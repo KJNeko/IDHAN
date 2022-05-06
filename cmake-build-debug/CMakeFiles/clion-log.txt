@@ -1,4 +1,4 @@
-/home/kj16609/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/221.5080.224/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/kj16609/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/221.5080.224/bin/ninja/linux/ninja -G Ninja -S /home/kj16609/Desktop/Projects/IDHAN -B /home/kj16609/Desktop/Projects/IDHAN/cmake-build-debug
+/home/kj16609/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/221.5080.224/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles" -S /home/kj16609/Desktop/Projects/IDHAN -B /home/kj16609/Desktop/Projects/IDHAN
 -- The C compiler identification is GNU 11.2.0
 -- The CXX compiler identification is GNU 11.2.0
 -- Detecting C compiler ABI info
@@ -13,4 +13,4 @@
 -- Detecting CXX compile features - done
 -- Configuring done
 -- Generating done
--- Build files have been written to: /home/kj16609/Desktop/Projects/IDHAN/cmake-build-debug
+-- Build files have been written to: /home/kj16609/Desktop/Projects/IDHAN
