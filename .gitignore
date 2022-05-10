@@ -6,3 +6,5 @@
 /CMakeFiles/
 /.idea
 /.cmake/
+/Testing
+/cmake-build-debug/

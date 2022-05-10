@@ -1,0 +1,10 @@
+{
+    "database_host": "localhost",
+    "database_name": "idhan",
+    "database_password": "idhan",
+    "database_port": "5432",
+    "database_user": "idhan",
+    "file_path": "./files",
+    "log_path": "./logs",
+    "thumbnail_path": "./thumbnails"
+}
