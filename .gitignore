@@ -8,3 +8,4 @@
 /.cmake/
 /Testing
 /cmake-build-debug/
+/Testing/
