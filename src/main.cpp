@@ -1,17 +1,10 @@
 #include "include/Database/config.hpp"
 #include "include/Database/database.hpp"
 
+#include "include/Utility/HashFilepath.hpp"
+
 int main()
 {
-
-	//Read config
-	IDHANConfig config;
-
-	IDHANDatabase database;
-
-
-	database.addFile( "./Images/test.jpg" );
-
 
 	return 0;
 }
