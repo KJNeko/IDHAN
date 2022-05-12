@@ -15,7 +15,7 @@ class IDHANConfig
 public:
 
 	template < typename T >
-	std::optional<T> getValue( const std::string& valueName )
+	static inline std::optional<T> getValue( const std::string& valueName )
 	{
 		try
 		{
@@ -33,7 +33,7 @@ public:
 	}
 
 	template < typename T >
-	void setValue( const std::string& valueName, T value )
+	static inline void setValue( const std::string& valueName, T value )
 	{
 		//read config file
 		std::ifstream i( "config.json" );
@@ -53,7 +53,7 @@ public:
 	}
 
 	template < typename T >
-	T getSet( const std::string& valueName, T defaultValue )
+	static inline T getSet( const std::string& valueName, T defaultValue )
 	{
 		auto value = getValue<T>( valueName );
 		if ( value.has_value())
@@ -67,6 +67,17 @@ public:
 	}
 
 };
+
+std::string getDBString()
+{
+	std::string dbString;
+	dbString += "dbname=" + IDHANConfig::getSet<std::string>( "dbname", "idhanDB" );
+	dbString += " user=" + IDHANConfig::getSet<std::string>( "user", "idhan" );
+	dbString += " password=" + IDHANConfig::getSet<std::string>( "password", "idhan" );
+	dbString += " host=" + IDHANConfig::getSet<std::string>( "host", "localhost" );
+	dbString += " port=" + IDHANConfig::getSet<std::string>( "port", "5432" );
+	return dbString;
+}
 
 
 #endif //IDHAN_CONFIG_HPP
