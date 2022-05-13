@@ -14,11 +14,12 @@
 class Connection
 {
 public:
-	static pqxx::connection conn;
+	static inline pqxx::connection* conn{nullptr};
+	static inline bool validConnection{false};
 
 private:
 
-	static std::mutex lock;
+	static inline std::mutex lock;
 	std::lock_guard<std::mutex> guard{lock};
 
 public:
@@ -27,24 +28,29 @@ public:
 
 	Connection()
 	{
-		if(conn.is_open())
+		if(conn == nullptr)
+		{
+			conn = new pqxx::connection( getDBString());
+		}
+
+		if(conn->is_open())
 		{
 			return;
 		}
 		else
 		{
-			conn = pqxx::connection(getDBString());
+			*conn = pqxx::connection(getDBString());
 		}
 	}
 
 	static void resetConn()
 	{
-		conn = pqxx::connection(getDBString());
+		*conn = pqxx::connection(getDBString());
 	}
 
 	static pqxx::connection& getConn()
 	{
-		return conn;
+		return *(conn);
 	}
 };
 
