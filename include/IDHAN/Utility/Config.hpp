@@ -64,6 +64,8 @@ public:
 		{
 			setValue( valueName, defaultValue );
 		}
+
+		return defaultValue;
 	}
 
 };
@@ -71,11 +73,14 @@ public:
 std::string getDBString()
 {
 	std::string dbString;
-	dbString += "dbname=" + IDHANConfig::getSet<std::string>( "dbname", "idhanDB" );
-	dbString += " user=" + IDHANConfig::getSet<std::string>( "user", "idhan" );
-	dbString += " password=" + IDHANConfig::getSet<std::string>( "password", "idhan" );
-	dbString += " host=" + IDHANConfig::getSet<std::string>( "host", "localhost" );
-	dbString += " port=" + IDHANConfig::getSet<std::string>( "port", "5432" );
+	dbString += "dbname=" + IDHANConfig::getSet<std::string>( "database_name", "idhan" );
+	dbString += " user=" + IDHANConfig::getSet<std::string>( "database_user", "idhan" );
+	dbString += " password=" + IDHANConfig::getSet<std::string>( "database_password", "idhan" );
+	dbString += " host=" + IDHANConfig::getSet<std::string>( "database_host", "localhost" );
+	dbString += " port=" + IDHANConfig::getSet<std::string>( "database_port", "5432" );
+
+	std::cout << dbString << std::endl;
+
 	return dbString;
 }
 
