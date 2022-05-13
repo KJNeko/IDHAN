@@ -213,9 +213,6 @@ namespace IDHAN::DB::TAGS
 		return std::make_pair(group, subtag);
 	}
 
-
-
-
 	void addMap(uint64_t tag, uint64_t hashID)
 	{
 		Connection conn;
@@ -249,16 +246,6 @@ namespace IDHAN::DB::TAGS
 		w.exec( query );
 		w.commit();
 	}
-
-
-
-
-
-
-
-
-
-
 
 }
 
