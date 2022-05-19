@@ -70,7 +70,7 @@ public:
 
 };
 
-std::string getDBString()
+inline std::string getDBString()
 {
 	std::string dbString;
 	dbString += "dbname=" + IDHANConfig::getSet<std::string>( "database_name", "idhan" );
@@ -78,9 +78,6 @@ std::string getDBString()
 	dbString += " password=" + IDHANConfig::getSet<std::string>( "database_password", "idhan" );
 	dbString += " host=" + IDHANConfig::getSet<std::string>( "database_host", "localhost" );
 	dbString += " port=" + IDHANConfig::getSet<std::string>( "database_port", "5432" );
-
-	std::cout << dbString << std::endl;
-
 	return dbString;
 }
 

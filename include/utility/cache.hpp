@@ -24,13 +24,9 @@ class Cache
 	std::unordered_map<Key, std::chrono::time_point<std::chrono::high_resolution_clock>> lastUsed{};
 
 
-	std::function<std::optional<Tuple>( Key )> getterFunc;
+	std::function<std::optional<Tuple>( Key )> getterFunc {};
 
 public:
-
-	Cache() = delete;
-
-	Cache( std::function<std::optional<Tuple>( Key )> getterFunc ) : getterFunc( getterFunc ) {}
 
 	std::optional<Tuple> get( Key value )
 	{
@@ -51,16 +47,19 @@ public:
 		}
 		else
 		{
-			auto result = getterFunc( value );
-
-			if ( result.has_value())
-			{
-				cache.emplace( value, result );
-				lastUsed.emplace( value, std::chrono::high_resolution_clock::now());
-				return result.value();
-			}
 			return std::nullopt;
 		}
+	}
+
+	size_t size()
+	{
+		return cache.size();
+	}
+
+	void place(Key value, Tuple tup)
+	{
+		cache.emplace(value, tup);
+		lastUsed.emplace(value, std::chrono::high_resolution_clock::now());
 	}
 
 	void wipe()

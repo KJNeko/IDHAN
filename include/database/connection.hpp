@@ -2,6 +2,7 @@
 // Created by kj16609 on 5/11/22.
 //
 
+#pragma once
 #ifndef IDHAN_CONNECTION_HPP
 #define IDHAN_CONNECTION_HPP
 
@@ -9,7 +10,7 @@
 
 #include <mutex>
 
-#include "include/IDHAN/Utility/Config.hpp"
+#include "include/utility/config.hpp"
 
 class Connection
 {

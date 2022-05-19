@@ -1,33 +1,16 @@
-#include <string>
-#include <iostream>
-#include <bitset>
-
-#include "include/IDHAN/Utility/Cache.hpp"
-
-#include "include/IDHAN/DB/Tags.hpp"
-
-
-#include <optional>
-
-std::optional<std::string> getFromDBOrSomething( size_t id )
-{
-
-	return std::nullopt;
-}
-
+#include "include/database/tags.hpp"
+#include "include/database/files.hpp"
+#include "include/database/HydrusTranslate/HydrusTranslate.hpp"
 
 int main()
 {
-	IDHAN::DB::TAGS::validateTables();
+	idhan::tags::validateTables();
 
 
-	uint64_t id = IDHAN::DB::TAGS::getTag("character", "toujou koneko");
-	std::pair<std::string, std::string> tag = IDHAN::DB::TAGS::getTag(id);
+	//Hydrus translate test
+	Hydrus::getTagList("/home/kj16609/Desktop/Projects/hydrus/db/client.master.db");
 
-	std::cout << "ID: " << id << std::endl;
-	std::cout << "IDBits: " << std::bitset<64>(id) << std::endl;
-
-	std::cout << tag.first << ":" << tag.second << std::endl;
+	Hydrus::parseHydrusMappings("/home/kj16609/Desktop/Projects/hydrus/db");
 
 	return 0;
 }

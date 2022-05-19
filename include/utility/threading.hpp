@@ -14,8 +14,6 @@
 
 #include <future>
 
-#include "include/IDHAN/Utility/RingBuffer.hpp"
-
 //TODO: Expand the abilities of WorkUnit for things like returning void and other complex functions
 
 namespace HydrusCXX::Threading
@@ -41,7 +39,7 @@ namespace HydrusCXX::Threading
 			{
 			}
 
-			std::future <Ret> getFuture()
+			std::future<Ret> getFuture()
 			{
 				return task.get_future();
 			}
@@ -64,9 +62,10 @@ namespace HydrusCXX::Threading
 
 	class ThreadManager
 	{
-		std::vector <std::thread> threads{};
+		std::vector<std::thread> threads{};
 
-		ringBuffer<Internal::WorkBasic*, 15> workQueue{};
+		std::queue<Internal::WorkBasic*> workQueue{};
+		std::mutex mtx;
 
 		bool stopThreadsFlag{ false };
 
@@ -76,19 +75,29 @@ namespace HydrusCXX::Threading
 		{
 			while ( !stopThreadsFlag )
 			{
-				//GetWork
-				auto work = workQueue.getNext_for( std::chrono::milliseconds( 500 ));
 
-				if ( !work.has_value())
+				Internal::WorkBasic* wrk{ nullptr };
 				{
-					//No work to do.
-					std::this_thread::yield();
+					std::lock_guard<std::mutex> lck( mtx );
+					if ( workQueue.empty())
+					{
+						continue;
+					}
+
+					//GetWork
+
+					wrk = workQueue.front();
+					workQueue.pop();
+				}
+
+				if ( wrk == nullptr )
+				{
 					continue;
 				}
 
-				work.value()->doTask();
+				wrk->doTask();
 
-				delete work.value();
+				delete wrk;
 			}
 		}
 
@@ -135,10 +144,11 @@ namespace HydrusCXX::Threading
 		ThreadManager operator=( ThreadManager const& ) = delete;
 
 		template < typename Ret, typename Func, typename... Args >
-		std::future <Ret> submit( Func func, Args& ... args )
+		std::future<Ret> submit( Func func, Args& ... args )
 		{
+			std::lock_guard<std::mutex> lck( mtx );
 			auto* workUnit = new Internal::WorkUnit<Ret, Func, Args...>( func, args... );
-			( workQueue.pushNext( static_cast<Internal::WorkBasic*>(workUnit), std::chrono::seconds( 2 )));
+			( workQueue.push( static_cast<Internal::WorkBasic*>(workUnit)));
 
 			return workUnit->getFuture();
 		}
