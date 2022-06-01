@@ -17,8 +17,7 @@
  		}
  	}
  }
- 
- 
+
  
  
  
@@ -77,6 +76,7 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 #include <vector>
 
 #include "database.hpp"
+#include "jsonparser.hpp"
 
 
 #define CONSTEXPR_REQUIRES(expr) \
@@ -90,6 +90,10 @@ void resetDB()
 	conn.resetDB();
 }
 
+TEST_CASE("ConnectionTest", "[database]")
+{
+	resetDB();
+}
 
 TEST_CASE("addTag", "[tags][database]")
 {
@@ -101,7 +105,7 @@ TEST_CASE("addTag", "[tags][database]")
 	
 	//First paramter: HashID
 	//Second paramter: List of tags to add
-	addTag(1, tags);
+	REQUIRE(addTag(1, tags) == true);
 	
 	//Testing
 	{
@@ -176,4 +180,78 @@ TEST_CASE("getTags", "[tags][database]")
 	auto retTags = getTags(1);
 	REQUIRE(retTags.size() == tags.size());
 	REQUIRE(retTags == tags);
+}
+
+TEST_CASE("jsonParse", "[json],[database]")
+{
+	std::string jsonStr = R"(
+	{
+		"0": {
+			"operation": 0,
+			"filepaths": {
+				"0": "/test/"
+			}
+		},
+		"1": {
+			"operation": 1,
+			"hashIDs": [1,2,3,4]
+		},
+		"2": {
+			"operation": 2,
+			"hashIDs": [1,2,3,4],
+			"tags": {
+				"0": {
+					"group": "",
+					"subtag": "toujou koneko"
+				},
+				"1": {
+					"group": "series",
+					"subtag": "Highschool DxD"
+				}
+			}
+		},
+		"3": {
+			"operation": 3,
+			"hashIDs": [1,2,3,4],
+			"tags": {
+				"0": {
+					"group": "series",
+					"subtag": "Highschool DxD"
+				}
+			}
+		},
+		"4": {
+			"operation": 4,
+			"hashIDs": [1,2,3,4]
+		},
+		"5": {
+			"operation": 5,
+			"pairs": {
+				"0": {
+					"origin": {
+						"group": "",
+						"subtag": "toujou koneko"
+					},
+					"new": {
+						"group": "character",
+						"subtag": "toujou koneko"
+					}
+				}
+			}
+		},
+		"6": {
+			"operation": 3,
+			"hashIDs": [1,2,3,4],
+			"tags": {
+				"0": {
+					"group" : "series",
+					"subtag" : "Highschool DxD"
+				}
+			}
+		}
+	}
+	)";
+	
+	
+	std::cout << parseJson(jsonStr) << std::endl;
 }

@@ -53,106 +53,142 @@ public:
 };
 
 
-void addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags)
+bool addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags)
 {
-	
-	Connection conn;
-	pqxx::work wrk (conn.getConn());
-	
-	auto getSubtagID = [&wrk](std::string text)
+	try
 	{
-		uint64_t id{0};
+		Connection conn;
+		pqxx::work wrk (conn.getConn());
 		
-		//Try a select
-		pqxx::result res = wrk.exec("SELECT subtagid FROM subtags WHERE subtag = '" + text + "'");
-		
-		if(res.empty())
+		auto getSubtagID = [&wrk](std::string text)
 		{
-			res = wrk.exec("INSERT INTO subtags (subtag) VALUES ('" + text + "') RETURNING subtagid");
+			//Try a select
+			pqxx::result res = wrk.exec("SELECT subtagid FROM subtags WHERE subtag = '" + text + "'");
+			
+			if(res.empty())
+			{
+				res = wrk.exec("INSERT INTO subtags (subtag) VALUES ('" + text + "') RETURNING subtagid");
+			}
+			
+			return res[0][0].as<uint64_t>();
+		};
+		
+		auto getGroupID = [&wrk](std::string text)
+		{
+			//Try a select
+			pqxx::result res = wrk.exec("SELECT groupid FROM groups WHERE \"group\" = '" + text + "'");
+			
+			if(res.empty())
+			{
+				res = wrk.exec("INSERT INTO groups (\"group\") VALUES ('" + text + "') RETURNING groupid");
+			}
+			
+			return res[0][0].as<uint64_t>();
+		};
+		
+		
+		for(auto& [group, subtag] : tags)
+		{
+			uint16_t groupID = getGroupID(group);
+			uint64_t subtagID = getSubtagID(subtag);
+			
+	
+			wrk.exec("INSERT INTO mappings (hashid, groupid, subtagid) VALUES ("+ std::to_string(hashID) +","+ std::to_string(groupID) + "," + std::to_string(subtagID) + ")");
 		}
 		
-		return res[0][0].as<uint64_t>();
-	};
-	
-	auto getGroupID = [&wrk](std::string text)
-	{
-		uint64_t id{0};
-		
-		//Try a select
-		pqxx::result res = wrk.exec("SELECT groupid FROM groups WHERE \"group\" = '" + text + "'");
-		
-		if(res.empty())
-		{
-			res = wrk.exec("INSERT INTO groups (\"group\") VALUES ('" + text + "') RETURNING groupid");
+		wrk.commit();
 		}
-		
-		return res[0][0].as<uint64_t>();
-	};
-	
-	
-	for(auto& [group, subtag] : tags)
+	catch(pqxx::unique_violation& e)
 	{
-		uint16_t groupID = getGroupID(group);
-		uint64_t subtagID = getSubtagID(subtag);
-		
-
-		wrk.exec("INSERT INTO mappings (hashid, groupid, subtagid) VALUES ("+ std::to_string(hashID) +","+ std::to_string(groupID) + "," + std::to_string(subtagID) + ")");
+		return false;
+	}
+	catch(pqxx::foreign_key_violation& e)
+	{
+		return false;
+	}
+	catch(pqxx::not_null_violation& e)
+	{
+		return false;
 	}
 	
-	wrk.commit();
-	
+	return true;
 }
 
-void removeTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags)
+bool removeTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags)
 {
-	Connection conn;
-	pqxx::work wrk (conn.getConn());
-	
-	auto getSubtagID = [&wrk](std::string text) -> uint64_t
+	try
 	{
-		//Try a select
-		pqxx::result res = wrk.exec("SELECT subtagid FROM subtags WHERE subtag = '" + text + "'");
+		Connection conn;
+		pqxx::work wrk( conn.getConn());
 		
-		if(res.empty())
+		auto getSubtagID = [&wrk]( std::string text ) -> uint64_t
 		{
-			return 0;
+			//Try a select
+			pqxx::result res = wrk.exec(
+					"SELECT subtagid FROM subtags WHERE subtag = '" + text + "'" );
+			
+			if ( res.empty())
+			{
+				return 0;
+			}
+			
+			return res[0][0].as<uint64_t>();
+		};
+		
+		auto getGroupID = [&wrk]( std::string text ) -> uint64_t
+		{
+			//Try a select
+			pqxx::result res = wrk.exec(
+					"SELECT groupid FROM groups WHERE \"group\" = '" + text + "'" );
+			
+			if ( res.empty())
+			{
+				return 0;
+			}
+			
+			return res[0][0].as<uint64_t>();
+		};
+		
+		
+		for ( auto& [group, subtag] : tags )
+		{
+			uint16_t groupID = getGroupID( group );
+			uint64_t subtagID = getSubtagID( subtag );
+			
+			if ( groupID == 0 || subtagID == 0 )
+			{
+				continue;
+			}
+			
+			//delete from mappings
+			wrk.exec(
+					"DELETE FROM mappings WHERE hashid = " +
+					std::to_string( hashID ) + " AND groupid = " +
+					std::to_string( groupID ) + " AND subtagid = " +
+					std::to_string( subtagID ));
+			
+			wrk.exec(
+					"DELETE FROM subtags WHERE subtagid NOT IN (SELECT subtagid FROM mappings)" );
+			wrk.exec(
+					"DELETE FROM groups WHERE groupid NOT IN (SELECT groupid FROM mappings)" );
 		}
 		
-		return res[0][0].as<uint64_t>();
-	};
-	
-	auto getGroupID = [&wrk](std::string text) -> uint64_t
+		wrk.commit();
+	}
+	catch(pqxx::unique_violation& e)
 	{
-		//Try a select
-		pqxx::result res = wrk.exec("SELECT groupid FROM groups WHERE \"group\" = '" + text + "'");
-		
-		if(res.empty())
-		{
-			return 0;
-		}
-		
-		return res[0][0].as<uint64_t>();
-	};
-	
-	
-	for(auto& [group, subtag] : tags)
+		return false;
+	}
+	catch(pqxx::foreign_key_violation& e)
 	{
-		uint16_t groupID = getGroupID(group);
-		uint64_t subtagID = getSubtagID(subtag);
-		
-		if(groupID == 0 || subtagID == 0)
-		{
-			continue;
-		}
-		
-		//delete from mappings
-		wrk.exec("DELETE FROM mappings WHERE hashid = " + std::to_string(hashID) + " AND groupid = " + std::to_string(groupID) + " AND subtagid = " + std::to_string(subtagID));
-		
-		wrk.exec("DELETE FROM subtags WHERE subtagid NOT IN (SELECT subtagid FROM mappings)");
-		wrk.exec("DELETE FROM groups WHERE groupid NOT IN (SELECT groupid FROM mappings)");
+		return false;
+	}
+	catch(pqxx::not_null_violation& e)
+	{
+		return false;
 	}
 	
-	wrk.commit();
+	return true;
 }
 
 std::vector<std::pair<std::string, std::string>> getTags(uint64_t hashID)

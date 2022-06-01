@@ -9,8 +9,6 @@
 /cmake_install.cmake
 /CMakeFiles/
 /Testing
-/cmake-build-debug/
-/Testing/
 config.json
 
 #### Conan
