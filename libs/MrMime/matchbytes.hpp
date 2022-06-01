@@ -5,7 +5,7 @@
 #include <cstddef> // std::size_t
 #include <cstdint> // uint8_t
 #include <array>
-#include "include/libFGL/include/fgl/utility/zip.hpp"
+#include <fgl/utility/zip.hpp>
 
 namespace MrMime
 {

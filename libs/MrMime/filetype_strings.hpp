@@ -7,7 +7,7 @@
 
 namespace MrMime {
 
-[[nodiscard]] constexpr const char* fileType_to_cstr(const FileType filetype)
+[[nodiscard]] inline constexpr const char* fileType_to_cstr(const FileType filetype)
 {
 	switch(filetype)
 	{
@@ -33,7 +33,6 @@ namespace MrMime {
 //	case VIDEO_MKV: return {"VIDEO_MKV"};
 //	case VIDEO_WEBM: return {"VIDEO_WEBM"};
 //	case APPLICATION_JSON: return {"APPLICATION_JSON"};
-	case IMAGE_APNG: return {"IMAGE_APNG"};
 //	case UNDETERMINED_PNG: return {"UNDETERMINED_PNG"};
 //	case VIDEO_MPEG: return {"VIDEO_MPEG"};
 	case VIDEO_MOV: return {"VIDEO_MOV"};
@@ -63,7 +62,7 @@ namespace MrMime {
 	};
 }
 
-[[nodiscard]] std::string fileType_to_string(const FileType filetype)
+[[nodiscard]] inline std::string fileType_to_string(const FileType filetype)
 {
 	return std::string(fileType_to_cstr(filetype));
 }

@@ -90,7 +90,7 @@ typedef std::array<std::byte, internal::size_of_largest_signature>
 
 /// Attempts to match a signature with an array of bytes
 // returns FileType::APPLICATION_UNKNOWN if no signature can be matched.
-[[nodiscard]] FileType deduceFileType(const header_data_buffer_t& header_data)
+[[nodiscard]] inline FileType deduceFileType(const header_data_buffer_t& header_data)
 {
 	using namespace MrMime::internal;
 	return std::apply(
