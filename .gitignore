@@ -28,3 +28,7 @@ graph.png
 *.gif
 *.jpg
 *.png
+/bin/apiTest
+/bin/DBTest
+/bin/IDHAN
+/bin/main
