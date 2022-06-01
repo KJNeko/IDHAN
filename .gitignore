@@ -12,3 +12,19 @@
 /cmake-build-debug/
 /Testing/
 config.json
+
+#### Conan
+*.lock
+.cmake
+conaninfo.txt
+graph_info.json
+conanbuildinfo.cmake
+conanbuildinfo.txt
+*.dot
+graph.png
+
+
+###images
+*.gif
+*.jpg
+*.png
