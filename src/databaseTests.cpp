@@ -277,7 +277,9 @@ TEST_CASE("jsonParseGetTag", "[json][database]")
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"("5":{"succeeded":["0"]})";
+	
+	REQUIRE(parseJson(jsonStr) == expected);
 }
 
 TEST_CASE("jsonParse", "[json][database]")

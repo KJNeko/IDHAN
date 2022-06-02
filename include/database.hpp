@@ -208,7 +208,112 @@ std::vector<std::pair<std::string, std::string>> getTags(uint64_t hashID)
 	return tags;
 }
 
-
+bool replaceTag(std::pair<std::string, std::string> origin, std::pair<std::string, std::string> replacement)
+{
+	try
+	{
+		Connection conn;
+		pqxx::work wrk( conn.getConn());
+		
+		
+		auto selectSubtagID = [&wrk]( std::string text )
+		{
+			//Try a select
+			pqxx::result res = wrk.exec(
+					"SELECT subtagid FROM subtags WHERE subtag = '" + text +
+					"'" );
+			
+			if ( res.empty())
+			{
+				res = wrk.exec(
+						"INSERT INTO subtags (subtag) VALUES ('" + text +
+						"') RETURNING subtagid" );
+			}
+			
+			return res[0][0].as<uint64_t>();
+		};
+		
+		auto selectGroupID = [&wrk]( std::string text )
+		{
+			//Try a select
+			pqxx::result res = wrk.exec(
+					"SELECT groupid FROM groups WHERE \"group\" = '" + text +
+					"'" );
+			
+			if ( res.empty())
+			{
+				res = wrk.exec(
+						"INSERT INTO groups (\"group\") VALUES ('" + text +
+						"') RETURNING groupid" );
+			}
+			
+			return res[0][0].as<uint64_t>();
+		};
+		
+		auto getSubtagID = [&wrk]( std::string text )
+		{
+			//Try a select
+			pqxx::result res = wrk.exec(
+					"SELECT subtagid FROM subtags WHERE subtag = '" + text +
+					"'" );
+			
+			if ( res.empty())
+			{
+				res = wrk.exec(
+						"INSERT INTO subtags (subtag) VALUES ('" + text +
+						"') RETURNING subtagid" );
+			}
+			
+			return res[0][0].as<uint64_t>();
+		};
+		
+		auto getGroupID = [&wrk]( std::string text )
+		{
+			//Try a select
+			pqxx::result res = wrk.exec(
+					"SELECT groupid FROM groups WHERE \"group\" = '" + text +
+					"'" );
+			
+			if ( res.empty())
+			{
+				res = wrk.exec(
+						"INSERT INTO groups (\"group\") VALUES ('" + text +
+						"') RETURNING groupid" );
+			}
+			
+			return res[0][0].as<uint64_t>();
+		};
+		
+		auto [origingroup, originsubtag] = std::make_pair(
+				selectGroupID( origin.first ), selectSubtagID( origin.second ));
+		auto [replacegroup, replacesubtag] = std::make_pair(
+				getGroupID( replacement.first ),
+				getSubtagID( replacement.second ));
+		
+		wrk.exec(
+				"UPDATE mappings SET groupid = " +
+				std::to_string( replacegroup ) + ", subtagid = " +
+				std::to_string( replacesubtag ) + " WHERE groupid = " +
+				std::to_string( origingroup ) + " AND subtagid = " +
+				std::to_string( originsubtag ));
+		
+		wrk.commit();
+	}
+	catch(pqxx::unique_violation& e)
+	{
+		return false;
+	}
+	catch(pqxx::foreign_key_violation& e)
+	{
+		return false;
+	}
+	catch(pqxx::not_null_violation& e)
+	{
+		return false;
+	}
+	
+	return true;
+}
 
 
 

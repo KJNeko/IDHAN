@@ -121,6 +121,54 @@ std::string parseJson(std::string& json)
 			}
 			
 			case OperationType::RenameTag:
+				{
+					std::vector<std::string> failedVec, succeededVec;
+					
+					for(auto [key, value] : jsn[item.key()]["pairs"].items())
+					{
+						auto ref = jsn[item.key()]["pairs"][key];
+						
+						auto origin = ref["origin"];
+						auto replacement = ref["new"];
+						
+						std::string originGroup {""};
+						if(origin.contains("group"))
+						{
+							originGroup = origin["group"].get<std::string>();
+						}
+						std::string originSubtag{origin["subtag"].get<std::string>()};
+						
+						
+						
+						std::string replaceGroup {""};
+						if(replacement.contains("group"))
+						{
+							originGroup = replacement["group"].get<std::string>();
+						}
+						std::string replaceSubtag{replacement["subtag"].get<std::string>()};
+						
+						if(replaceTag(std::make_pair(originGroup, originSubtag), std::make_pair(replaceGroup, replaceSubtag)))
+						{
+							succeededVec.push_back(key);
+						}
+						else
+						{
+							failedVec.push_back(key);
+						}
+					}
+					
+					if(!succeededVec.empty())
+					{
+						output[item.key()]["succeeded"] = succeededVec;
+					}
+					
+					if(!failedVec.empty())
+					{
+						output[item.key()]["failed"] = failedVec;
+					}
+				}
+				
+				
 				std::cout << "STUB RENAMETAG" << std::endl;
 			break;
 		}
