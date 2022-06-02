@@ -195,7 +195,10 @@ TEST_CASE("jsonParseAddFile", "[json][database]")
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"1":{"succeeded":[1,2,3,4]}})";
+	
+	REQUIRE(parseJson(jsonStr) == expected);
+	resetDB();
 }
 
 TEST_CASE("jsonParseRemoveFile", "[json][database]")
@@ -209,7 +212,10 @@ TEST_CASE("jsonParseRemoveFile", "[json][database]")
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"1":{"succeeded":[1,2,3,4]}})";
+	
+	REQUIRE(parseJson(jsonStr) == expected);
+	resetDB();
 }
 
 TEST_CASE("jsonParseAddTag", "[json][database]")
@@ -233,13 +239,30 @@ TEST_CASE("jsonParseAddTag", "[json][database]")
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"2":{"succeeded":[1,2,3,4]}})";
+	
+	REQUIRE(parseJson(jsonStr) == expected);
+	resetDB();
 }
 
 TEST_CASE("jsonParseRemoveTag", "[json][database]")
 {
 	std::string jsonStr = R"(
 	{
+		"2": {
+			"operation": 2,
+			"hashIDs": [1,2,3,4],
+			"tags": {
+				"0": {
+					"group": "",
+					"subtag": "toujou koneko"
+				},
+				"1": {
+					"group": "series",
+					"subtag": "Highschool DxD"
+				}
+			}
+		},
 		"3": {
 			"operation": 3,
 			"hashIDs": [1,2,3,4],
@@ -253,12 +276,61 @@ TEST_CASE("jsonParseRemoveTag", "[json][database]")
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"2":{"succeeded":[1,2,3,4]},"3":{"succeeded":[1,2,3,4]}})";
+	
+	REQUIRE(parseJson(jsonStr) == expected);
+	resetDB();
 }
 
 TEST_CASE("jsonParseGetTag", "[json][database]")
-{	std::string jsonStr = R"(
+{
+	std::string jsonStr = R"(
 	{
+	"2": {
+		"operation": 2,
+		"hashIDs": [1,2,3,4],
+		"tags": {
+			"0": {
+				"group": "",
+				"subtag": "toujou koneko"
+			},
+			"1": {
+				"group": "series",
+				"subtag": "Highschool DxD"
+			}
+		}
+	},
+	"7": {
+		"operation": 4,
+		"hashIDs": [1,2,3,4]
+	}
+	}
+	)";
+	
+	std::string expected = R"({"2":{"succeeded":[1,2,3,4]},"7":{"1":["toujou koneko","series:Highschool DxD"],"2":["toujou koneko","series:Highschool DxD"],"3":["toujou koneko","series:Highschool DxD"],"4":["toujou koneko","series:Highschool DxD"]}})";
+	
+	REQUIRE(parseJson(jsonStr) == expected);
+	resetDB();
+}
+
+TEST_CASE("jsonParseRenameTag", "[json][database]")
+{
+	std::string jsonStr = R"(
+	{
+	"2": {
+		"operation": 2,
+		"hashIDs": [1,2,3,4],
+		"tags": {
+			"0": {
+				"group": "",
+				"subtag": "toujou koneko"
+			},
+			"1": {
+				"group": "series",
+				"subtag": "Highschool DxD"
+			}
+		}
+	},
 	"5": {
 		"operation": 5,
 		"pairs": {
@@ -277,9 +349,10 @@ TEST_CASE("jsonParseGetTag", "[json][database]")
 	}
 	)";
 	
-	std::string expected = R"("5":{"succeeded":["0"]})";
+	std::string expected = R"({"2":{"succeeded":[1,2,3,4]},"5":{"succeeded":[0]}})";
 	
 	REQUIRE(parseJson(jsonStr) == expected);
+	resetDB();
 }
 
 TEST_CASE("jsonParse", "[json][database]")
@@ -361,6 +434,9 @@ TEST_CASE("jsonParse", "[json][database]")
 	}
 	)";
 	
+	std::string expected = R"(DEFINE)";
 	
 	std::cout << parseJson(jsonStr) << std::endl;
+	REQUIRE(parseJson(jsonStr) == expected);
+	resetDB();
 }

@@ -94,8 +94,15 @@ std::string parseJson(std::string& json)
 					}
 				}
 				
-				output[item.key()]["completed"] = success;
-				output[item.key()]["failed"] = fails;
+				if(!success.empty())
+				{
+					output[item.key()]["succeeded"] = success;
+				}
+				
+				if(!fails.empty())
+				{
+					output[item.key()]["failed"] = fails;
+				}
 			break;
 			}
 			case OperationType::GetTag:
@@ -111,7 +118,14 @@ std::string parseJson(std::string& json)
 					
 					for ( auto& [group, subtag] : tags )
 					{
-						tagConcant.emplace_back(group + subtag);
+						if(group == "")
+						{
+							tagConcant.emplace_back(subtag);
+						}
+						else
+						{
+							tagConcant.emplace_back(group + ":" + subtag);
+						}
 					}
 					
 					output[item.key()][std::to_string(id)] = tagConcant;
@@ -122,7 +136,7 @@ std::string parseJson(std::string& json)
 			
 			case OperationType::RenameTag:
 				{
-					std::vector<std::string> failedVec, succeededVec;
+					std::vector<uint64_t> failedVec, succeededVec;
 					
 					for(auto [key, value] : jsn[item.key()]["pairs"].items())
 					{
@@ -149,11 +163,11 @@ std::string parseJson(std::string& json)
 						
 						if(replaceTag(std::make_pair(originGroup, originSubtag), std::make_pair(replaceGroup, replaceSubtag)))
 						{
-							succeededVec.push_back(key);
+							succeededVec.push_back(std::stoull(key));
 						}
 						else
 						{
-							failedVec.push_back(key);
+							failedVec.push_back( std::stoull( key ));
 						}
 					}
 					
@@ -167,9 +181,6 @@ std::string parseJson(std::string& json)
 						output[item.key()]["failed"] = failedVec;
 					}
 				}
-				
-				
-				std::cout << "STUB RENAMETAG" << std::endl;
 			break;
 		}
 		
