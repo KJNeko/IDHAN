@@ -182,8 +182,107 @@ TEST_CASE("getTags", "[tags][database]")
 	REQUIRE(retTags == tags);
 }
 
-TEST_CASE("jsonParse", "[json],[database]")
+TEST_CASE("jsonParseAddFile", "[json][database]")
 {
+	std::string jsonStr = R"(
+	{
+		"0": {
+			"operation": 0,
+			"filepaths": {
+				"0": "/test/"
+			}
+		}
+	}
+	)";
+	
+	parseJson(jsonStr);
+}
+
+TEST_CASE("jsonParseRemoveFile", "[json][database]")
+{
+	std::string jsonStr = R"(
+	{
+		"1": {
+			"operation": 1,
+			"hashIDs": [1,2,3,4]
+		}
+	}
+	)";
+	
+	parseJson(jsonStr);
+}
+
+TEST_CASE("jsonParseAddTag", "[json][database]")
+{
+	std::string jsonStr = R"(
+	{
+		"2": {
+			"operation": 2,
+			"hashIDs": [1,2,3,4],
+			"tags": {
+				"0": {
+					"group": "",
+					"subtag": "toujou koneko"
+				},
+				"1": {
+					"group": "series",
+					"subtag": "Highschool DxD"
+				}
+			}
+		}
+	}
+	)";
+	
+	parseJson(jsonStr);
+}
+
+TEST_CASE("jsonParseRemoveTag", "[json][database]")
+{
+	std::string jsonStr = R"(
+	{
+		"3": {
+			"operation": 3,
+			"hashIDs": [1,2,3,4],
+			"tags": {
+				"0": {
+					"group": "series",
+					"subtag": "Highschool DxD"
+				}
+			}
+		}
+	}
+	)";
+	
+	parseJson(jsonStr);
+}
+
+TEST_CASE("jsonParseGetTag", "[json][database]")
+{	std::string jsonStr = R"(
+	{
+	"5": {
+		"operation": 5,
+		"pairs": {
+			"0": {
+				"origin": {
+					"group": "",
+					"subtag": "toujou koneko"
+				},
+				"new": {
+					"group": "character",
+					"subtag": "toujou koneko"
+				}
+				}
+			}
+		}
+	}
+	)";
+	
+	parseJson(jsonStr);
+}
+
+TEST_CASE("jsonParse", "[json][database]")
+{
+	resetDB();
 	std::string jsonStr = R"(
 	{
 		"0": {
@@ -201,7 +300,6 @@ TEST_CASE("jsonParse", "[json],[database]")
 			"hashIDs": [1,2,3,4],
 			"tags": {
 				"0": {
-					"group": "",
 					"subtag": "toujou koneko"
 				},
 				"1": {
@@ -221,15 +319,20 @@ TEST_CASE("jsonParse", "[json],[database]")
 			}
 		},
 		"4": {
-			"operation": 4,
-			"hashIDs": [1,2,3,4]
+			"operation": 3,
+			"hashIDs": [1,2],
+			"tags": {
+				"0": {
+					"groups": "meta",
+					"subtag": "absurdres"
+				}
+			}
 		},
 		"5": {
 			"operation": 5,
 			"pairs": {
 				"0": {
 					"origin": {
-						"group": "",
 						"subtag": "toujou koneko"
 					},
 					"new": {
@@ -248,6 +351,10 @@ TEST_CASE("jsonParse", "[json],[database]")
 					"subtag" : "Highschool DxD"
 				}
 			}
+		},
+		"7": {
+			"operation": 4,
+			"hashIDs": [1,2,3,4]
 		}
 	}
 	)";
