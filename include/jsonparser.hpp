@@ -12,12 +12,12 @@
 
 enum OperationType
 {
-	AddFile = 0,
-	RemoveFile,
-	AddTag,
-	RemoveTag,
-	GetTag,
-	RenameTag,
+	AddFile = 0,	//0
+	RemoveFile,		//1
+	AddTag,			//2
+	RemoveTag,		//3
+	GetTag, 		//4
+	RenameTag,		//5
 };
 
 
@@ -51,7 +51,14 @@ std::string parseJson(std::string& json)
 				
 				for(auto& tag : jsn[item.key()]["tags"])
 				{
-					tags.emplace_back(std::make_pair(tag["group"].get<std::string>(), tag["subtag"].get<std::string>()));
+					//Check if the group should be empty or not
+					std::string groupStr{""};
+					if(tag.contains("group"))
+					{
+						groupStr = tag["group"].get<std::string>();
+					}
+					
+					tags.emplace_back(std::make_pair(groupStr, tag["subtag"].get<std::string>()));
 				}
 				
 				auto list = jsn[item.key()]["hashIDs"].get<std::vector<uint64_t>>();
@@ -92,8 +99,27 @@ std::string parseJson(std::string& json)
 			break;
 			}
 			case OperationType::GetTag:
-				std::cout << "STUB GETTAG" << std::endl;
-			break;
+			{
+				auto hashID = jsn[item.key()]["hashIDs"].get<std::vector<uint64_t>>();
+				
+				for ( auto& id : hashID )
+				{
+					std::vector<std::pair<std::string, std::string>> tags = getTags(
+							id );
+					
+					std::vector<std::string> tagConcant;
+					
+					for ( auto& [group, subtag] : tags )
+					{
+						tagConcant.emplace_back(group + subtag);
+					}
+					
+					output[item.key()][std::to_string(id)] = tagConcant;
+				}
+				
+				break;
+			}
+			
 			case OperationType::RenameTag:
 				std::cout << "STUB RENAMETAG" << std::endl;
 			break;
