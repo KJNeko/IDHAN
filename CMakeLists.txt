@@ -5,7 +5,7 @@ set(CONAN_SYSTEM_INCLUDES ON)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-find_package(Catch2 3 REQUIRED)
+find_package(Catch2 REQUIRED)
 
 
 add_executable(main src/main.cpp include/database.cpp include/jsonparser.cpp include/crypto.cpp)
