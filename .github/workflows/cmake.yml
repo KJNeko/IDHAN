@@ -64,5 +64,5 @@ jobs:
       
     - name: Tests
       working-directory: ${{runner.workspace}}/bin
-      run: ctest DBtest
+      run: ctest DBTest
       
