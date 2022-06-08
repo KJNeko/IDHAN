@@ -8,5 +8,8 @@ openssl/3.0.3
 libFGL/latest@alaestor/main
 opencv/4.5.5
 
+[options]
+opencv:with_ffmpeg=False
+
 [generators]
 cmake
