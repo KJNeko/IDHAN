@@ -63,6 +63,6 @@ jobs:
       run: make -j2
       
     - name: Tests
-      working-directory: ${{runner.workspace}}/IDHAN/bin
-      run: ctest DBTest
+      working-directory: ${{runner.workspace}}/IDHAN
+      run: ctest -C Debug
       

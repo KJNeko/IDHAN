@@ -121,10 +121,11 @@ TEST_CASE("addTag", "[tags][database]")
 	
 	//First paramter: HashID
 	//Second paramter: List of tags to add
-	uint64_t id = addFile("./../Images/valid.jpg");
+	uint64_t id = addFile("./Images/valid.jpg");
 	if(id == 0)
 	{
 		throw std::runtime_error("Could not add file");
+		FAIL("ID was returned as 0 from addFile");
 	}
 	addTag(id, tags);
 	
@@ -153,6 +154,7 @@ TEST_CASE("addTag", "[tags][database]")
 		wrk.commit();
 	}
 	
+	SUCCEED();
 	resetDB();
 }
 
@@ -167,7 +169,7 @@ TEST_CASE("removeTag", "[tags][database]")
 	
 	//First paramter: HashID
 	//Second paramter: List of tags to add
-	uint64_t id = addFile("./../Images/valid.jpg");
+	uint64_t id = addFile("./Images/valid.jpg");
 	if(id == 0)
 	{
 		throw std::runtime_error("Could not add file");
@@ -206,7 +208,7 @@ TEST_CASE("getTags", "[tags][database]")
 	
 	//First paramter: HashID
 	//Second paramter: List of tags to add
-	uint64_t id = addFile("./../Images/valid.jpg");
+	uint64_t id = addFile("./Images/valid.jpg");
 	if(id == 0)
 	{
 		throw std::runtime_error("Could not add file");
@@ -229,24 +231,24 @@ TEST_CASE("jsonParseAddFile", "[json][database]")
 		"0": {
 			"operation": 0,
 			"filepaths": {
-				"0": "/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg",
-				"1": "/home/kj16609/Desktop/Projects/IDHAN/Images/doesntexist.png",
-				"2": "/home/kj16609/Desktop/Projects/IDHAN/Images/invalid.txt"
+				"0": "./Images/valid.jpg",
+				"1": "./Images/doesntexist.png",
+				"2": "./Images/invalid.txt"
 			}
 		}
 	}
 	)";
 	
-	std::string expected = R"({"0":{"failed":{"1":"File does not exist: /home/kj16609/Desktop/Projects/IDHAN/Images/doesntexist.png","2":"File parser was unable to make sense of the file"},"imported":{"0":{"filepath":"/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:41:47.789093"},"mappings":[],"playerinfo":{"bytes":2556576,"duration":0,"fps":0,"frames":1,"height":1960,"type":1,"width":4032}}}}}})";
+	std::string expected = R"({"0":{"failed":{"1":"File does not exist: ./Images/doesntexist.png","2":"File parser was unable to make sense of the file"},"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:41:47.789093"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}}})";
 	
 	//Check for fail condition
 	std::string data = parseJson(jsonStr);
 	
 	//Check if the first 25 characters match
-	REQUIRE(data.substr(0, 301) == expected.substr(0, 301));
+	REQUIRE(data.substr(0, 240) == expected.substr(0, 240));
 	
 	//Check if the last 121 characters match
-	REQUIRE(data.substr(data.size() - 120, 121) == expected.substr(expected.size() - 120, 121));
+	REQUIRE(data.substr(data.size() - 119, 121) == expected.substr(expected.size() - 119, 121));
 	
 	
 	resetDB();
@@ -285,7 +287,7 @@ TEST_CASE("jsonParseAddTag", "[json][database]")
 		"0": {
 			"operation": 0,
 			"filepaths": {
-				"0": "/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg"
+				"0": "./Images/valid.jpg"
 			}
 		},
 		"2": {
@@ -305,7 +307,7 @@ TEST_CASE("jsonParseAddTag", "[json][database]")
 	}
 	)";
 	
-	std::string expected = R"({"0":{"imported":{"0":{"filepath":"/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:50:42.272076"},"mappings":[],"playerinfo":{"bytes":2556576,"duration":0,"fps":0,"frames":1,"height":1960,"type":1,"width":4032}}}}},"2":{"failed":[2],"succeeded":[1]}})";
+	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:50:42.272076"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"failed":[2],"succeeded":[1]}})";
 	
 	auto data = parseJson(jsonStr);
 	
@@ -313,10 +315,10 @@ TEST_CASE("jsonParseAddTag", "[json][database]")
 	std::cout << expected << std::endl;
 	
 	//Check that the first 151 characters match
-	REQUIRE(data.substr(0, 149) == expected.substr(0, 149));
+	REQUIRE(data.substr(0, 113) == expected.substr(0, 113));
 	
 	//Check that the last 160 characters match
-	REQUIRE(data.substr(data.size() - 154, 155) == expected.substr(expected.size() - 154, 155));
+	REQUIRE(data.substr(data.size() - 153, 155) == expected.substr(expected.size() - 153, 155));
 	
 	resetDB();
 }
@@ -330,7 +332,7 @@ TEST_CASE("jsonParseRemoveTag", "[json][database]")
 		"0": {
 			"operation": 0,
 			"filepaths": {
-				"0": "/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg"
+				"0": "./Images/valid.jpg"
 			}
 		},
 		"2": {
@@ -360,15 +362,15 @@ TEST_CASE("jsonParseRemoveTag", "[json][database]")
 	}
 	)";
 	
-	std::string expected = R"({"0":{"imported":{"0":{"filepath":"/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:57:41.678387"},"mappings":[],"playerinfo":{"bytes":2556576,"duration":0,"fps":0,"frames":1,"height":1960,"type":1,"width":4032}}}}},"2":{"succeeded":[1]},"3":{"succeeded":[1,2,3,4]}})";
+	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:57:41.678387"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"3":{"succeeded":[1,2,3,4]}})";
 	
 	auto data = parseJson(jsonStr);
 	
 	//Compare the first 148 characters
-	REQUIRE(data.substr(0, 148) == expected.substr(0, 148));
+	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
 	
 	//Compare the last 170 characters
-	REQUIRE(data.substr(data.size() - 170, 171) == expected.substr(expected.size() - 170, 171));
+	REQUIRE(data.substr(data.size() - 169, 171) == expected.substr(expected.size() - 169, 171));
 	
 	resetDB();
 }
@@ -382,7 +384,7 @@ TEST_CASE("jsonParseGetTag", "[json][database]")
 	"0": {
 		"operation": 0,
 		"filepaths": {
-			"0": "/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg"
+			"0": "./Images/valid.jpg"
 		}
 	},
 	"2": {
@@ -406,17 +408,17 @@ TEST_CASE("jsonParseGetTag", "[json][database]")
 	}
 	)";
 	
-	std::string expected = R"({"0":{"imported":{"0":{"filepath":"/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:10:52.871199"},"mappings":[],"playerinfo":{"bytes":2556576,"duration":0,"fps":0,"frames":1,"height":1960,"type":1,"width":4032}}}}},"2":{"succeeded":[1]},"7":{"failed":{"2":"HashID does not exist"},"succeeded":{"1":["toujou koneko","series:Highschool DxD"]}}})";
+	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:10:52.871199"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"7":{"failed":{"2":"HashID does not exist"},"succeeded":{"1":["toujou koneko","series:Highschool DxD"]}}})";
 	
 	auto data = parseJson(jsonStr);
 	
 	
 	
 	//Check that the first 148 characters match
-	REQUIRE(data.substr(0, 148) == expected.substr(0, 148));
+	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
 	
 	//Check that the last 247 characters match
-	REQUIRE(data.substr(data.size() - 247, 248) == expected.substr(expected.size() - 247, 248));
+	REQUIRE(data.substr(data.size() - 246, 248) == expected.substr(expected.size() - 246, 248));
 	
 	resetDB();
 }
@@ -430,7 +432,7 @@ TEST_CASE("jsonParseRenameTag", "[json][database]")
 		"0": {
 			"operation": 0,
 			"filepaths": {
-				"0": "/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg"
+				"0": "./Images/valid.jpg"
 			}
 		},
 		"2": {
@@ -479,15 +481,15 @@ TEST_CASE("jsonParseRenameTag", "[json][database]")
 	}
 	)";
 	
-	std::string expected = R"({"0":{"imported":{"0":{"filepath":"/home/kj16609/Desktop/Projects/IDHAN/Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:53:53.418013"},"mappings":[],"playerinfo":{"bytes":2556576,"duration":0,"fps":0,"frames":1,"height":1960,"type":1,"width":4032}}}}},"2":{"succeeded":[1]},"4":{"succeeded":{"1":["toujou koneko","series:Highschool DxD"]}},"5":{"succeeded":[0]},"6":{"succeeded":{"1":["series:Highschool DxD","character:toujou koneko"]}}})";
+	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:53:53.418013"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"4":{"succeeded":{"1":["toujou koneko","series:Highschool DxD"]}},"5":{"succeeded":[0]},"6":{"succeeded":{"1":["series:Highschool DxD","character:toujou koneko"]}}})";
 	
 	auto data = parseJson(jsonStr);
 	
 	//Check the first 148 characters match
-	REQUIRE(data.substr(0, 148) == expected.substr(0, 148));
+	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
 	
 	//Check the last 306 characters
-	REQUIRE(data.substr(data.size() - 306, 307) == expected.substr(expected.size() - 306, 307));
+	REQUIRE(data.substr(data.size() - 305, 307) == expected.substr(expected.size() - 305, 307));
 	
 	resetDB();
 }

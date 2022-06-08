@@ -13,4 +13,3 @@ opencv:with_ffmpeg=False
 
 [generators]
 cmake
-cmake_paths

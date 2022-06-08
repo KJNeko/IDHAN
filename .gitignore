@@ -21,12 +21,15 @@ conanbuildinfo.txt
 *.dot
 graph.png
 
+#### Cmake
+*.cmake
+*.tcl
+
 
 ###images
-*.gif
-*.jpg
-*.png
 /bin/apiTest
 /bin/DBTest
 /bin/IDHAN
 /bin/main
+/bin/Testing/Temporary/LastTest.log
+/bin/Testing/Temporary/CTestCostData.txt

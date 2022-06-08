@@ -3,7 +3,6 @@ project(main LANGUAGES CXX)
 
 set(CONAN_SYSTEM_INCLUDES ON)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
 conan_basic_setup()
 
 
@@ -26,7 +25,8 @@ target_include_directories(DBTest PRIVATE ${CMAKE_BINARY_DIR}/libs/libFGL/includ
 target_compile_features(DBTest PRIVATE cxx_std_20)
 target_compile_options(DBTest PRIVATE -fmax-errors=3 -Wpadded -fconcepts-diagnostics-depth=4 -fconstexpr-ops-limit=67108864 -Wall -Wextra -Wundef -Wnull-dereference -Wpedantic -pedantic-errors -Weffc++ -Wnoexcept -Wuninitialized -Wunused -Wunused-parameter -Winit-self -Wconversion -Wuseless-cast -Wextra-semi -Wsuggest-final-types -Wsuggest-final-methods -Wsuggest-override  -Wformat-signedness -Wno-format-zero-length -Wmissing-include-dirs -Wshift-overflow=2 -Walloc-zero -Walloca -Wsign-promo -Wconversion -Wduplicated-branches -Wduplicated-cond -Wfloat-equal -Wshadow -Wshadow=local -Wmultiple-inheritance -Wvirtual-inheritance -Wno-virtual-move-assign -Wunsafe-loop-optimizations -Wnormalized -Wpacked -Wredundant-decls -Wmismatched-tags -Wredundant-tags -Wctor-dtor-privacy -Wdeprecated-copy-dtor -Wstrict-null-sentinel -Wold-style-cast -Woverloaded-virtual -Wzero-as-null-pointer-constant -Wconditionally-supported -Werror=pedantic -Wwrite-strings -Wmultiple-inheritance -Wunused-const-variable=2 -Wdouble-promotion -Wpointer-arith -Wcast-align=strict -Wcast-qual -Wconversion -Wsign-conversion -Wimplicit-fallthrough=1 -Wmisleading-indentation -Wdangling-else -Wdate-time -Wformat=2 -Wformat-overflow=2 -Wformat-signedness -Wformat-truncation=2 -Wswitch-default -Wswitch-enum -Wstrict-overflow=5 -Wstringop-overflow=4 -Warray-bounds=2 -Wattribute-alias=2 -Wcatch-value=2 -Wplacement-new=2 -Wtrampolines -Winvalid-imported-macros -Winvalid-imported-macros -Og -g -fstrict-aliasing -fno-omit-frame-pointer -fstack-check -ftrapv -fwrapv -fverbose-asm -femit-class-debug-always)
 target_compile_definitions(DBTest PRIVATE FGL_ACKNOWLEDGE_INCOMPATIBLE_COMPILER)
-target_link_libraries(DBTest ${CONAN_LIBS} Catch2::Catch2WithMain)
+target_link_libraries(DBTest ${CONAN_LIBS})
+
 
 include(CTest)
 include(Catch)
