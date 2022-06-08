@@ -14,8 +14,6 @@ std::string parseJson(std::string& json)
 	{
 		//auto operationID = item["operation"].get<OperationType>();
 		
-		std::cout << "Operating on item: " << item.key() << std::endl;
-		
 		auto jsnitem = jsn[item.key()];
 		OperationType opID = jsnitem["operation"].get<OperationType>();
 		switch(opID)

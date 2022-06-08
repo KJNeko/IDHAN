@@ -60,7 +60,8 @@ uint64_t addFile(std::filesystem::path path)
 	using MrMime::header_data_buffer_t;
 	if(!std::filesystem::exists(path))
 	{
-		throw std::runtime_error("File does not exist");
+		std::string currentpwd = std::filesystem::current_path().string();
+		throw std::runtime_error("Unable to find file: " + path.string() + " in " + currentpwd);
 	}
 	
 	const std::size_t size{std::filesystem::file_size(path)};

@@ -56,12 +56,12 @@ namespace MrMime
 				return LEN - 1;
 			}
 
-			[[nodiscard]] constexpr inline std::byte operator[]( const decltype(m_bytes)::size_type i ) const
+			[[nodiscard]] constexpr inline std::byte operator[]( const typename decltype(m_bytes)::size_type i ) const
 			{
 				return m_bytes.at( i );
 			}
 
-			[[nodiscard]] constexpr inline std::byte& operator[]( const decltype(m_bytes)::size_type i )
+			[[nodiscard]] constexpr inline std::byte& operator[]( const typename decltype(m_bytes)::size_type i )
 			{
 				return m_bytes.at( i );
 			}
