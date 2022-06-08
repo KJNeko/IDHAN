@@ -1,8 +1,15 @@
 [requires]
 libpqxx/7.7.3
-libFGL/latest@alaestor/volatile
 catch2/2.13.9
 restinio/0.6.9
+nlohmann_json/3.10.5
+libpqxx/7.7.3
+openssl/3.0.3
+libFGL/latest@alaestor/main
+opencv/4.5.5
+
+[options]
+opencv:with_ffmpeg=False
 
 [generators]
 cmake

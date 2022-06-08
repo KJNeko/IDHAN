@@ -77,6 +77,7 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 
 #include "database.hpp"
 #include "jsonparser.hpp"
+#include "crypto.hpp"
 
 
 #define CONSTEXPR_REQUIRES(expr) \
@@ -88,6 +89,21 @@ void resetDB()
 {
 	Connection conn;
 	conn.resetDB();
+}
+
+TEST_CASE("SHA256Test", "[crypto]")
+{
+	std::vector<uint8_t> expected {0x9f,0x86,0xd0,0x81,0x88,0x4c,0x7d,0x65,0x9a,0x2f,0xea,0xa0,0xc5,0x5a,0xd0,0x15,0xa3,0xbf,0x4f,0x1b,0x2b,0x0b,0x82,0x2c,0xd1,0x5d,0x6c,0x15,0xb0,0xf0,0x0a,0x08};
+	std::vector<uint8_t> data = {'t','e','s','t'};
+	REQUIRE(SHA256(data) == expected);
+}
+
+TEST_CASE("MD5Test", "[crypto]")
+{
+	std::vector<uint8_t> expected {0x09,0x8f,0x6b,0xcd,0x46,0x21,0xd3,0x73,0xca,0xde,0x4e,0x83,0x26,0x27,0xb4,0xf6};
+	std::vector<uint8_t> data = {'t','e','s','t'};
+	
+	REQUIRE(MD5(data) == expected);
 }
 
 TEST_CASE("ConnectionTest", "[database]")
@@ -105,7 +121,13 @@ TEST_CASE("addTag", "[tags][database]")
 	
 	//First paramter: HashID
 	//Second paramter: List of tags to add
-	REQUIRE(addTag(1, tags) == true);
+	uint64_t id = addFile("./Images/valid.jpg");
+	if(id == 0)
+	{
+		throw std::runtime_error("Could not add file");
+		FAIL("ID was returned as 0 from addFile");
+	}
+	addTag(id, tags);
 	
 	//Testing
 	{
@@ -131,6 +153,9 @@ TEST_CASE("addTag", "[tags][database]")
 		
 		wrk.commit();
 	}
+	
+	SUCCEED();
+	resetDB();
 }
 
 TEST_CASE("removeTag", "[tags][database]")
@@ -143,8 +168,13 @@ TEST_CASE("removeTag", "[tags][database]")
 	
 	//First paramter: HashID
 	//Second paramter: List of tags to add
-	addTag(1, tags);
-	removeTag(1, tags);
+	uint64_t id = addFile("./Images/valid.jpg");
+	if(id == 0)
+	{
+		throw std::runtime_error("Could not add file");
+	}
+	addTag(id, tags);
+	removeTag(id, tags);
 	
 	
 	{
@@ -163,6 +193,7 @@ TEST_CASE("removeTag", "[tags][database]")
 		wrk.commit();
 	}
 	
+	resetDB();
 }
 
 TEST_CASE("getTags", "[tags][database]")
@@ -175,31 +206,56 @@ TEST_CASE("getTags", "[tags][database]")
 	
 	//First paramter: HashID
 	//Second paramter: List of tags to add
-	addTag(1, tags);
+	uint64_t id = addFile("./Images/valid.jpg");
+	if(id == 0)
+	{
+		throw std::runtime_error("Could not add file");
+	}
+	addTag(id, tags);
 	
 	auto retTags = getTags(1);
 	REQUIRE(retTags.size() == tags.size());
 	REQUIRE(retTags == tags);
+	
+	resetDB();
 }
 
 TEST_CASE("jsonParseAddFile", "[json][database]")
 {
+	resetDB();
+	
 	std::string jsonStr = R"(
 	{
 		"0": {
 			"operation": 0,
 			"filepaths": {
-				"0": "/test/"
+				"0": "./Images/valid.jpg",
+				"1": "./Images/doesntexist.png",
+				"2": "./Images/invalid.txt"
 			}
 		}
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"0":{"failed":{"1":"File does not exist: ./Images/doesntexist.png","2":"File parser was unable to make sense of the file"},"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:41:47.789093"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}}})";
+	
+	//Check for fail condition
+	std::string data = parseJson(jsonStr);
+	
+	//Check if the first 25 characters match
+	REQUIRE(data.substr(0, 240) == expected.substr(0, 240));
+	
+	//Check if the last 121 characters match
+	REQUIRE(data.substr(data.size() - 119, 121) == expected.substr(expected.size() - 119, 121));
+	
+	
+	resetDB();
 }
 
 TEST_CASE("jsonParseRemoveFile", "[json][database]")
 {
+	resetDB();
+	
 	std::string jsonStr = R"(
 	{
 		"1": {
@@ -209,16 +265,32 @@ TEST_CASE("jsonParseRemoveFile", "[json][database]")
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"1":{"succeeded":[1,2,3,4]}})";
+	
+	auto data = parseJson(jsonStr);
+	
+	std::cout << data << std::endl;
+	std::cout << expected << std::endl;
+	
+	REQUIRE(data == expected);
+	resetDB();
 }
 
 TEST_CASE("jsonParseAddTag", "[json][database]")
 {
+	resetDB();
+	
 	std::string jsonStr = R"(
 	{
+		"0": {
+			"operation": 0,
+			"filepaths": {
+				"0": "./Images/valid.jpg"
+			}
+		},
 		"2": {
 			"operation": 2,
-			"hashIDs": [1,2,3,4],
+			"hashIDs": [1,2],
 			"tags": {
 				"0": {
 					"group": "",
@@ -233,13 +305,48 @@ TEST_CASE("jsonParseAddTag", "[json][database]")
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:50:42.272076"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"failed":[2],"succeeded":[1]}})";
+	
+	auto data = parseJson(jsonStr);
+	
+	std::cout << data << std::endl;
+	std::cout << expected << std::endl;
+	
+	//Check that the first 151 characters match
+	REQUIRE(data.substr(0, 113) == expected.substr(0, 113));
+	
+	//Check that the last 160 characters match
+	REQUIRE(data.substr(data.size() - 153, 155) == expected.substr(expected.size() - 153, 155));
+	
+	resetDB();
 }
 
 TEST_CASE("jsonParseRemoveTag", "[json][database]")
 {
+	resetDB();
+	
 	std::string jsonStr = R"(
 	{
+		"0": {
+			"operation": 0,
+			"filepaths": {
+				"0": "./Images/valid.jpg"
+			}
+		},
+		"2": {
+			"operation": 2,
+			"hashIDs": [1],
+			"tags": {
+				"0": {
+					"group": "",
+					"subtag": "toujou koneko"
+				},
+				"1": {
+					"group": "series",
+					"subtag": "Highschool DxD"
+				}
+			}
+		},
 		"3": {
 			"operation": 3,
 			"hashIDs": [1,2,3,4],
@@ -253,36 +360,142 @@ TEST_CASE("jsonParseRemoveTag", "[json][database]")
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:57:41.678387"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"3":{"succeeded":[1,2,3,4]}})";
+	
+	auto data = parseJson(jsonStr);
+	
+	//Compare the first 148 characters
+	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
+	
+	//Compare the last 170 characters
+	REQUIRE(data.substr(data.size() - 169, 171) == expected.substr(expected.size() - 169, 171));
+	
+	resetDB();
 }
 
 TEST_CASE("jsonParseGetTag", "[json][database]")
-{	std::string jsonStr = R"(
+{
+	resetDB();
+	
+	std::string jsonStr = R"(
 	{
-	"5": {
-		"operation": 5,
-		"pairs": {
+	"0": {
+		"operation": 0,
+		"filepaths": {
+			"0": "./Images/valid.jpg"
+		}
+	},
+	"2": {
+		"operation": 2,
+		"hashIDs": [1],
+		"tags": {
 			"0": {
-				"origin": {
+				"group": "",
+				"subtag": "toujou koneko"
+			},
+			"1": {
+				"group": "series",
+				"subtag": "Highschool DxD"
+			}
+		}
+	},
+	"7": {
+		"operation": 4,
+		"hashIDs": [1,2]
+	}
+	}
+	)";
+	
+	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:10:52.871199"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"7":{"failed":{"2":"HashID does not exist"},"succeeded":{"1":["toujou koneko","series:Highschool DxD"]}}})";
+	
+	auto data = parseJson(jsonStr);
+	
+	
+	
+	//Check that the first 148 characters match
+	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
+	
+	//Check that the last 247 characters match
+	REQUIRE(data.substr(data.size() - 246, 248) == expected.substr(expected.size() - 246, 248));
+	
+	resetDB();
+}
+
+TEST_CASE("jsonParseRenameTag", "[json][database]")
+{
+	resetDB();
+	
+	std::string jsonStr = R"(
+	{
+		"0": {
+			"operation": 0,
+			"filepaths": {
+				"0": "./Images/valid.jpg"
+			}
+		},
+		"2": {
+			"operation": 2,
+			"hashIDs": [
+				1
+			],
+			"tags": {
+				"0": {
 					"group": "",
 					"subtag": "toujou koneko"
 				},
-				"new": {
-					"group": "character",
-					"subtag": "toujou koneko"
-				}
+				"1": {
+					"group": "series",
+					"subtag": "Highschool DxD"
 				}
 			}
+		},
+		"4": {
+			"operation": 4,
+			"hashIDs": [
+				1
+			]
+		},
+		"5": {
+			"operation": 5,
+			"pairs": {
+				"0": {
+					"origin": {
+						"group": "",
+						"subtag": "toujou koneko"
+					},
+					"new": {
+						"group": "character",
+						"subtag": "toujou koneko"
+					}
+				}
+			}
+		},
+		"6": {
+			"operation": 4,
+			"hashIDs": [
+				1
+			]
 		}
 	}
 	)";
 	
-	parseJson(jsonStr);
+	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:53:53.418013"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"4":{"succeeded":{"1":["toujou koneko","series:Highschool DxD"]}},"5":{"succeeded":[0]},"6":{"succeeded":{"1":["series:Highschool DxD","character:toujou koneko"]}}})";
+	
+	auto data = parseJson(jsonStr);
+	
+	//Check the first 148 characters match
+	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
+	
+	//Check the last 306 characters
+	REQUIRE(data.substr(data.size() - 305, 307) == expected.substr(expected.size() - 305, 307));
+	
+	resetDB();
 }
 
 TEST_CASE("jsonParse", "[json][database]")
 {
 	resetDB();
+	
 	std::string jsonStr = R"(
 	{
 		"0": {
@@ -333,6 +546,7 @@ TEST_CASE("jsonParse", "[json][database]")
 			"pairs": {
 				"0": {
 					"origin": {
+						"group": "",
 						"subtag": "toujou koneko"
 					},
 					"new": {
@@ -359,6 +573,10 @@ TEST_CASE("jsonParse", "[json][database]")
 	}
 	)";
 	
+	std::string expected = R"(DEFINE)";
 	
 	std::cout << parseJson(jsonStr) << std::endl;
+	REQUIRE(parseJson(jsonStr) == expected);
+	
+	resetDB();
 }
