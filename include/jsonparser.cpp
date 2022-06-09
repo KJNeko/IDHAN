@@ -4,9 +4,9 @@
 
 #include "jsonparser.hpp"
 
-nlohmann::json parseJson(std::string& json)
+nlohmann::json parseJson(const std::string& json)
 {
-	auto jsn = nlohmann::json::parse(json);
+	const auto jsn = nlohmann::json::parse(json);
 	
 	nlohmann::json output;
 	

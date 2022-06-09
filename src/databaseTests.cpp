@@ -573,3 +573,50 @@ TEST_CASE("jsonParse", "[json][database]")
 	
 	resetDB();
 }
+
+TEST_CASE("HighQuantityImport", "[perf]")
+{
+	resetDB();
+	
+	#ifndef NDEBUG
+	
+	std::filesystem::path path = std::filesystem::current_path().string() + "/../Images/Perf/JPG/";
+	
+	if(std::filesystem::exists(path))
+	{
+		//Create json package
+		nlohmann::json json;
+		
+		std::vector<std::string> filepaths;
+		
+		for(auto& file : std::filesystem::directory_iterator(path))
+		{
+			filepaths.push_back(file.path().lexically_normal().string());
+		}
+		
+		json["0"]["operation"] = 0;
+		json["0"]["filepaths"] = filepaths;
+		
+		auto start = std::chrono::high_resolution_clock::now();
+		
+		const std::string dump = json.dump();
+		
+		auto data = parseJson(dump);
+		
+		std::cout << data.dump(4) << std::endl;
+		
+		auto end = std::chrono::high_resolution_clock::now();
+		
+		std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+		
+		SUCCEED();
+	}
+	else
+	{
+		FAIL(path.string() + " does not exist");
+	}
+	
+	#endif
+	
+	resetDB();
+}

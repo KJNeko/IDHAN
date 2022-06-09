@@ -5,7 +5,6 @@
 #include "database.hpp"
 
 #include <fstream>
-#include <opencv2/opencv.hpp>
 
 void Connection::createTables()
 {
@@ -110,10 +109,13 @@ uint64_t addFile(std::filesystem::path path)
 				//Insert the player info
 				uint64_t hashid = res[0][0].as<uint64_t>();
 				
-				//PNG check if()
+				//Check if Animated
 				
-				//OpenCV load image
-				cv::Mat img = cv::imdecode(image_data, cv::IMREAD_COLOR);
+				
+				//Open image from array
+				
+				
+				
 				
 				wrk.exec_prepared("insertPlayerInfo", hashid, static_cast<uint16_t>(MIMEType), 1, size, img.rows, img.cols, 0, 0);
 				
