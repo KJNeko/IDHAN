@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.1)
 project(main LANGUAGES CXX)
 
 set(CONAN_SYSTEM_INCLUDES ON)
