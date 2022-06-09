@@ -22,7 +22,7 @@ enum OperationType
 
 
 
-std::string parseJson(std::string& json);
+nlohmann::json parseJson(std::string& json);
 
 
 #endif //MAIN_JSONPARSER_HPP

@@ -84,7 +84,6 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
   static_assert(expr);\
   REQUIRE(expr);
 
-
 void resetDB()
 {
 	Connection conn;
@@ -214,6 +213,7 @@ TEST_CASE("getTags", "[tags][database]")
 	addTag(id, tags);
 	
 	auto retTags = getTags(1);
+	
 	REQUIRE(retTags.size() == tags.size());
 	REQUIRE(retTags == tags);
 	
@@ -240,13 +240,22 @@ TEST_CASE("jsonParseAddFile", "[json][database]")
 	std::string expected = R"({"0":{"failed":{"1":"File does not exist: ./Images/doesntexist.png","2":"File parser was unable to make sense of the file"},"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:41:47.789093"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}}})";
 	
 	//Check for fail condition
-	std::string data = parseJson(jsonStr);
+	nlohmann::json data = parseJson(jsonStr);
 	
-	//Check if the first 25 characters match
-	REQUIRE(data.substr(0, 240) == expected.substr(0, 240));
+	REQUIRE(data["0"]["imported"]["0"]["filepath"] == "./Images/valid.jpg");
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["importinfo"]["filename"] == "valid.jpg");
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["mappings"].empty());
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["bytes"] == 755424);
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["duration"] == 0);
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["fps"] == 0);
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["frames"] == 1);
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["height"] == 4032);
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["type"] == 1);
+	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["width"] == 1960);
 	
-	//Check if the last 121 characters match
-	REQUIRE(data.substr(data.size() - 119, 121) == expected.substr(expected.size() - 119, 121));
+	
+	REQUIRE(data["0"]["failed"]["1"] == "File does not exist: ./Images/doesntexist.png");
+	REQUIRE(data["0"]["failed"]["2"] == "File parser was unable to make sense of the file");
 	
 	
 	resetDB();
@@ -269,10 +278,8 @@ TEST_CASE("jsonParseRemoveFile", "[json][database]")
 	
 	auto data = parseJson(jsonStr);
 	
-	std::cout << data << std::endl;
-	std::cout << expected << std::endl;
+	REQUIRE(data["1"]["succeeded"] == std::vector<uint64_t>({1,2,3,4}));
 	
-	REQUIRE(data == expected);
 	resetDB();
 }
 
@@ -309,14 +316,9 @@ TEST_CASE("jsonParseAddTag", "[json][database]")
 	
 	auto data = parseJson(jsonStr);
 	
-	std::cout << data << std::endl;
-	std::cout << expected << std::endl;
-	
-	//Check that the first 151 characters match
-	REQUIRE(data.substr(0, 113) == expected.substr(0, 113));
-	
-	//Check that the last 160 characters match
-	REQUIRE(data.substr(data.size() - 153, 155) == expected.substr(expected.size() - 153, 155));
+	//Parse AddTag test
+	REQUIRE(data["2"]["failed"] == std::vector<uint64_t>({2}));
+	REQUIRE(data["2"]["succeeded"] == std::vector<uint64_t>({1}));
 	
 	resetDB();
 }
@@ -364,11 +366,8 @@ TEST_CASE("jsonParseRemoveTag", "[json][database]")
 	
 	auto data = parseJson(jsonStr);
 	
-	//Compare the first 148 characters
-	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
-	
-	//Compare the last 170 characters
-	REQUIRE(data.substr(data.size() - 169, 171) == expected.substr(expected.size() - 169, 171));
+	//Parse RemoveTag test
+	REQUIRE(data["3"]["succeeded"] == std::vector<uint64_t>({1,2,3,4}));
 	
 	resetDB();
 }
@@ -410,13 +409,8 @@ TEST_CASE("jsonParseGetTag", "[json][database]")
 	
 	auto data = parseJson(jsonStr);
 	
-	
-	
-	//Check that the first 148 characters match
-	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
-	
-	//Check that the last 247 characters match
-	REQUIRE(data.substr(data.size() - 246, 248) == expected.substr(expected.size() - 246, 248));
+	REQUIRE(data["7"]["failed"]["2"] == "HashID does not exist");
+	REQUIRE(data["7"]["succeeded"]["1"] == std::vector<std::string>({"toujou koneko","series:Highschool DxD"}));
 	
 	resetDB();
 }
@@ -483,11 +477,10 @@ TEST_CASE("jsonParseRenameTag", "[json][database]")
 	
 	auto data = parseJson(jsonStr);
 	
-	//Check the first 148 characters match
-	REQUIRE(data.substr(0, 58) == expected.substr(0, 58));
+	REQUIRE(data["4"]["succeeded"]["1"] == std::vector<std::string>({"toujou koneko","series:Highschool DxD"}));
+	REQUIRE(data["5"]["succeeded"] == std::vector<uint64_t>({0}));
+	REQUIRE(data["6"]["succeeded"]["1"] == std::vector<std::string>({"series:Highschool DxD","character:toujou koneko"}));
 	
-	//Check the last 306 characters
-	REQUIRE(data.substr(data.size() - 305, 307) == expected.substr(expected.size() - 305, 307));
 	
 	resetDB();
 }
