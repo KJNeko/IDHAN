@@ -107,38 +107,31 @@ uint64_t addFile(std::filesystem::path path)
 			image_data.resize(size);
 			ifs.read(reinterpret_cast<char*>(image_data.data()), static_cast<long>(size) );
 			
-			/*auto md5_future = std::async(std::launch::async, [&image_data](){
-				ZoneScopedN("md5");
-				TracyCSetThreadName("md5");
-				return MD5(image_data);
+
+			std::shared_future<std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>> hash_future = std::async(std::launch::async, [&image_data]()
+			{
+				ZoneScopedN( "ImageHash" );
+				return std::make_tuple(SHA256( image_data ), MD5( image_data ));
 			}).share();
 			
-			auto sha256_future = std::async(std::launch::async, [&image_data](){
-				ZoneScopedN("sha256");
-				TracyCSetThreadName("sha256");
-				return SHA256(image_data);
-			}).share();
-			
-			auto image_future = std::async(std::launch::async, [&image_data](){
+			auto images_future = std::async(std::launch::async, [&image_data, &hash_future](){
 				ZoneScopedN("ImageLoading");
-				TracyCSetThreadName("ImageLoading");
-				return vips::VImage::new_from_buffer(image_data.data(), image_data.size(), "");
-			}).share();
-			
-			auto image_resize_future = std::async(std::launch::async, [&image_future, &sha256_future](){
-				ZoneScopedN("ImageResize");
-				TracyCSetThreadName("ImageResize");
-				auto img = image_future.get();
+				auto img = vips::VImage::new_from_buffer(image_data.data(), image_data.size(), "");
 				double scaleValue = std::min(
 						static_cast<double>(idhan::config::thumbnail_width) / static_cast<double>(img.width()),
 						static_cast<double>(idhan::config::thumbnail_height) / static_cast<double>(img.height()) );
-				img = img.resize(scaleValue);
-				auto path = idhan::config::thumbnail_path;
+				auto image_resized = img.resize(scaleValue);
 				
-				path.append( idhan::utils::toHex( sha256_future.get() ) + ".jpg" );
+				//Write image to disk
+				auto thumb_path = idhan::config::thumbnail_path;
 				
-				if(!std::filesystem::exists(path))
+				auto [sha256, md5] = hash_future.get();
+				
+				thumb_path.append( idhan::utils::toHex( sha256 ) + ".jpg" );
+				
+				if ( !std::filesystem::exists( thumb_path ))
 				{
+					ZoneScopedN("ImageWriting");
 					if ( !idhan::config::thumbnail_pathValid )
 					{
 						//Check if the path exists
@@ -153,29 +146,14 @@ uint64_t addFile(std::filesystem::path path)
 						//Set the path to valid
 						idhan::config::thumbnail_pathValid = true;
 					}
-					img.write_to_file(path.c_str());
+					image_resized.write_to_file( thumb_path.c_str());
 				}
 				
+				return img;
 			});
 			
-			auto md5 = md5_future.get();
-			auto sha256 = sha256_future.get();
-			*/
 			
-			auto md5 = [&image_data](){
-				ZoneScopedN("md5");
-				return MD5(image_data);
-			}();
-			
-			auto sha256 = [&image_data](){
-				ZoneScopedN("sha256");
-				return SHA256(image_data);
-			}();
-			
-			auto image = [&image_data](){
-				ZoneScopedN("ImageLoading");
-				return vips::VImage::new_from_buffer(image_data.data(), image_data.size(), "");
-			}();
+			auto [sha256, md5] = hash_future.get();
 			
 			std::basic_string_view<std::byte> sha256_view = std::basic_string_view(reinterpret_cast<std::byte*>(sha256.data()), sha256.size());
 			std::basic_string_view<std::byte> md5_view = std::basic_string_view(reinterpret_cast<std::byte*>(md5.data()), md5.size());
@@ -186,52 +164,28 @@ uint64_t addFile(std::filesystem::path path)
 			if(res.size() == 0)
 			{
 				//We have not imported this file before
-				ZoneScopedN("InsertFile");
+				ZoneScopedN( "InsertFile" );
 				
 				//Insert the file into the database
-				res = wrk.exec_prepared("insertFile", sha256_view, md5_view);
+				res = wrk.exec_prepared( "insertFile", sha256_view, md5_view );
 				
 				//Insert the player info
 				uint64_t hashid = res[0][0].as<uint64_t>();
 				
 				//Check if Animated
-				std::string hex_sha256 = idhan::utils::toHex(sha256);
+				std::string hex_sha256 = idhan::utils::toHex( sha256 );
 				
-				wrk.exec_prepared("insertPlayerInfo", hashid, static_cast<uint16_t>(MIMEType), 1, size, image.height(), image.width(), 0, 0);
+				auto image = images_future.get();
+				wrk.exec_prepared(
+						"insertPlayerInfo", hashid,
+						static_cast<uint16_t>(MIMEType), 1, size,
+						image.height(), image.width(), 0, 0 );
 				
 				//Insert the import info
-				wrk.exec_prepared("insertImportInfo", hashid, path.filename().string());
+				wrk.exec_prepared(
+						"insertImportInfo", hashid, path.filename().string());
+				
 			}
-			
-				[&image, &sha256](){
-				ZoneScopedN("ImageResize");
-				double scaleValue = std::min(
-						static_cast<double>(idhan::config::thumbnail_width) / static_cast<double>(image.width()),
-						static_cast<double>(idhan::config::thumbnail_height) / static_cast<double>(image.height()) );
-				image = image.resize(scaleValue);
-				auto path = idhan::config::thumbnail_path;
-				
-				path.append( idhan::utils::toHex( sha256 ) + ".jpg" );
-				
-				if(!std::filesystem::exists(path))
-				{
-					if ( !idhan::config::thumbnail_pathValid )
-					{
-						//Check if the path exists
-						if ( !std::filesystem::exists(
-								idhan::config::thumbnail_path ))
-						{
-							//Create the directory
-							std::filesystem::create_directory(
-									idhan::config::thumbnail_path );
-						}
-						
-						//Set the path to valid
-						idhan::config::thumbnail_pathValid = true;
-					}
-					image.write_to_file(path.c_str());
-				}
-			}();
 			
 			wrk.commit();
 			return res[0][0].as<uint64_t>();
