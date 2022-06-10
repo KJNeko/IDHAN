@@ -63,26 +63,27 @@ query:DELETE FROM mappings where hashid IN ($1) and where groupid IN ($2) and wh
 what:get_tags
 args: hashID
 query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN ($1)
-
-
-
-
-
-
-
 */
-#define CATCH_CONFIG_MAIN
+
+#define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
 #include <vector>
 
 #include "database.hpp"
 #include "jsonparser.hpp"
 #include "crypto.hpp"
+#include "idhanthreads.hpp"
+
+#include <vips/vips8>
+#include <vips/VImage8.h>
+
+#include <Tracy.hpp>
 
 
 #define CONSTEXPR_REQUIRES(expr) \
   static_assert(expr);\
   REQUIRE(expr);
+
 
 void resetDB()
 {
@@ -472,10 +473,10 @@ TEST_CASE("jsonParseRenameTag", "[json][database]")
 		}
 	}
 	)";
-	
-	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:53:53.418013"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"4":{"succeeded":{"1":["toujou koneko","series:Highschool DxD"]}},"5":{"succeeded":[0]},"6":{"succeeded":{"1":["series:Highschool DxD","character:toujou koneko"]}}})";
-	
+
 	auto data = parseJson(jsonStr);
+	
+	std::cout << data.dump(4) << std::endl;
 	
 	REQUIRE(data["4"]["succeeded"]["1"] == std::vector<std::string>({"toujou koneko","series:Highschool DxD"}));
 	REQUIRE(data["5"]["succeeded"] == std::vector<uint64_t>({0}));
@@ -580,7 +581,7 @@ TEST_CASE("HighQuantityImport", "[perf]")
 	
 	#ifndef NDEBUG
 	
-	std::filesystem::path path = std::filesystem::current_path().string() + "/../Images/Perf/JPG/";
+	std::filesystem::path path = "./Images/Perf/JPG/";
 	
 	if(std::filesystem::exists(path))
 	{
@@ -619,4 +620,23 @@ TEST_CASE("HighQuantityImport", "[perf]")
 	#endif
 	
 	resetDB();
+}
+
+int main(int argc, char** argv)
+{
+	//VIPS
+	if(VIPS_INIT(argv[0]))
+	{
+		throw std::runtime_error("Failed to initialize vips");
+	}
+	
+	
+	//Catch2
+	int result = Catch::Session().run( argc, argv );
+	
+	//VIPS
+	vips_shutdown();
+	
+	
+	return result;
 }

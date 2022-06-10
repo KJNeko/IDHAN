@@ -3,8 +3,22 @@
 //
 
 #include "database.hpp"
+#include "utility/fileutils.hpp"
+#include "utility/config.hpp"
+#include "idhanthreads.hpp"
+
+
 
 #include <fstream>
+#include <future>
+
+
+//vips
+#include <vips/vips8>
+#include <vips/VImage8.h>
+#include <iostream>
+
+#include <Tracy.hpp>
 
 void Connection::createTables()
 {
@@ -56,6 +70,7 @@ void Connection::resetDB()
 
 uint64_t addFile(std::filesystem::path path)
 {
+	
 	using MrMime::header_data_buffer_t;
 	if(!std::filesystem::exists(path))
 	{
@@ -86,23 +101,93 @@ uint64_t addFile(std::filesystem::path path)
 		case MrMime::IMAGE_GIF: [[fallthrough]];
 		case MrMime::IMAGE_BMP:
 		{
+			ZoneScopedN("ImageParsing");
 			//Load the rest of the file into memory
 			std::vector<uint8_t> image_data;
 			image_data.resize(size);
 			ifs.read(reinterpret_cast<char*>(image_data.data()), static_cast<long>(size) );
 			
-			auto md5 = MD5(image_data);
-			auto sha256 = SHA256(image_data);
+			/*auto md5_future = std::async(std::launch::async, [&image_data](){
+				ZoneScopedN("md5");
+				TracyCSetThreadName("md5");
+				return MD5(image_data);
+			}).share();
+			
+			auto sha256_future = std::async(std::launch::async, [&image_data](){
+				ZoneScopedN("sha256");
+				TracyCSetThreadName("sha256");
+				return SHA256(image_data);
+			}).share();
+			
+			auto image_future = std::async(std::launch::async, [&image_data](){
+				ZoneScopedN("ImageLoading");
+				TracyCSetThreadName("ImageLoading");
+				return vips::VImage::new_from_buffer(image_data.data(), image_data.size(), "");
+			}).share();
+			
+			auto image_resize_future = std::async(std::launch::async, [&image_future, &sha256_future](){
+				ZoneScopedN("ImageResize");
+				TracyCSetThreadName("ImageResize");
+				auto img = image_future.get();
+				double scaleValue = std::min(
+						static_cast<double>(idhan::config::thumbnail_width) / static_cast<double>(img.width()),
+						static_cast<double>(idhan::config::thumbnail_height) / static_cast<double>(img.height()) );
+				img = img.resize(scaleValue);
+				auto path = idhan::config::thumbnail_path;
+				
+				path.append( idhan::utils::toHex( sha256_future.get() ) + ".jpg" );
+				
+				if(!std::filesystem::exists(path))
+				{
+					if ( !idhan::config::thumbnail_pathValid )
+					{
+						//Check if the path exists
+						if ( !std::filesystem::exists(
+								idhan::config::thumbnail_path ))
+						{
+							//Create the directory
+							std::filesystem::create_directory(
+									idhan::config::thumbnail_path );
+						}
+						
+						//Set the path to valid
+						idhan::config::thumbnail_pathValid = true;
+					}
+					img.write_to_file(path.c_str());
+				}
+				
+			});
+			
+			auto md5 = md5_future.get();
+			auto sha256 = sha256_future.get();
+			*/
+			
+			auto md5 = [&image_data](){
+				ZoneScopedN("md5");
+				return MD5(image_data);
+			}();
+			
+			auto sha256 = [&image_data](){
+				ZoneScopedN("sha256");
+				return SHA256(image_data);
+			}();
+			
+			auto image = [&image_data](){
+				ZoneScopedN("ImageLoading");
+				return vips::VImage::new_from_buffer(image_data.data(), image_data.size(), "");
+			}();
 			
 			std::basic_string_view<std::byte> sha256_view = std::basic_string_view(reinterpret_cast<std::byte*>(sha256.data()), sha256.size());
 			std::basic_string_view<std::byte> md5_view = std::basic_string_view(reinterpret_cast<std::byte*>(md5.data()), md5.size());
-			
 			
 			pqxx::work wrk(Connection::getConn());
 			//Check if we have already imported the file before
 			auto res = wrk.exec_prepared("selectFile", sha256_view);
 			if(res.size() == 0)
 			{
+				//We have not imported this file before
+				ZoneScopedN("InsertFile");
+				
 				//Insert the file into the database
 				res = wrk.exec_prepared("insertFile", sha256_view, md5_view);
 				
@@ -110,20 +195,43 @@ uint64_t addFile(std::filesystem::path path)
 				uint64_t hashid = res[0][0].as<uint64_t>();
 				
 				//Check if Animated
+				std::string hex_sha256 = idhan::utils::toHex(sha256);
 				
-				
-				//Open image from array
-				
-				
-				
-				
-				wrk.exec_prepared("insertPlayerInfo", hashid, static_cast<uint16_t>(MIMEType), 1, size, img.rows, img.cols, 0, 0);
+				wrk.exec_prepared("insertPlayerInfo", hashid, static_cast<uint16_t>(MIMEType), 1, size, image.height(), image.width(), 0, 0);
 				
 				//Insert the import info
 				wrk.exec_prepared("insertImportInfo", hashid, path.filename().string());
 			}
 			
-			
+				[&image, &sha256](){
+				ZoneScopedN("ImageResize");
+				double scaleValue = std::min(
+						static_cast<double>(idhan::config::thumbnail_width) / static_cast<double>(image.width()),
+						static_cast<double>(idhan::config::thumbnail_height) / static_cast<double>(image.height()) );
+				image = image.resize(scaleValue);
+				auto path = idhan::config::thumbnail_path;
+				
+				path.append( idhan::utils::toHex( sha256 ) + ".jpg" );
+				
+				if(!std::filesystem::exists(path))
+				{
+					if ( !idhan::config::thumbnail_pathValid )
+					{
+						//Check if the path exists
+						if ( !std::filesystem::exists(
+								idhan::config::thumbnail_path ))
+						{
+							//Create the directory
+							std::filesystem::create_directory(
+									idhan::config::thumbnail_path );
+						}
+						
+						//Set the path to valid
+						idhan::config::thumbnail_pathValid = true;
+					}
+					image.write_to_file(path.c_str());
+				}
+			}();
 			
 			wrk.commit();
 			return res[0][0].as<uint64_t>();
@@ -171,12 +279,16 @@ uint64_t addFile(std::filesystem::path path)
 			break;
 	}
 	
+	//Wait for all thumbnailFutures to complete
+	
+	
 	return 0;
 }
 
 
 void addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags)
 {
+	ZoneScopedN("addTag");
 	Connection conn;
 	pqxx::work wrk (conn.getConn());
 	
@@ -221,6 +333,7 @@ void addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> ta
 
 void removeTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags)
 {
+	ZoneScopedN("removeTag");
 	Connection conn;
 	pqxx::work wrk( conn.getConn());
 	
@@ -279,6 +392,7 @@ void removeTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>>
 
 std::vector<std::pair<std::string, std::string>> getTags(uint64_t hashID)
 {
+	ZoneScopedN("getTags");
 	Connection conn;
 	pqxx::work wrk(conn.getConn());
 	
@@ -302,8 +416,7 @@ std::vector<std::pair<std::string, std::string>> getTags(uint64_t hashID)
 
 void replaceTag(std::pair<std::string, std::string> origin, std::pair<std::string, std::string> replacement)
 {
-	std::cout << "Replacing tag " << origin.first << ":" << origin.second << " with " << replacement.first << ":" << replacement.second << std::endl;
-	
+	ZoneScopedN("replaceTag");
 	Connection conn;
 	pqxx::work wrk( conn.getConn());
 	
@@ -388,18 +501,13 @@ void replaceTag(std::pair<std::string, std::string> origin, std::pair<std::strin
 			std::to_string( origingroup ) + " AND subtagid = " +
 			std::to_string( originsubtag ));
 	
-	std::cout << "Command: " << "UPDATE mappings SET groupid = " +
-								std::to_string( replacegroup ) + ", subtagid = " +
-								std::to_string( replacesubtag ) + " WHERE groupid = " +
-								std::to_string( origingroup ) + " AND subtagid = " +
-								std::to_string( originsubtag ) << std::endl;
-	
 	wrk.commit();
 }
 
 
 nlohmann::json getFileinfo(uint64_t hashID)
 {
+	ZoneScopedN("getFileinfo");
 	Connection conn;
 	pqxx::work wrk(conn.getConn());
 	

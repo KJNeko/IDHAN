@@ -10,6 +10,9 @@
 #include "MrMime/mister_mime.hpp"
 #include "crypto.hpp"
 
+#include <Tracy.hpp>
+
+
 class Connection
 {
 	static inline bool valid {false};

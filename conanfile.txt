@@ -5,6 +5,7 @@ nlohmann_json/3.10.5
 libpqxx/7.7.3
 openssl/3.0.3
 libFGL/latest@alaestor/main
+glib/2.73.0
 
 [generators]
 cmake

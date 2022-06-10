@@ -4,8 +4,11 @@
 
 #include "jsonparser.hpp"
 
+#include <Tracy.hpp>
+
 nlohmann::json parseJson(const std::string& json)
 {
+	ZoneScopedN("parseJson");
 	const auto jsn = nlohmann::json::parse(json);
 	
 	nlohmann::json output;
@@ -20,6 +23,7 @@ nlohmann::json parseJson(const std::string& json)
 		{
 			case OperationType::AddFile:
 			{
+				ZoneScopedN("AddFile");
 				for(auto& file : jsn[item.key()]["filepaths"].items())
 				{
 					std::filesystem::path path = file.value().get<std::string>();
@@ -45,11 +49,16 @@ nlohmann::json parseJson(const std::string& json)
 			}
 				break;
 			case OperationType::RemoveFile:
+			{
+				ZoneScopedN("RemoveFile");
 				std::cout << "STUB REMOVEFILE" << std::endl;
+			}
+				
 				break;
 			case OperationType::AddTag: [[fallthrough]];
 			case OperationType::RemoveTag:
 			{
+				ZoneScopedN("AddTag/RemoveTag");
 				//Convert the tags into the propery array we want
 				std::vector<std::pair<std::string, std::string>> tags;
 				
@@ -115,6 +124,7 @@ nlohmann::json parseJson(const std::string& json)
 			}
 			case OperationType::GetTag:
 			{
+				ZoneScopedN("GetTag");
 				auto hashID = jsn[item.key()]["hashIDs"].get<std::vector<uint64_t>>();
 				
 				for ( auto& id : hashID )
@@ -151,6 +161,7 @@ nlohmann::json parseJson(const std::string& json)
 			
 			case OperationType::RenameTag:
 			{
+				ZoneScopedN("RenameTag");
 				std::vector<uint64_t> failedVec, succeededVec;
 				
 				for(auto [key, value] : jsn[item.key()]["pairs"].items())
