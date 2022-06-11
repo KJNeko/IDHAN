@@ -70,7 +70,6 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 #include <vector>
 
 #include "database.hpp"
-#include "jsonparser.hpp"
 #include "crypto.hpp"
 #include "idhanthreads.hpp"
 
@@ -221,407 +220,48 @@ TEST_CASE("getTags", "[tags][database]")
 	resetDB();
 }
 
-TEST_CASE("jsonParseAddFile", "[json][database]")
+TEST_CASE("removeFile", "[database]")
 {
 	resetDB();
-	
-	std::string jsonStr = R"(
+	uint64_t id = addFile("./Images/valid.jpg");
+	if(id == 0)
 	{
-		"0": {
-			"operation": 0,
-			"filepaths": {
-				"0": "./Images/valid.jpg",
-				"1": "./Images/doesntexist.png",
-				"2": "./Images/invalid.txt"
-			}
-		}
+		throw std::runtime_error("Could not add file");
 	}
-	)";
+	//Add random tags
+	std::vector<std::pair<std::string, std::string>> tags;
+	tags.push_back(std::make_pair("character", "toujou koneko"));
+	tags.push_back(std::make_pair("series", "Highschool DxD"));
 	
-	std::string expected = R"({"0":{"failed":{"1":"File does not exist: ./Images/doesntexist.png","2":"File parser was unable to make sense of the file"},"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:41:47.789093"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}}})";
+	addTag(id, tags);
 	
-	//Check for fail condition
-	nlohmann::json data = parseJson(jsonStr);
+	removeFile(id);
 	
-	REQUIRE(data["0"]["imported"]["0"]["filepath"] == "./Images/valid.jpg");
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["importinfo"]["filename"] == "valid.jpg");
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["mappings"].empty());
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["bytes"] == 755424);
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["duration"] == 0);
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["fps"] == 0);
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["frames"] == 1);
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["height"] == 4032);
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["type"] == 1);
-	REQUIRE(data["0"]["imported"]["0"]["tabledata"]["playerinfo"]["width"] == 1960);
-	
-	
-	REQUIRE(data["0"]["failed"]["1"] == "File does not exist: ./Images/doesntexist.png");
-	REQUIRE(data["0"]["failed"]["2"] == "File parser was unable to make sense of the file");
-	
-	
-	resetDB();
-}
-
-TEST_CASE("jsonParseRemoveFile", "[json][database]")
-{
-	resetDB();
-	
-	std::string jsonStr = R"(
+	//Ensure everything deleted
 	{
-		"1": {
-			"operation": 1,
-			"hashIDs": [1,2,3,4]
-		}
-	}
-	)";
-	
-	std::string expected = R"({"1":{"succeeded":[1,2,3,4]}})";
-	
-	auto data = parseJson(jsonStr);
-	
-	REQUIRE(data["1"]["succeeded"] == std::vector<uint64_t>({1,2,3,4}));
-	
-	resetDB();
-}
-
-TEST_CASE("jsonParseAddTag", "[json][database]")
-{
-	resetDB();
-	
-	std::string jsonStr = R"(
-	{
-		"0": {
-			"operation": 0,
-			"filepaths": {
-				"0": "./Images/valid.jpg"
-			}
-		},
-		"2": {
-			"operation": 2,
-			"hashIDs": [1,2],
-			"tags": {
-				"0": {
-					"group": "",
-					"subtag": "toujou koneko"
-				},
-				"1": {
-					"group": "series",
-					"subtag": "Highschool DxD"
-				}
-			}
-		}
-	}
-	)";
-	
-	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 20:50:42.272076"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"failed":[2],"succeeded":[1]}})";
-	
-	auto data = parseJson(jsonStr);
-	
-	//Parse AddTag test
-	REQUIRE(data["2"]["failed"] == std::vector<uint64_t>({2}));
-	REQUIRE(data["2"]["succeeded"] == std::vector<uint64_t>({1}));
-	
-	resetDB();
-}
-
-TEST_CASE("jsonParseRemoveTag", "[json][database]")
-{
-	resetDB();
-	
-	std::string jsonStr = R"(
-	{
-		"0": {
-			"operation": 0,
-			"filepaths": {
-				"0": "./Images/valid.jpg"
-			}
-		},
-		"2": {
-			"operation": 2,
-			"hashIDs": [1],
-			"tags": {
-				"0": {
-					"group": "",
-					"subtag": "toujou koneko"
-				},
-				"1": {
-					"group": "series",
-					"subtag": "Highschool DxD"
-				}
-			}
-		},
-		"3": {
-			"operation": 3,
-			"hashIDs": [1,2,3,4],
-			"tags": {
-				"0": {
-					"group": "series",
-					"subtag": "Highschool DxD"
-				}
-			}
-		}
-	}
-	)";
-	
-	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:57:41.678387"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"3":{"succeeded":[1,2,3,4]}})";
-	
-	auto data = parseJson(jsonStr);
-	
-	//Parse RemoveTag test
-	REQUIRE(data["3"]["succeeded"] == std::vector<uint64_t>({1,2,3,4}));
-	
-	resetDB();
-}
-
-TEST_CASE("jsonParseGetTag", "[json][database]")
-{
-	resetDB();
-	
-	std::string jsonStr = R"(
-	{
-	"0": {
-		"operation": 0,
-		"filepaths": {
-			"0": "./Images/valid.jpg"
-		}
-	},
-	"2": {
-		"operation": 2,
-		"hashIDs": [1],
-		"tags": {
-			"0": {
-				"group": "",
-				"subtag": "toujou koneko"
-			},
-			"1": {
-				"group": "series",
-				"subtag": "Highschool DxD"
-			}
-		}
-	},
-	"7": {
-		"operation": 4,
-		"hashIDs": [1,2]
-	}
-	}
-	)";
-	
-	std::string expected = R"({"0":{"imported":{"0":{"filepath":"./Images/valid.jpg","tabledata":{"importinfo":{"filename":"valid.jpg","time":"2022-06-07 21:10:52.871199"},"mappings":[],"playerinfo":{"bytes":755424,"duration":0,"fps":0,"frames":1,"height":4032,"type":1,"width":1960}}}}},"2":{"succeeded":[1]},"7":{"failed":{"2":"HashID does not exist"},"succeeded":{"1":["toujou koneko","series:Highschool DxD"]}}})";
-	
-	auto data = parseJson(jsonStr);
-	
-	REQUIRE(data["7"]["failed"]["2"] == "HashID does not exist");
-	REQUIRE(data["7"]["succeeded"]["1"] == std::vector<std::string>({"toujou koneko","series:Highschool DxD"}));
-	
-	resetDB();
-}
-
-TEST_CASE("jsonParseRenameTag", "[json][database]")
-{
-	resetDB();
-	
-	std::string jsonStr = R"(
-	{
-		"0": {
-			"operation": 0,
-			"filepaths": {
-				"0": "./Images/valid.jpg"
-			}
-		},
-		"2": {
-			"operation": 2,
-			"hashIDs": [
-				1
-			],
-			"tags": {
-				"0": {
-					"group": "",
-					"subtag": "toujou koneko"
-				},
-				"1": {
-					"group": "series",
-					"subtag": "Highschool DxD"
-				}
-			}
-		},
-		"4": {
-			"operation": 4,
-			"hashIDs": [
-				1
-			]
-		},
-		"5": {
-			"operation": 5,
-			"pairs": {
-				"0": {
-					"origin": {
-						"group": "",
-						"subtag": "toujou koneko"
-					},
-					"new": {
-						"group": "character",
-						"subtag": "toujou koneko"
-					}
-				}
-			}
-		},
-		"6": {
-			"operation": 4,
-			"hashIDs": [
-				1
-			]
-		}
-	}
-	)";
-
-	auto data = parseJson(jsonStr);
-	
-	std::cout << data.dump(4) << std::endl;
-	
-	REQUIRE(data["4"]["succeeded"]["1"] == std::vector<std::string>({"toujou koneko","series:Highschool DxD"}));
-	REQUIRE(data["5"]["succeeded"] == std::vector<uint64_t>({0}));
-	REQUIRE(data["6"]["succeeded"]["1"] == std::vector<std::string>({"series:Highschool DxD","character:toujou koneko"}));
-	
-	
-	resetDB();
-}
-
-TEST_CASE("jsonParse", "[json][database]")
-{
-	resetDB();
-	
-	std::string jsonStr = R"(
-	{
-		"0": {
-			"operation": 0,
-			"filepaths": {
-				"0": "/test/"
-			}
-		},
-		"1": {
-			"operation": 1,
-			"hashIDs": [1,2,3,4]
-		},
-		"2": {
-			"operation": 2,
-			"hashIDs": [1,2,3,4],
-			"tags": {
-				"0": {
-					"subtag": "toujou koneko"
-				},
-				"1": {
-					"group": "series",
-					"subtag": "Highschool DxD"
-				}
-			}
-		},
-		"3": {
-			"operation": 3,
-			"hashIDs": [1,2,3,4],
-			"tags": {
-				"0": {
-					"group": "series",
-					"subtag": "Highschool DxD"
-				}
-			}
-		},
-		"4": {
-			"operation": 3,
-			"hashIDs": [1,2],
-			"tags": {
-				"0": {
-					"groups": "meta",
-					"subtag": "absurdres"
-				}
-			}
-		},
-		"5": {
-			"operation": 5,
-			"pairs": {
-				"0": {
-					"origin": {
-						"group": "",
-						"subtag": "toujou koneko"
-					},
-					"new": {
-						"group": "character",
-						"subtag": "toujou koneko"
-					}
-				}
-			}
-		},
-		"6": {
-			"operation": 3,
-			"hashIDs": [1,2,3,4],
-			"tags": {
-				"0": {
-					"group" : "series",
-					"subtag" : "Highschool DxD"
-				}
-			}
-		},
-		"7": {
-			"operation": 4,
-			"hashIDs": [1,2,3,4]
-		}
-	}
-	)";
-	
-	std::string expected = R"(DEFINE)";
-	
-	std::cout << parseJson(jsonStr) << std::endl;
-	REQUIRE(parseJson(jsonStr) == expected);
-	
-	resetDB();
-}
-
-TEST_CASE("HighQuantityImport", "[perf]")
-{
-	resetDB();
-	
-	#ifndef NDEBUG
-	
-	std::filesystem::path path = "./Images/Perf/JPG/";
-	
-	if(std::filesystem::exists(path))
-	{
-		//Create json package
-		nlohmann::json json;
+		Connection conn;
+		pqxx::work wrk( conn.getConn());
 		
-		std::vector<std::string> filepaths;
+		pqxx::result mappingsRes = wrk.exec( "select * from mappings" );
+		REQUIRE( mappingsRes.empty());
 		
-		for(auto& file : std::filesystem::directory_iterator(path))
-		{
-			filepaths.push_back(file.path().lexically_normal().string());
-		}
+		pqxx::result filesRes = wrk.exec( "select * from files" );
+		REQUIRE( filesRes.empty());
 		
-		json["0"]["operation"] = 0;
-		json["0"]["filepaths"] = filepaths;
+		pqxx::result playerInfoRes = wrk.exec( "select * from playerinfo" );
+		REQUIRE( playerInfoRes.empty());
 		
-		auto start = std::chrono::high_resolution_clock::now();
-		
-		const std::string dump = json.dump();
-		
-		auto data = parseJson(dump);
-		
-		auto end = std::chrono::high_resolution_clock::now();
-		
-		std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-		
-		SUCCEED();
+		pqxx::result importInfoRes = wrk.exec( "select * from importinfo" );
+		REQUIRE( importInfoRes.empty());
 	}
-	else
-	{
-		FAIL(path.string() + " does not exist");
-	}
-	
-	#endif
 	
 	resetDB();
 }
 
 int main(int argc, char** argv)
 {
+	idhan::config::debug = true;
+	
 	//VIPS
 	if(VIPS_INIT(argv[0]))
 	{
