@@ -9,7 +9,7 @@ include(FindPkgConfig)
 pkg_search_module(VIPS REQUIRED vips-cpp)
 
 
-add_executable(main src/main.cpp include/database.cpp include/jsonparser.cpp include/crypto.cpp include/utility/fileutils.cpp)
+add_executable(main src/main.cpp include/database.cpp include/crypto.cpp include/utility/fileutils.cpp)
 target_include_directories(main PRIVATE ${CONAN_SYSTEM_INCLUDES})
 target_include_directories(main PRIVATE ${CMAKE_BINARY_DIR}/include)
 target_include_directories(main PRIVATE ${CMAKE_BINARY_DIR}/libs)
@@ -21,7 +21,7 @@ target_compile_definitions(main PRIVATE FGL_ACKNOWLEDGE_INCOMPATIBLE_COMPILER)
 target_link_libraries(main ${CONAN_LIBS} ${VIPS_LIBRARIES})
 
 
-add_executable(DBTest src/databaseTests.cpp include/database.cpp include/jsonparser.cpp include/crypto.cpp include/utility/fileutils.cpp)
+add_executable(DBTest src/databaseTests.cpp include/database.cpp include/crypto.cpp include/utility/fileutils.cpp)
 target_include_directories(DBTest PRIVATE ${CONAN_SYSTEM_INCLUDES})
 target_include_directories(DBTest PRIVATE ${CMAKE_BINARY_DIR}/include)
 target_include_directories(DBTest PRIVATE ${CMAKE_BINARY_DIR}/libs)
@@ -37,7 +37,7 @@ set(TRACY_NO_EXIT 1)
 set(TRACY_ON_DEMAND 0)
 add_subdirectory(libs/tracy)
 
-add_executable(TracyProfile src/databaseTests.cpp include/database.cpp include/jsonparser.cpp include/crypto.cpp include/utility/fileutils.cpp)
+add_executable(TracyProfile src/databaseTests.cpp include/database.cpp include/crypto.cpp include/utility/fileutils.cpp)
 target_include_directories(TracyProfile PRIVATE ${CONAN_SYSTEM_INCLUDES})
 target_include_directories(TracyProfile PRIVATE ${CMAKE_BINARY_DIR}/include)
 target_include_directories(TracyProfile PRIVATE ${CMAKE_BINARY_DIR}/libs)
