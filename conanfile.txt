@@ -2,71 +2,67 @@
 libpqxx/7.7.3
 catch2/2.13.9
 nlohmann_json/3.10.5
-libpqxx/7.7.3
 openssl/3.0.3
 libFGL/latest@alaestor/main
 glib/2.73.0
 
 [options]
-openssl:no_engine=False
-
-
-        openssl:shared = False
-        openssl:fPIC = True
-        openssl:enable_weak_ssl_ciphers = False
-        openssl:386 = False
-        openssl:no_aria = True
-        openssl:no_asm = True
-        openssl:no_async = False
-        openssl:no_blake2 = True
-        openssl:no_bf = True
-        openssl:no_camellia = True
-        openssl:no_chacha = True
-        openssl:no_cms = True
-        openssl:no_comp = True
-        openssl:no_ct = True
-        openssl:no_cast = True
-        openssl:no_deprecated = True
-        openssl:no_des = True
-        openssl:no_dgram = True
-        openssl:no_dh = True
-        openssl:no_dsa = True
-        openssl:no_dso = True
-        openssl:no_ec = True
-        openssl:no_ecdh = True
-        openssl:no_ecdsa = True
-        openssl:no_engine = False
-        openssl:no_filenames = True
-        openssl:no_fips = True
-        openssl:no_gost = True
-        openssl:no_idea = True
-        openssl:no_legacy = True
-        openssl:no_md2 = True
-        openssl:no_md4 = True
-        openssl:no_mdc2 = True
-        openssl:no_ocsp = True
-        openssl:no_pinshared = True
-        openssl:no_rc2 = True
-        openssl:no_rc4 = True
-        openssl:no_rc5 = True
-        openssl:no_rfc3779 = True
-        openssl:no_rmd160 = True
-        openssl:no_sm2 = True
-        openssl:no_sm3 = True
-        openssl:no_sm4 = True
-        openssl:no_srp = True
-        openssl:no_srtp = True
-        openssl:no_sse2 = False
-        openssl:no_ssl = True
-        openssl:no_stdio = True
-        openssl:no_seed = True
-        openssl:no_sock = True
-        openssl:no_ssl3 = True
-        openssl:no_threads = False
-        openssl:no_tls1 = True
-        openssl:no_ts = True
-        openssl:no_whirlpool = True
-        openssl:no_zlib = True
+openssl:shared = False
+openssl:fPIC = True
+openssl:enable_weak_ssl_ciphers = False
+openssl:386 = False
+openssl:no_aria = True
+openssl:no_asm = True
+openssl:no_async = False
+openssl:no_blake2 = True
+openssl:no_bf = True
+openssl:no_camellia = True
+openssl:no_chacha = True
+openssl:no_cms = True
+openssl:no_comp = True
+openssl:no_ct = True
+openssl:no_cast = True
+openssl:no_deprecated = True
+openssl:no_des = True
+openssl:no_dgram = True
+openssl:no_dh = True
+openssl:no_dsa = True
+openssl:no_dso = True
+openssl:no_ec = True
+openssl:no_ecdh = True
+openssl:no_ecdsa = True
+openssl:no_engine = False
+openssl:no_filenames = True
+openssl:no_fips = True
+openssl:no_gost = True
+openssl:no_idea = True
+openssl:no_legacy = True
+openssl:no_md2 = True
+openssl:no_md4 = True
+openssl:no_mdc2 = True
+openssl:no_ocsp = True
+openssl:no_pinshared = True
+openssl:no_rc2 = True
+openssl:no_rc4 = True
+openssl:no_rc5 = True
+openssl:no_rfc3779 = True
+openssl:no_rmd160 = True
+openssl:no_sm2 = True
+openssl:no_sm3 = True
+openssl:no_sm4 = True
+openssl:no_srp = True
+openssl:no_srtp = True
+openssl:no_sse2 = False
+openssl:no_ssl = True
+openssl:no_stdio = True
+openssl:no_seed = True
+openssl:no_sock = True
+openssl:no_ssl3 = True
+openssl:no_threads = False
+openssl:no_tls1 = True
+openssl:no_ts = True
+openssl:no_whirlpool = True
+openssl:no_zlib = True
 
 
 [generators]
