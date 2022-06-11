@@ -17,16 +17,18 @@ namespace idhan
 		
 		inline static std::mutex configLock;
 		
+		
+		//Import and file configs
 		inline static std::filesystem::path thumbnail_path { "./db/thumbnails/" };
-		inline static std::atomic<bool> thumbnail_pathValid = false;
+		inline static std::atomic<bool> thumbnail_pathValid { false };
 		
 		inline static std::filesystem::path file_path { "./db/file/"};
-		
 		
 		//vips
 		inline static std::atomic<bool> vips_allow_threaded;
 		
 		
+		inline static std::atomic<bool> debug { false };
 	};
 }
 
