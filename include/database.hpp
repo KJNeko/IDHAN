@@ -35,6 +35,8 @@ public:
 
 uint64_t addFile(std::filesystem::path path);
 
+void removeFile(uint64_t id);
+
 void addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags);
 
 void removeTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags);
