@@ -7,7 +7,6 @@
 
 #include <pqxx/pqxx>
 #include <nlohmann/json.hpp>
-#include "MrMime/mister_mime.hpp"
 #include "crypto.hpp"
 
 #include <TracyBox.hpp>

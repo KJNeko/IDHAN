@@ -77,7 +77,6 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 #include <vips/vips8>
 #include <vips/VImage8.h>
 
-#include <Tracy.hpp>
 
 #include <TracyBox.hpp>
 
@@ -604,8 +603,6 @@ TEST_CASE("HighQuantityImport", "[perf]")
 		const std::string dump = json.dump();
 		
 		auto data = parseJson(dump);
-		
-		std::cout << data.dump(4) << std::endl;
 		
 		auto end = std::chrono::high_resolution_clock::now();
 		

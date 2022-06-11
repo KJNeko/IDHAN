@@ -203,6 +203,8 @@ nlohmann::json parseJson(const std::string& json)
 				}
 			}
 				break;
+			default:
+				break;
 		}
 		
 	}

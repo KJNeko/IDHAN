@@ -6,6 +6,7 @@
 #include "utility/fileutils.hpp"
 #include "utility/config.hpp"
 #include "idhanthreads.hpp"
+#include "MrMime/mister_mime.hpp"
 
 
 
@@ -38,9 +39,10 @@ void Connection::prepareStatements()
 {
 	//Prepare statements
 	conn->prepare("selectFile", "SELECT hashid FROM files WHERE sha256 = $1");
-	conn->prepare("insertFile", "INSERT INTO files (sha256, md5) VALUES ($1, $2) RETURNING hashid");
+	conn->prepare("insertFileSHA256", "INSERT INTO files (sha256) VALUES ($1) RETURNING hashid");
 	conn->prepare("insertPlayerInfo", "INSERT INTO playerinfo (hashid, type, frames, bytes, width, height, duration, fps) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)");
 	conn->prepare("insertImportInfo", "INSERT INTO importinfo (hashid, filename, time) VALUES ($1, $2, NOW()::timestamp)");
+	conn->prepare("insertPlayerBasicInfo", "INSERT INTO playerinfo (hashid, type) VALUES ($1, $2)");
 }
 
 Connection::Connection(const std::string& args)
@@ -70,7 +72,7 @@ void Connection::resetDB()
 
 uint64_t addFile(std::filesystem::path path)
 {
-	
+	ZoneScopedN("addFile");
 	using MrMime::header_data_buffer_t;
 	if(!std::filesystem::exists(path))
 	{
@@ -85,6 +87,7 @@ uint64_t addFile(std::filesystem::path path)
 		return 0;
 	}
 	
+	ZoneNamedN(bufferRead, "MimeParsing", true);
 	MrMime::header_data_buffer_t buffer;
 	auto ifs{std::ifstream(path, std::ios::binary)};
 	ifs.exceptions(std::ifstream::badbit | std::ifstream::failbit | std::ifstream::eofbit);
@@ -93,150 +96,67 @@ uint64_t addFile(std::filesystem::path path)
 	
 	auto MIMEType = MrMime::deduceFileType(buffer);
 	
-	switch(MIMEType)
+	ZoneNamedN(readFile, "ReadFile", true);
+	//Read the rest of the file data
+	std::vector<uint8_t> data;
+	data.resize(size);
+	ifs.read(reinterpret_cast<char*>(data.data()), static_cast<long int>(size));
+	
+	ZoneNamedN(sha256Tracy, "SHA256", true);
+	//Calculate SHA256 of the file
+	auto sha256 = SHA256(data);
+	std::basic_string_view<std::byte> sha256_view{reinterpret_cast<std::byte*>(sha256.data()), sha256.size()};
+	
+	ZoneNamedN(DBTrans, "DatabaseTransaction", true);
+	//Check if the file already exists in the database records
+	Connection conn;
+	pqxx::work wrk(conn.getConn());
+	ZoneNamedN(selectFIleQuery, "selectFile", true);
+	pqxx::result res = wrk.exec_prepared("selectFile", sha256_view);
+	
+	auto hashID = 0;
+	
+	if(res.size() > 0)
 	{
-		
-		case MrMime::IMAGE_JPEG: [[fallthrough]];
-		case MrMime::IMAGE_PNG: [[fallthrough]];
-		case MrMime::IMAGE_GIF: [[fallthrough]];
-		case MrMime::IMAGE_BMP:
+		hashID = res[0][0].as<uint64_t>();
+	}
+	else
+	{
+		ZoneScopedN("insertFileSHA256");
+		//Insert the file into the database
+		pqxx::result res = wrk.exec_prepared("insertFileSHA256", sha256_view);
+		if(res.size() == 0)
 		{
-			ZoneScopedN("ImageParsing");
-			//Load the rest of the file into memory
-			std::vector<uint8_t> image_data;
-			image_data.resize(size);
-			ifs.read(reinterpret_cast<char*>(image_data.data()), static_cast<long>(size) );
-			
-
-			std::shared_future<std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>> hash_future = std::async(std::launch::async, [&image_data]()
-			{
-				ZoneScopedN( "ImageHash" );
-				return std::make_tuple(SHA256( image_data ), MD5( image_data ));
-			}).share();
-			
-			auto images_future = std::async(std::launch::async, [&image_data, &hash_future](){
-				ZoneScopedN("ImageLoading");
-				auto img = vips::VImage::new_from_buffer(image_data.data(), image_data.size(), "");
-				double scaleValue = std::min(
-						static_cast<double>(idhan::config::thumbnail_width) / static_cast<double>(img.width()),
-						static_cast<double>(idhan::config::thumbnail_height) / static_cast<double>(img.height()) );
-				auto image_resized = img.resize(scaleValue);
-				
-				//Write image to disk
-				auto thumb_path = idhan::config::thumbnail_path;
-				
-				auto [sha256, md5] = hash_future.get();
-				
-				thumb_path.append( idhan::utils::toHex( sha256 ) + ".jpg" );
-				
-				if ( !std::filesystem::exists( thumb_path ))
-				{
-					ZoneScopedN("ImageWriting");
-					if ( !idhan::config::thumbnail_pathValid )
-					{
-						//Check if the path exists
-						if ( !std::filesystem::exists(
-								idhan::config::thumbnail_path ))
-						{
-							//Create the directory
-							std::filesystem::create_directory(
-									idhan::config::thumbnail_path );
-						}
-						
-						//Set the path to valid
-						idhan::config::thumbnail_pathValid = true;
-					}
-					image_resized.write_to_file( thumb_path.c_str());
-				}
-				
-				return img;
-			});
-			
-			
-			auto [sha256, md5] = hash_future.get();
-			
-			std::basic_string_view<std::byte> sha256_view = std::basic_string_view(reinterpret_cast<std::byte*>(sha256.data()), sha256.size());
-			std::basic_string_view<std::byte> md5_view = std::basic_string_view(reinterpret_cast<std::byte*>(md5.data()), md5.size());
-			
-			pqxx::work wrk(Connection::getConn());
-			//Check if we have already imported the file before
-			auto res = wrk.exec_prepared("selectFile", sha256_view);
-			if(res.size() == 0)
-			{
-				//We have not imported this file before
-				ZoneScopedN( "InsertFile" );
-				
-				//Insert the file into the database
-				res = wrk.exec_prepared( "insertFile", sha256_view, md5_view );
-				
-				//Insert the player info
-				uint64_t hashid = res[0][0].as<uint64_t>();
-				
-				//Check if Animated
-				std::string hex_sha256 = idhan::utils::toHex( sha256 );
-				
-				auto image = images_future.get();
-				wrk.exec_prepared(
-						"insertPlayerInfo", hashid,
-						static_cast<uint16_t>(MIMEType), 1, size,
-						image.height(), image.width(), 0, 0 );
-				
-				//Insert the import info
-				wrk.exec_prepared(
-						"insertImportInfo", hashid, path.filename().string());
-				
-			}
-			
-			wrk.commit();
-			return res[0][0].as<uint64_t>();
+			wrk.abort();
+			return 0;
 		}
-			break;
-		case MrMime::APPLICATION_FLASH:
-			break;
-		case MrMime::IMAGE_ICON:
-			break;
-		case MrMime::VIDEO_FLV:
-			break;
-		case MrMime::APPLICATION_PDF:
-			break;
-		case MrMime::APPLICATION_ZIP:
-			break;
-		case MrMime::APPLICATION_HYDRUS_ENCRYPTED_ZIP:
-			break;
-		case MrMime::VIDEO_MP4:
-			break;
-		case MrMime::AUDIO_FLAC:
-			break;
-		case MrMime::UNDETERMINED_WM:
-			break;
-		case MrMime::IMAGE_APNG:
-			break;
-		case MrMime::VIDEO_MOV:
-			break;
-		case MrMime::VIDEO_AVI:
-			break;
-		case MrMime::APPLICATION_RAR:
-			break;
-		case MrMime::APPLICATION_7Z:
-			break;
-		case MrMime::IMAGE_WEBP:
-			break;
-		case MrMime::IMAGE_TIFF:
-			break;
-		case MrMime::APPLICATION_PSD:
-			break;
-		case MrMime::APPLICATION_CLIP:
-			break;
-		case MrMime::AUDIO_WAVE:
-			break;
-		case MrMime::APPLICATION_UNKNOWN:
-			break;
+
+		//Insert quick mime data
+		auto hashID = res[0][0].as<uint64_t>();
+		
+		wrk.exec_prepared("insertPlayerBasicInfo", hashID, static_cast<uint16_t>(MIMEType));
 	}
 	
-	//Wait for all thumbnailFutures to complete
+	//Start the file moving process
 	
+	//Calculate the filename and path
+	ZoneNamedN(movefile, "MoveFile", true);
+	auto fileHex = idhan::utils::toHex(sha256);
 	
-	return 0;
+	auto modifiedPath = idhan::config::file_path;
+	modifiedPath /= "f" + fileHex.substr(0,2);
+	modifiedPath /= fileHex;
+	
+	modifiedPath.replace_extension(path.extension());
+	
+	//Create the directory if it doesn't exist
+	if(!std::filesystem::exists(modifiedPath))
+	{
+		std::filesystem::create_directories(modifiedPath.parent_path());
+	}
+	
+	//Move the file
+	std::filesystem::rename(path, modifiedPath);
 }
 
 
@@ -269,7 +189,7 @@ void addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> ta
 			res = wrk.exec("INSERT INTO groups (\"group\") VALUES ('" + text + "') RETURNING groupid");
 		}
 		
-		return res[0][0].as<uint64_t>();
+		return res[0][0].as<uint16_t>();
 	};
 	
 	
@@ -279,7 +199,7 @@ void addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> ta
 		uint64_t subtagID = getSubtagID(subtag);
 		
 		
-		wrk.exec("INSERT INTO mappings (hashid, groupid, subtagid) VALUES ("+ std::to_string(hashID) +","+ std::to_string(groupID) + "," + std::to_string(subtagID) + ")");
+		wrk.exec("INSERT INTO mappings (hashid, groupid, subtagid) VALUES ("+ std::to_string(hashID) +","+ std::to_string(static_cast<unsigned int>(groupID)) + "," + std::to_string(subtagID) + ")");
 	}
 	
 	wrk.commit();
@@ -305,7 +225,7 @@ void removeTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>>
 		return res[0][0].as<uint64_t>();
 	};
 	
-	auto getGroupID = [&wrk]( std::string text ) -> uint64_t
+	auto getGroupID = [&wrk]( std::string text ) -> uint16_t
 	{
 		//Try a select
 		pqxx::result res = wrk.exec(
@@ -316,7 +236,7 @@ void removeTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>>
 			return 0;
 		}
 		
-		return res[0][0].as<uint64_t>();
+		return res[0][0].as<uint16_t>();
 	};
 	
 	
@@ -334,7 +254,7 @@ void removeTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>>
 		wrk.exec(
 				"DELETE FROM mappings WHERE hashid = " +
 				std::to_string( hashID ) + " AND groupid = " +
-				std::to_string( groupID ) + " AND subtagid = " +
+				std::to_string( static_cast<unsigned int>(groupID) ) + " AND subtagid = " +
 				std::to_string( subtagID ));
 		
 		wrk.exec("DELETE FROM subtags WHERE subtagid NOT IN (SELECT subtagid FROM mappings)" );
