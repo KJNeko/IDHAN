@@ -10,6 +10,7 @@
 //#pragma GCC diagnostic ignored "-Wold-style-cast"
 //#pragma GCC diagnostic ignored "-Wredundant-tags"
 #include <Tracy.hpp>
+#include <TracyC.h>
 //Undo warnings disable
 //#pragma GCC diagnostic pop
 
