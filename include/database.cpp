@@ -114,7 +114,7 @@ uint64_t addFile(std::filesystem::path path)
 	ZoneNamedN(selectFIleQuery, "selectFile", true);
 	pqxx::result res = wrk.exec_prepared("selectFile", sha256_view);
 	
-	auto hashID = 0;
+	uint64_t hashID = 0;
 	
 	if(res.size() > 0)
 	{
@@ -124,7 +124,7 @@ uint64_t addFile(std::filesystem::path path)
 	{
 		ZoneScopedN("insertFileSHA256");
 		//Insert the file into the database
-		pqxx::result res = wrk.exec_prepared("insertFileSHA256", sha256_view);
+		res = wrk.exec_prepared("insertFileSHA256", sha256_view);
 		if(res.size() == 0)
 		{
 			wrk.abort();
@@ -132,13 +132,12 @@ uint64_t addFile(std::filesystem::path path)
 		}
 
 		//Insert quick mime data
-		auto hashID = res[0][0].as<uint64_t>();
+		hashID = res[0][0].as<uint64_t>();
 		
 		wrk.exec_prepared("insertPlayerBasicInfo", hashID, static_cast<uint16_t>(MIMEType));
 	}
 	
-	//Start the file moving process
-	
+
 	//Calculate the filename and path
 	ZoneNamedN(movefile, "MoveFile", true);
 	auto fileHex = idhan::utils::toHex(sha256);
@@ -157,6 +156,8 @@ uint64_t addFile(std::filesystem::path path)
 	
 	//Move the file
 	std::filesystem::rename(path, modifiedPath);
+	
+	return hashID;
 }
 
 
