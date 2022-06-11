@@ -7,8 +7,10 @@
 
 #include <pqxx/pqxx>
 #include <nlohmann/json.hpp>
-#include "MrMime/mister_mime.hpp"
 #include "crypto.hpp"
+
+#include <TracyBox.hpp>
+
 
 class Connection
 {
@@ -32,6 +34,8 @@ public:
 };
 
 uint64_t addFile(std::filesystem::path path);
+
+void removeFile(uint64_t id);
 
 void addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags);
 

@@ -4,7 +4,7 @@
 
 #include "crypto.hpp"
 
-std::vector<uint8_t> SHA256(std::vector<uint8_t> data)
+std::vector<uint8_t> SHA256(const std::vector<uint8_t>& data)
 {
 	//SHA256
 	EVP_MD_CTX *ctx;
@@ -19,7 +19,7 @@ std::vector<uint8_t> SHA256(std::vector<uint8_t> data)
 	return output;
 }
 
-std::vector<uint8_t> MD5(std::vector<uint8_t> data)
+std::vector<uint8_t> MD5(const std::vector<uint8_t>& data)
 {
 	//MD5
 	EVP_MD_CTX *ctx;

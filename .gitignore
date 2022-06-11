@@ -33,3 +33,12 @@ graph.png
 /bin/main
 /bin/Testing/Temporary/LastTest.log
 /bin/Testing/Temporary/CTestCostData.txt
+
+###Performance testing set
+/Images/Perf/JPG
+/Images/Perf/PNG
+/Images/Perf/TIFF
+/Images/Perf/BMP
+/Images/Perf/GIF
+/Images/Perf/MP4
+/Images/Perf/RAND
