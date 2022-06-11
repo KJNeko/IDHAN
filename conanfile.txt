@@ -4,7 +4,6 @@ catch2/2.13.9
 nlohmann_json/3.10.5
 openssl/3.0.3
 libFGL/latest@alaestor/main
-glib/2.73.0
 
 [options]
 openssl:shared = False
