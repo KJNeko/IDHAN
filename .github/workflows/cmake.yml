@@ -78,7 +78,13 @@ jobs:
         # POSTGRES_USER - create the specified user with superuser power
         postgresql user: idhan # optional, default is 
         # POSTGRES_PASSWORD - superuser password
-        postgresql password: idhan # optional, default is 
+        postgresql password: idhan # optional, default is
+
+    - name: Wait for postgresql to start
+      run: |
+          while ! pg_isready; do
+          sleep 1
+          done
       
     - name: Tests
       working-directory: ${{runner.workspace}}/IDHAN
