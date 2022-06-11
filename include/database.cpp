@@ -18,7 +18,7 @@
 #include <vips/VImage8.h>
 #include <iostream>
 
-#include <Tracy.hpp>
+#include <TracyBox.hpp>
 
 void Connection::createTables()
 {

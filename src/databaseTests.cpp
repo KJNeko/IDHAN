@@ -79,6 +79,7 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 
 #include <Tracy.hpp>
 
+#include <TracyBox.hpp>
 
 #define CONSTEXPR_REQUIRES(expr) \
   static_assert(expr);\

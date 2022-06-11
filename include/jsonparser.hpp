@@ -10,7 +10,7 @@
 #include <iostream>
 #include "database.hpp"
 
-#include <Tracy.hpp>
+#include <TracyBox.hpp>
 
 enum OperationType
 {

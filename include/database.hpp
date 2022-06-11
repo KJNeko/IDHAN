@@ -10,7 +10,7 @@
 #include "MrMime/mister_mime.hpp"
 #include "crypto.hpp"
 
-#include <Tracy.hpp>
+#include <TracyBox.hpp>
 
 
 class Connection

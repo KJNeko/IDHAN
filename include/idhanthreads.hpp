@@ -26,8 +26,7 @@
 #include "utility/fileutils.hpp"
 #include "utility/config.hpp"
 
-#include <Tracy.hpp>
-
+#include <TracyBox.hpp>
 
 namespace idhan::threads
 {

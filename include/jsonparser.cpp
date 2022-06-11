@@ -4,7 +4,7 @@
 
 #include "jsonparser.hpp"
 
-#include <Tracy.hpp>
+#include <TracyBox.hpp>
 
 nlohmann::json parseJson(const std::string& json)
 {

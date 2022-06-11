@@ -8,8 +8,6 @@
 #include <atomic>
 #include <filesystem>
 
-#include <Tracy.hpp>
-
 namespace idhan
 {
 	struct config
