@@ -30,7 +30,7 @@ jobs:
         
     - name: Update depends
       run: |
-        sudo apt install libgtk2.0-dev
+        sudo apt install libgtk2.0-dev libvips-tools
     
     - name: ConanCache
       uses: actions/cache@v3
