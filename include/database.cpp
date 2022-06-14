@@ -7,7 +7,7 @@
 #include "utility/config.hpp"
 #include "idhanthreads.hpp"
 #include "MrMime/mister_mime.hpp"
-
+#include "services/thumbnailer.hpp"
 
 
 #include <fstream>
@@ -23,7 +23,7 @@
 
 void Connection::createTables()
 {
-	pqxx::work wrk(*conn);
+	pqxx::work wrk(conn);
 	
 	wrk.exec("CREATE TABLE IF NOT EXISTS files (hashid BIGSERIAL PRIMARY KEY, sha256 BYTEA UNIQUE, md5 BYTEA UNIQUE);");
 	wrk.exec("CREATE TABLE IF NOT EXISTS playerinfo (hashid BIGINT PRIMARY KEY REFERENCES files ON DELETE CASCADE, type SMALLINT, frames BIGINT, bytes BIGINT, width BIGINT, height BIGINT, duration BIGINT, fps BIGINT)");
@@ -40,47 +40,27 @@ void Connection::prepareStatements()
 	//Prepare statements
 	
 	
-	
-	
-	
-	
-	
 	//Files prepare
-	conn->prepare("selectFile", "SELECT hashid FROM files WHERE sha256 = $1");
-	conn->prepare("selectFileSHA256", "SELECT sha256 FROM files WHERE hashid = $1");
-	conn->prepare("insertFileSHA256", "INSERT INTO files (sha256) VALUES ($1) RETURNING hashid");
+	conn.prepare("selectFile", "SELECT hashid FROM files WHERE sha256 = $1");
+	conn.prepare("selectFileSHA256", "SELECT sha256 FROM files WHERE hashid = $1");
+	conn.prepare("insertFileSHA256", "INSERT INTO files (sha256) VALUES ($1) RETURNING hashid");
 	
 	
 	//playerinfo prepare
-	conn->prepare("insertPlayerInfo", "INSERT INTO playerinfo (hashid, type, frames, bytes, width, height, duration, fps) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)");
-	conn->prepare("insertBasicPlayerInfo", "INSERT INTO playerinfo (hashid, type) VALUES ($1, $2)");
+	conn.prepare("insertPlayerInfo", "INSERT INTO playerinfo (hashid, type, frames, bytes, width, height, duration, fps) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)");
+	conn.prepare("insertBasicPlayerInfo", "INSERT INTO playerinfo (hashid, type) VALUES ($1, $2)");
+	conn.prepare("selectFileMimeType", "SELECT type FROM playerinfo WHERE hashid = $1");
+	
 	
 	//importinfo prepare
-	conn->prepare("insertImportInfo", "INSERT INTO importinfo (hashid, filename, time) VALUES ($1, $2, NOW()::timestamp)");
-	
-	
-	
-	
-	
-}
-
-Connection::Connection(const std::string& args)
-{
-	if(!valid)
-	{
-		conn = new pqxx::connection(args);
-		valid = true;
-		
-		//Run verification pass for the tables
-		createTables();
-		prepareStatements();
-	}
+	conn.prepare("insertImportInfo", "INSERT INTO importinfo (hashid, filename, time) VALUES ($1, $2, NOW()::timestamp)");
+	conn.prepare("selectFilename", "SELECT filename FROM importinfo WHERE hashid = $1");
 }
 
 void Connection::resetDB()
 {
 	
-	pqxx::work wrk(*conn);
+	pqxx::work wrk(conn);
 	wrk.exec("drop table if exists files, playerinfo, importinfo, subtags, groups, mappings");
 	wrk.commit();
 	
@@ -91,107 +71,117 @@ void Connection::resetDB()
 
 uint64_t addFile(std::filesystem::path path)
 {
-	ZoneScopedN("addFile");
-	using MrMime::header_data_buffer_t;
-	if(!std::filesystem::exists(path))
-	{
-		std::string currentpwd = std::filesystem::current_path().string();
-		throw std::runtime_error("Unable to find file: " + path.string() + " in " + currentpwd);
-	}
-	
-	const std::size_t size{std::filesystem::file_size(path)};
-	
-	if (size < sizeof(header_data_buffer_t))
-	{
-		return 0;
-	}
-	
-	//ZoneNamedN(readFile, "ReadFile", true);
-	TracyCZoneN(readfile,"ReadFile", 1);
-	//Read the rest of the file data
-	std::vector<uint8_t> data;
-	data.resize(size);
-	
-	auto ifs{std::ifstream(path, std::ios::binary)};
-	ifs.exceptions(std::ifstream::badbit | std::ifstream::failbit | std::ifstream::eofbit);
-	ifs.read(reinterpret_cast<char*>(data.data()), static_cast<long int>(size));
-	TracyCZoneEnd(readfile);
-	
-	TracyCZoneN(bufferRead, "MimeParsing", true);
-	MrMime::header_data_buffer_t buffer;
-	memcpy(buffer.data(), data.data(), sizeof(buffer));
-	TracyCZoneN(deduce, "DeduceFiletype", true);
-	const auto MIMEType = MrMime::deduceFileType(buffer);
-	TracyCZoneEnd(deduce);
-	TracyCZoneEnd(bufferRead);
-	
-	TracyCZoneN(sha256Tracy, "SHA256", true);
-	//Calculate SHA256 of the file
-	//const std::vector<uint8_t> sha256 = std::move(SHA256(data));
-	const std::vector<uint8_t> sha256 = SHA256(data);
-	const std::basic_string_view<std::byte> sha256_view{reinterpret_cast<const std::byte*>(sha256.data()), sha256.size()};
-	TracyCZoneEnd(sha256Tracy);
-	
-	TracyCZoneN(DBTrans, "DatabaseTransaction", true);
-	//Check if the file already exists in the database records
-	Connection conn;
-	pqxx::work wrk(conn.getConn());
-	TracyCZoneN(selectFileQuery, "selectFile", true);
-	pqxx::result res = wrk.exec_prepared("selectFile", sha256_view);
-	TracyCZoneEnd(selectFileQuery);
-	
 	uint64_t hashID = 0;
-	
-	if(res.size() > 0)
 	{
-		hashID = res[0][0].as<uint64_t>();
-	}
-	else
-	{
-		TracyCZoneN(insertFileSHA256, "insertFileSHA256", true);
-		//Insert the file into the database
-		res = wrk.exec_prepared("insertFileSHA256", sha256_view);
-		TracyCZoneEnd(insertFileSHA256);
-		if(res.size() == 0)
+		ZoneScopedN( "addFile" );
+		using MrMime::header_data_buffer_t;
+		if ( !std::filesystem::exists( path ))
 		{
-			wrk.abort();
+			std::string currentpwd = std::filesystem::current_path().string();
+			throw std::runtime_error(
+					"Unable to find file: " + path.string() + " in " +
+					currentpwd );
+		}
+		
+		const std::size_t size { std::filesystem::file_size( path ) };
+		
+		if ( size < sizeof( header_data_buffer_t ))
+		{
 			return 0;
 		}
-
-		//Insert quick mime data
-		hashID = res[0][0].as<uint64_t>();
 		
-		TracyCZoneN(insertPlayerBasicInfo, "insertBasicPlayerInfo", true);
-		wrk.exec_prepared("insertBasicPlayerInfo", hashID, static_cast<uint16_t>(MIMEType));
-		wrk.exec_prepared("insertImportInfo", hashID, path.string());
-		TracyCZoneEnd(insertPlayerBasicInfo);
+		TracyCZoneN( readfile, "ReadFile", true );
+		//Read the rest of the file data
+		std::vector<uint8_t> data;
+		data.resize( size );
+		
+		auto ifs { std::ifstream( path, std::ios::binary ) };
+		ifs.exceptions(
+				std::ifstream::badbit | std::ifstream::failbit |
+				std::ifstream::eofbit );
+		ifs.read(
+				reinterpret_cast<char*>(data.data()),
+				static_cast<long int>(size));
+		TracyCZoneEnd( readfile );
+		
+		TracyCZoneN( bufferRead, "MimeParsing", true );
+		MrMime::header_data_buffer_t buffer;
+		memcpy( buffer.data(), data.data(), sizeof( buffer ));
+		TracyCZoneN( deduce, "DeduceFiletype", true );
+		const auto MIMEType = MrMime::deduceFileType( buffer );
+		TracyCZoneEnd( deduce );
+		TracyCZoneEnd( bufferRead );
+		
+		TracyCZoneN( sha256Tracy, "SHA256", true );
+		//Calculate SHA256 of the file
+		//const std::vector<uint8_t> sha256 = std::move(SHA256(data));
+		const std::vector<uint8_t> sha256 = SHA256( data );
+		const std::basic_string_view<std::byte> sha256_view {
+				reinterpret_cast<const std::byte*>(sha256.data()),
+				sha256.size() };
+		TracyCZoneEnd( sha256Tracy );
+		
+		TracyCZoneN( DBTrans, "DatabaseTransaction", true );
+		//Check if the file already exists in the database records
+		Connection conn;
+		pqxx::work wrk( conn.getConn());
+		TracyCZoneN( selectFileQuery, "selectFile", true );
+		pqxx::result res = wrk.exec_prepared( "selectFile", sha256_view );
+		TracyCZoneEnd( selectFileQuery );
+		
+		if ( res.size() > 0 )
+		{
+			hashID = res[0][0].as<uint64_t>();
+		}
+		else
+		{
+			TracyCZoneN( insertFileSHA256, "insertFileSHA256", true );
+			//Insert the file into the database
+			res = wrk.exec_prepared( "insertFileSHA256", sha256_view );
+			TracyCZoneEnd( insertFileSHA256 );
+			if ( res.size() == 0 )
+			{
+				wrk.abort();
+				return 0;
+			}
+			
+			//Insert quick mime data
+			hashID = res[0][0].as<uint64_t>();
+			
+			TracyCZoneN( insertPlayerBasicInfo, "insertBasicPlayerInfo", true );
+			wrk.exec_prepared(
+					"insertBasicPlayerInfo", hashID,
+					static_cast<uint16_t>(MIMEType));
+			wrk.exec_prepared( "insertImportInfo", hashID, path.string());
+			TracyCZoneEnd( insertPlayerBasicInfo );
+		}
+		TracyCZoneEnd( DBTrans );
+		
+		//Calculate the filename and path
+		TracyCZoneN( movefile, "MoveFile", true );
+		const std::string fileHex = idhan::utils::toHex( sha256 );
+		
+		auto modifiedPath = idhan::config::fileconfig::file_path;
+		modifiedPath /= "f" + fileHex.substr( 0, 2 );
+		modifiedPath /= fileHex;
+		
+		modifiedPath.replace_extension( path.extension());
+		
+		//Create the directory if it doesn't exist
+		if ( !std::filesystem::exists( modifiedPath ))
+		{
+			std::filesystem::create_directories( modifiedPath.parent_path());
+		}
+		
+		//Move the file
+		std::filesystem::rename( path, modifiedPath );
+		
+		TracyCZoneEnd( movefile );
+		wrk.commit();
 	}
-	TracyCZoneEnd(DBTrans);
-
-	//Calculate the filename and path
-	TracyCZoneN(movefile, "MoveFile", true);
-	const std::string fileHex = idhan::utils::toHex(sha256);
 	
-	auto modifiedPath = idhan::config::file_path;
-	modifiedPath /= "f" + fileHex.substr(0,2);
-	modifiedPath /= fileHex;
 	
-	modifiedPath.replace_extension(path.extension());
-	
-	//Create the directory if it doesn't exist
-	if(!std::filesystem::exists(modifiedPath))
-	{
-		std::filesystem::create_directories(modifiedPath.parent_path());
-	}
-	
-	//Move the file
-	if(!idhan::config::debug)
-	{
-		std::filesystem::rename(path, modifiedPath);
-	}
-	
-	TracyCZoneEnd(movefile);
-	wrk.commit();
+	idhan::services::Thumbnailer::enqueue( hashID );
 	return hashID;
 }
 
@@ -217,7 +207,7 @@ void removeFile(uint64_t id)
 	//Calculate the filepath
 	const std::string fileHex = idhan::utils::toHex(sha256);
 	
-	auto modifiedPath = idhan::config::file_path;
+	auto modifiedPath = idhan::config::fileconfig::file_path;
 	modifiedPath /= "f" + fileHex.substr(0,2);
 	modifiedPath /= fileHex;
 	

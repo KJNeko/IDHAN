@@ -72,6 +72,7 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 #include "database.hpp"
 #include "crypto.hpp"
 #include "idhanthreads.hpp"
+#include "./services/thumbnailer.hpp"
 
 #include <vips/vips8>
 #include <vips/VImage8.h>
@@ -258,9 +259,32 @@ TEST_CASE("removeFile", "[database]")
 	resetDB();
 }
 
+TEST_CASE("massAdd", "[perf]")
+{
+	ZoneScopedN("MassAdd");
+	resetDB();
+	std::filesystem::path path {"./Images/Perf/JPG"};
+	
+	std::vector<std::string> files;
+	
+	for(auto& p : std::filesystem::directory_iterator(path))
+	{
+		files.push_back(p.path().string());
+	}
+	
+	//Add files
+	std::vector<uint64_t> ids;
+	for(auto& f : files)
+	{
+		ids.push_back(addFile(f));
+	}
+}
+
 int main(int argc, char** argv)
 {
 	idhan::config::debug = true;
+	idhan::services::ImageThumbnailer::start();
+	idhan::services::Thumbnailer::start();
 	
 	//VIPS
 	if(VIPS_INIT(argv[0]))
@@ -268,9 +292,13 @@ int main(int argc, char** argv)
 		throw std::runtime_error("Failed to initialize vips");
 	}
 	
-	
 	//Catch2
 	int result = Catch::Session().run( argc, argv );
+	
+	TracyCZoneN(await,"Shutdown",true);
+	idhan::services::ImageThumbnailer::await();
+	idhan::services::Thumbnailer::await();
+	TracyCZoneEnd(await);
 	
 	//VIPS
 	vips_shutdown();

@@ -8,27 +8,41 @@
 #include <atomic>
 #include <filesystem>
 
-namespace idhan
+namespace idhan::config
 {
-	struct config
+	inline static std::mutex configLock;
+	
+	//Import and file configs
+	struct fileconfig
 	{
-		inline static std::atomic<uint64_t> thumbnail_width { 250 };
-		inline static std::atomic<uint64_t> thumbnail_height { 250 };
-		
-		inline static std::mutex configLock;
-		
-		
-		//Import and file configs
-		inline static std::filesystem::path thumbnail_path { "./db/thumbnails/" };
-		inline static std::atomic<bool> thumbnail_pathValid { false };
-		
+		//File storage
 		inline static std::filesystem::path file_path { "./db/file/"};
 		
-		//vips
+		
+		//Thumbnail stuff
+		inline static std::atomic<uint64_t> thumbnail_width { 250 };
+		inline static std::atomic<uint64_t> thumbnail_height { 250 };
+		inline static std::filesystem::path thumbnail_path { "./db/thumbnails/" };
+		inline static std::atomic<bool> thumbnail_pathValid { false };
+	};
+
+	
+	//vips
+	struct vipsconfig
+	{
 		inline static std::atomic<bool> vips_allow_threaded;
+	};
+	
+	
+	
+	inline static std::atomic<bool> debug { false };
+	
+	struct services
+	{
+		inline static std::atomic<size_t> service_maximum_threads { 0 };
 		
-		
-		inline static std::atomic<bool> debug { false };
+		//Grace period in ms for services to start
+		inline static std::atomic<size_t> service_grace_period { 1000 };
 	};
 }
 

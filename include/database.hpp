@@ -11,26 +11,31 @@
 
 #include <TracyBox.hpp>
 
-
 class Connection
 {
-	static inline bool valid {false};
-	static inline pqxx::connection* conn{nullptr};
+	pqxx::connection conn;
 	
 	void createTables();
 	
 	void prepareStatements();
 	
 public:
-	Connection(const std::string& args = "dbname=idhan user=idhan password=idhan host=localhost port=5432");
-	
-	static auto& getConn()
+	Connection(const std::string& args = "dbname=idhan user=idhan password=idhan host=localhost port=5432") : conn(args)
 	{
-		return *conn;
+		ZoneScopedN("Connection::Connection");
+		if(conn.is_open())
+		{
+			createTables();
+			prepareStatements();
+		}
+	}
+	
+	pqxx::connection& getConn()
+	{
+		return conn;
 	}
 	
 	void resetDB();
-	
 };
 
 uint64_t addFile(std::filesystem::path path);
