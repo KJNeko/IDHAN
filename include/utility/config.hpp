@@ -35,7 +35,8 @@ namespace idhan::config
 	
 	
 	
-	inline static std::atomic<bool> debug { false };
+	inline static std::atomic<bool> debug { true };
+	inline static std::atomic<bool> thumbnail_active { false };
 	
 	struct services
 	{

@@ -66,8 +66,6 @@ void Connection::resetDB()
 	
 	createTables();
 }
-	
-
 
 uint64_t addFile(std::filesystem::path path)
 {
@@ -170,7 +168,10 @@ uint64_t addFile(std::filesystem::path path)
 		//Create the directory if it doesn't exist
 		if ( !std::filesystem::exists( modifiedPath ))
 		{
-			std::filesystem::create_directories( modifiedPath.parent_path());
+			if(!idhan::config::debug)
+			{
+				std::filesystem::create_directories( modifiedPath.parent_path());
+			}
 		}
 		
 		//Move the file
@@ -180,8 +181,10 @@ uint64_t addFile(std::filesystem::path path)
 		wrk.commit();
 	}
 	
-	
-	idhan::services::Thumbnailer::enqueue( hashID );
+	if(idhan::config::thumbnail_active)
+	{
+		idhan::services::Thumbnailer::enqueue( hashID );
+	}
 	return hashID;
 }
 
