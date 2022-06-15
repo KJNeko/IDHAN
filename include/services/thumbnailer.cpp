@@ -9,9 +9,6 @@
 #include <future>
 
 #include "TracyBox.hpp"
-
-#include <iostream>
-
 namespace idhan::services
 {
 	void ImageThumbnailer::start(size_t count)
@@ -32,7 +29,10 @@ namespace idhan::services
 			queuelock.lock();
 			if(queue.size() > 0)
 			{
+				//Manage the thumbnailer threads
+
 				ZoneScopedN("Thumbnailer");
+				TracyCPlot("Thumbnail queue size", queue.size());
 				auto [promise, hashID] = std::move(queue.front());
 				queue.pop();
 				queuelock.unlock();
@@ -49,15 +49,20 @@ namespace idhan::services
 					if(res.size() == 0)
 					{
 						promise.set_value(vips::VImage());
+						wrk.commit();
 						continue;
 					}
 					
 					sha256_view = res[0][0].as<std::string>();
+					wrk.commit();
 					
-					pqxx::result res2 = wrk.exec_prepared("selectFilename", hashID);
+					pqxx::work wrk2(conn.getConn());
+					
+					pqxx::result res2 = wrk2.exec_prepared("selectFilename", hashID);
 					if(res2.size() == 0)
 					{
 						promise.set_value(vips::VImage());
+						wrk.commit();
 						continue;
 					}
 					
@@ -123,8 +128,196 @@ namespace idhan::services
 	
 	void ImageThumbnailer::enqueue(const uint64_t hashID, std::promise<vips::VImage> promise)
 	{
+		static std::chrono::steady_clock::time_point lastChecked {std::chrono::milliseconds(0)};
+		
 		std::lock_guard<std::mutex> lock(queuelock);
-		queue.emplace(std::move(promise), hashID);
+		queue.emplace( std::move( promise ), hashID );
+		
+		TracyCPlot("Thumbnail queue size", queue.size());
+	}
+	
+	void ImageThumbnailer::await()
+	{
+		while(true)
+		{
+			std::this_thread::yield();
+			
+			queuelock.lock();
+			if(queue.empty())
+			{
+				queuelock.unlock();
+				return;
+			}
+			queuelock.unlock();
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+	}
+	
+	void ImageThumbnailer::manageThreads()
+	{
+		static std::chrono::steady_clock::time_point lastChecked = std::chrono::steady_clock::now();
+		static std::mutex checkLock;
+		
+		if(lastChecked < std::chrono::steady_clock::now() - std::chrono::seconds(2))
+		{
+			if ( queue.size() > threads.size() * 25 )
+			{
+				TracyCPlot( "Thumbnail threads", threads.size());
+				if ( threads.size() <
+					 idhan::config::services::service_maximum_threads )
+					threads.emplace_back( &ImageThumbnailer::run );
+			}
+			else
+			{
+				TracyCPlot( "Thumbnail threads", threads.size());
+				//If the queue is under 5 remove a thread until there is only one left
+				if ( queue.size() < threads.size() * 15 )
+				{
+					if ( threads.size() > 1 )
+					{
+						threads.back().request_stop();
+						threads.back().join();
+						threads.pop_back();
+					}
+				}
+			}
+			lastChecked = std::chrono::steady_clock::now();
+		}
+	}
+	
+	ImageThumbnailer::~ImageThumbnailer()
+	{
+		for(auto& thread : threads)
+		{
+			thread.request_stop();
+		}
+		
+		for(auto& thread : threads)
+		{
+			thread.join();
+		}
+	}
+	
+	void Thumbnailer::work( std::stop_token stoken )
+	{
+		while(!stoken.stop_requested())
+		{
+			ImageThumbnailer::manageThreads();
+			queuelock.lock();
+			if ( queue.empty() )
+			{
+				queuelock.unlock();
+				std::this_thread::yield();
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				continue;
+			}
+			auto [hashID, promise] = std::move(queue.front());
+			queue.pop();
+			queuelock.unlock();
+			
+			ZoneScopedN("ThumbnailerEnqueue");
+			//Get mime type from DB
+			MrMime::FileType mimeNum;
+			
+			{
+				ZoneScopedN("getMime");
+				Connection conn;
+				pqxx::work wrk(conn.getConn());
+				pqxx::result res = wrk.exec_prepared("selectFileMimeType", hashID);
+				if(res.size() == 0)
+				{
+					wrk.commit();
+					promise.set_exception(std::make_exception_ptr(std::runtime_error("Mapping for file not found")));
+					continue;
+				}
+				
+				mimeNum = static_cast<MrMime::FileType>(res[0][0].as<uint16_t>());
+			}
+			
+			switch(mimeNum)
+			{
+				//Images
+				case MrMime::IMAGE_JPEG: [[fallthrough]];
+				case MrMime::IMAGE_PNG: [[fallthrough]];
+				case MrMime::IMAGE_GIF: [[fallthrough]];
+				case MrMime::IMAGE_BMP: [[fallthrough]];
+				case MrMime::IMAGE_WEBP: [[fallthrough]];
+				case MrMime::IMAGE_TIFF: [[fallthrough]];
+				case MrMime::IMAGE_APNG: [[fallthrough]];
+				case MrMime::IMAGE_ICON:
+				{
+					ImageThumbnailer::enqueue(hashID, std::move(promise));
+				}
+					break;
+					
+					//Video
+				case MrMime::VIDEO_FLV: [[fallthrough]];
+				case MrMime::VIDEO_MP4: [[fallthrough]];
+				case MrMime::VIDEO_MOV: [[fallthrough]];
+				case MrMime::VIDEO_AVI:
+				{
+					//FFMPEG
+				}
+					break;
+				
+				case MrMime::APPLICATION_FLASH:
+					break;
+				case MrMime::APPLICATION_PSD:
+					//TODO: Figure out. Maybe ask floo
+					break;
+				case MrMime::APPLICATION_CLIP:
+					break;
+					
+					//Audio
+				case MrMime::AUDIO_WAVE:
+					break;
+				case MrMime::AUDIO_FLAC:
+					break;
+					
+					//Unknown
+				case MrMime::UNDETERMINED_WM:
+					break;
+				
+				default:
+					break;
+			}
+		}
+	}
+	
+	void Thumbnailer::start()
+	{
+		thread = std::jthread(&Thumbnailer::work);
+	}
+	
+	std::future<vips::VImage> Thumbnailer::enqueue( const uint64_t hashID )
+	{
+		std::lock_guard<std::mutex> lock( queuelock );
+		std::promise<vips::VImage> promise;
+		queue.emplace( hashID, std::move( promise ));
+		return queue.back().second.get_future();
+	}
+	
+	void Thumbnailer::await()
+	{
+		while(true)
+		{
+			std::this_thread::yield();
+			
+			queuelock.lock();
+			if(queue.empty())
+			{
+				queuelock.unlock();
+				return;
+			}
+			queuelock.unlock();
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+	}
+	
+	Thumbnailer::~Thumbnailer()
+	{
+		thread.request_stop();
+		thread.join();
 	}
 	
 }

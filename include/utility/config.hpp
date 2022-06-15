@@ -35,12 +35,12 @@ namespace idhan::config
 	
 	
 	
-	inline static std::atomic<bool> debug { true };
-	inline static std::atomic<bool> thumbnail_active { false };
+	inline static std::atomic<bool> debug { false };
+	inline static std::atomic<bool> thumbnail_active { true };
 	
 	struct services
 	{
-		inline static std::atomic<size_t> service_maximum_threads { 0 };
+		inline static std::atomic<size_t> service_maximum_threads { 8 };
 		
 		//Grace period in ms for services to start
 		inline static std::atomic<size_t> service_grace_period { 1000 };

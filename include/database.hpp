@@ -11,31 +11,45 @@
 
 #include <TracyBox.hpp>
 
-class Connection
+//const std::string& args = "dbname=idhan user=idhan password=idhan host=localhost port=5432"
+
+
+class ConnectionRevolver
 {
-	pqxx::connection conn;
+	inline static std::vector<std::pair<pqxx::connection, bool>> connections;
 	
-	void createTables();
-	
-	void prepareStatements();
+	static void prepareStatements(pqxx::connection& conn);
 	
 public:
-	Connection(const std::string& args = "dbname=idhan user=idhan password=idhan host=localhost port=5432") : conn(args)
-	{
-		ZoneScopedN("Connection::Connection");
-		if(conn.is_open())
-		{
-			createTables();
-			prepareStatements();
-		}
-	}
+	
+	static void createTables();
+	
+	static void resetDB();
+	
+	
+	inline static std::mutex connLock;
+	inline static std::pair<pqxx::connection&, bool&> getConnection();
+};
+
+
+class Connection
+{
+	std::pair<pqxx::connection&, bool&> conn;
+	std::lock_guard<std::mutex> lock{ConnectionRevolver::connLock};
+
+public:
+	Connection() : conn(ConnectionRevolver::getConnection()) {}
 	
 	pqxx::connection& getConn()
 	{
-		return conn;
+		return conn.first;
 	}
 	
-	void resetDB();
+	~Connection()
+	{
+		conn.second = false;
+	}
+	
 };
 
 uint64_t addFile(std::filesystem::path path);

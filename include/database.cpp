@@ -5,7 +5,6 @@
 #include "database.hpp"
 #include "utility/fileutils.hpp"
 #include "utility/config.hpp"
-#include "idhanthreads.hpp"
 #include "MrMime/mister_mime.hpp"
 #include "services/thumbnailer.hpp"
 
@@ -15,35 +14,20 @@
 
 
 //vips
-#include <vips/vips8>
-#include <vips/VImage8.h>
 #include <iostream>
 
 #include <TracyBox.hpp>
 
-void Connection::createTables()
-{
-	pqxx::work wrk(conn);
-	
-	wrk.exec("CREATE TABLE IF NOT EXISTS files (hashid BIGSERIAL PRIMARY KEY, sha256 BYTEA UNIQUE, md5 BYTEA UNIQUE);");
-	wrk.exec("CREATE TABLE IF NOT EXISTS playerinfo (hashid BIGINT PRIMARY KEY REFERENCES files ON DELETE CASCADE, type SMALLINT, frames BIGINT, bytes BIGINT, width BIGINT, height BIGINT, duration BIGINT, fps BIGINT)");
-	wrk.exec("CREATE TABLE IF NOT EXISTS importinfo (hashid BIGINT PRIMARY KEY REFERENCES files ON DELETE CASCADE, time TIMESTAMP, filename TEXT)");
-	wrk.exec("CREATE TABLE IF NOT EXISTS subtags (subtagid BIGSERIAL PRIMARY KEY, subtag TEXT UNIQUE);");
-	wrk.exec("CREATE TABLE IF NOT EXISTS groups (groupid SMALLSERIAL PRIMARY KEY, \"group\" TEXT UNIQUE);");
-	wrk.exec("CREATE TABLE IF NOT EXISTS mappings (hashid BIGINT REFERENCES files ON DELETE CASCADE, groupid SMALLINT REFERENCES groups ON DELETE CASCADE, subtagid BIGINT REFERENCES subtags ON DELETE CASCADE);");
-	
-	wrk.commit();
-}
 
-void Connection::prepareStatements()
+void ConnectionRevolver::prepareStatements( pqxx::connection& conn )
 {
 	//Prepare statements
-	
 	
 	//Files prepare
 	conn.prepare("selectFile", "SELECT hashid FROM files WHERE sha256 = $1");
 	conn.prepare("selectFileSHA256", "SELECT sha256 FROM files WHERE hashid = $1");
 	conn.prepare("insertFileSHA256", "INSERT INTO files (sha256) VALUES ($1) RETURNING hashid");
+	conn.prepare("insertFile", "INSERT INTO files (sha256, md5) VALUES ($1, $2) RETURNING hashid");
 	
 	
 	//playerinfo prepare
@@ -57,14 +41,55 @@ void Connection::prepareStatements()
 	conn.prepare("selectFilename", "SELECT filename FROM importinfo WHERE hashid = $1");
 }
 
-void Connection::resetDB()
+void ConnectionRevolver::createTables()
 {
+	pqxx::connection conn("dbname=idhan user=idhan password=idhan host=localhost port=5432");
+	pqxx::work wrk(conn);
 	
+	wrk.exec("CREATE TABLE IF NOT EXISTS files (hashid BIGSERIAL PRIMARY KEY, sha256 BYTEA UNIQUE, md5 BYTEA UNIQUE);");
+	wrk.exec("CREATE TABLE IF NOT EXISTS playerinfo (hashid BIGINT PRIMARY KEY REFERENCES files ON DELETE CASCADE, type SMALLINT, frames BIGINT, bytes BIGINT, width BIGINT, height BIGINT, duration BIGINT, fps BIGINT)");
+	wrk.exec("CREATE TABLE IF NOT EXISTS importinfo (hashid BIGINT PRIMARY KEY REFERENCES files ON DELETE CASCADE, time TIMESTAMP, filename TEXT)");
+	wrk.exec("CREATE TABLE IF NOT EXISTS subtags (subtagid BIGSERIAL PRIMARY KEY, subtag TEXT UNIQUE);");
+	wrk.exec("CREATE TABLE IF NOT EXISTS groups (groupid SMALLSERIAL PRIMARY KEY, \"group\" TEXT UNIQUE);");
+	wrk.exec("CREATE TABLE IF NOT EXISTS mappings (hashid BIGINT REFERENCES files ON DELETE CASCADE, groupid SMALLINT REFERENCES groups ON DELETE CASCADE, subtagid BIGINT REFERENCES subtags ON DELETE CASCADE);");
+	
+	wrk.commit();
+}
+
+void ConnectionRevolver::resetDB()
+{
+	pqxx::connection conn("dbname=idhan user=idhan password=idhan host=localhost port=5432");
 	pqxx::work wrk(conn);
 	wrk.exec("drop table if exists files, playerinfo, importinfo, subtags, groups, mappings");
 	wrk.commit();
 	
 	createTables();
+}
+
+std::pair<pqxx::connection&, bool&> ConnectionRevolver::getConnection()
+{
+	//See if we have an connection available
+	{
+		std::lock_guard<std::mutex> lock(connLock);
+		for (auto& conn : connections)
+		{
+			if (!conn.second)
+			{
+				conn.second = true;
+				return {conn.first, conn.second};
+			}
+		}
+	}
+	
+	TracyCPlot("connections vector", connections.size());
+	
+	//No connection available, create a new one
+	std::lock_guard<std::mutex> lock(connLock);
+	auto& conn = connections.emplace_back(std::make_pair(pqxx::connection("dbname=idhan user=idhan password=idhan host=localhost port=5432"), false));
+	//Run the prepares on it
+	prepareStatements(conn.first);
+	conn.second = true;
+	return {conn.first, conn.second};
 }
 
 uint64_t addFile(std::filesystem::path path)
@@ -117,15 +142,22 @@ uint64_t addFile(std::filesystem::path path)
 		const std::basic_string_view<std::byte> sha256_view {
 				reinterpret_cast<const std::byte*>(sha256.data()),
 				sha256.size() };
+		
 		TracyCZoneEnd( sha256Tracy );
 		
-		TracyCZoneN( DBTrans, "DatabaseTransaction", true );
+		TracyCZoneN( md5tracy , "MD5", true);
+		const std::vector<uint8_t> md5 = MD5( data );
+		const std::basic_string_view<std::byte> md5_view {
+				reinterpret_cast<const std::byte*>(md5.data()),
+				md5.size() };
+		TracyCZoneEnd( md5tracy );
+		
 		//Check if the file already exists in the database records
 		Connection conn;
 		pqxx::work wrk( conn.getConn());
-		TracyCZoneN( selectFileQuery, "selectFile", true );
+		//TracyCZoneN( selectFileQuery, "selectFile", true );
 		pqxx::result res = wrk.exec_prepared( "selectFile", sha256_view );
-		TracyCZoneEnd( selectFileQuery );
+		//TracyCZoneEnd( selectFileQuery );
 		
 		if ( res.size() > 0 )
 		{
@@ -133,12 +165,13 @@ uint64_t addFile(std::filesystem::path path)
 		}
 		else
 		{
-			TracyCZoneN( insertFileSHA256, "insertFileSHA256", true );
+			TracyCZoneN( insertFileDB, "insertFileDB", true );
 			//Insert the file into the database
-			res = wrk.exec_prepared( "insertFileSHA256", sha256_view );
-			TracyCZoneEnd( insertFileSHA256 );
+			res = wrk.exec_prepared( "insertFile", sha256_view, md5_view );
+			TracyCZoneEnd( insertFileDB );
 			if ( res.size() == 0 )
 			{
+				std::cout << "Error inserting file into database" << std::endl;
 				wrk.abort();
 				return 0;
 			}
@@ -153,7 +186,6 @@ uint64_t addFile(std::filesystem::path path)
 			wrk.exec_prepared( "insertImportInfo", hashID, path.string());
 			TracyCZoneEnd( insertPlayerBasicInfo );
 		}
-		TracyCZoneEnd( DBTrans );
 		
 		//Calculate the filename and path
 		TracyCZoneN( movefile, "MoveFile", true );
@@ -171,11 +203,19 @@ uint64_t addFile(std::filesystem::path path)
 			if(!idhan::config::debug)
 			{
 				std::filesystem::create_directories( modifiedPath.parent_path());
+				//Write the file from the buffer
+				if(std::ofstream ofs( modifiedPath, std::ios::binary ); ofs)
+				{
+					ofs.write( reinterpret_cast<const char*>(data.data()), size );
+				}
+				
+				//std::filesystem::rename( path, modifiedPath );
+				//Delete the old file
+				std::filesystem::remove( path );
 			}
 		}
 		
 		//Move the file
-		std::filesystem::rename( path, modifiedPath );
 		
 		TracyCZoneEnd( movefile );
 		wrk.commit();

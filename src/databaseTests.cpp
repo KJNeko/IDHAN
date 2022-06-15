@@ -71,7 +71,6 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 
 #include "database.hpp"
 #include "crypto.hpp"
-#include "idhanthreads.hpp"
 #include "./services/thumbnailer.hpp"
 
 #include <vips/vips8>
@@ -87,12 +86,13 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 
 void resetDB()
 {
-	Connection conn;
-	conn.resetDB();
+	ZoneScopedN("resetDB")
+	ConnectionRevolver::resetDB();
 }
 
 TEST_CASE("SHA256Test", "[crypto]")
 {
+	ZoneScopedN("SHA256Test");
 	std::vector<uint8_t> expected {0x9f,0x86,0xd0,0x81,0x88,0x4c,0x7d,0x65,0x9a,0x2f,0xea,0xa0,0xc5,0x5a,0xd0,0x15,0xa3,0xbf,0x4f,0x1b,0x2b,0x0b,0x82,0x2c,0xd1,0x5d,0x6c,0x15,0xb0,0xf0,0x0a,0x08};
 	std::vector<uint8_t> data = {'t','e','s','t'};
 	REQUIRE(SHA256(data) == expected);
@@ -100,6 +100,7 @@ TEST_CASE("SHA256Test", "[crypto]")
 
 TEST_CASE("MD5Test", "[crypto]")
 {
+	ZoneScopedN("MD5Test");
 	std::vector<uint8_t> expected {0x09,0x8f,0x6b,0xcd,0x46,0x21,0xd3,0x73,0xca,0xde,0x4e,0x83,0x26,0x27,0xb4,0xf6};
 	std::vector<uint8_t> data = {'t','e','s','t'};
 	
@@ -108,11 +109,13 @@ TEST_CASE("MD5Test", "[crypto]")
 
 TEST_CASE("ConnectionTest", "[database]")
 {
+	ZoneScopedN("ConnectionTest");
 	resetDB();
 }
 
 TEST_CASE("addTag", "[tags][database]")
 {
+	ZoneScopedN("addTag");
 	resetDB();
 	std::vector<std::pair<std::string, std::string>> tags;
 	tags.push_back(std::make_pair("character", "toujou koneko"));
@@ -160,6 +163,7 @@ TEST_CASE("addTag", "[tags][database]")
 
 TEST_CASE("removeTag", "[tags][database]")
 {
+	ZoneScopedN("removeTag");
 	resetDB();
 	std::vector<std::pair<std::string, std::string>> tags;
 	tags.push_back(std::make_pair("character", "toujou koneko"));
@@ -198,6 +202,7 @@ TEST_CASE("removeTag", "[tags][database]")
 
 TEST_CASE("getTags", "[tags][database]")
 {
+	ZoneScopedN("getTags");
 	resetDB();
 	std::vector<std::pair<std::string, std::string>> tags;
 	tags.push_back(std::make_pair("character", "toujou koneko"));
@@ -223,6 +228,7 @@ TEST_CASE("getTags", "[tags][database]")
 
 TEST_CASE("removeFile", "[database]")
 {
+	ZoneScopedN("removeFile");
 	resetDB();
 	uint64_t id = addFile("./Images/valid.jpg");
 	if(id == 0)
@@ -282,7 +288,6 @@ TEST_CASE("massAdd", "[perf]")
 
 int main(int argc, char** argv)
 {
-	idhan::config::debug = true;
 	idhan::services::ImageThumbnailer::start();
 	idhan::services::Thumbnailer::start();
 	
