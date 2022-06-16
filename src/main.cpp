@@ -4,16 +4,16 @@
 
 #include <iostream>
 
-#include <vector>
-
 #include "database.hpp"
-#include "crypto.hpp"
 #include "./services/thumbnailer.hpp"
 
-#include <vips/vips8>
-#include <vips/VImage8.h>
-
 #include <TracyBox.hpp>
+
+#include <QtCore>
+#include <QApplication>
+#include <QWidget>
+
+#include "mainView.hpp"
 
 void resetDB()
 {
@@ -22,6 +22,8 @@ void resetDB()
 
 int main(int argc, char** argv)
 {
+	std::cout << "Qt version: " << qVersion() << std::endl;
+	
 	idhan::services::ImageThumbnailer::start();
 	idhan::services::Thumbnailer::start();
 	
@@ -31,25 +33,10 @@ int main(int argc, char** argv)
 		throw std::runtime_error("Failed to initialize vips");
 	}
 	
-	//Catch2
+	QApplication app(argc, argv);
 	
-	ZoneScopedN("MassAdd");
-	resetDB();
-	std::filesystem::path path {"../Images/Perf/JPG"};
-	
-	std::vector<std::string> files;
-	
-	for(auto& p : std::filesystem::directory_iterator(path))
-	{
-		files.push_back(p.path().string());
-	}
-	
-	//Add files
-	std::vector<uint64_t> ids;
-	for(auto& f : files)
-	{
-		ids.push_back(addFile(f));
-	}
+	MainWindow window;
+	window.show();
 	
 	
 	TracyCZoneN(await,"Shutdown",true);
@@ -60,5 +47,6 @@ int main(int argc, char** argv)
 	//VIPS
 	vips_shutdown();
 	
-	return 0;
+	
+	return app.exec();
 }

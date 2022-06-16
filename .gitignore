@@ -42,3 +42,8 @@ graph.png
 /Images/Perf/GIF
 /Images/Perf/MP4
 /Images/Perf/RAND
+
+
+main_autogen/
+TracyProfile_autogen/
+DBTest_autogen/
