@@ -65,8 +65,15 @@ args: hashID
 query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN ($1)
 */
 
+
+
+//warning: assuming signed overflow does not occur when changing X +- C1 cmp C2 to X cmp C2 -+ C1 [-Wstrict-overflow]
+//Even ignoring -Wstrict-overflow, the compiler will still warn about overflow.
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
+
+
+
 #include <vector>
 
 #include "database.hpp"
@@ -75,7 +82,6 @@ query:SELECT groupid, subtagid FROM tags NATURAL JOIN mappings WHERE hashid IN (
 
 #include <vips/vips8>
 #include <vips/VImage8.h>
-
 
 #include <TracyBox.hpp>
 
@@ -285,6 +291,7 @@ TEST_CASE("massAdd", "[perf]")
 		ids.push_back(addFile(f));
 	}
 }
+
 
 int main(int argc, char** argv)
 {

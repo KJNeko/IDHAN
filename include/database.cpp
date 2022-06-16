@@ -81,7 +81,7 @@ std::pair<pqxx::connection&, bool&> ConnectionRevolver::getConnection()
 		}
 	}
 	
-	TracyCPlot("connections vector", connections.size());
+	TracyCPlot("connections vector", static_cast<double>(connections.size()));
 	
 	//No connection available, create a new one
 	std::lock_guard<std::mutex> lock(connLock);
@@ -211,7 +211,7 @@ uint64_t addFile(std::filesystem::path path)
 				//Write the file from the buffer
 				if(std::ofstream ofs( modifiedPath, std::ios::binary ); ofs)
 				{
-					ofs.write( reinterpret_cast<const char*>(data.data()), size );
+					ofs.write( reinterpret_cast<const char*>(data.data()), static_cast<long int>(size) );
 				}
 				
 				//std::filesystem::rename( path, modifiedPath );

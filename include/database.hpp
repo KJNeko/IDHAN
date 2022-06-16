@@ -5,7 +5,17 @@
 #ifndef MAIN_DATABASE_HPP
 #define MAIN_DATABASE_HPP
 
+//Don't make me box you
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wmultiple-inheritance"
+#pragma GCC diagnostic ignored "-Wswitch-default"
 #include <pqxx/pqxx>
+#pragma GCC diagnostic pop
+
+
 #include <nlohmann/json.hpp>
 #include "crypto.hpp"
 
@@ -28,7 +38,7 @@ public:
 	
 	
 	inline static std::mutex connLock;
-	inline static std::pair<pqxx::connection&, bool&> getConnection();
+	static std::pair<pqxx::connection&, bool&> getConnection();
 };
 
 

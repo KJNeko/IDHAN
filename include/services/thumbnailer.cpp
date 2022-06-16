@@ -32,7 +32,7 @@ namespace idhan::services
 				//Manage the thumbnailer threads
 
 				ZoneScopedN("Thumbnailer");
-				TracyCPlot("Thumbnail queue size", queue.size());
+				TracyCPlot("Thumbnail queue size", static_cast<double>(queue.size()));
 				auto [promise, hashID] = std::move(queue.front());
 				queue.pop();
 				queuelock.unlock();
@@ -97,9 +97,10 @@ namespace idhan::services
 						static_cast<double>(idhan::config::fileconfig::thumbnail_width) / static_cast<double>(image.width()),
 						static_cast<double>(idhan::config::fileconfig::thumbnail_height) / static_cast<double>(image.height()));
 					
-					uint64_t width = image.width() * ratio;
+					uint64_t width = static_cast<uint64_t>(
+							static_cast<double>(image.width()) * ratio);
 					//vips::VImage resized = image.resize(ratio);
-					vips::VImage resized = image.thumbnail_image(width);
+					vips::VImage resized = image.thumbnail_image(static_cast<int>(width));
 					TracyCZoneEnd(resize);
 					
 					//Save image to disk
@@ -133,7 +134,7 @@ namespace idhan::services
 		std::lock_guard<std::mutex> lock(queuelock);
 		queue.emplace( std::move( promise ), hashID );
 		
-		TracyCPlot("Thumbnail queue size", queue.size());
+		TracyCPlot("Thumbnail queue size", static_cast<double>(queue.size()));
 	}
 	
 	void ImageThumbnailer::await()
@@ -162,14 +163,14 @@ namespace idhan::services
 		{
 			if ( queue.size() > threads.size() * 25 )
 			{
-				TracyCPlot( "Thumbnail threads", threads.size());
+				TracyCPlot( "Thumbnail threads", static_cast<double>(threads.size()));
 				if ( threads.size() <
 					 idhan::config::services::service_maximum_threads )
 					threads.emplace_back( &ImageThumbnailer::run );
 			}
 			else
 			{
-				TracyCPlot( "Thumbnail threads", threads.size());
+				TracyCPlot( "Thumbnail threads", static_cast<double>(threads.size()));
 				//If the queue is under 5 remove a thread until there is only one left
 				if ( queue.size() < threads.size() * 15 )
 				{
