@@ -256,7 +256,7 @@ namespace idhan::services
 				case MrMime::VIDEO_MOV: [[fallthrough]];
 				case MrMime::VIDEO_AVI:
 				{
-					//FFMPEG
+				
 				}
 					break;
 				
@@ -273,13 +273,9 @@ namespace idhan::services
 					break;
 				case MrMime::AUDIO_FLAC:
 					break;
-					
-					//Unknown
-				case MrMime::UNDETERMINED_WM:
-					break;
 				
 				default:
-					break;
+					throw std::runtime_error("Unknown mime type or file is not supported");
 			}
 		}
 	}
