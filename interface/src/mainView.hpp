@@ -6,6 +6,7 @@
 #define MAIN_MAINVIEW_HPP
 
 #include <QMainWindow>
+#include "MrMime/filetype_enum.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -26,6 +27,8 @@ private:
 	
 public:
 	void addTab( QWidget* widget );
+	
+	void importFiles(const std::vector<std::pair<QString, MrMime::FileType>>& files);
 	
 private slots:
 	void on_actionImport_triggered();

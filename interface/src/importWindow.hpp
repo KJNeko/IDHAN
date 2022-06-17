@@ -6,6 +6,7 @@
 #define MAIN_IMPORTWINDOW_HPP
 
 #include <QDialog>
+#include "MrMime/filetype_enum.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -24,9 +25,13 @@ public:
 private:
 	Ui::ImportWindow* ui;
 	
+	std::vector<std::pair<QString, MrMime::FileType>> fileList;
+	
 private slots:
 	//Click on "addFolder" button
 	void on_addFolder_clicked();
+
+	void on_importNow_clicked();
 };
 
 

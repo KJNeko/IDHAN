@@ -19,6 +19,8 @@
 #include <nlohmann/json.hpp>
 #include "crypto.hpp"
 
+#include "MrMime/mister_mime.hpp"
+
 #include <TracyBox.hpp>
 
 //const std::string& args = "dbname=idhan user=idhan password=idhan host=localhost port=5432"
@@ -62,8 +64,6 @@ public:
 	
 };
 
-uint64_t addFile(std::filesystem::path path);
-
 void removeFile(uint64_t id);
 
 void addTag(uint64_t hashID, std::vector<std::pair<std::string, std::string>> tags);
@@ -75,5 +75,61 @@ std::vector<std::pair<std::string, std::string>> getTags(uint64_t hashID);
 void replaceTag(std::pair<std::string, std::string> origin, std::pair<std::string, std::string> replacement);
 
 nlohmann::json getFileinfo(uint64_t hashID);
+
+
+namespace IdhanException
+{
+	
+	//Generic
+	class IDDoesntExist : public std::exception {};
+	class SHA256DoesntExist : public std::exception {};
+	
+	
+
+	
+	//Tag exceptions
+	class TagNotPresent : public std::exception {};
+	class TagAlreadyPresent : public std::exception {};
+}
+
+
+//Data structs 1 struct per data table
+
+
+
+
+//Managing files
+
+//Adds file mapping to database
+uint64_t addFileMapping(std::array<uint8_t, 32> SHA256);
+
+//Deletes the mapping with the given id. Also deletes all other mappings associated with the file
+void deleteMappingCascade(uint64_t id);
+
+//Translation SHA256 <-> ID
+uint64_t getMappingID(std::vector<uint8_t>& sha256);
+std::vector<uint8_t> getMappingSHA256(uint64_t id);
+
+
+//Tag management
+void addTag(uint64_t id, std::string tag);
+
+void removeTag(uint64_t id, std::string tag);
+
+std::vector<uint64_t> getFilesWithTag(std::vector<std::string> tag);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #endif //MAIN_DATABASE_HPP

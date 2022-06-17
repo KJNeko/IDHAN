@@ -2,9 +2,12 @@
 // Created by kj16609 on 6/7/22.
 //
 
+#include <array>
+#include <cstring>
+
 #include "crypto.hpp"
 
-std::vector<uint8_t> SHA256(const std::vector<uint8_t>& data)
+std::array<uint8_t, 32> SHA256(const std::vector<uint8_t>& data)
 {
 	//SHA256
 	EVP_MD_CTX *ctx;
@@ -15,11 +18,12 @@ std::vector<uint8_t> SHA256(const std::vector<uint8_t>& data)
 	EVP_DigestUpdate(ctx, data.data(), data.size());
 	EVP_DigestFinal_ex(ctx, md, &md_len);
 	EVP_MD_CTX_destroy(ctx);
-	std::vector<uint8_t> output(md, md + md_len);
+	std::array<uint8_t, 32> output;
+	memcpy(output.data(), md, md_len);
 	return output;
 }
 
-std::vector<uint8_t> MD5(const std::vector<uint8_t>& data)
+std::array<uint8_t, 16> MD5(const std::vector<uint8_t>& data)
 {
 	//MD5
 	EVP_MD_CTX *ctx;
@@ -30,6 +34,7 @@ std::vector<uint8_t> MD5(const std::vector<uint8_t>& data)
 	EVP_DigestUpdate(ctx, data.data(), data.size());
 	EVP_DigestFinal_ex(ctx, md, &md_len);
 	EVP_MD_CTX_destroy(ctx);
-	std::vector<uint8_t> output(md, md + md_len);
+	std::array<uint8_t, 16> output;
+	memcpy(output.data(), md, md_len);
 	return output;
 }

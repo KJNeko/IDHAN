@@ -7,12 +7,23 @@
 
 #include <string>
 #include <vector>
+#include <iomanip>
 
 #include "MrMime/mister_mime.hpp"
 
 namespace idhan::utils
 {
-	std::string toHex(std::vector<uint8_t> data);
+	template <typename T>
+	std::string toHex(T data)
+	{
+		std::stringstream ss;
+		for (auto& i : data)
+		{
+			ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(i);
+		}
+		
+		return ss.str();
+	}
 	
 	std::pair<MrMime::FileType, uint64_t> get_mime(const std::string& filepath);
 }

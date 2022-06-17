@@ -9,6 +9,8 @@
 
 //ImportWindow include
 #include "importWindow.hpp"
+#include "importViewer.hpp"
+#include "MrMime/filetype_enum.h"
 
 MainWindow::MainWindow( QWidget* parent )
 		:
@@ -30,11 +32,22 @@ void MainWindow::addTab( QWidget* widget )
 void MainWindow::on_actionImport_triggered()
 {
 	//Open import window
-	ImportWindow window;
+	ImportWindow window( this );
 	window.exec();
+}
+
+void MainWindow::importFiles(const std::vector<std::pair<QString, MrMime::FileType>>& files)
+{
+	//Open import viewer in a new page
+	ImportViewer* viewer = new ImportViewer( this );
+	
+	//Create a new tag and place the viewer into it
+	ui->tabWidget->addTab( viewer, "Import" );
+	viewer->addFiles(files);
 }
 
 void MainWindow::on_actionoptions_triggered()
 {
 
 }
+

@@ -13,9 +13,9 @@
 
 #include <vector>
 
-std::vector<uint8_t> SHA256(const std::vector<uint8_t>& data);
+std::array<uint8_t, 32> SHA256(const std::vector<uint8_t>& data);
 
-std::vector<uint8_t> MD5(const std::vector<uint8_t>& data);
+std::array<uint8_t, 16> MD5(const std::vector<uint8_t>& data);
 
 
 #endif //MAIN_CRYPTO_HPP

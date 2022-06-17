@@ -92,146 +92,27 @@ std::pair<pqxx::connection&, bool&> ConnectionRevolver::getConnection()
 	return {conn.first, conn.second};
 }
 
-uint64_t addFile(std::filesystem::path path)
+uint64_t addFileMapping(std::array<uint8_t, 32>& SHA256)
 {
-	uint64_t hashID = 0;
-	{
-		ZoneScopedN( "addFile" );
-		using MrMime::header_data_buffer_t;
-		if ( !std::filesystem::exists( path ))
-		{
-			std::string currentpwd = std::filesystem::current_path().string();
-			throw std::runtime_error(
-					"Unable to find file: " + path.string() + " in " +
-					currentpwd );
-		}
-		
-		const std::size_t size { std::filesystem::file_size( path ) };
-		
-		if ( size < sizeof( header_data_buffer_t ))
-		{
-			return 0;
-		}
-		
-		TracyCZoneN( readfile, "ReadFile", true );
-		//Read the rest of the file data
-		std::vector<uint8_t> data;
-		data.resize( size );
-		
-		auto ifs { std::ifstream( path, std::ios::binary ) };
-		ifs.exceptions(
-				std::ifstream::badbit | std::ifstream::failbit |
-				std::ifstream::eofbit );
-		ifs.read(
-				reinterpret_cast<char*>(data.data()),
-				static_cast<long int>(size));
-		TracyCZoneEnd( readfile );
-		
-		TracyCZoneN( bufferRead, "MimeParsing", true );
-		MrMime::header_data_buffer_t buffer;
-		memcpy( buffer.data(), data.data(), sizeof( buffer ));
-		TracyCZoneN( deduce, "DeduceFiletype", true );
-		const auto MIMEType = MrMime::deduceFileType( buffer );
-		if( MIMEType == MrMime::FileType::APPLICATION_UNKNOWN )
-		{
-			throw std::runtime_error("Unable to determine file mimetype");
-		}
-		
-		TracyCZoneEnd( deduce );
-		TracyCZoneEnd( bufferRead );
-		
-		TracyCZoneN( sha256Tracy, "SHA256", true );
-		//Calculate SHA256 of the file
-		//const std::vector<uint8_t> sha256 = std::move(SHA256(data));
-		const std::vector<uint8_t> sha256 = SHA256( data );
-		const std::basic_string_view<std::byte> sha256_view {
-				reinterpret_cast<const std::byte*>(sha256.data()),
-				sha256.size() };
-		
-		TracyCZoneEnd( sha256Tracy );
-		
-		TracyCZoneN( md5tracy , "MD5", true);
-		const std::vector<uint8_t> md5 = MD5( data );
-		const std::basic_string_view<std::byte> md5_view {
-				reinterpret_cast<const std::byte*>(md5.data()),
-				md5.size() };
-		TracyCZoneEnd( md5tracy );
-		
-		//Check if the file already exists in the database records
-		Connection conn;
-		pqxx::work wrk( conn.getConn());
-		//TracyCZoneN( selectFileQuery, "selectFile", true );
-		pqxx::result res = wrk.exec_prepared( "selectFile", sha256_view );
-		//TracyCZoneEnd( selectFileQuery );
-		
-		if ( res.size() > 0 )
-		{
-			hashID = res[0][0].as<uint64_t>();
-		}
-		else
-		{
-			TracyCZoneN( insertFileDB, "insertFileDB", true );
-			//Insert the file into the database
-			res = wrk.exec_prepared( "insertFile", sha256_view, md5_view );
-			TracyCZoneEnd( insertFileDB );
-			if ( res.size() == 0 )
-			{
-				std::cout << "Error inserting file into database" << std::endl;
-				wrk.abort();
-				return 0;
-			}
-			
-			//Insert quick mime data
-			hashID = res[0][0].as<uint64_t>();
-			
-			TracyCZoneN( insertPlayerBasicInfo, "insertBasicPlayerInfo", true );
-			wrk.exec_prepared(
-					"insertBasicPlayerInfo", hashID,
-					static_cast<uint16_t>(MIMEType));
-			wrk.exec_prepared( "insertImportInfo", hashID, path.string());
-			TracyCZoneEnd( insertPlayerBasicInfo );
-		}
-		
-		//Calculate the filename and path
-		TracyCZoneN( movefile, "MoveFile", true );
-		const std::string fileHex = idhan::utils::toHex( sha256 );
-		
-		auto modifiedPath = idhan::config::fileconfig::file_path;
-		modifiedPath /= "f" + fileHex.substr( 0, 2 );
-		modifiedPath /= fileHex;
-		
-		modifiedPath.replace_extension( path.extension());
-		
-		//Create the directory if it doesn't exist
-		if ( !std::filesystem::exists( modifiedPath ))
-		{
-			if(!idhan::config::debug)
-			{
-				std::filesystem::create_directories( modifiedPath.parent_path());
-				//Write the file from the buffer
-				if(std::ofstream ofs( modifiedPath, std::ios::binary ); ofs)
-				{
-					ofs.write( reinterpret_cast<const char*>(data.data()), static_cast<long int>(size) );
-				}
-				
-				//std::filesystem::rename( path, modifiedPath );
-				//Delete the old file
-				std::filesystem::remove( path );
-			}
-		}
-		
-		//Move the file
-		
-		TracyCZoneEnd( movefile );
-		wrk.commit();
-	}
+	std::basic_string_view<std::byte> SHA256_view(reinterpret_cast<std::byte*>(SHA256.data()), SHA256.size());
 	
-	if(idhan::config::thumbnail_active)
+	Connection conn;
+	pqxx::work wrk(conn.getConn());
+	
+	//Check if the file is already in the database
+	pqxx::result res = wrk.exec_prepared("selectFile", SHA256_view);
+	if (res.size() > 0)
 	{
-		idhan::services::Thumbnailer::enqueue( hashID );
+		return res[0][0].as<uint64_t>();
 	}
-	return hashID;
+	else
+	{
+		//Insert the file
+		res = wrk.exec_prepared("insertFileSHA256", SHA256_view);
+		return res[0][0].as<uint64_t>();
+	}
 }
+
 
 void removeFile(uint64_t id)
 {
@@ -398,149 +279,4 @@ std::vector<std::pair<std::string, std::string>> getTags(uint64_t hashID)
 	}
 	
 	return tags;
-}
-
-void replaceTag(std::pair<std::string, std::string> origin, std::pair<std::string, std::string> replacement)
-{
-	ZoneScopedN("replaceTag");
-	Connection conn;
-	pqxx::work wrk( conn.getConn());
-	
-	auto selectSubtagID = [&wrk]( std::string text )
-	{
-		//Try a select
-		pqxx::result res = wrk.exec(
-				"SELECT subtagid FROM subtags WHERE subtag = '" + text +
-				"'" );
-		
-		if ( res.empty())
-		{
-			res = wrk.exec(
-					"INSERT INTO subtags (subtag) VALUES ('" + text +
-					"') RETURNING subtagid" );
-		}
-		
-		return res[0][0].as<uint64_t>();
-	};
-	
-	auto selectGroupID = [&wrk]( std::string text )
-	{
-		//Try a select
-		pqxx::result res = wrk.exec(
-				"SELECT groupid FROM groups WHERE \"group\" = '" + text +
-				"'" );
-		
-		if ( res.empty())
-		{
-			res = wrk.exec(
-					"INSERT INTO groups (\"group\") VALUES ('" + text +
-					"') RETURNING groupid" );
-		}
-		
-		return res[0][0].as<uint64_t>();
-	};
-	
-	auto getSubtagID = [&wrk]( std::string text )
-	{
-		//Try a select
-		pqxx::result res = wrk.exec(
-				"SELECT subtagid FROM subtags WHERE subtag = '" + text +
-				"'" );
-		
-		if ( res.empty())
-		{
-			res = wrk.exec(
-					"INSERT INTO subtags (subtag) VALUES ('" + text +
-					"') RETURNING subtagid" );
-		}
-		
-		return res[0][0].as<uint64_t>();
-	};
-	
-	auto getGroupID = [&wrk]( std::string text )
-	{
-		//Try a select
-		pqxx::result res = wrk.exec(
-				"SELECT groupid FROM groups WHERE \"group\" = '" + text +
-				"'" );
-		
-		if ( res.empty())
-		{
-			res = wrk.exec(
-					"INSERT INTO groups (\"group\") VALUES ('" + text +
-					"') RETURNING groupid" );
-		}
-		
-		return res[0][0].as<uint64_t>();
-	};
-	
-	auto [origingroup, originsubtag] = std::make_pair(
-			selectGroupID( origin.first ), selectSubtagID( origin.second ));
-	auto [replacegroup, replacesubtag] = std::make_pair(
-			getGroupID( replacement.first ),
-			getSubtagID( replacement.second ));
-	
-	wrk.exec(
-			"UPDATE mappings SET groupid = " +
-			std::to_string( replacegroup ) + ", subtagid = " +
-			std::to_string( replacesubtag ) + " WHERE groupid = " +
-			std::to_string( origingroup ) + " AND subtagid = " +
-			std::to_string( originsubtag ));
-	
-	wrk.commit();
-}
-
-
-nlohmann::json getFileinfo(uint64_t hashID)
-{
-	ZoneScopedN("getFileinfo");
-	Connection conn;
-	pqxx::work wrk(conn.getConn());
-	
-	nlohmann::json j;
-	
-	//mappings
-	{
-		pqxx::result res = wrk.exec("SELECT \"group\", subtag FROM mappings NATURAL JOIN subtags NATURAL JOIN groups WHERE hashid = " + std::to_string(hashID));
-		
-		//Combine
-		std::vector<std::string> tags;
-		for( pqxx::row row : res)
-		{
-			tags.emplace_back(row[0].as<std::string>() + ":" + row[1].as<std::string>());
-		}
-		
-		j["mappings"] = tags;
-	}
-	
-	//playerinfo
-	{
-		pqxx::result res = wrk.exec("SELECT type, frames, bytes, width, height, (CAST(fps as float) * CAST(frames as float)) as duration, fps FROM playerinfo WHERE hashid = " + std::to_string(hashID));
-		
-		if(res.size() == 1)
-		{
-			pqxx::row row = res[0];
-			
-			j["playerinfo"]["type"] = row[0].as<uint64_t>();
-			j["playerinfo"]["frames"] = row[1].as<uint64_t>();
-			j["playerinfo"]["bytes"] = row[2].as<uint64_t>();
-			j["playerinfo"]["width"] = row[3].as<uint64_t>();
-			j["playerinfo"]["height"] = row[4].as<uint64_t>();
-			j["playerinfo"]["duration"] = row[5].as<uint64_t>();
-			j["playerinfo"]["fps"] = row[6].as<uint64_t>();
-		}
-	}
-	
-	//importinfo
-	{
-		pqxx::result res = wrk.exec("SELECT time, filename FROM importinfo WHERE hashid = " + std::to_string(hashID));
-		
-		if(res.size() == 1)
-		{
-			j["importinfo"]["time"] = res[0][0].as<std::string>();
-			j["importinfo"]["filename"] = res[0][1].as<std::string>();
-		}
-	}
-	
-	return j;
 }
