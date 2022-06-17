@@ -244,7 +244,7 @@ namespace idhan::services
 				case MrMime::IMAGE_BMP: [[fallthrough]];
 				case MrMime::IMAGE_WEBP: [[fallthrough]];
 				case MrMime::IMAGE_TIFF: [[fallthrough]];
-				case MrMime::IMAGE_APNG: [[fallthrough]];
+				//case MrMime::IMAGE_APNG: [[fallthrough]];
 				case MrMime::IMAGE_ICON:
 				{
 					ImageThumbnailer::enqueue(hashID, std::move(promise));
@@ -265,8 +265,6 @@ namespace idhan::services
 					break;
 				case MrMime::APPLICATION_PSD:
 					//TODO: Figure out. Maybe ask floo
-					break;
-				case MrMime::APPLICATION_CLIP:
 					break;
 					
 					//Audio

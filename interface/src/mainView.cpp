@@ -7,6 +7,8 @@
 #include "mainView.hpp"
 #include "../ui/ui_mainView.h"
 
+//ImportWindow include
+#include "importWindow.hpp"
 
 MainWindow::MainWindow( QWidget* parent )
 		:
@@ -18,4 +20,21 @@ MainWindow::MainWindow( QWidget* parent )
 MainWindow::~MainWindow()
 {
 	delete ui;
+}
+
+void MainWindow::addTab( QWidget* widget )
+{
+	ui->tabWidget->addTab( widget, widget->windowTitle() );
+}
+
+void MainWindow::on_actionImport_triggered()
+{
+	//Open import window
+	ImportWindow window;
+	window.exec();
+}
+
+void MainWindow::on_actionoptions_triggered()
+{
+
 }

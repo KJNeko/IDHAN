@@ -8,9 +8,13 @@
 #include <string>
 #include <vector>
 
+#include "MrMime/mister_mime.hpp"
+
 namespace idhan::utils
 {
 	std::string toHex(std::vector<uint8_t> data);
+	
+	std::pair<MrMime::FileType, uint64_t> get_mime(const std::string& filepath);
 }
 
 #endif //MAIN_FILEUTILS_HPP

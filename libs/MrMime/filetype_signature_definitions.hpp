@@ -36,14 +36,14 @@ namespace MrMime
 				BSS( APPLICATION_PDF ) << "%PDF",
 				BSS( APPLICATION_PSD ) << "8BPS\x00\x01",
 				BSS( APPLICATION_PSD ) << "8BPS\x00\x02",
-				BSS( APPLICATION_CLIP ) << "CSFCHUNK",
+				//BSS( APPLICATION_CLIP ) << "CSFCHUNK",
 				BSS( APPLICATION_ZIP ) << "PK\x03\x04",
 				BSS( APPLICATION_ZIP ) << "PK\x05\x06",
 				BSS( APPLICATION_ZIP ) << "PK\x07\x08",
 				BSS( APPLICATION_7Z ) << "7z\xBC\xAF\x27\x1C",
 				BSS( APPLICATION_RAR ) << "\x52\x61\x72\x21\x1A\x07\x00",
 				BSS( APPLICATION_RAR ) << "\x52\x61\x72\x21\x1A\x07\x01\x00",
-				BSS( APPLICATION_HYDRUS_ENCRYPTED_ZIP ) << "hydrus encrypted zip",
+				//BSS( APPLICATION_HYDRUS_ENCRYPTED_ZIP ) << "hydrus encrypted zip",
 				BSS( VIDEO_MP4 ) << SkipBytes( 4 ) << "ftypmp4",
 				BSS( VIDEO_MP4 ) << SkipBytes( 4 ) << "ftypisom",
 				BSS( VIDEO_MP4 ) << SkipBytes( 4 ) << "ftypM4V",
@@ -55,8 +55,8 @@ namespace MrMime
 				BSS( AUDIO_FLAC ) << "fLaC",
 				BSS( AUDIO_WAVE ) << "RIFF" << SkipBytes( 8 ) << "WAVE",
 				BSS( VIDEO_AVI ) << SkipBytes( 8 ) << "AVI",
-				BSS( UNDETERMINED_WM ) << "\x30\x26\xB2\x75\x8E\x66\xCF\x11"
-										  "\xA6\xD9\x00\xAA\x00\x62\xCE\x6C"
+				//BSS( UNDETERMINED_WM ) << "\x30\x26\xB2\x75\x8E\x66\xCF\x11"
+				//						  "\xA6\xD9\x00\xAA\x00\x62\xCE\x6C"
 		};
 
 		typedef decltype( signatures ) Signatures_t;

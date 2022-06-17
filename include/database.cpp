@@ -132,7 +132,7 @@ uint64_t addFile(std::filesystem::path path)
 		memcpy( buffer.data(), data.data(), sizeof( buffer ));
 		TracyCZoneN( deduce, "DeduceFiletype", true );
 		const auto MIMEType = MrMime::deduceFileType( buffer );
-		if( MIMEType == MrMime::FileType::UNDETERMINED_WM )
+		if( MIMEType == MrMime::FileType::APPLICATION_UNKNOWN )
 		{
 			throw std::runtime_error("Unable to determine file mimetype");
 		}

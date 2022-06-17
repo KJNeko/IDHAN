@@ -14,6 +14,7 @@
 #include <QWidget>
 
 #include "mainView.hpp"
+#include "fileView.hpp"
 
 void resetDB()
 {
@@ -38,6 +39,10 @@ int main(int argc, char** argv)
 	MainWindow window;
 	window.show();
 	
+	//Attach a file viewer
+	FileView fileView;
+	
+	window.addTab(&fileView);
 	
 	TracyCZoneN(await,"Shutdown",true);
 	idhan::services::ImageThumbnailer::await();

@@ -23,6 +23,14 @@ public:
 
 private:
 	Ui::MainWindow* ui;
+	
+public:
+	void addTab( QWidget* widget );
+	
+private slots:
+	void on_actionImport_triggered();
+	
+	void on_actionoptions_triggered();
 };
 
 
