@@ -1,3 +1,9 @@
 [submodule "libs/tracy"]
 	path = libs/tracy
 	url = https://github.com/wolfpld/tracy.git
+[submodule "libs/libpqxx"]
+	path = libs/libpqxx
+	url = git@github.com:jtv/libpqxx.git
+[submodule "libs/spdlog"]
+	path = libs/spdlog
+	url = git@github.com:gabime/spdlog.git

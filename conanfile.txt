@@ -2,7 +2,6 @@
 libpqxx/7.7.3
 sqlite3/3.38.5
 
-
 libFGL/latest@alaestor/main
 
 spdlog/1.10.0
