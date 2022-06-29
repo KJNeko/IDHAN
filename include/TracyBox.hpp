@@ -6,12 +6,13 @@
 #define MAIN_TRACYBOX_HPP
 
 #pragma GCC diagnostic push
-//Ignored -Wold-style-cast
+// Ignored -Wold-style-cast
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wredundant-tags"
 #include <Tracy.hpp>
 #include <TracyC.h>
-//Undo warnings disable
+#include <spdlog/spdlog.h>
+// Undo warnings disable
 #pragma GCC diagnostic pop
 
-#endif //MAIN_TRACYBOX_HPP
+#endif // MAIN_TRACYBOX_HPP

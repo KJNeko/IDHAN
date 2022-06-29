@@ -7,35 +7,37 @@
 
 #include <QWidget>
 #include <queue>
-#include "MrMime/filetype_enum.h"
 
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class ImportViewer; }
+namespace Ui
+{
+class ImportViewer;
+}
 QT_END_NAMESPACE
 
 class ImportViewer : public QWidget
 {
-Q_OBJECT
+	Q_OBJECT
 
-public:
+  public:
 	explicit ImportViewer( QWidget* parent = nullptr );
-	
-	~ImportViewer() override;
-	
-	void addFiles(const std::vector<std::pair<QString, MrMime::FileType>>& files);
 
-private:
+	~ImportViewer() override;
+
+	void addFiles( const QVector<QPair<QString, QString>>& files );
+
+  private:
 	Ui::ImportViewer* ui;
-	
-	//File import list
-	std::queue<std::pair<QString, MrMime::FileType>> files;
+
+	// File import list
+	std::queue<QPair<QString, QString>> files;
 	std::mutex filesMutex;
-	
-	//Record keeping
-	uint64_t filesAdded {0};
-	uint64_t filesProcessed {0};
+
+	// Record keeping
+	uint64_t filesAdded { 0 };
+	uint64_t filesProcessed { 0 };
 };
 
 
-#endif //MAIN_IMPORTVIEWER_HPP
+#endif // MAIN_IMPORTVIEWER_HPP

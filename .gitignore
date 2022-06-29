@@ -47,3 +47,5 @@ graph.png
 main_autogen/
 TracyProfile_autogen/
 DBTest_autogen/
+conan/
+build/

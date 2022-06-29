@@ -4,54 +4,40 @@
 
 #include <iostream>
 
-#include "database.hpp"
-#include "./services/thumbnailer.hpp"
-
-#include <TracyBox.hpp>
-
-#include <QtCore>
 #include <QApplication>
-#include <QWidget>
+#include <QtCore>
 
 #include "mainView.hpp"
-#include "fileView.hpp"
 
-void resetDB()
-{
-	ConnectionRevolver::resetDB();
-}
+#include "TracyBox.hpp"
 
-int main(int argc, char** argv)
+#include "database.hpp"
+#include "database/idhanDatabase.hpp"
+
+int main( int argc, char** argv )
 {
-	std::cout << "Qt version: " << qVersion() << std::endl;
-	
-	idhan::services::ImageThumbnailer::start();
-	idhan::services::Thumbnailer::start();
-	
-	//VIPS
-	if(VIPS_INIT(argv[0]))
 	{
-		throw std::runtime_error("Failed to initialize vips");
+		Database db;
+		db.init();
 	}
-	
-	QApplication app(argc, argv);
-	
+
+	Hash hash;
+
+
+	const QByteArray hash_var = QByteArray::fromRawData( (const char*)hash.data(), hash.size() );
+	const QString hash_hex	  = hash_var.toHex();
+	const std::string view	  = hash_hex.toStdString();
+
+	std::cout << view << std::endl;
+
+	std::cout << "Id: " << getFileID( hash, true ) << std::endl;
+
+	std::cout << "Qt version: " << qVersion() << std::endl;
+
+	QApplication app( argc, argv );
+
 	MainWindow window;
 	window.show();
-	
-	//Attach a file viewer
-	FileView fileView;
-	
-	window.addTab(&fileView);
-	
-	TracyCZoneN(await,"Shutdown",true);
-	idhan::services::ImageThumbnailer::await();
-	idhan::services::Thumbnailer::await();
-	TracyCZoneEnd(await);
-	
-	//VIPS
-	vips_shutdown();
-	
-	
+
 	return app.exec();
 }

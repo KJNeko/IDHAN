@@ -5,36 +5,37 @@
 #ifndef MAIN_MAINVIEW_HPP
 #define MAIN_MAINVIEW_HPP
 
+
 #include <QMainWindow>
-#include "MrMime/filetype_enum.h"
 
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
+namespace Ui
+{
+class MainWindow;
+}
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
 
-public:
+  public:
 	explicit MainWindow( QWidget* parent = nullptr );
-	
+
 	~MainWindow() override;
 
-private:
+  private:
 	Ui::MainWindow* ui;
-	
-public:
+
+  public:
 	void addTab( QWidget* widget );
-	
-	void importFiles(const std::vector<std::pair<QString, MrMime::FileType>>& files);
-	
-private slots:
+
+	void importFiles( const QVector<QPair<QString, QString>>& files );
+
+  private slots:
 	void on_actionImport_triggered();
-	
-	void on_actionoptions_triggered();
 };
 
 
-#endif //MAIN_MAINVIEW_HPP
+#endif // MAIN_MAINVIEW_HPP

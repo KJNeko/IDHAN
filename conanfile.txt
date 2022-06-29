@@ -1,12 +1,11 @@
 [requires]
 libpqxx/7.7.3
-catch2/2.13.9
-nlohmann_json/3.10.5
-openssl/3.0.3
+sqlite3/3.38.5
+
+
 libFGL/latest@alaestor/main
 
-[options]
-qt:qtdeclarative = True
+spdlog/1.10.0
 
 [generators]
 cmake

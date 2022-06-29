@@ -5,16 +5,13 @@
 // You may need to build the project (run Qt uic code generator) to get "ui_mainView.h" resolved
 
 #include "mainView.hpp"
-#include "../ui/ui_mainView.h"
+#include "ui_mainView.h"
 
-//ImportWindow include
-#include "importWindow.hpp"
+// ImportWindow include
 #include "importViewer.hpp"
-#include "MrMime/filetype_enum.h"
+#include "importWindow.hpp"
 
-MainWindow::MainWindow( QWidget* parent )
-		:
-		QMainWindow( parent ), ui( new Ui::MainWindow )
+MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )
 {
 	ui->setupUi( this );
 }
@@ -31,23 +28,17 @@ void MainWindow::addTab( QWidget* widget )
 
 void MainWindow::on_actionImport_triggered()
 {
-	//Open import window
+	// Open import window
 	ImportWindow window( this );
 	window.exec();
 }
 
-void MainWindow::importFiles(const std::vector<std::pair<QString, MrMime::FileType>>& files)
+void MainWindow::importFiles( const QVector<QPair<QString, QString>>& files )
 {
-	//Open import viewer in a new page
+	// Open import viewer in a new page
 	ImportViewer* viewer = new ImportViewer( this );
-	
-	//Create a new tag and place the viewer into it
+
+	// Create a new tag and place the viewer into it
 	ui->tabWidget->addTab( viewer, "Import" );
-	viewer->addFiles(files);
+	viewer->addFiles( files );
 }
-
-void MainWindow::on_actionoptions_triggered()
-{
-
-}
-
