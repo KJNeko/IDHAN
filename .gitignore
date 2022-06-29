@@ -49,3 +49,4 @@ TracyProfile_autogen/
 DBTest_autogen/
 conan/
 build/
+/main
