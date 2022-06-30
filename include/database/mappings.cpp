@@ -8,37 +8,46 @@
 #include "groups.hpp"
 #include "subtags.hpp"
 
-void addMapping( const Hash& sha256, const std::string& group, const std::string& subtag )
-{
-	const uint64_t group_id { getSubtagID( subtag, true ) };
-	const uint64_t subtag_id { getGroupID( group, true ) };
-	const uint64_t file_id { getFileID( sha256, true ) };
+#include "TracyBox.hpp"
 
-	Database db;
-	pqxx::work work { db.getWork() };
+void addMapping( const Hash& sha256, const std::string& group, const std::string& subtag, Database db )
+{
+	ZoneScoped;
+	const uint64_t group_id { getSubtagID( subtag, true, db ) };
+	const uint64_t subtag_id { getGroupID( group, true, db ) };
+	const uint64_t file_id { getFileID( sha256, true, db ) };
+
+	pqxx::work& work { db.getWork() };
 
 	work.exec(
-		"INSERT INTO mappings (file_id, group_id, subtag_id) VALUES (" + std::to_string( file_id ) + ", " + std::to_string( group_id ) +
-		", " + std::to_string( subtag_id ) + ")" );
+		"INSERT INTO mappings (file_id, group_id, subtag_id) VALUES (" +
+		std::to_string( file_id ) + ", " + std::to_string( group_id ) + ", " +
+		std::to_string( subtag_id ) + ")" );
+
+	work.commit();
 }
 
-void removeMapping( const Hash& sha256, const std::string& group, const std::string& subtag )
+void removeMapping( const Hash& sha256, const std::string& group, const std::string& subtag, Database db )
 {
-	const uint64_t group_id { getSubtagID( subtag, true ) };
-	const uint64_t subtag_id { getGroupID( group, true ) };
-	const uint64_t file_id { getFileID( sha256, true ) };
+	ZoneScoped;
+	const uint64_t group_id { getSubtagID( subtag, true, db ) };
+	const uint64_t subtag_id { getGroupID( group, true, db ) };
+	const uint64_t file_id { getFileID( sha256, true, db ) };
 
-	Database db;
-	pqxx::work work { db.getWork() };
+	pqxx::work& work { db.getWork() };
 
 	const pqxx::result res = work.exec(
-		"DELETE FROM mappings WHERE file_id = " + std::to_string( file_id ) + " AND group_id = " + std::to_string( group_id ) +
+		"DELETE FROM mappings WHERE file_id = " + std::to_string( file_id ) +
+		" AND group_id = " + std::to_string( group_id ) +
 		" AND subtag_id = " + std::to_string( subtag_id ) );
 
 	if ( res.affected_rows() == 0 )
 	{
 		throw EmptyReturn(
-			"No mapping with file_id " + std::to_string( file_id ) + " and group_id " + std::to_string( group_id ) + " and subtag_id " +
+			"No mapping with file_id " + std::to_string( file_id ) +
+			" and group_id " + std::to_string( group_id ) + " and subtag_id " +
 			std::to_string( subtag_id ) + " found to be deleted." );
 	}
+
+	work.commit();
 }

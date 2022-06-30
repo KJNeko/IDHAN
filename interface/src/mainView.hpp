@@ -31,7 +31,7 @@ class MainWindow : public QMainWindow
   public:
 	void addTab( QWidget* widget );
 
-	void importFiles( const QVector<QPair<QString, QString>>& files );
+	void importFiles( const std::vector<std::pair<std::string, std::string>>& files );
 
   private slots:
 	void on_actionImport_triggered();

@@ -6,19 +6,15 @@
 #include "database.hpp"
 #include "databaseExceptions.hpp"
 
-
 #include <QByteArray>
 #include <QString>
 
-#include <iostream>
-
 #include "TracyBox.hpp"
 
-uint64_t addFile( const Hash& sha256 )
+uint64_t addFile( const Hash& sha256, Database db )
 {
 	ZoneScoped;
-	Database db;
-	pqxx::work work { db.getWork() };
+	pqxx::work& work { db.getWork() };
 
 	pqxx::params values;
 
@@ -31,18 +27,15 @@ uint64_t addFile( const Hash& sha256 )
 	return res[ 0 ][ "hash_id" ].as<uint64_t>();
 }
 
-uint64_t getFileID( const Hash& sha256, const bool add = false )
+uint64_t getFileID( const Hash& sha256, const bool add, Database db )
 {
 	ZoneScoped;
 
 	pqxx::result res;
 
 	{
-		Database db;
-		pqxx::work work { db.getWork() };
-
-		// Hash to hex conversion via QString
-		// TODO: Figure out a better way or just start using exec_prepared again
+		ZoneScopedN( "getFileID_select" );
+		pqxx::work& work { db.getWork() };
 
 		pqxx::params values;
 
@@ -56,15 +49,13 @@ uint64_t getFileID( const Hash& sha256, const bool add = false )
 
 	if ( res.empty() )
 	{
-		if ( add )
-		{
-
-			return addFile( sha256 );
-		}
+		if ( add ) { return addFile( sha256, db ); }
 		else
 		{
-			QByteArray hash_var = QByteArray::fromRawData( (const char*)sha256.data(), sha256.size() );
-			QString hash_str	= hash_var.toHex();
+			QByteArray hash_var = QByteArray::fromRawData(
+				reinterpret_cast<const char*>( sha256.data() ),
+				static_cast<qsizetype>( sha256.size() ) );
+			QString hash_str = hash_var.toHex();
 			throw EmptyReturn( "No file with hash " + hash_str.toStdString() + " found." );
 		}
 	}

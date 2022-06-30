@@ -12,26 +12,30 @@
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #pragma GCC diagnostic ignored "-Wmultiple-inheritance"
 #pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wpadded"
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 
 #include <pqxx/pqxx>
 
 #pragma GCC diagnostic pop
 
+#include <memory>
 
 class Database
 {
-	inline static pqxx::connection conn { "dbname=idhan user=idhan password=idhan host=localhost" };
+	inline static pqxx::connection* conn { nullptr };
 	inline static std::mutex mtx;
-	std::lock_guard<std::mutex> lock_ptr { mtx };
+	std::shared_ptr<pqxx::work> txn;
+	std::shared_ptr<std::lock_guard<std::mutex>> guard;
 
   public:
-	pqxx::work getWork();
+	Database();
+	Database( Database& );
 
-	void release();
+	static void initalizeConnection( const std::string& );
 
-	void init();
-
-	~Database();
+	pqxx::work& getWork();
 };
 
 

@@ -30,7 +30,7 @@ class ImportWindow : public QDialog
   private:
 	Ui::ImportWindow* ui;
 
-	QVector<QPair<QString, QString>> fileList;
+	std::vector<std::pair<std::string, std::string>> fileList;
 
   private slots:
 	// Click on "addFolder" button

@@ -9,10 +9,19 @@
 #include <string>
 
 // idhan
+#include "database.hpp"
 #include "files.hpp"
 
-void addMapping( const Hash& sha256, const std::string& group, const std::string& subtag );
-void removeMapping( const Hash& sha256, const std::string& group, const std::string& subtag );
+void addMapping(
+	const Hash& sha256,
+	const std::string& group,
+	const std::string& subtag,
+	Database = Database() );
+void removeMapping(
+	const Hash& sha256,
+	const std::string& group,
+	const std::string& subtag,
+	Database = Database() );
 
 
 #endif // MAIN_MAPPINGS_HPP

@@ -5,6 +5,7 @@
 #ifndef MAIN_IMPORTVIEWER_HPP
 #define MAIN_IMPORTVIEWER_HPP
 
+#include <QFuture>
 #include <QWidget>
 #include <queue>
 
@@ -25,18 +26,26 @@ class ImportViewer : public QWidget
 
 	~ImportViewer() override;
 
-	void addFiles( const QVector<QPair<QString, QString>>& files );
+	void processFiles();
+
+	void addFiles( const std::vector<std::pair<std::string, std::string>>& files );
 
   private:
 	Ui::ImportViewer* ui;
 
 	// File import list
-	std::queue<QPair<QString, QString>> files;
-	std::mutex filesMutex;
+	std::vector<std::pair<std::string, std::string>> files;
+	QFuture<void>* processingThread { nullptr };
 
 	// Record keeping
 	uint64_t filesAdded { 0 };
 	uint64_t filesProcessed { 0 };
+
+  private slots:
+	void updateValues_slot();
+
+  signals:
+	void updateValues();
 };
 
 

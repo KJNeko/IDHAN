@@ -11,27 +11,43 @@
 
 #include "TracyBox.hpp"
 
+#include "database.hpp"
+
 int main( int argc, char** argv )
 {
-	try
+	std::cout << "Qt version: " << qVersion() << std::endl;
+
+	QApplication app( argc, argv );
+
+	QCoreApplication::setOrganizationName( "Future Gadget Labs" );
+	QCoreApplication::setApplicationName( "IDHAN" );
+
+	QSettings s;
+
+	spdlog::info( "IDHAN config location: " + s.fileName().toStdString() );
+
+	s.beginGroup( "Database" );
+
+	const std::string db_host =
+		s.value( "host", "localhost" ).toString().toStdString();
+	const std::string db_name = s.value( "name", "idhan" ).toString().toStdString();
+	const std::string db_user = s.value( "user", "idhan" ).toString().toStdString();
+	const std::string db_pass = s.value( "pass", "idhan" ).toString().toStdString();
+
+	Database::initalizeConnection(
+		"host=" + db_host + " dbname=" + db_name + " user=" + db_user +
+		" password=" + db_pass );
+
+
+	MainWindow window;
+	window.show();
+
+	auto ret { app.exec() };
+
+	if ( s.value( "firstRun", true ).toBool() )
 	{
-		std::cout << "Running" << std::endl;
-		
-		std::cout << "Qt version: " << qVersion() << std::endl;
-		
-		QApplication app( argc, argv );
-		
-		MainWindow window;
-		window.show();
-		
-		return app.exec();
+		s.setValue( "firstRun", false );
 	}
-	catch(std::exception& e)
-	{
-		std::cout << e.what() << std::endl;
-	}
-	catch(...)
-	{
-		std::cout << "wtf" << std::endl;
-	}
+
+	return ret;
 }

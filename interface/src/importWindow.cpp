@@ -2,7 +2,8 @@
 // Created by kj16609 on 6/16/22.
 //
 
-// You may need to build the project (run Qt uic code generator) to get "ui_ImportWindow.h" resolved
+// You may need to build the project (run Qt uic code generator) to get
+// "ui_ImportWindow.h" resolved
 
 #include "importWindow.hpp"
 #include "ui_importWindow.h"
@@ -16,7 +17,9 @@
 
 #include "mainView.hpp"
 
-ImportWindow::ImportWindow( QWidget* parent ) : QDialog( parent ), ui( new Ui::ImportWindow )
+ImportWindow::ImportWindow( QWidget* parent )
+	: QDialog( parent ),
+	  ui( new Ui::ImportWindow )
 {
 	ui->setupUi( this );
 
@@ -31,9 +34,12 @@ ImportWindow::ImportWindow( QWidget* parent ) : QDialog( parent ), ui( new Ui::I
 
 	ui->fileList->setModel( model );
 
-	ui->fileList->horizontalHeader()->setSectionResizeMode( 0, QHeaderView::ResizeMode::Interactive );
-	ui->fileList->horizontalHeader()->setSectionResizeMode( 1, QHeaderView::ResizeMode::Interactive );
-	ui->fileList->horizontalHeader()->setSectionResizeMode( 2, QHeaderView::ResizeMode::Interactive );
+	ui->fileList->horizontalHeader()->setSectionResizeMode(
+		0, QHeaderView::ResizeMode::Interactive );
+	ui->fileList->horizontalHeader()->setSectionResizeMode(
+		1, QHeaderView::ResizeMode::Interactive );
+	ui->fileList->horizontalHeader()->setSectionResizeMode(
+		2, QHeaderView::ResizeMode::Interactive );
 
 	ui->fileList->horizontalHeader()->setStretchLastSection( false );
 	ui->fileList->resizeColumnsToContents();
@@ -57,10 +63,7 @@ void ImportWindow::on_addFolder_clicked()
 	while ( it.hasNext() )
 	{
 		it.next();
-		if ( it.fileInfo().isFile() )
-		{
-			files.append( it.filePath() );
-		}
+		if ( it.fileInfo().isFile() ) { files.append( it.filePath() ); }
 	}
 
 	// Set max progress bar
@@ -74,19 +77,20 @@ void ImportWindow::on_addFolder_clicked()
 	// Parse each file and see if it is a compatable mime type
 	for ( auto& file : files )
 	{
-		QString fullPath = path + "/" + file;
-
 		QMimeDatabase db;
-		QMimeType mime = db.mimeTypeForFile( path + "/" + file );
+		QMimeType mime = db.mimeTypeForFile( file );
 
-		QFile f( fullPath );
+		QFile f( file );
 
 		auto sizeStr = locale.formattedDataSize( f.size() );
 
-		model->appendRow( { new QStandardItem( path + "/" + file ), new QStandardItem( mime.name() ), new QStandardItem( sizeStr ) } );
+		model->appendRow(
+			{ new QStandardItem( file ),
+			  new QStandardItem( mime.name() ),
+			  new QStandardItem( sizeStr ) } );
 
 		// Add to the list of files for further processing
-		fileList.push_back( { fullPath, mime.name() } );
+		fileList.push_back( { file.toStdString(), mime.name().toStdString() } );
 
 		// Set the progress bar
 		ui->progressBar->setValue( ui->progressBar->value() + 1 );

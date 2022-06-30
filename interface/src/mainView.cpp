@@ -2,7 +2,8 @@
 // Created by kj16609 on 6/16/22.
 //
 
-// You may need to build the project (run Qt uic code generator) to get "ui_mainView.h" resolved
+// You may need to build the project (run Qt uic code generator) to get
+// "ui_mainView.h" resolved
 
 #include "mainView.hpp"
 #include "ui_mainView.h"
@@ -11,7 +12,9 @@
 #include "importViewer.hpp"
 #include "importWindow.hpp"
 
-MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )
+MainWindow::MainWindow( QWidget* parent )
+	: QMainWindow( parent ),
+	  ui( new Ui::MainWindow )
 {
 	ui->setupUi( this );
 }
@@ -33,7 +36,7 @@ void MainWindow::on_actionImport_triggered()
 	window.exec();
 }
 
-void MainWindow::importFiles( const QVector<QPair<QString, QString>>& files )
+void MainWindow::importFiles( const std::vector<std::pair<std::string, std::string>>& files )
 {
 	// Open import viewer in a new page
 	ImportViewer* viewer = new ImportViewer( this );

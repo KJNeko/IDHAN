@@ -7,16 +7,55 @@
 
 #include <iostream>
 
-pqxx::work Database::getWork()
+#include "TracyBox.hpp"
+
+Database::Database()
 {
-	return pqxx::work( conn );
+	ZoneScoped;
+	if ( conn == nullptr )
+	{
+		spdlog::critical( "Database connection not formed or invalid" );
+		throw std::runtime_error( "Database connection not formed or invalid" );
+	}
+	else
+	{
+		guard = std::make_shared<std::lock_guard<std::mutex>>( mtx );
+		txn	  = std::make_shared<pqxx::work>( *conn );
+	}
 }
 
-void Database::init()
+Database::Database( Database& db )
 {
-	// Ensure that all the tables we want exist
+	ZoneScoped;
+	if ( conn == nullptr )
+	{
+		spdlog::critical( "Database connection not formed or invalid" );
+		throw std::runtime_error( "Database connection not formed or invalid" );
+	}
 
-	auto work = getWork();
+	// Copy the txn and guard
+	guard = db.guard;
+	txn	  = db.txn;
+}
+
+void Database::initalizeConnection( const std::string& connectionArgs )
+{
+	ZoneScoped;
+	std::lock_guard<std::mutex> guard( mtx );
+	spdlog::info( "Initalizing connection with settings '" + connectionArgs + "'" );
+
+	conn = new pqxx::connection( connectionArgs );
+
+	if ( !conn->is_open() )
+	{
+		spdlog::critical( "Failed to open database connection" );
+		throw std::runtime_error( "Failed to open database connection" );
+	}
+
+	spdlog::info( "Connection opened" );
+
+	// Create the tables if they don't exist
+	pqxx::work work { *conn };
 
 	work.exec( "create extension if not exists pg_trgm;" );
 
@@ -31,11 +70,9 @@ void Database::init()
 
 	work.commit();
 }
-void Database::release()
+
+pqxx::work& Database::getWork()
 {
-	mtx.unlock();
-}
-Database::~Database()
-{
-	std::cout << "~Database()" << std::endl;
+	ZoneScoped;
+	return *txn;
 }
