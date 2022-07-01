@@ -34,16 +34,16 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="addFolder">
+       <widget class="QPushButton" name="addFiles">
         <property name="text">
-         <string>Add folder</string>
+         <string>Add files</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="addFiles">
+       <widget class="QPushButton" name="addFolder">
         <property name="text">
-         <string>Add files</string>
+         <string>Add folder</string>
         </property>
        </widget>
       </item>

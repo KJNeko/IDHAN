@@ -28,7 +28,8 @@ std::string getSubtag( const uint64_t subtag_id, Database db )
 		"SELECT subtag FROM subtags WHERE subtag_id = " + std::to_string( subtag_id ) );
 	if ( res.empty() )
 	{
-		throw EmptyReturn( "No subtag with id " + std::to_string( subtag_id ) + " found." );
+		throw EmptyReturnException(
+			"No subtag with id " + std::to_string( subtag_id ) + " found." );
 	}
 	work.commit();
 	return res[ 0 ][ "subtag" ].as<std::string>();
@@ -51,7 +52,7 @@ uint64_t getSubtagID( const std::string& subtag, const bool create, Database db 
 		}
 		else
 		{
-			throw EmptyReturn( "No subtag with name " + subtag + " found." );
+			throw EmptyReturnException( "No subtag with name " + subtag + " found." );
 		}
 	}
 	work.commit();
@@ -67,7 +68,8 @@ void deleteSubtag( const std::string& subtag, Database db )
 		work.exec( "DELETE FROM subtags WHERE subtag = '" + subtag + "' CASCADE" );
 	if ( res.affected_rows() == 0 )
 	{
-		throw EmptyReturn( "No subtag with name " + subtag + " found to be deleted." );
+		throw EmptyReturnException(
+			"No subtag with name " + subtag + " found to be deleted." );
 	}
 }
 

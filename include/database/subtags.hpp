@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/28/22.
 //
 
+#pragma once
 #ifndef MAIN_SUBTAGS_HPP
 #define MAIN_SUBTAGS_HPP
 

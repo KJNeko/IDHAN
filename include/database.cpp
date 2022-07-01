@@ -11,6 +11,7 @@
 
 Database::Database()
 {
+	std::lock_guard<std::mutex> conGuard( conMtx );
 	ZoneScoped;
 	if ( conn == nullptr )
 	{
@@ -59,14 +60,18 @@ void Database::initalizeConnection( const std::string& connectionArgs )
 
 	work.exec( "create extension if not exists pg_trgm;" );
 
-	work.exec( "CREATE TABLE IF NOT EXISTS files (hash_id BIGSERIAL PRIMARY KEY, sha256 BYTEA UNIQUE);" );
+	work.exec( "CREATE TABLE IF NOT EXISTS files (hash_id BIGSERIAL PRIMARY KEY, sha256 BYTEA UNIQUE NOT NULL);" );
 
-	work.exec( "CREATE TABLE IF NOT EXISTS subtags (subtag_id BIGSERIAL PRIMARY KEY, subtag TEXT UNIQUE);" );
-	work.exec( "CREATE TABLE IF NOT EXISTS groups (group_id BIGSERIAL PRIMARY KEY, \"group\" TEXT UNIQUE);" );
+	work.exec( "CREATE TABLE IF NOT EXISTS subtags (subtag_id BIGSERIAL PRIMARY KEY, subtag TEXT UNIQUE NOT NULL);" );
+	work.exec( "CREATE TABLE IF NOT EXISTS groups (group_id BIGSERIAL PRIMARY KEY, \"group\" TEXT UNIQUE NOT NULL);" );
 
-	work.exec( "CREATE TABLE IF NOT EXISTS tags (tag_id BIGSERIAL PRIMARY KEY, subtag_id BIGINT REFERENCES subtags(subtag_id), group_id BIGINT REFERENCES groups(group_id));" );
+	work.exec( "CREATE TABLE IF NOT EXISTS tags (tag_id BIGSERIAL PRIMARY KEY, subtag_id BIGINT REFERENCES subtags(subtag_id), group_id BIGINT REFERENCES groups(group_id) NOT NULL);" );
 
-	work.exec( "CREATE TABLE IF NOT EXISTS mappings (hash_id BIGINT REFERENCES files(hash_id), tag_id BIGINT REFERENCES tags(tag_id));" );
+	work.exec( "CREATE TABLE IF NOT EXISTS mappings (hash_id BIGINT REFERENCES files(hash_id), tag_id BIGINT REFERENCES tags(tag_id) NOT NULL);" );
+
+	work.exec( "CREATE TABLE IF NOT EXISTS deleted (hash_id BIGINT REFERENCES files(hash_id), delete_time TIMESTAMP NOT NULL);" );
+
+	work.exec( "CREATE TABLE IF NOT EXISTS mime (hash_id BIGINT REFERENCES files(hash_id), mime TEXT NOT NULL);" );
 
 	work.commit();
 }

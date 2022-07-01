@@ -1,0 +1,11 @@
+[requires]
+libpqxx/7.7.3
+sqlite3/3.38.5
+md4c/0.4.8
+libFGL/latest@alaestor/main
+spdlog/1.10.0
+ffmpeg/5.0
+
+[generators]
+cmake_paths
+cmake_find_package

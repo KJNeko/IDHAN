@@ -28,7 +28,8 @@ std::string getGroup( const uint64_t group_id, Database db )
 		"SELECT group_name FROM groups WHERE group_id = " + std::to_string( group_id ) );
 	if ( res.empty() )
 	{
-		throw EmptyReturn( "No group with id " + std::to_string( group_id ) + " found." );
+		throw EmptyReturnException(
+			"No group with id " + std::to_string( group_id ) + " found." );
 	}
 	return res[ 0 ][ "group" ].as<std::string>();
 }
@@ -43,7 +44,10 @@ uint64_t getGroupID( const std::string& group, const bool create, Database db )
 	if ( res.empty() )
 	{
 		if ( create ) { return addGroup( group, db ); }
-		else { throw EmptyReturn( "No group with name " + group + " found." ); }
+		else
+		{
+			throw EmptyReturnException( "No group with name " + group + " found." );
+		}
 	}
 	return res[ 0 ][ "group_id" ].as<uint64_t>();
 }
@@ -57,7 +61,8 @@ void removeGroup( const std::string& group, Database db )
 		work.exec( "DELETE FROM groups WHERE group_name = '" + group + "' CASCADE" );
 	if ( res.affected_rows() == 0 )
 	{
-		throw EmptyReturn( "No group with name " + group + " found to be deleted." );
+		throw EmptyReturnException(
+			"No group with name " + group + " found to be deleted." );
 	}
 }
 

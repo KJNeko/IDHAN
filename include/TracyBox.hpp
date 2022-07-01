@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/10/22.
 //
 
+#pragma once
 #ifndef MAIN_TRACYBOX_HPP
 #define MAIN_TRACYBOX_HPP
 

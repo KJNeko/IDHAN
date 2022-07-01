@@ -5,130 +5,323 @@
 // You may need to build the project (run Qt uic code generator) to get
 // "ui_ImportViewer.h" resolved
 
+// Ui
 #include "importViewer.hpp"
+#include "ImageDelegate.hpp"
 #include "ui_importViewer.h"
 
+// Qt
 #include <QCryptographicHash>
 #include <QFile>
+#include <QFuture>
 #include <QQueue>
 #include <QThread>
 #include <QtConcurrent/QtConcurrent>
 
+// Logging/Prof
 #include "TracyBox.hpp"
 
+// Database
+#include "database/FileData.hpp"
+#include "database/databaseExceptions.hpp"
 #include "database/files.hpp"
 
-ImportViewer::ImportViewer( QWidget* parent )
-	: QWidget( parent ),
-	  ui( new Ui::ImportViewer )
+// std
+#include <fstream>
+
+
+#ifdef _WIN32
+// TODO find an alternative to unistd fsync for windows
+#elif __linux__
+
+
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+
+#else
+#ifndef FGL_ACKNOWLEDGE_INCOMPATIBLE_OS
+#error "Unsupported platform for IDHAN (Requirement: fsync implementation or similar) - please define FGL_ACKNOWLEDGE_INCOMPATIBLE_OS to fallback to std::ostream"
+#endif
+#endif
+
+
+ImportViewer::ImportViewer( QWidget* parent ) : QWidget( parent ), ui( new Ui::ImportViewer )
 {
 	ui->setupUi( this );
 
 	connect( this, &ImportViewer::updateValues, this, &ImportViewer::updateValues_slot );
+	connect( this, &ImportViewer::addFileToView, this, &ImportViewer::addFileToView_slot );
+
+
+	auto model = new ImageModel( this );
+	auto delegate = new ImageDelegate( this );
+
+	ui->listView->setModel( model );
+	ui->listView->setItemDelegate( delegate );
+
+	ui->listView->setItemAlignment( Qt::AlignCenter );
+
+	connect( delegate, &ImageDelegate::generateThumbnail, model, &ImageModel::generateThumbnail );
 }
+
 
 ImportViewer::~ImportViewer()
 {
 
-	if ( processingThread != nullptr ) { processingThread->cancel(); }
+	if ( processingThread != nullptr )
+	{ processingThread->cancel(); }
 
 
 	delete ui;
 }
 
-struct FileData
+/// TODO libFGL
+#include <concepts>
+#include <functional>
+#include <type_traits>
+
+
+namespace internal
 {
-	std::string path;
-	std::string mime;
+	template< typename T, class T_dtor > class raii_wrapper
+	{
+	public:
+		T object;
 
-	QByteArray filedata;
-	QByteArray sha256;
-	uint64_t id;
 
-	QVector<QPair<QString, QString>> tags;
-};
+		[[nodiscard]] constexpr explicit raii_wrapper(
+			T&& obj, T_dtor&& dtor ) noexcept( noexcept( T( std::forward< decltype( obj ) >( obj ) ) ) &&
+			noexcept( std::move( T_dtor( dtor ) ) ) )
+			: object( std::forward< decltype( obj ) >( obj ) ), m_dtor( std::move( dtor ) )
+		{
+		}
+
+
+		~raii_wrapper() noexcept( noexcept( std::invoke( m_dtor, object ) ) )
+		{
+			std::invoke( m_dtor, object );
+		}
+
+
+	private:
+		T_dtor&& m_dtor;
+	};
+} // namespace internal
+
 
 void ImportViewer::processFiles()
 {
 	ZoneScoped;
-	std::vector<QPromise<FileData>> promises;
-	std::vector<QFuture<FileData>> futures;
 
-	promises.resize( files.size() );
+	QThreadPool pool;
+	pool.setMaxThreadCount( 8 );
 
-	TracyCZoneN( promiseZone, "Promise initalization", true );
-	for ( auto& promise : promises )
+	using Output = std::variant< uint64_t, std::exception_ptr >;
+
+	//Apparently reduce needs a first parameter of a 'return' value for whatever reason
+	auto reduce = [ this ]( [[maybe_unused]] uint64_t&, const Output& var ) -> void
 	{
-		QFuture<FileData> future = promise.future();
-		futures.emplace_back(
-			future
-				.then(
-					QtFuture::Launch::Async,
-					[]( FileData data_ )
-					{
-						data_.sha256 = QCryptographicHash::hash(
-							data_.filedata, QCryptographicHash::Sha256 );
-						return data_;
-					} )
-				.then(
-					QtFuture::Launch::Async,
-					[]( FileData data_ )
-					{
-						// Insert into database
-						Hash sha256;
-						memcpy( sha256.data(), data_.sha256.data(), sha256.size() );
-
-						uint64_t id = getFileID( sha256, true );
-
-						spdlog::info( "Inserted file with id {}", id );
-
-						return data_;
-					} ) );
-	}
-	TracyCZoneEnd( promiseZone );
-
-	auto runfuture = QtConcurrent::run(
-		QThreadPool::globalInstance(),
-		[ this, &promises ]
-		{
-			for ( size_t i = 0; i < files.size(); ++i )
-			{
-				ZoneScopedN( "File processing" );
-				auto& promise = promises[ i ];
-
-				FileData data_;
-
-				auto file = files.at( i );
-
-				data_.path = file.first;
-				data_.mime = file.second;
-
-				promise.start();
-
-				// Load file from desk
-				QFile f( QString::fromStdString( data_.path ) );
-				if ( !f.open( QIODevice::ReadOnly ) )
-				{
-					spdlog::error( "Could not open file {}", data_.path );
-					continue;
-				}
-
-				data_.filedata = f.readAll();
-				f.close();
-
-				promise.addResult( data_ );
-				promise.finish();
-			}
-		} );
-
-	for ( auto& future : futures )
-	{
-		auto data_ = future.result();
 		++filesProcessed;
 
+		try
+		{
+			if ( auto valID = std::get_if< uint64_t >( &var ); valID != nullptr )
+			{
+				if ( *valID != 0 )
+				{
+					++successful;
+					emit addFileToView( *valID );
+					return;
+				}
+				else
+				{
+					// TODO implement error for unknown import
+				}
+			}
+			else if ( auto valExcept = std::get_if< std::exception_ptr >( &var ); valExcept != nullptr )
+			{
+				std::rethrow_exception( *valExcept );
+			}
+			else
+			{ throw std::runtime_error( "Unknown variant type" ); }
+		}
+		catch ( FileAlreadyExistsException& e )
+		{
+			++alreadyinDB;
+			return;
+		}
+		catch ( FileDeletedException& e )
+		{
+			++deleted;
+			return;
+		}
+		catch ( std::exception& e )
+		{
+			++failed;
+			return;
+		}
+
+		return;
+	};
+
+	auto process = []( std::filesystem::path path_ ) -> Output
+	{
+		try
+		{
+			spdlog::info( "Processing file {}", path_.string() );
+			if ( !std::filesystem::exists( path_ ) )
+			{
+				spdlog::error( "File {} does not exist", path_.string() );
+				throw std::runtime_error( "File does not exist" );
+			}
+
+			const std::vector< std::byte > bytes = [ &path_ ]() -> std::vector< std::byte >
+			{
+				if ( std::ifstream ifs( path_ ); ifs )
+				{
+					const auto size { std::filesystem::file_size( path_ ) };
+
+					std::vector< std::byte > bytes_;
+					bytes_.resize( size );
+
+					// Read to buffer
+
+					ifs.read(
+						reinterpret_cast<char*>( bytes_.data()), static_cast<long>( size )
+					);
+					return bytes_;
+				}
+
+				return {};
+			}();
+
+			spdlog::info( "File {} has {} bytes", path_.string(), bytes.size() );
+
+			const QByteArrayView bytes_view(
+				bytes.data(), static_cast<qsizetype>( bytes.size())
+			);
+
+			const Hash32 sha256 { QCryptographicHash::hash(
+				bytes_view, QCryptographicHash::Sha256
+			) };
+
+			spdlog::info(
+				"File {} has hash {}", path_.string(), sha256.getQByteArray().toHex().toStdString()
+			);
+
+			// Check if the database already has the file we are about to
+			// import
+			uint64_t hash_id { 0 };
+
+			// Generate filepath location from hash
+			const std::filesystem::path filepath = getFilepath( sha256 );
+
+			// Check if file already exists
+			if ( std::filesystem::exists( filepath ) )
+			{
+				spdlog::error( "File {} already exists", filepath.string() );
+			}
+			else
+			{
+				// Ensure that the parent directory exists
+				std::filesystem::create_directories( filepath.parent_path() );
+
+				#ifdef __linux__
+
+				// Notes
+				// O_LARGEFILE can be used if the file would exceed the
+				// off_t (32bit) limit in size
+
+
+				// Active
+				// O_CREAT creats the file if it does not exist
+				// O_WRONLY opens the file for writing only
+				// O_SYNC ensures that the data is written to disk before
+				// returning from the write call
+
+				internal::raii_wrapper file(
+					::open(
+						filepath.c_str(), O_WRONLY | O_CREAT | O_SYNC, S_IRUSR | S_IWUSR
+					), []( int i ) { ::close( i ); }
+				);
+
+				int ofs = file.object;
+
+				if ( ofs == -1 )
+				{
+					spdlog::error( "Failed to open file {}", filepath.string() );
+
+					std::exception_ptr eptr { std::make_exception_ptr(
+						std::system_error( errno, std::generic_category() )
+					) };
+					return Output( eptr );
+				}
+
+				::write( ofs, bytes.data(), bytes.size() );
+
+				#else
+				// TODO implement for windows
+				// https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-flushfilebuffers?redirectedfrom=MSDN
+
+
+				#warning "Current operating system doesn't have fsync support implemented, This could cause dataloss in the event of powerloss or a crash"
+				// Write the file
+				// If the OS dies and your file isn't fully written.
+				// Not my fault. Get a better OS bitch
+				if ( std::ofstream ofs( filepath ); ofs )
+				{
+					ofs.write(
+						reinterpret_cast<const char*>( bytes.data() ),
+						static_cast<long>( bytes.size() ) );
+					ofs.rdbuf()->pubsync();
+				}
+				#endif
+			}
+
+			// Insert into database
+			try
+			{
+				hash_id = getFileID( sha256 );
+			}
+			catch ( ... )
+			{
+
+			}
+
+			if ( hash_id )
+			{
+				//We got an ID. Throw FileExists
+				throw FileAlreadyExistsException( "hash_id:" + std::to_string( hash_id ) );
+			}
+
+			hash_id = addFile( sha256 );
+
+			spdlog::info( "Imported file {}", filepath.string() );
+
+			return Output( hash_id );
+		}
+		catch ( ... )
+		{
+			auto eptr = std::current_exception();
+			return Output( eptr );
+		}
+	};
+
+	auto future = QtConcurrent::mappedReduced(
+		&pool, files, process, reduce
+	);
+
+	while ( !future.isFinished() )
+	{
+		QThread::yieldCurrentThread();
+		QThread::msleep( 250 );
 		emit updateValues();
 	}
 }
+
 
 void ImportViewer::updateValues_slot()
 {
@@ -140,13 +333,25 @@ void ImportViewer::updateValues_slot()
 	ui->progressLabel->setText( str );
 
 	// Set the progress bar
-	ui->progressBar->setValue( filesProcessed );
+	ui->progressBar->setValue( static_cast<int>( filesProcessed ) );
+
+	QString str2;
+
+	str2 += successful ? QString( "%1 successful " ).arg( successful ) : "";
+	str2 += failed && successful ? QString( "%1 failed (" ).arg( failed ) : "";
+	str2 += alreadyinDB ? QString( "%1 already in DB " ).arg( alreadyinDB ) : "";
+	str2 += deleted ? QString( "%1 deleted " ).arg( deleted ) : "";
+	str2 += failed && successful ? QString( ")" ) : "";
+
+
+	ui->statusLabel->setText( str2 );
 }
 
-void ImportViewer::addFiles( const std::vector<std::pair<std::string, std::string>>& files_ )
+
+void ImportViewer::addFiles( const std::vector< std::filesystem::path >& files_ )
 {
-	// File import list
-	for ( auto& file : files_ ) { files.push_back( file ); }
+	files.reserve( files_.size() );
+	files = files_;
 
 	filesAdded = files.size();
 
@@ -157,8 +362,16 @@ void ImportViewer::addFiles( const std::vector<std::pair<std::string, std::strin
 	// Set the label
 	ui->progressLabel->setText( str );
 
-	ui->progressBar->setMaximum( filesAdded );
+	ui->progressBar->setMaximum( static_cast<int>( filesAdded ) );
 
 	auto runfuture = QtConcurrent::run(
-		QThreadPool::globalInstance(), &ImportViewer::processFiles, this );
+		QThreadPool::globalInstance(), &ImportViewer::processFiles, this
+	);
+}
+
+
+void ImportViewer::addFileToView_slot( uint64_t hash_id )
+{
+	auto model = dynamic_cast<ImageModel*>( ui->listView->model());
+	model->addImage( hash_id );
 }

@@ -10,7 +10,7 @@
 
 #include "TracyBox.hpp"
 
-void addMapping( const Hash& sha256, const std::string& group, const std::string& subtag, Database db )
+void addMapping( const Hash32& sha256, const std::string& group, const std::string& subtag, Database db )
 {
 	ZoneScoped;
 	const uint64_t group_id { getSubtagID( subtag, true, db ) };
@@ -27,7 +27,7 @@ void addMapping( const Hash& sha256, const std::string& group, const std::string
 	work.commit();
 }
 
-void removeMapping( const Hash& sha256, const std::string& group, const std::string& subtag, Database db )
+void removeMapping( const Hash32& sha256, const std::string& group, const std::string& subtag, Database db )
 {
 	ZoneScoped;
 	const uint64_t group_id { getSubtagID( subtag, true, db ) };
@@ -43,7 +43,7 @@ void removeMapping( const Hash& sha256, const std::string& group, const std::str
 
 	if ( res.affected_rows() == 0 )
 	{
-		throw EmptyReturn(
+		throw EmptyReturnException(
 			"No mapping with file_id " + std::to_string( file_id ) +
 			" and group_id " + std::to_string( group_id ) + " and subtag_id " +
 			std::to_string( subtag_id ) + " found to be deleted." );

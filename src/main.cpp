@@ -24,6 +24,14 @@ int main( int argc, char** argv )
 
 	QSettings s;
 
+	if ( s.value( "firstRun", true ).toBool() )
+	{
+		s.setValue( "paths/thumbnail_path", "./db/thumbnails" );
+		s.setValue( "paths/file_path", "./db/files" );
+		s.setValue( "firstRun", false );
+	}
+
+
 	spdlog::info( "IDHAN config location: " + s.fileName().toStdString() );
 
 	s.beginGroup( "Database" );
@@ -44,10 +52,6 @@ int main( int argc, char** argv )
 
 	auto ret { app.exec() };
 
-	if ( s.value( "firstRun", true ).toBool() )
-	{
-		s.setValue( "firstRun", false );
-	}
 
 	return ret;
 }

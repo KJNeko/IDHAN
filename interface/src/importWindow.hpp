@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/16/22.
 //
 
+#pragma once
 #ifndef MAIN_IMPORTWINDOW_HPP
 #define MAIN_IMPORTWINDOW_HPP
 
@@ -10,6 +11,7 @@
 #include <QPair>
 #include <QVector>
 
+#include <filesystem>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -30,7 +32,7 @@ class ImportWindow : public QDialog
   private:
 	Ui::ImportWindow* ui;
 
-	std::vector<std::pair<std::string, std::string>> fileList;
+	std::vector<std::filesystem::path> fileList;
 
   private slots:
 	// Click on "addFolder" button

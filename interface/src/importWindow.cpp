@@ -67,7 +67,7 @@ void ImportWindow::on_addFolder_clicked()
 	}
 
 	// Set max progress bar
-	ui->progressBar->setMaximum( files.size() );
+	ui->progressBar->setMaximum( static_cast<int>(files.size()) );
 
 	// Get our current locale
 	QLocale locale = this->locale();
@@ -90,7 +90,7 @@ void ImportWindow::on_addFolder_clicked()
 			  new QStandardItem( sizeStr ) } );
 
 		// Add to the list of files for further processing
-		fileList.push_back( { file.toStdString(), mime.name().toStdString() } );
+		fileList.emplace_back(file.toStdString() );
 
 		// Set the progress bar
 		ui->progressBar->setValue( ui->progressBar->value() + 1 );

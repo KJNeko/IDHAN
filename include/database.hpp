@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/1/22.
 //
 
+#pragma once
 #ifndef MAIN_DATABASE_HPP
 #define MAIN_DATABASE_HPP
 
@@ -28,6 +29,8 @@ class Database
 	inline static std::mutex mtx;
 	std::shared_ptr<pqxx::work> txn;
 	std::shared_ptr<std::lock_guard<std::mutex>> guard;
+
+	inline static std::mutex conMtx;
 
   public:
 	Database();

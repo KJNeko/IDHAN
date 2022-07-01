@@ -36,7 +36,7 @@ void MainWindow::on_actionImport_triggered()
 	window.exec();
 }
 
-void MainWindow::importFiles( const std::vector<std::pair<std::string, std::string>>& files )
+void MainWindow::importFiles( const std::vector<std::filesystem::path>& files )
 {
 	// Open import viewer in a new page
 	ImportViewer* viewer = new ImportViewer( this );

@@ -7,10 +7,27 @@
 
 #include <stdexcept>
 
-class EmptyReturn : public std::runtime_error
+class EmptyReturnException : public std::runtime_error
 {
   public:
-	EmptyReturn( const std::string& what ) : std::runtime_error( what )
+	EmptyReturnException( const std::string& what ) : std::runtime_error( what )
+	{
+	}
+};
+
+class FileAlreadyExistsException : public std::runtime_error
+{
+  public:
+	FileAlreadyExistsException( const std::string& what )
+		: std::runtime_error( what )
+	{
+	}
+};
+
+class FileDeletedException : public std::runtime_error
+{
+  public:
+	FileDeletedException( const std::string& what ) : std::runtime_error( what )
 	{
 	}
 };

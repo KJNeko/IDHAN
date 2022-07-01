@@ -2,12 +2,14 @@
 // Created by kj16609 on 6/16/22.
 //
 
+#pragma once
 #ifndef MAIN_MAINVIEW_HPP
 #define MAIN_MAINVIEW_HPP
 
 
 #include <QMainWindow>
 
+#include <filesystem>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -31,7 +33,7 @@ class MainWindow : public QMainWindow
   public:
 	void addTab( QWidget* widget );
 
-	void importFiles( const std::vector<std::pair<std::string, std::string>>& files );
+	void importFiles( const std::vector<std::filesystem::path>& files );
 
   private slots:
 	void on_actionImport_triggered();

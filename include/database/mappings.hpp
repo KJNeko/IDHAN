@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/28/22.
 //
 
+#pragma once
 #ifndef MAIN_MAPPINGS_HPP
 #define MAIN_MAPPINGS_HPP
 
@@ -13,12 +14,12 @@
 #include "files.hpp"
 
 void addMapping(
-	const Hash& sha256,
+	const Hash32& sha256,
 	const std::string& group,
 	const std::string& subtag,
 	Database = Database() );
 void removeMapping(
-	const Hash& sha256,
+	const Hash32& sha256,
 	const std::string& group,
 	const std::string& subtag,
 	Database = Database() );
