@@ -5,6 +5,7 @@ md4c/0.4.8
 libFGL/latest@alaestor/main
 spdlog/1.10.0
 ffmpeg/5.0
+tracy/cci.20220130
 
 [generators]
 cmake_paths

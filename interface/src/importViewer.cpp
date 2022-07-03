@@ -171,7 +171,6 @@ void ImportViewer::processFiles()
 	{
 		try
 		{
-			spdlog::info( "Processing file {}", path_.string() );
 			if ( !std::filesystem::exists( path_ ) )
 			{
 				spdlog::error( "File {} does not exist", path_.string() );
@@ -198,8 +197,6 @@ void ImportViewer::processFiles()
 				return {};
 			}();
 
-			spdlog::info( "File {} has {} bytes", path_.string(), bytes.size() );
-
 			const QByteArrayView bytes_view(
 				bytes.data(), static_cast<qsizetype>( bytes.size())
 			);
@@ -207,10 +204,6 @@ void ImportViewer::processFiles()
 			const Hash32 sha256 { QCryptographicHash::hash(
 				bytes_view, QCryptographicHash::Sha256
 			) };
-
-			spdlog::info(
-				"File {} has hash {}", path_.string(), sha256.getQByteArray().toHex().toStdString()
-			);
 
 			// Check if the database already has the file we are about to
 			// import
@@ -298,9 +291,7 @@ void ImportViewer::processFiles()
 			}
 
 			hash_id = addFile( sha256 );
-
-			spdlog::info( "Imported file {}", filepath.string() );
-
+			
 			return Output( hash_id );
 		}
 		catch ( ... )
