@@ -86,7 +86,31 @@ ImportViewer::~ImportViewer()
 
 namespace internal
 {
-	template< typename T, class T_dtor > class raii_wrapper
+
+	template< typename T, class T_ctor, class T_dtor, class... T_args > class raii_wrapper
+	{
+	public:
+		T_dtor&& dtor;
+		T val;
+
+
+		raii_wrapper( T& val_, T_ctor& ctor_, T_dtor& dtor_, T_args... args_ )
+			: dtor( std::move( dtor_ ) ), val( ctor_( std::forward< T_args >( args_ )... ) )
+		{
+			val_ = val;
+		}
+
+
+		~raii_wrapper()
+		{
+			std::invoke( dtor, val );
+		}
+	};
+
+
+
+
+	/*template< typename T, class T_dtor > class raii_wrapper
 	{
 	public:
 		T object;
@@ -108,7 +132,8 @@ namespace internal
 
 	private:
 		T_dtor&& m_dtor;
-	};
+	};*/
+
 } // namespace internal
 
 
@@ -235,13 +260,19 @@ void ImportViewer::processFiles()
 				// O_SYNC ensures that the data is written to disk before
 				// returning from the write call
 
-				internal::raii_wrapper file(
-					::open(
-						filepath.c_str(), O_WRONLY | O_CREAT | O_SYNC, S_IRUSR | S_IWUSR
-					), []( int i ) { ::close( i ); }
+				auto c_tor = [](
+					std::filesystem::path path,
+					int o_flags,
+					int s_flags ) -> int { return ::open( path.c_str(), o_flags, s_flags ); };
+				auto d_tor = []( int i ) -> void { ::close( i ); };
+
+
+				int val { 0 };
+				internal::raii_wrapper obj(
+					val, c_tor, d_tor, filepath, O_WRONLY | O_CREAT | O_SYNC, S_IRUSR | S_IWUSR
 				);
 
-				int ofs = file.object;
+				int ofs = val;
 
 				if ( ofs == -1 )
 				{
@@ -291,7 +322,7 @@ void ImportViewer::processFiles()
 			}
 
 			hash_id = addFile( sha256 );
-			
+
 			return Output( hash_id );
 		}
 		catch ( ... )
