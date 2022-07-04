@@ -5,31 +5,49 @@
 #ifndef MAIN_DATABASEEXCEPTIONS_HPP
 #define MAIN_DATABASEEXCEPTIONS_HPP
 
+
 #include <stdexcept>
+#include <utility>
 
-class EmptyReturnException : public std::runtime_error
+
+struct IDHANErrorContainer
 {
-  public:
-	EmptyReturnException( const std::string& what ) : std::runtime_error( what )
+	std::string what_;
+
+
+	std::string what()
 	{
+		return what_;
 	}
+
+
+	IDHANErrorContainer( std::string& what ) : what_( std::move( what ) ) {}
 };
 
-class FileAlreadyExistsException : public std::runtime_error
+//@formatter:off
+enum class ErrorNo
 {
-  public:
-	FileAlreadyExistsException( const std::string& what )
-		: std::runtime_error( what )
-	{
-	}
+	//File errors
+	FILE_ALREADY_EXISTS = 0,
+	FILE_NOT_FOUND,
+	FSYNC_FILE_OPENEN_FAILED,
+
+	//Database errors
+	DATABASE_DATA_NOT_FOUND,
+	DATABASE_DATA_ALREADY_EXISTS,
+	DATABASE_UNKNOWN_ERROR,
+
+
+};
+//@formatter:on
+
+struct IDHANError : public IDHANErrorContainer
+{
+	ErrorNo error_code_;
+
+
+	IDHANError( ErrorNo error_code, std::string what ) : IDHANErrorContainer( what ), error_code_( error_code ) {}
 };
 
-class FileDeletedException : public std::runtime_error
-{
-  public:
-	FileDeletedException( const std::string& what ) : std::runtime_error( what )
-	{
-	}
-};
 
 #endif // MAIN_DATABASEEXCEPTIONS_HPP

@@ -25,6 +25,7 @@
 #include "database/FileData.hpp"
 #include "database/databaseExceptions.hpp"
 #include "database/files.hpp"
+#include "database/metadata.hpp"
 
 // std
 #include <fstream>
@@ -63,8 +64,6 @@ ImportViewer::ImportViewer( QWidget* parent ) : QWidget( parent ), ui( new Ui::I
 	ui->listView->setItemDelegate( delegate );
 
 	ui->listView->setItemAlignment( Qt::AlignCenter );
-
-	connect( delegate, &ImageDelegate::generateThumbnail, model, &ImageModel::generateThumbnail );
 }
 
 
@@ -144,56 +143,63 @@ void ImportViewer::processFiles()
 	QThreadPool pool;
 	pool.setMaxThreadCount( 8 );
 
-	using Output = std::variant< uint64_t, std::exception_ptr >;
+	using Output = std::variant< uint64_t, IDHANError >;
 
 	//Apparently reduce needs a first parameter of a 'return' value for whatever reason
 	auto reduce = [ this ]( [[maybe_unused]] uint64_t&, const Output& var ) -> void
 	{
+		ZoneScoped;
 		++filesProcessed;
 
-		try
+
+		if ( auto valID = std::get_if< uint64_t >( &var ); valID != nullptr )
 		{
-			if ( auto valID = std::get_if< uint64_t >( &var ); valID != nullptr )
+			if ( *valID != 0 )
 			{
-				if ( *valID != 0 )
-				{
-					++successful;
-					emit addFileToView( *valID );
-					return;
-				}
-				else
-				{
-					// TODO implement error for unknown import
-				}
-			}
-			else if ( auto valExcept = std::get_if< std::exception_ptr >( &var ); valExcept != nullptr )
-			{
-				std::rethrow_exception( *valExcept );
+				++successful;
+				emit addFileToView( *valID );
+				return;
 			}
 			else
-			{ throw std::runtime_error( "Unknown variant type" ); }
+			{
+				// TODO implement error for unknown import
+			}
 		}
-		catch ( FileAlreadyExistsException& e )
+		else if ( auto e = std::get_if< IDHANError >( &var ); e != nullptr )
 		{
-			++alreadyinDB;
-			return;
+			auto val = *e;
+
+			spdlog::warn( val.what() );
+
+			if ( e->error_code_ == ErrorNo::DATABASE_DATA_NOT_FOUND )
+			{
+				++failed;
+			}
+			else if ( e->error_code_ == ErrorNo::DATABASE_DATA_ALREADY_EXISTS )
+			{
+				++alreadyinDB;
+			}
+			else if ( e->error_code_ == ErrorNo::FILE_NOT_FOUND )
+			{
+				++failed;
+				return;
+			}
+			else
+			{
+				spdlog::critical( "Unhanbled error code: {}", static_cast<int>(e->error_code_) );
+				throw val;
+			}
 		}
-		catch ( FileDeletedException& e )
-		{
-			++deleted;
-			return;
-		}
-		catch ( std::exception& e )
-		{
-			++failed;
-			return;
-		}
+		else
+		{ throw std::runtime_error( "Unknown variant type" ); }
+
 
 		return;
 	};
 
 	auto process = []( std::filesystem::path path_ ) -> Output
 	{
+		ZoneScopedN( "process" );
 		try
 		{
 			if ( !std::filesystem::exists( path_ ) )
@@ -204,6 +210,7 @@ void ImportViewer::processFiles()
 
 			const std::vector< std::byte > bytes = [ &path_ ]() -> std::vector< std::byte >
 			{
+				ZoneScopedN( "Read file" );
 				if ( std::ifstream ifs( path_ ); ifs )
 				{
 					const auto size { std::filesystem::file_size( path_ ) };
@@ -234,8 +241,14 @@ void ImportViewer::processFiles()
 			// import
 			uint64_t hash_id { 0 };
 
+			QMimeDatabase mime_db;
+
+			const auto mime_type = mime_db.mimeTypeForFile( path_.c_str() );
+
 			// Generate filepath location from hash
-			const std::filesystem::path filepath = getFilepath( sha256 );
+			const std::filesystem::path filepath = getFilepathFromHash( sha256 ).string() +
+				"." +
+				mime_type.preferredSuffix().toStdString();
 
 			// Check if file already exists
 			if ( std::filesystem::exists( filepath ) )
@@ -253,38 +266,25 @@ void ImportViewer::processFiles()
 				// O_LARGEFILE can be used if the file would exceed the
 				// off_t (32bit) limit in size
 
-
 				// Active
 				// O_CREAT creats the file if it does not exist
 				// O_WRONLY opens the file for writing only
 				// O_SYNC ensures that the data is written to disk before
 				// returning from the write call
 
-				auto c_tor = [](
-					std::filesystem::path path,
-					int o_flags,
-					int s_flags ) -> int { return ::open( path.c_str(), o_flags, s_flags ); };
-				auto d_tor = []( int i ) -> void { ::close( i ); };
+				int val { ::open( filepath.c_str(), O_WRONLY | O_CREAT | O_SYNC | O_LARGEFILE, S_IRUSR | S_IWUSR ) };
 
-
-				int val { 0 };
-				internal::raii_wrapper obj(
-					val, c_tor, d_tor, filepath, O_WRONLY | O_CREAT | O_SYNC, S_IRUSR | S_IWUSR
-				);
-
-				int ofs = val;
-
-				if ( ofs == -1 )
+				if ( val == -1 )
 				{
-					spdlog::error( "Failed to open file {}", filepath.string() );
+					IDHANError err { ErrorNo::FSYNC_FILE_OPENEN_FAILED,
+						"Failed to open file error code: " + std::to_string( val ) };
 
-					std::exception_ptr eptr { std::make_exception_ptr(
-						std::system_error( errno, std::generic_category() )
-					) };
-					return Output( eptr );
+					return Output( err );
 				}
 
-				::write( ofs, bytes.data(), bytes.size() );
+				::write( val, bytes.data(), bytes.size() );
+
+				::close( val );
 
 				#else
 				// TODO implement for windows
@@ -305,31 +305,33 @@ void ImportViewer::processFiles()
 				#endif
 			}
 
-			// Insert into database
-			try
-			{
-				hash_id = getFileID( sha256 );
-			}
-			catch ( ... )
-			{
 
-			}
+			// Insert into database
+			//Check if it is in the database
+
+			hash_id = getFileID( sha256 );
+
 
 			if ( hash_id )
 			{
 				//We got an ID. Throw FileExists
-				throw FileAlreadyExistsException( "hash_id:" + std::to_string( hash_id ) );
+				throw IDHANError(
+					ErrorNo::DATABASE_DATA_ALREADY_EXISTS, "hash_id: " + std::to_string( hash_id )
+				);
 			}
 
 			hash_id = addFile( sha256 );
 
+			//Add metadata
+			populateMime( hash_id, mime_type.name().toStdString() );
+
 			return Output( hash_id );
 		}
-		catch ( ... )
+		catch ( IDHANError& e )
 		{
-			auto eptr = std::current_exception();
-			return Output( eptr );
+			return Output( e );
 		}
+
 	};
 
 	auto future = QtConcurrent::mappedReduced(
@@ -339,7 +341,7 @@ void ImportViewer::processFiles()
 	while ( !future.isFinished() )
 	{
 		QThread::yieldCurrentThread();
-		QThread::msleep( 250 );
+		QThread::msleep( 100 );
 		emit updateValues();
 	}
 }
@@ -347,6 +349,7 @@ void ImportViewer::processFiles()
 
 void ImportViewer::updateValues_slot()
 {
+	ZoneScoped;
 	QString str;
 
 	str += QString( "%1/%2" ).arg( filesProcessed ).arg( filesAdded );
@@ -372,6 +375,7 @@ void ImportViewer::updateValues_slot()
 
 void ImportViewer::addFiles( const std::vector< std::filesystem::path >& files_ )
 {
+	ZoneScoped;
 	files.reserve( files_.size() );
 	files = files_;
 

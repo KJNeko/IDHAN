@@ -6,36 +6,34 @@
 #ifndef MAIN_IMAGEMODEL_HPP
 #define MAIN_IMAGEMODEL_HPP
 
+
 #include <QAbstractItemDelegate>
 #include <QAbstractListModel>
 #include <QPainter>
 
+
 class ImageDelegate : public QAbstractItemDelegate
 {
-	Q_OBJECT
+Q_OBJECT
 
-  public:
+public:
 	ImageDelegate( QObject* parent = nullptr );
 
-	void
-	paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
+	void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
 
-	QSize
-	sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
-
-  signals:
-	void generateThumbnail( uint64_t hash_id ) const;
+	QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
 };
 
 
 class ImageModel : public QAbstractListModel
 {
-	Q_OBJECT
+Q_OBJECT
 
-  public:
+public:
 	ImageModel( QWidget* parent = nullptr );
 
 	int rowCount( const QModelIndex& parent = QModelIndex() ) const override;
+
 	int columnCount( const QModelIndex& parent = QModelIndex() ) const override;
 
 	QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const override;
@@ -48,11 +46,8 @@ class ImageModel : public QAbstractListModel
 
 	void populate();
 
-  private:
-	std::vector<uint64_t> fileList;
-
-  public slots:
-	void generateThumbnail( uint64_t hash_id );
+private:
+	std::vector< uint64_t > fileList;
 };
 
 

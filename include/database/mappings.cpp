@@ -10,6 +10,7 @@
 
 #include "TracyBox.hpp"
 
+
 void addMapping( const Hash32& sha256, const std::string& group, const std::string& subtag, Database db )
 {
 	ZoneScoped;
@@ -17,15 +18,21 @@ void addMapping( const Hash32& sha256, const std::string& group, const std::stri
 	const uint64_t subtag_id { getGroupID( group, true, db ) };
 	const uint64_t file_id { getFileID( sha256, true, db ) };
 
-	pqxx::work& work { db.getWork() };
+	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	work.exec(
+	work->exec(
 		"INSERT INTO mappings (file_id, group_id, subtag_id) VALUES (" +
-		std::to_string( file_id ) + ", " + std::to_string( group_id ) + ", " +
-		std::to_string( subtag_id ) + ")" );
+			std::to_string( file_id ) +
+			", " +
+			std::to_string( group_id ) +
+			", " +
+			std::to_string( subtag_id ) +
+			")"
+	);
 
-	work.commit();
+	db.commit();
 }
+
 
 void removeMapping( const Hash32& sha256, const std::string& group, const std::string& subtag, Database db )
 {
@@ -34,20 +41,29 @@ void removeMapping( const Hash32& sha256, const std::string& group, const std::s
 	const uint64_t subtag_id { getGroupID( group, true, db ) };
 	const uint64_t file_id { getFileID( sha256, true, db ) };
 
-	pqxx::work& work { db.getWork() };
+	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work.exec(
-		"DELETE FROM mappings WHERE file_id = " + std::to_string( file_id ) +
-		" AND group_id = " + std::to_string( group_id ) +
-		" AND subtag_id = " + std::to_string( subtag_id ) );
+	const pqxx::result res = work->exec(
+		"DELETE FROM mappings WHERE file_id = " +
+			std::to_string( file_id ) +
+			" AND group_id = " +
+			std::to_string( group_id ) +
+			" AND subtag_id = " +
+			std::to_string( subtag_id )
+	);
 
 	if ( res.affected_rows() == 0 )
 	{
-		throw EmptyReturnException(
-			"No mapping with file_id " + std::to_string( file_id ) +
-			" and group_id " + std::to_string( group_id ) + " and subtag_id " +
-			std::to_string( subtag_id ) + " found to be deleted." );
+		throw IDHANError(
+			ErrorNo::DATABASE_DATA_NOT_FOUND, "No mapping with file_id " +
+			std::to_string( file_id ) +
+			" and group_id " +
+			std::to_string( group_id ) +
+			" and subtag_id " +
+			std::to_string( subtag_id ) +
+			" found to be deleted."
+		);
 	}
 
-	work.commit();
+	db.commit();
 }

@@ -13,13 +13,13 @@
 
 #include "TracyBox.hpp"
 #include <fgl/types/ctypes.hpp>
+#include <QCache>
 
 
 uint64_t addFile( const Hash32& sha256, Database db )
 {
-	spdlog::debug( "addFile()" );
 	ZoneScoped;
-	pqxx::work& work { db.getWork() };
+	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
 	pqxx::params values;
 
@@ -27,8 +27,10 @@ uint64_t addFile( const Hash32& sha256, Database db )
 
 	values.append( sha256.getView() );
 
-	const pqxx::result res = work.exec_params( query, values );
-	work.commit();
+	const pqxx::result res = work->exec_params( query, values );
+
+	db.commit();
+
 	return res[ 0 ][ "hash_id" ].as< uint64_t >();
 }
 
@@ -37,16 +39,15 @@ uint64_t getFileID( const Hash32& sha256, const bool add, Database db )
 {
 	ZoneScoped;
 
-	pqxx::work& work { db.getWork() };
+	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
 	pqxx::params values;
 
 	constexpr pqxx::zview query = "SELECT hash_id FROM files WHERE sha256 = $1";
 	values.append( sha256.getView() );
 
-	const pqxx::result res = work.exec_params( query, values );
-	work.commit();
 
+	const pqxx::result res = work->exec_params( query, values );
 
 	if ( res.empty() )
 	{
@@ -55,11 +56,12 @@ uint64_t getFileID( const Hash32& sha256, const bool add, Database db )
 		else
 		{
 			QString hash_str = sha256.getQByteArray().toHex();
-			throw EmptyReturnException(
-				"No file with hash " + hash_str.toStdString() + " found."
-			);
+			db.commit( false );
+			return 0;
 		}
 	}
+
+	db.commit( false );
 
 	return res[ 0 ][ 0 ].as< uint64_t >();
 }
@@ -68,23 +70,28 @@ uint64_t getFileID( const Hash32& sha256, const bool add, Database db )
 Hash32 getHash( const uint64_t hash_id, Database db )
 {
 	ZoneScoped;
-	pqxx::work& work { db.getWork() };
+	static QCache< uint64_t, std::shared_ptr< Hash32>> cache( 1000 );
 
-	const pqxx::result res = work.exec(
+	if ( cache.contains( hash_id ) )
+	{
+		return **cache.object( hash_id );
+	}
+
+	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+
+	const pqxx::result res = work->exec(
 		"SELECT sha256 FROM files WHERE hash_id = " + std::to_string( hash_id )
 	);
 
-	work.commit();
-
 	if ( res.empty() )
 	{
-		throw EmptyReturnException(
-			"No file with hash_id " + std::to_string( hash_id ) + " found."
+		throw IDHANError(
+			ErrorNo::DATABASE_DATA_NOT_FOUND, "No file with ID " + std::to_string( hash_id ) + " found."
 		);
 	}
 
 	// From db -> \xabcdef12354587979 -> abcdef12354587979 -> RAW BYES
-	auto hexstring_to_qbytearray = []( std::string_view sv ) -> QByteArray
+	auto hexstring_to_qbytearray = []( std::string sv ) -> QByteArray
 	{
 		return QByteArray::fromHex(
 			QString::fromUtf8(
@@ -93,16 +100,29 @@ Hash32 getHash( const uint64_t hash_id, Database db )
 		);
 	};
 
-	return Hash32 { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string_view >() ) };
+	Hash32 hash { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string >() ) };
+
+	//Create a copy of the data as a shared pointer
+	std::shared_ptr< Hash32 > hash_ptr = std::make_shared< Hash32 >( hash );
+
+	//Add the hash to the cache
+	cache.insert( hash_id, new std::shared_ptr< Hash32 >( hash_ptr ) );
+
+	db.commit();
+
+	return Hash32 { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string >() ) };
 }
 
 
 // Filepath from hash_id
-std::filesystem::path getThubmnailpath( const uint64_t hash_id, Database db )
+std::filesystem::path getThumbnailpath( const uint64_t hash_id, Database db )
 {
 	ZoneScoped;
 	const Hash32 hash = getHash( hash_id, db );
-	return getThumbnailpath( hash );
+
+	db.commit();
+
+	return getThumbnailpathFromHash( hash );
 }
 
 
@@ -111,8 +131,11 @@ std::filesystem::path getFilepath( const uint64_t hash_id, Database db )
 	ZoneScoped;
 	const Hash32 hash = getHash( hash_id, db );
 
-	auto path = getFilepath( hash );
+	auto path = getFilepathFromHash( hash );
+	path += ".";
 	path += getFileExtention( hash_id, db );
+
+	db.commit();
 
 	return path;
 }
@@ -169,14 +192,14 @@ namespace internal
 } // namespace internal
 
 // Filepath from only hash
-std::filesystem::path getThumbnailpath( const Hash32& sha256 )
+std::filesystem::path getThumbnailpathFromHash( const Hash32& sha256 )
 {
 	ZoneScoped;
-	return internal::generate_path_to_file( "paths/thumbnail_path", "./db/thumbnails", 't', sha256 );
+	return internal::generate_path_to_file( "paths/thumbnail_path", "./db/thumbnails", 't', sha256 ).string() + ".jpg";
 }
 
 
-std::filesystem::path getFilepath( const Hash32& sha256 )
+std::filesystem::path getFilepathFromHash( const Hash32& sha256 )
 {
 	ZoneScoped;
 	return internal::generate_path_to_file( "paths/file_path", "./db/file_paths", 'f', sha256 );

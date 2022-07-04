@@ -44,7 +44,7 @@ template< fgl::traits::byte_type T = std::byte > struct ByteArray32 : public std
 		QByteArray hash_arry;
 		hash_arry.resize( static_cast<qsizetype>(this->size()) );
 		memcpy( hash_arry.data(), this->data(), this->size() );
-		
+
 		return hash_arry;
 	}
 
@@ -65,15 +65,15 @@ using Hash32 = ByteArray32< std::byte >;
 
 
 // Filepath from hash_id
-[[nodiscard]] std::filesystem::path getThubmnailpath( const uint64_t hash_id, Database db = Database() );
+[[nodiscard]] std::filesystem::path getThumbnailpath( const uint64_t hash_id, Database db = Database() );
 
 [[nodiscard]] std::filesystem::path getFilepath( const uint64_t hash_id, Database db = Database() );
 
 
 // Filepath from only hash
-[[nodiscard]] std::filesystem::path getThumbnailpath( const Hash32& sha256 );
+[[nodiscard]] std::filesystem::path getThumbnailpathFromHash( const Hash32& sha256 );
 
-[[nodiscard]] std::filesystem::path getFilepath( const Hash32& sha256 );
+[[nodiscard]] std::filesystem::path getFilepathFromHash( const Hash32& sha256 );
 
 
 #endif // MAIN_FILES_HPP

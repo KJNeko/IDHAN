@@ -77,7 +77,7 @@
        <enum>QListView::Adjust</enum>
       </property>
       <property name="layoutMode">
-       <enum>QListView::Batched</enum>
+       <enum>QListView::SinglePass</enum>
       </property>
       <property name="gridSize">
        <size>
@@ -86,7 +86,10 @@
        </size>
       </property>
       <property name="batchSize">
-       <number>5</number>
+       <number>400</number>
+      </property>
+      <property name="selectionRectVisible">
+       <bool>true</bool>
       </property>
      </widget>
     </widget>

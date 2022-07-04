@@ -17,29 +17,40 @@
 #pragma GCC diagnostic ignored "-Wpadded"
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 
+
 #include <pqxx/pqxx>
+
 
 #pragma GCC diagnostic pop
 
-#include <memory>
+
+#include <mutex>
+
 
 class Database
 {
 	inline static pqxx::connection* conn { nullptr };
-	inline static std::mutex mtx;
-	std::shared_ptr<pqxx::work> txn;
-	std::shared_ptr<std::lock_guard<std::mutex>> guard;
+	inline static std::recursive_mutex txn_mtx;
+	std::shared_ptr< pqxx::work > txn;
 
-	inline static std::mutex conMtx;
+	std::lock_guard< std::recursive_mutex > lk { txn_mtx };
 
-  public:
-	Database();
-	Database( Database& );
+	std::shared_ptr< bool > finalized { new bool( false ) };
+
+public:
+	Database() = default;
+
+	Database( Database& db );
 
 	static void initalizeConnection( const std::string& );
 
-	pqxx::work& getWork();
-};
+	std::shared_ptr< pqxx::work > getWorkPtr();
 
+	void commit( bool throw_on_error = true );
+
+	void abort( bool throw_on_error = true );
+
+	~Database();
+};
 
 #endif // MAIN_DATABASE_HPP
