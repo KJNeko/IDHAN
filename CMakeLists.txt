@@ -12,6 +12,7 @@ set(CMAKE_CXX_FLAGS_SYSTEM "-std=c++20 -DNDEBUG -O3 -march=native -fmax-errors=3
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/interface/ui)
 
 #set(CMAKE_THREAD_LIBS_INIT "-lpthread")
@@ -51,6 +52,7 @@ file(GLOB_RECURSE SOURCES
         "${CMAKE_SOURCE_DIR}/include/*.cpp"
         "${CMAKE_SOURCE_DIR}/include/services/*.cpp"
         "${CMAKE_SOURCE_DIR}/interface/src/*.cpp"
+        "${CMAKE_SOURCE_DIR}/Resources/*.qrc"
         )
 
 add_executable(IDHAN ${SOURCES})
