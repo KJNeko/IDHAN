@@ -135,8 +135,14 @@ std::filesystem::path getFilepath( const uint64_t hash_id, Database db )
 	const Hash32 hash = getHash( hash_id, db );
 
 	auto path = getFilepathFromHash( hash );
-	path += ".";
-	path += getFileExtention( hash_id, db );
+
+	const auto ext = getFileExtention( hash_id, db );
+
+	if ( ext.size() > 0 )
+	{
+		path += ".";
+		path += ext;
+	}
 
 	db.commit();
 
