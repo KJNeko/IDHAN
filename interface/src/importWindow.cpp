@@ -87,6 +87,11 @@ void ImportWindow::on_addFolder_clicked()
 
 		QFile f( file );
 
+		if ( f.size() == 0 )
+		{
+			continue;
+		}
+
 		auto sizeStr = locale.formattedDataSize( f.size() );
 		
 		model->appendRow(
