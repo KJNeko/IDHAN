@@ -12,6 +12,7 @@
 #include <QPixmap>
 #include <QSettings>
 #include <QtConcurrent/QtConcurrent>
+#include <QPixmapCache>
 
 #include "ImageDelegate.hpp"
 
@@ -19,9 +20,6 @@
 #include <iostream>
 
 #include "database/files.hpp"
-#include "database/metadata.hpp"
-
-#include "services/ThumbnailGenerator.hpp"
 
 #include "TracyBox.hpp"
 
@@ -34,13 +32,33 @@ ImageDelegate::ImageDelegate( QObject* parent ) : QAbstractItemDelegate( parent 
 void ImageDelegate::paint(
 	QPainter* const painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
+	using namespace std::literals::chrono_literals;
+
 	ZoneScoped;
 	// Get the image
 	auto hash_id = index.data( Qt::DisplayRole ).value< uint64_t >();
 
+	//Get the hash for the image
+	auto hash = getHash( hash_id );
 
-	auto thumbnail = getThumbnail( hash_id );
-	
+	QPixmap thumbnail;
+	if ( auto key = hash.getQByteArray().toHex(); !QPixmapCache::find( key, &thumbnail ) )
+	{
+		//Get thumbnail path from database
+		auto thumbnail_path = getThumbnailpath( hash_id );
+
+		if ( !std::filesystem::exists( thumbnail_path ) )
+		{
+			//spdlog::warn( "Expected thumbnail at {}. It is missing!", thumbnail_path.string() );
+			thumbnail = QPixmap( ":/IDHAN/icon-64.png" );
+		}
+		else
+		{
+			thumbnail.load( QString::fromStdString( thumbnail_path.string() ) );
+			QPixmapCache::insert( key, thumbnail );
+		}
+	}
+
 	QRect rect = option.rect;
 	// Center the image in the rectangle
 	rect.setX( rect.x() + ( rect.width() - thumbnail.width() ) / 2 );
