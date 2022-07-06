@@ -78,9 +78,9 @@ Hash32 getHash( const uint64_t hash_id, Database db )
 
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec(
-		"SELECT sha256 FROM files WHERE hash_id = " + std::to_string( hash_id )
-	);
+	constexpr pqxx::zview query { "SELECT sha256 FROM files WHERE hash_id = $1" };
+
+	const pqxx::result res { work->exec_params( query, hash_id ) };
 
 	if ( res.empty() )
 	{
@@ -99,7 +99,7 @@ Hash32 getHash( const uint64_t hash_id, Database db )
 		);
 	};
 
-	Hash32 hash { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string >() ) };
+	const Hash32 hash { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string >() ) };
 
 	//Create a copy of the data as a shared pointer
 	std::shared_ptr< Hash32 > hash_ptr = std::make_shared< Hash32 >( hash );
