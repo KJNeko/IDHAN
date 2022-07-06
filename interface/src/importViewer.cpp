@@ -356,8 +356,14 @@ void ImportViewer::processFiles()
 			if ( hash_id )
 			{
 				//We got an ID. Throw FileExists
+				spdlog::warn(
+					"File already exists {}, path: {}, With hash_id {}:{}", sha256.getQByteArray()
+					.toHex()
+					.toStdString(), path_.string(), hash_id, getHash( hash_id ).getQByteArray().toHex().toStdString()
+				);
+
 				throw IDHANError(
-					ErrorNo::DATABASE_DATA_ALREADY_EXISTS, "hash_id: " + std::to_string( hash_id )
+					ErrorNo::DATABASE_DATA_ALREADY_EXISTS, "File already exists with id: " + std::to_string( hash_id )
 				);
 			}
 
