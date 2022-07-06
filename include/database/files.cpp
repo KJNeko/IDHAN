@@ -55,7 +55,6 @@ uint64_t getFileID( const Hash32& sha256, const bool add, Database db )
 		{ return addFile( sha256, db ); }
 		else
 		{
-			QString hash_str = sha256.getQByteArray().toHex();
 			db.commit( false );
 			return 0;
 		}
@@ -143,8 +142,7 @@ std::filesystem::path getFilepath( const uint64_t hash_id, Database db )
 
 namespace internal
 {
-
-// This returns the directory
+	// This returns the directory
 	[[nodiscard]] inline std::filesystem::path path_from_settings(
 		const fgl::cstring setting, const fgl::cstring default_path )
 	{

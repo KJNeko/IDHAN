@@ -55,9 +55,6 @@ void ImageDelegate::paint(
 	// Draw boarder around the image
 	painter->drawRect( option.rect );
 	painter->restore();
-
-
-	return;
 }
 
 

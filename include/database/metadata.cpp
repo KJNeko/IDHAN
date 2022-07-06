@@ -63,8 +63,7 @@ std::string getMime( const uint64_t hash_id, Database db )
 	{
 		spdlog::error( "No mime found for hash_id {}", hash_id );
 		throw IDHANError(
-			ErrorNo::DATABASE_DATA_NOT_FOUND, "Failed to get mime for hash_id" +
-			std::to_string( hash_id )
+			ErrorNo::DATABASE_DATA_NOT_FOUND, "Failed to get mime for hash_id" + std::to_string( hash_id )
 		);
 	}
 
@@ -78,7 +77,7 @@ std::string getFileExtention( const std::string mimeType )
 {
 	QMimeDatabase qtMimedb;
 
-	auto mime_type = qtMimedb.mimeTypeForName( QString::fromStdString( mimeType ) );
+	const auto mime_type = qtMimedb.mimeTypeForName( QString::fromStdString( mimeType ) );
 
 	return mime_type.preferredSuffix().toStdString();
 }

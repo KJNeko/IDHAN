@@ -1,8 +1,6 @@
 #include "database.hpp"
 
-#include <QMimeDatabase>
 #include <QMimeType>
-#include <QSettings>
 
 #include <iostream>
 

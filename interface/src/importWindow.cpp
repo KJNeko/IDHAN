@@ -17,9 +17,8 @@
 
 #include "mainView.hpp"
 
-ImportWindow::ImportWindow( QWidget* parent )
-	: QDialog( parent ),
-	  ui( new Ui::ImportWindow )
+
+ImportWindow::ImportWindow( QWidget* parent ) : QDialog( parent ), ui( new Ui::ImportWindow )
 {
 	ui->setupUi( this );
 
@@ -35,20 +34,25 @@ ImportWindow::ImportWindow( QWidget* parent )
 	ui->fileList->setModel( model );
 
 	ui->fileList->horizontalHeader()->setSectionResizeMode(
-		0, QHeaderView::ResizeMode::Interactive );
+		0, QHeaderView::ResizeMode::Interactive
+	);
 	ui->fileList->horizontalHeader()->setSectionResizeMode(
-		1, QHeaderView::ResizeMode::Interactive );
+		1, QHeaderView::ResizeMode::Interactive
+	);
 	ui->fileList->horizontalHeader()->setSectionResizeMode(
-		2, QHeaderView::ResizeMode::Interactive );
+		2, QHeaderView::ResizeMode::Interactive
+	);
 
 	ui->fileList->horizontalHeader()->setStretchLastSection( false );
 	ui->fileList->resizeColumnsToContents();
 }
 
+
 ImportWindow::~ImportWindow()
 {
 	delete ui;
 }
+
 
 void ImportWindow::on_addFolder_clicked()
 {
@@ -63,7 +67,8 @@ void ImportWindow::on_addFolder_clicked()
 	while ( it.hasNext() )
 	{
 		it.next();
-		if ( it.fileInfo().isFile() ) { files.append( it.filePath() ); }
+		if ( it.fileInfo().isFile() )
+		{ files.append( it.filePath() ); }
 	}
 
 	// Set max progress bar
@@ -75,7 +80,7 @@ void ImportWindow::on_addFolder_clicked()
 	auto model = dynamic_cast<QStandardItemModel*>( ui->fileList->model() );
 
 	// Parse each file and see if it is a compatable mime type
-	for ( auto& file : files )
+	for ( auto& file: files )
 	{
 		QMimeDatabase db;
 		QMimeType mime = db.mimeTypeForFile( file );
@@ -83,14 +88,13 @@ void ImportWindow::on_addFolder_clicked()
 		QFile f( file );
 
 		auto sizeStr = locale.formattedDataSize( f.size() );
-
+		
 		model->appendRow(
-			{ new QStandardItem( file ),
-			  new QStandardItem( mime.name() ),
-			  new QStandardItem( sizeStr ) } );
+			{ new QStandardItem( file ), new QStandardItem( mime.name() ), new QStandardItem( sizeStr ) }
+		);
 
 		// Add to the list of files for further processing
-		fileList.emplace_back(file.toStdString() );
+		fileList.emplace_back( file.toStdString() );
 
 		// Set the progress bar
 		ui->progressBar->setValue( ui->progressBar->value() + 1 );
@@ -98,6 +102,7 @@ void ImportWindow::on_addFolder_clicked()
 
 	ui->fileList->resizeColumnsToContents();
 }
+
 
 void ImportWindow::on_importNow_clicked()
 {

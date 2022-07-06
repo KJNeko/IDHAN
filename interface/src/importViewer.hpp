@@ -5,6 +5,7 @@
 #ifndef MAIN_IMPORTVIEWER_HPP
 #define MAIN_IMPORTVIEWER_HPP
 
+
 #include <QFuture>
 #include <QWidget>
 #include <QTimer>
@@ -17,29 +18,29 @@
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
-class ImportViewer;
+	class ImportViewer;
 }
 QT_END_NAMESPACE
 
 class ImportViewer : public QWidget
 {
-	Q_OBJECT
+Q_OBJECT
 
-  public:
+public:
 	explicit ImportViewer( QWidget* parent = nullptr );
 
 	~ImportViewer() override;
 
 	void processFiles();
 
-	void addFiles( const std::vector<std::filesystem::path>& files );
+	void addFiles( const std::vector< std::filesystem::path >& files );
 
-  private:
+private:
 	Ui::ImportViewer* ui;
 
 	// File import list
-	std::vector<std::filesystem::path> files;
-	QFuture<void>* processingThread { nullptr };
+	std::vector< std::filesystem::path > files;
+	QFuture< void >* processingThread { nullptr };
 
 	// Record keeping
 	uint64_t filesAdded { 0 };
@@ -53,14 +54,18 @@ class ImportViewer : public QWidget
 	std::queue< uint64_t > addImageQueue;
 	std::mutex queue_lock;
 
-  private slots:
+private slots:
+
 	void updateValues_slot();
+
 	void addFileToView_slot( uint64_t );
 
 	void processImageQueue();
 
-  signals:
+signals:
+
 	void updateValues();
+
 	void addFileToView( uint64_t );
 };
 
