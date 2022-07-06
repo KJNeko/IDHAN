@@ -256,17 +256,20 @@ void ImportViewer::processFiles()
 			const auto mime_type = mime_db.mimeTypeForFile( path_.c_str() );
 
 			// Generate filepath location from hash
-			const std::filesystem::path filepath = getFilepathFromHash( sha256 ).string() +
-				"." +
-				mime_type.preferredSuffix().toStdString();
+			std::filesystem::path filepath = getFilepathFromHash( sha256 ).string();
+			const auto ext = mime_type.preferredSuffix().toStdString();
+
+			if ( ext.size() > 0 )
+			{
+				filepath += ".";
+				filepath += ext;
+			}
 
 			// Check if file already exists
-			if ( std::filesystem::exists( filepath ) )
+			if ( !std::filesystem::exists( filepath ) )
 			{
-				spdlog::error( "File {} already exists", filepath.string() );
-			}
-			else
-			{
+				//TODO implement "security" levels to check already written files
+
 				// Ensure that the parent directory exists
 				std::filesystem::create_directories( filepath.parent_path() );
 
