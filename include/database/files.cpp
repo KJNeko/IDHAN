@@ -69,7 +69,11 @@ uint64_t getFileID( const Hash32& sha256, const bool add, Database db )
 Hash32 getHash( const uint64_t hash_id, Database db )
 {
 	ZoneScoped;
-	static QCache< uint64_t, std::shared_ptr< Hash32>> cache( 1000 );
+	constexpr size_t size_unit { sizeof( uint64_t ) + sizeof( std::array< uint8_t, 32 > ) };
+	constexpr size_t size_max { 1024 * 1024 * 256 }; //256MB
+	constexpr size_t size_num { size_max / size_unit };
+
+	static QCache< uint64_t, std::shared_ptr< Hash32>> cache( size_num );
 
 	if ( cache.contains( hash_id ) )
 	{
