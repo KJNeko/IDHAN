@@ -7,6 +7,8 @@
 
 #include <QFuture>
 #include <QWidget>
+#include <QTimer>
+
 #include <queue>
 
 #include "database/FileData.hpp"
@@ -47,9 +49,15 @@ class ImportViewer : public QWidget
 	uint64_t alreadyinDB { 0 };
 	uint64_t deleted { 0 };
 
+	QTimer processImageQueueTimer;
+	std::queue< uint64_t > addImageQueue;
+	std::mutex queue_lock;
+
   private slots:
 	void updateValues_slot();
 	void addFileToView_slot( uint64_t );
+
+	void processImageQueue();
 
   signals:
 	void updateValues();

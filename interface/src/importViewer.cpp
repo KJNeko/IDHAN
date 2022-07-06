@@ -64,6 +64,16 @@ ImportViewer::ImportViewer( QWidget* parent ) : QWidget( parent ), ui( new Ui::I
 	ui->listView->setItemDelegate( delegate );
 
 	ui->listView->setItemAlignment( Qt::AlignCenter );
+
+
+	//Set the timer interval to be every 250ms
+	processImageQueueTimer.setInterval( 30 );
+
+	//Connect the timer to the processImageQueue function
+	connect( &processImageQueueTimer, &QTimer::timeout, this, &ImportViewer::processImageQueue );
+
+	//Start the timer
+	processImageQueueTimer.start();
 }
 
 
@@ -427,5 +437,23 @@ void ImportViewer::addFiles( const std::vector< std::filesystem::path >& files_ 
 void ImportViewer::addFileToView_slot( uint64_t hash_id )
 {
 	auto model = dynamic_cast<ImageModel*>( ui->listView->model());
-	model->addImage( hash_id );
+	std::lock_guard< std::mutex > lk( queue_lock );
+	addImageQueue.push( hash_id );
+
+	//model->addImage( hash_id );
+}
+
+
+void ImportViewer::processImageQueue()
+{
+	std::lock_guard< std::mutex > lk( queue_lock );
+
+	auto model = dynamic_cast<ImageModel*>( ui->listView->model());
+
+	while ( !addImageQueue.empty() )
+	{
+		auto hash_id = addImageQueue.front();
+		addImageQueue.pop();
+		model->addImage( hash_id );
+	}
 }
