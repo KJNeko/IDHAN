@@ -272,7 +272,7 @@ void ImportViewer::processFiles()
 				// O_SYNC ensures that the data is written to disk before
 				// returning from the write call
 
-				int val { ::open( filepath.c_str(), O_WRONLY | O_CREAT | O_SYNC | O_LARGEFILE, S_IRUSR | S_IWUSR ) };
+				int val { ::open( filepath.c_str(), O_WRONLY | O_CREAT | O_LARGEFILE, S_IRUSR | S_IWUSR ) };
 
 				if ( val == -1 )
 				{
@@ -283,6 +283,34 @@ void ImportViewer::processFiles()
 				}
 
 				::write( val, bytes.data(), bytes.size() );
+
+
+				//Start preparing the thumbnail while we wait for the data to be written
+
+				TracyCZoneN( generate_thumbnail, "generate_thumbnail", true );
+				QSettings s;
+				const auto x_res = s.value( "thumbnails/x_res", 120 ).toInt();
+				const auto y_res = s.value( "thumbnails/y_res", 120 ).toInt();
+
+				if ( mime_type.name().contains( "image/" ) )
+				{
+					QImage raw;
+					raw.loadFromData( reinterpret_cast<const unsigned char*>(bytes.data()), bytes.size() );
+
+					//Resize image
+					const auto resized_qimage = raw.scaled( x_res, y_res, Qt::KeepAspectRatio, Qt::SmoothTransformation );
+
+					auto thumbnail_path = getThumbnailpathFromHash( sha256 );
+
+					//Ensure the parent directory is created
+					std::filesystem::create_directories( thumbnail_path.parent_path() );
+
+					resized_qimage.save( QString::fromStdString( thumbnail_path.string() ) );
+				}
+				TracyCZoneEnd( generate_thumbnail );
+
+				//Ensure that everything is done
+				::fsync( val );
 
 				::close( val );
 
