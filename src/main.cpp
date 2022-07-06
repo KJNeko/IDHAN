@@ -15,9 +15,14 @@
 
 #include "database/files.hpp"
 
+#include <QPixmapCache>
+#include <QImageReader>
+
 
 int main( int argc, char** argv )
 {
+	QImageReader::setAllocationLimit( 0 );
+
 	std::cout << "Qt version: " << qVersion() << std::endl;
 
 	QApplication app( argc, argv );
@@ -32,6 +37,17 @@ int main( int argc, char** argv )
 		s.setValue( "paths/thumbnail_path", "./db/thumbnails" );
 		s.setValue( "paths/file_path", "./db/files" );
 		s.setValue( "firstRun", false );
+	}
+
+	if ( !s.value( "QtSilence", false ).toBool() )
+	{
+		spdlog::warn(
+			"QtDebug is set to false. This silences qt.gui.icc and qt.gui.imageio. This is intentional. set QtSilence in {} to false to enable them again", s
+			.fileName()
+			.toStdString()
+		);
+		QLoggingCategory::setFilterRules( QStringLiteral( "qt.gui.icc=false" ) );
+		QLoggingCategory::setFilterRules( QStringLiteral( "qt.gui.imageio=false" ) );
 	}
 
 	//Create directories if they don't exist. error if unable to access or make directories
