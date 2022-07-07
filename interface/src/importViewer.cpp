@@ -187,6 +187,9 @@ void ImportViewer::processFiles()
 			}
 			else if ( e->error_code_ == ErrorNo::DATABASE_DATA_ALREADY_EXISTS )
 			{
+				//Cast to a DuplicateDataException
+				const auto& ex = static_cast<const DuplicateDataException& >( *e );
+				emit addFileToView( ex.hash_id );
 				++alreadyinDB;
 			}
 			else if ( e->error_code_ == ErrorNo::FILE_NOT_FOUND )
@@ -362,9 +365,7 @@ void ImportViewer::processFiles()
 					.toStdString(), path_.string(), hash_id, getHash( hash_id ).getQByteArray().toHex().toStdString()
 				);
 
-				throw IDHANError(
-					ErrorNo::DATABASE_DATA_ALREADY_EXISTS, "File already exists with id: " + std::to_string( hash_id )
-				);
+				throw DuplicateDataException( "Duplicate hash_id", hash_id );
 			}
 
 			hash_id = addFile( sha256 );
