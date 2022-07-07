@@ -21,13 +21,9 @@ uint64_t addFile( const Hash32& sha256, Database db )
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	pqxx::params values;
-
 	constexpr pqxx::zview query = "INSERT INTO files (sha256) VALUES ($1) RETURNING hash_id";
 
-	values.append( sha256.getView() );
-
-	const pqxx::result res = work->exec_params( query, values );
+	const pqxx::result res = work->exec_params( query, sha256.getView() );
 
 	db.commit();
 
@@ -41,13 +37,9 @@ uint64_t getFileID( const Hash32& sha256, const bool add, Database db )
 
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	pqxx::params values;
-
 	constexpr pqxx::zview query = "SELECT hash_id FROM files WHERE sha256 = $1";
-	values.append( sha256.getView() );
 
-
-	const pqxx::result res = work->exec_params( query, values );
+	const pqxx::result res = work->exec_params( query, sha256.getView() );
 
 	if ( res.empty() )
 	{
@@ -134,7 +126,7 @@ std::filesystem::path getFilepath( const uint64_t hash_id, Database db )
 	ZoneScoped;
 	const Hash32 hash = getHash( hash_id, db );
 
-	auto path = getFilepathFromHash( hash );
+	const path = getFilepathFromHash( hash );
 
 	const auto ext = getFileExtention( hash_id, db );
 

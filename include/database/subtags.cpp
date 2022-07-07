@@ -14,9 +14,9 @@ uint64_t addSubtag( const std::string& subtag, Database db )
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec(
-		"INSERT INTO subtags (subtag) VALUES ('" + subtag + "') RETURNING subtag_id"
-	);
+	constexpr pqxx::zview query { "INSERT INTO subtags (subtag) VALUES ($1) RETURNING subtag_id" };
+
+	const pqxx::result res { work->exec_params( query, subtag ) };
 
 	db.commit();
 
@@ -29,9 +29,10 @@ std::string getSubtag( const uint64_t subtag_id, Database db )
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec(
-		"SELECT subtag FROM subtags WHERE subtag_id = " + std::to_string( subtag_id )
-	);
+	constexpr pqxx::zview query { "SELECT subtag FROM subtags WHERE subtag_id = $1" };
+
+	const pqxx::result res { work->exec_params( query, subtag_id ) };
+
 	if ( res.empty() )
 	{
 		throw IDHANError(
@@ -50,7 +51,9 @@ uint64_t getSubtagID( const std::string& subtag, const bool create, Database db 
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec( "SELECT subtag_id FROM subtags WHERE subtag = '" + subtag + "'" );
+	constexpr pqxx::zview query { "SELECT subtag_id FROM subtags WHERE subtag = $1" };
+
+	const pqxx::result res { work->exec_params( query, subtag ) };
 
 	if ( res.empty() )
 	{
@@ -76,7 +79,10 @@ void deleteSubtag( const std::string& subtag, Database db )
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec( "DELETE FROM subtags WHERE subtag = '" + subtag + "' CASCADE" );
+	constexpr pqxx::zview query { "DELETE FROM subtags WHERE subtag = $1 CASCADE" };
+
+	const pqxx::result res { work->exec_params( query, subtag ) };
+
 	if ( res.affected_rows() == 0 )
 	{
 		throw IDHANError(

@@ -14,9 +14,9 @@ uint64_t addGroup( const std::string& group, Database db )
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec(
-		"INSERT INTO groups (group_name) VALUES ('" + work->esc( group ) + "') RETURNING group_id"
-	);
+	constexpr pqxx::zview query { "INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
+
+	const pqxx::result res = work->exec_params( query, group );
 
 	db.commit();
 
@@ -29,9 +29,10 @@ std::string getGroup( const uint64_t group_id, Database db )
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec(
-		"SELECT group_name FROM groups WHERE group_id = " + std::to_string( group_id )
-	);
+	constexpr pqxx::zview query { "SELECT group_name FROM groups WHERE group_id = $1" };
+
+	const pqxx::result res = work->exec_params( query, group_id );
+
 	if ( res.empty() )
 	{
 		throw IDHANError(
@@ -50,9 +51,10 @@ uint64_t getGroupID( const std::string& group, const bool create, Database db )
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec(
-		"SELECT group_id FROM groups WHERE group_name = '" + work->esc( group ) + "'"
-	);
+	constexpr pqxx::zview query { "SELECT group_id FROM groups WHERE group_name = $1" };
+
+	const pqxx::result res { work->exec_params( query, group ) };
+
 	if ( res.empty() )
 	{
 		if ( create )
@@ -74,7 +76,10 @@ void removeGroup( const std::string& group, Database db )
 	ZoneScoped;
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec( "DELETE FROM groups WHERE group_name = '" + group + "' CASCADE" );
+	constexpr pqxx::zview query { "DELETE FROM groups WHERE group_name = $1" };
+
+	const pqxx::result res { work->exec_params( query, group ) };
+
 	if ( res.affected_rows() == 0 )
 	{
 		throw IDHANError(

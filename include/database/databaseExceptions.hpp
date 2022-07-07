@@ -49,5 +49,13 @@ struct IDHANError : public IDHANErrorContainer
 	IDHANError( ErrorNo error_code, std::string what ) : IDHANErrorContainer( what ), error_code_( error_code ) {}
 };
 
+struct DuplicateDataException : public IDHANError
+{
+	uint64_t hash_id { 0 };
+
+
+	DuplicateDataException( std::string what, uint64_t hash_id_ )
+		: IDHANError( ErrorNo::DATABASE_DATA_ALREADY_EXISTS, what ), hash_id( hash_id_ ) {}
+};
 
 #endif // MAIN_DATABASEEXCEPTIONS_HPP

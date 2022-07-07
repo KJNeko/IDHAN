@@ -13,8 +13,6 @@
 
 #include "database.hpp"
 
-#include "database/files.hpp"
-
 #include <QPixmapCache>
 #include <QImageReader>
 

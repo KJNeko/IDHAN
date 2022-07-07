@@ -20,16 +20,10 @@ void addMapping( const Hash32& sha256, const std::string& group, const std::stri
 
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	work->exec(
-		"INSERT INTO mappings (file_id, group_id, subtag_id) VALUES (" +
-			std::to_string( file_id ) +
-			", " +
-			std::to_string( group_id ) +
-			", " +
-			std::to_string( subtag_id ) +
-			")"
-	);
+	constexpr pqxx::zview query { "INSERT INTO mappings ( file_id, group_id, subtag_id ) VALUES ( $1, $2, $3 )" };
 
+	work->exec_params( query, file_id, group_id, subtag_id );
+	
 	db.commit();
 }
 
@@ -43,14 +37,9 @@ void removeMapping( const Hash32& sha256, const std::string& group, const std::s
 
 	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
 
-	const pqxx::result res = work->exec(
-		"DELETE FROM mappings WHERE file_id = " +
-			std::to_string( file_id ) +
-			" AND group_id = " +
-			std::to_string( group_id ) +
-			" AND subtag_id = " +
-			std::to_string( subtag_id )
-	);
+	constexpr pqxx::zview query { "DELETE FROM mappings WHERE file_id = $1 AND group_id = $2 AND subtag_id = $3" };
+
+	const pqxx::result res = work->exec_params( query, file_id, group_id, subtag_id );
 
 	if ( res.affected_rows() == 0 )
 	{

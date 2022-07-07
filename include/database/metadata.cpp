@@ -19,14 +19,14 @@ uint64_t getMimeID( const std::string& mime, Database db )
 
 	constexpr pqxx::zview query { "SELECT mime_id FROM mime_types WHERE mime = $1" };
 
-	pqxx::result res { work->exec_params( query, work->esc( mime ) ) };
+	pqxx::result res { work->exec_params( query, mime ) };
 
 	if ( res.empty() )
 	{
 		//Create the mime
 		constexpr pqxx::zview query_insert { "INSERT INTO mime_types (mime) VALUES ($1) RETURNING mime_id" };
 
-		res = work->exec_params( query_insert, work->esc( mime ) );
+		res = work->exec_params( query_insert, mime );
 	}
 
 	return res[ 0 ][ "mime_id" ].as< uint64_t >();
