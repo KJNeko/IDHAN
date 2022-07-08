@@ -105,10 +105,20 @@ QVariant ImageModel::data( const QModelIndex& index, int role ) const
 }
 
 
-void ImageModel::addImage( uint64_t id )
+void ImageModel::addImage( const uint64_t id )
 {
 	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + 1) );
 	fileList.push_back( id );
+	endInsertRows();
+}
+
+
+void ImageModel::addImages( const std::vector< uint64_t >& queue )
+{
+	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + queue.size()) );
+
+	fileList.insert( fileList.end(), queue.begin(), queue.end() );
+
 	endInsertRows();
 }
 
@@ -135,4 +145,12 @@ int ImageModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
 
 ImageModel::~ImageModel()
 {
+}
+
+
+void ImageModel::setFiles( const std::vector< uint64_t >& ids )
+{
+	beginResetModel();
+	fileList = ids;
+	endResetModel();
 }

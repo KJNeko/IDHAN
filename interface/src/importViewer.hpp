@@ -11,8 +11,9 @@
 #include <QTimer>
 
 #include <queue>
+#include <filesystem>
 
-#include "database/FileData.hpp"
+#include "listViewport.hpp"
 
 
 QT_BEGIN_NAMESPACE
@@ -50,23 +51,15 @@ private:
 	uint64_t alreadyinDB { 0 };
 	uint64_t deleted { 0 };
 
-	QTimer processImageQueueTimer;
-	std::queue< uint64_t > addImageQueue;
-	std::mutex queue_lock;
-
-private slots:
-
-	void updateValues_slot();
-
-	void addFileToView_slot( uint64_t );
-
-	void processImageQueue();
+	ListViewport* viewport { nullptr };
 
 signals:
 
 	void updateValues();
 
-	void addFileToView( uint64_t );
+private slots:
+
+	void updateValues_slot();
 };
 
 

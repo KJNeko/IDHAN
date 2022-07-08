@@ -126,7 +126,7 @@ std::filesystem::path getFilepath( const uint64_t hash_id, Database db )
 	ZoneScoped;
 	const Hash32 hash = getHash( hash_id, db );
 
-	const path = getFilepathFromHash( hash );
+	auto path = getFilepathFromHash( hash );
 
 	const auto ext = getFileExtention( hash_id, db );
 

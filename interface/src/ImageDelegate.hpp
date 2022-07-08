@@ -38,7 +38,11 @@ public:
 
 	QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const override;
 
-	void addImage( uint64_t id );
+	void addImage( const uint64_t id );
+
+	void addImages( const std::vector< uint64_t >& ids );
+
+	void setFiles( const std::vector< uint64_t >& ids );
 
 	void reset();
 

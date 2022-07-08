@@ -22,13 +22,14 @@
 #include "TracyBox.hpp"
 
 // Database
-#include "database/FileData.hpp"
 #include "database/databaseExceptions.hpp"
 #include "database/files.hpp"
 #include "database/metadata.hpp"
 
 // std
 #include <fstream>
+
+#include "listViewport.hpp"
 
 
 #ifdef _WIN32
@@ -53,27 +54,12 @@ ImportViewer::ImportViewer( QWidget* parent ) : QWidget( parent ), ui( new Ui::I
 {
 	ui->setupUi( this );
 
+	viewport = new ListViewport( this );
+
+	ui->viewFrame->layout()->addWidget( viewport );
+
+	//Connect all the things
 	connect( this, &ImportViewer::updateValues, this, &ImportViewer::updateValues_slot );
-	connect( this, &ImportViewer::addFileToView, this, &ImportViewer::addFileToView_slot );
-
-
-	auto model = new ImageModel( this );
-	auto delegate = new ImageDelegate( this );
-
-	ui->listView->setModel( model );
-	ui->listView->setItemDelegate( delegate );
-
-	ui->listView->setItemAlignment( Qt::AlignCenter );
-
-
-	//Set the timer interval to be every 250ms
-	processImageQueueTimer.setInterval( 30 );
-
-	//Connect the timer to the processImageQueue function
-	connect( &processImageQueueTimer, &QTimer::timeout, this, &ImportViewer::processImageQueue );
-
-	//Start the timer
-	processImageQueueTimer.start();
 }
 
 
@@ -83,67 +69,8 @@ ImportViewer::~ImportViewer()
 	if ( processingThread != nullptr )
 	{ processingThread->cancel(); }
 
-
 	delete ui;
 }
-
-/// TODO libFGL
-#include <concepts>
-#include <functional>
-#include <type_traits>
-
-
-namespace internal
-{
-
-	template< typename T, class T_ctor, class T_dtor, class... T_args > class raii_wrapper
-	{
-	public:
-		T_dtor&& dtor;
-		T val;
-
-
-		raii_wrapper( T& val_, T_ctor& ctor_, T_dtor& dtor_, T_args... args_ )
-			: dtor( std::move( dtor_ ) ), val( ctor_( std::forward< T_args >( args_ )... ) )
-		{
-			val_ = val;
-		}
-
-
-		~raii_wrapper()
-		{
-			std::invoke( dtor, val );
-		}
-	};
-
-
-
-
-	/*template< typename T, class T_dtor > class raii_wrapper
-	{
-	public:
-		T object;
-
-
-		[[nodiscard]] constexpr explicit raii_wrapper(
-			T&& obj, T_dtor&& dtor ) noexcept( noexcept( T( std::forward< decltype( obj ) >( obj ) ) ) &&
-			noexcept( std::move( T_dtor( dtor ) ) ) )
-			: object( std::forward< decltype( obj ) >( obj ) ), m_dtor( std::move( dtor ) )
-		{
-		}
-
-
-		~raii_wrapper() noexcept( noexcept( std::invoke( m_dtor, object ) ) )
-		{
-			std::invoke( m_dtor, object );
-		}
-
-
-	private:
-		T_dtor&& m_dtor;
-	};*/
-
-} // namespace internal
 
 
 void ImportViewer::processFiles()
@@ -161,13 +88,12 @@ void ImportViewer::processFiles()
 		ZoneScoped;
 		++filesProcessed;
 
-
 		if ( auto valID = std::get_if< uint64_t >( &var ); valID != nullptr )
 		{
 			if ( *valID != 0 )
 			{
 				++successful;
-				emit addFileToView( *valID );
+				viewport->addFile( *valID );
 				return;
 			}
 			else
@@ -189,7 +115,7 @@ void ImportViewer::processFiles()
 			{
 				//Cast to a DuplicateDataException
 				const auto& ex = static_cast<const DuplicateDataException& >( *e );
-				emit addFileToView( ex.hash_id );
+				viewport->addFile( ex.hash_id );
 				++alreadyinDB;
 			}
 			else if ( e->error_code_ == ErrorNo::FILE_NOT_FOUND )
@@ -311,7 +237,7 @@ void ImportViewer::processFiles()
 				if ( mime_type.name().contains( "image/" ) )
 				{
 					QImage raw;
-					raw.loadFromData( reinterpret_cast<const unsigned char*>(bytes.data()), bytes.size() );
+					raw.loadFromData( reinterpret_cast<const unsigned char*>(bytes.data()), static_cast<int>(bytes.size()) );
 
 					//Resize image
 					const auto resized_qimage = raw.scaled( x_res, y_res, Qt::KeepAspectRatio, Qt::SmoothTransformation );
@@ -443,27 +369,3 @@ void ImportViewer::addFiles( const std::vector< std::filesystem::path >& files_ 
 	);
 }
 
-
-void ImportViewer::addFileToView_slot( uint64_t hash_id )
-{
-	auto model = dynamic_cast<ImageModel*>( ui->listView->model());
-	std::lock_guard< std::mutex > lk( queue_lock );
-	addImageQueue.push( hash_id );
-
-	//model->addImage( hash_id );
-}
-
-
-void ImportViewer::processImageQueue()
-{
-	std::lock_guard< std::mutex > lk( queue_lock );
-
-	auto model = dynamic_cast<ImageModel*>( ui->listView->model());
-
-	while ( !addImageQueue.empty() )
-	{
-		auto hash_id = addImageQueue.front();
-		addImageQueue.pop();
-		model->addImage( hash_id );
-	}
-}

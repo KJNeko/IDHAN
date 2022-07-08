@@ -142,6 +142,7 @@ Database::~Database()
 	if ( ( !( *finalized ) && !( txn.use_count() >= 2 || !( txn.use_count() ) ) ) )
 	{
 		spdlog::warn( "~Database() called without commit() or abort(), finalized: {}, use_count: {}", *finalized, txn.use_count() );
+		//TODO fix the -Wterminate error here. Even though changes are we would want it terminate.
 		throw std::runtime_error( "~Database() called without commit() or abort()" );
 	}
 }
