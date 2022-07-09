@@ -10,14 +10,14 @@
 #include <string>
 
 
-uint64_t addGroup( const std::string& group, Database = Database() );
+uint64_t addGroup( const std::string& group );
 
-std::string getGroup( const uint64_t group_id, Database = Database() );
+std::string getGroup( const uint64_t group_id );
 
-uint64_t getGroupID( const std::string& group, bool = false, Database = Database() );
+uint64_t getGroupID( const std::string& group, bool = false );
 
-void removeGroup( const std::string& group, Database = Database() );
+void removeGroup( const std::string& group );
 
-void removeGroup( const uint64_t group_id, Database = Database() );
+void removeGroup( const uint64_t group_id );
 
 #endif // MAIN_GROUPS_HPP

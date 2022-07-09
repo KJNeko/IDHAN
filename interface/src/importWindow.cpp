@@ -69,6 +69,7 @@ void ImportWindow::on_addFolder_clicked()
 		it.next();
 		if ( it.fileInfo().isFile() )
 		{ files.append( it.filePath() ); }
+		QApplication::processEvents();
 	}
 
 	// Set max progress bar
@@ -93,7 +94,7 @@ void ImportWindow::on_addFolder_clicked()
 		}
 
 		auto sizeStr = locale.formattedDataSize( f.size() );
-		
+
 		model->appendRow(
 			{ new QStandardItem( file ), new QStandardItem( mime.name() ), new QStandardItem( sizeStr ) }
 		);
@@ -103,6 +104,7 @@ void ImportWindow::on_addFolder_clicked()
 
 		// Set the progress bar
 		ui->progressBar->setValue( ui->progressBar->value() + 1 );
+		QApplication::processEvents();
 	}
 
 	ui->fileList->resizeColumnsToContents();

@@ -9,76 +9,87 @@
 #include "TracyBox.hpp"
 
 
-uint64_t addGroup( const std::string& group, Database db )
+uint64_t addGroup( const std::string& group )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
 
-	const pqxx::result res = work->exec_params( query, group );
+	const pqxx::result res = work.exec_params( query, group );
 
-	db.commit();
+	work.commit();
+
 
 	return res[ 0 ][ "group_id" ].as< uint64_t >();
 }
 
 
-std::string getGroup( const uint64_t group_id, Database db )
+std::string getGroup( const uint64_t group_id )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "SELECT group_name FROM groups WHERE group_id = $1" };
 
-	const pqxx::result res = work->exec_params( query, group_id );
+	const pqxx::result res = work.exec_params( query, group_id );
 
 	if ( res.empty() )
 	{
+		spdlog::error( "No group with ID {} found.", group_id );
 		throw IDHANError(
 			ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with id " + std::to_string( group_id ) + " found."
 		);
 	}
 
-	db.commit();
+	work.commit();
 
 	return res[ 0 ][ "group" ].as< std::string >();
 }
 
 
-uint64_t getGroupID( const std::string& group, const bool create, Database db )
+uint64_t getGroupID( const std::string& group, const bool create )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "SELECT group_id FROM groups WHERE group_name = $1" };
 
-	const pqxx::result res { work->exec_params( query, group ) };
+	const pqxx::result res { work.exec_params( query, group ) };
 
 	if ( res.empty() )
 	{
 		if ( create )
-		{ return addGroup( group, db ); }
+		{
+			work.commit();
+			return addGroup( group );
+		}
 		else
 		{
+			work.abort();
+			spdlog::error( "No group with name {} found. create == false", group );
 			throw IDHANError( ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with name " + group + " found." );
 		}
 	}
 
-	db.commit();
+	work.commit();
 
 	return res[ 0 ][ "group_id" ].as< uint64_t >();
 }
 
 
-void removeGroup( const std::string& group, Database db )
+void removeGroup( const std::string& group )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "DELETE FROM groups WHERE group_name = $1" };
 
-	const pqxx::result res { work->exec_params( query, group ) };
+	const pqxx::result res { work.exec_params( query, group ) };
 
 	if ( res.affected_rows() == 0 )
 	{
@@ -87,14 +98,12 @@ void removeGroup( const std::string& group, Database db )
 		);
 	}
 
-	db.commit();
+	work.commit();
 }
 
 
-void removeGroup( const uint64_t group_id, Database db )
+void removeGroup( const uint64_t group_id )
 {
 	ZoneScoped;
-	removeGroup( getGroup( group_id, db ), db );
-
-	db.commit();
+	removeGroup( getGroup( group_id ) );
 }

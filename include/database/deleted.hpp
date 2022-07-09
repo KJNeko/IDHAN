@@ -10,8 +10,9 @@
 #include "databaseExceptions.hpp"
 #include "files.hpp"
 
-bool deleted( uint64_t hash_id, Database db = Database() );
 
-bool deleted( Hash32 sha256, Database db = Database() );
+bool deleted( uint64_t hash_id );
+
+bool deleted( Hash32 sha256 );
 
 #endif // MAIN_DELETED_HPP

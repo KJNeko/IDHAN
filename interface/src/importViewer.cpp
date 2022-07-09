@@ -25,6 +25,7 @@
 #include "database/databaseExceptions.hpp"
 #include "database/files.hpp"
 #include "database/metadata.hpp"
+#include "database/mappings.hpp"
 
 // std
 #include <fstream>
@@ -103,29 +104,31 @@ void ImportViewer::processFiles()
 		}
 		else if ( auto e = std::get_if< IDHANError >( &var ); e != nullptr )
 		{
-			auto val = *e;
+			auto& val = *e;
 
-			spdlog::warn( val.what() );
-
-			if ( e->error_code_ == ErrorNo::DATABASE_DATA_NOT_FOUND )
+			if ( val.error_code_ == ErrorNo::DATABASE_DATA_NOT_FOUND )
 			{
 				++failed;
 			}
-			else if ( e->error_code_ == ErrorNo::DATABASE_DATA_ALREADY_EXISTS )
+			else if ( val.error_code_ == ErrorNo::DATABASE_DATA_ALREADY_EXISTS )
 			{
-				//Cast to a DuplicateDataException
-				const auto& ex = static_cast<const DuplicateDataException& >( *e );
-				viewport->addFile( ex.hash_id );
+				if ( val.hash_id == 0 )
+				{
+					++failed;
+					return;
+				}
+				viewport->addFile( val.hash_id );
 				++alreadyinDB;
+				return;
 			}
-			else if ( e->error_code_ == ErrorNo::FILE_NOT_FOUND )
+			else if ( val.error_code_ == ErrorNo::FILE_NOT_FOUND )
 			{
 				++failed;
 				return;
 			}
 			else
 			{
-				spdlog::critical( "Unhanbled error code: {}", static_cast<int>(e->error_code_) );
+				spdlog::critical( "Unhanbled error code: {}", static_cast<int>(val.error_code_) );
 				throw val;
 			}
 		}
@@ -175,10 +178,6 @@ void ImportViewer::processFiles()
 			const Hash32 sha256 { QCryptographicHash::hash(
 				bytes_view, QCryptographicHash::Sha256
 			) };
-
-			// Check if the database already has the file we are about to
-			// import
-			uint64_t hash_id { 0 };
 
 			QMimeDatabase mime_db;
 
@@ -278,46 +277,58 @@ void ImportViewer::processFiles()
 
 			// Insert into database
 			//Check if it is in the database
+			const uint64_t hash_id_exists = getFileID( sha256 );
 
-			hash_id = getFileID( sha256 );
-
-
-			if ( hash_id )
+			if ( hash_id_exists )
 			{
-				//We got an ID. Throw FileExists
-				spdlog::warn(
-					"File already exists {}, path: {}, With hash_id {}:{}", sha256.getQByteArray()
-					.toHex()
-					.toStdString(), path_.string(), hash_id, getHash( hash_id ).getQByteArray().toHex().toStdString()
-				);
-
-				throw DuplicateDataException( "Duplicate hash_id", hash_id );
+				spdlog::info( "Throwing already exists" );
+				throw IDHANError( ErrorNo::DATABASE_DATA_ALREADY_EXISTS, "Duplicate hash_id", hash_id_exists );
 			}
 
-			hash_id = addFile( sha256 );
+			spdlog::debug( "Adding file" );
+			const auto hash_id = addFile( sha256 );
+			spdlog::debug( "Added file" );
 
 			//Add metadata
+			spdlog::debug( "Populating file" );
 			populateMime( hash_id, mime_type.name().toStdString() );
+			spdlog::debug( "Populated file" );
+
+			//Add the "system:inbox" tag to the image
+			spdlog::debug( "Adding system::inbox" );
+			addMapping( sha256, "system", "inbox" );
+			spdlog::debug( "Added" );
 
 			return Output( hash_id );
+
 		}
 		catch ( IDHANError& e )
 		{
-			return Output( e );
+			return Output( IDHANError( e.error_code_, e.what(), e.hash_id ) );
 		}
-
 	};
 
-	auto future = QtConcurrent::mappedReduced(
-		&pool, files, process, reduce
-	);
-
-	while ( !future.isFinished() )
+	try
 	{
-		QThread::yieldCurrentThread();
-		QThread::msleep( 100 );
-		emit updateValues();
+		auto future = QtConcurrent::mappedReduced(
+			&pool, files, process, reduce
+		);
+
+		while ( !future.isFinished() && !future.isCanceled() )
+		{
+			QThread::yieldCurrentThread();
+			QThread::msleep( 100 );
+			emit updateValues();
+		}
 	}
+	catch ( const std::exception& e )
+	{
+		spdlog::error( e.what() );
+		throw e;
+	}
+
+
+	spdlog::info( "Finished processing files" );
 }
 
 

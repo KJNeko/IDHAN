@@ -48,6 +48,8 @@ int main( int argc, char** argv )
 		QLoggingCategory::setFilterRules( QStringLiteral( "qt.gui.imageio=false" ) );
 	}
 
+	spdlog::set_level( spdlog::level::debug );
+
 	//Create directories if they don't exist. error if unable to access or make directories
 	QDir dir;
 

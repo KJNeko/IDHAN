@@ -92,5 +92,5 @@ void ListViewport::processValues()
 
 void ListViewport::updateTimermsec_slot( uint64_t msec )
 {
-	updateTimer.setInterval( msec );
+	updateTimer.setInterval( static_cast<int>(msec) );
 }

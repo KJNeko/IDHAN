@@ -22,6 +22,7 @@
 #include "database/files.hpp"
 
 #include "TracyBox.hpp"
+#include "database/databaseExceptions.hpp"
 
 
 ImageDelegate::ImageDelegate( QObject* parent ) : QAbstractItemDelegate( parent )
@@ -39,7 +40,17 @@ void ImageDelegate::paint(
 	auto hash_id = index.data( Qt::DisplayRole ).value< uint64_t >();
 
 	//Get the hash for the image
-	auto hash = getHash( hash_id );
+	Hash32 hash;
+	try
+	{
+		hash = getHash( hash_id );
+	}
+	catch ( const IDHANError& e )
+	{
+		spdlog::error( "Error getting hash for image: {}", e.what() );
+		return;
+	}
+
 
 	QPixmap thumbnail;
 	if ( auto key = hash.getQByteArray().toHex(); !QPixmapCache::find( key, &thumbnail ) )

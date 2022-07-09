@@ -6,16 +6,18 @@
 #ifndef MAIN_METADATA_HPP
 #define MAIN_METADATA_HPP
 
+
 #include <string>
 
 #include "database.hpp"
 
-void populateMime( const uint64_t hash_id, const std::string& mime, Database db = Database() );
 
-std::string getMime( const uint64_t hash_id, Database db = Database() );
+void populateMime( const uint64_t hash_id, const std::string& mime );
 
-std::string getFileExtention(const std::string mimeType);
+std::string getMime( const uint64_t hash_id );
 
-std::string getFileExtention( const uint64_t hash_id, Database db = Database() );
+std::string getFileExtention( const std::string mimeType );
+
+std::string getFileExtention( const uint64_t hash_id );
 
 #endif // MAIN_METADATA_HPP

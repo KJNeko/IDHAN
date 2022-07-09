@@ -57,17 +57,17 @@ template< fgl::traits::byte_type T = std::byte > struct ByteArray32 : public std
 
 using Hash32 = ByteArray32< std::byte >;
 
-[[nodiscard]] uint64_t addFile( const Hash32& sha256, Database db = Database() );
+[[nodiscard]] uint64_t addFile( const Hash32& sha256 );
 
-[[nodiscard]] uint64_t getFileID( const Hash32& sha256, const bool add = false, Database db = Database() );
+[[nodiscard]] uint64_t getFileID( const Hash32& sha256, const bool add = false );
 
-[[nodiscard]] Hash32 getHash( const uint64_t hash_id, Database db = Database() );
+[[nodiscard]] Hash32 getHash( const uint64_t hash_id );
 
 
 // Filepath from hash_id
-[[nodiscard]] std::filesystem::path getThumbnailpath( const uint64_t hash_id, Database db = Database() );
+[[nodiscard]] std::filesystem::path getThumbnailpath( const uint64_t hash_id );
 
-[[nodiscard]] std::filesystem::path getFilepath( const uint64_t hash_id, Database db = Database() );
+[[nodiscard]] std::filesystem::path getFilepath( const uint64_t hash_id );
 
 
 // Filepath from only hash

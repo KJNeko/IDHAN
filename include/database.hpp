@@ -25,32 +25,76 @@
 
 
 #include <mutex>
+#include <semaphore>
+#include <queue>
+#include <thread>
 
 
-class Database
+#define POOL_COUNT static_cast<uint64_t>(32)
+
+class ConnectionPool
 {
-	inline static pqxx::connection* conn { nullptr };
-	inline static std::recursive_mutex txn_mtx;
-	std::shared_ptr< pqxx::work > txn;
 
-	std::lock_guard< std::recursive_mutex > lk { txn_mtx };
-
-	std::shared_ptr< bool > finalized { new bool( false ) };
+	inline static std::queue< pqxx::connection > connections;
+	inline static std::mutex connections_mutex;
+	inline static std::counting_semaphore< POOL_COUNT > active = std::counting_semaphore< POOL_COUNT >( POOL_COUNT );
 
 public:
-	Database() = default;
+	static void init( const std::string& connString )
+	{
+		std::lock_guard< std::mutex > lock( connections_mutex );
+		for ( uint64_t i = 0; i < POOL_COUNT; i++ )
+		{
+			connections.push( pqxx::connection( connString ) );
+		}
+	}
 
-	Database( Database& db );
 
-	static void initalizeConnection( const std::string& );
+	static pqxx::connection acquire()
+	{
+		active.acquire();
+		std::lock_guard< std::mutex > lock( connections_mutex );
+		auto connection = std::move( connections.front() );
+		connections.pop();
 
-	std::shared_ptr< pqxx::work > getWorkPtr();
+		return std::move( std::move( connection ) );
+	}
 
-	void commit( bool throw_on_error = true );
 
-	void abort( bool throw_on_error = true );
-
-	~Database();
+	static void release( pqxx::connection& conn )
+	{
+		std::lock_guard< std::mutex > lock( connections_mutex );
+		connections.push( std::move( conn ) );
+		active.release();
+	}
 };
+
+class Connection
+{
+	std::unique_ptr< pqxx::connection > conn { nullptr };
+
+public:
+	Connection()
+	{
+		conn = std::make_unique< pqxx::connection >( ConnectionPool::acquire() );
+	}
+
+
+	~Connection()
+	{
+		ConnectionPool::release( *conn.get() );
+	}
+
+
+	pqxx::connection& operator()()
+	{
+		return *conn;
+	}
+};
+
+namespace Database
+{
+	void initalizeConnection( const std::string& connectionArgs );
+}
 
 #endif // MAIN_DATABASE_HPP

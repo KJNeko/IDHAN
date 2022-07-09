@@ -9,29 +9,31 @@
 #include "TracyBox.hpp"
 
 
-uint64_t addSubtag( const std::string& subtag, Database db )
+uint64_t addSubtag( const std::string& subtag )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "INSERT INTO subtags (subtag) VALUES ($1) RETURNING subtag_id" };
 
-	const pqxx::result res { work->exec_params( query, subtag ) };
+	const pqxx::result res { work.exec_params( query, subtag ) };
 
-	db.commit();
+	work.commit();
 
 	return res[ 0 ][ "subtag_id" ].as< uint64_t >();
 }
 
 
-std::string getSubtag( const uint64_t subtag_id, Database db )
+std::string getSubtag( const uint64_t subtag_id )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "SELECT subtag FROM subtags WHERE subtag_id = $1" };
 
-	const pqxx::result res { work->exec_params( query, subtag_id ) };
+	const pqxx::result res { work.exec_params( query, subtag_id ) };
 
 	if ( res.empty() )
 	{
@@ -40,48 +42,52 @@ std::string getSubtag( const uint64_t subtag_id, Database db )
 		);
 	}
 
-	db.commit();
+	work.commit();
 
 	return res[ 0 ][ "subtag" ].as< std::string >();
 }
 
 
-uint64_t getSubtagID( const std::string& subtag, const bool create, Database db )
+uint64_t getSubtagID( const std::string& subtag, const bool create )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "SELECT subtag_id FROM subtags WHERE subtag = $1" };
 
-	const pqxx::result res { work->exec_params( query, subtag ) };
+	const pqxx::result res { work.exec_params( query, subtag ) };
 
 	if ( res.empty() )
 	{
 		if ( create )
 		{
-			work->commit();
-			return addSubtag( subtag, db );
+			work.commit();
+			return addSubtag( subtag );
 		}
 		else
 		{
+			work.abort();
+			spdlog::error( "No subtag with name {} found. create == false", subtag );
 			throw IDHANError( ErrorNo::DATABASE_DATA_NOT_FOUND, "No subtag with name " + subtag + " found." );
 		}
 	}
 
-	db.commit();
+	work.commit();
 
 	return res[ 0 ][ "subtag_id" ].as< uint64_t >();
 }
 
 
-void deleteSubtag( const std::string& subtag, Database db )
+void deleteSubtag( const std::string& subtag )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "DELETE FROM subtags WHERE subtag = $1 CASCADE" };
 
-	const pqxx::result res { work->exec_params( query, subtag ) };
+	const pqxx::result res { work.exec_params( query, subtag ) };
 
 	if ( res.affected_rows() == 0 )
 	{
@@ -90,14 +96,12 @@ void deleteSubtag( const std::string& subtag, Database db )
 		);
 	}
 
-	db.commit();
+	work.commit();
 }
 
 
-void deleteSubtag( const uint64_t subtag_id, Database db )
+void deleteSubtag( const uint64_t subtag_id )
 {
 	ZoneScoped;
-	deleteSubtag( getSubtag( subtag_id, db ), db );
-
-	db.commit();
+	deleteSubtag( getSubtag( subtag_id ) );
 }

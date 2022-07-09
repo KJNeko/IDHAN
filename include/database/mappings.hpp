@@ -13,16 +13,12 @@
 #include "database.hpp"
 #include "files.hpp"
 
+
 void addMapping(
-	const Hash32& sha256,
-	const std::string& group,
-	const std::string& subtag,
-	Database = Database() );
+	const Hash32& sha256, const std::string& group, const std::string& subtag );
+
 void removeMapping(
-	const Hash32& sha256,
-	const std::string& group,
-	const std::string& subtag,
-	Database = Database() );
+	const Hash32& sha256, const std::string& group, const std::string& subtag );
 
 
 #endif // MAIN_MAPPINGS_HPP

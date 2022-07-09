@@ -10,20 +10,6 @@
 #include <utility>
 
 
-struct IDHANErrorContainer
-{
-	std::string what_;
-
-
-	std::string what()
-	{
-		return what_;
-	}
-
-
-	IDHANErrorContainer( std::string& what ) : what_( std::move( what ) ) {}
-};
-
 //@formatter:off
 enum class ErrorNo
 {
@@ -37,25 +23,21 @@ enum class ErrorNo
 	DATABASE_DATA_ALREADY_EXISTS,
 	DATABASE_UNKNOWN_ERROR,
 
-
 };
 //@formatter:on
 
-struct IDHANError : public IDHANErrorContainer
+class IDHANError : public std::runtime_error
 {
+public:
 	ErrorNo error_code_;
-
-
-	IDHANError( ErrorNo error_code, std::string what ) : IDHANErrorContainer( what ), error_code_( error_code ) {}
-};
-
-struct DuplicateDataException : public IDHANError
-{
 	uint64_t hash_id { 0 };
 
 
-	DuplicateDataException( std::string what, uint64_t hash_id_ )
-		: IDHANError( ErrorNo::DATABASE_DATA_ALREADY_EXISTS, what ), hash_id( hash_id_ ) {}
+	IDHANError( ErrorNo error_code, std::string what ) : std::runtime_error( what ), error_code_( error_code ) {}
+
+
+	IDHANError( ErrorNo error_code, std::string what, uint64_t hash_id_ )
+		: std::runtime_error( what ), error_code_( error_code ), hash_id( hash_id_ ) {}
 };
 
 #endif // MAIN_DATABASEEXCEPTIONS_HPP

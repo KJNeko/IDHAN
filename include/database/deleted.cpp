@@ -5,31 +5,31 @@
 #include "deleted.hpp"
 
 
-bool deleted( const uint64_t hash_id, Database db )
+bool deleted( const uint64_t hash_id )
 {
 
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "SELECT hash_id FROM deleted WHERE hash_id = $1" };
 
-	const pqxx::result res { work->exec_params( query, hash_id ) };
+	const pqxx::result res { work.exec_params( query, hash_id ) };
 
-	db.commit();
+	work.commit();
 
 	return !res.empty();
 }
 
 
-bool deleted( const Hash32 sha256, Database db )
+bool deleted( const Hash32 sha256 )
 {
 
-	const uint64_t id = getFileID( sha256, false, db );
+	const uint64_t id = getFileID( sha256, false );
 
 	if ( id == 0 )
 	{
 		return false;
 	}
 
-	db.commit();
-	return deleted( id, db );
+	return deleted( id );
 }

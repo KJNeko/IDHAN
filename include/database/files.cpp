@@ -16,49 +16,56 @@
 #include <QCache>
 
 
-uint64_t addFile( const Hash32& sha256, Database db )
+uint64_t addFile( const Hash32& sha256 )
 {
 	ZoneScoped;
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query = "INSERT INTO files (sha256) VALUES ($1) RETURNING hash_id";
 
-	const pqxx::result res = work->exec_params( query, sha256.getView() );
+	const pqxx::result res = work.exec_params( query, sha256.getView() );
 
-	db.commit();
+	if ( res.empty() )
+	{
+		spdlog::error( "Failed to insert file into database" );
+	}
+
+	work.commit();
 
 	return res[ 0 ][ "hash_id" ].as< uint64_t >();
 }
 
 
-uint64_t getFileID( const Hash32& sha256, const bool add, Database db )
+uint64_t getFileID( const Hash32& sha256, const bool add )
 {
 	ZoneScoped;
 
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query = "SELECT hash_id FROM files WHERE sha256 = $1";
 
-	const pqxx::result res = work->exec_params( query, sha256.getView() );
+	const pqxx::result res = work.exec_params( query, sha256.getView() );
 
 	if ( res.empty() )
 	{
 		if ( add )
-		{ return addFile( sha256, db ); }
+		{
+			return addFile( sha256 );
+		}
 		else
 		{
-			db.commit( false );
 			return 0;
 		}
 	}
 
-	db.commit( false );
 
 	return res[ 0 ][ 0 ].as< uint64_t >();
 }
 
 
-Hash32 getHash( const uint64_t hash_id, Database db )
+Hash32 getHash( const uint64_t hash_id )
 {
 	ZoneScoped;
 	constexpr size_t size_unit { sizeof( uint64_t ) + sizeof( std::array< uint8_t, 32 > ) };
@@ -72,14 +79,16 @@ Hash32 getHash( const uint64_t hash_id, Database db )
 		return **cache.object( hash_id );
 	}
 
-	std::shared_ptr< pqxx::work > work { db.getWorkPtr() };
+	Connection conn;
+	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query { "SELECT sha256 FROM files WHERE hash_id = $1" };
 
-	const pqxx::result res { work->exec_params( query, hash_id ) };
+	const pqxx::result res { work.exec_params( query, hash_id ) };
 
 	if ( res.empty() )
 	{
+		spdlog::warn( "No file with ID {}", hash_id );
 		throw IDHANError(
 			ErrorNo::DATABASE_DATA_NOT_FOUND, "No file with ID " + std::to_string( hash_id ) + " found."
 		);
@@ -103,40 +112,42 @@ Hash32 getHash( const uint64_t hash_id, Database db )
 	//Add the hash to the cache
 	cache.insert( hash_id, new std::shared_ptr< Hash32 >( hash_ptr ) );
 
-	db.commit();
+	work.commit();
 
 	return Hash32 { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string >() ) };
 }
 
 
 // Filepath from hash_id
-std::filesystem::path getThumbnailpath( const uint64_t hash_id, Database db )
+std::filesystem::path getThumbnailpath( const uint64_t hash_id )
 {
 	ZoneScoped;
-	const Hash32 hash = getHash( hash_id, db );
 
-	db.commit();
+	Connection conn;
+	pqxx::work work { conn() };
+
+	const Hash32 hash { getHash( hash_id ) };
+
+	work.commit();
 
 	return getThumbnailpathFromHash( hash );
 }
 
 
-std::filesystem::path getFilepath( const uint64_t hash_id, Database db )
+std::filesystem::path getFilepath( const uint64_t hash_id )
 {
 	ZoneScoped;
-	const Hash32 hash = getHash( hash_id, db );
+	const Hash32 hash = getHash( hash_id );
 
 	auto path = getFilepathFromHash( hash );
 
-	const auto ext = getFileExtention( hash_id, db );
+	const auto ext = getFileExtention( hash_id );
 
 	if ( ext.size() > 0 )
 	{
 		path += ".";
 		path += ext;
 	}
-
-	db.commit();
 
 	return path;
 }
