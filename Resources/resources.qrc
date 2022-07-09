@@ -1,0 +1,11 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource>
+        <file>IDHAN/icon-128.png</file>
+        <file>IDHAN/icon-64.png</file>
+        <file>IDHAN/icon-32.png</file>
+        <file>IDHAN/icon-16.png</file>
+        <file>IDHAN/letter-16.png</file>
+        <file>IDHAN/letter-980.png</file>
+    </qresource>
+</RCC>
