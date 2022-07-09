@@ -13,6 +13,8 @@
 
 #include "ImageDelegate.hpp"
 
+#include "FileData.hpp"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -33,7 +35,7 @@ public:
 private:
 	Ui::ListViewport* ui;
 
-	std::vector< uint64_t > files;
+	//std::vector< uint64_t > files;
 
 	ImageModel* model { new ImageModel( this ) };
 	ImageDelegate* delegate { new ImageDelegate( this ) };

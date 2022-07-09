@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <memory>
 #include <filesystem>
+#include <utility>
+#include <QMetaType>
 
 #include "database/tags.hpp"
 #include "database/files.hpp"
@@ -43,10 +45,6 @@ class FileDataPool
 {
 	inline static std::unordered_map< uint64_t, std::shared_ptr< FileDataContainer>> filePool;
 	inline static std::mutex filePoolLock; //Prevents things like a request and clear operation at the same time
-	//QCache is used to prevent rapidly accessed data from vanishing right away.
-	//Grace of '500' items.
-	inline static QCache< uint64_t, FileDataContainer > filePoolCache { 500 };
-
 
 public:
 	static std::shared_ptr< FileDataContainer > request( uint64_t );
@@ -63,11 +61,22 @@ class FileData : public std::shared_ptr< FileDataContainer >
 
 public:
 
-	FileData( uint64_t hash_id ) : std::shared_ptr< FileDataContainer >( FileDataPool::request( hash_id ) ) {}
+	FileData() = default;
 
+	uint64_t hash_id_ { 0 };
+
+
+	FileData( uint64_t hash_id )
+		: std::shared_ptr< FileDataContainer >( FileDataPool::request( hash_id ) ), hash_id_( hash_id ) {}
+
+
+	FileData( const FileData& other ) = default;
+
+	FileData( FileData&& other ) = default;
 
 	~FileData();
 };
 
+Q_DECLARE_METATYPE( FileData )
 
 #endif //IDHAN_FILEDATA_HPP

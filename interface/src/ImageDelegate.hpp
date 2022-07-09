@@ -13,6 +13,7 @@
 
 #include "database/files.hpp"
 #include "database/tags.hpp"
+#include "FileData.hpp"
 
 
 class ImageDelegate : public QAbstractItemDelegate
@@ -50,7 +51,7 @@ public:
 	void populate();
 
 private:
-	std::vector< uint64_t > fileList;
+	std::vector< FileData > fileList;
 };
 
 

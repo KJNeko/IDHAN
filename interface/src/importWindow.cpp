@@ -17,6 +17,8 @@
 
 #include "mainView.hpp"
 
+#include "TracyBox.hpp"
+
 
 ImportWindow::ImportWindow( QWidget* parent ) : QDialog( parent ), ui( new Ui::ImportWindow )
 {
@@ -56,6 +58,8 @@ ImportWindow::~ImportWindow()
 
 void ImportWindow::on_addFolder_clicked()
 {
+	ZoneScoped;
+
 	// Open a file dialog
 	QString path = QFileDialog::getExistingDirectory( this, "Select a folder" );
 
@@ -69,7 +73,6 @@ void ImportWindow::on_addFolder_clicked()
 		it.next();
 		if ( it.fileInfo().isFile() )
 		{ files.append( it.filePath() ); }
-		QApplication::processEvents();
 	}
 
 	// Set max progress bar
@@ -104,7 +107,7 @@ void ImportWindow::on_addFolder_clicked()
 
 		// Set the progress bar
 		ui->progressBar->setValue( ui->progressBar->value() + 1 );
-		QApplication::processEvents();
+		//QApplication::processEvents();
 	}
 
 	ui->fileList->resizeColumnsToContents();

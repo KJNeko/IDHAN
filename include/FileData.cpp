@@ -14,6 +14,20 @@ FileDataContainer::FileDataContainer( const uint64_t hash_id_, const std::shared
 	  file_path( getFilepath( hash_id_ ) ),
 	  tags( getTags( hash_id_ ) )
 {
+	ZoneScoped;
+
+	//Calculate size of all the internal objects
+	size_t size { 0 };
+
+	size += sizeof( modificationLock ) + sizeof( std::mutex );
+	size += sizeof( hash_id );
+	size += sizeof( sha256 );
+	size += sizeof( thumbnail_path ) + thumbnail_path.string().size();
+	size += sizeof( file_path ) + file_path.string().size();
+	size += sizeof( tags ) * tags.size();
+	size += sizeof( thumbnail_valid );
+
+	//TracyAlloc( this, size );
 }
 
 
@@ -29,27 +43,15 @@ std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_
 	}
 	else
 	{
-		//Check if it's in the QCache first
-		const auto obj { filePoolCache.object( hash_id ) };
-		if ( obj )
-		{
-			auto shared_ptr { std::make_shared< FileDataContainer >( *obj ) };
+		//Create a new object and add it to the QCache
 
-			filePool.emplace( std::make_pair( hash_id, shared_ptr ) );
-			return shared_ptr;
-		}
-		else
-		{
-			//Create a new object and add it to the QCache
+		const auto newObj { FileDataContainer( hash_id ) };
+		const auto shared_ptr { std::make_shared< FileDataContainer >( newObj ) };
 
-			const auto newObj { FileDataContainer( hash_id ) };
-			const auto shared_ptr { std::make_shared< FileDataContainer >( newObj ) };
+		filePool.emplace( std::make_pair( hash_id, shared_ptr ) );
 
-			filePool.emplace( std::make_pair( hash_id, shared_ptr ) );
-			filePoolCache.insert( hash_id, new FileDataContainer( newObj ) );
+		return shared_ptr;
 
-			return shared_ptr;
-		}
 	}
 }
 
@@ -58,7 +60,6 @@ void FileDataPool::invalidate( const uint64_t hash_id )
 {
 	std::lock_guard< std::mutex > lock( filePoolLock );
 	ZoneScoped;
-
 	const auto itter { filePool.find( hash_id ) };
 	if ( itter != filePool.end() )
 	{
@@ -92,8 +93,10 @@ FileData::~FileData()
 	//Check if this is the last shared pointer to the original datapool
 	if ( this->use_count() <= 2 )
 	{
-		FileDataPool::clear( this->get()->hash_id );
+		FileDataPool::clear( hash_id_ );
 	}
+
+	//TracyFree( this );
 }
 
 

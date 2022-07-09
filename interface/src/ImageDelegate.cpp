@@ -36,22 +36,16 @@ ImageDelegate::ImageDelegate( QObject* parent ) : QAbstractItemDelegate( parent 
 void ImageDelegate::paint(
 	QPainter* const painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-	using namespace std::literals::chrono_literals;
-
 	ZoneScoped;
 	// Get the image
-	const FileData filedat { index.data( Qt::DisplayRole ).value< uint64_t >() };
-
-	//Get the hash for the image
-	Hash32& hash = filedat->sha256;
+	const FileData filedat { index.data( Qt::DisplayRole ).value< FileData >() };
 
 	QPixmap thumbnail;
-	if ( auto key = hash.getQByteArray().toHex(); !QPixmapCache::find( key, &thumbnail ) )
+	if ( const auto key = filedat->sha256.getQByteArray().toHex(); !QPixmapCache::find( key, &thumbnail ) )
 	{
 		ZoneScopedN( "Get image" );
 
-		//Get thumbnail path from database
-		auto thumbnail_path = getThumbnailpath( filedat->hash_id );
+		auto thumbnail_path = filedat->thumbnail_path;
 
 		if ( !std::filesystem::exists( thumbnail_path ) )
 		{
@@ -89,7 +83,7 @@ void ImageDelegate::paint(
 			if ( group == "system" && subtag == "inbox" )
 			{
 				//Add the inbox symbol to the top left of the image.
-				QPixmap inbox_symbol( ":/IDHAN/letter-16.png" );
+				const QPixmap inbox_symbol( ":/IDHAN/letter-16.png" );
 				painter->drawPixmap( option.rect.topLeft(), inbox_symbol );
 				break;
 			}

@@ -2,6 +2,24 @@
 // Created by kj16609 on 6/1/22.
 //
 
+#include "TracyBox.hpp"
+
+
+void* operator new( std::size_t count )
+{
+	auto ptr = malloc( count );
+	TracySecureAlloc ( ptr, count );
+	return ptr;
+}
+
+
+void operator delete( void* ptr ) noexcept
+{
+	TracySecureFree ( ptr );
+	free( ptr );
+}
+
+
 #include <iostream>
 
 #include <QApplication>
@@ -9,7 +27,6 @@
 
 #include "mainView.hpp"
 
-#include "TracyBox.hpp"
 
 #include "database.hpp"
 
@@ -19,10 +36,11 @@
 
 int main( int argc, char** argv )
 {
+	spdlog::info( "Starting IDHAN" );
 	QImageReader::setAllocationLimit( 0 );
 
-	//About 1GB
-	QPixmapCache::setCacheLimit( 1000000 );
+	//About 1G
+	//QPixmapCache::setCacheLimit( 1000000 );
 
 	std::cout << "Qt version: " << qVersion() << std::endl;
 
@@ -88,10 +106,13 @@ int main( int argc, char** argv )
 	);
 
 
+	spdlog::info( "Rendering window" );
 	MainWindow window;
 	window.show();
 
 	auto ret { app.exec() };
+
+	spdlog::info( "Window closed...Cleaning up" );
 
 
 	return ret;

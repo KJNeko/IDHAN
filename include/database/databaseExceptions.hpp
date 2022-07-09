@@ -23,6 +23,8 @@ enum class ErrorNo
 	DATABASE_DATA_ALREADY_EXISTS,
 	DATABASE_UNKNOWN_ERROR,
 
+	UNKNOWN_ERROR
+
 };
 //@formatter:on
 

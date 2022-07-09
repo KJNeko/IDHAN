@@ -126,10 +126,13 @@ void ImportViewer::processFiles()
 				++failed;
 				return;
 			}
+			else if ( val.error_code_ == ErrorNo::UNKNOWN_ERROR )
+			{
+				spdlog::critical( "Unknown error occurred while processing file! error: {}", e->what() );
+			}
 			else
 			{
-				spdlog::critical( "Unhanbled error code: {}", static_cast<int>(val.error_code_) );
-				throw val;
+				spdlog::critical( "Unhandled error code: {}", static_cast<int>(val.error_code_) );
 			}
 		}
 		else
@@ -294,11 +297,19 @@ void ImportViewer::processFiles()
 
 			return Output( hash_id );
 
+			spdlog::critical( "PROCESS HAS ESCAPED SCOPE BOUNDS!" );
 		}
 		catch ( IDHANError& e )
 		{
 			return Output( IDHANError( e.error_code_, e.what(), e.hash_id ) );
 		}
+		catch ( std::exception& e )
+		{
+			spdlog::error( "Process: {}", e.what() );
+			return Output( IDHANError( ErrorNo::UNKNOWN_ERROR, e.what() ) );
+		}
+
+		spdlog::critical( "PROCESS HAS ESCAPED SCOPE BOUNDS!" );
 	};
 
 	try

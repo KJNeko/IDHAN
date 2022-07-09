@@ -47,6 +47,7 @@ namespace Database
 		work.exec( "CREATE INDEX IF NOT EXISTS mappings_tag_index ON mappings(tag_id);" );
 		work.exec( "CREATE INDEX IF NOT EXISTS mappings_hash_index ON mappings(hash_id);" );
 
+		work.exec( "CREATE INDEX IF NOT EXISTS mime_mime_index ON mime(hash_id);" );
 
 		spdlog::info( "Tables checked" );
 

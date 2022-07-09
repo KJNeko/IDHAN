@@ -42,7 +42,7 @@ find_package("tracy")
 #If we are compiling in debug then enable tracy
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
     set(TRACY_ENABLE 1)
-    set(TRACY_NO_EXIT 1)
+    set(TRACY_NO_EXIT 0)
     set(TRACY_ON_DEMAND 0)
     message("Tracy enabled")
 endif ()
