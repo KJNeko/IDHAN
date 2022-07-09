@@ -17,9 +17,7 @@ ListViewport::ListViewport( QWidget* parent ) : QWidget( parent ), ui( new Ui::L
 	ui->listView->setModel( model );
 	ui->listView->setItemDelegate( delegate );
 
-	ui->listView->setWrapping( true );
-	ui->listView->setFlow( QListView::Flow::LeftToRight );
-	ui->listView->setSpacing( 15 );
+	ui->listView->setSpacing( 5 );
 
 	updateTimer.setInterval( 250 );
 

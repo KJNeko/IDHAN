@@ -42,6 +42,12 @@ namespace Database
 		work.exec( "CREATE TABLE IF NOT EXISTS collections (collection_id BIGSERIAL PRIMARY KEY, collection_name TEXT UNIQUE NOT NULL);" );
 		work.exec( "CREATE TABLE IF NOT EXISTS collections_filter (collection_id BIGINT REFERENCES collections(collection_id), tag_ids BIGINT[]);" );
 
+
+		//Indexes
+		work.exec( "CREATE INDEX IF NOT EXISTS mappings_tag_index ON mappings(tag_id);" );
+		work.exec( "CREATE INDEX IF NOT EXISTS mappings_hash_index ON mappings(hash_id);" );
+
+
 		spdlog::info( "Tables checked" );
 
 

@@ -11,6 +11,31 @@
 #include <QAbstractListModel>
 #include <QPainter>
 
+#include "database/files.hpp"
+#include "database/tags.hpp"
+
+
+struct FileData
+{
+	Hash32 sha256;
+
+	std::vector< Tag > tags;
+
+	uint64_t hash_id { 0 };
+
+	FileData() = default;
+
+	FileData( const uint64_t hash_id );
+
+	//FileData( FileData& other );
+
+	//FileData( FileData&& other );
+
+	~FileData() = default;
+
+};
+
+Q_DECLARE_METATYPE( FileData )
 
 class ImageDelegate : public QAbstractItemDelegate
 {
@@ -38,20 +63,16 @@ public:
 
 	QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const override;
 
-	void addImage( const uint64_t id );
-
 	void addImages( const std::vector< uint64_t >& ids );
 
 	void setFiles( const std::vector< uint64_t >& ids );
 
 	void reset();
 
-	~ImageModel() override;
-
 	void populate();
 
 private:
-	std::vector< uint64_t > fileList;
+	std::vector< FileData > fileList;
 };
 
 

@@ -21,6 +21,9 @@ int main( int argc, char** argv )
 {
 	QImageReader::setAllocationLimit( 0 );
 
+	//About 1GB
+	QPixmapCache::setCacheLimit( 1000000 );
+
 	std::cout << "Qt version: " << qVersion() << std::endl;
 
 	QApplication app( argc, argv );

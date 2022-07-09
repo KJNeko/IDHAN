@@ -281,23 +281,16 @@ void ImportViewer::processFiles()
 
 			if ( hash_id_exists )
 			{
-				spdlog::info( "Throwing already exists" );
 				throw IDHANError( ErrorNo::DATABASE_DATA_ALREADY_EXISTS, "Duplicate hash_id", hash_id_exists );
 			}
 
-			spdlog::debug( "Adding file" );
 			const auto hash_id = addFile( sha256 );
-			spdlog::debug( "Added file" );
 
 			//Add metadata
-			spdlog::debug( "Populating file" );
 			populateMime( hash_id, mime_type.name().toStdString() );
-			spdlog::debug( "Populated file" );
 
 			//Add the "system:inbox" tag to the image
-			spdlog::debug( "Adding system::inbox" );
 			addMapping( sha256, "system", "inbox" );
-			spdlog::debug( "Added" );
 
 			return Output( hash_id );
 

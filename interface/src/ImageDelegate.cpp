@@ -17,12 +17,19 @@
 #include "ImageDelegate.hpp"
 
 #include <filesystem>
-#include <iostream>
-
-#include "database/files.hpp"
 
 #include "TracyBox.hpp"
+
+
 #include "database/databaseExceptions.hpp"
+#include "database/tags.hpp"
+#include "database/files.hpp"
+
+
+FileData::FileData( const uint64_t hash_id_ )
+	: sha256( getHash( hash_id_ ) ), tags( getTags( hash_id_ ) ), hash_id( hash_id_ )
+{
+}
 
 
 ImageDelegate::ImageDelegate( QObject* parent ) : QAbstractItemDelegate( parent )
@@ -37,26 +44,18 @@ void ImageDelegate::paint(
 
 	ZoneScoped;
 	// Get the image
-	auto hash_id = index.data( Qt::DisplayRole ).value< uint64_t >();
+	auto filedat = index.data( Qt::DisplayRole ).value< FileData >();
 
 	//Get the hash for the image
-	Hash32 hash;
-	try
-	{
-		hash = getHash( hash_id );
-	}
-	catch ( const IDHANError& e )
-	{
-		spdlog::error( "Error getting hash for image: {}", e.what() );
-		return;
-	}
-
+	Hash32& hash = filedat.sha256;
 
 	QPixmap thumbnail;
 	if ( auto key = hash.getQByteArray().toHex(); !QPixmapCache::find( key, &thumbnail ) )
 	{
+		ZoneScopedN( "Get image" );
+
 		//Get thumbnail path from database
-		auto thumbnail_path = getThumbnailpath( hash_id );
+		auto thumbnail_path = getThumbnailpath( filedat.hash_id );
 
 		if ( !std::filesystem::exists( thumbnail_path ) )
 		{
@@ -65,6 +64,7 @@ void ImageDelegate::paint(
 		}
 		else
 		{
+			ZoneScopedN( "Load image" );
 			thumbnail.load( QString::fromStdString( thumbnail_path.string() ) );
 			QPixmapCache::insert( key, thumbnail );
 		}
@@ -84,6 +84,21 @@ void ImageDelegate::paint(
 	// Draw boarder around the image
 	painter->drawRect( option.rect );
 	painter->restore();
+
+	//See if we have "system:inbox"
+	{
+		ZoneScopedN( "search_tag" )
+		for ( const auto& [ group, subtag ]: filedat.tags )
+		{
+			if ( group == "system" && subtag == "inbox" )
+			{
+				//Add the inbox symbol to the top left of the image.
+				QPixmap inbox_symbol( ":/IDHAN/letter-16.png" );
+				painter->drawPixmap( option.rect.topLeft(), inbox_symbol );
+				break;
+			}
+		}
+	}
 }
 
 
@@ -110,17 +125,11 @@ QVariant ImageModel::data( const QModelIndex& index, int role ) const
 	{ return QVariant(); }
 
 	if ( role == Qt::DisplayRole )
-	{ return qint64( fileList[ static_cast<unsigned long>( index.row() ) ] ); }
+	{
+		return QVariant::fromValue( fileList[ static_cast<unsigned long>( index.row() ) ] );
+	}
 
 	return QVariant();
-}
-
-
-void ImageModel::addImage( const uint64_t id )
-{
-	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + 1) );
-	fileList.push_back( id );
-	endInsertRows();
 }
 
 
@@ -128,7 +137,12 @@ void ImageModel::addImages( const std::vector< uint64_t >& queue )
 {
 	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + queue.size()) );
 
-	fileList.insert( fileList.end(), queue.begin(), queue.end() );
+	fileList.reserve( queue.size() );
+
+	for ( auto& hash_id: queue )
+	{
+		fileList.emplace_back( hash_id );
+	}
 
 	endInsertRows();
 }
@@ -154,14 +168,13 @@ int ImageModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
 }
 
 
-ImageModel::~ImageModel()
-{
-}
-
-
 void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 {
 	beginResetModel();
-	fileList = ids;
+	fileList.reserve( ids.size() );
+	for ( auto& id: ids )
+	{
+		fileList.emplace_back( id );
+	}
 	endResetModel();
 }
