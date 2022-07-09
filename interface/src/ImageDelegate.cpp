@@ -25,11 +25,7 @@
 #include "database/tags.hpp"
 #include "database/files.hpp"
 
-
-FileData::FileData( const uint64_t hash_id_ )
-	: sha256( getHash( hash_id_ ) ), tags( getTags( hash_id_ ) ), hash_id( hash_id_ )
-{
-}
+#include "FileData.hpp"
 
 
 ImageDelegate::ImageDelegate( QObject* parent ) : QAbstractItemDelegate( parent )
@@ -44,10 +40,10 @@ void ImageDelegate::paint(
 
 	ZoneScoped;
 	// Get the image
-	auto filedat = index.data( Qt::DisplayRole ).value< FileData >();
+	const FileData filedat { index.data( Qt::DisplayRole ).value< uint64_t >() };
 
 	//Get the hash for the image
-	Hash32& hash = filedat.sha256;
+	Hash32& hash = filedat->sha256;
 
 	QPixmap thumbnail;
 	if ( auto key = hash.getQByteArray().toHex(); !QPixmapCache::find( key, &thumbnail ) )
@@ -55,7 +51,7 @@ void ImageDelegate::paint(
 		ZoneScopedN( "Get image" );
 
 		//Get thumbnail path from database
-		auto thumbnail_path = getThumbnailpath( filedat.hash_id );
+		auto thumbnail_path = getThumbnailpath( filedat->hash_id );
 
 		if ( !std::filesystem::exists( thumbnail_path ) )
 		{
@@ -88,7 +84,7 @@ void ImageDelegate::paint(
 	//See if we have "system:inbox"
 	{
 		ZoneScopedN( "search_tag" )
-		for ( const auto& [ group, subtag ]: filedat.tags )
+		for ( const auto& [ group, subtag ]: filedat->tags )
 		{
 			if ( group == "system" && subtag == "inbox" )
 			{

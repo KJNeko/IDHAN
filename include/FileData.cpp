@@ -6,15 +6,21 @@
 
 
 FileDataContainer::FileDataContainer( const uint64_t hash_id_, const std::shared_ptr< std::mutex > mtx_ptr )
-	: modificationLock( mtx_ptr ), hash_id( hash_id_ )
+	: modificationLock( mtx_ptr ),
+	  hash_id( hash_id_ ),
+	  sha256( getHash( hash_id_ ) ),
+	  thumbnail_path( getThumbnailpath( hash_id_ ) ),
+	  thumbnail_valid( std::filesystem::exists( thumbnail_path ) ),
+	  file_path( getFilepath( hash_id_ ) ),
+	  tags( getTags( hash_id_ ) )
 {
-
 }
 
 
 std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_id )
 {
 	std::lock_guard< std::mutex > lock( filePoolLock );
+	ZoneScoped;
 
 	const auto itter { filePool.find( hash_id ) };
 	if ( itter != filePool.end() )
@@ -51,12 +57,13 @@ std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_
 void FileDataPool::invalidate( const uint64_t hash_id )
 {
 	std::lock_guard< std::mutex > lock( filePoolLock );
+	ZoneScoped;
 
 	const auto itter { filePool.find( hash_id ) };
 	if ( itter != filePool.end() )
 	{
 		auto old_ptr = itter->second;
-		std::lock_guard< std::mutex > lock( *old_ptr->modificationLock );
+		std::lock_guard< std::mutex > lock_obj( *old_ptr->modificationLock );
 
 		//Create a new object
 		FileDataContainer new_obj( hash_id, old_ptr->modificationLock );
@@ -70,6 +77,7 @@ void FileDataPool::invalidate( const uint64_t hash_id )
 void FileDataPool::clear( const uint64_t hash_id )
 {
 	std::lock_guard< std::mutex > lock( filePoolLock );
+	ZoneScoped;
 
 	const auto itter { filePool.find( hash_id ) };
 	if ( itter != filePool.end() )
@@ -79,18 +87,12 @@ void FileDataPool::clear( const uint64_t hash_id )
 }
 
 
-FileData::FileData( const uint64_t hash_id ) : data( FileDataPool::request( hash_id ) )
-{
-
-}
-
-
 FileData::~FileData()
 {
 	//Check if this is the last shared pointer to the original datapool
-	if ( data.use_count() <= 2 )
+	if ( this->use_count() <= 2 )
 	{
-		FileDataPool::clear( data->hash_id );
+		FileDataPool::clear( this->get()->hash_id );
 	}
 }
 

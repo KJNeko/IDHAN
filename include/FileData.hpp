@@ -15,6 +15,7 @@
 #include <filesystem>
 
 #include "database/tags.hpp"
+#include "database/files.hpp"
 
 
 struct FileDataContainer
@@ -22,6 +23,8 @@ struct FileDataContainer
 	std::shared_ptr< std::mutex > modificationLock;
 
 	uint64_t hash_id;
+
+	Hash32 sha256;
 
 	std::filesystem::path thumbnail_path {};
 	bool thumbnail_valid { false };
@@ -55,13 +58,12 @@ public:
 	static void clear( uint64_t );
 };
 
-class FileData
+class FileData : public std::shared_ptr< FileDataContainer >
 {
-private:
-	std::shared_ptr< FileDataContainer > data;
 
+public:
 
-	FileData( uint64_t );
+	FileData( uint64_t hash_id ) : std::shared_ptr< FileDataContainer >( FileDataPool::request( hash_id ) ) {}
 
 
 	~FileData();

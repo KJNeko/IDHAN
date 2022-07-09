@@ -15,28 +15,6 @@
 #include "database/tags.hpp"
 
 
-struct FileData
-{
-	Hash32 sha256;
-
-	std::vector< Tag > tags;
-
-	uint64_t hash_id { 0 };
-
-	FileData() = default;
-
-	FileData( const uint64_t hash_id );
-
-	//FileData( FileData& other );
-
-	//FileData( FileData&& other );
-
-	~FileData() = default;
-
-};
-
-Q_DECLARE_METATYPE( FileData )
-
 class ImageDelegate : public QAbstractItemDelegate
 {
 Q_OBJECT
@@ -72,7 +50,7 @@ public:
 	void populate();
 
 private:
-	std::vector< FileData > fileList;
+	std::vector< uint64_t > fileList;
 };
 
 
