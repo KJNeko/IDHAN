@@ -32,6 +32,10 @@ public:
 
 	~ListViewport() override;
 
+	ListViewport( const ListViewport& ) = delete;
+
+	ListViewport operator=( const ListViewport& ) = delete;
+
 private:
 	Ui::ListViewport* ui;
 
@@ -40,9 +44,9 @@ private:
 	ImageModel* model { new ImageModel( this ) };
 	ImageDelegate* delegate { new ImageDelegate( this ) };
 
-	QTimer updateTimer;
-	std::vector< uint64_t > addQueue;
-	std::mutex queue_lock;
+	QTimer updateTimer {};
+	std::vector< uint64_t > addQueue {};
+	std::mutex queue_lock {};
 
 public slots:
 

@@ -26,8 +26,8 @@ TagView::~TagView()
 
 struct GroupMember
 {
-	Group group;
-	std::vector< std::pair< Subtag, uint64_t > > subtags;
+	Group group {};
+	std::vector< std::pair< Subtag, uint64_t > > subtags {};
 };
 
 

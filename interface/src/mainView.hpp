@@ -11,31 +11,37 @@
 
 #include <filesystem>
 
+
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
-class MainWindow;
+	class MainWindow;
 }
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
-	Q_OBJECT
+Q_OBJECT
 
-  public:
+public:
 	explicit MainWindow( QWidget* parent = nullptr );
 
 	~MainWindow() override;
 
-  private:
+	MainWindow( const MainWindow& ) = delete;
+
+	MainWindow operator=( const MainWindow& ) = delete;
+
+private:
 	Ui::MainWindow* ui;
 
-  public:
+public:
 	void addTab( QWidget* widget );
 
-	void importFiles( const std::vector<std::filesystem::path>& files );
+	void importFiles( const std::vector< std::filesystem::path >& files );
 
-  private slots:
+private slots:
+
 	void on_actionImport_triggered();
 };
 

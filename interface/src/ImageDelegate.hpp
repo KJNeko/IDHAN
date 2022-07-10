@@ -53,7 +53,7 @@ public:
 	const std::vector< uint64_t > getFiles() const;
 
 private:
-	std::vector< FileData > fileList;
+	std::vector< FileData > fileList {};
 };
 
 

@@ -13,28 +13,36 @@
 
 #include <filesystem>
 
+
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
-class ImportWindow;
+	class ImportWindow;
 }
 QT_END_NAMESPACE
 
 class ImportWindow : public QDialog
 {
-	Q_OBJECT
+Q_OBJECT
 
-  public:
+public:
 	explicit ImportWindow( QWidget* parent = nullptr );
 
 	~ImportWindow() override;
 
-  private:
+
+	ImportWindow( const ImportWindow& ) = delete;
+
+	ImportWindow operator=( const ImportWindow& ) = delete;
+
+
+private:
 	Ui::ImportWindow* ui;
 
-	std::vector<std::filesystem::path> fileList;
+	std::vector< std::filesystem::path > fileList {};
 
-  private slots:
+private slots:
+
 	// Click on "addFolder" button
 	void on_addFolder_clicked();
 

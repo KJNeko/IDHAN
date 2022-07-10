@@ -33,6 +33,10 @@ public:
 
 	~ImportViewer() override;
 
+	ImportViewer( const ImportViewer& ) = delete;
+
+	ImportViewer operator=( const ImportViewer& ) = delete;
+
 	void processFiles();
 
 	void addFiles( const std::vector< std::filesystem::path >& files );
@@ -41,7 +45,7 @@ private:
 	Ui::ImportViewer* ui;
 
 	// File import list
-	std::vector< std::filesystem::path > files;
+	std::vector< std::filesystem::path > files {};
 	QFuture< void >* processingThread { nullptr };
 
 	// Record keeping

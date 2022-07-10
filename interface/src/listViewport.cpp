@@ -101,7 +101,7 @@ void ListViewport::updateTimermsec_slot( uint64_t msec )
 }
 
 
-void ListViewport::itemActivated( const QModelIndex& index )
+void ListViewport::itemActivated( [[maybe_unused]] const QModelIndex& index )
 {
 	updateSelection();
 }
@@ -113,7 +113,7 @@ void ListViewport::updateSelection()
 	auto list = ui->listView->selectionModel()->selectedIndexes();
 
 	std::vector< uint64_t > files;
-	files.reserve( list.size() );
+	files.reserve( static_cast<unsigned long>(list.size()) );
 
 	for ( const auto& i: list )
 	{

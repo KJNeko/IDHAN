@@ -12,8 +12,7 @@
 
 struct Group
 {
-	std::string text;
-
+	std::string text {};
 
 	Group() = default;
 

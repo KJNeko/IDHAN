@@ -28,6 +28,10 @@ public:
 
 	~TagView() override;
 
+	TagView( const TagView& ) = delete;
+
+	TagView operator=( const TagView& ) = delete;
+
 	void setTags( const std::vector< Tag >& tags );
 
 private:
