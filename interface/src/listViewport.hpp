@@ -56,14 +56,17 @@ public slots:
 
 	void updateTimermsec_slot( uint64_t );
 
+	void itemActivated( const QModelIndex& index );
+
+	void updateSelection();
+
 signals:
 
 	void updateTimermsec( uint64_t );
 
 	void setupTimer();
 
-	std::vector< uint64_t > selection();
-
+	void selection( const std::vector< uint64_t >& );
 };
 
 

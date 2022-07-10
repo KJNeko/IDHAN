@@ -34,11 +34,11 @@ Tag getTag( const uint64_t tag_id )
 	const uint64_t group_id { res[ 0 ][ "group_id" ].as< uint64_t >() };
 	const uint64_t subtag_id { res[ 0 ][ "subtag_id" ].as< uint64_t >() };
 
-	return std::make_pair( getGroup( group_id ), getSubtag( subtag_id ) );
+	return { getGroup( group_id ), getSubtag( subtag_id ) };
 }
 
 
-uint64_t getTagID( const std::string& group, const std::string& subtag, bool create )
+uint64_t getTagID( const Group& group, const Subtag& subtag, bool create )
 {
 	ZoneScoped;
 	Connection conn;
@@ -62,7 +62,7 @@ uint64_t getTagID( const std::string& group, const std::string& subtag, bool cre
 	else if ( res.empty() )
 	{
 		throw IDHANError(
-			ErrorNo::DATABASE_DATA_NOT_FOUND, "No tag found for " + group + ":" + subtag
+			ErrorNo::DATABASE_DATA_NOT_FOUND, "No tag found for " + group.text + ":" + subtag.text
 		);
 	}
 	else

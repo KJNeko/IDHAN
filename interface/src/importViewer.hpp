@@ -14,6 +14,7 @@
 #include <filesystem>
 
 #include "listViewport.hpp"
+#include "TagView.hpp"
 
 
 QT_BEGIN_NAMESPACE
@@ -52,6 +53,7 @@ private:
 	uint64_t deleted { 0 };
 
 	ListViewport* viewport { nullptr };
+	TagView* tagport { nullptr };
 
 signals:
 

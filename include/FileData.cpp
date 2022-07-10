@@ -15,19 +15,6 @@ FileDataContainer::FileDataContainer( const uint64_t hash_id_, const std::shared
 	  tags( getTags( hash_id_ ) )
 {
 	ZoneScoped;
-
-	//Calculate size of all the internal objects
-	size_t size { 0 };
-
-	size += sizeof( modificationLock ) + sizeof( std::mutex );
-	size += sizeof( hash_id );
-	size += sizeof( sha256 );
-	size += sizeof( thumbnail_path ) + thumbnail_path.string().size();
-	size += sizeof( file_path ) + file_path.string().size();
-	size += sizeof( tags ) * tags.size();
-	size += sizeof( thumbnail_valid );
-
-	//TracyAlloc( this, size );
 }
 
 
@@ -36,22 +23,28 @@ std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_
 	std::lock_guard< std::mutex > lock( filePoolLock );
 	ZoneScoped;
 
-	const auto itter { filePool.find( hash_id ) };
-	if ( itter != filePool.end() )
+	TracyCPlot( "FileDataPool Size", static_cast<double>(filePool.size()) );
+
+	if ( filePool.contains( hash_id ) )
 	{
+		const auto itter { filePool.find( hash_id ) };
 		return itter->second;
 	}
 	else
 	{
-		//Create a new object and add it to the QCache
+		const auto shared_ptr { std::make_shared< FileDataContainer >( FileDataContainer( hash_id ) ) };
 
-		const auto newObj { FileDataContainer( hash_id ) };
-		const auto shared_ptr { std::make_shared< FileDataContainer >( newObj ) };
+		if ( !filePool.insert( { hash_id, shared_ptr } ).second )
+		{
+			spdlog::error( "Unable to insert {} into filepool", hash_id );
 
-		filePool.emplace( std::make_pair( hash_id, shared_ptr ) );
+			spdlog::debug( "filePool.size(): {}", filePool.size() );
+			spdlog::debug( "filePool.bucket_count(): {}", filePool.bucket_count() );
+			spdlog::debug( "filePool.load_factor(): {}", filePool.load_factor() );
+			spdlog::debug( "filePool.max_load_factor(): {}", filePool.max_load_factor() );
+		}
 
 		return shared_ptr;
-
 	}
 }
 
@@ -83,15 +76,40 @@ void FileDataPool::clear( const uint64_t hash_id )
 	const auto itter { filePool.find( hash_id ) };
 	if ( itter != filePool.end() )
 	{
-		filePool.erase( itter );
+		//Check that the use count is 0
+		if ( itter->second.use_count() == 0 )
+		{
+			filePool.erase( itter );
+		}
+		else
+		{
+			spdlog::warn( "Tried to erase {} but it was in use {} times", hash_id, itter->second.use_count() );
+			throw std::runtime_error(
+				"Tried to erase " +
+					std::to_string( hash_id ) +
+					" that was in use " +
+					std::to_string( itter->second.use_count() ) +
+					" times"
+			);
+		}
+		TracyCPlot( "FileDataPool Size", static_cast<double>(filePool.size()) );
 	}
 }
+
+
+//copy
+FileData::FileData( const FileData& other )
+	: std::shared_ptr< FileDataContainer >( other ), hash_id_( other.hash_id_ ) {}
+
+
+FileData::FileData( FileData&& other )
+	: std::shared_ptr< FileDataContainer >( std::move( other ) ), hash_id_( std::move( other.hash_id_ ) ) {}
 
 
 FileData::~FileData()
 {
 	//Check if this is the last shared pointer to the original datapool
-	if ( this->use_count() <= 2 )
+	if ( this->use_count() <= 1 )
 	{
 		FileDataPool::clear( hash_id_ );
 	}

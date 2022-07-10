@@ -7,12 +7,10 @@
 
 // Ui
 #include "importViewer.hpp"
-#include "ImageDelegate.hpp"
 #include "ui_importViewer.h"
 
 // Qt
 #include <QCryptographicHash>
-#include <QFile>
 #include <QFuture>
 #include <QQueue>
 #include <QThread>
@@ -31,6 +29,7 @@
 #include <fstream>
 
 #include "listViewport.hpp"
+#include "TagView.hpp"
 
 
 #ifdef _WIN32
@@ -40,7 +39,6 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 
@@ -56,11 +54,17 @@ ImportViewer::ImportViewer( QWidget* parent ) : QWidget( parent ), ui( new Ui::I
 	ui->setupUi( this );
 
 	viewport = new ListViewport( this );
+	tagport = new TagView( this );
 
 	ui->viewFrame->layout()->addWidget( viewport );
 
+	ui->tagFrame->layout()->addWidget( tagport );
+
 	//Connect all the things
 	connect( this, &ImportViewer::updateValues, this, &ImportViewer::updateValues_slot );
+
+	//Connect the selection model to the tagview
+	connect( viewport, &ListViewport::selection, tagport, &TagView::selectionChanged );
 }
 
 

@@ -9,7 +9,7 @@
 #include "TracyBox.hpp"
 
 
-uint64_t addGroup( const std::string& group )
+uint64_t addGroup( const Group& group )
 {
 	ZoneScoped;
 	Connection conn;
@@ -17,7 +17,7 @@ uint64_t addGroup( const std::string& group )
 
 	constexpr pqxx::zview query { "INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
 
-	const pqxx::result res = work.exec_params( query, group );
+	const pqxx::result res = work.exec_params( query, group.text );
 
 	work.commit();
 
@@ -26,7 +26,7 @@ uint64_t addGroup( const std::string& group )
 }
 
 
-std::string getGroup( const uint64_t group_id )
+Group getGroup( const uint64_t group_id )
 {
 	ZoneScoped;
 	Connection conn;
@@ -50,7 +50,7 @@ std::string getGroup( const uint64_t group_id )
 }
 
 
-uint64_t getGroupID( const std::string& group, const bool create )
+uint64_t getGroupID( const Group& group, const bool create )
 {
 	ZoneScoped;
 	Connection conn;
@@ -58,7 +58,7 @@ uint64_t getGroupID( const std::string& group, const bool create )
 
 	constexpr pqxx::zview query { "SELECT group_id FROM groups WHERE group_name = $1" };
 
-	const pqxx::result res { work.exec_params( query, group ) };
+	const pqxx::result res { work.exec_params( query, group.text ) };
 
 	if ( res.empty() )
 	{
@@ -70,8 +70,8 @@ uint64_t getGroupID( const std::string& group, const bool create )
 		else
 		{
 			work.abort();
-			spdlog::error( "No group with name {} found. create == false", group );
-			throw IDHANError( ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with name " + group + " found." );
+			spdlog::error( "No group with name {} found. create == false", group.text );
+			throw IDHANError( ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with name " + group.text + " found." );
 		}
 	}
 
@@ -81,7 +81,7 @@ uint64_t getGroupID( const std::string& group, const bool create )
 }
 
 
-void removeGroup( const std::string& group )
+void removeGroup( const Group& group )
 {
 	ZoneScoped;
 	Connection conn;
@@ -89,12 +89,12 @@ void removeGroup( const std::string& group )
 
 	constexpr pqxx::zview query { "DELETE FROM groups WHERE group_name = $1" };
 
-	const pqxx::result res { work.exec_params( query, group ) };
+	const pqxx::result res { work.exec_params( query, group.text ) };
 
 	if ( res.affected_rows() == 0 )
 	{
 		throw IDHANError(
-			ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with name " + group + " found to be deleted."
+			ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with name " + group.text + " found to be deleted."
 		);
 	}
 

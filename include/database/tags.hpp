@@ -11,13 +11,26 @@
 #include <string>
 
 #include "database.hpp"
+#include "database/groups.hpp"
+#include "database/subtags.hpp"
 
 
-typedef std::pair< std::string, std::string > Tag;
+struct Tag
+{
+	Group group;
+	Subtag subtag;
+
+
+	Tag( Group& group_, Subtag& subtag_ ) : group( group_ ), subtag( subtag_ ) {}
+
+
+	Tag( Group group_, Subtag subtag_ ) : group( group_ ), subtag( subtag_ ) {}
+};
+
 
 Tag getTag( const uint64_t tag_id );
 
-uint64_t getTagID( const std::string& group, const std::string& subtag, bool = false );
+uint64_t getTagID( const Group& group, const Subtag& subtag, bool = false );
 
 void deleteTagID( const uint64_t tag_id );
 

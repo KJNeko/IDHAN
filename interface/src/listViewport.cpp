@@ -25,6 +25,8 @@ ListViewport::ListViewport( QWidget* parent ) : QWidget( parent ), ui( new Ui::L
 	connect( this, &ListViewport::updateTimermsec, this, &ListViewport::updateTimermsec_slot );
 
 	updateTimer.start();
+
+	connect( ui->listView, &QListView::activated, this, &ListViewport::itemActivated );
 }
 
 
@@ -36,6 +38,7 @@ ListViewport::~ListViewport()
 
 void ListViewport::resetFiles()
 {
+	ZoneScoped;
 	std::lock_guard< std::mutex > lock( queue_lock );
 	model->reset();
 }
@@ -43,6 +46,7 @@ void ListViewport::resetFiles()
 
 void ListViewport::setFiles( const std::vector< uint64_t >& files_ )
 {
+	ZoneScoped;
 	std::lock_guard< std::mutex > lock( queue_lock );
 	model->setFiles( files_ );
 }
@@ -50,6 +54,7 @@ void ListViewport::setFiles( const std::vector< uint64_t >& files_ )
 
 void ListViewport::addFile( const uint64_t file_id )
 {
+	ZoneScoped;
 	/*
 	 * addFile simply adds to the list of files to be processed. This helps reduce flickering and other things
 	 * Two tick speeds. ('high' AKA every 16ms) and ('low' AKA every 1s) it will switch to a slow mode if the queue is empty.
@@ -70,6 +75,7 @@ void ListViewport::addFile( const uint64_t file_id )
 
 void ListViewport::processValues()
 {
+	ZoneScoped;
 	std::lock_guard< std::mutex > lock( queue_lock );
 	//If queue is empty then set the timer to 'low'
 	if ( addQueue.empty() )
@@ -85,10 +91,41 @@ void ListViewport::processValues()
 		model->addImages( addQueue );
 		addQueue.clear();
 	}
+	updateSelection();
 }
 
 
 void ListViewport::updateTimermsec_slot( uint64_t msec )
 {
 	updateTimer.setInterval( static_cast<int>(msec) );
+}
+
+
+void ListViewport::itemActivated( const QModelIndex& index )
+{
+	updateSelection();
+}
+
+
+void ListViewport::updateSelection()
+{
+	ZoneScoped;
+	auto list = ui->listView->selectionModel()->selectedIndexes();
+
+	std::vector< uint64_t > files;
+	files.reserve( list.size() );
+
+	for ( const auto& i: list )
+	{
+		files.push_back( model->data( i, Qt::DisplayRole ).value< uint64_t >() );
+	}
+
+	//If there is no files then return everything
+	if ( files.empty() )
+	{
+		emit selection( model->getFiles() );
+		return;
+	}
+
+	emit selection( files );
 }

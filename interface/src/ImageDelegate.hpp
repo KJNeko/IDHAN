@@ -50,6 +50,8 @@ public:
 
 	void populate();
 
+	const std::vector< uint64_t > getFiles() const;
+
 private:
 	std::vector< FileData > fileList;
 };

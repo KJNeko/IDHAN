@@ -22,8 +22,6 @@
 
 
 #include "database/databaseExceptions.hpp"
-#include "database/tags.hpp"
-#include "database/files.hpp"
 
 #include "FileData.hpp"
 
@@ -38,7 +36,7 @@ void ImageDelegate::paint(
 {
 	ZoneScoped;
 	// Get the image
-	const FileData filedat { index.data( Qt::DisplayRole ).value< FileData >() };
+	const FileData filedat { index.data( Qt::DisplayRole ).value< uint64_t >() };
 
 	QPixmap thumbnail;
 	if ( const auto key = filedat->sha256.getQByteArray().toHex(); !QPixmapCache::find( key, &thumbnail ) )
@@ -60,6 +58,12 @@ void ImageDelegate::paint(
 		}
 	}
 
+	//If selected paint a light blue background
+	if ( option.state & QStyle::State_Selected )
+	{
+		painter->fillRect( option.rect, QColor( 0, 0, 255, 50 ) );
+	}
+
 	QRect rect = option.rect;
 	// Center the image in the rectangle
 	rect.setX( rect.x() + ( rect.width() - thumbnail.width() ) / 2 );
@@ -72,6 +76,12 @@ void ImageDelegate::paint(
 	// Use painter to paint the image
 	painter->drawPixmap( rect, thumbnail );
 	// Draw boarder around the image
+
+	if ( option.state & QStyle::State_Selected )
+	{
+		painter->setPen( QColor( 0, 0, 255 ) );
+	}
+
 	painter->drawRect( option.rect );
 	painter->restore();
 
@@ -111,12 +121,13 @@ ImageModel::ImageModel( QWidget* parent ) : QAbstractListModel( parent )
 
 QVariant ImageModel::data( const QModelIndex& index, int role ) const
 {
+	ZoneScoped;
 	if ( !index.isValid() )
 	{ return QVariant(); }
 
 	if ( role == Qt::DisplayRole )
 	{
-		return QVariant::fromValue( fileList[ static_cast<unsigned long>( index.row() ) ] );
+		return QVariant::fromValue( fileList[ static_cast<unsigned long>( index.row() ) ]->hash_id );
 	}
 
 	return QVariant();
@@ -125,11 +136,12 @@ QVariant ImageModel::data( const QModelIndex& index, int role ) const
 
 void ImageModel::addImages( const std::vector< uint64_t >& queue )
 {
+	ZoneScoped;
 	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + queue.size()) );
 
 	fileList.reserve( queue.size() );
 
-	for ( auto& hash_id: queue )
+	for ( const auto& hash_id: queue )
 	{
 		fileList.emplace_back( hash_id );
 	}
@@ -160,6 +172,7 @@ int ImageModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
 
 void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 {
+	ZoneScoped;
 	beginResetModel();
 	fileList.reserve( ids.size() );
 	for ( auto& id: ids )
@@ -167,4 +180,19 @@ void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 		fileList.emplace_back( id );
 	}
 	endResetModel();
+}
+
+
+const std::vector< uint64_t > ImageModel::getFiles() const
+{
+	ZoneScoped;
+
+	std::vector< uint64_t > ret;
+
+	for ( const auto& file: fileList )
+	{
+		ret.push_back( file->hash_id );
+	}
+
+	return ret;
 }

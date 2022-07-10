@@ -9,7 +9,7 @@
 #include "TracyBox.hpp"
 
 
-uint64_t addSubtag( const std::string& subtag )
+uint64_t addSubtag( const Subtag& subtag )
 {
 	ZoneScoped;
 	Connection conn;
@@ -17,7 +17,7 @@ uint64_t addSubtag( const std::string& subtag )
 
 	constexpr pqxx::zview query { "INSERT INTO subtags (subtag) VALUES ($1) RETURNING subtag_id" };
 
-	const pqxx::result res { work.exec_params( query, subtag ) };
+	const pqxx::result res { work.exec_params( query, subtag.text ) };
 
 	work.commit();
 
@@ -25,7 +25,7 @@ uint64_t addSubtag( const std::string& subtag )
 }
 
 
-std::string getSubtag( const uint64_t subtag_id )
+Subtag getSubtag( const uint64_t subtag_id )
 {
 	ZoneScoped;
 	Connection conn;
@@ -48,7 +48,7 @@ std::string getSubtag( const uint64_t subtag_id )
 }
 
 
-uint64_t getSubtagID( const std::string& subtag, const bool create )
+uint64_t getSubtagID( const Subtag& subtag, const bool create )
 {
 	ZoneScoped;
 	Connection conn;
@@ -56,7 +56,7 @@ uint64_t getSubtagID( const std::string& subtag, const bool create )
 
 	constexpr pqxx::zview query { "SELECT subtag_id FROM subtags WHERE subtag = $1" };
 
-	const pqxx::result res { work.exec_params( query, subtag ) };
+	const pqxx::result res { work.exec_params( query, subtag.text ) };
 
 	if ( res.empty() )
 	{
@@ -68,8 +68,8 @@ uint64_t getSubtagID( const std::string& subtag, const bool create )
 		else
 		{
 			work.abort();
-			spdlog::error( "No subtag with name {} found. create == false", subtag );
-			throw IDHANError( ErrorNo::DATABASE_DATA_NOT_FOUND, "No subtag with name " + subtag + " found." );
+			spdlog::error( "No subtag with name {} found. create == false", subtag.text );
+			throw IDHANError( ErrorNo::DATABASE_DATA_NOT_FOUND, "No subtag with name " + subtag.text + " found." );
 		}
 	}
 
@@ -79,7 +79,7 @@ uint64_t getSubtagID( const std::string& subtag, const bool create )
 }
 
 
-void deleteSubtag( const std::string& subtag )
+void deleteSubtag( const Subtag& subtag )
 {
 	ZoneScoped;
 	Connection conn;
@@ -87,12 +87,12 @@ void deleteSubtag( const std::string& subtag )
 
 	constexpr pqxx::zview query { "DELETE FROM subtags WHERE subtag = $1 CASCADE" };
 
-	const pqxx::result res { work.exec_params( query, subtag ) };
+	const pqxx::result res { work.exec_params( query, subtag.text ) };
 
 	if ( res.affected_rows() == 0 )
 	{
 		throw IDHANError(
-			ErrorNo::DATABASE_DATA_NOT_FOUND, "No subtag with name " + subtag + " found to be deleted."
+			ErrorNo::DATABASE_DATA_NOT_FOUND, "No subtag with name " + subtag.text + " found to be deleted."
 		);
 	}
 

@@ -12,13 +12,54 @@
 #include "database.hpp"
 
 
-uint64_t addSubtag( const std::string& subtag );
+struct Subtag
+{
+	std::string text;
 
-std::string getSubtag( const uint64_t subtag_id );
 
-uint64_t getSubtagID( const std::string& subtag, bool );
+	Subtag() = default;
 
-void deleteSubtag( const std::string& subtag );
+
+	Subtag( const std::string& text_ ) : text( text_ ) {}
+
+
+	operator std::string&()
+	{
+		return text;
+	}
+
+
+	bool operator==( const std::string& other ) const
+	{
+		return text == other;
+	}
+
+
+	bool operator==( const Subtag& other ) const
+	{
+		return text == other.text;
+	}
+
+
+	bool operator!=( const std::string& other ) const
+	{
+		return text != other;
+	}
+
+
+	bool operator!=( const Subtag& other ) const
+	{
+		return text != other.text;
+	}
+};
+
+uint64_t addSubtag( const Subtag& subtag );
+
+Subtag getSubtag( const uint64_t subtag_id );
+
+uint64_t getSubtagID( const Subtag& subtag, bool );
+
+void deleteSubtag( const Subtag& subtag );
 
 void deleteSubtag( const uint64_t subtag_id );
 
