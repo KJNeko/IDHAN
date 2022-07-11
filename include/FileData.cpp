@@ -18,6 +18,12 @@ FileDataContainer::FileDataContainer( const uint64_t hash_id_, const std::shared
 }
 
 
+void FileDataContainer::signalModification()
+{
+	//emit updated();
+}
+
+
 std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_id )
 {
 	std::lock_guard< std::mutex > lock( filePoolLock );

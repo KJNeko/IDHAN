@@ -39,8 +39,8 @@ namespace Database
 		work.exec( "CREATE TABLE IF NOT EXISTS mime_types (mime_id BIGSERIAL PRIMARY KEY, mime TEXT UNIQUE NOT NULL);" );
 		work.exec( "CREATE TABLE IF NOT EXISTS mime (hash_id BIGINT REFERENCES files(hash_id), mime_id BIGINT REFERENCES mime_types(mime_id));" );
 
-		work.exec( "CREATE TABLE IF NOT EXISTS collections (collection_id BIGSERIAL PRIMARY KEY, collection_name TEXT UNIQUE NOT NULL);" );
-		work.exec( "CREATE TABLE IF NOT EXISTS collections_filter (collection_id BIGINT REFERENCES collections(collection_id), tag_ids BIGINT[]);" );
+		//work.exec( "CREATE TABLE IF NOT EXISTS collections (collection_id BIGSERIAL PRIMARY KEY, collection_name TEXT UNIQUE NOT NULL);" );
+		//work.exec( "CREATE TABLE IF NOT EXISTS collections_filter (collection_id BIGINT REFERENCES collections(collection_id), tag_ids BIGINT[]);" );
 
 
 		//Indexes

@@ -15,16 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QTreeWidget" name="tagList">
-     <property name="columnCount">
-      <number>1</number>
-     </property>
-     <column>
-      <property name="text">
-       <string notr="true">1</string>
-      </property>
-     </column>
-    </widget>
+    <widget class="QListView" name="tagView"/>
    </item>
   </layout>
  </widget>

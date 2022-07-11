@@ -2,6 +2,8 @@
 // Created by kj16609 on 7/8/22.
 //
 
+#include <QCache>
+
 #include "tags.hpp"
 #include "groups.hpp"
 #include "subtags.hpp"
@@ -14,6 +16,12 @@
 Tag getTag( const uint64_t tag_id )
 {
 	ZoneScoped;
+	static QCache< uint64_t, Tag > tag_cache { 5000 };
+
+	if ( tag_cache.contains( tag_id ) )
+	{
+		return *tag_cache.object( tag_id );
+	}
 
 	Connection conn;
 	pqxx::work work { conn() };
@@ -34,7 +42,7 @@ Tag getTag( const uint64_t tag_id )
 	const uint64_t group_id { res[ 0 ][ "group_id" ].as< uint64_t >() };
 	const uint64_t subtag_id { res[ 0 ][ "subtag_id" ].as< uint64_t >() };
 
-	return { getGroup( group_id ), getSubtag( subtag_id ) };
+	return { getGroup( group_id ), getSubtag( subtag_id ), tag_id };
 }
 
 
@@ -93,7 +101,7 @@ std::vector< Tag > getTags( const uint64_t hash_id )
 	pqxx::work work { conn() };
 
 	constexpr pqxx::zview query {
-		"SELECT group_name, subtag FROM tags NATURAL JOIN groups NATURAL JOIN subtags NATURAL JOIN mappings WHERE hash_id = $1;" };
+		"SELECT group_name, subtag, tag_id FROM tags NATURAL JOIN groups NATURAL JOIN subtags NATURAL JOIN mappings WHERE hash_id = $1;" };
 
 	const pqxx::result res { work.exec_params( query, hash_id ) };
 
@@ -101,10 +109,34 @@ std::vector< Tag > getTags( const uint64_t hash_id )
 
 	for ( const auto& row: res )
 	{
-		tags.emplace_back( row[ "group_name" ].as< std::string >(), row[ "subtag" ].as< std::string >() );
+		tags.emplace_back(
+			row[ "group_name" ].as< std::string >(), row[ "subtag" ].as< std::string >(), row[ "tag_id" ].as< uint64_t >()
+		);
 	}
 
 	return tags;
 }
 
+
+std::vector< std::pair< uint64_t, Tag>> getTags( const std::vector< uint64_t >& hash_ids )
+{
+	ZoneScoped;
+
+	Connection conn;
+	pqxx::work work { conn() };
+
+	constexpr pqxx::zview query {
+		"SELECT tag_id, count(tag_id) AS id_count FROM mappings where hash_id = any($1::bigint[]) group by tag_id order by tag_id" };
+
+	const pqxx::result res { work.exec_params( query, hash_ids ) };
+
+	std::vector< std::pair< uint64_t, Tag >> tags;
+
+	for ( const auto& row: res )
+	{
+		tags.emplace_back( row[ "id_count" ].as< uint64_t >(), getTag( row[ "tag_id" ].as< uint64_t >() ) );
+	}
+
+	return tags;
+}
 

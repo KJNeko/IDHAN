@@ -39,6 +39,12 @@ struct FileDataContainer
 	bool is_inbox { false };
 
 	FileDataContainer( const uint64_t, const std::shared_ptr< std::mutex > = std::make_shared< std::mutex >() );
+
+	void signalModification();
+
+signals:
+
+	void updated( const uint64_t );
 };
 
 class FileDataPool

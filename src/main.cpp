@@ -46,7 +46,7 @@ int main( int argc, char** argv )
 	QImageReader::setAllocationLimit( 0 );
 
 	//About 1G
-	//QPixmapCache::setCacheLimit( 1000000 );
+	QPixmapCache::setCacheLimit( 500000 );
 
 	std::cout << "Qt version: " << qVersion() << std::endl;
 

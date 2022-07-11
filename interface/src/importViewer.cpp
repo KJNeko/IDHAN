@@ -299,6 +299,54 @@ void ImportViewer::processFiles()
 			//Add the "system:inbox" tag to the image
 			addMapping( sha256, "system", "inbox" );
 
+			//Check to see if a file exists with the tags
+			if ( std::filesystem::exists( path_.string() + ".txt" ) )
+			{
+				spdlog::info( "Suspected file with tags found {}", path_.string() + ".txt" );
+
+				if ( std::ifstream ifs( path_.string() + ".txt" ); ifs )
+				{
+					while ( !ifs.eof() )
+					{
+						std::string name;
+
+						ifs >> name;
+
+						//Split the tag by ":"
+
+						std::vector< std::string > split_strings;
+
+						constexpr std::string_view delim { ":" };
+
+						const std::string_view sv { name };
+
+						for ( const auto word: std::views::split( sv, delim ) )
+						{
+							split_strings.push_back( word.data() );
+						}
+
+						if ( split_strings.size() == 2 )
+						{
+							addMapping( sha256, split_strings[ 0 ], split_strings[ 1 ] );
+						}
+						else if ( split_strings.size() == 1 )
+						{
+							addMapping( sha256, "", split_strings[ 0 ] );
+						}
+						else
+						{
+							spdlog::error( "Invalid tag format {}", name );
+						}
+
+					};
+
+
+				}
+
+
+			}
+
+
 			return Output( hash_id );
 
 			spdlog::critical( "PROCESS HAS ESCAPED SCOPE BOUNDS!" );

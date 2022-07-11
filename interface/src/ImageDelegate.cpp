@@ -58,11 +58,6 @@ void ImageDelegate::paint(
 		}
 	}
 
-	//If selected paint a light blue background
-	if ( option.state & QStyle::State_Selected )
-	{
-		painter->fillRect( option.rect, QColor( 0, 0, 255, 50 ) );
-	}
 
 	QRect rect = option.rect;
 	// Center the image in the rectangle
@@ -77,18 +72,19 @@ void ImageDelegate::paint(
 	painter->drawPixmap( rect, thumbnail );
 	// Draw boarder around the image
 
-	if ( option.state & QStyle::State_Selected )
-	{
-		painter->setPen( QColor( 0, 0, 255 ) );
-	}
-
 	painter->drawRect( option.rect );
 	painter->restore();
+
+	//If selected paint a light blue background
+	if ( option.state & QStyle::State_Selected )
+	{
+		painter->fillRect( option.rect, QColor( 0, 0, 255, 50 ) );
+	}
 
 	//See if we have "system:inbox"
 	{
 		ZoneScopedN( "search_tag" )
-		for ( const auto& [ group, subtag ]: filedat->tags )
+		for ( const auto& [ group, subtag, tag_id ]: filedat->tags )
 		{
 			if ( group == "system" && subtag == "inbox" )
 			{
@@ -110,6 +106,20 @@ QSize ImageDelegate::sizeHint(
 	int width = s.value( "thumbnails/x_res", 120 ).toInt();
 	int height = s.value( "thumbnails/y_res", 120 ).toInt();
 
+/*	const FileData filedat { index.data( Qt::DisplayRole ).value< uint64_t >() };
+
+	if ( filedat->thumbnail_path.empty() )
+	{
+		return QSize( width, height );
+	}
+	else
+	{
+		//Load the image and get the size
+		QPixmap thumbnail;
+		thumbnail.load( QString::fromStdString( filedat->thumbnail_path.string() ) );
+		return { width, thumbnail.size().height() };
+	}
+*/
 	return QSize( width, height );
 }
 

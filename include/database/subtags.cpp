@@ -62,8 +62,18 @@ uint64_t getSubtagID( const Subtag& subtag, const bool create )
 	{
 		if ( create )
 		{
+			constexpr pqxx::zview lockTable { "LOCK TABLE subtags IN EXCLUSIVE MODE" };
+
+			work.exec( lockTable );
+
+
+			constexpr pqxx::zview query_insert { "INSERT INTO subtags (subtag) VALUES ($1) RETURNING subtag_id" };
+
+			const pqxx::result res_insert { work.exec_params( query_insert, subtag.text ) };
+
 			work.commit();
-			return addSubtag( subtag );
+
+			return res_insert[ 0 ][ "subtag_id" ].as< uint64_t >();
 		}
 		else
 		{

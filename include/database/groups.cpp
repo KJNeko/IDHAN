@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/28/22.
 //
 
+#include <QCache>
 #include "groups.hpp"
 #include "database.hpp"
 #include "databaseExceptions.hpp"
@@ -29,6 +30,13 @@ uint64_t addGroup( const Group& group )
 Group getGroup( const uint64_t group_id )
 {
 	ZoneScoped;
+	static QCache< uint64_t, Group > group_cache { 5000 };
+
+	if ( group_cache.contains( group_id ) )
+	{
+		return *group_cache.object( group_id );
+	}
+
 	Connection conn;
 	pqxx::work work { conn() };
 
@@ -46,7 +54,9 @@ Group getGroup( const uint64_t group_id )
 
 	work.commit();
 
-	return res[ 0 ][ "group" ].as< std::string >();
+	group_cache.insert( group_id, new Group( res[ 0 ][ "group_name" ].as< std::string >() ) );
+
+	return res[ 0 ][ "group_name" ].as< std::string >();
 }
 
 
@@ -64,8 +74,17 @@ uint64_t getGroupID( const Group& group, const bool create )
 	{
 		if ( create )
 		{
+			constexpr pqxx::zview lockTable { "LOCK TABLE groups IN EXCLUSIVE MODE" };
+
+			work.exec( lockTable );
+
+			constexpr pqxx::zview query_insert { "INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
+
+			const pqxx::result res_insert { work.exec_params( query_insert, group.text ) };
+
 			work.commit();
-			return addGroup( group );
+
+			return res_insert[ 0 ][ "group_id" ].as< uint64_t >();
 		}
 		else
 		{

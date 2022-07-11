@@ -18,12 +18,19 @@ uint64_t getMimeID( const std::string& mime )
 	Connection conn;
 	pqxx::work work { conn() };
 
+
 	constexpr pqxx::zview query { "SELECT mime_id FROM mime_types WHERE mime = $1" };
 
 	pqxx::result res { work.exec_params( query, mime ) };
 
 	if ( res.empty() )
 	{
+		//This means the mime didn't exist in the database so we need to lock the table
+		//and insert it.
+
+		constexpr pqxx::zview lockTable { "LOCK TABLE mime_types IN EXCLUSIVE MODE" };
+		work.exec( lockTable );
+
 		//Create the mime
 		constexpr pqxx::zview query_insert { "INSERT INTO mime_types (mime) VALUES ($1) RETURNING mime_id" };
 

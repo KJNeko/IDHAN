@@ -8,6 +8,9 @@
 #include "ui_TagView.h"
 
 #include <QTreeWidgetItem>
+#include <QList>
+#include <QStandardItemModel>
+#include <QPainter>
 
 #include "FileData.hpp"
 
@@ -15,6 +18,9 @@
 TagView::TagView( QWidget* parent ) : QWidget( parent ), ui( new Ui::TagView )
 {
 	ui->setupUi( this );
+
+	ui->tagView->setModel( model );
+	ui->tagView->setItemDelegate( delegate );
 }
 
 
@@ -24,118 +30,126 @@ TagView::~TagView()
 }
 
 
-struct GroupMember
-{
-	Group group {};
-	std::vector< std::pair< Subtag, uint64_t > > subtags {};
-};
-
-
-void TagView::setTags( const std::vector< Tag >& tags )
-{
-	ZoneScoped;
-
-	std::vector< GroupMember > list;
-
-	for ( const Tag& tag: tags )
-	{
-		//See if it's already in the list
-		auto iter = std::find_if(
-			list.begin(), list.end(), [ &tag ]( const GroupMember& member )
-		{
-			return member.group == tag.group;
-		}
-		);
-
-		if ( iter == list.end() )
-		{
-			//It's not in the list, add it
-			GroupMember member;
-			member.group = tag.group;
-			member.subtags.emplace_back( std::make_pair( tag.subtag, 1 ) );
-			list.push_back( member );
-		}
-		else
-		{
-			//If it's in the list check if the subtag exists
-			auto subtag_iter = std::find_if(
-				iter->subtags.begin(), iter->subtags.end(), [ &tag ]( const std::pair< Subtag, uint64_t >& subtag )
-			{
-				return subtag.first == tag.subtag;
-			}
-			);
-
-			if ( subtag_iter == iter->subtags.end() )
-			{
-				//It's not in the list, add it
-				iter->subtags.emplace_back( std::make_pair( tag.subtag, 1 ) );
-			}
-			else
-			{
-				//It's in the list, increment the count
-				subtag_iter->second++;
-			}
-		}
-	}
-
-	//Sort the list based on group name
-
-	std::sort(
-		list.begin(), list.end(), []( const GroupMember& a, const GroupMember& b )
-	{
-		return a.group.text < b.group.text;
-	}
-	);
-
-	//Sort each internal list by
-	for ( GroupMember& member: list )
-	{
-
-		std::sort(
-			member.subtags.begin(), member.subtags.end(), [](
-			const std::pair< Subtag, uint64_t >& a, const std::pair< Subtag, uint64_t >& b )
-		{
-			return a.first.text < b.first.text;
-		}
-		);
-
-	}
-
-	//Reset the viewer
-	ui->tagList->clear();
-
-	//Add the tags
-	for ( const GroupMember& member: list )
-	{
-		QTreeWidgetItem* group_item = new QTreeWidgetItem( ui->tagList );
-		group_item->setText( 0, member.group.text.c_str() );
-		group_item->setExpanded( true );
-
-		for ( const std::pair< Subtag, uint64_t >& subtag: member.subtags )
-		{
-			QTreeWidgetItem* subtag_item = new QTreeWidgetItem( group_item );
-			subtag_item->setText( 0, ( subtag.first.text + " (" + std::to_string( subtag.second ) + ")" ).c_str() );
-		}
-	}
-}
-
-
 void TagView::selectionChanged( const std::vector< uint64_t >& hash_ids )
 {
 	ZoneScoped;
-	std::vector< Tag > tags;
 
-	for ( const auto hash_id: hash_ids )
-	{
-		const auto data_ptr { FileData( hash_id ) };
-		tags.reserve( data_ptr->tags.size() );
+	spdlog::info( "selectionChanged: {}", hash_ids.size() );
 
-		tags.insert( tags.end(), data_ptr->tags.begin(), data_ptr->tags.end() );
-	}
+	//Clear the model
+	model->reset();
 
-	this->setTags( tags );
+	model->setFiles( hash_ids );
 }
 
 
+//Should only be called during invalidate
+void TagModel::reset()
+{
+	std::lock_guard< std::mutex > lock( this->mtx );
+
+	ZoneScoped;
+
+	beginResetModel();
+	database_ret = pqxx::result();
+	endResetModel();
+}
 
 
+void TagModel::setFiles( const std::vector< uint64_t >& hash_ids )
+{
+	std::lock_guard< std::mutex > lock( this->mtx );
+
+	ZoneScoped;
+
+
+	beginResetModel();
+
+	Connection conn;
+	pqxx::work work( conn() );
+
+	constexpr pqxx::zview query {
+		"SELECT tag_id, count(tag_id) AS counter FROM mappings WHERE hash_id = ANY($1::bigint[]) GROUP BY tag_id ORDER BY count(tag_id) DESC" };
+
+	database_ret = { work.exec_params( query, hash_ids ) };
+
+	endResetModel();
+}
+
+
+TagModel::TagModel( QWidget* parent )
+{
+
+}
+
+
+int TagModel::rowCount( const QModelIndex& parent ) const
+{
+	return database_ret.size();
+}
+
+
+int TagModel::columnCount( const QModelIndex& parent ) const
+{
+	return 1;
+}
+
+
+struct DataPack
+{
+	uint64_t tag_id { 0 };
+	uint64_t counter { 0 };
+};
+
+
+QVariant TagModel::data( const QModelIndex& index, int role ) const
+{
+	DataPack pack;
+	pack.tag_id = database_ret[ index.row() ][ "tag_id" ].as< uint64_t >();
+	pack.counter = database_ret[ index.row() ][ "counter" ].as< uint64_t >();
+
+	return QVariant::fromValue( pack );
+}
+
+
+QSize TagDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const
+{
+	//50% of the width of the view
+	if ( index.column() == 0 )
+	{
+		return QSize( option.rect.width() / 2, 25 );
+	}
+	else
+	{
+		return QSize( option.rect.width() / 4, 25 );
+	}
+}
+
+
+void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
+{
+	ZoneScoped;
+
+	auto tag_data = index.data().value< DataPack >();
+
+	auto tag = getTag( tag_data.tag_id );
+
+	QString str;
+	str += QString::fromStdString( tag.group.text.empty() ? tag.group.text : "" );
+	str += QString::fromStdString( tag.group.text.empty() ? ":" : "" );
+	str += QString::fromStdString( tag.subtag.text );
+
+	str += QString::fromStdString( " (" + std::to_string( tag_data.counter ) + ")" );
+
+	painter->save();
+
+	painter->drawText( option.rect, Qt::AlignCenter, str );
+
+	painter->restore();
+}
+
+
+TagDelegate::TagDelegate( QObject* parent ) : QItemDelegate( parent )
+{
+
+}

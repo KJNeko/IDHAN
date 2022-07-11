@@ -26,7 +26,7 @@ ImportWindow::ImportWindow( QWidget* parent ) : QDialog( parent ), ui( new Ui::I
 
 	// Create a new model
 	// Create a new model
-	QStandardItemModel* model = new QStandardItemModel();
+	QStandardItemModel * model = new QStandardItemModel();
 
 	model->setColumnCount( 3 );
 	model->setHorizontalHeaderItem( 0, new QStandardItem( "Name" ) );
@@ -88,6 +88,16 @@ void ImportWindow::on_addFolder_clicked()
 	{
 		QMimeDatabase db;
 		QMimeType mime = db.mimeTypeForFile( file );
+
+		//Check that it's a media type file
+		const auto& mimeType = mime.name();
+
+		if ( !mimeType.contains( "image/" ) && !mimeType.contains( "video/" ) )
+		{
+			spdlog::info( "Skipping {} due to mime type {}", file.toStdString(), mimeType.toStdString() );
+			continue;
+		}
+
 
 		QFile f( file );
 
