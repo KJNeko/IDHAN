@@ -11,9 +11,9 @@
 #include <QAbstractListModel>
 #include <QPainter>
 
-#include "database/files.hpp"
-#include "database/tags.hpp"
-#include "FileData.hpp"
+#include "database/files/files.hpp"
+#include "database/tags/tags.hpp"
+#include "filedata/FileData.hpp"
 
 
 class ImageDelegate : public QAbstractItemDelegate

@@ -10,74 +10,11 @@
 #include <QStandardItem>
 #include <QItemDelegate>
 
-#include "database/tags.hpp"
-#include "FileData.hpp"
+#include "database/tags/tags.hpp"
+#include "filedata/FileData.hpp"
 
-
-class TagDelegate : public QItemDelegate
-{
-Q_OBJECT
-
-public:
-	TagDelegate( QObject* parent = nullptr );
-
-	void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
-
-	QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
-};
-
-struct TagCounter
-{
-	uint64_t counter { 0 };
-	Tag tag;
-
-	TagCounter() = default;
-
-
-	TagCounter( Tag tag_, uint64_t counter_ ) : counter( counter_ ), tag( tag_ ) {}
-
-
-	TagCounter( const TagCounter& other ) : counter( other.counter ), tag( other.tag ) {}
-
-
-	TagCounter& operator=( const TagCounter& other )
-	{
-		counter = other.counter;
-		tag = other.tag;
-		return *this;
-	}
-};
-
-Q_DECLARE_METATYPE( TagCounter )
-
-class TagModel : public QAbstractListModel
-{
-Q_OBJECT
-
-public:
-	TagModel( QWidget* parent = nullptr );
-
-	int rowCount( const QModelIndex& parent = QModelIndex() ) const override;
-
-	int columnCount( const QModelIndex& parent = QModelIndex() ) const override;
-
-	QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const override;
-	
-	void reset();
-
-	//TODO implement these two if needed
-	//void addTag( const uint64_t tag_id );
-
-	//void removeTag( const uint64_t tag_id );
-
-	void setFiles( const std::vector< uint64_t >& hash_ids );
-
-private:
-
-	pqxx::result database_ret;
-
-	std::mutex mtx;
-};
+#include "modelDelegates/TagViewer/TagModel.hpp"
+#include "modelDelegates/TagViewer/TagDelegate.hpp"
 
 
 QT_BEGIN_NAMESPACE

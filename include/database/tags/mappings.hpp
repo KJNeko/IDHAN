@@ -10,8 +10,8 @@
 #include <string>
 
 // idhan
-#include "database.hpp"
-#include "files.hpp"
+#include "database/database.hpp"
+#include "database/files/files.hpp"
 
 
 void addMapping(

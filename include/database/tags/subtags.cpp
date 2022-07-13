@@ -3,8 +3,8 @@
 //
 
 #include "subtags.hpp"
-#include "database.hpp"
-#include "databaseExceptions.hpp"
+#include "database/database.hpp"
+#include "database/utility/databaseExceptions.hpp"
 
 #include "TracyBox.hpp"
 
@@ -14,6 +14,19 @@ uint64_t addSubtag( const Subtag& subtag )
 	ZoneScoped;
 	Connection conn;
 	pqxx::work work { conn() };
+
+	constexpr pqxx::zview lockTable { "LOCK TABLE subtags IN EXCLUSIVE MODE" };
+
+	work.exec( lockTable );
+
+	//Check that it wasn't made before we locked
+	constexpr pqxx::zview checkSubtag { "SELECT subtag_id FROM subtags WHERE subtag = $1" };
+	const pqxx::result check_ret = work.exec_params( checkSubtag, subtag.text );
+	if ( check_ret.size() )
+	{
+		work.commit();
+		return check_ret[ 0 ][ "subtag_id" ].as< uint64_t >();
+	}
 
 	constexpr pqxx::zview query { "INSERT INTO subtags (subtag) VALUES ($1) RETURNING subtag_id" };
 
@@ -62,18 +75,7 @@ uint64_t getSubtagID( const Subtag& subtag, const bool create )
 	{
 		if ( create )
 		{
-			constexpr pqxx::zview lockTable { "LOCK TABLE subtags IN EXCLUSIVE MODE" };
-
-			work.exec( lockTable );
-
-
-			constexpr pqxx::zview query_insert { "INSERT INTO subtags (subtag) VALUES ($1) RETURNING subtag_id" };
-
-			const pqxx::result res_insert { work.exec_params( query_insert, subtag.text ) };
-
-			work.commit();
-
-			return res_insert[ 0 ][ "subtag_id" ].as< uint64_t >();
+			return addSubtag( subtag );
 		}
 		else
 		{

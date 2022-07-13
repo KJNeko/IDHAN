@@ -10,10 +10,11 @@
 #include <QTimer>
 
 #include <queue>
+#include <QItemSelection>
 
-#include "ImageDelegate.hpp"
+#include "modelDelegates/ImageViewer/ImageDelegate.hpp"
 
-#include "FileData.hpp"
+#include "filedata/FileData.hpp"
 
 
 QT_BEGIN_NAMESPACE
@@ -44,7 +45,6 @@ private:
 	ImageModel* model { new ImageModel( this ) };
 	ImageDelegate* delegate { new ImageDelegate( this ) };
 
-	QTimer updateTimer {};
 	std::vector< uint64_t > addQueue {};
 	std::mutex queue_lock {};
 
@@ -56,13 +56,7 @@ public slots:
 
 	void setFiles( const std::vector< uint64_t >& files );
 
-	void processValues();
-
-	void updateTimermsec_slot( uint64_t );
-
-	void itemActivated( const QModelIndex& index );
-
-	void updateSelection();
+	void itemActivated( const QItemSelection& selected, const QItemSelection& deselected );
 
 signals:
 

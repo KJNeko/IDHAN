@@ -21,9 +21,9 @@
 #include "TracyBox.hpp"
 
 
-#include "database/databaseExceptions.hpp"
+#include "database/utility/databaseExceptions.hpp"
 
-#include "FileData.hpp"
+#include "filedata/FileData.hpp"
 
 
 ImageDelegate::ImageDelegate( QObject* parent ) : QAbstractItemDelegate( parent )
@@ -79,21 +79,6 @@ void ImageDelegate::paint(
 	if ( option.state & QStyle::State_Selected )
 	{
 		painter->fillRect( option.rect, QColor( 0, 0, 255, 50 ) );
-	}
-
-	//See if we have "system:inbox"
-	{
-		ZoneScopedN( "search_tag" )
-		for ( const auto& [ group, subtag, tag_id ]: filedat->tags )
-		{
-			if ( group == "system" && subtag == "inbox" )
-			{
-				//Add the inbox symbol to the top left of the image.
-				const QPixmap inbox_symbol( ":/IDHAN/letter-16.png" );
-				painter->drawPixmap( option.rect.topLeft(), inbox_symbol );
-				break;
-			}
-		}
 	}
 }
 

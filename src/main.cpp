@@ -16,7 +16,36 @@ void* operator new( std::size_t count )
 }
 
 
+void* operator new[]( std::size_t count )
+{
+	auto ptr = malloc( count );
+	TracySecureAlloc ( ptr, count );
+	return ptr;
+}
+
+
 void operator delete( void* ptr ) noexcept
+{
+	TracySecureFree ( ptr );
+	free( ptr );
+}
+
+
+void operator delete[]( void* ptr ) noexcept
+{
+	TracySecureFree ( ptr );
+	free( ptr );
+}
+
+
+void operator delete( void* ptr, std::size_t ) noexcept
+{
+	TracySecureFree ( ptr );
+	free( ptr );
+}
+
+
+void operator delete[]( void* ptr, std::size_t ) noexcept
 {
 	TracySecureFree ( ptr );
 	free( ptr );
@@ -34,7 +63,7 @@ void operator delete( void* ptr ) noexcept
 #include "mainView.hpp"
 
 
-#include "database.hpp"
+#include "database/database.hpp"
 
 #include <QPixmapCache>
 #include <QImageReader>

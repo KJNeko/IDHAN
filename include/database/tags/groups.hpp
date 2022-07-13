@@ -6,7 +6,7 @@
 #define MAIN_GROUPS_HPP
 
 
-#include "database.hpp"
+#include "database/database.hpp"
 #include <string>
 
 

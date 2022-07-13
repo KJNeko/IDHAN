@@ -2,8 +2,8 @@
 // Created by kj16609 on 6/28/22.
 //
 
-#include "database.hpp"
-#include "databaseExceptions.hpp"
+#include "database/database.hpp"
+#include "database/utility/databaseExceptions.hpp"
 #include "files.hpp"
 #include "metadata.hpp"
 

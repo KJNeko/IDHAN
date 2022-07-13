@@ -8,7 +8,7 @@
 #include "groups.hpp"
 #include "subtags.hpp"
 
-#include "databaseExceptions.hpp"
+#include "database/utility/databaseExceptions.hpp"
 
 #include "TracyBox.hpp"
 
@@ -61,6 +61,17 @@ uint64_t getTagID( const Group& group, const Subtag& subtag, bool create )
 
 	if ( res.empty() && create )
 	{
+		constexpr pqxx::zview lock { "LOCK TABLE tags IN EXCLUSIVE MODE" };
+		work.exec( lock );
+
+		constexpr pqxx::zview select { "SELECT tag_id FROM tags WHERE group_id = $1 AND subtag_id = $2" };
+		const pqxx::result select_res { work.exec_params( select, group_id, subtag_id ) };
+		if ( !select_res.empty() )
+		{
+			work.commit();
+			return select_res[ 0 ][ "tag_id" ].as< uint64_t >();
+		}
+
 		constexpr pqxx::zview query_insert {
 			"INSERT INTO tags ( group_id, subtag_id ) VALUES ( $1, $2 ) RETURNING tag_id" };
 		const pqxx::result insert_res { work.exec_params( query_insert, group_id, subtag_id ) };

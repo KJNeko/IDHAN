@@ -20,10 +20,10 @@
 #include "TracyBox.hpp"
 
 // Database
-#include "database/databaseExceptions.hpp"
-#include "database/files.hpp"
-#include "database/metadata.hpp"
-#include "database/mappings.hpp"
+#include "database/utility/databaseExceptions.hpp"
+#include "database/files/files.hpp"
+#include "database/files/metadata.hpp"
+#include "database/tags/mappings.hpp"
 
 // std
 #include <fstream>
@@ -83,7 +83,7 @@ void ImportViewer::processFiles()
 	ZoneScoped;
 
 	QThreadPool pool;
-	pool.setMaxThreadCount( 8 );
+	pool.setMaxThreadCount( 1 );
 
 	using Output = std::variant< uint64_t, IDHANError >;
 
@@ -310,9 +310,7 @@ void ImportViewer::processFiles()
 					{
 						std::string name;
 
-						ifs >> name;
-
-						//Split the tag by ":"
+						std::getline( ifs, name );
 
 						std::vector< std::string > split_strings;
 
@@ -322,11 +320,23 @@ void ImportViewer::processFiles()
 
 						for ( const auto word: std::views::split( sv, delim ) )
 						{
-							split_strings.push_back( word.data() );
+							if ( split_strings.empty() )
+							{
+								//Push back just the group
+								split_strings.push_back( std::string( word.data(), word.size() ) );
+							}
+							else
+							{
+								//Push back the rest of the tag
+								split_strings.push_back( std::string( word.data(), word.size() ) );
+							}
+							spdlog::debug( "Inserted: {}", split_strings.back() );
 						}
 
 						if ( split_strings.size() == 2 )
 						{
+							spdlog::debug( "split_strings.size() = {}", split_strings.size() );
+							spdlog::debug( "split_strings[0] = {}, split_strings[1] = {}", split_strings[ 0 ], split_strings[ 1 ] );
 							addMapping( sha256, split_strings[ 0 ], split_strings[ 1 ] );
 						}
 						else if ( split_strings.size() == 1 )
@@ -339,11 +349,7 @@ void ImportViewer::processFiles()
 						}
 
 					};
-
-
 				}
-
-
 			}
 
 

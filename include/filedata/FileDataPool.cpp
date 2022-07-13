@@ -1,27 +1,15 @@
 //
-// Created by kj16609 on 7/9/22.
+// Created by kj16609 on 7/13/22.
 //
 
-#include "FileData.hpp"
+#include "FileDataPool.hpp"
 
+#include "FileDataContainer.hpp"
 
-FileDataContainer::FileDataContainer( const uint64_t hash_id_, const std::shared_ptr< std::mutex > mtx_ptr )
-	: modificationLock( mtx_ptr ),
-	  hash_id( hash_id_ ),
-	  sha256( getHash( hash_id_ ) ),
-	  thumbnail_path( getThumbnailpath( hash_id_ ) ),
-	  thumbnail_valid( std::filesystem::exists( thumbnail_path ) ),
-	  file_path( getFilepath( hash_id_ ) ),
-	  tags( getTags( hash_id_ ) )
-{
-	ZoneScoped;
-}
+#include <mutex>
+#include <memory>
 
-
-void FileDataContainer::signalModification()
-{
-	//emit updated();
-}
+#include "TracyBox.hpp"
 
 
 std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_id )
@@ -101,33 +89,3 @@ void FileDataPool::clear( const uint64_t hash_id )
 		TracyCPlot( "FileDataPool Size", static_cast<double>(filePool.size()) );
 	}
 }
-
-
-//copy
-FileData::FileData( const FileData& other )
-	: std::shared_ptr< FileDataContainer >( other ), hash_id_( other.hash_id_ ) {}
-
-
-FileData::FileData( FileData&& other )
-	: std::shared_ptr< FileDataContainer >( std::move( other ) ), hash_id_( std::move( other.hash_id_ ) ) {}
-
-
-FileData::~FileData()
-{
-	//Check if this is the last shared pointer to the original datapool
-	if ( this->use_count() <= 1 )
-	{
-		FileDataPool::clear( hash_id_ );
-	}
-
-	//TracyFree( this );
-}
-
-
-
-
-
-
-
-
-

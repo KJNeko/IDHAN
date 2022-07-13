@@ -3,8 +3,8 @@
 //
 
 #include "mappings.hpp"
-#include "database.hpp"
-#include "databaseExceptions.hpp"
+#include "database/database.hpp"
+#include "database/utility/databaseExceptions.hpp"
 #include "tags.hpp"
 
 #include "TracyBox.hpp"
@@ -17,8 +17,22 @@ void addMapping( const Hash32& sha256, const std::string& group, const std::stri
 	Connection conn;
 	pqxx::work work { conn() };
 
+	constexpr pqxx::zview lockTable { "LOCK TABLE mappings IN EXCLUSIVE MODE" };
+
+	work.exec( lockTable );
+
 	const uint64_t tag_id { getTagID( group, subtag, true ) };
 	const uint64_t hash_id { getFileID( sha256, true ) };
+
+	//Check that it wasn't made before we locked
+	constexpr pqxx::zview checkMapping { "SELECT * FROM mappings WHERE tag_id = $1 AND hash_id = $2" };
+	const pqxx::result check_ret = work.exec_params( checkMapping, tag_id, hash_id );
+	if ( check_ret.size() )
+	{
+		work.commit();
+		return;
+	}
+
 
 	constexpr pqxx::zview query { "INSERT INTO mappings ( hash_id, tag_id ) VALUES ( $1, $2 )" };
 

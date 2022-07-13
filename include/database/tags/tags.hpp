@@ -10,9 +10,9 @@
 
 #include <string>
 
-#include "database.hpp"
-#include "database/groups.hpp"
-#include "database/subtags.hpp"
+#include "database/database.hpp"
+#include "groups.hpp"
+#include "subtags.hpp"
 
 
 struct Tag

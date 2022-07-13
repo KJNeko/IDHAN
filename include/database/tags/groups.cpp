@@ -4,8 +4,8 @@
 
 #include <QCache>
 #include "groups.hpp"
-#include "database.hpp"
-#include "databaseExceptions.hpp"
+#include "database/database.hpp"
+#include "database/utility/databaseExceptions.hpp"
 
 #include "TracyBox.hpp"
 
@@ -15,6 +15,19 @@ uint64_t addGroup( const Group& group )
 	ZoneScoped;
 	Connection conn;
 	pqxx::work work { conn() };
+
+	constexpr pqxx::zview lockTable { "LOCK TABLE groups IN EXCLUSIVE MODE" };
+
+	work.exec( lockTable );
+
+	//Check that it wasn't made before we locked
+	constexpr pqxx::zview checkGroup { "SELECT group_id FROM groups WHERE group_name = $1" };
+	const pqxx::result check_ret = work.exec_params( checkGroup, group.text );
+	if ( check_ret.size() )
+	{
+		work.commit();
+		return check_ret[ 0 ][ "group_id" ].as< uint64_t >();
+	}
 
 	constexpr pqxx::zview query { "INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
 
@@ -74,17 +87,7 @@ uint64_t getGroupID( const Group& group, const bool create )
 	{
 		if ( create )
 		{
-			constexpr pqxx::zview lockTable { "LOCK TABLE groups IN EXCLUSIVE MODE" };
-
-			work.exec( lockTable );
-
-			constexpr pqxx::zview query_insert { "INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
-
-			const pqxx::result res_insert { work.exec_params( query_insert, group.text ) };
-
-			work.commit();
-
-			return res_insert[ 0 ][ "group_id" ].as< uint64_t >();
+			return addGroup( group );
 		}
 		else
 		{
