@@ -61,9 +61,21 @@ void ListViewport::addFile( const uint64_t file_id )
 }
 
 
+void ListViewport::addFiles( const std::vector< uint64_t >& file_id )
+{
+	ZoneScoped;
+	model->addImages( file_id );
+
+	//If there are no files selected then update the model
+	if ( ui->listView->selectionModel()->selectedIndexes().empty() )
+	{
+		emit selection( model->getFiles() );
+	}
+}
+
+
 void ListViewport::itemActivated(
-	[[maybe_unused]] const QItemSelection& selected,
-	[[maybe_unused]] const QItemSelection& deselected )
+	[[maybe_unused]] const QItemSelection& selected, [[maybe_unused]] const QItemSelection& deselected )
 {
 	ZoneScoped;
 

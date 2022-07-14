@@ -27,6 +27,7 @@
 
 // std
 #include <fstream>
+#include <algorithm>
 
 #include "listViewport.hpp"
 #include "TagView.hpp"
@@ -83,22 +84,54 @@ void ImportViewer::processFiles()
 	ZoneScoped;
 
 	QThreadPool pool;
-	pool.setMaxThreadCount( 1 );
+	//Thread count should be 1/4h of the number of cores
+	pool.setMaxThreadCount( std::max( 1, static_cast<int>(std::thread::hardware_concurrency() / 4) ) );
+
+	spdlog::debug( "Starting processing thread with {} threads", pool.maxThreadCount() );
 
 	using Output = std::variant< uint64_t, IDHANError >;
 
+	std::vector< uint64_t > file_queue;
+	auto timepoint_queue_send = std::chrono::high_resolution_clock::now(); //Timepoint for the last time the queue was sent to the image list
+
 	//Apparently reduce needs a first parameter of a 'return' value for whatever reason
-	auto reduce = [ this ]( [[maybe_unused]] uint64_t&, const Output& var ) -> void
+	auto reduce = [ this, &file_queue, &timepoint_queue_send ](
+		[[maybe_unused]] uint64_t&, const Output& var ) -> void
 	{
 		ZoneScoped;
 		++filesProcessed;
+
+		auto processQueue = [ this, &file_queue, &timepoint_queue_send ]()
+		{
+			using namespace std::chrono_literals;
+
+			//Check if the queue is too long, If so send it to the image list
+			//Send it anyways if the previous send was longer then 30ms ago
+			//Should be fine to send it every 30 ms since the flicker is caused due
+			//to the signal trying to update the queue rapidly and cause a redraw for every insert
+			const auto timepoint_queue_send_now { std::chrono::high_resolution_clock::now() };
+			const auto time_diff { timepoint_queue_send_now - timepoint_queue_send };
+			constexpr size_t queue_send_interval { 50 }; //number of items before the queue is sent anyways
+			constexpr auto queue_send_time { 1s };
+
+			if ( time_diff > queue_send_time || file_queue.size() >= queue_send_interval )
+			{
+				viewport->addFiles( file_queue );
+				file_queue.clear();
+				timepoint_queue_send = timepoint_queue_send_now;
+			}
+		};
 
 		if ( auto valID = std::get_if< uint64_t >( &var ); valID != nullptr )
 		{
 			if ( *valID != 0 )
 			{
 				++successful;
-				viewport->addFile( *valID );
+				//viewport->addFile( *valID );
+
+				file_queue.push_back( *valID );
+				processQueue();
+
 				return;
 			}
 			else
@@ -110,33 +143,51 @@ void ImportViewer::processFiles()
 		{
 			auto& val = *e;
 
-			if ( val.error_code_ == ErrorNo::DATABASE_DATA_NOT_FOUND )
+			switch ( val.error_code_ )
 			{
+
+			case ErrorNo::DATABASE_DATA_NOT_FOUND:
 				++failed;
-			}
-			else if ( val.error_code_ == ErrorNo::DATABASE_DATA_ALREADY_EXISTS )
+				break;
+
+			case ErrorNo::DATABASE_DATA_ALREADY_EXISTS:
 			{
-				if ( val.hash_id == 0 )
+				if ( !val.hash_id )
 				{
 					++failed;
-					return;
+					break;
 				}
-				viewport->addFile( val.hash_id );
+
 				++alreadyinDB;
-				return;
+
+				file_queue.push_back( val.hash_id );
+				processQueue();
+
+				break;
 			}
-			else if ( val.error_code_ == ErrorNo::FILE_NOT_FOUND )
-			{
+
+			case ErrorNo::FILE_NOT_FOUND:
 				++failed;
-				return;
-			}
-			else if ( val.error_code_ == ErrorNo::UNKNOWN_ERROR )
-			{
-				spdlog::critical( "Unknown error occurred while processing file! error: {}", e->what() );
-			}
-			else
-			{
-				spdlog::critical( "Unhandled error code: {}", static_cast<int>(val.error_code_) );
+				break;
+
+			case ErrorNo::UNKNOWN_ERROR:
+				++failed;
+				spdlog::critical( "Unknown error occurred while processing file! Error: {}", e->what() );
+				break;
+
+			case ErrorNo::DATABASE_UNKNOWN_ERROR:
+				[[fallthrough]];
+			case ErrorNo::FSYNC_FILE_OPENEN_FAILED:
+				[[fallthrough]];
+			case ErrorNo::FILE_ALREADY_EXISTS:
+				[[fallthrough]];
+			default:
+				spdlog::error(
+					"Unhandled error code: {} in reduce function for file imports. Error: {}", static_cast<int>(val.error_code_), e
+					->what()
+				);
+
+
 			}
 		}
 		else
@@ -302,7 +353,6 @@ void ImportViewer::processFiles()
 			//Check to see if a file exists with the tags
 			if ( std::filesystem::exists( path_.string() + ".txt" ) )
 			{
-				spdlog::info( "Suspected file with tags found {}", path_.string() + ".txt" );
 
 				if ( std::ifstream ifs( path_.string() + ".txt" ); ifs )
 				{
@@ -318,7 +368,7 @@ void ImportViewer::processFiles()
 
 						const std::string_view sv { name };
 
-						for ( const auto word: std::views::split( sv, delim ) )
+						for ( const auto& word: std::views::split( sv, delim ) )
 						{
 							if ( split_strings.empty() )
 							{
@@ -330,13 +380,10 @@ void ImportViewer::processFiles()
 								//Push back the rest of the tag
 								split_strings.push_back( std::string( word.data(), word.size() ) );
 							}
-							spdlog::debug( "Inserted: {}", split_strings.back() );
 						}
 
 						if ( split_strings.size() == 2 )
 						{
-							spdlog::debug( "split_strings.size() = {}", split_strings.size() );
-							spdlog::debug( "split_strings[0] = {}, split_strings[1] = {}", split_strings[ 0 ], split_strings[ 1 ] );
 							addMapping( sha256, split_strings[ 0 ], split_strings[ 1 ] );
 						}
 						else if ( split_strings.size() == 1 )

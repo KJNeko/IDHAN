@@ -50,8 +50,10 @@ private:
 
 public slots:
 
-	void addFile( uint64_t );
+	void addFile( const uint64_t );
 
+	void addFiles( const std::vector< uint64_t >& file_id );
+	
 	void resetFiles();
 
 	void setFiles( const std::vector< uint64_t >& files );
