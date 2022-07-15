@@ -63,10 +63,17 @@ message("${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}}")
 target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/interface/src)
 target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_compile_features(IDHAN PRIVATE cxx_std_20)
-target_compile_definitions(IDHAN PRIVATE FGL_ACKNOWLEDGE_INCOMPATIBLE_COMPILER TRACY_ENABLE)
+
+if (CMAKE_BUILD_TYPE MATCHES "Debug")
+    target_compile_definitions(IDHAN PRIVATE FGL_ACKNOWLEDGE_INCOMPATIBLE_COMPILER TRACY_ENABLE)
+else ()
+    target_compile_definitions(IDHAN PRIVATE FGL_ACKNOWLEDGE_INCOMPATIBLE_COMPILER)
+endif ()
 
 
 target_link_libraries(IDHAN Qt6::Core Qt6::Widgets Qt6::Concurrent spdlog::spdlog libpqxx::pqxx tracy::tracy libFGL::libFGL)
+
+
 
 
 

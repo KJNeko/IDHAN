@@ -26,7 +26,7 @@ ImportWindow::ImportWindow( QWidget* parent ) : QDialog( parent ), ui( new Ui::I
 
 	// Create a new model
 	// Create a new model
-	QStandardItemModel * model = new QStandardItemModel();
+	QStandardItemModel* model = new QStandardItemModel();
 
 	model->setColumnCount( 3 );
 	model->setHorizontalHeaderItem( 0, new QStandardItem( "Name" ) );
@@ -94,7 +94,7 @@ void ImportWindow::on_addFolder_clicked()
 
 		if ( !mimeType.contains( "image/" ) && !mimeType.contains( "video/" ) )
 		{
-			spdlog::info( "Skipping {} due to mime type {}", file.toStdString(), mimeType.toStdString() );
+			ui->progressBar->setMaximum( ui->progressBar->maximum() - 1 );
 			continue;
 		}
 
@@ -117,8 +117,15 @@ void ImportWindow::on_addFolder_clicked()
 
 		// Set the progress bar
 		ui->progressBar->setValue( ui->progressBar->value() + 1 );
-		//QApplication::processEvents();
+
+		if ( ui->progressBar->value() % 100 == 0 )
+		{
+			QApplication::processEvents();
+			ui->fileList->resizeColumnsToContents();
+		}
 	}
+
+	QApplication::processEvents();
 
 	ui->fileList->resizeColumnsToContents();
 }

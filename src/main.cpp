@@ -74,8 +74,7 @@ int main( int argc, char** argv )
 	spdlog::info( "Starting IDHAN" );
 	QImageReader::setAllocationLimit( 0 );
 
-	//About 1G
-	QPixmapCache::setCacheLimit( 500000 );
+	QPixmapCache::setCacheLimit( 1000000 ); //1 = 1KB
 
 	std::cout << "Qt version: " << qVersion() << std::endl;
 

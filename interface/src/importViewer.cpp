@@ -84,8 +84,8 @@ void ImportViewer::processFiles()
 	ZoneScoped;
 
 	QThreadPool pool;
-	//Thread count should be 1/4h of the number of cores
-	pool.setMaxThreadCount( std::max( 1, static_cast<int>(std::thread::hardware_concurrency() / 4) ) );
+	//Thread count should be 1/4th of the number of cores
+	pool.setMaxThreadCount( std::max( 4, static_cast<int>(std::thread::hardware_concurrency() / 4) ) );
 
 	spdlog::debug( "Starting processing thread with {} threads", pool.maxThreadCount() );
 
@@ -94,14 +94,17 @@ void ImportViewer::processFiles()
 	std::vector< uint64_t > file_queue;
 	auto timepoint_queue_send = std::chrono::high_resolution_clock::now(); //Timepoint for the last time the queue was sent to the image list
 
+	const uint64_t file_count { files.size() };
+	uint64_t file_counter { 0 };
+
 	//Apparently reduce needs a first parameter of a 'return' value for whatever reason
-	auto reduce = [ this, &file_queue, &timepoint_queue_send ](
+	auto reduce = [ this, &file_queue, &timepoint_queue_send, &file_counter, file_count ](
 		[[maybe_unused]] uint64_t&, const Output& var ) -> void
 	{
 		ZoneScoped;
 		++filesProcessed;
 
-		auto processQueue = [ this, &file_queue, &timepoint_queue_send ]()
+		auto processQueue = [ this, &file_queue, &timepoint_queue_send, &file_counter, file_count ]()
 		{
 			using namespace std::chrono_literals;
 
@@ -112,10 +115,13 @@ void ImportViewer::processFiles()
 			const auto timepoint_queue_send_now { std::chrono::high_resolution_clock::now() };
 			const auto time_diff { timepoint_queue_send_now - timepoint_queue_send };
 			constexpr size_t queue_send_interval { 50 }; //number of items before the queue is sent anyways
-			constexpr auto queue_send_time { 1s };
+			constexpr auto queue_send_time { 1000ms / 5 }; //Five times per second
 
-			if ( time_diff > queue_send_time || file_queue.size() >= queue_send_interval )
+			if ( time_diff > queue_send_time ||
+				file_queue.size() >= queue_send_interval ||
+				file_counter + file_queue.size() >= file_count - 5 )
 			{
+				file_counter += file_queue.size();
 				viewport->addFiles( file_queue );
 				file_queue.clear();
 				timepoint_queue_send = timepoint_queue_send_now;
@@ -313,12 +319,13 @@ void ImportViewer::processFiles()
 
 				::close( val );
 
-				#else
+				#elif _WIN32
 				// TODO implement for windows
 				// https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-flushfilebuffers?redirectedfrom=MSDN
 
-
-				#warning "Current operating system doesn't have fsync support implemented, This could cause dataloss in the event of powerloss or a crash"
+				#else
+					#ifndef FGL_FGL_ACKNOWLEDGE_INCOMPATIBLE_OS
+						#warning "Current operating system doesn't have fsync support implemented, This could cause dataloss in the event of powerloss or a crash"
 				// Write the file
 				// If the OS dies and your file isn't fully written.
 				// Not my fault. Get a better OS bitch
@@ -329,6 +336,7 @@ void ImportViewer::processFiles()
 						static_cast<long>( bytes.size() ) );
 					ofs.rdbuf()->pubsync();
 				}
+					#endif
 				#endif
 			}
 
@@ -347,8 +355,8 @@ void ImportViewer::processFiles()
 			//Add metadata
 			populateMime( hash_id, mime_type.name().toStdString() );
 
-			//Add the "system:inbox" tag to the image
-			addMapping( sha256, "system", "inbox" );
+			//Mark the file as 'inbox'
+			//TODO
 
 			//Check to see if a file exists with the tags
 			if ( std::filesystem::exists( path_.string() + ".txt" ) )
@@ -382,13 +390,23 @@ void ImportViewer::processFiles()
 							}
 						}
 
-						if ( split_strings.size() == 2 )
+
+						if ( split_strings.size() >= 2 )
 						{
-							addMapping( sha256, split_strings[ 0 ], split_strings[ 1 ] );
+							const size_t group_size { split_strings[ 0 ].size() };
+							//Combine all but the first string
+							std::string combined_string;
+
+							for ( size_t i = group_size + 1; i < name.size(); ++i )
+							{
+								combined_string += name[ i ];
+							}
+
+							addMapping( hash_id, split_strings[ 0 ], combined_string );
 						}
 						else if ( split_strings.size() == 1 )
 						{
-							addMapping( sha256, "", split_strings[ 0 ] );
+							addMapping( hash_id, "", split_strings[ 0 ] );
 						}
 						else
 						{
@@ -438,6 +456,8 @@ void ImportViewer::processFiles()
 
 
 	spdlog::info( "Finished processing files" );
+
+	files.clear();
 }
 
 

@@ -14,10 +14,14 @@
 #include "database/files/files.hpp"
 
 
-void addMapping(
+void addMapping( const uint64_t, const std::string& group, const std::string& subtag );
+
+void removeMapping( const uint64_t, const std::string& group, const std::string& subtag );
+
+void addMappingToHash(
 	const Hash32& sha256, const std::string& group, const std::string& subtag );
 
-void removeMapping(
+void removeMappingFromHash(
 	const Hash32& sha256, const std::string& group, const std::string& subtag );
 
 

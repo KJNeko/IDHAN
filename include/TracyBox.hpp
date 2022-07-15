@@ -20,7 +20,10 @@
 
 #include <Tracy.hpp>
 #include <TracyC.h>
+
+
 #include <spdlog/spdlog.h>
+
 
 
 
@@ -28,5 +31,6 @@
 
 // Undo warnings disable
 #pragma GCC diagnostic pop
+
 
 #endif // MAIN_TRACYBOX_HPP

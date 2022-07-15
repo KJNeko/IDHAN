@@ -10,9 +10,11 @@
 #include "TracyBox.hpp"
 
 
-void addMapping( const Hash32& sha256, const std::string& group, const std::string& subtag )
+void addMapping( const uint64_t hash_id, const std::string& group, const std::string& subtag )
 {
 	ZoneScoped;
+	const uint64_t tag_id { getTagID( group, subtag, true ) };
+
 
 	Connection conn;
 	pqxx::work work { conn() };
@@ -20,6 +22,63 @@ void addMapping( const Hash32& sha256, const std::string& group, const std::stri
 	constexpr pqxx::zview lockTable { "LOCK TABLE mappings IN EXCLUSIVE MODE" };
 
 	work.exec( lockTable );
+
+	//Check that another transaction didn't make it in between
+
+	constexpr pqxx::zview checkMapping { "SELECT * FROM mappings WHERE tag_id = $1 AND hash_id = $2" };
+	const pqxx::result check_ret2 = work.exec_params( checkMapping, tag_id, hash_id );
+	if ( check_ret2.size() )
+	{
+		work.commit();
+		return;
+	}
+
+	constexpr pqxx::zview query { "INSERT INTO mappings ( hash_id, tag_id ) VALUES ( $1, $2 )" };
+
+	work.exec_params( query, hash_id, tag_id );
+
+	work.commit();
+}
+
+
+void removeMapping( const uint64_t hash_id, const std::string& group, const std::string& subtag )
+{
+	ZoneScoped;
+	const uint64_t tag_id { getTagID( group, subtag, true ) };
+
+	Connection conn;
+	pqxx::work work { conn() };
+
+
+	constexpr pqxx::zview lockTable { "LOCK TABLE mappings IN EXCLUSIVE MODE" };
+	work.exec( lockTable );
+
+	constexpr pqxx::zview query { "DELETE FROM mappings WHERE hash_id = $1 AND tag_id = $1" };
+
+	const pqxx::result res = work.exec_params( query, hash_id, tag_id );
+
+	if ( res.affected_rows() == 0 )
+	{
+		throw IDHANError(
+			ErrorNo::DATABASE_DATA_NOT_FOUND, "No mapping found for " +
+			std::to_string( hash_id ) +
+			" in " +
+			group +
+			":" +
+			subtag
+		);
+	}
+
+	work.commit();
+}
+
+
+void addMappingToHash( const Hash32& sha256, const std::string& group, const std::string& subtag )
+{
+	ZoneScoped;
+
+	Connection conn;
+	pqxx::work work { conn() };
 
 	const uint64_t tag_id { getTagID( group, subtag, true ) };
 	const uint64_t hash_id { getFileID( sha256, true ) };
@@ -33,40 +92,13 @@ void addMapping( const Hash32& sha256, const std::string& group, const std::stri
 		return;
 	}
 
-
-	constexpr pqxx::zview query { "INSERT INTO mappings ( hash_id, tag_id ) VALUES ( $1, $2 )" };
-
-	work.exec_params( query, hash_id, tag_id );
-
-	work.commit();
+	addMapping( hash_id, group, subtag );
 }
 
 
-void removeMapping( const Hash32& sha256, const std::string& group, const std::string& subtag )
+void removeMappingFromHash( const Hash32& sha256, const std::string& group, const std::string& subtag )
 {
-	ZoneScoped;
-	const uint64_t tag_id { getTagID( group, subtag, false ) };
 	const uint64_t hash_id { getFileID( sha256, false ) };
 
-
-	Connection conn;
-	pqxx::work work { conn() };
-
-	constexpr pqxx::zview query { "DELETE FROM mappings WHERE hash_id = $1 AND tag_id = $1" };
-
-	const pqxx::result res = work.exec_params( query, hash_id, tag_id );
-
-	if ( res.affected_rows() == 0 )
-	{
-		throw IDHANError(
-			ErrorNo::DATABASE_DATA_NOT_FOUND, "No mapping found for " +
-			sha256.getQByteArray().toHex().toStdString() +
-			" in " +
-			group +
-			":" +
-			subtag
-		);
-	}
-
-	work.commit();
+	removeMapping( hash_id, group, subtag );
 }
