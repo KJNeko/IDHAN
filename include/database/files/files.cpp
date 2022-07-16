@@ -20,18 +20,16 @@ uint64_t addFile( const Hash32& sha256 )
 {
 	ZoneScoped;
 	Connection conn;
-	pqxx::work work { conn() };
+	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query = "INSERT INTO files (sha256) VALUES ($1) RETURNING hash_id";
 
-	const pqxx::result res = work.exec_params( query, sha256.getView() );
+	const pqxx::result res = work->exec_params( query, sha256.getView() );
 
 	if ( res.empty() )
 	{
 		spdlog::error( "Failed to insert file into database" );
 	}
-
-	work.commit();
 
 	return res[ 0 ][ "hash_id" ].as< uint64_t >();
 }
@@ -42,11 +40,11 @@ uint64_t getFileID( const Hash32& sha256, const bool add )
 	ZoneScoped;
 
 	Connection conn;
-	pqxx::work work { conn() };
+	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query = "SELECT hash_id FROM files WHERE sha256 = $1";
 
-	const pqxx::result res = work.exec_params( query, sha256.getView() );
+	const pqxx::result res = work->exec_params( query, sha256.getView() );
 
 	if ( res.empty() )
 	{
@@ -80,11 +78,11 @@ Hash32 getHash( const uint64_t hash_id )
 	}
 
 	Connection conn;
-	pqxx::work work { conn() };
+	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query { "SELECT sha256 FROM files WHERE hash_id = $1" };
 
-	const pqxx::result res { work.exec_params( query, hash_id ) };
+	const pqxx::result res { work->exec_params( query, hash_id ) };
 
 	if ( res.empty() )
 	{
@@ -112,8 +110,6 @@ Hash32 getHash( const uint64_t hash_id )
 	//Add the hash to the cache
 	cache.insert( hash_id, new std::shared_ptr< Hash32 >( hash_ptr ) );
 
-	work.commit();
-
 	return Hash32 { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string >() ) };
 }
 
@@ -124,11 +120,11 @@ std::filesystem::path getThumbnailpath( const uint64_t hash_id )
 	ZoneScoped;
 
 	Connection conn;
-	pqxx::work work { conn() };
+	auto work { conn.getWork() };
 
 	const Hash32 hash { getHash( hash_id ) };
 
-	work.commit();
+	work->commit();
 
 	return getThumbnailpathFromHash( hash );
 }

@@ -32,7 +32,7 @@ void TagModel::setFiles( const std::vector< uint64_t >& hash_ids )
 	beginResetModel();
 
 	Connection conn;
-	pqxx::work work( conn() );
+	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query_raw {
 		"SELECT tag_id, count(tag_id) AS counter FROM mappings WHERE hash_id = ANY($1::bigint[]) GROUP BY tag_id" };
@@ -70,7 +70,7 @@ void TagModel::setFiles( const std::vector< uint64_t >& hash_ids )
 	}
 
 
-	database_ret = { work.exec_params( query_str, hash_ids ) };
+	database_ret = { work->exec_params( query_str, hash_ids ) };
 
 	endResetModel();
 }

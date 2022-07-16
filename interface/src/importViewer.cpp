@@ -364,6 +364,9 @@ void ImportViewer::processFiles()
 
 				if ( std::ifstream ifs( path_.string() + ".txt" ); ifs )
 				{
+					Connection conn;
+					auto work { conn.getWork() };
+
 					while ( !ifs.eof() )
 					{
 						std::string name;
@@ -413,7 +416,9 @@ void ImportViewer::processFiles()
 							spdlog::error( "Invalid tag format {}", name );
 						}
 
-					};
+					}
+
+					work->commit();
 				}
 			}
 

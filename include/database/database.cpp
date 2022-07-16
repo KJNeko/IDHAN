@@ -14,13 +14,13 @@ namespace Database
 		ZoneScoped;
 		spdlog::info( "Initalizing connections with settings '" + connectionArgs + "'" );
 
-		ConnectionPool::init( connectionArgs );
+		ConnectionManager::init( connectionArgs );
 
 		Connection conn;
 		spdlog::info( "Connections made" );
 
 		// Create the tables if they don't exist
-		pqxx::work work { conn() };
+		auto work { conn.getWork() };
 
 		spdlog::info( "Checking tables" );
 
@@ -43,9 +43,9 @@ namespace Database
 		CREATE INDEX IF NOT EXISTS mime_mime_index ON mime(hash_id);
 		)" };
 
-		work.exec( table_query );
-		work.exec( index_query );
+		work->exec( table_query );
+		work->exec( index_query );
 
-		work.commit();
+		work->commit();
 	}
 }

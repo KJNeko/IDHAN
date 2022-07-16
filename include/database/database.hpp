@@ -29,66 +29,66 @@
 #include <queue>
 #include <thread>
 
+#include "TracyBox.hpp"
 
-#define POOL_COUNT static_cast<uint64_t>(32)
 
-class ConnectionPool
+class ConnectionManager
 {
+	inline static std::unique_ptr< pqxx::connection > connection;
 
-	inline static std::queue< pqxx::connection > connections;
-	inline static std::mutex connections_mutex;
-	inline static std::counting_semaphore< POOL_COUNT > active = std::counting_semaphore< POOL_COUNT >( POOL_COUNT );
+	inline static std::shared_ptr< pqxx::work > work_global;
 
 public:
-	static void init( const std::string& connString )
+	inline static std::recursive_mutex connectionLock;
+
+
+	inline static std::shared_ptr< pqxx::work > acquireWork()
 	{
-		std::lock_guard< std::mutex > lock( connections_mutex );
-		for ( uint64_t i = 0; i < POOL_COUNT; i++ )
+		if ( work_global == nullptr )
 		{
-			connections.push( pqxx::connection( connString ) );
+			spdlog::debug( "Beginning new work transaction" );
+			work_global = std::make_shared< pqxx::work >( *connection );
+		}
+		return work_global;
+	}
+
+
+	inline static void markFinished()
+	{
+		if ( work_global.unique() )
+		{
+			auto temp = std::move( work_global );
+			work_global = nullptr;
 		}
 	}
 
 
-	static pqxx::connection acquire()
+	inline static void init( const std::string& connectionString )
 	{
-		active.acquire();
-		std::lock_guard< std::mutex > lock( connections_mutex );
-		auto connection = std::move( connections.front() );
-		connections.pop();
-
-		return std::move( std::move( connection ) );
-	}
-
-
-	static void release( pqxx::connection& conn )
-	{
-		std::lock_guard< std::mutex > lock( connections_mutex );
-		connections.push( std::move( conn ) );
-		active.release();
+		connection = std::make_unique< pqxx::connection >( connectionString );
 	}
 };
 
 class Connection
 {
-	std::unique_ptr< pqxx::connection > conn { nullptr };
+	std::lock_guard< std::recursive_mutex > lock;
+
+	std::shared_ptr< pqxx::work > work;
 
 public:
-	Connection()
+
+	Connection() : lock( ConnectionManager::connectionLock ), work( ConnectionManager::acquireWork() ) {}
+
+
+	std::shared_ptr< pqxx::work > getWork()
 	{
-		conn = std::make_unique< pqxx::connection >( ConnectionPool::acquire() );
+		return work;
 	}
 
 
 	~Connection()
 	{
-		ConnectionPool::release( *conn.get() );
-	}
-
-
-	pqxx::connection& operator()()
-	{
-		return *conn;
+		ConnectionManager::markFinished();
 	}
 };
 

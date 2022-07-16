@@ -17,27 +17,20 @@ void addMapping( const uint64_t hash_id, const std::string& group, const std::st
 
 
 	Connection conn;
-	pqxx::work work { conn() };
-
-	constexpr pqxx::zview lockTable { "LOCK TABLE mappings IN EXCLUSIVE MODE" };
-
-	work.exec( lockTable );
+	auto work { conn.getWork() };
 
 	//Check that another transaction didn't make it in between
 
 	constexpr pqxx::zview checkMapping { "SELECT * FROM mappings WHERE tag_id = $1 AND hash_id = $2" };
-	const pqxx::result check_ret2 = work.exec_params( checkMapping, tag_id, hash_id );
+	const pqxx::result check_ret2 = work->exec_params( checkMapping, tag_id, hash_id );
 	if ( check_ret2.size() )
 	{
-		work.commit();
 		return;
 	}
 
 	constexpr pqxx::zview query { "INSERT INTO mappings ( hash_id, tag_id ) VALUES ( $1, $2 )" };
 
-	work.exec_params( query, hash_id, tag_id );
-
-	work.commit();
+	work->exec_params( query, hash_id, tag_id );
 }
 
 
@@ -47,15 +40,11 @@ void removeMapping( const uint64_t hash_id, const std::string& group, const std:
 	const uint64_t tag_id { getTagID( group, subtag, true ) };
 
 	Connection conn;
-	pqxx::work work { conn() };
-
-
-	constexpr pqxx::zview lockTable { "LOCK TABLE mappings IN EXCLUSIVE MODE" };
-	work.exec( lockTable );
+	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query { "DELETE FROM mappings WHERE hash_id = $1 AND tag_id = $1" };
 
-	const pqxx::result res = work.exec_params( query, hash_id, tag_id );
+	const pqxx::result res = work->exec_params( query, hash_id, tag_id );
 
 	if ( res.affected_rows() == 0 )
 	{
@@ -69,7 +58,6 @@ void removeMapping( const uint64_t hash_id, const std::string& group, const std:
 		);
 	}
 
-	work.commit();
 }
 
 
@@ -78,17 +66,16 @@ void addMappingToHash( const Hash32& sha256, const std::string& group, const std
 	ZoneScoped;
 
 	Connection conn;
-	pqxx::work work { conn() };
+	auto work { conn.getWork() };
 
 	const uint64_t tag_id { getTagID( group, subtag, true ) };
 	const uint64_t hash_id { getFileID( sha256, true ) };
 
 	//Check that it wasn't made before we locked
 	constexpr pqxx::zview checkMapping { "SELECT * FROM mappings WHERE tag_id = $1 AND hash_id = $2" };
-	const pqxx::result check_ret = work.exec_params( checkMapping, tag_id, hash_id );
+	const pqxx::result check_ret = work->exec_params( checkMapping, tag_id, hash_id );
 	if ( check_ret.size() )
 	{
-		work.commit();
 		return;
 	}
 
