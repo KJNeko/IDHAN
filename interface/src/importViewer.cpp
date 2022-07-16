@@ -314,6 +314,74 @@ void ImportViewer::processFiles()
 				}
 				TracyCZoneEnd( generate_thumbnail );
 
+				const std::vector< std::pair< std::string, std::string>> tags = [ &path_ ]()
+				{
+					std::vector< std::pair< std::string, std::string>> tags_vec;
+					//Check to see if a file exists with the tags
+					if ( std::filesystem::exists( path_.string() + ".txt" ) )
+					{
+
+						if ( std::ifstream ifs( path_.string() + ".txt" ); ifs )
+						{
+
+							while ( !ifs.eof() )
+							{
+								std::string name;
+
+								std::getline( ifs, name );
+
+								std::vector< std::string > split_strings;
+
+								constexpr std::string_view delim { ":" };
+
+								const std::string_view sv { name };
+
+								for ( const auto& word: std::views::split( sv, delim ) )
+								{
+									if ( split_strings.empty() )
+									{
+										//Push back just the group
+										split_strings.push_back( std::string( word.data(), word.size() ) );
+									}
+									else
+									{
+										//Push back the rest of the tag
+										split_strings.push_back( std::string( word.data(), word.size() ) );
+									}
+								}
+
+
+								if ( split_strings.size() >= 2 )
+								{
+									const size_t group_size { split_strings[ 0 ].size() };
+									//Combine all but the first string
+									std::string combined_string;
+
+									for ( size_t i = group_size + 1; i < name.size(); ++i )
+									{
+										combined_string += name[ i ];
+									}
+
+									tags_vec.push_back( std::make_pair( split_strings[ 0 ], combined_string ) );
+									//addMapping( hash_id, split_strings[ 0 ], combined_string );
+								}
+								else if ( split_strings.size() == 1 )
+								{
+									tags_vec.push_back( std::make_pair( split_strings[ 0 ], "" ) );
+									//addMapping( hash_id, "", split_strings[ 0 ] );
+								}
+								else
+								{
+									spdlog::error( "Invalid tag format {}", name );
+								}
+
+							}
+						}
+					}
+
+					return tags_vec;
+				}();
+
 				//Ensure that everything is done
 				::fsync( val );
 
@@ -338,93 +406,39 @@ void ImportViewer::processFiles()
 				}
 					#endif
 				#endif
-			}
 
 
-			// Insert into database
-			//Check if it is in the database
-			const uint64_t hash_id_exists = getFileID( sha256 );
-
-			if ( hash_id_exists )
-			{
-				throw IDHANError( ErrorNo::DATABASE_DATA_ALREADY_EXISTS, "Duplicate hash_id", hash_id_exists );
-			}
-
-			const auto hash_id = addFile( sha256 );
-
-			//Add metadata
-			populateMime( hash_id, mime_type.name().toStdString() );
-
-			//Mark the file as 'inbox'
-			//TODO
-
-			//Check to see if a file exists with the tags
-			if ( std::filesystem::exists( path_.string() + ".txt" ) )
-			{
-
-				if ( std::ifstream ifs( path_.string() + ".txt" ); ifs )
+				// Insert into database
+				//Check if it is in the database
 				{
 					Connection conn;
 					auto work { conn.getWork() };
 
-					while ( !ifs.eof() )
+					const uint64_t hash_id_exists = getFileID( sha256 );
+
+					if ( hash_id_exists )
 					{
-						std::string name;
+						throw IDHANError( ErrorNo::DATABASE_DATA_ALREADY_EXISTS, "Duplicate hash_id", hash_id_exists );
+					}
 
-						std::getline( ifs, name );
+					const auto hash_id = addFile( sha256 );
 
-						std::vector< std::string > split_strings;
+					//Add metadata
+					populateMime( hash_id, mime_type.name().toStdString() );
 
-						constexpr std::string_view delim { ":" };
-
-						const std::string_view sv { name };
-
-						for ( const auto& word: std::views::split( sv, delim ) )
-						{
-							if ( split_strings.empty() )
-							{
-								//Push back just the group
-								split_strings.push_back( std::string( word.data(), word.size() ) );
-							}
-							else
-							{
-								//Push back the rest of the tag
-								split_strings.push_back( std::string( word.data(), word.size() ) );
-							}
-						}
-
-
-						if ( split_strings.size() >= 2 )
-						{
-							const size_t group_size { split_strings[ 0 ].size() };
-							//Combine all but the first string
-							std::string combined_string;
-
-							for ( size_t i = group_size + 1; i < name.size(); ++i )
-							{
-								combined_string += name[ i ];
-							}
-
-							addMapping( hash_id, split_strings[ 0 ], combined_string );
-						}
-						else if ( split_strings.size() == 1 )
-						{
-							addMapping( hash_id, "", split_strings[ 0 ] );
-						}
-						else
-						{
-							spdlog::error( "Invalid tag format {}", name );
-						}
-
+					for ( const auto& tag: tags )
+					{
+						addMapping( hash_id, tag.first, tag.second );
 					}
 
 					work->commit();
+
+					return Output( hash_id );
 				}
+				//Mark the file as 'inbox'
+				//TODO
+
 			}
-
-
-			return Output( hash_id );
-
 			spdlog::critical( "PROCESS HAS ESCAPED SCOPE BOUNDS!" );
 		}
 		catch ( IDHANError& e )
