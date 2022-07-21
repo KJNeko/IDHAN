@@ -18,7 +18,6 @@ uint64_t getMimeID( const std::string& mime )
 	Connection conn;
 	auto work { conn.getWork() };
 
-
 	constexpr pqxx::zview query { "SELECT mime_id FROM mime_types WHERE mime = $1" };
 
 	pqxx::result res { work->exec_params( query, mime ) };
@@ -35,12 +34,14 @@ uint64_t getMimeID( const std::string& mime )
 	}
 
 	return res[ 0 ][ "mime_id" ].as< uint64_t >();
+
 }
 
 
 void populateMime( const uint64_t hash_id, const std::string& mime )
 {
 	ZoneScoped;
+
 	Connection conn;
 	auto work { conn.getWork() };
 
@@ -49,8 +50,6 @@ void populateMime( const uint64_t hash_id, const std::string& mime )
 	const auto mime_id { getMimeID( mime ) };
 
 	const pqxx::result ret = work->exec_params( query, hash_id, mime_id );
-
-	return;
 }
 
 

@@ -21,7 +21,6 @@ uint64_t addGroup( const Group& group )
 	const pqxx::result check_ret = work->exec_params( checkGroup, group.text );
 	if ( check_ret.size() )
 	{
-		work->commit();
 		return check_ret[ 0 ][ "group_id" ].as< uint64_t >();
 	}
 
@@ -35,8 +34,9 @@ uint64_t addGroup( const Group& group )
 
 Group getGroup( const uint64_t group_id )
 {
+
 	ZoneScoped;
-	static QCache< uint64_t, Group > group_cache { 5000 };
+	static QCache< uint64_t, Group > group_cache { 64000000 };
 
 	if ( group_cache.contains( group_id ) )
 	{
@@ -57,10 +57,13 @@ Group getGroup( const uint64_t group_id )
 			ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with id " + std::to_string( group_id ) + " found."
 		);
 	}
-	
-	group_cache.insert( group_id, new Group( res[ 0 ][ "group_name" ].as< std::string >() ) );
+
+	const std::string str { res[ 0 ][ "group_name" ].as< std::string_view >() };
+
+	group_cache.insert( group_id, new Group( str ), str.size() );
 
 	return res[ 0 ][ "group_name" ].as< std::string >();
+
 }
 
 

@@ -11,6 +11,7 @@
 
 uint64_t addSubtag( const Subtag& subtag )
 {
+
 	ZoneScoped;
 	Connection conn;
 	auto work { conn.getWork() };
@@ -28,6 +29,7 @@ uint64_t addSubtag( const Subtag& subtag )
 	const pqxx::result res { work->exec_params( query, subtag.text ) };
 
 	return res[ 0 ][ "subtag_id" ].as< uint64_t >();
+
 }
 
 

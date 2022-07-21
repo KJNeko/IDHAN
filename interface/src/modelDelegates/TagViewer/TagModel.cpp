@@ -76,25 +76,25 @@ void TagModel::setFiles( const std::vector< uint64_t >& hash_ids )
 }
 
 
-TagModel::TagModel( QWidget* parent )
+TagModel::TagModel( [[maybe_unused]]QWidget* parent )
 {
 
 }
 
 
-int TagModel::rowCount( const QModelIndex& parent ) const
+int TagModel::rowCount( [[maybe_unused]] const QModelIndex& parent ) const
 {
 	return database_ret.size();
 }
 
 
-int TagModel::columnCount( const QModelIndex& parent ) const
+int TagModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
 {
 	return 1;
 }
 
 
-QVariant TagModel::data( const QModelIndex& index, int role ) const
+QVariant TagModel::data( const QModelIndex& index, [[maybe_unused]] int role ) const
 {
 	DataPack pack;
 	pack.tag_id = database_ret[ index.row() ][ "tag_id" ].as< uint64_t >();

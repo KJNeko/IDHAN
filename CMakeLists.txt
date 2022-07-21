@@ -50,7 +50,6 @@ endif ()
 file(GLOB_RECURSE SOURCES
         "${CMAKE_SOURCE_DIR}/src/*.cpp"
         "${CMAKE_SOURCE_DIR}/include/*.cpp"
-        "${CMAKE_SOURCE_DIR}/include/services/*.cpp"
         "${CMAKE_SOURCE_DIR}/interface/src/*.cpp"
         "${CMAKE_SOURCE_DIR}/Resources/*.qrc"
         )

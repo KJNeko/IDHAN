@@ -12,21 +12,12 @@
 
 void addMapping( const uint64_t hash_id, const std::string& group, const std::string& subtag )
 {
+
 	ZoneScoped;
 	const uint64_t tag_id { getTagID( group, subtag, true ) };
-
-
+	
 	Connection conn;
 	auto work { conn.getWork() };
-
-	//Check that another transaction didn't make it in between
-
-	constexpr pqxx::zview checkMapping { "SELECT * FROM mappings WHERE tag_id = $1 AND hash_id = $2" };
-	const pqxx::result check_ret2 = work->exec_params( checkMapping, tag_id, hash_id );
-	if ( check_ret2.size() )
-	{
-		return;
-	}
 
 	constexpr pqxx::zview query { "INSERT INTO mappings ( hash_id, tag_id ) VALUES ( $1, $2 )" };
 

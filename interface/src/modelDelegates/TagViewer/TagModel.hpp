@@ -41,9 +41,9 @@ public:
 
 private:
 
-	pqxx::result database_ret;
+	pqxx::result database_ret {};
 
-	std::mutex mtx;
+	std::mutex mtx {};
 };
 
 

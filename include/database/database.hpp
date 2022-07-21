@@ -31,70 +31,175 @@
 
 #include "TracyBox.hpp"
 
+#include <iostream>
+
+
+#define CONNECTION_MAX_COUNT 32
+
+class ConnectionPool
+{
+
+	inline static std::queue< std::unique_ptr< pqxx::connection > > connections {};
+
+	inline static std::counting_semaphore< CONNECTION_MAX_COUNT > readyConnections { 0 };
+
+	inline static std::mutex poolLock;
+
+public:
+	static pqxx::connection* acquire()
+	{
+
+		readyConnections.acquire();
+		std::lock_guard< std::mutex > guard( poolLock );
+
+		auto conn { connections.front().release() };
+		connections.pop();
+		return conn;
+	}
+
+
+	static void release( pqxx::connection* conn )
+	{
+
+		std::lock_guard< std::mutex > guard( poolLock );
+
+		connections.emplace( conn );
+		readyConnections.release();
+	}
+
+
+	static void init( const std::string& connString )
+	{
+
+		std::lock_guard< std::mutex > lock( poolLock );
+		const uint64_t connectionCount {
+			std::min< unsigned int >( std::thread::hardware_concurrency(), CONNECTION_MAX_COUNT ) };
+		for ( size_t i = 0; i < connectionCount; ++i )
+		{
+			connections.push( std::make_unique< pqxx::connection >( connString ) );
+			readyConnections.release();
+		}
+	}
+
+};
+
+
+class UniqueConnection
+{
+	std::unique_ptr< pqxx::connection > connection;
+
+public:
+
+	pqxx::work transaction;
+
+
+	UniqueConnection() : connection( ConnectionPool::acquire() ), transaction( *connection )
+	{
+	}
+
+
+	~UniqueConnection()
+	{
+
+		ConnectionPool::release( connection.release() );
+	}
+};
+
 
 class ConnectionManager
 {
-	inline static std::unique_ptr< pqxx::connection > connection;
+	inline static std::unordered_map< std::thread::id, std::shared_ptr< UniqueConnection > > activeConnections;
 
-	inline static std::shared_ptr< pqxx::work > work_global;
+	inline static std::mutex connectionLock;
 
 public:
-	inline static std::recursive_mutex connectionLock;
 
-
-	inline static std::shared_ptr< pqxx::work > acquireWork()
+	static std::shared_ptr< UniqueConnection > acquire()
 	{
-		if ( work_global == nullptr )
+
+		const auto thread_id { std::this_thread::get_id() };
+
+		const std::optional< std::shared_ptr< UniqueConnection>> conn_iter = [ & ]() -> std::optional< std::shared_ptr< UniqueConnection>>
 		{
-			spdlog::debug( "Beginning new work transaction" );
-			work_global = std::make_shared< pqxx::work >( *connection );
-		}
-		return work_global;
-	}
+			std::lock_guard< std::mutex > lock( connectionLock );
+			const auto it { activeConnections.find( thread_id ) };
 
+			if ( it == activeConnections.end() )
+			{
+				return std::nullopt;
+			}
+			else
+			{
+				return it->second;
+			}
+		}();
 
-	inline static void markFinished()
-	{
-		if ( work_global.unique() )
+		if ( conn_iter.has_value() )
 		{
-			auto temp = std::move( work_global );
-			work_global = nullptr;
+			return conn_iter.value();
+		}
+		else
+		{
+			std::shared_ptr< UniqueConnection > new_conn { std::make_shared< UniqueConnection >() };
+			std::lock_guard< std::mutex > lock( connectionLock );
+
+			activeConnections.emplace( thread_id, new_conn );
+
+			return new_conn;
 		}
 	}
 
 
-	inline static void init( const std::string& connectionString )
+	static void release()
 	{
-		connection = std::make_unique< pqxx::connection >( connectionString );
+		std::lock_guard< std::mutex > lock( connectionLock );
+
+		const auto thread_id { std::this_thread::get_id() };
+
+		const auto it { activeConnections.find( thread_id ) };
+		
+		if ( it->second.unique() || it->second.use_count() == 2 )
+		{
+			activeConnections.erase( thread_id );
+		}
 	}
+
+
 };
 
-class Connection
+class RecursiveConnection
 {
-	std::lock_guard< std::recursive_mutex > lock;
-
-	std::shared_ptr< pqxx::work > work;
-
 public:
 
-	Connection() : lock( ConnectionManager::connectionLock ), work( ConnectionManager::acquireWork() ) {}
+	std::shared_ptr< UniqueConnection > connection;
 
 
-	std::shared_ptr< pqxx::work > getWork()
+	pqxx::work* getWork()
 	{
-		return work;
+		return &( connection->transaction );
 	}
 
 
-	~Connection()
+	RecursiveConnection() : connection( ConnectionManager::acquire() )
 	{
-		ConnectionManager::markFinished();
+
 	}
+
+
+	~RecursiveConnection()
+	{
+		ConnectionManager::release();
+	}
+
+
 };
+
+typedef RecursiveConnection Connection;
 
 namespace Database
 {
 	void initalizeConnection( const std::string& connectionArgs );
 }
+
 
 #endif // MAIN_DATABASE_HPP

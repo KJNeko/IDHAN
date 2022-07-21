@@ -14,7 +14,7 @@ namespace Database
 		ZoneScoped;
 		spdlog::info( "Initalizing connections with settings '" + connectionArgs + "'" );
 
-		ConnectionManager::init( connectionArgs );
+		ConnectionPool::init( connectionArgs );
 
 		Connection conn;
 		spdlog::info( "Connections made" );

@@ -124,8 +124,6 @@ std::filesystem::path getThumbnailpath( const uint64_t hash_id )
 
 	const Hash32 hash { getHash( hash_id ) };
 
-	work->commit();
-
 	return getThumbnailpathFromHash( hash );
 }
 
