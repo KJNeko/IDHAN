@@ -9,8 +9,8 @@
 #include "ui_IDHANView.h"
 
 // ImportWindow include
-#include "ImportView.hpp"
-#include "../windows/importWindow.hpp"
+#include "views/ImportView/ImportView.hpp"
+#include "windows/ImportWindows/importWindow.hpp"
 
 
 MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )

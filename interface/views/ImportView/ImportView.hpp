@@ -13,8 +13,8 @@
 #include <queue>
 #include <filesystem>
 
-#include "../modules/ListViewModule.hpp"
-#include "../modules/TagViewModule.hpp"
+#include "modules/FileViewModule/ListViewModule.hpp"
+#include "modules/TagViewModule/TagViewModule.hpp"
 
 
 QT_BEGIN_NAMESPACE

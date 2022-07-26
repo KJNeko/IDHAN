@@ -60,7 +60,7 @@ void operator delete[]( void* ptr, std::size_t ) noexcept
 #include <QApplication>
 #include <QtCore>
 
-#include "views/IDHANView.hpp"
+#include "views/IDHANView/IDHANView.hpp"
 
 
 #include "database/database.hpp"

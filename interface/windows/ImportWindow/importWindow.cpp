@@ -15,7 +15,7 @@
 #include <QStandardItemModel>
 #include <iostream>
 
-#include "../views/IDHANView.hpp"
+#include "views/IDHANView/IDHANView.hpp"
 
 #include "TracyBox.hpp"
 

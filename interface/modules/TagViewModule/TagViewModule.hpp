@@ -13,8 +13,8 @@
 #include "database/tags/tags.hpp"
 #include "filedata/FileData.hpp"
 
-#include "../modelDelegates/TagViewer/TagModel.hpp"
-#include "../modelDelegates/TagViewer/TagDelegate.hpp"
+#include "modelDelegates/TagViewer/TagModel.hpp"
+#include "modelDelegates/TagViewer/TagDelegate.hpp"
 
 
 QT_BEGIN_NAMESPACE

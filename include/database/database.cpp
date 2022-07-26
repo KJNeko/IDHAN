@@ -14,17 +14,19 @@ namespace Database
 		ZoneScoped;
 		spdlog::info( "Initalizing connections with settings '" + connectionArgs + "'" );
 
-		ConnectionPool::init( connectionArgs );
+		try
+		{
+			ConnectionPool::init( connectionArgs );
 
-		Connection conn;
-		spdlog::info( "Connections made" );
+			Connection conn;
+			spdlog::info( "Connections made" );
 
-		// Create the tables if they don't exist
-		auto work { conn.getWork() };
+			// Create the tables if they don't exist
+			auto work { conn.getWork() };
 
-		spdlog::info( "Checking tables" );
+			spdlog::info( "Checking tables" );
 
-		constexpr pqxx::zview table_query { R"(
+			constexpr pqxx::zview table_query { R"(
 		CREATE TABLE IF NOT EXISTS files (hash_id BIGSERIAL PRIMARY KEY, sha256 BYTEA UNIQUE NOT NULL);
 		CREATE TABLE IF NOT EXISTS files (hash_id BIGSERIAL PRIMARY KEY, sha256 BYTEA UNIQUE NOT NULL);
 		CREATE TABLE IF NOT EXISTS subtags (subtag_id BIGSERIAL PRIMARY KEY, subtag TEXT UNIQUE NOT NULL);
@@ -36,16 +38,21 @@ namespace Database
 		CREATE TABLE IF NOT EXISTS mime (hash_id BIGINT REFERENCES files(hash_id), mime_id BIGINT REFERENCES mime_types(mime_id));
 		)" };
 
-		constexpr pqxx::zview index_query { R"(
+			constexpr pqxx::zview index_query { R"(
 		create extension if not exists pg_trgm;
 		CREATE INDEX IF NOT EXISTS mappings_tag_index ON mappings(tag_id);
 		CREATE INDEX IF NOT EXISTS mappings_hash_index ON mappings(hash_id);
 		CREATE INDEX IF NOT EXISTS mime_mime_index ON mime(hash_id);
 		)" };
 
-		work->exec( table_query );
-		work->exec( index_query );
+			work->exec( table_query );
+			work->exec( index_query );
 
-		work->commit();
+			work->commit();
+		}
+		catch ( const std::exception& e )
+		{
+			spdlog::critical( "Unable to complete initalizeConnection due to: {}", e.what() );
+		}
 	}
 }
