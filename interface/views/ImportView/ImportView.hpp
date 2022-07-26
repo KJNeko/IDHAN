@@ -13,7 +13,7 @@
 #include <queue>
 #include <filesystem>
 
-#include "modules/FileViewModule/ListViewModule.hpp"
+#include "modules/ListViewModule/ListViewModule.hpp"
 #include "modules/TagViewModule/TagViewModule.hpp"
 
 

@@ -24,6 +24,7 @@
 #include "database/files/metadata.hpp"
 
 #include "idhan_systems/import/importer.hpp"
+#include "idhan_systems/threading.hpp"
 
 
 ImportView::ImportView( QWidget* parent ) : QWidget( parent ), ui( new Ui::ImportView )
@@ -58,12 +59,6 @@ ImportView::~ImportView()
 void ImportView::processFiles()
 {
 	ZoneScoped;
-
-	QThreadPool pool;
-	//Thread count should be 1/4th of the number of cores or at least 4
-	pool.setMaxThreadCount( std::max( 4, static_cast<int>(std::thread::hardware_concurrency() / 4) ) );
-
-	spdlog::debug( "Starting processing thread with {} threads", pool.maxThreadCount() );
 
 	std::vector< uint64_t > file_queue;
 	auto timepoint_queue_send = std::chrono::high_resolution_clock::now(); //Timepoint for the last time the queue was sent to the image list
@@ -149,7 +144,7 @@ void ImportView::processFiles()
 
 
 	auto future = QtConcurrent::mappedReduced(
-		&pool, files, process, reduce
+		&ImportPool::getPool(), files, process, reduce
 	);
 
 	while ( !future.isFinished() && !future.isCanceled() )

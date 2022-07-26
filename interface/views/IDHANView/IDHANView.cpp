@@ -10,7 +10,7 @@
 
 // ImportWindow include
 #include "views/ImportView/ImportView.hpp"
-#include "windows/ImportWindows/importWindow.hpp"
+#include "windows/ImportWindow/importWindow.hpp"
 
 
 MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )

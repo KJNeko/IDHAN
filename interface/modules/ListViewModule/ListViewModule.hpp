@@ -12,7 +12,7 @@
 #include <queue>
 #include <QItemSelection>
 
-#include "../modelDelegates/ImageViewer/ImageDelegate.hpp"
+#include "modelDelegates/ImageViewer/ImageDelegate.hpp"
 
 #include "filedata/FileData.hpp"
 

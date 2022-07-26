@@ -15,6 +15,7 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/interface/ui)
 
 find_package(Qt6 COMPONENTS Widgets Core Concurrent REQUIRED)
 
+set(BUILD_TEST OFF)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/submodules/spdlog)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/submodules/tracy)

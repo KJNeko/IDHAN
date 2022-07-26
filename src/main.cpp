@@ -59,14 +59,14 @@ void operator delete[]( void* ptr, std::size_t ) noexcept
 
 #include <QApplication>
 #include <QtCore>
+#include <QPixmapCache>
+#include <QImageReader>
 
 #include "views/IDHANView/IDHANView.hpp"
 
-
 #include "database/database.hpp"
 
-#include <QPixmapCache>
-#include <QImageReader>
+#include "idhan_systems/threading.hpp"
 
 
 void customMessageHandler( QtMsgType type, const QMessageLogContext& context, const QString& msg )
@@ -106,6 +106,9 @@ int main( int argc, char** argv )
 	spdlog::info( "Attaching custom handler to Qt messages" );
 	//qInstallMessageHandler( customMessageHandler );
 	spdlog::info( "Attached" );
+
+	spdlog::info( "Initalizing thread pools" );
+	initThreadPools();
 
 	QPixmapCache::setCacheLimit( 1000000 ); //1 = 1KB
 	spdlog::info( "QPixmapCache limit set to {} KB", QPixmapCache::cacheLimit() );
