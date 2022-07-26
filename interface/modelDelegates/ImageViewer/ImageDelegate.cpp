@@ -86,7 +86,7 @@ void ImageDelegate::paint(
 QSize ImageDelegate::sizeHint(
 	[[maybe_unused]] const QStyleOptionViewItem& option, [[maybe_unused]] const QModelIndex& index ) const
 {
-	QSettings s;
+	QSettings s( QSettings::IniFormat, QSettings::UserScope, "Future Gadget Labs", "IDHAN" );
 
 	int width = s.value( "thumbnails/x_res", 120 ).toInt();
 	int height = s.value( "thumbnails/y_res", 120 ).toInt();

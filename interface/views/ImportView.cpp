@@ -6,8 +6,8 @@
 // "ui_ImportViewer.h" resolved
 
 // Ui
-#include "importViewer.hpp"
-#include "ui_importViewer.h"
+#include "ImportView.hpp"
+#include "ui_ImportView.h"
 
 // Qt
 #include <QCryptographicHash>
@@ -26,26 +26,26 @@
 #include "idhan_systems/import/importer.hpp"
 
 
-ImportViewer::ImportViewer( QWidget* parent ) : QWidget( parent ), ui( new Ui::ImportViewer )
+ImportView::ImportView( QWidget* parent ) : QWidget( parent ), ui( new Ui::ImportView )
 {
 	ui->setupUi( this );
 
-	viewport = new ListViewport( this );
-	tagport = new TagView( this );
+	viewport = new ListViewModule( this );
+	tagport = new TagViewModule( this );
 
 	ui->viewFrame->layout()->addWidget( viewport );
 
 	ui->tagFrame->layout()->addWidget( tagport );
 
 	//Connect all the things
-	connect( this, &ImportViewer::updateValues, this, &ImportViewer::updateValues_slot );
+	connect( this, &ImportView::updateValues, this, &ImportView::updateValues_slot );
 
 	//Connect the selection model to the tagview
-	connect( viewport, &ListViewport::selection, tagport, &TagView::selectionChanged );
+	connect( viewport, &ListViewModule::selection, tagport, &TagViewModule::selectionChanged );
 }
 
 
-ImportViewer::~ImportViewer()
+ImportView::~ImportView()
 {
 
 	if ( processingThread != nullptr )
@@ -55,7 +55,7 @@ ImportViewer::~ImportViewer()
 }
 
 
-void ImportViewer::processFiles()
+void ImportView::processFiles()
 {
 	ZoneScoped;
 
@@ -88,7 +88,7 @@ void ImportViewer::processFiles()
 			const auto timepoint_queue_send_now { std::chrono::high_resolution_clock::now() };
 			const auto time_diff { timepoint_queue_send_now - timepoint_queue_send };
 			constexpr size_t queue_send_interval { 50 }; //number of items before the queue is sent anyways
-			constexpr auto queue_send_time { 1000ms / 5 }; //Five times per second
+			constexpr auto queue_send_time { 1000ms / 2.5 };
 
 			if ( time_diff > queue_send_time ||
 				file_queue.size() >= queue_send_interval ||
@@ -165,7 +165,7 @@ void ImportViewer::processFiles()
 }
 
 
-void ImportViewer::updateValues_slot()
+void ImportView::updateValues_slot()
 {
 	ZoneScoped;
 	QString str;
@@ -191,7 +191,7 @@ void ImportViewer::updateValues_slot()
 }
 
 
-void ImportViewer::addFiles( const std::vector< std::filesystem::path >& files_ )
+void ImportView::addFiles( const std::vector< std::filesystem::path >& files_ )
 {
 	ZoneScoped;
 	files.reserve( files_.size() );
@@ -209,7 +209,7 @@ void ImportViewer::addFiles( const std::vector< std::filesystem::path >& files_ 
 	ui->progressBar->setMaximum( static_cast<int>( filesAdded ) );
 
 	auto runfuture = QtConcurrent::run(
-		QThreadPool::globalInstance(), &ImportViewer::processFiles, this
+		QThreadPool::globalInstance(), &ImportView::processFiles, this
 	);
 }
 

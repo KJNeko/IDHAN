@@ -154,7 +154,8 @@ namespace internal
 		const fgl::cstring setting, const fgl::cstring default_path )
 	{
 		ZoneScoped;
-		QSettings s;
+		QSettings s( QSettings::IniFormat, QSettings::UserScope, "Future Gadget Labs", "IDHAN" );
+
 		std::string p { s.value( setting, "invalid" ).toString().toStdString() };
 		if ( p == "invalid" )
 		{

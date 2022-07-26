@@ -40,7 +40,7 @@ void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
 
 	painter->save();
 
-	painter->drawText( option.rect, Qt::AlignCenter, str );
+	painter->drawText( option.rect, Qt::AlignLeft, str );
 
 	painter->restore();
 }

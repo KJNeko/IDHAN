@@ -140,66 +140,72 @@ std::vector< std::pair< std::string, std::string>> parseSidecarTags( const std::
 {
 	std::vector< std::pair< std::string, std::string>> tags_vec;
 	//Check to see if a file exists with the tags
-	if ( std::filesystem::exists( path.string() + ".txt" ) )
+
+	if ( std::ifstream ifs( path.string() + ".txt" ); ifs )
 	{
-
-		if ( std::ifstream ifs( path.string() + ".txt" ); ifs )
+		constexpr uint64_t max_count { 1024 };
+		uint64_t counter { 0 };
+		while ( !ifs.eof() && !ifs.bad() && !ifs.fail() && ifs.good() )
 		{
-
-			while ( !ifs.eof() )
+			++counter;
+			if ( counter > 1024 )
 			{
-				std::string name;
+				spdlog::warn( "While importing tags for {} we went over the counter of {}", path.string(), max_count );
+				break;
+			}
 
-				std::getline( ifs, name );
+			std::string name;
 
-				std::vector< std::string > split_strings;
+			std::getline( ifs, name );
 
-				constexpr std::string_view delim { ":" };
+			std::vector< std::string > split_strings;
 
-				const std::string_view sv { name };
+			constexpr std::string_view delim { ":" };
 
-				for ( const auto& word: std::views::split( sv, delim ) )
+			const std::string_view sv { name };
+
+			for ( const auto& word: std::views::split( sv, delim ) )
+			{
+				if ( split_strings.empty() )
 				{
-					if ( split_strings.empty() )
-					{
-						//Push back just the group
-						split_strings.push_back( std::string( word.data(), word.size() ) );
-					}
-					else
-					{
-						//Push back the rest of the tag
-						split_strings.push_back( std::string( word.data(), word.size() ) );
-					}
-				}
-
-
-				if ( split_strings.size() >= 2 )
-				{
-					const size_t group_size { split_strings[ 0 ].size() };
-					//Combine all but the first string
-					std::string combined_string;
-
-					for ( size_t i = group_size + 1; i < name.size(); ++i )
-					{
-						combined_string += name[ i ];
-					}
-
-					tags_vec.push_back( std::make_pair( split_strings[ 0 ], combined_string ) );
-					//addMapping( hash_id, split_strings[ 0 ], combined_string );
-				}
-				else if ( split_strings.size() == 1 )
-				{
-					tags_vec.push_back( std::make_pair( split_strings[ 0 ], "" ) );
-					//addMapping( hash_id, "", split_strings[ 0 ] );
+					//Push back just the group
+					split_strings.push_back( std::string( word.data(), word.size() ) );
 				}
 				else
 				{
-					spdlog::error( "Invalid tag format {}", name );
+					//Push back the rest of the tag
+					split_strings.push_back( std::string( word.data(), word.size() ) );
+				}
+			}
+
+
+			if ( split_strings.size() >= 2 )
+			{
+				const size_t group_size { split_strings[ 0 ].size() };
+				//Combine all but the first string
+				std::string combined_string;
+
+				for ( size_t i = group_size + 1; i < name.size(); ++i )
+				{
+					combined_string += name[ i ];
 				}
 
+				tags_vec.push_back( std::make_pair( split_strings[ 0 ], combined_string ) );
+				//addMapping( hash_id, split_strings[ 0 ], combined_string );
 			}
+			else if ( split_strings.size() == 1 )
+			{
+				tags_vec.push_back( std::make_pair( "", split_strings[ 0 ] ) );
+				//addMapping( hash_id, "", split_strings[ 0 ] );
+			}
+			else
+			{
+				spdlog::error( "Invalid tag format {}", name );
+			}
+
 		}
 	}
+
 
 	return tags_vec;
 }
@@ -209,7 +215,8 @@ void generateThumbnail( const std::vector< std::byte >& data, const QMimeType mi
 {
 	ZoneScoped;
 
-	QSettings s;
+	QSettings s( QSettings::IniFormat, QSettings::UserScope, "Future Gadget Labs", "IDHAN" );
+
 	const auto x_res = s.value( "thumbnails/x_res", 120 ).toInt();
 	const auto y_res = s.value( "thumbnails/y_res", 120 ).toInt();
 
@@ -297,7 +304,7 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 					continue;
 				}
 
-				throw IDHANError( ErrorNo::DATABASE_UNKNOWN_ERROR, "e.what()" );
+				throw IDHANError( ErrorNo::DATABASE_UNKNOWN_ERROR, e.what() );
 			}
 
 			break;

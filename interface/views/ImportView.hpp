@@ -13,36 +13,36 @@
 #include <queue>
 #include <filesystem>
 
-#include "listViewport.hpp"
-#include "TagView.hpp"
+#include "../modules/ListViewModule.hpp"
+#include "../modules/TagViewModule.hpp"
 
 
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
-	class ImportViewer;
+	class ImportView;
 }
 QT_END_NAMESPACE
 
-class ImportViewer : public QWidget
+class ImportView : public QWidget
 {
 Q_OBJECT
 
 public:
-	explicit ImportViewer( QWidget* parent = nullptr );
+	explicit ImportView( QWidget* parent = nullptr );
 
-	~ImportViewer() override;
+	~ImportView() override;
 
-	ImportViewer( const ImportViewer& ) = delete;
+	ImportView( const ImportView& ) = delete;
 
-	ImportViewer operator=( const ImportViewer& ) = delete;
+	ImportView operator=( const ImportView& ) = delete;
 
 	void processFiles();
 
 	void addFiles( const std::vector< std::filesystem::path >& files );
 
 private:
-	Ui::ImportViewer* ui;
+	Ui::ImportView* ui;
 
 	// File import list
 	std::vector< std::filesystem::path > files {};
@@ -56,8 +56,8 @@ private:
 	uint64_t alreadyinDB { 0 };
 	uint64_t deleted { 0 };
 
-	ListViewport* viewport { nullptr };
-	TagView* tagport { nullptr };
+	ListViewModule* viewport { nullptr };
+	TagViewModule* tagport { nullptr };
 
 signals:
 

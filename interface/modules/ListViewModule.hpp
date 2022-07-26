@@ -12,7 +12,7 @@
 #include <queue>
 #include <QItemSelection>
 
-#include "modelDelegates/ImageViewer/ImageDelegate.hpp"
+#include "../modelDelegates/ImageViewer/ImageDelegate.hpp"
 
 #include "filedata/FileData.hpp"
 
@@ -20,25 +20,25 @@
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
-	class ListViewport;
+	class ListViewModule;
 }
 QT_END_NAMESPACE
 
-class ListViewport : public QWidget
+class ListViewModule : public QWidget
 {
 Q_OBJECT
 
 public:
-	explicit ListViewport( QWidget* parent = nullptr );
+	explicit ListViewModule( QWidget* parent = nullptr );
 
-	~ListViewport() override;
+	~ListViewModule() override;
 
-	ListViewport( const ListViewport& ) = delete;
+	ListViewModule( const ListViewModule& ) = delete;
 
-	ListViewport operator=( const ListViewport& ) = delete;
+	ListViewModule operator=( const ListViewModule& ) = delete;
 
 private:
-	Ui::ListViewport* ui;
+	Ui::ListViewModule* ui;
 
 	//std::vector< uint64_t > files;
 
@@ -53,7 +53,7 @@ public slots:
 	void addFile( const uint64_t );
 
 	void addFiles( const std::vector< uint64_t >& file_id );
-	
+
 	void resetFiles();
 
 	void setFiles( const std::vector< uint64_t >& files );

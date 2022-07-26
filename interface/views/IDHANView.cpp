@@ -5,29 +5,31 @@
 // You may need to build the project (run Qt uic code generator) to get
 // "ui_mainView.h" resolved
 
-#include "mainView.hpp"
-#include "ui_mainView.h"
+#include "IDHANView.hpp"
+#include "ui_IDHANView.h"
 
 // ImportWindow include
-#include "importViewer.hpp"
-#include "importWindow.hpp"
+#include "ImportView.hpp"
+#include "../windows/importWindow.hpp"
 
-MainWindow::MainWindow( QWidget* parent )
-	: QMainWindow( parent ),
-	  ui( new Ui::MainWindow )
+
+MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )
 {
 	ui->setupUi( this );
 }
+
 
 MainWindow::~MainWindow()
 {
 	delete ui;
 }
 
+
 void MainWindow::addTab( QWidget* widget )
 {
 	ui->tabWidget->addTab( widget, widget->windowTitle() );
 }
+
 
 void MainWindow::on_actionImport_triggered()
 {
@@ -36,10 +38,11 @@ void MainWindow::on_actionImport_triggered()
 	window.exec();
 }
 
-void MainWindow::importFiles( const std::vector<std::filesystem::path>& files )
+
+void MainWindow::importFiles( const std::vector< std::filesystem::path >& files )
 {
 	// Open import viewer in a new page
-	ImportViewer* viewer = new ImportViewer( this );
+	ImportView* viewer = new ImportView( this );
 
 	// Create a new tag and place the viewer into it
 	ui->tabWidget->addTab( viewer, "Import" );

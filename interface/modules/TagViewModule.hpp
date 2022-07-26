@@ -2,8 +2,8 @@
 // Created by kj16609 on 7/9/22.
 //
 
-#ifndef IDHAN_TAGVIEW_HPP
-#define IDHAN_TAGVIEW_HPP
+#ifndef IDHAN_TAGVIEWMODULE_HPP
+#define IDHAN_TAGVIEWMODULE_HPP
 
 
 #include <QWidget>
@@ -13,33 +13,33 @@
 #include "database/tags/tags.hpp"
 #include "filedata/FileData.hpp"
 
-#include "modelDelegates/TagViewer/TagModel.hpp"
-#include "modelDelegates/TagViewer/TagDelegate.hpp"
+#include "../modelDelegates/TagViewer/TagModel.hpp"
+#include "../modelDelegates/TagViewer/TagDelegate.hpp"
 
 
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
-	class TagView;
+	class TagViewModule;
 }
 QT_END_NAMESPACE
 
-class TagView : public QWidget
+class TagViewModule : public QWidget
 {
 Q_OBJECT
 
 
 public:
-	explicit TagView( QWidget* parent = nullptr );
+	explicit TagViewModule( QWidget* parent = nullptr );
 
-	~TagView() override;
+	~TagViewModule() override;
 
-	TagView( const TagView& ) = delete;
+	TagViewModule( const TagViewModule& ) = delete;
 
-	TagView operator=( const TagView& ) = delete;
+	TagViewModule operator=( const TagViewModule& ) = delete;
 
 private:
-	Ui::TagView* ui;
+	Ui::TagViewModule* ui;
 
 	TagModel* model { new TagModel( this ) };
 	TagDelegate* delegate { new TagDelegate( this ) };
@@ -52,4 +52,4 @@ public slots:
 };
 
 
-#endif //IDHAN_TAGVIEW_HPP
+#endif //IDHAN_TAGVIEWMODULE_HPP

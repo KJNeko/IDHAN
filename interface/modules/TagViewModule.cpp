@@ -4,8 +4,8 @@
 
 // You may need to build the project (run Qt uic code generator) to get "ui_TagView.h" resolved
 
-#include "TagView.hpp"
-#include "ui_TagView.h"
+#include "TagViewModule.hpp"
+#include "ui_TagViewModule.h"
 
 #include <QTreeWidgetItem>
 #include <QList>
@@ -15,7 +15,7 @@
 #include "filedata/FileData.hpp"
 
 
-TagView::TagView( QWidget* parent ) : QWidget( parent ), ui( new Ui::TagView )
+TagViewModule::TagViewModule( QWidget* parent ) : QWidget( parent ), ui( new Ui::TagViewModule )
 {
 	ui->setupUi( this );
 
@@ -27,18 +27,18 @@ TagView::TagView( QWidget* parent ) : QWidget( parent ), ui( new Ui::TagView )
 }
 
 
-TagView::~TagView()
+TagViewModule::~TagViewModule()
 {
 	delete ui;
 }
 
 
-void TagView::selectionChanged( const std::vector< uint64_t >& hash_ids )
+void TagViewModule::selectionChanged( const std::vector< uint64_t >& hash_ids )
 {
 	ZoneScoped;
 
 	//Clear the model
-	model->reset();
+	//model->reset();
 
 	model->setFiles( hash_ids );
 }

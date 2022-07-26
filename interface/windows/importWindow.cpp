@@ -6,7 +6,7 @@
 // "ui_ImportWindow.h" resolved
 
 #include "importWindow.hpp"
-#include "ui_importWindow.h"
+#include "ui_ImportWindow.h"
 
 #include <QDirIterator>
 #include <QFileDialog>
@@ -15,7 +15,7 @@
 #include <QStandardItemModel>
 #include <iostream>
 
-#include "mainView.hpp"
+#include "../views/IDHANView.hpp"
 
 #include "TracyBox.hpp"
 

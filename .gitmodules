@@ -1,3 +1,15 @@
 [submodule "libs/tracy"]
 	path = libs/tracy
 	url = https://github.com/wolfpld/tracy.git
+[submodule "submodules/tracy"]
+	path = submodules/tracy
+	url = git@github.com:wolfpld/tracy.git
+[submodule "submodules/spdlog"]
+	path = submodules/spdlog
+	url = git@github.com:gabime/spdlog.git
+[submodule "submodules/libpqxx"]
+	path = submodules/libpqxx
+	url = git@github.com:jtv/libpqxx.git
+[submodule "submodules/libFGL"]
+	path = submodules/libFGL
+	url = https://github.com/alaestor/libFGL.git

@@ -4,13 +4,13 @@
 
 // You may need to build the project (run Qt uic code generator) to get "ui_ListViewport.h" resolved
 
-#include "listViewport.hpp"
-#include "ui_ListViewport.h"
+#include "ListViewModule.hpp"
+#include "ui_ListViewModule.h"
 
 #include "TracyBox.hpp"
 
 
-ListViewport::ListViewport( QWidget* parent ) : QWidget( parent ), ui( new Ui::ListViewport )
+ListViewModule::ListViewModule( QWidget* parent ) : QWidget( parent ), ui( new Ui::ListViewModule )
 {
 	ui->setupUi( this );
 
@@ -20,19 +20,19 @@ ListViewport::ListViewport( QWidget* parent ) : QWidget( parent ), ui( new Ui::L
 	ui->listView->setSpacing( 5 );
 
 	connect(
-		ui->listView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ListViewport::itemActivated
+		ui->listView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ListViewModule::itemActivated
 	);
 
 }
 
 
-ListViewport::~ListViewport()
+ListViewModule::~ListViewModule()
 {
 	delete ui;
 }
 
 
-void ListViewport::resetFiles()
+void ListViewModule::resetFiles()
 {
 	ZoneScoped;
 	std::lock_guard< std::mutex > lock( queue_lock );
@@ -40,7 +40,7 @@ void ListViewport::resetFiles()
 }
 
 
-void ListViewport::setFiles( const std::vector< uint64_t >& files_ )
+void ListViewModule::setFiles( const std::vector< uint64_t >& files_ )
 {
 	ZoneScoped;
 	std::lock_guard< std::mutex > lock( queue_lock );
@@ -48,7 +48,7 @@ void ListViewport::setFiles( const std::vector< uint64_t >& files_ )
 }
 
 
-void ListViewport::addFile( const uint64_t file_id )
+void ListViewModule::addFile( const uint64_t file_id )
 {
 	ZoneScoped;
 	model->addImages( { file_id } );
@@ -61,7 +61,7 @@ void ListViewport::addFile( const uint64_t file_id )
 }
 
 
-void ListViewport::addFiles( const std::vector< uint64_t >& file_id )
+void ListViewModule::addFiles( const std::vector< uint64_t >& file_id )
 {
 	ZoneScoped;
 	model->addImages( file_id );
@@ -74,7 +74,7 @@ void ListViewport::addFiles( const std::vector< uint64_t >& file_id )
 }
 
 
-void ListViewport::itemActivated(
+void ListViewModule::itemActivated(
 	[[maybe_unused]] const QItemSelection& selected, [[maybe_unused]] const QItemSelection& deselected )
 {
 	ZoneScoped;

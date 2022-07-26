@@ -60,7 +60,7 @@ void operator delete[]( void* ptr, std::size_t ) noexcept
 #include <QApplication>
 #include <QtCore>
 
-#include "mainView.hpp"
+#include "views/IDHANView.hpp"
 
 
 #include "database/database.hpp"
@@ -69,21 +69,53 @@ void operator delete[]( void* ptr, std::size_t ) noexcept
 #include <QImageReader>
 
 
+void customMessageHandler( QtMsgType type, const QMessageLogContext& context, const QString& msg )
+{
+	QByteArray localMsg = msg.toLocal8Bit();
+	const char* file = context.file ? context.file : "";
+	const char* function = context.function ? context.function : "";
+	switch ( type )
+	{
+	case QtDebugMsg:
+		spdlog::debug( "{} ({}:{}, {})", localMsg.constData(), file, context.line, function );
+		break;
+	case QtInfoMsg:
+		spdlog::info( "{} ({}:{}, {})", localMsg.constData(), file, context.line, function );
+		break;
+	case QtWarningMsg:
+		spdlog::warn( "{} ({}:{}, {})", localMsg.constData(), file, context.line, function );
+		break;
+	case QtCriticalMsg:
+		spdlog::critical( "{} ({}:{}, {})", localMsg.constData(), file, context.line, function );
+		break;
+	case QtFatalMsg:
+		spdlog::critical( "{} ({}:{}, {})", localMsg.constData(), file, context.line, function );
+		break;
+	}
+
+}
+
+
 int main( int argc, char** argv )
 {
+	spdlog::info( "Qt version: {}", qVersion() );
+
 	spdlog::info( "Starting IDHAN" );
 	QImageReader::setAllocationLimit( 0 );
 
-	QPixmapCache::setCacheLimit( 1000000 ); //1 = 1KB
+	spdlog::info( "Attaching custom handler to Qt messages" );
+	//qInstallMessageHandler( customMessageHandler );
+	spdlog::info( "Attached" );
 
-	std::cout << "Qt version: " << qVersion() << std::endl;
+	QPixmapCache::setCacheLimit( 1000000 ); //1 = 1KB
+	spdlog::info( "QPixmapCache limit set to {} KB", QPixmapCache::cacheLimit() );
 
 	QApplication app( argc, argv );
 
 	QCoreApplication::setOrganizationName( "Future Gadget Labs" );
 	QCoreApplication::setApplicationName( "IDHAN" );
 
-	QSettings s;
+	QSettings s( QSettings::IniFormat, QSettings::UserScope, "Future Gadget Labs", "IDHAN" );
 
 	if ( s.value( "firstRun", true ).toBool() )
 	{
