@@ -53,6 +53,9 @@ ImportView::~ImportView()
 	{ processingThread->cancel(); }
 
 	delete ui;
+
+	delete viewport;
+	delete tagport;
 }
 
 

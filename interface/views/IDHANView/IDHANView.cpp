@@ -11,6 +11,7 @@
 // ImportWindow include
 #include "views/ImportView/ImportView.hpp"
 #include "windows/ImportWindow/importWindow.hpp"
+#include "views/IDHANView/NewViewDialog/NewViewDialog.hpp"
 
 
 MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )
@@ -35,6 +36,13 @@ void MainWindow::on_actionImport_triggered()
 {
 	// Open import window
 	ImportWindow window( this );
+	window.exec();
+}
+
+
+void MainWindow::on_actionAddNewView_triggered()
+{
+	NewViewDialog window( this );
 	window.exec();
 }
 
