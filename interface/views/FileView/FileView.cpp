@@ -21,6 +21,8 @@ FileView::FileView( QWidget* parent ) : QWidget( parent ), ui( new Ui::FileView 
 	ui->searchFrame->layout()->addWidget( tagsearch );
 
 	connect( viewport, &ListViewModule::selection, tagport, &TagViewModule::selectionChanged );
+
+	connect( tagsearch, &TagSearchModule::searchComplete, viewport, &ListViewModule::setFiles );
 }
 
 

@@ -131,6 +131,7 @@ QVariant ImageModel::data( const QModelIndex& index, int role ) const
 
 void ImageModel::addImages( const std::vector< uint64_t >& queue )
 {
+	spdlog::debug( "Adding {} images to the model", queue.size() );
 	ZoneScoped;
 	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + queue.size()) );
 
@@ -167,8 +168,10 @@ int ImageModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
 
 void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 {
+	spdlog::debug( "Setting {} images to the model", ids.size() );
 	ZoneScoped;
 	beginResetModel();
+	fileList.clear();
 	fileList.reserve( ids.size() );
 	for ( auto& id: ids )
 	{
@@ -181,7 +184,6 @@ void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 const std::vector< uint64_t > ImageModel::getFiles() const
 {
 	ZoneScoped;
-
 	std::vector< uint64_t > ret;
 
 	for ( const auto& file: fileList )

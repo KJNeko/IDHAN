@@ -31,10 +31,18 @@ private:
 	Ui::TagSearchModule* ui;
 
 	pqxx::result result;
+	std::mutex result_lock {};
+
+	void updateTagSearch();
 
 signals:
 
 	void updateSearchResults( const pqxx::result res );
+
+	void searchComplete( const std::vector< uint64_t >& file_ids );
+
+	void updateFileList( const pqxx::result res );
+
 
 private slots:
 
@@ -43,6 +51,8 @@ private slots:
 	void on_searchBar_returnPressed();
 
 	void on_searchResults_doubleClicked();
+
+	void on_activeTags_doubleClicked();
 
 	void updateSearch( const pqxx::result& res );
 };
