@@ -8,6 +8,19 @@
 #include "TracyBox.hpp"
 
 
+//Should only be called during invalidate
+void TagSearchModel::reset()
+{
+	std::lock_guard< std::mutex > lock( this->mtx );
+
+	ZoneScoped;
+
+	beginResetModel();
+	tag_list = std::vector< uint64_t >();
+	endResetModel();
+}
+
+
 void TagSearchModel::setTags( const std::vector< uint64_t >& tag_list_ )
 {
 	std::lock_guard< std::mutex > lock( this->mtx );
@@ -21,9 +34,21 @@ void TagSearchModel::setTags( const std::vector< uint64_t >& tag_list_ )
 }
 
 
+TagSearchModel::TagSearchModel( [[maybe_unused]]QWidget* parent )
+{
+
+}
+
+
 int TagSearchModel::rowCount( [[maybe_unused]] const QModelIndex& parent ) const
 {
 	return tag_list.size();
+}
+
+
+int TagSearchModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
+{
+	return 1;
 }
 
 
