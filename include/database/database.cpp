@@ -18,7 +18,7 @@ namespace Database
 		{
 			ConnectionPool::init( connectionArgs );
 
-			Connection conn;
+			const Connection conn;
 			spdlog::info( "Connections made" );
 
 			// Create the tables if they don't exist

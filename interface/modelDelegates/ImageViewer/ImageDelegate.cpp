@@ -118,20 +118,16 @@ QVariant ImageModel::data( const QModelIndex& index, int role ) const
 {
 	ZoneScoped;
 	if ( !index.isValid() )
-	{ return QVariant(); }
+	{ return {}; }
 
 	if ( role == Qt::DisplayRole )
-	{
 		return QVariant::fromValue( fileList[ static_cast<unsigned long>( index.row() ) ]->hash_id );
-	}
-
-	return QVariant();
+	else return {};
 }
 
 
 void ImageModel::addImages( const std::vector< uint64_t >& queue )
 {
-	spdlog::debug( "Adding {} images to the model", queue.size() );
 	ZoneScoped;
 	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + queue.size()) );
 
@@ -168,7 +164,6 @@ int ImageModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
 
 void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 {
-	spdlog::debug( "Setting {} images to the model", ids.size() );
 	ZoneScoped;
 	beginResetModel();
 	fileList.clear();
@@ -181,10 +176,12 @@ void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 }
 
 
-const std::vector< uint64_t > ImageModel::getFiles() const
+std::vector< uint64_t > ImageModel::getFileIDs() const
 {
 	ZoneScoped;
 	std::vector< uint64_t > ret;
+
+	ret.reserve( fileList.size() );
 
 	for ( const auto& file: fileList )
 	{

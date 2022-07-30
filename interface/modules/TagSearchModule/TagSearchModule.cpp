@@ -40,7 +40,7 @@ void TagSearchModule::on_searchBar_textChanged( const QString& text )
 	}
 
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	//constexpr pqxx::zview query_search {
@@ -79,7 +79,7 @@ void TagSearchModule::on_searchBar_returnPressed()
 	}
 
 	//Check if the tag exists in the database
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query_search { "SELECT tag_id FROM concat_tags WHERE joined_text = $1 limit 1" };
@@ -143,7 +143,7 @@ void TagSearchModule::updateTagSearch()
 
 	auto startTime { std::chrono::high_resolution_clock::now() };
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	//Get the active tags

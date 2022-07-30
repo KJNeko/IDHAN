@@ -157,7 +157,7 @@ public:
 		const auto thread_id { std::this_thread::get_id() };
 
 		const auto it { activeConnections.find( thread_id ) };
-		
+
 		if ( it->second.unique() || it->second.use_count() == 2 )
 		{
 			activeConnections.erase( thread_id );
@@ -174,7 +174,7 @@ public:
 	std::shared_ptr< UniqueConnection > connection;
 
 
-	pqxx::work* getWork()
+	pqxx::work* getWork() const
 	{
 		return &( connection->transaction );
 	}

@@ -13,12 +13,12 @@ uint64_t addSubtag( const Subtag& subtag )
 {
 
 	ZoneScoped;
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	//Check that it wasn't made before we locked
 	constexpr pqxx::zview checkSubtag { "SELECT subtag_id FROM subtags WHERE subtag = $1" };
-	const pqxx::result check_ret = work->exec_params( checkSubtag, subtag.text );
+	const pqxx::result check_ret { work->exec_params( checkSubtag, subtag.text ) };
 	if ( check_ret.size() )
 	{
 		return check_ret[ 0 ][ "subtag_id" ].as< uint64_t >();
@@ -36,7 +36,7 @@ uint64_t addSubtag( const Subtag& subtag )
 Subtag getSubtag( const uint64_t subtag_id )
 {
 	ZoneScoped;
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query { "SELECT subtag FROM subtags WHERE subtag_id = $1" };
@@ -57,7 +57,7 @@ Subtag getSubtag( const uint64_t subtag_id )
 uint64_t getSubtagID( const Subtag& subtag, const bool create )
 {
 	ZoneScoped;
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query { "SELECT subtag_id FROM subtags WHERE subtag = $1" };
@@ -85,7 +85,7 @@ uint64_t getSubtagID( const Subtag& subtag, const bool create )
 void deleteSubtag( const Subtag& subtag )
 {
 	ZoneScoped;
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query { "DELETE FROM subtags WHERE subtag = $1 CASCADE" };

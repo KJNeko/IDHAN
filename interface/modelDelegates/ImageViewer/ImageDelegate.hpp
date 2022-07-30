@@ -48,9 +48,7 @@ public:
 
 	void reset();
 
-	void populate();
-
-	const std::vector< uint64_t > getFiles() const;
+	std::vector< uint64_t > getFileIDs() const;
 
 private:
 	std::vector< FileData > fileList {};

@@ -31,7 +31,7 @@ void TagModel::setFiles( const std::vector< uint64_t >& hash_ids )
 
 	beginResetModel();
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query_raw {
@@ -78,7 +78,6 @@ void TagModel::setFiles( const std::vector< uint64_t >& hash_ids )
 
 TagModel::TagModel( [[maybe_unused]]QWidget* parent )
 {
-
 }
 
 

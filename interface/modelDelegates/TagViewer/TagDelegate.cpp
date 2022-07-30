@@ -12,14 +12,7 @@
 QSize TagDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
 	//50% of the width of the view
-	if ( index.column() == 0 )
-	{
-		return QSize( option.rect.width() / 2, 25 );
-	}
-	else
-	{
-		return QSize( option.rect.width() / 4, 25 );
-	}
+	return QSize( option.rect.width() / ( index.column() ? 2 : 4 ), 25 );
 }
 
 
@@ -27,16 +20,11 @@ void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
 {
 	ZoneScoped;
 
-	auto tag_data = index.data().value< DataPack >();
+	const Tag tag = getTag( index.data().value< uint64_t >() );
 
-	auto tag = getTag( tag_data.tag_id );
-
-	QString str;
-	str += QString::fromStdString( !tag.group.text.empty() ? tag.group.text : "" );
-	str += QString::fromStdString( !tag.group.text.empty() ? ":" : "" );
-	str += QString::fromStdString( tag.subtag.text );
-
-	str += QString::fromStdString( " (" + std::to_string( tag_data.counter ) + ")" );
+	const QString group_text { QString::fromStdString( !tag.group.text.empty() ? tag.group.text + ":" : "" ) };
+	const QString subtag_text { QString::fromStdString( tag.subtag.text ) };
+	const QString str { group_text + subtag_text };
 
 	painter->save();
 

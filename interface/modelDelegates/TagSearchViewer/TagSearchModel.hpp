@@ -16,21 +16,18 @@
 
 #include "database/database.hpp"
 
+#include "modelDelegates/TagViewer/TagModel.hpp"
 
-class TagSearchModel : public QAbstractListModel
+
+class TagSearchModel : public TagModel
 {
 Q_OBJECT
 
 public:
-	TagSearchModel( QWidget* parent = nullptr );
 
 	int rowCount( const QModelIndex& parent = QModelIndex() ) const override;
 
-	int columnCount( const QModelIndex& parent = QModelIndex() ) const override;
-
 	QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const override;
-
-	void reset();
 
 	void setTags( const std::vector< uint64_t >& tags_id );
 

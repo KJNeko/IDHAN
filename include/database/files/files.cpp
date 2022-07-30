@@ -19,7 +19,7 @@
 uint64_t addFile( const Hash32& sha256 )
 {
 	ZoneScoped;
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query = "INSERT INTO files (sha256) VALUES ($1) RETURNING hash_id";
@@ -27,9 +27,8 @@ uint64_t addFile( const Hash32& sha256 )
 	const pqxx::result res = work->exec_params( query, sha256.getView() );
 
 	if ( res.empty() )
-	{
 		spdlog::error( "Failed to insert file into database" );
-	}
+
 
 	return res[ 0 ][ "hash_id" ].as< uint64_t >();
 }
@@ -39,7 +38,7 @@ uint64_t getFileID( const Hash32& sha256, const bool add )
 {
 	ZoneScoped;
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query = "SELECT hash_id FROM files WHERE sha256 = $1";
@@ -49,13 +48,9 @@ uint64_t getFileID( const Hash32& sha256, const bool add )
 	if ( res.empty() )
 	{
 		if ( add )
-		{
 			return addFile( sha256 );
-		}
 		else
-		{
 			return 0;
-		}
 	}
 
 
@@ -73,11 +68,9 @@ Hash32 getHash( const uint64_t hash_id )
 	static QCache< uint64_t, std::shared_ptr< Hash32>> cache( size_num );
 
 	if ( cache.contains( hash_id ) )
-	{
 		return **cache.object( hash_id );
-	}
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query { "SELECT sha256 FROM files WHERE hash_id = $1" };
@@ -105,12 +98,12 @@ Hash32 getHash( const uint64_t hash_id )
 	const Hash32 hash { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string >() ) };
 
 	//Create a copy of the data as a shared pointer
-	std::shared_ptr< Hash32 > hash_ptr = std::make_shared< Hash32 >( hash );
+	const std::shared_ptr< Hash32 > hash_ptr = std::make_shared< Hash32 >( hash );
 
 	//Add the hash to the cache
 	cache.insert( hash_id, new std::shared_ptr< Hash32 >( hash_ptr ) );
 
-	return Hash32 { hexstring_to_qbytearray( res[ 0 ][ 0 ].as< std::string >() ) };
+	return hash;
 }
 
 
@@ -118,9 +111,6 @@ Hash32 getHash( const uint64_t hash_id )
 std::filesystem::path getThumbnailpath( const uint64_t hash_id )
 {
 	ZoneScoped;
-
-	Connection conn;
-	auto work { conn.getWork() };
 
 	const Hash32 hash { getHash( hash_id ) };
 

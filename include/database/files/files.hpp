@@ -20,9 +20,6 @@
 
 template< fgl::traits::byte_type T = std::byte > struct ByteArray32 : public std::array< T, 32 >
 {
-	using base_t = std::array< T, 32 >;
-
-
 	[[nodiscard]] explicit ByteArray32( const QByteArray& arry )
 	{
 		if ( arry.size() != 32 )

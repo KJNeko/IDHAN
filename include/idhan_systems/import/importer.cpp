@@ -282,7 +282,7 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 			{
 				ZoneScopedN( "Import To DB" );
 				//Just to take one of the connections and keep it until we are done
-				Connection conn;
+				const Connection conn;
 				auto work { conn.getWork() };
 
 				//Database

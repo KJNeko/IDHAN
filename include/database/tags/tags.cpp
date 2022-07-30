@@ -23,7 +23,7 @@ Tag getTag( const uint64_t tag_id )
 		return *tag_cache.object( tag_id );
 	}
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query { "SELECT group_id, subtag_id FROM tags WHERE tag_id = $1" };
@@ -47,7 +47,7 @@ Tag getTag( const uint64_t tag_id )
 uint64_t getTagID( const Group& group, const Subtag& subtag, bool create )
 {
 	ZoneScoped;
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	//Get id for group
@@ -81,7 +81,7 @@ void deleteTagID( const uint64_t tag_id )
 {
 	ZoneScoped;
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query { "DELETE FROM tags WHERE tag_id = $1 CASCADE" };
@@ -93,7 +93,7 @@ std::vector< Tag > getTags( const uint64_t hash_id )
 {
 	ZoneScoped;
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query {
@@ -118,7 +118,7 @@ std::vector< std::pair< uint64_t, Tag>> getTags( const std::vector< uint64_t >& 
 {
 	ZoneScoped;
 
-	Connection conn;
+	const Connection conn;
 	auto work { conn.getWork() };
 
 	constexpr pqxx::zview query {

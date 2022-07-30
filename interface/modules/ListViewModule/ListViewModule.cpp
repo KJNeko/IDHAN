@@ -64,7 +64,7 @@ void ListViewModule::addFile( const uint64_t file_id )
 	//If there are no files selected then update the model
 	if ( ui->listView->selectionModel()->selectedIndexes().empty() )
 	{
-		emit selection( model->getFiles() );
+		emit selection( model->getFileIDs() );
 	}
 }
 
@@ -77,7 +77,7 @@ void ListViewModule::addFiles( const std::vector< uint64_t >& file_id )
 	//If there are no files selected then update the model
 	if ( ui->listView->selectionModel()->selectedIndexes().empty() )
 	{
-		emit selection( model->getFiles() );
+		emit selection( model->getFileIDs() );
 	}
 }
 
@@ -100,7 +100,7 @@ void ListViewModule::itemActivated(
 	//If there is no files then return everything
 	if ( files.empty() )
 	{
-		emit selection( model->getFiles() );
+		emit selection( model->getFileIDs() );
 		return;
 	}
 
