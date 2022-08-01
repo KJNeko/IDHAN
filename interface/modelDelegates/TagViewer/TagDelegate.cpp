@@ -7,6 +7,7 @@
 #include "TracyBox.hpp"
 
 #include "database/tags/tags.hpp"
+#include "DataPack.hpp"
 
 
 QSize TagDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const
@@ -20,7 +21,10 @@ void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
 {
 	ZoneScoped;
 
-	const Tag tag = getTag( index.data().value< uint64_t >() );
+	const auto [ hash_id, count ] = index.data().value< DataPack >();
+
+	const auto tag { getTag( hash_id ) };
+
 
 	const QString group_text { QString::fromStdString( !tag.group.text.empty() ? tag.group.text + ":" : "" ) };
 	const QString subtag_text { QString::fromStdString( tag.subtag.text ) };
