@@ -40,8 +40,8 @@ void TagSearchModule::on_searchBar_textChanged( const QString& text )
 	}
 
 
-	const Connection conn;
-	auto work { conn.getWork() };
+	UniqueConnection conn;
+	pqxx::work work { *( conn.connection ) };
 
 	//constexpr pqxx::zview query_search {
 	//	"SELECT tag_id, (SELECT count(*) FROM mappings WHERE concat_tags.tag_id = mappings.tag_id) as tag_count FROM concat_tags WHERE joined_text LIKE $1 limit 15" };
@@ -51,13 +51,16 @@ void TagSearchModule::on_searchBar_textChanged( const QString& text )
 
 	const std::string str = text.toStdString() + "%";
 
-	emit updateSearchResults( work->exec_params( query_search_count, str ) );
+	emit updateSearchResults( work.exec_params( query_search_count, str ) );
 }
 
 
 std::string getTagStr( const uint64_t tag_id )
 {
-	const auto tag { tags::getTag( tag_id ) };
+	const auto tag_future { tags::async::getTag( tag_id ) };
+
+	const auto tag { tag_future.result() };
+
 
 	if ( tag.group == "" )
 	{
@@ -79,12 +82,12 @@ void TagSearchModule::on_searchBar_returnPressed()
 	}
 
 	//Check if the tag exists in the database
-	const Connection conn;
-	auto work { conn.getWork() };
+	UniqueConnection conn;
+	pqxx::work work { *( conn.connection ) };
 
 	constexpr pqxx::zview query_search { "SELECT tag_id FROM concat_tags WHERE joined_text = $1 limit 1" };
 
-	const pqxx::result res { work->exec_params( query_search, ui->searchBar->text().toStdString() ) };
+	const pqxx::result res { work.exec_params( query_search, ui->searchBar->text().toStdString() ) };
 
 	if ( res.empty() )
 	{
@@ -143,8 +146,8 @@ void TagSearchModule::updateTagSearch()
 
 	auto startTime { std::chrono::high_resolution_clock::now() };
 
-	const Connection conn;
-	auto work { conn.getWork() };
+	UniqueConnection conn;
+	pqxx::work work { *( conn.connection ) };
 
 	//Get the active tags
 	std::vector< uint64_t > active_tags;
@@ -155,7 +158,7 @@ void TagSearchModule::updateTagSearch()
 		//TODO: Move this into it's own database file
 		constexpr pqxx::zview concat_search { "SELECT tag_id FROM concat_tags WHERE joined_text = $1 limit 1" };
 
-		const auto ret = work->exec_params( concat_search, tag_str );
+		const auto ret = work.exec_params( concat_search, tag_str );
 
 		if ( ret.size() == 0 )
 		{
@@ -172,7 +175,7 @@ void TagSearchModule::updateTagSearch()
 		"SELECT hash_id FROM (SELECT hash_id, array_agg(tag_id) AS tags FROM mappings group by hash_id) as temp_query WHERE temp_query.tags @> $1"
 	);
 
-	const pqxx::result res { work->exec_params( filtered_search, active_tags ) };
+	const pqxx::result res { work.exec_params( filtered_search, active_tags ) };
 
 	std::vector< uint64_t > files;
 

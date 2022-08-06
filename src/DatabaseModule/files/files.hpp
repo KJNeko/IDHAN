@@ -16,6 +16,7 @@
 #include <fgl/types/traits.hpp>
 
 #include "TracyBox.hpp"
+#include "templates/pipeline/PipelineTemplate.hpp"
 
 
 template< fgl::traits::byte_type T = std::byte > struct ByteArray32 : public std::array< T, 32 >
@@ -64,23 +65,33 @@ using Hash32 = ByteArray32< std::byte >;
 namespace files
 {
 
-	[[nodiscard]] uint64_t addFile( const Hash32& sha256 );
 
-	[[nodiscard]] uint64_t getFileID( const Hash32& sha256, const bool add = false );
+	namespace raw
+	{
 
-	[[nodiscard]] Hash32 getHash( const uint64_t hash_id );
+		[[nodiscard]] uint64_t addFile( pqxx::work& work, const Hash32& sha256 );
 
+		[[nodiscard]] uint64_t getFileID( pqxx::work& work, const Hash32& sha256 );
 
-// Filepath from hash_id
+		[[nodiscard]] Hash32 getHash( pqxx::work& work, const uint64_t hash_id );
+	}
+
 	[[nodiscard]] std::filesystem::path getThumbnailpath( const uint64_t hash_id );
 
 	[[nodiscard]] std::filesystem::path getFilepath( const uint64_t hash_id );
 
+	namespace async
+	{
+		QFuture< uint64_t > addFile( const Hash32& sha256 );
 
-// Filepath from only hash
-	[[nodiscard]] std::filesystem::path getThumbnailpathFromHash( const Hash32& sha256 );
+		QFuture< uint64_t > getFileID( const Hash32& sha256 );
 
-	[[nodiscard]] std::filesystem::path getFilepathFromHash( const Hash32& sha256 );
+		QFuture< Hash32 > getHash( const uint64_t hash_id );
+	}
+
+	std::filesystem::path getThumbnailpathFromHash( const Hash32& sha256 );
+
+	std::filesystem::path getFilepathFromHash( const Hash32& sha256 );
 }
 
 #endif // MAIN_FILES_HPP

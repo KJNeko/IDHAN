@@ -14,11 +14,11 @@ namespace Database
 
 		ConnectionPool::init( connectionArgs );
 
-		const Connection conn;
+		const UniqueConnection conn;
 		spdlog::info( "Connections made" );
 
 		// Create the tables if they don't exist
-		auto work { conn.getWork() };
+		pqxx::work work { *conn.connection };
 
 		spdlog::info( "Checking tables" );
 
@@ -43,21 +43,11 @@ namespace Database
 				CREATE OR REPLACE VIEW concat_tags AS SELECT tag_id, concat(group_name, CASE WHEN length(group_name) = 0 THEN '' ELSE ':' END, subtag) AS joined_text FROM tags NATURAL JOIN subtags NATURAL JOIN groups;
 			)" };
 
-		work->exec( table_query );
-		work->exec( index_query );
-		work->exec( view_query );
+		work.exec( table_query );
+		work.exec( index_query );
+		work.exec( view_query );
 
-		work->commit();
+		work.commit();
 	}
-
-
-	void RESETDATABASE()
-	{
-		Connection conn;
-		auto work { conn.getWork() };
-
-		work->exec( "DROP TABLE IF EXISTS files, subtags, groups, tags, mappings, deleted, mime_types, mime CASCADE" );
-
-		ConnectionPool::deinit();
-	}
+	
 }

@@ -50,7 +50,6 @@ class ConnectionPool
 public:
 	static pqxx::connection* acquire()
 	{
-
 		readyConnections.acquire();
 		std::lock_guard< std::mutex > guard( poolLock );
 
@@ -62,7 +61,6 @@ public:
 
 	static void release( pqxx::connection* conn )
 	{
-
 		std::lock_guard< std::mutex > guard( poolLock );
 
 		connections.emplace( conn );
@@ -106,117 +104,22 @@ public:
 };
 
 
-class UniqueConnection
+struct UniqueConnection
 {
 	std::unique_ptr< pqxx::connection > connection;
 
-public:
 
-	pqxx::work transaction;
-
-
-	UniqueConnection() : connection( ConnectionPool::acquire() ), transaction( *connection )
+	UniqueConnection() : connection( ConnectionPool::acquire() )
 	{
 	}
 
 
 	~UniqueConnection()
 	{
-
 		ConnectionPool::release( connection.release() );
 	}
 };
 
-
-class ConnectionManager
-{
-	inline static std::unordered_map< std::thread::id, std::shared_ptr< UniqueConnection > > activeConnections;
-
-	inline static std::mutex connectionLock;
-
-public:
-
-	static std::shared_ptr< UniqueConnection > acquire()
-	{
-
-		const auto thread_id { std::this_thread::get_id() };
-
-		const std::optional< std::shared_ptr< UniqueConnection>> conn_iter = [ & ]() -> std::optional< std::shared_ptr< UniqueConnection>>
-		{
-			std::lock_guard< std::mutex > lock( connectionLock );
-			const auto it { activeConnections.find( thread_id ) };
-
-			if ( it == activeConnections.end() )
-			{
-				return std::nullopt;
-			}
-			else
-			{
-				return it->second;
-			}
-		}();
-
-		if ( conn_iter.has_value() )
-		{
-			return conn_iter.value();
-		}
-		else
-		{
-			std::shared_ptr< UniqueConnection > new_conn { std::make_shared< UniqueConnection >() };
-			std::lock_guard< std::mutex > lock( connectionLock );
-
-			activeConnections.emplace( thread_id, new_conn );
-
-			return new_conn;
-		}
-	}
-
-
-	static void release()
-	{
-		std::lock_guard< std::mutex > lock( connectionLock );
-
-		const auto thread_id { std::this_thread::get_id() };
-
-		const auto it { activeConnections.find( thread_id ) };
-
-		if ( it->second.unique() || it->second.use_count() == 2 )
-		{
-			activeConnections.erase( thread_id );
-		}
-	}
-
-
-};
-
-class RecursiveConnection
-{
-public:
-
-	std::shared_ptr< UniqueConnection > connection;
-
-
-	[[nodiscard]] pqxx::work* getWork() const
-	{
-		return &( connection->transaction );
-	}
-
-
-	RecursiveConnection() : connection( ConnectionManager::acquire() )
-	{
-
-	}
-
-
-	~RecursiveConnection()
-	{
-		ConnectionManager::release();
-	}
-
-
-};
-
-typedef RecursiveConnection Connection;
 
 namespace Database
 {

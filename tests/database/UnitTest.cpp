@@ -105,7 +105,7 @@ TEST( files, AddFile )
 	const Connection conn;
 	auto work { conn.getWork() };
 
-	EXPECT_GT( files::addFile( Hash32( HASH_8 ) ), static_cast<uint64_t>(0) );
+	EXPECT_GT( files::async::addFile( Hash32( HASH_8 ) ).result(), static_cast<uint64_t>(0) );
 
 	SUCCEED();
 }
@@ -121,7 +121,7 @@ TEST( files, GetFileID )
 
 	const uint64_t hash_id { files::addFile( Hash32( HASH_8 ) ) };
 
-	EXPECT_EQ( files::getFileID( Hash32( HASH_8 ) ), hash_id );
+	EXPECT_EQ( files::async::getFileID( Hash32( HASH_8 ) ).result(), hash_id );
 
 	SUCCEED();
 }

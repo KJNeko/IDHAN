@@ -67,6 +67,7 @@ void operator delete[]( void* ptr, std::size_t ) noexcept
 #include "DatabaseModule/DatabaseObjects/database.hpp"
 
 #include "idhan_systems/threading.hpp"
+#include "templates/pipeline/PipelineTemplate.hpp"
 
 
 void customMessageHandler( QtMsgType type, const QMessageLogContext& context, const QString& msg )
@@ -98,6 +99,7 @@ void customMessageHandler( QtMsgType type, const QMessageLogContext& context, co
 
 int main( int argc, char** argv )
 {
+
 	spdlog::info( "Qt version: {}", qVersion() );
 
 	spdlog::info( "Starting IDHAN" );
@@ -174,6 +176,10 @@ int main( int argc, char** argv )
 		"host=" + db_host + " dbname=" + db_name + " user=" + db_user + " password=" + db_pass
 	);
 
+	spdlog::info( "Initalizing pipelines" );
+
+
+	spdlog::info( "Finialized pipelines" );
 
 	spdlog::info( "Rendering window" );
 	MainWindow window;

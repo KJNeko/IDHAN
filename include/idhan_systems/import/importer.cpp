@@ -9,6 +9,7 @@
 
 #include "DatabaseModule/files/metadata.hpp"
 #include "DatabaseModule/tags/mappings.hpp"
+#include "DatabaseModule/tags/tags.hpp"
 
 #include <fstream>
 
@@ -45,7 +46,7 @@ std::vector< std::byte > readFile( const std::filesystem::path& path )
 		const size_t file_size { std::filesystem::file_size( path ) };
 		std::vector< std::byte > data;
 		data.resize( file_size );
-		ifs.read( reinterpret_cast<char*>(data.data()), file_size );
+		ifs.read( reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(file_size) );
 		return data;
 	}
 
@@ -273,48 +274,44 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 
 	uint64_t hash_id { 0 };
 
-	if ( !files::getFileID( sha256 ) )
-	{
-		for ( size_t i = 0; i < 15; ++i )
-		{
+	bool exists { false };
 
-			try
-			{
-				ZoneScopedN( "Import To DB" );
-				//Just to take one of the connections and keep it until we are done
-				const Connection conn;
-				auto work { conn.getWork() };
-
-				//Database
-				hash_id = files::addFile( sha256 );
-
-				populateMime( hash_id, mime_type.name().toStdString() );
-
-				for ( const auto& tag: tags )
-				{
-					mappings::addMapping( hash_id, tag.first, tag.second );
-				}
-
-				work->commit();
-			}
-			catch ( pqxx::unique_violation& e )
-			{
-				if ( i < 5 )
-				{
-					continue;
-				}
-
-				throw IDHANError( ErrorNo::DATABASE_UNKNOWN_ERROR, e.what() );
-			}
-
-			break;
-		}
-	}
-	else
+	if ( files::async::getFileID( sha256 ).result() != 0 )
 	{
 		finalizeSecureWrite( file_handle_id );
 		return { ImportResult::ALREADY_IMPORTED, hash_id };
 	}
+
+	auto hash_id_future { files::async::addFile( sha256 ) };
+
+	hash_id = hash_id_future.result();
+
+	auto mime_future = metadata::async::populateMime( hash_id_future.result(), mime_type.name().toStdString() );
+
+	std::vector< QFuture< void>> tag_futures;
+
+	for ( const auto& tag: tags )
+	{
+		auto tag_future = tags::async::getTagID( tag.first, tag.second );
+
+		if ( tag_future.result() == 0 )
+		{
+			auto create_tag_future = tags::async::createTag( tag.first, tag.second );
+			tag_futures.push_back( mappings::async::addMapping( hash_id, create_tag_future.result() ) );
+		}
+		else
+		{
+			tag_futures.push_back( mappings::async::addMapping( hash_id, tag_future.result() ) );
+		}
+	}
+
+	for ( size_t i = 0; i < tag_futures.size(); ++i )
+	{
+		tag_futures[ i ].waitForFinished();
+	}
+
+	mime_future.waitForFinished();
+
 
 	//Create the thumbnail if it doesn't exist
 	generateThumbnail( file_data, mime_type, sha256 );

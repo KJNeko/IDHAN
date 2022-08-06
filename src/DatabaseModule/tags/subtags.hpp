@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "templates/pipeline/PipelineTemplate.hpp"
 #include "DatabaseModule/DatabaseObjects/database.hpp"
 
 #include "objects/tag.hpp"
@@ -17,15 +18,27 @@
 namespace subtags
 {
 
-	uint64_t createSubtag( const Subtag& subtag );
+	namespace raw
+	{
+		[[nodiscard]] uint64_t createSubtag( pqxx::work& work, const Subtag& subtag );
 
-	Subtag getSubtag( const uint64_t subtag_id );
+		[[nodiscard]] Subtag getSubtag( pqxx::work& work, const uint64_t subtag_id );
 
-	uint64_t getSubtagID( const Subtag& subtag );
+		[[nodiscard]]uint64_t getSubtagID( pqxx::work& work, const Subtag& subtag );
 
-	void deleteSubtag( const Subtag& subtag );
+		void deleteSubtag( pqxx::work& work, const uint64_t subtag_id );
+	}
 
-	void deleteSubtag( const uint64_t subtag_id );
+	namespace async
+	{
+		QFuture< uint64_t > createSubtag( const Subtag& subtag );
+
+		QFuture< Subtag > getSubtag( const uint64_t subtag_id );
+
+		QFuture< uint64_t > getSubtagID( const Subtag& subtag );
+
+		QFuture< void > deleteSubtag( const uint64_t subtag_id );
+	}
 }
 
 #endif // MAIN_SUBTAGS_HPP

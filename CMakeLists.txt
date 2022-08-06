@@ -40,7 +40,7 @@ file(GLOB_RECURSE SOURCES
         "${CMAKE_SOURCE_DIR}/src/*.cpp"
         )
 
-include(tests/database/CMakeLists.txt)
+#include(tests/database/CMakeLists.txt)
 
 add_executable(IDHAN ${SOURCES})
 

@@ -27,7 +27,9 @@ void TagSearchDelegate::paint( QPainter* painter, const QStyleOptionViewItem& op
 {
 	ZoneScoped;
 
-	const auto tag = tags::getTag( index.data().value< uint64_t >() );
+	const auto tag_future { tags::async::getTag( index.data().value< uint64_t >() ) };
+
+	const auto tag { tag_future.result() };
 
 	QString str;
 	str += QString::fromStdString( !tag.group.empty() ? tag.group : "" );

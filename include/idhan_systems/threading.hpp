@@ -38,25 +38,6 @@ public:
 	}
 };
 
-class RequestPool
-{
-	inline static QThreadPool threadingPool;
-
-public:
-	inline static void init()
-	{
-		threadingPool.setMaxThreadCount(
-			std::max(
-				2, static_cast<int>(static_cast<float>(QThreadPool::globalInstance()->maxThreadCount()) * 0.10f)
-			)
-		);
-		threadingPool.setThreadPriority( QThread::Priority::HighPriority );
-		spdlog::info(
-			"RequestPool created with {} threads. Using priority QThread::Priority::HighPriority", threadingPool.maxThreadCount()
-		);
-	}
-};
-
 
 void initThreadPools();
 

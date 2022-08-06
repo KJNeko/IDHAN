@@ -8,5 +8,4 @@
 void initThreadPools()
 {
 	ImportPool::init();
-	RequestPool::init();
 }

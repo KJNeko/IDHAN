@@ -11,22 +11,42 @@
 #include <string>
 
 #include "DatabaseModule/DatabaseObjects/database.hpp"
+#include "templates/pipeline/PipelineTemplate.hpp"
 
 #include "objects/tag.hpp"
 
 
 namespace tags
 {
-	Tag getTag( const uint64_t tag_id );
+
+	namespace raw
+	{
+		Tag getTag( pqxx::work& work, const uint64_t tag_id );
 
 
-	uint64_t createTag( const Group& group, const Subtag& subtag );
+		uint64_t createTag( pqxx::work& work, const Group& group, const Subtag& subtag );
 
 
-	uint64_t getTagID( const Group& group, const Subtag& subtag, bool = false );
+		uint64_t getTagID( pqxx::work& work, const Group& group, const Subtag& subtag );
 
 
-	void deleteTagFromID( const uint64_t tag_id );
+		void deleteTagFromID( pqxx::work& work, const uint64_t tag_id );
+	}
+
+	namespace async
+	{
+		QFuture< Tag > getTag( const uint64_t tag_id );
+
+
+		QFuture< uint64_t > createTag( const Group& group, const Subtag& subtag );
+
+
+		QFuture< uint64_t > getTagID( const Group& group, const Subtag& subtag );
+
+
+		QFuture< void > deleteTagFromID( const uint64_t tag_id );
+	}
+
 }
 
 

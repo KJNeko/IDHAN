@@ -2,139 +2,150 @@
 // Created by kj16609 on 6/28/22.
 //
 
-#include <QCache>
+
+
+
 #include "groups.hpp"
 #include "DatabaseModule/DatabaseObjects/database.hpp"
 #include "DatabaseModule/utility/databaseExceptions.hpp"
 
 #include "TracyBox.hpp"
 
+#include <QCache>
+#include <QFuture>
+
 
 namespace groups
 {
-	uint64_t createGroup( const Group& group )
+	namespace raw
 	{
-		constexpr pqxx::zview select_group_id_query { "SELECT group_id FROM groups WHERE group_name = $1" };
-		constexpr pqxx::zview insert_group_query { "INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
-
-
-		ZoneScoped;
-		const Connection conn;
-		auto work { conn.getWork() };
-
-		const pqxx::result check_result { work->exec_params( select_group_id_query, group ) };
-		if ( check_result.size() )
+		uint64_t createGroup( pqxx::work& work, const Group& group )
 		{
-			return check_result[ 0 ][ "group_id" ].as< uint64_t >();
+			constexpr pqxx::zview select_group_id_query { "SELECT group_id FROM groups WHERE group_name = $1" };
+			constexpr pqxx::zview insert_group_query {
+				"INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
+
+			ZoneScoped;
+
+			const pqxx::result check_result { work.exec_params( select_group_id_query, group ) };
+			if ( check_result.size() )
+			{
+				return check_result[ 0 ][ "group_id" ].as< uint64_t >();
+			}
+
+			const pqxx::result insert_result { work.exec_params( insert_group_query, group ) };
+
+			work.commit();
+
+			return insert_result[ 0 ][ "group_id" ].as< uint64_t >();
 		}
 
 
-		const pqxx::result insert_result { work->exec_params( insert_group_query, group ) };
+		Group getGroup( pqxx::work& work, const uint64_t group_id )
+		{
+			constexpr pqxx::zview select_group_name_query { "SELECT group_name FROM groups WHERE group_id = $1" };
 
-		return insert_result[ 0 ][ "group_id" ].as< uint64_t >();
+			ZoneScoped;
+			constexpr uint64_t BPerMB { 1000000 };
+			constexpr uint64_t size { 64 * BPerMB };
+
+			static QCache< uint64_t, Group > group_cache { size };
+
+			if ( group_cache.contains( group_id ) )
+			{
+				return *group_cache.object( group_id );
+			}
+
+			const pqxx::result select_result { work.exec_params( select_group_name_query, group_id ) };
+
+			if ( select_result.empty() )
+			{
+				spdlog::error( "No group with ID {} found.", group_id );
+				throw IDHANError(
+					ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with id " + std::to_string( group_id ) + " found."
+				);
+			}
+
+			const std::string group_str { select_result[ 0 ][ "group_name" ].as< std::string_view >() };
+
+			group_cache.insert( group_id, new Group( group_str ), static_cast<qsizetype>(group_str.size()) );
+
+			return group_str;
+		}
+
+
+		uint64_t getGroupID( pqxx::work& work, const Group& group )
+		{
+			constexpr pqxx::zview select_group_id_query { "SELECT group_id FROM groups WHERE group_name = $1" };
+
+			ZoneScoped;
+
+			const pqxx::result select_result { work.exec_params( select_group_id_query, group ) };
+
+			if ( select_result.empty() )
+			{
+				return 0;
+			}
+
+
+			return select_result[ 0 ][ "group_id" ].as< uint64_t >();
+		}
+
+
+		void removeGroup( pqxx::work& work, const uint64_t group_id )
+		{
+			constexpr pqxx::zview remove_query { "DELETE FROM groups WHERE group_id = $1" };
+
+			ZoneScoped;
+
+			const pqxx::result remove_result { work.exec_params( remove_query, group_id ) };
+
+			if ( remove_result.affected_rows() == 0 )
+			{
+				throw IDHANError(
+					ErrorNo::DATABASE_DATA_NOT_FOUND, "0 rows effected while deleting group_id: " +
+					std::to_string( group_id ) +
+					" from groups."
+				);
+			}
+		}
 	}
 
-
-	Group getGroup( const uint64_t group_id )
+	namespace async
 	{
-		constexpr pqxx::zview select_group_name_query { "SELECT group_name FROM groups WHERE group_id = $1" };
-
-
-		ZoneScoped;
-		constexpr uint64_t BPerMB { 1000000 };
-		constexpr uint64_t size { 64 * BPerMB };
-
-		static QCache< uint64_t, Group > group_cache { size };
-
-		if ( group_cache.contains( group_id ) )
+		QFuture< uint64_t > createGroup( const Group& group )
 		{
-			return *group_cache.object( group_id );
-		}
+			static DatabasePipelineTemplate pipeline;
+			Task< uint64_t, Group > task { raw::createGroup, group };
 
-		const Connection conn;
-		auto work { conn.getWork() };
-
-
-		const pqxx::result select_result { work->exec_params( select_group_name_query, group_id ) };
-
-		if ( select_result.empty() )
-		{
-			spdlog::error( "No group with ID {} found.", group_id );
-			throw IDHANError(
-				ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with id " + std::to_string( group_id ) + " found."
-			);
-		}
-
-		const std::string group_str { select_result[ 0 ][ "group_name" ].as< std::string_view >() };
-
-		group_cache.insert( group_id, new Group( group_str ), group_str.size() );
-
-		return select_result[ 0 ][ "group_name" ].as< std::string >();
-
-	}
-
-
-	uint64_t getGroupID( const Group& group )
-	{
-		constexpr pqxx::zview select_group_id_query { "SELECT group_id FROM groups WHERE group_name = $1" };
-
-
-		ZoneScoped;
-		const Connection conn;
-		auto work { conn.getWork() };
-
-
-		const pqxx::result select_result { work->exec_params( select_group_id_query, group ) };
-
-		if ( select_result.empty() )
-		{
-			spdlog::error( "No group with name {} found.", group );
-			throw IDHANError( ErrorNo::DATABASE_DATA_NOT_FOUND, "No group with name " + group + " found." );
+			return pipeline.enqueue( task );
 		}
 
 
-		return select_result[ 0 ][ "group_id" ].as< uint64_t >();
-	}
-
-
-	void removeGroup( const Group& group )
-	{
-		constexpr pqxx::zview remove_query { "DELETE FROM groups WHERE group_name = $1" };
-
-		ZoneScoped;
-		const Connection conn;
-		auto work { conn.getWork() };
-
-
-		const pqxx::result remove_result { work->exec_params( remove_query, group ) };
-
-		if ( remove_result.affected_rows() == 0 )
+		QFuture< Group > getGroup( const uint64_t group_id )
 		{
-			throw IDHANError(
-				ErrorNo::DATABASE_DATA_NOT_FOUND, "0 rows effected while deleting " + group + " from groups."
-			);
+			static DatabasePipelineTemplate pipeline;
+			Task< Group, uint64_t > task { raw::getGroup, group_id };
+
+			return pipeline.enqueue( task );
 		}
 
-	}
 
-
-	void removeGroup( const uint64_t group_id )
-	{
-		constexpr pqxx::zview remove_query { "DELETE FROM groups WHERE group_id = $1" };
-
-		ZoneScoped;
-		const Connection conn;
-		auto work { conn.getWork() };
-
-		const pqxx::result remove_result { work->exec_params( remove_query, group_id ) };
-
-		if ( remove_result.affected_rows() == 0 )
+		QFuture< uint64_t > getGroupID( const Group& group )
 		{
-			throw IDHANError(
-				ErrorNo::DATABASE_DATA_NOT_FOUND, "0 rows effected while deleting group_id: " +
-				std::to_string( group_id ) +
-				" from groups."
-			);
+			static DatabasePipelineTemplate pipeline;
+			Task< uint64_t, Group > task { raw::getGroupID, group };
+
+			return pipeline.enqueue( task );
+		}
+
+
+		QFuture< void > removeGroup( const uint64_t group_id )
+		{
+			static DatabasePipelineTemplate pipeline;
+			Task< void, uint64_t > task { raw::removeGroup, group_id };
+
+			return pipeline.enqueue( task );
 		}
 	}
 }

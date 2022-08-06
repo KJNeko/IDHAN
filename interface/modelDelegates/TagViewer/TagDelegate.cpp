@@ -23,8 +23,9 @@ void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
 
 	const auto [ hash_id, count ] = index.data().value< DataPack >();
 
-	const auto tag { tags::getTag( hash_id ) };
+	const auto tag_future { tags::async::getTag( hash_id ) };
 
+	const auto tag { tag_future.result() };
 
 	const QString group_text { QString::fromStdString( !tag.group.empty() ? tag.group + ":" : "" ) };
 	const QString subtag_text { QString::fromStdString( tag.subtag ) };
