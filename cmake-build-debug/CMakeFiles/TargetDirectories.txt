@@ -1,3 +1,0 @@
-/home/kj16609/Desktop/Projects/IDHAN/cmake-build-debug/CMakeFiles/IDHAN.dir
-/home/kj16609/Desktop/Projects/IDHAN/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/kj16609/Desktop/Projects/IDHAN/cmake-build-debug/CMakeFiles/rebuild_cache.dir
