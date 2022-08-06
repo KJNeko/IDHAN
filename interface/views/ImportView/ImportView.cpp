@@ -20,8 +20,8 @@
 #include "TracyBox.hpp"
 
 // Database
-#include "database/utility/databaseExceptions.hpp"
-#include "database/files/metadata.hpp"
+#include "DatabaseModule/utility/databaseExceptions.hpp"
+#include "DatabaseModule/files/metadata.hpp"
 
 #include "idhan_systems/import/importer.hpp"
 #include "idhan_systems/threading.hpp"

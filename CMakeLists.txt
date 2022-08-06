@@ -1,12 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 project(IDHAN LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(seperate_debug_info ON)
-
-list(APPEND CMAKE_PREFIX_PATH "D:\\Qt\\6.3.1\\mingw_64")
+if (WIN32)
+    list(APPEND CMAKE_PREFIX_PATH "D:\\Qt\\6.3.1\\mingw_64")
+endif ()
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
@@ -15,7 +12,6 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/interface/ui)
 
 find_package(Qt6 COMPONENTS Widgets Core Concurrent REQUIRED)
 
-set(BUILD_TEST OFF)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/submodules/spdlog)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/submodules/tracy)
@@ -44,12 +40,15 @@ file(GLOB_RECURSE SOURCES
         "${CMAKE_SOURCE_DIR}/src/*.cpp"
         )
 
+include(tests/database/CMakeLists.txt)
+
 add_executable(IDHAN ${SOURCES})
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UPPER)
 message("${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}}")
 
 target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/interface)
 
 target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/submodules/libpqxx/include)
@@ -59,8 +58,9 @@ target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/submodules/libFGL/in
 target_compile_features(IDHAN PRIVATE cxx_std_20)
 target_compile_definitions(IDHAN PRIVATE FGL_ACKNOWLEDGE_INCOMPATIBLE_COMPILER TRACY_ENABLE)
 
-
 target_link_libraries(IDHAN PUBLIC Qt6::Core Qt6::Widgets Qt6::Concurrent spdlog pqxx TracyClient)
+
+#Unit tests
 
 
 

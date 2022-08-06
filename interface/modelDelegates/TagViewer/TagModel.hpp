@@ -14,7 +14,7 @@
 
 #include <vector>
 
-#include "database/database.hpp"
+#include "DatabaseModule/DatabaseObjects/database.hpp"
 
 
 class TagModel : public QAbstractListModel

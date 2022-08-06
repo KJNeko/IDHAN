@@ -4,11 +4,11 @@
 
 #include "importer.hpp"
 
-#include "database/utility/databaseExceptions.hpp"
+#include "DatabaseModule/utility/databaseExceptions.hpp"
 
 
-#include "database/files/metadata.hpp"
-#include "database/tags/mappings.hpp"
+#include "DatabaseModule/files/metadata.hpp"
+#include "DatabaseModule/tags/mappings.hpp"
 
 #include <fstream>
 
@@ -229,7 +229,7 @@ void generateThumbnail( const std::vector< std::byte >& data, const QMimeType mi
 		//Resize image
 		const auto resized_qimage = raw.scaled( x_res, y_res, Qt::KeepAspectRatio, Qt::SmoothTransformation );
 
-		auto thumbnail_path = getThumbnailpathFromHash( sha256 );
+		auto thumbnail_path = files::getThumbnailpathFromHash( sha256 );
 
 		//Ensure the parent directory is created
 		std::filesystem::create_directories( thumbnail_path.parent_path() );
@@ -251,7 +251,7 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 
 	const std::filesystem::path out_filepath { [ &sha256, &mime_type ]()
 	{
-		std::filesystem::path filepath { getFilepathFromHash( sha256 ).string() };
+		std::filesystem::path filepath { files::getFilepathFromHash( sha256 ).string() };
 		const auto ext = mime_type.preferredSuffix().toStdString();
 		if ( ext.size() > 0 )
 		{
@@ -273,7 +273,7 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 
 	uint64_t hash_id { 0 };
 
-	if ( !getFileID( sha256 ) )
+	if ( !files::getFileID( sha256 ) )
 	{
 		for ( size_t i = 0; i < 15; ++i )
 		{
@@ -286,13 +286,13 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 				auto work { conn.getWork() };
 
 				//Database
-				hash_id = addFile( sha256 );
+				hash_id = files::addFile( sha256 );
 
 				populateMime( hash_id, mime_type.name().toStdString() );
 
 				for ( const auto& tag: tags )
 				{
-					addMapping( hash_id, tag.first, tag.second );
+					mappings::addMapping( hash_id, tag.first, tag.second );
 				}
 
 				work->commit();

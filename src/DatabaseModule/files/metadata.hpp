@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "database/database.hpp"
+#include "DatabaseModule/DatabaseObjects/database.hpp"
 
 
 void populateMime( const uint64_t hash_id, const std::string& mime );

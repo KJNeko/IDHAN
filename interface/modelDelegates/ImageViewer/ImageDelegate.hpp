@@ -11,8 +11,8 @@
 #include <QAbstractListModel>
 #include <QPainter>
 
-#include "database/files/files.hpp"
-#include "database/tags/tags.hpp"
+#include "DatabaseModule/files/files.hpp"
+#include "DatabaseModule/tags/tags.hpp"
 #include "filedata/FileData.hpp"
 
 

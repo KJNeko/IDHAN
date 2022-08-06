@@ -45,6 +45,8 @@ class ConnectionPool
 
 	inline static std::mutex poolLock;
 
+	inline static std::atomic< bool > initalized { false };
+
 public:
 	static pqxx::connection* acquire()
 	{
@@ -70,6 +72,10 @@ public:
 
 	static void init( const std::string& connString )
 	{
+		if ( initalized )
+		{
+			return;
+		}
 
 		std::lock_guard< std::mutex > lock( poolLock );
 		const uint64_t connectionCount {
@@ -79,6 +85,22 @@ public:
 			connections.push( std::make_unique< pqxx::connection >( connString ) );
 			readyConnections.release();
 		}
+		initalized = true;
+	}
+
+
+	static void deinit()
+	{
+		if ( !initalized )
+		{
+			return;
+		}
+		std::lock_guard< std::mutex > lock( poolLock );
+		for ( size_t i = 0; i < connections.size(); ++i )
+		{
+			delete acquire();
+		}
+		initalized = false;
 	}
 
 };
@@ -174,7 +196,7 @@ public:
 	std::shared_ptr< UniqueConnection > connection;
 
 
-	pqxx::work* getWork() const
+	[[nodiscard]] pqxx::work* getWork() const
 	{
 		return &( connection->transaction );
 	}
@@ -199,6 +221,8 @@ typedef RecursiveConnection Connection;
 namespace Database
 {
 	void initalizeConnection( const std::string& connectionArgs );
+
+	void RESETDATABASE();
 }
 
 

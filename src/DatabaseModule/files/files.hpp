@@ -7,7 +7,7 @@
 #define MAIN_FILES_HPP
 
 
-#include "database/database.hpp"
+#include "DatabaseModule/DatabaseObjects/database.hpp"
 #include <array>
 #include <cstdint>
 
@@ -27,6 +27,13 @@ template< fgl::traits::byte_type T = std::byte > struct ByteArray32 : public std
 			spdlog::error( "ByteArray32: QByteArray size is not 32" );
 			throw std::runtime_error( "Hash array size is not 32" );
 		}
+		memcpy( this->data(), arry.data(), this->size() );
+	}
+
+
+	template< fgl::traits::byte_type T_byte = std::byte >
+	[[nodiscard]] explicit ByteArray32( const std::array< T_byte, 32 >& arry )
+	{
 		memcpy( this->data(), arry.data(), this->size() );
 	}
 
@@ -54,23 +61,26 @@ template< fgl::traits::byte_type T = std::byte > struct ByteArray32 : public std
 
 using Hash32 = ByteArray32< std::byte >;
 
-[[nodiscard]] uint64_t addFile( const Hash32& sha256 );
+namespace files
+{
 
-[[nodiscard]] uint64_t getFileID( const Hash32& sha256, const bool add = false );
+	[[nodiscard]] uint64_t addFile( const Hash32& sha256 );
 
-[[nodiscard]] Hash32 getHash( const uint64_t hash_id );
+	[[nodiscard]] uint64_t getFileID( const Hash32& sha256, const bool add = false );
+
+	[[nodiscard]] Hash32 getHash( const uint64_t hash_id );
 
 
 // Filepath from hash_id
-[[nodiscard]] std::filesystem::path getThumbnailpath( const uint64_t hash_id );
+	[[nodiscard]] std::filesystem::path getThumbnailpath( const uint64_t hash_id );
 
-[[nodiscard]] std::filesystem::path getFilepath( const uint64_t hash_id );
+	[[nodiscard]] std::filesystem::path getFilepath( const uint64_t hash_id );
 
 
 // Filepath from only hash
-[[nodiscard]] std::filesystem::path getThumbnailpathFromHash( const Hash32& sha256 );
+	[[nodiscard]] std::filesystem::path getThumbnailpathFromHash( const Hash32& sha256 );
 
-[[nodiscard]] std::filesystem::path getFilepathFromHash( const Hash32& sha256 );
-
+	[[nodiscard]] std::filesystem::path getFilepathFromHash( const Hash32& sha256 );
+}
 
 #endif // MAIN_FILES_HPP

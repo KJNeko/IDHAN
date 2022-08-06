@@ -6,7 +6,7 @@
 
 #include "TracyBox.hpp"
 
-#include "database/tags/tags.hpp"
+#include "DatabaseModule/tags/tags.hpp"
 #include "DataPack.hpp"
 
 
@@ -23,11 +23,11 @@ void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
 
 	const auto [ hash_id, count ] = index.data().value< DataPack >();
 
-	const auto tag { getTag( hash_id ) };
+	const auto tag { tags::getTag( hash_id ) };
 
 
-	const QString group_text { QString::fromStdString( !tag.group.text.empty() ? tag.group.text + ":" : "" ) };
-	const QString subtag_text { QString::fromStdString( tag.subtag.text ) };
+	const QString group_text { QString::fromStdString( !tag.group.empty() ? tag.group + ":" : "" ) };
+	const QString subtag_text { QString::fromStdString( tag.subtag ) };
 	const QString str { group_text + subtag_text };
 
 	painter->save();

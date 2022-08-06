@@ -10,7 +10,7 @@
 #include <QStandardItem>
 #include <QItemDelegate>
 
-#include "database/tags/tags.hpp"
+#include "DatabaseModule/tags/tags.hpp"
 #include "filedata/FileData.hpp"
 
 #include "modelDelegates/TagViewer/TagModel.hpp"

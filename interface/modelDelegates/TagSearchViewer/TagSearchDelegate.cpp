@@ -6,7 +6,7 @@
 
 #include "TracyBox.hpp"
 
-#include "database/tags/tags.hpp"
+#include "DatabaseModule/tags/tags.hpp"
 
 
 QSize TagSearchDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const
@@ -27,12 +27,12 @@ void TagSearchDelegate::paint( QPainter* painter, const QStyleOptionViewItem& op
 {
 	ZoneScoped;
 
-	const auto tag = getTag( index.data().value< uint64_t >() );
+	const auto tag = tags::getTag( index.data().value< uint64_t >() );
 
 	QString str;
-	str += QString::fromStdString( !tag.group.text.empty() ? tag.group.text : "" );
-	str += QString::fromStdString( !tag.group.text.empty() ? ":" : "" );
-	str += QString::fromStdString( tag.subtag.text );
+	str += QString::fromStdString( !tag.group.empty() ? tag.group : "" );
+	str += QString::fromStdString( !tag.group.empty() ? ":" : "" );
+	str += QString::fromStdString( tag.subtag );
 
 	painter->save();
 

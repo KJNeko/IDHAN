@@ -8,7 +8,7 @@
 
 #include <QWidget>
 
-#include "database/database.hpp"
+#include "DatabaseModule/DatabaseObjects/database.hpp"
 
 
 QT_BEGIN_NAMESPACE

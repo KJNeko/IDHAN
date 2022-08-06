@@ -9,8 +9,8 @@
 
 #include "TracyBox.hpp"
 
-#include "database/database.hpp"
-#include "database/tags/tags.hpp"
+#include "DatabaseModule/DatabaseObjects/database.hpp"
+#include "DatabaseModule/tags/tags.hpp"
 
 
 #include <QStandardItemModel>
@@ -57,15 +57,15 @@ void TagSearchModule::on_searchBar_textChanged( const QString& text )
 
 std::string getTagStr( const uint64_t tag_id )
 {
-	const auto tag { getTag( tag_id ) };
+	const auto tag { tags::getTag( tag_id ) };
 
 	if ( tag.group == "" )
 	{
-		return tag.subtag.text;
+		return tag.subtag;
 	}
 	else
 	{
-		return tag.group.text + ":" + tag.subtag.text;
+		return tag.group + ":" + tag.subtag;
 	}
 }
 

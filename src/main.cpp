@@ -64,7 +64,7 @@ void operator delete[]( void* ptr, std::size_t ) noexcept
 
 #include "views/IDHANView/IDHANView.hpp"
 
-#include "database/database.hpp"
+#include "DatabaseModule/DatabaseObjects/database.hpp"
 
 #include "idhan_systems/threading.hpp"
 

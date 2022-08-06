@@ -4,7 +4,7 @@
 
 #include "metadata.hpp"
 
-#include "database/utility/databaseExceptions.hpp"
+#include "DatabaseModule/utility/databaseExceptions.hpp"
 
 #include "TracyBox.hpp"
 

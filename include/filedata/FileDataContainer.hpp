@@ -13,7 +13,7 @@
 
 #include <QObject> //signals
 
-#include "database/files/files.hpp" //Hash32
+#include "DatabaseModule/files/files.hpp" //Hash32
 
 
 struct FileDataContainer

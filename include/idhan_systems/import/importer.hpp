@@ -11,10 +11,10 @@
 #include <filesystem>
 #include <vector>
 
-#include "database/tags/groups.hpp"
-#include "database/tags/subtags.hpp"
+#include "DatabaseModule/tags/groups.hpp"
+#include "DatabaseModule/tags/subtags.hpp"
 
-#include "database/files/files.hpp"
+#include "DatabaseModule/files/files.hpp"
 
 
 enum class ImportResult
