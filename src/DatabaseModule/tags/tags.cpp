@@ -63,39 +63,22 @@ namespace tags
 
 			const auto [ group_id, subtag_id ] = [ & ]() -> std::pair< uint64_t, uint64_t >
 			{
-				QFuture< uint64_t > group_id_;
-				QFuture< uint64_t > subtag_id_;
+				const uint64_t group_id_ = groups::raw::createGroup( work, group );
+				const uint64_t subtag_id_ = subtags::raw::createSubtag( work, subtag );
 
-				group_id_ = groups::async::getGroupID( group );
-				subtag_id_ = subtags::async::getSubtagID( subtag );
-
-				if ( group_id_.result() == 0 )
-				{
-					group_id_ = groups::async::createGroup( group );
-				}
-
-				if ( subtag_id_.result() == 0 )
-				{
-					subtag_id_ = subtags::async::createSubtag( subtag );
-				}
-
-				spdlog::info( "Tag {}:{} created with ids {}:{}", group, subtag, group_id_.result(), subtag_id_.result() );
-
-				return { group_id_.result(), subtag_id_.result() };
+				return { group_id_, subtag_id_ };
 			}();
 
 			//Check if it exists
 			const auto tag_id { getTagID( work, group, subtag ) };
 			if ( tag_id == 0 )
 			{
-				spdlog::info( "Tag {}:{} does not exist. Creating", group, subtag );
 				const pqxx::result res { work.exec_params( query_insert, group_id, subtag_id ) };
 				work.commit();
 				return res[ 0 ][ "tag_id" ].as< uint64_t >();
 			}
 			else
 			{
-				spdlog::info( "Tag {}:{} already existed", group, subtag );
 				return tag_id;
 			};
 		}
@@ -109,19 +92,18 @@ namespace tags
 
 			const auto [ group_id, subtag_id ] = [ & ]() -> std::pair< uint64_t, uint64_t >
 			{
-				QFuture< uint64_t > group_id_;
-				QFuture< uint64_t > subtag_id_;
+				uint64_t group_id_;
+				uint64_t subtag_id_;
 
-				group_id_ = groups::async::getGroupID( group );
-				subtag_id_ = subtags::async::getSubtagID( subtag );
+				group_id_ = groups::raw::getGroupID( work, group );
+				subtag_id_ = subtags::raw::getSubtagID( work, subtag );
 
-				if ( group_id_.result() == 0 || subtag_id_.result() == 0 )
+				if ( group_id_ == 0 || subtag_id_ == 0 )
 				{
-					spdlog::info( "Tag {}:{} does not exist... {}:{}", group, subtag, group_id_.result(), subtag_id_.result() );
 					return { 0, 0 };
 				}
 
-				return { group_id_.result(), subtag_id_.result() };
+				return { group_id_, subtag_id_ };
 			}();
 
 			if ( group_id == 0 || subtag_id == 0 )
@@ -165,6 +147,8 @@ namespace tags
 	{
 		QFuture< Tag > getTag( const uint64_t tag_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< Tag, uint64_t > task { raw::getTag, tag_id };
 
@@ -174,6 +158,8 @@ namespace tags
 
 		QFuture< uint64_t > createTag( const Group& group, const Subtag& subtag )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Group, Subtag > task { raw::createTag, group, subtag };
 
@@ -183,6 +169,8 @@ namespace tags
 
 		QFuture< uint64_t > getTagID( const Group& group, const Subtag& subtag )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Group, Subtag > task { raw::getTagID, group, subtag };
 
@@ -192,6 +180,8 @@ namespace tags
 
 		QFuture< void > deleteTagFromID( const uint64_t tag_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t > task { raw::deleteTagFromID, tag_id };
 

@@ -34,7 +34,6 @@ ListViewModule::~ListViewModule()
 
 void ListViewModule::resetFiles()
 {
-	ZoneScoped;
 	std::lock_guard< std::mutex > lock( queue_lock );
 	model->reset();
 }

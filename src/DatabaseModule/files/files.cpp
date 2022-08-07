@@ -158,6 +158,8 @@ namespace files
 	{
 		QFuture< uint64_t > addFile( const Hash32& sha256 )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Hash32 > task { raw::addFile, sha256 };
 
@@ -167,6 +169,8 @@ namespace files
 
 		QFuture< uint64_t > getFileID( const Hash32& sha256 )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Hash32 > task { raw::getFileID, sha256 };
 
@@ -176,6 +180,8 @@ namespace files
 
 		QFuture< Hash32 > getHash( const uint64_t hash_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< Hash32, uint64_t > task { raw::getHash, hash_id };
 

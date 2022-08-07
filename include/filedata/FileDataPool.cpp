@@ -15,7 +15,6 @@
 std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_id )
 {
 	std::lock_guard< std::mutex > lock( filePoolLock );
-	ZoneScoped;
 
 	TracyCPlot( "FileDataPool Size", static_cast<double>(filePool.size()) );
 
@@ -46,7 +45,6 @@ std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_
 void FileDataPool::invalidate( const uint64_t hash_id )
 {
 	std::lock_guard< std::mutex > lock( filePoolLock );
-	ZoneScoped;
 	const auto itter { filePool.find( hash_id ) };
 	if ( itter != filePool.end() )
 	{
@@ -65,7 +63,6 @@ void FileDataPool::invalidate( const uint64_t hash_id )
 void FileDataPool::clear( const uint64_t hash_id )
 {
 	std::lock_guard< std::mutex > lock( filePoolLock );
-	ZoneScoped;
 
 	const auto itter { filePool.find( hash_id ) };
 	if ( itter != filePool.end() )

@@ -9,6 +9,7 @@
 #include "TracyBox.hpp"
 
 #include <QFuture>
+#include <QCache>
 
 
 namespace subtags
@@ -17,21 +18,16 @@ namespace subtags
 	{
 		uint64_t createSubtag( pqxx::work& work, const Subtag& subtag )
 		{
-			constexpr pqxx::zview checkSubtag { "SELECT subtag_id FROM subtags WHERE subtag = $1" };
-
 			constexpr pqxx::zview query { "INSERT INTO subtags (subtag) VALUES ($1) RETURNING subtag_id" };
 
 
 			ZoneScoped;
 
-
-			//Check that it wasn't made before we locked
-			const pqxx::result check_ret { work.exec_params( checkSubtag, subtag ) };
-			if ( check_ret.size() )
+			const uint64_t subtag_id { getSubtagID( work, subtag ) };
+			if ( subtag_id != 0 )
 			{
-				return check_ret[ 0 ][ "subtag_id" ].as< uint64_t >();
+				return subtag_id;
 			}
-
 
 			const pqxx::result res { work.exec_params( query, subtag ) };
 
@@ -47,7 +43,14 @@ namespace subtags
 			constexpr pqxx::zview query { "SELECT subtag FROM subtags WHERE subtag_id = $1" };
 
 			ZoneScoped;
+			constexpr uint64_t BPerMB { 1000000 };
+			constexpr uint64_t size { 64 * BPerMB };
 
+			static QCache< uint64_t, Subtag > subtag_cache { size };
+			if ( subtag_cache.contains( subtag_id ) )
+			{
+				return *subtag_cache.object( subtag_id );
+			}
 
 			const pqxx::result res { work.exec_params( query, subtag_id ) };
 
@@ -58,7 +61,11 @@ namespace subtags
 				);
 			}
 
-			return res[ 0 ][ "subtag" ].as< std::string >();
+			const Subtag subtag { res[ 0 ][ "subtag" ].as< std::string >() };
+
+			subtag_cache.insert( subtag_id, new Subtag( subtag ) );
+
+			return subtag;
 		}
 
 
@@ -68,6 +75,14 @@ namespace subtags
 
 
 			ZoneScoped;
+			constexpr uint64_t BPerMB { 1000000 };
+			constexpr uint64_t size { 64 * BPerMB };
+
+			static QCache< Subtag, uint64_t > subtag_cache { size };
+			if ( subtag_cache.contains( subtag ) )
+			{
+				return *subtag_cache.object( subtag );
+			}
 
 			const pqxx::result res { work.exec_params( query, subtag ) };
 
@@ -75,8 +90,12 @@ namespace subtags
 			{
 				return 0;
 			}
-			
-			return res[ 0 ][ "subtag_id" ].as< uint64_t >();
+
+			const uint64_t subtag_id { res[ 0 ][ "subtag_id" ].as< uint64_t >() };
+
+			subtag_cache.insert( subtag, new uint64_t( subtag_id ) );
+
+			return subtag_id;
 		}
 
 
@@ -104,6 +123,8 @@ namespace subtags
 	{
 		QFuture< uint64_t > createSubtag( const Subtag& subtag )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Subtag > task { raw::createSubtag, subtag };
 
@@ -113,6 +134,8 @@ namespace subtags
 
 		QFuture< Subtag > getSubtag( const uint64_t subtag_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< Subtag, uint64_t > task { raw::getSubtag, subtag_id };
 
@@ -122,6 +145,8 @@ namespace subtags
 
 		QFuture< uint64_t > getSubtagID( const Subtag& subtag )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Subtag > task { raw::getSubtagID, subtag };
 
@@ -131,6 +156,8 @@ namespace subtags
 
 		QFuture< void > deleteSubtag( const uint64_t subtag_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t > task { raw::deleteSubtag, subtag_id };
 

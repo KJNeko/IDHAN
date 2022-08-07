@@ -11,23 +11,35 @@ void DatabasePipelineTemplate::runner()
 	{
 		while ( !terminating )
 		{
+			//Grab from the temporary queue and place into the larger queue
+
+
 			TaskBasic* task { nullptr };
 			semaphore.acquire();
 
-
 			{
-				std::lock_guard< std::mutex > lock( pipelineLock );
-				task = tasks.front();
-				tasks.pop();
+				ZoneScopedN( "DatabasePipelineTemplate::runner()" );
+
+				{
+					#ifndef NDEBUG
+					std::lock_guard< LockableBase( std::mutex ) > lock( pipelineLock );
+					LockMark( pipelineLock )
+					#else
+					std::lock_guard< std::mutex > lock( pipelineLock );
+					#endif
+
+					task = tasks.front();
+					tasks.pop();
+				}
+
+				pqxx::work work { *pipeline_conn->connection };
+
+
+				task->run( work );
+
+
+				delete task;
 			}
-
-			pqxx::work work { *pipeline_conn->connection };
-
-
-			task->run( work );
-
-
-			delete task;
 		}
 	}
 	catch ( std::exception& e )

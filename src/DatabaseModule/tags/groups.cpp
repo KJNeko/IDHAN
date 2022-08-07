@@ -21,16 +21,16 @@ namespace groups
 	{
 		uint64_t createGroup( pqxx::work& work, const Group& group )
 		{
-			constexpr pqxx::zview select_group_id_query { "SELECT group_id FROM groups WHERE group_name = $1" };
 			constexpr pqxx::zview insert_group_query {
 				"INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
 
 			ZoneScoped;
 
-			const pqxx::result check_result { work.exec_params( select_group_id_query, group ) };
-			if ( check_result.size() )
+			const uint64_t group_id { getGroupID( work, group ) };
+
+			if ( group_id != 0 )
 			{
-				return check_result[ 0 ][ "group_id" ].as< uint64_t >();
+				return group_id;
 			}
 
 			const pqxx::result insert_result { work.exec_params( insert_group_query, group ) };
@@ -79,6 +79,15 @@ namespace groups
 			constexpr pqxx::zview select_group_id_query { "SELECT group_id FROM groups WHERE group_name = $1" };
 
 			ZoneScoped;
+			constexpr uint64_t BPerMB { 1000000 };
+			constexpr uint64_t size { 64 * BPerMB };
+
+			static QCache< Group, uint64_t > group_cache { size };
+
+			if ( group_cache.contains( group ) )
+			{
+				return *group_cache.object( group );
+			}
 
 			const pqxx::result select_result { work.exec_params( select_group_id_query, group ) };
 
@@ -87,8 +96,11 @@ namespace groups
 				return 0;
 			}
 
+			const auto result { select_result[ 0 ][ "group_id" ].as< uint64_t >() };
 
-			return select_result[ 0 ][ "group_id" ].as< uint64_t >();
+			group_cache.insert( group, new uint64_t( result ), static_cast<qsizetype>(group.size()) );
+
+			return result;
 		}
 
 
@@ -115,6 +127,8 @@ namespace groups
 	{
 		QFuture< uint64_t > createGroup( const Group& group )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Group > task { raw::createGroup, group };
 
@@ -124,6 +138,8 @@ namespace groups
 
 		QFuture< Group > getGroup( const uint64_t group_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< Group, uint64_t > task { raw::getGroup, group_id };
 
@@ -133,6 +149,8 @@ namespace groups
 
 		QFuture< uint64_t > getGroupID( const Group& group )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Group > task { raw::getGroupID, group };
 
@@ -142,6 +160,8 @@ namespace groups
 
 		QFuture< void > removeGroup( const uint64_t group_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t > task { raw::removeGroup, group_id };
 

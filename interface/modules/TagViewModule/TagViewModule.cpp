@@ -35,7 +35,6 @@ TagViewModule::~TagViewModule()
 
 void TagViewModule::selectionChanged( const std::vector< uint64_t >& hash_ids )
 {
-	ZoneScoped;
 
 	//Clear the model
 	//model->reset();

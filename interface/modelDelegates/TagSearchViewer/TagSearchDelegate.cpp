@@ -25,7 +25,6 @@ QSize TagSearchDelegate::sizeHint( const QStyleOptionViewItem& option, const QMo
 
 void TagSearchDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-	ZoneScoped;
 
 	const auto tag_future { tags::async::getTag( index.data().value< uint64_t >() ) };
 

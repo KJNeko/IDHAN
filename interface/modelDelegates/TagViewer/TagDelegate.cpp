@@ -19,7 +19,6 @@ QSize TagDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelInd
 
 void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-	ZoneScoped;
 
 	const auto [ hash_id, count ] = index.data().value< DataPack >();
 

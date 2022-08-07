@@ -14,7 +14,6 @@ void TagModel::reset()
 {
 	std::lock_guard< std::mutex > lock( this->mtx );
 
-	ZoneScoped;
 
 	beginResetModel();
 	database_ret = pqxx::result();
@@ -83,7 +82,6 @@ TagModel::TagModel( [[maybe_unused]]QWidget* parent )
 
 int TagModel::rowCount( [[maybe_unused]] const QModelIndex& parent ) const
 {
-	ZoneScoped;
 
 	return database_ret.size();
 }
@@ -97,7 +95,6 @@ int TagModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
 
 QVariant TagModel::data( const QModelIndex& index, [[maybe_unused]] int role ) const
 {
-	ZoneScoped;
 
 	DataPack pack;
 	pack.tag_id = database_ret[ index.row() ][ "tag_id" ].as< uint64_t >();

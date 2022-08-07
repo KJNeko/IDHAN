@@ -246,7 +246,19 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 
 	const std::vector< std::byte > file_data { readFile( path ) };
 
+	TracyCZoneN( zone2, "createTags", true );
+	const auto tags { parseSidecarTags( path ) };
+	std::vector< QFuture< uint64_t>> tag_id_futures;
+	for ( size_t i = 0; i < tags.size(); ++i )
+	{
+		tag_id_futures.push_back( tags::async::createTag( tags[ i ].first, tags[ i ].second ) );
+	}
+	TracyCZoneEnd( zone2 );
+
 	const Hash32 sha256 { getSHA256Hash( file_data ) };
+
+
+	auto get_hash_id_future { files::async::getFileID( sha256 ) };
 
 	const auto mime_type { determineMime( file_data ) };
 
@@ -262,6 +274,14 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 		return filepath;
 	}() };
 
+	if ( get_hash_id_future.result() != 0 )
+	{
+		//TODO add the abilit to save the file even if it's already imported and we are missing the file
+		return { ImportResult::ALREADY_IMPORTED, get_hash_id_future.result() };
+	}
+
+	auto hash_id_future { files::async::addFile( sha256 ) };
+
 	int file_handle_id { 0 };
 
 	if ( !std::filesystem::exists( out_filepath ) )
@@ -270,19 +290,10 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 		file_handle_id = startSecureWrite( out_filepath, file_data );
 	}
 
-	const auto tags { parseSidecarTags( path ) };
 
 	uint64_t hash_id { 0 };
 
 	bool exists { false };
-
-	if ( files::async::getFileID( sha256 ).result() != 0 )
-	{
-		finalizeSecureWrite( file_handle_id );
-		return { ImportResult::ALREADY_IMPORTED, hash_id };
-	}
-
-	auto hash_id_future { files::async::addFile( sha256 ) };
 
 	hash_id = hash_id_future.result();
 
@@ -290,32 +301,17 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 
 	std::vector< QFuture< void>> tag_futures;
 
-	for ( const auto& tag: tags )
-	{
-		auto tag_future = tags::async::getTagID( tag.first, tag.second );
-
-		if ( tag_future.result() == 0 )
-		{
-			auto create_tag_future = tags::async::createTag( tag.first, tag.second );
-			tag_futures.push_back( mappings::async::addMapping( hash_id, create_tag_future.result() ) );
-		}
-		else
-		{
-			tag_futures.push_back( mappings::async::addMapping( hash_id, tag_future.result() ) );
-		}
-	}
-
-	for ( size_t i = 0; i < tag_futures.size(); ++i )
-	{
-		tag_futures[ i ].waitForFinished();
-	}
 
 	mime_future.waitForFinished();
-
-
 	//Create the thumbnail if it doesn't exist
 	generateThumbnail( file_data, mime_type, sha256 );
 
+	TracyCZoneN( zone3, "addMappings", true );
+	for ( size_t i = 0; i < tags.size(); ++i )
+	{
+		tag_futures.push_back( mappings::async::addMapping( hash_id, tag_id_futures[ i ].result() ) );
+	}
+	TracyCZoneEnd( zone3 );
 
 	finalizeSecureWrite( file_handle_id );
 	return { ImportResult::SUCCESS, hash_id };

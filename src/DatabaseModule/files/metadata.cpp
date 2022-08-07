@@ -45,9 +45,9 @@ namespace metadata
 
 			constexpr pqxx::zview query { "INSERT INTO mime (hash_id, mime_id) VALUES ($1, $2)" };
 
-			const auto mime_id { async::getMimeID( mime ) };
+			const auto mime_id { raw::getMimeID( work, mime ) };
 
-			const pqxx::result ret { work.exec_params( query, hash_id, mime_id.result() ) };
+			const pqxx::result ret { work.exec_params( query, hash_id, mime_id ) };
 
 		}
 

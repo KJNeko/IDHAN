@@ -13,7 +13,6 @@ void TagSearchModel::reset()
 {
 	std::lock_guard< std::mutex > lock( this->mtx );
 
-	ZoneScoped;
 
 	beginResetModel();
 	tag_list = std::vector< uint64_t >();
@@ -24,8 +23,6 @@ void TagSearchModel::reset()
 void TagSearchModel::setTags( const std::vector< uint64_t >& tag_list_ )
 {
 	std::lock_guard< std::mutex > lock( this->mtx );
-
-	ZoneScoped;
 
 
 	beginResetModel();

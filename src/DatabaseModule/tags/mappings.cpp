@@ -86,12 +86,7 @@ namespace mappings
 
 			for ( const auto& row: res )
 			{
-				tags_futures.emplace_back( tags::async::getTag( row[ "tag_id" ].as< uint64_t >() ) );
-			}
-
-			for ( size_t i = 0; i < res.size(); ++i )
-			{
-				tags.emplace_back( res[ i ][ "id_count" ].as< uint64_t >(), tags_futures[ i ].result() );
+				tags.emplace_back( row[ "id_count" ].as< uint64_t >(), tags::raw::getTag( work, row[ "tag_id" ].as< uint64_t >() ) );
 			}
 
 			return tags;
@@ -103,6 +98,8 @@ namespace mappings
 
 		QFuture< void > addMapping( const uint64_t hash_id, const uint64_t tag_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t, uint64_t > task { raw::addMapping, hash_id, tag_id };
 
@@ -112,6 +109,8 @@ namespace mappings
 
 		QFuture< void > deleteMapping( const uint64_t hash_id, const uint64_t tag_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t, uint64_t > task { raw::deleteMapping, hash_id, tag_id };
 
@@ -121,6 +120,8 @@ namespace mappings
 
 		QFuture< std::vector< Tag >> getMappings( const uint64_t hash_id )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			auto func = static_cast<std::vector< Tag >( * )( pqxx::work&, uint64_t )>(raw::getMappings);
 
@@ -132,6 +133,8 @@ namespace mappings
 
 		QFuture< std::vector< std::pair< uint64_t, Tag>> > getMappings( const std::vector< uint64_t >& hash_ids )
 		{
+			ZoneScoped;
+
 			static DatabasePipelineTemplate pipeline;
 			Task< std::vector< std::pair< uint64_t, Tag>>, std::vector< uint64_t>> task { raw::getMappingsGroup,
 				hash_ids };

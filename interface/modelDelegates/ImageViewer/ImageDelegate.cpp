@@ -34,7 +34,6 @@ ImageDelegate::ImageDelegate( QObject* parent ) : QAbstractItemDelegate( parent 
 void ImageDelegate::paint(
 	QPainter* const painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-	ZoneScoped;
 	// Get the image
 	const FileData filedat { index.data( Qt::DisplayRole ).value< uint64_t >() };
 
@@ -116,7 +115,6 @@ ImageModel::ImageModel( QWidget* parent ) : QAbstractListModel( parent )
 
 QVariant ImageModel::data( const QModelIndex& index, int role ) const
 {
-	ZoneScoped;
 	if ( !index.isValid() )
 	{ return {}; }
 
@@ -128,7 +126,6 @@ QVariant ImageModel::data( const QModelIndex& index, int role ) const
 
 void ImageModel::addImages( const std::vector< uint64_t >& queue )
 {
-	ZoneScoped;
 	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + queue.size()) );
 
 	fileList.reserve( queue.size() );
@@ -178,7 +175,6 @@ void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 
 std::vector< uint64_t > ImageModel::getFileIDs() const
 {
-	ZoneScoped;
 	std::vector< uint64_t > ret;
 
 	ret.reserve( fileList.size() );
