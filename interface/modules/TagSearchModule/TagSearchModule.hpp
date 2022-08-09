@@ -9,6 +9,7 @@
 #include <QWidget>
 
 #include "DatabaseModule/DatabaseObjects/database.hpp"
+#include "filedata/FileData.hpp"
 
 
 QT_BEGIN_NAMESPACE
@@ -42,7 +43,7 @@ signals:
 
 	void updateSearchResults( const pqxx::result res );
 
-	void searchComplete( const std::vector< uint64_t >& file_ids );
+	void searchComplete( const std::vector< FileData >& file_ids );
 
 	void updateFileList( const pqxx::result res );
 

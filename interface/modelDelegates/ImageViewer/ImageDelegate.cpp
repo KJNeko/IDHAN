@@ -159,17 +159,11 @@ int ImageModel::columnCount( [[maybe_unused]] const QModelIndex& parent ) const
 }
 
 
-void ImageModel::setFiles( const std::vector< uint64_t >& ids )
+void ImageModel::setFiles( const std::vector< FileData >& file_data )
 {
 	ZoneScoped;
 	beginResetModel();
-	fileList.clear();
-
-	fileList.reserve( ids.size() );
-	for ( auto& id: ids )
-	{
-		fileList.emplace_back( id );
-	}
+	fileList = file_data;
 	endResetModel();
 }
 

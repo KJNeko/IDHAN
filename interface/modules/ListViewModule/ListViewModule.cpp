@@ -39,12 +39,13 @@ void ListViewModule::resetFiles()
 }
 
 
-void ListViewModule::setFiles( const std::vector< uint64_t >& files_ )
+void ListViewModule::setFiles( const std::vector< FileData >& files_ )
 {
 	ZoneScoped;
 	resetFiles();
-	
+
 	std::lock_guard< std::mutex > lock( queue_lock );
+
 	model->setFiles( files_ );
 }
 

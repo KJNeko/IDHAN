@@ -56,7 +56,7 @@ public slots:
 
 	void resetFiles();
 
-	void setFiles( const std::vector< uint64_t >& files );
+	void setFiles( const std::vector< FileData >& files );
 
 	void itemActivated( const QItemSelection& selected, const QItemSelection& deselected );
 

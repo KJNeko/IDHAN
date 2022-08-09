@@ -14,6 +14,7 @@
 
 #include "modelDelegates/TagViewer/TagDelegate.hpp"
 #include "modelDelegates/TagViewer/TagModel.hpp"
+#include "filedata/FileData.hpp"
 
 
 #include <QStandardItemModel>
@@ -108,10 +109,6 @@ void TagSearchModule::on_searchBar_returnPressed()
 		return;
 	}
 
-	spdlog::info(
-		"Found tag {} with id {}", ui->searchBar->text().toStdString(), res[ 0 ][ "tag_id" ].as< uint64_t >()
-	);
-
 	//Insert to the search list
 	const uint64_t tag_id = res[ 0 ][ "tag_id" ].as< uint64_t >();
 
@@ -152,7 +149,7 @@ void TagSearchModule::updateTagSearch()
 
 	if ( ui->activeTags->count() == 0 )
 	{
-		emit searchComplete( std::vector< uint64_t >() );
+		emit searchComplete( std::vector< FileData >() );
 		return;
 	}
 
@@ -201,7 +198,14 @@ void TagSearchModule::updateTagSearch()
 	//Set the internal list to the search results
 	previous_result = files;
 
-	emit searchComplete( files );
+	std::vector< FileData > file_data;
+
+	for ( const auto& file: files )
+	{
+		file_data.emplace_back( file );
+	}
+
+	emit searchComplete( file_data );
 }
 
 

@@ -44,7 +44,7 @@ public:
 
 	void addImages( const std::vector< uint64_t >& ids );
 
-	void setFiles( const std::vector< uint64_t >& ids );
+	void setFiles( const std::vector< FileData >& ids );
 
 	void reset();
 

@@ -7,15 +7,6 @@
 #include "FileDataPool.hpp"
 
 
-//copy
-FileData::FileData( const FileData& other )
-	: std::shared_ptr< FileDataContainer >( other ), hash_id_( other.hash_id_ ) {}
-
-
-FileData::FileData( FileData&& other )
-	: std::shared_ptr< FileDataContainer >( std::move( other ) ), hash_id_( std::move( other.hash_id_ ) ) {}
-
-
 FileData::~FileData()
 {
 

@@ -7,6 +7,7 @@
 #include "TracyBox.hpp"
 
 #include "DatabaseModule/tags/tags.hpp"
+#include "modelDelegates/TagViewer/TagData.hpp"
 
 
 QSize TagSearchDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const
@@ -26,18 +27,11 @@ QSize TagSearchDelegate::sizeHint( const QStyleOptionViewItem& option, const QMo
 void TagSearchDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
 
-	const auto tag_future { tags::async::getTag( index.data().value< uint64_t >() ) };
-
-	const auto tag { tag_future.result() };
-
-	QString str;
-	str += QString::fromStdString( !tag.group.empty() ? tag.group : "" );
-	str += QString::fromStdString( !tag.group.empty() ? ":" : "" );
-	str += QString::fromStdString( tag.subtag );
+	const auto tag { index.data().value< TagData >() };
 
 	painter->save();
 
-	painter->drawText( option.rect, Qt::AlignLeft, str );
+	painter->drawText( option.rect, Qt::AlignLeft, tag.qt_concat() );
 
 	painter->restore();
 }
