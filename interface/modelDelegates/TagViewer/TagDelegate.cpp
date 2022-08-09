@@ -7,7 +7,7 @@
 #include "TracyBox.hpp"
 
 #include "DatabaseModule/tags/tags.hpp"
-#include "DataPack.hpp"
+#include "TagData.hpp"
 
 
 QSize TagDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const
@@ -19,20 +19,11 @@ QSize TagDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelInd
 
 void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-
-	const auto [ hash_id, count ] = index.data().value< DataPack >();
-
-	const auto tag_future { tags::async::getTag( hash_id ) };
-
-	const auto tag { tag_future.result() };
-
-	const QString group_text { QString::fromStdString( !tag.group.empty() ? tag.group + ":" : "" ) };
-	const QString subtag_text { QString::fromStdString( tag.subtag ) };
-	const QString str { group_text + subtag_text };
+	const TagData tag_data { index.data( Qt::DisplayRole ).value< TagData >() };
 
 	painter->save();
 
-	painter->drawText( option.rect, Qt::AlignLeft, str );
+	painter->drawText( option.rect, Qt::AlignLeft, tag_data.qt_concat() );
 
 	painter->restore();
 }

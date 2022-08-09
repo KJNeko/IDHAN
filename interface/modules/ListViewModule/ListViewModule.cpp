@@ -42,14 +42,8 @@ void ListViewModule::resetFiles()
 void ListViewModule::setFiles( const std::vector< uint64_t >& files_ )
 {
 	ZoneScoped;
-	spdlog::info( "Files setting" );
-
-	if ( files_.empty() )
-	{
-		resetFiles();
-		return;
-	}
-
+	resetFiles();
+	
 	std::lock_guard< std::mutex > lock( queue_lock );
 	model->setFiles( files_ );
 }

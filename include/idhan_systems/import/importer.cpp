@@ -292,9 +292,7 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 
 
 	uint64_t hash_id { 0 };
-
-	bool exists { false };
-
+	
 	hash_id = hash_id_future.result();
 
 	auto mime_future = metadata::async::populateMime( hash_id_future.result(), mime_type.name().toStdString() );

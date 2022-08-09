@@ -36,7 +36,7 @@
     <widget class="QLineEdit" name="searchBar"/>
    </item>
    <item>
-    <widget class="QListWidget" name="searchResults"/>
+    <widget class="QListView" name="searchResults"/>
    </item>
   </layout>
  </widget>

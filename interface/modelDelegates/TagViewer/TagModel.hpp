@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "DatabaseModule/DatabaseObjects/database.hpp"
+#include "TagData.hpp"
 
 
 class TagModel : public QAbstractListModel
@@ -32,16 +33,11 @@ public:
 
 	void reset();
 
-	//TODO implement these two if needed
-	//void addTag( const uint64_t tag_id );
-
-	//void removeTag( const uint64_t tag_id );
-
-	void setFiles( const std::vector< uint64_t >& hash_ids );
+	void setTags( const std::vector< TagData >& tag_ids );
 
 private:
 
-	pqxx::result database_ret {};
+	std::vector< TagData > tags;
 
 	std::mutex mtx {};
 };

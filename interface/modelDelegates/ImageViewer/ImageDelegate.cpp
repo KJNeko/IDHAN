@@ -164,6 +164,7 @@ void ImageModel::setFiles( const std::vector< uint64_t >& ids )
 	ZoneScoped;
 	beginResetModel();
 	fileList.clear();
+
 	fileList.reserve( ids.size() );
 	for ( auto& id: ids )
 	{

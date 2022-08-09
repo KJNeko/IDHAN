@@ -8,7 +8,7 @@
 #define IDHAN_TAGDELEGATE_HPP
 
 
-#include "DataPack.hpp"
+#include "TagData.hpp"
 
 
 #include <QItemDelegate>

@@ -18,8 +18,9 @@ FileData::FileData( FileData&& other )
 
 FileData::~FileData()
 {
+
 	//Check if this is the last shared pointer to the original datapool
-	if ( this->use_count() <= 1 )
+	if ( this->use_count() <= 2 )
 	{
 		FileDataPool::clear( hash_id_ );
 	}

@@ -12,6 +12,9 @@
 #include "DatabaseModule/DatabaseObjects/database.hpp"
 #include "DatabaseModule/tags/tags.hpp"
 
+#include "modelDelegates/TagViewer/TagDelegate.hpp"
+#include "modelDelegates/TagViewer/TagModel.hpp"
+
 
 #include <QStandardItemModel>
 #include <QtConcurrent/QtConcurrent>
@@ -22,6 +25,9 @@ TagSearchModule::TagSearchModule( QWidget* parent ) : QWidget( parent ), ui( new
 	ui->setupUi( this );
 
 	connect( this, &TagSearchModule::updateSearchResults, this, &TagSearchModule::updateSearch );
+
+	ui->searchResults->setModel( new TagModel( this ) );
+	ui->searchResults->setItemDelegate( new TagDelegate( this ) );
 }
 
 
@@ -39,7 +45,6 @@ void TagSearchModule::on_searchBar_textChanged( const QString& text )
 		return;
 	}
 
-
 	UniqueConnection conn;
 	pqxx::work work { *( conn.connection ) };
 
@@ -47,11 +52,22 @@ void TagSearchModule::on_searchBar_textChanged( const QString& text )
 	//	"SELECT tag_id, (SELECT count(*) FROM mappings WHERE concat_tags.tag_id = mappings.tag_id) as tag_count FROM concat_tags WHERE joined_text LIKE $1 limit 15" };
 
 	constexpr pqxx::zview query_search_count {
-		"SELECT tag_id, (SELECT count(*) FROM mappings WHERE concat_tags.tag_id = mappings.tag_id) as tag_count FROM concat_tags WHERE joined_text LIKE $1 order by similarity(joined_text, $1) DESC, tag_count DESC limit 15;" };
+		"SELECT tag_id, (SELECT count(*) FROM mappings WHERE concat_tags.tag_id = mappings.tag_id) as tag_count, joined_text as tag_text FROM concat_tags WHERE joined_text LIKE $1 order by similarity(joined_text, $1) DESC, tag_count DESC limit 15;" };
 
-	const std::string str = text.toStdString() + "%";
+	constexpr pqxx::zview query_filtered {
+		"SELECT tag_id, ( SELECT count(*) FROM mappings WHERE concat_tags.tag_id = mappings.tag_id AND hash_id = ANY( $2::bigint[] ) ) as tag_count, joined_text as tag_text FROM concat_tags WHERE tag_id IN ( SELECT tag_id FROM mappings WHERE hash_id = ANY( $2::bigint[] ) ) AND joined_text LIKE $1 order by similarity(joined_text, $1) DESC, tag_count DESC limit 15;" };
 
-	emit updateSearchResults( work.exec_params( query_search_count, str ) );
+	const std::string str { text.toStdString() + "%" };
+
+	if ( ui->activeTags->count() == 0 )
+	{
+		emit updateSearchResults( work.exec_params( query_search_count, str ) );
+	}
+	else
+	{
+		emit updateSearchResults( work.exec_params( query_filtered, str, previous_result ) );
+	}
+
 }
 
 
@@ -60,7 +76,6 @@ std::string getTagStr( const uint64_t tag_id )
 	const auto tag_future { tags::async::getTag( tag_id ) };
 
 	const auto tag { tag_future.result() };
-
 
 	if ( tag.group == "" )
 	{
@@ -75,7 +90,6 @@ std::string getTagStr( const uint64_t tag_id )
 
 void TagSearchModule::on_searchBar_returnPressed()
 {
-
 	if ( ui->searchBar->text() == "" )
 	{
 		return;
@@ -105,7 +119,7 @@ void TagSearchModule::on_searchBar_returnPressed()
 
 	ui->searchBar->clear();
 
-	QtConcurrent::run( QThreadPool::globalInstance(), &TagSearchModule::updateTagSearch, this );
+	const auto future { QtConcurrent::run( QThreadPool::globalInstance(), &TagSearchModule::updateTagSearch, this ) };
 }
 
 
@@ -116,25 +130,25 @@ void TagSearchModule::on_activeTags_doubleClicked()
 	ui->activeTags->removeItemWidget( item );
 	delete item;
 
-	QtConcurrent::run( QThreadPool::globalInstance(), &TagSearchModule::updateTagSearch, this );
+	const auto future { QtConcurrent::run( QThreadPool::globalInstance(), &TagSearchModule::updateTagSearch, this ) };
 }
 
 
 void TagSearchModule::on_searchResults_doubleClicked()
 {
 	//Add the double clicked tag to the active tags
-	const auto item = ui->searchResults->currentItem();
-	ui->activeTags->addItem( item->text() );
+	const auto item_index = ui->searchResults->currentIndex();
+
+	ui->activeTags->addItem( QString::fromStdString( item_index.data( Qt::DisplayRole ).value< TagData >().tagText ) );
 
 	ui->searchBar->clear();
 
-	QtConcurrent::run( QThreadPool::globalInstance(), &TagSearchModule::updateTagSearch, this );
+	const auto future { QtConcurrent::run( QThreadPool::globalInstance(), &TagSearchModule::updateTagSearch, this ) };
 }
 
 
 void TagSearchModule::updateTagSearch()
 {
-	spdlog::info( "Starting search" );
 
 	if ( ui->activeTags->count() == 0 )
 	{
@@ -184,11 +198,8 @@ void TagSearchModule::updateTagSearch()
 		files.emplace_back( row[ "hash_id" ].as< uint64_t >() );
 	}
 
-	spdlog::info(
-		"Finished query in {} ms", std::chrono::duration_cast< std::chrono::milliseconds >(
-		std::chrono::high_resolution_clock::now() - startTime
-	).count()
-	);
+	//Set the internal list to the search results
+	previous_result = files;
 
 	emit searchComplete( files );
 }
@@ -196,17 +207,22 @@ void TagSearchModule::updateTagSearch()
 
 void TagSearchModule::updateSearch( const pqxx::result& res )
 {
-	ui->searchResults->clear();
+	ui->searchResults->reset();
+
+	std::vector< TagData > data_set;
 
 	for ( const auto& row: res )
 	{
-		const QString str { QString::fromStdString(
-			getTagStr( row[ "tag_id" ].as< uint64_t >() ) +
-				"(" +
-				std::to_string( row[ "tag_count" ].as< uint64_t >() ) +
-				")"
-		) };
-		ui->searchResults->addItem( new QListWidgetItem( str ) );
+		TagData tag_data;
+		tag_data.tagText = row[ "tag_text" ].as< std::string >();
+		tag_data.tag_id = row[ "tag_id" ].as< uint64_t >();
+		tag_data.counter = row[ "tag_count" ].as< uint64_t >();
+
+		data_set.push_back( tag_data );
 	}
+
+	auto model_ptr { reinterpret_cast<TagModel*>(ui->searchResults->model()) };
+
+	model_ptr->setTags( data_set );
 }
 

@@ -16,6 +16,19 @@
 #include "DatabaseModule/files/files.hpp" //Hash32
 
 
+enum class IDHANBitFlags
+{
+	ARCHIVED = 0b0000000000000001, TRASHED = 0b0000000000000010, DELETED = 0b0000000000000100,
+};
+
+enum class IDHANRenderType
+{
+	UNKNOWN = 0, //Display error
+	IMAGE, //Media player - Image
+	VIDEO, //Media player - Video
+	RENDERABLE, //Indicates processing needs to be done before it can be shown
+};
+
 struct FileDataContainer
 {
 	std::shared_ptr< std::mutex > modificationLock;
@@ -29,8 +42,8 @@ struct FileDataContainer
 	std::filesystem::path file_path {};
 
 	//Flags of interest
-	bool is_video { false };
-	bool is_inbox { false };
+	IDHANRenderType render_type { IDHANRenderType::UNKNOWN };
+	IDHANBitFlags bitflags { 0 };
 
 	FileDataContainer( const uint64_t, const std::shared_ptr< std::mutex > = std::make_shared< std::mutex >() );
 

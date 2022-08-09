@@ -20,6 +20,8 @@
 struct TaskBasic
 {
 	virtual void run( pqxx::work& work ) = 0;
+
+	virtual ~TaskBasic() = default;
 };
 
 template< typename T, typename... T_Args > struct Task : public TaskBasic

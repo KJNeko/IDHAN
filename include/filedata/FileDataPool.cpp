@@ -67,22 +67,8 @@ void FileDataPool::clear( const uint64_t hash_id )
 	const auto itter { filePool.find( hash_id ) };
 	if ( itter != filePool.end() )
 	{
-		//Check that the use count is 0
-		if ( itter->second.use_count() == 0 )
-		{
-			filePool.erase( itter );
-		}
-		else
-		{
-			spdlog::warn( "Tried to erase {} but it was in use {} times", hash_id, itter->second.use_count() );
-			throw std::runtime_error(
-				"Tried to erase " +
-					std::to_string( hash_id ) +
-					" that was in use " +
-					std::to_string( itter->second.use_count() ) +
-					" times"
-			);
-		}
+		filePool.erase( itter );
+		
 		TracyCPlot( "FileDataPool Size", static_cast<double>(filePool.size()) );
 	}
 }

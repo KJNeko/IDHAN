@@ -33,7 +33,10 @@ private:
 	pqxx::result result;
 	std::mutex result_lock {};
 
+	std::vector< uint64_t > previous_result {};
+
 	void updateTagSearch();
+
 
 signals:
 
