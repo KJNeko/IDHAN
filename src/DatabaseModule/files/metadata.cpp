@@ -19,7 +19,6 @@ namespace metadata
 
 		uint64_t getMimeID( pqxx::work& work, const std::string& mime )
 		{
-			ZoneScoped;
 			constexpr pqxx::zview query { "SELECT mime_id FROM mime_types WHERE mime = $1" };
 
 			const pqxx::result res { work.exec_params( query, mime ) };
@@ -41,7 +40,6 @@ namespace metadata
 
 		void populateMime( pqxx::work& work, const uint64_t hash_id, const std::string& mime )
 		{
-			ZoneScoped;
 
 			constexpr pqxx::zview query { "INSERT INTO mime (hash_id, mime_id) VALUES ($1, $2)" };
 
@@ -54,7 +52,6 @@ namespace metadata
 
 		std::string getMime( pqxx::work& work, const uint64_t hash_id )
 		{
-			ZoneScoped;
 
 			constexpr pqxx::zview query { "SELECT mime FROM mime NATURAL JOIN mime_types WHERE hash_id = $1" };
 
@@ -115,7 +112,6 @@ namespace metadata
 
 	std::string getFileExtention( const uint64_t hash_id )
 	{
-		ZoneScoped;
 
 		const std::string mime { async::getMime( hash_id ).result() };
 

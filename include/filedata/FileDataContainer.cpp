@@ -3,6 +3,7 @@
 //
 
 #include "FileDataContainer.hpp"
+#include "DatabaseModule/tags/mappings.hpp"
 
 
 FileDataContainer::FileDataContainer( const uint64_t hash_id_, const std::shared_ptr< std::mutex > mtx_ptr )
@@ -11,7 +12,8 @@ FileDataContainer::FileDataContainer( const uint64_t hash_id_, const std::shared
 	  sha256( files::async::getHash( hash_id_ ).result() ),
 	  thumbnail_path( files::getThumbnailpath( hash_id_ ) ),
 	  thumbnail_valid( std::filesystem::exists( thumbnail_path ) ),
-	  file_path( files::getFilepath( hash_id_ ) )
+	  file_path( files::getFilepath( hash_id_ ) ),
+	  tags( mappings::async::getMappings( hash_id_ ).result() )
 {
 }
 

@@ -12,6 +12,8 @@
 //Should only be called during invalidate
 void TagModel::reset()
 {
+	ZoneScoped;
+
 	std::lock_guard< std::mutex > lock( this->mtx );
 
 

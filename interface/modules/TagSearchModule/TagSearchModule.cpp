@@ -40,6 +40,8 @@ TagSearchModule::~TagSearchModule()
 
 void TagSearchModule::on_searchBar_textChanged( const QString& text )
 {
+	ZoneScoped;
+
 	if ( text == "" )
 	{
 		emit updateSearchResults( pqxx::result() );
@@ -74,6 +76,8 @@ void TagSearchModule::on_searchBar_textChanged( const QString& text )
 
 std::string getTagStr( const uint64_t tag_id )
 {
+	ZoneScoped;
+
 	const auto tag_future { tags::async::getTag( tag_id ) };
 
 	const auto tag { tag_future.result() };
@@ -91,6 +95,8 @@ std::string getTagStr( const uint64_t tag_id )
 
 void TagSearchModule::on_searchBar_returnPressed()
 {
+	ZoneScoped;
+
 	if ( ui->searchBar->text() == "" )
 	{
 		return;
@@ -122,6 +128,8 @@ void TagSearchModule::on_searchBar_returnPressed()
 
 void TagSearchModule::on_activeTags_doubleClicked()
 {
+	ZoneScoped;
+
 	//Remove the double clicked tag
 	const auto item = ui->activeTags->currentItem();
 	ui->activeTags->removeItemWidget( item );
@@ -133,6 +141,8 @@ void TagSearchModule::on_activeTags_doubleClicked()
 
 void TagSearchModule::on_searchResults_doubleClicked()
 {
+	ZoneScoped;
+
 	//Add the double clicked tag to the active tags
 	const auto item_index = ui->searchResults->currentIndex();
 
@@ -146,6 +156,7 @@ void TagSearchModule::on_searchResults_doubleClicked()
 
 void TagSearchModule::updateTagSearch()
 {
+	ZoneScoped;
 
 	if ( ui->activeTags->count() == 0 )
 	{
@@ -211,6 +222,8 @@ void TagSearchModule::updateTagSearch()
 
 void TagSearchModule::updateSearch( const pqxx::result& res )
 {
+	ZoneScoped;
+
 	ui->searchResults->reset();
 
 	std::vector< TagData > data_set;

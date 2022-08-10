@@ -9,7 +9,6 @@ namespace Database
 {
 	void initalizeConnection( const std::string& connectionArgs )
 	{
-		ZoneScoped;
 		spdlog::info( "Initalizing connections with settings '" + connectionArgs + "'" );
 
 		ConnectionPool::init( connectionArgs );
@@ -49,5 +48,5 @@ namespace Database
 
 		work.commit();
 	}
-	
+
 }

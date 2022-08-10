@@ -19,6 +19,7 @@ QSize TagDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelInd
 
 void TagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
+	ZoneScoped;
 	const TagData tag_data { index.data( Qt::DisplayRole ).value< TagData >() };
 
 	painter->save();

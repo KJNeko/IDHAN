@@ -14,6 +14,8 @@
 #include <QObject> //signals
 
 #include "DatabaseModule/files/files.hpp" //Hash32
+#include "modelDelegates/TagViewer/TagData.hpp"
+#include "DatabaseModule/tags/objects/tag.hpp"
 
 
 enum class IDHANBitFlags
@@ -44,6 +46,9 @@ struct FileDataContainer
 	//Flags of interest
 	IDHANRenderType render_type { IDHANRenderType::UNKNOWN };
 	IDHANBitFlags bitflags { 0 };
+
+	//Tags
+	std::vector< Tag > tags;
 
 	FileDataContainer( const uint64_t, const std::shared_ptr< std::mutex > = std::make_shared< std::mutex >() );
 

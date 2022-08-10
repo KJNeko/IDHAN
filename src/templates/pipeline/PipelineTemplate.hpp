@@ -44,7 +44,6 @@ public:
 
 	void run( pqxx::work& work ) override
 	{
-		ZoneScoped;
 		std::tuple< pqxx::work& > tuplWork { work };
 
 		if constexpr ( std::is_void_v< T > )
@@ -92,12 +91,7 @@ class DatabasePipelineTemplate
 	std::queue< TaskBasic* > tasks;
 	std::counting_semaphore< 1024 > semaphore { 0 };
 
-	#ifndef NDEBUG
-	TracyLockable( std::mutex, pipelineLock )
-	#else
 	std::mutex pipelineLock;
-	#endif
-
 
 	std::atomic< bool > terminating;
 
@@ -115,14 +109,7 @@ public:
 	template< typename T, typename... T_Args >
 	QFuture< T > enqueue( Task< T, T_Args... >& task )
 	{
-		ZoneScoped;
-
-		#ifndef NDEBUG
-		std::lock_guard< LockableBase( std::mutex ) > lock( pipelineLock );
-		LockMark( pipelineLock )
-		#else
 		std::lock_guard< std::mutex > lock( pipelineLock );
-		#endif
 
 
 		//tasks.emplace( std::move( task ) );

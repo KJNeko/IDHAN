@@ -35,36 +35,67 @@ TagViewModule::~TagViewModule()
 }
 
 
-void TagViewModule::selectionChanged( const std::vector< uint64_t >& hash_ids )
+void TagViewModule::updateTagsFromFiles( const std::vector< uint64_t >& hash_ids )
 {
+	ZoneScoped;
 
 	//Clear the model
 	//model->reset();
 
 	//Get a list of all the tags
 
-	const UniqueConnection conn;
-	pqxx::work work { *conn.connection };
+	std::vector< FileData > files;
+	files.reserve( hash_ids.size() );
 
-
-	constexpr pqxx::zview query_raw {
-		"SELECT tag_id, count(tag_id) AS counter, joined_text FROM mappings NATURAL JOIN concat_tags WHERE hash_id = ANY($1::bigint[]) GROUP BY tag_id, joined_text" };
-
-	const pqxx::result result = work.exec_params( query_raw, hash_ids );
-
-	std::vector< TagData > tags;
-	for ( const auto& row: result )
+	TracyCZoneN( get_files, "Fetch files", true );
+	for ( const auto& hash_id: hash_ids )
 	{
-		const auto tag_id = row[ 0 ].as< uint64_t >();
-		const auto counter = row[ 1 ].as< uint64_t >();
-		const auto joined_text = row[ 2 ].as< std::string >();
-		const auto tag_data = TagData { tag_id, counter, joined_text };
+		files.emplace_back( hash_id );
+	}
+	TracyCZoneEnd( get_files );
 
 
-		tags.push_back( tag_data );
+	TracyCZoneN( counter, "Count tags", true );
+
+	std::unordered_map< uint64_t, TagData > tag_data;
+
+	for ( const auto& file: files )
+	{
+		for ( const auto& tag: file->tags )
+		{
+			tag_data[ tag.tag_id ].counter++;
+			tag_data[ tag.tag_id ].tagText = tag.group + ":" + tag.subtag;
+		}
 	}
 
-	model->setTags( tags );
+	TracyCZoneEnd( counter );
+
+	TracyCZoneN( translate, "map -> vector", true );
+	std::vector< TagData > temp_data;
+	temp_data.reserve( tag_data.size() );
+	for ( auto& tag: tag_data )
+	{
+		temp_data.emplace_back( std::move( tag.second ) );
+	}
+	TracyCZoneEnd( translate );
+
+
+	TracyCZoneN( sort, "Sort", true );
+	std::sort(
+		temp_data.begin(), temp_data.end(), []( const TagData& a, const TagData& b )
+	{
+		return a.counter > b.counter;
+	}
+	);
+	TracyCZoneEnd( sort );
+
+	model->setTags( temp_data );
+}
+
+
+void TagViewModule::selectionChanged( const std::vector< uint64_t >& hash_ids )
+{
+	QtConcurrent::run( &TagViewModule::updateTagsFromFiles, this, hash_ids );
 }
 
 

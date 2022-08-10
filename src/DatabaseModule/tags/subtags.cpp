@@ -21,8 +21,6 @@ namespace subtags
 			constexpr pqxx::zview query { "INSERT INTO subtags (subtag) VALUES ($1) RETURNING subtag_id" };
 
 
-			ZoneScoped;
-
 			const uint64_t subtag_id { getSubtagID( work, subtag ) };
 			if ( subtag_id != 0 )
 			{
@@ -42,7 +40,7 @@ namespace subtags
 		{
 			constexpr pqxx::zview query { "SELECT subtag FROM subtags WHERE subtag_id = $1" };
 
-			ZoneScoped;
+
 			constexpr uint64_t BPerMB { 1000000 };
 			constexpr uint64_t size { 64 * BPerMB };
 
@@ -74,7 +72,6 @@ namespace subtags
 			constexpr pqxx::zview query { "SELECT subtag_id FROM subtags WHERE subtag = $1" };
 
 
-			ZoneScoped;
 			constexpr uint64_t BPerMB { 1000000 };
 			constexpr uint64_t size { 64 * BPerMB };
 
@@ -101,7 +98,6 @@ namespace subtags
 
 		void deleteSubtag( pqxx::work& work, const uint64_t subtag_id )
 		{
-			ZoneScoped;
 
 
 			constexpr pqxx::zview query { "DELETE FROM subtags WHERE subtag_id = $1 CASCADE" };
@@ -123,8 +119,6 @@ namespace subtags
 	{
 		QFuture< uint64_t > createSubtag( const Subtag& subtag )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Subtag > task { raw::createSubtag, subtag };
 
@@ -134,8 +128,6 @@ namespace subtags
 
 		QFuture< Subtag > getSubtag( const uint64_t subtag_id )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< Subtag, uint64_t > task { raw::getSubtag, subtag_id };
 
@@ -145,8 +137,6 @@ namespace subtags
 
 		QFuture< uint64_t > getSubtagID( const Subtag& subtag )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Subtag > task { raw::getSubtagID, subtag };
 
@@ -156,8 +146,6 @@ namespace subtags
 
 		QFuture< void > deleteSubtag( const uint64_t subtag_id )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t > task { raw::deleteSubtag, subtag_id };
 

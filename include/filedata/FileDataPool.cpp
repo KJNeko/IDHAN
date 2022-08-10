@@ -30,11 +30,6 @@ std::shared_ptr< FileDataContainer > FileDataPool::request( const uint64_t hash_
 		if ( !filePool.insert( { hash_id, shared_ptr } ).second )
 		{
 			spdlog::error( "Unable to insert {} into filepool", hash_id );
-
-			spdlog::debug( "filePool.size(): {}", filePool.size() );
-			spdlog::debug( "filePool.bucket_count(): {}", filePool.bucket_count() );
-			spdlog::debug( "filePool.load_factor(): {}", filePool.load_factor() );
-			spdlog::debug( "filePool.max_load_factor(): {}", filePool.max_load_factor() );
 		}
 
 		return shared_ptr;
@@ -68,7 +63,7 @@ void FileDataPool::clear( const uint64_t hash_id )
 	if ( itter != filePool.end() )
 	{
 		filePool.erase( itter );
-		
+
 		TracyCPlot( "FileDataPool Size", static_cast<double>(filePool.size()) );
 	}
 }

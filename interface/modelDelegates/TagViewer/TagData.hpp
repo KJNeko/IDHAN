@@ -39,8 +39,12 @@ struct TagData
 	TagData& operator=( const TagData& data ) = default;
 
 
-	TagData( uint64_t tag_id_, uint64_t counter_, const std::string& tagText_ )
+	TagData( const uint64_t tag_id_, const uint64_t counter_, const std::string& tagText_ )
 		: tag_id( tag_id_ ), counter( counter_ ), tagText( tagText_ ) {}
+
+
+	TagData( const uint64_t tag_id_, const uint64_t counter_, const std::string_view tagText_ )
+		: tag_id( tag_id_ ), counter( counter_ ), tagText( tagText_.begin(), tagText_.end() ) {}
 
 
 	~TagData() = default;

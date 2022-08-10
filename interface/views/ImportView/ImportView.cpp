@@ -109,6 +109,7 @@ void ImportView::processFiles()
 			file_queue.push_back( var.second );
 			break;
 		case ImportResult::ALREADY_IMPORTED:
+			file_queue.push_back( var.second );
 			++alreadyinDB;
 			break;
 		case ImportResult::FILE_NOT_FOUND:

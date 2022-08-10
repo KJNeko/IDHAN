@@ -23,7 +23,6 @@ namespace files
 
 		uint64_t addFile( pqxx::work& work, const Hash32& sha256 )
 		{
-			ZoneScoped;
 
 			constexpr pqxx::zview query = "INSERT INTO files (sha256) VALUES ($1) RETURNING hash_id";
 
@@ -40,7 +39,6 @@ namespace files
 
 		uint64_t getFileID( pqxx::work& work, const Hash32& sha256 )
 		{
-			ZoneScoped;
 
 			constexpr pqxx::zview query = "SELECT hash_id FROM files WHERE sha256 = $1";
 
@@ -58,7 +56,6 @@ namespace files
 
 		Hash32 getHash( pqxx::work& work, const uint64_t hash_id )
 		{
-			ZoneScoped;
 			constexpr size_t size_unit { sizeof( uint64_t ) + sizeof( std::array< uint8_t, 32 > ) };
 			constexpr size_t size_max { 1024 * 1024 * 256 }; //256MB
 			constexpr size_t size_num { size_max / size_unit };
@@ -126,7 +123,6 @@ namespace files
 // example: subfolder_and_filename(Hash32{"1234"}, 't') -> "t12/1234"
 			[[nodiscard]] inline std::string subfolder_and_filename( const char symbol, const Hash32& sha256 )
 			{
-				ZoneScoped;
 				// Use QByteArray to be lazy and convert to hex
 				const std::string hash_str = sha256.getQByteArray().toHex().toStdString();
 
@@ -147,7 +143,6 @@ namespace files
 			[[nodiscard]] inline std::filesystem::path generatePathToFile(
 				const fgl::cstring setting, const fgl::cstring default_path, const char symbol, const Hash32& sha256 )
 			{
-				ZoneScoped;
 				return path_from_settings( setting, default_path ) / subfolder_and_filename( symbol, sha256 );
 			}
 		} // namespace internal
@@ -158,7 +153,6 @@ namespace files
 	{
 		QFuture< uint64_t > addFile( const Hash32& sha256 )
 		{
-			ZoneScoped;
 
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Hash32 > task { raw::addFile, sha256 };
@@ -169,7 +163,6 @@ namespace files
 
 		QFuture< uint64_t > getFileID( const Hash32& sha256 )
 		{
-			ZoneScoped;
 
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Hash32 > task { raw::getFileID, sha256 };
@@ -180,7 +173,6 @@ namespace files
 
 		QFuture< Hash32 > getHash( const uint64_t hash_id )
 		{
-			ZoneScoped;
 
 			static DatabasePipelineTemplate pipeline;
 			Task< Hash32, uint64_t > task { raw::getHash, hash_id };
@@ -193,7 +185,6 @@ namespace files
 	// Filepath from hash_id
 	std::filesystem::path getThumbnailpath( const uint64_t hash_id )
 	{
-		ZoneScoped;
 
 		const Hash32 hash { async::getHash( hash_id ).result() };
 
@@ -203,7 +194,6 @@ namespace files
 
 	std::filesystem::path getFilepath( const uint64_t hash_id )
 	{
-		ZoneScoped;
 		const Hash32 hash { async::getHash( hash_id ).result() };
 
 		auto path { getFilepathFromHash( hash ) };
@@ -223,7 +213,6 @@ namespace files
 // Filepath from only hash
 	std::filesystem::path getThumbnailpathFromHash( const Hash32& sha256 )
 	{
-		ZoneScoped;
 		return raw::internal::generatePathToFile( "paths/thumbnail_path", "./db/thumbnails", 't', sha256 ).string() +
 			".jpg";
 	}
@@ -231,7 +220,6 @@ namespace files
 
 	std::filesystem::path getFilepathFromHash( const Hash32& sha256 )
 	{
-		ZoneScoped;
 		return raw::internal::generatePathToFile( "paths/file_path", "./db/file_paths", 'f', sha256 );
 	}
 

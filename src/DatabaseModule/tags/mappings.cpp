@@ -19,7 +19,6 @@ namespace mappings
 		{
 			constexpr pqxx::zview query { "INSERT INTO mappings ( hash_id, tag_id ) VALUES ( $1, $2 )" };
 
-			ZoneScoped;
 
 			work.exec_params( query, hash_id, tag );
 		} catch ( pqxx::unique_violation& e )
@@ -32,7 +31,6 @@ namespace mappings
 		{
 			constexpr pqxx::zview query { "DELETE FROM mappings WHERE hash_id = $1 AND tag_id = $2" };
 
-			ZoneScoped;
 
 			const pqxx::result res { work.exec_params( query, hash_id, tag ) };
 			if ( res.affected_rows() == 0 )
@@ -52,7 +50,6 @@ namespace mappings
 			constexpr pqxx::zview query {
 				"SELECT group_name, subtag, tag_id FROM tags NATURAL JOIN groups NATURAL JOIN subtags NATURAL JOIN mappings WHERE hash_id = $1;" };
 
-			ZoneScoped;
 
 			const pqxx::result res { work.exec_params( query, hash_id ) };
 
@@ -75,8 +72,6 @@ namespace mappings
 			constexpr pqxx::zview query {
 				"SELECT tag_id, count(tag_id) AS id_count FROM mappings where hash_id = any($1::bigint[]) group by tag_id order by tag_id" };
 
-			ZoneScoped;
-
 
 			const pqxx::result res { work.exec_params( query, hash_ids ) };
 
@@ -98,7 +93,7 @@ namespace mappings
 
 		QFuture< void > addMapping( const uint64_t hash_id, const uint64_t tag_id )
 		{
-			ZoneScoped;
+
 
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t, uint64_t > task { raw::addMapping, hash_id, tag_id };
@@ -109,7 +104,7 @@ namespace mappings
 
 		QFuture< void > deleteMapping( const uint64_t hash_id, const uint64_t tag_id )
 		{
-			ZoneScoped;
+
 
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t, uint64_t > task { raw::deleteMapping, hash_id, tag_id };
@@ -120,7 +115,7 @@ namespace mappings
 
 		QFuture< std::vector< Tag >> getMappings( const uint64_t hash_id )
 		{
-			ZoneScoped;
+
 
 			static DatabasePipelineTemplate pipeline;
 			auto func = static_cast<std::vector< Tag >( * )( pqxx::work&, uint64_t )>(raw::getMappings);
@@ -133,7 +128,7 @@ namespace mappings
 
 		QFuture< std::vector< std::pair< uint64_t, Tag>> > getMappings( const std::vector< uint64_t >& hash_ids )
 		{
-			ZoneScoped;
+
 
 			static DatabasePipelineTemplate pipeline;
 			Task< std::vector< std::pair< uint64_t, Tag>>, std::vector< uint64_t>> task { raw::getMappingsGroup,

@@ -23,7 +23,7 @@ namespace tags
 		{
 			constexpr pqxx::zview query { "SELECT group_id, subtag_id FROM tags WHERE tag_id = $1" };
 
-			ZoneScoped;
+
 			static QCache< uint64_t, Tag > tag_cache { 5000 };
 
 			if ( tag_cache.contains( tag_id ) )
@@ -58,9 +58,6 @@ namespace tags
 				"INSERT INTO tags ( group_id, subtag_id ) VALUES ( $1, $2 ) RETURNING tag_id" };
 
 
-			ZoneScoped;
-
-
 			const auto [ group_id, subtag_id ] = [ & ]() -> std::pair< uint64_t, uint64_t >
 			{
 				const uint64_t group_id_ = groups::raw::createGroup( work, group );
@@ -88,7 +85,6 @@ namespace tags
 		{
 			constexpr pqxx::zview query { "SELECT tag_id FROM tags WHERE group_id = $1 AND subtag_id = $2" };
 
-			ZoneScoped;
 
 			const auto [ group_id, subtag_id ] = [ & ]() -> std::pair< uint64_t, uint64_t >
 			{
@@ -134,8 +130,6 @@ namespace tags
 				"DELETE FROM groups WHERE group_id NOT IN (SELECT group_id FROM tags)" };
 
 
-			ZoneScoped;
-
 			work.exec_params( query, tag_id );
 
 			work.exec( query_clean_subtags );
@@ -147,8 +141,6 @@ namespace tags
 	{
 		QFuture< Tag > getTag( const uint64_t tag_id )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< Tag, uint64_t > task { raw::getTag, tag_id };
 
@@ -158,8 +150,6 @@ namespace tags
 
 		QFuture< uint64_t > createTag( const Group& group, const Subtag& subtag )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Group, Subtag > task { raw::createTag, group, subtag };
 
@@ -169,8 +159,6 @@ namespace tags
 
 		QFuture< uint64_t > getTagID( const Group& group, const Subtag& subtag )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Group, Subtag > task { raw::getTagID, group, subtag };
 
@@ -180,8 +168,6 @@ namespace tags
 
 		QFuture< void > deleteTagFromID( const uint64_t tag_id )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t > task { raw::deleteTagFromID, tag_id };
 

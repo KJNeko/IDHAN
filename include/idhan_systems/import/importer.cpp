@@ -139,6 +139,8 @@ void finalizeSecureWrite( [[maybe_unused]] const int id )
 
 std::vector< std::pair< std::string, std::string>> parseSidecarTags( const std::filesystem::path& path )
 {
+	ZoneScoped;
+
 	std::vector< std::pair< std::string, std::string>> tags_vec;
 	//Check to see if a file exists with the tags
 
@@ -246,14 +248,12 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 
 	const std::vector< std::byte > file_data { readFile( path ) };
 
-	TracyCZoneN( zone2, "createTags", true );
 	const auto tags { parseSidecarTags( path ) };
 	std::vector< QFuture< uint64_t>> tag_id_futures;
 	for ( size_t i = 0; i < tags.size(); ++i )
 	{
 		tag_id_futures.push_back( tags::async::createTag( tags[ i ].first, tags[ i ].second ) );
 	}
-	TracyCZoneEnd( zone2 );
 
 	const Hash32 sha256 { getSHA256Hash( file_data ) };
 
@@ -292,7 +292,7 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 
 
 	uint64_t hash_id { 0 };
-	
+
 	hash_id = hash_id_future.result();
 
 	auto mime_future = metadata::async::populateMime( hash_id_future.result(), mime_type.name().toStdString() );
@@ -304,12 +304,15 @@ ImportResultOutput importToDB( const std::filesystem::path& path )
 	//Create the thumbnail if it doesn't exist
 	generateThumbnail( file_data, mime_type, sha256 );
 
-	TracyCZoneN( zone3, "addMappings", true );
 	for ( size_t i = 0; i < tags.size(); ++i )
 	{
 		tag_futures.push_back( mappings::async::addMapping( hash_id, tag_id_futures[ i ].result() ) );
 	}
-	TracyCZoneEnd( zone3 );
+
+	for ( auto& tag_future: tag_futures )
+	{
+		tag_future.waitForFinished();
+	}
 
 	finalizeSecureWrite( file_handle_id );
 	return { ImportResult::SUCCESS, hash_id };

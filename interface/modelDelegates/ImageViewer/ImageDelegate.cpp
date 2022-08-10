@@ -126,6 +126,8 @@ QVariant ImageModel::data( const QModelIndex& index, int role ) const
 
 void ImageModel::addImages( const std::vector< uint64_t >& queue )
 {
+	ZoneScoped;
+
 	beginInsertRows( {}, static_cast<int>(fileList.size()), static_cast<int>(fileList.size() + queue.size()) );
 
 	fileList.reserve( queue.size() );
@@ -170,6 +172,8 @@ void ImageModel::setFiles( const std::vector< FileData >& file_data )
 
 std::vector< uint64_t > ImageModel::getFileIDs() const
 {
+	ZoneScoped;
+
 	std::vector< uint64_t > ret;
 
 	ret.reserve( fileList.size() );

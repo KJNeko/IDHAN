@@ -24,7 +24,6 @@ namespace groups
 			constexpr pqxx::zview insert_group_query {
 				"INSERT INTO groups (group_name) VALUES ($1) RETURNING group_id" };
 
-			ZoneScoped;
 
 			const uint64_t group_id { getGroupID( work, group ) };
 
@@ -45,7 +44,7 @@ namespace groups
 		{
 			constexpr pqxx::zview select_group_name_query { "SELECT group_name FROM groups WHERE group_id = $1" };
 
-			ZoneScoped;
+
 			constexpr uint64_t BPerMB { 1000000 };
 			constexpr uint64_t size { 64 * BPerMB };
 
@@ -78,7 +77,7 @@ namespace groups
 		{
 			constexpr pqxx::zview select_group_id_query { "SELECT group_id FROM groups WHERE group_name = $1" };
 
-			ZoneScoped;
+
 			constexpr uint64_t BPerMB { 1000000 };
 			constexpr uint64_t size { 64 * BPerMB };
 
@@ -108,7 +107,6 @@ namespace groups
 		{
 			constexpr pqxx::zview remove_query { "DELETE FROM groups WHERE group_id = $1" };
 
-			ZoneScoped;
 
 			const pqxx::result remove_result { work.exec_params( remove_query, group_id ) };
 
@@ -127,8 +125,6 @@ namespace groups
 	{
 		QFuture< uint64_t > createGroup( const Group& group )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Group > task { raw::createGroup, group };
 
@@ -138,8 +134,6 @@ namespace groups
 
 		QFuture< Group > getGroup( const uint64_t group_id )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< Group, uint64_t > task { raw::getGroup, group_id };
 
@@ -149,8 +143,6 @@ namespace groups
 
 		QFuture< uint64_t > getGroupID( const Group& group )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< uint64_t, Group > task { raw::getGroupID, group };
 
@@ -160,8 +152,6 @@ namespace groups
 
 		QFuture< void > removeGroup( const uint64_t group_id )
 		{
-			ZoneScoped;
-
 			static DatabasePipelineTemplate pipeline;
 			Task< void, uint64_t > task { raw::removeGroup, group_id };
 

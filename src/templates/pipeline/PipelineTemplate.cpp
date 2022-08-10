@@ -18,15 +18,9 @@ void DatabasePipelineTemplate::runner()
 			semaphore.acquire();
 
 			{
-				ZoneScopedN( "DatabasePipelineTemplate::runner()" );
 
 				{
-					#ifndef NDEBUG
-					std::lock_guard< LockableBase( std::mutex ) > lock( pipelineLock );
-					LockMark( pipelineLock )
-					#else
 					std::lock_guard< std::mutex > lock( pipelineLock );
-					#endif
 
 					task = tasks.front();
 					tasks.pop();

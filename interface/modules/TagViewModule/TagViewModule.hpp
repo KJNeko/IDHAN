@@ -44,11 +44,13 @@ private:
 	TagModel* model { new TagModel( this ) };
 	TagDelegate* delegate { new TagDelegate( this ) };
 
+	void updateTagsFromFiles( const std::vector< uint64_t >& file_data );
+
 public slots:
 
 	//void addFile( const uint64_t hash_id );
 
-	void selectionChanged( const std::vector< uint64_t >& hash_ids );
+	void selectionChanged( const std::vector< uint64_t >& file_data );
 };
 
 
