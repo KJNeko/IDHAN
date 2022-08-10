@@ -58,13 +58,21 @@ void TagViewModule::updateTagsFromFiles( const std::vector< uint64_t >& hash_ids
 	TracyCZoneN( counter, "Count tags", true );
 
 	std::unordered_map< uint64_t, TagData > tag_data;
+	tag_data.reserve( files.size() );
 
 	for ( const auto& file: files )
 	{
 		for ( const auto& tag: file->tags )
 		{
-			tag_data[ tag.tag_id ].counter++;
-			tag_data[ tag.tag_id ].tagText = tag.group + ":" + tag.subtag;
+			auto& counter = tag_data[ tag.tag_id ].counter;
+			++counter;
+			if ( counter <= 1 )
+			{
+				std::string str = tag.group;
+				str += ":";
+				str += tag.subtag;
+				tag_data[ tag.tag_id ].tagText = tag.group + ":" + tag.subtag;
+			}
 		}
 	}
 
@@ -73,10 +81,7 @@ void TagViewModule::updateTagsFromFiles( const std::vector< uint64_t >& hash_ids
 	TracyCZoneN( translate, "map -> vector", true );
 	std::vector< TagData > temp_data;
 	temp_data.reserve( tag_data.size() );
-	for ( auto& tag: tag_data )
-	{
-		temp_data.emplace_back( std::move( tag.second ) );
-	}
+	std::copy( tag_data.begin(), tag_data.end(), temp_data );
 	TracyCZoneEnd( translate );
 
 
