@@ -81,7 +81,7 @@ void TagViewModule::updateTagsFromFiles( const std::vector< uint64_t >& hash_ids
 	TracyCZoneN( translate, "map -> vector", true );
 	std::vector< TagData > temp_data;
 	temp_data.reserve( tag_data.size() );
-	std::copy( tag_data.begin(), tag_data.end(), temp_data );
+	std::copy( tag_data.begin(), tag_data.end(), std::back_inserter( temp_data ) );
 	TracyCZoneEnd( translate );
 
 
