@@ -1,32 +1,27 @@
-####	Dot-Hidden Files & Directories
-.*
-
-####	Misc.
-/cmake-build-debug/
-/cmake-build-release/
-/docs
-/html
-/latex
-/IDHAN
-/Makefile
-/CMakeCache.txt
-/cmake_install.cmake
-/CMakeFiles/
-/Testing
-config.json
-
-#### Cmake
+#builds
+cmake-build-debug/
+cmake-build-release/
 *.cmake
-*.tcl
+MakeFile
+
+.idea/
 
 
-###images
-/bin/
 
 
-main_autogen/
-TracyProfile_autogen/
-DBTest_autogen/
-conan/
-build/
-/main
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

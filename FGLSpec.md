@@ -1,4 +1,4 @@
-# This following information defines the specification of FGL INTERNAL DEVELOPMENT GUIDELINES 2022 version
+# This following information defines the specification of FGL INTERNAL DEVELOPMENT GUIDELINES 2022
 
 ---
 
