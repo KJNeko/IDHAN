@@ -173,6 +173,7 @@ _**Example Result**_
 | 1          | success                  |
 | 2          | data does not match type |
 | 3          | invalid marker_name      |
+
 `message` will be populated with an error message upon failure
 
 
