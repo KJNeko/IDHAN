@@ -4,22 +4,6 @@
 Uses POST / GET requests to gain information from IDHAN.
 
 
-
-### List of all POST
-```
-/files/add_files
-/files/delete_file
-```
-
-### List of all GET
-```
-/files/get_markers
-```
-
-
-
-
-
 ## Adding files
 ### **POST `/files/add_file`**
 
@@ -98,6 +82,7 @@ Note: Prefill is not recommended since it could take a VERY long time to complet
 | ulongint     | 8        | uint64_t         |
 | text         | ?        | std::string      |
 | array\<type> | ?        | std::vector\<T>  |
+
 Note: Arrays can be used aswell with any of the previous types in the table but they are expensive since you'll have to re-write the entire array in order to append/delete even a single item in the array
 
 
@@ -140,7 +125,7 @@ _**Example Result:**_
 
 
 
-### **GET `/files/get_markings`**
+### **GET `/markings/get_markings`**
 
 _Gets markings with NAME for a specific file id_
 
@@ -183,11 +168,11 @@ _**Example Result**_
 }
 ```
 
-| status_id  | reason              |
-|------------|---------------------|
-| 1          | success             |
-| 2          | invalid type        |
-| 3          | invalid marker_name |
+| status_id  | reason                   |
+|------------|--------------------------|
+| 1          | success                  |
+| 2          | data does not match type |
+| 3          | invalid marker_name      |
 `message` will be populated with an error message upon failure
 
 
