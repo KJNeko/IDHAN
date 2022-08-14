@@ -6,22 +6,7 @@ MakeFile
 
 .idea/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#builds
+/conan/
+/build/
 

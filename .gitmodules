@@ -10,3 +10,6 @@
 [submodule "submodules/libFGL"]
 	path = submodules/libFGL
 	url = https://github.com/alaestor/libFGL.git
+[submodule "submodules/drogon"]
+	path = submodules/drogon
+	url = git@github.com:drogonframework/drogon.git

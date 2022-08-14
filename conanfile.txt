@@ -1,0 +1,11 @@
+[requires]
+libpqxx/7.7.4
+drogon/1.7.5
+spdlog/1.10.0
+tracy/0.8.2.1
+
+
+[generators]
+cmake
+
+
