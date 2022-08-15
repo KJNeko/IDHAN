@@ -10,3 +10,5 @@ MakeFile
 /conan/
 /build/
 
+/docs/latex/
+/docs/html/
