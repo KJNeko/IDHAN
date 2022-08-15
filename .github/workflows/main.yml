@@ -1,7 +1,7 @@
 name: Automated Main Deploy Action
 on:
   push:
-    branches:  [ main ]
+    branches:  [ main, dev-backend ]
 jobs:
   doxygen:
     runs-on: ubuntu-latest
