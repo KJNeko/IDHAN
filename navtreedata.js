@@ -25,6 +25,31 @@
 var NAVTREE =
 [
   [ "IDHAN", "index.html", [
+    [ "Feature Set", "page-idhan-features.html", [
+      [ "Basics", "page-idhan-features.html#page-idhan-features-basics", [
+        [ "Database Support", "page-idhan-features.html#page-idhan-features-basics-database", null ]
+      ] ],
+      [ "Advanced", "page-idhan-features.html#page-idhan-features-advanced", [
+        [ "Flyweight design", "page-idhan-features.html#page-idhan-features-flyweight", null ],
+        [ "Markings", "page-idhan-features.html#page-idhan-features-markings", null ],
+        [ "Direct Database access", "page-idhan-features.html#page-idhan-features-tables", null ]
+      ] ]
+    ] ],
+    [ "Direct Database Access Guide", "page-idhan-database-direct-guide.html", [
+      [ "Postgresql", "page-idhan-database-direct-guide.html#Postgresql", [
+        [ "efficent tables", "page-idhan-database-direct-guide.html#Creating", null ],
+        [ "queries", "page-idhan-database-direct-guide.html#Efficent", null ],
+        [ "functions", "page-idhan-database-direct-guide.html#Helper", null ]
+      ] ],
+      [ "sqlite3", "page-idhan-database-direct-guide.html#sqlite3", [
+        [ "Queries", "page-idhan-database-direct-guide.html#Queries", null ]
+      ] ]
+    ] ],
+    [ "Welcome to IDHAN's git page", "md_README.html", [
+      [ "Performance", "md_README.html#autotoc_md1", null ],
+      [ "Development", "md_README.html#autotoc_md2", null ],
+      [ "FAQ", "md_README.html#autotoc_md3", null ]
+    ] ],
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
       [ "Class Index", "classes.html", null ],

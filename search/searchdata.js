@@ -1,10 +1,11 @@
 var indexSectionsWithContent =
 {
-  0: "cipst",
+  0: "cdfipstw",
   1: "ips",
   2: "i",
   3: "ct",
-  4: "c"
+  4: "c",
+  5: "dfw"
 };
 
 var indexSectionNames =
@@ -13,7 +14,8 @@ var indexSectionNames =
   1: "classes",
   2: "functions",
   3: "variables",
-  4: "typedefs"
+  4: "typedefs",
+  5: "pages"
 };
 
 var indexSectionLabels =
@@ -22,6 +24,7 @@ var indexSectionLabels =
   1: "Classes",
   2: "Functions",
   3: "Variables",
-  4: "Typedefs"
+  4: "Typedefs",
+  5: "Pages"
 };
 
