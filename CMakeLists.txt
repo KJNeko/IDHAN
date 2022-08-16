@@ -30,6 +30,7 @@ string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UPPER)
 message("${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}}")
 
 target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 target_compile_features(IDHAN PRIVATE cxx_std_20)
 target_compile_definitions(IDHAN PRIVATE FGL_ACKNOWLEDGE_INCOMPATIBLE_COMPILER TRACY_ENABLE)
