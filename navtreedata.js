@@ -32,19 +32,17 @@ var NAVTREE =
       [ "Advanced", "page-idhan-features.html#page-idhan-features-advanced", [
         [ "Flyweight design", "page-idhan-features.html#page-idhan-features-flyweight", null ],
         [ "Markings", "page-idhan-features.html#page-idhan-features-markings", null ],
-        [ "Direct Database access", "page-idhan-features.html#page-idhan-features-tables", null ]
+        [ "Direct Database access", "page-idhan-features.html#page-idhan-features-tables", null ],
+        [ "Generators", "page-idhan-features.html#page-idhan-features-generator", null ]
       ] ]
     ] ],
     [ "Direct Database Access Guide", "page-idhan-database-direct-guide.html", [
       [ "Postgresql", "page-idhan-database-direct-guide.html#Postgresql", [
-        [ "efficent tables", "page-idhan-database-direct-guide.html#Creating", null ],
-        [ "queries", "page-idhan-database-direct-guide.html#Efficent", null ],
-        [ "functions", "page-idhan-database-direct-guide.html#Helper", null ]
+        [ "efficent tables", "page-idhan-database-direct-guide.html#Creating", null ]
       ] ],
-      [ "sqlite3", "page-idhan-database-direct-guide.html#sqlite3", [
-        [ "Queries", "page-idhan-database-direct-guide.html#Queries", null ]
-      ] ]
+      [ "sqlite3", "page-idhan-database-direct-guide.html#sqlite3", null ]
     ] ],
+    [ "Tags", "page-idhan-tags-info.html", null ],
     [ "Welcome to IDHAN's git page", "md_README.html", [
       [ "Performance", "md_README.html#autotoc_md1", null ],
       [ "Development", "md_README.html#autotoc_md2", null ],
@@ -69,7 +67,7 @@ var NAVTREE =
 
 var NAVTREEINDEX =
 [
-"IDHANAbstractDatabase_8hpp_source.html"
+"FileDataContainer_8hpp_source.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['postgresqladditionalargs_0',['PostgresqlAdditionalArgs',['../structPostgresqlAdditionalArgs.html',1,'']]]
+  ['database_0',['Database',['../classIDHAN_1_1Database_1_1Database.html',1,'IDHAN::Database']]]
 ];

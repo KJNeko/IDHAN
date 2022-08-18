@@ -105,7 +105,7 @@ $(document).ready(function(){initNavTree('page-idhan-features.html',''); initRes
 Basics</h1>
 <h2><a class="anchor" id="page-idhan-features-basics-database"></a>
 Database Support</h2>
-<p >IDHAN supports two major database backends. sqlite3 <code><a class="el" href="classIDHANSqlite.html">IDHANSqlite</a></code> and postgresql <code><a class="el" href="classIDHANPostgresql.html">IDHANPostgresql</a></code>. Either of these are selected at compile time.</p>
+<p >IDHAN supports two major database backends. sqlite3 <code>IDHANSqlite</code> and postgresql <code>IDHANPostgresql</code>. Either of these are selected at compile time.</p>
 <dl class="section note"><dt>Note</dt><dd>Select what you need. Not what you want. If you do not need the performance for a massive dataset then use sqlite3</dd></dl>
 <p>Pros and cons </p><table class="markdownTable">
 <tr class="markdownTableHead">
@@ -138,9 +138,9 @@ If you are building an <b>SMALL</b> applocation for managing your family photos?
 Advanced</h1>
 <h2><a class="anchor" id="page-idhan-features-flyweight"></a>
 Flyweight design</h2>
-<p >IDHAN supports a flyweight design that reduces memory usage for redundent data by keeping a large pool of <code>FileDataContainer</code> that is handed out through pointers contained in <code>FileData</code>. This has the bonus of allowing the object to stay in sync with the database at all times.</p>
+<p >IDHAN supports a flyweight design that reduces memory usage for redundent data by keeping a large pool of <code><a class="el" href="classFileDataContainer.html">FileDataContainer</a></code> that is handed out through pointers contained in <code><a class="el" href="classFileData.html" title="Primary object for IDHAN. This contains all file information for the file_id given when constructed....">FileData</a></code>. This has the bonus of allowing the object to stay in sync with the database at all times.</p>
 <dl class="section note"><dt>Note</dt><dd>In the event that you don't wish for this system to be used then you can check the define list to disabled it in your program.</dd></dl>
-<dl class="section warning"><dt>Warning</dt><dd>Disabling this will remove some functionality within <code>FileData</code> that allows the object to remain in sync with the database so thus it needs to re-check every time you access the object. Crippling your performance. Disabling this is <em><b>NOT RECOMENDED</b></em></dd>
+<dl class="section warning"><dt>Warning</dt><dd>Disabling this will remove some functionality within <code><a class="el" href="classFileData.html" title="Primary object for IDHAN. This contains all file information for the file_id given when constructed....">FileData</a></code> that allows the object to remain in sync with the database so thus it needs to re-check every time you access the object. Crippling your performance. Disabling this is <em><b>NOT RECOMENDED</b></em></dd>
 <dd>
 Disabling this feature will <b>DRASTICALLY</b> increase your memory usage</dd></dl>
 <h2><a class="anchor" id="page-idhan-features-markings"></a>
@@ -153,7 +153,10 @@ Markings</h2>
 Direct Database access</h2>
 <p >While IDHAN is an abstraction to the database side of things we still give you the full ability to access the database and make your own queries. It is recomended to follow our <a class="el" href="page-idhan-database-direct-guide.html">Direct Database Access Guide</a> on how to make the most of each db backend</p>
 <dl class="section note"><dt>Note</dt><dd>While we provide this system to you we do not offer any types of performnace enhancements along with it.</dd></dl>
-<dl class="section warning"><dt>Warning</dt><dd>There is <b>NO</b> safety attached to this system. If you <code>drop tables files</code> it will do so and it will not be possible to recover without a backup. Be careful. </dd></dl>
+<dl class="section warning"><dt>Warning</dt><dd>There is <b>NO</b> safety attached to this system. If you <code>drop tables files</code> it will do so and it will not be possible to recover without a backup. Be careful.</dd></dl>
+<h2><a class="anchor" id="page-idhan-features-generator"></a>
+Generators</h2>
+<p >A lot of the time when mass downloading from artists two of the most common sets of files are archives and psd files. These are usually hard to display/render on their own. IDHAN will treat files in zips as individual files </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

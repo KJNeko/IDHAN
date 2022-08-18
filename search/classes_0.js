@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['idhanabstractdatabase_0',['IDHANAbstractDatabase',['../classIDHANAbstractDatabase.html',1,'']]],
-  ['idhandatabase_1',['IDHANDatabase',['../classIDHANDatabase.html',1,'']]],
-  ['idhanpostgresql_2',['IDHANPostgresql',['../classIDHANPostgresql.html',1,'']]],
-  ['idhansqlite_3',['IDHANSqlite',['../classIDHANSqlite.html',1,'']]]
+  ['abstractdatabase_0',['AbstractDatabase',['../classIDHAN_1_1Database_1_1AbstractDatabase.html',1,'IDHAN::Database']]]
 ];

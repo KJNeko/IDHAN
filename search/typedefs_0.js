@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['connectionargs_5ft_0',['ConnectionArgs_T',['../classIDHANPostgresql.html#a4da679776207a7fb563b8b3d846fae57',1,'IDHANPostgresql']]]
+  ['connectionargs_5ft_0',['ConnectionArgs_T',['../classIDHAN_1_1Database_1_1IDHANPostgresql.html#aa06f2ebc15820779a94e0bd810431b7d',1,'IDHAN::Database::IDHANPostgresql']]]
 ];

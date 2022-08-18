@@ -1,0 +1,7 @@
+<map id="TagExceptionRecurse" name="TagExceptionRecurse">
+<area shape="rect" id="node1" title="Thrown in the event of a infinite loop of tags (parent/child, siblings, or overwrite)" alt="" coords="19,304,167,331"/>
+<area shape="rect" id="node2" href="$classIDHANTagException.html" title=" " alt="" coords="21,229,164,256"/>
+<area shape="rect" id="node3" href="$classIDHANDatabaseException.html" title=" " alt="" coords="5,155,180,181"/>
+<area shape="rect" id="node4" href="$classIDHANException.html" title=" " alt="" coords="33,80,153,107"/>
+<area shape="rect" id="node5" title=" " alt="" coords="42,5,143,32"/>
+</map>

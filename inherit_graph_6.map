@@ -1,0 +1,10 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" title=" " alt="" coords="5,31,107,57"/>
+<area shape="rect" id="node2" href="$classIDHANException.html" title=" " alt="" coords="155,31,275,57"/>
+<area shape="rect" id="node3" href="$classIDHANDatabaseException.html" title=" " alt="" coords="323,31,497,57"/>
+<area shape="rect" id="node4" href="$classIDHANInvalidFileID.html" title=" " alt="" coords="549,5,685,32"/>
+<area shape="rect" id="node5" href="$classIDHANTagException.html" title=" " alt="" coords="545,56,688,83"/>
+<area shape="rect" id="node6" href="$classNonExistentTag.html" title="Thrown in the event of a tag not existing (text)" alt="" coords="753,5,867,32"/>
+<area shape="rect" id="node7" href="$classNonExistentTagID.html" title="Thrown in the event of a tag_id parameter being invalid (non existant)" alt="" coords="747,56,873,83"/>
+<area shape="rect" id="node8" href="$classTagExceptionRecurse.html" title="Thrown in the event of a infinite loop of tags (parent/child, siblings, or overwrite)" alt="" coords="736,107,884,133"/>
+</map>
