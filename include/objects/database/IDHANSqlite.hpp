@@ -5,26 +5,24 @@
 #ifndef IDHAN_IDHANSQLITE_HPP
 #define IDHAN_IDHANSQLITE_HPP
 
-#include "abstract/IDHANAbstractDatabase.hpp"
+#include "objects/abstract/IDHANAbstractDatabase.hpp"
 
 
-
+namespace IDHAN::Database
+{
 struct SqliteConnectionArgs
 {
-
 };
 
-class IDHANSqlite : public IDHANAbstractDatabase
+class IDHANSqlite : public AbstractDatabase
 {
-	//TODO:Define this
+	// TODO:Define this
 
   public:
-
 	using ConnectionArgs = SqliteConnectionArgs;
 
 
-	IDHANSqlite(ConnectionArgs conn_args)
-
+	IDHANSqlite( ConnectionArgs conn_args )
 };
-
+}
 #endif	// IDHAN_IDHANSQLITE_HPP

@@ -58,16 +58,18 @@
  *
  * 		\warning There is **NO** safety attached to this system. If you `drop tables files` it will do so and it will not be possible to recover without a backup. Be careful.
  *
+ * 	@subsection page-idhan-features-generator Generators
+ * 		A lot of the time when mass downloading from artists two of the most common sets of files are archives and psd files. These are usually hard to display/render on their own. IDHAN will treat files in zips as individual files
+ *
+ *
  * @page page-idhan-database-direct-guide Direct Database Access Guide
  * @section Postgresql
  * @subsection Creating efficent tables
- * @subsection Efficent queries
- * @subsection Helper functions
  *
  * @section sqlite3
  * @subsection Creating efficent tables
- * @subsection Queries
- * @subsection Helper functions
+ *
+ *
  *
  *
  */

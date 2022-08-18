@@ -5,10 +5,13 @@
 #ifndef IDHAN_IDHANPOSTGRESQL_HPP
 #define IDHAN_IDHANPOSTGRESQL_HPP
 
-#include "abstract/IDHANAbstractDatabase.hpp"
-#include "IDHANDatabase.hpp"
-
 #include <pqxx/pqxx>
+
+#include "IDHANDatabase.hpp"
+#include "objects/abstract/IDHANAbstractDatabase.hpp"
+
+namespace IDHAN::Database
+{
 
 //! Additional arguments for the postgresql connection
 struct PostgresqlAdditionalArgs
@@ -21,7 +24,7 @@ struct PostgresqlAdditionalArgs
 
 };
 
-class IDHANPostgresql : public IDHANAbstractDatabase
+class IDHANPostgresql : public AbstractDatabase
 {
 	pqxx::connection conn;
 
@@ -35,6 +38,8 @@ class IDHANPostgresql : public IDHANAbstractDatabase
 		//Do more setup here if required
 	}
 };
+}
+
 
 
 #endif	// IDHAN_IDHANPOSTGRESQL_HPP
