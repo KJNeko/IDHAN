@@ -21,18 +21,22 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
 endif ()
 
 file(GLOB_RECURSE SOURCES
-        "${CMAKE_SOURCE_DIR}/src/*.cpp"
+        "${CMAKE_SOURCE_DIR}/src/idhan/*.cpp"
         )
 
-add_executable(IDHAN ${SOURCES})
+add_library(IDHAN ${SOURCES})
+
+add_executable(IDHAN_TESTS ${CMAKE_SOURCE_DIR}/src/tests/tests.cpp)
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UPPER)
 message("${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}}")
 
-target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(IDHAN PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 target_compile_features(IDHAN PRIVATE cxx_std_20)
 target_compile_definitions(IDHAN PRIVATE FGL_ACKNOWLEDGE_INCOMPATIBLE_COMPILER TRACY_ENABLE)
 
-target_link_libraries(IDHAN PUBLIC CONAN_PKG::libpqxx CONAN_PKG::spdlog CONAN_PKG::drogon)
+target_link_libraries(IDHAN PUBLIC CONAN_PKG::libpqxx CONAN_PKG::openssl CONAN_PKG::libFGL CONAN_PKG::spdlog)
+
+target_link_libraries(IDHAN_TESTS IDHAN CONAN_PKG::catch2)
+
