@@ -25,24 +25,6 @@
 var NAVTREE =
 [
   [ "IDHAN", "index.html", [
-    [ "Feature Set", "page-idhan-features.html", [
-      [ "Basics", "page-idhan-features.html#page-idhan-features-basics", [
-        [ "Database Support", "page-idhan-features.html#page-idhan-features-basics-database", null ]
-      ] ],
-      [ "Advanced", "page-idhan-features.html#page-idhan-features-advanced", [
-        [ "Flyweight design", "page-idhan-features.html#page-idhan-features-flyweight", null ],
-        [ "Markings", "page-idhan-features.html#page-idhan-features-markings", null ],
-        [ "Direct Database access", "page-idhan-features.html#page-idhan-features-tables", null ],
-        [ "Generators", "page-idhan-features.html#page-idhan-features-generator", null ]
-      ] ]
-    ] ],
-    [ "Direct Database Access Guide", "page-idhan-database-direct-guide.html", [
-      [ "Postgresql", "page-idhan-database-direct-guide.html#Postgresql", [
-        [ "efficent tables", "page-idhan-database-direct-guide.html#Creating", null ]
-      ] ],
-      [ "sqlite3", "page-idhan-database-direct-guide.html#sqlite3", null ]
-    ] ],
-    [ "Tags", "page-idhan-tags-info.html", null ],
     [ "Welcome to IDHAN's git page", "md_README.html", [
       [ "Performance", "md_README.html#autotoc_md1", null ],
       [ "Development", "md_README.html#autotoc_md2", null ],
@@ -51,12 +33,9 @@ var NAVTREE =
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
       [ "Class Index", "classes.html", null ],
-      [ "Class Hierarchy", "hierarchy.html", "hierarchy" ],
       [ "Class Members", "functions.html", [
         [ "All", "functions.html", null ],
-        [ "Functions", "functions_func.html", null ],
-        [ "Variables", "functions_vars.html", null ],
-        [ "Typedefs", "functions_type.html", null ]
+        [ "Functions", "functions_func.html", null ]
       ] ]
     ] ],
     [ "Files", "files.html", [
@@ -67,7 +46,7 @@ var NAVTREE =
 
 var NAVTREEINDEX =
 [
-"FileDataContainer_8hpp_source.html"
+"ConnectionManager_8hpp_source.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

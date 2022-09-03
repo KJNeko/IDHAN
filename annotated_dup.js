@@ -1,25 +1,16 @@
 var annotated_dup =
 [
-    [ "IDHAN", null, [
-      [ "Database", null, [
-        [ "AbstractDatabase", "classIDHAN_1_1Database_1_1AbstractDatabase.html", null ],
-        [ "Database", "classIDHAN_1_1Database_1_1Database.html", "classIDHAN_1_1Database_1_1Database" ],
-        [ "IDHANPostgresql", "classIDHAN_1_1Database_1_1IDHANPostgresql.html", "classIDHAN_1_1Database_1_1IDHANPostgresql" ],
-        [ "IDHANSqlite", "classIDHAN_1_1Database_1_1IDHANSqlite.html", null ],
-        [ "PostgresqlAdditionalArgs", "structIDHAN_1_1Database_1_1PostgresqlAdditionalArgs.html", "structIDHAN_1_1Database_1_1PostgresqlAdditionalArgs" ],
-        [ "SqliteConnectionArgs", "structIDHAN_1_1Database_1_1SqliteConnectionArgs.html", null ]
+    [ "idhan", null, [
+      [ "database", null, [
+        [ "internal", null, [
+          [ "ConnectionManagerTester", "structidhan_1_1database_1_1internal_1_1ConnectionManagerTester.html", null ],
+          [ "ConnectionPoolTester", "structidhan_1_1database_1_1internal_1_1ConnectionPoolTester.html", null ]
+        ] ],
+        [ "ConnectionManager", "classidhan_1_1database_1_1ConnectionManager.html", null ],
+        [ "ConnectionPool", "classidhan_1_1database_1_1ConnectionPool.html", "classidhan_1_1database_1_1ConnectionPool" ],
+        [ "RecursiveConnection", "classidhan_1_1database_1_1RecursiveConnection.html", null ],
+        [ "UniqueConnection", "classidhan_1_1database_1_1UniqueConnection.html", null ]
       ] ]
     ] ],
-    [ "FileData", "classFileData.html", null ],
-    [ "FileDataContainer", "classFileDataContainer.html", null ],
-    [ "FileDataEmpty", "classFileDataEmpty.html", null ],
-    [ "FileDataPool", "classFileDataPool.html", null ],
-    [ "IDHANDatabaseException", "classIDHANDatabaseException.html", null ],
-    [ "IDHANException", "classIDHANException.html", null ],
-    [ "IDHANInvalidFileID", "classIDHANInvalidFileID.html", null ],
-    [ "IDHANTagException", "classIDHANTagException.html", null ],
-    [ "NonExistentTag", "classNonExistentTag.html", null ],
-    [ "NonExistentTagID", "classNonExistentTagID.html", null ],
-    [ "Tag", "classTag.html", "classTag" ],
-    [ "TagExceptionRecurse", "classTagExceptionRecurse.html", "classTagExceptionRecurse" ]
+    [ "FileRecord", "classFileRecord.html", null ]
 ];

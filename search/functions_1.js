@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['concat_5ftag_0',['concat_tag',['../classTag.html#a4cc1b8f76410ce2a1a80a5d5d7b3255a',1,'Tag']]]
+  ['deinit_0',['deinit',['../classidhan_1_1database_1_1ConnectionPool.html#a0a09b0ddd30f59209c65fecf173ca1bd',1,'idhan::database::ConnectionPool']]]
 ];
