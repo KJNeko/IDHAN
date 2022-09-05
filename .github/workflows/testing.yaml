@@ -1,0 +1,52 @@
+
+name: Build & Tests
+on:
+  push:
+    branches: [main, dev_backend]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Update workspace
+        run: apt install python3 -y
+
+      - name: Get Conan
+        run: pip3 install conan
+
+      - name: Get Dependencies
+        run: conan install . --build=missing -if="conan"
+
+      - name: Build CMake
+        # You may pin to the exact commit or the version.
+        # uses: ashutoshvarma/action-cmake-build@0fbeeac8b1f9c8aef99e9eae9d78529ed3b0364b
+        uses: ashutoshvarma/action-cmake-build@v1
+        with:
+          # Build directory where build files will be generated
+          build-dir: # default is ${{ runner.workspace }}/build
+          # CMake build type (Release, Debug, MinSizeRel, RelWithDebInfo)
+          build-type: # default is Release
+          # C Compiler for toolchain
+          cc: # optional
+          # C++ Compiler for toolchain
+          cxx: # optional
+          # CMake build target
+          target: # optional
+          # Number of concurrent jobs for build and test
+          parallel: # optional, default is 4
+          # Run CTest or not
+          run-test: 1
+          # Run 'cmake --install' or not
+          install-build: # optional, default is false
+          # Update git submodules
+          submodule-update: # optional, default is false
+          # Misc Options to pass to CMake while configuring project
+          configure-options: # optional
+          # Misc Options to pass to CMake while building project using cmake --build
+          build-options: # optional
+          # Misc Options to pass to CMake while installing project using cmake --install
+          install-options: # optional
+          # Misc Options to pass to CTest
+          ctest-options: # optional
