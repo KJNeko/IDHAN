@@ -7,6 +7,8 @@
 #include <asio/connect.hpp>
 #include <asio/ssl/verify_mode.hpp>
 
+#include <future>
+
 #include "spdlog/spdlog.h"
 
 namespace idhan
@@ -54,8 +56,16 @@ namespace idhan
 		}
 	}
 
+	std::future< ServerVersionInfoResponse > ClientContext::requestServerVersionInfo()
+	{
+		ServerVersionInfoRequest req {};
+
+		return getResponse( std::move( req ) );
+	}
+
 	void ClientContext::shutdown()
 	{
+		//TODO: Submit client disconnect message.
 		(void)runner.request_stop();
 		asio_context.stop();
 	}

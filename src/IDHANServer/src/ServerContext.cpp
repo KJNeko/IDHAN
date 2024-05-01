@@ -8,6 +8,8 @@
 
 #include <filesystem>
 
+#include "../../IDHAN/include/idhan/requests/concepts.hpp"
+#include "idhan/MessageHeader.hpp"
 #include "spdlog/spdlog.h"
 
 namespace idhan
@@ -64,14 +66,31 @@ namespace idhan
 				}
 				else
 				{
-					handleInputData( length );
+					if ( in_working_buffer.size() > sizeof( std::size_t ) )
+					{
+						if ( const auto message_header = MessageHeader::decodeFromBuffer( in_working_buffer );
+					         message_header.length <= in_working_buffer.size() )
+						{
+							//We have the entire message. Extract it then send it to the message router.
+
+							std::vector< std::byte > new_buffer {};
+							new_buffer.resize( message_header.length );
+
+							std::memcpy( new_buffer.data(), in_working_buffer.data(), message_header.length );
+
+							routeMessage( std::move( new_buffer ) );
+
+							//Erase the message from the buffer
+							in_working_buffer
+								.erase( in_working_buffer.begin(), in_working_buffer.begin() + message_header.length );
+						}
+						//Insufficent data. Need to wait for more.
+					}
+
 					prepareRead();
 				}
 			} );
 	}
-
-	void ClientConnection::handleInputData( std::size_t size )
-	{}
 
 	void ServerContext::prepareIncomingAcceptor()
 	{

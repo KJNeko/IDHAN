@@ -35,6 +35,13 @@ TEST_CASE( "Server setup", "[server][network]" )
 			{
 				ClientContext second_client { ServerContext::DEFAULT_LISTEN_HOST, ClientContext::DEFAULT_LISTEN_PORT };
 			}
+
+			AND_THEN( "A client should be able to request the version information" )
+			{
+				auto server_info { client.requestServerVersionInfo() };
+
+				server_info.wait_for( std::chrono::seconds( 1 ) );
+			}
 		}
 	}
 }

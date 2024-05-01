@@ -18,6 +18,11 @@ namespace idhan
 	{
 		asio::ssl::stream< asio::ip::tcp::socket > secure_socket;
 		std::array< std::byte, 1024 > in_data_buffer {};
+		std::vector< std::byte > in_working_buffer {};
+
+		void prepareRead();
+
+	  public:
 
 		ClientConnection( asio::ip::tcp::socket&& socket, asio::ssl::context& ssl_context ) :
 		  secure_socket( std::forward< decltype( socket ) >( socket ), ssl_context )
@@ -25,10 +30,7 @@ namespace idhan
 
 		void startHandshake();
 
-		void sendData( const std::vector< std::byte >& data );
-		std::vector< std::byte > recieveData();
-		void prepareRead();
-		void handleInputData( std::size_t size );
+		void routeMessage( const std::vector< std::byte >& move );
 	};
 
 	class ServerContext
