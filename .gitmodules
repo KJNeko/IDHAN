@@ -10,3 +10,24 @@
 [submodule "dependencies/spdlog"]
 	path = dependencies/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "submodules/websocket"]
+	path = submodules/websocket
+	url = https://gitlab.com/eidheim/Simple-WebSocket-Server.git
+[submodule "submodules/webserver"]
+	path = submodules/webserver
+	url = https://github.com/dendisuhubdy/asio-webserver.git
+[submodule "dependencies/drogon"]
+	path = dependencies/drogon
+	url = https://github.com/drogonframework/drogon.git
+[submodule "fgl_cmake_modules"]
+	path = fgl_cmake_modules
+	url = git@github.com:KJNeko/fgl_cmake_modules.git
+[submodule "dependencies/libpqxx"]
+	path = dependencies/libpqxx
+	url = https://github.com/jtv/libpqxx.git
+[submodule "dependencies/postgres"]
+	path = dependencies/postgres
+	url = https://github.com/postgres/postgres.git
+[submodule "dependencies/sqlite3"]
+	path = dependencies/sqlite3
+	url = https://github.com/sqlite/sqlite.git

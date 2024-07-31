@@ -1,0 +1,81 @@
+%! Author = kj16609
+%! Date = 4/4/24
+
+% Preamble
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% Document
+\begin{document}
+
+	\section{IDHAN Basics}
+	\subsection[whatisidhan]{What is IDHAN}
+	IDHAN is a file management database designed for modularity and performance. It's design attempts to use system resources given by the user as effectively as possible
+
+	\subsection[terms]{Basic Terminology}
+	\begin{description}
+        	\item[Server]: The primary IDHAN instance that handles API access and management of the database.
+	        \item[Client]: Any API accessor (Typically will have some sort of GUI interface).
+	        \item[API]: Both the RESTful and Socket based APIs.
+	        \item[Record]: A sha256 matching a set of data
+	        \item[File]: A single file/data and it's associated hash
+	        \item[Archive]: A file containing multiple other files
+	        \item[Tag]: A piece of information attached to a given Record.
+	\end{description}
+
+
+
+	\section{Tagging}
+	\subsection[tags-terms]{Tag terminology}
+	\begin{description}
+	        \item[Tag]: (See Basic Terminology)
+	        \item[Alias]: A tag connection that turns A into B, Along with B inheriting all parents/children/siblings from A
+	        \item[Siblings]: A tag connection that acts as an XOR (Exclusive or). Tag A as a older sibling to tag B. If both are present the older sibling 'wins' and is presented while the younger sibling is hidden
+		\item[Parents]: A tag connection that assuming A is a parent of B will cause A to be present whenever B is present. (A child can't be without it's parents)
+	\end{description}
+
+	\subsection[tags-visual]{Tag visulizations}
+	The following are various ways to write tag connections without explicitly refering to them as parents/siblings/children
+	\begin{description}
+		\item[Alias] A $\rightarrow$ B ( B is the idealized or prefered tag over A ) (Writen as $->$)
+		\item[Parents] A $\Rightarrow$ B (B is the child of A) (Written as $=>$)
+		\item[Siblings] A $\rightrightarrows$ B (B is the older sibling of A) (Written as $=>>$)
+	\end{description}
+
+
+
+	\section{Core functionality}
+
+
+	\subsection[client-connection]{Client Connections}
+	\subsubsection[socket-connection]{Socket connections}
+	The following only applies to clients that are using a messageing type API (Such as the socket API).\newline
+	The client's challenge must be performed as follows:\newline
+	The client will recieve information about the Server after inital connection and before authentication. This information consists of the version. This allows the client to check it's version and disconnect upon being unable to communicate with the server.\newline
+	The client will then issue an authorization request. The client must provide the key it wishes to authenticate with in the request. \newline
+	Upon the client being rejected the server will issue a rejection response and close the connection.\newline
+	Upon the client being accepted the server with issue a acceptance response that contains any extra information about the server that can't be sent to unauthenticated clients
+
+
+	\subsection[work-queue]{Work Queue}
+	Each client connection will be given it's own work queue. The server can be configured to assign more or less threads to each queue as well as a priority.
+	Each client's config will be of the following:
+	\begin{description}
+		\item[Priority] The priority of the queue. Higher work gets done first. 
+		\item[Reserved Threads] The number of dedicated threads for processing a given thread pool. Reserved threads will NOT steal work from another queue. Must be lower then max threads
+		\item[Max threads] The max number of threads that will process on a given thread pool. This value is overriden by the minimum of either this value or the global thread max value. 0 means unlimited/global max
+	\end{description}
+
+	
+
+
+	\subsection[file-importing]{File Importing}
+	
+
+
+
+   
+\end{document}

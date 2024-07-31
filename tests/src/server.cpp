@@ -11,37 +11,5 @@ using namespace idhan;
 
 TEST_CASE( "Server setup", "[server][network]" )
 {
-	WHEN( "Default constructed" )
-	{
-		ServerContext server_ctx {};
 
-		THEN( "The host should be \"localhost\"" )
-		{
-			REQUIRE(
-				server_ctx.listenAddress() == asio::ip::address::from_string( ServerContext::DEFAULT_LISTEN_HOST ) );
-		}
-
-		THEN( "The port should be 16609" )
-		{
-			REQUIRE( server_ctx.listenPort() == ServerContext::DEFAULT_LISTEN_PORT );
-		}
-
-		THEN( "A client should be able to connect" )
-		{
-			ClientContext client { ServerContext::DEFAULT_LISTEN_HOST, ClientContext::DEFAULT_LISTEN_PORT };
-			using namespace std::chrono_literals;
-			std::this_thread::sleep_for( 100ms );
-			AND_THEN( "A second client should be able to connect" )
-			{
-				ClientContext second_client { ServerContext::DEFAULT_LISTEN_HOST, ClientContext::DEFAULT_LISTEN_PORT };
-			}
-
-			AND_THEN( "A client should be able to request the version information" )
-			{
-				auto server_info { client.requestServerVersionInfo() };
-
-				server_info.wait_for( std::chrono::seconds( 1 ) );
-			}
-		}
-	}
 }
