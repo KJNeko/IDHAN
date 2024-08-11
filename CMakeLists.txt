@@ -17,6 +17,7 @@ include(spdlog)
 include(postgres)
 include(sqlite3)
 include(drogon)
+include(qt6)
 
 #add_subdirectory(IDHAN)
 add_subdirectory(IDHANServer)
