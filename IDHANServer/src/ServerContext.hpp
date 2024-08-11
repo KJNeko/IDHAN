@@ -18,6 +18,7 @@ namespace idhan
 
 		ServerContext() = delete;
 
+		void setupCORSSupport();
 		ServerContext( const ConnectionArguments& arguments );
 		void run();
 

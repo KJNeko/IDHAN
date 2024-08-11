@@ -16,19 +16,8 @@ constexpr std::uint16_t DEFAULT_PORT { 16609 };
 namespace idhan
 {
 
-	ServerContext::ServerContext( const ConnectionArguments& arguments ) :
-	  m_db( std::make_unique< Database >( arguments ) )
+	void ServerContext::setupCORSSupport()
 	{
-		log::server::info( "IDHAN initalization starting" );
-
-		auto& app { drogon::app() };
-
-		drogon::app()
-			.setLogPath( "./" )
-			.setLogLevel( trantor::Logger::kInfo )
-			.addListener( "127.0.0.1", DEFAULT_PORT )
-			.setThreadNum( 16 );
-
 		drogon::app().registerPreRoutingAdvice(
 			[]( const drogon::HttpRequestPtr& request,
 		        drogon::FilterCallback&& stop,
@@ -56,6 +45,22 @@ namespace idhan
 				response->addHeader( "Access-Control-Allow-Origin", "*" );
 				response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
 			} );
+	}
+
+	ServerContext::ServerContext( const ConnectionArguments& arguments ) :
+	  m_db( std::make_unique< Database >( arguments ) )
+	{
+		log::server::info( "IDHAN initalization starting" );
+
+		auto& app { drogon::app() };
+
+		drogon::app()
+			.setLogPath( "./" )
+			.setLogLevel( trantor::Logger::kInfo )
+			.addListener( "127.0.0.1", DEFAULT_PORT )
+			.setThreadNum( 16 );
+
+		setupCORSSupport();
 
 		hyapi::setupAccessHandlers();
 		hyapi::setupServiceHandlers();
@@ -73,8 +78,6 @@ namespace idhan
 	}
 
 	ServerContext::~ServerContext()
-	{
-
-	}
+	{}
 
 } // namespace idhan
