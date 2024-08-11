@@ -2,14 +2,14 @@
 // Created by kj16609 on 7/23/24.
 //
 
-#include "idhan/ServerContext.hpp"
+#include "ServerContext.hpp"
 
 #include <fixme.hpp>
 
 #include "core/Database.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "hyapi/setups.hpp"
-#include "idhan/logging/log.hpp"
+#include "logging/log.hpp"
 
 constexpr std::uint16_t DEFAULT_PORT { 16609 };
 

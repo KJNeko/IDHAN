@@ -4,9 +4,7 @@
 
 #include "Database.hpp"
 
-#include "hyapi/HydrusDB.hpp"
-#include "idhan/logging/log.hpp"
-#include "sqlite/Transaction.hpp"
+#include "logging/log.hpp"
 
 namespace idhan
 {

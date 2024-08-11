@@ -4,14 +4,13 @@
 
 #include <cstdlib>
 
-#include "idhan/ConnectionArguments.hpp"
-#include "idhan/ServerContext.hpp"
+#include "ConnectionArguments.hpp"
+#include "ServerContext.hpp"
 
 int main( int argc, char** argv )
 {
 	idhan::ConnectionArguments arguments {};
 	//arguments.hydrus_info.hydrus_db_path = "/home/kj16609/.local/share/hydrus/db/";
-	arguments.hydrus_info.hydrus_db_path = "/run/media/kj16609/SDD1/CuddleDBHydrus/";
 	arguments.user = "idhan";
 	arguments.hostname = "localhost";
 

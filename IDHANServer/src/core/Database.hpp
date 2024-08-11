@@ -6,7 +6,7 @@
 
 #include <pqxx/pqxx>
 
-#include "idhan/ConnectionArguments.hpp"
+#include "../ConnectionArguments.hpp"
 
 namespace idhan
 {
