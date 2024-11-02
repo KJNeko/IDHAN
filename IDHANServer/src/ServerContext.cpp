@@ -11,7 +11,6 @@
 #include "hyapi/setups.hpp"
 #include "logging/log.hpp"
 
-constexpr std::uint16_t DEFAULT_PORT { 16609 };
 
 namespace idhan
 {
@@ -62,7 +61,7 @@ namespace idhan
 		drogon::app()
 			.setLogPath( "./" )
 			.setLogLevel( trantor::Logger::kInfo )
-			.addListener( "127.0.0.1", DEFAULT_PORT )
+			.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT )
 			.setThreadNum( 16 )
 			.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() );
 
@@ -79,7 +78,7 @@ namespace idhan
 	{
 		log::server::info( "Starting runtime" );
 
-		log::info( "Server available at http://localhost:{}", DEFAULT_PORT );
+		log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
 		drogon::app().run();
 
 		log::server::info( "Shutting down" );

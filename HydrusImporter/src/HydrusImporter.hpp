@@ -21,8 +21,6 @@ namespace idhan::hydrus
 		void copyTags();
 		void copyFiles( std::size_t hy_service_id );
 
-		IDHANClient client;
-
 	  public:
 
 		HydrusImporter() = delete;
