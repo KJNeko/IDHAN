@@ -20,9 +20,6 @@ namespace idhan::import
 	{
 		FileRecordID m_id;
 		SHA256 m_sha256;
-
-
-
 	};
 
 	QFileInfo getPath( const FileRecord record );
@@ -30,6 +27,8 @@ namespace idhan::import
 	FileRecord createRecord( const SHA256& sha256 );
 
 	FileRecord createRecord( QByteArrayView data );
+
+	FileRecord createRecord( const std::vector< std::byte >& data );
 
 } // namespace idhan::import
 

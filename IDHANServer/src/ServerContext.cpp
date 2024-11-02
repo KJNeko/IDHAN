@@ -54,16 +54,23 @@ namespace idhan
 
 		auto& app { drogon::app() };
 
+		spdlog::set_level( spdlog::level::debug );
+		log::trace( "Logging show trace" );
+		log::debug( "Logging show debug" );
+		log::info( "Logging show info" );
+
 		drogon::app()
 			.setLogPath( "./" )
 			.setLogLevel( trantor::Logger::kInfo )
 			.addListener( "127.0.0.1", DEFAULT_PORT )
-			.setThreadNum( 16 );
+			.setThreadNum( 16 )
+			.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() );
 
 		setupCORSSupport();
 
 		hyapi::setupAccessHandlers();
 		hyapi::setupServiceHandlers();
+		hyapi::setupFileHandlers();
 
 		log::server::info( "IDHAN initalization finished" );
 	}
@@ -72,6 +79,7 @@ namespace idhan
 	{
 		log::server::info( "Starting runtime" );
 
+		log::info( "Server available at http://localhost:{}", DEFAULT_PORT );
 		drogon::app().run();
 
 		log::server::info( "Shutting down" );

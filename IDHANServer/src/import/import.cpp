@@ -11,4 +11,9 @@ namespace idhan::import
 
 	FileRecord createRecord( const SHA256& sha256 );
 
-}
+	FileRecord createRecord( const std::vector< std::byte >& data )
+	{
+
+	}
+
+} // namespace idhan::import

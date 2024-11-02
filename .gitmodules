@@ -31,3 +31,9 @@
 [submodule "dependencies/sqlite3"]
 	path = dependencies/sqlite3
 	url = https://github.com/sqlite/sqlite.git
+[submodule "3rd-party/hydrus-web"]
+	path = 3rd-party/hydrus-web
+	url = https://github.com/floogulinc/hydrus-web.git
+[submodule "3rd-party/hydrus"]
+	path = 3rd-party/hydrus
+	url = https://github.com/hydrusnetwork/hydrus.git

@@ -2,9 +2,8 @@
 
 enable_testing()
 
-file(GLOB_RECURSE FGL_TEST_SOURCES "*.cpp")
 
-add_executable(IDHANTests ${FGL_TEST_SOURCES})
+AddFGLExecutable(IDHANTests ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(IDHANTests PUBLIC IDHAN Catch2::Catch2WithMain LibIDHANServer LibIDHANClient)
 
 #catch_discover_tests(IDHANTests)

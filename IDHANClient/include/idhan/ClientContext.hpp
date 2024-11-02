@@ -4,12 +4,10 @@
 
 #pragma once
 
-
 namespace idhan
 {
 
-	class Client
+	class IDHANClient
 	{};
 
-
-}
+} // namespace idhan

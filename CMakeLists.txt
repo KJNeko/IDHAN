@@ -12,16 +12,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 PreSetup()
 
-include(Catch)
+
+option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" ON)
+option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
+
+#IDHANServer/IDHANClient
 include(spdlog)
 include(postgres)
-include(sqlite3)
 include(drogon)
 include(qt6)
-
-#add_subdirectory(IDHAN)
+add_subdirectory(IDHAN)
 add_subdirectory(IDHANServer)
 add_subdirectory(IDHANClient)
-add_subdirectory(tests)
+
+if (BUILD_IDHAN_TESTS)
+	#IDHANTests
+	include(Catch)
+	add_subdirectory(tests)
+endif ()
+
+
+if (BUILD_HYDRUS_IMPORTER)
+	#HydrusImporter
+	include(sqlite3)
+	add_subdirectory(HydrusImporter)
+endif ()
 
 PostSetup()

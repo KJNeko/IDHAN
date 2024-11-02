@@ -3,6 +3,7 @@
 //
 
 #include "../versions.hpp"
+#include "api/helpers/ResponseCallback.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "fixme.hpp"
 
@@ -12,7 +13,6 @@ namespace idhan::hyapi
 	constexpr auto PRETEND_API_VERSION { 65 };
 	constexpr auto PRETEND_HYDRUS_VERISON { 583 };
 
-	using ResponseFunction = std::function< void( const drogon::HttpResponsePtr& ) >;
 
 	// /hyapi/api_version
 	void getApiVersion( [[maybe_unused]] const drogon::HttpRequestPtr& request, ResponseFunction&& callback )

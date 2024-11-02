@@ -21,6 +21,11 @@ namespace idhan
 
 	  public:
 
+		inline pqxx::connection& conn()
+		{
+			return connection;
+		}
+
 		Database( const ConnectionArguments& arguments );
 	};
 

@@ -4,12 +4,24 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Weffc++"
 #include <spdlog/spdlog.h>
+#pragma GCC diagnostic pop
 
 #include <string>
 
+#include "qt_formatters/qstring.hpp"
+
 namespace idhan::log
 {
+
+	template < typename... Ts >
+	void trace( const std::string str, Ts&&... ts )
+	{
+		::spdlog::trace( str, std::forward< Ts >( ts )... );
+	}
 
 	template < typename... Ts >
 	void debug( const std::string str, Ts&&... ts )
@@ -21,6 +33,12 @@ namespace idhan::log
 	void info( const std::string str, Ts&&... ts )
 	{
 		::spdlog::info( str, std::forward< Ts >( ts )... );
+	}
+
+	template < typename... Ts >
+	void warn( const std::string str, Ts&&... ts )
+	{
+		::spdlog::warn( str, std::forward< Ts >( ts )... );
 	}
 
 	template < typename... Ts >
