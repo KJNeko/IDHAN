@@ -5,6 +5,9 @@
 #include <QCommandLineParser>
 #include <QCoreApplication>
 
+#include <filesystem>
+#include <iostream>
+
 #include "NET_CONSTANTS.hpp"
 #include "idhan/IDHANClient.hpp"
 
@@ -28,7 +31,35 @@ int main( int argc, char** argv )
 
 	parser.process( app );
 
+	const auto pos_args { parser.positionalArguments() };
+	if ( pos_args.size() != 1 )
+	{
+		std::cout << "Mismatched number of arguments. Expected 1" << std::endl;
+		parser.showHelp();
+		std::terminate();
+	}
+
+	const std::filesystem::path path { pos_args[ 0 ].toStdString() };
+	if ( !std::filesystem::exists( path ) )
+	{
+		std::cout << "Path supplied does not exist" << std::endl;
+		parser.showHelp();
+		std::terminate();
+	}
+
+	if ( !std::filesystem::is_directory( path ) )
+	{
+		std::cout << "Path is not a directory" << std::endl;
+		parser.showHelp();
+		std::terminate();
+	}
+
 	idhan::IDHANClientConfig config {};
+
+	config.hostname = parser.value( idhan_host.valueName() ).toStdString();
+	config.port = parser.value( idhan_port.valueName() ).toUShort();
+
+	idhan::IDHANClient client { config };
 
 	return EXIT_SUCCESS;
 }

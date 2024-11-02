@@ -6,6 +6,7 @@
 
 #include <fixme.hpp>
 
+#include "NET_CONSTANTS.hpp"
 #include "core/Database.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "hyapi/setups.hpp"
