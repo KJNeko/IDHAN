@@ -17,6 +17,9 @@ namespace idhan
 	{
 		std::string hostname;
 		std::uint16_t port;
+		//! Name of this application.
+		std::string self_name;
+		bool use_ssl { false };
 	};
 
 	class IDHANClient : public QObject
@@ -30,15 +33,25 @@ namespace idhan
 		//! Queries the server version, Returns true if successful
 		void attemptQueryVersion();
 
+		inline static IDHANClient* m_instance { nullptr };
+
 	  public:
+
+		static IDHANClient& instance();
 
 		Q_DISABLE_COPY_MOVE( IDHANClient );
 
 		IDHANClient() = delete;
+
+		/**
+		 * @brief Upon construction the class will attempt to get the version info from the IDHAN server target.
+		 * @note Qt must be initalized before construction of this class. Either a QGuiApplication or an QApplication instance
+		 * @param config
+		 */
 		IDHANClient( const IDHANClientConfig& config );
 
 	  public slots:
-		void recieveVersionData();
+		void handleVersionInfo( QNetworkReply* reply );
 
 	  public:
 

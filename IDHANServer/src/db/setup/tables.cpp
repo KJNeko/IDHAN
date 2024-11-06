@@ -229,7 +229,7 @@ namespace idhan::db
 	{
 		for ( const auto& [ table_name, query ] : table_creation_sql )
 		{
-			log::info( "Running {}", query );
+			// log::info( "Running {}", query );
 			tx.exec( query );
 			addTableToInfo( tx, table_name, query );
 		}

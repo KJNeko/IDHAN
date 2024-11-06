@@ -23,6 +23,7 @@ int main( int argc, char** argv )
 	QCommandLineOption idhan_host { { "H", "host" }, "Hostname or IP of the IDHAN server" };
 	idhan_host.setDefaultValue( "localhost" );
 	idhan_host.setValueName( "idhan_host" );
+
 	QCommandLineOption idhan_port { { "P", "port" }, "Port of the IDHAN server" };
 	idhan_port.setDefaultValue( QString::number( idhan::IDHAN_DEFAULT_PORT ) );
 	idhan_port.setValueName( "idhan_port" );
@@ -56,12 +57,15 @@ int main( int argc, char** argv )
 		std::terminate();
 	}
 
+
 	idhan::IDHANClientConfig config {};
 
 	config.hostname = parser.value( idhan_host ).toStdString();
 	config.port = parser.value( idhan_port ).toUShort();
 
 	idhan::IDHANClient client { config };
+
+	app.exec();
 
 	return EXIT_SUCCESS;
 }

@@ -6,7 +6,14 @@
 
 #include <moc_IDHANClient.cpp>
 
+#include <QCoreApplication>
 #include <QNetworkReply>
+
+#include <spdlog/spdlog.h>
+
+#include <thread>
+
+#include "logging/qt_formatters/qstring.hpp"
 
 namespace idhan
 {
@@ -16,20 +23,72 @@ namespace idhan
 		QNetworkRequest request;
 
 		QUrl url {};
-		url.setHost( QString::fromStdString( m_config.hostname + "/version" ) );
+		url.setHost( QString::fromStdString( m_config.hostname ) );
 		url.setPort( m_config.port );
+		url.setPath( "/version" );
+
+		if ( m_config.use_ssl )
+		{
+			url.setScheme( "https" );
+		}
+		else
+		{
+			url.setScheme( "http" );
+		}
 
 		request.setUrl( url );
 
+		spdlog::info( "Requesting version info from {}", url.toString() );
+
 		QNetworkReply* reply { m_network.get( request ) };
-		return;
+
+		connect(
+			reply,
+			&QNetworkReply::finished,
+			this,
+			[ this, reply ]()
+			{
+				handleVersionInfo( reply );
+				reply->deleteLater();
+			} );
+
+		connect(
+			reply,
+			&QNetworkReply::errorOccurred,
+			this,
+			[ this, reply ]( QNetworkReply::NetworkError error )
+			{
+				spdlog::error(
+					"Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
+
+				reply->deleteLater();
+			} );
+	}
+
+	IDHANClient& IDHANClient::instance()
+	{
+		return *m_instance;
 	}
 
 	IDHANClient::IDHANClient( const IDHANClientConfig& config ) : QObject( nullptr ), m_config( config )
 	{
+		spdlog::info( "Hostname: {}", m_config.hostname );
+		spdlog::info( "Port: {}", m_config.port );
+		if ( m_config.hostname.empty() ) throw std::runtime_error( "hostname must not be empty" );
+
+		if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
+
+		if ( QCoreApplication::instance() == nullptr )
+			throw std::runtime_error( "IDHANClient expects a running Qt instance. QGuiApplication of QApplication" );
+
 		attemptQueryVersion();
+
+		m_instance = this;
 	}
 
-	void IDHANClient::recieveVersionData()
-	{}
+	void IDHANClient::handleVersionInfo( QNetworkReply* reply )
+	{
+		spdlog::debug( "Recieved version info" );
+	}
+
 } // namespace idhan

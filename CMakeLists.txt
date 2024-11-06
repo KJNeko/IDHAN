@@ -12,9 +12,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 PreSetup()
 
-
 option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
+
+set(SPDLOG_USE_STD_FORMAT ON)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 #IDHANServer/IDHANClient
 include(spdlog)

@@ -7,11 +7,10 @@
 #include <fixme.hpp>
 
 #include "NET_CONSTANTS.hpp"
+#include "api/api.hpp"
 #include "core/Database.hpp"
 #include "drogon/HttpAppFramework.h"
-#include "hyapi/setups.hpp"
 #include "logging/log.hpp"
-
 
 namespace idhan
 {
@@ -64,13 +63,12 @@ namespace idhan
 			.setLogLevel( trantor::Logger::kInfo )
 			.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT )
 			.setThreadNum( 16 )
-			.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() );
+			.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() )
+			.setDocumentRoot( "./pages" );
 
 		setupCORSSupport();
 
-		hyapi::setupAccessHandlers();
-		hyapi::setupServiceHandlers();
-		hyapi::setupFileHandlers();
+		api::registerApi();
 
 		log::server::info( "IDHAN initalization finished" );
 	}

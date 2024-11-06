@@ -4,7 +4,8 @@
 
 #pragma once
 
-#define MAKE_IDHAN_VERSION( major, minor, patch ) ( major << 16 ) | ( minor < 8 ) || patch
+#define MAKE_IDHAN_VERSION( major, minor, patch ) int( ( major << 16 ) | ( minor < 8 ) || patch )
 
-#define IDHAN_SERVER_VERSION MAKE_IDHAN_VERSION( 1, 0, 0 )
-#define IDHAN_API_VERSION MAKE_IDHAN_VERSION( 1, 0, 0 )
+#define IDHAN_VERSION MAKE_IDHAN_VERSION( 0, 1, 0 )
+
+#define IDHAN_API_VERSION MAKE_IDHAN_VERSION( 0, 1, 0 )
