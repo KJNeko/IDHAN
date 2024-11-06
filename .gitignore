@@ -1,0 +1,44 @@
+# docs
+/docs/html/
+/docs/latex/
+
+# dot hidden
+.*
+.*/
+
+# explicit
+*.ignore
+
+# Build dirs
+/build/
+/cmake-build-*/
+/src/shaders/
+
+# Build helpers
+build.bat
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+[Bb]in/
+[Oo]bj/
+
+# IDE specific
+#	# clion
+/venv/
+#	# Visual Studio
+/out/build/x64-Debug
+/CMakeFiles
+/CMakeCache.txt
+*.user
+*.autosave
+#	#Visual Studio Indexes
+*.vsidx
+read.lock
+#	# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+
+out/
