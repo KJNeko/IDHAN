@@ -7,6 +7,7 @@
 #include <moc_IDHANClient.cpp>
 
 #include <QCoreApplication>
+#include <QJsonDocument>
 #include <QNetworkReply>
 
 #include <spdlog/spdlog.h>
@@ -72,6 +73,7 @@ namespace idhan
 
 	IDHANClient::IDHANClient( const IDHANClientConfig& config ) : QObject( nullptr ), m_config( config )
 	{
+		std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
 		spdlog::info( "Hostname: {}", m_config.hostname );
 		spdlog::info( "Port: {}", m_config.port );
 		if ( m_config.hostname.empty() ) throw std::runtime_error( "hostname must not be empty" );
@@ -88,7 +90,21 @@ namespace idhan
 
 	void IDHANClient::handleVersionInfo( QNetworkReply* reply )
 	{
-		spdlog::debug( "Recieved version info" );
+		spdlog::info( "Recieved version info" );
+
+		const auto data { reply->readAll() };
+		const QJsonDocument json { QJsonDocument::fromJson( data ) };
+
+		spdlog::info( "Data recieved: {}", std::string_view( data.data(), data.size() ) );
+
+		const auto version { json[ "idhan_version" ].toInteger() };
+		const auto api_version { json[ "idhan_api_version" ].toInteger() };
+
+		spdlog::info(
+			"Recieved info from server at {}, IDHAN version: {}, API version: {}",
+			reply->url().toString(),
+			version,
+			api_version );
 	}
 
 } // namespace idhan

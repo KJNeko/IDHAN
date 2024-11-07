@@ -4,8 +4,10 @@
 
 #include "HyAPI.hpp"
 
+#include "constants/SearchOrder.hpp"
 #include "constants/hydrus_version.hpp"
 #include "fixme.hpp"
+#include "logging/log.hpp"
 #include "versions.hpp"
 
 namespace idhan::hyapi
@@ -68,8 +70,45 @@ namespace idhan::hyapi
 	void HydrusAPI::addFile( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 	{}
 
+	template < typename T >
+	T getDefaultedValue( const std::string name, const drogon::HttpRequestPtr& request, const T default_value )
+	{
+		const auto value { request->getOptionalParameter< T >( name ) };
+
+		if ( value.has_value() ) return value.value();
+
+		return default_value;
+	}
+
 	void HydrusAPI::searchFiles( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
-	{}
+	{
+		const auto tags { request->getOptionalParameter< std::string >( "tags" ) };
+		if ( !tags.has_value() )
+		{
+			Json::Value value;
+			value[ "status" ] = 403;
+			value[ "message" ] = "You must supply a list of tags.";
+
+			callback( drogon::HttpResponse::newHttpJsonResponse( value ) );
+
+			return;
+		}
+
+		// was a domain set?
+		const auto file_domain_id { request->getOptionalParameter< int >( "file_domain" ) };
+		const auto tag_domain_id { request->getOptionalParameter< std::size_t >( "tag_service_key" ) };
+		const auto include_current_tags { getDefaultedValue< bool >( "include_current_tags", request, true ) };
+		const auto include_pending_tags { getDefaultedValue< bool >( "include_pending_tags", request, true ) };
+		const auto file_sort_type {
+			getDefaultedValue< SearchOrder >( "file_sort_type", request, SearchOrder::ImportTime )
+		};
+		const auto file_sort_asc { getDefaultedValue< bool >( "file_sort_asc", request, true ) };
+		const auto return_file_ids { getDefaultedValue( "return_file_ids", request, true ) };
+		const auto return_hashes { getDefaultedValue< bool >( "return_hashes", request, false ) };
+
+
+
+	}
 
 	void HydrusAPI::fileHashes( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 	{}
