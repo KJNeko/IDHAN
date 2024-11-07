@@ -21,9 +21,9 @@ namespace idhan
 
 	  public:
 
-		SearchBuilder();
+		SearchBuilder() = default;
 
-		void construct();
+		std::string construct();
 
 		void filterTagDomain( const TagDomainID value );
 

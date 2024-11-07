@@ -13,6 +13,11 @@ namespace idhan
 		file_records_filter += "";
 	}
 
+	std::string SearchBuilder::construct()
+	{
+		return "";
+	}
+
 	void SearchBuilder::filterTagDomain( const TagDomainID value )
 	{
 		//any searches with `tags` should be filtered.
