@@ -4,8 +4,10 @@
 
 #include "HyAPI.hpp"
 
+#include "IDHANTypes.hpp"
 #include "constants/SearchOrder.hpp"
 #include "constants/hydrus_version.hpp"
+#include "core/SearchBuilder.hpp"
 #include "fixme.hpp"
 #include "logging/log.hpp"
 #include "versions.hpp"
@@ -106,8 +108,14 @@ namespace idhan::hyapi
 		const auto return_file_ids { getDefaultedValue( "return_file_ids", request, true ) };
 		const auto return_hashes { getDefaultedValue< bool >( "return_hashes", request, false ) };
 
+		// Build the search
+		SearchBuilder builder {};
 
+		if ( file_domain_id.has_value() ) builder.filterFileDomain( file_domain_id.value() );
 
+		if ( tag_domain_id.has_value() ) builder.filterTagDomain( tag_domain_id.value() );
+
+		std::string query { builder.construct() };
 	}
 
 	void HydrusAPI::fileHashes( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )

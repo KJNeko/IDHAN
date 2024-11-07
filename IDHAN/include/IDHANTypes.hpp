@@ -8,4 +8,5 @@ namespace idhan
 	using RecordID = std::uint32_t;
 
 	using TagDomainID = std::uint16_t;
+	using FileDomainID = std::uint16_t;
 } // namespace idhan

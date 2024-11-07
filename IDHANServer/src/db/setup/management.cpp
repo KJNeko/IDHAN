@@ -35,18 +35,22 @@ namespace idhan::db
 		return std::get< 0 >( result.at( 0 ).as< std::uint16_t >() );
 	}
 
-	void addTableToInfo( pqxx::nontransaction& tx, const std::string_view name, const std::string_view creation_query )
+	void addTableToInfo(
+		pqxx::nontransaction& tx,
+		const std::string_view name,
+		const std::string_view creation_query,
+		const std::size_t migration_id )
 	{
 		tx.exec_params(
-			"INSERT INTO idhan_info ( table_version, table_name, creation_query ) VALUES ($1, $2, $3)",
-			1,
+			R"(
+					INSERT INTO idhan_info (table_name, last_migration_id, queries)
+					VALUES( $1, $2, $3 )
+					ON CONFLICT DO UPDATE SET
+						queries = idhan_info.queries || EXCLUDED.queries,
+		                last_migration_id = EXCLUDED.last_migration_id;)",
 			name,
+			migration_id,
 			creation_query );
-	}
-
-	void updateTableVersion( pqxx::nontransaction& tx, const std::string_view name, const std::uint16_t version )
-	{
-		tx.exec_params( "UPDATE idhan_info SET table_version = $1 WHERE table_name = $2", version, name );
 	}
 
 #ifdef ALLOW_TABLE_DESTRUCTION

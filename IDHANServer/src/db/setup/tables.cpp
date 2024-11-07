@@ -2,8 +2,6 @@
 // Created by kj16609 on 9/8/24.
 //
 
-#include "tables.hpp"
-
 #include <pqxx/nontransaction>
 
 #include <array>
@@ -18,7 +16,7 @@ namespace idhan::db
 
 	// Inital tables
 	// clang-format off
-	constexpr std::array< std::tuple< std::string_view, std::string_view >, 19 > table_creation_sql {
+	constexpr std::array< std::tuple< std::string_view, std::string_view >, 20 > table_creation_sql {
 		{
 			{
 				"idhan_info",
@@ -31,13 +29,20 @@ namespace idhan::db
 				)"
 			},
 			{
-				"file_records",
+			"records",
 				R"(
-					CREATE TABLE file_records (
-						file_record_id	SERIAL		PRIMARY KEY,
+					CREATE TABLE records (
+						record_id		SERIAL		PRIMARY KEY,
 						sha256			BYTEA		UNIQUE NOT NULL,
 						creation_time	TIMESTAMP	WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 					)
+				)"
+			},
+			{
+				"file_domains",
+				R"(
+					CREATE TABLE file_domains (
+
 				)"
 			},
 			/*======================== TAGS =======================================*/
@@ -115,7 +120,7 @@ namespace idhan::db
 				"tag_mappings",
 				R"(
 					CREATE TABLE tag_mappings (
-						record_id	INTEGER		REFERENCES file_records(file_record_id),
+						record_id	INTEGER		REFERENCES records(record_id),
 						tag_id		INTEGER		REFERENCES tags(tag_id),
 						domain_id	SMALLINT	REFERENCES tag_domains(tag_domain_id),
 						UNIQUE(domain_id, record_id, tag_id)
@@ -146,7 +151,7 @@ namespace idhan::db
 				"url_map",
 				R"(
 					CREATE TABLE url_map (
-						file_record_id	INTEGER	REFERENCES file_records(file_record_id),
+						record_id	INTEGER	REFERENCES records(record_id),
 						url_id			INTEGER REFERENCES urls(url_id)
 					)
 				)"
@@ -166,7 +171,7 @@ namespace idhan::db
 				R"(
 					CREATE TABLE cluster_info (
 						cluster_id		SMALLINT	REFERENCES file_clusters(cluster_id),
-						file_record_id	INTEGER		REFERENCES file_records(file_record_id),
+						record_id		INTEGER		REFERENCES records(record_id),
 						file_size		BIGINT,
 						obtained		TIMESTAMP	WITHOUT TIME ZONE
 					)
@@ -177,7 +182,7 @@ namespace idhan::db
 				"deleted_files",
 				R"(
 					CREATE TABLE deleted_files (
-						file_record_id	INTEGER		REFERENCES file_records(file_record_id),
+						record_id		INTEGER		REFERENCES records(record_id),
 						deleted_time	TIMESTAMP	WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 					)
 				)"
@@ -186,7 +191,7 @@ namespace idhan::db
 				"file_notes",
 				R"(
 					CREATE TABLE file_notes (
-						file_record_id	SERIAL	REFERENCES file_records(file_record_id),
+						record_id	SERIAL	REFERENCES records(record_id),
 						note			TEXT	NOT NULL
 					)
 				)"
@@ -206,9 +211,9 @@ namespace idhan::db
 				"record_mime",
 				R"(
 					CREATE TABLE record_mime (
-						file_record_id	INTEGER	REFERENCES file_records(file_record_id),
+						record_id		INTEGER	REFERENCES records(record_id),
 						mime_id			INTEGER	REFERENCES mime(mime_id),
-						UNIQUE(file_record_id)
+						UNIQUE(record_id)
 					)
 				)"
 			}
@@ -224,15 +229,5 @@ namespace idhan::db
 		R"()"
 	};
 	*/
-
-	void prepareInitalTables( pqxx::nontransaction& tx )
-	{
-		for ( const auto& [ table_name, query ] : table_creation_sql )
-		{
-			// log::info( "Running {}", query );
-			tx.exec( query );
-			addTableToInfo( tx, table_name, query );
-		}
-	}
 
 } // namespace idhan::db

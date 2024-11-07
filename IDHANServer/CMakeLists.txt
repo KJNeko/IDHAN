@@ -1,5 +1,39 @@
 
 
+set(MIGRATION_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/db/setup/migration)
+
+# Process each migration file
+file(GLOB_RECURSE MIGRATIONS "${MIGRATION_DIR}/*.sql")
+
+file(READ ${MIGRATION_DIR}/migration-template.cpp.unused TEMPLATE_CONTENT)
+file(READ ${MIGRATION_DIR}/check-template.cpp.unused CHECK_TEMPLATE_CONTENT)
+string(CONFIGURE "${CHECK_TEMPLATE_CONTENT}" CHECK_TEMPLATE_CONTENT)
+
+message("\n\n${TEMPLATE_CONTENT}")
+
+foreach (MIGRATION ${MIGRATIONS})
+
+	get_filename_component(FILENAME ${MIGRATION} NAME_WLE)
+	string(REGEX MATCH "^[0-9]+" MIGRATION_ID ${FILENAME})
+	string(REGEX MATCH "[A-Za-z].*$" MIGRATION_TABLE ${FILENAME})
+
+	string(REPLACE "NEXT_MIGRATION" "${CHECK_TEMPLATE_CONTENT}" TEMPLATE_CONTENT "${TEMPLATE_CONTENT}")
+
+	file(READ ${MIGRATION} FILE_CONTENT)
+	set(FILE_CONTENT "\n${FILE_CONTENT}")
+	string(REPLACE "\n" "\n\t\t\t" FILE_CONTENT "${FILE_CONTENT}")
+	set(FILE_CONTENT "${FILE_CONTENT}\n\t\t")
+
+	string(REPLACE "MIGRATION_TABLE" "${MIGRATION_TABLE}" TEMPLATE_CONTENT "${TEMPLATE_CONTENT}")
+	string(REPLACE "MIGRATION_TARGET_ID" "${MIGRATION_ID}" TEMPLATE_CONTENT "${TEMPLATE_CONTENT}")
+	string(REPLACE "MIGRATION_QUERY" "${FILE_CONTENT}" TEMPLATE_CONTENT "${TEMPLATE_CONTENT}")
+endforeach ()
+
+string(REPLACE "NEXT_MIGRATION" "\treturn migration_id;" TEMPLATE_CONTENT "${TEMPLATE_CONTENT}")
+
+file(WRITE ${MIGRATION_DIR}/doMigration.cpp "${TEMPLATE_CONTENT}")
+
+
 AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(IDHANServer PUBLIC spdlog fmt drogon)
@@ -28,3 +62,4 @@ foreach (PAGE ${PAGE_FILES})
 			COMMENT "Copying ${PAGE} to ${OUT_PATH}"
 	)
 endforeach ()
+

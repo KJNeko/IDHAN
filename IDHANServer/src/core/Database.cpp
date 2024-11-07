@@ -4,10 +4,8 @@
 
 #include "Database.hpp"
 
-#include "db/setup/indexes.hpp"
 #include "db/setup/management.hpp"
-#include "db/setup/sql_functions.hpp"
-#include "db/setup/tables.hpp"
+#include "db/setup/migration/migrations.hpp"
 #include "logging/log.hpp"
 
 namespace idhan
@@ -17,9 +15,8 @@ namespace idhan
 	{
 		log::info( "Starting inital table setup" );
 
-		db::prepareInitalTables( tx );
-		db::prepareSQLFunctions( tx );
-		db::prepareInitalIndexes( tx );
+		db::updateMigrations( tx );
+
 		tx.commit();
 	}
 

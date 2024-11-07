@@ -42,3 +42,5 @@ read.lock
 *.vspx
 
 out/
+
+/IDHANServer/src/db/setup/migration/doMigration.cpp
