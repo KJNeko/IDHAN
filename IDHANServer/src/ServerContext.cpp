@@ -7,7 +7,6 @@
 #include <fixme.hpp>
 
 #include "NET_CONSTANTS.hpp"
-#include "api/api.hpp"
 #include "core/Database.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/log.hpp"
@@ -53,7 +52,6 @@ namespace idhan
 
 		auto& app { drogon::app() };
 
-		spdlog::set_level( spdlog::level::debug );
 		log::trace( "Logging show trace" );
 		log::debug( "Logging show debug" );
 		log::info( "Logging show info" );
@@ -68,9 +66,7 @@ namespace idhan
 
 		setupCORSSupport();
 
-		api::registerApi();
-
-		log::server::info( "IDHAN initalization finished" );
+		log::server::info( "IDHAN initialization finished" );
 	}
 
 	void ServerContext::run()

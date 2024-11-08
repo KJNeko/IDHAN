@@ -15,8 +15,6 @@ namespace idhan
 	{
 		log::info( "Starting inital table setup" );
 
-		db::updateMigrations( tx );
-
 		tx.commit();
 	}
 
@@ -27,19 +25,12 @@ namespace idhan
 	{
 		log::info( "Postgres connection made: {}", connection.dbname() );
 
-		// Determine if we should do our inital setup (if the idhan_info table is missing then we should do our setup)
-		{
-			pqxx::nontransaction tx { connection };
+		pqxx::nontransaction tx { connection };
 
-			db::destroyTables( tx );
-			// This function does nothing if the proper define is not enabled.
-			// This should be used in order to make it easy to do fresh testing.
+		// This function is a NOOP unless a define is enabled for it by default.
+		db::destroyTables( tx );
 
-			if ( !db::tableExists( tx, "idhan_info" ) )
-			{
-				initalSetup( tx );
-			}
-		}
+		db::updateMigrations( tx );
 
 		log::info( "Database loading finished" );
 	}

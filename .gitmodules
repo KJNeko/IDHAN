@@ -37,3 +37,6 @@
 [submodule "3rd-party/hydrus"]
 	path = 3rd-party/hydrus
 	url = https://github.com/hydrusnetwork/hydrus.git
+[submodule "docs/doxygen-awesome-css"]
+	path = docs/doxygen-awesome-css
+	url = https://github.com/jothepro/doxygen-awesome-css.git

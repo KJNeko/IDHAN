@@ -2,7 +2,7 @@
 // Created by kj16609 on 11/7/24.
 //
 #pragma once
-#include <pqxx/nontransaction.hxx>
+#include <pqxx/nontransaction>
 
 #include <cstddef>
 

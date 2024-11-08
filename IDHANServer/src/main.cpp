@@ -6,9 +6,12 @@
 
 #include "ConnectionArguments.hpp"
 #include "ServerContext.hpp"
+#include "logging/log.hpp"
 
 int main( int argc, char** argv )
 {
+	spdlog::set_level( spdlog::level::debug );
+
 	idhan::ConnectionArguments arguments {};
 	//arguments.hydrus_info.hydrus_db_path = "/home/kj16609/.local/share/hydrus/db/";
 	arguments.user = "idhan";

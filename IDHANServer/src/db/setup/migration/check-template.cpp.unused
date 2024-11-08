@@ -1,6 +1,9 @@
-    if( migration_id == MIGRATION_TARGET_ID )
+    if( migration_id <= MIGRATION_TARGET_ID )
     {
         constexpr std::string_view query { R"(MIGRATION_QUERY)" };
+
+        log::debug("Performing migration {}->{}", migration_id, MIGRATION_TARGET_ID);
+        migration_id = MIGRATION_TARGET_ID;
 
         tx.exec( query );
 		addTableToInfo(tx, "MIGRATION_TABLE", query, MIGRATION_TARGET_ID);

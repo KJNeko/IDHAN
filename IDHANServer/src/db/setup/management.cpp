@@ -44,8 +44,8 @@ namespace idhan::db
 		tx.exec_params(
 			R"(
 					INSERT INTO idhan_info (table_name, last_migration_id, queries)
-					VALUES( $1, $2, $3 )
-					ON CONFLICT DO UPDATE SET
+					VALUES( $1, $2, ARRAY[$3] )
+					ON CONFLICT (table_name) DO UPDATE SET
 						queries = idhan_info.queries || EXCLUDED.queries,
 		                last_migration_id = EXCLUDED.last_migration_id;)",
 			name,
