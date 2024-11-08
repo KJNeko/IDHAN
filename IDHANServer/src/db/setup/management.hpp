@@ -8,27 +8,27 @@
 
 namespace pqxx
 {
-	class nontransaction;
+class nontransaction;
 }
 
 namespace idhan::db
 {
 
-	bool tableExists( pqxx::nontransaction& tx, std::string_view name );
+bool tableExists( pqxx::nontransaction& tx, std::string_view name );
 
-	//! Returns the table version.
-	std::uint16_t getTableVersion( pqxx::nontransaction& tx, std::string_view name );
+//! Returns the table version.
+std::uint16_t getTableVersion( pqxx::nontransaction& tx, std::string_view name );
 
-	void addTableToInfo(
-		pqxx::nontransaction& tx, std::string_view name, std::string_view creation_query, std::size_t migration_id );
+void addTableToInfo(
+	pqxx::nontransaction& tx, std::string_view name, std::string_view creation_query, std::size_t migration_id );
 
 #ifdef ALLOW_TABLE_DESTRUCTION
-	void destroyTables( pqxx::nontransaction& );
+void destroyTables( pqxx::nontransaction& );
 #else
-	inline void destroyTables( [[maybe_unused]] pqxx::nontransaction& )
-	{
-		return;
-	}
+inline void destroyTables( [[maybe_unused]] pqxx::nontransaction& )
+{
+	return;
+}
 #endif
 
 } // namespace idhan::db

@@ -38,16 +38,16 @@
 namespace idhan::api
 {
 
-	class IDHANAuth : public drogon::HttpMiddleware< IDHANAuth >
-	{
-	  public:
+class IDHANAuth : public drogon::HttpMiddleware< IDHANAuth >
+{
+  public:
 
-		IDHANAuth() = default;
+	IDHANAuth() = default;
 
-		void invoke(
-			const drogon::HttpRequestPtr& req,
-			drogon::MiddlewareNextCallback&& nextCb,
-			drogon::MiddlewareCallback&& mcb ) override;
-	};
+	void invoke(
+		const drogon::HttpRequestPtr& req,
+		drogon::MiddlewareNextCallback&& nextCb,
+		drogon::MiddlewareCallback&& mcb ) override;
+};
 
 } // namespace idhan::api

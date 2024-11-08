@@ -11,23 +11,23 @@
 namespace idhan
 {
 
-	struct SearchBuilder
-	{
-		constexpr static std::string_view inital_query { "SELECT tag_id FROM file_records" };
-		std::string file_records_filter {};
+struct SearchBuilder
+{
+	constexpr static std::string_view inital_query { "SELECT tag_id FROM file_records" };
+	std::string file_records_filter {};
 
-		pqxx::params params;
-		pqxx::placeholders<> placeholders;
+	pqxx::params params;
+	pqxx::placeholders<> placeholders;
 
-	  public:
+  public:
 
-		SearchBuilder() = default;
+	SearchBuilder() = default;
 
-		std::string construct();
+	std::string construct();
 
-		void filterTagDomain( const TagDomainID value );
+	void filterTagDomain( const TagDomainID value );
 
-		void filterFileDomain( const FileDomainID value );
-	};
+	void filterFileDomain( const FileDomainID value );
+};
 
 } // namespace idhan

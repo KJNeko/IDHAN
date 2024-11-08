@@ -10,5 +10,5 @@
 
 namespace idhan
 {
-	using ResponseFunction = std::function< void( const drogon::HttpResponsePtr& ) >;
+using ResponseFunction = std::function< void( const drogon::HttpResponsePtr& ) >;
 }

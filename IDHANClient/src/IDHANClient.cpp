@@ -19,92 +19,92 @@
 namespace idhan
 {
 
-	void IDHANClient::attemptQueryVersion()
+void IDHANClient::attemptQueryVersion()
+{
+	QNetworkRequest request;
+
+	QUrl url {};
+	url.setHost( QString::fromStdString( m_config.hostname ) );
+	url.setPort( m_config.port );
+	url.setPath( "/version" );
+
+	if ( m_config.use_ssl )
 	{
-		QNetworkRequest request;
+		url.setScheme( "https" );
+	}
+	else
+	{
+		url.setScheme( "http" );
+	}
 
-		QUrl url {};
-		url.setHost( QString::fromStdString( m_config.hostname ) );
-		url.setPort( m_config.port );
-		url.setPath( "/version" );
+	request.setUrl( url );
 
-		if ( m_config.use_ssl )
+	spdlog::info( "Requesting version info from {}", url.toString() );
+
+	QNetworkReply* reply { m_network.get( request ) };
+
+	connect(
+		reply,
+		&QNetworkReply::finished,
+		this,
+		[ this, reply ]()
 		{
-			url.setScheme( "https" );
-		}
-		else
+			handleVersionInfo( reply );
+			reply->deleteLater();
+		} );
+
+	connect(
+		reply,
+		&QNetworkReply::errorOccurred,
+		this,
+		[ this, reply ]( QNetworkReply::NetworkError error )
 		{
-			url.setScheme( "http" );
-		}
+			spdlog::
+				error( "Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
 
-		request.setUrl( url );
+			reply->deleteLater();
+		} );
+}
 
-		spdlog::info( "Requesting version info from {}", url.toString() );
+IDHANClient& IDHANClient::instance()
+{
+	return *m_instance;
+}
 
-		QNetworkReply* reply { m_network.get( request ) };
+IDHANClient::IDHANClient( const IDHANClientConfig& config ) : QObject( nullptr ), m_config( config )
+{
+	std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+	spdlog::info( "Hostname: {}", m_config.hostname );
+	spdlog::info( "Port: {}", m_config.port );
+	if ( m_config.hostname.empty() ) throw std::runtime_error( "hostname must not be empty" );
 
-		connect(
-			reply,
-			&QNetworkReply::finished,
-			this,
-			[ this, reply ]()
-			{
-				handleVersionInfo( reply );
-				reply->deleteLater();
-			} );
+	if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
 
-		connect(
-			reply,
-			&QNetworkReply::errorOccurred,
-			this,
-			[ this, reply ]( QNetworkReply::NetworkError error )
-			{
-				spdlog::error(
-					"Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
+	if ( QCoreApplication::instance() == nullptr )
+		throw std::runtime_error( "IDHANClient expects a running Qt instance. QGuiApplication of QApplication" );
 
-				reply->deleteLater();
-			} );
-	}
+	attemptQueryVersion();
 
-	IDHANClient& IDHANClient::instance()
-	{
-		return *m_instance;
-	}
+	m_instance = this;
+}
 
-	IDHANClient::IDHANClient( const IDHANClientConfig& config ) : QObject( nullptr ), m_config( config )
-	{
-		std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
-		spdlog::info( "Hostname: {}", m_config.hostname );
-		spdlog::info( "Port: {}", m_config.port );
-		if ( m_config.hostname.empty() ) throw std::runtime_error( "hostname must not be empty" );
+void IDHANClient::handleVersionInfo( QNetworkReply* reply )
+{
+	spdlog::info( "Recieved version info" );
 
-		if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
+	const auto data { reply->readAll() };
+	const QJsonDocument json { QJsonDocument::fromJson( data ) };
 
-		if ( QCoreApplication::instance() == nullptr )
-			throw std::runtime_error( "IDHANClient expects a running Qt instance. QGuiApplication of QApplication" );
+	spdlog::info( "Data recieved: {}", std::string_view( data.data(), data.size() ) );
 
-		attemptQueryVersion();
+	const auto version { json[ "idhan_version" ].toInteger() };
+	const auto api_version { json[ "idhan_api_version" ].toInteger() };
 
-		m_instance = this;
-	}
-
-	void IDHANClient::handleVersionInfo( QNetworkReply* reply )
-	{
-		spdlog::info( "Recieved version info" );
-
-		const auto data { reply->readAll() };
-		const QJsonDocument json { QJsonDocument::fromJson( data ) };
-
-		spdlog::info( "Data recieved: {}", std::string_view( data.data(), data.size() ) );
-
-		const auto version { json[ "idhan_version" ].toInteger() };
-		const auto api_version { json[ "idhan_api_version" ].toInteger() };
-
-		spdlog::info(
-			"Recieved info from server at {}, IDHAN version: {}, API version: {}",
-			reply->url().toString(),
-			version,
-			api_version );
-	}
+	spdlog::info(
+		"Recieved info from server at {}, IDHAN version: {}, API version: {}",
+		reply->url().toString(),
+		version,
+		api_version );
+}
 
 } // namespace idhan

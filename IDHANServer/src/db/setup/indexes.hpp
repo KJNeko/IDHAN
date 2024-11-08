@@ -6,12 +6,12 @@
 
 namespace pqxx
 {
-	class nontransaction;
+class nontransaction;
 }
 
 namespace idhan::db
 {
 
-	void prepareInitalIndexes( pqxx::nontransaction& );
+void prepareInitalIndexes( pqxx::nontransaction& );
 
 }

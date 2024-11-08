@@ -11,42 +11,42 @@
 namespace idhan
 {
 
-	void Database::initalSetup( pqxx::nontransaction& tx )
-	{
-		log::info( "Starting inital table setup" );
+void Database::initalSetup( pqxx::nontransaction& tx )
+{
+	log::info( "Starting inital table setup" );
 
-		tx.commit();
-	}
+	tx.commit();
+}
 
-	void Database::importHydrus( const ConnectionArguments& connection_arguments )
-	{}
+void Database::importHydrus( const ConnectionArguments& connection_arguments )
+{}
 
-	Database::Database( const ConnectionArguments& arguments ) : connection( arguments.format() )
-	{
-		log::info( "Postgres connection made: {}", connection.dbname() );
+Database::Database( const ConnectionArguments& arguments ) : connection( arguments.format() )
+{
+	log::info( "Postgres connection made: {}", connection.dbname() );
 
-		pqxx::nontransaction tx { connection };
+	pqxx::nontransaction tx { connection };
 
-		// This function is a NOOP unless a define is enabled for it by default.
-		db::destroyTables( tx );
+	// This function is a NOOP unless a define is enabled for it by default.
+	db::destroyTables( tx );
 
-		db::updateMigrations( tx );
+	db::updateMigrations( tx );
 
-		log::info( "Database loading finished" );
-	}
+	log::info( "Database loading finished" );
+}
 
-	std::string ConnectionArguments::format() const
-	{
-		std::string str;
-		if ( hostname.empty() ) throw std::runtime_error( "Hostname empty" );
+std::string ConnectionArguments::format() const
+{
+	std::string str;
+	if ( hostname.empty() ) throw std::runtime_error( "Hostname empty" );
 
-		if ( port == std::numeric_limits< std::uint16_t >::quiet_NaN() ) throw std::runtime_error( "Port not set" );
+	if ( port == std::numeric_limits< std::uint16_t >::quiet_NaN() ) throw std::runtime_error( "Port not set" );
 
-		str += std::format( "host={} ", hostname );
-		str += std::format( "port={} ", port );
-		str += std::format( "dbname={} ", dbname );
-		str += std::format( "user={} ", user );
+	str += std::format( "host={} ", hostname );
+	str += std::format( "port={} ", port );
+	str += std::format( "dbname={} ", dbname );
+	str += std::format( "user={} ", user );
 
-		return str;
-	}
+	return str;
+}
 } // namespace idhan

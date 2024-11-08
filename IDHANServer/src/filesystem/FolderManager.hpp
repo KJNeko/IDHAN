@@ -17,60 +17,60 @@
 namespace idhan::filesystem
 {
 
-	inline QString createSubpath( const SHA256& sha256 )
+inline QString createSubpath( const SHA256& sha256 )
+{
+	const QString hex { sha256.hex() };
+
+	// [0:1]/[2:3]/[0:128]
+	QDir path {};
+	path = path.filePath( hex.mid( 0, 2 ) );
+	path = path.filePath( hex.mid( 2, 2 ) );
+	return path.path();
+}
+
+class FolderManager
+{
+	struct FolderInfo
 	{
-		const QString hex { sha256.hex() };
+		QStorageInfo m_info;
+		QDir m_path;
 
-		// [0:1]/[2:3]/[0:128]
-		QDir path {};
-		path = path.filePath( hex.mid( 0, 2 ) );
-		path = path.filePath( hex.mid( 2, 2 ) );
-		return path.path();
-	}
+		std::size_t capacity() const;
 
-	class FolderManager
-	{
-		struct FolderInfo
-		{
-			QStorageInfo m_info;
-			QDir m_path;
+		std::size_t free() const;
 
-			std::size_t capacity() const;
+		//! Max size this folder can contain. 0 == unlimited
+		std::size_t m_max_capacity;
 
-			std::size_t free() const;
+		FolderInfo( QDir path );
 
-			//! Max size this folder can contain. 0 == unlimited
-			std::size_t m_max_capacity;
+		void storeFile( const SHA256& sha256, QIODevice* io, QString extension ) const;
 
-			FolderInfo( QDir path );
+		bool hasFile( const SHA256& sha256 );
+	};
 
-			void storeFile( const SHA256& sha256, QIODevice* io, QString extension ) const;
+	std::vector< FolderInfo > m_folders {};
 
-			bool hasFile( const SHA256& sha256 );
-		};
+	//! Finds the best folder to add the file too
+	FolderInfo& findBestFolder( const std::size_t file_size );
 
-		std::vector< FolderInfo > m_folders {};
+  public:
 
-		//! Finds the best folder to add the file too
-		FolderInfo& findBestFolder( const std::size_t file_size );
+	// Management
+	void addFolder( const QDir path, const std::size_t max_size = 0 );
+	void removeFolder( const QDir path );
 
-	  public:
+	//File storage
 
-		// Management
-		void addFolder( const QDir path, const std::size_t max_size = 0 );
-		void removeFolder( const QDir path );
-
-		//File storage
-
-		//! Stores the data located at `data`.
-		/**
+	//! Stores the data located at `data`.
+	/**
 		 * @note Preserves the current index of `data`
 		 */
-		void storeFile( const FileRecord& record, QIODevice* data );
+	void storeFile( const FileRecord& record, QIODevice* data );
 
-		std::ifstream openFile( const FileRecord& record );
+	std::ifstream openFile( const FileRecord& record );
 
-		static FolderManager& getInstance();
-	};
+	static FolderManager& getInstance();
+};
 
 } // namespace idhan::filesystem

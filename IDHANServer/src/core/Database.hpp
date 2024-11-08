@@ -11,22 +11,19 @@
 namespace idhan
 {
 
-	class Database
-	{
-		pqxx::connection connection;
+class Database
+{
+	pqxx::connection connection;
 
-		void initalSetup( pqxx::nontransaction& nontransaction );
+	void initalSetup( pqxx::nontransaction& nontransaction );
 
-		void importHydrus( const ConnectionArguments& connection_arguments );
+	void importHydrus( const ConnectionArguments& connection_arguments );
 
-	  public:
+  public:
 
-		inline pqxx::connection& conn()
-		{
-			return connection;
-		}
+	inline pqxx::connection& conn() { return connection; }
 
-		Database( const ConnectionArguments& arguments );
-	};
+	Database( const ConnectionArguments& arguments );
+};
 
 } // namespace idhan

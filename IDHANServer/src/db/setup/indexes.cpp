@@ -12,15 +12,15 @@
 namespace idhan::db
 {
 
-	constexpr std::array< std::string_view, 0 > index_sql {
+constexpr std::array< std::string_view, 0 > index_sql {
 
-	};
+};
 
-	void prepareInitalIndexes( pqxx::nontransaction& tx )
+void prepareInitalIndexes( pqxx::nontransaction& tx )
+{
+	for ( const auto& sql : index_sql )
 	{
-		for ( const auto& sql : index_sql )
-		{
-			tx.exec( sql );
-		}
+		tx.exec( sql );
 	}
+}
 } // namespace idhan::db

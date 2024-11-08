@@ -4,13 +4,12 @@
 
 #pragma once
 
-
-
 namespace pqxx
 {
-	class nontransaction;
+class nontransaction;
 }
+
 namespace idhan::db
-	{
-		void prepareSQLFunctions(pqxx::nontransaction& tx);
-	}
+{
+void prepareSQLFunctions( pqxx::nontransaction& tx );
+}

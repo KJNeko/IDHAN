@@ -8,8 +8,8 @@
 
 namespace idhan::db
 {
-	std::size_t doMigration( pqxx::nontransaction& tx, std::size_t migration_id );
+std::size_t doMigration( pqxx::nontransaction& tx, std::size_t migration_id );
 
-	void updateMigrations( pqxx::nontransaction& tx );
+void updateMigrations( pqxx::nontransaction& tx );
 
 } // namespace idhan::db

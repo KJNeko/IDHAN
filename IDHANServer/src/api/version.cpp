@@ -10,16 +10,16 @@
 namespace idhan::api
 {
 
-	void IDHANApi::version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
-	{
-		log::debug( "/version" );
+void IDHANApi::version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+{
+	log::debug( "/version" );
 
-		Json::Value json;
-		json[ "idhan_version" ] = IDHAN_VERSION;
-		json[ "idhan_api_version" ] = IDHAN_API_VERSION;
-		json[ "hydrus_api_version" ] = HYDRUS_MIMICED_API_VERSION;
+	Json::Value json;
+	json[ "idhan_version" ] = IDHAN_VERSION;
+	json[ "idhan_api_version" ] = IDHAN_API_VERSION;
+	json[ "hydrus_api_version" ] = HYDRUS_MIMICED_API_VERSION;
 
-		callback( drogon::HttpResponse::newHttpJsonResponse( json ) );
-	}
+	callback( drogon::HttpResponse::newHttpJsonResponse( json ) );
+}
 
 } // namespace idhan::api

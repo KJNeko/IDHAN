@@ -56,7 +56,7 @@ BreakConstructorInitializers: AfterColon
 BreakInheritanceList: AfterColon
 BreakStringLiterals: false
 ColumnLimit: 120
-CompactNamespaces: false
+CompactNamespaces: true
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 4
 Cpp11BracedListStyle: false
@@ -97,7 +97,7 @@ UseTab: AlignWithSpaces
 IndentWrappedFunctionNames: true
 InsertBraces: false
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: All
+NamespaceIndentation: None
 PPIndentWidth: 2
 PackConstructorInitializers: CurrentLine
 PenaltyBreakOpenParenthesis: 999

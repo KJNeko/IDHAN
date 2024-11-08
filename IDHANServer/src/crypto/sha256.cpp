@@ -14,22 +14,22 @@
 
 namespace idhan
 {
-	SHA256::SHA256( const std::byte* data ) : m_data()
-	{
-		std::memcpy( m_data.data(), data, m_data.size() );
-	}
+SHA256::SHA256( const std::byte* data ) : m_data()
+{
+	std::memcpy( m_data.data(), data, m_data.size() );
+}
 
-	QString SHA256::hex() const
-	{
-		return QString( m_data.toHex() );
-	}
+QString SHA256::hex() const
+{
+	return QString( m_data.toHex() );
+}
 
-	SHA256::SHA256( QIODevice* io ) : m_data()
-	{
-		QCryptographicHash hasher { QCryptographicHash::Sha256 };
-		hasher.addData( io );
+SHA256::SHA256( QIODevice* io ) : m_data()
+{
+	QCryptographicHash hasher { QCryptographicHash::Sha256 };
+	hasher.addData( io );
 
-		m_data = hasher.result();
-	}
+	m_data = hasher.result();
+}
 
 } // namespace idhan

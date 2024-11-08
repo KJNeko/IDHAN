@@ -8,17 +8,17 @@
 namespace idhan::api
 {
 
-	class IDHANApi : public drogon::HttpController< IDHANApi >
-	{
-		void version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+class IDHANApi : public drogon::HttpController< IDHANApi >
+{
+	void version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
 
-	  public:
+  public:
 
-		METHOD_LIST_BEGIN
+	METHOD_LIST_BEGIN
 
-		ADD_METHOD_TO( IDHANApi::version, "/version" );
+	ADD_METHOD_TO( IDHANApi::version, "/version" );
 
-		METHOD_LIST_END
-	};
+	METHOD_LIST_END
+};
 
 } // namespace idhan::api

@@ -14,72 +14,69 @@
 namespace idhan
 {
 
-	void ServerContext::setupCORSSupport()
-	{
-		drogon::app().registerPreRoutingAdvice(
-			[]( const drogon::HttpRequestPtr& request,
-		        drogon::FilterCallback&& stop,
-		        drogon::FilterChainCallback&& pass )
+void ServerContext::setupCORSSupport()
+{
+	drogon::app().registerPreRoutingAdvice(
+		[]( const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
+		{
+			if ( !request->path().starts_with( "/hyapi" ) || request->method() != drogon::Options )
 			{
-				if ( !request->path().starts_with( "/hyapi" ) || request->method() != drogon::Options )
-				{
-					pass();
-					return;
-				}
+				pass();
+				return;
+			}
 
-				auto response { drogon::HttpResponse::newHttpResponse() };
+			auto response { drogon::HttpResponse::newHttpResponse() };
 
-				response->addHeader( "Access-Control-Allow-Headers", "*" );
-				response->addHeader( "Access-Control-Allow-Origin", "*" );
-				response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
+			response->addHeader( "Access-Control-Allow-Headers", "*" );
+			response->addHeader( "Access-Control-Allow-Origin", "*" );
+			response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
 
-				stop( response );
-			} );
+			stop( response );
+		} );
 
-		drogon::app().registerPostHandlingAdvice(
-			[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
-			{
-				response->addHeader( "Access-Control-Allow-Headers", "*" );
-				response->addHeader( "Access-Control-Allow-Origin", "*" );
-				response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
-			} );
-	}
+	drogon::app().registerPostHandlingAdvice(
+		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
+		{
+			response->addHeader( "Access-Control-Allow-Headers", "*" );
+			response->addHeader( "Access-Control-Allow-Origin", "*" );
+			response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
+		} );
+}
 
-	ServerContext::ServerContext( const ConnectionArguments& arguments ) :
-	  m_db( std::make_unique< Database >( arguments ) )
-	{
-		log::server::info( "IDHAN initalization starting" );
+ServerContext::ServerContext( const ConnectionArguments& arguments ) : m_db( std::make_unique< Database >( arguments ) )
+{
+	log::server::info( "IDHAN initalization starting" );
 
-		auto& app { drogon::app() };
+	auto& app { drogon::app() };
 
-		log::trace( "Logging show trace" );
-		log::debug( "Logging show debug" );
-		log::info( "Logging show info" );
+	log::trace( "Logging show trace" );
+	log::debug( "Logging show debug" );
+	log::info( "Logging show info" );
 
-		drogon::app()
-			.setLogPath( "./" )
-			.setLogLevel( trantor::Logger::kInfo )
-			.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT )
-			.setThreadNum( 16 )
-			.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() )
-			.setDocumentRoot( "./pages" );
+	drogon::app()
+		.setLogPath( "./" )
+		.setLogLevel( trantor::Logger::kInfo )
+		.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT )
+		.setThreadNum( 16 )
+		.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() )
+		.setDocumentRoot( "./pages" );
 
-		setupCORSSupport();
+	setupCORSSupport();
 
-		log::server::info( "IDHAN initialization finished" );
-	}
+	log::server::info( "IDHAN initialization finished" );
+}
 
-	void ServerContext::run()
-	{
-		log::server::info( "Starting runtime" );
+void ServerContext::run()
+{
+	log::server::info( "Starting runtime" );
 
-		log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
-		drogon::app().run();
+	log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
+	drogon::app().run();
 
-		log::server::info( "Shutting down" );
-	}
+	log::server::info( "Shutting down" );
+}
 
-	ServerContext::~ServerContext()
-	{}
+ServerContext::~ServerContext()
+{}
 
 } // namespace idhan

@@ -8,22 +8,22 @@
 
 namespace idhan
 {
-	struct ConnectionArguments;
-	class Database;
+struct ConnectionArguments;
+class Database;
 
-	class ServerContext
-	{
-		std::unique_ptr< Database > m_db;
+class ServerContext
+{
+	std::unique_ptr< Database > m_db;
 
-	  public:
+  public:
 
-		ServerContext() = delete;
+	ServerContext() = delete;
 
-		void setupCORSSupport();
-		ServerContext( const ConnectionArguments& arguments );
-		void run();
+	void setupCORSSupport();
+	ServerContext( const ConnectionArguments& arguments );
+	void run();
 
-		~ServerContext();
-	};
+	~ServerContext();
+};
 
 } // namespace idhan

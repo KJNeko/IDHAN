@@ -14,27 +14,27 @@
 namespace idhan::import
 {
 
-	using FileRecordID = std::uint64_t;
+using FileRecordID = std::uint64_t;
 
-	struct FileRecord
-	{
-		FileRecordID m_id;
-		SHA256 m_sha256;
-	};
+struct FileRecord
+{
+	FileRecordID m_id;
+	SHA256 m_sha256;
+};
 
-	QFileInfo getPath( const FileRecord record );
+QFileInfo getPath( const FileRecord record );
 
-	FileRecord createRecord( const SHA256& sha256 );
+FileRecord createRecord( const SHA256& sha256 );
 
-	FileRecord createRecord( QByteArrayView data );
+FileRecord createRecord( QByteArrayView data );
 
-	FileRecord createRecord( const std::vector< std::byte >& data );
+FileRecord createRecord( const std::vector< std::byte >& data );
 
 } // namespace idhan::import
 
 namespace idhan
 {
 
-	using import::FileRecord;
+using import::FileRecord;
 
 }

@@ -10,13 +10,13 @@
 namespace idhan::mime
 {
 
-	using MimeID = std::uint32_t;
-	constexpr MimeID UNKNOWN_MIME_ID { std::numeric_limits< MimeID >::max() };
+using MimeID = std::uint32_t;
+constexpr MimeID UNKNOWN_MIME_ID { std::numeric_limits< MimeID >::max() };
 
-	void loadParsers();
+void loadParsers();
 
-	MimeID parse( QIODevice* io );
+MimeID parse( QIODevice* io );
 
-	MimeID getMimeFromIO( QIODevice* io );
+MimeID getMimeFromIO( QIODevice* io );
 
 } // namespace idhan::mime

@@ -6,17 +6,17 @@
 
 namespace idhan::hyapi
 {
-	class HyAPIAuth : public drogon::HttpMiddleware< HyAPIAuth >
-	{
-	  public:
+class HyAPIAuth : public drogon::HttpMiddleware< HyAPIAuth >
+{
+  public:
 
-		HyAPIAuth();
+	HyAPIAuth();
 
-		void invoke(
-			const drogon::HttpRequestPtr& req,
-			drogon::MiddlewareNextCallback&& nextCb,
-			drogon::MiddlewareCallback&& mcb ) override;
-	};
+	void invoke(
+		const drogon::HttpRequestPtr& req,
+		drogon::MiddlewareNextCallback&& nextCb,
+		drogon::MiddlewareCallback&& mcb ) override;
+};
 
-	constexpr auto* const HyAPIAuthName { "idhan::hyapi::HyAPIAuth" };
+constexpr auto* const HyAPIAuthName { "idhan::hyapi::HyAPIAuth" };
 } // namespace idhan::hyapi

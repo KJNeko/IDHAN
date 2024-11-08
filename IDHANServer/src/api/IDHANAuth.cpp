@@ -7,10 +7,10 @@
 namespace idhan::api
 {
 
-	void IDHANAuth::invoke(
-		const drogon::HttpRequestPtr& req, drogon::MiddlewareNextCallback&& nextCb, drogon::MiddlewareCallback&& mcb )
-	{
-		// continue
-		nextCb( std::move( mcb ) );
-	}
+void IDHANAuth::invoke(
+	const drogon::HttpRequestPtr& req, drogon::MiddlewareNextCallback&& nextCb, drogon::MiddlewareCallback&& mcb )
+{
+	// continue
+	nextCb( std::move( mcb ) );
+}
 } // namespace idhan::api

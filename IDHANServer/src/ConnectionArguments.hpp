@@ -14,14 +14,14 @@ constexpr std::uint16_t IDHAN_DEFAULT_POSTGRES_PORT { 5432 };
 namespace idhan
 {
 
-	struct ConnectionArguments
-	{
-		std::string hostname { "" };
-		std::uint16_t port { IDHAN_DEFAULT_POSTGRES_PORT };
-		std::string dbname { "idhan-db" };
-		std::string user { "idhan" };
+struct ConnectionArguments
+{
+	std::string hostname { "" };
+	std::uint16_t port { IDHAN_DEFAULT_POSTGRES_PORT };
+	std::string dbname { "idhan-db" };
+	std::string user { "idhan" };
 
-		std::string format() const;
-	};
+	std::string format() const;
+};
 
 } // namespace idhan

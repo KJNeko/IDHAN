@@ -15,21 +15,21 @@ class QIODevice;
 namespace idhan
 {
 
-	class SHA256
-	{
-		QByteArray m_data;
+class SHA256
+{
+	QByteArray m_data;
 
-		SHA256() = delete;
+	SHA256() = delete;
 
-		explicit SHA256( const std::byte* data );
+	explicit SHA256( const std::byte* data );
 
-		friend SHA256 createFromIStream( std::istream& istream );
+	friend SHA256 createFromIStream( std::istream& istream );
 
-	  public:
+  public:
 
-		QString hex() const;
+	QString hex() const;
 
-		explicit SHA256( QIODevice* io );
-	};
+	explicit SHA256( QIODevice* io );
+};
 
 } // namespace idhan

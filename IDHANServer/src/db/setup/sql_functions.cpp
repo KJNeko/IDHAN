@@ -12,8 +12,8 @@
 namespace idhan::db
 {
 
-	constexpr std::array< std::string_view, 1 > function_creation_sql {
-		R"(
+constexpr std::array< std::string_view, 1 > function_creation_sql {
+	R"(
 			CREATE OR REPLACE FUNCTION tag(in_namespace_text TEXT, in_subtag_text TEXT)
 			    RETURNS BIGINT AS
 			$tag_id$
@@ -47,14 +47,14 @@ namespace idhan::db
 			END;
 			$tag_id$ LANGUAGE plpgsql;
 		)"
-	};
+};
 
-	void prepareSQLFunctions( pqxx::nontransaction& tx )
+void prepareSQLFunctions( pqxx::nontransaction& tx )
+{
+	for ( const auto& sql : function_creation_sql )
 	{
-		for ( const auto& sql : function_creation_sql )
-		{
-			tx.exec( sql );
-		}
+		tx.exec( sql );
 	}
+}
 
 } // namespace idhan::db

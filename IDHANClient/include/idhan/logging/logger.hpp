@@ -24,44 +24,44 @@
 namespace idhan::logging
 {
 
-	template < typename... Ts >
-	void notify( const std::string_view& fmt, const Ts&... ts )
-	{}
+template < typename... Ts >
+void notify( const std::string_view& fmt, const Ts&... ts )
+{}
 
-	template < typename... Ts >
-	void info( const std::string_view& fmt, const Ts&... ts )
-	{}
+template < typename... Ts >
+void info( const std::string_view& fmt, const Ts&... ts )
+{}
 
-	template < typename... Ts >
-	void warn( const std::string_view& fmt, const Ts&... ts )
-	{}
+template < typename... Ts >
+void warn( const std::string_view& fmt, const Ts&... ts )
+{}
 
-	template < typename... Ts >
-	void error( const std::string_view& fmt, const Ts&... ts )
-	{}
+template < typename... Ts >
+void error( const std::string_view& fmt, const Ts&... ts )
+{}
 
-	template < typename... Ts >
-	void critical( const std::string_view& fmt, const Ts&... ts )
-	{}
+template < typename... Ts >
+void critical( const std::string_view& fmt, const Ts&... ts )
+{}
 
-	enum CallbackLevel : uint8_t
-	{
-		Notify = 1 << 0,
-		Info = 1 << 1,
-		Warn = 1 << 2,
-		Error = 1 << 3,
-		Critical = 1 << 4,
-		All = Notify | Info | Warn | Error | Critical
-	};
+enum CallbackLevel : uint8_t
+{
+	Notify = 1 << 0,
+	Info = 1 << 1,
+	Warn = 1 << 2,
+	Error = 1 << 3,
+	Critical = 1 << 4,
+	All = Notify | Info | Warn | Error | Critical
+};
 
-	using CallbackFunction = std::function< void( CallbackLevel level, std::string_view message ) >;
+using CallbackFunction = std::function< void( CallbackLevel level, std::string_view message ) >;
 
-	//! Registers a callback. The level will act as a mask for specific events
-	void registerCallback( CallbackFunction& func, CallbackLevel level );
+//! Registers a callback. The level will act as a mask for specific events
+void registerCallback( CallbackFunction& func, CallbackLevel level );
 
 } // namespace idhan::logging
 
 namespace IDHAN::log
 {
-	using namespace idhan::logging;
+using namespace idhan::logging;
 }
