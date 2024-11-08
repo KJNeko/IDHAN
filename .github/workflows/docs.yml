@@ -1,25 +1,23 @@
-name: Doxygen Publish
-
+name: Automated Main Deploy Action
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
+    branches: [ main, dev-backend ]
 jobs:
-  build:
+  doxygen:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: 'true'
 
-      - name: Doxygen Action
+      - name: (Doxygen) HTML
         uses: mattnotmitt/doxygen-action@v1.1.0
         with:
           doxyfile-path: "./Doxyfile"
-
-      - name: Deploy
+          working-directory: "."
+      - name: (Doxygen) Deploy HTML on Github Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./html
+          deploy_key: ${{ secrets.ACTION_DEPLOY_KEY }}
+          publish_dir: "./docs/html"
