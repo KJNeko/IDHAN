@@ -1,0 +1,6 @@
+html {
+	--top-height: 140px;
+	--side-nav-fixed-width: 360px;
+	--side-nav-arrow-opacity: 0.1;
+	--side-nav-arrow-hover-opacity: 0.9;
+}
