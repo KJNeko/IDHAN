@@ -6,6 +6,8 @@
 
 /**
  * @page IDHANAuth IDHAN Authorization
+ * @warning This document is purely for reference for later, The only thing true in this document is the concept of `Access Key`
+ *
  * IDHAN uses a key system to authorize access to the API. There are various ways to do so however.
  * First, Some terminology.
  * - `Access Key`: A key that is set and capable of being used until it's deleted. Permanant life.
@@ -16,6 +18,8 @@
 /**
  *
  * @page IDHANAuth Auth Tables
+ * @warning This document is purely for reference for later.
+ *
  * There are currently 4 tables that deal with authorization for the API:
  * `access_keys`, `session_keys`, `hydrus_keys`, and `access_domains`
  *

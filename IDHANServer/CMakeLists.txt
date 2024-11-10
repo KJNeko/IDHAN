@@ -17,7 +17,7 @@ add_custom_command(
 		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake: Generating doMigration.cpp")
 
 target_link_libraries(IDHANServer PUBLIC spdlog fmt drogon)
-target_link_libraries(IDHANServer PRIVATE pqxx sqlite3 Qt6::Core)
+target_link_libraries(IDHANServer PRIVATE pqxx sqlite3 Qt6::Core tomlplusplus::tomlplusplus)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
 target_include_directories(IDHANServer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
