@@ -18,7 +18,6 @@ jobs:
         uses: mattnotmitt/doxygen-action@v1.1.0
         with:
           doxyfile-path: "${{ github.workspace }}/Doxyfile"
-          working-directory: "${{ github.workspace }}"
 
       - name: API Docs
         uses: Legion2/swagger-ui-action@v1.3.0
