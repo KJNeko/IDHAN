@@ -11,6 +11,9 @@ jobs:
         with:
           submodules: 'true'
 
+      - name: Print shit
+        run: ls ${{ github.workspace }}
+
       - name: (Doxygen) HTML
         uses: mattnotmitt/doxygen-action@v1.1.0
         with:
