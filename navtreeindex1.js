@@ -1,5 +1,12 @@
 var NAVTREEINDEX1 =
 {
+"d6/d66/namespaceIDHAN.html":[4,0,0],
+"d6/d70/namespaceidhan_1_1logging.html":[4,0,1,7],
+"d6/d70/namespaceidhan_1_1logging.html#a152e52d454120e9667932fd38a741748":[4,0,1,7,6],
+"d6/d70/namespaceidhan_1_1logging.html#a1e3a3ad52057010c1de1fcfea9c02bed":[4,0,1,7,1],
+"d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3":[4,0,1,7,2],
+"d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3a079213b47315cd7ad0765eb9f7d54596":[4,0,1,7,2,3],
+"d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3a087a97531195a0af0e9e35e49a629399":[4,0,1,7,2,1],
 "d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3a9003dc2cd9d52f6cea07150f54418494":[4,0,1,7,2,4],
 "d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3ae5c2f80ff28fc9abad259b09569b00bd":[4,0,1,7,2,0],
 "d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3af80d28e04741a6d7f75d4c4b3f0f4f62":[4,0,1,7,2,5],
@@ -242,12 +249,5 @@ var NAVTREEINDEX1 =
 "dd/d85/hydrus__version_8hpp.html#afdc03fd9d615424a797a53e071ea913a":[6,0,2,0,6,0,1,1],
 "dd/d85/hydrus__version_8hpp_source.html":[6,0,2,0,6,0,1],
 "dd/d87/import_8hpp.html":[6,0,2,0,7,1],
-"dd/d87/import_8hpp.html#a0bd0457098872508f58afb72901c2be5":[6,0,2,0,7,1,5],
-"dd/d87/import_8hpp.html#a0c86ae0be652ced439e81b471bd8189b":[6,0,2,0,7,1,2],
-"dd/d87/import_8hpp.html#a114b6b27f14c7a1b4e7ee80d7147fe27":[6,0,2,0,7,1,3],
-"dd/d87/import_8hpp.html#aecbd1be194120ca1865e05b69e7caa9e":[6,0,2,0,7,1,1],
-"dd/d87/import_8hpp.html#aefba9c4cb30051e70b53709c3f3b4538":[6,0,2,0,7,1,4],
-"dd/d87/import_8hpp_source.html":[6,0,2,0,7,1],
-"dd/dcf/namespaceidhan.html":[4,0,1],
-"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880c":[4,0,1,24]
+"dd/d87/import_8hpp.html#a0bd0457098872508f58afb72901c2be5":[6,0,2,0,7,1,5]
 };
