@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace idhan
 {
 using NamespaceID = std::uint32_t;

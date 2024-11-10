@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "IDHANTypes.hpp"
+#include "drogon/HttpRequest.h"
 
 namespace idhan
 {
@@ -23,11 +24,11 @@ struct SearchBuilder
 
 	SearchBuilder() = default;
 
-	std::string construct();
+	std::string construct( const bool return_ids = true, const bool return_hashes = false ) const;
 
 	void filterTagDomain( const TagDomainID value );
 
-	void filterFileDomain( const FileDomainID value );
+	void addFileDomain( const FileDomainID value );
 };
 
 } // namespace idhan

@@ -92,6 +92,19 @@ void HydrusAPI::searchFiles( const drogon::HttpRequestPtr& request, ResponseFunc
 		return;
 	}
 
+	// Build the search
+	SearchBuilder builder {};
+
+	if ( auto opt = request->getOptionalParameter< int >( "file_domain_id" ); opt.has_value() )
+	{
+		builder.addFileDomain( opt.value() );
+	}
+
+	if ( auto opt = request->getOptionalParameter< std::vector< int > >( "file_domain_ids" ); opt.has_value() )
+	{
+		for ( const auto& value : opt.value() ) builder.addFileDomain( value );
+	}
+
 	// was a domain set?
 	const auto file_domain_id { request->getOptionalParameter< int >( "file_domain" ) };
 
@@ -113,13 +126,6 @@ void HydrusAPI::searchFiles( const drogon::HttpRequestPtr& request, ResponseFunc
 	const auto file_sort_asc { request->getOptionalParameter< bool >( "file_sort_asc" ).value_or( true ) };
 	const auto return_file_ids { request->getOptionalParameter< bool >( "return_file_ids" ).value_or( true ) };
 	const auto return_hashes { request->getOptionalParameter< bool >( "return_hashes" ).value_or( false ) };
-
-	// Build the search
-	SearchBuilder builder {};
-
-	if ( file_domain_id.has_value() ) builder.filterFileDomain( file_domain_id.value() );
-
-	if ( tag_domain_id.has_value() ) builder.filterTagDomain( tag_domain_id.value() );
 
 	std::string query { builder.construct() };
 }
