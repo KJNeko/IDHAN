@@ -22,6 +22,7 @@ jobs:
         with:
           output: './docs/html/swagger-ui'
           spec-file: "./docs/api.yaml"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: (Doxygen) Deploy HTML on Github Pages
         uses: peaceiris/actions-gh-pages@v3
