@@ -17,6 +17,12 @@ jobs:
           doxyfile-path: "./Doxyfile"
           working-directory: "."
 
+      - name: API Docs
+        uses: Legion2/swagger-ui-action@v1.3.0
+        with:
+          output: './docs/html/swagger-ui'
+          spec-file: "./docs/api.yaml"
+
       - name: (Doxygen) Deploy HTML on Github Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
