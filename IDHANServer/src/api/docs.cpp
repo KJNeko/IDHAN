@@ -10,17 +10,35 @@
 namespace idhan::api
 {
 
-void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+void IDHANApi::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
 	std::string path { request->getPath() };
 	log::info( path );
 
-	callback( drogon::HttpResponse::newFileResponse( "./pages/api.yaml" ) );
+	callback( drogon::HttpResponse::newFileResponse( "./pages" + path ) );
 }
 
-void IDHANApi::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
-	callback( drogon::HttpResponse::newRedirectionResponse( "./apidocs.html" ) );
+	if ( auto ifs = std::ifstream( "./pages/apidocs.html", std::ios::ate ); ifs )
+	{
+		std::size_t size { ifs.tellg() };
+		ifs.seekg( 0, std::ios::beg );
+
+		std::string str {};
+		str.resize( size );
+		ifs.read( str.data(), str.size() );
+
+		// create http response
+		auto response { drogon::HttpResponse::newHttpResponse() };
+		response->setContentTypeCode( drogon::ContentType::CT_TEXT_HTML );
+
+		response->setBody( str );
+
+		callback( response );
+	}
+
+	callback( drogon::HttpResponse::newHttpResponse() );
 }
 
 } // namespace idhan::api

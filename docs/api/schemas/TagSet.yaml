@@ -1,0 +1,7 @@
+description: "Two strings that make up a tag"
+type: object
+properties:
+  namespace:
+    $ref: 'TagComponent.yaml'
+  subtag:
+    $ref: 'TagComponent.yaml'

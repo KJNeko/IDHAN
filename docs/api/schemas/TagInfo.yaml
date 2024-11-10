@@ -1,0 +1,10 @@
+type: object
+properties:
+  tag_id:
+    type: integer
+  namespace:
+    $ref: './TagNamespace.yaml'
+  subtag:
+    $ref: './TagSubtag.yaml'
+  color:
+    $ref: './TagColor.yaml'

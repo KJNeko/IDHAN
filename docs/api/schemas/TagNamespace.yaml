@@ -1,0 +1,3 @@
+type: string
+description: The first text component of a tag
+example: 'character'

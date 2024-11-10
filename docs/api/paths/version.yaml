@@ -1,0 +1,12 @@
+get:
+  tags:
+    - public
+  summary: Returns version info
+  security: [ ]
+  responses:
+    "200":
+      description: Json object with info
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/VersionInfo.yaml'

@@ -1,0 +1,19 @@
+post:
+  tags:
+    - tags
+    - access-locked
+  summary: Creates a new tag, Or returns an ID of an existing one
+  requestBody:
+    description: Json object with a namespace id or text, and a subtag id, or text
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../schemas/TagSet.yaml'
+  responses:
+    "200":
+      description: "Json object with tag info"
+      content:
+        application/json:
+          schema:
+            $ref: '../../schemas/TagInfo.yaml'

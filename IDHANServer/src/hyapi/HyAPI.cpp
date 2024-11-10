@@ -31,7 +31,7 @@ void HydrusAPI::apiVersion( [[maybe_unused]] const drogon::HttpRequestPtr& reque
 
 	// I'm unsure if anything would actually ever need this.
 	// But i figured i'd supply it anyways
-	json[ "idhan_server_version" ] = IDHAN_VERSION;
+	json[ "is_idhan_instance" ] = true;
 	json[ "idhan_api_version" ] = IDHAN_API_VERSION;
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( json ) };

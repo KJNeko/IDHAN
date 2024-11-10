@@ -1,0 +1,3 @@
+oneOf:
+  - $ref: 'TagID.yaml'
+  - $ref: 'TagString.yaml'

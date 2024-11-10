@@ -1,0 +1,53 @@
+openapi: 3.0.0
+servers:
+  - url: /
+
+info:
+  description: Standard API for IDHAN
+  version: "1.0.0"
+  title: IDHAN API
+  contact:
+    email: kj16609@lolicon.zip
+tags:
+  - name: public
+    description: Public access
+  - name: access-locked
+    description: Locked behind usage of an access key
+  - name: tags
+    description: Tag related operations
+  - name: files
+    description: File related operations
+
+security:
+  - KeyAuth: [ ]
+
+paths:
+  /version:
+    $ref: './paths/version.yaml'
+  /tag/create:
+    $ref: './paths/tags/create.yaml'
+  /tag/{tag_id}/info:
+    $ref: './paths/tags/info.yaml'
+  /file/{file_id}/add_tag:
+  /file/{file_id}/tags:
+  /file/{file_id}/info:
+
+
+
+components:
+  schemas:
+    TagInfo:
+      $ref: './schemas/TagInfo.yaml'
+    Version:
+      $ref: './schemas/Version.yaml'
+    VersionInfo:
+      $ref: './schemas/VersionInfo.yaml'
+    TagColor:
+      $ref: './schemas/TagColor.yaml'
+    TagSet:
+      $ref: './schemas/TagSet.yaml'
+    TagInput:
+      $ref: './schemas/TagInput.yaml'
+  securitySchemes:
+    KeyAuth:
+      $ref: './securitySchemes/KeyAuth.yaml'

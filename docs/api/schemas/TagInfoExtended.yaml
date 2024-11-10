@@ -1,0 +1,8 @@
+type: object
+allOf:
+  - $ref: 'TagInfo.yaml'
+  - type: object
+    properties:
+      items_count:
+        type: integer
+        description: "Number of items with this tag"
