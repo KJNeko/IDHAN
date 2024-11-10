@@ -1,4 +1,0 @@
-var searchData=
-[
-  ['idhan_20authorization_0',['IDHAN Authorization',['../d1/d63/IDHANAuth.html',1,'']]]
-];
