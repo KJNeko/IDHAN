@@ -2,6 +2,8 @@
 // Created by kj16609 on 11/10/24.
 //
 
+#include <fstream>
+
 #include "IDHANApi.hpp"
 #include "logging/log.hpp"
 
@@ -14,6 +16,11 @@ void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& ca
 	log::info( path );
 
 	callback( drogon::HttpResponse::newFileResponse( "./pages/api.yaml" ) );
+}
+
+void IDHANApi::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+{
+	callback( drogon::HttpResponse::newRedirectionResponse( "./apidocs.html" ) );
 }
 
 } // namespace idhan::api

@@ -1,11 +1,10 @@
 openapi: 3.0.0
 servers:
-  # Added by API Auto Mocking Plugin
-  - description: SwaggerHub API Auto Mocking
-    url: https://virtserver.swaggerhub.com/KJ16609/IDHANAPI/1.0.0
+  - url: /
+
 info:
   description: Standard API for IDHAN
-  version: "1.0.0"
+  version: "1.0.555"
   title: IDHAN API
   contact:
     email: kj16609@lolicon.zip

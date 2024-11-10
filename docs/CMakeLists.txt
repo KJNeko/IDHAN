@@ -18,7 +18,9 @@ if (BUILD_IDHAN_DOCS)
 
 	add_custom_command(
 			OUTPUT ${API_YAML_OUT}
+			DEPENDS ${API_YAML}
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${API_YAML} ${API_YAML_OUT}
+			COMMENT "Copying API docs"
 	)
 
 	add_dependencies(IDHANServer IDHANDocs)

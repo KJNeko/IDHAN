@@ -31,6 +31,7 @@ namespace idhan::api
 class IDHANApi : public drogon::HttpController< IDHANApi >
 {
 	void api( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	void apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
 
 	void version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
 
@@ -50,6 +51,7 @@ class IDHANApi : public drogon::HttpController< IDHANApi >
 	METHOD_LIST_BEGIN
 
 	ADD_METHOD_VIA_REGEX( IDHANApi::api, "/api.yaml" );
+	ADD_METHOD_TO( IDHANApi::apiDocs, "/api" );
 
 	ADD_METHOD_TO( IDHANApi::version, "/version" );
 
