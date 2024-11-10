@@ -1,4 +1,4 @@
 #!/usr/bin/bash
 
 doxygen
-xdg-open ./docs/html/index.html
+xdg-open ./docs/out/html/index.html

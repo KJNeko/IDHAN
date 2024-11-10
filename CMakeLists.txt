@@ -18,6 +18,8 @@ PreSetup()
 option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)
 option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
+option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
+
 if (BUILD_HYDRUS_IMPORTER)
 	set(BUILD_IDHAN_CLIENT ON)
 endif ()
@@ -33,6 +35,8 @@ include(toml)
 add_subdirectory(IDHAN)
 add_subdirectory(IDHANServer)
 add_subdirectory(IDHANClient)
+add_subdirectory(docs)
+
 
 if (BUILD_IDHAN_TESTS)
 	#IDHANTests

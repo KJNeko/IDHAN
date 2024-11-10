@@ -11,27 +11,14 @@ jobs:
         with:
           submodules: 'true'
 
-      - name: Print shit
-        run: ls ${{ github.workspace }}
-
       - name: (Doxygen) HTML
         uses: mattnotmitt/doxygen-action@v1.1.0
         with:
           doxyfile-path: "./Doxyfile"
           working-directory: '.'
 
-      - name: API Docs
-        uses: Legion2/swagger-ui-action@v1.3.0
-        with:
-          output: '${{ github.workspace }}/docs/swagger-ui'
-          spec-file: "${{ github.workspace }}/docs/api.yaml"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge docs
-        run: cp -r ${{ github.workspace }}/docs/swagger-ui ${{ github.workspace }}/docs/html/swagger-ui
-
       - name: (Doxygen) Deploy HTML on Github Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: "${{ github.workspace }}/docs/html"
+          publish_dir: "${{ github.workspace }}/docs/out/html"

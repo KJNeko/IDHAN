@@ -44,3 +44,4 @@ read.lock
 out/
 
 /IDHANServer/src/db/setup/migration/doMigration.cpp
+/docs/out

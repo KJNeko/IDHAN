@@ -68,7 +68,7 @@ PROJECT_LOGO           = ./docs/libfgl_custom/TitorV2.png
 # entered, it will be relative to the location where doxygen was started. If
 # left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = ./docs
+OUTPUT_DIRECTORY       = ./docs/out
 
 # If the CREATE_SUBDIRS tag is set to YES then doxygen will create up to 4096
 # sub-directories (in 2 levels) under the output directory of each output format
@@ -1372,7 +1372,9 @@ HTML_EXTRA_STYLESHEET  = ./docs/doxygen-awesome-css/doxygen-awesome.css \
 HTML_EXTRA_FILES       = ./docs/doxygen-awesome-css/doxygen-awesome-fragment-copy-button.js \
                          ./docs/doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js \
                          ./docs/doxygen-awesome-css/doxygen-awesome-paragraph-link.js \
-                         ./docs/libfgl_custom/tempus.ico
+                         ./docs/libfgl_custom/tempus.ico \
+                         ./docs/api.yaml \
+                         ./docs/apidocs.html
 
 # The HTML_COLORSTYLE tag can be used to specify if the generated HTML output
 # should be rendered with a dark or light theme.
@@ -1933,7 +1935,7 @@ EXTRA_SEARCH_MAPPINGS  =
 # If the GENERATE_LATEX tag is set to YES, doxygen will generate LaTeX output.
 # The default value is: YES.
 
-GENERATE_LATEX         = YES
+GENERATE_LATEX         = NO
 
 # The LATEX_OUTPUT tag is used to specify where the LaTeX docs will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of

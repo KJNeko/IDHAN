@@ -28,6 +28,7 @@ endif ()
 # Copy page info to the output directory
 
 file(GLOB_RECURSE PAGE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/pages/*")
+set(PAGE_OUTPUTS "")
 
 foreach (PAGE ${PAGE_FILES})
 
@@ -36,10 +37,15 @@ foreach (PAGE ${PAGE_FILES})
 	set(OUT_PATH ${CMAKE_BINARY_DIR}/bin/${REL_PATH})
 
 	add_custom_command(
-			TARGET IDHANServer POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy ${PAGE} ${OUT_PATH}
+			OUTPUT ${OUT_PATH}
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PAGE} ${OUT_PATH}
 			DEPENDS ${PAGE}
 			COMMENT "Copying ${PAGE} to ${OUT_PATH}"
 	)
+
+	list(APPEND PAGE_OUTPUTS ${OUT_PATH})
+
 endforeach ()
 
+add_custom_target(IDHANPages DEPENDS ${PAGE_OUTPUTS})
+add_dependencies(IDHANServer IDHANPages)
