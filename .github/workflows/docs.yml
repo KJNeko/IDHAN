@@ -20,9 +20,12 @@ jobs:
       - name: API Docs
         uses: Legion2/swagger-ui-action@v1.3.0
         with:
-          output: './docs/html/swagger-ui'
+          output: './docs/swagger-ui'
           spec-file: "./docs/api.yaml"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge docs
+        run: cp ./docs/swagger-ui ./docs/html/swagger-ui
 
       - name: (Doxygen) Deploy HTML on Github Pages
         uses: peaceiris/actions-gh-pages@v3
