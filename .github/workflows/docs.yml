@@ -25,7 +25,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Merge docs
-        run: cp ./docs/swagger-ui ./docs/html/swagger-ui
+        run: cp -r ./docs/swagger-ui ./docs/html/swagger-ui
 
       - name: (Doxygen) Deploy HTML on Github Pages
         uses: peaceiris/actions-gh-pages@v3
