@@ -37,14 +37,7 @@ class IDHANApi : public drogon::HttpController< IDHANApi >
 
 	void tagInfo( const drogon::HttpRequestPtr& request, ResponseFunction&& callback, TagID tag_id );
 
-	void createTagFromText(
-		const drogon::HttpRequestPtr& request, ResponseFunction&& callback, const std::string_view tag_text );
-
-	void createTagFromComponents(
-		const drogon::HttpRequestPtr& request,
-		ResponseFunction&& callback,
-		std::string_view namespace_text,
-		std::string_view subtag_text );
+	drogon::Task< drogon::HttpResponsePtr > createTag( drogon::HttpRequestPtr request );
 
   public:
 
@@ -59,8 +52,7 @@ class IDHANApi : public drogon::HttpController< IDHANApi >
 	ADD_METHOD_TO( IDHANApi::tagInfo, "/tag/info?tag_id={1}" );
 	ADD_METHOD_TO( IDHANApi::tagInfo, "/tag/info?tag_ids={1}" );
 
-	ADD_METHOD_TO( IDHANApi::createTagFromText, "/tag/create?tag_text={1}" );
-	ADD_METHOD_TO( IDHANApi::createTagFromComponents, "/tag/create?tag_namespace={1}&tag_subtag={2}" );
+	ADD_METHOD_TO( IDHANApi::createTag, "/tag/create", drogon::Post );
 
 	METHOD_LIST_END
 };

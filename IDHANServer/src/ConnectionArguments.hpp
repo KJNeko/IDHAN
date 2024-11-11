@@ -20,6 +20,7 @@ struct ConnectionArguments
 	std::uint16_t port { IDHAN_DEFAULT_POSTGRES_PORT };
 	std::string dbname { "idhan-db" };
 	std::string user { "idhan" };
+	std::string password { "" };
 
 	std::string format() const;
 };

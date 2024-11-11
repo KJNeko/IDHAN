@@ -4,11 +4,14 @@
 
 #pragma once
 
+#include <QFuture>
 #include <QNetworkAccessManager>
 #include <QObject>
 
 #include <cstdint>
 #include <string>
+
+#include "IDHANTypes.hpp"
 
 namespace idhan
 {
@@ -34,6 +37,9 @@ class IDHANClient : public QObject
 	void attemptQueryVersion();
 
 	inline static IDHANClient* m_instance { nullptr };
+	QUrl m_url_template {};
+
+	void addKeyHeader( QNetworkRequest& request );
 
   public:
 
@@ -49,6 +55,10 @@ class IDHANClient : public QObject
 		 * @param config
 		 */
 	IDHANClient( const IDHANClientConfig& config );
+
+	// tags
+	QFuture< TagID > createTag( const std::string& namespace_text, const std::string& subtag_text );
+	QFuture< TagID > createTag( std::string_view tag_text );
 
   public slots:
 	void handleVersionInfo( QNetworkReply* reply );

@@ -9,11 +9,12 @@
 namespace idhan
 {
 struct ConnectionArguments;
-class Database;
+class ManagementConnection;
 
 class ServerContext
 {
-	std::unique_ptr< Database > m_db;
+	//! Connection to postgresql to be used for management/setup
+	std::unique_ptr< ManagementConnection > m_postgresql_management;
 
   public:
 

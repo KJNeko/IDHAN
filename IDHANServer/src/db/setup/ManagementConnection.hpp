@@ -6,12 +6,12 @@
 
 #include <pqxx/pqxx>
 
-#include "../ConnectionArguments.hpp"
-
 namespace idhan
 {
+struct ConnectionArguments;
 
-class Database
+//! This class is used for the inital setup, migrations, and management of the idhan database.
+class ManagementConnection
 {
 	pqxx::connection connection;
 
@@ -23,7 +23,7 @@ class Database
 
 	inline pqxx::connection& conn() { return connection; }
 
-	Database( const ConnectionArguments& arguments );
+	ManagementConnection( const ConnectionArguments& arguments );
 };
 
 } // namespace idhan

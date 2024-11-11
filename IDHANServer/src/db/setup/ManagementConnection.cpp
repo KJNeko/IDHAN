@@ -2,8 +2,9 @@
 // Created by kj16609 on 7/24/24.
 //
 
-#include "Database.hpp"
+#include "ManagementConnection.hpp"
 
+#include "ConnectionArguments.hpp"
 #include "db/setup/management.hpp"
 #include "db/setup/migration/migrations.hpp"
 #include "logging/log.hpp"
@@ -11,17 +12,17 @@
 namespace idhan
 {
 
-void Database::initalSetup( pqxx::nontransaction& tx )
+void ManagementConnection::initalSetup( pqxx::nontransaction& tx )
 {
 	log::info( "Starting inital table setup" );
 
 	tx.commit();
 }
 
-void Database::importHydrus( const ConnectionArguments& connection_arguments )
+void ManagementConnection::importHydrus( const ConnectionArguments& connection_arguments )
 {}
 
-Database::Database( const ConnectionArguments& arguments ) : connection( arguments.format() )
+ManagementConnection::ManagementConnection( const ConnectionArguments& arguments ) : connection( arguments.format() )
 {
 	log::info( "Postgres connection made: {}", connection.dbname() );
 

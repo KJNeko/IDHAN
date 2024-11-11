@@ -57,13 +57,14 @@ int main( int argc, char** argv )
 		std::terminate();
 	}
 
-
 	idhan::IDHANClientConfig config {};
 
 	config.hostname = parser.value( idhan_host ).toStdString();
 	config.port = parser.value( idhan_port ).toUShort();
 
 	idhan::IDHANClient client { config };
+
+	auto future { client.createTag( "character", "toujou koneko" ) };
 
 	app.exec();
 

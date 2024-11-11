@@ -6,8 +6,10 @@
 
 #include <fixme.hpp>
 
+#include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
-#include "core/Database.hpp"
+#include "api/helpers/ResponseCallback.hpp"
+#include "db/setup/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/log.hpp"
 
@@ -43,7 +45,18 @@ void ServerContext::setupCORSSupport()
 		} );
 }
 
-ServerContext::ServerContext( const ConnectionArguments& arguments ) : m_db( std::make_unique< Database >( arguments ) )
+void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr&, ResponseFunction&& callback )
+{
+	log::error( "Unhandled exception got to drogon! What: {}", e.what() );
+
+	// 500
+	const auto response { drogon::HttpResponse::newHttpResponse( drogon::k500InternalServerError, drogon::CT_NONE ) };
+
+	callback( response );
+}
+
+ServerContext::ServerContext( const ConnectionArguments& arguments ) :
+  m_postgresql_management( std::make_unique< ManagementConnection >( arguments ) )
 {
 	log::server::info( "IDHAN initalization starting" );
 
@@ -59,7 +72,23 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) : m_db( std
 		.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT )
 		.setThreadNum( 16 )
 		.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() )
-		.setDocumentRoot( "./pages" );
+		.setDocumentRoot( "./pages" )
+		.setExceptionHandler( exceptionHandler );
+
+	drogon::orm::PostgresConfig config;
+	config.host = arguments.hostname;
+	config.port = arguments.port;
+	config.databaseName = arguments.dbname;
+	config.username = arguments.user;
+	config.password = arguments.password;
+	config.connectionNumber = std::thread::hardware_concurrency();
+	config.name = "default";
+	config.isFast = false;
+	config.characterSet = "UTF-8";
+	config.timeout = 60.0f;
+	config.autoBatch = false;
+
+	drogon::app().addDbClient( config );
 
 	setupCORSSupport();
 
