@@ -1,7 +1,6 @@
 post:
   tags:
     - tags
-    - access-locked
   summary: Creates a new tag, Or returns an ID of an existing one
   requestBody:
     description: Json object with a namespace id or text, and a subtag id, or text
@@ -10,6 +9,25 @@ post:
       application/json:
         schema:
           $ref: '../../schemas/TagSet.yaml'
+        examples:
+          TextWNamespace:
+            summary: Text with namespace
+            description: This shows an example of a tag that would look like "`character`:`toujou koneko`"
+            value:
+              namespace: "character"
+              subtag: "toujou koneko"
+          TextWONamespace:
+            summary: Text without namespace
+            description: This shows an empty tag, The value `0` can also be used instead of an empty string
+            value:
+              namespace: ""
+              subtag: "catgirl"
+          ids:
+            value:
+              namespace: 0
+              subtag: 0
+
+
   responses:
     "200":
       description: "Json object with tag info"

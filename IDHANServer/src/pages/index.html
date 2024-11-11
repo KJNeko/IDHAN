@@ -20,16 +20,14 @@
 <div class="container">
     <img src="Titorv2.png" alt="Titor Image" width="100" height="100">
     <div class="info">
-        <p>Software version <span id="idhan-version">Getting version...</span></p>
+        <p>Server version: <span id="idhan-version">Getting version...</span></p>
         <p>API Version: <span id="api-version">Getting version...</span></p>
-        <p>Hydrus API version: <span id="hydrus-version">Getting version...</span></p>
+        <p>Mimicked Hydrus API version: <span id="hydrus-version">Getting version...</span></p>
     </div>
 </div>
 <script>
     let url = `${window.location.protocol}//${window.location.hostname}` + (window.location.port ? `:${window.location.port}` : '');
 
-    const idhan_version = 'idhan_version';
-    const idhan_api_version = 'idhan_api_version';
     const hydrus_api_version = 'hydrus_api_version';
 
     async function fetchVersion() {
@@ -40,9 +38,15 @@
             }
 
             const data = await response.json();
-            document.getElementById('idhan-version').textContent = data[idhan_version] || 'N/A';
-            document.getElementById('api-version').textContent = data[idhan_api_version] || 'N/A';
-            document.getElementById('hydrus-version').textContent = data[hydrus_api_version] || 'N/A';
+            const idhan_server_version = data.idhan_server_version;
+            const idhan_api_version = data.idhan_api_version;
+
+            console.log(idhan_server_version)
+            console.log(idhan_api_version)
+
+            document.getElementById('idhan-version').textContent = idhan_server_version.string || 'N/A';
+            document.getElementById('api-version').textContent = idhan_api_version.string || 'N/A';
+            document.getElementById('hydrus-version').textContent = data.hydrus_api_version || 'N/A';
         } catch (error) {
             console.error('Error fetching version info:', error);
             document.getElementById('idhan-version').textContent = 'Failed to get version info';

@@ -1,7 +1,6 @@
 get:
   tags:
     - tags
-    - access-locked
   summary: Returns information about a tag.
   parameters:
     - in: path
@@ -9,7 +8,6 @@ get:
       required: true
       schema:
         $ref: '../../schemas/TagID.yaml'
-
   responses:
     "200":
       description: "Json object with tag info"

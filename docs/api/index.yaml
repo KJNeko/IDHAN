@@ -11,8 +11,6 @@ info:
 tags:
   - name: public
     description: Public access
-  - name: access-locked
-    description: Locked behind usage of an access key
   - name: tags
     description: Tag related operations
   - name: files
@@ -28,11 +26,14 @@ paths:
     $ref: './paths/tags/create.yaml'
   /tag/{tag_id}/info:
     $ref: './paths/tags/info.yaml'
+  /tag/autocomplete:
+    $ref: './paths/tags/autocomplete.yaml'
   /file/{file_id}/add_tag:
+    $ref: './paths/file/add_tag.yaml'
   /file/{file_id}/tags:
+    $ref: './paths/file/tags.yaml'
   /file/{file_id}/info:
-
-
+    $ref: './paths/file/info.yaml'
 
 components:
   schemas:

@@ -1,0 +1,13 @@
+get:
+  tags:
+    - tags
+    - files
+  summary: Returns a list of tags on this file
+  responses:
+    "200":
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../../schemas/TagInfo.yaml'
