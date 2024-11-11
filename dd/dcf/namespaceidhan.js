@@ -45,9 +45,9 @@ var namespaceidhan =
       [ "NAMESPACE_DELIMTER", "dd/dec/namespaceidhan_1_1tags.html#ae7cbfedaea5b29f67e72312b4ae0168f", null ]
     ] ],
     [ "ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", "de/d07/structidhan_1_1ConnectionArguments" ],
-    [ "Database", "db/d2e/classidhan_1_1Database.html", "db/d2e/classidhan_1_1Database" ],
     [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
     [ "IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", "da/d27/structidhan_1_1IDHANClientConfig" ],
+    [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],
     [ "SearchBuilder", "dc/dba/structidhan_1_1SearchBuilder.html", "dc/dba/structidhan_1_1SearchBuilder" ],
     [ "ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", "d0/d4c/classidhan_1_1ServerContext" ],
     [ "SHA256", "d0/de3/classidhan_1_1SHA256.html", "d0/de3/classidhan_1_1SHA256" ],
@@ -75,6 +75,7 @@ var namespaceidhan =
     [ "checkContentType", "dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824", null ],
     [ "createRecord", "dd/dcf/namespaceidhan.html#a6082d5125704348419620e38c65b1391", null ],
     [ "createRecords", "dd/dcf/namespaceidhan.html#acf5ed3e5c28ee48585b70505ed8d7f49", null ],
+    [ "exceptionHandler", "dd/dcf/namespaceidhan.html#a0c33ed4d742238b8197513d9cee1c23c", null ],
     [ "fixme", "dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e", null ],
     [ "getRecordID", "dd/dcf/namespaceidhan.html#a887e40e1f1d81f9517f6792e8fe83202", null ],
     [ "getRecordIDs", "dd/dcf/namespaceidhan.html#a76cc4d06698f12eab45dfc0c73c9365e", null ],

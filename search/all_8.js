@@ -40,7 +40,7 @@ var searchData=
   ['idhantypes_2ehpp_37',['IDHANTypes.hpp',['../da/d68/IDHANTypes_8hpp.html',1,'']]],
   ['import_2ecpp_38',['import.cpp',['../d3/d4b/import_8cpp.html',1,'']]],
   ['import_2ehpp_39',['import.hpp',['../dd/d87/import_8hpp.html',1,'']]],
-  ['importhydrus_40',['importHydrus',['../db/d2e/classidhan_1_1Database.html#a2ee61461c8229e556f04e34f4b0d2013',1,'idhan::Database']]],
+  ['importhydrus_40',['importHydrus',['../dc/dc7/classidhan_1_1ManagementConnection.html#abcbfc658ac2332326dc3697fb014a9dc',1,'idhan::ManagementConnection']]],
   ['importresponses_2ehpp_41',['ImportResponses.hpp',['../df/d1c/ImportResponses_8hpp.html',1,'']]],
   ['importtime_42',['ImportTime',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a1879511084784c3ad9d0ba1448408125',1,'idhan::hyapi']]],
   ['index_5fsql_43',['index_sql',['../db/d01/namespaceidhan_1_1db.html#a1993588097de14fcdbdd414523d0d0f5',1,'idhan::db']]],
@@ -49,7 +49,7 @@ var searchData=
   ['info_46',['Info',['../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3a087a97531195a0af0e9e35e49a629399',1,'idhan::logging']]],
   ['info_47',['info',['../dd/df9/APIDocs.html#tag_info',1,'GET /tag/tag_id}/info'],['../d6/d70/namespaceidhan_1_1logging.html#aa8ecb230be1041a9055d35b2ea4023be',1,'idhan::logging::info()'],['../d7/d03/namespaceidhan_1_1log.html#a8316bd7336920fe9ea2ea314fe06f798',1,'idhan::log::info()'],['../d2/d61/namespaceidhan_1_1log_1_1server.html#aa587df5fadb2a4dbfd980e689adf37b4',1,'idhan::log::server::info()']]],
   ['inital_5fquery_48',['inital_query',['../dc/dba/structidhan_1_1SearchBuilder.html#a5ce11a735b236c6064cea42c5fc37db5',1,'idhan::SearchBuilder']]],
-  ['initalsetup_49',['initalSetup',['../db/d2e/classidhan_1_1Database.html#a7513affc5be4459173730ec8f8318f88',1,'idhan::Database']]],
+  ['initalsetup_49',['initalSetup',['../dc/dc7/classidhan_1_1ManagementConnection.html#a341f66b2c238e85e9bf98c0aff3f7db6',1,'idhan::ManagementConnection']]],
   ['instance_50',['instance',['../d3/d67/classidhan_1_1IDHANClient.html#ad1bb050d93dff240cff27af74b800f89',1,'idhan::IDHANClient']]],
   ['invalid_5frecord_5fid_51',['INVALID_RECORD_ID',['../dd/dcf/namespaceidhan.html#a943caa84aefff067bbc40b48286aa040',1,'idhan']]],
   ['invoke_52',['invoke',['../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a94fb3c18fdf74d7d6bb5c897e19be89e',1,'idhan::api::IDHANAuth::invoke()'],['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#a5696247bb6074024c6134b2e0a5de827',1,'idhan::hyapi::HyAPIAuth::invoke()']]]

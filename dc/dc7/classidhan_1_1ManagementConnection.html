@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.12.0"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: idhan::Database Class Reference</title>
+    <title>IDHAN: idhan::ManagementConnection Class Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('db/d2e/classidhan_1_1Database.html','../../'); initResizable(true); });
+$(function(){initNavTree('dc/dc7/classidhan_1_1ManagementConnection.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -114,41 +114,46 @@ $(function(){initNavTree('db/d2e/classidhan_1_1Database.html','../../'); initRes
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pri-methods">Private Member Functions</a> &#124;
 <a href="#pri-attribs">Private Attributes</a> &#124;
-<a href="../../d1/d61/classidhan_1_1Database-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">idhan::Database Class Reference</div></div>
+<a href="../../d3/d6a/classidhan_1_1ManagementConnection-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">idhan::ManagementConnection Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p><code>#include &lt;<a class="el" href="../../d2/d88/Database_8hpp_source.html">Database.hpp</a>&gt;</code></p>
+<p>This class is used for the inital setup, migrations, and management of the idhan database.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../d9/d70/ManagementConnection_8hpp_source.html">ManagementConnection.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ac17a11dd76713aaeed586d9dd41241a7" id="r_ac17a11dd76713aaeed586d9dd41241a7"><td class="memItemLeft" align="right" valign="top">pqxx::connection &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac17a11dd76713aaeed586d9dd41241a7">conn</a> ()</td></tr>
-<tr class="separator:ac17a11dd76713aaeed586d9dd41241a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aac2d0cce3e2c131ee207720bcebfb6ee" id="r_aac2d0cce3e2c131ee207720bcebfb6ee"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aac2d0cce3e2c131ee207720bcebfb6ee">Database</a> (const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;arguments)</td></tr>
-<tr class="separator:aac2d0cce3e2c131ee207720bcebfb6ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1a1d0e38986411aa6b043202fe1489ae" id="r_a1a1d0e38986411aa6b043202fe1489ae"><td class="memItemLeft" align="right" valign="top">pqxx::connection &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1a1d0e38986411aa6b043202fe1489ae">conn</a> ()</td></tr>
+<tr class="separator:a1a1d0e38986411aa6b043202fe1489ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73053209304149e4010be8ecc6e3f84a" id="r_a73053209304149e4010be8ecc6e3f84a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a73053209304149e4010be8ecc6e3f84a">ManagementConnection</a> (const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;arguments)</td></tr>
+<tr class="separator:a73053209304149e4010be8ecc6e3f84a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
-<tr class="memitem:a7513affc5be4459173730ec8f8318f88" id="r_a7513affc5be4459173730ec8f8318f88"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7513affc5be4459173730ec8f8318f88">initalSetup</a> (pqxx::nontransaction &amp;nontransaction)</td></tr>
-<tr class="separator:a7513affc5be4459173730ec8f8318f88"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ee61461c8229e556f04e34f4b0d2013" id="r_a2ee61461c8229e556f04e34f4b0d2013"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2ee61461c8229e556f04e34f4b0d2013">importHydrus</a> (const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;connection_arguments)</td></tr>
-<tr class="separator:a2ee61461c8229e556f04e34f4b0d2013"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a341f66b2c238e85e9bf98c0aff3f7db6" id="r_a341f66b2c238e85e9bf98c0aff3f7db6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a341f66b2c238e85e9bf98c0aff3f7db6">initalSetup</a> (pqxx::nontransaction &amp;nontransaction)</td></tr>
+<tr class="separator:a341f66b2c238e85e9bf98c0aff3f7db6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abcbfc658ac2332326dc3697fb014a9dc" id="r_abcbfc658ac2332326dc3697fb014a9dc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abcbfc658ac2332326dc3697fb014a9dc">importHydrus</a> (const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;connection_arguments)</td></tr>
+<tr class="separator:abcbfc658ac2332326dc3697fb014a9dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
-<tr class="memitem:afd4e5ac20bcf355835b090f9d597b619" id="r_afd4e5ac20bcf355835b090f9d597b619"><td class="memItemLeft" align="right" valign="top">pqxx::connection&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd4e5ac20bcf355835b090f9d597b619">connection</a></td></tr>
-<tr class="separator:afd4e5ac20bcf355835b090f9d597b619"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a31b3fb2a3491923ebdb3dc75555c4753" id="r_a31b3fb2a3491923ebdb3dc75555c4753"><td class="memItemLeft" align="right" valign="top">pqxx::connection&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a31b3fb2a3491923ebdb3dc75555c4753">connection</a></td></tr>
+<tr class="separator:a31b3fb2a3491923ebdb3dc75555c4753"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="aac2d0cce3e2c131ee207720bcebfb6ee" name="aac2d0cce3e2c131ee207720bcebfb6ee"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aac2d0cce3e2c131ee207720bcebfb6ee">&#9670;&#160;</a></span>Database()</h2>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>This class is used for the inital setup, migrations, and management of the idhan database. </p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a73053209304149e4010be8ecc6e3f84a" name="a73053209304149e4010be8ecc6e3f84a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a73053209304149e4010be8ecc6e3f84a">&#9670;&#160;</a></span>ManagementConnection()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">idhan::Database::Database </td>
+          <td class="memname">idhan::ManagementConnection::ManagementConnection </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>arguments</em></span></td><td>)</td>
           <td></td>
@@ -159,8 +164,8 @@ Private Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ac17a11dd76713aaeed586d9dd41241a7" name="ac17a11dd76713aaeed586d9dd41241a7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac17a11dd76713aaeed586d9dd41241a7">&#9670;&#160;</a></span>conn()</h2>
+<a id="a1a1d0e38986411aa6b043202fe1489ae" name="a1a1d0e38986411aa6b043202fe1489ae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1a1d0e38986411aa6b043202fe1489ae">&#9670;&#160;</a></span>conn()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -169,7 +174,7 @@ Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">pqxx::connection &amp; idhan::Database::conn </td>
+          <td class="memname">pqxx::connection &amp; idhan::ManagementConnection::conn </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
@@ -184,8 +189,8 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a2ee61461c8229e556f04e34f4b0d2013" name="a2ee61461c8229e556f04e34f4b0d2013"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2ee61461c8229e556f04e34f4b0d2013">&#9670;&#160;</a></span>importHydrus()</h2>
+<a id="abcbfc658ac2332326dc3697fb014a9dc" name="abcbfc658ac2332326dc3697fb014a9dc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abcbfc658ac2332326dc3697fb014a9dc">&#9670;&#160;</a></span>importHydrus()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -194,7 +199,7 @@ Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void idhan::Database::importHydrus </td>
+          <td class="memname">void idhan::ManagementConnection::importHydrus </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>connection_arguments</em></span></td><td>)</td>
           <td></td>
@@ -209,8 +214,8 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a7513affc5be4459173730ec8f8318f88" name="a7513affc5be4459173730ec8f8318f88"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7513affc5be4459173730ec8f8318f88">&#9670;&#160;</a></span>initalSetup()</h2>
+<a id="a341f66b2c238e85e9bf98c0aff3f7db6" name="a341f66b2c238e85e9bf98c0aff3f7db6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a341f66b2c238e85e9bf98c0aff3f7db6">&#9670;&#160;</a></span>initalSetup()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -219,7 +224,7 @@ Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void idhan::Database::initalSetup </td>
+          <td class="memname">void idhan::ManagementConnection::initalSetup </td>
           <td>(</td>
           <td class="paramtype">pqxx::nontransaction &amp;</td>          <td class="paramname"><span class="paramname"><em>nontransaction</em></span></td><td>)</td>
           <td></td>
@@ -235,8 +240,8 @@ Private Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
-<a id="afd4e5ac20bcf355835b090f9d597b619" name="afd4e5ac20bcf355835b090f9d597b619"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afd4e5ac20bcf355835b090f9d597b619">&#9670;&#160;</a></span>connection</h2>
+<a id="a31b3fb2a3491923ebdb3dc75555c4753" name="a31b3fb2a3491923ebdb3dc75555c4753"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31b3fb2a3491923ebdb3dc75555c4753">&#9670;&#160;</a></span>connection</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -245,7 +250,7 @@ Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">pqxx::connection idhan::Database::connection</td>
+          <td class="memname">pqxx::connection idhan::ManagementConnection::connection</td>
         </tr>
       </table>
   </td>
@@ -258,15 +263,15 @@ Private Attributes</h2></td></tr>
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
-<li>IDHANServer/src/core/<a class="el" href="../../d2/d88/Database_8hpp_source.html">Database.hpp</a></li>
-<li>IDHANServer/src/core/<a class="el" href="../../d3/d48/Database_8cpp.html">Database.cpp</a></li>
+<li>IDHANServer/src/db/setup/<a class="el" href="../../d9/d70/ManagementConnection_8hpp_source.html">ManagementConnection.hpp</a></li>
+<li>IDHANServer/src/db/setup/<a class="el" href="../../dd/d4b/ManagementConnection_8cpp.html">ManagementConnection.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></li><li class="navelem"><a class="el" href="../../db/d2e/classidhan_1_1Database.html">Database</a></li>
+    <li class="navelem"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></li><li class="navelem"><a class="el" href="../../dc/dc7/classidhan_1_1ManagementConnection.html">ManagementConnection</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.12.0 </li>
   </ul>
 </div>

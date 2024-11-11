@@ -1,7 +1,6 @@
 var hierarchy =
 [
     [ "idhan::ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", null ],
-    [ "idhan::Database", "db/d2e/classidhan_1_1Database.html", null ],
     [ "idhan::import::FileRecord", "d7/d4b/structidhan_1_1import_1_1FileRecord.html", null ],
     [ "idhan::filesystem::FolderManager::FolderInfo", "d0/d2b/structidhan_1_1filesystem_1_1FolderManager_1_1FolderInfo.html", null ],
     [ "idhan::filesystem::FolderManager", "d0/dff/classidhan_1_1filesystem_1_1FolderManager.html", null ],
@@ -15,6 +14,7 @@ var hierarchy =
       [ "idhan::hyapi::HyAPIAuth", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html", null ]
     ] ],
     [ "idhan::IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", null ],
+    [ "idhan::ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", null ],
     [ "QObject", null, [
       [ "idhan::IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", null ]
     ] ],

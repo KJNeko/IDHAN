@@ -70,8 +70,8 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d6/d66/namespaceIDHAN.html",
-"dd/d87/import_8hpp.html#a0c86ae0be652ced439e81b471bd8189b"
+"d6/d49/classidhan_1_1api_1_1IDHANAuth.html",
+"dd/d4a/header-names_8hpp_source.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
