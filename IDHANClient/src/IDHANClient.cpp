@@ -109,13 +109,13 @@ IDHANClient::IDHANClient( const IDHANClientConfig& config ) : QObject( nullptr )
 }
 
 QFuture< TagID > IDHANClient::
-	createTag( std::string_view namespace_text, std::string_view subtag_text, QNetworkAccessManager& network )
+	createTag( const std::string& namespace_text, const std::string& subtag_text, QNetworkAccessManager& network )
 {
 	auto promise { std::make_shared< QPromise< TagID > >() };
 
 	QJsonObject object {};
-	object[ "namespace" ] = QString::fromStdString( std::string( namespace_text ) );
-	object[ "subtag" ] = QString::fromStdString( std::string( subtag_text ) );
+	object[ "namespace" ] = QString::fromStdString( namespace_text );
+	object[ "subtag" ] = QString::fromStdString( subtag_text );
 
 	QUrl url { m_url_template };
 	url.setPath( "/tag/create" );
@@ -157,12 +157,12 @@ QFuture< TagID > IDHANClient::
 	return promise->future();
 }
 
-QFuture< TagID > IDHANClient::createTag( const std::string_view namespace_text, const std::string_view subtag_text )
+QFuture< TagID > IDHANClient::createTag( const std::string& namespace_text, const std::string& subtag_text )
 {
 	return createTag( namespace_text, subtag_text, m_network );
 }
 
-QFuture< TagID > IDHANClient::createTag( std::string_view tag_text )
+QFuture< TagID > IDHANClient::createTag( const std::string& tag_text )
 {
 	QPromise< TagID > promise {};
 }

@@ -18,9 +18,10 @@ void IDHANApi::tagInfo( const drogon::HttpRequestPtr& request, ResponseFunction&
 	log::info( "/tag/{}/info", tag_id );
 }
 
-inline static thread_local std::unordered_map< std::string, NamespaceID > namespace_cache {};
+inline static std::recursive_mutex namespace_mtx {};
+inline static std::unordered_map< std::string, NamespaceID > namespace_cache {};
 
-drogon::Task< std::optional< NamespaceID > > searchNamespace( const std::string str, drogon::orm::DbClientPtr db )
+drogon::Task< std::optional< NamespaceID > > searchNamespace( const std::string& str, drogon::orm::DbClientPtr db )
 {
 	const auto result {
 		co_await db->execSqlCoro( "SELECT namespace_id FROM tag_namespaces WHERE namespace_text = $1", str )
@@ -31,7 +32,7 @@ drogon::Task< std::optional< NamespaceID > > searchNamespace( const std::string 
 	co_return result[ 0 ][ 0 ].as< NamespaceID >();
 }
 
-drogon::Task< NamespaceID > createNamespace( const std::string str, drogon::orm::DbClientPtr db )
+drogon::Task< NamespaceID > findOrCreateNamespace( const std::string& str, drogon::orm::DbClientPtr db )
 {
 	bool success { false };
 
@@ -53,17 +54,25 @@ drogon::Task< NamespaceID > createNamespace( const std::string str, drogon::orm:
 		}
 	}
 	while ( success != true );
+	std::unreachable();
 }
 
-drogon::Task< NamespaceID > getNamespaceID( std::string namespace_text, drogon::orm::DbClientPtr db )
+drogon::Task< NamespaceID > getNamespaceID( const std::string& namespace_text, drogon::orm::DbClientPtr db )
 {
-	if ( auto itter = namespace_cache.find( namespace_text ); itter != namespace_cache.end() )
 	{
-		log::debug( "Namespace '{}' cache hit: '{}'", namespace_text, itter->second );
-		co_return itter->second;
+		std::lock_guard guard { namespace_mtx };
+		if ( auto itter = namespace_cache.find( namespace_text ); itter != namespace_cache.end() )
+		{
+			co_return itter->second;
+		}
 	}
 
-	co_return co_await createNamespace( namespace_text, db );
+	const NamespaceID id { co_await findOrCreateNamespace( namespace_text, db ) };
+	{
+		std::lock_guard guard { namespace_mtx };
+		namespace_cache.insert( std::make_pair( namespace_text, id ) );
+	}
+	co_return id;
 }
 
 drogon::Task< NamespaceID > getNamespaceID( Json::Value namespace_c, drogon::orm::DbClientPtr db )
@@ -79,29 +88,67 @@ drogon::Task< NamespaceID > getNamespaceID( Json::Value namespace_c, drogon::orm
 	throw std::runtime_error( "create tag failed: namespace input was neither string or integer" );
 }
 
+drogon::Task< std::optional< SubtagID > > searchSubtag( const std::string& str, drogon::orm::DbClientPtr db )
+{
+	const auto result { co_await db->execSqlCoro( "SELECT subtag_id FROM tag_subtags WHERE subtag_text = $1", str ) };
+
+	if ( result.size() == 0 ) co_return std::nullopt;
+
+	co_return result[ 0 ][ 0 ].as< SubtagID >();
+}
+
+drogon::Task< SubtagID > findOrCreateSubtag( const std::string& str, drogon::orm::DbClientPtr db )
+{
+	bool success { false };
+
+	do {
+		const auto id_search { co_await searchSubtag( str, db ) };
+		if ( id_search.has_value() )
+		{
+			co_return id_search.value();
+		}
+
+		const auto id_creation { co_await db->execSqlCoro(
+			"INSERT INTO tag_subtags (subtag_text) VALUES ($1) ON CONFLICT(subtag_text) DO NOTHING RETURNING subtag_id",
+			str ) };
+
+		if ( id_creation.size() > 0 )
+		{
+			success = true;
+			co_return id_creation[ 0 ][ 0 ].as< SubtagID >();
+		}
+	}
+	while ( success != true );
+	std::unreachable();
+}
+
+drogon::Task< SubtagID > getSubtagID( const std::string& subtag_text, drogon::orm::DbClientPtr db )
+{
+	/*
+	{
+		std::lock_guard guard { subtag_mtx };
+		if ( auto itter = subtag_cache.find( subtag_text ); itter != subtag_cache.end() )
+		{
+			co_return itter->second;
+		}
+	}
+	*/
+
+	const auto id { co_await findOrCreateSubtag( subtag_text, db ) };
+	/*
+	{
+		std::lock_guard guard { subtag_mtx };
+		subtag_cache.insert( std::make_pair( subtag_text, id ) );
+	}
+	*/
+	co_return id;
+}
+
 drogon::Task< SubtagID > getSubtagID( Json::Value subtag_c, drogon::orm::DbClientPtr db )
 {
 	if ( subtag_c.isString() )
 	{
-		const auto subtag_text { subtag_c.asString() };
-		const auto search_result {
-			co_await db->execSqlCoro( "SELECT subtag_id FROM tag_subtags WHERE subtag_text = $1", subtag_text )
-		};
-
-		if ( search_result.size() > 0 )
-		{
-			co_return search_result[ 0 ][ 0 ].as< SubtagID >();
-		}
-		else
-		{
-			const auto create_result { co_await db->execSqlCoro(
-				"INSERT INTO tag_subtags (subtag_text) VALUES ($1) ON CONFLICT (subtag_text) DO UPDATE SET subtag_text = EXCLUDED.subtag_text RETURNING subtag_id",
-				subtag_text ) };
-
-			if ( create_result.size() == 0 ) throw std::runtime_error( "create tag failed" );
-
-			co_return create_result[ 0 ][ 0 ].as< SubtagID >();
-		}
+		co_return co_await getSubtagID( subtag_c.asString(), db );
 	}
 	else if ( subtag_c.isInt() )
 	{

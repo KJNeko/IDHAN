@@ -9,6 +9,7 @@
 #include <QObject>
 
 #include <cstdint>
+#include <queue>
 #include <string>
 
 #include "IDHANTypes.hpp"
@@ -58,11 +59,12 @@ class IDHANClient : public QObject
 		 */
 	IDHANClient( const IDHANClientConfig& config );
 
-	QFuture< TagID > createTag( std::string_view namespace_text, std::string_view subtag_text, QNetworkAccessManager& network );
+	QFuture< TagID >
+		createTag( const std::string& namespace_text, const std::string& subtag_text, QNetworkAccessManager& network );
 
 	// tags
-	QFuture< TagID > createTag( std::string_view namespace_text, std::string_view subtag_text );
-	QFuture< TagID > createTag( std::string_view tag_text );
+	QFuture< TagID > createTag( const std::string& namespace_text, const std::string& subtag_text );
+	QFuture< TagID > createTag( const std::string& tag_text );
 
   public slots:
 	void handleVersionInfo( QNetworkReply* reply );

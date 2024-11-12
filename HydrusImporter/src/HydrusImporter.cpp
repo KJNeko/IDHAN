@@ -27,32 +27,93 @@ void HydrusImporter::copyTags()
 	TransactionBase transaction { master_db };
 
 	std::shared_ptr synchronizer { std::make_shared< QFutureSynchronizer< TagID > >() };
-	std::counting_semaphore< 16 > sync_counter { 16 };
 
-	QFutureSynchronizer< void > thread_sync;
+	constexpr std::size_t max_threads { 128 };
+	const std::size_t thread_count { std::thread::hardware_concurrency() };
 
-	std::size_t counter { 0 };
+	std::counting_semaphore< max_threads > sync_counter { std::thread::hardware_concurrency() };
 
-	std::size_t pair_size { 0 };
-	std::vector< std::pair< std::string, std::string > > tag_pairs {};
+	QFutureSynchronizer< void > thread_sync {};
+
+	constexpr std::size_t group_size { 4'000 };
+
+	using TagPairGroup = std::vector< std::pair< std::string, std::string > >;
+
+	std::mutex mtx {};
+	std::queue< TagPairGroup > group_queue {};
+	for ( std::size_t i = 0; i < thread_count + 1; ++i )
+	{
+		group_queue.emplace().resize( group_size );
+	}
+
+	auto getGroup = [ &mtx, &group_queue ]
+	{
+		std::lock_guard guard { mtx };
+		auto group { std::move( group_queue.front() ) };
+		group_queue.pop();
+		return group;
+	};
+
+	TagPairGroup tag_pairs { getGroup() };
+
+	const auto start { std::chrono::steady_clock::now() };
+	std::atomic< std::size_t > processed { 0 };
+
+	spdlog::info( "Getting tag count" );
+	std::size_t tag_count { 0 };
+	transaction << "SELECT count(*) FROM tags" >> tag_count;
+	spdlog::info( "Tag count: {}", tag_count );
+
+	auto printProcessed = [ &processed, &start, &tag_count ]()
+	{
+		const auto end { std::chrono::steady_clock::now() };
+		const auto duration { end - start };
+
+		std::size_t value { processed };
+		spdlog::info(
+			"Processed {} tags since start: {}",
+			value,
+			std::chrono::duration_cast< std::chrono::seconds >( duration ) );
+
+		const std::chrono::duration< double > s_duration { end - start };
+
+		const auto time_per_item { s_duration / value };
+
+		spdlog::info(
+			"Rate: {}/s, ETA: {}, (Total time: {})",
+			static_cast< std::size_t >( static_cast< double >( value ) / s_duration.count() ),
+			std::chrono::duration_cast< std::chrono::minutes >( time_per_item * ( tag_count - value ) ),
+			std::chrono::duration_cast< std::chrono::minutes >( time_per_item * tag_count ) );
+	};
+
+	std::size_t current_id { 0 };
+
+	QThreadPool pool {};
+	pool.setMaxThreadCount( thread_count );
 
 	transaction
 			<< "SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags ORDER BY subtag_id ASC"
 		>> [ & ]( const std::string_view namespace_text, const std::string_view subtag_text )
 	{
-		++counter;
-		pair_size += namespace_text.size();
-		pair_size += subtag_text.size();
+		tag_pairs[ current_id ].first = namespace_text;
+		tag_pairs[ current_id ].second = subtag_text;
+		current_id++;
 
-		tag_pairs.emplace_back( std::make_pair( namespace_text, subtag_text ) );
-
-		// 16KB assuming L1 cache for each core.
-		if ( tag_pairs.size() > 50'000 )
+		if ( current_id >= group_size )
 		{
-			pair_size = 0;
+			current_id = 0;
 			sync_counter.acquire();
+
 			thread_sync.addFuture( QtConcurrent::run(
-				[ &sync_counter, client = m_client, data = std::move( tag_pairs ) ]()
+				&pool,
+				[ &printProcessed,
+			      &processed,
+			      group_size,
+			      &sync_counter,
+			      client = m_client,
+			      data = std::move( tag_pairs ),
+			      &mtx,
+			      &group_queue ]()
 				{
 					QNetworkAccessManager network {};
 					QEventLoop loop;
@@ -68,14 +129,21 @@ void HydrusImporter::copyTags()
 					watcher.setFuture( QtConcurrent::run( [ &sync ]() { sync.waitForFinished(); } ) );
 
 					loop.exec();
+					{
+						std::lock_guard guard { mtx };
+						group_queue.push( std::move( data ) );
+					}
 					sync_counter.release();
+					processed += group_size;
+					printProcessed();
 				} ) );
-		}
 
-		if ( counter % 100'000 == 0 ) spdlog::info( "Imported {} tags so far", counter );
+			tag_pairs = getGroup();
+		}
 	};
 
 	thread_sync.addFuture( QtConcurrent::run( [ sync = std::move( synchronizer ) ]() { sync->waitForFinished(); } ) );
+	thread_sync.waitForFinished();
 }
 
 HydrusImporter::HydrusImporter( const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client ) :
