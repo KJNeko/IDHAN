@@ -117,16 +117,15 @@ void HydrusImporter::copyTags()
 				{
 					QNetworkAccessManager network {};
 					QEventLoop loop;
-					QFutureSynchronizer< TagID > sync {};
 
-					for ( const auto& [ nspace, stag ] : data )
-						sync.addFuture( client->createTag( nspace, stag, network ) );
+					QFutureWatcher< std::vector< TagID > > data_watcher {};
+					data_watcher.setFuture( client->createTags( data, network ) );
 
 					// create watcher to watch until the sync is finished
 					QFutureWatcher< void > watcher {};
 					QObject::connect( &watcher, &QFutureWatcher< void >::finished, &loop, &QEventLoop::quit );
 
-					watcher.setFuture( QtConcurrent::run( [ &sync ]() { sync.waitForFinished(); } ) );
+					watcher.setFuture( QtConcurrent::run( [ & ]() { data_watcher.waitForFinished(); } ) );
 
 					loop.exec();
 					{

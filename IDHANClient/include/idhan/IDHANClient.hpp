@@ -58,6 +58,8 @@ class IDHANClient : public QObject
 		 * @param config
 		 */
 	IDHANClient( const IDHANClientConfig& config );
+	QFuture< std::vector< TagID > >
+		createTags( const std::vector< std::pair< std::string, std::string > >& tags, QNetworkAccessManager& network );
 
 	QFuture< TagID >
 		createTag( const std::string& namespace_text, const std::string& subtag_text, QNetworkAccessManager& network );
