@@ -18,80 +18,79 @@ void IDHANApi::tagInfo( const drogon::HttpRequestPtr& request, ResponseFunction&
 	log::info( "/tag/{}/info", tag_id );
 }
 
-std::variant< NamespaceID, std::string > getNamespaceComponent( const Json::Value& value )
-{}
+inline static thread_local std::unordered_map< std::string, NamespaceID > namespace_cache {};
 
-drogon::Task< drogon::HttpResponsePtr > IDHANApi::createTag( drogon::HttpRequestPtr request )
+drogon::Task< std::optional< NamespaceID > > searchNamespace( const std::string str, drogon::orm::DbClientPtr db )
 {
-	log::debug( "/tag/create" );
+	const auto result {
+		co_await db->execSqlCoro( "SELECT namespace_id FROM tag_namespaces WHERE namespace_text = $1", str )
+	};
 
-	if ( request == nullptr )
+	if ( result.size() == 0 ) co_return std::nullopt;
+
+	co_return result[ 0 ][ 0 ].as< NamespaceID >();
+}
+
+drogon::Task< NamespaceID > createNamespace( const std::string str, drogon::orm::DbClientPtr db )
+{
+	bool success { false };
+
+	do {
+		const auto id_search { co_await searchNamespace( str, db ) };
+		if ( id_search.has_value() )
+		{
+			co_return id_search.value();
+		}
+
+		const auto id_creation { co_await db->execSqlCoro(
+			"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) ON CONFLICT(namespace_text) DO NOTHING RETURNING namespace_id",
+			str ) };
+
+		if ( id_creation.size() > 0 )
+		{
+			success = true;
+			co_return id_creation[ 0 ][ 0 ].as< NamespaceID >();
+		}
+	}
+	while ( success != true );
+}
+
+drogon::Task< NamespaceID > getNamespaceID( std::string namespace_text, drogon::orm::DbClientPtr db )
+{
+	if ( auto itter = namespace_cache.find( namespace_text ); itter != namespace_cache.end() )
 	{
-		log::error( "/tag/create: null request" );
+		log::debug( "Namespace '{}' cache hit: '{}'", namespace_text, itter->second );
+		co_return itter->second;
 	}
 
-	// we should have a body
-	const auto input_json { request->jsonObject() };
+	co_return co_await createNamespace( namespace_text, db );
+}
 
-	if ( input_json == nullptr )
-	{
-		log::error( "/tag/create: no json data" );
-	}
-
-	const auto& value { *input_json };
-
-	const auto namespace_c { value[ "namespace" ] };
-	const auto subtag_c { value[ "subtag" ] };
-
-	NamespaceID namespace_id { std::numeric_limits< NamespaceID >::quiet_NaN() };
-	SubtagID subtag_id { std::numeric_limits< SubtagID >::quiet_NaN() };
-
-	auto db { drogon::app().getDbClient() };
-
+drogon::Task< NamespaceID > getNamespaceID( Json::Value namespace_c, drogon::orm::DbClientPtr db )
+{
 	if ( namespace_c.isString() )
 	{
-		const auto namespace_text { namespace_c.asString() };
-		const auto search_result {
-			co_await db
-				->execSqlCoro( "SELECT namespace_id FROM tag_namespaces WHERE namespace_text = $1", namespace_text )
-		};
-
-		if ( search_result.size() > 0 )
-		{
-			log::debug( "createTag: Found namespace_id: {}", namespace_id );
-			namespace_id = search_result[ 0 ][ 0 ].as< NamespaceID >();
-		}
-		else
-		{
-			const auto create_result { co_await db->execSqlCoro(
-				"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) ON CONFLICT (namespace_text) DO UPDATE SET namespace_text = EXCLUDED.namespace_text RETURNING namespace_id",
-				namespace_text ) };
-
-			if ( create_result.size() == 0 ) throw std::runtime_error( "create tag failed" );
-
-			log::debug( "createTag: Created namespace: {}:{}", namespace_id, namespace_text );
-
-			namespace_id = create_result[ 0 ][ 0 ].as< NamespaceID >();
-		}
+		co_return co_await getNamespaceID( namespace_c.asString(), db );
 	}
 	else if ( namespace_c.isInt() )
 	{
-		namespace_id = namespace_c.as< NamespaceID >();
+		co_return namespace_c.as< NamespaceID >();
 	}
-	else
-		throw std::runtime_error( "create tag failed: namespace input was neither string or integer" );
+	throw std::runtime_error( "create tag failed: namespace input was neither string or integer" );
+}
 
+drogon::Task< SubtagID > getSubtagID( Json::Value subtag_c, drogon::orm::DbClientPtr db )
+{
 	if ( subtag_c.isString() )
 	{
 		const auto subtag_text { subtag_c.asString() };
-		log::debug( "Subtag input was string : {}", subtag_text );
 		const auto search_result {
 			co_await db->execSqlCoro( "SELECT subtag_id FROM tag_subtags WHERE subtag_text = $1", subtag_text )
 		};
 
 		if ( search_result.size() > 0 )
 		{
-			subtag_id = search_result[ 0 ][ 0 ].as< SubtagID >();
+			co_return search_result[ 0 ][ 0 ].as< SubtagID >();
 		}
 		else
 		{
@@ -101,32 +100,66 @@ drogon::Task< drogon::HttpResponsePtr > IDHANApi::createTag( drogon::HttpRequest
 
 			if ( create_result.size() == 0 ) throw std::runtime_error( "create tag failed" );
 
-			log::debug( "createTag: Created subtag: {}:{}", subtag_id, subtag_text );
-
-			subtag_id = create_result[ 0 ][ 0 ].as< SubtagID >();
+			co_return create_result[ 0 ][ 0 ].as< SubtagID >();
 		}
 	}
 	else if ( subtag_c.isInt() )
 	{
-		log::debug( "Subtag input was integer : {}", subtag_c.as< SubtagID >() );
-		subtag_id = subtag_c.as< SubtagID >();
+		co_return subtag_c.as< SubtagID >();
 	}
-	else
-		throw std::runtime_error( "create tag failed: subtag input was neither string or integer" );
+	throw std::runtime_error( "create tag failed: subtag input was neither string or integer" );
+}
+
+drogon::Task< drogon::HttpResponsePtr > IDHANApi::createTag( drogon::HttpRequestPtr request )
+{
+	if ( request == nullptr )
+	{
+		log::error( "/tag/create: null request" );
+		throw std::runtime_error( "Null request" );
+	}
+
+	// we should have a body
+	const auto input_json { request->jsonObject() };
+
+	if ( input_json == nullptr )
+	{
+		log::error( "/tag/create: no json data" );
+		throw std::runtime_error( "No json data" );
+	}
+
+	const auto& value { *input_json };
+
+	auto namespace_c { value[ "namespace" ] };
+	auto subtag_c { value[ "subtag" ] };
+
+	if ( auto tag_data = value[ "tag" ]; tag_data.isString() )
+	{
+		// split the tag
+		const std::string str { tag_data.asString() };
+		if ( !str.contains( ':' ) )
+		{
+			subtag_c = value[ "subtag" ].asString();
+		}
+		else
+		{
+			const auto [ n, s ] = tags::split( str );
+			namespace_c = std::move( n );
+			subtag_c = std::move( s );
+		}
+	}
+	else if ( namespace_c.isNull() && subtag_c.isNull() )
+	{
+		co_return drogon::HttpResponse::newNotFoundResponse();
+	}
+
+	auto db { drogon::app().getDbClient() };
+
+	const NamespaceID namespace_id { co_await getNamespaceID( namespace_c, db ) };
+	const SubtagID subtag_id { co_await getSubtagID( subtag_c, db ) };
 
 	// We now have both namespace and subtag ids, So we can try searching for it.
 	const auto search_result { co_await db->execSqlCoro(
 		"SELECT tag_id FROM tags WHERE namespace_id = $1 AND subtag_id = $2", namespace_id, subtag_id ) };
-
-	if ( std::isnan( namespace_id ) )
-	{
-		throw std::runtime_error( "create tag failed: namespace was not set" );
-	}
-
-	if ( std::isnan( subtag_id ) )
-	{
-		throw std::runtime_error( "create tag failed: subtag_id is nan" );
-	}
 
 	Json::Value json {};
 

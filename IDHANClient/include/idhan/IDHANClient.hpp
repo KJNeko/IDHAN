@@ -33,6 +33,8 @@ class IDHANClient : public QObject
 	QNetworkAccessManager m_network;
 	std::size_t connection_attempts { 0 };
 
+	std::unordered_map< std::thread::id, std::shared_ptr< QNetworkAccessManager > > m_network_managers;
+
 	//! Queries the server version, Returns true if successful
 	void attemptQueryVersion();
 
@@ -56,8 +58,10 @@ class IDHANClient : public QObject
 		 */
 	IDHANClient( const IDHANClientConfig& config );
 
+	QFuture< TagID > createTag( std::string_view namespace_text, std::string_view subtag_text, QNetworkAccessManager& network );
+
 	// tags
-	QFuture< TagID > createTag( const std::string& namespace_text, const std::string& subtag_text );
+	QFuture< TagID > createTag( std::string_view namespace_text, std::string_view subtag_text );
 	QFuture< TagID > createTag( std::string_view tag_text );
 
   public slots:

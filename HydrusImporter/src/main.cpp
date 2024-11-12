@@ -8,14 +8,12 @@
 #include <filesystem>
 #include <iostream>
 
+#include "HydrusImporter.hpp"
 #include "NET_CONSTANTS.hpp"
 #include "idhan/IDHANClient.hpp"
 
 int main( int argc, char** argv )
 {
-	QCoreApplication app { argc, argv };
-	app.setApplicationName( "1.0" );
-
 	QCommandLineParser parser {};
 	parser.addHelpOption();
 	parser.addVersionOption();
@@ -32,6 +30,9 @@ int main( int argc, char** argv )
 
 	parser.addOptions( { idhan_host, idhan_port } );
 
+	QCoreApplication app { argc, argv };
+	app.setApplicationName( "1.0" );
+
 	parser.process( app );
 
 	const auto pos_args { parser.positionalArguments() };
@@ -42,15 +43,15 @@ int main( int argc, char** argv )
 		std::terminate();
 	}
 
-	const std::filesystem::path path { pos_args[ 0 ].toStdString() };
-	if ( !std::filesystem::exists( path ) )
+	const std::filesystem::path hydrus_path { pos_args[ 0 ].toStdString() };
+	if ( !std::filesystem::exists( hydrus_path ) )
 	{
 		std::cout << "Path supplied does not exist" << std::endl;
 		parser.showHelp();
 		std::terminate();
 	}
 
-	if ( !std::filesystem::is_directory( path ) )
+	if ( !std::filesystem::is_directory( hydrus_path ) )
 	{
 		std::cout << "Path is not a directory" << std::endl;
 		parser.showHelp();
@@ -62,11 +63,11 @@ int main( int argc, char** argv )
 	config.hostname = parser.value( idhan_host ).toStdString();
 	config.port = parser.value( idhan_port ).toUShort();
 
-	idhan::IDHANClient client { config };
+	std::shared_ptr< idhan::IDHANClient > client { std::make_shared< idhan::IDHANClient >( config ) };
 
-	auto future { client.createTag( "character", "toujou koneko" ) };
+	auto hydrus_importer { std::make_shared< idhan::hydrus::HydrusImporter >( hydrus_path, client ) };
 
-	app.exec();
+	hydrus_importer->copyHydrusTags();
 
-	return EXIT_SUCCESS;
+	return app.exec();
 }

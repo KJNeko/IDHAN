@@ -52,7 +52,7 @@ class IDHANApi : public drogon::HttpController< IDHANApi >
 	ADD_METHOD_TO( IDHANApi::tagInfo, "/tag/info?tag_id={1}" );
 	ADD_METHOD_TO( IDHANApi::tagInfo, "/tag/info?tag_ids={1}" );
 
-	ADD_METHOD_TO( IDHANApi::createTag, "/tag/create", drogon::Post );
+	ADD_METHOD_TO( IDHANApi::createTag, "/tag/create" );
 
 	METHOD_LIST_END
 };

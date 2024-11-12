@@ -10,29 +10,23 @@
 
 namespace idhan::hydrus
 {
-	class HydrusImporter
-	{
-		sqlite3* master_db { nullptr };
-		sqlite3* client_db { nullptr };
-		sqlite3* mappings_db { nullptr };
+class HydrusImporter
+{
+	sqlite3* master_db { nullptr };
+	sqlite3* client_db { nullptr };
+	sqlite3* mappings_db { nullptr };
+	std::shared_ptr< IDHANClient > m_client;
 
-		void copyNamespaces();
-		void copySubtags();
-		void copyTags();
-		void copyFiles( std::size_t hy_service_id );
+	void copyTags();
+	void copyFiles( std::size_t hy_service_id );
 
-	  public:
+  public:
 
-		HydrusImporter() = delete;
-		HydrusImporter( const std::filesystem::path& path );
-		~HydrusImporter();
+	HydrusImporter() = delete;
+	HydrusImporter( const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client );
+	~HydrusImporter();
 
-		void copyHydrusTags()
-		{
-			copyNamespaces();
-			copySubtags();
-			copyTags();
-		}
-	};
+	void copyHydrusTags() { copyTags(); }
+};
 
 } // namespace idhan::hydrus

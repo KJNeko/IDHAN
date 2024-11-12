@@ -6,6 +6,7 @@
 
 #include <fixme.hpp>
 
+#include "../../dependencies/drogon/lib/src/HttpAppFrameworkImpl.h"
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
 #include "api/helpers/ResponseCallback.hpp"
@@ -45,14 +46,11 @@ void ServerContext::setupCORSSupport()
 		} );
 }
 
-void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr&, ResponseFunction&& callback )
+void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
-	log::error( "Unhandled exception got to drogon! What: {}", e.what() );
+	log::error( "Unhandled exception got to drogon! In request: {} What: {}", request->query(), e.what() );
 
-	// 500
-	const auto response { drogon::HttpResponse::newHttpResponse( drogon::k500InternalServerError, drogon::CT_NONE ) };
-
-	callback( response );
+	drogon::defaultExceptionHandler( e, request, std::move( callback ) );
 }
 
 ServerContext::ServerContext( const ConnectionArguments& arguments ) :

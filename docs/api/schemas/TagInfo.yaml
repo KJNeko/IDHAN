@@ -2,7 +2,7 @@ type: object
 properties:
   tag_id:
     type: integer
-  namespace:
-    $ref: './TagNamespace.yaml'
-  subtag:
-    $ref: './TagSubtag.yaml'
+  namespace_id:
+    type: integer
+  subtag_id:
+    type: integer

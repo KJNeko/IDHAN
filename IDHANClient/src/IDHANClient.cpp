@@ -7,6 +7,8 @@
 #include <moc_IDHANClient.cpp>
 
 #include <QCoreApplication>
+#include <QHttpMultiPart>
+#include <QHttpPart>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
@@ -27,8 +29,6 @@ void IDHANClient::attemptQueryVersion()
 
 	QUrl url { m_url_template };
 	url.setPath( "/version" );
-
-	qDebug() << url;
 
 	request.setUrl( url );
 
@@ -56,6 +56,15 @@ void IDHANClient::attemptQueryVersion()
 				error( "Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
 
 			reply->deleteLater();
+
+			std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+			connection_attempts += 1;
+			if ( connection_attempts > 8 )
+			{
+				std::terminate();
+			}
+
+			attemptQueryVersion();
 		} );
 }
 
@@ -71,7 +80,7 @@ IDHANClient& IDHANClient::instance()
 
 IDHANClient::IDHANClient( const IDHANClientConfig& config ) : QObject( nullptr ), m_config( config )
 {
-	std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+	std::this_thread::sleep_for( std::chrono::seconds( 4 ) );
 	spdlog::info( "Hostname: {}", m_config.hostname );
 	spdlog::info( "Port: {}", m_config.port );
 	if ( m_config.hostname.empty() ) throw std::runtime_error( "hostname must not be empty" );
@@ -99,41 +108,45 @@ IDHANClient::IDHANClient( const IDHANClientConfig& config ) : QObject( nullptr )
 	attemptQueryVersion();
 }
 
-QFuture< TagID > IDHANClient::createTag( const std::string& namespace_text, const std::string& subtag_text )
+QFuture< TagID > IDHANClient::
+	createTag( std::string_view namespace_text, std::string_view subtag_text, QNetworkAccessManager& network )
 {
 	auto promise { std::make_shared< QPromise< TagID > >() };
 
 	QJsonObject object {};
-	object[ "namespace" ] = QString::fromStdString( namespace_text );
-	object[ "subtag" ] = QString::fromStdString( subtag_text );
+	object[ "namespace" ] = QString::fromStdString( std::string( namespace_text ) );
+	object[ "subtag" ] = QString::fromStdString( std::string( subtag_text ) );
 
 	QUrl url { m_url_template };
 	url.setPath( "/tag/create" );
 
-	qDebug() << url;
+	const auto json_str_thing { "application/json" };
 
-	QNetworkRequest request {};
+	QNetworkRequest request { url };
+	request.setHeader( QNetworkRequest::ContentTypeHeader, json_str_thing );
+	request.setRawHeader( "accept", json_str_thing );
 	addKeyHeader( request );
 
-	QJsonDocument doc { object };
+	const QJsonDocument doc { object };
 
-	auto response { m_network.post( request, doc.toJson() ) };
+	const auto post_data { std::make_shared< QByteArray >( doc.toJson() ) };
 
-	auto future { promise->future() };
+	auto response { network.post( request, *post_data ) };
 
-	auto handleResponse = [ promise, response ]()
+	auto handleResponse = [ promise, response, post_data ]()
 	{
 		// reply will give us a body of json
 		const auto data { response->readAll() };
-
-		qDebug() << data;
+		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
 
 		promise->finish();
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise, response ]( QNetworkReply::NetworkError error )
+	auto handleError = [ promise, response, post_data ]( QNetworkReply::NetworkError error )
 	{
+		spdlog::error( "Error: {}", response->errorString() );
+
 		promise->finish();
 		response->deleteLater();
 	};
@@ -141,7 +154,12 @@ QFuture< TagID > IDHANClient::createTag( const std::string& namespace_text, cons
 	connect( response, &QNetworkReply::finished, handleResponse );
 	connect( response, &QNetworkReply::errorOccurred, handleError );
 
-	return future;
+	return promise->future();
+}
+
+QFuture< TagID > IDHANClient::createTag( const std::string_view namespace_text, const std::string_view subtag_text )
+{
+	return createTag( namespace_text, subtag_text, m_network );
 }
 
 QFuture< TagID > IDHANClient::createTag( std::string_view tag_text )

@@ -10,6 +10,11 @@ post:
         schema:
           $ref: '../../schemas/TagSet.yaml'
         examples:
+          SingleText:
+            summary: Single text string
+            description: This is for ease of use. The internals will split the tag on the `:` character, Or if there is no `:` character it will treat the entire tag as a subtag component with a blank namespace.
+            value:
+              tag: "character:toujou koneko"
           TextWNamespace:
             summary: Text with namespace
             description: This shows an example of a tag that would look like "`character`:`toujou koneko`"
