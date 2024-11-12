@@ -75,7 +75,7 @@ var namespaceidhan =
     [ "checkContentType", "dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824", null ],
     [ "createRecord", "dd/dcf/namespaceidhan.html#a6082d5125704348419620e38c65b1391", null ],
     [ "createRecords", "dd/dcf/namespaceidhan.html#acf5ed3e5c28ee48585b70505ed8d7f49", null ],
-    [ "exceptionHandler", "dd/dcf/namespaceidhan.html#a0c33ed4d742238b8197513d9cee1c23c", null ],
+    [ "exceptionHandler", "dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694", null ],
     [ "fixme", "dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e", null ],
     [ "getRecordID", "dd/dcf/namespaceidhan.html#a887e40e1f1d81f9517f6792e8fe83202", null ],
     [ "getRecordIDs", "dd/dcf/namespaceidhan.html#a76cc4d06698f12eab45dfc0c73c9365e", null ],

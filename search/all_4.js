@@ -14,6 +14,6 @@ var searchData=
   ['error_11',['Error',['../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3a079213b47315cd7ad0765eb9f7d54596',1,'idhan::logging']]],
   ['error_12',['error',['../d6/d70/namespaceidhan_1_1logging.html#a8cbd24ea5404523d787b3c933a25257e',1,'idhan::logging::error()'],['../d7/d03/namespaceidhan_1_1log.html#a6ec3544d0542c8175f499735a47f6afc',1,'idhan::log::error()']]],
   ['ethumbnailaccess_13',['eThumbnailAccess',['../dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cae5e3626cfca65531a46e0bc61f8efda5',1,'idhan']]],
-  ['exceptionhandler_14',['exceptionHandler',['../dd/dcf/namespaceidhan.html#a0c33ed4d742238b8197513d9cee1c23c',1,'idhan']]],
+  ['exceptionhandler_14',['exceptionHandler',['../dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694',1,'idhan']]],
   ['extension_5fmap_15',['extension_map',['../d4/d9c/namespaceidhan_1_1mime.html#a05200597264e8188c7f729940afca14b',1,'idhan::mime']]]
 ];
