@@ -62,7 +62,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANApi::info( drogon::HttpRequestPtr r
 
 		if ( !result[ 0 ][ 1 ].isNull() )
 		{
-			const auto& color { result[ 0 ][ 1 ].as< std::vector< std::byte > >() };
+			const auto& color { result[ 0 ][ 1 ].as< std::vector< char > >() };
 
 			//TODO: hex
 			root[ "color" ][ "hex" ] = "FIXME";
