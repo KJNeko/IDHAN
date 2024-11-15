@@ -7,16 +7,13 @@
 #include <ranges>
 
 #include "IDHANApi.hpp"
-#include "core/tags.hpp"
 #include "logging/log.hpp"
+#include "splitTag.hpp"
 
 namespace idhan::api
 {
 
-void IDHANApi::tagInfo( const drogon::HttpRequestPtr& request, ResponseFunction&& callback, TagID tag_id )
-{
-	log::info( "/tag/{}/info", tag_id );
-}
+
 
 inline static std::recursive_mutex namespace_mtx {};
 inline static std::unordered_map< std::string, NamespaceID > namespace_cache {};
@@ -180,8 +177,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANApi::createTagRouter( drogon::HttpR
 
 drogon::Task< drogon::HttpResponsePtr > IDHANApi::createBatchedTag( drogon::HttpRequestPtr request )
 {
-	std::vector< std::pair< std::future< NamespaceID >, std::future< SubtagID > > > futures {};
-
 	if ( request == nullptr )
 	{
 		log::error( "/tag/create: null request" );
@@ -202,6 +197,9 @@ drogon::Task< drogon::HttpResponsePtr > IDHANApi::createBatchedTag( drogon::Http
 	Json::Value out {};
 
 	int array_idx { 0 };
+
+	std::size_t tag_count { 0 };
+	std::vector< std::pair< std::future< NamespaceID >, std::future< SubtagID > > > futures {};
 
 	for ( const Json::Value& value : json_array )
 	{

@@ -31,7 +31,14 @@ post:
             value:
               namespace: 0
               subtag: 0
-
+          array:
+            summary: Array of tags
+            description: This shows an example of how you can use an tag objects.
+            value:
+              - namespace: "character"
+                subtag: "toujou koneko"
+              - namespace: "series"
+                subtag: "Highschool DxD"
 
   responses:
     "200":
@@ -40,3 +47,15 @@ post:
         application/json:
           schema:
             $ref: '../../schemas/TagInfo.yaml'
+          examples:
+            singlesent:
+              summary: "Single tag in request (non array)"
+              description: "Single tag in request"
+              value:
+                tag_id: 0
+            array:
+              summary: "Array of tags sent"
+              description: "Even if 1 tag is present in the array, The return will always be an array if you send the request as an array"
+              value:
+                - tag_id: 0
+                - tag_id: 1

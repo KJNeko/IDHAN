@@ -24,16 +24,26 @@ paths:
     $ref: './paths/version.yaml'
   /tag/create:
     $ref: './paths/tags/create.yaml'
+  /tag/search:
+    $ref: './paths/tags/search.yaml'
   /tag/{tag_id}/info:
     $ref: './paths/tags/info.yaml'
   /tag/autocomplete:
     $ref: './paths/tags/autocomplete.yaml'
-  /file/{file_id}/add_tag:
-    $ref: './paths/file/add_tag.yaml'
-  /file/{file_id}/tags:
+  /file/create:
+    $ref: './paths/file/create.yaml'
+  /file/{file_id}/tags/add:
+    $ref: './paths/file/tags/add.yaml'
+  /file/{file_id}/tags/remove:
+    $ref: './paths/file/tags/remove.yaml'
+  /file/{file_id}/tags/info:
     $ref: './paths/file/tags.yaml'
   /file/{file_id}/info:
     $ref: './paths/file/info.yaml'
+  /file/{file_id}:
+    $ref: './paths/file/file.yaml'
+  /file/search:
+    $ref: './paths/file/search.yaml'
 
 components:
   schemas:

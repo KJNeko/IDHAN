@@ -35,7 +35,11 @@ class IDHANApi : public drogon::HttpController< IDHANApi >
 
 	void version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
 
-	void tagInfo( const drogon::HttpRequestPtr& request, ResponseFunction&& callback, TagID tag_id );
+	drogon::Task< drogon::HttpResponsePtr > info( drogon::HttpRequestPtr request, TagID tag_id );
+
+	drogon::Task< drogon::HttpResponsePtr > search( drogon::HttpRequestPtr request, std::string tag_text );
+
+	drogon::Task< drogon::HttpResponsePtr > autocomplete( drogon::HttpRequestPtr request, std::string tag_id );
 
 	drogon::Task< drogon::HttpResponsePtr > createSingleTag( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > createBatchedTag( drogon::HttpRequestPtr request );
@@ -50,9 +54,12 @@ class IDHANApi : public drogon::HttpController< IDHANApi >
 
 	ADD_METHOD_TO( IDHANApi::version, "/version" );
 
-	ADD_METHOD_TO( IDHANApi::tagInfo, "/tag/{tag_id}/info" );
-	ADD_METHOD_TO( IDHANApi::tagInfo, "/tag/info?tag_id={1}" );
-	ADD_METHOD_TO( IDHANApi::tagInfo, "/tag/info?tag_ids={1}" );
+	ADD_METHOD_TO( IDHANApi::info, "/tag/{tag_id}/info" );
+	ADD_METHOD_TO( IDHANApi::info, "/tag/info?tag_id={1}" );
+	ADD_METHOD_TO( IDHANApi::info, "/tag/info?tag_ids={1}" );
+
+	ADD_METHOD_TO( IDHANApi::search, "/tag/search?tag={1}" );
+	// ADD_METHOD_TO( IDHANApi::autocomplete, "/tag/autocomplete?tag={1}" );
 
 	ADD_METHOD_TO( IDHANApi::createTagRouter, "/tag/create" );
 

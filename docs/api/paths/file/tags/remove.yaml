@@ -1,0 +1,5 @@
+delete:
+  tags:
+    - tags
+    - files
+  summary: Removes a tag from a given file

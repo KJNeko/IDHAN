@@ -1,0 +1,20 @@
+get:
+  tags:
+    - tags
+  summary: Searches for a given tag id from a given text
+  parameters:
+    - in: query
+      name: tag
+      required: true
+  responses:
+    200:
+      description: Returns a json object with a flag indicating if it was found, if so. the tag_id field is also present
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              found:
+                type: boolean
+              tag_id:
+                type: integer

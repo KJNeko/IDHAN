@@ -1,5 +1,7 @@
 get:
   tags:
-    - tags
     - files
   summary: Returns information about a file
+  parameters:
+    - $ref: '../../parameters/file_id.yaml'
+

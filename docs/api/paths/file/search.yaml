@@ -1,0 +1,13 @@
+get:
+  tags:
+    - files
+  summary: Searches for a given file using hashes.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            sha256:
+              $ref: '../../schemas/SHA256.yaml'

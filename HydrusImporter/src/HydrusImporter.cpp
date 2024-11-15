@@ -35,7 +35,7 @@ void HydrusImporter::copyTags()
 
 	QFutureSynchronizer< void > thread_sync {};
 
-	constexpr std::size_t group_size { 4'000 };
+	constexpr std::size_t group_size { 500 };
 
 	using TagPairGroup = std::vector< std::pair< std::string, std::string > >;
 
