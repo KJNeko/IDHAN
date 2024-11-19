@@ -10,6 +10,10 @@
 #include <array>
 #include <istream>
 
+namespace drogon::orm
+{
+class Field;
+}
 class QIODevice;
 
 namespace idhan
@@ -17,7 +21,7 @@ namespace idhan
 
 class SHA256
 {
-	QByteArray m_data;
+	std::array< std::byte, ( 256 / 8 ) > m_data {};
 
 	SHA256() = delete;
 
@@ -27,7 +31,9 @@ class SHA256
 
   public:
 
-	QString hex() const;
+	explicit SHA256( const drogon::orm::Field& field );
+
+	std::string hex() const;
 
 	explicit SHA256( QIODevice* io );
 };
