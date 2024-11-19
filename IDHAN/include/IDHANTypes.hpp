@@ -4,6 +4,9 @@
 
 namespace idhan
 {
+
+using RecordID = std::uint32_t;
+
 using NamespaceID = std::uint32_t;
 using SubtagID = std::uint32_t;
 using TagID = std::uint32_t;
