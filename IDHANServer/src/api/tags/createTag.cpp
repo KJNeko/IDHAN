@@ -6,14 +6,12 @@
 
 #include <ranges>
 
-#include "IDHANApi.hpp"
+#include "api/IDHANTagAPI.hpp"
 #include "logging/log.hpp"
 #include "splitTag.hpp"
 
 namespace idhan::api
 {
-
-
 
 inline static std::recursive_mutex namespace_mtx {};
 inline static std::unordered_map< std::string, NamespaceID > namespace_cache {};
@@ -158,7 +156,7 @@ drogon::Task< TagID >
 	std::unreachable();
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANApi::createTagRouter( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagRouter( drogon::HttpRequestPtr request )
 {
 	const auto json_obj { request->getJsonObject() };
 
@@ -175,7 +173,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANApi::createTagRouter( drogon::HttpR
 	}
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANApi::createBatchedTag( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createBatchedTag( drogon::HttpRequestPtr request )
 {
 	if ( request == nullptr )
 	{
@@ -243,7 +241,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANApi::createBatchedTag( drogon::Http
 	co_return drogon::HttpResponse::newHttpJsonResponse( out );
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANApi::createSingleTag( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createSingleTag( drogon::HttpRequestPtr request )
 {
 	if ( request == nullptr )
 	{

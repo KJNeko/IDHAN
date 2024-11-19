@@ -1,6 +1,10 @@
+//
+// Created by kj16609 on 11/18/24.
+//
 
-
-#include "api/IDHANApi.hpp"
+#include "IDHANTypes.hpp"
+#include "api/IDHANTagAPI.hpp"
+#include "drogon/HttpResponse.h"
 
 namespace idhan::api
 {
@@ -18,7 +22,7 @@ drogon::HttpResponsePtr generateFailedTagSearch( const TagID tag_id )
 	return response;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANApi::info( drogon::HttpRequestPtr request, TagID tag_id )
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::info( drogon::HttpRequestPtr request, TagID tag_id )
 {
 	Json::Value root {};
 	root[ "tag_id" ] = tag_id;

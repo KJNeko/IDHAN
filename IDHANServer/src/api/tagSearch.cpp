@@ -2,12 +2,12 @@
 // Created by kj16609 on 11/14/24.
 //
 
-#include "IDHANApi.hpp"
+#include "IDHANTagAPI.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
 {
-drogon::Task< drogon::HttpResponsePtr > IDHANApi::
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
 	search( drogon::HttpRequestPtr request, const std::string tag_text )
 {
 	log::debug( "/tag/search?tag={}", tag_text );
