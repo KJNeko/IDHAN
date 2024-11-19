@@ -1,0 +1,18 @@
+get:
+  tags:
+    - cluster
+  summary: Returns info about the file cluster
+  responses:
+    200:
+      description: Json object
+      content:
+        application/json:
+          schema:
+            $ref: '../../schemas/ClusterInfo.yaml'
+    404:
+      description: Cluster id was invalid or not found.
+  parameters:
+    - in: path
+      name: cluster_id
+      schema:
+        type: integer

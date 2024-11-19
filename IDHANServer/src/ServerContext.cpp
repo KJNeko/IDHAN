@@ -98,6 +98,7 @@ void ServerContext::run()
 	log::server::info( "Starting runtime" );
 
 	log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
+	log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
 	drogon::app().run();
 
 	log::server::info( "Shutting down" );

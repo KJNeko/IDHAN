@@ -1,0 +1,23 @@
+patch:
+  tags:
+    - cluster
+  summary: Modifies a given cluster.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../schemas/ClusterInfo.yaml'
+  parameters:
+    - in: path
+      name: cluster_id
+      schema:
+        type: integer
+  responses:
+    200:
+      content:
+        application/json:
+          schema:
+            $ref: '../../schemas/ClusterInfo.yaml'
+    404:
+      description: Cluster id was invalid or not found.
