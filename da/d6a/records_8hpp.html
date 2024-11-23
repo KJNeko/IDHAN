@@ -112,14 +112,13 @@ $(function(){initNavTree('da/d6a/records_8hpp.html','../../'); initResizable(tru
 <div class="header">
   <div class="summary">
 <a href="#namespaces">Namespaces</a> &#124;
-<a href="#func-members">Functions</a> &#124;
-<a href="#var-members">Variables</a>  </div>
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">records.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
-<code>#include &lt;limits&gt;</code><br />
-<code>#include &lt;vector&gt;</code><br />
+<div class="textblock"><code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d5/d68/sha256_8hpp_source.html">crypto/sha256.hpp</a>&quot;</code><br />
+<code>#include &quot;drogon/orm/DbClient.h&quot;</code><br />
 </div>
 <p><a href="../../da/d6a/records_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -130,26 +129,8 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a6082d5125704348419620e38c65b1391" id="r_a6082d5125704348419620e38c65b1391"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/dcf/namespaceidhan.html#a6e67e90c434824b2b791e27145451c92">RecordID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a6082d5125704348419620e38c65b1391">idhan::createRecord</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256)</td></tr>
-<tr class="memdesc:a6082d5125704348419620e38c65b1391"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a record with the given <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>. If the record exists it will be returned.  <br /></td></tr>
-<tr class="separator:a6082d5125704348419620e38c65b1391"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acf5ed3e5c28ee48585b70505ed8d7f49" id="r_acf5ed3e5c28ee48585b70505ed8d7f49"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a6e67e90c434824b2b791e27145451c92">RecordID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#acf5ed3e5c28ee48585b70505ed8d7f49">idhan::createRecords</a> (const std::vector&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &gt; &amp;sha256)</td></tr>
-<tr class="separator:acf5ed3e5c28ee48585b70505ed8d7f49"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a887e40e1f1d81f9517f6792e8fe83202" id="r_a887e40e1f1d81f9517f6792e8fe83202"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/dcf/namespaceidhan.html#a6e67e90c434824b2b791e27145451c92">RecordID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a887e40e1f1d81f9517f6792e8fe83202">idhan::getRecordID</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256)</td></tr>
-<tr class="memdesc:a887e40e1f1d81f9517f6792e8fe83202"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the recordID associated with a given sha256.  <br /></td></tr>
-<tr class="separator:a887e40e1f1d81f9517f6792e8fe83202"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a76cc4d06698f12eab45dfc0c73c9365e" id="r_a76cc4d06698f12eab45dfc0c73c9365e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a6e67e90c434824b2b791e27145451c92">RecordID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a76cc4d06698f12eab45dfc0c73c9365e">idhan::getRecordIDs</a> (const std::vector&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &gt; &amp;sha256)</td></tr>
-<tr class="separator:a76cc4d06698f12eab45dfc0c73c9365e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adce3ac1c67a528bd1dbe124e7facc11b" id="r_adce3ac1c67a528bd1dbe124e7facc11b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#adce3ac1c67a528bd1dbe124e7facc11b">idhan::recordExists</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256)</td></tr>
-<tr class="memdesc:adce3ac1c67a528bd1dbe124e7facc11b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if a given record exists.  <br /></td></tr>
-<tr class="separator:adce3ac1c67a528bd1dbe124e7facc11b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a66e4c03aa90aa4e537677569d4d7e557" id="r_a66e4c03aa90aa4e537677569d4d7e557"><td class="memItemLeft" align="right" valign="top">std::vector&lt; bool &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a66e4c03aa90aa4e537677569d4d7e557">idhan::recordExists</a> (const std::vector&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &gt; &amp;sha256)</td></tr>
-<tr class="separator:a66e4c03aa90aa4e537677569d4d7e557"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:a943caa84aefff067bbc40b48286aa040" id="r_a943caa84aefff067bbc40b48286aa040"><td class="memItemLeft" align="right" valign="top">static constexpr <a class="el" href="../../dd/dcf/namespaceidhan.html#a6e67e90c434824b2b791e27145451c92">RecordID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a943caa84aefff067bbc40b48286aa040">idhan::INVALID_RECORD_ID</a> { std::numeric_limits&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a6e67e90c434824b2b791e27145451c92">RecordID</a> &gt;::max() }</td></tr>
-<tr class="separator:a943caa84aefff067bbc40b48286aa040"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a76828f1eed852334ad83d57970800420" id="r_a76828f1eed852334ad83d57970800420"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a76828f1eed852334ad83d57970800420">idhan::getRecordSHA256</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#aa569f61b50f666991e0a9c4adf4bf1b5">RecordID</a> id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a76828f1eed852334ad83d57970800420"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

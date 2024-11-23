@@ -1,7 +1,11 @@
 var namespaceidhan_1_1filesystem =
 [
-    [ "FolderManager", "d0/dff/classidhan_1_1filesystem_1_1FolderManager.html", "d0/dff/classidhan_1_1filesystem_1_1FolderManager" ],
-    [ "createSubpath", "db/d9b/namespaceidhan_1_1filesystem.html#aa11eea6ad31fe47035e10ab921698a00", null ],
-    [ "getExtension", "db/d9b/namespaceidhan_1_1filesystem.html#ab1c829aa3cd62cfc695719fbc30d0a7c", null ],
-    [ "getFilesystemCapacity", "db/d9b/namespaceidhan_1_1filesystem.html#ae119b8cbfedcbc34598aeb7ce43f22bc", null ]
+    [ "ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager" ],
+    [ "FileMetaType", "db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454", [
+      [ "THUMBNAIL", "db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454af15d2050859211cb959d22fd823157df", null ],
+      [ "NORMAL", "db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454a2f3832925146c996b37d1534cdcabe28", null ]
+    ] ],
+    [ "createSubpath", "db/d9b/namespaceidhan_1_1filesystem.html#ad28790b6ff89849d0bdad9ced09c4918", null ],
+    [ "getFilesystemCapacity", "db/d9b/namespaceidhan_1_1filesystem.html#ae119b8cbfedcbc34598aeb7ce43f22bc", null ],
+    [ "metaTypePathID", "db/d9b/namespaceidhan_1_1filesystem.html#af22279849e95364f785f83f943474ae0", null ]
 ];

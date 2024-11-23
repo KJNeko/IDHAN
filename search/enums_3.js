@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['searchorder_0',['SearchOrder',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685',1,'idhan::hyapi']]]
+  ['keypermissions_0',['KeyPermissions',['../dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880c',1,'idhan']]]
 ];

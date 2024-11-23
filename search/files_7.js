@@ -1,10 +1,16 @@
 var searchData=
 [
-  ['main_2ecpp_0',['main.cpp',['../df/d0a/main_8cpp.html',1,'']]],
-  ['management_2ecpp_1',['management.cpp',['../d4/d71/management_8cpp.html',1,'']]],
-  ['management_2ehpp_2',['management.hpp',['../d2/dd9/management_8hpp.html',1,'']]],
-  ['managementconnection_2ecpp_3',['ManagementConnection.cpp',['../dd/d4b/ManagementConnection_8cpp.html',1,'']]],
-  ['managementconnection_2ehpp_4',['ManagementConnection.hpp',['../d9/d70/ManagementConnection_8hpp.html',1,'']]],
-  ['migrations_2ecpp_5',['migrations.cpp',['../da/d07/migrations_8cpp.html',1,'']]],
-  ['migrations_2ehpp_6',['migrations.hpp',['../d8/d75/migrations_8hpp.html',1,'']]]
+  ['idhanapi_2ehpp_0',['IDHANApi.hpp',['../dd/d57/IDHANApi_8hpp.html',1,'']]],
+  ['idhanauth_2ecpp_1',['IDHANAuth.cpp',['../dc/daf/IDHANAuth_8cpp.html',1,'']]],
+  ['idhanauth_2ehpp_2',['IDHANAuth.hpp',['../d4/d8f/IDHANAuth_8hpp.html',1,'']]],
+  ['idhanclient_2ecpp_3',['IDHANClient.cpp',['../d4/da8/IDHANClient_8cpp.html',1,'']]],
+  ['idhanclient_2ehpp_4',['IDHANClient.hpp',['../dc/d23/IDHANClient_8hpp.html',1,'']]],
+  ['idhanfileapi_2ehpp_5',['IDHANFileAPI.hpp',['../dc/d9a/IDHANFileAPI_8hpp.html',1,'']]],
+  ['idhantagapi_2ehpp_6',['IDHANTagAPI.hpp',['../d4/d83/IDHANTagAPI_8hpp.html',1,'']]],
+  ['idhantypes_2ehpp_7',['IDHANTypes.hpp',['../da/d68/IDHANTypes_8hpp.html',1,'']]],
+  ['importfile_2ecpp_8',['importFile.cpp',['../d0/d0a/importFile_8cpp.html',1,'']]],
+  ['importresponses_2ehpp_9',['ImportResponses.hpp',['../df/d1c/ImportResponses_8hpp.html',1,'']]],
+  ['indexes_2ecpp_10',['indexes.cpp',['../d0/d3e/indexes_8cpp.html',1,'']]],
+  ['indexes_2ehpp_11',['indexes.hpp',['../d3/d3e/indexes_8hpp.html',1,'']]],
+  ['info_2ecpp_12',['info.cpp',['../de/d9b/cluster_2info_8cpp.html',1,'(Global Namespace)'],['../d4/d58/tags_2info_8cpp.html',1,'(Global Namespace)']]]
 ];

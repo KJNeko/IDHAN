@@ -1,5 +1,6 @@
 var namespaces_dup =
 [
+    [ "drogon", "d1/d5d/namespacedrogon.html", "d1/d5d/namespacedrogon" ],
     [ "IDHAN", "d6/d66/namespaceIDHAN.html", "d6/d66/namespaceIDHAN" ],
     [ "idhan", "dd/dcf/namespaceidhan.html", "dd/dcf/namespaceidhan" ],
     [ "pqxx", "dc/d09/namespacepqxx.html", null ],

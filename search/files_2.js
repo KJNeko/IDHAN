@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['fixme_2ehpp_0',['fixme.hpp',['../d6/d3b/fixme_8hpp.html',1,'']]],
-  ['foldermanager_2ecpp_1',['FolderManager.cpp',['../d2/dda/FolderManager_8cpp.html',1,'']]],
-  ['foldermanager_2ehpp_2',['FolderManager.hpp',['../df/d4c/FolderManager_8hpp.html',1,'']]]
+  ['detectmimetype_2ecpp_0',['detectMimeType.cpp',['../d6/d1e/detectMimeType_8cpp.html',1,'']]],
+  ['docs_2ecpp_1',['docs.cpp',['../d8/d83/docs_8cpp.html',1,'']]]
 ];

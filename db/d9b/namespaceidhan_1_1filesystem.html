@@ -112,6 +112,7 @@ $(function(){initNavTree('db/d9b/namespaceidhan_1_1filesystem.html','../../'); i
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">idhan::filesystem Namespace Reference</div></div>
 </div><!--header-->
@@ -119,61 +120,65 @@ $(function(){initNavTree('db/d9b/namespaceidhan_1_1filesystem.html','../../'); i
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dff/classidhan_1_1filesystem_1_1FolderManager.html">FolderManager</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html">ClusterManager</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a62ce7ed3bb4de7c10f83b1d173ec3454" id="r_a62ce7ed3bb4de7c10f83b1d173ec3454"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a> { <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454af15d2050859211cb959d22fd823157df">THUMBNAIL</a> = 0
+, <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454a2f3832925146c996b37d1534cdcabe28">NORMAL</a> = 1
+ }</td></tr>
+<tr class="separator:a62ce7ed3bb4de7c10f83b1d173ec3454"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ab1c829aa3cd62cfc695719fbc30d0a7c" id="r_ab1c829aa3cd62cfc695719fbc30d0a7c"><td class="memItemLeft" align="right" valign="top">QString&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab1c829aa3cd62cfc695719fbc30d0a7c">getExtension</a> (const <a class="el" href="../../d7/d4b/structidhan_1_1import_1_1FileRecord.html">FileRecord</a> &amp;record)</td></tr>
-<tr class="memdesc:ab1c829aa3cd62cfc695719fbc30d0a7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the extension for a given file.  <br /></td></tr>
-<tr class="separator:ab1c829aa3cd62cfc695719fbc30d0a7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae119b8cbfedcbc34598aeb7ce43f22bc" id="r_ae119b8cbfedcbc34598aeb7ce43f22bc"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae119b8cbfedcbc34598aeb7ce43f22bc">getFilesystemCapacity</a> (QDir path)</td></tr>
 <tr class="separator:ae119b8cbfedcbc34598aeb7ce43f22bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa11eea6ad31fe47035e10ab921698a00" id="r_aa11eea6ad31fe47035e10ab921698a00"><td class="memItemLeft" align="right" valign="top">QString&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa11eea6ad31fe47035e10ab921698a00">createSubpath</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256)</td></tr>
-<tr class="separator:aa11eea6ad31fe47035e10ab921698a00"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af22279849e95364f785f83f943474ae0" id="r_af22279849e95364f785f83f943474ae0"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af22279849e95364f785f83f943474ae0">metaTypePathID</a> (const <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a> type)</td></tr>
+<tr class="separator:af22279849e95364f785f83f943474ae0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad28790b6ff89849d0bdad9ced09c4918" id="r_ad28790b6ff89849d0bdad9ced09c4918"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad28790b6ff89849d0bdad9ced09c4918">createSubpath</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256, const <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a> meta_type)</td></tr>
+<tr class="separator:ad28790b6ff89849d0bdad9ced09c4918"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="a62ce7ed3bb4de7c10f83b1d173ec3454" name="a62ce7ed3bb4de7c10f83b1d173ec3454"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a62ce7ed3bb4de7c10f83b1d173ec3454">&#9670;&#160;</a></span>FileMetaType</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454">idhan::filesystem::FileMetaType</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a62ce7ed3bb4de7c10f83b1d173ec3454af15d2050859211cb959d22fd823157df" name="a62ce7ed3bb4de7c10f83b1d173ec3454af15d2050859211cb959d22fd823157df"></a>THUMBNAIL&#160;</td><td class="fielddoc"><p>0: Thumbnail of a stored file </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a62ce7ed3bb4de7c10f83b1d173ec3454a2f3832925146c996b37d1534cdcabe28" name="a62ce7ed3bb4de7c10f83b1d173ec3454a2f3832925146c996b37d1534cdcabe28"></a>NORMAL&#160;</td><td class="fielddoc"><p>1: A normal file. </p>
+</td></tr>
+</table>
+
+</div>
+</div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="aa11eea6ad31fe47035e10ab921698a00" name="aa11eea6ad31fe47035e10ab921698a00"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa11eea6ad31fe47035e10ab921698a00">&#9670;&#160;</a></span>createSubpath()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">QString idhan::filesystem::createSubpath </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>sha256</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ab1c829aa3cd62cfc695719fbc30d0a7c" name="ab1c829aa3cd62cfc695719fbc30d0a7c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab1c829aa3cd62cfc695719fbc30d0a7c">&#9670;&#160;</a></span>getExtension()</h2>
+<a id="ad28790b6ff89849d0bdad9ced09c4918" name="ad28790b6ff89849d0bdad9ced09c4918"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad28790b6ff89849d0bdad9ced09c4918">&#9670;&#160;</a></span>createSubpath()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QString idhan::filesystem::getExtension </td>
+          <td class="memname">std::filesystem::path idhan::filesystem::createSubpath </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="../../d7/d4b/structidhan_1_1import_1_1FileRecord.html">FileRecord</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>record</em></span></td><td>)</td>
+          <td class="paramtype">const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>sha256</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">const <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a></td>          <td class="paramname"><span class="paramname"><em>meta_type</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
-
-<p>Returns the extension for a given file. </p>
 
 </div>
 </div>
@@ -187,6 +192,23 @@ Functions</h2></td></tr>
           <td class="memname">std::size_t idhan::filesystem::getFilesystemCapacity </td>
           <td>(</td>
           <td class="paramtype">QDir</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af22279849e95364f785f83f943474ae0" name="af22279849e95364f785f83f943474ae0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af22279849e95364f785f83f943474ae0">&#9670;&#160;</a></span>metaTypePathID()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string idhan::filesystem::metaTypePathID </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a></td>          <td class="paramname"><span class="paramname"><em>type</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>

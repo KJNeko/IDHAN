@@ -2,11 +2,11 @@ var searchData=
 [
   ['handleversioninfo_0',['handleVersionInfo',['../d3/d67/classidhan_1_1IDHANClient.html#a30c79b07ba16c35e0ed3cac637dc0bce',1,'idhan::IDHANClient']]],
   ['hasaudio_1',['HasAudio',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a3ae6805278f83b3bc765d6d10401c915',1,'idhan::hyapi']]],
-  ['hasfile_2',['hasFile',['../d0/d2b/structidhan_1_1filesystem_1_1FolderManager_1_1FolderInfo.html#a69d4819bc5eab975345ad66d1a0d868c',1,'idhan::filesystem::FolderManager::FolderInfo']]],
+  ['hasfile_2',['hasFile',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ace286184394f2c684659f9d2f956eb86',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
   ['hashhex_3',['HashHex',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685ac86fa80d0675efa7d1562fb501385f9f',1,'idhan::hyapi']]],
   ['header_2dnames_2ehpp_4',['header-names.hpp',['../dd/d4a/header-names_8hpp.html',1,'']]],
   ['height_5',['Height',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a39b508302bcf8b14eb74172b4e76f933',1,'idhan::hyapi']]],
-  ['hex_6',['hex',['../d0/de3/classidhan_1_1SHA256.html#a3e9a7059b449f07b7aa3b7b0eb1591e4',1,'idhan::SHA256']]],
+  ['hex_6',['hex',['../d0/de3/classidhan_1_1SHA256.html#a4cd0626f10d0bccbf0554b1ae9442b8e',1,'idhan::SHA256']]],
   ['hostname_7',['hostname',['../da/d27/structidhan_1_1IDHANClientConfig.html#a37c577166ebe90c4f5ecad994182c9a0',1,'idhan::IDHANClientConfig::hostname'],['../de/d07/structidhan_1_1ConnectionArguments.html#a7dc41c815c884266f303c54ef5c27c50',1,'idhan::ConnectionArguments::hostname']]],
   ['hy_5faccess_5fkey_5fheader_5fname_8',['HY_ACCESS_KEY_HEADER_NAME',['../dd/d4a/header-names_8hpp.html#af962369cd9dcadf4f8d186ea6244285b',1,'header-names.hpp']]],
   ['hyapi_2ecpp_9',['HyAPI.cpp',['../df/de5/HyAPI_8cpp.html',1,'']]],

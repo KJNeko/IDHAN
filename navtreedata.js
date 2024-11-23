@@ -25,13 +25,14 @@
 var NAVTREE =
 [
   [ "IDHAN", "index.html", [
+    [ "\"IDHAN File MetaTypes\"", "index.html", "index" ],
     [ "IDHAN API Docs", "dd/df9/APIDocs.html", null ],
     [ "IDHAN Authorization", "d1/d63/IDHANAuth.html", null ],
     [ "README", "d3/d3b/md_IDHANServer_2src_2db_2setup_2migration_2README.html", null ],
     [ "Welcome to IDHAN's page", "d0/d30/md_README.html", [
-      [ "Getting started", "d0/d30/md_README.html#autotoc_md1", null ],
-      [ "Clients", "d0/d30/md_README.html#autotoc_md2", null ],
-      [ "Server docs", "d0/d30/md_README.html#autotoc_md3", null ]
+      [ "Getting started", "d0/d30/md_README.html#autotoc_md6", null ],
+      [ "Clients", "d0/d30/md_README.html#autotoc_md7", null ],
+      [ "Server docs", "d0/d30/md_README.html#autotoc_md8", null ]
     ] ],
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
@@ -52,6 +53,9 @@ var NAVTREE =
         [ "All", "functions.html", null ],
         [ "Functions", "functions_func.html", null ],
         [ "Variables", "functions_vars.html", null ],
+        [ "Typedefs", "functions_type.html", null ],
+        [ "Enumerations", "functions_enum.html", null ],
+        [ "Enumerator", "functions_eval.html", null ],
         [ "Related Symbols", "functions_rela.html", null ]
       ] ]
     ] ],
@@ -70,8 +74,9 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d5/dc9/versions_8hpp_source.html",
-"dc/dde/checkContentType_8hpp_source.html"
+"d5/dc9/versions_8hpp.html#a6427bcbc5795606523fae35d86cd4d4b",
+"dc/d1e/classidhan_1_1api_1_1ImportStreamReader.html#a9a9dacd694770f5716d890ad0d08b9e5",
+"de/d3d/createTag_8cpp.html#adab2ce6dfb9480909bee56fd380b43b0"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

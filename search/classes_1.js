@@ -1,7 +1,7 @@
 var searchData=
 [
-  ['filerecord_0',['FileRecord',['../d7/d4b/structidhan_1_1import_1_1FileRecord.html',1,'idhan::import']]],
-  ['folderinfo_1',['FolderInfo',['../d0/d2b/structidhan_1_1filesystem_1_1FolderManager_1_1FolderInfo.html',1,'idhan::filesystem::FolderManager']]],
-  ['foldermanager_2',['FolderManager',['../d0/dff/classidhan_1_1filesystem_1_1FolderManager.html',1,'idhan::filesystem']]],
-  ['formatter_3c_20qstring_20_3e_3',['formatter&lt; QString &gt;',['../d9/dce/structstd_1_1formatter_3_01QString_01_4.html',1,'std']]]
+  ['clusterapi_0',['ClusterAPI',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html',1,'idhan::api']]],
+  ['clusterinfo_1',['ClusterInfo',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html',1,'idhan::api::ClusterInfo'],['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
+  ['clustermanager_2',['ClusterManager',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html',1,'idhan::filesystem']]],
+  ['connectionarguments_3',['ConnectionArguments',['../de/d07/structidhan_1_1ConnectionArguments.html',1,'idhan']]]
 ];

@@ -1,8 +1,12 @@
 var searchData=
 [
-  ['recordexists_0',['recordExists',['../dd/dcf/namespaceidhan.html#adce3ac1c67a528bd1dbe124e7facc11b',1,'idhan::recordExists(const SHA256 &amp;sha256)'],['../dd/dcf/namespaceidhan.html#a66e4c03aa90aa4e537677569d4d7e557',1,'idhan::recordExists(const std::vector&lt; SHA256 &gt; &amp;sha256)']]],
-  ['registercallback_1',['registerCallback',['../d6/d70/namespaceidhan_1_1logging.html#a823c742df0088e2b2d065e9a6c550fde',1,'idhan::logging']]],
-  ['removefolder_2',['removeFolder',['../d0/dff/classidhan_1_1filesystem_1_1FolderManager.html#a21bcaad01c0b5d105dc85e3df93f47ca',1,'idhan::filesystem::FolderManager']]],
-  ['requestnewpermissions_3',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#ac83c83a6a4d6837ce0e734afc3e69715',1,'idhan::hyapi::HydrusAPI']]],
-  ['run_4',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
+  ['readdata_0',['readData',['../d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper.html#a86026980dbf18b7212da92762d1028bd',1,'idhan::mime::IStreamQtWrapper']]],
+  ['rebuildclusterinfo_1',['rebuildClusterInfo',['../db/de4/namespaceidhan_1_1api.html#ac2b6c3009496ef7e863e9275138b8e79',1,'idhan::api']]],
+  ['recordnotfound_2',['RecordNotFound',['../dd/d8d/structidhan_1_1RecordNotFound.html#a331c3f6b9e49c6723261defc8278f973',1,'idhan::RecordNotFound']]],
+  ['registercallback_3',['registerCallback',['../d6/d70/namespaceidhan_1_1logging.html#a823c742df0088e2b2d065e9a6c550fde',1,'idhan::logging']]],
+  ['registermimetype_4',['registerMimeType',['../d4/d9c/namespaceidhan_1_1mime.html#a96c638ae913e30e456c17d6958c1a07f',1,'idhan::mime']]],
+  ['remove_5',['remove',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#acfff738ea78324256e23e1475e826fdd',1,'idhan::api::ClusterAPI']]],
+  ['removesize_6',['removeSize',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#afecfbc7407c85ccef6c2e1cb0cc20106',1,'idhan::api::ClusterInfo']]],
+  ['requestnewpermissions_7',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#ac83c83a6a4d6837ce0e734afc3e69715',1,'idhan::hyapi::HydrusAPI']]],
+  ['run_8',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
 ];

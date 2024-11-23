@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['connectionarguments_0',['ConnectionArguments',['../de/d07/structidhan_1_1ConnectionArguments.html',1,'idhan']]]
+  ['apiexception_0',['APIException',['../d7/dca/structidhan_1_1APIException.html',1,'idhan']]]
 ];

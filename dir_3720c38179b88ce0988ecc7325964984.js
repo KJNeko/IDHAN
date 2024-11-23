@@ -1,5 +1,5 @@
 var dir_3720c38179b88ce0988ecc7325964984 =
 [
-    [ "FolderManager.cpp", "d2/dda/FolderManager_8cpp.html", "d2/dda/FolderManager_8cpp" ],
-    [ "FolderManager.hpp", "df/d4c/FolderManager_8hpp.html", "df/d4c/FolderManager_8hpp" ]
+    [ "ClusterManager.cpp", "d1/da8/ClusterManager_8cpp.html", "d1/da8/ClusterManager_8cpp" ],
+    [ "ClusterManager.hpp", "d4/d14/ClusterManager_8hpp.html", "d4/d14/ClusterManager_8hpp" ]
 ];
