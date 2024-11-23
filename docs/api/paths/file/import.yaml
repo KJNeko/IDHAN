@@ -1,0 +1,10 @@
+post:
+  tags:
+    - files
+  summary: Imports a given file.
+  requestBody:
+    content:
+      application/octet-stream:
+        schema:
+          type: string
+          format: binary

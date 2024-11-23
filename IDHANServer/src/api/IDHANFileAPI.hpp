@@ -20,7 +20,7 @@ class IDHANFileAPI : public drogon::HttpController< IDHANFileAPI >
 
 	METHOD_LIST_BEGIN
 
-	// ADD_METHOD_TO( IDHANFileAPI::create, "/file/create" );
+	ADD_METHOD_TO( IDHANFileAPI::createRecord, "/file/create" );
 
 	// tags
 	// ADD_METHOD_TO( IDHANFileAPI::addTag, "/file/{file_id}/tags/add" );

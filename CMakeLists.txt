@@ -5,8 +5,8 @@ project(IDHAN LANGUAGES CXX)
 
 enable_testing()
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/fgl_cmake_modules)
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules")
+# Includes fgl_cmake_modules
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/libFGL)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

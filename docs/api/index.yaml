@@ -44,6 +44,20 @@ paths:
     $ref: './paths/file/file.yaml'
   /file/search:
     $ref: './paths/file/search.yaml'
+  /file/import:
+    $ref: './paths/file/import.yaml'
+
+  /clusters/add:
+    $ref: './paths/clusters/add.yaml'
+  /clusters/list:
+    $ref: './paths/clusters/list.yaml'
+  /clusters/{cluster_id}/info:
+    $ref: './paths/clusters/info.yaml'
+  /clusters/{cluster_id}/modify:
+    $ref: './paths/clusters/modify.yaml'
+  /clusters/{cluster_id}/remove:
+    $ref: './paths/clusters/remove.yaml'
+
 
 components:
   schemas:
