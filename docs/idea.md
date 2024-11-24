@@ -4,7 +4,7 @@ The application/concept name is **IDHAN** (**I** **D**on't **H**ave **A** **N**a
 
 # Notes
 
-- Anything mark with **(P)** means that the idea is planned however will very likely not be implemented for the first version of IDHAN.
+- Anything marked with **(P)** means that the idea is planned however will very likely not be implemented for the first version of IDHAN.
 
 # Key terminology
 
@@ -87,7 +87,8 @@ Tags are 'solved' in the following order
 - parents/childs and siblings are flattened. This means that all tags are transformed into their alias tag, or 'idealised'.
 - parent/child tags are then applied.
 - Finally siblings are applied.
-- When siblings are applied a parent that is younger then an older tag is hidden, If the child is supposed to be hidden, then all parents are also hidden or removed, Even if both tags were present on the record initally.
+- When siblings are applied a parent that is younger than an older tag is hidden, If the child is supposed to be hidden,
+  then all parents are also hidden or removed, Even if both tags were present on the record initally.
 
 Things to note:
 
@@ -114,7 +115,9 @@ This information set also contains basic information about the file:
 
 # File parsing
 
-Even if IDHAN can identify a file, it will ignore any MIME types not registered to be handled by IDHAN. There are defaults registered by default such as JPG and PNG and other common formats. A full list can be found here:(TODO: Put the list here)
+Even if IDHAN can identify a file, it will ignore any MIME types not registered to be handled by IDHAN.
+There are defaults registered by default such as JPG and PNG and other common formats.\
+A full list can be found here:(TODO: Put the list here)
 
 ## Importing methods
 
@@ -122,11 +125,14 @@ IDHAN will parse files that it has been given to import through the following me
 
 ### Internal parser
 
-IDHAN will use an internal MIME parser that works based on byte signatures. Each MIME will be given a set of signatures and their expected locations, and a priority, The priority is to allow differentiation between APNG and PNG.
+IDHAN will use an internal MIME parser that works based on byte signatures.
+Each MIME will be given a set of signatures and their expected locations, and a priority,
+The priority is to allow differentiation between APNG and PNG.
 
 ### Python scripts **(P)**
 
-IDHAN will allow for python scripts to be used in order to identify the mime type of file, This will happen after the internal parser has run and found no results, Or if IDHAN has been specified to use the script after a specific parser hit.\
+IDHAN will allow for python scripts to be used in order to identify the mime type of file,
+This will happen after the internal parser has run and found no results, Or if IDHAN has been specified to use the script after a specific parser hit.\
 IDHAN will supply a series of helper functions in python that can be imported in python to assist with giving back the response IDHAN expects.\
 These scripts will also be capable of returning file information back to IDHAN that can help with understanding new filetypes that IDHAN has never seen before without adding handling in the source code itself.
 
