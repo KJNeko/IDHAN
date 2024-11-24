@@ -1,6 +1,7 @@
-This document contains a lot of the key ideas and concepts for the current and future development.
+This document contains a lot of the key ideas and concepts for the current and future development.\
+Note that this document might not match the current state of IDHAN and is mostly a guide for myself to stay on track that this document might not match the current state of IDHAN and is mostly a guide for myself to stay on track.
 
-The application/concept name is **IDHAN** (**I** **D**on't **H**ave **A** **N**ame).
+The application/concept name is **IDHAN** (**I** **D**on't **H**ave **A** **N**ame). (Better name maybe pending)
 
 # Notes
 
@@ -23,8 +24,8 @@ A record can be linked to many different things depending on what it needs to re
 
 ### Many to Many
 
-- Tags
-- Collection
+- **Tags**. Records can have tags associated with them.
+- **Collection** **(P)** Records can be placed into a collection for organization.
 
 ### One to One
 
@@ -153,3 +154,8 @@ There are a few key config options for it
 - What files are allowed. (files, thumbnails, generators, generated, ect)
 - The ratio of which file should be stored ( This value will be an integer in most cases and will be represented as a percent of `N / TotalN` )
 - The max byte size that the cluster should reach.
+
+# Collections **(P)**
+
+In IDHAN a collection is simply to tie multiple records together. A collection can be made to inherit all the tags of its members and even have tags of its own.
+The tags of a collection follow the same tags as individual records.
