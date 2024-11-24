@@ -142,3 +142,14 @@ These scripts will also be capable of returning file information back to IDHAN t
 
 **FOR NOW THIS IS A STUB**
 
+# File clusters
+
+A file cluster is the storage point for files. It can be set in the server through the `clusters.yaml` config file.
+Alternatively it can be configured through the management endpoint at `<url>/manage`
+
+There are a few key config options for it
+
+- The path to store the files
+- What files are allowed. (files, thumbnails, generators, generated, ect)
+- The ratio of which file should be stored ( This value will be an integer in most cases and will be represented as a percent of `N / TotalN` )
+- The max byte size that the cluster should reach.
