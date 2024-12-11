@@ -159,3 +159,10 @@ There are a few key config options for it
 
 In IDHAN a collection is simply to tie multiple records together. A collection can be made to inherit all the tags of its members and even have tags of its own.
 The tags of a collection follow the same tags as individual records.
+
+# Generators
+
+Generators are used in order to provide a way for IDHAN to keep a record of a source of multiple files, Examples of this would be the ability to store a single PSD and generate variants of an image without needing to store the variants.
+Generators will be capable of being defined by a python script that will register itself to handle specific files. Upon doing so each file that the generator can apply too will be scanned and processed through the generator's pre-processing stage. This will collect information that can be used to configure the generation process by the user.
+
+An example of this generator system would be the ability to register a PSD file that contains layers that allow for variants of an image to be created, Such as differences in clothing depending on enabled layers. The API will expose a way to configure the data for generation that is defined by the python script.
