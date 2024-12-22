@@ -4,8 +4,6 @@
 
 #include "ServerContext.hpp"
 
-#include <fixme.hpp>
-
 #include "../../dependencies/drogon/lib/src/HttpAppFrameworkImpl.h"
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
@@ -93,15 +91,25 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::server::info( "IDHAN initialization finished" );
 }
 
+void trantorHook( const char* msg, const std::uint64_t len )
+{
+	log::info( "{}", std::string_view( msg, len ) );
+}
+
 void ServerContext::run()
 {
 	log::server::info( "Starting runtime" );
+
+#ifndef NDEBUG
+	trantor::Logger::setOutputFunction( trantorHook, []() {} );
+#endif
 
 	log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
 	log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
 	drogon::app().run();
 
-	log::server::info( "Shutting down" );
+	// log::server::info( "Shutting down" );
+	return;
 }
 
 ServerContext::~ServerContext()

@@ -9,9 +9,7 @@ namespace idhan::api
 {
 class IDHANFileAPI : public drogon::HttpController< IDHANFileAPI >
 {
-	// drogon::Task< drogon::HttpResponsePtr > importFile( drogon::HttpRequestPtr request );
-	drogon::Task< drogon::HttpResponsePtr >
-		importFile( const drogon::HttpRequestPtr request, drogon::RequestStreamPtr&& request_stream );
+	drogon::Task< drogon::HttpResponsePtr > importFile( const drogon::HttpRequestPtr request );
 
 	//! Creates a new record in the database. Responds with the record id in a json format.
 	drogon::Task< drogon::HttpResponsePtr > createRecord( const drogon::HttpRequestPtr request );

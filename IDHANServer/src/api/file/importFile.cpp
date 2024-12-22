@@ -6,6 +6,8 @@
 
 #include "api/IDHANFileAPI.hpp"
 #include "core/files/mime.hpp"
+#include "crypto/sha256.hpp"
+#include "fgl/defines.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -39,9 +41,10 @@ struct ImportData
 	[[nodiscard]] auto lock() const { return std::lock_guard { mtx }; }
 };
 
-drogon::Task< drogon::HttpResponsePtr > IDHANFileAPI::
-	importFile( const drogon::HttpRequestPtr request, drogon::RequestStreamPtr&& request_stream )
+drogon::Task< drogon::HttpResponsePtr > IDHANFileAPI::importFile( const drogon::HttpRequestPtr request )
 {
+	log::debug( "Hit" );
+	FGL_ASSERT( request, "Request invalid" );
 	const auto request_data { request->getBody() };
 	const auto content_type { request->getContentType() };
 	log::debug( "Body length: {}", request_data.size() );
@@ -49,7 +52,14 @@ drogon::Task< drogon::HttpResponsePtr > IDHANFileAPI::
 
 	auto db { drogon::app().getDbClient() };
 
-	// const auto mime { mime::detectMimeType(, db ) };
-}
+	const MineInfo mime { mime::detectMimeType(, db ) };
 
+	const SHA256 sha256 { SHA256::hash( request_data ) };
+
+	Json::Value root {};
+
+	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
+
+	co_return response;
+}
 } // namespace idhan::api

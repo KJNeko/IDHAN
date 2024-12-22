@@ -38,7 +38,8 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 			// Here we do the ON CONFLICT DO NOTHING in order to prevent an exception from being thrown by drogon.
 			auto result {
-				co_await db->execSqlCoro( "INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING", sha256 )
+				co_await db
+					->execSqlCoro( "INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING", sha256.toVec() )
 			};
 
 			RecordID record_id FGL_UNINITALIZED;
@@ -47,7 +48,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 			{
 				// In this case the record likely already existed. So we should just search for it.
 				const auto search_result {
-					co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", sha256 )
+					co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", sha256.toVec() )
 				};
 
 				//TODO: Proper exception
@@ -64,6 +65,8 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	else if ( sha256s.isString() ) // HEX string
 	{}
 }
+
+
 
 ResponseTask IDHANFileAPI::createRecord( const drogon::HttpRequestPtr request )
 {

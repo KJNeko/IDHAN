@@ -33,6 +33,10 @@ class SHA256
 
 	friend SHA256 createFromIStream( std::istream& istream );
 
+	explicit SHA256( std::array< std::byte, ( 256 / 8 ) >&& data ) :
+	  m_data( std::forward< decltype( m_data ) >( data ) )
+	{}
+
   public:
 
 	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; };
@@ -48,10 +52,12 @@ class SHA256
 
 	explicit SHA256( const drogon::orm::Field& field );
 
+	static SHA256 hash( const std::string_view& str );
+
 	std::string hex() const;
 
 	//! Turns a HEX string into a SHA256 object. Str must be exactly (256 / 8) * 2, 64 characters long
-	static SHA256 fromHex( const std::string str );
+	static SHA256 fromHex( const std::string& str );
 
 	explicit SHA256( QIODevice* io );
 };
