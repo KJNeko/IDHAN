@@ -74,12 +74,15 @@ var namespaceidhan =
       [ "eAllPermissions", "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca466198b70ed2bb19896f587d392b7739", null ]
     ] ],
     [ "checkContentType", "dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824", null ],
+    [ "decodeHexChar", "dd/dcf/namespaceidhan.html#a5e1c82d7c5acce0ced21966a61cf7169", null ],
+    [ "decodeHexPair", "dd/dcf/namespaceidhan.html#a4eb238a2fbab3131c37059615787b1e6", null ],
     [ "exceptionHandler", "dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694", null ],
     [ "fixme", "dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e", null ],
     [ "getRecordSHA256", "dd/dcf/namespaceidhan.html#a76828f1eed852334ad83d57970800420", null ],
     [ "operator<<", "dd/dcf/namespaceidhan.html#aab6f14ce4ff56989b9a4202d48facdbd", null ],
     [ "splitTag", "dd/dcf/namespaceidhan.html#a37cff2a5b3a86f9964161d219f392141", null ],
     [ "splitTag", "dd/dcf/namespaceidhan.html#a4e881a977f3992fcbf6ed75cf66bb837", null ],
+    [ "trantorHook", "dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8", null ],
     [ "IDHAN_DEFAULT_PORT", "dd/dcf/namespaceidhan.html#a6efaa7ff194234490095eccedd770735", null ],
     [ "TAG_NAMESPACE_DELIMTER", "dd/dcf/namespaceidhan.html#abe33911f1365581d3fe2bc31f675e6b5", null ]
 ];

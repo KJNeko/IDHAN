@@ -22,8 +22,14 @@ var annotated_dup =
         [ "ScopedTimer", "de/d50/structidhan_1_1logging_1_1ScopedTimer.html", "de/d50/structidhan_1_1logging_1_1ScopedTimer" ]
       ] ],
       [ "mime", "d4/d9c/namespaceidhan_1_1mime.html", [
+        [ "AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo" ],
         [ "FileMimeInfo", "db/de8/structidhan_1_1mime_1_1FileMimeInfo.html", "db/de8/structidhan_1_1mime_1_1FileMimeInfo" ],
-        [ "IStreamQtWrapper", "d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper.html", "d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper" ]
+        [ "ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", "d3/d75/structidhan_1_1mime_1_1ImageInfo" ],
+        [ "IStreamQtWrapper", "d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper.html", "d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper" ],
+        [ "MimeDatabase", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html", "d5/d42/classidhan_1_1mime_1_1MimeDatabase" ],
+        [ "MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", "d7/d2a/structidhan_1_1mime_1_1MimeInfo" ],
+        [ "Resolution", "d6/d56/structidhan_1_1mime_1_1Resolution.html", "d6/d56/structidhan_1_1mime_1_1Resolution" ],
+        [ "VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", "de/da8/structidhan_1_1mime_1_1VideoInfo" ]
       ] ],
       [ "APIException", "d7/dca/structidhan_1_1APIException.html", null ],
       [ "ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", "de/d07/structidhan_1_1ConnectionArguments" ],

@@ -234,12 +234,19 @@ Functions</h2></td></tr>
 <tr class="separator:ad4d6cfd89f1d3ee52a7ea1084cd0e824"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a76828f1eed852334ad83d57970800420" id="r_a76828f1eed852334ad83d57970800420"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a76828f1eed852334ad83d57970800420">getRecordSHA256</a> (const <a class="el" href="#aa569f61b50f666991e0a9c4adf4bf1b5">RecordID</a> id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a76828f1eed852334ad83d57970800420"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e1c82d7c5acce0ced21966a61cf7169" id="r_a5e1c82d7c5acce0ced21966a61cf7169"><td class="memItemLeft" align="right" valign="top">constexpr std::uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e1c82d7c5acce0ced21966a61cf7169">decodeHexChar</a> (const char hex)</td></tr>
+<tr class="memdesc:a5e1c82d7c5acce0ced21966a61cf7169"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decodes a single hex character.  <br /></td></tr>
+<tr class="separator:a5e1c82d7c5acce0ced21966a61cf7169"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4eb238a2fbab3131c37059615787b1e6" id="r_a4eb238a2fbab3131c37059615787b1e6"><td class="memItemLeft" align="right" valign="top">constexpr std::uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4eb238a2fbab3131c37059615787b1e6">decodeHexPair</a> (const char left, const char right)</td></tr>
+<tr class="separator:a4eb238a2fbab3131c37059615787b1e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aab6f14ce4ff56989b9a4202d48facdbd" id="r_aab6f14ce4ff56989b9a4202d48facdbd"><td class="memItemLeft" align="right" valign="top">drogon::orm::internal::SqlBinder &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aab6f14ce4ff56989b9a4202d48facdbd">operator&lt;&lt;</a> (drogon::orm::internal::SqlBinder &amp;binder, <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">idhan::SHA256</a> &amp;&amp;sha256)</td></tr>
 <tr class="separator:aab6f14ce4ff56989b9a4202d48facdbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf2de6ab319c3d5893959073ae46e47e" id="r_acf2de6ab319c3d5893959073ae46e47e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acf2de6ab319c3d5893959073ae46e47e">fixme</a> (const std::source_location location=std::source_location::current())</td></tr>
 <tr class="separator:acf2de6ab319c3d5893959073ae46e47e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a05ffd4928189092728cf8fa8ab20e694" id="r_a05ffd4928189092728cf8fa8ab20e694"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a05ffd4928189092728cf8fa8ab20e694">exceptionHandler</a> (const std::exception &amp;e, const drogon::HttpRequestPtr &amp;request, <a class="el" href="#ab36e2f7c68cd1ad091d47cc6a44231e1">ResponseFunction</a> &amp;&amp;callback)</td></tr>
 <tr class="separator:a05ffd4928189092728cf8fa8ab20e694"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a654cd3b3bfaffed8056f562beb1e47d8" id="r_a654cd3b3bfaffed8056f562beb1e47d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a654cd3b3bfaffed8056f562beb1e47d8">trantorHook</a> (const char *msg, const std::uint64_t len)</td></tr>
+<tr class="separator:a654cd3b3bfaffed8056f562beb1e47d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
@@ -472,6 +479,62 @@ Variables</h2></td></tr>
 
 </div>
 </div>
+<a id="a5e1c82d7c5acce0ced21966a61cf7169" name="a5e1c82d7c5acce0ced21966a61cf7169"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e1c82d7c5acce0ced21966a61cf7169">&#9670;&#160;</a></span>decodeHexChar()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::uint8_t idhan::decodeHexChar </td>
+          <td>(</td>
+          <td class="paramtype">const char</td>          <td class="paramname"><span class="paramname"><em>hex</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Decodes a single hex character. </p>
+
+</div>
+</div>
+<a id="a4eb238a2fbab3131c37059615787b1e6" name="a4eb238a2fbab3131c37059615787b1e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4eb238a2fbab3131c37059615787b1e6">&#9670;&#160;</a></span>decodeHexPair()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::uint8_t idhan::decodeHexPair </td>
+          <td>(</td>
+          <td class="paramtype">const char</td>          <td class="paramname"><span class="paramname"><em>left</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char</td>          <td class="paramname"><span class="paramname"><em>right</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a05ffd4928189092728cf8fa8ab20e694" name="a05ffd4928189092728cf8fa8ab20e694"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a05ffd4928189092728cf8fa8ab20e694">&#9670;&#160;</a></span>exceptionHandler()</h2>
 
@@ -609,6 +672,27 @@ Variables</h2></td></tr>
           <td>(</td>
           <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>str</em></span></td><td>)</td>
           <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a654cd3b3bfaffed8056f562beb1e47d8" name="a654cd3b3bfaffed8056f562beb1e47d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a654cd3b3bfaffed8056f562beb1e47d8">&#9670;&#160;</a></span>trantorHook()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::trantorHook </td>
+          <td>(</td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>msg</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::uint64_t</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

@@ -8,5 +8,9 @@ var searchData=
   ['migrations_2ecpp_5',['migrations.cpp',['../da/d07/migrations_8cpp.html',1,'']]],
   ['migrations_2ehpp_6',['migrations.hpp',['../d8/d75/migrations_8hpp.html',1,'']]],
   ['mime_2ehpp_7',['mime.hpp',['../d2/d5d/mime_8hpp.html',1,'']]],
-  ['modify_2ecpp_8',['modify.cpp',['../d7/d5c/modify_8cpp.html',1,'']]]
+  ['mimedatabase_2ecpp_8',['MimeDatabase.cpp',['../db/dc2/MimeDatabase_8cpp.html',1,'']]],
+  ['mimedatabase_2ehpp_9',['MimeDatabase.hpp',['../d6/df0/MimeDatabase_8hpp.html',1,'']]],
+  ['mimeinfo_2ecpp_10',['MimeInfo.cpp',['../d3/dbe/MimeInfo_8cpp.html',1,'']]],
+  ['mimeinfo_2ehpp_11',['MimeInfo.hpp',['../db/d46/MimeInfo_8hpp.html',1,'']]],
+  ['modify_2ecpp_12',['modify.cpp',['../d7/d5c/modify_8cpp.html',1,'']]]
 ];

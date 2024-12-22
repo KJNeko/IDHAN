@@ -4,7 +4,7 @@ var searchData=
   ['get_1',['get',['../d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b',1,'idhan::config::get(std::string_view group, std::string_view name)'],['../d6/db4/namespaceidhan_1_1config.html#a7c2410d2d4a089659f913de7518f8e0e',1,'idhan::config::get(std::string_view group, std::string_view name, const T default_value)']]],
   ['getdefaultedvalue_2',['getDefaultedValue',['../d2/d18/namespaceidhan_1_1hyapi.html#a5dd8f4a8d5cf655864103809cfa0e80c',1,'idhan::hyapi']]],
   ['getfilesystemcapacity_3',['getFilesystemCapacity',['../db/d9b/namespaceidhan_1_1filesystem.html#ae119b8cbfedcbc34598aeb7ce43f22bc',1,'idhan::filesystem']]],
-  ['getinstance_4',['getInstance',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a02b686ee8a91defa9faf668524ad1673',1,'idhan::filesystem::ClusterManager']]],
+  ['getinstance_4',['getInstance',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a02b686ee8a91defa9faf668524ad1673',1,'idhan::filesystem::ClusterManager::getInstance()'],['../d4/d9c/namespaceidhan_1_1mime.html#a1d7a6346a14df758133691706d644832',1,'idhan::mime::getInstance()']]],
   ['getmime_5',['getMime',['../d4/d9c/namespaceidhan_1_1mime.html#adcb9649e51e1bf53e6fa1f30a2fc0210',1,'idhan::mime']]],
   ['getmimeidfromrecord_6',['getMimeIDFromRecord',['../d4/d9c/namespaceidhan_1_1mime.html#a4fb3e6c97205af3230d1c74e9204da1d',1,'idhan::mime']]],
   ['getnamespaceid_7',['getNamespaceID',['../db/de4/namespaceidhan_1_1api.html#abd1fd6dacf396b59e1cbe6c640890c89',1,'idhan::api::getNamespaceID(const std::string &amp;namespace_text, drogon::orm::DbClientPtr db)'],['../db/de4/namespaceidhan_1_1api.html#aba9a9850d6edff5caaab46c3a3caf8d5',1,'idhan::api::getNamespaceID(Json::Value namespace_c, drogon::orm::DbClientPtr db)']]],

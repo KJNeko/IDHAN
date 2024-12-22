@@ -112,16 +112,29 @@ $(function(){initNavTree('d4/d9c/namespaceidhan_1_1mime.html','../../'); initRes
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">idhan::mime Namespace Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html">AnimatedInfo</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">FileMimeInfo</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d75/structidhan_1_1mime_1_1ImageInfo.html">ImageInfo</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper.html">IStreamQtWrapper</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html">MimeDatabase</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html">MimeInfo</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d56/structidhan_1_1mime_1_1Resolution.html">Resolution</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/da8/structidhan_1_1mime_1_1VideoInfo.html">VideoInfo</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
@@ -141,6 +154,15 @@ Functions</h2></td></tr>
 <tr class="memitem:a96c638ae913e30e456c17d6958c1a07f" id="r_a96c638ae913e30e456c17d6958c1a07f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/dcf/namespaceidhan.html#a80014aa9f63cb6df8dc2cf8b1e5570e1">MimeID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a96c638ae913e30e456c17d6958c1a07f">registerMimeType</a> (const std::string &amp;name, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="memdesc:a96c638ae913e30e456c17d6958c1a07f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a new mime type in the database.  <br /></td></tr>
 <tr class="separator:a96c638ae913e30e456c17d6958c1a07f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a54e14db7a4025e9c517e2b2f018e8cea" id="r_a54e14db7a4025e9c517e2b2f018e8cea"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="../../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html">MimeInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a54e14db7a4025e9c517e2b2f018e8cea">idhanScanMime</a> (const std::byte *data, std::size_t len)</td></tr>
+<tr class="separator:a54e14db7a4025e9c517e2b2f018e8cea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d7a6346a14df758133691706d644832" id="r_a1d7a6346a14df758133691706d644832"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="../../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html">MimeDatabase</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d7a6346a14df758133691706d644832">getInstance</a> ()</td></tr>
+<tr class="separator:a1d7a6346a14df758133691706d644832"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:ae88919075ec4e61aa26cdfb59a167d04" id="r_ae88919075ec4e61aa26cdfb59a167d04"><td class="memItemLeft" align="right" valign="top">static std::shared_ptr&lt; <a class="el" href="../../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html">MimeDatabase</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae88919075ec4e61aa26cdfb59a167d04">mime_db</a> { nullptr }</td></tr>
+<tr class="separator:ae88919075ec4e61aa26cdfb59a167d04"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="af5337621997a4c8dbd556a06ec9ffa5c" name="af5337621997a4c8dbd556a06ec9ffa5c"></a>
@@ -163,6 +185,23 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Attempts to detect the mime type for this file, Will return an empty optional if it was not registered. </p>
+
+</div>
+</div>
+<a id="a1d7a6346a14df758133691706d644832" name="a1d7a6346a14df758133691706d644832"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d7a6346a14df758133691706d644832">&#9670;&#160;</a></span>getInstance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt; <a class="el" href="../../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html">MimeDatabase</a> &gt; idhan::mime::getInstance </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -247,6 +286,27 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a54e14db7a4025e9c517e2b2f018e8cea" name="a54e14db7a4025e9c517e2b2f018e8cea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a54e14db7a4025e9c517e2b2f018e8cea">&#9670;&#160;</a></span>idhanScanMime()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; <a class="el" href="../../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html">MimeInfo</a> &gt; idhan::mime::idhanScanMime </td>
+          <td>(</td>
+          <td class="paramtype">const std::byte *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a96c638ae913e30e456c17d6958c1a07f" name="a96c638ae913e30e456c17d6958c1a07f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a96c638ae913e30e456c17d6958c1a07f">&#9670;&#160;</a></span>registerMimeType()</h2>
 
@@ -290,6 +350,29 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Registers a new mime type in the database. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Variable Documentation</h2>
+<a id="ae88919075ec4e61aa26cdfb59a167d04" name="ae88919075ec4e61aa26cdfb59a167d04"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae88919075ec4e61aa26cdfb59a167d04">&#9670;&#160;</a></span>mime_db</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt; <a class="el" href="../../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html">MimeDatabase</a> &gt; idhan::mime::mime_db { nullptr }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
 
 </div>
 </div>

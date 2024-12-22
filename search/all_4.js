@@ -16,5 +16,6 @@ var searchData=
   ['ethumbnailaccess_13',['eThumbnailAccess',['../dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cae5e3626cfca65531a46e0bc61f8efda5',1,'idhan']]],
   ['exceptionhandler_14',['exceptionHandler',['../dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694',1,'idhan']]],
   ['exceptions_2ehpp_15',['exceptions.hpp',['../da/d49/exceptions_8hpp.html',1,'']]],
-  ['extension_16',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo']]]
+  ['extension_16',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo']]],
+  ['extra_5finfo_17',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]]
 ];

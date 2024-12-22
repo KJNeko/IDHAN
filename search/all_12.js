@@ -14,5 +14,6 @@ var searchData=
   ['total_11',['total',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a90a7c5b922ea8c9163376b353eee5ed3',1,'idhan::api::ClusterInfo']]],
   ['totalmediaviewtime_12',['TotalMediaViewtime',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685acb04a90cb7f7b87cb12a0906d87e8930',1,'idhan::hyapi']]],
   ['tovec_13',['toVec',['../d0/de3/classidhan_1_1SHA256.html#a6d7314b1d734629d1f4149aeda878647',1,'idhan::SHA256']]],
-  ['trace_14',['trace',['../d7/d03/namespaceidhan_1_1log.html#a0a03f23bc2bbe4edc9bb4daa0647b60c',1,'idhan::log']]]
+  ['trace_14',['trace',['../d7/d03/namespaceidhan_1_1log.html#a0a03f23bc2bbe4edc9bb4daa0647b60c',1,'idhan::log']]],
+  ['trantorhook_15',['trantorHook',['../dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8',1,'idhan']]]
 ];

@@ -7,7 +7,7 @@ var searchData=
   ['get_20tag_20tag_5fid_20info_4',['GET /tag/tag_id}/info',['../dd/df9/APIDocs.html#tag_info',1,'']]],
   ['getdefaultedvalue_5',['getDefaultedValue',['../d2/d18/namespaceidhan_1_1hyapi.html#a5dd8f4a8d5cf655864103809cfa0e80c',1,'idhan::hyapi']]],
   ['getfilesystemcapacity_6',['getFilesystemCapacity',['../db/d9b/namespaceidhan_1_1filesystem.html#ae119b8cbfedcbc34598aeb7ce43f22bc',1,'idhan::filesystem']]],
-  ['getinstance_7',['getInstance',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a02b686ee8a91defa9faf668524ad1673',1,'idhan::filesystem::ClusterManager']]],
+  ['getinstance_7',['getInstance',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a02b686ee8a91defa9faf668524ad1673',1,'idhan::filesystem::ClusterManager::getInstance()'],['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a06ee048a0e6db422d41a1ef5e2a1f04e',1,'idhan::mime::MimeDatabase::getInstance'],['../d4/d9c/namespaceidhan_1_1mime.html#a1d7a6346a14df758133691706d644832',1,'idhan::mime::getInstance()']]],
   ['getmime_8',['getMime',['../d4/d9c/namespaceidhan_1_1mime.html#adcb9649e51e1bf53e6fa1f30a2fc0210',1,'idhan::mime']]],
   ['getmime_2ecpp_9',['getMime.cpp',['../de/dce/getMime_8cpp.html',1,'']]],
   ['getmimeidfromrecord_10',['getMimeIDFromRecord',['../d4/d9c/namespaceidhan_1_1mime.html#a4fb3e6c97205af3230d1c74e9204da1d',1,'idhan::mime']]],

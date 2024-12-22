@@ -50,7 +50,7 @@ var NAVTREE =
       [ "Class Index", "classes.html", null ],
       [ "Class Hierarchy", "hierarchy.html", "hierarchy" ],
       [ "Class Members", "functions.html", [
-        [ "All", "functions.html", null ],
+        [ "All", "functions.html", "functions_dup" ],
         [ "Functions", "functions_func.html", null ],
         [ "Variables", "functions_vars.html", null ],
         [ "Typedefs", "functions_type.html", null ],
@@ -65,6 +65,8 @@ var NAVTREE =
         [ "All", "globals.html", null ],
         [ "Functions", "globals_func.html", null ],
         [ "Variables", "globals_vars.html", null ],
+        [ "Enumerations", "globals_enum.html", null ],
+        [ "Enumerator", "globals_eval.html", null ],
         [ "Macros", "globals_defs.html", null ]
       ] ]
     ] ]
@@ -74,9 +76,10 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d5/dc9/versions_8hpp.html#a6427bcbc5795606523fae35d86cd4d4b",
-"dc/d1e/classidhan_1_1api_1_1ImportStreamReader.html#a9a9dacd694770f5716d890ad0d08b9e5",
-"de/d3d/createTag_8cpp.html#adab2ce6dfb9480909bee56fd380b43b0"
+"d4/d9c/namespaceidhan_1_1mime.html#a1d7a6346a14df758133691706d644832",
+"da/d68/IDHANTypes_8hpp.html#a0cdf569f56861f06ea1a67d83e41529e",
+"dd/db8/splitTag_8hpp.html#a0dda1c04fbc66421eab29ca7f02fcbac",
+"dir_9868e3b60fd799607c7d7d1c4294e646.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

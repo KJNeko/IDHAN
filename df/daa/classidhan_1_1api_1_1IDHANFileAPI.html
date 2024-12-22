@@ -130,13 +130,13 @@ Inheritance diagram for idhan::api::IDHANFileAPI:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a07d658752e6cc0183fcaac82a60edd33" id="r_a07d658752e6cc0183fcaac82a60edd33"><td class="memItemLeft" align="right" valign="top">METHOD_LIST_BEGIN&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a07d658752e6cc0183fcaac82a60edd33">ADD_METHOD_TO</a> (<a class="el" href="#aec93b36090eabd8725f20c2d7a8afa4c">IDHANFileAPI::createRecord</a>, &quot;/file/create&quot;)</td></tr>
 <tr class="separator:a07d658752e6cc0183fcaac82a60edd33"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac2141889eaf0f059d0bb024870fd5d82" id="r_ac2141889eaf0f059d0bb024870fd5d82"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac2141889eaf0f059d0bb024870fd5d82">ADD_METHOD_TO</a> (<a class="el" href="#a46e9c378eb7ea2e36e2886a5e96c1d4d">IDHANFileAPI::importFile</a>, &quot;/file/import&quot;)</td></tr>
+<tr class="memitem:ac2141889eaf0f059d0bb024870fd5d82" id="r_ac2141889eaf0f059d0bb024870fd5d82"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac2141889eaf0f059d0bb024870fd5d82">ADD_METHOD_TO</a> (<a class="el" href="#a444fc6870a8726a1c128aec8949bedf4">IDHANFileAPI::importFile</a>, &quot;/file/import&quot;)</td></tr>
 <tr class="separator:ac2141889eaf0f059d0bb024870fd5d82"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
-<tr class="memitem:a46e9c378eb7ea2e36e2886a5e96c1d4d" id="r_a46e9c378eb7ea2e36e2886a5e96c1d4d"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a46e9c378eb7ea2e36e2886a5e96c1d4d">importFile</a> (const drogon::HttpRequestPtr request, drogon::RequestStreamPtr &amp;&amp;request_stream)</td></tr>
-<tr class="separator:a46e9c378eb7ea2e36e2886a5e96c1d4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a444fc6870a8726a1c128aec8949bedf4" id="r_a444fc6870a8726a1c128aec8949bedf4"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a444fc6870a8726a1c128aec8949bedf4">importFile</a> (const drogon::HttpRequestPtr request)</td></tr>
+<tr class="separator:a444fc6870a8726a1c128aec8949bedf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aec93b36090eabd8725f20c2d7a8afa4c" id="r_aec93b36090eabd8725f20c2d7a8afa4c"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aec93b36090eabd8725f20c2d7a8afa4c">createRecord</a> (const drogon::HttpRequestPtr request)</td></tr>
 <tr class="memdesc:aec93b36090eabd8725f20c2d7a8afa4c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new record in the database. Responds with the record id in a json format.  <br /></td></tr>
 <tr class="separator:aec93b36090eabd8725f20c2d7a8afa4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -172,7 +172,7 @@ Private Member Functions</h2></td></tr>
         <tr>
           <td class="memname">idhan::api::IDHANFileAPI::ADD_METHOD_TO </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="#a46e9c378eb7ea2e36e2886a5e96c1d4d">IDHANFileAPI::importFile</a></td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
+          <td class="paramtype"><a class="el" href="#a444fc6870a8726a1c128aec8949bedf4">IDHANFileAPI::importFile</a></td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -211,8 +211,8 @@ Private Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a46e9c378eb7ea2e36e2886a5e96c1d4d" name="a46e9c378eb7ea2e36e2886a5e96c1d4d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a46e9c378eb7ea2e36e2886a5e96c1d4d">&#9670;&#160;</a></span>importFile()</h2>
+<a id="a444fc6870a8726a1c128aec8949bedf4" name="a444fc6870a8726a1c128aec8949bedf4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a444fc6870a8726a1c128aec8949bedf4">&#9670;&#160;</a></span>importFile()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -223,12 +223,8 @@ Private Member Functions</h2></td></tr>
         <tr>
           <td class="memname">drogon::Task&lt; drogon::HttpResponsePtr &gt; idhan::api::IDHANFileAPI::importFile </td>
           <td>(</td>
-          <td class="paramtype">const drogon::HttpRequestPtr</td>          <td class="paramname"><span class="paramname"><em>request</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const drogon::HttpRequestPtr</td>          <td class="paramname"><span class="paramname"><em>request</em></span></td><td>)</td>
           <td></td>
-          <td class="paramtype">drogon::RequestStreamPtr &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>request_stream</em></span>&#160;)</td>
         </tr>
       </table>
   </td>

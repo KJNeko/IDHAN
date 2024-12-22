@@ -33,8 +33,13 @@ var hierarchy =
       [ "idhan::hyapi::HyAPIAuth", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html", null ]
     ] ],
     [ "idhan::IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", null ],
+    [ "idhan::mime::ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", [
+      [ "idhan::mime::AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", null ]
+    ] ],
     [ "idhan::api::ImportData", "de/d7c/structidhan_1_1api_1_1ImportData.html", null ],
     [ "idhan::ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", null ],
+    [ "idhan::mime::MimeDatabase", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html", null ],
+    [ "idhan::mime::MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", null ],
     [ "QIODevice", null, [
       [ "idhan::mime::IStreamQtWrapper", "d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper.html", null ]
     ] ],
@@ -44,8 +49,10 @@ var hierarchy =
     [ "drogon::RequestStreamReader", null, [
       [ "idhan::api::ImportStreamReader", "dc/d1e/classidhan_1_1api_1_1ImportStreamReader.html", null ]
     ] ],
+    [ "idhan::mime::Resolution", "d6/d56/structidhan_1_1mime_1_1Resolution.html", null ],
     [ "idhan::logging::ScopedTimer", "de/d50/structidhan_1_1logging_1_1ScopedTimer.html", null ],
     [ "idhan::SearchBuilder", "dc/dba/structidhan_1_1SearchBuilder.html", null ],
     [ "idhan::ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", null ],
-    [ "idhan::SHA256", "d0/de3/classidhan_1_1SHA256.html", null ]
+    [ "idhan::SHA256", "d0/de3/classidhan_1_1SHA256.html", null ],
+    [ "idhan::mime::VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", null ]
 ];
