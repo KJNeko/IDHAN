@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['self_5fname_0',['self_name',['../da/d27/structidhan_1_1IDHANClientConfig.html#a2834f4ef7f668daddad0669f6343cb91',1,'idhan::IDHANClientConfig']]],
-  ['size_1',['size',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a237efb1b1b82ac3db31dac181649b4f7',1,'idhan::api::ClusterInfo']]],
-  ['start_2',['start',['../de/d50/structidhan_1_1logging_1_1ScopedTimer.html#a1376167c5c3e12ab1013ed9c06c7db9a',1,'idhan::logging::ScopedTimer']]],
-  ['stream_3',['stream',['../dc/d1e/classidhan_1_1api_1_1ImportStreamReader.html#a9cf673479bd851b046425815b20a8c60',1,'idhan::api::ImportStreamReader::stream'],['../de/d7c/structidhan_1_1api_1_1ImportData.html#a733bd09955b24709dbc215a45ecec890',1,'idhan::api::ImportData::stream']]]
+  ['ratio_0',['ratio',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a8103d35d073e41e522a97a9b76d01147',1,'idhan::api::ClusterInfo']]],
+  ['read_5fonly_1',['read_only',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a72e7430fde38cd491e8ac54510ea5dca',1,'idhan::api::ClusterInfo']]],
+  ['resolution_2',['resolution',['../de/da8/structidhan_1_1mime_1_1VideoInfo.html#a23fc9d8cc0e8d923b0d71db1eda6f165',1,'idhan::mime::VideoInfo::resolution'],['../d3/d75/structidhan_1_1mime_1_1ImageInfo.html#a579eac1988a95720dc4664b4a2462314',1,'idhan::mime::ImageInfo::resolution']]]
 ];

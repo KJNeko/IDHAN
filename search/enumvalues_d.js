@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['random_0',['Random',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685abfd410c0d6197c155284ecd1a7206ce5',1,'idhan::hyapi']]],
-  ['ratio_1',['Ratio',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a4c73feb117d14e617579a8278bb3da3e',1,'idhan::hyapi']]]
+  ['pixelhashhex_0',['PixelHashHex',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685ab399b020c4951ac058ad4a2b5ebedda5',1,'idhan::hyapi']]],
+  ['previouslydeleted_1',['PreviouslyDeleted',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a124ca310f93eccdc9790b24fce74329c',1,'idhan::hyapi']]]
 ];

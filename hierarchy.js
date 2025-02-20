@@ -36,18 +36,18 @@ var hierarchy =
     [ "idhan::mime::ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", [
       [ "idhan::mime::AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", null ]
     ] ],
-    [ "idhan::api::ImportData", "de/d7c/structidhan_1_1api_1_1ImportData.html", null ],
     [ "idhan::ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", null ],
     [ "idhan::mime::MimeDatabase", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html", null ],
-    [ "idhan::mime::MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", null ],
-    [ "QIODevice", null, [
-      [ "idhan::mime::IStreamQtWrapper", "d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper.html", null ]
+    [ "idhan::mime::MimeDataIdentifier", "d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html", [
+      [ "idhan::mime::DataIdentifierSearch", "d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html", [
+        [ "idhan::mime::DataIdentifierOverride", "d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride.html", null ]
+      ] ]
     ] ],
+    [ "idhan::mime::MimeDataTrack", "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html", null ],
+    [ "idhan::mime::MimeIdentifier", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html", null ],
+    [ "idhan::mime::MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", null ],
     [ "QObject", null, [
       [ "idhan::IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", null ]
-    ] ],
-    [ "drogon::RequestStreamReader", null, [
-      [ "idhan::api::ImportStreamReader", "dc/d1e/classidhan_1_1api_1_1ImportStreamReader.html", null ]
     ] ],
     [ "idhan::mime::Resolution", "d6/d56/structidhan_1_1mime_1_1Resolution.html", null ],
     [ "idhan::logging::ScopedTimer", "de/d50/structidhan_1_1logging_1_1ScopedTimer.html", null ],

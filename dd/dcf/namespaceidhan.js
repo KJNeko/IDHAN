@@ -74,8 +74,9 @@ var namespaceidhan =
       [ "eAllPermissions", "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca466198b70ed2bb19896f587d392b7739", null ]
     ] ],
     [ "checkContentType", "dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824", null ],
-    [ "decodeHexChar", "dd/dcf/namespaceidhan.html#a5e1c82d7c5acce0ced21966a61cf7169", null ],
-    [ "decodeHexPair", "dd/dcf/namespaceidhan.html#a4eb238a2fbab3131c37059615787b1e6", null ],
+    [ "decodeHex", "dd/dcf/namespaceidhan.html#a5b247491d0fa033dd2d939970df653fa", null ],
+    [ "decodeHexCharacter", "dd/dcf/namespaceidhan.html#ace19126f81e79d920ce7787ba54d016b", null ],
+    [ "decodeHexCharacters", "dd/dcf/namespaceidhan.html#ad23693d258282b5457ded516e1a6b0d1", null ],
     [ "exceptionHandler", "dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694", null ],
     [ "fixme", "dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e", null ],
     [ "getRecordSHA256", "dd/dcf/namespaceidhan.html#a76828f1eed852334ad83d57970800420", null ],

@@ -7,9 +7,7 @@ var annotated_dup =
         [ "IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", "df/def/classidhan_1_1api_1_1IDHANApi" ],
         [ "IDHANAuth", "d6/d49/classidhan_1_1api_1_1IDHANAuth.html", "d6/d49/classidhan_1_1api_1_1IDHANAuth" ],
         [ "IDHANFileAPI", "df/daa/classidhan_1_1api_1_1IDHANFileAPI.html", "df/daa/classidhan_1_1api_1_1IDHANFileAPI" ],
-        [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ],
-        [ "ImportData", "de/d7c/structidhan_1_1api_1_1ImportData.html", "de/d7c/structidhan_1_1api_1_1ImportData" ],
-        [ "ImportStreamReader", "dc/d1e/classidhan_1_1api_1_1ImportStreamReader.html", "dc/d1e/classidhan_1_1api_1_1ImportStreamReader" ]
+        [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ]
       ] ],
       [ "filesystem", "db/d9b/namespaceidhan_1_1filesystem.html", [
         [ "ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager" ]
@@ -23,10 +21,14 @@ var annotated_dup =
       ] ],
       [ "mime", "d4/d9c/namespaceidhan_1_1mime.html", [
         [ "AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo" ],
+        [ "DataIdentifierOverride", "d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride.html", "d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride" ],
+        [ "DataIdentifierSearch", "d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html", "d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch" ],
         [ "FileMimeInfo", "db/de8/structidhan_1_1mime_1_1FileMimeInfo.html", "db/de8/structidhan_1_1mime_1_1FileMimeInfo" ],
         [ "ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", "d3/d75/structidhan_1_1mime_1_1ImageInfo" ],
-        [ "IStreamQtWrapper", "d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper.html", "d4/d9b/structidhan_1_1mime_1_1IStreamQtWrapper" ],
         [ "MimeDatabase", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html", "d5/d42/classidhan_1_1mime_1_1MimeDatabase" ],
+        [ "MimeDataIdentifier", "d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html", "d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier" ],
+        [ "MimeDataTrack", "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html", "de/d89/structidhan_1_1mime_1_1MimeDataTrack" ],
+        [ "MimeIdentifier", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier" ],
         [ "MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", "d7/d2a/structidhan_1_1mime_1_1MimeInfo" ],
         [ "Resolution", "d6/d56/structidhan_1_1mime_1_1Resolution.html", "d6/d56/structidhan_1_1mime_1_1Resolution" ],
         [ "VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", "de/da8/structidhan_1_1mime_1_1VideoInfo" ]

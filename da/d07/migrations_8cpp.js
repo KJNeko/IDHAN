@@ -1,4 +1,4 @@
 var migrations_8cpp =
 [
-    [ "updateMigrations", "da/d07/migrations_8cpp.html#a8636d1bc8175db3fc89fb558da9ea434", null ]
+    [ "idhan::db::updateMigrations", "db/d01/namespaceidhan_1_1db.html#a8636d1bc8175db3fc89fb558da9ea434", null ]
 ];

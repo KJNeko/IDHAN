@@ -28,7 +28,7 @@ var NAVTREE =
     [ "\"IDHAN File MetaTypes\"", "index.html", "index" ],
     [ "IDHAN API Docs", "dd/df9/APIDocs.html", null ],
     [ "IDHAN Authorization", "d1/d63/IDHANAuth.html", null ],
-    [ "README", "d3/d3b/md_IDHANServer_2src_2db_2setup_2migration_2README.html", null ],
+    [ "Mime Parser", "d9/d30/MimeParser.html", null ],
     [ "Welcome to IDHAN's page", "d0/d30/md_README.html", [
       [ "Getting started", "d0/d30/md_README.html#autotoc_md6", null ],
       [ "Clients", "d0/d30/md_README.html#autotoc_md7", null ],
@@ -65,8 +65,6 @@ var NAVTREE =
         [ "All", "globals.html", null ],
         [ "Functions", "globals_func.html", null ],
         [ "Variables", "globals_vars.html", null ],
-        [ "Enumerations", "globals_enum.html", null ],
-        [ "Enumerator", "globals_eval.html", null ],
         [ "Macros", "globals_defs.html", null ]
       ] ]
     ] ]
@@ -76,11 +74,10 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d4/d9c/namespaceidhan_1_1mime.html#a1d7a6346a14df758133691706d644832",
-"da/d68/IDHANTypes_8hpp.html#a0cdf569f56861f06ea1a67d83e41529e",
-"dd/db8/splitTag_8hpp.html#a0dda1c04fbc66421eab29ca7f02fcbac",
-"dir_9868e3b60fd799607c7d7d1c4294e646.html"
+"d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride.html#a33101860beace406e8ca648a69bddedf",
+"db/de4/namespaceidhan_1_1api.html#a31510b2560a529566f296b66dae97df6",
+"dd/dcf/namespaceidhan.html#afd5c5cb8e59f086c13fc23bc87f30003"
 ];
 
-var SYNCONMSG = 'click to disable panel synchronisation';
-var SYNCOFFMSG = 'click to enable panel synchronisation';
+var SYNCONMSG = 'click to disable panel synchronization';
+var SYNCOFFMSG = 'click to enable panel synchronization';

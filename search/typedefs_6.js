@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['tagdomainid_0',['TagDomainID',['../dd/dcf/namespaceidhan.html#a3245b5614ad73f1cd63f0389fff1d9aa',1,'idhan']]],
-  ['tagid_1',['TagID',['../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e',1,'idhan']]]
+  ['subinfovariant_0',['SubInfoVariant',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a16ae1ee0f4f708d61de7ca9049359a89',1,'idhan::mime::MimeInfo']]],
+  ['subtagid_1',['SubtagID',['../dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0',1,'idhan']]]
 ];

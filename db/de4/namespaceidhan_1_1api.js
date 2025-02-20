@@ -6,8 +6,6 @@ var namespaceidhan_1_1api =
     [ "IDHANAuth", "d6/d49/classidhan_1_1api_1_1IDHANAuth.html", "d6/d49/classidhan_1_1api_1_1IDHANAuth" ],
     [ "IDHANFileAPI", "df/daa/classidhan_1_1api_1_1IDHANFileAPI.html", "df/daa/classidhan_1_1api_1_1IDHANFileAPI" ],
     [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ],
-    [ "ImportData", "de/d7c/structidhan_1_1api_1_1ImportData.html", "de/d7c/structidhan_1_1api_1_1ImportData" ],
-    [ "ImportStreamReader", "dc/d1e/classidhan_1_1api_1_1ImportStreamReader.html", "dc/d1e/classidhan_1_1api_1_1ImportStreamReader" ],
     [ "createRecordFromJson", "db/de4/namespaceidhan_1_1api.html#a0cd19a5936e8c63a544206a2072250fb", null ],
     [ "createRecordFromOctet", "db/de4/namespaceidhan_1_1api.html#a9f8d566d3390c231c7a322099b5cb47d", null ],
     [ "createTagID", "db/de4/namespaceidhan_1_1api.html#abeb4f1dfbac8d77557466c2c4abad947", null ],
