@@ -9,14 +9,12 @@
 
 namespace idhan::mime
 {
-//! Registers a new mime type in the database
+
+//! Searches for a mime type in the database
 std::optional< MimeID > searchMimeType( const std::string& name, drogon::orm::DbClientPtr db );
 
 //! Registers a new mime type in the database
 MimeID registerMimeType( const std::string& name, drogon::orm::DbClientPtr db );
-
-//! Attempts to detect the mime type for this file, Will return an empty optional if it was not registered.
-std::optional< MimeID > detectMimeType( std::istream& is, drogon::orm::DbClientPtr db );
 
 //! Returns the mime id assocaited with a given record.
 //! @throws NoFileInfo if the record has no file info

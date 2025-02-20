@@ -1,0 +1,18 @@
+{
+  "mime": "image/jpeg",
+  "extensions": [
+    "jpg"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 0,
+      "hex": "FFD8FF"
+    },
+    {
+      "type": "search",
+      "offset": -2,
+      "hex": "FFD9"
+    }
+  ]
+}
