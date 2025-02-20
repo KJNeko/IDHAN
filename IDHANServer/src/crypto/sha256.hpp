@@ -43,7 +43,7 @@ class SHA256
 	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; };
 
 	//! Supplied so we can work with drogon until I figure out how the fuck to overload their operators.
-	inline std::vector< char > toVec()
+	inline std::vector< char > toVec() const
 	{
 		std::vector< char > data {};
 		data.resize( m_data.size() );

@@ -4,16 +4,17 @@
 
 #include "IDHANTypes.hpp"
 #include "api/IDHANFileAPI.hpp"
+#include "api/helpers/records.hpp"
 #include "crypto/sha256.hpp"
 #include "fgl/defines.hpp"
 
 namespace idhan::api
 {
 
+
+
 ResponseTask createRecordFromOctet( const drogon::HttpRequestPtr req )
-{
-	//TODO: FIXME
-}
+{}
 
 ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 {
@@ -36,37 +37,12 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 			// dehexify the string.
 			SHA256 sha256 { SHA256::fromHex( str ) };
 
-			// Here we do the ON CONFLICT DO NOTHING in order to prevent an exception from being thrown by drogon.
-			auto result {
-				co_await db
-					->execSqlCoro( "INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING", sha256.toVec() )
-			};
-
-			RecordID record_id FGL_UNINITALIZED;
-
-			if ( result.empty() )
-			{
-				// In this case the record likely already existed. So we should just search for it.
-				const auto search_result {
-					co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", sha256.toVec() )
-				};
-
-				//TODO: Proper exception
-				if ( search_result.empty() ) throw std::runtime_error( "record_id is empty" );
-
-				record_id = search_result[ 0 ][ 0 ].as< RecordID >();
-			}
-			else
-			{
-				record_id = result[ 0 ][ 0 ].as< RecordID >();
-			}
+			const RecordID record_id { co_await createRecord( sha256, db ) };
 		}
 	}
 	else if ( sha256s.isString() ) // HEX string
 	{}
 }
-
-
 
 ResponseTask IDHANFileAPI::createRecord( const drogon::HttpRequestPtr request )
 {

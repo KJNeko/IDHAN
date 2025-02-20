@@ -8,3 +8,70 @@ post:
         schema:
           type: string
           format: binary
+  responses:
+    success:
+      description: Successful import and record creation of the file
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_id:
+                type: integer
+              status:
+                type: integer
+                example: 1
+              record_timestamp:
+                description: Only present if new_record is false
+                type: integer
+                example: 1740049373
+              file_timestamp:
+                type: integer
+                example: 1740049373
+    already exists:
+      description: IDHAN already has the file
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_id:
+                type: integer
+              status:
+                type: integer
+                example: 2
+              record_timestamp:
+                type: integer
+                example: 1740049373
+              file_timestamp:
+                type: integer
+                example: 1740049373
+    previously deleted:
+      description: IDHAN has been told to delete this file
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_id:
+                type: integer
+              status:
+                type: integer
+                example: 3
+              deleted_timestamp:
+                type: integer
+                example: 1740049373
+    failed:
+      description: IDHAN failed to determine the file's mime
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: integer
+                example: 4
+              reason:
+                type: string
+                example: unknown mime
+
