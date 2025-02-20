@@ -9,37 +9,10 @@
 #include "crypto/sha256.hpp"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
+#include "mime/MimeDatabase.hpp"
 
 namespace idhan::api
 {
-
-class ImportStreamReader : public drogon::RequestStreamReader
-{
-	std::mutex mtx;
-	std::strstream stream {};
-
-  public:
-
-	void onStreamData( const char* data, const size_t length ) override
-	{
-		std::lock_guard guard { mtx };
-		stream << std::string_view( data, length );
-	}
-
-	void onStreamFinish( std::exception_ptr ) override
-	{
-		std::lock_guard guard { mtx };
-		stream.setstate( std::ios::eofbit );
-	}
-};
-
-struct ImportData
-{
-	std::istream& stream;
-	std::mutex& mtx;
-
-	[[nodiscard]] auto lock() const { return std::lock_guard { mtx }; }
-};
 
 drogon::Task< drogon::HttpResponsePtr > IDHANFileAPI::importFile( const drogon::HttpRequestPtr request )
 {
@@ -52,9 +25,11 @@ drogon::Task< drogon::HttpResponsePtr > IDHANFileAPI::importFile( const drogon::
 
 	auto db { drogon::app().getDbClient() };
 
-	const MineInfo mime { mime::detectMimeType(, db ) };
-
 	const SHA256 sha256 { SHA256::hash( request_data ) };
+
+	const std::optional< std::string > mime_str { mime::getInstance()->scan( request_data ) };
+
+	log::debug( "MIME type: {}", mime_str.value_or( "NONE" ) );
 
 	Json::Value root {};
 

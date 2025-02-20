@@ -1,0 +1,60 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+
+
+participant Client
+
+!pragma teoz true
+box "Server" #LightBlue
+participant Server
+box "Internal"
+queue ImporterQueue as Queue
+participant Importer...N as Importer
+participant MimeDatabase
+end box
+
+end box
+
+activate Client
+activate Server
+
+Client <-> Server: Auth
+
+Client -> Server: Submit file
+Server -> Server: Get import UID
+
+Server -> Server: Wait for import queue to have space available
+Server -> Queue: Place file onto queue
+
+Server -> Client: Return UID
+
+deactivate Client
+
+Queue <-> Importer: Pull next import task
+Importer -> MimeDatabase: Request mime parse
+
+MimeDatabase -> Importer: Return mime info
+
+alt#Gold #LightBlue Mime detected
+Importer -> Importer: Continue import
+else #Pink Mime Unknown
+Importer -> Server: Invalidate UID
+end
+
+
+Client -> Server: Request import info
+alt#Gold #LightBlue Import success
+Server -> Client: Returns
+else #Pink UID Invalid/Error
+Server -> Client: Returns error
+else #Grey Import not completed
+Server -> Server: Wait for import to completed
+Server -> Client:
+end
+
+
+destroy Client
+
+@enduml

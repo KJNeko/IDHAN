@@ -30,6 +30,7 @@ class SHA256
 	SHA256() = delete;
 
 	explicit SHA256( const std::byte* data );
+	SHA256( const std::string_view& data );
 
 	friend SHA256 createFromIStream( std::istream& istream );
 

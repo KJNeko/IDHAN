@@ -1,0 +1,28 @@
+{
+  "mime": "image/png",
+  "extensions": [
+    "png"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 0,
+      "hex": "89504E470D0A1A0A"
+    },
+    {
+      "type": "override",
+      // acTL chunk
+      "hex": "6163544C",
+      "override": "image/apng",
+      "data": [
+        {
+          "type": "search",
+          // IDAT chunk, Which should be after acTL
+          "hex": "4944415478"
+        }
+      ]
+    }
+  ]
+}
+
+
