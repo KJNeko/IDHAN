@@ -22,7 +22,7 @@ drogon::HttpResponsePtr generateFailedTagSearch( const TagID tag_id )
 	return response;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::info( drogon::HttpRequestPtr request, TagID tag_id )
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagInfo( drogon::HttpRequestPtr request, TagID tag_id )
 {
 	Json::Value root {};
 	root[ "tag_id" ] = tag_id;

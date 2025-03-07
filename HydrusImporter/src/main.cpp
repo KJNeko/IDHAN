@@ -67,7 +67,7 @@ int main( int argc, char** argv )
 
 	auto hydrus_importer { std::make_shared< idhan::hydrus::HydrusImporter >( hydrus_path, client ) };
 
-	hydrus_importer->copyHydrusTags();
+	hydrus_importer->copyHydrusInfo();
 
 	return app.exec();
 }

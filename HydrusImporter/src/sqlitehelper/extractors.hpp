@@ -61,6 +61,16 @@ void extract( sqlite3_stmt* stmt, std::string& str ) noexcept
 		return;
 }
 
+template < std::uint64_t index >
+void extract( sqlite3_stmt* stmt, std::vector< std::byte >& out ) noexcept
+{
+	const void* const data { sqlite3_column_blob( stmt, index ) };
+	if ( data )
+		std::memcpy( out.data(), data, out.size() );
+	else
+		return;
+}
+
 template < std::uint64_t index, typename T >
 	requires std::is_same_v< T, std::u8string_view >
 void extract( sqlite3_stmt* stmt, std::u8string_view& t ) noexcept

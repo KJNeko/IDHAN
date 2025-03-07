@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "api/ClusterAPI.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "exceptions.hpp"
 #include "logging/log.hpp"
 
@@ -24,9 +25,15 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	const auto& request_json { *request_json_ptr };
 
 	std::filesystem::path target_path { request_json[ "path" ].asString() };
-
-	// Change the target path to be absolute
 	if ( target_path.is_relative() ) target_path = std::filesystem::absolute( target_path );
+
+	const bool readonly { request_json[ "readonly" ].asBool() };
+
+	if ( readonly && !std::filesystem::exists( target_path ) )
+	{
+		co_return createBadRequest(
+			"Path {} does not exist, but was requested as read only. This seems wrong", target_path.string() );
+	}
 
 	{
 		// Test if the path we are wanting to add is already
@@ -45,7 +52,8 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 			{
 				//TODO: Exception
 				transaction->rollback();
-				throw std::runtime_error( "Path already exists" );
+
+				co_return createConflict( "Path {} already exists in the cluster list", path.string() );
 			}
 		}
 	}
@@ -55,30 +63,35 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	// The path was not already in use. Now check if it's valid
 	if ( !std::filesystem::exists( target_path ) )
 	{
-		if ( !std::filesystem::create_directory( target_path ) )
+		if ( !std::filesystem::create_directories( target_path ) )
 		{
 			transaction->rollback();
-			throw std::runtime_error( "Failed to create directory " + target_path.string() );
+
+			co_return createInternalError( "Was unable to create directory {}", target_path.string() );
 		}
 	}
 
-	// We can make the directory or it already exists.
-	// Can we write into it?
-	if ( std::ofstream ofs( target_path / "write_test.txt" ); ofs )
+	if ( !readonly )
 	{
-		constexpr std::string_view test_string { "IDHAN can write" };
-		ofs.write( test_string.data(), test_string.size() );
-	}
-	else
-	{
-		transaction->rollback();
-		throw std::runtime_error( "Failed to write to file " + target_path.string() );
-	}
+		// We can make the directory or it already exists.
+		// Can we write into it?
+		if ( std::ofstream ofs( target_path / "write_test.txt" ); ofs )
+		{
+			constexpr std::string_view test_string { "IDHAN can write" };
+			ofs.write( test_string.data(), test_string.size() );
+		}
+		else
+		{
+			transaction->rollback();
+			co_return createInternalError(
+				"Failed to write to file {} as write test for cluster", ( target_path / "write_test.txt" ).string() );
+		}
 
-	log::debug( "Write test passed. Inserting new cluster into table" );
+		log::debug( "Write test passed. Inserting new cluster into table" );
 
-	// delete the test
-	std::filesystem::remove( target_path / "write_test.txt" );
+		// delete the test
+		std::filesystem::remove( target_path / "write_test.txt" );
+	}
 
 	const std::string folder_name { request_json[ "name" ].isString() ? request_json[ "name" ].asString() :
 		                                                                "Cluster Temp Name" };
@@ -92,7 +105,8 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	if ( insert_result.empty() )
 	{
 		transaction->rollback();
-		throw std::runtime_error( "Failed to insert into file_clusters" );
+
+		co_return createInternalError( "Failed to insert new cluster into table" );
 	}
 
 	const auto cluster_id { insert_result[ 0 ][ 0 ].as< ClusterID >() };

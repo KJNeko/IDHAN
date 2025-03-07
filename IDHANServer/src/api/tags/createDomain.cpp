@@ -1,0 +1,156 @@
+//
+// Created by kj16609 on 2/20/25.
+//
+
+#include "api/IDHANTagAPI.hpp"
+#include "api/helpers/createBadRequest.hpp"
+#include "drogon/HttpResponse.h"
+#include "drogon/utils/coroutine.h"
+#include "fgl/defines.hpp"
+#include "logging/log.hpp"
+
+namespace idhan::api
+{
+
+drogon::Task< std::optional< Json::Value > >
+	getTagDomainInfoJson( const TagDomainID domain_id, drogon::orm::DbClientPtr db )
+{
+	const auto search {
+		co_await db
+			->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains WHERE tag_domain_id = $1", domain_id )
+	};
+
+	if ( search.empty() ) co_return std::nullopt;
+
+	Json::Value out_json {};
+
+	out_json[ "domain_id" ] = search[ 0 ][ 0 ].as< TagDomainID >();
+	out_json[ "domain_name" ] = search[ 0 ][ 1 ].as< std::string >();
+
+	co_return out_json;
+}
+
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagDomain( drogon::HttpRequestPtr request )
+{
+	const auto json_obj { request->getJsonObject() };
+
+	if ( json_obj == nullptr )
+	{
+		co_return createBadRequest( "No valid json input" );
+	}
+
+	const auto json { *json_obj };
+
+	const auto name { json[ "name" ] };
+
+	auto db { drogon::app().getDbClient() };
+
+	if ( name.isString() )
+	{
+		const auto search {
+			co_await db->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE domain_name = $1", name.asString() )
+		};
+
+		if ( !search.empty() ) [[unlikely]]
+		{
+			const auto tag_domain_id { search[ 0 ][ 0 ].as< TagDomainID >() };
+
+			std::optional< Json::Value > out_json { co_await getTagDomainInfoJson( tag_domain_id, db ) };
+
+			if ( out_json.has_value() )
+			{
+				auto response { drogon::HttpResponse::newHttpJsonResponse( out_json.value() ) };
+				response->setStatusCode( drogon::k409Conflict );
+
+				co_return response;
+			}
+
+			co_return createInternalError( "Error getting tag domain info for domain {}", tag_domain_id );
+		}
+
+		const auto create { co_await db->execSqlCoro(
+			"INSERT INTO tag_domains (domain_name) VALUES ($1) RETURNING tag_domain_id", name.asString() ) };
+
+		if ( auto info = co_await getTagDomainInfoJson( create[ 0 ][ 0 ].as< TagDomainID >(), db ); info.has_value() )
+		{
+			co_return drogon::HttpResponse::newHttpJsonResponse( *info );
+		}
+
+		co_return createInternalError( "Error creating new domain with name {}", name.asString() );
+	}
+	else
+	{
+		log::error( "Failed to parse json" );
+		co_return drogon::HttpResponse::
+			newHttpResponse( drogon::HttpStatusCode::k400BadRequest, drogon::ContentType::CT_NONE );
+	}
+
+	FGL_UNREACHABLE();
+}
+
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagDomains( drogon::HttpRequestPtr request )
+{
+	auto db { drogon::app().getDbClient() };
+
+	const auto search { co_await db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains" ) };
+
+	Json::Value out_json {};
+	// Done to make the result an empty array instead of null in the case of no domains
+	out_json.resize( 0 );
+
+	for ( const auto& row : search )
+	{
+		const auto info { co_await getTagDomainInfoJson( row[ 0 ].as< TagDomainID >(), db ) };
+
+		if ( !info.has_value() )
+		{
+			co_return createInternalError(
+				"Failed to get info for tag domain {} despite it existing", row[ 0 ].as< std::string >() );
+		}
+
+		out_json.append( *info );
+	}
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
+}
+
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
+	getTagDomainInfo( drogon::HttpRequestPtr request, const TagDomainID domain_id )
+{
+	auto db { drogon::app().getDbClient() };
+
+	const auto search {
+		co_await db->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", domain_id )
+	};
+
+	if ( search.empty() )
+	{
+		co_return createBadRequest( "Domain id {} does not exists", domain_id );
+	}
+
+	const auto info { co_await getTagDomainInfoJson( domain_id, db ) };
+
+	if ( !info.has_value() )
+	{
+		co_return createInternalError( "Failed to get info for tag domain {} despite it existing", domain_id );
+	}
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( *info );
+}
+
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
+	deleteTagDomain( drogon::HttpRequestPtr request, TagDomainID domain_id )
+{
+	auto db { drogon::app().getDbClient() };
+	const auto search { co_await db->execSqlCoro( "DELETE FROM tag_domains WHERE tag_domain_id = $1", domain_id ) };
+
+	if ( search.empty() ) co_return createBadRequest( "Failed to find tag domain by id {}", domain_id );
+
+	Json::Value out_json {};
+
+	out_json[ "domain_id" ] = search[ 0 ][ 0 ].as< TagDomainID >();
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
+}
+
+} // namespace idhan::api

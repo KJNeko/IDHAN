@@ -52,6 +52,12 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 			"UPDATE file_clusters SET cluster_name = $1 WHERE cluster_id = $2", json[ "name" ].asString(), cluster_id );
 	}
 
+	if ( !json[ "ratio" ].isInt64() )
+	{
+		co_await transaction->execSqlCoro(
+			"UPDATE file_clusters SET size_limit = $1 WHERE cluster_id = $2", json[ "ratio" ].asInt64(), cluster_id );
+	}
+
 	co_return co_await infoT( request, cluster_id, transaction );
 }
 

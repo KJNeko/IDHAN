@@ -1,0 +1,28 @@
+post:
+  tags:
+    - tags
+    - parents
+  description: Creates a parent/child relationship between two tags
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            parent_tags:
+              description: An array or a single integer
+              oneOf:
+                - type: integer
+                - type: array
+                  items:
+                    $ref: '../../../../schemas/TagID.yaml'
+
+            child_tags:
+              description: An array or a single integer
+              oneOf:
+                - type: integer
+                - type: array
+                  items:
+                    $ref: '../../../../schemas/TagID.yaml'
+  responses:

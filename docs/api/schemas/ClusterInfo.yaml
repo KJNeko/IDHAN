@@ -26,7 +26,7 @@ properties:
     description: Number of files in the cluster
     type: integer
     readOnly: true
-  ratio_number:
+  ratio:
     description: Ratio of files that should be placed in this cluster. ( Ratio / TotalRatio )
     type: integer
     example: 1

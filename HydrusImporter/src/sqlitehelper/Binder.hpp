@@ -13,150 +13,147 @@
 
 namespace idhan::hydrus
 {
-	template < typename T >
-	concept has_value = requires( T& t ) {
-		{
-			t.value()
-		} -> std::same_as< typename T::value_type& >;
-	};
+template < typename T >
+concept has_value = requires( T& t ) {
+	{ t.value() } -> std::same_as< typename T::value_type& >;
+};
+
+template < typename T >
+concept has_value_check = requires( T& t ) {
+	{ t.has_value() } -> std::same_as< bool >;
+};
+
+template < typename T >
+concept has_get = requires( T& t ) {
+	{ std::get< 0 >( t ) };
+};
+
+template < typename T > concept is_tuple = has_get< std::remove_reference_t< T > >;
+
+template < typename T >
+concept is_optional = has_value< std::remove_reference_t< T > > && has_value_check< std::remove_reference_t< T > >;
+
+class Binder
+{
+	sqlite3* ptr;
+	sqlite3_stmt* stmt { nullptr };
+	int param_counter { 0 };
+	int max_param_count { 0 };
+	bool ran { false };
+
+	Q_DISABLE_COPY_MOVE( Binder )
+
+  public:
+
+	Binder() = delete;
+
+	Binder( sqlite3* ptr, const std::string_view sql );
 
 	template < typename T >
-	concept has_value_check = requires( T& t ) {
-		{
-			t.has_value()
-		} -> std::same_as< bool >;
-	};
-
-	template < typename T >
-	concept has_get = requires( T& t ) {
-		{
-			std::get< 0 >( t )
-		};
-	};
-
-	template < typename T > concept is_tuple = has_get< std::remove_reference_t< T > >;
-
-	template < typename T >
-	concept is_optional = has_value< std::remove_reference_t< T > > && has_value_check< std::remove_reference_t< T > >;
-
-	class Binder
+	// Why was this here? What reason did I put it here for?
+	//requires( !std::is_same_v< std::remove_reference_t< T >, std::string > )
+	Binder& operator<<( T t )
 	{
-		sqlite3* ptr;
-		sqlite3_stmt* stmt { nullptr };
-		int param_counter { 0 };
-		int max_param_count { 0 };
-		bool ran { false };
-
-		Q_DISABLE_COPY_MOVE( Binder )
-
-	  public:
-
-		Binder() = delete;
-
-		Binder( sqlite3* ptr, const std::string_view sql );
-
-		template < typename T >
-		// Why was this here? What reason did I put it here for?
-		//requires( !std::is_same_v< std::remove_reference_t< T >, std::string > )
-		Binder& operator<<( T t )
+		if ( param_counter > max_param_count )
 		{
-			if ( param_counter > max_param_count )
-			{
-				throw std::runtime_error( std::format(
+			throw std::runtime_error(
+				std::format(
 					"param_counter > param_count = {} > {} for query \"{}\"",
 					param_counter,
 					sqlite3_bind_parameter_count( stmt ),
 					std::string( sqlite3_sql( stmt ) ) ) );
-			}
+		}
 
-			switch ( bindParameter< std::remove_reference_t< T > >( stmt, std::move( t ), ++param_counter ) )
-			{
-				case SQLITE_OK:
-					break;
-				default:
-					{
-						throw std::runtime_error( std::format(
+		switch ( bindParameter< std::remove_reference_t< T > >( stmt, std::move( t ), ++param_counter ) )
+		{
+			case SQLITE_OK:
+				break;
+			default:
+				{
+					throw std::runtime_error(
+						std::format(
 							"Failed to bind to \"{}\": Reason: \"{}\"", sqlite3_sql( stmt ), sqlite3_errmsg( ptr ) ) );
-					}
-			}
-
-			return *this;
+				}
 		}
 
-		// Feed into value directly
-		template < typename T >
-			requires( (!is_optional< T >) && (!is_tuple< T >))
-		void operator>>( T& t )
+		return *this;
+	}
+
+	// Feed into value directly
+	template < typename T >
+		requires( ( !is_optional< T > ) && (!is_tuple< T >))
+	void operator>>( T& t )
+	{
+		std::optional< std::tuple< T > > tpl;
+
+		executeQuery( tpl );
+
+		if ( tpl.has_value() )
+			t = std::move( std::get< 0, T >( tpl.value() ) );
+		else
+			throw std::runtime_error( std::format( "No rows returned for query \"{}\"", sqlite3_sql( stmt ) ) );
+	}
+
+	// Feed output into optional
+	template < typename T >
+		requires( !is_optional< T > && (!is_tuple< T >))
+	void operator>>( std::optional< T >& t )
+	{
+		std::optional< std::tuple< T > > tpl;
+
+		executeQuery( tpl );
+
+		if ( tpl.has_value() )
+			t = std::move( std::get< 0, T >( tpl.value() ) );
+		else
+			t = std::nullopt;
+	}
+
+	// Call function using output
+	template < typename Function >
+		requires( ( !is_optional< Function > ) && (!is_tuple< Function >))
+	void operator>>( Function&& func )
+	{
+		using FuncArgs = FunctionDecomp< Function >;
+		using Tpl = FuncArgs::ArgTuple;
+
+		std::optional< Tpl > opt_tpl { std::nullopt };
+		executeQuery( opt_tpl );
+
+		while ( opt_tpl.has_value() )
 		{
-			std::optional< std::tuple< T > > tpl;
-
-			executeQuery( tpl );
-
-			if ( tpl.has_value() )
-				t = std::move( std::get< 0, T >( tpl.value() ) );
-			else
-				throw std::runtime_error( std::format( "No rows returned for query \"{}\"", sqlite3_sql( stmt ) ) );
-		}
-
-		// Feed output into optional
-		template < typename T >
-			requires( !is_optional< T > && (!is_tuple< T >))
-		void operator>>( std::optional< T >& t )
-		{
-			std::optional< std::tuple< T > > tpl;
-
-			executeQuery( tpl );
-
-			if ( tpl.has_value() )
-				t = std::move( std::get< 0, T >( tpl.value() ) );
-			else
-				t = std::nullopt;
-		}
-
-		// Call function using output
-		template < typename Function >
-			requires( (!is_optional< Function >) && (!is_tuple< Function >))
-		void operator>>( Function&& func )
-		{
-			using FuncArgs = FunctionDecomp< Function >;
-			using Tpl = FuncArgs::ArgTuple;
-
-			std::optional< Tpl > opt_tpl { std::nullopt };
+			std::apply( func, std::move( opt_tpl.value() ) );
 			executeQuery( opt_tpl );
-
-			while ( opt_tpl.has_value() )
-			{
-				std::apply( func, std::move( opt_tpl.value() ) );
-				executeQuery( opt_tpl );
-			}
 		}
+	}
 
-		// Feed output into tuple
-		template < typename... Ts >
-			requires( !( is_optional< Ts > && ... ) ) && ( !( is_tuple< Ts > && ... ) )
-		void operator>>( std::tuple< Ts... >& tpl )
-		{
-			ran = true;
+	// Feed output into tuple
+	template < typename... Ts >
+		requires( !( is_optional< Ts > && ... ) ) && ( !( is_tuple< Ts > && ... ) )
+	void operator>>( std::tuple< Ts... >& tpl )
+	{
+		ran = true;
 
-			std::optional< std::tuple< Ts... > > opt_tpl { std::nullopt };
-			executeQuery< Ts... >( opt_tpl );
+		std::optional< std::tuple< Ts... > > opt_tpl { std::nullopt };
+		executeQuery< Ts... >( opt_tpl );
 
-			if ( opt_tpl.has_value() )
-				tpl = std::move( opt_tpl.value() );
-			else
-				throw std::runtime_error( "No rows returned for query" );
+		if ( opt_tpl.has_value() )
+			tpl = std::move( opt_tpl.value() );
+		else
+			throw std::runtime_error( "No rows returned for query" );
 
-			return;
-		}
+		return;
+	}
 
-	  private:
+  private:
 
-		template < typename... Ts >
-			requires( !( is_optional< Ts > || ... ) && !( is_tuple< Ts > || ... ) )
-		void executeQuery( [[maybe_unused]] std::optional< std::tuple< Ts... > >& tpl_opt )
-		{
-			if ( param_counter != max_param_count )
-				throw std::runtime_error( std::format(
+	template < typename... Ts >
+		requires( !( is_optional< Ts > || ... ) && !( is_tuple< Ts > || ... ) )
+	void executeQuery( [[maybe_unused]] std::optional< std::tuple< Ts... > >& tpl_opt )
+	{
+		if ( param_counter != max_param_count )
+			throw std::runtime_error(
+				std::format(
 					"Not enough parameters given for query! Given {}, Expected {}. param_counter != max_param_count = {} != {} for query \"{}\"",
 					param_counter,
 					max_param_count,
@@ -165,63 +162,58 @@ namespace idhan::hydrus
 					std::string_view( sqlite3_sql(
 						stmt ) ) ) ); // String view is safe here since the string is owned by sqlite3 and not freed until the statement is finalized
 
-			ran = true;
+		ran = true;
 
-			if ( stmt == nullptr ) throw std::runtime_error( "stmt was nullptr" );
+		if ( stmt == nullptr ) throw std::runtime_error( "stmt was nullptr" );
 
-#ifdef LOG_SQL_QUERIES
-			atlas::logging::debug( "Executing query {}", sqlite3_expanded_sql( stmt ) );
-#endif
+		const auto step_ret { sqlite3_step( stmt ) };
 
-			const auto step_ret { sqlite3_step( stmt ) };
-
-			switch ( step_ret )
-			{
-				case SQLITE_ROW:
-					[[likely]]
+		switch ( step_ret )
+		{
+			case SQLITE_ROW:
+				[[likely]]
+				{
+					if constexpr ( sizeof...( Ts ) > 0 )
 					{
-						if constexpr ( sizeof...( Ts ) > 0 )
-						{
-							std::tuple< Ts... > tpl;
-							extractRow< 0, Ts... >( stmt, tpl );
-							tpl_opt = std::move( tpl );
-							return;
-						}
-						else
-						{
-							throw std::runtime_error( std::format(
+						std::tuple< Ts... > tpl {};
+						extractRow< 0, Ts... >( stmt, tpl );
+						tpl_opt = std::move( tpl );
+						return;
+					}
+					else
+					{
+						throw std::runtime_error(
+							std::format(
 								"No rows were expected but rows were returned for query: \"{}\". Is this intentional?",
 								sqlite3_expanded_sql( stmt ) ) );
-						}
 					}
-				case SQLITE_DONE:
-					{
-#ifdef LOG_SQL_QUERIES
-						atlas::logging::debug( "Finished query {}", sqlite3_expanded_sql( stmt ) );
-#endif
-						//Help hint to the compiler that it shouldn't keep an empty tuple around
-						if constexpr ( sizeof...( Ts ) > 0 ) tpl_opt = std::nullopt;
-						return;
+				}
+			case SQLITE_DONE:
+				{
+					//Help hint to the compiler that it shouldn't keep an empty tuple around
+					if constexpr ( sizeof...( Ts ) > 0 ) tpl_opt = std::nullopt;
+					return;
 
-						default:
-							[[fallthrough]];
-						case SQLITE_MISUSE:
-							[[fallthrough]];
-						case SQLITE_BUSY:
-							[[fallthrough]];
-						case SQLITE_ERROR:
-							{
-								throw std::runtime_error( std::format(
+					default:
+						[[fallthrough]];
+					case SQLITE_MISUSE:
+						[[fallthrough]];
+					case SQLITE_BUSY:
+						[[fallthrough]];
+					case SQLITE_ERROR:
+						{
+							throw std::runtime_error(
+								std::format(
 									"DB: Query error: \"{}\", Query: \"{}\"",
 									sqlite3_errmsg( ptr ),
 									sqlite3_expanded_sql( stmt ) ) );
-							}
-					}
-			}
+						}
+				}
 		}
+	}
 
-	  public:
+  public:
 
-		~Binder();
-	};
+	~Binder();
+};
 } // namespace idhan::hydrus

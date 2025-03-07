@@ -66,7 +66,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.setLogPath( "./" )
 		.setLogLevel( trantor::Logger::kInfo )
 		.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT )
-		.setThreadNum( 16 )
+		.setThreadNum( 0 )
 		.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() )
 		.setDocumentRoot( "./pages" )
 		.setExceptionHandler( exceptionHandler );
@@ -83,6 +83,11 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	config.characterSet = "UTF-8";
 	config.timeout = 60.0f;
 	config.autoBatch = false;
+
+	if ( arguments.testmode )
+	{
+		config.connectOptions.emplace( std::make_pair( "searchpatch", "test" ) );
+	}
 
 	drogon::app().addDbClient( config );
 

@@ -4,14 +4,14 @@
 
 #include "IDHANTypes.hpp"
 #include "api/IDHANFileAPI.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "crypto/sha256.hpp"
 #include "fgl/defines.hpp"
+#include "logging/log.hpp"
 
 namespace idhan::api
 {
-
-
 
 ResponseTask createRecordFromOctet( const drogon::HttpRequestPtr req )
 {}
@@ -30,18 +30,33 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	const auto& sha256s { json[ "sha256" ] };
 	if ( sha256s.isArray() )
 	{
+		Json::Value json_array {};
+		Json::ArrayIndex idx { 0 };
+
 		for ( const auto& value : sha256s )
 		{
+			if ( !value.isString() ) co_return createBadRequest( "Json value in array was not a string" );
+
 			const auto& str { value.asString() };
 
 			// dehexify the string.
 			SHA256 sha256 { SHA256::fromHex( str ) };
 
 			const RecordID record_id { co_await createRecord( sha256, db ) };
+			json_array[ idx++ ] = record_id;
 		}
+
+		co_return drogon::HttpResponse::newHttpJsonResponse( json_array );
 	}
 	else if ( sha256s.isString() ) // HEX string
-	{}
+	{
+		Json::Value json_out {};
+		SHA256 sha256 { SHA256::fromHex( sha256s.asString() ) };
+		const RecordID record_id { co_await createRecord( sha256, db ) };
+		json_out[ "record_id" ] = record_id;
+
+		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );
+	}
 }
 
 ResponseTask IDHANFileAPI::createRecord( const drogon::HttpRequestPtr request )
@@ -63,7 +78,7 @@ ResponseTask IDHANFileAPI::createRecord( const drogon::HttpRequestPtr request )
 			break;
 	}
 
-	co_return nullptr;
+	co_return createBadRequest( "Unexpected content type" );
 }
 
 } // namespace idhan::api

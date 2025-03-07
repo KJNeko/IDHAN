@@ -17,6 +17,12 @@ int main( int argc, char** argv )
 	arguments.user = "idhan";
 	arguments.hostname = "localhost";
 
+	for ( std::size_t i = 0; i < argc; ++i )
+	{
+		idhan::log::debug( "{}: {}", i, argv[ i ] );
+		if ( argv[ i ] == "--testmoode" ) arguments.testmode = true;
+	}
+
 	idhan::ServerContext context { arguments };
 
 	// context.cloneHydrusData( "/home/kj16609/.local/share/hydrus/db" );

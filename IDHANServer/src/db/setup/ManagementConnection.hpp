@@ -17,8 +17,6 @@ class ManagementConnection
 
 	void initalSetup( pqxx::nontransaction& nontransaction );
 
-	void importHydrus( const ConnectionArguments& connection_arguments );
-
   public:
 
 	inline pqxx::connection& conn() { return connection; }

@@ -14,12 +14,12 @@
 namespace idhan::db
 {
 
-void updateMigrations( pqxx::nontransaction& tx )
+void updateMigrations( pqxx::nontransaction& tx, const std::string_view schema )
 {
 	std::size_t current_id { 0 };
 
 	// attempt to get the most recent update id
-	if ( tableExists( tx, "idhan_info" ) )
+	if ( tableExists( tx, "idhan_info", schema ) )
 	{
 		auto ret { tx.exec( "SELECT last_migration_id FROM idhan_info ORDER BY last_migration_id DESC limit 1" ) };
 

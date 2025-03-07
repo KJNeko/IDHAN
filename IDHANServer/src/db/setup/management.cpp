@@ -16,11 +16,12 @@
 namespace idhan::db
 {
 
-bool tableExists( pqxx::nontransaction& tx, const std::string_view name )
+bool tableExists( pqxx::nontransaction& tx, const std::string_view name, const std::string_view schema )
 {
-	const pqxx::result table_result {
-		tx.exec_params( "SELECT table_name FROM information_schema.tables WHERE table_name = $1", name )
-	};
+	const pqxx::result table_result { tx.exec_params(
+		"SELECT table_name FROM information_schema.tables WHERE table_name = $1 AND table_schema = $2",
+		name,
+		schema ) };
 
 	return table_result.size() > 0;
 }
@@ -57,9 +58,9 @@ void addTableToInfo(
 
 void destroyTables( pqxx::nontransaction& tx )
 {
-	log::critical(
-		"We are about to drop the public schema since we are compiling with ALLOW_TABLE_DESTRUCTION! This will happen in 5 seconds. QUIT NOW IF YOU DON'T WANT THIS TO HAPPEN" );
-	std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+	// log::critical(
+		// "We are about to drop the public schema since we are compiling with ALLOW_TABLE_DESTRUCTION! This will happen in 5 seconds. QUIT NOW IF YOU DON'T WANT THIS TO HAPPEN" );
+	// std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
 
 	if ( !tx.exec( "SELECT schema_name FROM information_schema.schemata WHERE schema_name = \'public\'" ).empty() )
 	{

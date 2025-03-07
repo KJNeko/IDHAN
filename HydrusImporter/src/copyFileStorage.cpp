@@ -1,0 +1,38 @@
+//
+// Created by kj16609 on 2/20/25.
+//
+
+#include "HydrusImporter.hpp"
+#include "sqlitehelper/Transaction.hpp"
+
+namespace idhan::hydrus
+{
+
+void HydrusImporter::copyFileStorage()
+{
+	TransactionBase client_tr { client_db };
+
+	std::size_t counter { 0 };
+
+	client_tr << "SELECT location, weight, max_num_bytes FROM ideal_client_files_locations" >>
+		[ this, &counter ]( const std::string str, const std::uint16_t weight, const std::size_t byte_limit )
+	{
+		if ( str == "client_files" ) //edge case handling for defaults
+		{
+			m_client->createFileCluster(
+				( m_path / "client_files" ).string(),
+				std::format( "Hydrus cluster: {}", counter++ ),
+				byte_limit,
+				weight,
+				true );
+		}
+		else
+		{
+			m_client
+				->createFileCluster( str, std::format( "Hydrus cluster: {}", counter++ ), byte_limit, weight, true );
+		}
+	};
+}
+
+
+} // namespace idhan::hydrus

@@ -30,6 +30,16 @@ paths:
     $ref: './paths/tags/info.yaml'
   /tag/autocomplete:
     $ref: './paths/tags/autocomplete.yaml'
+  /tag/domain/create:
+    $ref: './paths/tags/domains/create.yaml'
+  /tag/domain/list:
+    $ref: './paths/tags/domains/list.yaml'
+  /tag/domain/{domain_id}/info:
+    $ref: './paths/tags/domains/info.yaml'
+  /tag/domain/{domain_id}/delete:
+    $ref: './paths/tags/domains/delete.yaml'
+  /tag/parents/create:
+    $ref: './paths/tags/relationships/parent/create.yaml'
   /file/create:
     $ref: './paths/file/create.yaml'
   /file/{file_id}/tags/add:

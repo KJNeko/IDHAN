@@ -16,9 +16,15 @@ class HydrusImporter
 	sqlite3* client_db { nullptr };
 	sqlite3* mappings_db { nullptr };
 	std::shared_ptr< IDHANClient > m_client;
+	std::filesystem::path m_path;
 
 	void copyTags();
-	void copyFiles( std::size_t hy_service_id );
+	void copyParents();
+	void copySiblings();
+
+	void copyFileStorage();
+
+	void copyHashes();
 
   public:
 
@@ -26,7 +32,16 @@ class HydrusImporter
 	HydrusImporter( const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client );
 	~HydrusImporter();
 
-	void copyHydrusTags() { copyTags(); }
+	void copyHydrusTags();
+
+	void copyFileInfo();
+
+	inline void copyHydrusInfo()
+	{
+		copyHashes();
+		copyFileInfo();
+		copyHydrusTags();
+	}
 };
 
 } // namespace idhan::hydrus

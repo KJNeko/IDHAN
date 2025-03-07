@@ -7,6 +7,11 @@
 #include <functional>
 #include <string_view>
 
+#include "logging/qt_formatters/qstring.hpp"
+#include "spdlog/spdlog.h"
+
+class QNetworkReply;
+
 /**
  *
  * IDHAN logging functions should be used as a way to transmit logging information back to the server. There are the following levels
@@ -25,24 +30,46 @@ namespace idhan::logging
 {
 
 template < typename... Ts >
-void notify( const std::string_view& fmt, const Ts&... ts )
-{}
+void notify( std::string fmt, Ts&&... ts )
+{
+	//TODO: Get this name from the context
+	spdlog::get( "client" )->info( fmt, std::forward< Ts >( ts )... );
+}
 
 template < typename... Ts >
-void info( const std::string_view& fmt, const Ts&... ts )
-{}
+void debug( std::string fmt, Ts&&... ts )
+{
+	spdlog::get( "client" )->debug( fmt, std::forward< Ts >( ts )... );
+}
 
 template < typename... Ts >
-void warn( const std::string_view& fmt, const Ts&... ts )
-{}
+void info( std::string fmt, Ts&&... ts )
+{
+	spdlog::get( "client" )->info( fmt, std::forward< Ts >( ts )... );
+}
 
 template < typename... Ts >
-void error( const std::string_view& fmt, const Ts&... ts )
-{}
+void warn( std::string fmt, Ts&&... ts )
+{
+	spdlog::get( "client" )->warn( fmt, std::forward< Ts >( ts )... );
+}
 
 template < typename... Ts >
-void critical( const std::string_view& fmt, const Ts&... ts )
-{}
+void error( std::string fmt, Ts&&... ts )
+{
+	spdlog::get( "client" )->error( fmt, std::forward< Ts >( ts )... );
+}
+
+template < typename... Ts >
+void critical( std::string fmt, Ts&&... ts )
+{
+	spdlog::get( "client" )->critical( fmt, std::forward< Ts >( ts )... );
+}
+
+/**
+ * @brief Logs the network error response to the local log only.
+ */
+void logResponse( QNetworkReply* reply );
 
 enum CallbackLevel : uint8_t
 {

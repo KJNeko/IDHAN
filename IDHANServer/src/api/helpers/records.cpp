@@ -15,15 +15,12 @@ drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClie
 		co_await db->execSqlCoro( "INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING", sha256.toVec() )
 	};
 
-	RecordID record_id FGL_UNINITALIZED;
-
-	// If the DO NOTHING clause is triggered, we'll have no result.
 	if ( result.empty() )
 	{
 		const auto search_result { co_await searchRecord( sha256, db ) };
 
 		//TODO: Proper exception
-		if ( !search_result.has_value() ) throw std::runtime_error( "Failed to get record_id after inserting it" );
+		if ( !search_result.has_value() ) throw std::runtime_error( "Optional had no result" );
 
 		co_return search_result.value();
 	}

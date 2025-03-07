@@ -19,19 +19,27 @@ void ManagementConnection::initalSetup( pqxx::nontransaction& tx )
 	tx.commit();
 }
 
-void ManagementConnection::importHydrus( const ConnectionArguments& connection_arguments )
-{}
-
 ManagementConnection::ManagementConnection( const ConnectionArguments& arguments ) : connection( arguments.format() )
 {
 	log::info( "Postgres connection made: {}", connection.dbname() );
 
 	pqxx::nontransaction tx { connection };
 
-	// This function is a NOOP unless a define is enabled for it by default.
-	db::destroyTables( tx );
-
-	db::updateMigrations( tx );
+	if ( arguments.testmode )
+	{
+		tx.exec( "DROP SCHEMA IF EXISTS test CASCADE" );
+		tx.exec( "CREATE SCHEMA test" );
+		tx.exec( "SET schema 'test'" );
+		// This function is a NOOP unless a define is enabled for it.
+		constexpr std::string_view schema { "test" };
+		db::updateMigrations( tx, schema );
+	}
+	else
+	{
+		constexpr std::string_view schema { "public" };
+		db::destroyTables( tx );
+		db::updateMigrations( tx, schema );
+	}
 
 	log::info( "Database loading finished" );
 }
@@ -47,6 +55,9 @@ std::string ConnectionArguments::format() const
 	str += std::format( "port={} ", port );
 	str += std::format( "dbname={} ", dbname );
 	str += std::format( "user={} ", user );
+	if ( testmode ) str += "options='-c search_path=test'";
+
+	log::debug( "Connecting using: {}", str );
 
 	return str;
 }

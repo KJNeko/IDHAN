@@ -21,6 +21,7 @@ struct ConnectionArguments
 	std::string dbname { "idhan-db" };
 	std::string user { "idhan" };
 	std::string password { "" };
+	bool testmode { false };
 
 	std::string format() const;
 };
