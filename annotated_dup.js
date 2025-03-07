@@ -7,7 +7,8 @@ var annotated_dup =
         [ "IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", "df/def/classidhan_1_1api_1_1IDHANApi" ],
         [ "IDHANAuth", "d6/d49/classidhan_1_1api_1_1IDHANAuth.html", "d6/d49/classidhan_1_1api_1_1IDHANAuth" ],
         [ "IDHANFileAPI", "df/daa/classidhan_1_1api_1_1IDHANFileAPI.html", "df/daa/classidhan_1_1api_1_1IDHANFileAPI" ],
-        [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ]
+        [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ],
+        [ "NamespaceCache", "de/dbb/structidhan_1_1api_1_1NamespaceCache.html", "de/dbb/structidhan_1_1api_1_1NamespaceCache" ]
       ] ],
       [ "filesystem", "db/d9b/namespaceidhan_1_1filesystem.html", [
         [ "ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager" ]
@@ -47,7 +48,8 @@ var annotated_dup =
       [ "RecordNotFound", "dd/d8d/structidhan_1_1RecordNotFound.html", "dd/d8d/structidhan_1_1RecordNotFound" ],
       [ "SearchBuilder", "dc/dba/structidhan_1_1SearchBuilder.html", "dc/dba/structidhan_1_1SearchBuilder" ],
       [ "ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", "d0/d4c/classidhan_1_1ServerContext" ],
-      [ "SHA256", "d0/de3/classidhan_1_1SHA256.html", "d0/de3/classidhan_1_1SHA256" ]
+      [ "SHA256", "d0/de3/classidhan_1_1SHA256.html", "d0/de3/classidhan_1_1SHA256" ],
+      [ "VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", "d3/d25/structidhan_1_1VersionInfo" ]
     ] ],
     [ "std", null, [
       [ "formatter< QString >", "d9/dce/structstd_1_1formatter_3_01QString_01_4.html", "d9/dce/structstd_1_1formatter_3_01QString_01_4" ]

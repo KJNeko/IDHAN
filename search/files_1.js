@@ -9,6 +9,14 @@ var searchData=
   ['config_2ecpp_6',['Config.cpp',['../de/da7/Config_8cpp.html',1,'']]],
   ['config_2ehpp_7',['Config.hpp',['../df/db4/Config_8hpp.html',1,'']]],
   ['connectionarguments_2ehpp_8',['ConnectionArguments.hpp',['../d4/d71/ConnectionArguments_8hpp.html',1,'']]],
-  ['createrecord_2ecpp_9',['createRecord.cpp',['../d9/d53/createRecord_8cpp.html',1,'']]],
-  ['createtag_2ecpp_10',['createTag.cpp',['../de/d3d/createTag_8cpp.html',1,'']]]
+  ['createaliasrelationship_2ecpp_9',['createAliasRelationship.cpp',['../d9/d8d/createAliasRelationship_8cpp.html',1,'']]],
+  ['createbadrequest_2ecpp_10',['createBadRequest.cpp',['../dd/da6/createBadRequest_8cpp.html',1,'']]],
+  ['createbadrequest_2ehpp_11',['createBadRequest.hpp',['../de/dbc/createBadRequest_8hpp.html',1,'']]],
+  ['createdomain_2ecpp_12',['createDomain.cpp',['../d1/d68/createDomain_8cpp.html',1,'']]],
+  ['createparentrelationship_2ecpp_13',['createParentRelationship.cpp',['../de/dfd/createParentRelationship_8cpp.html',1,'']]],
+  ['createrecord_2ecpp_14',['createRecord.cpp',['../d9/d53/createRecord_8cpp.html',1,'']]],
+  ['createrecords_2ecpp_15',['createRecords.cpp',['../dd/d0a/createRecords_8cpp.html',1,'']]],
+  ['createtag_2ecpp_16',['createTag.cpp',['../d0/d13/IDHANClient_2src_2tags_2createTag_8cpp.html',1,'(Global Namespace)'],['../d4/d07/IDHANServer_2src_2api_2tags_2createTag_8cpp.html',1,'(Global Namespace)']]],
+  ['createtagdomain_2ecpp_17',['createTagDomain.cpp',['../dc/d7e/createTagDomain_8cpp.html',1,'']]],
+  ['createtags_2ecpp_18',['createTags.cpp',['../d5/dd4/createTags_8cpp.html',1,'']]]
 ];

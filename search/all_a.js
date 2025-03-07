@@ -8,5 +8,8 @@ var searchData=
   ['loadfromfile_5',['loadFromFile',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#aec8618df2a181f8ef9ee0d41f7699f73',1,'idhan::mime::MimeIdentifier']]],
   ['loadfromjson_6',['loadFromJson',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a5b2f54848480ad1ea4e526923b788f14',1,'idhan::mime::MimeIdentifier']]],
   ['log_2ehpp_7',['log.hpp',['../d4/d3d/log_8hpp.html',1,'']]],
-  ['logger_2ehpp_8',['logger.hpp',['../d6/da3/logger_8hpp.html',1,'']]]
+  ['logger_8',['logger',['../d3/d67/classidhan_1_1IDHANClient.html#a76e63026b950354ff34d152c2142e955',1,'idhan::IDHANClient']]],
+  ['logger_2ecpp_9',['logger.cpp',['../d3/d30/logger_8cpp.html',1,'']]],
+  ['logger_2ehpp_10',['logger.hpp',['../d6/da3/logger_8hpp.html',1,'']]],
+  ['logresponse_11',['logResponse',['../d6/d70/namespaceidhan_1_1logging.html#a0491af2b3a3b5869d3bdfd8bcd752ecf',1,'idhan::logging']]]
 ];

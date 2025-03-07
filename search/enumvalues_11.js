@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['vetoed_0',['Vetoed',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a080eeda2f7816a0991e8d9c786b109fd',1,'idhan::hyapi']]]
+  ['unknownmime_0',['UnknownMime',['../dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fba29e50f3b7235f0ddae371b3e650b791c',1,'idhan']]],
+  ['unknownreason_1',['UnknownReason',['../dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fbaf49e876140bce3f728508916b6cf18ac',1,'idhan']]]
 ];

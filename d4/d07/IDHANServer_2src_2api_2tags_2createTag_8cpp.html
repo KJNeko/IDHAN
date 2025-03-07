@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('de/d3d/createTag_8cpp.html','../../'); initResizable(true); });
+$(function(){initNavTree('d4/d07/IDHANServer_2src_2api_2tags_2createTag_8cpp.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -111,18 +111,26 @@ $(function(){initNavTree('de/d3d/createTag_8cpp.html','../../'); initResizable(t
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a> &#124;
 <a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">createTag.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;oneapi/tbb/detail/_range_common.h&gt;</code><br />
+<div class="textblock"><code>#include &lt;pqxx/transaction_base&gt;</code><br />
 <code>#include &lt;ranges&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../d4/d83/IDHANTagAPI_8hpp_source.html">api/IDHANTagAPI.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../de/dbc/createBadRequest_8hpp_source.html">api/helpers/createBadRequest.hpp</a>&quot;</code><br />
+<code>#include &quot;fgl/defines.hpp&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d4/d3d/log_8hpp_source.html">logging/log.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../dd/db8/splitTag_8hpp_source.html">splitTag.hpp</a>&quot;</code><br />
 </div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html">idhan::api::NamespaceCache</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
@@ -138,32 +146,32 @@ Functions</h2></td></tr>
 <tr class="separator:a0878975a04214726106a922525d29036"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abd1fd6dacf396b59e1cbe6c640890c89" id="r_abd1fd6dacf396b59e1cbe6c640890c89"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#af5aed2f9fe91a2b9950b80c37ba36117">NamespaceID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#abd1fd6dacf396b59e1cbe6c640890c89">idhan::api::getNamespaceID</a> (const std::string &amp;namespace_text, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:abd1fd6dacf396b59e1cbe6c640890c89"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aba9a9850d6edff5caaab46c3a3caf8d5" id="r_aba9a9850d6edff5caaab46c3a3caf8d5"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#af5aed2f9fe91a2b9950b80c37ba36117">NamespaceID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#aba9a9850d6edff5caaab46c3a3caf8d5">idhan::api::getNamespaceID</a> (Json::Value namespace_c, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:aba9a9850d6edff5caaab46c3a3caf8d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a75358c78ee479aad31dafba95fc1485b" id="r_a75358c78ee479aad31dafba95fc1485b"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0">SubtagID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a75358c78ee479aad31dafba95fc1485b">idhan::api::searchSubtag</a> (const std::string &amp;str, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a75358c78ee479aad31dafba95fc1485b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adfb6a22a0bd510beb89778fb05319cfb" id="r_adfb6a22a0bd510beb89778fb05319cfb"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0">SubtagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#adfb6a22a0bd510beb89778fb05319cfb">idhan::api::findOrCreateSubtag</a> (const std::string &amp;str, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:adfb6a22a0bd510beb89778fb05319cfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8a45a67fcde75ac10ccfc8d0f329f1e" id="r_aa8a45a67fcde75ac10ccfc8d0f329f1e"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#af5aed2f9fe91a2b9950b80c37ba36117">NamespaceID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#aa8a45a67fcde75ac10ccfc8d0f329f1e">idhan::api::getNamespaceID</a> (const Json::Value &amp;namespace_c, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:aa8a45a67fcde75ac10ccfc8d0f329f1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a04b5a5d72712c9e893f6cc12ac721c" id="r_a8a04b5a5d72712c9e893f6cc12ac721c"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0">SubtagID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a8a04b5a5d72712c9e893f6cc12ac721c">idhan::api::searchSubtag</a> (const std::string &amp;str, const drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a8a04b5a5d72712c9e893f6cc12ac721c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae670f9906446cc6afefbb5ad3e3904c8" id="r_ae670f9906446cc6afefbb5ad3e3904c8"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0">SubtagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#ae670f9906446cc6afefbb5ad3e3904c8">idhan::api::findOrCreateSubtag</a> (const std::string &amp;str, const drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:ae670f9906446cc6afefbb5ad3e3904c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae8f4872c87ccbe8b7bc8680d1c76cfb9" id="r_ae8f4872c87ccbe8b7bc8680d1c76cfb9"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0">SubtagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#ae8f4872c87ccbe8b7bc8680d1c76cfb9">idhan::api::getSubtagID</a> (Json::Value subtag_c, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:ae8f4872c87ccbe8b7bc8680d1c76cfb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad1f6bd3d7cc9d790bf08906e6349d7e4" id="r_ad1f6bd3d7cc9d790bf08906e6349d7e4"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#ad1f6bd3d7cc9d790bf08906e6349d7e4">idhan::api::searchTagID</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#af5aed2f9fe91a2b9950b80c37ba36117">NamespaceID</a> namespace_id, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0">SubtagID</a> subtag_id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:ad1f6bd3d7cc9d790bf08906e6349d7e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abeb4f1dfbac8d77557466c2c4abad947" id="r_abeb4f1dfbac8d77557466c2c4abad947"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#abeb4f1dfbac8d77557466c2c4abad947">idhan::api::createTagID</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#af5aed2f9fe91a2b9950b80c37ba36117">NamespaceID</a> namespace_id, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0">SubtagID</a> subtag_id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:abeb4f1dfbac8d77557466c2c4abad947"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9608422b5225528a0667e370b946a75a" id="r_a9608422b5225528a0667e370b946a75a"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a9608422b5225528a0667e370b946a75a">idhan::api::pgEscape</a> (const std::string &amp;str)</td></tr>
+<tr class="separator:a9608422b5225528a0667e370b946a75a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:a8550b3105a04b6ee51d43b98021aa691" id="r_a8550b3105a04b6ee51d43b98021aa691"><td class="memItemLeft" align="right" valign="top">static std::recursive_mutex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a8550b3105a04b6ee51d43b98021aa691">idhan::api::namespace_mtx</a> {}</td></tr>
-<tr class="separator:a8550b3105a04b6ee51d43b98021aa691"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adab2ce6dfb9480909bee56fd380b43b0" id="r_adab2ce6dfb9480909bee56fd380b43b0"><td class="memItemLeft" align="right" valign="top">static std::unordered_map&lt; std::string, <a class="el" href="../../dd/dcf/namespaceidhan.html#af5aed2f9fe91a2b9950b80c37ba36117">NamespaceID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#adab2ce6dfb9480909bee56fd380b43b0">idhan::api::namespace_cache</a> {}</td></tr>
-<tr class="separator:adab2ce6dfb9480909bee56fd380b43b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aac5fecfe401a04ac4f9007f7e14183c3" id="r_aac5fecfe401a04ac4f9007f7e14183c3"><td class="memItemLeft" align="right" valign="top">static thread_local std::unique_ptr&lt; <a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html">NamespaceCache</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#aac5fecfe401a04ac4f9007f7e14183c3">idhan::api::namespace_cache</a> { std::make_unique&lt; <a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html">NamespaceCache</a> &gt;() }</td></tr>
+<tr class="separator:aac5fecfe401a04ac4f9007f7e14183c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8b56e136226ae89f755dd9aa547a23fc.html">api</a></li><li class="navelem"><a class="el" href="../../dir_484b39b0a198af60834e458a13690619.html">tags</a></li><li class="navelem"><a class="el" href="../../de/d3d/createTag_8cpp.html">createTag.cpp</a></li>
+    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8b56e136226ae89f755dd9aa547a23fc.html">api</a></li><li class="navelem"><a class="el" href="../../dir_484b39b0a198af60834e458a13690619.html">tags</a></li><li class="navelem"><a class="el" href="../../d4/d07/IDHANServer_2src_2api_2tags_2createTag_8cpp.html">createTag.cpp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

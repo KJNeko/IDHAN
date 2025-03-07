@@ -121,8 +121,8 @@ $(function(){initNavTree('db/d01/namespaceidhan_1_1db.html','../../'); initResiz
 Functions</h2></td></tr>
 <tr class="memitem:a2b863ba9db65a3a2b79583cdda4b26cb" id="r_a2b863ba9db65a3a2b79583cdda4b26cb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2b863ba9db65a3a2b79583cdda4b26cb">prepareInitalIndexes</a> (pqxx::nontransaction &amp;tx)</td></tr>
 <tr class="separator:a2b863ba9db65a3a2b79583cdda4b26cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab1d11ac332cafd317f8fb367429f9797" id="r_ab1d11ac332cafd317f8fb367429f9797"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab1d11ac332cafd317f8fb367429f9797">tableExists</a> (pqxx::nontransaction &amp;tx, const std::string_view name)</td></tr>
-<tr class="separator:ab1d11ac332cafd317f8fb367429f9797"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3fefd542f615196c8a0ecfaed4864e5b" id="r_a3fefd542f615196c8a0ecfaed4864e5b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fefd542f615196c8a0ecfaed4864e5b">tableExists</a> (pqxx::nontransaction &amp;tx, const std::string_view name, const std::string_view schema)</td></tr>
+<tr class="separator:a3fefd542f615196c8a0ecfaed4864e5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a511a1567c404a0a2457f8f7f69cd9c10" id="r_a511a1567c404a0a2457f8f7f69cd9c10"><td class="memItemLeft" align="right" valign="top">std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a511a1567c404a0a2457f8f7f69cd9c10">getTableVersion</a> (pqxx::nontransaction &amp;tx, const std::string_view name)</td></tr>
 <tr class="memdesc:a511a1567c404a0a2457f8f7f69cd9c10"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the table version.  <br /></td></tr>
 <tr class="separator:a511a1567c404a0a2457f8f7f69cd9c10"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -130,8 +130,8 @@ Functions</h2></td></tr>
 <tr class="separator:a873077c67e5bb8709aedc0555db3b5ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a042c099ba9a0a055e27d3306de63bcb2" id="r_a042c099ba9a0a055e27d3306de63bcb2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a042c099ba9a0a055e27d3306de63bcb2">destroyTables</a> (pqxx::nontransaction &amp;)</td></tr>
 <tr class="separator:a042c099ba9a0a055e27d3306de63bcb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8636d1bc8175db3fc89fb558da9ea434" id="r_a8636d1bc8175db3fc89fb558da9ea434"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8636d1bc8175db3fc89fb558da9ea434">updateMigrations</a> (pqxx::nontransaction &amp;tx)</td></tr>
-<tr class="separator:a8636d1bc8175db3fc89fb558da9ea434"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae3753db3b119251461a6be5b599bb165" id="r_ae3753db3b119251461a6be5b599bb165"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae3753db3b119251461a6be5b599bb165">updateMigrations</a> (pqxx::nontransaction &amp;tx, const std::string_view schema)</td></tr>
+<tr class="separator:ae3753db3b119251461a6be5b599bb165"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2fc1f163c11aa9afdce72fa901a35ac0" id="r_a2fc1f163c11aa9afdce72fa901a35ac0"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2fc1f163c11aa9afdce72fa901a35ac0">doMigration</a> (pqxx::nontransaction &amp;tx, std::size_t migration_id)</td></tr>
 <tr class="separator:a2fc1f163c11aa9afdce72fa901a35ac0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acdeef18ae2854f4b6915d60af3a6a3f8" id="r_acdeef18ae2854f4b6915d60af3a6a3f8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acdeef18ae2854f4b6915d60af3a6a3f8">prepareSQLFunctions</a> (pqxx::nontransaction &amp;tx)</td></tr>
@@ -279,8 +279,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="ab1d11ac332cafd317f8fb367429f9797" name="ab1d11ac332cafd317f8fb367429f9797"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab1d11ac332cafd317f8fb367429f9797">&#9670;&#160;</a></span>tableExists()</h2>
+<a id="a3fefd542f615196c8a0ecfaed4864e5b" name="a3fefd542f615196c8a0ecfaed4864e5b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3fefd542f615196c8a0ecfaed4864e5b">&#9670;&#160;</a></span>tableExists()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -293,15 +293,20 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>schema</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a8636d1bc8175db3fc89fb558da9ea434" name="a8636d1bc8175db3fc89fb558da9ea434"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8636d1bc8175db3fc89fb558da9ea434">&#9670;&#160;</a></span>updateMigrations()</h2>
+<a id="ae3753db3b119251461a6be5b599bb165" name="ae3753db3b119251461a6be5b599bb165"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae3753db3b119251461a6be5b599bb165">&#9670;&#160;</a></span>updateMigrations()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -309,8 +314,12 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">void idhan::db::updateMigrations </td>
           <td>(</td>
-          <td class="paramtype">pqxx::nontransaction &amp;</td>          <td class="paramname"><span class="paramname"><em>tx</em></span></td><td>)</td>
+          <td class="paramtype">pqxx::nontransaction &amp;</td>          <td class="paramname"><span class="paramname"><em>tx</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>schema</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['keypermissions_0',['KeyPermissions',['../dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880c',1,'idhan']]]
+  ['importfailurecode_0',['ImportFailureCode',['../dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fb',1,'idhan']]],
+  ['importstatus_1',['ImportStatus',['../dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4',1,'idhan']]]
 ];

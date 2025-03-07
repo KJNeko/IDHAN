@@ -121,6 +121,8 @@ $(function(){initNavTree('d6/da3/logger_8hpp.html','../../'); initResizable(true
 <div class="textblock"><code>#include &lt;cstdint&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
+<code>#include &quot;logging/qt_formatters/qstring.hpp&quot;</code><br />
+<code>#include &quot;spdlog/spdlog.h&quot;</code><br />
 </div>
 <p><a href="../../d6/da3/logger_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -156,21 +158,27 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a152e52d454120e9667932fd38a741748" id="r_a152e52d454120e9667932fd38a741748"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:a152e52d454120e9667932fd38a741748"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a152e52d454120e9667932fd38a741748">idhan::logging::notify</a> (const std::string_view &amp;fmt, const Ts &amp;... ts)</td></tr>
-<tr class="separator:a152e52d454120e9667932fd38a741748"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8ecb230be1041a9055d35b2ea4023be" id="r_aa8ecb230be1041a9055d35b2ea4023be"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:aa8ecb230be1041a9055d35b2ea4023be"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#aa8ecb230be1041a9055d35b2ea4023be">idhan::logging::info</a> (const std::string_view &amp;fmt, const Ts &amp;... ts)</td></tr>
-<tr class="separator:aa8ecb230be1041a9055d35b2ea4023be"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae9206de4c6220f7ad2a5b763fc7aa0b4" id="r_ae9206de4c6220f7ad2a5b763fc7aa0b4"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:ae9206de4c6220f7ad2a5b763fc7aa0b4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#ae9206de4c6220f7ad2a5b763fc7aa0b4">idhan::logging::warn</a> (const std::string_view &amp;fmt, const Ts &amp;... ts)</td></tr>
-<tr class="separator:ae9206de4c6220f7ad2a5b763fc7aa0b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8cbd24ea5404523d787b3c933a25257e" id="r_a8cbd24ea5404523d787b3c933a25257e"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:a8cbd24ea5404523d787b3c933a25257e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a8cbd24ea5404523d787b3c933a25257e">idhan::logging::error</a> (const std::string_view &amp;fmt, const Ts &amp;... ts)</td></tr>
-<tr class="separator:a8cbd24ea5404523d787b3c933a25257e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7422cbae97462cd78f59edd85324b5d9" id="r_a7422cbae97462cd78f59edd85324b5d9"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:a7422cbae97462cd78f59edd85324b5d9"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a7422cbae97462cd78f59edd85324b5d9">idhan::logging::critical</a> (const std::string_view &amp;fmt, const Ts &amp;... ts)</td></tr>
-<tr class="separator:a7422cbae97462cd78f59edd85324b5d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a628cdc3f7f2f6a58a8928d2df13b9726" id="r_a628cdc3f7f2f6a58a8928d2df13b9726"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a628cdc3f7f2f6a58a8928d2df13b9726"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a628cdc3f7f2f6a58a8928d2df13b9726">idhan::logging::notify</a> (std::string fmt, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a628cdc3f7f2f6a58a8928d2df13b9726"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab97a1c3c305eb37526a529aa4302ebb4" id="r_ab97a1c3c305eb37526a529aa4302ebb4"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:ab97a1c3c305eb37526a529aa4302ebb4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#ab97a1c3c305eb37526a529aa4302ebb4">idhan::logging::debug</a> (std::string fmt, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:ab97a1c3c305eb37526a529aa4302ebb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a57fbb5406ff86b408670fc1ae5c0b844" id="r_a57fbb5406ff86b408670fc1ae5c0b844"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a57fbb5406ff86b408670fc1ae5c0b844"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a57fbb5406ff86b408670fc1ae5c0b844">idhan::logging::info</a> (std::string fmt, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a57fbb5406ff86b408670fc1ae5c0b844"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a90198764e4fe06b07b8794a0c3193c1c" id="r_a90198764e4fe06b07b8794a0c3193c1c"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a90198764e4fe06b07b8794a0c3193c1c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a90198764e4fe06b07b8794a0c3193c1c">idhan::logging::warn</a> (std::string fmt, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a90198764e4fe06b07b8794a0c3193c1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a90047c4831e7f6c9f7d95ebdec219b08" id="r_a90047c4831e7f6c9f7d95ebdec219b08"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a90047c4831e7f6c9f7d95ebdec219b08"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a90047c4831e7f6c9f7d95ebdec219b08">idhan::logging::error</a> (std::string fmt, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a90047c4831e7f6c9f7d95ebdec219b08"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a96fdf1cc30728c4d254461d41dfe0cde" id="r_a96fdf1cc30728c4d254461d41dfe0cde"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a96fdf1cc30728c4d254461d41dfe0cde"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a96fdf1cc30728c4d254461d41dfe0cde">idhan::logging::critical</a> (std::string fmt, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a96fdf1cc30728c4d254461d41dfe0cde"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0491af2b3a3b5869d3bdfd8bcd752ecf" id="r_a0491af2b3a3b5869d3bdfd8bcd752ecf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a0491af2b3a3b5869d3bdfd8bcd752ecf">idhan::logging::logResponse</a> (QNetworkReply *reply)</td></tr>
+<tr class="memdesc:a0491af2b3a3b5869d3bdfd8bcd752ecf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Logs the network error response to the local log only.  <br /></td></tr>
+<tr class="separator:a0491af2b3a3b5869d3bdfd8bcd752ecf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a823c742df0088e2b2d065e9a6c550fde" id="r_a823c742df0088e2b2d065e9a6c550fde"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a823c742df0088e2b2d065e9a6c550fde">idhan::logging::registerCallback</a> (<a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a1e3a3ad52057010c1de1fcfea9c02bed">CallbackFunction</a> &amp;func, <a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3">CallbackLevel</a> level)</td></tr>
 <tr class="memdesc:a823c742df0088e2b2d065e9a6c550fde"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a callback. The level will act as a mask for specific events.  <br /></td></tr>
 <tr class="separator:a823c742df0088e2b2d065e9a6c550fde"><td class="memSeparator" colspan="2">&#160;</td></tr>

@@ -125,12 +125,12 @@ $(function(){initNavTree('d8/d75/migrations_8hpp_source.html','../../'); initRes
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>{</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno"><a class="line" href="../../db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0">   11</a></span>std::size_t <a class="code hl_function" href="../../db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0">doMigration</a>( pqxx::nontransaction&amp; tx, std::size_t migration_id );</div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d01/namespaceidhan_1_1db.html#a8636d1bc8175db3fc89fb558da9ea434">updateMigrations</a>( pqxx::nontransaction&amp; tx );</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d01/namespaceidhan_1_1db.html#ae3753db3b119251461a6be5b599bb165">updateMigrations</a>( pqxx::nontransaction&amp; tx, std::string_view schema );</div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>} <span class="comment">// namespace idhan::db</span></div>
 <div class="ttc" id="anamespaceidhan_1_1db_html"><div class="ttname"><a href="../../db/d01/namespaceidhan_1_1db.html">idhan::db</a></div><div class="ttdef"><b>Definition</b> indexes.cpp:13</div></div>
 <div class="ttc" id="anamespaceidhan_1_1db_html_a2fc1f163c11aa9afdce72fa901a35ac0"><div class="ttname"><a href="../../db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0">idhan::db::doMigration</a></div><div class="ttdeci">std::size_t doMigration(pqxx::nontransaction &amp;tx, std::size_t migration_id)</div></div>
-<div class="ttc" id="anamespaceidhan_1_1db_html_a8636d1bc8175db3fc89fb558da9ea434"><div class="ttname"><a href="../../db/d01/namespaceidhan_1_1db.html#a8636d1bc8175db3fc89fb558da9ea434">idhan::db::updateMigrations</a></div><div class="ttdeci">void updateMigrations(pqxx::nontransaction &amp;tx)</div><div class="ttdef"><b>Definition</b> migrations.cpp:17</div></div>
+<div class="ttc" id="anamespaceidhan_1_1db_html_ae3753db3b119251461a6be5b599bb165"><div class="ttname"><a href="../../db/d01/namespaceidhan_1_1db.html#ae3753db3b119251461a6be5b599bb165">idhan::db::updateMigrations</a></div><div class="ttdeci">void updateMigrations(pqxx::nontransaction &amp;tx, const std::string_view schema)</div><div class="ttdef"><b>Definition</b> migrations.cpp:17</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

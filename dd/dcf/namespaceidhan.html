@@ -133,6 +133,8 @@ Namespaces</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d18/namespaceidhan_1_1hyapi.html">hyapi</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d20/namespaceidhan_1_1internal.html">internal</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html">log</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d70/namespaceidhan_1_1logging.html">logging</a></td></tr>
@@ -176,6 +178,8 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d25/structidhan_1_1VersionInfo.html">VersionInfo</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -204,6 +208,16 @@ Typedefs</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
+<tr class="memitem:a553e106467d62307da15f6bcd9d714c4" id="r_a553e106467d62307da15f6bcd9d714c4"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a553e106467d62307da15f6bcd9d714c4">ImportStatus</a> { <a class="el" href="#a553e106467d62307da15f6bcd9d714c4a3ed388d31a0a5d3c37031bf2b59d6a7e">Success</a> = 1
+, <a class="el" href="#a553e106467d62307da15f6bcd9d714c4aba7710b08f08a9228fee41ee13261146">Exists</a> = 2
+, <a class="el" href="#a553e106467d62307da15f6bcd9d714c4a424b43382bec554150ba2a9e100b3dd5">Deleted</a> = 3
+, <a class="el" href="#a553e106467d62307da15f6bcd9d714c4a605c675a2b37cc079bcd0ac6143d1e72">Failed</a> = 4
+ }</td></tr>
+<tr class="separator:a553e106467d62307da15f6bcd9d714c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b45175c5a9b4ca53b660a59c37163fb" id="r_a9b45175c5a9b4ca53b660a59c37163fb"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9b45175c5a9b4ca53b660a59c37163fb">ImportFailureCode</a> { <a class="el" href="#a9b45175c5a9b4ca53b660a59c37163fbaf49e876140bce3f728508916b6cf18ac">UnknownReason</a> = 0
+, <a class="el" href="#a9b45175c5a9b4ca53b660a59c37163fba29e50f3b7235f0ddae371b3e650b791c">UnknownMime</a> = 1
+ }</td></tr>
+<tr class="separator:a9b45175c5a9b4ca53b660a59c37163fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a017e30cf513c900451d0fe48373e880c" id="r_a017e30cf513c900451d0fe48373e880c"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a017e30cf513c900451d0fe48373e880c">KeyPermissions</a> { <br />
 &#160;&#160;<a class="el" href="#a017e30cf513c900451d0fe48373e880ca924397fd11936e351485c02170a8fa19">eApiAccess</a> = 1 &lt;&lt; 0
 , <a class="el" href="#a017e30cf513c900451d0fe48373e880ca64ae873b2cbf56a4771b5dded0d023d2">eRemoteAccess</a> = 1 &lt;&lt; 1
@@ -235,9 +249,24 @@ Functions</h2></td></tr>
 <tr class="separator:a4e881a977f3992fcbf6ed75cf66bb837"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a37cff2a5b3a86f9964161d219f392141" id="r_a37cff2a5b3a86f9964161d219f392141"><td class="memItemLeft" align="right" valign="top">std::pair&lt; std::string, std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a37cff2a5b3a86f9964161d219f392141">splitTag</a> (const std::string &amp;str)</td></tr>
 <tr class="separator:a37cff2a5b3a86f9964161d219f392141"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa32290eb8fec468bba8a98213ecf71c2" id="r_aa32290eb8fec468bba8a98213ecf71c2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/d25/structidhan_1_1VersionInfo.html">VersionInfo</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa32290eb8fec468bba8a98213ecf71c2">handleVersionInfo</a> (QNetworkReply *reply)</td></tr>
+<tr class="separator:aa32290eb8fec468bba8a98213ecf71c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4afa544fadfd058083f08001daced2b5" id="r_a4afa544fadfd058083f08001daced2b5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4afa544fadfd058083f08001daced2b5">errorResponseHandler</a> ()</td></tr>
+<tr class="separator:a4afa544fadfd058083f08001daced2b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad4d6cfd89f1d3ee52a7ea1084cd0e824" id="r_ad4d6cfd89f1d3ee52a7ea1084cd0e824"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad4d6cfd89f1d3ee52a7ea1084cd0e824">checkContentType</a> (const drogon::HttpRequestPtr &amp;request, const <a class="el" href="#ab36e2f7c68cd1ad091d47cc6a44231e1">ResponseFunction</a> &amp;callback, const std::vector&lt; drogon::ContentType &gt; expected)</td></tr>
 <tr class="memdesc:ad4d6cfd89f1d3ee52a7ea1084cd0e824"><td class="mdescLeft">&#160;</td><td class="mdescRight">Responds with that the content type is unsupported or unknown.  <br /></td></tr>
 <tr class="separator:ad4d6cfd89f1d3ee52a7ea1084cd0e824"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a21f651d8ff7ac1a338fe2c38e57f4d4c" id="r_a21f651d8ff7ac1a338fe2c38e57f4d4c"><td class="memItemLeft" align="right" valign="top">drogon::HttpResponsePtr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a21f651d8ff7ac1a338fe2c38e57f4d4c">createBadRequest</a> (const Json::Value &amp;json)</td></tr>
+<tr class="separator:a21f651d8ff7ac1a338fe2c38e57f4d4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2b9879d901088ee21962581de3439875" id="r_a2b9879d901088ee21962581de3439875"><td class="memTemplParams" colspan="2">template&lt;typename... Args&gt; </td></tr>
+<tr class="memitem:a2b9879d901088ee21962581de3439875"><td class="memTemplItemLeft" align="right" valign="top">drogon::HttpResponsePtr&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2b9879d901088ee21962581de3439875">createBadRequest</a> (const std::format_string&lt; Args... &gt; str, Args &amp;&amp;... args)</td></tr>
+<tr class="separator:a2b9879d901088ee21962581de3439875"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3cb3ccfd882c152d4515e614fcc9a7f" id="r_ad3cb3ccfd882c152d4515e614fcc9a7f"><td class="memTemplParams" colspan="2">template&lt;typename... Args&gt; </td></tr>
+<tr class="memitem:ad3cb3ccfd882c152d4515e614fcc9a7f"><td class="memTemplItemLeft" align="right" valign="top">drogon::HttpResponsePtr&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ad3cb3ccfd882c152d4515e614fcc9a7f">createInternalError</a> (const std::format_string&lt; Args... &gt; str, Args &amp;&amp;... args)</td></tr>
+<tr class="separator:ad3cb3ccfd882c152d4515e614fcc9a7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad91c59f3dfc81d861106eae4858c1333" id="r_ad91c59f3dfc81d861106eae4858c1333"><td class="memTemplParams" colspan="2">template&lt;typename... Args&gt; </td></tr>
+<tr class="memitem:ad91c59f3dfc81d861106eae4858c1333"><td class="memTemplItemLeft" align="right" valign="top">drogon::HttpResponsePtr&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ad91c59f3dfc81d861106eae4858c1333">createConflict</a> (const std::format_string&lt; Args... &gt; str, Args &amp;&amp;... args)</td></tr>
+<tr class="separator:ad91c59f3dfc81d861106eae4858c1333"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a76828f1eed852334ad83d57970800420" id="r_a76828f1eed852334ad83d57970800420"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a76828f1eed852334ad83d57970800420">getRecordSHA256</a> (const <a class="el" href="#aa569f61b50f666991e0a9c4adf4bf1b5">RecordID</a> id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a76828f1eed852334ad83d57970800420"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aab6f14ce4ff56989b9a4202d48facdbd" id="r_aab6f14ce4ff56989b9a4202d48facdbd"><td class="memItemLeft" align="right" valign="top">drogon::orm::internal::SqlBinder &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aab6f14ce4ff56989b9a4202d48facdbd">operator&lt;&lt;</a> (drogon::orm::internal::SqlBinder &amp;binder, <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">idhan::SHA256</a> &amp;&amp;sha256)</td></tr>
@@ -255,6 +284,8 @@ Variables</h2></td></tr>
 <tr class="separator:a6efaa7ff194234490095eccedd770735"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abe33911f1365581d3fe2bc31f675e6b5" id="r_abe33911f1365581d3fe2bc31f675e6b5"><td class="memItemLeft" align="right" valign="top">constexpr char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe33911f1365581d3fe2bc31f675e6b5">TAG_NAMESPACE_DELIMTER</a> { ':' }</td></tr>
 <tr class="separator:abe33911f1365581d3fe2bc31f675e6b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d8f68e98aca33cc11a278808bd5aba2" id="r_a5d8f68e98aca33cc11a278808bd5aba2"><td class="memItemLeft" align="right" valign="top">std::uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5d8f68e98aca33cc11a278808bd5aba2">attempts</a> { 0 }</td></tr>
+<tr class="separator:a5d8f68e98aca33cc11a278808bd5aba2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Typedef Documentation</h2>
 <a id="a616197a70486b24e46240754ce959260" name="a616197a70486b24e46240754ce959260"></a>
@@ -412,6 +443,44 @@ Variables</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="a9b45175c5a9b4ca53b660a59c37163fb" name="a9b45175c5a9b4ca53b660a59c37163fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9b45175c5a9b4ca53b660a59c37163fb">&#9670;&#160;</a></span>ImportFailureCode</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="#a9b45175c5a9b4ca53b660a59c37163fb">idhan::ImportFailureCode</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a9b45175c5a9b4ca53b660a59c37163fbaf49e876140bce3f728508916b6cf18ac" name="a9b45175c5a9b4ca53b660a59c37163fbaf49e876140bce3f728508916b6cf18ac"></a>UnknownReason&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a9b45175c5a9b4ca53b660a59c37163fba29e50f3b7235f0ddae371b3e650b791c" name="a9b45175c5a9b4ca53b660a59c37163fba29e50f3b7235f0ddae371b3e650b791c"></a>UnknownMime&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+</div>
+</div>
+<a id="a553e106467d62307da15f6bcd9d714c4" name="a553e106467d62307da15f6bcd9d714c4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a553e106467d62307da15f6bcd9d714c4">&#9670;&#160;</a></span>ImportStatus</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="#a553e106467d62307da15f6bcd9d714c4">idhan::ImportStatus</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a553e106467d62307da15f6bcd9d714c4a3ed388d31a0a5d3c37031bf2b59d6a7e" name="a553e106467d62307da15f6bcd9d714c4a3ed388d31a0a5d3c37031bf2b59d6a7e"></a>Success&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a553e106467d62307da15f6bcd9d714c4aba7710b08f08a9228fee41ee13261146" name="a553e106467d62307da15f6bcd9d714c4aba7710b08f08a9228fee41ee13261146"></a>Exists&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a553e106467d62307da15f6bcd9d714c4a424b43382bec554150ba2a9e100b3dd5" name="a553e106467d62307da15f6bcd9d714c4a424b43382bec554150ba2a9e100b3dd5"></a>Deleted&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a553e106467d62307da15f6bcd9d714c4a605c675a2b37cc079bcd0ac6143d1e72" name="a553e106467d62307da15f6bcd9d714c4a605c675a2b37cc079bcd0ac6143d1e72"></a>Failed&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+</div>
+</div>
 <a id="a017e30cf513c900451d0fe48373e880c" name="a017e30cf513c900451d0fe48373e880c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a017e30cf513c900451d0fe48373e880c">&#9670;&#160;</a></span>KeyPermissions</h2>
 
@@ -477,6 +546,92 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Responds with that the content type is unsupported or unknown. </p>
+
+</div>
+</div>
+<a id="a21f651d8ff7ac1a338fe2c38e57f4d4c" name="a21f651d8ff7ac1a338fe2c38e57f4d4c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a21f651d8ff7ac1a338fe2c38e57f4d4c">&#9670;&#160;</a></span>createBadRequest() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::HttpResponsePtr idhan::createBadRequest </td>
+          <td>(</td>
+          <td class="paramtype">const Json::Value &amp;</td>          <td class="paramname"><span class="paramname"><em>json</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a2b9879d901088ee21962581de3439875" name="a2b9879d901088ee21962581de3439875"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2b9879d901088ee21962581de3439875">&#9670;&#160;</a></span>createBadRequest() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename... Args&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::HttpResponsePtr idhan::createBadRequest </td>
+          <td>(</td>
+          <td class="paramtype">const std::format_string&lt; Args... &gt;</td>          <td class="paramname"><span class="paramname"><em>str</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Args &amp;&amp;...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad91c59f3dfc81d861106eae4858c1333" name="ad91c59f3dfc81d861106eae4858c1333"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad91c59f3dfc81d861106eae4858c1333">&#9670;&#160;</a></span>createConflict()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename... Args&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::HttpResponsePtr idhan::createConflict </td>
+          <td>(</td>
+          <td class="paramtype">const std::format_string&lt; Args... &gt;</td>          <td class="paramname"><span class="paramname"><em>str</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Args &amp;&amp;...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad3cb3ccfd882c152d4515e614fcc9a7f" name="ad3cb3ccfd882c152d4515e614fcc9a7f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3cb3ccfd882c152d4515e614fcc9a7f">&#9670;&#160;</a></span>createInternalError()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename... Args&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::HttpResponsePtr idhan::createInternalError </td>
+          <td>(</td>
+          <td class="paramtype">const std::format_string&lt; Args... &gt;</td>          <td class="paramname"><span class="paramname"><em>str</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Args &amp;&amp;...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -559,6 +714,23 @@ Variables</h2></td></tr>
 
 </div>
 </div>
+<a id="a4afa544fadfd058083f08001daced2b5" name="a4afa544fadfd058083f08001daced2b5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4afa544fadfd058083f08001daced2b5">&#9670;&#160;</a></span>errorResponseHandler()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::errorResponseHandler </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a05ffd4928189092728cf8fa8ab20e694" name="a05ffd4928189092728cf8fa8ab20e694"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a05ffd4928189092728cf8fa8ab20e694">&#9670;&#160;</a></span>exceptionHandler()</h2>
 
@@ -625,6 +797,23 @@ Variables</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa32290eb8fec468bba8a98213ecf71c2" name="aa32290eb8fec468bba8a98213ecf71c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa32290eb8fec468bba8a98213ecf71c2">&#9670;&#160;</a></span>handleVersionInfo()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d3/d25/structidhan_1_1VersionInfo.html">VersionInfo</a> idhan::handleVersionInfo </td>
+          <td>(</td>
+          <td class="paramtype">QNetworkReply *</td>          <td class="paramname"><span class="paramname"><em>reply</em></span></td><td>)</td>
+          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -724,6 +913,20 @@ Variables</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Variable Documentation</h2>
+<a id="a5d8f68e98aca33cc11a278808bd5aba2" name="a5d8f68e98aca33cc11a278808bd5aba2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d8f68e98aca33cc11a278808bd5aba2">&#9670;&#160;</a></span>attempts</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::uint8_t idhan::attempts { 0 }</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a6efaa7ff194234490095eccedd770735" name="a6efaa7ff194234490095eccedd770735"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6efaa7ff194234490095eccedd770735">&#9670;&#160;</a></span>IDHAN_DEFAULT_PORT</h2>
 

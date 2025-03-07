@@ -5,10 +5,10 @@ var searchData=
   ['idhanexception_2',['IDHANException',['../dd/d1d/structidhan_1_1IDHANException.html#a093eab8aa4bbbdae046eb5f7e8990cbc',1,'idhan::IDHANException']]],
   ['idhantagapi_3',['IDHANTagAPI',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a63cb7247addf460d5cbd6b136a500395',1,'idhan::api::IDHANTagAPI']]],
   ['importfile_4',['importFile',['../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a444fc6870a8726a1c128aec8949bedf4',1,'idhan::api::IDHANFileAPI']]],
-  ['importhydrus_5',['importHydrus',['../dc/dc7/classidhan_1_1ManagementConnection.html#abcbfc658ac2332326dc3697fb014a9dc',1,'idhan::ManagementConnection']]],
-  ['info_6',['info',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a51665d1db1aba35b5ff37faa13e6798f',1,'idhan::api::ClusterAPI::info()'],['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#aed4ed0fb0a9c27d81900be260d0c7e18',1,'idhan::api::IDHANTagAPI::info()'],['../d6/d70/namespaceidhan_1_1logging.html#aa8ecb230be1041a9055d35b2ea4023be',1,'idhan::logging::info()'],['../d7/d03/namespaceidhan_1_1log.html#a8316bd7336920fe9ea2ea314fe06f798',1,'idhan::log::info()'],['../d2/d61/namespaceidhan_1_1log_1_1server.html#aa587df5fadb2a4dbfd980e689adf37b4',1,'idhan::log::server::info()']]],
-  ['infot_7',['infoT',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a2ec30bfe615c05d99b319e418dd4e374',1,'idhan::api::ClusterAPI']]],
-  ['initalsetup_8',['initalSetup',['../dc/dc7/classidhan_1_1ManagementConnection.html#a341f66b2c238e85e9bf98c0aff3f7db6',1,'idhan::ManagementConnection']]],
+  ['info_5',['info',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a51665d1db1aba35b5ff37faa13e6798f',1,'idhan::api::ClusterAPI::info()'],['../d6/d70/namespaceidhan_1_1logging.html#a57fbb5406ff86b408670fc1ae5c0b844',1,'idhan::logging::info()'],['../d7/d03/namespaceidhan_1_1log.html#a8316bd7336920fe9ea2ea314fe06f798',1,'idhan::log::info()'],['../d2/d61/namespaceidhan_1_1log_1_1server.html#aa587df5fadb2a4dbfd980e689adf37b4',1,'idhan::log::server::info()']]],
+  ['infot_6',['infoT',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a2ec30bfe615c05d99b319e418dd4e374',1,'idhan::api::ClusterAPI']]],
+  ['initalsetup_7',['initalSetup',['../dc/dc7/classidhan_1_1ManagementConnection.html#a341f66b2c238e85e9bf98c0aff3f7db6',1,'idhan::ManagementConnection']]],
+  ['insert_8',['insert',['../de/dbb/structidhan_1_1api_1_1NamespaceCache.html#a73f8df151773f0621bcb1b079e7a4db1',1,'idhan::api::NamespaceCache']]],
   ['instance_9',['instance',['../d3/d67/classidhan_1_1IDHANClient.html#ad1bb050d93dff240cff27af74b800f89',1,'idhan::IDHANClient']]],
   ['invoke_10',['invoke',['../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a94fb3c18fdf74d7d6bb5c897e19be89e',1,'idhan::api::IDHANAuth::invoke()'],['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#a5696247bb6074024c6134b2e0a5de827',1,'idhan::hyapi::HyAPIAuth::invoke()']]]
 ];

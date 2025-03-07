@@ -122,44 +122,45 @@ $(function(){initNavTree('dc/d9a/IDHANFileAPI_8hpp_source.html','../../'); initR
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>{</div>
-<div class="foldopen" id="foldopen00010" data-start="{" data-end="};">
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno"><a class="line" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html">   10</a></span><span class="keyword">class </span><a class="code hl_class" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html">IDHANFileAPI</a> : <span class="keyword">public</span> drogon::HttpController&lt; IDHANFileAPI &gt;</div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>{</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    drogon::Task&lt; drogon::HttpResponsePtr &gt; <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a444fc6870a8726a1c128aec8949bedf4">importFile</a>( <span class="keyword">const</span> drogon::HttpRequestPtr request );</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span></div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    drogon::Task&lt; drogon::HttpResponsePtr &gt; <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#aec93b36090eabd8725f20c2d7a8afa4c">createRecord</a>( <span class="keyword">const</span> drogon::HttpRequestPtr request );</div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>  <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    METHOD_LIST_BEGIN</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a07d658752e6cc0183fcaac82a60edd33">   21</a></span>    <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a07d658752e6cc0183fcaac82a60edd33">ADD_METHOD_TO</a>( <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#aec93b36090eabd8725f20c2d7a8afa4c">IDHANFileAPI::createRecord</a>, <span class="stringliteral">&quot;/file/create&quot;</span> );</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    <span class="comment">// tags</span></div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::addTag, &quot;/file/{file_id}/tags/add&quot; );</span></div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::removeTag, &quot;/file/{file_id}/tags/remove&quot; );</span></div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::tagList, &quot;/file/{file_id}/tags&quot; );</span></div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="comment">// info</span></div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::info, &quot;/file/{file_id}/info&quot; );</span></div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="comment">// file retrevial</span></div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::file, &quot;/file/{file_id}&quot; );</span></div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::thumbnail, &quot;/file/{file_id}/thumbnail&quot; );</span></div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#ac2141889eaf0f059d0bb024870fd5d82">   35</a></span>    <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#ac2141889eaf0f059d0bb024870fd5d82">ADD_METHOD_TO</a>( <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a444fc6870a8726a1c128aec8949bedf4">IDHANFileAPI::importFile</a>, <span class="stringliteral">&quot;/file/import&quot;</span> );</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    METHOD_LIST_END</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>};</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
+<div class="foldopen" id="foldopen00011" data-start="{" data-end="};">
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno"><a class="line" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html">   11</a></span><span class="keyword">class </span><a class="code hl_class" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html">IDHANFileAPI</a> : <span class="keyword">public</span> drogon::HttpController&lt; IDHANFileAPI &gt;</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>{</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    drogon::Task&lt; drogon::HttpResponsePtr &gt; <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a444fc6870a8726a1c128aec8949bedf4">importFile</a>( <span class="keyword">const</span> drogon::HttpRequestPtr request );</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    drogon::Task&lt; drogon::HttpResponsePtr &gt; <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#aec93b36090eabd8725f20c2d7a8afa4c">createRecord</a>( <span class="keyword">const</span> drogon::HttpRequestPtr request );</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>  <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    METHOD_LIST_BEGIN</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno"><a class="line" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a07d658752e6cc0183fcaac82a60edd33">   22</a></span>    <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a07d658752e6cc0183fcaac82a60edd33">ADD_METHOD_TO</a>( <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#aec93b36090eabd8725f20c2d7a8afa4c">IDHANFileAPI::createRecord</a>, <span class="stringliteral">&quot;/file/create&quot;</span> );</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="comment">// tags</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::addTag, &quot;/file/{file_id}/tags/add&quot; );</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::removeTag, &quot;/file/{file_id}/tags/remove&quot; );</span></div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::tagList, &quot;/file/{file_id}/tags&quot; );</span></div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="comment">// info</span></div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::info, &quot;/file/{file_id}/info&quot; );</span></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="comment">// file retrevial</span></div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::file, &quot;/file/{file_id}&quot; );</span></div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="comment">// ADD_METHOD_TO( IDHANFileAPI::thumbnail, &quot;/file/{file_id}/thumbnail&quot; );</span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno"><a class="line" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#ac2141889eaf0f059d0bb024870fd5d82">   36</a></span>    <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#ac2141889eaf0f059d0bb024870fd5d82">ADD_METHOD_TO</a>( <a class="code hl_function" href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a444fc6870a8726a1c128aec8949bedf4">IDHANFileAPI::importFile</a>, <span class="stringliteral">&quot;/file/import&quot;</span> );</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    METHOD_LIST_END</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>};</div>
 </div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>} <span class="comment">// namespace idhan::api</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>} <span class="comment">// namespace idhan::api</span></div>
 <div class="ttc" id="aResponseCallback_8hpp_html"><div class="ttname"><a href="../../de/d0b/ResponseCallback_8hpp.html">ResponseCallback.hpp</a></div></div>
-<div class="ttc" id="aclassidhan_1_1api_1_1IDHANFileAPI_html"><div class="ttname"><a href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html">idhan::api::IDHANFileAPI</a></div><div class="ttdef"><b>Definition</b> IDHANFileAPI.hpp:11</div></div>
+<div class="ttc" id="aclassidhan_1_1api_1_1IDHANFileAPI_html"><div class="ttname"><a href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html">idhan::api::IDHANFileAPI</a></div><div class="ttdef"><b>Definition</b> IDHANFileAPI.hpp:12</div></div>
 <div class="ttc" id="aclassidhan_1_1api_1_1IDHANFileAPI_html_a07d658752e6cc0183fcaac82a60edd33"><div class="ttname"><a href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a07d658752e6cc0183fcaac82a60edd33">idhan::api::IDHANFileAPI::ADD_METHOD_TO</a></div><div class="ttdeci">METHOD_LIST_BEGIN ADD_METHOD_TO(IDHANFileAPI::createRecord, &quot;/file/create&quot;)</div></div>
-<div class="ttc" id="aclassidhan_1_1api_1_1IDHANFileAPI_html_a444fc6870a8726a1c128aec8949bedf4"><div class="ttname"><a href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a444fc6870a8726a1c128aec8949bedf4">idhan::api::IDHANFileAPI::importFile</a></div><div class="ttdeci">drogon::Task&lt; drogon::HttpResponsePtr &gt; importFile(const drogon::HttpRequestPtr request)</div><div class="ttdef"><b>Definition</b> importFile.cpp:17</div></div>
+<div class="ttc" id="aclassidhan_1_1api_1_1IDHANFileAPI_html_a444fc6870a8726a1c128aec8949bedf4"><div class="ttname"><a href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#a444fc6870a8726a1c128aec8949bedf4">idhan::api::IDHANFileAPI::importFile</a></div><div class="ttdeci">drogon::Task&lt; drogon::HttpResponsePtr &gt; importFile(const drogon::HttpRequestPtr request)</div><div class="ttdef"><b>Definition</b> importFile.cpp:52</div></div>
 <div class="ttc" id="aclassidhan_1_1api_1_1IDHANFileAPI_html_ac2141889eaf0f059d0bb024870fd5d82"><div class="ttname"><a href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#ac2141889eaf0f059d0bb024870fd5d82">idhan::api::IDHANFileAPI::ADD_METHOD_TO</a></div><div class="ttdeci">ADD_METHOD_TO(IDHANFileAPI::importFile, &quot;/file/import&quot;)</div></div>
-<div class="ttc" id="aclassidhan_1_1api_1_1IDHANFileAPI_html_aec93b36090eabd8725f20c2d7a8afa4c"><div class="ttname"><a href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#aec93b36090eabd8725f20c2d7a8afa4c">idhan::api::IDHANFileAPI::createRecord</a></div><div class="ttdeci">drogon::Task&lt; drogon::HttpResponsePtr &gt; createRecord(const drogon::HttpRequestPtr request)</div><div class="ttdoc">Creates a new record in the database. Responds with the record id in a json format.</div><div class="ttdef"><b>Definition</b> createRecord.cpp:71</div></div>
-<div class="ttc" id="anamespaceidhan_1_1api_html"><div class="ttname"><a href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></div><div class="ttdef"><b>Definition</b> add.cpp:12</div></div>
+<div class="ttc" id="aclassidhan_1_1api_1_1IDHANFileAPI_html_aec93b36090eabd8725f20c2d7a8afa4c"><div class="ttname"><a href="../../df/daa/classidhan_1_1api_1_1IDHANFileAPI.html#aec93b36090eabd8725f20c2d7a8afa4c">idhan::api::IDHANFileAPI::createRecord</a></div><div class="ttdeci">drogon::Task&lt; drogon::HttpResponsePtr &gt; createRecord(const drogon::HttpRequestPtr request)</div><div class="ttdoc">Creates a new record in the database. Responds with the record id in a json format.</div><div class="ttdef"><b>Definition</b> createRecord.cpp:62</div></div>
+<div class="ttc" id="anamespaceidhan_1_1api_html"><div class="ttname"><a href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></div><div class="ttdef"><b>Definition</b> add.cpp:13</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

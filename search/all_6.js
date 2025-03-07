@@ -12,7 +12,7 @@ var searchData=
   ['getmime_9',['getMime',['../d4/d9c/namespaceidhan_1_1mime.html#adcb9649e51e1bf53e6fa1f30a2fc0210',1,'idhan::mime']]],
   ['getmime_2ecpp_10',['getMime.cpp',['../de/dce/getMime_8cpp.html',1,'']]],
   ['getmimeidfromrecord_11',['getMimeIDFromRecord',['../d4/d9c/namespaceidhan_1_1mime.html#a4fb3e6c97205af3230d1c74e9204da1d',1,'idhan::mime']]],
-  ['getnamespaceid_12',['getNamespaceID',['../db/de4/namespaceidhan_1_1api.html#abd1fd6dacf396b59e1cbe6c640890c89',1,'idhan::api::getNamespaceID(const std::string &amp;namespace_text, drogon::orm::DbClientPtr db)'],['../db/de4/namespaceidhan_1_1api.html#aba9a9850d6edff5caaab46c3a3caf8d5',1,'idhan::api::getNamespaceID(Json::Value namespace_c, drogon::orm::DbClientPtr db)']]],
+  ['getnamespaceid_12',['getNamespaceID',['../db/de4/namespaceidhan_1_1api.html#abd1fd6dacf396b59e1cbe6c640890c89',1,'idhan::api::getNamespaceID(const std::string &amp;namespace_text, drogon::orm::DbClientPtr db)'],['../db/de4/namespaceidhan_1_1api.html#aa8a45a67fcde75ac10ccfc8d0f329f1e',1,'idhan::api::getNamespaceID(const Json::Value &amp;namespace_c, drogon::orm::DbClientPtr db)']]],
   ['getpath_13',['getPath',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#aab8d0b613c9574823fcca5fec8ac4893',1,'idhan::api::ClusterInfo']]],
   ['getrecordmime_14',['getRecordMime',['../d4/d9c/namespaceidhan_1_1mime.html#ae4df26fe30622785aa3927e3381a485a',1,'idhan::mime']]],
   ['getrecordsha256_15',['getRecordSHA256',['../dd/dcf/namespaceidhan.html#a76828f1eed852334ad83d57970800420',1,'idhan']]],
@@ -21,5 +21,12 @@ var searchData=
   ['getservices_18',['getServices',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a0960f70f183fbf15768376beaea2dfbc',1,'idhan::hyapi::HydrusAPI']]],
   ['getsubtagid_19',['getSubtagID',['../db/de4/namespaceidhan_1_1api.html#ae8f4872c87ccbe8b7bc8680d1c76cfb9',1,'idhan::api']]],
   ['gettableversion_20',['getTableVersion',['../db/d01/namespaceidhan_1_1db.html#a511a1567c404a0a2457f8f7f69cd9c10',1,'idhan::db']]],
-  ['getting_20started_21',['Getting started',['../d0/d30/md_README.html#autotoc_md6',1,'']]]
+  ['gettagdomain_21',['getTagDomain',['../d3/d67/classidhan_1_1IDHANClient.html#a819160529e039fa0b7766876cdc07c60',1,'idhan::IDHANClient']]],
+  ['gettagdomain_2ecpp_22',['getTagDomain.cpp',['../d9/d87/getTagDomain_8cpp.html',1,'']]],
+  ['gettagdomaininfo_23',['getTagDomainInfo',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a9678ba8f3872795c2b6480b82f3aff60',1,'idhan::api::IDHANTagAPI']]],
+  ['gettagdomaininfojson_24',['getTagDomainInfoJson',['../db/de4/namespaceidhan_1_1api.html#a327c41c798c4cc8348c6c1288d0177ee',1,'idhan::api']]],
+  ['gettagdomains_25',['getTagDomains',['../d3/d67/classidhan_1_1IDHANClient.html#aed6bcb0b7e0e72fecff82be60c3eec0a',1,'idhan::IDHANClient::getTagDomains()'],['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a89213ae415cee58b3a24dc0750cd5a4d',1,'idhan::api::IDHANTagAPI::getTagDomains()']]],
+  ['gettagdomains_2ecpp_26',['getTagDomains.cpp',['../dc/dec/getTagDomains_8cpp.html',1,'']]],
+  ['gettaginfo_27',['getTagInfo',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a4dd0b24e956925b9b0e7755396b457d3',1,'idhan::api::IDHANTagAPI']]],
+  ['getting_20started_28',['Getting started',['../d0/d30/md_README.html#autotoc_md6',1,'']]]
 ];

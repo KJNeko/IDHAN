@@ -1,5 +1,6 @@
 var hierarchy =
 [
+    [ "idhan::VersionInfo::ApiVersion", "d6/d85/structidhan_1_1VersionInfo_1_1ApiVersion.html", null ],
     [ "idhan::api::ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", null ],
     [ "idhan::filesystem::ClusterManager::ClusterInfo", "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html", null ],
     [ "idhan::filesystem::ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", null ],
@@ -32,6 +33,7 @@ var hierarchy =
       [ "idhan::api::IDHANAuth", "d6/d49/classidhan_1_1api_1_1IDHANAuth.html", null ],
       [ "idhan::hyapi::HyAPIAuth", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html", null ]
     ] ],
+    [ "idhan::IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", null ],
     [ "idhan::IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", null ],
     [ "idhan::mime::ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", [
       [ "idhan::mime::AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", null ]
@@ -46,13 +48,13 @@ var hierarchy =
     [ "idhan::mime::MimeDataTrack", "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html", null ],
     [ "idhan::mime::MimeIdentifier", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html", null ],
     [ "idhan::mime::MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", null ],
-    [ "QObject", null, [
-      [ "idhan::IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", null ]
-    ] ],
+    [ "idhan::api::NamespaceCache", "de/dbb/structidhan_1_1api_1_1NamespaceCache.html", null ],
     [ "idhan::mime::Resolution", "d6/d56/structidhan_1_1mime_1_1Resolution.html", null ],
     [ "idhan::logging::ScopedTimer", "de/d50/structidhan_1_1logging_1_1ScopedTimer.html", null ],
     [ "idhan::SearchBuilder", "dc/dba/structidhan_1_1SearchBuilder.html", null ],
     [ "idhan::ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", null ],
+    [ "idhan::VersionInfo::ServerVersion", "d9/d69/structidhan_1_1VersionInfo_1_1ServerVersion.html", null ],
     [ "idhan::SHA256", "d0/de3/classidhan_1_1SHA256.html", null ],
+    [ "idhan::VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", null ],
     [ "idhan::mime::VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", null ]
 ];

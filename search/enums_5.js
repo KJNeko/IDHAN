@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['type_0',['Type',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a0cd23d3f9f0b109e732cea5dab9e1146',1,'idhan::mime::MimeIdentifier']]]
+  ['searchorder_0',['SearchOrder',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685',1,'idhan::hyapi']]]
 ];

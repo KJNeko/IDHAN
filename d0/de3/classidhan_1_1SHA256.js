@@ -10,7 +10,7 @@ var classidhan_1_1SHA256 =
     [ "fromHex", "d0/de3/classidhan_1_1SHA256.html#ad541cee4496022e6063a182f79cf3b55", null ],
     [ "hash", "d0/de3/classidhan_1_1SHA256.html#a071415941584f38eafe3f3db594daa57", null ],
     [ "hex", "d0/de3/classidhan_1_1SHA256.html#a4cd0626f10d0bccbf0554b1ae9442b8e", null ],
-    [ "toVec", "d0/de3/classidhan_1_1SHA256.html#a6d7314b1d734629d1f4149aeda878647", null ],
+    [ "toVec", "d0/de3/classidhan_1_1SHA256.html#a2027b42b64bf9a46ea2936588f6959f6", null ],
     [ "createFromIStream", "d0/de3/classidhan_1_1SHA256.html#a63df022890c468a619548757b076d2ca", null ],
     [ "m_data", "d0/de3/classidhan_1_1SHA256.html#a231656a24c9b9f5392a027ea0e9df680", null ]
 ];

@@ -116,6 +116,7 @@ $(function(){initNavTree('functions_vars.html',''); initResizable(true); });
 <li>active_counter&#160;:&#160;<a class="el" href="d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a77f49be6ecdf2689ed72cd800aeebb36">idhan::mime::MimeDatabase</a></li>
 <li>allowed_files&#160;:&#160;<a class="el" href="d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a9a9733a8d3d034c8828bc6d8514ccf9b">idhan::api::ClusterInfo</a></li>
 <li>allowed_thumbnails&#160;:&#160;<a class="el" href="d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a9a4d67fbd1a07ff7f8d3738365d67789">idhan::api::ClusterInfo</a></li>
+<li>api&#160;:&#160;<a class="el" href="d3/d25/structidhan_1_1VersionInfo.html#a713c8c583cafdd978a7801a179703368">idhan::VersionInfo</a></li>
 </ul>
 
 
@@ -159,6 +160,7 @@ $(function(){initNavTree('functions_vars.html',''); initResizable(true); });
 
 <h3><a id="index_l" name="index_l"></a>- l -</h3><ul>
 <li>limit&#160;:&#160;<a class="el" href="d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a2567c76a6ce4cc91b4fdd7c6105407f9">idhan::api::ClusterInfo</a></li>
+<li>logger&#160;:&#160;<a class="el" href="d3/d67/classidhan_1_1IDHANClient.html#a76e63026b950354ff34d152c2142e955">idhan::IDHANClient</a></li>
 </ul>
 
 
@@ -166,10 +168,11 @@ $(function(){initNavTree('functions_vars.html',''); initResizable(true); });
 <li>m_children&#160;:&#160;<a class="el" href="d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#adb51d6d39ecb564e0d7a856c708d3cd1">idhan::mime::MimeDataIdentifier</a></li>
 <li>m_config&#160;:&#160;<a class="el" href="d3/d67/classidhan_1_1IDHANClient.html#a274cbd4395e8c98768fedd74e6fca783">idhan::IDHANClient</a></li>
 <li>m_data&#160;:&#160;<a class="el" href="d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a9ebe557ec5d160f9406ee48e92bbe338">idhan::mime::DataIdentifierSearch</a>, <a class="el" href="d0/de3/classidhan_1_1SHA256.html#a231656a24c9b9f5392a027ea0e9df680">idhan::SHA256</a></li>
+<li>m_empty_namespace&#160;:&#160;<a class="el" href="de/dbb/structidhan_1_1api_1_1NamespaceCache.html#a1e36a319b999e893d47c0cf8ddaec241">idhan::api::NamespaceCache</a></li>
 <li>m_extensions&#160;:&#160;<a class="el" href="dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a6cbf7a20ca5acb714008ddaa950eb682">idhan::mime::MimeIdentifier</a></li>
 <li>m_flags&#160;:&#160;<a class="el" href="dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a109f8237647639890cfe609c1a974642">idhan::filesystem::ClusterManager::ClusterInfo</a></li>
 <li>m_folders&#160;:&#160;<a class="el" href="df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#ac9540530cbc4b9ced3e5777c88bfc535">idhan::filesystem::ClusterManager</a></li>
-<li>m_id&#160;:&#160;<a class="el" href="d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a387f74aba458765e8993ea2959115afb">idhan::api::ClusterInfo</a>, <a class="el" href="db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a507be944deacad5802b47616fefaf857">idhan::mime::FileMimeInfo</a></li>
+<li>m_id&#160;:&#160;<a class="el" href="d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a387f74aba458765e8993ea2959115afb">idhan::api::ClusterInfo</a>, <a class="el" href="de/dbb/structidhan_1_1api_1_1NamespaceCache.html#a9a919b200afa87232452ad705a080b54">idhan::api::NamespaceCache</a>, <a class="el" href="db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a507be944deacad5802b47616fefaf857">idhan::mime::FileMimeInfo</a></li>
 <li>m_identifiers&#160;:&#160;<a class="el" href="d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#ad50297c644082c789301821bb61d801a">idhan::mime::MimeDatabase</a>, <a class="el" href="dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a875bcf0d84d71ebfe49ce20bdfedb174">idhan::mime::MimeIdentifier</a></li>
 <li>m_info&#160;:&#160;<a class="el" href="dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a5188734b8bfcb5327cd2f9b1f637f16a">idhan::filesystem::ClusterManager::ClusterInfo</a></li>
 <li>m_instance&#160;:&#160;<a class="el" href="d3/d67/classidhan_1_1IDHANClient.html#a3ee84a5b16efe1752e88aec7039249a0">idhan::IDHANClient</a></li>
@@ -215,12 +218,15 @@ $(function(){initNavTree('functions_vars.html',''); initResizable(true); });
 
 <h3><a id="index_s" name="index_s"></a>- s -</h3><ul>
 <li>self_name&#160;:&#160;<a class="el" href="da/d27/structidhan_1_1IDHANClientConfig.html#a2834f4ef7f668daddad0669f6343cb91">idhan::IDHANClientConfig</a></li>
+<li>server&#160;:&#160;<a class="el" href="d3/d25/structidhan_1_1VersionInfo.html#a32117cfd9342a5e51f0c8e5747edf1f3">idhan::VersionInfo</a></li>
 <li>size&#160;:&#160;<a class="el" href="d8/d94/structidhan_1_1api_1_1ClusterInfo.html#afec7fe924ab12bc1a18022c50e703197">idhan::api::ClusterInfo</a></li>
 <li>start&#160;:&#160;<a class="el" href="de/d50/structidhan_1_1logging_1_1ScopedTimer.html#a1376167c5c3e12ab1013ed9c06c7db9a">idhan::logging::ScopedTimer</a></li>
+<li>str&#160;:&#160;<a class="el" href="d6/d85/structidhan_1_1VersionInfo_1_1ApiVersion.html#ae0560923d392101fb46e68752deb43b7">idhan::VersionInfo::ApiVersion</a>, <a class="el" href="d9/d69/structidhan_1_1VersionInfo_1_1ServerVersion.html#a8308c0aef8644e62667b3eceeaf6372e">idhan::VersionInfo::ServerVersion</a></li>
 </ul>
 
 
 <h3><a id="index_t" name="index_t"></a>- t -</h3><ul>
+<li>testmode&#160;:&#160;<a class="el" href="de/d07/structidhan_1_1ConnectionArguments.html#a832a9898eccb5cd477f4c02e378637df">idhan::ConnectionArguments</a></li>
 <li>total&#160;:&#160;<a class="el" href="d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a90a7c5b922ea8c9163376b353eee5ed3">idhan::api::ClusterInfo</a></li>
 </ul>
 

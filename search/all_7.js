@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['handleversioninfo_0',['handleVersionInfo',['../d3/d67/classidhan_1_1IDHANClient.html#a30c79b07ba16c35e0ed3cac637dc0bce',1,'idhan::IDHANClient']]],
+  ['handleversioninfo_0',['handleVersionInfo',['../dd/dcf/namespaceidhan.html#aa32290eb8fec468bba8a98213ecf71c2',1,'idhan']]],
   ['hasaudio_1',['HasAudio',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a3ae6805278f83b3bc765d6d10401c915',1,'idhan::hyapi']]],
   ['hasfile_2',['hasFile',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ace286184394f2c684659f9d2f956eb86',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
   ['hash_3',['hash',['../d0/de3/classidhan_1_1SHA256.html#a071415941584f38eafe3f3db594daa57',1,'idhan::SHA256']]],
