@@ -25,6 +25,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	const Json::Value& json { *json_ptr };
 
 	auto db { drogon::app().getDbClient() };
+	auto transaction { db->newTransaction() };
 
 	//test if sha256 is a list or 1 item
 	const auto& sha256s { json[ "sha256" ] };
@@ -42,8 +43,22 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 			// dehexify the string.
 			SHA256 sha256 { SHA256::fromHex( str ) };
 
-			const RecordID record_id { co_await createRecord( sha256, db ) };
-			json_array[ idx++ ] = record_id;
+			const auto result { co_await transaction->execSqlCoro(
+				"INSERT INTO records(sha256) VALUES ($1) ON CONFLICT DO NOTHING RETURNING record_id",
+				sha256.toVec() ) };
+
+			// const RecordID record_id { co_await createRecord( sha256, db ) };
+
+			// already imported.
+			if ( result.empty() )
+			{
+				auto opt { co_await searchRecord( sha256, db ) };
+
+				if ( opt ) json_array[ idx++ ] = opt.value();
+				continue;
+			}
+
+			json_array[ idx++ ] = result[ 0 ][ 0 ].as< RecordID >();
 		}
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_array );

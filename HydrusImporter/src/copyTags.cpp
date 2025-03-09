@@ -4,7 +4,6 @@
 
 #include <QCoreApplication>
 #include <QEventLoop>
-#include <QFutureSynchronizer>
 #include <QFutureWatcher>
 #include <QTimer>
 #include <QtConcurrentRun>
@@ -23,111 +22,107 @@ void HydrusImporter::copyTags()
 	std::shared_ptr synchronizer { std::make_shared< QFutureSynchronizer< TagID > >() };
 
 	constexpr std::size_t max_threads { 128 };
-	const std::size_t thread_count { 6 };
+	const std::uint32_t thread_count { std::thread::hardware_concurrency() };
 
-	std::counting_semaphore< max_threads > sync_counter { thread_count };
+	std::counting_semaphore< max_threads > sync_counter { thread_count * 2 };
 
 	QFutureSynchronizer< void > thread_sync {};
 
-	constexpr std::size_t group_size { 1024 * 8 };
+	constexpr std::size_t group_size { 1000 * 8 };
 
 	using TagPairGroup = std::vector< std::pair< std::string, std::string > >;
 
-	std::mutex mtx {};
-	std::queue< TagPairGroup > group_queue {};
-	for ( std::size_t i = 0; i < thread_count + 1; ++i )
-	{
-		group_queue.emplace().resize( group_size );
-	}
-
-	auto getGroup = [ &mtx, &group_queue ]
-	{
-		std::lock_guard guard { mtx };
-		auto group { std::move( group_queue.front() ) };
-		group_queue.pop();
-		return group;
-	};
-
-	TagPairGroup tag_pairs { getGroup() };
+	TagPairGroup tag_pairs {};
+	tag_pairs.resize( group_size );
 
 	const auto start { std::chrono::steady_clock::now() };
+	auto last_start { start };
 	std::atomic< std::size_t > processed { 0 };
+	std::size_t total_processed { 0 };
 
 	spdlog::info( "Getting tag count" );
 	std::size_t tag_count { 0 };
 	transaction << "SELECT count(*) FROM tags" >> tag_count;
 	spdlog::info( "Tag count: {}", tag_count );
 
-	auto printProcessed = [ &processed, &start, &tag_count ]()
+	auto printProcessed = [ &processed, start, &last_start, &tag_count, &total_processed ]()
 	{
 		const auto end { std::chrono::steady_clock::now() };
-		const auto duration { end - start };
+		const auto total_duration { end - start };
 
-		std::size_t processed_count { processed };
+		std::size_t processed_count { processed.exchange( 0 ) };
+		total_processed += processed_count;
+
+		const std::chrono::duration< double > duration { end - last_start };
+		last_start = end;
+
+		if ( processed_count == 0 ) return;
+
+		const auto time_per_item { total_duration / total_processed };
 
 		spdlog::info(
-			"Processed {} tags since start: {}",
-			processed_count,
-			std::chrono::duration_cast< std::chrono::seconds >( duration ) );
-
-		const std::chrono::duration< double > s_duration { end - start };
-
-		const auto time_per_item { s_duration / processed_count };
-
-		spdlog::info(
-			"Rate: {}/s, ETA: {}, (Total time: {})",
-			static_cast< std::size_t >( static_cast< double >( processed_count ) / s_duration.count() ),
-			std::chrono::duration_cast< std::chrono::minutes >( time_per_item * ( tag_count - processed_count ) ),
-			std::chrono::duration_cast< std::chrono::minutes >( time_per_item * tag_count ) );
+			"[tags]: {} ({:2.1f}%): Rate: {}/s, ETA: {}, (Total time: {})",
+			total_processed,
+			( static_cast< float >( total_processed ) / static_cast< float >( tag_count ) * 100.0f ),
+			static_cast< std::size_t >( static_cast< double >( processed_count ) / duration.count() ),
+			std::chrono::duration_cast< std::chrono::minutes >( time_per_item * ( tag_count - total_processed ) ),
+			std::chrono::duration_cast< std::chrono::minutes >( total_duration ) );
 	};
-
-	QTimer m_timer {};
-	m_timer.setInterval( 3000 );
-	m_timer.setSingleShot( false );
-	m_timer.callOnTimeout( printProcessed );
-	m_timer.start();
-
-	std::size_t current_id { 0 };
 
 	QThreadPool pool {};
 	pool.setMaxThreadCount( thread_count );
 
-	std::string current_namespace {};
+	QFuture< void > timer_future { QtConcurrent::
+		                               run( &pool,
+		                                    [ & ]( QPromise< void >& promise )
+		                                    {
+												QEventLoop loop {};
+												QTimer m_timer {};
+												m_timer.setInterval( 2000 );
+												m_timer.setSingleShot( false );
+												m_timer.callOnTimeout( printProcessed );
+												m_timer.start();
 
-	auto submitData = [ & ]()
+												do {
+													loop.processEvents();
+													std::this_thread::yield();
+													std::this_thread::sleep_for( std::chrono::microseconds( 100 ) );
+												}
+												while ( !promise.isCanceled() );
+
+												return;
+											} ) };
+
+	std::size_t current_id { 0 };
+
+	std::string current_namespace { "" };
+
+	auto submitData =
+		[ &printProcessed, &processed, group_size, &sync_counter, client = m_client, &tag_pairs, &pool, &thread_sync ]()
 	{
 		thread_sync.addFuture(
-			QtConcurrent::
-				run( &pool,
-		             [ &printProcessed,
-		               &processed,
-		               group_size,
-		               &sync_counter,
-		               client = m_client,
-		               data = std::move( tag_pairs ),
-		               &mtx,
-		               &group_queue ]()
-		             {
-						 QNetworkAccessManager network {};
-						 QEventLoop loop;
+			QtConcurrent::run(
+				&pool,
+				[ &printProcessed, &processed, group_size, &sync_counter, client ]( TagPairGroup pairs )
+				{
+					QNetworkAccessManager network {};
+					QEventLoop loop;
 
-						 QFutureWatcher< std::vector< TagID > > data_watcher {};
-						 data_watcher.setFuture( client->createTags( data, network ) );
+					QFutureWatcher< std::vector< TagID > > data_watcher {};
+					data_watcher.setFuture( client->createTags( pairs ) );
 
-						 // create watcher to watch until the sync is finished
-						 QFutureWatcher< void > watcher {};
-						 QObject::connect( &watcher, &QFutureWatcher< void >::finished, &loop, &QEventLoop::quit );
+					// create watcher to watch until the sync is finished
+					QFutureWatcher< void > watcher {};
+					QObject::connect( &watcher, &QFutureWatcher< void >::finished, &loop, &QEventLoop::quit );
 
-						 watcher.setFuture( QtConcurrent::run( [ & ]() { data_watcher.waitForFinished(); } ) );
+					watcher.setFuture( QtConcurrent::run( [ & ]() { data_watcher.waitForFinished(); } ) );
 
-						 loop.exec();
-						 {
-							 std::lock_guard guard { mtx };
-							 group_queue.push( std::move( data ) );
-						 }
-						 sync_counter.release();
-						 processed += group_size;
-					 } ) );
+					loop.exec();
+
+					sync_counter.release();
+					processed += group_size;
+				},
+				tag_pairs ) );
 	};
 
 	transaction
@@ -139,6 +134,9 @@ void HydrusImporter::copyTags()
 			logging::debug( "Processing namespace: {}", namespace_text );
 			current_namespace = namespace_text;
 		}
+
+		FGL_ASSERT( tag_pairs.size() > current_id, "tag_pairs.size() > current_id failed" );
+
 		tag_pairs[ current_id ].first = namespace_text;
 		tag_pairs[ current_id ].second = subtag_text;
 
@@ -148,21 +146,11 @@ void HydrusImporter::copyTags()
 		{
 			current_id = 0;
 
-			if ( QThread::isMainThread() )
-			{
-				do {
-					QCoreApplication::processEvents();
-				}
-				while ( !sync_counter.try_acquire_for( std::chrono::milliseconds( 250 ) ) );
-			}
-			else
-			{
-				sync_counter.acquire();
-			}
+			sync_counter.acquire();
 
 			submitData();
 
-			tag_pairs = getGroup();
+			tag_pairs.resize( group_size );
 		}
 	};
 
@@ -170,12 +158,54 @@ void HydrusImporter::copyTags()
 
 	thread_sync.addFuture( QtConcurrent::run( [ sync = std::move( synchronizer ) ]() { sync->waitForFinished(); } ) );
 	thread_sync.waitForFinished();
-	m_timer.stop();
+	timer_future.cancel();
 
 	printProcessed();
+
+	logging::info( "Finished processing {} tags", total_processed );
 }
 
 void HydrusImporter::copyParents()
-{}
+{
+	TransactionBase master_tr { master_db };
+	TransactionBase client_tr { client_db };
+
+	QNetworkAccessManager m_network {};
+
+	const auto getHydrusTag = [ &master_tr ]( const std::size_t tag_id ) -> std::string
+	{
+		std::string str;
+
+		master_tr << "SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id = ?"
+				  << tag_id
+			>> [ &str ]( const std::string_view n_tag, const std::string_view s_tag )
+		{
+			if ( n_tag.empty() )
+				str = s_tag;
+			else
+				str = std::format( "{}:{}", n_tag, s_tag );
+		};
+
+		return str;
+	};
+
+	// find all services that have parents
+	client_tr << "SELECT name, service_id FROM services WHERE service_type = 0 OR service_type = 5" >>
+		[ & ]( const std::string name, const std::size_t service_id )
+	{
+		spdlog::info( "Getting parents from service {}", name );
+
+		const std::string table_name { std::format( "current_tag_parents_{}", service_id ) };
+
+		const auto domain_id { m_client->createTagDomain( name ) };
+
+		client_tr << std::format( "SELECT child_tag_id, parent_tag_id FROM {}", table_name ) >>
+			[ &getHydrusTag, this ]( const std::size_t child_id, const std::size_t parent_id )
+		{
+			const std::string parent_str { getHydrusTag( parent_id ) };
+			const std::string child_str { getHydrusTag( child_id ) };
+		};
+	};
+}
 
 } // namespace idhan::hydrus

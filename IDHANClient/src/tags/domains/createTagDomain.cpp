@@ -45,7 +45,7 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 		response->deleteLater();
 	};
 
-	sendClientJson( object, m_network, "/tag/domain/create", handleResponse, handleError );
+	sendClientJson( object, "/tag/domain/create", handleResponse, handleError );
 
 	return promise->future();
 }

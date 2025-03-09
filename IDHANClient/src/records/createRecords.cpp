@@ -14,17 +14,16 @@ namespace idhan
 {
 
 QFuture< std::vector< RecordID > > IDHANClient::
-	createRecords( std::vector< std::array< std::byte, ( 256 / 8 ) > >& hashes, QNetworkAccessManager& network )
+	createRecords( std::vector< std::array< std::byte, ( 256 / 8 ) > >& hashes )
 {
 	std::vector< std::string > hex_hashes {};
 
 	FGL_UNIMPLEMENTED();
 
-	return this->createRecords( hex_hashes, network );
+	return this->createRecords( hex_hashes );
 }
 
-QFuture< std::vector< RecordID > > IDHANClient::
-	createRecords( const std::vector< std::string >& hashes, QNetworkAccessManager& network )
+QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector< std::string >& hashes )
 {
 	auto promise { std::make_shared< QPromise< std::vector< RecordID > > >() };
 
@@ -67,7 +66,7 @@ QFuture< std::vector< RecordID > > IDHANClient::
 		response->deleteLater();
 	};
 
-	sendClientJson( object, network, "/file/create", handleResponse, handleError );
+	sendClientJson( object, "/file/create", handleResponse, handleError );
 
 	return promise->future();
 }
