@@ -8,6 +8,7 @@
 #include <QFutureSynchronizer>
 #include <QtConcurrentRun>
 
+#include "idhan/logging/logger.hpp"
 #include "spdlog/spdlog.h"
 #include "sqlitehelper/Transaction.hpp"
 
@@ -19,7 +20,8 @@ constexpr std::string_view LOCK_FILE_NAME { "client_running" };
 static std::size_t core_count { std::thread::hardware_concurrency() };
 
 HydrusImporter::HydrusImporter( const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client ) :
-  m_client( client ), m_path( path )
+  m_client( client ),
+  m_path( path )
 {
 	if ( !std::filesystem::exists( path ) ) throw std::runtime_error( "Failed to open path to hydrus db" );
 
@@ -54,14 +56,32 @@ HydrusImporter::~HydrusImporter()
 
 void HydrusImporter::copyHydrusTags()
 {
-	copySiblings();
-	copyParents();
 	copyTags();
+	// no hydrus equiv
+	// copySiblings();
+	// copyAliases();
+	copyParents();
 }
 
 void HydrusImporter::copyFileInfo()
 {
 	copyFileStorage();
+}
+
+void HydrusImporter::copyHydrusInfo()
+{
+	QFuture< void > tag_future { QtConcurrent::run( &HydrusImporter::copyHydrusTags, this ) };
+	sync.addFuture( std::move( tag_future ) );
+
+	QFuture< void > hash_future { QtConcurrent::run( &HydrusImporter::copyHashes, this ) };
+	sync.addFuture( std::move( hash_future ) );
+
+	// idhan::logging::info( "Waiting for futures" );
+	// sync.waitForFinished();
+
+	// copyHashes();
+	// copyFileInfo();
+	// copyHydrusTags();
 }
 
 } // namespace idhan::hydrus

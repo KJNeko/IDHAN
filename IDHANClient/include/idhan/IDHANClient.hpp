@@ -13,6 +13,8 @@
 #include <string>
 
 #include "IDHANTypes.hpp"
+#include "Network.hpp"
+#include "fgl/defines.hpp"
 
 namespace spdlog
 {
@@ -45,17 +47,18 @@ struct VersionInfo
 	} api;
 };
 
+
+
 class IDHANClient
 {
 	std::shared_ptr< spdlog::logger > logger { nullptr };
 	IDHANClientConfig m_config;
-	QNetworkAccessManager m_network;
 	std::size_t connection_attempts { 0 };
-
-	std::unordered_map< std::thread::id, std::shared_ptr< QNetworkAccessManager > > m_network_managers;
 
 	inline static IDHANClient* m_instance { nullptr };
 	QUrl m_url_template {};
+
+	Network network;
 
 	void addKeyHeader( QNetworkRequest& request );
 
@@ -74,7 +77,7 @@ class IDHANClient
 	*/
 	IDHANClient( const IDHANClientConfig& config );
 
-	QFuture< std::vector< RecordID > > createRecords( std::vector< std::array< std::byte, 32 > >& hashes, QNetworkAccessManager& network );
+	QFuture< std::vector< RecordID > > createRecords( std::vector< std::array< std::byte, 32 > >& hashes );
 
 	/**
 	 * @brief
@@ -82,18 +85,14 @@ class IDHANClient
 	 * @param network
 	 * @return
 	 */
-	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::string >& hashes, QNetworkAccessManager& network );
+	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::string >& hashes );
 
 	QFuture< VersionInfo > queryVersion();
 
-	QFuture< std::vector< TagID > >
-		createTags( const std::vector< std::pair< std::string, std::string > >& tags, QNetworkAccessManager& network );
+	QFuture< std::vector< TagID > > createTags( const std::vector< std::pair< std::string, std::string > >& tags );
 
-	QFuture< TagID >
-		createTag( const std::string& namespace_text, const std::string& subtag_text, QNetworkAccessManager& network );
-
-	// tags
 	QFuture< TagID > createTag( const std::string& namespace_text, const std::string& subtag_text );
+
 	QFuture< TagID > createTag( const std::string& tag_text );
 
 	/**
@@ -118,13 +117,13 @@ class IDHANClient
 
 	void sendClientJson(
 		const QJsonObject& object,
-		QNetworkAccessManager& network,
 		const QString& path,
 		std::function< void( QNetworkReply* reply ) >&& responseHandler,
 		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
 	/**
 	 * @brief Creates a new tag domain, Throws if the domain exists
 	 * @param name
+	 * @param network
 	 * @throws DomainExists
 	 * @return
 	 */

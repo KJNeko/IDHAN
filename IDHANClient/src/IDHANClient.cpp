@@ -62,7 +62,7 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 
 	logging::info( "Requesting version info from {}", url.toString() );
 
-	QNetworkReply* reply { m_network.get( request ) };
+	QNetworkReply* reply { network.get( request ) };
 
 	auto promise { std::make_shared< QPromise< VersionInfo > >() };
 
@@ -129,7 +129,7 @@ IDHANClient& IDHANClient::instance()
 	return *m_instance;
 }
 
-IDHANClient::IDHANClient( const IDHANClientConfig& config ) : m_config( config )
+IDHANClient::IDHANClient( const IDHANClientConfig& config ) : m_config( config ), network( nullptr )
 {
 	logger = spdlog::stdout_color_mt( "client" );
 	logger->set_level( spdlog::level::info );
@@ -176,13 +176,11 @@ IDHANClient::IDHANClient( const IDHANClientConfig& config ) : m_config( config )
 	logging::info( "Got version info from server: Server: {}, Api: {}", data.server.str, data.api.str );
 }
 
-
 void errorResponseHandler()
 {}
 
 void IDHANClient::sendClientJson(
 	const QJsonObject& object,
-	QNetworkAccessManager& network,
 	const QString& path,
 	std::function< void( QNetworkReply* reply ) >&& responseHandler,
 	std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler )
@@ -252,7 +250,7 @@ QFuture< void > IDHANClient::createFileCluster(
 		response->deleteLater();
 	};
 
-	sendClientJson( object, m_network, "/clusters/add", handleResponse, handleError );
+	sendClientJson( object, "/clusters/add", handleResponse, handleError );
 
 	return promise->future();
 }

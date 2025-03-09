@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <QFutureSynchronizer>
+
 #include <IDHAN>
 #include <filesystem>
 #include <sqlite3.h>
@@ -17,6 +19,8 @@ class HydrusImporter
 	sqlite3* mappings_db { nullptr };
 	std::shared_ptr< IDHANClient > m_client;
 	std::filesystem::path m_path;
+
+	QFutureSynchronizer< void > sync {};
 
 	void copyTags();
 	void copyParents();
@@ -36,12 +40,7 @@ class HydrusImporter
 
 	void copyFileInfo();
 
-	inline void copyHydrusInfo()
-	{
-		copyHashes();
-		copyFileInfo();
-		copyHydrusTags();
-	}
+	void copyHydrusInfo();
 };
 
 } // namespace idhan::hydrus

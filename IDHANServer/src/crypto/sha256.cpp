@@ -6,8 +6,6 @@
 
 #include <QCryptographicHash>
 
-#include <openssl/evp.h>
-
 #include <cassert>
 #include <cstring>
 #include <vector>

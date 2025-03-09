@@ -11,8 +11,7 @@
 namespace idhan
 {
 
-QFuture< TagID > IDHANClient::
-	createTag( const std::string& namespace_text, const std::string& subtag_text, QNetworkAccessManager& network )
+QFuture< TagID > IDHANClient::createTag( const std::string& namespace_text, const std::string& subtag_text )
 {
 	auto promise { std::make_shared< QPromise< TagID > >() };
 
@@ -46,14 +45,9 @@ QFuture< TagID > IDHANClient::
 		response->deleteLater();
 	};
 
-	sendClientJson( object, network, "/tag/create", handleResponse, handleError );
+	sendClientJson( object, "/tag/create", handleResponse, handleError );
 
 	return promise->future();
-}
-
-QFuture< TagID > IDHANClient::createTag( const std::string& namespace_text, const std::string& subtag_text )
-{
-	return createTag( namespace_text, subtag_text, m_network );
 }
 
 QFuture< TagID > IDHANClient::createTag( const std::string& tag_text )
