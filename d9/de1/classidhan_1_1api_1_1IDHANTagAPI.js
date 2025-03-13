@@ -1,7 +1,9 @@
 var classidhan_1_1api_1_1IDHANTagAPI =
 [
     [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a63cb7247addf460d5cbd6b136a500395", null ],
+    [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#ad662ca52b674dcc05b6ff5eb717815f0", null ],
     [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#abb2ee18c10d4408228bf3fc17852c884", null ],
+    [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a4f5c6376825990f03063ff6e78ee3e25", null ],
     [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a0a0903a4d85bb09f785146afb6428bb4", null ],
     [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a1bf44bfd2c337884f1fcf3e2e937eedc", null ],
     [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a62306b65c8501e863ad6f6ee27973fd1", null ],
@@ -13,7 +15,9 @@ var classidhan_1_1api_1_1IDHANTagAPI =
     [ "autocomplete", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a1a79e058278f6342772cbfc140a325cf", null ],
     [ "createBatchedTag", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a7430ddaa6728c41274adaf096cd0560b", null ],
     [ "createSingleTag", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a6c7f4400fbd512f2b281de804df474cc", null ],
+    [ "createTagAliases", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a86f8719660c9b004d994650bb31d8561", null ],
     [ "createTagDomain", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#add05fbe039bd11bf9d6afda4738b0e42", null ],
+    [ "createTagParents", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a91369b00dc0ba7ea78a6d76c96881694", null ],
     [ "createTagRouter", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#afbdbf6e5bf48cb17d52eb9e3c43de96b", null ],
     [ "deleteTagDomain", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#accedfb0817762c2bdaa8e78e3da1cd17", null ],
     [ "getTagDomainInfo", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a9678ba8f3872795c2b6480b82f3aff60", null ],

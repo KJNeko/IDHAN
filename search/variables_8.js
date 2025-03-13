@@ -13,12 +13,11 @@ var searchData=
   ['m_5finstance_10',['m_instance',['../d3/d67/classidhan_1_1IDHANClient.html#a3ee84a5b16efe1752e88aec7039249a0',1,'idhan::IDHANClient']]],
   ['m_5fmax_5fcapacity_11',['m_max_capacity',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a287a8983d0c14e3a7f9686083455c1ad',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
   ['m_5fmime_12',['m_mime',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a7688f8bfe4394c53dff06efaaf47f1f0',1,'idhan::mime::MimeIdentifier']]],
-  ['m_5fnetwork_13',['m_network',['../d3/d67/classidhan_1_1IDHANClient.html#a1fdaaa0850b88d3973d66940a5fdbf2f',1,'idhan::IDHANClient']]],
-  ['m_5fnetwork_5fmanagers_14',['m_network_managers',['../d3/d67/classidhan_1_1IDHANClient.html#ab76a8dd34bd1a98c41f998126c691fc8',1,'idhan::IDHANClient']]],
-  ['m_5fpath_15',['m_path',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#afd5f6841e291a0a0ef768aedb35e0b89',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
-  ['m_5fpostgresql_5fmanagement_16',['m_postgresql_management',['../d0/d4c/classidhan_1_1ServerContext.html#a2c908d303a0a55bf251f2d1ae397b817',1,'idhan::ServerContext']]],
-  ['m_5furl_5ftemplate_17',['m_url_template',['../d3/d67/classidhan_1_1IDHANClient.html#a5a9ab6d0c7b9c10d0f49d3e7481e643e',1,'idhan::IDHANClient']]],
-  ['mime_5fdb_18',['mime_db',['../d4/d9c/namespaceidhan_1_1mime.html#ae88919075ec4e61aa26cdfb59a167d04',1,'idhan::mime']]],
-  ['mtx_19',['mtx',['../db/de4/namespaceidhan_1_1api.html#a076726f6ebc82ecf58b8ad14354acc77',1,'idhan::api']]],
-  ['mutex_20',['mutex',['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a0f79ab2e69982c85b895ecd137efae90',1,'idhan::mime::MimeDatabase']]]
+  ['m_5fnetwork_13',['m_network',['../d9/d66/classidhan_1_1Network.html#ab87497ddea9404f79c20b8751d277655',1,'idhan::Network']]],
+  ['m_5fpath_14',['m_path',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#afd5f6841e291a0a0ef768aedb35e0b89',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
+  ['m_5fpostgresql_5fmanagement_15',['m_postgresql_management',['../d0/d4c/classidhan_1_1ServerContext.html#a2c908d303a0a55bf251f2d1ae397b817',1,'idhan::ServerContext']]],
+  ['m_5furl_5ftemplate_16',['m_url_template',['../d3/d67/classidhan_1_1IDHANClient.html#a5a9ab6d0c7b9c10d0f49d3e7481e643e',1,'idhan::IDHANClient']]],
+  ['mime_5fdb_17',['mime_db',['../d4/d9c/namespaceidhan_1_1mime.html#ae88919075ec4e61aa26cdfb59a167d04',1,'idhan::mime']]],
+  ['mtx_18',['mtx',['../db/de4/namespaceidhan_1_1api.html#a076726f6ebc82ecf58b8ad14354acc77',1,'idhan::api']]],
+  ['mutex_19',['mutex',['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a0f79ab2e69982c85b895ecd137efae90',1,'idhan::mime::MimeDatabase']]]
 ];

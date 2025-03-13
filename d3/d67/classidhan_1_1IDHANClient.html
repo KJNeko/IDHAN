@@ -113,6 +113,7 @@ $(function(){initNavTree('d3/d67/classidhan_1_1IDHANClient.html','../../'); init
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
+<a href="#pri-types">Private Types</a> &#124;
 <a href="#pri-methods">Private Member Functions</a> &#124;
 <a href="#pri-attribs">Private Attributes</a> &#124;
 <a href="#pri-static-attribs">Static Private Attributes</a> &#124;
@@ -125,6 +126,8 @@ $(function(){initNavTree('d3/d67/classidhan_1_1IDHANClient.html','../../'); init
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a9524156aa24ab12504d4798765254626" id="r_a9524156aa24ab12504d4798765254626"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9524156aa24ab12504d4798765254626">setUrlInfo</a> (QUrl &amp;url)</td></tr>
+<tr class="separator:a9524156aa24ab12504d4798765254626"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aad54a32d5b8d88fedd9044776d8665a0" id="r_aad54a32d5b8d88fedd9044776d8665a0"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad54a32d5b8d88fedd9044776d8665a0">Q_DISABLE_COPY_MOVE</a> (<a class="el" href="../../d3/d67/classidhan_1_1IDHANClient.html">IDHANClient</a>)</td></tr>
 <tr class="separator:aad54a32d5b8d88fedd9044776d8665a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45033f1a9634c426b3777ca3cc59b8ec" id="r_a45033f1a9634c426b3777ca3cc59b8ec"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a45033f1a9634c426b3777ca3cc59b8ec">IDHANClient</a> ()=delete</td></tr>
@@ -132,35 +135,43 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a504deb5b5bd3e78aeef4e4597f1bcb6c" id="r_a504deb5b5bd3e78aeef4e4597f1bcb6c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a504deb5b5bd3e78aeef4e4597f1bcb6c">IDHANClient</a> (const <a class="el" href="../../da/d27/structidhan_1_1IDHANClientConfig.html">IDHANClientConfig</a> &amp;config)</td></tr>
 <tr class="memdesc:a504deb5b5bd3e78aeef4e4597f1bcb6c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Upon construction the class will attempt to get the version info from the <a class="el" href="../../d6/d66/namespaceIDHAN.html">IDHAN</a> server target.  <br /></td></tr>
 <tr class="separator:a504deb5b5bd3e78aeef4e4597f1bcb6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1462c526098a8e04dc09c737b0e4506c" id="r_a1462c526098a8e04dc09c737b0e4506c"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#aa569f61b50f666991e0a9c4adf4bf1b5">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1462c526098a8e04dc09c737b0e4506c">createRecords</a> (std::vector&lt; std::array&lt; std::byte, 32 &gt; &gt; &amp;hashes, QNetworkAccessManager &amp;network)</td></tr>
-<tr class="separator:a1462c526098a8e04dc09c737b0e4506c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3bc2176687992e16d65c98e81bed988d" id="r_a3bc2176687992e16d65c98e81bed988d"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#aa569f61b50f666991e0a9c4adf4bf1b5">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3bc2176687992e16d65c98e81bed988d">createRecords</a> (const std::vector&lt; std::string &gt; &amp;hashes, QNetworkAccessManager &amp;network)</td></tr>
-<tr class="separator:a3bc2176687992e16d65c98e81bed988d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaafc2a2d5864d78ffe535f24e7c2030c" id="r_aaafc2a2d5864d78ffe535f24e7c2030c"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaafc2a2d5864d78ffe535f24e7c2030c">createRecords</a> (std::vector&lt; std::array&lt; std::byte, 32 &gt; &gt; &amp;hashes)</td></tr>
+<tr class="separator:aaafc2a2d5864d78ffe535f24e7c2030c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bc0e97b6981ec0af5a020b8de40db5b" id="r_a8bc0e97b6981ec0af5a020b8de40db5b"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8bc0e97b6981ec0af5a020b8de40db5b">createRecords</a> (const std::vector&lt; std::string &gt; &amp;hashes)</td></tr>
+<tr class="separator:a8bc0e97b6981ec0af5a020b8de40db5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c486ac03c633b5492f2ca1cd693c004" id="r_a0c486ac03c633b5492f2ca1cd693c004"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::optional&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0c486ac03c633b5492f2ca1cd693c004">getRecordID</a> (const std::string &amp;sha256)</td></tr>
+<tr class="separator:a0c486ac03c633b5492f2ca1cd693c004"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a13bf2b43da6cac4454ae204b205f1514" id="r_a13bf2b43da6cac4454ae204b205f1514"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../d3/d25/structidhan_1_1VersionInfo.html">VersionInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a13bf2b43da6cac4454ae204b205f1514">queryVersion</a> ()</td></tr>
 <tr class="separator:a13bf2b43da6cac4454ae204b205f1514"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a12a50a392ea51e65fb174a7c9f665e02" id="r_a12a50a392ea51e65fb174a7c9f665e02"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a12a50a392ea51e65fb174a7c9f665e02">createTags</a> (const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;tags, QNetworkAccessManager &amp;network)</td></tr>
-<tr class="separator:a12a50a392ea51e65fb174a7c9f665e02"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a66ce6b88546b5dbac1b3f82bb44e6076" id="r_a66ce6b88546b5dbac1b3f82bb44e6076"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a66ce6b88546b5dbac1b3f82bb44e6076">createTag</a> (const std::string &amp;namespace_text, const std::string &amp;subtag_text, QNetworkAccessManager &amp;network)</td></tr>
-<tr class="separator:a66ce6b88546b5dbac1b3f82bb44e6076"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a325c3a915ba2703b05246b2a601f3b8f" id="r_a325c3a915ba2703b05246b2a601f3b8f"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a325c3a915ba2703b05246b2a601f3b8f">createTag</a> (const std::string &amp;namespace_text, const std::string &amp;subtag_text)</td></tr>
-<tr class="separator:a325c3a915ba2703b05246b2a601f3b8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5e584e87992be9d4abae75e65f340912" id="r_a5e584e87992be9d4abae75e65f340912"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e584e87992be9d4abae75e65f340912">createTag</a> (const std::string &amp;tag_text)</td></tr>
+<tr class="memitem:a3b8a03b6b66dcd1815b5f3afce8e1db6" id="r_a3b8a03b6b66dcd1815b5f3afce8e1db6"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3b8a03b6b66dcd1815b5f3afce8e1db6">createTags</a> (const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;tags)</td></tr>
+<tr class="separator:a3b8a03b6b66dcd1815b5f3afce8e1db6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a6334c31d7d710f78f37312702d2afa" id="r_a2a6334c31d7d710f78f37312702d2afa"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a6334c31d7d710f78f37312702d2afa">createTag</a> (const std::string &amp;&amp;namespace_text, const std::string &amp;&amp;subtag_text)</td></tr>
+<tr class="separator:a2a6334c31d7d710f78f37312702d2afa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e584e87992be9d4abae75e65f340912" id="r_a5e584e87992be9d4abae75e65f340912"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e584e87992be9d4abae75e65f340912">createTag</a> (const std::string &amp;tag_text)</td></tr>
 <tr class="separator:a5e584e87992be9d4abae75e65f340912"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:addd98e175df2e600d94bf5b2df5e2fb7" id="r_addd98e175df2e600d94bf5b2df5e2fb7"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#addd98e175df2e600d94bf5b2df5e2fb7">createParentRelationship</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> parent_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> child_id)</td></tr>
-<tr class="memdesc:addd98e175df2e600d94bf5b2df5e2fb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a parent/child relationship between two tags.  <br /></td></tr>
-<tr class="separator:addd98e175df2e600d94bf5b2df5e2fb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1988217034fd5233a43e059e76ee41bc" id="r_a1988217034fd5233a43e059e76ee41bc"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1988217034fd5233a43e059e76ee41bc">createAliasRelationship</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> aliased_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> alias_id)</td></tr>
-<tr class="memdesc:a1988217034fd5233a43e059e76ee41bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new alias for a given tag.  <br /></td></tr>
-<tr class="separator:a1988217034fd5233a43e059e76ee41bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af3f73dbc239854ab5ac3e99a237fcdde" id="r_af3f73dbc239854ab5ac3e99a237fcdde"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3f73dbc239854ab5ac3e99a237fcdde">sendClientJson</a> (const QJsonObject &amp;object, QNetworkAccessManager &amp;network, const QString &amp;path, std::function&lt; void(QNetworkReply *reply) &gt; &amp;&amp;responseHandler, std::function&lt; void(QNetworkReply *reply, QNetworkReply::NetworkError error) &gt; &amp;&amp;errorHandler)</td></tr>
-<tr class="separator:af3f73dbc239854ab5ac3e99a237fcdde"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:add74395f28ee34e458a588b990e7de52" id="r_add74395f28ee34e458a588b990e7de52"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a3245b5614ad73f1cd63f0389fff1d9aa">TagDomainID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add74395f28ee34e458a588b990e7de52">createTagDomain</a> (const std::string &amp;name)</td></tr>
+<tr class="memitem:aa08e150c2b6bd207b80a03305cc9ec76" id="r_aa08e150c2b6bd207b80a03305cc9ec76"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa08e150c2b6bd207b80a03305cc9ec76">addTags</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> domain_id, std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;&amp;tags)</td></tr>
+<tr class="separator:aa08e150c2b6bd207b80a03305cc9ec76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c047161fb0a877242215bd25f63d589" id="r_a8c047161fb0a877242215bd25f63d589"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c047161fb0a877242215bd25f63d589">createParentRelationship</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> tag_domian_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> parent_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> child_id)</td></tr>
+<tr class="memdesc:a8c047161fb0a877242215bd25f63d589"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a parent/child relationship between two tags.  <br /></td></tr>
+<tr class="separator:a8c047161fb0a877242215bd25f63d589"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4ed543abe6f5d9885e673c6bf560a2a3" id="r_a4ed543abe6f5d9885e673c6bf560a2a3"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4ed543abe6f5d9885e673c6bf560a2a3">createParentRelationship</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> tag_domian_id, std::vector&lt; std::pair&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a>, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &gt; &amp;&amp;pairs)</td></tr>
+<tr class="separator:a4ed543abe6f5d9885e673c6bf560a2a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24ecc45cd5c29940d63adc69bfc7e11f" id="r_a24ecc45cd5c29940d63adc69bfc7e11f"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a24ecc45cd5c29940d63adc69bfc7e11f">createAliasRelationship</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> tag_domain_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> aliased_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> alias_id)</td></tr>
+<tr class="memdesc:a24ecc45cd5c29940d63adc69bfc7e11f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new alias for a given tag.  <br /></td></tr>
+<tr class="separator:a24ecc45cd5c29940d63adc69bfc7e11f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a080d9afa1f71075365d4ef2d58c3f58e" id="r_a080d9afa1f71075365d4ef2d58c3f58e"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a080d9afa1f71075365d4ef2d58c3f58e">createAliasRelationship</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> tag_domain_id, std::vector&lt; std::pair&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a>, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &gt; &amp;&amp;pairs)</td></tr>
+<tr class="separator:a080d9afa1f71075365d4ef2d58c3f58e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace5f324c98fd66f068b7108c354504c8" id="r_ace5f324c98fd66f068b7108c354504c8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace5f324c98fd66f068b7108c354504c8">sendClientGet</a> (<a class="el" href="#a345509d5d84ccd0f64186d5351f2b572">UrlVariant</a> url, std::function&lt; void(QNetworkReply *reply) &gt; &amp;&amp;responseHandler, std::function&lt; void(QNetworkReply *reply, QNetworkReply::NetworkError error) &gt; &amp;&amp;errorHandler)</td></tr>
+<tr class="separator:ace5f324c98fd66f068b7108c354504c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0e216c27abc2c4e9890dc0b03964736d" id="r_a0e216c27abc2c4e9890dc0b03964736d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0e216c27abc2c4e9890dc0b03964736d">sendClientPost</a> (QJsonDocument &amp;&amp;object, <a class="el" href="#a345509d5d84ccd0f64186d5351f2b572">UrlVariant</a> url, std::function&lt; void(QNetworkReply *reply) &gt; &amp;&amp;responseHandler, std::function&lt; void(QNetworkReply *reply, QNetworkReply::NetworkError error) &gt; &amp;&amp;errorHandler)</td></tr>
+<tr class="separator:a0e216c27abc2c4e9890dc0b03964736d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add74395f28ee34e458a588b990e7de52" id="r_add74395f28ee34e458a588b990e7de52"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add74395f28ee34e458a588b990e7de52">createTagDomain</a> (const std::string &amp;name)</td></tr>
 <tr class="memdesc:add74395f28ee34e458a588b990e7de52"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new tag domain, Throws if the domain exists.  <br /></td></tr>
 <tr class="separator:add74395f28ee34e458a588b990e7de52"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a819160529e039fa0b7766876cdc07c60" id="r_a819160529e039fa0b7766876cdc07c60"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a3245b5614ad73f1cd63f0389fff1d9aa">TagDomainID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a819160529e039fa0b7766876cdc07c60">getTagDomain</a> (const std::string name)</td></tr>
+<tr class="memitem:a819160529e039fa0b7766876cdc07c60" id="r_a819160529e039fa0b7766876cdc07c60"><td class="memItemLeft" align="right" valign="top">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a819160529e039fa0b7766876cdc07c60">getTagDomain</a> (const std::string name)</td></tr>
 <tr class="memdesc:a819160529e039fa0b7766876cdc07c60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Searches for an existing tag domain. Throws if it does not exist.  <br /></td></tr>
 <tr class="separator:a819160529e039fa0b7766876cdc07c60"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aed6bcb0b7e0e72fecff82be60c3eec0a" id="r_aed6bcb0b7e0e72fecff82be60c3eec0a"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a3245b5614ad73f1cd63f0389fff1d9aa">TagDomainID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed6bcb0b7e0e72fecff82be60c3eec0a">getTagDomains</a> ()</td></tr>
+<tr class="memitem:aed6bcb0b7e0e72fecff82be60c3eec0a" id="r_aed6bcb0b7e0e72fecff82be60c3eec0a"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed6bcb0b7e0e72fecff82be60c3eec0a">getTagDomains</a> ()</td></tr>
 <tr class="memdesc:aed6bcb0b7e0e72fecff82be60c3eec0a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a list of all tag domain ids.  <br /></td></tr>
 <tr class="separator:aed6bcb0b7e0e72fecff82be60c3eec0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a324fb81d06372cffa5c512fa08814fe7" id="r_a324fb81d06372cffa5c512fa08814fe7"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a324fb81d06372cffa5c512fa08814fe7">createFileCluster</a> (const std::filesystem::path &amp;server_path, const std::string &amp;cluster_name, std::size_t byte_limit, std::uint16_t ratio, bool readonly)</td></tr>
@@ -173,10 +184,17 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:ad1bb050d93dff240cff27af74b800f89" id="r_ad1bb050d93dff240cff27af74b800f89"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d3/d67/classidhan_1_1IDHANClient.html">IDHANClient</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1bb050d93dff240cff27af74b800f89">instance</a> ()</td></tr>
 <tr class="separator:ad1bb050d93dff240cff27af74b800f89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-types" name="pri-types"></a>
+Private Types</h2></td></tr>
+<tr class="memitem:a345509d5d84ccd0f64186d5351f2b572" id="r_a345509d5d84ccd0f64186d5351f2b572"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a345509d5d84ccd0f64186d5351f2b572">UrlVariant</a> = std::variant&lt; QString, QUrl &gt;</td></tr>
+<tr class="separator:a345509d5d84ccd0f64186d5351f2b572"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
 <tr class="memitem:a8f1a421eeaa1367a2295a767df30f999" id="r_a8f1a421eeaa1367a2295a767df30f999"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8f1a421eeaa1367a2295a767df30f999">addKeyHeader</a> (QNetworkRequest &amp;request)</td></tr>
 <tr class="separator:a8f1a421eeaa1367a2295a767df30f999"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5fa15cb4b7bc7418a10eb2e21daea3eb" id="r_a5fa15cb4b7bc7418a10eb2e21daea3eb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5fa15cb4b7bc7418a10eb2e21daea3eb">sendClientJson</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814b">HttpMethod</a> method, <a class="el" href="#a345509d5d84ccd0f64186d5351f2b572">UrlVariant</a> url, std::function&lt; void(QNetworkReply *reply) &gt; &amp;&amp;responseHandler, std::function&lt; void(QNetworkReply *reply, QNetworkReply::NetworkError error) &gt; &amp;&amp;errorHandler, QJsonDocument &amp;&amp;object)</td></tr>
+<tr class="separator:a5fa15cb4b7bc7418a10eb2e21daea3eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
@@ -184,20 +202,41 @@ Private Attributes</h2></td></tr>
 <tr class="separator:a76e63026b950354ff34d152c2142e955"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a274cbd4395e8c98768fedd74e6fca783" id="r_a274cbd4395e8c98768fedd74e6fca783"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../da/d27/structidhan_1_1IDHANClientConfig.html">IDHANClientConfig</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a274cbd4395e8c98768fedd74e6fca783">m_config</a></td></tr>
 <tr class="separator:a274cbd4395e8c98768fedd74e6fca783"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1fdaaa0850b88d3973d66940a5fdbf2f" id="r_a1fdaaa0850b88d3973d66940a5fdbf2f"><td class="memItemLeft" align="right" valign="top">QNetworkAccessManager&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1fdaaa0850b88d3973d66940a5fdbf2f">m_network</a></td></tr>
-<tr class="separator:a1fdaaa0850b88d3973d66940a5fdbf2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03f5e34833cff23b56687151abaeb0d0" id="r_a03f5e34833cff23b56687151abaeb0d0"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a03f5e34833cff23b56687151abaeb0d0">connection_attempts</a> { 0 }</td></tr>
 <tr class="separator:a03f5e34833cff23b56687151abaeb0d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab76a8dd34bd1a98c41f998126c691fc8" id="r_ab76a8dd34bd1a98c41f998126c691fc8"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; std::thread::id, std::shared_ptr&lt; QNetworkAccessManager &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab76a8dd34bd1a98c41f998126c691fc8">m_network_managers</a></td></tr>
-<tr class="separator:ab76a8dd34bd1a98c41f998126c691fc8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5a9ab6d0c7b9c10d0f49d3e7481e643e" id="r_a5a9ab6d0c7b9c10d0f49d3e7481e643e"><td class="memItemLeft" align="right" valign="top">QUrl&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5a9ab6d0c7b9c10d0f49d3e7481e643e">m_url_template</a> {}</td></tr>
 <tr class="separator:a5a9ab6d0c7b9c10d0f49d3e7481e643e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d79ee766affc0e5cb520dbe751fd8cf" id="r_a7d79ee766affc0e5cb520dbe751fd8cf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d9/d66/classidhan_1_1Network.html">Network</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7d79ee766affc0e5cb520dbe751fd8cf">network</a></td></tr>
+<tr class="separator:a7d79ee766affc0e5cb520dbe751fd8cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-static-attribs" name="pri-static-attribs"></a>
 Static Private Attributes</h2></td></tr>
 <tr class="memitem:a3ee84a5b16efe1752e88aec7039249a0" id="r_a3ee84a5b16efe1752e88aec7039249a0"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d3/d67/classidhan_1_1IDHANClient.html">IDHANClient</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3ee84a5b16efe1752e88aec7039249a0">m_instance</a> { nullptr }</td></tr>
 <tr class="separator:a3ee84a5b16efe1752e88aec7039249a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="a345509d5d84ccd0f64186d5351f2b572" name="a345509d5d84ccd0f64186d5351f2b572"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a345509d5d84ccd0f64186d5351f2b572">&#9670;&#160;</a></span>UrlVariant</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a345509d5d84ccd0f64186d5351f2b572">idhan::IDHANClient::UrlVariant</a> = std::variant&lt; QString, QUrl &gt;</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a45033f1a9634c426b3777ca3cc59b8ec" name="a45033f1a9634c426b3777ca3cc59b8ec"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a45033f1a9634c426b3777ca3cc59b8ec">&#9670;&#160;</a></span>IDHANClient() <span class="overload">[1/2]</span></h2>
@@ -301,8 +340,34 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a1988217034fd5233a43e059e76ee41bc" name="a1988217034fd5233a43e059e76ee41bc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1988217034fd5233a43e059e76ee41bc">&#9670;&#160;</a></span>createAliasRelationship()</h2>
+<a id="aa08e150c2b6bd207b80a03305cc9ec76" name="aa08e150c2b6bd207b80a03305cc9ec76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa08e150c2b6bd207b80a03305cc9ec76">&#9670;&#160;</a></span>addTags()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">QFuture&lt; void &gt; idhan::IDHANClient::addTags </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a></td>          <td class="paramname"><span class="paramname"><em>domain_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>tags</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a080d9afa1f71075365d4ef2d58c3f58e" name="a080d9afa1f71075365d4ef2d58c3f58e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a080d9afa1f71075365d4ef2d58c3f58e">&#9670;&#160;</a></span>createAliasRelationship() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -310,12 +375,38 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="memname">QFuture&lt; void &gt; idhan::IDHANClient::createAliasRelationship </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a></td>          <td class="paramname"><span class="paramname"><em>aliased_id</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a></td>          <td class="paramname"><span class="paramname"><em>tag_domain_id</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a></td>          <td class="paramname"><span class="paramname"><em>alias_id</em></span>&#160;)</td>
+          <td class="paramtype">std::vector&lt; std::pair&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a>, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>pairs</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a24ecc45cd5c29940d63adc69bfc7e11f" name="a24ecc45cd5c29940d63adc69bfc7e11f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24ecc45cd5c29940d63adc69bfc7e11f">&#9670;&#160;</a></span>createAliasRelationship() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">QFuture&lt; void &gt; idhan::IDHANClient::createAliasRelationship </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a></td>          <td class="paramname"><span class="paramname"><em>tag_domain_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a></td>          <td class="paramname"><span class="paramname"><em>aliased_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a></td>          <td class="paramname"><span class="paramname"><em>alias_id</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -376,8 +467,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="addd98e175df2e600d94bf5b2df5e2fb7" name="addd98e175df2e600d94bf5b2df5e2fb7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#addd98e175df2e600d94bf5b2df5e2fb7">&#9670;&#160;</a></span>createParentRelationship()</h2>
+<a id="a4ed543abe6f5d9885e673c6bf560a2a3" name="a4ed543abe6f5d9885e673c6bf560a2a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4ed543abe6f5d9885e673c6bf560a2a3">&#9670;&#160;</a></span>createParentRelationship() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -385,12 +476,38 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="memname">QFuture&lt; void &gt; idhan::IDHANClient::createParentRelationship </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a></td>          <td class="paramname"><span class="paramname"><em>parent_id</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a></td>          <td class="paramname"><span class="paramname"><em>tag_domian_id</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a></td>          <td class="paramname"><span class="paramname"><em>child_id</em></span>&#160;)</td>
+          <td class="paramtype">std::vector&lt; std::pair&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a>, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>pairs</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8c047161fb0a877242215bd25f63d589" name="a8c047161fb0a877242215bd25f63d589"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8c047161fb0a877242215bd25f63d589">&#9670;&#160;</a></span>createParentRelationship() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">QFuture&lt; void &gt; idhan::IDHANClient::createParentRelationship </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a></td>          <td class="paramname"><span class="paramname"><em>tag_domian_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a></td>          <td class="paramname"><span class="paramname"><em>parent_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a></td>          <td class="paramname"><span class="paramname"><em>child_id</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -408,21 +525,17 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a3bc2176687992e16d65c98e81bed988d" name="a3bc2176687992e16d65c98e81bed988d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3bc2176687992e16d65c98e81bed988d">&#9670;&#160;</a></span>createRecords() <span class="overload">[1/2]</span></h2>
+<a id="a8bc0e97b6981ec0af5a020b8de40db5b" name="a8bc0e97b6981ec0af5a020b8de40db5b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8bc0e97b6981ec0af5a020b8de40db5b">&#9670;&#160;</a></span>createRecords() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#aa569f61b50f666991e0a9c4adf4bf1b5">RecordID</a> &gt; &gt; idhan::IDHANClient::createRecords </td>
+          <td class="memname">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt; idhan::IDHANClient::createRecords </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>hashes</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>hashes</em></span></td><td>)</td>
           <td></td>
-          <td class="paramtype">QNetworkAccessManager &amp;</td>          <td class="paramname"><span class="paramname"><em>network</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -437,68 +550,38 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a1462c526098a8e04dc09c737b0e4506c" name="a1462c526098a8e04dc09c737b0e4506c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1462c526098a8e04dc09c737b0e4506c">&#9670;&#160;</a></span>createRecords() <span class="overload">[2/2]</span></h2>
+<a id="aaafc2a2d5864d78ffe535f24e7c2030c" name="aaafc2a2d5864d78ffe535f24e7c2030c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaafc2a2d5864d78ffe535f24e7c2030c">&#9670;&#160;</a></span>createRecords() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#aa569f61b50f666991e0a9c4adf4bf1b5">RecordID</a> &gt; &gt; idhan::IDHANClient::createRecords </td>
+          <td class="memname">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt; idhan::IDHANClient::createRecords </td>
           <td>(</td>
-          <td class="paramtype">std::vector&lt; std::array&lt; std::byte, 32 &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>hashes</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">std::vector&lt; std::array&lt; std::byte, 32 &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>hashes</em></span></td><td>)</td>
           <td></td>
-          <td class="paramtype">QNetworkAccessManager &amp;</td>          <td class="paramname"><span class="paramname"><em>network</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a325c3a915ba2703b05246b2a601f3b8f" name="a325c3a915ba2703b05246b2a601f3b8f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a325c3a915ba2703b05246b2a601f3b8f">&#9670;&#160;</a></span>createTag() <span class="overload">[1/3]</span></h2>
+<a id="a2a6334c31d7d710f78f37312702d2afa" name="a2a6334c31d7d710f78f37312702d2afa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a6334c31d7d710f78f37312702d2afa">&#9670;&#160;</a></span>createTag() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt; idhan::IDHANClient::createTag </td>
+          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; idhan::IDHANClient::createTag </td>
           <td>(</td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>namespace_text</em></span>, </td>
+          <td class="paramtype">const std::string &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>namespace_text</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>subtag_text</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a66ce6b88546b5dbac1b3f82bb44e6076" name="a66ce6b88546b5dbac1b3f82bb44e6076"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a66ce6b88546b5dbac1b3f82bb44e6076">&#9670;&#160;</a></span>createTag() <span class="overload">[2/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt; idhan::IDHANClient::createTag </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>namespace_text</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>subtag_text</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">QNetworkAccessManager &amp;</td>          <td class="paramname"><span class="paramname"><em>network</em></span>&#160;)</td>
+          <td class="paramtype">const std::string &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>subtag_text</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -506,13 +589,13 @@ Static Private Attributes</h2></td></tr>
 </div>
 </div>
 <a id="a5e584e87992be9d4abae75e65f340912" name="a5e584e87992be9d4abae75e65f340912"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5e584e87992be9d4abae75e65f340912">&#9670;&#160;</a></span>createTag() <span class="overload">[3/3]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e584e87992be9d4abae75e65f340912">&#9670;&#160;</a></span>createTag() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt; idhan::IDHANClient::createTag </td>
+          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; idhan::IDHANClient::createTag </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>tag_text</em></span></td><td>)</td>
           <td></td>
@@ -529,7 +612,7 @@ Static Private Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a3245b5614ad73f1cd63f0389fff1d9aa">TagDomainID</a> &gt; idhan::IDHANClient::createTagDomain </td>
+          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> &gt; idhan::IDHANClient::createTagDomain </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>name</em></span></td><td>)</td>
           <td></td>
@@ -541,6 +624,7 @@ Static Private Attributes</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">name</td><td></td></tr>
+    <tr><td class="paramname">network</td><td></td></tr>
   </table>
   </dd>
 </dl>
@@ -554,21 +638,34 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a12a50a392ea51e65fb174a7c9f665e02" name="a12a50a392ea51e65fb174a7c9f665e02"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a12a50a392ea51e65fb174a7c9f665e02">&#9670;&#160;</a></span>createTags()</h2>
+<a id="a3b8a03b6b66dcd1815b5f3afce8e1db6" name="a3b8a03b6b66dcd1815b5f3afce8e1db6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3b8a03b6b66dcd1815b5f3afce8e1db6">&#9670;&#160;</a></span>createTags()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e">TagID</a> &gt; &gt; idhan::IDHANClient::createTags </td>
+          <td class="memname">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &gt; idhan::IDHANClient::createTags </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tags</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tags</em></span></td><td>)</td>
           <td></td>
-          <td class="paramtype">QNetworkAccessManager &amp;</td>          <td class="paramname"><span class="paramname"><em>network</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a0c486ac03c633b5492f2ca1cd693c004" name="a0c486ac03c633b5492f2ca1cd693c004"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c486ac03c633b5492f2ca1cd693c004">&#9670;&#160;</a></span>getRecordID()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">QFuture&lt; std::optional&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt; idhan::IDHANClient::getRecordID </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>sha256</em></span></td><td>)</td>
+          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -582,7 +679,7 @@ Static Private Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a3245b5614ad73f1cd63f0389fff1d9aa">TagDomainID</a> &gt; idhan::IDHANClient::getTagDomain </td>
+          <td class="memname">QFuture&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> &gt; idhan::IDHANClient::getTagDomain </td>
           <td>(</td>
           <td class="paramtype">const std::string</td>          <td class="paramname"><span class="paramname"><em>name</em></span></td><td>)</td>
           <td></td>
@@ -614,7 +711,7 @@ Static Private Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a3245b5614ad73f1cd63f0389fff1d9aa">TagDomainID</a> &gt; &gt; idhan::IDHANClient::getTagDomains </td>
+          <td class="memname">QFuture&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> &gt; &gt; idhan::IDHANClient::getTagDomains </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
@@ -686,26 +783,16 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="af3f73dbc239854ab5ac3e99a237fcdde" name="af3f73dbc239854ab5ac3e99a237fcdde"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af3f73dbc239854ab5ac3e99a237fcdde">&#9670;&#160;</a></span>sendClientJson()</h2>
+<a id="ace5f324c98fd66f068b7108c354504c8" name="ace5f324c98fd66f068b7108c354504c8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace5f324c98fd66f068b7108c354504c8">&#9670;&#160;</a></span>sendClientGet()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void idhan::IDHANClient::sendClientJson </td>
+          <td class="memname">void idhan::IDHANClient::sendClientGet </td>
           <td>(</td>
-          <td class="paramtype">const QJsonObject &amp;</td>          <td class="paramname"><span class="paramname"><em>object</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">QNetworkAccessManager &amp;</td>          <td class="paramname"><span class="paramname"><em>network</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span>, </td>
+          <td class="paramtype"><a class="el" href="#a345509d5d84ccd0f64186d5351f2b572">UrlVariant</a></td>          <td class="paramname"><span class="paramname"><em>url</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -716,6 +803,98 @@ Static Private Attributes</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">std::function&lt; void(QNetworkReply *reply, QNetworkReply::NetworkError error) &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>errorHandler</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5fa15cb4b7bc7418a10eb2e21daea3eb" name="a5fa15cb4b7bc7418a10eb2e21daea3eb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5fa15cb4b7bc7418a10eb2e21daea3eb">&#9670;&#160;</a></span>sendClientJson()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::IDHANClient::sendClientJson </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814b">HttpMethod</a></td>          <td class="paramname"><span class="paramname"><em>method</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#a345509d5d84ccd0f64186d5351f2b572">UrlVariant</a></td>          <td class="paramname"><span class="paramname"><em>url</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; void(QNetworkReply *reply) &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>responseHandler</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; void(QNetworkReply *reply, QNetworkReply::NetworkError error) &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>errorHandler</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">QJsonDocument &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>object</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a0e216c27abc2c4e9890dc0b03964736d" name="a0e216c27abc2c4e9890dc0b03964736d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0e216c27abc2c4e9890dc0b03964736d">&#9670;&#160;</a></span>sendClientPost()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::IDHANClient::sendClientPost </td>
+          <td>(</td>
+          <td class="paramtype">QJsonDocument &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>object</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#a345509d5d84ccd0f64186d5351f2b572">UrlVariant</a></td>          <td class="paramname"><span class="paramname"><em>url</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; void(QNetworkReply *reply) &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>responseHandler</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; void(QNetworkReply *reply, QNetworkReply::NetworkError error) &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>errorHandler</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9524156aa24ab12504d4798765254626" name="a9524156aa24ab12504d4798765254626"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9524156aa24ab12504d4798765254626">&#9670;&#160;</a></span>setUrlInfo()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::IDHANClient::setUrlInfo </td>
+          <td>(</td>
+          <td class="paramtype">QUrl &amp;</td>          <td class="paramname"><span class="paramname"><em>url</em></span></td><td>)</td>
+          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -811,50 +990,6 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a1fdaaa0850b88d3973d66940a5fdbf2f" name="a1fdaaa0850b88d3973d66940a5fdbf2f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1fdaaa0850b88d3973d66940a5fdbf2f">&#9670;&#160;</a></span>m_network</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">QNetworkAccessManager idhan::IDHANClient::m_network</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ab76a8dd34bd1a98c41f998126c691fc8" name="ab76a8dd34bd1a98c41f998126c691fc8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab76a8dd34bd1a98c41f998126c691fc8">&#9670;&#160;</a></span>m_network_managers</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::unordered_map&lt; std::thread::id, std::shared_ptr&lt; QNetworkAccessManager &gt; &gt; idhan::IDHANClient::m_network_managers</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
 <a id="a5a9ab6d0c7b9c10d0f49d3e7481e643e" name="a5a9ab6d0c7b9c10d0f49d3e7481e643e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5a9ab6d0c7b9c10d0f49d3e7481e643e">&#9670;&#160;</a></span>m_url_template</h2>
 
@@ -877,13 +1012,38 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a7d79ee766affc0e5cb520dbe751fd8cf" name="a7d79ee766affc0e5cb520dbe751fd8cf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d79ee766affc0e5cb520dbe751fd8cf">&#9670;&#160;</a></span>network</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d9/d66/classidhan_1_1Network.html">Network</a> idhan::IDHANClient::network</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>IDHANClient/include/idhan/<a class="el" href="../../dc/d23/IDHANClient_8hpp_source.html">IDHANClient.hpp</a></li>
 <li>IDHANClient/src/<a class="el" href="../../d4/da8/IDHANClient_8cpp.html">IDHANClient.cpp</a></li>
 <li>IDHANClient/src/records/<a class="el" href="../../dd/d0a/createRecords_8cpp.html">createRecords.cpp</a></li>
+<li>IDHANClient/src/tags/<a class="el" href="../../d2/df2/IDHANClient_2src_2tags_2addTags_8cpp.html">addTags.cpp</a></li>
+<li>IDHANClient/src/tags/aliases/<a class="el" href="../../d4/d0b/createAliasRelationships_8cpp.html">createAliasRelationships.cpp</a></li>
 <li>IDHANClient/src/tags/<a class="el" href="../../d0/d13/IDHANClient_2src_2tags_2createTag_8cpp.html">createTag.cpp</a></li>
 <li>IDHANClient/src/tags/<a class="el" href="../../d5/dd4/createTags_8cpp.html">createTags.cpp</a></li>
 <li>IDHANClient/src/tags/domains/<a class="el" href="../../dc/d7e/createTagDomain_8cpp.html">createTagDomain.cpp</a></li>
+<li>IDHANClient/src/tags/parents/<a class="el" href="../../de/dfd/createParentRelationship_8cpp.html">createParentRelationship.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

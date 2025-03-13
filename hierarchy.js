@@ -25,7 +25,7 @@ var hierarchy =
     [ "drogon::HttpController", null, [
       [ "idhan::api::ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", null ],
       [ "idhan::api::IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", null ],
-      [ "idhan::api::IDHANFileAPI", "df/daa/classidhan_1_1api_1_1IDHANFileAPI.html", null ],
+      [ "idhan::api::IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", null ],
       [ "idhan::api::IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", null ],
       [ "idhan::hyapi::HydrusAPI", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html", null ]
     ] ],
@@ -49,6 +49,9 @@ var hierarchy =
     [ "idhan::mime::MimeIdentifier", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html", null ],
     [ "idhan::mime::MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", null ],
     [ "idhan::api::NamespaceCache", "de/dbb/structidhan_1_1api_1_1NamespaceCache.html", null ],
+    [ "QObject", null, [
+      [ "idhan::Network", "d9/d66/classidhan_1_1Network.html", null ]
+    ] ],
     [ "idhan::mime::Resolution", "d6/d56/structidhan_1_1mime_1_1Resolution.html", null ],
     [ "idhan::logging::ScopedTimer", "de/d50/structidhan_1_1logging_1_1ScopedTimer.html", null ],
     [ "idhan::SearchBuilder", "dc/dba/structidhan_1_1SearchBuilder.html", null ],

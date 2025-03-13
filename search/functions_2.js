@@ -10,5 +10,6 @@ var searchData=
   ['decodehexcharacters_7',['decodeHexCharacters',['../dd/dcf/namespaceidhan.html#ad23693d258282b5457ded516e1a6b0d1',1,'idhan']]],
   ['deletetagdomain_8',['deleteTagDomain',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#accedfb0817762c2bdaa8e78e3da1cd17',1,'idhan::api::IDHANTagAPI']]],
   ['destroytables_9',['destroyTables',['../db/d01/namespaceidhan_1_1db.html#a042c099ba9a0a055e27d3306de63bcb2',1,'idhan::db']]],
-  ['domigration_10',['doMigration',['../db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0',1,'idhan::db']]]
+  ['domigration_10',['doMigration',['../db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0',1,'idhan::db']]],
+  ['dosenddata_11',['doSendData',['../d9/d66/classidhan_1_1Network.html#ad30f199a473e0207cfd8c010ac3dedcf',1,'idhan::Network']]]
 ];

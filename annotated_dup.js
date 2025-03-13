@@ -6,7 +6,7 @@ var annotated_dup =
         [ "ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", "d8/d94/structidhan_1_1api_1_1ClusterInfo" ],
         [ "IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", "df/def/classidhan_1_1api_1_1IDHANApi" ],
         [ "IDHANAuth", "d6/d49/classidhan_1_1api_1_1IDHANAuth.html", "d6/d49/classidhan_1_1api_1_1IDHANAuth" ],
-        [ "IDHANFileAPI", "df/daa/classidhan_1_1api_1_1IDHANFileAPI.html", "df/daa/classidhan_1_1api_1_1IDHANFileAPI" ],
+        [ "IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI" ],
         [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ],
         [ "NamespaceCache", "de/dbb/structidhan_1_1api_1_1NamespaceCache.html", "de/dbb/structidhan_1_1api_1_1NamespaceCache" ]
       ] ],
@@ -43,6 +43,7 @@ var annotated_dup =
       [ "InvalidRequestBody", "d2/d81/structidhan_1_1InvalidRequestBody.html", null ],
       [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],
       [ "MimeException", "df/d62/structidhan_1_1MimeException.html", "df/d62/structidhan_1_1MimeException" ],
+      [ "Network", "d9/d66/classidhan_1_1Network.html", "d9/d66/classidhan_1_1Network" ],
       [ "NoFileInfo", "dd/d56/structidhan_1_1NoFileInfo.html", "dd/d56/structidhan_1_1NoFileInfo" ],
       [ "NoMimeRecord", "d9/ddc/structidhan_1_1NoMimeRecord.html", "d9/ddc/structidhan_1_1NoMimeRecord" ],
       [ "RecordNotFound", "dd/d8d/structidhan_1_1RecordNotFound.html", "dd/d8d/structidhan_1_1RecordNotFound" ],

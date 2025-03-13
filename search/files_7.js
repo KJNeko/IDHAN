@@ -5,7 +5,7 @@ var searchData=
   ['idhanauth_2ehpp_2',['IDHANAuth.hpp',['../d4/d8f/IDHANAuth_8hpp.html',1,'']]],
   ['idhanclient_2ecpp_3',['IDHANClient.cpp',['../d4/da8/IDHANClient_8cpp.html',1,'']]],
   ['idhanclient_2ehpp_4',['IDHANClient.hpp',['../dc/d23/IDHANClient_8hpp.html',1,'']]],
-  ['idhanfileapi_2ehpp_5',['IDHANFileAPI.hpp',['../dc/d9a/IDHANFileAPI_8hpp.html',1,'']]],
+  ['idhanrecordapi_2ehpp_5',['IDHANRecordAPI.hpp',['../d9/d8d/IDHANRecordAPI_8hpp.html',1,'']]],
   ['idhantagapi_2ehpp_6',['IDHANTagAPI.hpp',['../d4/d83/IDHANTagAPI_8hpp.html',1,'']]],
   ['idhantypes_2ehpp_7',['IDHANTypes.hpp',['../da/d68/IDHANTypes_8hpp.html',1,'']]],
   ['importcodes_2ehpp_8',['ImportCodes.hpp',['../df/d6c/ImportCodes_8hpp.html',1,'']]],

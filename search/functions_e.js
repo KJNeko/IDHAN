@@ -7,6 +7,7 @@ var searchData=
   ['reloadmimeparsers_4',['reloadMimeParsers',['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a36cbe1e79ea189987a6656b2cf001176',1,'idhan::mime::MimeDatabase']]],
   ['remove_5',['remove',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#acfff738ea78324256e23e1475e826fdd',1,'idhan::api::ClusterAPI']]],
   ['removesize_6',['removeSize',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#afecfbc7407c85ccef6c2e1cb0cc20106',1,'idhan::api::ClusterInfo']]],
-  ['requestnewpermissions_7',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#ac83c83a6a4d6837ce0e734afc3e69715',1,'idhan::hyapi::HydrusAPI']]],
-  ['run_8',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
+  ['removetags_7',['removeTags',['../d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html#a665ad9c2c00348cce376d1deb9876fd9',1,'idhan::api::IDHANRecordAPI']]],
+  ['requestnewpermissions_8',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#ac83c83a6a4d6837ce0e734afc3e69715',1,'idhan::hyapi::HydrusAPI']]],
+  ['run_9',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
 ];

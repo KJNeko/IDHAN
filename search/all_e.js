@@ -15,8 +15,9 @@ var searchData=
   ['pixelhashhex_12',['PixelHashHex',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685ab399b020c4951ac058ad4a2b5ebedda5',1,'idhan::hyapi']]],
   ['placeholders_13',['placeholders',['../dc/dba/structidhan_1_1SearchBuilder.html#a4529c80a9e7fd8ac53aa354aa352a201',1,'idhan::SearchBuilder']]],
   ['port_14',['port',['../da/d27/structidhan_1_1IDHANClientConfig.html#ac993def7251cbce1d142f1ed76fd464b',1,'idhan::IDHANClientConfig::port'],['../de/d07/structidhan_1_1ConnectionArguments.html#a262b24651c48720d52cfeb6563e79e68',1,'idhan::ConnectionArguments::port']]],
-  ['pqxx_15',['pqxx',['../dc/d09/namespacepqxx.html',1,'']]],
-  ['prepareinitalindexes_16',['prepareInitalIndexes',['../db/d01/namespaceidhan_1_1db.html#a2b863ba9db65a3a2b79583cdda4b26cb',1,'idhan::db']]],
-  ['preparesqlfunctions_17',['prepareSQLFunctions',['../db/d01/namespaceidhan_1_1db.html#acdeef18ae2854f4b6915d60af3a6a3f8',1,'idhan::db']]],
-  ['previouslydeleted_18',['PreviouslyDeleted',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a124ca310f93eccdc9790b24fce74329c',1,'idhan::hyapi']]]
+  ['post_15',['POST',['../dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814ba77642b866fe063e9ed69a98f7edf9d47',1,'idhan']]],
+  ['pqxx_16',['pqxx',['../dc/d09/namespacepqxx.html',1,'']]],
+  ['prepareinitalindexes_17',['prepareInitalIndexes',['../db/d01/namespaceidhan_1_1db.html#a2b863ba9db65a3a2b79583cdda4b26cb',1,'idhan::db']]],
+  ['preparesqlfunctions_18',['prepareSQLFunctions',['../db/d01/namespaceidhan_1_1db.html#acdeef18ae2854f4b6915d60af3a6a3f8',1,'idhan::db']]],
+  ['previouslydeleted_19',['PreviouslyDeleted',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a124ca310f93eccdc9790b24fce74329c',1,'idhan::hyapi']]]
 ];

@@ -1,11 +1,14 @@
 var IDHANTypes_8hpp =
 [
-    [ "idhan::ClusterID", "dd/dcf/namespaceidhan.html#a616197a70486b24e46240754ce959260", null ],
-    [ "idhan::FileDomainID", "dd/dcf/namespaceidhan.html#afd5c5cb8e59f086c13fc23bc87f30003", null ],
-    [ "idhan::MimeID", "dd/dcf/namespaceidhan.html#a80014aa9f63cb6df8dc2cf8b1e5570e1", null ],
-    [ "idhan::NamespaceID", "dd/dcf/namespaceidhan.html#af5aed2f9fe91a2b9950b80c37ba36117", null ],
-    [ "idhan::RecordID", "dd/dcf/namespaceidhan.html#aa569f61b50f666991e0a9c4adf4bf1b5", null ],
-    [ "idhan::SubtagID", "dd/dcf/namespaceidhan.html#a14a208f0e2f4e070d902c25ea38021e0", null ],
-    [ "idhan::TagDomainID", "dd/dcf/namespaceidhan.html#a3245b5614ad73f1cd63f0389fff1d9aa", null ],
-    [ "idhan::TagID", "dd/dcf/namespaceidhan.html#a0cdf569f56861f06ea1a67d83e41529e", null ]
+    [ "idhan::BigInt", "dd/dcf/namespaceidhan.html#a8d4e612fd18aa94ceb70ffbd5b3b5577", null ],
+    [ "idhan::ClusterID", "dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec", null ],
+    [ "idhan::FileDomainID", "dd/dcf/namespaceidhan.html#ae9c835593c59f31ae01ead8a29c45afa", null ],
+    [ "idhan::Integer", "dd/dcf/namespaceidhan.html#a988bcb50aeed6b070f91eb612eb951fc", null ],
+    [ "idhan::MimeID", "dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29", null ],
+    [ "idhan::NamespaceID", "dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5", null ],
+    [ "idhan::RecordID", "dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e", null ],
+    [ "idhan::SmallInt", "dd/dcf/namespaceidhan.html#a734eab49a3bd6d395ac80de87002ae81", null ],
+    [ "idhan::SubtagID", "dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d", null ],
+    [ "idhan::TagDomainID", "dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12", null ],
+    [ "idhan::TagID", "dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382", null ]
 ];

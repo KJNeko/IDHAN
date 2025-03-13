@@ -1,10 +1,13 @@
 var namespaceidhan_1_1api =
 [
+    [ "helpers", "d5/d86/namespaceidhan_1_1api_1_1helpers.html", [
+      [ "getTagDomainID", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8b9593b6063381a5aa3319e5536f4b59", null ]
+    ] ],
     [ "ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", "dc/d8c/classidhan_1_1api_1_1ClusterAPI" ],
     [ "ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", "d8/d94/structidhan_1_1api_1_1ClusterInfo" ],
     [ "IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", "df/def/classidhan_1_1api_1_1IDHANApi" ],
     [ "IDHANAuth", "d6/d49/classidhan_1_1api_1_1IDHANAuth.html", "d6/d49/classidhan_1_1api_1_1IDHANAuth" ],
-    [ "IDHANFileAPI", "df/daa/classidhan_1_1api_1_1IDHANFileAPI.html", "df/daa/classidhan_1_1api_1_1IDHANFileAPI" ],
+    [ "IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI" ],
     [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ],
     [ "NamespaceCache", "de/dbb/structidhan_1_1api_1_1NamespaceCache.html", "de/dbb/structidhan_1_1api_1_1NamespaceCache" ],
     [ "createAlreadyImportedResponse", "db/de4/namespaceidhan_1_1api.html#af46af2d5372ec721c2354ed892170ec0", null ],
