@@ -1,5 +1,0 @@
-post:
-  tags:
-    - tags
-    - files
-  summary: Adds a tag, or tags to a given file.

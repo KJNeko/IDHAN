@@ -1,6 +1,6 @@
 post:
   tags:
-    - files
+    - records
   summary: Creates a new file record, You can only supply a SHA256. If you are wishing to import a file, see (TODO)
   requestBody:
     required: true

@@ -2,18 +2,23 @@
 // Created by kj16609 on 2/20/25.
 //
 
+#include <QFuture>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 
-#include "../../include/idhan/IDHANClient.hpp"
-#include "../../include/idhan/logging/logger.hpp"
+#include "IDHANClient.hpp"
+#include "IDHANTypes.hpp"
+#include "logging/logger.hpp"
+#include "splitTag.hpp"
 
 namespace idhan
 {
 
-QFuture< TagID > IDHANClient::createTag( const std::string& namespace_text, const std::string& subtag_text )
+QFuture< TagID > IDHANClient::createTag( const std::string&& namespace_text, const std::string&& subtag_text )
 {
 	auto promise { std::make_shared< QPromise< TagID > >() };
+	promise->start();
 
 	QJsonObject object {};
 	object[ "namespace" ] = QString::fromStdString( namespace_text );
@@ -45,14 +50,23 @@ QFuture< TagID > IDHANClient::createTag( const std::string& namespace_text, cons
 		response->deleteLater();
 	};
 
-	sendClientJson( object, "/tag/create", handleResponse, handleError );
+	const QString path { "/tag/create" };
+
+	QJsonDocument doc {};
+	doc.setObject( std::move( object ) );
+
+	sendClientPost( std::move( doc ), path, handleResponse, handleError );
 
 	return promise->future();
 }
 
 QFuture< TagID > IDHANClient::createTag( const std::string& tag_text )
 {
-	QPromise< TagID > promise {};
+	const auto tag_split { splitTag( tag_text ) };
+
+	return createTag( std::move( tag_split.first ), std::move( tag_split.second ) );
 }
+
+
 
 } // namespace idhan

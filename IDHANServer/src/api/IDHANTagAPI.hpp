@@ -25,6 +25,9 @@ class IDHANTagAPI : public drogon::HttpController< IDHANTagAPI >
 	drogon::Task< drogon::HttpResponsePtr > getTagDomainInfo( drogon::HttpRequestPtr request, TagDomainID domain_id );
 	drogon::Task< drogon::HttpResponsePtr > deleteTagDomain( drogon::HttpRequestPtr request, TagDomainID domain_id );
 
+	drogon::Task< drogon::HttpResponsePtr > createTagParents( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > createTagAliases( drogon::HttpRequestPtr request );
+
   public:
 
 	IDHANTagAPI() = default;
@@ -44,6 +47,9 @@ class IDHANTagAPI : public drogon::HttpController< IDHANTagAPI >
 	ADD_METHOD_TO( IDHANTagAPI::getTagDomains, "/tag/domain/list" );
 	ADD_METHOD_TO( IDHANTagAPI::getTagDomainInfo, "/tag/domain/{domain_id}/info" );
 	ADD_METHOD_TO( IDHANTagAPI::deleteTagDomain, "/tag/domain/{domain_id}/delete" );
+
+	ADD_METHOD_TO( IDHANTagAPI::createTagParents, "/tag/parents/create" );
+	ADD_METHOD_TO( IDHANTagAPI::createTagAliases, "/tag/alias/create" );
 
 	METHOD_LIST_END
 };

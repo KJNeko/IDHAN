@@ -14,12 +14,9 @@ namespace idhan
 QFuture< std::vector< TagID > > IDHANClient::
 	createTags( const std::vector< std::pair< std::string, std::string > >& tags )
 {
-	logging::debug( "IDHANClient::createTags: Count {}", tags.size() );
 	auto promise { std::make_shared< QPromise< std::vector< TagID > > >() };
 
 	QJsonArray array {};
-
-	std::size_t idx { 0 };
 
 	for ( const auto& [ namespace_text, subtag_text ] : tags )
 	{
@@ -44,11 +41,10 @@ QFuture< std::vector< TagID > > IDHANClient::
 
 	const auto post_data { std::make_shared< QByteArray >( doc.toJson() ) };
 
-	auto response { network.post( request, *post_data ) };
+	auto response { network.send( POST, request, *post_data ) };
 
 	auto handleResponse = [ promise, response, post_data ]()
 	{
-		logging::debug( "Got response for createTags" );
 		// reply will give us a body of json
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );

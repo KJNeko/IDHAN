@@ -1,6 +1,6 @@
 get:
   tags:
-    - cluster
+    - clusters
   summary: Returns info about the file cluster
   responses:
     200:

@@ -14,11 +14,21 @@
 namespace idhan
 {
 
+enum HttpMethod
+{
+	POST,
+	UPDATE,
+	DELETE,
+	GET
+};
+
 class Network : public QObject
 {
 	Q_OBJECT
 
 	QNetworkAccessManager m_network;
+
+	QNetworkReply* sendDataI( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body );
 
   public:
 
@@ -27,17 +37,21 @@ class Network : public QObject
 
 	Network( QObject* parent = nullptr );
 
-	[[nodiscard]] QNetworkReply* post( const QNetworkRequest& request, const QByteArray& body );
-	[[nodiscard]] QNetworkReply* get( const QNetworkRequest& request );
+	[[nodiscard]] QNetworkReply*
+		send( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body );
 
   public slots:
-	void doSendPost(
-		const QNetworkRequest& request, const QByteArray& body, std::shared_ptr< QPromise< QNetworkReply* > > promise );
-	void doSendGet( const QNetworkRequest& request, std::shared_ptr< QPromise< QNetworkReply* > > promise );
+	void doSendData(
+		const HttpMethod method,
+		const QNetworkRequest& request,
+		const QByteArray& body,
+		const std::shared_ptr< QPromise< QNetworkReply* > >& promise );
 
   signals:
-	void sendPost(
-		const QNetworkRequest& request, const QByteArray& body, std::shared_ptr< QPromise< QNetworkReply* > > promise );
-	void sendGet( const QNetworkRequest& request, std::shared_ptr< QPromise< QNetworkReply* > > promise );
+	void sendData(
+		const HttpMethod method,
+		const QNetworkRequest& request,
+		const QByteArray& body,
+		std::shared_ptr< QPromise< QNetworkReply* > > promise );
 };
 } // namespace idhan

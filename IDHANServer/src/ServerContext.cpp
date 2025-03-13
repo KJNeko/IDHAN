@@ -4,10 +4,10 @@
 
 #include "ServerContext.hpp"
 
-#include "../../dependencies/drogon/lib/src/HttpAppFrameworkImpl.h"
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
 #include "api/helpers/ResponseCallback.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "db/setup/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/log.hpp"
@@ -20,6 +20,8 @@ void ServerContext::setupCORSSupport()
 	drogon::app().registerPreRoutingAdvice(
 		[]( const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
 		{
+			log::debug( "{}:{}", request->getMethodString(), request->getPath() );
+
 			if ( !request->path().starts_with( "/hyapi" ) || request->method() != drogon::Options )
 			{
 				pass();
@@ -46,9 +48,14 @@ void ServerContext::setupCORSSupport()
 
 void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
-	log::error( "Unhandled exception got to drogon! In request: {} What: {}", request->query(), e.what() );
+	log::error( "Unhandled exception got to drogon! In request: {} What: {}", request->getQuery(), e.what() );
+	spdlog::dump_backtrace();
 
-	drogon::defaultExceptionHandler( e, request, std::move( callback ) );
+	auto response { idhan::createInternalError(
+		"Unhandled exception got to drogon! In request: {} What: {}", request->getPath(), e.what() ) };
+
+	callback( response );
+	// drogon::defaultExceptionHandler( e, request, std::move( callback ) );
 }
 
 ServerContext::ServerContext( const ConnectionArguments& arguments ) :
@@ -58,7 +65,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	auto& app { drogon::app() };
 
-	log::trace( "Logging show trace" );
+	spdlog::enable_backtrace( 32 );
+
 	log::debug( "Logging show debug" );
 	log::info( "Logging show info" );
 
@@ -66,8 +74,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.setLogPath( "./" )
 		.setLogLevel( trantor::Logger::kInfo )
 		.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT )
-		.setThreadNum( 0 )
-		.setClientMaxBodySize( std::numeric_limits< std::size_t >::max() )
+		.setThreadNum( 32 )
+		.setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() )
 		.setDocumentRoot( "./pages" )
 		.setExceptionHandler( exceptionHandler );
 
@@ -98,7 +106,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 void trantorHook( const char* msg, const std::uint64_t len )
 {
-	log::info( "{}", std::string_view( msg, len ) );
+	log::info( "Hook: {}", std::string_view( msg, len ) );
 }
 
 void ServerContext::run()
@@ -111,6 +119,7 @@ void ServerContext::run()
 
 	log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
 	log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
+
 	drogon::app().run();
 
 	// log::server::info( "Shutting down" );

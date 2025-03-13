@@ -17,18 +17,21 @@ namespace idhan::hydrus
 
 void HydrusImporter::copyTags()
 {
+	logging::info( "Copying tags" );
 	TransactionBase transaction { master_db };
 
 	std::shared_ptr synchronizer { std::make_shared< QFutureSynchronizer< TagID > >() };
 
 	constexpr std::size_t max_threads { 128 };
-	const std::uint32_t thread_count { std::thread::hardware_concurrency() };
+	const std::uint32_t thread_count {
+		std::min( static_cast< std::uint32_t >( 8 ), std::thread::hardware_concurrency() )
+	};
 
 	std::counting_semaphore< max_threads > sync_counter { thread_count * 2 };
 
 	QFutureSynchronizer< void > thread_sync {};
 
-	constexpr std::size_t group_size { 1000 * 8 };
+	constexpr std::size_t group_size { 1024 * 32 };
 
 	using TagPairGroup = std::vector< std::pair< std::string, std::string > >;
 
@@ -43,20 +46,20 @@ void HydrusImporter::copyTags()
 	spdlog::info( "Getting tag count" );
 	std::size_t tag_count { 0 };
 	transaction << "SELECT count(*) FROM tags" >> tag_count;
-	spdlog::info( "Tag count: {}", tag_count );
 
 	auto printProcessed = [ &processed, start, &last_start, &tag_count, &total_processed ]()
 	{
-		const auto end { std::chrono::steady_clock::now() };
-		const auto total_duration { end - start };
-
 		std::size_t processed_count { processed.exchange( 0 ) };
 		total_processed += processed_count;
 
-		const std::chrono::duration< double > duration { end - last_start };
-		last_start = end;
-
 		if ( processed_count == 0 ) return;
+
+		const auto end { std::chrono::steady_clock::now() };
+		const auto total_duration { end - start };
+
+		const std::chrono::duration< double > duration { end - last_start };
+
+		last_start = end;
 
 		const auto time_per_item { total_duration / total_processed };
 
@@ -120,10 +123,12 @@ void HydrusImporter::copyTags()
 					loop.exec();
 
 					sync_counter.release();
-					processed += group_size;
+					processed += pairs.size();
 				},
 				tag_pairs ) );
 	};
+
+	tag_pairs.resize( group_size );
 
 	transaction
 			<< "SELECT DISTINCT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags ORDER BY namespace_id, length(namespace) ASC"
@@ -131,11 +136,8 @@ void HydrusImporter::copyTags()
 	{
 		if ( namespace_text != current_namespace )
 		{
-			logging::debug( "Processing namespace: {}", namespace_text );
 			current_namespace = namespace_text;
 		}
-
-		FGL_ASSERT( tag_pairs.size() > current_id, "tag_pairs.size() > current_id failed" );
 
 		tag_pairs[ current_id ].first = namespace_text;
 		tag_pairs[ current_id ].second = subtag_text;
@@ -149,10 +151,10 @@ void HydrusImporter::copyTags()
 			sync_counter.acquire();
 
 			submitData();
-
-			tag_pairs.resize( group_size );
 		}
 	};
+
+	tag_pairs.resize( current_id + 1 );
 
 	submitData();
 
@@ -163,49 +165,6 @@ void HydrusImporter::copyTags()
 	printProcessed();
 
 	logging::info( "Finished processing {} tags", total_processed );
-}
-
-void HydrusImporter::copyParents()
-{
-	TransactionBase master_tr { master_db };
-	TransactionBase client_tr { client_db };
-
-	QNetworkAccessManager m_network {};
-
-	const auto getHydrusTag = [ &master_tr ]( const std::size_t tag_id ) -> std::string
-	{
-		std::string str;
-
-		master_tr << "SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id = ?"
-				  << tag_id
-			>> [ &str ]( const std::string_view n_tag, const std::string_view s_tag )
-		{
-			if ( n_tag.empty() )
-				str = s_tag;
-			else
-				str = std::format( "{}:{}", n_tag, s_tag );
-		};
-
-		return str;
-	};
-
-	// find all services that have parents
-	client_tr << "SELECT name, service_id FROM services WHERE service_type = 0 OR service_type = 5" >>
-		[ & ]( const std::string name, const std::size_t service_id )
-	{
-		spdlog::info( "Getting parents from service {}", name );
-
-		const std::string table_name { std::format( "current_tag_parents_{}", service_id ) };
-
-		const auto domain_id { m_client->createTagDomain( name ) };
-
-		client_tr << std::format( "SELECT child_tag_id, parent_tag_id FROM {}", table_name ) >>
-			[ &getHydrusTag, this ]( const std::size_t child_id, const std::size_t parent_id )
-		{
-			const std::string parent_str { getHydrusTag( parent_id ) };
-			const std::string child_str { getHydrusTag( child_id ) };
-		};
-	};
 }
 
 } // namespace idhan::hydrus

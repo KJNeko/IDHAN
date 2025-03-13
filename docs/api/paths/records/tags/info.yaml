@@ -1,0 +1,19 @@
+get:
+  tags:
+    - tags
+    - records
+  summary: Returns a list of tags on this file
+  parameters:
+    - name: record_id
+      in: path
+      required: true
+      schema:
+        $ref: '../../../schemas/RecordID.yaml'
+  responses:
+    "200":
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../../../schemas/TagInfo.yaml'

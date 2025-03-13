@@ -227,7 +227,7 @@ std::string pgEscape( const std::string& str )
 		if ( c == '}' ) cleaned.push_back( '\\' );
 		if ( c == '{' ) cleaned.push_back( '\\' );
 		if ( c == '\"' ) cleaned.push_back( '\\' );
-		if ( c == '\'' ) cleaned.push_back( '\'' );
+		// if ( c == '\'' ) cleaned.push_back( '\'' );
 		if ( c == '\\' ) cleaned.push_back( '\\' );
 		if ( c == ',' ) contains_comma = true;
 		cleaned.push_back( c );
@@ -306,6 +306,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createBatchedTag( drogon::H
 	{
 		log::error( "Failed to create batched tags: \n{}, \n{}", namespaces, subtags );
 		std::rethrow_exception( std::current_exception() );
+
+		co_return createInternalError( "Failed to create batched tags: {}, {}", namespaces, subtags );
 	}
 }
 

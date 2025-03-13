@@ -1,5 +1,5 @@
 type: string
 description: SHA256
-maxLength: 32
-minLength: 32
+maxLength: 64
+minLength: 64
 example: 869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29

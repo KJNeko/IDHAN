@@ -4,20 +4,16 @@
 
 #include "HydrusImporter.hpp"
 
-#include <QCoreApplication>
 #include <QFutureSynchronizer>
+#include <QFutureWatcher>
 #include <QtConcurrentRun>
 
-#include "idhan/logging/logger.hpp"
-#include "spdlog/spdlog.h"
 #include "sqlitehelper/Transaction.hpp"
 
 namespace idhan::hydrus
 {
 
 constexpr std::string_view LOCK_FILE_NAME { "client_running" };
-
-static std::size_t core_count { std::thread::hardware_concurrency() };
 
 HydrusImporter::HydrusImporter( const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client ) :
   m_client( client ),
@@ -54,15 +50,6 @@ HydrusImporter::~HydrusImporter()
 	sqlite3_close_v2( mappings_db );
 }
 
-void HydrusImporter::copyHydrusTags()
-{
-	copyTags();
-	// no hydrus equiv
-	// copySiblings();
-	// copyAliases();
-	copyParents();
-}
-
 void HydrusImporter::copyFileInfo()
 {
 	copyFileStorage();
@@ -70,18 +57,69 @@ void HydrusImporter::copyFileInfo()
 
 void HydrusImporter::copyHydrusInfo()
 {
-	QFuture< void > tag_future { QtConcurrent::run( &HydrusImporter::copyHydrusTags, this ) };
+	auto tags_processed { std::make_shared< std::atomic< bool > >( false ) };
+	auto domains_processed { std::make_shared< std::atomic< bool > >( false ) };
+	auto hashes_processed { std::make_shared< std::atomic< bool > >( false ) };
+
+	QFuture< void > tag_domains { QtConcurrent::run(
+		[ this, domains_processed ]()
+		{
+			this->copyTagDomains();
+			domains_processed->store( true );
+			domains_processed->notify_all();
+		} ) };
+
+	QFuture< void > tag_future { QtConcurrent::run(
+		[ this, tags_processed ]()
+		{
+			this->copyTags();
+			tags_processed->store( true );
+			tags_processed->notify_all();
+		} ) };
+
+	QFuture< void > parents_future { QtConcurrent::run(
+		[ this, tags_processed, domains_processed ]
+		{
+			if ( !domains_processed->load() ) domains_processed->wait( false );
+			if ( !tags_processed->load() ) tags_processed->wait( false );
+			this->copyParents();
+		} ) };
+
+	QFuture< void > aliases_future { QtConcurrent::run(
+		[ this, tags_processed, domains_processed ]
+		{
+			if ( !domains_processed->load() ) domains_processed->wait( false );
+			if ( !tags_processed->load() ) tags_processed->wait( false );
+			this->copySiblings();
+		} ) };
+
+	// QFuture< void > hash_future { QtConcurrent::run( &HydrusImporter::copyHashes, this )
+	QFuture< void > hash_future { QtConcurrent::run(
+		[ this, hashes_processed ]()
+		{
+			this->copyHashes();
+			hashes_processed->store( true );
+			hashes_processed->notify_all();
+		} ) };
+
+	QFuture< void > mappings_future { QtConcurrent::run(
+		[ tags_processed, hashes_processed, this, domains_processed ]()
+		{
+			if ( !domains_processed->load() ) domains_processed->wait( false );
+			if ( !tags_processed->load() ) tags_processed->wait( false );
+			if ( !hashes_processed->load() ) hashes_processed->wait( false );
+
+			this->copyMappings();
+		} ) };
+
+	// QFuture< void > url_future { hash_future.then( [ this ]() { this->copyUrls(); } ) };
+
+	sync.addFuture( std::move( tag_domains ) );
 	sync.addFuture( std::move( tag_future ) );
-
-	QFuture< void > hash_future { QtConcurrent::run( &HydrusImporter::copyHashes, this ) };
+	sync.addFuture( std::move( parents_future ) );
+	sync.addFuture( std::move( aliases_future ) );
 	sync.addFuture( std::move( hash_future ) );
-
-	// idhan::logging::info( "Waiting for futures" );
-	// sync.waitForFinished();
-
-	// copyHashes();
-	// copyFileInfo();
-	// copyHydrusTags();
+	sync.addFuture( std::move( mappings_future ) );
 }
 
 } // namespace idhan::hydrus

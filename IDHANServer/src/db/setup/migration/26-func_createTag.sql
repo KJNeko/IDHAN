@@ -1,9 +1,9 @@
 CREATE OR REPLACE FUNCTION createBatchedTag(namespace_text_i TEXT[], subtag_text_i TEXT[])
-    RETURNS SETOF BIGINT
+    RETURNS SETOF INTEGER
 AS
 $$
 DECLARE
-    namespace_ids INTEGER[]; subtag_ids INTEGER[]; tag_ids BIGINT[];
+    namespace_ids INTEGER[]; subtag_ids INTEGER[]; tag_ids INTEGER[];
 BEGIN
 
     -- get all namespace ids
@@ -38,7 +38,7 @@ BEGIN
         ON CONFLICT(subtag_text) DO NOTHING;
     END IF;
 
-    SELECT array_agg((CASE WHEN tags.tag_id IS NULL THEN 0::BIGINT ELSE tags.tag_id END))
+    SELECT array_agg((CASE WHEN tags.tag_id IS NULL THEN 0::INTEGER ELSE tags.tag_id END))
     INTO tag_ids
     FROM UNNEST(namespace_ids, subtag_ids) as ids(namespace_id, subtag_id)
              LEFT JOIN tags ON ids.namespace_id = tags.namespace_id AND ids.subtag_id = tags.subtag_id;
@@ -57,10 +57,11 @@ BEGIN
     END IF;
 
     RETURN QUERY SELECT tag_id
-                 FROM UNNEST(namespace_text_i, subtag_text_i) as i(namespace_text, subtag_text)
+                 FROM UNNEST(namespace_text_i, subtag_text_i) WITH ORDINALITY as i(namespace_text, subtag_text, idx)
                           LEFT JOIN tag_namespaces as tn ON tn.namespace_text = i.namespace_text
                           LEFT JOIN tag_subtags as ts ON ts.subtag_text = i.subtag_text
-                          LEFT JOIN tags ON tn.namespace_id = tags.namespace_id AND ts.subtag_id = tags.subtag_id;
+                          LEFT JOIN tags ON tn.namespace_id = tags.namespace_id AND ts.subtag_id = tags.subtag_id
+                 ORDER BY i.idx;
 END;
 $$ LANGUAGE plpgsql;
 

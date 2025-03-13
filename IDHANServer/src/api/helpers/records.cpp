@@ -3,7 +3,6 @@
 #include "records.hpp"
 
 #include "crypto/sha256.hpp"
-#include "fgl/defines.hpp"
 
 namespace idhan::api
 {
@@ -23,10 +22,8 @@ drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClie
 
 		co_return search_result.value();
 	}
-	else
-	{
-		co_return result[ 0 ][ 0 ].as< RecordID >();
-	}
+
+	co_return result[ 0 ][ 0 ].as< RecordID >();
 }
 
 drogon::Task< std::optional< RecordID > > searchRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )

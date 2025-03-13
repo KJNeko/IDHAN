@@ -1,0 +1,22 @@
+get:
+  tags:
+    - records
+  summary: Searches for a given file using hashes.
+  parameters:
+    - name: sha256
+      in: query
+      required: true
+      schema:
+        $ref: '../../schemas/SHA256.yaml'
+  responses:
+    200:
+      description: Successfully found records
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              found:
+                type: boolean
+              record_id:
+                type: integer

@@ -1,6 +1,6 @@
 post:
   tags:
-    - tags
+    - tag domains
   summary: Creates a new tag domain used for grouping relationships
   requestBody:
     description: Json object

@@ -74,6 +74,12 @@ SHA256 SHA256::fromHex( const std::string& str )
 	return SHA256( std::move( bytes ) );
 }
 
+SHA256 SHA256::fromBuffer( const std::vector< std::byte >& data )
+{
+	if ( data.size() != ( 256 / 8 ) ) throw std::runtime_error( "Invalid size" );
+	return SHA256( data.data() );
+}
+
 SHA256::SHA256( QIODevice* io ) : m_data()
 {
 	QCryptographicHash hasher { QCryptographicHash::Sha256 };

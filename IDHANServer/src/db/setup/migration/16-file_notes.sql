@@ -1,5 +1,5 @@
 CREATE TABLE file_notes
 (
-	record_id SERIAL REFERENCES records (record_id),
-	note      TEXT NOT NULL
+    record_id INTEGER,
+    note      TEXT NOT NULL
 );

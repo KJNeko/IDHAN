@@ -59,6 +59,7 @@ class SHA256
 
 	//! Turns a HEX string into a SHA256 object. Str must be exactly (256 / 8) * 2, 64 characters long
 	static SHA256 fromHex( const std::string& str );
+	static SHA256 fromBuffer( const std::vector< std::byte >& data );
 
 	explicit SHA256( QIODevice* io );
 };

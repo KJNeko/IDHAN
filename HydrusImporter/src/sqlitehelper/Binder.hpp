@@ -115,7 +115,7 @@ class Binder
 	void operator>>( Function&& func )
 	{
 		using FuncArgs = FunctionDecomp< Function >;
-		using Tpl = FuncArgs::ArgTuple;
+		using Tpl = typename FuncArgs::ArgTuple;
 
 		std::optional< Tpl > opt_tpl { std::nullopt };
 		executeQuery( opt_tpl );
@@ -149,7 +149,7 @@ class Binder
 
 	template < typename... Ts >
 		requires( !( is_optional< Ts > || ... ) && !( is_tuple< Ts > || ... ) )
-	void executeQuery( [[maybe_unused]] std::optional< std::tuple< Ts... > >& tpl_opt )
+	void executeQuery( std::optional< std::tuple< Ts... > >& tpl_opt )
 	{
 		if ( param_counter != max_param_count )
 			throw std::runtime_error(

@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "IDHANApi.hpp"
+#include "helpers/createBadRequest.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -12,8 +13,9 @@ namespace idhan::api
 
 void IDHANApi::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
-	std::string path { request->getPath() };
-	log::info( path );
+	const std::string path { request->getPath() };
+
+	log::info( "Attempted to get {}", path );
 
 	callback( drogon::HttpResponse::newFileResponse( "./pages" + path ) );
 }
@@ -22,7 +24,7 @@ void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& ca
 {
 	if ( auto ifs = std::ifstream( "./pages/apidocs.html", std::ios::ate ); ifs )
 	{
-		std::size_t size { ifs.tellg() };
+		const std::size_t size { ifs.tellg() };
 		ifs.seekg( 0, std::ios::beg );
 
 		std::string str {};
@@ -30,7 +32,7 @@ void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& ca
 		ifs.read( str.data(), str.size() );
 
 		// create http response
-		auto response { drogon::HttpResponse::newHttpResponse() };
+		const auto response { drogon::HttpResponse::newHttpResponse() };
 		response->setContentTypeCode( drogon::ContentType::CT_TEXT_HTML );
 
 		response->setBody( str );
@@ -38,7 +40,7 @@ void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& ca
 		callback( response );
 	}
 
-	callback( drogon::HttpResponse::newHttpResponse() );
+	callback( createInternalError( "API docs not provided" ) );
 }
 
 } // namespace idhan::api

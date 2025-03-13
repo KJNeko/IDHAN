@@ -1,3 +1,5 @@
 oneOf:
   - $ref: 'TagID.yaml'
-  - $ref: 'TagString.yaml'
+  - type: string
+    example: "character:toujou koneko"
+  - $ref: 'TagSet.yaml'

@@ -5,16 +5,20 @@
 namespace idhan
 {
 
-using RecordID = std::uint32_t;
+using SmallInt = std::uint16_t;
+using Integer = std::uint32_t;
+using BigInt = std::uint64_t;
 
-using NamespaceID = std::uint32_t;
-using SubtagID = std::uint32_t;
-using TagID = std::uint32_t;
+using RecordID = Integer;
 
-using ClusterID = std::uint16_t;
+using NamespaceID = Integer;
+using SubtagID = Integer;
+using TagID = Integer;
 
-using MimeID = std::uint32_t;
+using ClusterID = SmallInt;
 
-using TagDomainID = std::uint16_t;
-using FileDomainID = std::uint16_t;
+using MimeID = Integer;
+
+using TagDomainID = SmallInt;
+using FileDomainID = SmallInt;
 } // namespace idhan

@@ -1,6 +1,6 @@
 delete:
   tags:
-    - cluster
+    - clusters
   summary: Deletes a filesystem cluster. The cluster MUST be empty before deletion.
   responses:
     200:
