@@ -11,10 +11,15 @@ info:
 tags:
   - name: public
     description: Public access
+  - name: records
+    description: File related operations
+  - name: tag domains
+    description: Tag grouping
   - name: tags
     description: Tag related operations
-  - name: files
-    description: File related operations
+  - name: clusters
+    description: File clusters managed by IDHAN
+
 
 security:
   - KeyAuth: [ ]
@@ -40,20 +45,21 @@ paths:
     $ref: './paths/tags/domains/delete.yaml'
   /tag/parents/create:
     $ref: './paths/tags/relationships/parent/create.yaml'
-  /file/create:
-    $ref: './paths/file/create.yaml'
-  /file/{file_id}/tags/add:
-    $ref: './paths/file/tags/add.yaml'
-  /file/{file_id}/tags/remove:
-    $ref: './paths/file/tags/remove.yaml'
-  /file/{file_id}/tags/info:
-    $ref: './paths/file/tags.yaml'
-  /file/{file_id}/info:
-    $ref: './paths/file/info.yaml'
-  /file/{file_id}:
-    $ref: './paths/file/file.yaml'
-  /file/search:
-    $ref: './paths/file/search.yaml'
+  /records/create:
+    $ref: './paths/records/create.yaml'
+  /records/{record_id}/tags/add:
+    $ref: './paths/records/tags/add.yaml'
+  /records/{record_id}/tags/remove:
+    $ref: './paths/records/tags/remove.yaml'
+  /records/{record_id}/tags/info:
+    $ref: './paths/records/tags/info.yaml'
+  /records/{record_id}/info:
+    $ref: './paths/records/info.yaml'
+  /records/{record_id}:
+    $ref: './paths/records/file.yaml'
+  /records/search:
+    $ref: './paths/records/search.yaml'
+
   /file/import:
     $ref: './paths/file/import.yaml'
 

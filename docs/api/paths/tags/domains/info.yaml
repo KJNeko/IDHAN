@@ -1,6 +1,6 @@
 get:
   tags:
-    - tags
+    - tag domains
   summary: Gets information relating to a domain
   parameters:
     - in: path

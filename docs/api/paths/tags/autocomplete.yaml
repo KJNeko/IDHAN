@@ -1,6 +1,7 @@
 get:
   tags:
     - tags
+    - search
   description: Returns the best possible tag for a given input. The list will be capped at a maximum of the input `limit` or until all items above the the `lowest_match` value are found, Whichever happens first.
   summary: Returns a list of tags that are the best possible fits for a given input.
   parameters:

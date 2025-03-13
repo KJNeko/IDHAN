@@ -4,7 +4,7 @@
 
 #include <strstream>
 
-#include "api/IDHANFileAPI.hpp"
+#include "api/IDHANRecordAPI.hpp"
 #include "api/helpers/records.hpp"
 #include "codes/ImportCodes.hpp"
 #include "core/files/mime.hpp"
@@ -49,7 +49,8 @@ Json::Value createUnknownMimeResponse()
 	return root;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANFileAPI::importFile( const drogon::HttpRequestPtr request )
+/*
+drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::importFile( const drogon::HttpRequestPtr request )
 {
 	log::debug( "Hit" );
 	FGL_ASSERT( request, "Request invalid" );
@@ -97,4 +98,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANFileAPI::importFile( const drogon::
 
 	co_return response;
 }
+*/
+
 } // namespace idhan::api

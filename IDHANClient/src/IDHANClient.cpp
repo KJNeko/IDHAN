@@ -6,13 +6,10 @@
 
 #include <QCoreApplication>
 #include <QHttpPart>
-#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QUrlQuery>
-
-#include <spdlog/spdlog.h>
 
 #include <thread>
 
@@ -62,7 +59,9 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 
 	logging::info( "Requesting version info from {}", url.toString() );
 
-	QNetworkReply* reply { network.get( request ) };
+	const QByteArray empty_body {};
+
+	QNetworkReply* reply { network.send( GET, request, empty_body ) };
 
 	auto promise { std::make_shared< QPromise< VersionInfo > >() };
 
@@ -124,6 +123,13 @@ void IDHANClient::addKeyHeader( QNetworkRequest& request )
 	request.setRawHeader( "IDHAN-Api-Key", "lolicon" );
 }
 
+void IDHANClient::setUrlInfo( QUrl& url )
+{
+	url.setHost( m_url_template.host() );
+	url.setPort( m_url_template.port() );
+	url.setScheme( m_url_template.scheme() );
+}
+
 IDHANClient& IDHANClient::instance()
 {
 	return *m_instance;
@@ -132,9 +138,9 @@ IDHANClient& IDHANClient::instance()
 IDHANClient::IDHANClient( const IDHANClientConfig& config ) : m_config( config ), network( nullptr )
 {
 	logger = spdlog::stdout_color_mt( "client" );
-	logger->set_level( spdlog::level::info );
+	logger->set_level( spdlog::level::debug );
 
-	std::this_thread::sleep_for( std::chrono::seconds( 4 ) );
+	std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
 	logging::info( "Hostname: {}", m_config.hostname );
 	logging::info( "Port: {}", m_config.port );
 	if ( m_config.hostname.empty() ) throw std::runtime_error( "hostname must not be empty" );
@@ -176,37 +182,110 @@ IDHANClient::IDHANClient( const IDHANClientConfig& config ) : m_config( config )
 	logging::info( "Got version info from server: Server: {}, Api: {}", data.server.str, data.api.str );
 }
 
-void errorResponseHandler()
-{}
-
-void IDHANClient::sendClientJson(
-	const QJsonObject& object,
-	const QString& path,
+void IDHANClient::sendClientGet(
+	UrlVariant url,
 	std::function< void( QNetworkReply* reply ) >&& responseHandler,
 	std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler )
 {
-	QUrl url { m_url_template };
-	url.setPath( path );
+	QJsonDocument doc {};
 
+	return sendClientJson(
+		GET,
+		url,
+		std::forward< decltype( responseHandler ) >( responseHandler ),
+		std::forward< decltype( errorHandler ) >( errorHandler ),
+		std::move( doc ) );
+}
+
+void IDHANClient::sendClientPost(
+	QJsonDocument&& object,
+	UrlVariant url,
+	std::function< void( QNetworkReply* reply ) >&& responseHandler,
+	std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler )
+{
+	sendClientJson(
+		POST,
+		url,
+		std::forward< std::function< void( QNetworkReply * reply ) > >( responseHandler ),
+		std::forward<
+			std::function< void( QNetworkReply * reply, QNetworkReply::NetworkError error ) > >( errorHandler ),
+		std::forward< QJsonDocument >( object ) );
+}
+
+void IDHANClient::sendClientJson(
+	const HttpMethod method,
+	UrlVariant url_v,
+	std::function< void( QNetworkReply* reply ) >&& responseHandler,
+	std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler,
+	QJsonDocument&& object )
+{
 	const auto json_str_thing { "application/json" };
 
+	if ( std::holds_alternative< QString >( url_v ) )
+	{
+		QString path { std::get< QString >( url_v ) };
+		QUrl url { m_url_template };
+		url.setPath( path );
+		url_v = url;
+	}
+
+	QUrl url { std::get< QUrl >( url_v ) };
+
+	setUrlInfo( url );
+
 	QNetworkRequest request { url };
+	// request.setTransferTimeout( std::chrono::milliseconds( 8000 ) );
 	request.setHeader( QNetworkRequest::ContentTypeHeader, json_str_thing );
 	request.setRawHeader( "accept", json_str_thing );
 	addKeyHeader( request );
 
-	const QJsonDocument doc { object };
+	const QJsonDocument doc { std::move( object ) };
 
-	const auto post_data { std::make_shared< QByteArray >( doc.toJson() ) };
+	const QByteArray body { doc.toJson() };
 
-	auto response { network.post( request, *post_data ) };
+	QNetworkReply* response { network.send( method, request, body ) };
 
 	QObject::
 		connect( response, &QNetworkReply::finished, [ responseHandler, response ]() { responseHandler( response ); } );
+
 	QObject::connect(
 		response,
 		&QNetworkReply::errorOccurred,
-		[ errorHandler, response ]( const QNetworkReply::NetworkError error ) { errorHandler( response, error ); } );
+		[ errorHandler, response, url ]( const QNetworkReply::NetworkError error )
+		{
+			if ( error == QNetworkReply::NetworkError::OperationCanceledError )
+			{
+				logging::critical(
+					"Operation timed out with request to {}: {}",
+					url.toString(),
+					response->errorString().toStdString() );
+				std::abort();
+			}
+
+			logging::warn(
+				"This maybe can be ignored: Error occurred with request to {}: {}",
+				url.toString(),
+				response->errorString().toStdString() );
+
+			// check if this is a special error or not.
+			// It should have json if so
+			auto header = response->header( QNetworkRequest::ContentTypeHeader );
+			if ( header.isValid() && header.toString().contains( "application/json" ) )
+			{
+				const auto body { response->readAll() };
+				QJsonDocument doc { QJsonDocument::fromJson( body ) };
+				if ( doc.isObject() )
+				{
+					QJsonObject object { doc.object() };
+					if ( object.contains( "error" ) )
+					{
+						logging::error( object[ "error" ].toString().toStdString() );
+					}
+				}
+			}
+
+			errorHandler( response, error );
+		} );
 }
 
 QFuture< void > IDHANClient::createFileCluster(
@@ -250,7 +329,10 @@ QFuture< void > IDHANClient::createFileCluster(
 		response->deleteLater();
 	};
 
-	sendClientJson( object, "/clusters/add", handleResponse, handleError );
+	QJsonDocument doc {};
+	doc.setObject( std::move( object ) );
+
+	sendClientPost( std::move( doc ), "/clusters/add", handleResponse, handleError );
 
 	return promise->future();
 }

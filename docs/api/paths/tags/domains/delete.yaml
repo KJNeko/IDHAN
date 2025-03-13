@@ -1,6 +1,6 @@
 get:
   tags:
-    - tags
+    - tag domains
   summary: Deletes a given tag domain
   parameters:
     - in: path

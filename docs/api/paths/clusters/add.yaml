@@ -1,6 +1,6 @@
 post:
   tags:
-    - cluster
+    - clusters
   summary: Creates a new cluster.
   requestBody:
     required: true

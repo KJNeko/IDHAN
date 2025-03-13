@@ -1,5 +1,5 @@
 delete:
   tags:
     - tags
-    - files
+    - records
   summary: Removes a tag from a given file

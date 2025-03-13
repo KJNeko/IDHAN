@@ -14,71 +14,56 @@
 namespace idhan
 {
 
+QNetworkReply* Network::sendDataI( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body )
+{
+	QNetworkReply* response { nullptr };
+	switch ( method )
+	{
+		case HttpMethod::GET:
+			return m_network.get( request, body );
+		case HttpMethod::POST:
+			return m_network.post( request, body );
+		case HttpMethod::DELETE:
+			return m_network.sendCustomRequest( request, "DELETE", body );
+		case HttpMethod::UPDATE:
+			return m_network.sendCustomRequest( request, "UPDATE", body );
+		default:
+			throw std::logic_error( "Unknown method" );
+	}
+
+	return response;
+}
+
 Network::Network( QObject* parent ) : QObject( parent )
 {
-	connect( this, &Network::sendPost, this, &Network::doSendPost, Qt::QueuedConnection );
-	connect( this, &Network::sendGet, this, &Network::doSendGet, Qt::QueuedConnection );
+	connect( this, &Network::sendData, this, &Network::doSendData, Qt::QueuedConnection );
 }
 
-QNetworkReply* Network::post( const QNetworkRequest& request, const QByteArray& body )
+QNetworkReply* Network::send( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body )
 {
-	if ( QThread::isMainThread() )
+	if ( QThread::isMainThread() ) [[unlikely]]
 	{
-		return m_network.post( request, body );
+		return this->sendDataI( method, request, body );
 	}
-	else
-	{
-		auto promise { std::make_shared< QPromise< QNetworkReply* > >() };
-		auto future { promise->future() };
-		emit sendPost( request, body, std::move( promise ) );
 
-		future.waitForFinished();
+	auto promise { std::make_shared< QPromise< QNetworkReply* > >() };
+	auto future { promise->future() };
+	emit sendData( method, request, body, std::move( promise ) );
 
-		return future.result();
-	}
+	future.waitForFinished();
+
+	return future.result();
 }
 
-QNetworkReply* Network::get( const QNetworkRequest& request )
-{
-	if ( QThread::isMainThread() )
-	{
-		return m_network.get( request );
-	}
-	else
-	{
-		auto promise { std::make_shared< QPromise< QNetworkReply* > >() };
-		auto future { promise->future() };
-		emit sendGet( request, std::move( promise ) );
-
-		future.waitForFinished();
-
-		return future.result();
-	}
-}
-
-void Network::doSendPost(
+void Network::doSendData(
+	const HttpMethod method,
 	const QNetworkRequest& request,
 	const QByteArray& body,
-	const std::shared_ptr< QPromise< QNetworkReply* > > promise )
+	const std::shared_ptr< QPromise< QNetworkReply* > >& promise )
 {
 	try
 	{
-		auto response { m_network.post( request, body ) };
-
-		promise->addResult( response );
-		promise->finish();
-	}
-	catch ( ... )
-	{
-		promise->setException( std::current_exception() );
-	}
-}
-
-void Network::doSendGet( const QNetworkRequest& request, const std::shared_ptr< QPromise< QNetworkReply* > > promise )
-{
-	try
-	{
-		auto response { m_network.get( request ) };
+		QNetworkReply* response { sendDataI( method, request, body ) };
 
 		promise->addResult( response );
 		promise->finish();

@@ -21,6 +21,10 @@ class HydrusImporter
 	std::filesystem::path m_path;
 
 	QFutureSynchronizer< void > sync {};
+	std::size_t thread_count { 1 };
+
+	void copyTagDomains();
+	void copyDomainMappings( const TagDomainID domain_id, const std::size_t hy_service_id );
 
 	void copyTags();
 	void copyParents();
@@ -29,6 +33,8 @@ class HydrusImporter
 	void copyFileStorage();
 
 	void copyHashes();
+
+	void copyMappings();
 
   public:
 

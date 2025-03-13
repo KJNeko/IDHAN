@@ -3,7 +3,7 @@
 //
 
 #include "IDHANTypes.hpp"
-#include "api/IDHANFileAPI.hpp"
+#include "api/IDHANRecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "crypto/sha256.hpp"
@@ -43,22 +43,9 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 			// dehexify the string.
 			SHA256 sha256 { SHA256::fromHex( str ) };
 
-			const auto result { co_await transaction->execSqlCoro(
-				"INSERT INTO records(sha256) VALUES ($1) ON CONFLICT DO NOTHING RETURNING record_id",
-				sha256.toVec() ) };
+			auto result { co_await createRecord( sha256, transaction ) };
 
-			// const RecordID record_id { co_await createRecord( sha256, db ) };
-
-			// already imported.
-			if ( result.empty() )
-			{
-				auto opt { co_await searchRecord( sha256, db ) };
-
-				if ( opt ) json_array[ idx++ ] = opt.value();
-				continue;
-			}
-
-			json_array[ idx++ ] = result[ 0 ][ 0 ].as< RecordID >();
+			json_array[ idx++ ] = result;
 		}
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_array );
@@ -74,7 +61,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	}
 }
 
-ResponseTask IDHANFileAPI::createRecord( const drogon::HttpRequestPtr request )
+ResponseTask IDHANRecordAPI::createRecord( const drogon::HttpRequestPtr request )
 {
 	// the request here should be either an octet stream, or json. If it's an octet stream, then it will be a file we can hash.
 

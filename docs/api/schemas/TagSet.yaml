@@ -3,5 +3,7 @@ type: object
 properties:
   namespace:
     $ref: 'TagComponent.yaml'
+    example: 1
   subtag:
     $ref: 'TagComponent.yaml'
+    example: "toujou koneko"

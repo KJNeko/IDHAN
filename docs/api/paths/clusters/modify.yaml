@@ -1,6 +1,6 @@
 patch:
   tags:
-    - cluster
+    - clusters
   summary: Modifies a given cluster.
   requestBody:
     required: true

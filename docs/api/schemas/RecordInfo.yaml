@@ -1,0 +1,4 @@
+type: object
+properties:
+  record_id:
+    $ref: 'RecordID.yaml'

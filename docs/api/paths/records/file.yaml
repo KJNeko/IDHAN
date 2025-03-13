@@ -1,6 +1,6 @@
 get:
   tags:
-    - files
+    - records
   summary: Returns the file if it is present in the filesystem cluster.
   parameters:
     - $ref: '../../parameters/file_id.yaml'

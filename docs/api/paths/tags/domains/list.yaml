@@ -1,6 +1,6 @@
 get:
   tags:
-    - tags
+    - tag domains
   summary: Returns a list of all tag domains
   responses:
     200:

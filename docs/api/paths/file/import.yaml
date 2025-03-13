@@ -1,6 +1,6 @@
 post:
   tags:
-    - files
+    - records
   summary: Imports a given file.
   requestBody:
     content:

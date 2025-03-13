@@ -5,16 +5,18 @@
 #pragma once
 
 #include <QFuture>
+#include <QNetworkReply>
+#include <QUrlQuery>
 
 #include <cstdint>
 #include <filesystem>
-#include <qnetworkreply.h>
 #include <queue>
 #include <string>
 
 #include "IDHANTypes.hpp"
 #include "Network.hpp"
 #include "fgl/defines.hpp"
+#include "logging/logger.hpp"
 
 namespace spdlog
 {
@@ -23,7 +25,7 @@ class logger;
 
 namespace idhan
 {
-class TagDomain;
+class SHA256;
 
 struct IDHANClientConfig
 {
@@ -47,8 +49,6 @@ struct VersionInfo
 	} api;
 };
 
-
-
 class IDHANClient
 {
 	std::shared_ptr< spdlog::logger > logger { nullptr };
@@ -60,9 +60,13 @@ class IDHANClient
 
 	Network network;
 
+	using UrlVariant = std::variant< QString, QUrl >;
+
 	void addKeyHeader( QNetworkRequest& request );
 
   public:
+
+	void setUrlInfo( QUrl& url );
 
 	static IDHANClient& instance();
 
@@ -87,13 +91,18 @@ class IDHANClient
 	 */
 	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::string >& hashes );
 
+	QFuture< std::optional< RecordID > > getRecordID( const std::string& sha256 );
+
 	QFuture< VersionInfo > queryVersion();
 
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::pair< std::string, std::string > >& tags );
 
-	QFuture< TagID > createTag( const std::string& namespace_text, const std::string& subtag_text );
+	QFuture< TagID > createTag( const std::string&& namespace_text, const std::string&& subtag_text );
 
 	QFuture< TagID > createTag( const std::string& tag_text );
+
+	QFuture< void > addTags(
+		RecordID record_id, TagDomainID domain_id, std::vector< std::pair< std::string, std::string > >&& tags );
 
 	/**
 	 * @brief Creates a parent/child relationship between two tags
@@ -102,7 +111,9 @@ class IDHANClient
 	 * @param domain_id
 	 * @return
 	 */
-	QFuture< void > createParentRelationship( TagID parent_id, TagID child_id );
+	QFuture< void > createParentRelationship( TagDomainID tag_domian_id, TagID parent_id, TagID child_id );
+	QFuture< void >
+		createParentRelationship( TagDomainID tag_domian_id, std::vector< std::pair< TagID, TagID > >&& pairs );
 
 	/**
 	 * @brief Creates a new alias for a given tag.
@@ -113,13 +124,33 @@ class IDHANClient
 	 * @throws InvalidTagID
 	 * @return
 	 */
-	QFuture< void > createAliasRelationship( TagID aliased_id, TagID alias_id );
+	QFuture< void > createAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
 
-	void sendClientJson(
-		const QJsonObject& object,
-		const QString& path,
+	QFuture< void >
+		createAliasRelationship( TagDomainID tag_domain_id, std::vector< std::pair< TagID, TagID > >&& pairs );
+
+	void sendClientGet(
+		UrlVariant url,
 		std::function< void( QNetworkReply* reply ) >&& responseHandler,
 		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
+
+	void sendClientPost(
+		QJsonDocument&& object,
+		UrlVariant url,
+		std::function< void( QNetworkReply* reply ) >&& responseHandler,
+		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
+
+  private:
+
+	void sendClientJson(
+		HttpMethod method,
+		UrlVariant url,
+		std::function< void( QNetworkReply* reply ) >&& responseHandler,
+		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler,
+		QJsonDocument&& object );
+
+  public:
+
 	/**
 	 * @brief Creates a new tag domain, Throws if the domain exists
 	 * @param name

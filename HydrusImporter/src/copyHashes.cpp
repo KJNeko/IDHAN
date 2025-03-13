@@ -17,20 +17,22 @@ namespace idhan::hydrus
 
 void HydrusImporter::copyHashes()
 {
+	logging::info( "Starting copying hashes" );
 	TransactionBase master_tr { master_db };
 
 	std::vector< std::string > hashes {};
 
 	QThreadPool pool {};
 
-	const std::uint32_t thread_count { std::thread::hardware_concurrency() };
+	const std::uint32_t thread_count { 8 };
 
 	pool.setMaxThreadCount( thread_count );
 
-	std::counting_semaphore< 1024 > sync_counter { thread_count * 2 };
+	std::counting_semaphore< 128 > sync_counter { thread_count * 2 };
 	QFutureSynchronizer< void > thread_sync {};
 
-	std::uint32_t group_size { 1000 * 32 };
+	constexpr std::uint32_t group_size { 1024 * 4 };
+
 	std::atomic< std::size_t > processed { 0 };
 	std::size_t total_processed { 0 };
 
@@ -44,14 +46,14 @@ void HydrusImporter::copyHashes()
 					QEventLoop loop {};
 
 					QFutureWatcher< std::vector< RecordID > > data_watcher {};
-					data_watcher.setFuture( client->createRecords( data ) );
+					data_watcher.setFuture( client->createRecords( std::move( data ) ) );
 
 					QFutureWatcher< void > watcher {};
 					QObject::connect( &watcher, &QFutureWatcher< void >::finished, &loop, &QEventLoop::quit );
 
 					watcher.setFuture( QtConcurrent::run( [ & ]() { data_watcher.waitForFinished(); } ) );
 
-					processed += group_size;
+					processed += data.size();
 
 					loop.exec();
 
@@ -71,15 +73,16 @@ void HydrusImporter::copyHashes()
 
 	auto printProgress = [ &processed, start, &total_processed, &last_start, total_to_process ]()
 	{
-		const auto end { std::chrono::steady_clock::now() };
-		const auto total_duration { end - start };
-		const std::chrono::duration< double > duration { end - last_start };
-		last_start = end;
-
 		const std::size_t processed_count { processed.exchange( 0 ) };
 		total_processed += processed_count;
 
 		if ( processed_count == 0 ) return;
+
+		const auto end { std::chrono::steady_clock::now() };
+		const auto total_duration { end - start };
+		const std::chrono::duration< double > duration { end - last_start };
+
+		last_start = end;
 
 		const auto time_per_item { total_duration / total_processed };
 
@@ -114,18 +117,17 @@ void HydrusImporter::copyHashes()
 												return;
 											} ) };
 
-	master_tr << "SELECT hash_id, hex(hash), hash FROM hashes" >>
-		[ & ]( const std::uint64_t id, const std::string_view hex, std::vector< std::byte > data )
+	master_tr << "SELECT hash_id, hex(hash) FROM hashes" >> [ & ]( const std::uint64_t id, const std::string_view hex )
 	{
-		if ( hex.size() != 64 && data.size() != 32 )
+		if ( hex.size() != 64 )
 		{
 			logging::error( "hash_id {} had a corrupted hash of length {}!", id, hex.size() );
 			return;
 		}
 
-		hashes.emplace_back( std::string( hex ) );
+		hashes.emplace_back( hex );
 
-		if ( hashes.size() > group_size )
+		if ( hashes.size() >= group_size )
 		{
 			sync_counter.acquire();
 
@@ -138,6 +140,8 @@ void HydrusImporter::copyHashes()
 	submitData();
 
 	thread_sync.waitForFinished();
+
+	printProgress();
 
 	logging::info( "Finished importing {} hashes", total_processed );
 }

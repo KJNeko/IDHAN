@@ -1,6 +1,6 @@
 get:
   tags:
-    - cluster
+    - clusters
   summary: Returns a json list of all cluster ids in use.
   responses:
     200:
