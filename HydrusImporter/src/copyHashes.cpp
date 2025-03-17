@@ -31,7 +31,7 @@ void HydrusImporter::copyHashes()
 	std::counting_semaphore< 128 > sync_counter { thread_count * 2 };
 	QFutureSynchronizer< void > thread_sync {};
 
-	constexpr std::uint32_t group_size { 1024 * 4 };
+	constexpr std::uint32_t group_size { 1024 * 8 };
 
 	std::atomic< std::size_t > processed { 0 };
 	std::size_t total_processed { 0 };

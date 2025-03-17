@@ -10,7 +10,6 @@ namespace idhan::api
 drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
 	search( drogon::HttpRequestPtr request, const std::string tag_text )
 {
-	log::debug( "/tag/search?tag={}", tag_text );
 	auto db { drogon::app().getDbClient() };
 
 	const auto result { co_await db->execSqlCoro( "SELECT tag_id FROM tags_combined WHERE tag_text = $1", tag_text ) };
