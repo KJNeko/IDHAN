@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.13.2"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: Member List</title>
+    <title>IDHAN: IDHANServer/src/api/helpers/tags/tags.cpp File Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('de/dbb/structidhan_1_1api_1_1NamespaceCache.html','../../'); initResizable(true); });
+$(function(){initNavTree('d5/d69/tags_8cpp.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -110,21 +110,34 @@ $(function(){initNavTree('de/dbb/structidhan_1_1api_1_1NamespaceCache.html','../
 </div>
 
 <div class="header">
-  <div class="headertitle"><div class="title">idhan::api::NamespaceCache Member List</div></div>
+  <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
+  <div class="headertitle"><div class="title">tags.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-
-<p>This is the complete list of members for <a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html">idhan::api::NamespaceCache</a>, including all inherited members.</p>
-<table class="directory">
-  <tr class="even"><td class="entry"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html#a8c825607e5343d78dd8cb9c9d8c985d7">find</a>(const std::string &amp;str)</td><td class="entry"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html">idhan::api::NamespaceCache</a></td><td class="entry"><span class="mlabel">inline</span></td></tr>
-  <tr class="odd"><td class="entry"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html#a73f8df151773f0621bcb1b079e7a4db1">insert</a>(const std::string &amp;namespace_text, NamespaceID id)</td><td class="entry"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html">idhan::api::NamespaceCache</a></td><td class="entry"><span class="mlabel">inline</span></td></tr>
-  <tr class="even"><td class="entry"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html#a1e36a319b999e893d47c0cf8ddaec241">m_empty_namespace</a></td><td class="entry"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html">idhan::api::NamespaceCache</a></td><td class="entry"></td></tr>
-  <tr class="odd"><td class="entry"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html#a9a919b200afa87232452ad705a080b54">m_id</a></td><td class="entry"><a class="el" href="../../de/dbb/structidhan_1_1api_1_1NamespaceCache.html">idhan::api::NamespaceCache</a></td><td class="entry"></td></tr>
-</table></div><!-- contents -->
+<div class="textblock"><code>#include &quot;<a class="el" href="../../d4/d49/tags_8hpp_source.html">tags.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../de/dbc/createBadRequest_8hpp_source.html">api/helpers/createBadRequest.hpp</a>&quot;</code><br />
+<code>#include &quot;drogon/HttpResponse.h&quot;</code><br />
+<code>#include &quot;drogon/orm/DbClient.h&quot;</code><br />
+<code>#include &quot;drogon/utils/coroutine.h&quot;</code><br />
+</div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a9f1848d8fc19ffaf73a46f88f4bdaf97" id="r_a9f1848d8fc19ffaf73a46f88f4bdaf97"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a9f1848d8fc19ffaf73a46f88f4bdaf97">idhan::findOrCreateTag</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a> namespace_id, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a> subtag_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a9f1848d8fc19ffaf73a46f88f4bdaf97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+</div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
+    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8b56e136226ae89f755dd9aa547a23fc.html">api</a></li><li class="navelem"><a class="el" href="../../dir_625c1a12e47410e27d64c77816a2b326.html">helpers</a></li><li class="navelem"><a class="el" href="../../dir_f86cef9e55f7a061f7bfd66d11ce67b7.html">tags</a></li><li class="navelem"><a class="el" href="../../d5/d69/tags_8cpp.html">tags.cpp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

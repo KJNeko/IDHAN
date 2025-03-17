@@ -24,10 +24,10 @@ var searchData=
   ['createtag_21',['createTag',['../d3/d67/classidhan_1_1IDHANClient.html#a2a6334c31d7d710f78f37312702d2afa',1,'idhan::IDHANClient::createTag(const std::string &amp;&amp;namespace_text, const std::string &amp;&amp;subtag_text)'],['../d3/d67/classidhan_1_1IDHANClient.html#a5e584e87992be9d4abae75e65f340912',1,'idhan::IDHANClient::createTag(const std::string &amp;tag_text)']]],
   ['createtagaliases_22',['createTagAliases',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a86f8719660c9b004d994650bb31d8561',1,'idhan::api::IDHANTagAPI']]],
   ['createtagdomain_23',['createTagDomain',['../d3/d67/classidhan_1_1IDHANClient.html#add74395f28ee34e458a588b990e7de52',1,'idhan::IDHANClient::createTagDomain()'],['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#add05fbe039bd11bf9d6afda4738b0e42',1,'idhan::api::IDHANTagAPI::createTagDomain()']]],
-  ['createtagid_24',['createTagID',['../db/de4/namespaceidhan_1_1api.html#abeb4f1dfbac8d77557466c2c4abad947',1,'idhan::api']]],
+  ['createtagid_24',['createTagID',['../db/de4/namespaceidhan_1_1api.html#aa95dd9ce1bae49e2026b3e35f5732694',1,'idhan::api']]],
   ['createtagparents_25',['createTagParents',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a91369b00dc0ba7ea78a6d76c96881694',1,'idhan::api::IDHANTagAPI']]],
   ['createtagrouter_26',['createTagRouter',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#afbdbf6e5bf48cb17d52eb9e3c43de96b',1,'idhan::api::IDHANTagAPI']]],
-  ['createtags_27',['createTags',['../d3/d67/classidhan_1_1IDHANClient.html#a3b8a03b6b66dcd1815b5f3afce8e1db6',1,'idhan::IDHANClient']]],
+  ['createtags_27',['createTags',['../d3/d67/classidhan_1_1IDHANClient.html#a3b8a03b6b66dcd1815b5f3afce8e1db6',1,'idhan::IDHANClient::createTags()'],['../db/de4/namespaceidhan_1_1api.html#ad2dbcc2f24b2b0231516095201fbbfb8',1,'idhan::api::createTags(const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;tag_pairs, drogon::orm::DbClientPtr db)']]],
   ['createunknownmimeresponse_28',['createUnknownMimeResponse',['../db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662',1,'idhan::api']]],
   ['critical_29',['critical',['../d6/d70/namespaceidhan_1_1logging.html#a96fdf1cc30728c4d254461d41dfe0cde',1,'idhan::logging::critical()'],['../d7/d03/namespaceidhan_1_1log.html#a576c3c7a112b0939dab38a258132abf5',1,'idhan::log::critical()']]]
 ];

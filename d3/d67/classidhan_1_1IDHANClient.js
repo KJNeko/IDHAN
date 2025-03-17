@@ -6,6 +6,7 @@ var classidhan_1_1IDHANClient =
     [ "~IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html#a018c82d2bb8908f3822ab0804da92765", null ],
     [ "addKeyHeader", "d3/d67/classidhan_1_1IDHANClient.html#a8f1a421eeaa1367a2295a767df30f999", null ],
     [ "addTags", "d3/d67/classidhan_1_1IDHANClient.html#aa08e150c2b6bd207b80a03305cc9ec76", null ],
+    [ "addTags", "d3/d67/classidhan_1_1IDHANClient.html#a19aacb267d93d55043bdc4876ee1b3ea", null ],
     [ "createAliasRelationship", "d3/d67/classidhan_1_1IDHANClient.html#a080d9afa1f71075365d4ef2d58c3f58e", null ],
     [ "createAliasRelationship", "d3/d67/classidhan_1_1IDHANClient.html#a24ecc45cd5c29940d63adc69bfc7e11f", null ],
     [ "createFileCluster", "d3/d67/classidhan_1_1IDHANClient.html#a324fb81d06372cffa5c512fa08814fe7", null ],

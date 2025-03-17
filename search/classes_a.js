@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['versioninfo_0',['VersionInfo',['../d3/d25/structidhan_1_1VersionInfo.html',1,'idhan']]],
-  ['videoinfo_1',['VideoInfo',['../de/da8/structidhan_1_1mime_1_1VideoInfo.html',1,'idhan::mime']]]
+  ['tagpair_0',['TagPair',['../d0/d19/structidhan_1_1api_1_1TagPair.html',1,'idhan::api']]]
 ];

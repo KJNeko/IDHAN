@@ -15,11 +15,11 @@ var searchData=
   ['searchhash_2ecpp_12',['searchHash.cpp',['../d6/d4b/searchHash_8cpp.html',1,'']]],
   ['searchmimetype_13',['searchMimeType',['../d4/d9c/namespaceidhan_1_1mime.html#a1e76c9f7fd90eb7db7938c56cf0933f1',1,'idhan::mime']]],
   ['searchmimetype_2ecpp_14',['searchMimeType.cpp',['../db/d4a/searchMimeType_8cpp.html',1,'']]],
-  ['searchnamespace_15',['searchNamespace',['../db/de4/namespaceidhan_1_1api.html#aa9874befa0c1aee7e40de4e0757fbc5d',1,'idhan::api']]],
+  ['searchnamespace_15',['searchNamespace',['../dd/dcf/namespaceidhan.html#a5fa74bb214874aa2789badd88b18619a',1,'idhan']]],
   ['searchorder_16',['SearchOrder',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685',1,'idhan::hyapi']]],
   ['searchorder_2ehpp_17',['SearchOrder.hpp',['../d3/d84/SearchOrder_8hpp.html',1,'']]],
   ['searchrecord_18',['searchRecord',['../db/de4/namespaceidhan_1_1api.html#a904cb428166f942735f8c9606bf98334',1,'idhan::api']]],
-  ['searchsubtag_19',['searchSubtag',['../db/de4/namespaceidhan_1_1api.html#a8a04b5a5d72712c9e893f6cc12ac721c',1,'idhan::api']]],
+  ['searchsubtag_19',['searchSubtag',['../dd/dcf/namespaceidhan.html#a60d3fe70f3505cfd95050bdbe38d56ad',1,'idhan']]],
   ['searchtagid_20',['searchTagID',['../db/de4/namespaceidhan_1_1api.html#ad1f6bd3d7cc9d790bf08906e6349d7e4',1,'idhan::api']]],
   ['self_5fname_21',['self_name',['../da/d27/structidhan_1_1IDHANClientConfig.html#a2834f4ef7f668daddad0669f6343cb91',1,'idhan::IDHANClientConfig']]],
   ['send_22',['send',['../d9/d66/classidhan_1_1Network.html#ab8fbf82a33bf297be6b45d0d286f4ce9',1,'idhan::Network']]],
@@ -65,5 +65,7 @@ var searchData=
   ['stub_2ecpp_62',['stub.cpp',['../db/da4/stub_8cpp.html',1,'']]],
   ['subinfovariant_63',['SubInfoVariant',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a16ae1ee0f4f708d61de7ca9049359a89',1,'idhan::mime::MimeInfo']]],
   ['subtagid_64',['SubtagID',['../dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d',1,'idhan']]],
-  ['success_65',['Success',['../dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4a3ed388d31a0a5d3c37031bf2b59d6a7e',1,'idhan::Success'],['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a30f320abc79538b35f124e95143f41a3',1,'idhan::hyapi::Success']]]
+  ['subtags_2ecpp_65',['subtags.cpp',['../d0/da6/subtags_8cpp.html',1,'']]],
+  ['subtags_2ehpp_66',['subtags.hpp',['../de/db4/subtags_8hpp.html',1,'']]],
+  ['success_67',['Success',['../dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4a3ed388d31a0a5d3c37031bf2b59d6a7e',1,'idhan::Success'],['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a30f320abc79538b35f124e95143f41a3',1,'idhan::hyapi::Success']]]
 ];

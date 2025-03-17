@@ -111,24 +111,42 @@ $(function(){initNavTree('db/dbb/IDHANServer_2src_2api_2record_2tags_2addTags_8c
 
 <div class="header">
   <div class="summary">
-<a href="#namespaces">Namespaces</a>  </div>
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">addTags.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d9/d8d/IDHANRecordAPI_8hpp_source.html">api/IDHANRecordAPI.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d4/d83/IDHANTagAPI_8hpp_source.html">api/IDHANTagAPI.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../de/dbc/createBadRequest_8hpp_source.html">api/helpers/createBadRequest.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../da/df3/helpers_8hpp_source.html">api/helpers/helpers.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d4/d49/tags_8hpp_source.html">api/helpers/tags/tags.hpp</a>&quot;</code><br />
 <code>#include &quot;fgl/defines.hpp&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d4/d3d/log_8hpp_source.html">logging/log.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../dd/db8/splitTag_8hpp_source.html">splitTag.hpp</a>&quot;</code><br />
 </div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">idhan::api::TagPair</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a2f937f8d622dc8b90cc208c22d48dc26" id="r_a2f937f8d622dc8b90cc208c22d48dc26"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a2f937f8d622dc8b90cc208c22d48dc26">idhan::api::getIDFromPair</a> (const <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &amp;tag, drogon::orm::DbClientPtr transaction)</td></tr>
+<tr class="separator:a2f937f8d622dc8b90cc208c22d48dc26"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad2e58082017e1fd3b7bf3eb59c861c5" id="r_aad2e58082017e1fd3b7bf3eb59c861c5"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#aad2e58082017e1fd3b7bf3eb59c861c5">idhan::api::getTagPairs</a> (const Json::Value &amp;json)</td></tr>
+<tr class="separator:aad2e58082017e1fd3b7bf3eb59c861c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a907f3b8605d75230b6819ed7591b55a7" id="r_a907f3b8605d75230b6819ed7591b55a7"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a907f3b8605d75230b6819ed7591b55a7">idhan::api::getIDsFromPairs</a> (const std::vector&lt; <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &gt; &amp;pairs, drogon::orm::DbClientPtr transaction)</td></tr>
+<tr class="separator:a907f3b8605d75230b6819ed7591b55a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

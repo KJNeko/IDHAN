@@ -8,7 +8,7 @@ var annotated_dup =
         [ "IDHANAuth", "d6/d49/classidhan_1_1api_1_1IDHANAuth.html", "d6/d49/classidhan_1_1api_1_1IDHANAuth" ],
         [ "IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI" ],
         [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ],
-        [ "NamespaceCache", "de/dbb/structidhan_1_1api_1_1NamespaceCache.html", "de/dbb/structidhan_1_1api_1_1NamespaceCache" ]
+        [ "TagPair", "d0/d19/structidhan_1_1api_1_1TagPair.html", "d0/d19/structidhan_1_1api_1_1TagPair" ]
       ] ],
       [ "filesystem", "db/d9b/namespaceidhan_1_1filesystem.html", [
         [ "ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager" ]

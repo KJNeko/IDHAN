@@ -48,7 +48,6 @@ var hierarchy =
     [ "idhan::mime::MimeDataTrack", "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html", null ],
     [ "idhan::mime::MimeIdentifier", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html", null ],
     [ "idhan::mime::MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", null ],
-    [ "idhan::api::NamespaceCache", "de/dbb/structidhan_1_1api_1_1NamespaceCache.html", null ],
     [ "QObject", null, [
       [ "idhan::Network", "d9/d66/classidhan_1_1Network.html", null ]
     ] ],
@@ -58,6 +57,7 @@ var hierarchy =
     [ "idhan::ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", null ],
     [ "idhan::VersionInfo::ServerVersion", "d9/d69/structidhan_1_1VersionInfo_1_1ServerVersion.html", null ],
     [ "idhan::SHA256", "d0/de3/classidhan_1_1SHA256.html", null ],
+    [ "idhan::api::TagPair", "d0/d19/structidhan_1_1api_1_1TagPair.html", null ],
     [ "idhan::VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", null ],
     [ "idhan::mime::VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", null ]
 ];

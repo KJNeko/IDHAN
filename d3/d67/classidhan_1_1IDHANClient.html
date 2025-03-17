@@ -151,6 +151,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a5e584e87992be9d4abae75e65f340912"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa08e150c2b6bd207b80a03305cc9ec76" id="r_aa08e150c2b6bd207b80a03305cc9ec76"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa08e150c2b6bd207b80a03305cc9ec76">addTags</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> domain_id, std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;&amp;tags)</td></tr>
 <tr class="separator:aa08e150c2b6bd207b80a03305cc9ec76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19aacb267d93d55043bdc4876ee1b3ea" id="r_a19aacb267d93d55043bdc4876ee1b3ea"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a19aacb267d93d55043bdc4876ee1b3ea">addTags</a> (std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &amp;&amp;record_ids, <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> domain_id, const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;tags)</td></tr>
+<tr class="separator:a19aacb267d93d55043bdc4876ee1b3ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8c047161fb0a877242215bd25f63d589" id="r_a8c047161fb0a877242215bd25f63d589"><td class="memItemLeft" align="right" valign="top">QFuture&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c047161fb0a877242215bd25f63d589">createParentRelationship</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> tag_domian_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> parent_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> child_id)</td></tr>
 <tr class="memdesc:a8c047161fb0a877242215bd25f63d589"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a parent/child relationship between two tags.  <br /></td></tr>
 <tr class="separator:a8c047161fb0a877242215bd25f63d589"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -341,7 +343,7 @@ Static Private Attributes</h2></td></tr>
 </div>
 </div>
 <a id="aa08e150c2b6bd207b80a03305cc9ec76" name="aa08e150c2b6bd207b80a03305cc9ec76"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa08e150c2b6bd207b80a03305cc9ec76">&#9670;&#160;</a></span>addTags()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aa08e150c2b6bd207b80a03305cc9ec76">&#9670;&#160;</a></span>addTags() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -360,6 +362,32 @@ Static Private Attributes</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>tags</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a19aacb267d93d55043bdc4876ee1b3ea" name="a19aacb267d93d55043bdc4876ee1b3ea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a19aacb267d93d55043bdc4876ee1b3ea">&#9670;&#160;</a></span>addTags() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">QFuture&lt; void &gt; idhan::IDHANClient::addTags </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>record_ids</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a></td>          <td class="paramname"><span class="paramname"><em>domain_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tags</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

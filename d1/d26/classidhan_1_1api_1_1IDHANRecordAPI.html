@@ -130,6 +130,8 @@ Inheritance diagram for idhan::api::IDHANRecordAPI:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:aa16b48cb82c06fd3e61778912c12af5f" id="r_aa16b48cb82c06fd3e61778912c12af5f"><td class="memItemLeft" align="right" valign="top">METHOD_LIST_BEGIN&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa16b48cb82c06fd3e61778912c12af5f">ADD_METHOD_TO</a> (<a class="el" href="#a8cc9af85cbf0b590c6029ed16c2eeb4f">IDHANRecordAPI::createRecord</a>, &quot;/records/create&quot;)</td></tr>
 <tr class="separator:aa16b48cb82c06fd3e61778912c12af5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a826ed0485bb393ea9107ad2cc2f07686" id="r_a826ed0485bb393ea9107ad2cc2f07686"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a826ed0485bb393ea9107ad2cc2f07686">ADD_METHOD_TO</a> (<a class="el" href="#a99c74d4f29cec89a60f4d7b40a8a7b3a">IDHANRecordAPI::addMultipleTags</a>, &quot;/records/tags/add&quot;)</td></tr>
+<tr class="separator:a826ed0485bb393ea9107ad2cc2f07686"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad1e4c107c747c5fbdf73d97e1988e6c9" id="r_ad1e4c107c747c5fbdf73d97e1988e6c9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1e4c107c747c5fbdf73d97e1988e6c9">ADD_METHOD_TO</a> (<a class="el" href="#acb4963a74607ba91fd45cceb76a3b338">IDHANRecordAPI::addTags</a>, &quot;/records/{record_id}/tags/add&quot;)</td></tr>
 <tr class="separator:ad1e4c107c747c5fbdf73d97e1988e6c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a21af14ee36cc2e2c6ffb13de76e79dfe" id="r_a21af14ee36cc2e2c6ffb13de76e79dfe"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a21af14ee36cc2e2c6ffb13de76e79dfe">ADD_METHOD_TO</a> (<a class="el" href="#a665ad9c2c00348cce376d1deb9876fd9">IDHANRecordAPI::removeTags</a>, &quot;/records/{record_id}/tags/remove&quot;)</td></tr>
@@ -146,6 +148,8 @@ Private Member Functions</h2></td></tr>
 <tr class="separator:a8cc9af85cbf0b590c6029ed16c2eeb4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acb4963a74607ba91fd45cceb76a3b338" id="r_acb4963a74607ba91fd45cceb76a3b338"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb4963a74607ba91fd45cceb76a3b338">addTags</a> (drogon::HttpRequestPtr request, <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id)</td></tr>
 <tr class="separator:acb4963a74607ba91fd45cceb76a3b338"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a99c74d4f29cec89a60f4d7b40a8a7b3a" id="r_a99c74d4f29cec89a60f4d7b40a8a7b3a"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a99c74d4f29cec89a60f4d7b40a8a7b3a">addMultipleTags</a> (drogon::HttpRequestPtr request)</td></tr>
+<tr class="separator:a99c74d4f29cec89a60f4d7b40a8a7b3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a665ad9c2c00348cce376d1deb9876fd9" id="r_a665ad9c2c00348cce376d1deb9876fd9"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a665ad9c2c00348cce376d1deb9876fd9">removeTags</a> (drogon::HttpRequestPtr request, <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id)</td></tr>
 <tr class="separator:a665ad9c2c00348cce376d1deb9876fd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19a265f1047f016d216f5bc67c071b8f" id="r_a19a265f1047f016d216f5bc67c071b8f"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a19a265f1047f016d216f5bc67c071b8f">listTags</a> (drogon::HttpRequestPtr request, <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id)</td></tr>
@@ -154,8 +158,29 @@ Private Member Functions</h2></td></tr>
 <tr class="separator:a1e93bd1b71577bab59ab229744efd971"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a826ed0485bb393ea9107ad2cc2f07686" name="a826ed0485bb393ea9107ad2cc2f07686"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a826ed0485bb393ea9107ad2cc2f07686">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[1/6]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">idhan::api::IDHANRecordAPI::ADD_METHOD_TO </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#a99c74d4f29cec89a60f4d7b40a8a7b3a">IDHANRecordAPI::addMultipleTags</a></td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">&quot;/records/tags/add&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="ad1e4c107c747c5fbdf73d97e1988e6c9" name="ad1e4c107c747c5fbdf73d97e1988e6c9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad1e4c107c747c5fbdf73d97e1988e6c9">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[1/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ad1e4c107c747c5fbdf73d97e1988e6c9">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[2/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -176,7 +201,7 @@ Private Member Functions</h2></td></tr>
 </div>
 </div>
 <a id="aa16b48cb82c06fd3e61778912c12af5f" name="aa16b48cb82c06fd3e61778912c12af5f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa16b48cb82c06fd3e61778912c12af5f">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[2/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aa16b48cb82c06fd3e61778912c12af5f">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[3/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -197,7 +222,7 @@ Private Member Functions</h2></td></tr>
 </div>
 </div>
 <a id="ac4eef856643cbc341dbf24f39bbf8043" name="ac4eef856643cbc341dbf24f39bbf8043"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac4eef856643cbc341dbf24f39bbf8043">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[3/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ac4eef856643cbc341dbf24f39bbf8043">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[4/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -218,7 +243,7 @@ Private Member Functions</h2></td></tr>
 </div>
 </div>
 <a id="a21af14ee36cc2e2c6ffb13de76e79dfe" name="a21af14ee36cc2e2c6ffb13de76e79dfe"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a21af14ee36cc2e2c6ffb13de76e79dfe">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[4/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a21af14ee36cc2e2c6ffb13de76e79dfe">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[5/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -239,7 +264,7 @@ Private Member Functions</h2></td></tr>
 </div>
 </div>
 <a id="a88dd4523a0f54b8f20e4b42fffd25c4b" name="a88dd4523a0f54b8f20e4b42fffd25c4b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a88dd4523a0f54b8f20e4b42fffd25c4b">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[5/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a88dd4523a0f54b8f20e4b42fffd25c4b">&#9670;&#160;</a></span>ADD_METHOD_TO() <span class="overload">[6/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -255,6 +280,31 @@ Private Member Functions</h2></td></tr>
           <td class="paramtype">&quot;/records/search&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span>&#160;)</td>
         </tr>
       </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a99c74d4f29cec89a60f4d7b40a8a7b3a" name="a99c74d4f29cec89a60f4d7b40a8a7b3a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a99c74d4f29cec89a60f4d7b40a8a7b3a">&#9670;&#160;</a></span>addMultipleTags()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; drogon::HttpResponsePtr &gt; idhan::api::IDHANRecordAPI::addMultipleTags </td>
+          <td>(</td>
+          <td class="paramtype">drogon::HttpRequestPtr</td>          <td class="paramname"><span class="paramname"><em>request</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>

@@ -1,9 +1,9 @@
 var searchData=
 [
   ['name_0',['name',['../de/d50/structidhan_1_1logging_1_1ScopedTimer.html#aa3a23cb3a201e8805098c82c5197d68f',1,'idhan::logging::ScopedTimer']]],
-  ['namespace_5fcache_1',['namespace_cache',['../db/de4/namespaceidhan_1_1api.html#aac5fecfe401a04ac4f9007f7e14183c3',1,'idhan::api']]],
-  ['namespacecache_2',['NamespaceCache',['../de/dbb/structidhan_1_1api_1_1NamespaceCache.html',1,'idhan::api']]],
-  ['namespaceid_3',['NamespaceID',['../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5',1,'idhan']]],
+  ['namespaceid_1',['NamespaceID',['../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5',1,'idhan']]],
+  ['namespaces_2ecpp_2',['namespaces.cpp',['../d9/da6/namespaces_8cpp.html',1,'']]],
+  ['namespaces_2ehpp_3',['namespaces.hpp',['../d8/d9d/namespaces_8hpp.html',1,'']]],
   ['net_5fconstants_2ehpp_4',['NET_CONSTANTS.hpp',['../da/dbd/NET__CONSTANTS_8hpp.html',1,'']]],
   ['network_5',['Network',['../d9/d66/classidhan_1_1Network.html',1,'idhan::Network'],['../d9/d66/classidhan_1_1Network.html#a5d1dc622f74da8fb412f5d374808da23',1,'idhan::Network::Network()']]],
   ['network_6',['network',['../d3/d67/classidhan_1_1IDHANClient.html#a7d79ee766affc0e5cb520dbe751fd8cf',1,'idhan::IDHANClient']]],
