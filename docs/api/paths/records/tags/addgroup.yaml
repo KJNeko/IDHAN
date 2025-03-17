@@ -1,0 +1,66 @@
+post:
+  tags:
+    - tags
+    - records
+  summary: Adds a tag, or tags to a given set of records.
+  parameters:
+    - name: tag_domain_id
+      in: query
+      required: true
+      schema:
+        $ref: '../../../schemas/TagDomainID.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            records:
+              type: array
+              items:
+                $ref: '../../../schemas/RecordID.yaml'
+            tags:
+              type: array
+              items:
+                $ref: '../../../schemas/TagInput.yaml'
+        examples:
+          IDs:
+            summary: An array of multiple tag ids
+            value:
+              records:
+                - 1
+                - 2
+                - 3
+              tags:
+                - 1
+                - 2
+                - 3
+          Strings:
+            summary: An array of strings
+            value:
+              records:
+                - 1
+                - 2
+                - 3
+              tags:
+                - "character:toujou koneko"
+                - "catgirl"
+                - "series:highschool dxd"
+          Tag objects:
+            summary: An array of tag objects
+            value:
+              records:
+                - 1
+                - 2
+                - 3
+              tags:
+                - namespace: "character"
+                  subtag: "toujou koneko"
+                - namespace: 1
+                  subtag: 1
+
+  200:
+    description: All tags added successfully
+  400:
+    description: One or more ids were invalid

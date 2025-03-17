@@ -17,6 +17,8 @@ class IDHANRecordAPI : public drogon::HttpController< IDHANRecordAPI >
 	drogon::Task< drogon::HttpResponsePtr > createRecord( drogon::HttpRequestPtr request );
 
 	drogon::Task< drogon::HttpResponsePtr > addTags( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > addMultipleTags( drogon::HttpRequestPtr request );
+
 	drogon::Task< drogon::HttpResponsePtr > removeTags( drogon::HttpRequestPtr request, RecordID record_id );
 	drogon::Task< drogon::HttpResponsePtr > listTags( drogon::HttpRequestPtr request, RecordID record_id );
 
@@ -29,6 +31,8 @@ class IDHANRecordAPI : public drogon::HttpController< IDHANRecordAPI >
 	ADD_METHOD_TO( IDHANRecordAPI::createRecord, "/records/create" );
 
 	// tags
+	ADD_METHOD_TO( IDHANRecordAPI::addMultipleTags, "/records/tags/add" );
+
 	ADD_METHOD_TO( IDHANRecordAPI::addTags, "/records/{record_id}/tags/add" );
 	ADD_METHOD_TO( IDHANRecordAPI::removeTags, "/records/{record_id}/tags/remove" );
 	ADD_METHOD_TO( IDHANRecordAPI::listTags, "/records/{record_id}/tags" );

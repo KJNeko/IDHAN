@@ -27,26 +27,32 @@ security:
 paths:
   /version:
     $ref: './paths/version.yaml'
-  /tag/create:
+  /tags/create:
     $ref: './paths/tags/create.yaml'
-  /tag/search:
+  /tags/search:
     $ref: './paths/tags/search.yaml'
-  /tag/{tag_id}/info:
+  /tags/{tag_id}/info:
     $ref: './paths/tags/info.yaml'
-  /tag/autocomplete:
+  /tags/autocomplete:
     $ref: './paths/tags/autocomplete.yaml'
-  /tag/domain/create:
+  /tags/domain/create:
     $ref: './paths/tags/domains/create.yaml'
-  /tag/domain/list:
+  /tags/domain/list:
     $ref: './paths/tags/domains/list.yaml'
-  /tag/domain/{domain_id}/info:
+  /tags/domain/{domain_id}/info:
     $ref: './paths/tags/domains/info.yaml'
-  /tag/domain/{domain_id}/delete:
+  /tags/domain/{domain_id}/delete:
     $ref: './paths/tags/domains/delete.yaml'
-  /tag/parents/create:
+
+  /tags/parents/create:
     $ref: './paths/tags/relationships/parent/create.yaml'
+
+
+
   /records/create:
     $ref: './paths/records/create.yaml'
+  /records/tags/add:
+    $ref: './paths/records/tags/addgroup.yaml'
   /records/{record_id}/tags/add:
     $ref: './paths/records/tags/add.yaml'
   /records/{record_id}/tags/remove:

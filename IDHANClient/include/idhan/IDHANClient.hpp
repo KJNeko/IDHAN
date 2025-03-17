@@ -104,6 +104,11 @@ class IDHANClient
 	QFuture< void > addTags(
 		RecordID record_id, TagDomainID domain_id, std::vector< std::pair< std::string, std::string > >&& tags );
 
+	QFuture< void > addTags(
+		std::vector< RecordID >&& record_ids,
+		TagDomainID domain_id,
+		const std::vector< std::pair< std::string, std::string > >& tags );
+
 	/**
 	 * @brief Creates a parent/child relationship between two tags
 	 * @param parent_id

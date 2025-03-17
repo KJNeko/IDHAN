@@ -197,6 +197,16 @@ void IDHANClient::sendClientGet(
 		std::move( doc ) );
 }
 
+void handleResponse( QNetworkReply* response, std::function< void( constQJsonDocument& ) > callback )
+{
+	const auto data { reply->readAll() };
+	if ( !reply->isFInished() ) throw std::runtime_error( "Failed to read response" );
+
+	reply->deleteLater();
+
+	callback( QJsonDocument::fromJson( data ) );
+}
+
 void IDHANClient::sendClientPost(
 	QJsonDocument&& object,
 	UrlVariant url,

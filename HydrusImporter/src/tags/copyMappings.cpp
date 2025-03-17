@@ -18,9 +18,11 @@ void HydrusImporter::copyMappings()
 	TransactionBase client_tr { client_db };
 
 	QThreadPool pool {};
-	pool.setMaxThreadCount( 0 );
+	pool.setMaxThreadCount( 8 );
 
 	QFutureSynchronizer< void > sync {};
+
+	std::vector< std::pair< TagDomainID, std::size_t > > domains {};
 
 	client_tr << "SELECT name, service_id FROM services WHERE service_type = 0 OR service_type = 5" >>
 		[ & ]( const std::string name, const std::size_t service_id )
@@ -29,10 +31,13 @@ void HydrusImporter::copyMappings()
 
 		domain_id_future.waitForFinished();
 
-		sync.addFuture(
-			QtConcurrent::
-				run( &pool, &HydrusImporter::copyDomainMappings, this, domain_id_future.result(), service_id ) );
+		domains.emplace_back( domain_id_future.result(), service_id );
 	};
+
+	for ( const auto& [ domain_id, service_id ] : domains )
+	{
+		sync.addFuture( QtConcurrent::run( &pool, &HydrusImporter::copyDomainMappings, this, domain_id, service_id ) );
+	}
 
 	sync.waitForFinished();
 }
@@ -42,60 +47,72 @@ void HydrusImporter::copyDomainMappings( const TagDomainID domain_id, const std:
 	const auto table_name { std::format( "current_mappings_{}", hy_service_id ) };
 
 	TransactionBase mappings_tr { mappings_db };
+	TransactionBase inner_mappings_tr { mappings_db };
 	TransactionBase master_tr { master_db };
 
 	logging::info( "Copying mappings from {}", table_name );
 
-	master_tr << "SELECT hex(hash), hash_id FROM hashes" >>
-		[ &mappings_tr, this, &table_name, domain_id ]( const std::string hash, const std::size_t hash_id )
-	{
-		if ( hash.size() != ( ( 256 / 8 ) * 2 ) )
-		{
-			logging::error( "hash_id {} had a corrupted hash of length {}!", hash_id, hash.size() );
-			return;
-		}
+	const auto inner_query { std::format( "SELECT hash_id FROM {} WHERE tag_id = $1", table_name ) };
 
+	QFuture< void > future { QtFuture::makeReadyVoidFuture() };
+
+	mappings_tr << std::format(
+		"SELECT tag_id, count(tag_id) AS count FROM {} GROUP BY tag_id ORDER BY count DESC", table_name )
+		>> [ & ]( const std::size_t tag_id, const std::size_t count )
+	{
+		// now to get the tags
 		std::vector< std::pair< std::string, std::string > > tags {};
 
-		mappings_tr << std::format( "SELECT tag_id FROM {} WHERE hash_id = $1", table_name ) << hash_id >>
-			[ this, &tags ]( const std::size_t tag_id )
-		{
-			TransactionBase inner_master_tr { master_db };
+		master_tr << "SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id = $1"
+				  << tag_id
+			>> [ &tags ]( const std::string_view namespace_text, const std::string_view subtag_text )
+		{ tags.emplace_back( namespace_text, subtag_text ); };
 
-			inner_master_tr
-					<< "SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id = $1"
-					<< tag_id
-				>> [ &tags ]( std::string namespace_text, std::string subtag_text )
-			{ tags.emplace_back( namespace_text, subtag_text ); };
+		std::vector< std::string > hashes {};
+
+		inner_mappings_tr << inner_query << tag_id >>
+			[ this, &future, &master_tr, &hashes, domain_id, &tags ]( const std::size_t hash_id )
+		{
+			// now to get the hash
+			master_tr << "SELECT hex(hash) FROM hashes WHERE hash_id = $1" << hash_id >>
+				[ this, &future, hash_id, &hashes, domain_id, &tags ]( const std::string_view sha256_hash )
+			{
+				if ( sha256_hash.empty() || sha256_hash.size() != 64 )
+				{
+					logging::warn( "Hash ID {} was corrupted! Size of : {}", hash_id, sha256_hash.size() );
+					return;
+				}
+
+				hashes.emplace_back( sha256_hash );
+
+				if ( hashes.size() > 1024 * 64 )
+				{
+					QFuture< std::vector< RecordID > > records_future { m_client->createRecords( hashes ) };
+
+					records_future.waitForFinished();
+
+					std::vector< RecordID > records { records_future.result() };
+
+					future.waitForFinished();
+
+					future = m_client->addTags( std::move( records ), domain_id, tags );
+					records.clear();
+				}
+			};
 		};
 
-		if ( tags.size() == 0 ) return;
+		QFuture< std::vector< RecordID > > records_future { m_client->createRecords( hashes ) };
 
-		auto record_future { m_client->getRecordID( hash ) };
+		records_future.waitForFinished();
 
-		record_future.waitForFinished();
-
-		if ( record_future.resultCount() != 1 )
-		{
-			logging::error( "hash_id {} has {} record results", hash_id, record_future.resultCount() );
-		}
-
-		const RecordID record_id { record_future.result().value_or( 0 ) };
-
-		if ( record_id == 0 )
-		{
-			logging::error( "hash id {}: {} has no record in IDHAN!", hash_id, hash );
-
-			return;
-		}
-
-		auto future { m_client->addTags( record_id, domain_id, std::move( tags ) ) };
+		std::vector< RecordID > records { records_future.result() };
 
 		future.waitForFinished();
 
-		logging::info( "Processed {} mappings for hash {} from table {}", tags.size(), hash_id, table_name );
+		future = m_client->addTags( std::move( records ), domain_id, std::move( tags ) );
+
+		logging::info( "Copied mappings for tag {}:{} with {} records", tags[ 0 ].first, tags[ 0 ].second, count );
 	};
-	logging::debug( "Finished processing all hashes" );
 }
 
 } // namespace idhan::hydrus

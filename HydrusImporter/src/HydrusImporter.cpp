@@ -57,7 +57,7 @@ void HydrusImporter::copyFileInfo()
 
 void HydrusImporter::copyHydrusInfo()
 {
-	auto tags_processed { std::make_shared< std::atomic< bool > >( false ) };
+	// auto tags_processed { std::make_shared< std::atomic< bool > >( false ) };
 	auto domains_processed { std::make_shared< std::atomic< bool > >( false ) };
 	auto hashes_processed { std::make_shared< std::atomic< bool > >( false ) };
 
@@ -69,44 +69,45 @@ void HydrusImporter::copyHydrusInfo()
 			domains_processed->notify_all();
 		} ) };
 
+	/*
 	QFuture< void > tag_future { QtConcurrent::run(
 		[ this, tags_processed ]()
 		{
-			this->copyTags();
+			// this->copyTags();
 			tags_processed->store( true );
 			tags_processed->notify_all();
 		} ) };
+	*/
 
 	QFuture< void > parents_future { QtConcurrent::run(
-		[ this, tags_processed, domains_processed ]
+		[ this, domains_processed ]
 		{
 			if ( !domains_processed->load() ) domains_processed->wait( false );
-			if ( !tags_processed->load() ) tags_processed->wait( false );
+			// if ( !tags_processed->load() ) tags_processed->wait( false );
 			this->copyParents();
 		} ) };
 
 	QFuture< void > aliases_future { QtConcurrent::run(
-		[ this, tags_processed, domains_processed ]
+		[ this, domains_processed ]
 		{
 			if ( !domains_processed->load() ) domains_processed->wait( false );
-			if ( !tags_processed->load() ) tags_processed->wait( false );
+			// if ( !tags_processed->load() ) tags_processed->wait( false );
 			this->copySiblings();
 		} ) };
 
-	// QFuture< void > hash_future { QtConcurrent::run( &HydrusImporter::copyHashes, this )
 	QFuture< void > hash_future { QtConcurrent::run(
 		[ this, hashes_processed ]()
 		{
-			this->copyHashes();
+			// this->copyHashes();
 			hashes_processed->store( true );
 			hashes_processed->notify_all();
 		} ) };
 
 	QFuture< void > mappings_future { QtConcurrent::run(
-		[ tags_processed, hashes_processed, this, domains_processed ]()
+		[ hashes_processed, this, domains_processed ]()
 		{
 			if ( !domains_processed->load() ) domains_processed->wait( false );
-			if ( !tags_processed->load() ) tags_processed->wait( false );
+			// if ( !tags_processed->load() ) tags_processed->wait( false );
 			if ( !hashes_processed->load() ) hashes_processed->wait( false );
 
 			this->copyMappings();
@@ -115,7 +116,7 @@ void HydrusImporter::copyHydrusInfo()
 	// QFuture< void > url_future { hash_future.then( [ this ]() { this->copyUrls(); } ) };
 
 	sync.addFuture( std::move( tag_domains ) );
-	sync.addFuture( std::move( tag_future ) );
+	// sync.addFuture( std::move( tag_future ) );
 	sync.addFuture( std::move( parents_future ) );
 	sync.addFuture( std::move( aliases_future ) );
 	sync.addFuture( std::move( hash_future ) );
