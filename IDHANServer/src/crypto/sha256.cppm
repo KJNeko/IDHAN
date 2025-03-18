@@ -4,9 +4,7 @@
 
 module;
 
-#include <QByteArray>
 #include <QCryptographicHash>
-#include <QVarLengthArray>
 
 #include <openssl/sha.h>
 
