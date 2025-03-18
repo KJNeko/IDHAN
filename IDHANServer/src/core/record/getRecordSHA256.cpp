@@ -3,9 +3,10 @@
 //
 
 #include "IDHANTypes.hpp"
-#include "crypto/sha256.hpp"
 #include "drogon/orm/DbClient.h"
 #include "exceptions.hpp"
+
+import sha256;
 
 namespace idhan
 {

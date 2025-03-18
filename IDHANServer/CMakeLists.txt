@@ -1,6 +1,9 @@
 
 AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(MIGRATION_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/doMigration.cpp")
 file(REMOVE ${MIGRATION_SOURCE})
 
@@ -16,10 +19,16 @@ add_custom_command(
 		COMMAND ${CMAKE_COMMAND} -DMIGRATION_DIR=${MIGRATION_DIR} -DOUT=${MIGRATION_SOURCE} -P "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake"
 		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake: Generating doMigration.cpp")
 
-target_link_libraries(IDHANServer PUBLIC spdlog fmt drogon)
-target_link_libraries(IDHANServer PRIVATE pqxx sqlite3 Qt6::Core tomlplusplus::tomlplusplus)
-target_link_libraries(IDHANServer PRIVATE IDHAN)
-target_include_directories(IDHANServer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+LinkLibs(IDHANServer PUBLIC spdlog)
+LinkLibs(IDHANServer PUBLIC fmt)
+LinkLibs(IDHANServer PUBLIC drogon)
+
+LinkLibs(IDHANServer PUBLIC pqxx)
+LinkLibs(IDHANServer PUBLIC sqlite3)
+LinkLibs(IDHANServer PUBLIC Qt6::Core)
+LinkLibs(IDHANServer PUBLIC tomlplusplus::tomlplusplus)
+
+LinkLibs(IDHANServer PRIVATE IDHAN)
 
 if (DEFINED ALLOW_TABLE_DESTRUCTION AND ALLOW_TABLE_DESTRUCTION)
 	target_compile_definitions(IDHANServer PUBLIC ALLOW_TABLE_DESTRUCTION=1)

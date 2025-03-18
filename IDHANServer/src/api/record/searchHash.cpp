@@ -4,7 +4,7 @@
 
 #include "api/IDHANRecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "crypto/sha256.hpp"
+import sha256;
 
 namespace idhan::api
 {

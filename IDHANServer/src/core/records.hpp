@@ -3,7 +3,7 @@
 //
 #pragma once
 #include "IDHANTypes.hpp"
-#include "crypto/sha256.hpp"
+import sha256;
 #include "drogon/orm/DbClient.h"
 
 namespace idhan

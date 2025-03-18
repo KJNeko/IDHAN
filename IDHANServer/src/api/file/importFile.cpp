@@ -8,10 +8,11 @@
 #include "api/helpers/records.hpp"
 #include "codes/ImportCodes.hpp"
 #include "core/files/mime.hpp"
-#include "crypto/sha256.hpp"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
+
+import sha256;
 
 namespace idhan::api
 {

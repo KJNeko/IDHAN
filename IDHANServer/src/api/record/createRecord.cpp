@@ -6,9 +6,9 @@
 #include "api/IDHANRecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
-#include "crypto/sha256.hpp"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
+import sha256;
 
 namespace idhan::api
 {
