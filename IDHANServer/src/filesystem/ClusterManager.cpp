@@ -10,7 +10,8 @@
 
 #include "core/files/mime.hpp"
 #include "core/records.hpp"
-#include "crypto/sha256.hpp"
+
+import sha256;
 
 namespace idhan::filesystem
 {
