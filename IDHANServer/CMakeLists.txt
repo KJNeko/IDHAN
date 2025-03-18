@@ -19,14 +19,10 @@ add_custom_command(
 		COMMAND ${CMAKE_COMMAND} -DMIGRATION_DIR=${MIGRATION_DIR} -DOUT=${MIGRATION_SOURCE} -P "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake"
 		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake: Generating doMigration.cpp")
 
-LinkLibs(IDHANServer PUBLIC spdlog)
-LinkLibs(IDHANServer PUBLIC fmt)
-LinkLibs(IDHANServer PUBLIC drogon)
 
-LinkLibs(IDHANServer PUBLIC pqxx)
-LinkLibs(IDHANServer PUBLIC sqlite3)
-LinkLibs(IDHANServer PUBLIC Qt6::Core)
-LinkLibs(IDHANServer PUBLIC tomlplusplus::tomlplusplus)
+target_link_libraries(IDHANServer PUBLIC spdlog fmt drogon)
+target_link_libraries(IDHANServer PRIVATE pqxx sqlite3 Qt6::Core tomlplusplus::tomlplusplus)
+target_link_libraries(IDHANServer PRIVATE IDHAN)
 
 LinkLibs(IDHANServer PRIVATE IDHAN)
 
