@@ -14,9 +14,17 @@ ClusterAPI::ResponseTask ClusterAPI::list( drogon::HttpRequestPtr request )
 
 	Json::Value root {};
 
+	const auto transaction { co_await db->newTransactionCoro() };
+
 	for ( Json::ArrayIndex i = 0; i < result.size(); ++i )
 	{
-		root[ i ] = result[ static_cast< std::size_t >( i ) ][ 0 ].as< ClusterID >();
+		const ClusterID id { result[ i ][ 0 ].as< ClusterID >() };
+
+		const auto info { co_await getInfo( id, transaction ) };
+
+		if ( !info.has_value() ) co_return info.error();
+
+		root[ i ] = info.value();
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );

@@ -14,7 +14,10 @@
 #include "IDHANTypes.hpp"
 #include "drogon/orm/DbClient.h"
 
-import sha256;
+namespace idhan
+{
+class SHA256;
+}
 
 namespace idhan::filesystem
 {

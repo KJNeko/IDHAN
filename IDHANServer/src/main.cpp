@@ -20,7 +20,7 @@ int main( int argc, char** argv )
 	for ( std::size_t i = 0; i < argc; ++i )
 	{
 		idhan::log::debug( "{}: {}", i, argv[ i ] );
-		if ( argv[ i ] == "--testmoode" ) arguments.testmode = true;
+		if ( argv[ i ] == "--testmode" ) arguments.testmode = true;
 	}
 
 	idhan::ServerContext context { arguments };
@@ -29,6 +29,8 @@ int main( int argc, char** argv )
 	// context.cloneHydrusData( "/home/kj16609/Desktop/Projects/cxx/IDHAN/3rd-party/hydrus/db" );
 
 	context.run();
+
+	idhan::log::info( "Shutting down..." );
 
 	return EXIT_SUCCESS;
 }

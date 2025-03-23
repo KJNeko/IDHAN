@@ -6,15 +6,17 @@
 #include "api/IDHANRecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
+#include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
-import sha256;
 
 namespace idhan::api
 {
 
 ResponseTask createRecordFromOctet( const drogon::HttpRequestPtr req )
-{}
+{
+	co_return createBadRequest( "Not implemented" );
+}
 
 ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 {
@@ -53,7 +55,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	else if ( sha256s.isString() ) // HEX string
 	{
 		Json::Value json_out {};
-		SHA256 sha256 { SHA256::fromHex( sha256s.asString() ) };
+		const SHA256 sha256 { SHA256::fromHex( sha256s.asString() ) };
 		const RecordID record_id { co_await createRecord( sha256, db ) };
 		json_out[ "record_id" ] = record_id;
 

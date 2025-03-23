@@ -4,7 +4,7 @@
 
 #include "api/IDHANRecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-import sha256;
+#include "crypto/SHA256.hpp"
 
 namespace idhan::api
 {
@@ -20,7 +20,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::searchHash( [[maybe_unus
 	if ( hash_str.size() != expected_hash_size )
 		co_return createBadRequest( "Hash size was invalid, must be {}", expected_hash_size );
 
-	SHA256 hash { SHA256::fromHex( hash_str ) };
+	const SHA256 hash { SHA256::fromHex( hash_str ) };
 
 	const auto db { drogon::app().getDbClient() };
 

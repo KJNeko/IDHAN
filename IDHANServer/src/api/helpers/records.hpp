@@ -3,7 +3,10 @@
 #include "drogon/orm/DbClient.h"
 #include "drogon/utils/coroutine.h"
 
-import sha256;
+namespace idhan
+{
+class SHA256;
+}
 
 namespace idhan::api
 {

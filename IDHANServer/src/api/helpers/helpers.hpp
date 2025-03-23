@@ -13,4 +13,6 @@ namespace idhan::api::helpers
 
 std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainID( drogon::HttpRequestPtr request );
 
-}
+void addFileCacheHeader( drogon::HttpResponsePtr sharedPtr );
+
+} // namespace idhan::api::helpers

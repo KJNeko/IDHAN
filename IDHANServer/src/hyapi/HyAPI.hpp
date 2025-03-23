@@ -10,25 +10,25 @@ namespace idhan::hyapi
 {
 class HydrusAPI : public drogon::HttpController< HydrusAPI >
 {
-	void unsupported( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > unsupported( const drogon::HttpRequestPtr& request );
 
 	// Access management (access)
-	void apiVersion( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void requestNewPermissions( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void sessionKey( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void verifyAccessKey( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void getService( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void getServices( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > apiVersion( const drogon::HttpRequestPtr& request );
+	drogon::Task< drogon::HttpResponsePtr > requestNewPermissions( const drogon::HttpRequestPtr& request );
+	drogon::Task< drogon::HttpResponsePtr > sessionKey( const drogon::HttpRequestPtr& request );
+	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( const drogon::HttpRequestPtr& request );
+	drogon::Task< drogon::HttpResponsePtr > getService( const drogon::HttpRequestPtr& request );
+	drogon::Task< drogon::HttpResponsePtr > getServices( const drogon::HttpRequestPtr& request );
 
 	// Importing and deleting files (import)
-	void addFile( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > addFile( const drogon::HttpRequestPtr& request );
 
 	// Searching and Fetching files (search)
-	void searchFiles( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void fileHashes( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void fileMetadata( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void file( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void thumbnail( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > searchFiles( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > fileHashes( const drogon::HttpRequestPtr& request );
+	drogon::Task< drogon::HttpResponsePtr > fileMetadata( const drogon::HttpRequestPtr& request );
+	drogon::Task< drogon::HttpResponsePtr > file( const drogon::HttpRequestPtr& request );
+	drogon::Task< drogon::HttpResponsePtr > thumbnail( const drogon::HttpRequestPtr& request );
 
   public:
 

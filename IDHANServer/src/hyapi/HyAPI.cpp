@@ -5,6 +5,7 @@
 #include "HyAPI.hpp"
 
 #include "IDHANTypes.hpp"
+#include "api/IDHANSearchAPI.hpp"
 #include "constants/SearchOrder.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/SearchBuilder.hpp"
@@ -15,7 +16,7 @@
 namespace idhan::hyapi
 {
 
-void HydrusAPI::unsupported( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::unsupported( const drogon::HttpRequestPtr& request )
 {
 	Json::Value root;
 	root[ "status" ] = 410;
@@ -23,7 +24,7 @@ void HydrusAPI::unsupported( const drogon::HttpRequestPtr& request, ResponseFunc
 }
 
 // /hyapi/api_version
-void HydrusAPI::apiVersion( [[maybe_unused]] const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::apiVersion( [[maybe_unused]] const drogon::HttpRequestPtr& request )
 {
 	Json::Value json;
 	json[ "version" ] = HYDRUS_MIMICED_API_VERSION;
@@ -36,23 +37,23 @@ void HydrusAPI::apiVersion( [[maybe_unused]] const drogon::HttpRequestPtr& reque
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( json ) };
 
-	callback( response );
+	co_return response;
 }
 
 // /hyapi/access/request_new_permissions
-void HydrusAPI::requestNewPermissions( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::requestNewPermissions( const drogon::HttpRequestPtr& request )
 {
 	idhan::fixme();
 }
 
 // /hyapi/access/session_key
-void HydrusAPI::sessionKey( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::sessionKey( const drogon::HttpRequestPtr& request )
 {
 	idhan::fixme();
 }
 
 // /hyapi/access/verify_access_key
-void HydrusAPI::verifyAccessKey( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::verifyAccessKey( const drogon::HttpRequestPtr& request )
 {
 	Json::Value json;
 	json[ "basic_permissions" ] = 0;
@@ -60,16 +61,16 @@ void HydrusAPI::verifyAccessKey( const drogon::HttpRequestPtr& request, Response
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( json ) };
 
-	callback( response );
+	co_return response;
 }
 
-void HydrusAPI::getService( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getService( const drogon::HttpRequestPtr& request )
 {}
 
-void HydrusAPI::getServices( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( const drogon::HttpRequestPtr& request )
 {}
 
-void HydrusAPI::addFile( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::addFile( const drogon::HttpRequestPtr& request )
 {}
 
 template < typename T >
@@ -78,7 +79,7 @@ T getDefaultedValue( const std::string name, const drogon::HttpRequestPtr& reque
 	return request->getOptionalParameter< T >( name ).value_or( default_value );
 }
 
-void HydrusAPI::searchFiles( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequestPtr request )
 {
 	const auto tags { request->getOptionalParameter< std::string >( "tags" ) };
 	if ( !tags.has_value() )
@@ -87,10 +88,13 @@ void HydrusAPI::searchFiles( const drogon::HttpRequestPtr& request, ResponseFunc
 		value[ "status" ] = 403;
 		value[ "message" ] = "You must supply a list of tags.";
 
-		callback( drogon::HttpResponse::newHttpJsonResponse( value ) );
-
-		return;
+		co_return drogon::HttpResponse::newHttpJsonResponse( value );
 	}
+
+	log::debug( "tags: {}", tags.value() );
+
+	// modify the request and resubmit it under the /search endpoint
+	co_return co_await ::idhan::api::IDHANSearchAPI::search( request );
 
 	// Build the search
 	SearchBuilder builder {};
@@ -130,16 +134,16 @@ void HydrusAPI::searchFiles( const drogon::HttpRequestPtr& request, ResponseFunc
 	std::string query { builder.construct() };
 }
 
-void HydrusAPI::fileHashes( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( const drogon::HttpRequestPtr& request )
 {}
 
-void HydrusAPI::fileMetadata( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( const drogon::HttpRequestPtr& request )
 {}
 
-void HydrusAPI::file( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( const drogon::HttpRequestPtr& request )
 {}
 
-void HydrusAPI::thumbnail( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( const drogon::HttpRequestPtr& request )
 {}
 
 } // namespace idhan::hyapi
