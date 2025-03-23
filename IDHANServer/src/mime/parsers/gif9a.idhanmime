@@ -1,13 +1,13 @@
 {
-  "mime": "image/jpeg",
+  "mime": "animated/gif",
   "extensions": [
-    "jpg"
+    "gif"
   ],
   "data": [
     {
       "type": "search",
       "offset": 0,
-      "hex": "FFD8FF"
+      "hex": "474946383961"
     }
   ]
 }

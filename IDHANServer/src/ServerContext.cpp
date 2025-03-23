@@ -20,7 +20,7 @@ void ServerContext::setupCORSSupport()
 	drogon::app().registerPreRoutingAdvice(
 		[]( const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
 		{
-			// log::debug( "{}:{}", request->getMethodString(), request->getPath() );
+			log::debug( "{}:{}", request->getMethodString(), request->getPath() );
 			if ( !request->path().starts_with( "/hyapi" ) || request->method() != drogon::Options )
 			{
 				pass();

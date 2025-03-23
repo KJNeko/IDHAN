@@ -20,7 +20,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	const auto request_json_ptr { request->getJsonObject() };
 
-	if ( request_json_ptr == nullptr ) throw InvalidRequestBody();
+	if ( request_json_ptr == nullptr ) co_return createBadRequest( "No json data supplied" );
 
 	const auto& request_json { *request_json_ptr };
 
@@ -50,7 +50,6 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 			const std::filesystem::path path { cluster_path };
 			if ( target_path == path )
 			{
-				//TODO: Exception
 				transaction->rollback();
 
 				co_return createConflict( "Path {} already exists in the cluster list", path.string() );
@@ -63,6 +62,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	// The path was not already in use. Now check if it's valid
 	if ( !std::filesystem::exists( target_path ) )
 	{
+		// Since we already have a check that we are not read only, we should try creating it
 		if ( !std::filesystem::create_directories( target_path ) )
 		{
 			transaction->rollback();
@@ -93,13 +93,17 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 		std::filesystem::remove( target_path / "write_test.txt" );
 	}
 
-	const std::string folder_name { request_json[ "name" ].isString() ? request_json[ "name" ].asString() :
-		                                                                "Cluster Temp Name" };
+	if ( !request_json[ "name" ].isString() )
+	{
+		transaction->rollback();
+		co_return createBadRequest( "Cluster name must be specified" );
+	}
+	const std::string cluster_name { request_json[ "name" ].asString() };
 
 	// insert the data
 	const auto insert_result { co_await transaction->execSqlCoro(
 		"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) RETURNING cluster_id",
-		folder_name,
+		cluster_name,
 		target_path.string() ) };
 
 	if ( insert_result.empty() )
@@ -114,7 +118,11 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	log::debug( "Setting cluster info" );
 
 	// Modify will return `{cluster_id}/list` if it succeeds.
-	co_return co_await modifyT( request, cluster_id, transaction );
+	const auto ret { co_await modifyT( request, cluster_id, transaction ) };
+
+	//TODO: Queue orphan check here.
+
+	co_return ret;
 }
 
 } // namespace idhan::api

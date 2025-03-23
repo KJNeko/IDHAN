@@ -66,6 +66,9 @@ paths:
   /records/search:
     $ref: './paths/records/search.yaml'
 
+  /search:
+    $ref: './paths/search/search.yaml'
+
   /file/import:
     $ref: './paths/file/import.yaml'
 

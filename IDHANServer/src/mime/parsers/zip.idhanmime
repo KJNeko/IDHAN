@@ -1,13 +1,15 @@
 {
-  "mime": "image/jpeg",
+  "mime": "application/zip",
   "extensions": [
-    "jpg"
+    "zip"
   ],
   "data": [
     {
       "type": "search",
       "offset": 0,
-      "hex": "FFD8FF"
+      "hex": "504B0304"
     }
   ]
 }
+
+

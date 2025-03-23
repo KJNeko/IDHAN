@@ -1,13 +1,13 @@
 {
-  "mime": "image/jpeg",
+  "mime": "application/psd",
   "extensions": [
-    "jpg"
+    "psd"
   ],
   "data": [
     {
       "type": "search",
       "offset": 0,
-      "hex": "FFD8FF"
+      "hex": "38425053"
     }
   ]
 }
