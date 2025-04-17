@@ -7,7 +7,6 @@ set(HYDRUS_REPO_PATH ${CMAKE_SOURCE_DIR}/3rd-party/hydrus)
 set(HYDRUS_SOURCE_FILE ${HYDRUS_REPO_PATH}/hydrus/core/HydrusConstants.py)
 set(HYDRUS_CLIENT_SOURCE_FILE ${HYDRUS_REPO_PATH}/hydrus/client/ClientConstants.py)
 set(HYDRUS_REPO "https://github.com/hydrusnetwork/hydrus.git")
-file(REMOVE ${HYDRUS_CONSTANTS_FILE})
 
 if (NOT EXISTS ${HYDRUS_SOURCE_FILE})
 	message("Hydrus source file not found. Cloning repository...")
@@ -20,7 +19,6 @@ endif ()
 if (NOT EXISTS ${HYDRUS_SOURCE_FILE})
 	message(FATAL_ERROR "Failed to obtain Hydrus source file")
 endif ()
-
 
 add_custom_command(
 		OUTPUT ${HYDRUS_CONSTANTS_FILE}

@@ -265,14 +265,11 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 
 			if ( !tag_ids.has_value() ) co_return tag_ids.error();
 
-			// for ( const TagID tag_id : tag_ids.value() )
-			// {
 			co_await transaction->execSqlCoro(
 				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, unnest($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 				static_cast< RecordID >( records_json[ i ].asInt64() ),
 				helpers::pgArrayify( tag_ids.value() ),
 				tag_domain_id.value() );
-			// }
 		}
 	}
 	else if ( !sets_json.isNull() )
