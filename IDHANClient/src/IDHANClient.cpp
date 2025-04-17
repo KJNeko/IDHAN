@@ -87,28 +87,6 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 
 			const auto e { std::runtime_error( "Failed to get reply from remote" ) };
 
-			if ( attempts < 3 )
-			{
-				std::this_thread::yield();
-				std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
-				auto future { queryVersion() };
-
-				while ( future.isRunning() && QThread::isMainThread() )
-				{
-					QCoreApplication::processEvents();
-				}
-
-				future.waitForFinished();
-
-				reply->deleteLater();
-
-				if ( future.isFinished() && future.resultCount() > 0 )
-				{
-					promise->addResult( future.result() );
-					return;
-				}
-			}
-
 			promise->setException( std::make_exception_ptr( e ) );
 			promise->finish();
 
@@ -140,7 +118,6 @@ IDHANClient::IDHANClient( const IDHANClientConfig& config ) : m_config( config )
 	logger = spdlog::stdout_color_mt( "client" );
 	logger->set_level( spdlog::level::debug );
 
-	std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
 	logging::info( "Hostname: {}", m_config.hostname );
 	logging::info( "Port: {}", m_config.port );
 	if ( m_config.hostname.empty() ) throw std::runtime_error( "hostname must not be empty" );
@@ -168,10 +145,11 @@ IDHANClient::IDHANClient( const IDHANClientConfig& config ) : m_config( config )
 	// Get version info from server.
 	QFuture< VersionInfo > future { queryVersion() };
 
-	while ( !future.isFinished() && !future.isCanceled() && !future.isSuspended() )
+	while ( !future.isFinished() && QThread::isMainThread() )
 	{
+		logging::debug( "Waiting for version reply" );
+		QCoreApplication::processEvents( QEventLoop::AllEvents, 100 );
 		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-		QCoreApplication::processEvents();
 	}
 
 	if ( future.resultCount() < 0 ) throw std::runtime_error( "Failed to get version info" );
@@ -197,19 +175,19 @@ void IDHANClient::sendClientGet(
 		std::move( doc ) );
 }
 
-void handleResponse( QNetworkReply* response, std::function< void( constQJsonDocument& ) > callback )
+void handleResponse( QNetworkReply* response, std::function< void( const QJsonDocument& ) > callback )
 {
-	const auto data { reply->readAll() };
-	if ( !reply->isFInished() ) throw std::runtime_error( "Failed to read response" );
+	const auto data { response->readAll() };
+	if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
 
-	reply->deleteLater();
+	response->deleteLater();
 
 	callback( QJsonDocument::fromJson( data ) );
 }
 
 void IDHANClient::sendClientPost(
 	QJsonDocument&& object,
-	UrlVariant url,
+	const UrlVariant& url,
 	std::function< void( QNetworkReply* reply ) >&& responseHandler,
 	std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler )
 {
@@ -233,13 +211,13 @@ void IDHANClient::sendClientJson(
 
 	if ( std::holds_alternative< QString >( url_v ) )
 	{
-		QString path { std::get< QString >( url_v ) };
+		const auto path { std::get< QString >( url_v ) };
 		QUrl url { m_url_template };
 		url.setPath( path );
 		url_v = url;
 	}
 
-	QUrl url { std::get< QUrl >( url_v ) };
+	auto url { std::get< QUrl >( url_v ) };
 
 	setUrlInfo( url );
 
@@ -255,8 +233,25 @@ void IDHANClient::sendClientJson(
 
 	QNetworkReply* response { network.send( method, request, body ) };
 
-	QObject::
-		connect( response, &QNetworkReply::finished, [ responseHandler, response ]() { responseHandler( response ); } );
+	const auto submit_time { std::chrono::high_resolution_clock::now() };
+
+	QObject::connect(
+		response,
+		&QNetworkReply::finished,
+		[ responseHandler, response, submit_time ]()
+		{
+			const auto response_in_time { std::chrono::high_resolution_clock::now() };
+
+			if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 1 ) )
+			{
+				logging::warn(
+					"Server took {} to response to query {}",
+					std::chrono::duration_cast< std::chrono::milliseconds >( response_time ),
+					response->url().path().toStdString() );
+			}
+
+			responseHandler( response );
+		} );
 
 	QObject::connect(
 		response,
@@ -345,6 +340,15 @@ QFuture< void > IDHANClient::createFileCluster(
 	sendClientPost( std::move( doc ), "/clusters/add", handleResponse, handleError );
 
 	return promise->future();
+}
+
+IDHANClient::~IDHANClient()
+{
+	//cleanup logger we created
+	auto logger { spdlog::logger( "client" ) };
+	logger.flush();
+	spdlog::drop( "client" );
+	m_instance = nullptr;
 }
 
 } // namespace idhan

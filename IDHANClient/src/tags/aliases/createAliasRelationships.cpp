@@ -37,7 +37,7 @@ QFuture< void > IDHANClient::
 	doc.setArray( array );
 
 	QUrl url {};
-	url.setPath( "/tag/alias/create" );
+	url.setPath( "/tags/alias/create" );
 	QUrlQuery query {};
 	query.addQueryItem( "tag_domain_id", QString::number( tag_domain_id ) );
 	url.setQuery( query );
