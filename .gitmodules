@@ -46,3 +46,9 @@
 [submodule "dependencies/libFGL"]
 	path = dependencies/libFGL
 	url = git@github.com:KJNeko/libFGL.git
+[submodule "dependencies/trantor"]
+	path = dependencies/trantor
+	url = https://github.com/an-tao/trantor.git
+[submodule "dependencies/dependencies/spdlog"]
+	path = dependencies/dependencies/spdlog
+	url = https://github.com/gabime/spdlog.git
