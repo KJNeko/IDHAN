@@ -20,8 +20,18 @@ add_custom_command(
 		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake: Generating doMigration.cpp")
 
 
-target_link_libraries(IDHANServer PUBLIC spdlog fmt drogon)
-target_link_libraries(IDHANServer PRIVATE pqxx sqlite3 Qt6::Core tomlplusplus::tomlplusplus)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(spdlog REQUIRED)
+add_definitions(-DSPDLOG_USE_STD_FORMAT)
+find_package(drogon REQUIRED)
+
+if (spdlog_FOUND)
+else ()
+	message(SEND_ERROR "Spdlog not found")
+endif ()
+
+target_link_libraries(IDHANServer PUBLIC spdlog drogon)
+target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core tomlplusplus::tomlplusplus)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
 
 target_link_libraries(IDHANServer PRIVATE IDHAN)
