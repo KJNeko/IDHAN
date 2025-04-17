@@ -1,0 +1,38 @@
+
+
+# We start by getting the HydrusConstants.py file from the hydrus repo. This will be located in 3rd-party/hydrus
+
+function(extract_constant_value CONSTANT_NAME OUTPUT_VARIABLE)
+	file(STRINGS ${HYDRUS_CONSTANTS_FILE} FILE_CONTENTS)
+	foreach (LINE ${FILE_CONTENTS})
+		if (LINE MATCHES "^${CONSTANT_NAME}[ ]*=[ ]*([0-9]+)$")
+			set(${OUTPUT_VARIABLE} ${CMAKE_MATCH_1} PARENT_SCOPE)
+			break()
+		endif ()
+	endforeach ()
+endfunction()
+
+list(APPEND HYDRUS_CONSTANTS "TAG_REPOSITORY" "FILE_REPOSITORY" "LOCAL_FILE_DOMAIN" "MESSAGE_DEPOT" "LOCAL_TAG" "LOCAL_RATING_NUMERICAL" "LOCAL_RATING_LIKE" "RATING_NUMERICAL_REPOSITORY" "RATING_LIKE_REPOSITORY" "COMBINED_TAG" "COMBINED_FILE" "LOCAL_BOORU" "IPFS" "LOCAL_FILE_TRASH_DOMAIN" "COMBINED_LOCAL_FILE" "TEST_SERVICE" "LOCAL_NOTES" "CLIENT_API_SERVICE" "COMBINED_DELETED_FILE" "LOCAL_FILE_UPDATE_DOMAIN" "COMBINED_LOCAL_MEDIA" "LOCAL_RATING_INCDEC" "SERVER_ADMIN" "NULL_SERVICE")
+list(APPEND HYDRUS_CONSTANTS "NETWORK_VERSION" "SOFTWARE_VERSION" "CLIENT_API_VERSION")
+list(APPEND HYDRUS_CONSTANTS "STATUS_UNKNOWN" "STATUS_SUCCESSFUL_AND_NEW" "STATUS_SUCCESSFUL_BUT_REDUNDANT" "STATUS_DELETED" "STATUS_ERROR" "STATUS_NEW" "STATUS_PAUSED" "STATUS_VETOED" "STATUS_SKIPPED" "STATUS_SUCCESSFUL_AND_CHILD_FILES")
+
+# OUT_TARGET = file to write too
+
+foreach (CONSTANT_NAME ${HYDRUS_CONSTANTS})
+	extract_constant_value(${CONSTANT_NAME} ${CONSTANT_NAME})
+	#	message("Hydrus value for ${CONSTANT_NAME} was ${${CONSTANT_NAME}}")
+	#	file(APPEND ${OUT_TARGET} "inline constexpr std::size_t ${CONSTANT_NAME} { ${${CONSTANT_NAME}} };\n")
+endforeach ()
+
+file(WRITE ${OUT_TARGET} "#pragma once\n")
+file(APPEND ${OUT_TARGET} "#include <cstdint>\n\n")
+file(APPEND ${OUT_TARGET} "namespace idhan::hydrus::gen_constants {\n\n")
+
+foreach (CONSTANT_NAME ${HYDRUS_CONSTANTS})
+	if (DEFINED ${CONSTANT_NAME})
+		file(APPEND ${OUT_TARGET} "inline constexpr std::size_t ${CONSTANT_NAME} { ${${CONSTANT_NAME}} };\n")
+	endif ()
+endforeach ()
+
+file(APPEND ${OUT_TARGET} "\n} // namespace idhan::hydrus::constants\n")
+
