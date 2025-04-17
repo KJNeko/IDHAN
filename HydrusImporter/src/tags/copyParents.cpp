@@ -3,6 +3,7 @@
 //
 
 #include "HydrusImporter.hpp"
+#include "hydrus_constants.hpp"
 #include "idhan/logging/logger.hpp"
 #include "splitTag.hpp"
 #include "sqlitehelper/Transaction.hpp"
@@ -31,9 +32,15 @@ void HydrusImporter::copyParents()
 	};
 
 	// find all services that have parents
-	client_tr << "SELECT name, service_id FROM services WHERE service_type = 0 OR service_type = 5" >>
-		[ & ]( const std::string name, const std::size_t service_id )
+	client_tr << "SELECT name, service_id, service_type FROM services WHERE service_type = 0 OR service_type = 5" >>
+		[ & ]( const std::string_view name, const std::size_t service_id, const std::size_t service_type )
 	{
+		if ( !m_process_ptr_mappings && service_type == hy_constants::ServiceTypes::PTR_SERVICE )
+		{
+			// if the current table is for the ptr, and we are not told to process the ptr mappings, then skip this
+			return;
+		}
+
 		logging::info( "Getting parents from service {}", name );
 
 		const std::string table_name { std::format( "current_tag_parents_{}", service_id ) };

@@ -15,7 +15,6 @@
 
 #include "IDHANTypes.hpp"
 #include "Network.hpp"
-#include "fgl/defines.hpp"
 #include "logging/logger.hpp"
 
 namespace spdlog
@@ -81,6 +80,8 @@ class IDHANClient
 	*/
 	IDHANClient( const IDHANClientConfig& config );
 
+	~IDHANClient();
+
 	QFuture< std::vector< RecordID > > createRecords( std::vector< std::array< std::byte, 32 > >& hashes );
 
 	/**
@@ -101,6 +102,10 @@ class IDHANClient
 
 	QFuture< TagID > createTag( const std::string& tag_text );
 
+	QFuture< std::vector< TagID > > getRecordTags( const RecordID record_id, const TagDomainID domain_id );
+
+	QFuture< std::vector< std::string > > getTagText( std::vector< TagID >& tag_ids );
+
 	QFuture< void > addTags(
 		RecordID record_id, TagDomainID domain_id, std::vector< std::pair< std::string, std::string > >&& tags );
 
@@ -108,12 +113,19 @@ class IDHANClient
 		std::vector< RecordID >&& record_ids,
 		TagDomainID domain_id,
 		const std::vector< std::pair< std::string, std::string > >& tags );
+	QFuture< void > addTags(
+		std::vector< RecordID >&& record_ids, TagDomainID domain_id, std::vector< std::vector< TagID > >&& tag_sets );
+
+	QFuture< void > addTags(
+		std::vector< RecordID >&& record_ids,
+		TagDomainID domain_id,
+		std::vector< std::vector< std::pair< std::string, std::string > > >&& tag_sets );
 
 	/**
 	 * @brief Creates a parent/child relationship between two tags
 	 * @param parent_id
 	 * @param child_id
-	 * @param domain_id
+	 * @param tag_domain_id
 	 * @return
 	 */
 	QFuture< void > createParentRelationship( TagDomainID tag_domian_id, TagID parent_id, TagID child_id );
@@ -134,28 +146,6 @@ class IDHANClient
 	QFuture< void >
 		createAliasRelationship( TagDomainID tag_domain_id, std::vector< std::pair< TagID, TagID > >&& pairs );
 
-	void sendClientGet(
-		UrlVariant url,
-		std::function< void( QNetworkReply* reply ) >&& responseHandler,
-		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
-
-	void sendClientPost(
-		QJsonDocument&& object,
-		UrlVariant url,
-		std::function< void( QNetworkReply* reply ) >&& responseHandler,
-		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
-
-  private:
-
-	void sendClientJson(
-		HttpMethod method,
-		UrlVariant url,
-		std::function< void( QNetworkReply* reply ) >&& responseHandler,
-		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler,
-		QJsonDocument&& object );
-
-  public:
-
 	/**
 	 * @brief Creates a new tag domain, Throws if the domain exists
 	 * @param name
@@ -171,7 +161,7 @@ class IDHANClient
 	 * @throws DomainDoesNotExist
 	 * @return
 	 */
-	QFuture< TagDomainID > getTagDomain( const std::string name );
+	QFuture< TagDomainID > getTagDomain( std::string_view name );
 
 	/**
 	 * @brief Returns a list of all tag domain ids
@@ -186,9 +176,27 @@ class IDHANClient
 		std::uint16_t ratio,
 		bool readonly );
 
-  public:
+  private:
 
-	~IDHANClient() = default;
+	void sendClientGet(
+		UrlVariant url,
+		std::function< void( QNetworkReply* reply ) >&& responseHandler,
+		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
+
+	void sendClientPost(
+		QJsonDocument&& object,
+		const UrlVariant& url,
+		std::function< void( QNetworkReply* reply ) >&& responseHandler,
+		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
+
+	void sendClientJson(
+		HttpMethod method,
+		UrlVariant url,
+		std::function< void( QNetworkReply* reply ) >&& responseHandler,
+		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler,
+		QJsonDocument&& object );
+
+  public:
 };
 
 } // namespace idhan

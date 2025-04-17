@@ -2,9 +2,14 @@
 // Created by kj16609 on 3/8/25.
 //
 
-#include <qtconcurrentrun.h>
+#include <QCoreApplication>
+#include <QtConcurrentRun>
+
+#include <ranges>
+#include <semaphore>
 
 #include "HydrusImporter.hpp"
+#include "hydrus_constants.hpp"
 #include "idhan/logging/logger.hpp"
 #include "sqlitehelper/Transaction.hpp"
 
@@ -24,10 +29,16 @@ void HydrusImporter::copyMappings()
 
 	std::vector< std::pair< TagDomainID, std::size_t > > domains {};
 
-	client_tr << "SELECT name, service_id FROM services WHERE service_type = 0 OR service_type = 5" >>
-		[ & ]( const std::string name, const std::size_t service_id )
+	client_tr << "SELECT name, service_id, service_type FROM services WHERE service_type = 0 OR service_type = 5" >>
+		[ & ]( const std::string_view name, const std::size_t service_id, const std::size_t service_type )
 	{
 		QFuture< TagDomainID > domain_id_future { m_client->getTagDomain( name ) };
+
+		if ( !m_process_ptr_mappings && service_type == hy_constants::ServiceTypes::PTR_SERVICE )
+		{
+			// if the current table is for the ptr, and we are not told to process the ptr mappings, then skip this
+			return;
+		}
 
 		domain_id_future.waitForFinished();
 
@@ -36,10 +47,105 @@ void HydrusImporter::copyMappings()
 
 	for ( const auto& [ domain_id, service_id ] : domains )
 	{
+		// copyDomainMappings( domain_id, service_id );
 		sync.addFuture( QtConcurrent::run( &pool, &HydrusImporter::copyDomainMappings, this, domain_id, service_id ) );
 	}
 
 	sync.waitForFinished();
+
+	logging::info( "Finished processing all mappings" );
+}
+
+void HydrusImporter::finish()
+{
+	logging::info( "Finished processing Hydrus database into IDHAN" );
+	const auto now { std::chrono::steady_clock::now() };
+
+	const auto printTime = []( const auto time ) -> void { logging::info( "Total time took: {}", time ); };
+
+	const auto time_elapsed { now - start_time };
+
+	using namespace std::chrono_literals;
+
+	if ( time_elapsed < 1s )
+		printTime( std::chrono::duration_cast< std::chrono::milliseconds >( time_elapsed ) );
+	else if ( time_elapsed < 1min )
+		printTime( std::chrono::duration_cast< std::chrono::seconds >( time_elapsed ) );
+	else
+		printTime( std::chrono::duration_cast< std::chrono::hours >( time_elapsed ) );
+
+	QCoreApplication::exit();
+}
+
+struct Set
+{
+	RecordID id;
+	std::vector< TagID > tags;
+
+	Set() = delete;
+
+	Set( const RecordID record, std::vector< TagID >&& move ) : id( record ), tags( std::move( move ) ) {}
+
+	Set( const Set& other ) = delete;
+	Set& operator=( const Set& other ) = delete;
+
+	Set( Set&& other ) = default;
+	Set& operator=( Set&& other ) = default;
+};
+
+inline std::string tagToKey( const std::string_view namespace_i, const std::string_view subtag_i )
+{
+	if ( namespace_i == "" ) return std::string( subtag_i );
+	return std::format( "{}:{}", namespace_i, subtag_i );
+}
+
+void HydrusImporter::processSets( const std::vector< Set >& sets, const TagDomainID domain_id )
+{
+	TransactionBase master_tr { master_db };
+
+	std::vector< std::string > hashes {};
+
+	auto record_future { m_client->createRecords( hashes ) };
+
+	std::vector< std::vector< std::pair< std::string, std::string > > > tag_sets {};
+
+	// process hashes
+	for ( const auto& set : sets )
+	{
+		bool invalid_hash { false };
+		master_tr << "SELECT hex(hash) FROM hashes WHERE hash_id = $1" << set.id >>
+			[ &hashes, &invalid_hash ]( const std::string_view hex_hash )
+		{
+			if ( hex_hash.size() != ( 256 / 8 * 2 ) )
+			{
+				invalid_hash = true;
+				return;
+			}
+
+			hashes.emplace_back( hex_hash );
+		};
+
+		if ( invalid_hash ) continue;
+
+		std::vector< std::pair< std::string, std::string > > tags {};
+		tags.reserve( set.tags.size() );
+		for ( const auto& tag_id : set.tags )
+		{
+			master_tr
+					<< "SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id = $1"
+					<< tag_id
+				>> [ &tags ]( const std::string_view namespace_i, const std::string_view subtag_i )
+			{ tags.emplace_back( namespace_i, subtag_i ); };
+		}
+
+		tag_sets.emplace_back( std::move( tags ) );
+	}
+
+	record_future.waitForFinished();
+
+	auto future { m_client->addTags( std::move( record_future.result() ), domain_id, std::move( tag_sets ) ) };
+
+	future.waitForFinished();
 }
 
 void HydrusImporter::copyDomainMappings( const TagDomainID domain_id, const std::size_t hy_service_id )
@@ -47,72 +153,80 @@ void HydrusImporter::copyDomainMappings( const TagDomainID domain_id, const std:
 	const auto table_name { std::format( "current_mappings_{}", hy_service_id ) };
 
 	TransactionBase mappings_tr { mappings_db };
-	TransactionBase inner_mappings_tr { mappings_db };
-	TransactionBase master_tr { master_db };
 
 	logging::info( "Copying mappings from {}", table_name );
 
-	const auto inner_query { std::format( "SELECT hash_id FROM {} WHERE tag_id = $1", table_name ) };
+	std::vector< Set > sets {};
+	std::vector< TagID > tags {};
 
-	QFuture< void > future { QtFuture::makeReadyVoidFuture() };
+	std::size_t last_id { 0 };
 
-	mappings_tr << std::format(
-		"SELECT tag_id, count(tag_id) AS count FROM {} GROUP BY tag_id ORDER BY count DESC", table_name )
-		>> [ & ]( const std::size_t tag_id, const std::size_t count )
+	std::size_t counter { 0 };
+	std::size_t tag_counter { 0 };
+
+	QThreadPool pool {};
+	constexpr std::size_t thread_count { 2 };
+	std::counting_semaphore< 64 > semaphore { thread_count };
+	pool.setMaxThreadCount( thread_count );
+	QFutureSynchronizer< void > sync {};
+
+	constexpr std::size_t sets_per_request { 1024 };
+	std::size_t to_process { 0 };
+
+	mappings_tr << std::format( "SELECT COUNT(*) FROM {}", table_name ) >> to_process;
+
+	logging::info( "Processing {} mappings for table {}", to_process, table_name );
+
+	mappings_tr << std::format( "SELECT hash_id, tag_id FROM {} ORDER BY hash_id", table_name ) >>
+		[ & ]( const std::size_t hash_id, const std::size_t tag_id )
 	{
-		// now to get the tags
-		std::vector< std::pair< std::string, std::string > > tags {};
+		if ( last_id == 0 ) [[unlikely]]
+			last_id = hash_id;
 
-		master_tr << "SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id = $1"
-				  << tag_id
-			>> [ &tags ]( const std::string_view namespace_text, const std::string_view subtag_text )
-		{ tags.emplace_back( namespace_text, subtag_text ); };
-
-		std::vector< std::string > hashes {};
-
-		inner_mappings_tr << inner_query << tag_id >>
-			[ this, &future, &master_tr, &hashes, domain_id, &tags ]( const std::size_t hash_id )
+		if ( hash_id != last_id ) [[unlikely]]
 		{
-			// now to get the hash
-			master_tr << "SELECT hex(hash) FROM hashes WHERE hash_id = $1" << hash_id >>
-				[ this, &future, hash_id, &hashes, domain_id, &tags ]( const std::string_view sha256_hash )
+			if ( counter >= sets_per_request )
 			{
-				if ( sha256_hash.empty() || sha256_hash.size() != 64 )
-				{
-					logging::warn( "Hash ID {} was corrupted! Size of : {}", hash_id, sha256_hash.size() );
-					return;
-				}
+				semaphore.acquire();
+				sync.addFuture(
+					QtConcurrent::
+						run( &pool,
+				             [ sets = std::move( sets ), domain_id, &semaphore, this ]
+				             {
+								 this->processSets( sets, domain_id );
+								 semaphore.release();
+							 } ) );
+				sets.clear();
+				sets.reserve( sets_per_request );
+				counter = 0;
+				tag_counter = 0;
+			}
 
-				hashes.emplace_back( sha256_hash );
+			tag_counter += tags.size();
+			Set set { static_cast< RecordID >( hash_id ), std::move( tags ) };
+			tags.reserve( 1024 );
+			tags.clear();
 
-				if ( hashes.size() > 1024 * 64 )
-				{
-					QFuture< std::vector< RecordID > > records_future { m_client->createRecords( hashes ) };
+			sets.emplace_back( std::move( set ) );
 
-					records_future.waitForFinished();
+			counter += 1;
+			last_id = hash_id;
+		}
 
-					std::vector< RecordID > records { records_future.result() };
-
-					future.waitForFinished();
-
-					future = m_client->addTags( std::move( records ), domain_id, tags );
-					records.clear();
-				}
-			};
-		};
-
-		QFuture< std::vector< RecordID > > records_future { m_client->createRecords( hashes ) };
-
-		records_future.waitForFinished();
-
-		std::vector< RecordID > records { records_future.result() };
-
-		future.waitForFinished();
-
-		future = m_client->addTags( std::move( records ), domain_id, std::move( tags ) );
-
-		logging::info( "Copied mappings for tag {}:{} with {} records", tags[ 0 ].first, tags[ 0 ].second, count );
+		tags.emplace_back( tag_id );
 	};
+
+	if ( !sets.empty() )
+	{
+		processSets( std::move( sets ), domain_id );
+		sets.clear();
+	}
+
+	sync.waitForFinished();
+
+	pool.waitForDone();
+
+	logging::info( "Finished processing {}", table_name );
 }
 
 } // namespace idhan::hydrus
