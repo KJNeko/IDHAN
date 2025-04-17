@@ -23,19 +23,23 @@ drogon::Task< std::optional< NamespaceID > > searchNamespace( const std::string&
 drogon::Task< std::expected< NamespaceID, drogon::HttpResponsePtr > >
 	findOrCreateNamespace( const std::string& str, drogon::orm::DbClientPtr db )
 {
-	const auto id_search { co_await searchNamespace( str, db ) };
-	if ( id_search.has_value() )
-	{
-		co_return id_search.value();
+	NamespaceID namespace_id { 0 };
+
+	do {
+		if ( const auto id_search = co_await searchNamespace( str, db ); id_search.has_value() )
+		{
+			co_return id_search.value();
+		}
+
+		const auto id_creation { co_await db->execSqlCoro(
+			"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) ON CONFLICT DO NOTHING RETURNING namespace_id",
+			str ) };
+
+		if ( id_creation.size() > 0 ) namespace_id = id_creation[ 0 ][ 0 ].as< NamespaceID >();
 	}
+	while ( namespace_id == 0 );
 
-	const auto id_creation { co_await db->execSqlCoro(
-		"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) ON CONFLICT DO NOTHING RETURNING namespace_id",
-		str ) };
-
-	if ( id_creation.size() > 0 ) co_return id_creation[ 0 ][ 0 ].as< NamespaceID >();
-
-	co_return std::unexpected( createInternalError( "Failed to create namespace: {}", str ) );
+	co_return namespace_id;
 }
 
 } // namespace idhan

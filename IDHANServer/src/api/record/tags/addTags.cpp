@@ -174,24 +174,19 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 	if ( !tag_pairs.has_value() ) co_return tag_pairs.error();
 
-	auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), transaction ) };
+	const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), transaction ) };
 
-	for ( const TagID& tag : tag_pair_ids.value() )
-	{
-		const auto tag_domain_id { helpers::getTagDomainID( request ) };
+	if ( !tag_pair_ids.has_value() ) co_return tag_pair_ids.error();
 
-		if ( !tag_domain_id.has_value() ) co_return tag_domain_id.error();
+	const auto tag_domain_id { helpers::getTagDomainID( request ) };
 
-		const auto tag_id { co_await getIDFromPair( tag, transaction ) };
+	if ( !tag_domain_id.has_value() ) co_return tag_domain_id.error();
 
-		if ( !tag_id.has_value() ) co_return tag_id.error();
-
-		const auto insert_result { co_await transaction->execSqlCoro(
-			"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
-			record_id,
-			tag_id.value(),
-			tag_domain_id.value() ) };
-	}
+	const auto insert_result { co_await transaction->execSqlCoro(
+		"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
+		record_id,
+		helpers::pgArrayify( tag_pair_ids.value() ),
+		tag_domain_id.value() ) };
 
 	co_return drogon::HttpResponse::newHttpResponse();
 }
@@ -206,19 +201,32 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 
 	const auto& json { *json_ptr };
 
-	auto tag_pairs { co_await getTagPairs( json[ "tags" ] ) };
+	if ( !json[ "records" ].isArray() )
+		co_return createBadRequest( "Invalid json: Array of ids called 'records' must be present." );
 
-	if ( !tag_pairs.has_value() ) co_return tag_pairs.error();
+	const auto tag_domain_id { helpers::getTagDomainID( request ) };
 
-	auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), transaction ) };
+	if ( !tag_domain_id.has_value() ) co_return tag_domain_id.error();
 
-	const auto records_json { json[ "records" ] };
+	const auto domain_search {
+		co_await db
+			->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id.value() )
+	};
 
-	for ( const TagID tag_id : tag_pair_ids.value() )
+	if ( domain_search.empty() ) co_return createBadRequest( "Invalid domain ID given" );
+
+	const auto& records_json { json[ "records" ] };
+
+	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
+	if ( const auto& tags_json = json[ "tags" ]; tags_json.isArray() )
 	{
-		const auto tag_domain_id { helpers::getTagDomainID( request ) };
+		const auto tag_pairs { co_await getTagPairs( tags_json ) };
 
-		if ( !tag_domain_id.has_value() ) co_return tag_domain_id.error();
+		if ( !tag_pairs.has_value() ) co_return tag_pairs.error();
+
+		const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), transaction ) };
+
+		if ( !tag_pair_ids.has_value() ) co_return tag_pair_ids.error();
 
 		for ( const auto& record_json : records_json )
 		{
@@ -226,11 +234,50 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 				co_return createBadRequest( "Invalid json item in records list: Expected integral" );
 
 			const auto insert_result { co_await transaction->execSqlCoro(
-				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 				static_cast< RecordID >( record_json.asInt64() ),
-				tag_id,
+				helpers::pgArrayify( tag_pair_ids.value() ),
 				tag_domain_id.value() ) };
 		}
+	}
+	else if ( !tags_json.isNull() )
+	{
+		co_return createBadRequest( "Invalid json: Tags must be array or null (not present)" );
+	}
+
+	if ( const auto& sets_json = json[ "sets" ]; sets_json.isArray() )
+	{
+		if ( sets_json.size() != records_json.size() )
+			co_return createBadRequest(
+				"Sets vs Records size mismatch. Number of sets must match number of records. Got {} expected {}: Json: {}",
+				sets_json.size(),
+				records_json.size(),
+				json.toStyledString() );
+
+		for ( Json::ArrayIndex i = 0; i < sets_json.size(); ++i )
+		{
+			// each set will be an array of tags
+			const auto tags { co_await getTagPairs( sets_json[ i ] ) };
+
+			if ( !tags.has_value() ) co_return tags.error();
+
+			const auto tag_ids { co_await getIDsFromPairs( std::move( tags.value() ), db ) };
+
+			if ( !tag_ids.has_value() ) co_return tag_ids.error();
+
+			// for ( const TagID tag_id : tag_ids.value() )
+			// {
+			co_await transaction->execSqlCoro(
+				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, unnest($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
+				static_cast< RecordID >( records_json[ i ].asInt64() ),
+				helpers::pgArrayify( tag_ids.value() ),
+				tag_domain_id.value() );
+			// }
+		}
+	}
+	else if ( !sets_json.isNull() )
+	{
+		co_return createBadRequest( "Invalid json: Sets must be array or null (not present)" );
 	}
 
 	co_return drogon::HttpResponse::newHttpResponse();

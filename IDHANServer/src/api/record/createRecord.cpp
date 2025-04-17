@@ -27,12 +27,12 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	const Json::Value& json { *json_ptr };
 
 	auto db { drogon::app().getDbClient() };
-	auto transaction { db->newTransaction() };
 
 	//test if sha256 is a list or 1 item
 	const auto& sha256s { json[ "sha256" ] };
 	if ( sha256s.isArray() )
 	{
+		// auto transaction { db->newTransaction() };
 		Json::Value json_array {};
 		Json::ArrayIndex idx { 0 };
 
@@ -43,9 +43,11 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 			const auto& str { value.asString() };
 
 			// dehexify the string.
-			SHA256 sha256 { SHA256::fromHex( str ) };
 
-			auto result { co_await createRecord( sha256, transaction ) };
+			const auto expected_hash { SHA256::fromHex( str ) };
+			if ( !expected_hash.has_value() ) co_return expected_hash.error();
+
+			const auto result { co_await createRecord( *expected_hash, db ) };
 
 			json_array[ idx++ ] = result;
 		}
@@ -55,8 +57,11 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	else if ( sha256s.isString() ) // HEX string
 	{
 		Json::Value json_out {};
-		const SHA256 sha256 { SHA256::fromHex( sha256s.asString() ) };
-		const RecordID record_id { co_await createRecord( sha256, db ) };
+		const auto sha256 { SHA256::fromHex( sha256s.asString() ) };
+
+		if ( !sha256.has_value() ) co_return sha256.error();
+
+		const RecordID record_id { co_await createRecord( *sha256, db ) };
 		json_out[ "record_id" ] = record_id;
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );

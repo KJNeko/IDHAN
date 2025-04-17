@@ -4,23 +4,12 @@
 
 #include "SHA256.hpp"
 
+#include <expected>
 #include <fstream>
 #include <istream>
 
+#include "api/helpers/createBadRequest.hpp"
 #include "fgl/defines.hpp"
-
-namespace idhan
-{
-inline drogon::orm::internal::SqlBinder& operator<<( drogon::orm::internal::SqlBinder& binder, idhan::SHA256&& sha256 )
-{
-	const auto data { sha256.data() };
-	std::vector< char > binary {};
-	binary.resize( data.size() );
-	std::memcpy( binary.data(), data.data(), data.size() );
-
-	return binder << binary;
-}
-} // namespace idhan
 
 namespace idhan
 {
@@ -37,7 +26,8 @@ SHA256::SHA256( const drogon::orm::Field& field )
 {
 	const auto data { field.as< std::vector< char > >() };
 
-	assert( data.size() == m_data.size() );
+	FGL_ASSERT(
+		data.size() == m_data.size(), std::format( "Invalid size. Expected {} got {}", m_data.size(), data.size() ) );
 
 	std::memcpy( m_data.data(), data.data(), data.size() );
 }
@@ -51,10 +41,12 @@ std::string SHA256::hex() const
 	return str;
 }
 
-SHA256 SHA256::fromHex( const std::string& str )
+std::expected< SHA256, drogon::HttpResponsePtr > SHA256::fromHex( const std::string& str )
 {
 	// 0xFF = 0b11111111
 	FGL_ASSERT( str.size() == ( 256 / 8 * 2 ), "Hex string must be exactly 64 characters log" );
+	if ( str.size() != ( 256 / 8 * 2 ) )
+		return std::unexpected( createBadRequest( "Hex string must be exactly 64 characters long" ) );
 
 	std::array< std::byte, ( 256 / 8 ) > bytes {};
 
