@@ -34,22 +34,22 @@ class IDHANTagAPI : public drogon::HttpController< IDHANTagAPI >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tag/{tag_id}/info" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tag/info?tag_id={1}" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tag/info?tag_ids={1}" );
+	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tags/{tag_id}/info" );
+	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tags/info?tag_id={1}" );
+	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tags/info?tag_ids={1}" );
 
-	ADD_METHOD_TO( IDHANTagAPI::search, "/tag/search?tag={1}" );
-	// ADD_METHOD_TO( IDHANTagAPI::autocomplete, "/tag/autocomplete?tag={1}" );
+	ADD_METHOD_TO( IDHANTagAPI::search, "/tags/search?tag={1}" );
+	// ADD_METHOD_TO( IDHANTagAPI::autocomplete, "/tags/autocomplete?tag={1}" );
 
-	ADD_METHOD_TO( IDHANTagAPI::createTagRouter, "/tag/create" );
+	ADD_METHOD_TO( IDHANTagAPI::createTagRouter, "/tags/create" );
 
-	ADD_METHOD_TO( IDHANTagAPI::createTagDomain, "/tag/domain/create" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagDomains, "/tag/domain/list" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagDomainInfo, "/tag/domain/{domain_id}/info" );
-	ADD_METHOD_TO( IDHANTagAPI::deleteTagDomain, "/tag/domain/{domain_id}/delete" );
+	ADD_METHOD_TO( IDHANTagAPI::createTagDomain, "/tags/domain/create" );
+	ADD_METHOD_TO( IDHANTagAPI::getTagDomains, "/tags/domain/list" );
+	ADD_METHOD_TO( IDHANTagAPI::getTagDomainInfo, "/tags/domain/{domain_id}/info" );
+	ADD_METHOD_TO( IDHANTagAPI::deleteTagDomain, "/tags/domain/{domain_id}/delete" );
 
-	ADD_METHOD_TO( IDHANTagAPI::createTagParents, "/tag/parents/create" );
-	ADD_METHOD_TO( IDHANTagAPI::createTagAliases, "/tag/alias/create" );
+	ADD_METHOD_TO( IDHANTagAPI::createTagParents, "/tags/parents/create" );
+	ADD_METHOD_TO( IDHANTagAPI::createTagAliases, "/tags/alias/create" );
 
 	METHOD_LIST_END
 };

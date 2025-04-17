@@ -22,6 +22,8 @@ struct ConnectionArguments
 	std::string user { "idhan" };
 	std::string password { "" };
 	bool testmode { false };
+	//! If true then the server will use stdout to log things.
+	bool use_stdout { false };
 
 	std::string format() const;
 };

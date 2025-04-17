@@ -6,11 +6,13 @@
 
 #include <QCryptographicHash>
 
+#include <drogon/HttpResponse.h>
 #include <openssl/sha.h>
 
 #include <array>
 #include <cassert>
 #include <cstring>
+#include <expected>
 #include <filesystem>
 #include <vector>
 
@@ -54,7 +56,7 @@ class SHA256
 	std::string hex() const;
 
 	//! Turns a HEX string into a SHA256 object. Str must be exactly (256 / 8) * 2, 64 characters long
-	static SHA256 fromHex( const std::string& str );
+	static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
 	static SHA256 fromBuffer( const std::vector< std::byte >& data );
 
 	inline static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }

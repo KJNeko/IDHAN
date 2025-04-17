@@ -44,6 +44,7 @@ post:
               - namespace: 1
                 subtag: 1
 
+
   200:
     description: All tags added successfully
   400:
