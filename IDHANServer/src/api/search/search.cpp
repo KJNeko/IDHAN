@@ -16,20 +16,29 @@ drogon::Task< drogon::HttpResponsePtr > IDHANSearchAPI::search( drogon::HttpRequ
 
 	log::info( "Returning {} results", result.size() );
 
-	Json::Value file_ids {};
-
-	for ( const auto& row : result )
+	if ( result.empty() )
 	{
-		const auto id { row[ 0 ].as< std::size_t >() };
-		file_ids.append( id );
+		Json::Value root {};
+		root[ "file_ids" ] = Json::arrayValue;
+		co_return drogon::HttpResponse::newHttpJsonResponse( root );
 	}
+	else
+	{
+		Json::Value file_ids {};
 
-	log::info( "Returning {} results", file_ids.size() );
+		for ( const auto& row : result )
+		{
+			const auto id { row[ 0 ].as< std::size_t >() };
+			file_ids.append( id );
+		}
 
-	Json::Value json {};
-	json[ "file_ids" ] = file_ids;
+		log::info( "Returning {} results", file_ids.size() );
 
-	co_return drogon::HttpResponse::newHttpJsonResponse( json );
+		Json::Value json {};
+		json[ "file_ids" ] = std::move( file_ids );
+
+		co_return drogon::HttpResponse::newHttpJsonResponse( json );
+	}
 }
 
 } // namespace idhan::api
