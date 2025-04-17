@@ -14,7 +14,7 @@ class IDHANTagAPI : public drogon::HttpController< IDHANTagAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > search( drogon::HttpRequestPtr request, std::string tag_text );
 
-	drogon::Task< drogon::HttpResponsePtr > autocomplete( drogon::HttpRequestPtr request, std::string tag_id );
+	drogon::Task< drogon::HttpResponsePtr > autocomplete( drogon::HttpRequestPtr request, std::string tag_text );
 
 	drogon::Task< drogon::HttpResponsePtr > createSingleTag( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > createBatchedTag( drogon::HttpRequestPtr request );
@@ -39,7 +39,7 @@ class IDHANTagAPI : public drogon::HttpController< IDHANTagAPI >
 	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tags/info?tag_ids={1}" );
 
 	ADD_METHOD_TO( IDHANTagAPI::search, "/tags/search?tag={1}" );
-	// ADD_METHOD_TO( IDHANTagAPI::autocomplete, "/tags/autocomplete?tag={1}" );
+	ADD_METHOD_TO( IDHANTagAPI::autocomplete, "/tags/autocomplete?tag={1}" );
 
 	ADD_METHOD_TO( IDHANTagAPI::createTagRouter, "/tags/create" );
 
@@ -53,5 +53,7 @@ class IDHANTagAPI : public drogon::HttpController< IDHANTagAPI >
 
 	METHOD_LIST_END
 };
+
+drogon::Task< Json::Value > getSimilarTags( std::string search_value, drogon::orm::DbClientPtr db );
 
 } // namespace idhan::api

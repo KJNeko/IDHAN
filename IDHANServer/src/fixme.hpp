@@ -13,6 +13,7 @@ inline void fixme( const std::source_location location = std::source_location::c
 {
 	std::cout << std::format( "{}:{} {}", location.file_name(), location.line(), location.function_name() )
 			  << std::endl;
+	std::abort();
 }
 
 } // namespace idhan

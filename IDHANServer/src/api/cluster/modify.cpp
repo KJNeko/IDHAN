@@ -55,7 +55,9 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 	if ( json[ "ratio" ].isInt64() )
 	{
 		co_await transaction->execSqlCoro(
-			"UPDATE file_clusters SET ratio_number = $1 WHERE cluster_id = $2", json[ "ratio" ].asInt64(), cluster_id );
+			"UPDATE file_clusters SET ratio_number = $1 WHERE cluster_id = $2",
+			static_cast< std::uint16_t >( json[ "ratio" ].asInt64() ),
+			cluster_id );
 	}
 
 	if ( json[ "size" ].isObject() && json[ "size" ][ "limit" ].isIntegral() )
