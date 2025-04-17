@@ -105,8 +105,6 @@ void HydrusImporter::processSets( const std::vector< Set >& sets, const TagDomai
 
 	std::vector< std::string > hashes {};
 
-	auto record_future { m_client->createRecords( hashes ) };
-
 	std::vector< std::vector< std::pair< std::string, std::string > > > tag_sets {};
 
 	// process hashes
@@ -140,6 +138,8 @@ void HydrusImporter::processSets( const std::vector< Set >& sets, const TagDomai
 
 		tag_sets.emplace_back( std::move( tags ) );
 	}
+
+	auto record_future { m_client->createRecords( hashes ) };
 
 	record_future.waitForFinished();
 
@@ -193,6 +193,11 @@ void HydrusImporter::copyDomainMappings( const TagDomainID domain_id, const std:
 						run( &pool,
 				             [ sets = std::move( sets ), domain_id, &semaphore, this ]
 				             {
+								 if ( sets.empty() )
+								 {
+									 logging::critical( "wtf?" );
+									 std::abort();
+								 }
 								 this->processSets( sets, domain_id );
 								 semaphore.release();
 							 } ) );
