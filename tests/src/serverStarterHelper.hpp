@@ -9,7 +9,6 @@
 
 #include <chrono>
 #include <cstdlib>
-#include <iostream>
 #include <signal.h>
 #include <unistd.h>
 
@@ -84,11 +83,11 @@ inline void monitor( const int server_pid, const int test_pid )
 	const auto executable { current_dir / executable_name };
 	if ( !std::filesystem::exists( executable ) ) throw std::runtime_error( "IDHANServer executable does not exist" );
 
-	const std::array< char*, 3 > args { const_cast< char* >( executable.c_str() ), "--testmode", nullptr };
+	const std::array< char*, 4 > args {
+		const_cast< char* >( executable.c_str() ), "--testmode", "--use_stdout=1", nullptr
+	};
 
-	const pid_t server_pid { fork() };
-
-	if ( server_pid == 0 )
+	if ( const pid_t server_pid = fork(); server_pid == 0 )
 	{
 		// we are the child
 		prctl( PR_SET_PDEATHSIG, SIGTERM ); // terminate if the parent also terminates
@@ -98,11 +97,9 @@ inline void monitor( const int server_pid, const int test_pid )
 		exit( EXIT_FAILURE );
 	}
 
-	std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+	std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
 	return {};
 }
 
-#define SERVER_HANDLE                                                                                                  \
-	const auto _ { startServer() };                                                                                    \
-	std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+#define SERVER_HANDLE const auto _ { startServer() };
