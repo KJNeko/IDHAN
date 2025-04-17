@@ -234,6 +234,13 @@ QFuture< void > IDHANClient::addTags(
 
 	std::size_t counter { 0 };
 
+	if ( record_ids.size() != tag_sets.size() )
+	{
+		logging::warn( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() );
+		throw std::
+			runtime_error( std::format( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() ) );
+	}
+
 	for ( const auto& set : tag_sets )
 	{
 		std::vector< std::size_t > indicies {};

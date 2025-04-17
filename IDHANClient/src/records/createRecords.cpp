@@ -27,13 +27,25 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 {
 	auto promise { std::make_shared< QPromise< std::vector< RecordID > > >() };
 
+	const auto expected_record_count { hashes.size() };
+	if ( hashes.empty() )
+	{
+		logging::warn(
+			"IDHANClient::createRecords, No hashes to create. This is likely not intentional. Must have at least 1 hash!" );
+		promise->addResult( std::vector< RecordID > {} );
+		promise->finish();
+		return promise->future();
+	}
+
 	QJsonObject object {};
 	QJsonArray array {};
 	for ( const auto& hash : hashes ) array.append( QString::fromStdString( hash ) );
 
 	object.insert( "sha256", array );
 
-	auto handleResponse = [ promise ]( QNetworkReply* response )
+	logging::debug( "Creating {} records", expected_record_count );
+
+	auto handleResponse = [ promise, expected_record_count ]( QNetworkReply* response )
 	{
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "failed to read response" );
@@ -47,6 +59,18 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 		{
 			const auto record_id { row.toInteger() };
 			record_ids.emplace_back( record_id );
+		}
+
+		if ( expected_record_count != record_ids.size() )
+		{
+			const auto log_msg { std::format(
+				"Server responded with incorrect number of record results. Expected {} got {}",
+				expected_record_count,
+				record_ids.size() ) };
+
+			logging::error( log_msg );
+
+			promise->setException( std::make_exception_ptr( log_msg ) );
 		}
 
 		promise->addResult( record_ids );
