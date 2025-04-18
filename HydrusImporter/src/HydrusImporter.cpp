@@ -116,6 +116,8 @@ void HydrusImporter::copyHydrusInfo()
 			this->copyMappings();
 		} ) };
 
+	QFuture< void > files_future { QtConcurrent::run( [ this ]() { this->copyFileStorage(); } ) };
+
 	// QFuture< void > url_future { hash_future.then( [ this ]() { this->copyUrls(); } ) };
 
 	sync.addFuture( std::move( tag_domains ) );
@@ -124,6 +126,7 @@ void HydrusImporter::copyHydrusInfo()
 	// sync.addFuture( std::move( aliases_future ) );
 	sync.addFuture( std::move( hash_future ) );
 	sync.addFuture( std::move( mappings_future ) );
+	sync.addFuture( std::move( files_future ) );
 
 	final_future = QtConcurrent::run( [ this ]() { sync.waitForFinished(); } ).then( [ this ]() { this->finish(); } );
 }
