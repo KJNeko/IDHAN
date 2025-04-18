@@ -15,9 +15,11 @@ void HydrusImporter::copyFileStorage()
 	std::size_t counter { 0 };
 
 	client_tr << "SELECT location, weight, max_num_bytes FROM ideal_client_files_locations" >>
-		[ this, &counter ]( const std::string str, const std::uint16_t weight, const std::size_t byte_limit )
+		[ this, &counter ]( const std::string location, const std::uint16_t weight, const std::size_t byte_limit )
 	{
-		if ( str == "client_files" ) //edge case handling for defaults
+		logging::info( "Processing file storage location {}", location );
+
+		if ( location == "client_files" ) //edge case handling for defaults
 		{
 			m_client->createFileCluster(
 				( m_path / "client_files" ).string(),
@@ -28,11 +30,10 @@ void HydrusImporter::copyFileStorage()
 		}
 		else
 		{
-			m_client
-				->createFileCluster( str, std::format( "Hydrus cluster: {}", counter++ ), byte_limit, weight, true );
+			m_client->createFileCluster(
+				location, std::format( "Hydrus cluster: {}", counter++ ), byte_limit, weight, true );
 		}
 	};
 }
-
 
 } // namespace idhan::hydrus
