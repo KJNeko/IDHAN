@@ -170,7 +170,7 @@ void HydrusImporter::copyDomainMappings( const TagDomainID domain_id, const std:
 	pool.setMaxThreadCount( thread_count );
 	QFutureSynchronizer< void > sync {};
 
-	constexpr std::size_t sets_per_request { 1024 };
+	constexpr std::size_t sets_per_request { 1024 * 8 };
 	std::size_t to_process { 0 };
 
 	mappings_tr << std::format( "SELECT COUNT(*) FROM {}", table_name ) >> to_process;
@@ -209,7 +209,7 @@ void HydrusImporter::copyDomainMappings( const TagDomainID domain_id, const std:
 
 			tag_counter += tags.size();
 			Set set { static_cast< RecordID >( hash_id ), std::move( tags ) };
-			tags.reserve( 1024 );
+			tags.reserve( sets_per_request );
 			tags.clear();
 
 			sets.emplace_back( std::move( set ) );
