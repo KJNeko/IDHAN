@@ -71,7 +71,7 @@ int main( int argc, char** argv )
 
 	std::shared_ptr< idhan::IDHANClient > client { std::make_shared< idhan::IDHANClient >( config ) };
 
-	const bool process_ptr_flag { parser.value( process_ptr ).toInt() > 0 ? true : false };
+	const bool process_ptr_flag { parser.value( process_ptr ).toInt() > 0 };
 
 	auto hydrus_importer { std::make_shared< idhan::hydrus::HydrusImporter >( hydrus_path, client, process_ptr_flag ) };
 
