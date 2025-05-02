@@ -9,12 +9,8 @@ if (NOT TARGET Trantor::Trantor)
 	macro(install)
 	endmacro()
 
-	set(CMAKE_CXX_STANDARD 23)
-
 	add_subdirectory(${CMAKE_SOURCE_DIR}/dependencies/trantor ${CMAKE_CURRENT_BINARY_DIR}/trantor)
 	set(Trantor_FOUND TRUE)
-
-	set_target_properties(trantor PROPERTIES CXX_STANDARD 23)
 
 	add_library(Trantor::Trantor ALIAS trantor)
 
