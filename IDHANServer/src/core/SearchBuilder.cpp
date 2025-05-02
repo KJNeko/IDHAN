@@ -9,18 +9,31 @@
 namespace idhan
 {
 
-std::string createFilter( std::uint32_t index, const std::vector< TagID >& tag_ids )
+std::string
+	createFilter( std::uint32_t index, const std::vector< TagID >& tag_ids, const HydrusDisplayType display_mode )
 {
 	std::string str {};
 	str += std::format( " filter_{}", index );
-	str += " AS (SELECT record_id, tag_id, domain_id FROM tag_mappings";
+	str += " AS (SELECT DISTINCT record_id FROM ";
+
+	switch ( display_mode )
+	{
+		default:
+			[[fallthrough]];
+		case HydrusDisplayType::DISPLAY:
+			str += "tag_mappings tm";
+			break;
+		case HydrusDisplayType::STORED:
+			str += "display_mappings tm";
+			break;
+	}
+
 	str += std::format( " WHERE tag_id = {}", tag_ids[ index ] );
 	str += " AND domain_id = ANY($1)";
 	if ( index != 0 )
 	{
 		str += std::format(
-			" AND EXISTS (SELECT 1 FROM filter_{} last_filter WHERE last_filter.record_id = tag_mappings.record_id)",
-			index - 1 );
+			" AND EXISTS (SELECT 1 FROM filter_{} last_filter WHERE last_filter.record_id = tm.record_id)", index - 1 );
 	}
 
 	str += ")";
@@ -30,10 +43,6 @@ std::string createFilter( std::uint32_t index, const std::vector< TagID >& tag_i
 
 std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes )
 {
-	/*
-	SELECT [record_id],[1:sha256] FROM tag_mappings [1:NATURAL JOIN records ON tag_mappings.record_id = records.record_id]
-	*/
-
 	//TODO: Sort tag ids to get the most out of each filter.
 
 	std::string query {};
@@ -41,7 +50,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	query += "WITH";
 	for ( std::size_t i = 0; i < m_tags.size(); ++i )
 	{
-		query += createFilter( i, m_tags );
+		query += createFilter( i, m_tags, m_display_mode );
 		if ( i + 1 < m_tags.size() ) query += ",";
 		query += "\n";
 	}
@@ -86,7 +95,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 		default:
 			[[fallthrough]];
 		case SortType::FILESIZE:
-			query += " ORDER BY fm.file_size";
+			query += " ORDER BY fm.size";
 			break;
 		case SortType::IMPORT_TIME:
 			query += " ORDER BY fm.cluster_store_time ";
@@ -115,12 +124,12 @@ void SearchBuilder::setSortType( const SortType type )
 			}
 		case SortType::IMPORT_TIME:
 			{
-			// comes from `cluster_store_time` timestamp in `file_info`
+				// comes from `cluster_store_time` timestamp in `file_info`
 				m_required_joins.file_info = true;
 			}
 		case SortType::RECORD_TIME:
 			{
-			// comes from creation_time in `records`
+				// comes from creation_time in `records`
 				m_required_joins.records = true;
 			}
 	}
@@ -143,6 +152,11 @@ void SearchBuilder::addFileDomain( const FileDomainID value )
 void SearchBuilder::setTags( const std::vector< TagID >& vector )
 {
 	m_tags = std::move( vector );
+}
+
+void SearchBuilder::setDisplay( HydrusDisplayType type )
+{
+	m_display_mode = type;
 }
 
 } // namespace idhan

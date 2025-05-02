@@ -8,11 +8,11 @@ namespace idhan
 class SHA256;
 }
 
-namespace idhan::api
+namespace idhan::api::helpers
 {
 
 drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClientPtr db );
 
 drogon::Task< std::optional< RecordID > > searchRecord( const SHA256& sha256, drogon::orm::DbClientPtr db );
 
-} // namespace idhan::api
+} // namespace idhan::api::helpers

@@ -66,6 +66,11 @@ SHA256 SHA256::fromBuffer( const std::vector< std::byte >& data )
 	return SHA256( data.data() );
 }
 
+SHA256 SHA256::fromPgCol( const drogon::orm::Field& field )
+{
+	return { field };
+}
+
 /*
 SHA256::SHA256( QIODevice* io ) : m_data()
 {
