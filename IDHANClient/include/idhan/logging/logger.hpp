@@ -30,38 +30,44 @@ namespace idhan::logging
 {
 
 template < typename... Ts >
-void notify( std::string fmt, Ts&&... ts )
+void notify( std::format_string< Ts... > fmt, Ts&&... ts )
 {
 	//TODO: Get this name from the context
 	spdlog::get( "client" )->info( fmt, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void debug( std::string fmt, Ts&&... ts )
+void debug( std::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->debug( fmt, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void info( std::string fmt, Ts&&... ts )
+void info( std::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->info( fmt, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void warn( std::string fmt, Ts&&... ts )
+void warn( std::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->warn( fmt, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void error( std::string fmt, Ts&&... ts )
+void error( std::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->error( fmt, std::forward< Ts >( ts )... );
 }
 
+template < typename T >
+void error( const T& msg )
+{
+	spdlog::get( "client" )->error( msg );
+}
+
 template < typename... Ts >
-void critical( std::string fmt, Ts&&... ts )
+void critical( std::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->critical( fmt, std::forward< Ts >( ts )... );
 }
