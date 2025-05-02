@@ -8,6 +8,7 @@
 #include "api/IDHANSearchAPI.hpp"
 #include "api/IDHANTagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/tags/tags.hpp"
 #include "constants/SearchOrder.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/SearchBuilder.hpp"
@@ -124,8 +125,10 @@ T getDefaultedValue( const std::string name, drogon::HttpRequestPtr request, con
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequestPtr request )
 {
-	const auto tags { request->getOptionalParameter< std::string >( "tags" ) };
-	if ( !tags.has_value() )
+	const auto tags_o { request->getOptionalParameter< std::string >( "tags" ) };
+	constexpr auto empty_tags { "[]" };
+	const auto tags { tags_o.value_or( empty_tags ) };
+	if ( tags == empty_tags )
 	{
 		Json::Value value;
 		value[ "file_ids" ] = Json::Value( Json::arrayValue );
@@ -133,47 +136,57 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		co_return drogon::HttpResponse::newHttpJsonResponse( value );
 	}
 
-	log::debug( "tags: {}", tags.value() );
+	auto db { drogon::app().getDbClient() };
 
-	// modify the request and resubmit it under the /search endpoint
-	co_return co_await ::idhan::api::IDHANSearchAPI::search( request );
+	log::info( "Query: {}", request->getQuery() );
 
 	// Build the search
 	SearchBuilder builder {};
 
-	if ( auto opt = request->getOptionalParameter< int >( "file_domain_id" ); opt.has_value() )
+	Json::Value tags_json {};
+	Json::Reader reader;
+	if ( !reader.parse( tags, tags_json ) )
 	{
-		builder.addFileDomain( opt.value() );
+		co_return createBadRequest( "Invalid tags json" );
 	}
 
-	if ( auto opt = request->getOptionalParameter< std::vector< int > >( "file_domain_ids" ); opt.has_value() )
+	std::vector< TagID > tag_ids {};
+	for ( const auto& tag : tags_json )
 	{
-		for ( const auto& value : opt.value() ) builder.addFileDomain( value );
+		const auto tag_text { tag.asString() };
+
+		const auto tag_id { co_await findOrCreateTag( tag_text, db ) };
+
+		if ( tag_id.has_value() )
+			tag_ids.push_back( tag_id.value() );
+		else
+			co_return tag_id.error();
 	}
 
-	// was a domain set?
-	const auto file_domain_id { request->getOptionalParameter< int >( "file_domain" ) };
+	builder.setTags( tag_ids );
 
-	const auto tag_domain_id { request->getOptionalParameter< TagDomainID >( "tag_service_key" )
-		                           .value_or( std::numeric_limits< TagDomainID >::max() ) };
+	//TODO: file domains. For now we'll assume all files
 
-	const auto include_current_tags {
-		request->getOptionalParameter< bool >( "include_current_tags" ).value_or( true )
-	};
+	//TODO: Tag service key, Which tag domain to search. Defaults to all tags
 
-	const auto include_pending_tags {
-		request->getOptionalParameter< bool >( "include_pending_tags" ).value_or( true )
-	};
+	// include_current_tags and include_pending_tags are both things that are not needed for IDHAN so we just skip this.
 
 	const auto file_sort_type {
-		request->getOptionalParameter< SearchOrder >( "file_sort_type" ).value_or( SearchOrder::ImportTime )
+		static_cast< HydrusSortType >( request->getOptionalParameter< std::uint64_t >( "file_sort_type" )
+		                                   .value_or( HydrusSortType::DEFAULT ) )
 	};
 
 	const auto file_sort_asc { request->getOptionalParameter< bool >( "file_sort_asc" ).value_or( true ) };
-	const auto return_file_ids { request->getOptionalParameter< bool >( "return_file_ids" ).value_or( true ) };
+
+	builder.setSortType( hyToIDHANSortType( file_sort_type ) );
+	builder.setSortOrder( file_sort_asc ? SortOrder::ASC : SortOrder::DESC );
+
+	const auto return_fild_ids { request->getOptionalParameter< bool >( "return_file_ids" ).value_or( true ) };
 	const auto return_hashes { request->getOptionalParameter< bool >( "return_hashes" ).value_or( false ) };
 
 	std::string query { builder.construct() };
+
+	log::debug( "Generated search: {}", query );
 
 	co_return drogon::HttpResponse::newHttpResponse();
 }

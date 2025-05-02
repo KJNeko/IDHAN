@@ -3,6 +3,7 @@
 //
 
 #include "api/IDHANSearchAPI.hpp"
+#include "api/helpers/getArrayParameters.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -11,6 +12,9 @@ namespace idhan::api
 drogon::Task< drogon::HttpResponsePtr > IDHANSearchAPI::search( drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };
+
+	// Drogon does not support tag_id=1?tag_id=2 for some reason, But it's possible to be sent like that, So we'll handle it here.
+	const auto tag_ids { parseArrayParmeters< std::size_t >( request, "tag_id" ) };
 
 	const auto result { co_await db->execSqlCoro( "SELECT record_id FROM file_info" ) };
 

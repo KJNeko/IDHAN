@@ -60,7 +60,8 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		HydrusAPI::unsupported, "/hyapi/get_files/thumbnail_path", drogon::Get, HyAPIAuthName ); // UNSUPPORTED
 
 	ADD_METHOD_TO( HydrusAPI::searchTags, "/hyapi/add_tags/search_tags", drogon::Get, HyAPIAuthName );
-	ADD_METHOD_TO( HydrusAPI::getClientOptions, "/hyapi/manage_database/get_client_options", drogon::Get, HyAPIAuthName );
+	ADD_METHOD_TO(
+		HydrusAPI::getClientOptions, "/hyapi/manage_database/get_client_options", drogon::Get, HyAPIAuthName );
 	METHOD_LIST_END
 };
 } // namespace idhan::hyapi

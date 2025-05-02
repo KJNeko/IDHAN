@@ -8,6 +8,7 @@
 #include "drogon/HttpResponse.h"
 #include "drogon/orm/DbClient.h"
 #include "drogon/utils/coroutine.h"
+#include "splitTag.hpp"
 
 namespace idhan
 {
@@ -38,6 +39,21 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 		co_return std::
 			unexpected( createInternalError( "Failed to create tag {}:{}: {}", namespace_id, subtag_id, e.what() ) );
 	}
+}
+
+drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
+	findOrCreateTag( const std::string tag_text, drogon::orm::DbClientPtr db )
+{
+	const auto split_tag { splitTag( tag_text ) };
+	const auto& [ namespace_text, subtag_text ] = split_tag;
+
+	const auto namespace_id { co_await findOrCreateNamespace( namespace_text, db ) };
+	const auto subtag_id { co_await findOrCreateSubtag( subtag_text, db ) };
+
+	if ( !namespace_id.has_value() ) co_return std::unexpected( namespace_id.error() );
+	if ( !subtag_id.has_value() ) co_return std::unexpected( subtag_id.error() );
+
+	co_return co_await findOrCreateTag( namespace_id.value(), subtag_id.value(), db );
 }
 
 } // namespace idhan
