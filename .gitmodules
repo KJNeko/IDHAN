@@ -49,6 +49,3 @@
 [submodule "dependencies/trantor"]
 	path = dependencies/trantor
 	url = git@github.com:KJNeko/trantor.git
-[submodule "dependencies/dependencies/spdlog"]
-	path = dependencies/dependencies/spdlog
-	url = https://github.com/gabime/spdlog.git
