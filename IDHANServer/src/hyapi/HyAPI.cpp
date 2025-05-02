@@ -307,6 +307,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 			data[ "ext" ] = file_info[ 0 ][ "extension" ].as< std::string >();
 		}
 
+		// TODO: Provide height/width information
+		data[ "width" ] = 512;
+		data[ "height" ] = 512;
+
 		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
 		data[ "known_urls" ] = Json::Value( Json::arrayValue );
 
