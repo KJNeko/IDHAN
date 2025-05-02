@@ -4,8 +4,12 @@
 #include "MimeDatabase.hpp"
 
 #include <json/json.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 #include <cassert>
+#include <expected>
+#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 
@@ -45,15 +49,8 @@ IdentifierType getIdentifierType( const std::string& str )
 {
 	if ( str.empty() ) throw std::runtime_error( "Failed to get identifier type: Was empty" );
 
-	if ( str == "search" )
-	{
-		return IdentifierType::Search;
-	}
-
-	if ( str == "override" )
-	{
-		return IdentifierType::Override;
-	}
+	if ( str == "search" ) return IdentifierType::Search;
+	if ( str == "override" ) return IdentifierType::Override;
 
 	throw std::runtime_error( "Failed to get identifier type: " + str );
 }
@@ -110,6 +107,7 @@ bool DataIdentifierSearch::
 
 	for ( std::size_t i = 0; i < m_data.size(); ++i )
 	{
+		if ( i > m_data.size() ) return false;
 		if ( m_data[ i ] != data[ i + set_offset ] ) return false;
 	}
 
@@ -167,8 +165,6 @@ bool DataIdentifierOverride::
 	{
 		context.overriden_name = override_name;
 	}
-	else
-		log::debug( "Failed to find unique data for {}", override_name );
 
 	return true;
 }
@@ -262,7 +258,62 @@ MimeDatabase::MimeDatabase()
 	reloadMimeParsers();
 }
 
-std::optional< std::string > MimeDatabase::scan( const std::byte* data, const std::size_t length )
+std::expected< std::string, std::exception > MimeDatabase::scanFile( const std::filesystem::path& path )
+{
+	// Initialize data to nullptr
+	const std::byte* data { nullptr };
+
+	// mmap the file
+	std::error_code ec {};
+	if ( !std::filesystem::exists( path, ec ) || std::filesystem::is_directory( path, ec ) )
+	{
+		return std::unexpected { std::runtime_error { std::format( "Invalid file path: {}", path.string() ) } };
+	}
+
+	const int file_descriptor { open( path.c_str(), O_RDONLY ) };
+	if ( file_descriptor == -1 )
+	{
+		return std::unexpected { std::runtime_error {
+			std::format( "Failed to open file {}: {}", path.string(), strerror( errno ) ) } };
+	}
+
+	struct stat file_stat {};
+	if ( fstat( file_descriptor, &file_stat ) == -1 )
+	{
+		close( file_descriptor );
+		return std::unexpected { std::runtime_error {
+			std::format( "Failed to get file stats for {}: {}", path.string(), strerror( errno ) ) } };
+	}
+
+	if ( file_stat.st_size == 0 )
+	{
+		close( file_descriptor );
+		return std::unexpected { std::runtime_error { std::format( "File is empty: {}", path.string() ) } };
+	}
+
+	void* const mapped_region {
+		mmap( nullptr, static_cast< size_t >( file_stat.st_size ), PROT_READ, MAP_PRIVATE, file_descriptor, 0 )
+	};
+	close( file_descriptor ); // File descriptor can be closed after mmap
+
+	if ( mapped_region == MAP_FAILED )
+	{
+		return std::unexpected { std::runtime_error {
+			std::format( "Failed to mmap file {}: {}", path.string(), strerror( errno ) ) } };
+	}
+
+	data = static_cast< const std::byte* >( mapped_region ); // Assign pointer to the mapped memory
+
+	if ( auto opt = scan( data, static_cast< std::size_t >( file_stat.st_size ) ); opt.has_value() )
+	{
+		munmap( mapped_region, file_stat.st_size );
+		return opt.value();
+	}
+
+	return DEFAULT_MIME_TYPE;
+}
+
+std::expected< std::string, std::exception > MimeDatabase::scan( const std::byte* data, const std::size_t length )
 {
 	if ( updating_flag ) updating_flag.wait( false );
 
@@ -278,7 +329,7 @@ std::optional< std::string > MimeDatabase::scan( const std::byte* data, const st
 		}
 	}
 
-	return std::nullopt;
+	return DEFAULT_MIME_TYPE;
 }
 
 void MimeDatabase::reloadMimeParsers()

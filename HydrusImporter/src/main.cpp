@@ -26,12 +26,18 @@ int main( int argc, char** argv )
 	idhan_port.setDefaultValue( QString::number( idhan::IDHAN_DEFAULT_PORT ) );
 	idhan_port.setValueName( "idhan_port" );
 
+	QCommandLineOption process_ptr { "process_ptr", "Process the PTR mappings of files" };
+	process_ptr.setDefaultValue( "0" );
+	process_ptr.setValueName( "1/0" );
+	process_ptr.setDescription(
+		"Processes the PTR mappings from Hydrus, This can take an EXTREMELY LONG TIME. Default false (0)" );
+
 	parser.addPositionalArgument( "hydrus_db", "Points to the hydrus db directory\nExample: '~/Desktop/hydrus/db'" );
 
-	parser.addOptions( { idhan_host, idhan_port } );
+	parser.addOptions( { idhan_host, idhan_port, process_ptr } );
 
 	QCoreApplication app { argc, argv };
-	app.setApplicationName( "1.0" );
+	app.setApplicationName( "Hydrus Importer" );
 
 	parser.process( app );
 
@@ -65,7 +71,9 @@ int main( int argc, char** argv )
 
 	std::shared_ptr< idhan::IDHANClient > client { std::make_shared< idhan::IDHANClient >( config ) };
 
-	auto hydrus_importer { std::make_shared< idhan::hydrus::HydrusImporter >( hydrus_path, client ) };
+	const bool process_ptr_flag { parser.value( process_ptr ).toInt() > 0 ? true : false };
+
+	auto hydrus_importer { std::make_shared< idhan::hydrus::HydrusImporter >( hydrus_path, client, process_ptr_flag ) };
 
 	hydrus_importer->copyHydrusInfo();
 

@@ -3,24 +3,30 @@
 //
 
 #pragma once
+#include <spdlog/spdlog.h>
+
 #include <filesystem>
 #include <memory>
 
+#include "ConnectionArguments.hpp"
+
 namespace idhan
 {
-struct ConnectionArguments;
 class ManagementConnection;
 
 class ServerContext
 {
+	std::shared_ptr< spdlog::logger > m_logger;
 	//! Connection to postgresql to be used for management/setup
 	std::unique_ptr< ManagementConnection > m_postgresql_management;
+	ConnectionArguments args;
 
   public:
 
 	ServerContext() = delete;
 
-	void setupCORSSupport();
+	void setupCORSSupport() const;
+	static std::shared_ptr< spdlog::logger > createLogger( const ConnectionArguments& arguments );
 	ServerContext( const ConnectionArguments& arguments );
 	void run();
 

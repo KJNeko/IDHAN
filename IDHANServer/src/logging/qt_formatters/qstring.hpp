@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include <QString>
-
 #include <format>
 
+/*
 template <>
 struct std::formatter< QString >
 {
@@ -23,3 +22,5 @@ struct std::formatter< QString >
 		return std::format_to( ctx.out(), "{}", s.toStdString() );
 	}
 };
+
+*/

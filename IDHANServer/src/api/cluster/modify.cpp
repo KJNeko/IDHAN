@@ -40,22 +40,32 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 
 	const auto& json { *json_ptr };
 
-	if ( !json[ "readonly" ].isBool() )
+	if ( json[ "readonly" ].isBool() )
 	{
 		co_await transaction->execSqlCoro(
 			"UPDATE file_clusters SET read_only = $1 WHERE cluster_id = $2", json[ "readonly" ].asBool(), cluster_id );
 	}
 
-	if ( !json[ "name" ].isString() )
+	if ( json[ "name" ].isString() )
 	{
 		co_await transaction->execSqlCoro(
 			"UPDATE file_clusters SET cluster_name = $1 WHERE cluster_id = $2", json[ "name" ].asString(), cluster_id );
 	}
 
-	if ( !json[ "ratio" ].isInt64() )
+	if ( json[ "ratio" ].isInt64() )
 	{
 		co_await transaction->execSqlCoro(
-			"UPDATE file_clusters SET size_limit = $1 WHERE cluster_id = $2", json[ "ratio" ].asInt64(), cluster_id );
+			"UPDATE file_clusters SET ratio_number = $1 WHERE cluster_id = $2",
+			static_cast< std::uint16_t >( json[ "ratio" ].asInt64() ),
+			cluster_id );
+	}
+
+	if ( json[ "size" ].isObject() && json[ "size" ][ "limit" ].isIntegral() )
+	{
+		co_await transaction->execSqlCoro(
+			"UPDATE file_clusters SET size_limit = $1 WHERE cluster_id = $2",
+			json[ "size" ][ "limit" ].asInt64(),
+			cluster_id );
 	}
 
 	co_return co_await infoT( request, cluster_id, transaction );

@@ -15,6 +15,9 @@ void HyAPIAuth::invoke(
 {
 	const std::string& hyapi_key { req->getHeader( HY_ACCESS_KEY_HEADER_NAME ) };
 
+	nextCb( std::move( mcb ) );
+	return;
+
 	if ( hyapi_key.empty() )
 	{
 		Json::Value root;

@@ -1,0 +1,1 @@
+add_subdirectory(${CMAKE_SOURCE_DIR}/dependencies/Catch2 ${CMAKE_CURRENT_BINARY_DIR}/Catch2)

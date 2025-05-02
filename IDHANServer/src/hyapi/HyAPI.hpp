@@ -10,25 +10,29 @@ namespace idhan::hyapi
 {
 class HydrusAPI : public drogon::HttpController< HydrusAPI >
 {
-	void unsupported( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > unsupported( drogon::HttpRequestPtr request );
 
 	// Access management (access)
-	void apiVersion( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void requestNewPermissions( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void sessionKey( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void verifyAccessKey( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void getService( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void getServices( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > apiVersion( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > requestNewPermissions( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > sessionKey( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > getService( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > getServices( drogon::HttpRequestPtr request );
 
 	// Importing and deleting files (import)
-	void addFile( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > addFile( drogon::HttpRequestPtr request );
 
 	// Searching and Fetching files (search)
-	void searchFiles( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void fileHashes( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void fileMetadata( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void file( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void thumbnail( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > searchFiles( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > fileHashes( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > fileMetadata( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > file( drogon::HttpRequestPtr request );
+	//	drogon::Task< drogon::HttpResponsePtr > thumbnail( drogon::HttpRequestPtr request );
+
+	drogon::Task< drogon::HttpResponsePtr > searchTags( drogon::HttpRequestPtr request );
+
+	drogon::Task< drogon::HttpResponsePtr > getClientOptions( drogon::HttpRequestPtr request );
 
   public:
 
@@ -43,18 +47,21 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	ADD_METHOD_TO( HydrusAPI::getServices, "/hyapi/get_services", drogon::Get, HyAPIAuthName );
 
 	// Importing and deleting files
-	ADD_METHOD_TO( HydrusAPI::addFile, "/add_files/add_file", drogon::Get, HyAPIAuthName );
+	ADD_METHOD_TO( HydrusAPI::addFile, "/hyapi/add_files/add_file", drogon::Get, HyAPIAuthName );
 
 	// Searching and fetching files
 	ADD_METHOD_TO( HydrusAPI::searchFiles, "/hyapi/get_files/search_files", drogon::Get, HyAPIAuthName );
 	ADD_METHOD_TO( HydrusAPI::fileHashes, "/hyapi/get_files/file_hashes", drogon::Get, HyAPIAuthName );
 	ADD_METHOD_TO( HydrusAPI::fileMetadata, "/hyapi/get_files/file_metadata", drogon::Get, HyAPIAuthName );
 	ADD_METHOD_TO( HydrusAPI::file, "/hyapi/get_files/file", drogon::Get, HyAPIAuthName );
-	ADD_METHOD_TO( HydrusAPI::thumbnail, "/hyapi/get_files/thumbnail", drogon::Get, HyAPIAuthName );
+	ADD_METHOD_TO( HydrusAPI::file, "/hyapi/get_files/thumbnail", drogon::Get, HyAPIAuthName );
 	ADD_METHOD_TO( HydrusAPI::unsupported, "/hyapi/get_files/file_path", drogon::Get, HyAPIAuthName ); // UNSUPPORTED
 	ADD_METHOD_TO(
 		HydrusAPI::unsupported, "/hyapi/get_files/thumbnail_path", drogon::Get, HyAPIAuthName ); // UNSUPPORTED
 
+	ADD_METHOD_TO( HydrusAPI::searchTags, "/hyapi/add_tags/search_tags", drogon::Get, HyAPIAuthName );
+	ADD_METHOD_TO(
+		HydrusAPI::getClientOptions, "/hyapi/manage_database/get_client_options", drogon::Get, HyAPIAuthName );
 	METHOD_LIST_END
 };
 } // namespace idhan::hyapi

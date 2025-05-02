@@ -58,12 +58,12 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 	QJsonDocument doc {};
 	doc.setObject( std::move( object ) );
 
-	sendClientPost( std::move( doc ), "/tag/domain/create", handleResponse, handleError );
+	sendClientPost( std::move( doc ), "/tags/domain/create", handleResponse, handleError );
 
 	return promise->future();
 }
 
-QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string name )
+QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 {
 	auto promise { std::make_shared< QPromise< TagDomainID > >() };
 	promise->start();
@@ -108,7 +108,7 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string name )
 		response->deleteLater();
 	};
 
-	sendClientGet( "/tag/domain/list", handleResponse, handleError );
+	sendClientGet( "/tags/domain/list", handleResponse, handleError );
 
 	return promise->future();
 }

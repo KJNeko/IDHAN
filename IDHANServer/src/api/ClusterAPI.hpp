@@ -2,9 +2,10 @@
 // Created by kj16609 on 11/15/24.
 //
 #pragma once
+#include <expected>
+
 #include "IDHANTypes.hpp"
 #include "drogon/HttpController.h"
-#include "drogon/HttpResponse.h"
 #include "drogon/utils/coroutine.h"
 
 namespace idhan::api
@@ -41,6 +42,9 @@ struct ClusterInfo
 	void storeFile( const std::vector< std::byte >& data );
 };
 
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
+	getInfo( ClusterID cluster_id, std::shared_ptr< drogon::orm::Transaction > transaction );
+
 class ClusterAPI : public drogon::HttpController< ClusterAPI >
 {
 	using ResponseTask = drogon::Task< drogon::HttpResponsePtr >;
@@ -57,6 +61,8 @@ class ClusterAPI : public drogon::HttpController< ClusterAPI >
 	ResponseTask modify( drogon::HttpRequestPtr request, const ClusterID cluster_id );
 	ResponseTask remove( drogon::HttpRequestPtr request, const ClusterID cluster_id );
 
+	ResponseTask scan( drogon::HttpRequestPtr request, const ClusterID cluster_id );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -66,6 +72,7 @@ class ClusterAPI : public drogon::HttpController< ClusterAPI >
 	ADD_METHOD_TO( ClusterAPI::info, "/clusters/{cluster_id}/info" );
 	ADD_METHOD_TO( ClusterAPI::modify, "/clusters/{cluster_id}/modify" );
 	ADD_METHOD_TO( ClusterAPI::remove, "/clusters/{cluster_id}/remove" );
+	ADD_METHOD_TO( ClusterAPI::scan, "/clusters/{cluster_id}/scan" );
 
 	METHOD_LIST_END
 };

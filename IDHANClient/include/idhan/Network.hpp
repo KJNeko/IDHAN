@@ -28,7 +28,7 @@ class Network : public QObject
 
 	QNetworkAccessManager m_network;
 
-	QNetworkReply* sendDataI( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body );
+	QNetworkReply* sendDataI( HttpMethod method, const QNetworkRequest& request, const QByteArray& body );
 
   public:
 
@@ -37,12 +37,11 @@ class Network : public QObject
 
 	Network( QObject* parent = nullptr );
 
-	[[nodiscard]] QNetworkReply*
-		send( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body );
+	[[nodiscard]] QNetworkReply* send( HttpMethod method, const QNetworkRequest& request, const QByteArray& body );
 
   public slots:
 	void doSendData(
-		const HttpMethod method,
+		HttpMethod method,
 		const QNetworkRequest& request,
 		const QByteArray& body,
 		const std::shared_ptr< QPromise< QNetworkReply* > >& promise );

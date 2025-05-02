@@ -1,0 +1,15 @@
+{
+  "mime": "application/zip",
+  "extensions": [
+    "zip"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 0,
+      "hex": "504B0304"
+    }
+  ]
+}
+
+

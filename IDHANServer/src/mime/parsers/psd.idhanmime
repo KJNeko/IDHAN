@@ -1,0 +1,13 @@
+{
+  "mime": "application/psd",
+  "extensions": [
+    "psd"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 0,
+      "hex": "38425053"
+    }
+  ]
+}

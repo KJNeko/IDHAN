@@ -21,32 +21,22 @@ drogon::Task< std::optional< SubtagID > > searchSubtag( const std::string& str, 
 drogon::Task< std::expected< SubtagID, drogon::HttpResponsePtr > >
 	findOrCreateSubtag( const std::string& str, const drogon::orm::DbClientPtr db )
 {
-	const auto id_search { co_await searchSubtag( str, db ) };
-	if ( id_search.has_value() )
-	{
-		co_return id_search.value();
-	}
+	SubtagID subtag_id { 0 };
 
-	try
-	{
+	do {
+		if ( const auto id_search = co_await searchSubtag( str, db ); id_search.has_value() )
+		{
+			co_return id_search.value();
+		}
+
 		const auto id_creation { co_await db->execSqlCoro(
 			"INSERT INTO tag_subtags (subtag_text) VALUES ($1) ON CONFLICT DO NOTHING RETURNING subtag_id", str ) };
 
-		if ( id_creation.size() > 0 )
-		{
-			co_return id_creation[ 0 ][ 0 ].as< SubtagID >();
-		}
-
-		const auto second_search { co_await searchSubtag( str, db ) };
-
-		if ( second_search.has_value() ) co_return second_search.value();
-
-		co_return std::unexpected( createInternalError( "Failed to create subtag: {}", str ) );
+		if ( id_creation.size() > 0 ) subtag_id = id_creation[ 0 ][ 0 ].as< SubtagID >();
 	}
-	catch ( std::exception& e )
-	{
-		co_return std::unexpected( createInternalError( "Failed to create subtag: {}: {}", str, e.what() ) );
-	}
+	while ( subtag_id == 0 );
+
+	co_return subtag_id;
 }
 
 } // namespace idhan

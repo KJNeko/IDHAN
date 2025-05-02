@@ -5,6 +5,7 @@
 #pragma once
 
 #include <QFutureSynchronizer>
+#include <QFutureWatcher>
 
 #include <IDHAN>
 #include <filesystem>
@@ -12,6 +13,9 @@
 
 namespace idhan::hydrus
 {
+
+struct Set;
+
 class HydrusImporter
 {
 	sqlite3* master_db { nullptr };
@@ -19,12 +23,17 @@ class HydrusImporter
 	sqlite3* mappings_db { nullptr };
 	std::shared_ptr< IDHANClient > m_client;
 	std::filesystem::path m_path;
+	QFuture< void > final_future;
 
 	QFutureSynchronizer< void > sync {};
 	std::size_t thread_count { 1 };
+	bool m_process_ptr_mappings;
+	const std::chrono::time_point< std::chrono::steady_clock > start_time { std::chrono::steady_clock::now() };
 
 	void copyTagDomains();
-	void copyDomainMappings( const TagDomainID domain_id, const std::size_t hy_service_id );
+	void copyDomainMappings( TagDomainID domain_id, std::size_t hy_service_id );
+
+	void processSets( const std::vector< Set >& sets, TagDomainID domain_id );
 
 	void copyTags();
 	void copyParents();
@@ -38,8 +47,11 @@ class HydrusImporter
 
   public:
 
+	void finish();
+
 	HydrusImporter() = delete;
-	HydrusImporter( const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client );
+	HydrusImporter(
+		const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client, const bool process_ptr_flag );
 	~HydrusImporter();
 
 	void copyHydrusTags();

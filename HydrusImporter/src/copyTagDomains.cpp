@@ -3,6 +3,7 @@
 //
 
 #include "HydrusImporter.hpp"
+#include "hydrus_constants.hpp"
 #include "idhan/logging/logger.hpp"
 #include "sqlitehelper/Transaction.hpp"
 
@@ -14,9 +15,15 @@ void HydrusImporter::copyTagDomains()
 	logging::info( "Copying tag domains" );
 	TransactionBase client_tr { client_db };
 
-	client_tr << "SELECT name FROM services WHERE service_type = 0 OR service_type = 5" >>
-		[ & ]( const std::string_view name, const std::size_t service_id )
+	client_tr << "SELECT name, service_id, service_type FROM services WHERE service_type = 0 OR service_type = 5" >>
+		[ & ]( const std::string_view name, const std::size_t service_id, const std::size_t service_type )
 	{
+		if ( !m_process_ptr_mappings && service_type == hy_constants::ServiceTypes::PTR_SERVICE )
+		{
+			// if the current table is for the ptr, and we are not told to process the ptr mappings, then skip this
+			return;
+		}
+
 		const std::string str { name };
 		QFuture< TagDomainID > domain_id_future { m_client->createTagDomain( str ) };
 

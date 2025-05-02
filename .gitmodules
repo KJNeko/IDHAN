@@ -18,7 +18,7 @@
 	url = https://github.com/dendisuhubdy/asio-webserver.git
 [submodule "dependencies/drogon"]
 	path = dependencies/drogon
-	url = https://github.com/drogonframework/drogon.git
+	url = https://github.com/kjneko/drogon.git
 [submodule "fgl_cmake_modules"]
 	path = fgl_cmake_modules
 	url = git@github.com:KJNeko/fgl_cmake_modules.git
@@ -46,3 +46,6 @@
 [submodule "dependencies/libFGL"]
 	path = dependencies/libFGL
 	url = git@github.com:KJNeko/libFGL.git
+[submodule "dependencies/trantor"]
+	path = dependencies/trantor
+	url = git@github.com:KJNeko/trantor.git

@@ -18,4 +18,7 @@ namespace idhan
 drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	findOrCreateTag( NamespaceID namespace_id, SubtagID subtag_id, drogon::orm::DbClientPtr db );
 
-}
+drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
+	findOrCreateTag( std::string tag_text, drogon::orm::DbClientPtr db );
+
+} // namespace idhan
