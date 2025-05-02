@@ -97,7 +97,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagRouter( drogon::Ht
 
 	if ( json_obj->isObject() )
 	{
-		log::debug( "Tag router creating single tag" );
 		co_return co_await createSingleTag( request );
 	}
 
@@ -135,8 +134,6 @@ std::string pgEscape( const std::string& str )
 		}
 	}
 
-	log::debug( "Escaped \'{}\' to \'{}\'", str, cleaned );
-
 	if ( contains_comma ) return std::format( "\"{}\"", cleaned );
 	return cleaned;
 }
@@ -170,21 +167,11 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 	namespaces += "}";
 	subtags += "}";
 
-	log::debug( "Namespace array string: {}", namespaces );
-	log::debug( "Subtag array string: {}", subtags );
-
-	log::debug( "SubtagTESRJAIOWDKOAWKDarray string: {}", subtags );
-
 	std::vector< TagID > tag_ids {};
-
-	const auto search_path { co_await db->execSqlCoro( "SHOW search_path" ) };
-	log::debug( "Search path: {}", search_path[ 0 ][ 0 ].as< std::string >() );
 
 	try
 	{
 		const auto result { co_await db->execSqlCoro( "SELECT createBatchedTag($1, $2)", namespaces, subtags ) };
-
-		log::debug( "Got {} tags returned", result.size() );
 
 		if ( result.size() != tag_pairs.size() )
 			co_return std::unexpected( createInternalError(
@@ -232,16 +219,12 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createBatchedTag( drogon::H
 			tag_pairs.emplace_back( namespace_j.asString(), subtag_j.asString() );
 		}
 
-		log::debug( "Need to create {} tags", tag_pairs.size() );
-
 		Json::Value out {};
 		Json::ArrayIndex index { 0 };
 
 		const auto result { co_await createTags( tag_pairs, db ) };
 
 		if ( !result.has_value() ) co_return result.error();
-
-		log::debug( "Create tags returned with {} tags", result.value().size() );
 
 		for ( const auto& tag_id : result.value() )
 		{

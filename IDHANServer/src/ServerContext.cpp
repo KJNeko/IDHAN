@@ -79,6 +79,7 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 		file_logger->set_pattern( std::string( server_format_str ) );
 
 		spdlog::set_default_logger( file_logger );
+		trantor::Logger::enableSpdLog( file_logger );
 
 		return file_logger;
 	}
@@ -96,7 +97,14 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 		logger->set_pattern( std::string( server_format_str ) );
 
-		spdlog::set_default_logger( logger );
+#ifndef NDEBUG
+		// file_logger->set_level( spdlog::level::info );
+		// stdout_logger->set_level( spdlog::level::debug );
+		// logger->set_level( spdlog::level::debug );
+#endif
+
+		// spdlog::set_default_logger( logger );
+		trantor::Logger::enableSpdLog( logger );
 		return logger;
 	}
 }
@@ -108,7 +116,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 {
 	log::server::info( "IDHAN initialization starting" );
 
-	spdlog::enable_backtrace( 32 );
+	// spdlog::enable_backtrace( 32 );
 
 	log::debug( "Logging show debug" );
 	log::info( "Logging show info" );
@@ -130,8 +138,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.setDocumentRoot( "./pages" )
 		.setExceptionHandler( exceptionHandler )
 		.setLogPath( std::string( log_directory ), "", 1024 * 1024 * 1024, 8, true );
-
-	trantor::Logger::enableSpdLog( m_logger );
 
 	drogon::orm::PostgresConfig config;
 	config.host = arguments.hostname;

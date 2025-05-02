@@ -1,9 +1,6 @@
 
 AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(MIGRATION_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/doMigration.cpp")
 file(REMOVE ${MIGRATION_SOURCE})
 
@@ -22,7 +19,6 @@ add_custom_command(
 
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(spdlog REQUIRED)
-add_definitions(-DSPDLOG_USE_STD_FORMAT)
 find_package(drogon REQUIRED)
 
 if (spdlog_FOUND)

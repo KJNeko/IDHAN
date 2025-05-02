@@ -19,7 +19,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
 	if ( result.size() > 0 )
 	{
 		const auto tag_id { result[ 0 ][ 0 ].as< TagID >() };
-		log::debug( "Result of /tags/search?tag={}: {}", tag_text, tag_id );
 		json[ "tag_id" ] = tag_id;
 		json[ "found" ] = true;
 	}
