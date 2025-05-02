@@ -40,7 +40,7 @@ class SHA256
 
   public:
 
-	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; };
+	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; }
 
 	//! Supplied so we can work with drogon until I figure out how the fuck to overload their operators.
 	inline std::vector< char > toVec() const
@@ -58,6 +58,7 @@ class SHA256
 	//! Turns a HEX string into a SHA256 object. Str must be exactly (256 / 8) * 2, 64 characters long
 	static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
 	static SHA256 fromBuffer( const std::vector< std::byte >& data );
+	static SHA256 fromPgCol( const drogon::orm::Field& field );
 
 	inline static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
 

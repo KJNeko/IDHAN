@@ -8,6 +8,7 @@
 #include "api/IDHANSearchAPI.hpp"
 #include "api/IDHANTagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/records.hpp"
 #include "api/helpers/tags/tags.hpp"
 #include "constants/SearchOrder.hpp"
 #include "constants/hydrus_version.hpp"
@@ -181,14 +182,44 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	builder.setSortType( hyToIDHANSortType( file_sort_type ) );
 	builder.setSortOrder( file_sort_asc ? SortOrder::ASC : SortOrder::DESC );
 
-	const auto return_fild_ids { request->getOptionalParameter< bool >( "return_file_ids" ).value_or( true ) };
+	const auto return_file_ids { request->getOptionalParameter< bool >( "return_file_ids" ).value_or( true ) };
 	const auto return_hashes { request->getOptionalParameter< bool >( "return_hashes" ).value_or( false ) };
+	const auto tag_display_type {
+		request->getOptionalParameter< std::string >( "tag_display_type" ).value_or( "display" )
+	};
+
+	if ( tag_display_type == std::string_view( "storage" ) )
+	{
+		builder.setDisplay( HydrusDisplayType::STORED );
+	}
+	else
+	{
+		builder.setDisplay( HydrusDisplayType::DISPLAY );
+	}
 
 	std::string query { builder.construct() };
 
 	log::debug( "Generated search: {}", query );
 
-	co_return drogon::HttpResponse::newHttpResponse();
+	const auto result { co_await db->execSqlCoro( query, "{1,2,3,4}" ) };
+
+	Json::Value out {};
+	Json::Value file_ids {};
+	Json::Value hashes {};
+	Json::ArrayIndex i { 0 };
+
+	for ( const auto& row : result )
+	{
+		if ( return_file_ids ) file_ids[ i ] = row[ "record_id" ].as< RecordID >();
+		if ( return_hashes ) hashes[ i ] = SHA256::fromPgCol( row[ "sha256" ] ).hex();
+
+		i += 1;
+	}
+
+	if ( return_file_ids ) out[ "file_ids" ] = std::move( file_ids );
+	if ( return_hashes ) out[ "hashes" ] = std::move( hashes );
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( out );
 }
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( drogon::HttpRequestPtr request )
@@ -196,44 +227,116 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( drogon::HttpReque
 	idhan::fixme();
 }
 
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
+	convertHashes( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db )
+{
+	// Convert the string to json
+	Json::Reader reader {};
+	Json::Value json {};
+	reader.parse( hashes, json );
+
+	Json::Value out {};
+
+	for ( Json::ArrayIndex i = 0; i < json.size(); ++i )
+	{
+		const auto hex_string { json[ i ].asString() };
+		const auto sha256 { SHA256::fromHex( hex_string ) };
+
+		if ( !sha256.has_value() ) co_return std::unexpected( sha256.error() );
+
+		const auto record_id { co_await api::helpers::searchRecord( *sha256, db ) };
+
+		if ( !record_id.has_value() ) co_return std::unexpected( createBadRequest( "Invalid SHA256" ) );
+
+		out[ i ] = record_id.value();
+	}
+
+	request->setParameter( "file_ids", out.toStyledString() );
+
+	co_return std::expected< void, drogon::HttpResponsePtr > {};
+}
+
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpRequestPtr request )
 {
+	auto db { drogon::app().getDbClient() };
+
+	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ); hashes_opt.has_value() )
+	{
+		// convert hashes to their respective record_ids
+		if ( auto result = co_await convertHashes( request, hashes_opt.value(), db ); !result.has_value() )
+			co_return result.error();
+	}
+
 	const auto file_ids { request->getOptionalParameter< std::string >( "file_ids" ) };
 	if ( !file_ids.has_value() ) co_return createBadRequest( "Must provide file_ids array" );
 
 	std::string file_ids_str { file_ids.value() };
-	//file_ids will be in a json string format
+	Json::Value file_ids_json {};
+	Json::Reader file_ids_reader {};
+	file_ids_reader.parse( file_ids_str, file_ids_json );
+
 	std::vector< RecordID > record_ids {};
-	file_ids_str = file_ids_str.substr( 1, file_ids_str.size() - 2 ); // cut off the []
-	while ( !file_ids_str.empty() )
-	{
-		const auto end_itter { file_ids_str.find_first_of( ',' ) };
-		if ( end_itter == std::string::npos )
-		{
-			record_ids.push_back( std::stoi( file_ids_str ) );
-			file_ids_str.clear();
-		}
-		else
-		{
-			record_ids.push_back( std::stoi( file_ids_str.substr( 0, end_itter ) ) );
-			file_ids_str = file_ids_str.substr( end_itter + 1 );
-		}
-	}
+	for ( const auto& id : file_ids_json ) record_ids.push_back( id.as< RecordID >() );
 
 	// we've gotten all the ids. For now we'll just return them
 	Json::Value metadata {};
-
-	auto db { drogon::app().getDbClient() };
 
 	for ( const auto& id : record_ids )
 	{
 		Json::Value data {};
 
-		const auto hash_result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", id ) };
+		const auto hash_result { co_await db->execSqlCoro( "SELECT * FROM records WHERE record_id = $1", id ) };
 
 		data[ "file_id" ] = id;
 		const SHA256 sha256 { hash_result[ 0 ][ "sha256" ] };
 		data[ "hash" ] = sha256.hex();
+		const auto file_info { co_await db->execSqlCoro(
+			"SELECT size, mime.name as mime_name, coalesce(best_extension, extension) as extension  FROM file_info LEFT JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
+			id ) };
+
+		if ( file_info.size() == 0 )
+		{
+			data[ "size" ] = 0;
+			data[ "mime" ] = "";
+			data[ "ext" ] = "";
+		}
+		else
+		{
+			data[ "size" ] = file_info[ 0 ][ "size" ].as< std::size_t >();
+			data[ "mime" ] = file_info[ 0 ][ "mime_name" ].as< std::string >();
+			data[ "ext" ] = file_info[ 0 ][ "extension" ].as< std::string >();
+		}
+
+		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
+		data[ "known_urls" ] = Json::Value( Json::arrayValue );
+
+		auto storage_tags { db->execSqlCoro(
+			"SELECT domain_id, tag_id, tag_text FROM tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
+			id ) };
+
+		auto display_tags { db->execSqlCoro(
+			"SELECT domain_id, tag_id, tag_text FROM display_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
+			id ) };
+
+		for ( const auto& storage_tag : co_await storage_tags )
+		{
+			const auto& domain_id { storage_tag[ "domain_id" ] };
+			const auto& tag_id { storage_tag[ "tag_id" ] };
+			const auto& tag_text { storage_tag[ "tag_text" ] };
+
+			data[ "tags" ][ std::to_string( domain_id.as< TagDomainID >() ) ][ "storage_tags" ][ "0" ]
+				.append( tag_text.as< std::string >() );
+		}
+
+		for ( const auto& display_tag : co_await display_tags )
+		{
+			const auto& domain_id { display_tag[ "domain_id" ] };
+			const auto& tag_id { display_tag[ "tag_id" ] };
+			const auto& tag_text { display_tag[ "tag_text" ] };
+
+			data[ "tags" ][ std::to_string( domain_id.as< TagDomainID >() ) ][ "display_tags" ][ "0" ]
+				.append( tag_text.as< std::string >() );
+		}
 
 		metadata.append( std::move( data ) );
 	}

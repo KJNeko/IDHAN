@@ -4,7 +4,7 @@
 
 #include "crypto/SHA256.hpp"
 
-namespace idhan::api
+namespace idhan::api::helpers
 {
 
 drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )
@@ -38,4 +38,4 @@ drogon::Task< std::optional< RecordID > > searchRecord( const SHA256& sha256, dr
 	co_return search_result[ 0 ][ 0 ].as< RecordID >();
 }
 
-} // namespace idhan::api
+} // namespace idhan::api::helpers

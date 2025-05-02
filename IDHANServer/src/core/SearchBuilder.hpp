@@ -83,6 +83,12 @@ enum HydrusSortType
 	DEFAULT = HY_IMPORT_TIME
 };
 
+enum class HydrusDisplayType
+{
+	STORED,
+	DISPLAY
+};
+
 constexpr SortType hyToIDHANSortType( const HydrusSortType hy_sort )
 {
 	switch ( hy_sort )
@@ -157,6 +163,8 @@ struct SearchBuilder
 	SortOrder m_order;
 	std::vector< TagID > m_tags;
 
+	HydrusDisplayType m_display_mode;
+
   public:
 
 	SearchBuilder() = default;
@@ -171,6 +179,8 @@ struct SearchBuilder
 	void addFileDomain( FileDomainID value );
 
 	void setTags( const std::vector< TagID >& vector );
+
+	void setDisplay( HydrusDisplayType type );
 };
 
 } // namespace idhan

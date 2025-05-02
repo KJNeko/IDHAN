@@ -47,7 +47,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 			const auto expected_hash { SHA256::fromHex( str ) };
 			if ( !expected_hash.has_value() ) co_return expected_hash.error();
 
-			const auto result { co_await createRecord( *expected_hash, db ) };
+			const auto result { co_await helpers::createRecord( *expected_hash, db ) };
 
 			json_array[ idx++ ] = result;
 		}
@@ -61,7 +61,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 		if ( !sha256.has_value() ) co_return sha256.error();
 
-		const RecordID record_id { co_await createRecord( *sha256, db ) };
+		const RecordID record_id { co_await helpers::createRecord( *sha256, db ) };
 		json_out[ "record_id" ] = record_id;
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );

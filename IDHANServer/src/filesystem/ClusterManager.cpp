@@ -90,6 +90,7 @@ void ClusterManager::ClusterInfo::
 	}
 
 	//check that io stream is in binary mode
+	//TODO: Fix deprecated enum-enum-conversion (std::ios_base::fmtflags & std::ios_base::openmode)
 	if ( !( io.flags() & std::ios::binary ) )
 	{
 		throw std::runtime_error( "IO was not in binary mode!" );
