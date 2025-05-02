@@ -16,10 +16,21 @@ add_custom_command(
 		COMMAND ${CMAKE_COMMAND} -DMIGRATION_DIR=${MIGRATION_DIR} -DOUT=${MIGRATION_SOURCE} -P "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake"
 		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake: Generating doMigration.cpp")
 
-target_link_libraries(IDHANServer PUBLIC spdlog fmt drogon)
-target_link_libraries(IDHANServer PRIVATE pqxx sqlite3 Qt6::Core tomlplusplus::tomlplusplus)
+
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(spdlog REQUIRED)
+find_package(drogon REQUIRED)
+
+if (spdlog_FOUND)
+else ()
+	message(SEND_ERROR "Spdlog not found")
+endif ()
+
+target_link_libraries(IDHANServer PUBLIC spdlog drogon)
+target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core tomlplusplus::tomlplusplus)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
-target_include_directories(IDHANServer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(IDHANServer PRIVATE IDHAN)
 
 if (DEFINED ALLOW_TABLE_DESTRUCTION AND ALLOW_TABLE_DESTRUCTION)
 	target_compile_definitions(IDHANServer PUBLIC ALLOW_TABLE_DESTRUCTION=1)

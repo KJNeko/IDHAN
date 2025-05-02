@@ -91,6 +91,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagRouter( drogon::Ht
 
 	if ( json_obj->isArray() )
 	{
+		log::debug( "Tag router creating multiple tags" );
 		co_return co_await createBatchedTag( request );
 	}
 
@@ -114,13 +115,23 @@ std::string pgEscape( const std::string& str )
 
 	for ( const auto& c : str )
 	{
-		if ( c == '}' ) cleaned.push_back( '\\' );
-		if ( c == '{' ) cleaned.push_back( '\\' );
-		if ( c == '\"' ) cleaned.push_back( '\\' );
-		// if ( c == '\'' ) cleaned.push_back( '\'' );
-		if ( c == '\\' ) cleaned.push_back( '\\' );
-		if ( c == ',' ) contains_comma = true;
-		cleaned.push_back( c );
+		switch ( c )
+		{
+			case '}':
+				[[fallthrough]];
+			case '{':
+				[[fallthrough]];
+			case '\"':
+				[[fallthrough]];
+			case '\\':
+				[[fallthrough]];
+				cleaned.push_back( '\\' );
+			case ',':
+				[[fallthrough]];
+				contains_comma = contains_comma || ( c == ',' );
+			default:
+				cleaned.push_back( c );
+		}
 	}
 
 	if ( contains_comma ) return std::format( "\"{}\"", cleaned );
@@ -156,16 +167,25 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 	namespaces += "}";
 	subtags += "}";
 
-	const auto result { co_await db->execSqlCoro( "SELECT createBatchedTag($1, $2)", namespaces, subtags ) };
-
-	if ( result.size() != tag_pairs.size() )
-		co_return std::unexpected( createInternalError(
-			"Expected number of tag returns does not match {} == {}", result.size(), tag_pairs.size() ) );
-
 	std::vector< TagID > tag_ids {};
-	tag_ids.reserve( result.size() );
 
-	for ( const auto& tag : result ) tag_ids.emplace_back( tag[ 0 ].as< TagID >() );
+	try
+	{
+		const auto result { co_await db->execSqlCoro( "SELECT createBatchedTag($1, $2)", namespaces, subtags ) };
+
+		if ( result.size() != tag_pairs.size() )
+			co_return std::unexpected( createInternalError(
+				"Expected number of tag returns does not match {} == {}", result.size(), tag_pairs.size() ) );
+
+		tag_ids.reserve( result.size() );
+
+		for ( const auto& tag : result ) tag_ids.emplace_back( tag[ 0 ].as< TagID >() );
+	}
+	catch ( std::exception& e )
+	{
+		co_return std::
+			unexpected( createInternalError( "Failed to create tags using createBatchedTags(): {}", e.what() ) );
+	}
 
 	co_return tag_ids;
 }
@@ -224,7 +244,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createSingleTag( drogon::Ht
 {
 	if ( request == nullptr )
 	{
-		log::error( "/tag/create: null request" );
+		log::error( "/tags/create: null request" );
 		throw std::runtime_error( "Null request" );
 	}
 
@@ -233,7 +253,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createSingleTag( drogon::Ht
 
 	if ( input_json == nullptr )
 	{
-		log::error( "/tag/create: no json data" );
+		log::error( "/tags/create: no json data" );
 		throw std::runtime_error( "No json data" );
 	}
 
@@ -270,7 +290,14 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createSingleTag( drogon::Ht
 	if ( !namespace_id.has_value() ) co_return namespace_id.error();
 	if ( !subtag_id.has_value() ) co_return subtag_id.error();
 
+	log::debug( "Got namespace id {} for {} ", namespace_id.value(), namespace_c.asString() );
+	log::debug( "Got subtag id {} for {}", subtag_id.value(), subtag_c.asString() );
+
 	const auto tag_id { co_await createTagID( namespace_id.value(), subtag_id.value(), db ) };
+
+	if ( !tag_id.has_value() ) co_return tag_id.error();
+
+	log::debug( "Got tag id {} for tag ({}, {})", tag_id.value(), namespace_id.value(), subtag_id.value() );
 
 	Json::Value json {};
 

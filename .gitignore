@@ -45,3 +45,5 @@ out/
 
 /IDHANServer/src/db/setup/migration/doMigration.cpp
 /docs/out
+/IDHAN/include/hydrus_constants_gen.hpp
+/IDHAN/include/hydrus_client_constants_gen.hpp

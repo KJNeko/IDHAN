@@ -18,37 +18,43 @@ namespace idhan::log
 {
 
 template < typename... Ts >
-void trace( const std::string str, Ts&&... ts )
+void trace( const std::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::trace( str, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void debug( const std::string str, Ts&&... ts )
+void debug( const ::std::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::debug( str, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void info( const std::string str, Ts&&... ts )
+void info( const std::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::info( str, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void warn( const std::string str, Ts&&... ts )
+void warn( const std::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::warn( str, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void error( const std::string str, Ts&&... ts )
+void error( const std::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::error( str, std::forward< Ts >( ts )... );
 }
 
+template < typename T >
+void error( const T& val )
+{
+	::spdlog::error( val );
+}
+
 template < typename... Ts >
-void critical( const std::string str, Ts&&... ts )
+void critical( const std::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::critical( str, std::forward< Ts >( ts )... );
 }
@@ -56,9 +62,9 @@ void critical( const std::string str, Ts&&... ts )
 namespace server
 {
 template < typename... Ts >
-void info( const std::string str, Ts&&... ts )
+void info( const std::format_string< Ts... > str, Ts&&... ts )
 {
-	::spdlog::info( std::format( "[SERVER]: {}", str ), std::forward< Ts >( ts )... );
+	::spdlog::info( str, std::forward< Ts >( ts )... );
 }
 } // namespace server
 

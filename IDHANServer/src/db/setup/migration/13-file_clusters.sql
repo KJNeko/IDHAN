@@ -1,4 +1,4 @@
-CREATE TABLE file_clusters
+CREATE TABLE IF NOT EXISTS file_clusters
 (
     cluster_id         SMALLSERIAL NOT NULL PRIMARY KEY,
     ratio_number       SMALLINT    NOT NULL DEFAULT 1,     -- Ratio of the cluster ( Ratio / TotalRatio )

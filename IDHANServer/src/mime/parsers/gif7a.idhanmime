@@ -1,0 +1,13 @@
+{
+  "mime": "animated/gif",
+  "extensions": [
+    "gif"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 0,
+      "hex": "474946383761"
+    }
+  ]
+}

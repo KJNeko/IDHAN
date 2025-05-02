@@ -22,6 +22,13 @@ drogon::HttpResponsePtr createBadRequest( const std::format_string< Args... > st
 }
 
 template < typename... Args >
+inline drogon::HttpResponsePtr createNotFound( const std::format_string< Args... > str, Args&&... args )
+{
+	return internal::
+		createBadResponse( std::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k404NotFound );
+}
+
+template < typename... Args >
 drogon::HttpResponsePtr createInternalError( const std::format_string< Args... > str, Args&&... args )
 {
 	return internal::createBadResponse(

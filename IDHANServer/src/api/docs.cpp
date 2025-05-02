@@ -38,6 +38,7 @@ void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& ca
 		response->setBody( str );
 
 		callback( response );
+		return;
 	}
 
 	callback( createInternalError( "API docs not provided" ) );

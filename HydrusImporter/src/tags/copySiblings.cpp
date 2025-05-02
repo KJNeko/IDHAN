@@ -3,6 +3,7 @@
 //
 
 #include "HydrusImporter.hpp"
+#include "hydrus_constants.hpp"
 #include "sqlitehelper/Transaction.hpp"
 
 namespace idhan::hydrus
@@ -29,9 +30,15 @@ void HydrusImporter::copySiblings()
 	};
 
 	// find all services that have parents
-	client_tr << "SELECT name, service_id FROM services WHERE service_type = 0 OR service_type = 5" >>
-		[ & ]( const std::string name, const std::size_t service_id )
+	client_tr << "SELECT name, service_id, service_type FROM services WHERE service_type = 0 OR service_type = 5" >>
+		[ & ]( const std::string name, const std::size_t service_id, const std::size_t service_type )
 	{
+		if ( !m_process_ptr_mappings && service_type == hy_constants::ServiceTypes::PTR_SERVICE )
+		{
+			// if the current table is for the ptr, and we are not told to process the ptr mappings, then skip this
+			return;
+		}
+
 		logging::info( "Getting siblings from service {}", name );
 
 		const std::string table_name { std::format( "current_tag_siblings_{}", service_id ) };
@@ -54,15 +61,11 @@ void HydrusImporter::copySiblings()
 			tags.emplace_back( alias_pair );
 		};
 
-		logging::debug( "Found {} tags to insert", tags.size() );
-
 		QFuture< std::vector< TagID > > tag_ids_future { m_client->createTags( std::move( tags ) ) };
 
 		tag_ids_future.waitForFinished();
 
 		const auto tag_ids { tag_ids_future.result() };
-
-		logging::debug( "Finished creating tags for {} siblings", tag_ids.size() );
 
 		std::vector< std::pair< TagID, TagID > > pairs {};
 

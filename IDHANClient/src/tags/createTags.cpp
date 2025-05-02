@@ -28,7 +28,7 @@ QFuture< std::vector< TagID > > IDHANClient::
 	}
 
 	QUrl url { m_url_template };
-	url.setPath( "/tag/create" );
+	url.setPath( "/tags/create" );
 
 	const auto json_str_thing { "application/json" };
 
@@ -49,16 +49,18 @@ QFuture< std::vector< TagID > > IDHANClient::
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
 
-		QJsonDocument document { QJsonDocument::fromJson( data ) };
+		const QJsonDocument document { QJsonDocument::fromJson( data ) };
 
-		std::vector< TagID > tags {};
+		std::vector< TagID > tag_ids {};
+
+		logging::info( "Got {} tags", document.array().size() );
 
 		for ( const auto& obj : document.array() )
 		{
-			tags.emplace_back( obj.toObject()[ "tag_id" ].toInteger() );
+			tag_ids.emplace_back( obj.toObject()[ "tag_id" ].toInteger() );
 		}
 
-		promise->addResult( std::move( tags ) );
+		promise->addResult( std::move( tag_ids ) );
 
 		promise->finish();
 		response->deleteLater();

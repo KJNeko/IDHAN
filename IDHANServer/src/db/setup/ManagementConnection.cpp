@@ -30,7 +30,6 @@ ManagementConnection::ManagementConnection( const ConnectionArguments& arguments
 		tx.exec( "DROP SCHEMA IF EXISTS test CASCADE" );
 		tx.exec( "CREATE SCHEMA test" );
 		tx.exec( "SET schema 'test'" );
-		// This function is a NOOP unless a define is enabled for it.
 		constexpr std::string_view schema { "test" };
 		db::updateMigrations( tx, schema );
 	}

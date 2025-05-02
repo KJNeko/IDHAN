@@ -24,6 +24,11 @@ post:
               type: array
               items:
                 $ref: '../../../schemas/TagInput.yaml'
+            sets:
+              type: array
+              items:
+                type: array
+                $ref: '../../../schemas/TagInput.yaml'
         examples:
           IDs:
             summary: An array of multiple tag ids
@@ -59,7 +64,20 @@ post:
                   subtag: "toujou koneko"
                 - namespace: 1
                   subtag: 1
-
+          Sets:
+            summary: A set of records and an array of tag sets to add to each individual record
+            value:
+              records:
+                - 1
+                - 2
+                - 3
+              sets:
+                - - { namespace: "character", subtag: "toujou koneko" }
+                  - { namespace: 1, subtag: 1 }
+                - - { namespace: "character", subtag: "toujou koneko" }
+                  - { namespace: 3, subtag: 5 }
+                - - { namespace: "character", subtag: "toujou koneko" }
+                  - { namespace: 9, subtag: 2 }
   200:
     description: All tags added successfully
   400:

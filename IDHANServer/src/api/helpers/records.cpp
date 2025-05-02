@@ -2,7 +2,7 @@
 
 #include "records.hpp"
 
-#include "crypto/sha256.hpp"
+#include "crypto/SHA256.hpp"
 
 namespace idhan::api
 {

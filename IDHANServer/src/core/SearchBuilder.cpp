@@ -4,37 +4,130 @@
 
 #include "SearchBuilder.hpp"
 
+#include "logging/log.hpp"
+
 namespace idhan
 {
 
-std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes ) const
+std::string createFilter( std::uint32_t index, const std::vector< TagID >& tag_ids )
+{
+	std::string str {};
+	str += std::format( " filter_{}", index );
+	str += " AS (SELECT record_id, tag_id, domain_id FROM tag_mappings";
+	str += std::format( " WHERE tag_id = {}", tag_ids[ index ] );
+	str += " AND domain_id = ANY($1)";
+	if ( index != 0 )
+	{
+		str += std::format(
+			" AND EXISTS (SELECT 1 FROM filter_{} last_filter WHERE last_filter.record_id = tag_mappings.record_id)",
+			index - 1 );
+	}
+
+	str += ")";
+
+	return str;
+}
+
+std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes )
 {
 	/*
 	SELECT [record_id],[1:sha256] FROM tag_mappings [1:NATURAL JOIN records ON tag_mappings.record_id = records.record_id]
 	*/
 
-	constexpr std::string_view select_record_id { "SELECT record_id FROM tag_mappings" };
-	constexpr std::string_view select_sha256 {
-		"SELECT sha256 FROM tag_mappings NATURAL JOIN records ON tag_mappings.record_id = records.record_id"
-	};
-	constexpr std::string_view select_both {
-		"SELECT record_id, sha256 FROM tag_mappings NATURAL JOIN records ON tag_mappings.record_id = records.record_id"
-	};
+	//TODO: Sort tag ids to get the most out of each filter.
 
 	std::string query {};
 
-	if ( return_ids && return_hashes )
-		query += select_both;
-	else if ( return_ids )
-		query += select_record_id;
-	else if ( return_hashes )
-		query += select_sha256;
+	query += "WITH";
+	for ( std::size_t i = 0; i < m_tags.size(); ++i )
 	{
-		return "";
+		query += createFilter( i, m_tags );
+		if ( i + 1 < m_tags.size() ) query += ",";
+		query += "\n";
 	}
 
-	return "";
+	if ( m_tags.size() == 0 ) return query;
+
+	const std::string last_filter { std::format( "filter_{}", m_tags.size() - 1 ) };
+
+	// determine the SELECT
+	if ( return_ids && return_hashes )
+	{
+		m_required_joins.records = true;
+		const std::string select_both { std::format( " SELECT tm.record_id, sha256 FROM {} tm", last_filter ) };
+		query += select_both;
+	}
+	else if ( return_hashes )
+	{
+		const std::string select_sha256 { std::format( " SELECT tm.sha256 FROM {} tm", last_filter ) };
+		query += select_sha256;
+		m_required_joins.records = true;
+	}
+	else
+	{
+		const std::string select_record_id { std::format( " SELECT tm.record_id FROM {} tm", last_filter ) };
+		query += select_record_id;
+	}
+
+	// determine any joins needed
+	if ( m_required_joins.records )
+	{
+		query += " JOIN records rc ON rc.record_id = tm.record_id";
+	}
+
+	if ( m_required_joins.file_info )
+	{
+		query += " JOIN file_info fm ON fm.record_id = tm.record_id";
+	}
+
+	switch ( m_sort_type )
+	{
+		// DEFAULT and HY_* should not be used here.
+		default:
+			[[fallthrough]];
+		case SortType::FILESIZE:
+			query += " ORDER BY fm.file_size";
+			break;
+		case SortType::IMPORT_TIME:
+			query += " ORDER BY fm.cluster_store_time ";
+			break;
+		case SortType::RECORD_TIME:
+			query += " ORDER BY records.creation_time ";
+	}
+
+	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
+
+	log::info( "Query generated: \n{}", query );
+
+	return query;
 }
+
+void SearchBuilder::setSortType( const SortType type )
+{
+	switch ( type )
+	{
+		default:
+			[[fallthrough]];
+		case SortType::FILESIZE:
+			{
+				m_sort_type = type;
+				m_required_joins.file_info = true;
+			}
+		case SortType::IMPORT_TIME:
+			{
+			// comes from `cluster_store_time` timestamp in `file_info`
+				m_required_joins.file_info = true;
+			}
+		case SortType::RECORD_TIME:
+			{
+			// comes from creation_time in `records`
+				m_required_joins.records = true;
+			}
+	}
+}
+
+void SearchBuilder::setSortOrder( const SortOrder value )
+{}
 
 void SearchBuilder::filterTagDomain( const TagDomainID value )
 {
@@ -45,6 +138,11 @@ void SearchBuilder::addFileDomain( const FileDomainID value )
 {
 	params.append( value );
 	placeholders.next();
+}
+
+void SearchBuilder::setTags( const std::vector< TagID >& vector )
+{
+	m_tags = std::move( vector );
 }
 
 } // namespace idhan

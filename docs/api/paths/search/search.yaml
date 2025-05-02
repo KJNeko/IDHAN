@@ -1,0 +1,59 @@
+get:
+  tags:
+    - search
+  summary: Searches for a given file using tags
+  parameters:
+    - name: tag_ids
+      in: query
+      description: An array of tag IDs to search with. If empty, Default all files
+      required: false
+      schema:
+        type: array
+        items:
+          type: integer
+    - name: tag_domains
+      in: query
+      description: The tag domains to search in. Default all
+      required: false
+      schema:
+        type: array
+        items:
+          type: integer
+    - name: has_file
+      in: query
+      description: If true then the record must have a file stored. Default true
+      required: false
+      schema:
+        type: boolean
+    - name: sort_type
+      in: query
+      description: The sorting method. Default is import time
+      required: false
+      schema:
+        type: integer
+    - name: sort_order
+      in: query
+      description: Ascending/Newest/Smallest (true/non-zero) or descending/oldest/largest (false/zero)
+      schema:
+        type: boolean
+    - name: return_hashes
+      in: query
+      required: false
+      description: If true then the hash will also be returned
+      schema:
+        type: boolean
+    - name: return_ids
+      in: query
+      required: false
+      description: If true then the record id will be returned
+      schema:
+        type: boolean
+  responses:
+    200:
+      description: Successfully found records
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: integer

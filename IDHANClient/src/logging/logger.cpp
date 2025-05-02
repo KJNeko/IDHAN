@@ -4,7 +4,7 @@
 
 #include "idhan/logging/logger.hpp"
 
-#include <QJsonDocument>
+#include <QJsonValue>
 #include <QNetworkReply>
 
 namespace idhan::logging
@@ -17,7 +17,7 @@ void logResponse( QNetworkReply* reply )
 	const auto data { reply->readAll() };
 	if ( data.isEmpty() )
 	{
-		idhan::logging::error( reply->errorString().toStdString() );
+		error( reply->errorString().toStdString() );
 		return;
 	}
 
@@ -38,9 +38,8 @@ void logResponse( QNetworkReply* reply )
 		return;
 	}
 
-	logging::info(
-		"Failed to process special response: {}", reply->header( QNetworkRequest::ContentTypeHeader ).toString() );
-	idhan::logging::error( reply->errorString().toStdString() );
+	info( "Failed to process special response: {}", reply->header( QNetworkRequest::ContentTypeHeader ).toString() );
+	error( reply->errorString().toStdString() );
 }
 
 } // namespace idhan::logging

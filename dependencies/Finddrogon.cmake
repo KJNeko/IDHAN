@@ -1,0 +1,21 @@
+
+set(BUILD_MYSQL OFF)
+set(BUILD_SQLITE OFF)
+set(BUILD_REDIS OFF)
+set(BUILD_ORM ON)
+set(BUILD_EXAMPLES OFF)
+set(BUILD_CTL OFF)
+
+set(USE_MYSQL OFF)
+set(USE_SQLITE3 OFF)
+
+set(USE_SPDLOG ON)
+
+set(BUILD_TESTING ON)
+
+set(CMAKE_CXX_STANDARD 20)
+
+set(USE_SUBMODULE OFF)
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/dependencies/drogon ${CMAKE_CURRENT_BINARY_DIR}/drogon)
+set(drogon_FOUND TRUE)

@@ -4,6 +4,7 @@
 
 #include "HydrusImporter.hpp"
 
+#include <QCoreApplication>
 #include <QFutureSynchronizer>
 #include <QFutureWatcher>
 #include <QtConcurrentRun>
@@ -15,9 +16,11 @@ namespace idhan::hydrus
 
 constexpr std::string_view LOCK_FILE_NAME { "client_running" };
 
-HydrusImporter::HydrusImporter( const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client ) :
+HydrusImporter::HydrusImporter(
+	const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client, const bool process_ptr_flag ) :
   m_client( client ),
-  m_path( path )
+  m_path( path ),
+  m_process_ptr_mappings( process_ptr_flag )
 {
 	if ( !std::filesystem::exists( path ) ) throw std::runtime_error( "Failed to open path to hydrus db" );
 
@@ -113,14 +116,19 @@ void HydrusImporter::copyHydrusInfo()
 			this->copyMappings();
 		} ) };
 
+	QFuture< void > files_future { QtConcurrent::run( [ this ]() { this->copyFileStorage(); } ) };
+
 	// QFuture< void > url_future { hash_future.then( [ this ]() { this->copyUrls(); } ) };
 
 	sync.addFuture( std::move( tag_domains ) );
 	// sync.addFuture( std::move( tag_future ) );
-	sync.addFuture( std::move( parents_future ) );
-	sync.addFuture( std::move( aliases_future ) );
+	// sync.addFuture( std::move( parents_future ) );
+	// sync.addFuture( std::move( aliases_future ) );
 	sync.addFuture( std::move( hash_future ) );
 	sync.addFuture( std::move( mappings_future ) );
+	sync.addFuture( std::move( files_future ) );
+
+	final_future = QtConcurrent::run( [ this ]() { sync.waitForFinished(); } ).then( [ this ]() { this->finish(); } );
 }
 
 } // namespace idhan::hydrus
