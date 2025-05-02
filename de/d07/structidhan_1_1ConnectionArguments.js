@@ -6,5 +6,6 @@ var structidhan_1_1ConnectionArguments =
     [ "password", "de/d07/structidhan_1_1ConnectionArguments.html#a4a2d1b376ea0924b732391cb4e215a2d", null ],
     [ "port", "de/d07/structidhan_1_1ConnectionArguments.html#a262b24651c48720d52cfeb6563e79e68", null ],
     [ "testmode", "de/d07/structidhan_1_1ConnectionArguments.html#a832a9898eccb5cd477f4c02e378637df", null ],
+    [ "use_stdout", "de/d07/structidhan_1_1ConnectionArguments.html#a8a5bff98fbf308282cdba26e959915b4", null ],
     [ "user", "de/d07/structidhan_1_1ConnectionArguments.html#a59dfeb3477eb3eabd96c07dad452e834", null ]
 ];

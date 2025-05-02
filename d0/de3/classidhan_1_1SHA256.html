@@ -121,7 +121,7 @@ $(function(){initNavTree('d0/de3/classidhan_1_1SHA256.html','../../'); initResiz
 </div><!--header-->
 <div class="contents">
 
-<p><code>#include &lt;<a class="el" href="../../d5/d68/sha256_8hpp_source.html">sha256.hpp</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="../../db/d73/SHA256_8hpp_source.html">SHA256.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -134,18 +134,20 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a89d603bb6f129f7f86d18b8bc2fc680c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4cd0626f10d0bccbf0554b1ae9442b8e" id="r_a4cd0626f10d0bccbf0554b1ae9442b8e"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4cd0626f10d0bccbf0554b1ae9442b8e">hex</a> () const</td></tr>
 <tr class="separator:a4cd0626f10d0bccbf0554b1ae9442b8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5443a7d795554994ae96ddbefe53702f" id="r_a5443a7d795554994ae96ddbefe53702f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5443a7d795554994ae96ddbefe53702f">SHA256</a> (QIODevice *io)</td></tr>
-<tr class="separator:a5443a7d795554994ae96ddbefe53702f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a071415941584f38eafe3f3db594daa57" id="r_a071415941584f38eafe3f3db594daa57"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a071415941584f38eafe3f3db594daa57">hash</a> (const std::string_view &amp;str)</td></tr>
-<tr class="separator:a071415941584f38eafe3f3db594daa57"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad541cee4496022e6063a182f79cf3b55" id="r_ad541cee4496022e6063a182f79cf3b55"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad541cee4496022e6063a182f79cf3b55">fromHex</a> (const std::string &amp;str)</td></tr>
-<tr class="memdesc:ad541cee4496022e6063a182f79cf3b55"><td class="mdescLeft">&#160;</td><td class="mdescRight">Turns a HEX string into a <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> object. Str must be exactly (256 / 8) * 2, 64 characters long.  <br /></td></tr>
-<tr class="separator:ad541cee4496022e6063a182f79cf3b55"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acf722ad0a8cd5ab57eaccc08e5194622" id="r_acf722ad0a8cd5ab57eaccc08e5194622"><td class="memItemLeft" align="right" valign="top">static std::expected&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>, drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acf722ad0a8cd5ab57eaccc08e5194622">fromHex</a> (const std::string &amp;str)</td></tr>
+<tr class="memdesc:acf722ad0a8cd5ab57eaccc08e5194622"><td class="mdescLeft">&#160;</td><td class="mdescRight">Turns a HEX string into a <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> object. Str must be exactly (256 / 8) * 2, 64 characters long.  <br /></td></tr>
+<tr class="separator:acf722ad0a8cd5ab57eaccc08e5194622"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2edca213311b70e1616bafc751806d6f" id="r_a2edca213311b70e1616bafc751806d6f"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2edca213311b70e1616bafc751806d6f">fromBuffer</a> (const std::vector&lt; std::byte &gt; &amp;<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>)</td></tr>
 <tr class="separator:a2edca213311b70e1616bafc751806d6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a65fd20facc4078eae80c41ddaa0a17b5" id="r_a65fd20facc4078eae80c41ddaa0a17b5"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a65fd20facc4078eae80c41ddaa0a17b5">hash</a> (const std::vector&lt; std::byte &gt; &amp;<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>)</td></tr>
+<tr class="separator:a65fd20facc4078eae80c41ddaa0a17b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a88659621bb62cc0929851beeed5715ca" id="r_a88659621bb62cc0929851beeed5715ca"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a88659621bb62cc0929851beeed5715ca">hash</a> (const std::filesystem::path &amp;path)</td></tr>
+<tr class="separator:a88659621bb62cc0929851beeed5715ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa418580b6a1862d57d087d02e6fd86b6" id="r_aa418580b6a1862d57d087d02e6fd86b6"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa418580b6a1862d57d087d02e6fd86b6">hash</a> (const std::byte *<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>, const std::size_t size)</td></tr>
+<tr class="separator:aa418580b6a1862d57d087d02e6fd86b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
@@ -170,7 +172,7 @@ Friends</h2></td></tr>
 </table>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ab69236f70fcb57466f40da25adc83d6c" name="ab69236f70fcb57466f40da25adc83d6c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab69236f70fcb57466f40da25adc83d6c">&#9670;&#160;</a></span>SHA256() <span class="overload">[1/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ab69236f70fcb57466f40da25adc83d6c">&#9670;&#160;</a></span>SHA256() <span class="overload">[1/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -195,7 +197,7 @@ Friends</h2></td></tr>
 </div>
 </div>
 <a id="a4aec321eead8911f795113c57f4d99d7" name="a4aec321eead8911f795113c57f4d99d7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4aec321eead8911f795113c57f4d99d7">&#9670;&#160;</a></span>SHA256() <span class="overload">[2/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a4aec321eead8911f795113c57f4d99d7">&#9670;&#160;</a></span>SHA256() <span class="overload">[2/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -220,7 +222,7 @@ Friends</h2></td></tr>
 </div>
 </div>
 <a id="a2b13c8e0f876db1048b45ba59fc1713d" name="a2b13c8e0f876db1048b45ba59fc1713d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2b13c8e0f876db1048b45ba59fc1713d">&#9670;&#160;</a></span>SHA256() <span class="overload">[3/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a2b13c8e0f876db1048b45ba59fc1713d">&#9670;&#160;</a></span>SHA256() <span class="overload">[3/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -245,7 +247,7 @@ Friends</h2></td></tr>
 </div>
 </div>
 <a id="a7c17ab48960e00bd36b66e2e8dd8f818" name="a7c17ab48960e00bd36b66e2e8dd8f818"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7c17ab48960e00bd36b66e2e8dd8f818">&#9670;&#160;</a></span>SHA256() <span class="overload">[4/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a7c17ab48960e00bd36b66e2e8dd8f818">&#9670;&#160;</a></span>SHA256() <span class="overload">[4/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -270,13 +272,10 @@ Friends</h2></td></tr>
 </div>
 </div>
 <a id="a89d603bb6f129f7f86d18b8bc2fc680c" name="a89d603bb6f129f7f86d18b8bc2fc680c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a89d603bb6f129f7f86d18b8bc2fc680c">&#9670;&#160;</a></span>SHA256() <span class="overload">[5/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a89d603bb6f129f7f86d18b8bc2fc680c">&#9670;&#160;</a></span>SHA256() <span class="overload">[5/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">idhan::SHA256::SHA256 </td>
@@ -285,36 +284,6 @@ Friends</h2></td></tr>
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel explicit">explicit</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a5443a7d795554994ae96ddbefe53702f" name="a5443a7d795554994ae96ddbefe53702f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5443a7d795554994ae96ddbefe53702f">&#9670;&#160;</a></span>SHA256() <span class="overload">[6/6]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">idhan::SHA256::SHA256 </td>
-          <td>(</td>
-          <td class="paramtype">QIODevice *</td>          <td class="paramname"><span class="paramname"><em>io</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel explicit">explicit</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 </div>
@@ -370,8 +339,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="ad541cee4496022e6063a182f79cf3b55" name="ad541cee4496022e6063a182f79cf3b55"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad541cee4496022e6063a182f79cf3b55">&#9670;&#160;</a></span>fromHex()</h2>
+<a id="acf722ad0a8cd5ab57eaccc08e5194622" name="acf722ad0a8cd5ab57eaccc08e5194622"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acf722ad0a8cd5ab57eaccc08e5194622">&#9670;&#160;</a></span>fromHex()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -380,7 +349,7 @@ Friends</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> idhan::SHA256::fromHex </td>
+          <td class="memname">std::expected&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>, drogon::HttpResponsePtr &gt; idhan::SHA256::fromHex </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>str</em></span></td><td>)</td>
           <td></td>
@@ -397,8 +366,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="a071415941584f38eafe3f3db594daa57" name="a071415941584f38eafe3f3db594daa57"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a071415941584f38eafe3f3db594daa57">&#9670;&#160;</a></span>hash()</h2>
+<a id="aa418580b6a1862d57d087d02e6fd86b6" name="aa418580b6a1862d57d087d02e6fd86b6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa418580b6a1862d57d087d02e6fd86b6">&#9670;&#160;</a></span>hash() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -409,13 +378,67 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> idhan::SHA256::hash </td>
           <td>(</td>
-          <td class="paramtype">const std::string_view &amp;</td>          <td class="paramname"><span class="paramname"><em>str</em></span></td><td>)</td>
+          <td class="paramtype">const std::byte *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::size_t</td>          <td class="paramname"><span class="paramname"><em>size</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a88659621bb62cc0929851beeed5715ca" name="a88659621bb62cc0929851beeed5715ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a88659621bb62cc0929851beeed5715ca">&#9670;&#160;</a></span>hash() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> idhan::SHA256::hash </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
 <span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a65fd20facc4078eae80c41ddaa0a17b5" name="a65fd20facc4078eae80c41ddaa0a17b5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a65fd20facc4078eae80c41ddaa0a17b5">&#9670;&#160;</a></span>hash() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> idhan::SHA256::hash </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; std::byte &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -516,8 +539,8 @@ Friends</h2></td></tr>
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
-<li>IDHANServer/src/crypto/<a class="el" href="../../d5/d68/sha256_8hpp_source.html">sha256.hpp</a></li>
-<li>IDHANServer/src/crypto/<a class="el" href="../../d4/d08/sha256_8cpp.html">sha256.cpp</a></li>
+<li>IDHANServer/src/crypto/<a class="el" href="../../db/d73/SHA256_8hpp_source.html">SHA256.hpp</a></li>
+<li>IDHANServer/src/crypto/<a class="el" href="../../d5/d9f/SHA256_8cpp.html">SHA256.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

@@ -37,7 +37,7 @@ var NAVTREE =
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
       [ "Namespace Members", "namespacemembers.html", [
-        [ "All", "namespacemembers.html", null ],
+        [ "All", "namespacemembers.html", "namespacemembers_dup" ],
         [ "Functions", "namespacemembers_func.html", null ],
         [ "Variables", "namespacemembers_vars.html", null ],
         [ "Typedefs", "namespacemembers_type.html", null ],
@@ -51,7 +51,7 @@ var NAVTREE =
       [ "Class Hierarchy", "hierarchy.html", "hierarchy" ],
       [ "Class Members", "functions.html", [
         [ "All", "functions.html", "functions_dup" ],
-        [ "Functions", "functions_func.html", null ],
+        [ "Functions", "functions_func.html", "functions_func" ],
         [ "Variables", "functions_vars.html", null ],
         [ "Typedefs", "functions_type.html", null ],
         [ "Enumerations", "functions_enum.html", null ],
@@ -74,10 +74,11 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d3/d67/classidhan_1_1IDHANClient.html#aed6bcb0b7e0e72fecff82be60c3eec0a",
-"d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a368f308633d07e4fcd9b3ea8bdf9dc7e",
-"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#afdf053f41b15ee8ec94b2201db966aa7",
-"de/da7/Config_8cpp.html"
+"d3/d67/classidhan_1_1IDHANClient.html#a8f1a421eeaa1367a2295a767df30f999",
+"d8/d58/structidhan_1_1FileInfo.html#a5d6d3b1c12546f0af369ed1253782b81",
+"db/de8/structidhan_1_1mime_1_1FileMimeInfo.html",
+"dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a4afdacfc9945508f2fcd07794672177f",
+"dir_59dfc06bce0148edc0b245bbe98f0639.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

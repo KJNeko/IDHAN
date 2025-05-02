@@ -112,6 +112,7 @@ $(function(){initNavTree('d0/d4c/classidhan_1_1ServerContext.html','../../'); in
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="#pri-attribs">Private Attributes</a> &#124;
 <a href="../../d3/d0a/classidhan_1_1ServerContext-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">idhan::ServerContext Class Reference</div></div>
@@ -124,8 +125,8 @@ $(function(){initNavTree('d0/d4c/classidhan_1_1ServerContext.html','../../'); in
 Public Member Functions</h2></td></tr>
 <tr class="memitem:adf339fa4ff53f47235f7c4c54fe80079" id="r_adf339fa4ff53f47235f7c4c54fe80079"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf339fa4ff53f47235f7c4c54fe80079">ServerContext</a> ()=delete</td></tr>
 <tr class="separator:adf339fa4ff53f47235f7c4c54fe80079"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab3af22f775f4d8cd7bb43422518f0e1b" id="r_ab3af22f775f4d8cd7bb43422518f0e1b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab3af22f775f4d8cd7bb43422518f0e1b">setupCORSSupport</a> ()</td></tr>
-<tr class="separator:ab3af22f775f4d8cd7bb43422518f0e1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac96845281b2520d05fad90ed49029fba" id="r_ac96845281b2520d05fad90ed49029fba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac96845281b2520d05fad90ed49029fba">setupCORSSupport</a> () const</td></tr>
+<tr class="separator:ac96845281b2520d05fad90ed49029fba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a165c2a866a8257be5eedd65385d70e89" id="r_a165c2a866a8257be5eedd65385d70e89"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a165c2a866a8257be5eedd65385d70e89">ServerContext</a> (const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;arguments)</td></tr>
 <tr class="separator:a165c2a866a8257be5eedd65385d70e89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab0a3b58db1d4e84d993f2488958625ef" id="r_ab0a3b58db1d4e84d993f2488958625ef"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0a3b58db1d4e84d993f2488958625ef">run</a> ()</td></tr>
@@ -133,11 +134,20 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a42b515397d7624f6b455ec9c4ea78017" id="r_a42b515397d7624f6b455ec9c4ea78017"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a42b515397d7624f6b455ec9c4ea78017">~ServerContext</a> ()</td></tr>
 <tr class="separator:a42b515397d7624f6b455ec9c4ea78017"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:ac602bf81127969cccd56184ed5050e74" id="r_ac602bf81127969cccd56184ed5050e74"><td class="memItemLeft" align="right" valign="top">static std::shared_ptr&lt; spdlog::logger &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac602bf81127969cccd56184ed5050e74">createLogger</a> (const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;arguments)</td></tr>
+<tr class="separator:ac602bf81127969cccd56184ed5050e74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
+<tr class="memitem:aae08fbaa380c1eb529bfcf090712e262" id="r_aae08fbaa380c1eb529bfcf090712e262"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; spdlog::logger &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aae08fbaa380c1eb529bfcf090712e262">m_logger</a></td></tr>
+<tr class="separator:aae08fbaa380c1eb529bfcf090712e262"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2c908d303a0a55bf251f2d1ae397b817" id="r_a2c908d303a0a55bf251f2d1ae397b817"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="../../dc/dc7/classidhan_1_1ManagementConnection.html">ManagementConnection</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c908d303a0a55bf251f2d1ae397b817">m_postgresql_management</a></td></tr>
 <tr class="memdesc:a2c908d303a0a55bf251f2d1ae397b817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connection to postgresql to be used for management/setup.  <br /></td></tr>
 <tr class="separator:a2c908d303a0a55bf251f2d1ae397b817"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf1b564616444c1b90b6eafa5d833be3" id="r_abf1b564616444c1b90b6eafa5d833be3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abf1b564616444c1b90b6eafa5d833be3">args</a></td></tr>
+<tr class="separator:abf1b564616444c1b90b6eafa5d833be3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="adf339fa4ff53f47235f7c4c54fe80079" name="adf339fa4ff53f47235f7c4c54fe80079"></a>
@@ -200,6 +210,31 @@ Private Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="ac602bf81127969cccd56184ed5050e74" name="ac602bf81127969cccd56184ed5050e74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac602bf81127969cccd56184ed5050e74">&#9670;&#160;</a></span>createLogger()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt; spdlog::logger &gt; idhan::ServerContext::createLogger </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>arguments</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="ab0a3b58db1d4e84d993f2488958625ef" name="ab0a3b58db1d4e84d993f2488958625ef"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab0a3b58db1d4e84d993f2488958625ef">&#9670;&#160;</a></span>run()</h2>
 
@@ -217,8 +252,8 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="ab3af22f775f4d8cd7bb43422518f0e1b" name="ab3af22f775f4d8cd7bb43422518f0e1b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab3af22f775f4d8cd7bb43422518f0e1b">&#9670;&#160;</a></span>setupCORSSupport()</h2>
+<a id="ac96845281b2520d05fad90ed49029fba" name="ac96845281b2520d05fad90ed49029fba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac96845281b2520d05fad90ed49029fba">&#9670;&#160;</a></span>setupCORSSupport()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -227,7 +262,7 @@ Private Attributes</h2></td></tr>
           <td class="memname">void idhan::ServerContext::setupCORSSupport </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
+          <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -235,6 +270,50 @@ Private Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
+<a id="abf1b564616444c1b90b6eafa5d833be3" name="abf1b564616444c1b90b6eafa5d833be3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abf1b564616444c1b90b6eafa5d833be3">&#9670;&#160;</a></span>args</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a> idhan::ServerContext::args</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aae08fbaa380c1eb529bfcf090712e262" name="aae08fbaa380c1eb529bfcf090712e262"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae08fbaa380c1eb529bfcf090712e262">&#9670;&#160;</a></span>m_logger</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt; spdlog::logger &gt; idhan::ServerContext::m_logger</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a2c908d303a0a55bf251f2d1ae397b817" name="a2c908d303a0a55bf251f2d1ae397b817"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2c908d303a0a55bf251f2d1ae397b817">&#9670;&#160;</a></span>m_postgresql_management</h2>
 

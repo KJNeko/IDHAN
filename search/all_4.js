@@ -12,11 +12,11 @@ var searchData=
   ['erecorddelete_9',['eRecordDelete',['../dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca527e0b9c5225c18c01dd6c57a95d0629',1,'idhan']]],
   ['eremoteaccess_10',['eRemoteAccess',['../dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca64ae873b2cbf56a4771b5dded0d023d2',1,'idhan']]],
   ['error_11',['Error',['../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3a079213b47315cd7ad0765eb9f7d54596',1,'idhan::logging']]],
-  ['error_12',['error',['../d6/d70/namespaceidhan_1_1logging.html#a90047c4831e7f6c9f7d95ebdec219b08',1,'idhan::logging::error()'],['../d7/d03/namespaceidhan_1_1log.html#a6ec3544d0542c8175f499735a47f6afc',1,'idhan::log::error()']]],
+  ['error_12',['error',['../d6/d70/namespaceidhan_1_1logging.html#a90047c4831e7f6c9f7d95ebdec219b08',1,'idhan::logging::error()'],['../d7/d03/namespaceidhan_1_1log.html#a14575812dc991bb299a3b52b74e39d84',1,'idhan::log::error(const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)'],['../d7/d03/namespaceidhan_1_1log.html#a00edb282198c5c35533ebc10bebff6f2',1,'idhan::log::error(const T &amp;val)']]],
   ['ethumbnailaccess_13',['eThumbnailAccess',['../dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cae5e3626cfca65531a46e0bc61f8efda5',1,'idhan']]],
   ['exceptionhandler_14',['exceptionHandler',['../dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694',1,'idhan']]],
   ['exceptions_2ehpp_15',['exceptions.hpp',['../da/d49/exceptions_8hpp.html',1,'']]],
   ['exists_16',['Exists',['../dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4aba7710b08f08a9228fee41ee13261146',1,'idhan']]],
-  ['extension_17',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo']]],
+  ['extension_17',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension']]],
   ['extra_5finfo_18',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]]
 ];

@@ -20,12 +20,15 @@ var hierarchy =
         ] ]
       ] ]
     ] ],
+    [ "idhan::FileInfo", "d8/d58/structidhan_1_1FileInfo.html", null ],
     [ "idhan::mime::FileMimeInfo", "db/de8/structidhan_1_1mime_1_1FileMimeInfo.html", null ],
     [ "std::formatter< QString >", "d9/dce/structstd_1_1formatter_3_01QString_01_4.html", null ],
     [ "drogon::HttpController", null, [
       [ "idhan::api::ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", null ],
       [ "idhan::api::IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", null ],
+      [ "idhan::api::IDHANMaintnanceAPI", "d7/d52/classidhan_1_1api_1_1IDHANMaintnanceAPI.html", null ],
       [ "idhan::api::IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", null ],
+      [ "idhan::api::IDHANSearchAPI", "d5/da5/classidhan_1_1api_1_1IDHANSearchAPI.html", null ],
       [ "idhan::api::IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", null ],
       [ "idhan::hyapi::HydrusAPI", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html", null ]
     ] ],

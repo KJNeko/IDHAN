@@ -6,5 +6,6 @@ var searchData=
   ['hyapi_2ehpp_3',['HyAPI.hpp',['../d7/d32/HyAPI_8hpp.html',1,'']]],
   ['hyapiauth_2ecpp_4',['HyAPIAuth.cpp',['../d3/d27/HyAPIAuth_8cpp.html',1,'']]],
   ['hyapiauth_2ehpp_5',['HyAPIAuth.hpp',['../d5/d3f/HyAPIAuth_8hpp.html',1,'']]],
-  ['hydrus_5fversion_2ehpp_6',['hydrus_version.hpp',['../dd/d85/hydrus__version_8hpp.html',1,'']]]
+  ['hydrus_5fconstants_2ehpp_6',['hydrus_constants.hpp',['../d8/d54/hydrus__constants_8hpp.html',1,'']]],
+  ['hydrus_5fversion_2ehpp_7',['hydrus_version.hpp',['../dd/d85/hydrus__version_8hpp.html',1,'']]]
 ];

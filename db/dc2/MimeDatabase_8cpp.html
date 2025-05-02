@@ -120,7 +120,11 @@ $(function(){initNavTree('db/dc2/MimeDatabase_8cpp.html','../../'); initResizabl
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="../../d6/df0/MimeDatabase_8hpp_source.html">MimeDatabase.hpp</a>&quot;</code><br />
 <code>#include &lt;json/json.h&gt;</code><br />
+<code>#include &lt;sys/mman.h&gt;</code><br />
+<code>#include &lt;sys/stat.h&gt;</code><br />
 <code>#include &lt;cassert&gt;</code><br />
+<code>#include &lt;expected&gt;</code><br />
+<code>#include &lt;fcntl.h&gt;</code><br />
 <code>#include &lt;filesystem&gt;</code><br />
 <code>#include &lt;fstream&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../d5/d96/decodeHex_8hpp_source.html">decodeHex.hpp</a>&quot;</code><br />

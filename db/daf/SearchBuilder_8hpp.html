@@ -112,14 +112,18 @@ $(function(){initNavTree('db/daf/SearchBuilder_8hpp.html','../../'); initResizab
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a>  </div>
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">SearchBuilder.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &lt;pqxx/pqxx&gt;</code><br />
 <code>#include &lt;string_view&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../db/daf/SearchBuilder_8hpp_source.html">SearchBuilder.hpp</a>&quot;</code><br />
 <code>#include &quot;drogon/HttpRequest.h&quot;</code><br />
+<code>#include &quot;hydrus_client_constants_gen.hpp&quot;</code><br />
 </div>
 <p><a href="../../db/daf/SearchBuilder_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -132,6 +136,88 @@ Classes</h2></td></tr>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:afc75313617103d43e0454bc5365ddbd1" id="r_afc75313617103d43e0454bc5365ddbd1"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1">idhan::SortOrder</a> { <a class="el" href="../../dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1ac6e421eaad140c1bc1a39980502df80c">idhan::ASC</a>
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1a65a6d757dbb571ccc3af9706e9a5f607">idhan::DESC</a>
+ }</td></tr>
+<tr class="separator:afc75313617103d43e0454bc5365ddbd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c24ee7f031693df1f26c9cb4a207970" id="r_a5c24ee7f031693df1f26c9cb4a207970"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970">idhan::SortType</a> { <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a35bd43483ce86afcb26c8cee9a4f4f8d">idhan::FILESIZE</a>
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a04b1e759024da80008251d0837e14b97">idhan::IMPORT_TIME</a>
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a60b1a33daefa32e59d0a8a73edd99923">idhan::RECORD_TIME</a>
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a5b39c8b553c821e7cddc6da64b5bd2ee">idhan::DEFAULT</a> = FILESIZE
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970ac39461e4488377198354fd0574b4a10d">idhan::HY_FILESIZE</a> = FILESIZE
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970af26c9b942ca9beb1774a79cc6539e7d8">idhan::HY_DURATION</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a73e8282d65975801bef027393a890f99">idhan::HY_IMPORT_TIME</a> = IMPORT_TIME
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a8ea7de179887e6db8657f829fbd6ed80">idhan::HY_MIME</a> = DEFAULT
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a3c755c8411091d30fc6297d6ab17daa0">idhan::HY_RANDOM</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970ab5f79797575eb45cab0492e9c9aef273">idhan::HY_WIDTH</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a9f132db3ac5a12af9c556918e481de7d">idhan::HY_HEIGHT</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a9aea1fabe5f9cb3886a454631bc62fca">idhan::HY_RATIO</a> = DEFAULT
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970ae6496723ccbd553694b81143b27f1401">idhan::HY_NUM_PIXELS</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970ac17e660a6dc1e4503917c20f387164a6">idhan::HY_NUM_TAGS</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970af0ccae89a870eb0dd6f39d80ac27e64e">idhan::HY_MEDIA_VIEWS</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a364ff20b72b7d5c06b7c6c106ba617e1">idhan::HY_MEDIA_VIEWTIME</a> = DEFAULT
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a7820d11b340eb492aa0ba2caacd2946f">idhan::HY_APPROX_BITRATE</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970ab1f4822d63909b0e872fa3f01cf7a966">idhan::HY_HAS_AUDIO</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a6c516b14e3a589c0b2ef90a2663af144">idhan::HY_FILE_MODIFIED_TIMESTAMP</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a8544162a9c9db368af09fa44b5c22248">idhan::HY_FRAMERATE</a> = DEFAULT
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a68ed8e7f5972a4e2f0f7af6237159342">idhan::HY_NUM_FRAMES</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a6b4c4c1d4de204333888326e99843a96">idhan::HY_NUM_COLLECTION_FILES</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a60f382b3173e5d07f09c254d69c03bff">idhan::HY_LAST_VIEWED_TIME</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a9c832dab9aedf67f3c691f940df640f9">idhan::HY_ARCHIVED_TIMESTAMP</a> = DEFAULT
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a3bbab5215354372e5c72fe8385de9510">idhan::HY_HASH</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a9fac97f36c38ef8ad73dd65d35135626">idhan::HY_PIXEL_HASH</a> = DEFAULT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970ac9af64d39829844bca9db8ec4517dae6">idhan::HY_BLURHASH</a> = DEFAULT
+<br />
+ }</td></tr>
+<tr class="separator:a5c24ee7f031693df1f26c9cb4a207970"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a244b87b8282e25b1adf2d36b9975a7b1" id="r_a244b87b8282e25b1adf2d36b9975a7b1"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1">idhan::HydrusSortType</a> { <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a73b6e344354bb9447c6e1874f3053c32">idhan::HY_FILESIZE</a> = hydrus::gen_constants::SORT_FILES_BY_FILESIZE
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a1d15d1b6683f6ecd81374ae09f1a1ff2">idhan::HY_DURATION</a> = hydrus::gen_constants::SORT_FILES_BY_DURATION
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1accf1a789771cbb6a2a002604f1bae83d">idhan::HY_IMPORT_TIME</a> = hydrus::gen_constants::SORT_FILES_BY_IMPORT_TIME
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a893f5dad95123c811b5b9145dacab4c8">idhan::HY_MIME</a> = hydrus::gen_constants::SORT_FILES_BY_MIME
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a3e07b72c52b0488bbf9de31fa27dea9e">idhan::HY_RANDOM</a> = hydrus::gen_constants::SORT_FILES_BY_RANDOM
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a0df7a567533cd6c39c3c122e07fb58b2">idhan::HY_WIDTH</a> = hydrus::gen_constants::SORT_FILES_BY_WIDTH
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1af81c2723352cc98bce1773f3df8d9261">idhan::HY_HEIGHT</a> = hydrus::gen_constants::SORT_FILES_BY_HEIGHT
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a21a89711a2a1f16b945aa15cea5c8711">idhan::HY_RATIO</a> = hydrus::gen_constants::SORT_FILES_BY_RATIO
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a5d0e386ba5f7272024c3a4a74a045462">idhan::HY_NUM_PIXELS</a> = hydrus::gen_constants::SORT_FILES_BY_NUM_PIXELS
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a88c3bee19e7e5850f045afbec2c3cb37">idhan::HY_NUM_TAGS</a> = hydrus::gen_constants::SORT_FILES_BY_NUM_TAGS
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1aec9d87bf901ff2119a9e22d5c6b9423d">idhan::HY_MEDIA_VIEWS</a> = hydrus::gen_constants::SORT_FILES_BY_MEDIA_VIEWS
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1aa0467e692226b6d3c816e81046cb4567">idhan::HY_MEDIA_VIEWTIME</a> = hydrus::gen_constants::SORT_FILES_BY_MEDIA_VIEWTIME
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a4f61833bb4c2f8cedcf14657b9178844">idhan::HY_APPROX_BITRATE</a> = hydrus::gen_constants::SORT_FILES_BY_APPROX_BITRATE
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1abc78f9a55dbf4eba5fc6b1649fbe054b">idhan::HY_HAS_AUDIO</a> = hydrus::gen_constants::SORT_FILES_BY_HAS_AUDIO
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1ad25362faf7acefe70d7b592ada54cbbf">idhan::HY_FILE_MODIFIED_TIMESTAMP</a> = hydrus::gen_constants::SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a63a358efb3160f11c30e977f051ea605">idhan::HY_FRAMERATE</a> = hydrus::gen_constants::SORT_FILES_BY_FRAMERATE
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1aa84683e725d832fd1246eb7b72eeeb8b">idhan::HY_NUM_FRAMES</a> = hydrus::gen_constants::SORT_FILES_BY_NUM_FRAMES
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a8abeaf4ee1833602a8580763f81e7166">idhan::HY_NUM_COLLECTION_FILES</a> = hydrus::gen_constants::SORT_FILES_BY_NUM_COLLECTION_FILES
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a4afdacfc9945508f2fcd07794672177f">idhan::HY_LAST_VIEWED_TIME</a> = hydrus::gen_constants::SORT_FILES_BY_LAST_VIEWED_TIME
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1af803bf6de1cc8605c8324763d5dc9593">idhan::HY_ARCHIVED_TIMESTAMP</a> = hydrus::gen_constants::SORT_FILES_BY_ARCHIVED_TIMESTAMP
+, <br />
+&#160;&#160;<a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a87a36c7db25fbbd9d76e02182b2d94b2">idhan::HY_HASH</a> = hydrus::gen_constants::SORT_FILES_BY_HASH
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1afdc61356126be689be4ed14b5f0dcd28">idhan::HY_PIXEL_HASH</a> = hydrus::gen_constants::SORT_FILES_BY_PIXEL_HASH
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a782090b558ffb9cac79a09159ee84181">idhan::HY_BLURHASH</a> = hydrus::gen_constants::SORT_FILES_BY_BLURHASH
+, <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a8ab8b2ef44ba415981a96aeb68e689ae">idhan::DEFAULT</a> = HY_IMPORT_TIME
+<br />
+ }</td></tr>
+<tr class="separator:a244b87b8282e25b1adf2d36b9975a7b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a9301fcccee80b6f287ded422a44f8150" id="r_a9301fcccee80b6f287ded422a44f8150"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970">SortType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150">idhan::hyToIDHANSortType</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1">HydrusSortType</a> hy_sort)</td></tr>
+<tr class="separator:a9301fcccee80b6f287ded422a44f8150"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

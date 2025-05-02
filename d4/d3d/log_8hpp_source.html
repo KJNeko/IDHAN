@@ -135,7 +135,7 @@ $(function(){initNavTree('d4/d3d/log_8hpp_source.html','../../'); initResizable(
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
 <div class="foldopen" id="foldopen00021" data-start="{" data-end="}">
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#a0a03f23bc2bbe4edc9bb4daa0647b60c">   21</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a0a03f23bc2bbe4edc9bb4daa0647b60c">trace</a>( <span class="keyword">const</span> std::string str, Ts&amp;&amp;... ts )</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#aea94a193253b168f253cd496452bf879">   21</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#aea94a193253b168f253cd496452bf879">trace</a>( <span class="keyword">const</span> std::format_string&lt; Ts... &gt; str, Ts&amp;&amp;... ts )</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>{</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    ::spdlog::trace( str, std::forward&lt; Ts &gt;( ts )... );</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>}</div>
@@ -143,7 +143,7 @@ $(function(){initNavTree('d4/d3d/log_8hpp_source.html','../../'); initResizable(
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
 <div class="foldopen" id="foldopen00027" data-start="{" data-end="}">
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#a51f097fdb5c09421327146780eaa3101">   27</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a51f097fdb5c09421327146780eaa3101">debug</a>( <span class="keyword">const</span> std::string str, Ts&amp;&amp;... ts )</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#a82989e7920b131502a7d82ee072b4a51">   27</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a82989e7920b131502a7d82ee072b4a51">debug</a>( const ::std::format_string&lt; Ts... &gt; str, Ts&amp;&amp;... ts )</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>{</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    ::spdlog::debug( str, std::forward&lt; Ts &gt;( ts )... );</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>}</div>
@@ -151,7 +151,7 @@ $(function(){initNavTree('d4/d3d/log_8hpp_source.html','../../'); initResizable(
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
 <div class="foldopen" id="foldopen00033" data-start="{" data-end="}">
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#a8316bd7336920fe9ea2ea314fe06f798">   33</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a8316bd7336920fe9ea2ea314fe06f798">info</a>( <span class="keyword">const</span> std::string str, Ts&amp;&amp;... ts )</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#acea0528caf8e7b84f55e6b1bf0e2e4d0">   33</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#acea0528caf8e7b84f55e6b1bf0e2e4d0">info</a>( <span class="keyword">const</span> std::format_string&lt; Ts... &gt; str, Ts&amp;&amp;... ts )</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>{</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    ::spdlog::info( str, std::forward&lt; Ts &gt;( ts )... );</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>}</div>
@@ -159,7 +159,7 @@ $(function(){initNavTree('d4/d3d/log_8hpp_source.html','../../'); initResizable(
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
 <div class="foldopen" id="foldopen00039" data-start="{" data-end="}">
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#ad86fb1670b2264831cc449a2f978cc5c">   39</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#ad86fb1670b2264831cc449a2f978cc5c">warn</a>( <span class="keyword">const</span> std::string str, Ts&amp;&amp;... ts )</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#aeceed2bffdb048e88c6c4fd05db304e6">   39</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#aeceed2bffdb048e88c6c4fd05db304e6">warn</a>( <span class="keyword">const</span> std::format_string&lt; Ts... &gt; str, Ts&amp;&amp;... ts )</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>{</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    ::spdlog::warn( str, std::forward&lt; Ts &gt;( ts )... );</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>}</div>
@@ -167,45 +167,53 @@ $(function(){initNavTree('d4/d3d/log_8hpp_source.html','../../'); initResizable(
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
 <div class="foldopen" id="foldopen00045" data-start="{" data-end="}">
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#a6ec3544d0542c8175f499735a47f6afc">   45</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a6ec3544d0542c8175f499735a47f6afc">error</a>( <span class="keyword">const</span> std::string str, Ts&amp;&amp;... ts )</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#a14575812dc991bb299a3b52b74e39d84">   45</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a14575812dc991bb299a3b52b74e39d84">error</a>( <span class="keyword">const</span> std::format_string&lt; Ts... &gt; str, Ts&amp;&amp;... ts )</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>{</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    ::spdlog::error( str, std::forward&lt; Ts &gt;( ts )... );</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>}</div>
 </div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span> T &gt;</div>
 <div class="foldopen" id="foldopen00051" data-start="{" data-end="}">
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#a576c3c7a112b0939dab38a258132abf5">   51</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a576c3c7a112b0939dab38a258132abf5">critical</a>( <span class="keyword">const</span> std::string str, Ts&amp;&amp;... ts )</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#a00edb282198c5c35533ebc10bebff6f2">   51</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a14575812dc991bb299a3b52b74e39d84">error</a>( <span class="keyword">const</span> T&amp; val )</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>{</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    ::spdlog::critical( str, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    ::spdlog::error( val );</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>}</div>
 </div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="foldopen" id="foldopen00056" data-start="{" data-end="}">
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno"><a class="line" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html">   56</a></span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html">server</a></div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>{</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
-<div class="foldopen" id="foldopen00059" data-start="{" data-end="}">
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno"><a class="line" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html#aa587df5fadb2a4dbfd980e689adf37b4">   59</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html#aa587df5fadb2a4dbfd980e689adf37b4">info</a>( <span class="keyword">const</span> std::string str, Ts&amp;&amp;... ts )</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>{</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    ::spdlog::info( std::format( <span class="stringliteral">&quot;[SERVER]: {}&quot;</span>, str ), std::forward&lt; Ts &gt;( ts )... );</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>}</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
+<div class="foldopen" id="foldopen00057" data-start="{" data-end="}">
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno"><a class="line" href="../../d7/d03/namespaceidhan_1_1log.html#af65cf9811afb832ad15903a7d93656d8">   57</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#af65cf9811afb832ad15903a7d93656d8">critical</a>( <span class="keyword">const</span> std::format_string&lt; Ts... &gt; str, Ts&amp;&amp;... ts )</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>{</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    ::spdlog::critical( str, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>}</div>
 </div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>} <span class="comment">// namespace server</span></div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
+<div class="foldopen" id="foldopen00062" data-start="{" data-end="}">
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno"><a class="line" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html">   62</a></span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html">server</a></div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>{</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span>... Ts &gt;</div>
+<div class="foldopen" id="foldopen00065" data-start="{" data-end="}">
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno"><a class="line" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html#afcd1c73124c90950816f5d14fbfb903f">   65</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html#afcd1c73124c90950816f5d14fbfb903f">info</a>( <span class="keyword">const</span> std::format_string&lt; Ts... &gt; str, Ts&amp;&amp;... ts )</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>{</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    ::spdlog::info( str, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>}</div>
 </div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>} <span class="comment">// namespace idhan::log</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>} <span class="comment">// namespace server</span></div>
+</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>} <span class="comment">// namespace idhan::log</span></div>
 </div>
 <div class="ttc" id="aerver_2src_2logging_2qt__formatters_2qstring_8hpp_html"><div class="ttname"><a href="../../db/db0/erver_2src_2logging_2qt__formatters_2qstring_8hpp.html">qstring.hpp</a></div></div>
-<div class="ttc" id="anamespaceidhan_1_1log_1_1server_html"><div class="ttname"><a href="../../d2/d61/namespaceidhan_1_1log_1_1server.html">idhan::log::server</a></div><div class="ttdef"><b>Definition</b> log.hpp:57</div></div>
-<div class="ttc" id="anamespaceidhan_1_1log_1_1server_html_aa587df5fadb2a4dbfd980e689adf37b4"><div class="ttname"><a href="../../d2/d61/namespaceidhan_1_1log_1_1server.html#aa587df5fadb2a4dbfd980e689adf37b4">idhan::log::server::info</a></div><div class="ttdeci">void info(const std::string str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:59</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_1_1server_html"><div class="ttname"><a href="../../d2/d61/namespaceidhan_1_1log_1_1server.html">idhan::log::server</a></div><div class="ttdef"><b>Definition</b> log.hpp:63</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_1_1server_html_afcd1c73124c90950816f5d14fbfb903f"><div class="ttname"><a href="../../d2/d61/namespaceidhan_1_1log_1_1server.html#afcd1c73124c90950816f5d14fbfb903f">idhan::log::server::info</a></div><div class="ttdeci">void info(const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:65</div></div>
 <div class="ttc" id="anamespaceidhan_1_1log_html"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html">idhan::log</a></div><div class="ttdef"><b>Definition</b> log.hpp:18</div></div>
-<div class="ttc" id="anamespaceidhan_1_1log_html_a0a03f23bc2bbe4edc9bb4daa0647b60c"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#a0a03f23bc2bbe4edc9bb4daa0647b60c">idhan::log::trace</a></div><div class="ttdeci">void trace(const std::string str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:21</div></div>
-<div class="ttc" id="anamespaceidhan_1_1log_html_a51f097fdb5c09421327146780eaa3101"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#a51f097fdb5c09421327146780eaa3101">idhan::log::debug</a></div><div class="ttdeci">void debug(const std::string str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:27</div></div>
-<div class="ttc" id="anamespaceidhan_1_1log_html_a576c3c7a112b0939dab38a258132abf5"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#a576c3c7a112b0939dab38a258132abf5">idhan::log::critical</a></div><div class="ttdeci">void critical(const std::string str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:51</div></div>
-<div class="ttc" id="anamespaceidhan_1_1log_html_a6ec3544d0542c8175f499735a47f6afc"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#a6ec3544d0542c8175f499735a47f6afc">idhan::log::error</a></div><div class="ttdeci">void error(const std::string str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:45</div></div>
-<div class="ttc" id="anamespaceidhan_1_1log_html_a8316bd7336920fe9ea2ea314fe06f798"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#a8316bd7336920fe9ea2ea314fe06f798">idhan::log::info</a></div><div class="ttdeci">void info(const std::string str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:33</div></div>
-<div class="ttc" id="anamespaceidhan_1_1log_html_ad86fb1670b2264831cc449a2f978cc5c"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#ad86fb1670b2264831cc449a2f978cc5c">idhan::log::warn</a></div><div class="ttdeci">void warn(const std::string str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:39</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_html_a14575812dc991bb299a3b52b74e39d84"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#a14575812dc991bb299a3b52b74e39d84">idhan::log::error</a></div><div class="ttdeci">void error(const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:45</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_html_a82989e7920b131502a7d82ee072b4a51"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#a82989e7920b131502a7d82ee072b4a51">idhan::log::debug</a></div><div class="ttdeci">void debug(const ::std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:27</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_html_acea0528caf8e7b84f55e6b1bf0e2e4d0"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#acea0528caf8e7b84f55e6b1bf0e2e4d0">idhan::log::info</a></div><div class="ttdeci">void info(const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:33</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_html_aea94a193253b168f253cd496452bf879"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#aea94a193253b168f253cd496452bf879">idhan::log::trace</a></div><div class="ttdeci">void trace(const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:21</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_html_aeceed2bffdb048e88c6c4fd05db304e6"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#aeceed2bffdb048e88c6c4fd05db304e6">idhan::log::warn</a></div><div class="ttdeci">void warn(const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:39</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_html_af65cf9811afb832ad15903a7d93656d8"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#af65cf9811afb832ad15903a7d93656d8">idhan::log::critical</a></div><div class="ttdeci">void critical(const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:57</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
