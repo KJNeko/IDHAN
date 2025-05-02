@@ -107,6 +107,8 @@ void HydrusImporter::processSets( const std::vector< Set >& sets, const TagDomai
 
 	std::vector< std::vector< std::pair< std::string, std::string > > > tag_sets {};
 
+	logging::debug( "Got {} sets to process", sets.size() );
+
 	// process hashes
 	for ( const auto& set : sets )
 	{
@@ -159,7 +161,7 @@ void HydrusImporter::copyDomainMappings( const TagDomainID domain_id, const std:
 	std::vector< Set > sets {};
 	std::vector< TagID > tags {};
 
-	std::size_t last_id { 0 };
+	std::size_t current_id { 0 };
 
 	std::size_t counter { 0 };
 	std::size_t tag_counter { 0 };
@@ -177,54 +179,60 @@ void HydrusImporter::copyDomainMappings( const TagDomainID domain_id, const std:
 
 	logging::info( "Processing {} mappings for table {}", to_process, table_name );
 
+	const auto finalizeSet = [ & ]()
+	{
+		semaphore.acquire();
+		sync.addFuture(
+			QtConcurrent::
+				run( &pool,
+		             [ sets = std::move( sets ), domain_id, &semaphore, this ]
+		             {
+						 if ( sets.empty() )
+						 {
+							 logging::critical( "wtf?" );
+							 std::abort();
+						 }
+						 this->processSets( sets, domain_id );
+						 semaphore.release();
+					 } ) );
+		sets.clear();
+		sets.reserve( sets_per_request );
+		counter = 0;
+		tag_counter = 0;
+	};
+
+	const auto flushSet = [ & ]( const auto new_id )
+	{
+		if ( counter >= sets_per_request ) finalizeSet();
+
+		tag_counter += tags.size();
+		Set set { static_cast< RecordID >( current_id ), std::move( tags ) };
+		tags.reserve( sets_per_request );
+		tags.clear();
+
+		sets.emplace_back( std::move( set ) );
+
+		counter += 1;
+		current_id = new_id;
+	};
+
 	mappings_tr << std::format( "SELECT hash_id, tag_id FROM {} ORDER BY hash_id", table_name ) >>
 		[ & ]( const std::size_t hash_id, const std::size_t tag_id )
 	{
-		if ( last_id == 0 ) [[unlikely]]
-			last_id = hash_id;
+		// set the inital id
+		if ( current_id == 0 ) [[unlikely]]
+			current_id = hash_id;
 
-		if ( hash_id != last_id ) [[unlikely]]
-		{
-			if ( counter >= sets_per_request )
-			{
-				semaphore.acquire();
-				sync.addFuture(
-					QtConcurrent::
-						run( &pool,
-				             [ sets = std::move( sets ), domain_id, &semaphore, this ]
-				             {
-								 if ( sets.empty() )
-								 {
-									 logging::critical( "wtf?" );
-									 std::abort();
-								 }
-								 this->processSets( sets, domain_id );
-								 semaphore.release();
-							 } ) );
-				sets.clear();
-				sets.reserve( sets_per_request );
-				counter = 0;
-				tag_counter = 0;
-			}
-
-			tag_counter += tags.size();
-			Set set { static_cast< RecordID >( hash_id ), std::move( tags ) };
-			tags.reserve( sets_per_request );
-			tags.clear();
-
-			sets.emplace_back( std::move( set ) );
-
-			counter += 1;
-			last_id = hash_id;
-		}
+		if ( hash_id != current_id ) [[unlikely]]
+			flushSet( hash_id );
 
 		tags.emplace_back( tag_id );
 	};
 
 	if ( !sets.empty() )
 	{
-		processSets( std::move( sets ), domain_id );
-		sets.clear();
+		flushSet( 0 ); // can use 0 here since it's unimportant
+		finalizeSet();
 	}
 
 	sync.waitForFinished();
