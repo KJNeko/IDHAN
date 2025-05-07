@@ -16,5 +16,6 @@ var searchData=
   ['free_13',['free',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a8081e2179fa79c3a42fc8f6e3f9b28a0',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
   ['frombuffer_14',['fromBuffer',['../d0/de3/classidhan_1_1SHA256.html#a2edca213311b70e1616bafc751806d6f',1,'idhan::SHA256']]],
   ['fromhex_15',['fromHex',['../d0/de3/classidhan_1_1SHA256.html#acf722ad0a8cd5ab57eaccc08e5194622',1,'idhan::SHA256']]],
-  ['fromsplit_16',['fromSplit',['../d0/d19/structidhan_1_1api_1_1TagPair.html#aac99b2810e6722f53d657b0519e2f237',1,'idhan::api::TagPair']]]
+  ['frompgcol_16',['fromPgCol',['../d0/de3/classidhan_1_1SHA256.html#a7322fc84a16b77e09a1572fec139dfae',1,'idhan::SHA256']]],
+  ['fromsplit_17',['fromSplit',['../d0/d19/structidhan_1_1api_1_1TagPair.html#aac99b2810e6722f53d657b0519e2f237',1,'idhan::api::TagPair']]]
 ];

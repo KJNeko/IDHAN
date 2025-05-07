@@ -184,6 +184,8 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d57/structidhan_1_1TagCache.html">TagCache</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d25/structidhan_1_1VersionInfo.html">VersionInfo</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -211,6 +213,10 @@ Typedefs</h2></td></tr>
 <tr class="separator:ab878d47a161ff5340a3205251007ca12"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae9c835593c59f31ae01ead8a29c45afa" id="r_ae9c835593c59f31ae01ead8a29c45afa"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9c835593c59f31ae01ead8a29c45afa">FileDomainID</a> = <a class="el" href="#a734eab49a3bd6d395ac80de87002ae81">SmallInt</a></td></tr>
 <tr class="separator:ae9c835593c59f31ae01ead8a29c45afa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a269817ce3aee2f503d86d50393e83d94" id="r_a269817ce3aee2f503d86d50393e83d94"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a269817ce3aee2f503d86d50393e83d94">TagRelationshipInfo</a> = <a class="el" href="../../d9/d81/structidhan_1_1IDHANClient_1_1TagRelationshipInfo.html">IDHANClient::TagRelationshipInfo</a></td></tr>
+<tr class="separator:a269817ce3aee2f503d86d50393e83d94"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe060cb698ab3f6bd48d74c427221afa" id="r_afe060cb698ab3f6bd48d74c427221afa"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe060cb698ab3f6bd48d74c427221afa">TagInfo</a> = <a class="el" href="../../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html">IDHANClient::TagInfo</a></td></tr>
+<tr class="separator:afe060cb698ab3f6bd48d74c427221afa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab36e2f7c68cd1ad091d47cc6a44231e1" id="r_ab36e2f7c68cd1ad091d47cc6a44231e1"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab36e2f7c68cd1ad091d47cc6a44231e1">ResponseFunction</a> = std::function&lt; void( const drogon::HttpResponsePtr&amp; ) &gt;</td></tr>
 <tr class="separator:ab36e2f7c68cd1ad091d47cc6a44231e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af8dffe5d1800a78e09605b08052fa841" id="r_af8dffe5d1800a78e09605b08052fa841"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af8dffe5d1800a78e09605b08052fa841">ResponseTask</a> = drogon::Task&lt; drogon::HttpResponsePtr &gt;</td></tr>
@@ -328,6 +334,10 @@ Enumerations</h2></td></tr>
 <br />
  }</td></tr>
 <tr class="separator:a244b87b8282e25b1adf2d36b9975a7b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73650c5f1993b5e6816c6ea26de7807a" id="r_a73650c5f1993b5e6816c6ea26de7807a"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a73650c5f1993b5e6816c6ea26de7807a">HydrusDisplayType</a> { <a class="el" href="#a73650c5f1993b5e6816c6ea26de7807aa725c3f6190ad95f075d3c9211323f308">STORED</a>
+, <a class="el" href="#a73650c5f1993b5e6816c6ea26de7807aac97ad854bf48c774ad3d0863fe1ec8cd">DISPLAY</a>
+ }</td></tr>
+<tr class="separator:a73650c5f1993b5e6816c6ea26de7807a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -377,8 +387,8 @@ Functions</h2></td></tr>
 <tr class="separator:ac390dcf160dcc533ff56c6a35344083b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a76828f1eed852334ad83d57970800420" id="r_a76828f1eed852334ad83d57970800420"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a76828f1eed852334ad83d57970800420">getRecordSHA256</a> (const <a class="el" href="#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a76828f1eed852334ad83d57970800420"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acd5725384a69cb636dcd528f4e9bd141" id="r_acd5725384a69cb636dcd528f4e9bd141"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acd5725384a69cb636dcd528f4e9bd141">createFilter</a> (std::uint32_t index, const std::vector&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &amp;tag_ids)</td></tr>
-<tr class="separator:acd5725384a69cb636dcd528f4e9bd141"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a788e82c1d39211ed895eb59bbbc3e859" id="r_a788e82c1d39211ed895eb59bbbc3e859"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a788e82c1d39211ed895eb59bbbc3e859">createFilter</a> (std::uint32_t index, const std::vector&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &amp;tag_ids, const <a class="el" href="#a73650c5f1993b5e6816c6ea26de7807a">HydrusDisplayType</a> display_mode)</td></tr>
+<tr class="separator:a788e82c1d39211ed895eb59bbbc3e859"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9301fcccee80b6f287ded422a44f8150" id="r_a9301fcccee80b6f287ded422a44f8150"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="#a5c24ee7f031693df1f26c9cb4a207970">SortType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9301fcccee80b6f287ded422a44f8150">hyToIDHANSortType</a> (const <a class="el" href="#a244b87b8282e25b1adf2d36b9975a7b1">HydrusSortType</a> hy_sort)</td></tr>
 <tr class="separator:a9301fcccee80b6f287ded422a44f8150"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf2de6ab319c3d5893959073ae46e47e" id="r_acf2de6ab319c3d5893959073ae46e47e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acf2de6ab319c3d5893959073ae46e47e">fixme</a> (const std::source_location location=std::source_location::current())</td></tr>
@@ -599,6 +609,34 @@ Variables</h2></td></tr>
 
 </div>
 </div>
+<a id="afe060cb698ab3f6bd48d74c427221afa" name="afe060cb698ab3f6bd48d74c427221afa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe060cb698ab3f6bd48d74c427221afa">&#9670;&#160;</a></span>TagInfo</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#afe060cb698ab3f6bd48d74c427221afa">idhan::TagInfo</a> = <a class="el" href="../../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html">IDHANClient::TagInfo</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a269817ce3aee2f503d86d50393e83d94" name="a269817ce3aee2f503d86d50393e83d94"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a269817ce3aee2f503d86d50393e83d94">&#9670;&#160;</a></span>TagRelationshipInfo</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a269817ce3aee2f503d86d50393e83d94">idhan::TagRelationshipInfo</a> = <a class="el" href="../../d9/d81/structidhan_1_1IDHANClient_1_1TagRelationshipInfo.html">IDHANClient::TagRelationshipInfo</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <h2 class="groupheader">Enumeration Type Documentation</h2>
 <a id="a2633d986ee0146c0e96d57295eec814b" name="a2633d986ee0146c0e96d57295eec814b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2633d986ee0146c0e96d57295eec814b">&#9670;&#160;</a></span>HttpMethod</h2>
@@ -616,6 +654,32 @@ Variables</h2></td></tr>
 <tr><td class="fieldname"><a id="a2633d986ee0146c0e96d57295eec814ba21b5649bc911eeaa1b8697e6276f8f50" name="a2633d986ee0146c0e96d57295eec814ba21b5649bc911eeaa1b8697e6276f8f50"></a>UPDATE&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a2633d986ee0146c0e96d57295eec814ba2b42cebf07bd0bc52052ec1759ae52d0" name="a2633d986ee0146c0e96d57295eec814ba2b42cebf07bd0bc52052ec1759ae52d0"></a>DELETE&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a2633d986ee0146c0e96d57295eec814ba1f4475a2a11d280b0641ac67b1fc3839" name="a2633d986ee0146c0e96d57295eec814ba1f4475a2a11d280b0641ac67b1fc3839"></a>GET&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+</div>
+</div>
+<a id="a73650c5f1993b5e6816c6ea26de7807a" name="a73650c5f1993b5e6816c6ea26de7807a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a73650c5f1993b5e6816c6ea26de7807a">&#9670;&#160;</a></span>HydrusDisplayType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#a73650c5f1993b5e6816c6ea26de7807a">idhan::HydrusDisplayType</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel strong">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a73650c5f1993b5e6816c6ea26de7807aa725c3f6190ad95f075d3c9211323f308" name="a73650c5f1993b5e6816c6ea26de7807aa725c3f6190ad95f075d3c9211323f308"></a>STORED&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a73650c5f1993b5e6816c6ea26de7807aac97ad854bf48c774ad3d0863fe1ec8cd" name="a73650c5f1993b5e6816c6ea26de7807aac97ad854bf48c774ad3d0863fe1ec8cd"></a>DISPLAY&#160;</td><td class="fielddoc"></td></tr>
 </table>
 
 </div>
@@ -889,8 +953,8 @@ template&lt;typename... Args&gt; </div>
 
 </div>
 </div>
-<a id="acd5725384a69cb636dcd528f4e9bd141" name="acd5725384a69cb636dcd528f4e9bd141"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acd5725384a69cb636dcd528f4e9bd141">&#9670;&#160;</a></span>createFilter()</h2>
+<a id="a788e82c1d39211ed895eb59bbbc3e859" name="a788e82c1d39211ed895eb59bbbc3e859"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a788e82c1d39211ed895eb59bbbc3e859">&#9670;&#160;</a></span>createFilter()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -903,7 +967,12 @@ template&lt;typename... Args&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::vector&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tag_ids</em></span>&#160;)</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tag_ids</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="#a73650c5f1993b5e6816c6ea26de7807a">HydrusDisplayType</a></td>          <td class="paramname"><span class="paramname"><em>display_mode</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

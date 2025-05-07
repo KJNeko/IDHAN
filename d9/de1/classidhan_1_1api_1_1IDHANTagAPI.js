@@ -12,6 +12,7 @@ var classidhan_1_1api_1_1IDHANTagAPI =
     [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#aa8cd51dae99031ec3948ac518208bdcf", null ],
     [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a08da904a24f6015a9f4fb2a3eae86f82", null ],
     [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a2ac2bde9c8cb0cd06c7d752457dc839f", null ],
+    [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a7739e23e907ecbbbad5c1d3c9dfe89c5", null ],
     [ "ADD_METHOD_TO", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#afaa217e9eb9ce94dcf1b79b28be5136c", null ],
     [ "autocomplete", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#ad5754f5e81a80bc662cd09148bb69e90", null ],
     [ "createBatchedTag", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a7430ddaa6728c41274adaf096cd0560b", null ],
@@ -24,5 +25,6 @@ var classidhan_1_1api_1_1IDHANTagAPI =
     [ "getTagDomainInfo", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a9678ba8f3872795c2b6480b82f3aff60", null ],
     [ "getTagDomains", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a89213ae415cee58b3a24dc0750cd5a4d", null ],
     [ "getTagInfo", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a4dd0b24e956925b9b0e7755396b457d3", null ],
+    [ "getTagRelationships", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#ab2c4c625c3b7dcb92d7e1a213944c692", null ],
     [ "search", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a9862445cd02632d1e9520f94ee6fb4b0", null ]
 ];

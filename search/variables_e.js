@@ -5,5 +5,6 @@ var searchData=
   ['tag_5fnamespace_5fdelimter_2',['TAG_NAMESPACE_DELIMTER',['../dd/dcf/namespaceidhan.html#abe33911f1365581d3fe2bc31f675e6b5',1,'idhan']]],
   ['tag_5fsubtag_3',['tag_subtag',['../d0/d19/structidhan_1_1api_1_1TagPair.html#ac26981c2e1dea8df6c48e925fec9f678',1,'idhan::api::TagPair']]],
   ['testmode_4',['testmode',['../de/d07/structidhan_1_1ConnectionArguments.html#a832a9898eccb5cd477f4c02e378637df',1,'idhan::ConnectionArguments']]],
-  ['total_5',['total',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a90a7c5b922ea8c9163376b353eee5ed3',1,'idhan::api::ClusterInfo']]]
+  ['text_5',['text',['../dc/dbd/structidhan_1_1TagCache_1_1CacheItem.html#ab529f4b6199374e917175c83528ccbd3',1,'idhan::TagCache::CacheItem']]],
+  ['total_6',['total',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a90a7c5b922ea8c9163376b353eee5ed3',1,'idhan::api::ClusterInfo']]]
 ];

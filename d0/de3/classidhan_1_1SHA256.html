@@ -142,6 +142,8 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:acf722ad0a8cd5ab57eaccc08e5194622"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2edca213311b70e1616bafc751806d6f" id="r_a2edca213311b70e1616bafc751806d6f"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2edca213311b70e1616bafc751806d6f">fromBuffer</a> (const std::vector&lt; std::byte &gt; &amp;<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>)</td></tr>
 <tr class="separator:a2edca213311b70e1616bafc751806d6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7322fc84a16b77e09a1572fec139dfae" id="r_a7322fc84a16b77e09a1572fec139dfae"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7322fc84a16b77e09a1572fec139dfae">fromPgCol</a> (const drogon::orm::Field &amp;field)</td></tr>
+<tr class="separator:a7322fc84a16b77e09a1572fec139dfae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a65fd20facc4078eae80c41ddaa0a17b5" id="r_a65fd20facc4078eae80c41ddaa0a17b5"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a65fd20facc4078eae80c41ddaa0a17b5">hash</a> (const std::vector&lt; std::byte &gt; &amp;<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>)</td></tr>
 <tr class="separator:a65fd20facc4078eae80c41ddaa0a17b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a88659621bb62cc0929851beeed5715ca" id="r_a88659621bb62cc0929851beeed5715ca"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a88659621bb62cc0929851beeed5715ca">hash</a> (const std::filesystem::path &amp;path)</td></tr>
@@ -363,6 +365,31 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Turns a HEX string into a <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> object. Str must be exactly (256 / 8) * 2, 64 characters long. </p>
+
+</div>
+</div>
+<a id="a7322fc84a16b77e09a1572fec139dfae" name="a7322fc84a16b77e09a1572fec139dfae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7322fc84a16b77e09a1572fec139dfae">&#9670;&#160;</a></span>fromPgCol()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> idhan::SHA256::fromPgCol </td>
+          <td>(</td>
+          <td class="paramtype">const drogon::orm::Field &amp;</td>          <td class="paramname"><span class="paramname"><em>field</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
 
 </div>
 </div>

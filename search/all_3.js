@@ -5,7 +5,7 @@ var searchData=
   ['dataidentifiersearch_2',['DataIdentifierSearch',['../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html',1,'idhan::mime::DataIdentifierSearch'],['../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#adcc55234e8208c9b83bb4ca09f1a4b08',1,'idhan::mime::DataIdentifierSearch::DataIdentifierSearch()=delete'],['../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a59eb1e94708b108c853447b8b1475c49',1,'idhan::mime::DataIdentifierSearch::DataIdentifierSearch(const Json::Value &amp;json)'],['../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a0acdecb31272fdd43af34f14020b7f94',1,'idhan::mime::DataIdentifierSearch::DataIdentifierSearch(DataIdentifierSearch &amp;&amp;other)=default']]],
   ['dbexception_3',['DBException',['../d7/d25/structidhan_1_1DBException.html',1,'idhan::DBException'],['../d7/d25/structidhan_1_1DBException.html#a5a014bb628698a87f9c77beee2a2cd15',1,'idhan::DBException::DBException()']]],
   ['dbname_4',['dbname',['../de/d07/structidhan_1_1ConnectionArguments.html#a7dfd95fc91bbb52f20d2d9e4554ca306',1,'idhan::ConnectionArguments']]],
-  ['debug_5',['debug',['../d6/d70/namespaceidhan_1_1logging.html#ab97a1c3c305eb37526a529aa4302ebb4',1,'idhan::logging::debug()'],['../d7/d03/namespaceidhan_1_1log.html#a82989e7920b131502a7d82ee072b4a51',1,'idhan::log::debug()']]],
+  ['debug_5',['debug',['../d6/d70/namespaceidhan_1_1logging.html#a236746b59e4ca1ec10198f0b38ae0324',1,'idhan::logging::debug()'],['../d7/d03/namespaceidhan_1_1log.html#a82989e7920b131502a7d82ee072b4a51',1,'idhan::log::debug()']]],
   ['decodehex_6',['decodeHex',['../dd/dcf/namespaceidhan.html#a5b247491d0fa033dd2d939970df653fa',1,'idhan']]],
   ['decodehex_2ehpp_7',['decodeHex.hpp',['../d5/d96/decodeHex_8hpp.html',1,'']]],
   ['decodehexcharacter_8',['decodeHexCharacter',['../dd/dcf/namespaceidhan.html#ace19126f81e79d920ce7787ba54d016b',1,'idhan']]],
@@ -17,10 +17,11 @@ var searchData=
   ['deletetagdomain_14',['deleteTagDomain',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#accedfb0817762c2bdaa8e78e3da1cd17',1,'idhan::api::IDHANTagAPI']]],
   ['desc_15',['DESC',['../dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1a65a6d757dbb571ccc3af9706e9a5f607',1,'idhan']]],
   ['destroytables_16',['destroyTables',['../db/d01/namespaceidhan_1_1db.html#a042c099ba9a0a055e27d3306de63bcb2',1,'idhan::db']]],
-  ['docs_17',['IDHAN API Docs',['../dd/df9/APIDocs.html',1,'']]],
-  ['docs_18',['Server docs',['../d0/d30/md_README.html#autotoc_md8',1,'']]],
-  ['docs_2ecpp_19',['docs.cpp',['../d8/d83/docs_8cpp.html',1,'']]],
-  ['domigration_20',['doMigration',['../db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0',1,'idhan::db']]],
-  ['dosenddata_21',['doSendData',['../d9/d66/classidhan_1_1Network.html#a85ba4ae26f7dc105c0f539f05c27b074',1,'idhan::Network']]],
-  ['duration_22',['Duration',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a2dccc42c283796de4f573e60f2c61808',1,'idhan::hyapi']]]
+  ['display_17',['DISPLAY',['../dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807aac97ad854bf48c774ad3d0863fe1ec8cd',1,'idhan']]],
+  ['docs_18',['IDHAN API Docs',['../dd/df9/APIDocs.html',1,'']]],
+  ['docs_19',['Server docs',['../d0/d30/md_README.html#autotoc_md8',1,'']]],
+  ['docs_2ecpp_20',['docs.cpp',['../d8/d83/docs_8cpp.html',1,'']]],
+  ['domigration_21',['doMigration',['../db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0',1,'idhan::db']]],
+  ['dosenddata_22',['doSendData',['../d9/d66/classidhan_1_1Network.html#a85ba4ae26f7dc105c0f539f05c27b074',1,'idhan::Network']]],
+  ['duration_23',['Duration',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a2dccc42c283796de4f573e60f2c61808',1,'idhan::hyapi']]]
 ];

@@ -1,6 +1,7 @@
 var hierarchy =
 [
     [ "idhan::VersionInfo::ApiVersion", "d6/d85/structidhan_1_1VersionInfo_1_1ApiVersion.html", null ],
+    [ "idhan::TagCache::CacheItem", "dc/dbd/structidhan_1_1TagCache_1_1CacheItem.html", null ],
     [ "idhan::api::ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", null ],
     [ "idhan::filesystem::ClusterManager::ClusterInfo", "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html", null ],
     [ "idhan::filesystem::ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", null ],
@@ -51,6 +52,7 @@ var hierarchy =
     [ "idhan::mime::MimeDataTrack", "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html", null ],
     [ "idhan::mime::MimeIdentifier", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html", null ],
     [ "idhan::mime::MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", null ],
+    [ "idhan::IDHANClient::TagInfo::NamespaceInfo", "df/dad/structidhan_1_1IDHANClient_1_1TagInfo_1_1NamespaceInfo.html", null ],
     [ "QObject", null, [
       [ "idhan::Network", "d9/d66/classidhan_1_1Network.html", null ]
     ] ],
@@ -60,7 +62,11 @@ var hierarchy =
     [ "idhan::ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", null ],
     [ "idhan::VersionInfo::ServerVersion", "d9/d69/structidhan_1_1VersionInfo_1_1ServerVersion.html", null ],
     [ "idhan::SHA256", "d0/de3/classidhan_1_1SHA256.html", null ],
+    [ "idhan::IDHANClient::TagInfo::SubtagInfo", "d6/d0b/structidhan_1_1IDHANClient_1_1TagInfo_1_1SubtagInfo.html", null ],
+    [ "idhan::TagCache", "d9/d57/structidhan_1_1TagCache.html", null ],
+    [ "idhan::IDHANClient::TagInfo", "dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html", null ],
     [ "idhan::api::TagPair", "d0/d19/structidhan_1_1api_1_1TagPair.html", null ],
+    [ "idhan::IDHANClient::TagRelationshipInfo", "d9/d81/structidhan_1_1IDHANClient_1_1TagRelationshipInfo.html", null ],
     [ "idhan::VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", null ],
     [ "idhan::mime::VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", null ]
 ];

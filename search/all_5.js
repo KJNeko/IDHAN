@@ -37,6 +37,7 @@ var searchData=
   ['free_34',['free',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a8081e2179fa79c3a42fc8f6e3f9b28a0',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
   ['frombuffer_35',['fromBuffer',['../d0/de3/classidhan_1_1SHA256.html#a2edca213311b70e1616bafc751806d6f',1,'idhan::SHA256']]],
   ['fromhex_36',['fromHex',['../d0/de3/classidhan_1_1SHA256.html#acf722ad0a8cd5ab57eaccc08e5194622',1,'idhan::SHA256']]],
-  ['fromsplit_37',['fromSplit',['../d0/d19/structidhan_1_1api_1_1TagPair.html#aac99b2810e6722f53d657b0519e2f237',1,'idhan::api::TagPair']]],
-  ['function_5fcreation_5fsql_38',['function_creation_sql',['../db/d01/namespaceidhan_1_1db.html#afb0fe10bf3a302b0d51ca347e533cf2e',1,'idhan::db']]]
+  ['frompgcol_37',['fromPgCol',['../d0/de3/classidhan_1_1SHA256.html#a7322fc84a16b77e09a1572fec139dfae',1,'idhan::SHA256']]],
+  ['fromsplit_38',['fromSplit',['../d0/d19/structidhan_1_1api_1_1TagPair.html#aac99b2810e6722f53d657b0519e2f237',1,'idhan::api::TagPair']]],
+  ['function_5fcreation_5fsql_39',['function_creation_sql',['../db/d01/namespaceidhan_1_1db.html#afb0fe10bf3a302b0d51ca347e533cf2e',1,'idhan::db']]]
 ];

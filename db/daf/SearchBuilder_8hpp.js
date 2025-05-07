@@ -1,6 +1,10 @@
 var SearchBuilder_8hpp =
 [
     [ "idhan::SearchBuilder", "dc/dba/structidhan_1_1SearchBuilder.html", "dc/dba/structidhan_1_1SearchBuilder" ],
+    [ "idhan::HydrusDisplayType", "dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807a", [
+      [ "idhan::HydrusDisplayType::STORED", "dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807aa725c3f6190ad95f075d3c9211323f308", null ],
+      [ "idhan::HydrusDisplayType::DISPLAY", "dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807aac97ad854bf48c774ad3d0863fe1ec8cd", null ]
+    ] ],
     [ "idhan::HydrusSortType", "dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1", [
       [ "idhan::HY_FILESIZE", "dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a73b6e344354bb9447c6e1874f3053c32", null ],
       [ "idhan::HY_DURATION", "dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a1d15d1b6683f6ecd81374ae09f1a1ff2", null ],

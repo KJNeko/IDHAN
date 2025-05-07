@@ -53,6 +53,7 @@ var annotated_dup =
       [ "SearchBuilder", "dc/dba/structidhan_1_1SearchBuilder.html", "dc/dba/structidhan_1_1SearchBuilder" ],
       [ "ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", "d0/d4c/classidhan_1_1ServerContext" ],
       [ "SHA256", "d0/de3/classidhan_1_1SHA256.html", "d0/de3/classidhan_1_1SHA256" ],
+      [ "TagCache", "d9/d57/structidhan_1_1TagCache.html", "d9/d57/structidhan_1_1TagCache" ],
       [ "VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", "d3/d25/structidhan_1_1VersionInfo" ]
     ] ],
     [ "std", null, [

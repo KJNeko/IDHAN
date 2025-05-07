@@ -8,6 +8,7 @@ var classidhan_1_1SHA256 =
     [ "data", "d0/de3/classidhan_1_1SHA256.html#a9ba39bb782d0aeb4752449a99614915e", null ],
     [ "fromBuffer", "d0/de3/classidhan_1_1SHA256.html#a2edca213311b70e1616bafc751806d6f", null ],
     [ "fromHex", "d0/de3/classidhan_1_1SHA256.html#acf722ad0a8cd5ab57eaccc08e5194622", null ],
+    [ "fromPgCol", "d0/de3/classidhan_1_1SHA256.html#a7322fc84a16b77e09a1572fec139dfae", null ],
     [ "hash", "d0/de3/classidhan_1_1SHA256.html#aa418580b6a1862d57d087d02e6fd86b6", null ],
     [ "hash", "d0/de3/classidhan_1_1SHA256.html#a88659621bb62cc0929851beeed5715ca", null ],
     [ "hash", "d0/de3/classidhan_1_1SHA256.html#a65fd20facc4078eae80c41ddaa0a17b5", null ],

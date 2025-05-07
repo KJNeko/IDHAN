@@ -65,7 +65,7 @@ var searchData=
   ['indexes_2ecpp_62',['indexes.cpp',['../d0/d3e/indexes_8cpp.html',1,'']]],
   ['indexes_2ehpp_63',['indexes.hpp',['../d3/d3e/indexes_8hpp.html',1,'']]],
   ['info_64',['Info',['../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3a087a97531195a0af0e9e35e49a629399',1,'idhan::logging']]],
-  ['info_65',['info',['../dd/df9/APIDocs.html#tag_info',1,'GET /tag/tag_id}/info'],['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#aa5e27d015a31d12814bf3308eb41e367',1,'idhan::mime::MimeInfo::info'],['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a51665d1db1aba35b5ff37faa13e6798f',1,'idhan::api::ClusterAPI::info()'],['../d6/d70/namespaceidhan_1_1logging.html#a57fbb5406ff86b408670fc1ae5c0b844',1,'idhan::logging::info()'],['../d7/d03/namespaceidhan_1_1log.html#acea0528caf8e7b84f55e6b1bf0e2e4d0',1,'idhan::log::info()'],['../d2/d61/namespaceidhan_1_1log_1_1server.html#afcd1c73124c90950816f5d14fbfb903f',1,'idhan::log::server::info()']]],
+  ['info_65',['info',['../dd/df9/APIDocs.html#tag_info',1,'GET /tag/tag_id}/info'],['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#aa5e27d015a31d12814bf3308eb41e367',1,'idhan::mime::MimeInfo::info'],['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a51665d1db1aba35b5ff37faa13e6798f',1,'idhan::api::ClusterAPI::info()'],['../d6/d70/namespaceidhan_1_1logging.html#a97a60923bdc7cb0cf61d36b425722b7b',1,'idhan::logging::info()'],['../d7/d03/namespaceidhan_1_1log.html#acea0528caf8e7b84f55e6b1bf0e2e4d0',1,'idhan::log::info()'],['../d2/d61/namespaceidhan_1_1log_1_1server.html#afcd1c73124c90950816f5d14fbfb903f',1,'idhan::log::server::info()']]],
   ['info_2ecpp_66',['info.cpp',['../de/d9b/cluster_2info_8cpp.html',1,'(Global Namespace)'],['../d4/d58/tags_2info_8cpp.html',1,'(Global Namespace)']]],
   ['infot_67',['infoT',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a2ec30bfe615c05d99b319e418dd4e374',1,'idhan::api::ClusterAPI']]],
   ['inital_5fquery_68',['inital_query',['../dc/dba/structidhan_1_1SearchBuilder.html#adbd1eed9d1aeb60e514455d471f3a182',1,'idhan::SearchBuilder']]],
@@ -73,5 +73,6 @@ var searchData=
   ['instance_70',['instance',['../d3/d67/classidhan_1_1IDHANClient.html#ad1bb050d93dff240cff27af74b800f89',1,'idhan::IDHANClient']]],
   ['integer_71',['Integer',['../dd/dcf/namespaceidhan.html#a988bcb50aeed6b070f91eb612eb951fc',1,'idhan']]],
   ['invalidrequestbody_72',['InvalidRequestBody',['../d2/d81/structidhan_1_1InvalidRequestBody.html',1,'idhan']]],
-  ['invoke_73',['invoke',['../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a94fb3c18fdf74d7d6bb5c897e19be89e',1,'idhan::api::IDHANAuth::invoke()'],['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#a5696247bb6074024c6134b2e0a5de827',1,'idhan::hyapi::HyAPIAuth::invoke()']]]
+  ['invoke_73',['invoke',['../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a94fb3c18fdf74d7d6bb5c897e19be89e',1,'idhan::api::IDHANAuth::invoke()'],['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#a5696247bb6074024c6134b2e0a5de827',1,'idhan::hyapi::HyAPIAuth::invoke()']]],
+  ['item_5fcount_74',['item_count',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#a36e9ca478d7b0414f11322b8ba34d1a1',1,'idhan::IDHANClient::TagInfo']]]
 ];
