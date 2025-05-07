@@ -32,8 +32,9 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	const auto path_str { result[ 0 ][ 0 ].as< std::string >() };
 
 	std::size_t size_accum { 0 };
-	std::size_t file_counter { 0 };
+	std::uint32_t file_counter { 0 };
 
+	/*
 	constexpr std::size_t in_flight { 4 };
 
 	std::counting_semaphore< in_flight > in_counter { in_flight };
@@ -41,6 +42,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	std::thread feeder {};
 	std::thread w0, w1, w2, w3;
+	*/
 
 	struct Data
 	{
@@ -58,6 +60,9 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		}
 	};
 
+	const auto scan_hashes { request->getOptionalParameter< bool >( "scan_hashes" ).value_or( true ) };
+	const auto scan_mime { request->getOptionalParameter< bool >( "scan_mime" ).value_or( true ) };
+
 	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( path_str ) )
 	{
 		if ( !dir_entry.is_regular_file() ) continue;
@@ -68,19 +73,30 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( data.extension() == ".thumbnail" ) continue;
 
-		int fd { open( data.path.c_str(), O_RDONLY ) };
-		data.length = std::filesystem::file_size( data.path );
+		if ( scan_hashes || scan_mime )
+		{
+			int fd { open( data.path.c_str(), O_RDONLY ) };
+			data.length = std::filesystem::file_size( data.path );
 
-		data.data = reinterpret_cast< std::byte* >( mmap( nullptr, data.length, PROT_READ, MAP_SHARED, fd, 0 ) );
+			data.data = static_cast< std::byte* >( mmap( nullptr, data.length, PROT_READ, MAP_SHARED, fd, 0 ) );
 
-		close( fd );
+			close( fd );
+		}
 
-		const SHA256 sha256 { SHA256::hash( dir_entry.path() ) };
+		const auto sha256_e { scan_hashes ? SHA256::hash( data.data, data.length ) : SHA256::fromHex( data.name() ) };
+
+		if ( !sha256_e.has_value() )
+		{
+			log::warn( "Failed to get hash for file {}", data.path.string() );
+			continue;
+		}
+
+		const auto& sha256 { sha256_e.value() };
 
 		// We are expecting that the filename without the extension should be the file
 		const auto expected_hex { sha256.hex() };
 
-		if ( expected_hex != data.name() )
+		if ( scan_hashes && expected_hex != data.name() )
 		{
 			log::warn(
 				"During scan of cluster {} file {} was found to have the name of {} but hash of {}",
@@ -110,34 +126,37 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		const RecordID record_id { search[ 0 ][ 0 ].as< RecordID >() };
 
-		// Determine if there is a mime for this file
-		const auto mime_search {
-			co_await db->execSqlCoro( "SELECT mime_id FROM file_info WHERE record_id = $1", record_id )
-		};
-
-		if ( mime_search.empty() )
+		if ( scan_mime )
 		{
-			auto info { co_await gatherFileInfo( data.data, data.length, db ) };
+			// Determine if there is a mime for this file
+			const auto mime_search {
+				co_await db->execSqlCoro( "SELECT mime_id FROM file_info WHERE record_id = $1", record_id )
+			};
 
-			if ( info.mime_id == 0 )
+			if ( mime_search.empty() )
 			{
-				log::warn(
-					"IDHAN came across file {} that it could not determine a mime for: Extension: {}",
-					data.path.string(),
-					data.extension() );
-				info.extension = data.extension();
+				auto info { co_await gatherFileInfo( data.data, data.length, db ) };
+
+				if ( info.mime_id == 0 )
+				{
+					log::warn(
+						"IDHAN came across file {} that it could not determine a mime for: Extension: {}",
+						data.path.string(),
+						data.extension() );
+					info.extension = data.extension();
+				}
+
+				co_await setFileInfo( record_id, info, db );
+
+				co_await db
+					->execSqlCoro( "UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", cluster_id, record_id );
 			}
-
-			co_await setFileInfo( record_id, info, db );
-
-			co_await db
-				->execSqlCoro( "UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", cluster_id, record_id );
 		}
 
 		// The file is ours and has passed all verification
 		size_accum += data.length;
 		file_counter += 1;
-	};
+	}
 
 	log::info(
 		"Finished scanning {} with size of {} and file count of {}",
@@ -145,7 +164,11 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		fgl::size::toHuman( size_accum ),
 		file_counter );
 
-	co_await db->execSqlCoro( "UPDATE file_clusters SET size_used = $1 WHERE cluster_id = $2", size_accum, cluster_id );
+	co_await db->execSqlCoro(
+		"UPDATE file_clusters SET size_used = $1, file_count = $3 WHERE cluster_id = $2",
+		size_accum,
+		cluster_id,
+		file_counter );
 
 	co_return drogon::HttpResponse::newHttpResponse();
 }
