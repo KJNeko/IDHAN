@@ -67,12 +67,20 @@ void HydrusImporter::finish()
 
 	using namespace std::chrono_literals;
 
-	if ( time_elapsed < 1s )
-		printTime( std::chrono::duration_cast< std::chrono::milliseconds >( time_elapsed ) );
-	else if ( time_elapsed < 1min )
-		printTime( std::chrono::duration_cast< std::chrono::seconds >( time_elapsed ) );
-	else
-		printTime( std::chrono::duration_cast< std::chrono::hours >( time_elapsed ) );
+	const auto hours { std::chrono::duration_cast< std::chrono::hours >( time_elapsed ).count() };
+	const auto minutes {
+		std::chrono::duration_cast< std::chrono::minutes >( time_elapsed % std::chrono::hours( 1 ) ).count()
+	};
+	const auto seconds {
+		std::chrono::duration_cast< std::chrono::seconds >( time_elapsed % std::chrono::minutes( 1 ) ).count()
+	};
+
+	std::string time_str {};
+	if ( hours > 0 ) time_str += std::format( "{}h:", hours );
+	if ( minutes > 0 ) time_str += std::format( "{}m:", minutes );
+	time_str += std::format( "{}s", seconds );
+
+	logging::info( "Total time took: {}", time_str );
 
 	QCoreApplication::exit();
 }
@@ -106,8 +114,6 @@ void HydrusImporter::processSets( const std::vector< Set >& sets, const TagDomai
 	std::vector< std::string > hashes {};
 
 	std::vector< std::vector< std::pair< std::string, std::string > > > tag_sets {};
-
-	logging::debug( "Got {} sets to process", sets.size() );
 
 	// process hashes
 	for ( const auto& set : sets )

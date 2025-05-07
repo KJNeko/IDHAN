@@ -13,7 +13,7 @@ namespace idhan::hydrus
 
 void HydrusImporter::copyParents()
 {
-	logging::info( "Copying parents" );
+	logging::info( "Starting to copy parents" );
 	TransactionBase master_tr { master_db };
 	TransactionBase client_tr { client_db };
 

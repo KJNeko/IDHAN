@@ -11,6 +11,7 @@
 #include <QNetworkReply>
 #include <QUrlQuery>
 
+#include <qtconcurrentrun.h>
 #include <thread>
 
 #include "logging/logger.hpp"
@@ -59,39 +60,30 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 
 	logging::info( "Requesting version info from {}", url.toString() );
 
-	const QByteArray empty_body {};
-
-	QNetworkReply* reply { network.send( GET, request, empty_body ) };
-
 	auto promise { std::make_shared< QPromise< VersionInfo > >() };
 
-	QObject::connect(
-		reply,
-		&QNetworkReply::finished,
-		[ this, reply, promise ]()
-		{
-			logging::info( "Handling version network response" );
-			promise->addResult( handleVersionInfo( reply ) );
-			promise->finish();
+	auto handleResponse = [ this, promise ]( QNetworkReply* reply )
+	{
+		logging::info( "Handling version network response" );
+		promise->addResult( handleVersionInfo( reply ) );
+		promise->finish();
 
-			reply->deleteLater();
-		} );
+		reply->deleteLater();
+	};
 
-	QObject::connect(
-		reply,
-		&QNetworkReply::errorOccurred,
-		[ this, reply, promise ]( QNetworkReply::NetworkError error )
-		{
-			logging::
-				error( "Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
+	auto handleError = [ this, promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error )
+	{
+		logging::error( "Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
 
-			const auto e { std::runtime_error( "Failed to get reply from remote" ) };
+		const auto e { std::runtime_error( "Failed to get reply from remote" ) };
 
-			promise->setException( std::make_exception_ptr( e ) );
-			promise->finish();
+		promise->setException( std::make_exception_ptr( e ) );
+		promise->finish();
 
-			reply->deleteLater();
-		} );
+		reply->deleteLater();
+	};
+
+	sendClientGet( "/version", handleResponse, handleError );
 
 	return promise->future();
 }
@@ -221,6 +213,8 @@ void IDHANClient::sendClientJson(
 
 	setUrlInfo( url );
 
+	// logging::debug( "Sending request to {}", url.toString().toStdString() );
+
 	QNetworkRequest request { url };
 	// request.setTransferTimeout( std::chrono::milliseconds( 8000 ) );
 	request.setHeader( QNetworkRequest::ContentTypeHeader, json_str_thing );
@@ -242,15 +236,17 @@ void IDHANClient::sendClientJson(
 		{
 			const auto response_in_time { std::chrono::high_resolution_clock::now() };
 
-			if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 1 ) )
+			if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 5 ) )
 			{
 				logging::warn(
-					"Server took {} to response to query {}",
+					"Server took {} to response to query {}. Might be doing a lot of work?",
 					std::chrono::duration_cast< std::chrono::milliseconds >( response_time ),
 					response->url().path().toStdString() );
 			}
 
-			responseHandler( response );
+			QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
+			// responseHandler( response );
+			// response->deleteLater();
 		} );
 
 	QObject::connect(
@@ -289,7 +285,9 @@ void IDHANClient::sendClientJson(
 				}
 			}
 
-			errorHandler( response, error );
+			QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error ) );
+			// errorHandler( response, error );
+			// response->deleteLater();
 		} );
 }
 

@@ -131,7 +131,7 @@ void HydrusImporter::copyTags()
 	tag_pairs.resize( group_size );
 
 	transaction
-			<< "SELECT DISTINCT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags ORDER BY namespace_id, length(namespace) ASC"
+			<< "SELECT DISTINCT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags ORDER BY length(namespace), namespace_id ASC"
 		>> [ & ]( const std::string_view namespace_text, const std::string_view subtag_text )
 	{
 		if ( namespace_text != current_namespace )

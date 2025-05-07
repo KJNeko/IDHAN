@@ -102,9 +102,13 @@ class IDHANClient
 
 	QFuture< TagID > createTag( const std::string& tag_text );
 
-	QFuture< std::vector< TagID > > getRecordTags( const RecordID record_id, const TagDomainID domain_id );
+	QFuture< std::vector< TagID > > getRecordTags( RecordID record_id, TagDomainID domain_id );
 
 	QFuture< std::vector< std::string > > getTagText( std::vector< TagID >& tag_ids );
+
+	QFuture< std::string > getTagText( const TagID tag_id );
+
+	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag( const QString& text );
 
 	QFuture< void > addTags(
 		RecordID record_id, TagDomainID domain_id, std::vector< std::pair< std::string, std::string > >&& tags );
@@ -163,6 +167,45 @@ class IDHANClient
 	 */
 	QFuture< TagDomainID > getTagDomain( std::string_view name );
 
+	struct TagRelationshipInfo
+	{
+		std::vector< TagID > m_aliased, m_aliases, m_parents, m_children, m_older_siblings, m_younger_siblings;
+	};
+
+	QFuture< TagRelationshipInfo > getTagRelationships( TagID tag_id, TagDomainID domain_id );
+
+	struct TagInfo
+	{
+		TagID m_id;
+
+		struct NamespaceInfo
+		{
+			NamespaceID m_id;
+			std::string m_text;
+		} m_namespace;
+
+		struct SubtagInfo
+		{
+			SubtagID m_id;
+			std::string m_text;
+		} m_subtag;
+
+		std::string toStdString() const
+		{
+			FGL_ASSERT( m_namespace.m_id != 0, "Namespace ID invalid" );
+			FGL_ASSERT( m_subtag.m_id != 0, "Subtag ID invalid" );
+
+			if ( m_namespace.m_text.empty() ) return m_subtag.m_text;
+			return std::format( "{}:{}", m_namespace.m_text, m_subtag.m_text );
+		}
+
+		QString toQString() const { return QString::fromStdString( toStdString() ); }
+
+		std::size_t item_count { 0 };
+	};
+
+	QFuture< TagInfo > getTagInfo( TagID tag_id );
+
 	/**
 	 * @brief Returns a list of all tag domain ids
 	 * @return
@@ -198,5 +241,8 @@ class IDHANClient
 
   public:
 };
+
+using TagRelationshipInfo = IDHANClient::TagRelationshipInfo;
+using TagInfo = IDHANClient::TagInfo;
 
 } // namespace idhan
