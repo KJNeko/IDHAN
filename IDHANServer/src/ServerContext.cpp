@@ -28,7 +28,10 @@ void ServerContext::setupCORSSupport() const
 		[ this ](
 			const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
 		{
-			// if ( args.testmode ) log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
+			if ( args.testmode )
+				log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
+			else
+				log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
 
 			if ( !request->path().starts_with( "/hyapi" ) || request->method() != drogon::Options )
 			{
