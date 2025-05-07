@@ -15,7 +15,7 @@ void IDHANApi::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&
 {
 	const std::string path { request->getPath() };
 
-	log::info( "Attempted to get {}", path );
+	// log::info( "Attempted to get {}", path );
 
 	callback( drogon::HttpResponse::newFileResponse( "./pages" + path ) );
 }
