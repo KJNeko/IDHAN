@@ -78,7 +78,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagInfo( drogon::HttpReq
 
 	{
 		const auto result {
-			co_await db->execSqlCoro( "SELECT subtag_id FROM tag_subtags WHERE subtag_id = $1", subtag_id )
+			co_await db->execSqlCoro( "SELECT subtag_text FROM tag_subtags WHERE subtag_id = $1", subtag_id )
 		};
 
 		if ( result.size() == 0 )
@@ -89,6 +89,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagInfo( drogon::HttpReq
 		root[ "subtag" ][ "id" ] = subtag_id;
 		root[ "subtag" ][ "text" ] = result[ 0 ][ 0 ].as< std::string >();
 	}
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
 } // namespace idhan::api
