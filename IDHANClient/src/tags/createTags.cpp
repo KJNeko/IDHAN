@@ -11,6 +11,7 @@
 
 namespace idhan
 {
+
 QFuture< std::vector< TagID > > IDHANClient::
 	createTags( const std::vector< std::pair< std::string, std::string > >& tags )
 {
@@ -27,23 +28,7 @@ QFuture< std::vector< TagID > > IDHANClient::
 		array.append( std::move( obj ) );
 	}
 
-	QUrl url { m_url_template };
-	url.setPath( "/tags/create" );
-
-	const auto json_str_thing { "application/json" };
-
-	QNetworkRequest request { url };
-	request.setHeader( QNetworkRequest::ContentTypeHeader, json_str_thing );
-	request.setRawHeader( "accept", json_str_thing );
-	addKeyHeader( request );
-
-	const QJsonDocument doc { array };
-
-	const auto post_data { std::make_shared< QByteArray >( doc.toJson() ) };
-
-	auto response { network.send( POST, request, *post_data ) };
-
-	auto handleResponse = [ promise, response, post_data ]()
+	auto handleResponse = [ promise ]( auto* response )
 	{
 		// reply will give us a body of json
 		const auto data { response->readAll() };
@@ -52,8 +37,6 @@ QFuture< std::vector< TagID > > IDHANClient::
 		const QJsonDocument document { QJsonDocument::fromJson( data ) };
 
 		std::vector< TagID > tag_ids {};
-
-		logging::info( "Got {} tags", document.array().size() );
 
 		for ( const auto& obj : document.array() )
 		{
@@ -66,7 +49,7 @@ QFuture< std::vector< TagID > > IDHANClient::
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise, response, post_data ]( QNetworkReply::NetworkError error )
+	auto handleError = [ promise ]( auto* response, QNetworkReply::NetworkError error )
 	{
 		logging::logResponse( response );
 
@@ -74,8 +57,9 @@ QFuture< std::vector< TagID > > IDHANClient::
 		response->deleteLater();
 	};
 
-	QObject::connect( response, &QNetworkReply::finished, handleResponse );
-	QObject::connect( response, &QNetworkReply::errorOccurred, handleError );
+	QJsonDocument doc { array };
+
+	sendClientPost( std::move( doc ), "/tags/create", handleResponse, handleError );
 
 	return promise->future();
 }

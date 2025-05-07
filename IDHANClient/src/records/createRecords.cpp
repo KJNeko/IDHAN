@@ -43,8 +43,6 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 
 	object.insert( "sha256", array );
 
-	logging::debug( "Creating {} records", expected_record_count );
-
 	auto handleResponse = [ promise, expected_record_count ]( QNetworkReply* response )
 	{
 		const auto data { response->readAll() };
