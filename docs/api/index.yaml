@@ -47,8 +47,6 @@ paths:
   /tags/parents/create:
     $ref: './paths/tags/relationships/parent/create.yaml'
 
-
-
   /records/create:
     $ref: './paths/records/create.yaml'
   /records/tags/add:
@@ -57,7 +55,7 @@ paths:
     $ref: './paths/records/tags/add.yaml'
   /records/{record_id}/tags/remove:
     $ref: './paths/records/tags/remove.yaml'
-  /records/{record_id}/tags/info:
+  /records/{record_id}/tags:
     $ref: './paths/records/tags/info.yaml'
   /records/{record_id}/info:
     $ref: './paths/records/info.yaml'
