@@ -21,10 +21,11 @@ std::string
 		default:
 			[[fallthrough]];
 		case HydrusDisplayType::DISPLAY:
-			str += "tag_mappings tm";
+			// str += "tag_mappings tm";
+			str += "final_mappings tm";
 			break;
 		case HydrusDisplayType::STORED:
-			str += "display_mappings tm";
+			str += "tag_mappings tm";
 			break;
 	}
 
