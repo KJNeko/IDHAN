@@ -17,7 +17,8 @@ add_custom_command(
 		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake: Generating doMigration.cpp")
 
 
-find_package(Qt6 REQUIRED COMPONENTS Core)
+# Gui is needed for QImage for whatever reason
+find_package(Qt6 REQUIRED COMPONENTS Core Multimedia)
 find_package(spdlog REQUIRED)
 find_package(drogon REQUIRED)
 
@@ -27,7 +28,7 @@ else ()
 endif ()
 
 target_link_libraries(IDHANServer PUBLIC spdlog drogon)
-target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core tomlplusplus::tomlplusplus)
+target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core Qt6::Multimedia tomlplusplus::tomlplusplus)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
 
 target_link_libraries(IDHANServer PRIVATE IDHAN)

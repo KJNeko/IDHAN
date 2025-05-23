@@ -80,7 +80,8 @@ paths:
     $ref: './paths/clusters/modify.yaml'
   /clusters/{cluster_id}/remove:
     $ref: './paths/clusters/remove.yaml'
-
+  /clusters/{cluster_id}/scan:
+    $ref: './paths/clusters/scan.yaml'
 
 components:
   schemas:

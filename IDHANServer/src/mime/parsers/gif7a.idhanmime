@@ -1,5 +1,6 @@
 {
   "mime": "animated/gif",
+  "idhan_type": "qt-image",
   "extensions": [
     "gif"
   ],

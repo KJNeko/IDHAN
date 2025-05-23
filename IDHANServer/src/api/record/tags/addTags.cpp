@@ -4,7 +4,6 @@
 
 #include "IDHANTypes.hpp"
 #include "api/IDHANRecordAPI.hpp"
-#include "api/IDHANTagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "api/helpers/tags/tags.hpp"

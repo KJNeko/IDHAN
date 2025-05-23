@@ -12,7 +12,7 @@
 #include "api/helpers/tags/tags.hpp"
 #include "constants/SearchOrder.hpp"
 #include "constants/hydrus_version.hpp"
-#include "core/SearchBuilder.hpp"
+#include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
 #include "fixme.hpp"
@@ -201,7 +201,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	log::debug( "Generated search: {}", query );
 
-	const auto result { co_await db->execSqlCoro( query, "{1,2,3,4}" ) };
+	const auto result { co_await db->execSqlCoro( query, "{1,2,3,4,5}" ) };
 
 	Json::Value out {};
 	Json::Value file_ids {};
@@ -215,6 +215,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 		i += 1;
 	}
+
+	log::info( "Got {} results", file_ids.size() );
 
 	if ( return_file_ids ) out[ "file_ids" ] = std::move( file_ids );
 	if ( return_hashes ) out[ "hashes" ] = std::move( hashes );
@@ -319,7 +321,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 			id ) };
 
 		auto display_tags { db->execSqlCoro(
-			"SELECT domain_id, tag_id, tag_text FROM display_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
+			"SELECT domain_id, tag_id, tag_text FROM final_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
 			id ) };
 
 		for ( const auto& storage_tag : co_await storage_tags )

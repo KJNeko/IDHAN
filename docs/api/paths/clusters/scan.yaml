@@ -1,0 +1,39 @@
+get:
+  tags:
+    - clusters
+  summary: Scans a cluster for files
+  parameters:
+    - name: cluster_id
+      in: path
+      required: true
+      description: ID of the cluster to scan
+      schema:
+        type: integer
+    - name: trust_filename
+      in: query
+      required: false
+      description: Trust the filename and ignore the hash given by the file
+      schema:
+        type: boolean
+        default: false
+    - name: scan_mime
+      in: query
+      required: false
+      description: Scans the mime if the file has not been scanned previously
+      schema:
+        type: boolean
+        default: true
+    - name: rescan_mime
+      in: query
+      required: false
+      description: Triggers the mime to be retested for all files
+      schema:
+        type: boolean
+        default: false
+  responses:
+    200:
+      description: Returns a json status with scan results
+      content:
+        application/json:
+          schema:
+            type: object

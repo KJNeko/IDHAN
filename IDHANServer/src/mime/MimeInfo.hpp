@@ -6,6 +6,7 @@
 
 #include <variant>
 
+#include "FileInfo.hpp"
 #include "IDHANTypes.hpp"
 
 namespace idhan::mime
@@ -33,9 +34,14 @@ struct MimeInfo
 {
 	using SubInfoVariant = std::variant< VideoInfo, ImageInfo, AnimatedInfo >;
 
-	MimeID id;
+	MimeID id { constants::INVALID_MIME_ID };
 	SubInfoVariant info {};
 	Json::Value extra_info {};
+
+	template < typename T >
+		requires std::constructible_from< SubInfoVariant, T >
+	MimeInfo( T& variant ) : info( variant )
+	{}
 };
 
 } // namespace idhan::mime

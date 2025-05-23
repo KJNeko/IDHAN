@@ -5,6 +5,7 @@
 #include "FileInfo.hpp"
 
 #include "logging/log.hpp"
+#include "metadata/Data.hpp"
 #include "mime/MimeDatabase.hpp"
 
 namespace idhan
@@ -25,11 +26,11 @@ drogon::Task< void > setFileInfo( const RecordID record_id, const FileInfo& info
 		info.extension );
 }
 
-drogon::Task< FileInfo > gatherFileInfo( const std::byte* data, const std::size_t size, drogon::orm::DbClientPtr db )
+drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< Data > data, drogon::orm::DbClientPtr db )
 {
 	FileInfo info {};
-	info.size = size;
-	const auto mime_string { mime::getInstance()->scan( data, size ) };
+	info.size = data->length();
+	const auto mime_string { mime::getInstance()->scan( data->data(), data->length() ) };
 
 	if ( !mime_string.has_value() )
 	{
@@ -43,7 +44,7 @@ drogon::Task< FileInfo > gatherFileInfo( const std::byte* data, const std::size_
 
 	if ( mime_search.empty() )
 	{
-		info.mime_id = 0;
+		info.mime_id = constants::INVALID_MIME_ID;
 		log::warn( "Found file where mime is not registered in IDHAN: Mime: {}", mime_string.value() );
 	}
 	else
