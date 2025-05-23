@@ -33,7 +33,13 @@ WITH tag_relationship_checks AS (
          UNION ALL
 
          -- Recursive case: traverse tag relationships
-         SELECT h.domain_id as domain_id, h.aliased_id as aliased_id, ca.alias_id IS NULL as is_final, COALESCE(ca.alias_id, h.alias_id) as alias_id, array_append(h.path, ca.alias_id) as path, ca.alias_id = ANY (h.path) as is_cyclic, h.depth + 1 as depth
+         SELECT h.domain_id                                                     as domain_id,
+                h.aliased_id                                                    as aliased_id,
+                ca.alias_id IS NULL                                             as is_final,
+                COALESCE(ca.alias_id, h.alias_id)                               as alias_id,
+                array_append(h.path, ca.alias_id)                               as path,
+                (CASE WHEN ca.alias_id = ANY (h.path) THEN TRUE ELSE FALSE END) as is_cyclic,
+                h.depth + 1                                                     as depth
          FROM hierarchy h
                   LEFT JOIN intermediate_tags ca ON h.alias_id = ca.aliased_id
              AND h.domain_id = ca.domain_id

@@ -23,7 +23,7 @@ activate Server
 Client <-> Server: Auth
 
 Client -> Server: Submit file
-Server -> Server: Get import UID
+Server -> Server: Generate import UID
 
 Server -> Server: Wait for import queue to have space available
 Server -> Queue: Place file onto queue
@@ -43,6 +43,9 @@ else #Pink Mime Unknown
 Importer -> Server: Invalidate UID
 end
 
+==  ==
+
+autonumber
 
 Client -> Server: Request import info
 alt#Gold #LightBlue Import success

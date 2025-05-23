@@ -10,6 +10,12 @@
 
 namespace idhan
 {
+class Data;
+
+namespace constants
+{
+constexpr MimeID INVALID_MIME_ID { 0 };
+}
 
 struct FileInfo
 {
@@ -20,7 +26,8 @@ struct FileInfo
 };
 
 //! Populates a FileInfo struct with information from the data
-drogon::Task< FileInfo > gatherFileInfo( const std::byte* data, const std::size_t size, drogon::orm::DbClientPtr db );
-drogon::Task< void > setFileInfo( const RecordID record_id, const FileInfo& info, drogon::orm::DbClientPtr db );
+drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< Data > data, drogon::orm::DbClientPtr db );
+
+drogon::Task< void > setFileInfo( RecordID record_id, const FileInfo& info, drogon::orm::DbClientPtr db );
 
 } // namespace idhan
