@@ -47,10 +47,11 @@ var searchData=
   ['hydrus_5fconstants_2ehpp_44',['hydrus_constants.hpp',['../d8/d54/hydrus__constants_8hpp.html',1,'']]],
   ['hydrus_5fmimiced_5fapi_5fversion_45',['HYDRUS_MIMICED_API_VERSION',['../dd/d85/hydrus__version_8hpp.html#ab20930693103023802163bbd74c292bb',1,'hydrus_version.hpp']]],
   ['hydrus_5fmimiced_5fversion_46',['HYDRUS_MIMICED_VERSION',['../dd/d85/hydrus__version_8hpp.html#a678076fb21e94e502c0765ba9f928139',1,'hydrus_version.hpp']]],
-  ['hydrus_5fversion_2ehpp_47',['hydrus_version.hpp',['../dd/d85/hydrus__version_8hpp.html',1,'']]],
-  ['hydrusapi_48',['HydrusAPI',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html',1,'idhan::hyapi']]],
-  ['hydrusdisplaytype_49',['HydrusDisplayType',['../dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807a',1,'idhan']]],
-  ['hydrusimportresponses_50',['HydrusImportResponses',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665',1,'idhan::hyapi']]],
-  ['hydrussorttype_51',['HydrusSortType',['../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1',1,'idhan']]],
-  ['hytoidhansorttype_52',['hyToIDHANSortType',['../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150',1,'idhan']]]
+  ['hydrus_5fserialisable_5fconstants_5fgen_2ehpp_47',['hydrus_serialisable_constants_gen.hpp',['../df/d72/hydrus__serialisable__constants__gen_8hpp.html',1,'']]],
+  ['hydrus_5fversion_2ehpp_48',['hydrus_version.hpp',['../dd/d85/hydrus__version_8hpp.html',1,'']]],
+  ['hydrusapi_49',['HydrusAPI',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html',1,'idhan::hyapi']]],
+  ['hydrusdisplaytype_50',['HydrusDisplayType',['../dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807a',1,'idhan']]],
+  ['hydrusimportresponses_51',['HydrusImportResponses',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665',1,'idhan::hyapi']]],
+  ['hydrussorttype_52',['HydrusSortType',['../dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1',1,'idhan']]],
+  ['hytoidhansorttype_53',['hyToIDHANSortType',['../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150',1,'idhan']]]
 ];

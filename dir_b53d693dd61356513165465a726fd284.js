@@ -7,6 +7,7 @@ var dir_b53d693dd61356513165465a726fd284 =
     [ "filesystem", "dir_3720c38179b88ce0988ecc7325964984.html", "dir_3720c38179b88ce0988ecc7325964984" ],
     [ "hyapi", "dir_fa39e7d6092e804b04cf9ce04006eb47.html", "dir_fa39e7d6092e804b04cf9ce04006eb47" ],
     [ "logging", "dir_11cc625acd1206bb2603f6322c915d87.html", "dir_11cc625acd1206bb2603f6322c915d87" ],
+    [ "metadata", "dir_6cb525e80707a04c2be1de91f9f29e0e.html", "dir_6cb525e80707a04c2be1de91f9f29e0e" ],
     [ "mime", "dir_9868e3b60fd799607c7d7d1c4294e646.html", "dir_9868e3b60fd799607c7d7d1c4294e646" ],
     [ "Config.cpp", "de/da7/Config_8cpp.html", "de/da7/Config_8cpp" ],
     [ "Config.hpp", "df/db4/Config_8hpp.html", "df/db4/Config_8hpp" ],

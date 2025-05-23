@@ -17,6 +17,8 @@ var searchData=
   ['exceptionhandler_14',['exceptionHandler',['../dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694',1,'idhan']]],
   ['exceptions_2ehpp_15',['exceptions.hpp',['../da/d49/exceptions_8hpp.html',1,'']]],
   ['exists_16',['Exists',['../dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4aba7710b08f08a9228fee41ee13261146',1,'idhan']]],
-  ['extension_17',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension']]],
-  ['extra_5finfo_18',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]]
+  ['expectedtask_17',['ExpectedTask',['../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4',1,'ExpectedTask.hpp']]],
+  ['expectedtask_2ehpp_18',['ExpectedTask.hpp',['../d6/d3e/ExpectedTask_8hpp.html',1,'']]],
+  ['extension_19',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension'],['../d8/d43/classidhan_1_1Data.html#a79b7d95bc3d241ebab716fabbf48abb8',1,'idhan::Data::extension()']]],
+  ['extra_5finfo_20',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]]
 ];

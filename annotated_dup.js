@@ -38,11 +38,13 @@ var annotated_dup =
       ] ],
       [ "APIException", "d7/dca/structidhan_1_1APIException.html", null ],
       [ "ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", "de/d07/structidhan_1_1ConnectionArguments" ],
+      [ "Data", "d8/d43/classidhan_1_1Data.html", "d8/d43/classidhan_1_1Data" ],
       [ "DBException", "d7/d25/structidhan_1_1DBException.html", "d7/d25/structidhan_1_1DBException" ],
       [ "FileInfo", "d8/d58/structidhan_1_1FileInfo.html", "d8/d58/structidhan_1_1FileInfo" ],
       [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
       [ "IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", "da/d27/structidhan_1_1IDHANClientConfig" ],
       [ "IDHANException", "dd/d1d/structidhan_1_1IDHANException.html", "dd/d1d/structidhan_1_1IDHANException" ],
+      [ "ImageData", "db/d5e/structidhan_1_1ImageData.html", "db/d5e/structidhan_1_1ImageData" ],
       [ "InvalidRequestBody", "d2/d81/structidhan_1_1InvalidRequestBody.html", null ],
       [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],
       [ "MimeException", "df/d62/structidhan_1_1MimeException.html", "df/d62/structidhan_1_1MimeException" ],
@@ -54,6 +56,7 @@ var annotated_dup =
       [ "ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", "d0/d4c/classidhan_1_1ServerContext" ],
       [ "SHA256", "d0/de3/classidhan_1_1SHA256.html", "d0/de3/classidhan_1_1SHA256" ],
       [ "TagCache", "d9/d57/structidhan_1_1TagCache.html", "d9/d57/structidhan_1_1TagCache" ],
+      [ "TagSearch", "d9/d46/classidhan_1_1TagSearch.html", "d9/d46/classidhan_1_1TagSearch" ],
       [ "VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", "d3/d25/structidhan_1_1VersionInfo" ]
     ] ],
     [ "std", null, [

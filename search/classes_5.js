@@ -9,6 +9,7 @@ var searchData=
   ['idhanrecordapi_6',['IDHANRecordAPI',['../d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html',1,'idhan::api']]],
   ['idhansearchapi_7',['IDHANSearchAPI',['../d5/da5/classidhan_1_1api_1_1IDHANSearchAPI.html',1,'idhan::api']]],
   ['idhantagapi_8',['IDHANTagAPI',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html',1,'idhan::api']]],
-  ['imageinfo_9',['ImageInfo',['../d3/d75/structidhan_1_1mime_1_1ImageInfo.html',1,'idhan::mime']]],
-  ['invalidrequestbody_10',['InvalidRequestBody',['../d2/d81/structidhan_1_1InvalidRequestBody.html',1,'idhan']]]
+  ['imagedata_9',['ImageData',['../db/d5e/structidhan_1_1ImageData.html',1,'idhan']]],
+  ['imageinfo_10',['ImageInfo',['../d3/d75/structidhan_1_1mime_1_1ImageInfo.html',1,'idhan::mime']]],
+  ['invalidrequestbody_11',['InvalidRequestBody',['../d2/d81/structidhan_1_1InvalidRequestBody.html',1,'idhan']]]
 ];

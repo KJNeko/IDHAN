@@ -11,11 +11,12 @@ var searchData=
   ['findorcreatenamespace_8',['findOrCreateNamespace',['../dd/dcf/namespaceidhan.html#af6d426cda0d593930875e52f980b41ec',1,'idhan']]],
   ['findorcreatesubtag_9',['findOrCreateSubtag',['../dd/dcf/namespaceidhan.html#ad9c7e7dc5caa7093a1d4f900e95465dc',1,'idhan']]],
   ['findorcreatetag_10',['findOrCreateTag',['../dd/dcf/namespaceidhan.html#a9f1848d8fc19ffaf73a46f88f4bdaf97',1,'idhan::findOrCreateTag(const NamespaceID namespace_id, const SubtagID subtag_id, drogon::orm::DbClientPtr db)'],['../dd/dcf/namespaceidhan.html#ac390dcf160dcc533ff56c6a35344083b',1,'idhan::findOrCreateTag(const std::string tag_text, drogon::orm::DbClientPtr db)']]],
-  ['fixme_11',['fixme',['../dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e',1,'idhan']]],
-  ['format_12',['format',['../d9/dce/structstd_1_1formatter_3_01QString_01_4.html#a297b1d7fa1d3774c049eb0446e5c3252',1,'std::formatter&lt; QString &gt;::format()'],['../de/d07/structidhan_1_1ConnectionArguments.html#ae1aacfc7f7d3b854d9811c4fe0a2a7c8',1,'idhan::ConnectionArguments::format()']]],
-  ['free_13',['free',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a8081e2179fa79c3a42fc8f6e3f9b28a0',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
-  ['frombuffer_14',['fromBuffer',['../d0/de3/classidhan_1_1SHA256.html#a2edca213311b70e1616bafc751806d6f',1,'idhan::SHA256']]],
-  ['fromhex_15',['fromHex',['../d0/de3/classidhan_1_1SHA256.html#acf722ad0a8cd5ab57eaccc08e5194622',1,'idhan::SHA256']]],
-  ['frompgcol_16',['fromPgCol',['../d0/de3/classidhan_1_1SHA256.html#a7322fc84a16b77e09a1572fec139dfae',1,'idhan::SHA256']]],
-  ['fromsplit_17',['fromSplit',['../d0/d19/structidhan_1_1api_1_1TagPair.html#aac99b2810e6722f53d657b0519e2f237',1,'idhan::api::TagPair']]]
+  ['findsiblings_11',['findSiblings',['../d9/d46/classidhan_1_1TagSearch.html#a2d9cd9a4e8013d744d3a7539346a0d39',1,'idhan::TagSearch']]],
+  ['fixme_12',['fixme',['../dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e',1,'idhan']]],
+  ['format_13',['format',['../d9/dce/structstd_1_1formatter_3_01QString_01_4.html#a297b1d7fa1d3774c049eb0446e5c3252',1,'std::formatter&lt; QString &gt;::format()'],['../de/d07/structidhan_1_1ConnectionArguments.html#ae1aacfc7f7d3b854d9811c4fe0a2a7c8',1,'idhan::ConnectionArguments::format()']]],
+  ['free_14',['free',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a8081e2179fa79c3a42fc8f6e3f9b28a0',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],
+  ['frombuffer_15',['fromBuffer',['../d0/de3/classidhan_1_1SHA256.html#a2edca213311b70e1616bafc751806d6f',1,'idhan::SHA256']]],
+  ['fromhex_16',['fromHex',['../d0/de3/classidhan_1_1SHA256.html#acf722ad0a8cd5ab57eaccc08e5194622',1,'idhan::SHA256']]],
+  ['frompgcol_17',['fromPgCol',['../d0/de3/classidhan_1_1SHA256.html#a7322fc84a16b77e09a1572fec139dfae',1,'idhan::SHA256']]],
+  ['fromsplit_18',['fromSplit',['../d0/d19/structidhan_1_1api_1_1TagPair.html#aac99b2810e6722f53d657b0519e2f237',1,'idhan::api::TagPair']]]
 ];

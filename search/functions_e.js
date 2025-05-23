@@ -6,8 +6,9 @@ var searchData=
   ['registermimetype_3',['registerMimeType',['../d4/d9c/namespaceidhan_1_1mime.html#a96c638ae913e30e456c17d6958c1a07f',1,'idhan::mime']]],
   ['reloadmimeparsers_4',['reloadMimeParsers',['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a36cbe1e79ea189987a6656b2cf001176',1,'idhan::mime::MimeDatabase']]],
   ['remove_5',['remove',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#acfff738ea78324256e23e1475e826fdd',1,'idhan::api::ClusterAPI']]],
-  ['removesize_6',['removeSize',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#afecfbc7407c85ccef6c2e1cb0cc20106',1,'idhan::api::ClusterInfo']]],
-  ['removetags_7',['removeTags',['../d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html#a665ad9c2c00348cce376d1deb9876fd9',1,'idhan::api::IDHANRecordAPI']]],
-  ['requestnewpermissions_8',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a18afc80809768409c8cea0f6d68d5969',1,'idhan::hyapi::HydrusAPI']]],
-  ['run_9',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
+  ['removesiblings_6',['removeSiblings',['../d9/d46/classidhan_1_1TagSearch.html#a4c81dacf77d00ed231e0b6c3b065c7b2',1,'idhan::TagSearch']]],
+  ['removesize_7',['removeSize',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#afecfbc7407c85ccef6c2e1cb0cc20106',1,'idhan::api::ClusterInfo']]],
+  ['removetags_8',['removeTags',['../d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html#a665ad9c2c00348cce376d1deb9876fd9',1,'idhan::api::IDHANRecordAPI']]],
+  ['requestnewpermissions_9',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a18afc80809768409c8cea0f6d68d5969',1,'idhan::hyapi::HydrusAPI']]],
+  ['run_10',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
 ];

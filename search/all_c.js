@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['name_0',['name',['../de/d50/structidhan_1_1logging_1_1ScopedTimer.html#aa3a23cb3a201e8805098c82c5197d68f',1,'idhan::logging::ScopedTimer']]],
+  ['name_0',['name',['../de/d50/structidhan_1_1logging_1_1ScopedTimer.html#aa3a23cb3a201e8805098c82c5197d68f',1,'idhan::logging::ScopedTimer::name'],['../d8/d43/classidhan_1_1Data.html#af0b33712b0cecc08d496145317eb3e5f',1,'idhan::Data::name()']]],
   ['namespaceid_1',['NamespaceID',['../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5',1,'idhan']]],
   ['namespaceinfo_2',['NamespaceInfo',['../df/dad/structidhan_1_1IDHANClient_1_1TagInfo_1_1NamespaceInfo.html',1,'idhan::IDHANClient::TagInfo']]],
   ['namespaces_2ecpp_3',['namespaces.cpp',['../d9/da6/namespaces_8cpp.html',1,'']]],

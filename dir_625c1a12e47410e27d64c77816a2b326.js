@@ -6,6 +6,7 @@ var dir_625c1a12e47410e27d64c77816a2b326 =
     [ "checkContentType.hpp", "dc/dde/checkContentType_8hpp.html", "dc/dde/checkContentType_8hpp" ],
     [ "createBadRequest.cpp", "dd/da6/createBadRequest_8cpp.html", "dd/da6/createBadRequest_8cpp" ],
     [ "createBadRequest.hpp", "de/dbc/createBadRequest_8hpp.html", "de/dbc/createBadRequest_8hpp" ],
+    [ "ExpectedTask.hpp", "d6/d3e/ExpectedTask_8hpp.html", "d6/d3e/ExpectedTask_8hpp" ],
     [ "getArrayParameters.hpp", "d2/dff/getArrayParameters_8hpp.html", "d2/dff/getArrayParameters_8hpp" ],
     [ "getTagDomainID.cpp", "d9/d92/getTagDomainID_8cpp.html", "d9/d92/getTagDomainID_8cpp" ],
     [ "helpers.hpp", "da/df3/helpers_8hpp.html", "da/df3/helpers_8hpp" ],

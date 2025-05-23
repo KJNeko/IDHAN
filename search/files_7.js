@@ -10,10 +10,11 @@ var searchData=
   ['idhansearchapi_2ehpp_7',['IDHANSearchAPI.hpp',['../d7/d99/IDHANSearchAPI_8hpp.html',1,'']]],
   ['idhantagapi_2ehpp_8',['IDHANTagAPI.hpp',['../d4/d83/IDHANTagAPI_8hpp.html',1,'']]],
   ['idhantypes_2ehpp_9',['IDHANTypes.hpp',['../da/d68/IDHANTypes_8hpp.html',1,'']]],
-  ['importcodes_2ehpp_10',['ImportCodes.hpp',['../df/d6c/ImportCodes_8hpp.html',1,'']]],
-  ['importfile_2ecpp_11',['importFile.cpp',['../d0/d0a/importFile_8cpp.html',1,'']]],
-  ['importresponses_2ehpp_12',['ImportResponses.hpp',['../df/d1c/ImportResponses_8hpp.html',1,'']]],
-  ['indexes_2ecpp_13',['indexes.cpp',['../d0/d3e/indexes_8cpp.html',1,'']]],
-  ['indexes_2ehpp_14',['indexes.hpp',['../d3/d3e/indexes_8hpp.html',1,'']]],
-  ['info_2ecpp_15',['info.cpp',['../de/d9b/cluster_2info_8cpp.html',1,'(Global Namespace)'],['../d4/d58/tags_2info_8cpp.html',1,'(Global Namespace)']]]
+  ['imageprocessing_2ehpp_10',['imageProcessing.hpp',['../d8/dbd/imageProcessing_8hpp.html',1,'']]],
+  ['importcodes_2ehpp_11',['ImportCodes.hpp',['../df/d6c/ImportCodes_8hpp.html',1,'']]],
+  ['importfile_2ecpp_12',['importFile.cpp',['../d0/d0a/importFile_8cpp.html',1,'']]],
+  ['importresponses_2ehpp_13',['ImportResponses.hpp',['../df/d1c/ImportResponses_8hpp.html',1,'']]],
+  ['indexes_2ecpp_14',['indexes.cpp',['../d0/d3e/indexes_8cpp.html',1,'']]],
+  ['indexes_2ehpp_15',['indexes.hpp',['../d3/d3e/indexes_8hpp.html',1,'']]],
+  ['info_2ecpp_16',['info.cpp',['../de/d9b/cluster_2info_8cpp.html',1,'(Global Namespace)'],['../d4/d58/tags_2info_8cpp.html',1,'(Global Namespace)']]]
 ];

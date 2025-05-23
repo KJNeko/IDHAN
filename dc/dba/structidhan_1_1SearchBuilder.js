@@ -13,7 +13,7 @@ var structidhan_1_1SearchBuilder =
     [ "inital_query", "dc/dba/structidhan_1_1SearchBuilder.html#adbd1eed9d1aeb60e514455d471f3a182", null ],
     [ "m_display_mode", "dc/dba/structidhan_1_1SearchBuilder.html#a830b5531099658f8a6a1b4bc9a9f1393", null ],
     [ "m_order", "dc/dba/structidhan_1_1SearchBuilder.html#aed7bf7e9c600b6aeaab9d7d7d7d795e4", null ],
-    [ "m_required_joins", "dc/dba/structidhan_1_1SearchBuilder.html#a0b48566c14a2544e694e7953e93ae769", null ],
+    [ "m_required_joins", "dc/dba/structidhan_1_1SearchBuilder.html#ae3d70617c94452cb2c9054a681fabdec", null ],
     [ "m_sort_type", "dc/dba/structidhan_1_1SearchBuilder.html#a450567413e0c4bffadfaeeb2daa9d742", null ],
     [ "m_tags", "dc/dba/structidhan_1_1SearchBuilder.html#a9af3a9a5693fc46be1304d5e8a9ffa4a", null ],
     [ "params", "dc/dba/structidhan_1_1SearchBuilder.html#a865c16dd9e4341c79cb532333b6c2baa", null ],

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['gatherfileinfo_0',['gatherFileInfo',['../dd/dcf/namespaceidhan.html#a68a02aac4c9738809292790b00488e49',1,'idhan']]],
+  ['gatherfileinfo_0',['gatherFileInfo',['../dd/dcf/namespaceidhan.html#a66695f27b8fd1c644ca60415b72b55a5',1,'idhan']]],
   ['generatefailedtagsearch_1',['generateFailedTagSearch',['../db/de4/namespaceidhan_1_1api.html#a138152f9ed047fc7bfc451afc1e801c2',1,'idhan::api']]],
   ['get_2',['get',['../d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b',1,'idhan::config::get(std::string_view group, std::string_view name)'],['../d6/db4/namespaceidhan_1_1config.html#a7c2410d2d4a089659f913de7518f8e0e',1,'idhan::config::get(std::string_view group, std::string_view name, const T default_value)']]],
   ['getclientoptions_3',['getClientOptions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#aa445e4574ff5d67bb85f27363634ffed',1,'idhan::hyapi::HydrusAPI']]],
