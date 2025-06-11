@@ -3,24 +3,26 @@
 //
 
 #include "IDHANTypes.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/orm/DbClient.h"
-#include "exceptions.hpp"
 
 namespace idhan
 {
 
-SHA256 getRecordSHA256( const RecordID id, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > >
+	getRecordSHA256( const RecordID id, drogon::orm::DbClientPtr db )
 {
-	const auto result { db->execSqlSync( "SELECT sha256 FROM records WHERE record_id = $1", id ) };
+	const auto result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", id ) };
 
-	if ( result.empty() ) throw RecordNotFound( id );
+	if ( result.empty() )
+		co_return std::unexpected( createInternalError( "Could not find sha256 for given record id" ) );
 
 	const auto row { result[ 0 ][ 0 ] };
 
 	const SHA256 sha256 { row };
 
-	return sha256;
+	co_return sha256;
 }
 
 } // namespace idhan

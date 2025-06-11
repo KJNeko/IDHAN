@@ -5,7 +5,7 @@
 #include "FileInfo.hpp"
 
 #include "logging/log.hpp"
-#include "metadata/Data.hpp"
+#include "metadata/FileMappedData.hpp"
 #include "mime/MimeDatabase.hpp"
 
 namespace idhan
@@ -26,7 +26,7 @@ drogon::Task< void > setFileInfo( const RecordID record_id, const FileInfo& info
 		info.extension );
 }
 
-drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< Data > data, drogon::orm::DbClientPtr db )
+drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db )
 {
 	FileInfo info {};
 	info.size = data->length();

@@ -8,7 +8,7 @@
 namespace idhan
 {
 
-class Data
+class FileMappedData
 {
 	std::filesystem::path m_path;
 	std::size_t m_length;
@@ -17,9 +17,9 @@ class Data
 
   public:
 
-	Data() = delete;
+	FileMappedData() = delete;
 
-	explicit Data( const std::filesystem::path& path_i );
+	explicit FileMappedData( const std::filesystem::path& path_i );
 
 	std::string extension() const { return m_path.extension().string(); }
 
@@ -31,7 +31,7 @@ class Data
 
 	std::string strpath() const { return m_path.string(); }
 
-	~Data();
+	~FileMappedData();
 };
 
 } // namespace idhan

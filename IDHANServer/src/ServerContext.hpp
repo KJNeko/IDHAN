@@ -9,6 +9,8 @@
 #include <memory>
 
 #include "ConnectionArguments.hpp"
+#include "filesystem/ClusterManager.hpp"
+#include "modules/ModuleLoader.hpp"
 
 namespace idhan
 {
@@ -20,6 +22,8 @@ class ServerContext
 	//! Connection to postgresql to be used for management/setup
 	std::unique_ptr< ManagementConnection > m_postgresql_management;
 	ConnectionArguments args;
+	std::unique_ptr< filesystem::ClusterManager > m_clusters {};
+	std::unique_ptr< modules::ModuleLoader > m_module_loader {};
 
   public:
 

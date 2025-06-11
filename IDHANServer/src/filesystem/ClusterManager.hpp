@@ -6,13 +6,17 @@
 
 #include <QStorageInfo>
 
+#include <expected>
 #include <filesystem>
 #include <future>
 #include <queue>
 #include <vector>
 
 #include "IDHANTypes.hpp"
+#include "drogon/HttpAppFramework.h"
+#include "drogon/HttpResponse.h"
 #include "drogon/orm/DbClient.h"
+#include "drogon/utils/FunctionTraits.h"
 
 namespace idhan
 {
@@ -71,6 +75,7 @@ class ClusterManager
 
 	struct ClusterInfo
 	{
+		ClusterID m_id;
 		QStorageInfo m_info;
 		QDir m_path;
 
@@ -79,18 +84,24 @@ class ClusterManager
 		std::size_t capacity() const;
 
 		std::size_t free() const;
+		ClusterInfo( std::filesystem::path path, ClusterID id );
+		ClusterInfo( const drogon::orm::Row& row );
 
 		//! Max size this folder can contain. 0 == unlimited
 		std::size_t m_max_capacity;
 
-		ClusterInfo( std::filesystem::path path );
-
-		void storeFile( const SHA256& sha256, std::istream& io, std::string_view extension, FileMetaType type ) const;
+		std::expected< void, drogon::HttpResponsePtr > storeFile(
+			const SHA256& sha256,
+			const std::byte* data,
+			std::size_t length,
+			std::string_view extension,
+			FileMetaType type ) const;
 
 		bool hasFile( const SHA256& sha256 ) const;
 	};
 
-	std::vector< ClusterInfo > m_folders {};
+	std::mutex m_mutex {};
+	std::unordered_map< ClusterID, ClusterInfo > m_folders {};
 
 	enum ClusterTargetType
 	{
@@ -101,19 +112,28 @@ class ClusterManager
 	};
 
 	//! Finds the best folder to add the file too.
-	ClusterInfo& findBestFolder( std::size_t file_size );
+	drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > >
+		findBestFolder( RecordID record_id, std::size_t file_size, drogon::orm::DbClientPtr db );
 
-	void storeFile( RecordID record, std::istream& stream, drogon::orm::DbClientPtr db, FileMetaType type );
+	drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeFile(
+		RecordID record, const std::byte* data, std::size_t length, drogon::orm::DbClientPtr db, FileMetaType type );
+
+	inline static ClusterManager* m_instance;
 
   public:
 
+	ClusterManager();
+
 	//File storage
+	drogon::Task< void > reloadClusters( drogon::orm::DbClientPtr db );
 
 	//! Stores the data located at `stream` for a given record id.
-	void storeFile( RecordID record, std::istream& stream, drogon::orm::DbClientPtr db );
-	void storeThumbnail( RecordID record, std::istream& stream, drogon::orm::DbClientPtr db );
+	drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
+		storeFile( RecordID record, const std::byte* data, std::size_t length, drogon::orm::DbClientPtr db );
+	drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
+		storeThumbnail( RecordID record, const std::byte* data, std::size_t length, drogon::orm::DbClientPtr db );
 
-	std::ifstream openFile( const RecordID record );
+	std::ifstream openFile( RecordID record );
 
 	static ClusterManager& getInstance();
 };
