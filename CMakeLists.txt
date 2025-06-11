@@ -33,6 +33,7 @@ include(toml)
 add_subdirectory(IDHAN)
 add_subdirectory(IDHANServer)
 add_subdirectory(IDHANClient)
+#add_subdirectory(IDHANModules)
 add_subdirectory(tools/TagEditor)
 add_subdirectory(docs)
 

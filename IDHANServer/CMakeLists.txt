@@ -13,8 +13,8 @@ file(GLOB_RECURSE MIGRATION_SQLS CONFIGURE_DEPENDS ${MIGRATION_DIR}/*.sql)
 add_custom_command(
 		OUTPUT ${MIGRATION_SOURCE}
 		DEPENDS ${MIGRATION_SQLS}
-		COMMAND ${CMAKE_COMMAND} -DMIGRATION_DIR=${MIGRATION_DIR} -DOUT=${MIGRATION_SOURCE} -P "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake"
-		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/modules/GenerateMigrations.cmake: Generating doMigration.cpp")
+		COMMAND ${CMAKE_COMMAND} -DMIGRATION_DIR=${MIGRATION_DIR} -DOUT=${MIGRATION_SOURCE} -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateMigrations.cmake"
+		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateMigrations.cmake: Generating doMigration.cpp")
 
 
 # Gui is needed for QImage for whatever reason
@@ -61,6 +61,8 @@ endforeach ()
 
 add_custom_target(IDHANPages DEPENDS ${PAGE_OUTPUTS})
 add_dependencies(IDHANServer IDHANPages)
+
+#add_dependencies(IDHANServer IDHANModules)
 
 # Copy mime identifiers to the output dir
 file(GLOB_RECURSE PARSER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/mime/parsers/*")
