@@ -117,8 +117,10 @@ $(function(){initNavTree('d2/d5d/mime_8hpp.html','../../'); initResizable(true);
   <div class="headertitle"><div class="title">mime.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;string&gt;</code><br />
+<div class="textblock"><code>#include &lt;expected&gt;</code><br />
+<code>#include &lt;string&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
+<code>#include &quot;drogon/HttpResponse.h&quot;</code><br />
 <code>#include &quot;drogon/orm/DbClient.h&quot;</code><br />
 </div>
 <p><a href="../../d2/d5d/mime_8hpp_source.html">Go to the source code of this file.</a></p>
@@ -143,12 +145,12 @@ Functions</h2></td></tr>
 <tr class="memitem:a96c638ae913e30e456c17d6958c1a07f" id="r_a96c638ae913e30e456c17d6958c1a07f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#a96c638ae913e30e456c17d6958c1a07f">idhan::mime::registerMimeType</a> (const std::string &amp;name, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="memdesc:a96c638ae913e30e456c17d6958c1a07f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a new mime type in the database.  <br /></td></tr>
 <tr class="separator:a96c638ae913e30e456c17d6958c1a07f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4fb3e6c97205af3230d1c74e9204da1d" id="r_a4fb3e6c97205af3230d1c74e9204da1d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#a4fb3e6c97205af3230d1c74e9204da1d">idhan::mime::getMimeIDFromRecord</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> id, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a4fb3e6c97205af3230d1c74e9204da1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adcb9649e51e1bf53e6fa1f30a2fc0210" id="r_adcb9649e51e1bf53e6fa1f30a2fc0210"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">FileMimeInfo</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#adcb9649e51e1bf53e6fa1f30a2fc0210">idhan::mime::getMime</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> mime_id, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:adcb9649e51e1bf53e6fa1f30a2fc0210"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae4df26fe30622785aa3927e3381a485a" id="r_ae4df26fe30622785aa3927e3381a485a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">FileMimeInfo</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#ae4df26fe30622785aa3927e3381a485a">idhan::mime::getRecordMime</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:ae4df26fe30622785aa3927e3381a485a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a06b2668eae82ceff21b426ba8d3522fe" id="r_a06b2668eae82ceff21b426ba8d3522fe"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#a06b2668eae82ceff21b426ba8d3522fe">idhan::mime::getMimeIDFromRecord</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a06b2668eae82ceff21b426ba8d3522fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a98bd6d790e210d7093ac4ad107cbf9e3" id="r_a98bd6d790e210d7093ac4ad107cbf9e3"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">FileMimeInfo</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#a98bd6d790e210d7093ac4ad107cbf9e3">idhan::mime::getMime</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> mime_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a98bd6d790e210d7093ac4ad107cbf9e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a786eeba1e0e7845c001f743de45e2436" id="r_a786eeba1e0e7845c001f743de45e2436"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">FileMimeInfo</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#a786eeba1e0e7845c001f743de45e2436">idhan::mime::getRecordMime</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a786eeba1e0e7845c001f743de45e2436"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

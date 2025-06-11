@@ -141,15 +141,18 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memdesc:acf722ad0a8cd5ab57eaccc08e5194622"><td class="mdescLeft">&#160;</td><td class="mdescRight">Turns a HEX string into a <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> object. Str must be exactly (256 / 8) * 2, 64 characters long.  <br /></td></tr>
 <tr class="separator:acf722ad0a8cd5ab57eaccc08e5194622"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2edca213311b70e1616bafc751806d6f" id="r_a2edca213311b70e1616bafc751806d6f"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2edca213311b70e1616bafc751806d6f">fromBuffer</a> (const std::vector&lt; std::byte &gt; &amp;<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>)</td></tr>
+<tr class="memdesc:a2edca213311b70e1616bafc751806d6f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Takes the byte representation of a hash from a buffer.  <br /></td></tr>
 <tr class="separator:a2edca213311b70e1616bafc751806d6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7322fc84a16b77e09a1572fec139dfae" id="r_a7322fc84a16b77e09a1572fec139dfae"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7322fc84a16b77e09a1572fec139dfae">fromPgCol</a> (const drogon::orm::Field &amp;field)</td></tr>
 <tr class="separator:a7322fc84a16b77e09a1572fec139dfae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40d9886df57ac6adfc0ae97d505a1453" id="r_a40d9886df57ac6adfc0ae97d505a1453"><td class="memItemLeft" align="right" valign="top">static drogon::Task&lt; std::expected&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a40d9886df57ac6adfc0ae97d505a1453">fromDB</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a40d9886df57ac6adfc0ae97d505a1453"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae02be865de8bfbec8e369cd9f0f51c21" id="r_ae02be865de8bfbec8e369cd9f0f51c21"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae02be865de8bfbec8e369cd9f0f51c21">hash</a> (const std::byte *<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>, std::size_t size)</td></tr>
+<tr class="separator:ae02be865de8bfbec8e369cd9f0f51c21"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a65fd20facc4078eae80c41ddaa0a17b5" id="r_a65fd20facc4078eae80c41ddaa0a17b5"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a65fd20facc4078eae80c41ddaa0a17b5">hash</a> (const std::vector&lt; std::byte &gt; &amp;<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>)</td></tr>
 <tr class="separator:a65fd20facc4078eae80c41ddaa0a17b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a88659621bb62cc0929851beeed5715ca" id="r_a88659621bb62cc0929851beeed5715ca"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a88659621bb62cc0929851beeed5715ca">hash</a> (const std::filesystem::path &amp;path)</td></tr>
-<tr class="separator:a88659621bb62cc0929851beeed5715ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa418580b6a1862d57d087d02e6fd86b6" id="r_aa418580b6a1862d57d087d02e6fd86b6"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa418580b6a1862d57d087d02e6fd86b6">hash</a> (const std::byte *<a class="el" href="#a9ba39bb782d0aeb4752449a99614915e">data</a>, const std::size_t size)</td></tr>
-<tr class="separator:aa418580b6a1862d57d087d02e6fd86b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a697a85896197d81a367596131d2b09fe" id="r_a697a85896197d81a367596131d2b09fe"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a697a85896197d81a367596131d2b09fe">hashFile</a> (const std::filesystem::path &amp;path)</td></tr>
+<tr class="separator:a697a85896197d81a367596131d2b09fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
@@ -339,6 +342,37 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
+<p>Takes the byte representation of a hash from a buffer. </p>
+
+</div>
+</div>
+<a id="a40d9886df57ac6adfc0ae97d505a1453" name="a40d9886df57ac6adfc0ae97d505a1453"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a40d9886df57ac6adfc0ae97d505a1453">&#9670;&#160;</a></span>fromDB()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>, drogon::HttpResponsePtr &gt; &gt; idhan::SHA256::fromDB </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
 </div>
 </div>
 <a id="acf722ad0a8cd5ab57eaccc08e5194622" name="acf722ad0a8cd5ab57eaccc08e5194622"></a>
@@ -393,8 +427,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="aa418580b6a1862d57d087d02e6fd86b6" name="aa418580b6a1862d57d087d02e6fd86b6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa418580b6a1862d57d087d02e6fd86b6">&#9670;&#160;</a></span>hash() <span class="overload">[1/3]</span></h2>
+<a id="ae02be865de8bfbec8e369cd9f0f51c21" name="ae02be865de8bfbec8e369cd9f0f51c21"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae02be865de8bfbec8e369cd9f0f51c21">&#9670;&#160;</a></span>hash() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -410,32 +444,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::size_t</td>          <td class="paramname"><span class="paramname"><em>size</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a88659621bb62cc0929851beeed5715ca" name="a88659621bb62cc0929851beeed5715ca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a88659621bb62cc0929851beeed5715ca">&#9670;&#160;</a></span>hash() <span class="overload">[2/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> idhan::SHA256::hash </td>
-          <td>(</td>
-          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
-          <td></td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>size</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -448,7 +457,7 @@ Friends</h2></td></tr>
 </div>
 </div>
 <a id="a65fd20facc4078eae80c41ddaa0a17b5" name="a65fd20facc4078eae80c41ddaa0a17b5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a65fd20facc4078eae80c41ddaa0a17b5">&#9670;&#160;</a></span>hash() <span class="overload">[3/3]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a65fd20facc4078eae80c41ddaa0a17b5">&#9670;&#160;</a></span>hash() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -466,6 +475,31 @@ Friends</h2></td></tr>
   </td>
   <td class="mlabels-right">
 <span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a697a85896197d81a367596131d2b09fe" name="a697a85896197d81a367596131d2b09fe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a697a85896197d81a367596131d2b09fe">&#9670;&#160;</a></span>hashFile()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> idhan::SHA256::hashFile </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">

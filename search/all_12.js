@@ -25,13 +25,14 @@ var searchData=
   ['text_22',['text',['../dc/dbd/structidhan_1_1TagCache_1_1CacheItem.html#ab529f4b6199374e917175c83528ccbd3',1,'idhan::TagCache::CacheItem']]],
   ['thumbnail_23',['THUMBNAIL',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a556eba4638bbb0ac8ac03e13ce6d1a82a7bd8024ff79a46c03fcc8cefa555ec8d',1,'idhan::filesystem::ClusterManager::THUMBNAIL'],['../db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454af15d2050859211cb959d22fd823157df',1,'idhan::filesystem::THUMBNAIL']]],
   ['thumbnail_24',['Thumbnail',['../index.html#autotoc_md0',1,'']]],
-  ['to_20idhan_20s_20page_25',['Welcome to IDHAN&apos;s page',['../d0/d30/md_README.html',1,'']]],
-  ['toqstring_26',['toQString',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#abf42bd9ee4c6b03da394c7629e8125b0',1,'idhan::IDHANClient::TagInfo']]],
-  ['tostdstring_27',['toStdString',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#a77589c2070149b18103bf30edc21bb6d',1,'idhan::IDHANClient::TagInfo']]],
-  ['total_28',['total',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a90a7c5b922ea8c9163376b353eee5ed3',1,'idhan::api::ClusterInfo']]],
-  ['totalmediaviewtime_29',['TotalMediaViewtime',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685acb04a90cb7f7b87cb12a0906d87e8930',1,'idhan::hyapi']]],
-  ['tovec_30',['toVec',['../d0/de3/classidhan_1_1SHA256.html#a2027b42b64bf9a46ea2936588f6959f6',1,'idhan::SHA256']]],
-  ['trace_31',['trace',['../d7/d03/namespaceidhan_1_1log.html#aea94a193253b168f253cd496452bf879',1,'idhan::log']]],
-  ['trantorhook_32',['trantorHook',['../dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8',1,'idhan']]],
-  ['type_33',['Type',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a0cd23d3f9f0b109e732cea5dab9e1146',1,'idhan::mime::MimeIdentifier']]]
+  ['thumbnail_25',['thumbnail',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#af0b1b5cf5917627da42e16a6df6879cb',1,'idhan::hyapi::HydrusAPI']]],
+  ['to_20idhan_20s_20page_26',['Welcome to IDHAN&apos;s page',['../d0/d30/md_README.html',1,'']]],
+  ['toqstring_27',['toQString',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#abf42bd9ee4c6b03da394c7629e8125b0',1,'idhan::IDHANClient::TagInfo']]],
+  ['tostdstring_28',['toStdString',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#a77589c2070149b18103bf30edc21bb6d',1,'idhan::IDHANClient::TagInfo']]],
+  ['total_29',['total',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a90a7c5b922ea8c9163376b353eee5ed3',1,'idhan::api::ClusterInfo']]],
+  ['totalmediaviewtime_30',['TotalMediaViewtime',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685acb04a90cb7f7b87cb12a0906d87e8930',1,'idhan::hyapi']]],
+  ['tovec_31',['toVec',['../d0/de3/classidhan_1_1SHA256.html#a2027b42b64bf9a46ea2936588f6959f6',1,'idhan::SHA256']]],
+  ['trace_32',['trace',['../d7/d03/namespaceidhan_1_1log.html#aea94a193253b168f253cd496452bf879',1,'idhan::log']]],
+  ['trantorhook_33',['trantorHook',['../dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8',1,'idhan']]],
+  ['type_34',['Type',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a0cd23d3f9f0b109e732cea5dab9e1146',1,'idhan::mime::MimeIdentifier']]]
 ];

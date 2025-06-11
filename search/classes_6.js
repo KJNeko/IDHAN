@@ -6,5 +6,7 @@ var searchData=
   ['mimedatatrack_3',['MimeDataTrack',['../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html',1,'idhan::mime']]],
   ['mimeexception_4',['MimeException',['../df/d62/structidhan_1_1MimeException.html',1,'idhan']]],
   ['mimeidentifier_5',['MimeIdentifier',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html',1,'idhan::mime']]],
-  ['mimeinfo_6',['MimeInfo',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html',1,'idhan::mime']]]
+  ['mimeinfo_6',['MimeInfo',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html',1,'idhan::mime']]],
+  ['moduleholder_7',['ModuleHolder',['../d0/d85/classidhan_1_1modules_1_1ModuleHolder.html',1,'idhan::modules']]],
+  ['moduleloader_8',['ModuleLoader',['../d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html',1,'idhan::modules']]]
 ];

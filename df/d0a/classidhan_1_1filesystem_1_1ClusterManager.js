@@ -14,11 +14,15 @@ var classidhan_1_1filesystem_1_1ClusterManager =
       [ "GENERATORS", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a556eba4638bbb0ac8ac03e13ce6d1a82a3392c71fc8ef899182a4296bb664661d", null ],
       [ "FILES", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a556eba4638bbb0ac8ac03e13ce6d1a82ad4d15c7514d5f8c330ad87ea4fe27c03", null ]
     ] ],
-    [ "findBestFolder", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a4d50b94f65044445f58d30e5838431ff", null ],
+    [ "ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#afeae8aa2c189f8f7799f8a82a8e94ccd", null ],
+    [ "findBestFolder", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#ab2c2f5100d0e47ca6fea025b91c404c2", null ],
     [ "getInstance", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a02b686ee8a91defa9faf668524ad1673", null ],
-    [ "openFile", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a0696c73200fca620b3608abb8a44e529", null ],
-    [ "storeFile", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a5827d20fc162bf00c7d9cc2767838893", null ],
-    [ "storeFile", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#adf3ae321b60f96fc5b84ff37a053d965", null ],
-    [ "storeThumbnail", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#ad61b40738993465a90067c10a2e3e7ff", null ],
-    [ "m_folders", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#ac9540530cbc4b9ced3e5777c88bfc535", null ]
+    [ "openFile", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a3ed063e6e6aa7f9f4c83dd7482408624", null ],
+    [ "reloadClusters", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a23cf01ea08fd3ddb6835da5407c20569", null ],
+    [ "storeFile", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#afe2e85643c3ce3dc1855e3607dc45d68", null ],
+    [ "storeFile", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a47c915735b191ea2e955279b318e2409", null ],
+    [ "storeThumbnail", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#abbddacf3afb65ce8bdc521675d978617", null ],
+    [ "m_folders", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a55ffe37b5e13a7480206858ea0a2ad48", null ],
+    [ "m_instance", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a400ee6142ae1d50824de1f356f7b79dd", null ],
+    [ "m_mutex", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a6b3f5f5ad78e93868985f5e81e37a7c0", null ]
 ];

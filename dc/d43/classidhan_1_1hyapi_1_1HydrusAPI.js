@@ -3,7 +3,6 @@ var classidhan_1_1hyapi_1_1HydrusAPI =
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a59709e65d40e859fa88777768cd51c6c", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a4d642596eabeafd7d3978f14f1acdb46", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a43b742661c1555cbd003cb2a12029db2", null ],
-    [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2bc54e040d17b7e60fa565276f90ad74", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#ab7de1eeaf908fc8c3ae0afe9f604e544", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#af14d2d710d918a25286e067dacd0ce16", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a133195191cc189cb3189fd00c8ae1021", null ],
@@ -13,6 +12,7 @@ var classidhan_1_1hyapi_1_1HydrusAPI =
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#afdf053f41b15ee8ec94b2201db966aa7", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a9d9ea9d318543a90239c06254a92d00a", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a27e156e66ab6a2c9c903de320cc5eefa", null ],
+    [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a5e75e0a9c4885d3117598b3242005b2a", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#ab2d130f1b07c126e86e2d4b4d80aaaac", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#ab1eb3aae3790be06ac8b2c18f4f06cd1", null ],
     [ "ADD_METHOD_TO", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a0c60616e8993fa70e29a2855b356f923", null ],
@@ -28,6 +28,7 @@ var classidhan_1_1hyapi_1_1HydrusAPI =
     [ "searchFiles", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a151df36d4082c85f452a00f3b19128a7", null ],
     [ "searchTags", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a9436bf5f77463cb288cbc0f3e58b80ae", null ],
     [ "sessionKey", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a0f2704d9823df2a4b2e258b44f4d4203", null ],
+    [ "thumbnail", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#af0b1b5cf5917627da42e16a6df6879cb", null ],
     [ "unsupported", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2130a170773b6179c4172ba2d5892de1", null ],
     [ "verifyAccessKey", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a05d38a2e1aad37df9e2a12cec859e1ae", null ]
 ];

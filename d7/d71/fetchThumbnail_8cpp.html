@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.13.2"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: IDHANServer/src/metadata/Data.cpp File Reference</title>
+    <title>IDHAN: IDHANServer/src/api/file/fetchThumbnail.cpp File Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('d8/db3/Data_8cpp.html','../../'); initResizable(true); });
+$(function(){initNavTree('d7/d71/fetchThumbnail_8cpp.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -111,28 +111,41 @@ $(function(){initNavTree('d8/db3/Data_8cpp.html','../../'); initResizable(true);
 
 <div class="header">
   <div class="summary">
-<a href="#namespaces">Namespaces</a>  </div>
-  <div class="headertitle"><div class="title">Data.cpp File Reference</div></div>
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
+  <div class="headertitle"><div class="title">fetchThumbnail.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &quot;<a class="el" href="../../d2/d4b/Data_8hpp_source.html">Data.hpp</a>&quot;</code><br />
-<code>#include &lt;sys/mman.h&gt;</code><br />
-<code>#include &lt;fcntl.h&gt;</code><br />
-<code>#include &lt;filesystem&gt;</code><br />
-<code>#include &lt;string&gt;</code><br />
-<code>#include &lt;unistd.h&gt;</code><br />
+<div class="textblock"><code>#include &lt;fstream&gt;</code><br />
+<code>#include &lt;qimage.h&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../d9/d8d/IDHANRecordAPI_8hpp_source.html">api/IDHANRecordAPI.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../de/dbc/createBadRequest_8hpp_source.html">api/helpers/createBadRequest.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../db/d73/SHA256_8hpp_source.html">crypto/SHA256.hpp</a>&quot;</code><br />
+<code>#include &quot;drogon/utils/coroutine.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d4/d3d/log_8hpp_source.html">logging/log.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d4/dfc/FileMappedData_8hpp_source.html">metadata/FileMappedData.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d7/d46/ModuleLoader_8hpp_source.html">modules/ModuleLoader.hpp</a>&quot;</code><br />
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:aff888cda2fa015cb8c1a57bdfd45e757" id="r_aff888cda2fa015cb8c1a57bdfd45e757"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::filesystem::path, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#aff888cda2fa015cb8c1a57bdfd45e757">idhan::api::getRecordPath</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:aff888cda2fa015cb8c1a57bdfd45e757"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d950e0c36f8b6c1100124cb8befb982" id="r_a1d950e0c36f8b6c1100124cb8befb982"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::filesystem::path, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a1d950e0c36f8b6c1100124cb8befb982">idhan::api::getThumbnailPath</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a1d950e0c36f8b6c1100124cb8befb982"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_6cb525e80707a04c2be1de91f9f29e0e.html">metadata</a></li><li class="navelem"><a class="el" href="../../d8/db3/Data_8cpp.html">Data.cpp</a></li>
+    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8b56e136226ae89f755dd9aa547a23fc.html">api</a></li><li class="navelem"><a class="el" href="../../dir_1fe0b2f1ff2412d3ef234ba4abdd7121.html">file</a></li><li class="navelem"><a class="el" href="../../d7/d71/fetchThumbnail_8cpp.html">fetchThumbnail.cpp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

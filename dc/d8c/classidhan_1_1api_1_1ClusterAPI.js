@@ -8,11 +8,11 @@ var classidhan_1_1api_1_1ClusterAPI =
     [ "ADD_METHOD_TO", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a9823d44cf7e7c7e55ea9201cdd5723d8", null ],
     [ "ADD_METHOD_TO", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#aaa7fddc55b3b3cf53e4377dbd7c40ce9", null ],
     [ "ADD_METHOD_TO", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a263fcc00aa44f4dd1726c5cd56e6dbc7", null ],
-    [ "info", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a51665d1db1aba35b5ff37faa13e6798f", null ],
+    [ "info", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a3fee709b0797897c73cfa813c058143c", null ],
     [ "infoT", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a2ec30bfe615c05d99b319e418dd4e374", null ],
     [ "list", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a154a00f1ea3713fc9838dcd53e58c865", null ],
-    [ "modify", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a6fa77f3d3da0232425f59f279c974217", null ],
+    [ "modify", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a79e6bf118cfe31a6be3c6bec33f8362d", null ],
     [ "modifyT", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#ae345bc85aa99a2528d9ecfe68235c766", null ],
-    [ "remove", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#acfff738ea78324256e23e1475e826fdd", null ],
-    [ "scan", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#abe550f890d42067c9c11517dfd045c0b", null ]
+    [ "remove", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a9216abe93f2de1672996b9333aecc154", null ],
+    [ "scan", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a0c8ca64ff47af8efc9444dd51819f30f", null ]
 ];

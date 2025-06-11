@@ -6,6 +6,7 @@ var annotated_dup =
         [ "ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", "d8/d94/structidhan_1_1api_1_1ClusterInfo" ],
         [ "IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", "df/def/classidhan_1_1api_1_1IDHANApi" ],
         [ "IDHANAuth", "d6/d49/classidhan_1_1api_1_1IDHANAuth.html", "d6/d49/classidhan_1_1api_1_1IDHANAuth" ],
+        [ "IDHANImportAPI", "d1/d95/classidhan_1_1api_1_1IDHANImportAPI.html", "d1/d95/classidhan_1_1api_1_1IDHANImportAPI" ],
         [ "IDHANMaintnanceAPI", "d7/d52/classidhan_1_1api_1_1IDHANMaintnanceAPI.html", null ],
         [ "IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI" ],
         [ "IDHANSearchAPI", "d5/da5/classidhan_1_1api_1_1IDHANSearchAPI.html", "d5/da5/classidhan_1_1api_1_1IDHANSearchAPI" ],
@@ -36,11 +37,15 @@ var annotated_dup =
         [ "Resolution", "d6/d56/structidhan_1_1mime_1_1Resolution.html", "d6/d56/structidhan_1_1mime_1_1Resolution" ],
         [ "VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", "de/da8/structidhan_1_1mime_1_1VideoInfo" ]
       ] ],
+      [ "modules", "dd/da9/namespaceidhan_1_1modules.html", [
+        [ "ModuleHolder", "d0/d85/classidhan_1_1modules_1_1ModuleHolder.html", "d0/d85/classidhan_1_1modules_1_1ModuleHolder" ],
+        [ "ModuleLoader", "d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html", "d1/d6d/classidhan_1_1modules_1_1ModuleLoader" ]
+      ] ],
       [ "APIException", "d7/dca/structidhan_1_1APIException.html", null ],
       [ "ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", "de/d07/structidhan_1_1ConnectionArguments" ],
-      [ "Data", "d8/d43/classidhan_1_1Data.html", "d8/d43/classidhan_1_1Data" ],
       [ "DBException", "d7/d25/structidhan_1_1DBException.html", "d7/d25/structidhan_1_1DBException" ],
       [ "FileInfo", "d8/d58/structidhan_1_1FileInfo.html", "d8/d58/structidhan_1_1FileInfo" ],
+      [ "FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", "db/de9/classidhan_1_1FileMappedData" ],
       [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
       [ "IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", "da/d27/structidhan_1_1IDHANClientConfig" ],
       [ "IDHANException", "dd/d1d/structidhan_1_1IDHANException.html", "dd/d1d/structidhan_1_1IDHANException" ],

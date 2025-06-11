@@ -12,6 +12,7 @@ var dir_8b56e136226ae89f755dd9aa547a23fc =
     [ "IDHANApi.hpp", "dd/d57/IDHANApi_8hpp.html", "dd/d57/IDHANApi_8hpp" ],
     [ "IDHANAuth.cpp", "dc/daf/IDHANAuth_8cpp.html", null ],
     [ "IDHANAuth.hpp", "d4/d8f/IDHANAuth_8hpp.html", "d4/d8f/IDHANAuth_8hpp" ],
+    [ "IDHANImportAPI.hpp", "df/d55/IDHANImportAPI_8hpp.html", "df/d55/IDHANImportAPI_8hpp" ],
     [ "IDHANMaintnanceAPI.hpp", "d8/da0/IDHANMaintnanceAPI_8hpp.html", "d8/da0/IDHANMaintnanceAPI_8hpp" ],
     [ "IDHANRecordAPI.hpp", "d9/d8d/IDHANRecordAPI_8hpp.html", "d9/d8d/IDHANRecordAPI_8hpp" ],
     [ "IDHANSearchAPI.hpp", "d7/d99/IDHANSearchAPI_8hpp.html", "d7/d99/IDHANSearchAPI_8hpp" ],
