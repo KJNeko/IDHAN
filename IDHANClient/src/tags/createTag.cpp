@@ -11,7 +11,7 @@ namespace idhan
 
 QFuture< TagID > IDHANClient::createTag( const std::string&& namespace_text, const std::string&& subtag_text )
 {
-	return createTags( { { namespace_text, subtag_text } } )
+	return createTags( { std::make_pair( namespace_text, subtag_text ) } )
 	    .then( []( const std::vector< TagID >& tag_ids ) -> TagID { return tag_ids.at( 0 ); } );
 }
 

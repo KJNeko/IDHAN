@@ -90,6 +90,7 @@ inline void monitor( const int server_pid, const int test_pid )
 	if ( const pid_t server_pid = fork(); server_pid == 0 )
 	{
 		// we are the child
+		spdlog::info( "Opened server process" );
 		prctl( PR_SET_PDEATHSIG, SIGTERM ); // terminate if the parent also terminates
 		execv( executable.string().c_str(), args.data() );
 
