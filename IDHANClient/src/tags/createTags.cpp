@@ -8,9 +8,24 @@
 
 #include "idhan/IDHANClient.hpp"
 #include "logging/logger.hpp"
+#include "splitTag.hpp"
 
 namespace idhan
 {
+
+QFuture< std::vector< TagID > > IDHANClient::createTags( const std::vector< std::string >& tags )
+{
+	std::vector< std::pair< std::string, std::string > > pairs {};
+	pairs.reserve( tags.size() );
+
+	for ( const auto& tag : tags )
+	{
+		const auto& [ ntag, stag ] = splitTag( tag );
+		pairs.emplace_back( ntag, stag );
+	}
+
+	return createTags( pairs );
+}
 
 QFuture< std::vector< TagID > > IDHANClient::
 	createTags( const std::vector< std::pair< std::string, std::string > >& tags )

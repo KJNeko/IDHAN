@@ -18,7 +18,7 @@ void qtWaitFuture( QFuture< T >& future )
 	while ( !future.isFinished() ) QCoreApplication::processEvents( QEventLoop::AllEvents, 100 );
 }
 
-char genRealText( std::uint8_t value )
+constexpr char genRealText( std::uint8_t value )
 {
 	value = value % 62;
 
@@ -219,6 +219,27 @@ TEST_CASE( "Client tests", "[server][client][network]" )
 						const auto tag_id { tag_future.result() };
 						idhan::logging::info( "Got tag ID {} for tag {}", "series:highschool dxd", tag_id );
 					}
+
+					SECTION( "Empty namespace" )
+					{
+						auto tag_future { client.createTag( "", "highschool dxd" ) };
+						qtWaitFuture( tag_future );
+						REQUIRE( tag_future.resultCount() > 0 );
+						REQUIRE( tag_future.resultCount() == 1 );
+					}
+
+					SECTION( "Existing tag" )
+					{
+						auto tag_future { client.createTag( "character", "toujou koneko" ) };
+						qtWaitFuture( tag_future );
+						REQUIRE( tag_future.resultCount() > 0 );
+						REQUIRE( tag_future.resultCount() == 1 );
+						const auto tag_id { tag_future.result() };
+						idhan::logging::info( "Got tag ID {} for tag {}", "character:toujou koneko", tag_id );
+						auto tag_future2 { client.createTag( "character", "toujou koneko" ) };
+						qtWaitFuture( tag_future2 );
+						REQUIRE( tag_future2.resultCount() > 0 );
+					}
 				}
 
 				SECTION( "IDHANClient::createTags" )
@@ -228,6 +249,21 @@ TEST_CASE( "Client tests", "[server][client][network]" )
 						const std::vector< std::pair< std::string, std::string > > tags {
 							{ "character", "toujou koneko" }, { "series", "highschool dxd" }
 						};
+
+						auto future { client.createTags( tags ) };
+
+						qtWaitFuture( future );
+
+						REQUIRE( future.resultCount() > 0 );
+
+						const auto tag_ids { future.result() };
+
+						REQUIRE( tag_ids.size() == tags.size() );
+					}
+
+					SECTION( "Combined string" )
+					{
+						const std::vector< std::string > tags { "character:toujou koneko", "series:highschool dxd" };
 
 						auto future { client.createTags( tags ) };
 

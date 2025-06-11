@@ -96,6 +96,7 @@ class IDHANClient
 
 	QFuture< VersionInfo > queryVersion();
 
+	QFuture< std::vector< TagID > > createTags( const std::vector< std::string >& tags );
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::pair< std::string, std::string > >& tags );
 
 	QFuture< TagID > createTag( const std::string&& namespace_text, const std::string&& subtag_text );
