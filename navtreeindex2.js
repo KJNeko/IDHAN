@@ -1,5 +1,7 @@
 var NAVTREEINDEX2 =
 {
+"d7/d25/structidhan_1_1DBException.html":[6,0,0,8],
+"d7/d25/structidhan_1_1DBException.html#a5a014bb628698a87f9c77beee2a2cd15":[5,0,1,15,0],
 "d7/d25/structidhan_1_1DBException.html#a5a014bb628698a87f9c77beee2a2cd15":[6,0,0,8,0],
 "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html":[5,0,1,10,9],
 "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html":[6,0,0,4,9],
@@ -247,7 +249,5 @@ var NAVTREEINDEX2 =
 "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a7739e23e907ecbbbad5c1d3c9dfe89c5":[6,0,0,0,7,12],
 "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a86f8719660c9b004d994650bb31d8561":[5,0,1,0,8,17],
 "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a86f8719660c9b004d994650bb31d8561":[6,0,0,0,7,17],
-"d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a89213ae415cee58b3a24dc0750cd5a4d":[5,0,1,0,8,23],
-"d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a89213ae415cee58b3a24dc0750cd5a4d":[6,0,0,0,7,23],
-"d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a90356d4a38dd887973d4a34ec76abf5e":[5,0,1,0,8,2]
+"d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a89213ae415cee58b3a24dc0750cd5a4d":[5,0,1,0,8,23]
 };

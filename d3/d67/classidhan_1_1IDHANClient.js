@@ -23,6 +23,7 @@ var classidhan_1_1IDHANClient =
     [ "createTag", "d3/d67/classidhan_1_1IDHANClient.html#a5e584e87992be9d4abae75e65f340912", null ],
     [ "createTagDomain", "d3/d67/classidhan_1_1IDHANClient.html#add74395f28ee34e458a588b990e7de52", null ],
     [ "createTags", "d3/d67/classidhan_1_1IDHANClient.html#a3b8a03b6b66dcd1815b5f3afce8e1db6", null ],
+    [ "createTags", "d3/d67/classidhan_1_1IDHANClient.html#a4d440807a1d584ce44a6743648a17d3c", null ],
     [ "getRecordID", "d3/d67/classidhan_1_1IDHANClient.html#a0c486ac03c633b5492f2ca1cd693c004", null ],
     [ "getRecordTags", "d3/d67/classidhan_1_1IDHANClient.html#a0f118972dec955969d122ca482a82bb8", null ],
     [ "getTagDomain", "d3/d67/classidhan_1_1IDHANClient.html#a67774ecec3361908b100e5ddc0a9017f", null ],

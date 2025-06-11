@@ -70,7 +70,7 @@ var searchData=
   ['createtagid_67',['createTagID',['../db/de4/namespaceidhan_1_1api.html#aa95dd9ce1bae49e2026b3e35f5732694',1,'idhan::api']]],
   ['createtagparents_68',['createTagParents',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a91369b00dc0ba7ea78a6d76c96881694',1,'idhan::api::IDHANTagAPI']]],
   ['createtagrouter_69',['createTagRouter',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#afbdbf6e5bf48cb17d52eb9e3c43de96b',1,'idhan::api::IDHANTagAPI']]],
-  ['createtags_70',['createTags',['../d3/d67/classidhan_1_1IDHANClient.html#a3b8a03b6b66dcd1815b5f3afce8e1db6',1,'idhan::IDHANClient::createTags()'],['../db/de4/namespaceidhan_1_1api.html#ad2dbcc2f24b2b0231516095201fbbfb8',1,'idhan::api::createTags()']]],
+  ['createtags_70',['createTags',['../d3/d67/classidhan_1_1IDHANClient.html#a4d440807a1d584ce44a6743648a17d3c',1,'idhan::IDHANClient::createTags(const std::vector&lt; std::string &gt; &amp;tags)'],['../d3/d67/classidhan_1_1IDHANClient.html#a3b8a03b6b66dcd1815b5f3afce8e1db6',1,'idhan::IDHANClient::createTags(const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;tags)'],['../db/de4/namespaceidhan_1_1api.html#ad2dbcc2f24b2b0231516095201fbbfb8',1,'idhan::api::createTags()']]],
   ['createtags_2ecpp_71',['createTags.cpp',['../d5/dd4/createTags_8cpp.html',1,'']]],
   ['createunknownmimeresponse_72',['createUnknownMimeResponse',['../db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662',1,'idhan::api']]],
   ['critical_73',['Critical',['../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3a9003dc2cd9d52f6cea07150f54418494',1,'idhan::logging']]],

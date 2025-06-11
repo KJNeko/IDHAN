@@ -1,5 +1,7 @@
 var NAVTREEINDEX3 =
 {
+"d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a89213ae415cee58b3a24dc0750cd5a4d":[6,0,0,0,7,23],
+"d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a90356d4a38dd887973d4a34ec76abf5e":[5,0,1,0,8,2],
 "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a90356d4a38dd887973d4a34ec76abf5e":[6,0,0,0,7,2],
 "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a91369b00dc0ba7ea78a6d76c96881694":[5,0,1,0,8,19],
 "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a91369b00dc0ba7ea78a6d76c96881694":[6,0,0,0,7,19],
@@ -247,7 +249,5 @@ var NAVTREEINDEX3 =
 "dc/dba/structidhan_1_1SearchBuilder.html#ab0c0d054f083fbab94914c75e97e3399":[6,0,0,21,7],
 "dc/dba/structidhan_1_1SearchBuilder.html#ac74ffdb5120030d75b96bf047d25c8ad":[5,0,1,28,4],
 "dc/dba/structidhan_1_1SearchBuilder.html#ac74ffdb5120030d75b96bf047d25c8ad":[6,0,0,21,4],
-"dc/dba/structidhan_1_1SearchBuilder.html#ad55cb6872b0257bfafef39d5ee46f56f":[5,0,1,28,0],
-"dc/dba/structidhan_1_1SearchBuilder.html#ad55cb6872b0257bfafef39d5ee46f56f":[6,0,0,21,0],
-"dc/dba/structidhan_1_1SearchBuilder.html#adbd1eed9d1aeb60e514455d471f3a182":[5,0,1,28,10]
+"dc/dba/structidhan_1_1SearchBuilder.html#ad55cb6872b0257bfafef39d5ee46f56f":[5,0,1,28,0]
 };
