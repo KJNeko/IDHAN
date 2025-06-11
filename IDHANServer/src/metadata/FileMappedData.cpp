@@ -2,8 +2,6 @@
 // Created by kj16609 on 5/20/25.
 //
 
-#include "Data.hpp"
-
 #include <sys/mman.h>
 
 #include <fcntl.h>
@@ -11,10 +9,12 @@
 #include <string>
 #include <unistd.h>
 
+#include "FileMappedData.hpp"
+
 namespace idhan
 {
 
-Data::Data( const std::filesystem::path& path_i ) :
+FileMappedData::FileMappedData( const std::filesystem::path& path_i ) :
   m_path( path_i ),
   m_length( std::filesystem::file_size( path_i ) ),
   m_fd( open( m_path.c_str(), O_RDONLY ) ),
@@ -23,7 +23,7 @@ Data::Data( const std::filesystem::path& path_i ) :
 	close( m_fd );
 }
 
-Data::~Data()
+FileMappedData::~FileMappedData()
 {
 	if ( m_data ) munmap( m_data, m_length );
 }

@@ -18,6 +18,12 @@ ResponseTask createRecordFromOctet( const drogon::HttpRequestPtr req )
 	co_return createBadRequest( "Not implemented" );
 }
 
+ResponseTask createRecordFromSHA256( const SHA256 sha256, drogon::orm::DbClientPtr db )
+{
+
+
+}
+
 ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 {
 	const auto json_ptr { req->getJsonObject() };

@@ -390,6 +390,31 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( drogon::HttpRequestPtr 
 	co_return co_await drogon::app().forwardCoro( request );
 }
 
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( drogon::HttpRequestPtr request )
+{
+	auto file_id { request->getOptionalParameter< RecordID >( "file_id" ) };
+	const auto hash { request->getOptionalParameter< std::string >( "hash" ) };
+
+	RecordID record_id { file_id.value_or( 0 ) };
+
+	if ( hash.has_value() )
+	{
+		auto db { drogon::app().getDbClient() };
+		const auto sha256 { SHA256::fromHex( hash.value() ) };
+
+		const auto record_id_e { co_await api::helpers::searchRecord( *sha256, db ) };
+
+		if ( record_id_e.has_value() )
+			record_id = record_id_e.value();
+		else
+			co_return createNotFound( "No record with hash {} found", hash.value() );
+	}
+
+	request->setPath( std::format( "/records/{}/thumbnail", record_id ) );
+
+	co_return co_await drogon::app().forwardCoro( request );
+}
+
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpRequestPtr request )
 {
 	// http://localhost:16609/hyapi/add_tags/search_tags?search=cat&tag_display_type=display

@@ -7,7 +7,7 @@
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "logging/log.hpp"
-#include "metadata/Data.hpp"
+#include "metadata/FileMappedData.hpp"
 #include "mime/FileInfo.hpp"
 
 namespace idhan::api
@@ -53,7 +53,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	{
 		if ( !dir_entry.is_regular_file() ) continue;
 
-		auto data { std::make_shared< Data >( dir_entry.path() ) };
+		auto data { std::make_shared< FileMappedData >( dir_entry.path() ) };
 
 		if ( data->extension() == ".thumbnail" ) continue;
 

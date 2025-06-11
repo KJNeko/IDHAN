@@ -30,8 +30,7 @@ endif ()
 target_link_libraries(IDHANServer PUBLIC spdlog drogon)
 target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core Qt6::Multimedia tomlplusplus::tomlplusplus)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
-
-target_link_libraries(IDHANServer PRIVATE IDHAN)
+target_link_libraries(IDHANServer PUBLIC IDHANModules)
 
 if (DEFINED ALLOW_TABLE_DESTRUCTION AND ALLOW_TABLE_DESTRUCTION)
 	target_compile_definitions(IDHANServer PUBLIC ALLOW_TABLE_DESTRUCTION=1)
@@ -85,4 +84,6 @@ endforeach ()
 
 add_custom_target(IDHANMimeParsers DEPENDS ${PARSER_OUTPUTS})
 add_dependencies(IDHANServer IDHANMimeParsers)
+
+add_dependencies(IDHANServer IDHANPremadeModules)
 

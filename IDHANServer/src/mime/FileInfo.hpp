@@ -10,7 +10,7 @@
 
 namespace idhan
 {
-class Data;
+class FileMappedData;
 
 namespace constants
 {
@@ -26,7 +26,7 @@ struct FileInfo
 };
 
 //! Populates a FileInfo struct with information from the data
-drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< Data > data, drogon::orm::DbClientPtr db );
+drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db );
 
 drogon::Task< void > setFileInfo( RecordID record_id, const FileInfo& info, drogon::orm::DbClientPtr db );
 

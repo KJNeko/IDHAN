@@ -16,18 +16,34 @@ post:
           schema:
             type: object
             properties:
+              file:
+                type: object
+                properties:
+                  import_time:
+                    type: integer
+                    example: 1749642232
+                  import_time_human:
+                    type: string
+                    example: "2025-06-11 11:43:51.627481"
+              record:
+                type: object
+                properties:
+                  creation_time:
+                    type: integer
+                    example: 1749642039
+                  creation_time_human:
+                    type: string
+                    example: "2025-06-11 11:40:38.572907"
+                  id:
+                    type: integer
+                    example: 43
               record_id:
                 type: integer
+                example: 43
               status:
-                type: integer
-                example: 1
-              record_timestamp:
-                description: Only present if new_record is false
-                type: integer
-                example: 1740049373
-              file_timestamp:
-                type: integer
-                example: 1740049373
+                oneOf:
+                  - type: integer
+                    example: 1
     already exists:
       description: IDHAN already has the file
       content:
@@ -35,17 +51,33 @@ post:
           schema:
             type: object
             properties:
+              file:
+                type: object
+                properties:
+                  import_time:
+                    type: integer
+                    example: 1749642232
+                  import_time_human:
+                    type: string
+                    example: "2025-06-11 11:43:51.627481"
+              record:
+                type: object
+                properties:
+                  creation_time:
+                    type: integer
+                    example: 1749642039
+                  creation_time_human:
+                    type: string
+                    example: "2025-06-11 11:40:38.572907"
+                  id:
+                    type: integer
+                    example: 43
               record_id:
                 type: integer
+                example: 43
               status:
                 type: integer
                 example: 2
-              record_timestamp:
-                type: integer
-                example: 1740049373
-              file_timestamp:
-                type: integer
-                example: 1740049373
     previously deleted:
       description: IDHAN has been told to delete this file
       content:
@@ -53,14 +85,39 @@ post:
           schema:
             type: object
             properties:
+              file:
+                type: object
+                properties:
+                  import_time:
+                    type: integer
+                    example: 1749642232
+                  import_time_human:
+                    type: string
+                    example: "2025-06-11 11:43:51.627481"
+              record:
+                type: object
+                properties:
+                  creation_time:
+                    type: integer
+                    example: 1749642039
+                  creation_time_human:
+                    type: string
+                    example: "2025-06-11 11:40:38.572907"
+                  deleted_time:
+                    type: integer
+                    example: 1749642300
+                  deleted_time_human:
+                    type: string
+                    example: "2025-06-11 11:45:00.000000"
+                  id:
+                    type: integer
+                    example: 43
               record_id:
                 type: integer
+                example: 43
               status:
                 type: integer
                 example: 3
-              deleted_timestamp:
-                type: integer
-                example: 1740049373
     failed:
       description: IDHAN failed to determine the file's mime
       content:
@@ -74,4 +131,3 @@ post:
               reason:
                 type: string
                 example: unknown mime
-

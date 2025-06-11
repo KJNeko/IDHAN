@@ -57,11 +57,11 @@ class ClusterAPI : public drogon::HttpController< ClusterAPI >
 
 	ResponseTask add( drogon::HttpRequestPtr request );
 	ResponseTask list( drogon::HttpRequestPtr request );
-	ResponseTask info( drogon::HttpRequestPtr request, const ClusterID cluster_id );
-	ResponseTask modify( drogon::HttpRequestPtr request, const ClusterID cluster_id );
-	ResponseTask remove( drogon::HttpRequestPtr request, const ClusterID cluster_id );
+	ResponseTask info( drogon::HttpRequestPtr request, ClusterID cluster_id );
+	ResponseTask modify( drogon::HttpRequestPtr request, ClusterID cluster_id );
+	ResponseTask remove( drogon::HttpRequestPtr request, ClusterID cluster_id );
 
-	ResponseTask scan( drogon::HttpRequestPtr request, const ClusterID cluster_id );
+	ResponseTask scan( drogon::HttpRequestPtr request, ClusterID cluster_id );
 
   public:
 

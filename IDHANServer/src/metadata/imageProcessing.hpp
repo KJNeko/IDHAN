@@ -5,7 +5,7 @@
 
 #include <cstdint>
 
-#include "Data.hpp"
+#include "FileMappedData.hpp"
 #include "mime/MimeInfo.hpp"
 
 namespace idhan
@@ -17,6 +17,6 @@ struct ImageData
 	std::size_t m_height;
 };
 
-MimeInfo processImage( std::shared_ptr< Data > data );
+MimeInfo processImage( std::shared_ptr< FileMappedData > data );
 
 } // namespace idhan

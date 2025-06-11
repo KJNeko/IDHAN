@@ -367,4 +367,15 @@ std::shared_ptr< MimeDatabase > getInstance()
 	return mime_db = std::shared_ptr< MimeDatabase >( new MimeDatabase() );
 }
 
+drogon::Task< MimeID > getIDForStr( const std::string str, drogon::orm::DbClientPtr db )
+{
+	const auto search_result { co_await db->execSqlCoro( "SELECT mime_id FROM mime WHERE name = $1", str ) };
+	if ( !search_result.empty() ) co_return search_result[ 0 ][ 0 ].as< MimeID >();
+
+	const auto insert_result {
+		co_await db->execSqlCoro( "INSERT INTO mime (name) VALUES ($1) RETURNING mime_id", str )
+	};
+	if ( !insert_result.empty() ) co_return insert_result[ 0 ][ 0 ].as< MimeID >();
+}
+
 } // namespace idhan::mime

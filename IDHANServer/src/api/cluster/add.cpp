@@ -7,6 +7,7 @@
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "exceptions.hpp"
+#include "filesystem/ClusterManager.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -121,6 +122,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	const auto ret { co_await modifyT( request, cluster_id, transaction ) };
 
 	//TODO: Queue orphan check here.
+	co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
 
 	co_return ret;
 }

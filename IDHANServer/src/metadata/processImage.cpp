@@ -10,7 +10,7 @@
 namespace idhan
 {
 
-MimeInfo processImage( std::shared_ptr< Data > data )
+MimeInfo processImage( std::shared_ptr< FileMappedData > data )
 {
 	QImage image { QImage::fromData( QByteArrayView( data->data(), data->length() ) ) };
 

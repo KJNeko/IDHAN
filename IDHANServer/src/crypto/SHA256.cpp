@@ -71,6 +71,16 @@ SHA256 SHA256::fromPgCol( const drogon::orm::Field& field )
 	return { field };
 }
 
+drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::
+	fromDB( RecordID record_id, drogon::orm::DbClientPtr db )
+{
+	const auto result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", record_id ) };
+
+	if ( result.empty() ) co_return std::unexpected( createBadRequest( "Record not found" ) );
+
+	co_return SHA256::fromPgCol( result[ 0 ][ 0 ] );
+}
+
 /*
 SHA256::SHA256( QIODevice* io ) : m_data()
 {
@@ -82,7 +92,7 @@ SHA256::SHA256( QIODevice* io ) : m_data()
 }
 */
 
-SHA256 SHA256::hash( const std::filesystem::path& path )
+SHA256 SHA256::hashFile( const std::filesystem::path& path )
 {
 	//TODO: Switch to mmap instead
 	if ( std::ifstream ifs( path, std::ios_base::ate | std::ios_base::binary ); ifs )

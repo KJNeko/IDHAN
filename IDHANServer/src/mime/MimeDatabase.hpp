@@ -219,5 +219,6 @@ class MimeDatabase
 };
 
 std::shared_ptr< MimeDatabase > getInstance();
+drogon::Task< MimeID > getIDForStr( std::string str, drogon::orm::DbClientPtr db );
 
 } // namespace idhan::mime

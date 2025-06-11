@@ -16,6 +16,8 @@
 #include <filesystem>
 #include <vector>
 
+#include "../../../dependencies/drogon/orm_lib/tests/sqlite3/Blog.h"
+#include "IDHANTypes.hpp"
 #include "decodeHex.hpp"
 #include "drogon/orm/Field.h"
 #include "drogon/orm/SqlBinder.h"
@@ -57,13 +59,17 @@ class SHA256
 
 	//! Turns a HEX string into a SHA256 object. Str must be exactly (256 / 8) * 2, 64 characters long
 	static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
+	//! Takes the byte representation of a hash from a buffer.
 	static SHA256 fromBuffer( const std::vector< std::byte >& data );
 	static SHA256 fromPgCol( const drogon::orm::Field& field );
+	static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > >
+		fromDB( RecordID record_id, drogon::orm::DbClientPtr db );
 
-	inline static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
+	static SHA256 hash( const std::byte* data, std::size_t size );
 
-	static SHA256 hash( const std::filesystem::path& path );
-	static SHA256 hash( const std::byte* data, const std::size_t size );
+	static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
+
+	static SHA256 hashFile( const std::filesystem::path& path );
 };
 
 } // namespace idhan
