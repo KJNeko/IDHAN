@@ -11,7 +11,7 @@
 
 std::vector< std::string_view > JPGThumbnailer::handleableMimes()
 {
-	return { "image/jpeg", "image/png" };
+	return { "image/jpeg", "image/png", "image/webp" };
 }
 
 std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > JPGThumbnailer::createThumbnail(
@@ -29,6 +29,13 @@ std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > JPGThumbnailer::
 	else if ( mime_name == "image/jpeg" )
 	{
 		if ( vips_jpegload_buffer( data, length, &image, nullptr ) != 0 )
+		{
+			return std::unexpected( ModuleError { "Failed to load image" } );
+		}
+	}
+	else if ( mime_name == "image/webp" )
+	{
+		if ( vips_webpload_buffer( data, length, &image, nullptr ) != 0 )
 		{
 			return std::unexpected( ModuleError { "Failed to load image" } );
 		}
