@@ -61,6 +61,10 @@ paths:
     $ref: './paths/records/info.yaml'
   /records/{record_id}:
     $ref: './paths/records/file.yaml'
+  /records/{record_id}/file:
+    $ref: './paths/records/file.yaml'
+  /records/{record_id}/thumbnail:
+    $ref: './paths/records/thumbnail.yaml'
   /records/search:
     $ref: './paths/records/search.yaml'
 

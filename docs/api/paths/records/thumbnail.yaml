@@ -1,0 +1,33 @@
+get:
+  tags:
+    - records
+  summary: Get record thumbnail
+  description: Returns a PNG thumbnail for the specified record
+  parameters:
+    - $ref: '../../parameters/record_id.yaml'
+  responses:
+    '200':
+      description: Thumbnail image
+      content:
+        image/png:
+          schema:
+            type: string
+            format: binary
+    '400':
+      description: Bad request - Record does not exist or has no associated file
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '500':
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
