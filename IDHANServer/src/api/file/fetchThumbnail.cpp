@@ -65,6 +65,10 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 		"SELECT mime.name as mime_name, cluster_id FROM file_info JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
 		record_id ) };
 
+	if ( record_info.empty() )
+		co_return createBadRequest(
+			"Record {} does not exist or does not have any file info associated with it", record_id );
+
 	const auto mime_name { record_info[ 0 ][ "mime_name" ].as< std::string >() };
 	const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
 
