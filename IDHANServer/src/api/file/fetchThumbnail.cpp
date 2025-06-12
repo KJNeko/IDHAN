@@ -74,13 +74,10 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 	const auto thumbnail_location_e { co_await getThumbnailPath( record_id, db ) };
 
-	log::info( "Getting thumbnail from {}", thumbnail_location_e.value().string() );
-
 	if ( !thumbnail_location_e.has_value() ) co_return thumbnail_location_e.error();
 
 	if ( !std::filesystem::exists( thumbnail_location_e.value() ) )
 	{
-		log::info( "thumbnail for {} not found, Creating it", record_id );
 		//We must generate the thumbnail
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 

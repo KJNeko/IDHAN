@@ -107,8 +107,6 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
 
-	log::info( "Query generated: \n{}", query );
-
 	return query;
 }
 

@@ -39,8 +39,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANSearchAPI::search( drogon::HttpRequ
 	const auto result { co_await db->execSqlCoro(
 		"SELECT record_id FROM tag_mappings WHERE tag_id = $1", static_cast< TagID >( tag_ids[ 0 ] ) ) };
 
-	log::info( "Returning {} results", result.size() );
-
 	if ( result.empty() )
 	{
 		Json::Value root {};
@@ -56,8 +54,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANSearchAPI::search( drogon::HttpRequ
 			const auto id { row[ 0 ].as< std::size_t >() };
 			file_ids.append( id );
 		}
-
-		log::info( "Returning {} results", file_ids.size() );
 
 		Json::Value json {};
 		json[ "file_ids" ] = std::move( file_ids );
