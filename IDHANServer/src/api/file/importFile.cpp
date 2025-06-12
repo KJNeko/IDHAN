@@ -97,7 +97,9 @@ drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon
 		record_id ) };
 
 	const bool deleted { !delete_time[ 0 ][ "cluster_delete_time" ].isNull() };
-	const bool stored { !delete_time[ 0 ][ "cluster_store_time" ].isNull() && !overwrite_flag }; // if the file is not deleted, it is stored, But if the overwrite flag is on. Store it anyway
+	const bool stored {
+		!delete_time[ 0 ][ "cluster_store_time" ].isNull() && !overwrite_flag
+	}; // if the file is not deleted, it is stored, But if the overwrite flag is on. Store it anyway
 	// T (store time is not null) && F (overwrite flag is true) // Not stored
 
 	if ( deleted && !import_deleted )

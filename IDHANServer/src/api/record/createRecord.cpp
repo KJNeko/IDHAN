@@ -19,10 +19,7 @@ ResponseTask createRecordFromOctet( const drogon::HttpRequestPtr req )
 }
 
 ResponseTask createRecordFromSHA256( const SHA256 sha256, drogon::orm::DbClientPtr db )
-{
-
-
-}
+{}
 
 ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 {
