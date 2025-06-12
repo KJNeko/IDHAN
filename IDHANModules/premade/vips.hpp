@@ -5,5 +5,5 @@
 
 inline std::vector< std::string_view > vipsHandleable()
 {
-	return { "image/jpeg", "image/png", "image/webp" };
+	return { "image/jpeg", "image/png", "image/webp", "image/gif" };
 }
