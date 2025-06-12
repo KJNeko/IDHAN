@@ -28,9 +28,16 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::
 		                                                   { "image/webp", vips_webpload_buffer } };
 
 	VipsImage* image;
-	if ( func_map.at( mime_name )( data, length, &image, nullptr ) != 0 )
+	if ( auto it = func_map.find( mime_name ); it != func_map.end() )
 	{
-		return std::unexpected( ModuleError { "Failed to load image" } );
+		if ( it->second( data, length, &image, nullptr ) != 0 )
+		{
+			return std::unexpected( ModuleError { "Failed to load image" } );
+		}
+	}
+	else
+	{
+		return std::unexpected( ModuleError { "Unsupported mime type" } );
 	}
 
 	if ( !image )
