@@ -166,7 +166,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	setupCORSSupport();
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();
-	drogon::app().getLoop()->queueInLoop( [ this ]() { m_clusters = std::make_unique< filesystem::ClusterManager >(); } );
+	drogon::app().getLoop()->queueInLoop( [ this ]()
+	                                      { m_clusters = std::make_unique< filesystem::ClusterManager >(); } );
 
 	log::server::info( "IDHAN initialization finished" );
 }

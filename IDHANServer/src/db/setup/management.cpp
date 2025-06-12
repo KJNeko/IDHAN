@@ -59,7 +59,7 @@ void addTableToInfo(
 void destroyTables( pqxx::nontransaction& tx )
 {
 	// log::critical(
-		// "We are about to drop the public schema since we are compiling with ALLOW_TABLE_DESTRUCTION! This will happen in 5 seconds. QUIT NOW IF YOU DON'T WANT THIS TO HAPPEN" );
+	// "We are about to drop the public schema since we are compiling with ALLOW_TABLE_DESTRUCTION! This will happen in 5 seconds. QUIT NOW IF YOU DON'T WANT THIS TO HAPPEN" );
 	// std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
 
 	if ( !tx.exec( "SELECT schema_name FROM information_schema.schemata WHERE schema_name = \'public\'" ).empty() )
