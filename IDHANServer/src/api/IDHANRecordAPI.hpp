@@ -28,6 +28,9 @@ class IDHANRecordAPI : public drogon::HttpController< IDHANRecordAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id );
 
+	drogon::Task< drogon::HttpResponsePtr > fetchInfo( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > parseFile( drogon::HttpRequestPtr request, RecordID record_id );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -46,6 +49,8 @@ class IDHANRecordAPI : public drogon::HttpController< IDHANRecordAPI >
 	ADD_METHOD_TO( IDHANRecordAPI::fetchThumbnail, "/records/{record_id}/thumbnail" );
 	ADD_METHOD_TO( IDHANRecordAPI::fetchFile, "/records/{record_id}/file" );
 	ADD_METHOD_TO( IDHANRecordAPI::fetchFile, "/records/{record_id}" );
+	ADD_METHOD_TO( IDHANRecordAPI::fetchInfo, "/records/{record_id}/metadata" );
+	ADD_METHOD_TO( IDHANRecordAPI::parseFile, "/records/{record_id}/metadata/scan" );
 
 	METHOD_LIST_END
 };

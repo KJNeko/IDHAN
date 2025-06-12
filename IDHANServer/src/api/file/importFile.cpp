@@ -9,6 +9,7 @@
 #include "crypto/SHA256.hpp"
 #include "filesystem/ClusterManager.hpp"
 #include "logging/log.hpp"
+#include "metadata/parseMetadata.hpp"
 #include "mime/MimeDatabase.hpp"
 
 namespace idhan::api
@@ -148,6 +149,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon
 	root[ "file" ][ "deleted_time" ] = delete_time[ 0 ][ "cluster_delete_time_epoch" ].as< std::size_t >();
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
+
+	co_await tryParseRecordMetadata( record_id, db );
 
 	co_return response;
 }
