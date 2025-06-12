@@ -25,10 +25,12 @@ var searchData=
   ['removetags_2ecpp_22',['removeTags.cpp',['../de/d2b/removeTags_8cpp.html',1,'']]],
   ['request_23',['Request',['../dd/dcf/namespaceidhan.html#a631bc0d57cda8402afb737a93c7d3c6a',1,'idhan']]],
   ['requestnewpermissions_24',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a18afc80809768409c8cea0f6d68d5969',1,'idhan::hyapi::HydrusAPI']]],
-  ['resolution_25',['Resolution',['../d6/d56/structidhan_1_1mime_1_1Resolution.html',1,'idhan::mime']]],
-  ['resolution_26',['resolution',['../de/da8/structidhan_1_1mime_1_1VideoInfo.html#a23fc9d8cc0e8d923b0d71db1eda6f165',1,'idhan::mime::VideoInfo::resolution'],['../d3/d75/structidhan_1_1mime_1_1ImageInfo.html#a579eac1988a95720dc4664b4a2462314',1,'idhan::mime::ImageInfo::resolution']]],
-  ['responsecallback_2ehpp_27',['ResponseCallback.hpp',['../de/d0b/ResponseCallback_8hpp.html',1,'']]],
-  ['responsefunction_28',['ResponseFunction',['../dd/dcf/namespaceidhan.html#ab36e2f7c68cd1ad091d47cc6a44231e1',1,'idhan']]],
-  ['responsetask_29',['ResponseTask',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#ae87e5f86169969f5fa1ad7cebede9f8d',1,'idhan::api::ClusterAPI::ResponseTask'],['../dd/dcf/namespaceidhan.html#af8dffe5d1800a78e09605b08052fa841',1,'idhan::ResponseTask']]],
-  ['run_30',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
+  ['rescanmetadata_25',['rescanMetadata',['../d8/d54/classidhan_1_1api_1_1IDHANMaintenanceAPI.html#a7f3f1ce46901cf632da7b5110b0da752',1,'idhan::api::IDHANMaintenanceAPI']]],
+  ['rescanmetadata_2ecpp_26',['rescanMetadata.cpp',['../dc/da4/rescanMetadata_8cpp.html',1,'']]],
+  ['resolution_27',['Resolution',['../d6/d56/structidhan_1_1mime_1_1Resolution.html',1,'idhan::mime']]],
+  ['resolution_28',['resolution',['../de/da8/structidhan_1_1mime_1_1VideoInfo.html#a23fc9d8cc0e8d923b0d71db1eda6f165',1,'idhan::mime::VideoInfo::resolution'],['../d3/d75/structidhan_1_1mime_1_1ImageInfo.html#a579eac1988a95720dc4664b4a2462314',1,'idhan::mime::ImageInfo::resolution']]],
+  ['responsecallback_2ehpp_29',['ResponseCallback.hpp',['../de/d0b/ResponseCallback_8hpp.html',1,'']]],
+  ['responsefunction_30',['ResponseFunction',['../dd/dcf/namespaceidhan.html#ab36e2f7c68cd1ad091d47cc6a44231e1',1,'idhan']]],
+  ['responsetask_31',['ResponseTask',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#ae87e5f86169969f5fa1ad7cebede9f8d',1,'idhan::api::ClusterAPI::ResponseTask'],['../dd/dcf/namespaceidhan.html#af8dffe5d1800a78e09605b08052fa841',1,'idhan::ResponseTask']]],
+  ['run_32',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
 ];

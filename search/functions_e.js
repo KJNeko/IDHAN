@@ -11,5 +11,6 @@ var searchData=
   ['removesize_8',['removeSize',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#afecfbc7407c85ccef6c2e1cb0cc20106',1,'idhan::api::ClusterInfo']]],
   ['removetags_9',['removeTags',['../d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html#a665ad9c2c00348cce376d1deb9876fd9',1,'idhan::api::IDHANRecordAPI']]],
   ['requestnewpermissions_10',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a18afc80809768409c8cea0f6d68d5969',1,'idhan::hyapi::HydrusAPI']]],
-  ['run_11',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
+  ['rescanmetadata_11',['rescanMetadata',['../d8/d54/classidhan_1_1api_1_1IDHANMaintenanceAPI.html#a7f3f1ce46901cf632da7b5110b0da752',1,'idhan::api::IDHANMaintenanceAPI']]],
+  ['run_12',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
 ];

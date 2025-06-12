@@ -10,5 +10,11 @@ var IDHANTypes_8hpp =
     [ "idhan::SmallInt", "dd/dcf/namespaceidhan.html#a734eab49a3bd6d395ac80de87002ae81", null ],
     [ "idhan::SubtagID", "dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d", null ],
     [ "idhan::TagDomainID", "dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12", null ],
-    [ "idhan::TagID", "dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382", null ]
+    [ "idhan::TagID", "dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382", null ],
+    [ "idhan::SimpleMimeType", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0", [
+      [ "idhan::SimpleMimeType::IMAGE", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0a23a12f67f614b5518c7f1c2465bf95e3", null ],
+      [ "idhan::SimpleMimeType::VIDEO", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0ae60ae31f67ab883c746bb71c7a145c18", null ],
+      [ "idhan::SimpleMimeType::ANIMATION", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0a28ff0af6199e0baf97bb71b4b4422057", null ],
+      [ "idhan::SimpleMimeType::AUDIO", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0ae423b8bde9bfbfd7e9409b23b23aed91", null ]
+    ] ]
 ];

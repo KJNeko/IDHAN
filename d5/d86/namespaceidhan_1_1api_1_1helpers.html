@@ -120,6 +120,8 @@ $(function(){initNavTree('d5/d86/namespaceidhan_1_1api_1_1helpers.html','../../'
 Functions</h2></td></tr>
 <tr class="memitem:abe9ee9868275b04d234173e68960e98c" id="r_abe9ee9868275b04d234173e68960e98c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe9ee9868275b04d234173e68960e98c">addFileCacheHeader</a> (drogon::HttpResponsePtr ptr)</td></tr>
 <tr class="separator:abe9ee9868275b04d234173e68960e98c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9730b21072636e81689ac4abd9460e62" id="r_a9730b21072636e81689ac4abd9460e62"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::filesystem::path, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9730b21072636e81689ac4abd9460e62">getRecordPath</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a9730b21072636e81689ac4abd9460e62"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8b9593b6063381a5aa3319e5536f4b59" id="r_a8b9593b6063381a5aa3319e5536f4b59"><td class="memItemLeft" align="right" valign="top">std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a>, drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8b9593b6063381a5aa3319e5536f4b59">getTagDomainID</a> (drogon::HttpRequestPtr request)</td></tr>
 <tr class="separator:a8b9593b6063381a5aa3319e5536f4b59"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3052859c86bf8044cefad85d788bed7e" id="r_a3052859c86bf8044cefad85d788bed7e"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3052859c86bf8044cefad85d788bed7e">pgEscape</a> (const std::string &amp;s)</td></tr>
@@ -160,6 +162,27 @@ Functions</h2></td></tr>
           <td class="memname">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; idhan::api::helpers::createRecord </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>sha256</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9730b21072636e81689ac4abd9460e62" name="a9730b21072636e81689ac4abd9460e62"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9730b21072636e81689ac4abd9460e62">&#9670;&#160;</a></span>getRecordPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; std::expected&lt; std::filesystem::path, drogon::HttpResponsePtr &gt; &gt; idhan::api::helpers::getRecordPath </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>

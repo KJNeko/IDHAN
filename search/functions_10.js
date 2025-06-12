@@ -9,5 +9,6 @@ var searchData=
   ['tostdstring_6',['toStdString',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#a77589c2070149b18103bf30edc21bb6d',1,'idhan::IDHANClient::TagInfo']]],
   ['tovec_7',['toVec',['../d0/de3/classidhan_1_1SHA256.html#a2027b42b64bf9a46ea2936588f6959f6',1,'idhan::SHA256']]],
   ['trace_8',['trace',['../d7/d03/namespaceidhan_1_1log.html#aea94a193253b168f253cd496452bf879',1,'idhan::log']]],
-  ['trantorhook_9',['trantorHook',['../dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8',1,'idhan']]]
+  ['trantorhook_9',['trantorHook',['../dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8',1,'idhan']]],
+  ['tryparserecordmetadata_10',['tryParseRecordMetadata',['../db/de4/namespaceidhan_1_1api.html#a5b889643255ab25a33cb2d7fff515d36',1,'idhan::api']]]
 ];

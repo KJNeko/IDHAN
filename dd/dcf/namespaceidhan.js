@@ -49,7 +49,6 @@ var namespaceidhan =
     [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
     [ "IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", "da/d27/structidhan_1_1IDHANClientConfig" ],
     [ "IDHANException", "dd/d1d/structidhan_1_1IDHANException.html", "dd/d1d/structidhan_1_1IDHANException" ],
-    [ "ImageData", "db/d5e/structidhan_1_1ImageData.html", "db/d5e/structidhan_1_1ImageData" ],
     [ "InvalidRequestBody", "d2/d81/structidhan_1_1InvalidRequestBody.html", null ],
     [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],
     [ "MimeException", "df/d62/structidhan_1_1MimeException.html", "df/d62/structidhan_1_1MimeException" ],
@@ -139,6 +138,12 @@ var namespaceidhan =
       [ "eEditFileMetadata", "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880caf04f0e10822efdc1dcdf735ab3aac72d", null ],
       [ "eAllPermissions", "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca466198b70ed2bb19896f587d392b7739", null ]
     ] ],
+    [ "SimpleMimeType", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0", [
+      [ "IMAGE", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0a23a12f67f614b5518c7f1c2465bf95e3", null ],
+      [ "VIDEO", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0ae60ae31f67ab883c746bb71c7a145c18", null ],
+      [ "ANIMATION", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0a28ff0af6199e0baf97bb71b4b4422057", null ],
+      [ "AUDIO", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0ae423b8bde9bfbfd7e9409b23b23aed91", null ]
+    ] ],
     [ "SortOrder", "dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1", [
       [ "ASC", "dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1ac6e421eaad140c1bc1a39980502df80c", null ],
       [ "DESC", "dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1a65a6d757dbb571ccc3af9706e9a5f607", null ]
@@ -193,7 +198,6 @@ var namespaceidhan =
     [ "handleVersionInfo", "dd/dcf/namespaceidhan.html#aa32290eb8fec468bba8a98213ecf71c2", null ],
     [ "hyToIDHANSortType", "dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150", null ],
     [ "parseArrayParmeters", "dd/dcf/namespaceidhan.html#ae1f955a09fa3220012fb0c401950fcfa", null ],
-    [ "processImage", "dd/dcf/namespaceidhan.html#a3cb5f39cd68d95f7681f65951c767381", null ],
     [ "searchNamespace", "dd/dcf/namespaceidhan.html#a5fa74bb214874aa2789badd88b18619a", null ],
     [ "searchSubtag", "dd/dcf/namespaceidhan.html#a60d3fe70f3505cfd95050bdbe38d56ad", null ],
     [ "setFileInfo", "dd/dcf/namespaceidhan.html#a766a40aeb5ee90e764c3a0eee45dc8d1", null ],

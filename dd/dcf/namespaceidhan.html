@@ -168,8 +168,6 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d1d/structidhan_1_1IDHANException.html">IDHANException</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d5e/structidhan_1_1ImageData.html">ImageData</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d81/structidhan_1_1InvalidRequestBody.html">InvalidRequestBody</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/dc7/classidhan_1_1ManagementConnection.html">ManagementConnection</a></td></tr>
@@ -246,6 +244,12 @@ Enumerations</h2></td></tr>
 , <a class="el" href="#a9b45175c5a9b4ca53b660a59c37163fba29e50f3b7235f0ddae371b3e650b791c">UnknownMime</a> = 1
  }</td></tr>
 <tr class="separator:a9b45175c5a9b4ca53b660a59c37163fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa1d31e17df641b2a5bb9f146922fe6a0" id="r_aa1d31e17df641b2a5bb9f146922fe6a0"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa1d31e17df641b2a5bb9f146922fe6a0">SimpleMimeType</a> : std::uint16_t { <a class="el" href="#aa1d31e17df641b2a5bb9f146922fe6a0a23a12f67f614b5518c7f1c2465bf95e3">IMAGE</a> = 1
+, <a class="el" href="#aa1d31e17df641b2a5bb9f146922fe6a0ae60ae31f67ab883c746bb71c7a145c18">VIDEO</a> = 2
+, <a class="el" href="#aa1d31e17df641b2a5bb9f146922fe6a0a28ff0af6199e0baf97bb71b4b4422057">ANIMATION</a> = 3
+, <a class="el" href="#aa1d31e17df641b2a5bb9f146922fe6a0ae423b8bde9bfbfd7e9409b23b23aed91">AUDIO</a> = 4
+ }</td></tr>
+<tr class="separator:aa1d31e17df641b2a5bb9f146922fe6a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a017e30cf513c900451d0fe48373e880c" id="r_a017e30cf513c900451d0fe48373e880c"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a017e30cf513c900451d0fe48373e880c">KeyPermissions</a> { <br />
 &#160;&#160;<a class="el" href="#a017e30cf513c900451d0fe48373e880ca924397fd11936e351485c02170a8fa19">eApiAccess</a> = 1 &lt;&lt; 0
 , <a class="el" href="#a017e30cf513c900451d0fe48373e880ca64ae873b2cbf56a4771b5dded0d023d2">eRemoteAccess</a> = 1 &lt;&lt; 1
@@ -403,8 +407,6 @@ Functions</h2></td></tr>
 <tr class="separator:a9301fcccee80b6f287ded422a44f8150"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf2de6ab319c3d5893959073ae46e47e" id="r_acf2de6ab319c3d5893959073ae46e47e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acf2de6ab319c3d5893959073ae46e47e">fixme</a> (const std::source_location location=std::source_location::current())</td></tr>
 <tr class="separator:acf2de6ab319c3d5893959073ae46e47e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3cb5f39cd68d95f7681f65951c767381" id="r_a3cb5f39cd68d95f7681f65951c767381"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html">MimeInfo</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3cb5f39cd68d95f7681f65951c767381">processImage</a> (std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt; data)</td></tr>
-<tr class="separator:a3cb5f39cd68d95f7681f65951c767381"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a766a40aeb5ee90e764c3a0eee45dc8d1" id="r_a766a40aeb5ee90e764c3a0eee45dc8d1"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a766a40aeb5ee90e764c3a0eee45dc8d1">setFileInfo</a> (const <a class="el" href="#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, const <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> &amp;info, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a766a40aeb5ee90e764c3a0eee45dc8d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3d99207c8eca97e418ebb9522181b68f" id="r_a3d99207c8eca97e418ebb9522181b68f"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3d99207c8eca97e418ebb9522181b68f">gatherFileInfo</a> (std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt; data, drogon::orm::DbClientPtr db)</td></tr>
@@ -809,6 +811,34 @@ Variables</h2></td></tr>
 <tr><td class="fieldname"><a id="a017e30cf513c900451d0fe48373e880caf04f0e10822efdc1dcdf735ab3aac72d" name="a017e30cf513c900451d0fe48373e880caf04f0e10822efdc1dcdf735ab3aac72d"></a>eEditFileMetadata&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a017e30cf513c900451d0fe48373e880ca466198b70ed2bb19896f587d392b7739" name="a017e30cf513c900451d0fe48373e880ca466198b70ed2bb19896f587d392b7739"></a>eAllPermissions&#160;</td><td class="fielddoc"><p>Gives all API permissions. </p>
 </td></tr>
+</table>
+
+</div>
+</div>
+<a id="aa1d31e17df641b2a5bb9f146922fe6a0" name="aa1d31e17df641b2a5bb9f146922fe6a0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1d31e17df641b2a5bb9f146922fe6a0">&#9670;&#160;</a></span>SimpleMimeType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#aa1d31e17df641b2a5bb9f146922fe6a0">idhan::SimpleMimeType</a> : std::uint16_t</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel strong">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="aa1d31e17df641b2a5bb9f146922fe6a0a23a12f67f614b5518c7f1c2465bf95e3" name="aa1d31e17df641b2a5bb9f146922fe6a0a23a12f67f614b5518c7f1c2465bf95e3"></a>IMAGE&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="aa1d31e17df641b2a5bb9f146922fe6a0ae60ae31f67ab883c746bb71c7a145c18" name="aa1d31e17df641b2a5bb9f146922fe6a0ae60ae31f67ab883c746bb71c7a145c18"></a>VIDEO&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="aa1d31e17df641b2a5bb9f146922fe6a0a28ff0af6199e0baf97bb71b4b4422057" name="aa1d31e17df641b2a5bb9f146922fe6a0a28ff0af6199e0baf97bb71b4b4422057"></a>ANIMATION&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="aa1d31e17df641b2a5bb9f146922fe6a0ae423b8bde9bfbfd7e9409b23b23aed91" name="aa1d31e17df641b2a5bb9f146922fe6a0ae423b8bde9bfbfd7e9409b23b23aed91"></a>AUDIO&#160;</td><td class="fielddoc"></td></tr>
 </table>
 
 </div>
@@ -1388,23 +1418,6 @@ template&lt;typename T&gt; </div>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>target</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a3cb5f39cd68d95f7681f65951c767381" name="a3cb5f39cd68d95f7681f65951c767381"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3cb5f39cd68d95f7681f65951c767381">&#9670;&#160;</a></span>processImage()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="../../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html">MimeInfo</a> idhan::processImage </td>
-          <td>(</td>
-          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
-          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">

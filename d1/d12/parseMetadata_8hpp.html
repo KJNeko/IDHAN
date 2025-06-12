@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.13.2"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: IDHANServer/src/metadata/processImage.cpp File Reference</title>
+    <title>IDHAN: IDHANServer/src/metadata/parseMetadata.hpp File Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('d0/d9b/processImage_8cpp.html','../../'); initResizable(true); });
+$(function(){initNavTree('d1/d12/parseMetadata_8hpp.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -113,29 +113,33 @@ $(function(){initNavTree('d0/d9b/processImage_8cpp.html','../../'); initResizabl
   <div class="summary">
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
-  <div class="headertitle"><div class="title">processImage.cpp File Reference</div></div>
+  <div class="headertitle"><div class="title">parseMetadata.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;QtGui/qimage.h&gt;</code><br />
-<code>#include &quot;<a class="el" href="../../d8/dbd/imageProcessing_8hpp_source.html">imageProcessing.hpp</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../db/d46/MimeInfo_8hpp_source.html">mime/MimeInfo.hpp</a>&quot;</code><br />
-</div><table class="memberdecls">
+<div class="textblock"><code>#include &lt;drogon/drogon.h&gt;</code><br />
+<code>#include &lt;expected&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
+</div>
+<p><a href="../../d1/d12/parseMetadata_8hpp_source.html">Go to the source code of this file.</a></p>
+<table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a3cb5f39cd68d95f7681f65951c767381" id="r_a3cb5f39cd68d95f7681f65951c767381"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html">MimeInfo</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a3cb5f39cd68d95f7681f65951c767381">idhan::processImage</a> (std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt; data)</td></tr>
-<tr class="separator:a3cb5f39cd68d95f7681f65951c767381"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b889643255ab25a33cb2d7fff515d36" id="r_a5b889643255ab25a33cb2d7fff515d36"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a5b889643255ab25a33cb2d7fff515d36">idhan::api::tryParseRecordMetadata</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a5b889643255ab25a33cb2d7fff515d36"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_6cb525e80707a04c2be1de91f9f29e0e.html">metadata</a></li><li class="navelem"><a class="el" href="../../d0/d9b/processImage_8cpp.html">processImage.cpp</a></li>
+    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_6cb525e80707a04c2be1de91f9f29e0e.html">metadata</a></li><li class="navelem"><a class="el" href="../../d1/d12/parseMetadata_8hpp.html">parseMetadata.hpp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

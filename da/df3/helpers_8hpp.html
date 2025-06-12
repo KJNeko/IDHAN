@@ -116,10 +116,12 @@ $(function(){initNavTree('da/df3/helpers_8hpp.html','../../'); initResizable(tru
   <div class="headertitle"><div class="title">helpers.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;expected&gt;</code><br />
+<div class="textblock"><code>#include &lt;drogon/HttpResponse.h&gt;</code><br />
+<code>#include &lt;drogon/orm/DbClient.h&gt;</code><br />
+<code>#include &lt;drogon/utils/coroutine.h&gt;</code><br />
+<code>#include &lt;expected&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
-<code>#include &quot;drogon/HttpResponse.h&quot;</code><br />
 </div>
 <p><a href="../../da/df3/helpers_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -134,6 +136,8 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a9730b21072636e81689ac4abd9460e62" id="r_a9730b21072636e81689ac4abd9460e62"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::filesystem::path, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a9730b21072636e81689ac4abd9460e62">idhan::api::helpers::getRecordPath</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a9730b21072636e81689ac4abd9460e62"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8b9593b6063381a5aa3319e5536f4b59" id="r_a8b9593b6063381a5aa3319e5536f4b59"><td class="memItemLeft" align="right" valign="top">std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a>, drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8b9593b6063381a5aa3319e5536f4b59">idhan::api::helpers::getTagDomainID</a> (drogon::HttpRequestPtr request)</td></tr>
 <tr class="separator:a8b9593b6063381a5aa3319e5536f4b59"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abe9ee9868275b04d234173e68960e98c" id="r_abe9ee9868275b04d234173e68960e98c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#abe9ee9868275b04d234173e68960e98c">idhan::api::helpers::addFileCacheHeader</a> (drogon::HttpResponsePtr ptr)</td></tr>

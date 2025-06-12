@@ -29,7 +29,7 @@ var hierarchy =
       [ "idhan::api::ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", null ],
       [ "idhan::api::IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", null ],
       [ "idhan::api::IDHANImportAPI", "d1/d95/classidhan_1_1api_1_1IDHANImportAPI.html", null ],
-      [ "idhan::api::IDHANMaintnanceAPI", "d7/d52/classidhan_1_1api_1_1IDHANMaintnanceAPI.html", null ],
+      [ "idhan::api::IDHANMaintenanceAPI", "d8/d54/classidhan_1_1api_1_1IDHANMaintenanceAPI.html", null ],
       [ "idhan::api::IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", null ],
       [ "idhan::api::IDHANSearchAPI", "d5/da5/classidhan_1_1api_1_1IDHANSearchAPI.html", null ],
       [ "idhan::api::IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", null ],
@@ -41,7 +41,6 @@ var hierarchy =
     ] ],
     [ "idhan::IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", null ],
     [ "idhan::IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", null ],
-    [ "idhan::ImageData", "db/d5e/structidhan_1_1ImageData.html", null ],
     [ "idhan::mime::ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", [
       [ "idhan::mime::AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", null ]
     ] ],

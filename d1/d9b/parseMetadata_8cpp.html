@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.13.2"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: IDHANServer/src/api/IDHANMaintnanceAPI.hpp Source File</title>
+    <title>IDHAN: IDHANServer/src/metadata/parseMetadata.cpp File Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('d8/da0/IDHANMaintnanceAPI_8hpp_source.html','../../'); initResizable(true); });
+$(function(){initNavTree('d1/d9b/parseMetadata_8cpp.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -110,39 +110,38 @@ $(function(){initNavTree('d8/da0/IDHANMaintnanceAPI_8hpp_source.html','../../');
 </div>
 
 <div class="header">
-  <div class="headertitle"><div class="title">IDHANMaintnanceAPI.hpp</div></div>
+  <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
+  <div class="headertitle"><div class="title">parseMetadata.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<a href="../../d8/da0/IDHANMaintnanceAPI_8hpp.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">//</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment">// Created by kj16609 on 3/20/25.</span></div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment">//</span></div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#pragma once</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;drogon/HttpController.h&gt;</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>{</div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
-<div class="foldopen" id="foldopen00011" data-start="{" data-end="};">
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno"><a class="line" href="../../d7/d52/classidhan_1_1api_1_1IDHANMaintnanceAPI.html">   11</a></span><span class="keyword">class </span><a class="code hl_class" href="../../d7/d52/classidhan_1_1api_1_1IDHANMaintnanceAPI.html">IDHANMaintnanceAPI</a> : <span class="keyword">public</span> drogon::HttpController&lt; IDHANMaintnanceAPI &gt;</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>{</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>  <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    METHOD_LIST_BEGIN</div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    METHOD_LIST_END</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>};</div>
-</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>} <span class="comment">// namespace idhan::api</span></div>
-<div class="ttc" id="aclassidhan_1_1api_1_1IDHANMaintnanceAPI_html"><div class="ttname"><a href="../../d7/d52/classidhan_1_1api_1_1IDHANMaintnanceAPI.html">idhan::api::IDHANMaintnanceAPI</a></div><div class="ttdef"><b>Definition</b> IDHANMaintnanceAPI.hpp:12</div></div>
-<div class="ttc" id="anamespaceidhan_1_1api_html"><div class="ttname"><a href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></div><div class="ttdef"><b>Definition</b> add.cpp:14</div></div>
-</div><!-- fragment --></div><!-- contents -->
+<div class="textblock"><code>#include &quot;<a class="el" href="../../d1/d12/parseMetadata_8hpp_source.html">parseMetadata.hpp</a>&quot;</code><br />
+<code>#include &lt;drogon/drogon.h&gt;</code><br />
+<code>#include &lt;json/json.h&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../d4/dfc/FileMappedData_8hpp_source.html">FileMappedData.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../de/dbc/createBadRequest_8hpp_source.html">api/helpers/createBadRequest.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../da/df3/helpers_8hpp_source.html">api/helpers/helpers.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d7/d46/ModuleLoader_8hpp_source.html">modules/ModuleLoader.hpp</a>&quot;</code><br />
+</div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a5b889643255ab25a33cb2d7fff515d36" id="r_a5b889643255ab25a33cb2d7fff515d36"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a5b889643255ab25a33cb2d7fff515d36">idhan::api::tryParseRecordMetadata</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a5b889643255ab25a33cb2d7fff515d36"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+</div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8b56e136226ae89f755dd9aa547a23fc.html">api</a></li><li class="navelem"><a class="el" href="../../d8/da0/IDHANMaintnanceAPI_8hpp.html">IDHANMaintnanceAPI.hpp</a></li>
+    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_6cb525e80707a04c2be1de91f9f29e0e.html">metadata</a></li><li class="navelem"><a class="el" href="../../d1/d9b/parseMetadata_8cpp.html">parseMetadata.cpp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>
