@@ -289,22 +289,22 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	for ( const auto& id : file_ids_json ) record_ids.push_back( id.as< RecordID >() );
 
 	// we've gotten all the ids. For now we'll just return them
-	Json::Value metadata {};
+	Json::Value metadata_json {};
 
 	const auto services { co_await getServiceList( db ) };
 
-	for ( const auto& id : record_ids )
+	for ( const auto& record_id : record_ids )
 	{
 		Json::Value data {};
 
-		const auto hash_result { co_await db->execSqlCoro( "SELECT * FROM records WHERE record_id = $1", id ) };
+		const auto hash_result { co_await db->execSqlCoro( "SELECT * FROM records WHERE record_id = $1", record_id ) };
 
-		data[ "file_id" ] = id;
+		data[ "file_id" ] = record_id;
 		const SHA256 sha256 { hash_result[ 0 ][ "sha256" ] };
 		data[ "hash" ] = sha256.hex();
 		const auto file_info { co_await db->execSqlCoro(
-			"SELECT size, mime.name as mime_name, coalesce(best_extension, extension) as extension  FROM file_info LEFT JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
-			id ) };
+			"SELECT size, mime.name as mime_name, coalesce(best_extension, extension) as extension FROM file_info LEFT JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
+			record_id ) };
 
 		if ( file_info.size() == 0 )
 		{
@@ -320,19 +320,39 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		}
 
 		// TODO: Provide height/width information
-		data[ "width" ] = 512;
-		data[ "height" ] = 512;
+		const auto metadata {
+			co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id )
+		};
+
+		if ( !metadata.empty()
+		     && ( static_cast< SimpleMimeType >( metadata[ 0 ][ 0 ].as< std::uint16_t >() ) == SimpleMimeType::IMAGE ) )
+		{
+			const auto image_metadata {
+				co_await db->execSqlCoro( "SELECT width, height FROM image_metadata WHERE record_id = $1", record_id )
+			};
+
+			if ( !image_metadata.empty() )
+			{
+				data[ "width" ] = image_metadata[ 0 ][ 0 ].as< std::uint32_t >();
+				data[ "height" ] = image_metadata[ 0 ][ 1 ].as< std::uint32_t >();
+			}
+			else
+			{
+				data[ "width" ] = 0;
+				data[ "height" ] = 0;
+			}
+		}
 
 		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
 		data[ "known_urls" ] = Json::Value( Json::arrayValue );
 
 		auto storage_tags { db->execSqlCoro(
 			"SELECT domain_id, tag_id, tag_text FROM tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
-			id ) };
+			record_id ) };
 
 		auto display_tags { db->execSqlCoro(
 			"SELECT domain_id, tag_id, tag_text FROM final_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
-			id ) };
+			record_id ) };
 
 		for ( const auto& storage_tag : co_await storage_tags )
 		{
@@ -371,11 +391,11 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 			data[ "tags" ][ service_key ][ "type" ] = service[ "type" ];
 		}
 
-		metadata.append( std::move( data ) );
+		metadata_json.append( std::move( data ) );
 	}
 
 	Json::Value out {};
-	out[ "metadata" ] = std::move( metadata );
+	out[ "metadata" ] = std::move( metadata_json );
 
 	out[ "services" ] = std::move( services );
 

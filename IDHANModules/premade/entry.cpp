@@ -7,15 +7,16 @@
 #include <memory>
 #include <vector>
 
-#include "JPGMetadata.hpp"
+#include "ImageVipsMetadata.hpp"
+#include "ImageVipsThumbnailer.hpp"
 
 ModuleInfo IDHANEntry()
 {}
 
 std::vector< std::shared_ptr< IDHANModule > > getModules()
 {
-	std::vector< std::shared_ptr< IDHANModule > > ret { std::make_shared< JPGMetadata >(),
-		                                                std::make_shared< JPGThumbnailer >() };
+	std::vector< std::shared_ptr< IDHANModule > > ret { std::make_shared< ImageVipsMetadata >(),
+		                                                std::make_shared< ImageVipsThumbnailer >() };
 
 	return ret;
 }

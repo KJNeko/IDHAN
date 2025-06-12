@@ -7,6 +7,7 @@
 
 #include "api/IDHANRecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/utils/coroutine.h"
 #include "logging/log.hpp"
@@ -16,29 +17,7 @@
 namespace idhan::api
 {
 
-drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
-	getRecordPath( const RecordID record_id, drogon::orm::DbClientPtr db )
-{
-	const auto result { co_await db->execSqlCoro(
 
-		R"(SELECT folder_path, sha256, best_extension
-				FROM records
-						 JOIN file_info ON records.record_id = file_info.record_id
-						 JOIN mime ON file_info.mime_id = mime.mime_id
-						 JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id
-				WHERE records.record_id = $1)",
-		record_id ) };
-
-	const std::filesystem::path folder_path { result[ 0 ][ 0 ].as< std::string >() };
-	const SHA256 sha256 { SHA256::fromPgCol( result[ 0 ][ 1 ] ) };
-	const std::string mime_extension { result[ 0 ][ 2 ].as< std::string >() };
-
-	const auto hex { sha256.hex() };
-	const std::filesystem::path file_location { folder_path / std::format( "f{}", hex.substr( 0, 2 ) )
-		                                        / ( std::format( "{}.{}", hex, mime_extension ) ) };
-
-	co_return file_location;
-}
 
 drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
 	getThumbnailPath( const RecordID record_id, drogon::orm::DbClientPtr db )
@@ -88,7 +67,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
 
-		const auto record_path { co_await getRecordPath( record_id, db ) };
+		const auto record_path { co_await helpers::getRecordPath( record_id, db ) };
 
 		if ( !record_path.has_value() ) co_return record_path.error();
 

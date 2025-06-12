@@ -3,14 +3,20 @@
 //
 #pragma once
 
+#include <drogon/HttpResponse.h>
+#include <drogon/orm/DbClient.h>
+#include <drogon/utils/coroutine.h>
+
 #include <expected>
 #include <vector>
 
 #include "IDHANTypes.hpp"
-#include "drogon/HttpResponse.h"
 
 namespace idhan::api::helpers
 {
+
+drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
+	getRecordPath( RecordID record_id, drogon::orm::DbClientPtr db );
 
 std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainID( drogon::HttpRequestPtr request );
 

@@ -21,4 +21,13 @@ using MimeID = Integer;
 
 using TagDomainID = SmallInt;
 using FileDomainID = SmallInt;
+
+enum class SimpleMimeType : std::uint16_t
+{
+	IMAGE = 1,
+	VIDEO = 2,
+	ANIMATION = 3,
+	AUDIO = 4
+};
+
 } // namespace idhan

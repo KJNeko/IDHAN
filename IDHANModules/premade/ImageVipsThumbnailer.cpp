@@ -1,20 +1,17 @@
 //
-// Created by kj16609 on 6/11/25.
+// Created by kj16609 on 6/12/25.
 //
+#include "ImageVipsThumbnailer.hpp"
 
-#include "JPGMetadata.hpp"
+#include <vips/vips8>
+#include "vips.hpp"
 
-#include <vips/vips.h>
-
-#include <cstring>
-#include <memory>
-
-std::vector< std::string_view > JPGThumbnailer::handleableMimes()
+std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
 {
-	return { "image/jpeg", "image/png", "image/webp" };
+	return vipsHandleable();
 }
 
-std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > JPGThumbnailer::createThumbnail(
+std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnail(
 	void* data, std::size_t length, std::size_t width, std::size_t height, const std::string mime_name )
 {
 	VipsImage* image;
@@ -96,11 +93,3 @@ std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > JPGThumbnailer::
 
 	return ret;
 }
-
-std::vector< std::string_view > JPGMetadata::handleableMimes()
-{
-	return { "image/jpeg" };
-}
-
-std::expected< MetadataInfo, ModuleError > JPGMetadata::parseImage( void* data, std::size_t length )
-{}

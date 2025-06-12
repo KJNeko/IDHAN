@@ -7,19 +7,15 @@
 #include <variant>
 #include <vector>
 
+#include "IDHANTypes.hpp"
 #include "ModuleBase.hpp"
 
-enum class MetadataInfoType
-{
-	IMAGE,
-	ANIMATION,
-	VIDEO,
-	ARCHIVE,
-	OTHER
-};
-
 struct MetadataInfoImage
-{};
+{
+	int width;
+	int height;
+	std::uint8_t channels;
+};
 
 struct MetadataInfoAnimation
 {};
@@ -28,6 +24,7 @@ struct MetadataInfo
 {
 	std::variant< MetadataInfoImage, MetadataInfoAnimation > m_metadata;
 	std::string m_extra;
+	idhan::SimpleMimeType m_simple_type;
 };
 
 class FGL_EXPORT MetadataModuleI : public ModuleBase
@@ -48,7 +45,8 @@ class FGL_EXPORT MetadataModuleI : public ModuleBase
 		return false;
 	}
 
-	virtual std::expected< MetadataInfo, ModuleError > parseImage( void* data, std::size_t length ) = 0;
+	virtual std::expected< MetadataInfo, ModuleError >
+		parseImage( void* data, std::size_t length, std::string mime_name ) = 0;
 
 	ModuleType type() override { return ModuleTypeFlags::METADATA; }
 };
