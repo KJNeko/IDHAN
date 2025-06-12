@@ -4,6 +4,9 @@
 #include "ImageVipsThumbnailer.hpp"
 
 #include <vips/vips8>
+
+#include <unordered_map>
+
 #include "vips.hpp"
 
 std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
@@ -14,35 +17,24 @@ std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
 std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnail(
 	void* data, std::size_t length, std::size_t width, std::size_t height, const std::string mime_name )
 {
-	VipsImage* image;
+	using VipsFunc = int ( * )( void*, size_t, VipsImage**, ... );
+	std::unordered_map< std::string, VipsFunc > func_map { { "image/png", vips_pngload_buffer },
+		                                                   { "image/jpeg", vips_jpegload_buffer },
+		                                                   { "image/webp", vips_webpload_buffer },
+		                                                   { "image/gif", vips_gifload_buffer } };
 
-	if ( mime_name == "image/png" )
+	VipsImage* image;
+	if ( const auto it = func_map.find( mime_name ); it != func_map.end() )
 	{
-		if ( vips_pngload_buffer( data, length, &image, nullptr ) != 0 )
-		{
-			return std::unexpected( ModuleError { "Failed to load image" } );
-		}
-	}
-	else if ( mime_name == "image/jpeg" )
-	{
-		if ( vips_jpegload_buffer( data, length, &image, nullptr ) != 0 )
-		{
-			return std::unexpected( ModuleError { "Failed to load image" } );
-		}
-	}
-	else if ( mime_name == "image/webp" )
-	{
-		if ( vips_webpload_buffer( data, length, &image, nullptr ) != 0 )
+		if ( it->second( data, length, &image, nullptr ) != 0 )
 		{
 			return std::unexpected( ModuleError { "Failed to load image" } );
 		}
 	}
 	else
 	{
-		return std::unexpected( ModuleError { "Invalid mime type" } );
+		return std::unexpected( ModuleError { "Unsupported mime type" } );
 	}
-
-	// { vips_image_new_from_buffer( data, length, nullptr ) };
 
 	if ( !image )
 	{

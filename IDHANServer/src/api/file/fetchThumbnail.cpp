@@ -17,8 +17,6 @@
 namespace idhan::api
 {
 
-
-
 drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
 	getThumbnailPath( const RecordID record_id, drogon::orm::DbClientPtr db )
 {
@@ -48,6 +46,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 		co_return createBadRequest(
 			"Record {} does not exist or does not have any file info associated with it", record_id );
 
+	const bool force_regen { request->getOptionalParameter< bool >( "regen" ).value_or( false ) };
+
 	const auto mime_name { record_info[ 0 ][ "mime_name" ].as< std::string >() };
 	const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
 
@@ -55,7 +55,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 	if ( !thumbnail_location_e.has_value() ) co_return thumbnail_location_e.error();
 
-	if ( !std::filesystem::exists( thumbnail_location_e.value() ) )
+	if ( !std::filesystem::exists( thumbnail_location_e.value() ) || force_regen )
 	{
 		//We must generate the thumbnail
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };

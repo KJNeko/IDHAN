@@ -28,7 +28,7 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::
 		                                                   { "image/webp", vips_webpload_buffer } };
 
 	VipsImage* image;
-	if ( auto it = func_map.find( mime_name ); it != func_map.end() )
+	if ( const auto it = func_map.find( mime_name ); it != func_map.end() )
 	{
 		if ( it->second( data, length, &image, nullptr ) != 0 )
 		{
