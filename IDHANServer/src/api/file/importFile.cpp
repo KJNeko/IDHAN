@@ -49,12 +49,9 @@ Json::Value createUnknownMimeResponse()
 
 drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon::HttpRequestPtr request )
 {
-	log::info( "Hit" );
 	FGL_ASSERT( request, "Request invalid" );
 	const auto request_data { request->getBody() };
 	const auto content_type { request->getContentType() };
-	log::info( "Body length: {}", request_data.size() );
-	log::info( "Content type: {}", static_cast< int >( content_type ) );
 
 	auto db { drogon::app().getDbClient() };
 
@@ -64,7 +61,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon
 	const SHA256 sha256 { SHA256::hash( data_ptr, data_length ) };
 
 	const auto mime_str { mime::getInstance()->scan( request_data ) };
-	log::info( "MIME type: {}", mime_str.value_or( "NONE" ) );
 
 	const bool overwrite_flag { request->getOptionalParameter< bool >( "overwrite" ).value_or( false ) };
 	const bool import_deleted { request->getOptionalParameter< bool >( "import_deleted" ).value_or( false ) };
@@ -88,9 +84,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon
 
 	const auto record_id { co_await helpers::createRecord( sha256, db ) };
 
-	log::info( "Record created: {}", record_id );
-
-	log::info( "Setting mime info for import" );
 	// try to insert info if it's missing
 	co_await db->execSqlCoro(
 		"INSERT INTO file_info (record_id, mime_id, size) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
@@ -118,8 +111,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon
 
 	if ( should_store || overwrite_flag )
 	{
-		log::info( "Storing file" );
-
 		const auto store_result {
 			co_await filesystem::ClusterManager::getInstance().storeFile( record_id, data_ptr, data_length, db )
 		};

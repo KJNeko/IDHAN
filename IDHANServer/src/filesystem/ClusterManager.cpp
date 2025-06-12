@@ -94,8 +94,6 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	// QFile file { m_path.filePath( createSubpath( sha256 ) + extension ) };
 	auto path { m_path.filesystemAbsolutePath() / createSubpath( sha256, type ) };
 
-	log::info( "Writing file to {}", path.string() );
-
 	if ( extension.starts_with( '.' ) )
 		path.replace_extension( extension );
 	else
@@ -173,33 +171,22 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const FileMetaType type )
 {
 	std::lock_guard lock { m_mutex };
-	log::info( "Getting SHA256 for record {}", record );
 	const auto sha256_e { co_await getRecordSHA256( record, db ) };
 	if ( !sha256_e.has_value() ) co_return std::unexpected( sha256_e.error() );
 	const auto& sha256 { sha256_e.value() };
-	log::info( "Got SHA256 for record {}", record );
 
 	const auto& target_cluster_r { co_await findBestFolder( record, length, db ) };
 
 	if ( !target_cluster_r.has_value() ) co_return std::unexpected( target_cluster_r.error() );
 	const auto& target_folder { m_folders.at( target_cluster_r.value() ) };
 
-	log::info(
-		"Found ideal cluster {} to write {} to", target_folder.m_path.absolutePath().toStdString(), sha256.hex() );
-
 	const auto record_mime { co_await mime::getRecordMime( record, db ) };
-
-	log::info( "Got record mime" );
 
 	const auto result { target_folder.storeFile( sha256, data, length, record_mime.value().extension, type ) };
 
 	if ( !result.has_value() ) co_return result;
 
-	log::info( "File stored" );
-
 	constexpr auto query { "UPDATE file_info SET cluster_store_time = now(), cluster_id = $2 WHERE record_id = $1" };
-
-	log::info( "Updating file info for record {}", record );
 
 	co_await db->execSqlCoro( query, record, target_folder.m_id );
 

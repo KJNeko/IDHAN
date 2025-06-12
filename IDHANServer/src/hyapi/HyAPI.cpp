@@ -139,8 +139,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	auto db { drogon::app().getDbClient() };
 
-	log::info( "Query: {}", request->getQuery() );
-
 	// Build the search
 	SearchBuilder builder {};
 
@@ -215,8 +213,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 		i += 1;
 	}
-
-	log::info( "Got {} results", file_ids.size() );
 
 	if ( return_file_ids ) out[ "file_ids" ] = std::move( file_ids );
 	if ( return_hashes ) out[ "hashes" ] = std::move( hashes );

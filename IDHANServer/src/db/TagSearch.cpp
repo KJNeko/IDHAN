@@ -50,7 +50,6 @@ ExpectedTask< void > TagSearch::addID( const TagID id )
 
 ExpectedTask< void > TagSearch::addChildren( TagID tag_id )
 {
-	log::info( "Adding children for {}", tag_id );
 	std::vector< TagID > searched {};
 	std::queue< TagID > queue {};
 
@@ -85,7 +84,6 @@ ExpectedTask< void > TagSearch::addChildren( TagID tag_id )
 	std::ranges::sort( m_ids );
 	std::ranges::unique( m_ids );
 
-	log::info( "Added {} children for {}", searched.size(), tag_id );
 	co_return {};
 }
 
@@ -127,14 +125,11 @@ ExpectedTask< std::vector< TagID > > TagSearch::findSiblings( const TagID id )
 
 ExpectedTask< void > TagSearch::removeSiblings()
 {
-	log::info( "Removing siblings" );
 	std::vector< TagID > to_remove {};
 
 	for ( auto& id : m_ids )
 	{
-		log::info( "Removing siblings for {}", id );
 		const auto siblings { co_await findSiblings( id ) };
-		log::info( "Got {} siblings for {}", siblings->size(), id );
 
 		if ( !siblings.has_value() ) co_return std::unexpected( siblings.error() );
 
@@ -148,7 +143,6 @@ ExpectedTask< void > TagSearch::removeSiblings()
 		std::ranges::remove_if( m_ids, [ &id ]( const auto& i ) { return i == id; } );
 	}
 
-	log::info( "Removed siblings" );
 	co_return {};
 }
 
