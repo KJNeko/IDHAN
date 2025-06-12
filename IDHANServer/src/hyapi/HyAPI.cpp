@@ -77,14 +77,12 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getService( drogon::HttpReque
 	idhan::fixme();
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( drogon::HttpRequestPtr request )
+drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db )
 {
-	const auto db { drogon::app().getDbClient() };
-
 	// we start with the local tags services
 	const auto local_tags_result { co_await db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains" ) };
 
-	Json::Value root {};
+	Json::Value services {};
 
 	for ( auto& row : local_tags_result )
 	{
@@ -92,13 +90,26 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( drogon::HttpRequ
 		info[ "name" ] = row[ "domain_name" ].as< std::string >();
 		info[ "type" ] = hydrus::gen_constants::LOCAL_TAG;
 		info[ "type_pretty" ] = "local tag service";
-		info[ "service_key" ] =
-			std::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, row[ "tag_domain_id" ].as< TagDomainID >() );
 
-		root[ "local_tags" ].append( std::move( info ) );
+		const auto service_key {
+			std::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, row[ "tag_domain_id" ].as< TagDomainID >() )
+		};
+
+		info[ "service_key" ] = service_key;
+
+		services[ service_key ] = std::move( info );
 	}
 
-	// no tag repository (yet)
+	co_return services;
+}
+
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( drogon::HttpRequestPtr request )
+{
+	const auto db { drogon::app().getDbClient() };
+
+	Json::Value root {};
+
+	//Deprecated in v531
 	root[ "tag_repositories" ] = Json::Value( Json::arrayValue );
 	root[ "local_files" ] = Json::Value( Json::arrayValue );
 	root[ "local_updates" ] = Json::Value( Json::arrayValue );
@@ -108,7 +119,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( drogon::HttpRequ
 	root[ "all_known_files" ] = Json::Value( Json::arrayValue );
 	root[ "all_known_tags" ] = Json::Value( Json::arrayValue );
 	root[ "trash" ] = Json::Value( Json::arrayValue );
-	root[ "services" ] = Json::Value( Json::arrayValue );
+
+	root[ "services" ] = co_await getServiceList( db );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
@@ -279,6 +291,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	// we've gotten all the ids. For now we'll just return them
 	Json::Value metadata {};
 
+	const auto services { co_await getServiceList( db ) };
+
 	for ( const auto& id : record_ids )
 	{
 		Json::Value data {};
@@ -326,8 +340,11 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 			const auto& tag_id { storage_tag[ "tag_id" ] };
 			const auto& tag_text { storage_tag[ "tag_text" ] };
 
-			data[ "tags" ][ std::to_string( domain_id.as< TagDomainID >() ) ][ "storage_tags" ][ "0" ]
-				.append( tag_text.as< std::string >() );
+			const auto service_key {
+				std::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
+			};
+
+			data[ "tags" ][ service_key ][ "storage_tags" ][ "0" ].append( tag_text.as< std::string >() );
 		}
 
 		for ( const auto& display_tag : co_await display_tags )
@@ -336,8 +353,22 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 			const auto& tag_id { display_tag[ "tag_id" ] };
 			const auto& tag_text { display_tag[ "tag_text" ] };
 
-			data[ "tags" ][ std::to_string( domain_id.as< TagDomainID >() ) ][ "display_tags" ][ "0" ]
-				.append( tag_text.as< std::string >() );
+			const auto service_key {
+				std::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
+			};
+
+			data[ "tags" ][ service_key ][ "display_tags" ][ "0" ].append( tag_text.as< std::string >() );
+		}
+
+		for ( const auto& service : services )
+		{
+			const auto service_key { service[ "service_key" ].asString() };
+
+			if ( !data[ "tags" ].isMember( service_key ) ) continue;
+
+			data[ "tags" ][ service_key ][ "name" ] = service[ "name" ];
+			data[ "tags" ][ service_key ][ "type_pretty" ] = service[ "type_pretty" ];
+			data[ "tags" ][ service_key ][ "type" ] = service[ "type" ];
 		}
 
 		metadata.append( std::move( data ) );
@@ -345,6 +376,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 	Json::Value out {};
 	out[ "metadata" ] = std::move( metadata );
+
+	out[ "services" ] = std::move( services );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( std::move( out ) );
 }
@@ -457,8 +490,19 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getClientOptions( drogon::Htt
 	// turn string into json
 	Json::Value root {};
 
+	// For some reason get_client_options needs to also return the service list for whatever reason?
+
 	Json::Reader reader;
 	reader.parse( RAW_JSON, root );
+
+	root[ "services" ] = Json::Value( Json::objectValue );
+
+	// Hydrus provides services here by hyweb doesn't seem to want them here
+	// auto db { drogon::app().getDbClient() };
+	// root[ "services" ] = co_await getServiceList( db );
+
+	root[ "version" ] = 80;
+	root[ "hydrus_version" ] = 625;
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
