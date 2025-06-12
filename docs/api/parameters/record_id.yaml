@@ -1,3 +1,3 @@
 in: path
-name: file_id
+name: record_id
 required: true

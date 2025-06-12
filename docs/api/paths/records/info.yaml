@@ -3,5 +3,4 @@ get:
     - records
   summary: Returns information about a file
   parameters:
-    - $ref: '../../parameters/file_id.yaml'
-
+    - $ref: '../../parameters/record_id.yaml'
