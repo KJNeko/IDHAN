@@ -17,7 +17,7 @@
 
 The following is a example config file to use
 
-```
+```toml
 [database]
 #host = "localhost"
 #port = 5432
