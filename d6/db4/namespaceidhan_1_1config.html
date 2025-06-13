@@ -123,20 +123,22 @@ Functions</h2></td></tr>
 <tr class="separator:a255a8b9dc748a7570400620897433a4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac99dbf2767429fb7ce05171424ebad58" id="r_ac99dbf2767429fb7ce05171424ebad58"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac99dbf2767429fb7ce05171424ebad58">saveConfig</a> (const toml::parse_result &amp;modified_config)</td></tr>
 <tr class="separator:ac99dbf2767429fb7ce05171424ebad58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a470e02aa448f04c0dc13a14b6c67bd02" id="r_a470e02aa448f04c0dc13a14b6c67bd02"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a470e02aa448f04c0dc13a14b6c67bd02">setLocation</a> (std::filesystem::path path)</td></tr>
+<tr class="separator:a470e02aa448f04c0dc13a14b6c67bd02"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac228df2f9978c266327d7e62dde6b91b" id="r_ac228df2f9978c266327d7e62dde6b91b"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:ac228df2f9978c266327d7e62dde6b91b"><td class="memTemplItemLeft" align="right" valign="top">static std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ac228df2f9978c266327d7e62dde6b91b">get</a> (std::string_view group, std::string_view name)</td></tr>
 <tr class="separator:ac228df2f9978c266327d7e62dde6b91b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7c2410d2d4a089659f913de7518f8e0e" id="r_a7c2410d2d4a089659f913de7518f8e0e"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
-<tr class="memitem:a7c2410d2d4a089659f913de7518f8e0e"><td class="memTemplItemLeft" align="right" valign="top">static T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a7c2410d2d4a089659f913de7518f8e0e">get</a> (std::string_view group, std::string_view name, const T default_value)</td></tr>
-<tr class="separator:a7c2410d2d4a089659f913de7518f8e0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a60100e9304b504f71b533e6a7b5e94db" id="r_a60100e9304b504f71b533e6a7b5e94db"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
-<tr class="memitem:a60100e9304b504f71b533e6a7b5e94db"><td class="memTemplItemLeft" align="right" valign="top">static void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a60100e9304b504f71b533e6a7b5e94db">set</a> (T &amp;value, const std::string_view group, std::string_view name)</td></tr>
-<tr class="separator:a60100e9304b504f71b533e6a7b5e94db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2863493d119318b4f68b5949e43c551" id="r_ad2863493d119318b4f68b5949e43c551"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:ad2863493d119318b4f68b5949e43c551"><td class="memTemplItemLeft" align="right" valign="top">static T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ad2863493d119318b4f68b5949e43c551">get</a> (std::string_view group, std::string_view name, const auto default_value)</td></tr>
+<tr class="separator:ad2863493d119318b4f68b5949e43c551"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30b1857af639c8028261f91c77d9fe0b" id="r_a30b1857af639c8028261f91c77d9fe0b"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a30b1857af639c8028261f91c77d9fe0b"><td class="memTemplItemLeft" align="right" valign="top">static void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a30b1857af639c8028261f91c77d9fe0b">set</a> (const T &amp;value, const std::string_view group, std::string_view name)</td></tr>
+<tr class="separator:a30b1857af639c8028261f91c77d9fe0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:af591523ebd44332190c0a3d9f9a8d587" id="r_af591523ebd44332190c0a3d9f9a8d587"><td class="memItemLeft" align="right" valign="top">static constexpr std::string_view&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af591523ebd44332190c0a3d9f9a8d587">config_path</a> { &quot;./config.toml&quot; }</td></tr>
-<tr class="separator:af591523ebd44332190c0a3d9f9a8d587"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af3cf4f8c29bf2314734da40331f061ae" id="r_af3cf4f8c29bf2314734da40331f061ae"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3cf4f8c29bf2314734da40331f061ae">config_path</a> { &quot;./config.toml&quot; }</td></tr>
+<tr class="separator:af3cf4f8c29bf2314734da40331f061ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2e3e8a5518a79949c918ba345b54619f" id="r_a2e3e8a5518a79949c918ba345b54619f"><td class="memItemLeft" align="right" valign="top">static std::mutex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2e3e8a5518a79949c918ba345b54619f">config_mtx</a></td></tr>
 <tr class="separator:a2e3e8a5518a79949c918ba345b54619f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a49d74a2ef7d37cb0e5afd661794359bd" id="r_a49d74a2ef7d37cb0e5afd661794359bd"><td class="memItemLeft" align="right" valign="top">static toml::parse_result&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a49d74a2ef7d37cb0e5afd661794359bd">config</a></td></tr>
@@ -177,8 +179,8 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="a7c2410d2d4a089659f913de7518f8e0e" name="a7c2410d2d4a089659f913de7518f8e0e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7c2410d2d4a089659f913de7518f8e0e">&#9670;&#160;</a></span>get() <span class="overload">[2/2]</span></h2>
+<a id="ad2863493d119318b4f68b5949e43c551" name="ad2863493d119318b4f68b5949e43c551"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad2863493d119318b4f68b5949e43c551">&#9670;&#160;</a></span>get() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -201,7 +203,7 @@ template&lt;typename T&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const T</td>          <td class="paramname"><span class="paramname"><em>default_value</em></span>&#160;)</td>
+          <td class="paramtype">const auto</td>          <td class="paramname"><span class="paramname"><em>default_value</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -247,8 +249,8 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="a60100e9304b504f71b533e6a7b5e94db" name="a60100e9304b504f71b533e6a7b5e94db"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a60100e9304b504f71b533e6a7b5e94db">&#9670;&#160;</a></span>set()</h2>
+<a id="a30b1857af639c8028261f91c77d9fe0b" name="a30b1857af639c8028261f91c77d9fe0b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30b1857af639c8028261f91c77d9fe0b">&#9670;&#160;</a></span>set()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -261,7 +263,7 @@ template&lt;typename T&gt; </div>
         <tr>
           <td class="memname">static void idhan::config::set </td>
           <td>(</td>
-          <td class="paramtype">T &amp;</td>          <td class="paramname"><span class="paramname"><em>value</em></span>, </td>
+          <td class="paramtype">const T &amp;</td>          <td class="paramname"><span class="paramname"><em>value</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -279,6 +281,23 @@ template&lt;typename T&gt; </div>
 <span class="mlabels"><span class="mlabel static">static</span></span>  </td>
   </tr>
 </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a470e02aa448f04c0dc13a14b6c67bd02" name="a470e02aa448f04c0dc13a14b6c67bd02"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a470e02aa448f04c0dc13a14b6c67bd02">&#9670;&#160;</a></span>setLocation()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::config::setLocation </td>
+          <td>(</td>
+          <td class="paramtype">std::filesystem::path</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
 </div><div class="memdoc">
 
 </div>
@@ -328,8 +347,8 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="af591523ebd44332190c0a3d9f9a8d587" name="af591523ebd44332190c0a3d9f9a8d587"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af591523ebd44332190c0a3d9f9a8d587">&#9670;&#160;</a></span>config_path</h2>
+<a id="af3cf4f8c29bf2314734da40331f061ae" name="af3cf4f8c29bf2314734da40331f061ae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af3cf4f8c29bf2314734da40331f061ae">&#9670;&#160;</a></span>config_path</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -338,12 +357,12 @@ template&lt;typename T&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::string_view idhan::config::config_path { &quot;./config.toml&quot; }</td>
+          <td class="memname">std::string idhan::config::config_path { &quot;./config.toml&quot; }</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel constexpr">constexpr</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">

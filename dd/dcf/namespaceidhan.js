@@ -3,13 +3,14 @@ var namespaceidhan =
     [ "api", "db/de4/namespaceidhan_1_1api.html", "db/de4/namespaceidhan_1_1api" ],
     [ "config", "d6/db4/namespaceidhan_1_1config.html", [
       [ "get", "d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b", null ],
-      [ "get", "d6/db4/namespaceidhan_1_1config.html#a7c2410d2d4a089659f913de7518f8e0e", null ],
+      [ "get", "d6/db4/namespaceidhan_1_1config.html#ad2863493d119318b4f68b5949e43c551", null ],
       [ "loadConfig", "d6/db4/namespaceidhan_1_1config.html#a255a8b9dc748a7570400620897433a4d", null ],
       [ "saveConfig", "d6/db4/namespaceidhan_1_1config.html#ac99dbf2767429fb7ce05171424ebad58", null ],
-      [ "set", "d6/db4/namespaceidhan_1_1config.html#a60100e9304b504f71b533e6a7b5e94db", null ],
+      [ "set", "d6/db4/namespaceidhan_1_1config.html#a30b1857af639c8028261f91c77d9fe0b", null ],
+      [ "setLocation", "d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02", null ],
       [ "config", "d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd", null ],
       [ "config_mtx", "d6/db4/namespaceidhan_1_1config.html#a2e3e8a5518a79949c918ba345b54619f", null ],
-      [ "config_path", "d6/db4/namespaceidhan_1_1config.html#af591523ebd44332190c0a3d9f9a8d587", null ],
+      [ "config_path", "d6/db4/namespaceidhan_1_1config.html#af3cf4f8c29bf2314734da40331f061ae", null ],
       [ "config_updated", "d6/db4/namespaceidhan_1_1config.html#a18febcb5aabb4a56de67713a84a730ef", null ]
     ] ],
     [ "constants", "dd/d68/namespaceidhan_1_1constants.html", [

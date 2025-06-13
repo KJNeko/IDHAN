@@ -29,10 +29,13 @@ var namespaceidhan_1_1api =
     [ "createTagID", "db/de4/namespaceidhan_1_1api.html#aa95dd9ce1bae49e2026b3e35f5732694", null ],
     [ "createTags", "db/de4/namespaceidhan_1_1api.html#ad2dbcc2f24b2b0231516095201fbbfb8", null ],
     [ "createUnknownMimeResponse", "db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662", null ],
+    [ "findBestParser", "db/de4/namespaceidhan_1_1api.html#a66609d0a54b6e5567449f1d476237fa2", null ],
+    [ "findValidClusterName", "db/de4/namespaceidhan_1_1api.html#a72eed9ef97e8cee612f339764a180c41", null ],
     [ "generateFailedTagSearch", "db/de4/namespaceidhan_1_1api.html#a138152f9ed047fc7bfc451afc1e801c2", null ],
     [ "getIDFromPair", "db/de4/namespaceidhan_1_1api.html#a2f937f8d622dc8b90cc208c22d48dc26", null ],
     [ "getIDsFromPairs", "db/de4/namespaceidhan_1_1api.html#a907f3b8605d75230b6819ed7591b55a7", null ],
     [ "getInfo", "db/de4/namespaceidhan_1_1api.html#a85878ebd97047f3031fd9a034c8fcc21", null ],
+    [ "getMetadata", "db/de4/namespaceidhan_1_1api.html#aa258730bbed044fe0b7b6fb85f0b9b01", null ],
     [ "getNamespaceID", "db/de4/namespaceidhan_1_1api.html#a5863313a89c85bc795a38c91ad5e5a32", null ],
     [ "getSimilarTags", "db/de4/namespaceidhan_1_1api.html#a07b3b98d9215bf0f090b3b5a20f55bab", null ],
     [ "getSubtagID", "db/de4/namespaceidhan_1_1api.html#a94aa5bd233ef2b0a5144c35bc79adcb7", null ],
@@ -44,6 +47,7 @@ var namespaceidhan_1_1api =
     [ "rebuildClusterInfo", "db/de4/namespaceidhan_1_1api.html#ac2b6c3009496ef7e863e9275138b8e79", null ],
     [ "searchTagID", "db/de4/namespaceidhan_1_1api.html#ad1f6bd3d7cc9d790bf08906e6349d7e4", null ],
     [ "tryParseRecordMetadata", "db/de4/namespaceidhan_1_1api.html#a5b889643255ab25a33cb2d7fff515d36", null ],
+    [ "updateRecordMetadata", "db/de4/namespaceidhan_1_1api.html#a3ac86649c7feefdbff09fb6504960458", null ],
     [ "clusters", "db/de4/namespaceidhan_1_1api.html#a924d5376354e87972839e4482da48ccc", null ],
     [ "mtx", "db/de4/namespaceidhan_1_1api.html#a076726f6ebc82ecf58b8ad14354acc77", null ]
 ];

@@ -21,9 +21,11 @@ var NAVTREEINDEX0 =
 "d0/d19/structidhan_1_1api_1_1TagPair.html#ac83e615df59cf319fb6a339394efa436":[5,0,1,0,10,2],
 "d0/d19/structidhan_1_1api_1_1TagPair.html#ac83e615df59cf319fb6a339394efa436":[6,0,0,0,9,2],
 "d0/d30/md_README.html":[4],
+"d0/d30/md_README.html#autotoc_md10":[4,2],
 "d0/d30/md_README.html#autotoc_md6":[4,0],
-"d0/d30/md_README.html#autotoc_md7":[4,1],
-"d0/d30/md_README.html#autotoc_md8":[4,2],
+"d0/d30/md_README.html#autotoc_md7":[4,0,0],
+"d0/d30/md_README.html#autotoc_md8":[4,0,1],
+"d0/d30/md_README.html#autotoc_md9":[4,1],
 "d0/d3e/indexes_8cpp.html":[7,0,2,0,3,0,1],
 "d0/d4c/classidhan_1_1ServerContext.html":[5,0,1,29],
 "d0/d4c/classidhan_1_1ServerContext.html":[6,0,0,22],
@@ -247,7 +249,5 @@ var NAVTREEINDEX0 =
 "d2/df1/core_2search_2records_8hpp_source.html":[7,0,2,0,1,2,0],
 "d2/df2/IDHANClient_2src_2tags_2addTags_8cpp.html":[7,0,1,1,2,3],
 "d2/dff/getArrayParameters_8hpp.html":[7,0,2,0,0,2,7],
-"d2/dff/getArrayParameters_8hpp_source.html":[7,0,2,0,0,2,7],
-"d3/d0d/ServerContext_8cpp.html":[7,0,2,0,16],
-"d3/d20/namespaceidhan_1_1internal.html":[5,0,1,7]
+"d2/dff/getArrayParameters_8hpp_source.html":[7,0,2,0,0,2,7]
 };
