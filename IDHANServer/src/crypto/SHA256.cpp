@@ -44,7 +44,7 @@ std::string SHA256::hex() const
 std::expected< SHA256, drogon::HttpResponsePtr > SHA256::fromHex( const std::string& str )
 {
 	// 0xFF = 0b11111111
-	FGL_ASSERT( str.size() == ( 256 / 8 * 2 ), "Hex string must be exactly 64 characters log" );
+	// FGL_ASSERT( str.size() == ( 256 / 8 * 2 ), "Hex string must be exactly 64 characters log" );
 	if ( str.size() != ( 256 / 8 * 2 ) )
 		return std::unexpected( createBadRequest( "Hex string must be exactly 64 characters long" ) );
 
