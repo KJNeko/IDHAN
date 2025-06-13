@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <string>
 
+#include "Config.hpp"
+
 #ifndef IDHAN_DEFAULT_POSTRES_PORT
 constexpr std::uint16_t IDHAN_DEFAULT_POSTGRES_PORT { 5432 };
 #endif
@@ -16,11 +18,11 @@ namespace idhan
 
 struct ConnectionArguments
 {
-	std::string hostname { "" };
-	std::uint16_t port { IDHAN_DEFAULT_POSTGRES_PORT };
-	std::string dbname { "idhan-db" };
-	std::string user { "idhan" };
-	std::string password { "" };
+	std::string hostname { config::get< std::string >( "database", "host", "localhost" ) };
+	std::uint16_t port { config::get< std::uint16_t >( "database", "port", IDHAN_DEFAULT_POSTGRES_PORT ) };
+	std::string dbname { config::get< std::string >( "database", "database", "idhan-db" ) };
+	std::string user { config::get< std::string >( "database", "user", "idhan" ) };
+	std::string password { config::get< std::string >( "database", "password", "" ) };
 	bool testmode { false };
 	//! If true then the server will use stdout to log things.
 	bool use_stdout { false };

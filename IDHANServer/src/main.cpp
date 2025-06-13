@@ -23,12 +23,6 @@ int main( int argc, char** argv )
 
 #endif
 
-	QCommandLineOption use_stdout_option { "use_stdout",
-		                                   "Enables the logger to output to stdout (Default: 1)",
-		                                   "flag" };
-	use_stdout_option.setDefaultValue( "1" );
-	parser.addOption( use_stdout_option );
-
 	QCommandLineOption log_level { "log_level",
 		                           "Dictates the log level used (trace, debug, info, warning, error, critical",
 		                           "level" };
@@ -45,26 +39,58 @@ int main( int argc, char** argv )
 	pg_host.setDefaultValue( "localhost" );
 	parser.addOption( pg_host );
 
+	QCommandLineOption config_location { "config", "The location for the config file", "config_location" };
+	config_location.setDefaultValue( "./config.json" );
+	parser.addOption( config_location );
+
 	QCoreApplication app { argc, argv };
 	app.setApplicationName( "IDHAN" );
 
 	parser.process( app );
 
-	spdlog::set_level( spdlog::level::debug );
-
 	idhan::ConnectionArguments arguments {};
 	arguments.user = parser.value( pg_user ).toStdString();
 	arguments.hostname = parser.value( pg_host ).toStdString();
 
-	if ( !parser.isSet( "log_level" ) )
+	if ( parser.isSet( config_location ) )
 	{
-		spdlog::set_level( spdlog::level::info );
+		const std::filesystem::path location { parser.value( config_location ).toStdString() };
+		idhan::config::setLocation( location );
+	}
+
+	if ( !parser.isSet( log_level ) )
+	{
+		const auto level { idhan::config::get< std::string >( "logging", "level", "info" ) };
+
+		if ( level == "trace" )
+			spdlog::set_level( spdlog::level::trace );
+		else if ( level == "trace" )
+			spdlog::set_level( spdlog::level::trace );
+		else if ( level == "debug" )
+			spdlog::set_level( spdlog::level::debug );
+		else if ( level == "info" )
+			spdlog::set_level( spdlog::level::info );
+		else if ( level == "warning" || level == "warn" )
+			spdlog::set_level( spdlog::level::warn );
+		else if ( level == "error" )
+			spdlog::set_level( spdlog::level::err );
+		else if ( level == "critical" )
+			spdlog::set_level( spdlog::level::critical );
+		else
+		{
+			// invalid level, throw
+			spdlog::
+				critical( "Invalid log level, Expected one of: (trace, debug, info, (warning/warn), error, critical)" );
+			std::terminate();
+		}
 	}
 	else
 	{
 		const auto level { parser.value( log_level ).toStdString() };
 
 		if ( level == "trace" )
+			spdlog::set_level( spdlog::level::trace );
+		else if ( level == "trace" )
 			spdlog::set_level( spdlog::level::trace );
 		else if ( level == "debug" )
 			spdlog::set_level( spdlog::level::debug );
@@ -85,6 +111,10 @@ int main( int argc, char** argv )
 		}
 	}
 
+	spdlog::trace( "Logging level trace" );
+	spdlog::debug( "Logging level debug" );
+	spdlog::info( "Logging level info" );
+
 #ifndef NDEBUG
 	if ( parser.isSet( testmode_option ) )
 	{
@@ -93,11 +123,6 @@ int main( int argc, char** argv )
 #else
 	arguments.testmode = false;
 #endif
-
-	if ( parser.value( use_stdout_option ).toInt() > 0 )
-	{
-		arguments.use_stdout = true;
-	}
 
 	idhan::ServerContext context { arguments };
 
