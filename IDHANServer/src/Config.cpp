@@ -9,7 +9,7 @@
 namespace idhan::config
 {
 
-inline static constexpr std::string_view config_path { "./config.toml" };
+inline static std::string config_path { "./config.toml" };
 static std::mutex config_mtx;
 static toml::parse_result config;
 //! If true then the config should not be retrieved from disk again
@@ -37,6 +37,14 @@ void saveConfig( const toml::parse_result& modified_config )
 	}
 
 	config = std::move( modified_config );
+}
+
+void setLocation( std::filesystem::path path )
+{
+	if ( !std::filesystem::exists( path ) ) throw std::runtime_error( "Path given for config file does not exist" );
+	config_path = path;
+
+	loadConfig();
 }
 
 } // namespace idhan::config

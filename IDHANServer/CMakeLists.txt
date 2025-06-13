@@ -85,5 +85,17 @@ endforeach ()
 add_custom_target(IDHANMimeParsers DEPENDS ${PARSER_OUTPUTS})
 add_dependencies(IDHANServer IDHANMimeParsers)
 
-add_dependencies(IDHANServer IDHANPremadeModules)
+set(CONFIG_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/example.toml")
+set(CONFIG_OUTPUT "${CMAKE_BINARY_DIR}/bin/config.toml")
 
+add_custom_command(
+		OUTPUT ${CONFIG_OUTPUT}
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CONFIG_SOURCE} ${CONFIG_OUTPUT}
+		DEPENDS ${CONFIG_SOURCE}
+		COMMENT "Copying example.toml to binary directory"
+)
+
+add_custom_target(IDHANConfig DEPENDS ${CONFIG_OUTPUT})
+add_dependencies(IDHANServer IDHANConfig)
+
+add_dependencies(IDHANServer IDHANPremadeModules)

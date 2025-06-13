@@ -1,0 +1,19 @@
+[database]
+#host = "localhost"
+#port = 5432
+#user = "idhan"
+#password = "your_password_here"
+#database = "idhan-db"
+
+
+[server]
+#host = "0.0.0.0"
+#port = 16609
+#threads = 4
+#use_stdout = true
+
+[logging]
+# Loggin level: trace, debug, info, warn, error, critical
+level = "info"
+# Logging output location
+#file = "./logs/idhan.log"

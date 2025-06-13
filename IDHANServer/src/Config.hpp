@@ -21,15 +21,17 @@ static std::optional< T > get( std::string_view group, std::string_view name )
 }
 
 template < typename T >
-static T get( std::string_view group, std::string_view name, const T default_value )
+static T get( std::string_view group, std::string_view name, const auto default_value )
 {
 	const auto config { loadConfig() };
 
-	return config[ group ][ name ].value_or< T >( default_value );
+	const auto config_value { config[ group ][ name ].value< T >() };
+	if ( config_value.has_value() ) return config_value.value();
+	return default_value;
 }
 
 template < typename T >
-static void set( T& value, const std::string_view group, std::string_view name )
+static void set( const T& value, const std::string_view group, std::string_view name )
 {
 	const auto config { loadConfig() };
 
@@ -37,5 +39,7 @@ static void set( T& value, const std::string_view group, std::string_view name )
 
 	saveConfig( config );
 }
+
+void setLocation( std::filesystem::path path );
 
 } // namespace idhan::config
