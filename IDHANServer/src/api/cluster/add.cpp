@@ -13,13 +13,55 @@
 namespace idhan::api
 {
 
+/**
+ * @brief Finds a valid cluster name, If the cluster name is already taken, then we'll append a unique identifier to the end of it
+ */
+drogon::Task< std::string > findValidClusterName( const std::string desired_name, drogon::orm::DbClientPtr db )
+{
+	const auto result {
+		co_await db->execSqlCoro( "SELECT cluster_name FROM file_clusters WHERE cluster_name = $1", desired_name )
+	};
+
+	log::info( "Desired name: {}", desired_name );
+
+	if ( result.empty() )
+	{
+		log::info( "Cluster name {} not in use, Trying it", desired_name );
+		co_return desired_name;
+	}
+
+	const auto mark_start { desired_name.find_first_of( ":" ) };
+
+	if ( mark_start == std::string::npos )
+	{
+		co_return co_await findValidClusterName( std::format( "{}: 1", desired_name ), db );
+	}
+
+	const auto mark_number_str { desired_name.substr( mark_start + 1 ) };
+
+	try
+	{
+		const auto mark_number { std::stoull( mark_number_str ) };
+		log::info( "Got UID: {}", mark_number_str );
+		const auto filtered_name { desired_name.substr( 0, mark_start ) };
+
+		co_return co_await findValidClusterName( std::format( "{}: {}", filtered_name, mark_number + 1 ), db );
+	}
+	catch ( std::invalid_argument& arg )
+	{
+		// NOOP
+	}
+
+	co_return co_await findValidClusterName( std::format( "{}: 1", desired_name ), db );
+}
+
 ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };
 
 	auto transaction { co_await db->newTransactionCoro() };
 
-	const auto request_json_ptr { request->getJsonObject() };
+	const auto& request_json_ptr { request->getJsonObject() };
 
 	if ( request_json_ptr == nullptr ) co_return createBadRequest( "No json data supplied" );
 
@@ -101,10 +143,14 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	}
 	const std::string cluster_name { request_json[ "name" ].asString() };
 
+	const std::string fixed_cluster_name { co_await findValidClusterName( cluster_name, db ) };
+
+	log::info( "Creating cluster {} -> {}", cluster_name, fixed_cluster_name );
+
 	// insert the data
 	const auto insert_result { co_await transaction->execSqlCoro(
 		"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) RETURNING cluster_id",
-		cluster_name,
+		fixed_cluster_name,
 		target_path.string() ) };
 
 	if ( insert_result.empty() )
@@ -113,6 +159,10 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 		co_return createInternalError( "Failed to insert new cluster into table" );
 	}
+
+	// Set the request cluster_name to match the new name
+	auto& json_object_m { *request->getJsonObject() };
+	json_object_m[ "name" ] = fixed_cluster_name;
 
 	const auto cluster_id { insert_result[ 0 ][ 0 ].as< ClusterID >() };
 
