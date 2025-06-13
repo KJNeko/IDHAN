@@ -5,6 +5,14 @@ It's designed in a way that is compatible with most booru models. Currently the 
 
 # Getting started
 
+## How to build
+
+For detailed build instructions, please refer to our [Build Guide](docs/build.md).
+
+## How to configure
+
+For configuration options and setup, check out our [Configuration Guide](docs/config.md).
+
 # Clients
 
 # Server docs
