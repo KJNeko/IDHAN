@@ -16,56 +16,16 @@ namespace idhan::api
 {
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	tryParseRecordMetadata( const RecordID record_id, drogon::orm::DbClientPtr db )
+	updateRecordMetadata( const RecordID record_id, drogon::orm::DbClientPtr db, MetadataInfo metadata )
 {
-	const auto mime_info { co_await db->execSqlCoro(
-		"SELECT mime.name AS mime_name FROM file_info JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
-		record_id ) };
-
-	if ( mime_info.empty() )
-		co_return std::unexpected( createInternalError( "No mime info for record {}", record_id ) );
-
-	auto parsers {
-		modules::ModuleLoader::instance().getParserFor( mime_info[ 0 ][ "mime_name" ].as< std::string >() )
-	};
-
-	if ( parsers.empty() )
-	{
-		co_return std::unexpected(
-			createInternalError( "No parser for mime {}", mime_info[ 0 ][ "mime_name" ].as< std::string >() ) );
-	}
-
-	auto& parser { parsers.front() };
-
-	const auto record_path { co_await helpers::getRecordPath( record_id, db ) };
-
-	if ( !record_path.has_value() ) co_return std::unexpected( record_path.error() );
-
-	if ( !std::filesystem::exists( record_path.value() ) )
-		co_return std::unexpected( createInternalError( "File for record {} was missing", record_id ) );
-
-	FileMappedData data { record_path.value() };
-
-	const auto metadata {
-		parser->parseImage( data.data(), data.length(), mime_info[ 0 ][ "mime_name" ].as< std::string >() )
-	};
-
-	if ( !metadata.has_value() )
-	{
-		const ModuleError error { metadata.error() };
-		auto ret { createInternalError( "Module failed to parse data: {}", error ) };
-		co_return std::unexpected( ret );
-	}
-
-	const auto simple_type { metadata.value().m_simple_type };
+	const auto simple_type { metadata.m_simple_type };
 
 	Json::Value json {};
 	Json::Reader reader {};
-	if ( !metadata.value().m_extra.empty() )
+	if ( !metadata.m_extra.empty() )
 	{
-		if ( !reader.parse( metadata.value().m_extra, json ) )
-			co_return std::
-				unexpected( createBadRequest( "Failed to parse metadata \"{}\"", metadata.value().m_extra ) );
+		if ( !reader.parse( metadata.m_extra, json ) )
+			co_return std::unexpected( createBadRequest( "Failed to parse metadata \"{}\"", metadata.m_extra ) );
 	}
 	else
 	{
@@ -83,7 +43,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	{
 		case SimpleMimeType::IMAGE:
 			{
-				const auto& image_metadata { std::get< MetadataInfoImage >( metadata.value().m_metadata ) };
+				const auto& image_metadata { std::get< MetadataInfoImage >( metadata.m_metadata ) };
 				co_await db->execSqlCoro(
 					"INSERT INTO image_metadata (record_id, width, height, channels) VALUES ($1, $2, $3, $4) "
 					"ON CONFLICT (record_id) DO UPDATE SET width = $2, height = $3, channels = $4",
@@ -105,6 +65,70 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	co_return {};
 }
 
+drogon::Task< std::expected< std::pair< std::shared_ptr< MetadataModuleI >, std::string >, drogon::HttpResponsePtr > >
+	findBestParser( const RecordID record_id, drogon::orm::DbClientPtr db )
+{
+	// Get the mime info needed to determine which parser to use
+	const auto mime_info { co_await db->execSqlCoro(
+		"SELECT mime.name AS mime_name FROM file_info JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
+		record_id ) };
 
+	if ( mime_info.empty() )
+		co_return std::unexpected( createInternalError( "No mime info for record {}", record_id ) );
+
+	auto parsers {
+		modules::ModuleLoader::instance().getParserFor( mime_info[ 0 ][ "mime_name" ].as< std::string >() )
+	};
+
+	if ( parsers.empty() )
+	{
+		co_return std::unexpected(
+			createInternalError( "No parser for mime {}", mime_info[ 0 ][ "mime_name" ].as< std::string >() ) );
+	}
+
+	co_return std::make_pair( parsers.front(), mime_info[ 0 ][ "mime_name" ].as< std::string >() );
+}
+
+drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
+	getMetadata( const RecordID record_id, const std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db )
+{
+	auto parser_e { co_await findBestParser( record_id, db ) };
+	if ( !parser_e.has_value() ) co_return std::unexpected( parser_e.error() );
+
+	auto& [ parser, mime_name ] = parser_e.value();
+
+	const auto metadata { parser->parseImage( data->data(), data->length(), mime_name ) };
+
+	if ( !metadata.has_value() )
+	{
+		const ModuleError error { metadata.error() };
+		auto ret { createInternalError( "Module failed to parse data: {}", error ) };
+		co_return std::unexpected( ret );
+	}
+
+	co_return metadata.value();
+}
+
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
+	tryParseRecordMetadata( const RecordID record_id, drogon::orm::DbClientPtr db )
+{
+	// Get the file info
+	const auto record_path { co_await helpers::getRecordPath( record_id, db ) };
+
+	if ( !record_path.has_value() ) co_return std::unexpected( record_path.error() );
+
+	if ( !std::filesystem::exists( record_path.value() ) )
+		co_return std::unexpected( createInternalError( "File for record {} was missing", record_id ) );
+
+	std::shared_ptr< FileMappedData > data { std::make_shared< FileMappedData >( record_path.value() ) };
+
+	const auto metadata { co_await getMetadata( record_id, data, db ) };
+
+	if ( !metadata.has_value() ) co_return std::unexpected( metadata.error() );
+
+	co_await updateRecordMetadata( record_id, db, metadata.value() );
+
+	co_return {};
+}
 
 } // namespace idhan::api
