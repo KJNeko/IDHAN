@@ -2,12 +2,14 @@
 // Created by kj16609 on 3/20/25.
 //
 
+#include "MetadataModule.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "logging/log.hpp"
 #include "metadata/FileMappedData.hpp"
+#include "metadata/parseMetadata.hpp"
 #include "mime/FileInfo.hpp"
 
 namespace idhan::api
@@ -48,6 +50,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	// Triggers the mime to be retested for all files
 	const auto rescan_mime { request->getOptionalParameter< bool >( "rescan_mime" ).value_or( false ) };
+
+	const auto scan_metadata { request->getOptionalParameter< bool >( "scan_metadata" ).value_or( false ) };
 
 	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( path_str ) )
 	{
@@ -126,6 +130,16 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 				co_await db
 					->execSqlCoro( "UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", cluster_id, record_id );
+			}
+		}
+
+		if ( scan_metadata )
+		{
+			const auto metadata { co_await getMetadata( record_id, data, db ) };
+
+			if ( metadata.has_value() )
+			{
+				co_await updateRecordMetadata( record_id, db, metadata.value() );
 			}
 		}
 
