@@ -13,6 +13,19 @@
         .info {
             margin-left: 15px;
         }
+
+        .status {
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .status.connected {
+            color: #28a745;
+        }
+
+        .status.disconnected {
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -23,6 +36,8 @@
         <p>Server version: <span id="idhan-version">Getting version...</span></p>
         <p>API Version: <span id="api-version">Getting version...</span></p>
         <p>Mimicked Hydrus API version: <span id="hydrus-version">Getting version...</span></p>
+        <p>Status: <span class="status" id="connection-status">Connecting...</span></p>
+        <p>Last heartbeat: <span id="heartbeat-message">Waiting for heartbeat...</span></p>
     </div>
 </div>
 <script>
@@ -55,7 +70,37 @@
         }
     }
 
+    // WebSocket connection
+    function setupWebSocket() {
+        const ws = new WebSocket(`ws://${window.location.hostname}` + (window.location.port ? `:${window.location.port}` : '') + `/heartbeat`);
+        const statusElement = document.getElementById('connection-status');
+        const heartbeatElement = document.getElementById('heartbeat-message');
+
+        ws.onopen = function () {
+            statusElement.textContent = 'Connected';
+            statusElement.className = 'status connected';
+        };
+
+        ws.onmessage = function (event) {
+            heartbeatElement.textContent = event.data;
+        };
+
+        ws.onclose = function () {
+            statusElement.textContent = 'Disconnected - Reconnecting...';
+            statusElement.className = 'status disconnected';
+            // Try to reconnect after 5 seconds
+            setTimeout(setupWebSocket, 10000);
+        };
+
+        ws.onerror = function (error) {
+            console.error('WebSocket error:', error);
+            statusElement.textContent = 'Error - Check console for details';
+            statusElement.className = 'status disconnected';
+        };
+    }
+
     fetchVersion();
+    setupWebSocket();
 </script>
 </body>
 </html>
