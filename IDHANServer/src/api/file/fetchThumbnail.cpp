@@ -92,8 +92,15 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 		}
 	}
 
-	co_return drogon::HttpResponse::
-		newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG );
+	auto response {
+		drogon::HttpResponse::newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG )
+	};
+
+	const auto duration { std::chrono::hours( 1 ) };
+
+	helpers::addFileCacheHeader( response, duration );
+
+	co_return response;
 }
 
 } // namespace idhan::api

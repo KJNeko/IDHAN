@@ -95,7 +95,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::fetchFile( drogon::HttpR
 
 	auto response { drogon::HttpResponse::newFileResponse( path.string(), begin, end - begin ) };
 
-	helpers::addFileCacheHeader( response );
+	helpers::addFileCacheHeader(
+		response /* max_age is set to 1 year, Since this is likely to never be changed by IDHAN */ );
 
 	co_return response;
 }

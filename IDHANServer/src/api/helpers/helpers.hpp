@@ -20,7 +20,11 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
 
 std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainID( drogon::HttpRequestPtr request );
 
-void addFileCacheHeader( drogon::HttpResponsePtr sharedPtr );
+constexpr std::chrono::seconds default_max_age {
+	std::chrono::duration_cast< std::chrono::seconds >( std::chrono::years( 1 ) )
+};
+
+void addFileCacheHeader( drogon::HttpResponsePtr sharedPtr, std::chrono::seconds max_age = default_max_age );
 
 std::string pgEscape( const std::string& s );
 
