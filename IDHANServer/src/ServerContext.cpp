@@ -73,40 +73,49 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 {
 	constexpr std::string_view server_format_str { "[%Y-%m-%d %H:%M:%S.%e] [SERVER] [%^%l%$] [thread %t] %v" };
 
+	if ( !arguments.use_stdout ) log::warn( "use_stdout is false, This will be the last IDHAN output via stdout!" );
+
+	constexpr std::size_t KiB { 1024 };
+	constexpr std::size_t MiB { KiB * 1024 };
+
+	// logs all info & errors to a specific file
+	auto info_file_logger {
+		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( "./log/info.log", MiB * 2, 4, true )
+	};
+
+	info_file_logger->set_pattern( std::string( server_format_str ) );
+	info_file_logger->set_level( spdlog::level::info );
+
+	// logs all errors to a specific file
+	auto error_file_logger {
+		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( "./log/error.log", MiB * 16, 4, true )
+	};
+
+	error_file_logger->set_pattern( std::string( server_format_str ) );
+	error_file_logger->set_level( spdlog::level::err );
+
 	// stdout log disabled
 	if ( !arguments.use_stdout )
 	{
-		auto file_logger { spdlog::rotating_logger_mt( "file_logger", "./log/info.log", 1048576 * 10, 512, true ) };
-		file_logger->set_level( spdlog::level::info );
-
-		file_logger->set_pattern( std::string( server_format_str ) );
-
-		spdlog::set_default_logger( file_logger );
-		trantor::Logger::enableSpdLog( file_logger );
-
-		return file_logger;
-	}
-	else
-	{
-		auto file_logger {
-			std::make_shared< spdlog::sinks::rotating_file_sink_mt >( "./log/info.log", 1048576 * 10, 512, true )
-		};
-
-		auto stdout_logger { std::make_shared< spdlog::sinks::stdout_color_sink_mt >() };
-
-		auto logger {
-			std::make_shared< spdlog::logger >( "multi_sink", spdlog::sinks_init_list { stdout_logger, file_logger } )
-		};
+		auto logger { std::make_shared<
+			spdlog::logger >( "file_loggers", spdlog::sinks_init_list { info_file_logger, error_file_logger } ) };
 
 		logger->set_pattern( std::string( server_format_str ) );
 
-#ifndef NDEBUG
-		// file_logger->set_level( spdlog::level::info );
-		// stdout_logger->set_level( spdlog::level::debug );
-		// logger->set_level( spdlog::level::debug );
-#endif
+		spdlog::set_default_logger( logger );
+		trantor::Logger::enableSpdLog( logger );
 
-		// spdlog::set_default_logger( logger );
+		return logger;
+	}
+	else
+	{
+		auto stdout_logger { std::make_shared< spdlog::sinks::stdout_color_sink_mt >() };
+
+		auto logger { std::make_shared< spdlog::logger >(
+			"multi_sink", spdlog::sinks_init_list { stdout_logger, info_file_logger, error_file_logger } ) };
+
+		logger->set_pattern( std::string( server_format_str ) );
+
 		trantor::Logger::enableSpdLog( logger );
 		return logger;
 	}
@@ -181,9 +190,7 @@ void ServerContext::run()
 {
 	log::server::info( "Starting runtime" );
 
-#ifndef NDEBUG
 	trantor::Logger::setOutputFunction( trantorHook, []() {} );
-#endif
 
 	log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
 	log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );

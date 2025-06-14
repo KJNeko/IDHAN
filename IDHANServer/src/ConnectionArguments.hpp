@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <spdlog/spdlog.h>
+
 #include <filesystem>
 #include <string>
 
@@ -25,7 +27,8 @@ struct ConnectionArguments
 	std::string password { config::get< std::string >( "database", "password", "" ) };
 	bool testmode { false };
 	//! If true then the server will use stdout to log things.
-	bool use_stdout { false };
+	bool use_stdout { true };
+	spdlog::level::level_enum log_level { spdlog::level::info };
 
 	std::string format() const;
 };
