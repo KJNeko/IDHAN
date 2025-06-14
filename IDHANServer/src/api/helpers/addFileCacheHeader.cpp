@@ -7,9 +7,9 @@
 namespace idhan::api::helpers
 {
 
-void addFileCacheHeader( drogon::HttpResponsePtr ptr )
+void addFileCacheHeader( drogon::HttpResponsePtr ptr, std::chrono::seconds max_age )
 {
-	ptr->addHeader( "Cache-control", "immutable, max-age=31536000" );
+	ptr->addHeader( "Cache-Control", std::format( "private, immutable, max-age={}", max_age.count() ) );
 }
 
 } // namespace idhan::api::helpers
