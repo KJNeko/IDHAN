@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION createTagMappingsDomain() RETURNS TRIGGER
 AS
 $$
 DECLARE
-    domain_id INTEGER;
+    domain_id SMALLINT;
 BEGIN
     FOR domain_id IN SELECT tag_domain_id FROM tag_domains
         LOOP
@@ -13,20 +13,21 @@ BEGIN
 
             -- mappings
             EXECUTE FORMAT(
-                    'CREATE TABLE IF NOT EXISTS tag_mappings_%s PARTITION OF tag_mappings FOR VALUES IN (%s)',
-                    domain_id, domain_id);
+                    'CREATE TABLE IF NOT EXISTS tag_mappings_%1$s PARTITION OF tag_mappings FOR VALUES IN (%1$s)',
+                    domain_id);
             -- aliases
             EXECUTE FORMAT(
-                    'CREATE TABLE IF NOT EXISTS tag_aliases_%s PARTITION OF tag_aliases FOR VALUES IN (%s)',
-                    domain_id, domain_id);
+                    'CREATE TABLE IF NOT EXISTS tag_aliases_%1$s PARTITION OF tag_aliases FOR VALUES IN (%1$s)',
+                    domain_id);
             -- siblings
             EXECUTE FORMAT(
-                    'CREATE TABLE IF NOT EXISTS tag_siblings_%s PARTITION OF tag_siblings FOR VALUES IN (%s)',
-                    domain_id, domain_id);
+                    'CREATE TABLE IF NOT EXISTS tag_siblings_%1$s PARTITION OF tag_siblings FOR VALUES IN (%1$s)',
+                    domain_id);
             -- parents
             EXECUTE FORMAT(
-                    'CREATE TABLE IF NOT EXISTS tag_parents_%s PARTITION OF tag_parents FOR VALUES IN (%s)',
-                    domain_id, domain_id);
+                    'CREATE TABLE IF NOT EXISTS tag_parents_%1$s PARTITION OF tag_parents FOR VALUES IN (%1$s)',
+                    domain_id);
+
         end loop;
     RETURN NEW;
 END;
