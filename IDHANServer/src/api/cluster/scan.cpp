@@ -43,7 +43,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	*/
 
 	// Trust the filename, Ignore the hash given by the file
-	const auto trust_filename { request->getOptionalParameter< bool >( "trust_filename" ).value_or( false ) };
+	const auto scan_hash { request->getOptionalParameter< bool >( "scan_hash" ).value_or( true ) };
 
 	// Scans the mime if the file has not been scanned previously
 	const auto scan_mime { request->getOptionalParameter< bool >( "scan_mime" ).value_or( true ) };
@@ -61,8 +61,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( data->extension() == ".thumbnail" ) continue;
 
-		const auto sha256_e { trust_filename ? SHA256::fromHex( data->name() ) :
-			                                   SHA256::hash( data->data(), data->length() ) };
+		const auto sha256_e { scan_hash ? SHA256::hash( data->data(), data->length() ) :
+			                              SHA256::fromHex( data->name() ) };
 
 		if ( !sha256_e.has_value() )
 		{
