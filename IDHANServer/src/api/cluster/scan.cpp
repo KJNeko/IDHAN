@@ -61,8 +61,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( data->extension() == ".thumbnail" ) continue;
 
-		const auto sha256_e { trust_filename ? SHA256::hash( data->data(), data->length() ) :
-			                                   SHA256::fromHex( data->name() ) };
+		const auto sha256_e { trust_filename ? SHA256::fromHex( data->name() ) :
+			                                   SHA256::hash( data->data(), data->length() ) };
 
 		if ( !sha256_e.has_value() )
 		{
