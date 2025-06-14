@@ -122,8 +122,8 @@ void HydrusImporter::copyHydrusInfo()
 
 	sync.addFuture( std::move( tag_domains ) );
 	// sync.addFuture( std::move( tag_future ) );
-	// sync.addFuture( std::move( parents_future ) );
-	// sync.addFuture( std::move( aliases_future ) );
+	sync.addFuture( std::move( parents_future ) );
+	sync.addFuture( std::move( aliases_future ) );
 	sync.addFuture( std::move( hash_future ) );
 	sync.addFuture( std::move( mappings_future ) );
 	sync.addFuture( std::move( files_future ) );
