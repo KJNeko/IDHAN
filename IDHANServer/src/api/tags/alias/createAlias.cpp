@@ -56,9 +56,27 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagAliases( drogon::H
 			alias_id ) );
 	}
 
-	for ( auto& awaiter : awaiters ) co_await awaiter;
+	Json::Value out_json {};
 
-	co_return drogon::HttpResponse::newHttpResponse();
+	for ( auto& awaiter : awaiters )
+	{
+		try
+		{
+			co_await awaiter;
+		}
+		catch ( drogon::orm::DrogonDbException& e )
+		{
+			log::error( "Failed to create alias: {}", e.base().what() );
+
+			Json::Value value {};
+
+			out_json.append( e.base().what() );
+
+			co_return createBadRequest( "Failed to create alias: {}", e.base().what() );
+		}
+	}
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
 }
 
 } // namespace idhan::api
