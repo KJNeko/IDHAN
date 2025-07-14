@@ -86,6 +86,16 @@ RowGenerator< TArgs... > buildQuery( TransactionBaseCoro tr, std::string_view sq
 		sqlite3_prepare_v2( tr.db(), sql.data(), static_cast< int >( sql.size() + 1 ), &stmt, &unused )
 	};
 
+	struct StmtDeleter
+	{
+		void operator()( sqlite3_stmt* stmt ) const
+		{
+			if ( stmt != nullptr ) sqlite3_finalize( stmt );
+		}
+	};
+
+	std::unique_ptr< sqlite3_stmt, StmtDeleter > stmt_ptr { stmt };
+
 	if ( unused != nullptr && strlen( unused ) > 0 )
 	{
 		const std::string_view leftovers { unused };
@@ -138,7 +148,10 @@ RowGenerator< TArgs... > buildQuery( TransactionBaseCoro tr, std::string_view sq
 		step_ret =
 			sqlite3_step( stmt ); // if this is SQLITE_DONE then we are finished, Extracting this step will cause issues
 
-		if ( step_ret == SQLITE_DONE ) co_return std::move( tuple );
+		if ( step_ret == SQLITE_DONE )
+		{
+			co_return std::move( tuple );
+		}
 
 		co_yield std::move( tuple );
 	}
@@ -175,6 +188,8 @@ class Query
 
 	// End operator (Returns an non-existant end)
 	std::unreachable_sentinel_t end() const { return {}; }
+
+	Query() = default;
 };
 
 } // namespace idhan::hydrus
