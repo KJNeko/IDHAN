@@ -3,7 +3,6 @@
 //
 
 #include "HydrusImporter.hpp"
-#include "fgl/ProgressBar.hpp"
 #include "hydrus_constants.hpp"
 #include "idhan/logging/logger.hpp"
 #include "splitTag.hpp"
@@ -56,9 +55,6 @@ void HydrusImporter::copyParents()
 
 		std::size_t max_count { 0 };
 		client_tr << std::format( "SELECT count(*) FROM {}", table_name ) >> max_count;
-
-		auto parents_progress { fgl::ProgressBar::getInstance().addProgressBar( table_name ) };
-		parents_progress->setMax( max_count );
 
 		client_tr << std::format( "SELECT child_tag_id, parent_tag_id FROM {}", table_name ) >>
 			[ &getHydrusTag, &tags ]( const std::size_t child_id, const std::size_t parent_id )

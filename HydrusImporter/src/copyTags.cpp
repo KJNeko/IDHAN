@@ -9,7 +9,6 @@
 #include <QtConcurrentRun>
 
 #include "HydrusImporter.hpp"
-#include "fgl/ProgressBar.hpp"
 #include "idhan/logging/logger.hpp"
 #include "sqlitehelper/Transaction.hpp"
 
@@ -130,19 +129,11 @@ void HydrusImporter::copyTags()
 
 	tag_pairs.resize( group_size );
 
-	auto& progress_bar { fgl::ProgressBar::getInstance() };
-
-	auto process_progress { progress_bar.addProgressBar( "Tags Processed" ) };
-	auto submit_progress { progress_bar.addProgressBar( "Tags Submitted" ) };
-
 	std::size_t max_count;
 
 	transaction
 			<< "SELECT DISTINCT count(*) FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags ORDER BY length(namespace), namespace_id ASC"
 		>> max_count;
-
-	process_progress->setMax( max_count );
-	submit_progress->setMax( max_count );
 
 	transaction
 			<< "SELECT DISTINCT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags ORDER BY length(namespace), namespace_id ASC"
@@ -157,8 +148,6 @@ void HydrusImporter::copyTags()
 		tag_pairs[ current_id ].second = subtag_text;
 
 		current_id++;
-
-		process_progress->inc();
 
 		if ( current_id >= group_size )
 		{
