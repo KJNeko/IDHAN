@@ -16,11 +16,12 @@
 #include <filesystem>
 #include <vector>
 
-#include "../../../dependencies/drogon/orm_lib/tests/sqlite3/Blog.h"
 #include "IDHANTypes.hpp"
 #include "decodeHex.hpp"
+#include "drogon/orm/DbClient.h"
 #include "drogon/orm/Field.h"
 #include "drogon/orm/SqlBinder.h"
+#include "drogon/utils/coroutine.h"
 
 namespace idhan
 {
@@ -42,6 +43,14 @@ class SHA256
 
   public:
 
+	SHA256( const drogon::orm::Field& field );
+
+	SHA256& operator=( const SHA256& other ) = default;
+	SHA256( const SHA256& other ) = default;
+
+	SHA256& operator=( SHA256&& other ) = default;
+	SHA256( SHA256&& other ) = default;
+
 	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; }
 
 	//! Supplied so we can work with drogon until I figure out how the fuck to overload their operators.
@@ -53,7 +62,21 @@ class SHA256
 		return data;
 	}
 
-	SHA256( const drogon::orm::Field& field );
+	bool operator==( const SHA256& other ) const
+	{
+		return std::memcmp( m_data.data(), other.m_data.data(), m_data.size() ) == 0;
+	}
+
+	bool operator<( const SHA256& other ) const
+	{
+		for ( std::size_t i = 0; i < m_data.size(); ++i )
+		{
+			const auto& a = m_data[ i ];
+			const auto& b = other.m_data[ i ];
+			if ( a < b ) return true;
+		}
+		return false;
+	}
 
 	std::string hex() const;
 
