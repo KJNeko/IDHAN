@@ -13,23 +13,27 @@ namespace idhan::logging
 struct ScopedTimer
 {
 	std::string name;
-	const std::chrono::high_resolution_clock::time_point start;
 
-	ScopedTimer( const std::string& str ) : name( str ), start( std::chrono::high_resolution_clock::now() )
+	using Clock = std::chrono::high_resolution_clock;
+	using TimePoint = std::chrono::time_point< Clock >;
+
+	const TimePoint start;
+
+	ScopedTimer( const std::string& str ) : name( str ), start( Clock::now() )
 	{
 		// Print start time
-		log::info( "{} started", name );
+		// log::info( "{} started", name );
 	}
 
 	~ScopedTimer()
 	{
-		const auto end { std::chrono::high_resolution_clock::now() };
-		const auto duration { std::chrono::duration_cast< std::chrono::milliseconds >( end - start ).count() };
+		const auto end { Clock::now() };
+		const auto duration_s { std::chrono::duration_cast< std::chrono::seconds >( end - start ).count() };
+		const auto duration_ms { std::chrono::duration_cast< std::chrono::milliseconds >( end - start ).count() };
 
 		//Print in seconds
-		const auto seconds { duration / 1000.0 };
 
-		log::info( "{} took {} seconds", name, seconds );
+		if ( duration_s > 1 || duration_ms > 500 ) log::info( "{} took {}s {}ms", name, duration_s, duration_ms % 1000 );
 	}
 };
 

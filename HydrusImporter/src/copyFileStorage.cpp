@@ -21,7 +21,7 @@ void HydrusImporter::copyFileStorage()
 
 		if ( location == "client_files" ) //edge case handling for defaults
 		{
-			m_client->createFileCluster(
+			IDHANClient::instance().createFileCluster(
 				( m_path / "client_files" ).string(),
 				std::format( "Hydrus cluster: {}", counter++ ),
 				byte_limit,
@@ -30,7 +30,7 @@ void HydrusImporter::copyFileStorage()
 		}
 		else
 		{
-			m_client->createFileCluster(
+			IDHANClient::instance().createFileCluster(
 				location, std::format( "Hydrus cluster: {}", counter++ ), byte_limit, weight, true );
 		}
 	};

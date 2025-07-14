@@ -96,3 +96,21 @@ class SHA256
 };
 
 } // namespace idhan
+
+namespace std
+{
+template <>
+struct hash< idhan::SHA256 >
+{
+	std::size_t operator()( const idhan::SHA256& sha ) const noexcept
+	{
+		std::size_t seed = 0;
+		const auto& data = sha.data();
+		for ( const auto& byte : data )
+		{
+			seed ^= std::hash< std::byte >()( byte ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+		}
+		return seed;
+	}
+};
+} // namespace std

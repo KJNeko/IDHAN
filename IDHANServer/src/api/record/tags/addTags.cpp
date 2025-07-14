@@ -8,6 +8,7 @@
 #include "api/helpers/helpers.hpp"
 #include "api/helpers/tags/tags.hpp"
 #include "fgl/defines.hpp"
+#include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
 #include "splitTag.hpp"
 
@@ -160,6 +161,7 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 	addTags( const drogon::HttpRequestPtr request, RecordID record_id )
 {
+	logging::ScopedTimer timer { "addTags" };
 	// the path will contain a record_id
 	// it will also contain a tag_domain_id as a extra parameter, if no parameter is specified, then it will instead use the 'default' domain
 
@@ -192,6 +194,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon::HttpRequestPtr request )
 {
+	logging::ScopedTimer timer { "addMultipleTags" };
 	const auto json_ptr { request->getJsonObject() };
 	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );
 

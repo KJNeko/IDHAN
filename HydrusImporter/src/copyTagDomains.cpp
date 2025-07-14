@@ -25,7 +25,7 @@ void HydrusImporter::copyTagDomains()
 		}
 
 		const std::string str { name };
-		QFuture< TagDomainID > domain_id_future { m_client->createTagDomain( str ) };
+		QFuture< TagDomainID > domain_id_future { IDHANClient::instance().createTagDomain( str ) };
 
 		domain_id_future.waitForFinished();
 

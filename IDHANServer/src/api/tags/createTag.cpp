@@ -12,6 +12,7 @@
 #include "api/helpers/tags/namespaces.hpp"
 #include "api/helpers/tags/subtags.hpp"
 #include "fgl/defines.hpp"
+#include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
 #include "splitTag.hpp"
 
@@ -141,6 +142,7 @@ std::string pgEscape( const std::string& str )
 drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 	createTags( const std::vector< std::pair< std::string, std::string > >& tag_pairs, drogon::orm::DbClientPtr db )
 {
+	logging::ScopedTimer timer { "createTags" };
 	std::string namespaces { "{" };
 	std::string subtags { "{" };
 
@@ -192,6 +194,7 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 
 drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createBatchedTag( drogon::HttpRequestPtr request )
 {
+	logging::ScopedTimer timer { "createBatchedTag" };
 	// we should have a body
 	const auto input_json { request->jsonObject() };
 
@@ -242,6 +245,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createBatchedTag( drogon::H
 
 drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createSingleTag( drogon::HttpRequestPtr request )
 {
+	logging::ScopedTimer timer { "createSingleTime" };
 	if ( request == nullptr )
 	{
 		log::error( "/tags/create: null request" );

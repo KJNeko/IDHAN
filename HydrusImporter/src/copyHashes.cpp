@@ -41,12 +41,12 @@ void HydrusImporter::copyHashes()
 		thread_sync.addFuture(
 			QtConcurrent::run(
 				&pool,
-				[ &sync_counter, &processed, group_size, client = m_client ]( auto data ) -> void
+				[ &sync_counter, &processed, group_size ]( auto data ) -> void
 				{
 					QEventLoop loop {};
 
 					QFutureWatcher< std::vector< RecordID > > data_watcher {};
-					data_watcher.setFuture( client->createRecords( std::move( data ) ) );
+					data_watcher.setFuture( IDHANClient::instance().createRecords( std::move( data ) ) );
 
 					QFutureWatcher< void > watcher {};
 					QObject::connect( &watcher, &QFutureWatcher< void >::finished, &loop, &QEventLoop::quit );

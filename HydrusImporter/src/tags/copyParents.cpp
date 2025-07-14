@@ -3,6 +3,7 @@
 //
 
 #include "HydrusImporter.hpp"
+#include "fgl/ProgressBar.hpp"
 #include "hydrus_constants.hpp"
 #include "idhan/logging/logger.hpp"
 #include "splitTag.hpp"
@@ -45,7 +46,7 @@ void HydrusImporter::copyParents()
 
 		const std::string table_name { std::format( "current_tag_parents_{}", service_id ) };
 
-		const QFuture< TagDomainID > domain_id_future { m_client->getTagDomain( name ) };
+		const QFuture< TagDomainID > domain_id_future { IDHANClient::instance().getTagDomain( name ) };
 
 		const auto domain_id { domain_id_future.result() };
 
@@ -53,8 +54,14 @@ void HydrusImporter::copyParents()
 
 		std::vector< TagPair > tags {};
 
+		std::size_t max_count { 0 };
+		client_tr << std::format( "SELECT count(*) FROM {}", table_name ) >> max_count;
+
+		auto parents_progress { fgl::ProgressBar::getInstance().addProgressBar( table_name ) };
+		parents_progress->setMax( max_count );
+
 		client_tr << std::format( "SELECT child_tag_id, parent_tag_id FROM {}", table_name ) >>
-			[ &getHydrusTag, this, domain_id, &tags ]( const std::size_t child_id, const std::size_t parent_id )
+			[ &getHydrusTag, &tags ]( const std::size_t child_id, const std::size_t parent_id )
 		{
 			const auto parent_pair { getHydrusTag( parent_id ) };
 			const auto child_pair { getHydrusTag( child_id ) };
@@ -63,7 +70,7 @@ void HydrusImporter::copyParents()
 			tags.emplace_back( child_pair );
 		};
 
-		QFuture< std::vector< TagID > > tag_ids_future { m_client->createTags( std::move( tags ) ) };
+		QFuture< std::vector< TagID > > tag_ids_future { IDHANClient::instance().createTags( std::move( tags ) ) };
 
 		tag_ids_future.waitForFinished();
 
@@ -80,12 +87,12 @@ void HydrusImporter::copyParents()
 
 			if ( pairs.size() > 1024 * 32 )
 			{
-				m_client->createParentRelationship( domain_id, std::move( pairs ) ).waitForFinished();
+				IDHANClient::instance().createParentRelationship( domain_id, std::move( pairs ) ).waitForFinished();
 				pairs.clear();
 			}
 		}
 
-		m_client->createParentRelationship( domain_id, std::move( pairs ) ).waitForFinished();
+		IDHANClient::instance().createParentRelationship( domain_id, std::move( pairs ) ).waitForFinished();
 
 		logging::info( "Finished copying parents for {}", table_name );
 	};
