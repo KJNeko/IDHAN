@@ -60,6 +60,8 @@ void HydrusImporter::copyHydrusInfo()
 	// auto tags_processed { std::make_shared< std::atomic< bool > >( false ) };
 	auto domains_processed { std::make_shared< std::atomic< bool > >( false ) };
 	auto hashes_processed { std::make_shared< std::atomic< bool > >( false ) };
+	auto aliases_processed { std::make_shared< std::atomic< bool > >( false ) };
+	auto parents_processed { std::make_shared< std::atomic< bool > >( false ) };
 
 	QFuture< void > tag_domains { QtConcurrent::run(
 		[ this, domains_processed ]()
@@ -80,19 +82,23 @@ void HydrusImporter::copyHydrusInfo()
 	*/
 
 	QFuture< void > parents_future { QtConcurrent::run(
-		[ this, domains_processed ]
+		[ this, domains_processed, parents_processed, aliases_processed ]
 		{
 			if ( !domains_processed->load() ) domains_processed->wait( false );
+			// Prevents a bunch of triggers from happening during large insertions
+			if ( !aliases_processed->load() ) aliases_processed->wait( false );
 			// if ( !tags_processed->load() ) tags_processed->wait( false );
 			this->copyParents();
+			parents_processed->store( true );
 		} ) };
 
 	QFuture< void > aliases_future { QtConcurrent::run(
-		[ this, domains_processed ]
+		[ this, domains_processed, aliases_processed ]
 		{
 			if ( !domains_processed->load() ) domains_processed->wait( false );
 			// if ( !tags_processed->load() ) tags_processed->wait( false );
 			this->copySiblings();
+			aliases_processed->store( true );
 		} ) };
 
 	QFuture< void > hash_future { QtConcurrent::run(
@@ -104,10 +110,11 @@ void HydrusImporter::copyHydrusInfo()
 		} ) };
 
 	QFuture< void > mappings_future { QtConcurrent::run(
-		[ hashes_processed, this, domains_processed ]()
+		[ this, hashes_processed, domains_processed, parents_processed, aliases_processed ]()
 		{
+			if ( !parents_processed->load() ) parents_processed->wait( false );
+			if ( !aliases_processed->load() ) aliases_processed->wait( false );
 			if ( !domains_processed->load() ) domains_processed->wait( false );
-			// if ( !tags_processed->load() ) tags_processed->wait( false );
 			if ( !hashes_processed->load() ) hashes_processed->wait( false );
 
 			this->copyMappings();
