@@ -9,8 +9,18 @@
 #include <filesystem>
 #include <sqlite3.h>
 
+#ifndef __cpp_deleted_function
+#define __cpp_deleted_function 0
+#endif
+
+#if __cpp_deleted_function == 202403L
 template < typename T >
-[[nodiscard]] int bindParameter( sqlite3_stmt*, const T&, const int ) noexcept = delete;
+[[nodiscard]] int bindParameter( sqlite3_stmt*, const T&, int ) noexcept =
+	delete( "Needs bindParameter to be specialized for type T" );
+#else
+template < typename T >
+[[nodiscard]] int bindParameter( sqlite3_stmt*, const T&, int ) noexcept = delete;
+#endif
 
 template < typename T >
 	requires std::is_integral_v< T >
@@ -97,13 +107,23 @@ int bindParameters( sqlite3_stmt* stmt, const T& arg0, const TArgs&... args ) no
 	return SQLITE_OK;
 }
 
+#ifndef __cpp_pack_indexing
+#define __cpp_pack_indexing 0
+#endif
+
+constexpr auto SQLITE_START_INDEX { 1 };
+
 template < typename... TArgs >
 int bindParameters( sqlite3_stmt* stmt, const TArgs&... args ) noexcept
 {
 	if constexpr ( sizeof...( args ) == 0 )
 		return SQLITE_OK;
 	else if constexpr ( sizeof...( args ) == 1 )
-		return bindParameter( stmt, args..., 0 );
+#if __cpp_pack_indexing == 202311L
+		return bindParameter( stmt, args...[ 0 ], SQLITE_START_INDEX );
+#else
+		return bindParameter( stmt, args..., SQLITE_START_INDEX );
+#endif
 	else
-		return bindParameters< 0, TArgs... >( stmt, args... );
+		return bindParameters< SQLITE_START_INDEX, TArgs... >( stmt, args... );
 }
