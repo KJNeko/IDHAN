@@ -69,6 +69,8 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );
 	}
+
+	FGL_UNREACHABLE();
 }
 
 ResponseTask IDHANRecordAPI::createRecord( const drogon::HttpRequestPtr request )

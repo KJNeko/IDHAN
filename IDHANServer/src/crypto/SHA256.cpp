@@ -55,7 +55,9 @@ std::expected< SHA256, drogon::HttpResponsePtr > SHA256::fromHex( const std::str
 		bytes[ i / 2 ] = static_cast< std::byte >( decodeHexCharacters( str[ i ], str[ i + 1 ] ) );
 	}
 
-	return SHA256( std::move( bytes ) );
+	SHA256 sha256 { std::move( bytes ) };
+
+	return sha256;
 }
 
 SHA256 SHA256::fromBuffer( const std::vector< std::byte >& data )
