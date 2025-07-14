@@ -1,12 +1,9 @@
 var searchData=
 [
-  ['id_0',['id',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#afa38c78de59fffeb2c2448ee45fa4f4d',1,'idhan::mime::MimeInfo']]],
-  ['idhan_5fdefault_5fport_1',['IDHAN_DEFAULT_PORT',['../dd/dcf/namespaceidhan.html#a6efaa7ff194234490095eccedd770735',1,'idhan']]],
-  ['idhan_5fdefault_5fpostgres_5fport_2',['IDHAN_DEFAULT_POSTGRES_PORT',['../d4/d71/ConnectionArguments_8hpp.html#a981244a1304cb33078f1a9b010594111',1,'ConnectionArguments.hpp']]],
-  ['index_5fsql_3',['index_sql',['../db/d01/namespaceidhan_1_1db.html#a1993588097de14fcdbdd414523d0d0f5',1,'idhan::db']]],
-  ['info_4',['info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#aa5e27d015a31d12814bf3308eb41e367',1,'idhan::mime::MimeInfo']]],
-  ['inital_5fquery_5',['inital_query',['../dc/dba/structidhan_1_1SearchBuilder.html#adbd1eed9d1aeb60e514455d471f3a182',1,'idhan::SearchBuilder']]],
-  ['initfunc_6',['initFunc',['../d0/d85/classidhan_1_1modules_1_1ModuleHolder.html#a9ee933bc20c604dfe93e7d6ba6727798',1,'idhan::modules::ModuleHolder']]],
-  ['invalid_5fmime_5fid_7',['INVALID_MIME_ID',['../dd/d68/namespaceidhan_1_1constants.html#af2ffeb0dfdbb702b153807024d13f160',1,'idhan::constants']]],
-  ['item_5fcount_8',['item_count',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#a36e9ca478d7b0414f11322b8ba34d1a1',1,'idhan::IDHANClient::TagInfo']]]
+  ['height_0',['height',['../d6/d56/structidhan_1_1mime_1_1Resolution.html#a3b2d61adc8af46c526cc343f9536d84b',1,'idhan::mime::Resolution']]],
+  ['hit_5fcount_1',['hit_count',['../dc/dbd/structidhan_1_1TagCache_1_1CacheItem.html#a9a410c6de869f7778164ee742cfefdcd',1,'idhan::TagCache::CacheItem']]],
+  ['hostname_2',['hostname',['../de/d07/structidhan_1_1ConnectionArguments.html#a7dc41c815c884266f303c54ef5c27c50',1,'idhan::ConnectionArguments']]],
+  ['hyapiauthname_3',['HyAPIAuthName',['../d2/d18/namespaceidhan_1_1hyapi.html#a720a04837a0444fe8b1ee98d2759cc93',1,'idhan::hyapi']]],
+  ['hydrus_5fmimiced_5fapi_5fversion_4',['HYDRUS_MIMICED_API_VERSION',['../dd/d85/hydrus__version_8hpp.html#ab20930693103023802163bbd74c292bb',1,'hydrus_version.hpp']]],
+  ['hydrus_5fmimiced_5fversion_5',['HYDRUS_MIMICED_VERSION',['../dd/d85/hydrus__version_8hpp.html#a678076fb21e94e502c0765ba9f928139',1,'hydrus_version.hpp']]]
 ];

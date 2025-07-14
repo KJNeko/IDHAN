@@ -25,6 +25,7 @@ var hierarchy =
     [ "idhan::FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", null ],
     [ "idhan::mime::FileMimeInfo", "db/de8/structidhan_1_1mime_1_1FileMimeInfo.html", null ],
     [ "std::formatter< QString >", "d9/dce/structstd_1_1formatter_3_01QString_01_4.html", null ],
+    [ "std::hash< idhan::SHA256 >", "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html", null ],
     [ "drogon::HttpController", null, [
       [ "idhan::api::ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", null ],
       [ "idhan::api::IDHANApi", "df/def/classidhan_1_1api_1_1IDHANApi.html", null ],
@@ -40,7 +41,6 @@ var hierarchy =
       [ "idhan::hyapi::HyAPIAuth", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html", null ]
     ] ],
     [ "idhan::IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", null ],
-    [ "idhan::IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", null ],
     [ "idhan::mime::ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", [
       [ "idhan::mime::AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", null ]
     ] ],
@@ -73,5 +73,8 @@ var hierarchy =
     [ "idhan::IDHANClient::TagRelationshipInfo", "d9/d81/structidhan_1_1IDHANClient_1_1TagRelationshipInfo.html", null ],
     [ "idhan::TagSearch", "d9/d46/classidhan_1_1TagSearch.html", null ],
     [ "idhan::VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", null ],
-    [ "idhan::mime::VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", null ]
+    [ "idhan::mime::VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", null ],
+    [ "drogon::WebSocketController", null, [
+      [ "idhan::api::IDHANStatsWS", "df/d27/classidhan_1_1api_1_1IDHANStatsWS.html", null ]
+    ] ]
 ];

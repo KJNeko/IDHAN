@@ -1,9 +1,7 @@
 var searchData=
 [
-  ['self_5fname_0',['self_name',['../da/d27/structidhan_1_1IDHANClientConfig.html#a2834f4ef7f668daddad0669f6343cb91',1,'idhan::IDHANClientConfig']]],
-  ['server_1',['server',['../d3/d25/structidhan_1_1VersionInfo.html#a32117cfd9342a5e51f0c8e5747edf1f3',1,'idhan::VersionInfo']]],
-  ['size_2',['size',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#afec7fe924ab12bc1a18022c50e703197',1,'idhan::api::ClusterInfo::size'],['../d8/d58/structidhan_1_1FileInfo.html#af911271ba36c766b86296e955a2326c6',1,'idhan::FileInfo::size']]],
-  ['start_3',['start',['../de/d50/structidhan_1_1logging_1_1ScopedTimer.html#a1376167c5c3e12ab1013ed9c06c7db9a',1,'idhan::logging::ScopedTimer']]],
-  ['store_5ftime_4',['store_time',['../d8/d58/structidhan_1_1FileInfo.html#a225acb610a25164bcb81e474debc42f5',1,'idhan::FileInfo']]],
-  ['str_5',['str',['../d9/d69/structidhan_1_1VersionInfo_1_1ServerVersion.html#a8308c0aef8644e62667b3eceeaf6372e',1,'idhan::VersionInfo::ServerVersion::str'],['../d6/d85/structidhan_1_1VersionInfo_1_1ApiVersion.html#ae0560923d392101fb46e68752deb43b7',1,'idhan::VersionInfo::ApiVersion::str']]]
+  ['ratio_0',['ratio',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a8103d35d073e41e522a97a9b76d01147',1,'idhan::api::ClusterInfo']]],
+  ['read_5fonly_1',['read_only',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a72e7430fde38cd491e8ac54510ea5dca',1,'idhan::api::ClusterInfo']]],
+  ['records_2',['records',['../dc/dba/structidhan_1_1SearchBuilder.html#a5c868cef0ad77b163881a21942943cde',1,'idhan::SearchBuilder']]],
+  ['resolution_3',['resolution',['../de/da8/structidhan_1_1mime_1_1VideoInfo.html#a23fc9d8cc0e8d923b0d71db1eda6f165',1,'idhan::mime::VideoInfo::resolution'],['../d3/d75/structidhan_1_1mime_1_1ImageInfo.html#a579eac1988a95720dc4664b4a2462314',1,'idhan::mime::ImageInfo::resolution']]]
 ];

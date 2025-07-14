@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.13.2"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: idhan::IDHANClientConfig Struct Reference</title>
+    <title>IDHAN: IDHANServer/src/api/IDHANStatsWS.cpp File Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('da/d27/structidhan_1_1IDHANClientConfig.html','../../'); initResizable(true); });
+$(function(){initNavTree('df/d1c/IDHANStatsWS_8cpp.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -111,94 +111,32 @@ $(function(){initNavTree('da/d27/structidhan_1_1IDHANClientConfig.html','../../'
 
 <div class="header">
   <div class="summary">
-<a href="#pub-attribs">Public Attributes</a> &#124;
-<a href="../../da/d1a/structidhan_1_1IDHANClientConfig-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">idhan::IDHANClientConfig Struct Reference</div></div>
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
+  <div class="headertitle"><div class="title">IDHANStatsWS.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-
-<p><code>#include &lt;<a class="el" href="../../dc/d23/IDHANClient_8hpp_source.html">IDHANClient.hpp</a>&gt;</code></p>
-<table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
-Public Attributes</h2></td></tr>
-<tr class="memitem:a37c577166ebe90c4f5ecad994182c9a0" id="r_a37c577166ebe90c4f5ecad994182c9a0"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a37c577166ebe90c4f5ecad994182c9a0">hostname</a></td></tr>
-<tr class="separator:a37c577166ebe90c4f5ecad994182c9a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac993def7251cbce1d142f1ed76fd464b" id="r_ac993def7251cbce1d142f1ed76fd464b"><td class="memItemLeft" align="right" valign="top">std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac993def7251cbce1d142f1ed76fd464b">port</a></td></tr>
-<tr class="separator:ac993def7251cbce1d142f1ed76fd464b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2834f4ef7f668daddad0669f6343cb91" id="r_a2834f4ef7f668daddad0669f6343cb91"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2834f4ef7f668daddad0669f6343cb91">self_name</a></td></tr>
-<tr class="memdesc:a2834f4ef7f668daddad0669f6343cb91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name of this application.  <br /></td></tr>
-<tr class="separator:a2834f4ef7f668daddad0669f6343cb91"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac59fbc82c0f3158ad824f2b559e447ee" id="r_ac59fbc82c0f3158ad824f2b559e447ee"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac59fbc82c0f3158ad824f2b559e447ee">use_ssl</a> { false }</td></tr>
-<tr class="separator:ac59fbc82c0f3158ad824f2b559e447ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<div class="textblock"><code>#include &quot;<a class="el" href="../../de/d15/IDHANStatsWS_8hpp_source.html">IDHANStatsWS.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d4/d3d/log_8hpp_source.html">logging/log.hpp</a>&quot;</code><br />
+</div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a37600855f0a340587333ca110670a6c1" id="r_a37600855f0a340587333ca110670a6c1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a37600855f0a340587333ca110670a6c1">idhan::api::sendStatusJson</a> (const drogon::WebSocketConnectionPtr &amp;wsConnPtr)</td></tr>
+<tr class="separator:a37600855f0a340587333ca110670a6c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Member Data Documentation</h2>
-<a id="a37c577166ebe90c4f5ecad994182c9a0" name="a37c577166ebe90c4f5ecad994182c9a0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a37c577166ebe90c4f5ecad994182c9a0">&#9670;&#160;</a></span>hostname</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string idhan::IDHANClientConfig::hostname</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ac993def7251cbce1d142f1ed76fd464b" name="ac993def7251cbce1d142f1ed76fd464b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac993def7251cbce1d142f1ed76fd464b">&#9670;&#160;</a></span>port</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::uint16_t idhan::IDHANClientConfig::port</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a2834f4ef7f668daddad0669f6343cb91" name="a2834f4ef7f668daddad0669f6343cb91"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2834f4ef7f668daddad0669f6343cb91">&#9670;&#160;</a></span>self_name</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string idhan::IDHANClientConfig::self_name</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Name of this application. </p>
-
-</div>
-</div>
-<a id="ac59fbc82c0f3158ad824f2b559e447ee" name="ac59fbc82c0f3158ad824f2b559e447ee"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac59fbc82c0f3158ad824f2b559e447ee">&#9670;&#160;</a></span>use_ssl</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool idhan::IDHANClientConfig::use_ssl { false }</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<hr/>The documentation for this struct was generated from the following file:<ul>
-<li>IDHANClient/include/idhan/<a class="el" href="../../dc/d23/IDHANClient_8hpp_source.html">IDHANClient.hpp</a></li>
-</ul>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></li><li class="navelem"><a class="el" href="../../da/d27/structidhan_1_1IDHANClientConfig.html">IDHANClientConfig</a></li>
+    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8b56e136226ae89f755dd9aa547a23fc.html">api</a></li><li class="navelem"><a class="el" href="../../df/d1c/IDHANStatsWS_8cpp.html">IDHANStatsWS.cpp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

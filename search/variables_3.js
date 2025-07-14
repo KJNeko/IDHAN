@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['extension_0',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension']]],
-  ['extra_5finfo_1',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]]
+  ['dbname_0',['dbname',['../de/d07/structidhan_1_1ConnectionArguments.html#a7dfd95fc91bbb52f20d2d9e4554ca306',1,'idhan::ConnectionArguments']]],
+  ['default_5fmax_5fage_1',['default_max_age',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8d12688bc58bee790b5874ba6baa1db0',1,'idhan::api::helpers']]],
+  ['default_5fmime_5ftype_2',['DEFAULT_MIME_TYPE',['../d4/d9c/namespaceidhan_1_1mime.html#a8833a95d2fa3b2b39b73de784b958262',1,'idhan::mime']]],
+  ['deinitfunc_3',['deinitFunc',['../d0/d85/classidhan_1_1modules_1_1ModuleHolder.html#a00436b13ddf11d7caa817da41efdd2a2',1,'idhan::modules::ModuleHolder']]]
 ];

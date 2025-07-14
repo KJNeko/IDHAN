@@ -10,6 +10,7 @@ var annotated_dup =
         [ "IDHANMaintenanceAPI", "d8/d54/classidhan_1_1api_1_1IDHANMaintenanceAPI.html", "d8/d54/classidhan_1_1api_1_1IDHANMaintenanceAPI" ],
         [ "IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI" ],
         [ "IDHANSearchAPI", "d5/da5/classidhan_1_1api_1_1IDHANSearchAPI.html", "d5/da5/classidhan_1_1api_1_1IDHANSearchAPI" ],
+        [ "IDHANStatsWS", "df/d27/classidhan_1_1api_1_1IDHANStatsWS.html", "df/d27/classidhan_1_1api_1_1IDHANStatsWS" ],
         [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ],
         [ "TagPair", "d0/d19/structidhan_1_1api_1_1TagPair.html", "d0/d19/structidhan_1_1api_1_1TagPair" ]
       ] ],
@@ -47,7 +48,6 @@ var annotated_dup =
       [ "FileInfo", "d8/d58/structidhan_1_1FileInfo.html", "d8/d58/structidhan_1_1FileInfo" ],
       [ "FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", "db/de9/classidhan_1_1FileMappedData" ],
       [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
-      [ "IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", "da/d27/structidhan_1_1IDHANClientConfig" ],
       [ "IDHANException", "dd/d1d/structidhan_1_1IDHANException.html", "dd/d1d/structidhan_1_1IDHANException" ],
       [ "InvalidRequestBody", "d2/d81/structidhan_1_1InvalidRequestBody.html", null ],
       [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],
@@ -63,7 +63,8 @@ var annotated_dup =
       [ "TagSearch", "d9/d46/classidhan_1_1TagSearch.html", "d9/d46/classidhan_1_1TagSearch" ],
       [ "VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", "d3/d25/structidhan_1_1VersionInfo" ]
     ] ],
-    [ "std", null, [
-      [ "formatter< QString >", "d9/dce/structstd_1_1formatter_3_01QString_01_4.html", "d9/dce/structstd_1_1formatter_3_01QString_01_4" ]
+    [ "std", "d8/dcc/namespacestd.html", [
+      [ "formatter< QString >", "d9/dce/structstd_1_1formatter_3_01QString_01_4.html", "d9/dce/structstd_1_1formatter_3_01QString_01_4" ],
+      [ "hash< idhan::SHA256 >", "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html", "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4" ]
     ] ]
 ];

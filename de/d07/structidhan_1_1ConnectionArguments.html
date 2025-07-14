@@ -139,9 +139,11 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a4a2d1b376ea0924b732391cb4e215a2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a832a9898eccb5cd477f4c02e378637df" id="r_a832a9898eccb5cd477f4c02e378637df"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a832a9898eccb5cd477f4c02e378637df">testmode</a> { false }</td></tr>
 <tr class="separator:a832a9898eccb5cd477f4c02e378637df"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8a5bff98fbf308282cdba26e959915b4" id="r_a8a5bff98fbf308282cdba26e959915b4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8a5bff98fbf308282cdba26e959915b4">use_stdout</a> { false }</td></tr>
+<tr class="memitem:a8a5bff98fbf308282cdba26e959915b4" id="r_a8a5bff98fbf308282cdba26e959915b4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8a5bff98fbf308282cdba26e959915b4">use_stdout</a> { true }</td></tr>
 <tr class="memdesc:a8a5bff98fbf308282cdba26e959915b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">If true then the server will use stdout to log things.  <br /></td></tr>
 <tr class="separator:a8a5bff98fbf308282cdba26e959915b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2de027ae682b9990d9601734b0085e0" id="r_ac2de027ae682b9990d9601734b0085e0"><td class="memItemLeft" align="right" valign="top">spdlog::level::level_enum&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac2de027ae682b9990d9601734b0085e0">log_level</a> { spdlog::level::info }</td></tr>
+<tr class="separator:ac2de027ae682b9990d9601734b0085e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
 <a id="ae1aacfc7f7d3b854d9811c4fe0a2a7c8" name="ae1aacfc7f7d3b854d9811c4fe0a2a7c8"></a>
@@ -184,6 +186,20 @@ Public Attributes</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">std::string idhan::ConnectionArguments::hostname { <a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b">config::get</a>&lt; std::string &gt;( &quot;database&quot;, &quot;host&quot;, &quot;localhost&quot; ) }</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac2de027ae682b9990d9601734b0085e0" name="ac2de027ae682b9990d9601734b0085e0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac2de027ae682b9990d9601734b0085e0">&#9670;&#160;</a></span>log_level</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">spdlog::level::level_enum idhan::ConnectionArguments::log_level { spdlog::level::info }</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -239,7 +255,7 @@ Public Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool idhan::ConnectionArguments::use_stdout { false }</td>
+          <td class="memname">bool idhan::ConnectionArguments::use_stdout { true }</td>
         </tr>
       </table>
 </div><div class="memdoc">

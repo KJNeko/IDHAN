@@ -6,6 +6,7 @@ var dir_8b56e136226ae89f755dd9aa547a23fc =
     [ "jobs", "dir_6e74b4ec5a1a3d45747d69ae137de1d6.html", "dir_6e74b4ec5a1a3d45747d69ae137de1d6" ],
     [ "record", "dir_d58859b02cb88531b9ec027a398b4ce3.html", "dir_d58859b02cb88531b9ec027a398b4ce3" ],
     [ "search", "dir_e04a1ae10351b4defd3799abea39e29c.html", "dir_e04a1ae10351b4defd3799abea39e29c" ],
+    [ "stats", "dir_591c70c2161a19d6178e308b3b93a1a1.html", "dir_591c70c2161a19d6178e308b3b93a1a1" ],
     [ "tags", "dir_484b39b0a198af60834e458a13690619.html", "dir_484b39b0a198af60834e458a13690619" ],
     [ "ClusterAPI.cpp", "d6/db1/ClusterAPI_8cpp.html", "d6/db1/ClusterAPI_8cpp" ],
     [ "ClusterAPI.hpp", "d0/ddc/ClusterAPI_8hpp.html", "d0/ddc/ClusterAPI_8hpp" ],
@@ -17,6 +18,8 @@ var dir_8b56e136226ae89f755dd9aa547a23fc =
     [ "IDHANMaintenanceAPI.hpp", "dc/d0d/IDHANMaintenanceAPI_8hpp.html", "dc/d0d/IDHANMaintenanceAPI_8hpp" ],
     [ "IDHANRecordAPI.hpp", "d9/d8d/IDHANRecordAPI_8hpp.html", "d9/d8d/IDHANRecordAPI_8hpp" ],
     [ "IDHANSearchAPI.hpp", "d7/d99/IDHANSearchAPI_8hpp.html", "d7/d99/IDHANSearchAPI_8hpp" ],
+    [ "IDHANStatsWS.cpp", "df/d1c/IDHANStatsWS_8cpp.html", "df/d1c/IDHANStatsWS_8cpp" ],
+    [ "IDHANStatsWS.hpp", "de/d15/IDHANStatsWS_8hpp.html", "de/d15/IDHANStatsWS_8hpp" ],
     [ "IDHANTagAPI.hpp", "d4/d83/IDHANTagAPI_8hpp.html", "d4/d83/IDHANTagAPI_8hpp" ],
     [ "tagSearch.cpp", "df/dfd/tagSearch_8cpp.html", null ],
     [ "version.cpp", "d5/d1f/version_8cpp.html", "d5/d1f/version_8cpp" ]

@@ -1,13 +1,15 @@
 var namespaceidhan_1_1api =
 [
     [ "helpers", "d5/d86/namespaceidhan_1_1api_1_1helpers.html", [
-      [ "addFileCacheHeader", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#abe9ee9868275b04d234173e68960e98c", null ],
+      [ "addFileCacheHeader", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a21736c13cc2c8b4eae90106f3c474420", null ],
       [ "createRecord", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a9e7a1155daf6a5d745c5de632119569a", null ],
       [ "getRecordPath", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a9730b21072636e81689ac4abd9460e62", null ],
       [ "getTagDomainID", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8b9593b6063381a5aa3319e5536f4b59", null ],
+      [ "massCreateRecord", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a6333bcb5ca7772ce6cd0e487d5b6e060", null ],
       [ "pgArrayify", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a84d151b5914e745fde8868e4e4100359", null ],
       [ "pgEscape", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a3052859c86bf8044cefad85d788bed7e", null ],
-      [ "searchRecord", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a3adf4636cabb3ba30e3c656429a71e28", null ]
+      [ "searchRecord", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a3adf4636cabb3ba30e3c656429a71e28", null ],
+      [ "default_max_age", "d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8d12688bc58bee790b5874ba6baa1db0", null ]
     ] ],
     [ "ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", "dc/d8c/classidhan_1_1api_1_1ClusterAPI" ],
     [ "ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", "d8/d94/structidhan_1_1api_1_1ClusterInfo" ],
@@ -17,6 +19,7 @@ var namespaceidhan_1_1api =
     [ "IDHANMaintenanceAPI", "d8/d54/classidhan_1_1api_1_1IDHANMaintenanceAPI.html", "d8/d54/classidhan_1_1api_1_1IDHANMaintenanceAPI" ],
     [ "IDHANRecordAPI", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html", "d1/d26/classidhan_1_1api_1_1IDHANRecordAPI" ],
     [ "IDHANSearchAPI", "d5/da5/classidhan_1_1api_1_1IDHANSearchAPI.html", "d5/da5/classidhan_1_1api_1_1IDHANSearchAPI" ],
+    [ "IDHANStatsWS", "df/d27/classidhan_1_1api_1_1IDHANStatsWS.html", "df/d27/classidhan_1_1api_1_1IDHANStatsWS" ],
     [ "IDHANTagAPI", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html", "d9/de1/classidhan_1_1api_1_1IDHANTagAPI" ],
     [ "TagPair", "d0/d19/structidhan_1_1api_1_1TagPair.html", "d0/d19/structidhan_1_1api_1_1TagPair" ],
     [ "addFileSpecificInfo", "db/de4/namespaceidhan_1_1api.html#a2c5133e2ae97cc28dbd032b9d8b71ab8", null ],
@@ -26,6 +29,8 @@ var namespaceidhan_1_1api =
     [ "createRecordFromJson", "db/de4/namespaceidhan_1_1api.html#a0cd19a5936e8c63a544206a2072250fb", null ],
     [ "createRecordFromOctet", "db/de4/namespaceidhan_1_1api.html#a9f8d566d3390c231c7a322099b5cb47d", null ],
     [ "createRecordFromSHA256", "db/de4/namespaceidhan_1_1api.html#a2b1f02b3bc23d2c1c0a2aa58bca9297e", null ],
+    [ "createRecords", "db/de4/namespaceidhan_1_1api.html#a46ab5dd22e466aff4644c1e1f30b3e21", null ],
+    [ "createRecordsFromJsonArray", "db/de4/namespaceidhan_1_1api.html#a3e7bc2a20244506206dcebed435187c6", null ],
     [ "createTagID", "db/de4/namespaceidhan_1_1api.html#aa95dd9ce1bae49e2026b3e35f5732694", null ],
     [ "createTags", "db/de4/namespaceidhan_1_1api.html#ad2dbcc2f24b2b0231516095201fbbfb8", null ],
     [ "createUnknownMimeResponse", "db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662", null ],
@@ -44,8 +49,10 @@ var namespaceidhan_1_1api =
     [ "getThumbnailPath", "db/de4/namespaceidhan_1_1api.html#a1d950e0c36f8b6c1100124cb8befb982", null ],
     [ "parseRow", "db/de4/namespaceidhan_1_1api.html#a31510b2560a529566f296b66dae97df6", null ],
     [ "pgEscape", "db/de4/namespaceidhan_1_1api.html#a9608422b5225528a0667e370b946a75a", null ],
+    [ "processBatchAndMapRecords", "db/de4/namespaceidhan_1_1api.html#a2e6ffa8b97db890dcb901524eb94b154", null ],
     [ "rebuildClusterInfo", "db/de4/namespaceidhan_1_1api.html#ac2b6c3009496ef7e863e9275138b8e79", null ],
     [ "searchTagID", "db/de4/namespaceidhan_1_1api.html#ad1f6bd3d7cc9d790bf08906e6349d7e4", null ],
+    [ "sendStatusJson", "db/de4/namespaceidhan_1_1api.html#a37600855f0a340587333ca110670a6c1", null ],
     [ "tryParseRecordMetadata", "db/de4/namespaceidhan_1_1api.html#a5b889643255ab25a33cb2d7fff515d36", null ],
     [ "updateRecordMetadata", "db/de4/namespaceidhan_1_1api.html#a3ac86649c7feefdbff09fb6504960458", null ],
     [ "clusters", "db/de4/namespaceidhan_1_1api.html#a924d5376354e87972839e4482da48ccc", null ],

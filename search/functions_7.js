@@ -2,7 +2,7 @@ var searchData=
 [
   ['idealize_0',['idealize',['../d9/d46/classidhan_1_1TagSearch.html#a5df45c90d7ec33096b7835741c69be1b',1,'idhan::TagSearch']]],
   ['idhanauth_1',['IDHANAuth',['../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a4ccc356baf009ccaaac497ed66e402b1',1,'idhan::api::IDHANAuth']]],
-  ['idhanclient_2',['IDHANClient',['../d3/d67/classidhan_1_1IDHANClient.html#a45033f1a9634c426b3777ca3cc59b8ec',1,'idhan::IDHANClient::IDHANClient()=delete'],['../d3/d67/classidhan_1_1IDHANClient.html#a504deb5b5bd3e78aeef4e4597f1bcb6c',1,'idhan::IDHANClient::IDHANClient(const IDHANClientConfig &amp;config)']]],
+  ['idhanclient_2',['IDHANClient',['../d3/d67/classidhan_1_1IDHANClient.html#a5b9bd8be94a08a019b6596365b88bbb0',1,'idhan::IDHANClient::IDHANClient()'],['../d3/d67/classidhan_1_1IDHANClient.html#a7d5c206aac89e8e92151857a6f7eb1d0',1,'idhan::IDHANClient::IDHANClient(const QString &amp;hostname, qint16 port, bool use_ssl=false)']]],
   ['idhanexception_3',['IDHANException',['../dd/d1d/structidhan_1_1IDHANException.html#a093eab8aa4bbbdae046eb5f7e8990cbc',1,'idhan::IDHANException']]],
   ['idhantagapi_4',['IDHANTagAPI',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#a63cb7247addf460d5cbd6b136a500395',1,'idhan::api::IDHANTagAPI']]],
   ['importfile_5',['importFile',['../d1/d95/classidhan_1_1api_1_1IDHANImportAPI.html#a61f3324836e5ec054e7ca4dbe1ea6c23',1,'idhan::api::IDHANImportAPI']]],

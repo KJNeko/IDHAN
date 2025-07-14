@@ -12,8 +12,9 @@ var searchData=
   ['loadfromjson_9',['loadFromJson',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a5b2f54848480ad1ea4e526923b788f14',1,'idhan::mime::MimeIdentifier']]],
   ['loadmodules_10',['loadModules',['../d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html#aaf7327d4193f5f2b5020663241b181ca',1,'idhan::modules::ModuleLoader']]],
   ['log_2ehpp_11',['log.hpp',['../d4/d3d/log_8hpp.html',1,'']]],
-  ['logger_12',['logger',['../d3/d67/classidhan_1_1IDHANClient.html#a76e63026b950354ff34d152c2142e955',1,'idhan::IDHANClient']]],
-  ['logger_2ecpp_13',['logger.cpp',['../d3/d30/logger_8cpp.html',1,'']]],
-  ['logger_2ehpp_14',['logger.hpp',['../d6/da3/logger_8hpp.html',1,'']]],
-  ['logresponse_15',['logResponse',['../d6/d70/namespaceidhan_1_1logging.html#a0491af2b3a3b5869d3bdfd8bcd752ecf',1,'idhan::logging']]]
+  ['log_5flevel_12',['log_level',['../de/d07/structidhan_1_1ConnectionArguments.html#ac2de027ae682b9990d9601734b0085e0',1,'idhan::ConnectionArguments']]],
+  ['logger_13',['logger',['../d3/d67/classidhan_1_1IDHANClient.html#a76e63026b950354ff34d152c2142e955',1,'idhan::IDHANClient']]],
+  ['logger_2ecpp_14',['logger.cpp',['../d3/d30/logger_8cpp.html',1,'']]],
+  ['logger_2ehpp_15',['logger.hpp',['../d6/da3/logger_8hpp.html',1,'']]],
+  ['logresponse_16',['logResponse',['../d6/d70/namespaceidhan_1_1logging.html#a0491af2b3a3b5869d3bdfd8bcd752ecf',1,'idhan::logging']]]
 ];

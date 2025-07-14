@@ -48,7 +48,6 @@ var namespaceidhan =
     [ "FileInfo", "d8/d58/structidhan_1_1FileInfo.html", "d8/d58/structidhan_1_1FileInfo" ],
     [ "FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", "db/de9/classidhan_1_1FileMappedData" ],
     [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
-    [ "IDHANClientConfig", "da/d27/structidhan_1_1IDHANClientConfig.html", "da/d27/structidhan_1_1IDHANClientConfig" ],
     [ "IDHANException", "dd/d1d/structidhan_1_1IDHANException.html", "dd/d1d/structidhan_1_1IDHANException" ],
     [ "InvalidRequestBody", "d2/d81/structidhan_1_1InvalidRequestBody.html", null ],
     [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],
@@ -178,6 +177,7 @@ var namespaceidhan =
       [ "HY_PIXEL_HASH", "dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a9fac97f36c38ef8ad73dd65d35135626", null ],
       [ "HY_BLURHASH", "dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970ac9af64d39829844bca9db8ec4517dae6", null ]
     ] ],
+    [ "addIDHANOptions", "dd/dcf/namespaceidhan.html#ae36b565777c7d28ef6f198cbd978cba5", null ],
     [ "checkContentType", "dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824", null ],
     [ "createBadRequest", "dd/dcf/namespaceidhan.html#a2b9879d901088ee21962581de3439875", null ],
     [ "createConflict", "dd/dcf/namespaceidhan.html#ad91c59f3dfc81d861106eae4858c1333", null ],

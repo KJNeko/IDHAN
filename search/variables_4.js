@@ -1,8 +1,5 @@
 var searchData=
 [
-  ['fast_5fpass_0',['fast_pass',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a12acc5d2211506c46394b0b90e843f32',1,'idhan::mime::MimeIdentifier']]],
-  ['file_5fcount_1',['file_count',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a8467849aa3203b45651a3212546cc3d7',1,'idhan::api::ClusterInfo']]],
-  ['file_5finfo_2',['file_info',['../dc/dba/structidhan_1_1SearchBuilder.html#a6ec061edbd33213fefc1026374be81d4',1,'idhan::SearchBuilder']]],
-  ['file_5frecords_5ffilter_3',['file_records_filter',['../dc/dba/structidhan_1_1SearchBuilder.html#ae01adb00a7dc82324eaebbdcbc22f4f2',1,'idhan::SearchBuilder']]],
-  ['function_5fcreation_5fsql_4',['function_creation_sql',['../db/d01/namespaceidhan_1_1db.html#afb0fe10bf3a302b0d51ca347e533cf2e',1,'idhan::db']]]
+  ['extension_0',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension']]],
+  ['extra_5finfo_1',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]]
 ];

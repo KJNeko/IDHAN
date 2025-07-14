@@ -111,15 +111,16 @@ $(function(){initNavTree('d5/d86/namespaceidhan_1_1api_1_1helpers.html','../../'
 
 <div class="header">
   <div class="summary">
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">idhan::api::helpers Namespace Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:abe9ee9868275b04d234173e68960e98c" id="r_abe9ee9868275b04d234173e68960e98c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe9ee9868275b04d234173e68960e98c">addFileCacheHeader</a> (drogon::HttpResponsePtr ptr)</td></tr>
-<tr class="separator:abe9ee9868275b04d234173e68960e98c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a21736c13cc2c8b4eae90106f3c474420" id="r_a21736c13cc2c8b4eae90106f3c474420"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a21736c13cc2c8b4eae90106f3c474420">addFileCacheHeader</a> (drogon::HttpResponsePtr ptr, std::chrono::seconds max_age)</td></tr>
+<tr class="separator:a21736c13cc2c8b4eae90106f3c474420"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9730b21072636e81689ac4abd9460e62" id="r_a9730b21072636e81689ac4abd9460e62"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::filesystem::path, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9730b21072636e81689ac4abd9460e62">getRecordPath</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a9730b21072636e81689ac4abd9460e62"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8b9593b6063381a5aa3319e5536f4b59" id="r_a8b9593b6063381a5aa3319e5536f4b59"><td class="memItemLeft" align="right" valign="top">std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a>, drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8b9593b6063381a5aa3319e5536f4b59">getTagDomainID</a> (drogon::HttpRequestPtr request)</td></tr>
@@ -129,14 +130,21 @@ Functions</h2></td></tr>
 <tr class="memitem:a84d151b5914e745fde8868e4e4100359" id="r_a84d151b5914e745fde8868e4e4100359"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a84d151b5914e745fde8868e4e4100359"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a84d151b5914e745fde8868e4e4100359">pgArrayify</a> (const std::vector&lt; T &gt; &amp;vec)</td></tr>
 <tr class="separator:a84d151b5914e745fde8868e4e4100359"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6333bcb5ca7772ce6cd0e487d5b6e060" id="r_a6333bcb5ca7772ce6cd0e487d5b6e060"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6333bcb5ca7772ce6cd0e487d5b6e060">massCreateRecord</a> (const std::vector&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &gt; &amp;sha256s, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a6333bcb5ca7772ce6cd0e487d5b6e060"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9e7a1155daf6a5d745c5de632119569a" id="r_a9e7a1155daf6a5d745c5de632119569a"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9e7a1155daf6a5d745c5de632119569a">createRecord</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a9e7a1155daf6a5d745c5de632119569a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3adf4636cabb3ba30e3c656429a71e28" id="r_a3adf4636cabb3ba30e3c656429a71e28"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3adf4636cabb3ba30e3c656429a71e28">searchRecord</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a3adf4636cabb3ba30e3c656429a71e28"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a8d12688bc58bee790b5874ba6baa1db0" id="r_a8d12688bc58bee790b5874ba6baa1db0"><td class="memItemLeft" align="right" valign="top">constexpr std::chrono::seconds&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8d12688bc58bee790b5874ba6baa1db0">default_max_age</a></td></tr>
+<tr class="separator:a8d12688bc58bee790b5874ba6baa1db0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="abe9ee9868275b04d234173e68960e98c" name="abe9ee9868275b04d234173e68960e98c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abe9ee9868275b04d234173e68960e98c">&#9670;&#160;</a></span>addFileCacheHeader()</h2>
+<a id="a21736c13cc2c8b4eae90106f3c474420" name="a21736c13cc2c8b4eae90106f3c474420"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a21736c13cc2c8b4eae90106f3c474420">&#9670;&#160;</a></span>addFileCacheHeader()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -144,8 +152,12 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void idhan::api::helpers::addFileCacheHeader </td>
           <td>(</td>
-          <td class="paramtype">drogon::HttpResponsePtr</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span></td><td>)</td>
+          <td class="paramtype">drogon::HttpResponsePtr</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::chrono::seconds</td>          <td class="paramname"><span class="paramname"><em>max_age</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -211,6 +223,38 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a6333bcb5ca7772ce6cd0e487d5b6e060" name="a6333bcb5ca7772ce6cd0e487d5b6e060"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6333bcb5ca7772ce6cd0e487d5b6e060">&#9670;&#160;</a></span>massCreateRecord()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt; idhan::api::helpers::massCreateRecord </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>sha256s</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">sha256s</td><td></td></tr>
+    <tr><td class="paramname">db</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Hashes MUST be unique </dd>
+<dd>
+Hashes count cannot exceed 100, But can include 100 </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+</div>
+</div>
 <a id="a84d151b5914e745fde8868e4e4100359" name="a84d151b5914e745fde8868e4e4100359"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a84d151b5914e745fde8868e4e4100359">&#9670;&#160;</a></span>pgArrayify()</h2>
 
@@ -266,6 +310,32 @@ template&lt;typename T&gt; </div>
       </table>
 </div><div class="memdoc">
 
+</div>
+</div>
+<h2 class="groupheader">Variable Documentation</h2>
+<a id="a8d12688bc58bee790b5874ba6baa1db0" name="a8d12688bc58bee790b5874ba6baa1db0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d12688bc58bee790b5874ba6baa1db0">&#9670;&#160;</a></span>default_max_age</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::chrono::seconds idhan::api::helpers::default_max_age</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">{</div>
+<div class="line">    std::chrono::duration_cast&lt; std::chrono::seconds &gt;( std::chrono::years( 1 ) )</div>
+<div class="line">}</div>
+</div><!-- fragment -->
 </div>
 </div>
 </div><!-- contents -->

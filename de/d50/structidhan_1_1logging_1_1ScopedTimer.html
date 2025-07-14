@@ -111,6 +111,7 @@ $(function(){initNavTree('de/d50/structidhan_1_1logging_1_1ScopedTimer.html','..
 
 <div class="header">
   <div class="summary">
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="../../de/de7/structidhan_1_1logging_1_1ScopedTimer-members.html">List of all members</a>  </div>
@@ -120,6 +121,13 @@ $(function(){initNavTree('de/d50/structidhan_1_1logging_1_1ScopedTimer.html','..
 
 <p><code>#include &lt;<a class="el" href="../../d3/d82/ScopedTimer_8hpp_source.html">ScopedTimer.hpp</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:a0f2bb4754e046ea6a17d05111ca9f459" id="r_a0f2bb4754e046ea6a17d05111ca9f459"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0f2bb4754e046ea6a17d05111ca9f459">Clock</a> = std::chrono::high_resolution_clock</td></tr>
+<tr class="separator:a0f2bb4754e046ea6a17d05111ca9f459"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a05297b1820737ce057c423227a8189f7" id="r_a05297b1820737ce057c423227a8189f7"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a05297b1820737ce057c423227a8189f7">TimePoint</a> = std::chrono::time_point&lt; <a class="el" href="#a0f2bb4754e046ea6a17d05111ca9f459">Clock</a> &gt;</td></tr>
+<tr class="separator:a05297b1820737ce057c423227a8189f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a80a1612c2cc883dd86f9f2683169fc57" id="r_a80a1612c2cc883dd86f9f2683169fc57"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a80a1612c2cc883dd86f9f2683169fc57">ScopedTimer</a> (const std::string &amp;str)</td></tr>
@@ -131,9 +139,38 @@ Public Member Functions</h2></td></tr>
 Public Attributes</h2></td></tr>
 <tr class="memitem:aa3a23cb3a201e8805098c82c5197d68f" id="r_aa3a23cb3a201e8805098c82c5197d68f"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa3a23cb3a201e8805098c82c5197d68f">name</a></td></tr>
 <tr class="separator:aa3a23cb3a201e8805098c82c5197d68f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1376167c5c3e12ab1013ed9c06c7db9a" id="r_a1376167c5c3e12ab1013ed9c06c7db9a"><td class="memItemLeft" align="right" valign="top">const std::chrono::high_resolution_clock::time_point&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1376167c5c3e12ab1013ed9c06c7db9a">start</a></td></tr>
-<tr class="separator:a1376167c5c3e12ab1013ed9c06c7db9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad61b70ed6bf789dc127fbf20deb643c8" id="r_ad61b70ed6bf789dc127fbf20deb643c8"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="#a05297b1820737ce057c423227a8189f7">TimePoint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad61b70ed6bf789dc127fbf20deb643c8">start</a></td></tr>
+<tr class="separator:ad61b70ed6bf789dc127fbf20deb643c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="a0f2bb4754e046ea6a17d05111ca9f459" name="a0f2bb4754e046ea6a17d05111ca9f459"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0f2bb4754e046ea6a17d05111ca9f459">&#9670;&#160;</a></span>Clock</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a0f2bb4754e046ea6a17d05111ca9f459">idhan::logging::ScopedTimer::Clock</a> = std::chrono::high_resolution_clock</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a05297b1820737ce057c423227a8189f7" name="a05297b1820737ce057c423227a8189f7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a05297b1820737ce057c423227a8189f7">&#9670;&#160;</a></span>TimePoint</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a05297b1820737ce057c423227a8189f7">idhan::logging::ScopedTimer::TimePoint</a> = std::chrono::time_point&lt; <a class="el" href="#a0f2bb4754e046ea6a17d05111ca9f459">Clock</a> &gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a80a1612c2cc883dd86f9f2683169fc57" name="a80a1612c2cc883dd86f9f2683169fc57"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a80a1612c2cc883dd86f9f2683169fc57">&#9670;&#160;</a></span>ScopedTimer()</h2>
@@ -200,14 +237,14 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a1376167c5c3e12ab1013ed9c06c7db9a" name="a1376167c5c3e12ab1013ed9c06c7db9a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1376167c5c3e12ab1013ed9c06c7db9a">&#9670;&#160;</a></span>start</h2>
+<a id="ad61b70ed6bf789dc127fbf20deb643c8" name="ad61b70ed6bf789dc127fbf20deb643c8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad61b70ed6bf789dc127fbf20deb643c8">&#9670;&#160;</a></span>start</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const std::chrono::high_resolution_clock::time_point idhan::logging::ScopedTimer::start</td>
+          <td class="memname">const <a class="el" href="#a05297b1820737ce057c423227a8189f7">TimePoint</a> idhan::logging::ScopedTimer::start</td>
         </tr>
       </table>
 </div><div class="memdoc">

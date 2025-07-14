@@ -11,5 +11,6 @@ var searchData=
   ['pgarrayify_8',['pgArrayify',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a84d151b5914e745fde8868e4e4100359',1,'idhan::api::helpers']]],
   ['pgescape_9',['pgEscape',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a3052859c86bf8044cefad85d788bed7e',1,'idhan::api::helpers::pgEscape()'],['../db/de4/namespaceidhan_1_1api.html#a9608422b5225528a0667e370b946a75a',1,'idhan::api::pgEscape()']]],
   ['prepareinitalindexes_10',['prepareInitalIndexes',['../db/d01/namespaceidhan_1_1db.html#a2b863ba9db65a3a2b79583cdda4b26cb',1,'idhan::db']]],
-  ['preparesqlfunctions_11',['prepareSQLFunctions',['../db/d01/namespaceidhan_1_1db.html#acdeef18ae2854f4b6915d60af3a6a3f8',1,'idhan::db']]]
+  ['preparesqlfunctions_11',['prepareSQLFunctions',['../db/d01/namespaceidhan_1_1db.html#acdeef18ae2854f4b6915d60af3a6a3f8',1,'idhan::db']]],
+  ['processbatchandmaprecords_12',['processBatchAndMapRecords',['../db/de4/namespaceidhan_1_1api.html#a2e6ffa8b97db890dcb901524eb94b154',1,'idhan::api']]]
 ];
