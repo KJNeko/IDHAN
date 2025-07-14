@@ -9,6 +9,7 @@
 #include <QtConcurrentRun>
 
 #include "HydrusImporter.hpp"
+#include "fgl/ProgressBar.hpp"
 #include "idhan/logging/logger.hpp"
 #include "sqlitehelper/Transaction.hpp"
 
@@ -100,19 +101,18 @@ void HydrusImporter::copyTags()
 
 	std::string current_namespace { "" };
 
-	auto submitData =
-		[ &printProcessed, &processed, group_size, &sync_counter, client = m_client, &tag_pairs, &pool, &thread_sync ]()
+	auto submitData = [ &processed, &sync_counter, &tag_pairs, &pool, &thread_sync ]()
 	{
 		thread_sync.addFuture(
 			QtConcurrent::run(
 				&pool,
-				[ &printProcessed, &processed, group_size, &sync_counter, client ]( TagPairGroup pairs )
+				[ &processed, &sync_counter ]( TagPairGroup pairs )
 				{
 					QNetworkAccessManager network {};
 					QEventLoop loop;
 
 					QFutureWatcher< std::vector< TagID > > data_watcher {};
-					data_watcher.setFuture( client->createTags( pairs ) );
+					data_watcher.setFuture( IDHANClient::instance().createTags( pairs ) );
 
 					// create watcher to watch until the sync is finished
 					QFutureWatcher< void > watcher {};
@@ -130,6 +130,20 @@ void HydrusImporter::copyTags()
 
 	tag_pairs.resize( group_size );
 
+	auto& progress_bar { fgl::ProgressBar::getInstance() };
+
+	auto process_progress { progress_bar.addProgressBar( "Tags Processed" ) };
+	auto submit_progress { progress_bar.addProgressBar( "Tags Submitted" ) };
+
+	std::size_t max_count;
+
+	transaction
+			<< "SELECT DISTINCT count(*) FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags ORDER BY length(namespace), namespace_id ASC"
+		>> max_count;
+
+	process_progress->setMax( max_count );
+	submit_progress->setMax( max_count );
+
 	transaction
 			<< "SELECT DISTINCT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags ORDER BY length(namespace), namespace_id ASC"
 		>> [ & ]( const std::string_view namespace_text, const std::string_view subtag_text )
@@ -143,6 +157,8 @@ void HydrusImporter::copyTags()
 		tag_pairs[ current_id ].second = subtag_text;
 
 		current_id++;
+
+		process_progress->inc();
 
 		if ( current_id >= group_size )
 		{

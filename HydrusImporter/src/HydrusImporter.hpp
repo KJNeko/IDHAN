@@ -16,12 +16,20 @@ namespace idhan::hydrus
 
 struct Set;
 
-class HydrusImporter
+struct ServiceInfo
+{
+	std::size_t service_id;
+	QString name;
+	std::size_t num_mappings;
+	std::size_t num_aliases;
+	std::size_t num_parents;
+};
+
+struct HydrusImporter
 {
 	sqlite3* master_db { nullptr };
 	sqlite3* client_db { nullptr };
 	sqlite3* mappings_db { nullptr };
-	std::shared_ptr< IDHANClient > m_client;
 	std::filesystem::path m_path;
 	QFuture< void > final_future;
 
@@ -50,8 +58,7 @@ class HydrusImporter
 	void finish();
 
 	HydrusImporter() = delete;
-	HydrusImporter(
-		const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client, const bool process_ptr_flag );
+	HydrusImporter( const std::filesystem::path& path );
 	~HydrusImporter();
 
 	void copyHydrusTags();
@@ -59,6 +66,10 @@ class HydrusImporter
 	void copyFileInfo();
 
 	void copyHydrusInfo();
+
+	bool hasPTR() const;
+
+	std::vector< ServiceInfo > getTagServices();
 };
 
 } // namespace idhan::hydrus

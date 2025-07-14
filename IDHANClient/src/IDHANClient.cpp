@@ -6,13 +6,11 @@
 
 #include <QCoreApplication>
 #include <QHttpPart>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QUrlQuery>
 
 #include <qtconcurrentrun.h>
-#include <thread>
 
 #include "logging/logger.hpp"
 #include "logging/qt_formatters/qstring.hpp"
@@ -25,24 +23,38 @@ VersionInfo handleVersionInfo( QNetworkReply* reply )
 {
 	logging::info( "Recieved version info" );
 
+	if ( reply == nullptr ) throw std::runtime_error( "Reply is null" );
+
 	const auto data { reply->readAll() };
 	const QJsonDocument json_doc { QJsonDocument::fromJson( data ) };
 	const auto json = json_doc.object();
 
 	// logging::info( "Data recieved: {}", std::string_view( data.data(), data.size() ) );
 
-	const auto version { json[ "idhan_server_version" ].toObject() };
+	const auto server_version { json[ "idhan_server_version" ].toObject() };
 	const auto api_version { json[ "idhan_api_version" ].toObject() };
 
 	logging::info(
 		"Recieved info from server at {}, IDHAN version: {}, API version: {}",
 		reply->url().toString(),
-		version[ "string" ].toString(),
+		server_version[ "string" ].toString(),
 		api_version[ "string" ].toString() );
 
 	VersionInfo info {};
-	info.api.str = version[ "string" ].toString().toStdString();
-	info.server.str = version[ "string" ].toString().toStdString();
+
+	info.api.str = api_version[ "string" ].toString().toStdString();
+	info.api.major = api_version[ "major" ].toInt();
+	info.api.minor = api_version[ "minor" ].toInt();
+	info.api.patch = api_version[ "patch" ].toInt();
+
+	info.server.str = server_version[ "string" ].toString().toStdString();
+	info.server.major = server_version[ "major" ].toInt();
+	info.server.minor = server_version[ "minor" ].toInt();
+	info.server.patch = server_version[ "patch" ].toInt();
+
+	info.branch = json[ "branch" ].toString();
+	info.commit = json[ "commit" ].toString();
+	info.build_type = json[ "build" ].toString();
 
 	return info;
 }
@@ -62,7 +74,7 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 
 	auto promise { std::make_shared< QPromise< VersionInfo > >() };
 
-	auto handleResponse = [ this, promise ]( QNetworkReply* reply )
+	auto handleResponse = [ promise ]( QNetworkReply* reply )
 	{
 		logging::info( "Handling version network response" );
 		promise->addResult( handleVersionInfo( reply ) );
@@ -71,7 +83,7 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 		reply->deleteLater();
 	};
 
-	auto handleError = [ this, promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error )
+	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error )
 	{
 		logging::error( "Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
 
@@ -105,51 +117,22 @@ IDHANClient& IDHANClient::instance()
 	return *m_instance;
 }
 
-IDHANClient::IDHANClient( const IDHANClientConfig& config ) : m_config( config ), network( nullptr )
+IDHANClient::IDHANClient() : network( nullptr )
 {
 	logger = spdlog::stdout_color_mt( "client" );
 	logger->set_level( spdlog::level::debug );
 
-	logging::info( "Hostname: {}", m_config.hostname );
-	logging::info( "Port: {}", m_config.port );
-	if ( m_config.hostname.empty() ) throw std::runtime_error( "hostname must not be empty" );
-
 	if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
+	m_instance = this;
+}
 
+IDHANClient::IDHANClient( const QString& hostname, const qint16 port, const bool use_ssl ) : IDHANClient()
+{
 	if ( QCoreApplication::instance() == nullptr )
 		throw std::runtime_error(
 			"IDHANClient expects a Qt instance. Please use QGuiApplication of QApplication before constructing IDHANClient" );
 
-	m_instance = this;
-
-	m_url_template.setHost( QString::fromStdString( m_config.hostname ) );
-	m_url_template.setPort( m_config.port );
-
-	if ( m_config.use_ssl )
-	{
-		m_url_template.setScheme( "https" );
-	}
-	else
-	{
-		m_url_template.setScheme( "http" );
-	}
-
-	// Get version info from server.
-	QFuture< VersionInfo > future { queryVersion() };
-
-	while ( !future.isFinished() && QThread::isMainThread() )
-	{
-		logging::debug( "Waiting for version reply" );
-		QCoreApplication::processEvents( QEventLoop::AllEvents, 100 );
-		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-	}
-
-	if ( future.resultCount() < 0 ) throw std::runtime_error( "Failed to get version info" );
-	future.waitForFinished();
-
-	const VersionInfo data { future.result() };
-
-	logging::info( "Got version info from server: Server: {}, Api: {}", data.server.str, data.api.str );
+	openConnection( hostname, port, use_ssl );
 }
 
 void IDHANClient::sendClientGet(
@@ -244,6 +227,8 @@ void IDHANClient::sendClientJson(
 					response->url().path().toStdString() );
 			}
 
+			if ( response->error() != QNetworkReply::NoError ) return;
+
 			QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
 			// responseHandler( response );
 			// response->deleteLater();
@@ -263,11 +248,6 @@ void IDHANClient::sendClientJson(
 				std::abort();
 			}
 
-			logging::warn(
-				"This maybe can be ignored: Error occurred with request to {}: {}",
-				url.toString(),
-				response->errorString().toStdString() );
-
 			// check if this is a special error or not.
 			// It should have json if so
 			auto header = response->header( QNetworkRequest::ContentTypeHeader );
@@ -283,6 +263,13 @@ void IDHANClient::sendClientJson(
 						logging::error( object[ "error" ].toString().toStdString() );
 					}
 				}
+			}
+
+			const auto data { response->readAll() };
+			if ( data.size() != 0 )
+			{
+				std::string_view str { data.data(), data.size() };
+				logging::warn( "Error data: {}", str );
 			}
 
 			QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error ) );
@@ -347,6 +334,48 @@ IDHANClient::~IDHANClient()
 	logger.flush();
 	spdlog::drop( "client" );
 	m_instance = nullptr;
+}
+
+bool IDHANClient::validConnection() const
+{
+	auto future { this->m_instance->queryVersion() };
+	future.waitForFinished();
+
+	return future.resultCount() > 0;
+}
+
+void IDHANClient::openConnection( const QString hostname, const qint16 port, const bool use_ssl )
+{
+	if ( hostname.isEmpty() ) throw std::runtime_error( "hostname must not be empty" );
+
+	m_url_template.setHost( hostname );
+	m_url_template.setPort( port );
+
+	if ( use_ssl )
+	{
+		m_url_template.setScheme( "https" );
+	}
+	else
+	{
+		m_url_template.setScheme( "http" );
+	}
+	//
+	// // Get version info from server.
+	// QFuture< VersionInfo > future { queryVersion() };
+	//
+	// while ( !future.isFinished() && QThread::isMainThread() )
+	// {
+	// 	logging::debug( "Waiting for version reply" );
+	// 	QCoreApplication::processEvents( QEventLoop::AllEvents, 100 );
+	// 	std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+	// }
+	//
+	// if ( future.resultCount() < 0 ) throw std::runtime_error( "Failed to get version info" );
+	// future.waitForFinished();
+	//
+	// const VersionInfo data { future.result() };
+	//
+	// logging::info( "Got version info from server: Server: {}, Api: {}", data.server.str, data.api.str );
 }
 
 } // namespace idhan

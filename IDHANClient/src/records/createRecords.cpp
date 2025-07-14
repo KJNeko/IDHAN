@@ -25,6 +25,16 @@ QFuture< std::vector< RecordID > > IDHANClient::
 
 QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector< std::string >& hashes )
 {
+#ifndef NDEBUG
+	for ( const auto& hash : hashes )
+	{
+		if ( hash.size() != 64 )
+		{
+			throw std::runtime_error( "Invalid hash size" );
+		}
+	}
+#endif
+
 	auto promise { std::make_shared< QPromise< std::vector< RecordID > > >() };
 
 	const auto expected_record_count { hashes.size() };

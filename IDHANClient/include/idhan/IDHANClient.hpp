@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <QCommandLineParser>
 #include <QFuture>
 #include <QNetworkReply>
+#include <QSettings>
 #include <QUrlQuery>
 
 #include <cstdint>
@@ -26,32 +28,34 @@ namespace idhan
 {
 class SHA256;
 
-struct IDHANClientConfig
-{
-	std::string hostname;
-	std::uint16_t port;
-	//! Name of this application.
-	std::string self_name;
-	bool use_ssl { false };
-};
-
 struct VersionInfo
 {
 	struct ServerVersion
 	{
+		std::size_t major;
+		std::size_t minor;
+		std::size_t patch;
 		std::string str;
 	} server;
 
 	struct ApiVersion
 	{
+		std::size_t major;
+		std::size_t minor;
+		std::size_t patch;
 		std::string str;
 	} api;
+
+	QString branch;
+	QString build_type;
+	QString commit;
 };
+
+void addIDHANOptions( QCommandLineParser& parser );
 
 class IDHANClient
 {
 	std::shared_ptr< spdlog::logger > logger { nullptr };
-	IDHANClientConfig m_config;
 	std::size_t connection_attempts { 0 };
 
 	inline static IDHANClient* m_instance { nullptr };
@@ -71,16 +75,23 @@ class IDHANClient
 
 	Q_DISABLE_COPY_MOVE( IDHANClient );
 
-	IDHANClient() = delete;
+	IDHANClient();
 
 	/**
 	* @brief Upon construction the class will attempt to get the version info from the IDHAN server target.
 	* @note Qt must be initalized before construction of this class. Either a QGuiApplication or an QApplication instance
-	* @param config
+	* @param hostname
+	* @param port
+	* @param use_ssl
 	*/
-	IDHANClient( const IDHANClientConfig& config );
+	IDHANClient( const QString& hostname, qint16 port, bool use_ssl = false );
 
 	~IDHANClient();
+
+	//! Returns true if the server responds (sends back valid version info)
+	bool validConnection() const;
+
+	void openConnection( QString hostname, qint16 port, bool use_ssl = false );
 
 	QFuture< std::vector< RecordID > > createRecords( std::vector< std::array< std::byte, 32 > >& hashes );
 

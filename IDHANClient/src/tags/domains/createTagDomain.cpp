@@ -15,7 +15,12 @@ namespace idhan
 
 QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 {
+	// So it seems that something with postgresql gets very angry when we do too many table modifications at once, Something about a deadlock.
+	// Not sure how this happens but this function seems to be causing it the most, So we'll add a explicit lock here to prevent that from happening
 	auto promise { std::make_shared< QPromise< TagDomainID > >() };
+
+	static std::mutex mutex {};
+	auto guard { std::make_shared< std::lock_guard< decltype( mutex ) > >( mutex ) };
 
 	QJsonObject object {};
 
@@ -40,6 +45,10 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 
 		if ( error == QNetworkReply::NetworkError::ContentConflictError )
 		{
+			const std::runtime_error exception {
+				std::format( "Conflict Error: {}", response->errorString().toStdString() )
+			};
+			promise->setException( std::make_exception_ptr( exception ) );
 			promise->finish();
 			response->deleteLater();
 			return;
@@ -60,7 +69,13 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 
 	sendClientPost( std::move( doc ), "/tags/domain/create", handleResponse, handleError );
 
-	return promise->future();
+	auto future = promise->future();
+
+	QFuture< TagDomainID > unlock_future { future.then( [ guard_ptr = guard ]( const TagDomainID domain_id )
+		                                                { return domain_id; } ) };
+
+	return unlock_future;
+	// return promise->future();
 }
 
 QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )

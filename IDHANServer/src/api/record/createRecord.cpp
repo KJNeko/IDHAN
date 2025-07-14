@@ -8,6 +8,7 @@
 #include "api/helpers/records.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
+#include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -21,8 +22,87 @@ ResponseTask createRecordFromOctet( const drogon::HttpRequestPtr req )
 ResponseTask createRecordFromSHA256( const SHA256 sha256, drogon::orm::DbClientPtr db )
 {}
 
+drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
+	createRecords( const std::vector< SHA256 >& hashes, drogon::orm::DbClientPtr db )
+{}
+
+drogon::Task< void > processBatchAndMapRecords(
+	std::unordered_set< SHA256 >& hashes,
+	std::unordered_map< SHA256, RecordID >& record_id_map,
+	drogon::orm::DbClientPtr db )
+{
+	std::vector< SHA256 > hashes_vec {};
+	hashes_vec.insert( hashes_vec.begin(), hashes.begin(), hashes.end() );
+
+	const auto record_ids { co_await helpers::massCreateRecord( hashes_vec, db ) };
+
+	for ( std::size_t i = 0; i < hashes_vec.size(); ++i )
+	{
+		const auto& hash { hashes_vec[ i ] };
+		const auto& record_id { record_ids[ i ] };
+		record_id_map.emplace( hash, record_id );
+	}
+
+	hashes.clear();
+}
+
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
+	createRecordsFromJsonArray( const Json::Value& json, drogon::orm::DbClientPtr db )
+{
+	std::unordered_set< SHA256 > hashes {};
+
+	std::unordered_map< SHA256, RecordID > record_id_map {};
+	std::vector< SHA256 > hashes_order {};
+
+	for ( const auto& value : json )
+	{
+		if ( !value.isString() )
+			co_return std::unexpected( createBadRequest( "Json value in array must be a string" ) );
+
+		const auto& str { value.asString() };
+
+		//insert the hash into a set to make each hash unique
+
+		const auto expected_hash { SHA256::fromHex( str ) };
+		if ( !expected_hash.has_value() ) co_return std::unexpected( expected_hash.error() );
+
+		hashes.insert( expected_hash.value() );
+
+		if ( hashes.size() >= 100 )
+		{
+			co_await processBatchAndMapRecords( hashes, record_id_map, db );
+		}
+
+		hashes_order.emplace_back( expected_hash.value() );
+	}
+
+	if ( hashes_order.size() != record_id_map.size() )
+	{
+		log::warn(
+			"Create records endpoint got {} hashes but only {} were unique, This impacts performance, Only submit unique hashes",
+			hashes_order.size(),
+			record_id_map.size() );
+	}
+
+	if ( hashes.size() > 0 )
+	{
+		co_await processBatchAndMapRecords( hashes, record_id_map, db );
+	}
+
+	Json::Value json_array {};
+	Json::ArrayIndex idx { 0 };
+
+	for ( const auto& value : hashes_order )
+	{
+		json_array[ idx++ ] = record_id_map[ value ];
+	}
+
+	co_return json_array;
+}
+
 ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 {
+	logging::ScopedTimer timer { "createRecordFromJson" };
 	const auto json_ptr { req->getJsonObject() };
 	if ( json_ptr == nullptr ) // Data was invalid?
 		throw std::invalid_argument( "json_ptr is null" );
@@ -35,25 +115,11 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	const auto& sha256s { json[ "sha256" ] };
 	if ( sha256s.isArray() )
 	{
-		// auto transaction { db->newTransaction() };
-		Json::Value json_array {};
-		Json::ArrayIndex idx { 0 };
+		const auto json_result { co_await createRecordsFromJsonArray( sha256s, db ) };
 
-		for ( const auto& value : sha256s )
-		{
-			if ( !value.isString() ) co_return createBadRequest( "Json value in array was not a string" );
+		if ( !json_result.has_value() ) co_return json_result.error();
 
-			const auto& str { value.asString() };
-
-			// dehexify the string.
-
-			const auto expected_hash { SHA256::fromHex( str ) };
-			if ( !expected_hash.has_value() ) co_return expected_hash.error();
-
-			const auto result { co_await helpers::createRecord( *expected_hash, db ) };
-
-			json_array[ idx++ ] = result;
-		}
+		const auto& json_array { json_result.value() };
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_array );
 	}
@@ -75,6 +141,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 ResponseTask IDHANRecordAPI::createRecord( const drogon::HttpRequestPtr request )
 {
+	logging::ScopedTimer timer { "createRecord" };
 	// the request here should be either an octet stream, or json. If it's an octet stream, then it will be a file we can hash.
 
 	switch ( request->getContentType() )

@@ -30,6 +30,10 @@ void IDHANApi::version( const drogon::HttpRequestPtr& request, ResponseFunction&
 
 	json[ "hydrus_api_version" ] = HYDRUS_MIMICED_API_VERSION;
 
+	json["branch"] = FGL_GIT_BRANCH;
+	json["commit"] = FGL_GIT_COMMIT;
+	json["build"] = FGL_BUILD_TYPE;
+
 	callback( drogon::HttpResponse::newHttpJsonResponse( json ) );
 }
 

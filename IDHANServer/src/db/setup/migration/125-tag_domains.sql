@@ -1,35 +1,33 @@
-CREATE OR REPLACE FUNCTION createTagMappingsDomain() RETURNS TRIGGER
-    language plpgsql
+CREATE OR REPLACE FUNCTION createtagmappingsdomain() RETURNS TRIGGER
+    LANGUAGE plpgsql
 AS
 $$
-DECLARE
-    domain_id SMALLINT;
 BEGIN
-    FOR domain_id IN SELECT tag_domain_id FROM tag_domains
-        LOOP
-            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = FORMAT('tag_mappings_%s', domain_id)) THEN
-                CONTINUE;
-            END IF;
 
-            -- mappings
-            EXECUTE FORMAT(
-                    'CREATE TABLE IF NOT EXISTS tag_mappings_%1$s PARTITION OF tag_mappings FOR VALUES IN (%1$s)',
-                    domain_id);
-            -- aliases
-            EXECUTE FORMAT(
-                    'CREATE TABLE IF NOT EXISTS tag_aliases_%1$s PARTITION OF tag_aliases FOR VALUES IN (%1$s)',
-                    domain_id);
-            -- siblings
-            EXECUTE FORMAT(
-                    'CREATE TABLE IF NOT EXISTS tag_siblings_%1$s PARTITION OF tag_siblings FOR VALUES IN (%1$s)',
-                    domain_id);
-            -- parents
-            EXECUTE FORMAT(
-                    'CREATE TABLE IF NOT EXISTS tag_parents_%1$s PARTITION OF tag_parents FOR VALUES IN (%1$s)',
-                    domain_id);
+    -- mappings
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_mappings_%1$s PARTITION OF tag_mappings FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
 
-        end loop;
-    RETURN NEW;
+    -- aliases
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_aliases_%1$s PARTITION OF tag_aliases FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
+
+    -- siblings
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_siblings_%1$s PARTITION OF tag_siblings FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
+
+    -- parents
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_parents_%1$s PARTITION OF tag_parents FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
+
+    RETURN new;
+
+    -- Lock will be automatically released at transaction end
+    -- PERFORM pg_advisory_unlock(hashtext('information_schema_lock'));
 END;
 $$;
 
@@ -67,9 +65,8 @@ $$;
 CREATE TRIGGER tag_domain_insert
     AFTER INSERT
     ON tag_domains
-    REFERENCING NEW TABLE AS inserted
-    FOR EACH STATEMENT
-EXECUTE FUNCTION createTagMappingsDomain();
+    FOR EACH ROW
+EXECUTE FUNCTION createtagmappingsdomain();
 
 -- CREATE TRIGGER tag_domain_delete
 --     AFTER DELETE

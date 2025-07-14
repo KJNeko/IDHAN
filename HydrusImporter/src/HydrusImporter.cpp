@@ -9,6 +9,7 @@
 #include <QFutureWatcher>
 #include <QtConcurrentRun>
 
+#include "hydrus_constants.hpp"
 #include "sqlitehelper/Transaction.hpp"
 
 namespace idhan::hydrus
@@ -16,11 +17,7 @@ namespace idhan::hydrus
 
 constexpr std::string_view LOCK_FILE_NAME { "client_running" };
 
-HydrusImporter::HydrusImporter(
-	const std::filesystem::path& path, std::shared_ptr< IDHANClient >& client, const bool process_ptr_flag ) :
-  m_client( client ),
-  m_path( path ),
-  m_process_ptr_mappings( process_ptr_flag )
+HydrusImporter::HydrusImporter( const std::filesystem::path& path ) : m_path( path ), m_process_ptr_mappings( false )
 {
 	if ( !std::filesystem::exists( path ) ) throw std::runtime_error( "Failed to open path to hydrus db" );
 
@@ -129,6 +126,52 @@ void HydrusImporter::copyHydrusInfo()
 	sync.addFuture( std::move( files_future ) );
 
 	final_future = QtConcurrent::run( [ this ]() { sync.waitForFinished(); } ).then( [ this ]() { this->finish(); } );
+}
+
+bool HydrusImporter::hasPTR() const
+{
+	bool exists { false };
+
+	TransactionBase client_tr { client_db };
+
+	client_tr << "SELECT service_id, name FROM services WHERE service_type = $1"
+			  << static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE )
+		>> [ & ]( const std::size_t service_id, const std::string name ) { exists = true; };
+
+	return exists;
+}
+
+std::vector< ServiceInfo > HydrusImporter::getTagServices()
+{
+	TransactionBase client_tr { client_db };
+	std::vector< ServiceInfo > services {};
+
+	client_tr << "SELECT service_id, name FROM services WHERE service_type = $1 OR service_type = $2"
+			  << static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE )
+			  << static_cast< int >( hy_constants::ServiceTypes::TAG_SERVICE )
+		>> [ & ]( const std::size_t service_id, const std::string name )
+	{
+		ServiceInfo info {};
+		info.service_id = service_id;
+		info.name = QString::fromStdString( name );
+		services.emplace_back( std::move( info ) );
+	};
+
+	// TransactionBase mappings_tr { mappings_db };
+
+	/*
+	for ( auto& service_info : services )
+	{
+		mappings_tr << std::format( "SELECT count(*) FROM current_mappings_{}", service_info.service_id )
+			>> service_info.num_mappings;
+		client_tr << std::format( "SELECT count(*) FROM current_tag_parents_{}", service_info.service_id )
+			>> service_info.num_parents;
+		client_tr << std::format( "SELECT count(*) FROM current_tag_siblings_{}", service_info.service_id )
+			>> service_info.num_aliases;
+	}
+	*/
+
+	return services;
 }
 
 } // namespace idhan::hydrus

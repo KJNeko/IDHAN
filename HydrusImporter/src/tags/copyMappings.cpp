@@ -2,7 +2,6 @@
 // Created by kj16609 on 3/8/25.
 //
 
-#include <QCoreApplication>
 #include <QtConcurrentRun>
 
 #include <ranges>
@@ -32,7 +31,7 @@ void HydrusImporter::copyMappings()
 	client_tr << "SELECT name, service_id, service_type FROM services WHERE service_type = 0 OR service_type = 5" >>
 		[ & ]( const std::string_view name, const std::size_t service_id, const std::size_t service_type )
 	{
-		QFuture< TagDomainID > domain_id_future { m_client->getTagDomain( name ) };
+		QFuture< TagDomainID > domain_id_future { IDHANClient::instance().getTagDomain( name ) };
 
 		if ( !m_process_ptr_mappings && service_type == hy_constants::ServiceTypes::PTR_SERVICE )
 		{
@@ -147,11 +146,11 @@ void HydrusImporter::processSets( const std::vector< Set >& sets, const TagDomai
 		tag_sets.emplace_back( std::move( tags ) );
 	}
 
-	auto record_future { m_client->createRecords( hashes ) };
+	auto record_future { IDHANClient::instance().createRecords( hashes ) };
 
 	record_future.waitForFinished();
 
-	auto future { m_client->addTags( std::move( record_future.result() ), domain_id, std::move( tag_sets ) ) };
+	auto future { IDHANClient::instance().addTags( std::move( record_future.result() ), domain_id, std::move( tag_sets ) ) };
 
 	future.waitForFinished();
 }
