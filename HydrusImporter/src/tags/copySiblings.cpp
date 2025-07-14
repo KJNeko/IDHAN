@@ -3,7 +3,6 @@
 //
 
 #include "HydrusImporter.hpp"
-#include "fgl/ProgressBar.hpp"
 #include "hydrus_constants.hpp"
 #include "sqlitehelper/Transaction.hpp"
 
@@ -55,19 +54,14 @@ void HydrusImporter::copySiblings()
 		std::size_t max_count { 0 };
 		client_tr << std::format( "SELECT count(*) FROM {}", table_name ) >> max_count;
 
-		auto parents_progress { fgl::ProgressBar::getInstance().addProgressBar( table_name ) };
-		parents_progress->setMax( max_count );
-
 		client_tr << std::format( "SELECT bad_tag_id, good_tag_id FROM {}", table_name ) >>
-			[ &getHydrusTag, &tags, &parents_progress ]( const std::size_t aliased_id, const std::size_t alias_id )
+			[ &getHydrusTag, &tags ]( const std::size_t aliased_id, const std::size_t alias_id )
 		{
 			const auto aliased_pair { getHydrusTag( aliased_id ) };
 			const auto alias_pair { getHydrusTag( alias_id ) };
 
 			tags.emplace_back( aliased_pair );
 			tags.emplace_back( alias_pair );
-
-			parents_progress->inc();
 		};
 
 		QFuture< std::vector< TagID > > tag_ids_future { IDHANClient::instance().createTags( std::move( tags ) ) };
