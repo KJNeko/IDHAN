@@ -143,38 +143,54 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	}
 	const std::string cluster_name { request_json[ "name" ].asString() };
 
-	const std::string fixed_cluster_name { co_await findValidClusterName( cluster_name, db ) };
+	std::string fixed_cluster_name { co_await findValidClusterName( cluster_name, db ) };
 
 	log::info( "Creating cluster {} -> {}", cluster_name, fixed_cluster_name );
 
-	// insert the data
-	const auto insert_result { co_await transaction->execSqlCoro(
-		"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) RETURNING cluster_id",
-		fixed_cluster_name,
-		target_path.string() ) };
+	bool success { false };
 
-	if ( insert_result.empty() )
+	while ( !success )
 	{
-		transaction->rollback();
+		try
+		{
+			// insert the data
+			const auto insert_result { co_await transaction->execSqlCoro(
+				"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) RETURNING cluster_id",
+				fixed_cluster_name,
+				target_path.string() ) };
 
-		co_return createInternalError( "Failed to insert new cluster into table" );
+			success = true;
+
+			if ( insert_result.empty() )
+			{
+				transaction->rollback();
+
+				co_return createInternalError( "Failed to insert new cluster into table" );
+			}
+
+			// Set the request cluster_name to match the new name
+			auto& json_object_m { *request->getJsonObject() };
+			json_object_m[ "name" ] = fixed_cluster_name;
+
+			const auto cluster_id { insert_result[ 0 ][ 0 ].as< ClusterID >() };
+
+			log::debug( "Setting cluster info" );
+
+			// Modify will return `{cluster_id}/list` if it succeeds.
+			const auto ret { co_await modifyT( request, cluster_id, transaction ) };
+
+			//TODO: Queue orphan check here.
+			co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
+
+			co_return ret;
+		}
+		catch ( drogon::orm::UniqueViolation& e )
+		{
+			// NOOP
+		}
+
+		fixed_cluster_name = co_await findValidClusterName( cluster_name, db );
 	}
-
-	// Set the request cluster_name to match the new name
-	auto& json_object_m { *request->getJsonObject() };
-	json_object_m[ "name" ] = fixed_cluster_name;
-
-	const auto cluster_id { insert_result[ 0 ][ 0 ].as< ClusterID >() };
-
-	log::debug( "Setting cluster info" );
-
-	// Modify will return `{cluster_id}/list` if it succeeds.
-	const auto ret { co_await modifyT( request, cluster_id, transaction ) };
-
-	//TODO: Queue orphan check here.
-	co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
-
-	co_return ret;
 }
 
 } // namespace idhan::api
