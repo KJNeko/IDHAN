@@ -6,6 +6,8 @@ CREATE OR REPLACE FUNCTION insertmultiplerecords(VARIADIC bytes bytea[])
 AS
 $$
 BEGIN
+    LOCK TABLE records IN EXCLUSIVE MODE;
+
     RETURN QUERY
         WITH inserted_records AS (
             SELECT UNNEST(bytes) AS byte_data

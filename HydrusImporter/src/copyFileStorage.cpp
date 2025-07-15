@@ -15,7 +15,7 @@ void HydrusImporter::copyFileStorage()
 	std::size_t counter { 0 };
 
 	client_tr << "SELECT location, weight, max_num_bytes FROM ideal_client_files_locations" >>
-		[ this, &counter ]( const std::string location, const std::uint16_t weight, const std::size_t byte_limit )
+		[ this, &counter ]( const std::string_view location, const std::uint16_t weight, const std::size_t byte_limit )
 	{
 		logging::info( "Processing file storage location {}", location );
 

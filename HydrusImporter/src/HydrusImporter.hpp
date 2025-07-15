@@ -23,6 +23,8 @@ struct ServiceInfo
 	std::size_t num_mappings;
 	std::size_t num_aliases;
 	std::size_t num_parents;
+
+	ServiceInfo() = default;
 };
 
 struct HydrusImporter
@@ -53,7 +55,8 @@ struct HydrusImporter
 
 	void copyMappings();
 
-  public:
+	FGL_DELETE_COPY( HydrusImporter );
+	FGL_DELETE_MOVE( HydrusImporter );
 
 	void finish();
 

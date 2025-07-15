@@ -10,6 +10,7 @@
 #include <sqlite3.h>
 
 #include "concepts.hpp"
+#include "idhan/logging/logger.hpp"
 
 // template < std::uint64_t, typename T >
 // void extract( sqlite3_stmt*, T& ) = delete;
@@ -209,8 +210,9 @@ T extract( sqlite3_stmt* stmt ) noexcept
 	{
 		return extractTextView< index >( stmt );
 	}
-	if constexpr ( std::same_as< ExtractT, std::string > )
+	else if constexpr ( std::same_as< ExtractT, std::string > )
 	{
+		static_assert( false, "Use std::string_view instead" );
 		return extractText< index >( stmt );
 	}
 	else if constexpr ( std::is_integral_v< ExtractT > )
@@ -225,7 +227,7 @@ T extract( sqlite3_stmt* stmt ) noexcept
 #if __cpp_static_assert >= 202306L
 		static_assert( false, std::format( "Unsupported extract type: {}", typeid( ExtractT ).name() ) );
 #else
-		throw std::runtime_error( std::format( "Unsupported extract type: {}", typeid( ExtractT ).name() ) );
+		static_assert( false, "Unsupported extract type" );
 #endif
 	}
 }

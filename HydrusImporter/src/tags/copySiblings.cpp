@@ -31,7 +31,7 @@ void HydrusImporter::copySiblings()
 
 	// find all services that have parents
 	client_tr << "SELECT name, service_id, service_type FROM services WHERE service_type = 0 OR service_type = 5" >>
-		[ & ]( const std::string name, const std::size_t service_id, const std::size_t service_type )
+		[ & ]( const std::string_view name, const std::size_t service_id, const std::size_t service_type )
 	{
 		if ( !m_process_ptr_mappings && service_type == hy_constants::ServiceTypes::PTR_SERVICE )
 		{
