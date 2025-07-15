@@ -31,6 +31,8 @@ class TagServiceWidget : public QWidget
 
 	bool ready() const { return m_preprocessed; }
 
+	void setInfo( const idhan::hydrus::ServiceInfo& service_info );
+
   public slots:
 	void processedMappings( std::size_t count );
 	void processedParents( std::size_t count );
@@ -40,8 +42,6 @@ class TagServiceWidget : public QWidget
 	void setMaxMappings( std::size_t count );
 	void setMaxParents( std::size_t count );
 	void setMaxAliases( std::size_t count );
-
-	void setInfo( const idhan::hydrus::ServiceInfo& service_info );
 
   private:
 
