@@ -5,12 +5,13 @@
 #include "HydrusImporter.hpp"
 
 #include <QCoreApplication>
-#include <QFutureSynchronizer>
 #include <QFutureWatcher>
 #include <QtConcurrentRun>
 
 #include "hydrus_constants.hpp"
+#include "sqlitehelper/Query.hpp"
 #include "sqlitehelper/Transaction.hpp"
+#include "sqlitehelper/TransactionBaseCoro.hpp"
 
 namespace idhan::hydrus
 {
@@ -50,133 +51,43 @@ HydrusImporter::~HydrusImporter()
 	sqlite3_close_v2( mappings_db );
 }
 
-void HydrusImporter::copyFileInfo()
-{
-	copyFileStorage();
-}
-
-void HydrusImporter::copyHydrusInfo()
-{
-	// auto tags_processed { std::make_shared< std::atomic< bool > >( false ) };
-	auto domains_processed { std::make_shared< std::atomic< bool > >( false ) };
-	auto hashes_processed { std::make_shared< std::atomic< bool > >( false ) };
-	auto aliases_processed { std::make_shared< std::atomic< bool > >( false ) };
-	auto parents_processed { std::make_shared< std::atomic< bool > >( false ) };
-
-	QFuture< void > tag_domains { QtConcurrent::run(
-		[ this, domains_processed ]()
-		{
-			this->copyTagDomains();
-			domains_processed->store( true );
-			domains_processed->notify_all();
-		} ) };
-
-	/*
-	QFuture< void > tag_future { QtConcurrent::run(
-		[ this, tags_processed ]()
-		{
-			// this->copyTags();
-			tags_processed->store( true );
-			tags_processed->notify_all();
-		} ) };
-	*/
-
-	QFuture< void > parents_future { QtConcurrent::run(
-		[ this, domains_processed, parents_processed, aliases_processed ]
-		{
-			if ( !domains_processed->load() ) domains_processed->wait( false );
-			// Prevents a bunch of triggers from happening during large insertions
-			if ( !aliases_processed->load() ) aliases_processed->wait( false );
-			// if ( !tags_processed->load() ) tags_processed->wait( false );
-			this->copyParents();
-			parents_processed->store( true );
-		} ) };
-
-	QFuture< void > aliases_future { QtConcurrent::run(
-		[ this, domains_processed, aliases_processed ]
-		{
-			if ( !domains_processed->load() ) domains_processed->wait( false );
-			// if ( !tags_processed->load() ) tags_processed->wait( false );
-			this->copySiblings();
-			aliases_processed->store( true );
-		} ) };
-
-	QFuture< void > hash_future { QtConcurrent::run(
-		[ this, hashes_processed ]()
-		{
-			// this->copyHashes();
-			hashes_processed->store( true );
-			hashes_processed->notify_all();
-		} ) };
-
-	QFuture< void > mappings_future { QtConcurrent::run(
-		[ this, hashes_processed, domains_processed, parents_processed, aliases_processed ]()
-		{
-			if ( !parents_processed->load() ) parents_processed->wait( false );
-			if ( !aliases_processed->load() ) aliases_processed->wait( false );
-			if ( !domains_processed->load() ) domains_processed->wait( false );
-			if ( !hashes_processed->load() ) hashes_processed->wait( false );
-
-			this->copyMappings();
-		} ) };
-
-	QFuture< void > files_future { QtConcurrent::run( [ this ]() { this->copyFileStorage(); } ) };
-
-	// QFuture< void > url_future { hash_future.then( [ this ]() { this->copyUrls(); } ) };
-
-	sync.addFuture( std::move( tag_domains ) );
-	// sync.addFuture( std::move( tag_future ) );
-	sync.addFuture( std::move( parents_future ) );
-	sync.addFuture( std::move( aliases_future ) );
-	sync.addFuture( std::move( hash_future ) );
-	sync.addFuture( std::move( mappings_future ) );
-	sync.addFuture( std::move( files_future ) );
-
-	final_future = QtConcurrent::run( [ this ]() { sync.waitForFinished(); } ).then( [ this ]() { this->finish(); } );
-}
-
 bool HydrusImporter::hasPTR() const
 {
 	bool exists { false };
 
-	TransactionBase client_tr { client_db };
+	TransactionBaseCoro client_tr { client_db };
 
-	client_tr << "SELECT service_id, name FROM services WHERE service_type = $1"
-			  << static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE )
-		>> [ & ]( const std::size_t service_id, const std::string_view name ) { exists = true; };
+	Query< std::size_t, std::string_view > query { client_tr,
+		                                           "SELECT service_id, name FROM services WHERE service_type = $1",
+		                                           static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE ) };
+
+	for ( const auto& [ service_id, name ] : query )
+	{
+		exists = true;
+	}
 
 	return exists;
 }
 
 std::vector< ServiceInfo > HydrusImporter::getTagServices()
 {
-	TransactionBase client_tr { client_db };
+	TransactionBaseCoro client_tr { client_db };
 	std::vector< ServiceInfo > services {};
 
-	client_tr << "SELECT service_id, name FROM services WHERE service_type = $1 OR service_type = $2"
-			  << static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE )
-			  << static_cast< int >( hy_constants::ServiceTypes::TAG_SERVICE )
-		>> [ & ]( const std::size_t service_id, const std::string_view name )
+	Query< std::size_t, std::string_view > query {
+		client_tr,
+		"SELECT service_id, name FROM services WHERE service_type = $1 OR service_type = $2",
+		static_cast< int >( hy_constants::ServiceTypes::TAG_SERVICE ),
+		static_cast< int >( hy_constants::ServiceTypes::TAG_SERVICE )
+	};
+
+	for ( const auto& [ service_id, name ] : query )
 	{
 		ServiceInfo info {};
 		info.service_id = service_id;
 		info.name = QString::fromStdString( std::string( name ) );
 		services.emplace_back( std::move( info ) );
-	};
-
-	// TransactionBase mappings_tr { mappings_db };
-
-	/*
-	for ( auto& service_info : services )
-	{
-		mappings_tr << std::format( "SELECT count(*) FROM current_mappings_{}", service_info.service_id )
-			>> service_info.num_mappings;
-		client_tr << std::format( "SELECT count(*) FROM current_tag_parents_{}", service_info.service_id )
-			>> service_info.num_parents;
-		client_tr << std::format( "SELECT count(*) FROM current_tag_siblings_{}", service_info.service_id )
-			>> service_info.num_aliases;
 	}
-	*/
 
 	return services;
 }

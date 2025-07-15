@@ -3,19 +3,24 @@
 //
 
 #include "HydrusImporter.hpp"
+#include "sqlitehelper/Query.hpp"
 #include "sqlitehelper/Transaction.hpp"
+#include "sqlitehelper/TransactionBaseCoro.hpp"
 
 namespace idhan::hydrus
 {
 
 void HydrusImporter::copyFileStorage()
 {
-	TransactionBase client_tr { client_db };
+	TransactionBaseCoro client_tr { client_db };
 
 	std::size_t counter { 0 };
 
-	client_tr << "SELECT location, weight, max_num_bytes FROM ideal_client_files_locations" >>
-		[ this, &counter ]( const std::string_view location, const std::uint16_t weight, const std::size_t byte_limit )
+	Query< std::string_view, std::uint16_t, std::size_t > query {
+		client_tr, "SELECT location, weight, max_num_bytes FROM ideal_client_files_locations"
+	};
+
+	for ( const auto& [ location, weight, byte_limit ] : query )
 	{
 		logging::info( "Processing file storage location {}", location );
 
@@ -33,7 +38,7 @@ void HydrusImporter::copyFileStorage()
 			IDHANClient::instance().createFileCluster(
 				location, std::format( "Hydrus cluster: {}", counter++ ), byte_limit, weight, true );
 		}
-	};
+	}
 }
 
 } // namespace idhan::hydrus

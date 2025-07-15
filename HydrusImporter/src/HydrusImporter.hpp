@@ -40,35 +40,16 @@ struct HydrusImporter
 	bool m_process_ptr_mappings;
 	const std::chrono::time_point< std::chrono::steady_clock > start_time { std::chrono::steady_clock::now() };
 
-	void copyTagDomains();
-	void copyDomainMappings( TagDomainID domain_id, std::size_t hy_service_id );
-
-	void processSets( const std::vector< Set >& sets, TagDomainID domain_id );
-
-	void copyTags();
-	void copyParents();
-	void copySiblings();
-
-	void copyFileStorage();
-
-	void copyHashes();
-
-	void copyMappings();
-
 	FGL_DELETE_COPY( HydrusImporter );
 	FGL_DELETE_MOVE( HydrusImporter );
 
 	void finish();
 
+	void copyFileStorage();
+
 	HydrusImporter() = delete;
 	HydrusImporter( const std::filesystem::path& path );
 	~HydrusImporter();
-
-	void copyHydrusTags();
-
-	void copyFileInfo();
-
-	void copyHydrusInfo();
 
 	bool hasPTR() const;
 
