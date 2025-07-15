@@ -185,8 +185,11 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 	}
 	catch ( std::exception& e )
 	{
-		co_return std::
-			unexpected( createInternalError( "Failed to create tags using createBatchedTags(): {}", e.what() ) );
+		co_return std::unexpected( createInternalError(
+			"Failed to create tags using createBatchedTags(): {}\nNamespaces: {}\nSubtags: {}",
+			e.what(),
+			namespaces,
+			subtags ) );
 	}
 
 	co_return tag_ids;

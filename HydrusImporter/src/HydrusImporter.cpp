@@ -143,7 +143,7 @@ bool HydrusImporter::hasPTR() const
 
 	client_tr << "SELECT service_id, name FROM services WHERE service_type = $1"
 			  << static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE )
-		>> [ & ]( const std::size_t service_id, const std::string name ) { exists = true; };
+		>> [ & ]( const std::size_t service_id, const std::string_view name ) { exists = true; };
 
 	return exists;
 }
@@ -156,11 +156,11 @@ std::vector< ServiceInfo > HydrusImporter::getTagServices()
 	client_tr << "SELECT service_id, name FROM services WHERE service_type = $1 OR service_type = $2"
 			  << static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE )
 			  << static_cast< int >( hy_constants::ServiceTypes::TAG_SERVICE )
-		>> [ & ]( const std::size_t service_id, const std::string name )
+		>> [ & ]( const std::size_t service_id, const std::string_view name )
 	{
 		ServiceInfo info {};
 		info.service_id = service_id;
-		info.name = QString::fromStdString( name );
+		info.name = QString::fromStdString( std::string( name ) );
 		services.emplace_back( std::move( info ) );
 	};
 

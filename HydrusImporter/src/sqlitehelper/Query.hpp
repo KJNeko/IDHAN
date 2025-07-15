@@ -15,6 +15,7 @@
 #include "binders.hpp"
 #include "extractors.hpp"
 #include "fgl/defines.hpp"
+#include "idhan/logging/logger.hpp"
 
 namespace idhan::hydrus
 {
@@ -27,23 +28,26 @@ struct RowGenerator
 	struct promise_type;
 	using handle_type = std::coroutine_handle< promise_type >;
 
+	struct Empty
+	{};
+
 	struct promise_type
 	{
 		std::optional< TupleStore > m_tuple { std::nullopt };
 		std::exception_ptr m_exception { nullptr };
-		std::size_t rows_processed { 0 };
 
 		RowGenerator get_return_object() { return { handle_type::from_promise( *this ) }; }
 
-		std::suspend_always initial_suspend() noexcept { return {}; }
+		// Initial should never suspend so we can setup the sqlite3 stuff
+		static std::suspend_never initial_suspend() noexcept { return {}; }
 
-		std::suspend_always final_suspend() noexcept { return {}; }
+		static std::suspend_always final_suspend() noexcept { return {}; }
 
 		void unhandled_exception() { m_exception = std::current_exception(); }
 
-		void return_value( TupleStore&& tuple ) { m_tuple = std::move( tuple ); }
+		void return_void() {}
 
-		// void return_void() { m_tuple = std::nullopt; }
+		std::suspend_always yield_value( Empty ) { return {}; }
 
 		std::suspend_always yield_value( TupleStore&& tuple )
 		{
@@ -52,75 +56,48 @@ struct RowGenerator
 		}
 	};
 
+  private:
+
 	handle_type m_h;
 
-	const TupleStore& operator()() const
+  public:
+
+	bool done() const { return m_h.done(); }
+
+	void operator()() const
 	{
-		if ( m_h.done() ) throw std::runtime_error( "Query has reached end" );
+		if ( m_h.done() ) throw std::runtime_error( "Query has reached unexpected end" );
+
+		m_h.resume();
 
 		if ( m_h.promise().m_exception ) std::rethrow_exception( m_h.promise().m_exception );
-		m_h.resume();
-		if ( m_h.promise().m_tuple.has_value() )
-		{
-			return m_h.promise().m_tuple.value();
-			m_h.promise().rows_processed += 1;
-		}
-
-		throw std::runtime_error( "Reached end of SQL statement with invalid state" );
 	}
 
-	RowGenerator( handle_type h ) : m_h( h ) { m_h.resume(); }
+	TupleStore operator*() const { return m_h.promise().m_tuple.value(); }
+
+	RowGenerator( handle_type h ) : m_h( h ) {}
 
 	~RowGenerator() { m_h.destroy(); }
 };
 
-template < typename... TArgs >
-RowGenerator< TArgs... > buildQuery( TransactionBaseCoro tr, std::string_view sql, auto... sql_args )
+struct StmtDeleter
 {
-	using TupleStore = RowGenerator< TArgs... >::TupleStore;
+	void operator()( sqlite3_stmt* stmt ) const
+	{
+		if ( stmt != nullptr ) sqlite3_finalize( stmt );
+	}
+};
+
+std::unique_ptr< sqlite3_stmt, StmtDeleter > prepareStatement( TransactionBaseCoro tr, std::string_view sql );
+
+template < typename... TArgs >
+RowGenerator< TArgs... >
+	buildQuery( TransactionBaseCoro tr, std::unique_ptr< sqlite3_stmt, StmtDeleter >& stmt_holder, auto... sql_args )
+{
+	// Need to ensure that the stmt is owned outside the coroutine because sqlite3_finalize will break the final co_return because it will go out of scope here.
+	auto stmt { stmt_holder.get() };
+
 	constexpr auto sql_args_count { sizeof...( sql_args ) };
-	sqlite3_stmt* stmt { nullptr };
-
-	const char* unused { nullptr };
-	const auto prepare_ret {
-		sqlite3_prepare_v2( tr.db(), sql.data(), static_cast< int >( sql.size() + 1 ), &stmt, &unused )
-	};
-
-	struct StmtDeleter
-	{
-		void operator()( sqlite3_stmt* stmt ) const
-		{
-			if ( stmt != nullptr ) sqlite3_finalize( stmt );
-		}
-	};
-
-	std::unique_ptr< sqlite3_stmt, StmtDeleter > stmt_ptr { stmt };
-
-	if ( unused != nullptr && strlen( unused ) > 0 )
-	{
-		const std::string_view leftovers { unused };
-		auto itter { leftovers.begin() };
-		while ( itter != leftovers.end() )
-		{
-			if ( *itter == '\n' || *itter == '\t' )
-			{
-				++itter;
-				continue;
-			}
-
-			throw std::runtime_error( std::format( "Query had unused portions of the input. Unused: \"{}\"", unused ) );
-		}
-	}
-
-	if ( stmt == nullptr )
-		throw std::runtime_error( std::format( "Failed to prepare stmt, {}", sqlite3_errmsg( tr.db() ) ) );
-
-	if ( prepare_ret != SQLITE_OK )
-	{
-		throw std::runtime_error(
-			std::format( "DB: Failed to prepare statement: \"{}\", Reason: \"{}\"", sql, sqlite3_errmsg( tr.db() ) ) );
-	}
-
 	if ( const auto expected_bind_count = sqlite3_bind_parameter_count( stmt ); expected_bind_count != sql_args_count )
 	{
 		throw std::runtime_error(
@@ -128,33 +105,37 @@ RowGenerator< TArgs... > buildQuery( TransactionBaseCoro tr, std::string_view sq
 				"DB: Failed to bind parameters, Expected: {}, Actual: {}", sql_args_count, expected_bind_count ) );
 	}
 
-	switch ( bindParameters( stmt, sql_args... ) )
+	switch ( const auto bind_result = bindParameters( stmt, sql_args... ); bind_result )
 	{
 		case SQLITE_OK:
 			break;
+		case SQLITE_RANGE: // Second parameter to sqlite3_bind out of range
+			[[fallthrough]];
 		default:
 			throw std::runtime_error(
 				std::format(
 					"Failed to bind to \"{}\": Reason: \"{}\"", sqlite3_sql( stmt ), sqlite3_errmsg( tr.db() ) ) );
 	}
 
-	int step_ret = sqlite3_step( stmt );
+	int step_ret { 0 };
 
-	while ( step_ret == SQLITE_ROW )
-	{
-		TupleStore tuple { extractRow< TArgs... >( stmt ) };
-		static_assert( std::is_move_constructible_v< TupleStore >, "Tuple must be moveable" );
-
-		step_ret =
-			sqlite3_step( stmt ); // if this is SQLITE_DONE then we are finished, Extracting this step will cause issues
-
-		if ( step_ret == SQLITE_DONE )
+	do {
+		step_ret = sqlite3_step( stmt );
+		switch ( step_ret )
 		{
-			co_return std::move( tuple );
+			default:
+				throw std::runtime_error( "Invalid result from sqlite3_step" );
+			case SQLITE_ROW:
+				co_yield extractRow< TArgs... >( stmt );
+				break;
+			case SQLITE_DONE:
+				co_return;
+				break;
 		}
-
-		co_yield std::move( tuple );
 	}
+	while ( step_ret == SQLITE_ROW );
+
+	throw std::runtime_error( "Invalid return result from sqlite3_step" );
 
 	FGL_UNREACHABLE();
 }
@@ -162,26 +143,35 @@ RowGenerator< TArgs... > buildQuery( TransactionBaseCoro tr, std::string_view sq
 template < typename... TArgs >
 class Query
 {
+	std::unique_ptr< sqlite3_stmt, StmtDeleter > m_stmt_ptr;
 	RowGenerator< TArgs... > m_generator;
 
   public:
 
 	using TupleStore = decltype( m_generator )::TupleStore;
 
-	Query( TransactionBaseCoro tr, std::string_view sql, auto... sql_args ) :
-	  m_generator( buildQuery< TArgs... >( tr, sql, sql_args... ) )
+	Query( const TransactionBaseCoro tr, const std::string_view sql, auto... sql_args ) :
+	  m_stmt_ptr( prepareStatement( tr, sql ) ),
+	  m_generator( buildQuery< TArgs... >( tr, m_stmt_ptr, sql_args... ) )
 	{}
 
 	struct It
 	{
 		Query& query {};
 
-		const Query::It& operator++() const { return *this; }
+		const Query::It& operator++() const
+		{
+			query.m_generator();
+			return *this;
+		}
 
-		bool operator==( const std::unreachable_sentinel_t ) const { return query.m_generator.m_h.done(); }
+		bool operator==( const std::unreachable_sentinel_t ) const { return query.m_generator.done(); }
 
-		const TupleStore& operator*() const { return query.m_generator(); }
+		TupleStore operator*() const { return *query.m_generator; }
 	};
+
+	// used when expecting only 1 row
+	TupleStore operator*() const { return *m_generator; }
 
 	// Begin operator (Returns TupleStore)
 	It begin() { return It { *this }; }

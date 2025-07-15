@@ -8,7 +8,11 @@
 #include <string_view>
 
 #include "logging/qt_formatters/qstring.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 #include "spdlog/spdlog.h"
+#pragma GCC diagnostic pop
 
 class QNetworkReply;
 
