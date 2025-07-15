@@ -18,27 +18,36 @@ drogon::Task< drogon::HttpResponsePtr > IDHANSearchAPI::search( drogon::HttpRequ
 	const auto tag_ids { parseArrayParmeters< std::size_t >( request, "tag_id" ) };
 	const auto domain_ids { parseArrayParmeters< TagDomainID >( request, "tag_domains" ) };
 
-	/*
-	for ( TagDomainID domain_id : domain_ids )
+	const bool use_stored { request->getOptionalParameter< bool >( "use_stored" ).value_or( false ) };
+
+	std::string query { "" };
+	std::string query_template { "" };
+
+	if ( use_stored )
 	{
-		TagSearch searcher { domain_id, db };
-
-		for ( const TagID& tag_id : tag_ids )
-		{
-			auto result { co_await searcher.addID( tag_id ) };
-
-			if ( !result.has_value() ) co_return result.error();
-		}
-
-		const auto records { co_await searcher.search() };
-
-		if ( !records.has_value() ) co_return records.error();
+		query_template = "SELECT record_id FROM tag_mappings WHERE tag_id = {0} AND domain_id = {1}";
 	}
-	*/
+	else
+	{
+		query_template =
+			"WITH expanded_tags AS ( SELECT UNNEST(expandSearchTags({0}, {1}::smallint)) AS tag_id) SELECT DISTINCT tm.record_id FROM expanded_tags et JOIN tag_mappings tm ON tm.tag_id = et.tag_id AND tm.domain_id = {1}";
+	}
 
-	const auto result { co_await db->execSqlCoro(
-		"SELECT record_id FROM tag_mappings WHERE tag_id = $1", static_cast< TagID >( tag_ids[ 0 ] ) ) };
+	for ( std::size_t tag_i = 0; tag_i < tag_ids.size(); ++tag_i )
+	{
+		for ( std::size_t domain_i = 0; domain_i < domain_ids.size(); ++domain_i )
+		{
+			if ( domain_i > 0 ) query += " UNION ";
+			query += std::vformat(
+				query_template, std::format_args( std::make_format_args( tag_ids[ tag_i ], domain_ids[ domain_i ] ) ) );
+		}
+	}
 
+	log::info( "Query: {}", query );
+
+	// const auto result { co_await db->execSqlCoro( query, static_cast< TagID >( tag_ids[ 0 ] ) ),
+	// static_cast< TagID >(  ) };
+	/*
 	if ( result.empty() )
 	{
 		Json::Value root {};
@@ -60,6 +69,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANSearchAPI::search( drogon::HttpRequ
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json );
 	}
+	*/
 }
 
 } // namespace idhan::api
