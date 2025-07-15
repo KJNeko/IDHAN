@@ -1,7 +1,5 @@
 var NAVTREEINDEX4 =
 {
-"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a27e156e66ab6a2c9c903de320cc5eefa":[5,0,1,5,1,11],
-"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a27e156e66ab6a2c9c903de320cc5eefa":[6,0,0,2,1,11],
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2c23129fef40cf882f40574f68d5c0f8":[5,0,1,5,1,18],
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2c23129fef40cf882f40574f68d5c0f8":[6,0,0,2,1,18],
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2c988200e952841f7f2895bd2c515046":[5,0,1,5,1,19],
@@ -249,5 +247,7 @@ var NAVTREEINDEX4 =
 "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca7cb677ca414b16a0961fddecbab2c511":[5,0,1,54,9],
 "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca81ef2d4f20d16d215dd0068b035e107a":[5,0,1,54,7],
 "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca891162ddaad9917e99618292b32160f2":[5,0,1,54,5],
-"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca924397fd11936e351485c02170a8fa19":[5,0,1,54,0]
+"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca924397fd11936e351485c02170a8fa19":[5,0,1,54,0],
+"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cad82f290f4720e51c8644c22d1b0bc128":[5,0,1,54,8],
+"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cae5e3626cfca65531a46e0bc61f8efda5":[5,0,1,54,2]
 };

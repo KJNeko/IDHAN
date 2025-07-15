@@ -1,7 +1,5 @@
 var NAVTREEINDEX5 =
 {
-"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cad82f290f4720e51c8644c22d1b0bc128":[5,0,1,54,8],
-"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cae5e3626cfca65531a46e0bc61f8efda5":[5,0,1,54,2],
 "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880caf04f0e10822efdc1dcdf735ab3aac72d":[5,0,1,54,10],
 "dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694":[5,0,1,68],
 "dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5":[5,0,1,38],
@@ -249,5 +247,7 @@ var NAVTREEINDEX5 =
 "df/d0a/main_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627":[7,0,2,0,15,0],
 "df/d1c/IDHANStatsWS_8cpp.html":[7,0,2,0,0,18],
 "df/d1c/ImportResponses_8hpp.html":[7,0,2,0,5,0,2],
-"df/d1c/ImportResponses_8hpp_source.html":[7,0,2,0,5,0,2]
+"df/d1c/ImportResponses_8hpp_source.html":[7,0,2,0,5,0,2],
+"df/d27/classidhan_1_1api_1_1IDHANStatsWS.html":[5,0,1,0,9],
+"df/d27/classidhan_1_1api_1_1IDHANStatsWS.html":[6,0,0,0,8]
 };

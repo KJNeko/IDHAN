@@ -1,7 +1,5 @@
 var NAVTREEINDEX6 =
 {
-"df/d27/classidhan_1_1api_1_1IDHANStatsWS.html":[5,0,1,0,9],
-"df/d27/classidhan_1_1api_1_1IDHANStatsWS.html":[6,0,0,0,8],
 "df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#a3c56d2e56b59d5a53e058837ac4f3775":[5,0,1,0,9,2],
 "df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#a3c56d2e56b59d5a53e058837ac4f3775":[6,0,0,0,8,2],
 "df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#a578846ee42a0c39839129783518bb551":[5,0,1,0,9,1],

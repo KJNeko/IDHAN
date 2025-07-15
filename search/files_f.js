@@ -16,7 +16,6 @@ var searchData=
   ['splittag_2ehpp_13',['splitTag.hpp',['../dd/db8/splitTag_8hpp.html',1,'']]],
   ['sql_5ffunctions_2ecpp_14',['sql_functions.cpp',['../d2/d00/sql__functions_8cpp.html',1,'']]],
   ['sql_5ffunctions_2ehpp_15',['sql_functions.hpp',['../de/d0f/sql__functions_8hpp.html',1,'']]],
-  ['stub_2ecpp_16',['stub.cpp',['../db/da4/stub_8cpp.html',1,'']]],
-  ['subtags_2ecpp_17',['subtags.cpp',['../d0/da6/subtags_8cpp.html',1,'']]],
-  ['subtags_2ehpp_18',['subtags.hpp',['../de/db4/subtags_8hpp.html',1,'']]]
+  ['subtags_2ecpp_16',['subtags.cpp',['../d0/da6/subtags_8cpp.html',1,'']]],
+  ['subtags_2ehpp_17',['subtags.hpp',['../de/db4/subtags_8hpp.html',1,'']]]
 ];

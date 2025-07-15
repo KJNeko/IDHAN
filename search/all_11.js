@@ -78,12 +78,10 @@ var searchData=
   ['storethumbnail_75',['storeThumbnail',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#abbddacf3afb65ce8bdc521675d978617',1,'idhan::filesystem::ClusterManager']]],
   ['str_76',['str',['../d9/d69/structidhan_1_1VersionInfo_1_1ServerVersion.html#a8308c0aef8644e62667b3eceeaf6372e',1,'idhan::VersionInfo::ServerVersion::str'],['../d6/d85/structidhan_1_1VersionInfo_1_1ApiVersion.html#ae0560923d392101fb46e68752deb43b7',1,'idhan::VersionInfo::ApiVersion::str']]],
   ['strpath_77',['strpath',['../db/de9/classidhan_1_1FileMappedData.html#a43305fcfd0eeb6267eeac04f44bd1dd3',1,'idhan::FileMappedData']]],
-  ['stub_78',['stub',['../db/da4/stub_8cpp.html#a75fed61994fa4e930d5b06d5722ba2c8',1,'stub.cpp']]],
-  ['stub_2ecpp_79',['stub.cpp',['../db/da4/stub_8cpp.html',1,'']]],
-  ['subinfovariant_80',['SubInfoVariant',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a16ae1ee0f4f708d61de7ca9049359a89',1,'idhan::mime::MimeInfo']]],
-  ['subtagid_81',['SubtagID',['../dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d',1,'idhan']]],
-  ['subtaginfo_82',['SubtagInfo',['../d6/d0b/structidhan_1_1IDHANClient_1_1TagInfo_1_1SubtagInfo.html',1,'idhan::IDHANClient::TagInfo']]],
-  ['subtags_2ecpp_83',['subtags.cpp',['../d0/da6/subtags_8cpp.html',1,'']]],
-  ['subtags_2ehpp_84',['subtags.hpp',['../de/db4/subtags_8hpp.html',1,'']]],
-  ['success_85',['Success',['../dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4a3ed388d31a0a5d3c37031bf2b59d6a7e',1,'idhan::Success'],['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a30f320abc79538b35f124e95143f41a3',1,'idhan::hyapi::Success']]]
+  ['subinfovariant_78',['SubInfoVariant',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a16ae1ee0f4f708d61de7ca9049359a89',1,'idhan::mime::MimeInfo']]],
+  ['subtagid_79',['SubtagID',['../dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d',1,'idhan']]],
+  ['subtaginfo_80',['SubtagInfo',['../d6/d0b/structidhan_1_1IDHANClient_1_1TagInfo_1_1SubtagInfo.html',1,'idhan::IDHANClient::TagInfo']]],
+  ['subtags_2ecpp_81',['subtags.cpp',['../d0/da6/subtags_8cpp.html',1,'']]],
+  ['subtags_2ehpp_82',['subtags.hpp',['../de/db4/subtags_8hpp.html',1,'']]],
+  ['success_83',['Success',['../dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4a3ed388d31a0a5d3c37031bf2b59d6a7e',1,'idhan::Success'],['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a30f320abc79538b35f124e95143f41a3',1,'idhan::hyapi::Success']]]
 ];

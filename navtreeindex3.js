@@ -151,8 +151,6 @@ var NAVTREEINDEX3 =
 "db/d9b/namespaceidhan_1_1filesystem.html#ad28790b6ff89849d0bdad9ced09c4918":[5,0,1,4,2],
 "db/d9b/namespaceidhan_1_1filesystem.html#ae119b8cbfedcbc34598aeb7ce43f22bc":[5,0,1,4,3],
 "db/d9b/namespaceidhan_1_1filesystem.html#af22279849e95364f785f83f943474ae0":[5,0,1,4,4],
-"db/da4/stub_8cpp.html":[7,0,0,1,1],
-"db/da4/stub_8cpp.html#a75fed61994fa4e930d5b06d5722ba2c8":[7,0,0,1,1,0],
 "db/daf/SearchBuilder_8hpp.html":[7,0,2,0,1,2,2],
 "db/daf/SearchBuilder_8hpp_source.html":[7,0,2,0,1,2,2],
 "db/db0/erver_2src_2logging_2qt__formatters_2qstring_8hpp.html":[7,0,2,0,6,0,0],
@@ -249,5 +247,7 @@ var NAVTREEINDEX3 =
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a18afc80809768409c8cea0f6d68d5969":[5,0,1,5,1,24],
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a18afc80809768409c8cea0f6d68d5969":[6,0,0,2,1,24],
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2130a170773b6179c4172ba2d5892de1":[5,0,1,5,1,29],
-"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2130a170773b6179c4172ba2d5892de1":[6,0,0,2,1,29]
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2130a170773b6179c4172ba2d5892de1":[6,0,0,2,1,29],
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a27e156e66ab6a2c9c903de320cc5eefa":[5,0,1,5,1,11],
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a27e156e66ab6a2c9c903de320cc5eefa":[6,0,0,2,1,11]
 };

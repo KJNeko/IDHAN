@@ -81,9 +81,9 @@ var NAVTREEINDEX =
 "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html",
 "d6/d0b/structidhan_1_1IDHANClient_1_1TagInfo_1_1SubtagInfo.html#a6a4a2cbae3cd70ea75993e0b6e7332b8",
 "d9/d66/classidhan_1_1Network.html#a2a8dbc474d8d6a4a2a6c2a2b9910d1fb",
-"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a27e156e66ab6a2c9c903de320cc5eefa",
-"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cad82f290f4720e51c8644c22d1b0bc128",
-"df/d27/classidhan_1_1api_1_1IDHANStatsWS.html"
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2c23129fef40cf882f40574f68d5c0f8",
+"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880caf04f0e10822efdc1dcdf735ab3aac72d",
+"df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#a3c56d2e56b59d5a53e058837ac4f3775"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';
