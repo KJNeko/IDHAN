@@ -60,7 +60,7 @@
          </sizepolicy>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: rgb(255, 255, 255);</string>
+         <string notr="true">color: rgb(0, 170, 0);</string>
         </property>
         <property name="minimum">
          <number>0</number>
@@ -167,6 +167,9 @@
       </item>
       <item>
        <widget class="QCheckBox" name="checkBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="toolTip">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only processes mappings for files that you've obtained&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>

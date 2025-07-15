@@ -55,7 +55,7 @@ void TagServiceWidget::processedAliases( std::size_t count )
 void TagServiceWidget::preprocessingFinished()
 {
 	m_preprocessed = true;
-	this->ui->progressBar->setValue( 0 );
+	this->ui->progressBar->setMaximum( m_info.num_mappings + m_info.num_parents + m_info.num_aliases );
 }
 
 void TagServiceWidget::setMaxMappings( std::size_t count )
@@ -78,9 +78,5 @@ void TagServiceWidget::setMaxAliases( std::size_t count )
 
 void TagServiceWidget::setInfo( const idhan::hydrus::ServiceInfo& service_info )
 {
-	ui->mappingsCount->setText( QString( "Mappings: %1" ).arg( service_info.num_mappings ) );
-	ui->parentsCount->setText( QString( "Parents: %1" ).arg( service_info.num_parents ) );
-	ui->aliasesCount->setText( QString( "Aliases: %1" ).arg( service_info.num_aliases ) );
-	ui->progressBar->setMaximum( service_info.num_mappings + service_info.num_parents + service_info.num_aliases );
 	m_info = service_info;
 }
