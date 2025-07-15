@@ -22,7 +22,7 @@ TagServiceWidget::~TagServiceWidget()
 void TagServiceWidget::setName( const QString& name )
 {
 	m_name = name;
-	ui->name->setText( QString( "Name: %1" ).arg( name ) );
+	ui->name->setText( QString( "Name: %L1" ).arg( name ) );
 }
 
 void TagServiceWidget::processedMappings( std::size_t count )
@@ -31,7 +31,7 @@ void TagServiceWidget::processedMappings( std::size_t count )
 	QLocale locale { QLocale::English, QLocale::UnitedStates };
 	locale.setNumberOptions( QLocale::DefaultNumberOptions );
 	ui->mappingsCount
-		->setText( QString( "Mappings: %1 (%2 processed)" ).arg( m_info.num_mappings ).arg( mappings_processed ) );
+		->setText( QString( "Mappings: %L1 (%L2 processed)" ).arg( m_info.num_mappings ).arg( mappings_processed ) );
 	ui->progressBar->setValue( mappings_processed + aliases_processed + parents_processed );
 	this->ui->progressBar->setMaximum( m_info.num_mappings + m_info.num_parents + m_info.num_aliases );
 }
@@ -40,7 +40,7 @@ void TagServiceWidget::processedParents( std::size_t count )
 {
 	parents_processed += count;
 	ui->parentsCount
-		->setText( QString( "Parents: %1 (%2 processed)" ).arg( m_info.num_parents ).arg( parents_processed ) );
+		->setText( QString( "Parents: %L1 (%L2 processed)" ).arg( m_info.num_parents ).arg( parents_processed ) );
 	ui->progressBar->setValue( mappings_processed + aliases_processed + parents_processed );
 	this->ui->progressBar->setMaximum( m_info.num_mappings + m_info.num_parents + m_info.num_aliases );
 }
@@ -49,7 +49,7 @@ void TagServiceWidget::processedAliases( std::size_t count )
 {
 	aliases_processed += count;
 	ui->aliasesCount
-		->setText( QString( "Aliases: %1 (%2 processed)" ).arg( m_info.num_aliases ).arg( aliases_processed ) );
+		->setText( QString( "Aliases: %L1 (%L2 processed)" ).arg( m_info.num_aliases ).arg( aliases_processed ) );
 	ui->progressBar->setValue( mappings_processed + aliases_processed + parents_processed );
 	this->ui->progressBar->setMaximum( m_info.num_mappings + m_info.num_parents + m_info.num_aliases );
 }
@@ -63,10 +63,11 @@ void TagServiceWidget::setMaxMappings( std::size_t count )
 {
 	m_info.num_mappings = count;
 	if ( mappings_processed > 0 )
-		ui->mappingsCount
-			->setText( QString( "Mappings: %1 (%2 processed)" ).arg( m_info.num_mappings ).arg( mappings_processed ) );
+		ui->mappingsCount->setText( QString( "Mappings: %L1 (%L2 processed)" )
+		                                .arg( m_info.num_mappings )
+		                                .arg( mappings_processed ) );
 	else
-		ui->mappingsCount->setText( QString( "Mappings: %1" ).arg( m_info.num_mappings ) );
+		ui->mappingsCount->setText( QString( "Mappings: %L1" ).arg( m_info.num_mappings ) );
 }
 
 void TagServiceWidget::setMaxParents( std::size_t count )
@@ -74,9 +75,9 @@ void TagServiceWidget::setMaxParents( std::size_t count )
 	m_info.num_parents = count;
 	if ( parents_processed > 0 )
 		ui->parentsCount
-			->setText( QString( "Parents: %1 (%2 processed)" ).arg( m_info.num_parents ).arg( parents_processed ) );
+			->setText( QString( "Parents: %L1 (%L2 processed)" ).arg( m_info.num_parents ).arg( parents_processed ) );
 	else
-		ui->parentsCount->setText( QString( "Parents: %1" ).arg( m_info.num_parents ) );
+		ui->parentsCount->setText( QString( "Parents: %L1" ).arg( m_info.num_parents ) );
 }
 
 void TagServiceWidget::setMaxAliases( std::size_t count )
@@ -84,9 +85,9 @@ void TagServiceWidget::setMaxAliases( std::size_t count )
 	m_info.num_aliases = count;
 	if ( aliases_processed > 0 )
 		ui->aliasesCount
-			->setText( QString( "Aliases: %1 (%2 processed)" ).arg( m_info.num_aliases ).arg( aliases_processed ) );
+			->setText( QString( "Aliases: %L1 (%L2 processed)" ).arg( m_info.num_aliases ).arg( aliases_processed ) );
 	else
-		ui->aliasesCount->setText( QString( "Aliases: %1" ).arg( m_info.num_aliases ) );
+		ui->aliasesCount->setText( QString( "Aliases: %L1" ).arg( m_info.num_aliases ) );
 }
 
 void TagServiceWidget::setInfo( const idhan::hydrus::ServiceInfo& service_info )
