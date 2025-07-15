@@ -39,18 +39,16 @@ void TagServiceWidget::processedMappings( std::size_t count )
 void TagServiceWidget::processedParents( std::size_t count )
 {
 	parents_processed += count;
-	ui->parentsCount->setText( QString( "Parents: %1 (%2 processed)" )
-	                               .arg( m_info.num_parents, 0, ',', ' ' )
-	                               .arg( parents_processed, 0, ',', ' ' ) );
+	ui->parentsCount
+		->setText( QString( "Parents: %1 (%2 processed)" ).arg( m_info.num_parents ).arg( parents_processed ) );
 	ui->progressBar->setValue( mappings_processed + aliases_processed + parents_processed );
 }
 
 void TagServiceWidget::processedAliases( std::size_t count )
 {
 	aliases_processed += count;
-	ui->aliasesCount->setText( QString( "Aliases: %1 (%2 processed)" )
-	                               .arg( m_info.num_aliases, 0, ',', ' ' )
-	                               .arg( aliases_processed, 0, ',', ' ' ) );
+	ui->aliasesCount
+		->setText( QString( "Aliases: %1 (%2 processed)" ).arg( m_info.num_aliases ).arg( aliases_processed ) );
 	ui->progressBar->setValue( mappings_processed + aliases_processed + parents_processed );
 }
 
@@ -63,7 +61,7 @@ void TagServiceWidget::preprocessingFinished()
 void TagServiceWidget::setMaxMappings( std::size_t count )
 {
 	m_info.num_mappings = count;
-	ui->mappingsCount->setText( QString( "Mappings: %L1" ).arg( m_info.num_mappings ) );
+	ui->mappingsCount->setText( QString( "Mappings: %1" ).arg( m_info.num_mappings ) );
 }
 
 void TagServiceWidget::setMaxParents( std::size_t count )
