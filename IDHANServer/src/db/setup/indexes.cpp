@@ -4,7 +4,12 @@
 
 #include "indexes.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wswitch-enum"
 #include <pqxx/nontransaction>
+#pragma GCC diagnostic pop
 
 #include <array>
 #include <string_view>
