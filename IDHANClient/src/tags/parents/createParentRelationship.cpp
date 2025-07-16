@@ -54,7 +54,7 @@ QFuture< void > IDHANClient::
 	{
 		logging::error( reply->errorString().toStdString() );
 
-		const std::runtime_error exception { std::format( "Error: {}", reply->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", reply->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 

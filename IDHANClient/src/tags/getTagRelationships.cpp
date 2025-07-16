@@ -73,7 +73,7 @@ QFuture< IDHANClient::TagRelationshipInfo > IDHANClient::
 
 	auto handleError = [ promise ]( QNetworkReply* response, [[maybe_unused]] QNetworkReply::NetworkError error )
 	{
-		const std::runtime_error exception { std::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 		promise->setException( std::make_exception_ptr( exception ) );
 		promise->finish();
 		response->deleteLater();

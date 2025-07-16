@@ -53,7 +53,7 @@ QFuture< void > IDHANClient::addTags(
 	{
 		logging::error( reply->errorString().toStdString() );
 
-		const std::runtime_error exception { std::format( "Error: {}", reply->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", reply->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 
@@ -61,7 +61,7 @@ QFuture< void > IDHANClient::addTags(
 		reply->deleteLater();
 	};
 
-	const QString path { QString::fromStdString( std::format( "/records/{}/tags/add", record_id ) ) };
+	const QString path { QString::fromStdString( format_ns::format( "/records/{}/tags/add", record_id ) ) };
 
 	QUrl url {};
 	url.setPath( path );
@@ -117,7 +117,7 @@ QFuture< void > IDHANClient::addTags(
 	{
 		logging::error( reply->errorString().toStdString() );
 
-		const std::runtime_error exception { std::format( "Error: {}", reply->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", reply->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 
@@ -146,7 +146,7 @@ QFuture< void > IDHANClient::addTags(
 		if ( namespace_t == "" )
 			str = subtag_t;
 		else
-			str = std::format( "{}:{}", namespace_t, subtag_t );
+			str = format_ns::format( "{}:{}", namespace_t, subtag_t );
 
 		tag_str += str;
 		if ( i + 1 != tags.size() ) tag_str += ", ";
@@ -201,7 +201,7 @@ QFuture< void > IDHANClient::addTags(
 	{
 		logging::error( reply->errorString().toStdString() );
 
-		const std::runtime_error exception { std::format( "Error: {}", reply->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", reply->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 
@@ -238,7 +238,7 @@ QFuture< void > IDHANClient::addTags(
 	{
 		logging::warn( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() );
 		throw std::
-			runtime_error( std::format( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() ) );
+			runtime_error( format_ns::format( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() ) );
 	}
 
 	for ( const auto& set : tag_sets )

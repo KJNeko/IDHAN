@@ -135,7 +135,7 @@ std::string pgEscape( const std::string& str )
 		}
 	}
 
-	if ( contains_comma ) return std::format( "\"{}\"", cleaned );
+	if ( contains_comma ) return format_ns::format( "\"{}\"", cleaned );
 	return cleaned;
 }
 

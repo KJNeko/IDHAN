@@ -2,6 +2,8 @@
 // Created by kj16609 on 3/22/25.
 //
 
+#include <format>
+
 #include "api/IDHANSearchAPI.hpp"
 #include "api/helpers/getArrayParameters.hpp"
 #include "db/TagSearch.hpp"

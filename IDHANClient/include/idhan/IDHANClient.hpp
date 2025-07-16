@@ -208,7 +208,7 @@ class IDHANClient
 			FGL_ASSERT( m_subtag.m_id != 0, "Subtag ID invalid" );
 
 			if ( m_namespace.m_text.empty() ) return m_subtag.m_text;
-			return std::format( "{}:{}", m_namespace.m_text, m_subtag.m_text );
+			return format_ns::format( "{}:{}", m_namespace.m_text, m_subtag.m_text );
 		}
 
 		QString toQString() const { return QString::fromStdString( toStdString() ); }

@@ -8,41 +8,50 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Weffc++"
 #include <spdlog/spdlog.h>
+#ifndef ENABLE_STD_FORMAT
+#include <fmt/format.h>
+#endif
 #pragma GCC diagnostic pop
 
 #include <string>
 
 #include "qt_formatters/qstring.hpp"
 
+#ifdef ENABLE_STD_FORMAT
+namespace format_ns = std;
+#else
+namespace format_ns = fmt;
+#endif
+
 namespace idhan::log
 {
 
 template < typename... Ts >
-void trace( const std::format_string< Ts... > str, Ts&&... ts )
+void trace( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::trace( str, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void debug( const ::std::format_string< Ts... > str, Ts&&... ts )
+void debug( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::debug( str, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void info( const std::format_string< Ts... > str, Ts&&... ts )
+void info( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::info( str, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void warn( const std::format_string< Ts... > str, Ts&&... ts )
+void warn( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::warn( str, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void error( const std::format_string< Ts... > str, Ts&&... ts )
+void error( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::error( str, std::forward< Ts >( ts )... );
 }
@@ -54,7 +63,7 @@ void error( const T& val )
 }
 
 template < typename... Ts >
-void critical( const std::format_string< Ts... > str, Ts&&... ts )
+void critical( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::critical( str, std::forward< Ts >( ts )... );
 }
@@ -62,7 +71,7 @@ void critical( const std::format_string< Ts... > str, Ts&&... ts )
 namespace server
 {
 template < typename... Ts >
-void info( const std::format_string< Ts... > str, Ts&&... ts )
+void info( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::info( str, std::forward< Ts >( ts )... );
 }

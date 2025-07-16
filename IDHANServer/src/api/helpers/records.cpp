@@ -21,7 +21,7 @@ drogon::Task< std::vector< RecordID > >
 
 	for ( const auto& sha256 : sha256s )
 	{
-		query += std::format( "\'\\x{}\'::bytea", sha256.hex() );
+		query += format_ns::format( "\'\\x{}\'::bytea", sha256.hex() );
 		query += ",";
 	}
 
