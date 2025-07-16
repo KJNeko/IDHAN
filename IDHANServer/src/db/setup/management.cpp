@@ -7,6 +7,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wswitch-enum"
 #include <pqxx/nontransaction>
 #include <pqxx/result>
 #pragma GCC diagnostic pop
@@ -18,10 +19,11 @@ namespace idhan::db
 
 bool tableExists( pqxx::nontransaction& tx, const std::string_view name, const std::string_view schema )
 {
-	const pqxx::result table_result { tx.exec_params(
-		"SELECT table_name FROM information_schema.tables WHERE table_name = $1 AND table_schema = $2",
-		name,
-		schema ) };
+	pqxx::params params {};
+	params.append( name );
+	params.append( schema );
+	const pqxx::result table_result { tx.exec(
+		"SELECT table_name FROM information_schema.tables WHERE table_name = $1 AND table_schema = $2", params ) };
 
 	return table_result.size() > 0;
 }
@@ -29,7 +31,9 @@ bool tableExists( pqxx::nontransaction& tx, const std::string_view name, const s
 //! Returns the table version.
 std::uint16_t getTableVersion( pqxx::nontransaction& tx, const std::string_view name )
 {
-	auto result { tx.exec_params( "SELECT table_version FROM idhan_info WHERE table_name = $1", name ) };
+	pqxx::params params {};
+	params.append( name );
+	auto result { tx.exec( "SELECT table_version FROM idhan_info WHERE table_name = $1", params ) };
 
 	if ( result.size() == 0 ) return 0;
 
@@ -42,16 +46,18 @@ void addTableToInfo(
 	const std::string_view creation_query,
 	const std::size_t migration_id )
 {
-	tx.exec_params(
+	pqxx::params params {};
+	params.append( name );
+	params.append( migration_id );
+	params.append( creation_query );
+	tx.exec(
 		R"(
 					INSERT INTO idhan_info (table_name, last_migration_id, queries)
 					VALUES( $1, $2, ARRAY[$3] )
 					ON CONFLICT (table_name) DO UPDATE SET
 						queries = idhan_info.queries || EXCLUDED.queries,
 		                last_migration_id = EXCLUDED.last_migration_id;)",
-		name,
-		migration_id,
-		creation_query );
+		params );
 }
 
 #ifdef ALLOW_TABLE_DESTRUCTION

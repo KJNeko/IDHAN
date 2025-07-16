@@ -144,6 +144,9 @@ ResponseTask IDHANRecordAPI::createRecord( const drogon::HttpRequestPtr request 
 	logging::ScopedTimer timer { "createRecord" };
 	// the request here should be either an octet stream, or json. If it's an octet stream, then it will be a file we can hash.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+	// It's really not possible for us to have every single enum here.
 	switch ( request->getContentType() )
 	{
 		// Here we are expecting that the data being shoved into the request is actually a file.
@@ -158,6 +161,7 @@ ResponseTask IDHANRecordAPI::createRecord( const drogon::HttpRequestPtr request 
 			//TODO: Failure
 			break;
 	}
+#pragma GCC diagnostic pop
 
 	co_return createBadRequest( "Unexpected content type" );
 }
