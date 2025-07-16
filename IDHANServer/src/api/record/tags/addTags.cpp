@@ -27,7 +27,7 @@ struct TagPair
 	  tag_subtag( n_subtag )
 	{}
 
-	TagPair( const TagID id ) : tag_namespace(), tag_subtag(), tag_id( id ) {}
+	TagPair( const TagID id ) : tag_id( id ), tag_namespace(), tag_subtag() {}
 
 	static TagPair fromSplit( const std::string tag )
 	{
@@ -36,7 +36,7 @@ struct TagPair
 		return TagPair( t_n, t_s );
 	}
 
-	TagPair( const Json::Value& value )
+	explicit TagPair( const Json::Value& value ) : tag_id( std::nullopt ), tag_namespace(), tag_subtag()
 	{
 		try
 		{

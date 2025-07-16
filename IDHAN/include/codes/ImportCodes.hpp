@@ -6,7 +6,7 @@
 namespace idhan
 {
 
-enum ImportStatus
+enum ImportStatus : std::uint8_t
 {
 	Success = 1,
 	Exists = 2,
@@ -14,7 +14,7 @@ enum ImportStatus
 	Failed = 4,
 };
 
-enum ImportFailureCode
+enum ImportFailureCode : std::uint8_t
 {
 	UnknownReason = 0,
 	UnknownMime = 1,

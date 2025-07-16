@@ -5,6 +5,8 @@
 
 #include <filesystem>
 
+#include "fgl/defines.hpp"
+
 namespace idhan
 {
 
@@ -17,7 +19,7 @@ class FileMappedData
 
   public:
 
-	FileMappedData() = delete;
+	FGL_DELETE_ALL_RO5( FileMappedData );
 
 	explicit FileMappedData( const std::filesystem::path& path_i );
 

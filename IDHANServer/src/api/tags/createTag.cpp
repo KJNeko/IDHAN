@@ -123,11 +123,11 @@ std::string pgEscape( const std::string& str )
 			case '\"':
 				[[fallthrough]];
 			case '\\':
-				[[fallthrough]];
 				cleaned.push_back( '\\' );
-			case ',':
 				[[fallthrough]];
+			case ',':
 				contains_comma = contains_comma || ( c == ',' );
+				[[fallthrough]];
 			default:
 				cleaned.push_back( c );
 		}

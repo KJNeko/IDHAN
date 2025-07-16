@@ -144,8 +144,6 @@ void SearchBuilder::filterTagDomain( const TagDomainID value )
 
 void SearchBuilder::addFileDomain( const FileDomainID value )
 {
-	params.append( value );
-	placeholders.next();
 }
 
 void SearchBuilder::setTags( const std::vector< TagID >& vector )

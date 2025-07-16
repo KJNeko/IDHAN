@@ -13,7 +13,7 @@
 namespace idhan::modules
 {
 
-ModuleLoader::ModuleLoader()
+ModuleLoader::ModuleLoader() : m_modules(), m_libs()
 {
 	FGL_ASSERT( m_instance == nullptr, "ModuleLoader is a singleton" );
 	m_instance = this;
@@ -28,6 +28,8 @@ class ModuleHolder
 	VoidFunc deinitFunc;
 
   public:
+
+	FGL_DELETE_ALL_RO5( ModuleHolder );
 
 	void* handle() const { return m_handle; }
 
