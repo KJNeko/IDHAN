@@ -36,7 +36,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 	Json::Value json;
 
-	json[ "cluster_id" ] = cluster_id;
+	json[ "cluster_id" ] = static_cast< Json::Value::UInt >( cluster_id );
 	json[ "readonly" ] = cluster_info[ 0 ][ "read_only" ].as< bool >();
 	json[ "name" ] = cluster_info[ 0 ][ "cluster_name" ].as< std::string >();
 	const auto size_used { cluster_info[ 0 ][ "size_used" ].as< std::int64_t >() };

@@ -48,16 +48,16 @@ std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbna
 	const float target_aspect { static_cast< float >( width ) / static_cast< float >( height ) };
 
 	if ( target_aspect > source_aspect )
-	{
-		width = static_cast< int >( height * source_aspect );
-	}
+		width = static_cast< std::size_t >( static_cast< float >( height ) * source_aspect );
 	else
-	{
-		height = static_cast< int >( width / source_aspect );
-	}
+		height = static_cast< std::size_t >( static_cast< float >( width ) / source_aspect );
 
 	VipsImage* resized;
-	if ( vips_resize( image, &resized, width / (float)vips_image_get_width( image ), nullptr ) )
+	if ( vips_resize(
+			 image,
+			 &resized,
+			 static_cast< double >( width ) / static_cast< double >( vips_image_get_width( image ) ),
+			 nullptr ) )
 	{
 		g_object_unref( image );
 		return std::unexpected( ModuleError { "Failed to resize image" } );

@@ -19,7 +19,11 @@ QFuture< void > IDHANClient::addTags(
 {
 	if ( tags.empty() )
 	{
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 6, 0 )
 		return QtFuture::makeReadyVoidFuture();
+#else
+		return QFuture< void > {};
+#endif
 	}
 
 	auto promise { std::make_shared< QPromise< void > >() };
@@ -160,7 +164,14 @@ QFuture< void > IDHANClient::addTags(
 QFuture< void > IDHANClient::addTags(
 	std::vector< RecordID >&& record_ids, const TagDomainID domain_id, std::vector< std::vector< TagID > >&& tag_sets )
 {
-	if ( record_ids.empty() ) return QtFuture::makeReadyVoidFuture();
+	if ( record_ids.empty() )
+	{
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 6, 0 )
+		return QtFuture::makeReadyVoidFuture();
+#else
+		return QFuture< void > {};
+#endif
+	}
 
 	auto promise { std::make_shared< QPromise< void > >() };
 	promise->start();

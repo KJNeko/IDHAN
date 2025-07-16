@@ -22,8 +22,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 	for ( const auto& row : result )
 	{
-		const auto domain_id { row[ 0 ].as< std::size_t >() };
-		const auto tag_id { row[ 1 ].as< std::size_t >() };
+		const auto domain_id { row[ 0 ].as< TagDomainID >() };
+		const auto tag_id { row[ 1 ].as< TagID >() };
 
 		if ( auto itter = domain_map.find( domain_id ); itter != domain_map.end() )
 		{
@@ -33,7 +33,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 		else
 		{
 			Json::Value obj {};
-			obj[ "domain_id" ] = domain_id;
+			obj[ "domain_id" ] = static_cast< Json::Value::UInt >( domain_id );
 			obj[ "tag_ids" ] = Json::arrayValue;
 			obj[ "tag_ids" ].append( tag_id );
 			json.append( obj );

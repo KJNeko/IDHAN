@@ -11,7 +11,10 @@
 #include "ImageVipsThumbnailer.hpp"
 
 ModuleInfo IDHANEntry()
-{}
+{
+	//TODO: Fill out ModuleInfo
+	return {};
+}
 
 std::vector< std::shared_ptr< IDHANModule > > getModules()
 {

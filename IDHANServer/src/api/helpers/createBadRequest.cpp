@@ -16,7 +16,7 @@ drogon::HttpResponsePtr createBadResponse( const std::string& message, drogon::H
 {
 	Json::Value out_json {};
 	out_json[ "error" ] = message;
-	out_json[ "status" ] = code;
+	out_json[ "status" ] = static_cast< Json::Value::Int >( code );
 
 	log::error( message );
 
