@@ -8,7 +8,9 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Weffc++"
 #include <spdlog/spdlog.h>
-#ifndef ENABLE_STD_FORMAT
+#ifdef IDHAN_USE_STD_FORMAT
+#include <format>
+#else
 #include <fmt/format.h>
 #endif
 #pragma GCC diagnostic pop
@@ -17,7 +19,7 @@
 
 #include "qt_formatters/qstring.hpp"
 
-#ifdef ENABLE_STD_FORMAT
+#ifdef IDHAN_USE_STD_FORMAT
 namespace format_ns = std;
 #else
 namespace format_ns = fmt;
