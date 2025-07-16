@@ -21,7 +21,14 @@ QFuture< void > IDHANClient::
 QFuture< void > IDHANClient::
 	createParentRelationship( const TagDomainID tag_domian_id, std::vector< std::pair< TagID, TagID > >&& pairs )
 {
-	if ( pairs.size() == 0 ) return QtFuture::makeReadyVoidFuture();
+	if ( pairs.size() == 0 )
+	{
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 6, 0 )
+		return QtFuture::makeReadyVoidFuture();
+#else
+		return QFuture< void > {};
+#endif
+	}
 
 	QJsonArray array {};
 

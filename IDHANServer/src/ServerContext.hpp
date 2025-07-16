@@ -3,7 +3,11 @@
 //
 
 #pragma once
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 #include <spdlog/spdlog.h>
+#pragma GCC diagnostic pop
 
 #include <filesystem>
 #include <memory>
