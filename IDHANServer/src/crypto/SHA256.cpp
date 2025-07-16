@@ -27,7 +27,7 @@ SHA256::SHA256( const drogon::orm::Field& field )
 	const auto data { field.as< std::vector< char > >() };
 
 	FGL_ASSERT(
-		data.size() == m_data.size(), std::format( "Invalid size. Expected {} got {}", m_data.size(), data.size() ) );
+		data.size() == m_data.size(), format_ns::format( "Invalid size. Expected {} got {}", m_data.size(), data.size() ) );
 
 	std::memcpy( m_data.data(), data.data(), data.size() );
 }
@@ -37,7 +37,7 @@ std::string SHA256::hex() const
 	std::string str {};
 	str.reserve( m_data.size() );
 	for ( std::size_t i = 0; i < m_data.size(); ++i )
-		str += std::format( "{:02x}", static_cast< std::uint8_t >( m_data[ i ] ) );
+		str += format_ns::format( "{:02x}", static_cast< std::uint8_t >( m_data[ i ] ) );
 	return str;
 }
 
@@ -65,7 +65,7 @@ SHA256 SHA256::fromBuffer( const std::vector< std::byte >& data )
 {
 	if ( data.size() != ( 256 / 8 ) )
 		throw std::runtime_error(
-			std::format( "Invalid size. SHA256::fromBuffer expects a size of 32 bytes was {}", data.size() ) );
+			format_ns::format( "Invalid size. SHA256::fromBuffer expects a size of 32 bytes was {}", data.size() ) );
 	return SHA256( data.data() );
 }
 

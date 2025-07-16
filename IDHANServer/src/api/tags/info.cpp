@@ -5,6 +5,7 @@
 #include "IDHANTypes.hpp"
 #include "api/IDHANTagAPI.hpp"
 #include "drogon/HttpResponse.h"
+#include "logging/format_ns.hpp"
 
 namespace idhan::api
 {
@@ -14,7 +15,7 @@ drogon::HttpResponsePtr generateFailedTagSearch( const TagID tag_id )
 {
 	Json::Value value;
 	value[ "code" ] = 404;
-	value[ "message" ] = std::format(
+	value[ "message" ] = format_ns::format(
 		"TagID {} was not found. Either you tried to request it before it was comitted, or it did not exist", tag_id );
 
 	auto response { drogon::HttpResponse::newHttpJsonResponse( value ) };

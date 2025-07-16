@@ -6,10 +6,10 @@
 
 #include <QString>
 
-#include <format>
+#include "logging/format_ns.hpp"
 
 template <>
-struct std::formatter< QString >
+struct format_ns::formatter< QString >
 {
 	template < class ParseContext >
 	constexpr typename ParseContext::iterator parse( ParseContext& ctx )
@@ -20,6 +20,6 @@ struct std::formatter< QString >
 	template < class FmtContext >
 	typename FmtContext::iterator format( const QString s, FmtContext& ctx ) const
 	{
-		return std::format_to( ctx.out(), "{}", s.toStdString() );
+		return format_ns::format_to( ctx.out(), "{}", s.toStdString() );
 	}
 };

@@ -2,6 +2,7 @@
 // Created by kj16609 on 5/3/25.
 //
 
+#include <QJsonDocument>
 #include <QJsonObject>
 
 #include "IDHANTypes.hpp"
@@ -42,7 +43,7 @@ QFuture< TagInfo > IDHANClient::getTagInfo( const TagID tag_id )
 
 	auto handleError = [ promise ]( QNetworkReply* response, [[maybe_unused]] QNetworkReply::NetworkError error )
 	{
-		const std::runtime_error exception { std::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 		promise->setException( std::make_exception_ptr( exception ) );
 		promise->finish();
 

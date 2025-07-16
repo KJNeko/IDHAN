@@ -14,7 +14,7 @@
 
 #include "logging/logger.hpp"
 #include "logging/qt_formatters/qstring.hpp"
-#include "spdlog/sinks/stdout_color_sinks-inl.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 namespace idhan
 {
@@ -311,7 +311,7 @@ QFuture< void > IDHANClient::createFileCluster(
 	{
 		logging::logResponse( response );
 
-		const std::runtime_error exception { std::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 

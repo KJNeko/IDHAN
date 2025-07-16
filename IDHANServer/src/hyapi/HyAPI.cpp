@@ -92,7 +92,7 @@ drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db )
 		info[ "type_pretty" ] = "local tag service";
 
 		const auto service_key {
-			std::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, row[ "tag_domain_id" ].as< TagDomainID >() )
+			format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, row[ "tag_domain_id" ].as< TagDomainID >() )
 		};
 
 		info[ "service_key" ] = service_key;
@@ -361,7 +361,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 			const auto& tag_text { storage_tag[ "tag_text" ] };
 
 			const auto service_key {
-				std::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
+				format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
 			};
 
 			data[ "tags" ][ service_key ][ "storage_tags" ][ "0" ].append( tag_text.as< std::string >() );
@@ -374,7 +374,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 			const auto& tag_text { display_tag[ "tag_text" ] };
 
 			const auto service_key {
-				std::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
+				format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
 			};
 
 			data[ "tags" ][ service_key ][ "display_tags" ][ "0" ].append( tag_text.as< std::string >() );
@@ -434,7 +434,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( drogon::HttpRequestPtr 
 
 	const RecordID id { file_id.value() };
 
-	request->setPath( std::format( "/records/{}/file", id ) );
+	request->setPath( format_ns::format( "/records/{}/file", id ) );
 
 	co_return co_await drogon::app().forwardCoro( request );
 }
@@ -459,7 +459,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( drogon::HttpReques
 			co_return createNotFound( "No record with hash {} found", hash.value() );
 	}
 
-	request->setPath( std::format( "/records/{}/thumbnail", record_id ) );
+	request->setPath( format_ns::format( "/records/{}/thumbnail", record_id ) );
 
 	co_return co_await drogon::app().forwardCoro( request );
 }

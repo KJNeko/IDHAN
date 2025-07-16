@@ -13,7 +13,7 @@ namespace idhan
 
 QFuture< std::vector< TagID > > IDHANClient::getRecordTags( RecordID record_id, TagDomainID domain_id )
 {
-	const auto path { std::format( "/records/{}/tags", record_id ) };
+	const auto path { format_ns::format( "/records/{}/tags", record_id ) };
 
 	auto promise { std::make_shared< QPromise< std::vector< TagID > > >() };
 
@@ -59,7 +59,7 @@ QFuture< std::vector< TagID > > IDHANClient::getRecordTags( RecordID record_id, 
 
 	auto handleError = [ promise ]( QNetworkReply* response, [[maybe_unused]] QNetworkReply::NetworkError error )
 	{
-		const std::runtime_error exception { std::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 		promise->setException( std::make_exception_ptr( exception ) );
 		promise->finish();
 

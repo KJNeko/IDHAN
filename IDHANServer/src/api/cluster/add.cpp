@@ -34,7 +34,7 @@ drogon::Task< std::string > findValidClusterName( const std::string desired_name
 
 	if ( mark_start == std::string::npos )
 	{
-		co_return co_await findValidClusterName( std::format( "{}: 1", desired_name ), db );
+		co_return co_await findValidClusterName( format_ns::format( "{}: 1", desired_name ), db );
 	}
 
 	const auto mark_number_str { desired_name.substr( mark_start + 1 ) };
@@ -45,14 +45,14 @@ drogon::Task< std::string > findValidClusterName( const std::string desired_name
 		log::info( "Got UID: {}", mark_number_str );
 		const auto filtered_name { desired_name.substr( 0, mark_start ) };
 
-		co_return co_await findValidClusterName( std::format( "{}: {}", filtered_name, mark_number + 1 ), db );
+		co_return co_await findValidClusterName( format_ns::format( "{}: {}", filtered_name, mark_number + 1 ), db );
 	}
 	catch ( std::invalid_argument& arg )
 	{
 		// NOOP
 	}
 
-	co_return co_await findValidClusterName( std::format( "{}: 1", desired_name ), db );
+	co_return co_await findValidClusterName( format_ns::format( "{}: 1", desired_name ), db );
 }
 
 ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )

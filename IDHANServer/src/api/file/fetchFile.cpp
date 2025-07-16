@@ -40,8 +40,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::fetchFile( drogon::HttpR
 	if ( extension.starts_with( '.' ) ) extension = extension.substr( 1 );
 
 	const auto hash_string { hash.hex() };
-	const std::string folder { std::format( "f{}", hash_string.substr( 0, 2 ) ) };
-	const std::string file { std::format( "{}.{}", hash_string, extension ) };
+	const std::string folder { format_ns::format( "f{}", hash_string.substr( 0, 2 ) ) };
+	const std::string file { format_ns::format( "{}.{}", hash_string, extension ) };
 
 	std::filesystem::path path { cluster_path };
 	path /= folder;

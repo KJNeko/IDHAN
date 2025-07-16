@@ -17,13 +17,13 @@ void IDHANApi::version( const drogon::HttpRequestPtr& request, ResponseFunction&
 	Json::Value json;
 
 	json[ "idhan_server_version" ][ "string" ] =
-		std::format( "{}.{}.{}", IDHAN_SERVER_MAJOR, IDHAN_SERVER_MINOR, IDHAN_SERVER_PATCH );
+		format_ns::format( "{}.{}.{}", IDHAN_SERVER_MAJOR, IDHAN_SERVER_MINOR, IDHAN_SERVER_PATCH );
 	json[ "idhan_server_version" ][ "major" ] = IDHAN_SERVER_MAJOR;
 	json[ "idhan_server_version" ][ "minor" ] = IDHAN_SERVER_MINOR;
 	json[ "idhan_server_version" ][ "patch" ] = IDHAN_SERVER_PATCH;
 
 	json[ "idhan_api_version" ][ "string" ] =
-		std::format( "{}.{}.{}", IDHAN_API_MAJOR, IDHAN_API_MINOR, IDHAN_API_PATCH );
+		format_ns::format( "{}.{}.{}", IDHAN_API_MAJOR, IDHAN_API_MINOR, IDHAN_API_PATCH );
 	json[ "idhan_api_version" ][ "major" ] = IDHAN_API_MAJOR;
 	json[ "idhan_api_version" ][ "minor" ] = IDHAN_API_MINOR;
 	json[ "idhan_api_version" ][ "patch" ] = IDHAN_API_PATCH;

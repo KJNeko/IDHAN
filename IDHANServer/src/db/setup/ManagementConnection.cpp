@@ -50,10 +50,10 @@ std::string ConnectionArguments::format() const
 
 	if ( port == std::numeric_limits< std::uint16_t >::quiet_NaN() ) throw std::runtime_error( "Port not set" );
 
-	str += std::format( "host={} ", hostname );
-	str += std::format( "port={} ", port );
-	str += std::format( "dbname={} ", dbname );
-	str += std::format( "user={} ", user );
+	str += format_ns::format( "host={} ", hostname );
+	str += format_ns::format( "port={} ", port );
+	str += format_ns::format( "dbname={} ", dbname );
+	str += format_ns::format( "user={} ", user );
 	if ( testmode ) str += "options='-c search_path=test'";
 
 	log::debug( "Connecting using: {}", str );

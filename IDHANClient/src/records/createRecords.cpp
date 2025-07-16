@@ -71,7 +71,7 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 
 		if ( expected_record_count != record_ids.size() )
 		{
-			const auto log_msg { std::format(
+			const auto log_msg { format_ns::format(
 				"Server responded with incorrect number of record results. Expected {} got {}",
 				expected_record_count,
 				record_ids.size() ) };
@@ -90,7 +90,7 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 	{
 		logging::error( response->errorString().toStdString() );
 
-		const std::runtime_error exception { std::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 
@@ -137,7 +137,7 @@ QFuture< std::optional< RecordID > > IDHANClient::getRecordID( const std::string
 	{
 		logging::error( response->errorString().toStdString() );
 
-		const std::runtime_error exception { std::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 

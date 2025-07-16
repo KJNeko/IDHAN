@@ -11,8 +11,10 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
-#include "spdlog/spdlog.h"
+#include "spdlog/spdlog-inl.h"
 #pragma GCC diagnostic pop
+
+#include "logging/format_ns.hpp"
 
 class QNetworkReply;
 
@@ -34,32 +36,32 @@ namespace idhan::logging
 {
 
 template < typename... Ts >
-void notify( std::format_string< Ts... > fmt, Ts&&... ts )
+void notify( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	//TODO: Get this name from the context
 	spdlog::get( "client" )->info( fmt, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void debug( std::format_string< Ts... > fmt, Ts&&... ts )
+void debug( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->debug( fmt, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void info( std::format_string< Ts... > fmt, Ts&&... ts )
+void info( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->info( fmt, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void warn( std::format_string< Ts... > fmt, Ts&&... ts )
+void warn( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->warn( fmt, std::forward< Ts >( ts )... );
 }
 
 template < typename... Ts >
-void error( std::format_string< Ts... > fmt, Ts&&... ts )
+void error( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->error( fmt, std::forward< Ts >( ts )... );
 }
@@ -71,7 +73,7 @@ void error( const T& msg )
 }
 
 template < typename... Ts >
-void critical( std::format_string< Ts... > fmt, Ts&&... ts )
+void critical( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	spdlog::get( "client" )->critical( fmt, std::forward< Ts >( ts )... );
 }

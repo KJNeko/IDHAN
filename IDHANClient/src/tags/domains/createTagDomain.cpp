@@ -46,7 +46,7 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 		if ( error == QNetworkReply::NetworkError::ContentConflictError )
 		{
 			const std::runtime_error exception {
-				std::format( "Conflict Error: {}", response->errorString().toStdString() )
+				format_ns::format( "Conflict Error: {}", response->errorString().toStdString() )
 			};
 			promise->setException( std::make_exception_ptr( exception ) );
 			promise->finish();
@@ -54,7 +54,7 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 			return;
 		}
 
-		const std::runtime_error exception { std::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 
@@ -105,7 +105,7 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 			}
 		}
 
-		const std::runtime_error exception { std::format( "Error: No tag domain by name {}", name ) };
+		const std::runtime_error exception { format_ns::format( "Error: No tag domain by name {}", name ) };
 		promise->setException( std::make_exception_ptr( exception ) );
 
 		response->deleteLater();
@@ -115,7 +115,7 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 	{
 		logging::logResponse( response );
 
-		const std::runtime_error exception { std::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 

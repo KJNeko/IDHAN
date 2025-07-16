@@ -13,7 +13,7 @@ std::string
 	createFilter( std::uint32_t index, const std::vector< TagID >& tag_ids, const HydrusDisplayType display_mode )
 {
 	std::string str {};
-	str += std::format( " filter_{}", index );
+	str += format_ns::format( " filter_{}", index );
 	str += " AS (SELECT DISTINCT record_id FROM ";
 
 	switch ( display_mode )
@@ -29,11 +29,11 @@ std::string
 			break;
 	}
 
-	str += std::format( " WHERE tag_id = {}", tag_ids[ index ] );
+	str += format_ns::format( " WHERE tag_id = {}", tag_ids[ index ] );
 	str += " AND domain_id = ANY($1)";
 	if ( index != 0 )
 	{
-		str += std::format(
+		str += format_ns::format(
 			" AND EXISTS (SELECT 1 FROM filter_{} last_filter WHERE last_filter.record_id = tm.record_id)", index - 1 );
 	}
 
@@ -58,24 +58,24 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 
 	if ( m_tags.size() == 0 ) return query;
 
-	const std::string last_filter { std::format( "filter_{}", m_tags.size() - 1 ) };
+	const std::string last_filter { format_ns::format( "filter_{}", m_tags.size() - 1 ) };
 
 	// determine the SELECT
 	if ( return_ids && return_hashes )
 	{
 		m_required_joins.records = true;
-		const std::string select_both { std::format( " SELECT tm.record_id, sha256 FROM {} tm", last_filter ) };
+		const std::string select_both { format_ns::format( " SELECT tm.record_id, sha256 FROM {} tm", last_filter ) };
 		query += select_both;
 	}
 	else if ( return_hashes )
 	{
-		const std::string select_sha256 { std::format( " SELECT tm.sha256 FROM {} tm", last_filter ) };
+		const std::string select_sha256 { format_ns::format( " SELECT tm.sha256 FROM {} tm", last_filter ) };
 		query += select_sha256;
 		m_required_joins.records = true;
 	}
 	else
 	{
-		const std::string select_record_id { std::format( " SELECT tm.record_id FROM {} tm", last_filter ) };
+		const std::string select_record_id { format_ns::format( " SELECT tm.record_id FROM {} tm", last_filter ) };
 		query += select_record_id;
 	}
 
