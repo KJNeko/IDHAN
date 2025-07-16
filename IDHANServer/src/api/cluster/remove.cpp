@@ -8,6 +8,8 @@ namespace idhan::api
 {
 
 ClusterAPI::ResponseTask ClusterAPI::remove( drogon::HttpRequestPtr request, const ClusterID cluster_id )
-{}
+{
+	//TODO: Implement removal logic
+}
 
 } // namespace idhan::api

@@ -2,13 +2,26 @@
 // Created by kj16609 on 11/7/24.
 //
 #pragma once
-#include <pqxx/pqxx>
 
 #include <string_view>
 
 #include "IDHANTypes.hpp"
 #include "SearchBuilder.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wredundant-tags"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wnoexcept"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wnoexcept"
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#pragma GCC diagnostic ignored "-Wshadow"
 #include "drogon/HttpRequest.h"
+#pragma GCC diagnostic pop
+
 #include "hydrus_client_constants_gen.hpp"
 
 namespace idhan
@@ -157,8 +170,6 @@ struct SearchBuilder
 
 	} m_required_joins;
 
-	pqxx::params params;
-	pqxx::placeholders<> placeholders;
 	SortType m_sort_type;
 	SortOrder m_order;
 	std::vector< TagID > m_tags;
