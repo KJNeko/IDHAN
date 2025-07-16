@@ -43,6 +43,10 @@ int main( int argc, char** argv )
 	use_stdout.setDefaultValue( "true" );
 	parser.addOption( use_stdout );
 
+	QCommandLineOption use_testmode { "testmode", "Forces the DB to use the `test` schema", "testmode" };
+	use_testmode.setDefaultValue( "false" );
+	parser.addOption( use_testmode );
+
 	QCommandLineOption config_location { "config", "The location for the config file", "config_location" };
 	config_location.setDefaultValue( "./config.json" );
 	parser.addOption( config_location );
@@ -95,9 +99,9 @@ int main( int argc, char** argv )
 		arguments.log_level = strToSpdlogLevel( level );
 	}
 
-	if ( parser.isSet( testmode_option ) )
+	if ( parser.isSet( use_testmode ) )
 	{
-		arguments.testmode = true;
+		arguments.testmode = parser.value( use_testmode ).toStdString() == "true";
 	}
 
 	idhan::ServerContext context { arguments };
