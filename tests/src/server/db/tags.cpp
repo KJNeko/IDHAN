@@ -108,6 +108,12 @@ TEST_CASE( "Tag Tests", "[tags][db][server]" )
 			w.commit();
 		};
 
+		auto deleteMapping = [ & ]( const idhan::TagID id )
+		{
+			w.exec_params( "DELETE FROM tag_mappings WHERE tag_id = $1 AND domain_id = $2", id, DEFAULT_DOMAIN );
+			w.commit();
+		};
+
 		auto testFlatAlias = [ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id )
 		{
 			const auto result { w.exec_params(
@@ -213,10 +219,84 @@ TEST_CASE( "Tag Tests", "[tags][db][server]" )
 			REQUIRE( result[ 0 ][ "ideal_tag_id" ].as< idhan::TagID >() == ideal_tag_id );
 		};
 
-		SECTION( "Mappings" )
+		auto testParentMapping = [ & ]( const idhan::TagID tag_id, const idhan::TagID origin_id )
 		{
+			const auto result { w.exec_params(
+				"SELECT origin_id, tag_id FROM tag_mappings_virtuals WHERE domain_id = $1 AND tag_id = $2 AND origin_id = $3",
+				DEFAULT_DOMAIN,
+				tag_id,
+				origin_id ) };
+			REQUIRE( result.size() == 1 );
+		};
+
+		SECTION( "Parents" )
+		{
+			WHEN( "Parent `highschool dxd` is added to `toujou koneko`" )
+			{
+				createParent( tag_highschool_dxd, tag_e_toujou_koneko );
+				AND_WHEN( "`toujou koneko` is added as a mapping" )
+				{
+					createMapping( tag_e_toujou_koneko );
+
+					THEN( "The virtual mappings should have the tag `highschool dxd` with the origin `toujou koneko`" )
+					{
+						testParentMapping( tag_highschool_dxd, tag_e_toujou_koneko );
+					}
+
+					AND_WHEN( "Parent `highschool dxd` is deleted" )
+					{
+						deleteMapping( tag_e_toujou_koneko );
+
+						THEN( "The mapping should no longer exist" )
+						{
+							testParentMapping( tag_highschool_dxd, tag_e_toujou_koneko );
+						}
+					}
+
+					AND_WHEN( "Alias `toujou koneko` -> `character:toujou koneko` is added" )
+					{
+						createAlias( tag_e_toujou_koneko, tag_character_toujou_koneko );
+						THEN(
+							"The virtual mapping should be `highschool dxd` with an origin of `character:toujou koneko`" )
+						{
+							testParentMapping( tag_highschool_dxd, tag_character_toujou_koneko );
+						}
+
+						AND_WHEN( "The previous alias is deleted" )
+						{
+							deleteAlias( tag_e_toujou_koneko, tag_character_toujou_koneko );
+
+							testParentMapping( tag_highschool_dxd, tag_e_toujou_koneko );
+						}
+					}
+
+					AND_WHEN( "Alias `highschool dxd` -> `series:highschool dxd` is added" )
+					{
+						createAlias( tag_highschool_dxd, tag_series_highschool_dxd );
+						THEN(
+							"The virtual mapping should be `series:highschool dxd` with an origin of `toujou koneko`" )
+						{
+							testParentMapping( tag_series_highschool_dxd, tag_e_toujou_koneko );
+						}
+
+						AND_WHEN( "The previous alias is deleted" )
+						{
+							deleteAlias( tag_highschool_dxd, tag_series_highschool_dxd );
+
+							testParentMapping( tag_highschool_dxd, tag_e_toujou_koneko );
+						}
+					}
+
+					// Cleanup for the next tests
+					deleteMapping( tag_e_toujou_koneko );
+				}
+			}
+
 			createMapping( tag_e_toujou_koneko );
-			testMapping( tag_e_toujou_koneko );
+			THEN( "The mapping should exist" )
+			{
+				testMapping( tag_e_toujou_koneko );
+			}
 
 			WHEN( "Alias `toujou koneko` -> `character:toujou koneko` is created" )
 			{
