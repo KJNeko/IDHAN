@@ -146,7 +146,7 @@ class IDHANClient
 	 */
 	QFuture< void > createParentRelationship( TagDomainID tag_domian_id, TagID parent_id, TagID child_id );
 	QFuture< void >
-		createParentRelationship( TagDomainID tag_domian_id, std::vector< std::pair< TagID, TagID > >&& pairs );
+		createParentRelationship( TagDomainID tag_domian_id, const std::vector< std::pair< TagID, TagID > >& pairs );
 
 	/**
 	 * @brief Creates a new alias for a given tag.
@@ -160,7 +160,7 @@ class IDHANClient
 	QFuture< void > createAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
 
 	QFuture< void >
-		createAliasRelationship( TagDomainID tag_domain_id, std::vector< std::pair< TagID, TagID > >&& pairs );
+		createAliasRelationship( TagDomainID tag_domain_id, const std::vector< std::pair< TagID, TagID > >& pairs );
 
 	/**
 	 * @brief Creates a new tag domain, Throws if the domain exists

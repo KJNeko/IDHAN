@@ -19,11 +19,10 @@ QFuture< void > IDHANClient::createAliasRelationship( TagDomainID tag_domain_id,
 }
 
 QFuture< void > IDHANClient::
-	createAliasRelationship( const TagDomainID tag_domain_id, std::vector< std::pair< TagID, TagID > >&& pairs )
+	createAliasRelationship( const TagDomainID tag_domain_id, const std::vector< std::pair< TagID, TagID > >& pairs )
 {
 	if ( pairs.size() == 0 )
 	{
-		
 #if QT_VERSION >= QT_VERSION_CHECK( 6, 6, 0 )
 		return QtFuture::makeReadyVoidFuture();
 #else
