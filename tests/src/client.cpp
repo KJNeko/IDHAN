@@ -180,13 +180,7 @@ TEST_CASE( "Client tests", "[server][client][network]" )
 
 	SECTION( "Client connection" )
 	{
-		idhan::IDHANClientConfig config {};
-		config.hostname = "localhost";
-		config.port = idhan::IDHAN_DEFAULT_PORT;
-		config.self_name = "testing suite";
-		config.use_ssl = false;
-
-		idhan::IDHANClient client { config };
+		idhan::IDHANClient client { "localhost", idhan::IDHAN_DEFAULT_PORT, false };
 
 		SECTION( "Function tests" )
 		{
