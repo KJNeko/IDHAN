@@ -32,6 +32,7 @@ class TagServiceWorker final : public QObject, public QRunnable
 
 	void preprocess();
 	void importMappings();
+	void processRelationships();
 	void run() override;
 
   private:
@@ -43,8 +44,10 @@ class TagServiceWorker final : public QObject, public QRunnable
 	};
 
 	void processSets( const std::vector< MappingPair >& pairs ) const;
+	void processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const;
+	void processSiblings( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const;
 
-    void processMappingsBatch(
+	void processMappingsBatch(
 		const idhan::hydrus::TransactionBaseCoro& mappings_tr, const std::string& current_mappings_name );
 
   public:

@@ -78,7 +78,7 @@ std::vector< ServiceInfo > HydrusImporter::getTagServices()
 		client_tr,
 		"SELECT service_id, name FROM services WHERE service_type = $1 OR service_type = $2",
 		static_cast< int >( hy_constants::ServiceTypes::TAG_SERVICE ),
-		static_cast< int >( hy_constants::ServiceTypes::TAG_SERVICE )
+		static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE )
 	};
 
 	for ( const auto& [ service_id, name ] : query )

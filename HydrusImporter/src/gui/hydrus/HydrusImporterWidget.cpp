@@ -21,6 +21,9 @@ HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent 
 {
 	ui->setupUi( this );
 
+	// Process PTR by default?
+	// ui->cbProcessPTR->setChecked( false );
+
 	ui->hyFolderStatusLabel->setText( "Invalid" );
 	ui->hyFolderStatusLabel->setStyleSheet( "QLabel { color: red; }" );
 
@@ -103,7 +106,11 @@ void HydrusImporterWidget::on_parseHydrusDB_pressed()
 
 	for ( const auto& service : service_infos )
 	{
-		if ( service.name == "public tag repository" && !ui->cbProcessPTR->isChecked() ) continue;
+		if ( service.name == "public tag repository" && !ui->cbProcessPTR->isChecked() )
+		{
+			// idhan::logging::info( "Skipping PTR because cbProcessPTR is not checked" );
+			continue;
+		}
 
 		TagServiceWidget* widget { new TagServiceWidget( this ) };
 

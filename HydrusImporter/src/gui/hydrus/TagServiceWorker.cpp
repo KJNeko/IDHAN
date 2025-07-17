@@ -139,6 +139,7 @@ void TagServiceWorker::processSets( const std::vector< MappingPair >& pairs ) co
 				tag_id
 			};
 
+			//TODO: Make this not a for loop, It should be using *operator instead
 			for ( const auto& [ namespace_i, subtag_i ] : query )
 			{
 				tag_pair = std::make_pair( namespace_i, subtag_i );
@@ -189,6 +190,59 @@ void TagServiceWorker::processSets( const std::vector< MappingPair >& pairs ) co
 	future.waitForFinished();
 }
 
+void TagServiceWorker::processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const
+{
+	auto& client = idhan::IDHANClient::instance();
+
+	auto future = client.createParentRelationship( tag_domain_id, pairs );
+	future.waitForFinished();
+}
+
+void TagServiceWorker::processSiblings( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const
+{
+	auto& client = idhan::IDHANClient::instance();
+
+	auto future = client.createAliasRelationship( tag_domain_id, pairs );
+	future.waitForFinished();
+}
+
+void TagServiceWorker::processMappingsBatch(
+	const idhan::hydrus::TransactionBaseCoro& mappings_tr, const std::string& current_mappings_name )
+{
+	std::vector< MappingPair > sets {};
+	constexpr std::size_t hash_limit { 1000 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
+	constexpr std::size_t average_tags_per_hash { 64 };
+	constexpr std::size_t set_limit { average_tags_per_hash * hash_limit };
+
+	idhan::hydrus::Query< int, int > query {
+		mappings_tr, std::format( "SELECT tag_id, hash_id FROM {} ORDER BY hash_id, tag_id", current_mappings_name )
+	};
+
+	std::size_t mappings_counter { 0 };
+
+	std::unordered_set< int > hash_id_set {};
+
+	for ( const auto& [ tag_id, hash_id ] : query )
+	{
+		// dump before processing the next item if we are over the limit
+		if ( hash_id_set.size() >= hash_limit )
+		{
+			hash_id_set.clear();
+			processSets( sets );
+			sets.clear();
+			sets.reserve( set_limit );
+			emit processedMappings( mappings_counter );
+			mappings_counter = 0;
+		}
+
+		mappings_counter += 1;
+		sets.emplace_back( hash_id, tag_id );
+		hash_id_set.insert( hash_id );
+	}
+
+	emit processedMappings( mappings_counter );
+}
+
 void TagServiceWorker::importMappings()
 {
 	using namespace idhan::hydrus;
@@ -199,9 +253,9 @@ void TagServiceWorker::importMappings()
 
 	auto& client = idhan::IDHANClient::instance();
 
-	std::string str { m_service.name.toStdString() };
+	const std::string service_name { m_service.name.toStdString() };
 
-	auto tag_domain_f { client.createTagDomain( str ) };
+	auto tag_domain_f { client.createTagDomain( service_name ) };
 
 	//TODO: Add handling for conflicting tag domains
 	try
@@ -210,30 +264,40 @@ void TagServiceWorker::importMappings()
 	}
 	catch ( std::exception& e )
 	{
-		tag_domain_f = client.getTagDomain( str );
+		tag_domain_f = client.getTagDomain( service_name );
 		tag_domain_f.waitForFinished();
 	}
 
 	tag_domain_id = tag_domain_f.result();
 
+	processRelationships();
+
 	processMappingsBatch( mappings_tr, current_mappings_name );
 
+	emit finished();
+}
+
+void TagServiceWorker::processRelationships()
+{
+	using namespace idhan::hydrus;
+
+	const auto id { m_service.service_id };
 	const auto current_parents_name { std::format( "current_tag_parents_{}", id ) };
 	const auto current_siblings_name { std::format( "current_tag_siblings_{}", id ) };
 
 	TransactionBaseCoro client_tr { m_importer->client_db };
 	TransactionBaseCoro master_tr { m_importer->master_db };
 
-	std::unordered_map< int, idhan::TagID > tag_map {};
-	std::set< int > tag_set {};
 	using HyTagID = int;
 	using ParentID = HyTagID;
 	using ChildID = HyTagID;
 	using BadTagID = HyTagID;
 	using GoodTagID = HyTagID;
 
-	std::vector< std::pair< ChildID, ParentID > > parents {};
-	std::vector< std::pair< BadTagID, GoodTagID > > siblings {};
+	std::set< HyTagID > tag_set {};
+
+	std::vector< std::pair< ChildID, ParentID > > hy_parents {};
+	std::vector< std::pair< BadTagID, GoodTagID > > hy_siblings {};
 
 	std::unordered_map< int, std::pair< std::string, std::string > > tag_pairs {};
 
@@ -245,7 +309,7 @@ void TagServiceWorker::importMappings()
 
 		for ( const auto& [ child_id, parent_id ] : query )
 		{
-			parents.emplace_back( child_id, parent_id );
+			hy_parents.emplace_back( child_id, parent_id );
 			tag_set.emplace( child_id );
 			tag_set.emplace( parent_id );
 		}
@@ -258,7 +322,7 @@ void TagServiceWorker::importMappings()
 
 		for ( const auto& [ bad_id, good_id ] : query )
 		{
-			siblings.emplace_back( bad_id, good_id );
+			hy_siblings.emplace_back( bad_id, good_id );
 			tag_set.emplace( bad_id );
 			tag_set.emplace( good_id );
 		}
@@ -289,34 +353,99 @@ void TagServiceWorker::importMappings()
 	}
 
 	std::vector< std::pair< std::string, std::string > > tags {};
+	std::vector< HyTagID > tag_order {};
 
-	for ( const auto& [ _, tag_text ] : tag_pairs )
+	for ( const auto& [ tag_id, tag_text ] : tag_pairs )
 	{
 		// const auto& [ namespace_str, subtag_str ] = tag_text;
 		tags.emplace_back( tag_text );
+		tag_order.emplace_back( tag_id );
 	}
 
+	auto& client = idhan::IDHANClient::instance();
 	auto tag_f { client.createTags( tags ) };
 
 	tag_f.waitForFinished();
 
 	// Maps from Hydrus ID to IDHAN IDs
-	std::unordered_map< int, idhan::TagID > tag_translation_map {};
+	std::unordered_map< HyTagID, idhan::TagID > tag_translation_map {};
 
 	const auto result { tag_f.result() };
 
-	FGL_ASSERT( tag_set.size() == result.size(), "Tag set was not the same size as result!" );
+	FGL_ASSERT( tag_order.size() == result.size(), "Tag set was not the same size as result!" );
 
 	auto ret_itter = result.begin();
-	for ( auto itter = tag_set.begin(); itter != tag_set.end(); ++itter, ++ret_itter )
+	auto itter = tag_order.begin();
+	for ( ; itter != tag_order.end(); ++itter, ++ret_itter )
 	{
-		const auto original_id { *itter };
-		const auto new_id { *ret_itter };
+		const HyTagID original_id { *itter };
+		const idhan::TagID new_id { *ret_itter };
+
+#ifndef NDEBUG
+		auto tag_info = client.getTagInfo( new_id );
+		tag_info.waitForFinished();
+
+		const auto hy_tag_str = tag_pairs[ original_id ];
+		const auto idhan_tag_i = tag_info.result();
+		FGL_ASSERT(
+			hy_tag_str.first == idhan_tag_i.m_namespace.m_text,
+			std::format(
+				"Namespace text mismatch! Expected {} got {}", hy_tag_str.first, idhan_tag_i.m_namespace.m_text ) );
+		FGL_ASSERT(
+			hy_tag_str.second == idhan_tag_i.m_subtag.m_text,
+			std::format( "Subtag text mismatch! Expected {} got {}", hy_tag_str.second, idhan_tag_i.m_subtag.m_text ) );
+#endif
 
 		tag_translation_map.emplace( original_id, new_id );
 	}
 
+	constexpr std::size_t set_limit { 4 };
+
+	// Process parents
+	{
+		std::vector< std::pair< idhan::TagID, idhan::TagID > > parents {};
+
+		for ( const auto& [ hy_child_id, hy_parent_id ] : hy_parents )
+		{
+			const auto idhan_child_id = tag_translation_map.at( hy_child_id );
+			const auto idhan_parent_id = tag_translation_map.at( hy_parent_id );
+
+			// parents are expected to be in (parent, child) format
+			parents.emplace_back( idhan_parent_id, idhan_child_id );
+
+			if ( parents.size() >= set_limit )
+			{
+				processParents( parents );
+				emit processedParents( parents.size() );
+				parents.clear();
+			}
+		}
+
+		processParents( parents );
+		emit processedParents( parents.size() );
+	}
+
 	emit processedParents( m_service.num_parents );
+
+	{
+		std::vector< std::pair< idhan::TagID, idhan::TagID > > siblings {};
+		for ( const auto& [ hy_bad_id, hy_good_id ] : hy_siblings )
+		{
+			const auto idhan_bad_id = tag_translation_map.at( hy_bad_id );
+			const auto idhan_good_id = tag_translation_map.at( hy_good_id );
+
+			siblings.emplace_back( idhan_bad_id, idhan_good_id );
+			if ( siblings.size() >= set_limit )
+			{
+				processSiblings( siblings );
+				emit processedAliases( siblings.size() );
+				siblings.clear();
+			}
+		}
+		processSiblings( siblings );
+		emit processedAliases( siblings.size() );
+	}
+
 	emit processedAliases( m_service.num_aliases );
 
 	emit finished();
@@ -334,41 +463,4 @@ void TagServiceWorker::run()
 		m_processing = true;
 		importMappings();
 	}
-}
-
-void TagServiceWorker::processMappingsBatch(
-	const idhan::hydrus::TransactionBaseCoro& mappings_tr, const std::string& current_mappings_name )
-{
-	std::vector< MappingPair > sets {};
-	constexpr std::size_t hash_limit { 1000 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
-	constexpr std::size_t average_tags_per_hash { 512 * 1024 };
-	constexpr std::size_t set_limit { average_tags_per_hash * hash_limit };
-
-	idhan::hydrus::Query< int, int > query {
-		mappings_tr, std::format( "SELECT tag_id, hash_id FROM {} ORDER BY hash_id, tag_id", current_mappings_name )
-	};
-
-	std::size_t mappings_counter { 0 };
-
-	std::unordered_set< int > hash_id_set {};
-
-	for ( const auto& [ tag_id, hash_id ] : query )
-	{
-		// dump before processing the next item if we are over the limit
-		if ( hash_id_set.size() >= hash_limit )
-		{
-			hash_id_set.clear();
-			processSets( sets );
-			sets.clear();
-			sets.reserve( set_limit );
-			emit processedMappings( mappings_counter );
-			mappings_counter = 0;
-		}
-
-		mappings_counter += 1;
-		sets.emplace_back( hash_id, tag_id );
-		hash_id_set.insert( hash_id );
-	}
-
-	emit processedMappings( mappings_counter );
 }

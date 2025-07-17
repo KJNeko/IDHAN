@@ -54,7 +54,7 @@ std::string ConnectionArguments::format() const
 	str += format_ns::format( "port={} ", port );
 	str += format_ns::format( "dbname={} ", dbname );
 	str += format_ns::format( "user={} ", user );
-	if ( testmode ) str += "options='-c search_path=test'";
+	if ( testmode ) str += "options='-c search_path=test -c client_min_messages=debug1'";
 
 	log::debug( "Connecting using: {}", str );
 

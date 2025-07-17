@@ -19,7 +19,7 @@ QFuture< void > IDHANClient::
 }
 
 QFuture< void > IDHANClient::
-	createParentRelationship( const TagDomainID tag_domian_id, std::vector< std::pair< TagID, TagID > >&& pairs )
+	createParentRelationship( const TagDomainID tag_domian_id, const std::vector< std::pair< TagID, TagID > >& pairs )
 {
 	if ( pairs.size() == 0 )
 	{

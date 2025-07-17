@@ -40,7 +40,7 @@ int main( int argc, char** argv )
 	parser.addOption( pg_host );
 
 	QCommandLineOption use_stdout { "use_stdout", "Use stdout for logging", "use_stdout" };
-	use_stdout.setDefaultValue( "true" );
+	use_stdout.setDefaultValue( "1" );
 	parser.addOption( use_stdout );
 
 	QCommandLineOption use_testmode { "testmode", "Forces the DB to use the `test` schema", "testmode" };
@@ -64,11 +64,6 @@ int main( int argc, char** argv )
 	{
 		const std::filesystem::path location { parser.value( config_location ).toStdString() };
 		idhan::config::setLocation( location );
-	}
-
-	if ( parser.isSet( use_stdout ) )
-	{
-		arguments.use_stdout = parser.value( use_stdout ).toStdString() == "true";
 	}
 
 	const auto strToSpdlogLevel = []( const std::string& level )
@@ -102,6 +97,15 @@ int main( int argc, char** argv )
 	if ( parser.isSet( use_testmode ) )
 	{
 		arguments.testmode = parser.value( use_testmode ).toStdString() == "true";
+	}
+
+	if ( parser.isSet( use_stdout ) && ( parser.value( use_stdout ).toInt() == 0 ) )
+	{
+		arguments.use_stdout = false;
+	}
+	else
+	{
+		spdlog::info( "Using stdout for logging" );
 	}
 
 	idhan::ServerContext context { arguments };
