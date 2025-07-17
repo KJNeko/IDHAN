@@ -16,13 +16,6 @@ int main( int argc, char** argv )
 	parser.addHelpOption();
 	parser.addVersionOption();
 
-#ifndef NDEBUG
-
-	QCommandLineOption testmode_option { "testmode", "Enables testmode if present" };
-	parser.addOption( testmode_option );
-
-#endif
-
 	QCommandLineOption log_level { "log_level",
 		                           "Dictates the log level used (trace, debug, info, warning, error, critical",
 		                           "level" };
@@ -44,7 +37,6 @@ int main( int argc, char** argv )
 	parser.addOption( use_stdout );
 
 	QCommandLineOption use_testmode { "testmode", "Forces the DB to use the `test` schema", "testmode" };
-	use_testmode.setDefaultValue( "false" );
 	parser.addOption( use_testmode );
 
 	QCommandLineOption config_location { "config", "The location for the config file", "config_location" };
@@ -96,7 +88,8 @@ int main( int argc, char** argv )
 
 	if ( parser.isSet( use_testmode ) )
 	{
-		arguments.testmode = parser.value( use_testmode ).toStdString() == "true";
+		spdlog::warn( "Using testmode" );
+		arguments.testmode = true;
 	}
 
 	if ( parser.isSet( use_stdout ) && ( parser.value( use_stdout ).toInt() == 0 ) )

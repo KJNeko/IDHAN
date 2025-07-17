@@ -7,5 +7,3 @@ AddFGLLibrary(IDHANClient SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT
 target_include_directories(IDHANClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/idhan)
 target_link_libraries(IDHANClient PUBLIC IDHAN)
 target_link_libraries(IDHANClient PUBLIC Qt6::Core Qt6::Network Qt6::Concurrent spdlog::spdlog_header_only)
-target_compile_definitions(IDHANClient PRIVATE IDHAN_USE_STD_FORMAT)
-target_compile_definitions(IDHANClient PRIVATE SPDLOG_USE_STD_FORMAT)
