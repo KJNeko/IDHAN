@@ -39,6 +39,7 @@ VersionInfo handleVersionInfo( QNetworkReply* reply )
 		reply->url().toString(),
 		server_version[ "string" ].toString(),
 		api_version[ "string" ].toString() );
+		*/
 
 	VersionInfo info {};
 
@@ -117,7 +118,7 @@ IDHANClient& IDHANClient::instance()
 	return *m_instance;
 }
 
-IDHANClient::IDHANClient() : network( nullptr )
+IDHANClient::IDHANClient() : logger( spdlog::stdout_color_mt( logging::IDHAN_CLIENT_LOGGER_NAME ) ), network( nullptr )
 {
 	logger = spdlog::stdout_color_mt( "client" );
 	logger->set_level( spdlog::level::debug );
@@ -330,9 +331,9 @@ QFuture< void > IDHANClient::createFileCluster(
 IDHANClient::~IDHANClient()
 {
 	//cleanup logger we created
-	auto logger { spdlog::logger( "client" ) };
-	logger.flush();
-	spdlog::drop( "client" );
+	spdlog::info( "Destroying logger" );
+	logger->flush();
+	spdlog::drop( logging::IDHAN_CLIENT_LOGGER_NAME );
 	m_instance = nullptr;
 }
 
@@ -351,31 +352,7 @@ void IDHANClient::openConnection( const QString hostname, const qint16 port, con
 	m_url_template.setHost( hostname );
 	m_url_template.setPort( port );
 
-	if ( use_ssl )
-	{
-		m_url_template.setScheme( "https" );
-	}
-	else
-	{
-		m_url_template.setScheme( "http" );
-	}
-	//
-	// // Get version info from server.
-	// QFuture< VersionInfo > future { queryVersion() };
-	//
-	// while ( !future.isFinished() && QThread::isMainThread() )
-	// {
-	// 	logging::debug( "Waiting for version reply" );
-	// 	QCoreApplication::processEvents( QEventLoop::AllEvents, 100 );
-	// 	std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-	// }
-	//
-	// if ( future.resultCount() < 0 ) throw std::runtime_error( "Failed to get version info" );
-	// future.waitForFinished();
-	//
-	// const VersionInfo data { future.result() };
-	//
-	// logging::info( "Got version info from server: Server: {}, Api: {}", data.server.str, data.api.str );
+	m_url_template.setScheme( use_ssl ? "https" : "http" );
 }
 
 } // namespace idhan
