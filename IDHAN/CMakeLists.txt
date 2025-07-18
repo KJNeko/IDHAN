@@ -19,6 +19,8 @@ if (NOT EXISTS ${HYDRUS_SOURCE_FILE})
 	)
 endif ()
 
+target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=1)
+
 if (NOT EXISTS ${HYDRUS_SOURCE_FILE})
 	message(FATAL_ERROR "Failed to obtain Hydrus source file")
 endif ()
