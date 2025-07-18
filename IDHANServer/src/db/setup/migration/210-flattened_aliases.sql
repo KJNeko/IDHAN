@@ -40,6 +40,9 @@ BEGIN
     WHERE alias_id = new.aliased_id
       AND domain_id = new.domain_id;
 
+    -- Fix any chains, `toujou_koneko` -> `toujou koneko` -> `character:toujou koneko`
+    -- fa1.chain = {toujou_koneko, toujou koneko}
+    -- fa2.chian = {toujou koneko, character:toujou koneko}
     UPDATE flattened_aliases fa1
     SET alias_id = fa2.alias_id,
         chain    = ARRAY_CAT(fa1.chain, fa2.chain)
@@ -50,6 +53,10 @@ BEGIN
     RETURN new;
 END;
 $$;
+
+
+ALTER TABLE flattened_aliases
+    ADD CONSTRAINT chain_size_limit CHECK (ARRAY_LENGTH(chain, 1) <= 128);
 
 -- Function for handling deletes
 CREATE FUNCTION update_flattened_aliases_delete()
