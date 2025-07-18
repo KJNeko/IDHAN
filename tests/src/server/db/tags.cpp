@@ -37,6 +37,128 @@ TEST_CASE( "Tag Tests", "[tags][db][server]" )
 	};
 	const auto dummy_id { dummy_record[ 0 ][ 0 ].as< idhan::RecordID >() };
 
+	auto createAlias = [ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id )
+	{
+		w.exec_params(
+			"INSERT INTO tag_aliases (domain_id, aliased_id, alias_id) VALUES ($1, $2, $3)",
+			DEFAULT_DOMAIN,
+			aliased_id,
+			alias_id );
+		w.commit();
+	};
+
+	auto deleteAlias = [ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id )
+	{
+		w.exec_params(
+			"DELETE FROM tag_aliases WHERE domain_id = $1 AND aliased_id = $2 AND alias_id = $3",
+			DEFAULT_DOMAIN,
+			aliased_id,
+			alias_id );
+		w.commit();
+	};
+
+	auto createParent = [ & ]( const idhan::TagID parent_id, const idhan::TagID child_id )
+	{
+		w.exec_params(
+			"INSERT INTO tag_parents (domain_id, parent_id, child_id) VALUES ($1, $2, $3)",
+			DEFAULT_DOMAIN,
+			parent_id,
+			child_id );
+		w.commit();
+	};
+
+	auto deleteParent = [ & ]( const idhan::TagID parent_id, const idhan::TagID child_id )
+	{
+		w.exec_params(
+			"DELETE FROM tag_parents WHERE domain_id = $1 AND parent_id = $2 AND child_id = $3",
+			DEFAULT_DOMAIN,
+			parent_id,
+			child_id );
+		w.commit();
+	};
+
+	auto createMapping = [ & ]( const idhan::TagID id )
+	{
+		w.exec_params(
+			"INSERT INTO tag_mappings (domain_id, record_id, tag_id) VALUES ($1, $2, $3)",
+			DEFAULT_DOMAIN,
+			dummy_id,
+			id );
+		w.commit();
+	};
+
+	auto deleteMapping = [ & ]( const idhan::TagID id )
+	{
+		w.exec_params( "DELETE FROM tag_mappings WHERE tag_id = $1 AND domain_id = $2", id, DEFAULT_DOMAIN );
+		w.commit();
+	};
+
+	auto testFlatAlias = [ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id )
+	{
+		const auto result { w.exec_params(
+			"SELECT aliased_id, alias_id FROM flattened_aliases WHERE aliased_id = $1 AND alias_id = $2",
+			aliased_id,
+			alias_id ) };
+		w.commit();
+
+		CAPTURE( aliased_id );
+		CAPTURE( alias_id );
+
+		REQUIRE( result.size() == 1 );
+	};
+
+	auto testFlatAliasChain =
+		[ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id, const idhan::TagID original_alias )
+	{
+		const auto result { w.exec_params(
+			"SELECT aliased_id, alias_id, original_alias_id FROM flattened_aliases WHERE aliased_id = $1 AND alias_id = $2",
+			aliased_id,
+			alias_id ) };
+		w.commit();
+
+		CAPTURE( aliased_id );
+		CAPTURE( alias_id );
+		CAPTURE( original_alias );
+
+		REQUIRE( result.size() == 1 );
+		REQUIRE( result[ 0 ][ "aliased_id" ].as< idhan::TagID >() == aliased_id );
+		REQUIRE( result[ 0 ][ "alias_id" ].as< idhan::TagID >() == alias_id );
+		REQUIRE( result[ 0 ][ "original_alias_id" ].as< idhan::TagID >() == original_alias );
+	};
+
+	auto testMapping = [ & ]( const idhan::TagID tag_id )
+	{
+		const auto result { w.exec_params(
+			"SELECT tag_id, ideal_tag_id FROM tag_mappings WHERE domain_id = $1 AND tag_id = $2",
+			DEFAULT_DOMAIN,
+			tag_id ) };
+		REQUIRE( result.size() == 1 );
+		const auto returned_tag_id = result[ 0 ][ "tag_id" ].as< idhan::TagID >();
+		CAPTURE( returned_tag_id );
+		const auto ideal_tag_null = result[ 0 ][ "ideal_tag_id" ].is_null();
+		REQUIRE( ideal_tag_null );
+	};
+
+	auto testMappingIdealised = [ & ]( const idhan::TagID tag_id, const idhan::TagID ideal_tag_id )
+	{
+		const auto result { w.exec_params(
+			"SELECT tag_id, ideal_tag_id FROM tag_mappings WHERE domain_id = $1 AND tag_id = $2 AND ideal_tag_id IS NOT NULL",
+			DEFAULT_DOMAIN,
+			tag_id ) };
+		REQUIRE( result.size() == 1 );
+		REQUIRE( result[ 0 ][ "ideal_tag_id" ].as< idhan::TagID >() == ideal_tag_id );
+	};
+
+	auto testParentMapping = [ & ]( const idhan::TagID tag_id, const idhan::TagID origin_id )
+	{
+		const auto result { w.exec_params(
+			"SELECT origin_id, tag_id FROM tag_mappings_virtuals WHERE domain_id = $1 AND tag_id = $2 AND origin_id = $3",
+			DEFAULT_DOMAIN,
+			tag_id,
+			origin_id ) };
+		REQUIRE( result.size() == 1 );
+	};
+
 	SECTION( "Table check" )
 	{
 		// test that `tags` table exists
@@ -57,95 +179,6 @@ TEST_CASE( "Tag Tests", "[tags][db][server]" )
 		const auto tag_series_highschool_dxd { CREATE_TESTTAG( "series", "highschool dxd" ) };
 		const auto tag_highschool_dxd { CREATE_TESTTAG( "", "highschool dxd" ) };
 		const auto tag_white_hair { CREATE_TESTTAG( "", "white hair" ) };
-
-		auto createAlias = [ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id )
-		{
-			w.exec_params(
-				"INSERT INTO tag_aliases (domain_id, aliased_id, alias_id) VALUES ($1, $2, $3)",
-				DEFAULT_DOMAIN,
-				aliased_id,
-				alias_id );
-			w.commit();
-		};
-
-		auto deleteAlias = [ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id )
-		{
-			w.exec_params(
-				"DELETE FROM tag_aliases WHERE domain_id = $1 AND aliased_id = $2 AND alias_id = $3",
-				DEFAULT_DOMAIN,
-				aliased_id,
-				alias_id );
-			w.commit();
-		};
-
-		auto createParent = [ & ]( const idhan::TagID parent_id, const idhan::TagID child_id )
-		{
-			w.exec_params(
-				"INSERT INTO tag_parents (domain_id, parent_id, child_id) VALUES ($1, $2, $3)",
-				DEFAULT_DOMAIN,
-				parent_id,
-				child_id );
-			w.commit();
-		};
-
-		auto deleteParent = [ & ]( const idhan::TagID parent_id, const idhan::TagID child_id )
-		{
-			w.exec_params(
-				"DELETE FROM tag_parents WHERE domain_id = $1 AND parent_id = $2 AND child_id = $3",
-				DEFAULT_DOMAIN,
-				parent_id,
-				child_id );
-			w.commit();
-		};
-
-		auto createMapping = [ & ]( const idhan::TagID id )
-		{
-			w.exec_params(
-				"INSERT INTO tag_mappings (domain_id, record_id, tag_id) VALUES ($1, $2, $3)",
-				DEFAULT_DOMAIN,
-				dummy_id,
-				id );
-			w.commit();
-		};
-
-		auto deleteMapping = [ & ]( const idhan::TagID id )
-		{
-			w.exec_params( "DELETE FROM tag_mappings WHERE tag_id = $1 AND domain_id = $2", id, DEFAULT_DOMAIN );
-			w.commit();
-		};
-
-		auto testFlatAlias = [ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id )
-		{
-			const auto result { w.exec_params(
-				"SELECT aliased_id, alias_id FROM flattened_aliases WHERE aliased_id = $1 AND alias_id = $2",
-				aliased_id,
-				alias_id ) };
-			w.commit();
-
-			CAPTURE( aliased_id );
-			CAPTURE( alias_id );
-
-			REQUIRE( result.size() == 1 );
-		};
-
-		auto testFlatAliasChain =
-			[ & ]( const idhan::TagID aliased_id, const idhan::TagID alias_id, const idhan::TagID original_alias )
-		{
-			const auto result { w.exec_params(
-				"SELECT aliased_id, alias_id, original_alias_id FROM flattened_aliases WHERE aliased_id = $1 AND alias_id = $2",
-				aliased_id,
-				alias_id ) };
-			w.commit();
-
-			CAPTURE( aliased_id );
-			CAPTURE( alias_id );
-			CAPTURE( original_alias );
-
-			REQUIRE( result.size() == 1 );
-			REQUIRE( result[ 0 ][ "aliased_id" ].as< idhan::TagID >() == aliased_id );
-			REQUIRE( result[ 0 ][ "alias_id" ].as< idhan::TagID >() == alias_id );
-			REQUIRE( result[ 0 ][ "original_alias_id" ].as< idhan::TagID >() == original_alias );
-		};
 
 		SECTION( "Aliases" )
 		{
@@ -196,38 +229,33 @@ TEST_CASE( "Tag Tests", "[tags][db][server]" )
 			}
 		}
 
-		auto testMapping = [ & ]( const idhan::TagID tag_id )
+		SECTION( "Alias chains" )
 		{
-			const auto result { w.exec_params(
-				"SELECT tag_id, ideal_tag_id FROM tag_mappings WHERE domain_id = $1 AND tag_id = $2",
-				DEFAULT_DOMAIN,
-				tag_id ) };
-			REQUIRE( result.size() == 1 );
-			const auto returned_tag_id = result[ 0 ][ "tag_id" ].as< idhan::TagID >();
-			CAPTURE( returned_tag_id );
-			const auto ideal_tag_null = result[ 0 ][ "ideal_tag_id" ].is_null();
-			REQUIRE( ideal_tag_null );
-		};
+			const auto tag_1 { CREATE_TESTTAG( "", "tag_1" ) };
+			const auto tag_2 { CREATE_TESTTAG( "", "tag_2" ) };
+			const auto tag_3 { CREATE_TESTTAG( "", "tag_3" ) };
+			const auto tag_4 { CREATE_TESTTAG( "", "tag_4" ) };
+			const auto tag_5 { CREATE_TESTTAG( "", "tag_5" ) };
+			const auto tag_6 { CREATE_TESTTAG( "", "tag_6" ) };
 
-		auto testMappingIdealised = [ & ]( const idhan::TagID tag_id, const idhan::TagID ideal_tag_id )
-		{
-			const auto result { w.exec_params(
-				"SELECT tag_id, ideal_tag_id FROM tag_mappings WHERE domain_id = $1 AND tag_id = $2 AND ideal_tag_id IS NOT NULL",
-				DEFAULT_DOMAIN,
-				tag_id ) };
-			REQUIRE( result.size() == 1 );
-			REQUIRE( result[ 0 ][ "ideal_tag_id" ].as< idhan::TagID >() == ideal_tag_id );
-		};
+			createAlias( tag_1, tag_2 );
+			createAlias( tag_2, tag_3 );
 
-		auto testParentMapping = [ & ]( const idhan::TagID tag_id, const idhan::TagID origin_id )
-		{
-			const auto result { w.exec_params(
-				"SELECT origin_id, tag_id FROM tag_mappings_virtuals WHERE domain_id = $1 AND tag_id = $2 AND origin_id = $3",
-				DEFAULT_DOMAIN,
-				tag_id,
-				origin_id ) };
-			REQUIRE( result.size() == 1 );
-		};
+			// createAlias(tag_3, tag_4);
+
+			createAlias( tag_4, tag_5 );
+			createAlias( tag_5, tag_6 );
+
+			testFlatAliasChain( tag_1, tag_3, tag_2 );
+			testFlatAliasChain( tag_4, tag_6, tag_5 );
+
+			THEN( "Chains should be repaired" )
+			{
+				createAlias( tag_3, tag_4 );
+				testFlatAliasChain( tag_1, tag_6, tag_2 );
+				testFlatAliasChain( tag_4, tag_6, tag_5 );
+			}
+		}
 
 		SECTION( "Parents" )
 		{
@@ -344,6 +372,12 @@ TEST_CASE( "Tag Tests", "[tags][db][server]" )
 				{}
 			}
 		}
+	}
+
+	SECTION( "Alias self reference" )
+	{
+		const auto tag_self_ref { CREATE_TESTTAG( "", "self_ref" ) };
+		REQUIRE_THROWS( createAlias( tag_self_ref, tag_self_ref ) );
 	}
 
 	SUCCEED();
