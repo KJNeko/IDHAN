@@ -257,6 +257,42 @@ TEST_CASE( "Tag alias chains", "[tags][db][server]" )
 		fixture.verifyFlatAliasChain( tag_empty_toujou, tag_character_shrione, tag_character_toujou );
 		fixture.verifyFlatAlias( tag_character_toujou, tag_character_shrione );
 	}
+
+	SECTION( "Circular alias chain prevention" )
+	{
+		const auto A = fixture.createTag( "", "A" );
+		const auto B = fixture.createTag( "", "B" );
+		const auto C = fixture.createTag( "", "C" );
+
+		// A -> B -> C
+		fixture.createAlias( A, B );
+		fixture.createAlias( B, C );
+
+		// Attempt to create circular references
+		// C -> A
+		REQUIRE_THROWS( fixture.createAlias( C, A ) );
+		// C -> B
+		REQUIRE_THROWS( fixture.createAlias( C, B ) );
+
+		// B -> A
+		REQUIRE_THROWS( fixture.createAlias( B, A ) );
+
+		REQUIRE_THROWS( fixture.createAlias( A, A ) );
+		REQUIRE_THROWS( fixture.createAlias( B, B ) );
+		REQUIRE_THROWS( fixture.createAlias( C, C ) );
+
+		SECTION( "New chains are prevented if circular" )
+		{
+			// D -> E
+			const auto D = fixture.createTag( "", "D" );
+			const auto E = fixture.createTag( "", "E" );
+
+			fixture.createAlias( D, E );
+			fixture.createAlias( E, A );
+
+			REQUIRE_THROWS( fixture.createAlias( C, D ) );
+		}
+	}
 }
 
 TEST_CASE( "Complex alias chain repair", "[tags][db][server]" )
