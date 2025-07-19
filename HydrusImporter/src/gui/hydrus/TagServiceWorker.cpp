@@ -6,6 +6,8 @@
 
 #include <QObject>
 
+#include <fstream>
+
 #include "moc_TagServiceWorker.cpp"
 #include "sqlitehelper/Query.hpp"
 #include "sqlitehelper/Transaction.hpp"
@@ -381,7 +383,7 @@ void TagServiceWorker::processRelationships()
 		const HyTagID original_id { *itter };
 		const idhan::TagID new_id { *ret_itter };
 
-#ifndef NDEBUG
+#ifdef VERIFY_TAG_RETURNS
 		auto tag_info = client.getTagInfo( new_id );
 		tag_info.waitForFinished();
 
@@ -399,7 +401,60 @@ void TagServiceWorker::processRelationships()
 		tag_translation_map.emplace( original_id, new_id );
 	}
 
-	constexpr std::size_t set_limit { 4 };
+	// idhan::logging::debug( "Finished processing tags" );
+
+	std::size_t set_limit { 8 };
+
+	{
+		std::vector< std::pair< idhan::TagID, idhan::TagID > > siblings {};
+
+		// These tags cause issues atm so we will just blacklist them
+		const std::vector< idhan::TagID > blacklist { 1021104, 1798924, 2891711, 947635,  2465134, 9770468, 12681993,
+			                                          1043263, 1209090, 7673,    8499,    166417,  9690,    167037,
+			                                          922614,  167457,  166791,  9045064, 274,     451723,  2343232 };
+
+		std::size_t counter { 0 };
+
+		for ( const auto& [ hy_bad_id, hy_good_id ] : hy_siblings )
+		{
+			if ( counter > 80000 ) set_limit = 1;
+
+			if ( hy_bad_id == hy_good_id )
+			{
+				idhan::logging::warn(
+					"Found alias that references itself ({}, {}), {}", hy_bad_id, hy_good_id, tag_pairs[ hy_bad_id ] );
+				continue;
+			}
+
+			// check for blacklisted tags
+			if ( std::ranges::find( blacklist, hy_bad_id ) != blacklist.end() ) continue;
+			if ( std::ranges::find( blacklist, hy_good_id ) != blacklist.end() ) continue;
+
+			try
+			{
+				const auto idhan_bad_id = tag_translation_map.at( hy_bad_id );
+				const auto idhan_good_id = tag_translation_map.at( hy_good_id );
+
+				siblings.emplace_back( idhan_bad_id, idhan_good_id );
+				if ( siblings.size() >= set_limit )
+				{
+					processSiblings( siblings );
+					emit processedAliases( siblings.size() );
+					siblings.clear();
+				}
+			}
+			catch ( std::exception& e )
+			{
+				idhan::logging::error( "Hydrus set ({}, {}) caused an error", hy_bad_id, hy_good_id );
+				idhan::logging::error( e.what() );
+
+				// Do nothing
+				siblings.clear();
+			}
+		}
+		processSiblings( siblings );
+		emit processedAliases( siblings.size() );
+	}
 
 	// Process parents
 	{
@@ -424,29 +479,6 @@ void TagServiceWorker::processRelationships()
 		processParents( parents );
 		emit processedParents( parents.size() );
 	}
-
-	emit processedParents( m_service.num_parents );
-
-	{
-		std::vector< std::pair< idhan::TagID, idhan::TagID > > siblings {};
-		for ( const auto& [ hy_bad_id, hy_good_id ] : hy_siblings )
-		{
-			const auto idhan_bad_id = tag_translation_map.at( hy_bad_id );
-			const auto idhan_good_id = tag_translation_map.at( hy_good_id );
-
-			siblings.emplace_back( idhan_bad_id, idhan_good_id );
-			if ( siblings.size() >= set_limit )
-			{
-				processSiblings( siblings );
-				emit processedAliases( siblings.size() );
-				siblings.clear();
-			}
-		}
-		processSiblings( siblings );
-		emit processedAliases( siblings.size() );
-	}
-
-	emit processedAliases( m_service.num_aliases );
 
 	emit finished();
 }
