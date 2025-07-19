@@ -64,17 +64,9 @@ QFuture< std::vector< TagID > > IDHANClient::
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise ]( auto* response, QNetworkReply::NetworkError error )
-	{
-		logging::logResponse( response );
-
-		promise->finish();
-		response->deleteLater();
-	};
-
 	QJsonDocument doc { array };
 
-	sendClientPost( std::move( doc ), "/tags/create", handleResponse, handleError );
+	sendClientPost( std::move( doc ), "/tags/create", handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }
