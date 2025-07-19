@@ -53,11 +53,11 @@ QFuture< void > IDHANClient::addTags(
 		reply->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error )
+	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error, std::string server_msg )
 	{
 		logging::error( reply->errorString().toStdString() );
 
-		const std::runtime_error exception { format_ns::format( "Error: {}", reply->errorString().toStdString() ) };
+		const std::runtime_error exception { server_msg };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 
@@ -117,11 +117,9 @@ QFuture< void > IDHANClient::addTags(
 		reply->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error )
+	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error, std::string server_msg )
 	{
-		logging::error( reply->errorString().toStdString() );
-
-		const std::runtime_error exception { format_ns::format( "Error: {}", reply->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", server_msg ) };
 
 		promise->setException( std::make_exception_ptr( exception ) );
 
@@ -208,18 +206,6 @@ QFuture< void > IDHANClient::addTags(
 		reply->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error )
-	{
-		logging::error( reply->errorString().toStdString() );
-
-		const std::runtime_error exception { format_ns::format( "Error: {}", reply->errorString().toStdString() ) };
-
-		promise->setException( std::make_exception_ptr( exception ) );
-
-		promise->finish();
-		reply->deleteLater();
-	};
-
 	const QString path { "/records/tags/add" };
 
 	QUrl url {};
@@ -230,7 +216,7 @@ QFuture< void > IDHANClient::addTags(
 
 	url.setQuery( query );
 
-	sendClientPost( std::move( doc ), url, handleResponse, handleError );
+	sendClientPost( std::move( doc ), url, handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }
@@ -248,8 +234,8 @@ QFuture< void > IDHANClient::addTags(
 	if ( record_ids.size() != tag_sets.size() )
 	{
 		logging::warn( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() );
-		throw std::
-			runtime_error( format_ns::format( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() ) );
+		throw std::runtime_error(
+			format_ns::format( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() ) );
 	}
 
 	for ( const auto& set : tag_sets )

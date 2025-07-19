@@ -41,9 +41,10 @@ QFuture< TagInfo > IDHANClient::getTagInfo( const TagID tag_id )
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* response, [[maybe_unused]] QNetworkReply::NetworkError error )
+	auto handleError =
+		[ promise ]( QNetworkReply* response, [[maybe_unused]] QNetworkReply::NetworkError error, std::string msg )
 	{
-		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
+		const std::runtime_error exception { format_ns::format( "Error: {}", msg ) };
 		promise->setException( std::make_exception_ptr( exception ) );
 		promise->finish();
 

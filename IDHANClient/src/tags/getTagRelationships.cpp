@@ -71,18 +71,10 @@ QFuture< IDHANClient::TagRelationshipInfo > IDHANClient::
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* response, [[maybe_unused]] QNetworkReply::NetworkError error )
-	{
-		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
-		promise->setException( std::make_exception_ptr( exception ) );
-		promise->finish();
-		response->deleteLater();
-	};
-
 	QUrl url {};
 	url.setPath( QString( "/tags/%1/%2/relationships" ).arg( domain_id ).arg( tag_id ) );
 
-	sendClientGet( url, handleResponse, handleError );
+	sendClientGet( url, handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }

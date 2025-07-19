@@ -6,6 +6,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include <fstream>
+
 #include "IDHANClient.hpp"
 
 namespace idhan
@@ -58,19 +60,7 @@ QFuture< void > IDHANClient::
 		reply->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error )
-	{
-		logging::error( reply->errorString().toStdString() );
-
-		const std::runtime_error exception { format_ns::format( "Error: {}", reply->errorString().toStdString() ) };
-
-		promise->setException( std::make_exception_ptr( exception ) );
-
-		promise->finish();
-		reply->deleteLater();
-	};
-
-	sendClientPost( std::move( doc ), url, handleResponse, handleError );
+	sendClientPost( std::move( doc ), url, handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }

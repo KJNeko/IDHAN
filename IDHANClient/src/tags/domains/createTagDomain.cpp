@@ -39,7 +39,7 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* response, QNetworkReply::NetworkError error )
+	auto handleError = [ promise ]( QNetworkReply* response, QNetworkReply::NetworkError error, std::string server_msg )
 	{
 		logging::logResponse( response );
 
@@ -113,7 +113,6 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 
 	auto handleError = [ promise ]( QNetworkReply* response, QNetworkReply::NetworkError error )
 	{
-		logging::logResponse( response );
 
 		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
 
@@ -123,7 +122,7 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 		response->deleteLater();
 	};
 
-	sendClientGet( "/tags/domain/list", handleResponse, handleError );
+	sendClientGet( "/tags/domain/list", handleResponse, defaultErrorHandler(promise) );
 
 	return promise->future();
 }

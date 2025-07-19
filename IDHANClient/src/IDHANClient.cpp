@@ -21,8 +21,6 @@ namespace idhan
 
 VersionInfo handleVersionInfo( QNetworkReply* reply )
 {
-	logging::info( "Recieved version info" );
-
 	if ( reply == nullptr ) throw std::runtime_error( "Reply is null" );
 
 	const auto data { reply->readAll() };
@@ -34,7 +32,8 @@ VersionInfo handleVersionInfo( QNetworkReply* reply )
 	const auto server_version { json[ "idhan_server_version" ].toObject() };
 	const auto api_version { json[ "idhan_api_version" ].toObject() };
 
-	logging::info(
+	/*
+	logging::debug(
 		"Recieved info from server at {}, IDHAN version: {}, API version: {}",
 		reply->url().toString(),
 		server_version[ "string" ].toString(),
@@ -71,20 +70,17 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 
 	request.setUrl( url );
 
-	logging::info( "Requesting version info from {}", url.toString() );
-
 	auto promise { std::make_shared< QPromise< VersionInfo > >() };
 
 	auto handleResponse = [ promise ]( QNetworkReply* reply )
 	{
-		logging::info( "Handling version network response" );
 		promise->addResult( handleVersionInfo( reply ) );
 		promise->finish();
 
 		reply->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error )
+	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error, std::string server_msg )
 	{
 		logging::error( "Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
 
@@ -120,8 +116,14 @@ IDHANClient& IDHANClient::instance()
 
 IDHANClient::IDHANClient() : logger( spdlog::stdout_color_mt( logging::IDHAN_CLIENT_LOGGER_NAME ) ), network( nullptr )
 {
-	logger = spdlog::stdout_color_mt( "client" );
+#ifndef NDEBUG
 	logger->set_level( spdlog::level::debug );
+#else
+	logger->set_level( spdlog::level::info );
+#endif
+
+	logging::debug( "Debug logging enabled" );
+	logging::info( "Info logging enabled" );
 
 	if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
 	m_instance = this;
@@ -136,10 +138,8 @@ IDHANClient::IDHANClient( const QString& hostname, const qint16 port, const bool
 	openConnection( hostname, port, use_ssl );
 }
 
-void IDHANClient::sendClientGet(
-	UrlVariant url,
-	std::function< void( QNetworkReply* reply ) >&& responseHandler,
-	std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler )
+void IDHANClient::
+	sendClientGet( UrlVariant url, IDHANResponseHandler&& responseHandler, IDHANErrorHandler&& errorHandler )
 {
 	QJsonDocument doc {};
 
@@ -164,23 +164,22 @@ void handleResponse( QNetworkReply* response, std::function< void( const QJsonDo
 void IDHANClient::sendClientPost(
 	QJsonDocument&& object,
 	const UrlVariant& url,
-	std::function< void( QNetworkReply* reply ) >&& responseHandler,
-	std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler )
+	IDHANResponseHandler&& responseHandler,
+	IDHANErrorHandler&& errorHandler )
 {
 	sendClientJson(
 		POST,
 		url,
-		std::forward< std::function< void( QNetworkReply * reply ) > >( responseHandler ),
-		std::forward<
-			std::function< void( QNetworkReply * reply, QNetworkReply::NetworkError error ) > >( errorHandler ),
+		std::forward< IDHANResponseHandler >( responseHandler ),
+		std::forward< IDHANErrorHandler >( errorHandler ),
 		std::forward< QJsonDocument >( object ) );
 }
 
 void IDHANClient::sendClientJson(
 	const HttpMethod method,
 	UrlVariant url_v,
-	std::function< void( QNetworkReply* reply ) >&& responseHandler,
-	std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler,
+	IDHANResponseHandler&& responseHandler,
+	IDHANErrorHandler&& errorHandler,
 	QJsonDocument&& object )
 {
 	const auto json_str_thing { "application/json" };
@@ -261,19 +260,17 @@ void IDHANClient::sendClientJson(
 					QJsonObject object { doc.object() };
 					if ( object.contains( "error" ) )
 					{
-						logging::error( object[ "error" ].toString().toStdString() );
+						const auto error_msg { object[ "error" ].toString().toStdString() };
+						// logging::error( object[ "error" ].toString().toStdString() );
+
+						QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error, error_msg ) );
+						return;
 					}
 				}
 			}
 
-			const auto data { response->readAll() };
-			if ( data.size() != 0 )
-			{
-				std::string_view str { data.data(), data.size() };
-				logging::warn( "Error data: {}", str );
-			}
-
-			QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error ) );
+			QThreadPool::globalInstance()
+				->start( std::bind( errorHandler, response, error, response->errorString().toStdString() ) );
 			// errorHandler( response, error );
 			// response->deleteLater();
 		} );
@@ -308,22 +305,10 @@ QFuture< void > IDHANClient::createFileCluster(
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* response, QNetworkReply::NetworkError error )
-	{
-		logging::logResponse( response );
-
-		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
-
-		promise->setException( std::make_exception_ptr( exception ) );
-
-		promise->finish();
-		response->deleteLater();
-	};
-
 	QJsonDocument doc {};
 	doc.setObject( std::move( object ) );
 
-	sendClientPost( std::move( doc ), "/clusters/add", handleResponse, handleError );
+	sendClientPost( std::move( doc ), "/clusters/add", handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }

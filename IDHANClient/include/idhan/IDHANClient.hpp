@@ -53,6 +53,9 @@ struct VersionInfo
 
 void addIDHANOptions( QCommandLineParser& parser );
 
+using IDHANResponseHandler = std::function< void( QNetworkReply* ) >;
+using IDHANErrorHandler = std::function< void( QNetworkReply*, QNetworkReply::NetworkError, std::string server_msg ) >;
+
 class IDHANClient
 {
 	std::shared_ptr< spdlog::logger > logger { nullptr };
@@ -233,26 +236,41 @@ class IDHANClient
 
   private:
 
-	void sendClientGet(
-		UrlVariant url,
-		std::function< void( QNetworkReply* reply ) >&& responseHandler,
-		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
+	void sendClientGet( UrlVariant url, IDHANResponseHandler&& responseHandler, IDHANErrorHandler&& errorHandler );
 
 	void sendClientPost(
 		QJsonDocument&& object,
 		const UrlVariant& url,
-		std::function< void( QNetworkReply* reply ) >&& responseHandler,
-		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler );
+		IDHANResponseHandler&& responseHandler,
+		IDHANErrorHandler&& errorHandler );
 
 	void sendClientJson(
 		HttpMethod method,
 		UrlVariant url,
-		std::function< void( QNetworkReply* reply ) >&& responseHandler,
-		std::function< void( QNetworkReply* reply, QNetworkReply::NetworkError error ) >&& errorHandler,
+		IDHANResponseHandler&& responseHandler,
+		IDHANErrorHandler&& errorHandler,
 		QJsonDocument&& object );
 
   public:
 };
+
+template < typename TPromise >
+auto defaultErrorHandler( TPromise&& promise )
+{
+	auto handler = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error, std::string server_msg )
+	{
+		// logging::logResponse( reply );
+
+		const std::runtime_error exception { format_ns::format( "{}", server_msg ) };
+
+		promise->setException( std::make_exception_ptr( exception ) );
+
+		promise->finish();
+		reply->deleteLater();
+	};
+
+	return handler;
+}
 
 using TagRelationshipInfo = IDHANClient::TagRelationshipInfo;
 using TagInfo = IDHANClient::TagInfo;

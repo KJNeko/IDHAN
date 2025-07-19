@@ -86,22 +86,10 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* response, QNetworkReply::NetworkError error )
-	{
-		logging::error( response->errorString().toStdString() );
-
-		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
-
-		promise->setException( std::make_exception_ptr( exception ) );
-
-		promise->finish();
-		response->deleteLater();
-	};
-
 	QJsonDocument doc {};
 	doc.setObject( std::move( object ) );
 
-	sendClientPost( std::move( doc ), "/records/create", handleResponse, handleError );
+	sendClientPost( std::move( doc ), "/records/create", handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }
@@ -133,24 +121,12 @@ QFuture< std::optional< RecordID > > IDHANClient::getRecordID( const std::string
 		}
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* response, QNetworkReply::NetworkError error )
-	{
-		logging::error( response->errorString().toStdString() );
-
-		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
-
-		promise->setException( std::make_exception_ptr( exception ) );
-
-		promise->finish();
-		response->deleteLater();
-	};
-
 	QUrl url { "/records/search" };
 	QUrlQuery query {};
 	query.addQueryItem( "sha256", QString::fromStdString( sha256 ) );
 	url.setQuery( query );
 
-	sendClientGet( url, handleResponse, handleError );
+	sendClientGet( url, handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }

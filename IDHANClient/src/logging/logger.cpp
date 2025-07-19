@@ -4,6 +4,7 @@
 
 #include "idhan/logging/logger.hpp"
 
+#include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkReply>
 
@@ -14,31 +15,26 @@ void logResponse( QNetworkReply* reply )
 {
 	if ( !reply ) return;
 
-	const auto data { reply->readAll() };
-	if ( data.isEmpty() )
-	{
-		error( reply->errorString().toStdString() );
-		return;
-	}
-
 	// there is some data with the reply
 	// test if it's json
-	if ( reply->header( QNetworkRequest::ContentTypeHeader ).toString().startsWith( "application/json" ) )
+
+	const auto header = reply->header( QNetworkRequest::ContentTypeHeader );
+	if ( header.isValid() && header.toString().contains( "application/json" ) )
 	{
-		const QJsonDocument doc { QJsonDocument::fromJson( data ) };
-
-		// get message if present
-		if ( doc[ "error" ].isString() )
+		const auto body { reply->readAll() };
+		QJsonDocument doc { QJsonDocument::fromJson( body ) };
+		if ( doc.isObject() )
 		{
-			error( "{}: {}", reply->errorString(), doc[ "error" ].toString() );
-
-			return;
+			QJsonObject object { doc.object() };
+			if ( object.contains( "error" ) )
+			{
+				const auto error_msg { object[ "error" ].toString().toStdString() };
+				error( error_msg );
+				return;
+			}
 		}
-
-		return;
 	}
 
-	info( "Failed to process special response: {}", reply->header( QNetworkRequest::ContentTypeHeader ).toString() );
 	error( reply->errorString().toStdString() );
 }
 
