@@ -21,8 +21,16 @@ HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent 
 {
 	ui->setupUi( this );
 
+#ifndef IMPORTER_PROCESS_PTR_DEFAULT
+#define IMPORTER_PROCESS_PTR_DEFAULT false
+#endif
+
 	// Process PTR by default?
+#if IMPORTER_PROCESS_PTR_DEFAULT
+	ui->cbProcessPTR->setChecked( true );
+#else
 	ui->cbProcessPTR->setChecked( false );
+#endif
 
 	ui->hyFolderStatusLabel->setText( "Invalid" );
 	ui->hyFolderStatusLabel->setStyleSheet( "QLabel { color: red; }" );
