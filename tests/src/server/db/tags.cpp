@@ -21,7 +21,9 @@ struct TagTestFixture
 	idhan::RecordID dummy_id;
 	pqxx::work w;
 
-	TagTestFixture() : c { "host=localhost dbname=idhan-db user=idhan" }, w { c }
+	TagTestFixture() :
+	  c { "host=localhost dbname=idhan-db user=idhan" },
+	  w { c }
 	{
 		spdlog::set_level( spdlog::level::debug );
 		// c.set_verbosity( pqxx::error_verbosity::verbose );
@@ -57,13 +59,18 @@ struct TagTestFixture
 
 	// Example refactored functions showing the pattern:
 
+	void tryCommit()
+	{
+		// w.commit();
+	}
+
 	idhan::TagID createTag( const std::string& namespace_name, const std::string& subtag )
 	{
 		auto query = R"( SELECT * FROM createTag($1, $2);)";
 
 		CAPTURE( query );
 		const auto result { w.exec( query, pqxx::params { namespace_name, subtag } ) };
-		w.commit();
+		tryCommit();
 		return result.one_row()[ 0 ].as< idhan::TagID >();
 	}
 
@@ -72,7 +79,7 @@ struct TagTestFixture
 		const auto query { "INSERT INTO tag_mappings (domain_id, record_id, tag_id) VALUES ($1, $2, $3)" };
 		pqxx::params params { DEFAULT_DOMAIN, dummy_id, tag_id };
 		w.exec( query, params );
-		w.commit();
+		tryCommit();
 	}
 
 	void deleteMapping( const idhan::TagID tag_id )
@@ -80,7 +87,7 @@ struct TagTestFixture
 		const auto query { "DELETE FROM tag_mappings WHERE domain_id = $1 AND record_id = $2 AND tag_id = $3" };
 		pqxx::params params { DEFAULT_DOMAIN, dummy_id, tag_id };
 		w.exec( query, params );
-		w.commit();
+		tryCommit();
 	}
 
 	void createAlias( const idhan::TagID aliased_id, const idhan::TagID tag_id )
@@ -88,7 +95,7 @@ struct TagTestFixture
 		const auto query { "INSERT INTO tag_aliases (domain_id, aliased_id, alias_id) VALUES ($1, $2, $3)" };
 		pqxx::params params { DEFAULT_DOMAIN, aliased_id, tag_id };
 		w.exec( query, params );
-		w.commit();
+		tryCommit();
 	}
 
 	void deleteAlias( const idhan::TagID aliased_id, const idhan::TagID tag_id )
@@ -96,7 +103,7 @@ struct TagTestFixture
 		const auto query { "DELETE FROM tag_aliases WHERE domain_id = $1 AND aliased_id = $2 AND alias_id = $3" };
 		pqxx::params params { DEFAULT_DOMAIN, aliased_id, tag_id };
 		w.exec( query, params );
-		w.commit();
+		tryCommit();
 	}
 
 	void createParent( const idhan::TagID parent_id, const idhan::TagID child_id )
@@ -104,7 +111,7 @@ struct TagTestFixture
 		const auto query { "INSERT INTO tag_parents (domain_id, parent_id, child_id) VALUES ($1, $2, $3)" };
 		pqxx::params params { DEFAULT_DOMAIN, parent_id, child_id };
 		w.exec( query, params );
-		w.commit();
+		tryCommit();
 	}
 
 	void deleteParent( const idhan::TagID parent_id, const idhan::TagID child_id )
@@ -112,18 +119,18 @@ struct TagTestFixture
 		const auto query { "DELETE FROM tag_parents WHERE domain_id = $1 AND parent_id = $2 AND child_id = $3" };
 		pqxx::params params { DEFAULT_DOMAIN, parent_id, child_id };
 		w.exec( query, params );
-		w.commit();
+		tryCommit();
 	}
 };
 
-#define REQUIRE_VIRTUAL_TAG( origin_id_i, tag_id_i )                                                                   \
-	{                                                                                                                  \
-		const auto virtual_mappings { fixture.getVirtualMappings() };                                                  \
-		REQUIRE(                                                                                                       \
-			std::ranges::find_if(                                                                                      \
-				virtual_mappings,                                                                                      \
-				[]( const VirtualTagMapping& mapping ) -> bool                                                         \
-				{ return mapping.tag_id = tag_id_i && mapping.origin_id == origin_id_i; } ) );                         \
+#define REQUIRE_VIRTUAL_TAG( origin_id_i, tag_id_i )                                           \
+	{                                                                                          \
+		const auto virtual_mappings { fixture.getVirtualMappings() };                          \
+		REQUIRE(                                                                               \
+			std::ranges::find_if(                                                              \
+				virtual_mappings,                                                              \
+				[]( const VirtualTagMapping& mapping ) -> bool                                 \
+				{ return mapping.tag_id = tag_id_i && mapping.origin_id == origin_id_i; } ) ); \
 	}
 
 #define REQUIRE_MAPPING_IDEAL( tag_id, ideal_id )                                                                       \
@@ -135,23 +142,23 @@ struct TagTestFixture
 		REQUIRE( result.size() == 1 );                                                                                  \
 	}
 
-#define REQUIRE_MAPPING( tag_id )                                                                                      \
-	{                                                                                                                  \
-		const pqxx::params params { fixture.dummy_id, tag_id, DEFAULT_DOMAIN };                                        \
-		const auto result {                                                                                            \
-			fixture.w                                                                                                  \
-				.exec( "SELECT 1 FROM tag_mappings WHERE record_id = $1 AND tag_id = $2 AND domain_id = $3", params )  \
-		};                                                                                                             \
-		REQUIRE( result.size() == 1 );                                                                                 \
+#define REQUIRE_MAPPING( tag_id )                                                                                     \
+	{                                                                                                                 \
+		const pqxx::params params { fixture.dummy_id, tag_id, DEFAULT_DOMAIN };                                       \
+		const auto result {                                                                                           \
+			fixture.w                                                                                                 \
+				.exec( "SELECT 1 FROM tag_mappings WHERE record_id = $1 AND tag_id = $2 AND domain_id = $3", params ) \
+		};                                                                                                            \
+		REQUIRE( result.size() == 1 );                                                                                \
 	}
 
-#define REQUIRE_FLATTENED_ALIAS( aliased_id, alias_id )                                                                \
-	{                                                                                                                  \
-		const pqxx::params params { aliased_id, alias_id };                                                            \
-		const auto result {                                                                                            \
-			fixture.w.exec( "SELECT 1 FROM flattened_aliases WHERE aliased_id = $1 AND alias_id = $2", params )        \
-		};                                                                                                             \
-		REQUIRE( result.size() == 1 );                                                                                 \
+#define REQUIRE_FLATTENED_ALIAS( aliased_id, alias_id )                                                         \
+	{                                                                                                           \
+		const pqxx::params params { aliased_id, alias_id };                                                     \
+		const auto result {                                                                                     \
+			fixture.w.exec( "SELECT 1 FROM flattened_aliases WHERE aliased_id = $1 AND alias_id = $2", params ) \
+		};                                                                                                      \
+		REQUIRE( result.size() == 1 );                                                                          \
 	}
 
 #define REQUIRE_PARENT_MAPPING( origin_id, parent_id )                                                                 \
@@ -260,18 +267,21 @@ TEST_CASE( "Tag alias chains", "[tags][db][server]" )
 		fixture.createAlias( A, B );
 		fixture.createAlias( B, C );
 
-		// Attempt to create circular references
-		// C -> A
-		REQUIRE_THROWS( fixture.createAlias( C, A ) );
-		// C -> B
-		REQUIRE_THROWS( fixture.createAlias( C, B ) );
+		THEN( "Circular references must throw" )
+		{
+			// Attempt to create circular references
+			// C -> A
+			REQUIRE_THROWS( fixture.createAlias( C, A ) );
+			// C -> B
+			REQUIRE_THROWS( fixture.createAlias( C, B ) );
 
-		// B -> A
-		REQUIRE_THROWS( fixture.createAlias( B, A ) );
+			// B -> A
+			REQUIRE_THROWS( fixture.createAlias( B, A ) );
 
-		REQUIRE_THROWS( fixture.createAlias( A, A ) );
-		REQUIRE_THROWS( fixture.createAlias( B, B ) );
-		REQUIRE_THROWS( fixture.createAlias( C, C ) );
+			REQUIRE_THROWS( fixture.createAlias( A, A ) );
+			REQUIRE_THROWS( fixture.createAlias( B, B ) );
+			REQUIRE_THROWS( fixture.createAlias( C, C ) );
+		}
 
 		SECTION( "New chains are prevented if circular" )
 		{
@@ -322,66 +332,133 @@ TEST_CASE( "Complex alias chain repair", "[tags][db][server]" )
 	REQUIRE_FLATTENED_ALIAS( tag_5, tag_6 );
 }
 
-TEST_CASE( "Tag parent relationships", "[tags][db][server][tags-parents]" )
+TEST_CASE( "Tag parent relationships", "[tags][db][server][parents]" )
 {
 	SERVER_HANDLE;
 	std::this_thread::sleep_for( std::chrono::milliseconds( 25 ) );
 
 	TagTestFixture fixture;
 
-	const auto tag_toujou = fixture.createTag( "", "toujou koneko" );
-	const auto tag_highschool_dxd = fixture.createTag( "", "highschool dxd" );
+	const auto tag_ahri { fixture.createTag( "character", "ahri (league of legends)" ) };
+	const auto tag_league { fixture.createTag( "series", "league of legends" ) };
+	const auto tag_riot { fixture.createTag( "copyright", "riot games" ) };
 
-	SECTION( "Parent before mapping" )
+	GIVEN( "A record with mapping `character:ahri (league of legends)" )
 	{
-		fixture.createParent( tag_highschool_dxd, tag_toujou );
-		fixture.createMapping( tag_toujou );
+		fixture.createMapping( tag_ahri );
 
-		REQUIRE_PARENT_MAPPING( tag_toujou, tag_highschool_dxd );
+		THEN( "The mapping should exist" )
+		{
+			REQUIRE_MAPPING( tag_ahri );
+		}
 
-		// Cleanup
-		fixture.deleteMapping( tag_toujou );
-		fixture.deleteParent( tag_highschool_dxd, tag_toujou );
-	}
+		WHEN( "Adding a parent of 'series:league of legends' to 'character:ahri(league of legends)'" )
+		{
+			fixture.createParent( tag_league, tag_ahri );
 
-	SECTION( "Parent after mapping" )
-	{
-		fixture.createMapping( tag_toujou );
-		fixture.createParent( tag_highschool_dxd, tag_toujou );
+			THEN( "The mapping should exist in the aliased_parents table" )
+			{
+				const auto result { fixture.w.exec( "SELECT * FROM aliased_parents" ) };
+				REQUIRE( result.size() == 1 );
 
-		REQUIRE_PARENT_MAPPING( tag_toujou, tag_highschool_dxd );
+				const auto result_row { result[ 0 ] };
+				REQUIRE( result_row[ "original_parent_id" ].as< idhan::TagID >() == tag_league );
+				REQUIRE( result_row[ "original_child_id" ].as< idhan::TagID >() == tag_ahri );
 
-		// Cleanup
-		fixture.deleteMapping( tag_toujou );
-		fixture.deleteParent( tag_highschool_dxd, tag_toujou );
-	}
+				REQUIRE( result_row[ "parent_id" ].is_null() );
+				REQUIRE( result_row[ "child_id" ].is_null() );
+			}
 
-	SECTION( "Parent relationship with aliases" )
-	{
-		const auto tag_character_toujou = fixture.createTag( "character", "toujou koneko" );
-		const auto tag_series_highschool_dxd = fixture.createTag( "series", "highschool dxd" );
+			THEN( "The virtual mappings table should have a tag of `series:league of legends` for record 1" )
+			{
+				const auto result { fixture.w.exec(
+					"SELECT COUNT(*) FROM tag_mappings_virtuals WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
+					pqxx::params { fixture.dummy_id, tag_league, tag_ahri } ) };
+				REQUIRE( result[ 0 ][ 0 ].as< int >() == 1 );
+			}
 
-		fixture.createParent( tag_highschool_dxd, tag_toujou );
-		fixture.createMapping( tag_toujou );
+			AND_WHEN( "Adding a parent of `copyright:riot games` to `series:league of legends`" )
+			{
+				fixture.createParent( tag_riot, tag_league );
 
-		// Add alias to child
-		fixture.createAlias( tag_toujou, tag_character_toujou );
-		REQUIRE_PARENT_MAPPING( tag_character_toujou, tag_highschool_dxd );
+				THEN( "The virtual mappings table should have a tag of `copyright:riot games`" )
+				{
+					const auto result2 { fixture.w.exec(
+						"SELECT COUNT(*) FROM tag_mappings_virtuals WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
+						pqxx::params { fixture.dummy_id, tag_riot, tag_league } ) };
+					REQUIRE( result2[ 0 ][ 0 ].as< int >() == 1 );
+				}
 
-		// Remove child alias
-		fixture.deleteAlias( tag_toujou, tag_character_toujou );
-		REQUIRE_PARENT_MAPPING( tag_toujou, tag_highschool_dxd );
+				THEN( "The virtual mappings table should have two tags" )
+				{
+					const auto total_result { fixture.w.exec( "SELECT COUNT(*) FROM tag_mappings_virtuals" ) };
+					REQUIRE_FALSE( total_result.empty() );
+					REQUIRE( total_result[ 0 ][ 0 ].as< int >() == 2 );
+				}
 
-		// Add alias to parent
-		fixture.createAlias( tag_highschool_dxd, tag_series_highschool_dxd );
-		REQUIRE_PARENT_MAPPING( tag_toujou, tag_series_highschool_dxd );
+				THEN( "The aliased_parents table should have two rows" )
+				{
+					const auto result { fixture.w.exec( "SELECT * FROM aliased_parents" ) };
+					REQUIRE( result.size() == 2 );
+				}
 
-		// Remove parent alias
-		fixture.deleteAlias( tag_highschool_dxd, tag_series_highschool_dxd );
-		REQUIRE_PARENT_MAPPING( tag_toujou, tag_highschool_dxd );
+				AND_WHEN( "The parent `series:league of legends` is removed from `character:ahri (league of legends)" )
+				{
+					fixture.deleteParent( tag_league, tag_ahri );
 
-		// Cleanup
-		fixture.deleteMapping( tag_toujou );
+					THEN( "The only row that should remain should be league -> riot" )
+					{
+						const auto result { fixture.w.exec( "SELECT * FROM aliased_parents" ) };
+						REQUIRE( result.size() == 1 );
+
+						const auto result_row { result[ 0 ] };
+						REQUIRE( result_row[ "original_parent_id" ].as< idhan::TagID >() == tag_riot );
+						REQUIRE( result_row[ "original_child_id" ].as< idhan::TagID >() == tag_league );
+					}
+
+					AND_WHEN( "The mapping is re-added" )
+					{
+						fixture.createParent( tag_league, tag_ahri );
+
+						THEN( "The aliased parents should have two rows" )
+						{
+							const auto result { fixture.w.exec( "SELECT * FROM aliased_parents" ) };
+							REQUIRE( result.size() == 2 );
+						}
+
+						THEN( "The virtual mappings should be restored" )
+						{
+							const auto result { fixture.w.exec( "SELECT * FROM tag_mappings_virtuals" ) };
+
+							// Helps with debugging
+							CHECKED_IF( result.size() == 1 )
+							{
+								const auto result_row { result[ 0 ] };
+
+								// Check that the only row is at least the first part of the chain (tag_ahri -> tag_league)
+								REQUIRE( result_row[ "record_id" ].as< idhan::RecordID >() == fixture.dummy_id );
+								REQUIRE( result_row[ "tag_id" ].as< idhan::TagID >() == tag_league );
+								REQUIRE( result_row[ "origin_id" ].as< idhan::TagID >() == tag_ahri );
+								REQUIRE( result_row[ "domain_id" ].as< idhan::TagDomainID >() == DEFAULT_DOMAIN );
+							}
+
+							REQUIRE( result.size() == 2 );
+						}
+					}
+				}
+			}
+
+			AND_WHEN( "The parent relationship is deleted" )
+			{
+				fixture.deleteParent( tag_league, tag_ahri );
+
+				THEN( "The virtual table should have no mappings" )
+				{
+					const auto total_result { fixture.w.exec( "SELECT COUNT(*) FROM tag_mappings_virtuals" ) };
+					REQUIRE( total_result[ 0 ][ 0 ].as< int >() == 0 );
+				}
+			}
+		}
 	}
 }
 
