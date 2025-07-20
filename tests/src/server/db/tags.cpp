@@ -23,12 +23,20 @@ struct TagTestFixture
 
 	TagTestFixture() : c { "host=localhost dbname=idhan-db user=idhan" }, w { c }
 	{
+		spdlog::set_level( spdlog::level::debug );
 		// c.set_verbosity( pqxx::error_verbosity::verbose );
 		c.set_notice_handler(
 			[]( const pqxx::zview& message )
 			{
 				// if message starts with DEBUG then print it
-				if ( message.starts_with( "DEBUG" ) ) std::cout << message;
+				if ( message.starts_with( "DEBUG" ) )
+				{
+					spdlog::debug( message );
+				}
+				else
+				{
+					spdlog::info( message );
+				}
 			} );
 
 		// Set search path to test schema
@@ -336,7 +344,6 @@ TEST_CASE( "Tag parent relationships", "[tags][db][server][tags-parents]" )
 		fixture.deleteParent( tag_highschool_dxd, tag_toujou );
 	}
 
-	/*
 	SECTION( "Parent after mapping" )
 	{
 		fixture.createMapping( tag_toujou );
@@ -376,7 +383,6 @@ TEST_CASE( "Tag parent relationships", "[tags][db][server][tags-parents]" )
 		// Cleanup
 		fixture.deleteMapping( tag_toujou );
 	}
-	*/
 }
 
 TEST_CASE( "Tag mappings and idealization", "[tags][db][server]" )
