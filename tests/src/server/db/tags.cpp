@@ -381,25 +381,26 @@ TEST_CASE( "Tag parent relationships", "[tags][db][server][parents]" )
 			{
 				fixture.createParent( tag_riot, tag_league );
 
+				THEN( "The aliased_parents table should have two rows" )
+				{
+					const auto result { fixture.w.exec( "SELECT * FROM aliased_parents" ) };
+					REQUIRE( result.size() == 2 );
+				}
+
+				THEN( "The virtual mappings table should have a tag of `series:league of legends`" )
+				{
+					const auto result1 { fixture.w.exec(
+						"SELECT COUNT(*) FROM tag_mappings_virtuals WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
+						pqxx::params { fixture.dummy_id, tag_league, tag_ahri } ) };
+					REQUIRE( result1[ 0 ][ 0 ].as< int >() == 1 );
+				}
+
 				THEN( "The virtual mappings table should have a tag of `copyright:riot games`" )
 				{
 					const auto result2 { fixture.w.exec(
 						"SELECT COUNT(*) FROM tag_mappings_virtuals WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
 						pqxx::params { fixture.dummy_id, tag_riot, tag_league } ) };
 					REQUIRE( result2[ 0 ][ 0 ].as< int >() == 1 );
-				}
-
-				THEN( "The virtual mappings table should have two tags" )
-				{
-					const auto total_result { fixture.w.exec( "SELECT COUNT(*) FROM tag_mappings_virtuals" ) };
-					REQUIRE_FALSE( total_result.empty() );
-					REQUIRE( total_result[ 0 ][ 0 ].as< int >() == 2 );
-				}
-
-				THEN( "The aliased_parents table should have two rows" )
-				{
-					const auto result { fixture.w.exec( "SELECT * FROM aliased_parents" ) };
-					REQUIRE( result.size() == 2 );
 				}
 
 				AND_WHEN( "The parent `series:league of legends` is removed from `character:ahri (league of legends)" )
