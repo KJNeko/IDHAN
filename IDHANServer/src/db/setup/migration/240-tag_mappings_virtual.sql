@@ -77,6 +77,8 @@ CREATE TRIGGER tag_virtuals_after_mappings_delete
     FOR EACH ROW
 EXECUTE FUNCTION tag_virtuals_mappings_delete_trigger();
 
+CREATE INDEX ON tag_mappings (domain_id, COALESCE(ideal_tag_id, tag_id));
+
 CREATE FUNCTION tag_virtuals_after_insert_aliased_parents()
     RETURNS TRIGGER AS
 $$
@@ -88,6 +90,7 @@ BEGIN
     FROM tag_mappings tm
              JOIN aliased_parents ap ON tm.domain_id = ap.domain_id AND COALESCE(tm.ideal_tag_id, tm.tag_id) = COALESCE(ap.child_id, ap.original_child_id)
     WHERE COALESCE(tm.ideal_tag_id, tm.tag_id) = COALESCE(new.child_id, new.original_child_id)
+      AND tm.domain_id = new.domain_id
     ON CONFLICT
         DO NOTHING;
 
@@ -96,6 +99,7 @@ BEGIN
     SELECT tm.record_id, COALESCE(new.child_id, new.original_child_id) AS origin_id, COALESCE(new.parent_id, new.original_parent_id) AS tag_id, tm.domain_id, TRUE AS self_origin
     FROM tag_mappings_virtuals tm
     WHERE tm.tag_id = COALESCE(new.child_id, new.original_child_id)
+      AND tm.domain_id = new.domain_id
     ON CONFLICT DO NOTHING;
 
     RETURN new;
