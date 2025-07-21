@@ -26,6 +26,7 @@ TagServiceWorker::TagServiceWorker( QObject* parent, idhan::hydrus::HydrusImport
 void TagServiceWorker::setService( const idhan::hydrus::ServiceInfo& info )
 {
 	m_service = info;
+	if ( m_service.name == "public tag repository" ) m_ptr = true;
 }
 
 void TagServiceWorker::preprocess()
@@ -403,7 +404,7 @@ void TagServiceWorker::processRelationships()
 
 	// idhan::logging::debug( "Finished processing tags" );
 
-	std::size_t set_limit { 8 };
+	std::size_t set_limit { 1 };
 
 	{
 		std::vector< std::pair< idhan::TagID, idhan::TagID > > siblings {};
@@ -413,12 +414,8 @@ void TagServiceWorker::processRelationships()
 			                                          1043263, 1209090, 7673,    8499,    166417,  9690,    167037,
 			                                          922614,  167457,  166791,  9045064, 274,     451723,  2343232 };
 
-		std::size_t counter { 0 };
-
 		for ( const auto& [ hy_bad_id, hy_good_id ] : hy_siblings )
 		{
-			if ( counter > 80000 ) set_limit = 1;
-
 			if ( hy_bad_id == hy_good_id )
 			{
 				idhan::logging::warn(
@@ -427,8 +424,8 @@ void TagServiceWorker::processRelationships()
 			}
 
 			// check for blacklisted tags
-			if ( std::ranges::find( blacklist, hy_bad_id ) != blacklist.end() ) continue;
-			if ( std::ranges::find( blacklist, hy_good_id ) != blacklist.end() ) continue;
+			// if ( std::ranges::find( blacklist, hy_bad_id ) != blacklist.end() ) continue;
+			// if ( std::ranges::find( blacklist, hy_good_id ) != blacklist.end() ) continue;
 
 			try
 			{
@@ -447,6 +444,12 @@ void TagServiceWorker::processRelationships()
 			{
 				idhan::logging::error( "Hydrus set ({}, {}) caused an error", hy_bad_id, hy_good_id );
 				idhan::logging::error( e.what() );
+
+				if ( std::ofstream ofs( "bad_ids.txt", std::ios::app ); ofs )
+				{
+					ofs << hy_bad_id << "\n";
+					ofs << hy_good_id << "\n";
+				}
 
 				// Do nothing
 				siblings.clear();
@@ -485,14 +488,27 @@ void TagServiceWorker::processRelationships()
 
 void TagServiceWorker::run()
 {
-	if ( !m_preprocessed )
+	try
 	{
-		m_preprocessed = true;
-		preprocess();
+		if ( !m_preprocessed )
+		{
+			m_preprocessed = true;
+			preprocess();
+		}
+		else
+		{
+			m_processing = true;
+			importMappings();
+		}
 	}
-	else
+	catch ( std::exception& e )
 	{
-		m_processing = true;
-		importMappings();
+		idhan::logging::error( e.what() );
+		std::terminate();
+	}
+	catch ( ... )
+	{
+		idhan::logging::error( "Unknown exception" );
+		std::terminate();
 	}
 }

@@ -156,7 +156,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QCheckBox" name="shouldImport">
+       <widget class="QCheckBox" name="cbShouldImport">
         <property name="text">
          <string>Import</string>
         </property>
