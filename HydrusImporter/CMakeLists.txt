@@ -8,3 +8,7 @@ target_link_libraries(HydrusImporter PUBLIC Qt6::Core Qt6::Concurrent IDHANClien
 if (DEFINED IMPORTER_TESTS AND IMPORTER_TESTS EQUAL 1)
 	target_compile_definitions(HydrusImporter PUBLIC IMPORTER_TESTS=1)
 endif ()
+
+if (DEFINED IMPORTER_PROCESS_PTR_DEFAULT AND IMPORTER_PROCESS_PTR_DEFAULT EQUAL 1)
+	target_compile_definitions(HydrusImporter PUBLIC IMPORTER_PROCESS_PTR_DEFAULT=1)
+endif ()

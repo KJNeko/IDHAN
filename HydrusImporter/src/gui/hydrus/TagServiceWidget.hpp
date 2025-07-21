@@ -21,10 +21,11 @@ class TagServiceWidget : public QWidget
 	idhan::hydrus::ServiceInfo m_info;
 	QString m_name;
 	bool m_preprocessed { false };
+	TagServiceWorker* m_worker;
 
   public:
 
-	explicit TagServiceWidget( QWidget* parent = nullptr );
+	explicit TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWidget* parent = nullptr );
 	~TagServiceWidget() override;
 
 	void setName( const QString& name );
@@ -34,6 +35,9 @@ class TagServiceWidget : public QWidget
 	void setInfo( const idhan::hydrus::ServiceInfo& service_info );
 
   public slots:
+	void startImport();
+	void startPreImport();
+
 	void processedMappings( std::size_t count );
 	void processedParents( std::size_t count );
 	void processedAliases( std::size_t count );

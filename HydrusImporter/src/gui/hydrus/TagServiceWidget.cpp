@@ -7,11 +7,40 @@
 
 #include <iostream>
 
+#include "TagServiceWorker.hpp"
 #include "ui_TagServiceWidget.h"
 
-TagServiceWidget::TagServiceWidget( QWidget* parent ) : QWidget( parent ), ui( new Ui::TagServiceWidget )
+TagServiceWidget::TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWidget* parent ) :
+  QWidget( parent ),
+  m_worker( new TagServiceWorker( this, importer ) ),
+  ui( new Ui::TagServiceWidget )
 {
 	ui->setupUi( this );
+
+	m_worker->setService( m_info );
+
+	connect(
+		m_worker,
+		&TagServiceWorker::processedMappings,
+		this,
+		&TagServiceWidget::processedMappings,
+		Qt::AutoConnection );
+	connect(
+		m_worker, &TagServiceWorker::processedParents, this, &TagServiceWidget::processedParents, Qt::AutoConnection );
+	connect(
+		m_worker, &TagServiceWorker::processedAliases, this, &TagServiceWidget::processedAliases, Qt::AutoConnection );
+	connect(
+		m_worker,
+		&TagServiceWorker::processedMaxMappings,
+		this,
+		&TagServiceWidget::setMaxMappings,
+		Qt::AutoConnection );
+	connect(
+		m_worker, &TagServiceWorker::processedMaxParents, this, &TagServiceWidget::setMaxParents, Qt::AutoConnection );
+	connect(
+		m_worker, &TagServiceWorker::processedMaxAliases, this, &TagServiceWidget::setMaxAliases, Qt::AutoConnection );
+	connect(
+		m_worker, &TagServiceWorker::finished, this, &TagServiceWidget::preprocessingFinished, Qt::AutoConnection );
 }
 
 TagServiceWidget::~TagServiceWidget()
@@ -93,4 +122,15 @@ void TagServiceWidget::setMaxAliases( std::size_t count )
 void TagServiceWidget::setInfo( const idhan::hydrus::ServiceInfo& service_info )
 {
 	m_info = service_info;
+	m_worker->setService( m_info );
+}
+
+void TagServiceWidget::startImport()
+{
+	if ( ui->cbShouldImport->isChecked() ) QThreadPool::globalInstance()->start( m_worker );
+}
+
+void TagServiceWidget::startPreImport()
+{
+	QThreadPool::globalInstance()->start( m_worker );
 }

@@ -28,7 +28,6 @@ class HydrusImporterWidget final : public QWidget
 	std::unique_ptr< idhan::hydrus::HydrusImporter > m_importer { nullptr };
 
 	QThreadPool m_threads;
-	std::vector< TagServiceWorker* > m_workers {};
 
   public:
 
@@ -41,6 +40,10 @@ class HydrusImporterWidget final : public QWidget
 	void on_selectHydrusPath_clicked();
 	void on_parseHydrusDB_pressed();
 	void on_importButton_pressed();
+
+  signals:
+	void triggerPreImport();
+	void triggerImport();
 
   private:
 

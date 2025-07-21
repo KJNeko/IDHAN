@@ -18,11 +18,11 @@ struct Set;
 
 struct ServiceInfo
 {
-	std::size_t service_id;
-	QString name;
-	std::size_t num_mappings;
-	std::size_t num_aliases;
-	std::size_t num_parents;
+	std::size_t service_id { static_cast< std::size_t >( ~0 ) };
+	QString name { "INVALID SERVICE" };
+	std::size_t num_mappings { 0 };
+	std::size_t num_aliases { 0 };
+	std::size_t num_parents { 0 };
 
 	ServiceInfo() = default;
 };

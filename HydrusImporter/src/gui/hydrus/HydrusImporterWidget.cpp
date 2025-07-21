@@ -120,72 +120,35 @@ void HydrusImporterWidget::on_parseHydrusDB_pressed()
 			continue;
 		}
 
-		TagServiceWidget* widget { new TagServiceWidget( this ) };
+		auto widget { new TagServiceWidget( m_importer.get(), this ) };
 
 		widget->setName( service.name );
 		widget->setInfo( service );
 
 		ui->tagServicesLayout->addWidget( widget );
 
-		auto* worker { new TagServiceWorker( this, m_importer.get() ) };
-
-		worker->setService( service );
-
 		connect(
-			worker,
-			&TagServiceWorker::processedMappings,
+			this,
+			&HydrusImporterWidget::triggerImport,
 			widget,
-			&TagServiceWidget::processedMappings,
-			Qt::AutoConnection );
+			&TagServiceWidget::startImport,
+			Qt::SingleShotConnection );
 		connect(
-			worker,
-			&TagServiceWorker::processedParents,
+			this,
+			&HydrusImporterWidget::triggerPreImport,
 			widget,
-			&TagServiceWidget::processedParents,
-			Qt::AutoConnection );
-		connect(
-			worker,
-			&TagServiceWorker::processedAliases,
-			widget,
-			&TagServiceWidget::processedAliases,
-			Qt::AutoConnection );
-		connect(
-			worker,
-			&TagServiceWorker::processedMaxMappings,
-			widget,
-			&TagServiceWidget::setMaxMappings,
-			Qt::AutoConnection );
-		connect(
-			worker,
-			&TagServiceWorker::processedMaxParents,
-			widget,
-			&TagServiceWidget::setMaxParents,
-			Qt::AutoConnection );
-		connect(
-			worker,
-			&TagServiceWorker::processedMaxAliases,
-			widget,
-			&TagServiceWidget::setMaxAliases,
-			Qt::AutoConnection );
-		connect(
-			worker, &TagServiceWorker::finished, widget, &TagServiceWidget::preprocessingFinished, Qt::AutoConnection );
-
-		m_workers.emplace_back( worker );
-
-		if ( service.name == "public tag repository" ) worker->m_ptr = true;
-
-		m_threads.start( worker );
+			&TagServiceWidget::startPreImport,
+			Qt::SingleShotConnection );
 	}
+
+	emit triggerPreImport();
 
 	ui->importButton->setEnabled( true );
 }
 
 void HydrusImporterWidget::on_importButton_pressed()
 {
-	for ( auto& worker : m_workers )
-	{
-		m_threads.start( worker );
-	}
+	emit triggerImport();
 
 	ui->importButton->setEnabled( false );
 }
