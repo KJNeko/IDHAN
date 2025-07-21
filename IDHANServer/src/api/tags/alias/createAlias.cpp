@@ -5,6 +5,7 @@
 #include "api/IDHANTagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "fgl/defines.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -48,6 +49,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagAliases( drogon::H
 
 		const TagID aliased_id { aliased.as< TagID >() };
 		const TagID alias_id { alias.as< TagID >() };
+
+		FGL_ASSERT( aliased_id != alias_id, "Cannot alias a tag to itself" );
 
 		awaiters.emplace_back( transaction->execSqlCoro(
 			"INSERT INTO tag_aliases (domain_id, aliased_id, alias_id) VALUES ($1, $2, $3) ON CONFLICT(domain_id, aliased_id) DO NOTHING",
