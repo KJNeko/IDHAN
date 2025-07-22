@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Database Storage Statistics</title>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sunburst-chart@1.18.0"></script>
+    <style>
+        #chart {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+<div id="chart"></div>
+<script>
+    function formatBytes(bytes) {
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let value = bytes;
+        let unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.length - 1) {
+            value /= 1024;
+            unitIndex++;
+        }
+        return `${value.toFixed(2)} ${units[unitIndex]}`;
+    }
+
+    fetch('/db/stats/sunburst')
+        .then(response => response.json())
+        .then(data => {
+            const chart = Sunburst()
+                .data(data)
+                .label('name')
+                .size('value')
+                .width(window.innerWidth)
+                .excludeRoot(true)
+                .height(window.innerHeight)
+                .sort((a, b) => b.value - a.value)
+                .showLabels(true)
+                .tooltipContent((d, node) => `${d.name}: ${formatBytes(d.value)}${d.value !== node.value ? ` (${formatBytes(node.value)} total)` : ''}`)
+                (document.getElementById('chart'));
+        });
+</script>
+</body>
+</html>
