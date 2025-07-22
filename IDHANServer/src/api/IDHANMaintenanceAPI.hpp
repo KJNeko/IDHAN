@@ -25,12 +25,16 @@ namespace idhan::api
 class IDHANMaintenanceAPI : public drogon::HttpController< IDHANMaintenanceAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > rescanMetadata( drogon::HttpRequestPtr request );
+	// drogon::Task< drogon::HttpResponsePtr > postgresqlStorage( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > postgresqlStorageSunData( drogon::HttpRequestPtr request );
 
   public:
 
 	METHOD_LIST_BEGIN
 
 	ADD_METHOD_TO( IDHANMaintenanceAPI::rescanMetadata, "/jobs/metadata/rescan" );
+	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart" );
+	ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorageSunData, "/db/stats/sunburst" );
 
 	METHOD_LIST_END
 };
