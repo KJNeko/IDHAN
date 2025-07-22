@@ -63,7 +63,7 @@ $$;
 -- $$;
 
 CREATE TRIGGER tag_domain_insert
-    AFTER INSERT
+    BEFORE INSERT
     ON tag_domains
     FOR EACH ROW
 EXECUTE FUNCTION createtagmappingsdomain();
