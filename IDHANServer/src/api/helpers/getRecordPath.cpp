@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/12/25.
 //
 
+#include "createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/utils/coroutine.h"
 #include "helpers.hpp"
@@ -13,13 +14,16 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
 {
 	const auto result { co_await db->execSqlCoro(
 
-		R"(SELECT folder_path, sha256, best_extension
+		R"(SELECT folder_path, sha256, COALESCE(extension, best_extension) as extension
 				FROM records
 						 JOIN file_info ON records.record_id = file_info.record_id
-						 JOIN mime ON file_info.mime_id = mime.mime_id
+						 LEFT JOIN mime ON file_info.mime_id = mime.mime_id
 						 JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id
 				WHERE records.record_id = $1)",
 		record_id ) };
+
+	if ( result.empty() )
+		co_return std::unexpected( createBadRequest( "Record {} is not stored in any cluster", record_id ) );
 
 	const std::filesystem::path folder_path { result[ 0 ][ 0 ].as< std::string >() };
 	const SHA256 sha256 { SHA256::fromPgCol( result[ 0 ][ 1 ] ) };
@@ -31,4 +35,4 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
 
 	co_return file_location;
 }
-} // namespace idhan::helpers
+} // namespace idhan::api::helpers

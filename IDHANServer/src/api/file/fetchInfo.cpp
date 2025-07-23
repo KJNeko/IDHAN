@@ -107,7 +107,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::parseFile( drogon::HttpR
 {
 	{
 		auto db { drogon::app().getDbClient() };
-		co_await tryParseRecordMetadata( record_id, db );
+		const auto parse_result { co_await tryParseRecordMetadata( record_id, db ) };
+		if ( !parse_result.has_value() ) co_return parse_result.error();
 	}
 
 	co_return co_await fetchInfo( request, record_id );
