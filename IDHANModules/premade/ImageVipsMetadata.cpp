@@ -25,7 +25,8 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::
 	// VipsFunc load = vips_pngload_buffer;
 	std::unordered_map< std::string, VipsFunc > func_map { { "image/png", vips_pngload_buffer },
 		                                                   { "image/jpeg", vips_jpegload_buffer },
-		                                                   { "image/webp", vips_webpload_buffer } };
+		                                                   { "image/webp", vips_webpload_buffer },
+		                                                   { "image/gif", vips_gifload_buffer } };
 
 	VipsImage* image;
 	if ( const auto it = func_map.find( mime_name ); it != func_map.end() )
