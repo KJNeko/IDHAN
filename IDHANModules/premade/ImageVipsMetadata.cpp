@@ -19,7 +19,7 @@ std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
 }
 
 std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::
-	parseImage( void* data, std::size_t length, const std::string mime_name )
+	parseFile( void* data, std::size_t length, const std::string mime_name )
 {
 	using VipsFunc = int ( * )( void*, size_t, VipsImage**, ... );
 	// VipsFunc load = vips_pngload_buffer;

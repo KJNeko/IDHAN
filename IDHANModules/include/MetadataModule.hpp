@@ -46,7 +46,7 @@ class FGL_EXPORT MetadataModuleI : public ModuleBase
 	}
 
 	virtual std::expected< MetadataInfo, ModuleError >
-		parseImage( void* data, std::size_t length, std::string mime_name ) = 0;
+		parseFile( void* data, std::size_t length, std::string mime_name ) = 0;
 
 	ModuleType type() override { return ModuleTypeFlags::METADATA; }
 };

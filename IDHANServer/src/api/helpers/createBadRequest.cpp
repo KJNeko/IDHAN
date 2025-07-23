@@ -4,12 +4,7 @@
 
 #include "createBadRequest.hpp"
 
-#include "logging/log.hpp"
-
-namespace idhan
-{
-
-namespace internal
+namespace idhan::internal
 {
 
 drogon::HttpResponsePtr createBadResponse( const std::string& message, drogon::HttpStatusCode code )
@@ -18,14 +13,10 @@ drogon::HttpResponsePtr createBadResponse( const std::string& message, drogon::H
 	out_json[ "error" ] = message;
 	out_json[ "status" ] = static_cast< Json::Value::Int >( code );
 
-	log::error( message );
-
 	auto response { drogon::HttpResponse::newHttpJsonResponse( out_json ) };
 	response->setStatusCode( code );
 
 	return response;
 }
 
-} // namespace internal
-
-} // namespace idhan
+} // namespace idhan::internal

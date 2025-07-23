@@ -310,7 +310,7 @@ std::expected< std::string, std::exception > MimeDatabase::scanFile( const std::
 		return opt.value();
 	}
 
-	return DEFAULT_MIME_TYPE;
+	return INVALID_MIME_NAME;
 }
 
 std::expected< std::string, std::exception > MimeDatabase::scan( const std::byte* data, const std::size_t length )
@@ -329,7 +329,7 @@ std::expected< std::string, std::exception > MimeDatabase::scan( const std::byte
 		}
 	}
 
-	return DEFAULT_MIME_TYPE;
+	return INVALID_MIME_NAME;
 }
 
 void MimeDatabase::reloadMimeParsers()

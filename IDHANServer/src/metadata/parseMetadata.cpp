@@ -20,24 +20,22 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 {
 	const auto simple_type { metadata.m_simple_type };
 
+	co_await db->execSqlCoro(
+		"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2) "
+		"ON CONFLICT (record_id) DO UPDATE SET simple_mime_type = $2",
+		record_id,
+		simple_type );
+
 	Json::Value json {};
 	Json::Reader reader {};
 	if ( !metadata.m_extra.empty() )
 	{
 		if ( !reader.parse( metadata.m_extra, json ) )
 			co_return std::unexpected( createBadRequest( "Failed to parse metadata \"{}\"", metadata.m_extra ) );
-	}
-	else
-	{
-		json = Json::ValueType::objectValue;
-	}
 
-	co_await db->execSqlCoro(
-		"INSERT INTO metadata (record_id, simple_mime_type, json) VALUES ($1, $2, $3::json) "
-		"ON CONFLICT (record_id) DO UPDATE SET simple_mime_type = $2, json = $3::json",
-		record_id,
-		simple_type,
-		json );
+		co_await db
+			->execSqlCoro( "UPDATE metadata SET json = $2 WHERE record_id = $1", record_id, json.toStyledString() );
+	}
 
 	switch ( simple_type )
 	{
@@ -65,39 +63,42 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	co_return {};
 }
 
-drogon::Task< std::expected< std::pair< std::shared_ptr< MetadataModuleI >, std::string >, drogon::HttpResponsePtr > >
-	findBestParser( const RecordID record_id, drogon::orm::DbClientPtr db )
+drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( const std::string mime_name )
 {
-	// Get the mime info needed to determine which parser to use
-	const auto mime_info { co_await db->execSqlCoro(
-		"SELECT mime.name AS mime_name FROM file_info JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
-		record_id ) };
+	auto parsers { modules::ModuleLoader::instance().getParserFor( mime_name ) };
 
-	if ( mime_info.empty() )
-		co_return std::unexpected( createInternalError( "No mime info for record {}", record_id ) );
+	if ( parsers.empty() ) co_return {};
 
-	auto parsers {
-		modules::ModuleLoader::instance().getParserFor( mime_info[ 0 ][ "mime_name" ].as< std::string >() )
-	};
-
-	if ( parsers.empty() )
-	{
-		co_return std::unexpected(
-			createInternalError( "No parser for mime {}", mime_info[ 0 ][ "mime_name" ].as< std::string >() ) );
-	}
-
-	co_return std::make_pair( parsers.front(), mime_info[ 0 ][ "mime_name" ].as< std::string >() );
+	// return the first parser
+	co_return parsers[ 0 ];
 }
 
 drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
 	getMetadata( const RecordID record_id, const std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db )
 {
-	auto parser_e { co_await findBestParser( record_id, db ) };
-	if ( !parser_e.has_value() ) co_return std::unexpected( parser_e.error() );
+	const auto record_mime {
+		co_await db->execSqlCoro( "SELECT mime_id FROM file_info WHERE record_id = $1", record_id )
+	};
 
-	auto& [ parser, mime_name ] = parser_e.value();
+	if ( record_mime.empty() )
+		co_return std::unexpected( createBadRequest(
+			"Record {} does not exist or does not have any file info associated with it", record_id ) );
 
-	const auto metadata { parser->parseImage( data->data(), data->length(), mime_name ) };
+	const auto mime_id { record_mime[ 0 ][ "mime_id" ].as< MimeID >() };
+
+	const auto mime_info { co_await db->execSqlCoro( "SELECT * FROM mime WHERE mime_id = $1", mime_id ) };
+
+	if ( mime_info.empty() )
+		co_return std::unexpected( createInternalError( "Unable to get mime info for mime_id {}", mime_id ) );
+
+	const auto mime_name { mime_info[ 0 ][ "name" ].as< std::string >() };
+
+	const std::shared_ptr< MetadataModuleI > parser { co_await findBestParser( mime_name ) };
+
+	if ( parser == nullptr )
+		co_return std::unexpected( createBadRequest( "No parser found for mime type {}", mime_name ) );
+
+	const auto metadata { parser->parseFile( data->data(), data->length(), mime_name ) };
 
 	if ( !metadata.has_value() )
 	{
@@ -120,7 +121,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	if ( !std::filesystem::exists( record_path.value() ) )
 		co_return std::unexpected( createInternalError( "File for record {} was missing", record_id ) );
 
-	std::shared_ptr< FileMappedData > data { std::make_shared< FileMappedData >( record_path.value() ) };
+	const auto data { std::make_shared< FileMappedData >( record_path.value() ) };
 
 	const auto metadata { co_await getMetadata( record_id, data, db ) };
 
