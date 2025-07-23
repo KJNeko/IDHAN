@@ -11,22 +11,35 @@
 namespace idhan
 {
 
-drogon::Task< void > setFileInfo( const RecordID record_id, const FileInfo& info, drogon::orm::DbClientPtr db )
+drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const drogon::orm::DbClientPtr db )
 {
 	const trantor::Date date {
 		std::chrono::duration_cast< std::chrono::microseconds >( info.store_time.time_since_epoch() ).count()
 	};
 
-	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = $3, cluster_store_time = $4",
-		record_id,
-		info.size,
-		info.mime_id,
-		date,
-		info.extension );
+	if ( info.mime_id == constants::INVALID_MIME_ID ) // if the mime is invalid (unknown)
+	{
+		// the extension is used so we can still find the file even with an invalid mime
+		co_await db->execSqlCoro(
+			"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, NULL, $3, $4) ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = NULL, cluster_store_time = $3, extension = $4",
+			record_id,
+			info.size,
+			date,
+			info.extension );
+	}
+	else
+	{
+		co_await db->execSqlCoro(
+			"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, $3, $4, NULL) ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = $3, cluster_store_time = $4, extension = NULL",
+			record_id,
+			info.size,
+			info.mime_id,
+			date );
+	}
 }
 
-drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db )
+drogon::Task< FileInfo >
+	gatherFileInfo( const std::shared_ptr< FileMappedData > data, const drogon::orm::DbClientPtr db )
 {
 	FileInfo info {};
 	info.size = data->length();
@@ -45,10 +58,15 @@ drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileMappedData > data,
 	if ( mime_search.empty() )
 	{
 		info.mime_id = constants::INVALID_MIME_ID;
-		log::warn( "Found file where mime is not registered in IDHAN: Mime: {}", mime_string.value() );
+		info.extension = data->extension();
+		// ensure that it doesn't start with `.`
+		if ( info.extension.starts_with( '.' ) ) info.extension = info.extension.substr( 1 );
 	}
 	else
+	{
 		info.mime_id = mime_search[ 0 ][ 0 ].as< MimeID >();
+		// extension is not needed if the mime_id is present
+	}
 
 	info.store_time = std::chrono::system_clock::now();
 

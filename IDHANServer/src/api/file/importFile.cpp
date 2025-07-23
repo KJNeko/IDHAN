@@ -72,7 +72,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon
 		co_return drogon::HttpResponse::newHttpJsonResponse( createUnknownMimeResponse() );
 	}
 
-	const bool is_octet { mime_str == DEFAULT_MIME_TYPE };
+	const bool is_octet { mime_str == INVALID_MIME_NAME };
 	const bool force_import { request->getOptionalParameter< bool >( "force" ).value_or( false ) };
 
 	if ( is_octet && !force_import )

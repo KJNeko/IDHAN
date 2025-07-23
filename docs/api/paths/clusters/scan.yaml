@@ -9,13 +9,13 @@ get:
       description: ID of the cluster to scan
       schema:
         type: integer
-    - name: trust_filename
+    - name: recompute_hash
       in: query
       required: false
-      description: Trust the filename and ignore the hash given by the file
+      description: If false then the filename will be trusted and the hash will not be recomputed
       schema:
         type: boolean
-        default: false
+        default: true
     - name: scan_mime
       in: query
       required: false
@@ -26,7 +26,21 @@ get:
     - name: rescan_mime
       in: query
       required: false
-      description: Triggers the mime to be retested for all files
+      description: Rescans the mime type for all files
+      schema:
+        type: boolean
+        default: false
+    - name: scan_metadata
+      in: query
+      required: false
+      description: Scans the metadata if the file has not been scanned previously
+      schema:
+        type: boolean
+        default: true
+    - name: rescan_metadata
+      in: query
+      required: false
+      description: Rescans the metadata for all files
       schema:
         type: boolean
         default: false

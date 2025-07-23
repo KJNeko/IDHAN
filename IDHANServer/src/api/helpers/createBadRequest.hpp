@@ -19,6 +19,7 @@
 #pragma GCC diagnostic pop
 
 #include "logging/format_ns.hpp"
+#include "logging/log.hpp"
 
 namespace idhan
 {
@@ -36,7 +37,7 @@ drogon::HttpResponsePtr createBadRequest( const format_ns::format_string< Args..
 }
 
 template < typename... Args >
-inline drogon::HttpResponsePtr createNotFound( const format_ns::format_string< Args... > str, Args&&... args )
+drogon::HttpResponsePtr createNotFound( const format_ns::format_string< Args... > str, Args&&... args )
 {
 	return internal::createBadResponse(
 		format_ns::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k404NotFound );
@@ -45,6 +46,7 @@ inline drogon::HttpResponsePtr createNotFound( const format_ns::format_string< A
 template < typename... Args >
 drogon::HttpResponsePtr createInternalError( const format_ns::format_string< Args... > str, Args&&... args )
 {
+	log::error( format_ns::format( str, std::forward< Args >( args )... ) );
 	return internal::createBadResponse(
 		format_ns::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k500InternalServerError );
 }

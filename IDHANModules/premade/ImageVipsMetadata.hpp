@@ -16,7 +16,7 @@ class ImageVipsMetadata final : public MetadataModuleI
 	ImageVipsMetadata() = default;
 
 	std::vector< std::string_view > handleableMimes() override;
-	std::expected< MetadataInfo, ModuleError > parseImage( void* data, std::size_t length, std::string mime_name )
+	std::expected< MetadataInfo, ModuleError > parseFile( void* data, std::size_t length, std::string mime_name )
 		override;
 
 	std::string_view name() override { return "JPG Metadata Parser"; }

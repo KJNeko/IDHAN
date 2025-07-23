@@ -14,9 +14,11 @@
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
+#include "drogon/HttpClient.h"
 #include "fgl/defines.hpp"
 #include "fixme.hpp"
 #include "logging/log.hpp"
+#include "metadata/parseMetadata.hpp"
 #include "versions.hpp"
 
 namespace idhan::hyapi
@@ -264,142 +266,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	request->setParameter( "file_ids", out.toStyledString() );
 
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
-}
-
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpRequestPtr request )
-{
-	auto db { drogon::app().getDbClient() };
-
-	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ); hashes_opt.has_value() )
-	{
-		// convert hashes to their respective record_ids
-		if ( auto result = co_await convertHashes( request, hashes_opt.value(), db ); !result.has_value() )
-			co_return result.error();
-	}
-
-	const auto file_ids { request->getOptionalParameter< std::string >( "file_ids" ) };
-	if ( !file_ids.has_value() ) co_return createBadRequest( "Must provide file_ids array" );
-
-	std::string file_ids_str { file_ids.value() };
-	Json::Value file_ids_json {};
-	Json::Reader file_ids_reader {};
-	file_ids_reader.parse( file_ids_str, file_ids_json );
-
-	std::vector< RecordID > record_ids {};
-	for ( const auto& id : file_ids_json ) record_ids.push_back( id.as< RecordID >() );
-
-	// we've gotten all the ids. For now we'll just return them
-	Json::Value metadata_json {};
-
-	const auto services { co_await getServiceList( db ) };
-
-	for ( const auto& record_id : record_ids )
-	{
-		Json::Value data {};
-
-		const auto hash_result { co_await db->execSqlCoro( "SELECT * FROM records WHERE record_id = $1", record_id ) };
-
-		data[ "file_id" ] = record_id;
-		const SHA256 sha256 { hash_result[ 0 ][ "sha256" ] };
-		data[ "hash" ] = sha256.hex();
-		const auto file_info { co_await db->execSqlCoro(
-			"SELECT size, mime.name as mime_name, coalesce(best_extension, extension) as extension FROM file_info LEFT JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
-			record_id ) };
-
-		if ( file_info.size() == 0 )
-		{
-			data[ "size" ] = 0;
-			data[ "mime" ] = "";
-			data[ "ext" ] = "";
-		}
-		else
-		{
-			data[ "size" ] = file_info[ 0 ][ "size" ].as< std::size_t >();
-			data[ "mime" ] = file_info[ 0 ][ "mime_name" ].as< std::string >();
-			data[ "ext" ] = file_info[ 0 ][ "extension" ].as< std::string >();
-		}
-
-		// TODO: Provide height/width information
-		const auto metadata {
-			co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id )
-		};
-
-		if ( !metadata.empty()
-		     && ( static_cast< SimpleMimeType >( metadata[ 0 ][ 0 ].as< std::uint16_t >() ) == SimpleMimeType::IMAGE ) )
-		{
-			const auto image_metadata {
-				co_await db->execSqlCoro( "SELECT width, height FROM image_metadata WHERE record_id = $1", record_id )
-			};
-
-			if ( !image_metadata.empty() )
-			{
-				data[ "width" ] = image_metadata[ 0 ][ 0 ].as< std::uint32_t >();
-				data[ "height" ] = image_metadata[ 0 ][ 1 ].as< std::uint32_t >();
-			}
-			else
-			{
-				data[ "width" ] = 0;
-				data[ "height" ] = 0;
-			}
-		}
-
-		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
-		data[ "known_urls" ] = Json::Value( Json::arrayValue );
-
-		auto storage_tags { db->execSqlCoro(
-			"SELECT domain_id, tag_id, tag_text FROM tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
-			record_id ) };
-
-		auto display_tags { db->execSqlCoro(
-			"SELECT domain_id, tag_id, tag_text FROM final_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
-			record_id ) };
-
-		for ( const auto& storage_tag : co_await storage_tags )
-		{
-			const auto& domain_id { storage_tag[ "domain_id" ] };
-			const auto& tag_id { storage_tag[ "tag_id" ] };
-			const auto& tag_text { storage_tag[ "tag_text" ] };
-
-			const auto service_key {
-				format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
-			};
-
-			data[ "tags" ][ service_key ][ "storage_tags" ][ "0" ].append( tag_text.as< std::string >() );
-		}
-
-		for ( const auto& display_tag : co_await display_tags )
-		{
-			const auto& domain_id { display_tag[ "domain_id" ] };
-			const auto& tag_id { display_tag[ "tag_id" ] };
-			const auto& tag_text { display_tag[ "tag_text" ] };
-
-			const auto service_key {
-				format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
-			};
-
-			data[ "tags" ][ service_key ][ "display_tags" ][ "0" ].append( tag_text.as< std::string >() );
-		}
-
-		for ( const auto& service : services )
-		{
-			const auto service_key { service[ "service_key" ].asString() };
-
-			if ( !data[ "tags" ].isMember( service_key ) ) continue;
-
-			data[ "tags" ][ service_key ][ "name" ] = service[ "name" ];
-			data[ "tags" ][ service_key ][ "type_pretty" ] = service[ "type_pretty" ];
-			data[ "tags" ][ service_key ][ "type" ] = service[ "type" ];
-		}
-
-		metadata_json.append( std::move( data ) );
-	}
-
-	Json::Value out {};
-	out[ "metadata" ] = std::move( metadata_json );
-
-	out[ "services" ] = std::move( services );
-
-	co_return drogon::HttpResponse::newHttpJsonResponse( std::move( out ) );
 }
 
 /*

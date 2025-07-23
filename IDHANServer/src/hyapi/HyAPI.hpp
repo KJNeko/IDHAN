@@ -18,6 +18,8 @@
 #include "drogon/HttpController.h"
 #pragma GCC diagnostic pop
 
+#include <expected>
+
 #include "api/helpers/ResponseCallback.hpp"
 
 namespace idhan::hyapi
@@ -78,4 +80,10 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		HydrusAPI::getClientOptions, "/hyapi/manage_database/get_client_options", drogon::Get, HyAPIAuthName );
 	METHOD_LIST_END
 };
+
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
+	convertHashes( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db );
+
+drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db );
+
 } // namespace idhan::hyapi

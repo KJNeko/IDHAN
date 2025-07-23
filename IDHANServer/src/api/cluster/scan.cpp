@@ -32,18 +32,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	std::size_t size_accum { 0 };
 	std::uint32_t file_counter { 0 };
 
-	/*
-	constexpr std::size_t in_flight { 4 };
-
-	std::counting_semaphore< in_flight > in_counter { in_flight };
-	std::counting_semaphore< in_flight > out_counter { 0 };
-
-	std::thread feeder {};
-	std::thread w0, w1, w2, w3;
-	*/
-
 	// Trust the filename, Ignore the hash given by the file
-	const auto scan_hash { request->getOptionalParameter< bool >( "scan_hash" ).value_or( true ) };
+	const auto recompute_hash { request->getOptionalParameter< bool >( "recompute_hash" ).value_or( true ) };
 
 	// Scans the mime if the file has not been scanned previously
 	const auto scan_mime { request->getOptionalParameter< bool >( "scan_mime" ).value_or( true ) };
@@ -51,7 +41,9 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	// Triggers the mime to be retested for all files
 	const auto rescan_mime { request->getOptionalParameter< bool >( "rescan_mime" ).value_or( false ) };
 
-	const auto scan_metadata { request->getOptionalParameter< bool >( "scan_metadata" ).value_or( false ) };
+	const auto scan_metadata { request->getOptionalParameter< bool >( "scan_metadata" ).value_or( true ) };
+
+	const auto rescan_metadata { request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( true ) };
 
 	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( path_str ) )
 	{
@@ -61,8 +53,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( data->extension() == ".thumbnail" ) continue;
 
-		const auto sha256_e { scan_hash ? SHA256::hash( data->data(), data->length() ) :
-			                              SHA256::fromHex( data->name() ) };
+		const auto sha256_e { recompute_hash ? SHA256::hash( data->data(), data->length() ) :
+			                                   SHA256::fromHex( data->name() ) };
 
 		if ( !sha256_e.has_value() )
 		{
@@ -106,14 +98,15 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		const RecordID record_id { search[ 0 ][ 0 ].as< RecordID >() };
 
-		if ( scan_mime )
+		bool valid_mime { true };
+		if ( scan_mime || rescan_mime )
 		{
 			// Determine if there is a mime for this file
 			const auto mime_search {
 				co_await db->execSqlCoro( "SELECT mime_id FROM file_info WHERE record_id = $1", record_id )
 			};
 
-			if ( rescan_mime || mime_search.empty() )
+			if ( mime_search.empty() || rescan_mime )
 			{
 				auto info { co_await gatherFileInfo( data, db ) };
 
@@ -124,6 +117,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 						data->strpath(),
 						data->extension() );
 					info.extension = data->extension();
+					if ( info.extension.starts_with( '.' ) ) info.extension = info.extension.substr( 1 );
+					valid_mime = false;
 				}
 
 				co_await setFileInfo( record_id, info, db );
@@ -133,13 +128,29 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 			}
 		}
 
-		if ( scan_metadata )
+		// if the mime we just processed is not valid then we should skip scanning the metadata as we won't know what parser to use anyways.
+		if ( ( scan_metadata || rescan_metadata ) && valid_mime )
 		{
-			const auto metadata { co_await getMetadata( record_id, data, db ) };
+			// check if we have metadata already
+			const auto metadata_search {
+				co_await db->execSqlCoro( "SELECT record_id FROM metadata WHERE record_id = $1", record_id )
+			};
 
-			if ( metadata.has_value() )
+			if ( metadata_search.empty() || rescan_metadata )
 			{
-				co_await updateRecordMetadata( record_id, db, metadata.value() );
+				const auto metadata { co_await getMetadata( record_id, data, db ) };
+
+				if ( metadata.has_value() )
+				{
+					co_await updateRecordMetadata( record_id, db, metadata.value() );
+				}
+				else
+				{
+					log::warn(
+						"During scan of cluster {} file {} with was unable to be parsed for metadata (Maybe missing metadata parser?)",
+						cluster_id,
+						data->strpath() );
+				}
 			}
 		}
 

@@ -41,6 +41,6 @@ struct FileInfo
 //! Populates a FileInfo struct with information from the data
 drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db );
 
-drogon::Task< void > setFileInfo( RecordID record_id, const FileInfo& info, drogon::orm::DbClientPtr db );
+drogon::Task<> setFileInfo( RecordID record_id, FileInfo info, drogon::orm::DbClientPtr db );
 
 } // namespace idhan

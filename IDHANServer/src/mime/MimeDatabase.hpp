@@ -183,7 +183,7 @@ struct MimeIdentifier
 };
 
 //! This mime type is used for unknown mime types
-constexpr auto DEFAULT_MIME_TYPE { "application/octet-stream" };
+constexpr auto INVALID_MIME_NAME { "unknown/unknown" };
 
 class MimeDatabase
 {
@@ -200,14 +200,14 @@ class MimeDatabase
 
   public:
 
-	std::expected< std::string, std::exception > scan( const std::byte* data, const std::size_t length );
+	std::expected< std::string, std::exception > scan( const std::byte* data, std::size_t length );
 
-	inline std::expected< std::string, std::exception > scan( const std::vector< std::byte >& data )
+	std::expected< std::string, std::exception > scan( const std::vector< std::byte >& data )
 	{
 		return scan( data.data(), data.size() );
 	}
 
-	inline std::expected< std::string, std::exception > scan( const std::string_view& data )
+	std::expected< std::string, std::exception > scan( const std::string_view& data )
 	{
 		return scan( reinterpret_cast< const std::byte* >( data.data() ), data.size() );
 	}
