@@ -27,10 +27,8 @@ drogon::Task< std::expected< NamespaceID, drogon::HttpResponsePtr > >
 	std::size_t counter { 0 };
 
 	do {
-		if ( const auto id_search = co_await searchNamespace( str, db ); id_search.has_value() )
-		{
-			co_return id_search.value();
-		}
+		if ( counter > 128 ) co_return std::unexpected( createBadRequest( "Too many namespace creation attempts" ) );
+		++counter;
 
 		if ( const auto search_result { co_await searchNamespace( str, db ) }; search_result.has_value() )
 			co_return search_result.value();
