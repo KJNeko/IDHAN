@@ -164,8 +164,8 @@ struct TagTestFixture
 #define REQUIRE_PARENT_MAPPING( origin_id, parent_id )                                                                 \
 	{                                                                                                                  \
 		const pqxx::params params { fixture.dummy_id, parent_id, origin_id };                                          \
-		const auto result { fixture.w.exec(                                                                            \
-			"SELECT 1 FROM tag_mappings_virtuals WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3", params ) }; \
+		const auto result { fixture.w.exec(                                                                           \
+			"SELECT 1 FROM tag_mappings_virtual WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3", params ) }; \
 		REQUIRE( result.size() == 1 );                                                                                 \
 	}
 
@@ -372,7 +372,7 @@ TEST_CASE( "Tag parent relationships", "[tags][db][server][parents]" )
 			THEN( "The virtual mappings table should have a tag of `series:league of legends` for record 1" )
 			{
 				const auto result { fixture.w.exec(
-					"SELECT COUNT(*) FROM tag_mappings_virtuals WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
+					"SELECT COUNT(*) FROM tag_mappings_virtual WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
 					pqxx::params { fixture.dummy_id, tag_league, tag_ahri } ) };
 				REQUIRE( result[ 0 ][ 0 ].as< int >() == 1 );
 			}
@@ -390,7 +390,7 @@ TEST_CASE( "Tag parent relationships", "[tags][db][server][parents]" )
 				THEN( "The virtual mappings table should have a tag of `series:league of legends`" )
 				{
 					const auto result1 { fixture.w.exec(
-						"SELECT COUNT(*) FROM tag_mappings_virtuals WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
+						"SELECT COUNT(*) FROM tag_mappings_virtual WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
 						pqxx::params { fixture.dummy_id, tag_league, tag_ahri } ) };
 					REQUIRE( result1[ 0 ][ 0 ].as< int >() == 1 );
 				}
@@ -398,7 +398,7 @@ TEST_CASE( "Tag parent relationships", "[tags][db][server][parents]" )
 				THEN( "The virtual mappings table should have a tag of `copyright:riot games`" )
 				{
 					const auto result2 { fixture.w.exec(
-						"SELECT COUNT(*) FROM tag_mappings_virtuals WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
+						"SELECT COUNT(*) FROM tag_mappings_virtual WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3",
 						pqxx::params { fixture.dummy_id, tag_riot, tag_league } ) };
 					REQUIRE( result2[ 0 ][ 0 ].as< int >() == 1 );
 				}
@@ -429,7 +429,7 @@ TEST_CASE( "Tag parent relationships", "[tags][db][server][parents]" )
 
 						THEN( "The virtual mappings should be restored" )
 						{
-							const auto result { fixture.w.exec( "SELECT * FROM tag_mappings_virtuals" ) };
+							const auto result { fixture.w.exec( "SELECT * FROM tag_mappings_virtual" ) };
 
 							// Helps with debugging
 							CHECKED_IF( result.size() == 1 )
@@ -455,7 +455,7 @@ TEST_CASE( "Tag parent relationships", "[tags][db][server][parents]" )
 
 				THEN( "The virtual table should have no mappings" )
 				{
-					const auto total_result { fixture.w.exec( "SELECT COUNT(*) FROM tag_mappings_virtuals" ) };
+					const auto total_result { fixture.w.exec( "SELECT COUNT(*) FROM tag_mappings_virtual" ) };
 					REQUIRE( total_result[ 0 ][ 0 ].as< int >() == 0 );
 				}
 			}
