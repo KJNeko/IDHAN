@@ -93,6 +93,12 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::fetchFile( drogon::HttpR
 		}
 	}
 
+	if ( request->getOptionalParameter< bool >( "download" ).value_or( false ) )
+	{
+		// send the file as a download instead of letting the browser try to display it
+		co_return drogon::HttpResponse::newFileResponse( path.string(), path.filename().string() );
+	}
+
 	auto response { drogon::HttpResponse::newFileResponse( path.string(), begin, end - begin ) };
 
 	helpers::addFileCacheHeader(
