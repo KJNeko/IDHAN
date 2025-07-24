@@ -52,6 +52,12 @@ void warn( const format_ns::format_string< Ts... > str, Ts&&... ts )
 	::spdlog::warn( str, std::forward< Ts >( ts )... );
 }
 
+template < typename T >
+void warn( const T& t )
+{
+	::spdlog::warn( t );
+}
+
 template < typename... Ts >
 void error( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
