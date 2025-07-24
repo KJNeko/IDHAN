@@ -7,6 +7,7 @@
 #include "api/IDHANTagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
+#include "api/record/urls/urls.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
@@ -97,7 +98,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ); hashes_opt.has_value() )
 	{
 		// convert hashes to their respective record_ids
-		if ( auto result = co_await convertHashes( request, hashes_opt.value(), db ); !result.has_value() )
+		if ( auto result = co_await convertQueryRecordIDs( request, hashes_opt.value(), db ); !result.has_value() )
 			co_return result.error();
 	}
 
@@ -135,7 +136,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		}
 
 		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
-		data[ "known_urls" ] = Json::Value( Json::arrayValue );
+
+		const auto url_json_e { co_await fetchUrlsJson( record_id, db ) };
+		if ( !url_json_e.has_value() ) co_return url_json_e.error();
+		data[ "known_urls" ] = url_json_e.value();
 
 		{
 			const auto data_result { co_await getMetadataInfo( db, record_id, data ) };

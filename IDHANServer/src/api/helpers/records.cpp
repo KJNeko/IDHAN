@@ -61,7 +61,7 @@ drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClie
 
 	if ( result.empty() ) [[unlikely]]
 	{
-		const auto search_result { co_await searchRecord( sha256, db ) };
+		const auto search_result { co_await findRecord( sha256, db ) };
 
 		//TODO: Proper exception
 		if ( !search_result.has_value() ) throw std::runtime_error( "Optional had no result" );
@@ -72,7 +72,7 @@ drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClie
 	co_return result[ 0 ][ 0 ].as< RecordID >();
 }
 
-drogon::Task< std::optional< RecordID > > searchRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )
+drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )
 {
 	const auto search_result {
 		co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", sha256.toVec() )

@@ -45,11 +45,19 @@ class IDHANRecordAPI : public drogon::HttpController< IDHANRecordAPI >
 	drogon::Task< drogon::HttpResponsePtr > fetchInfo( drogon::HttpRequestPtr request, RecordID record_id );
 	drogon::Task< drogon::HttpResponsePtr > parseFile( drogon::HttpRequestPtr request, RecordID record_id );
 
+	drogon::Task< drogon::HttpResponsePtr > fetchUrls( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > addUrls( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > removeUrls( drogon::HttpRequestPtr request, RecordID record_id );
+
   public:
 
 	METHOD_LIST_BEGIN
 
 	ADD_METHOD_TO( IDHANRecordAPI::createRecord, "/records/create" );
+
+	ADD_METHOD_TO( IDHANRecordAPI::fetchUrls, "/records/{record_id}/urls" );
+	ADD_METHOD_TO( IDHANRecordAPI::addUrls, "/records/{record_id}/urls/add" );
+	ADD_METHOD_TO( IDHANRecordAPI::removeUrls, "/records/{record_id}/urls/remove" );
 
 	// tags
 	ADD_METHOD_TO( IDHANRecordAPI::addMultipleTags, "/records/tags/add" );

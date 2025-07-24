@@ -1,7 +1,6 @@
 #pragma once
 #include "IDHANTypes.hpp"
 
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wredundant-tags"
@@ -38,6 +37,6 @@ drogon::Task< std::vector< RecordID > >
 
 drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClientPtr db );
 
-drogon::Task< std::optional< RecordID > > searchRecord( const SHA256& sha256, drogon::orm::DbClientPtr db );
+drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, drogon::orm::DbClientPtr db );
 
 } // namespace idhan::api::helpers
