@@ -4,7 +4,7 @@ servers:
 
 info:
   description: Standard API for IDHAN
-  version: "1.0.0"
+  version: "0.1.0"
   title: IDHAN API
   contact:
     email: kj16609@lolicon.zip
