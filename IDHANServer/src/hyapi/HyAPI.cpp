@@ -17,6 +17,7 @@
 #include "drogon/HttpClient.h"
 #include "fgl/defines.hpp"
 #include "fixme.hpp"
+#include "helpers.hpp"
 #include "logging/log.hpp"
 #include "metadata/parseMetadata.hpp"
 #include "versions.hpp"
@@ -240,40 +241,19 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( drogon::HttpReque
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	convertHashes( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db )
+	convertQueryRecordIDs( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db )
 {
-	// Convert the string to json
-	Json::Reader reader {};
-	Json::Value json {};
-	reader.parse( hashes, json );
+	const auto out { co_await helpers::extractRecordIDsFromParameters( request, db ) };
+	if ( !out.has_value() ) co_return std::unexpected( out.error() );
 
-	Json::Value out {};
+	Json::Value out_json {};
 
-	for ( Json::ArrayIndex i = 0; i < json.size(); ++i )
-	{
-		const auto hex_string { json[ i ].asString() };
-		const auto sha256 { SHA256::fromHex( hex_string ) };
+	for ( const auto& id : out.value() ) out_json.append( id );
 
-		if ( !sha256.has_value() ) co_return std::unexpected( sha256.error() );
-
-		const auto record_id { co_await api::helpers::searchRecord( *sha256, db ) };
-
-		if ( !record_id.has_value() ) co_return std::unexpected( createBadRequest( "Invalid SHA256" ) );
-
-		out[ i ] = record_id.value();
-	}
-
-	request->setParameter( "file_ids", out.toStyledString() );
+	request->setParameter( "file_ids", out_json.toStyledString() );
 
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
-
-/*
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( drogon::HttpRequestPtr request )
-{
-	co_return drogon::HttpResponse::newHttpResponse();
-}
-*/
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( drogon::HttpRequestPtr request )
 {
@@ -317,7 +297,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( drogon::HttpReques
 		auto db { drogon::app().getDbClient() };
 		const auto sha256 { SHA256::fromHex( hash.value() ) };
 
-		const auto record_id_e { co_await api::helpers::searchRecord( *sha256, db ) };
+		const auto record_id_e { co_await api::helpers::findRecord( *sha256, db ) };
 
 		if ( record_id_e.has_value() )
 			record_id = record_id_e.value();

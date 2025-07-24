@@ -22,6 +22,9 @@ using MimeID = Integer;
 using TagDomainID = SmallInt;
 using FileDomainID = SmallInt;
 
+using UrlID = Integer;
+using UrlDomainID = Integer;
+
 enum class SimpleMimeType : std::uint16_t
 {
 	NONE = 0,

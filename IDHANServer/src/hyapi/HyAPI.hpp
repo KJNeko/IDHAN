@@ -20,6 +20,7 @@
 
 #include <expected>
 
+#include "IDHANTypes.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 
 namespace idhan::hyapi
@@ -50,6 +51,8 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > getClientOptions( drogon::HttpRequestPtr request );
 
+	drogon::Task< drogon::HttpResponsePtr > associateUrl( drogon::HttpRequestPtr request );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -72,6 +75,12 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	ADD_METHOD_TO( HydrusAPI::file, "/hyapi/get_files/file", drogon::Get, HyAPIAuthName );
 	ADD_METHOD_TO( HydrusAPI::thumbnail, "/hyapi/get_files/thumbnail", drogon::Get, HyAPIAuthName );
 	ADD_METHOD_TO( HydrusAPI::unsupported, "/hyapi/get_files/file_path", drogon::Get, HyAPIAuthName ); // UNSUPPORTED
+
+	ADD_METHOD_TO( HydrusAPI::unsupported, "/hyapi/add_urls/add_url", drogon::Post, HyAPIAuthName ); // UNSUPPORTED
+
+	// file urls
+	ADD_METHOD_TO( HydrusAPI::associateUrl, "/hyapi/add_urls/associate_url", drogon::Post, HyAPIAuthName );
+
 	ADD_METHOD_TO(
 		HydrusAPI::unsupported, "/hyapi/get_files/thumbnail_path", drogon::Get, HyAPIAuthName ); // UNSUPPORTED
 
@@ -81,8 +90,15 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	METHOD_LIST_END
 };
 
+/**
+ * @brief Converts and extracts Hydrus' `file` input from json to record ids, Sets the record parameter `file_ids` to a json array of the record ids
+ * @param request
+ * @param hashes
+ * @param db
+ * @return
+ */
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	convertHashes( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db );
+	convertQueryRecordIDs( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db );
 
 drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db );
 
