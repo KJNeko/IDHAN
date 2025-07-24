@@ -7,20 +7,18 @@
 namespace idhan::api
 {
 
-ClusterAPI::ResponseTask ClusterAPI::list( drogon::HttpRequestPtr request )
+ClusterAPI::ResponseTask ClusterAPI::list( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };
 	const auto result { co_await db->execSqlCoro( "SELECT cluster_id FROM file_clusters" ) };
 
 	Json::Value root {};
 
-	const auto transaction { co_await db->newTransactionCoro() };
-
 	for ( Json::ArrayIndex i = 0; i < result.size(); ++i )
 	{
 		const ClusterID id { result[ i ][ 0 ].as< ClusterID >() };
 
-		const auto info { co_await getInfo( id, transaction ) };
+		const auto info { co_await getInfo( id, db ) };
 
 		if ( !info.has_value() ) co_return info.error();
 

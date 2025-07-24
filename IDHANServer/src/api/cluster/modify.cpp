@@ -15,10 +15,8 @@ ClusterAPI::ResponseTask ClusterAPI::modify( drogon::HttpRequestPtr request, con
 	co_return co_await modifyT( request, cluster_id, transaction );
 }
 
-ClusterAPI::ResponseTask ClusterAPI::modifyT(
-	drogon::HttpRequestPtr request,
-	const ClusterID cluster_id,
-	std::shared_ptr< drogon::orm::Transaction > transaction )
+ClusterAPI::ResponseTask ClusterAPI::
+	modifyT( drogon::HttpRequestPtr request, const ClusterID cluster_id, drogon::orm::DbClientPtr transaction )
 {
 	log::debug( "Modifying cluster: {}", cluster_id );
 	const auto cluster_info {
@@ -28,7 +26,6 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 	if ( cluster_info.empty() )
 	{
 		log::warn( "Cluster id {} could not be found", cluster_id );
-		transaction->rollback();
 		co_return drogon::HttpResponse::newHttpResponse( drogon::k404NotFound, drogon::CT_TEXT_HTML );
 	}
 

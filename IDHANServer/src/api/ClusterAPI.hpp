@@ -56,17 +56,15 @@ struct ClusterInfo
 };
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getInfo( ClusterID cluster_id, std::shared_ptr< drogon::orm::Transaction > transaction );
+	getInfo( ClusterID cluster_id, drogon::orm::DbClientPtr transaction );
 
 class ClusterAPI : public drogon::HttpController< ClusterAPI >
 {
 	using ResponseTask = drogon::Task< drogon::HttpResponsePtr >;
 
-	ResponseTask modifyT(
-		drogon::HttpRequestPtr request, ClusterID cluster_id, std::shared_ptr< drogon::orm::Transaction > transaction );
+	ResponseTask modifyT( drogon::HttpRequestPtr request, ClusterID cluster_id, drogon::orm::DbClientPtr transaction );
 
-	ResponseTask infoT(
-		drogon::HttpRequestPtr request, ClusterID cluster_id, std::shared_ptr< drogon::orm::Transaction > transaction );
+	ResponseTask infoT( drogon::HttpRequestPtr request, ClusterID cluster_id, drogon::orm::DbClientPtr transaction );
 
 	ResponseTask add( drogon::HttpRequestPtr request );
 	ResponseTask list( drogon::HttpRequestPtr request );

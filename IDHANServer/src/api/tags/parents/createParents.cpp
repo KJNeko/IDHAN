@@ -29,7 +29,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagParents( drogon::H
 	}
 
 	const auto db { drogon::app().getDbClient() };
-	auto transaction { co_await db->newTransactionCoro() };
 
 	const auto tag_domain_id { helpers::getTagDomainID( request ) };
 
@@ -46,7 +45,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagParents( drogon::H
 		const TagID parent_id { parent.as< TagID >() };
 		const TagID child_id { child.as< TagID >() };
 
-		co_await transaction->execSqlCoro(
+		co_await db->execSqlCoro(
 			"INSERT INTO tag_parents (domain_id, parent_id, child_id) VALUES ($1, $2, $3) ON CONFLICT(domain_id, parent_id, child_id) DO NOTHING",
 			tag_domain_id.value(),
 			parent_id,
