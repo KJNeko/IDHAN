@@ -29,6 +29,8 @@ class FileMappedData
 
 	std::size_t length() const { return m_length; }
 
+	std::filesystem::path path() const { return m_path; }
+
 	std::byte* data() const { return m_data; }
 
 	std::string strpath() const { return m_path.string(); }
