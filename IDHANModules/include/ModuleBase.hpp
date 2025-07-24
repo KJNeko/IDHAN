@@ -6,6 +6,8 @@
 #include <cstdint>
 #define FGL_EXPORT __attribute__( ( visibility( "default" ) ) )
 
+namespace idhan
+{
 enum ModuleTypeFlags : std::uint16_t
 {
 	METADATA = 1 << 0,
@@ -36,3 +38,4 @@ struct ModuleInfo
 using IDHANModule = ModuleBase;
 
 using ModuleError = std::string;
+} // namespace idhan

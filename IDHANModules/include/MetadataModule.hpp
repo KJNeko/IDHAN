@@ -10,6 +10,8 @@
 #include "IDHANTypes.hpp"
 #include "ModuleBase.hpp"
 
+namespace idhan
+{
 struct MetadataInfoImage
 {
 	int width;
@@ -22,9 +24,9 @@ struct MetadataInfoAnimation
 
 struct MetadataInfo
 {
-	std::variant< MetadataInfoImage, MetadataInfoAnimation > m_metadata;
-	std::string m_extra;
-	idhan::SimpleMimeType m_simple_type;
+	std::variant< std::monostate, MetadataInfoImage, MetadataInfoAnimation > m_metadata {};
+	std::string m_extra {};
+	SimpleMimeType m_simple_type { SimpleMimeType::NONE };
 };
 
 class FGL_EXPORT MetadataModuleI : public ModuleBase
@@ -50,3 +52,4 @@ class FGL_EXPORT MetadataModuleI : public ModuleBase
 
 	ModuleType type() override { return ModuleTypeFlags::METADATA; }
 };
+} // namespace idhan

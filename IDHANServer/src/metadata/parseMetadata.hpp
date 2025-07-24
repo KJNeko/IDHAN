@@ -3,7 +3,6 @@
 //
 #pragma once
 
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wredundant-tags"
@@ -25,9 +24,8 @@
 namespace idhan
 {
 class FileMappedData;
-}
-
 struct MetadataInfo;
+} // namespace idhan
 
 namespace idhan::api
 {

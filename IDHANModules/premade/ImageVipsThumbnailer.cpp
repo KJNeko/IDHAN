@@ -9,6 +9,8 @@
 
 #include "vips.hpp"
 
+using namespace idhan;
+
 std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
 {
 	return vipsHandleable();
