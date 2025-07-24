@@ -52,6 +52,7 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	drogon::Task< drogon::HttpResponsePtr > getClientOptions( drogon::HttpRequestPtr request );
 
 	drogon::Task< drogon::HttpResponsePtr > associateUrl( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > getUrlInfo( drogon::HttpRequestPtr request );
 
   public:
 
@@ -80,6 +81,7 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 
 	// file urls
 	ADD_METHOD_TO( HydrusAPI::associateUrl, "/hyapi/add_urls/associate_url", drogon::Post, HyAPIAuthName );
+	ADD_METHOD_TO( HydrusAPI::getUrlInfo, "/hyapi/add_urls/get_url_info", drogon::Get, HyAPIAuthName );
 
 	ADD_METHOD_TO(
 		HydrusAPI::unsupported, "/hyapi/get_files/thumbnail_path", drogon::Get, HyAPIAuthName ); // UNSUPPORTED

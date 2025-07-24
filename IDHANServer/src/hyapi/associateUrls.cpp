@@ -12,6 +12,39 @@
 namespace idhan::hyapi
 {
 
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
+	getAdvancedUrlInfo( std::string url_str, drogon::orm::DbClientPtr db )
+{
+	Json::Value root {};
+
+	// const auto url_id { co_await idhan::helpers::findOrCreateUrl( url_str, db ) };
+	// if ( !url_id.has_value() ) co_return url_id.error();
+	// const auto url_id_e { url_id.value() };
+
+	root[ "request_url" ] = url_str;
+	root[ "normalized_url" ] = url_str;
+	root[ "url_type" ] = 5; // Unknown URL
+	root[ "url_type_string" ] = "unknown";
+	// root["match_name"] =
+	root[ "can_parse" ] = false;
+
+	co_return root;
+}
+
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( drogon::HttpRequestPtr request )
+{
+	const auto url_parameter { request->getOptionalParameter< std::string >( "url" ) };
+	if ( !url_parameter.has_value() ) co_return createBadRequest( "Must provide url parameter" );
+	const auto url_str { url_parameter.value() };
+
+	auto db { drogon::app().getDbClient() };
+	const auto url_info_e { co_await getAdvancedUrlInfo( url_str, db ) };
+	if ( !url_info_e.has_value() ) co_return url_info_e.error();
+	const auto& url_info { url_info_e.value() };
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( url_info );
+}
+
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( drogon::HttpRequestPtr request )
 {
 	const auto json_object { request->getJsonObject() };
