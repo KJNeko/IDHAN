@@ -1,0 +1,64 @@
+get:
+  tags:
+    - tags
+    - search
+  description: Returns the best possible tag for a given input. The list will be capped at a maximum of the input `limit` or until all items above the the `lowest_match` value are found, Whichever happens first.
+  summary: Returns a list of tags that are the best possible fits for a given input.
+  parameters:
+    - in: query
+      name: tag
+      schema:
+        type: string
+        default: ""
+      required: true
+      description: Partial text of a tag to search
+    - in: query
+      name: limit
+      schema:
+        type: integer
+        default: 10
+      required: false
+      description: Maximum number of items to return
+    - in: query
+      name: pre_search
+      schema:
+        type: boolean
+        default: true
+      description: Allows for text before the tag to be counted. If false then it will assume that the tag follows `^tag.*$`
+    - in: query
+      name: post_search
+      schema:
+        type: boolean
+        default: true
+      description: Reverse of pre_search. Tag expected to be `^.*tag$`
+    - in: query
+      name: threshold
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 100
+        default: 0
+      description: threshold that a tag will be added to the list. 0% to 100% match. Note that the order of returns is in highest match to lowest match. The match value must be above the threshold to be added.
+
+  responses:
+    "200":
+      description: An array of tags stored in json. The order is from greatest match to least match
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '../../schemas/TagInfo.yaml'
+          examples:
+            CatTag:
+              summary: Tag was 'cat'
+              value:
+                - tag_id: 3
+                  namespace: ""
+                  subtag: "cat ears"
+                - tag_id: 2
+                  namespace: ""
+                  subtag: "catgirl"
+                - tag_id: 1
+                  namespace: "species"
+                  subtag: "catgirl"

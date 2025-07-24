@@ -1,0 +1,61 @@
+post:
+  tags:
+    - tags
+  summary: Creates a new tag, Or returns an ID of an existing one
+  requestBody:
+    description: Json object with a namespace id or text, and a subtag id, or text
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../schemas/TagSet.yaml'
+        examples:
+          SingleText:
+            summary: Single text string
+            description: This is for ease of use. The internals will split the tag on the `:` character, Or if there is no `:` character it will treat the entire tag as a subtag component with a blank namespace.
+            value:
+              tag: "character:toujou koneko"
+          TextWNamespace:
+            summary: Text with namespace
+            description: This shows an example of a tag that would look like "`character`:`toujou koneko`"
+            value:
+              namespace: "character"
+              subtag: "toujou koneko"
+          TextWONamespace:
+            summary: Text without namespace
+            description: This shows an empty tag, The value `0` can also be used instead of an empty string
+            value:
+              namespace: ""
+              subtag: "catgirl"
+          ids:
+            value:
+              namespace: 0
+              subtag: 0
+          array:
+            summary: Array of tags
+            description: This shows an example of how you can use an tag objects.
+            value:
+              - namespace: "character"
+                subtag: "toujou koneko"
+              - namespace: "series"
+                subtag: "Highschool DxD"
+
+  responses:
+    "200":
+      description: "Json object with tag info"
+      content:
+        application/json:
+          schema:
+            $ref: '../../schemas/TagInfo.yaml'
+          examples:
+            singlesent:
+              summary: "Single tag in request (non array)"
+              description: "Single tag in request"
+              value:
+                tag_id: 0
+            array:
+              summary: "Array of tags sent"
+              description: "Even if 1 tag is present in the array, The return will always be an array if you send the request as an array"
+              value:
+                - tag_id: 0
+                - tag_id: 1

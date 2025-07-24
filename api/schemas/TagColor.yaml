@@ -1,0 +1,18 @@
+description: "RBG Values are provided for ease of use."
+type: object
+properties:
+  hex:
+    type: string
+    example: "F0F0F0"
+  r:
+    type: integer
+    minimum: 0
+    maximum: 255
+  g:
+    type: integer
+    minimum: 0
+    maximum: 255
+  b:
+    type: integer
+    minimum: 0
+    maximum: 255

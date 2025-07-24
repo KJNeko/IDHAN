@@ -1,0 +1,133 @@
+post:
+  tags:
+    - records
+  summary: Imports a given file.
+  requestBody:
+    content:
+      application/octet-stream:
+        schema:
+          type: string
+          format: binary
+  responses:
+    success:
+      description: Successful import and record creation of the file
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              file:
+                type: object
+                properties:
+                  import_time:
+                    type: integer
+                    example: 1749642232
+                  import_time_human:
+                    type: string
+                    example: "2025-06-11 11:43:51.627481"
+              record:
+                type: object
+                properties:
+                  creation_time:
+                    type: integer
+                    example: 1749642039
+                  creation_time_human:
+                    type: string
+                    example: "2025-06-11 11:40:38.572907"
+                  id:
+                    type: integer
+                    example: 43
+              record_id:
+                type: integer
+                example: 43
+              status:
+                oneOf:
+                  - type: integer
+                    example: 1
+    already exists:
+      description: IDHAN already has the file
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              file:
+                type: object
+                properties:
+                  import_time:
+                    type: integer
+                    example: 1749642232
+                  import_time_human:
+                    type: string
+                    example: "2025-06-11 11:43:51.627481"
+              record:
+                type: object
+                properties:
+                  creation_time:
+                    type: integer
+                    example: 1749642039
+                  creation_time_human:
+                    type: string
+                    example: "2025-06-11 11:40:38.572907"
+                  id:
+                    type: integer
+                    example: 43
+              record_id:
+                type: integer
+                example: 43
+              status:
+                type: integer
+                example: 2
+    previously deleted:
+      description: IDHAN has been told to delete this file
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              file:
+                type: object
+                properties:
+                  import_time:
+                    type: integer
+                    example: 1749642232
+                  import_time_human:
+                    type: string
+                    example: "2025-06-11 11:43:51.627481"
+              record:
+                type: object
+                properties:
+                  creation_time:
+                    type: integer
+                    example: 1749642039
+                  creation_time_human:
+                    type: string
+                    example: "2025-06-11 11:40:38.572907"
+                  deleted_time:
+                    type: integer
+                    example: 1749642300
+                  deleted_time_human:
+                    type: string
+                    example: "2025-06-11 11:45:00.000000"
+                  id:
+                    type: integer
+                    example: 43
+              record_id:
+                type: integer
+                example: 43
+              status:
+                type: integer
+                example: 3
+    failed:
+      description: IDHAN failed to determine the file's mime
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: integer
+                example: 4
+              reason:
+                type: string
+                example: unknown mime

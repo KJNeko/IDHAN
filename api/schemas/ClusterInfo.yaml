@@ -1,0 +1,37 @@
+type: object
+properties:
+  cluster_id:
+    type: integer
+    readOnly: true
+  readonly:
+    type: boolean
+    default: true
+  name:
+    type: string
+  path:
+    type: string
+    example: ./files
+  size:
+    type: object
+    properties:
+      used:
+        type: integer
+        readOnly: true
+      limit:
+        type: integer
+      available:
+        type: integer
+        readOnly: true
+  file_count:
+    description: Number of files in the cluster
+    type: integer
+    readOnly: true
+  ratio:
+    description: Ratio of files that should be placed in this cluster. ( Ratio / TotalRatio )
+    type: integer
+    example: 1
+    default: 1
+  type:
+    type: string
+    enum: [ All, Files, Thumbnails ]
+    default: All

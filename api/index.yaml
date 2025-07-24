@@ -1,0 +1,106 @@
+openapi: 3.0.0
+servers:
+  - url: /
+
+info:
+  description: Standard API for IDHAN
+  version: "1.0.0"
+  title: IDHAN API
+  contact:
+    email: kj16609@lolicon.zip
+tags:
+  - name: public
+    description: Public access
+  - name: records
+    description: File related operations
+  - name: tag domains
+    description: Tag grouping
+  - name: tags
+    description: Tag related operations
+  - name: clusters
+    description: File clusters managed by IDHAN
+
+
+security:
+  - KeyAuth: [ ]
+
+paths:
+  /version:
+    $ref: './paths/version.yaml'
+  /tags/create:
+    $ref: './paths/tags/create.yaml'
+  /tags/search:
+    $ref: './paths/tags/search.yaml'
+  /tags/{tag_id}/info:
+    $ref: './paths/tags/info.yaml'
+  /tags/autocomplete:
+    $ref: './paths/tags/autocomplete.yaml'
+  /tags/domain/create:
+    $ref: './paths/tags/domains/create.yaml'
+  /tags/domain/list:
+    $ref: './paths/tags/domains/list.yaml'
+  /tags/domain/{domain_id}/info:
+    $ref: './paths/tags/domains/info.yaml'
+  /tags/domain/{domain_id}/delete:
+    $ref: './paths/tags/domains/delete.yaml'
+
+  /tags/parents/create:
+    $ref: './paths/tags/relationships/parent/create.yaml'
+
+  /records/create:
+    $ref: './paths/records/create.yaml'
+  /records/tags/add:
+    $ref: './paths/records/tags/addgroup.yaml'
+  /records/{record_id}/tags/add:
+    $ref: './paths/records/tags/add.yaml'
+  /records/{record_id}/tags/remove:
+    $ref: './paths/records/tags/remove.yaml'
+  /records/{record_id}/tags:
+    $ref: './paths/records/tags/info.yaml'
+  /records/{record_id}/info:
+    $ref: './paths/records/info.yaml'
+  /records/{record_id}:
+    $ref: './paths/records/file.yaml'
+  /records/{record_id}/file:
+    $ref: './paths/records/file.yaml'
+  /records/{record_id}/thumbnail:
+    $ref: './paths/records/thumbnail.yaml'
+  /records/search:
+    $ref: './paths/records/search.yaml'
+
+  /search:
+    $ref: './paths/search/search.yaml'
+
+  /file/import:
+    $ref: './paths/file/import.yaml'
+
+  /clusters/add:
+    $ref: './paths/clusters/add.yaml'
+  /clusters/list:
+    $ref: './paths/clusters/list.yaml'
+  /clusters/{cluster_id}/info:
+    $ref: './paths/clusters/info.yaml'
+  /clusters/{cluster_id}/modify:
+    $ref: './paths/clusters/modify.yaml'
+  /clusters/{cluster_id}/remove:
+    $ref: './paths/clusters/remove.yaml'
+  /clusters/{cluster_id}/scan:
+    $ref: './paths/clusters/scan.yaml'
+
+components:
+  schemas:
+    TagInfo:
+      $ref: './schemas/TagInfo.yaml'
+    Version:
+      $ref: './schemas/Version.yaml'
+    VersionInfo:
+      $ref: './schemas/VersionInfo.yaml'
+    TagColor:
+      $ref: './schemas/TagColor.yaml'
+    TagSet:
+      $ref: './schemas/TagSet.yaml'
+    TagInput:
+      $ref: './schemas/TagInput.yaml'
+  securitySchemes:
+    KeyAuth:
+      $ref: './securitySchemes/KeyAuth.yaml'

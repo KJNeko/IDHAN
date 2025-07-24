@@ -1,0 +1,15 @@
+get:
+  tags:
+    - clusters
+  summary: Returns a json list of all cluster ids in use.
+  responses:
+    200:
+      description: Returns a json array with the ids currently in use
+      content:
+        application/json:
+          schema:
+            type: array
+            example:
+              - 1
+              - 2
+              - 3

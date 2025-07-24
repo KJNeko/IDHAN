@@ -1,0 +1,17 @@
+get:
+  tags:
+    - tag domains
+  summary: Deletes a given tag domain
+  parameters:
+    - in: path
+      name: domain_id
+      required: true
+      schema:
+        $ref: '../../../schemas/TagDomainID.yaml'
+  responses:
+    200:
+      description: Json object with domain info
+      content:
+        application/json:
+          schema:
+            $ref: '../../../schemas/TagDomainInfo.yaml'

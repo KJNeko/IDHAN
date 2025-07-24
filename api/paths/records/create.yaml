@@ -1,0 +1,32 @@
+post:
+  tags:
+    - records
+  summary: Creates a new file record, You can only supply a SHA256. If you are wishing to import a file, see (TODO)
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            sha256:
+              $ref: '../../schemas/SHA256.yaml'
+        examples:
+          single:
+            summary: Single hash
+            value:
+              sha256: '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29'
+          array:
+            summary: Array of hashes
+            value:
+              sha256: [ '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29', '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29' ]
+  responses:
+    200:
+      description: Successfully imported all records
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_id:
+                type: integer

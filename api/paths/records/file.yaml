@@ -1,0 +1,14 @@
+get:
+  tags:
+    - records
+  summary: Returns the file if it is present in the filesystem cluster.
+  parameters:
+    - $ref: '../../parameters/record_id.yaml'
+  responses:
+    '200':
+      description: Success
+      content:
+        '*/*':
+          schema:
+            type: string
+            format: binary

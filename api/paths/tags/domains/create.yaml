@@ -1,0 +1,23 @@
+post:
+  tags:
+    - tag domains
+  summary: Creates a new tag domain used for grouping relationships
+  requestBody:
+    description: Json object
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "my domain"
+  responses:
+    "200":
+      description: Json object with the domain info
+      content:
+        application/json:
+          schema:
+            $ref: '../../../schemas/TagDomainInfo.yaml'
+

@@ -1,0 +1,31 @@
+post:
+  tags:
+    - clusters
+  summary: Creates a new cluster.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../schemas/ClusterInfo.yaml'
+  responses:
+    200:
+      description: The cluster was successfully created
+    422:
+      description: The cluster was not able to be created.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+              message:
+                type: string
+          examples:
+            folder invalid:
+              summary: Access error
+              description: The folder could not be created or accessed due to filesystem permission errors.
+              value:
+                code: 422
+                message: Unable to create directory.

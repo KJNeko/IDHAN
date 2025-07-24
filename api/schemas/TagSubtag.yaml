@@ -1,0 +1,4 @@
+type: string
+description: The second text component of a tag
+example: 'toujou koneko'
+minLength: 0

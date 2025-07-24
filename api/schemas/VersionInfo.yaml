@@ -1,0 +1,8 @@
+type: object
+properties:
+  idhan_server_version:
+    $ref: './Version.yaml'
+  idhan_api_version:
+    $ref: './Version.yaml'
+  hydrus_api_version:
+    type: integer

@@ -1,0 +1,17 @@
+get:
+  tags:
+    - tags
+  summary: Returns information about a tag.
+  parameters:
+    - in: path
+      name: tag_id
+      required: true
+      schema:
+        $ref: '../../schemas/TagID.yaml'
+  responses:
+    "200":
+      description: "Json object with tag info"
+      content:
+        application/json:
+          schema:
+            $ref: '../../schemas/TagInfoExtended.yaml'

@@ -1,0 +1,8 @@
+type: object
+properties:
+  domain_name:
+    type: string
+    example: "my domain"
+  domain_id:
+    type: integer
+    example: 0

@@ -1,0 +1,15 @@
+type: object
+properties:
+  string:
+    description: "Simple string for easy display"
+    type: string
+    example: "1.0.0"
+  major:
+    type: integer
+    example: 1
+  minor:
+    type: integer
+    example: 0
+  patch:
+    type: integer
+    example: 0

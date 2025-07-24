@@ -1,0 +1,26 @@
+type: object
+allOf:
+  - $ref: 'TagInfo.yaml'
+  - type: object
+    properties:
+      namespace:
+        type: object
+        properties:
+          id:
+            type: integer
+          text:
+            type: string
+            example: "character"
+      subtag:
+        type: object
+        properties:
+          id:
+            type: integer
+          text:
+            type: string
+            example: "toujou koneko"
+      items_count:
+        type: integer
+        description: "Number of items with this tag"
+      color:
+        $ref: './TagColor.yaml'

@@ -1,0 +1,6 @@
+get:
+  tags:
+    - records
+  summary: Returns information about a file
+  parameters:
+    - $ref: '../../parameters/record_id.yaml'

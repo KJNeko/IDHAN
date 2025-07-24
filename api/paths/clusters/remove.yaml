@@ -1,0 +1,25 @@
+delete:
+  tags:
+    - clusters
+  summary: Deletes a filesystem cluster. The cluster MUST be empty before deletion.
+  responses:
+    200:
+      description: The cluster info was successfully removed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 200
+    422:
+      description: The file cluster cannot be deleted because files have not been migrated.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 422

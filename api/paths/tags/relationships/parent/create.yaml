@@ -1,0 +1,26 @@
+post:
+  tags:
+    - parents
+  description: Creates a parent/child relationship between two tags
+  parameters:
+    - name: tag_domain_id
+      in: query
+      required: true
+      schema:
+        $ref: '../../../../schemas/TagDomainID.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              parent_id:
+                $ref: '../../../../schemas/TagID.yaml'
+              child_id:
+                $ref: '../../../../schemas/TagID.yaml'
+  responses:
+    200:
+      description: Tags relationship created
