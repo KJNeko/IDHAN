@@ -19,22 +19,22 @@ jobs:
 
       - name: Extract API documentation
         run: |
-          # Copy existing Swagger/API docs
+          # Copy the entire API specification directory
+          if [ -d "docs/api" ]; then
+            cp -r docs/api/* docs-output/api/
+          fi
+          
+          # Copy the Swagger UI HTML file
           if [ -f "IDHANServer/src/pages/apidocs.html" ]; then
             cp IDHANServer/src/pages/apidocs.html docs-output/api/index.html
           fi
           
-          # Copy any API-related static files (CSS, JS, images)
+          # Copy any other API-related static files (CSS, JS, images)
           if [ -d "IDHANServer/src/pages" ]; then
             find IDHANServer/src/pages -name "*.css" -o -name "*.js" -o -name "*.png" -o -name "*.jpg" -o -name "*.ico" | while read file; do
               cp "$file" docs-output/api/
             done
           fi
-          
-          # Look for any JSON API specs in the source
-          find . -name "*.json" -path "*/api/*" -o -name "openapi.json" -o -name "swagger.json" | while read file; do
-            cp "$file" docs-output/api/
-          done
 
       - name: (Doxygen) Generate HTML
         uses: mattnotmitt/doxygen-action@v1.1.0
