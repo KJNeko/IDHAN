@@ -13,13 +13,12 @@ namespace idhan::api
 ClusterAPI::ResponseTask ClusterAPI::info( drogon::HttpRequestPtr request, const ClusterID cluster_id )
 {
 	auto db { drogon::app().getDbClient() };
-	auto transaction { co_await db->newTransactionCoro() };
 
-	co_return co_await infoT( request, cluster_id, transaction );
+	co_return co_await infoT( request, cluster_id, db );
 }
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getInfo( ClusterID cluster_id, std::shared_ptr< drogon::orm::Transaction > transaction )
+	getInfo( ClusterID cluster_id, const drogon::orm::DbClientPtr transaction )
 {
 	const auto cluster_info { co_await transaction->execSqlCoro(
 		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, allowed_thumbnails, allowed_files, cluster_name, folder_path FROM file_clusters WHERE cluster_id = $1",
@@ -28,7 +27,6 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	if ( cluster_info.empty() )
 	{
 		log::warn( "Cluster info could not be found for cluster id: {}", cluster_id );
-		transaction->rollback();
 		co_return std::
 			unexpected( drogon::HttpResponse::newHttpResponse( drogon::k404NotFound, drogon::CT_TEXT_HTML ) );
 	}
@@ -60,8 +58,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	co_return json;
 }
 
-ClusterAPI::ResponseTask ClusterAPI::infoT(
-	drogon::HttpRequestPtr request, ClusterID cluster_id, std::shared_ptr< drogon::orm::Transaction > transaction )
+ClusterAPI::ResponseTask ClusterAPI::
+	infoT( drogon::HttpRequestPtr request, ClusterID cluster_id, drogon::orm::DbClientPtr transaction )
 {
 	const auto result { co_await getInfo( cluster_id, transaction ) };
 

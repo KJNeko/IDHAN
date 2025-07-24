@@ -169,13 +169,12 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );
 
 	const auto db { drogon::app().getDbClient() };
-	const auto transaction { co_await db->newTransactionCoro() };
 
 	auto tag_pairs { co_await getTagPairs( *json_ptr ) };
 
 	if ( !tag_pairs.has_value() ) co_return tag_pairs.error();
 
-	const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), transaction ) };
+	const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
 
 	if ( !tag_pair_ids.has_value() ) co_return tag_pair_ids.error();
 
@@ -183,7 +182,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 	if ( !tag_domain_id.has_value() ) co_return tag_domain_id.error();
 
-	const auto insert_result { co_await transaction->execSqlCoro(
+	const auto insert_result { co_await db->execSqlCoro(
 		"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 		record_id,
 		helpers::pgArrayify( tag_pair_ids.value() ),
@@ -199,7 +198,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );
 
 	const auto db { drogon::app().getDbClient() };
-	const auto transaction { co_await db->newTransactionCoro() };
 
 	const auto& json { *json_ptr };
 
@@ -226,7 +224,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 
 		if ( !tag_pairs.has_value() ) co_return tag_pairs.error();
 
-		const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), transaction ) };
+		const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
 
 		if ( !tag_pair_ids.has_value() ) co_return tag_pair_ids.error();
 
@@ -235,7 +233,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 			if ( !record_json.isIntegral() )
 				co_return createBadRequest( "Invalid json item in records list: Expected integral" );
 
-			const auto insert_result { co_await transaction->execSqlCoro(
+			const auto insert_result { co_await db->execSqlCoro(
 				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 				static_cast< RecordID >( record_json.asInt64() ),
 				helpers::pgArrayify( tag_pair_ids.value() ),
@@ -267,7 +265,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 
 			if ( !tag_ids.has_value() ) co_return tag_ids.error();
 
-			co_await transaction->execSqlCoro(
+			co_await db->execSqlCoro(
 				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, unnest($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 				static_cast< RecordID >( records_json[ i ].asInt64() ),
 				helpers::pgArrayify( tag_ids.value() ),

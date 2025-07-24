@@ -28,7 +28,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagAliases( drogon::H
 	}
 
 	const auto db { drogon::app().getDbClient() };
-	auto transaction { co_await db->newTransactionCoro() };
 
 	const auto tag_domain_id { helpers::getTagDomainID( request ) };
 
@@ -52,7 +51,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagAliases( drogon::H
 
 		FGL_ASSERT( aliased_id != alias_id, "Cannot alias a tag to itself" );
 
-		awaiters.emplace_back( transaction->execSqlCoro(
+		awaiters.emplace_back( db->execSqlCoro(
 			"INSERT INTO tag_aliases (domain_id, aliased_id, alias_id) VALUES ($1, $2, $3) ON CONFLICT(domain_id, aliased_id) DO NOTHING",
 			tag_domain_id.value(),
 			aliased_id,
