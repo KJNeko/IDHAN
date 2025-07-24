@@ -20,9 +20,10 @@ drogon::Task< Json::Value >
 
 		R"(
 		SELECT *,
-		       similarity(tag_text, $2)			as similarity,
-		       tag_text = $2					as exact,
-		       similarity(tag_Text, $2) * count as score
+				similarity(tag_text, $2)			AS similarity,
+				tag_text = $2						AS exact,
+				similarity(tag_Text, $2) * count	AS score,
+				total_mapping_counts.count			AS count
 		FROM tags_combined
 		         JOIN total_mapping_counts USING (tag_id)
 		WHERE tag_text LIKE $1
@@ -44,13 +45,12 @@ drogon::Task< Json::Value >
 	{
 		Json::Value tag;
 
-		//TODO: Hydrus only, Hide behind a toggle for hydrus support
 		tag[ "value" ] = row[ "tag_text" ].as< std::string >();
 		tag[ "tag_text" ] = row[ "tag_text" ].as< std::string >();
 
 		tag[ "similarity" ] = row[ "similarity" ].as< double >();
 		tag[ "tag_id" ] = row[ "tag_id" ].as< TagID >();
-		tag[ "count" ] = 0;
+		tag[ "count" ] = row[ "count" ].as< std::size_t >();
 
 		root[ "tags" ].append( std::move( tag ) );
 	}
