@@ -137,9 +137,25 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
 
-		const auto url_json_e { co_await fetchUrlsJson( record_id, db ) };
+		const auto url_json_e { co_await fetchUrlsStrings( record_id, db ) };
 		if ( !url_json_e.has_value() ) co_return url_json_e.error();
-		data[ "known_urls" ] = url_json_e.value();
+
+		data[ "known_urls" ] = Json::Value( Json::arrayValue );
+		data[ "detailed_known_urls" ] = Json::Value( Json::arrayValue );
+
+		for ( const auto& url_str : url_json_e.value() )
+		{
+			data[ "known_urls" ].append( url_str );
+
+			Json::Value advanced_url_info {};
+			advanced_url_info[ "request_url" ] = url_str;
+			advanced_url_info[ "normalised_url" ] = url_str;
+			advanced_url_info[ "url_type" ] = 5; // Unknown URL
+			advanced_url_info[ "url_type_string" ] = "unknown";
+			advanced_url_info[ "can_parse" ] = false;
+
+			data[ "detailed_known_urls" ].append( advanced_url_info );
+		}
 
 		{
 			const auto data_result { co_await getMetadataInfo( db, record_id, data ) };
