@@ -24,9 +24,10 @@ jobs:
             cp -r docs/api/* docs-output/api/
           fi
           
-          # Copy the Swagger UI HTML file
+          # Copy and patch the Swagger UI HTML file
           if [ -f "IDHANServer/src/pages/apidocs.html" ]; then
-            cp IDHANServer/src/pages/apidocs.html docs-output/api/index.html
+            # Patch the file to use the correct GitHub Pages path
+            sed "s|'/api/index.yaml'|'/IDHAN/api/index.yaml'|g" IDHANServer/src/pages/apidocs.html > docs-output/api/index.html
           fi
           
           # Copy any other API-related static files (CSS, JS, images)
