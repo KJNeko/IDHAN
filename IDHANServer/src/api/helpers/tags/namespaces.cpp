@@ -24,12 +24,16 @@ drogon::Task< std::expected< NamespaceID, drogon::HttpResponsePtr > >
 	findOrCreateNamespace( const std::string& str, drogon::orm::DbClientPtr db )
 {
 	NamespaceID namespace_id { 0 };
+	std::size_t counter { 0 };
 
 	do {
 		if ( const auto id_search = co_await searchNamespace( str, db ); id_search.has_value() )
 		{
 			co_return id_search.value();
 		}
+
+		if ( const auto search_result { co_await searchNamespace( str, db ) }; search_result.has_value() )
+			co_return search_result.value();
 
 		const auto id_creation { co_await db->execSqlCoro(
 			"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) ON CONFLICT DO NOTHING RETURNING namespace_id",

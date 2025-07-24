@@ -47,19 +47,15 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	const auto split_tag { splitTag( tag_text ) };
 	const auto& [ namespace_text, subtag_text ] = split_tag;
 
-	auto transaction { co_await db->newTransactionCoro() };
-
-	const auto namespace_id { co_await findOrCreateNamespace( namespace_text, transaction ) };
-	const auto subtag_id { co_await findOrCreateSubtag( subtag_text, transaction ) };
+	const auto namespace_id { co_await findOrCreateNamespace( namespace_text, db ) };
+	const auto subtag_id { co_await findOrCreateSubtag( subtag_text, db ) };
 
 	if ( !namespace_id.has_value() ) co_return std::unexpected( namespace_id.error() );
 	if ( !subtag_id.has_value() ) co_return std::unexpected( subtag_id.error() );
 
-	const auto tag_result { co_await findOrCreateTag( namespace_id.value(), subtag_id.value(), transaction ) };
+	const auto tag_result { co_await findOrCreateTag( namespace_id.value(), subtag_id.value(), db ) };
 
 	if ( tag_result.has_value() ) co_return tag_result;
-
-	transaction->rollback();
 }
 
 } // namespace idhan

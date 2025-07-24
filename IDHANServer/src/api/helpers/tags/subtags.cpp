@@ -22,8 +22,12 @@ drogon::Task< std::expected< SubtagID, drogon::HttpResponsePtr > >
 	findOrCreateSubtag( const std::string& str, const drogon::orm::DbClientPtr db )
 {
 	SubtagID subtag_id { 0 };
+	std::size_t counter { 0 };
 
 	do {
+		if ( counter > 128 ) co_return std::unexpected( createBadRequest( "Too many subtag creation attempts" ) );
+		++counter;
+
 		if ( const auto id_search = co_await searchSubtag( str, db ); id_search.has_value() )
 		{
 			co_return id_search.value();
