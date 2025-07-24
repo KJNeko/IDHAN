@@ -17,5 +17,5 @@ git checkout <TAG>
 git pull
 git submodule update --init --recursive
 cmake -DCMAKE_BUILD_TYPE=System -B build
-cmake --build build -j<THREAD COUNT>
+cmake --build build -j<THREAD COUNT> --target IDHANServer
 ```
