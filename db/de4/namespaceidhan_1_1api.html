@@ -154,16 +154,18 @@ Functions</h2></td></tr>
 <tr class="memitem:a72eed9ef97e8cee612f339764a180c41" id="r_a72eed9ef97e8cee612f339764a180c41"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a72eed9ef97e8cee612f339764a180c41">findValidClusterName</a> (const std::string desired_name, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="memdesc:a72eed9ef97e8cee612f339764a180c41"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a valid cluster name, If the cluster name is already taken, then we'll append a unique identifier to the end of it.  <br /></td></tr>
 <tr class="separator:a72eed9ef97e8cee612f339764a180c41"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a85878ebd97047f3031fd9a034c8fcc21" id="r_a85878ebd97047f3031fd9a034c8fcc21"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; Json::Value, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a85878ebd97047f3031fd9a034c8fcc21">getInfo</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a> cluster_id, std::shared_ptr&lt; drogon::orm::Transaction &gt; transaction)</td></tr>
-<tr class="separator:a85878ebd97047f3031fd9a034c8fcc21"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a718530de6b9642998ba8eda5479ede" id="r_a2a718530de6b9642998ba8eda5479ede"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; Json::Value, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a718530de6b9642998ba8eda5479ede">getInfo</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a> cluster_id, const drogon::orm::DbClientPtr transaction)</td></tr>
+<tr class="separator:a2a718530de6b9642998ba8eda5479ede"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa7174549e61635e2384663040b539ca" id="r_afa7174549e61635e2384663040b539ca"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afa7174549e61635e2384663040b539ca">adoptOrphan</a> (std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt; data, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:afa7174549e61635e2384663040b539ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a31510b2560a529566f296b66dae97df6" id="r_a31510b2560a529566f296b66dae97df6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d8/d94/structidhan_1_1api_1_1ClusterInfo.html">ClusterInfo</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a31510b2560a529566f296b66dae97df6">parseRow</a> (const drogon::orm::Row &amp;row)</td></tr>
 <tr class="separator:a31510b2560a529566f296b66dae97df6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac2b6c3009496ef7e863e9275138b8e79" id="r_ac2b6c3009496ef7e863e9275138b8e79"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac2b6c3009496ef7e863e9275138b8e79">rebuildClusterInfo</a> ()</td></tr>
 <tr class="separator:ac2b6c3009496ef7e863e9275138b8e79"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a536d724442383c31201aeba479a97323" id="r_a536d724442383c31201aeba479a97323"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a536d724442383c31201aeba479a97323">addImageInfo</a> (Json::Value &amp;root, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a536d724442383c31201aeba479a97323"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2c5133e2ae97cc28dbd032b9d8b71ab8" id="r_a2c5133e2ae97cc28dbd032b9d8b71ab8"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c5133e2ae97cc28dbd032b9d8b71ab8">addFileSpecificInfo</a> (Json::Value &amp;root, const drogon::orm::Result::const_reference &amp;row, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a2c5133e2ae97cc28dbd032b9d8b71ab8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3896ef32c044ea7cac1a4a4c71b2fb8a" id="r_a3896ef32c044ea7cac1a4a4c71b2fb8a"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3896ef32c044ea7cac1a4a4c71b2fb8a">addImageInfo</a> (Json::Value &amp;root, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a3896ef32c044ea7cac1a4a4c71b2fb8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac0ec189feb15017b23d667d3407951b4" id="r_ac0ec189feb15017b23d667d3407951b4"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac0ec189feb15017b23d667d3407951b4">addFileSpecificInfo</a> (Json::Value &amp;root, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:ac0ec189feb15017b23d667d3407951b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1d950e0c36f8b6c1100124cb8befb982" id="r_a1d950e0c36f8b6c1100124cb8befb982"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::filesystem::path, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d950e0c36f8b6c1100124cb8befb982">getThumbnailPath</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a1d950e0c36f8b6c1100124cb8befb982"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2f2064c53b35bd7715c806d94f48c53c" id="r_a2f2064c53b35bd7715c806d94f48c53c"><td class="memItemLeft" align="right" valign="top">Json::Value&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f2064c53b35bd7715c806d94f48c53c">createDeletedResponse</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, const std::size_t deleted_time)</td></tr>
@@ -192,8 +194,8 @@ Functions</h2></td></tr>
 <tr class="separator:a2f937f8d622dc8b90cc208c22d48dc26"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aad2e58082017e1fd3b7bf3eb59c861c5" id="r_aad2e58082017e1fd3b7bf3eb59c861c5"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad2e58082017e1fd3b7bf3eb59c861c5">getTagPairs</a> (const Json::Value &amp;json)</td></tr>
 <tr class="separator:aad2e58082017e1fd3b7bf3eb59c861c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a907f3b8605d75230b6819ed7591b55a7" id="r_a907f3b8605d75230b6819ed7591b55a7"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a907f3b8605d75230b6819ed7591b55a7">getIDsFromPairs</a> (const std::vector&lt; <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &gt; &amp;pairs, drogon::orm::DbClientPtr transaction)</td></tr>
-<tr class="separator:a907f3b8605d75230b6819ed7591b55a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a025f1a3ab49e6ff6cb78b95e299ef908" id="r_a025f1a3ab49e6ff6cb78b95e299ef908"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a025f1a3ab49e6ff6cb78b95e299ef908">getIDsFromPairs</a> (const std::vector&lt; <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &gt; &amp;pairs, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a025f1a3ab49e6ff6cb78b95e299ef908"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a327c41c798c4cc8348c6c1288d0177ee" id="r_a327c41c798c4cc8348c6c1288d0177ee"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; Json::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a327c41c798c4cc8348c6c1288d0177ee">getTagDomainInfoJson</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> domain_id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a327c41c798c4cc8348c6c1288d0177ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5863313a89c85bc795a38c91ad5e5a32" id="r_a5863313a89c85bc795a38c91ad5e5a32"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5863313a89c85bc795a38c91ad5e5a32">getNamespaceID</a> (const Json::Value &amp;namespace_c, drogon::orm::DbClientPtr db)</td></tr>
@@ -212,8 +214,8 @@ Functions</h2></td></tr>
 <tr class="separator:a138152f9ed047fc7bfc451afc1e801c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3ac86649c7feefdbff09fb6504960458" id="r_a3ac86649c7feefdbff09fb6504960458"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3ac86649c7feefdbff09fb6504960458">updateRecordMetadata</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db, MetadataInfo metadata)</td></tr>
 <tr class="separator:a3ac86649c7feefdbff09fb6504960458"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a66609d0a54b6e5567449f1d476237fa2" id="r_a66609d0a54b6e5567449f1d476237fa2"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::pair&lt; std::shared_ptr&lt; MetadataModuleI &gt;, std::string &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a66609d0a54b6e5567449f1d476237fa2">findBestParser</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a66609d0a54b6e5567449f1d476237fa2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae85814d877bd9d3b377b694789306e14" id="r_ae85814d877bd9d3b377b694789306e14"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::shared_ptr&lt; MetadataModuleI &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae85814d877bd9d3b377b694789306e14">findBestParser</a> (const std::string mime_name)</td></tr>
+<tr class="separator:ae85814d877bd9d3b377b694789306e14"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa258730bbed044fe0b7b6fb85f0b9b01" id="r_aa258730bbed044fe0b7b6fb85f0b9b01"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; MetadataInfo, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa258730bbed044fe0b7b6fb85f0b9b01">getMetadata</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, const std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt; data, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:aa258730bbed044fe0b7b6fb85f0b9b01"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5b889643255ab25a33cb2d7fff515d36" id="r_a5b889643255ab25a33cb2d7fff515d36"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5b889643255ab25a33cb2d7fff515d36">tryParseRecordMetadata</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
@@ -227,21 +229,16 @@ Variables</h2></td></tr>
 <tr class="separator:a924d5376354e87972839e4482da48ccc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a2c5133e2ae97cc28dbd032b9d8b71ab8" name="a2c5133e2ae97cc28dbd032b9d8b71ab8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2c5133e2ae97cc28dbd032b9d8b71ab8">&#9670;&#160;</a></span>addFileSpecificInfo()</h2>
+<a id="ac0ec189feb15017b23d667d3407951b4" name="ac0ec189feb15017b23d667d3407951b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac0ec189feb15017b23d667d3407951b4">&#9670;&#160;</a></span>addFileSpecificInfo()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">drogon::Task&lt; void &gt; idhan::api::addFileSpecificInfo </td>
+          <td class="memname">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt; idhan::api::addFileSpecificInfo </td>
           <td>(</td>
           <td class="paramtype">Json::Value &amp;</td>          <td class="paramname"><span class="paramname"><em>root</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const drogon::orm::Result::const_reference &amp;</td>          <td class="paramname"><span class="paramname"><em>row</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -258,14 +255,14 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a536d724442383c31201aeba479a97323" name="a536d724442383c31201aeba479a97323"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a536d724442383c31201aeba479a97323">&#9670;&#160;</a></span>addImageInfo()</h2>
+<a id="a3896ef32c044ea7cac1a4a4c71b2fb8a" name="a3896ef32c044ea7cac1a4a4c71b2fb8a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3896ef32c044ea7cac1a4a4c71b2fb8a">&#9670;&#160;</a></span>addImageInfo()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">drogon::Task&lt; void &gt; idhan::api::addImageInfo </td>
+          <td class="memname">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt; idhan::api::addImageInfo </td>
           <td>(</td>
           <td class="paramtype">Json::Value &amp;</td>          <td class="paramname"><span class="paramname"><em>root</em></span>, </td>
         </tr>
@@ -273,6 +270,27 @@ Variables</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="afa7174549e61635e2384663040b539ca" name="afa7174549e61635e2384663040b539ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa7174549e61635e2384663040b539ca">&#9670;&#160;</a></span>adoptOrphan()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a>, drogon::HttpResponsePtr &gt; &gt; idhan::api::adoptOrphan </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -487,21 +505,17 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a66609d0a54b6e5567449f1d476237fa2" name="a66609d0a54b6e5567449f1d476237fa2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a66609d0a54b6e5567449f1d476237fa2">&#9670;&#160;</a></span>findBestParser()</h2>
+<a id="ae85814d877bd9d3b377b694789306e14" name="ae85814d877bd9d3b377b694789306e14"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae85814d877bd9d3b377b694789306e14">&#9670;&#160;</a></span>findBestParser()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">drogon::Task&lt; std::expected&lt; std::pair&lt; std::shared_ptr&lt; MetadataModuleI &gt;, std::string &gt;, drogon::HttpResponsePtr &gt; &gt; idhan::api::findBestParser </td>
+          <td class="memname">drogon::Task&lt; std::shared_ptr&lt; MetadataModuleI &gt; &gt; idhan::api::findBestParser </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const std::string</td>          <td class="paramname"><span class="paramname"><em>mime_name</em></span></td><td>)</td>
           <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -569,8 +583,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a907f3b8605d75230b6819ed7591b55a7" name="a907f3b8605d75230b6819ed7591b55a7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a907f3b8605d75230b6819ed7591b55a7">&#9670;&#160;</a></span>getIDsFromPairs()</h2>
+<a id="a025f1a3ab49e6ff6cb78b95e299ef908" name="a025f1a3ab49e6ff6cb78b95e299ef908"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a025f1a3ab49e6ff6cb78b95e299ef908">&#9670;&#160;</a></span>getIDsFromPairs()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -583,15 +597,15 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>transaction</em></span>&#160;)</td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a85878ebd97047f3031fd9a034c8fcc21" name="a85878ebd97047f3031fd9a034c8fcc21"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a85878ebd97047f3031fd9a034c8fcc21">&#9670;&#160;</a></span>getInfo()</h2>
+<a id="a2a718530de6b9642998ba8eda5479ede" name="a2a718530de6b9642998ba8eda5479ede"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a718530de6b9642998ba8eda5479ede">&#9670;&#160;</a></span>getInfo()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -604,7 +618,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::shared_ptr&lt; drogon::orm::Transaction &gt;</td>          <td class="paramname"><span class="paramname"><em>transaction</em></span>&#160;)</td>
+          <td class="paramtype">const drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>transaction</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

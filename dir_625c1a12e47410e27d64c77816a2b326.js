@@ -10,8 +10,11 @@ var dir_625c1a12e47410e27d64c77816a2b326 =
     [ "getArrayParameters.hpp", "d2/dff/getArrayParameters_8hpp.html", "d2/dff/getArrayParameters_8hpp" ],
     [ "getRecordPath.cpp", "dc/dae/getRecordPath_8cpp.html", "dc/dae/getRecordPath_8cpp" ],
     [ "getTagDomainID.cpp", "d9/d92/getTagDomainID_8cpp.html", "d9/d92/getTagDomainID_8cpp" ],
-    [ "helpers.hpp", "da/df3/helpers_8hpp.html", "da/df3/helpers_8hpp" ],
+    [ "helpers.hpp", "df/dbc/api_2helpers_2helpers_8hpp.html", "df/dbc/api_2helpers_2helpers_8hpp" ],
+    [ "pgEscape.cpp", "df/ddd/pgEscape_8cpp.html", "df/ddd/pgEscape_8cpp" ],
     [ "records.cpp", "d5/d42/records_8cpp.html", "d5/d42/records_8cpp" ],
     [ "records.hpp", "d6/d8c/api_2helpers_2records_8hpp.html", "d6/d8c/api_2helpers_2records_8hpp" ],
-    [ "ResponseCallback.hpp", "de/d0b/ResponseCallback_8hpp.html", "de/d0b/ResponseCallback_8hpp" ]
+    [ "ResponseCallback.hpp", "de/d0b/ResponseCallback_8hpp.html", "de/d0b/ResponseCallback_8hpp" ],
+    [ "urls.cpp", "d9/da1/urls_8cpp.html", "d9/da1/urls_8cpp" ],
+    [ "urls.hpp", "dd/d58/helpers_2urls_8hpp.html", "dd/d58/helpers_2urls_8hpp" ]
 ];

@@ -22,6 +22,6 @@ var namespaceidhan_1_1mime =
     [ "parseIdentifier", "d4/d9c/namespaceidhan_1_1mime.html#acf8635d150552beac02fd82ce3b8fcf4", null ],
     [ "registerMimeType", "d4/d9c/namespaceidhan_1_1mime.html#a96c638ae913e30e456c17d6958c1a07f", null ],
     [ "searchMimeType", "d4/d9c/namespaceidhan_1_1mime.html#a1e76c9f7fd90eb7db7938c56cf0933f1", null ],
-    [ "DEFAULT_MIME_TYPE", "d4/d9c/namespaceidhan_1_1mime.html#a8833a95d2fa3b2b39b73de784b958262", null ],
+    [ "INVALID_MIME_NAME", "d4/d9c/namespaceidhan_1_1mime.html#acca2f121ffeaebdcd2a242c8db9fb239", null ],
     [ "mime_db", "d4/d9c/namespaceidhan_1_1mime.html#ae88919075ec4e61aa26cdfb59a167d04", null ]
 ];

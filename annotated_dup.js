@@ -1,5 +1,8 @@
 var annotated_dup =
 [
+    [ "format_ns", null, [
+      [ "formatter< QString >", "d8/d46/structformat__ns_1_1formatter_3_01QString_01_4.html", "d8/d46/structformat__ns_1_1formatter_3_01QString_01_4" ]
+    ] ],
     [ "idhan", "dd/dcf/namespaceidhan.html", [
       [ "api", "db/de4/namespaceidhan_1_1api.html", [
         [ "ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", "dc/d8c/classidhan_1_1api_1_1ClusterAPI" ],
@@ -64,7 +67,6 @@ var annotated_dup =
       [ "VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", "d3/d25/structidhan_1_1VersionInfo" ]
     ] ],
     [ "std", "d8/dcc/namespacestd.html", [
-      [ "formatter< QString >", "d9/dce/structstd_1_1formatter_3_01QString_01_4.html", "d9/dce/structstd_1_1formatter_3_01QString_01_4" ],
       [ "hash< idhan::SHA256 >", "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html", "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4" ]
     ] ]
 ];

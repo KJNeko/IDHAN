@@ -16,7 +16,5 @@ var structidhan_1_1SearchBuilder =
     [ "m_required_joins", "dc/dba/structidhan_1_1SearchBuilder.html#ae3d70617c94452cb2c9054a681fabdec", null ],
     [ "m_sort_type", "dc/dba/structidhan_1_1SearchBuilder.html#a450567413e0c4bffadfaeeb2daa9d742", null ],
     [ "m_tags", "dc/dba/structidhan_1_1SearchBuilder.html#a9af3a9a5693fc46be1304d5e8a9ffa4a", null ],
-    [ "params", "dc/dba/structidhan_1_1SearchBuilder.html#a865c16dd9e4341c79cb532333b6c2baa", null ],
-    [ "placeholders", "dc/dba/structidhan_1_1SearchBuilder.html#a4529c80a9e7fd8ac53aa354aa352a201", null ],
     [ "records", "dc/dba/structidhan_1_1SearchBuilder.html#a5c868cef0ad77b163881a21942943cde", null ]
 ];

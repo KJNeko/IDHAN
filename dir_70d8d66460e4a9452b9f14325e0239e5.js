@@ -6,7 +6,5 @@ var dir_70d8d66460e4a9452b9f14325e0239e5 =
     [ "management.cpp", "d4/d71/management_8cpp.html", "d4/d71/management_8cpp" ],
     [ "management.hpp", "d2/dd9/management_8hpp.html", "d2/dd9/management_8hpp" ],
     [ "ManagementConnection.cpp", "dd/d4b/ManagementConnection_8cpp.html", null ],
-    [ "ManagementConnection.hpp", "d9/d70/ManagementConnection_8hpp.html", "d9/d70/ManagementConnection_8hpp" ],
-    [ "sql_functions.cpp", "d2/d00/sql__functions_8cpp.html", "d2/d00/sql__functions_8cpp" ],
-    [ "sql_functions.hpp", "de/d0f/sql__functions_8hpp.html", "de/d0f/sql__functions_8hpp" ]
+    [ "ManagementConnection.hpp", "d9/d70/ManagementConnection_8hpp.html", "d9/d70/ManagementConnection_8hpp" ]
 ];

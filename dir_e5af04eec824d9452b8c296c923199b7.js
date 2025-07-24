@@ -5,5 +5,5 @@ var dir_e5af04eec824d9452b8c296c923199b7 =
     [ "list.cpp", "d1/dd9/list_8cpp.html", null ],
     [ "modify.cpp", "d7/d5c/modify_8cpp.html", null ],
     [ "remove.cpp", "da/d8c/remove_8cpp.html", null ],
-    [ "scan.cpp", "d0/df1/scan_8cpp.html", null ]
+    [ "scan.cpp", "d0/df1/scan_8cpp.html", "d0/df1/scan_8cpp" ]
 ];

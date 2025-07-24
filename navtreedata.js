@@ -78,12 +78,13 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html",
-"d6/d0b/structidhan_1_1IDHANClient_1_1TagInfo_1_1SubtagInfo.html#a6a4a2cbae3cd70ea75993e0b6e7332b8",
-"d9/d66/classidhan_1_1Network.html#a2a8dbc474d8d6a4a2a6c2a2b9910d1fb",
-"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2c23129fef40cf882f40574f68d5c0f8",
-"dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880caf04f0e10822efdc1dcdf735ab3aac72d",
-"df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#a3c56d2e56b59d5a53e058837ac4f3775"
+"d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a3a0573fc8d3ae6a1b359ffb90e78e0ef",
+"d5/d96/decodeHex_8hpp_source.html",
+"d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a33101860beace406e8ca648a69bddedf",
+"db/de9/classidhan_1_1FileMappedData.html#a384dd838017206bf53766ccf0b72e4f3",
+"dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a6cbf7a20ca5acb714008ddaa950eb682",
+"de/da8/structidhan_1_1mime_1_1VideoInfo.html#a23fc9d8cc0e8d923b0d71db1eda6f165",
+"namespacemembers_v.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

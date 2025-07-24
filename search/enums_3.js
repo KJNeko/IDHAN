@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['importfailurecode_0',['ImportFailureCode',['../dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fb',1,'idhan']]],
-  ['importstatus_1',['ImportStatus',['../dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4',1,'idhan']]]
+  ['importfailurecode_0',['ImportFailureCode',['../dd/dcf/namespaceidhan.html#a39a0cb629aa74b4df56b9ad53c6bd086',1,'idhan']]],
+  ['importstatus_1',['ImportStatus',['../dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2',1,'idhan']]]
 ];

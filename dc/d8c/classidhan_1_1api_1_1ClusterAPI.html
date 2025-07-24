@@ -149,10 +149,10 @@ Private Types</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
-<tr class="memitem:ae345bc85aa99a2528d9ecfe68235c766" id="r_ae345bc85aa99a2528d9ecfe68235c766"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ae87e5f86169969f5fa1ad7cebede9f8d">ResponseTask</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae345bc85aa99a2528d9ecfe68235c766">modifyT</a> (drogon::HttpRequestPtr request, <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a> cluster_id, std::shared_ptr&lt; drogon::orm::Transaction &gt; transaction)</td></tr>
-<tr class="separator:ae345bc85aa99a2528d9ecfe68235c766"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ec30bfe615c05d99b319e418dd4e374" id="r_a2ec30bfe615c05d99b319e418dd4e374"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ae87e5f86169969f5fa1ad7cebede9f8d">ResponseTask</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2ec30bfe615c05d99b319e418dd4e374">infoT</a> (drogon::HttpRequestPtr request, <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a> cluster_id, std::shared_ptr&lt; drogon::orm::Transaction &gt; transaction)</td></tr>
-<tr class="separator:a2ec30bfe615c05d99b319e418dd4e374"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a834fc9f7dd0715cf43234c005eb09289" id="r_a834fc9f7dd0715cf43234c005eb09289"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ae87e5f86169969f5fa1ad7cebede9f8d">ResponseTask</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a834fc9f7dd0715cf43234c005eb09289">modifyT</a> (drogon::HttpRequestPtr request, <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a> cluster_id, drogon::orm::DbClientPtr transaction)</td></tr>
+<tr class="separator:a834fc9f7dd0715cf43234c005eb09289"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4fb0ba393cfb414fb7c9b6f9da762c61" id="r_a4fb0ba393cfb414fb7c9b6f9da762c61"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ae87e5f86169969f5fa1ad7cebede9f8d">ResponseTask</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fb0ba393cfb414fb7c9b6f9da762c61">infoT</a> (drogon::HttpRequestPtr request, <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a> cluster_id, drogon::orm::DbClientPtr transaction)</td></tr>
+<tr class="separator:a4fb0ba393cfb414fb7c9b6f9da762c61"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad7f7473f5ae7ed91c2e499dd7b027fb5" id="r_ad7f7473f5ae7ed91c2e499dd7b027fb5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ae87e5f86169969f5fa1ad7cebede9f8d">ResponseTask</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad7f7473f5ae7ed91c2e499dd7b027fb5">add</a> (drogon::HttpRequestPtr request)</td></tr>
 <tr class="separator:ad7f7473f5ae7ed91c2e499dd7b027fb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a154a00f1ea3713fc9838dcd53e58c865" id="r_a154a00f1ea3713fc9838dcd53e58c865"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ae87e5f86169969f5fa1ad7cebede9f8d">ResponseTask</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a154a00f1ea3713fc9838dcd53e58c865">list</a> (drogon::HttpRequestPtr request)</td></tr>
@@ -370,8 +370,8 @@ Private Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a2ec30bfe615c05d99b319e418dd4e374" name="a2ec30bfe615c05d99b319e418dd4e374"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2ec30bfe615c05d99b319e418dd4e374">&#9670;&#160;</a></span>infoT()</h2>
+<a id="a4fb0ba393cfb414fb7c9b6f9da762c61" name="a4fb0ba393cfb414fb7c9b6f9da762c61"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4fb0ba393cfb414fb7c9b6f9da762c61">&#9670;&#160;</a></span>infoT()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -392,7 +392,7 @@ Private Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::shared_ptr&lt; drogon::orm::Transaction &gt;</td>          <td class="paramname"><span class="paramname"><em>transaction</em></span>&#160;)</td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>transaction</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -458,8 +458,8 @@ Private Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ae345bc85aa99a2528d9ecfe68235c766" name="ae345bc85aa99a2528d9ecfe68235c766"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae345bc85aa99a2528d9ecfe68235c766">&#9670;&#160;</a></span>modifyT()</h2>
+<a id="a834fc9f7dd0715cf43234c005eb09289" name="a834fc9f7dd0715cf43234c005eb09289"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a834fc9f7dd0715cf43234c005eb09289">&#9670;&#160;</a></span>modifyT()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -480,7 +480,7 @@ Private Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::shared_ptr&lt; drogon::orm::Transaction &gt;</td>          <td class="paramname"><span class="paramname"><em>transaction</em></span>&#160;)</td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>transaction</em></span>&#160;)</td>
         </tr>
       </table>
   </td>

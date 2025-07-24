@@ -119,34 +119,39 @@ $(function(){initNavTree('d9/d70/ManagementConnection_8hpp_source.html','../../'
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span> </div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#pragma once</span></div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;pqxx/pqxx&gt;</span></div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../dd/dcf/namespaceidhan.html">idhan</a></div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>{</div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">struct </span><a class="code hl_struct" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a>;</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span></div>
-<div class="foldopen" id="foldopen00014" data-start="{" data-end="};">
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno"><a class="line" href="../../dc/dc7/classidhan_1_1ManagementConnection.html">   14</a></span><span class="keyword">class </span><a class="code hl_function" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a73053209304149e4010be8ecc6e3f84a">ManagementConnection</a></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#pragma GCC diagnostic push</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Weffc++&quot;</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wuseless-cast&quot;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wswitch-enum&quot;</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &lt;pqxx/pqxx&gt;</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#pragma GCC diagnostic pop</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../dd/dcf/namespaceidhan.html">idhan</a></div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>{</div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno"><a class="line" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753">   16</a></span>    pqxx::connection <a class="code hl_variable" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753">connection</a>;</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a341f66b2c238e85e9bf98c0aff3f7db6">initalSetup</a>( pqxx::nontransaction&amp; nontransaction );</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>  <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno"><a class="line" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a1a1d0e38986411aa6b043202fe1489ae">   22</a></span>    <span class="keyword">inline</span> pqxx::connection&amp; <a class="code hl_function" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a1a1d0e38986411aa6b043202fe1489ae">conn</a>() { <span class="keywordflow">return</span> <a class="code hl_variable" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753">connection</a>; }</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <a class="code hl_function" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a73053209304149e4010be8ecc6e3f84a">ManagementConnection</a>( <span class="keyword">const</span> <a class="code hl_struct" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a>&amp; arguments );</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>};</div>
-</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="keyword">struct </span><a class="code hl_struct" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a>;</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span></div>
+<div class="foldopen" id="foldopen00019" data-start="{" data-end="};">
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno"><a class="line" href="../../dc/dc7/classidhan_1_1ManagementConnection.html">   19</a></span><span class="keyword">class </span><a class="code hl_function" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a73053209304149e4010be8ecc6e3f84a">ManagementConnection</a></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>{</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753">   21</a></span>    pqxx::connection <a class="code hl_variable" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753">connection</a>;</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a341f66b2c238e85e9bf98c0aff3f7db6">initalSetup</a>( pqxx::nontransaction&amp; nontransaction );</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>  <span class="keyword">public</span>:</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>} <span class="comment">// namespace idhan</span></div>
-<div class="ttc" id="aclassidhan_1_1ManagementConnection_html_a1a1d0e38986411aa6b043202fe1489ae"><div class="ttname"><a href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a1a1d0e38986411aa6b043202fe1489ae">idhan::ManagementConnection::conn</a></div><div class="ttdeci">pqxx::connection &amp; conn()</div><div class="ttdef"><b>Definition</b> ManagementConnection.hpp:22</div></div>
-<div class="ttc" id="aclassidhan_1_1ManagementConnection_html_a31b3fb2a3491923ebdb3dc75555c4753"><div class="ttname"><a href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753">idhan::ManagementConnection::connection</a></div><div class="ttdeci">pqxx::connection connection</div><div class="ttdef"><b>Definition</b> ManagementConnection.hpp:16</div></div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a1a1d0e38986411aa6b043202fe1489ae">   27</a></span>    <span class="keyword">inline</span> pqxx::connection&amp; <a class="code hl_function" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a1a1d0e38986411aa6b043202fe1489ae">conn</a>() { <span class="keywordflow">return</span> <a class="code hl_variable" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753">connection</a>; }</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <a class="code hl_function" href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a73053209304149e4010be8ecc6e3f84a">ManagementConnection</a>( <span class="keyword">const</span> <a class="code hl_struct" href="../../de/d07/structidhan_1_1ConnectionArguments.html">ConnectionArguments</a>&amp; arguments );</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>};</div>
+</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>} <span class="comment">// namespace idhan</span></div>
+<div class="ttc" id="aclassidhan_1_1ManagementConnection_html_a1a1d0e38986411aa6b043202fe1489ae"><div class="ttname"><a href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a1a1d0e38986411aa6b043202fe1489ae">idhan::ManagementConnection::conn</a></div><div class="ttdeci">pqxx::connection &amp; conn()</div><div class="ttdef"><b>Definition</b> ManagementConnection.hpp:27</div></div>
+<div class="ttc" id="aclassidhan_1_1ManagementConnection_html_a31b3fb2a3491923ebdb3dc75555c4753"><div class="ttname"><a href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753">idhan::ManagementConnection::connection</a></div><div class="ttdeci">pqxx::connection connection</div><div class="ttdef"><b>Definition</b> ManagementConnection.hpp:21</div></div>
 <div class="ttc" id="aclassidhan_1_1ManagementConnection_html_a341f66b2c238e85e9bf98c0aff3f7db6"><div class="ttname"><a href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a341f66b2c238e85e9bf98c0aff3f7db6">idhan::ManagementConnection::initalSetup</a></div><div class="ttdeci">void initalSetup(pqxx::nontransaction &amp;nontransaction)</div><div class="ttdef"><b>Definition</b> ManagementConnection.cpp:15</div></div>
 <div class="ttc" id="aclassidhan_1_1ManagementConnection_html_a73053209304149e4010be8ecc6e3f84a"><div class="ttname"><a href="../../dc/dc7/classidhan_1_1ManagementConnection.html#a73053209304149e4010be8ecc6e3f84a">idhan::ManagementConnection::ManagementConnection</a></div><div class="ttdeci">ManagementConnection(const ConnectionArguments &amp;arguments)</div><div class="ttdef"><b>Definition</b> ManagementConnection.cpp:22</div></div>
 <div class="ttc" id="anamespaceidhan_html"><div class="ttname"><a href="../../dd/dcf/namespaceidhan.html">idhan</a></div><div class="ttdef"><b>Definition</b> ImportCodes.hpp:7</div></div>
-<div class="ttc" id="astructidhan_1_1ConnectionArguments_html"><div class="ttname"><a href="../../de/d07/structidhan_1_1ConnectionArguments.html">idhan::ConnectionArguments</a></div><div class="ttdef"><b>Definition</b> ConnectionArguments.hpp:22</div></div>
+<div class="ttc" id="astructidhan_1_1ConnectionArguments_html"><div class="ttname"><a href="../../de/d07/structidhan_1_1ConnectionArguments.html">idhan::ConnectionArguments</a></div><div class="ttdef"><b>Definition</b> ConnectionArguments.hpp:25</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

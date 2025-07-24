@@ -1,7 +1,7 @@
 var searchData=
 [
-  ['unknownmime_0',['UnknownMime',['../dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fba29e50f3b7235f0ddae371b3e650b791c',1,'idhan']]],
-  ['unknownreason_1',['UnknownReason',['../dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fbaf49e876140bce3f728508916b6cf18ac',1,'idhan']]],
+  ['unknownmime_0',['UnknownMime',['../dd/dcf/namespaceidhan.html#a39a0cb629aa74b4df56b9ad53c6bd086a29e50f3b7235f0ddae371b3e650b791c',1,'idhan']]],
+  ['unknownreason_1',['UnknownReason',['../dd/dcf/namespaceidhan.html#a39a0cb629aa74b4df56b9ad53c6bd086af49e876140bce3f728508916b6cf18ac',1,'idhan']]],
   ['unloadmodules_2',['unloadModules',['../d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html#a999a56ae67b730346a638100e86fffd8',1,'idhan::modules::ModuleLoader']]],
   ['unsupported_3',['unsupported',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2130a170773b6179c4172ba2d5892de1',1,'idhan::hyapi::HydrusAPI']]],
   ['update_4',['UPDATE',['../dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814ba21b5649bc911eeaa1b8697e6276f8f50',1,'idhan']]],
@@ -9,8 +9,12 @@ var searchData=
   ['updatemigrations_6',['updateMigrations',['../db/d01/namespaceidhan_1_1db.html#ae3753db3b119251461a6be5b599bb165',1,'idhan::db']]],
   ['updaterecordmetadata_7',['updateRecordMetadata',['../db/de4/namespaceidhan_1_1api.html#a3ac86649c7feefdbff09fb6504960458',1,'idhan::api']]],
   ['updating_5fflag_8',['updating_flag',['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#ad9f860a0908c55fe9004891238c85990',1,'idhan::mime::MimeDatabase']]],
-  ['urlvariant_9',['UrlVariant',['../d3/d67/classidhan_1_1IDHANClient.html#a345509d5d84ccd0f64186d5351f2b572',1,'idhan::IDHANClient']]],
-  ['use_5fstdout_10',['use_stdout',['../de/d07/structidhan_1_1ConnectionArguments.html#a8a5bff98fbf308282cdba26e959915b4',1,'idhan::ConnectionArguments']]],
-  ['used_11',['used',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#ac45729103320a1cc70b1f5046640a1e3',1,'idhan::api::ClusterInfo']]],
-  ['user_12',['user',['../de/d07/structidhan_1_1ConnectionArguments.html#a59dfeb3477eb3eabd96c07dad452e834',1,'idhan::ConnectionArguments']]]
+  ['urldomainid_9',['UrlDomainID',['../dd/dcf/namespaceidhan.html#af1a24da638bc9655757cca9c63acae16',1,'idhan']]],
+  ['urlid_10',['UrlID',['../dd/dcf/namespaceidhan.html#a76a20c122183f18301dbd9f48b4831f8',1,'idhan']]],
+  ['urls_2ecpp_11',['urls.cpp',['../d9/da1/urls_8cpp.html',1,'']]],
+  ['urls_2ehpp_12',['urls.hpp',['../dd/d58/helpers_2urls_8hpp.html',1,'(Global Namespace)'],['../d7/d79/record_2urls_2urls_8hpp.html',1,'(Global Namespace)']]],
+  ['urlvariant_13',['UrlVariant',['../d3/d67/classidhan_1_1IDHANClient.html#a345509d5d84ccd0f64186d5351f2b572',1,'idhan::IDHANClient']]],
+  ['use_5fstdout_14',['use_stdout',['../de/d07/structidhan_1_1ConnectionArguments.html#a8a5bff98fbf308282cdba26e959915b4',1,'idhan::ConnectionArguments']]],
+  ['used_15',['used',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#ac45729103320a1cc70b1f5046640a1e3',1,'idhan::api::ClusterInfo']]],
+  ['user_16',['user',['../de/d07/structidhan_1_1ConnectionArguments.html#a59dfeb3477eb3eabd96c07dad452e834',1,'idhan::ConnectionArguments']]]
 ];

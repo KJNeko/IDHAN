@@ -112,13 +112,16 @@ $(function(){initNavTree('d7/d32/HyAPI_8hpp.html','../../'); initResizable(true)
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a>  </div>
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">HyAPI.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="../../d5/d3f/HyAPIAuth_8hpp_source.html">HyAPIAuth.hpp</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../de/d0b/ResponseCallback_8hpp_source.html">api/helpers/ResponseCallback.hpp</a>&quot;</code><br />
 <code>#include &quot;drogon/HttpController.h&quot;</code><br />
+<code>#include &lt;expected&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../de/d0b/ResponseCallback_8hpp_source.html">api/helpers/ResponseCallback.hpp</a>&quot;</code><br />
 </div>
 <p><a href="../../d7/d32/HyAPI_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -133,6 +136,14 @@ Namespaces</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d18/namespaceidhan_1_1hyapi.html">idhan::hyapi</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:ade3c0dd0c64899f786b9a3154ee135dd" id="r_ade3c0dd0c64899f786b9a3154ee135dd"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d18/namespaceidhan_1_1hyapi.html#ade3c0dd0c64899f786b9a3154ee135dd">idhan::hyapi::convertQueryRecordIDs</a> (drogon::HttpRequestPtr &amp;request, const std::string &amp;hashes, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="memdesc:ade3c0dd0c64899f786b9a3154ee135dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts and extracts Hydrus' <code>file</code> input from json to record ids, Sets the record parameter <code>file_ids</code> to a json array of the record ids.  <br /></td></tr>
+<tr class="separator:ade3c0dd0c64899f786b9a3154ee135dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abbdbe7c8606747784d91bb8a1e98f33e" id="r_abbdbe7c8606747784d91bb8a1e98f33e"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; Json::Value &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d18/namespaceidhan_1_1hyapi.html#abbdbe7c8606747784d91bb8a1e98f33e">idhan::hyapi::getServiceList</a> (drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:abbdbe7c8606747784d91bb8a1e98f33e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

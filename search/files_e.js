@@ -6,6 +6,7 @@ var searchData=
   ['registermimetype_2ecpp_3',['registerMimeType.cpp',['../dc/d44/registerMimeType_8cpp.html',1,'']]],
   ['remove_2ecpp_4',['remove.cpp',['../da/d8c/remove_8cpp.html',1,'']]],
   ['removetags_2ecpp_5',['removeTags.cpp',['../de/d2b/removeTags_8cpp.html',1,'']]],
-  ['rescanmetadata_2ecpp_6',['rescanMetadata.cpp',['../dc/da4/rescanMetadata_8cpp.html',1,'']]],
-  ['responsecallback_2ehpp_7',['ResponseCallback.hpp',['../de/d0b/ResponseCallback_8hpp.html',1,'']]]
+  ['removeurls_2ecpp_6',['removeUrls.cpp',['../d1/ddd/removeUrls_8cpp.html',1,'']]],
+  ['rescanmetadata_2ecpp_7',['rescanMetadata.cpp',['../dc/da4/rescanMetadata_8cpp.html',1,'']]],
+  ['responsecallback_2ehpp_8',['ResponseCallback.hpp',['../de/d0b/ResponseCallback_8hpp.html',1,'']]]
 ];

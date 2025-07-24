@@ -22,13 +22,17 @@ var namespaceidhan =
       [ "doMigration", "db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0", null ],
       [ "getTableVersion", "db/d01/namespaceidhan_1_1db.html#a511a1567c404a0a2457f8f7f69cd9c10", null ],
       [ "prepareInitalIndexes", "db/d01/namespaceidhan_1_1db.html#a2b863ba9db65a3a2b79583cdda4b26cb", null ],
-      [ "prepareSQLFunctions", "db/d01/namespaceidhan_1_1db.html#acdeef18ae2854f4b6915d60af3a6a3f8", null ],
       [ "tableExists", "db/d01/namespaceidhan_1_1db.html#a3fefd542f615196c8a0ecfaed4864e5b", null ],
       [ "updateMigrations", "db/d01/namespaceidhan_1_1db.html#ae3753db3b119251461a6be5b599bb165", null ],
-      [ "function_creation_sql", "db/d01/namespaceidhan_1_1db.html#afb0fe10bf3a302b0d51ca347e533cf2e", null ],
       [ "index_sql", "db/d01/namespaceidhan_1_1db.html#a1993588097de14fcdbdd414523d0d0f5", null ]
     ] ],
     [ "filesystem", "db/d9b/namespaceidhan_1_1filesystem.html", "db/d9b/namespaceidhan_1_1filesystem" ],
+    [ "helpers", "d7/dc1/namespaceidhan_1_1helpers.html", [
+      [ "fetchUrlsJson", "d7/dc1/namespaceidhan_1_1helpers.html#a1ed3c01830b74e853e4550e2ebe8f545", null ],
+      [ "fetchUrlsStrings", "d7/dc1/namespaceidhan_1_1helpers.html#a41fee11e49e5168f60bbc4e729b14862", null ],
+      [ "findOrCreateUrl", "d7/dc1/namespaceidhan_1_1helpers.html#a4aa58c98e84e7987699e681aba606c42", null ],
+      [ "INVALID_URL_ID", "d7/dc1/namespaceidhan_1_1helpers.html#af0f6251a6f830052ed5dc7ac5c0a7ad3", null ]
+    ] ],
     [ "hyapi", "d2/d18/namespaceidhan_1_1hyapi.html", "d2/d18/namespaceidhan_1_1hyapi" ],
     [ "hydrus", "d4/d8a/namespaceidhan_1_1hydrus.html", "d4/d8a/namespaceidhan_1_1hydrus" ],
     [ "internal", "d3/d20/namespaceidhan_1_1internal.html", [
@@ -65,6 +69,8 @@ var namespaceidhan =
     [ "BigInt", "dd/dcf/namespaceidhan.html#a8d4e612fd18aa94ceb70ffbd5b3b5577", null ],
     [ "ClusterID", "dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec", null ],
     [ "FileDomainID", "dd/dcf/namespaceidhan.html#ae9c835593c59f31ae01ead8a29c45afa", null ],
+    [ "IDHANErrorHandler", "dd/dcf/namespaceidhan.html#ab065ab405e7080bdb90b7929a01f07d7", null ],
+    [ "IDHANResponseHandler", "dd/dcf/namespaceidhan.html#a54a840927284a4b6b83f881e616dd76b", null ],
     [ "Integer", "dd/dcf/namespaceidhan.html#a988bcb50aeed6b070f91eb612eb951fc", null ],
     [ "MimeID", "dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29", null ],
     [ "NamespaceID", "dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5", null ],
@@ -78,6 +84,8 @@ var namespaceidhan =
     [ "TagID", "dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382", null ],
     [ "TagInfo", "dd/dcf/namespaceidhan.html#afe060cb698ab3f6bd48d74c427221afa", null ],
     [ "TagRelationshipInfo", "dd/dcf/namespaceidhan.html#a269817ce3aee2f503d86d50393e83d94", null ],
+    [ "UrlDomainID", "dd/dcf/namespaceidhan.html#af1a24da638bc9655757cca9c63acae16", null ],
+    [ "UrlID", "dd/dcf/namespaceidhan.html#a76a20c122183f18301dbd9f48b4831f8", null ],
     [ "HttpMethod", "dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814b", [
       [ "POST", "dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814ba77642b866fe063e9ed69a98f7edf9d47", null ],
       [ "UPDATE", "dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814ba21b5649bc911eeaa1b8697e6276f8f50", null ],
@@ -114,15 +122,15 @@ var namespaceidhan =
       [ "HY_BLURHASH", "dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a782090b558ffb9cac79a09159ee84181", null ],
       [ "DEFAULT", "dd/dcf/namespaceidhan.html#a244b87b8282e25b1adf2d36b9975a7b1a8ab8b2ef44ba415981a96aeb68e689ae", null ]
     ] ],
-    [ "ImportFailureCode", "dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fb", [
-      [ "UnknownReason", "dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fbaf49e876140bce3f728508916b6cf18ac", null ],
-      [ "UnknownMime", "dd/dcf/namespaceidhan.html#a9b45175c5a9b4ca53b660a59c37163fba29e50f3b7235f0ddae371b3e650b791c", null ]
+    [ "ImportFailureCode", "dd/dcf/namespaceidhan.html#a39a0cb629aa74b4df56b9ad53c6bd086", [
+      [ "UnknownReason", "dd/dcf/namespaceidhan.html#a39a0cb629aa74b4df56b9ad53c6bd086af49e876140bce3f728508916b6cf18ac", null ],
+      [ "UnknownMime", "dd/dcf/namespaceidhan.html#a39a0cb629aa74b4df56b9ad53c6bd086a29e50f3b7235f0ddae371b3e650b791c", null ]
     ] ],
-    [ "ImportStatus", "dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4", [
-      [ "Success", "dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4a3ed388d31a0a5d3c37031bf2b59d6a7e", null ],
-      [ "Exists", "dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4aba7710b08f08a9228fee41ee13261146", null ],
-      [ "Deleted", "dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4a424b43382bec554150ba2a9e100b3dd5", null ],
-      [ "Failed", "dd/dcf/namespaceidhan.html#a553e106467d62307da15f6bcd9d714c4a605c675a2b37cc079bcd0ac6143d1e72", null ]
+    [ "ImportStatus", "dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2", [
+      [ "Success", "dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2a3ed388d31a0a5d3c37031bf2b59d6a7e", null ],
+      [ "Exists", "dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2aba7710b08f08a9228fee41ee13261146", null ],
+      [ "Deleted", "dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2a424b43382bec554150ba2a9e100b3dd5", null ],
+      [ "Failed", "dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2a605c675a2b37cc079bcd0ac6143d1e72", null ]
     ] ],
     [ "KeyPermissions", "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880c", [
       [ "eApiAccess", "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca924397fd11936e351485c02170a8fa19", null ],
@@ -139,6 +147,7 @@ var namespaceidhan =
       [ "eAllPermissions", "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca466198b70ed2bb19896f587d392b7739", null ]
     ] ],
     [ "SimpleMimeType", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0", [
+      [ "NONE", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0ab50339a10e1de285ac99d4c3990b8693", null ],
       [ "IMAGE", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0a23a12f67f614b5518c7f1c2465bf95e3", null ],
       [ "VIDEO", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0ae60ae31f67ab883c746bb71c7a145c18", null ],
       [ "ANIMATION", "dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0a28ff0af6199e0baf97bb71b4b4422057", null ],
@@ -179,14 +188,17 @@ var namespaceidhan =
     ] ],
     [ "addIDHANOptions", "dd/dcf/namespaceidhan.html#ae36b565777c7d28ef6f198cbd978cba5", null ],
     [ "checkContentType", "dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824", null ],
-    [ "createBadRequest", "dd/dcf/namespaceidhan.html#a2b9879d901088ee21962581de3439875", null ],
-    [ "createConflict", "dd/dcf/namespaceidhan.html#ad91c59f3dfc81d861106eae4858c1333", null ],
+    [ "createBadRequest", "dd/dcf/namespaceidhan.html#ab5aa5db369621cef0ec9aae2ddfadbf1", null ],
+    [ "createBadRequest", "dd/dcf/namespaceidhan.html#ab6f6790f06426a6162f6319329635e8f", null ],
+    [ "createConflict", "dd/dcf/namespaceidhan.html#a682d264abf479cad4bd993673160cea1", null ],
     [ "createFilter", "dd/dcf/namespaceidhan.html#a788e82c1d39211ed895eb59bbbc3e859", null ],
-    [ "createInternalError", "dd/dcf/namespaceidhan.html#ad3cb3ccfd882c152d4515e614fcc9a7f", null ],
-    [ "createNotFound", "dd/dcf/namespaceidhan.html#a28146e5bc3d6646a3bc289d761a1cf2b", null ],
+    [ "createInternalError", "dd/dcf/namespaceidhan.html#a418adeed5ac97317a8cfbe045ace957d", null ],
+    [ "createInternalError", "dd/dcf/namespaceidhan.html#a19a75580dba00693ef9736a3661fbc75", null ],
+    [ "createNotFound", "dd/dcf/namespaceidhan.html#a53e269619cce487d1cd74e9d814dc351", null ],
     [ "decodeHex", "dd/dcf/namespaceidhan.html#a5b247491d0fa033dd2d939970df653fa", null ],
     [ "decodeHexCharacter", "dd/dcf/namespaceidhan.html#ace19126f81e79d920ce7787ba54d016b", null ],
     [ "decodeHexCharacters", "dd/dcf/namespaceidhan.html#ad23693d258282b5457ded516e1a6b0d1", null ],
+    [ "defaultErrorHandler", "dd/dcf/namespaceidhan.html#aae832ea656fdf9ffd691a6e5bfa9f0f1", null ],
     [ "exceptionHandler", "dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694", null ],
     [ "findOrCreateNamespace", "dd/dcf/namespaceidhan.html#af6d426cda0d593930875e52f980b41ec", null ],
     [ "findOrCreateSubtag", "dd/dcf/namespaceidhan.html#ad9c7e7dc5caa7093a1d4f900e95465dc", null ],
@@ -201,7 +213,7 @@ var namespaceidhan =
     [ "parseArrayParmeters", "dd/dcf/namespaceidhan.html#ae1f955a09fa3220012fb0c401950fcfa", null ],
     [ "searchNamespace", "dd/dcf/namespaceidhan.html#a5fa74bb214874aa2789badd88b18619a", null ],
     [ "searchSubtag", "dd/dcf/namespaceidhan.html#a60d3fe70f3505cfd95050bdbe38d56ad", null ],
-    [ "setFileInfo", "dd/dcf/namespaceidhan.html#a766a40aeb5ee90e764c3a0eee45dc8d1", null ],
+    [ "setFileInfo", "dd/dcf/namespaceidhan.html#af97a6a91e89c070ccddfd332c6116d2b", null ],
     [ "splitTag", "dd/dcf/namespaceidhan.html#a37cff2a5b3a86f9964161d219f392141", null ],
     [ "splitTag", "dd/dcf/namespaceidhan.html#a4e881a977f3992fcbf6ed75cf66bb837", null ],
     [ "trantorHook", "dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8", null ],

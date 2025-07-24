@@ -117,6 +117,7 @@ $(function(){initNavTree('d4/d3d/log_8hpp.html','../../'); initResizable(true); 
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &lt;spdlog/spdlog.h&gt;</code><br />
+<code>#include &lt;fmt/format.h&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../db/db0/erver_2src_2logging_2qt__formatters_2qstring_8hpp_source.html">qt_formatters/qstring.hpp</a>&quot;</code><br />
 </div>
@@ -133,30 +134,42 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aea94a193253b168f253cd496452bf879" id="r_aea94a193253b168f253cd496452bf879"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:aea94a193253b168f253cd496452bf879"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#aea94a193253b168f253cd496452bf879">idhan::log::trace</a> (const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
-<tr class="separator:aea94a193253b168f253cd496452bf879"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82989e7920b131502a7d82ee072b4a51" id="r_a82989e7920b131502a7d82ee072b4a51"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:a82989e7920b131502a7d82ee072b4a51"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a82989e7920b131502a7d82ee072b4a51">idhan::log::debug</a> (const ::std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
-<tr class="separator:a82989e7920b131502a7d82ee072b4a51"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acea0528caf8e7b84f55e6b1bf0e2e4d0" id="r_acea0528caf8e7b84f55e6b1bf0e2e4d0"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:acea0528caf8e7b84f55e6b1bf0e2e4d0"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#acea0528caf8e7b84f55e6b1bf0e2e4d0">idhan::log::info</a> (const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
-<tr class="separator:acea0528caf8e7b84f55e6b1bf0e2e4d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeceed2bffdb048e88c6c4fd05db304e6" id="r_aeceed2bffdb048e88c6c4fd05db304e6"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:aeceed2bffdb048e88c6c4fd05db304e6"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#aeceed2bffdb048e88c6c4fd05db304e6">idhan::log::warn</a> (const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
-<tr class="separator:aeceed2bffdb048e88c6c4fd05db304e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14575812dc991bb299a3b52b74e39d84" id="r_a14575812dc991bb299a3b52b74e39d84"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:a14575812dc991bb299a3b52b74e39d84"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a14575812dc991bb299a3b52b74e39d84">idhan::log::error</a> (const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
-<tr class="separator:a14575812dc991bb299a3b52b74e39d84"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af13459524cc53dacaf6736431fae1db1" id="r_af13459524cc53dacaf6736431fae1db1"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:af13459524cc53dacaf6736431fae1db1"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#af13459524cc53dacaf6736431fae1db1">idhan::log::trace</a> (const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:af13459524cc53dacaf6736431fae1db1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a39d14c1f94795855b6c7ecc81e224545" id="r_a39d14c1f94795855b6c7ecc81e224545"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a39d14c1f94795855b6c7ecc81e224545"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a39d14c1f94795855b6c7ecc81e224545">idhan::log::debug</a> (const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a39d14c1f94795855b6c7ecc81e224545"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a231715a9c414eade2333abdc7e932277" id="r_a231715a9c414eade2333abdc7e932277"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a231715a9c414eade2333abdc7e932277"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a231715a9c414eade2333abdc7e932277">idhan::log::debug</a> (const T &amp;t)</td></tr>
+<tr class="separator:a231715a9c414eade2333abdc7e932277"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a36d3f7dbad5875dc7fd29c96c1e69573" id="r_a36d3f7dbad5875dc7fd29c96c1e69573"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a36d3f7dbad5875dc7fd29c96c1e69573"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a36d3f7dbad5875dc7fd29c96c1e69573">idhan::log::info</a> (const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a36d3f7dbad5875dc7fd29c96c1e69573"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1913abc8f4c59b87f781fadae9242020" id="r_a1913abc8f4c59b87f781fadae9242020"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a1913abc8f4c59b87f781fadae9242020"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a1913abc8f4c59b87f781fadae9242020">idhan::log::info</a> (const T &amp;t)</td></tr>
+<tr class="separator:a1913abc8f4c59b87f781fadae9242020"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c77f741df908f5b04d655cdab83fb6c" id="r_a1c77f741df908f5b04d655cdab83fb6c"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a1c77f741df908f5b04d655cdab83fb6c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a1c77f741df908f5b04d655cdab83fb6c">idhan::log::warn</a> (const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a1c77f741df908f5b04d655cdab83fb6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac698be3533edf7425ae271140a28e896" id="r_ac698be3533edf7425ae271140a28e896"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:ac698be3533edf7425ae271140a28e896"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#ac698be3533edf7425ae271140a28e896">idhan::log::warn</a> (const T &amp;t)</td></tr>
+<tr class="separator:ac698be3533edf7425ae271140a28e896"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a287df0607837a7584d21e78f7667cadc" id="r_a287df0607837a7584d21e78f7667cadc"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a287df0607837a7584d21e78f7667cadc"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a287df0607837a7584d21e78f7667cadc">idhan::log::error</a> (const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a287df0607837a7584d21e78f7667cadc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00edb282198c5c35533ebc10bebff6f2" id="r_a00edb282198c5c35533ebc10bebff6f2"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a00edb282198c5c35533ebc10bebff6f2"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a00edb282198c5c35533ebc10bebff6f2">idhan::log::error</a> (const T &amp;val)</td></tr>
 <tr class="separator:a00edb282198c5c35533ebc10bebff6f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af65cf9811afb832ad15903a7d93656d8" id="r_af65cf9811afb832ad15903a7d93656d8"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:af65cf9811afb832ad15903a7d93656d8"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#af65cf9811afb832ad15903a7d93656d8">idhan::log::critical</a> (const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
-<tr class="separator:af65cf9811afb832ad15903a7d93656d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afcd1c73124c90950816f5d14fbfb903f" id="r_afcd1c73124c90950816f5d14fbfb903f"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
-<tr class="memitem:afcd1c73124c90950816f5d14fbfb903f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html#afcd1c73124c90950816f5d14fbfb903f">idhan::log::server::info</a> (const std::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
-<tr class="separator:afcd1c73124c90950816f5d14fbfb903f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d61ac3f294d12a6e8f50061cfc74768" id="r_a0d61ac3f294d12a6e8f50061cfc74768"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a0d61ac3f294d12a6e8f50061cfc74768"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a0d61ac3f294d12a6e8f50061cfc74768">idhan::log::critical</a> (const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a0d61ac3f294d12a6e8f50061cfc74768"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a648d8630efa447d96ad08b2b5fbff6e6" id="r_a648d8630efa447d96ad08b2b5fbff6e6"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a648d8630efa447d96ad08b2b5fbff6e6"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d7/d03/namespaceidhan_1_1log.html#a648d8630efa447d96ad08b2b5fbff6e6">idhan::log::critical</a> (const T &amp;val)</td></tr>
+<tr class="separator:a648d8630efa447d96ad08b2b5fbff6e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b46b5983b96b2f5641c60373c882b54" id="r_a6b46b5983b96b2f5641c60373c882b54"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a6b46b5983b96b2f5641c60373c882b54"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d2/d61/namespaceidhan_1_1log_1_1server.html#a6b46b5983b96b2f5641c60373c882b54">idhan::log::server::info</a> (const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</td></tr>
+<tr class="separator:a6b46b5983b96b2f5641c60373c882b54"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

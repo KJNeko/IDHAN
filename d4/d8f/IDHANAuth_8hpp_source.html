@@ -117,28 +117,41 @@ $(function(){initNavTree('d4/d8f/IDHANAuth_8hpp_source.html','../../'); initResi
 <div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment">// Created by kj16609 on 11/8/24.</span></div>
 <div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment">//</span></div>
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#pragma once</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &quot;drogon/HttpMiddleware.h&quot;</span></div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span></div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>{</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
-<div class="foldopen" id="foldopen00045" data-start="{" data-end="};">
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno"><a class="line" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html">   45</a></span><span class="keyword">class </span><a class="code hl_function" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a4ccc356baf009ccaaac497ed66e402b1">IDHANAuth</a> : <span class="keyword">public</span> drogon::HttpMiddleware&lt; IDHANAuth &gt;</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>{</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno"><a class="line" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a4ccc356baf009ccaaac497ed66e402b1">   49</a></span>    <a class="code hl_function" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a4ccc356baf009ccaaac497ed66e402b1">IDHANAuth</a>() = <span class="keywordflow">default</span>;</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a94fb3c18fdf74d7d6bb5c897e19be89e">invoke</a>(</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        <span class="keyword">const</span> drogon::HttpRequestPtr&amp; req,</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        drogon::MiddlewareNextCallback&amp;&amp; nextCb,</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        drogon::MiddlewareCallback&amp;&amp; mcb ) <span class="keyword">override</span>;</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>};</div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#pragma GCC diagnostic push</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Weffc++&quot;</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wredundant-tags&quot;</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wcast-qual&quot;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wold-style-cast&quot;</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wnoexcept&quot;</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wredundant-decls&quot;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wuseless-cast&quot;</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wnoexcept&quot;</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wswitch-enum&quot;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wshadow&quot;</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &quot;drogon/HttpMiddleware.h&quot;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#pragma GCC diagnostic pop</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span></div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span></div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>{</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
+<div class="foldopen" id="foldopen00058" data-start="{" data-end="};">
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno"><a class="line" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html">   58</a></span><span class="keyword">class </span><a class="code hl_function" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a4ccc356baf009ccaaac497ed66e402b1">IDHANAuth</a> : <span class="keyword">public</span> drogon::HttpMiddleware&lt; IDHANAuth &gt;</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>{</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>  <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno"><a class="line" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a4ccc356baf009ccaaac497ed66e402b1">   62</a></span>    <a class="code hl_function" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a4ccc356baf009ccaaac497ed66e402b1">IDHANAuth</a>() = <span class="keywordflow">default</span>;</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a94fb3c18fdf74d7d6bb5c897e19be89e">invoke</a>(</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>        <span class="keyword">const</span> drogon::HttpRequestPtr&amp; req,</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>        drogon::MiddlewareNextCallback&amp;&amp; nextCb,</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>        drogon::MiddlewareCallback&amp;&amp; mcb ) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>};</div>
 </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>} <span class="comment">// namespace idhan::api</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>} <span class="comment">// namespace idhan::api</span></div>
 <div class="ttc" id="aclassidhan_1_1api_1_1IDHANAuth_html_a4ccc356baf009ccaaac497ed66e402b1"><div class="ttname"><a href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a4ccc356baf009ccaaac497ed66e402b1">idhan::api::IDHANAuth::IDHANAuth</a></div><div class="ttdeci">IDHANAuth()=default</div></div>
 <div class="ttc" id="aclassidhan_1_1api_1_1IDHANAuth_html_a94fb3c18fdf74d7d6bb5c897e19be89e"><div class="ttname"><a href="../../d6/d49/classidhan_1_1api_1_1IDHANAuth.html#a94fb3c18fdf74d7d6bb5c897e19be89e">idhan::api::IDHANAuth::invoke</a></div><div class="ttdeci">void invoke(const drogon::HttpRequestPtr &amp;req, drogon::MiddlewareNextCallback &amp;&amp;nextCb, drogon::MiddlewareCallback &amp;&amp;mcb) override</div><div class="ttdef"><b>Definition</b> IDHANAuth.cpp:10</div></div>
 <div class="ttc" id="anamespaceidhan_1_1api_html"><div class="ttname"><a href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></div><div class="ttdef"><b>Definition</b> add.cpp:14</div></div>

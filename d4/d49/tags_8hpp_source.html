@@ -121,24 +121,39 @@ $(function(){initNavTree('d4/d49/tags_8hpp_source.html','../../'); initResizable
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;expected&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &quot;<a class="code" href="../../da/d68/IDHANTypes_8hpp.html">IDHANTypes.hpp</a>&quot;</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &quot;drogon/HttpResponse.h&quot;</span></div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &quot;drogon/orm/DbClient.h&quot;</span></div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &quot;drogon/utils/coroutine.h&quot;</span></div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &quot;<a class="code" href="../../d8/d9d/namespaces_8hpp.html">namespaces.hpp</a>&quot;</span></div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &quot;<a class="code" href="../../de/db4/subtags_8hpp.html">subtags.hpp</a>&quot;</span></div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../dd/dcf/namespaceidhan.html">idhan</a></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>{</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>drogon::Task&lt; std::expected&lt; TagID, drogon::HttpResponsePtr &gt; &gt;</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    <a class="code hl_function" href="../../dd/dcf/namespaceidhan.html#a9f1848d8fc19ffaf73a46f88f4bdaf97">findOrCreateTag</a>( <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a> namespace_id, <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a> subtag_id, drogon::orm::DbClientPtr <a class="code hl_namespace" href="../../db/d01/namespaceidhan_1_1db.html">db</a> );</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>drogon::Task&lt; std::expected&lt; TagID, drogon::HttpResponsePtr &gt; &gt;</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    <a class="code hl_function" href="../../dd/dcf/namespaceidhan.html#a9f1848d8fc19ffaf73a46f88f4bdaf97">findOrCreateTag</a>( std::string tag_text, drogon::orm::DbClientPtr <a class="code hl_namespace" href="../../db/d01/namespaceidhan_1_1db.html">db</a> );</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>} <span class="comment">// namespace idhan</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#pragma GCC diagnostic push</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Weffc++&quot;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wredundant-tags&quot;</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wcast-qual&quot;</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wold-style-cast&quot;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wnoexcept&quot;</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wredundant-decls&quot;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wuseless-cast&quot;</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wnoexcept&quot;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wswitch-enum&quot;</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wshadow&quot;</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &quot;drogon/HttpResponse.h&quot;</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &quot;drogon/orm/DbClient.h&quot;</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#include &quot;drogon/utils/coroutine.h&quot;</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#pragma GCC diagnostic pop</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="preprocessor">#include &quot;<a class="code" href="../../d8/d9d/namespaces_8hpp.html">namespaces.hpp</a>&quot;</span></div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="preprocessor">#include &quot;<a class="code" href="../../de/db4/subtags_8hpp.html">subtags.hpp</a>&quot;</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../dd/dcf/namespaceidhan.html">idhan</a></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>{</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>drogon::Task&lt; std::expected&lt; TagID, drogon::HttpResponsePtr &gt; &gt;</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <a class="code hl_function" href="../../dd/dcf/namespaceidhan.html#a9f1848d8fc19ffaf73a46f88f4bdaf97">findOrCreateTag</a>( <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a> namespace_id, <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a> subtag_id, drogon::orm::DbClientPtr <a class="code hl_namespace" href="../../db/d01/namespaceidhan_1_1db.html">db</a> );</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>drogon::Task&lt; std::expected&lt; TagID, drogon::HttpResponsePtr &gt; &gt;</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <a class="code hl_function" href="../../dd/dcf/namespaceidhan.html#a9f1848d8fc19ffaf73a46f88f4bdaf97">findOrCreateTag</a>( std::string tag_text, drogon::orm::DbClientPtr <a class="code hl_namespace" href="../../db/d01/namespaceidhan_1_1db.html">db</a> );</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>} <span class="comment">// namespace idhan</span></div>
 <div class="ttc" id="aIDHANTypes_8hpp_html"><div class="ttname"><a href="../../da/d68/IDHANTypes_8hpp.html">IDHANTypes.hpp</a></div></div>
-<div class="ttc" id="anamespaceidhan_1_1db_html"><div class="ttname"><a href="../../db/d01/namespaceidhan_1_1db.html">idhan::db</a></div><div class="ttdef"><b>Definition</b> indexes.cpp:13</div></div>
+<div class="ttc" id="anamespaceidhan_1_1db_html"><div class="ttname"><a href="../../db/d01/namespaceidhan_1_1db.html">idhan::db</a></div><div class="ttdef"><b>Definition</b> indexes.cpp:18</div></div>
 <div class="ttc" id="anamespaceidhan_html"><div class="ttname"><a href="../../dd/dcf/namespaceidhan.html">idhan</a></div><div class="ttdef"><b>Definition</b> ImportCodes.hpp:7</div></div>
 <div class="ttc" id="anamespaceidhan_html_a09cafc4e2171570c26d1a2007f6dabe5"><div class="ttname"><a href="../../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5">idhan::NamespaceID</a></div><div class="ttdeci">Integer NamespaceID</div><div class="ttdef"><b>Definition</b> IDHANTypes.hpp:14</div></div>
 <div class="ttc" id="anamespaceidhan_html_a4399af8ffca506cb05aefbe2bcd58a8d"><div class="ttname"><a href="../../dd/dcf/namespaceidhan.html#a4399af8ffca506cb05aefbe2bcd58a8d">idhan::SubtagID</a></div><div class="ttdeci">Integer SubtagID</div><div class="ttdef"><b>Definition</b> IDHANTypes.hpp:15</div></div>
