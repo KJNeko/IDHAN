@@ -5,6 +5,7 @@
 #include "MetadataModule.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/records.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "logging/log.hpp"
@@ -14,6 +15,15 @@
 
 namespace idhan::api
 {
+
+drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > >
+	adoptOrphan( std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db )
+{
+	const auto sha256 { SHA256::hash( data->data(), data->length() ) };
+	const auto record_result { co_await helpers::createRecord( sha256, db ) };
+
+	co_return record_result;
+}
 
 drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr request, const ClusterID cluster_id )
 {
@@ -37,13 +47,17 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	// Scans the mime if the file has not been scanned previously
 	const auto scan_mime { request->getOptionalParameter< bool >( "scan_mime" ).value_or( true ) };
-
 	// Triggers the mime to be retested for all files
 	const auto rescan_mime { request->getOptionalParameter< bool >( "rescan_mime" ).value_or( false ) };
 
+	// Uses a metadata parser to scan for metadata
 	const auto scan_metadata { request->getOptionalParameter< bool >( "scan_metadata" ).value_or( true ) };
-
+	// Forces the metadata parser to run, even if data is already present
 	const auto rescan_metadata { request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( true ) };
+
+	const auto stop_on_fail { request->getOptionalParameter< bool >( "stop_on_fail" ).value_or( true ) };
+
+	const auto adopt_orphans { request->getOptionalParameter< bool >( "adopt_orphans" ).value_or( false ) };
 
 	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( path_str ) )
 	{
@@ -58,6 +72,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( !sha256_e.has_value() )
 		{
+			if ( stop_on_fail ) co_return createInternalError( "Failed to get hash for file" );
 			log::warn( "Failed to get hash for file {}", data->strpath() );
 			continue;
 		}
@@ -69,12 +84,15 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( expected_hex != data->name() )
 		{
-			log::warn(
-				"During scan of cluster {} file {} was found to have the name of {} but hash of {}",
+			const auto error_str { format_ns::format(
+				"While scanning cluster {} file {} was found to have name of {} but hash of {}",
 				cluster_id,
 				data->strpath(),
 				data->name(),
-				expected_hex );
+				expected_hex ) };
+
+			if ( stop_on_fail ) co_return createInternalError( error_str );
+			log::warn( error_str );
 
 			//TODO: If not readonly, Move this file to a new location for processing by the user
 			continue;
@@ -86,17 +104,24 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		};
 
 		// Orphan check
-		if ( search.empty() )
+		if ( search.empty() && !adopt_orphans )
 		{
-			log::warn(
+			const auto error_str { format_ns::format(
 				"During scan of cluster {} file {} was found to have hash {} but was not in the DB. Possible orphan file",
 				cluster_id,
 				data->strpath(),
-				data->name() );
+				data->name() ) };
+
+			if ( stop_on_fail ) co_return createInternalError( error_str );
+			log::warn( error_str );
 			continue;
 		}
 
-		const RecordID record_id { search[ 0 ][ 0 ].as< RecordID >() };
+		const auto record_id_e { search.empty() && adopt_orphans ? co_await adoptOrphan( data, db ) :
+			                                                       search[ 0 ][ 0 ].as< RecordID >() };
+
+		if ( !record_id_e.has_value() ) co_return record_id_e.error();
+		const auto record_id { record_id_e.value() };
 
 		bool valid_mime { true };
 		if ( scan_mime || rescan_mime )
@@ -126,6 +151,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 				co_await db
 					->execSqlCoro( "UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", cluster_id, record_id );
 			}
+
+			//TODO: If the cluster is not readonly, try to fix any invalid extensions
 		}
 
 		// if the mime we just processed is not valid then we should skip scanning the metadata as we won't know what parser to use anyways.
@@ -146,10 +173,15 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 				}
 				else
 				{
+					const auto json { metadata.error()->getJsonObject() };
+
+					if ( !json ) co_return createInternalError( "Metadata returned invalid response internally" );
+
 					log::warn(
-						"During scan of cluster {} file {} with was unable to be parsed for metadata (Maybe missing metadata parser?)",
+						"During scan of cluster {} file {} with was unable to be parsed for metadata: {}",
 						cluster_id,
-						data->strpath() );
+						data->strpath(),
+						( *json )[ "error" ].asString() );
 				}
 			}
 		}
@@ -171,6 +203,9 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		cluster_id,
 		file_counter );
 
-	co_return drogon::HttpResponse::newHttpResponse();
+	request->setPath( format_ns::format( "/cluster/{}/info", cluster_id ) );
+
+	co_return co_await drogon::app().forwardCoro( request );
+	// co_return drogon::HttpResponse::newHttpResponse();
 }
 } // namespace idhan::api
