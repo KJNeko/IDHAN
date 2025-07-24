@@ -117,23 +117,21 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 		for ( const auto& item : json )
 		{
 			if ( item.isObject() )
-			{
-				// tag component
 				tags.emplace_back( TagPair( item ) );
-			}
 			else if ( item.isUInt64() )
-			{
 				tags.emplace_back( static_cast< TagID >( item.asUInt64() ) );
-			}
 			else if ( item.isString() )
-			{
 				tags.emplace_back( TagPair::fromSplit( item.asString() ) );
-			}
 			else
 				co_return std::unexpected( createBadRequest( "Invalid type format for json" ) );
 		}
 
 		co_return tags;
+	}
+	catch ( std::exception& e )
+	{
+		log::error( "Error with {}", json.toStyledString() );
+		co_return std::unexpected( createBadRequest( "Invalid json item in json list: {}", e.what() ) );
 	}
 	catch ( ... )
 	{
@@ -143,16 +141,27 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
-	getIDsFromPairs( const std::vector< TagPair >& pairs, drogon::orm::DbClientPtr transaction )
+	getIDsFromPairs( const std::vector< TagPair >& pairs, drogon::orm::DbClientPtr db )
 {
 	std::vector< TagID > ids {};
 	ids.reserve( pairs.size() );
 
-	for ( const auto& pair : pairs )
+	try
 	{
-		const auto result { co_await getIDFromPair( pair, transaction ) };
-		if ( !result.has_value() ) co_return std::unexpected( result.error() );
-		ids.emplace_back( result.value() );
+		for ( const auto& pair : pairs )
+		{
+			const auto result { co_await getIDFromPair( pair, db ) };
+			if ( !result.has_value() ) co_return std::unexpected( result.error() );
+			ids.emplace_back( result.value() );
+		}
+	}
+	catch ( std::exception& e )
+	{
+		co_return std::unexpected( createBadRequest( "Error getting tag ids from pairs: {}", e.what() ) );
+	}
+	catch ( ... )
+	{
+		co_return std::unexpected( createBadRequest( "Error getting tag ids from pairs" ) );
 	}
 
 	co_return ids;
@@ -220,6 +229,10 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
 	if ( const auto& tags_json = json[ "tags" ]; tags_json.isArray() )
 	{
+		if ( tags_json.size() > 1024 * 64 )
+			log::warn(
+				"Endpoint /records/tags/add recieved a LOT of tags ({}), This might take awhile to return",
+				tags_json.size() );
 		const auto tag_pairs { co_await getTagPairs( tags_json ) };
 
 		if ( !tag_pairs.has_value() ) co_return tag_pairs.error();

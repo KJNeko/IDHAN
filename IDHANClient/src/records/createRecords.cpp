@@ -28,10 +28,7 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 #ifndef NDEBUG
 	for ( const auto& hash : hashes )
 	{
-		if ( hash.size() != 64 )
-		{
-			throw std::runtime_error( "Invalid hash size" );
-		}
+		if ( hash.size() != 64 ) throw std::runtime_error( "Invalid hash size" );
 	}
 #endif
 
