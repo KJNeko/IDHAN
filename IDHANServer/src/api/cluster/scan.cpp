@@ -117,6 +117,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 			continue;
 		}
 
+		// if we didn't find a record and we are set to adopt any orphans we find, then we'll adopt it here.
 		const auto record_id_e { search.empty() && adopt_orphans ? co_await adoptOrphan( data, db ) :
 			                                                       search[ 0 ][ 0 ].as< RecordID >() };
 
@@ -203,9 +204,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		cluster_id,
 		file_counter );
 
-	request->setPath( format_ns::format( "/cluster/{}/info", cluster_id ) );
+	request->setPath( format_ns::format( "/clusters/{}/info", cluster_id ) );
 
 	co_return co_await drogon::app().forwardCoro( request );
-	// co_return drogon::HttpResponse::newHttpResponse();
 }
 } // namespace idhan::api
