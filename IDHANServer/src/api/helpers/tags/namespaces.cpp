@@ -5,6 +5,8 @@
 #include "namespaces.hpp"
 
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/helpers.hpp"
+#include "logging/log.hpp"
 
 namespace idhan
 {

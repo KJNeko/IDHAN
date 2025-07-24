@@ -22,7 +22,7 @@ std::string
 			[[fallthrough]];
 		case HydrusDisplayType::DISPLAY:
 			// str += "tag_mappings tm";
-			str += "final_mappings tm";
+			str += "tag_mappings_final tm";
 			break;
 		case HydrusDisplayType::STORED:
 			str += "tag_mappings tm";
@@ -143,8 +143,7 @@ void SearchBuilder::filterTagDomain( const TagDomainID value )
 }
 
 void SearchBuilder::addFileDomain( const FileDomainID value )
-{
-}
+{}
 
 void SearchBuilder::setTags( const std::vector< TagID >& vector )
 {

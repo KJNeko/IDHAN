@@ -96,7 +96,7 @@ void TagServiceWorker::preprocess()
 	emit finished();
 }
 
-void TagServiceWorker::processSets( const std::vector< MappingPair >& pairs ) const
+void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) const
 {
 	FGL_ASSERT( m_importer, "Importer was null!" );
 	idhan::hydrus::TransactionBase master_tr { m_importer->master_db };
@@ -212,10 +212,10 @@ void TagServiceWorker::processSiblings( const std::vector< std::pair< idhan::Tag
 void TagServiceWorker::processMappingsBatch(
 	const idhan::hydrus::TransactionBaseCoro& mappings_tr, const std::string& current_mappings_name )
 {
-	std::vector< MappingPair > sets {};
-	constexpr std::size_t hash_limit { 1000 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
-	constexpr std::size_t average_tags_per_hash { 64 };
-	constexpr std::size_t set_limit { average_tags_per_hash * hash_limit };
+	std::vector< MappingPair > pairs {};
+	constexpr std::size_t hash_limit { 200 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
+	constexpr std::size_t average_tags_per_hash { 128 };
+	constexpr std::size_t pair_limit { average_tags_per_hash * hash_limit };
 
 	idhan::hydrus::Query< int, int > query {
 		mappings_tr, std::format( "SELECT tag_id, hash_id FROM {} ORDER BY hash_id, tag_id", current_mappings_name )
@@ -231,15 +231,15 @@ void TagServiceWorker::processMappingsBatch(
 		if ( hash_id_set.size() >= hash_limit )
 		{
 			hash_id_set.clear();
-			processSets( sets );
-			sets.clear();
-			sets.reserve( set_limit );
+			processPairs( pairs );
+			pairs.clear();
+			pairs.reserve( pair_limit );
 			emit processedMappings( mappings_counter );
 			mappings_counter = 0;
 		}
 
 		mappings_counter += 1;
-		sets.emplace_back( hash_id, tag_id );
+		pairs.emplace_back( hash_id, tag_id );
 		hash_id_set.insert( hash_id );
 	}
 
@@ -267,6 +267,7 @@ void TagServiceWorker::importMappings()
 	}
 	catch ( std::exception& e )
 	{
+		idhan::logging::info( "Got exception: {} when trying to create tag domain for {}", e.what(), service_name );
 		tag_domain_f = client.getTagDomain( service_name );
 		tag_domain_f.waitForFinished();
 	}
@@ -276,8 +277,6 @@ void TagServiceWorker::importMappings()
 	processRelationships();
 
 	processMappingsBatch( mappings_tr, current_mappings_name );
-
-	emit finished();
 }
 
 void TagServiceWorker::processRelationships()
@@ -357,62 +356,54 @@ void TagServiceWorker::processRelationships()
 
 	std::vector< std::pair< std::string, std::string > > tags {};
 	std::vector< HyTagID > tag_order {};
+	std::unordered_map< HyTagID, idhan::TagID > tag_translation_map {};
+	auto& client { idhan::IDHANClient::instance() };
+	tag_translation_map.reserve( tag_pairs.size() );
 
 	for ( const auto& [ tag_id, tag_text ] : tag_pairs )
 	{
 		// const auto& [ namespace_str, subtag_str ] = tag_text;
 		tags.emplace_back( tag_text );
 		tag_order.emplace_back( tag_id );
+
+		if ( tags.size() >= 1024 )
+		{
+			auto tag_f { client.createTags( tags ) };
+			tag_f.waitForFinished();
+			const auto result { tag_f.result() };
+
+			FGL_ASSERT( tag_order.size() == result.size(), "Tag set was not the same size as result!" );
+
+			auto ret_itter = result.begin();
+			auto itter = tag_order.begin();
+			for ( ; itter != tag_order.end(); ++itter, ++ret_itter ) tag_translation_map.emplace( *itter, *ret_itter );
+
+			tags.clear();
+			tag_order.clear();
+		}
 	}
 
-	auto& client = idhan::IDHANClient::instance();
 	auto tag_f { client.createTags( tags ) };
-
 	tag_f.waitForFinished();
-
-	// Maps from Hydrus ID to IDHAN IDs
-	std::unordered_map< HyTagID, idhan::TagID > tag_translation_map {};
-
 	const auto result { tag_f.result() };
 
 	FGL_ASSERT( tag_order.size() == result.size(), "Tag set was not the same size as result!" );
 
 	auto ret_itter = result.begin();
 	auto itter = tag_order.begin();
-	for ( ; itter != tag_order.end(); ++itter, ++ret_itter )
-	{
-		const HyTagID original_id { *itter };
-		const idhan::TagID new_id { *ret_itter };
+	for ( ; itter != tag_order.end(); ++itter, ++ret_itter ) tag_translation_map.emplace( *itter, *ret_itter );
 
-#ifdef VERIFY_TAG_RETURNS
-		auto tag_info = client.getTagInfo( new_id );
-		tag_info.waitForFinished();
-
-		const auto hy_tag_str = tag_pairs[ original_id ];
-		const auto idhan_tag_i = tag_info.result();
-		FGL_ASSERT(
-			hy_tag_str.first == idhan_tag_i.m_namespace.m_text,
-			std::format(
-				"Namespace text mismatch! Expected {} got {}", hy_tag_str.first, idhan_tag_i.m_namespace.m_text ) );
-		FGL_ASSERT(
-			hy_tag_str.second == idhan_tag_i.m_subtag.m_text,
-			std::format( "Subtag text mismatch! Expected {} got {}", hy_tag_str.second, idhan_tag_i.m_subtag.m_text ) );
-#endif
-
-		tag_translation_map.emplace( original_id, new_id );
-	}
+	idhan::logging::debug( "Created {} tags", tag_translation_map.size() );
 
 	// idhan::logging::debug( "Finished processing tags" );
 
-	std::size_t set_limit { 1 };
+	// For now we are limiting to 1 set until we can make a better rollback system
+	constexpr std::size_t set_limit { 1 };
 
 	{
 		std::vector< std::pair< idhan::TagID, idhan::TagID > > siblings {};
 
 		// These tags cause issues atm so we will just blacklist them
-		const std::vector< idhan::TagID > blacklist { 1021104, 1798924, 2891711, 947635,  2465134, 9770468, 12681993,
-			                                          1043263, 1209090, 7673,    8499,    166417,  9690,    167037,
-			                                          922614,  167457,  166791,  9045064, 274,     451723,  2343232 };
 
 		for ( const auto& [ hy_bad_id, hy_good_id ] : hy_siblings )
 		{
@@ -423,14 +414,16 @@ void TagServiceWorker::processRelationships()
 				continue;
 			}
 
-			// check for blacklisted tags
-			// if ( std::ranges::find( blacklist, hy_bad_id ) != blacklist.end() ) continue;
-			// if ( std::ranges::find( blacklist, hy_good_id ) != blacklist.end() ) continue;
-
 			try
 			{
 				const auto idhan_bad_id = tag_translation_map.at( hy_bad_id );
 				const auto idhan_good_id = tag_translation_map.at( hy_good_id );
+
+				if ( idhan_bad_id == idhan_good_id )
+				{
+					throw std::runtime_error(
+						std::format( "Found alias that references itself {} == {}", idhan_bad_id, idhan_good_id ) );
+				}
 
 				siblings.emplace_back( idhan_bad_id, idhan_good_id );
 				if ( siblings.size() >= set_limit )
@@ -442,8 +435,11 @@ void TagServiceWorker::processRelationships()
 			}
 			catch ( std::exception& e )
 			{
-				idhan::logging::error( "Hydrus set ({}, {}) caused an error", hy_bad_id, hy_good_id );
-				idhan::logging::error( e.what() );
+				idhan::logging::error(
+					"Hydrus set (bad_id, good_id) ({}, {}) caused an error while importing: {}",
+					hy_bad_id,
+					hy_good_id,
+					e.what() );
 
 				if ( std::ofstream ofs( "bad_ids.txt", std::ios::app ); ofs )
 				{
@@ -482,8 +478,6 @@ void TagServiceWorker::processRelationships()
 		processParents( parents );
 		emit processedParents( parents.size() );
 	}
-
-	emit finished();
 }
 
 void TagServiceWorker::run()
@@ -499,6 +493,7 @@ void TagServiceWorker::run()
 		{
 			m_processing = true;
 			importMappings();
+			emit finished();
 		}
 	}
 	catch ( std::exception& e )

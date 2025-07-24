@@ -43,7 +43,7 @@ class TagServiceWorker final : public QObject, public QRunnable
 		int tag_id;
 	};
 
-	void processSets( const std::vector< MappingPair >& pairs ) const;
+	void processPairs( const std::vector< MappingPair >& pairs ) const;
 	void processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const;
 	void processSiblings( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const;
 

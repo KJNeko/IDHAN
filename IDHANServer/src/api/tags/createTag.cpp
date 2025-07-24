@@ -9,6 +9,7 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/tags/namespaces.hpp"
 #include "api/helpers/tags/subtags.hpp"
+#include "api/helpers/tags/tags.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
@@ -141,53 +142,22 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 	createTags( const std::vector< std::pair< std::string, std::string > >& tag_pairs, drogon::orm::DbClientPtr db )
 {
 	logging::ScopedTimer timer { "createTags" };
-	std::string namespaces { "{" };
-	std::string subtags { "{" };
-
-	namespaces.reserve( tag_pairs.size() * 64 );
-	subtags.reserve( tag_pairs.size() * 64 );
-
-	std::size_t counter { 0 };
-
-	for ( const auto& [ namespace_txt, subtag_txt ] : tag_pairs )
-	{
-		// replace any single ' with double '
-		namespaces += pgEscape( namespace_txt );
-		subtags += pgEscape( subtag_txt );
-
-		if ( counter < tag_pairs.size() - 1 )
-		{
-			namespaces += ",";
-			subtags += ",";
-		}
-
-		++counter;
-	}
-
-	namespaces += "}";
-	subtags += "}";
 
 	std::vector< TagID > tag_ids {};
 
-	try
+	for ( const auto& [ namespace_text, subtag_text ] : tag_pairs )
 	{
-		const auto result { co_await db->execSqlCoro( "SELECT createBatchedTag($1, $2)", namespaces, subtags ) };
+		const auto namespace_id { co_await findOrCreateNamespace( namespace_text, db ) };
+		const auto subtag_id { co_await findOrCreateSubtag( subtag_text, db ) };
 
-		if ( result.size() != tag_pairs.size() )
-			co_return std::unexpected( createInternalError(
-				"Expected number of tag returns does not match {} == {}", result.size(), tag_pairs.size() ) );
+		if ( !namespace_id.has_value() ) co_return std::unexpected( namespace_id.error() );
+		if ( !subtag_id.has_value() ) co_return std::unexpected( subtag_id.error() );
 
-		tag_ids.reserve( result.size() );
+		const auto tag_id { co_await findOrCreateTag( namespace_id.value(), subtag_id.value(), db ) };
 
-		for ( const auto& tag : result ) tag_ids.emplace_back( tag[ 0 ].as< TagID >() );
-	}
-	catch ( std::exception& e )
-	{
-		co_return std::unexpected( createInternalError(
-			"Failed to create tags using createBatchedTags(): {}\nNamespaces: {}\nSubtags: {}",
-			e.what(),
-			namespaces,
-			subtags ) );
+		if ( !tag_id.has_value() ) co_return std::unexpected( tag_id.error() );
+
+		tag_ids.emplace_back( tag_id.value() );
 	}
 
 	co_return tag_ids;

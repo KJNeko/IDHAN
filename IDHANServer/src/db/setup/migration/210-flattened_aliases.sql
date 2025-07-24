@@ -5,7 +5,8 @@ CREATE TABLE flattened_aliases
     alias_id INTEGER REFERENCES tags (tag_id) NULL,
     domain_id         SMALLINT REFERENCES tag_domains (tag_domain_id) NOT NULL,
     chain             INTEGER[]                                       NOT NULL,
-    UNIQUE (aliased_id, alias_id, domain_id)
+    UNIQUE (aliased_id, alias_id, domain_id),
+    UNIQUE (aliased_id, domain_id)
 );
 
 -- Function for handling inserts
@@ -60,7 +61,6 @@ BEGIN
     RETURN new;
 END;
 $$;
-
 
 ALTER TABLE flattened_aliases
     ADD CONSTRAINT chain_size_limit CHECK (ARRAY_LENGTH(chain, 1) <= 128);

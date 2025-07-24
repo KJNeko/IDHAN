@@ -6,16 +6,16 @@ CREATE OR REPLACE FUNCTION insertmultiplerecords(VARIADIC bytes bytea[])
 AS
 $$
 BEGIN
-    LOCK TABLE records IN EXCLUSIVE MODE;
+    WITH inserted_records AS (SELECT UNNEST(bytes) AS byte_data)
+    INSERT
+    INTO records (sha256)
+    SELECT byte_data
+    FROM inserted_records
+    ON CONFLICT DO NOTHING;
 
-    RETURN QUERY
-        WITH inserted_records AS (
-            SELECT UNNEST(bytes) AS byte_data
-            )
-            INSERT INTO records (sha256)
-                SELECT byte_data
-                FROM inserted_records
-                ON CONFLICT (sha256) DO UPDATE SET sha256 = records.sha256
-                RETURNING records.record_id;
+    RETURN QUERY WITH inserted_records AS (SELECT UNNEST(bytes) AS byte_data)
+                 SELECT r.record_id
+                 FROM inserted_records ir
+                          JOIN records r ON ir.byte_data = r.sha256;
 END;
 $$ LANGUAGE plpgsql;

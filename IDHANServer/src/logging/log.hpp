@@ -40,10 +40,22 @@ void debug( const format_ns::format_string< Ts... > str, Ts&&... ts )
 	::spdlog::debug( str, std::forward< Ts >( ts )... );
 }
 
+template < typename T >
+void debug( const T& t )
+{
+	::spdlog::debug( t );
+}
+
 template < typename... Ts >
 void info( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::info( str, std::forward< Ts >( ts )... );
+}
+
+template < typename T >
+void info( const T& t )
+{
+	::spdlog::info( t );
 }
 
 template < typename... Ts >
@@ -74,6 +86,12 @@ template < typename... Ts >
 void critical( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::critical( str, std::forward< Ts >( ts )... );
+}
+
+template < typename T >
+void critical( const T& val )
+{
+	::spdlog::critical( val );
 }
 
 namespace server

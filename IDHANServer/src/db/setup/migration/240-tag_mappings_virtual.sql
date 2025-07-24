@@ -7,7 +7,7 @@ CREATE TABLE tag_mappings_virtual
     UNIQUE (record_id, tag_id)
 );
 
-CREATE FUNCTION tag_virtuals_mappings_update_trigger()
+CREATE FUNCTION after_update_on_tag_mappings()
     RETURNS TRIGGER AS
 $$
 BEGIN
@@ -34,7 +34,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION tag_virtuals_mappings_insert_trigger()
+CREATE FUNCTION after_insert_on_tag_mappings()
     RETURNS TRIGGER AS
 $$
 BEGIN
@@ -50,32 +50,32 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION tag_virtuals_mappings_delete_trigger()
+CREATE OR REPLACE FUNCTION after_delete_on_tag_mappings()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    DELETE FROM tag_mappings_virtuals WHERE record_id = old.record_id AND tag_id = old.tag_id;
+    DELETE FROM tag_mappings_virtual WHERE record_id = old.record_id AND origin_id = old.tag_id;
     RETURN old;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER tag_virtuals_after_mappings_insert
+CREATE TRIGGER a_i_tag_mappings
     AFTER INSERT
     ON tag_mappings
     FOR EACH ROW
-EXECUTE FUNCTION tag_virtuals_mappings_insert_trigger();
+EXECUTE FUNCTION after_insert_on_tag_mappings();
 
-CREATE TRIGGER tag_virtuals_after_mappings_update
+CREATE TRIGGER a_u_tag_mappings
     AFTER UPDATE
     ON tag_mappings
     FOR EACH ROW
-EXECUTE FUNCTION tag_virtuals_mappings_update_trigger();
+EXECUTE FUNCTION after_update_on_tag_mappings();
 
-CREATE TRIGGER tag_virtuals_after_mappings_delete
+CREATE TRIGGER a_d_tag_mappings
     AFTER DELETE
     ON tag_mappings
     FOR EACH ROW
-EXECUTE FUNCTION tag_virtuals_mappings_delete_trigger();
+EXECUTE FUNCTION after_delete_on_tag_mappings();
 
 CREATE INDEX ON tag_mappings (domain_id, COALESCE(ideal_tag_id, tag_id));
 
