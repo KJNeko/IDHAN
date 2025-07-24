@@ -60,6 +60,9 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 	switch ( simple_mime_type )
 	{
+		case SimpleMimeType::NONE:
+			//NOOP
+			break;
 		case SimpleMimeType::IMAGE:
 			{
 				const auto image_metadata {

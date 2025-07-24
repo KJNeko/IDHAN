@@ -24,6 +24,7 @@ using FileDomainID = SmallInt;
 
 enum class SimpleMimeType : std::uint16_t
 {
+	NONE = 0,
 	IMAGE = 1,
 	VIDEO = 2,
 	ANIMATION = 3,

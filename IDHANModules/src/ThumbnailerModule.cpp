@@ -4,8 +4,11 @@
 
 #include "../include/ThumbnailerModule.hpp"
 
+namespace idhan
+{
 ThumbnailerModuleI::ThumbnailerModuleI()
 {}
 
 ThumbnailerModuleI::~ThumbnailerModuleI()
 {}
+} // namespace idhan

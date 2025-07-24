@@ -13,6 +13,8 @@
 #include "ImageVipsMetadata.hpp"
 #include "ImageVipsThumbnailer.hpp"
 
+using namespace idhan;
+
 ModuleInfo IDHANEntry()
 {
 	//TODO: Fill out ModuleInfo

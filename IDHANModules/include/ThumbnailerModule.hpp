@@ -8,6 +8,8 @@
 
 #include "ModuleBase.hpp"
 
+namespace idhan
+{
 class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 {
   public:
@@ -38,3 +40,4 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 
 	ModuleType type() override { return ModuleTypeFlags::THUMBNAILER; }
 };
+} // namespace idhan

@@ -13,6 +13,8 @@
 
 #include "vips.hpp"
 
+using namespace idhan;
+
 std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
 {
 	return vipsHandleable();

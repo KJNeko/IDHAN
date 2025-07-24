@@ -9,15 +9,15 @@
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
 
-class ImageVipsMetadata final : public MetadataModuleI
+class ImageVipsMetadata final : public idhan::MetadataModuleI
 {
   public:
 
 	ImageVipsMetadata() = default;
 
 	std::vector< std::string_view > handleableMimes() override;
-	std::expected< MetadataInfo, ModuleError > parseFile( void* data, std::size_t length, std::string mime_name )
-		override;
+	std::expected< idhan::MetadataInfo, idhan::ModuleError >
+		parseFile( void* data, std::size_t length, std::string mime_name ) override;
 
 	std::string_view name() override { return "JPG Metadata Parser"; }
 };
