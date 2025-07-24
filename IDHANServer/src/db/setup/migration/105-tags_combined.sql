@@ -5,9 +5,6 @@ CREATE TABLE tags_combined
     PRIMARY KEY (tag_id)
 );
 
-CREATE INDEX tags_combined_tag_text_idx
-    ON tags_combined USING gin (tag_text);
-
 CREATE OR REPLACE FUNCTION concat_tag(namespace_text TEXT, subtag_text TEXT) RETURNS TEXT AS
 $$
 BEGIN
@@ -22,7 +19,7 @@ BEGIN
         INSERT INTO tags_combined (tag_id, tag_text)
         VALUES (new.tag_id,
                 concat_tag((SELECT namespace_text FROM tag_namespaces WHERE namespace_id = new.namespace_id LIMIT 1),
-                           (SELECT subtag_text FROM tag_subtags WHERE subtag_id = new.subtag_id LIMIT 1)))
+                           (SELECT subtag_text FROM tag_subtags WHERE subtag_id = new.subtag_id LIMIT 1)));
         RETURN new;
     ELSIF (tg_op = 'DELETE') THEN
         DELETE FROM tags_combined WHERE tag_id = old.tag_id;
