@@ -4,6 +4,7 @@
 
 #include "api/IDHANTagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "fgl/defines.hpp"
 
 namespace idhan::api
 {
@@ -13,8 +14,21 @@ drogon::Task< Json::Value >
 {
 	LOG_DEBUG << "Searching for tag \"{}\"" << search_value;
 
+	const auto wrapped_search_value { '%' + search_value + '%' };
+
 	const auto result { co_await db->execSqlCoro(
-		"SELECT tag_id, tag_text, similarity($1, tag_text) AS similarity FROM tags_combined WHERE tag_text LIKE $1 ORDER BY similarity DESC LIMIT $2",
+
+		R"(
+		SELECT *,
+		       similarity(tag_text, $2)			as similarity,
+		       tag_text = $2					as exact,
+		       similarity(tag_Text, $2) * count as score
+		FROM tags_combined
+		         JOIN total_mapping_counts USING (tag_id)
+		WHERE tag_text LIKE $1
+		ORDER BY exact DESC, score DESC, similarity DESC
+		limit $3)",
+		wrapped_search_value,
 		search_value,
 		limit ) };
 
@@ -56,7 +70,6 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
 	}
 
 	// pre-prep the search_value for searching in the database
-	search_value = '%' + search_value + '%';
 	const auto db { drogon::app().getDbClient() };
 
 	const std::size_t limit { request->getOptionalParameter< std::size_t >( "limit" ).value_or( 10 ) };

@@ -356,7 +356,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 	}
 
 	// pre-prep the search_value for searching in the database
-	search_value = '%' + search_value + '%';
 	const auto db { drogon::app().getDbClient() };
 
 	const auto result { co_await api::getSimilarTags( search_value, db ) };
