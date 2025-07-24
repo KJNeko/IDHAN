@@ -3,7 +3,7 @@ on:
   push:
     branches: [ master ]
 jobs:
-  doxygen:
+  build-and-deploy-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -11,14 +11,84 @@ jobs:
         with:
           submodules: 'true'
 
-      - name: (Doxygen) HTML
+      - name: Prepare documentation structure
+        run: |
+          # Create docs structure
+          mkdir -p docs-output/api
+          mkdir -p docs-output/doxygen
+
+      - name: Extract API documentation
+        run: |
+          # Copy existing Swagger/API docs
+          if [ -f "IDHANServer/src/pages/apidocs.html" ]; then
+            cp IDHANServer/src/pages/apidocs.html docs-output/api/index.html
+          fi
+          
+          # Copy any API-related static files (CSS, JS, images)
+          if [ -d "IDHANServer/src/pages" ]; then
+            find IDHANServer/src/pages -name "*.css" -o -name "*.js" -o -name "*.png" -o -name "*.jpg" -o -name "*.ico" | while read file; do
+              cp "$file" docs-output/api/
+            done
+          fi
+          
+          # Look for any JSON API specs in the source
+          find . -name "*.json" -path "*/api/*" -o -name "openapi.json" -o -name "swagger.json" | while read file; do
+            cp "$file" docs-output/api/
+          done
+
+      - name: (Doxygen) Generate HTML
         uses: mattnotmitt/doxygen-action@v1.1.0
         with:
           doxyfile-path: "./Doxyfile"
           working-directory: '.'
 
-      - name: (Doxygen) Deploy HTML on Github Pages
+      - name: Organize documentation
+        run: |
+          # Copy Doxygen output
+          cp -r docs/out/html/* docs-output/doxygen/
+          
+          # Create main index page that links to both documentation types
+          cat > docs-output/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>IDHAN Documentation</title>
+              <meta charset="utf-8">
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+                  .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                  h1 { color: #333; text-align: center; margin-bottom: 40px; }
+                  .doc-links { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
+                  .doc-card { background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 30px; text-align: center; min-width: 200px; transition: all 0.3s ease; }
+                  .doc-card:hover { border-color: #007bff; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,123,255,0.2); }
+                  .doc-card h2 { margin-top: 0; color: #007bff; }
+                  .doc-card p { color: #6c757d; margin-bottom: 20px; }
+                  .doc-card a { display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; transition: background 0.3s ease; }
+                  .doc-card a:hover { background: #0056b3; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>IDHAN Documentation</h1>
+                  <div class="doc-links">
+                      <div class="doc-card">
+                          <h2>📚 Code Documentation</h2>
+                          <p>Complete API reference and code documentation generated from source code comments.</p>
+                          <a href="./doxygen/index.html">View Doxygen Docs</a>
+                      </div>
+                      <div class="doc-card">
+                          <h2>🔌 API Documentation</h2>
+                          <p>Interactive API documentation with request/response examples and testing interface.</p>
+                          <a href="./api/index.html">View API Docs</a>
+                      </div>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: "${{ github.workspace }}/docs/out/html"
+          publish_dir: "./docs-output"
