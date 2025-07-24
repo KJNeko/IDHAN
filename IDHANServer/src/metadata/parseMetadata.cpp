@@ -84,6 +84,9 @@ drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
 		co_return std::unexpected( createBadRequest(
 			"Record {} does not exist or does not have any file info associated with it", record_id ) );
 
+	if ( record_mime[ 0 ][ "mime_id" ].isNull() ) co_return MetadataInfo {};
+	// co_return std::unexpected( createBadRequest( "Record {} does not have a valid mime type", record_id ) );
+
 	const auto mime_id { record_mime[ 0 ][ "mime_id" ].as< MimeID >() };
 
 	const auto mime_info { co_await db->execSqlCoro( "SELECT * FROM mime WHERE mime_id = $1", mime_id ) };
