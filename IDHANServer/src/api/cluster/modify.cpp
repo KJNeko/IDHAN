@@ -11,7 +11,7 @@ namespace idhan::api
 ClusterAPI::ResponseTask ClusterAPI::modify( drogon::HttpRequestPtr request, const ClusterID cluster_id )
 {
 	auto db { drogon::app().getDbClient() };
-	auto transaction { db->newTransaction() };
+	auto transaction { co_await db->newTransactionCoro() };
 	co_return co_await modifyT( request, cluster_id, transaction );
 }
 

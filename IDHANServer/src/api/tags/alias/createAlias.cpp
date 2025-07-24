@@ -28,7 +28,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagAliases( drogon::H
 	}
 
 	const auto db { drogon::app().getDbClient() };
-	auto transaction { db->newTransaction() };
+	auto transaction { co_await db->newTransactionCoro() };
 
 	const auto tag_domain_id { helpers::getTagDomainID( request ) };
 
