@@ -5,7 +5,7 @@ Note: Replace BUILD_TYPE with either `Release` or `Debug` depending on your requ
 ```
 git clone https://github.com/KJNeko/FGLEngine.git --recursive
 cmake -DCMAKE_BUILD_TYPE=System -B build
-cmake --build build -j<THREAD COUNT>
+cmake --build build -j<THREAD COUNT> --target IDHANServer
 ```
 
 # Build steps (Update)
