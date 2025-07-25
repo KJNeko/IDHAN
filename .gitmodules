@@ -45,7 +45,7 @@
 	url = https://github.com/marzer/tomlplusplus.git
 [submodule "dependencies/libFGL"]
 	path = dependencies/libFGL
-	url = git@github.com:KJNeko/libFGL.git
+	url = https://github.com/KJNeko/libFGL.git
 [submodule "dependencies/trantor"]
 	path = dependencies/trantor
-	url = git@github.com:KJNeko/trantor.git
+	url = https://github.com/KJNeko/trantor.git
