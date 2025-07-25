@@ -41,8 +41,8 @@
 	path = docs/doxygen-awesome-css
 	url = https://github.com/jothepro/doxygen-awesome-css.git
 [submodule "dependencies/tomlplusplus"]
-	path = dependencies/tomlplusplus
-	url = https://github.com/marzer/tomlplusplus.git
+    path = dependencies/tomlplusplus
+    url = https://github.com/marzer/tomlplusplus
 [submodule "dependencies/libFGL"]
 	path = dependencies/libFGL
 	url = https://github.com/KJNeko/libFGL.git
