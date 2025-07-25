@@ -7,19 +7,27 @@ info:
   version: "0.1.0"
   title: IDHAN API
   contact:
-    email: kj16609@lolicon.zip
+    url: https://github.com/KJNeko/IDHAN
 tags:
   - name: public
-    description: Public access
+    description: Publicly accessible endpoints that don't require authentication
   - name: records
-    description: File related operations
+    description: |
+      File record operations including creation, retrieval, tagging, and metadata management.
+      Records represent individual files recorded in IDHAN's system
   - name: tag domains
-    description: Tag grouping
+    description: |
+      Tag domain management for organizing tags into logical groups
   - name: tags
-    description: Tag related operations
+    description: |
+      Tag management operations including creation, search, and relationships
   - name: clusters
-    description: File clusters managed by IDHAN
-
+    description: |
+      File cluster operations for managing groups of related files.
+  - name: search
+    description: Global search functionality across records
+  - name: parents
+    description: Tag parent operations
 
 security:
   - KeyAuth: [ ]
@@ -27,6 +35,8 @@ security:
 paths:
   /version:
     $ref: './paths/version.yaml'
+
+  # Tags
   /tags/create:
     $ref: './paths/tags/create.yaml'
   /tags/search:
@@ -35,6 +45,8 @@ paths:
     $ref: './paths/tags/info.yaml'
   /tags/autocomplete:
     $ref: './paths/tags/autocomplete.yaml'
+
+  # Tag domains
   /tags/domain/create:
     $ref: './paths/tags/domains/create.yaml'
   /tags/domain/list:
@@ -44,9 +56,11 @@ paths:
   /tags/domain/{domain_id}/delete:
     $ref: './paths/tags/domains/delete.yaml'
 
+  # Tag Relationships
   /tags/parents/create:
     $ref: './paths/tags/relationships/parent/create.yaml'
 
+  # Recods
   /records/create:
     $ref: './paths/records/create.yaml'
   /records/tags/add:

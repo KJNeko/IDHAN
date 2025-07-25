@@ -1,8 +1,18 @@
 type: object
 properties:
+  branch:
+    type: string
+    example: "master"
+  build:
+    type: string
+    example: "Debug"
+  commit:
+    type: string
+    example: "5f9617d"
   idhan_server_version:
     $ref: './Version.yaml'
   idhan_api_version:
     $ref: './Version.yaml'
   hydrus_api_version:
     type: integer
+    example: 80

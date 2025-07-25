@@ -3,13 +3,13 @@ properties:
   string:
     description: "Simple string for easy display"
     type: string
-    example: "1.0.0"
+    example: "1.2.3"
   major:
     type: integer
     example: 1
   minor:
     type: integer
-    example: 0
+    example: 2
   patch:
     type: integer
-    example: 0
+    example: 3
