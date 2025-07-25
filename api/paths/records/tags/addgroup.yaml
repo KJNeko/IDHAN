@@ -2,7 +2,8 @@ post:
   tags:
     - tags
     - records
-  summary: Adds a tag, or tags to a given set of records.
+  summary: Adds tags to multiple records
+  description: Bulk operation to add tags or tag sets to multiple records. For single record operations, use /records/{record_id}/tags/add
   parameters:
     - name: tag_domain_id
       in: query
@@ -15,70 +16,48 @@ post:
       application/json:
         schema:
           type: object
+          required:
+            - records
           properties:
             records:
               type: array
               items:
                 $ref: '../../../schemas/RecordID.yaml'
+              minItems: 1
             tags:
               type: array
               items:
                 $ref: '../../../schemas/TagInput.yaml'
+              description: Tags to add to all specified records
             sets:
               type: array
               items:
                 type: array
-                $ref: '../../../schemas/TagInput.yaml'
+                items:
+                  $ref: '../../../schemas/TagInput.yaml'
+              description: Individual tag sets for each record (must match records array length)
+          oneOf:
+            - required: [ tags ]
+            - required: [ sets ]
         examples:
-          IDs:
-            summary: An array of multiple tag ids
+          bulk_tags:
+            summary: Add same tags to multiple records
             value:
-              records:
-                - 1
-                - 2
-                - 3
-              tags:
-                - 1
-                - 2
-                - 3
-          Strings:
-            summary: An array of strings
-            value:
-              records:
-                - 1
-                - 2
-                - 3
+              records: [ 1, 2, 3 ]
               tags:
                 - "character:toujou koneko"
                 - "catgirl"
                 - "series:highschool dxd"
-          Tag objects:
-            summary: An array of tag objects
+          individual_sets:
+            summary: Add different tag sets to each record
             value:
-              records:
-                - 1
-                - 2
-                - 3
-              tags:
-                - namespace: "character"
-                  subtag: "toujou koneko"
-                - namespace: 1
-                  subtag: 1
-          Sets:
-            summary: A set of records and an array of tag sets to add to each individual record
-            value:
-              records:
-                - 1
-                - 2
-                - 3
+              records: [ 1, 2, 3 ]
               sets:
-                - - { namespace: "character", subtag: "toujou koneko" }
-                  - { namespace: 1, subtag: 1 }
-                - - { namespace: "character", subtag: "toujou koneko" }
-                  - { namespace: 3, subtag: 5 }
-                - - { namespace: "character", subtag: "toujou koneko" }
-                  - { namespace: 9, subtag: 2 }
-  200:
-    description: All tags added successfully
-  400:
-    description: One or more ids were invalid
+                - [ { namespace: "character", subtag: "toujou koneko" } ]
+                - [ { namespace: "character", subtag: "toujou koneko" }, { namespace: 3, subtag: 5 } ]
+                - [ { namespace: 9, subtag: 2 } ]
+  responses:
+    200:
+      description: Tags added successfully to all records
+    400:
+      description: Invalid request data
