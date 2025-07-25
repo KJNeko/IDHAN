@@ -10,7 +10,11 @@ post:
           type: object
           properties:
             sha256:
-              $ref: '../../schemas/SHA256.yaml'
+              oneOf:
+                - $ref: '../../schemas/SHA256.yaml'
+                - type: array
+                  items:
+                    $ref: '../../schemas/SHA256.yaml'
         examples:
           single:
             summary: Single hash
@@ -22,11 +26,33 @@ post:
               sha256: [ '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29', '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29' ]
   responses:
     200:
-      description: Successfully imported all records
+      description: Records created successfully
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              record_id:
-                type: integer
+            oneOf:
+              - type: object
+                properties:
+                  record_id:
+                    type: integer
+                example:
+                  record_id: 1234
+              - type: object
+                properties:
+                  record_ids:
+                    type: array
+                    items:
+                      type: integer
+                example:
+                  record_ids: [ 1234, 5678 ]
+          examples:
+            single:
+              summary: Single hash
+              value:
+                record_id: 1234
+            array:
+              summary: Array of hashes
+              value:
+                record_ids: [ 1234, 5678 ]
+    400:
+      description: Bad request
