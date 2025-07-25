@@ -134,22 +134,30 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::info( "Logging show info" );
 
 	std::size_t hardware_count { std::min( static_cast< std::size_t >( std::thread::hardware_concurrency() ), 4ul ) };
-	std::size_t rest_count { hardware_count / 4 };
-	std::size_t db_count { hardware_count };
+	std::size_t io_threads { hardware_count / 4 };
+	std::size_t db_threads { hardware_count / 4 };
 
 	constexpr std::string_view log_directory { "./log/drogon" };
 
 	std::filesystem::create_directories( log_directory );
 
-	drogon::app()
-		.setLogPath( "./" )
-		.setLogLevel( trantor::Logger::kInfo )
-		.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT )
-		.setThreadNum( rest_count )
-		.setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() )
-		.setDocumentRoot( "./pages" )
-		.setExceptionHandler( exceptionHandler )
-		.setLogPath( std::string( log_directory ), "", 1024 * 1024 * 1024, 8, true );
+	auto& app = drogon::app()
+	                .setLogPath( "./" )
+	                .setLogLevel( trantor::Logger::kInfo )
+	                .setThreadNum( io_threads )
+	                .setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() )
+	                .setDocumentRoot( "./pages" )
+	                .setExceptionHandler( exceptionHandler )
+	                .setLogPath( std::string( log_directory ), "", 1024 * 1024 * 1024, 8, true );
+
+	if ( true )
+	{
+		app.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT );
+	}
+	else
+	{
+		app.addListener( "0.0.0.0", IDHAN_DEFAULT_PORT );
+	}
 
 	drogon::orm::PostgresConfig config;
 	config.host = arguments.hostname;
@@ -157,7 +165,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	config.databaseName = arguments.dbname;
 	config.username = arguments.user;
 	config.password = arguments.password;
-	config.connectionNumber = db_count;
+	config.connectionNumber = db_threads;
 	config.name = "default";
 	config.isFast = false;
 	config.characterSet = "UTF-8";
