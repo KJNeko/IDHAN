@@ -10,7 +10,6 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "api/helpers/tags/tags.hpp"
-#include "constants/SearchOrder.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
@@ -25,7 +24,7 @@
 namespace idhan::hyapi
 {
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::unsupported( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::unsupported( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	Json::Value root;
 	root[ "status" ] = 410;

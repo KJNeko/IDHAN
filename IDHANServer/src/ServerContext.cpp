@@ -198,7 +198,7 @@ void ServerContext::run()
 {
 	log::server::info( "Starting runtime" );
 
-	trantor::Logger::setOutputFunction( trantorHook, []() {} );
+	trantor::Logger::setOutputFunction( trantorHook, []() noexcept {} );
 
 	log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
 	log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );

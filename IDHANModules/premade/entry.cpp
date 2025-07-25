@@ -2,8 +2,11 @@
 // Created by kj16609 on 6/11/25.
 //
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 #include <spdlog/spdlog.h>
 #include <vips/vips.h>
+#pragma GCC diagnostic pop
 
 #include <format>
 #include <functional>

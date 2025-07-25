@@ -9,8 +9,7 @@
 namespace idhan
 {
 
-std::string
-	createFilter( std::uint32_t index, const std::vector< TagID >& tag_ids, const HydrusDisplayType display_mode )
+std::string createFilter( std::size_t index, const std::vector< TagID >& tag_ids, const HydrusDisplayType display_mode )
 {
 	std::string str {};
 	str += format_ns::format( " filter_{}", index );

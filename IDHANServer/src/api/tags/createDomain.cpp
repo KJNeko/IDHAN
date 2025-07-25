@@ -24,7 +24,7 @@ drogon::Task< std::optional< Json::Value > >
 
 	Json::Value out_json {};
 
-	out_json[ "domain_id" ] = search[ 0 ][ 0 ].as< TagDomainID >();
+	out_json[ "domain_id" ] = static_cast< Json::UInt64 >( search[ 0 ][ 0 ].as< TagDomainID >() );
 	out_json[ "domain_name" ] = search[ 0 ][ 1 ].as< std::string >();
 
 	co_return out_json;
@@ -88,7 +88,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagDomain( drogon::Ht
 	FGL_UNREACHABLE();
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagDomains( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagDomains( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };
 
@@ -115,7 +115,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagDomains( drogon::Http
 }
 
 drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
-	getTagDomainInfo( drogon::HttpRequestPtr request, const TagDomainID domain_id )
+	getTagDomainInfo( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID domain_id )
 {
 	auto db { drogon::app().getDbClient() };
 
