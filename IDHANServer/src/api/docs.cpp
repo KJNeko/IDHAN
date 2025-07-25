@@ -24,12 +24,12 @@ void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& ca
 {
 	if ( auto ifs = std::ifstream( "./pages/apidocs.html", std::ios::ate ); ifs )
 	{
-		const std::size_t size { ifs.tellg() };
+		const std::streamoff size { ifs.tellg() };
 		ifs.seekg( 0, std::ios::beg );
 
 		std::string str {};
-		str.resize( size );
-		ifs.read( str.data(), str.size() );
+		str.resize( static_cast< std::size_t >( size ) );
+		ifs.read( str.data(), size );
 
 		// create http response
 		const auto response { drogon::HttpResponse::newHttpResponse() };

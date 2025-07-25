@@ -7,6 +7,8 @@
 #include <iostream>
 #include <source_location>
 
+#include "logging/format_ns.hpp"
+
 namespace idhan
 {
 inline void fixme( const std::source_location location = std::source_location::current() )
