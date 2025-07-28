@@ -17,31 +17,12 @@ void IDHANApi::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&
 
 	// log::info( "Attempted to get {}", path );
 
-	callback( drogon::HttpResponse::newFileResponse( "./pages" + path ) );
+	callback( drogon::HttpResponse::newFileResponse( "./static" + path ) );
 }
 
 void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
-	if ( auto ifs = std::ifstream( "./pages/apidocs.html", std::ios::ate ); ifs )
-	{
-		const std::streamoff size { ifs.tellg() };
-		ifs.seekg( 0, std::ios::beg );
-
-		std::string str {};
-		str.resize( static_cast< std::size_t >( size ) );
-		ifs.read( str.data(), size );
-
-		// create http response
-		const auto response { drogon::HttpResponse::newHttpResponse() };
-		response->setContentTypeCode( drogon::ContentType::CT_TEXT_HTML );
-
-		response->setBody( str );
-
-		callback( response );
-		return;
-	}
-
-	callback( createInternalError( "API docs not provided" ) );
+	callback( drogon::HttpResponse::newFileResponse( "./static/apidocs.html" ) );
 }
 
 } // namespace idhan::api

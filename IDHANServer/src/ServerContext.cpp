@@ -31,7 +31,7 @@ void ServerContext::setupCORSSupport() const
 			if ( args.testmode )
 				log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
 			else
-				log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
+				log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
 
 			if ( !request->path().starts_with( "/hyapi" ) || request->method() != drogon::Options )
 			{
@@ -146,9 +146,13 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	                .setLogLevel( trantor::Logger::kInfo )
 	                .setThreadNum( io_threads )
 	                .setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() )
-	                .setDocumentRoot( "./pages" )
+	                .setDocumentRoot( "./static" )
 	                .setExceptionHandler( exceptionHandler )
 	                .setLogPath( std::string( log_directory ), "", 1024 * 1024 * 1024, 8, true );
+
+	app.registerCustomExtensionMime( "wasm", "application/wasm" );
+
+	app.setFileTypes( { "html", "wasm", "svg", "js", "png", "jpg" } );
 
 	if ( true )
 	{
