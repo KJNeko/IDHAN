@@ -39,7 +39,7 @@ endif ()
 
 # Copy page info to the output directory
 
-file(GLOB_RECURSE PAGE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/pages/*")
+file(GLOB_RECURSE PAGE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/static/*")
 set(PAGE_OUTPUTS "")
 
 foreach (PAGE ${PAGE_FILES})
@@ -100,3 +100,7 @@ add_custom_target(IDHANConfig DEPENDS ${CONFIG_OUTPUT})
 add_dependencies(IDHANServer IDHANConfig)
 
 add_dependencies(IDHANServer IDHANPremadeModules)
+
+if (DEFINED IDHAN_WEBUI AND IDHAN_WEBUI EQUAL ON)
+	add_dependencies(IDHANServer IDHANWebUI)
+endif ()
