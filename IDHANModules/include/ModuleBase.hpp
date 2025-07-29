@@ -16,6 +16,13 @@ enum ModuleTypeFlags : std::uint16_t
 
 using ModuleType = std::uint16_t;
 
+struct ModuleVersion
+{
+	std::size_t m_major { 1 };
+	std::size_t m_minor { 0 };
+	std::size_t m_patch { 0 };
+};
+
 class FGL_EXPORT ModuleBase
 {
   public:
@@ -27,12 +34,8 @@ class FGL_EXPORT ModuleBase
 	virtual bool threadSafe() { return false; }
 
 	virtual ModuleType type() = 0;
-};
 
-struct ModuleInfo
-{
-	std::string_view m_name { "IDHAN Premade Module" };
-	std::size_t m_version { 1 };
+	virtual ModuleVersion version() = 0;
 };
 
 using IDHANModule = ModuleBase;

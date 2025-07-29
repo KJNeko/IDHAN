@@ -78,8 +78,8 @@ void ModuleLoader::loadModules()
 
 			log::info( "Getting modules from module" );
 
-			using EntryFunc = void* (*)();
-			auto getModulesFunc { reinterpret_cast< EntryFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
+			using VoidFunc = void* (*)();
+			auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
 			if ( !getModulesFunc )
 			{
 				log::error( "Failed to get getModulesFunc: {}", dlerror() );
@@ -87,7 +87,7 @@ void ModuleLoader::loadModules()
 			}
 
 			using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )();
-			GetModulesFunc getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
+			auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
 
 			if ( !getModules )
 			{
