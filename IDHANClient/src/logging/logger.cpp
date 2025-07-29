@@ -11,6 +11,12 @@
 namespace idhan::logging
 {
 
+std::shared_ptr< spdlog::logger > getLogger()
+{
+	const auto& ctx { IDHANClient::instance() };
+	return ctx.getLogger();
+}
+
 void logResponse( QNetworkReply* reply )
 {
 	if ( !reply ) return;

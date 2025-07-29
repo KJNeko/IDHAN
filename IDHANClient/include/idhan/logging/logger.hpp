@@ -14,6 +14,7 @@
 #include <spdlog/spdlog.h>
 #pragma GCC diagnostic pop
 
+#include "idhan/IDHANClient.hpp"
 #include "logging/format_ns.hpp"
 
 class QNetworkReply;
@@ -35,13 +36,12 @@ class QNetworkReply;
 namespace idhan::logging
 {
 
-inline static constexpr auto IDHAN_CLIENT_LOGGER_NAME { "idhan-client" };
+std::shared_ptr< spdlog::logger > getLogger();
 
 template < typename... Ts >
 void notify( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
-	//TODO: Get this name from the context
-	auto logger = spdlog::get( IDHAN_CLIENT_LOGGER_NAME );
+	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
 	logger->info( fmt, std::forward< Ts >( ts )... );
 }
@@ -49,7 +49,7 @@ void notify( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 template < typename... Ts >
 void debug( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
-	auto logger = spdlog::get( IDHAN_CLIENT_LOGGER_NAME );
+	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
 	logger->debug( fmt, std::forward< Ts >( ts )... );
 }
@@ -57,7 +57,7 @@ void debug( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 template < typename... Ts >
 void info( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
-	auto logger = spdlog::get( IDHAN_CLIENT_LOGGER_NAME );
+	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
 	logger->info( fmt, std::forward< Ts >( ts )... );
 }
@@ -65,7 +65,7 @@ void info( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 template < typename... Ts >
 void warn( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
-	auto logger = spdlog::get( IDHAN_CLIENT_LOGGER_NAME );
+	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
 	logger->warn( fmt, std::forward< Ts >( ts )... );
 }
@@ -73,7 +73,7 @@ void warn( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 template < typename... Ts >
 void error( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
-	auto logger = spdlog::get( IDHAN_CLIENT_LOGGER_NAME );
+	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
 	logger->error( fmt, std::forward< Ts >( ts )... );
 }
@@ -81,7 +81,7 @@ void error( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 template < typename T >
 void error( const T& msg )
 {
-	auto logger = spdlog::get( IDHAN_CLIENT_LOGGER_NAME );
+	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
 	logger->error( msg );
 }
@@ -89,7 +89,7 @@ void error( const T& msg )
 template < typename... Ts >
 void critical( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
-	auto logger = spdlog::get( IDHAN_CLIENT_LOGGER_NAME );
+	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
 	logger->critical( fmt, std::forward< Ts >( ts )... );
 }

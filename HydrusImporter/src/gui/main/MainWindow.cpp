@@ -19,6 +19,7 @@ MainWindow::MainWindow( QWidget* parent ) :
   QMainWindow( parent ),
   m_client(
 	  std::make_unique< idhan::IDHANClient >(
+		  "Importer",
 		  settings.value( "hostname", "localhost" ).toString(),
 		  settings.value( "port", idhan::IDHAN_DEFAULT_PORT ).toUInt() ) ),
   ui( new Ui::MainWindow )
