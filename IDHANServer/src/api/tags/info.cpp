@@ -49,7 +49,14 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagInfo( drogon::HttpReq
 
 	{
 		//TODO: Figure out how many files use this tag
-		root[ "items_count" ] = 0;
+		const auto count_result {
+			co_await db->execSqlCoro( "SELECT count FROM total_mapping_counts WHERE tag_id = $1", tag_id )
+		};
+
+		if ( !count_result.empty() )
+			root[ "items_count" ] = count_result[ 0 ][ 0 ].as< std::size_t >();
+		else
+			root[ "items_count" ] = 0;
 	}
 
 	// find namespace info
