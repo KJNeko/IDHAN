@@ -114,23 +114,22 @@ IDHANClient& IDHANClient::instance()
 	return *m_instance;
 }
 
-IDHANClient::IDHANClient() : logger( spdlog::stdout_color_mt( logging::IDHAN_CLIENT_LOGGER_NAME ) ), network( nullptr )
+IDHANClient::IDHANClient( const QString& client_name, const QString& hostname, const qint16 port, const bool use_ssl ) :
+  m_logger( spdlog::stdout_color_mt( client_name.toStdString() ) ),
+  network( nullptr )
 {
+	if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
+	m_instance = this;
+
 #ifndef NDEBUG
-	logger->set_level( spdlog::level::debug );
+	m_logger->set_level( spdlog::level::debug );
 #else
-	logger->set_level( spdlog::level::info );
+	m_logger->set_level( spdlog::level::info );
 #endif
 
 	logging::debug( "Debug logging enabled" );
 	logging::info( "Info logging enabled" );
 
-	if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
-	m_instance = this;
-}
-
-IDHANClient::IDHANClient( const QString& hostname, const qint16 port, const bool use_ssl ) : IDHANClient()
-{
 	if ( QCoreApplication::instance() == nullptr )
 		throw std::runtime_error(
 			"IDHANClient expects a Qt instance. Please use QGuiApplication of QApplication before constructing IDHANClient" );
@@ -317,8 +316,8 @@ IDHANClient::~IDHANClient()
 {
 	//cleanup logger we created
 	spdlog::info( "Destroying logger" );
-	logger->flush();
-	spdlog::drop( logging::IDHAN_CLIENT_LOGGER_NAME );
+	m_logger->flush();
+	spdlog::drop( m_logger->name() );
 	m_instance = nullptr;
 }
 

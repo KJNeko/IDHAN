@@ -58,7 +58,7 @@ using IDHANErrorHandler = std::function< void( QNetworkReply*, QNetworkReply::Ne
 
 class IDHANClient
 {
-	std::shared_ptr< spdlog::logger > logger { nullptr };
+	std::shared_ptr< spdlog::logger > m_logger { nullptr };
 	std::size_t connection_attempts { 0 };
 
 	inline static IDHANClient* m_instance { nullptr };
@@ -72,22 +72,25 @@ class IDHANClient
 
   public:
 
+	std::shared_ptr< spdlog::logger > getLogger() const { return m_logger; }
+
 	void setUrlInfo( QUrl& url );
 
 	static IDHANClient& instance();
 
 	Q_DISABLE_COPY_MOVE( IDHANClient );
 
-	IDHANClient();
+	IDHANClient() = delete;
 
 	/**
 	* @brief Upon construction the class will attempt to get the version info from the IDHAN server target.
 	* @note Qt must be initalized before construction of this class. Either a QGuiApplication or an QApplication instance
+	* @param client_name Name of the client that shows up in the server logs for network logs and in the logging statements
 	* @param hostname
 	* @param port
 	* @param use_ssl
 	*/
-	IDHANClient( const QString& hostname, qint16 port, bool use_ssl = false );
+	IDHANClient( const QString& client_name, const QString& hostname, qint16 port, bool use_ssl = false );
 
 	~IDHANClient();
 
