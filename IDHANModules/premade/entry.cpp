@@ -18,12 +18,6 @@
 
 using namespace idhan;
 
-ModuleInfo IDHANEntry()
-{
-	//TODO: Fill out ModuleInfo
-	return {};
-}
-
 std::vector< std::shared_ptr< IDHANModule > > getModules()
 {
 	std::vector< std::shared_ptr< IDHANModule > > ret { std::make_shared< ImageVipsMetadata >(),
@@ -33,11 +27,6 @@ std::vector< std::shared_ptr< IDHANModule > > getModules()
 }
 
 extern "C" {
-
-void* getEntryFunc()
-{
-	return reinterpret_cast< void* >( &IDHANEntry );
-}
 
 void* getModulesFunc()
 {

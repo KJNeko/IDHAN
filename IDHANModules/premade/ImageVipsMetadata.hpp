@@ -20,4 +20,6 @@ class ImageVipsMetadata final : public idhan::MetadataModuleI
 		parseFile( void* data, std::size_t length, std::string mime_name ) override;
 
 	std::string_view name() override { return "JPG Metadata Parser"; }
+
+	idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 };
