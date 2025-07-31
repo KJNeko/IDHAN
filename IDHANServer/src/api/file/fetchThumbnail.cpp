@@ -3,7 +3,6 @@
 //
 
 #include <fstream>
-#include <qimage.h>
 
 #include "api/IDHANRecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -13,6 +12,7 @@
 #include "logging/log.hpp"
 #include "metadata/FileMappedData.hpp"
 #include "modules/ModuleLoader.hpp"
+#include "trantor/utils/ConcurrentTaskQueue.h"
 
 namespace idhan::api
 {
@@ -33,8 +33,7 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
 	co_return file_location;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
-	fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	auto db { drogon::app().getDbClient() };
 
@@ -71,13 +70,17 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 		if ( !record_path.has_value() ) co_return record_path.error();
 
-		FileMappedData data { record_path.value() };
+		// FileMappedData data { record_path.value() };
+		FileIOUring io_uring { record_path.value() };
 
 		std::size_t height { 256 };
 		std::size_t width { 256 };
 
+		const auto file_size { std::filesystem::file_size( record_path.value() ) };
+		std::vector< std::byte > data { co_await io_uring.read( 0, file_size ) };
+
 		const auto thumbnail_info {
-			thumbnailer->createThumbnail( data.data(), data.length(), width, height, mime_name )
+			thumbnailer->createThumbnail( data.data(), data.size(), width, height, mime_name )
 		};
 		if ( !thumbnail_info.has_value() )
 			co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
