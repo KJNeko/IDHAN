@@ -4,13 +4,14 @@
 
 #include <fstream>
 
-#include "api/IDHANRecordAPI.hpp"
+#include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
+#include "drogon/HttpAppFramework.h"
 #include "drogon/utils/coroutine.h"
-#include "logging/log.hpp"
-#include "metadata/FileMappedData.hpp"
+#include "filesystem/IOUring.hpp"
+#include "logging/ScopedTimer.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "trantor/utils/ConcurrentTaskQueue.h"
 
@@ -45,7 +46,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		co_return createBadRequest(
 			"Record {} does not exist or does not have any file info associated with it", record_id );
 
-	const bool force_regen { request->getOptionalParameter< bool >( "regen" ).value_or( false ) };
+	const bool force_regenerate { request->getOptionalParameter< bool >( "regenerate" ).value_or( false ) };
 
 	const auto mime_name { record_info[ 0 ][ "mime_name" ].as< std::string >() };
 	const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
@@ -54,14 +55,16 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	if ( !thumbnail_location_e.has_value() ) co_return thumbnail_location_e.error();
 
-	if ( !std::filesystem::exists( thumbnail_location_e.value() ) || force_regen )
+	if ( !std::filesystem::exists( thumbnail_location_e.value() ) || force_regenerate )
 	{
+		using namespace std::chrono_literals;
+		logging::ScopedTimer thumbnail_timer { "Thumbnail Process", 5s };
 		//We must generate the thumbnail
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 
 		if ( thumbnailers.size() == 0 )
 		{
-			co_return createBadRequest( "No thumbnailer for mime type {} given", mime_name );
+			co_return createBadRequest( "No thumbnailer for mime type {} provided by modules", mime_name );
 		}
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
@@ -82,22 +85,35 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		const auto thumbnail_info {
 			thumbnailer->createThumbnail( data.data(), data.size(), width, height, mime_name )
 		};
+
 		if ( !thumbnail_info.has_value() )
 			co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 
 		std::filesystem::create_directories( thumbnail_location_e.value().parent_path() );
 
-		const auto& thumbnail_data = thumbnail_info.value().data;
+		// const auto& thumbnail_data = thumbnail_info.value().data;
+		auto thumbnail_data {
+			std::make_shared< std::vector< std::uint8_t > >( std::move( thumbnail_info.value().data ) )
+		};
 
-		if ( std::ofstream ofs( thumbnail_location_e.value(), std::ios::binary ); ofs )
-		{
-			ofs.write( reinterpret_cast< const char* >( thumbnail_data.data() ), thumbnail_data.size() );
-		}
+		const auto thumbnail_location { thumbnail_location_e.value() };
+
+		//TODO: io_uring for saving this data to a file
+		auto save_coro { drogon::queueInLoopCoro(
+			drogon::app().getLoop(),
+			[ thumbnail_data, thumbnail_location ]()
+			{
+				if ( std::ofstream ofs( thumbnail_location, std::ios::binary ); ofs )
+				{
+					ofs.write( reinterpret_cast< const char* >( thumbnail_data->data() ), thumbnail_data->size() );
+				}
+			} ) };
+
+		co_await save_coro;
 	}
 
-	auto response {
-		drogon::HttpResponse::newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG )
-	};
+	auto response { drogon::HttpResponse::newFileResponse(
+		thumbnail_location_e.value(), thumbnail_location_e.value().filename(), drogon::ContentType::CT_IMAGE_PNG ) };
 
 	const auto duration { std::chrono::hours( 1 ) };
 
