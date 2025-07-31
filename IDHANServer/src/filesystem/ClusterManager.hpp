@@ -15,6 +15,7 @@
 #include <future>
 
 #include "IDHANTypes.hpp"
+#include "IOUring.hpp"
 
 namespace idhan
 {
@@ -70,6 +71,8 @@ class ClusterManager
 
 		STORES_ALL = STORES_THUMBNAILS | STORES_ARCHIVES | STORES_GENERATORS | STORES_FILES
 	};
+
+	IOUring m_io_uring;
 
 	struct ClusterInfo
 	{

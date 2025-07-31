@@ -28,7 +28,7 @@ else ()
 endif ()
 
 target_link_libraries(IDHANServer PUBLIC spdlog drogon)
-target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core Qt6::Multimedia tomlplusplus::tomlplusplus)
+target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core Qt6::Multimedia tomlplusplus::tomlplusplus uring)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
 target_link_libraries(IDHANServer PUBLIC IDHANModules)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
