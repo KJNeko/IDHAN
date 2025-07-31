@@ -4,12 +4,17 @@
 
 #include "SearchBuilder.hpp"
 
+#include "api/helpers/helpers.hpp"
 #include "logging/log.hpp"
 
 namespace idhan
 {
 
-std::string createFilter( std::size_t index, const std::vector< TagID >& tag_ids, const HydrusDisplayType display_mode )
+std::string createFilter(
+	std::size_t index,
+	const std::vector< TagID >& tag_ids,
+	const HydrusDisplayType display_mode,
+	const bool filter_domains )
 {
 	std::string str {};
 	str += format_ns::format( " filter_{}", index );
@@ -28,8 +33,12 @@ std::string createFilter( std::size_t index, const std::vector< TagID >& tag_ids
 			break;
 	}
 
-	str += format_ns::format( " WHERE tag_id = {}", tag_ids[ index ] );
-	str += " AND domain_id = ANY($1)";
+	// only join the previous searches
+	// This join will allow for AND searches
+	if ( index > 0 ) str += format_ns::format( " JOIN filter_{} USING (record_id)", index - 1 );
+
+	str += format_ns::format( " WHERE tm.tag_id = {}", tag_ids[ index ] );
+	if ( filter_domains ) str += " AND tm.domain_id = ANY($1)";
 	if ( index != 0 )
 	{
 		str += format_ns::format(
@@ -41,7 +50,25 @@ std::string createFilter( std::size_t index, const std::vector< TagID >& tag_ids
 	return str;
 }
 
-std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes )
+drogon::Task< drogon::orm::Result > SearchBuilder::query(
+	const drogon::orm::DbClientPtr db,
+	const std::vector< TagDomainID > domain_ids,
+	const bool return_ids,
+	const bool return_hashes )
+{
+	std::string domain_list { api::helpers::pgArrayify( domain_ids ) };
+
+	co_return co_await db
+		->execSqlCoro( construct( return_ids, return_hashes, /* filter_domains */ true ), domain_list );
+}
+
+drogon::Task< drogon::orm::Result > SearchBuilder::
+	query( const drogon::orm::DbClientPtr db, const bool return_ids, const bool return_hashes )
+{
+	co_return co_await db->execSqlCoro( construct( return_ids, return_hashes, /* filter_domains */ false ) );
+}
+
+std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes, const bool filter_domains )
 {
 	//TODO: Sort tag ids to get the most out of each filter.
 
@@ -50,7 +77,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	query += "WITH";
 	for ( std::size_t i = 0; i < m_tags.size(); ++i )
 	{
-		query += createFilter( i, m_tags, m_display_mode );
+		query += createFilter( i, m_tags, m_display_mode, filter_domains );
 		if ( i + 1 < m_tags.size() ) query += ",";
 		query += "\n";
 	}
@@ -134,7 +161,9 @@ void SearchBuilder::setSortType( const SortType type )
 }
 
 void SearchBuilder::setSortOrder( const SortOrder value )
-{}
+{
+	m_order = value;
+}
 
 void SearchBuilder::filterTagDomain( const TagDomainID value )
 {
@@ -149,7 +178,7 @@ void SearchBuilder::setTags( const std::vector< TagID >& vector )
 	m_tags = std::move( vector );
 }
 
-void SearchBuilder::setDisplay( HydrusDisplayType type )
+void SearchBuilder::setDisplay( const HydrusDisplayType type )
 {
 	m_display_mode = type;
 }

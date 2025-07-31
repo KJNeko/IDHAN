@@ -22,6 +22,9 @@
 #include "drogon/HttpRequest.h"
 #pragma GCC diagnostic pop
 
+#include "drogon/orm/DbClient.h"
+#include "drogon/orm/Result.h"
+#include "drogon/utils/coroutine.h"
 #include "hydrus_client_constants_gen.hpp"
 
 namespace idhan
@@ -157,9 +160,8 @@ constexpr SortType hyToIDHANSortType( const HydrusSortType hy_sort )
 	}
 }
 
-struct SearchBuilder
+class SearchBuilder
 {
-	std::string inital_query { "SELECT tag_id FROM file_records" };
 	std::string file_records_filter {};
 
 	//! Contains a list of all required joins for this query and it's sorting options
@@ -180,7 +182,22 @@ struct SearchBuilder
 
 	SearchBuilder() = default;
 
-	std::string construct( bool return_ids = true, bool return_hashes = false );
+	drogon::Task< drogon::orm::Result > query(
+		drogon::orm::DbClientPtr db,
+		std::vector< TagDomainID > domain_ids,
+		bool return_ids = true,
+		bool return_hashes = false );
+
+	drogon::Task< drogon::orm::Result >
+		query( drogon::orm::DbClientPtr db, bool return_ids = true, bool return_hashes = false );
+
+	/**
+	 * @brief Constructs a query to be used. $1 is expected to be an array of domain_ids
+	 * @param return_ids
+	 * @param return_hashes
+	 * @return
+	 */
+	std::string construct( bool return_ids = true, bool return_hashes = false, bool filter_domains = false );
 	void setSortType( SortType type );
 
 	void setSortOrder( SortOrder value );
