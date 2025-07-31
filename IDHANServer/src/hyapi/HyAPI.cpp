@@ -209,11 +209,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		builder.setDisplay( HydrusDisplayType::DISPLAY );
 	}
 
-	std::string query { builder.construct() };
-
-	log::debug( "Generated search: {}", query );
-
-	const auto result { co_await db->execSqlCoro( query, "{1,2,3,4,5}" ) };
+	const auto result { co_await builder.query( db, {} ) };
 
 	Json::Value out {};
 	Json::Value file_ids {};

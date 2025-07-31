@@ -31,7 +31,7 @@ class TagSearch
 	drogon::orm::DbClientPtr m_db;
 	TagDomainID m_domain;
 
-	drogon::Task< std::expected< unsigned, std::shared_ptr< drogon::HttpResponse > > > idealize( TagID id );
+	ExpectedTask< TagID > idealize( TagID id );
 
 	std::vector< TagID > m_ids {};
 
