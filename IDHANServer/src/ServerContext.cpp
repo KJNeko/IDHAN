@@ -31,7 +31,7 @@ void ServerContext::setupCORSSupport() const
 			if ( args.testmode )
 				log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
 			else
-				log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
+				log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
 
 			if ( !request->path().starts_with( "/hyapi" ) || request->method() != drogon::Options )
 			{
@@ -134,8 +134,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::info( "Logging show info" );
 
 	std::size_t hardware_count { std::min( static_cast< std::size_t >( std::thread::hardware_concurrency() ), 4ul ) };
-	std::size_t io_threads { hardware_count / 4 };
-	std::size_t db_threads { hardware_count / 4 };
+	std::size_t io_threads { hardware_count };
+	std::size_t db_threads { io_threads * 2 };
 
 	constexpr std::string_view log_directory { "./log/drogon" };
 
