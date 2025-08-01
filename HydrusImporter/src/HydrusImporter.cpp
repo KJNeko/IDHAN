@@ -4,8 +4,6 @@
 
 #include "HydrusImporter.hpp"
 
-#include <QCoreApplication>
-#include <QFutureWatcher>
 #include <QtConcurrentRun>
 
 #include "hydrus_constants.hpp"
@@ -44,8 +42,6 @@ HydrusImporter::HydrusImporter( const std::filesystem::path& path ) : m_path( pa
 
 HydrusImporter::~HydrusImporter()
 {
-	//TODO: Cleanup after ourselves
-
 	sqlite3_close_v2( master_db );
 	sqlite3_close_v2( client_db );
 	sqlite3_close_v2( mappings_db );

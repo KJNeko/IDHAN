@@ -2,12 +2,12 @@
 // Created by kj16609 on 7/21/25.
 //
 
-#include "api/IDHANMaintenanceAPI.hpp"
+#include "api/APIMaintenance.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > IDHANMaintenanceAPI::postgresqlStorageSunData( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > APIMaintenance::postgresqlStorageSunData( drogon::HttpRequestPtr request )
 {
 	Json::Value root {};
 	root[ "name" ] = "root";

@@ -55,11 +55,11 @@
 namespace idhan::api
 {
 
-class IDHANAuth : public drogon::HttpMiddleware< IDHANAuth >
+class APIAuth : public drogon::HttpMiddleware< APIAuth >
 {
   public:
 
-	IDHANAuth() = default;
+	APIAuth() = default;
 
 	void invoke(
 		const drogon::HttpRequestPtr& req,

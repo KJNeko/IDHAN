@@ -4,7 +4,7 @@
 
 #include "HyAPI.hpp"
 #include "IDHANTypes.hpp"
-#include "api/IDHANTagAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "api/record/urls/urls.hpp"
@@ -41,7 +41,6 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	getMetadataInfo( drogon::orm::DbClientPtr db, const RecordID record_id, Json::Value data )
 {
-	// TODO: Provide height/width information
 	auto metadata {
 		co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id )
 	};
@@ -98,8 +97,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ) )
 	{
 		// convert hashes to their respective record_ids
-		if ( auto result = co_await convertQueryRecordIDs( request, hashes_opt.value(), db ); !result.has_value() )
-			co_return result.error();
+		if ( auto result = co_await convertQueryRecordIDs( request, db ); !result ) co_return result.error();
 	}
 
 	const auto file_ids { request->getOptionalParameter< std::string >( "file_ids" ) };

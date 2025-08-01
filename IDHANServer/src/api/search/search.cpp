@@ -4,7 +4,7 @@
 
 #include <format>
 
-#include "api/IDHANSearchAPI.hpp"
+#include "api/SearchAPI.hpp"
 #include "api/helpers/getArrayParameters.hpp"
 #include "db/TagSearch.hpp"
 #include "logging/log.hpp"
@@ -12,7 +12,7 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > IDHANSearchAPI::search( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };
 

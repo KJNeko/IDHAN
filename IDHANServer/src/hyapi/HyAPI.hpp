@@ -100,7 +100,7 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
  * @return
  */
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	convertQueryRecordIDs( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db );
+	convertQueryRecordIDs( drogon::HttpRequestPtr& request, drogon::orm::DbClientPtr db );
 
 drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db );
 

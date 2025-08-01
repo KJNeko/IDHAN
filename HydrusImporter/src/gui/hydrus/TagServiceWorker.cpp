@@ -105,33 +105,28 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 	using HyTagID = int;
 	using TagPair = std::pair< std::string, std::string >;
 
-	std::unordered_map< HyHashID, std::vector< HyTagID > > tag_map {};
-	tag_map.reserve( pairs.size() );
-	std::unordered_map< HyTagID, TagPair > tag_id_map {};
-	tag_id_map.reserve( pairs.size() );
-
-	std::unordered_set< HyHashID > hash_ids {};
-	hash_ids.reserve( pairs.size() );
-	std::unordered_map< HyHashID, std::vector< HyTagID > > hash_id_tag_id_map {};
-	hash_id_tag_id_map.reserve( pairs.size() );
-	std::unordered_map< HyTagID, TagPair > tag_id_pairs {};
-	tag_id_pairs.reserve( pairs.size() );
+	std::unordered_map< HyHashID, std::vector< HyTagID > > hy_hash_tag_map {};
+	hy_hash_tag_map.reserve( pairs.size() );
+	std::unordered_set< HyHashID > hy_hash_id_set {};
+	hy_hash_id_set.reserve( pairs.size() );
+	std::unordered_map< HyTagID, TagPair > hy_tag_map {};
+	hy_tag_map.reserve( pairs.size() );
 
 	auto& client = idhan::IDHANClient::instance();
 
 	// process tag ids
 	for ( const auto& [ hash_id, tag_id ] : pairs )
 	{
-		hash_ids.emplace( hash_id );
+		hy_hash_id_set.emplace( hash_id );
 
-		if ( !hash_id_tag_id_map.contains( hash_id ) )
+		if ( !hy_hash_tag_map.contains( hash_id ) )
 		{
-			hash_id_tag_id_map[ hash_id ] = {};
+			hy_hash_tag_map[ hash_id ] = {};
 		}
 
-		hash_id_tag_id_map[ hash_id ].emplace_back( tag_id );
+		hy_hash_tag_map[ hash_id ].emplace_back( tag_id );
 
-		if ( !tag_id_pairs.contains( tag_id ) )
+		if ( !hy_tag_map.contains( tag_id ) )
 		{
 			TagPair tag_pair {};
 
@@ -142,23 +137,18 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 				tag_id
 			};
 
-			//TODO: Make this not a for loop, It should be using *operator instead
-			for ( const auto& [ namespace_i, subtag_i ] : query )
-			{
-				tag_pair = std::make_pair( namespace_i, subtag_i );
-				tag_id_pairs[ tag_id ] = tag_pair;
-			}
-
-			tag_id_map[ tag_id ] = tag_pair;
+			const auto [ namespace_id, subtag_i ] = *query;
+			tag_pair = std::make_pair( namespace_id, subtag_i );
+			hy_tag_map[ tag_id ] = tag_pair;
 		}
 	}
 
 	std::vector< std::string > hashes {};
-	hashes.reserve( hash_ids.size() );
+	hashes.reserve( hy_hash_id_set.size() );
 	std::vector< std::vector< TagPair > > tag_sets {};
-	tag_sets.reserve( hash_ids.size() );
+	tag_sets.reserve( hy_hash_id_set.size() );
 
-	for ( const auto& hash_id : hash_ids )
+	for ( const auto& hash_id : hy_hash_id_set )
 	{
 		std::string hash {};
 		hash.reserve( 256 / 8 );
@@ -175,10 +165,10 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 		hashes.emplace_back( hash );
 
 		std::vector< TagPair > tag_pairs {};
-		tag_pairs.reserve( hash_id_tag_id_map[ hash_id ].size() );
-		for ( const auto& tag_id : hash_id_tag_id_map[ hash_id ] )
+		tag_pairs.reserve( hy_hash_tag_map[ hash_id ].size() );
+		for ( const auto& tag_id : hy_hash_tag_map[ hash_id ] )
 		{
-			tag_pairs.emplace_back( tag_id_map[ tag_id ] );
+			tag_pairs.emplace_back( hy_tag_map[ tag_id ] );
 		}
 
 		tag_sets.emplace_back( std::move( tag_pairs ) );

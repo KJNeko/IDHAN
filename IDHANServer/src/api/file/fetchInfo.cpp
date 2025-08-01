@@ -3,7 +3,7 @@
 //
 
 #include "IDHANTypes.hpp"
-#include "api/IDHANRecordAPI.hpp"
+#include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "metadata/parseMetadata.hpp"
@@ -69,7 +69,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	co_return {};
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::
 	fetchInfo( [[maybe_unused]] drogon::HttpRequestPtr request, RecordID record_id )
 {
 	auto db { drogon::app().getDbClient() };
@@ -103,7 +103,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::parseFile( drogon::HttpRequestPtr request, RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::parseFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	{
 		auto db { drogon::app().getDbClient() };

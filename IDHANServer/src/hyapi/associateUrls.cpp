@@ -31,7 +31,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	co_return root;
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( const drogon::HttpRequestPtr request )
 {
 	const auto url_parameter { request->getOptionalParameter< std::string >( "url" ) };
 	if ( !url_parameter ) co_return createBadRequest( "Must provide url parameter" );
@@ -45,7 +45,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( drogon::HttpReque
 	co_return drogon::HttpResponse::newHttpJsonResponse( url_info );
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( const drogon::HttpRequestPtr request )
 {
 	const auto json_object { request->getJsonObject() };
 	if ( json_object == nullptr ) co_return createBadRequest( "No json data supplied" );

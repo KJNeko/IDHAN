@@ -4,7 +4,7 @@
 
 #include <regex>
 
-#include "api/IDHANRecordAPI.hpp"
+#include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
@@ -13,7 +13,7 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::fetchFile( drogon::HttpRequestPtr request, RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	auto db { drogon::app().getDbClient() };
 

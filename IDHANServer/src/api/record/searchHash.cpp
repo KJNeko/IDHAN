@@ -2,15 +2,14 @@
 // Created by kj16609 on 3/11/25.
 //
 
-#include "api/IDHANRecordAPI.hpp"
+#include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::searchHash( [[maybe_unused]] const drogon::HttpRequestPtr
-                                                                        request )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::searchHash( [[maybe_unused]] const drogon::HttpRequestPtr request )
 {
 	const auto hash_str { request->getParameter( "sha256" ) };
 

@@ -2,12 +2,12 @@
 // Created by kj16609 on 5/3/25.
 //
 
-#include "api/IDHANTagAPI.hpp"
+#include "api/TagAPI.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
+drogon::Task< drogon::HttpResponsePtr > TagAPI::
 	getTagRelationships( drogon::HttpRequestPtr request, const TagDomainID domain_id, const TagID tag_id )
 {
 	const auto db { drogon::app().getDbClient() };

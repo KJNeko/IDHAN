@@ -5,14 +5,14 @@
 #include <expected>
 
 #include "IDHANTypes.hpp"
-#include "api/IDHANRecordAPI.hpp"
+#include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/urls.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addUrls( drogon::HttpRequestPtr request, RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	const auto db { drogon::app().getDbClient() };
 

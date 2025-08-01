@@ -2,7 +2,7 @@
 // Created by kj16609 on 3/11/25.
 //
 
-#include "api/IDHANTagAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "fgl/defines.hpp"
@@ -11,7 +11,7 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagAliases( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRequestPtr request )
 {
 	const auto json_obj { request->getJsonObject() };
 

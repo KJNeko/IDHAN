@@ -5,8 +5,8 @@
 #include "HyAPI.hpp"
 
 #include "IDHANTypes.hpp"
-#include "api/IDHANSearchAPI.hpp"
-#include "api/IDHANTagAPI.hpp"
+#include "api/SearchAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "api/helpers/tags/tags.hpp"
@@ -234,7 +234,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( drogon::HttpReque
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	convertQueryRecordIDs( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db )
+	convertQueryRecordIDs( drogon::HttpRequestPtr& request, drogon::orm::DbClientPtr db )
 {
 	const auto out { co_await helpers::extractRecordIDsFromParameters( request, db ) };
 	if ( !out ) co_return std::unexpected( out.error() );
@@ -248,7 +248,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( const drogon::HttpRequestPtr request )
 {
 	auto file_id { request->getOptionalParameter< RecordID >( "file_id" ) };
 	const auto hash { request->getOptionalParameter< std::string >( "hash" ) };
@@ -308,10 +308,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 	const auto search { request->getOptionalParameter< std::string >( "search" ) };
 	if ( !search ) co_return createBadRequest( "Must provide search string" );
 
-	std::string search_value { search.value_or( "" ) };
+	const std::string search_value { search.value_or( "" ) };
 
-	// an empty text should return an empty list and 200-OK according to hydrus spec
-	if ( search == "" )
+	// any empty text should return an empty list and 200-OK according to hydrus spec
+	if ( search_value == "" )
 	{
 		Json::Value root;
 		root[ "tags" ] = Json::Value( Json::arrayValue );
@@ -353,12 +353,11 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getClientOptions( drogon::Htt
 
 	root[ "services" ] = Json::Value( Json::objectValue );
 
-	// Hydrus provides services here by hyweb doesn't seem to want them here
-	// auto db { drogon::app().getDbClient() };
-	// root[ "services" ] = co_await getServiceList( db );
+	auto db { drogon::app().getDbClient() };
+	root[ "services" ] = co_await getServiceList( db );
 
-	root[ "version" ] = 80;
-	root[ "hydrus_version" ] = 625;
+	root[ "version" ] = HYDRUS_MIMICED_API_VERSION;
+	root[ "hydrus_version" ] = HYDRUS_MIMICED_VERSION;
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }

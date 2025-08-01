@@ -3,7 +3,7 @@
 //
 
 #include "IDHANTypes.hpp"
-#include "api/IDHANTagAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "drogon/HttpResponse.h"
 #include "logging/format_ns.hpp"
 
@@ -23,7 +23,8 @@ drogon::HttpResponsePtr generateFailedTagSearch( const TagID tag_id )
 	return response;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagInfo( drogon::HttpRequestPtr request, TagID tag_id )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::
+	getTagInfo( [[maybe_unused]] const drogon::HttpRequestPtr request, const TagID tag_id )
 {
 	Json::Value root {};
 	root[ "tag_id" ] = tag_id;
@@ -76,8 +77,12 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagInfo( drogon::HttpReq
 		{
 			const auto& color { result[ 0 ][ 1 ].as< std::vector< char > >() };
 
-			//TODO: hex
-			root[ "color" ][ "hex" ] = "FIXME";
+			std::string hex_str {};
+			for ( const auto& c : color )
+			{
+				hex_str += format_ns::format( "%02x", static_cast< int >( c ) );
+			}
+			root[ "color" ][ "hex" ] = hex_str;
 			root[ "color" ][ "r" ] = static_cast< int >( color[ 0 ] );
 			root[ "color" ][ "g" ] = static_cast< int >( color[ 1 ] );
 			root[ "color" ][ "b" ] = static_cast< int >( color[ 2 ] );

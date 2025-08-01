@@ -3,7 +3,7 @@
 //
 
 #include "IDHANTypes.hpp"
-#include "api/IDHANRecordAPI.hpp"
+#include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "api/helpers/tags/tags.hpp"
@@ -167,8 +167,7 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 	co_return ids;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
-	addTags( const drogon::HttpRequestPtr request, RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags( const drogon::HttpRequestPtr request, RecordID record_id )
 {
 	logging::ScopedTimer timer { "addTags" };
 	// the path will contain a record_id
@@ -200,7 +199,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 	co_return drogon::HttpResponse::newHttpResponse();
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "addMultipleTags" };
 	const auto json_ptr { request->getJsonObject() };

@@ -3,7 +3,6 @@
 //
 #pragma once
 
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wredundant-tags"
@@ -18,11 +17,10 @@
 #include "drogon/HttpController.h"
 #pragma GCC diagnostic pop
 
-
 namespace idhan::api
 {
 
-class IDHANImportAPI : public drogon::HttpController< IDHANImportAPI >
+class ImportAPI : public drogon::HttpController< ImportAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > importFile( drogon::HttpRequestPtr request );
 
@@ -30,7 +28,7 @@ class IDHANImportAPI : public drogon::HttpController< IDHANImportAPI >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( IDHANImportAPI::importFile, "/file/import" );
+	ADD_METHOD_TO( ImportAPI::importFile, "/file/import" );
 
 	METHOD_LIST_END
 };
