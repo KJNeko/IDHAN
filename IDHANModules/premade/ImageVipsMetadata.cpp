@@ -5,8 +5,6 @@
 #include "ImageVipsMetadata.hpp"
 
 #include <vips/vips8>
-// Fucking macros
-#undef IMAGE
 
 #include <cstring>
 #include <unordered_map>
@@ -21,17 +19,10 @@ std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
 }
 
 std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::
-	parseFile( void* data, std::size_t length, const std::string mime_name )
+	parseFile( void* data, const std::size_t length, const std::string mime_name )
 {
-	using VipsFunc = int ( * )( void*, size_t, VipsImage**, ... );
-	// VipsFunc load = vips_pngload_buffer;
-	std::unordered_map< std::string, VipsFunc > func_map { { "image/png", vips_pngload_buffer },
-		                                                   { "image/jpeg", vips_jpegload_buffer },
-		                                                   { "image/webp", vips_webpload_buffer },
-		                                                   { "image/gif", vips_gifload_buffer } };
-
 	VipsImage* image;
-	if ( const auto it = func_map.find( mime_name ); it != func_map.end() )
+	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() )
 	{
 		if ( it->second( data, length, &image, nullptr ) != 0 )
 		{
