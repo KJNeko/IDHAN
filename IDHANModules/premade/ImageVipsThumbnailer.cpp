@@ -66,8 +66,8 @@ std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbna
 	}
 	g_object_unref( image );
 
-	void* output_buffer;
-	size_t output_length;
+	void* output_buffer { nullptr };
+	size_t output_length { 0 };
 	if ( vips_pngsave_buffer( resized, &output_buffer, &output_length, nullptr ) )
 	{
 		g_object_unref( resized );
@@ -75,9 +75,8 @@ std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbna
 	}
 	g_object_unref( resized );
 
-	std::vector< unsigned char > output(
-		static_cast< unsigned char* >( output_buffer ),
-		static_cast< unsigned char* >( output_buffer ) + output_length );
+	std::vector< std::byte > output(
+		static_cast< std::byte* >( output_buffer ), static_cast< std::byte* >( output_buffer ) + output_length );
 	g_free( output_buffer );
 
 	ThumbnailerModuleI::ThumbnailInfo ret {};
