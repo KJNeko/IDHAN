@@ -32,7 +32,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagParents( drogon::H
 
 	const auto tag_domain_id { helpers::getTagDomainID( request ) };
 
-	if ( !tag_domain_id.has_value() ) co_return tag_domain_id.error();
+	if ( !tag_domain_id ) co_return tag_domain_id.error();
 
 	for ( const auto& item : json )
 	{

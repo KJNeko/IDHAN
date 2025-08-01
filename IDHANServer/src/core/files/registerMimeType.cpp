@@ -12,7 +12,7 @@ namespace idhan::mime
 
 MimeID registerMimeType( const std::string& name, drogon::orm::DbClientPtr db )
 {
-	if ( const auto mime = searchMimeType( name, db ); mime.has_value() ) return mime.value();
+	if ( const auto mime = searchMimeType( name, db ) ) return mime.value();
 
 	const QMimeDatabase mime_db {};
 

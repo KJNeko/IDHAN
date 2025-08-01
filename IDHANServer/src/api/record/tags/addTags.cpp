@@ -77,13 +77,13 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 
 	auto [ tag_id, tag_namespace, tag_subtag ] = tag;
 
-	if ( tag_id.has_value() ) co_return tag_id.value();
+	if ( tag_id ) co_return tag_id.value();
 
 	if ( std::holds_alternative< std::string >( tag_namespace ) )
 	{
 		const auto result { co_await findOrCreateNamespace( std::get< std::string >( tag_namespace ), transaction ) };
 
-		if ( !result.has_value() ) co_return std::unexpected( result.error() );
+		if ( !result ) co_return std::unexpected( result.error() );
 
 		tag_namespace = result.value();
 	}
@@ -92,7 +92,7 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	{
 		const auto result { co_await findOrCreateSubtag( std::get< std::string >( tag_subtag ), transaction ) };
 
-		if ( !result.has_value() ) co_return std::unexpected( result.error() );
+		if ( !result ) co_return std::unexpected( result.error() );
 
 		tag_subtag = result.value();
 	}
@@ -100,7 +100,7 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	const auto result { co_await findOrCreateTag(
 		std::get< NamespaceID >( tag_namespace ), std::get< SubtagID >( tag_subtag ), transaction ) };
 
-	if ( !result.has_value() ) co_return std::unexpected( result.error() );
+	if ( !result ) co_return std::unexpected( result.error() );
 
 	co_return result.value();
 }
@@ -151,7 +151,7 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 		for ( const auto& pair : pairs )
 		{
 			const auto result { co_await getIDFromPair( pair, db ) };
-			if ( !result.has_value() ) co_return std::unexpected( result.error() );
+			if ( !result ) co_return std::unexpected( result.error() );
 			ids.emplace_back( result.value() );
 		}
 	}
@@ -181,15 +181,15 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 
 	auto tag_pairs { co_await getTagPairs( *json_ptr ) };
 
-	if ( !tag_pairs.has_value() ) co_return tag_pairs.error();
+	if ( !tag_pairs ) co_return tag_pairs.error();
 
 	const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
 
-	if ( !tag_pair_ids.has_value() ) co_return tag_pair_ids.error();
+	if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
 	const auto tag_domain_id { helpers::getTagDomainID( request ) };
 
-	if ( !tag_domain_id.has_value() ) co_return tag_domain_id.error();
+	if ( !tag_domain_id ) co_return tag_domain_id.error();
 
 	const auto insert_result { co_await db->execSqlCoro(
 		"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
@@ -215,7 +215,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 
 	const auto tag_domain_id { helpers::getTagDomainID( request ) };
 
-	if ( !tag_domain_id.has_value() ) co_return tag_domain_id.error();
+	if ( !tag_domain_id ) co_return tag_domain_id.error();
 
 	const auto domain_search {
 		co_await db
@@ -235,11 +235,11 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 				tags_json.size() );
 		const auto tag_pairs { co_await getTagPairs( tags_json ) };
 
-		if ( !tag_pairs.has_value() ) co_return tag_pairs.error();
+		if ( !tag_pairs ) co_return tag_pairs.error();
 
 		const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
 
-		if ( !tag_pair_ids.has_value() ) co_return tag_pair_ids.error();
+		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
 		for ( const auto& record_json : records_json )
 		{
@@ -272,11 +272,11 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addMultipleTags( drogon:
 			// each set will be an array of tags
 			const auto tags { co_await getTagPairs( sets_json[ i ] ) };
 
-			if ( !tags.has_value() ) co_return tags.error();
+			if ( !tags ) co_return tags.error();
 
 			const auto tag_ids { co_await getIDsFromPairs( std::move( tags.value() ), db ) };
 
-			if ( !tag_ids.has_value() ) co_return tag_ids.error();
+			if ( !tag_ids ) co_return tag_ids.error();
 
 			co_await db->execSqlCoro(
 				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, unnest($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",

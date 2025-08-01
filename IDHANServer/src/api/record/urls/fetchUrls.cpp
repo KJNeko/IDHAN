@@ -19,7 +19,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
 	const auto db { drogon::app().getFastDbClient() };
 	const auto urls { co_await fetchUrlsJson( record_id, db ) };
 
-	if ( !urls.has_value() ) co_return urls.error();
+	if ( !urls ) co_return urls.error();
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( urls.value() );
 }
@@ -51,7 +51,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 {
 	const auto urls { co_await fetchUrlsStrings( record_id, db ) };
 
-	if ( !urls.has_value() ) co_return std::unexpected( urls.error() );
+	if ( !urls ) co_return std::unexpected( urls.error() );
 
 	Json::Value json { Json::ValueType::arrayValue };
 

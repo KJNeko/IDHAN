@@ -18,7 +18,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	Json::Value root {};
 
 	// const auto url_id { co_await idhan::helpers::findOrCreateUrl( url_str, db ) };
-	// if ( !url_id.has_value() ) co_return url_id.error();
+	// if ( !url_id ) co_return url_id.error();
 	// const auto url_id_e { url_id.value() };
 
 	root[ "request_url" ] = url_str;
@@ -34,12 +34,12 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( drogon::HttpRequestPtr request )
 {
 	const auto url_parameter { request->getOptionalParameter< std::string >( "url" ) };
-	if ( !url_parameter.has_value() ) co_return createBadRequest( "Must provide url parameter" );
+	if ( !url_parameter ) co_return createBadRequest( "Must provide url parameter" );
 	const auto url_str { url_parameter.value() };
 
 	auto db { drogon::app().getDbClient() };
 	const auto url_info_e { co_await getAdvancedUrlInfo( url_str, db ) };
-	if ( !url_info_e.has_value() ) co_return url_info_e.error();
+	if ( !url_info_e ) co_return url_info_e.error();
 	const auto& url_info { url_info_e.value() };
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( url_info );
@@ -54,7 +54,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( drogon::HttpReq
 	auto db { drogon::app().getDbClient() };
 
 	const auto records_e { co_await helpers::extractRecordIDsFromFilesJson( json, db ) };
-	if ( !records_e.has_value() ) co_return records_e.error();
+	if ( !records_e ) co_return records_e.error();
 	const auto& records { records_e.value() };
 
 	// change url_to_add to urls_to_add to simplify handling
@@ -78,7 +78,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( drogon::HttpReq
 		{
 			const auto url_str { url.asString() };
 			const auto url_id { co_await idhan::helpers::findOrCreateUrl( url_str, db ) };
-			if ( !url_id.has_value() ) co_return url_id.error();
+			if ( !url_id ) co_return url_id.error();
 			url_ids.emplace_back( url_id.value() );
 		}
 
@@ -100,7 +100,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( drogon::HttpReq
 		{
 			const auto url_str { url.asString() };
 			const auto url_id { co_await idhan::helpers::findOrCreateUrl( url_str, db ) };
-			if ( !url_id.has_value() ) co_return url_id.error();
+			if ( !url_id ) co_return url_id.error();
 			url_ids.emplace_back( url_id.value() );
 		}
 

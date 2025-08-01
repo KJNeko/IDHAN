@@ -64,7 +64,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 		//insert the hash into a set to make each hash unique
 
 		const auto expected_hash { SHA256::fromHex( str ) };
-		if ( !expected_hash.has_value() ) co_return std::unexpected( expected_hash.error() );
+		if ( !expected_hash ) co_return std::unexpected( expected_hash.error() );
 
 		hashes.insert( expected_hash.value() );
 
@@ -117,7 +117,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	{
 		const auto json_result { co_await createRecordsFromJsonArray( sha256s, db ) };
 
-		if ( !json_result.has_value() ) co_return json_result.error();
+		if ( !json_result ) co_return json_result.error();
 
 		const auto& json_array { json_result.value() };
 
@@ -128,7 +128,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 		Json::Value json_out {};
 		const auto sha256 { SHA256::fromHex( sha256s.asString() ) };
 
-		if ( !sha256.has_value() ) co_return sha256.error();
+		if ( !sha256 ) co_return sha256.error();
 
 		const RecordID record_id { co_await helpers::createRecord( *sha256, db ) };
 		json_out[ "record_id" ] = record_id;

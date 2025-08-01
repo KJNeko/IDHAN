@@ -63,12 +63,11 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	const auto namespace_id { co_await findOrCreateNamespace( namespace_text, db ) };
 	const auto subtag_id { co_await findOrCreateSubtag( subtag_text, db ) };
 
-	if ( !namespace_id.has_value() ) co_return std::unexpected( namespace_id.error() );
-	if ( !subtag_id.has_value() ) co_return std::unexpected( subtag_id.error() );
+	if ( !namespace_id ) co_return std::unexpected( namespace_id.error() );
+	if ( !subtag_id ) co_return std::unexpected( subtag_id.error() );
 
-	const auto tag_result { co_await findOrCreateTag( namespace_id.value(), subtag_id.value(), db ) };
-
-	if ( tag_result.has_value() ) co_return tag_result;
+	if ( const auto tag_result { co_await findOrCreateTag( namespace_id.value(), subtag_id.value(), db ) } )
+		co_return tag_result;
 
 	co_return std::
 		unexpected( createInternalError( "Failed to create tag {}:{}", namespace_id.value(), subtag_id.value() ) );

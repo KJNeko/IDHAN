@@ -103,7 +103,7 @@ drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
 
 	const auto metadata { parser->parseFile( data->data(), data->length(), mime_name ) };
 
-	if ( !metadata.has_value() )
+	if ( !metadata )
 	{
 		const ModuleError error { metadata.error() };
 		auto ret { createInternalError( "Module failed to parse data: {}", error ) };
@@ -119,7 +119,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	// Get the file info
 	const auto record_path { co_await helpers::getRecordPath( record_id, db ) };
 
-	if ( !record_path.has_value() ) co_return std::unexpected( record_path.error() );
+	if ( !record_path ) co_return std::unexpected( record_path.error() );
 
 	if ( !std::filesystem::exists( record_path.value() ) )
 		co_return std::unexpected( createInternalError( "File for record {} was missing", record_id ) );
@@ -128,7 +128,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 
 	const auto metadata { co_await getMetadata( record_id, data, db ) };
 
-	if ( !metadata.has_value() ) co_return std::unexpected( metadata.error() );
+	if ( !metadata ) co_return std::unexpected( metadata.error() );
 
 	co_await updateRecordMetadata( record_id, db, metadata.value() );
 

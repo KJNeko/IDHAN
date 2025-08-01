@@ -49,7 +49,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	if ( metadata.empty() )
 	{
 		const auto parse_result { co_await api::tryParseRecordMetadata( record_id, db ) };
-		if ( !parse_result.has_value() ) co_return std::unexpected( parse_result.error() );
+		if ( !parse_result ) co_return std::unexpected( parse_result.error() );
 	}
 
 	metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
@@ -95,7 +95,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 {
 	auto db { drogon::app().getDbClient() };
 
-	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ); hashes_opt.has_value() )
+	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ) )
 	{
 		// convert hashes to their respective record_ids
 		if ( auto result = co_await convertQueryRecordIDs( request, hashes_opt.value(), db ); !result.has_value() )
@@ -103,7 +103,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	}
 
 	const auto file_ids { request->getOptionalParameter< std::string >( "file_ids" ) };
-	if ( !file_ids.has_value() ) co_return createBadRequest( "Must provide file_ids array" );
+	if ( !file_ids ) co_return createBadRequest( "Must provide file_ids array" );
 
 	std::string file_ids_str { file_ids.value() };
 	Json::Value file_ids_json {};
@@ -131,14 +131,14 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 		{
 			const auto data_result { co_await getFileInfo( db, record_id, data ) };
-			if ( !data_result.has_value() ) co_return data_result.error();
+			if ( !data_result ) co_return data_result.error();
 			data = data_result.value();
 		}
 
 		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
 
 		const auto url_json_e { co_await fetchUrlsStrings( record_id, db ) };
-		if ( !url_json_e.has_value() ) co_return url_json_e.error();
+		if ( !url_json_e ) co_return url_json_e.error();
 
 		data[ "known_urls" ] = Json::Value( Json::arrayValue );
 		data[ "detailed_known_urls" ] = Json::Value( Json::arrayValue );
@@ -159,7 +159,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 		{
 			const auto data_result { co_await getMetadataInfo( db, record_id, data ) };
-			if ( !data_result.has_value() ) co_return data_result.error();
+			if ( !data_result ) co_return data_result.error();
 			data = data_result.value();
 		}
 

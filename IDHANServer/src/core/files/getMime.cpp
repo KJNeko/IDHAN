@@ -40,7 +40,7 @@ drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > >
 {
 	const auto id { co_await getMimeIDFromRecord( record_id, db ) };
 
-	if ( id.has_value() ) co_return co_await getMime( id.value(), db );
+	if ( id ) co_return co_await getMime( id.value(), db );
 
 	co_return std::unexpected( id.error() );
 }

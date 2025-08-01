@@ -35,15 +35,15 @@ ExpectedTask< void > TagSearch::addID( const TagID id )
 {
 	const auto idealized_id { co_await idealize( id ) };
 
-	if ( !idealized_id.has_value() ) co_return std::unexpected( idealized_id.error() );
+	if ( !idealized_id ) co_return std::unexpected( idealized_id.error() );
 
 	m_ids.emplace_back( *idealized_id );
 
 	const auto children_result { co_await addChildren( *idealized_id ) };
-	if ( !children_result.has_value() ) co_return std::unexpected( children_result.error() );
+	if ( !children_result ) co_return std::unexpected( children_result.error() );
 
 	// const auto siblings_result { co_await removeSiblings( *idealized_id ) };
-	// if ( !siblings_result.has_value() ) co_return std::unexpected( siblings_result.error() );
+	// if ( !siblings_result ) co_return std::unexpected( siblings_result.error() );
 
 	co_return {};
 }
@@ -131,7 +131,7 @@ ExpectedTask< void > TagSearch::removeSiblings()
 	{
 		const auto siblings { co_await findSiblings( id ) };
 
-		if ( !siblings.has_value() ) co_return std::unexpected( siblings.error() );
+		if ( !siblings ) co_return std::unexpected( siblings.error() );
 
 		to_remove.insert( to_remove.end(), siblings->begin(), siblings->end() );
 	}

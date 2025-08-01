@@ -20,7 +20,7 @@ ClusterAPI::ResponseTask ClusterAPI::list( [[maybe_unused]] drogon::HttpRequestP
 
 		const auto info { co_await getInfo( id, db ) };
 
-		if ( !info.has_value() ) co_return info.error();
+		if ( !info ) co_return info.error();
 
 		root[ i ] = info.value();
 	}

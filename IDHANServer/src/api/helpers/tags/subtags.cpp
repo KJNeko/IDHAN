@@ -28,10 +28,7 @@ drogon::Task< std::expected< SubtagID, drogon::HttpResponsePtr > >
 		if ( counter > 128 ) co_return std::unexpected( createBadRequest( "Too many subtag creation attempts" ) );
 		++counter;
 
-		if ( const auto id_search = co_await searchSubtag( str, db ); id_search.has_value() )
-		{
-			co_return id_search.value();
-		}
+		if ( const auto id_search = co_await searchSubtag( str, db ) ) co_return id_search.value();
 
 		const auto id_creation { co_await db->execSqlCoro(
 			"INSERT INTO tag_subtags (subtag_text) VALUES ($1) ON CONFLICT DO NOTHING RETURNING subtag_id", str ) };

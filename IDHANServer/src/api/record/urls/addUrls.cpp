@@ -27,7 +27,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::addUrls( drogon::HttpReq
 	{
 		const auto url_id { co_await helpers::findOrCreateUrl( url.asString(), db ) };
 
-		if ( !url_id.has_value() ) co_return url_id.error();
+		if ( !url_id ) co_return url_id.error();
 
 		co_await db
 			->execSqlCoro( "INSERT INTO url_mappings (url_id, record_id) VALUES ($1, $2)", url_id.value(), record_id );

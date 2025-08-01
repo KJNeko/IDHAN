@@ -21,7 +21,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::searchHash( [[maybe_unus
 		co_return createBadRequest( "Hash size was invalid, must be {}", expected_hash_size );
 
 	const auto expected_hash { SHA256::fromHex( hash_str ) };
-	if ( !expected_hash.has_value() ) co_return expected_hash.error();
+	if ( !expected_hash ) co_return expected_hash.error();
 
 	const auto& hash { expected_hash.value() };
 
