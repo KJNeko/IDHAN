@@ -18,6 +18,11 @@
 namespace idhan
 {
 
+FileIOUring::FileIOUring( const std::filesystem::path& path ) : m_fd( open( path.c_str(), O_RDWR | O_CREAT, 0666 ) )
+{
+	if ( m_fd <= 0 ) throw std::runtime_error( "Failed to open file" );
+}
+
 drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len )
 {
 	auto& uring { IOUring::getInstance() };
@@ -252,6 +257,20 @@ void IOUring::sendNop()
 	io_uring_smp_store_release( m_submission_ring.tail, tail );
 
 	notifySubmit( 1 );
+}
+
+IOUring& IOUring::getInstance()
+{
+	if ( !instance ) throw std::runtime_error( "IOUring instance not initialized" );
+	return *instance;
+}
+
+void IOUring::notifySubmit( std::size_t count ) const
+{
+	if ( auto ret = io_uring_enter( uring_fd, count, 0, IORING_ENTER_SQ_WAKEUP, nullptr ); ret < 0 )
+	{
+		throw std::runtime_error( "Failed to enter io_uring" );
+	}
 }
 
 IOUring::IOUring() :
