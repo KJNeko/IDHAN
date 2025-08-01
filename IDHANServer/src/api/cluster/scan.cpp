@@ -132,7 +132,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 				co_await db->execSqlCoro( "SELECT mime_id FROM file_info WHERE record_id = $1", record_id )
 			};
 
-			if ( mime_search.empty() || rescan_mime )
+			if ( mime_search.empty() || mime_search[ 0 ][ "mime_id" ].isNull() || rescan_mime )
 			{
 				auto info { co_await gatherFileInfo( data, db ) };
 
