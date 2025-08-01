@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "MimeInfo.hpp"
+#include "decodeHex.hpp"
 #include "fgl/defines.hpp"
 
 namespace idhan::mime
@@ -81,6 +82,9 @@ struct MimeDataTrack
 
 class MimeDataIdentifier
 {
+  protected:
+
+	bool m_required { true };
 	std::vector< std::unique_ptr< MimeDataIdentifier > > m_children {};
 
 	virtual bool pass(
@@ -98,6 +102,8 @@ class MimeDataIdentifier
 
 	bool test( const std::byte* data, const std::size_t length, std::size_t& current_offset, MimeDataTrack& context )
 		const;
+
+	bool required() const { return m_required; }
 };
 
 class DataIdentifierSearch : public MimeDataIdentifier
@@ -106,32 +112,63 @@ class DataIdentifierSearch : public MimeDataIdentifier
 
 	constexpr static std::int64_t NO_OFFSET { std::numeric_limits< std::int64_t >::max() };
 	std::int64_t offset { NO_OFFSET };
-	std::vector< std::byte > m_data {};
+
+	struct DataSet
+	{
+		std::vector< std::byte > m_data {};
+
+		bool match( const std::byte* data, const std::size_t length ) const
+		{
+			if ( this->m_data.size() > length ) return false;
+
+			for ( std::size_t i = 0; i < this->m_data.size(); ++i )
+				if ( this->m_data[ i ] != data[ i ] ) return false;
+
+			return true;
+		}
+
+		DataSet( std::vector< std::byte >&& data ) : m_data( std::move( data ) ) {}
+
+		std::size_t size() const { return m_data.size(); }
+	};
+
+	std::vector< DataSet > m_data {};
 
   public:
 
-	bool passOffset(
+	/**
+	 * @brief Tests for all the m_data sets at the given offset. Ignoring the cursor.
+	 * @param data
+	 * @param length
+	 * @param cursor Ignored
+	 * @param context
+	 * @return
+	 */
+	bool testOffset(
 		const std::byte* data,
 		const std::size_t length,
-		std::size_t& current_offset,
+		std::size_t& cursor,
 		[[maybe_unused]] MimeDataTrack& context ) const;
 
-	bool passNoOffset(
+	/**
+	 * @brief Scans for the m_data sets in the forward direction, Returns true if any match
+	 * @param data
+	 * @param length
+	 * @param cursor
+	 * @param context
+	 * @return
+	 */
+	bool testScanForward(
 		const std::byte* data,
 		const std::size_t length,
-		std::size_t& current_offset,
+		std::size_t& cursor,
 		[[maybe_unused]] MimeDataTrack& context ) const;
 
 	bool pass(
 		const std::byte* data,
 		const std::size_t length,
 		std::size_t& current_offset,
-		[[maybe_unused]] MimeDataTrack& context ) const override
-	{
-		if ( offset == NO_OFFSET ) return passNoOffset( data, length, current_offset, context );
-
-		return passOffset( data, length, current_offset, context );
-	}
+		[[maybe_unused]] MimeDataTrack& context ) const override;
 
 	DataIdentifierSearch() = delete;
 	DataIdentifierSearch( const Json::Value& json );
