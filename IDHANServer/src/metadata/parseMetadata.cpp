@@ -106,7 +106,7 @@ drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
 	if ( !metadata )
 	{
 		const ModuleError error { metadata.error() };
-		auto ret { createInternalError( "Module failed to parse data: {}", error ) };
+		auto ret { createInternalError( "Module failed to parse data for record {}: {}", record_id, error ) };
 		co_return std::unexpected( ret );
 	}
 
