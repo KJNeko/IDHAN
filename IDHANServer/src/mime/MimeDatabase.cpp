@@ -102,7 +102,8 @@ bool DataIdentifierSearch::testOffset(
 {
 	for ( const auto& set : m_data )
 	{
-		if ( set.match( data + offset, length ) )
+		if ( set.size() + offset > length ) continue;
+		if ( set.match( data + offset ) )
 		{
 			cursor = offset + set.size();
 			return true;
@@ -127,7 +128,8 @@ bool DataIdentifierSearch::testScanForward(
 	{
 		for ( const auto& set : m_data )
 		{
-			if ( set.match( data + current_offset, length ) )
+			if ( set.size() + current_offset > length ) continue;
+			if ( set.match( data + current_offset ) )
 			{
 				// if we match, set the cursor to be at the end of the match
 				cursor = current_offset + set.size();

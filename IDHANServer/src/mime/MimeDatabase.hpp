@@ -117,12 +117,12 @@ class DataIdentifierSearch : public MimeDataIdentifier
 	{
 		std::vector< std::byte > m_data {};
 
-		bool match( const std::byte* data, const std::size_t length ) const
+		bool match( const std::byte* data ) const
 		{
-			if ( this->m_data.size() > length ) return false;
-
 			for ( std::size_t i = 0; i < this->m_data.size(); ++i )
+			{
 				if ( this->m_data[ i ] != data[ i ] ) return false;
+			}
 
 			return true;
 		}
