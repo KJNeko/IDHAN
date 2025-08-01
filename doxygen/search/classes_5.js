@@ -1,15 +1,10 @@
 var searchData=
 [
-  ['idhanapi_0',['IDHANApi',['../df/def/classidhan_1_1api_1_1IDHANApi.html',1,'idhan::api']]],
-  ['idhanauth_1',['IDHANAuth',['../d6/d49/classidhan_1_1api_1_1IDHANAuth.html',1,'idhan::api']]],
-  ['idhanclient_2',['IDHANClient',['../d3/d67/classidhan_1_1IDHANClient.html',1,'idhan']]],
-  ['idhanexception_3',['IDHANException',['../dd/d1d/structidhan_1_1IDHANException.html',1,'idhan']]],
-  ['idhanimportapi_4',['IDHANImportAPI',['../d1/d95/classidhan_1_1api_1_1IDHANImportAPI.html',1,'idhan::api']]],
-  ['idhanmaintenanceapi_5',['IDHANMaintenanceAPI',['../d8/d54/classidhan_1_1api_1_1IDHANMaintenanceAPI.html',1,'idhan::api']]],
-  ['idhanrecordapi_6',['IDHANRecordAPI',['../d1/d26/classidhan_1_1api_1_1IDHANRecordAPI.html',1,'idhan::api']]],
-  ['idhansearchapi_7',['IDHANSearchAPI',['../d5/da5/classidhan_1_1api_1_1IDHANSearchAPI.html',1,'idhan::api']]],
-  ['idhanstatsws_8',['IDHANStatsWS',['../df/d27/classidhan_1_1api_1_1IDHANStatsWS.html',1,'idhan::api']]],
-  ['idhantagapi_9',['IDHANTagAPI',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html',1,'idhan::api']]],
-  ['imageinfo_10',['ImageInfo',['../d3/d75/structidhan_1_1mime_1_1ImageInfo.html',1,'idhan::mime']]],
-  ['invalidrequestbody_11',['InvalidRequestBody',['../d2/d81/structidhan_1_1InvalidRequestBody.html',1,'idhan']]]
+  ['idhanclient_0',['IDHANClient',['../d3/d67/classidhan_1_1IDHANClient.html',1,'idhan']]],
+  ['idhanexception_1',['IDHANException',['../dd/d1d/structidhan_1_1IDHANException.html',1,'idhan']]],
+  ['imageinfo_2',['ImageInfo',['../d3/d75/structidhan_1_1mime_1_1ImageInfo.html',1,'idhan::mime']]],
+  ['importapi_3',['ImportAPI',['../d5/d82/classidhan_1_1api_1_1ImportAPI.html',1,'idhan::api']]],
+  ['infoapi_4',['InfoAPI',['../dd/db3/classidhan_1_1api_1_1InfoAPI.html',1,'idhan::api']]],
+  ['invalidrequestbody_5',['InvalidRequestBody',['../d2/d81/structidhan_1_1InvalidRequestBody.html',1,'idhan']]],
+  ['iouring_6',['IOUring',['../dd/d25/classidhan_1_1IOUring.html',1,'idhan']]]
 ];

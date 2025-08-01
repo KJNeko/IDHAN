@@ -114,8 +114,7 @@ $(function(){initNavTree('d6/d70/namespaceidhan_1_1logging.html','../../'); init
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
-<a href="#func-members">Functions</a> &#124;
-<a href="#var-members">Variables</a>  </div>
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">idhan::logging Namespace Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -146,6 +145,8 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:aec4925cfc1288479a93e17bfc9ba2364" id="r_aec4925cfc1288479a93e17bfc9ba2364"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; spdlog::logger &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aec4925cfc1288479a93e17bfc9ba2364">getLogger</a> ()</td></tr>
+<tr class="separator:aec4925cfc1288479a93e17bfc9ba2364"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a687acef9950ea33ff1b271464fc38876" id="r_a687acef9950ea33ff1b271464fc38876"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
 <tr class="memitem:a687acef9950ea33ff1b271464fc38876"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a687acef9950ea33ff1b271464fc38876">notify</a> (format_ns::format_string&lt; Ts... &gt; fmt, Ts &amp;&amp;... ts)</td></tr>
 <tr class="separator:a687acef9950ea33ff1b271464fc38876"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -173,11 +174,6 @@ Functions</h2></td></tr>
 <tr class="memitem:a823c742df0088e2b2d065e9a6c550fde" id="r_a823c742df0088e2b2d065e9a6c550fde"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a823c742df0088e2b2d065e9a6c550fde">registerCallback</a> (<a class="el" href="#a1e3a3ad52057010c1de1fcfea9c02bed">CallbackFunction</a> &amp;func, <a class="el" href="#a669e7d4e6d0939442ea601b6967313d3">CallbackLevel</a> level)</td></tr>
 <tr class="memdesc:a823c742df0088e2b2d065e9a6c550fde"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a callback. The level will act as a mask for specific events.  <br /></td></tr>
 <tr class="separator:a823c742df0088e2b2d065e9a6c550fde"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:aac5ca7d962ba0e9ebabe02edeee3f55e" id="r_aac5ca7d962ba0e9ebabe02edeee3f55e"><td class="memItemLeft" align="right" valign="top">static constexpr auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aac5ca7d962ba0e9ebabe02edeee3f55e">IDHAN_CLIENT_LOGGER_NAME</a> { &quot;idhan-client&quot; }</td></tr>
-<tr class="separator:aac5ca7d962ba0e9ebabe02edeee3f55e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="../../d6/d66/namespaceIDHAN.html">IDHAN</a> logging functions should be used as a way to transmit logging information back to the server. There are the following levels notify, info, warn, error, critical. It is expected that upon a critical message, the application is about to die.</p>
@@ -316,6 +312,23 @@ template&lt;typename... Ts&gt; </div>
 
 </div>
 </div>
+<a id="aec4925cfc1288479a93e17bfc9ba2364" name="aec4925cfc1288479a93e17bfc9ba2364"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aec4925cfc1288479a93e17bfc9ba2364">&#9670;&#160;</a></span>getLogger()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt; spdlog::logger &gt; idhan::logging::getLogger </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="ad7f2d7057dade42c67be664ff3261637" name="ad7f2d7057dade42c67be664ff3261637"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad7f2d7057dade42c67be664ff3261637">&#9670;&#160;</a></span>info()</h2>
 
@@ -423,29 +436,6 @@ template&lt;typename... Ts&gt; </div>
           <td class="paramtype">Ts &amp;&amp;...</td>          <td class="paramname"><span class="paramname"><em>ts</em></span>&#160;)</td>
         </tr>
       </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<h2 class="groupheader">Variable Documentation</h2>
-<a id="aac5ca7d962ba0e9ebabe02edeee3f55e" name="aac5ca7d962ba0e9ebabe02edeee3f55e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aac5ca7d962ba0e9ebabe02edeee3f55e">&#9670;&#160;</a></span>IDHAN_CLIENT_LOGGER_NAME</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">auto idhan::logging::IDHAN_CLIENT_LOGGER_NAME { &quot;idhan-client&quot; }</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel constexpr">constexpr</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 </div>

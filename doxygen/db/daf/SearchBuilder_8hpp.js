@@ -1,6 +1,6 @@
 var SearchBuilder_8hpp =
 [
-    [ "idhan::SearchBuilder", "dc/dba/structidhan_1_1SearchBuilder.html", "dc/dba/structidhan_1_1SearchBuilder" ],
+    [ "idhan::SearchBuilder", "d7/d1e/classidhan_1_1SearchBuilder.html", "d7/d1e/classidhan_1_1SearchBuilder" ],
     [ "idhan::HydrusDisplayType", "dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807a", [
       [ "idhan::HydrusDisplayType::STORED", "dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807aa725c3f6190ad95f075d3c9211323f308", null ],
       [ "idhan::HydrusDisplayType::DISPLAY", "dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807aac97ad854bf48c774ad3d0863fe1ec8cd", null ]

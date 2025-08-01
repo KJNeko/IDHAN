@@ -26,8 +26,8 @@ var NAVTREE =
 [
   [ "IDHAN", "index.html", [
     [ "\"IDHAN File MetaTypes\"", "index.html", "index" ],
-    [ "IDHAN API Docs", "dd/df9/APIDocs.html", null ],
     [ "IDHAN Authorization", "d1/d63/IDHANAuth.html", null ],
+    [ "IDHAN API Docs", "dd/df9/APIDocs.html", null ],
     [ "Mime Parser", "d9/d30/MimeParser.html", null ],
     [ "Welcome to IDHAN's page", "d0/d30/md_README.html", [
       [ "Getting started", "d0/d30/md_README.html#autotoc_md6", [
@@ -78,13 +78,13 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a3a0573fc8d3ae6a1b359ffb90e78e0ef",
-"d5/d96/decodeHex_8hpp_source.html",
-"d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a33101860beace406e8ca648a69bddedf",
-"db/de9/classidhan_1_1FileMappedData.html#a384dd838017206bf53766ccf0b72e4f3",
-"dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a6cbf7a20ca5acb714008ddaa950eb682",
-"de/da8/structidhan_1_1mime_1_1VideoInfo.html#a23fc9d8cc0e8d923b0d71db1eda6f165",
-"namespacemembers_v.html"
+"d2/d83/structidhan_1_1ReadAwaiter.html#af0aa14cf8ece1565972a3090d682c5d6",
+"d5/d08/namespaceidhan_1_1hydrus_1_1hy__constants.html",
+"d7/d1e/classidhan_1_1SearchBuilder.html#a830b5531099658f8a6a1b4bc9a9f1393",
+"da/d3c/APIAuth_8hpp_source.html",
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a109f8237647639890cfe609c1a974642",
+"dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a9c832dab9aedf67f3c691f940df640f9",
+"df/dca/structidhan_1_1FileIOUring.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

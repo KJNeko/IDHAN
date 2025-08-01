@@ -189,9 +189,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a5c538865c5ad60aa650c211bfb7a249e" id="r_a5c538865c5ad60aa650c211bfb7a249e"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a5c538865c5ad60aa650c211bfb7a249e"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a5c538865c5ad60aa650c211bfb7a249e">getDefaultedValue</a> (const std::string name, drogon::HttpRequestPtr request, const T default_value)</td></tr>
 <tr class="separator:a5c538865c5ad60aa650c211bfb7a249e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ade3c0dd0c64899f786b9a3154ee135dd" id="r_ade3c0dd0c64899f786b9a3154ee135dd"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ade3c0dd0c64899f786b9a3154ee135dd">convertQueryRecordIDs</a> (drogon::HttpRequestPtr &amp;request, const std::string &amp;hashes, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="memdesc:ade3c0dd0c64899f786b9a3154ee135dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts and extracts Hydrus' <code>file</code> input from json to record ids, Sets the record parameter <code>file_ids</code> to a json array of the record ids.  <br /></td></tr>
-<tr class="separator:ade3c0dd0c64899f786b9a3154ee135dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a88116f3b826429453ec6751f70211464" id="r_a88116f3b826429453ec6751f70211464"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a88116f3b826429453ec6751f70211464">convertQueryRecordIDs</a> (drogon::HttpRequestPtr &amp;request, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="memdesc:a88116f3b826429453ec6751f70211464"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts and extracts Hydrus' <code>file</code> input from json to record ids, Sets the record parameter <code>file_ids</code> to a json array of the record ids.  <br /></td></tr>
+<tr class="separator:a88116f3b826429453ec6751f70211464"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
@@ -259,8 +259,8 @@ Variables</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="ade3c0dd0c64899f786b9a3154ee135dd" name="ade3c0dd0c64899f786b9a3154ee135dd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ade3c0dd0c64899f786b9a3154ee135dd">&#9670;&#160;</a></span>convertQueryRecordIDs()</h2>
+<a id="a88116f3b826429453ec6751f70211464" name="a88116f3b826429453ec6751f70211464"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a88116f3b826429453ec6751f70211464">&#9670;&#160;</a></span>convertQueryRecordIDs()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -269,11 +269,6 @@ Variables</h2></td></tr>
           <td class="memname">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt; idhan::hyapi::convertQueryRecordIDs </td>
           <td>(</td>
           <td class="paramtype">drogon::HttpRequestPtr &amp;</td>          <td class="paramname"><span class="paramname"><em>request</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>hashes</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>

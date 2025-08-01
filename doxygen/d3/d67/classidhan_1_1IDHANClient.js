@@ -3,8 +3,8 @@ var classidhan_1_1IDHANClient =
     [ "TagInfo", "dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html", "dd/d66/structidhan_1_1IDHANClient_1_1TagInfo" ],
     [ "TagRelationshipInfo", "d9/d81/structidhan_1_1IDHANClient_1_1TagRelationshipInfo.html", "d9/d81/structidhan_1_1IDHANClient_1_1TagRelationshipInfo" ],
     [ "UrlVariant", "d3/d67/classidhan_1_1IDHANClient.html#a345509d5d84ccd0f64186d5351f2b572", null ],
-    [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html#a5b9bd8be94a08a019b6596365b88bbb0", null ],
-    [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html#a7d5c206aac89e8e92151857a6f7eb1d0", null ],
+    [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html#a45033f1a9634c426b3777ca3cc59b8ec", null ],
+    [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html#a9bed7688b68aac4d0f0af4a959ee6528", null ],
     [ "~IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html#a5c5406c8882641397932f0363e8e39d9", null ],
     [ "addKeyHeader", "d3/d67/classidhan_1_1IDHANClient.html#a8f1a421eeaa1367a2295a767df30f999", null ],
     [ "addTags", "d3/d67/classidhan_1_1IDHANClient.html#aa08e150c2b6bd207b80a03305cc9ec76", null ],
@@ -24,6 +24,7 @@ var classidhan_1_1IDHANClient =
     [ "createTagDomain", "d3/d67/classidhan_1_1IDHANClient.html#add74395f28ee34e458a588b990e7de52", null ],
     [ "createTags", "d3/d67/classidhan_1_1IDHANClient.html#a3b8a03b6b66dcd1815b5f3afce8e1db6", null ],
     [ "createTags", "d3/d67/classidhan_1_1IDHANClient.html#a4d440807a1d584ce44a6743648a17d3c", null ],
+    [ "getLogger", "d3/d67/classidhan_1_1IDHANClient.html#af51ddb59f38262f0d956c17017c2525b", null ],
     [ "getRecordID", "d3/d67/classidhan_1_1IDHANClient.html#a0c486ac03c633b5492f2ca1cd693c004", null ],
     [ "getRecordTags", "d3/d67/classidhan_1_1IDHANClient.html#a0f118972dec955969d122ca482a82bb8", null ],
     [ "getTagDomain", "d3/d67/classidhan_1_1IDHANClient.html#a67774ecec3361908b100e5ddc0a9017f", null ],
@@ -42,8 +43,8 @@ var classidhan_1_1IDHANClient =
     [ "setUrlInfo", "d3/d67/classidhan_1_1IDHANClient.html#a9524156aa24ab12504d4798765254626", null ],
     [ "validConnection", "d3/d67/classidhan_1_1IDHANClient.html#ae893b5afe14caf1b4dbb03a7783aee08", null ],
     [ "connection_attempts", "d3/d67/classidhan_1_1IDHANClient.html#a03f5e34833cff23b56687151abaeb0d0", null ],
-    [ "logger", "d3/d67/classidhan_1_1IDHANClient.html#a76e63026b950354ff34d152c2142e955", null ],
     [ "m_instance", "d3/d67/classidhan_1_1IDHANClient.html#a3ee84a5b16efe1752e88aec7039249a0", null ],
+    [ "m_logger", "d3/d67/classidhan_1_1IDHANClient.html#a50e6d2f8964379dec4eb8969cdf1bec3", null ],
     [ "m_url_template", "d3/d67/classidhan_1_1IDHANClient.html#a5a9ab6d0c7b9c10d0f49d3e7481e643e", null ],
     [ "network", "d3/d67/classidhan_1_1IDHANClient.html#a7d79ee766affc0e5cb520dbe751fd8cf", null ]
 ];

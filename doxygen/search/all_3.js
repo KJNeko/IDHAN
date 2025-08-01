@@ -16,7 +16,7 @@ var searchData=
   ['deinitfunc_13',['deinitFunc',['../d0/d85/classidhan_1_1modules_1_1ModuleHolder.html#a00436b13ddf11d7caa817da41efdd2a2',1,'idhan::modules::ModuleHolder']]],
   ['delete_14',['DELETE',['../dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814ba2b42cebf07bd0bc52052ec1759ae52d0',1,'idhan']]],
   ['deleted_15',['Deleted',['../dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2a424b43382bec554150ba2a9e100b3dd5',1,'idhan']]],
-  ['deletetagdomain_16',['deleteTagDomain',['../d9/de1/classidhan_1_1api_1_1IDHANTagAPI.html#accedfb0817762c2bdaa8e78e3da1cd17',1,'idhan::api::IDHANTagAPI']]],
+  ['deletetagdomain_16',['deleteTagDomain',['../d3/dad/classidhan_1_1api_1_1TagAPI.html#aea5be2779a4f9ca165066ba2930c30fc',1,'idhan::api::TagAPI']]],
   ['desc_17',['DESC',['../dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1a65a6d757dbb571ccc3af9706e9a5f607',1,'idhan']]],
   ['destroytables_18',['destroyTables',['../db/d01/namespaceidhan_1_1db.html#a042c099ba9a0a055e27d3306de63bcb2',1,'idhan::db']]],
   ['display_19',['DISPLAY',['../dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807aac97ad854bf48c774ad3d0863fe1ec8cd',1,'idhan']]],
@@ -25,5 +25,6 @@ var searchData=
   ['docs_2ecpp_22',['docs.cpp',['../d8/d83/docs_8cpp.html',1,'']]],
   ['domigration_23',['doMigration',['../db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0',1,'idhan::db']]],
   ['dosenddata_24',['doSendData',['../d9/d66/classidhan_1_1Network.html#a85ba4ae26f7dc105c0f539f05c27b074',1,'idhan::Network']]],
-  ['duration_25',['Duration',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a2dccc42c283796de4f573e60f2c61808',1,'idhan::hyapi']]]
+  ['dropped_25',['dropped',['../df/d36/structidhan_1_1IOUring_1_1SubmissionRingPointers.html#ad27825e1fcfea7d2e3e1825e323fe3f6',1,'idhan::IOUring::SubmissionRingPointers']]],
+  ['duration_26',['Duration',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a2dccc42c283796de4f573e60f2c61808',1,'idhan::hyapi']]]
 ];

@@ -8,5 +8,6 @@ var searchData=
   ['config_5fpath_5',['config_path',['../d6/db4/namespaceidhan_1_1config.html#af3cf4f8c29bf2314734da40331f061ae',1,'idhan::config']]],
   ['config_5fupdated_6',['config_updated',['../d6/db4/namespaceidhan_1_1config.html#a18febcb5aabb4a56de67713a84a730ef',1,'idhan::config']]],
   ['connection_7',['connection',['../dc/dc7/classidhan_1_1ManagementConnection.html#a31b3fb2a3491923ebdb3dc75555c4753',1,'idhan::ManagementConnection']]],
-  ['connection_5fattempts_8',['connection_attempts',['../d3/d67/classidhan_1_1IDHANClient.html#a03f5e34833cff23b56687151abaeb0d0',1,'idhan::IDHANClient']]]
+  ['connection_5fattempts_8',['connection_attempts',['../d3/d67/classidhan_1_1IDHANClient.html#a03f5e34833cff23b56687151abaeb0d0',1,'idhan::IDHANClient']]],
+  ['cqes_9',['cqes',['../de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html#a0ce948b44c1eba6e53575aa532f7ba28',1,'idhan::IOUring::CommandRingPointers']]]
 ];

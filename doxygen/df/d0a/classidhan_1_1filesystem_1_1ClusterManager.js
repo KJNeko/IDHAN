@@ -6,7 +6,8 @@ var classidhan_1_1filesystem_1_1ClusterManager =
       [ "STORES_ARCHIVES", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46a3898556b522082e62b896ba3e83f4785", null ],
       [ "STORES_GENERATORS", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46ac8d34e9b7ef11f118501a7dee95b8428", null ],
       [ "STORES_FILES", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46a8378838894311913916a0991183c204c", null ],
-      [ "STORES_ALL", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46ac03b600cf2b8757d68636c59cc7e73e4", null ]
+      [ "STORES_ALL", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46ac03b600cf2b8757d68636c59cc7e73e4", null ],
+      [ "STORES_DEFAULT", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46a62d21b1e6bc2900c356faae1a27d2d5d", null ]
     ] ],
     [ "ClusterTargetType", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a556eba4638bbb0ac8ac03e13ce6d1a82", [
       [ "THUMBNAIL", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a556eba4638bbb0ac8ac03e13ce6d1a82a7bd8024ff79a46c03fcc8cefa555ec8d", null ],
@@ -24,5 +25,6 @@ var classidhan_1_1filesystem_1_1ClusterManager =
     [ "storeThumbnail", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#abbddacf3afb65ce8bdc521675d978617", null ],
     [ "m_folders", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a55ffe37b5e13a7480206858ea0a2ad48", null ],
     [ "m_instance", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a400ee6142ae1d50824de1f356f7b79dd", null ],
+    [ "m_io_uring", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#aeea7e5397faa6bc20267d0faef2ece8c", null ],
     [ "m_mutex", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a6b3f5f5ad78e93868985f5e81e37a7c0", null ]
 ];

@@ -39,7 +39,7 @@ var namespaceidhan_1_1hyapi =
       [ "PixelHashHex", "d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685ab399b020c4951ac058ad4a2b5ebedda5", null ],
       [ "BlurHash", "d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a719b502068d64d2d59de03cf1b31c7c8", null ]
     ] ],
-    [ "convertQueryRecordIDs", "d2/d18/namespaceidhan_1_1hyapi.html#ade3c0dd0c64899f786b9a3154ee135dd", null ],
+    [ "convertQueryRecordIDs", "d2/d18/namespaceidhan_1_1hyapi.html#a88116f3b826429453ec6751f70211464", null ],
     [ "getAdvancedUrlInfo", "d2/d18/namespaceidhan_1_1hyapi.html#a0cd7eccc9c02bf9497d1068d5eaad1b5", null ],
     [ "getDefaultedValue", "d2/d18/namespaceidhan_1_1hyapi.html#a5c538865c5ad60aa650c211bfb7a249e", null ],
     [ "getFileInfo", "d2/d18/namespaceidhan_1_1hyapi.html#abe1f267b411335de26f397790642f985", null ],

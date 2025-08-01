@@ -1,6 +1,6 @@
 var structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo =
 [
-    [ "ClusterInfo", "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a78ff8ca76c8a84b2d5cc48f421a9a9d5", null ],
+    [ "ClusterInfo", "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ae96d27fca808756eff942c1ae910d0c3", null ],
     [ "ClusterInfo", "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#abba2beb790eb7c75bea3a9467afae20e", null ],
     [ "capacity", "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a356a072130aaf060149ad5c96816411a", null ],
     [ "free", "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a8081e2179fa79c3a42fc8f6e3f9b28a0", null ],

@@ -1,9 +1,9 @@
 var searchData=
 [
   ['handle_0',['handle',['../d0/d85/classidhan_1_1modules_1_1ModuleHolder.html#a21e1f07d028c0d78ec7d93c7be70667e',1,'idhan::modules::ModuleHolder']]],
-  ['handleconnectionclosed_1',['handleConnectionClosed',['../df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#a9f6f13c52168a926a8368ca406d342a7',1,'idhan::api::IDHANStatsWS']]],
-  ['handlenewconnection_2',['handleNewConnection',['../df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#a578846ee42a0c39839129783518bb551',1,'idhan::api::IDHANStatsWS']]],
-  ['handlenewmessage_3',['handleNewMessage',['../df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#a3c56d2e56b59d5a53e058837ac4f3775',1,'idhan::api::IDHANStatsWS']]],
+  ['handleconnectionclosed_1',['handleConnectionClosed',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html#aeb71b3e210aada23b99a7b070ba9fa07',1,'idhan::api::Heartbeat']]],
+  ['handlenewconnection_2',['handleNewConnection',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html#a0c43f1eb5d7e0948f1cd3dcfef8a5e6f',1,'idhan::api::Heartbeat']]],
+  ['handlenewmessage_3',['handleNewMessage',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html#a23303437297bea8f3f531173c5fbc5a1',1,'idhan::api::Heartbeat']]],
   ['handleresponse_4',['handleResponse',['../dd/dcf/namespaceidhan.html#a1fb1f5c877cb6dee9d5e5782c056a055',1,'idhan']]],
   ['handleversioninfo_5',['handleVersionInfo',['../dd/dcf/namespaceidhan.html#aa32290eb8fec468bba8a98213ecf71c2',1,'idhan']]],
   ['hasfile_6',['hasFile',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ace286184394f2c684659f9d2f956eb86',1,'idhan::filesystem::ClusterManager::ClusterInfo']]],

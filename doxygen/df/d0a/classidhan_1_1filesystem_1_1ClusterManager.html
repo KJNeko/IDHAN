@@ -158,6 +158,7 @@ Private Types</h2></td></tr>
 , <a class="el" href="#a96e06ead6dd48b244220c7f0efee4b46a8378838894311913916a0991183c204c">STORES_FILES</a> = 1 &lt;&lt; 3
 , <br />
 &#160;&#160;<a class="el" href="#a96e06ead6dd48b244220c7f0efee4b46ac03b600cf2b8757d68636c59cc7e73e4">STORES_ALL</a> = STORES_THUMBNAILS | STORES_ARCHIVES | STORES_GENERATORS | STORES_FILES
+, <a class="el" href="#a96e06ead6dd48b244220c7f0efee4b46a62d21b1e6bc2900c356faae1a27d2d5d">STORES_DEFAULT</a> = STORES_ALL
 <br />
  }</td></tr>
 <tr class="separator:a96e06ead6dd48b244220c7f0efee4b46"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -178,6 +179,8 @@ Private Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
+<tr class="memitem:aeea7e5397faa6bc20267d0faef2ece8c" id="r_aeea7e5397faa6bc20267d0faef2ece8c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d25/classidhan_1_1IOUring.html">IOUring</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeea7e5397faa6bc20267d0faef2ece8c">m_io_uring</a></td></tr>
+<tr class="separator:aeea7e5397faa6bc20267d0faef2ece8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6b3f5f5ad78e93868985f5e81e37a7c0" id="r_a6b3f5f5ad78e93868985f5e81e37a7c0"><td class="memItemLeft" align="right" valign="top">std::mutex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6b3f5f5ad78e93868985f5e81e37a7c0">m_mutex</a> {}</td></tr>
 <tr class="separator:a6b3f5f5ad78e93868985f5e81e37a7c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a55ffe37b5e13a7480206858ea0a2ad48" id="r_a55ffe37b5e13a7480206858ea0a2ad48"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a>, <a class="el" href="../../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html">ClusterInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a55ffe37b5e13a7480206858ea0a2ad48">m_folders</a> {}</td></tr>
@@ -214,6 +217,7 @@ Static Private Attributes</h2></td></tr>
 <tr><td class="fieldname"><a id="a96e06ead6dd48b244220c7f0efee4b46ac8d34e9b7ef11f118501a7dee95b8428" name="a96e06ead6dd48b244220c7f0efee4b46ac8d34e9b7ef11f118501a7dee95b8428"></a>STORES_GENERATORS&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a96e06ead6dd48b244220c7f0efee4b46a8378838894311913916a0991183c204c" name="a96e06ead6dd48b244220c7f0efee4b46a8378838894311913916a0991183c204c"></a>STORES_FILES&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a96e06ead6dd48b244220c7f0efee4b46ac03b600cf2b8757d68636c59cc7e73e4" name="a96e06ead6dd48b244220c7f0efee4b46ac03b600cf2b8757d68636c59cc7e73e4"></a>STORES_ALL&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a96e06ead6dd48b244220c7f0efee4b46a62d21b1e6bc2900c356faae1a27d2d5d" name="a96e06ead6dd48b244220c7f0efee4b46a62d21b1e6bc2900c356faae1a27d2d5d"></a>STORES_DEFAULT&#160;</td><td class="fielddoc"></td></tr>
 </table>
 
 </div>
@@ -507,6 +511,28 @@ Static Private Attributes</h2></td></tr>
   </td>
   <td class="mlabels-right">
 <span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aeea7e5397faa6bc20267d0faef2ece8c" name="aeea7e5397faa6bc20267d0faef2ece8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeea7e5397faa6bc20267d0faef2ece8c">&#9670;&#160;</a></span>m_io_uring</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../dd/d25/classidhan_1_1IOUring.html">IOUring</a> idhan::filesystem::ClusterManager::m_io_uring</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">

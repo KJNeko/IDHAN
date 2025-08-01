@@ -5,5 +5,5 @@ var searchData=
   ['welcome_20to_20idhan_20s_20page_2',['Welcome to IDHAN&apos;s page',['../d0/d30/md_README.html',1,'']]],
   ['width_3',['Width',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a55c3552fbe5fe90d8bffabf0b20ae418',1,'idhan::hyapi']]],
   ['width_4',['width',['../d6/d56/structidhan_1_1mime_1_1Resolution.html#a8ba7834e0269a7fc6320c7d83e7161b4',1,'idhan::mime::Resolution']]],
-  ['ws_5fpath_5fadd_5',['WS_PATH_ADD',['../df/d27/classidhan_1_1api_1_1IDHANStatsWS.html#adee6f9673d46dca49522e65684cc3185',1,'idhan::api::IDHANStatsWS']]]
+  ['ws_5fpath_5fadd_5',['WS_PATH_ADD',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html#ae156531c90df749359dbefa51298b573',1,'idhan::api::Heartbeat']]]
 ];
