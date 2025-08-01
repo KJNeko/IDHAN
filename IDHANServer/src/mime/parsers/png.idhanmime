@@ -1,6 +1,5 @@
 {
   "mime": "image/png",
-  "idhan_type": "qt-image",
   "extensions": [
     "png"
   ],
@@ -25,5 +24,3 @@
     }
   ]
 }
-
-

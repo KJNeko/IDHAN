@@ -1,0 +1,20 @@
+{
+  "mime": "image/webp",
+  "extensions": [
+    "webp"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 0,
+      "hex": "52494646",
+      "data": [
+        {
+          "type": "search",
+          "offset": 8,
+          "hex": "57454250"
+        }
+      ]
+    }
+  ]
+}
