@@ -23,10 +23,7 @@ struct FileIOUring
 {
 	int m_fd { -1 };
 
-	FileIOUring( const std::filesystem::path& path ) : m_fd( open( path.c_str(), O_RDWR | O_CREAT ) )
-	{
-		if ( m_fd <= 0 ) throw std::runtime_error( "Failed to open file" );
-	}
+	FileIOUring( const std::filesystem::path& path );
 
 	drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len );
 	drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 );
@@ -125,19 +122,9 @@ class IOUring
 	FGL_DELETE_COPY( IOUring );
 	FGL_DELETE_MOVE( IOUring );
 
-	static IOUring& getInstance()
-	{
-		if ( !instance ) throw std::runtime_error( "IOUring instance not initialized" );
-		return *instance;
-	}
+	static IOUring& getInstance();
 
-	void notifySubmit( std::size_t count )
-	{
-		if ( auto ret = io_uring_enter( uring_fd, count, 0, IORING_ENTER_SQ_WAKEUP, nullptr ); ret < 0 )
-		{
-			throw std::runtime_error( "Failed to enter io_uring" );
-		}
-	}
+	void notifySubmit( std::size_t count ) const;
 
 	explicit IOUring();
 
