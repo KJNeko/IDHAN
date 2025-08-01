@@ -74,15 +74,33 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	std::size_t begin { 0 };
 	std::size_t end { 0 };
 
-	if ( !range_header.empty() )
+	// This is stupid but apparently valid
+	constexpr auto full_range { "bytes=0-" };
+	if ( !range_header.empty() && range_header != full_range )
 	{
 		static const std::regex range_pattern { R"(bytes=(\d*)-(\d*)?)" };
 		std::smatch range_match {};
 
 		if ( std::regex_match( range_header, range_match, range_pattern ) )
 		{
-			if ( range_match[ 1 ].matched ) begin = static_cast< std::size_t >( std::stoull( range_match[ 1 ] ) );
-			if ( range_match[ 2 ].matched ) end = static_cast< std::size_t >( std::stoull( range_match[ 2 ] ) );
+			if ( range_match.size() != 3 )
+			{
+				log::error( "Invalid Range Header. Expected 3 matches, Got {}", range_match.size() );
+				co_return createBadRequest( "Invalid Range Header. Expected 3 matches, Got {}", range_match.size() );
+			}
+
+			try
+			{
+				if ( range_match[ 1 ].matched )
+					begin = static_cast< std::size_t >( std::stoull( range_match[ 1 ].str() ) );
+				if ( range_match[ 2 ].matched )
+					end = static_cast< std::size_t >( std::stoull( range_match[ 2 ].str() ) );
+			}
+			catch ( std::exception& e )
+			{
+				log::error( "Error with range header: {}", e.what() );
+				co_return createBadRequest( "Invalid Range Header" );
+			}
 
 			// Ensure the range is valid
 			if ( begin > end || end >= file_size ) co_return createBadRequest( "Invalid Range Header" );
