@@ -18,7 +18,7 @@ var searchData=
   ['normal_15',['Normal',['../index.html#autotoc_md1',1,'']]],
   ['notify_16',['Notify',['../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3ae5c2f80ff28fc9abad259b09569b00bd',1,'idhan::logging']]],
   ['notify_17',['notify',['../d6/d70/namespaceidhan_1_1logging.html#a687acef9950ea33ff1b271464fc38876',1,'idhan::logging']]],
-  ['notifysubmit_18',['notifySubmit',['../dd/d25/classidhan_1_1IOUring.html#a2bb22c78fbd89c4f243c694e19b5d694',1,'idhan::IOUring']]],
+  ['notifysubmit_18',['notifySubmit',['../dd/d25/classidhan_1_1IOUring.html#ab56569fb28936674cc85f652ffbc9938',1,'idhan::IOUring']]],
   ['numberofframes_19',['NumberOfFrames',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a3a0573fc8d3ae6a1b359ffb90e78e0ef',1,'idhan::hyapi']]],
   ['numberofmediaviews_20',['NumberOfMediaViews',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a525479be8038eb856a60bf121a80497c',1,'idhan::hyapi']]],
   ['numberofpixels_21',['NumberOfPixels',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a452a9b44039396cce8fc7103ebdff124',1,'idhan::hyapi']]],

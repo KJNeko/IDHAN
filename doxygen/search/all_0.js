@@ -55,8 +55,7 @@ var searchData=
   ['autocomplete_52',['autocomplete',['../d3/dad/classidhan_1_1api_1_1TagAPI.html#a5af50e9d46219cc5ce922acece9744fa',1,'idhan::api::TagAPI']]],
   ['autocompletetag_53',['autocompleteTag',['../d3/d67/classidhan_1_1IDHANClient.html#ac0b9705e4ad9d67ba3777ebe93f55542',1,'idhan::IDHANClient']]],
   ['autocompletetag_2ecpp_54',['autocompleteTag.cpp',['../da/d92/IDHANClient_2src_2tags_2autocompleteTag_8cpp.html',1,'(Global Namespace)'],['../dc/dad/IDHANServer_2src_2api_2tags_2autocompleteTag_8cpp.html',1,'(Global Namespace)']]],
-  ['await_5fready_55',['await_ready',['../d2/d83/structidhan_1_1ReadAwaiter.html#af2bd9da5db28b4816bf0e267d993af83',1,'idhan::ReadAwaiter']]],
-  ['await_5fresume_56',['await_resume',['../d2/d83/structidhan_1_1ReadAwaiter.html#a197ad617a555cd4dc86f43383db3df52',1,'idhan::ReadAwaiter']]],
-  ['await_5fsuspend_57',['await_suspend',['../d2/d83/structidhan_1_1ReadAwaiter.html#af0aa14cf8ece1565972a3090d682c5d6',1,'idhan::ReadAwaiter']]],
-  ['awaiter_58',['awaiter',['../d0/d5f/structidhan_1_1UserData.html#a6bae5d9cc43fde43b1a8661561284403',1,'idhan::UserData']]]
+  ['await_5fready_55',['await_ready',['../d2/d83/structidhan_1_1ReadAwaiter.html#af2bd9da5db28b4816bf0e267d993af83',1,'idhan::ReadAwaiter::await_ready()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#a145e9d4e6410a506a1b24bc616cb7d3e',1,'idhan::WriteAwaiter::await_ready()']]],
+  ['await_5fresume_56',['await_resume',['../d2/d83/structidhan_1_1ReadAwaiter.html#a197ad617a555cd4dc86f43383db3df52',1,'idhan::ReadAwaiter::await_resume()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#afa540da7f3b46f93a65fd1adfcd3a24e',1,'idhan::WriteAwaiter::await_resume()']]],
+  ['await_5fsuspend_57',['await_suspend',['../d2/d83/structidhan_1_1ReadAwaiter.html#af0aa14cf8ece1565972a3090d682c5d6',1,'idhan::ReadAwaiter::await_suspend()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#a91775a48871679e614197f44bde97f49',1,'idhan::WriteAwaiter::await_suspend()']]]
 ];

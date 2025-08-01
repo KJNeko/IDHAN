@@ -113,6 +113,7 @@ $(function(){initNavTree('d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride.h
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="#pri-methods">Private Member Functions</a> &#124;
 <a href="#pri-attribs">Private Attributes</a> &#124;
 <a href="#pri-static-attribs">Static Private Attributes</a> &#124;
@@ -139,17 +140,28 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ad7fc58d51d69871101a122cc91a9c4c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a368a124aa292a6a93ff8240c8e3a8f72" id="r_a368a124aa292a6a93ff8240c8e3a8f72"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a368a124aa292a6a93ff8240c8e3a8f72">DataIdentifierOverride</a> (const Json::Value &amp;json)</td></tr>
 <tr class="separator:a368a124aa292a6a93ff8240c8e3a8f72"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4962b8cd19c58b63b9c6d4fbc7e107e8" id="r_a4962b8cd19c58b63b9c6d4fbc7e107e8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a4962b8cd19c58b63b9c6d4fbc7e107e8">passOffset</a> (const std::byte *data, const std::size_t length, std::size_t &amp;current_offset, <a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;context) const</td></tr>
-<tr class="separator:a4962b8cd19c58b63b9c6d4fbc7e107e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a368f308633d07e4fcd9b3ea8bdf9dc7e" id="r_a368f308633d07e4fcd9b3ea8bdf9dc7e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a368f308633d07e4fcd9b3ea8bdf9dc7e">passNoOffset</a> (const std::byte *data, const std::size_t length, std::size_t &amp;current_offset, <a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;context) const</td></tr>
-<tr class="separator:a368f308633d07e4fcd9b3ea8bdf9dc7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2eef2620a1e014cbc96f1b2e47a8b907" id="r_a2eef2620a1e014cbc96f1b2e47a8b907"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a2eef2620a1e014cbc96f1b2e47a8b907">testOffset</a> (const std::byte *data, const std::size_t length, std::size_t &amp;cursor, <a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;context) const</td></tr>
+<tr class="memdesc:a2eef2620a1e014cbc96f1b2e47a8b907"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests for all the m_data sets at the given offset. Ignoring the cursor.  <br /></td></tr>
+<tr class="separator:a2eef2620a1e014cbc96f1b2e47a8b907"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a93856095e980ec5b9e2a228e08edd6d9" id="r_a93856095e980ec5b9e2a228e08edd6d9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a93856095e980ec5b9e2a228e08edd6d9">testScanForward</a> (const std::byte *data, const std::size_t length, std::size_t &amp;cursor, <a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;context) const</td></tr>
+<tr class="memdesc:a93856095e980ec5b9e2a228e08edd6d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scans for the m_data sets in the forward direction, Returns true if any match.  <br /></td></tr>
+<tr class="separator:a93856095e980ec5b9e2a228e08edd6d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0267b40c94b7673b548c2b3852b91594" id="r_a0267b40c94b7673b548c2b3852b91594"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#a0267b40c94b7673b548c2b3852b91594">test</a> (const std::byte *data, const std::size_t length, std::size_t &amp;current_offset, <a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;context) const</td></tr>
 <tr class="separator:a0267b40c94b7673b548c2b3852b91594"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a818061994dd068dc1554ef5f7f702db0" id="r_a818061994dd068dc1554ef5f7f702db0"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#a818061994dd068dc1554ef5f7f702db0">required</a> () const</td></tr>
+<tr class="separator:a818061994dd068dc1554ef5f7f702db0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a56843393d58944b4b10aac4a7d04893b" id="r_a56843393d58944b4b10aac4a7d04893b"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a56843393d58944b4b10aac4a7d04893b">override_name</a> {}</td></tr>
 <tr class="separator:a56843393d58944b4b10aac4a7d04893b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
+Protected Attributes</h2></td></tr>
+<tr class="memitem:a23f0b584e311e56466edd29917a8f4a4" id="r_a23f0b584e311e56466edd29917a8f4a4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#a23f0b584e311e56466edd29917a8f4a4">m_required</a> { true }</td></tr>
+<tr class="separator:a23f0b584e311e56466edd29917a8f4a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adb51d6d39ecb564e0d7a856c708d3cd1" id="r_adb51d6d39ecb564e0d7a856c708d3cd1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="../../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html">MimeDataIdentifier</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#adb51d6d39ecb564e0d7a856c708d3cd1">m_children</a> {}</td></tr>
+<tr class="separator:adb51d6d39ecb564e0d7a856c708d3cd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
@@ -160,10 +172,8 @@ Private Member Functions</h2></td></tr>
 Private Attributes</h2></td></tr>
 <tr class="memitem:a29f2f9be2d674e2247396853723018da" id="r_a29f2f9be2d674e2247396853723018da"><td class="memItemLeft" align="right" valign="top">std::int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a29f2f9be2d674e2247396853723018da">offset</a> { <a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#ad509c789d6929edd82c08a38540c567a">NO_OFFSET</a> }</td></tr>
 <tr class="separator:a29f2f9be2d674e2247396853723018da"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9ebe557ec5d160f9406ee48e92bbe338" id="r_a9ebe557ec5d160f9406ee48e92bbe338"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a9ebe557ec5d160f9406ee48e92bbe338">m_data</a> {}</td></tr>
-<tr class="separator:a9ebe557ec5d160f9406ee48e92bbe338"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adb51d6d39ecb564e0d7a856c708d3cd1" id="r_adb51d6d39ecb564e0d7a856c708d3cd1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="../../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html">MimeDataIdentifier</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#adb51d6d39ecb564e0d7a856c708d3cd1">m_children</a> {}</td></tr>
-<tr class="separator:adb51d6d39ecb564e0d7a856c708d3cd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c7f7a81a6b407923e08c41e3a23ca48" id="r_a0c7f7a81a6b407923e08c41e3a23ca48"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d5/d5b/structidhan_1_1mime_1_1DataIdentifierSearch_1_1DataSet.html">DataSet</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a0c7f7a81a6b407923e08c41e3a23ca48">m_data</a> {}</td></tr>
+<tr class="separator:a0c7f7a81a6b407923e08c41e3a23ca48"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-static-attribs" name="pri-static-attribs"></a>
 Static Private Attributes</h2></td></tr>
@@ -263,8 +273,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a368f308633d07e4fcd9b3ea8bdf9dc7e" name="a368f308633d07e4fcd9b3ea8bdf9dc7e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a368f308633d07e4fcd9b3ea8bdf9dc7e">&#9670;&#160;</a></span>passNoOffset()</h2>
+<a id="a818061994dd068dc1554ef5f7f702db0" name="a818061994dd068dc1554ef5f7f702db0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a818061994dd068dc1554ef5f7f702db0">&#9670;&#160;</a></span>required()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -273,68 +283,15 @@ Static Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool idhan::mime::DataIdentifierSearch::passNoOffset </td>
+          <td class="memname">bool idhan::mime::MimeDataIdentifier::required </td>
           <td>(</td>
-          <td class="paramtype">const std::byte *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::size_t</td>          <td class="paramname"><span class="paramname"><em>length</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::size_t &amp;</td>          <td class="paramname"><span class="paramname"><em>current_offset</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>context</em></span>&#160;) const</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inherited">inherited</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a4962b8cd19c58b63b9c6d4fbc7e107e8" name="a4962b8cd19c58b63b9c6d4fbc7e107e8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4962b8cd19c58b63b9c6d4fbc7e107e8">&#9670;&#160;</a></span>passOffset()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool idhan::mime::DataIdentifierSearch::passOffset </td>
-          <td>(</td>
-          <td class="paramtype">const std::byte *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::size_t</td>          <td class="paramname"><span class="paramname"><em>length</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::size_t &amp;</td>          <td class="paramname"><span class="paramname"><em>current_offset</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>context</em></span>&#160;) const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inherited">inherited</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel inherited">inherited</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -380,6 +337,108 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a2eef2620a1e014cbc96f1b2e47a8b907" name="a2eef2620a1e014cbc96f1b2e47a8b907"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2eef2620a1e014cbc96f1b2e47a8b907">&#9670;&#160;</a></span>testOffset()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool idhan::mime::DataIdentifierSearch::testOffset </td>
+          <td>(</td>
+          <td class="paramtype">const std::byte *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::size_t</td>          <td class="paramname"><span class="paramname"><em>length</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t &amp;</td>          <td class="paramname"><span class="paramname"><em>cursor</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>context</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inherited">inherited</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Tests for all the m_data sets at the given offset. Ignoring the cursor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td></td></tr>
+    <tr><td class="paramname">length</td><td></td></tr>
+    <tr><td class="paramname">cursor</td><td>Ignored </td></tr>
+    <tr><td class="paramname">context</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+</div>
+</div>
+<a id="a93856095e980ec5b9e2a228e08edd6d9" name="a93856095e980ec5b9e2a228e08edd6d9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a93856095e980ec5b9e2a228e08edd6d9">&#9670;&#160;</a></span>testScanForward()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool idhan::mime::DataIdentifierSearch::testScanForward </td>
+          <td>(</td>
+          <td class="paramtype">const std::byte *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::size_t</td>          <td class="paramname"><span class="paramname"><em>length</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t &amp;</td>          <td class="paramname"><span class="paramname"><em>cursor</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">MimeDataTrack</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>context</em></span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inherited">inherited</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Scans for the m_data sets in the forward direction, Returns true if any match. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td></td></tr>
+    <tr><td class="paramname">length</td><td></td></tr>
+    <tr><td class="paramname">cursor</td><td></td></tr>
+    <tr><td class="paramname">context</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+</div>
+</div>
 <h2 class="groupheader">Member Data Documentation</h2>
 <a id="adb51d6d39ecb564e0d7a856c708d3cd1" name="adb51d6d39ecb564e0d7a856c708d3cd1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#adb51d6d39ecb564e0d7a856c708d3cd1">&#9670;&#160;</a></span>m_children</h2>
@@ -396,15 +455,15 @@ Static Private Attributes</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel private">private</span><span class="mlabel inherited">inherited</span></span>  </td>
+<span class="mlabels"><span class="mlabel protected">protected</span><span class="mlabel inherited">inherited</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a9ebe557ec5d160f9406ee48e92bbe338" name="a9ebe557ec5d160f9406ee48e92bbe338"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9ebe557ec5d160f9406ee48e92bbe338">&#9670;&#160;</a></span>m_data</h2>
+<a id="a0c7f7a81a6b407923e08c41e3a23ca48" name="a0c7f7a81a6b407923e08c41e3a23ca48"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c7f7a81a6b407923e08c41e3a23ca48">&#9670;&#160;</a></span>m_data</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -413,12 +472,34 @@ Static Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt; std::byte &gt; idhan::mime::DataIdentifierSearch::m_data {}</td>
+          <td class="memname">std::vector&lt; <a class="el" href="../../d5/d5b/structidhan_1_1mime_1_1DataIdentifierSearch_1_1DataSet.html">DataSet</a> &gt; idhan::mime::DataIdentifierSearch::m_data {}</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
 <span class="mlabels"><span class="mlabel private">private</span><span class="mlabel inherited">inherited</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a23f0b584e311e56466edd29917a8f4a4" name="a23f0b584e311e56466edd29917a8f4a4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a23f0b584e311e56466edd29917a8f4a4">&#9670;&#160;</a></span>m_required</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool idhan::mime::MimeDataIdentifier::m_required { true }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel protected">protected</span><span class="mlabel inherited">inherited</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">

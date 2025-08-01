@@ -1,7 +1,7 @@
 var searchData=
 [
   ['handle_0',['handle',['../d0/d85/classidhan_1_1modules_1_1ModuleHolder.html#a21e1f07d028c0d78ec7d93c7be70667e',1,'idhan::modules::ModuleHolder']]],
-  ['handle_5ftype_1',['handle_type',['../d2/d83/structidhan_1_1ReadAwaiter.html#a71364448f8cded4b7eed430f9ccc20c5',1,'idhan::ReadAwaiter']]],
+  ['handle_5ftype_1',['handle_type',['../d2/d83/structidhan_1_1ReadAwaiter.html#a71364448f8cded4b7eed430f9ccc20c5',1,'idhan::ReadAwaiter::handle_type'],['../d9/d52/structidhan_1_1WriteAwaiter.html#a5c5038acef9c6cb58823f1d9784d6eb4',1,'idhan::WriteAwaiter::handle_type']]],
   ['handleconnectionclosed_2',['handleConnectionClosed',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html#aeb71b3e210aada23b99a7b070ba9fa07',1,'idhan::api::Heartbeat']]],
   ['handlenewconnection_3',['handleNewConnection',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html#a0c43f1eb5d7e0948f1cd3dcfef8a5e6f',1,'idhan::api::Heartbeat']]],
   ['handlenewmessage_4',['handleNewMessage',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html#a23303437297bea8f3f531173c5fbc5a1',1,'idhan::api::Heartbeat']]],

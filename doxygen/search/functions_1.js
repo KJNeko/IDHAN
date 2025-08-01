@@ -4,7 +4,7 @@ var searchData=
   ['checkcontenttype_1',['checkContentType',['../dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824',1,'idhan']]],
   ['clusterinfo_2',['ClusterInfo',['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ae96d27fca808756eff942c1ae910d0c3',1,'idhan::filesystem::ClusterManager::ClusterInfo::ClusterInfo(const std::filesystem::path &amp;path, ClusterID id)'],['../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#abba2beb790eb7c75bea3a9467afae20e',1,'idhan::filesystem::ClusterManager::ClusterInfo::ClusterInfo(const drogon::orm::Row &amp;row)']]],
   ['clustermanager_3',['ClusterManager',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#afeae8aa2c189f8f7799f8a82a8e94ccd',1,'idhan::filesystem::ClusterManager']]],
-  ['complete_4',['complete',['../d2/d83/structidhan_1_1ReadAwaiter.html#a0ec9c7a37fa003be2465d79649fbc09d',1,'idhan::ReadAwaiter']]],
+  ['complete_4',['complete',['../d2/d83/structidhan_1_1ReadAwaiter.html#a0ec9c7a37fa003be2465d79649fbc09d',1,'idhan::ReadAwaiter::complete()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#af293e83839efd7192d3d2a4446e48cba',1,'idhan::WriteAwaiter::complete()']]],
   ['conn_5',['conn',['../dc/dc7/classidhan_1_1ManagementConnection.html#a1a1d0e38986411aa6b043202fe1489ae',1,'idhan::ManagementConnection']]],
   ['construct_6',['construct',['../d7/d1e/classidhan_1_1SearchBuilder.html#aa8cc4f836d24ce130a823cd680bcc537',1,'idhan::SearchBuilder']]],
   ['convertqueryrecordids_7',['convertQueryRecordIDs',['../d2/d18/namespaceidhan_1_1hyapi.html#a88116f3b826429453ec6751f70211464',1,'idhan::hyapi']]],

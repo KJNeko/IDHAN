@@ -7,6 +7,7 @@ var hierarchy =
     [ "idhan::filesystem::ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", null ],
     [ "idhan::IOUring::CommandRingPointers", "de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html", null ],
     [ "idhan::ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", null ],
+    [ "idhan::mime::DataIdentifierSearch::DataSet", "d5/d5b/structidhan_1_1mime_1_1DataIdentifierSearch_1_1DataSet.html", null ],
     [ "std::exception", null, [
       [ "std::runtime_error", null, [
         [ "idhan::IDHANException", "dd/d1d/structidhan_1_1IDHANException.html", [
@@ -48,7 +49,7 @@ var hierarchy =
       [ "idhan::mime::AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", null ]
     ] ],
     [ "idhan::IOUring", "dd/d25/classidhan_1_1IOUring.html", null ],
-    [ "idhan::ReadAwaiter::m_sqe", "d0/dcb/structidhan_1_1ReadAwaiter_1_1m__sqe.html", null ],
+    [ "idhan::IOUringUserData", "d1/d67/structidhan_1_1IOUringUserData.html", null ],
     [ "idhan::ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", null ],
     [ "idhan::mime::MimeDatabase", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html", null ],
     [ "idhan::mime::MimeDataIdentifier", "d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html", [
@@ -79,10 +80,10 @@ var hierarchy =
     [ "idhan::api::TagPair", "d0/d19/structidhan_1_1api_1_1TagPair.html", null ],
     [ "idhan::IDHANClient::TagRelationshipInfo", "d9/d81/structidhan_1_1IDHANClient_1_1TagRelationshipInfo.html", null ],
     [ "idhan::TagSearch", "d9/d46/classidhan_1_1TagSearch.html", null ],
-    [ "idhan::UserData", "d0/d5f/structidhan_1_1UserData.html", null ],
     [ "idhan::VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", null ],
     [ "idhan::mime::VideoInfo", "de/da8/structidhan_1_1mime_1_1VideoInfo.html", null ],
     [ "drogon::WebSocketController", null, [
       [ "idhan::api::Heartbeat", "dd/d91/classidhan_1_1api_1_1Heartbeat.html", null ]
-    ] ]
+    ] ],
+    [ "idhan::WriteAwaiter", "d9/d52/structidhan_1_1WriteAwaiter.html", null ]
 ];

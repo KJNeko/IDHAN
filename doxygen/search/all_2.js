@@ -23,7 +23,7 @@ var searchData=
   ['clustertargettype_20',['ClusterTargetType',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a556eba4638bbb0ac8ac03e13ce6d1a82',1,'idhan::filesystem::ClusterManager']]],
   ['commandringpointers_21',['CommandRingPointers',['../de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html',1,'idhan::IOUring']]],
   ['commit_22',['commit',['../d3/d25/structidhan_1_1VersionInfo.html#a02a9ba040a15f2d3275ba7059794109c',1,'idhan::VersionInfo']]],
-  ['complete_23',['complete',['../d2/d83/structidhan_1_1ReadAwaiter.html#a0ec9c7a37fa003be2465d79649fbc09d',1,'idhan::ReadAwaiter']]],
+  ['complete_23',['complete',['../d2/d83/structidhan_1_1ReadAwaiter.html#a0ec9c7a37fa003be2465d79649fbc09d',1,'idhan::ReadAwaiter::complete()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#af293e83839efd7192d3d2a4446e48cba',1,'idhan::WriteAwaiter::complete()']]],
   ['config_24',['config',['../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd',1,'idhan::config']]],
   ['config_2ecpp_25',['Config.cpp',['../de/da7/Config_8cpp.html',1,'']]],
   ['config_2ehpp_26',['Config.hpp',['../df/db4/Config_8hpp.html',1,'']]],

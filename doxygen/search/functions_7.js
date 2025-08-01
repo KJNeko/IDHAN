@@ -12,5 +12,6 @@ var searchData=
   ['instance_9',['instance',['../d3/d67/classidhan_1_1IDHANClient.html#ad1bb050d93dff240cff27af74b800f89',1,'idhan::IDHANClient::instance()'],['../d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html#a60ce3bb365ca4694cb79bd1771d94944',1,'idhan::modules::ModuleLoader::instance()']]],
   ['invoke_10',['invoke',['../d4/d76/classidhan_1_1api_1_1APIAuth.html#ace432e04deedeb98abfe73e362549977',1,'idhan::api::APIAuth::invoke()'],['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#a5696247bb6074024c6134b2e0a5de827',1,'idhan::hyapi::HyAPIAuth::invoke()']]],
   ['iothread_11',['ioThread',['../dd/dcf/namespaceidhan.html#a6263c51c6d3d4f2de1823665d392ef42',1,'idhan']]],
-  ['iouring_12',['IOUring',['../dd/d25/classidhan_1_1IOUring.html#a771a3535bc90a7e685e7687b08297e2e',1,'idhan::IOUring']]]
+  ['iouring_12',['IOUring',['../dd/d25/classidhan_1_1IOUring.html#a771a3535bc90a7e685e7687b08297e2e',1,'idhan::IOUring']]],
+  ['iouringuserdata_13',['IOUringUserData',['../d1/d67/structidhan_1_1IOUringUserData.html#aab2cf24e864ee3ee85d6bd9340e0af5f',1,'idhan::IOUringUserData::IOUringUserData(ReadAwaiter *read)'],['../d1/d67/structidhan_1_1IOUringUserData.html#a0d738339f456a163439123ff5eda1233',1,'idhan::IOUringUserData::IOUringUserData(WriteAwaiter *write)']]]
 ];

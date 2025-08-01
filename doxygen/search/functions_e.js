@@ -1,7 +1,7 @@
 var searchData=
 [
   ['read_0',['read',['../df/dca/structidhan_1_1FileIOUring.html#aa483efbf5800c592f751746215f0c593',1,'idhan::FileIOUring']]],
-  ['readawaiter_1',['ReadAwaiter',['../d2/d83/structidhan_1_1ReadAwaiter.html#adf090d1c0aa587fb81d7e0fd099a5c0f',1,'idhan::ReadAwaiter::ReadAwaiter(handle_type handle)'],['../d2/d83/structidhan_1_1ReadAwaiter.html#a83396f0eb7682f7e2568571fd39bf4fb',1,'idhan::ReadAwaiter::ReadAwaiter(IOUring *uring, struct io_uring_sqe sqe)']]],
+  ['readawaiter_1',['ReadAwaiter',['../d2/d83/structidhan_1_1ReadAwaiter.html#adf090d1c0aa587fb81d7e0fd099a5c0f',1,'idhan::ReadAwaiter::ReadAwaiter(handle_type handle)'],['../d2/d83/structidhan_1_1ReadAwaiter.html#a7eefe0fb578fe9124b559c6b769c700f',1,'idhan::ReadAwaiter::ReadAwaiter(IOUring *uring, io_uring_sqe sqe)']]],
   ['rebuildclusterinfo_2',['rebuildClusterInfo',['../db/de4/namespaceidhan_1_1api.html#ac2b6c3009496ef7e863e9275138b8e79',1,'idhan::api']]],
   ['recordnotfound_3',['RecordNotFound',['../dd/d8d/structidhan_1_1RecordNotFound.html#a331c3f6b9e49c6723261defc8278f973',1,'idhan::RecordNotFound']]],
   ['registercallback_4',['registerCallback',['../d6/d70/namespaceidhan_1_1logging.html#a823c742df0088e2b2d065e9a6c550fde',1,'idhan::logging']]],
@@ -14,6 +14,7 @@ var searchData=
   ['removetags_11',['removeTags',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html#add0be5a2c68954ed3b4d09f380541681',1,'idhan::api::RecordAPI']]],
   ['removeurls_12',['removeUrls',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a495933f9913f58a26fc16e34ab2adb6a',1,'idhan::api::RecordAPI']]],
   ['requestnewpermissions_13',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a18afc80809768409c8cea0f6d68d5969',1,'idhan::hyapi::HydrusAPI']]],
-  ['rescanmetadata_14',['rescanMetadata',['../d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#a8443f76224c87e0e136f7361af1a2761',1,'idhan::api::APIMaintenance']]],
-  ['run_15',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
+  ['required_14',['required',['../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#a818061994dd068dc1554ef5f7f702db0',1,'idhan::mime::MimeDataIdentifier']]],
+  ['rescanmetadata_15',['rescanMetadata',['../d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#a8443f76224c87e0e136f7361af1a2761',1,'idhan::api::APIMaintenance']]],
+  ['run_16',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
 ];

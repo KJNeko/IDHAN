@@ -6,9 +6,11 @@ var classidhan_1_1IOUring =
     [ "~IOUring", "dd/d25/classidhan_1_1IOUring.html#a6e14b0ea344ab78ecd462b602adc8b89", null ],
     [ "FGL_DELETE_COPY", "dd/d25/classidhan_1_1IOUring.html#a4aef7412d5a3a57a151a96e5064d6306", null ],
     [ "FGL_DELETE_MOVE", "dd/d25/classidhan_1_1IOUring.html#a8c62ad128ad1290e6533b9021972dc64", null ],
-    [ "getInstance", "dd/d25/classidhan_1_1IOUring.html#af2f6ba8345568b10277bf2b4d59ebc8a", null ],
-    [ "notifySubmit", "dd/d25/classidhan_1_1IOUring.html#a2bb22c78fbd89c4f243c694e19b5d694", null ],
-    [ "send", "dd/d25/classidhan_1_1IOUring.html#ad6ee636074e9c1ab6899532731c6929f", null ],
+    [ "getInstance", "dd/d25/classidhan_1_1IOUring.html#ac4b27fca8d480b308b2cd7f15e23aa7b", null ],
+    [ "notifySubmit", "dd/d25/classidhan_1_1IOUring.html#ab56569fb28936674cc85f652ffbc9938", null ],
+    [ "sendNop", "dd/d25/classidhan_1_1IOUring.html#a30e7328754f3bf54fe533e2810de5607", null ],
+    [ "sendRead", "dd/d25/classidhan_1_1IOUring.html#a7832ef24d3adb84e094999329084501a", null ],
+    [ "sendWrite", "dd/d25/classidhan_1_1IOUring.html#a77c50ae4dd713ec8baee35b80b0ab446", null ],
     [ "setupCommandRing", "dd/d25/classidhan_1_1IOUring.html#a781d1b8e8a2e7ed58320d2396ed5a090", null ],
     [ "setupSubmissionEntries", "dd/d25/classidhan_1_1IOUring.html#a11fd1cb23262b559aff9de6133cc5503", null ],
     [ "setupSubmissionRing", "dd/d25/classidhan_1_1IOUring.html#a307df6d36dc72eef11fa6d5c439eb9d4", null ],
@@ -21,6 +23,7 @@ var classidhan_1_1IOUring =
     [ "m_params", "dd/d25/classidhan_1_1IOUring.html#ad0a0a40eaa0667cc3e8b9809731ed25f", null ],
     [ "m_submission_entries", "dd/d25/classidhan_1_1IOUring.html#add8c78515073d6a72ef533618177dd53", null ],
     [ "m_submission_ring", "dd/d25/classidhan_1_1IOUring.html#add0bd5302aeb9d5dc3655eea5c983b7a", null ],
+    [ "mtx", "dd/d25/classidhan_1_1IOUring.html#acead0172ea337d88471c96d7241c3bda", null ],
     [ "to_submit", "dd/d25/classidhan_1_1IOUring.html#aecd79668806141324f95f1f45d57b578", null ],
     [ "uring_fd", "dd/d25/classidhan_1_1IOUring.html#ac907b80e6ca4ba964aebaebc185d517a", null ]
 ];

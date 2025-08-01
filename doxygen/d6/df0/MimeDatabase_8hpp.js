@@ -3,6 +3,7 @@ var MimeDatabase_8hpp =
     [ "idhan::mime::MimeDataTrack", "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html", "de/d89/structidhan_1_1mime_1_1MimeDataTrack" ],
     [ "idhan::mime::MimeDataIdentifier", "d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html", "d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier" ],
     [ "idhan::mime::DataIdentifierSearch", "d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html", "d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch" ],
+    [ "idhan::mime::DataIdentifierSearch::DataSet", "d5/d5b/structidhan_1_1mime_1_1DataIdentifierSearch_1_1DataSet.html", "d5/d5b/structidhan_1_1mime_1_1DataIdentifierSearch_1_1DataSet" ],
     [ "idhan::mime::DataIdentifierOverride", "d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride.html", "d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride" ],
     [ "idhan::mime::MimeIdentifier", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier" ],
     [ "idhan::mime::MimeDatabase", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html", "d5/d42/classidhan_1_1mime_1_1MimeDatabase" ],

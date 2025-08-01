@@ -13,7 +13,7 @@ var searchData=
   ['getidfrompair_10',['getIDFromPair',['../db/de4/namespaceidhan_1_1api.html#a2f937f8d622dc8b90cc208c22d48dc26',1,'idhan::api']]],
   ['getidsfrompairs_11',['getIDsFromPairs',['../db/de4/namespaceidhan_1_1api.html#a025f1a3ab49e6ff6cb78b95e299ef908',1,'idhan::api']]],
   ['getinfo_12',['getInfo',['../db/de4/namespaceidhan_1_1api.html#a2a718530de6b9642998ba8eda5479ede',1,'idhan::api']]],
-  ['getinstance_13',['getInstance',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a02b686ee8a91defa9faf668524ad1673',1,'idhan::filesystem::ClusterManager::getInstance()'],['../dd/d25/classidhan_1_1IOUring.html#af2f6ba8345568b10277bf2b4d59ebc8a',1,'idhan::IOUring::getInstance()'],['../d4/d9c/namespaceidhan_1_1mime.html#a1d7a6346a14df758133691706d644832',1,'idhan::mime::getInstance()']]],
+  ['getinstance_13',['getInstance',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a02b686ee8a91defa9faf668524ad1673',1,'idhan::filesystem::ClusterManager::getInstance()'],['../dd/d25/classidhan_1_1IOUring.html#ac4b27fca8d480b308b2cd7f15e23aa7b',1,'idhan::IOUring::getInstance()'],['../d4/d9c/namespaceidhan_1_1mime.html#a1d7a6346a14df758133691706d644832',1,'idhan::mime::getInstance()']]],
   ['getlogger_14',['getLogger',['../d3/d67/classidhan_1_1IDHANClient.html#af51ddb59f38262f0d956c17017c2525b',1,'idhan::IDHANClient::getLogger()'],['../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364',1,'idhan::logging::getLogger()']]],
   ['getmetadata_15',['getMetadata',['../db/de4/namespaceidhan_1_1api.html#aa258730bbed044fe0b7b6fb85f0b9b01',1,'idhan::api']]],
   ['getmetadatainfo_16',['getMetadataInfo',['../d2/d18/namespaceidhan_1_1hyapi.html#a91aa1cafd77b35981bd534654c5e8f93',1,'idhan::hyapi']]],

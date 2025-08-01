@@ -85,5 +85,6 @@ var searchData=
   ['iouring_82',['IOUring',['../dd/d25/classidhan_1_1IOUring.html',1,'idhan::IOUring'],['../dd/d25/classidhan_1_1IOUring.html#a771a3535bc90a7e685e7687b08297e2e',1,'idhan::IOUring::IOUring()']]],
   ['iouring_2ecpp_83',['IOUring.cpp',['../d0/d85/IOUring_8cpp.html',1,'']]],
   ['iouring_2ehpp_84',['IOUring.hpp',['../d3/d94/IOUring_8hpp.html',1,'']]],
-  ['item_5fcount_85',['item_count',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#a36e9ca478d7b0414f11322b8ba34d1a1',1,'idhan::IDHANClient::TagInfo']]]
+  ['iouringuserdata_85',['IOUringUserData',['../d1/d67/structidhan_1_1IOUringUserData.html',1,'idhan::IOUringUserData'],['../d1/d67/structidhan_1_1IOUringUserData.html#aab2cf24e864ee3ee85d6bd9340e0af5f',1,'idhan::IOUringUserData::IOUringUserData(ReadAwaiter *read)'],['../d1/d67/structidhan_1_1IOUringUserData.html#a0d738339f456a163439123ff5eda1233',1,'idhan::IOUringUserData::IOUringUserData(WriteAwaiter *write)']]],
+  ['item_5fcount_86',['item_count',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#a36e9ca478d7b0414f11322b8ba34d1a1',1,'idhan::IDHANClient::TagInfo']]]
 ];

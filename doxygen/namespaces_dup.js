@@ -7,5 +7,6 @@ var namespaces_dup =
     [ "idhan", "dd/dcf/namespaceidhan.html", "dd/dcf/namespaceidhan" ],
     [ "pqxx", "dc/d09/namespacepqxx.html", null ],
     [ "spdlog", "dc/dec/namespacespdlog.html", null ],
-    [ "std", "d8/dcc/namespacestd.html", "d8/dcc/namespacestd" ]
+    [ "std", "d8/dcc/namespacestd.html", "d8/dcc/namespacestd" ],
+    [ "trantor", "db/d9e/namespacetrantor.html", null ]
 ];

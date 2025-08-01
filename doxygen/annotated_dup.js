@@ -55,6 +55,7 @@ var annotated_dup =
       [ "IDHANException", "dd/d1d/structidhan_1_1IDHANException.html", "dd/d1d/structidhan_1_1IDHANException" ],
       [ "InvalidRequestBody", "d2/d81/structidhan_1_1InvalidRequestBody.html", null ],
       [ "IOUring", "dd/d25/classidhan_1_1IOUring.html", "dd/d25/classidhan_1_1IOUring" ],
+      [ "IOUringUserData", "d1/d67/structidhan_1_1IOUringUserData.html", "d1/d67/structidhan_1_1IOUringUserData" ],
       [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],
       [ "MimeException", "df/d62/structidhan_1_1MimeException.html", "df/d62/structidhan_1_1MimeException" ],
       [ "Network", "d9/d66/classidhan_1_1Network.html", "d9/d66/classidhan_1_1Network" ],
@@ -68,8 +69,8 @@ var annotated_dup =
       [ "TagCache", "d9/d57/structidhan_1_1TagCache.html", "d9/d57/structidhan_1_1TagCache" ],
       [ "TagSearch", "d9/d46/classidhan_1_1TagSearch.html", "d9/d46/classidhan_1_1TagSearch" ],
       [ "Ui", "d3/daf/classidhan_1_1Ui.html", "d3/daf/classidhan_1_1Ui" ],
-      [ "UserData", "d0/d5f/structidhan_1_1UserData.html", "d0/d5f/structidhan_1_1UserData" ],
-      [ "VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", "d3/d25/structidhan_1_1VersionInfo" ]
+      [ "VersionInfo", "d3/d25/structidhan_1_1VersionInfo.html", "d3/d25/structidhan_1_1VersionInfo" ],
+      [ "WriteAwaiter", "d9/d52/structidhan_1_1WriteAwaiter.html", "d9/d52/structidhan_1_1WriteAwaiter" ]
     ] ],
     [ "std", "d8/dcc/namespacestd.html", [
       [ "hash< idhan::SHA256 >", "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html", "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4" ]
