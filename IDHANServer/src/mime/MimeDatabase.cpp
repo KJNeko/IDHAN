@@ -94,57 +94,59 @@ MimeDataIdentifier::MimeDataIdentifier( const Json::Value& value )
 	}
 }
 
-bool DataIdentifierSearch::passOffset(
+bool DataIdentifierSearch::testOffset(
 	const std::byte* data,
 	const std::size_t length,
-	std::size_t& current_offset,
+	[[maybe_unused]] std::size_t& cursor,
 	[[maybe_unused]] MimeDataTrack& context ) const
 {
-	std::int64_t set_offset { static_cast< std::int64_t >( current_offset ) + offset };
-
-	//wrap around
-	if ( set_offset < 0 ) set_offset = length + set_offset;
-
-	if ( set_offset + m_data.size() >= length ) return false;
-
-	for ( std::size_t i = 0; i < m_data.size(); ++i )
+	for ( const auto& set : m_data )
 	{
-		if ( i > m_data.size() ) return false;
-		if ( m_data[ i ] != data[ i + set_offset ] ) return false;
+		if ( set.match( data + offset, length ) )
+		{
+			cursor = offset + set.size();
+			return true;
+		}
 	}
 
-	current_offset += m_data.size();
-	return true;
+	return false;
 }
 
-bool DataIdentifierSearch::passNoOffset(
+bool DataIdentifierSearch::testScanForward(
 	const std::byte* data,
 	const std::size_t length,
-	std::size_t& current_offset,
+	std::size_t& cursor,
 	[[maybe_unused]] MimeDataTrack& context ) const
 {
 	if ( length <= m_data.size() ) return false;
 
-	for ( std::size_t data_offset = 0; data_offset < length - m_data.size(); ++data_offset )
+	std::size_t current_offset { cursor };
+
+	// if any of these are a full match, we use them
+	while ( current_offset <= length )
 	{
-		bool full_match { true };
-		for ( std::size_t scan_offset = 0; scan_offset < m_data.size(); ++scan_offset )
+		for ( const auto& set : m_data )
 		{
-			if ( data[ data_offset + scan_offset ] != m_data[ scan_offset ] )
+			if ( set.match( data + current_offset, length ) )
 			{
-				full_match = false;
-				break;
+				// if we match, set the cursor to be at the end of the match
+				cursor = current_offset + set.size();
+				return true;
 			}
 		}
 
-		if ( !full_match ) continue;
-
-		current_offset += m_data.size();
-
-		return true;
+		current_offset += 1;
 	}
 
 	return false;
+}
+
+bool DataIdentifierSearch::
+	pass( const std::byte* data, const std::size_t length, std::size_t& current_offset, MimeDataTrack& context ) const
+{
+	if ( offset == NO_OFFSET ) return testScanForward( data, length, current_offset, context );
+
+	return testOffset( data, length, current_offset, context );
 }
 
 DataIdentifierSearch::DataIdentifierSearch( const Json::Value& json ) : MimeDataIdentifier( json[ "data" ] )
@@ -160,7 +162,21 @@ DataIdentifierSearch::DataIdentifierSearch( const Json::Value& json ) : MimeData
 
 	if ( hex_v.isNull() ) throw std::invalid_argument( "Failed to parse identifier type: Hex field was null" );
 
-	m_data = decodeHex( hex_v.asString() );
+	if ( hex_v.isArray() )
+	{
+		for ( const auto& hex_str : hex_v )
+		{
+			if ( !hex_str.isString() )
+				throw std::invalid_argument( "Failed to parse identifier type: Hex field was not an array of strings" );
+			m_data.emplace_back( decodeHex( hex_str.asString() ) );
+		}
+	}
+	else if ( hex_v.isString() )
+	{
+		m_data.emplace_back( decodeHex( hex_v.asString() ) );
+	}
+	else
+		throw std::invalid_argument( "Failed to parse identifier type: Hex field was not an array or string" );
 }
 
 bool DataIdentifierOverride::
@@ -179,6 +195,7 @@ DataIdentifierOverride::DataIdentifierOverride( const Json::Value& json ) : Data
 	auto& name { json[ "override" ] };
 	if ( name.isNull() ) throw std::invalid_argument( "Failed to parse override name" );
 	override_name = name.asString();
+	m_required = false;
 }
 
 MimeIdentifier::MimeIdentifier(
@@ -192,11 +209,15 @@ MimeIdentifier::MimeIdentifier(
 
 bool MimeIdentifier::test( const std::byte* data, const std::size_t length, MimeDataTrack& context ) const
 {
+	// test all the various identifiers, only one needs to pass
 	for ( const auto& identifier : m_identifiers )
 	{
 		std::size_t offset { 0 };
 
-		if ( !identifier->test( data, length, offset, context ) ) return false;
+		if ( !identifier->test( data, length, offset, context ) && identifier->required() )
+		{
+			return false;
+		}
 	}
 
 	return true;
@@ -361,6 +382,16 @@ void MimeDatabase::reloadMimeParsers()
 	}
 
 	log::info( "Loaded {} mime parsers", m_identifiers.size() );
+
+	auto db { drogon::app().getDbClient() };
+
+	for ( const auto& identifier : m_identifiers )
+	{
+		db->execSqlSync(
+			"INSERT INTO mime (name, best_extension) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE set best_extension = $2",
+			identifier.m_mime,
+			identifier.m_extensions[ 0 ] );
+	}
 
 	updating_flag.store( false );
 	updating_flag.notify_all();
