@@ -92,7 +92,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		// const auto& thumbnail_data = thumbnail_info.value().data;
 		auto thumbnail_data {
-			std::make_shared< std::vector< std::uint8_t > >( std::move( thumbnail_info.value().data ) )
+			std::make_shared< std::vector< std::byte > >( std::move( thumbnail_info.value().data ) )
 		};
 
 		const auto thumbnail_location { thumbnail_location_e.value() };
@@ -100,7 +100,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		std::filesystem::create_directories( thumbnail_location.parent_path() );
 		FileIOUring io_uring_write { thumbnail_location };
 
-		co_await io_uring_write.write( data );
+		co_await io_uring_write.write( *thumbnail_data );
 	}
 
 	auto response { drogon::HttpResponse::newFileResponse(
