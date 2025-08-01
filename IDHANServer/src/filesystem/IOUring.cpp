@@ -9,61 +9,14 @@
 #include <liburing.h>
 #include <stdexcept>
 
+#include "ReadAwaiter.hpp"
+#include "WriteAwaiter.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
 
 namespace idhan
 {
-
-void ReadAwaiter::await_suspend( const std::coroutine_handle<> h )
-{
-	m_cont = h;
-
-	static std::mutex mtx {};
-	std::lock_guard lock { mtx };
-
-	unsigned tail = *m_uring->m_submission_ring.tail;
-	unsigned index = tail & *m_uring->m_submission_ring.mask;
-
-	m_sqe.user_data = reinterpret_cast< unsigned long >( this );
-	m_uring->m_submission_ring.entries[ index ] = m_sqe;
-
-	m_uring->m_submission_ring.array[ index ] = index;
-	tail++;
-
-	io_uring_smp_store_release( m_uring->m_submission_ring.tail, tail );
-
-	m_uring->notifySubmit( 1 );
-}
-
-std::vector< std::byte > ReadAwaiter::await_resume()
-{
-	if ( m_exception ) std::rethrow_exception( m_exception );
-	return m_data;
-}
-
-ReadAwaiter::ReadAwaiter( IOUring* uring, struct io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
-{}
-
-void ReadAwaiter::complete( int result, const std::vector< std::byte >& data )
-{
-	if ( result < 0 )
-	{
-		log::error( "Failed to read file: {}", strerror( errno ) );
-		m_exception =
-			std::make_exception_ptr( std::runtime_error( std::string( "Failed to read file: " ) + strerror( errno ) ) );
-	}
-	else
-	{
-		m_data = data;
-	}
-
-	if ( m_cont ) m_cont.resume();
-}
-
-ReadAwaiter::~ReadAwaiter()
-{}
 
 drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len )
 {
@@ -87,15 +40,33 @@ drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t of
 
 	io_uring_prep_read( &sqe, m_fd, data.data(), static_cast< __u32 >( len ), offset );
 
-	co_await uring.send( sqe );
+	co_await uring.sendRead( sqe );
 
 	co_return data;
 }
 
-struct UserData
+drogon::Task< void > FileIOUring::write( std::vector< std::byte > data, std::size_t offset )
 {
-	ReadAwaiter* awaiter;
-};
+	auto& uring { IOUring::getInstance() };
+
+	const auto len { data.size() };
+	if ( m_fd <= 0 ) throw std::runtime_error( "FileIOUring::write: Invalid file descriptor" );
+	if ( len >= std::numeric_limits< __u32 >::max() )
+		throw std::runtime_error(
+			format_ns::format(
+				"FileIOUring::write: len > std::numeric_limits<unsigned>::max() ({} >= {}) Tell the Dev!",
+				len,
+				std::numeric_limits< __u32 >::max() ) );
+
+	io_uring_sqe sqe {};
+	std::memset( &sqe, 0, sizeof( sqe ) );
+
+	io_uring_prep_write( &sqe, m_fd, data.data(), static_cast< __u32 >( len ), offset );
+
+	co_await uring.sendWrite( sqe );
+
+	co_return;
+}
 
 void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< std::atomic< bool > > running )
 {
@@ -134,33 +105,48 @@ void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< st
 
 			if ( cqe.user_data == 0 )
 			{
+				if ( token.stop_requested() ) return;
 				log::error( "Awaiter was not given" );
 				head++;
 				continue;
 			}
 
-			auto* awaiter { reinterpret_cast< ReadAwaiter* >( cqe.user_data ) };
+			auto deleter = []( const IOUringUserData* ptr ) -> void { delete ptr; };
 
-			if ( awaiter )
+			const auto user_data { std::unique_ptr<
+				IOUringUserData,
+				decltype( deleter ) >( reinterpret_cast< IOUringUserData* >( cqe.user_data ), deleter ) };
+
+			switch ( user_data->m_type )
 			{
-				std::vector< std::byte > data {};
+				case IOUringUserData::Type::READ:
+					{
+						const auto& read_awaiter { user_data->read_awaiter };
+						std::vector< std::byte > data {};
 
-				auto* buffer { reinterpret_cast< std::byte* >( awaiter->m_sqe.addr ) };
-				data.assign( buffer, buffer + cqe.res );
+						auto* buffer { reinterpret_cast< std::byte* >( read_awaiter->m_sqe.addr ) };
+						data.assign( buffer, buffer + cqe.res );
 
-				awaiter->complete( cqe.res, data );
-			}
-			else
-			{
-				log::warn( "Something happened to the awaiter for io_uring" );
+						read_awaiter->complete( cqe.res, data );
+						break;
+					}
+				case IOUringUserData::Type::WRITE:
+					{
+						const auto& write_awaiter { user_data->write_awaiter };
+						write_awaiter->complete( cqe.res );
+						break;
+					}
+				default:
+					{
+						log::error( "IOUring: Unknown user data type" );
+						break;
+					}
 			}
 
 			head++;
 		}
 
 		io_uring_smp_store_release( uring->m_command_ring.head, head );
-
-		std::this_thread::sleep_for( std::chrono::milliseconds( 25 ) );
 	}
 }
 
@@ -248,6 +234,26 @@ void* IOUring::setupSubmissionEntries() const
 		IORING_OFF_SQES );
 }
 
+void IOUring::sendNop()
+{
+	std::lock_guard lock { mtx };
+
+	unsigned tail = *m_submission_ring.tail;
+	unsigned index = tail & *m_submission_ring.mask;
+
+	io_uring_sqe sqe {};
+	std::memset( &sqe, 0, sizeof( sqe ) );
+	io_uring_prep_nop( &sqe );
+
+	m_submission_ring.entries[ index ] = sqe;
+	m_submission_ring.array[ index ] = index;
+	tail++;
+
+	io_uring_smp_store_release( m_submission_ring.tail, tail );
+
+	notifySubmit( 1 );
+}
+
 IOUring::IOUring() :
   uring_fd( setupUring( m_params ) ),
   m_submission_ring( setupSubmissionRing() ),
@@ -271,15 +277,22 @@ IOUring::IOUring() :
 	io_run->notify_all();
 }
 
-ReadAwaiter IOUring::send( struct io_uring_sqe sqe )
+ReadAwaiter IOUring::sendRead( const struct io_uring_sqe& sqe )
 {
 	return ReadAwaiter { this, sqe };
 }
 
+WriteAwaiter IOUring::sendWrite( const struct io_uring_sqe& sqe )
+{
+	return WriteAwaiter { this, sqe };
+}
+
 IOUring::~IOUring()
 {
+	this->sendNop();
 	this->io_thread.request_stop();
 	this->io_thread.join();
+	log::info( "Joined io_uring watcher thread" );
 	if ( uring_fd > 0 ) close( uring_fd );
 }
 
