@@ -17,16 +17,10 @@ std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
 }
 
 std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnail(
-	void* data, std::size_t length, std::size_t width, std::size_t height, const std::string mime_name )
+	void* data, const std::size_t length, std::size_t width, std::size_t height, const std::string mime_name )
 {
-	using VipsFunc = int ( * )( void*, size_t, VipsImage**, ... );
-	std::unordered_map< std::string, VipsFunc > func_map { { "image/png", vips_pngload_buffer },
-		                                                   { "image/jpeg", vips_jpegload_buffer },
-		                                                   { "image/webp", vips_webpload_buffer },
-		                                                   { "image/gif", vips_gifload_buffer } };
-
 	VipsImage* image;
-	if ( const auto it = func_map.find( mime_name ); it != func_map.end() )
+	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() )
 	{
 		if ( it->second( data, length, &image, nullptr ) != 0 )
 		{
@@ -54,7 +48,7 @@ std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbna
 	else
 		height = static_cast< std::size_t >( static_cast< float >( width ) / source_aspect );
 
-	VipsImage* resized;
+	VipsImage* resized { nullptr };
 	if ( vips_resize(
 			 image,
 			 &resized,
