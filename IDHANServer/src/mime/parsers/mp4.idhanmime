@@ -1,0 +1,22 @@
+{
+  "mime": "video/mp4",
+  "extensions": [
+    "mp4",
+    "m4v",
+    "m4p",
+    "m4b"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 4,
+      "hex": [
+        "66747970",
+        "6D6D7034",
+        "4D534E56",
+        "69736F6D",
+        "6D703432"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "mime": "application/x-clip-studio",
+  "extensions": [
+    "clip"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 0,
+      "hex": "4353464348554E4B",
+      "data": [
+        {
+          "type": "search",
+          "hex": "1843484E4B48656164"
+        }
+      ]
+    }
+  ]
+}
