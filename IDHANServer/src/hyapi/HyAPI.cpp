@@ -168,9 +168,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	{
 		const auto tag_text { tag.asString() };
 
-		const auto tag_id { co_await findOrCreateTag( tag_text, db ) };
-
-		if ( tag_id.has_value() )
+		if ( const auto tag_id { co_await findOrCreateTag( tag_text, db ) } )
 			tag_ids.push_back( tag_id.value() );
 		else
 			co_return tag_id.error();
@@ -239,7 +237,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	convertQueryRecordIDs( drogon::HttpRequestPtr& request, const std::string& hashes, drogon::orm::DbClientPtr db )
 {
 	const auto out { co_await helpers::extractRecordIDsFromParameters( request, db ) };
-	if ( !out.has_value() ) co_return std::unexpected( out.error() );
+	if ( !out ) co_return std::unexpected( out.error() );
 
 	Json::Value out_json {};
 
@@ -255,12 +253,12 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( drogon::HttpRequestPtr 
 	auto file_id { request->getOptionalParameter< RecordID >( "file_id" ) };
 	const auto hash { request->getOptionalParameter< std::string >( "hash" ) };
 
-	if ( hash.has_value() )
+	if ( hash )
 	{
 		auto db { drogon::app().getDbClient() };
 		const auto sha256 { SHA256::fromHex( hash.value() ) };
 
-		if ( !sha256.has_value() ) co_return sha256.error();
+		if ( !sha256 ) co_return sha256.error();
 
 		const auto record_result {
 			co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", sha256->toVec() )
@@ -271,7 +269,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( drogon::HttpRequestPtr 
 		file_id = record_result[ 0 ][ "record_id" ].as< RecordID >();
 	}
 
-	if ( !file_id.has_value() && !hash.has_value() ) co_return createBadRequest( "No hash of file_id specified" );
+	if ( !file_id && !hash ) co_return createBadRequest( "No hash of file_id specified" );
 
 	const RecordID id { file_id.value() };
 
@@ -287,14 +285,12 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( drogon::HttpReques
 
 	RecordID record_id { file_id.value_or( 0 ) };
 
-	if ( hash.has_value() )
+	if ( hash )
 	{
 		auto db { drogon::app().getDbClient() };
 		const auto sha256 { SHA256::fromHex( hash.value() ) };
 
-		const auto record_id_e { co_await api::helpers::findRecord( *sha256, db ) };
-
-		if ( record_id_e.has_value() )
+		if ( const auto record_id_e { co_await api::helpers::findRecord( *sha256, db ) } )
 			record_id = record_id_e.value();
 		else
 			co_return createNotFound( "No record with hash {} found", hash.value() );
@@ -310,7 +306,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 	// http://localhost:16609/hyapi/add_tags/search_tags?search=cat&tag_display_type=display
 
 	const auto search { request->getOptionalParameter< std::string >( "search" ) };
-	if ( !search.has_value() ) co_return createBadRequest( "Must provide search string" );
+	if ( !search ) co_return createBadRequest( "Must provide search string" );
 
 	std::string search_value { search.value_or( "" ) };
 

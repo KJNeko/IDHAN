@@ -66,8 +66,7 @@ drogon::Task< std::optional< TagID > >
 drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	createTagID( const NamespaceID namespace_id, const SubtagID subtag_id, drogon::orm::DbClientPtr db )
 {
-	const auto id_search { co_await searchTagID( namespace_id, subtag_id, db ) };
-	if ( id_search.has_value() )
+	if ( const auto id_search { co_await searchTagID( namespace_id, subtag_id, db ) } )
 	{
 		co_return id_search.value();
 	}
@@ -150,12 +149,12 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 		const auto namespace_id { co_await findOrCreateNamespace( namespace_text, db ) };
 		const auto subtag_id { co_await findOrCreateSubtag( subtag_text, db ) };
 
-		if ( !namespace_id.has_value() ) co_return std::unexpected( namespace_id.error() );
-		if ( !subtag_id.has_value() ) co_return std::unexpected( subtag_id.error() );
+		if ( !namespace_id ) co_return std::unexpected( namespace_id.error() );
+		if ( !subtag_id ) co_return std::unexpected( subtag_id.error() );
 
 		const auto tag_id { co_await findOrCreateTag( namespace_id.value(), subtag_id.value(), db ) };
 
-		if ( !tag_id.has_value() ) co_return std::unexpected( tag_id.error() );
+		if ( !tag_id ) co_return std::unexpected( tag_id.error() );
 
 		tag_ids.emplace_back( tag_id.value() );
 	}
@@ -198,7 +197,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createBatchedTag( drogon::H
 
 		const auto result { co_await createTags( tag_pairs, db ) };
 
-		if ( !result.has_value() ) co_return result.error();
+		if ( !result ) co_return result.error();
 
 		for ( const auto& tag_id : result.value() )
 		{
@@ -262,15 +261,15 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createSingleTag( drogon::Ht
 	const auto namespace_id { co_await findOrCreateNamespace( namespace_c.asString(), db ) };
 	const auto subtag_id { co_await findOrCreateSubtag( subtag_c.asString(), db ) };
 
-	if ( !namespace_id.has_value() ) co_return namespace_id.error();
-	if ( !subtag_id.has_value() ) co_return subtag_id.error();
+	if ( !namespace_id ) co_return namespace_id.error();
+	if ( !subtag_id ) co_return subtag_id.error();
 
 	log::debug( "Got namespace id {} for {} ", namespace_id.value(), namespace_c.asString() );
 	log::debug( "Got subtag id {} for {}", subtag_id.value(), subtag_c.asString() );
 
 	const auto tag_id { co_await createTagID( namespace_id.value(), subtag_id.value(), db ) };
 
-	if ( !tag_id.has_value() ) co_return tag_id.error();
+	if ( !tag_id ) co_return tag_id.error();
 
 	log::debug( "Got tag id {} for tag ({}, {})", tag_id.value(), namespace_id.value(), subtag_id.value() );
 

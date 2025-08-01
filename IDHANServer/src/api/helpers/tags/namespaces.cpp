@@ -32,8 +32,7 @@ drogon::Task< std::expected< NamespaceID, drogon::HttpResponsePtr > >
 		if ( counter > 128 ) co_return std::unexpected( createBadRequest( "Too many namespace creation attempts" ) );
 		++counter;
 
-		if ( const auto search_result { co_await searchNamespace( str, db ) }; search_result.has_value() )
-			co_return search_result.value();
+		if ( const auto search_result { co_await searchNamespace( str, db ) } ) co_return search_result.value();
 
 		const auto id_creation { co_await db->execSqlCoro(
 			"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) ON CONFLICT DO NOTHING RETURNING namespace_id",

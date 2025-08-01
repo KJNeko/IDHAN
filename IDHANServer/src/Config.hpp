@@ -25,8 +25,7 @@ static T get( std::string_view group, std::string_view name, const auto default_
 {
 	const auto config { loadConfig() };
 
-	const auto config_value { config[ group ][ name ].value< T >() };
-	if ( config_value.has_value() ) return config_value.value();
+	if ( const auto config_value { config[ group ][ name ].value< T >() } ) return config_value.value();
 	return default_value;
 }
 

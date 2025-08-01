@@ -14,7 +14,7 @@ std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainID( drogon::Ht
 	{
 		const auto tag_domain_parameter = request->getOptionalParameter< std::string >( "tag_domain_id" );
 
-		if ( !tag_domain_parameter.has_value() )
+		if ( !tag_domain_parameter )
 			return std::unexpected( createBadRequest( "tag_domain_id not supplied in query" ) );
 
 		const std::string tag_domain_str { *tag_domain_parameter };

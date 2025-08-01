@@ -66,7 +66,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon
 	const bool overwrite_flag { request->getOptionalParameter< bool >( "overwrite" ).value_or( false ) };
 	const bool import_deleted { request->getOptionalParameter< bool >( "import_deleted" ).value_or( false ) };
 
-	if ( !mime_str.has_value() )
+	if ( !mime_str )
 	{
 		// If the mime type is not known, Then simply skip it.
 		co_return drogon::HttpResponse::newHttpJsonResponse( createUnknownMimeResponse() );
@@ -118,7 +118,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon
 			co_await filesystem::ClusterManager::getInstance().storeFile( record_id, data_ptr, data_length, db )
 		};
 
-		if ( !store_result.has_value() )
+		if ( !store_result )
 		{
 			co_return store_result.error();
 		}

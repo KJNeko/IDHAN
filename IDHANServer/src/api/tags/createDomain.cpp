@@ -55,9 +55,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagDomain( drogon::Ht
 		{
 			const auto tag_domain_id { search[ 0 ][ 0 ].as< TagDomainID >() };
 
-			std::optional< Json::Value > out_json { co_await getTagDomainInfoJson( tag_domain_id, db ) };
-
-			if ( out_json.has_value() )
+			if ( std::optional< Json::Value > out_json { co_await getTagDomainInfoJson( tag_domain_id, db ) } )
 			{
 				auto response { drogon::HttpResponse::newHttpJsonResponse( out_json.value() ) };
 				response->setStatusCode( drogon::k409Conflict );
@@ -71,7 +69,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagDomain( drogon::Ht
 		const auto create { co_await db->execSqlCoro(
 			"INSERT INTO tag_domains (domain_name) VALUES ($1) RETURNING tag_domain_id", name.asString() ) };
 
-		if ( auto info = co_await getTagDomainInfoJson( create[ 0 ][ 0 ].as< TagDomainID >(), db ); info.has_value() )
+		if ( auto info = co_await getTagDomainInfoJson( create[ 0 ][ 0 ].as< TagDomainID >(), db ) )
 		{
 			co_return drogon::HttpResponse::newHttpJsonResponse( *info );
 		}
@@ -102,7 +100,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagDomains( [[maybe_unus
 	{
 		const auto info { co_await getTagDomainInfoJson( row[ 0 ].as< TagDomainID >(), db ) };
 
-		if ( !info.has_value() )
+		if ( !info )
 		{
 			co_return createInternalError(
 				"Failed to get info for tag domain {} despite it existing", row[ 0 ].as< std::string >() );
@@ -130,7 +128,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
 
 	const auto info { co_await getTagDomainInfoJson( domain_id, db ) };
 
-	if ( !info.has_value() )
+	if ( !info )
 	{
 		co_return createInternalError( "Failed to get info for tag domain {} despite it existing", domain_id );
 	}

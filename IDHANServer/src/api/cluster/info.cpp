@@ -63,7 +63,7 @@ ClusterAPI::ResponseTask ClusterAPI::
 {
 	const auto result { co_await getInfo( cluster_id, transaction ) };
 
-	if ( !result.has_value() ) co_return result.error();
+	if ( !result ) co_return result.error();
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( result.value() );
 }

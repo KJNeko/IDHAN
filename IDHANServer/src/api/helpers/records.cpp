@@ -64,7 +64,7 @@ drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClie
 		const auto search_result { co_await findRecord( sha256, db ) };
 
 		//TODO: Proper exception
-		if ( !search_result.has_value() ) throw std::runtime_error( "Optional had no result" );
+		if ( !search_result ) throw std::runtime_error( "Optional had no result" );
 
 		co_return search_result.value();
 	}

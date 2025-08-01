@@ -37,7 +37,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	{
 		const auto parsed_metadata { co_await tryParseRecordMetadata( record_id, db ) };
 
-		if ( !parsed_metadata.has_value() ) co_return std::unexpected( parsed_metadata.error() );
+		if ( !parsed_metadata ) co_return std::unexpected( parsed_metadata.error() );
 
 		simple_mime_result =
 			co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
@@ -53,7 +53,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 		case SimpleMimeType::IMAGE:
 			{
 				const auto result { co_await addImageInfo( root, record_id, db ) };
-				if ( !result.has_value() ) co_return std::unexpected( result.error() );
+				if ( !result ) co_return std::unexpected( result.error() );
 				break;
 			}
 		case SimpleMimeType::VIDEO:
@@ -108,7 +108,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::parseFile( drogon::HttpR
 	{
 		auto db { drogon::app().getDbClient() };
 		const auto parse_result { co_await tryParseRecordMetadata( record_id, db ) };
-		if ( !parse_result.has_value() ) co_return parse_result.error();
+		if ( !parse_result ) co_return parse_result.error();
 	}
 
 	co_return co_await fetchInfo( request, record_id );

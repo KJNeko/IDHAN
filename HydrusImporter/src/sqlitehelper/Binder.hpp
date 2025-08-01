@@ -70,7 +70,7 @@ class Binder
 
 		executeQuery( tpl );
 
-		if ( tpl.has_value() )
+		if ( tpl )
 			t = std::move( std::get< 0, T >( tpl.value() ) );
 		else
 			throw std::runtime_error( std::format( "No rows returned for query \"{}\"", sqlite3_sql( stmt ) ) );
@@ -85,7 +85,7 @@ class Binder
 
 		executeQuery( tpl );
 
-		if ( tpl.has_value() )
+		if ( tpl )
 			t = std::move( std::get< 0, T >( tpl.value() ) );
 		else
 			t = std::nullopt;
@@ -102,7 +102,7 @@ class Binder
 		std::optional< Tpl > opt_tpl { std::nullopt };
 		executeQuery( opt_tpl );
 
-		while ( opt_tpl.has_value() )
+		while ( opt_tpl )
 		{
 			std::apply( func, std::move( opt_tpl.value() ) );
 			executeQuery( opt_tpl );
@@ -119,7 +119,7 @@ class Binder
 		std::optional< std::tuple< Ts... > > opt_tpl { std::nullopt };
 		executeQuery< Ts... >( opt_tpl );
 
-		if ( opt_tpl.has_value() )
+		if ( opt_tpl )
 			tpl = std::move( opt_tpl.value() );
 		else
 			throw std::runtime_error( "No rows returned for query" );

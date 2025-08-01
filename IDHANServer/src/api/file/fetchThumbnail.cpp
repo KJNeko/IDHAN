@@ -22,7 +22,7 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
 	getThumbnailPath( const RecordID record_id, drogon::orm::DbClientPtr db )
 {
 	const auto sha256_e { co_await SHA256::fromDB( record_id, db ) };
-	if ( !sha256_e.has_value() ) co_return std::unexpected( sha256_e.error() );
+	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 
 	const auto& sha256 { sha256_e.value() };
 
@@ -53,7 +53,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	const auto thumbnail_location_e { co_await getThumbnailPath( record_id, db ) };
 
-	if ( !thumbnail_location_e.has_value() ) co_return thumbnail_location_e.error();
+	if ( !thumbnail_location_e ) co_return thumbnail_location_e.error();
 
 	if ( !std::filesystem::exists( thumbnail_location_e.value() ) || force_regenerate )
 	{
@@ -71,7 +71,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		const auto record_path { co_await helpers::getRecordPath( record_id, db ) };
 
-		if ( !record_path.has_value() ) co_return record_path.error();
+		if ( !record_path ) co_return record_path.error();
 
 		// FileMappedData data { record_path.value() };
 		FileIOUring io_uring { record_path.value() };
@@ -86,8 +86,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 			thumbnailer->createThumbnail( data.data(), data.size(), width, height, mime_name )
 		};
 
-		if ( !thumbnail_info.has_value() )
-			co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
+		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 
 		std::filesystem::create_directories( thumbnail_location_e.value().parent_path() );
 

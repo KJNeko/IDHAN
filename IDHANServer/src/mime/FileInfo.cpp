@@ -45,7 +45,7 @@ drogon::Task< FileInfo >
 	info.size = data->length();
 	const auto mime_string { mime::getInstance()->scan( data->data(), data->length() ) };
 
-	if ( !mime_string.has_value() )
+	if ( !mime_string )
 	{
 		throw mime_string.error();
 	}

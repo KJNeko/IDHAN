@@ -304,7 +304,7 @@ std::expected< std::string, std::exception > MimeDatabase::scanFile( const std::
 
 	data = static_cast< const std::byte* >( mapped_region ); // Assign pointer to the mapped memory
 
-	if ( auto opt = scan( data, static_cast< std::size_t >( file_stat.st_size ) ); opt.has_value() )
+	if ( auto opt = scan( data, static_cast< std::size_t >( file_stat.st_size ) ) )
 	{
 		munmap( mapped_region, file_stat.st_size );
 		return opt.value();

@@ -172,19 +172,19 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 {
 	std::lock_guard lock { m_mutex };
 	const auto sha256_e { co_await getRecordSHA256( record, db ) };
-	if ( !sha256_e.has_value() ) co_return std::unexpected( sha256_e.error() );
+	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 	const auto& sha256 { sha256_e.value() };
 
 	const auto& target_cluster_r { co_await findBestFolder( record, length, db ) };
 
-	if ( !target_cluster_r.has_value() ) co_return std::unexpected( target_cluster_r.error() );
+	if ( !target_cluster_r ) co_return std::unexpected( target_cluster_r.error() );
 	const auto& target_folder { m_folders.at( target_cluster_r.value() ) };
 
 	const auto record_mime { co_await mime::getRecordMime( record, db ) };
 
 	const auto result { target_folder.storeFile( sha256, data, length, record_mime.value().extension, type ) };
 
-	if ( !result.has_value() ) co_return result;
+	if ( !result ) co_return result;
 
 	constexpr auto query { "UPDATE file_info SET cluster_store_time = now(), cluster_id = $2 WHERE record_id = $1" };
 

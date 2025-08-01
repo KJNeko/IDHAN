@@ -25,7 +25,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::removeUrls( drogon::Http
 	{
 		const auto url_id { co_await helpers::findOrCreateUrl( url.asString(), db ) };
 
-		if ( !url_id.has_value() ) co_return url_id.error();
+		if ( !url_id ) co_return url_id.error();
 
 		co_await db
 			->execSqlCoro( "DELETE FROM url_mappings WHERE url_id = $1 AND record_id = $2", url_id.value(), record_id );

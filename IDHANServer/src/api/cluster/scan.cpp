@@ -70,7 +70,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		const auto sha256_e { recompute_hash ? SHA256::hash( data->data(), data->length() ) :
 			                                   SHA256::fromHex( data->name() ) };
 
-		if ( !sha256_e.has_value() )
+		if ( !sha256_e )
 		{
 			if ( stop_on_fail ) co_return createInternalError( "Failed to get hash for file" );
 			log::warn( "Failed to get hash for file {}", data->strpath() );
@@ -121,7 +121,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		const auto record_id_e { search.empty() && adopt_orphans ? co_await adoptOrphan( data, db ) :
 			                                                       search[ 0 ][ 0 ].as< RecordID >() };
 
-		if ( !record_id_e.has_value() ) co_return record_id_e.error();
+		if ( !record_id_e ) co_return record_id_e.error();
 		const auto record_id { record_id_e.value() };
 
 		bool valid_mime { true };
@@ -166,9 +166,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 			if ( metadata_search.empty() || rescan_metadata )
 			{
-				const auto metadata { co_await getMetadata( record_id, data, db ) };
-
-				if ( metadata.has_value() )
+				if ( const auto metadata { co_await getMetadata( record_id, data, db ) } )
 				{
 					co_await updateRecordMetadata( record_id, db, metadata.value() );
 				}
