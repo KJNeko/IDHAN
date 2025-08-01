@@ -16,7 +16,7 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 
 	struct ThumbnailInfo
 	{
-		std::vector< unsigned char > data;
+		std::vector< std::byte > data {};
 		std::size_t width, height;
 	};
 
