@@ -1,5 +1,5 @@
 //
-// Created by kj16609 on 3/22/25.
+// Created by kj16609 on 3/20/25.
 //
 #pragma once
 
@@ -17,18 +17,24 @@
 #include <drogon/HttpController.h>
 #pragma GCC diagnostic pop
 
+#include <expected>
+
 namespace idhan::api
 {
 
-class IDHANSearchAPI : public drogon::HttpController< IDHANSearchAPI >
+class APIMaintenance : public drogon::HttpController< APIMaintenance >
 {
-  public:
+	drogon::Task< drogon::HttpResponsePtr > rescanMetadata( drogon::HttpRequestPtr request );
+	// drogon::Task< drogon::HttpResponsePtr > postgresqlStorage( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > postgresqlStorageSunData( drogon::HttpRequestPtr request );
 
-	static drogon::Task< drogon::HttpResponsePtr > search( drogon::HttpRequestPtr );
+  public:
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( IDHANSearchAPI::search, "/search" );
+	ADD_METHOD_TO( APIMaintenance::rescanMetadata, "/jobs/metadata/rescan" );
+	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart" );
+	ADD_METHOD_TO( APIMaintenance::postgresqlStorageSunData, "/db/stats/sunburst" );
 
 	METHOD_LIST_END
 };

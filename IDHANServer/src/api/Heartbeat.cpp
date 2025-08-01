@@ -2,7 +2,7 @@
 // Created by kj16609 on 6/14/25.
 //
 
-#include "IDHANStatsWS.hpp"
+#include "Heartbeat.hpp"
 
 #include "logging/log.hpp"
 
@@ -17,7 +17,7 @@ void sendStatusJson( const drogon::WebSocketConnectionPtr& wsConnPtr )
 	wsConnPtr->sendJson( json );
 }
 
-void IDHANStatsWS::
+void Heartbeat::
 	handleNewConnection( const drogon::HttpRequestPtr& req, const drogon::WebSocketConnectionPtr& wsConnPtr )
 {
 	std::shared_ptr< trantor::TimerId > timer_id { std::make_shared< trantor::TimerId >( 0 ) };
@@ -45,11 +45,11 @@ void IDHANStatsWS::
 	*timer_id.get() = id;
 }
 
-void IDHANStatsWS::
+void Heartbeat::
 	handleNewMessage( const drogon::WebSocketConnectionPtr&, std::string&&, const drogon::WebSocketMessageType& )
 {}
 
-void IDHANStatsWS::handleConnectionClosed( const drogon::WebSocketConnectionPtr& )
+void Heartbeat::handleConnectionClosed( const drogon::WebSocketConnectionPtr& )
 {}
 
 } // namespace idhan::api

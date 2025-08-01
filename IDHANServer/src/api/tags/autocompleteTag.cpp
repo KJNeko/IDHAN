@@ -2,7 +2,7 @@
 // Created by kj16609 on 4/17/25.
 //
 
-#include "api/IDHANTagAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "fgl/defines.hpp"
 
@@ -58,8 +58,8 @@ drogon::Task< Json::Value >
 	co_return root;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
-	autocomplete( drogon::HttpRequestPtr request, std::string search_value )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::
+	autocomplete( const drogon::HttpRequestPtr request, const std::string search_value )
 {
 	const auto display_type { request->getOptionalParameter< std::string >( "tag_display_type" ) };
 

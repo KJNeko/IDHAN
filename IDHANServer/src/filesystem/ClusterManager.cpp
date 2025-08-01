@@ -20,7 +20,7 @@ namespace idhan::filesystem
 
 std::size_t getFilesystemCapacity( QDir path )
 {
-	QStorageInfo info { path };
+	const QStorageInfo info { path };
 	return info.bytesAvailable();
 }
 
@@ -34,17 +34,19 @@ std::size_t ClusterManager::ClusterInfo::free() const
 	return m_info.bytesAvailable();
 }
 
-ClusterManager::ClusterInfo::ClusterInfo( std::filesystem::path path, const ClusterID id ) :
+ClusterManager::ClusterInfo::ClusterInfo( const std::filesystem::path& path, const ClusterID id ) :
   m_id( id ),
   m_info( path ),
   m_path( path ),
-  m_max_capacity( 0 )
+  m_flags( ClusterFlags::STORES_DEFAULT ),
+  m_max_capacity( std::numeric_limits< std::size_t >::max() )
 {}
 
 ClusterManager::ClusterInfo::ClusterInfo( const drogon::orm::Row& row ) :
   m_id( row[ "cluster_id" ].as< ClusterID >() ),
   m_info( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) ),
-  m_path( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) )
+  m_path( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) ),
+  m_flags( ClusterFlags::STORES_DEFAULT )
 {}
 
 std::string metaTypePathID( const FileMetaType type )
@@ -56,7 +58,6 @@ std::string metaTypePathID( const FileMetaType type )
 			break;
 		default:
 			[[fallthrough]];
-
 			// case ARCHIVE:
 			// [[fallthrough]];
 			// case GENERATOR:
@@ -121,8 +122,8 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	return {};
 }
 
-drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManager::
-	findBestFolder( const RecordID record_id, const std::size_t file_size, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManager::findBestFolder(
+	const RecordID record_id, [[maybe_unused]] const std::size_t file_size, drogon::orm::DbClientPtr db )
 {
 	const auto cluster_check { co_await db->execSqlCoro(
 		"SELECT cluster_id, cluster_delete_time FROM file_info WHERE record_id = $1 LIMIT 1", record_id ) };
@@ -158,7 +159,8 @@ drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManag
 		cluster_scores.emplace_back( rankCluster( row ), row[ "cluster_id" ].as< ClusterID >() );
 	}
 
-	std::ranges::sort( cluster_scores, []( const auto& a, const auto& b ) { return a.first < b.first; } );
+	std::ranges::
+		sort( cluster_scores, []( const auto& a, const auto& b ) noexcept -> bool { return a.first < b.first; } );
 
 	co_return cluster_scores[ 0 ].second;
 }
@@ -167,7 +169,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const RecordID record,
 	const std::byte* data,
 	const std::size_t length,
-	drogon::orm::DbClientPtr db,
+	const drogon::orm::DbClientPtr db,
 	const FileMetaType type )
 {
 	std::lock_guard lock { m_mutex };
@@ -202,7 +204,7 @@ ClusterManager::ClusterManager()
 	m_instance = this;
 }
 
-drogon::Task< void > ClusterManager::reloadClusters( drogon::orm::DbClientPtr db )
+drogon::Task< void > ClusterManager::reloadClusters( const drogon::orm::DbClientPtr db )
 {
 	log::info( "Reloading clusters" );
 	std::lock_guard lock { m_mutex };
@@ -218,15 +220,15 @@ drogon::Task< void > ClusterManager::reloadClusters( drogon::orm::DbClientPtr db
 	}
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::
-	storeFile( RecordID record, const std::byte* data, const std::size_t length, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeFile(
+	const RecordID record, const std::byte* data, const std::size_t length, const drogon::orm::DbClientPtr db )
 {
 	const auto result { co_await storeFile( record, data, length, db, FileMetaType::NORMAL ) };
 	co_return result;
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::
-	storeThumbnail( RecordID record, const std::byte* data, const std::size_t length, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeThumbnail(
+	const RecordID record, const std::byte* data, const std::size_t length, const drogon::orm::DbClientPtr db )
 {
 	co_return co_await storeFile( record, data, length, db, FileMetaType::THUMBNAIL );
 }

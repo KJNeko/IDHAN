@@ -18,12 +18,10 @@
 #include <drogon/WebSocketController.h>
 #pragma GCC diagnostic pop
 
-
-
 namespace idhan::api
 {
 
-class IDHANStatsWS : public drogon::WebSocketController< IDHANStatsWS >
+class Heartbeat : public drogon::WebSocketController< Heartbeat >
 {
 	// drogon::Task< drogon::HttpResponsePtr > getBones( drogon::HttpRequestPtr request );
 	// drogon::Task< drogon::HttpResponsePtr > getFileCount( drogon::HttpRequestPtr request );

@@ -2,7 +2,7 @@
 // Created by kj16609 on 2/20/25.
 //
 
-#include "api/IDHANTagAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "drogon/HttpResponse.h"
 #include "drogon/utils/coroutine.h"
@@ -13,7 +13,7 @@ namespace idhan::api
 {
 
 drogon::Task< std::optional< Json::Value > >
-	getTagDomainInfoJson( const TagDomainID domain_id, drogon::orm::DbClientPtr db )
+	getTagDomainInfoJson( const TagDomainID domain_id, const drogon::orm::DbClientPtr db )
 {
 	const auto search {
 		co_await db
@@ -30,7 +30,7 @@ drogon::Task< std::optional< Json::Value > >
 	co_return out_json;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagDomain( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpRequestPtr request )
 {
 	const auto json_obj { request->getJsonObject() };
 
@@ -86,7 +86,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagDomain( drogon::Ht
 	FGL_UNREACHABLE();
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagDomains( [[maybe_unused]] drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomains( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };
 
@@ -112,7 +112,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::getTagDomains( [[maybe_unus
 	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
+drogon::Task< drogon::HttpResponsePtr > TagAPI::
 	getTagDomainInfo( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID domain_id )
 {
 	auto db { drogon::app().getDbClient() };
@@ -136,8 +136,8 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
 	co_return drogon::HttpResponse::newHttpJsonResponse( *info );
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
-	deleteTagDomain( drogon::HttpRequestPtr request, TagDomainID domain_id )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::
+	deleteTagDomain( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID domain_id )
 {
 	auto db { drogon::app().getDbClient() };
 	const auto search { co_await db->execSqlCoro( "DELETE FROM tag_domains WHERE tag_domain_id = $1", domain_id ) };
@@ -146,7 +146,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
 
 	Json::Value out_json {};
 
-	out_json[ "domain_id" ] = search[ 0 ][ 0 ].as< TagDomainID >();
+	out_json[ "domain_id" ] = static_cast< Json::Value::UInt >( search[ 0 ][ 0 ].as< TagDomainID >() );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
 }

@@ -94,9 +94,11 @@ MimeDataIdentifier::MimeDataIdentifier( const Json::Value& value )
 	}
 }
 
-bool DataIdentifierSearch::
-	passOffset( const std::byte* data, const std::size_t length, std::size_t& current_offset, MimeDataTrack& context )
-		const
+bool DataIdentifierSearch::passOffset(
+	const std::byte* data,
+	const std::size_t length,
+	std::size_t& current_offset,
+	[[maybe_unused]] MimeDataTrack& context ) const
 {
 	std::int64_t set_offset { static_cast< std::int64_t >( current_offset ) + offset };
 
@@ -115,28 +117,31 @@ bool DataIdentifierSearch::
 	return true;
 }
 
-bool DataIdentifierSearch::
-	passNoOffset( const std::byte* data, const std::size_t length, std::size_t& current_offset, MimeDataTrack& context )
-		const
+bool DataIdentifierSearch::passNoOffset(
+	const std::byte* data,
+	const std::size_t length,
+	std::size_t& current_offset,
+	[[maybe_unused]] MimeDataTrack& context ) const
 {
 	if ( length <= m_data.size() ) return false;
 
-	for ( std::size_t x = 0; x < length - m_data.size(); ++x )
+	for ( std::size_t data_offset = 0; data_offset < length - m_data.size(); ++data_offset )
 	{
-		for ( std::size_t i = 0; i < m_data.size(); ++i )
+		bool full_match { true };
+		for ( std::size_t scan_offset = 0; scan_offset < m_data.size(); ++scan_offset )
 		{
-			if ( data[ x + i ] != m_data[ i ] )
+			if ( data[ data_offset + scan_offset ] != m_data[ scan_offset ] )
 			{
-				goto skip;
+				full_match = false;
+				break;
 			}
 		}
+
+		if ( !full_match ) continue;
 
 		current_offset += m_data.size();
 
 		return true;
-
-	skip:
-		continue;
 	}
 
 	return false;
@@ -310,6 +315,7 @@ std::expected< std::string, std::exception > MimeDatabase::scanFile( const std::
 		return opt.value();
 	}
 
+	munmap( mapped_region, file_stat.st_size );
 	return INVALID_MIME_NAME;
 }
 

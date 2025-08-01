@@ -5,7 +5,7 @@
 #include <expected>
 
 #include "IDHANTypes.hpp"
-#include "api/IDHANRecordAPI.hpp"
+#include "api/RecordAPI.hpp"
 #include "urls.hpp"
 
 namespace idhan
@@ -13,7 +13,7 @@ namespace idhan
 
 namespace api
 {
-drogon::Task< drogon::HttpResponsePtr > IDHANRecordAPI::
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::
 	fetchUrls( [[maybe_unused]] drogon::HttpRequestPtr request, const RecordID record_id )
 {
 	const auto db { drogon::app().getFastDbClient() };

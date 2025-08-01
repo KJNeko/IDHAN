@@ -4,14 +4,14 @@
 
 #include <fstream>
 
-#include "IDHANApi.hpp"
+#include "InfoAPI.hpp"
 #include "helpers/createBadRequest.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
 {
 
-void IDHANApi::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+void InfoAPI::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
 	const std::string path { request->getPath() };
 
@@ -20,7 +20,7 @@ void IDHANApi::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&
 	callback( drogon::HttpResponse::newFileResponse( "./static" + path ) );
 }
 
-void IDHANApi::api( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+void InfoAPI::api( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
 	callback( drogon::HttpResponse::newFileResponse( "./static/apidocs.html" ) );
 }

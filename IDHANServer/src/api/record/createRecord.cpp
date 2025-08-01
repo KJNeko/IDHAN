@@ -3,7 +3,7 @@
 //
 
 #include "IDHANTypes.hpp"
-#include "api/IDHANRecordAPI.hpp"
+#include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "crypto/SHA256.hpp"
@@ -14,17 +14,10 @@
 namespace idhan::api
 {
 
-ResponseTask createRecordFromOctet( const drogon::HttpRequestPtr req )
+ResponseTask createRecordFromOctet( [[maybe_unused]] const drogon::HttpRequestPtr req )
 {
 	co_return createBadRequest( "Not implemented" );
 }
-
-ResponseTask createRecordFromSHA256( const SHA256 sha256, drogon::orm::DbClientPtr db )
-{}
-
-drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
-	createRecords( const std::vector< SHA256 >& hashes, drogon::orm::DbClientPtr db )
-{}
 
 drogon::Task< void > processBatchAndMapRecords(
 	std::unordered_set< SHA256 >& hashes,
@@ -139,7 +132,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 	FGL_UNREACHABLE();
 }
 
-ResponseTask IDHANRecordAPI::createRecord( const drogon::HttpRequestPtr request )
+ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "createRecord" };
 	// the request here should be either an octet stream, or json. If it's an octet stream, then it will be a file we can hash.
@@ -159,6 +152,7 @@ ResponseTask IDHANRecordAPI::createRecord( const drogon::HttpRequestPtr request 
 			break;
 		default:
 			//TODO: Failure
+			co_return createBadRequest( "Unknown content type" );
 			break;
 	}
 #pragma GCC diagnostic pop

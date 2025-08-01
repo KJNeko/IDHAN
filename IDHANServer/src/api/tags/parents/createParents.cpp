@@ -4,7 +4,7 @@
 
 #include <expected>
 
-#include "api/IDHANTagAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "logging/log.hpp"
@@ -12,7 +12,7 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagParents( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( drogon::HttpRequestPtr request )
 {
 	const auto json_obj { request->getJsonObject() };
 

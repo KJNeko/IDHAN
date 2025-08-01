@@ -2,7 +2,7 @@
 // Created by kj16609 on 6/14/25.
 //
 
-#include "api/IDHANStatsWS.hpp"
+#include "api/Heartbeat.hpp"
 
 namespace idhan::api
 {

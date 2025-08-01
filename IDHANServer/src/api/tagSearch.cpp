@@ -2,13 +2,12 @@
 // Created by kj16609 on 11/14/24.
 //
 
-#include "IDHANTagAPI.hpp"
+#include "TagAPI.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
 {
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::
-	search( drogon::HttpRequestPtr request, const std::string tag_text )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::search( drogon::HttpRequestPtr request, const std::string tag_text )
 {
 	auto db { drogon::app().getDbClient() };
 

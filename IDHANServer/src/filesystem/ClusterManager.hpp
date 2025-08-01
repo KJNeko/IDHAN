@@ -69,7 +69,8 @@ class ClusterManager
 		STORES_GENERATORS = 1 << 2,
 		STORES_FILES = 1 << 3,
 
-		STORES_ALL = STORES_THUMBNAILS | STORES_ARCHIVES | STORES_GENERATORS | STORES_FILES
+		STORES_ALL = STORES_THUMBNAILS | STORES_ARCHIVES | STORES_GENERATORS | STORES_FILES,
+		STORES_DEFAULT = STORES_ALL
 	};
 
 	IOUring m_io_uring;
@@ -85,7 +86,7 @@ class ClusterManager
 		std::size_t capacity() const;
 
 		std::size_t free() const;
-		ClusterInfo( std::filesystem::path path, ClusterID id );
+		ClusterInfo( const std::filesystem::path& path, ClusterID id );
 		ClusterInfo( const drogon::orm::Row& row );
 
 		//! Max size this folder can contain. 0 == unlimited

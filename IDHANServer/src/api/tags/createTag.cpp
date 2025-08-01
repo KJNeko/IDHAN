@@ -5,7 +5,7 @@
 #include <expected>
 #include <ranges>
 
-#include "api/IDHANTagAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/tags/namespaces.hpp"
 #include "api/helpers/tags/subtags.hpp"
@@ -19,7 +19,7 @@ namespace idhan::api
 {
 
 drogon::Task< std::expected< NamespaceID, drogon::HttpResponsePtr > >
-	getNamespaceID( const Json::Value& namespace_c, drogon::orm::DbClientPtr db )
+	getNamespaceID( const Json::Value& namespace_c, const drogon::orm::DbClientPtr db )
 {
 	if ( namespace_c.isString() )
 	{
@@ -50,7 +50,7 @@ drogon::Task< std::expected< SubtagID, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::optional< TagID > >
-	searchTagID( const NamespaceID namespace_id, const SubtagID subtag_id, drogon::orm::DbClientPtr db )
+	searchTagID( const NamespaceID namespace_id, const SubtagID subtag_id, const drogon::orm::DbClientPtr db )
 {
 	const auto result { co_await db->execSqlCoro(
 		"SELECT tag_id FROM tags WHERE namespace_id = $1 AND subtag_id = $2", namespace_id, subtag_id ) };
@@ -64,7 +64,7 @@ drogon::Task< std::optional< TagID > >
 }
 
 drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
-	createTagID( const NamespaceID namespace_id, const SubtagID subtag_id, drogon::orm::DbClientPtr db )
+	createTagID( const NamespaceID namespace_id, const SubtagID subtag_id, const drogon::orm::DbClientPtr db )
 {
 	if ( const auto id_search { co_await searchTagID( namespace_id, subtag_id, db ) } )
 	{
@@ -82,7 +82,7 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	co_return std::unexpected( createInternalError( "Unable to create tag with {}:{}", namespace_id, subtag_id ) );
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createTagRouter( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagRouter( const drogon::HttpRequestPtr request )
 {
 	const auto json_obj { request->getJsonObject() };
 
@@ -137,8 +137,8 @@ std::string pgEscape( const std::string& str )
 	return cleaned;
 }
 
-drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
-	createTags( const std::vector< std::pair< std::string, std::string > >& tag_pairs, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > createTags(
+	const std::vector< std::pair< std::string, std::string > >& tag_pairs, const drogon::orm::DbClientPtr db )
 {
 	logging::ScopedTimer timer { "createTags" };
 
@@ -162,7 +162,7 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 	co_return tag_ids;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createBatchedTag( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::createBatchedTag( const drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "createBatchedTag" };
 	// we should have a body
@@ -213,7 +213,7 @@ drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createBatchedTag( drogon::H
 	}
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANTagAPI::createSingleTag( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::createSingleTag( drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "createSingleTime" };
 	if ( request == nullptr )

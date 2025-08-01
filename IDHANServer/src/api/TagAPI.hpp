@@ -4,7 +4,6 @@
 #pragma once
 #include "IDHANTypes.hpp"
 
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wredundant-tags"
@@ -22,7 +21,7 @@
 namespace idhan::api
 {
 
-class IDHANTagAPI : public drogon::HttpController< IDHANTagAPI >
+class TagAPI : public drogon::HttpController< TagAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > getTagInfo( drogon::HttpRequestPtr request, TagID tag_id );
 
@@ -46,27 +45,27 @@ class IDHANTagAPI : public drogon::HttpController< IDHANTagAPI >
 
   public:
 
-	IDHANTagAPI() = default;
+	TagAPI() = default;
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tags/{tag_id}/info" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tags/info?tag_id={1}" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagInfo, "/tags/info?tag_ids={1}" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagRelationships, "/tags/{domain_id}/{tag_id}/relationships" );
+	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/{tag_id}/info" );
+	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/info?tag_id={1}" );
+	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/info?tag_ids={1}" );
+	ADD_METHOD_TO( TagAPI::getTagRelationships, "/tags/{domain_id}/{tag_id}/relationships" );
 
-	ADD_METHOD_TO( IDHANTagAPI::search, "/tags/search?tag={1}" );
-	ADD_METHOD_TO( IDHANTagAPI::autocomplete, "/tags/autocomplete?tag={1}" );
+	ADD_METHOD_TO( TagAPI::search, "/tags/search?tag={1}" );
+	ADD_METHOD_TO( TagAPI::autocomplete, "/tags/autocomplete?tag={1}" );
 
-	ADD_METHOD_TO( IDHANTagAPI::createTagRouter, "/tags/create" );
+	ADD_METHOD_TO( TagAPI::createTagRouter, "/tags/create" );
 
-	ADD_METHOD_TO( IDHANTagAPI::createTagDomain, "/tags/domain/create" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagDomains, "/tags/domain/list" );
-	ADD_METHOD_TO( IDHANTagAPI::getTagDomainInfo, "/tags/domain/{domain_id}/info" );
-	ADD_METHOD_TO( IDHANTagAPI::deleteTagDomain, "/tags/domain/{domain_id}/delete" );
+	ADD_METHOD_TO( TagAPI::createTagDomain, "/tags/domain/create" );
+	ADD_METHOD_TO( TagAPI::getTagDomains, "/tags/domain/list" );
+	ADD_METHOD_TO( TagAPI::getTagDomainInfo, "/tags/domain/{domain_id}/info" );
+	ADD_METHOD_TO( TagAPI::deleteTagDomain, "/tags/domain/{domain_id}/delete" );
 
-	ADD_METHOD_TO( IDHANTagAPI::createTagParents, "/tags/parents/create" );
-	ADD_METHOD_TO( IDHANTagAPI::createTagAliases, "/tags/alias/create" );
+	ADD_METHOD_TO( TagAPI::createTagParents, "/tags/parents/create" );
+	ADD_METHOD_TO( TagAPI::createTagAliases, "/tags/alias/create" );
 
 	METHOD_LIST_END
 };

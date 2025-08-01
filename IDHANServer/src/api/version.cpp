@@ -2,7 +2,7 @@
 // Created by kj16609 on 11/8/24.
 //
 
-#include "IDHANApi.hpp"
+#include "InfoAPI.hpp"
 #include "hyapi/constants/hydrus_version.hpp"
 #include "logging/log.hpp"
 #include "versions.hpp"
@@ -10,7 +10,7 @@
 namespace idhan::api
 {
 
-void IDHANApi::version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+void InfoAPI::version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
 {
 	log::debug( "/version" );
 
@@ -30,9 +30,9 @@ void IDHANApi::version( const drogon::HttpRequestPtr& request, ResponseFunction&
 
 	json[ "hydrus_api_version" ] = HYDRUS_MIMICED_API_VERSION;
 
-	json["branch"] = FGL_GIT_BRANCH;
-	json["commit"] = FGL_GIT_COMMIT;
-	json["build"] = FGL_BUILD_TYPE;
+	json[ "branch" ] = FGL_GIT_BRANCH;
+	json[ "commit" ] = FGL_GIT_COMMIT;
+	json[ "build" ] = FGL_BUILD_TYPE;
 
 	callback( drogon::HttpResponse::newHttpJsonResponse( json ) );
 }

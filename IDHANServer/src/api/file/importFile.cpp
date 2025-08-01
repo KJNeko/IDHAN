@@ -2,7 +2,7 @@
 // Created by kj16609 on 11/15/24.
 //
 
-#include "api/IDHANImportAPI.hpp"
+#include "api/ImportAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "codes/ImportCodes.hpp"
@@ -48,7 +48,7 @@ Json::Value createUnknownMimeResponse()
 	return root;
 }
 
-drogon::Task< drogon::HttpResponsePtr > IDHANImportAPI::importFile( const drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::HttpRequestPtr request )
 {
 	FGL_ASSERT( request, "Request invalid" );
 	const auto request_data { request->getBody() };
