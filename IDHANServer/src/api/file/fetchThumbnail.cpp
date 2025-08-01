@@ -97,18 +97,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		const auto thumbnail_location { thumbnail_location_e.value() };
 
-		//TODO: io_uring for saving this data to a file
-		auto save_coro { drogon::queueInLoopCoro(
-			drogon::app().getLoop(),
-			[ thumbnail_data, thumbnail_location ]()
-			{
-				if ( std::ofstream ofs( thumbnail_location, std::ios::binary ); ofs )
-				{
-					ofs.write( reinterpret_cast< const char* >( thumbnail_data->data() ), thumbnail_data->size() );
-				}
-			} ) };
+		std::filesystem::create_directories( thumbnail_location.parent_path() );
+		FileIOUring io_uring_write { thumbnail_location };
 
-		co_await save_coro;
+		co_await io_uring_write.write( data );
 	}
 
 	auto response { drogon::HttpResponse::newFileResponse(

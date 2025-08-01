@@ -10,49 +10,47 @@
 #include <filesystem>
 #include <liburing.h>
 
+#include "ReadAwaiter.hpp"
+#include "WriteAwaiter.hpp"
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
 
 namespace idhan
 {
 
-class IOUring;
-
-struct [[nodiscard]] ReadAwaiter
-{
-	struct promise_type;
-
-	using handle_type = std::coroutine_handle< promise_type >;
-
-	bool await_ready() const noexcept { return false; }
-
-	void await_suspend( const std::coroutine_handle<> h );
-
-	std::vector< std::byte > await_resume();
-
-	std::vector< std::byte > m_data {};
-	std::exception_ptr m_exception {};
-	handle_type m_h;
-	std::coroutine_handle<> m_cont;
-	IOUring* m_uring { nullptr };
-	struct io_uring_sqe m_sqe {};
-
-	ReadAwaiter( handle_type handle ) : m_h( handle ) {}
-
-	ReadAwaiter( IOUring* uring, struct io_uring_sqe sqe );
-
-	void complete( int result, const std::vector< std::byte >& data );
-
-	~ReadAwaiter();
-};
-
 struct FileIOUring
+
 {
 	int m_fd { -1 };
 
-	FileIOUring( const std::filesystem::path& path ) : m_fd( open( path.c_str(), O_RDWR ) ) {}
+	FileIOUring( const std::filesystem::path& path ) : m_fd( open( path.c_str(), O_RDWR | O_CREAT ) )
+	{
+		if ( m_fd <= 0 ) throw std::runtime_error( "Failed to open file" );
+	}
 
 	drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len );
+	drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 );
+};
+
+struct IOUringUserData
+{
+	enum class Type
+	{
+		READ,
+		WRITE
+	} m_type;
+
+	union
+	{
+		ReadAwaiter* read_awaiter;
+		WriteAwaiter* write_awaiter;
+	};
+
+	IOUringUserData( ReadAwaiter* read ) : m_type( Type::READ ), read_awaiter( read ) {}
+
+	IOUringUserData( WriteAwaiter* write ) : m_type( Type::WRITE ), write_awaiter( write ) {}
+
+	~IOUringUserData() = default;
 };
 
 class IOUring
@@ -64,6 +62,8 @@ class IOUring
 	static int setupUring( io_uring_params& params );
 
   public:
+
+	std::mutex mtx {};
 
 	struct SubmissionRingPointers
 	{
@@ -100,6 +100,8 @@ class IOUring
 		}
 	} m_command_ring;
 
+  private:
+
 	io_uring_sqe* m_submission_entries { nullptr };
 
 	SubmissionRingPointers setupSubmissionRing();
@@ -114,6 +116,9 @@ class IOUring
 		ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< std::atomic< bool > > running );
 
 	std::atomic< unsigned > to_submit { 0 };
+
+	//! Submits an empty operation to io_uring to unstick the thread to allow it to properly exit
+	void sendNop();
 
   public:
 
@@ -136,7 +141,8 @@ class IOUring
 
 	explicit IOUring();
 
-	ReadAwaiter send( struct io_uring_sqe sqe );
+	WriteAwaiter sendWrite( const io_uring_sqe& sqe );
+	ReadAwaiter sendRead( const io_uring_sqe& sqe );
 
 	~IOUring();
 };

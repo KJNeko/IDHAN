@@ -157,8 +157,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 		{
 			const auto data_result { co_await getMetadataInfo( db, record_id, data ) };
-			if ( !data_result ) co_return data_result.error();
-			data = data_result.value();
+			if ( data_result ) data = data_result.value();
 		}
 
 		auto storage_tags { db->execSqlCoro(
