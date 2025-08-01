@@ -10,6 +10,7 @@
       "hex": "89504E470D0A1A0A"
     },
     {
+      // override for APNG
       "type": "override",
       // acTL chunk
       "hex": "6163544C",
