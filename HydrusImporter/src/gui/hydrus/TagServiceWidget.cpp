@@ -58,8 +58,8 @@ void TagServiceWidget::setName( const QString& name )
 
 void TagServiceWidget::updateTime()
 {
-	const auto total_processed { ui->progressBar->value() };
-	const auto to_process { m_info.num_mappings + m_info.num_parents + m_info.num_aliases };
+	const std::size_t total_processed { ui->progressBar->value() };
+	const std::size_t to_process { m_info.num_mappings + m_info.num_parents + m_info.num_aliases };
 
 	if ( total_processed == -1 ) return;
 
@@ -74,7 +74,7 @@ void TagServiceWidget::updateTime()
 			.count()
 	};
 
-	const auto ms_per_mapping { static_cast< float >( time_elapsed ) / static_cast< float >( total_processed ) };
+	const double ms_per_mapping { static_cast< double >( time_elapsed ) / static_cast< double >( total_processed ) };
 
 	const auto time_remaining { static_cast< std::size_t >( ( to_process - total_processed ) * ms_per_mapping ) };
 
@@ -82,7 +82,7 @@ void TagServiceWidget::updateTime()
 	const auto minutes = ( time_remaining % 3600000 ) / 60000;
 	const auto seconds = ( time_remaining % 60000 ) / 1000;
 
-	ui->statusLabel->setText( QString( "ETA: %1:%2:%3 (%4/%5)" )
+	ui->statusLabel->setText( QString( "ETA: %1:%2:%3 (%L4/%L5)" )
 	                              .arg( hours, 2, 10, QChar( '0' ) )
 	                              .arg( minutes, 2, 10, QChar( '0' ) )
 	                              .arg( seconds, 2, 10, QChar( '0' ) )
@@ -99,8 +99,10 @@ void TagServiceWidget::processedMappings( std::size_t count )
 	locale.setNumberOptions( QLocale::DefaultNumberOptions );
 	ui->mappingsCount
 		->setText( QString( "Mappings: %L1 (%L2 processed)" ).arg( m_info.num_mappings ).arg( mappings_processed ) );
-	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
-	ui->progressBar->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	ui->progressBar
+		->setValue( static_cast< std::size_t >( mappings_processed + aliases_processed + parents_processed ) );
+	ui->progressBar
+		->setMaximum( static_cast< std::size_t >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
 	updateTime();
 }
 
@@ -109,8 +111,10 @@ void TagServiceWidget::processedParents( std::size_t count )
 	parents_processed += count;
 	ui->parentsCount
 		->setText( QString( "Parents: %L1 (%L2 processed)" ).arg( m_info.num_parents ).arg( parents_processed ) );
-	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
-	ui->progressBar->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	ui->progressBar
+		->setValue( static_cast< std::size_t >( mappings_processed + aliases_processed + parents_processed ) );
+	ui->progressBar
+		->setMaximum( static_cast< std::size_t >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
 	updateTime();
 }
 
@@ -119,8 +123,10 @@ void TagServiceWidget::processedAliases( std::size_t count )
 	aliases_processed += count;
 	ui->aliasesCount
 		->setText( QString( "Aliases: %L1 (%L2 processed)" ).arg( m_info.num_aliases ).arg( aliases_processed ) );
-	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
-	ui->progressBar->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	ui->progressBar
+		->setValue( static_cast< std::size_t >( mappings_processed + aliases_processed + parents_processed ) );
+	ui->progressBar
+		->setMaximum( static_cast< std::size_t >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
 	updateTime();
 }
 
