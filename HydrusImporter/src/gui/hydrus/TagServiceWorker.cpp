@@ -215,10 +215,13 @@ void TagServiceWorker::processMappingsBatch(
 
 	std::unordered_set< int > hash_id_set {};
 
+	auto last_id { 0 };
+
 	for ( const auto& [ tag_id, hash_id ] : query )
 	{
 		// dump before processing the next item if we are over the limit
-		if ( hash_id_set.size() >= hash_limit )
+		const auto hash_changed { hash_id != last_id };
+		if ( hash_id_set.size() >= hash_limit && hash_changed )
 		{
 			hash_id_set.clear();
 			processPairs( pairs );
@@ -227,6 +230,7 @@ void TagServiceWorker::processMappingsBatch(
 			emit processedMappings( mappings_counter );
 			mappings_counter = 0;
 		}
+		last_id = hash_id;
 
 		mappings_counter += 1;
 		pairs.emplace_back( hash_id, tag_id );
@@ -264,9 +268,8 @@ void TagServiceWorker::importMappings()
 
 	tag_domain_id = tag_domain_f.result();
 
-	processRelationships();
-
 	processMappingsBatch( mappings_tr, current_mappings_name );
+	processRelationships();
 }
 
 void TagServiceWorker::processRelationships()
