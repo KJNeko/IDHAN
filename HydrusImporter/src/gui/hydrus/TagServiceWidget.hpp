@@ -22,6 +22,9 @@ class TagServiceWidget : public QWidget
 	QString m_name;
 	bool m_preprocessed { false };
 	TagServiceWorker* m_worker;
+	using Clock = std::chrono::high_resolution_clock;
+	using TimePoint = std::chrono::high_resolution_clock::time_point;
+	TimePoint m_start;
 
   public:
 
@@ -31,6 +34,7 @@ class TagServiceWidget : public QWidget
 	~TagServiceWidget() override;
 
 	void setName( const QString& name );
+	void updateTime();
 
 	bool ready() const { return m_preprocessed; }
 

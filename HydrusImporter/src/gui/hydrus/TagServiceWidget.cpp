@@ -56,6 +56,42 @@ void TagServiceWidget::setName( const QString& name )
 	ui->name->setText( QString( "Name: %L1" ).arg( name ) );
 }
 
+void TagServiceWidget::updateTime()
+{
+	const auto total_processed { ui->progressBar->value() };
+	const auto to_process { m_info.num_mappings + m_info.num_parents + m_info.num_aliases };
+
+	if ( total_processed == -1 ) return;
+
+	if ( to_process == total_processed )
+	{
+		ui->statusLabel->setText( "ETA: Finished" );
+		return;
+	}
+
+	const auto time_elapsed {
+		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::high_resolution_clock::now() - m_start )
+			.count()
+	};
+
+	const auto ms_per_mapping { static_cast< float >( time_elapsed ) / static_cast< float >( total_processed ) };
+
+	const auto time_remaining { static_cast< std::size_t >( ( to_process - total_processed ) * ms_per_mapping ) };
+
+	const auto hours = time_remaining / 3600000;
+	const auto minutes = ( time_remaining % 3600000 ) / 60000;
+	const auto seconds = ( time_remaining % 60000 ) / 1000;
+
+	ui->statusLabel->setText( QString( "ETA: %1:%2:%3 (%4/%5)" )
+	                              .arg( hours, 2, 10, QChar( '0' ) )
+	                              .arg( minutes, 2, 10, QChar( '0' ) )
+	                              .arg( seconds, 2, 10, QChar( '0' ) )
+	                              .arg( total_processed, 2, 10, QChar( '0' ) )
+	                              .arg( to_process, 2, 10, QChar( '0' ) )
+
+	);
+}
+
 void TagServiceWidget::processedMappings( std::size_t count )
 {
 	mappings_processed += count;
@@ -64,8 +100,8 @@ void TagServiceWidget::processedMappings( std::size_t count )
 	ui->mappingsCount
 		->setText( QString( "Mappings: %L1 (%L2 processed)" ).arg( m_info.num_mappings ).arg( mappings_processed ) );
 	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
-	this->ui->progressBar
-		->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	ui->progressBar->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	updateTime();
 }
 
 void TagServiceWidget::processedParents( std::size_t count )
@@ -74,8 +110,8 @@ void TagServiceWidget::processedParents( std::size_t count )
 	ui->parentsCount
 		->setText( QString( "Parents: %L1 (%L2 processed)" ).arg( m_info.num_parents ).arg( parents_processed ) );
 	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
-	this->ui->progressBar
-		->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	ui->progressBar->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	updateTime();
 }
 
 void TagServiceWidget::processedAliases( std::size_t count )
@@ -84,13 +120,14 @@ void TagServiceWidget::processedAliases( std::size_t count )
 	ui->aliasesCount
 		->setText( QString( "Aliases: %L1 (%L2 processed)" ).arg( m_info.num_aliases ).arg( aliases_processed ) );
 	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
-	this->ui->progressBar
-		->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	ui->progressBar->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
+	updateTime();
 }
 
 void TagServiceWidget::preprocessingFinished()
 {
 	m_preprocessed = true;
+	updateTime();
 }
 
 void TagServiceWidget::setMaxMappings( std::size_t count )
@@ -133,6 +170,7 @@ void TagServiceWidget::setInfo( const idhan::hydrus::ServiceInfo& service_info )
 void TagServiceWidget::startImport()
 {
 	if ( ui->cbShouldImport->isChecked() ) QThreadPool::globalInstance()->start( m_worker );
+	m_start = std::chrono::high_resolution_clock::now();
 }
 
 void TagServiceWidget::startPreImport()
