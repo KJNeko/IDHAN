@@ -29,17 +29,14 @@ QFuture< void > IDHANClient::addTags(
 	auto promise { std::make_shared< QPromise< void > >() };
 	promise->start();
 
-	constexpr auto NAMESPACE_KEY { "namespace" };
-	constexpr auto SUBTAG_KEY { "subtag" };
-
-	auto convertTagsToArray = []( const auto& tags ) -> QJsonArray
+	auto convertTagsToArray = []( const auto& tag_list ) -> QJsonArray
 	{
 		QJsonArray array {};
-		for ( const auto& [ namespace_t, subtag_t ] : tags )
+		for ( const auto& [ namespace_t, subtag_t ] : tag_list )
 		{
 			QJsonObject object {};
-			object[ NAMESPACE_KEY ] = QString::fromStdString( namespace_t );
-			object[ SUBTAG_KEY ] = QString::fromStdString( subtag_t );
+			object[ "namespace" ] = QString::fromStdString( namespace_t );
+			object[ "subtag" ] = QString::fromStdString( subtag_t );
 		}
 		return array;
 	};
@@ -49,18 +46,6 @@ QFuture< void > IDHANClient::addTags(
 
 	auto handleResponse = [ promise ]( QNetworkReply* reply )
 	{
-		promise->finish();
-		reply->deleteLater();
-	};
-
-	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error, std::string server_msg )
-	{
-		logging::error( reply->errorString().toStdString() );
-
-		const std::runtime_error exception { server_msg };
-
-		promise->setException( std::make_exception_ptr( exception ) );
-
 		promise->finish();
 		reply->deleteLater();
 	};
@@ -75,7 +60,7 @@ QFuture< void > IDHANClient::addTags(
 
 	url.setQuery( query );
 
-	sendClientPost( std::move( doc ), url, handleResponse, handleError );
+	sendClientPost( std::move( doc ), url, handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }
@@ -117,16 +102,6 @@ QFuture< void > IDHANClient::addTags(
 		reply->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error, std::string server_msg )
-	{
-		const std::runtime_error exception { format_ns::format( "Error: {}", server_msg ) };
-
-		promise->setException( std::make_exception_ptr( exception ) );
-
-		promise->finish();
-		reply->deleteLater();
-	};
-
 	const QString path { "/records/tags/add" };
 
 	QUrl url {};
@@ -137,7 +112,7 @@ QFuture< void > IDHANClient::addTags(
 
 	url.setQuery( query );
 
-	sendClientPost( std::move( doc ), url, handleResponse, handleError );
+	sendClientPost( std::move( doc ), url, handleResponse, defaultErrorHandler( promise ) );
 
 	std::string tag_str {};
 
@@ -245,7 +220,7 @@ QFuture< void > IDHANClient::addTags(
 		{
 			if ( const auto itter = std::ranges::find_if(
 					 unique_tags,
-					 [ &tag ]( const std::pair< std::string, std::string >& pair ) -> bool
+					 [ &tag ]( const std::pair< std::string, std::string >& pair ) noexcept -> bool
 					 { return pair.first == tag.first && pair.second == tag.second; } );
 			     itter != unique_tags.end() )
 			{

@@ -6,7 +6,6 @@
 
 #include <moc_Network.cpp>
 
-#include <QFuture>
 #include <QThread>
 
 #include "logging/logger.hpp"
@@ -17,7 +16,6 @@ namespace idhan
 QNetworkReply* Network::sendDataI( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body )
 {
 	// request.setTransferTimeout( std::chrono::milliseconds( 30 * 1000 ) );
-	QNetworkReply* response { nullptr };
 	switch ( method )
 	{
 		case HttpMethod::GET:
@@ -35,7 +33,7 @@ QNetworkReply* Network::sendDataI( const HttpMethod method, const QNetworkReques
 	FGL_UNREACHABLE();
 }
 
-Network::Network( QObject* parent ) : QObject( parent )
+Network::Network( QObject* parent ) : QObject( parent ), m_network( this )
 {
 	connect( this, &Network::sendData, this, &Network::doSendData, Qt::QueuedConnection );
 }

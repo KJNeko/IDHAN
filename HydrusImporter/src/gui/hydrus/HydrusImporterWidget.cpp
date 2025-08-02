@@ -17,11 +17,14 @@
 
 class TagServiceWorker;
 
-HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent ), ui( new Ui::HydrusImporterWidget )
+HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) :
+  QWidget( parent ),
+  m_threads(),
+  ui( new Ui::HydrusImporterWidget )
 {
 	ui->setupUi( this );
 
-	ui->cbProcessPTR->setChecked( false );
+	ui->cbProcessPTR->setChecked( true );
 
 	ui->hyFolderStatusLabel->setText( "Invalid" );
 	ui->hyFolderStatusLabel->setStyleSheet( "QLabel { color: red; }" );
@@ -38,7 +41,7 @@ HydrusImporterWidget::~HydrusImporterWidget()
 	delete ui;
 }
 
-void HydrusImporterWidget::on_hydrusFolderPath_textChanged( const QString& path )
+void HydrusImporterWidget::on_hydrusFolderPath_textChanged( [[maybe_unused]] const QString& path )
 {
 	testHydrusPath();
 }

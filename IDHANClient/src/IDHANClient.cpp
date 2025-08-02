@@ -80,19 +80,7 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 		reply->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error, std::string server_msg )
-	{
-		logging::error( "Failed to get reply from remote: {}:{}", static_cast< int >( error ), reply->errorString() );
-
-		const auto e { std::runtime_error( "Failed to get reply from remote" ) };
-
-		promise->setException( std::make_exception_ptr( e ) );
-		promise->finish();
-
-		reply->deleteLater();
-	};
-
-	sendClientGet( "/version", handleResponse, handleError );
+	sendClientGet( "/version", handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }
@@ -252,14 +240,14 @@ void IDHANClient::sendClientJson(
 			auto header = response->header( QNetworkRequest::ContentTypeHeader );
 			if ( header.isValid() && header.toString().contains( "application/json" ) )
 			{
-				const auto body { response->readAll() };
-				QJsonDocument doc { QJsonDocument::fromJson( body ) };
-				if ( doc.isObject() )
+				const auto response_body { response->readAll() };
+				QJsonDocument response_doc { QJsonDocument::fromJson( response_body ) };
+				if ( response_doc.isObject() )
 				{
-					QJsonObject object { doc.object() };
-					if ( object.contains( "error" ) )
+					QJsonObject response_object { response_doc.object() };
+					if ( response_object.contains( "error" ) )
 					{
-						const auto error_msg { object[ "error" ].toString().toStdString() };
+						const auto error_msg { response_object[ "error" ].toString().toStdString() };
 						// logging::error( object[ "error" ].toString().toStdString() );
 
 						QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error, error_msg ) );

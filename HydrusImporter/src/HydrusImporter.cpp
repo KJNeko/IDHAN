@@ -16,7 +16,10 @@ namespace idhan::hydrus
 
 constexpr std::string_view LOCK_FILE_NAME { "client_running" };
 
-HydrusImporter::HydrusImporter( const std::filesystem::path& path ) : m_path( path ), m_process_ptr_mappings( false )
+HydrusImporter::HydrusImporter( const std::filesystem::path& path ) :
+  m_path( path ),
+  final_future(),
+  m_process_ptr_mappings( false )
 {
 	if ( !std::filesystem::exists( path ) ) throw std::runtime_error( "Failed to open path to hydrus db" );
 
@@ -57,7 +60,7 @@ bool HydrusImporter::hasPTR() const
 		                                           "SELECT service_id, name FROM services WHERE service_type = $1",
 		                                           static_cast< int >( hy_constants::ServiceTypes::PTR_SERVICE ) };
 
-	for ( const auto& [ service_id, name ] : query )
+	for ( [[maybe_unused]] const auto& [ serviae_id, name ] : query )
 	{
 		exists = true;
 	}

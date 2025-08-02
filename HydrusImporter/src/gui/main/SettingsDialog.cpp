@@ -28,7 +28,7 @@ void SettingsDialog::on_testConnection_pressed()
 
 	auto& client { IDHANClient::instance() };
 
-	client.openConnection( ui->leHostname->text(), ui->lePort->text().toInt() );
+	client.openConnection( ui->leHostname->text(), static_cast< qint16 >( ui->lePort->text().toInt() ) );
 
 	auto future { client.queryVersion() };
 
