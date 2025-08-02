@@ -203,7 +203,7 @@ void TagServiceWorker::processMappingsBatch(
 	const idhan::hydrus::TransactionBaseCoro& mappings_tr, const std::string& current_mappings_name )
 {
 	std::vector< MappingPair > pairs {};
-	constexpr std::size_t hash_limit { 200 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
+	constexpr std::size_t hash_limit { 600 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
 	constexpr std::size_t average_tags_per_hash { 128 };
 	constexpr std::size_t pair_limit { average_tags_per_hash * hash_limit };
 

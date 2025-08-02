@@ -44,6 +44,8 @@ class TagServiceWidget : public QWidget
 	void startImport();
 	void startPreImport();
 
+	void updateProcessed();
+
 	void processedMappings( std::size_t count );
 	void processedParents( std::size_t count );
 	void processedAliases( std::size_t count );
