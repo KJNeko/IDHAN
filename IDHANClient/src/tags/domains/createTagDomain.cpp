@@ -39,7 +39,9 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* response, QNetworkReply::NetworkError error, std::string server_msg )
+	auto handleError =
+		[ promise ](
+			QNetworkReply* response, QNetworkReply::NetworkError error, [[maybe_unused]] std::string server_msg )
 	{
 		logging::logResponse( response );
 
@@ -71,8 +73,10 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 
 	auto future = promise->future();
 
-	QFuture< TagDomainID > unlock_future { future.then( [ guard_ptr = guard ]( const TagDomainID domain_id )
-		                                                { return domain_id; } ) };
+	QFuture< TagDomainID > unlock_future {
+		future
+			.then( [ guard_ptr = guard ]( const TagDomainID domain_id ) noexcept -> TagDomainID { return domain_id; } )
+	};
 
 	return unlock_future;
 	// return promise->future();
@@ -95,11 +99,11 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 
 		for ( const auto& row : array )
 		{
-			const auto& object { row.toObject() };
+			const auto& row_object { row.toObject() };
 
-			if ( object[ "domain_name" ].toString() == name )
+			if ( row_object[ "domain_name" ].toString() == name )
 			{
-				promise->addResult( object[ "domain_id" ].toInteger() );
+				promise->addResult( row_object[ "domain_id" ].toInteger() );
 				promise->finish();
 				return;
 			}
@@ -111,18 +115,7 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 		response->deleteLater();
 	};
 
-	auto handleError = [ promise ]( QNetworkReply* response, QNetworkReply::NetworkError error )
-	{
-
-		const std::runtime_error exception { format_ns::format( "Error: {}", response->errorString().toStdString() ) };
-
-		promise->setException( std::make_exception_ptr( exception ) );
-
-		promise->finish();
-		response->deleteLater();
-	};
-
-	sendClientGet( "/tags/domain/list", handleResponse, defaultErrorHandler(promise) );
+	sendClientGet( "/tags/domain/list", handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }

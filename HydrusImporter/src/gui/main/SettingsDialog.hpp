@@ -19,6 +19,8 @@ class SettingsDialog final : public QDialog
 
   public:
 
+	Q_DISABLE_COPY_MOVE( SettingsDialog )
+
 	explicit SettingsDialog( QWidget* parent = nullptr );
 
 	virtual ~SettingsDialog() override;

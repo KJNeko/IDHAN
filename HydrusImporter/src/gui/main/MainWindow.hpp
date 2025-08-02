@@ -34,6 +34,8 @@ class MainWindow final : public QMainWindow
 
   public:
 
+	Q_DISABLE_COPY_MOVE( MainWindow )
+
 	explicit MainWindow( QWidget* parent = nullptr );
 	~MainWindow() override;
 

@@ -12,6 +12,8 @@
 
 TagServiceWidget::TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWidget* parent ) :
   QWidget( parent ),
+  m_info(),
+  m_name(),
   m_worker( new TagServiceWorker( this, importer ) ),
   ui( new Ui::TagServiceWidget )
 {
@@ -61,8 +63,9 @@ void TagServiceWidget::processedMappings( std::size_t count )
 	locale.setNumberOptions( QLocale::DefaultNumberOptions );
 	ui->mappingsCount
 		->setText( QString( "Mappings: %L1 (%L2 processed)" ).arg( m_info.num_mappings ).arg( mappings_processed ) );
-	ui->progressBar->setValue( mappings_processed + aliases_processed + parents_processed );
-	this->ui->progressBar->setMaximum( m_info.num_mappings + m_info.num_parents + m_info.num_aliases );
+	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
+	this->ui->progressBar
+		->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
 }
 
 void TagServiceWidget::processedParents( std::size_t count )
@@ -70,8 +73,9 @@ void TagServiceWidget::processedParents( std::size_t count )
 	parents_processed += count;
 	ui->parentsCount
 		->setText( QString( "Parents: %L1 (%L2 processed)" ).arg( m_info.num_parents ).arg( parents_processed ) );
-	ui->progressBar->setValue( mappings_processed + aliases_processed + parents_processed );
-	this->ui->progressBar->setMaximum( m_info.num_mappings + m_info.num_parents + m_info.num_aliases );
+	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
+	this->ui->progressBar
+		->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
 }
 
 void TagServiceWidget::processedAliases( std::size_t count )
@@ -79,8 +83,9 @@ void TagServiceWidget::processedAliases( std::size_t count )
 	aliases_processed += count;
 	ui->aliasesCount
 		->setText( QString( "Aliases: %L1 (%L2 processed)" ).arg( m_info.num_aliases ).arg( aliases_processed ) );
-	ui->progressBar->setValue( mappings_processed + aliases_processed + parents_processed );
-	this->ui->progressBar->setMaximum( m_info.num_mappings + m_info.num_parents + m_info.num_aliases );
+	ui->progressBar->setValue( static_cast< int >( mappings_processed + aliases_processed + parents_processed ) );
+	this->ui->progressBar
+		->setMaximum( static_cast< int >( m_info.num_mappings + m_info.num_parents + m_info.num_aliases ) );
 }
 
 void TagServiceWidget::preprocessingFinished()

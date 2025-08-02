@@ -13,8 +13,8 @@
 namespace idhan
 {
 
-QFuture< std::vector< RecordID > > IDHANClient::
-	createRecords( std::vector< std::array< std::byte, ( 256 / 8 ) > >& hashes )
+QFuture< std::vector< RecordID > > IDHANClient::createRecords( [[maybe_unused]] std::vector<
+															   std::array< std::byte, ( 256 / 8 ) > >& hashes )
 {
 	std::vector< std::string > hex_hashes {};
 

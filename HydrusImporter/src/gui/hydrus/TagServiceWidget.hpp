@@ -25,6 +25,8 @@ class TagServiceWidget : public QWidget
 
   public:
 
+	Q_DISABLE_COPY_MOVE( TagServiceWidget )
+
 	explicit TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWidget* parent = nullptr );
 	~TagServiceWidget() override;
 

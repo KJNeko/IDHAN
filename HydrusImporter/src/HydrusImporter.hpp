@@ -27,8 +27,10 @@ struct ServiceInfo
 	ServiceInfo() = default;
 };
 
-struct HydrusImporter
+class HydrusImporter
 {
+  public:
+
 	sqlite3* master_db { nullptr };
 	sqlite3* client_db { nullptr };
 	sqlite3* mappings_db { nullptr };
@@ -42,8 +44,6 @@ struct HydrusImporter
 
 	FGL_DELETE_COPY( HydrusImporter );
 	FGL_DELETE_MOVE( HydrusImporter );
-
-	void finish();
 
 	void copyFileStorage();
 

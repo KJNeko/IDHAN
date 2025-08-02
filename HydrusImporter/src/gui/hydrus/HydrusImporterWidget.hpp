@@ -31,6 +31,8 @@ class HydrusImporterWidget final : public QWidget
 
   public:
 
+	Q_DISABLE_COPY_MOVE( HydrusImporterWidget )
+
 	explicit HydrusImporterWidget( QWidget* parent = nullptr );
 	~HydrusImporterWidget() override;
 

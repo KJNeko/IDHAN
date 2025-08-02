@@ -253,14 +253,13 @@ class IDHANClient
 		IDHANResponseHandler&& responseHandler,
 		IDHANErrorHandler&& errorHandler,
 		QJsonDocument&& object );
-
-  public:
 };
 
 template < typename TPromise >
 auto defaultErrorHandler( TPromise&& promise )
 {
-	auto handler = [ promise ]( QNetworkReply* reply, QNetworkReply::NetworkError error, std::string server_msg )
+	auto handler =
+		[ promise ]( QNetworkReply* reply, [[maybe_unused]] QNetworkReply::NetworkError error, std::string server_msg )
 	{
 		// logging::logResponse( reply );
 

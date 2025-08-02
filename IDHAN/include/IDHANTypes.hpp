@@ -34,4 +34,6 @@ enum class SimpleMimeType : std::uint16_t
 	AUDIO = 4
 };
 
+constexpr TagID INVALID_TAG_ID { 0 };
+
 } // namespace idhan

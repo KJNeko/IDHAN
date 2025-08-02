@@ -47,7 +47,7 @@ QFuture< std::string > IDHANClient::getTagText( const TagID tag_id )
 			std::ranges::partial_sort(
 				sorted_tags,
 				sorted_tags.begin() + 512,
-				[]( const auto& a, const auto& b ) { return a.second < b.second; } );
+				[]( const auto& a, const auto& b ) noexcept -> bool { return a.second < b.second; } );
 
 			for ( std::size_t i = 0; i < 512; ++i )
 			{
@@ -78,8 +78,8 @@ QFuture< std::vector< std::pair< TagID, std::string > > > IDHANClient::autocompl
 	{
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
-		const QJsonDocument doc { QJsonDocument::fromJson( data ) };
-		const auto array = doc[ "tags" ].toArray();
+		const QJsonDocument response_doc { QJsonDocument::fromJson( data ) };
+		const auto array = response_doc[ "tags" ].toArray();
 
 		std::vector< std::pair< TagID, std::string > > results {};
 
