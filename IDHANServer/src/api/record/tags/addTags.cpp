@@ -79,7 +79,26 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 
 	if ( tag_id ) co_return tag_id.value();
 
-	if ( std::holds_alternative< std::string >( tag_namespace ) )
+	const auto tag_namespace_is_str { std::holds_alternative< std::string >( tag_namespace ) };
+	const auto tag_subtag_is_str { std::holds_alternative< std::string >( tag_subtag ) };
+
+	if ( tag_namespace_is_str && tag_subtag_is_str ) [[likely]]
+	{
+		const auto result { co_await transaction->execSqlCoro(
+			"SELECT tag_id, namespace_id, subtag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE namespace_text = $1 AND subtag_text = $2",
+			std::get< std::string >( tag_namespace ),
+			std::get< std::string >( tag_subtag ) ) };
+
+		if ( result.size() > 0 )
+		{
+			tag_id = result[ 0 ][ 0 ].as< TagID >();
+			tag_namespace = result[ 0 ][ 1 ].as< NamespaceID >();
+			tag_subtag = result[ 0 ][ 2 ].as< SubtagID >();
+			co_return tag_id.value();
+		}
+	}
+
+	if ( tag_namespace_is_str ) [[likely]]
 	{
 		const auto result { co_await findOrCreateNamespace( std::get< std::string >( tag_namespace ), transaction ) };
 
@@ -88,7 +107,7 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 		tag_namespace = result.value();
 	}
 
-	if ( std::holds_alternative< std::string >( tag_subtag ) )
+	if ( tag_subtag_is_str ) [[likely]]
 	{
 		const auto result { co_await findOrCreateSubtag( std::get< std::string >( tag_subtag ), transaction ) };
 
@@ -240,6 +259,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
+		const auto tag_array { helpers::pgArrayify( tag_pair_ids.value() ) };
+
 		for ( const auto& record_json : records_json )
 		{
 			if ( !record_json.isIntegral() )
@@ -248,7 +269,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 			const auto insert_result { co_await db->execSqlCoro(
 				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 				static_cast< RecordID >( record_json.asInt64() ),
-				helpers::pgArrayify( tag_pair_ids.value() ),
+				tag_array,
 				tag_domain_id.value() ) };
 		}
 	}
