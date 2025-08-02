@@ -16,8 +16,6 @@ namespace idhan
 drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	findOrCreateTag( const NamespaceID namespace_id, const SubtagID subtag_id, drogon::orm::DbClientPtr db )
 {
-	constexpr TagID INVALID_TAG_ID { 0 };
-
 	TagID tag_id { INVALID_TAG_ID };
 
 	do {
