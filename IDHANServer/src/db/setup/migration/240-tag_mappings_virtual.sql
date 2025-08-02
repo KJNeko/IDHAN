@@ -4,7 +4,8 @@ CREATE TABLE tag_mappings_virtual
     origin_id INTEGER  NOT NULL REFERENCES tags (tag_id),
     tag_id    INTEGER  NOT NULL REFERENCES tags (tag_id),
     domain_id SMALLINT NOT NULL REFERENCES tag_domains (tag_domain_id),
-    UNIQUE (record_id, tag_id)
+    UNIQUE (record_id, tag_id),
+    PRIMARY KEY (record_id, origin_id, domain_id)
 );
 
 CREATE FUNCTION after_update_on_tag_mappings()
