@@ -44,7 +44,7 @@ template < typename T >
 std::string pgArrayify( const std::vector< T >& vec )
 {
 	std::string data { "{" };
-	data.reserve( vec.size() * 8 );
+	data.reserve( vec.size() * 2 );
 
 	std::size_t counter { 0 };
 
