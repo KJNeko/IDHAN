@@ -42,7 +42,7 @@ BEGIN
     INSERT INTO tag_mappings_virtual (record_id, tag_id, origin_id, domain_id)
     SELECT DISTINCT new.record_id, COALESCE(ap.parent_id, ap.original_parent_id) AS tag_id, COALESCE(new.ideal_tag_id, new.tag_id) AS origin_id, new.domain_id
     FROM aliased_parents ap
-    WHERE ap.child_id = COALESCE(new.ideal_tag_id, new.tag_id)
+    WHERE COALESCE(ap.child_id, ap.original_child_id) = COALESCE(new.ideal_tag_id, new.tag_id)
       AND ap.domain_id = new.domain_id
     ON CONFLICT DO NOTHING;
 
