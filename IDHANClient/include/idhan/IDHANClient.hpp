@@ -132,10 +132,6 @@ class IDHANClient
 		RecordID record_id, TagDomainID domain_id, std::vector< std::pair< std::string, std::string > >&& tags );
 
 	QFuture< void > addTags(
-		std::vector< RecordID >&& record_ids,
-		TagDomainID domain_id,
-		const std::vector< std::pair< std::string, std::string > >& tags );
-	QFuture< void > addTags(
 		std::vector< RecordID >&& record_ids, TagDomainID domain_id, std::vector< std::vector< TagID > >&& tag_sets );
 
 	QFuture< void > addTags(
