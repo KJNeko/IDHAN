@@ -1,3 +1,4 @@
+project(IDHANServer LANGUAGES CXX C)
 
 AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
