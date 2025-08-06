@@ -56,6 +56,58 @@ void TagServiceWidget::setName( const QString& name )
 	ui->name->setText( QString( "Name: %L1" ).arg( name ) );
 }
 
+void TagServiceWidget::recordMappingProcessed( std::size_t count )
+{
+	const auto now = Clock::now();
+
+	m_mapping_records.emplace_back( now, count );
+
+	// Clean old records (older than 1 minute)
+	cleanOldRecords();
+}
+
+void TagServiceWidget::cleanOldRecords()
+{
+	const auto now = Clock::now();
+	const auto one_minute_ago = now - std::chrono::minutes( 1 );
+
+	while ( !m_mapping_records.empty() && m_mapping_records.front().timestamp < one_minute_ago )
+	{
+		m_mapping_records.pop_front();
+	}
+}
+
+double TagServiceWidget::getAverageMappingsPerMinute() const
+{
+	if ( m_mapping_records.empty() ) return 0.0;
+
+	std::size_t total_mappings = 0;
+
+	// Sum up all complete seconds
+	for ( const auto& record : m_mapping_records )
+	{
+		total_mappings += record.count;
+	}
+
+	// Calculate time span
+	const auto now = Clock::now();
+	auto time_span = std::chrono::milliseconds( 0 );
+
+	if ( !m_mapping_records.empty() )
+	{
+		time_span =
+			std::chrono::duration_cast< std::chrono::milliseconds >( now - m_mapping_records.front().timestamp );
+	}
+
+	if ( time_span.count() > 0 )
+	{
+		// Convert to mappings per minute
+		return static_cast< double >( total_mappings ) / ( static_cast< double >( time_span.count() ) / 60000.0 );
+	}
+
+	return 0.0;
+}
+
 void TagServiceWidget::updateTime()
 {
 	const std::size_t to_process { m_info.num_mappings + m_info.num_parents + m_info.num_aliases };
@@ -91,12 +143,18 @@ void TagServiceWidget::updateTime()
 	const auto minutes = ( time_remaining % 3600000 ) / 60000;
 	const auto seconds = ( time_remaining % 60000 ) / 1000;
 
-	ui->statusLabel->setText( QString( "ETA: %1:%2:%3 (%L4/%L5)" )
+	// Add rate information to the status
+	const double current_rate = getMappingsPerSecond();
+	const double avg_rate = getAverageMappingsPerMinute();
+
+	ui->statusLabel->setText( QString( "ETA: %1:%2:%3 | Rate: %L4/s | Avg: %L5/min" )
 	                              .arg( hours, 2, 10, QChar( '0' ) )
 	                              .arg( minutes, 2, 10, QChar( '0' ) )
 	                              .arg( seconds, 2, 10, QChar( '0' ) )
-	                              .arg( total_processed, 2, 10, QChar( '0' ) )
-	                              .arg( to_process, 2, 10, QChar( '0' ) )
+	                              // .arg( total_processed, 2, 10, QChar( '0' ) )
+	                              // .arg( to_process, 2, 10, QChar( '0' ) )
+	                              .arg( static_cast< int >( current_rate ) )
+	                              .arg( static_cast< int >( avg_rate ) )
 
 	);
 }
@@ -116,6 +174,8 @@ void TagServiceWidget::updateProcessed()
 void TagServiceWidget::processedMappings( std::size_t count )
 {
 	mappings_processed += count;
+	recordMappingProcessed( count );
+
 	QLocale locale { QLocale::English, QLocale::UnitedStates };
 	locale.setNumberOptions( QLocale::DefaultNumberOptions );
 	ui->mappingsCount
