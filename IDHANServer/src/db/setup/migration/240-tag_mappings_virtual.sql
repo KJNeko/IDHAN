@@ -4,9 +4,59 @@ CREATE TABLE tag_mappings_virtual
     origin_id INTEGER  NOT NULL REFERENCES tags (tag_id),
     tag_id    INTEGER  NOT NULL REFERENCES tags (tag_id),
     domain_id SMALLINT NOT NULL REFERENCES tag_domains (tag_domain_id),
-    UNIQUE (record_id, tag_id),
     PRIMARY KEY (record_id, origin_id, domain_id)
-);
+) PARTITION BY LIST (domain_id);
+
+
+DO
+$$
+    DECLARE
+        domain_id_record RECORD;
+    BEGIN
+        FOR domain_id_record IN (SELECT tag_domain_id FROM tag_domains)
+            LOOP
+                EXECUTE FORMAT('CREATE TABLE tag_mappings_virtual_%s PARTITION OF tag_mappings_virtual FOR VALUES IN (%s)',
+                               domain_id_record.tag_domain_id, domain_id_record.tag_domain_id);
+            END LOOP;
+    END
+$$;
+
+CREATE OR REPLACE FUNCTION createtagmappingsdomain() RETURNS TRIGGER
+    LANGUAGE plpgsql
+AS
+$$
+BEGIN
+
+    -- mappings
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_mappings_%1$s PARTITION OF tag_mappings FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
+
+    -- aliases
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_aliases_%1$s PARTITION OF tag_aliases FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
+
+    -- siblings
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_siblings_%1$s PARTITION OF tag_siblings FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
+
+    -- parents
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_parents_%1$s PARTITION OF tag_parents FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
+
+    EXECUTE FORMAT(
+            'CREATE TABLE tag_mappings_virtual_%1$s PARTITION OF tag_mappings_virtual FOR VALUES IN (%1$s)',
+            new.tag_domain_id);
+
+    RETURN new;
+
+    -- Lock will be automatically released at transaction end
+    -- PERFORM pg_advisory_unlock(hashtext('information_schema_lock'));
+END;
+$$;
 
 CREATE FUNCTION after_update_on_tag_mappings()
     RETURNS TRIGGER AS
@@ -35,13 +85,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE INDEX ON aliased_parents (COALESCE(child_id, original_child_id), COALESCE(parent_id, original_parent_id), domain_id);
+
 CREATE FUNCTION after_insert_on_tag_mappings()
     RETURNS TRIGGER AS
 $$
 BEGIN
     RAISE DEBUG 'Inserting new tag_mapping % into tag_mappings_virtual due to new tag %', new.record_id, new.tag_id;
     INSERT INTO tag_mappings_virtual (record_id, tag_id, origin_id, domain_id)
-    SELECT DISTINCT new.record_id, COALESCE(ap.parent_id, ap.original_parent_id) AS tag_id, COALESCE(new.ideal_tag_id, new.tag_id) AS origin_id, new.domain_id
+    SELECT new.record_id, COALESCE(ap.parent_id, ap.original_parent_id) AS tag_id, COALESCE(new.ideal_tag_id, new.tag_id) AS origin_id, new.domain_id
     FROM aliased_parents ap
     WHERE COALESCE(ap.child_id, ap.original_child_id) = COALESCE(new.ideal_tag_id, new.tag_id)
       AND ap.domain_id = new.domain_id
@@ -77,8 +129,6 @@ CREATE TRIGGER a_d_tag_mappings
     ON tag_mappings
     FOR EACH ROW
 EXECUTE FUNCTION after_delete_on_tag_mappings();
-
-CREATE INDEX ON tag_mappings (domain_id, COALESCE(ideal_tag_id, tag_id));
 
 CREATE FUNCTION tag_virtuals_after_insert_aliased_parents()
     RETURNS TRIGGER AS

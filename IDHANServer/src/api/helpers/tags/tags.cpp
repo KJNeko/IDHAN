@@ -40,11 +40,12 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 		catch ( [[maybe_unused]] drogon::orm::UniqueViolation& e )
 		{
 			// noop
+			log::debug( "Unique violation: ({}:{})", namespace_id, subtag_id );
 		}
-		catch ( std::runtime_error& e )
+		catch ( std::exception& e )
 		{
 			co_return std::unexpected(
-				createInternalError( "Failed to create tag {}:{}: {}", namespace_id, subtag_id, e.what() ) );
+				createInternalError( "Failed to create tag due to {}, {}:{}", e.what(), namespace_id, subtag_id ) );
 		}
 	}
 	while ( tag_id == INVALID_TAG_ID );

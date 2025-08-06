@@ -10,7 +10,7 @@ CREATE TABLE flattened_aliases
 );
 
 -- Function for handling inserts
-CREATE FUNCTION update_flattened_aliases_insert()
+CREATE OR REPLACE FUNCTION update_flattened_aliases_insert()
     RETURNS TRIGGER
     LANGUAGE plpgsql AS
 $$
@@ -56,7 +56,8 @@ BEGIN
     FROM flattened_aliases fa2
     WHERE fa1.domain_id = fa2.domain_id
       AND fa1.alias_id = fa2.aliased_id
-      AND fa2.aliased_id = new.alias_id;
+      AND fa2.aliased_id = new.alias_id
+      AND fa2.domain_id = new.domain_id;
 
     RETURN new;
 END;

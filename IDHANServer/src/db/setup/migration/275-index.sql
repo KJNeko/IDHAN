@@ -1,0 +1,1 @@
+CREATE INDEX tag_mappings_coalesce_tag_id_idx ON tag_mappings (COALESCE(ideal_tag_id, tag_id)) INCLUDE (record_id);

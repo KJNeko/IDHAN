@@ -15,7 +15,7 @@ constexpr std::string pgEscapeI( const std::string& str )
 	std::string cleaned {};
 	cleaned.reserve( str.size() * 2 );
 
-	if ( str.empty() ) return "\"\"";
+	// if ( str.empty() ) return "\"\"";
 	if ( str == "null" ) return "\"null\"";
 
 	bool contains_comma { false };

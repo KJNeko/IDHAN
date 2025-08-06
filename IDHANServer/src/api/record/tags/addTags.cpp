@@ -2,6 +2,7 @@
 // Created by kj16609 on 3/11/25.
 //
 
+#include "../../helpers/drogonArrayBind.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -201,7 +202,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags( const drogon::HttpRe
 
 	if ( !tag_pairs ) co_return tag_pairs.error();
 
-	const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
+	auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
 
 	if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
@@ -212,7 +213,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags( const drogon::HttpRe
 	const auto insert_result { co_await db->execSqlCoro(
 		"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 		record_id,
-		helpers::pgArrayify( tag_pair_ids.value() ),
+		std::move( tag_pair_ids.value() ),
 		tag_domain_id.value() ) };
 
 	co_return drogon::HttpResponse::newHttpResponse();
@@ -255,11 +256,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		if ( !tag_pairs ) co_return tag_pairs.error();
 
-		const auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
+		auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
 
 		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
-
-		const auto tag_array { helpers::pgArrayify( tag_pair_ids.value() ) };
 
 		for ( const auto& record_json : records_json )
 		{
@@ -269,7 +268,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 			const auto insert_result { co_await db->execSqlCoro(
 				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 				static_cast< RecordID >( record_json.asInt64() ),
-				tag_array,
+				std::move( tag_pair_ids.value() ),
 				tag_domain_id.value() ) };
 		}
 	}
@@ -294,14 +293,16 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 			if ( !tags ) co_return tags.error();
 
-			const auto tag_ids { co_await getIDsFromPairs( std::move( tags.value() ), db ) };
+			const auto tag_ids_e { co_await getIDsFromPairs( std::move( tags.value() ), db ) };
 
-			if ( !tag_ids ) co_return tag_ids.error();
+			if ( !tag_ids_e ) co_return tag_ids_e.error();
+
+			auto tag_ids { tag_ids_e.value() };
 
 			co_await db->execSqlCoro(
 				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, unnest($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 				static_cast< RecordID >( records_json[ i ].asInt64() ),
-				helpers::pgArrayify( tag_ids.value() ),
+				std::move( tag_ids ),
 				tag_domain_id.value() );
 		}
 	}

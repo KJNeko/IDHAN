@@ -34,18 +34,21 @@ CREATE FUNCTION wrap_tag_mappings_insert()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    new.ideal_tag_id = (SELECT alias_id FROM flattened_aliases WHERE aliased_id = new.tag_id AND domain_id = new.domain_id);
+    UPDATE tag_mappings tm
+    SET ideal_tag_id = fa.alias_id
+    FROM new_mappings nm
+             LEFT JOIN flattened_aliases fa ON fa.aliased_id = nm.tag_id AND fa.domain_id = nm.domain_id
+    WHERE tm.domain_id = nm.domain_id
+      AND tm.tag_id = nm.tag_id
+      AND tm.ideal_tag_id = nm.ideal_tag_id;
 
-    IF new.ideal_tag_id IS NOT NULL THEN
-        RAISE DEBUG 'Set ideal tag to (%) "%" for tag (%) "%" on record % in domain %', new.ideal_tag_id, tag_text(new.ideal_tag_id), new.tag_id, tag_text(new.tag_id), new.record_id, new.domain_id;
-    END IF;
-
-    RETURN new;
+    RETURN NULL;
 END;
-$$ LANGUAGE plpgsql STABLE;
+$$ LANGUAGE plpgsql VOLATILE;
 
 CREATE TRIGGER insert_tag_mappings_intercept
-    BEFORE INSERT
+    AFTER INSERT
     ON tag_mappings
-    FOR EACH ROW
+    REFERENCING new TABLE AS new_mappings
+    FOR EACH STATEMENT
 EXECUTE FUNCTION wrap_tag_mappings_insert();

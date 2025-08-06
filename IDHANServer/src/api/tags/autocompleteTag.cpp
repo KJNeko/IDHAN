@@ -17,15 +17,14 @@ drogon::Task< Json::Value >
 	const auto wrapped_search_value { '%' + search_value + '%' };
 
 	const auto result { co_await db->execSqlCoro(
-
 		R"(
 		SELECT *,
-				similarity(tag_text, $2)			AS similarity,
-				tag_text = $2						AS exact,
-				similarity(tag_Text, $2) * count	AS score,
-				total_mapping_counts.count			AS count
+				similarity(tag_text, $2)								AS similarity,
+				tag_text = $2											AS exact,
+				similarity(tag_text, $2) * coalesce(display_count, 1)	AS score,
+				tag_counts.display_count								AS count
 		FROM tags_combined
-		         JOIN total_mapping_counts USING (tag_id)
+		         JOIN tag_counts USING (tag_id)
 		WHERE tag_text LIKE $1
 		ORDER BY exact DESC, score DESC, similarity DESC
 		limit $3)",
@@ -33,7 +32,7 @@ drogon::Task< Json::Value >
 		search_value,
 		limit ) };
 
-	Json::Value root;
+	Json::Value root {};
 
 	if ( result.size() == 0 )
 	{
