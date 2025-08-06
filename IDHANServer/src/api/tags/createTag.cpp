@@ -3,10 +3,24 @@
 //
 
 #include <expected>
+#include <functional>
 #include <ranges>
+
+namespace std
+{
+template <>
+struct hash< std::pair< std::string, std::string > >
+{
+	std::size_t operator()( const std::pair< std::string, std::string >& p ) const noexcept
+	{
+		return std::hash< std::string > {}( p.first + ":" + p.second );
+	}
+};
+} // namespace std
 
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/drogonArrayBind.hpp"
 #include "api/helpers/tags/namespaces.hpp"
 #include "api/helpers/tags/subtags.hpp"
 #include "api/helpers/tags/tags.hpp"
@@ -45,19 +59,58 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 
 	std::vector< TagID > tag_ids {};
 
+	std::unordered_map< std::pair< std::string, std::string >, TagID > tag_map {};
+
+	std::vector< std::string > namespace_params {};
+	std::vector< std::string > subtag_params {};
+
 	for ( const auto& [ namespace_text, subtag_text ] : tag_pairs )
 	{
-		const auto namespace_id { co_await findOrCreateNamespace( namespace_text, db ) };
-		const auto subtag_id { co_await findOrCreateSubtag( subtag_text, db ) };
+		namespace_params.emplace_back( namespace_text );
+		subtag_params.emplace_back( subtag_text );
+	}
 
-		if ( !namespace_id ) co_return std::unexpected( namespace_id.error() );
-		if ( !subtag_id ) co_return std::unexpected( subtag_id.error() );
+	try
+	{
+		const auto result { co_await db->execSqlCoro(
+			"SELECT * FROM createBatchTags($1::TEXT[], $2::TEXT[])",
+			std::move( namespace_params ),
+			std::move( subtag_params ) ) };
 
-		const auto tag_id { co_await findOrCreateTag( namespace_id.value(), subtag_id.value(), db ) };
+		for ( const auto& row : result )
+		{
+			const auto& tag_id { row[ "tag_id" ].as< TagID >() };
+			const auto& namespace_text { row[ "namespace_text" ].as< std::string >() };
+			const auto& subtag_text { row[ "subtag_text" ].as< std::string >() };
 
-		if ( !tag_id ) co_return std::unexpected( tag_id.error() );
+			tag_map.emplace( std::make_pair( namespace_text, subtag_text ), tag_id );
+		}
+	}
+	catch ( std::exception& e )
+	{
+		co_return std::unexpected( createInternalError( "Failed to create tags: {}", e.what() ) );
+	}
 
-		tag_ids.emplace_back( tag_id.value() );
+	for ( const auto& [ namespace_text, subtag_text ] : tag_pairs )
+	{
+		const auto cache_itter = tag_map.find( { namespace_text, subtag_text } );
+		if ( cache_itter != tag_map.end() )
+		{
+			tag_ids.emplace_back( cache_itter->second );
+		}
+		else
+		{
+			const auto search_result { co_await db->execSqlCoro(
+				"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE namespace_text = $1 AND subtag_text = $2",
+				namespace_text,
+				subtag_text ) };
+
+			if ( search_result.size() > 0 )
+				tag_ids.emplace_back( search_result[ 0 ][ 0 ].as< TagID >() );
+			else
+				co_return std::
+					unexpected( createInternalError( "Failed to create tag {}:{}", namespace_text, subtag_text ) );
+		}
 	}
 
 	co_return tag_ids;
@@ -78,40 +131,55 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createBatchedTag( const drogon::
 
 	auto db { drogon::app().getDbClient() };
 
-	try
+	Json::Value out {};
+	Json::ArrayIndex index { 0 };
+
+	std::vector< std::pair< std::string, std::string > > tag_pairs {};
+	tag_pairs.reserve( json_array.size() );
+	for ( const auto& json_array_item : json_array )
 	{
-		std::vector< std::pair< std::string, std::string > > tag_pairs {};
-		tag_pairs.reserve( json_array.size() );
-		for ( const auto& json_array_item : json_array )
+		const auto& namespace_j { json_array_item[ "namespace" ] };
+		const auto& subtag_j { json_array_item[ "subtag" ] };
+
+		if ( !namespace_j.isString() ) co_return createBadRequest( "Invalid namespace: Expected string" );
+		if ( !subtag_j.isString() ) co_return createBadRequest( "Invalid subtag: Expected string" );
+
+		tag_pairs.emplace_back( namespace_j.asString(), subtag_j.asString() );
+	}
+
+	std::ranges::reverse( tag_pairs );
+
+	while ( !tag_pairs.empty() )
+	{
+		constexpr std::size_t chunk_size { 1024 };
+		std::vector< std::pair< std::string, std::string > > tag_pairs_chunk {};
+		tag_pairs_chunk.reserve( chunk_size );
+
+		for ( std::size_t i = 0; i < chunk_size && !tag_pairs.empty(); ++i )
 		{
-			const auto& namespace_j { json_array_item[ "namespace" ] };
-			const auto& subtag_j { json_array_item[ "subtag" ] };
-
-			if ( !namespace_j.isString() ) co_return createBadRequest( "Invalid namespace: Expected string" );
-			if ( !subtag_j.isString() ) co_return createBadRequest( "Invalid subtag: Expected string" );
-
-			tag_pairs.emplace_back( namespace_j.asString(), subtag_j.asString() );
+			tag_pairs_chunk.push_back( tag_pairs.back() );
+			tag_pairs.pop_back();
 		}
 
-		Json::Value out {};
-		Json::ArrayIndex index { 0 };
-
-		const auto result { co_await createTags( tag_pairs, db ) };
-
-		if ( !result ) co_return result.error();
-
-		for ( const auto& tag_id : result.value() )
+		try
 		{
-			out[ index ][ "tag_id" ] = tag_id;
-			index += 1;
-		}
+			const auto result { co_await createTags( tag_pairs_chunk, db ) };
 
-		co_return drogon::HttpResponse::newHttpJsonResponse( out );
+			if ( !result ) co_return result.error();
+
+			for ( const auto& tag_id : result.value() )
+			{
+				out[ index ][ "tag_id" ] = tag_id;
+				index += 1;
+			}
+		}
+		catch ( std::exception& e )
+		{
+			co_return createInternalError( "Failed to create batched tags: {}", e.what() );
+		}
 	}
-	catch ( std::exception& e )
-	{
-		co_return createInternalError( "Failed to create batched tags: {}", e.what() );
-	}
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( out );
 }
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::createSingleTag( drogon::HttpRequestPtr request )

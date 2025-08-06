@@ -3,6 +3,7 @@
 //
 
 #include "api/APIMaintenance.hpp"
+#include "api/helpers/drogonArrayBind.hpp"
 
 namespace idhan::api
 {
@@ -51,6 +52,38 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::postgresqlStorageSunData
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
+}
+
+drogon::Task< drogon::HttpResponsePtr > APIMaintenance::test( drogon::HttpRequestPtr request )
+{
+	std::vector< std::pair< std::string, std::string > > pairs { { "character", "toujou koneko" },
+		                                                         { "", "catgirl" },
+		                                                         { "series", "highschool dxd" },
+		                                                         { "", "original 7,500+ bookmarks" } };
+
+	auto db { drogon::app().getDbClient() };
+	for ( const auto& pair : pairs )
+	{
+		std::vector< std::string > pair1 {};
+		pair1.push_back( pair.first );
+		std::vector< std::string > pair2 {};
+		pair2.push_back( pair.second );
+
+		const auto result {
+			co_await db
+				->execSqlCoro( "SELECT * FROM UNNEST($1::TEXT[], $2::TEXT[])", std::move( pair1 ), std::move( pair2 ) )
+		};
+
+		for ( const auto& row : result )
+		{
+			const auto first { row[ 0 ].as< std::string >() };
+			const auto second { row[ 1 ].as< std::string >() };
+
+			std::cout << first << "," << second << std::endl;
+		}
+	}
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( Json::Value() );
 }
 
 } // namespace idhan::api

@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "IDHANTypes.hpp"
+#include "drogonArrayBind.hpp"
 
 namespace idhan::api::helpers
 {
@@ -37,41 +38,5 @@ constexpr std::chrono::seconds default_max_age {
 };
 
 void addFileCacheHeader( drogon::HttpResponsePtr sharedPtr, std::chrono::seconds max_age = default_max_age );
-
-std::string pgEscape( const std::string& s );
-
-template < typename T >
-std::string pgArrayify( const std::vector< T >& vec )
-{
-	std::string data { "{" };
-	data.reserve( vec.size() * 2 );
-
-	std::size_t counter { 0 };
-
-	for ( const auto& v : vec )
-	{
-		if constexpr ( std::same_as< T, std::string > )
-		{
-			data += pgEscape( v );
-		}
-		else if constexpr ( std::is_integral_v< T > )
-		{
-			data += std::to_string( v );
-		}
-		else
-			static_assert( false, "Unknown type for pgArraify" );
-
-		if ( counter < vec.size() - 1 )
-		{
-			data += ",";
-		}
-
-		counter += 1;
-	}
-
-	data += "}";
-
-	return data;
-}
 
 } // namespace idhan::api::helpers

@@ -55,6 +55,8 @@ class SHA256
 
   public:
 
+	static constexpr std::size_t size() { return ( 256 / 8 ); }
+
 	SHA256( const drogon::orm::Field& field );
 
 	SHA256& operator=( const SHA256& other ) = default;

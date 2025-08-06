@@ -4,68 +4,33 @@
 
 #include "SearchBuilder.hpp"
 
+#include "api/helpers/drogonArrayBind.hpp"
 #include "api/helpers/helpers.hpp"
 #include "logging/log.hpp"
 
 namespace idhan
 {
 
-std::string createFilter(
-	std::size_t index,
-	const std::vector< TagID >& tag_ids,
-	const HydrusDisplayType display_mode,
-	const bool filter_domains )
-{
-	std::string str {};
-	str += format_ns::format( " filter_{}", index );
-	str += " AS (SELECT DISTINCT record_id FROM ";
-
-	switch ( display_mode )
-	{
-		default:
-			[[fallthrough]];
-		case HydrusDisplayType::DISPLAY:
-			// str += "tag_mappings tm";
-			str += "tag_mappings_final tm";
-			break;
-		case HydrusDisplayType::STORED:
-			str += "tag_mappings tm";
-			break;
-	}
-
-	// only join the previous searches
-	// This join will allow for AND searches
-	if ( index > 0 ) str += format_ns::format( " JOIN filter_{} USING (record_id)", index - 1 );
-
-	str += format_ns::format( " WHERE tm.tag_id = {}", tag_ids[ index ] );
-	if ( filter_domains ) str += " AND tm.domain_id = ANY($1)";
-	if ( index != 0 )
-	{
-		str += format_ns::format(
-			" AND EXISTS (SELECT 1 FROM filter_{} last_filter WHERE last_filter.record_id = tm.record_id)", index - 1 );
-	}
-
-	str += ")";
-
-	return str;
-}
-
 drogon::Task< drogon::orm::Result > SearchBuilder::query(
 	const drogon::orm::DbClientPtr db,
-	const std::vector< TagDomainID > domain_ids,
+	std::vector< TagDomainID > domain_ids,
 	const bool return_ids,
 	const bool return_hashes )
 {
-	std::string domain_list { api::helpers::pgArrayify( domain_ids ) };
-
-	co_return co_await db
-		->execSqlCoro( construct( return_ids, return_hashes, /* filter_domains */ true ), domain_list );
+	const std::size_t tag_count { m_tags.size() };
+	co_return co_await db->execSqlCoro(
+		construct( return_ids, return_hashes, /* filter_domains */ true ),
+		std::move( m_tags ),
+		tag_count,
+		std::move( domain_ids ) );
 }
 
 drogon::Task< drogon::orm::Result > SearchBuilder::
 	query( const drogon::orm::DbClientPtr db, const bool return_ids, const bool return_hashes )
 {
-	co_return co_await db->execSqlCoro( construct( return_ids, return_hashes, /* filter_domains */ false ) );
+	const std::size_t tag_count { m_tags.size() };
+	co_return co_await db->execSqlCoro(
+		construct( return_ids, return_hashes, /* filter_domains */ false ), std::move( m_tags ), tag_count );
 }
 
 std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes, const bool filter_domains )
@@ -73,40 +38,33 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	//TODO: Sort tag ids to get the most out of each filter.
 
 	std::string query {};
-
-	query += "WITH";
-	for ( std::size_t i = 0; i < m_tags.size(); ++i )
-	{
-		query += createFilter( i, m_tags, m_display_mode, filter_domains );
-		if ( i + 1 < m_tags.size() ) query += ",";
-		query += "\n";
-	}
-
-	if ( m_tags.size() == 0 ) return query;
-
-	const std::string last_filter { format_ns::format( "filter_{}", m_tags.size() - 1 ) };
+	query.reserve( 1024 );
+	constexpr std::string_view query_start {
+		"WITH filtered_records AS (SELECT record_id FROM tag_mappings_final WHERE tag_id = ANY($1::INT[]) GROUP BY record_id HAVING COUNT(DISTINCT tag_id) = $2)"
+	};
+	query += query_start;
 
 	// determine the SELECT
 	if ( return_ids && return_hashes )
 	{
 		m_required_joins.records = true;
-		const std::string select_both { format_ns::format( " SELECT tm.record_id, sha256 FROM {} tm", last_filter ) };
+		constexpr std::string_view select_both { " SELECT tm.record_id, sha256 FROM filtered_records tm" };
 		query += select_both;
 	}
 	else if ( return_hashes )
 	{
-		const std::string select_sha256 { format_ns::format( " SELECT tm.sha256 FROM {} tm", last_filter ) };
+		constexpr std::string_view select_sha256 { " SELECT tm.sha256 FROM filtered_records tm" };
 		query += select_sha256;
 		m_required_joins.records = true;
 	}
 	else
 	{
-		const std::string select_record_id { format_ns::format( " SELECT tm.record_id FROM {} tm", last_filter ) };
+		constexpr std::string_view select_record_id { " SELECT tm.record_id FROM filtered_records tm" };
 		query += select_record_id;
 	}
 
 	// determine any joins needed
-	if ( m_required_joins.records )
+	if ( m_required_joins.records && false )
 	{
 		query += " JOIN records rc ON rc.record_id = tm.record_id";
 	}

@@ -1,10 +1,10 @@
     if( migration_id <= MIGRATION_TARGET_ID )
     {
     #if FGL_HAS_EMBED
-        constexpr unsigned char query_data[] {
+        constexpr const char query_data[] {
             #embed "MIGRATION_PATH"
         };
-        constexpr std::string_view query { query_data, sizeof(query_data) };
+        std::string_view query { &query_data[0], sizeof(query_data) };
     #else
         constexpr std::string_view query { R"(MIGRATION_QUERY)" };
     #endif
