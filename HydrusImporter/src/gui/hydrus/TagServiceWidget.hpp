@@ -5,6 +5,9 @@
 
 #include <QWidget>
 
+#include <chrono>
+#include <deque>
+
 #include "HydrusImporter.hpp"
 #include "HydrusImporterWidget.hpp"
 
@@ -26,6 +29,15 @@ class TagServiceWidget : public QWidget
 	using TimePoint = std::chrono::high_resolution_clock::time_point;
 	TimePoint m_start;
 
+	// Rate tracking
+	struct ProcessingRecord
+	{
+		TimePoint timestamp;
+		std::size_t count;
+	};
+
+	std::deque< ProcessingRecord > m_mapping_records;
+
   public:
 
 	Q_DISABLE_COPY_MOVE( TagServiceWidget )
@@ -39,6 +51,11 @@ class TagServiceWidget : public QWidget
 	bool ready() const { return m_preprocessed; }
 
 	void setInfo( const idhan::hydrus::ServiceInfo& service_info );
+
+	// Rate calculation methods
+	double getMappingsPerSecond() const { return getAverageMappingsPerMinute() / 60.0; }
+
+	double getAverageMappingsPerMinute() const;
 
   public slots:
 	void startImport();
@@ -56,6 +73,9 @@ class TagServiceWidget : public QWidget
 	void setMaxAliases( std::size_t count );
 
   private:
+
+	void recordMappingProcessed( std::size_t count );
+	void cleanOldRecords();
 
 	Ui::TagServiceWidget* ui;
 };

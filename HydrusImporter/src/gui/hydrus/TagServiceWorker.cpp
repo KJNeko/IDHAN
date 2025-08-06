@@ -5,6 +5,7 @@
 #include "TagServiceWorker.hpp"
 
 #include <QObject>
+#include <QtConcurrent>
 
 #include <fstream>
 
@@ -112,8 +113,6 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 	std::unordered_map< HyTagID, TagPair > hy_tag_map {};
 	hy_tag_map.reserve( pairs.size() );
 
-	auto& client = idhan::IDHANClient::instance();
-
 	// process tag ids
 	for ( const auto& [ hash_id, tag_id ] : pairs )
 	{
@@ -176,11 +175,31 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 
 	// Get unique tag ids
 
-	auto record_future = client.createRecords( hashes );
-	record_future.waitForFinished();
+	using namespace idhan;
 
-	auto future = client.addTags( std::move( record_future.result() ), tag_domain_id, std::move( tag_sets ) );
-	future.waitForFinished();
+	mappings_semaphore.acquire();
+	while ( m_futures.size() > 0 && m_futures.front().isFinished() )
+	{
+		m_futures.pop();
+	}
+
+	m_futures.push(
+		QtConcurrent::run(
+			[ this, hashes = std::move( hashes ), tag_sets_i = std::move( tag_sets ) ]() mutable
+			{
+				auto& client = idhan::IDHANClient::instance();
+				auto record_future = client.createRecords( hashes );
+				auto tag_sets_c { tag_sets_i };
+
+				record_future.waitForFinished();
+				auto records = record_future.result();
+				FGL_ASSERT( records.size() == hashes.size(), "Records size was not the same as hashes size!" );
+				FGL_ASSERT( records.size() == tag_sets_c.size(), "Records size was not the same as tag sets size!" );
+				auto tag_future = client.addTags( std::move( records ), tag_domain_id, std::move( tag_sets_c ) );
+
+				tag_future.waitForFinished();
+				mappings_semaphore.release();
+			} ) );
 }
 
 void TagServiceWorker::processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const
@@ -203,7 +222,7 @@ void TagServiceWorker::processMappingsBatch(
 	const idhan::hydrus::TransactionBaseCoro& mappings_tr, const std::string& current_mappings_name )
 {
 	std::vector< MappingPair > pairs {};
-	constexpr std::size_t hash_limit { 600 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
+	constexpr std::size_t hash_limit { 200 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
 	constexpr std::size_t average_tags_per_hash { 128 };
 	constexpr std::size_t pair_limit { average_tags_per_hash * hash_limit };
 
@@ -436,8 +455,23 @@ void TagServiceWorker::processRelationships()
 
 				if ( std::ofstream ofs( "bad_ids.txt", std::ios::app ); ofs )
 				{
-					ofs << hy_bad_id << "\n";
-					ofs << hy_good_id << "\n";
+					const auto [ namespace_text, subtag_text ] = tag_pairs[ hy_bad_id ];
+					const auto [ namespace_text_2, subtag_text_2 ] = tag_pairs[ hy_good_id ];
+					ofs << "'";
+					if ( namespace_text.empty() )
+						ofs << subtag_text;
+					else
+						ofs << namespace_text << ":" << subtag_text;
+
+					ofs << "','";
+
+					if ( namespace_text_2.empty() )
+						ofs << subtag_text_2;
+					else
+						ofs << namespace_text_2 << ":" << subtag_text_2;
+
+					ofs << "'";
+					ofs << std::endl;
 				}
 
 				// Do nothing
