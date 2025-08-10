@@ -1,7 +1,3 @@
-# docs
-/docs/html/
-/docs/latex/
-
 # dot hidden
 .*
 .*/
@@ -12,17 +8,9 @@
 # Build dirs
 /build/
 /cmake-build-*/
-/src/shaders/
 
 # Build helpers
 build.bat
-
-# Build results
-[Dd]ebug/
-[Rr]elease/
-x64/
-[Bb]in/
-[Oo]bj/
 
 # IDE specific
 #	# clion
@@ -41,9 +29,10 @@ read.lock
 *.vsp
 *.vspx
 
-out/
-
-/IDHANServer/src/db/setup/migration/doMigration.cpp
 /docs/out
+
 /IDHAN/include/hydrus_constants_gen.hpp
 /IDHAN/include/hydrus_client_constants_gen.hpp
+
+# Used for allowing easy setup of development environments for testing
+/IDHANServer/src/db/setup/migration/9999-dev.sql
