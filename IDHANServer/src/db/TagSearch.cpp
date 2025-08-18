@@ -17,9 +17,8 @@ ExpectedTask< TagID > TagSearch::idealize( const TagID id )
 {
 	const auto id_check { co_await m_db->execSqlCoro( "SELECT tag_id FROM tags WHERE tag_id = $1", id ) };
 	const auto result {
-		co_await m_db
-			->execSqlCoro( "SELECT alias_id FROM tag_aliases WHERE aliased_id = $1 AND domain_id = $2", id, m_domain )
-	};
+		co_await m_db->execSqlCoro(
+		"SELECT alias_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2", id, m_domain ) };
 
 	if ( id_check.empty() ) co_return std::unexpected( createBadRequest( "Invalid tag ID: {}", id ) );
 
@@ -28,7 +27,9 @@ ExpectedTask< TagID > TagSearch::idealize( const TagID id )
 	co_return result[ 0 ][ "alias_id" ].as< TagID >();
 }
 
-TagSearch::TagSearch( const TagDomainID domain_id, drogon::orm::DbClientPtr db ) : m_db( db ), m_domain( domain_id )
+TagSearch::TagSearch( const TagDomainID tag_domain_id, drogon::orm::DbClientPtr db ) :
+  m_db( db ),
+  m_domain( tag_domain_id )
 {}
 
 ExpectedTask< void > TagSearch::addID( const TagID id )
@@ -57,7 +58,7 @@ ExpectedTask< void > TagSearch::addChildren( TagID tag_id )
 
 	do {
 		const auto children { co_await m_db->execSqlCoro(
-			"SELECT DISTINCT child_id FROM aliased_parents WHERE parent_id = $1 AND domain_id = $2",
+			"SELECT DISTINCT child_id FROM aliased_parents WHERE parent_id = $1 AND tag_domain_id = $2",
 			queue.front(),
 			m_domain ) };
 
@@ -96,7 +97,7 @@ ExpectedTask< std::vector< TagID > > TagSearch::findSiblings( const TagID id )
 
 	do {
 		const auto siblings { co_await m_db->execSqlCoro(
-			"SELECT DISTINCT younger_id FROM aliased_siblings WHERE older_id = $1 AND domain_id = $2",
+			"SELECT DISTINCT younger_id FROM aliased_siblings WHERE older_id = $1 AND tag_domain_id = $2",
 			queue.front(),
 			m_domain ) };
 
@@ -155,7 +156,7 @@ ExpectedTask< std::vector< RecordID > > TagSearch::search()
 	for ( auto& id : m_ids )
 	{
 		const auto result { co_await m_db->execSqlCoro(
-			"SELECT DISTINCT record_id FROM tag_mappings WHERE tag_id = $1 AND domain_id = $2", id, m_domain ) };
+			"SELECT DISTINCT record_id FROM tag_mappings WHERE tag_id = $1 AND tag_domain_id = $2", id, m_domain ) };
 
 		std::vector< RecordID > result_records;
 		for ( const auto& row : result )

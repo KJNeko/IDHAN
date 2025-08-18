@@ -42,7 +42,7 @@ class TagSearch
 
   public:
 
-	TagSearch( TagDomainID domain_id, drogon::orm::DbClientPtr db = drogon::app().getDbClient() );
+	TagSearch( TagDomainID tag_domain_id, drogon::orm::DbClientPtr db = drogon::app().getDbClient() );
 
 	ExpectedTask< void > addID( TagID id );
 
