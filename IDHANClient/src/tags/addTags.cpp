@@ -15,7 +15,9 @@ namespace idhan
 {
 
 QFuture< void > IDHANClient::addTags(
-	const RecordID record_id, const TagDomainID domain_id, std::vector< std::pair< std::string, std::string > >&& tags )
+	const RecordID record_id,
+	const TagDomainID tag_domain_id,
+	std::vector< std::pair< std::string, std::string > >&& tags )
 {
 	if ( tags.empty() )
 	{
@@ -56,7 +58,7 @@ QFuture< void > IDHANClient::addTags(
 	url.setPath( path );
 
 	QUrlQuery query {};
-	query.addQueryItem( "tag_domain_id", QString::number( domain_id ) );
+	query.addQueryItem( "tag_domain_id", QString::number( tag_domain_id ) );
 
 	url.setQuery( query );
 
@@ -66,7 +68,9 @@ QFuture< void > IDHANClient::addTags(
 }
 
 QFuture< void > IDHANClient::addTags(
-	std::vector< RecordID >&& record_ids, const TagDomainID domain_id, std::vector< std::vector< TagID > >&& tag_sets )
+	std::vector< RecordID >&& record_ids,
+	const TagDomainID tag_domain_id,
+	std::vector< std::vector< TagID > >&& tag_sets )
 {
 	if ( record_ids.empty() )
 	{
@@ -118,7 +122,7 @@ QFuture< void > IDHANClient::addTags(
 	url.setPath( path );
 
 	QUrlQuery query {};
-	query.addQueryItem( "tag_domain_id", QString::number( domain_id ) );
+	query.addQueryItem( "tag_domain_id", QString::number( tag_domain_id ) );
 
 	url.setQuery( query );
 
@@ -129,7 +133,7 @@ QFuture< void > IDHANClient::addTags(
 
 QFuture< void > IDHANClient::addTags(
 	std::vector< RecordID >&& record_ids,
-	const TagDomainID domain_id,
+	const TagDomainID tag_domain_id,
 	std::vector< std::vector< std::pair< std::string, std::string > > >&& tag_sets )
 {
 	std::vector< std::pair< std::string, std::string > > unique_tags {};
@@ -176,7 +180,10 @@ QFuture< void > IDHANClient::addTags(
 
 	const auto tag_ids { tags_future.result() };
 
-	FGL_ASSERT( tag_ids.size() == unique_tags.size(), "IDHAN returned not the correct number of tags back" );
+	FGL_ASSERT(
+		tag_ids.size() == unique_tags.size(),
+		format_ns::format(
+			"IDHAN returned not the correct number of tags back, {} != {}", tag_ids.size(), unique_tags.size() ) );
 
 	for ( const auto& set : tag_set_indicies )
 	{
@@ -189,7 +196,7 @@ QFuture< void > IDHANClient::addTags(
 		ids.emplace_back( std::move( set_ids ) );
 	}
 
-	return addTags( std::move( record_ids ), domain_id, std::move( ids ) );
+	return addTags( std::move( record_ids ), tag_domain_id, std::move( ids ) );
 }
 
 } // namespace idhan

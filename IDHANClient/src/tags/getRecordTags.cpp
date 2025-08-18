@@ -11,7 +11,7 @@
 namespace idhan
 {
 
-QFuture< std::vector< TagID > > IDHANClient::getRecordTags( RecordID record_id, TagDomainID domain_id )
+QFuture< std::vector< TagID > > IDHANClient::getRecordTags( RecordID record_id, TagDomainID tag_domain_id )
 {
 	const auto path { format_ns::format( "/records/{}/tags", record_id ) };
 
@@ -19,14 +19,14 @@ QFuture< std::vector< TagID > > IDHANClient::getRecordTags( RecordID record_id, 
 
 	promise->start();
 
-	auto handleResponse = [ promise, domain_id ]( QNetworkReply* response )
+	auto handleResponse = [ promise, tag_domain_id ]( QNetworkReply* response )
 	{
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
 
 		/*
 			 * Will be an array of objects like
-			 * { "domain_id": 2, "tag_ids": [1,2,3] }
+			 * { "tag_domain_id": 2, "tag_ids": [1,2,3] }
 			 *
 			 */
 
@@ -38,7 +38,7 @@ QFuture< std::vector< TagID > > IDHANClient::getRecordTags( RecordID record_id, 
 		for ( const auto& value : array )
 		{
 			const auto obj = value.toObject();
-			if ( obj[ "domain_id" ].toInt() == domain_id )
+			if ( obj[ "tag_domain_id" ].toInt() == tag_domain_id )
 			{
 				const auto tag_array = obj[ "tag_ids" ].toArray();
 				results.reserve( tag_array.size() );

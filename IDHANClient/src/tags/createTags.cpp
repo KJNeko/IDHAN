@@ -55,7 +55,15 @@ QFuture< std::vector< TagID > > IDHANClient::
 
 		for ( const auto& obj : document.array() )
 		{
-			tag_ids.emplace_back( obj.toObject()[ "tag_id" ].toInteger() );
+			const auto& tag_obj = obj.toObject();
+			const auto tag_id = tag_obj[ "tag_id" ].toInteger();
+			FGL_ASSERT(
+				tag_id > 0,
+				format_ns::format(
+					"Tag ID was invalid being returned from IDHAN Got {} from {}",
+					tag_id,
+					document.toJson().toStdString() ) );
+			tag_ids.emplace_back( tag_id );
 		}
 
 		promise->addResult( std::move( tag_ids ) );
