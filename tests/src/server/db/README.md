@@ -1,1 +1,0 @@
-# This folder contains tests that are to be executed after the server has been initalized using testmode without any operations performed on it.

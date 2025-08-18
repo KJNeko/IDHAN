@@ -14,7 +14,6 @@
 #include <spdlog/spdlog.h>
 #pragma GCC diagnostic pop
 
-#include "idhan/IDHANClient.hpp"
 #include "logging/format_ns.hpp"
 
 class QNetworkReply;

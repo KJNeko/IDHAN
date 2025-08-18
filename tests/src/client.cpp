@@ -4,7 +4,7 @@
 
 #include <QCoreApplication>
 
-#include <catch2/catch_all.hpp>
+#include <gtest/gtest.h>
 
 #include <random>
 
@@ -171,141 +171,120 @@ std::pair< std::string, std::string > generateTag()
 	return { gen_ns, gen_st };
 }
 
-TEST_CASE( "Client tests", "[server][client][network]" )
+struct ClientTests : public ::testing::Test
 {
 	int argc { 0 };
-	QCoreApplication app { argc, nullptr };
+	std::unique_ptr< QCoreApplication > app;
+	std::unique_ptr< ServerHandle > server_handle;
+	std::unique_ptr< idhan::IDHANClient > client;
 
-	SERVER_HANDLE;
-
-	SECTION( "Client connection" )
+	void SetUp() override
 	{
-		idhan::IDHANClient client { "localhost", idhan::IDHAN_DEFAULT_PORT, false };
-
-		SECTION( "Function tests" )
-		{
-			SECTION( "Tags" )
-			{
-				SECTION( "IDHANClient::createTag" )
-				{
-					SECTION( "Single string" )
-					{
-						auto tag_future { client.createTag( "character:toujou koneko" ) };
-
-						qtWaitFuture( tag_future );
-
-						REQUIRE( tag_future.resultCount() > 0 );
-						REQUIRE( tag_future.resultCount() == 1 );
-
-						const auto tag_id { tag_future.result() };
-						idhan::logging::info( "Got tag ID {} for tag {}", "character:toujou koneko", tag_id );
-					}
-
-					SECTION( "Split string" )
-					{
-						auto tag_future { client.createTag( "series", "highschool dxd" ) };
-
-						qtWaitFuture( tag_future );
-
-						REQUIRE( tag_future.resultCount() > 0 );
-						REQUIRE( tag_future.resultCount() == 1 );
-
-						const auto tag_id { tag_future.result() };
-						idhan::logging::info( "Got tag ID {} for tag {}", "series:highschool dxd", tag_id );
-					}
-
-					SECTION( "Empty namespace" )
-					{
-						auto tag_future { client.createTag( "", "highschool dxd" ) };
-						qtWaitFuture( tag_future );
-						REQUIRE( tag_future.resultCount() > 0 );
-						REQUIRE( tag_future.resultCount() == 1 );
-					}
-
-					SECTION( "Existing tag" )
-					{
-						auto tag_future { client.createTag( "character", "toujou koneko" ) };
-						qtWaitFuture( tag_future );
-						REQUIRE( tag_future.resultCount() > 0 );
-						REQUIRE( tag_future.resultCount() == 1 );
-						const auto tag_id { tag_future.result() };
-						idhan::logging::info( "Got tag ID {} for tag {}", "character:toujou koneko", tag_id );
-						auto tag_future2 { client.createTag( "character", "toujou koneko" ) };
-						qtWaitFuture( tag_future2 );
-						REQUIRE( tag_future2.resultCount() > 0 );
-					}
-				}
-
-				SECTION( "IDHANClient::createTags" )
-				{
-					SECTION( "Split strings" )
-					{
-						const std::vector< std::pair< std::string, std::string > > tags {
-							{ "character", "toujou koneko" }, { "series", "highschool dxd" }
-						};
-
-						auto future { client.createTags( tags ) };
-
-						qtWaitFuture( future );
-
-						REQUIRE( future.resultCount() > 0 );
-
-						const auto tag_ids { future.result() };
-
-						REQUIRE( tag_ids.size() == tags.size() );
-					}
-
-					SECTION( "Combined string" )
-					{
-						const std::vector< std::string > tags { "character:toujou koneko", "series:highschool dxd" };
-
-						auto future { client.createTags( tags ) };
-
-						qtWaitFuture( future );
-
-						REQUIRE( future.resultCount() > 0 );
-
-						const auto tag_ids { future.result() };
-
-						REQUIRE( tag_ids.size() == tags.size() );
-					}
-				}
-			}
-		}
+		app = std::make_unique< QCoreApplication >( argc, nullptr );
+		server_handle = std::make_unique< ServerHandle >( startServer() );
+		client = std::make_unique< idhan::IDHANClient >( "test", "localhost", idhan::IDHAN_DEFAULT_PORT, false );
 	}
+};
 
+TEST_F( ClientTests, ClientTest )
+{
 	SUCCEED();
 }
 
+class ClientTagTests : public ClientTests
+{
+};
+
+TEST_F( ClientTagTests, CreateTagSingleString )
+{
+	auto tag_future { client->createTag( "character:toujou koneko" ) };
+	qtWaitFuture( tag_future );
+	ASSERT_GT( tag_future.resultCount(), 0 );
+	ASSERT_EQ( tag_future.resultCount(), 1 );
+	const auto tag_id { tag_future.result() };
+	idhan::logging::info( "Got tag ID {} for tag {}", "character:toujou koneko", tag_id );
+}
+
+TEST_F( ClientTagTests, CreateTagSplitString )
+{
+	auto tag_future { client->createTag( "series", "highschool dxd" ) };
+	qtWaitFuture( tag_future );
+	ASSERT_GT( tag_future.resultCount(), 0 );
+	ASSERT_EQ( tag_future.resultCount(), 1 );
+	const auto tag_id { tag_future.result() };
+	idhan::logging::info( "Got tag ID {} for tag {}", "series:highschool dxd", tag_id );
+}
+
+TEST_F( ClientTagTests, CreateTagEmptyNamespace )
+{
+	auto tag_future { client->createTag( "", "highschool dxd" ) };
+	qtWaitFuture( tag_future );
+	ASSERT_GT( tag_future.resultCount(), 0 );
+	ASSERT_EQ( tag_future.resultCount(), 1 );
+}
+
+TEST_F( ClientTagTests, CreateExistingTag )
+{
+	auto tag_future { client->createTag( "character", "toujou koneko" ) };
+	qtWaitFuture( tag_future );
+	ASSERT_GT( tag_future.resultCount(), 0 );
+	ASSERT_EQ( tag_future.resultCount(), 1 );
+	const auto tag_id { tag_future.result() };
+	idhan::logging::info( "Got tag ID {} for tag {}", "character:toujou koneko", tag_id );
+	auto tag_future2 { client->createTag( "character", "toujou koneko" ) };
+	qtWaitFuture( tag_future2 );
+	ASSERT_GT( tag_future2.resultCount(), 0 );
+}
+
+TEST_F( ClientTagTests, CreateTagsSplitStrings )
+{
+	const std::vector< std::pair< std::string, std::string > > tags {
+		{ "character", "toujou koneko" }, { "series", "highschool dxd" }
+	};
+	auto future { client->createTags( tags ) };
+	qtWaitFuture( future );
+	ASSERT_GT( future.resultCount(), 0 );
+	const auto tag_ids { future.result() };
+	ASSERT_EQ( tag_ids.size(), tags.size() );
+}
+
+TEST_F( ClientTagTests, CreateTagsCombinedStrings )
+{
+	const std::vector< std::string > tags { "character:toujou koneko", "series:highschool dxd" };
+	auto future { client->createTags( tags ) };
+	qtWaitFuture( future );
+	ASSERT_GT( future.resultCount(), 0 );
+	const auto tag_ids { future.result() };
+	ASSERT_EQ( tag_ids.size(), tags.size() );
+}
+
+// INSTANTIATE_TEST_SUITE_P( Create, ClientTagParamTests, ::testing::Values( "character:toujou koneko", "series:highschool dxd" ) );
+
 /*
-TEST_CASE( "Benchmarks" )
+TEST( Benchmarks, CreateTags )
 {
 	int argc { 0 };
 	QCoreApplication app { argc, nullptr };
 
 	SERVER_HANDLE;
 
-	idhan::IDHANClientConfig config {};
-	config.hostname = "localhost";
-	config.port = idhan::IDHAN_DEFAULT_PORT;
-	config.self_name = "testing suite";
-	config.use_ssl = false;
+	idhan::IDHANClient client { "test", "localhost", idhan::IDHAN_DEFAULT_PORT, false };
 
-	idhan::IDHANClient client { config };
+	std::vector< std::pair< std::string, std::string > > tags( 16 );
 
-	BENCHMARK_ADVANCED( "Create tags" )( Catch::Benchmark::Chronometer meter )
-	{
-		std::vector< std::pair< std::string, std::string > > tags( 16 );
+	for ( std::size_t i = 0; i < tags.size(); i++ ) tags[ i ] = generateTag();
 
-		for ( std::size_t i = 0; i < tags.size(); i++ ) tags[ i ] = generateTag();
+	testing::internal::CaptureStdout();
+	auto start = testing::internal::TimeInMillis();
 
-		meter.measure(
-			[ & ]
-			{
-				auto future { client.createTags( tags ) };
-				qtWaitFuture( future );
-				return future.result();
-			} );
-	};
+	auto future { client.createTags( tags ) };
+	qtWaitFuture( future );
+	auto result = future.result();
+
+	auto elapsed = testing::internal::TimeInMillis() - start;
+	testing::internal::GetCapturedStdout();
+
+	EXPECT_GT( result.size(), 0 );
+	EXPECT_LT( elapsed, 5000 ); // 5 second timeout
 }
 */

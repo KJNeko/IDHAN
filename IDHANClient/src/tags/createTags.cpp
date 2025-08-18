@@ -34,16 +34,20 @@ QFuture< std::vector< TagID > > IDHANClient::
 
 	QJsonArray array {};
 
+	if ( tags.size() == 0 ) throw std::runtime_error( "Needs more then 1 tag to make" );
+
 	for ( const auto& [ namespace_text, subtag_text ] : tags )
 	{
-		QJsonObject obj;
+		QJsonObject obj {};
 
 		obj[ "namespace" ] = QString::fromStdString( namespace_text );
 		obj[ "subtag" ] = QString::fromStdString( subtag_text );
 		array.append( std::move( obj ) );
 	}
 
-	auto handleResponse = [ promise ]( auto* response )
+	const auto expected_count { tags.size() };
+
+	auto handleResponse = [ promise, expected_count ]( auto* response )
 	{
 		// reply will give us a body of json
 		const auto data { response->readAll() };
@@ -65,6 +69,13 @@ QFuture< std::vector< TagID > > IDHANClient::
 					document.toJson().toStdString() ) );
 			tag_ids.emplace_back( tag_id );
 		}
+
+		if ( tag_ids.size() != expected_count )
+			throw std::runtime_error(
+				format_ns::format(
+					"IDHAN did not return the correct number of tags back. Expected {} got {}",
+					tag_ids.size(),
+					expected_count ) );
 
 		promise->addResult( std::move( tag_ids ) );
 

@@ -5,9 +5,9 @@
 #include "ManagementConnection.hpp"
 
 #include "ConnectionArguments.hpp"
-#include "db/setup/management.hpp"
-#include "db/setup/migration/migrations.hpp"
 #include "logging/log.hpp"
+#include "management.hpp"
+#include "migrations.hpp"
 
 namespace idhan
 {
@@ -35,6 +35,7 @@ ManagementConnection::ManagementConnection( const ConnectionArguments& arguments
 	}
 	else
 	{
+		tx.exec( "CREATE SCHEMA IF NOT EXISTS public" );
 		constexpr std::string_view schema { "public" };
 		db::destroyTables( tx );
 		db::updateMigrations( tx, schema );
