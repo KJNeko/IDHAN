@@ -8,6 +8,7 @@
 #include "api/helpers/records.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
+#include "filesystem/IOUring.hpp"
 #include "logging/log.hpp"
 #include "metadata/FileMappedData.hpp"
 #include "metadata/parseMetadata.hpp"
@@ -17,9 +18,10 @@ namespace idhan::api
 {
 
 drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > >
-	adoptOrphan( std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db )
+	adoptOrphan( FileIOUring io_uring, drogon::orm::DbClientPtr db )
 {
-	const auto sha256 { SHA256::hash( data->data(), data->length() ) };
+	const auto data { co_await io_uring.readAll() };
+	const auto sha256 { SHA256::hash( data.data(), data.size() ) };
 	const auto record_result { co_await helpers::createRecord( sha256, db ) };
 
 	co_return record_result;
@@ -32,12 +34,13 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	const auto db { drogon::app().getDbClient() };
 
 	const auto result {
-		co_await db->execSqlCoro( "SELECT folder_path FROM file_clusters WHERE cluster_id = $1", cluster_id )
+		co_await db->execSqlCoro( "SELECT folder_path, read_only FROM file_clusters WHERE cluster_id = $1", cluster_id )
 	};
 
 	if ( result.empty() ) co_return createBadRequest( "Cluster not found with ID {}", cluster_id );
 
-	const auto path_str { result[ 0 ][ 0 ].as< std::string >() };
+	const auto cluster_path { result[ 0 ][ "folder_path" ].as< std::string >() };
+	const bool read_only { result[ 0 ][ "read_only" ].as< bool >() };
 
 	std::size_t size_accum { 0 };
 	std::uint32_t file_counter { 0 };
@@ -73,15 +76,21 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	if ( read_only && !recompute_hash )
 		co_return createBadRequest( "Must recompute hash for read only folders (recompute hash was set to false)" );
 
-	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( path_str ) )
+	// Where we put bad files if not in readonly mode
+	const std::filesystem::path bad_dir { cluster_path };
+
+	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( cluster_path ) )
 	{
 		if ( !dir_entry.is_regular_file() ) continue;
 
+		const auto file_path { dir_entry.path() };
 		auto data { std::make_shared< FileMappedData >( dir_entry.path() ) };
+
+		FileIOUring io_uring { file_path };
 
 		if ( data->extension() == ".thumbnail" ) continue;
 
-		const auto sha256_e { recompute_hash ? SHA256::hash( data->data(), data->length() ) :
+		const auto sha256_e { recompute_hash ? co_await SHA256::hashCoro( io_uring ) :
 			                                   SHA256::fromHex( data->name() ) };
 
 		if ( !sha256_e )
@@ -105,8 +114,13 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 				data->name(),
 				expected_hex ) };
 
-			if ( stop_on_fail ) co_return createInternalError( error_str );
-			log::warn( error_str );
+			if ( !read_only )
+			{
+				std::filesystem::rename( file_path, bad_dir / file_path.filename() );
+				log::warn( "{}; File was moved to {}", error_str, ( bad_dir / file_path.filename() ).string() );
+			}
+			else if ( stop_on_fail )
+				co_return createInternalError( error_str );
 
 			//TODO: If not readonly, Move this file to a new location for processing by the user
 			continue;
@@ -132,7 +146,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		}
 
 		// if we didn't find a record and we are set to adopt any orphans we find, then we'll adopt it here.
-		const auto record_id_e { search.empty() && adopt_orphans ? co_await adoptOrphan( data, db ) :
+		const auto record_id_e { search.empty() && adopt_orphans ? co_await adoptOrphan( io_uring, db ) :
 			                                                       search[ 0 ][ 0 ].as< RecordID >() };
 
 		if ( !record_id_e ) co_return record_id_e.error();
@@ -153,7 +167,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 				if ( info.mime_id == constants::INVALID_MIME_ID )
 				{
 					log::warn(
-						"IDHAN came across file {} that it could not determine a mime for: Extension: {}",
+						"During scan of cluster {} IDHAN came across file {} that it could not determine a mime for: Extension: {}",
+						cluster_id,
 						data->strpath(),
 						data->extension() );
 					info.extension = data->extension();

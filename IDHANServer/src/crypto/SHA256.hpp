@@ -37,6 +37,11 @@
 
 namespace idhan
 {
+struct FileIOUring;
+}
+
+namespace idhan
+{
 
 class SHA256
 {
@@ -103,6 +108,7 @@ class SHA256
 		fromDB( RecordID record_id, drogon::orm::DbClientPtr db );
 
 	static SHA256 hash( const std::byte* data, std::size_t size );
+	static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
 
 	static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
 

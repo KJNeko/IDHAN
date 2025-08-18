@@ -22,11 +22,13 @@ struct FileIOUring
 
 {
 	int m_fd { -1 };
+	std::filesystem::path m_path;
 
 	FileIOUring( const std::filesystem::path& path );
+	drogon::Task< std::vector< std::byte > > readAll() const;
 
-	drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len );
-	drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 );
+	drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
+	drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 ) const;
 };
 
 struct IOUringUserData

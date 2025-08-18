@@ -18,12 +18,20 @@
 namespace idhan
 {
 
-FileIOUring::FileIOUring( const std::filesystem::path& path ) : m_fd( open( path.c_str(), O_RDWR | O_CREAT, 0666 ) )
+FileIOUring::FileIOUring( const std::filesystem::path& path ) :
+  m_fd( open( path.c_str(), O_RDWR | O_CREAT, 0666 ) ),
+  m_path( path )
 {
 	if ( m_fd <= 0 ) throw std::runtime_error( "Failed to open file" );
 }
 
-drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len )
+drogon::Task< std::vector< std::byte > > FileIOUring::readAll() const
+{
+	const auto file_size { std::filesystem::file_size( m_path ) };
+	co_return co_await read( 0, file_size );
+}
+
+drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len ) const
 {
 	auto& uring { IOUring::getInstance() };
 
@@ -50,7 +58,7 @@ drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t of
 	co_return data;
 }
 
-drogon::Task< void > FileIOUring::write( std::vector< std::byte > data, std::size_t offset )
+drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, const std::size_t offset ) const
 {
 	auto& uring { IOUring::getInstance() };
 
