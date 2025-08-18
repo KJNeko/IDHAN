@@ -9,6 +9,5 @@ var searchData=
   ['path_6',['path',['../db/de9/classidhan_1_1FileMappedData.html#af5ff7974e8e72732b3fc26b93403e614',1,'idhan::FileMappedData']]],
   ['pgescape_7',['pgEscape',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a267910c9cd40d8f20d84eec5719d0af9',1,'idhan::api::helpers']]],
   ['pgescapei_8',['pgEscapeI',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a3f4643c98726286a10fa2e41c14c3b78',1,'idhan::api::helpers']]],
-  ['postgresqlstoragesundata_9',['postgresqlStorageSunData',['../d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#a4a10b1492337010c07636a0038e7ef3d',1,'idhan::api::APIMaintenance']]],
-  ['prepareinitalindexes_10',['prepareInitalIndexes',['../db/d01/namespaceidhan_1_1db.html#a2b863ba9db65a3a2b79583cdda4b26cb',1,'idhan::db']]]
+  ['postgresqlstoragesundata_9',['postgresqlStorageSunData',['../d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#a4a10b1492337010c07636a0038e7ef3d',1,'idhan::api::APIMaintenance']]]
 ];

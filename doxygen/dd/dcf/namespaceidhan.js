@@ -14,16 +14,6 @@ var namespaceidhan =
     [ "constants", "dd/d68/namespaceidhan_1_1constants.html", [
       [ "INVALID_MIME_ID", "dd/d68/namespaceidhan_1_1constants.html#af2ffeb0dfdbb702b153807024d13f160", null ]
     ] ],
-    [ "db", "db/d01/namespaceidhan_1_1db.html", [
-      [ "addTableToInfo", "db/d01/namespaceidhan_1_1db.html#a873077c67e5bb8709aedc0555db3b5ee", null ],
-      [ "destroyTables", "db/d01/namespaceidhan_1_1db.html#a042c099ba9a0a055e27d3306de63bcb2", null ],
-      [ "doMigration", "db/d01/namespaceidhan_1_1db.html#a2fc1f163c11aa9afdce72fa901a35ac0", null ],
-      [ "getTableVersion", "db/d01/namespaceidhan_1_1db.html#a511a1567c404a0a2457f8f7f69cd9c10", null ],
-      [ "prepareInitalIndexes", "db/d01/namespaceidhan_1_1db.html#a2b863ba9db65a3a2b79583cdda4b26cb", null ],
-      [ "tableExists", "db/d01/namespaceidhan_1_1db.html#a3fefd542f615196c8a0ecfaed4864e5b", null ],
-      [ "updateMigrations", "db/d01/namespaceidhan_1_1db.html#ae3753db3b119251461a6be5b599bb165", null ],
-      [ "index_sql", "db/d01/namespaceidhan_1_1db.html#a1993588097de14fcdbdd414523d0d0f5", null ]
-    ] ],
     [ "filesystem", "db/d9b/namespaceidhan_1_1filesystem.html", "db/d9b/namespaceidhan_1_1filesystem" ],
     [ "helpers", "d7/dc1/namespaceidhan_1_1helpers.html", [
       [ "fetchUrlsJson", "d7/dc1/namespaceidhan_1_1helpers.html#a1ed3c01830b74e853e4550e2ebe8f545", null ],

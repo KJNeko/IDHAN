@@ -22,8 +22,6 @@ var searchData=
   ['post_19',['POST',['../dd/dcf/namespaceidhan.html#a2633d986ee0146c0e96d57295eec814ba77642b866fe063e9ed69a98f7edf9d47',1,'idhan']]],
   ['postgresqlstats_2ecpp_20',['postgresqlStats.cpp',['../d5/d0b/postgresqlStats_8cpp.html',1,'']]],
   ['postgresqlstoragesundata_21',['postgresqlStorageSunData',['../d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#a4a10b1492337010c07636a0038e7ef3d',1,'idhan::api::APIMaintenance']]],
-  ['pqxx_22',['pqxx',['../dc/d09/namespacepqxx.html',1,'']]],
-  ['prepareinitalindexes_23',['prepareInitalIndexes',['../db/d01/namespaceidhan_1_1db.html#a2b863ba9db65a3a2b79583cdda4b26cb',1,'idhan::db']]],
-  ['previouslydeleted_24',['PreviouslyDeleted',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a124ca310f93eccdc9790b24fce74329c',1,'idhan::hyapi']]],
-  ['ptr_5fservice_25',['PTR_SERVICE',['../d5/d08/namespaceidhan_1_1hydrus_1_1hy__constants.html#a43eaffc63d902c822fe37eef60b0deb0a884b619d080cea7234c8d71658986f15',1,'idhan::hydrus::hy_constants']]]
+  ['previouslydeleted_22',['PreviouslyDeleted',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a124ca310f93eccdc9790b24fce74329c',1,'idhan::hyapi']]],
+  ['ptr_5fservice_23',['PTR_SERVICE',['../d5/d08/namespaceidhan_1_1hydrus_1_1hy__constants.html#a43eaffc63d902c822fe37eef60b0deb0a884b619d080cea7234c8d71658986f15',1,'idhan::hydrus::hy_constants']]]
 ];

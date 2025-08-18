@@ -2,7 +2,7 @@ var searchData=
 [
   ['readawaiter_2ecpp_0',['ReadAwaiter.cpp',['../dd/dbf/ReadAwaiter_8cpp.html',1,'']]],
   ['readawaiter_2ehpp_1',['ReadAwaiter.hpp',['../d9/deb/ReadAwaiter_8hpp.html',1,'']]],
-  ['readme_2emd_2',['README.md',['../db/ddb/IDHANServer_2src_2db_2setup_2migration_2README_8md.html',1,'(Global Namespace)'],['../da/ddd/README_8md.html',1,'(Global Namespace)']]],
+  ['readme_2emd_2',['README.md',['../da/ddd/README_8md.html',1,'']]],
   ['recordapi_2ehpp_3',['RecordAPI.hpp',['../d2/d9f/RecordAPI_8hpp.html',1,'']]],
   ['records_2ecpp_4',['records.cpp',['../d5/d42/records_8cpp.html',1,'']]],
   ['records_2ehpp_5',['records.hpp',['../d6/d8c/api_2helpers_2records_8hpp.html',1,'(Global Namespace)'],['../d2/df1/core_2search_2records_8hpp.html',1,'(Global Namespace)']]],

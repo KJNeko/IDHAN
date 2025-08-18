@@ -11,7 +11,7 @@ var searchData=
   ['readawaiter_8',['ReadAwaiter',['../d2/d83/structidhan_1_1ReadAwaiter.html',1,'idhan::ReadAwaiter'],['../d2/d83/structidhan_1_1ReadAwaiter.html#adf090d1c0aa587fb81d7e0fd099a5c0f',1,'idhan::ReadAwaiter::ReadAwaiter(handle_type handle)'],['../d2/d83/structidhan_1_1ReadAwaiter.html#a7eefe0fb578fe9124b559c6b769c700f',1,'idhan::ReadAwaiter::ReadAwaiter(IOUring *uring, io_uring_sqe sqe)']]],
   ['readawaiter_2ecpp_9',['ReadAwaiter.cpp',['../dd/dbf/ReadAwaiter_8cpp.html',1,'']]],
   ['readawaiter_2ehpp_10',['ReadAwaiter.hpp',['../d9/deb/ReadAwaiter_8hpp.html',1,'']]],
-  ['readme_2emd_11',['README.md',['../db/ddb/IDHANServer_2src_2db_2setup_2migration_2README_8md.html',1,'(Global Namespace)'],['../da/ddd/README_8md.html',1,'(Global Namespace)']]],
+  ['readme_2emd_11',['README.md',['../da/ddd/README_8md.html',1,'']]],
   ['rebuildclusterinfo_12',['rebuildClusterInfo',['../db/de4/namespaceidhan_1_1api.html#ac2b6c3009496ef7e863e9275138b8e79',1,'idhan::api']]],
   ['record_5ftime_13',['RECORD_TIME',['../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a60b1a33daefa32e59d0a8a73edd99923',1,'idhan']]],
   ['recordapi_14',['RecordAPI',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html',1,'idhan::api']]],
