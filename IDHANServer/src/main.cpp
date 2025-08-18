@@ -75,8 +75,14 @@ int main( int argc, char** argv )
 	{
 		const auto level { idhan::config::get< std::string >( "logging", "level", "info" ) };
 		spdlog::info( "Logging level: {}", level );
-		spdlog::set_level( strToSpdlogLevel( level ) );
+
+#ifdef NDEBUG
 		arguments.log_level = strToSpdlogLevel( level );
+#else
+		arguments.log_level = spdlog::level::debug;
+#endif
+
+		spdlog::set_level( arguments.log_level );
 	}
 	else
 	{
