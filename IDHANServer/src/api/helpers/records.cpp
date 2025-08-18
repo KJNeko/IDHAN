@@ -1,10 +1,9 @@
-
-
 #include "records.hpp"
 
+#include "api/helpers/drogonArrayBind.hpp"
+#include "createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
-#include "logging/log.hpp"
 
 namespace idhan::api::helpers
 {
@@ -12,64 +11,55 @@ namespace idhan::api::helpers
 drogon::Task< std::vector< RecordID > >
 	massCreateRecord( const std::vector< SHA256 >& sha256s, drogon::orm::DbClientPtr db )
 {
-	FGL_ASSERT( sha256s.size() <= 100, "Too many hashes" );
+	if ( sha256s.empty() ) co_return {};
 
-	//TODO: Add in check for uniqueness
+	auto copy { sha256s };
+	auto copy2 { sha256s };
 
-	std::string query {};
-	query += "SELECT * FROM insertMultipleRecords(";
+	co_await db->execSqlCoro< std::vector< idhan::SHA256 > >(
+		"INSERT INTO records (sha256) VALUES (UNNEST($1::BYTEA[])) ON CONFLICT DO NOTHING", std::move( copy ) );
 
-	for ( const auto& sha256 : sha256s )
+	std::vector< RecordID > record_ids {};
+	record_ids.reserve( sha256s.size() );
+
+	const auto result { co_await db->execSqlCoro< std::vector<
+		SHA256 > >( "SELECT record_id FROM records WHERE sha256 = ANY($1::BYTEA[])", std::move( copy2 ) ) };
+
+	for ( const auto& row : result )
 	{
-		query += format_ns::format( "\'\\x{}\'::bytea", sha256.hex() );
-		query += ",";
+		record_ids.push_back( row[ 0 ].as< RecordID >() );
 	}
 
-	// remove last `,`
-	query.pop_back();
+	if ( record_ids.size() != sha256s.size() ) co_return {};
 
-	query += ");";
-
-	try
-	{
-		const auto result { co_await db->execSqlCoro( query ) };
-
-		std::vector< RecordID > record_ids {};
-		record_ids.reserve( sha256s.size() );
-
-		for ( const auto& row : result )
-		{
-			record_ids.push_back( row[ 0 ].as< RecordID >() );
-		}
-
-		co_return record_ids;
-	}
-	catch ( std::exception& e )
-	{
-		log::error( "Error with {}", query );
-
-		std::rethrow_exception( std::current_exception() );
-	}
+	co_return record_ids;
 }
 
-drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > >
+	createRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )
 {
-	// Here we do the ON CONFLICT DO NOTHING in order to prevent an exception from being thrown by drogon.
-	const auto result { co_await db->execSqlCoro(
-		"INSERT INTO records (sha256) VALUES ($1) ON CONFLICT (sha256) DO UPDATE SET sha256 = excluded.sha256 RETURNING record_id",
-		sha256.toVec() ) };
+	const auto result { co_await findRecord( sha256, db ) };
 
-	if ( result.empty() ) [[unlikely]]
-	{
-		const auto search_result { co_await findRecord( sha256, db ) };
+	if ( result ) [[likely]]
+		co_return result.value();
 
-		//TODO: Proper exception
-		if ( !search_result ) throw std::runtime_error( "Optional had no result" );
+	std::size_t tries { 0 };
 
-		co_return search_result.value();
+	do {
+		tries += 1;
+		if ( tries > 16 ) // TODO: ret
+			co_return 0;
+
+		const auto insert { co_await db->execSqlCoro(
+			"INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING RETURNING record_id", sha256.toVec() ) };
+
+		if ( insert.empty() ) continue;
+
+		co_return insert[ 0 ][ 0 ].as< RecordID >();
 	}
+	while ( tries < 16 );
 
-	co_return result[ 0 ][ 0 ].as< RecordID >();
+	co_return std::unexpected( createBadRequest( "Failed to create record" ) );
 }
 
 drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )

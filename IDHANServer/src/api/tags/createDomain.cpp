@@ -13,18 +13,16 @@ namespace idhan::api
 {
 
 drogon::Task< std::optional< Json::Value > >
-	getTagDomainInfoJson( const TagDomainID domain_id, const drogon::orm::DbClientPtr db )
+	getTagDomainInfoJson( const TagDomainID tag_domain_id, const drogon::orm::DbClientPtr db )
 {
-	const auto search {
-		co_await db
-			->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains WHERE tag_domain_id = $1", domain_id )
-	};
+	const auto search { co_await db->execSqlCoro(
+		"SELECT tag_domain_id, domain_name FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id ) };
 
 	if ( search.empty() ) co_return std::nullopt;
 
 	Json::Value out_json {};
 
-	out_json[ "domain_id" ] = static_cast< Json::UInt64 >( search[ 0 ][ 0 ].as< TagDomainID >() );
+	out_json[ "tag_domain_id" ] = static_cast< Json::UInt64 >( search[ 0 ][ 0 ].as< TagDomainID >() );
 	out_json[ "domain_name" ] = search[ 0 ][ 1 ].as< std::string >();
 
 	co_return out_json;
@@ -69,9 +67,14 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpReq
 		const auto create { co_await db->execSqlCoro(
 			"INSERT INTO tag_domains (domain_name) VALUES ($1) RETURNING tag_domain_id", name.asString() ) };
 
-		if ( auto info = co_await getTagDomainInfoJson( create[ 0 ][ 0 ].as< TagDomainID >(), db ) )
+		if ( create.size() > 0 )
 		{
-			co_return drogon::HttpResponse::newHttpJsonResponse( *info );
+			log::debug( "Created tag domain \'{}\' as id {}", name.asString(), create[ 0 ][ 0 ].as< TagDomainID >() );
+
+			if ( auto info = co_await getTagDomainInfoJson( create[ 0 ][ 0 ].as< TagDomainID >(), db ) )
+			{
+				co_return drogon::HttpResponse::newHttpJsonResponse( *info );
+			}
 		}
 
 		co_return createInternalError( "Error creating new domain with name {}", name.asString() );
@@ -113,40 +116,40 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomains( [[maybe_unused]] 
 }
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	getTagDomainInfo( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID domain_id )
+	getTagDomainInfo( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID tag_domain_id )
 {
 	auto db { drogon::app().getDbClient() };
 
 	const auto search {
-		co_await db->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", domain_id )
+		co_await db->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id )
 	};
 
 	if ( search.empty() )
 	{
-		co_return createBadRequest( "Domain id {} does not exists", domain_id );
+		co_return createBadRequest( "Domain id {} does not exists", tag_domain_id );
 	}
 
-	const auto info { co_await getTagDomainInfoJson( domain_id, db ) };
+	const auto info { co_await getTagDomainInfoJson( tag_domain_id, db ) };
 
 	if ( !info )
 	{
-		co_return createInternalError( "Failed to get info for tag domain {} despite it existing", domain_id );
+		co_return createInternalError( "Failed to get info for tag domain {} despite it existing", tag_domain_id );
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( *info );
 }
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	deleteTagDomain( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID domain_id )
+	deleteTagDomain( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID tag_domain_id )
 {
 	auto db { drogon::app().getDbClient() };
-	const auto search { co_await db->execSqlCoro( "DELETE FROM tag_domains WHERE tag_domain_id = $1", domain_id ) };
+	const auto search { co_await db->execSqlCoro( "DELETE FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id ) };
 
-	if ( search.empty() ) co_return createBadRequest( "Failed to find tag domain by id {}", domain_id );
+	if ( search.empty() ) co_return createBadRequest( "Failed to find tag domain by id {}", tag_domain_id );
 
 	Json::Value out_json {};
 
-	out_json[ "domain_id" ] = static_cast< Json::Value::UInt >( search[ 0 ][ 0 ].as< TagDomainID >() );
+	out_json[ "tag_domain_id" ] = static_cast< Json::Value::UInt >( search[ 0 ][ 0 ].as< TagDomainID >() );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
 }

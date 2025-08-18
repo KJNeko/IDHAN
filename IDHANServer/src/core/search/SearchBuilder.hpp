@@ -184,7 +184,7 @@ class SearchBuilder
 
 	drogon::Task< drogon::orm::Result > query(
 		drogon::orm::DbClientPtr db,
-		std::vector< TagDomainID > domain_ids,
+		std::vector< TagDomainID > tag_domain_ids,
 		bool return_ids = true,
 		bool return_hashes = false );
 
@@ -192,7 +192,7 @@ class SearchBuilder
 		query( drogon::orm::DbClientPtr db, bool return_ids = true, bool return_hashes = false );
 
 	/**
-	 * @brief Constructs a query to be used. $1 is expected to be an array of domain_ids
+	 * @brief Constructs a query to be used. $1 is expected to be an array of tag_domain_ids
 	 * @param return_ids
 	 * @param return_hashes
 	 * @return

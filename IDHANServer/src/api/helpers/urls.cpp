@@ -4,14 +4,19 @@
 
 #include "urls.hpp"
 
+#include "createBadRequest.hpp"
+
 namespace idhan::helpers
 {
 drogon::Task< std::expected< UrlID, drogon::HttpResponsePtr > >
 	findOrCreateUrl( const std::string url, drogon::orm::DbClientPtr db )
 {
 	UrlID url_id { INVALID_URL_ID };
+	std::size_t tries { 0 };
 
 	do {
+		tries += 1;
+		if ( tries > 16 ) co_return std::unexpected( createBadRequest( "Too many URL creation attempts" ) );
 		const auto search_result { co_await db->execSqlCoro( "SELECT url_id FROM urls WHERE url = $1", url ) };
 
 		if ( !search_result.empty() )

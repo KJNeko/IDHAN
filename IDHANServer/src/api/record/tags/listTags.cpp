@@ -13,33 +13,45 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::
 	const auto db { drogon::app().getDbClient() };
 
 	const auto result {
-		co_await db->execSqlCoro( "SELECT domain_id, tag_id FROM tag_mappings WHERE record_id = $1", record_id )
+		co_await db->execSqlCoro( "SELECT tag_domain_id, tag_id FROM tag_mappings WHERE record_id = $1", record_id )
 	};
 
 	Json::Value json {};
 
-	std::unordered_map< TagDomainID, Json::ArrayIndex > domain_map {};
+	std::unordered_map< TagDomainID, std::vector< TagID > > domain_map {};
 
 	for ( const auto& row : result )
 	{
-		const auto domain_id { row[ 0 ].as< TagDomainID >() };
+		const auto tag_domain_id { row[ 0 ].as< TagDomainID >() };
 		const auto tag_id { row[ 1 ].as< TagID >() };
 
-		if ( auto itter = domain_map.find( domain_id ); itter != domain_map.end() )
+		if ( auto itter = domain_map.find( tag_domain_id ); itter != domain_map.end() )
 		{
-			json[ itter->second ][ "tag_ids" ].append( tag_id );
-			continue;
+			itter->second.emplace_back( tag_id );
 		}
 		else
 		{
-			Json::Value obj {};
-			obj[ "domain_id" ] = static_cast< Json::Value::UInt >( domain_id );
-			obj[ "tag_ids" ] = Json::arrayValue;
-			obj[ "tag_ids" ].append( tag_id );
-			json.append( obj );
-
-			domain_map[ domain_id ] = json.size() - 1;
+			domain_map.insert_or_assign( tag_domain_id, std::vector< TagID > { tag_id } );
 		}
+	}
+
+	for ( const auto& [ domain_id, tag_ids ] : domain_map )
+	{
+		Json::Value obj {};
+		obj[ "tag_domain_id" ] = static_cast< Json::Value::LargestUInt >( domain_id );
+
+		{
+			Json::Value tag_ids_json {};
+			Json::ArrayIndex index { 0 };
+			for ( const auto& tag_id : tag_ids )
+			{
+				tag_ids_json[ index++ ] = static_cast< Json::Value::LargestUInt >( tag_id );
+			}
+
+			obj[ "tag_ids" ] = std::move( tag_ids_json );
+		}
+
+		json.append( obj );
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );

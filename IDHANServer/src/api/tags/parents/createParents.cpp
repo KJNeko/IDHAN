@@ -45,11 +45,18 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( drogon::HttpRe
 		const TagID parent_id { parent.as< TagID >() };
 		const TagID child_id { child.as< TagID >() };
 
-		co_await db->execSqlCoro(
-			"INSERT INTO tag_parents (domain_id, parent_id, child_id) VALUES ($1, $2, $3) ON CONFLICT(domain_id, parent_id, child_id) DO NOTHING",
-			tag_domain_id.value(),
-			parent_id,
-			child_id );
+		try
+		{
+			co_await db->execSqlCoro(
+				"INSERT INTO tag_parents (tag_domain_id, parent_id, child_id) VALUES ($1, $2, $3) ON CONFLICT(tag_domain_id, parent_id, child_id) DO NOTHING",
+				tag_domain_id.value(),
+				parent_id,
+				child_id );
+		}
+		catch ( std::exception& e )
+		{
+			co_return createInternalError( "Error adding tag parents: {}", e.what() );
+		}
 	}
 
 	co_return drogon::HttpResponse::newHttpResponse();

@@ -19,26 +19,6 @@ ResponseTask createRecordFromOctet( [[maybe_unused]] const drogon::HttpRequestPt
 	co_return createBadRequest( "Not implemented" );
 }
 
-drogon::Task< void > processBatchAndMapRecords(
-	std::unordered_set< SHA256 >& hashes,
-	std::unordered_map< SHA256, RecordID >& record_id_map,
-	drogon::orm::DbClientPtr db )
-{
-	std::vector< SHA256 > hashes_vec {};
-	hashes_vec.insert( hashes_vec.begin(), hashes.begin(), hashes.end() );
-
-	const auto record_ids { co_await helpers::massCreateRecord( hashes_vec, db ) };
-
-	for ( std::size_t i = 0; i < hashes_vec.size(); ++i )
-	{
-		const auto& hash { hashes_vec[ i ] };
-		const auto& record_id { record_ids[ i ] };
-		record_id_map.emplace( hash, record_id );
-	}
-
-	hashes.clear();
-}
-
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	createRecordsFromJsonArray( const Json::Value& json, drogon::orm::DbClientPtr db )
 {
@@ -54,19 +34,24 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 		const auto& str { value.asString() };
 
-		//insert the hash into a set to make each hash unique
-
 		const auto expected_hash { SHA256::fromHex( str ) };
 		if ( !expected_hash ) co_return std::unexpected( expected_hash.error() );
 
 		hashes.insert( expected_hash.value() );
 
-		if ( hashes.size() >= 100 )
-		{
-			co_await processBatchAndMapRecords( hashes, record_id_map, db );
-		}
-
 		hashes_order.emplace_back( expected_hash.value() );
+	}
+
+	std::vector< SHA256 > hashes_vec {};
+	hashes_vec.insert( hashes_vec.begin(), hashes.begin(), hashes.end() );
+
+	const auto record_ids { co_await helpers::massCreateRecord( hashes_vec, db ) };
+
+	for ( std::size_t i = 0; i < hashes_vec.size(); ++i )
+	{
+		const auto& hash { hashes_vec[ i ] };
+		const auto& record_id { record_ids[ i ] };
+		record_id_map.emplace( hash, record_id );
 	}
 
 	if ( hashes_order.size() != record_id_map.size() )
@@ -75,11 +60,6 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 			"Create records endpoint got {} hashes but only {} were unique, This impacts performance, Only submit unique hashes",
 			hashes_order.size(),
 			record_id_map.size() );
-	}
-
-	if ( hashes.size() > 0 )
-	{
-		co_await processBatchAndMapRecords( hashes, record_id_map, db );
 	}
 
 	Json::Value json_array {};
@@ -123,8 +103,11 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 		if ( !sha256 ) co_return sha256.error();
 
-		const RecordID record_id { co_await helpers::createRecord( *sha256, db ) };
-		json_out[ "record_id" ] = record_id;
+		const auto record_id_e { co_await helpers::createRecord( *sha256, db ) };
+		if ( record_id_e )
+			json_out[ "record_id" ] = record_id_e.value();
+		else
+			co_return record_id_e.error();
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );
 	}
