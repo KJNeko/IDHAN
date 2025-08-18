@@ -187,18 +187,27 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 		QtConcurrent::run(
 			[ this, hashes = std::move( hashes ), tag_sets_i = std::move( tag_sets ) ]() mutable
 			{
-				auto& client = idhan::IDHANClient::instance();
-				auto record_future = client.createRecords( hashes );
-				auto tag_sets_c { tag_sets_i };
+				try
+				{
+					auto& client = idhan::IDHANClient::instance();
+					auto record_future = client.createRecords( hashes );
+					auto tag_sets_c { tag_sets_i };
 
-				record_future.waitForFinished();
-				auto records = record_future.result();
-				FGL_ASSERT( records.size() == hashes.size(), "Records size was not the same as hashes size!" );
-				FGL_ASSERT( records.size() == tag_sets_c.size(), "Records size was not the same as tag sets size!" );
-				auto tag_future = client.addTags( std::move( records ), tag_domain_id, std::move( tag_sets_c ) );
+					record_future.waitForFinished();
+					auto records = record_future.result();
+					FGL_ASSERT( records.size() == hashes.size(), "Records size was not the same as hashes size!" );
+					FGL_ASSERT(
+						records.size() == tag_sets_c.size(), "Records size was not the same as tag sets size!" );
+					auto tag_future = client.addTags( std::move( records ), tag_domain_id, std::move( tag_sets_c ) );
 
-				tag_future.waitForFinished();
-				mappings_semaphore.release();
+					tag_future.waitForFinished();
+					mappings_semaphore.release();
+				}
+				catch ( std::exception& e )
+				{
+					idhan::logging::error( "Got exception: {} when trying to create mappings", e.what() );
+					std::abort();
+				}
 			} ) );
 }
 

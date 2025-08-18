@@ -21,7 +21,7 @@ class TagServiceWorker final : public QObject, public QRunnable
 	idhan::TagDomainID tag_domain_id { 0 };
 
 	mutable std::queue< QFuture< void > > m_futures {};
-	constexpr static auto sem_count { 6 };
+	constexpr static auto sem_count { 4 };
 	mutable std::counting_semaphore< sem_count > mappings_semaphore { sem_count };
 
   public:
