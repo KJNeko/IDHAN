@@ -35,4 +35,5 @@ read.lock
 /IDHAN/include/hydrus_client_constants_gen.hpp
 
 # Used for allowing easy setup of development environments for testing
-/IDHANServer/src/db/setup/migration/dev.sql
+/dev.sql
+dev.sql
