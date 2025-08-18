@@ -15,7 +15,7 @@
 #include "NET_CONSTANTS.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "db/setup/ManagementConnection.hpp"
+#include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/log.hpp"
 
