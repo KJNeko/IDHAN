@@ -13,9 +13,9 @@ var searchData=
   ['password_10',['password',['../de/d07/structidhan_1_1ConnectionArguments.html#a4a2d1b376ea0924b732391cb4e215a2d',1,'idhan::ConnectionArguments']]],
   ['patch_11',['patch',['../d9/d69/structidhan_1_1VersionInfo_1_1ServerVersion.html#a723022bbd80d2936659c1ded7fdf3e22',1,'idhan::VersionInfo::ServerVersion::patch'],['../d6/d85/structidhan_1_1VersionInfo_1_1ApiVersion.html#abe8cc56a7fa8e79b1013f87e710f5f83',1,'idhan::VersionInfo::ApiVersion::patch']]],
   ['path_12',['path',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a6f6395f416e2e85daf81b7f90a27c8c4',1,'idhan::api::ClusterInfo::path'],['../db/de9/classidhan_1_1FileMappedData.html#af5ff7974e8e72732b3fc26b93403e614',1,'idhan::FileMappedData::path()']]],
-  ['pgarrayify_13',['pgArrayify',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a84d151b5914e745fde8868e4e4100359',1,'idhan::api::helpers']]],
-  ['pgescape_14',['pgEscape',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#af3acfacd327c1e8c4837692f95a330e5',1,'idhan::api::helpers::pgEscape()'],['../db/de4/namespaceidhan_1_1api.html#a9608422b5225528a0667e370b946a75a',1,'idhan::api::pgEscape()']]],
-  ['pgescape_2ecpp_15',['pgEscape.cpp',['../df/ddd/pgEscape_8cpp.html',1,'']]],
+  ['pgescape_13',['pgEscape',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a267910c9cd40d8f20d84eec5719d0af9',1,'idhan::api::helpers']]],
+  ['pgescape_2ecpp_14',['pgEscape.cpp',['../df/ddd/pgEscape_8cpp.html',1,'']]],
+  ['pgescape_2ehpp_15',['pgEscape.hpp',['../dc/d4c/pgEscape_8hpp.html',1,'']]],
   ['pgescapei_16',['pgEscapeI',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a3f4643c98726286a10fa2e41c14c3b78',1,'idhan::api::helpers']]],
   ['pixelhashhex_17',['PixelHashHex',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685ab399b020c4951ac058ad4a2b5ebedda5',1,'idhan::hyapi']]],
   ['port_18',['port',['../de/d07/structidhan_1_1ConnectionArguments.html#a262b24651c48720d52cfeb6563e79e68',1,'idhan::ConnectionArguments']]],
@@ -25,6 +25,5 @@ var searchData=
   ['pqxx_22',['pqxx',['../dc/d09/namespacepqxx.html',1,'']]],
   ['prepareinitalindexes_23',['prepareInitalIndexes',['../db/d01/namespaceidhan_1_1db.html#a2b863ba9db65a3a2b79583cdda4b26cb',1,'idhan::db']]],
   ['previouslydeleted_24',['PreviouslyDeleted',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a124ca310f93eccdc9790b24fce74329c',1,'idhan::hyapi']]],
-  ['processbatchandmaprecords_25',['processBatchAndMapRecords',['../db/de4/namespaceidhan_1_1api.html#a2e6ffa8b97db890dcb901524eb94b154',1,'idhan::api']]],
-  ['ptr_5fservice_26',['PTR_SERVICE',['../d5/d08/namespaceidhan_1_1hydrus_1_1hy__constants.html#a43eaffc63d902c822fe37eef60b0deb0a884b619d080cea7234c8d71658986f15',1,'idhan::hydrus::hy_constants']]]
+  ['ptr_5fservice_25',['PTR_SERVICE',['../d5/d08/namespaceidhan_1_1hydrus_1_1hy__constants.html#a43eaffc63d902c822fe37eef60b0deb0a884b619d080cea7234c8d71658986f15',1,'idhan::hydrus::hy_constants']]]
 ];

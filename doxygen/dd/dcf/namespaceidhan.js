@@ -2,16 +2,14 @@ var namespaceidhan =
 [
     [ "api", "db/de4/namespaceidhan_1_1api.html", "db/de4/namespaceidhan_1_1api" ],
     [ "config", "d6/db4/namespaceidhan_1_1config.html", [
-      [ "get", "d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b", null ],
-      [ "get", "d6/db4/namespaceidhan_1_1config.html#ad2863493d119318b4f68b5949e43c551", null ],
-      [ "loadConfig", "d6/db4/namespaceidhan_1_1config.html#a255a8b9dc748a7570400620897433a4d", null ],
-      [ "saveConfig", "d6/db4/namespaceidhan_1_1config.html#ac99dbf2767429fb7ce05171424ebad58", null ],
-      [ "set", "d6/db4/namespaceidhan_1_1config.html#a30b1857af639c8028261f91c77d9fe0b", null ],
+      [ "ConfigType", "d6/db4/namespaceidhan_1_1config.html#a01dbecb77029982f954f16adf56d9939", null ],
+      [ "get", "d6/db4/namespaceidhan_1_1config.html#a85dee5c79fec80c92190afdc59b16b9c", null ],
+      [ "get", "d6/db4/namespaceidhan_1_1config.html#acef2de43bf9050779b9cbe55d58dc06a", null ],
+      [ "getUserConfigPath", "d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2", null ],
+      [ "getValue", "d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62", null ],
+      [ "getValue", "d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9", null ],
       [ "setLocation", "d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02", null ],
-      [ "config", "d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd", null ],
-      [ "config_mtx", "d6/db4/namespaceidhan_1_1config.html#a2e3e8a5518a79949c918ba345b54619f", null ],
-      [ "config_path", "d6/db4/namespaceidhan_1_1config.html#af3cf4f8c29bf2314734da40331f061ae", null ],
-      [ "config_updated", "d6/db4/namespaceidhan_1_1config.html#a18febcb5aabb4a56de67713a84a730ef", null ]
+      [ "user_config_path", "d6/db4/namespaceidhan_1_1config.html#afab990a000004246b77833d562707466", null ]
     ] ],
     [ "constants", "dd/d68/namespaceidhan_1_1constants.html", [
       [ "INVALID_MIME_ID", "dd/d68/namespaceidhan_1_1constants.html#af2ffeb0dfdbb702b153807024d13f160", null ]
@@ -77,6 +75,7 @@ var namespaceidhan =
     [ "FileDomainID", "dd/dcf/namespaceidhan.html#ae9c835593c59f31ae01ead8a29c45afa", null ],
     [ "IDHANErrorHandler", "dd/dcf/namespaceidhan.html#ab065ab405e7080bdb90b7929a01f07d7", null ],
     [ "IDHANResponseHandler", "dd/dcf/namespaceidhan.html#a54a840927284a4b6b83f881e616dd76b", null ],
+    [ "Int", "dd/dcf/namespaceidhan.html#abc89697b8e0f220d19fd160a6eb9b6b4", null ],
     [ "Integer", "dd/dcf/namespaceidhan.html#a6ed442d49994c3319232136128846670", null ],
     [ "MimeID", "dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29", null ],
     [ "NamespaceID", "dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5", null ],
@@ -197,7 +196,6 @@ var namespaceidhan =
     [ "createBadRequest", "dd/dcf/namespaceidhan.html#ab5aa5db369621cef0ec9aae2ddfadbf1", null ],
     [ "createBadRequest", "dd/dcf/namespaceidhan.html#ab6f6790f06426a6162f6319329635e8f", null ],
     [ "createConflict", "dd/dcf/namespaceidhan.html#a682d264abf479cad4bd993673160cea1", null ],
-    [ "createFilter", "dd/dcf/namespaceidhan.html#ad375224cfdfa8e574e06e935a0fc98e5", null ],
     [ "createInternalError", "dd/dcf/namespaceidhan.html#a418adeed5ac97317a8cfbe045ace957d", null ],
     [ "createInternalError", "dd/dcf/namespaceidhan.html#a19a75580dba00693ef9736a3661fbc75", null ],
     [ "createNotFound", "dd/dcf/namespaceidhan.html#a53e269619cce487d1cd74e9d814dc351", null ],
@@ -206,10 +204,6 @@ var namespaceidhan =
     [ "decodeHexCharacters", "dd/dcf/namespaceidhan.html#ad23693d258282b5457ded516e1a6b0d1", null ],
     [ "defaultErrorHandler", "dd/dcf/namespaceidhan.html#aae832ea656fdf9ffd691a6e5bfa9f0f1", null ],
     [ "exceptionHandler", "dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694", null ],
-    [ "findOrCreateNamespace", "dd/dcf/namespaceidhan.html#af6d426cda0d593930875e52f980b41ec", null ],
-    [ "findOrCreateSubtag", "dd/dcf/namespaceidhan.html#ad9c7e7dc5caa7093a1d4f900e95465dc", null ],
-    [ "findOrCreateTag", "dd/dcf/namespaceidhan.html#a9f1848d8fc19ffaf73a46f88f4bdaf97", null ],
-    [ "findOrCreateTag", "dd/dcf/namespaceidhan.html#ac390dcf160dcc533ff56c6a35344083b", null ],
     [ "fixme", "dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e", null ],
     [ "gatherFileInfo", "dd/dcf/namespaceidhan.html#a3d99207c8eca97e418ebb9522181b68f", null ],
     [ "getRecordSHA256", "dd/dcf/namespaceidhan.html#aace1e0dead98fb497035b664deda96f5", null ],
@@ -218,13 +212,12 @@ var namespaceidhan =
     [ "hyToIDHANSortType", "dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150", null ],
     [ "ioThread", "dd/dcf/namespaceidhan.html#a6263c51c6d3d4f2de1823665d392ef42", null ],
     [ "parseArrayParmeters", "dd/dcf/namespaceidhan.html#ae1f955a09fa3220012fb0c401950fcfa", null ],
-    [ "searchNamespace", "dd/dcf/namespaceidhan.html#a5fa74bb214874aa2789badd88b18619a", null ],
-    [ "searchSubtag", "dd/dcf/namespaceidhan.html#a60d3fe70f3505cfd95050bdbe38d56ad", null ],
     [ "setFileInfo", "dd/dcf/namespaceidhan.html#af97a6a91e89c070ccddfd332c6116d2b", null ],
     [ "splitTag", "dd/dcf/namespaceidhan.html#a37cff2a5b3a86f9964161d219f392141", null ],
     [ "splitTag", "dd/dcf/namespaceidhan.html#a4e881a977f3992fcbf6ed75cf66bb837", null ],
     [ "trantorHook", "dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8", null ],
     [ "attempts", "dd/dcf/namespaceidhan.html#a5d8f68e98aca33cc11a278808bd5aba2", null ],
     [ "IDHAN_DEFAULT_PORT", "dd/dcf/namespaceidhan.html#a6efaa7ff194234490095eccedd770735", null ],
+    [ "INVALID_TAG_ID", "dd/dcf/namespaceidhan.html#a02972bea8fb965945cd00aafccf5112c", null ],
     [ "TAG_NAMESPACE_DELIMTER", "dd/dcf/namespaceidhan.html#abe33911f1365581d3fe2bc31f675e6b5", null ]
 ];

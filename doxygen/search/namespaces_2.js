@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['spdlog_0',['spdlog',['../dc/dec/namespacespdlog.html',1,'']]],
-  ['std_1',['std',['../d8/dcc/namespacestd.html',1,'']]]
+  ['pqxx_0',['pqxx',['../dc/d09/namespacepqxx.html',1,'']]]
 ];

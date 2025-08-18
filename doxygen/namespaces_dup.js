@@ -1,5 +1,6 @@
 var namespaces_dup =
 [
+    [ "drogon", "d1/d5d/namespacedrogon.html", "d1/d5d/namespacedrogon" ],
     [ "format_ns", null, [
       [ "formatter< QString >", "d8/d46/structformat__ns_1_1formatter_3_01QString_01_4.html", "d8/d46/structformat__ns_1_1formatter_3_01QString_01_4" ]
     ] ],

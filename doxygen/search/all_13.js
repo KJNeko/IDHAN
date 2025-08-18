@@ -20,5 +20,6 @@ var searchData=
   ['urlvariant_17',['UrlVariant',['../d3/d67/classidhan_1_1IDHANClient.html#a345509d5d84ccd0f64186d5351f2b572',1,'idhan::IDHANClient']]],
   ['use_5fstdout_18',['use_stdout',['../de/d07/structidhan_1_1ConnectionArguments.html#a8a5bff98fbf308282cdba26e959915b4',1,'idhan::ConnectionArguments']]],
   ['used_19',['used',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#ac45729103320a1cc70b1f5046640a1e3',1,'idhan::api::ClusterInfo']]],
-  ['user_20',['user',['../de/d07/structidhan_1_1ConnectionArguments.html#a59dfeb3477eb3eabd96c07dad452e834',1,'idhan::ConnectionArguments']]]
+  ['user_20',['user',['../de/d07/structidhan_1_1ConnectionArguments.html#a59dfeb3477eb3eabd96c07dad452e834',1,'idhan::ConnectionArguments']]],
+  ['user_5fconfig_5fpath_21',['user_config_path',['../d6/db4/namespaceidhan_1_1config.html#afab990a000004246b77833d562707466',1,'idhan::config']]]
 ];

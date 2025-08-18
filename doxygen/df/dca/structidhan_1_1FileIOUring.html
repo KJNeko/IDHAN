@@ -124,15 +124,19 @@ $(function(){initNavTree('df/dca/structidhan_1_1FileIOUring.html','../../'); ini
 Public Member Functions</h2></td></tr>
 <tr class="memitem:adc2f9c39746ab148d1c623a6b5088221" id="r_adc2f9c39746ab148d1c623a6b5088221"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adc2f9c39746ab148d1c623a6b5088221">FileIOUring</a> (const std::filesystem::path &amp;path)</td></tr>
 <tr class="separator:adc2f9c39746ab148d1c623a6b5088221"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa483efbf5800c592f751746215f0c593" id="r_aa483efbf5800c592f751746215f0c593"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa483efbf5800c592f751746215f0c593">read</a> (std::size_t offset, std::size_t len)</td></tr>
-<tr class="separator:aa483efbf5800c592f751746215f0c593"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aab54ff46ce7721cd4427b3e72959670b" id="r_aab54ff46ce7721cd4427b3e72959670b"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aab54ff46ce7721cd4427b3e72959670b">write</a> (std::vector&lt; std::byte &gt; data, std::size_t offset=0)</td></tr>
-<tr class="separator:aab54ff46ce7721cd4427b3e72959670b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2697022ca2ada9df751913871510e834" id="r_a2697022ca2ada9df751913871510e834"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2697022ca2ada9df751913871510e834">readAll</a> () const</td></tr>
+<tr class="separator:a2697022ca2ada9df751913871510e834"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63f9cd6379eb1404e3bb7551777488b8" id="r_a63f9cd6379eb1404e3bb7551777488b8"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a63f9cd6379eb1404e3bb7551777488b8">read</a> (std::size_t offset, std::size_t len) const</td></tr>
+<tr class="separator:a63f9cd6379eb1404e3bb7551777488b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a502adaa0964f98a481d1507aa8eb985f" id="r_a502adaa0964f98a481d1507aa8eb985f"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a502adaa0964f98a481d1507aa8eb985f">write</a> (std::vector&lt; std::byte &gt; data, std::size_t offset=0) const</td></tr>
+<tr class="separator:a502adaa0964f98a481d1507aa8eb985f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a006bcb2d61036c1b1767327b2b9aa2ba" id="r_a006bcb2d61036c1b1767327b2b9aa2ba"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a006bcb2d61036c1b1767327b2b9aa2ba">m_fd</a> { -1 }</td></tr>
 <tr class="separator:a006bcb2d61036c1b1767327b2b9aa2ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0ae05552eeab9a4dc92c3e32c9084b8" id="r_ab0ae05552eeab9a4dc92c3e32c9084b8"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0ae05552eeab9a4dc92c3e32c9084b8">m_path</a></td></tr>
+<tr class="separator:ab0ae05552eeab9a4dc92c3e32c9084b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="adc2f9c39746ab148d1c623a6b5088221" name="adc2f9c39746ab148d1c623a6b5088221"></a>
@@ -153,8 +157,8 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="aa483efbf5800c592f751746215f0c593" name="aa483efbf5800c592f751746215f0c593"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa483efbf5800c592f751746215f0c593">&#9670;&#160;</a></span>read()</h2>
+<a id="a63f9cd6379eb1404e3bb7551777488b8" name="a63f9cd6379eb1404e3bb7551777488b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a63f9cd6379eb1404e3bb7551777488b8">&#9670;&#160;</a></span>read()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -167,15 +171,32 @@ Public Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;)</td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="aab54ff46ce7721cd4427b3e72959670b" name="aab54ff46ce7721cd4427b3e72959670b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aab54ff46ce7721cd4427b3e72959670b">&#9670;&#160;</a></span>write()</h2>
+<a id="a2697022ca2ada9df751913871510e834" name="a2697022ca2ada9df751913871510e834"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2697022ca2ada9df751913871510e834">&#9670;&#160;</a></span>readAll()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt; idhan::FileIOUring::readAll </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a502adaa0964f98a481d1507aa8eb985f" name="a502adaa0964f98a481d1507aa8eb985f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a502adaa0964f98a481d1507aa8eb985f">&#9670;&#160;</a></span>write()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -188,7 +209,7 @@ Public Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>offset</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>&#160;)</td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>offset</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>&#160;) const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -204,6 +225,20 @@ Public Attributes</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">int idhan::FileIOUring::m_fd { -1 }</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ab0ae05552eeab9a4dc92c3e32c9084b8" name="ab0ae05552eeab9a4dc92c3e32c9084b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0ae05552eeab9a4dc92c3e32c9084b8">&#9670;&#160;</a></span>m_path</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path idhan::FileIOUring::m_path</td>
         </tr>
       </table>
 </div><div class="memdoc">

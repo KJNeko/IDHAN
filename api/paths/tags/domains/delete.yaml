@@ -4,7 +4,7 @@ get:
   summary: Deletes a given tag domain
   parameters:
     - in: path
-      name: domain_id
+      name: tag_domain_id
       required: true
       schema:
         $ref: '../../../schemas/TagDomainID.yaml'

@@ -130,8 +130,10 @@ Public Types</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ab0ff96970a63c8697344591aea7bd0df" id="r_ab0ff96970a63c8697344591aea7bd0df"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0ff96970a63c8697344591aea7bd0df">ScopedTimer</a> (const std::string &amp;str, std::chrono::milliseconds ms_warn_time=std::chrono::minutes(1))</td></tr>
-<tr class="separator:ab0ff96970a63c8697344591aea7bd0df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2debebad1df019f2a5bd202519aed7ee" id="r_a2debebad1df019f2a5bd202519aed7ee"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2debebad1df019f2a5bd202519aed7ee">ScopedTimer</a> (const std::string &amp;str, bool always_warn, std::chrono::milliseconds ms_warn_time=std::chrono::minutes(1))</td></tr>
+<tr class="separator:a2debebad1df019f2a5bd202519aed7ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af28695bcc518f80cd1d7904fc755efd2" id="r_af28695bcc518f80cd1d7904fc755efd2"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af28695bcc518f80cd1d7904fc755efd2">ScopedTimer</a> (const std::string &amp;str, std::chrono::milliseconds ms_warn_time=std::chrono::minutes(1), const bool always_warn=false)</td></tr>
+<tr class="separator:af28695bcc518f80cd1d7904fc755efd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa1e4a80bd1dd0bc77daa691bc21a73e6" id="r_aa1e4a80bd1dd0bc77daa691bc21a73e6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa1e4a80bd1dd0bc77daa691bc21a73e6">~ScopedTimer</a> ()</td></tr>
 <tr class="separator:aa1e4a80bd1dd0bc77daa691bc21a73e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -141,6 +143,8 @@ Public Attributes</h2></td></tr>
 <tr class="separator:aa3a23cb3a201e8805098c82c5197d68f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac227a0e71ff19bf9994032640821e0c0" id="r_ac227a0e71ff19bf9994032640821e0c0"><td class="memItemLeft" align="right" valign="top">std::chrono::milliseconds&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac227a0e71ff19bf9994032640821e0c0">m_warn_time</a></td></tr>
 <tr class="separator:ac227a0e71ff19bf9994032640821e0c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4313091c116c523038afe085f2d02148" id="r_a4313091c116c523038afe085f2d02148"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4313091c116c523038afe085f2d02148">m_always_warn</a></td></tr>
+<tr class="separator:a4313091c116c523038afe085f2d02148"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad61b70ed6bf789dc127fbf20deb643c8" id="r_ad61b70ed6bf789dc127fbf20deb643c8"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="#a05297b1820737ce057c423227a8189f7">TimePoint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad61b70ed6bf789dc127fbf20deb643c8">start</a></td></tr>
 <tr class="separator:ad61b70ed6bf789dc127fbf20deb643c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -174,8 +178,8 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ab0ff96970a63c8697344591aea7bd0df" name="ab0ff96970a63c8697344591aea7bd0df"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab0ff96970a63c8697344591aea7bd0df">&#9670;&#160;</a></span>ScopedTimer()</h2>
+<a id="a2debebad1df019f2a5bd202519aed7ee" name="a2debebad1df019f2a5bd202519aed7ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2debebad1df019f2a5bd202519aed7ee">&#9670;&#160;</a></span>ScopedTimer() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -188,9 +192,48 @@ Public Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>always_warn</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">std::chrono::milliseconds</td>          <td class="paramname"><span class="paramname"><em>ms_warn_time</em></span><span class="paramdefsep"> = </span><span class="paramdefval">std::chrono::minutes(&#160;1&#160;)</span>&#160;)</td>
         </tr>
       </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af28695bcc518f80cd1d7904fc755efd2" name="af28695bcc518f80cd1d7904fc755efd2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af28695bcc518f80cd1d7904fc755efd2">&#9670;&#160;</a></span>ScopedTimer() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">idhan::logging::ScopedTimer::ScopedTimer </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>str</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::chrono::milliseconds</td>          <td class="paramname"><span class="paramname"><em>ms_warn_time</em></span><span class="paramdefsep"> = </span><span class="paramdefval">std::chrono::minutes(&#160;1&#160;)</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const bool</td>          <td class="paramname"><span class="paramname"><em>always_warn</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
@@ -213,6 +256,20 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
+<a id="a4313091c116c523038afe085f2d02148" name="a4313091c116c523038afe085f2d02148"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4313091c116c523038afe085f2d02148">&#9670;&#160;</a></span>m_always_warn</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool idhan::logging::ScopedTimer::m_always_warn</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="ac227a0e71ff19bf9994032640821e0c0" name="ac227a0e71ff19bf9994032640821e0c0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac227a0e71ff19bf9994032640821e0c0">&#9670;&#160;</a></span>m_warn_time</h2>
 

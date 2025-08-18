@@ -15,7 +15,5 @@ var searchData=
   ['sha256_2ecpp_12',['SHA256.cpp',['../d5/d9f/SHA256_8cpp.html',1,'']]],
   ['sha256_2ehpp_13',['SHA256.hpp',['../db/d73/SHA256_8hpp.html',1,'']]],
   ['splittag_2ecpp_14',['splitTag.cpp',['../d3/dc6/splitTag_8cpp.html',1,'']]],
-  ['splittag_2ehpp_15',['splitTag.hpp',['../dd/db8/splitTag_8hpp.html',1,'']]],
-  ['subtags_2ecpp_16',['subtags.cpp',['../d0/da6/subtags_8cpp.html',1,'']]],
-  ['subtags_2ehpp_17',['subtags.hpp',['../de/db4/subtags_8hpp.html',1,'']]]
+  ['splittag_2ehpp_15',['splitTag.hpp',['../dd/db8/splitTag_8hpp.html',1,'']]]
 ];

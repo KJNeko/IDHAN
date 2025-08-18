@@ -215,6 +215,8 @@ Typedefs</h2></td></tr>
 <tr class="separator:a31eafa7aae65c5efce9f2aaa41ac0a35"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6ed442d49994c3319232136128846670" id="r_a6ed442d49994c3319232136128846670"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6ed442d49994c3319232136128846670">Integer</a> = std::int32_t</td></tr>
 <tr class="separator:a6ed442d49994c3319232136128846670"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abc89697b8e0f220d19fd160a6eb9b6b4" id="r_abc89697b8e0f220d19fd160a6eb9b6b4"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abc89697b8e0f220d19fd160a6eb9b6b4">Int</a> = <a class="el" href="#a6ed442d49994c3319232136128846670">Integer</a></td></tr>
+<tr class="separator:abc89697b8e0f220d19fd160a6eb9b6b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aff7eeabb0a2896a4b6eaa2e02cdf2dac" id="r_aff7eeabb0a2896a4b6eaa2e02cdf2dac"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aff7eeabb0a2896a4b6eaa2e02cdf2dac">BigInt</a> = std::int64_t</td></tr>
 <tr class="separator:aff7eeabb0a2896a4b6eaa2e02cdf2dac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a400f778b43db61ea6f23b30757c8bc4e" id="r_a400f778b43db61ea6f23b30757c8bc4e"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> = <a class="el" href="#a6ed442d49994c3319232136128846670">Integer</a></td></tr>
@@ -420,22 +422,8 @@ Functions</h2></td></tr>
 <tr class="memitem:ae1f955a09fa3220012fb0c401950fcfa" id="r_ae1f955a09fa3220012fb0c401950fcfa"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:ae1f955a09fa3220012fb0c401950fcfa"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae1f955a09fa3220012fb0c401950fcfa">parseArrayParmeters</a> (drogon::HttpRequestPtr request, const std::string_view target)</td></tr>
 <tr class="separator:ae1f955a09fa3220012fb0c401950fcfa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5fa74bb214874aa2789badd88b18619a" id="r_a5fa74bb214874aa2789badd88b18619a"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; <a class="el" href="#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5fa74bb214874aa2789badd88b18619a">searchNamespace</a> (const std::string &amp;str, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a5fa74bb214874aa2789badd88b18619a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af6d426cda0d593930875e52f980b41ec" id="r_af6d426cda0d593930875e52f980b41ec"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af6d426cda0d593930875e52f980b41ec">findOrCreateNamespace</a> (const std::string &amp;str, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:af6d426cda0d593930875e52f980b41ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a60d3fe70f3505cfd95050bdbe38d56ad" id="r_a60d3fe70f3505cfd95050bdbe38d56ad"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; <a class="el" href="#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a60d3fe70f3505cfd95050bdbe38d56ad">searchSubtag</a> (const std::string &amp;str, const drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a60d3fe70f3505cfd95050bdbe38d56ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad9c7e7dc5caa7093a1d4f900e95465dc" id="r_ad9c7e7dc5caa7093a1d4f900e95465dc"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad9c7e7dc5caa7093a1d4f900e95465dc">findOrCreateSubtag</a> (const std::string &amp;str, const drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:ad9c7e7dc5caa7093a1d4f900e95465dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9f1848d8fc19ffaf73a46f88f4bdaf97" id="r_a9f1848d8fc19ffaf73a46f88f4bdaf97"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f1848d8fc19ffaf73a46f88f4bdaf97">findOrCreateTag</a> (const <a class="el" href="#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a> namespace_id, const <a class="el" href="#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a> subtag_id, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a9f1848d8fc19ffaf73a46f88f4bdaf97"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac390dcf160dcc533ff56c6a35344083b" id="r_ac390dcf160dcc533ff56c6a35344083b"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac390dcf160dcc533ff56c6a35344083b">findOrCreateTag</a> (const std::string tag_text, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:ac390dcf160dcc533ff56c6a35344083b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aace1e0dead98fb497035b664deda96f5" id="r_aace1e0dead98fb497035b664deda96f5"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aace1e0dead98fb497035b664deda96f5">getRecordSHA256</a> (const <a class="el" href="#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> id, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:aace1e0dead98fb497035b664deda96f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad375224cfdfa8e574e06e935a0fc98e5" id="r_ad375224cfdfa8e574e06e935a0fc98e5"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad375224cfdfa8e574e06e935a0fc98e5">createFilter</a> (std::size_t index, const std::vector&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &amp;tag_ids, const <a class="el" href="#a73650c5f1993b5e6816c6ea26de7807a">HydrusDisplayType</a> display_mode, const bool filter_domains)</td></tr>
-<tr class="separator:ad375224cfdfa8e574e06e935a0fc98e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9301fcccee80b6f287ded422a44f8150" id="r_a9301fcccee80b6f287ded422a44f8150"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="#a5c24ee7f031693df1f26c9cb4a207970">SortType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9301fcccee80b6f287ded422a44f8150">hyToIDHANSortType</a> (const <a class="el" href="#a244b87b8282e25b1adf2d36b9975a7b1">HydrusSortType</a> hy_sort)</td></tr>
 <tr class="separator:a9301fcccee80b6f287ded422a44f8150"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6263c51c6d3d4f2de1823665d392ef42" id="r_a6263c51c6d3d4f2de1823665d392ef42"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6263c51c6d3d4f2de1823665d392ef42">ioThread</a> (const std::stop_token &amp;token, <a class="el" href="../../dd/d25/classidhan_1_1IOUring.html">IOUring</a> *uring, std::shared_ptr&lt; std::atomic&lt; bool &gt; &gt; running)</td></tr>
@@ -454,6 +442,8 @@ Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
+<tr class="memitem:a02972bea8fb965945cd00aafccf5112c" id="r_a02972bea8fb965945cd00aafccf5112c"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a02972bea8fb965945cd00aafccf5112c">INVALID_TAG_ID</a> { 0 }</td></tr>
+<tr class="separator:a02972bea8fb965945cd00aafccf5112c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6efaa7ff194234490095eccedd770735" id="r_a6efaa7ff194234490095eccedd770735"><td class="memItemLeft" align="right" valign="top">constexpr std::uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6efaa7ff194234490095eccedd770735">IDHAN_DEFAULT_PORT</a> { 16609 }</td></tr>
 <tr class="separator:a6efaa7ff194234490095eccedd770735"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abe33911f1365581d3fe2bc31f675e6b5" id="r_abe33911f1365581d3fe2bc31f675e6b5"><td class="memItemLeft" align="right" valign="top">constexpr char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe33911f1365581d3fe2bc31f675e6b5">TAG_NAMESPACE_DELIMTER</a> { ':' }</td></tr>
@@ -526,6 +516,20 @@ Variables</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">using <a class="el" href="#a54a840927284a4b6b83f881e616dd76b">idhan::IDHANResponseHandler</a> = std::function&lt; void( QNetworkReply* ) &gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="abc89697b8e0f220d19fd160a6eb9b6b4" name="abc89697b8e0f220d19fd160a6eb9b6b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abc89697b8e0f220d19fd160a6eb9b6b4">&#9670;&#160;</a></span>Int</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#abc89697b8e0f220d19fd160a6eb9b6b4">idhan::Int</a> = <a class="el" href="#a6ed442d49994c3319232136128846670">Integer</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1129,37 +1133,6 @@ template&lt;typename... Args&gt; </div>
 
 </div>
 </div>
-<a id="ad375224cfdfa8e574e06e935a0fc98e5" name="ad375224cfdfa8e574e06e935a0fc98e5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad375224cfdfa8e574e06e935a0fc98e5">&#9670;&#160;</a></span>createFilter()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string idhan::createFilter </td>
-          <td>(</td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>index</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::vector&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tag_ids</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="#a73650c5f1993b5e6816c6ea26de7807a">HydrusDisplayType</a></td>          <td class="paramname"><span class="paramname"><em>display_mode</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const bool</td>          <td class="paramname"><span class="paramname"><em>filter_domains</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
 <a id="a418adeed5ac97317a8cfbe045ace957d" name="a418adeed5ac97317a8cfbe045ace957d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a418adeed5ac97317a8cfbe045ace957d">&#9670;&#160;</a></span>createInternalError() <span class="overload">[1/2]</span></h2>
 
@@ -1355,95 +1328,6 @@ template&lt;typename TPromise&gt; </div>
 
 </div>
 </div>
-<a id="af6d426cda0d593930875e52f980b41ec" name="af6d426cda0d593930875e52f980b41ec"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af6d426cda0d593930875e52f980b41ec">&#9670;&#160;</a></span>findOrCreateNamespace()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a>, drogon::HttpResponsePtr &gt; &gt; idhan::findOrCreateNamespace </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>str</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ad9c7e7dc5caa7093a1d4f900e95465dc" name="ad9c7e7dc5caa7093a1d4f900e95465dc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad9c7e7dc5caa7093a1d4f900e95465dc">&#9670;&#160;</a></span>findOrCreateSubtag()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a>, drogon::HttpResponsePtr &gt; &gt; idhan::findOrCreateSubtag </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>str</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a9f1848d8fc19ffaf73a46f88f4bdaf97" name="a9f1848d8fc19ffaf73a46f88f4bdaf97"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9f1848d8fc19ffaf73a46f88f4bdaf97">&#9670;&#160;</a></span>findOrCreateTag() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a>, drogon::HttpResponsePtr &gt; &gt; idhan::findOrCreateTag </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a></td>          <td class="paramname"><span class="paramname"><em>namespace_id</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a></td>          <td class="paramname"><span class="paramname"><em>subtag_id</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ac390dcf160dcc533ff56c6a35344083b" name="ac390dcf160dcc533ff56c6a35344083b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac390dcf160dcc533ff56c6a35344083b">&#9670;&#160;</a></span>findOrCreateTag() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a>, drogon::HttpResponsePtr &gt; &gt; idhan::findOrCreateTag </td>
-          <td>(</td>
-          <td class="paramtype">const std::string</td>          <td class="paramname"><span class="paramname"><em>tag_text</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
 <a id="acf2de6ab319c3d5893959073ae46e47e" name="acf2de6ab319c3d5893959073ae46e47e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acf2de6ab319c3d5893959073ae46e47e">&#9670;&#160;</a></span>fixme()</h2>
 
@@ -1625,48 +1509,6 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="a5fa74bb214874aa2789badd88b18619a" name="a5fa74bb214874aa2789badd88b18619a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5fa74bb214874aa2789badd88b18619a">&#9670;&#160;</a></span>searchNamespace()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">drogon::Task&lt; std::optional&lt; <a class="el" href="#a09cafc4e2171570c26d1a2007f6dabe5">NamespaceID</a> &gt; &gt; idhan::searchNamespace </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>str</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a60d3fe70f3505cfd95050bdbe38d56ad" name="a60d3fe70f3505cfd95050bdbe38d56ad"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a60d3fe70f3505cfd95050bdbe38d56ad">&#9670;&#160;</a></span>searchSubtag()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">drogon::Task&lt; std::optional&lt; <a class="el" href="#a4399af8ffca506cb05aefbe2bcd58a8d">SubtagID</a> &gt; &gt; idhan::searchSubtag </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>str</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
 <a id="af97a6a91e89c070ccddfd332c6116d2b" name="af97a6a91e89c070ccddfd332c6116d2b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af97a6a91e89c070ccddfd332c6116d2b">&#9670;&#160;</a></span>setFileInfo()</h2>
 
@@ -1782,6 +1624,28 @@ template&lt;typename T&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">std::uint16_t idhan::IDHAN_DEFAULT_PORT { 16609 }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a02972bea8fb965945cd00aafccf5112c" name="a02972bea8fb965945cd00aafccf5112c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a02972bea8fb965945cd00aafccf5112c">&#9670;&#160;</a></span>INVALID_TAG_ID</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="#a0ab021b530780b1003469a494332e382">TagID</a> idhan::INVALID_TAG_ID { 0 }</td>
         </tr>
       </table>
   </td>

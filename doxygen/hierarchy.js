@@ -29,6 +29,8 @@ var hierarchy =
     [ "idhan::mime::FileMimeInfo", "db/de8/structidhan_1_1mime_1_1FileMimeInfo.html", null ],
     [ "format_ns::formatter< QString >", "d8/d46/structformat__ns_1_1formatter_3_01QString_01_4.html", null ],
     [ "std::hash< idhan::SHA256 >", "d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html", null ],
+    [ "std::hash< std::pair< std::string, std::string > >", "da/dc9/structstd_1_1hash_3_01std_1_1pair_3_01std_1_1string_00_01std_1_1string_01_4_01_4.html", null ],
+    [ "Header", "dc/d47/structHeader.html", null ],
     [ "drogon::HttpController", null, [
       [ "idhan::Ui", "d3/daf/classidhan_1_1Ui.html", null ],
       [ "idhan::api::APIMaintenance", "d8/dd5/classidhan_1_1api_1_1APIMaintenance.html", null ],

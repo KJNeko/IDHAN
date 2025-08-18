@@ -121,55 +121,130 @@ $(function(){initNavTree('df/db4/Config_8hpp_source.html','../../'); initResizab
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;toml++/toml.hpp&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;filesystem&gt;</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d6/db4/namespaceidhan_1_1config.html">idhan::config</a></div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>{</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>toml::parse_result <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a255a8b9dc748a7570400620897433a4d">loadConfig</a>();</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#ac99dbf2767429fb7ce05171424ebad58">saveConfig</a>( <span class="keyword">const</span> toml::parse_result&amp; <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">config</a> );</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span> T &gt;</div>
-<div class="foldopen" id="foldopen00016" data-start="{" data-end="}">
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno"><a class="line" href="../../d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b">   16</a></span><span class="keyword">static</span> std::optional&lt; T &gt; <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b">get</a>( std::string_view group, std::string_view name )</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>{</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    <span class="keyword">const</span> <span class="keyword">auto</span> <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">config</a> { <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a255a8b9dc748a7570400620897433a4d">loadConfig</a>() };</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <span class="keywordflow">return</span> <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">config</a>[ group ][ name ].value&lt; T &gt;();</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>}</div>
-</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span> T &gt;</div>
-<div class="foldopen" id="foldopen00024" data-start="{" data-end="}">
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="../../d6/db4/namespaceidhan_1_1config.html#ad2863493d119318b4f68b5949e43c551">   24</a></span><span class="keyword">static</span> T <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b">get</a>( std::string_view group, std::string_view name, <span class="keyword">const</span> <span class="keyword">auto</span> default_value )</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>{</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keyword">const</span> <span class="keyword">auto</span> <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">config</a> { <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a255a8b9dc748a7570400620897433a4d">loadConfig</a>() };</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="keywordflow">if</span> ( <span class="keyword">const</span> <span class="keyword">auto</span> config_value { <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">config</a>[ group ][ name ].value&lt; T &gt;() } ) <span class="keywordflow">return</span> config_value.value();</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keywordflow">return</span> default_value;</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>}</div>
-</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;ranges&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;variant&gt;</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &quot;<a class="code" href="../../d4/d3d/log_8hpp.html">logging/log.hpp</a>&quot;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d6/db4/namespaceidhan_1_1config.html">idhan::config</a></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>{</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno"><a class="line" href="../../d6/db4/namespaceidhan_1_1config.html#a01dbecb77029982f954f16adf56d9939">   16</a></span><span class="keyword">using </span><a class="code hl_typedef" href="../../d6/db4/namespaceidhan_1_1config.html#a01dbecb77029982f954f16adf56d9939">ConfigType</a> = std::variant&lt; std::string, std::size_t &gt;;</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#if defined( __linux__ )</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">constexpr</span> std::array&lt; std::string_view, 4 &gt; config_paths {</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>    <span class="stringliteral">&quot;/usr/share/idhan/config.toml&quot;</span>, <span class="stringliteral">&quot;/etc/idhan/config.toml&quot;</span>, <span class="stringliteral">&quot;~/.config/idhan/config.toml&quot;</span>, <span class="stringliteral">&quot;./config.toml&quot;</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>};</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#elif defined( _WIN32 )</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="keyword">constexpr</span> std::array&lt; std::string_view, 4 &gt; config_paths { <span class="stringliteral">&quot;%ProgramData%\\idhan\\config.toml&quot;</span>,</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>                                                           <span class="stringliteral">&quot;%APPDATA%\\idhan\\config.toml&quot;</span>,</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>                                                           <span class="stringliteral">&quot;%LOCALAPPDATA%\\idhan\\config.toml&quot;</span>,</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>                                                           <span class="stringliteral">&quot;./config.toml&quot;</span> };</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>std::string_view <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2">getUserConfigPath</a>();</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span> T &gt;</div>
 <div class="foldopen" id="foldopen00033" data-start="{" data-end="}">
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="../../d6/db4/namespaceidhan_1_1config.html#a30b1857af639c8028261f91c77d9fe0b">   33</a></span><span class="keyword">static</span> <span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a30b1857af639c8028261f91c77d9fe0b">set</a>( <span class="keyword">const</span> T&amp; value, <span class="keyword">const</span> std::string_view group, std::string_view name )</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="../../d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9">   33</a></span>std::optional&lt; T &gt; <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9">getValue</a>( std::string_view path, <span class="keyword">const</span> std::string_view group, <span class="keyword">const</span> std::string_view name )</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>{</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keyword">const</span> <span class="keyword">auto</span> <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">config</a> { <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a255a8b9dc748a7570400620897433a4d">loadConfig</a>() };</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keywordflow">if</span> ( !std::filesystem::exists( path ) ) <span class="keywordflow">return</span> std::nullopt;</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">config</a>[ group ][ name ] = value;</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#ac99dbf2767429fb7ce05171424ebad58">saveConfig</a>( <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">config</a> );</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>}</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordflow">try</span></div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    {</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        <span class="keyword">auto</span> <a class="code hl_namespace" href="../../d6/db4/namespaceidhan_1_1config.html">config</a> = toml::parse_file( path.data() );</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        <span class="keywordflow">if</span> ( <span class="keyword">auto</span>* table = <a class="code hl_namespace" href="../../d6/db4/namespaceidhan_1_1config.html">config</a>[ group ].as_table() )</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>        {</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>            <span class="keywordflow">if</span> ( <span class="keyword">const</span> <span class="keyword">auto</span> value = ( *table )[ name ] )</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>            {</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>                <span class="keywordflow">if</span> <span class="keyword">constexpr</span> (</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>                    std::is_same_v&lt; T, std::string &gt; || std::is_same_v&lt; T, bool &gt; || std::is_same_v&lt; T, double &gt;</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>                    || std::is_same_v&lt; T, std::int64_t &gt; )</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>                {</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>                    <span class="keywordflow">return</span> **value.as&lt; T &gt;();</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>                }</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>                <span class="keywordflow">else</span> <span class="keywordflow">if</span> <span class="keyword">constexpr</span> ( std::is_integral_v&lt; T &gt; )</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>                {</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>                    <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span> T <span class="keyword">&gt;</span>( **value.as&lt; std::int64_t &gt;() );</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>                }</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>                <span class="keywordflow">else</span></div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>                    <span class="keyword">static_assert</span>( <span class="keyword">false</span>, <span class="stringliteral">&quot;Unsupported toml config type&quot;</span> );</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>            }</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>            <span class="keywordflow">return</span> std::nullopt;</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        }</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        <span class="keywordflow">return</span> std::nullopt;</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    }</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="keywordflow">catch</span> ( <span class="keyword">const</span> toml::parse_error&amp; err )</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    {</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>        <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a1c77f741df908f5b04d655cdab83fb6c">log::warn</a>( <span class="stringliteral">&quot;Failed to parse config file: {}&quot;</span>, err.what() );</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    }</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <span class="keywordflow">return</span> std::nullopt;</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>}</div>
 </div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02">setLocation</a>( std::filesystem::path path );</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>} <span class="comment">// namespace idhan::config</span></div>
-<div class="ttc" id="anamespaceidhan_1_1config_html"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html">idhan::config</a></div><div class="ttdef"><b>Definition</b> Config.cpp:10</div></div>
-<div class="ttc" id="anamespaceidhan_1_1config_html_a255a8b9dc748a7570400620897433a4d"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#a255a8b9dc748a7570400620897433a4d">idhan::config::loadConfig</a></div><div class="ttdeci">toml::parse_result loadConfig()</div><div class="ttdef"><b>Definition</b> Config.cpp:18</div></div>
-<div class="ttc" id="anamespaceidhan_1_1config_html_a30b1857af639c8028261f91c77d9fe0b"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#a30b1857af639c8028261f91c77d9fe0b">idhan::config::set</a></div><div class="ttdeci">static void set(const T &amp;value, const std::string_view group, std::string_view name)</div><div class="ttdef"><b>Definition</b> Config.hpp:33</div></div>
-<div class="ttc" id="anamespaceidhan_1_1config_html_a470e02aa448f04c0dc13a14b6c67bd02"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02">idhan::config::setLocation</a></div><div class="ttdeci">void setLocation(std::filesystem::path path)</div><div class="ttdef"><b>Definition</b> Config.cpp:42</div></div>
-<div class="ttc" id="anamespaceidhan_1_1config_html_a49d74a2ef7d37cb0e5afd661794359bd"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#a49d74a2ef7d37cb0e5afd661794359bd">idhan::config::config</a></div><div class="ttdeci">static toml::parse_result config</div><div class="ttdef"><b>Definition</b> Config.cpp:14</div></div>
-<div class="ttc" id="anamespaceidhan_1_1config_html_ac228df2f9978c266327d7e62dde6b91b"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b">idhan::config::get</a></div><div class="ttdeci">static std::optional&lt; T &gt; get(std::string_view group, std::string_view name)</div><div class="ttdef"><b>Definition</b> Config.hpp:16</div></div>
-<div class="ttc" id="anamespaceidhan_1_1config_html_ac99dbf2767429fb7ce05171424ebad58"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#ac99dbf2767429fb7ce05171424ebad58">idhan::config::saveConfig</a></div><div class="ttdeci">void saveConfig(const toml::parse_result &amp;modified_config)</div><div class="ttdef"><b>Definition</b> Config.cpp:29</div></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span> T &gt;</div>
+<div class="foldopen" id="foldopen00070" data-start="{" data-end="}">
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno"><a class="line" href="../../d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62">   70</a></span>std::optional&lt; T &gt; <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9">getValue</a>( <span class="keyword">const</span> std::string_view group, <span class="keyword">const</span> std::string_view name )</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>{</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keyword">const</span> <span class="keyword">auto</span> <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#afab990a000004246b77833d562707466">user_config_path</a> { <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2">getUserConfigPath</a>() };</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="keywordflow">if</span> ( <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#afab990a000004246b77833d562707466">user_config_path</a>.empty() )</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    {</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>        <span class="keywordflow">if</span> ( <span class="keyword">auto</span> result = <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9">getValue&lt; T &gt;</a>( <a class="code hl_variable" href="../../d6/db4/namespaceidhan_1_1config.html#afab990a000004246b77833d562707466">user_config_path</a>, group, name ); result )</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>        {</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>            <span class="keywordflow">return</span> *result;</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>        }</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    }</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordflow">for</span> ( <span class="keyword">const</span> <span class="keyword">auto</span>&amp; path : config_paths | std::views::reverse )</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    {</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>        <span class="keywordflow">if</span> ( <span class="keyword">auto</span> result = <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9">getValue&lt; T &gt;</a>( path, group, name ); result )</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>        {</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>            <span class="keywordflow">return</span> *result;</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>        }</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    }</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span> </div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordflow">return</span> std::nullopt;</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>}</div>
+</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span> T &gt;</div>
+<div class="foldopen" id="foldopen00093" data-start="{" data-end="}">
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno"><a class="line" href="../../d6/db4/namespaceidhan_1_1config.html#a85dee5c79fec80c92190afdc59b16b9c">   93</a></span>std::optional&lt; T &gt; <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a85dee5c79fec80c92190afdc59b16b9c">get</a>( std::string_view group, std::string_view name )</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>{</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9">getValue&lt; T &gt;</a>( group, name );</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>}</div>
+</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span> </div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span><span class="keyword">template</span> &lt; <span class="keyword">typename</span> T &gt;</div>
+<div class="foldopen" id="foldopen00099" data-start="{" data-end="}">
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno"><a class="line" href="../../d6/db4/namespaceidhan_1_1config.html#acef2de43bf9050779b9cbe55d58dc06a">   99</a></span>T <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a85dee5c79fec80c92190afdc59b16b9c">get</a>( std::string_view group, std::string_view name, <span class="keyword">const</span> <span class="keyword">auto</span> default_value )</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>{</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    <span class="keyword">const</span> <span class="keyword">auto</span> ret { <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a85dee5c79fec80c92190afdc59b16b9c">get&lt; T &gt;</a>( group, name ) };</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span> </div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <span class="keywordflow">if</span> ( ret ) <span class="keywordflow">return</span> *ret;</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span> </div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <a class="code hl_function" href="../../d7/d03/namespaceidhan_1_1log.html#a1c77f741df908f5b04d655cdab83fb6c">log::warn</a>(</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        <span class="stringliteral">&quot;Loaded default config from group: \&#39;{}\&#39; name: \&#39;{}\&#39; with default value \&#39;{}\&#39;. You might wanna set this value in a config file&quot;</span>,</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>        group,</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>        name,</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>        default_value );</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span> </div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    <span class="keywordflow">return</span> default_value;</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>}</div>
+</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02">setLocation</a>( std::filesystem::path path );</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span> </div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>} <span class="comment">// namespace idhan::config</span></div>
+<div class="ttc" id="alog_8hpp_html"><div class="ttname"><a href="../../d4/d3d/log_8hpp.html">log.hpp</a></div></div>
+<div class="ttc" id="anamespaceidhan_1_1config_html"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html">idhan::config</a></div><div class="ttdef"><b>Definition</b> Config.cpp:11</div></div>
+<div class="ttc" id="anamespaceidhan_1_1config_html_a01dbecb77029982f954f16adf56d9939"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#a01dbecb77029982f954f16adf56d9939">idhan::config::ConfigType</a></div><div class="ttdeci">std::variant&lt; std::string, std::size_t &gt; ConfigType</div><div class="ttdef"><b>Definition</b> Config.hpp:16</div></div>
+<div class="ttc" id="anamespaceidhan_1_1config_html_a470e02aa448f04c0dc13a14b6c67bd02"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02">idhan::config::setLocation</a></div><div class="ttdeci">void setLocation(std::filesystem::path path)</div><div class="ttdef"><b>Definition</b> Config.cpp:20</div></div>
+<div class="ttc" id="anamespaceidhan_1_1config_html_a5433efb7f8e18c0ad4d7d611477f1dd9"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9">idhan::config::getValue</a></div><div class="ttdeci">std::optional&lt; T &gt; getValue(std::string_view path, const std::string_view group, const std::string_view name)</div><div class="ttdef"><b>Definition</b> Config.hpp:33</div></div>
+<div class="ttc" id="anamespaceidhan_1_1config_html_a85dee5c79fec80c92190afdc59b16b9c"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#a85dee5c79fec80c92190afdc59b16b9c">idhan::config::get</a></div><div class="ttdeci">std::optional&lt; T &gt; get(std::string_view group, std::string_view name)</div><div class="ttdef"><b>Definition</b> Config.hpp:93</div></div>
+<div class="ttc" id="anamespaceidhan_1_1config_html_adcb29a021b4a4c53eb3d2bda846dbba2"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2">idhan::config::getUserConfigPath</a></div><div class="ttdeci">std::string_view getUserConfigPath()</div><div class="ttdoc">Locations to search for config info, Searches user path first, then the inverse of this list.</div><div class="ttdef"><b>Definition</b> Config.cpp:15</div></div>
+<div class="ttc" id="anamespaceidhan_1_1config_html_afab990a000004246b77833d562707466"><div class="ttname"><a href="../../d6/db4/namespaceidhan_1_1config.html#afab990a000004246b77833d562707466">idhan::config::user_config_path</a></div><div class="ttdeci">static std::string user_config_path</div><div class="ttdef"><b>Definition</b> Config.cpp:13</div></div>
+<div class="ttc" id="anamespaceidhan_1_1log_html_a1c77f741df908f5b04d655cdab83fb6c"><div class="ttname"><a href="../../d7/d03/namespaceidhan_1_1log.html#a1c77f741df908f5b04d655cdab83fb6c">idhan::log::warn</a></div><div class="ttdeci">void warn(const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> log.hpp:62</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

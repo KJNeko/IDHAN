@@ -117,11 +117,11 @@ $(function(){initNavTree('db/dbb/IDHANServer_2src_2api_2record_2tags_2addTags_8c
   <div class="headertitle"><div class="title">addTags.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
+<div class="textblock"><code>#include &quot;<a class="el" href="../../df/de2/drogonArrayBind_8hpp_source.html">../../helpers/drogonArrayBind.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d2/d9f/RecordAPI_8hpp_source.html">api/RecordAPI.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../de/dbc/createBadRequest_8hpp_source.html">api/helpers/createBadRequest.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../df/dbc/api_2helpers_2helpers_8hpp_source.html">api/helpers/helpers.hpp</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../d4/d49/tags_8hpp_source.html">api/helpers/tags/tags.hpp</a>&quot;</code><br />
 <code>#include &quot;fgl/defines.hpp&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d3/d82/ScopedTimer_8hpp_source.html">logging/ScopedTimer.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d4/d3d/log_8hpp_source.html">logging/log.hpp</a>&quot;</code><br />
@@ -147,6 +147,8 @@ Functions</h2></td></tr>
 <tr class="separator:aad2e58082017e1fd3b7bf3eb59c861c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a025f1a3ab49e6ff6cb78b95e299ef908" id="r_a025f1a3ab49e6ff6cb78b95e299ef908"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a025f1a3ab49e6ff6cb78b95e299ef908">idhan::api::getIDsFromPairs</a> (const std::vector&lt; <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &gt; &amp;pairs, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a025f1a3ab49e6ff6cb78b95e299ef908"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad91534aa5515e18e35c71e5a5748a422" id="r_ad91534aa5515e18e35c71e5a5748a422"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#ad91534aa5515e18e35c71e5a5748a422">idhan::api::addTagsToRecord</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt; tag_ids, const <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> tag_domain_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:ad91534aa5515e18e35c71e5a5748a422"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

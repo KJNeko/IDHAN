@@ -5,7 +5,7 @@ var classidhan_1_1SearchBuilder =
     [ "construct", "d7/d1e/classidhan_1_1SearchBuilder.html#aa8cc4f836d24ce130a823cd680bcc537", null ],
     [ "filterTagDomain", "d7/d1e/classidhan_1_1SearchBuilder.html#a64b41df9d90bf75b3f4a5022342113a0", null ],
     [ "query", "d7/d1e/classidhan_1_1SearchBuilder.html#a36ca1d04e7cdcb406c8f2572aebcda2a", null ],
-    [ "query", "d7/d1e/classidhan_1_1SearchBuilder.html#a12f106d6146feacd65ffa662bd1ae8ef", null ],
+    [ "query", "d7/d1e/classidhan_1_1SearchBuilder.html#a175ebf9d8ac74f3834cd77c3d08abb16", null ],
     [ "setDisplay", "d7/d1e/classidhan_1_1SearchBuilder.html#ac74ffdb5120030d75b96bf047d25c8ad", null ],
     [ "setSortOrder", "d7/d1e/classidhan_1_1SearchBuilder.html#a9955906704ef87cd2b005e93f47f289a", null ],
     [ "setSortType", "d7/d1e/classidhan_1_1SearchBuilder.html#a40a255a9e218e28150a14266cffa33cc", null ],

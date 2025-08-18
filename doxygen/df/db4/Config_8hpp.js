@@ -1,9 +1,10 @@
 var Config_8hpp =
 [
-    [ "idhan::config::get", "d6/db4/namespaceidhan_1_1config.html#ac228df2f9978c266327d7e62dde6b91b", null ],
-    [ "idhan::config::get", "d6/db4/namespaceidhan_1_1config.html#ad2863493d119318b4f68b5949e43c551", null ],
-    [ "idhan::config::loadConfig", "d6/db4/namespaceidhan_1_1config.html#a255a8b9dc748a7570400620897433a4d", null ],
-    [ "idhan::config::saveConfig", "d6/db4/namespaceidhan_1_1config.html#ac99dbf2767429fb7ce05171424ebad58", null ],
-    [ "idhan::config::set", "d6/db4/namespaceidhan_1_1config.html#a30b1857af639c8028261f91c77d9fe0b", null ],
+    [ "idhan::config::ConfigType", "d6/db4/namespaceidhan_1_1config.html#a01dbecb77029982f954f16adf56d9939", null ],
+    [ "idhan::config::get", "d6/db4/namespaceidhan_1_1config.html#a85dee5c79fec80c92190afdc59b16b9c", null ],
+    [ "idhan::config::get", "d6/db4/namespaceidhan_1_1config.html#acef2de43bf9050779b9cbe55d58dc06a", null ],
+    [ "idhan::config::getUserConfigPath", "d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2", null ],
+    [ "idhan::config::getValue", "d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62", null ],
+    [ "idhan::config::getValue", "d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9", null ],
     [ "idhan::config::setLocation", "d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02", null ]
 ];

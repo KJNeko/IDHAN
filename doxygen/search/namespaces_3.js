@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['trantor_0',['trantor',['../db/d9e/namespacetrantor.html',1,'']]]
+  ['spdlog_0',['spdlog',['../dc/dec/namespacespdlog.html',1,'']]],
+  ['std_1',['std',['../d8/dcc/namespacestd.html',1,'']]]
 ];
