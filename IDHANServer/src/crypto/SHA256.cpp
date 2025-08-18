@@ -10,6 +10,7 @@
 
 #include "api/helpers/createBadRequest.hpp"
 #include "fgl/defines.hpp"
+#include "filesystem/IOUring.hpp"
 
 namespace idhan
 {
@@ -27,7 +28,8 @@ SHA256::SHA256( const drogon::orm::Field& field )
 	const auto data { field.as< std::vector< char > >() };
 
 	FGL_ASSERT(
-		data.size() == m_data.size(), format_ns::format( "Invalid size. Expected {} got {}", m_data.size(), data.size() ) );
+		data.size() == m_data.size(),
+		format_ns::format( "Invalid size. Expected {} got {}", m_data.size(), data.size() ) );
 
 	std::memcpy( m_data.data(), data.data(), data.size() );
 }
@@ -129,6 +131,13 @@ SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
 	std::memcpy( out_data.data(), result.data(), result.size() );
 
 	return SHA256::fromBuffer( out_data );
+}
+
+drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
+{
+	const auto data { co_await io_uring.readAll() };
+
+	co_return hash( data.data(), data.size() );
 }
 
 } // namespace idhan
