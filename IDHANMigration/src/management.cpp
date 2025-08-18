@@ -10,6 +10,7 @@
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #include <pqxx/nontransaction>
 #include <pqxx/result>
+#include <spdlog/spdlog.h>
 #pragma GCC diagnostic pop
 
 namespace idhan::db
@@ -31,7 +32,7 @@ std::uint16_t getTableVersion( pqxx::nontransaction& tx, const std::string_view 
 {
 	pqxx::params params {};
 	params.append( name );
-	auto result { tx.exec( "SELECT table_version FROM idhan_info WHERE table_name = $1", params ) };
+	const auto result { tx.exec( "SELECT table_version FROM idhan_info WHERE table_name = $1", params ) };
 
 	if ( result.size() == 0 ) return 0;
 
@@ -72,7 +73,7 @@ void destroyTables( pqxx::nontransaction& tx )
 	}
 	else
 	{
-		log::debug( "Public schema does not exist. Skipping drop." );
+		spdlog::debug( "Public schema does not exist. Skipping drop." );
 	}
 
 	tx.exec( "CREATE SCHEMA public" );
