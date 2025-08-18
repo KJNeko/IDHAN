@@ -3,48 +3,23 @@
 //
 #include "Config.hpp"
 
-#include <atomic>
-#include <fstream>
+#include <ranges>
+
+#include "logging/log.hpp"
 
 namespace idhan::config
 {
 
-inline static std::string config_path { "./config.toml" };
-static std::mutex config_mtx;
-static toml::parse_result config;
-//! If true then the config should not be retrieved from disk again
-static std::atomic< bool > config_updated;
+static std::string user_config_path { "" };
 
-toml::parse_result loadConfig()
+std::string_view getUserConfigPath()
 {
-	std::lock_guard guard { config_mtx };
-	if ( !config_updated )
-	{
-		config = toml::parse_file( config_path );
-	}
-
-	return config;
-}
-
-void saveConfig( const toml::parse_result& modified_config )
-{
-	std::lock_guard guard { config_mtx };
-	if ( std::ofstream ofs( std::filesystem::path( config_path ), std::ofstream::trunc ); ofs )
-	{
-		toml::toml_formatter formatter { modified_config };
-
-		ofs << formatter;
-	}
-
-	config = std::move( modified_config );
+	return user_config_path;
 }
 
 void setLocation( std::filesystem::path path )
 {
-	if ( !std::filesystem::exists( path ) ) throw std::runtime_error( "Path given for config file does not exist" );
-	config_path = path;
-
-	loadConfig();
+	user_config_path = path;
 }
 
 } // namespace idhan::config
