@@ -49,12 +49,17 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 
 	static std::binary_semaphore sem { 1 };
 
+	if ( tag_pairs.size() == 0 )
+	{
+		co_return std::unexpected( createBadRequest( "No tags to create" ) );
+	}
+
 	try
 	{
 		sem.acquire();
 
 		const auto result { co_await db->execSqlCoro(
-			"SELECT * FROM createBatchTags($1::TEXT[], $2::TEXT[])",
+			"SELECT tag_id FROM createBatchTags($1::TEXT[], $2::TEXT[])",
 			std::move( namespace_params ),
 			std::move( subtag_params ) ) };
 

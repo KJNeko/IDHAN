@@ -36,6 +36,7 @@ include(postgres)
 include(toml)
 
 add_subdirectory(IDHAN)
+add_subdirectory(IDHANMigration)
 add_subdirectory(IDHANModules)
 add_subdirectory(IDHANServer)
 add_subdirectory(IDHANClient)

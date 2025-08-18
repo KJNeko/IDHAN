@@ -8,6 +8,8 @@
 #include <QJsonValue>
 #include <QNetworkReply>
 
+#include "IDHANClient.hpp"
+
 namespace idhan::logging
 {
 

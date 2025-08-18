@@ -263,6 +263,8 @@ auto defaultErrorHandler( TPromise&& promise )
 
 		const std::runtime_error exception { format_ns::format( "{}", server_msg ) };
 
+		logging::error( server_msg );
+
 		promise->setException( std::make_exception_ptr( exception ) );
 
 		promise->finish();

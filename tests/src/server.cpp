@@ -4,13 +4,13 @@
 
 #include <QCoreApplication>
 
-#include <catch2/catch_all.hpp>
+#include <gtest/gtest.h>
 
 #include "NET_CONSTANTS.hpp"
 #include "idhan/IDHANClient.hpp"
 #include "serverStarterHelper.hpp"
 
-TEST_CASE( "Server setup", "[server][network]" )
+TEST( ServerTests, ServerSetup )
 {
 	SERVER_HANDLE;
 

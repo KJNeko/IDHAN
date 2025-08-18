@@ -6,6 +6,7 @@
 
 #include <moc_Network.cpp>
 
+#include <QFuture>
 #include <QThread>
 
 #include "logging/logger.hpp"
