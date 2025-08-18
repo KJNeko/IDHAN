@@ -13,7 +13,7 @@ namespace idhan
 {
 
 QFuture< IDHANClient::TagRelationshipInfo > IDHANClient::
-	getTagRelationships( const TagID tag_id, const TagDomainID domain_id )
+	getTagRelationships( const TagID tag_id, const TagDomainID tag_domain_id )
 {
 	const auto promise { std::make_shared< QPromise< TagRelationshipInfo > >() };
 	promise->start();
@@ -72,7 +72,7 @@ QFuture< IDHANClient::TagRelationshipInfo > IDHANClient::
 	};
 
 	QUrl url {};
-	url.setPath( QString( "/tags/%1/%2/relationships" ).arg( domain_id ).arg( tag_id ) );
+	url.setPath( QString( "/tags/%1/%2/relationships" ).arg( tag_domain_id ).arg( tag_id ) );
 
 	sendClientGet( url, handleResponse, defaultErrorHandler( promise ) );
 

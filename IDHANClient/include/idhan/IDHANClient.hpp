@@ -120,23 +120,25 @@ class IDHANClient
 
 	QFuture< TagID > createTag( const std::string& tag_text );
 
-	QFuture< std::vector< TagID > > getRecordTags( RecordID record_id, TagDomainID domain_id );
+	QFuture< std::vector< TagID > > getRecordTags( RecordID record_id, TagDomainID tag_domain_id );
 
 	QFuture< std::vector< std::string > > getTagText( std::vector< TagID >& tag_ids );
 
-	QFuture< std::string > getTagText( const TagID tag_id );
+	QFuture< std::string > getTagText( TagID tag_id );
 
 	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag( const QString& text );
 
 	QFuture< void > addTags(
-		RecordID record_id, TagDomainID domain_id, std::vector< std::pair< std::string, std::string > >&& tags );
-
-	QFuture< void > addTags(
-		std::vector< RecordID >&& record_ids, TagDomainID domain_id, std::vector< std::vector< TagID > >&& tag_sets );
+		RecordID record_id, TagDomainID tag_domain_id, std::vector< std::pair< std::string, std::string > >&& tags );
 
 	QFuture< void > addTags(
 		std::vector< RecordID >&& record_ids,
-		TagDomainID domain_id,
+		TagDomainID tag_domain_id,
+		std::vector< std::vector< TagID > >&& tag_sets );
+
+	QFuture< void > addTags(
+		std::vector< RecordID >&& record_ids,
+		TagDomainID tag_domain_id,
 		std::vector< std::vector< std::pair< std::string, std::string > > >&& tag_sets );
 
 	/**
@@ -154,7 +156,7 @@ class IDHANClient
 	 * @brief Creates a new alias for a given tag.
 	 * @param aliased_id
 	 * @param alias_id
-	 * @param domain_id
+	 * @param tag_domain_id
 	 * @throws AliasLoopException Throws an exception if a loop is detected
 	 * @throws InvalidTagID
 	 * @return
@@ -186,7 +188,7 @@ class IDHANClient
 		std::vector< TagID > m_aliased, m_aliases, m_parents, m_children, m_older_siblings, m_younger_siblings;
 	};
 
-	QFuture< TagRelationshipInfo > getTagRelationships( TagID tag_id, TagDomainID domain_id );
+	QFuture< TagRelationshipInfo > getTagRelationships( TagID tag_id, TagDomainID tag_domain_id );
 
 	struct TagInfo
 	{

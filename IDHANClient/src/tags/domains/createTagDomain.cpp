@@ -33,7 +33,7 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 
 		const QJsonDocument doc { QJsonDocument::fromJson( data ) };
 
-		promise->addResult( doc.object()[ "domain_id" ].toInteger() );
+		promise->addResult( doc.object()[ "tag_domain_id" ].toInteger() );
 
 		promise->finish();
 		response->deleteLater();
@@ -73,10 +73,8 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 
 	auto future = promise->future();
 
-	QFuture< TagDomainID > unlock_future {
-		future
-			.then( [ guard_ptr = guard ]( const TagDomainID domain_id ) noexcept -> TagDomainID { return domain_id; } )
-	};
+	QFuture< TagDomainID > unlock_future { future.then(
+		[ guard_ptr = guard ]( const TagDomainID tag_domain_id ) noexcept -> TagDomainID { return tag_domain_id; } ) };
 
 	return unlock_future;
 	// return promise->future();
@@ -103,7 +101,7 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 
 			if ( row_object[ "domain_name" ].toString() == name )
 			{
-				promise->addResult( row_object[ "domain_id" ].toInteger() );
+				promise->addResult( row_object[ "tag_domain_id" ].toInteger() );
 				promise->finish();
 				return;
 			}

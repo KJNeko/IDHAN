@@ -186,7 +186,7 @@ void IDHANClient::sendClientJson(
 	// logging::debug( "Sending request to {}", url.toString().toStdString() );
 
 	QNetworkRequest request { url };
-	// request.setTransferTimeout( std::chrono::milliseconds( 8000 ) );
+	// request.setTransferTimeout( std::chrono::seconds( 10 ) );
 	request.setHeader( QNetworkRequest::ContentTypeHeader, json_str_thing );
 	request.setRawHeader( "accept", json_str_thing );
 	addKeyHeader( request );
