@@ -11,6 +11,7 @@
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
+#include "logging/ScopedTimer.hpp"
 #include "metadata/parseMetadata.hpp"
 
 namespace idhan::hyapi
@@ -92,6 +93,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpRequestPtr request )
 {
+	logging::ScopedTimer timer { "fileMetadata", std::chrono::seconds( 1 ) };
 	auto db { drogon::app().getDbClient() };
 
 	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ) )
@@ -161,21 +163,21 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		}
 
 		auto storage_tags { db->execSqlCoro(
-			"SELECT domain_id, tag_id, tag_text FROM tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
+			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
 			record_id ) };
 
 		auto display_tags { db->execSqlCoro(
-			"SELECT domain_id, tag_id, tag_text FROM tag_mappings_final NATURAL JOIN tags_combined WHERE record_id = $1",
+			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_final NATURAL JOIN tags_combined WHERE record_id = $1",
 			record_id ) };
 
 		for ( const auto& storage_tag : co_await storage_tags )
 		{
-			const auto& domain_id { storage_tag[ "domain_id" ] };
+			const auto& tag_domain_id { storage_tag[ "tag_domain_id" ] };
 			const auto& tag_id { storage_tag[ "tag_id" ] };
 			const auto& tag_text { storage_tag[ "tag_text" ] };
 
 			const auto service_key {
-				format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
+				format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, tag_domain_id.as< TagDomainID >() )
 			};
 
 			data[ "tags" ][ service_key ][ "storage_tags" ][ "0" ].append( tag_text.as< std::string >() );
@@ -183,12 +185,12 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 		for ( const auto& display_tag : co_await display_tags )
 		{
-			const auto& domain_id { display_tag[ "domain_id" ] };
+			const auto& tag_domain_id { display_tag[ "tag_domain_id" ] };
 			const auto& tag_id { display_tag[ "tag_id" ] };
 			const auto& tag_text { display_tag[ "tag_text" ] };
 
 			const auto service_key {
-				format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, domain_id.as< TagDomainID >() )
+				format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, tag_domain_id.as< TagDomainID >() )
 			};
 
 			data[ "tags" ][ service_key ][ "display_tags" ][ "0" ].append( tag_text.as< std::string >() );

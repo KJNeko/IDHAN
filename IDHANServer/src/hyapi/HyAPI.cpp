@@ -9,7 +9,6 @@
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
-#include "api/helpers/tags/tags.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
@@ -17,6 +16,7 @@
 #include "fgl/defines.hpp"
 #include "fixme.hpp"
 #include "helpers.hpp"
+#include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
 #include "metadata/parseMetadata.hpp"
 #include "versions.hpp"
@@ -140,6 +140,8 @@ T getDefaultedValue( const std::string name, drogon::HttpRequestPtr request, con
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequestPtr request )
 {
+	logging::ScopedTimer timer { "Search files", std::chrono::seconds( 2 ) };
+	const auto start = std::chrono::system_clock::now();
 	const auto tags_o { request->getOptionalParameter< std::string >( "tags" ) };
 	constexpr auto empty_tags { "[]" };
 	const auto tags { tags_o.value_or( empty_tags ) };
@@ -164,14 +166,20 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	}
 
 	std::vector< TagID > tag_ids {};
+
+	tag_ids.reserve( tags_json.size() );
+
 	for ( const auto& tag : tags_json )
 	{
 		const auto tag_text { tag.asString() };
 
-		if ( const auto tag_id { co_await findOrCreateTag( tag_text, db ) } )
-			tag_ids.push_back( tag_id.value() );
-		else
-			co_return tag_id.error();
+		const auto tag_id_result {
+			co_await db->execSqlCoro( "SELECT tag_id FROM tags_combined WHERE tag_text = $1", tag_text )
+		};
+
+		if ( tag_id_result.empty() ) co_return createBadRequest( "No tag with text {} found", tag_text );
+
+		tag_ids.emplace_back( tag_id_result[ 0 ][ 0 ].as< TagID >() );
 	}
 
 	builder.setTags( tag_ids );
@@ -207,12 +215,27 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		builder.setDisplay( HydrusDisplayType::DISPLAY );
 	}
 
+	auto end = std::chrono::system_clock::now();
+	const auto diff { std::chrono::duration_cast< std::chrono::milliseconds >( end - start ).count() };
+	log::info( "Setup took {}ms", diff );
+
+	auto query_start = std::chrono::system_clock::now();
 	const auto result { co_await builder.query( db, {} ) };
+	auto query_end = std::chrono::system_clock::now();
+	const auto query_diff {
+		std::chrono::duration_cast< std::chrono::milliseconds >( query_end - query_start ).count()
+	};
+	log::info( "Query took {}ms", query_diff );
 
 	Json::Value out {};
+
+	const auto json_start = std::chrono::system_clock::now();
 	Json::Value file_ids {};
 	Json::Value hashes {};
 	Json::ArrayIndex i { 0 };
+
+	file_ids.resize( result.size() );
+	hashes.resize( result.size() );
 
 	for ( const auto& row : result )
 	{
@@ -224,6 +247,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	if ( return_file_ids ) out[ "file_ids" ] = std::move( file_ids );
 	if ( return_hashes ) out[ "hashes" ] = std::move( hashes );
+
+	const auto json_end = std::chrono::system_clock::now();
+	const auto json_diff { std::chrono::duration_cast< std::chrono::milliseconds >( json_end - json_start ).count() };
+	log::info( "JSON took {}ms", json_diff );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( out );
 }
