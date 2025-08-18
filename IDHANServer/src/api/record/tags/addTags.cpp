@@ -7,7 +7,6 @@
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
-#include "api/helpers/tags/tags.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
@@ -86,43 +85,26 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	if ( tag_namespace_is_str && tag_subtag_is_str ) [[likely]]
 	{
 		const auto result { co_await transaction->execSqlCoro(
-			"SELECT tag_id, namespace_id, subtag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE namespace_text = $1 AND subtag_text = $2",
+			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE namespace_text = $1 AND subtag_text = $2",
 			std::get< std::string >( tag_namespace ),
 			std::get< std::string >( tag_subtag ) ) };
 
-		if ( result.size() > 0 )
-		{
-			tag_id = result[ 0 ][ 0 ].as< TagID >();
-			tag_namespace = result[ 0 ][ 1 ].as< NamespaceID >();
-			tag_subtag = result[ 0 ][ 2 ].as< SubtagID >();
-			co_return tag_id.value();
-		}
+		if ( result.size() > 0 ) co_return result[ 0 ][ 0 ].as< TagID >();
 	}
-
-	if ( tag_namespace_is_str ) [[likely]]
+	else if ( !tag_namespace_is_str && !tag_subtag_is_str ) [[likely]]
 	{
-		const auto result { co_await findOrCreateNamespace( std::get< std::string >( tag_namespace ), transaction ) };
+		const auto result { co_await transaction->execSqlCoro(
+			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2)",
+			std::get< NamespaceID >( tag_namespace ),
+			std::get< SubtagID >( tag_subtag ) ) };
 
-		if ( !result ) co_return std::unexpected( result.error() );
-
-		tag_namespace = result.value();
+		if ( result.size() > 0 ) co_return result[ 0 ][ 0 ].as< TagID >();
 	}
-
-	if ( tag_subtag_is_str ) [[likely]]
+	else
 	{
-		const auto result { co_await findOrCreateSubtag( std::get< std::string >( tag_subtag ), transaction ) };
-
-		if ( !result ) co_return std::unexpected( result.error() );
-
-		tag_subtag = result.value();
+		co_return std::
+			unexpected( createBadRequest( "Tag namespace and subtag must be both strings or both numbers" ) );
 	}
-
-	const auto result { co_await findOrCreateTag(
-		std::get< NamespaceID >( tag_namespace ), std::get< SubtagID >( tag_subtag ), transaction ) };
-
-	if ( !result ) co_return std::unexpected( result.error() );
-
-	co_return result.value();
 }
 
 drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > > getTagPairs( const Json::Value& json )
@@ -173,6 +155,12 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 			const auto result { co_await getIDFromPair( pair, db ) };
 			if ( !result ) co_return std::unexpected( result.error() );
 			ids.emplace_back( result.value() );
+
+			if ( !( result.value() > 0 ) )
+			{
+				co_return std::unexpected(
+					createBadRequest( "Tag ID was not valid. Must be tag_id > 0; Was {}", result.value() ) );
+			}
 		}
 	}
 	catch ( std::exception& e )
@@ -185,6 +173,28 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 	}
 
 	co_return ids;
+}
+
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
+	const RecordID record_id,
+	std::vector< TagID > tag_ids,
+	const TagDomainID tag_domain_id,
+	drogon::orm::DbClientPtr db )
+{
+	try
+	{
+		const auto insert_result { co_await db->execSqlCoro(
+			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) VALUES ($1, UNNEST($2::tagid[]), $3) ON CONFLICT DO NOTHING",
+			record_id,
+			std::move( tag_ids ),
+			tag_domain_id ) };
+	}
+	catch ( std::exception& e )
+	{
+		co_return std::unexpected( createInternalError( "Error adding tags: {}", e.what() ) );
+	}
+
+	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags( const drogon::HttpRequestPtr request, RecordID record_id )
@@ -210,11 +220,13 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags( const drogon::HttpRe
 
 	if ( !tag_domain_id ) co_return tag_domain_id.error();
 
-	const auto insert_result { co_await db->execSqlCoro(
-		"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
-		record_id,
-		std::move( tag_pair_ids.value() ),
-		tag_domain_id.value() ) };
+	for ( const auto& tag_id : tag_pair_ids.value() ) FGL_ASSERT( tag_id > 0, "TagID must be above 0" );
+
+	const auto result {
+		co_await addTagsToRecord( record_id, std::move( tag_pair_ids.value() ), tag_domain_id.value(), db )
+	};
+
+	if ( !result ) co_return result.error();
 
 	co_return drogon::HttpResponse::newHttpResponse();
 }
@@ -236,22 +248,23 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	if ( !tag_domain_id ) co_return tag_domain_id.error();
 
+	if ( !( tag_domain_id.value() > 0 ) )
+		co_return createBadRequest(
+			"Invalid domain ID given: Expected tag_domain_id > 0; Got {}", tag_domain_id.value() );
+
 	const auto domain_search {
 		co_await db
 			->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id.value() )
 	};
 
-	if ( domain_search.empty() ) co_return createBadRequest( "Invalid domain ID given" );
+	if ( domain_search.empty() )
+		co_return createBadRequest( "Invalid domain ID given: Got no IDs (searched for {})", tag_domain_id.value() );
 
 	const auto& records_json { json[ "records" ] };
 
 	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
 	if ( const auto& tags_json = json[ "tags" ]; tags_json.isArray() )
 	{
-		if ( tags_json.size() > 1024 * 64 )
-			log::warn(
-				"Endpoint /records/tags/add recieved a LOT of tags ({}), This might take awhile to return",
-				tags_json.size() );
 		const auto tag_pairs { co_await getTagPairs( tags_json ) };
 
 		if ( !tag_pairs ) co_return tag_pairs.error();
@@ -265,11 +278,13 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 			if ( !record_json.isIntegral() )
 				co_return createBadRequest( "Invalid json item in records list: Expected integral" );
 
-			const auto insert_result { co_await db->execSqlCoro(
-				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
+			const auto result { co_await addTagsToRecord(
 				static_cast< RecordID >( record_json.asInt64() ),
 				std::move( tag_pair_ids.value() ),
-				tag_domain_id.value() ) };
+				tag_domain_id.value(),
+				db ) };
+
+			if ( !result ) co_return result.error();
 		}
 	}
 	else if ( !tags_json.isNull() )
@@ -299,11 +314,13 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 			auto tag_ids { tag_ids_e.value() };
 
-			co_await db->execSqlCoro(
-				"INSERT INTO tag_mappings (record_id, tag_id, domain_id) VALUES ($1, unnest($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
+			const auto result { co_await addTagsToRecord(
 				static_cast< RecordID >( records_json[ i ].asInt64() ),
 				std::move( tag_ids ),
-				tag_domain_id.value() );
+				tag_domain_id.value(),
+				db ) };
+
+			if ( !result ) co_return result.error();
 		}
 	}
 	else if ( !sets_json.isNull() )

@@ -29,19 +29,19 @@ class TagAPI : public drogon::HttpController< TagAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > autocomplete( drogon::HttpRequestPtr request, std::string tag_text );
 
-	drogon::Task< drogon::HttpResponsePtr > createSingleTag( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > createBatchedTag( drogon::HttpRequestPtr request );
-	drogon::Task< drogon::HttpResponsePtr > createTagRouter( drogon::HttpRequestPtr request );
 
 	drogon::Task< drogon::HttpResponsePtr > createTagDomain( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > getTagDomains( drogon::HttpRequestPtr request );
-	drogon::Task< drogon::HttpResponsePtr > getTagDomainInfo( drogon::HttpRequestPtr request, TagDomainID domain_id );
-	drogon::Task< drogon::HttpResponsePtr > deleteTagDomain( drogon::HttpRequestPtr request, TagDomainID domain_id );
+	drogon::Task< drogon::HttpResponsePtr >
+		getTagDomainInfo( drogon::HttpRequestPtr request, TagDomainID tag_domain_id );
+	drogon::Task< drogon::HttpResponsePtr >
+		deleteTagDomain( drogon::HttpRequestPtr request, TagDomainID tag_domain_id );
 
 	drogon::Task< drogon::HttpResponsePtr > createTagParents( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > createTagAliases( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr >
-		getTagRelationships( drogon::HttpRequestPtr request, TagDomainID domain_id, TagID tag_id );
+		getTagRelationships( drogon::HttpRequestPtr request, TagDomainID tag_domain_id, TagID tag_id );
 
   public:
 
@@ -57,7 +57,7 @@ class TagAPI : public drogon::HttpController< TagAPI >
 	ADD_METHOD_TO( TagAPI::search, "/tags/search?tag={1}" );
 	ADD_METHOD_TO( TagAPI::autocomplete, "/tags/autocomplete?tag={1}" );
 
-	ADD_METHOD_TO( TagAPI::createTagRouter, "/tags/create" );
+	ADD_METHOD_TO( TagAPI::createBatchedTag, "/tags/create" );
 
 	ADD_METHOD_TO( TagAPI::createTagDomain, "/tags/domain/create" );
 	ADD_METHOD_TO( TagAPI::getTagDomains, "/tags/domain/list" );

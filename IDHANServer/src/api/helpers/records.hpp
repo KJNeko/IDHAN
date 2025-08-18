@@ -12,6 +12,9 @@
 #pragma GCC diagnostic ignored "-Wnoexcept"
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #pragma GCC diagnostic ignored "-Wshadow"
+#include <expected>
+
+#include "drogon/HttpResponse.h"
 #include "drogon/orm/DbClient.h"
 #include "drogon/utils/coroutine.h"
 #pragma GCC diagnostic pop
@@ -35,7 +38,8 @@ namespace idhan::api::helpers
 drogon::Task< std::vector< RecordID > >
 	massCreateRecord( const std::vector< SHA256 >& sha256s, drogon::orm::DbClientPtr db );
 
-drogon::Task< RecordID > createRecord( const SHA256& sha256, drogon::orm::DbClientPtr db );
+drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > >
+	createRecord( const SHA256& sha256, drogon::orm::DbClientPtr db );
 
 drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, drogon::orm::DbClientPtr db );
 

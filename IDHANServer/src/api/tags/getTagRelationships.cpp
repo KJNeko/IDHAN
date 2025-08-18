@@ -8,26 +8,24 @@ namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	getTagRelationships( drogon::HttpRequestPtr request, const TagDomainID domain_id, const TagID tag_id )
+	getTagRelationships( drogon::HttpRequestPtr request, const TagDomainID tag_domain_id, const TagID tag_id )
 {
 	const auto db { drogon::app().getDbClient() };
 
-	auto parents_result {
-		db->execSqlCoro( "SELECT parent_id FROM tag_parents WHERE child_id = $1 AND domain_id = $2", tag_id, domain_id )
-	};
-	auto children_result {
-		db->execSqlCoro( "SELECT child_id FROM tag_parents WHERE parent_id = $1 AND domain_id = $2", tag_id, domain_id )
-	};
+	auto parents_result { db->execSqlCoro(
+		"SELECT parent_id FROM tag_parents WHERE child_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
+	auto children_result { db->execSqlCoro(
+		"SELECT child_id FROM tag_parents WHERE parent_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
 
 	auto older_siblings { db->execSqlCoro(
-		"SELECT older_id FROM tag_siblings WHERE younger_id = $1 AND domain_id = $2", tag_id, domain_id ) };
+		"SELECT older_id FROM tag_siblings WHERE younger_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
 	auto younger_siblings { db->execSqlCoro(
-		"SELECT younger_id FROM tag_siblings WHERE older_id = $1 AND domain_id = $2", tag_id, domain_id ) };
+		"SELECT younger_id FROM tag_siblings WHERE older_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
 
 	auto aliases_result { db->execSqlCoro(
-		"SELECT alias_id FROM tag_aliases WHERE aliased_id = $1 AND domain_id = $2", tag_id, domain_id ) };
+		"SELECT alias_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
 	auto aliased_result { db->execSqlCoro(
-		"SELECT aliased_id FROM tag_aliases WHERE alias_id = $1 AND domain_id = $2", tag_id, domain_id ) };
+		"SELECT aliased_id FROM tag_aliases WHERE alias_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
 
 	Json::Value json {};
 	json[ "parents" ] = Json::arrayValue;

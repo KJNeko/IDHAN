@@ -53,7 +53,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRe
 			co_return createBadRequest( "Cannot alias a tag to itself {} == {}", aliased_id, alias_id );
 
 		awaiters.emplace_back( db->execSqlCoro(
-			"INSERT INTO tag_aliases (domain_id, aliased_id, alias_id) VALUES ($1, $2, $3) ON CONFLICT(domain_id, aliased_id) DO NOTHING",
+			"INSERT INTO tag_aliases (tag_domain_id, aliased_id, alias_id) VALUES ($1, $2, $3) ON CONFLICT(tag_domain_id, aliased_id) DO NOTHING",
 			tag_domain_id.value(),
 			aliased_id,
 			alias_id ) );

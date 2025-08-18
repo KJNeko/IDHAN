@@ -32,18 +32,21 @@ drogon::HttpResponsePtr createBadResponse( const std::string& message, drogon::H
 template < typename... Args >
 drogon::HttpResponsePtr createBadRequest( const format_ns::format_string< Args... > str, Args&&... args )
 {
+	log::warn( format_ns::format( str, std::forward< Args >( args )... ) );
 	return internal::createBadResponse(
 		format_ns::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k400BadRequest );
 }
 
 inline drogon::HttpResponsePtr createBadRequest( const std::string& msg )
 {
+	log::warn( msg );
 	return internal::createBadResponse( msg, drogon::HttpStatusCode::k400BadRequest );
 }
 
 template < typename... Args >
 drogon::HttpResponsePtr createNotFound( const format_ns::format_string< Args... > str, Args&&... args )
 {
+	log::warn( format_ns::format( str, std::forward< Args >( args )... ) );
 	return internal::createBadResponse(
 		format_ns::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k404NotFound );
 }
@@ -58,12 +61,14 @@ drogon::HttpResponsePtr createInternalError( const format_ns::format_string< Arg
 
 inline drogon::HttpResponsePtr createInternalError( const std::string& msg )
 {
+	log::error( msg );
 	return internal::createBadResponse( msg, drogon::HttpStatusCode::k500InternalServerError );
 }
 
 template < typename... Args >
 drogon::HttpResponsePtr createConflict( const format_ns::format_string< Args... > str, Args&&... args )
 {
+	log::warn( format_ns::format( str, std::forward< Args >( args )... ) );
 	return internal::createBadResponse(
 		format_ns::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k409Conflict );
 }

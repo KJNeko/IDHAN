@@ -35,7 +35,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		co_await db->execSqlCoro( "SELECT folder_path FROM file_clusters WHERE cluster_id = $1", cluster_id )
 	};
 
-	if ( result.empty() ) co_return createBadRequest( "Cluster not found with ID" );
+	if ( result.empty() ) co_return createBadRequest( "Cluster not found with ID {}", cluster_id );
 
 	const auto path_str { result[ 0 ][ 0 ].as< std::string >() };
 
@@ -43,21 +43,35 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	std::uint32_t file_counter { 0 };
 
 	// Trust the filename, Ignore the hash given by the file
-	const auto recompute_hash { request->getOptionalParameter< bool >( "recompute_hash" ).value_or( true ) };
+	auto recompute_hash { request->getOptionalParameter< bool >( "recompute_hash" ).value_or( true ) };
 
 	// Scans the mime if the file has not been scanned previously
-	const auto scan_mime { request->getOptionalParameter< bool >( "scan_mime" ).value_or( true ) };
+	auto scan_mime { request->getOptionalParameter< bool >( "scan_mime" ).value_or( true ) };
 	// Triggers the mime to be retested for all files
-	const auto rescan_mime { request->getOptionalParameter< bool >( "rescan_mime" ).value_or( false ) };
+	auto rescan_mime { request->getOptionalParameter< bool >( "rescan_mime" ).value_or( false ) };
 
 	// Uses a metadata parser to scan for metadata
-	const auto scan_metadata { request->getOptionalParameter< bool >( "scan_metadata" ).value_or( true ) };
+	auto scan_metadata { request->getOptionalParameter< bool >( "scan_metadata" ).value_or( true ) };
 	// Forces the metadata parser to run, even if data is already present
-	const auto rescan_metadata { request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( true ) };
+	auto rescan_metadata { request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( true ) };
 
 	const auto stop_on_fail { request->getOptionalParameter< bool >( "stop_on_fail" ).value_or( true ) };
 
-	const auto adopt_orphans { request->getOptionalParameter< bool >( "adopt_orphans" ).value_or( false ) };
+	auto adopt_orphans { request->getOptionalParameter< bool >( "adopt_orphans" ).value_or( false ) };
+
+	if ( adopt_orphans )
+	{
+		scan_metadata = true;
+		scan_mime = true;
+	}
+
+	if ( scan_metadata )
+	{
+		scan_mime = true;
+	}
+
+	if ( read_only && !recompute_hash )
+		co_return createBadRequest( "Must recompute hash for read only folders (recompute hash was set to false)" );
 
 	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( path_str ) )
 	{

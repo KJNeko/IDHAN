@@ -6,14 +6,13 @@
 
 #include "api/helpers/drogonArrayBind.hpp"
 #include "api/helpers/helpers.hpp"
-#include "logging/log.hpp"
 
 namespace idhan
 {
 
 drogon::Task< drogon::orm::Result > SearchBuilder::query(
 	const drogon::orm::DbClientPtr db,
-	std::vector< TagDomainID > domain_ids,
+	std::vector< TagDomainID > tag_domain_ids,
 	const bool return_ids,
 	const bool return_hashes )
 {
@@ -22,15 +21,31 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 		construct( return_ids, return_hashes, /* filter_domains */ true ),
 		std::move( m_tags ),
 		tag_count,
-		std::move( domain_ids ) );
+		std::move( tag_domain_ids ) );
 }
 
 drogon::Task< drogon::orm::Result > SearchBuilder::
 	query( const drogon::orm::DbClientPtr db, const bool return_ids, const bool return_hashes )
 {
 	const std::size_t tag_count { m_tags.size() };
-	co_return co_await db->execSqlCoro(
-		construct( return_ids, return_hashes, /* filter_domains */ false ), std::move( m_tags ), tag_count );
+
+	std::vector< TagID > tests { 1, 2, 3, 4 };
+
+	const auto test { co_await db->execSqlCoro( "SELECT * FROM UNNEST($1::BIGINT[])", std::move( tests ) ) };
+
+	if ( test.size() != 4 )
+	{
+		throw std::runtime_error( "test failed" );
+	}
+	else
+	{
+		std::cout << "test passed" << std::endl;
+	}
+
+	auto result { co_await db->execSqlCoro(
+		construct( return_ids, return_hashes, /* filter_domains */ false ), std::move( m_tags ), tag_count ) };
+
+	co_return result;
 }
 
 std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes, const bool filter_domains )
@@ -40,7 +55,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	std::string query {};
 	query.reserve( 1024 );
 	constexpr std::string_view query_start {
-		"WITH filtered_records AS (SELECT record_id FROM tag_mappings_final WHERE tag_id = ANY($1::INT[]) GROUP BY record_id HAVING COUNT(DISTINCT tag_id) = $2)"
+		"WITH filtered_records AS (SELECT record_id FROM active_tag_mappings_final WHERE tag_id = ANY($1::BIGINT[]) GROUP BY record_id HAVING COUNT(DISTINCT tag_id) = $2)"
 	};
 	query += query_start;
 
@@ -87,6 +102,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 			break;
 		case SortType::RECORD_TIME:
 			query += " ORDER BY records.creation_time ";
+			break;
 	}
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
@@ -104,16 +120,19 @@ void SearchBuilder::setSortType( const SortType type )
 			{
 				m_sort_type = type;
 				m_required_joins.file_info = true;
+				break;
 			}
 		case SortType::IMPORT_TIME:
 			{
 				// comes from `cluster_store_time` timestamp in `file_info`
 				m_required_joins.file_info = true;
+				break;
 			}
 		case SortType::RECORD_TIME:
 			{
 				// comes from creation_time in `records`
 				m_required_joins.records = true;
+				break;
 			}
 	}
 }

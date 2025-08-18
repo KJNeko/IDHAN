@@ -148,9 +148,9 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	log::info( "Creating cluster {} -> {}", cluster_name, fixed_cluster_name );
 
 	bool success { false };
+	std::size_t tries { 0 };
 
-	while ( !success )
-	{
+	do {
 		try
 		{
 			// insert the data
@@ -188,9 +188,15 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 		{
 			// NOOP
 		}
+		++tries;
+
+		if ( tries > 16 ) co_return createInternalError( "Failed to create cluster: Too many tries" );
 
 		fixed_cluster_name = co_await findValidClusterName( cluster_name, db );
 	}
+	while ( !success );
+
+	co_return createInternalError( "Somehow escaped cluster building" );
 }
 
 } // namespace idhan::api

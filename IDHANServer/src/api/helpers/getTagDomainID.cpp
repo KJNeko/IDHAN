@@ -24,12 +24,15 @@ std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainID( drogon::Ht
 			return std::unexpected( createBadRequest( "Tag domain was an empty string upon parsing" ) );
 		}
 
-		const std::uint64_t domain_id { std::stoull( tag_domain_str ) };
+		const std::uint64_t tag_domain_id { std::stoull( tag_domain_str ) };
 
-		if ( domain_id > std::numeric_limits< TagDomainID >::max() )
-			return std::unexpected( createBadRequest( "Invalid domain_id: Domain ID out of range of type" ) );
+		if ( tag_domain_id > std::numeric_limits< TagDomainID >::max() )
+			return std::unexpected( createBadRequest( "Invalid tag_domain_id: Domain ID out of range of type" ) );
 
-		return static_cast< TagDomainID >( domain_id );
+		if ( !( tag_domain_id > 0 ) )
+			return std::unexpected( createBadRequest( "Invalid tag_domain_id: Domain ID must be greater than zero" ) );
+
+		return static_cast< TagDomainID >( tag_domain_id );
 	}
 	catch ( ... )
 	{

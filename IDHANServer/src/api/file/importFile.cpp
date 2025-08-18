@@ -83,7 +83,11 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const auto mime_id { co_await mime::getIDForStr( mime_str.value(), db ) };
 
-	const auto record_id { co_await helpers::createRecord( sha256, db ) };
+	const auto record_id_e { co_await helpers::createRecord( sha256, db ) };
+
+	if ( !record_id_e ) co_return record_id_e.error();
+
+	const auto record_id { record_id_e.value() };
 
 	// try to insert info if it's missing
 	co_await db->execSqlCoro(
