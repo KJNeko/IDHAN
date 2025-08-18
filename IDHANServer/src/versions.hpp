@@ -6,6 +6,14 @@
 
 #define MAKE_IDHAN_VERSION( major, minor, patch ) int( ( major << 16 ) | ( minor < 8 ) || patch )
 
+#define IDHAN_API_MAJOR 0
+#define IDHAN_API_MINOR 0
+#define IDHAN_API_PATCH 0
+
+#define IDHAN_SERVER_MAJOR 0
+#define IDHAN_SERVER_MINOR 0
+#define IDHAN_SERVER_PATCH 0
+
 #ifdef NDEBUG
 
 #ifndef IDHAN_SERVER_MAJOR
