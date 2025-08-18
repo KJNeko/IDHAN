@@ -1,7 +1,5 @@
-CREATE SEQUENCE tag_domains_tag_domain_id_seq;
-
 CREATE TABLE tag_domains
 (
-    tag_domain_id INTEGER PRIMARY KEY DEFAULT NEXTVAL('tag_domains_tag_domain_id_seq'),
+    tag_domain_id SMALLSERIAL PRIMARY KEY,
     domain_name   TEXT UNIQUE NOT NULL
 );
