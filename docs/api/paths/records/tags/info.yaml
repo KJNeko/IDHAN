@@ -18,10 +18,10 @@ get:
             items:
               type: object
               required:
-                - domain_id
+                - tag_domain_id
                 - tag_ids
               properties:
-                domain_id:
+                tag_domain_id:
                   $ref: '../../../schemas/TagDomainID.yaml'
                 tag_ids:
                   type: array

@@ -3,6 +3,6 @@ properties:
   domain_name:
     type: string
     example: "my domain"
-  domain_id:
+  tag_domain_id:
     type: integer
     example: 0
