@@ -7,6 +7,7 @@ namespace idhan
 
 using SmallInt = std::int16_t;
 using Integer = std::int32_t;
+using Int = Integer;
 using BigInt = std::int64_t;
 
 using RecordID = Integer;
