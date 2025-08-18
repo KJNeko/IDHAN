@@ -83,7 +83,7 @@ void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< st
 	{
 		// We can check the CQ ring tail for things being inserted.
 		FGL_ASSERT( uring->uring_fd > 0, "Invalid io_uring fd" );
-		const auto ret { io_uring_enter( uring->uring_fd, 0, 1, IORING_ENTER_GETEVENTS, nullptr ) };
+		const auto ret { io_uring_enter( uring->uring_fd, 0, min_complete, IORING_ENTER_GETEVENTS, nullptr ) };
 
 		if ( ret < 0 )
 		{
