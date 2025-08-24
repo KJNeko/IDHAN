@@ -22,7 +22,7 @@ FileIOUring::FileIOUring( const std::filesystem::path& path ) :
   m_fd( open( path.c_str(), O_RDWR | O_CREAT, 0666 ) ),
   m_path( path )
 {
-	if ( m_fd <= 0 ) throw std::runtime_error( "Failed to open file" );
+	if ( m_fd <= 0 ) throw std::runtime_error( format_ns::format( "Failed to open file {}", path.string() ) );
 }
 
 drogon::Task< std::vector< std::byte > > FileIOUring::readAll() const
@@ -102,10 +102,8 @@ void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< st
 
 		unsigned head { io_uring_smp_load_acquire( uring->m_command_ring.head ) };
 
-		log::debug( "Processing events from io_uring" );
 		while ( head != io_uring_smp_load_acquire( uring->m_command_ring.tail ) )
 		{
-			log::debug( "Processing CQ entry" );
 			const unsigned index = head & *uring->m_command_ring.mask;
 			const auto& cqe = uring->m_command_ring.cqes[ index ];
 
