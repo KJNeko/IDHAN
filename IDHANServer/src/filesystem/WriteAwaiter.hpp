@@ -7,6 +7,8 @@
 #include <exception>
 #include <liburing.h>
 
+#include "fgl/defines.hpp"
+
 namespace trantor
 {
 class EventLoop;
@@ -29,8 +31,8 @@ struct [[nodiscard]] WriteAwaiter
 
 	handle_type m_h;
 
-	std::exception_ptr m_exception;
-	std::coroutine_handle<> m_cont;
+	std::exception_ptr m_exception { nullptr };
+	std::coroutine_handle<> m_cont {};
 
 	IOUring* m_uring { nullptr };
 	io_uring_sqe m_sqe {};
@@ -39,6 +41,8 @@ struct [[nodiscard]] WriteAwaiter
 	WriteAwaiter( handle_type handle ) : m_h( handle ) {}
 
 	WriteAwaiter( IOUring* uring, io_uring_sqe sqe );
+
+	FGL_DELETE_ALL_RO5( WriteAwaiter );
 
 	void complete( int result );
 
