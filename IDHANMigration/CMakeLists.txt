@@ -20,7 +20,3 @@ file(GLOB_RECURSE CPP_SOURCES CONFIGURE_DEPENDS
 add_library(IDHANMigration STATIC ${MIGRATION_SOURCE} ${CPP_SOURCES})
 target_include_directories(IDHANMigration PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(IDHANMigration PRIVATE pqxx spdlog::spdlog)
-
-if (DEFINED ALLOW_TABLE_DESTRUCTION AND ALLOW_TABLE_DESTRUCTION)
-	target_compile_definitions(IDHANMigration PUBLIC ALLOW_TABLE_DESTRUCTION=1)
-endif ()
