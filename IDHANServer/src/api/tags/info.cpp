@@ -51,7 +51,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::
 	{
 		//TODO: Figure out how many files use this tag
 		const auto count_result {
-			co_await db->execSqlCoro( "SELECT storage_count, display_count FROM tag_counts WHERE tag_id = $1", tag_id )
+			co_await db->execSqlCoro( "SELECT storage_count, display_count FROM total_tag_counts WHERE tag_id = $1", tag_id )
 		};
 
 		if ( !count_result.empty() )
