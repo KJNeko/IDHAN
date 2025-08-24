@@ -16,21 +16,28 @@ drogon::Task< Json::Value >
 
 	const auto wrapped_search_value { '%' + search_value + '%' };
 
+	constexpr std::size_t max_limit { 32 };
+
+	if ( limit > max_limit )
+	{
+		log::warn( "Tag search came in with absurdly high limit (was {}, clamped to {})", limit, max_limit );
+	}
+
 	const auto result { co_await db->execSqlCoro(
 		R"(
 		SELECT *,
 				similarity(tag_text, $2)								AS similarity,
 				tag_text = $2											AS exact,
 				similarity(tag_text, $2) * coalesce(display_count, 1)	AS score,
-				tag_counts.display_count								AS count
+				COALESCE(tc.display_count, 0)							AS count
 		FROM tags_combined
-		         JOIN tag_counts USING (tag_id)
+		         LEFT JOIN total_tag_counts tc USING (tag_id)
 		WHERE tag_text LIKE $1
 		ORDER BY exact DESC, score DESC, similarity DESC
 		limit $3)",
 		wrapped_search_value,
 		search_value,
-		limit ) };
+		std::min( limit, max_limit ) ) };
 
 	Json::Value root {};
 
