@@ -37,3 +37,5 @@ read.lock
 # Used for allowing easy setup of development environments for testing
 IDHANServer/src/db/dev.sql
 IDHANServer/src/db/pre-dev.sql
+
+.env
