@@ -70,7 +70,7 @@ endforeach ()
 add_custom_target(IDHANMimeParsers DEPENDS ${PARSER_OUTPUTS})
 add_dependencies(IDHANServer IDHANMimeParsers)
 
-set(CONFIG_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/example.toml")
+set(CONFIG_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/config-example.toml")
 set(CONFIG_OUTPUT "${CMAKE_BINARY_DIR}/bin/config.toml")
 
 add_custom_command(
