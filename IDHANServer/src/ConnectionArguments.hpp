@@ -27,7 +27,7 @@ struct ConnectionArguments
 	std::uint16_t port { config::get< std::uint16_t >( "database", "port", IDHAN_DEFAULT_POSTGRES_PORT ) };
 	std::string dbname { config::get< std::string >( "database", "database", "idhan-db" ) };
 	std::string user { config::get< std::string >( "database", "user", "idhan" ) };
-	std::string password { config::get< std::string >( "database", "password", "" ) };
+	std::string password { config::get< std::string >( "database", "password", "idhan" ) };
 	bool testmode { false };
 	//! If true then the server will use stdout to log things.
 	bool use_stdout { true };
