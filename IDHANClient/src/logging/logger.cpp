@@ -6,7 +6,6 @@
 
 #include <QJsonObject>
 #include <QJsonValue>
-#include <QNetworkReply>
 
 #include "IDHANClient.hpp"
 
