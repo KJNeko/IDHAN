@@ -19,10 +19,8 @@ if (NOT EXISTS ${HYDRUS_SOURCE_FILE})
     )
 endif ()
 
-if (IDHAN_USE_STD_FORMAT)
-
-    include(CheckCXXSourceCompiles)
-    check_cxx_source_compiles("
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
     #include <format>
     int main() {
         std::format(\"Test {}\", 42);
@@ -30,12 +28,10 @@ if (IDHAN_USE_STD_FORMAT)
     }
     " HAVE_STD_FORMAT)
 
-    if (HAVE_STD_FORMAT)
-        target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=1)
-    else ()
-        target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=0)
-    endif ()
-
+if (HAVE_STD_FORMAT)
+    target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=1)
+else ()
+    target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=0)
 endif ()
 
 if (NOT EXISTS ${HYDRUS_SOURCE_FILE})
