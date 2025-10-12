@@ -37,8 +37,15 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
 
 WORKDIR /build
 
-# Copy source code
-COPY . /build/
+# Copy server source files
+COPY dependencies/ /build/dependencies/
+copy 3rd-party/hydrus /build/3rd-party/hydrus/
+COPY IDHANModules/ /build/IDHANModules/
+COPY IDHANServer/ /build/IDHANServer/
+COPY IDHAN/ /build/IDHAN/
+COPY IDHANMigration/ /build/IDHANMigration/
+
+COPY CMakeLists.txt /build/
 
 # Initialize git submodules if needed
 RUN if [ -f .gitmodules ]; then git submodule update --init --recursive || true; fi
@@ -51,6 +58,8 @@ RUN cmake -S . -B build \
     -DBUILD_HYDRUS_IMPORTER=OFF \
     -DBUILD_IDHAN_DOCS=OFF \
     -DBUILD_IDHAN_WEBUI=OFF \
+    -DBUILD_IDHAN_CLIENT=OFF \
+    -DBUILD_IDHAN_TOOLS=OFF \
     && cmake --build build --target IDHANServer -j$(nproc)
 
 # Stage 2: Runtime environment
