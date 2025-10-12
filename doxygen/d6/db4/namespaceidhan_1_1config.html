@@ -125,11 +125,21 @@ Typedefs</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a5a243f4ee0172d26a8550180bdda75ad" id="r_a5a243f4ee0172d26a8550180bdda75ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5a243f4ee0172d26a8550180bdda75ad">addCLIConfig</a> (const std::string_view group, const std::string_view name, const std::string_view value)</td></tr>
+<tr class="memdesc:a5a243f4ee0172d26a8550180bdda75ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Locations to search for config info, Searches user path first, then the inverse of this list.  <br /></td></tr>
+<tr class="separator:a5a243f4ee0172d26a8550180bdda75ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aabefeeb8705781cf495a119ed83d6f23" id="r_aabefeeb8705781cf495a119ed83d6f23"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aabefeeb8705781cf495a119ed83d6f23">getCLIConfig</a> (const std::string_view group, const std::string_view name)</td></tr>
+<tr class="separator:aabefeeb8705781cf495a119ed83d6f23"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adcb29a021b4a4c53eb3d2bda846dbba2" id="r_adcb29a021b4a4c53eb3d2bda846dbba2"><td class="memItemLeft" align="right" valign="top">std::string_view&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adcb29a021b4a4c53eb3d2bda846dbba2">getUserConfigPath</a> ()</td></tr>
-<tr class="memdesc:adcb29a021b4a4c53eb3d2bda846dbba2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Locations to search for config info, Searches user path first, then the inverse of this list.  <br /></td></tr>
 <tr class="separator:adcb29a021b4a4c53eb3d2bda846dbba2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a470e02aa448f04c0dc13a14b6c67bd02" id="r_a470e02aa448f04c0dc13a14b6c67bd02"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a470e02aa448f04c0dc13a14b6c67bd02">setLocation</a> (std::filesystem::path path)</td></tr>
 <tr class="separator:a470e02aa448f04c0dc13a14b6c67bd02"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a92364f7583cb897b92c4ee81038fe395" id="r_a92364f7583cb897b92c4ee81038fe395"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a92364f7583cb897b92c4ee81038fe395"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a92364f7583cb897b92c4ee81038fe395">tryGetEnv</a> (const std::string_view group, const std::string_view name)</td></tr>
+<tr class="separator:a92364f7583cb897b92c4ee81038fe395"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f73b3fd9b6fa82c8f984e936cf4fb86" id="r_a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2f73b3fd9b6fa82c8f984e936cf4fb86">tryGetCLI</a> (const std::string_view group, const std::string_view name)</td></tr>
+<tr class="separator:a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5433efb7f8e18c0ad4d7d611477f1dd9" id="r_a5433efb7f8e18c0ad4d7d611477f1dd9"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a5433efb7f8e18c0ad4d7d611477f1dd9"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a5433efb7f8e18c0ad4d7d611477f1dd9">getValue</a> (std::string_view path, const std::string_view group, const std::string_view name)</td></tr>
 <tr class="separator:a5433efb7f8e18c0ad4d7d611477f1dd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -147,6 +157,8 @@ Functions</h2></td></tr>
 Variables</h2></td></tr>
 <tr class="memitem:afab990a000004246b77833d562707466" id="r_afab990a000004246b77833d562707466"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afab990a000004246b77833d562707466">user_config_path</a> { &quot;&quot; }</td></tr>
 <tr class="separator:afab990a000004246b77833d562707466"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ce648d3f0a53424434f1a8032fb999a" id="r_a5ce648d3f0a53424434f1a8032fb999a"><td class="memItemLeft" align="right" valign="top">static std::unordered_map&lt; std::pair&lt; std::string, std::string &gt;, std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5ce648d3f0a53424434f1a8032fb999a">CLI_CONFIG</a> {}</td></tr>
+<tr class="separator:a5ce648d3f0a53424434f1a8032fb999a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Typedef Documentation</h2>
 <a id="a01dbecb77029982f954f16adf56d9939" name="a01dbecb77029982f954f16adf56d9939"></a>
@@ -164,6 +176,34 @@ Variables</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a5a243f4ee0172d26a8550180bdda75ad" name="a5a243f4ee0172d26a8550180bdda75ad"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a243f4ee0172d26a8550180bdda75ad">&#9670;&#160;</a></span>addCLIConfig()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::config::addCLIConfig </td>
+          <td>(</td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>value</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Locations to search for config info, Searches user path first, then the inverse of this list. </p>
+
+</div>
+</div>
 <a id="a85dee5c79fec80c92190afdc59b16b9c" name="a85dee5c79fec80c92190afdc59b16b9c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a85dee5c79fec80c92190afdc59b16b9c">&#9670;&#160;</a></span>get() <span class="overload">[1/2]</span></h2>
 
@@ -215,6 +255,27 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
+<a id="aabefeeb8705781cf495a119ed83d6f23" name="aabefeeb8705781cf495a119ed83d6f23"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aabefeeb8705781cf495a119ed83d6f23">&#9670;&#160;</a></span>getCLIConfig()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const char * idhan::config::getCLIConfig </td>
+          <td>(</td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="adcb29a021b4a4c53eb3d2bda846dbba2" name="adcb29a021b4a4c53eb3d2bda846dbba2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#adcb29a021b4a4c53eb3d2bda846dbba2">&#9670;&#160;</a></span>getUserConfigPath()</h2>
 
@@ -229,8 +290,6 @@ template&lt;typename T&gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-
-<p>Locations to search for config info, Searches user path first, then the inverse of this list. </p>
 
 </div>
 </div>
@@ -302,7 +361,75 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
+<a id="a2f73b3fd9b6fa82c8f984e936cf4fb86" name="a2f73b3fd9b6fa82c8f984e936cf4fb86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2f73b3fd9b6fa82c8f984e936cf4fb86">&#9670;&#160;</a></span>tryGetCLI()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; T &gt; idhan::config::tryGetCLI </td>
+          <td>(</td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a92364f7583cb897b92c4ee81038fe395" name="a92364f7583cb897b92c4ee81038fe395"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a92364f7583cb897b92c4ee81038fe395">&#9670;&#160;</a></span>tryGetEnv()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; T &gt; idhan::config::tryGetEnv </td>
+          <td>(</td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <h2 class="groupheader">Variable Documentation</h2>
+<a id="a5ce648d3f0a53424434f1a8032fb999a" name="a5ce648d3f0a53424434f1a8032fb999a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5ce648d3f0a53424434f1a8032fb999a">&#9670;&#160;</a></span>CLI_CONFIG</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unordered_map&lt; std::pair&lt; std::string, std::string &gt;, std::string &gt; idhan::config::CLI_CONFIG {}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="afab990a000004246b77833d562707466" name="afab990a000004246b77833d562707466"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afab990a000004246b77833d562707466">&#9670;&#160;</a></span>user_config_path</h2>
 
@@ -318,7 +445,7 @@ template&lt;typename T&gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">

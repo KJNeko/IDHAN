@@ -17,13 +17,12 @@ var searchData=
   ['error_14',['error',['../d6/d70/namespaceidhan_1_1logging.html#ad797006c44c74ca0ae86fb072008a5bc',1,'idhan::logging::error(format_ns::format_string&lt; Ts... &gt; fmt, Ts &amp;&amp;... ts)'],['../d6/d70/namespaceidhan_1_1logging.html#af5d9eed729a7c8e1b89183d9129fe519',1,'idhan::logging::error(const T &amp;msg)'],['../d7/d03/namespaceidhan_1_1log.html#a287df0607837a7584d21e78f7667cadc',1,'idhan::log::error(const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)'],['../d7/d03/namespaceidhan_1_1log.html#a00edb282198c5c35533ebc10bebff6f2',1,'idhan::log::error(const T &amp;val)']]],
   ['ethumbnailaccess_15',['eThumbnailAccess',['../dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880cae5e3626cfca65531a46e0bc61f8efda5',1,'idhan']]],
   ['exceptionhandler_16',['exceptionHandler',['../dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694',1,'idhan']]],
-  ['exceptions_2ehpp_17',['exceptions.hpp',['../da/d49/exceptions_8hpp.html',1,'']]],
-  ['exists_18',['Exists',['../dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2aba7710b08f08a9228fee41ee13261146',1,'idhan']]],
-  ['expectedtask_19',['ExpectedTask',['../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4',1,'ExpectedTask.hpp']]],
-  ['expectedtask_2ehpp_20',['ExpectedTask.hpp',['../d6/d3e/ExpectedTask_8hpp.html',1,'']]],
-  ['extension_21',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension'],['../db/de9/classidhan_1_1FileMappedData.html#ab31ae6048889dbcedca59258bf70db71',1,'idhan::FileMappedData::extension()']]],
-  ['extra_5finfo_22',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]],
-  ['extractrecordidsfromfilesjson_23',['extractRecordIDsFromFilesJson',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidsfromparameters_24',['extractRecordIDsFromParameters',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidstojsonfromfiles_25',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]]
+  ['exists_17',['Exists',['../dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2aba7710b08f08a9228fee41ee13261146',1,'idhan']]],
+  ['expectedtask_18',['ExpectedTask',['../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4',1,'ExpectedTask.hpp']]],
+  ['expectedtask_2ehpp_19',['ExpectedTask.hpp',['../d6/d3e/ExpectedTask_8hpp.html',1,'']]],
+  ['extension_20',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension'],['../db/de9/classidhan_1_1FileMappedData.html#ab31ae6048889dbcedca59258bf70db71',1,'idhan::FileMappedData::extension()']]],
+  ['extra_5finfo_21',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]],
+  ['extractrecordidsfromfilesjson_22',['extractRecordIDsFromFilesJson',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce',1,'idhan::hyapi::helpers']]],
+  ['extractrecordidsfromparameters_23',['extractRecordIDsFromParameters',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1',1,'idhan::hyapi::helpers']]],
+  ['extractrecordidstojsonfromfiles_24',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]]
 ];

@@ -8,6 +8,7 @@ var structidhan_1_1WriteAwaiter =
     [ "await_resume", "d9/d52/structidhan_1_1WriteAwaiter.html#afa540da7f3b46f93a65fd1adfcd3a24e", null ],
     [ "await_suspend", "d9/d52/structidhan_1_1WriteAwaiter.html#a91775a48871679e614197f44bde97f49", null ],
     [ "complete", "d9/d52/structidhan_1_1WriteAwaiter.html#af293e83839efd7192d3d2a4446e48cba", null ],
+    [ "FGL_DELETE_ALL_RO5", "d9/d52/structidhan_1_1WriteAwaiter.html#ab4ec52816b6261733865de068ef38b99", null ],
     [ "m_cont", "d9/d52/structidhan_1_1WriteAwaiter.html#acbd02647c57e56c419b54059fb98515e", null ],
     [ "m_event_loop", "d9/d52/structidhan_1_1WriteAwaiter.html#a43f6a1cd0182310db1c5ad19852f4fa0", null ],
     [ "m_exception", "d9/d52/structidhan_1_1WriteAwaiter.html#aa640f394940439d9db341ca6433425f6", null ],

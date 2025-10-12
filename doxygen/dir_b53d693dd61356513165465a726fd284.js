@@ -13,7 +13,6 @@ var dir_b53d693dd61356513165465a726fd284 =
     [ "Config.cpp", "de/da7/Config_8cpp.html", "de/da7/Config_8cpp" ],
     [ "Config.hpp", "df/db4/Config_8hpp.html", "df/db4/Config_8hpp" ],
     [ "ConnectionArguments.hpp", "d4/d71/ConnectionArguments_8hpp.html", "d4/d71/ConnectionArguments_8hpp" ],
-    [ "exceptions.hpp", "da/d49/exceptions_8hpp.html", "da/d49/exceptions_8hpp" ],
     [ "fixme.hpp", "d6/d3b/fixme_8hpp.html", "d6/d3b/fixme_8hpp" ],
     [ "main.cpp", "df/d0a/main_8cpp.html", "df/d0a/main_8cpp" ],
     [ "ServerContext.cpp", "d3/d0d/ServerContext_8cpp.html", "d3/d0d/ServerContext_8cpp" ],

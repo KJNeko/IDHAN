@@ -111,6 +111,7 @@ $(function(){initNavTree('df/db4/Config_8hpp.html','../../'); initResizable(true
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
@@ -119,12 +120,19 @@ $(function(){initNavTree('df/db4/Config_8hpp.html','../../'); initResizable(true
 <div class="contents">
 <div class="textblock"><code>#include &lt;toml++/toml.hpp&gt;</code><br />
 <code>#include &lt;filesystem&gt;</code><br />
+<code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;ranges&gt;</code><br />
+<code>#include &lt;string&gt;</code><br />
 <code>#include &lt;variant&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../d4/d3d/log_8hpp_source.html">logging/log.hpp</a>&quot;</code><br />
 </div>
 <p><a href="../../df/db4/Config_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc9/structstd_1_1hash_3_01std_1_1pair_3_01std_1_1string_00_01std_1_1string_01_4_01_4.html">std::hash&lt; std::pair&lt; std::string, std::string &gt; &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
@@ -139,9 +147,19 @@ Typedefs</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a5a243f4ee0172d26a8550180bdda75ad" id="r_a5a243f4ee0172d26a8550180bdda75ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a5a243f4ee0172d26a8550180bdda75ad">idhan::config::addCLIConfig</a> (const std::string_view group, const std::string_view name, const std::string_view value)</td></tr>
+<tr class="memdesc:a5a243f4ee0172d26a8550180bdda75ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Locations to search for config info, Searches user path first, then the inverse of this list.  <br /></td></tr>
+<tr class="separator:a5a243f4ee0172d26a8550180bdda75ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aabefeeb8705781cf495a119ed83d6f23" id="r_aabefeeb8705781cf495a119ed83d6f23"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#aabefeeb8705781cf495a119ed83d6f23">idhan::config::getCLIConfig</a> (const std::string_view group, const std::string_view name)</td></tr>
+<tr class="separator:aabefeeb8705781cf495a119ed83d6f23"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adcb29a021b4a4c53eb3d2bda846dbba2" id="r_adcb29a021b4a4c53eb3d2bda846dbba2"><td class="memItemLeft" align="right" valign="top">std::string_view&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2">idhan::config::getUserConfigPath</a> ()</td></tr>
-<tr class="memdesc:adcb29a021b4a4c53eb3d2bda846dbba2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Locations to search for config info, Searches user path first, then the inverse of this list.  <br /></td></tr>
 <tr class="separator:adcb29a021b4a4c53eb3d2bda846dbba2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a92364f7583cb897b92c4ee81038fe395" id="r_a92364f7583cb897b92c4ee81038fe395"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a92364f7583cb897b92c4ee81038fe395"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a92364f7583cb897b92c4ee81038fe395">idhan::config::tryGetEnv</a> (const std::string_view group, const std::string_view name)</td></tr>
+<tr class="separator:a92364f7583cb897b92c4ee81038fe395"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f73b3fd9b6fa82c8f984e936cf4fb86" id="r_a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a2f73b3fd9b6fa82c8f984e936cf4fb86">idhan::config::tryGetCLI</a> (const std::string_view group, const std::string_view name)</td></tr>
+<tr class="separator:a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5433efb7f8e18c0ad4d7d611477f1dd9" id="r_a5433efb7f8e18c0ad4d7d611477f1dd9"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a5433efb7f8e18c0ad4d7d611477f1dd9"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9">idhan::config::getValue</a> (std::string_view path, const std::string_view group, const std::string_view name)</td></tr>
 <tr class="separator:a5433efb7f8e18c0ad4d7d611477f1dd9"><td class="memSeparator" colspan="2">&#160;</td></tr>

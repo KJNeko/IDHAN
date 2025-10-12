@@ -41,6 +41,8 @@ var searchData=
   ['trace_38',['trace',['../d7/d03/namespaceidhan_1_1log.html#af13459524cc53dacaf6736431fae1db1',1,'idhan::log']]],
   ['trantor_39',['trantor',['../db/d9e/namespacetrantor.html',1,'']]],
   ['trantorhook_40',['trantorHook',['../dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8',1,'idhan']]],
-  ['tryparserecordmetadata_41',['tryParseRecordMetadata',['../db/de4/namespaceidhan_1_1api.html#a5b889643255ab25a33cb2d7fff515d36',1,'idhan::api']]],
-  ['type_42',['Type',['../d1/d67/structidhan_1_1IOUringUserData.html#a3456a999bbc12bd5d1744bb0c9be1685',1,'idhan::IOUringUserData::Type'],['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a0cd23d3f9f0b109e732cea5dab9e1146',1,'idhan::mime::MimeIdentifier::Type']]]
+  ['trygetcli_41',['tryGetCLI',['../d6/db4/namespaceidhan_1_1config.html#a2f73b3fd9b6fa82c8f984e936cf4fb86',1,'idhan::config']]],
+  ['trygetenv_42',['tryGetEnv',['../d6/db4/namespaceidhan_1_1config.html#a92364f7583cb897b92c4ee81038fe395',1,'idhan::config']]],
+  ['tryparserecordmetadata_43',['tryParseRecordMetadata',['../db/de4/namespaceidhan_1_1api.html#a5b889643255ab25a33cb2d7fff515d36',1,'idhan::api']]],
+  ['type_44',['Type',['../d1/d67/structidhan_1_1IOUringUserData.html#a3456a999bbc12bd5d1744bb0c9be1685',1,'idhan::IOUringUserData::Type'],['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a0cd23d3f9f0b109e732cea5dab9e1146',1,'idhan::mime::MimeIdentifier::Type']]]
 ];

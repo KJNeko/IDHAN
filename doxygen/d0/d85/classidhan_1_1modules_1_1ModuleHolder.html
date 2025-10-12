@@ -125,8 +125,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a13b19b3f53222bba551652b4f7c1f273"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a21e1f07d028c0d78ec7d93c7be70667e" id="r_a21e1f07d028c0d78ec7d93c7be70667e"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a21e1f07d028c0d78ec7d93c7be70667e">handle</a> () const</td></tr>
 <tr class="separator:a21e1f07d028c0d78ec7d93c7be70667e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a08cef406fd9e5cb57678997bf9921657" id="r_a08cef406fd9e5cb57678997bf9921657"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a08cef406fd9e5cb57678997bf9921657">ModuleHolder</a> (const std::filesystem::path path)</td></tr>
-<tr class="separator:a08cef406fd9e5cb57678997bf9921657"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac4eb3b82c5b35673958ee7ab56e0afac" id="r_ac4eb3b82c5b35673958ee7ab56e0afac"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac4eb3b82c5b35673958ee7ab56e0afac">ModuleHolder</a> (const std::filesystem::path &amp;path)</td></tr>
+<tr class="separator:ac4eb3b82c5b35673958ee7ab56e0afac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aec853b4f78e8f9378f7029b585742a97" id="r_aec853b4f78e8f9378f7029b585742a97"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aec853b4f78e8f9378f7029b585742a97">~ModuleHolder</a> ()</td></tr>
 <tr class="separator:aec853b4f78e8f9378f7029b585742a97"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -139,9 +139,9 @@ Private Types</h2></td></tr>
 Private Attributes</h2></td></tr>
 <tr class="memitem:a1a5882f4c83174a918ff2d56d36e2d06" id="r_a1a5882f4c83174a918ff2d56d36e2d06"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1a5882f4c83174a918ff2d56d36e2d06">m_handle</a></td></tr>
 <tr class="separator:a1a5882f4c83174a918ff2d56d36e2d06"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9ee933bc20c604dfe93e7d6ba6727798" id="r_a9ee933bc20c604dfe93e7d6ba6727798"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#a8c3bf3504d992e927af47a590b7c2f1e">VoidFunc</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9ee933bc20c604dfe93e7d6ba6727798">initFunc</a></td></tr>
+<tr class="memitem:a9ee933bc20c604dfe93e7d6ba6727798" id="r_a9ee933bc20c604dfe93e7d6ba6727798"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#a8c3bf3504d992e927af47a590b7c2f1e">VoidFunc</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9ee933bc20c604dfe93e7d6ba6727798">initFunc</a> { nullptr }</td></tr>
 <tr class="separator:a9ee933bc20c604dfe93e7d6ba6727798"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a00436b13ddf11d7caa817da41efdd2a2" id="r_a00436b13ddf11d7caa817da41efdd2a2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#a8c3bf3504d992e927af47a590b7c2f1e">VoidFunc</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a00436b13ddf11d7caa817da41efdd2a2">deinitFunc</a></td></tr>
+<tr class="memitem:a00436b13ddf11d7caa817da41efdd2a2" id="r_a00436b13ddf11d7caa817da41efdd2a2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#a8c3bf3504d992e927af47a590b7c2f1e">VoidFunc</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a00436b13ddf11d7caa817da41efdd2a2">deinitFunc</a> { nullptr }</td></tr>
 <tr class="separator:a00436b13ddf11d7caa817da41efdd2a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Typedef Documentation</h2>
@@ -168,8 +168,8 @@ Private Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a08cef406fd9e5cb57678997bf9921657" name="a08cef406fd9e5cb57678997bf9921657"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a08cef406fd9e5cb57678997bf9921657">&#9670;&#160;</a></span>ModuleHolder()</h2>
+<a id="ac4eb3b82c5b35673958ee7ab56e0afac" name="ac4eb3b82c5b35673958ee7ab56e0afac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac4eb3b82c5b35673958ee7ab56e0afac">&#9670;&#160;</a></span>ModuleHolder()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -180,7 +180,7 @@ Private Attributes</h2></td></tr>
         <tr>
           <td class="memname">idhan::modules::ModuleHolder::ModuleHolder </td>
           <td>(</td>
-          <td class="paramtype">const std::filesystem::path</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -254,7 +254,7 @@ Private Attributes</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel nodiscard">nodiscard</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -272,7 +272,7 @@ Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="#a8c3bf3504d992e927af47a590b7c2f1e">VoidFunc</a> idhan::modules::ModuleHolder::deinitFunc</td>
+          <td class="memname"><a class="el" href="#a8c3bf3504d992e927af47a590b7c2f1e">VoidFunc</a> idhan::modules::ModuleHolder::deinitFunc { nullptr }</td>
         </tr>
       </table>
   </td>
@@ -294,7 +294,7 @@ Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="#a8c3bf3504d992e927af47a590b7c2f1e">VoidFunc</a> idhan::modules::ModuleHolder::initFunc</td>
+          <td class="memname"><a class="el" href="#a8c3bf3504d992e927af47a590b7c2f1e">VoidFunc</a> idhan::modules::ModuleHolder::initFunc { nullptr }</td>
         </tr>
       </table>
   </td>
