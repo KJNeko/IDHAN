@@ -21,10 +21,10 @@ option(BUILD_IDHAN_SERVER "Builds the server" ON)
 
 option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
 
-option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" OFF)
+option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)
 
 option(BUILD_IDHAN_TOOLS "Builds all tools" OFF)
-option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" OFF)
+option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
 if (BUILD_HYDRUS_IMPORTER)
     set(BUILD_IDHAN_CLIENT ON)

@@ -42,7 +42,7 @@ void notify( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
-	logger->info( fmt, std::forward< Ts >( ts )... );
+	logger->info( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
 template < typename... Ts >
@@ -50,7 +50,7 @@ void debug( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
-	logger->debug( fmt, std::forward< Ts >( ts )... );
+	logger->debug( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
 template < typename... Ts >
@@ -58,7 +58,7 @@ void info( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
-	logger->info( fmt, std::forward< Ts >( ts )... );
+	logger->info( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
 template < typename... Ts >
@@ -66,7 +66,7 @@ void warn( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
-	logger->warn( fmt, std::forward< Ts >( ts )... );
+	logger->warn( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
 template < typename... Ts >
@@ -74,7 +74,7 @@ void error( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
-	logger->error( fmt, std::forward< Ts >( ts )... );
+	logger->error( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
 template < typename T >
@@ -90,7 +90,7 @@ void critical( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
 	auto logger { getLogger() };
 	if ( !logger ) throw std::runtime_error( "Logger not found" );
-	logger->critical( fmt, std::forward< Ts >( ts )... );
+	logger->critical( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
 /**

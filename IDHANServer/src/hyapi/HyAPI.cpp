@@ -162,7 +162,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	Json::Reader reader;
 	if ( !reader.parse( tags, tags_json ) )
 	{
-		co_return createBadRequest( "Invalid tags json" );
+		co_return createBadRequest( "Invalid tags json: Was {}", tags );
 	}
 
 	std::vector< TagID > tag_ids {};

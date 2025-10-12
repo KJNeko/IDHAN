@@ -14,6 +14,7 @@
 #pragma GCC diagnostic ignored "-Wnoexcept"
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #pragma GCC diagnostic ignored "-Wshadow"
+#include "drogon/HttpController.h"
 #include "drogon/HttpMiddleware.h"
 #pragma GCC diagnostic pop
 
@@ -65,6 +66,17 @@ class APIAuth : public drogon::HttpMiddleware< APIAuth >
 		const drogon::HttpRequestPtr& req,
 		drogon::MiddlewareNextCallback&& nextCb,
 		drogon::MiddlewareCallback&& mcb ) override;
+};
+
+class AuthEndpoint : public drogon::HttpController< AuthEndpoint >
+{
+	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( drogon::HttpRequestPtr req );
+
+  public:
+
+	METHOD_LIST_BEGIN
+	ADD_METHOD_TO( AuthEndpoint::verifyAccessKey, "/hyapi/verify_access_key" );
+	METHOD_LIST_END
 };
 
 } // namespace idhan::api
