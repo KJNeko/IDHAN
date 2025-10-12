@@ -24,20 +24,43 @@ class ModuleHolder
 {
 	void* m_handle;
 	using VoidFunc = void* (*)();
-	VoidFunc initFunc;
-	VoidFunc deinitFunc;
+	VoidFunc initFunc { nullptr };
+	VoidFunc deinitFunc { nullptr };
 
   public:
 
 	FGL_DELETE_ALL_RO5( ModuleHolder );
 
-	void* handle() const { return m_handle; }
+	[[nodiscard]] void* handle() const { return m_handle; }
 
-	ModuleHolder( const std::filesystem::path path ) :
-	  m_handle( dlopen( path.c_str(), RTLD_LAZY | RTLD_GLOBAL ) ),
-	  initFunc( reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) ) ),
-	  deinitFunc( reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) ) )
+	ModuleHolder( const std::filesystem::path& path ) : m_handle( dlopen( path.c_str(), RTLD_LAZY | RTLD_GLOBAL ) )
 	{
+		if ( !std::filesystem::exists( path ) )
+		{
+			log::critical( "Failed to find module at path {}, {}", path.string(), dlerror() );
+			std::abort();
+		}
+
+		if ( !m_handle )
+		{
+			log::critical( "Failed to load module {}, {}", path.string(), dlerror() );
+			std::abort();
+		}
+
+		initFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
+		if ( !initFunc )
+		{
+			log::critical( "Failed to interrogate module {}, deinitFunc not found", path.string() );
+			std::abort();
+		}
+
+		deinitFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) );
+		if ( !deinitFunc )
+		{
+			log::critical( "Failed to interrogate module {}, initFunc not found", path.string() );
+			std::abort();
+		}
+
 		initFunc();
 	}
 
@@ -48,7 +71,7 @@ class ModuleHolder
 	}
 };
 
-constexpr std::array< std::string_view, 2 > module_paths { "./modules", "/var/lib/idhan/modules" };
+constexpr std::array< std::string_view, 2 > module_paths { { "./modules", "/var/lib/idhan/modules" } };
 
 void ModuleLoader::loadModules()
 {
@@ -68,7 +91,7 @@ void ModuleLoader::loadModules()
 
 			if ( extension == ".so" )
 			{
-				log::info( "Module found: {}", name );
+				log::info( "Library found: {}", name );
 
 				// void* handle = dlopen( entry.path().c_str(), RTLD_LAZY | RTLD_GLOBAL );
 				std::shared_ptr< ModuleHolder > holder { std::make_shared< ModuleHolder >( entry ) };
@@ -80,7 +103,7 @@ void ModuleLoader::loadModules()
 					continue;
 				}
 
-				log::info( "Getting modules from module" );
+				log::info( "Getting modules from shared lib" );
 
 				using VoidFunc = void* (*)();
 				auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
