@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: idhan-postgres
+    environment:
+      POSTGRES_USER: idhan
+      POSTGRES_PASSWORD: idhan
+      POSTGRES_DB: idhan-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U idhan"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  idhanserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: idhan-server
+    environment:
+      IDHAN_DATABASE_HOST: postgres
+      IDHAN_DATABASE_USER: idhan
+      IDHAN_DATABASE_PASSWORD: idhan
+      IDHAN_DATABASE_DATABASE: idhan-db
+    ports:
+      - "16609:16609"
+    volumes:
+      - idhan_modules:/var/lib/idhan/modules
+      - idhan_mime:/etc/idhan/mime.d
+      - idhan_config:/etc/idhan
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  idhan_modules:
+  idhan_mime:
+  idhan_config:
