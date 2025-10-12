@@ -145,7 +145,7 @@ $(function(){initNavTree('d6/da3/logger_8hpp_source.html','../../'); initResizab
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>{</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="keyword">auto</span> logger { <a class="code hl_function" href="../../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364">getLogger</a>() };</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordflow">if</span> ( !logger ) <span class="keywordflow">throw</span> std::runtime_error( <span class="stringliteral">&quot;Logger not found&quot;</span> );</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    logger-&gt;info( fmt, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    logger-&gt;info( format_ns::format( fmt, std::forward&lt; Ts &gt;( ts )... ) );</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>}</div>
 </div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
@@ -155,7 +155,7 @@ $(function(){initNavTree('d6/da3/logger_8hpp_source.html','../../'); initResizab
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>{</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keyword">auto</span> logger { <a class="code hl_function" href="../../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364">getLogger</a>() };</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keywordflow">if</span> ( !logger ) <span class="keywordflow">throw</span> std::runtime_error( <span class="stringliteral">&quot;Logger not found&quot;</span> );</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    logger-&gt;debug( fmt, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    logger-&gt;debug( format_ns::format( fmt, std::forward&lt; Ts &gt;( ts )... ) );</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>}</div>
 </div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
@@ -165,7 +165,7 @@ $(function(){initNavTree('d6/da3/logger_8hpp_source.html','../../'); initResizab
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>{</div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keyword">auto</span> logger { <a class="code hl_function" href="../../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364">getLogger</a>() };</div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    <span class="keywordflow">if</span> ( !logger ) <span class="keywordflow">throw</span> std::runtime_error( <span class="stringliteral">&quot;Logger not found&quot;</span> );</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    logger-&gt;info( fmt, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    logger-&gt;info( format_ns::format( fmt, std::forward&lt; Ts &gt;( ts )... ) );</div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>}</div>
 </div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
@@ -175,7 +175,7 @@ $(function(){initNavTree('d6/da3/logger_8hpp_source.html','../../'); initResizab
 <div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>{</div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="keyword">auto</span> logger { <a class="code hl_function" href="../../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364">getLogger</a>() };</div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="keywordflow">if</span> ( !logger ) <span class="keywordflow">throw</span> std::runtime_error( <span class="stringliteral">&quot;Logger not found&quot;</span> );</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    logger-&gt;warn( fmt, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    logger-&gt;warn( format_ns::format( fmt, std::forward&lt; Ts &gt;( ts )... ) );</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>}</div>
 </div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
@@ -185,7 +185,7 @@ $(function(){initNavTree('d6/da3/logger_8hpp_source.html','../../'); initResizab
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>{</div>
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keyword">auto</span> logger { <a class="code hl_function" href="../../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364">getLogger</a>() };</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keywordflow">if</span> ( !logger ) <span class="keywordflow">throw</span> std::runtime_error( <span class="stringliteral">&quot;Logger not found&quot;</span> );</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    logger-&gt;error( fmt, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    logger-&gt;error( format_ns::format( fmt, std::forward&lt; Ts &gt;( ts )... ) );</div>
 <div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>}</div>
 </div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
@@ -205,7 +205,7 @@ $(function(){initNavTree('d6/da3/logger_8hpp_source.html','../../'); initResizab
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>{</div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    <span class="keyword">auto</span> logger { <a class="code hl_function" href="../../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364">getLogger</a>() };</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    <span class="keywordflow">if</span> ( !logger ) <span class="keywordflow">throw</span> std::runtime_error( <span class="stringliteral">&quot;Logger not found&quot;</span> );</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    logger-&gt;critical( fmt, std::forward&lt; Ts &gt;( ts )... );</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    logger-&gt;critical( format_ns::format( fmt, std::forward&lt; Ts &gt;( ts )... ) );</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>}</div>
 </div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span></div>
@@ -239,7 +239,7 @@ $(function(){initNavTree('d6/da3/logger_8hpp_source.html','../../'); initResizab
 <div class="ttc" id="aformat__ns_8hpp_html"><div class="ttname"><a href="../../d0/d24/format__ns_8hpp.html">format_ns.hpp</a></div></div>
 <div class="ttc" id="anamespaceIDHAN_1_1log_html"><div class="ttname"><a href="../../d7/db9/namespaceIDHAN_1_1log.html">IDHAN::log</a></div><div class="ttdef"><b>Definition</b> logger.hpp:119</div></div>
 <div class="ttc" id="anamespaceidhan_1_1logging_html"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html">idhan::logging</a></div><div class="ttdef"><b>Definition</b> logger.hpp:36</div></div>
-<div class="ttc" id="anamespaceidhan_1_1logging_html_a0491af2b3a3b5869d3bdfd8bcd752ecf"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#a0491af2b3a3b5869d3bdfd8bcd752ecf">idhan::logging::logResponse</a></div><div class="ttdeci">void logResponse(QNetworkReply *reply)</div><div class="ttdoc">Logs the network error response to the local log only.</div><div class="ttdef"><b>Definition</b> logger.cpp:22</div></div>
+<div class="ttc" id="anamespaceidhan_1_1logging_html_a0491af2b3a3b5869d3bdfd8bcd752ecf"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#a0491af2b3a3b5869d3bdfd8bcd752ecf">idhan::logging::logResponse</a></div><div class="ttdeci">void logResponse(QNetworkReply *reply)</div><div class="ttdoc">Logs the network error response to the local log only.</div><div class="ttdef"><b>Definition</b> logger.cpp:21</div></div>
 <div class="ttc" id="anamespaceidhan_1_1logging_html_a1cc511547b8b0f0bf31a8dc43ea72db9"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#a1cc511547b8b0f0bf31a8dc43ea72db9">idhan::logging::debug</a></div><div class="ttdeci">void debug(format_ns::format_string&lt; Ts... &gt; fmt, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> logger.hpp:49</div></div>
 <div class="ttc" id="anamespaceidhan_1_1logging_html_a1e3a3ad52057010c1de1fcfea9c02bed"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#a1e3a3ad52057010c1de1fcfea9c02bed">idhan::logging::CallbackFunction</a></div><div class="ttdeci">std::function&lt; void(CallbackLevel level, std::string_view message) &gt; CallbackFunction</div><div class="ttdef"><b>Definition</b> logger.hpp:111</div></div>
 <div class="ttc" id="anamespaceidhan_1_1logging_html_a669e7d4e6d0939442ea601b6967313d3"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3">idhan::logging::CallbackLevel</a></div><div class="ttdeci">CallbackLevel</div><div class="ttdef"><b>Definition</b> logger.hpp:102</div></div>
@@ -254,7 +254,7 @@ $(function(){initNavTree('d6/da3/logger_8hpp_source.html','../../'); initResizab
 <div class="ttc" id="anamespaceidhan_1_1logging_html_ac2c95bb22deb171d1ee79402fa796d1b"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#ac2c95bb22deb171d1ee79402fa796d1b">idhan::logging::warn</a></div><div class="ttdeci">void warn(format_ns::format_string&lt; Ts... &gt; fmt, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> logger.hpp:65</div></div>
 <div class="ttc" id="anamespaceidhan_1_1logging_html_ad797006c44c74ca0ae86fb072008a5bc"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#ad797006c44c74ca0ae86fb072008a5bc">idhan::logging::error</a></div><div class="ttdeci">void error(format_ns::format_string&lt; Ts... &gt; fmt, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> logger.hpp:73</div></div>
 <div class="ttc" id="anamespaceidhan_1_1logging_html_ad7f2d7057dade42c67be664ff3261637"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#ad7f2d7057dade42c67be664ff3261637">idhan::logging::info</a></div><div class="ttdeci">void info(format_ns::format_string&lt; Ts... &gt; fmt, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> logger.hpp:57</div></div>
-<div class="ttc" id="anamespaceidhan_1_1logging_html_aec4925cfc1288479a93e17bfc9ba2364"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364">idhan::logging::getLogger</a></div><div class="ttdeci">std::shared_ptr&lt; spdlog::logger &gt; getLogger()</div><div class="ttdef"><b>Definition</b> logger.cpp:16</div></div>
+<div class="ttc" id="anamespaceidhan_1_1logging_html_aec4925cfc1288479a93e17bfc9ba2364"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#aec4925cfc1288479a93e17bfc9ba2364">idhan::logging::getLogger</a></div><div class="ttdeci">std::shared_ptr&lt; spdlog::logger &gt; getLogger()</div><div class="ttdef"><b>Definition</b> logger.cpp:15</div></div>
 <div class="ttc" id="anamespaceidhan_1_1logging_html_af35a292e53fa52cc12fa12916ea54c60"><div class="ttname"><a href="../../d6/d70/namespaceidhan_1_1logging.html#af35a292e53fa52cc12fa12916ea54c60">idhan::logging::critical</a></div><div class="ttdeci">void critical(format_ns::format_string&lt; Ts... &gt; fmt, Ts &amp;&amp;... ts)</div><div class="ttdef"><b>Definition</b> logger.hpp:89</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

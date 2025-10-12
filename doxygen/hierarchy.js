@@ -19,6 +19,7 @@ var hierarchy =
     [ "drogon::HttpController", null, [
       [ "idhan::Ui", "d3/daf/classidhan_1_1Ui.html", null ],
       [ "idhan::api::APIMaintenance", "d8/dd5/classidhan_1_1api_1_1APIMaintenance.html", null ],
+      [ "idhan::api::AuthEndpoint", "d2/d04/classidhan_1_1api_1_1AuthEndpoint.html", null ],
       [ "idhan::api::ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", null ],
       [ "idhan::api::ImportAPI", "d5/d82/classidhan_1_1api_1_1ImportAPI.html", null ],
       [ "idhan::api::InfoAPI", "dd/db3/classidhan_1_1api_1_1InfoAPI.html", null ],

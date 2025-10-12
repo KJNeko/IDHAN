@@ -7,6 +7,7 @@ var annotated_dup =
       [ "api", "db/de4/namespaceidhan_1_1api.html", [
         [ "APIAuth", "d4/d76/classidhan_1_1api_1_1APIAuth.html", "d4/d76/classidhan_1_1api_1_1APIAuth" ],
         [ "APIMaintenance", "d8/dd5/classidhan_1_1api_1_1APIMaintenance.html", "d8/dd5/classidhan_1_1api_1_1APIMaintenance" ],
+        [ "AuthEndpoint", "d2/d04/classidhan_1_1api_1_1AuthEndpoint.html", "d2/d04/classidhan_1_1api_1_1AuthEndpoint" ],
         [ "ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", "dc/d8c/classidhan_1_1api_1_1ClusterAPI" ],
         [ "ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", "d8/d94/structidhan_1_1api_1_1ClusterInfo" ],
         [ "Heartbeat", "dd/d91/classidhan_1_1api_1_1Heartbeat.html", "dd/d91/classidhan_1_1api_1_1Heartbeat" ],

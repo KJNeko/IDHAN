@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.13.2"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: IDHANServer/src/api/APIAuth.hpp File Reference</title>
+    <title>IDHAN: idhan::api::AuthEndpoint Class Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('da/d3c/APIAuth_8hpp.html','../../'); initResizable(true); });
+$(function(){initNavTree('d2/d04/classidhan_1_1api_1_1AuthEndpoint.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -111,36 +111,88 @@ $(function(){initNavTree('da/d3c/APIAuth_8hpp.html','../../'); initResizable(tru
 
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a>  </div>
-  <div class="headertitle"><div class="title">APIAuth.hpp File Reference</div></div>
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pri-methods">Private Member Functions</a> &#124;
+<a href="../../d9/de2/classidhan_1_1api_1_1AuthEndpoint-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">idhan::api::AuthEndpoint Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &quot;drogon/HttpController.h&quot;</code><br />
-<code>#include &quot;drogon/HttpMiddleware.h&quot;</code><br />
-</div>
-<p><a href="../../da/d3c/APIAuth_8hpp_source.html">Go to the source code of this file.</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../da/d3c/APIAuth_8hpp_source.html">APIAuth.hpp</a>&gt;</code></p>
+<div class="dynheader">
+Inheritance diagram for idhan::api::AuthEndpoint:</div>
+<div class="dyncontent">
+ <div class="center">
+  <img src="../../d2/d04/classidhan_1_1api_1_1AuthEndpoint.png" alt=""/>
+ </div></div>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
-Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d76/classidhan_1_1api_1_1APIAuth.html">idhan::api::APIAuth</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d04/classidhan_1_1api_1_1AuthEndpoint.html">idhan::api::AuthEndpoint</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:afa29ad8f1a211e20f40773089e1e5404" id="r_afa29ad8f1a211e20f40773089e1e5404"><td class="memItemLeft" align="right" valign="top">METHOD_LIST_BEGIN&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afa29ad8f1a211e20f40773089e1e5404">ADD_METHOD_TO</a> (<a class="el" href="#ae28cabf5caf5a3a5b1ef0c40ce4850df">AuthEndpoint::verifyAccessKey</a>, &quot;/hyapi/verify_access_key&quot;)</td></tr>
+<tr class="separator:afa29ad8f1a211e20f40773089e1e5404"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
-Namespaces</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html">idhan::api</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
+Private Member Functions</h2></td></tr>
+<tr class="memitem:ae28cabf5caf5a3a5b1ef0c40ce4850df" id="r_ae28cabf5caf5a3a5b1ef0c40ce4850df"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae28cabf5caf5a3a5b1ef0c40ce4850df">verifyAccessKey</a> (drogon::HttpRequestPtr req)</td></tr>
+<tr class="separator:ae28cabf5caf5a3a5b1ef0c40ce4850df"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="afa29ad8f1a211e20f40773089e1e5404" name="afa29ad8f1a211e20f40773089e1e5404"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa29ad8f1a211e20f40773089e1e5404">&#9670;&#160;</a></span>ADD_METHOD_TO()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">METHOD_LIST_BEGIN idhan::api::AuthEndpoint::ADD_METHOD_TO </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae28cabf5caf5a3a5b1ef0c40ce4850df">AuthEndpoint::verifyAccessKey</a></td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">&quot;/hyapi/verify_access_key&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae28cabf5caf5a3a5b1ef0c40ce4850df" name="ae28cabf5caf5a3a5b1ef0c40ce4850df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae28cabf5caf5a3a5b1ef0c40ce4850df">&#9670;&#160;</a></span>verifyAccessKey()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; drogon::HttpResponsePtr &gt; idhan::api::AuthEndpoint::verifyAccessKey </td>
+          <td>(</td>
+          <td class="paramtype">drogon::HttpRequestPtr</td>          <td class="paramname"><span class="paramname"><em>req</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
+<li>IDHANServer/src/api/<a class="el" href="../../da/d3c/APIAuth_8hpp_source.html">APIAuth.hpp</a></li>
+<li>IDHANServer/src/api/<a class="el" href="../../d7/d86/APIAuth_8cpp.html">APIAuth.cpp</a></li>
+</ul>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8b56e136226ae89f755dd9aa547a23fc.html">api</a></li><li class="navelem"><a class="el" href="../../da/d3c/APIAuth_8hpp.html">APIAuth.hpp</a></li>
+    <li class="navelem"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></li><li class="navelem"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html">api</a></li><li class="navelem"><a class="el" href="../../d2/d04/classidhan_1_1api_1_1AuthEndpoint.html">AuthEndpoint</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>
