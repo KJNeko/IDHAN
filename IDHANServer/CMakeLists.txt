@@ -3,7 +3,6 @@ project(IDHANServer LANGUAGES CXX C)
 AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 
-
 target_sources(IDHANServer PRIVATE ${MIGRATION_SOURCE})
 
 # Gui is needed for QImage for whatever reason
@@ -21,10 +20,6 @@ target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core Qt6::Multimedia tomlplu
 target_link_libraries(IDHANServer PRIVATE IDHAN)
 target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANMigration)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
-
-if (DEFINED ALLOW_TABLE_DESTRUCTION AND ALLOW_TABLE_DESTRUCTION)
-	target_compile_definitions(IDHANServer PUBLIC ALLOW_TABLE_DESTRUCTION=1)
-endif ()
 
 # Copy page info to the output directory
 
@@ -75,7 +70,7 @@ endforeach ()
 add_custom_target(IDHANMimeParsers DEPENDS ${PARSER_OUTPUTS})
 add_dependencies(IDHANServer IDHANMimeParsers)
 
-set(CONFIG_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/example.toml")
+set(CONFIG_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/config-example.toml")
 set(CONFIG_OUTPUT "${CMAKE_BINARY_DIR}/bin/config.toml")
 
 add_custom_command(

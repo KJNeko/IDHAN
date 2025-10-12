@@ -126,7 +126,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
   m_postgresql_management( std::make_unique< ManagementConnection >( arguments ) ),
   args( arguments )
 {
-	log::server::info( "IDHAN initialization starting" );
+	log::info( "IDHAN initialization starting" );
 
 	// spdlog::enable_backtrace( 32 );
 
@@ -190,7 +190,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	drogon::app().getLoop()->queueInLoop( [ this ]()
 	                                      { m_clusters = std::make_unique< filesystem::ClusterManager >(); } );
 
-	log::server::info( "IDHAN initialization finished" );
+	log::info( "IDHAN initialization finished" );
 }
 
 void trantorHook( const char* msg, const std::uint64_t len )
@@ -200,7 +200,7 @@ void trantorHook( const char* msg, const std::uint64_t len )
 
 void ServerContext::run()
 {
-	log::server::info( "Starting runtime" );
+	log::info( "Starting runtime" );
 
 	trantor::Logger::setOutputFunction( trantorHook, []() noexcept {} );
 
@@ -208,9 +208,6 @@ void ServerContext::run()
 	log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
 
 	drogon::app().run();
-
-	// log::server::info( "Shutting down" );
-	return;
 }
 
 ServerContext::~ServerContext()

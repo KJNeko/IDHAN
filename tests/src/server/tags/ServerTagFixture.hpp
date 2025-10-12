@@ -25,5 +25,11 @@ class ServerTagFixture : public ServerDBFixture
 
 	bool aliasExists( TagID aliased_id, TagID alias_id );
 
+	void createParent( TagID parent_id, TagID child_id );
+
+	bool parentExists( TagID parent_id, TagID child_id );
+
+	testing::AssertionResult parentInternalExists( RecordID record_id, TagID parent_id, TagID child_id, std::uint32_t count = 1 );
+
 	TagDomainID default_domain_id { 0 };
 };

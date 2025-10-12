@@ -59,26 +59,4 @@ void addTableToInfo(
 		params );
 }
 
-#ifdef ALLOW_TABLE_DESTRUCTION
-
-void destroyTables( pqxx::nontransaction& tx )
-{
-	// log::critical(
-	// "We are about to drop the public schema since we are compiling with ALLOW_TABLE_DESTRUCTION! This will happen in 5 seconds. QUIT NOW IF YOU DON'T WANT THIS TO HAPPEN" );
-	// std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
-
-	if ( !tx.exec( "SELECT schema_name FROM information_schema.schemata WHERE schema_name = \'public\'" ).empty() )
-	{
-		tx.exec( "DROP SCHEMA public CASCADE" );
-	}
-	else
-	{
-		spdlog::debug( "Public schema does not exist. Skipping drop." );
-	}
-
-	tx.exec( "CREATE SCHEMA public" );
-}
-
-#endif
-
 } // namespace idhan::db

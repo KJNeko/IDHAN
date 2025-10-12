@@ -9,11 +9,13 @@ TEST_F( MappingFixture, StorageMapping )
 	const auto tag_1 { createTag( "tag:1" ) };
 	const auto tag_2 { createTag( "tag:2" ) };
 
-	createMapping( tag_1 );
-	createMapping( tag_2 );
+	const auto record { createRecord( "record" ) };
 
-	ASSERT_TRUE( mappingExists( tag_1 ) );
-	ASSERT_TRUE( mappingExists( tag_2 ) );
+	createMapping( tag_1, record );
+	createMapping( tag_2, record );
+
+	ASSERT_TRUE( mappingExists( tag_1, record ) );
+	ASSERT_TRUE( mappingExists( tag_2, record ) );
 
 	SUCCEED();
 }

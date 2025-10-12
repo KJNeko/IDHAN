@@ -6,6 +6,11 @@ AS
 $$
 BEGIN
 
+    IF EXISTS(SELECT 1 FROM tag_aliases ta WHERE COALESCE(ta.ideal_alias_id, ta.alias_id) = new.aliased_id AND ta.tag_domain_id = new.tag_domain_id AND ta.aliased_id <> COALESCE(new.ideal_alias_id, new.alias_id))
+    THEN
+        RAISE EXCEPTION 'Recursive alias detected during update';
+    END IF;
+
     UPDATE tag_aliases
     SET ideal_alias_id = COALESCE(new.ideal_alias_id, new.alias_id)
     WHERE tag_aliases.alias_id = new.aliased_id

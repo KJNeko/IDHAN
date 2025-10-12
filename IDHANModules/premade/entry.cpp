@@ -9,7 +9,6 @@
 #pragma GCC diagnostic pop
 
 #include <format>
-#include <functional>
 #include <memory>
 #include <vector>
 
@@ -24,13 +23,6 @@ std::vector< std::shared_ptr< IDHANModule > > getModules()
 		                                                std::make_shared< ImageVipsThumbnailer >() };
 
 	return ret;
-}
-
-extern "C" {
-
-void* getModulesFunc()
-{
-	return reinterpret_cast< void* >( &getModules );
 }
 
 void gLoghandler(
@@ -67,6 +59,13 @@ void gLoghandler(
 		case G_LOG_LEVEL_DEBUG:
 			spdlog::debug( std::format( "VIPS: {}", message ) );
 	}
+}
+
+extern "C" {
+
+void* getModulesFunc()
+{
+	return reinterpret_cast< void* >( &getModules );
 }
 
 // Defined and implemented if a library used by these modules must be initalized first

@@ -12,13 +12,6 @@
 namespace idhan
 {
 
-void ManagementConnection::initalSetup( pqxx::nontransaction& tx )
-{
-	log::info( "Starting inital table setup" );
-
-	tx.commit();
-}
-
 ManagementConnection::ManagementConnection( const ConnectionArguments& arguments ) : connection( arguments.format() )
 {
 	log::info( "Postgres connection made: {}", connection.dbname() );
@@ -37,7 +30,6 @@ ManagementConnection::ManagementConnection( const ConnectionArguments& arguments
 	{
 		tx.exec( "CREATE SCHEMA IF NOT EXISTS public" );
 		constexpr std::string_view schema { "public" };
-		db::destroyTables( tx );
 		db::updateMigrations( tx, schema );
 	}
 
@@ -55,6 +47,7 @@ std::string ConnectionArguments::format() const
 	str += format_ns::format( "port={} ", port );
 	str += format_ns::format( "dbname={} ", dbname );
 	str += format_ns::format( "user={} ", user );
+	if ( !password.empty() ) str += format_ns::format( "password={} ", password );
 	if ( testmode ) str += "options='-c search_path=test -c client_min_messages=debug1'";
 
 	log::debug( "Connecting using: {}", str );
