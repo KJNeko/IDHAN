@@ -15,11 +15,16 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/dependencies")
 
 PreSetup()
 
-option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)
-option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" ON)
-option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
 option(BUILD_IDHAN_WEBUI "Builds the WASM WebUI for IDHAN server" ON)
+option(BUILD_IDHAN_SERVER "Builds the server" ON)
+
+option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
+
+option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" OFF)
+
+option(BUILD_IDHAN_TOOLS "Builds all tools" OFF)
+option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" OFF)
 
 if (BUILD_HYDRUS_IMPORTER)
     set(BUILD_IDHAN_CLIENT ON)
@@ -32,13 +37,20 @@ include(postgres)
 include(toml)
 
 add_subdirectory(IDHAN)
-add_subdirectory(IDHANMigration)
-add_subdirectory(IDHANModules)
-add_subdirectory(IDHANServer)
-add_subdirectory(IDHANClient)
-add_subdirectory(tools/TagEditor)
-add_subdirectory(docs)
-
+if (BUILD_IDHAN_SERVER)
+    add_subdirectory(IDHANMigration)
+    add_subdirectory(IDHANModules)
+    add_subdirectory(IDHANServer)
+endif ()
+if (BUILD_IDHAN_CLIENT)
+    add_subdirectory(IDHANClient)
+endif ()
+if (BUILD_IDHAN_TOOLS)
+    add_subdirectory(tools/TagEditor)
+endif ()
+if (BUILD_IDHAN_DOCS)
+    add_subdirectory(docs)
+endif ()
 
 if (BUILD_IDHAN_WEBUI)
     include(ExternalProject)
