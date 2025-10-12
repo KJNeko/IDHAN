@@ -15,4 +15,10 @@ void APIAuth::invoke(
 	// continue
 	nextCb( std::move( mcb ) );
 }
+
+drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyAccessKey( drogon::HttpRequestPtr req )
+{
+	co_return drogon::HttpResponse::newHttpResponse();
+}
+
 } // namespace idhan::api

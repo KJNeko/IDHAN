@@ -13,7 +13,6 @@
 #include <qtconcurrentrun.h>
 
 #include "logging/logger.hpp"
-#include "logging/qt_formatters/qstring.hpp"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 namespace idhan
@@ -209,8 +208,8 @@ void IDHANClient::sendClientJson(
 			if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 5 ) )
 			{
 				logging::warn(
-					"Server took {} to response to query {}. Might be doing a lot of work?",
-					std::chrono::duration_cast< std::chrono::milliseconds >( response_time ),
+					"Server took {}ms to response to query {}. Might be doing a lot of work?",
+					std::chrono::duration_cast< std::chrono::milliseconds >( response_time ).count(),
 					response->url().path().toStdString() );
 			}
 
