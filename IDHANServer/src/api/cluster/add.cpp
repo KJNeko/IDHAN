@@ -6,7 +6,6 @@
 
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "exceptions.hpp"
 #include "filesystem/ClusterManager.hpp"
 #include "logging/log.hpp"
 
