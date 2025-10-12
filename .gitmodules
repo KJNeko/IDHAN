@@ -49,3 +49,6 @@
 [submodule "dependencies/trantor"]
 	path = dependencies/trantor
 	url = https://github.com/KJNeko/trantor.git
+[submodule "3rd-party/hydrui"]
+	path = 3rd-party/hydrui
+	url = https://github.com/hydrui/hydrui.git
