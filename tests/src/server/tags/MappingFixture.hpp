@@ -10,9 +10,9 @@ class MappingFixture : public ServerTagFixture
 
   protected:
 
-	void createMapping( TagID tag_id );
-	void deleteMapping( TagID tag_id );
-	bool mappingExists( TagID tag_id );
+	void createMapping( TagID tag_id, RecordID record_id );
+	void deleteMapping( TagID tag_id, RecordID record_id );
+	bool mappingExists( TagID tag_id, RecordID record_id );
 
 	RecordID createRecord( const std::string_view data );
 	void SetUp() override;

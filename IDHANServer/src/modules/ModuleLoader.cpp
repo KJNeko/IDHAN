@@ -24,20 +24,43 @@ class ModuleHolder
 {
 	void* m_handle;
 	using VoidFunc = void* (*)();
-	VoidFunc initFunc;
-	VoidFunc deinitFunc;
+	VoidFunc initFunc { nullptr };
+	VoidFunc deinitFunc { nullptr };
 
   public:
 
 	FGL_DELETE_ALL_RO5( ModuleHolder );
 
-	void* handle() const { return m_handle; }
+	[[nodiscard]] void* handle() const { return m_handle; }
 
-	ModuleHolder( const std::filesystem::path path ) :
-	  m_handle( dlopen( path.c_str(), RTLD_LAZY | RTLD_GLOBAL ) ),
-	  initFunc( reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) ) ),
-	  deinitFunc( reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) ) )
+	ModuleHolder( const std::filesystem::path& path ) : m_handle( dlopen( path.c_str(), RTLD_LAZY | RTLD_GLOBAL ) )
 	{
+		if ( !std::filesystem::exists( path ) )
+		{
+			log::critical( "Failed to find module at path {}, {}", path.string(), dlerror() );
+			std::abort();
+		}
+
+		if ( !m_handle )
+		{
+			log::critical( "Failed to load module {}, {}", path.string(), dlerror() );
+			std::abort();
+		}
+
+		initFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
+		if ( !initFunc )
+		{
+			log::critical( "Failed to interrogate module {}, deinitFunc not found", path.string() );
+			std::abort();
+		}
+
+		deinitFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) );
+		if ( !deinitFunc )
+		{
+			log::critical( "Failed to interrogate module {}, initFunc not found", path.string() );
+			std::abort();
+		}
+
 		initFunc();
 	}
 
@@ -48,75 +71,80 @@ class ModuleHolder
 	}
 };
 
+constexpr std::array< std::string_view, 2 > module_paths { { "./modules", "/var/lib/idhan/modules" } };
+
 void ModuleLoader::loadModules()
 {
-	const auto search_path { std::filesystem::current_path() / "modules" };
-
-	log::info( "Searching for modules at {}", search_path.string() );
-
-	for ( const auto& entry : std::filesystem::directory_iterator( search_path ) )
+	for ( const auto& search_path : module_paths )
 	{
-		if ( !entry.is_regular_file() ) continue;
+		if ( !std::filesystem::exists( search_path ) ) continue;
 
-		const auto path { entry.path() };
-		const auto extension { path.extension() };
-		const auto name { path.filename().string() };
+		log::info( "Searching for modules at {}", search_path );
 
-		if ( extension == ".so" )
+		for ( const auto& entry : std::filesystem::directory_iterator( search_path ) )
 		{
-			log::info( "Module found: {}", name );
+			if ( !entry.is_regular_file() ) continue;
 
-			// void* handle = dlopen( entry.path().c_str(), RTLD_LAZY | RTLD_GLOBAL );
-			std::shared_ptr< ModuleHolder > holder { std::make_shared< ModuleHolder >( entry ) };
-			m_libs.emplace_back( holder );
+			const auto path { entry.path() };
+			const auto extension { path.extension() };
+			const auto name { path.filename().string() };
 
-			if ( !holder->handle() )
+			if ( extension == ".so" )
 			{
-				log::error( "Failed to load module: {}", dlerror() );
-				continue;
-			}
+				log::info( "Library found: {}", name );
 
-			log::info( "Getting modules from module" );
+				// void* handle = dlopen( entry.path().c_str(), RTLD_LAZY | RTLD_GLOBAL );
+				std::shared_ptr< ModuleHolder > holder { std::make_shared< ModuleHolder >( entry ) };
+				m_libs.emplace_back( holder );
 
-			using VoidFunc = void* (*)();
-			auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
-			if ( !getModulesFunc )
-			{
-				log::error( "Failed to get getModulesFunc: {}", dlerror() );
-				continue;
-			}
-
-			using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )();
-			auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
-
-			if ( !getModules )
-			{
-				log::error( "Failed to get modules function: {}", dlerror() );
-				continue;
-			}
-
-			auto modules = getModules();
-
-			//TODO: Possibly UB, Since apparently libraries have their own heaps?
-
-			for ( const auto& module : modules )
-			{
-				log::info( "Interrogating module from {} named {}", name, module->name() );
-
-				switch ( module->type() )
+				if ( !holder->handle() )
 				{
-					default:
-						log::error( "Unknown module type: {}", module->type() );
-						break;
-					case ModuleTypeFlags::METADATA:
-						log::info( "Module type: Metadata" );
-						break;
-					case ModuleTypeFlags::THUMBNAILER:
-						log::info( "Module type: Thumbnailer" );
-						break;
+					log::error( "Failed to load module: {}", dlerror() );
+					continue;
 				}
 
-				m_modules.push_back( module );
+				log::info( "Getting modules from shared lib" );
+
+				using VoidFunc = void* (*)();
+				auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
+				if ( !getModulesFunc )
+				{
+					log::error( "Failed to get getModulesFunc: {}", dlerror() );
+					continue;
+				}
+
+				using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )();
+				auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
+
+				if ( !getModules )
+				{
+					log::error( "Failed to get modules function: {}", dlerror() );
+					continue;
+				}
+
+				auto modules = getModules();
+
+				//TODO: Possibly UB, Since apparently libraries have their own heaps?
+
+				for ( const auto& module : modules )
+				{
+					log::info( "Interrogating module from {} named {}", name, module->name() );
+
+					switch ( module->type() )
+					{
+						default:
+							log::error( "Unknown module type: {}", module->type() );
+							break;
+						case ModuleTypeFlags::METADATA:
+							log::info( "Module type: Metadata" );
+							break;
+						case ModuleTypeFlags::THUMBNAILER:
+							log::info( "Module type: Thumbnailer" );
+							break;
+					}
+
+					m_modules.push_back( module );
+				}
 			}
 		}
 	}

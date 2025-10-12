@@ -10,8 +10,23 @@
 #include "ServerContext.hpp"
 #include "logging/log.hpp"
 
+void applyCLISettings(
+	const std::string_view group,
+	const std::string_view name,
+	const QCommandLineParser& parser,
+	const QCommandLineOption& pg_host )
+{
+	using namespace idhan::config;
+	if ( parser.isSet( pg_host ) )
+	{
+		addCLIConfig( group, name, parser.value( pg_host ).toStdString() );
+	}
+}
+
 int main( int argc, char** argv )
 {
+	using namespace idhan;
+
 	QCommandLineParser parser {};
 	parser.addHelpOption();
 	parser.addVersionOption();
@@ -48,9 +63,9 @@ int main( int argc, char** argv )
 
 	parser.process( app );
 
+	applyCLISettings( "database", "hostname", parser, pg_host );
+
 	idhan::ConnectionArguments arguments {};
-	arguments.user = parser.value( pg_user ).toStdString();
-	arguments.hostname = parser.value( pg_host ).toStdString();
 
 	if ( parser.isSet( config_location ) )
 	{

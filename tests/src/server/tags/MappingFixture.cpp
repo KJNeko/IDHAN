@@ -4,29 +4,29 @@
 
 #include "MappingFixture.hpp"
 
-void MappingFixture::createMapping( TagID tag_id )
+void MappingFixture::createMapping( TagID tag_id, const RecordID record_id )
 {
 	pqxx::work tx { *conn };
 
-	tx.exec_params( "INSERT INTO tag_mappings (tag_id, record_id, tag_domain_id) VALUES ($1, $2, $3)", pqxx::params { tag_id, default_record_id, default_domain_id } );
+	tx.exec_params( "INSERT INTO tag_mappings (tag_id, record_id, tag_domain_id) VALUES ($1, $2, $3)", pqxx::params { tag_id, record_id, default_domain_id } );
 
 	tx.commit();
 }
 
-void MappingFixture::deleteMapping( TagID tag_id )
+void MappingFixture::deleteMapping( TagID tag_id, const RecordID record_id )
 {
 	pqxx::work tx { *conn };
 
-	tx.exec_params( "DELETE FROM tag_mappings WHERE tag_id = $1 AND record_id = $2 AND tag_domain_id = $3", pqxx::params { tag_id, default_record_id, default_domain_id } );
+	tx.exec_params( "DELETE FROM tag_mappings WHERE tag_id = $1 AND record_id = $2 AND tag_domain_id = $3", pqxx::params { tag_id, record_id, default_domain_id } );
 
 	tx.commit();
 }
 
-bool MappingFixture::mappingExists( TagID tag_id )
+bool MappingFixture::mappingExists( TagID tag_id, const RecordID record_id )
 {
 	pqxx::work tx { *conn };
 
-	const auto result { tx.exec_params( "SELECT EXISTS(SELECT 1 FROM tag_mappings WHERE tag_id = $1 AND record_id = $2 AND tag_domain_id = $3)", pqxx::params { tag_id, default_record_id, default_domain_id } ) };
+	const auto result { tx.exec_params( "SELECT EXISTS(SELECT 1 FROM tag_mappings WHERE tag_id = $1 AND record_id = $2 AND tag_domain_id = $3)", pqxx::params { tag_id, record_id, default_domain_id } ) };
 
 	tx.commit();
 
@@ -39,9 +39,11 @@ RecordID MappingFixture::createRecord( const std::string_view data )
 
 	const auto result { tx.exec_params( "INSERT INTO records (sha256) VALUES (digest($1, 'sha256')) RETURNING record_id", pqxx::params { data } ) };
 
-	tx.commit();
-
 	if ( result.empty() ) throw std::runtime_error( "Failed to create record" );
+
+	tx.exec_params( "INSERT INTO file_info (size, record_id) VALUES ($1, $2)", 1, result[ 0 ][ 0 ].as< RecordID >() );
+
+	tx.commit();
 
 	return result[ 0 ][ 0 ].as< RecordID >();
 }
@@ -49,6 +51,4 @@ RecordID MappingFixture::createRecord( const std::string_view data )
 void MappingFixture::SetUp()
 {
 	ServerTagFixture::SetUp();
-
-	default_record_id = createRecord( "test" );
 }

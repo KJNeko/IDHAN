@@ -20,7 +20,7 @@ MimeID registerMimeType( const std::string& name, drogon::orm::DbClientPtr db )
 
 	for ( const QMimeType& mime_type : mime_types )
 	{
-		if ( mime_type.name() == name )
+		if ( mime_type.name().toStdString() == name )
 		{
 			const auto extension { mime_type.preferredSuffix() };
 

@@ -10,7 +10,18 @@
 namespace idhan::config
 {
 
-static std::string user_config_path { "" };
+inline static std::string user_config_path { "" };
+inline static std::unordered_map< std::pair< std::string, std::string >, std::string > CLI_CONFIG {};
+
+void addCLIConfig( const std::string_view group, const std::string_view name, const std::string_view value )
+{
+	CLI_CONFIG.emplace( std::pair< std::string, std::string >( group, name ), value );
+}
+
+const char* getCLIConfig( const std::string_view group, const std::string_view name )
+{
+	return CLI_CONFIG.at( std::pair< std::string, std::string >( group, name ) ).c_str();
+}
 
 std::string_view getUserConfigPath()
 {

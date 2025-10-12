@@ -20,8 +20,6 @@ class ManagementConnection
 {
 	pqxx::connection connection;
 
-	void initalSetup( pqxx::nontransaction& nontransaction );
-
   public:
 
 	inline pqxx::connection& conn() { return connection; }

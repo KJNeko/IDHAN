@@ -184,7 +184,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
 	try
 	{
 		const auto insert_result { co_await db->execSqlCoro(
-			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) VALUES ($1, UNNEST($2::tagid[]), $3) ON CONFLICT DO NOTHING",
+			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
 			record_id,
 			std::move( tag_ids ),
 			tag_domain_id ) };
