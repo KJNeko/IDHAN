@@ -83,9 +83,9 @@ class ClusterManager
 
 		ClusterFlags m_flags;
 
-		std::size_t capacity() const;
+		[[nodiscard]] std::size_t capacity() const;
 
-		std::size_t free() const;
+		[[nodiscard]] std::size_t free() const;
 		ClusterInfo( const std::filesystem::path& path, ClusterID id );
 		ClusterInfo( const drogon::orm::Row& row );
 
@@ -99,7 +99,7 @@ class ClusterManager
 			std::string_view extension,
 			FileMetaType type ) const;
 
-		bool hasFile( const SHA256& sha256 ) const;
+		[[nodiscard]] bool hasFile( const SHA256& sha256 ) const;
 	};
 
 	std::mutex m_mutex {};

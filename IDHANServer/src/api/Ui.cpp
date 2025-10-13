@@ -3,12 +3,14 @@
 //
 #include "Ui.hpp"
 
+#include "paths.hpp"
+
 namespace idhan
 {
 
 drogon::Task< drogon::HttpResponsePtr > Ui::index( drogon::HttpRequestPtr )
 {
-	co_return drogon::HttpResponse::newFileResponse( "./static/IDHANWebUI.html" );
+	co_return drogon::HttpResponse::newFileResponse( getStaticPath() / "IDHANWebUI.html" );
 }
 
 } // namespace idhan

@@ -6,23 +6,25 @@
 
 #include "InfoAPI.hpp"
 #include "helpers/createBadRequest.hpp"
-#include "logging/log.hpp"
+#include "paths.hpp"
 
 namespace idhan::api
 {
 
-void InfoAPI::apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > InfoAPI::apiDocs( drogon::HttpRequestPtr request )
 {
-	const std::string path { request->getPath() };
+	const std::string path_str { request->getPath() };
+	const std::filesystem::path file_path { path_str.substr( 1 ) };
+	const auto static_path { getStaticPath() };
 
-	// log::info( "Attempted to get {}", path );
+	log::info( "Attempting to get api docs from {}", ( static_path / file_path ).string() );
 
-	callback( drogon::HttpResponse::newFileResponse( "./static" + path ) );
+	co_return drogon::HttpResponse::newFileResponse( static_path / file_path );
 }
 
-void InfoAPI::api( const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
+drogon::Task< drogon::HttpResponsePtr > InfoAPI::api( drogon::HttpRequestPtr request )
 {
-	callback( drogon::HttpResponse::newFileResponse( "./static/apidocs.html" ) );
+	co_return drogon::HttpResponse::newFileResponse( getStaticPath() / "apidocs.html" );
 }
 
 } // namespace idhan::api

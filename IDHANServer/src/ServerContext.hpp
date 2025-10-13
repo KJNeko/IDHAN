@@ -33,9 +33,10 @@ class ServerContext
 
 	ServerContext() = delete;
 
+	ServerContext( const ConnectionArguments& arguments );
+
 	void setupCORSSupport() const;
 	static std::shared_ptr< spdlog::logger > createLogger( const ConnectionArguments& arguments );
-	ServerContext( const ConnectionArguments& arguments );
 	void run();
 
 	~ServerContext();

@@ -121,7 +121,7 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 			if ( item.isObject() )
 				tags.emplace_back( TagPair( item ) );
 			else if ( item.isUInt64() )
-				tags.emplace_back( static_cast< TagID >( item.asUInt64() ) );
+				tags.emplace_back< TagPair >( static_cast< TagID >( item.asUInt64() ) );
 			else if ( item.isString() )
 				tags.emplace_back( TagPair::fromSplit( item.asString() ) );
 			else

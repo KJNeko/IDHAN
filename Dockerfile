@@ -2,8 +2,10 @@
 # Stage 1: Build environment
 FROM ubuntu:24.04 AS builder
 
+RUN apt-get update
+
 # Install build dependencies
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     cmake \
     git \
@@ -28,8 +30,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libc-ares-dev \
     # Compiler with C++23 support
     g++-14 \
-    gcc-14 \
-    && rm -rf /var/lib/apt/lists/*
+    gcc-14
+
+RUN rm -rf /var/lib/apt/lists/*
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -43,6 +46,7 @@ copy 3rd-party/hydrus /build/3rd-party/hydrus/
 COPY IDHANModules/ /build/IDHANModules/
 COPY IDHANServer/ /build/IDHANServer/
 COPY IDHAN/ /build/IDHAN/
+COPY docs/ /build/docs/
 COPY IDHANMigration/ /build/IDHANMigration/
 
 COPY CMakeLists.txt /build/
@@ -56,7 +60,7 @@ RUN cmake -S . -B build \
     -DCMAKE_CXX_STANDARD=23 \
     -DBUILD_IDHAN_TESTS=OFF \
     -DBUILD_HYDRUS_IMPORTER=OFF \
-    -DBUILD_IDHAN_DOCS=OFF \
+    -DBUILD_IDHAN_DOCS=ON \
     -DBUILD_IDHAN_WEBUI=OFF \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
@@ -65,8 +69,10 @@ RUN cmake -S . -B build \
 # Stage 2: Runtime environment
 FROM ubuntu:24.04
 
+RUN apt-get update
+
 # Install runtime dependencies only
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     # Qt6 runtime libraries
     libqt6core6 \
     libqt6multimedia6 \
@@ -81,20 +87,24 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     uuid-runtime \
     zlib1g \
     libssl3 \
-    libc-ares2 \
-    && rm -rf /var/lib/apt/lists/*
+    libc-ares2
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y curl net-tools
+
+RUN rm -rf /var/lib/apt/lists/*
 
 # Create directories
-RUN mkdir -p /usr/local/share/idhan/static \
-    /var/lib/idhan/modules \
-    /etc/idhan/mime.d
+RUN mkdir -p /opt/idhan/static \
+    /opt/idhan/modules \
+    /opt/idhan/mime \
+    /usr/share/idhan
 
 # Copy built artifacts from builder stage
-COPY --from=builder /build/build/bin/IDHANServer /usr/local/bin/IDHANServer
-COPY --from=builder /build/build/bin/static/ /usr/local/share/idhan/static/
-COPY --from=builder /build/build/bin/modules/ /var/lib/idhan/modules/
-COPY --from=builder /build/build/bin/mime/ /etc/idhan/mime.d/
-COPY --from=builder /build/build/bin/config.toml /etc/idhan/config.toml
+COPY --from=builder /build/build/bin/IDHANServer /usr/bin/IDHANServer
+COPY --from=builder /build/build/bin/static/ /usr/share/idhan/static/
+COPY --from=builder /build/build/bin/modules/ /usr/share/idhan/modules
+COPY --from=builder /build/build/bin/mime/ /usr/share/idhan/mime
+COPY --from=builder /build/build/bin/config.toml /usr/share/idhan/config.toml
 
 # Environment variables for database configuration
 ENV IDHAN_DATABASE_HOST=localhost \
@@ -102,13 +112,13 @@ ENV IDHAN_DATABASE_HOST=localhost \
     IDHAN_DATABASE_PASSWORD=idhan \
     IDHAN_DATABASE_DATABASE=idhan-db
 
-RUN chmod +x /usr/local/bin/IDHANServer
+RUN chmod +x /usr/bin/IDHANServer
 
 # Make user-managed paths mountable
-VOLUME ["/var/lib/idhan/modules", "/etc/idhan/mime.d", "/etc/idhan"]
+VOLUME ["/opt/idhan", "/usr/share/idhan"]
 
 # Expose default port (adjust based on your config)
 EXPOSE 16609
 
 # Default entrypoint
-ENTRYPOINT ["/usr/local/bin/IDHANServer"]
+ENTRYPOINT ["/usr/bin/IDHANServer", "--localhost_only", "false"]

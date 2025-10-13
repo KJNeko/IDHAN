@@ -58,6 +58,10 @@ int main( int argc, char** argv )
 	config_location.setDefaultValue( "./config.json" );
 	parser.addOption( config_location );
 
+	QCommandLineOption localhost_only { "localhost_only", "Only listens on localhost", "localhost_only" };
+	localhost_only.setDefaultValue( "true" );
+	parser.addOption( localhost_only );
+
 	QCoreApplication app { argc, argv };
 	app.setApplicationName( "IDHAN" );
 
@@ -120,6 +124,20 @@ int main( int argc, char** argv )
 	else
 	{
 		spdlog::info( "Using stdout for logging" );
+	}
+
+	if ( parser.isSet( localhost_only ) )
+	{
+		const auto parser_value = parser.value( localhost_only );
+
+		if ( parser_value == "false" || parser_value == "0" )
+		{
+			arguments.listen_localhost_only = false;
+		}
+		else
+		{
+			arguments.listen_localhost_only = true;
+		}
 	}
 
 	idhan::ServerContext context { arguments };
