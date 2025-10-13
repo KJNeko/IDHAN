@@ -8,8 +8,6 @@ services:
       POSTGRES_DB: idhan-db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U idhan"]
       interval: 10s
@@ -33,6 +31,8 @@ services:
       - idhan_modules:/var/lib/idhan/modules
       - idhan_mime:/etc/idhan/mime.d
       - idhan_config:/etc/idhan
+    security_opt:
+      - seccomp=unconfined
     depends_on:
       postgres:
         condition: service_healthy

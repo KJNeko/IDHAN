@@ -44,10 +44,9 @@ namespace idhan::api
  */
 class InfoAPI : public drogon::HttpController< InfoAPI >
 {
-	void api( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-	void apiDocs( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
-
-	void version( const drogon::HttpRequestPtr& request, ResponseFunction&& callback );
+	drogon::Task< drogon::HttpResponsePtr > api( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > apiDocs( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > version( drogon::HttpRequestPtr request );
 
   public:
 

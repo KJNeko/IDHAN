@@ -10,6 +10,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <filesystem>
+#include <paths.hpp>
 
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
@@ -146,7 +147,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	                .setLogLevel( trantor::Logger::kInfo )
 	                .setThreadNum( io_threads )
 	                .setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() )
-	                .setDocumentRoot( "./static" )
+	                .setDocumentRoot( getStaticPath() )
 	                .setExceptionHandler( exceptionHandler )
 	                .setLogPath( std::string( log_directory ), "", 1024 * 1024 * 1024, 8, true );
 
@@ -154,13 +155,15 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	app.setFileTypes( { "html", "wasm", "svg", "js", "png", "jpg" } );
 
-	if ( true )
+	if ( arguments.listen_localhost_only )
 	{
 		app.addListener( "127.0.0.1", IDHAN_DEFAULT_PORT );
+		app.addListener( "::1", IDHAN_DEFAULT_PORT );
 	}
 	else
 	{
 		app.addListener( "0.0.0.0", IDHAN_DEFAULT_PORT );
+		app.addListener( "::", IDHAN_DEFAULT_PORT );
 	}
 
 	drogon::orm::PostgresConfig config;
@@ -176,19 +179,24 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	config.timeout = 60.0f;
 	config.autoBatch = false;
 
-	if ( arguments.testmode )
-	{
-		log::warn( "Connecting to database using test mode!" );
-		config.connectOptions.emplace( std::make_pair( "search_path", "test" ) );
-	}
-
 	drogon::app().addDbClient( config );
 
 	setupCORSSupport();
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();
-	drogon::app().getLoop()->queueInLoop( [ this ]()
-	                                      { m_clusters = std::make_unique< filesystem::ClusterManager >(); } );
+
+	m_clusters = std::make_unique< filesystem::ClusterManager >();
+	// Register callback to initialize clusters after event loop starts
+
+	drogon::app().getLoop()->runInLoop(
+		[ this ]() -> drogon::Task< void > { co_await m_clusters->reloadClusters( drogon::app().getDbClient() ); } );
+
+	drogon::app().registerBeginningAdvice(
+		[]()
+		{
+			log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
+			log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
+		} );
 
 	log::info( "IDHAN initialization finished" );
 }
@@ -204,10 +212,9 @@ void ServerContext::run()
 
 	trantor::Logger::setOutputFunction( trantorHook, []() noexcept {} );
 
-	log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
-	log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
-
 	drogon::app().run();
+
+	log::info( "Exiting runtime" );
 }
 
 ServerContext::~ServerContext()
