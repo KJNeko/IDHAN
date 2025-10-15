@@ -20,6 +20,8 @@ namespace idhan
 {
 class ManagementConnection;
 
+void addCORSHeaders( const drogon::HttpResponsePtr& response );
+
 class ServerContext
 {
 	std::shared_ptr< spdlog::logger > m_logger;
