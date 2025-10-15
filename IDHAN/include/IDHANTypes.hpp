@@ -1,12 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 namespace idhan
 {
 
 using SmallInt = std::int16_t;
 using Integer = std::int32_t;
+#define INTEGER_PG_TYPE_NAME "INTEGER"
 using BigInt = std::int64_t;
 
 using Int = Integer;
@@ -15,7 +17,8 @@ using RecordID = Integer;
 
 using NamespaceID = Integer;
 using SubtagID = Integer;
-using TagID = BigInt;
+using TagID = Integer;
+#define TAG_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 
 using ClusterID = SmallInt;
 
