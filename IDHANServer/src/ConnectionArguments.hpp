@@ -9,7 +9,6 @@
 #include <spdlog/spdlog.h>
 #pragma GCC diagnostic pop
 
-#include <filesystem>
 #include <string>
 
 #include "Config.hpp"

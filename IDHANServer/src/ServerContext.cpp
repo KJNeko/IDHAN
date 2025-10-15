@@ -183,6 +183,13 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	config.timeout = 60.0f;
 	config.autoBatch = false;
 
+	log::info(
+		"Connecting to database {} at {}:{} with user {}",
+		config.databaseName,
+		config.host,
+		config.port,
+		config.username );
+
 	drogon::app().addDbClient( config );
 
 	setupCORSSupport();
