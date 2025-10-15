@@ -44,7 +44,8 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	std::string query {};
 	query.reserve( 1024 );
 	constexpr std::string_view query_start {
-		"WITH filtered_records AS (SELECT record_id FROM active_tag_mappings_final WHERE tag_id = ANY($1::BIGINT[]) GROUP BY record_id HAVING COUNT(DISTINCT tag_id) = $2)"
+		"WITH filtered_records AS (SELECT record_id FROM active_tag_mappings_final WHERE tag_id = ANY($1::" TAG_PG_TYPE_NAME
+		"[]) GROUP BY record_id HAVING COUNT(DISTINCT tag_id) = $2)"
 	};
 	query += query_start;
 

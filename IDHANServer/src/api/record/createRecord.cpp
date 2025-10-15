@@ -96,7 +96,8 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_array );
 	}
-	else if ( sha256s.isString() ) // HEX string
+
+	if ( sha256s.isString() ) // HEX string
 	{
 		Json::Value json_out {};
 		const auto sha256 { SHA256::fromHex( sha256s.asString() ) };
