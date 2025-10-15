@@ -2,7 +2,7 @@
 // Created by kj16609 on 3/11/25.
 //
 
-#include "../../helpers/drogonArrayBind.hpp"
+#include "../../../db/drogonArrayBind.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"

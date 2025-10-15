@@ -1,9 +1,9 @@
 #include "records.hpp"
 
-#include "api/helpers/drogonArrayBind.hpp"
 #include "createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
+#include "db/drogonArrayBind.hpp"
 
 namespace idhan::api::helpers
 {
