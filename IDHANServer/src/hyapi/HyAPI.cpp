@@ -367,7 +367,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 
 	const auto result { co_await api::getSimilarTags( search_value, db ) };
 
-	co_return drogon::HttpResponse::newHttpJsonResponse( result );
+	Json::Value root;
+	root[ "tags" ] = std::move( result );
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getClientOptions( drogon::HttpRequestPtr request )

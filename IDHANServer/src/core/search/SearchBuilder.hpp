@@ -25,7 +25,7 @@
 #include "drogon/orm/DbClient.h"
 #include "drogon/orm/Result.h"
 #include "drogon/utils/coroutine.h"
-#include "hydrus_client_constants_gen.hpp"
+#include "hydrus/ClientConstants_gen.hpp"
 
 namespace idhan
 {
