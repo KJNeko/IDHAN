@@ -23,6 +23,13 @@
 namespace idhan
 {
 
+void addCORSHeaders( const drogon::HttpResponsePtr& response )
+{
+	response->addHeader( "Access-Control-Allow-Headers", "*" );
+	response->addHeader( "Access-Control-Allow-Origin", "*" );
+	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
+}
+
 void ServerContext::setupCORSSupport() const
 {
 	drogon::app().registerPreRoutingAdvice(
@@ -34,27 +41,24 @@ void ServerContext::setupCORSSupport() const
 			else
 				log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
 
-			if ( !request->path().starts_with( "/hyapi" ) || request->method() != drogon::Options )
+			if ( request->method() == drogon::Options )
 			{
-				pass();
+				const auto response { drogon::HttpResponse::newHttpResponse() };
+
+				addCORSHeaders( response );
+
+				stop( response );
+
 				return;
 			}
 
-			const auto response { drogon::HttpResponse::newHttpResponse() };
-
-			response->addHeader( "Access-Control-Allow-Headers", "*" );
-			response->addHeader( "Access-Control-Allow-Origin", "*" );
-			response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
-
-			stop( response );
+			pass();
 		} );
 
 	drogon::app().registerPostHandlingAdvice(
 		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
 		{
-			response->addHeader( "Access-Control-Allow-Headers", "*" );
-			response->addHeader( "Access-Control-Allow-Origin", "*" );
-			response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
+			addCORSHeaders( response );
 		} );
 }
 
