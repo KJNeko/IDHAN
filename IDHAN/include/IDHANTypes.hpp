@@ -15,7 +15,7 @@ using RecordID = Integer;
 
 using NamespaceID = Integer;
 using SubtagID = Integer;
-using TagID = Integer;
+using TagID = BigInt;
 
 using ClusterID = SmallInt;
 

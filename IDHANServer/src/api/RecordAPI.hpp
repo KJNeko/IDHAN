@@ -71,7 +71,8 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 	ADD_METHOD_TO( RecordAPI::fetchThumbnail, "/records/{record_id}/thumbnail" );
 	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}/file" );
 	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}" );
-	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/metadata" );
+	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/info" );
+	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/metadata" ); // Legacy path for compatibility
 	ADD_METHOD_TO( RecordAPI::parseFile, "/records/{record_id}/metadata/scan" );
 
 	METHOD_LIST_END
