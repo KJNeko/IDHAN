@@ -57,6 +57,8 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > getPopups( drogon::HttpRequestPtr request );
 
+	drogon::Task< drogon::HttpResponsePtr > getPages( drogon::HttpRequestPtr request );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -127,6 +129,9 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 
 	ADD_METHOD_TO(
 		HydrusAPI::getPopups, "/hyapi/manage_popups/get_popups", drogon::Get, HyAPIAuthName, RESPONSE_ENRICHER_NAME );
+
+	ADD_METHOD_TO(
+		HydrusAPI::getPages, "/hyapi/manage_pages/get_pages", drogon::Get, HyAPIAuthName, RESPONSE_ENRICHER_NAME );
 
 	METHOD_LIST_END
 };

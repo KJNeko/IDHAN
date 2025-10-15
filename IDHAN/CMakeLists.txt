@@ -36,7 +36,6 @@ list(APPEND HYDRUS_SCAN_FILES ${HYDRUS_REPO_PATH}/hydrus/core/HydrusSerialisable
 list(APPEND HYDRUS_SCAN_FILES ${HYDRUS_REPO_PATH}/hydrus/client/ClientConstants.py)
 list(APPEND HYDRUS_SCAN_FILES ${HYDRUS_REPO_PATH}/hydrus/core/HydrusConstants.py)
 
-
 set(GENERATED_HEADERS "")
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus)
