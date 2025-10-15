@@ -22,8 +22,8 @@
 #include <expected>
 #include <vector>
 
+#include "../../db/drogonArrayBind.hpp"
 #include "IDHANTypes.hpp"
-#include "drogonArrayBind.hpp"
 
 namespace idhan::api::helpers
 {

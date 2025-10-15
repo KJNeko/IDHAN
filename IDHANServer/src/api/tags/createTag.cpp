@@ -18,9 +18,9 @@ struct hash< std::pair< std::string, std::string > >
 };
 } // namespace std
 
+#include "../../db/drogonArrayBind.hpp"
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "api/helpers/drogonArrayBind.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "splitTag.hpp"
