@@ -22,12 +22,8 @@ jobs:
       packages: write
 
     steps:
-      - name: test network
-        run: |
-          ping -c 1 google.com || (echo "Network unreachable" && exit 1)
-
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
         with:
           submodules: recursive
 
