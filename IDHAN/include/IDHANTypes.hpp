@@ -14,6 +14,7 @@ using BigInt = std::int64_t;
 using Int = Integer;
 
 using RecordID = Integer;
+#define RECORD_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 
 using NamespaceID = Integer;
 using SubtagID = Integer;
