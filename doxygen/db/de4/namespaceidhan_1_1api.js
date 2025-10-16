@@ -32,7 +32,7 @@ var namespaceidhan_1_1api =
     [ "createRecordFromJson", "db/de4/namespaceidhan_1_1api.html#a0cd19a5936e8c63a544206a2072250fb", null ],
     [ "createRecordFromOctet", "db/de4/namespaceidhan_1_1api.html#a9f8d566d3390c231c7a322099b5cb47d", null ],
     [ "createRecordsFromJsonArray", "db/de4/namespaceidhan_1_1api.html#a3e7bc2a20244506206dcebed435187c6", null ],
-    [ "createTags", "db/de4/namespaceidhan_1_1api.html#a8fb8edef2bc08a5431d3338675bf3f4e", null ],
+    [ "createTagsFromPairs", "db/de4/namespaceidhan_1_1api.html#ac01da1d9200b13d9dce0663f17c9c1ac", null ],
     [ "createUnknownMimeResponse", "db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662", null ],
     [ "findBestParser", "db/de4/namespaceidhan_1_1api.html#ae85814d877bd9d3b377b694789306e14", null ],
     [ "findValidClusterName", "db/de4/namespaceidhan_1_1api.html#a72eed9ef97e8cee612f339764a180c41", null ],

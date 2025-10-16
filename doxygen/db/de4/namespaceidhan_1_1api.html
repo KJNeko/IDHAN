@@ -196,8 +196,8 @@ Functions</h2></td></tr>
 <tr class="separator:a07b3b98d9215bf0f090b3b5a20f55bab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e9ffce36099b3873f44970f216defdd" id="r_a1e9ffce36099b3873f44970f216defdd"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; Json::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1e9ffce36099b3873f44970f216defdd">getTagDomainInfoJson</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> tag_domain_id, const drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:a1e9ffce36099b3873f44970f216defdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8fb8edef2bc08a5431d3338675bf3f4e" id="r_a8fb8edef2bc08a5431d3338675bf3f4e"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8fb8edef2bc08a5431d3338675bf3f4e">createTags</a> (const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;tag_pairs, const drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a8fb8edef2bc08a5431d3338675bf3f4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac01da1d9200b13d9dce0663f17c9c1ac" id="r_ac01da1d9200b13d9dce0663f17c9c1ac"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac01da1d9200b13d9dce0663f17c9c1ac">createTagsFromPairs</a> (const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;tag_pairs, const drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:ac01da1d9200b13d9dce0663f17c9c1ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a138152f9ed047fc7bfc451afc1e801c2" id="r_a138152f9ed047fc7bfc451afc1e801c2"><td class="memItemLeft" align="right" valign="top">drogon::HttpResponsePtr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a138152f9ed047fc7bfc451afc1e801c2">generateFailedTagSearch</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> tag_id)</td></tr>
 <tr class="separator:a138152f9ed047fc7bfc451afc1e801c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3ac86649c7feefdbff09fb6504960458" id="r_a3ac86649c7feefdbff09fb6504960458"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3ac86649c7feefdbff09fb6504960458">updateRecordMetadata</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db, MetadataInfo metadata)</td></tr>
@@ -418,14 +418,14 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a8fb8edef2bc08a5431d3338675bf3f4e" name="a8fb8edef2bc08a5431d3338675bf3f4e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8fb8edef2bc08a5431d3338675bf3f4e">&#9670;&#160;</a></span>createTags()</h2>
+<a id="ac01da1d9200b13d9dce0663f17c9c1ac" name="ac01da1d9200b13d9dce0663f17c9c1ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac01da1d9200b13d9dce0663f17c9c1ac">&#9670;&#160;</a></span>createTagsFromPairs()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt; idhan::api::createTags </td>
+          <td class="memname">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt; idhan::api::createTagsFromPairs </td>
           <td>(</td>
           <td class="paramtype">const std::vector&lt; std::pair&lt; std::string, std::string &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tag_pairs</em></span>, </td>
         </tr>

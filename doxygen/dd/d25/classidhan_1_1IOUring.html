@@ -116,7 +116,6 @@ $(function(){initNavTree('dd/d25/classidhan_1_1IOUring.html','../../'); initResi
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="#pri-methods">Private Member Functions</a> &#124;
-<a href="#pri-static-methods">Static Private Member Functions</a> &#124;
 <a href="#pri-attribs">Private Attributes</a> &#124;
 <a href="#pri-static-attribs">Static Private Attributes</a> &#124;
 <a href="#friends">Friends</a> &#124;
@@ -158,6 +157,8 @@ Static Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:a374d4885f69ec4b68796cf0e7e790bc1" id="r_a374d4885f69ec4b68796cf0e7e790bc1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a374d4885f69ec4b68796cf0e7e790bc1">m_iouring_setup</a> { false }</td></tr>
+<tr class="separator:a374d4885f69ec4b68796cf0e7e790bc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acead0172ea337d88471c96d7241c3bda" id="r_acead0172ea337d88471c96d7241c3bda"><td class="memItemLeft" align="right" valign="top">std::mutex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acead0172ea337d88471c96d7241c3bda">mtx</a> {}</td></tr>
 <tr class="separator:acead0172ea337d88471c96d7241c3bda"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:add0bd5302aeb9d5dc3655eea5c983b7a" id="r_add0bd5302aeb9d5dc3655eea5c983b7a"><td class="memItemLeft" align="right" valign="top">struct <a class="el" href="../../df/d36/structidhan_1_1IOUring_1_1SubmissionRingPointers.html">idhan::IOUring::SubmissionRingPointers</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add0bd5302aeb9d5dc3655eea5c983b7a">m_submission_ring</a></td></tr>
@@ -167,6 +168,8 @@ Public Attributes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
+<tr class="memitem:a4c6ef76056384f5257fafd8c7004091f" id="r_a4c6ef76056384f5257fafd8c7004091f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c6ef76056384f5257fafd8c7004091f">setupUring</a> ()</td></tr>
+<tr class="separator:a4c6ef76056384f5257fafd8c7004091f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a307df6d36dc72eef11fa6d5c439eb9d4" id="r_a307df6d36dc72eef11fa6d5c439eb9d4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../df/d36/structidhan_1_1IOUring_1_1SubmissionRingPointers.html">SubmissionRingPointers</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a307df6d36dc72eef11fa6d5c439eb9d4">setupSubmissionRing</a> ()</td></tr>
 <tr class="separator:a307df6d36dc72eef11fa6d5c439eb9d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a781d1b8e8a2e7ed58320d2396ed5a090" id="r_a781d1b8e8a2e7ed58320d2396ed5a090"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html">CommandRingPointers</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a781d1b8e8a2e7ed58320d2396ed5a090">setupCommandRing</a> ()</td></tr>
@@ -176,11 +179,6 @@ Private Member Functions</h2></td></tr>
 <tr class="memitem:a30e7328754f3bf54fe533e2810de5607" id="r_a30e7328754f3bf54fe533e2810de5607"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a30e7328754f3bf54fe533e2810de5607">sendNop</a> ()</td></tr>
 <tr class="memdesc:a30e7328754f3bf54fe533e2810de5607"><td class="mdescLeft">&#160;</td><td class="mdescRight">Submits an empty operation to io_uring to unstick the thread to allow it to properly exit.  <br /></td></tr>
 <tr class="separator:a30e7328754f3bf54fe533e2810de5607"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-static-methods" name="pri-static-methods"></a>
-Static Private Member Functions</h2></td></tr>
-<tr class="memitem:a38a2ee33bda4f3988be21c79e1f074f6" id="r_a38a2ee33bda4f3988be21c79e1f074f6"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a38a2ee33bda4f3988be21c79e1f074f6">setupUring</a> (io_uring_params &amp;params)</td></tr>
-<tr class="separator:a38a2ee33bda4f3988be21c79e1f074f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
@@ -463,8 +461,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="a38a2ee33bda4f3988be21c79e1f074f6" name="a38a2ee33bda4f3988be21c79e1f074f6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a38a2ee33bda4f3988be21c79e1f074f6">&#9670;&#160;</a></span>setupUring()</h2>
+<a id="a4c6ef76056384f5257fafd8c7004091f" name="a4c6ef76056384f5257fafd8c7004091f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4c6ef76056384f5257fafd8c7004091f">&#9670;&#160;</a></span>setupUring()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -475,13 +473,13 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">int idhan::IOUring::setupUring </td>
           <td>(</td>
-          <td class="paramtype">io_uring_params &amp;</td>          <td class="paramname"><span class="paramname"><em>params</em></span></td><td>)</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel static">static</span><span class="mlabel private">private</span></span>  </td>
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -598,6 +596,20 @@ Friends</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">struct <a class="el" href="../../de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html">idhan::IOUring::CommandRingPointers</a> idhan::IOUring::m_command_ring</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a374d4885f69ec4b68796cf0e7e790bc1" name="a374d4885f69ec4b68796cf0e7e790bc1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a374d4885f69ec4b68796cf0e7e790bc1">&#9670;&#160;</a></span>m_iouring_setup</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool idhan::IOUring::m_iouring_setup { false }</td>
         </tr>
       </table>
 </div><div class="memdoc">

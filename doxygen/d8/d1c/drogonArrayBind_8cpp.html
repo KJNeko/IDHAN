@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.13.2"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: IDHANServer/src/api/helpers/drogonArrayBind.cpp File Reference</title>
+    <title>IDHAN: IDHANServer/src/db/drogonArrayBind.cpp File Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -119,7 +119,6 @@ $(function(){initNavTree('d8/d1c/drogonArrayBind_8cpp.html','../../'); initResiz
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="../../df/de2/drogonArrayBind_8hpp_source.html">drogonArrayBind.hpp</a>&quot;</code><br />
 <code>#include &quot;fgl/defines.hpp&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../dc/d4c/pgEscape_8hpp_source.html">pgEscape.hpp</a>&quot;</code><br />
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
@@ -128,9 +127,12 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:af87e4f3ac766f2c187df1ebedcc0dac4" id="r_af87e4f3ac766f2c187df1ebedcc0dac4"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
-<tr class="memitem:af87e4f3ac766f2c187df1ebedcc0dac4"><td class="memTemplItemLeft" align="right" valign="top">constexpr int32_t&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af87e4f3ac766f2c187df1ebedcc0dac4">getTypeOid</a> ()</td></tr>
-<tr class="separator:af87e4f3ac766f2c187df1ebedcc0dac4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4bf319a60cc0493a9af63cabdb14d1e4" id="r_a4bf319a60cc0493a9af63cabdb14d1e4"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a4bf319a60cc0493a9af63cabdb14d1e4"><td class="memTemplItemLeft" align="right" valign="top">consteval int32_t&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a4bf319a60cc0493a9af63cabdb14d1e4">getTypeOid</a> ()</td></tr>
+<tr class="separator:a4bf319a60cc0493a9af63cabdb14d1e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad34e003dc4f7b4d11cfbf06c92c7217a" id="r_ad34e003dc4f7b4d11cfbf06c92c7217a"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:ad34e003dc4f7b4d11cfbf06c92c7217a"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; std::byte &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ad34e003dc4f7b4d11cfbf06c92c7217a">createPgBinaryArrayScalar</a> (const std::vector&lt; T &gt; &amp;data)</td></tr>
+<tr class="separator:ad34e003dc4f7b4d11cfbf06c92c7217a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a64a380c14c749cb95708de904c6f22fa" id="r_a64a380c14c749cb95708de904c6f22fa"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a> (const std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a31eafa7aae65c5efce9f2aaa41ac0a35">idhan::SmallInt</a> &gt; &amp;data)</td></tr>
 <tr class="separator:a64a380c14c749cb95708de904c6f22fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7387bbe6bef2d313cbb7a0d53d365a5b" id="r_a7387bbe6bef2d313cbb7a0d53d365a5b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7387bbe6bef2d313cbb7a0d53d365a5b">createPgBinaryArray</a> (const std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#abc89697b8e0f220d19fd160a6eb9b6b4">idhan::Int</a> &gt; &amp;data)</td></tr>
@@ -235,8 +237,27 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="af87e4f3ac766f2c187df1ebedcc0dac4" name="af87e4f3ac766f2c187df1ebedcc0dac4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af87e4f3ac766f2c187df1ebedcc0dac4">&#9670;&#160;</a></span>getTypeOid()</h2>
+<a id="ad34e003dc4f7b4d11cfbf06c92c7217a" name="ad34e003dc4f7b4d11cfbf06c92c7217a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad34e003dc4f7b4d11cfbf06c92c7217a">&#9670;&#160;</a></span>createPgBinaryArrayScalar()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::byte &gt; createPgBinaryArrayScalar </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a4bf319a60cc0493a9af63cabdb14d1e4" name="a4bf319a60cc0493a9af63cabdb14d1e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4bf319a60cc0493a9af63cabdb14d1e4">&#9670;&#160;</a></span>getTypeOid()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -255,7 +276,7 @@ template&lt;typename T&gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel constexpr">constexpr</span></span>  </td>
+<span class="mlabels"><span class="mlabel consteval">consteval</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -312,7 +333,7 @@ template&lt;typename T&gt; </div>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8b56e136226ae89f755dd9aa547a23fc.html">api</a></li><li class="navelem"><a class="el" href="../../dir_625c1a12e47410e27d64c77816a2b326.html">helpers</a></li><li class="navelem"><a class="el" href="../../d8/d1c/drogonArrayBind_8cpp.html">drogonArrayBind.cpp</a></li>
+    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_4d8e21bc94f631230c76e2efe0eee4ca.html">db</a></li><li class="navelem"><a class="el" href="../../d8/d1c/drogonArrayBind_8cpp.html">drogonArrayBind.cpp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

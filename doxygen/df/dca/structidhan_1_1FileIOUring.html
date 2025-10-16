@@ -130,6 +130,10 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a63f9cd6379eb1404e3bb7551777488b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a502adaa0964f98a481d1507aa8eb985f" id="r_a502adaa0964f98a481d1507aa8eb985f"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a502adaa0964f98a481d1507aa8eb985f">write</a> (std::vector&lt; std::byte &gt; data, std::size_t offset=0) const</td></tr>
 <tr class="separator:a502adaa0964f98a481d1507aa8eb985f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a588eb355339c04edc5636257f0871471" id="r_a588eb355339c04edc5636257f0871471"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a588eb355339c04edc5636257f0871471">fallbackRead</a> (std::size_t offset, std::size_t len) const</td></tr>
+<tr class="separator:a588eb355339c04edc5636257f0871471"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa837fc243f246b21ec8f0f1c9a6bc0d2" id="r_aa837fc243f246b21ec8f0f1c9a6bc0d2"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa837fc243f246b21ec8f0f1c9a6bc0d2">fallbackWrite</a> (std::vector&lt; std::byte &gt; data, std::size_t size) const</td></tr>
+<tr class="separator:aa837fc243f246b21ec8f0f1c9a6bc0d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -157,6 +161,48 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a588eb355339c04edc5636257f0871471" name="a588eb355339c04edc5636257f0871471"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a588eb355339c04edc5636257f0871471">&#9670;&#160;</a></span>fallbackRead()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt; idhan::FileIOUring::fallbackRead </td>
+          <td>(</td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>offset</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa837fc243f246b21ec8f0f1c9a6bc0d2" name="aa837fc243f246b21ec8f0f1c9a6bc0d2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa837fc243f246b21ec8f0f1c9a6bc0d2">&#9670;&#160;</a></span>fallbackWrite()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; void &gt; idhan::FileIOUring::fallbackWrite </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; std::byte &gt;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>size</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a63f9cd6379eb1404e3bb7551777488b8" name="a63f9cd6379eb1404e3bb7551777488b8"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a63f9cd6379eb1404e3bb7551777488b8">&#9670;&#160;</a></span>read()</h2>
 

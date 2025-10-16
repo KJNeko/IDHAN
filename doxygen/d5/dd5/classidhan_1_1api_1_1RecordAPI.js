@@ -6,6 +6,7 @@ var classidhan_1_1api_1_1RecordAPI =
     [ "ADD_METHOD_TO", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a99a8e03cfa3b649923564fdb97d0583c", null ],
     [ "ADD_METHOD_TO", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a6beb3197f1dafb50b498643bd0adf7dc", null ],
     [ "ADD_METHOD_TO", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#aa19887e9fcdf31634ea58280cad5934d", null ],
+    [ "ADD_METHOD_TO", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#afdb2e69b61c9cec22786a0f0823dd150", null ],
     [ "ADD_METHOD_TO", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#ad43274c8cef5f9fad48dc3d8e6261694", null ],
     [ "ADD_METHOD_TO", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a5675fd851f34edd4ac960364321a8d20", null ],
     [ "ADD_METHOD_TO", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a07886758da4908ee4856d4b7202779b7", null ],

@@ -30,7 +30,8 @@ var hierarchy =
     ] ],
     [ "drogon::HttpMiddleware", null, [
       [ "idhan::api::APIAuth", "d4/d76/classidhan_1_1api_1_1APIAuth.html", null ],
-      [ "idhan::hyapi::HyAPIAuth", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html", null ]
+      [ "idhan::hyapi::HyAPIAuth", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html", null ],
+      [ "idhan::hyapi::HyAPIResponseEnricher", "d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html", null ]
     ] ],
     [ "idhan::IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", null ],
     [ "idhan::mime::ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", [

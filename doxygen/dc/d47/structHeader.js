@@ -1,8 +1,8 @@
 var structHeader =
 [
-    [ "dimension_length", "dc/d47/structHeader.html#a15ac28c82447f8dce2325b4646b218c2", null ],
-    [ "element_type_oid", "dc/d47/structHeader.html#aaf103a53a3a102951ecf6e72214685be", null ],
-    [ "flags", "dc/d47/structHeader.html#a2075af1a2fe53bc055d9bc1a770b91f8", null ],
-    [ "lower_bound", "dc/d47/structHeader.html#a8831420e8f106e2cd6a2da04c6e79366", null ],
-    [ "num_dimensions", "dc/d47/structHeader.html#a21d3777875ef154659bad95b5f55126e", null ]
+    [ "data_offset", "dc/d47/structHeader.html#acc108a6fc5ec656ae7f6075f83ecc6aa", null ],
+    [ "dimension_length", "dc/d47/structHeader.html#ac03ffa159f80c8299cc108d814b0e73e", null ],
+    [ "element_type_oid", "dc/d47/structHeader.html#a55bfbb45e124a3fafef65eba3cad4cf9", null ],
+    [ "lower_bound", "dc/d47/structHeader.html#a2fcca0b9b3dfc8feff837f8290066317", null ],
+    [ "num_dimensions", "dc/d47/structHeader.html#a923150f60724ab8aa3a31a8ae43121be", null ]
 ];

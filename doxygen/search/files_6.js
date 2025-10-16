@@ -9,7 +9,8 @@ var searchData=
   ['hyapi_2ehpp_6',['HyAPI.hpp',['../d7/d32/HyAPI_8hpp.html',1,'']]],
   ['hyapiauth_2ecpp_7',['HyAPIAuth.cpp',['../d3/d27/HyAPIAuth_8cpp.html',1,'']]],
   ['hyapiauth_2ehpp_8',['HyAPIAuth.hpp',['../d5/d3f/HyAPIAuth_8hpp.html',1,'']]],
-  ['hydrus_5fconstants_2ehpp_9',['hydrus_constants.hpp',['../d8/d54/hydrus__constants_8hpp.html',1,'']]],
-  ['hydrus_5fserialisable_5fconstants_5fgen_2ehpp_10',['hydrus_serialisable_constants_gen.hpp',['../df/d72/hydrus__serialisable__constants__gen_8hpp.html',1,'']]],
-  ['hydrus_5fversion_2ehpp_11',['hydrus_version.hpp',['../dd/d85/hydrus__version_8hpp.html',1,'']]]
+  ['hyapiresponseenricher_2ecpp_9',['HyAPIResponseEnricher.cpp',['../da/d60/HyAPIResponseEnricher_8cpp.html',1,'']]],
+  ['hyapiresponseenricher_2ehpp_10',['HyAPIResponseEnricher.hpp',['../d1/df9/HyAPIResponseEnricher_8hpp.html',1,'']]],
+  ['hydrus_5fconstants_2ehpp_11',['hydrus_constants.hpp',['../d8/d54/hydrus__constants_8hpp.html',1,'']]],
+  ['hydrus_5fversion_2ehpp_12',['hydrus_version.hpp',['../dd/d85/hydrus__version_8hpp.html',1,'']]]
 ];

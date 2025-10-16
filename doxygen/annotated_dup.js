@@ -23,6 +23,7 @@ var annotated_dup =
       ] ],
       [ "hyapi", "d2/d18/namespaceidhan_1_1hyapi.html", [
         [ "HyAPIAuth", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth" ],
+        [ "HyAPIResponseEnricher", "d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html", "d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher" ],
         [ "HydrusAPI", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI" ]
       ] ],
       [ "logging", "d6/d70/namespaceidhan_1_1logging.html", [

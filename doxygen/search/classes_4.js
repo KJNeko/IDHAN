@@ -5,5 +5,6 @@ var searchData=
   ['header_2',['Header',['../dc/d47/structHeader.html',1,'']]],
   ['heartbeat_3',['Heartbeat',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html',1,'idhan::api']]],
   ['hyapiauth_4',['HyAPIAuth',['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html',1,'idhan::hyapi']]],
-  ['hydrusapi_5',['HydrusAPI',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html',1,'idhan::hyapi']]]
+  ['hyapiresponseenricher_5',['HyAPIResponseEnricher',['../d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html',1,'idhan::hyapi']]],
+  ['hydrusapi_6',['HydrusAPI',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html',1,'idhan::hyapi']]]
 ];

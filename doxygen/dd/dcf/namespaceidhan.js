@@ -190,6 +190,7 @@ var namespaceidhan =
       [ "HY_PIXEL_HASH", "dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970a9fac97f36c38ef8ad73dd65d35135626", null ],
       [ "HY_BLURHASH", "dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970ac9af64d39829844bca9db8ec4517dae6", null ]
     ] ],
+    [ "addCORSHeaders", "dd/dcf/namespaceidhan.html#abb3675d696d1a47fa1f667dde52d9aaa", null ],
     [ "addIDHANOptions", "dd/dcf/namespaceidhan.html#ae36b565777c7d28ef6f198cbd978cba5", null ],
     [ "checkContentType", "dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824", null ],
     [ "createBadRequest", "dd/dcf/namespaceidhan.html#ab5aa5db369621cef0ec9aae2ddfadbf1", null ],

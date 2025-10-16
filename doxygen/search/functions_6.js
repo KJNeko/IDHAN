@@ -12,5 +12,6 @@ var searchData=
   ['hashfile_9',['hashFile',['../d0/de3/classidhan_1_1SHA256.html#a697a85896197d81a367596131d2b09fe',1,'idhan::SHA256']]],
   ['hex_10',['hex',['../d0/de3/classidhan_1_1SHA256.html#a4cd0626f10d0bccbf0554b1ae9442b8e',1,'idhan::SHA256']]],
   ['hyapiauth_11',['HyAPIAuth',['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#ad2191a6cdb559cf77538bf4ae55ebf87',1,'idhan::hyapi::HyAPIAuth']]],
-  ['hytoidhansorttype_12',['hyToIDHANSortType',['../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150',1,'idhan']]]
+  ['hyapiresponseenricher_12',['HyAPIResponseEnricher',['../d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html#ae847dc56ef9ff8f3101671a11c2d571d',1,'idhan::hyapi::HyAPIResponseEnricher']]],
+  ['hytoidhansorttype_13',['hyToIDHANSortType',['../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150',1,'idhan']]]
 ];

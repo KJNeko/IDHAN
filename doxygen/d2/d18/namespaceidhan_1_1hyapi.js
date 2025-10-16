@@ -7,6 +7,7 @@ var namespaceidhan_1_1hyapi =
       [ "idsFromHashesArray", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a40a05eb124c409d441681b4f8aadecb5", null ]
     ] ],
     [ "HyAPIAuth", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html", "de/d61/classidhan_1_1hyapi_1_1HyAPIAuth" ],
+    [ "HyAPIResponseEnricher", "d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html", "d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher" ],
     [ "HydrusAPI", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html", "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI" ],
     [ "HydrusImportResponses", "d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665", [
       [ "Success", "d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a30f320abc79538b35f124e95143f41a3", null ],
@@ -45,5 +46,6 @@ var namespaceidhan_1_1hyapi =
     [ "getFileInfo", "d2/d18/namespaceidhan_1_1hyapi.html#abe1f267b411335de26f397790642f985", null ],
     [ "getMetadataInfo", "d2/d18/namespaceidhan_1_1hyapi.html#a91aa1cafd77b35981bd534654c5e8f93", null ],
     [ "getServiceList", "d2/d18/namespaceidhan_1_1hyapi.html#abbdbe7c8606747784d91bb8a1e98f33e", null ],
-    [ "HyAPIAuthName", "d2/d18/namespaceidhan_1_1hyapi.html#a720a04837a0444fe8b1ee98d2759cc93", null ]
+    [ "HyAPIAuthName", "d2/d18/namespaceidhan_1_1hyapi.html#a720a04837a0444fe8b1ee98d2759cc93", null ],
+    [ "RESPONSE_ENRICHER_NAME", "d2/d18/namespaceidhan_1_1hyapi.html#a4246fea9aa1b5e0375c5b8eaf59955aa", null ]
 ];
