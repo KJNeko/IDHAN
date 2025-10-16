@@ -3,7 +3,7 @@
 //
 
 #include "api/APIMaintenance.hpp"
-#include "api/helpers/drogonArrayBind.hpp"
+#include "db/drogonArrayBind.hpp"
 
 namespace idhan::api
 {

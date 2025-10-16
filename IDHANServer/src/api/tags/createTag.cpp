@@ -20,15 +20,14 @@ struct hash< std::pair< std::string, std::string > >
 
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "api/helpers/drogonArrayBind.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
-#include "splitTag.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > createTags(
+drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > createTagsFromPairs(
 	const std::vector< std::pair< std::string, std::string > >& tag_pairs, const drogon::orm::DbClientPtr db )
 {
 	logging::ScopedTimer timer { "createTags" };
@@ -94,10 +93,9 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 	co_return std::unexpected( createInternalError( "Failed to create tags" ) );
 }
 
-drogon::Task< drogon::HttpResponsePtr > TagAPI::createBatchedTag( const drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagsFromRequest( const drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "createBatchedTag" };
-	// we should have a body
 	const auto input_json { request->jsonObject() };
 
 	if ( input_json == nullptr )
@@ -105,7 +103,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createBatchedTag( const drogon::
 		co_return createBadRequest( "No json data" );
 	}
 
-	const auto json_array { *input_json };
+	const auto& json_array { *input_json };
 
 	auto db { drogon::app().getDbClient() };
 
@@ -122,7 +120,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createBatchedTag( const drogon::
 		tag_pairs.emplace_back( namespace_j.asString(), subtag_j.asString() );
 	}
 
-	const auto tag_ids { co_await createTags( tag_pairs, db ) };
+	const auto tag_ids { co_await createTagsFromPairs( tag_pairs, db ) };
 	if ( !tag_ids ) co_return tag_ids.error();
 
 	for ( const auto& tag_id : tag_ids.value() ) FGL_ASSERT( tag_id > 0, "TagID was not valid" );

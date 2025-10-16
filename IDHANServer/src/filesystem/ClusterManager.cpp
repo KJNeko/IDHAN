@@ -197,9 +197,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 
 ClusterManager::ClusterManager()
 {
-	auto db { drogon::app().getDbClient() };
-
-	drogon::sync_wait( reloadClusters( db ) );
 	FGL_ASSERT( m_instance == nullptr, "Only one instance of cluster manager should exist" );
 	m_instance = this;
 }

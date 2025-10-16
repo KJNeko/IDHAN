@@ -29,6 +29,9 @@ struct FileIOUring
 
 	drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
 	drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 ) const;
+
+	drogon::Task< std::vector< std::byte > > fallbackRead( std::size_t offset, std::size_t len ) const;
+	drogon::Task< void > fallbackWrite( std::vector< std::byte > data, std::size_t size ) const;
 };
 
 struct IOUringUserData
@@ -58,9 +61,11 @@ class IOUring
 	int uring_fd { 0 };
 	std::shared_ptr< std::atomic< bool > > io_run { std::make_shared< std::atomic< bool > >( false ) };
 
-	static int setupUring( io_uring_params& params );
+	int setupUring();
 
   public:
+
+	bool m_iouring_setup { false };
 
 	std::mutex mtx {};
 

@@ -6,7 +6,6 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "api/helpers/urls.hpp"
-#include "fgl/defines.hpp"
 #include "hyapi/helpers.hpp"
 
 namespace idhan::hyapi
@@ -29,20 +28,6 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	root[ "can_parse" ] = false;
 
 	co_return root;
-}
-
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( const drogon::HttpRequestPtr request )
-{
-	const auto url_parameter { request->getOptionalParameter< std::string >( "url" ) };
-	if ( !url_parameter ) co_return createBadRequest( "Must provide url parameter" );
-	const auto url_str { url_parameter.value() };
-
-	auto db { drogon::app().getDbClient() };
-	const auto url_info_e { co_await getAdvancedUrlInfo( url_str, db ) };
-	if ( !url_info_e ) co_return url_info_e.error();
-	const auto& url_info { url_info_e.value() };
-
-	co_return drogon::HttpResponse::newHttpJsonResponse( url_info );
 }
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( const drogon::HttpRequestPtr request )
@@ -116,5 +101,21 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( const drogon::H
 
 	co_return drogon::HttpResponse::newHttpResponse();
 }
+
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( const drogon::HttpRequestPtr request )
+{
+	const auto url_parameter { request->getOptionalParameter< std::string >( "url" ) };
+	if ( !url_parameter ) co_return createBadRequest( "Must provide url parameter" );
+	const auto url_str { url_parameter.value() };
+
+	auto db { drogon::app().getDbClient() };
+	const auto url_info_e { co_await getAdvancedUrlInfo( url_str, db ) };
+	if ( !url_info_e ) co_return url_info_e.error();
+	const auto& url_info { url_info_e.value() };
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( url_info );
+}
+
+
 
 } // namespace idhan::hyapi
