@@ -31,6 +31,7 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::version( drogon::HttpRequestPtr
 	json[ "idhan_api_version" ][ "patch" ] = IDHAN_API_PATCH;
 
 	json[ "hydrus_api_version" ] = HYDRUS_MIMICED_API_VERSION;
+	json["hydrus_version"] = HYDRUS_MIMICED_VERSION;
 
 	json[ "branch" ] = FGL_GIT_BRANCH;
 	json[ "commit" ] = FGL_GIT_COMMIT;
