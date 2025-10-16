@@ -16,9 +16,7 @@ services:
     restart: unless-stopped
 
   idhanserver:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: git.futuregadgetlabs.net/kj16609/idhan:latest
     container_name: idhan-server
     environment:
       IDHAN_DATABASE_HOST: postgres
