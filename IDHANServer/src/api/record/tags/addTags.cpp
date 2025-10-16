@@ -2,7 +2,7 @@
 // Created by kj16609 on 3/11/25.
 //
 
-#include "../../helpers/drogonArrayBind.hpp"
+#include "../../../db/drogonArrayBind.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -121,7 +121,7 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 			if ( item.isObject() )
 				tags.emplace_back( TagPair( item ) );
 			else if ( item.isUInt64() )
-				tags.emplace_back( static_cast< TagID >( item.asUInt64() ) );
+				tags.emplace_back< TagPair >( static_cast< TagID >( item.asUInt64() ) );
 			else if ( item.isString() )
 				tags.emplace_back( TagPair::fromSplit( item.asString() ) );
 			else
@@ -184,7 +184,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
 	try
 	{
 		const auto insert_result { co_await db->execSqlCoro(
-			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) VALUES ($1, UNNEST($2::INTEGER[]), $3) ON CONFLICT DO NOTHING",
+			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) VALUES ($1, UNNEST($2::" TAG_PG_TYPE_NAME "[]), $3) ON CONFLICT DO NOTHING",
 			record_id,
 			std::move( tag_ids ),
 			tag_domain_id ) };
@@ -197,7 +197,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
 
-drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags( const drogon::HttpRequestPtr request, RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags( const drogon::HttpRequestPtr request, const RecordID record_id )
 {
 	logging::ScopedTimer timer { "addTags" };
 	// the path will contain a record_id

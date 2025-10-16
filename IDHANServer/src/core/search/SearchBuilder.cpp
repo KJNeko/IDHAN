@@ -4,8 +4,8 @@
 
 #include "SearchBuilder.hpp"
 
-#include "api/helpers/drogonArrayBind.hpp"
 #include "api/helpers/helpers.hpp"
+#include "db/drogonArrayBind.hpp"
 
 namespace idhan
 {
@@ -28,22 +28,11 @@ drogon::Task< drogon::orm::Result > SearchBuilder::
 	query( const drogon::orm::DbClientPtr db, const bool return_ids, const bool return_hashes )
 {
 	const std::size_t tag_count { m_tags.size() };
+	const auto query { construct( return_ids, return_hashes, false ) };
 
-	std::vector< TagID > tests { 1, 2, 3, 4 };
+	log::info( "Trying to run {}", query );
 
-	const auto test { co_await db->execSqlCoro( "SELECT * FROM UNNEST($1::BIGINT[])", std::move( tests ) ) };
-
-	if ( test.size() != 4 )
-	{
-		throw std::runtime_error( "test failed" );
-	}
-	else
-	{
-		std::cout << "test passed" << std::endl;
-	}
-
-	auto result { co_await db->execSqlCoro(
-		construct( return_ids, return_hashes, /* filter_domains */ false ), std::move( m_tags ), tag_count ) };
+	auto result { co_await db->execSqlCoro( query, std::move( m_tags ), tag_count ) };
 
 	co_return result;
 }
@@ -55,7 +44,8 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	std::string query {};
 	query.reserve( 1024 );
 	constexpr std::string_view query_start {
-		"WITH filtered_records AS (SELECT record_id FROM active_tag_mappings_final WHERE tag_id = ANY($1::BIGINT[]) GROUP BY record_id HAVING COUNT(DISTINCT tag_id) = $2)"
+		"WITH filtered_records AS (SELECT record_id FROM active_tag_mappings_final WHERE tag_id = ANY($1::" TAG_PG_TYPE_NAME
+		"[]) GROUP BY record_id HAVING COUNT(DISTINCT tag_id) = $2)"
 	};
 	query += query_start;
 

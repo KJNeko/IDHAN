@@ -11,6 +11,7 @@
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "metadata/parseMetadata.hpp"
 
@@ -23,7 +24,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 		"SELECT size, mime.name as mime_name, coalesce(extension, best_extension) as extension FROM file_info LEFT JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
 		record_id ) };
 
-	if ( file_info.size() == 0 )
+	if ( file_info.empty() )
 	{
 		data[ "size" ] = 0;
 		data[ "mime" ] = "";
@@ -42,17 +43,16 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	getMetadataInfo( drogon::orm::DbClientPtr db, const RecordID record_id, Json::Value data )
 {
-	auto metadata {
-		co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id )
-	};
+	auto metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
 
 	if ( metadata.empty() )
 	{
+		log::warn( "Metadata missing for record {} Attempting to acquire metadata", record_id );
 		const auto parse_result { co_await api::tryParseRecordMetadata( record_id, db ) };
 		if ( !parse_result ) co_return std::unexpected( parse_result.error() );
-	}
 
-	metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
+		metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
+	}
 
 	if ( metadata.empty() )
 		co_return std::unexpected( createInternalError( "Failed to get mime type for record {}", record_id ) );
@@ -73,8 +73,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 				if ( !image_metadata.empty() )
 				{
-					data[ "width" ] = image_metadata[ 0 ][ 0 ].as< std::uint32_t >();
-					data[ "height" ] = image_metadata[ 0 ][ 1 ].as< std::uint32_t >();
+					data[ "width" ] = image_metadata[ 0 ][ "width" ].as< std::uint32_t >();
+					data[ "height" ] = image_metadata[ 0 ][ "height" ].as< std::uint32_t >();
 				}
 				else
 				{
@@ -93,7 +93,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpRequestPtr request )
 {
-	logging::ScopedTimer timer { "fileMetadata", std::chrono::seconds( 1 ) };
+	logging::ScopedTimer timer { "fileMetadata", std::chrono::milliseconds( 250 ) };
 	auto db { drogon::app().getDbClient() };
 
 	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ) )
@@ -105,7 +105,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	const auto file_ids { request->getOptionalParameter< std::string >( "file_ids" ) };
 	if ( !file_ids ) co_return createBadRequest( "Must provide file_ids array" );
 
-	std::string file_ids_str { file_ids.value() };
+	const std::string& file_ids_str { file_ids.value() };
 	Json::Value file_ids_json {};
 	Json::Reader file_ids_reader {};
 	file_ids_reader.parse( file_ids_str, file_ids_json );
@@ -113,27 +113,49 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	std::vector< RecordID > record_ids {};
 	for ( const auto& id : file_ids_json ) record_ids.push_back( id.as< RecordID >() );
 
-	// we've gotten all the ids. For now we'll just return them
 	Json::Value metadata_json {};
 
 	const auto services { co_await getServiceList( db ) };
 
-	for ( const auto& record_id : record_ids )
+	const auto hash_result { co_await db->execSqlCoro(
+		"SELECT record_id, sha256, coalesce(size, 0), coalesce(mime.name, '') as mime_name, coalesce(coalesce(extension, best_extension), '') as extension FROM records LEFT JOIN file_info USING (record_id) LEFT JOIN mime USING (mime_id) WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME
+		"[])",
+		std::move( record_ids ) ) };
+
+	struct Info
 	{
-		// poke the metadata endpoint from /records/{record_id}/metadata in order to ensure the metadata state is valid for this record_id
+		RecordID record_id;
+		SHA256 sha256;
+		std::size_t size;
+		std::string mime_name;
+		std::string extension;
+	};
+
+	std::vector< Info > hashes {};
+	hashes.reserve( services.size() );
+
+	for ( const auto& row : hash_result )
+	{
+		hashes.emplace_back(
+			row[ 0 ].as< RecordID >(),
+			SHA256::fromPgCol( row[ 1 ] ),
+			row[ 2 ].as< std::size_t >(),
+			row[ 3 ].as< std::string >(),
+			row[ 4 ].as< std::string >() );
+		// hashes.emplace_back( row[ 0 ].as< RecordID >(), SHA256::fromPgCol( row[ 1 ] ) );
+	}
+
+	for ( const auto& [ record_id, sha256, size, mime_name, extension ] : hashes )
+	{
+		logging::ScopedTimer timer_single { "singleRecordfileMetadata", std::chrono::milliseconds( 5 ) };
 		Json::Value data {};
 
-		const auto hash_result { co_await db->execSqlCoro( "SELECT * FROM records WHERE record_id = $1", record_id ) };
-
 		data[ "file_id" ] = record_id;
-		const SHA256 sha256 { hash_result[ 0 ][ "sha256" ] };
 		data[ "hash" ] = sha256.hex();
 
-		{
-			const auto data_result { co_await getFileInfo( db, record_id, data ) };
-			if ( !data_result ) co_return data_result.error();
-			data = data_result.value();
-		}
+		data[ "size" ] = size;
+		data[ "mime" ] = mime_name;
+		data[ "ext" ] = extension;
 
 		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
 
@@ -158,6 +180,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		}
 
 		{
+			logging::ScopedTimer metadata_timer { "metadata", std::chrono::milliseconds( 5 ) };
 			const auto data_result { co_await getMetadataInfo( db, record_id, data ) };
 			if ( data_result ) data = data_result.value();
 		}
@@ -165,11 +188,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		auto storage_tags { db->execSqlCoro(
 			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
 			record_id ) };
-
-		auto display_tags { db->execSqlCoro(
-			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_final NATURAL JOIN tags_combined WHERE record_id = $1",
-			record_id ) };
-
 		for ( const auto& storage_tag : co_await storage_tags )
 		{
 			const auto& tag_domain_id { storage_tag[ "tag_domain_id" ] };
@@ -183,6 +201,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 			data[ "tags" ][ service_key ][ "storage_tags" ][ "0" ].append( tag_text.as< std::string >() );
 		}
 
+		auto display_tags { db->execSqlCoro(
+			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_final NATURAL JOIN tags_combined WHERE record_id = $1",
+			record_id ) };
 		for ( const auto& display_tag : co_await display_tags )
 		{
 			const auto& tag_domain_id { display_tag[ "tag_domain_id" ] };
@@ -213,7 +234,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	Json::Value out {};
 	out[ "metadata" ] = std::move( metadata_json );
 
-	out[ "services" ] = std::move( services );
+	out[ "services" ] = services;
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( std::move( out ) );
 }

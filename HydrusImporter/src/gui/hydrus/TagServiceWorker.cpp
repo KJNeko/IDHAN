@@ -41,32 +41,13 @@ void TagServiceWorker::preprocess()
 	std::size_t parent_counter { 0 };
 	std::size_t sibling_counter { 0 };
 
-	if ( m_ptr && false ) // Disabled until I can figure why this locks up the GUI when it runs
+	idhan::hydrus::Query< int, int > query { mappings_tr, std::format( "SELECT * FROM {}", current_mappings_name ) };
+
+	for ( [[maybe_unused]] const auto& [ tag_id, hash_id ] : query )
 	{
-		if ( QThread::isMainThread() ) throw std::runtime_error( "Why the fuck is this on the main thread?" );
-
-		idhan::hydrus::Query< std::size_t > query { mappings_tr,
-			                                        std::format( "SELECT count(*) FROM {}", current_mappings_name ) };
-
-		for ( const auto& [ mapping_count ] : query )
-		{
-			mappings_counter = mapping_count;
-		}
-
-		// mappings_tr << std::format( "SELECT count(*) FROM {}", current_mappings_name ) >> mappings_counter;
-	}
-	else
-	{
-		idhan::hydrus::Query< int, int > query {
-			mappings_tr, std::format( "SELECT * FROM {} ORDER BY tag_id, hash_id", current_mappings_name )
-		};
-
-		for ( [[maybe_unused]] const auto& [ tag_id, hash_id ] : query )
-		{
-			mappings_counter += 1;
-			if ( mappings_counter % 500'000 == 0 ) emit processedMaxMappings( mappings_counter );
-		};
-	}
+		mappings_counter += 1;
+		if ( mappings_counter % 500'000 == 0 ) emit processedMaxMappings( mappings_counter );
+	};
 
 	emit processedMaxMappings( mappings_counter );
 
@@ -178,7 +159,7 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 	using namespace idhan;
 
 	mappings_semaphore.acquire();
-	while ( m_futures.size() > 0 && m_futures.front().isFinished() )
+	while ( !m_futures.empty() && m_futures.front().isFinished() )
 	{
 		m_futures.pop();
 	}
@@ -195,9 +176,8 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 
 					record_future.waitForFinished();
 					auto records = record_future.result();
-					FGL_ASSERT( records.size() == hashes.size(), "Records size was not the same as hashes size!" );
-					FGL_ASSERT(
-						records.size() == tag_sets_c.size(), "Records size was not the same as tag sets size!" );
+					FGL_ASSERT( records.size() == hashes.size(), "Records size was different from hashes size!" );
+					FGL_ASSERT( records.size() == tag_sets_c.size(), "Records size was different from tag sets size!" );
 					auto tag_future = client.addTags( std::move( records ), tag_domain_id, std::move( tag_sets_c ) );
 
 					tag_future.waitForFinished();
@@ -320,10 +300,6 @@ void TagServiceWorker::processRelationships()
 	std::set< HyTagID > tag_set {};
 
 	std::vector< std::pair< ChildID, ParentID > > hy_parents {};
-	std::vector< std::pair< BadTagID, GoodTagID > > hy_siblings {};
-
-	std::unordered_map< int, std::pair< std::string, std::string > > tag_pairs {};
-
 	// Get all parent mappings, insert into the tag_set set to get a list of unique ids
 	{
 		Query< ParentID, ChildID > query {
@@ -338,6 +314,7 @@ void TagServiceWorker::processRelationships()
 		}
 	}
 
+	std::vector< std::pair< BadTagID, GoodTagID > > hy_siblings {};
 	// Get all the sibling, insert into the tag_set set to get a list of unique ids
 	{
 		Query< int, int > query { client_tr,
@@ -351,6 +328,7 @@ void TagServiceWorker::processRelationships()
 		}
 	}
 
+	std::unordered_map< int, std::pair< std::string, std::string > > tag_pairs {};
 	// get all the unique tags component ids and their associated strings
 	for ( const auto& tag_id : tag_set )
 	{

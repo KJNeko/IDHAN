@@ -9,7 +9,6 @@
 #include <spdlog/spdlog.h>
 #pragma GCC diagnostic pop
 
-#include <filesystem>
 #include <string>
 
 #include "Config.hpp"
@@ -32,6 +31,7 @@ struct ConnectionArguments
 	//! If true then the server will use stdout to log things.
 	bool use_stdout { true };
 	spdlog::level::level_enum log_level { spdlog::level::info };
+	bool listen_localhost_only { true };
 
 	std::string format() const;
 };

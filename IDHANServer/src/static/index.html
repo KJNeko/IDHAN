@@ -35,15 +35,14 @@
     <div class="info">
         <p>Server version: <span id="idhan-version">Getting version...</span></p>
         <p>API Version: <span id="api-version">Getting version...</span></p>
-        <p>Mimicked Hydrus API version: <span id="hydrus-version">Getting version...</span></p>
+        <p>Mimicked Hydrus API version: <span id="hydrus-api-version">Getting version...</span></p>
+        <p>Mimicked Hydrus Version: <span id="hydrus-version">Getting version...</span></p>
         <p>Status: <span class="status" id="connection-status">Connecting...</span></p>
         <p>Last heartbeat: <span id="heartbeat-message">Waiting for heartbeat...</span></p>
     </div>
 </div>
 <script>
     let url = `${window.location.protocol}//${window.location.hostname}` + (window.location.port ? `:${window.location.port}` : '');
-
-    const hydrus_api_version = 'hydrus_api_version';
 
     async function fetchVersion() {
         try {
@@ -56,16 +55,17 @@
             const idhan_server_version = data.idhan_server_version;
             const idhan_api_version = data.idhan_api_version;
 
-            console.log(idhan_server_version)
-            console.log(idhan_api_version)
+            console.log(data)
 
             document.getElementById('idhan-version').textContent = idhan_server_version.string || 'N/A';
             document.getElementById('api-version').textContent = idhan_api_version.string || 'N/A';
-            document.getElementById('hydrus-version').textContent = data.hydrus_api_version || 'N/A';
+            document.getElementById('hydrus-api-version').textContent = data.hydrus_api_version || 'N/A';
+            document.getElementById('hydrus-version').textContent = data.hydrus_version || 'N/A';
         } catch (error) {
             console.error('Error fetching version info:', error);
             document.getElementById('idhan-version').textContent = 'Failed to get version info';
             document.getElementById('api-version').textContent = 'Failed to get version info';
+            document.getElementById('hydrus-api-version').textContent = 'Failed to get version info';
             document.getElementById('hydrus-version').textContent = 'Failed to get version info';
         }
     }

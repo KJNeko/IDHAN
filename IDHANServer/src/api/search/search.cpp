@@ -17,7 +17,12 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 	auto db { drogon::app().getDbClient() };
 
 	// Drogon does not support tag_id=1?tag_id=2 for some reason, But it's possible to be sent like that, So we'll handle it here.
-	const auto tag_ids { parseArrayParmeters< std::size_t >( request, "tag_id" ) };
+	// Support both tag_id (singular) and tag_ids (plural) for compatibility
+	auto tag_ids { parseArrayParmeters< std::size_t >( request, "tag_ids" ) };
+	if ( tag_ids.empty() )
+	{
+		tag_ids = parseArrayParmeters< std::size_t >( request, "tag_id" );
+	}
 	const auto tag_domain_ids { parseArrayParmeters< TagDomainID >( request, "tag_domains" ) };
 
 	const bool use_stored { request->getOptionalParameter< bool >( "use_stored" ).value_or( false ) };
@@ -41,12 +46,12 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	log::info( "Query: {}", query );
 
+	//TODO: Search for multiple tags
 	const auto result { co_await db->execSqlCoro( query, static_cast< TagID >( tag_ids[ 0 ] ) ) };
 
 	if ( result.empty() )
 	{
-		Json::Value root {};
-		root[ "file_ids" ] = Json::arrayValue;
+		Json::Value root { Json::arrayValue };
 		co_return drogon::HttpResponse::newHttpJsonResponse( root );
 	}
 
@@ -58,10 +63,7 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 		file_ids.append( id );
 	}
 
-	Json::Value json {};
-	json[ "file_ids" ] = std::move( file_ids );
-
-	co_return drogon::HttpResponse::newHttpJsonResponse( json );
+	co_return drogon::HttpResponse::newHttpJsonResponse( file_ids );
 }
 
 } // namespace idhan::api

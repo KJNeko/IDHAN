@@ -162,7 +162,16 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	Json::Reader reader;
 	if ( !reader.parse( tags, tags_json ) )
 	{
-		co_return createBadRequest( "Invalid tags json: Was {}", tags );
+		// Try to decode the text again and re-parse it
+		const auto decoded_tags { drogon::utils::urlDecode( tags ) };
+		if ( reader.parse( decoded_tags, tags_json ) )
+		{
+			log::warn( "Tags JSON had to be URL-decoded a second time. Call the requester an idiot" );
+		}
+		else
+		{
+			co_return createBadRequest( "Invalid tags json: Was {}", tags );
+		}
 	}
 
 	std::vector< TagID > tag_ids {};
@@ -358,7 +367,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 
 	const auto result { co_await api::getSimilarTags( search_value, db ) };
 
-	co_return drogon::HttpResponse::newHttpJsonResponse( result );
+	Json::Value root;
+	root[ "tags" ] = std::move( result );
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getClientOptions( drogon::HttpRequestPtr request )

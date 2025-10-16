@@ -4,7 +4,6 @@
 
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "fgl/defines.hpp"
 
 namespace idhan::api
 {
@@ -39,13 +38,7 @@ drogon::Task< Json::Value >
 		search_value,
 		std::min( limit, max_limit ) ) };
 
-	Json::Value root {};
-
-	if ( result.size() == 0 )
-	{
-		root[ "tags" ] = Json::Value( Json::arrayValue );
-		co_return root;
-	}
+	Json::Value tags { Json::arrayValue };
 
 	for ( const auto& row : result )
 	{
@@ -58,10 +51,10 @@ drogon::Task< Json::Value >
 		tag[ "tag_id" ] = row[ "tag_id" ].as< TagID >();
 		tag[ "count" ] = row[ "count" ].as< std::size_t >();
 
-		root[ "tags" ].append( std::move( tag ) );
+		tags.append( std::move( tag ) );
 	}
 
-	co_return root;
+	co_return tags;
 }
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::

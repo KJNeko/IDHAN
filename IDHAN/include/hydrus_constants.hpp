@@ -3,8 +3,7 @@
 //
 #pragma once
 
-#include "hydrus_client_constants_gen.hpp"
-#include "hydrus_constants_gen.hpp"
+#include "hydrus/HydrusConstants_gen.hpp"
 
 namespace idhan::hydrus::hy_constants
 {

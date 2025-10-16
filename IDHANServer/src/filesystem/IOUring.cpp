@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 
 #include <cmath>
+#include <fstream>
 #include <liburing.h>
 #include <stdexcept>
 
@@ -62,6 +63,8 @@ drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, co
 {
 	auto& uring { IOUring::getInstance() };
 
+	if ( uring.m_iouring_setup == false ) co_await fallbackWrite( data, offset );
+
 	const auto len { data.size() };
 	if ( m_fd <= 0 ) throw std::runtime_error( "FileIOUring::write: Invalid file descriptor" );
 	if ( len >= std::numeric_limits< __u32 >::max() )
@@ -81,8 +84,46 @@ drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, co
 	co_return;
 }
 
+drogon::Task< std::vector< std::byte > > FileIOUring::fallbackRead( const std::size_t offset, const std::size_t len )
+	const
+{
+	if ( std::ifstream ifs( m_path, std::ios::binary ); ifs )
+	{
+		std::vector< std::byte > data {};
+
+		data.reserve( len );
+
+		if ( offset > 0 ) ifs.seekg( offset );
+
+		ifs.read( reinterpret_cast< char* >( data.data() ), len );
+
+		co_return data;
+	}
+	else
+		throw std::
+			runtime_error( format_ns::format( "FileIOUring::fallbackRead: Failed to open file {}", m_path.string() ) );
+}
+
+drogon::Task< void > FileIOUring::fallbackWrite( const std::vector< std::byte > data, const std::size_t size ) const
+{
+	if ( std::ofstream ofs( m_path, std::ios::trunc | std::ios::binary ); ofs )
+	{
+		ofs.write( reinterpret_cast< const std::ostream::char_type* >( data.data() ), size );
+	}
+	else
+		throw std::
+			runtime_error( format_ns::format( "FileIOUring::fallbackWrite: Failed to open file {}", m_path.string() ) );
+
+	co_return;
+}
+
 void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< std::atomic< bool > > running )
 {
+	if ( !uring->m_iouring_setup )
+	{
+		log::warn( "Exiting iouring watcher thread due to invalid io_uring setup" );
+	}
+
 	const auto min_complete { 1 };
 
 	if ( running->load() == false ) running->wait( false );
@@ -222,16 +263,16 @@ IOUring::CommandRingPointers IOUring::setupCommandRing()
 	return ptrs;
 }
 
-int IOUring::setupUring( io_uring_params& params )
+int IOUring::setupUring()
 {
-	std::memset( &params, 0, sizeof( params ) );
+	std::memset( &m_params, 0, sizeof( m_params ) );
 	// COOP_TASKRUN stops io_uring from interrupting us.
-	params.flags = 0;
+	m_params.flags = 0;
 
 	static constexpr std::size_t queue_depth { 64 };
 	static_assert( queue_depth <= 4096, "Queue depth must be less than 4096" );
 
-	return io_uring_setup( queue_depth, &params );
+	return io_uring_setup( queue_depth, &m_params );
 }
 
 void* IOUring::setupSubmissionEntries() const
@@ -280,7 +321,7 @@ void IOUring::notifySubmit( std::size_t count ) const
 }
 
 IOUring::IOUring() :
-  uring_fd( setupUring( m_params ) ),
+  uring_fd( setupUring() ),
   m_submission_ring( setupSubmissionRing() ),
   m_command_ring( setupCommandRing() ),
   m_submission_entries( static_cast< io_uring_sqe* >( setupSubmissionEntries() ) ),
@@ -291,9 +332,11 @@ IOUring::IOUring() :
 
 	// queue depth must be a power of 2
 
-	if ( uring_fd < 0 )
+	m_iouring_setup = uring_fd > 0;
+
+	if ( m_iouring_setup == false )
 	{
-		throw std::runtime_error( format_ns::format( "Failed to setup IO uring, Error code: {}", uring_fd ) );
+		log::warn( "Failed to set up IOUring, Falling back to slower read/write system" );
 	}
 
 	instance = this;

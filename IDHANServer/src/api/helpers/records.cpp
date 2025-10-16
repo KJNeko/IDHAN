@@ -1,8 +1,8 @@
 #include "records.hpp"
 
-#include "api/helpers/drogonArrayBind.hpp"
 #include "createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "fgl/defines.hpp"
 
 namespace idhan::api::helpers
@@ -47,8 +47,8 @@ drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > >
 
 	do {
 		tries += 1;
-		if ( tries > 16 ) // TODO: ret
-			co_return 0;
+		if ( tries > 16 )
+			co_return std::unexpected( createInternalError( "Failed to insert record {}", sha256.hex() ) );
 
 		const auto insert { co_await db->execSqlCoro(
 			"INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING RETURNING record_id", sha256.toVec() ) };
