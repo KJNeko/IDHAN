@@ -7,7 +7,7 @@
 namespace idhan::logging
 {
 
-ScopedTimer::ScopedTimer( const std::string& str, const bool warn, const std::chrono::milliseconds ms_warn_time ) :
+ScopedTimer::ScopedTimer( const std::string& str, const bool warn, const std::chrono::microseconds ms_warn_time ) :
   name( str ),
   m_warn_time( ms_warn_time ),
   m_always_warn( warn ),
@@ -20,8 +20,9 @@ ScopedTimer::~ScopedTimer()
 	const auto duration { end - start };
 	const auto duration_s { std::chrono::duration_cast< std::chrono::seconds >( duration ).count() };
 	const auto duration_ms { std::chrono::duration_cast< std::chrono::milliseconds >( duration ).count() };
+	const auto duration_us { std::chrono::duration_cast< std::chrono::microseconds >( duration ).count() };
 
 	if ( duration > m_warn_time || m_always_warn )
-		log::warn( "{} took {}s {}ms", name, duration_s, duration_ms % 1000 );
+		log::warn( "{} took {}s {}ms {}us", name, duration_s, duration_ms % 1000, duration_us % ( 1000 ) );
 }
 } // namespace idhan::logging

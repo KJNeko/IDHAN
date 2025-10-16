@@ -13,7 +13,7 @@ namespace idhan::logging
 struct ScopedTimer
 {
 	std::string name;
-	std::chrono::milliseconds m_warn_time;
+	std::chrono::microseconds m_warn_time;
 	bool m_always_warn;
 
 	using Clock = std::chrono::high_resolution_clock;
@@ -22,11 +22,11 @@ struct ScopedTimer
 	const TimePoint start;
 
 	ScopedTimer(
-		const std::string& str, bool always_warn, std::chrono::milliseconds ms_warn_time = std::chrono::minutes( 1 ) );
+		const std::string& str, bool always_warn, std::chrono::microseconds ms_warn_time = std::chrono::minutes( 1 ) );
 
 	ScopedTimer(
 		const std::string& str,
-		std::chrono::milliseconds ms_warn_time = std::chrono::minutes( 1 ),
+		std::chrono::microseconds ms_warn_time = std::chrono::minutes( 1 ),
 		const bool always_warn = false ) :
 	  ScopedTimer( str, always_warn, ms_warn_time )
 	{}
