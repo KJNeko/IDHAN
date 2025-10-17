@@ -20,11 +20,6 @@ jobs:
       packages: write
 
     steps:
-      - name: Install network utilities
-        run: |
-          apt-get update
-          apt-get install -y iputils-ping net-tools iproute2
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
