@@ -14,9 +14,6 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/catthehacker/ubuntu:full-latest
-      options: --network host
     if: github.server_url == 'https://git.futuregadgetlabs.net'
     permissions:
       contents: read
