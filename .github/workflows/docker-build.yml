@@ -20,11 +20,11 @@ jobs:
       packages: write
 
     steps:
-
-      - name: test domains
+      - name: Install network utilities
         run: |
-          curl -v git.futuregadgetlabs.net
-        
+          apt-get update
+          apt-get install -y iputils-ping net-tools iproute2
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
