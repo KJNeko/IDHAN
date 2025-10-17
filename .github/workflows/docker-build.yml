@@ -34,7 +34,6 @@ jobs:
           registry: git.futuregadgetlabs.net
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
-          debug: true
 
       - name: Extract metadata (tags, labels)
         id: meta
