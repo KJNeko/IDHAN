@@ -35,6 +35,9 @@ jobs:
           username: kj16609
           password: ${{ secrets.TEST_SECRET }}
 
+      - name: Debug Sleep
+        run: sleep 600
+
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
