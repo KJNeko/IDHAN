@@ -7,9 +7,6 @@ on:
     tags:
       - '*'
 
-# Only run on Gitea, not GitHub
-if: ${{ gitea }}
-
 env:
   REGISTRY: git.futuregadgetlabs.net
   IMAGE_NAME: kj16609/idhan
@@ -17,13 +14,14 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    if: github.server_url == 'https://git.futuregadgetlabs.net'
     permissions:
       contents: read
       packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
