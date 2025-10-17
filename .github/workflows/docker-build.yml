@@ -20,6 +20,11 @@ jobs:
       packages: write
 
     steps:
+
+      - name: test domains
+        run: |
+          curl -v git.futuregadgetlabs.net
+        
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
