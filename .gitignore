@@ -38,3 +38,4 @@ IDHANServer/src/db/dev.sql
 IDHANServer/src/db/pre-dev.sql
 
 .env
+publish.sh
