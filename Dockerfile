@@ -35,17 +35,7 @@ RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 
-# Copy server source files
-COPY .git/ /build/.git
-COPY dependencies/ /build/dependencies/
-copy 3rd-party/hydrus /build/3rd-party/hydrus/
-COPY IDHANModules/ /build/IDHANModules/
-COPY IDHANServer/ /build/IDHANServer/
-COPY IDHAN/ /build/IDHAN/
-COPY docs/ /build/docs/
-COPY IDHANMigration/ /build/IDHANMigration/
-
-COPY CMakeLists.txt /build/
+COPY . /build/
 
 # Initialize git submodules if needed
 RUN if [ -f .gitmodules ]; then git submodule update --init --recursive || true; fi
