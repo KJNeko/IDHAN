@@ -20,8 +20,6 @@ jobs:
       packages: write
 
     steps:
-      - name: test sleep
-        run: sleep 1900000
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
