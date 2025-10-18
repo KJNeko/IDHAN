@@ -38,8 +38,6 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::version( drogon::HttpRequestPtr
 	json[ "tag" ] = FGL_GIT_TAG;
 	json[ "build" ] = FGL_BUILD_TYPE;
 
-	json[ "static_path" ] = getStaticPath().string();
-
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }
 
