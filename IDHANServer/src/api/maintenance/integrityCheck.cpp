@@ -15,7 +15,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::integrityCheck( drogon::
 	root[ "static" ] = getStaticPath().string();
 	root[ "static_exists" ] = std::filesystem::exists( getStaticPath() ) ? "true" : "false";
 
-	for ( const auto& file : std::filesystem::recursive_directory_iterator( getStaticPath() ) )
+	for ( const auto& file : std::filesystem::recursive_directory_iterator( getStaticPath().parent_path() ) )
 	{
 		if ( file.is_regular_file() ) root[ "files" ].append( file.path().string() );
 	}
