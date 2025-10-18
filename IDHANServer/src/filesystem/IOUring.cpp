@@ -122,7 +122,10 @@ void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< st
 	if ( !uring->m_iouring_setup )
 	{
 		log::warn( "Exiting iouring watcher thread due to invalid io_uring setup" );
+		return;
 	}
+
+	log::info( "IOUring watcher thread started" );
 
 	const auto min_complete { 1 };
 
