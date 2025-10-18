@@ -336,7 +336,8 @@ IOUring::IOUring() :
 
 	if ( m_iouring_setup == false )
 	{
-		log::warn( "Failed to set up IOUring, Falling back to slower read/write system" );
+		log::error( "Failed to set up IOUring, Falling back to slower read/write system" );
+		log::warn( "If you are running a docker container, Ensure IDHAN's contained has `seccomp=unconfined`" );
 	}
 
 	instance = this;
