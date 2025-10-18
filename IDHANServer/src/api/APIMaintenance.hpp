@@ -30,6 +30,8 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 
 	drogon::Task< drogon::HttpResponsePtr > test( drogon::HttpRequestPtr request );
 
+	drogon::Task< drogon::HttpResponsePtr > integrityCheck( drogon::HttpRequestPtr request );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -38,7 +40,9 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart" );
 	ADD_METHOD_TO( APIMaintenance::postgresqlStorageSunData, "/db/stats/sunburst" );
 
-	ADD_METHOD_TO( APIMaintenance::test, "/test" );
+	ADD_METHOD_TO( APIMaintenance::integrityCheck, "/integrity" );
+
+	// ADD_METHOD_TO( APIMaintenance::test, "/test" );
 
 	METHOD_LIST_END
 };
