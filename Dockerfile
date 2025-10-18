@@ -98,9 +98,6 @@ ENV IDHAN_DATABASE_HOST=localhost \
 
 RUN chmod +x /usr/bin/IDHANServer
 
-# Make user-managed paths mountable
-VOLUME ["/usr/share/idhan"]
-
 # Expose default port (adjust based on your config)
 EXPOSE 16609
 
