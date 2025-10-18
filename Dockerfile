@@ -4,43 +4,39 @@ FROM ubuntu:24.04 AS builder
 
 RUN apt-get update
 
-# Install build dependencies
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+# General dependencies
+RUN DEBIAN_FRONTNED=noninteractive apt-get install -y \
     build-essential \
     cmake \
     git \
     pkg-config \
-    # Qt6 development packages
+    gcc-14 \
+    g++-14
+
+# Server build dependencies
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    libpq-dev \
+    liburing-dev \
     qt6-base-dev \
     qt6-multimedia-dev \
     libqt6core6 \
     libqt6multimedia6 \
-    # PostgreSQL client libraries
-    libpq-dev \
-    postgresql-client \
-    # Image processing
-    libvips-dev \
-    # Async I/O
-    liburing-dev \
-    # Common dependencies for drogon/trantor
-    libjsoncpp-dev \
-    uuid-dev \
-    zlib1g-dev \
-    libssl-dev \
-    libc-ares-dev \
-    # Compiler with C++23 support
-    g++-14 \
-    gcc-14
+    libjsoncpp-dev
 
-RUN rm -rf /var/lib/apt/lists/*
+# Install build dependencies (IDHANPRemadeModules)
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    libvips-dev
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
 
+RUN rm -rf /var/lib/apt/lists/*
+
 WORKDIR /build
 
 # Copy server source files
+COPY .git/ /build/.git
 COPY dependencies/ /build/dependencies/
 copy 3rd-party/hydrus /build/3rd-party/hydrus/
 COPY IDHANModules/ /build/IDHANModules/
@@ -63,8 +59,9 @@ RUN cmake -S . -B build \
     -DBUILD_IDHAN_DOCS=ON \
     -DBUILD_IDHAN_WEBUI=OFF \
     -DBUILD_IDHAN_CLIENT=OFF \
-    -DBUILD_IDHAN_TOOLS=OFF \
-    && cmake --build build --target IDHANServer -j$(nproc)
+    -DBUILD_IDHAN_TOOLS=OFF
+
+RUN cmake --build build --target IDHANServer -j$(nproc)
 
 # Stage 2: Runtime environment
 FROM ubuntu:24.04
@@ -100,8 +97,8 @@ RUN mkdir -p /opt/idhan/static \
     /usr/share/idhan
 
 # Copy built artifacts from builder stage
-COPY --from=builder /build/build/bin/IDHANServer /usr/bin/IDHANServer
-COPY --from=builder /build/build/bin/static/ /usr/share/idhan/static/
+COPY --from=builder /build/build/bin/IDHANServer/ /usr/bin/IDHANServer
+COPY --from=builder /build/build/bin/static/ /usr/share/idhan/static
 COPY --from=builder /build/build/bin/modules/ /usr/share/idhan/modules
 COPY --from=builder /build/build/bin/mime/ /usr/share/idhan/mime
 COPY --from=builder /build/build/bin/config.toml /usr/share/idhan/config.toml

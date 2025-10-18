@@ -17,6 +17,8 @@ services:
 
   idhanserver:
     image: git.futuregadgetlabs.net/kj16609/idhan:latest
+    build:
+      context: .
     container_name: idhan-server
     environment:
       IDHAN_DATABASE_HOST: postgres
@@ -26,9 +28,7 @@ services:
     ports:
       - "16609:16609"
     volumes:
-      - idhan_modules:/var/lib/idhan/modules
-      - idhan_mime:/etc/idhan/mime.d
-      - idhan_config:/etc/idhan
+      - idhan_config:/usr/share/idhan
     security_opt:
       - seccomp=unconfined
     depends_on:
@@ -38,6 +38,4 @@ services:
 
 volumes:
   postgres_data:
-  idhan_modules:
-  idhan_mime:
   idhan_config:
