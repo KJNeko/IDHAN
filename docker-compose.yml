@@ -19,6 +19,7 @@ services:
     image: git.futuregadgetlabs.net/kj16609/idhan:latest
     build:
       context: .
+    pull_policy: always
     container_name: idhan-server
     environment:
       IDHAN_DATABASE_HOST: postgres
