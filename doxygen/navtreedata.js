@@ -81,11 +81,11 @@ var NAVTREEINDEX =
 "d2/d4d/namespacedrogon_1_1orm_1_1internal.html#a4fc4e35128fad1651a3202e3eaf37428",
 "d4/d76/classidhan_1_1api_1_1APIAuth.html",
 "d6/da3/logger_8hpp_source.html",
-"d9/d52/structidhan_1_1WriteAwaiter.html#a43f6a1cd0182310db1c5ad19852f4fa0",
-"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a8d518da8a0e370e50822fd75ae5ca449",
-"dd/db3/classidhan_1_1api_1_1InfoAPI.html#ad585bc09463b12fe9f6a297794081361",
-"df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html",
-"namespacemembers_n.html"
+"d9/d52/structidhan_1_1WriteAwaiter.html#a4241e96c063e3f0bcc4881788b0f8c78",
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a890b2d4267a6f7a5d2b1b5c249d6f17b",
+"dd/db3/classidhan_1_1api_1_1InfoAPI.html#a79c63ae3f7796c9379132541dc570a7e",
+"de/de7/add_8cpp.html",
+"namespacemembers_i.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

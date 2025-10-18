@@ -1,5 +1,8 @@
 var NAVTREEINDEX5 =
 {
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a890b2d4267a6f7a5d2b1b5c249d6f17b":[5,0,3,5,3,4],
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a890b2d4267a6f7a5d2b1b5c249d6f17b":[6,0,1,2,2,4],
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a8d518da8a0e370e50822fd75ae5ca449":[5,0,3,5,3,7],
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a8d518da8a0e370e50822fd75ae5ca449":[6,0,1,2,2,7],
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a9436bf5f77463cb288cbc0f3e58b80ae":[5,0,3,5,3,35],
 "dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a9436bf5f77463cb288cbc0f3e58b80ae":[6,0,1,2,2,35],
@@ -78,7 +81,7 @@ var NAVTREEINDEX5 =
 "dc/d90/WriteAwaiter_8hpp.html":[7,0,2,0,4,7],
 "dc/d90/WriteAwaiter_8hpp_source.html":[7,0,2,0,4,7],
 "dc/da4/rescanMetadata_8cpp.html":[7,0,2,0,0,3,0],
-"dc/dad/IDHANServer_2src_2api_2tags_2autocompleteTag_8cpp.html":[7,0,2,0,0,7,2],
+"dc/dad/IDHANServer_2src_2api_2tags_2autocompleteTag_8cpp.html":[7,0,2,0,0,8,2],
 "dc/dae/getRecordPath_8cpp.html":[7,0,2,0,0,2,7],
 "dc/dbd/structidhan_1_1TagCache_1_1CacheItem.html":[5,0,3,26,0],
 "dc/dbd/structidhan_1_1TagCache_1_1CacheItem.html":[6,0,1,19,0],
@@ -246,8 +249,5 @@ var NAVTREEINDEX5 =
 "dd/db3/classidhan_1_1api_1_1InfoAPI.html#a298ef111facdd9a014e67604c28acc33":[5,0,3,0,8,5],
 "dd/db3/classidhan_1_1api_1_1InfoAPI.html#a298ef111facdd9a014e67604c28acc33":[6,0,1,0,7,5],
 "dd/db3/classidhan_1_1api_1_1InfoAPI.html#a655a8ece8b1a78d4499412f09557669a":[5,0,3,0,8,2],
-"dd/db3/classidhan_1_1api_1_1InfoAPI.html#a655a8ece8b1a78d4499412f09557669a":[6,0,1,0,7,2],
-"dd/db3/classidhan_1_1api_1_1InfoAPI.html#a79c63ae3f7796c9379132541dc570a7e":[5,0,3,0,8,4],
-"dd/db3/classidhan_1_1api_1_1InfoAPI.html#a79c63ae3f7796c9379132541dc570a7e":[6,0,1,0,7,4],
-"dd/db3/classidhan_1_1api_1_1InfoAPI.html#ad585bc09463b12fe9f6a297794081361":[5,0,3,0,8,0]
+"dd/db3/classidhan_1_1api_1_1InfoAPI.html#a655a8ece8b1a78d4499412f09557669a":[6,0,1,0,7,2]
 };

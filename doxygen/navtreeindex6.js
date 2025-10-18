@@ -1,5 +1,8 @@
 var NAVTREEINDEX6 =
 {
+"dd/db3/classidhan_1_1api_1_1InfoAPI.html#a79c63ae3f7796c9379132541dc570a7e":[5,0,3,0,8,4],
+"dd/db3/classidhan_1_1api_1_1InfoAPI.html#a79c63ae3f7796c9379132541dc570a7e":[6,0,1,0,7,4],
+"dd/db3/classidhan_1_1api_1_1InfoAPI.html#ad585bc09463b12fe9f6a297794081361":[5,0,3,0,8,0],
 "dd/db3/classidhan_1_1api_1_1InfoAPI.html#ad585bc09463b12fe9f6a297794081361":[6,0,1,0,7,0],
 "dd/db3/classidhan_1_1api_1_1InfoAPI.html#ae6f96b607aacd036c6f6a87fc917e4dd":[5,0,3,0,8,3],
 "dd/db3/classidhan_1_1api_1_1InfoAPI.html#ae6f96b607aacd036c6f6a87fc917e4dd":[6,0,1,0,7,3],
@@ -7,11 +10,11 @@ var NAVTREEINDEX6 =
 "dd/db3/classidhan_1_1api_1_1InfoAPI.html#af163eebd1ffb4718482c8df9233975ec":[6,0,1,0,7,1],
 "dd/db8/splitTag_8hpp.html":[7,0,0,0,7],
 "dd/db8/splitTag_8hpp_source.html":[7,0,0,0,7],
-"dd/dba/addUrls_8cpp.html":[7,0,2,0,0,4,1,0],
+"dd/dba/addUrls_8cpp.html":[7,0,2,0,0,5,1,0],
 "dd/dbc/TagSearch_8hpp.html":[7,0,2,0,3,5],
 "dd/dbc/TagSearch_8hpp_source.html":[7,0,2,0,3,5],
-"dd/dbe/ImportAPI_8hpp.html":[7,0,2,0,0,16],
-"dd/dbe/ImportAPI_8hpp_source.html":[7,0,2,0,0,16],
+"dd/dbe/ImportAPI_8hpp.html":[7,0,2,0,0,17],
+"dd/dbe/ImportAPI_8hpp_source.html":[7,0,2,0,0,17],
 "dd/dbf/ReadAwaiter_8cpp.html":[7,0,2,0,4,4],
 "dd/dcf/namespaceidhan.html":[5,0,3],
 "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880c":[5,0,3,57],
@@ -184,7 +187,7 @@ var NAVTREEINDEX6 =
 "de/d07/structidhan_1_1ConnectionArguments.html#ae1aacfc7f7d3b854d9811c4fe0a2a7c8":[6,0,1,6,0],
 "de/d0b/ResponseCallback_8hpp.html":[7,0,2,0,0,2,14],
 "de/d0b/ResponseCallback_8hpp_source.html":[7,0,2,0,0,2,14],
-"de/d2b/removeTags_8cpp.html":[7,0,2,0,0,4,0,2],
+"de/d2b/removeTags_8cpp.html":[7,0,2,0,0,5,0,2],
 "de/d50/structidhan_1_1logging_1_1ScopedTimer.html":[5,0,3,9,0],
 "de/d50/structidhan_1_1logging_1_1ScopedTimer.html":[6,0,1,3,0],
 "de/d50/structidhan_1_1logging_1_1ScopedTimer.html#a05297b1820737ce057c423227a8189f7":[5,0,3,9,0,1],
@@ -238,7 +241,7 @@ var NAVTREEINDEX6 =
 "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html#add01289c8f4df86ccbac5de1c69c7596":[5,0,3,10,7,0],
 "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html#add01289c8f4df86ccbac5de1c69c7596":[6,0,1,4,7,0],
 "de/d9b/cluster_2info_8cpp.html":[7,0,2,0,0,0,1],
-"de/d9d/getBones_8cpp.html":[7,0,2,0,0,6,0],
+"de/d9d/getBones_8cpp.html":[7,0,2,0,0,7,0],
 "de/da7/Config_8cpp.html":[7,0,2,0,10],
 "de/da8/structidhan_1_1mime_1_1VideoInfo.html":[5,0,3,10,11],
 "de/da8/structidhan_1_1mime_1_1VideoInfo.html":[6,0,1,4,11],
@@ -246,8 +249,5 @@ var NAVTREEINDEX6 =
 "de/da8/structidhan_1_1mime_1_1VideoInfo.html#a23fc9d8cc0e8d923b0d71db1eda6f165":[6,0,1,4,11,0],
 "de/dbc/createBadRequest_8hpp.html":[7,0,2,0,0,2,4],
 "de/dbc/createBadRequest_8hpp_source.html":[7,0,2,0,0,2,4],
-"de/dce/getMime_8cpp.html":[7,0,2,0,1,0,0],
-"de/de7/add_8cpp.html":[7,0,2,0,0,0,0],
-"de/dfa/Heartbeat_8cpp.html":[7,0,2,0,0,14],
-"de/dfd/createParentRelationship_8cpp.html":[7,0,1,1,2,2,0]
+"de/dce/getMime_8cpp.html":[7,0,2,0,1,0,0]
 };
