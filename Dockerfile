@@ -81,10 +81,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y curl net-tools
 RUN rm -rf /var/lib/apt/lists/*
 
 # Create directories
-RUN mkdir -p /opt/idhan/static \
-    /opt/idhan/modules \
-    /opt/idhan/mime \
-    /usr/share/idhan
+RUN mkdir -p /usr/share/idhan/
 
 # Copy built artifacts from builder stage
 COPY --from=builder /build/build/bin/IDHANServer/ /usr/bin/IDHANServer
@@ -102,7 +99,7 @@ ENV IDHAN_DATABASE_HOST=localhost \
 RUN chmod +x /usr/bin/IDHANServer
 
 # Make user-managed paths mountable
-VOLUME ["/opt/idhan", "/usr/share/idhan"]
+VOLUME ["/usr/share/idhan"]
 
 # Expose default port (adjust based on your config)
 EXPOSE 16609
