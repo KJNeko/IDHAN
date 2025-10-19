@@ -4,6 +4,53 @@
 
 #include "paths.hpp"
 
+namespace idhan
+{
+std::vector< std::filesystem::path > getModulePaths()
+{
+	constexpr std::array< std::string_view, 2 > module_paths { { "./modules", "/var/lib/idhan/modules" } };
+
+	std::vector< std::filesystem::path > paths {};
+#ifdef __linux__
+#define MODULE_EXT ".so"
+#endif
+
+#ifndef MODULE_EXT
+#error "No module extension given for this OS. Please report to dev"
+#endif
+
+	for ( const auto& search_path : module_paths )
+	{
+		log::info( "Searching for modules at {}", search_path );
+		for ( const auto& file : std::filesystem::recursive_directory_iterator( search_path ) )
+		{
+			if ( !file.is_regular_file() ) continue;
+			if ( file.path().extension() == MODULE_EXT ) paths.emplace_back( file.path() );
+		}
+	}
+
+	return paths;
+}
+
+std::vector< std::filesystem::path > getMimeParserPaths()
+{
+	std::vector< std::filesystem::path > paths {};
+
+	constexpr std::array< std::string_view, 2 > parser_paths { { "./mime", "/var/lib/idhan/mime" } };
+
+	for ( const auto& search_path : parser_paths )
+	{
+		log::info( "Searching for mime parsers at {}", search_path );
+		for ( const auto& file : std::filesystem::recursive_directory_iterator( search_path ) )
+		{
+			if ( !file.is_regular_file() ) continue;
+			if ( file.path().extension() == ".idhanmime" ) paths.emplace_back( file.path() );
+		}
+	}
+
+	return paths;
+}
+
 std::filesystem::path getStaticPath()
 {
 	static std::filesystem::path static_path {};
@@ -13,11 +60,10 @@ std::filesystem::path getStaticPath()
 		static_path_once,
 		[ & ]()
 		{
-			if ( !std::filesystem::exists( "./static" ) )
-				static_path = IDHAN_STATIC_PATH;
-			else
-				static_path = std::filesystem::absolute( "./static" );
+			if ( std::filesystem::exists( "./static" ) ) static_path = std::filesystem::absolute( "./static" );
+			static_path = IDHAN_STATIC_PATH;
 		} );
 
 	return static_path;
 }
+} // namespace idhan

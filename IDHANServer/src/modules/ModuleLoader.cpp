@@ -6,6 +6,7 @@
 #include <dlfcn.h>
 #include <filesystem>
 #include <functional>
+#include <paths.hpp>
 
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
@@ -71,80 +72,70 @@ class ModuleHolder
 	}
 };
 
-constexpr std::array< std::string_view, 2 > module_paths { { "./modules", "/var/lib/idhan/modules" } };
-
 void ModuleLoader::loadModules()
 {
-	for ( const auto& search_path : module_paths )
+	const auto module_paths { getModulePaths() };
+
+	for ( const std::filesystem::path& path : module_paths )
 	{
-		if ( !std::filesystem::exists( search_path ) ) continue;
+		const auto extension { path.extension() };
+		const auto name { path.filename().string() };
 
-		log::info( "Searching for modules at {}", search_path );
-
-		for ( const auto& entry : std::filesystem::directory_iterator( search_path ) )
+		if ( extension == ".so" )
 		{
-			if ( !entry.is_regular_file() ) continue;
+			log::info( "Library found: {}", name );
 
-			const auto path { entry.path() };
-			const auto extension { path.extension() };
-			const auto name { path.filename().string() };
+			// void* handle = dlopen( entry.path().c_str(), RTLD_LAZY | RTLD_GLOBAL );
+			std::shared_ptr< ModuleHolder > holder { std::make_shared< ModuleHolder >( path ) };
+			m_libs.emplace_back( holder );
 
-			if ( extension == ".so" )
+			if ( !holder->handle() )
 			{
-				log::info( "Library found: {}", name );
+				log::error( "Failed to load module: {}", dlerror() );
+				continue;
+			}
 
-				// void* handle = dlopen( entry.path().c_str(), RTLD_LAZY | RTLD_GLOBAL );
-				std::shared_ptr< ModuleHolder > holder { std::make_shared< ModuleHolder >( entry ) };
-				m_libs.emplace_back( holder );
+			log::info( "Getting modules from shared lib" );
 
-				if ( !holder->handle() )
+			using VoidFunc = void* (*)();
+			auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
+			if ( !getModulesFunc )
+			{
+				log::error( "Failed to get getModulesFunc: {}", dlerror() );
+				continue;
+			}
+
+			using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )();
+			auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
+
+			if ( !getModules )
+			{
+				log::error( "Failed to get modules function: {}", dlerror() );
+				continue;
+			}
+
+			auto modules = getModules();
+
+			//TODO: Possibly UB, Since apparently libraries have their own heaps?
+
+			for ( const auto& module : modules )
+			{
+				log::info( "Interrogating module from {} named {}", name, module->name() );
+
+				switch ( module->type() )
 				{
-					log::error( "Failed to load module: {}", dlerror() );
-					continue;
+					default:
+						log::error( "Unknown module type: {}", module->type() );
+						break;
+					case ModuleTypeFlags::METADATA:
+						log::info( "Module type: Metadata" );
+						break;
+					case ModuleTypeFlags::THUMBNAILER:
+						log::info( "Module type: Thumbnailer" );
+						break;
 				}
 
-				log::info( "Getting modules from shared lib" );
-
-				using VoidFunc = void* (*)();
-				auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
-				if ( !getModulesFunc )
-				{
-					log::error( "Failed to get getModulesFunc: {}", dlerror() );
-					continue;
-				}
-
-				using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )();
-				auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
-
-				if ( !getModules )
-				{
-					log::error( "Failed to get modules function: {}", dlerror() );
-					continue;
-				}
-
-				auto modules = getModules();
-
-				//TODO: Possibly UB, Since apparently libraries have their own heaps?
-
-				for ( const auto& module : modules )
-				{
-					log::info( "Interrogating module from {} named {}", name, module->name() );
-
-					switch ( module->type() )
-					{
-						default:
-							log::error( "Unknown module type: {}", module->type() );
-							break;
-						case ModuleTypeFlags::METADATA:
-							log::info( "Module type: Metadata" );
-							break;
-						case ModuleTypeFlags::THUMBNAILER:
-							log::info( "Module type: Thumbnailer" );
-							break;
-					}
-
-					m_modules.push_back( module );
-				}
+				m_modules.push_back( module );
 			}
 		}
 	}
