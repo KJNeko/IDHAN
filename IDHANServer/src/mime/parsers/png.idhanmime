@@ -12,13 +12,16 @@
     {
       // override for APNG
       "type": "override",
-      // acTL chunk
-      "hex": "6163544C",
       "override": "image/apng",
       "data": [
         {
+          // acTL chunk
           "type": "search",
+          "hex": "6163544C"
+        },
+        {
           // IDAT chunk, Which should be after acTL
+          "type": "search",
           "hex": "4944415478"
         }
       ]

@@ -178,7 +178,7 @@ class DataIdentifierSearch : public MimeDataIdentifier
 	DataIdentifierSearch& operator=( DataIdentifierSearch&& other ) = default;
 };
 
-struct DataIdentifierOverride final : public DataIdentifierSearch
+struct DataIdentifierOverride final : public MimeDataIdentifier
 {
 	std::string override_name {};
 

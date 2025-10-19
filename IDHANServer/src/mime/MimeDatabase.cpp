@@ -193,7 +193,7 @@ DataIdentifierSearch::DataIdentifierSearch( const Json::Value& json ) : MimeData
 bool DataIdentifierOverride::
 	pass( const std::byte* data, const std::size_t length, std::size_t& current_offset, MimeDataTrack& context ) const
 {
-	if ( DataIdentifierSearch::pass( data, length, current_offset, context ) )
+	if ( MimeDataIdentifier::pass( data, length, current_offset, context ) )
 	{
 		context.overriden_name = override_name;
 	}
@@ -201,7 +201,7 @@ bool DataIdentifierOverride::
 	return true;
 }
 
-DataIdentifierOverride::DataIdentifierOverride( const Json::Value& json ) : DataIdentifierSearch( json )
+DataIdentifierOverride::DataIdentifierOverride( const Json::Value& json ) : MimeDataIdentifier( json )
 {
 	auto& name { json[ "override" ] };
 	if ( name.isNull() ) throw std::invalid_argument( "Failed to parse override name" );
@@ -275,14 +275,18 @@ MimeIdentifier MimeIdentifier::loadFromJson( const Json::Value& json )
 		extensions.push_back( extension.asString() );
 	}
 
-	const auto& parser_data { json[ "data" ] };
-
 	std::vector< std::unique_ptr< MimeDataIdentifier > > identifiers {};
-	identifiers.reserve( parser_data.size() );
 
-	for ( const auto& data : parser_data )
+	// If the json does not have a data object, It is just for registering a mime name and extension for it.
+	if ( json.isMember( "data" ) )
 	{
-		identifiers.push_back( parseIdentifier( data ) );
+		const auto& parser_data { json[ "data" ] };
+		identifiers.reserve( parser_data.size() );
+
+		for ( const auto& data : parser_data )
+		{
+			identifiers.push_back( parseIdentifier( data ) );
+		}
 	}
 
 	MimeIdentifier identifier { std::move( mime ), std::move( extensions ), std::move( identifiers ) };
