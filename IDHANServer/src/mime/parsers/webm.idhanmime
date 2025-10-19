@@ -6,7 +6,8 @@
   "data": [
     {
       "type": "search",
-      "hex": "7765626D"
+      "hex": "7765626D",
+      "limit": 1024
     }
   ]
 }
