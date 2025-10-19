@@ -135,7 +135,6 @@ ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )
 			co_return co_await createRecordFromJson( request );
 			break;
 		default:
-			//TODO: Failure
 			co_return createBadRequest( "Unknown content type" );
 			break;
 	}
