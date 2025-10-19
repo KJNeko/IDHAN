@@ -1,0 +1,30 @@
+# Build directories
+build/
+**/cmake-build-*/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test directories
+tests/
+
+# Documentation
+Doxyfile
+
+# Development tools
+tools/
+.clang-format
+.clang-format-ignore
+
+# Non-server components
+IDHANClient/
+IDHANWebUI/
+HydrusImporter/
+
+# Misc
+*.md
+publish.sh
+docs.sh
