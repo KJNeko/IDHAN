@@ -28,6 +28,7 @@ void addCORSHeaders( const drogon::HttpResponsePtr& response )
 	response->addHeader( "Access-Control-Allow-Headers", "*" );
 	response->addHeader( "Access-Control-Allow-Origin", "*" );
 	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
+	response->addHeader( "Access-Control-Max-Age", "86400" );
 }
 
 void ServerContext::setupCORSSupport() const
