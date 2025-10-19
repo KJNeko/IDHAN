@@ -44,6 +44,20 @@ get:
       schema:
         type: boolean
         default: false
+    - name: stop_on_fail
+      in: query
+      required: false
+      description: If false, The scanner will not stop on any fail condition.
+      schema:
+        type: boolean
+        default: true
+    - name: adopt_orphans
+      in: query
+      required: false
+      description: If true, Upon finding an orphan file. IDHAN will adopt it.
+      schema:
+        type: boolean
+        default: false
   responses:
     200:
       description: Returns a json status with scan results
@@ -51,3 +65,48 @@ get:
         application/json:
           schema:
             type: object
+    400:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+          examples:
+            cluster_not_found:
+              summary: Cluster not found
+              value:
+                error: "Cluster not found with ID {cluster_id}"
+            readonly_hash_required:
+              summary: Hash recomputation required for read-only cluster
+              value:
+                error: "Must recompute hash for read only folders (recompute hash was set to false)"
+    500:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+          examples:
+            hash_failed:
+              summary: Failed to compute hash
+              value:
+                error: "Failed to get hash for file"
+            hash_mismatch:
+              summary: File hash mismatch
+              value:
+                error: "While scanning cluster {cluster_id} file {path} was found to have name of {name} but hash of {hash}"
+            orphan_file:
+              summary: Orphan file found
+              description: If an orphan file is found and `adopt_orphans` is true, this error will not be returned
+              value:
+                error: "During scan of cluster {cluster_id} file {path} was found to have hash {hash} but was not in the DB. Possible orphan file"
+            metadata_error:
+              summary: Metadata parsing error
+              value:
+                error: "Metadata returned invalid response internally"
