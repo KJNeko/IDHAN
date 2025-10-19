@@ -137,7 +137,7 @@ std::optional< T > getValue( std::string_view path, const std::string_view group
 template < typename T >
 std::optional< T > getValue( const std::string_view group, const std::string_view name )
 {
-	//TODO: CLI
+	//TODO: Get arguments from CLI
 
 	// ENV
 	if ( auto result = tryGetEnv< T >( group, name ); result ) return *result;
