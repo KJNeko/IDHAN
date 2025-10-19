@@ -116,6 +116,4 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( const drogon::Htt
 	co_return drogon::HttpResponse::newHttpJsonResponse( url_info );
 }
 
-
-
 } // namespace idhan::hyapi

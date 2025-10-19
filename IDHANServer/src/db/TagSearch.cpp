@@ -16,8 +16,7 @@ namespace idhan
 ExpectedTask< TagID > TagSearch::idealize( const TagID id )
 {
 	const auto id_check { co_await m_db->execSqlCoro( "SELECT tag_id FROM tags WHERE tag_id = $1", id ) };
-	const auto result {
-		co_await m_db->execSqlCoro(
+	const auto result { co_await m_db->execSqlCoro(
 		"SELECT alias_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2", id, m_domain ) };
 
 	if ( id_check.empty() ) co_return std::unexpected( createBadRequest( "Invalid tag ID: {}", id ) );

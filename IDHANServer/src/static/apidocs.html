@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <meta name="description" content="SwaggerUI"/>
+    <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <meta content="SwaggerUI" name="description"/>
     <title>SwaggerUI</title>
-    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css"/>
+    <link href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" rel="stylesheet"/>
 </head>
 <body>
 <div id="swagger-ui"></div>
-<script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js" crossorigin></script>
+<script crossorigin src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
 <script>
     url = `${window.location.protocol}//${window.location.hostname}` + (window.location.port ? `:${window.location.port}` : '') + '/api/index.yaml';
 
