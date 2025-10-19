@@ -103,10 +103,13 @@ bool DataIdentifierSearch::testOffset(
 {
 	for ( const auto& set : m_data )
 	{
-		if ( set.size() + offset > length ) continue;
-		if ( set.match( data + offset ) )
+		// if the offset is negative then we will subtract the absolute value of it from the total length and use that as the offset
+		const std::size_t real_offset { offset < 0 ? length - static_cast< std::size_t >( std::abs( offset ) ) :
+			                                         static_cast< std::size_t >( offset ) };
+		if ( set.size() + real_offset > length ) continue;
+		if ( set.match( data + real_offset ) )
 		{
-			cursor = offset + set.size();
+			cursor = real_offset + set.size();
 			return true;
 		}
 	}
@@ -331,6 +334,7 @@ std::expected< std::string, std::exception > MimeDatabase::scanFile( const std::
 			std::format( "Failed to mmap file {}: {}", path.string(), strerror( errno ) ) } };
 	}
 
+	//TODO: Replace with io_uring
 	data = static_cast< const std::byte* >( mapped_region ); // Assign pointer to the mapped memory
 
 	if ( auto opt = scan( data, static_cast< std::size_t >( file_stat.st_size ) ) )
