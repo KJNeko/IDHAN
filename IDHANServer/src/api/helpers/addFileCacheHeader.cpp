@@ -2,6 +2,7 @@
 // Created by kj16609 on 3/22/25.
 //
 
+#include "drogon/HttpResponse.h"
 #include "helpers.hpp"
 #include "logging/format_ns.hpp"
 
