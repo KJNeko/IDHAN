@@ -15,6 +15,7 @@
 
 #include "decodeHex.hpp"
 #include "logging/log.hpp"
+#include "paths.hpp"
 
 namespace idhan::mime
 {
@@ -365,18 +366,13 @@ void MimeDatabase::reloadMimeParsers()
 {
 	updating_flag.store( true );
 
-	//TODO: Change this to be in the config
-	const auto parser_path { std::filesystem::current_path() / "mime" };
+	const auto mime_files { getMimeParserPaths() };
 
-	if ( !std::filesystem::exists( parser_path ) ) std::filesystem::create_directories( parser_path );
-
-	log::info( "Reloading mime parsers from {}", parser_path.string() );
-
-	for ( const auto& file : std::filesystem::recursive_directory_iterator( parser_path ) )
+	for ( const auto& file : mime_files )
 	{
-		log::debug( "Loading {}", file.path().string() );
+		log::debug( "Loading {}", file.string() );
 
-		MimeIdentifier identifier { MimeIdentifier::loadFromFile( file.path() ) };
+		MimeIdentifier identifier { MimeIdentifier::loadFromFile( file ) };
 
 		log::debug( "Found identifier for mime type {}", identifier.m_mime );
 
