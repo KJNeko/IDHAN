@@ -15,5 +15,4 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getPopups( drogon::HttpReques
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }
 
-
 } // namespace idhan::hyapi

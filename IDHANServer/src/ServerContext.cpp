@@ -56,11 +56,9 @@ void ServerContext::setupCORSSupport() const
 			pass();
 		} );
 
-	drogon::app().registerPostHandlingAdvice(
-		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
-		{
-			addCORSHeaders( response );
-		} );
+	drogon::app().registerPostHandlingAdvice( []( [[maybe_unused]] const drogon::HttpRequestPtr& request,
+	                                              const drogon::HttpResponsePtr& response )
+	                                          { addCORSHeaders( response ); } );
 }
 
 void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
