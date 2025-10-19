@@ -4,24 +4,12 @@
 
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "drogon/HttpResponse.h"
 #include "logging/format_ns.hpp"
 
 namespace idhan::api
 {
-
-//TODO: Move this out of here into generic handlers
-drogon::HttpResponsePtr generateFailedTagSearch( const TagID tag_id )
-{
-	Json::Value value;
-	value[ "code" ] = 404;
-	value[ "message" ] = format_ns::format(
-		"TagID {} was not found. Either you tried to request it before it was comitted, or it did not exist", tag_id );
-
-	auto response { drogon::HttpResponse::newHttpJsonResponse( value ) };
-
-	return response;
-}
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::
 	getTagInfo( [[maybe_unused]] const drogon::HttpRequestPtr request, const TagID tag_id )
@@ -41,7 +29,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::
 
 		if ( result.empty() )
 		{
-			co_return generateFailedTagSearch( tag_id );
+			co_return internal::createBadResponse(
+				"TagID {} was not found. Either you tried to request it before it was committed, or it does not exist",
+				tag_id );
 		}
 
 		namespace_id = result[ 0 ][ 0 ].as< NamespaceID >();
@@ -66,9 +56,10 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::
 		const auto result { co_await db->execSqlCoro(
 			"SELECT namespace_text, color FROM tag_namespaces WHERE namespace_id = $1", namespace_id ) };
 
-		if ( result.size() == 0 )
+		if ( result.empty() )
 		{
-			throw std::runtime_error( "IDHANApi::info: no namespace found" );
+			co_return createInternalError(
+				"No namespace found for tag {}. Expected namespace ID {}", tag_id, namespace_id );
 		}
 
 		root[ "namespace" ][ "id" ] = namespace_id;
@@ -95,9 +86,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::
 			co_await db->execSqlCoro( "SELECT subtag_text FROM tag_subtags WHERE subtag_id = $1", subtag_id )
 		};
 
-		if ( result.size() == 0 )
+		if ( result.empty() )
 		{
-			throw std::runtime_error( "IDHANApi::info: no subtag found" );
+			co_return createInternalError( "No subtag found for tag {}, Expected subtag ID {}", tag_id, subtag_id );
 		}
 
 		root[ "subtag" ][ "id" ] = subtag_id;
