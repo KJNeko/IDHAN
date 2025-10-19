@@ -29,7 +29,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::
 
 		if ( result.empty() )
 		{
-			co_return internal::createBadResponse(
+			co_return createBadRequest(
 				"TagID {} was not found. Either you tried to request it before it was committed, or it does not exist",
 				tag_id );
 		}
