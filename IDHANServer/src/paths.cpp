@@ -8,7 +8,7 @@ namespace idhan
 {
 std::vector< std::filesystem::path > getModulePaths()
 {
-	constexpr std::array< std::string_view, 2 > module_paths { { "./modules", "/var/lib/idhan/modules" } };
+	constexpr std::array< std::string_view, 2 > module_paths { { "./modules", "/usr/share/idhan/modules" } };
 
 	std::vector< std::filesystem::path > paths {};
 #ifdef __linux__
@@ -37,7 +37,7 @@ std::vector< std::filesystem::path > getMimeParserPaths()
 {
 	std::vector< std::filesystem::path > paths {};
 
-	constexpr std::array< std::string_view, 2 > parser_paths { { "./mime", "/var/lib/idhan/mime" } };
+	constexpr std::array< std::string_view, 2 > parser_paths { { "./mime", "/usr/share/idhan/mime" } };
 
 	for ( const auto& search_path : parser_paths )
 	{
@@ -49,8 +49,6 @@ std::vector< std::filesystem::path > getMimeParserPaths()
 			if ( file.path().extension() == ".idhanmime" ) paths.emplace_back( file.path() );
 		}
 	}
-
-	throw std::runtime_error( "Testing throw" );
 
 	return paths;
 }
