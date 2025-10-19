@@ -21,6 +21,7 @@ std::vector< std::filesystem::path > getModulePaths()
 
 	for ( const auto& search_path : module_paths )
 	{
+		if ( !std::filesystem::exists( search_path ) ) continue;
 		log::info( "Searching for modules at {}", search_path );
 		for ( const auto& file : std::filesystem::recursive_directory_iterator( search_path ) )
 		{
@@ -40,6 +41,7 @@ std::vector< std::filesystem::path > getMimeParserPaths()
 
 	for ( const auto& search_path : parser_paths )
 	{
+		if ( !std::filesystem::exists( search_path ) ) continue;
 		log::info( "Searching for mime parsers at {}", search_path );
 		for ( const auto& file : std::filesystem::recursive_directory_iterator( search_path ) )
 		{
