@@ -112,6 +112,7 @@ class DataIdentifierSearch : public MimeDataIdentifier
 
 	constexpr static std::int64_t NO_OFFSET { std::numeric_limits< std::int64_t >::max() };
 	std::int64_t offset { NO_OFFSET };
+	std::size_t length_limit { std::numeric_limits< std::size_t >::max() };
 
 	struct DataSet
 	{
@@ -199,7 +200,7 @@ struct MimeIdentifier
 	{
 		//! A data search
 		Search,
-		Override
+		Override,
 	};
 
 	bool fast_pass { false };

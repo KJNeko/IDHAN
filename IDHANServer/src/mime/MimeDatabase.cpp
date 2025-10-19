@@ -50,8 +50,12 @@ IdentifierType getIdentifierType( const std::string& str )
 {
 	if ( str.empty() ) throw std::runtime_error( "Failed to get identifier type: Was empty" );
 
-	if ( str == "search" ) return IdentifierType::Search;
-	if ( str == "override" ) return IdentifierType::Override;
+	std::unordered_map< std::string, IdentifierType > identifier_map {
+		{ "search", IdentifierType::Search },
+		{ "override", IdentifierType::Override },
+	};
+
+	if ( const auto itter = identifier_map.find( str ); itter != identifier_map.end() ) return itter->second;
 
 	throw std::runtime_error( "Failed to get identifier type: " + str );
 }
@@ -106,6 +110,7 @@ bool DataIdentifierSearch::testOffset(
 		// if the offset is negative then we will subtract the absolute value of it from the total length and use that as the offset
 		const std::size_t real_offset { offset < 0 ? length - static_cast< std::size_t >( std::abs( offset ) ) :
 			                                         static_cast< std::size_t >( offset ) };
+
 		if ( set.size() + real_offset > length ) continue;
 		if ( set.match( data + real_offset ) )
 		{
@@ -128,7 +133,7 @@ bool DataIdentifierSearch::testScanForward(
 	std::size_t current_offset { cursor };
 
 	// if any of these are a full match, we use them
-	while ( current_offset <= length )
+	while ( current_offset <= length && current_offset <= length_limit )
 	{
 		for ( const auto& set : m_data )
 		{
@@ -234,10 +239,10 @@ MimeIdentifier MimeIdentifier::loadFromFile( const std::filesystem::path& path )
 	if ( std::ifstream ifs( path, std::ios::binary | std::ios::ate ); ifs )
 	{
 		std::vector< char > data {};
-		data.resize( ifs.tellg() );
+		data.resize( static_cast< std::size_t >( ifs.tellg() ) );
 
 		ifs.seekg( 0, std::ios::beg );
-		ifs.read( data.data(), data.size() );
+		ifs.read( data.data(), static_cast< std::streamsize >( data.size() ) );
 
 		const std::string text { data.data(), data.size() };
 
