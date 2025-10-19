@@ -50,6 +50,8 @@ std::vector< std::filesystem::path > getMimeParserPaths()
 		}
 	}
 
+	throw std::runtime_error( "Testing throw" );
+
 	return paths;
 }
 
