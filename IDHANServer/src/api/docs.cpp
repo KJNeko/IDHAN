@@ -22,7 +22,7 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::apiDocs( drogon::HttpRequestPtr
 	co_return drogon::HttpResponse::newFileResponse( static_path / file_path );
 }
 
-drogon::Task< drogon::HttpResponsePtr > InfoAPI::api( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > InfoAPI::api( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	co_return drogon::HttpResponse::newFileResponse( getStaticPath() / "apidocs.html" );
 }

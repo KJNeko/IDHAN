@@ -46,7 +46,8 @@ ClusterManager::ClusterInfo::ClusterInfo( const drogon::orm::Row& row ) :
   m_id( row[ "cluster_id" ].as< ClusterID >() ),
   m_info( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) ),
   m_path( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) ),
-  m_flags( ClusterFlags::STORES_DEFAULT )
+  m_flags( ClusterFlags::STORES_DEFAULT ),
+  m_max_capacity( std::numeric_limits< std::size_t >::max() )
 {}
 
 std::string metaTypePathID( const FileMetaType type )

@@ -52,10 +52,15 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 				break;
 			}
 		case SimpleMimeType::VIDEO:
+			FGL_UNIMPLEMENTED();
 			break;
 		case SimpleMimeType::ANIMATION:
+			FGL_UNIMPLEMENTED();
 			break;
 		case SimpleMimeType::AUDIO:
+			FGL_UNIMPLEMENTED();
+			break;
+		case SimpleMimeType::NONE:
 			break;
 		default:;
 	}
@@ -63,7 +68,8 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	co_return {};
 }
 
-drogon::Task< MetadataInfo > getMetadata( const RecordID record_id, drogon::orm::DbClientPtr db )
+drogon::Task< MetadataInfo >
+	getMetadata( [[maybe_unused]] const RecordID record_id, [[maybe_unused]] drogon::orm::DbClientPtr db )
 {
 	FGL_UNIMPLEMENTED();
 }

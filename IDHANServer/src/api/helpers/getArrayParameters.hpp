@@ -37,7 +37,7 @@ std::vector< T > parseArrayParmeters( drogon::HttpRequestPtr request, const std:
 		}
 		else if constexpr ( std::is_scalar_v< T > )
 		{
-			std::size_t number {};
+			T number {};
 			std::from_chars( remainder.data(), remainder.data() + remainder.size(), number );
 			vec.push_back( number );
 			// log::info(

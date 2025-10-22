@@ -9,7 +9,7 @@
 namespace idhan::hyapi
 {
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getPages( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getPages( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	Json::Value json {};
 

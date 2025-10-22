@@ -40,7 +40,7 @@ class CursorData
 
 	CursorData( FileIOUring uring ) : m_io { uring } {}
 
-	CursorData( std::string_view data ) : m_io { data } {}
+	CursorData( std::string_view data ) noexcept : m_io { data } {}
 };
 
 class Cursor

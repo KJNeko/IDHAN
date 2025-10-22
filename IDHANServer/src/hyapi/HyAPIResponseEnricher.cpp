@@ -10,8 +10,7 @@
 
 namespace idhan::hyapi
 {
-HyAPIResponseEnricher::HyAPIResponseEnricher()
-{}
+HyAPIResponseEnricher::HyAPIResponseEnricher() = default;
 
 void HyAPIResponseEnricher::invoke(
 	const drogon::HttpRequestPtr& req, drogon::MiddlewareNextCallback&& nextCb, drogon::MiddlewareCallback&& mcb )
@@ -26,12 +25,11 @@ void HyAPIResponseEnricher::invoke(
 
 		// Parse the response body
 		Json::Value json {};
-		const Json::CharReaderBuilder builder {};
-		const std::unique_ptr< Json::CharReader > reader( builder.newCharReader() );
-		const std::string_view bodyStr { std::string_view( resp->body() ) };
+		Json::Reader reader {};
+		const std::string body_str { resp->body() };
 		std::string errors {};
 
-		if ( !reader->parse( bodyStr.data(), bodyStr.data() + bodyStr.size(), &json, &errors ) )
+		if ( !reader.parse( body_str, json ) )
 		{
 			return resp;
 		}

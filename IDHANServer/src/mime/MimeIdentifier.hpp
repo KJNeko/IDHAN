@@ -16,8 +16,8 @@ using MimeScore = std::uint_fast16_t;
 
 class MimeIdentifier
 {
-	std::string m_mime;
-	std::vector< std::string > m_extensions;
+	std::string m_mime {};
+	std::vector< std::string > m_extensions {};
 	std::string m_best_extension { "bin" };
 
 	std::vector< MimeMatcher > m_matchers {};
@@ -25,15 +25,15 @@ class MimeIdentifier
 
   public:
 
-	bool hasMatchers() const { return !m_matchers.empty(); }
+	[[nodiscard]] bool hasMatchers() const { return !m_matchers.empty(); }
 
-	std::string_view mime() const { return m_mime; }
+	[[nodiscard]] std::string_view mime() const { return m_mime; }
 
-	std::string getBestExtension() const { return m_best_extension; }
+	[[nodiscard]] std::string getBestExtension() const { return m_best_extension; }
 
 	coro::ImmedientTask< bool > test( Cursor cursor ) const;
 
-	MimeScore priority() const { return m_priority; }
+	[[nodiscard]] MimeScore priority() const { return m_priority; }
 
 	MimeIdentifier() = delete;
 	MimeIdentifier( const Json::Value& json );

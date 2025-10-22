@@ -159,7 +159,7 @@ class IOUring
 
 	static IOUring& getInstance();
 
-	void notifySubmit( std::size_t count ) const;
+	void notifySubmit( unsigned int count ) const;
 
 	explicit IOUring();
 

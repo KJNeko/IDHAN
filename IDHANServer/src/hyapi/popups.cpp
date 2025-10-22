@@ -6,7 +6,7 @@
 
 namespace idhan::hyapi
 {
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getPopups( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getPopups( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	Json::Value json {};
 

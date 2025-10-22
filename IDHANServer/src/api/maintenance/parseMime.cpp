@@ -46,7 +46,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::reloadMime( drogon::Http
 	co_return co_await listParsers( request );
 }
 
-drogon::Task< drogon::HttpResponsePtr > APIMaintenance::listParsers( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > APIMaintenance::listParsers( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	const auto mime_db { idhan::mime::getInstance() };
 
