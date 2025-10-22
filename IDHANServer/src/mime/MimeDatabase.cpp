@@ -44,11 +44,20 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 
 	if ( positive_matches.empty() )
 		co_return std::unexpected( createBadRequest( "Could not identify mime from file" ) );
-
-	log::debug( "Found {} positive matches", positive_matches.size() );
-
 	std::ranges::
 		sort( positive_matches, []( const auto& left, const auto& right ) { return left.second > right.second; } );
+
+	std::string matches_out {};
+	for ( std::size_t i = 0; i < positive_matches.size(); ++i )
+	{
+		const auto& [ match, score ] = positive_matches[ i ];
+		matches_out += format_ns::format( "({}, {})", match, score );
+		if ( i + 1 < positive_matches.size() ) matches_out += ", ";
+	}
+
+	log::debug( "Matches: {}", matches_out );
+
+	log::debug( "Found {} positive matches", positive_matches.size() );
 
 	co_return positive_matches.at( 0 ).first;
 }
