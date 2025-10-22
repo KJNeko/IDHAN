@@ -18,15 +18,15 @@ drogon::Task< void > CursorData::requestData( const std::size_t offset, const st
 	{
 		auto& uring = std::get< FileIOUring >( m_io );
 		m_buffer = co_await uring.read( offset, std::max( required_size, min_request_size ) );
+		co_return;
 	}
 	if ( std::holds_alternative< std::string_view >( m_io ) )
 	{
 		// explicitly left as NOOP
+		co_return;
 	}
-	else
-	{
-		throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
-	}
+
+	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
 }
 
 drogon::Task< std::pair< const std::byte*, std::size_t > > CursorData::
