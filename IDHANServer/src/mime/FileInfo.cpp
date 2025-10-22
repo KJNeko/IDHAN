@@ -12,7 +12,7 @@
 namespace idhan
 {
 
-coro::ImmedientTask<> setFileInfo( const RecordID record_id, const FileInfo info, const drogon::orm::DbClientPtr db )
+drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const drogon::orm::DbClientPtr db )
 {
 	const trantor::Date date {
 		std::chrono::duration_cast< std::chrono::microseconds >( info.store_time.time_since_epoch() ).count()
@@ -39,7 +39,7 @@ coro::ImmedientTask<> setFileInfo( const RecordID record_id, const FileInfo info
 	}
 }
 
-coro::ImmedientTask< std::expected< FileInfo, drogon::HttpResponsePtr > >
+drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
 	gatherFileInfo( FileIOUring io, const drogon::orm::DbClientPtr db )
 {
 	FileInfo info {};

@@ -41,7 +41,7 @@ struct ClusterInfo
 		std::size_t limit;
 	} size;
 
-	std::uint32_t file_count;
+	std::size_t file_count;
 	bool read_only;
 	bool allowed_thumbnails;
 	bool allowed_files;

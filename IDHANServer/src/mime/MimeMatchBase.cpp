@@ -52,7 +52,7 @@ std::vector< MimeMatcher > parseDataJson( const Json::Value& json )
 	return matchers;
 }
 
-coro::ImmedientTask< bool > MimeMatchBase::test( Cursor cursor )
+drogon::Task< bool > MimeMatchBase::test( Cursor cursor )
 {
 	const auto does_match { co_await this->match( cursor ) };
 

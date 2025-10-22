@@ -92,23 +92,23 @@ class MimeDatabase
 	std::atomic< bool > updating_flag {};
 	std::atomic< int > active_counter {};
 
-	coro::ImmedientTask< std::expected< std::string, drogon::HttpResponsePtr > > scan( Cursor cursor );
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( Cursor cursor );
 
   public:
 
 	Json::Value dump() const;
 
-	coro::ImmedientTask< std::expected< std::string, drogon::HttpResponsePtr > > scan( std::string_view data );
-	coro::ImmedientTask< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( std::string_view data );
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
 
-	coro::ImmedientTask< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
 
 	//! Reloads all the 3rd party mime parsers
 	void reloadMimeParsers();
 };
 
 std::shared_ptr< MimeDatabase > getInstance();
-coro::ImmedientTask< std::expected< MimeID, drogon::HttpResponsePtr > >
+drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
 	getIDForStr( std::string str, drogon::orm::DbClientPtr db );
 
 } // namespace idhan::mime

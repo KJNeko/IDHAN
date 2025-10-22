@@ -38,7 +38,7 @@ void WriteAwaiter::await_resume()
 	return;
 }
 
-WriteAwaiter::WriteAwaiter( IOUring* uring, struct io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
+WriteAwaiter::WriteAwaiter( IOUring* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
 {}
 
 void WriteAwaiter::complete( int result )

@@ -26,9 +26,9 @@ class CursorData
 	mutable std::vector< std::byte > m_buffer {};
 
 	//! Populates the buffer with data from the offset and at least required_size
-	coro::ImmedientTask< void > requestData( std::size_t offset, std::size_t required_size ) const;
+	drogon::Task< void > requestData( std::size_t offset, std::size_t required_size ) const;
 
-	coro::ImmedientTask< std::pair< const std::byte*, std::size_t > > data( std::size_t pos, std::size_t required_size ) const;
+	drogon::Task< std::pair< const std::byte*, std::size_t > > data( std::size_t pos, std::size_t required_size ) const;
 
 	friend class Cursor;
 

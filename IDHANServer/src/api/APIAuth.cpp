@@ -16,7 +16,7 @@ void APIAuth::invoke(
 	nextCb( std::move( mcb ) );
 }
 
-drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyAccessKey( drogon::HttpRequestPtr req )
+drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyAccessKey( [[maybe_unused]] drogon::HttpRequestPtr req )
 {
 	co_return drogon::HttpResponse::newHttpResponse();
 }

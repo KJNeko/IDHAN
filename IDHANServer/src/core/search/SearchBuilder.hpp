@@ -167,10 +167,9 @@ class SearchBuilder
 	//! Contains a list of all required joins for this query and it's sorting options
 	struct
 	{
-		bool file_info;
-		bool records;
-
-	} m_required_joins;
+		bool file_info { false };
+		bool records { false };
+	} m_required_joins {};
 
 	SortType m_sort_type;
 	SortOrder m_order;
@@ -180,7 +179,7 @@ class SearchBuilder
 
   public:
 
-	SearchBuilder() = default;
+	SearchBuilder();
 
 	drogon::Task< drogon::orm::Result > query(
 		drogon::orm::DbClientPtr db,

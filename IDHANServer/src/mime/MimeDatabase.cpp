@@ -20,7 +20,7 @@ MimeDatabase::MimeDatabase()
 	reloadMimeParsers();
 }
 
-coro::ImmedientTask< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( const Cursor cursor )
+drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( const Cursor cursor )
 {
 	std::vector< std::pair< std::string, MimeScore > > positive_matches {};
 
@@ -86,19 +86,19 @@ Json::Value MimeDatabase::dump() const
 	return json;
 }
 
-coro::ImmedientTask< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( std::string_view data )
+drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( std::string_view data )
 {
 	Cursor cursor { data };
 	co_return co_await scan( cursor );
 }
 
-coro::ImmedientTask< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( FileIOUring file_io )
+drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( FileIOUring file_io )
 {
 	Cursor cursor { file_io };
 	co_return co_await scan( cursor );
 }
 
-coro::ImmedientTask< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::
+drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::
 	scanFile( const std::filesystem::path& path )
 {
 	FileIOUring io { path };
@@ -130,7 +130,7 @@ std::shared_ptr< MimeDatabase > getInstance()
 	return instance;
 }
 
-coro::ImmedientTask< std::expected< MimeID, drogon::HttpResponsePtr > >
+drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
 	getIDForStr( std::string str, drogon::orm::DbClientPtr db )
 {
 	const auto search_result { co_await db->execSqlCoro( "SELECT mime_id FROM mime WHERE name = $1", str ) };

@@ -30,7 +30,7 @@ Json::Value jsonFromFile( const std::filesystem::path& path )
 	throw std::runtime_error( "Could not open file" );
 }
 
-coro::ImmedientTask< bool > MimeIdentifier::test( const Cursor cursor ) const
+drogon::Task< bool > MimeIdentifier::test( const Cursor cursor ) const
 {
 	for ( const auto& matcher : m_matchers )
 	{

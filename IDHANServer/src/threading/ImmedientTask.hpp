@@ -23,7 +23,7 @@ class [[nodiscard]] ImmedientTask
 			return ImmedientTask( std::coroutine_handle< promise_type >::from_promise( *this ) );
 		}
 
-		static std::suspend_never initial_suspend() { return {}; }
+		static std::suspend_always initial_suspend() { return {}; }
 
 		static std::suspend_always final_suspend() noexcept { return {}; }
 
@@ -31,8 +31,6 @@ class [[nodiscard]] ImmedientTask
 
 		void unhandled_exception() { exception = std::current_exception(); }
 	};
-
-	// using promise_type = std::conditional_t< is_returning, value_promise_type, void_promise_type >;
 
 	using handle_type = std::coroutine_handle< promise_type >;
 
@@ -72,79 +70,6 @@ class [[nodiscard]] ImmedientTask
 		void await_suspend( std::coroutine_handle<> ) {}
 
 		T await_resume() { return handle.promise().value; }
-
-		handle_type handle;
-	};
-
-	auto operator co_await() { return awaiter { handle }; }
-
-  private:
-
-	handle_type handle;
-};
-
-template <>
-class [[nodiscard]] ImmedientTask< void >
-{
-  public:
-
-	struct promise_type
-	{
-		std::exception_ptr exception;
-
-		ImmedientTask get_return_object()
-		{
-			return { std::coroutine_handle< promise_type >::from_promise( *this ) };
-		}
-
-		static std::suspend_never initial_suspend() { return {}; }
-
-		static std::suspend_always final_suspend() noexcept { return {}; }
-
-		void return_void() {}
-
-		void unhandled_exception() { exception = std::current_exception(); }
-	};
-
-	// using promise_type = std::conditional_t< is_returning, value_promise_type, void_promise_type >;
-
-	using handle_type = std::coroutine_handle< promise_type >;
-
-	ImmedientTask( handle_type h ) : handle( h ) {}
-
-	~ImmedientTask()
-	{
-		if ( handle ) handle.destroy();
-	}
-
-	ImmedientTask( const ImmedientTask& ) = delete;
-	ImmedientTask& operator=( const ImmedientTask& ) = delete;
-
-	ImmedientTask( ImmedientTask&& other ) noexcept : handle( other.handle ) { other.handle = nullptr; }
-
-	ImmedientTask& operator=( ImmedientTask&& other ) noexcept
-	{
-		if ( this != &other )
-		{
-			if ( handle ) handle.destroy();
-			handle = other.handle;
-			other.handle = nullptr;
-		}
-		return *this;
-	}
-
-	void get()
-	{
-		if ( handle.promise().exception ) std::rethrow_exception( handle.promise().exception );
-	}
-
-	struct awaiter
-	{
-		bool await_ready() { return true; }
-
-		void await_suspend( std::coroutine_handle<> ) {}
-
-		void await_resume() { (void)handle.promise(); }
 
 		handle_type handle;
 	};

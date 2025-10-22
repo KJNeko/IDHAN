@@ -13,7 +13,11 @@
 #include "filesystem/IOUring.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "modules/ModuleLoader.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
 #include "trantor/utils/ConcurrentTaskQueue.h"
+#pragma GCC diagnostic pop
 
 namespace idhan::api
 {

@@ -4,6 +4,7 @@
 #pragma once
 
 #include <chrono>
+#include <expected>
 
 #include "IDHANTypes.hpp"
 
@@ -18,12 +19,11 @@
 #pragma GCC diagnostic ignored "-Wnoexcept"
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #pragma GCC diagnostic ignored "-Wshadow"
-#include <expected>
+
+#include "drogon/drogon.h"
+#pragma GCC diagnostic pop
 
 #include "api/APIAuth.hpp"
-#include "drogon/drogon.h"
-#include "threading/ImmedientTask.hpp"
-#pragma GCC diagnostic pop
 
 namespace idhan
 {
@@ -44,9 +44,9 @@ struct FileInfo
 };
 
 //! Populates a FileInfo struct with information from the data
-coro::ImmedientTask< std::expected< FileInfo, drogon::HttpResponsePtr > >
+drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
 	gatherFileInfo( FileIOUring io_uring, drogon::orm::DbClientPtr db );
 
-coro::ImmedientTask<> setFileInfo( RecordID record_id, FileInfo info, drogon::orm::DbClientPtr db );
+drogon::Task<> setFileInfo( RecordID record_id, FileInfo info, drogon::orm::DbClientPtr db );
 
 } // namespace idhan

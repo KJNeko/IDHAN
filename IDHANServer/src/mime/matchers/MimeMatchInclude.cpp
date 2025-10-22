@@ -17,7 +17,7 @@ MimeMatchInclude::MimeMatchInclude( std::vector< MimeMatcher >&& matchers, const
   m_matchers( std::forward< std::vector< MimeMatcher > >( matchers ) )
 {}
 
-coro::ImmedientTask< bool > MimeMatchInclude::match( Cursor& cursor ) const
+drogon::Task< bool > MimeMatchInclude::match( Cursor& cursor ) const
 {
 	log::debug( "Testing included " );
 	for ( const auto& matcher : m_matchers )

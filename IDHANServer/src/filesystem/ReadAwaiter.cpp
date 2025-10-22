@@ -39,7 +39,11 @@ std::vector< std::byte > ReadAwaiter::await_resume()
 	return m_data;
 }
 
-ReadAwaiter::ReadAwaiter( IOUring* uring, struct io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
+ReadAwaiter::ReadAwaiter( IOUring* uring, io_uring_sqe sqe, std::vector< std::byte >&& data ) :
+  m_data( data ),
+  m_cont( std::noop_coroutine() ),
+  m_uring( uring ),
+  m_sqe( sqe )
 {}
 
 void ReadAwaiter::complete( int result, const std::vector< std::byte >& data )

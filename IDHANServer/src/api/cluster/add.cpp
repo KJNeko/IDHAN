@@ -86,7 +86,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 		for ( const auto& row : folder_search )
 		{
 			// each row will have cluster_id, folder_path
-			const auto cluster_id { row[ 0 ].as< ClusterID >() };
+			[[maybe_unused]] const auto cluster_id { row[ 0 ].as< ClusterID >() };
 			const auto cluster_path { row[ 1 ].as< std::string >() };
 
 			const std::filesystem::path path { cluster_path };
