@@ -98,7 +98,7 @@ std::optional< T > tryGetCLI( const std::string_view group, const std::string_vi
 }
 
 template < typename T >
-std::optional< T > getValue( std::string_view path, const std::string_view group, const std::string_view name )
+std::optional< T > getValue( const std::string_view path, const std::string_view group, const std::string_view name )
 {
 	if ( !std::filesystem::exists( path ) ) return std::nullopt;
 
