@@ -31,7 +31,7 @@ class MimeIdentifier
 
 	std::string getBestExtension() const { return m_best_extension; }
 
-	drogon::Task< bool > test( Cursor cursor ) const;
+	coro::ImmedientTask< bool > test( Cursor cursor ) const;
 
 	MimeScore priority() const { return m_priority; }
 

@@ -11,7 +11,7 @@
 namespace idhan::mime
 {
 
-drogon::Task< void > CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
+coro::ImmedientTask< void > CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
 {
 	log::debug( "Asking for {} bytes at {}", required_size, offset );
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
@@ -30,7 +30,7 @@ drogon::Task< void > CursorData::requestData( const std::size_t offset, const st
 	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
 }
 
-drogon::Task< std::pair< const std::byte*, std::size_t > > CursorData::
+coro::ImmedientTask< std::pair< const std::byte*, std::size_t > > CursorData::
 	data( const std::size_t pos, const std::size_t required_size ) const
 {
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
@@ -68,12 +68,23 @@ drogon::Task< std::pair< const std::byte*, std::size_t > > CursorData::
 	}
 	if ( std::holds_alternative< std::string_view >( m_io ) )
 	{
-		const auto* data_ptr { reinterpret_cast< const std::byte* >( std::get< std::string_view >( m_io ).data() ) };
-		const std::size_t length { std::get< std::string_view >( m_io ).size() };
+		const auto& string_view { std::get< std::string_view >( m_io ) };
+		const auto* data_ptr { reinterpret_cast< const std::byte* >( string_view.data() ) };
+		const std::size_t length { string_view.size() };
+		if ( pos + required_size >= length ) throw std::runtime_error( "OOB" );
+		if ( length < pos ) throw std::runtime_error( "OOB" );
+		m_buffer_pos = pos;
 		co_return std::make_pair( data_ptr + pos, length - pos );
 	}
 
 	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
+}
+
+std::size_t CursorData::size() const
+{
+	if ( std::holds_alternative< FileIOUring >( m_io ) ) return std::get< FileIOUring >( m_io ).size();
+	if ( std::holds_alternative< std::string_view >( m_io ) ) return std::get< std::string_view >( m_io ).size();
+	throw std::runtime_error( "Unable to get size of data. No implemented reader for variant" );
 }
 
 Cursor::Cursor( FileIOUring uring ) : m_data( std::make_shared< CursorData >( uring ) )
@@ -87,8 +98,9 @@ std::size_t Cursor::size() const
 	return m_data->size();
 }
 
-drogon::Task< bool > Cursor::tryMatch( const std::string_view match ) const
+coro::ImmedientTask< bool > Cursor::tryMatch( const std::string_view match ) const
 {
+	FGL_ASSERT( m_data, "Data was invalid" );
 	const auto [ ptr, size ] { co_await m_data->data( m_pos, match.size() ) };
 
 	if ( !ptr ) co_return false;
@@ -101,7 +113,7 @@ drogon::Task< bool > Cursor::tryMatch( const std::string_view match ) const
 	co_return passes;
 }
 
-drogon::Task< bool > Cursor::tryMatchInc( const std::string_view match )
+coro::ImmedientTask< bool > Cursor::tryMatchInc( const std::string_view match )
 {
 	const bool is_match { co_await tryMatch( match ) };
 	if ( is_match ) inc( match.size() );

@@ -12,11 +12,20 @@
 namespace idhan::mime
 {
 
-MimeMatchInclude::MimeMatchInclude( const Json::Value& json ) : MimeMatchBase( json )
+MimeMatchInclude::MimeMatchInclude( std::vector< MimeMatcher >&& matchers, const Json::Value& json ) :
+  MimeMatchBase( json ),
+  m_matchers( std::forward< std::vector< MimeMatcher > >( matchers ) )
 {}
 
-drogon::Task< bool > MimeMatchInclude::match( [[maybe_unused]] Cursor& cursor ) const
+coro::ImmedientTask< bool > MimeMatchInclude::match( Cursor& cursor ) const
 {
+	log::debug( "Testing included " );
+	for ( const auto& matcher : m_matchers )
+	{
+		if ( !co_await matcher->test( cursor ) ) co_return false;
+	}
+	log::debug( "End Testing included " );
+
 	co_return true;
 }
 
@@ -43,9 +52,9 @@ MimeMatcher MimeMatchInclude::createFromJson( const Json::Value& json )
 					format_ns::format( "Json being included ({}) was missing data field", desired_filename ) );
 			}
 
-			file_json[ "data" ] = json[ "data" ][ "data" ];
+			std::vector< MimeMatcher > matchers { parseDataJson( file_json[ "data" ] ) };
 
-			return std::make_unique< MimeMatchInclude >( file_json );
+			return std::make_unique< MimeMatchInclude >( std::move( matchers ), json );
 		}
 	}
 

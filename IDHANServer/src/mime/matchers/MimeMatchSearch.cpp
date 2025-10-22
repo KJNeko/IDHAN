@@ -16,19 +16,20 @@
 namespace idhan::mime
 {
 
-drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
+coro::ImmedientTask< bool > MimeMatchSearch::match( Cursor& cursor ) const
 {
 	if ( m_offset >= 0 && m_offset != NO_OFFSET )
 	{
 		cursor.jumpTo( m_offset );
 
-		for ( const auto& data : m_match_data )
+		for ( const auto& match : m_match_data )
 		{
-			const std::string_view data_view { reinterpret_cast< const char* >( data.data() ), data.size() };
-			log::debug( "Searching for {}", spdlog::to_hex( data_view ) );
-			if ( co_await cursor.tryMatch( data_view ) )
+			const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
+			log::debug( "Searching for {}", spdlog::to_hex( match_view ) );
+			if ( co_await cursor.tryMatch( match_view ) )
 			{
-				cursor.inc( data_view.size() );
+				log::debug( "Match found at offset {}", cursor.pos() );
+				cursor.inc( match_view.size() );
 				co_return true;
 			}
 		}
@@ -36,8 +37,23 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 		co_return false;
 	}
 
-	const auto pos_limit { cursor.pos() + m_limit };
+	for ( const auto& match : m_match_data )
+	{
+		const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
+
+		log::debug( "Searching for {}", spdlog::to_hex( match_view ) );
+	}
+
+	const auto start_pos { cursor.pos() };
+
+	const auto pos_limit { m_limit == NO_LIMIT ? NO_LIMIT : cursor.pos() + m_limit };
 	do {
+		if ( cursor.pos() >= pos_limit )
+		{
+			log::debug( "Ending search due to limit being hit. Limit was {}. Started at {}", pos_limit, start_pos );
+			break;
+		}
+
 		for ( const auto& match : m_match_data )
 		{
 			const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
@@ -48,7 +64,7 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 			}
 		}
 	}
-	while ( cursor.inc() && ( cursor.pos() <= pos_limit ) );
+	while ( cursor.inc() );
 
 	co_return false;
 }
@@ -84,6 +100,10 @@ MimeMatchSearch::MimeMatchSearch( const Json::Value& json ) : MimeMatchBase( jso
 	if ( json.isMember( "limit" ) )
 	{
 		m_limit = static_cast< std::size_t >( json[ "limit" ].asInt() );
+	}
+	else
+	{
+		m_limit = std::numeric_limits< std::size_t >::max();
 	}
 }
 

@@ -11,6 +11,7 @@
 
 #include "drogon/utils/coroutine.h"
 #include "filesystem/IOUring.hpp"
+#include "threading/ImmedientTask.hpp"
 
 namespace idhan::mime
 {
@@ -25,22 +26,17 @@ class CursorData
 	mutable std::vector< std::byte > m_buffer {};
 
 	//! Populates the buffer with data from the offset and at least required_size
-	drogon::Task< void > requestData( std::size_t offset, std::size_t required_size ) const;
+	coro::ImmedientTask< void > requestData( std::size_t offset, std::size_t required_size ) const;
 
-	drogon::Task< std::pair< const std::byte*, std::size_t > > data( std::size_t pos, std::size_t required_size ) const;
+	coro::ImmedientTask< std::pair< const std::byte*, std::size_t > > data( std::size_t pos, std::size_t required_size ) const;
 
 	friend class Cursor;
 
-	std::size_t size() const
-	{
-		if ( std::holds_alternative< FileIOUring >( m_io ) ) return std::get< FileIOUring >( m_io ).size();
-		if ( std::holds_alternative< std::string_view >( m_io ) ) return std::get< std::string_view >( m_io ).size();
-		throw std::runtime_error( "Unable to get size of data. No implemented reader for variant" );
-	}
+	std::size_t size() const;
 
   public:
 
-	CursorData() = delete;
+	FGL_DELETE_ALL_RO5( CursorData );
 
 	CursorData( FileIOUring uring ) : m_io { uring } {}
 
@@ -54,21 +50,22 @@ class Cursor
 
 	using Priority = int;
 
-	std::vector< std::pair< Priority, std::string > > m_matches {};
-
   public:
 
 	Cursor() = delete;
 	Cursor( FileIOUring uring );
 	Cursor( std::string_view view );
 
+	FGL_DEFAULT_COPY( Cursor );
+	FGL_DEFAULT_MOVE( Cursor );
+
 	std::size_t size() const;
 
 	//! Tries to match `match` with current cursor position.
-	drogon::Task< bool > tryMatch( std::string_view match ) const;
+	coro::ImmedientTask< bool > tryMatch( std::string_view match ) const;
 
 	//! Tries to match `match` with the current cursor position, if matched then the cursor will jump forward by match.size()
-	drogon::Task< bool > tryMatchInc( std::string_view match );
+	coro::ImmedientTask< bool > tryMatchInc( std::string_view match );
 
 	void jumpTo( std::int64_t pos );
 

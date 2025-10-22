@@ -7,6 +7,8 @@
 #include <liburing.h>
 #include <vector>
 
+#include "fgl/defines.hpp"
+
 namespace trantor
 {
 class EventLoop;
@@ -39,6 +41,10 @@ struct [[nodiscard]] ReadAwaiter
 	IOUring* m_uring { nullptr };
 	io_uring_sqe m_sqe {};
 	trantor::EventLoop* m_event_loop { nullptr };
+
+	FGL_DELETE_COPY( ReadAwaiter );
+
+	FGL_DELETE_MOVE( ReadAwaiter );
 
 	ReadAwaiter( handle_type handle ) : m_h( handle ) {}
 
