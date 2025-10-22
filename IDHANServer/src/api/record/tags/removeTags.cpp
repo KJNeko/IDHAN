@@ -3,13 +3,16 @@
 //
 
 #include "api/RecordAPI.hpp"
+#include "fgl/defines.hpp"
 
 namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::
-	removeTags( const drogon::HttpRequestPtr request, const RecordID record_id )
+	removeTags( [[maybe_unused]] const drogon::HttpRequestPtr request, [[maybe_unused]] const RecordID record_id )
 {
+	FGL_UNIMPLEMENTED();
+
 	auto db { drogon::app().getDbClient() };
 
 	Json::Value ok {};

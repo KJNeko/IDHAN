@@ -127,8 +127,8 @@ std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& 
 	{
 		auto& element = *reinterpret_cast< Element* >( ptr );
 		// const auto filtered_string { idhan::api::helpers::pgEscape( str ) };
-		const auto filtered_string { str };
-		element.element_length = htonl( filtered_string.size() );
+		const std::string& filtered_string { str };
+		element.element_length = htonl( static_cast< std::uint32_t >( filtered_string.size() ) );
 		ptr += sizeof( Element );
 		std::memcpy( ptr, filtered_string.data(), filtered_string.size() );
 		ptr += filtered_string.size();

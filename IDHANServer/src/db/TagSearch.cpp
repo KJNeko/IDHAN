@@ -140,7 +140,7 @@ ExpectedTask< void > TagSearch::removeSiblings()
 
 	for ( auto& id : to_remove )
 	{
-		std::ranges::remove_if( m_ids, [ &id ]( const auto& i ) { return i == id; } );
+		std::ranges::remove_if( m_ids, [ &id ]( const auto& i ) noexcept -> bool { return i == id; } );
 	}
 
 	co_return {};

@@ -22,7 +22,10 @@ SHA256::SHA256( const std::byte* data ) : m_data()
 }
 
 SHA256::SHA256( const std::string_view& data ) : m_data()
-{}
+{
+	FGL_ASSERT( data.size() == m_data.size(), "Input data size was not correct" );
+	std::memcpy( m_data.data(), data.data(), m_data.size() );
+}
 
 SHA256::SHA256( const drogon::orm::Field& field )
 {
@@ -127,9 +130,9 @@ SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
 	std::vector< std::byte > out_data {};
 	out_data.resize( 256 / 8 );
 
-	FGL_ASSERT( out_data.size() == result.size(), "Invalid size" );
+	FGL_ASSERT( out_data.size() == static_cast< std::size_t >( result.size() ), "Invalid size" );
 
-	std::memcpy( out_data.data(), result.data(), result.size() );
+	std::memcpy( out_data.data(), result.data(), static_cast< std::size_t >( result.size() ) );
 
 	return SHA256::fromBuffer( out_data );
 }

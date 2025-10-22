@@ -179,7 +179,7 @@ IOUring::SubmissionRingPointers IOUring::setupSubmissionRing()
 	if ( m_params.features & IORING_FEAT_SINGLE_MMAP )
 	{
 		const auto sq_len { m_params.sq_off.array + m_params.sq_entries * sizeof( unsigned ) };
-		const auto cq_len { m_params.cq_off.cqes + m_params.cq_entries * sizeof( struct io_uring_cqe ) };
+		const auto cq_len { m_params.cq_off.cqes + m_params.cq_entries * sizeof( io_uring_cqe ) };
 
 		const auto length { std::max( sq_len, cq_len ) };
 
@@ -217,7 +217,7 @@ IOUring::CommandRingPointers IOUring::setupCommandRing()
 	}
 	else
 	{
-		ptrs.length = m_params.cq_off.cqes + m_params.cq_entries * sizeof( struct io_uring_cqe );
+		ptrs.length = m_params.cq_off.cqes + m_params.cq_entries * sizeof( io_uring_cqe );
 		ptrs.mmap = static_cast< io_uring_cq* >( mmap(
 			nullptr, ptrs.length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_CQ_RING ) );
 	}
@@ -237,7 +237,7 @@ void* IOUring::setupSubmissionEntries() const
 {
 	return mmap(
 		nullptr,
-		m_params.sq_entries * sizeof( struct io_uring_sqe ),
+		m_params.sq_entries * sizeof( io_uring_sqe ),
 		PROT_READ | PROT_WRITE,
 		MAP_SHARED | MAP_POPULATE,
 		uring_fd,
@@ -358,7 +358,7 @@ IOUring& IOUring::getInstance()
 	return *instance;
 }
 
-void IOUring::notifySubmit( std::size_t count ) const
+void IOUring::notifySubmit( unsigned int count ) const
 {
 	if ( auto ret = io_uring_enter( uring_fd, count, 0, IORING_ENTER_SQ_WAKEUP, nullptr ); ret < 0 )
 	{
@@ -392,7 +392,7 @@ IOUring::IOUring() :
 	io_run->notify_all();
 }
 
-WriteAwaiter IOUring::sendWrite( const struct io_uring_sqe& sqe )
+WriteAwaiter IOUring::sendWrite( const io_uring_sqe& sqe )
 {
 	return WriteAwaiter { this, sqe };
 }

@@ -8,7 +8,8 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > APIMaintenance::postgresqlStorageSunData( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > APIMaintenance::
+	postgresqlStorageSunData( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	Json::Value root {};
 	root[ "name" ] = "root";
@@ -54,7 +55,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::postgresqlStorageSunData
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
-drogon::Task< drogon::HttpResponsePtr > APIMaintenance::test( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > APIMaintenance::test( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	co_return drogon::HttpResponse::newHttpJsonResponse( Json::Value() );
 }

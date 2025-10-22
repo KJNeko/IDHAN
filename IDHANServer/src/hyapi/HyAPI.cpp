@@ -51,19 +51,22 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::apiVersion( [[maybe_unused]] 
 }
 
 // /hyapi/access/request_new_permissions
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::requestNewPermissions( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::requestNewPermissions( [[maybe_unused]] drogon::HttpRequestPtr
+                                                                              request )
 {
 	idhan::fixme();
+	FGL_UNIMPLEMENTED();
 }
 
 // /hyapi/access/session_key
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::sessionKey( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::sessionKey( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	idhan::fixme();
+	FGL_UNIMPLEMENTED();
 }
 
 // /hyapi/access/verify_access_key
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::verifyAccessKey( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::verifyAccessKey( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	Json::Value json;
 	json[ "basic_permissions" ] = 0;
@@ -74,9 +77,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::verifyAccessKey( drogon::Http
 	co_return response;
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getService( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getService( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	idhan::fixme();
+	FGL_UNIMPLEMENTED();
 }
 
 drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db )
@@ -105,7 +109,7 @@ drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db )
 	co_return services;
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	const auto db { drogon::app().getDbClient() };
 
@@ -127,9 +131,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( drogon::HttpRequ
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::addFile( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::addFile( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	idhan::fixme();
+	FGL_UNIMPLEMENTED();
 }
 
 template < typename T >
@@ -243,8 +248,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	Json::Value hashes {};
 	Json::ArrayIndex i { 0 };
 
-	file_ids.resize( result.size() );
-	hashes.resize( result.size() );
+	file_ids.resize( static_cast< Json::Value::ArrayIndex >( result.size() ) );
+	hashes.resize( static_cast< Json::Value::ArrayIndex >( result.size() ) );
 
 	for ( const auto& row : result )
 	{
@@ -264,9 +269,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	co_return drogon::HttpResponse::newHttpJsonResponse( out );
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	idhan::fixme();
+	FGL_UNIMPLEMENTED();
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
@@ -373,7 +379,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getClientOptions( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getClientOptions( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	//TODO: This. For now i'll just make shit up
 	Json::Value json {};

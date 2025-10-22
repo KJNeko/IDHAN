@@ -62,6 +62,8 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 			break;
 		case SimpleMimeType::AUDIO:
 			break;
+		case SimpleMimeType::NONE:
+			[[fallthrough]];
 		default:
 			break;
 	}

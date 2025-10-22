@@ -73,7 +73,7 @@ class ClusterManager
 		STORES_DEFAULT = STORES_ALL
 	};
 
-	IOUring m_io_uring;
+	IOUring m_io_uring {};
 
 	struct ClusterInfo
 	{

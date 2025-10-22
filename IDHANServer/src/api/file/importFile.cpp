@@ -33,7 +33,7 @@ Json::Value createAlreadyImportedResponse( const RecordID record_id, const std::
 
 	root[ "record_id" ] = record_id;
 	root[ "cluster_store_time" ] = import_time;
-	root[ "status" ] = Exists;
+	root[ "status" ] = static_cast< Json::Value::UInt >( Exists );
 
 	return root;
 }
@@ -42,9 +42,9 @@ Json::Value createUnknownMimeResponse()
 {
 	Json::Value root {};
 
-	root[ "status" ] = Failed;
 	root[ "reason" ] = "unknown mime";
-	root[ "reason_id" ] = UnknownMime;
+	root[ "reason_id" ] = static_cast< Json::Value::UInt >( UnknownMime );
+	root[ "status" ] = static_cast< Json::Value::UInt >( Failed );
 
 	return root;
 }
@@ -53,7 +53,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 {
 	FGL_ASSERT( request, "Request invalid" );
 	const auto request_data { request->getBody() };
-	const auto content_type { request->getContentType() };
+	[[maybe_unused]] const auto content_type { request->getContentType() };
 
 	auto db { drogon::app().getDbClient() };
 
@@ -141,7 +141,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	Json::Value root {};
 
-	root[ "status" ] = stored ? ImportStatus::Exists : ImportStatus::Success;
+	root[ "status" ] = static_cast< Json::Value::UInt >( stored ? ImportStatus::Exists : ImportStatus::Success );
 	root[ "record_id" ] = record_id;
 
 	root[ "record" ][ "id" ] = record_id;

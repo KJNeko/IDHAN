@@ -7,7 +7,8 @@
 
 namespace idhan::api
 {
-drogon::Task< drogon::HttpResponsePtr > TagAPI::search( drogon::HttpRequestPtr request, const std::string tag_text )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::
+	search( [[maybe_unused]] drogon::HttpRequestPtr request, const std::string tag_text )
 {
 	auto db { drogon::app().getDbClient() };
 
@@ -15,7 +16,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::search( drogon::HttpRequestPtr r
 
 	Json::Value json {};
 
-	if ( result.size() > 0 )
+	if ( !result.empty() )
 	{
 		const auto tag_id { result[ 0 ][ 0 ].as< TagID >() };
 		json[ "tag_id" ] = tag_id;

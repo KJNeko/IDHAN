@@ -7,8 +7,8 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	getTagRelationships( drogon::HttpRequestPtr request, const TagDomainID tag_domain_id, const TagID tag_id )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagRelationships(
+	[[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID tag_domain_id, const TagID tag_id )
 {
 	const auto db { drogon::app().getDbClient() };
 

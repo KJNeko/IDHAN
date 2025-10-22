@@ -12,6 +12,7 @@
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
+#include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "metadata/parseMetadata.hpp"
 
@@ -61,6 +62,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 	switch ( simple_mime_type )
 	{
+		case SimpleMimeType::VIDEO:
+			FGL_UNIMPLEMENTED();
 		case SimpleMimeType::NONE:
 			//NOOP
 			break;
@@ -83,6 +86,12 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 				}
 				break;
 			}
+		case SimpleMimeType::ANIMATION:
+			FGL_UNIMPLEMENTED();
+			break;
+		case SimpleMimeType::AUDIO:
+			FGL_UNIMPLEMENTED();
+			break;
 		default:
 			co_return std::unexpected(
 				createInternalError( "Given file with unhandlable simple mime type for record {}", record_id ) );

@@ -12,7 +12,7 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > InfoAPI::version( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > InfoAPI::version( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	log::debug( "/version" );
 

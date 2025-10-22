@@ -49,7 +49,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 	const bool force_regenerate { request->getOptionalParameter< bool >( "regenerate" ).value_or( false ) };
 
 	const auto mime_name { record_info[ 0 ][ "mime_name" ].as< std::string >() };
-	const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
+	[[maybe_unused]] const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
 
 	const auto thumbnail_location_e { co_await getThumbnailPath( record_id, db ) };
 

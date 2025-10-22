@@ -6,6 +6,7 @@
 
 #include "api/helpers/helpers.hpp"
 #include "db/drogonArrayBind.hpp"
+#include "fgl/defines.hpp"
 #include "logging/log.hpp"
 
 namespace idhan
@@ -133,13 +134,16 @@ void SearchBuilder::setSortOrder( const SortOrder value )
 	m_order = value;
 }
 
-void SearchBuilder::filterTagDomain( const TagDomainID value )
+void SearchBuilder::filterTagDomain( [[maybe_unused]] const TagDomainID value )
 {
+	FGL_UNIMPLEMENTED();
 	//any searches with `tags` should be filtered.
 }
 
-void SearchBuilder::addFileDomain( const FileDomainID value )
-{}
+void SearchBuilder::addFileDomain( [[maybe_unused]] const FileDomainID value )
+{
+	FGL_UNIMPLEMENTED();
+}
 
 void SearchBuilder::setTags( const std::vector< TagID >& vector )
 {

@@ -25,7 +25,7 @@ struct [[nodiscard]] ReadAwaiter
 
 	using handle_type = std::coroutine_handle< promise_type >;
 
-	bool await_ready() const noexcept { return false; }
+	[[nodiscard]] bool await_ready() const noexcept { return false; }
 
 	void await_suspend( const std::coroutine_handle<> h );
 
