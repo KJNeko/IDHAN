@@ -27,8 +27,7 @@ class CursorData
 	//! Populates the buffer with data from the offset and at least required_size
 	drogon::Task< void > requestData( std::size_t offset, std::size_t required_size ) const;
 
-	drogon::Task< std::pair< const std::byte*, std::size_t > >
-		data( std::size_t pos, std::size_t required_size = min_request_size ) const;
+	drogon::Task< std::pair< const std::byte*, std::size_t > > data( std::size_t pos, std::size_t required_size ) const;
 
 	friend class Cursor;
 

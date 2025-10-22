@@ -41,11 +41,13 @@ drogon::Task< std::pair< const std::byte*, std::size_t > > CursorData::
 		const bool is_small { required_size > m_buffer.size() };
 
 		// access would not be in bounds
-		const bool is_oob { m_buffer_pos + m_buffer.size() < pos + required_size };
+		const bool is_oob { ( m_buffer_pos + m_buffer.size() ) < ( pos + required_size ) };
 
-		log::debug( "low: {}, small: {}, oob: {}", is_low, is_small, is_oob );
-
-		if ( is_low || is_small || is_oob ) co_await requestData( pos, required_size );
+		if ( is_low || is_small || is_oob )
+		{
+			log::debug( "low: {}, small: {}, oob: {}", is_low, is_small, is_oob );
+			co_await requestData( pos, required_size );
+		}
 
 		FGL_ASSERT( m_buffer_pos <= pos, "Buffer was not expected at it's current pos" );
 		const std::size_t offset { pos - m_buffer_pos };
