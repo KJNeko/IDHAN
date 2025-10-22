@@ -60,14 +60,13 @@ drogon::Task< bool > MimeMatchBase::test( Cursor cursor )
 
 	for ( const auto& child : m_children )
 	{
-		// if failed. return false
 		if ( !co_await child->test( cursor ) ) co_return false;
 	}
 
 	co_return true;
 }
 
-MimeMatchBase::MimeMatchBase( const Json::Value json ) : m_required( true )
+MimeMatchBase::MimeMatchBase( const Json::Value& json ) : m_required( true )
 {
 	if ( !json.isObject() ) throw std::runtime_error( "Expected a JSON object to be an object" );
 

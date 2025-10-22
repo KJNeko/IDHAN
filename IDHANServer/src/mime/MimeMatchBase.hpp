@@ -27,7 +27,7 @@ struct MimeMatchBase
 	std::vector< MimeMatcher > m_children {};
 
 	FGL_DELETE_ALL_RO5( MimeMatchBase );
-	MimeMatchBase( const Json::Value json );
+	MimeMatchBase( const Json::Value& json );
 	virtual ~MimeMatchBase() = default;
 
 	drogon::Task< bool > test( Cursor cursor );

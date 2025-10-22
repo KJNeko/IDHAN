@@ -26,19 +26,14 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 
 	for ( const auto& identifier : m_identifiers )
 	{
-		if ( identifier.m_matchers.empty() ) continue;
+		if ( !identifier.hasMatchers() ) continue;
 
-		log::debug( "Testing identifier for {}", identifier.m_mime );
-		bool failed_match { false };
-		for ( const auto& matcher : identifier.m_matchers )
-		{
-			if ( failed_match ) break;
-			failed_match |= !( co_await matcher->test( cursor ) );
-		}
+		log::debug( "Testing identifier for {}", identifier.mime() );
 
-		if ( !failed_match )
+		if ( co_await identifier.test( cursor ) )
 		{
-			positive_matches.emplace_back( identifier.m_mime, identifier.m_priority );
+			log::debug( "Test passed" );
+			positive_matches.emplace_back( identifier.mime(), identifier.priority() );
 		}
 	}
 
@@ -72,9 +67,9 @@ Json::Value MimeDatabase::dump() const
 	{
 		Json::Value item {};
 
-		item[ "mime" ] = identifier.m_mime;
-		item[ "best_extension" ] = identifier.m_best_extension;
-		item[ "score" ] = identifier.m_priority;
+		item[ "mime" ] = std::string( identifier.mime() );
+		item[ "best_extension" ] = identifier.getBestExtension();
+		item[ "score" ] = identifier.priority();
 
 		items.emplace_back( item );
 	}

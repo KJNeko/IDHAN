@@ -8,6 +8,7 @@
 
 #include <fstream>
 
+#include "Cursor.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::mime
@@ -27,6 +28,16 @@ Json::Value jsonFromFile( const std::filesystem::path& path )
 		return json;
 	}
 	throw std::runtime_error( "Could not open file" );
+}
+
+drogon::Task< bool > MimeIdentifier::test( const Cursor cursor ) const
+{
+	for ( const auto& matcher : m_matchers )
+	{
+		if ( !co_await matcher->test( cursor ) ) co_return false;
+	}
+
+	co_return true;
 }
 
 MimeIdentifier::MimeIdentifier( const Json::Value& json )
