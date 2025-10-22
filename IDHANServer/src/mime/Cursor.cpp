@@ -41,10 +41,19 @@ drogon::Task< std::pair< const std::byte*, std::size_t > > CursorData::
 		const bool is_small { required_size > m_buffer.size() };
 
 		// access would not be in bounds
-		const bool is_oob { ( m_buffer_pos + m_buffer.size() ) < ( pos + required_size ) };
+		const auto buffer_start { m_buffer_pos };
+		const auto buffer_size { m_buffer.size() };
+		const auto pos_start { pos };
+		const auto pos_size { required_size };
+
+		// check that buffer and pos overlap
+		const auto is_oob { pos_start > buffer_start + buffer_size
+			                || pos_start + pos_size > buffer_start + buffer_size };
 
 		if ( is_low || is_small || is_oob )
 		{
+			log::debug( "({}, {}), ({}, {})", buffer_start, buffer_size, pos_start, pos_size );
+
 			log::debug(
 				"access is lower than buffer: {}, access is larger than buffer: {}, access would oob: {}",
 				is_low,
