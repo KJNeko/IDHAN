@@ -165,7 +165,11 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 			{
 				auto info { co_await gatherFileInfo( io_uring, db ) };
 
-				if ( !info ) co_return info.error();
+				if ( !info )
+				{
+					if ( stop_on_fail ) co_return info.error();
+					continue;
+				}
 
 				if ( info->mime_id == constants::INVALID_MIME_ID )
 				{
