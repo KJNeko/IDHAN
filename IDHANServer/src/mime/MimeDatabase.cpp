@@ -102,6 +102,7 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 
 void MimeDatabase::reloadMimeParsers()
 {
+	m_identifiers.clear();
 	const std::vector< std::filesystem::path > paths { getMimeParserPaths() };
 
 	for ( const auto& path : paths )
