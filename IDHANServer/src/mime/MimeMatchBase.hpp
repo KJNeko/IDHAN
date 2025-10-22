@@ -5,6 +5,7 @@
 #include <fgl/defines.hpp>
 
 #include "drogon/utils/coroutine.h"
+#include "threading/ImmedientTask.hpp"
 
 namespace Json
 {
@@ -21,17 +22,18 @@ std::vector< MimeMatcher > parseDataJson( const Json::Value& json );
 
 struct MimeMatchBase
 {
-	//! If true then this must match
-	bool m_required;
+  protected:
 
 	std::vector< MimeMatcher > m_children {};
+
+  public:
 
 	FGL_DELETE_ALL_RO5( MimeMatchBase );
 	MimeMatchBase( const Json::Value& json );
 	virtual ~MimeMatchBase() = default;
 
-	drogon::Task< bool > test( Cursor cursor );
-	virtual drogon::Task< bool > match( Cursor& cursor ) const = 0;
+	coro::ImmedientTask< bool > test( Cursor cursor );
+	virtual coro::ImmedientTask< bool > match( Cursor& cursor ) const = 0;
 };
 
 } // namespace idhan::mime

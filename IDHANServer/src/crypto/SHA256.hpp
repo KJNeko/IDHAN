@@ -33,11 +33,10 @@
 #include <vector>
 
 #include "IDHANTypes.hpp"
-#include "decodeHex.hpp"
 
 namespace idhan
 {
-struct FileIOUring;
+class FileIOUring;
 }
 
 namespace idhan

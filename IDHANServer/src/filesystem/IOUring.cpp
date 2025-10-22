@@ -130,9 +130,9 @@ drogon::Task< std::vector< std::byte > > FileIOUring::fallbackRead( const std::s
 
 		co_return data;
 	}
-	else
-		throw std::
-			runtime_error( format_ns::format( "FileIOUring::fallbackRead: Failed to open file {}", m_path.string() ) );
+
+	throw std::
+		runtime_error( format_ns::format( "FileIOUring::fallbackRead: Failed to open file {}", m_path.string() ) );
 }
 
 drogon::Task< void > FileIOUring::fallbackWrite( const std::vector< std::byte > data, const std::size_t size ) const

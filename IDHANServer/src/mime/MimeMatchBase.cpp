@@ -52,26 +52,40 @@ std::vector< MimeMatcher > parseDataJson( const Json::Value& json )
 	return matchers;
 }
 
-drogon::Task< bool > MimeMatchBase::test( Cursor cursor )
+coro::ImmedientTask< bool > MimeMatchBase::test( Cursor cursor )
 {
 	const auto does_match { co_await this->match( cursor ) };
 
 	if ( !does_match ) co_return false;
 
+	log::debug( "Test passed. Checking {} children", m_children.size() );
+
 	for ( const auto& child : m_children )
 	{
-		if ( !co_await child->test( cursor ) ) co_return false;
+		if ( !co_await child->test( cursor ) )
+		{
+			log::debug( "Child failed" );
+			co_return false;
+		}
 	}
 
 	co_return true;
 }
 
-MimeMatchBase::MimeMatchBase( const Json::Value& json ) : m_required( true )
+MimeMatchBase::MimeMatchBase( const Json::Value& json )
 {
-	if ( !json.isObject() ) throw std::runtime_error( "Expected a JSON object to be an object" );
+	if ( !json.isObject() )
+	{
+		throw std::runtime_error( "Expected a JSON object to be an object" );
+	}
 
 	if ( json.isMember( "data" ) )
 	{
+		if ( !json[ "data" ].isArray() )
+		{
+			throw std::runtime_error( "Expected data to be an array of objects" );
+		}
+
 		// Has children
 		m_children = parseDataJson( json[ "data" ] );
 	}

@@ -22,11 +22,12 @@
 
 #include "api/APIAuth.hpp"
 #include "drogon/drogon.h"
+#include "threading/ImmedientTask.hpp"
 #pragma GCC diagnostic pop
 
 namespace idhan
 {
-struct FileIOUring;
+class FileIOUring;
 class FileMappedData;
 
 namespace constants
@@ -43,9 +44,9 @@ struct FileInfo
 };
 
 //! Populates a FileInfo struct with information from the data
-drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
+coro::ImmedientTask< std::expected< FileInfo, drogon::HttpResponsePtr > >
 	gatherFileInfo( FileIOUring io_uring, drogon::orm::DbClientPtr db );
 
-drogon::Task<> setFileInfo( RecordID record_id, FileInfo info, drogon::orm::DbClientPtr db );
+coro::ImmedientTask<> setFileInfo( RecordID record_id, FileInfo info, drogon::orm::DbClientPtr db );
 
 } // namespace idhan
