@@ -98,6 +98,13 @@ std::size_t Cursor::size() const
 	return m_data->size();
 }
 
+coro::ImmedientTask< std::string_view > Cursor::data( const std::size_t d_size )
+{
+	const auto [ ptr, size ] { co_await m_data->data( m_pos, d_size ) };
+
+	co_return std::string_view { reinterpret_cast< const char* >( ptr ), size };
+}
+
 coro::ImmedientTask< bool > Cursor::tryMatch( const std::string_view match ) const
 {
 	FGL_ASSERT( m_data, "Data was invalid" );

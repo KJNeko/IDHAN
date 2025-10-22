@@ -60,6 +60,7 @@ class Cursor
 	FGL_DEFAULT_MOVE( Cursor );
 
 	std::size_t size() const;
+	coro::ImmedientTask< std::string_view > data( std::size_t size );
 
 	//! Tries to match `match` with current cursor position.
 	coro::ImmedientTask< bool > tryMatch( std::string_view match ) const;
