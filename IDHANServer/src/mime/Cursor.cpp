@@ -18,6 +18,7 @@ drogon::Task< void > CursorData::requestData( const std::size_t offset, const st
 	{
 		auto& uring = std::get< FileIOUring >( m_io );
 		m_buffer = co_await uring.read( offset, std::max( required_size, min_request_size ) );
+		m_buffer_pos = offset;
 		co_return;
 	}
 	if ( std::holds_alternative< std::string_view >( m_io ) )
