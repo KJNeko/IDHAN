@@ -29,16 +29,15 @@ struct [[nodiscard]] WriteAwaiter
 
 	void await_resume();
 
-	handle_type m_h;
-
 	std::exception_ptr m_exception { nullptr };
 	std::coroutine_handle<> m_cont {};
 
 	IOUring* m_uring { nullptr };
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 	io_uring_sqe m_sqe {};
+#pragma GCC diagnostic pop
 	trantor::EventLoop* m_event_loop { nullptr };
-
-	WriteAwaiter( handle_type handle ) : m_h( handle ) {}
 
 	WriteAwaiter( IOUring* uring, io_uring_sqe sqe );
 

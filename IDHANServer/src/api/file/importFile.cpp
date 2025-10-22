@@ -22,7 +22,7 @@ Json::Value createDeletedResponse( const RecordID record_id, const std::size_t d
 
 	root[ "record_id" ] = record_id;
 	root[ "cluster_delete_time" ] = deleted_time;
-	root[ "status" ] = Deleted;
+	root[ "status" ] = static_cast< Json::Value::UInt >( Deleted );
 
 	return root;
 }

@@ -164,7 +164,7 @@ class IOUring
 	explicit IOUring();
 
 	WriteAwaiter sendWrite( const io_uring_sqe& sqe );
-	ReadAwaiter sendRead( const io_uring_sqe& sqe );
+	ReadAwaiter sendRead( const io_uring_sqe& sqe, std::vector< std::byte >&& data );
 
 	~IOUring();
 };

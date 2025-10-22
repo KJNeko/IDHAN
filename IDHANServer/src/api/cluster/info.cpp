@@ -58,8 +58,10 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	co_return json;
 }
 
-ClusterAPI::ResponseTask ClusterAPI::
-	infoT( drogon::HttpRequestPtr request, ClusterID cluster_id, drogon::orm::DbClientPtr transaction )
+ClusterAPI::ResponseTask ClusterAPI::infoT(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	const ClusterID cluster_id,
+	const drogon::orm::DbClientPtr transaction )
 {
 	const auto result { co_await getInfo( cluster_id, transaction ) };
 

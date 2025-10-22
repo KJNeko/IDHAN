@@ -79,15 +79,14 @@ drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t of
 	io_uring_sqe sqe {};
 	std::memset( &sqe, 0, sizeof( sqe ) );
 
-	std::vector< std::byte > data {};
-	data.resize( len );
-	std::memset( data.data(), 0, len );
+	std::vector< std::byte > buffer {};
+	buffer.resize( len );
 
-	io_uring_prep_read( &sqe, m_fd, data.data(), static_cast< __u32 >( len ), offset );
+	io_uring_prep_read( &sqe, m_fd, buffer.data(), static_cast< __u32 >( len ), offset );
 
-	co_await uring.sendRead( sqe );
+	const auto result { co_await uring.sendRead( sqe, std::move( buffer ) ) };
 
-	co_return data;
+	co_return result;
 }
 
 drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, const std::size_t offset ) const
@@ -397,9 +396,9 @@ WriteAwaiter IOUring::sendWrite( const io_uring_sqe& sqe )
 	return WriteAwaiter { this, sqe };
 }
 
-ReadAwaiter IOUring::sendRead( const struct io_uring_sqe& sqe )
+ReadAwaiter IOUring::sendRead( const io_uring_sqe& sqe, std::vector< std::byte >&& data )
 {
-	return ReadAwaiter { this, sqe };
+	return ReadAwaiter { this, sqe, std::move( data ) };
 }
 
 IOUring::~IOUring()

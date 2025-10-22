@@ -29,7 +29,7 @@ using ConfigType = std::variant< std::string, std::size_t >;
 //! Locations to search for config info, Searches user path first, then the inverse of this list
 #if defined( __linux__ )
 constexpr std::array< std::string_view, 4 > config_paths {
-	"/usr/share/idhan/config.toml", "/etc/idhan/config.toml", "~/.config/idhan/config.toml", "./config.toml"
+	{ "/usr/share/idhan/config.toml", "/etc/idhan/config.toml", "~/.config/idhan/config.toml", "./config.toml" }
 };
 #elif defined( _WIN32 )
 constexpr std::array< std::string_view, 4 > config_paths { "%ProgramData%\\idhan\\config.toml",
