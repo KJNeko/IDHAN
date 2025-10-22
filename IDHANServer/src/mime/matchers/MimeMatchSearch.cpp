@@ -32,6 +32,10 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 				cursor.inc( match_view.size() );
 				co_return true;
 			}
+			else
+			{
+				log::debug( "Found {} instead", spdlog::to_hex( co_await cursor.data( match.size() ) ) );
+			}
 		}
 
 		co_return false;
