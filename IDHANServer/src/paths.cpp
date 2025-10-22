@@ -62,8 +62,10 @@ std::filesystem::path getStaticPath()
 		static_path_once,
 		[ & ]()
 		{
-			if ( std::filesystem::exists( "./static" ) ) static_path = std::filesystem::absolute( "./static" );
-			static_path = IDHAN_STATIC_PATH;
+			if ( std::filesystem::exists( "./static" ) )
+				static_path = std::filesystem::absolute( "./static" );
+			else
+				static_path = IDHAN_STATIC_PATH;
 		} );
 
 	return static_path;
