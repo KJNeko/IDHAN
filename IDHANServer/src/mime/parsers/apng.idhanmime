@@ -1,0 +1,27 @@
+{
+  "mime": "image/apng",
+  "extensions": [
+    "png"
+  ],
+  "priority": 100,
+  "data": [
+    {
+      "type": "include",
+      "file": "png.idhanmime",
+      "data": [
+        {
+          // acTL chunk
+          "type": "search",
+          "hex": "6163544C",
+          "data": [
+            {
+              // IDAT chunk, Which should be after acTL
+              "type": "search",
+              "hex": "4944415478"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

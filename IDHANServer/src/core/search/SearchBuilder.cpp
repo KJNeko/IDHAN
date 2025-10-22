@@ -6,6 +6,7 @@
 
 #include "api/helpers/helpers.hpp"
 #include "db/drogonArrayBind.hpp"
+#include "logging/log.hpp"
 
 namespace idhan
 {

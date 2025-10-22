@@ -14,11 +14,6 @@ class FileMappedData
 {
 	std::filesystem::path m_path;
 	std::size_t m_length;
-	mutable int m_fd { -1 };
-	mutable std::byte* m_data { nullptr };
-	bool m_initalized { false };
-
-	void openMMap() const;
 
   public:
 
@@ -26,17 +21,15 @@ class FileMappedData
 
 	explicit FileMappedData( const std::filesystem::path& path_i );
 
-	std::string extension() const { return m_path.extension().string(); }
+	std::string extension() const;
 
-	std::string name() const { return m_path.stem().string(); }
+	std::string name() const;
 
-	std::size_t length() const { return m_length; }
+	std::size_t length() const;
 
-	std::filesystem::path path() const { return m_path; }
+	std::filesystem::path path() const;
 
-	std::byte* data() const;
-
-	std::string strpath() const { return m_path.string(); }
+	std::string strpath() const;
 
 	~FileMappedData();
 };

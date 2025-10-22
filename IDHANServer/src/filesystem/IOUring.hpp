@@ -6,9 +6,7 @@
 #include <liburing/io_uring.h>
 #include <sys/mman.h>
 
-#include <fcntl.h>
 #include <filesystem>
-#include <liburing.h>
 
 #include "ReadAwaiter.hpp"
 #include "WriteAwaiter.hpp"
@@ -18,13 +16,34 @@
 namespace idhan
 {
 
-struct FileIOUring
-
+class FileIOUring
 {
-	int m_fd { -1 };
+	struct FileDescriptor
+	{
+		std::shared_ptr< int > m_fd;
+
+		FileDescriptor() = delete;
+
+		explicit FileDescriptor( const int fd );
+
+		operator int() const;
+	};
+
+	FileDescriptor m_fd { -1 };
+	std::size_t m_size { 0 };
 	std::filesystem::path m_path;
+	void* m_mmap_ptr { nullptr };
+
+  public:
 
 	FileIOUring( const std::filesystem::path& path );
+
+	~FileIOUring();
+
+	std::size_t size() const;
+
+	const std::filesystem::path& path() const;
+
 	drogon::Task< std::vector< std::byte > > readAll() const;
 
 	drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
@@ -32,6 +51,15 @@ struct FileIOUring
 
 	drogon::Task< std::vector< std::byte > > fallbackRead( std::size_t offset, std::size_t len ) const;
 	drogon::Task< void > fallbackWrite( std::vector< std::byte > data, std::size_t size ) const;
+
+	//! Mmaps the file into memory, Read only
+	std::pair< void*, std::size_t > mmap();
+
+	FileIOUring() = delete;
+	FileIOUring( const FileIOUring& );
+	FileIOUring& operator=( const FileIOUring& );
+	FileIOUring( FileIOUring&& );
+	FileIOUring& operator=( FileIOUring&& );
 };
 
 struct IOUringUserData

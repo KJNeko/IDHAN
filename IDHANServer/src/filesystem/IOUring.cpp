@@ -19,11 +19,42 @@
 namespace idhan
 {
 
+void fileDescriptorDeleter( const int* fd )
+{
+	close( *fd );
+	delete fd;
+}
+
+FileIOUring::FileDescriptor::FileDescriptor( const int fd ) :
+  m_fd( std::shared_ptr< int > { new int( fd ), fileDescriptorDeleter } )
+{}
+
+FileIOUring::FileDescriptor::operator int() const
+{
+	return *m_fd;
+}
+
 FileIOUring::FileIOUring( const std::filesystem::path& path ) :
   m_fd( open( path.c_str(), O_RDWR | O_CREAT, 0666 ) ),
+  m_size( std::filesystem::file_size( path ) ),
   m_path( path )
 {
 	if ( m_fd <= 0 ) throw std::runtime_error( format_ns::format( "Failed to open file {}", path.string() ) );
+}
+
+FileIOUring::~FileIOUring()
+{
+	if ( m_mmap_ptr ) munmap( m_mmap_ptr, m_size );
+}
+
+std::size_t FileIOUring::size() const
+{
+	return m_size;
+}
+
+const std::filesystem::path& FileIOUring::path() const
+{
+	return m_path;
 }
 
 drogon::Task< std::vector< std::byte > > FileIOUring::readAll() const
@@ -117,6 +148,102 @@ drogon::Task< void > FileIOUring::fallbackWrite( const std::vector< std::byte > 
 	co_return;
 }
 
+std::pair< void*, std::size_t > FileIOUring::mmap()
+{
+	void* ptr = ::mmap( nullptr, size(), PROT_READ, MAP_SHARED, m_fd, 0 );
+	m_mmap_ptr = ptr;
+	return std::make_pair( ptr, size() );
+}
+
+FileIOUring::FileIOUring( const FileIOUring& ) = default;
+FileIOUring& FileIOUring::operator=( const FileIOUring& ) = default;
+FileIOUring::FileIOUring( FileIOUring&& ) = default;
+FileIOUring& FileIOUring::operator=( FileIOUring&& ) = default;
+
+int IOUring::setupUring()
+{
+	std::memset( &m_params, 0, sizeof( m_params ) );
+	// COOP_TASKRUN stops io_uring from interrupting us.
+	m_params.flags = 0;
+
+	static constexpr std::size_t queue_depth { 64 };
+	static_assert( queue_depth <= 4096, "Queue depth must be less than 4096" );
+
+	return io_uring_setup( queue_depth, &m_params );
+}
+
+IOUring::SubmissionRingPointers IOUring::setupSubmissionRing()
+{
+	SubmissionRingPointers ptrs {};
+
+	if ( m_params.features & IORING_FEAT_SINGLE_MMAP )
+	{
+		const auto sq_len { m_params.sq_off.array + m_params.sq_entries * sizeof( unsigned ) };
+		const auto cq_len { m_params.cq_off.cqes + m_params.cq_entries * sizeof( struct io_uring_cqe ) };
+
+		const auto length { std::max( sq_len, cq_len ) };
+
+		ptrs.mmap =
+			mmap( nullptr, length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_SQ_RING );
+	}
+	else
+	{
+		ptrs.length = m_params.sq_off.array + m_params.sq_entries * sizeof( unsigned );
+		ptrs.mmap = mmap(
+			nullptr, ptrs.length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_SQ_RING );
+	}
+
+	const auto& sq_off { m_params.sq_off };
+	ptrs.head = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.head );
+	ptrs.tail = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.tail );
+	ptrs.array = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.array );
+	ptrs.mask = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_mask );
+	// ptrs.entries = reinterpret_cast< io_uring_sqe* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_entries );
+	ptrs.flags = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.flags );
+	ptrs.dropped = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.dropped );
+	ptrs.array = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.array );
+
+	return ptrs;
+}
+
+IOUring::CommandRingPointers IOUring::setupCommandRing()
+{
+	CommandRingPointers ptrs {};
+
+	if ( m_params.features & IORING_FEAT_SINGLE_MMAP )
+	{
+		ptrs.length = 0;
+		ptrs.mmap = static_cast< io_uring_cq* >( this->m_submission_ring.mmap );
+	}
+	else
+	{
+		ptrs.length = m_params.cq_off.cqes + m_params.cq_entries * sizeof( struct io_uring_cqe );
+		ptrs.mmap = static_cast< io_uring_cq* >( mmap(
+			nullptr, ptrs.length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_CQ_RING ) );
+	}
+
+	ptrs.head = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.head );
+	ptrs.tail = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.tail );
+	ptrs.mask = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.ring_mask );
+	ptrs.overflow =
+		reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.overflow );
+	ptrs.cqes = reinterpret_cast< io_uring_cqe* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.cqes );
+	ptrs.flags = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.flags );
+
+	return ptrs;
+}
+
+void* IOUring::setupSubmissionEntries() const
+{
+	return mmap(
+		nullptr,
+		m_params.sq_entries * sizeof( struct io_uring_sqe ),
+		PROT_READ | PROT_WRITE,
+		MAP_SHARED | MAP_POPULATE,
+		uring_fd,
+		IORING_OFF_SQES );
+}
+
 void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< std::atomic< bool > > running )
 {
 	if ( !uring->m_iouring_setup )
@@ -205,90 +332,6 @@ void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< st
 	}
 }
 
-IOUring::SubmissionRingPointers IOUring::setupSubmissionRing()
-{
-	SubmissionRingPointers ptrs {};
-
-	if ( m_params.features & IORING_FEAT_SINGLE_MMAP )
-	{
-		const auto sq_len { m_params.sq_off.array + m_params.sq_entries * sizeof( unsigned ) };
-		const auto cq_len { m_params.cq_off.cqes + m_params.cq_entries * sizeof( struct io_uring_cqe ) };
-
-		const auto length { std::max( sq_len, cq_len ) };
-
-		ptrs.mmap =
-			mmap( nullptr, length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_SQ_RING );
-	}
-	else
-	{
-		ptrs.length = m_params.sq_off.array + m_params.sq_entries * sizeof( unsigned );
-		ptrs.mmap = mmap(
-			nullptr, ptrs.length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_SQ_RING );
-	}
-
-	const auto& sq_off { m_params.sq_off };
-	ptrs.head = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.head );
-	ptrs.tail = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.tail );
-	ptrs.array = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.array );
-	ptrs.mask = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_mask );
-	// ptrs.entries = reinterpret_cast< io_uring_sqe* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_entries );
-	ptrs.flags = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.flags );
-	ptrs.dropped = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.dropped );
-	ptrs.array = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.array );
-
-	return ptrs;
-}
-
-IOUring::CommandRingPointers IOUring::setupCommandRing()
-{
-	CommandRingPointers ptrs {};
-
-	if ( m_params.features & IORING_FEAT_SINGLE_MMAP )
-	{
-		ptrs.length = 0;
-		ptrs.mmap = static_cast< io_uring_cq* >( this->m_submission_ring.mmap );
-	}
-	else
-	{
-		ptrs.length = m_params.cq_off.cqes + m_params.cq_entries * sizeof( struct io_uring_cqe );
-		ptrs.mmap = static_cast< io_uring_cq* >( mmap(
-			nullptr, ptrs.length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_CQ_RING ) );
-	}
-
-	ptrs.head = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.head );
-	ptrs.tail = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.tail );
-	ptrs.mask = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.ring_mask );
-	ptrs.overflow =
-		reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.overflow );
-	ptrs.cqes = reinterpret_cast< io_uring_cqe* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.cqes );
-	ptrs.flags = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.flags );
-
-	return ptrs;
-}
-
-int IOUring::setupUring()
-{
-	std::memset( &m_params, 0, sizeof( m_params ) );
-	// COOP_TASKRUN stops io_uring from interrupting us.
-	m_params.flags = 0;
-
-	static constexpr std::size_t queue_depth { 64 };
-	static_assert( queue_depth <= 4096, "Queue depth must be less than 4096" );
-
-	return io_uring_setup( queue_depth, &m_params );
-}
-
-void* IOUring::setupSubmissionEntries() const
-{
-	return mmap(
-		nullptr,
-		m_params.sq_entries * sizeof( struct io_uring_sqe ),
-		PROT_READ | PROT_WRITE,
-		MAP_SHARED | MAP_POPULATE,
-		uring_fd,
-		IORING_OFF_SQES );
-}
-
 void IOUring::sendNop()
 {
 	std::lock_guard lock { mtx };
@@ -349,14 +392,14 @@ IOUring::IOUring() :
 	io_run->notify_all();
 }
 
-ReadAwaiter IOUring::sendRead( const struct io_uring_sqe& sqe )
-{
-	return ReadAwaiter { this, sqe };
-}
-
 WriteAwaiter IOUring::sendWrite( const struct io_uring_sqe& sqe )
 {
 	return WriteAwaiter { this, sqe };
+}
+
+ReadAwaiter IOUring::sendRead( const struct io_uring_sqe& sqe )
+{
+	return ReadAwaiter { this, sqe };
 }
 
 IOUring::~IOUring()

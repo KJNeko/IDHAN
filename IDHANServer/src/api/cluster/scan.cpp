@@ -9,6 +9,7 @@
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "filesystem/IOUring.hpp"
+#include "hyapi/helpers.hpp"
 #include "logging/log.hpp"
 #include "metadata/FileMappedData.hpp"
 #include "metadata/parseMetadata.hpp"
@@ -162,21 +163,23 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 			if ( mime_search.empty() || mime_search[ 0 ][ "mime_id" ].isNull() || rescan_mime )
 			{
-				auto info { co_await gatherFileInfo( data, db ) };
+				auto info { co_await gatherFileInfo( io_uring, db ) };
 
-				if ( info.mime_id == constants::INVALID_MIME_ID )
+				if ( !info ) co_return info.error();
+
+				if ( info->mime_id == constants::INVALID_MIME_ID )
 				{
 					log::warn(
 						"During scan of cluster {} IDHAN came across file {} that it could not determine a mime for: Extension: {}",
 						cluster_id,
 						data->strpath(),
 						data->extension() );
-					info.extension = data->extension();
-					if ( info.extension.starts_with( '.' ) ) info.extension = info.extension.substr( 1 );
+					info->extension = data->extension();
+					if ( info->extension.starts_with( '.' ) ) info->extension = info->extension.substr( 1 );
 					valid_mime = false;
 				}
 
-				co_await setFileInfo( record_id, info, db );
+				co_await setFileInfo( record_id, *info, db );
 
 				co_await db
 					->execSqlCoro( "UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", cluster_id, record_id );
@@ -195,21 +198,16 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 			if ( metadata_search.empty() || rescan_metadata )
 			{
-				if ( const auto metadata { co_await getMetadata( record_id, data, db ) } )
+				const auto parseResult { co_await tryParseRecordMetadata( record_id, db ) };
+				if ( !parseResult )
 				{
-					co_await updateRecordMetadata( record_id, db, metadata.value() );
-				}
-				else
-				{
-					const auto json { metadata.error()->getJsonObject() };
-
-					if ( !json ) co_return createInternalError( "Metadata returned invalid response internally" );
+					const auto message { hyapi::helpers::extractIDHANHTTPError( parseResult.error() ) };
 
 					log::warn(
 						"During scan of cluster {} file {} with was unable to be parsed for metadata: {}",
 						cluster_id,
 						data->strpath(),
-						( *json )[ "error" ].asString() );
+						message );
 				}
 			}
 		}

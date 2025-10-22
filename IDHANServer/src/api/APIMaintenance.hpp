@@ -32,6 +32,10 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 
 	drogon::Task< drogon::HttpResponsePtr > integrityCheck( drogon::HttpRequestPtr request );
 
+	drogon::Task< drogon::HttpResponsePtr > parseMime( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > reloadMime( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > listParsers( drogon::HttpRequestPtr request );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -39,6 +43,10 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	ADD_METHOD_TO( APIMaintenance::rescanMetadata, "/jobs/metadata/rescan" );
 	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart" );
 	ADD_METHOD_TO( APIMaintenance::postgresqlStorageSunData, "/db/stats/sunburst" );
+
+	ADD_METHOD_TO( APIMaintenance::parseMime, "/mime/parse_file" );
+	ADD_METHOD_TO( APIMaintenance::reloadMime, "/mime/reload" );
+	ADD_METHOD_TO( APIMaintenance::listParsers, "/mime/parsers" );
 
 	ADD_METHOD_TO( APIMaintenance::integrityCheck, "/integrity" );
 

@@ -8,16 +8,6 @@
       "type": "search",
       "offset": 0,
       "hex": "504B0304"
-    },
-    {
-      "type": "override",
-      "override": "application/vnd.comicbook+zip",
-      "data": [
-        {
-          "type": "search",
-          "hex": "89504E470D0A1A0A"
-        }
-      ]
     }
   ]
 }

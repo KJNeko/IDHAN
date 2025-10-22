@@ -7,12 +7,13 @@
 #include <filesystem>
 #include <memory>
 
+#include "MimeIdentifier.hpp"
 #include "MimeInfo.hpp"
-#include "decodeHex.hpp"
-#include "fgl/defines.hpp"
+#include "filesystem/IOUring.hpp"
 
 namespace idhan::mime
 {
+class Cursor;
 
 /**
 
@@ -75,151 +76,6 @@ An example file
 ```
  */
 
-struct MimeDataTrack
-{
-	std::string overriden_name;
-};
-
-class MimeDataIdentifier
-{
-  protected:
-
-	bool m_required { true };
-	std::vector< std::unique_ptr< MimeDataIdentifier > > m_children {};
-
-	virtual bool pass(
-		const std::byte* data,
-		const std::size_t length,
-		std::size_t& current_offset,
-		MimeDataTrack& context ) const = 0;
-
-  public:
-
-	MimeDataIdentifier() = delete;
-	MimeDataIdentifier( const Json::Value& value );
-
-	virtual ~MimeDataIdentifier() = default;
-
-	bool test( const std::byte* data, const std::size_t length, std::size_t& current_offset, MimeDataTrack& context )
-		const;
-
-	bool required() const { return m_required; }
-};
-
-class DataIdentifierSearch : public MimeDataIdentifier
-{
-	FGL_DELETE_COPY( DataIdentifierSearch );
-
-	constexpr static std::int64_t NO_OFFSET { std::numeric_limits< std::int64_t >::max() };
-	std::int64_t offset { NO_OFFSET };
-	std::size_t length_limit { std::numeric_limits< std::size_t >::max() };
-
-	struct DataSet
-	{
-		std::vector< std::byte > m_data {};
-
-		bool match( const std::byte* data ) const
-		{
-			for ( std::size_t i = 0; i < this->m_data.size(); ++i )
-			{
-				if ( this->m_data[ i ] != data[ i ] ) return false;
-			}
-
-			return true;
-		}
-
-		DataSet( std::vector< std::byte >&& data ) : m_data( std::move( data ) ) {}
-
-		std::size_t size() const { return m_data.size(); }
-	};
-
-	std::vector< DataSet > m_data {};
-
-  public:
-
-	/**
-	 * @brief Tests for all the m_data sets at the given offset. Ignoring the cursor.
-	 * @param data
-	 * @param length
-	 * @param cursor Ignored
-	 * @param context
-	 * @return
-	 */
-	bool testOffset(
-		const std::byte* data,
-		const std::size_t length,
-		std::size_t& cursor,
-		[[maybe_unused]] MimeDataTrack& context ) const;
-
-	/**
-	 * @brief Scans for the m_data sets in the forward direction, Returns true if any match
-	 * @param data
-	 * @param length
-	 * @param cursor
-	 * @param context
-	 * @return
-	 */
-	bool testScanForward(
-		const std::byte* data,
-		const std::size_t length,
-		std::size_t& cursor,
-		[[maybe_unused]] MimeDataTrack& context ) const;
-
-	bool pass(
-		const std::byte* data,
-		const std::size_t length,
-		std::size_t& current_offset,
-		[[maybe_unused]] MimeDataTrack& context ) const override;
-
-	DataIdentifierSearch() = delete;
-	DataIdentifierSearch( const Json::Value& json );
-
-	DataIdentifierSearch( DataIdentifierSearch&& other ) = default;
-	DataIdentifierSearch& operator=( DataIdentifierSearch&& other ) = default;
-};
-
-struct DataIdentifierOverride final : public MimeDataIdentifier
-{
-	std::string override_name {};
-
-	bool pass( const std::byte* data, const std::size_t length, std::size_t& current_offset, MimeDataTrack& context )
-		const override;
-
-	explicit DataIdentifierOverride( const Json::Value& json );
-};
-
-struct MimeIdentifier
-{
-	//! Name of the mime (example: "image/jpeg")
-	std::string m_mime {};
-
-	//! list of valid extensions
-	std::vector< std::string > m_extensions {};
-
-	enum Type
-	{
-		//! A data search
-		Search,
-		Override,
-	};
-
-	bool fast_pass { false };
-
-	std::vector< std::unique_ptr< MimeDataIdentifier > > m_identifiers {};
-
-	MimeIdentifier() = delete;
-
-	MimeIdentifier(
-		std::string&& mime,
-		std::vector< std::string >&& extensions,
-		std::vector< std::unique_ptr< MimeDataIdentifier > >&& identifiers );
-
-	bool test( const std::byte* data, std::size_t length, MimeDataTrack& context ) const;
-
-	static MimeIdentifier loadFromFile( const std::filesystem::path& path );
-	static MimeIdentifier loadFromJson( const Json::Value& json );
-};
-
 //! This mime type is used for unknown mime types
 constexpr auto INVALID_MIME_NAME { "unknown/unknown" };
 
@@ -236,27 +92,25 @@ class MimeDatabase
 	std::atomic< bool > updating_flag {};
 	std::atomic< int > active_counter {};
 
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( Cursor cursor );
+
+	friend std::shared_ptr< MimeDatabase > getInstance();
+
   public:
 
-	std::expected< std::string, std::exception > scan( const std::byte* data, std::size_t length );
+	Json::Value dump() const;
 
-	std::expected< std::string, std::exception > scan( const std::vector< std::byte >& data )
-	{
-		return scan( data.data(), data.size() );
-	}
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( std::string_view data );
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
 
-	std::expected< std::string, std::exception > scan( const std::string_view& data )
-	{
-		return scan( reinterpret_cast< const std::byte* >( data.data() ), data.size() );
-	}
-
-	std::expected< std::string, std::exception > scanFile( const std::filesystem::path& path );
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
 
 	//! Reloads all the 3rd party mime parsers
 	void reloadMimeParsers();
 };
 
 std::shared_ptr< MimeDatabase > getInstance();
-drogon::Task< MimeID > getIDForStr( std::string str, drogon::orm::DbClientPtr db );
+drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
+	getIDForStr( std::string str, drogon::orm::DbClientPtr db );
 
 } // namespace idhan::mime

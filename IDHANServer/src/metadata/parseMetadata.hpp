@@ -30,13 +30,18 @@ struct MetadataInfo;
 namespace idhan::api
 {
 
+//! Triggers the metadata parsing for a record and updates it
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
+	tryParseRecordMetadata( RecordID record_id, drogon::orm::DbClientPtr db );
+
+//! Returns the metadata for a given record after parsing the file
+drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
+	parseMetadata( RecordID record_id, drogon::orm::DbClientPtr db );
+
+//! Updates the record metadata for a record
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	updateRecordMetadata( RecordID record_id, drogon::orm::DbClientPtr db, MetadataInfo metadata );
 
-drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
-	getMetadata( RecordID record_id, std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db );
-
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	tryParseRecordMetadata( RecordID record_id, drogon::orm::DbClientPtr db );
+drogon::Task< MetadataInfo > getMetadata( const RecordID record_id, drogon::orm::DbClientPtr db );
 
 } // namespace idhan::api
