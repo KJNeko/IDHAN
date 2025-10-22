@@ -48,7 +48,7 @@ drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
 
 	if ( !mime_string )
 	{
-		throw mime_string.error();
+		co_return std::unexpected( mime_string.error() );
 	}
 
 	// Get MIME ID from database
