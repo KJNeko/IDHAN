@@ -11,7 +11,8 @@ RUN DEBIAN_FRONTNED=noninteractive apt-get install -y \
     git \
     pkg-config \
     gcc-14 \
-    g++-14
+    g++-14 \
+    ccache
 
 # Server build dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -51,7 +52,9 @@ RUN cmake -S . -B build \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF
 
-RUN cmake --build build --target IDHANServer -j$(nproc)
+ENV CCACHE_DIR=/root/.ccache
+RUN --mount=type=cache,target=/root/.ccache \
+    cmake --build build --target IDHANServer -j$(nproc)
 
 # Stage 2: Runtime environment
 FROM ubuntu:24.04
