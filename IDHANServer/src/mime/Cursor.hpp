@@ -15,7 +15,7 @@
 namespace idhan::mime
 {
 
-constexpr std::size_t min_request_size { 1024 };
+constexpr std::size_t min_request_size { 32 * 1024 };
 
 class CursorData
 {
