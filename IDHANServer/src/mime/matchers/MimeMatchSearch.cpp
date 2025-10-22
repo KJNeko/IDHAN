@@ -11,6 +11,7 @@
 
 #include "../Cursor.hpp"
 #include "drogon/utils/coroutine.h"
+#include "spdlog/fmt/bin_to_hex.h"
 
 namespace idhan::mime
 {
@@ -24,6 +25,7 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 		for ( const auto& data : m_match_data )
 		{
 			const std::string_view data_view { reinterpret_cast< const char* >( data.data() ), data.size() };
+			log::debug( "Searching for {}", spdlog::to_hex( data_view ) );
 			if ( co_await cursor.tryMatch( data_view ) )
 			{
 				cursor.inc( data_view.size() );

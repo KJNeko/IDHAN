@@ -35,15 +35,17 @@ MimeMatcher MimeMatchInclude::createFromJson( const Json::Value& json )
 	{
 		if ( mime_file.filename().string() == desired_filename )
 		{
-			const Json::Value json { jsonFromFile( mime_file ) };
+			Json::Value file_json { jsonFromFile( mime_file ) };
 
-			if ( !json.isMember( "data" ) )
+			if ( !file_json.isMember( "data" ) )
 			{
 				throw std::runtime_error(
 					format_ns::format( "Json being included ({}) was missing data field", desired_filename ) );
 			}
 
-			return std::make_unique< MimeMatchInclude >( json );
+			file_json[ "data" ] = json[ "data" ][ "data" ];
+
+			return std::make_unique< MimeMatchInclude >( file_json );
 		}
 	}
 
