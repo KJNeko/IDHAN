@@ -1,0 +1,117 @@
+//
+// Created by kj16609 on 10/21/25.
+//
+
+#include "Cursor.hpp"
+
+#include "filesystem/IOUring.hpp"
+#include "logging/log.hpp"
+#include "spdlog/fmt/bin_to_hex.h"
+
+namespace idhan::mime
+{
+
+drogon::Task< void > CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
+{
+	log::debug( "Asking for {} bytes at {}", required_size, offset );
+	if ( std::holds_alternative< FileIOUring >( m_io ) )
+	{
+		auto& uring = std::get< FileIOUring >( m_io );
+		m_buffer = co_await uring.read( offset, std::max( required_size, min_request_size ) );
+	}
+	if ( std::holds_alternative< std::string_view >( m_io ) )
+	{
+		// explicitly left as NOOP
+	}
+	else
+	{
+		throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
+	}
+}
+
+drogon::Task< std::pair< const std::byte*, std::size_t > > CursorData::
+	data( const std::size_t pos, const std::size_t required_size ) const
+{
+	if ( std::holds_alternative< FileIOUring >( m_io ) )
+	{
+		// buffer is for a range greater then the current pos. We need to go back
+		const bool is_low { pos < m_buffer_pos };
+
+		// buffer is not large enough. we need more data
+		const bool is_small { required_size > m_buffer.size() };
+
+		// access would not be in bounds
+		const bool is_oob { m_buffer_pos + m_buffer.size() < pos + required_size };
+
+		if ( is_low || is_small || is_oob ) co_await requestData( pos, required_size );
+
+		FGL_ASSERT( m_buffer_pos <= pos, "Buffer was not expected at it's current pos" );
+		const std::size_t offset { pos - m_buffer_pos };
+
+		co_return std::make_pair( m_buffer.data() + offset, m_buffer.size() );
+	}
+	if ( std::holds_alternative< std::string_view >( m_io ) )
+	{
+		const auto* data_ptr { reinterpret_cast< const std::byte* >( std::get< std::string_view >( m_io ).data() ) };
+		const std::size_t length { std::get< std::string_view >( m_io ).size() };
+		co_return std::make_pair( data_ptr + pos, length - pos );
+	}
+
+	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
+}
+
+Cursor::Cursor( FileIOUring uring ) : m_data( std::make_shared< CursorData >( uring ) )
+{}
+
+Cursor::Cursor( std::string_view view ) : m_data( std::make_shared< CursorData >( view ) )
+{}
+
+std::size_t Cursor::size() const
+{
+	return m_data->size();
+}
+
+drogon::Task< bool > Cursor::tryMatch( const std::string_view match ) const
+{
+	const auto [ ptr, size ] { co_await m_data->data( m_pos, match.size() ) };
+
+	if ( !ptr ) co_return false;
+
+	if ( size < match.size() ) co_return false;
+
+	// if memcmp returns zero, They are identical.
+	const bool passes { std::memcmp( ptr, match.data(), match.size() ) == 0 };
+
+	co_return passes;
+}
+
+drogon::Task< bool > Cursor::tryMatchInc( const std::string_view match )
+{
+	const bool is_match { co_await tryMatch( match ) };
+	if ( is_match ) inc( match.size() );
+	co_return is_match;
+}
+
+void Cursor::jumpTo( const std::int64_t pos )
+{
+	if ( pos < 0 ) m_pos = size() - static_cast< std::size_t >( std::abs( pos ) );
+	m_pos = static_cast< std::size_t >( pos );
+}
+
+bool Cursor::inc( const std::size_t i )
+{
+	m_pos += i;
+	return m_pos < size();
+}
+
+void Cursor::dec( const std::size_t i )
+{
+	m_pos -= i;
+}
+
+std::size_t Cursor::pos() const
+{
+	return m_pos;
+}
+
+} // namespace idhan::mime

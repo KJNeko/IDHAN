@@ -137,4 +137,22 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	co_return json_out;
 }
 
+std::string extractIDHANHTTPError( const drogon::HttpResponsePtr response )
+{
+	// The response should contain a json body that has an `error` text string in it
+	if ( response->contentType() != drogon::CT_APPLICATION_JSON )
+		throw std::invalid_argument( "Unable to extract IDHANHTTP error: Content-Type" );
+
+	const std::string body { response->body() };
+
+	Json::Reader reader {};
+	Json::Value json {};
+	if ( !reader.parse( body, json ) ) throw std::invalid_argument( "Unable to extract IDHANHTTP error: Invalid JSON" );
+
+	if ( !json.isMember( "error" ) )
+		throw std::invalid_argument( "Unable to extract IDHANHTTP error: Missing error field" );
+
+	return json[ "error" ].asString();
+}
+
 } // namespace idhan::hyapi::helpers

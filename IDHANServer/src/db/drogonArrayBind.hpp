@@ -4,7 +4,6 @@
 #pragma once
 
 #include "crypto/SHA256.hpp"
-#include "logging/log.hpp"
 
 std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SHA256 >& data );
 std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& data );

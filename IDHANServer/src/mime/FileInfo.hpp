@@ -18,11 +18,15 @@
 #pragma GCC diagnostic ignored "-Wnoexcept"
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #pragma GCC diagnostic ignored "-Wshadow"
+#include <expected>
+
+#include "api/APIAuth.hpp"
 #include "drogon/drogon.h"
 #pragma GCC diagnostic pop
 
 namespace idhan
 {
+struct FileIOUring;
 class FileMappedData;
 
 namespace constants
@@ -39,7 +43,8 @@ struct FileInfo
 };
 
 //! Populates a FileInfo struct with information from the data
-drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileMappedData > data, drogon::orm::DbClientPtr db );
+drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
+	gatherFileInfo( FileIOUring io_uring, drogon::orm::DbClientPtr db );
 
 drogon::Task<> setFileInfo( RecordID record_id, FileInfo info, drogon::orm::DbClientPtr db );
 

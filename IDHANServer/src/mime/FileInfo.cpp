@@ -4,6 +4,7 @@
 
 #include "FileInfo.hpp"
 
+#include "filesystem/IOUring.hpp"
 #include "logging/log.hpp"
 #include "metadata/FileMappedData.hpp"
 #include "mime/MimeDatabase.hpp"
@@ -38,12 +39,12 @@ drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const
 	}
 }
 
-drogon::Task< FileInfo >
-	gatherFileInfo( const std::shared_ptr< FileMappedData > data, const drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
+	gatherFileInfo( FileIOUring io, const drogon::orm::DbClientPtr db )
 {
 	FileInfo info {};
-	info.size = data->length();
-	const auto mime_string { mime::getInstance()->scan( data->data(), data->length() ) };
+	info.size = io.size();
+	const auto mime_string { co_await mime::getInstance()->scan( io ) };
 
 	if ( !mime_string )
 	{
@@ -58,7 +59,7 @@ drogon::Task< FileInfo >
 	if ( mime_search.empty() )
 	{
 		info.mime_id = constants::INVALID_MIME_ID;
-		info.extension = data->extension();
+		info.extension = io.path().extension();
 		// ensure that it doesn't start with `.`
 		if ( info.extension.starts_with( '.' ) ) info.extension = info.extension.substr( 1 );
 	}

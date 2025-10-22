@@ -3,28 +3,12 @@
   "extensions": [
     "png"
   ],
+  "priority": 50,
   "data": [
     {
       "type": "search",
       "offset": 0,
       "hex": "89504E470D0A1A0A"
-    },
-    {
-      // override for APNG
-      "type": "override",
-      "override": "image/apng",
-      "data": [
-        {
-          // acTL chunk
-          "type": "search",
-          "hex": "6163544C"
-        },
-        {
-          // IDAT chunk, Which should be after acTL
-          "type": "search",
-          "hex": "4944415478"
-        }
-      ]
     }
   ]
 }

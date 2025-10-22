@@ -7,6 +7,7 @@
 #include "api/helpers/records.hpp"
 #include "codes/ImportCodes.hpp"
 #include "crypto/SHA256.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "filesystem/ClusterManager.hpp"
 #include "logging/log.hpp"
 #include "metadata/parseMetadata.hpp"
@@ -61,7 +62,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const SHA256 sha256 { SHA256::hash( data_ptr, data_length ) };
 
-	const auto mime_str { mime::getInstance()->scan( request_data ) };
+	const auto mime_str { co_await mime::getInstance()->scan( request_data ) };
 
 	const bool overwrite_flag { request->getOptionalParameter< bool >( "overwrite" ).value_or( false ) };
 	const bool import_deleted { request->getOptionalParameter< bool >( "import_deleted" ).value_or( false ) };
@@ -83,6 +84,8 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const auto mime_id { co_await mime::getIDForStr( mime_str.value(), db ) };
 
+	if ( !mime_id ) co_return mime_id.error();
+
 	const auto record_id_e { co_await helpers::createRecord( sha256, db ) };
 
 	if ( !record_id_e ) co_return record_id_e.error();
@@ -93,7 +96,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	co_await db->execSqlCoro(
 		"INSERT INTO file_info (record_id, mime_id, size) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
 		record_id,
-		mime_id,
+		*mime_id,
 		data_length );
 
 	// select deleted time and store time

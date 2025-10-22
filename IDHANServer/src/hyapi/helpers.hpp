@@ -25,4 +25,6 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	extractRecordIDsToJsonFromFiles( Json::Value json, drogon::orm::DbClientPtr db );
 
+std::string extractIDHANHTTPError( const drogon::HttpResponsePtr response );
+
 } // namespace idhan::hyapi::helpers
