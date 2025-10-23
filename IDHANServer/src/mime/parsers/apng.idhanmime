@@ -13,11 +13,13 @@
           // acTL chunk
           "type": "search",
           "hex": "6163544C",
+          "limit": 512,
           "data": [
             {
               // IDAT chunk, Which should be after acTL
               "type": "search",
-              "hex": "4944415478"
+              "hex": "4944415478",
+              "limit": 512
             }
           ]
         }
