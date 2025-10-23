@@ -41,7 +41,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	if ( result.empty() ) co_return createBadRequest( "Cluster was not found with ID {}", cluster_id );
 
-	const auto cluster_path { result[ 0 ][ "folder_path" ].as< std::string >() };
+	const std::filesystem::path cluster_path { result[ 0 ][ "folder_path" ].as< std::string >() };
 	const bool read_only { result[ 0 ][ "read_only" ].as< bool >() };
 
 	std::size_t size_accum { 0 };
@@ -79,13 +79,16 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		co_return createBadRequest( "Must recompute hash for read only folders (recompute hash was set to false)" );
 
 	// Where we put bad files if not in readonly mode
-	const std::filesystem::path bad_dir { cluster_path };
+	const std::filesystem::path bad_dir { cluster_path / "bad" };
 
 	std::size_t processed_count { 0 };
 
 	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( cluster_path ) )
 	{
 		if ( !dir_entry.is_regular_file() ) continue;
+
+		// ensure we are not scanning the bad_dir
+		if ( dir_entry.path().parent_path() == bad_dir ) continue;
 
 		const auto& file_path { dir_entry.path() };
 
@@ -119,9 +122,17 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 				data->name(),
 				expected_hex ) };
 
+			if ( std::filesystem::file_size( file_path ) == 0 )
+			{
+				log::warn(
+					"While scanning cluster {}, File {} was found to be zero bytes!", cluster_id, data->strpath() );
+				continue;
+			}
+
 			if ( !read_only )
 			{
-				std::filesystem::rename( file_path, bad_dir / file_path.filename() );
+				std::filesystem::create_directories( bad_dir );
+				std::filesystem::copy( file_path, bad_dir / file_path.filename() );
 				log::warn( "{}; File was moved to {}", error_str, ( bad_dir / file_path.filename() ).string() );
 			}
 			else
