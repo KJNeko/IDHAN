@@ -124,15 +124,43 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 			if ( std::filesystem::file_size( file_path ) == 0 )
 			{
+				std::filesystem::remove( file_path );
 				log::warn(
-					"While scanning cluster {}, File {} was found to be zero bytes!", cluster_id, data->strpath() );
+					"While scanning cluster {}, File {} was found to be zero bytes! The file has been deleted",
+					cluster_id,
+					data->strpath() );
 				continue;
 			}
 
 			if ( !read_only )
 			{
 				std::filesystem::create_directories( bad_dir );
-				std::filesystem::copy( file_path, bad_dir / file_path.filename() );
+				std::error_code error_code {};
+				std::filesystem::rename( file_path, bad_dir / file_path.filename(), error_code );
+
+				if ( error_code )
+				{
+					log::warn(
+						"Failed to rename file from {} to {}: {}. Trying copy instead",
+						file_path.string(),
+						bad_dir.string(),
+						error_code.value() );
+
+					std::filesystem::copy(
+						file_path,
+						bad_dir / file_path.filename(),
+						std::filesystem::copy_options::overwrite_existing,
+						error_code );
+
+					if ( error_code || !( std::filesystem::exists( bad_dir / file_path.filename() ) ) )
+					{
+						log::error(
+							"Failed to copy file from {} to {}. Giving up.", file_path.string(), bad_dir.string() );
+					}
+
+					std::filesystem::remove( file_path );
+				}
+
 				log::warn( "{}; File was moved to {}", error_str, ( bad_dir / file_path.filename() ).string() );
 			}
 			else
