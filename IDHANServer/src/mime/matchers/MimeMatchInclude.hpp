@@ -21,7 +21,7 @@ class MimeMatchInclude : public MimeMatchBase
 	FGL_DELETE_ALL_RO5( MimeMatchInclude );
 
 	MimeMatchInclude( std::vector< MimeMatcher >&& matchers, const Json::Value& json );
-	drogon::Task< bool > match( Cursor& cursor ) const override;
+	coro::ImmedientTask< bool > match( Cursor& cursor ) const override;
 
 	static MimeMatcher createFromJson( const Json::Value& json );
 };

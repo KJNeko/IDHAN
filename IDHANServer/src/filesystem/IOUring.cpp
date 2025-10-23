@@ -15,6 +15,7 @@
 #include "drogon/HttpAppFramework.h"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
+#include "threading/ImmedientTask.hpp"
 
 namespace idhan
 {
@@ -57,13 +58,14 @@ const std::filesystem::path& FileIOUring::path() const
 	return m_path;
 }
 
-drogon::Task< std::vector< std::byte > > FileIOUring::readAll() const
+coro::ImmedientTask< std::vector< std::byte > > FileIOUring::readAll() const
 {
 	const auto file_size { std::filesystem::file_size( m_path ) };
 	co_return co_await read( 0, file_size );
 }
 
-drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len ) const
+coro::ImmedientTask< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len )
+	const
 {
 	auto& uring { IOUring::getInstance() };
 
@@ -79,14 +81,12 @@ drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t of
 	io_uring_sqe sqe {};
 	std::memset( &sqe, 0, sizeof( sqe ) );
 
-	std::vector< std::byte > buffer {};
-	buffer.resize( len );
+	auto buffer_ptr { std::make_shared< std::vector< std::byte > >() };
+	buffer_ptr->resize( len );
 
-	io_uring_prep_read( &sqe, m_fd, buffer.data(), static_cast< __u32 >( len ), offset );
+	io_uring_prep_read( &sqe, m_fd, buffer_ptr->data(), static_cast< __u32 >( len ), offset );
 
-	const auto result { co_await uring.sendRead( sqe, std::move( buffer ) ) };
-
-	co_return result;
+	co_return co_await uring.sendRead( sqe, buffer_ptr );
 }
 
 drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, const std::size_t offset ) const
@@ -156,7 +156,7 @@ std::pair< void*, std::size_t > FileIOUring::mmap()
 
 FileIOUring::FileIOUring( const FileIOUring& ) = default;
 FileIOUring& FileIOUring::operator=( const FileIOUring& ) = default;
-FileIOUring::FileIOUring( FileIOUring&& ) = default;
+FileIOUring::FileIOUring( FileIOUring&& ) noexcept = default;
 FileIOUring& FileIOUring::operator=( FileIOUring&& ) = default;
 
 int IOUring::setupUring()
@@ -303,12 +303,10 @@ void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< st
 				case IOUringUserData::Type::READ:
 					{
 						const auto& read_awaiter { user_data->read_awaiter };
-						std::vector< std::byte > data {};
 
-						auto* buffer { reinterpret_cast< std::byte* >( read_awaiter->m_sqe.addr ) };
-						data.assign( buffer, buffer + cqe.res );
+						// auto* buffer { reinterpret_cast< std::byte* >( read_awaiter->m_sqe.addr ) };
 
-						read_awaiter->complete( cqe.res, data );
+						read_awaiter->complete( cqe.res );
 						break;
 					}
 				case IOUringUserData::Type::WRITE:
@@ -396,9 +394,9 @@ WriteAwaiter IOUring::sendWrite( const io_uring_sqe& sqe )
 	return WriteAwaiter { this, sqe };
 }
 
-ReadAwaiter IOUring::sendRead( const io_uring_sqe& sqe, std::vector< std::byte >&& data )
+ReadAwaiter IOUring::sendRead( const io_uring_sqe& sqe, std::shared_ptr< std::vector< std::byte > >& data )
 {
-	return ReadAwaiter { this, sqe, std::move( data ) };
+	return ReadAwaiter { this, sqe, data };
 }
 
 IOUring::~IOUring()

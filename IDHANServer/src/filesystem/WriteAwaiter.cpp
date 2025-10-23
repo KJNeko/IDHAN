@@ -58,6 +58,8 @@ void WriteAwaiter::complete( int result )
 }
 
 WriteAwaiter::~WriteAwaiter()
-{}
+{
+	log::debug( "~WriteAwaiter()" );
+}
 
 } // namespace idhan

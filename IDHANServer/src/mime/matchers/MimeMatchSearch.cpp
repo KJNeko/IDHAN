@@ -16,7 +16,7 @@
 namespace idhan::mime
 {
 
-drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
+coro::ImmedientTask< bool > MimeMatchSearch::match( Cursor& cursor ) const
 {
 	if ( m_offset >= 0 && m_offset != NO_OFFSET )
 	{
@@ -25,16 +25,21 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 		for ( const auto& match : m_match_data )
 		{
 			const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
-			log::debug( "Searching for {}", spdlog::to_hex( match_view ) );
 			if ( co_await cursor.tryMatch( match_view ) )
 			{
-				log::debug( "Match found at offset {}", cursor.pos() );
+				log::debug( "PASS Match found {} at offset {}", spdlog::to_hex( match_view ), cursor.pos() );
 				cursor.inc( match_view.size() );
 				co_return true;
 			}
 			else
 			{
-				log::debug( "Found {} instead", spdlog::to_hex( co_await cursor.data( match.size() ) ) );
+				const auto data { co_await cursor.data( std::min( match.size(), 16ul ) ) };
+
+				if ( data.size() > 0 )
+					log::debug(
+						"No match found {}\nvs{}",
+						spdlog::to_hex( match_view ),
+						spdlog::to_hex( data.substr( 0, match.size() ) ) );
 			}
 		}
 

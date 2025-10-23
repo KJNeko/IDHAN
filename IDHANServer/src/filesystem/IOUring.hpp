@@ -12,11 +12,12 @@
 #include "WriteAwaiter.hpp"
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
+#include "threading/ImmedientTask.hpp"
 
 namespace idhan
 {
 
-class FileIOUring
+class [[nodiscard]] FileIOUring
 {
 	struct FileDescriptor
 	{
@@ -40,26 +41,23 @@ class FileIOUring
 
 	~FileIOUring();
 
-	std::size_t size() const;
+	[[nodiscard]] std::size_t size() const;
 
-	const std::filesystem::path& path() const;
-
-	drogon::Task< std::vector< std::byte > > readAll() const;
-
-	drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
-	drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 ) const;
-
-	drogon::Task< std::vector< std::byte > > fallbackRead( std::size_t offset, std::size_t len ) const;
-	drogon::Task< void > fallbackWrite( std::vector< std::byte > data, std::size_t size ) const;
+	[[nodiscard]] const std::filesystem::path& path() const;
+	[[nodiscard]] coro::ImmedientTask< std::vector< std::byte > > readAll() const;
+	[[nodiscard]] coro::ImmedientTask< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
+	[[nodiscard]] drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 ) const;
+	[[nodiscard]] drogon::Task< std::vector< std::byte > > fallbackRead( std::size_t offset, std::size_t len ) const;
+	[[nodiscard]] drogon::Task< void > fallbackWrite( std::vector< std::byte > data, std::size_t size ) const;
 
 	//! Mmaps the file into memory, Read only
-	std::pair< void*, std::size_t > mmap();
+	[[nodiscard]] std::pair< void*, std::size_t > mmap();
 
 	FileIOUring() = delete;
-	FileIOUring( const FileIOUring& );
-	FileIOUring& operator=( const FileIOUring& );
-	FileIOUring( FileIOUring&& );
-	FileIOUring& operator=( FileIOUring&& );
+	[[nodiscard]] FileIOUring( const FileIOUring& );
+	[[nodiscard]] FileIOUring& operator=( const FileIOUring& );
+	[[nodiscard]] FileIOUring( FileIOUring&& ) noexcept;
+	[[nodiscard]] FileIOUring& operator=( FileIOUring&& ) noexcept;
 };
 
 struct IOUringUserData
@@ -164,7 +162,7 @@ class IOUring
 	explicit IOUring();
 
 	WriteAwaiter sendWrite( const io_uring_sqe& sqe );
-	ReadAwaiter sendRead( const io_uring_sqe& sqe, std::vector< std::byte >&& data );
+	ReadAwaiter sendRead( const io_uring_sqe& sqe, std::shared_ptr< std::vector< std::byte > >& data );
 
 	~IOUring();
 };
