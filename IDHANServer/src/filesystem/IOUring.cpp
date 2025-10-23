@@ -157,7 +157,7 @@ std::pair< void*, std::size_t > FileIOUring::mmap()
 FileIOUring::FileIOUring( const FileIOUring& ) = default;
 FileIOUring& FileIOUring::operator=( const FileIOUring& ) = default;
 FileIOUring::FileIOUring( FileIOUring&& ) noexcept = default;
-FileIOUring& FileIOUring::operator=( FileIOUring&& ) = default;
+FileIOUring& FileIOUring::operator=( FileIOUring&& ) noexcept = default;
 
 int IOUring::setupUring()
 {
