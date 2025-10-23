@@ -8,7 +8,7 @@ var Config_8hpp =
     [ "idhan::config::getCLIConfig", "d6/db4/namespaceidhan_1_1config.html#aabefeeb8705781cf495a119ed83d6f23", null ],
     [ "idhan::config::getUserConfigPath", "d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2", null ],
     [ "idhan::config::getValue", "d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62", null ],
-    [ "idhan::config::getValue", "d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9", null ],
+    [ "idhan::config::getValue", "d6/db4/namespaceidhan_1_1config.html#a7f07951dfb5336e6dcbfc9333801a6a3", null ],
     [ "idhan::config::setLocation", "d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02", null ],
     [ "idhan::config::tryGetCLI", "d6/db4/namespaceidhan_1_1config.html#a2f73b3fd9b6fa82c8f984e936cf4fb86", null ],
     [ "idhan::config::tryGetEnv", "d6/db4/namespaceidhan_1_1config.html#a92364f7583cb897b92c4ee81038fe395", null ]

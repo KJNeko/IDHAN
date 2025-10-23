@@ -20,5 +20,7 @@ var searchData=
   ['createrecords_2ecpp_17',['createRecords.cpp',['../dd/d0a/createRecords_8cpp.html',1,'']]],
   ['createtag_2ecpp_18',['createTag.cpp',['../d0/d13/IDHANClient_2src_2tags_2createTag_8cpp.html',1,'(Global Namespace)'],['../d4/d07/IDHANServer_2src_2api_2tags_2createTag_8cpp.html',1,'(Global Namespace)']]],
   ['createtagdomain_2ecpp_19',['createTagDomain.cpp',['../dc/d7e/createTagDomain_8cpp.html',1,'']]],
-  ['createtags_2ecpp_20',['createTags.cpp',['../d5/dd4/createTags_8cpp.html',1,'']]]
+  ['createtags_2ecpp_20',['createTags.cpp',['../d5/dd4/createTags_8cpp.html',1,'']]],
+  ['cursor_2ecpp_21',['Cursor.cpp',['../d3/d37/Cursor_8cpp.html',1,'']]],
+  ['cursor_2ehpp_22',['Cursor.hpp',['../de/ddb/Cursor_8hpp.html',1,'']]]
 ];

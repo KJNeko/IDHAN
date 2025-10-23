@@ -1,9 +1,7 @@
 var searchData=
 [
-  ['openconnection_0',['openConnection',['../d3/d67/classidhan_1_1IDHANClient.html#add286a2a8588f21a6eeb2885a4e156d7',1,'idhan::IDHANClient']]],
-  ['openfile_1',['openFile',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a3ed063e6e6aa7f9f4c83dd7482408624',1,'idhan::filesystem::ClusterManager']]],
-  ['operator_28_29_2',['operator()',['../da/dc9/structstd_1_1hash_3_01std_1_1pair_3_01std_1_1string_00_01std_1_1string_01_4_01_4.html#ad4deb0fb19f2d6869a3f09eba25a7868',1,'std::hash&lt; std::pair&lt; std::string, std::string &gt; &gt;::operator()(const std::pair&lt; std::string, std::string &gt; &amp;p) const noexcept'],['../da/dc9/structstd_1_1hash_3_01std_1_1pair_3_01std_1_1string_00_01std_1_1string_01_4_01_4.html#ad4deb0fb19f2d6869a3f09eba25a7868',1,'std::hash&lt; std::pair&lt; std::string, std::string &gt; &gt;::operator()(const std::pair&lt; std::string, std::string &gt; &amp;p) const noexcept'],['../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html#a1fce87f46bcd4389269f7cdd55f5f62a',1,'std::hash&lt; idhan::SHA256 &gt;::operator()()']]],
-  ['operator_3c_3',['operator&lt;',['../d0/de3/classidhan_1_1SHA256.html#a1fea3f73dc1551949d91131034f2d504',1,'idhan::SHA256']]],
-  ['operator_3d_4',['operator=',['../d0/de3/classidhan_1_1SHA256.html#a464e157d3fe7f9eac60bdb7fccd2fe17',1,'idhan::SHA256::operator=(const SHA256 &amp;other)=default'],['../d0/de3/classidhan_1_1SHA256.html#ac8354637521ccedf05c1bab4991ae336',1,'idhan::SHA256::operator=(SHA256 &amp;&amp;other)=default'],['../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a881a58aa8523072dd7c8ac14113cd071',1,'idhan::mime::DataIdentifierSearch::operator=()']]],
-  ['operator_3d_3d_5',['operator==',['../d0/de3/classidhan_1_1SHA256.html#acf7bb4eae2bccab0e063a5514914c38b',1,'idhan::SHA256']]]
+  ['name_0',['name',['../db/de9/classidhan_1_1FileMappedData.html#a1ac6645b46e7fb60cd59ff664b3afd1c',1,'idhan::FileMappedData']]],
+  ['network_1',['Network',['../d9/d66/classidhan_1_1Network.html#a5d1dc622f74da8fb412f5d374808da23',1,'idhan::Network']]],
+  ['notify_2',['notify',['../d6/d70/namespaceidhan_1_1logging.html#a687acef9950ea33ff1b271464fc38876',1,'idhan::logging']]],
+  ['notifysubmit_3',['notifySubmit',['../dd/d25/classidhan_1_1IOUring.html#a7420aa5c12eb3a1a2bb142303537d841',1,'idhan::IOUring']]]
 ];

@@ -9,7 +9,7 @@ var namespaceidhan =
       [ "getCLIConfig", "d6/db4/namespaceidhan_1_1config.html#aabefeeb8705781cf495a119ed83d6f23", null ],
       [ "getUserConfigPath", "d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2", null ],
       [ "getValue", "d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62", null ],
-      [ "getValue", "d6/db4/namespaceidhan_1_1config.html#a5433efb7f8e18c0ad4d7d611477f1dd9", null ],
+      [ "getValue", "d6/db4/namespaceidhan_1_1config.html#a7f07951dfb5336e6dcbfc9333801a6a3", null ],
       [ "setLocation", "d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02", null ],
       [ "tryGetCLI", "d6/db4/namespaceidhan_1_1config.html#a2f73b3fd9b6fa82c8f984e936cf4fb86", null ],
       [ "tryGetEnv", "d6/db4/namespaceidhan_1_1config.html#a92364f7583cb897b92c4ee81038fe395", null ],
@@ -18,6 +18,9 @@ var namespaceidhan =
     ] ],
     [ "constants", "dd/d68/namespaceidhan_1_1constants.html", [
       [ "INVALID_MIME_ID", "dd/d68/namespaceidhan_1_1constants.html#af2ffeb0dfdbb702b153807024d13f160", null ]
+    ] ],
+    [ "coro", "d9/da5/namespaceidhan_1_1coro.html", [
+      [ "ImmedientTask", "d9/da5/namespaceidhan_1_1coro.html#a9fea6e44d5f8b6596ea50e9b3377a981", null ]
     ] ],
     [ "filesystem", "db/d9b/namespaceidhan_1_1filesystem.html", "db/d9b/namespaceidhan_1_1filesystem" ],
     [ "helpers", "d7/dc1/namespaceidhan_1_1helpers.html", [
@@ -53,7 +56,7 @@ var namespaceidhan =
     ] ],
     [ "ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", "de/d07/structidhan_1_1ConnectionArguments" ],
     [ "FileInfo", "d8/d58/structidhan_1_1FileInfo.html", "d8/d58/structidhan_1_1FileInfo" ],
-    [ "FileIOUring", "df/dca/structidhan_1_1FileIOUring.html", "df/dca/structidhan_1_1FileIOUring" ],
+    [ "FileIOUring", "d5/d8b/classidhan_1_1FileIOUring.html", "d5/d8b/classidhan_1_1FileIOUring" ],
     [ "FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", "db/de9/classidhan_1_1FileMappedData" ],
     [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
     [ "IOUring", "dd/d25/classidhan_1_1IOUring.html", "dd/d25/classidhan_1_1IOUring" ],
@@ -204,9 +207,13 @@ var namespaceidhan =
     [ "decodeHexCharacters", "dd/dcf/namespaceidhan.html#ad23693d258282b5457ded516e1a6b0d1", null ],
     [ "defaultErrorHandler", "dd/dcf/namespaceidhan.html#aae832ea656fdf9ffd691a6e5bfa9f0f1", null ],
     [ "exceptionHandler", "dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694", null ],
+    [ "fileDescriptorDeleter", "dd/dcf/namespaceidhan.html#a748edf3b2f7ea28438db27913972baa2", null ],
     [ "fixme", "dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e", null ],
-    [ "gatherFileInfo", "dd/dcf/namespaceidhan.html#a3d99207c8eca97e418ebb9522181b68f", null ],
+    [ "gatherFileInfo", "dd/dcf/namespaceidhan.html#a965a01b9430c24e503774ddc28557ffa", null ],
+    [ "getMimeParserPaths", "dd/dcf/namespaceidhan.html#adb23057f03ee6a0c01bb5c6f844cfbba", null ],
+    [ "getModulePaths", "dd/dcf/namespaceidhan.html#ad1722f80f712430b5d7829c4651c4c24", null ],
     [ "getRecordSHA256", "dd/dcf/namespaceidhan.html#aace1e0dead98fb497035b664deda96f5", null ],
+    [ "getStaticPath", "dd/dcf/namespaceidhan.html#a145ecba5a01abda0b1d9548a2fcc2829", null ],
     [ "handleResponse", "dd/dcf/namespaceidhan.html#a1fb1f5c877cb6dee9d5e5782c056a055", null ],
     [ "handleVersionInfo", "dd/dcf/namespaceidhan.html#aa32290eb8fec468bba8a98213ecf71c2", null ],
     [ "hyToIDHANSortType", "dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150", null ],

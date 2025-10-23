@@ -111,7 +111,6 @@ $(function(){initNavTree('d2/d83/structidhan_1_1ReadAwaiter.html','../../'); ini
 
 <div class="header">
   <div class="summary">
-<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="../../d0/de1/structidhan_1_1ReadAwaiter-members.html">List of all members</a>  </div>
@@ -121,34 +120,29 @@ $(function(){initNavTree('d2/d83/structidhan_1_1ReadAwaiter.html','../../'); ini
 
 <p><code>#include &lt;<a class="el" href="../../d9/deb/ReadAwaiter_8hpp_source.html">ReadAwaiter.hpp</a>&gt;</code></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
-Public Types</h2></td></tr>
-<tr class="memitem:a71364448f8cded4b7eed430f9ccc20c5" id="r_a71364448f8cded4b7eed430f9ccc20c5"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a71364448f8cded4b7eed430f9ccc20c5">handle_type</a> = std::coroutine_handle&lt; promise_type &gt;</td></tr>
-<tr class="separator:a71364448f8cded4b7eed430f9ccc20c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a0deecee1ff4d05a8519c5927fa09f1ac" id="r_a0deecee1ff4d05a8519c5927fa09f1ac"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0deecee1ff4d05a8519c5927fa09f1ac">FGL_DELETE_COPY</a> (<a class="el" href="../../d2/d83/structidhan_1_1ReadAwaiter.html">ReadAwaiter</a>)</td></tr>
+<tr class="separator:a0deecee1ff4d05a8519c5927fa09f1ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6453a70c92a3069853cf503b6279bfc0" id="r_a6453a70c92a3069853cf503b6279bfc0"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6453a70c92a3069853cf503b6279bfc0">FGL_DELETE_MOVE</a> (<a class="el" href="../../d2/d83/structidhan_1_1ReadAwaiter.html">ReadAwaiter</a>)</td></tr>
+<tr class="separator:a6453a70c92a3069853cf503b6279bfc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af542d5a3e9675f638669b7c757f5ee9b" id="r_af542d5a3e9675f638669b7c757f5ee9b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af542d5a3e9675f638669b7c757f5ee9b">ReadAwaiter</a> (<a class="el" href="../../dd/d25/classidhan_1_1IOUring.html">IOUring</a> *uring, io_uring_sqe sqe, std::shared_ptr&lt; std::vector&lt; std::byte &gt; &gt; &amp;data)</td></tr>
+<tr class="separator:af542d5a3e9675f638669b7c757f5ee9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a456d452ac83124d1d73e83ce8ffa50" id="r_a8a456d452ac83124d1d73e83ce8ffa50"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8a456d452ac83124d1d73e83ce8ffa50">complete</a> (int result)</td></tr>
+<tr class="separator:a8a456d452ac83124d1d73e83ce8ffa50"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af2bd9da5db28b4816bf0e267d993af83" id="r_af2bd9da5db28b4816bf0e267d993af83"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af2bd9da5db28b4816bf0e267d993af83">await_ready</a> () const noexcept</td></tr>
 <tr class="separator:af2bd9da5db28b4816bf0e267d993af83"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af0aa14cf8ece1565972a3090d682c5d6" id="r_af0aa14cf8ece1565972a3090d682c5d6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af0aa14cf8ece1565972a3090d682c5d6">await_suspend</a> (const std::coroutine_handle&lt;&gt; h)</td></tr>
 <tr class="separator:af0aa14cf8ece1565972a3090d682c5d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a197ad617a555cd4dc86f43383db3df52" id="r_a197ad617a555cd4dc86f43383db3df52"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a197ad617a555cd4dc86f43383db3df52">await_resume</a> ()</td></tr>
-<tr class="separator:a197ad617a555cd4dc86f43383db3df52"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adf090d1c0aa587fb81d7e0fd099a5c0f" id="r_adf090d1c0aa587fb81d7e0fd099a5c0f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf090d1c0aa587fb81d7e0fd099a5c0f">ReadAwaiter</a> (<a class="el" href="#a71364448f8cded4b7eed430f9ccc20c5">handle_type</a> handle)</td></tr>
-<tr class="separator:adf090d1c0aa587fb81d7e0fd099a5c0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7eefe0fb578fe9124b559c6b769c700f" id="r_a7eefe0fb578fe9124b559c6b769c700f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7eefe0fb578fe9124b559c6b769c700f">ReadAwaiter</a> (<a class="el" href="../../dd/d25/classidhan_1_1IOUring.html">IOUring</a> *uring, io_uring_sqe sqe)</td></tr>
-<tr class="separator:a7eefe0fb578fe9124b559c6b769c700f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0ec9c7a37fa003be2465d79649fbc09d" id="r_a0ec9c7a37fa003be2465d79649fbc09d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0ec9c7a37fa003be2465d79649fbc09d">complete</a> (int result, const std::vector&lt; std::byte &gt; &amp;data)</td></tr>
-<tr class="separator:a0ec9c7a37fa003be2465d79649fbc09d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f5ad18b839bb0ba0374077eddba4c10" id="r_a9f5ad18b839bb0ba0374077eddba4c10"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f5ad18b839bb0ba0374077eddba4c10">await_resume</a> () const</td></tr>
+<tr class="separator:a9f5ad18b839bb0ba0374077eddba4c10"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adca4c2f99d7d441ba7a8bbd18d0e6eec" id="r_adca4c2f99d7d441ba7a8bbd18d0e6eec"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adca4c2f99d7d441ba7a8bbd18d0e6eec">~ReadAwaiter</a> ()</td></tr>
 <tr class="separator:adca4c2f99d7d441ba7a8bbd18d0e6eec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a534c9e4db5f02c003866b0de03ed2d47" id="r_a534c9e4db5f02c003866b0de03ed2d47"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#a71364448f8cded4b7eed430f9ccc20c5">handle_type</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a534c9e4db5f02c003866b0de03ed2d47">m_h</a></td></tr>
-<tr class="separator:a534c9e4db5f02c003866b0de03ed2d47"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab6c0e9eb1dbb76a69dd5475fd895ae56" id="r_ab6c0e9eb1dbb76a69dd5475fd895ae56"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::byte &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab6c0e9eb1dbb76a69dd5475fd895ae56">m_data</a> {}</td></tr>
-<tr class="separator:ab6c0e9eb1dbb76a69dd5475fd895ae56"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17bcadbc4133f3e3e4a443bc791b5e1e" id="r_a17bcadbc4133f3e3e4a443bc791b5e1e"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a17bcadbc4133f3e3e4a443bc791b5e1e">m_data</a> {}</td></tr>
+<tr class="separator:a17bcadbc4133f3e3e4a443bc791b5e1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4085b592cddd6c05db14a75b72f2fd7f" id="r_a4085b592cddd6c05db14a75b72f2fd7f"><td class="memItemLeft" align="right" valign="top">std::exception_ptr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4085b592cddd6c05db14a75b72f2fd7f">m_exception</a> {}</td></tr>
 <tr class="separator:a4085b592cddd6c05db14a75b72f2fd7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad3d5b415c1a402b8382dac6b8bea1b65" id="r_ad3d5b415c1a402b8382dac6b8bea1b65"><td class="memItemLeft" align="right" valign="top">std::coroutine_handle&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad3d5b415c1a402b8382dac6b8bea1b65">m_cont</a></td></tr>
@@ -160,49 +154,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:ac2cad23713ebc0e78fa6ca858dc2ae9a" id="r_ac2cad23713ebc0e78fa6ca858dc2ae9a"><td class="memItemLeft" align="right" valign="top">trantor::EventLoop *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac2cad23713ebc0e78fa6ca858dc2ae9a">m_event_loop</a> { nullptr }</td></tr>
 <tr class="separator:ac2cad23713ebc0e78fa6ca858dc2ae9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Member Typedef Documentation</h2>
-<a id="a71364448f8cded4b7eed430f9ccc20c5" name="a71364448f8cded4b7eed430f9ccc20c5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a71364448f8cded4b7eed430f9ccc20c5">&#9670;&#160;</a></span>handle_type</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">using <a class="el" href="#a71364448f8cded4b7eed430f9ccc20c5">idhan::ReadAwaiter::handle_type</a> = std::coroutine_handle&lt; promise_type &gt;</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="adf090d1c0aa587fb81d7e0fd099a5c0f" name="adf090d1c0aa587fb81d7e0fd099a5c0f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adf090d1c0aa587fb81d7e0fd099a5c0f">&#9670;&#160;</a></span>ReadAwaiter() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">idhan::ReadAwaiter::ReadAwaiter </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="#a71364448f8cded4b7eed430f9ccc20c5">handle_type</a></td>          <td class="paramname"><span class="paramname"><em>handle</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a7eefe0fb578fe9124b559c6b769c700f" name="a7eefe0fb578fe9124b559c6b769c700f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7eefe0fb578fe9124b559c6b769c700f">&#9670;&#160;</a></span>ReadAwaiter() <span class="overload">[2/2]</span></h2>
+<a id="af542d5a3e9675f638669b7c757f5ee9b" name="af542d5a3e9675f638669b7c757f5ee9b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af542d5a3e9675f638669b7c757f5ee9b">&#9670;&#160;</a></span>ReadAwaiter()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -215,7 +169,12 @@ Public Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">io_uring_sqe</td>          <td class="paramname"><span class="paramname"><em>sqe</em></span>&#160;)</td>
+          <td class="paramtype">io_uring_sqe</td>          <td class="paramname"><span class="paramname"><em>sqe</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::shared_ptr&lt; std::vector&lt; std::byte &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -258,15 +217,15 @@ Public Attributes</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a197ad617a555cd4dc86f43383db3df52" name="a197ad617a555cd4dc86f43383db3df52"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a197ad617a555cd4dc86f43383db3df52">&#9670;&#160;</a></span>await_resume()</h2>
+<a id="a9f5ad18b839bb0ba0374077eddba4c10" name="a9f5ad18b839bb0ba0374077eddba4c10"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9f5ad18b839bb0ba0374077eddba4c10">&#9670;&#160;</a></span>await_resume()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -275,7 +234,7 @@ Public Attributes</h2></td></tr>
           <td class="memname">std::vector&lt; std::byte &gt; idhan::ReadAwaiter::await_resume </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
+          <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -299,8 +258,8 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a0ec9c7a37fa003be2465d79649fbc09d" name="a0ec9c7a37fa003be2465d79649fbc09d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0ec9c7a37fa003be2465d79649fbc09d">&#9670;&#160;</a></span>complete()</h2>
+<a id="a8a456d452ac83124d1d73e83ce8ffa50" name="a8a456d452ac83124d1d73e83ce8ffa50"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a456d452ac83124d1d73e83ce8ffa50">&#9670;&#160;</a></span>complete()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -308,12 +267,42 @@ Public Attributes</h2></td></tr>
         <tr>
           <td class="memname">void idhan::ReadAwaiter::complete </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>result</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>result</em></span></td><td>)</td>
           <td></td>
-          <td class="paramtype">const std::vector&lt; std::byte &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a0deecee1ff4d05a8519c5927fa09f1ac" name="a0deecee1ff4d05a8519c5927fa09f1ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0deecee1ff4d05a8519c5927fa09f1ac">&#9670;&#160;</a></span>FGL_DELETE_COPY()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">idhan::ReadAwaiter::FGL_DELETE_COPY </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d2/d83/structidhan_1_1ReadAwaiter.html">ReadAwaiter</a></td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a6453a70c92a3069853cf503b6279bfc0" name="a6453a70c92a3069853cf503b6279bfc0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6453a70c92a3069853cf503b6279bfc0">&#9670;&#160;</a></span>FGL_DELETE_MOVE()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">idhan::ReadAwaiter::FGL_DELETE_MOVE </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d2/d83/structidhan_1_1ReadAwaiter.html">ReadAwaiter</a></td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -335,14 +324,14 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="ab6c0e9eb1dbb76a69dd5475fd895ae56" name="ab6c0e9eb1dbb76a69dd5475fd895ae56"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab6c0e9eb1dbb76a69dd5475fd895ae56">&#9670;&#160;</a></span>m_data</h2>
+<a id="a17bcadbc4133f3e3e4a443bc791b5e1e" name="a17bcadbc4133f3e3e4a443bc791b5e1e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17bcadbc4133f3e3e4a443bc791b5e1e">&#9670;&#160;</a></span>m_data</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt; std::byte &gt; idhan::ReadAwaiter::m_data {}</td>
+          <td class="memname">std::shared_ptr&lt; std::vector&lt; std::byte &gt; &gt; idhan::ReadAwaiter::m_data {}</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -371,20 +360,6 @@ Public Attributes</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">std::exception_ptr idhan::ReadAwaiter::m_exception {}</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a534c9e4db5f02c003866b0de03ed2d47" name="a534c9e4db5f02c003866b0de03ed2d47"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a534c9e4db5f02c003866b0de03ed2d47">&#9670;&#160;</a></span>m_h</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="#a71364448f8cded4b7eed430f9ccc20c5">handle_type</a> idhan::ReadAwaiter::m_h</td>
         </tr>
       </table>
 </div><div class="memdoc">

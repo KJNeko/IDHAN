@@ -1,15 +1,15 @@
 var searchData=
 [
-  ['_7ecommandringpointers_0',['~CommandRingPointers',['../de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html#adb4fb619c866cb270f50eea36b77918a',1,'idhan::IOUring::CommandRingPointers']]],
-  ['_7efilemappeddata_1',['~FileMappedData',['../db/de9/classidhan_1_1FileMappedData.html#a6e8bc28edc3ff6eb42d6d634b36846be',1,'idhan::FileMappedData']]],
-  ['_7eidhanclient_2',['~IDHANClient',['../d3/d67/classidhan_1_1IDHANClient.html#a5c5406c8882641397932f0363e8e39d9',1,'idhan::IDHANClient']]],
-  ['_7eiouring_3',['~IOUring',['../dd/d25/classidhan_1_1IOUring.html#a6e14b0ea344ab78ecd462b602adc8b89',1,'idhan::IOUring']]],
-  ['_7eiouringuserdata_4',['~IOUringUserData',['../d1/d67/structidhan_1_1IOUringUserData.html#a1de825fb7c139df756c8bb283dac6222',1,'idhan::IOUringUserData']]],
-  ['_7emimedataidentifier_5',['~MimeDataIdentifier',['../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#a99e1b19d22d2b945ba2c99782b95788a',1,'idhan::mime::MimeDataIdentifier']]],
-  ['_7emoduleholder_6',['~ModuleHolder',['../d0/d85/classidhan_1_1modules_1_1ModuleHolder.html#aec853b4f78e8f9378f7029b585742a97',1,'idhan::modules::ModuleHolder']]],
-  ['_7ereadawaiter_7',['~ReadAwaiter',['../d2/d83/structidhan_1_1ReadAwaiter.html#adca4c2f99d7d441ba7a8bbd18d0e6eec',1,'idhan::ReadAwaiter']]],
-  ['_7escopedtimer_8',['~ScopedTimer',['../de/d50/structidhan_1_1logging_1_1ScopedTimer.html#aa1e4a80bd1dd0bc77daa691bc21a73e6',1,'idhan::logging::ScopedTimer']]],
-  ['_7eservercontext_9',['~ServerContext',['../d0/d4c/classidhan_1_1ServerContext.html#a42b515397d7624f6b455ec9c4ea78017',1,'idhan::ServerContext']]],
-  ['_7esubmissionringpointers_10',['~SubmissionRingPointers',['../df/d36/structidhan_1_1IOUring_1_1SubmissionRingPointers.html#a78295fe222b6368964c8b79ed41774a1',1,'idhan::IOUring::SubmissionRingPointers']]],
-  ['_7ewriteawaiter_11',['~WriteAwaiter',['../d9/d52/structidhan_1_1WriteAwaiter.html#a32f00aa514bc6fdabfa655c031a3ba10',1,'idhan::WriteAwaiter']]]
+  ['warn_0',['Warn',['../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3af997a60da93899a06132dcd9fbe08fb1',1,'idhan::logging']]],
+  ['warn_1',['warn',['../d6/d70/namespaceidhan_1_1logging.html#ac2c95bb22deb171d1ee79402fa796d1b',1,'idhan::logging::warn()'],['../d7/d03/namespaceidhan_1_1log.html#a1c77f741df908f5b04d655cdab83fb6c',1,'idhan::log::warn(const format_ns::format_string&lt; Ts... &gt; str, Ts &amp;&amp;... ts)'],['../d7/d03/namespaceidhan_1_1log.html#ac698be3533edf7425ae271140a28e896',1,'idhan::log::warn(const T &amp;t)']]],
+  ['welcome_20to_20idhan_20s_20page_2',['Welcome to IDHAN&apos;s page',['../d0/d30/md_README.html',1,'']]],
+  ['width_3',['Width',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a55c3552fbe5fe90d8bffabf0b20ae418',1,'idhan::hyapi']]],
+  ['width_4',['width',['../d6/d56/structidhan_1_1mime_1_1Resolution.html#a8ba7834e0269a7fc6320c7d83e7161b4',1,'idhan::mime::Resolution']]],
+  ['write_5',['WRITE',['../d1/d67/structidhan_1_1IOUringUserData.html#a3456a999bbc12bd5d1744bb0c9be1685ad4b9e47f65b6e79b010582f15785867e',1,'idhan::IOUringUserData']]],
+  ['write_6',['write',['../d5/d8b/classidhan_1_1FileIOUring.html#a502adaa0964f98a481d1507aa8eb985f',1,'idhan::FileIOUring']]],
+  ['write_5fawaiter_7',['write_awaiter',['../d1/d67/structidhan_1_1IOUringUserData.html#aff3e870e4b8d2b4914f5039d9272930e',1,'idhan::IOUringUserData']]],
+  ['writeawaiter_8',['WriteAwaiter',['../d9/d52/structidhan_1_1WriteAwaiter.html',1,'idhan::WriteAwaiter'],['../d9/d52/structidhan_1_1WriteAwaiter.html#a0149305e5b38153b8e9b8e40bcf9f38e',1,'idhan::WriteAwaiter::WriteAwaiter()']]],
+  ['writeawaiter_2ecpp_9',['WriteAwaiter.cpp',['../d7/d9f/WriteAwaiter_8cpp.html',1,'']]],
+  ['writeawaiter_2ehpp_10',['WriteAwaiter.hpp',['../dc/d90/WriteAwaiter_8hpp.html',1,'']]],
+  ['ws_5fpath_5fadd_11',['WS_PATH_ADD',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html#ae156531c90df749359dbefa51298b573',1,'idhan::api::Heartbeat']]]
 ];

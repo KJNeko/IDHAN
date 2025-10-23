@@ -6,9 +6,17 @@ var searchData=
   ['mime_2ehpp_3',['mime.hpp',['../d2/d5d/mime_8hpp.html',1,'']]],
   ['mimedatabase_2ecpp_4',['MimeDatabase.cpp',['../db/dc2/MimeDatabase_8cpp.html',1,'']]],
   ['mimedatabase_2ehpp_5',['MimeDatabase.hpp',['../d6/df0/MimeDatabase_8hpp.html',1,'']]],
-  ['mimeinfo_2ecpp_6',['MimeInfo.cpp',['../d3/dbe/MimeInfo_8cpp.html',1,'']]],
-  ['mimeinfo_2ehpp_7',['MimeInfo.hpp',['../db/d46/MimeInfo_8hpp.html',1,'']]],
-  ['modify_2ecpp_8',['modify.cpp',['../d7/d5c/modify_8cpp.html',1,'']]],
-  ['moduleloader_2ecpp_9',['ModuleLoader.cpp',['../d3/d82/ModuleLoader_8cpp.html',1,'']]],
-  ['moduleloader_2ehpp_10',['ModuleLoader.hpp',['../d7/d46/ModuleLoader_8hpp.html',1,'']]]
+  ['mimeidentifier_2ecpp_6',['MimeIdentifier.cpp',['../d5/da6/MimeIdentifier_8cpp.html',1,'']]],
+  ['mimeidentifier_2ehpp_7',['MimeIdentifier.hpp',['../d0/d4a/MimeIdentifier_8hpp.html',1,'']]],
+  ['mimeinfo_2ecpp_8',['MimeInfo.cpp',['../d3/dbe/MimeInfo_8cpp.html',1,'']]],
+  ['mimeinfo_2ehpp_9',['MimeInfo.hpp',['../db/d46/MimeInfo_8hpp.html',1,'']]],
+  ['mimematchbase_2ecpp_10',['MimeMatchBase.cpp',['../da/dbf/MimeMatchBase_8cpp.html',1,'']]],
+  ['mimematchbase_2ehpp_11',['MimeMatchBase.hpp',['../d1/d3f/MimeMatchBase_8hpp.html',1,'']]],
+  ['mimematchinclude_2ecpp_12',['MimeMatchInclude.cpp',['../df/d00/MimeMatchInclude_8cpp.html',1,'']]],
+  ['mimematchinclude_2ehpp_13',['MimeMatchInclude.hpp',['../d3/da8/MimeMatchInclude_8hpp.html',1,'']]],
+  ['mimematchsearch_2ecpp_14',['MimeMatchSearch.cpp',['../d4/dfe/MimeMatchSearch_8cpp.html',1,'']]],
+  ['mimematchsearch_2ehpp_15',['MimeMatchSearch.hpp',['../d1/df6/MimeMatchSearch_8hpp.html',1,'']]],
+  ['modify_2ecpp_16',['modify.cpp',['../d7/d5c/modify_8cpp.html',1,'']]],
+  ['moduleloader_2ecpp_17',['ModuleLoader.cpp',['../d3/d82/ModuleLoader_8cpp.html',1,'']]],
+  ['moduleloader_2ehpp_18',['ModuleLoader.hpp',['../d7/d46/ModuleLoader_8hpp.html',1,'']]]
 ];

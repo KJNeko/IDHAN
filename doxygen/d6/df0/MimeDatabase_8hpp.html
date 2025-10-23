@@ -122,26 +122,14 @@ $(function(){initNavTree('d6/df0/MimeDatabase_8hpp.html','../../'); initResizabl
 <code>#include &lt;expected&gt;</code><br />
 <code>#include &lt;filesystem&gt;</code><br />
 <code>#include &lt;memory&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../d0/d4a/MimeIdentifier_8hpp_source.html">MimeIdentifier.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../db/d46/MimeInfo_8hpp_source.html">MimeInfo.hpp</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../d5/d96/decodeHex_8hpp_source.html">decodeHex.hpp</a>&quot;</code><br />
-<code>#include &quot;fgl/defines.hpp&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d3/d94/IOUring_8hpp_source.html">filesystem/IOUring.hpp</a>&quot;</code><br />
 </div>
 <p><a href="../../d6/df0/MimeDatabase_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d89/structidhan_1_1mime_1_1MimeDataTrack.html">idhan::mime::MimeDataTrack</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html">idhan::mime::MimeDataIdentifier</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html">idhan::mime::DataIdentifierSearch</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d5b/structidhan_1_1mime_1_1DataIdentifierSearch_1_1DataSet.html">idhan::mime::DataIdentifierSearch::DataSet</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride.html">idhan::mime::DataIdentifierOverride</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html">idhan::mime::MimeIdentifier</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html">idhan::mime::MimeDatabase</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -156,8 +144,8 @@ Namespaces</h2></td></tr>
 Functions</h2></td></tr>
 <tr class="memitem:a1d7a6346a14df758133691706d644832" id="r_a1d7a6346a14df758133691706d644832"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="../../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html">MimeDatabase</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#a1d7a6346a14df758133691706d644832">idhan::mime::getInstance</a> ()</td></tr>
 <tr class="separator:a1d7a6346a14df758133691706d644832"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1fbd2b2d64b7d24c573b4081948bf767" id="r_a1fbd2b2d64b7d24c573b4081948bf767"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#a1fbd2b2d64b7d24c573b4081948bf767">idhan::mime::getIDForStr</a> (const std::string str, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a1fbd2b2d64b7d24c573b4081948bf767"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8be06428d7e89f1676c948f6c8469b5" id="r_aa8be06428d7e89f1676c948f6c8469b5"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d9c/namespaceidhan_1_1mime.html#aa8be06428d7e89f1676c948f6c8469b5">idhan::mime::getIDForStr</a> (std::string str, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:aa8be06428d7e89f1676c948f6c8469b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>

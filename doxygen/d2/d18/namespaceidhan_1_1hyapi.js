@@ -1,6 +1,7 @@
 var namespaceidhan_1_1hyapi =
 [
     [ "helpers", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html", [
+      [ "extractIDHANHTTPError", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#afd0d6d87b1ad0024c4ef51db5676f9d7", null ],
       [ "extractRecordIDsFromFilesJson", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce", null ],
       [ "extractRecordIDsFromParameters", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1", null ],
       [ "extractRecordIDsToJsonFromFiles", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b", null ],

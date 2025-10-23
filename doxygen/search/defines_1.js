@@ -8,6 +8,5 @@ var searchData=
   ['idhan_5fserver_5fminor_5',['IDHAN_SERVER_MINOR',['../d5/dc9/versions_8hpp.html#add92163c1c334819bff214b1ee3e4f5c',1,'versions.hpp']]],
   ['idhan_5fserver_5fpatch_6',['IDHAN_SERVER_PATCH',['../d5/dc9/versions_8hpp.html#ae70c9900eaf59f2d4d275e9c0b64f37e',1,'versions.hpp']]],
   ['idhan_5fserver_5fversion_7',['IDHAN_SERVER_VERSION',['../d5/dc9/versions_8hpp.html#ac034da67f03f490099443dca49ad4515',1,'versions.hpp']]],
-  ['idhan_5fstatic_5fpath_8',['IDHAN_STATIC_PATH',['../da/dfd/paths_8hpp.html#a24cdfbea93e29802563f25e8e69e8257',1,'paths.hpp']]],
-  ['integer_5fpg_5ftype_5fname_9',['INTEGER_PG_TYPE_NAME',['../da/d68/IDHANTypes_8hpp.html#aeb5515ac453078ffac1c0186a5e8ee94',1,'IDHANTypes.hpp']]]
+  ['integer_5fpg_5ftype_5fname_8',['INTEGER_PG_TYPE_NAME',['../da/d68/IDHANTypes_8hpp.html#aeb5515ac453078ffac1c0186a5e8ee94',1,'IDHANTypes.hpp']]]
 ];

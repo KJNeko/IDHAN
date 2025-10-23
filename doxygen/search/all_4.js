@@ -22,7 +22,8 @@ var searchData=
   ['expectedtask_2ehpp_19',['ExpectedTask.hpp',['../d6/d3e/ExpectedTask_8hpp.html',1,'']]],
   ['extension_20',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension'],['../db/de9/classidhan_1_1FileMappedData.html#ab31ae6048889dbcedca59258bf70db71',1,'idhan::FileMappedData::extension()']]],
   ['extra_5finfo_21',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]],
-  ['extractrecordidsfromfilesjson_22',['extractRecordIDsFromFilesJson',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidsfromparameters_23',['extractRecordIDsFromParameters',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidstojsonfromfiles_24',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]]
+  ['extractidhanhttperror_22',['extractIDHANHTTPError',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#afd0d6d87b1ad0024c4ef51db5676f9d7',1,'idhan::hyapi::helpers']]],
+  ['extractrecordidsfromfilesjson_23',['extractRecordIDsFromFilesJson',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce',1,'idhan::hyapi::helpers']]],
+  ['extractrecordidsfromparameters_24',['extractRecordIDsFromParameters',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1',1,'idhan::hyapi::helpers']]],
+  ['extractrecordidstojsonfromfiles_25',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]]
 ];

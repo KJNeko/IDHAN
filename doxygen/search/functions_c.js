@@ -1,13 +1,10 @@
 var searchData=
 [
-  ['parse_0',['parse',['../d8/d46/structformat__ns_1_1formatter_3_01QString_01_4.html#a0ac697d3ff44e144557cf317988699a1',1,'format_ns::formatter&lt; QString &gt;']]],
-  ['parsearrayparmeters_1',['parseArrayParmeters',['../dd/dcf/namespaceidhan.html#ae1f955a09fa3220012fb0c401950fcfa',1,'idhan']]],
-  ['parsefile_2',['parseFile',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a5c4ae06597e5aa7cb24b83c30c3e7187',1,'idhan::api::RecordAPI']]],
-  ['parseidentifier_3',['parseIdentifier',['../d4/d9c/namespaceidhan_1_1mime.html#acf8635d150552beac02fd82ce3b8fcf4',1,'idhan::mime']]],
-  ['parserow_4',['parseRow',['../db/de4/namespaceidhan_1_1api.html#a31510b2560a529566f296b66dae97df6',1,'idhan::api']]],
-  ['pass_5',['pass',['../d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html#a83f9fc7ae4d3d75d54b7754548fd1a63',1,'idhan::mime::MimeDataIdentifier::pass()'],['../d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html#a3207626c07b24be60125f283c785b6d9',1,'idhan::mime::DataIdentifierSearch::pass()'],['../d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride.html#ad7fc58d51d69871101a122cc91a9c4c3',1,'idhan::mime::DataIdentifierOverride::pass()']]],
-  ['path_6',['path',['../db/de9/classidhan_1_1FileMappedData.html#af5ff7974e8e72732b3fc26b93403e614',1,'idhan::FileMappedData']]],
-  ['pgescape_7',['pgEscape',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a267910c9cd40d8f20d84eec5719d0af9',1,'idhan::api::helpers']]],
-  ['pgescapei_8',['pgEscapeI',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a3f4643c98726286a10fa2e41c14c3b78',1,'idhan::api::helpers']]],
-  ['postgresqlstoragesundata_9',['postgresqlStorageSunData',['../d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#a4a10b1492337010c07636a0038e7ef3d',1,'idhan::api::APIMaintenance']]]
+  ['openconnection_0',['openConnection',['../d3/d67/classidhan_1_1IDHANClient.html#add286a2a8588f21a6eeb2885a4e156d7',1,'idhan::IDHANClient']]],
+  ['openfile_1',['openFile',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a3ed063e6e6aa7f9f4c83dd7482408624',1,'idhan::filesystem::ClusterManager']]],
+  ['operator_20int_2',['operator int',['../db/d9c/structidhan_1_1FileIOUring_1_1FileDescriptor.html#a2fe02a219d7d35fe509b06957a3bbdff',1,'idhan::FileIOUring::FileDescriptor']]],
+  ['operator_28_29_3',['operator()',['../da/dc9/structstd_1_1hash_3_01std_1_1pair_3_01std_1_1string_00_01std_1_1string_01_4_01_4.html#ad4deb0fb19f2d6869a3f09eba25a7868',1,'std::hash&lt; std::pair&lt; std::string, std::string &gt; &gt;::operator()(const std::pair&lt; std::string, std::string &gt; &amp;p) const noexcept'],['../da/dc9/structstd_1_1hash_3_01std_1_1pair_3_01std_1_1string_00_01std_1_1string_01_4_01_4.html#ad4deb0fb19f2d6869a3f09eba25a7868',1,'std::hash&lt; std::pair&lt; std::string, std::string &gt; &gt;::operator()(const std::pair&lt; std::string, std::string &gt; &amp;p) const noexcept'],['../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html#a1fce87f46bcd4389269f7cdd55f5f62a',1,'std::hash&lt; idhan::SHA256 &gt;::operator()()']]],
+  ['operator_3c_4',['operator&lt;',['../d0/de3/classidhan_1_1SHA256.html#a1fea3f73dc1551949d91131034f2d504',1,'idhan::SHA256']]],
+  ['operator_3d_5',['operator=',['../d0/de3/classidhan_1_1SHA256.html#a464e157d3fe7f9eac60bdb7fccd2fe17',1,'idhan::SHA256::operator=(const SHA256 &amp;other)=default'],['../d0/de3/classidhan_1_1SHA256.html#ac8354637521ccedf05c1bab4991ae336',1,'idhan::SHA256::operator=(SHA256 &amp;&amp;other)=default'],['../d5/d8b/classidhan_1_1FileIOUring.html#af71cf4846621bb55b3b06f016b957ea8',1,'idhan::FileIOUring::operator=(const FileIOUring &amp;)'],['../d5/d8b/classidhan_1_1FileIOUring.html#a26944a4c47f4199840d2b827d723d7fe',1,'idhan::FileIOUring::operator=(FileIOUring &amp;&amp;) noexcept']]],
+  ['operator_3d_3d_6',['operator==',['../d0/de3/classidhan_1_1SHA256.html#acf7bb4eae2bccab0e063a5514914c38b',1,'idhan::SHA256']]]
 ];

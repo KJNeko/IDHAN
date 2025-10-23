@@ -7,7 +7,7 @@ var structidhan_1_1api_1_1ClusterInfo =
     [ "allowed_files", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a9a9733a8d3d034c8828bc6d8514ccf9b", null ],
     [ "allowed_thumbnails", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a9a4d67fbd1a07ff7f8d3738365d67789", null ],
     [ "cluster_name", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a3bac437a6f504ab3784c367bfe6ea19f", null ],
-    [ "file_count", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a8467849aa3203b45651a3212546cc3d7", null ],
+    [ "file_count", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a4dd05f0073fc235352d889b1b4723dce", null ],
     [ "limit", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a2567c76a6ce4cc91b4fdd7c6105407f9", null ],
     [ "m_id", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a387f74aba458765e8993ea2959115afb", null ],
     [ "path", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a6f6395f416e2e85daf81b7f90a27c8c4", null ],

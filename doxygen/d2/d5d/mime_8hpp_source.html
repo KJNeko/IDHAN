@@ -122,47 +122,46 @@ $(function(){initNavTree('d2/d5d/mime_8hpp_source.html','../../'); initResizable
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &quot;<a class="code" href="../../da/d68/IDHANTypes_8hpp.html">IDHANTypes.hpp</a>&quot;</span></div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#pragma GCC diagnostic push</span></div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Weffc++&quot;</span></div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wredundant-tags&quot;</span></div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wcast-qual&quot;</span></div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wold-style-cast&quot;</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wnoexcept&quot;</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wredundant-decls&quot;</span></div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wuseless-cast&quot;</span></div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wnoexcept&quot;</span></div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wswitch-enum&quot;</span></div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wshadow&quot;</span></div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &quot;drogon/HttpResponse.h&quot;</span></div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &quot;drogon/orm/DbClient.h&quot;</span></div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#pragma GCC diagnostic pop</span></div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d4/d9c/namespaceidhan_1_1mime.html">idhan::mime</a></div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>{</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span></div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>std::optional&lt; MimeID &gt; <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a1e76c9f7fd90eb7db7938c56cf0933f1">searchMimeType</a>( <span class="keyword">const</span> std::string&amp; name, drogon::orm::DbClientPtr db );</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span></div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a96c638ae913e30e456c17d6958c1a07f">registerMimeType</a>( <span class="keyword">const</span> std::string&amp; name, drogon::orm::DbClientPtr db );</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span></div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>drogon::Task&lt; std::expected&lt; MimeID, drogon::HttpResponsePtr &gt; &gt;</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a06b2668eae82ceff21b426ba8d3522fe">getMimeIDFromRecord</a>( <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> <span class="keywordtype">id</span>, drogon::orm::DbClientPtr db );</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
-<div class="foldopen" id="foldopen00040" data-start="{" data-end="};">
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno"><a class="line" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">   40</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">FileMimeInfo</a></div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>{</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno"><a class="line" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a507be944deacad5802b47616fefaf857">   42</a></span>    <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> <a class="code hl_variable" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a507be944deacad5802b47616fefaf857">m_id</a>;</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13">   43</a></span>    std::string <a class="code hl_variable" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13">extension</a>;</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>};</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#pragma GCC diagnostic push</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Weffc++&quot;</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wredundant-tags&quot;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wcast-qual&quot;</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wold-style-cast&quot;</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wnoexcept&quot;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wredundant-decls&quot;</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wuseless-cast&quot;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wnoexcept&quot;</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wswitch-enum&quot;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Wshadow&quot;</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#include &quot;drogon/HttpResponse.h&quot;</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &quot;drogon/orm/DbClient.h&quot;</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#pragma GCC diagnostic pop</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d4/d9c/namespaceidhan_1_1mime.html">idhan::mime</a></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>{</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>std::optional&lt; MimeID &gt; <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a1e76c9f7fd90eb7db7938c56cf0933f1">searchMimeType</a>( <span class="keyword">const</span> std::string&amp; name, drogon::orm::DbClientPtr db );</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span></div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a96c638ae913e30e456c17d6958c1a07f">registerMimeType</a>( <span class="keyword">const</span> std::string&amp; name, drogon::orm::DbClientPtr db );</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span></div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>drogon::Task&lt; std::expected&lt; MimeID, drogon::HttpResponsePtr &gt; &gt;</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a06b2668eae82ceff21b426ba8d3522fe">getMimeIDFromRecord</a>( <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> <span class="keywordtype">id</span>, drogon::orm::DbClientPtr db );</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
+<div class="foldopen" id="foldopen00039" data-start="{" data-end="};">
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">   39</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">FileMimeInfo</a></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>{</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno"><a class="line" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a507be944deacad5802b47616fefaf857">   41</a></span>    <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> <a class="code hl_variable" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a507be944deacad5802b47616fefaf857">m_id</a>;</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno"><a class="line" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13">   42</a></span>    std::string <a class="code hl_variable" href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13">extension</a>;</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>};</div>
 </div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span></div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>drogon::Task&lt; std::expected&lt; FileMimeInfo, drogon::HttpResponsePtr &gt; &gt;</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a98bd6d790e210d7093ac4ad107cbf9e3">getMime</a>( <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> mime_id, drogon::orm::DbClientPtr db );</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span></div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>drogon::Task&lt; std::expected&lt; FileMimeInfo, drogon::HttpResponsePtr &gt; &gt;</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a786eeba1e0e7845c001f743de45e2436">getRecordMime</a>( <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db );</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>} <span class="comment">// namespace idhan::mime</span></div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span></div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>drogon::Task&lt; std::expected&lt; FileMimeInfo, drogon::HttpResponsePtr &gt; &gt;</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a98bd6d790e210d7093ac4ad107cbf9e3">getMime</a>( <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a> mime_id, drogon::orm::DbClientPtr db );</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span></div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>drogon::Task&lt; std::expected&lt; FileMimeInfo, drogon::HttpResponsePtr &gt; &gt;</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <a class="code hl_function" href="../../d4/d9c/namespaceidhan_1_1mime.html#a786eeba1e0e7845c001f743de45e2436">getRecordMime</a>( <a class="code hl_typedef" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, drogon::orm::DbClientPtr db );</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>} <span class="comment">// namespace idhan::mime</span></div>
 <div class="ttc" id="aIDHANTypes_8hpp_html"><div class="ttname"><a href="../../da/d68/IDHANTypes_8hpp.html">IDHANTypes.hpp</a></div></div>
 <div class="ttc" id="anamespaceidhan_1_1mime_html"><div class="ttname"><a href="../../d4/d9c/namespaceidhan_1_1mime.html">idhan::mime</a></div><div class="ttdef"><b>Definition</b> getMime.cpp:12</div></div>
 <div class="ttc" id="anamespaceidhan_1_1mime_html_a06b2668eae82ceff21b426ba8d3522fe"><div class="ttname"><a href="../../d4/d9c/namespaceidhan_1_1mime.html#a06b2668eae82ceff21b426ba8d3522fe">idhan::mime::getMimeIDFromRecord</a></div><div class="ttdeci">drogon::Task&lt; std::expected&lt; MimeID, drogon::HttpResponsePtr &gt; &gt; getMimeIDFromRecord(const RecordID id, drogon::orm::DbClientPtr db)</div><div class="ttdef"><b>Definition</b> getMime.cpp:15</div></div>
@@ -172,9 +171,9 @@ $(function(){initNavTree('d2/d5d/mime_8hpp_source.html','../../'); initResizable
 <div class="ttc" id="anamespaceidhan_1_1mime_html_a98bd6d790e210d7093ac4ad107cbf9e3"><div class="ttname"><a href="../../d4/d9c/namespaceidhan_1_1mime.html#a98bd6d790e210d7093ac4ad107cbf9e3">idhan::mime::getMime</a></div><div class="ttdeci">drogon::Task&lt; std::expected&lt; FileMimeInfo, drogon::HttpResponsePtr &gt; &gt; getMime(const MimeID mime_id, drogon::orm::DbClientPtr db)</div><div class="ttdef"><b>Definition</b> getMime.cpp:25</div></div>
 <div class="ttc" id="anamespaceidhan_html_a400f778b43db61ea6f23b30757c8bc4e"><div class="ttname"><a href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">idhan::RecordID</a></div><div class="ttdeci">Integer RecordID</div><div class="ttdef"><b>Definition</b> IDHANTypes.hpp:16</div></div>
 <div class="ttc" id="anamespaceidhan_html_aec7f367e1056a0db0b5fed702788be29"><div class="ttname"><a href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">idhan::MimeID</a></div><div class="ttdeci">Integer MimeID</div><div class="ttdef"><b>Definition</b> IDHANTypes.hpp:26</div></div>
-<div class="ttc" id="astructidhan_1_1mime_1_1FileMimeInfo_html"><div class="ttname"><a href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">idhan::mime::FileMimeInfo</a></div><div class="ttdef"><b>Definition</b> mime.hpp:41</div></div>
-<div class="ttc" id="astructidhan_1_1mime_1_1FileMimeInfo_html_a4f8025d00775a4487a4f3fd33c7bfe13"><div class="ttname"><a href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13">idhan::mime::FileMimeInfo::extension</a></div><div class="ttdeci">std::string extension</div><div class="ttdef"><b>Definition</b> mime.hpp:43</div></div>
-<div class="ttc" id="astructidhan_1_1mime_1_1FileMimeInfo_html_a507be944deacad5802b47616fefaf857"><div class="ttname"><a href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a507be944deacad5802b47616fefaf857">idhan::mime::FileMimeInfo::m_id</a></div><div class="ttdeci">MimeID m_id</div><div class="ttdef"><b>Definition</b> mime.hpp:42</div></div>
+<div class="ttc" id="astructidhan_1_1mime_1_1FileMimeInfo_html"><div class="ttname"><a href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html">idhan::mime::FileMimeInfo</a></div><div class="ttdef"><b>Definition</b> mime.hpp:40</div></div>
+<div class="ttc" id="astructidhan_1_1mime_1_1FileMimeInfo_html_a4f8025d00775a4487a4f3fd33c7bfe13"><div class="ttname"><a href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13">idhan::mime::FileMimeInfo::extension</a></div><div class="ttdeci">std::string extension</div><div class="ttdef"><b>Definition</b> mime.hpp:42</div></div>
+<div class="ttc" id="astructidhan_1_1mime_1_1FileMimeInfo_html_a507be944deacad5802b47616fefaf857"><div class="ttname"><a href="../../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a507be944deacad5802b47616fefaf857">idhan::mime::FileMimeInfo::m_id</a></div><div class="ttdeci">MimeID m_id</div><div class="ttdef"><b>Definition</b> mime.hpp:41</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

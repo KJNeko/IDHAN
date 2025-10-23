@@ -1,8 +1,10 @@
 var searchData=
 [
-  ['fileinfo_0',['FileInfo',['../d8/d58/structidhan_1_1FileInfo.html',1,'idhan']]],
-  ['fileiouring_1',['FileIOUring',['../df/dca/structidhan_1_1FileIOUring.html',1,'idhan']]],
-  ['filemappeddata_2',['FileMappedData',['../db/de9/classidhan_1_1FileMappedData.html',1,'idhan']]],
-  ['filemimeinfo_3',['FileMimeInfo',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html',1,'idhan::mime']]],
-  ['formatter_3c_20qstring_20_3e_4',['formatter&lt; QString &gt;',['../d8/d46/structformat__ns_1_1formatter_3_01QString_01_4.html',1,'format_ns']]]
+  ['hash_3c_20idhan_3a_3asha256_20_3e_0',['hash&lt; idhan::SHA256 &gt;',['../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html',1,'std']]],
+  ['hash_3c_20std_3a_3apair_3c_20std_3a_3astring_2c_20std_3a_3astring_20_3e_20_3e_1',['hash&lt; std::pair&lt; std::string, std::string &gt; &gt;',['../da/dc9/structstd_1_1hash_3_01std_1_1pair_3_01std_1_1string_00_01std_1_1string_01_4_01_4.html',1,'std']]],
+  ['header_2',['Header',['../dc/d47/structHeader.html',1,'']]],
+  ['heartbeat_3',['Heartbeat',['../dd/d91/classidhan_1_1api_1_1Heartbeat.html',1,'idhan::api']]],
+  ['hyapiauth_4',['HyAPIAuth',['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html',1,'idhan::hyapi']]],
+  ['hyapiresponseenricher_5',['HyAPIResponseEnricher',['../d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html',1,'idhan::hyapi']]],
+  ['hydrusapi_6',['HydrusAPI',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html',1,'idhan::hyapi']]]
 ];

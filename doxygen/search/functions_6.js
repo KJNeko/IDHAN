@@ -10,8 +10,9 @@ var searchData=
   ['hash_7',['hash',['../d0/de3/classidhan_1_1SHA256.html#ae02be865de8bfbec8e369cd9f0f51c21',1,'idhan::SHA256::hash(const std::byte *data, std::size_t size)'],['../d0/de3/classidhan_1_1SHA256.html#a65fd20facc4078eae80c41ddaa0a17b5',1,'idhan::SHA256::hash(const std::vector&lt; std::byte &gt; &amp;data)']]],
   ['hashcoro_8',['hashCoro',['../d0/de3/classidhan_1_1SHA256.html#acbdf8d0ab51199efe7cbd25d24bb63f6',1,'idhan::SHA256']]],
   ['hashfile_9',['hashFile',['../d0/de3/classidhan_1_1SHA256.html#a697a85896197d81a367596131d2b09fe',1,'idhan::SHA256']]],
-  ['hex_10',['hex',['../d0/de3/classidhan_1_1SHA256.html#a4cd0626f10d0bccbf0554b1ae9442b8e',1,'idhan::SHA256']]],
-  ['hyapiauth_11',['HyAPIAuth',['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#ad2191a6cdb559cf77538bf4ae55ebf87',1,'idhan::hyapi::HyAPIAuth']]],
-  ['hyapiresponseenricher_12',['HyAPIResponseEnricher',['../d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html#ae847dc56ef9ff8f3101671a11c2d571d',1,'idhan::hyapi::HyAPIResponseEnricher']]],
-  ['hytoidhansorttype_13',['hyToIDHANSortType',['../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150',1,'idhan']]]
+  ['hasmatchers_10',['hasMatchers',['../d2/db7/classidhan_1_1mime_1_1MimeIdentifier.html#a0086a989688c651d1dcf50a4ffdac030',1,'idhan::mime::MimeIdentifier']]],
+  ['hex_11',['hex',['../d0/de3/classidhan_1_1SHA256.html#a4cd0626f10d0bccbf0554b1ae9442b8e',1,'idhan::SHA256']]],
+  ['hyapiauth_12',['HyAPIAuth',['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#ad2191a6cdb559cf77538bf4ae55ebf87',1,'idhan::hyapi::HyAPIAuth']]],
+  ['hyapiresponseenricher_13',['HyAPIResponseEnricher',['../d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html#ae847dc56ef9ff8f3101671a11c2d571d',1,'idhan::hyapi::HyAPIResponseEnricher']]],
+  ['hytoidhansorttype_14',['hyToIDHANSortType',['../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150',1,'idhan']]]
 ];

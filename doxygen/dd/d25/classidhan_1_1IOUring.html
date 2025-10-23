@@ -139,14 +139,14 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a4aef7412d5a3a57a151a96e5064d6306"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8c62ad128ad1290e6533b9021972dc64" id="r_a8c62ad128ad1290e6533b9021972dc64"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c62ad128ad1290e6533b9021972dc64">FGL_DELETE_MOVE</a> (<a class="el" href="../../dd/d25/classidhan_1_1IOUring.html">IOUring</a>)</td></tr>
 <tr class="separator:a8c62ad128ad1290e6533b9021972dc64"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab56569fb28936674cc85f652ffbc9938" id="r_ab56569fb28936674cc85f652ffbc9938"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab56569fb28936674cc85f652ffbc9938">notifySubmit</a> (std::size_t count) const</td></tr>
-<tr class="separator:ab56569fb28936674cc85f652ffbc9938"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7420aa5c12eb3a1a2bb142303537d841" id="r_a7420aa5c12eb3a1a2bb142303537d841"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7420aa5c12eb3a1a2bb142303537d841">notifySubmit</a> (unsigned int count) const</td></tr>
+<tr class="separator:a7420aa5c12eb3a1a2bb142303537d841"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a771a3535bc90a7e685e7687b08297e2e" id="r_a771a3535bc90a7e685e7687b08297e2e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a771a3535bc90a7e685e7687b08297e2e">IOUring</a> ()</td></tr>
 <tr class="separator:a771a3535bc90a7e685e7687b08297e2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a77c50ae4dd713ec8baee35b80b0ab446" id="r_a77c50ae4dd713ec8baee35b80b0ab446"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d9/d52/structidhan_1_1WriteAwaiter.html">WriteAwaiter</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a77c50ae4dd713ec8baee35b80b0ab446">sendWrite</a> (const io_uring_sqe &amp;sqe)</td></tr>
 <tr class="separator:a77c50ae4dd713ec8baee35b80b0ab446"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7832ef24d3adb84e094999329084501a" id="r_a7832ef24d3adb84e094999329084501a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d2/d83/structidhan_1_1ReadAwaiter.html">ReadAwaiter</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7832ef24d3adb84e094999329084501a">sendRead</a> (const io_uring_sqe &amp;sqe)</td></tr>
-<tr class="separator:a7832ef24d3adb84e094999329084501a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af5961ed94e4451f04ed7ae6b64880dc4" id="r_af5961ed94e4451f04ed7ae6b64880dc4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d2/d83/structidhan_1_1ReadAwaiter.html">ReadAwaiter</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af5961ed94e4451f04ed7ae6b64880dc4">sendRead</a> (const io_uring_sqe &amp;sqe, std::shared_ptr&lt; std::vector&lt; std::byte &gt; &gt; &amp;data)</td></tr>
+<tr class="separator:af5961ed94e4451f04ed7ae6b64880dc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6e14b0ea344ab78ecd462b602adc8b89" id="r_a6e14b0ea344ab78ecd462b602adc8b89"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6e14b0ea344ab78ecd462b602adc8b89">~IOUring</a> ()</td></tr>
 <tr class="separator:a6e14b0ea344ab78ecd462b602adc8b89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -308,8 +308,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="ab56569fb28936674cc85f652ffbc9938" name="ab56569fb28936674cc85f652ffbc9938"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab56569fb28936674cc85f652ffbc9938">&#9670;&#160;</a></span>notifySubmit()</h2>
+<a id="a7420aa5c12eb3a1a2bb142303537d841" name="a7420aa5c12eb3a1a2bb142303537d841"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7420aa5c12eb3a1a2bb142303537d841">&#9670;&#160;</a></span>notifySubmit()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -317,7 +317,7 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">void idhan::IOUring::notifySubmit </td>
           <td>(</td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>count</em></span></td><td>)</td>
+          <td class="paramtype">unsigned int</td>          <td class="paramname"><span class="paramname"><em>count</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
@@ -352,8 +352,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="a7832ef24d3adb84e094999329084501a" name="a7832ef24d3adb84e094999329084501a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7832ef24d3adb84e094999329084501a">&#9670;&#160;</a></span>sendRead()</h2>
+<a id="af5961ed94e4451f04ed7ae6b64880dc4" name="af5961ed94e4451f04ed7ae6b64880dc4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af5961ed94e4451f04ed7ae6b64880dc4">&#9670;&#160;</a></span>sendRead()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -361,8 +361,12 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../d2/d83/structidhan_1_1ReadAwaiter.html">ReadAwaiter</a> idhan::IOUring::sendRead </td>
           <td>(</td>
-          <td class="paramtype">const io_uring_sqe &amp;</td>          <td class="paramname"><span class="paramname"><em>sqe</em></span></td><td>)</td>
+          <td class="paramtype">const io_uring_sqe &amp;</td>          <td class="paramname"><span class="paramname"><em>sqe</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::shared_ptr&lt; std::vector&lt; std::byte &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

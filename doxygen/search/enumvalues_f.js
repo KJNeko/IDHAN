@@ -1,12 +1,6 @@
 var searchData=
 [
-  ['search_0',['Search',['../dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html#a0cd23d3f9f0b109e732cea5dab9e1146a0404d3347de2fd51bf5ae15b4eecadd2',1,'idhan::mime::MimeIdentifier']]],
-  ['stored_1',['STORED',['../dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807aa725c3f6190ad95f075d3c9211323f308',1,'idhan']]],
-  ['stores_5fall_2',['STORES_ALL',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46ac03b600cf2b8757d68636c59cc7e73e4',1,'idhan::filesystem::ClusterManager']]],
-  ['stores_5farchives_3',['STORES_ARCHIVES',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46a3898556b522082e62b896ba3e83f4785',1,'idhan::filesystem::ClusterManager']]],
-  ['stores_5fdefault_4',['STORES_DEFAULT',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46a62d21b1e6bc2900c356faae1a27d2d5d',1,'idhan::filesystem::ClusterManager']]],
-  ['stores_5ffiles_5',['STORES_FILES',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46a8378838894311913916a0991183c204c',1,'idhan::filesystem::ClusterManager']]],
-  ['stores_5fgenerators_6',['STORES_GENERATORS',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46ac8d34e9b7ef11f118501a7dee95b8428',1,'idhan::filesystem::ClusterManager']]],
-  ['stores_5fthumbnails_7',['STORES_THUMBNAILS',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a96e06ead6dd48b244220c7f0efee4b46aa147b9b36a3227c15194c98aa6deeda0',1,'idhan::filesystem::ClusterManager']]],
-  ['success_8',['Success',['../dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2a3ed388d31a0a5d3c37031bf2b59d6a7e',1,'idhan::Success'],['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a30f320abc79538b35f124e95143f41a3',1,'idhan::hyapi::Success']]]
+  ['tag_5fservice_0',['TAG_SERVICE',['../d5/d08/namespaceidhan_1_1hydrus_1_1hy__constants.html#a43eaffc63d902c822fe37eef60b0deb0a1ad0158e1490d0d0304123502163aadb',1,'idhan::hydrus::hy_constants']]],
+  ['thumbnail_1',['THUMBNAIL',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a556eba4638bbb0ac8ac03e13ce6d1a82a7bd8024ff79a46c03fcc8cefa555ec8d',1,'idhan::filesystem::ClusterManager::THUMBNAIL'],['../db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454af15d2050859211cb959d22fd823157df',1,'idhan::filesystem::THUMBNAIL']]],
+  ['totalmediaviewtime_2',['TotalMediaViewtime',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685acb04a90cb7f7b87cb12a0906d87e8930',1,'idhan::hyapi']]]
 ];

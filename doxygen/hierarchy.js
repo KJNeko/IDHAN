@@ -7,9 +7,11 @@ var hierarchy =
     [ "idhan::filesystem::ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", null ],
     [ "idhan::IOUring::CommandRingPointers", "de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html", null ],
     [ "idhan::ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", null ],
-    [ "idhan::mime::DataIdentifierSearch::DataSet", "d5/d5b/structidhan_1_1mime_1_1DataIdentifierSearch_1_1DataSet.html", null ],
+    [ "idhan::mime::Cursor", "d0/d78/classidhan_1_1mime_1_1Cursor.html", null ],
+    [ "idhan::mime::CursorData", "db/d0c/classidhan_1_1mime_1_1CursorData.html", null ],
+    [ "idhan::FileIOUring::FileDescriptor", "db/d9c/structidhan_1_1FileIOUring_1_1FileDescriptor.html", null ],
     [ "idhan::FileInfo", "d8/d58/structidhan_1_1FileInfo.html", null ],
-    [ "idhan::FileIOUring", "df/dca/structidhan_1_1FileIOUring.html", null ],
+    [ "idhan::FileIOUring", "d5/d8b/classidhan_1_1FileIOUring.html", null ],
     [ "idhan::FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", null ],
     [ "idhan::mime::FileMimeInfo", "db/de8/structidhan_1_1mime_1_1FileMimeInfo.html", null ],
     [ "format_ns::formatter< QString >", "d8/d46/structformat__ns_1_1formatter_3_01QString_01_4.html", null ],
@@ -41,14 +43,12 @@ var hierarchy =
     [ "idhan::IOUringUserData", "d1/d67/structidhan_1_1IOUringUserData.html", null ],
     [ "idhan::ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", null ],
     [ "idhan::mime::MimeDatabase", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html", null ],
-    [ "idhan::mime::MimeDataIdentifier", "d1/d2e/classidhan_1_1mime_1_1MimeDataIdentifier.html", [
-      [ "idhan::mime::DataIdentifierSearch", "d9/d2d/classidhan_1_1mime_1_1DataIdentifierSearch.html", [
-        [ "idhan::mime::DataIdentifierOverride", "d6/d41/structidhan_1_1mime_1_1DataIdentifierOverride.html", null ]
-      ] ]
-    ] ],
-    [ "idhan::mime::MimeDataTrack", "de/d89/structidhan_1_1mime_1_1MimeDataTrack.html", null ],
-    [ "idhan::mime::MimeIdentifier", "dd/d62/structidhan_1_1mime_1_1MimeIdentifier.html", null ],
+    [ "idhan::mime::MimeIdentifier", "d2/db7/classidhan_1_1mime_1_1MimeIdentifier.html", null ],
     [ "idhan::mime::MimeInfo", "d7/d2a/structidhan_1_1mime_1_1MimeInfo.html", null ],
+    [ "idhan::mime::MimeMatchBase", "d2/dc9/structidhan_1_1mime_1_1MimeMatchBase.html", [
+      [ "idhan::mime::MimeMatchInclude", "dc/daa/classidhan_1_1mime_1_1MimeMatchInclude.html", null ],
+      [ "idhan::mime::MimeMatchSearch", "d0/db3/classidhan_1_1mime_1_1MimeMatchSearch.html", null ]
+    ] ],
     [ "idhan::modules::ModuleHolder", "d0/d85/classidhan_1_1modules_1_1ModuleHolder.html", null ],
     [ "idhan::modules::ModuleLoader", "d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html", null ],
     [ "idhan::IDHANClient::TagInfo::NamespaceInfo", "df/dad/structidhan_1_1IDHANClient_1_1TagInfo_1_1NamespaceInfo.html", null ],

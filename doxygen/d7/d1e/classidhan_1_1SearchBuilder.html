@@ -122,8 +122,8 @@ $(function(){initNavTree('d7/d1e/classidhan_1_1SearchBuilder.html','../../'); in
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ad55cb6872b0257bfafef39d5ee46f56f" id="r_ad55cb6872b0257bfafef39d5ee46f56f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad55cb6872b0257bfafef39d5ee46f56f">SearchBuilder</a> ()=default</td></tr>
-<tr class="separator:ad55cb6872b0257bfafef39d5ee46f56f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae30c87ef9e56eee9c3ae4136a0759572" id="r_ae30c87ef9e56eee9c3ae4136a0759572"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae30c87ef9e56eee9c3ae4136a0759572">SearchBuilder</a> ()</td></tr>
+<tr class="separator:ae30c87ef9e56eee9c3ae4136a0759572"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a175ebf9d8ac74f3834cd77c3d08abb16" id="r_a175ebf9d8ac74f3834cd77c3d08abb16"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::orm::Result &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a175ebf9d8ac74f3834cd77c3d08abb16">query</a> (drogon::orm::DbClientPtr db, std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#ab878d47a161ff5340a3205251007ca12">TagDomainID</a> &gt; tag_domain_ids, bool return_ids=true, bool return_hashes=false)</td></tr>
 <tr class="separator:a175ebf9d8ac74f3834cd77c3d08abb16"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a36ca1d04e7cdcb406c8f2572aebcda2a" id="r_a36ca1d04e7cdcb406c8f2572aebcda2a"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::orm::Result &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a36ca1d04e7cdcb406c8f2572aebcda2a">query</a> (drogon::orm::DbClientPtr db, bool return_ids=true, bool return_hashes=false)</td></tr>
@@ -150,9 +150,9 @@ Private Attributes</h2></td></tr>
 <tr class="separator:ae01adb00a7dc82324eaebbdcbc22f4f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae3d70617c94452cb2c9054a681fabdec" id="r_ae3d70617c94452cb2c9054a681fabdec"><td class="memItemLeft" >struct {&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9e336752b08a078c714d7c268e70be07" id="r_a9e336752b08a078c714d7c268e70be07"><td class="memItemLeft" >&#160;&#160;&#160;bool&#160;&#160;&#160;<a class="el" href="#a6ec061edbd33213fefc1026374be81d4">file_info</a>&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
+<tr class="memitem:a9e336752b08a078c714d7c268e70be07" id="r_a9e336752b08a078c714d7c268e70be07"><td class="memItemLeft" >&#160;&#160;&#160;bool&#160;&#160;&#160;<a class="el" href="#a6ec061edbd33213fefc1026374be81d4">file_info</a> { false }&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
 <tr class="separator:a9e336752b08a078c714d7c268e70be07"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aacab3865b7c78d38e606fff9b1f1d9d8" id="r_aacab3865b7c78d38e606fff9b1f1d9d8"><td class="memItemLeft" >&#160;&#160;&#160;bool&#160;&#160;&#160;<a class="el" href="#a5c868cef0ad77b163881a21942943cde">records</a>&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
+<tr class="memitem:aacab3865b7c78d38e606fff9b1f1d9d8" id="r_aacab3865b7c78d38e606fff9b1f1d9d8"><td class="memItemLeft" >&#160;&#160;&#160;bool&#160;&#160;&#160;<a class="el" href="#a5c868cef0ad77b163881a21942943cde">records</a> { false }&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
 <tr class="separator:aacab3865b7c78d38e606fff9b1f1d9d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae3d70617c94452cb2c9054a681fabdec" id="r_ae3d70617c94452cb2c9054a681fabdec"><td class="memItemLeft" valign="top">}&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae3d70617c94452cb2c9054a681fabdec">m_required_joins</a>&#160;</td><td class="memItemRight" valign="bottom"></td></tr>
 <tr class="memdesc:ae3d70617c94452cb2c9054a681fabdec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Contains a list of all required joins for this query and it's sorting options.  <br /></td></tr>
@@ -167,14 +167,11 @@ Private Attributes</h2></td></tr>
 <tr class="separator:a830b5531099658f8a6a1b4bc9a9f1393"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ad55cb6872b0257bfafef39d5ee46f56f" name="ad55cb6872b0257bfafef39d5ee46f56f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad55cb6872b0257bfafef39d5ee46f56f">&#9670;&#160;</a></span>SearchBuilder()</h2>
+<a id="ae30c87ef9e56eee9c3ae4136a0759572" name="ae30c87ef9e56eee9c3ae4136a0759572"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae30c87ef9e56eee9c3ae4136a0759572">&#9670;&#160;</a></span>SearchBuilder()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">idhan::SearchBuilder::SearchBuilder </td>
@@ -183,11 +180,6 @@ Private Attributes</h2></td></tr>
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel default">default</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 </div>
@@ -396,7 +388,7 @@ Private Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool idhan::SearchBuilder::file_info</td>
+          <td class="memname">bool idhan::SearchBuilder::file_info { false }</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -536,7 +528,7 @@ Private Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool idhan::SearchBuilder::records</td>
+          <td class="memname">bool idhan::SearchBuilder::records { false }</td>
         </tr>
       </table>
 </div><div class="memdoc">

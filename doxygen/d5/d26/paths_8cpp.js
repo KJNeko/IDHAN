@@ -1,4 +1,6 @@
 var paths_8cpp =
 [
-    [ "getStaticPath", "d5/d26/paths_8cpp.html#ac13571b75f1128be8b00081ea7b15760", null ]
+    [ "idhan::getMimeParserPaths", "dd/dcf/namespaceidhan.html#adb23057f03ee6a0c01bb5c6f844cfbba", null ],
+    [ "idhan::getModulePaths", "dd/dcf/namespaceidhan.html#ad1722f80f712430b5d7829c4651c4c24", null ],
+    [ "idhan::getStaticPath", "dd/dcf/namespaceidhan.html#a145ecba5a01abda0b1d9548a2fcc2829", null ]
 ];

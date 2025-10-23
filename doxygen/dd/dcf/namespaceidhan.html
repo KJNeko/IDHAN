@@ -129,6 +129,8 @@ Namespaces</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d68/namespaceidhan_1_1constants.html">constants</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/da5/namespaceidhan_1_1coro.html">coro</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d9b/namespaceidhan_1_1filesystem.html">filesystem</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dc1/namespaceidhan_1_1helpers.html">helpers</a></td></tr>
@@ -156,7 +158,7 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dca/structidhan_1_1FileIOUring.html">FileIOUring</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -407,15 +409,23 @@ Functions</h2></td></tr>
 <tr class="separator:aace1e0dead98fb497035b664deda96f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9301fcccee80b6f287ded422a44f8150" id="r_a9301fcccee80b6f287ded422a44f8150"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="#a5c24ee7f031693df1f26c9cb4a207970">SortType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9301fcccee80b6f287ded422a44f8150">hyToIDHANSortType</a> (const <a class="el" href="#a244b87b8282e25b1adf2d36b9975a7b1">HydrusSortType</a> hy_sort)</td></tr>
 <tr class="separator:a9301fcccee80b6f287ded422a44f8150"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a748edf3b2f7ea28438db27913972baa2" id="r_a748edf3b2f7ea28438db27913972baa2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a748edf3b2f7ea28438db27913972baa2">fileDescriptorDeleter</a> (const int *fd)</td></tr>
+<tr class="separator:a748edf3b2f7ea28438db27913972baa2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6263c51c6d3d4f2de1823665d392ef42" id="r_a6263c51c6d3d4f2de1823665d392ef42"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6263c51c6d3d4f2de1823665d392ef42">ioThread</a> (const std::stop_token &amp;token, <a class="el" href="../../dd/d25/classidhan_1_1IOUring.html">IOUring</a> *uring, std::shared_ptr&lt; std::atomic&lt; bool &gt; &gt; running)</td></tr>
 <tr class="separator:a6263c51c6d3d4f2de1823665d392ef42"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf2de6ab319c3d5893959073ae46e47e" id="r_acf2de6ab319c3d5893959073ae46e47e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acf2de6ab319c3d5893959073ae46e47e">fixme</a> (const std::source_location location=std::source_location::current())</td></tr>
 <tr class="separator:acf2de6ab319c3d5893959073ae46e47e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af97a6a91e89c070ccddfd332c6116d2b" id="r_af97a6a91e89c070ccddfd332c6116d2b"><td class="memItemLeft" align="right" valign="top">drogon::Task&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af97a6a91e89c070ccddfd332c6116d2b">setFileInfo</a> (const <a class="el" href="#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, const <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> info, const drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:af97a6a91e89c070ccddfd332c6116d2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3d99207c8eca97e418ebb9522181b68f" id="r_a3d99207c8eca97e418ebb9522181b68f"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3d99207c8eca97e418ebb9522181b68f">gatherFileInfo</a> (std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt; data, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="memdesc:a3d99207c8eca97e418ebb9522181b68f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> struct with information from the data.  <br /></td></tr>
-<tr class="separator:a3d99207c8eca97e418ebb9522181b68f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a965a01b9430c24e503774ddc28557ffa" id="r_a965a01b9430c24e503774ddc28557ffa"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a965a01b9430c24e503774ddc28557ffa">gatherFileInfo</a> (<a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a> io_uring, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="memdesc:a965a01b9430c24e503774ddc28557ffa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> struct with information from the data.  <br /></td></tr>
+<tr class="separator:a965a01b9430c24e503774ddc28557ffa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad1722f80f712430b5d7829c4651c4c24" id="r_ad1722f80f712430b5d7829c4651c4c24"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1722f80f712430b5d7829c4651c4c24">getModulePaths</a> ()</td></tr>
+<tr class="separator:ad1722f80f712430b5d7829c4651c4c24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adb23057f03ee6a0c01bb5c6f844cfbba" id="r_adb23057f03ee6a0c01bb5c6f844cfbba"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adb23057f03ee6a0c01bb5c6f844cfbba">getMimeParserPaths</a> ()</td></tr>
+<tr class="separator:adb23057f03ee6a0c01bb5c6f844cfbba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a145ecba5a01abda0b1d9548a2fcc2829" id="r_a145ecba5a01abda0b1d9548a2fcc2829"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a145ecba5a01abda0b1d9548a2fcc2829">getStaticPath</a> ()</td></tr>
+<tr class="separator:a145ecba5a01abda0b1d9548a2fcc2829"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abb3675d696d1a47fa1f667dde52d9aaa" id="r_abb3675d696d1a47fa1f667dde52d9aaa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abb3675d696d1a47fa1f667dde52d9aaa">addCORSHeaders</a> (const drogon::HttpResponsePtr &amp;response)</td></tr>
 <tr class="separator:abb3675d696d1a47fa1f667dde52d9aaa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a05ffd4928189092728cf8fa8ab20e694" id="r_a05ffd4928189092728cf8fa8ab20e694"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a05ffd4928189092728cf8fa8ab20e694">exceptionHandler</a> (const std::exception &amp;e, const drogon::HttpRequestPtr &amp;request, <a class="el" href="#ab36e2f7c68cd1ad091d47cc6a44231e1">ResponseFunction</a> &amp;&amp;callback)</td></tr>
@@ -1328,6 +1338,23 @@ template&lt;typename TPromise&gt; </div>
 
 </div>
 </div>
+<a id="a748edf3b2f7ea28438db27913972baa2" name="a748edf3b2f7ea28438db27913972baa2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a748edf3b2f7ea28438db27913972baa2">&#9670;&#160;</a></span>fileDescriptorDeleter()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::fileDescriptorDeleter </td>
+          <td>(</td>
+          <td class="paramtype">const int *</td>          <td class="paramname"><span class="paramname"><em>fd</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="acf2de6ab319c3d5893959073ae46e47e" name="acf2de6ab319c3d5893959073ae46e47e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acf2de6ab319c3d5893959073ae46e47e">&#9670;&#160;</a></span>fixme()</h2>
 
@@ -1353,16 +1380,16 @@ template&lt;typename TPromise&gt; </div>
 
 </div>
 </div>
-<a id="a3d99207c8eca97e418ebb9522181b68f" name="a3d99207c8eca97e418ebb9522181b68f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3d99207c8eca97e418ebb9522181b68f">&#9670;&#160;</a></span>gatherFileInfo()</h2>
+<a id="a965a01b9430c24e503774ddc28557ffa" name="a965a01b9430c24e503774ddc28557ffa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a965a01b9430c24e503774ddc28557ffa">&#9670;&#160;</a></span>gatherFileInfo()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">drogon::Task&lt; <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> &gt; idhan::gatherFileInfo </td>
+          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a>, drogon::HttpResponsePtr &gt; &gt; idhan::gatherFileInfo </td>
           <td>(</td>
-          <td class="paramtype">const std::shared_ptr&lt; <a class="el" href="../../db/de9/classidhan_1_1FileMappedData.html">FileMappedData</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a></td>          <td class="paramname"><span class="paramname"><em>io</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1373,6 +1400,40 @@ template&lt;typename TPromise&gt; </div>
 </div><div class="memdoc">
 
 <p>Populates a <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> struct with information from the data. </p>
+
+</div>
+</div>
+<a id="adb23057f03ee6a0c01bb5c6f844cfbba" name="adb23057f03ee6a0c01bb5c6f844cfbba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adb23057f03ee6a0c01bb5c6f844cfbba">&#9670;&#160;</a></span>getMimeParserPaths()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::filesystem::path &gt; idhan::getMimeParserPaths </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad1722f80f712430b5d7829c4651c4c24" name="ad1722f80f712430b5d7829c4651c4c24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad1722f80f712430b5d7829c4651c4c24">&#9670;&#160;</a></span>getModulePaths()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::filesystem::path &gt; idhan::getModulePaths </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -1391,6 +1452,23 @@ template&lt;typename TPromise&gt; </div>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a145ecba5a01abda0b1d9548a2fcc2829" name="a145ecba5a01abda0b1d9548a2fcc2829"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a145ecba5a01abda0b1d9548a2fcc2829">&#9670;&#160;</a></span>getStaticPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path idhan::getStaticPath </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
