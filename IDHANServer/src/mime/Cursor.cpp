@@ -11,9 +11,9 @@
 namespace idhan::mime
 {
 
-drogon::Task< void > CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
+coro::ImmedientTask<> CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
 {
-	log::debug( "Asking for {} bytes at {}", required_size, offset );
+	log::debug( "Requesting data at offset {} with size {}", offset, required_size );
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
 	{
 		auto& uring = std::get< FileIOUring >( m_io );
@@ -30,8 +30,8 @@ drogon::Task< void > CursorData::requestData( const std::size_t offset, const st
 	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
 }
 
-drogon::Task< std::pair< const std::byte*, std::size_t > > CursorData::
-	data( const std::size_t pos, const std::size_t required_size ) const
+coro::ImmedientTask< std::pair< const std::byte*, size_t > > CursorData::
+	checkData( const std::size_t pos, const std::size_t required_size ) const
 {
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
 	{
@@ -71,10 +71,10 @@ drogon::Task< std::pair< const std::byte*, std::size_t > > CursorData::
 		const auto& string_view { std::get< std::string_view >( m_io ) };
 		const auto* data_ptr { reinterpret_cast< const std::byte* >( string_view.data() ) };
 		const std::size_t length { string_view.size() };
-		if ( pos + required_size >= length ) throw std::runtime_error( "OOB" );
-		if ( length < pos ) throw std::runtime_error( "OOB" );
+		if ( pos + required_size >= length || length < pos ) co_return std::make_pair( nullptr, 0 );
+		const auto leftover_size { length - pos };
 		m_buffer_pos = pos;
-		co_return std::make_pair( data_ptr + pos, length - pos );
+		co_return std::make_pair( data_ptr + pos, std::min( required_size, leftover_size ) );
 	}
 
 	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
@@ -98,9 +98,10 @@ std::size_t Cursor::size() const
 	return m_data->size();
 }
 
-coro::ImmedientTask< std::string_view > Cursor::data( const std::size_t d_size )
+coro::ImmedientTask< std::string_view > Cursor::data( const std::size_t d_size ) const
 {
-	const auto [ ptr, size ] { co_await m_data->data( m_pos, d_size ) };
+	const auto data_result { co_await m_data->checkData( m_pos, d_size ) };
+	const auto [ ptr, size ] = data_result;
 
 	co_return std::string_view { reinterpret_cast< const char* >( ptr ), size };
 }
@@ -108,7 +109,7 @@ coro::ImmedientTask< std::string_view > Cursor::data( const std::size_t d_size )
 coro::ImmedientTask< bool > Cursor::tryMatch( const std::string_view match ) const
 {
 	FGL_ASSERT( m_data, "Data was invalid" );
-	const auto [ ptr, size ] { co_await m_data->data( m_pos, match.size() ) };
+	const auto [ ptr, size ] { co_await m_data->checkData( m_pos, match.size() ) };
 
 	if ( !ptr ) co_return false;
 

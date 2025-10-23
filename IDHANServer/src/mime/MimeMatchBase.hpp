@@ -5,6 +5,7 @@
 #include <fgl/defines.hpp>
 
 #include "drogon/utils/coroutine.h"
+#include "threading/ImmedientTask.hpp"
 
 namespace Json
 {
@@ -32,7 +33,7 @@ struct MimeMatchBase
 	virtual ~MimeMatchBase() = default;
 
 	drogon::Task< bool > test( Cursor cursor );
-	virtual drogon::Task< bool > match( Cursor& cursor ) const = 0;
+	virtual coro::ImmedientTask< bool > match( Cursor& cursor ) const = 0;
 };
 
 } // namespace idhan::mime

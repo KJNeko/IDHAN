@@ -54,6 +54,7 @@ std::vector< MimeMatcher > parseDataJson( const Json::Value& json )
 
 drogon::Task< bool > MimeMatchBase::test( Cursor cursor )
 {
+
 	const auto does_match { co_await this->match( cursor ) };
 
 	if ( !does_match ) co_return false;
