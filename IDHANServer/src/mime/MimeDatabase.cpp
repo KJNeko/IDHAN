@@ -15,9 +15,10 @@
 
 namespace idhan::mime
 {
+
 MimeDatabase::MimeDatabase()
 {
-	reloadMimeParsers();
+	drogon::sync_wait( reloadMimeParsers() );
 }
 
 drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( const Cursor cursor )
@@ -28,11 +29,11 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 	{
 		if ( !identifier.hasMatchers() ) continue;
 
-		log::debug( "Testing identifier for {}", identifier.mime() );
+		// log::debug( "Testing identifier for {}", identifier.mime() );
 
 		if ( co_await identifier.test( cursor ) )
 		{
-			log::debug( "Test passed" );
+			// log::debug( "Test passed" );
 			positive_matches.emplace_back( identifier.mime(), identifier.priority() );
 		}
 	}
@@ -51,11 +52,11 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 		if ( i + 1 < positive_matches.size() ) matches_out += ", ";
 	}
 
-	log::debug( "Matches: {}", matches_out );
+	log::debug( "Found {} positive MIME matches: {}", positive_matches.size(), matches_out );
 
-	log::debug( "Found {} positive matches", positive_matches.size() );
+	const auto first_result { positive_matches.at( 0 ) };
 
-	co_return positive_matches.at( 0 ).first;
+	co_return first_result.first; // first field of the pair is the mime string
 }
 
 Json::Value MimeDatabase::dump() const
@@ -105,8 +106,10 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 	co_return co_await scan( io );
 }
 
-void MimeDatabase::reloadMimeParsers()
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::reloadMimeParsers()
 {
+	auto db { drogon::app().getDbClient() };
+
 	m_identifiers.clear();
 	const std::vector< std::filesystem::path > paths { getMimeParserPaths() };
 
@@ -114,13 +117,26 @@ void MimeDatabase::reloadMimeParsers()
 	{
 		try
 		{
-			m_identifiers.emplace_back( path );
+			auto& identifier { m_identifiers.emplace_back( path ) };
+
+			std::string mime { identifier.mime() };
+
+			const auto id { co_await getIDForStr( mime, db ) };
+
+			if ( !id.has_value() )
+			{
+				// create it
+				co_await db->execSqlCoro(
+					"INSERT INTO mime(name, best_extension) VALUES ($1, $2)", mime, identifier.getBestExtension() );
+			}
 		}
 		catch ( std::exception& e )
 		{
 			log::error( "Failed to load mime parser at {} due to: {}", path.string(), e.what() );
 		}
 	}
+
+	co_return {};
 }
 
 std::shared_ptr< MimeDatabase > getInstance()
@@ -140,15 +156,6 @@ drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
 		co_return search_result[ 0 ][ 0 ].as< MimeID >();
 	}
 
-	const auto insert_result {
-		co_await db->execSqlCoro( "INSERT INTO mime (name) VALUES ($1) RETURNING mimd_id", str )
-	};
-
-	if ( insert_result.empty() )
-	{
-		co_return std::unexpected( createInternalError( "Failed to create mime ID for {}", str ) );
-	}
-
-	co_return insert_result[ 0 ][ 0 ].as< MimeID >();
+	co_return std::unexpected( createInternalError( "Could not find mime: {}", str ) );
 }
 } // namespace idhan::mime

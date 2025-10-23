@@ -54,18 +54,14 @@ std::vector< MimeMatcher > parseDataJson( const Json::Value& json )
 
 drogon::Task< bool > MimeMatchBase::test( Cursor cursor )
 {
-
 	const auto does_match { co_await this->match( cursor ) };
 
 	if ( !does_match ) co_return false;
-
-	log::debug( "Test passed. Checking {} children", m_children.size() );
 
 	for ( const auto& child : m_children )
 	{
 		if ( !co_await child->test( cursor ) )
 		{
-			log::debug( "Child failed" );
 			co_return false;
 		}
 	}

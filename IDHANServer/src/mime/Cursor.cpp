@@ -53,11 +53,11 @@ coro::ImmedientTask< std::pair< const std::byte*, size_t > > CursorData::
 
 		if ( is_low || is_small || is_oob )
 		{
-			log::debug(
-				"access is lower than buffer: {}, access is larger than buffer: {}, access would oob: {}",
-				is_low,
-				is_small,
-				is_oob );
+			// log::debug(
+			// 	"access is lower than buffer: {}, access is larger than buffer: {}, access would oob: {}",
+			// 	is_low,
+			// 	is_small,
+			// 	is_oob );
 			co_await requestData( pos, required_size );
 		}
 

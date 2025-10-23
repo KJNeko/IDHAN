@@ -104,7 +104,7 @@ class MimeDatabase
 	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
 
 	//! Reloads all the 3rd party mime parsers
-	void reloadMimeParsers();
+	drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();
 };
 
 std::shared_ptr< MimeDatabase > getInstance();

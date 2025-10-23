@@ -9,6 +9,7 @@
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "filesystem/IOUring.hpp"
+#include "fixme.hpp"
 #include "hyapi/helpers.hpp"
 #include "logging/log.hpp"
 #include "metadata/FileMappedData.hpp"
@@ -38,7 +39,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		co_await db->execSqlCoro( "SELECT folder_path, read_only FROM file_clusters WHERE cluster_id = $1", cluster_id )
 	};
 
-	if ( result.empty() ) co_return createBadRequest( "Cluster not found with ID {}", cluster_id );
+	if ( result.empty() ) co_return createBadRequest( "Cluster was not found with ID {}", cluster_id );
 
 	const auto cluster_path { result[ 0 ][ "folder_path" ].as< std::string >() };
 	const bool read_only { result[ 0 ][ "read_only" ].as< bool >() };
@@ -80,16 +81,19 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	// Where we put bad files if not in readonly mode
 	const std::filesystem::path bad_dir { cluster_path };
 
+	std::size_t processed_count { 0 };
+
 	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( cluster_path ) )
 	{
 		if ( !dir_entry.is_regular_file() ) continue;
 
-		const auto file_path { dir_entry.path() };
+		const auto& file_path { dir_entry.path() };
+
+		if ( file_path.extension() == ".thumbnail" ) continue;
+
 		auto data { std::make_shared< FileMappedData >( dir_entry.path() ) };
 
 		FileIOUring io_uring { file_path };
-
-		if ( data->extension() == ".thumbnail" ) continue;
 
 		const auto sha256_e { recompute_hash ? co_await SHA256::hashCoro( io_uring ) :
 			                                   SHA256::fromHex( data->name() ) };
@@ -120,10 +124,12 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 				std::filesystem::rename( file_path, bad_dir / file_path.filename() );
 				log::warn( "{}; File was moved to {}", error_str, ( bad_dir / file_path.filename() ).string() );
 			}
-			else if ( stop_on_fail )
-				co_return createInternalError( error_str );
+			else
+			{
+				log::warn( error_str );
+				if ( stop_on_fail ) co_return createInternalError( error_str );
+			}
 
-			//TODO: If not readonly, Move this file to a new location for processing by the user
 			continue;
 		}
 
@@ -156,6 +162,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		bool valid_mime { true };
 		if ( scan_mime || rescan_mime )
 		{
+			log::debug( "Scanning mime for record {}", record_id );
 			// Determine if there is a mime for this file
 			const auto mime_search {
 				co_await db->execSqlCoro( "SELECT mime_id FROM file_info WHERE record_id = $1", record_id )
@@ -183,6 +190,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 					valid_mime = false;
 				}
 
+				log::debug( "Found mime {} for {}", info->mime_id, data->strpath() );
+
 				co_await setFileInfo( record_id, *info, db );
 
 				co_await db
@@ -195,6 +204,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		// if the mime we just processed is not valid then we should skip scanning the metadata as we won't know what parser to use anyways.
 		if ( ( scan_metadata || rescan_metadata ) && valid_mime )
 		{
+			log::debug( "Scanning metadata for record {}", record_id );
 			// check if we have metadata already
 			const auto metadata_search {
 				co_await db->execSqlCoro( "SELECT record_id FROM metadata WHERE record_id = $1", record_id )
