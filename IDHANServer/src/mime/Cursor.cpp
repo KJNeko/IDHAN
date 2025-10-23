@@ -13,7 +13,7 @@ namespace idhan::mime
 
 coro::ImmedientTask<> CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
 {
-	log::debug( "Requesting data at offset {} with size {}", offset, required_size );
+	log::trace( "Requesting data at offset {} with size {}", offset, required_size );
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
 	{
 		auto& uring = std::get< FileIOUring >( m_io );
