@@ -141,6 +141,13 @@ drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
 {
 	const auto data { co_await io_uring.readAll() };
 
+	if ( data.empty() )
+	{
+		log::warn(
+			"While reading file {}, The filesystem said the file was zero bytes, or the read failed! A following warning might occur!",
+			io_uring.path().string() );
+	}
+
 	co_return hash( data.data(), data.size() );
 }
 
