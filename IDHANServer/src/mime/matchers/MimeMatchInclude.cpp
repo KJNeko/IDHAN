@@ -19,12 +19,10 @@ MimeMatchInclude::MimeMatchInclude( std::vector< MimeMatcher >&& matchers, const
 
 coro::ImmedientTask< bool > MimeMatchInclude::match( Cursor& cursor ) const
 {
-	log::debug( "Testing included " );
 	for ( const auto& matcher : m_matchers )
 	{
 		if ( !co_await matcher->test( cursor ) ) co_return false;
 	}
-	log::debug( "End Testing included " );
 
 	co_return true;
 }

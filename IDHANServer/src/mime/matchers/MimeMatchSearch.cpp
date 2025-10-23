@@ -27,12 +27,13 @@ coro::ImmedientTask< bool > MimeMatchSearch::match( Cursor& cursor ) const
 			const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
 			if ( co_await cursor.tryMatch( match_view ) )
 			{
-				log::debug( "PASS Match found {} at offset {}", spdlog::to_hex( match_view ), cursor.pos() );
+				// log::debug( "PASS Match found {} at offset {}", spdlog::to_hex( match_view ), cursor.pos() );
 				cursor.inc( match_view.size() );
 				co_return true;
 			}
 			else
 			{
+				/*
 				const auto data { co_await cursor.data( std::min( match.size(), 16ul ) ) };
 
 				if ( data.size() > 0 )
@@ -40,6 +41,7 @@ coro::ImmedientTask< bool > MimeMatchSearch::match( Cursor& cursor ) const
 						"No match found {}\nvs{}",
 						spdlog::to_hex( match_view ),
 						spdlog::to_hex( data.substr( 0, match.size() ) ) );
+				*/
 			}
 		}
 
@@ -50,7 +52,7 @@ coro::ImmedientTask< bool > MimeMatchSearch::match( Cursor& cursor ) const
 	{
 		const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
 
-		log::debug( "Searching for {}", spdlog::to_hex( match_view ) );
+		// log::debug( "Searching for {}", spdlog::to_hex( match_view ) );
 	}
 
 	const auto start_pos { cursor.pos() };
@@ -59,7 +61,7 @@ coro::ImmedientTask< bool > MimeMatchSearch::match( Cursor& cursor ) const
 	do {
 		if ( cursor.pos() >= pos_limit )
 		{
-			log::debug( "Ending search due to limit being hit. Limit was {}. Started at {}", pos_limit, start_pos );
+			// log::debug( "Ending search due to limit being hit. Limit was {}. Started at {}", pos_limit, start_pos );
 			break;
 		}
 

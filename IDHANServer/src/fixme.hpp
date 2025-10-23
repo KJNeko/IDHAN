@@ -13,9 +13,8 @@ namespace idhan
 {
 inline void fixme( const std::source_location location = std::source_location::current() )
 {
-	std::cout << format_ns::format( "{}:{} {}", location.file_name(), location.line(), location.function_name() )
+	std::cout << format_ns::format( "FIXME: {}:{} {}", location.file_name(), location.line(), location.function_name() )
 			  << std::endl;
-	std::abort();
 }
 
 } // namespace idhan

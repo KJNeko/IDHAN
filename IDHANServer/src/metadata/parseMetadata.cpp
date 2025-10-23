@@ -89,6 +89,13 @@ drogon::Task< std::expected< FileIOUring, drogon::HttpResponsePtr > >
 {
 	const auto path { co_await helpers::getRecordPath( record_id, db ) };
 	if ( !path ) co_return std::unexpected( path.error() );
+
+	if ( !std::filesystem::exists( *path ) )
+	{
+		co_return std::unexpected(
+			createInternalError( "Record {} does not exist at the expected path {}.", record_id, path->string() ) );
+	}
+
 	FileIOUring uring { *path };
 	co_return uring;
 }
