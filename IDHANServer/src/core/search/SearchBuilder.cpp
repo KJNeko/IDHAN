@@ -32,10 +32,9 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 drogon::Task< drogon::orm::Result > SearchBuilder::
 	query( const drogon::orm::DbClientPtr db, const bool return_ids, const bool return_hashes )
 {
-	const std::size_t tag_count { m_tags.size() };
 	const auto query { construct( return_ids, return_hashes, false ) };
 
-	log::info( "Trying to run \n{}", query );
+	log::debug( "Trying to run \n{}", query );
 
 	auto result { co_await db->execSqlCoro( query ) };
 
@@ -50,13 +49,13 @@ std::string SearchBuilder::
 	std::string query {};
 	query.reserve( 1024 );
 
-	if ( m_tags.size() == 0 )
+	if ( m_tags.empty() )
 	{
-		return "SELECT record_id FROM file_info";
+		return "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL";
 	}
 
 	constexpr std::string_view filter_template {
-		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1})"
+		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} AND tag_domain_id = ANY($3) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id = ANY($3))"
 	};
 
 	query += "WITH ";
