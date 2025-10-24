@@ -211,7 +211,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		}
 
 		auto display_tags { db->execSqlCoro(
-			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_final NATURAL JOIN tags_combined WHERE record_id = $1",
+			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1"
+			" UNION DISTINCT "
+			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_parents NATURAL JOIN tags_combined WHERE record_id = $1",
 			record_id ) };
 		for ( const auto& display_tag : co_await display_tags )
 		{
