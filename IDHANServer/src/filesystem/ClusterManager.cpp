@@ -8,9 +8,9 @@
 
 #include <fstream>
 
-#include "../core/search/records.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "core/files/mime.hpp"
+#include "core/record/getRecordSHA256.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
@@ -18,20 +18,20 @@
 namespace idhan::filesystem
 {
 
-std::size_t getFilesystemCapacity( QDir path )
+std::size_t getFilesystemCapacity( const QDir& path )
 {
 	const QStorageInfo info { path };
-	return info.bytesAvailable();
+	return static_cast< std::size_t >( info.bytesAvailable() );
 }
 
 std::size_t ClusterManager::ClusterInfo::capacity() const
 {
-	return m_info.bytesTotal();
+	return static_cast< std::size_t >( m_info.bytesTotal() );
 }
 
 std::size_t ClusterManager::ClusterInfo::free() const
 {
-	return m_info.bytesAvailable();
+	return static_cast< std::size_t >( m_info.bytesAvailable() );
 }
 
 ClusterManager::ClusterInfo::ClusterInfo( const std::filesystem::path& path, const ClusterID id ) :

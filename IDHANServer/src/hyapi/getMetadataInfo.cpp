@@ -205,6 +205,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		auto storage_tags { db->execSqlCoro(
 			"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
 			record_id ) };
+
 		for ( const auto& storage_tag : co_await storage_tags )
 		{
 			const auto& tag_domain_id { storage_tag[ "tag_domain_id" ] };
