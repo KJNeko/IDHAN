@@ -109,51 +109,51 @@ constexpr SortType hyToIDHANSortType( const HydrusSortType hy_sort )
 {
 	switch ( hy_sort )
 	{
-		case HY_FILESIZE:
+		case HydrusSortType::HY_FILESIZE:
 			return SortType::HY_FILESIZE;
-		case HY_DURATION:
+		case HydrusSortType::HY_DURATION:
 			return SortType::HY_DURATION;
-		case HY_IMPORT_TIME:
+		case HydrusSortType::HY_IMPORT_TIME:
 			return SortType::HY_IMPORT_TIME;
-		case HY_MIME:
+		case HydrusSortType::HY_MIME:
 			return SortType::HY_MIME;
-		case HY_RANDOM:
+		case HydrusSortType::HY_RANDOM:
 			return SortType::HY_RANDOM;
-		case HY_WIDTH:
+		case HydrusSortType::HY_WIDTH:
 			return SortType::HY_WIDTH;
-		case HY_HEIGHT:
+		case HydrusSortType::HY_HEIGHT:
 			return SortType::HY_HEIGHT;
-		case HY_RATIO:
+		case HydrusSortType::HY_RATIO:
 			return SortType::HY_RATIO;
-		case HY_NUM_PIXELS:
+		case HydrusSortType::HY_NUM_PIXELS:
 			return SortType::HY_NUM_PIXELS;
-		case HY_NUM_TAGS:
+		case HydrusSortType::HY_NUM_TAGS:
 			return SortType::HY_NUM_TAGS;
-		case HY_MEDIA_VIEWS:
+		case HydrusSortType::HY_MEDIA_VIEWS:
 			return SortType::HY_MEDIA_VIEWS;
-		case HY_MEDIA_VIEWTIME:
+		case HydrusSortType::HY_MEDIA_VIEWTIME:
 			return SortType::HY_MEDIA_VIEWTIME;
-		case HY_APPROX_BITRATE:
+		case HydrusSortType::HY_APPROX_BITRATE:
 			return SortType::HY_APPROX_BITRATE;
-		case HY_HAS_AUDIO:
+		case HydrusSortType::HY_HAS_AUDIO:
 			return SortType::HY_HAS_AUDIO;
-		case HY_FILE_MODIFIED_TIMESTAMP:
+		case HydrusSortType::HY_FILE_MODIFIED_TIMESTAMP:
 			return SortType::HY_FILE_MODIFIED_TIMESTAMP;
-		case HY_FRAMERATE:
+		case HydrusSortType::HY_FRAMERATE:
 			return SortType::HY_FRAMERATE;
-		case HY_NUM_FRAMES:
+		case HydrusSortType::HY_NUM_FRAMES:
 			return SortType::HY_NUM_FRAMES;
-		case HY_NUM_COLLECTION_FILES:
+		case HydrusSortType::HY_NUM_COLLECTION_FILES:
 			return SortType::HY_NUM_COLLECTION_FILES;
-		case HY_LAST_VIEWED_TIME:
+		case HydrusSortType::HY_LAST_VIEWED_TIME:
 			return SortType::HY_LAST_VIEWED_TIME;
-		case HY_ARCHIVED_TIMESTAMP:
+		case HydrusSortType::HY_ARCHIVED_TIMESTAMP:
 			return SortType::HY_ARCHIVED_TIMESTAMP;
-		case HY_HASH:
+		case HydrusSortType::HY_HASH:
 			return SortType::HY_HASH;
-		case HY_PIXEL_HASH:
+		case HydrusSortType::HY_PIXEL_HASH:
 			return SortType::HY_PIXEL_HASH;
-		case HY_BLURHASH:
+		case HydrusSortType::HY_BLURHASH:
 			return SortType::HY_BLURHASH;
 		default:
 			return SortType::DEFAULT;
