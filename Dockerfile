@@ -70,7 +70,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libssl3 \
     libc-ares2
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y curl net-tools
+# Cleanup
+RUN apt-get clean
 
 RUN rm -rf /var/lib/apt/lists/*
 
