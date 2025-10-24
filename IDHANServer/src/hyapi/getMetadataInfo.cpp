@@ -53,10 +53,10 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 		if ( !parse_result ) co_return std::unexpected( parse_result.error() );
 
 		metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
-	}
 
-	if ( metadata.empty() )
-		co_return std::unexpected( createInternalError( "Failed to get mime type for record {}", record_id ) );
+		if ( metadata.empty() )
+			co_return std::unexpected( createInternalError( "Failed to get mime type for record {}", record_id ) );
+	}
 
 	const SimpleMimeType simple_mime_type { metadata[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() };
 
