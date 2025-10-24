@@ -35,9 +35,9 @@ drogon::Task< drogon::orm::Result > SearchBuilder::
 	const std::size_t tag_count { m_tags.size() };
 	const auto query { construct( return_ids, return_hashes, false ) };
 
-	log::info( "Trying to run {}", query );
+	log::info( "Trying to run \n{}", query );
 
-	auto result { co_await db->execSqlCoro( query, std::move( m_tags ), tag_count ) };
+	auto result { co_await db->execSqlCoro( query ) };
 
 	co_return result;
 }
@@ -49,28 +49,50 @@ std::string SearchBuilder::
 
 	std::string query {};
 	query.reserve( 1024 );
-	constexpr std::string_view query_start {
-		"WITH filtered_records AS (SELECT record_id FROM active_tag_mappings_final WHERE tag_id = ANY($1::" TAG_PG_TYPE_NAME
-		"[]) GROUP BY record_id HAVING COUNT(DISTINCT tag_id) = $2)"
+
+	constexpr std::string_view filter_template {
+		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1})"
 	};
-	query += query_start;
+
+	query += "WITH ";
+
+	std::string final_filter { "final_filter AS (" };
+
+	for ( std::size_t i = 0; i < m_tags.size(); ++i )
+	{
+		auto& tag { m_tags[ i ] };
+
+		query += format_ns::format( filter_template, i, tag );
+		final_filter += format_ns::format( "SELECT record_id FROM filter_{}", i );
+
+		if ( i + 1 != m_tags.size() )
+		{
+			query += ",\n";
+			// We have more to process
+			final_filter += " INTERSECT ";
+		}
+	}
+
+	query += ",\n";
+	query += final_filter;
+	query += ")\n";
 
 	// determine the SELECT
 	if ( return_ids && return_hashes )
 	{
 		m_required_joins.records = true;
-		constexpr std::string_view select_both { " SELECT tm.record_id, sha256 FROM filtered_records tm" };
+		constexpr std::string_view select_both { " SELECT tm.record_id, sha256 FROM final_filter tm" };
 		query += select_both;
 	}
 	else if ( return_hashes )
 	{
-		constexpr std::string_view select_sha256 { " SELECT tm.sha256 FROM filtered_records tm" };
+		constexpr std::string_view select_sha256 { " SELECT tm.sha256 FROM final_filter tm" };
 		query += select_sha256;
 		m_required_joins.records = true;
 	}
 	else
 	{
-		constexpr std::string_view select_record_id { " SELECT tm.record_id FROM filtered_records tm" };
+		constexpr std::string_view select_record_id { " SELECT tm.record_id FROM final_filter tm" };
 		query += select_record_id;
 	}
 
