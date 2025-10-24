@@ -37,7 +37,9 @@ enum class SimpleMimeType : std::uint16_t
 	IMAGE = 1,
 	VIDEO = 2,
 	ANIMATION = 3,
-	AUDIO = 4
+	AUDIO = 4,
+	ARCHIVE = 5,
+	IMAGE_PROJECT = 6
 };
 
 constexpr TagID INVALID_TAG_ID { 0 };

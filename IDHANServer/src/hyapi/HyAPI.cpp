@@ -5,13 +5,13 @@
 #include "HyAPI.hpp"
 
 #include "IDHANTypes.hpp"
-#include "api/SearchAPI.hpp"
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "drogon/HttpClient.h"
 #include "fgl/defines.hpp"
 #include "fixme.hpp"
@@ -149,8 +149,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	const auto start = std::chrono::system_clock::now();
 	const auto tags_o { request->getOptionalParameter< std::string >( "tags" ) };
 	constexpr auto empty_tags { "[]" };
-	const auto tags { tags_o.value_or( empty_tags ) };
-	if ( tags == empty_tags )
+	const auto tags_parameter_str { tags_o.value_or( empty_tags ) };
+	if ( tags_parameter_str == empty_tags )
 	{
 		Json::Value value;
 		value[ "file_ids" ] = Json::Value( Json::arrayValue );
@@ -165,35 +165,41 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	Json::Value tags_json {};
 	Json::Reader reader;
-	if ( !reader.parse( tags, tags_json ) )
+	if ( !reader.parse( tags_parameter_str, tags_json ) )
 	{
 		// Try to decode the text again and re-parse it
-		const auto decoded_tags { drogon::utils::urlDecode( tags ) };
+		const auto decoded_tags { drogon::utils::urlDecode( tags_parameter_str ) };
 		if ( reader.parse( decoded_tags, tags_json ) )
 		{
 			log::warn( "Tags JSON had to be URL-decoded a second time. Call the requester an idiot" );
 		}
 		else
 		{
-			co_return createBadRequest( "Invalid tags json: Was {}", tags );
+			co_return createBadRequest( "Invalid tags json: Was {}", tags_parameter_str );
 		}
 	}
+
+	std::vector< std::string > search_tags {};
+	search_tags.reserve( tags_json.size() );
+
+	for ( const auto& tag : tags_json )
+	{
+		const auto tag_text { tag.asString() };
+		search_tags.emplace_back( tag_text );
+	}
+
+	const auto tag_id_result {
+		co_await db
+			->execSqlCoro( "SELECT tag_id, tag_text FROM tags_combined WHERE tag_text = $1", std::move( search_tags ) )
+	};
 
 	std::vector< TagID > tag_ids {};
 
 	tag_ids.reserve( tags_json.size() );
 
-	for ( const auto& tag : tags_json )
+	for ( const auto& tag_id_row : tag_id_result )
 	{
-		const auto tag_text { tag.asString() };
-
-		const auto tag_id_result {
-			co_await db->execSqlCoro( "SELECT tag_id FROM tags_combined WHERE tag_text = $1", tag_text )
-		};
-
-		if ( tag_id_result.empty() ) co_return createBadRequest( "No tag with text {} found", tag_text );
-
-		tag_ids.emplace_back( tag_id_result[ 0 ][ 0 ].as< TagID >() );
+		tag_ids.emplace_back( tag_id_row[ "tag_id" ].as< TagID >() );
 	}
 
 	builder.setTags( tag_ids );
