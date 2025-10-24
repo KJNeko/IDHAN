@@ -188,18 +188,26 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		search_tags.emplace_back( tag_text );
 	}
 
-	const auto tag_id_result {
-		co_await db
-			->execSqlCoro( "SELECT tag_id, tag_text FROM tags_combined WHERE tag_text = $1", std::move( search_tags ) )
-	};
+	std::string tag_array_str {};
+	tag_array_str.reserve( tags_json.size() * 128 );
+	for ( std::size_t i = 0; i < tags_json.size(); ++i )
+	{
+		tag_array_str += format_ns::format( "\'{}\'", search_tags[ i ] );
+		if ( i + 1 != tags_json.size() ) tag_array_str += ",";
+	}
+
+	const auto tag_id_result { co_await db->execSqlCoro(
+		format_ns::format(
+			"SELECT tag_id, tag_text FROM tags_combined WHERE tag_text = ANY(ARRAY[{}]::TEXT[])", tag_array_str ) ) };
+
+	if ( tag_id_result.size() != tags_json.size() ) co_return createInternalError( "Failed to get search tags" );
 
 	std::vector< TagID > tag_ids {};
-
 	tag_ids.reserve( tags_json.size() );
 
-	for ( const auto& tag_id_row : tag_id_result )
+	for ( const auto& row : tag_id_result )
 	{
-		tag_ids.emplace_back( tag_id_row[ "tag_id" ].as< TagID >() );
+		tag_ids.emplace_back( row[ "tag_id" ].as< TagID >() );
 	}
 
 	builder.setTags( tag_ids );
