@@ -14,4 +14,27 @@ enum ServiceTypes
 	TAG_SERVICE = gen_constants::LOCAL_TAG
 };
 
+inline std::uint16_t simpleToHyType( SimpleMimeType type )
+{
+	switch ( type )
+	{
+		default:
+			[[fallthrough]];
+		case SimpleMimeType::NONE:
+			[[fallthrough]];
+		case SimpleMimeType::IMAGE:
+			return gen_constants::GENERAL_IMAGE;
+		case SimpleMimeType::VIDEO:
+			return gen_constants::GENERAL_VIDEO;
+		case SimpleMimeType::ANIMATION:
+			return gen_constants::GENERAL_ANIMATION;
+		case SimpleMimeType::AUDIO:
+			return gen_constants::GENERAL_AUDIO;
+		case SimpleMimeType::ARCHIVE:
+			return gen_constants::GENERAL_APPLICATION_ARCHIVE;
+		case SimpleMimeType::IMAGE_PROJECT:
+			return gen_constants::GENERAL_IMAGE_PROJECT;
+	}
+}
+
 } // namespace idhan::hydrus::hy_constants

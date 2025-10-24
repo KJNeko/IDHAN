@@ -4,7 +4,10 @@
 
 #include "drogonArrayBind.hpp"
 
+#include "../../../IDHANClient/include/idhan/logging/logger.hpp"
 #include "fgl/defines.hpp"
+#include "logging/log.hpp"
+#include "spdlog/fmt/bin_to_hex.h"
 
 constexpr auto OID_BYTEA { 17 };
 constexpr auto OID_TEXT { 25 };
@@ -25,6 +28,7 @@ consteval int32_t getTypeOid()
 		return 701; // FLOAT8OID
 	else
 		static_assert( false, "No OID value for type T" );
+	FGL_UNREACHABLE();
 }
 
 struct Header
@@ -62,7 +66,7 @@ std::vector< std::byte > createPgBinaryArrayScalar( const std::vector< T >& data
 	header->dimension_length = htonl( static_cast< uint32_t >( data.size() ) );
 	header->lower_bound = htonl( 1 );
 
-	Element* elements = reinterpret_cast< Element* >( result.data() + sizeof( Header ) );
+	auto* elements = reinterpret_cast< Element* >( result.data() + sizeof( Header ) );
 	for ( std::size_t i = 0; i < data.size(); ++i )
 	{
 		auto& element { elements[ i ] };
@@ -71,6 +75,8 @@ std::vector< std::byte > createPgBinaryArrayScalar( const std::vector< T >& data
 		static_assert(
 			std::same_as< T, std::int64_t > || std::same_as< T, std::int32_t > || std::same_as< T, std::int16_t >,
 			"Invalid type" );
+
+		static_assert( sizeof( element.data ) == sizeof( data[ i ] ), "Size mismatch" );
 
 		if constexpr ( std::same_as< T, std::int64_t > )
 			element.data = htonll( data[ i ] );
@@ -105,17 +111,17 @@ std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& 
 	std::size_t string_sizes { 0 };
 	for ( const auto& str : strings ) string_sizes += str.size();
 
-	struct Element
+	struct [[gnu::packed]] Element
 	{
 		std::uint32_t element_length { 0 };
 	};
 
 	static_assert( sizeof( Element ) == sizeof( std::uint32_t ), "Element is not sized properly" );
 
-	result.resize( ( sizeof( Header ) + ( sizeof( Element ) * strings.size() ) + string_sizes ) * 1 );
-	std::memset( result.data(), 0, result.size() );
+	result.resize( sizeof( Header ) + ( sizeof( Element ) * strings.size() ) + string_sizes );
+	std::memset( result.data(), 0xFF, result.size() );
 
-	Header* header = reinterpret_cast< Header* >( result.data() );
+	auto* header = reinterpret_cast< Header* >( result.data() );
 	header->num_dimensions = htonl( 1 ); // dimension count
 	header->data_offset = htonl( 0 ); // any nulls?
 	header->element_type_oid = htonl( OID_TEXT ); // element type
@@ -127,12 +133,12 @@ std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& 
 	{
 		auto& element = *reinterpret_cast< Element* >( ptr );
 		// const auto filtered_string { idhan::api::helpers::pgEscape( str ) };
-		const std::string& filtered_string { str };
-		element.element_length = htonl( static_cast< std::uint32_t >( filtered_string.size() ) );
-		ptr += sizeof( Element );
-		std::memcpy( ptr, filtered_string.data(), filtered_string.size() );
-		ptr += filtered_string.size();
+		element.element_length = htonl( static_cast< std::uint32_t >( str.size() ) );
+		std::memcpy( ptr + sizeof( Element ), str.data(), str.size() );
+		ptr += sizeof( Element ) + str.size();
 	}
+
+	spdlog::info( "{}", spdlog::to_hex( result ) );
 
 	return result;
 }
@@ -149,14 +155,14 @@ std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SHA256 >
 
 	result.resize( sizeof( Header ) + ( sizeof( Element ) * data.size() ) );
 
-	Header* header = reinterpret_cast< Header* >( result.data() );
+	auto* header = reinterpret_cast< Header* >( result.data() );
 	header->num_dimensions = htonl( 1 ); // dimension count
 	header->data_offset = htonl( 0 ); // any nulls?
 	header->element_type_oid = htonl( OID_BYTEA ); // element type
 	header->dimension_length = htonl( static_cast< uint32_t >( data.size() ) ); // size of first dimension
 	header->lower_bound = htonl( 1 ); // offset of first dimension
 
-	Element* elements = reinterpret_cast< Element* >( result.data() + sizeof( Header ) );
+	auto* elements = reinterpret_cast< Element* >( result.data() + sizeof( Header ) );
 	for ( std::size_t i = 0; i < data.size(); ++i )
 	{
 		auto& element { elements[ i ] };

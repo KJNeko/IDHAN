@@ -60,6 +60,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 	const SimpleMimeType simple_mime_type { metadata[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() };
 
+	data[ "filetype_enum" ] = hydrus::hy_constants::simpleToHyType( simple_mime_type );
+
 	switch ( simple_mime_type )
 	{
 		case SimpleMimeType::VIDEO:
@@ -90,6 +92,12 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 			FGL_UNIMPLEMENTED();
 			break;
 		case SimpleMimeType::AUDIO:
+			FGL_UNIMPLEMENTED();
+			break;
+		case SimpleMimeType::ARCHIVE:
+			FGL_UNIMPLEMENTED();
+			break;
+		case SimpleMimeType::IMAGE_PROJECT:
 			FGL_UNIMPLEMENTED();
 			break;
 		default:
