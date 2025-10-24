@@ -4,7 +4,6 @@
 
 #include "drogonArrayBind.hpp"
 
-#include "../../../IDHANClient/include/idhan/logging/logger.hpp"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
 #include "spdlog/fmt/bin_to_hex.h"
