@@ -156,7 +156,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 	for ( const auto& [ record_id, sha256, size, mime_name, extension ] : hashes )
 	{
-		logging::ScopedTimer timer_single { "singleRecordfileMetadata", std::chrono::milliseconds( 5 ) };
+		logging::ScopedTimer timer_single { "singleRecordfileMetadata", std::chrono::milliseconds( 50 ) };
 		Json::Value data {};
 
 		data[ "file_id" ] = record_id;
