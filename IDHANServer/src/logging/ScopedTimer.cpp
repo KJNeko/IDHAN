@@ -23,7 +23,7 @@ ScopedTimer::~ScopedTimer()
 	const auto duration_ms { std::chrono::duration_cast< std::chrono::milliseconds >( duration ).count() };
 	const auto duration_us { std::chrono::duration_cast< std::chrono::microseconds >( duration ).count() };
 
-	if ( config::get< bool >( "logging", "enable_perf_warnings", false ) && duration > m_warn_time )
+	if ( config::getSilentDefault< bool >( "logging", "enable_perf_warnings", false ) && duration > m_warn_time )
 		log::warn( "{} took {}s {}ms {}us", name, duration_s, duration_ms % 1000, duration_us % ( 1000 ) );
 }
 
