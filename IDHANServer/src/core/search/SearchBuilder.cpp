@@ -50,6 +50,8 @@ std::string SearchBuilder::
 	std::string query {};
 	query.reserve( 1024 );
 
+	if ( m_tags.size() == 0 ) throw std::runtime_error( "No tags were set for search" );
+
 	constexpr std::string_view filter_template {
 		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1})"
 	};

@@ -138,8 +138,6 @@ std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& 
 		ptr += sizeof( Element ) + str.size();
 	}
 
-	spdlog::info( "{}", spdlog::to_hex( result ) );
-
 	return result;
 }
 
