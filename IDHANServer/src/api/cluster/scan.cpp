@@ -64,6 +64,8 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	auto adopt_orphans { request->getOptionalParameter< bool >( "adopt_orphans" ).value_or( false ) };
 
+	auto remove_missing_files { request->getOptionalParameter< bool >( "remove_missing_files" ).value_or( false ) };
+
 	if ( adopt_orphans )
 	{
 		scan_metadata = true;
@@ -80,8 +82,6 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	// Where we put bad files if not in readonly mode
 	const std::filesystem::path bad_dir { cluster_path / "bad" };
-
-	std::size_t processed_count { 0 };
 
 	for ( const auto& dir_entry : std::filesystem::recursive_directory_iterator( cluster_path ) )
 	{
@@ -268,6 +268,40 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 		// The file is ours and has passed all verification
 		size_accum += data->length();
 		file_counter += 1;
+	}
+
+	{
+		log::info( "Verifying paths" );
+		const auto path_search { co_await db->execSqlCoro(
+			"SELECT record_id, extension, sha256 FROM file_info JOIN records USING (record_id) LEFT JOIN mime USING (mime_id) WHERE cluster_id = $1",
+			cluster_id ) };
+		for ( const auto& infos : path_search )
+		{
+			const SHA256 sha256 { SHA256::fromPgCol( infos[ "sha256" ] ) };
+			const RecordID record_id { infos[ "record_id" ].as< RecordID >() };
+			const std::string extension { infos[ "extension" ].as< std::string >() };
+
+			const auto sha256_hex { sha256.hex() };
+
+			std::filesystem::path path { cluster_path };
+			if ( extension.empty() )
+				path /= sha256_hex;
+			else
+				path /= ( format_ns::format( "{}.{}", sha256_hex, extension ) );
+
+			if ( !std::filesystem::exists( path ) )
+			{
+				log::warn( "Missing file expected at {} for record {}", path.string(), record_id );
+				if ( stop_on_fail && !remove_missing_files )
+					co_return createInternalError( "Missing an expected file at {}", path.string() );
+				if ( remove_missing_files )
+				{
+					co_await db->execSqlCoro(
+						"DELETE FROM file_info WHERE record_id = $1 AND cluster_id = $2", record_id, cluster_id );
+					log::info( "Removed record indicating file {} is at cluster {}", record_id, cluster_id );
+				}
+			}
+		}
 	}
 
 	log::info(
