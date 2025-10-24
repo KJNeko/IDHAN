@@ -165,23 +165,33 @@ std::optional< T > getValue( const std::string_view group, const std::string_vie
 }
 
 template < typename T >
-std::optional< T > get( std::string_view group, std::string_view name )
+std::optional< T > get( const std::string_view group, const std::string_view name )
 {
 	return getValue< T >( group, name );
 }
 
 template < typename T >
-T get( std::string_view group, std::string_view name, const auto default_value )
+T get( const std::string_view group, const std::string_view name, const auto default_value )
 {
 	const auto ret { get< T >( group, name ) };
 
 	if ( ret ) return *ret;
 
 	log::warn(
-		"Loaded default config from group: \'{}\' name: \'{}\' with default value \'{}\'. You might wanna set this value in a config file",
+		R"(Loaded default config from the group: '{}' name: '{}' with default value '{}'. You might wanna set this value in a config file)",
 		group,
 		name,
 		default_value );
+
+	return default_value;
+}
+
+template < typename T >
+T getSilentDefault( const std::string_view group, const std::string_view name, const auto default_value )
+{
+	const auto ret { get< T >( group, name ) };
+
+	if ( ret ) return *ret;
 
 	return default_value;
 }
