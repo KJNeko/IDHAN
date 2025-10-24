@@ -60,7 +60,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 
 	const SimpleMimeType simple_mime_type { metadata[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() };
 
-	data[ "filetype_enum" ] = hydrus::hy_constants::simpleToHyType( simple_mime_type );
+	data[ "filetype_enum" ] =
+		static_cast< Json::Value::Int >( hydrus::hy_constants::simpleToHyType( simple_mime_type ) );
 
 	switch ( simple_mime_type )
 	{
@@ -128,6 +129,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	file_ids_reader.parse( file_ids_str, file_ids_json );
 
 	std::vector< RecordID > record_ids {};
+	record_ids.reserve( file_ids_json.size() );
 	for ( const auto& id : file_ids_json ) record_ids.push_back( id.as< RecordID >() );
 
 	Json::Value metadata_json {};
@@ -148,31 +150,23 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		std::string extension;
 	};
 
-	std::vector< Info > hashes {};
-	hashes.reserve( services.size() );
-
 	for ( const auto& row : hash_result )
 	{
-		hashes.emplace_back(
-			row[ 0 ].as< RecordID >(),
-			SHA256::fromPgCol( row[ 1 ] ),
-			row[ 2 ].as< std::size_t >(),
-			row[ 3 ].as< std::string >(),
-			row[ 4 ].as< std::string >() );
-		// hashes.emplace_back( row[ 0 ].as< RecordID >(), SHA256::fromPgCol( row[ 1 ] ) );
-	}
-
-	for ( const auto& [ record_id, sha256, size, mime_name, extension ] : hashes )
-	{
 		logging::ScopedTimer timer_single { "singleRecordfileMetadata", std::chrono::milliseconds( 50 ) };
+		const auto& record_id { row[ 0 ].as< RecordID >() };
+		const auto sha256 { SHA256::fromPgCol( row[ 1 ] ) };
+		const auto& size { row[ 2 ].as< std::size_t >() };
+		const auto mime_name { row[ 3 ].as< std::string_view >() };
+		const auto extension { row[ 4 ].as< std::string_view >() };
+
 		Json::Value data {};
 
 		data[ "file_id" ] = record_id;
 		data[ "hash" ] = sha256.hex();
 
 		data[ "size" ] = size;
-		data[ "mime" ] = mime_name;
-		data[ "ext" ] = extension;
+		data[ "mime" ] = std::string( mime_name );
+		data[ "ext" ] = std::string( extension );
 
 		data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
 
