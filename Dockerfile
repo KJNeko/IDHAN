@@ -2,30 +2,21 @@
 # Stage 1: Build environment
 FROM ubuntu:24.04 AS builder
 
-RUN apt-get update
-
-# General dependencies
-RUN DEBIAN_FRONTNED=noninteractive apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTNED=noninteractive apt-get install -y \
     build-essential \
     cmake \
     git \
     pkg-config \
     gcc-14 \
     g++-14 \
-    ccache
-
-# Server build dependencies
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    ccache \
     libpq-dev \
     liburing-dev \
     qt6-base-dev \
     qt6-multimedia-dev \
     libqt6core6 \
     libqt6multimedia6 \
-    libjsoncpp-dev
-
-# Install build dependencies (IDHANPRemadeModules)
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    libjsoncpp-dev \
     libvips-dev
 
 # Set C++23 capable compiler as default
