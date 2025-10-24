@@ -1,5 +1,5 @@
 services:
-  postgres:
+  idhan-postgres:
     image: postgres:18-alpine
     container_name: idhan-postgres
     environment:
@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: idhan
       POSTGRES_DB: idhan-db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - idhan_pg18:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U idhan"]
       interval: 10s
@@ -15,11 +15,11 @@ services:
       retries: 5
     restart: unless-stopped
 
-  idhanserver:
+  idhan-server:
     image: git.futuregadgetlabs.net/kj16609/idhan:latest
     container_name: idhan-server
     environment:
-      IDHAN_DATABASE_HOST: postgres
+      IDHAN_DATABASE_HOST: idhan-postgres
       IDHAN_DATABASE_USER: idhan
       IDHAN_DATABASE_PASSWORD: idhan
       IDHAN_DATABASE_DATABASE: idhan-db
@@ -28,9 +28,9 @@ services:
     security_opt:
       - seccomp=unconfined
     depends_on:
-      postgres:
+      idhan-postgres:
         condition: service_healthy
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  idhan_pg18:
