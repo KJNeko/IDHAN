@@ -176,6 +176,15 @@ class SearchBuilder
 	std::vector< TagID > m_tags;
 
 	HydrusDisplayType m_display_mode;
+	bool m_bind_domains { false };
+
+	/**
+	 * @brief Constructs a query to be used. $1 is expected to be an array of tag_domain_ids
+	 * @param return_ids
+	 * @param return_hashes
+	 * @return
+	 */
+	std::string construct( bool return_ids = true, bool return_hashes = false, bool filter_domains = false );
 
   public:
 
@@ -187,16 +196,6 @@ class SearchBuilder
 		bool return_ids = true,
 		bool return_hashes = false );
 
-	drogon::Task< drogon::orm::Result >
-		query( drogon::orm::DbClientPtr db, bool return_ids = true, bool return_hashes = false );
-
-	/**
-	 * @brief Constructs a query to be used. $1 is expected to be an array of tag_domain_ids
-	 * @param return_ids
-	 * @param return_hashes
-	 * @return
-	 */
-	std::string construct( bool return_ids = true, bool return_hashes = false, bool filter_domains = false );
 	void setSortType( SortType type );
 
 	void setSortOrder( SortOrder value );
