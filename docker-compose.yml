@@ -1,15 +1,15 @@
 services:
   idhan-postgres:
-    image: postgres:18-alpine
+    image: postgres:18
     container_name: idhan-postgres
     environment:
       POSTGRES_USER: idhan
       POSTGRES_PASSWORD: idhan
       POSTGRES_DB: idhan-db
     volumes:
-      - idhan_pg18:/var/lib/postgresql/data
+      - idhan_pg18:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U idhan"]
+      test: [ "CMD-SHELL", "pg_isready -U idhan" ]
       interval: 10s
       timeout: 5s
       retries: 5
