@@ -39,3 +39,4 @@ IDHANServer/src/db/pre-dev.sql
 
 .env
 publish.sh
+push-nas.sh
