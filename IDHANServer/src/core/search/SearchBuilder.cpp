@@ -12,35 +12,6 @@
 namespace idhan
 {
 
-SearchBuilder::SearchBuilder() : m_sort_type(), m_order(), m_tags(), m_display_mode()
-{}
-
-drogon::Task< drogon::orm::Result > SearchBuilder::query(
-	const drogon::orm::DbClientPtr db,
-	std::vector< TagDomainID > tag_domain_ids,
-	const bool return_ids,
-	const bool return_hashes )
-{
-	const std::size_t tag_count { m_tags.size() };
-	co_return co_await db->execSqlCoro(
-		construct( return_ids, return_hashes, /* filter_domains */ true ),
-		std::move( m_tags ),
-		tag_count,
-		std::move( tag_domain_ids ) );
-}
-
-drogon::Task< drogon::orm::Result > SearchBuilder::
-	query( const drogon::orm::DbClientPtr db, const bool return_ids, const bool return_hashes )
-{
-	const auto query { construct( return_ids, return_hashes, false ) };
-
-	log::debug( "Trying to run \n{}", query );
-
-	auto result { co_await db->execSqlCoro( query ) };
-
-	co_return result;
-}
-
 std::string SearchBuilder::
 	construct( const bool return_ids, const bool return_hashes, [[maybe_unused]] const bool filter_domains )
 {
@@ -54,9 +25,15 @@ std::string SearchBuilder::
 		return "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL";
 	}
 
-	constexpr std::string_view filter_template {
-		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} AND tag_domain_id = ANY($3) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id = ANY($3))"
+	constexpr std::string_view domain_filter_template {
+		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} AND tag_domain_id = ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id = ANY($1))"
 	};
+
+	constexpr std::string_view domainless_filter_template {
+		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1})"
+	};
+
+	m_bind_domains = filter_domains;
 
 	query += "WITH ";
 
@@ -66,7 +43,10 @@ std::string SearchBuilder::
 	{
 		auto& tag { m_tags[ i ] };
 
-		query += format_ns::format( filter_template, i, tag );
+		if ( filter_domains )
+			query += format_ns::format( domain_filter_template, i, tag );
+		else
+			query += format_ns::format( domainless_filter_template, i, tag );
 		final_filter += format_ns::format( "SELECT record_id FROM filter_{}", i );
 
 		if ( i + 1 != m_tags.size() )
@@ -130,6 +110,25 @@ std::string SearchBuilder::
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
 
 	return query;
+}
+
+SearchBuilder::SearchBuilder() : m_sort_type(), m_order(), m_tags(), m_display_mode()
+{}
+
+drogon::Task< drogon::orm::Result > SearchBuilder::query(
+	const drogon::orm::DbClientPtr db,
+	std::vector< TagDomainID > tag_domain_ids,
+	const bool return_ids,
+	const bool return_hashes )
+{
+	const auto query { construct( return_ids, return_hashes, /* filter_domains */ false ) };
+
+	log::info( "Search: Trying to run {}", query );
+
+	if ( m_bind_domains )
+		co_return co_await db->execSqlCoro( query, std::move( tag_domain_ids ) );
+	else
+		co_return co_await db->execSqlCoro( query );
 }
 
 void SearchBuilder::setSortType( const SortType type )
