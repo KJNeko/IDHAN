@@ -28,3 +28,4 @@ HydrusImporter/
 *.md
 publish.sh
 docs.sh
+push-nas.sh
