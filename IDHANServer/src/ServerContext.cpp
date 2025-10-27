@@ -149,7 +149,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	std::filesystem::create_directories( log_directory );
 
 	auto& app = drogon::app()
-	                .setLogPath( "./" )
 	                .setLogLevel( trantor::Logger::kInfo )
 	                .setThreadNum( io_threads )
 	                .setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() )
