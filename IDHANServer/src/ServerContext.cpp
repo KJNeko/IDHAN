@@ -141,6 +141,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	std::size_t io_threads { hardware_count };
 	std::size_t db_threads { io_threads * 2 };
 
+	log::info( "Running with {} IO threads, {} DB threads", io_threads, db_threads );
+
 	constexpr std::string_view log_directory { "./log/drogon" };
 
 	std::filesystem::create_directories( log_directory );
