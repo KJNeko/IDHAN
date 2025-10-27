@@ -132,7 +132,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 {
 	log::info( "IDHAN initialization starting" );
 
-	// spdlog::enable_backtrace( 32 );
+	spdlog::enable_backtrace( 32 );
 
 	log::debug( "Logging show debug" );
 	log::info( "Logging show info" );
@@ -141,7 +141,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	std::size_t io_threads { hardware_count };
 	std::size_t db_threads { io_threads * 2 };
 
-	log::info( "Running with {} IO threads, {} DB threads", io_threads, db_threads );
+	log::info( "IO Threads: {}", io_threads );
+	log::info( "DB Connections: {}", db_threads );
 
 	constexpr std::string_view log_directory { "./log/drogon" };
 
