@@ -118,6 +118,9 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	const auto& size { row[ 2 ].as< std::size_t >() };
 	const auto mime_name { row[ 3 ].as< std::string_view >() };
 	const auto extension { row[ 4 ].as< std::string_view >() };
+	const auto cluster_store_time_timestamp { row[ "cluster_store_time" ].isNull() ?
+		                                          0 :
+		                                          row[ "cluster_store_time" ].as< std::size_t >() };
 
 	Json::Value data {};
 
@@ -128,7 +131,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	data[ "mime" ] = std::string( mime_name );
 	data[ "ext" ] = std::string( extension );
 
-	data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = 0;
+	data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = cluster_store_time_timestamp;
 
 	const auto url_json_e { co_await fetchUrlsStrings( record_id, db ) };
 	if ( !url_json_e ) co_return std::unexpected( url_json_e.error() );
@@ -233,7 +236,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	const auto services { co_await getServiceList( db ) };
 
 	const auto hash_result { co_await db->execSqlCoro(
-		"SELECT record_id, sha256, coalesce(size, 0), coalesce(mime.name, '') as mime_name, coalesce(coalesce(extension, best_extension), '') as extension FROM records LEFT JOIN file_info USING (record_id) LEFT JOIN mime USING (mime_id) WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME
+		"SELECT record_id, sha256, coalesce(size, 0), coalesce(mime.name, '') as mime_name, coalesce(coalesce(extension, best_extension), '') as extension, cluster_store_time FROM records LEFT JOIN file_info USING (record_id) LEFT JOIN mime USING (mime_id) WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME
 		"[])",
 		std::move( record_ids ) ) };
 
