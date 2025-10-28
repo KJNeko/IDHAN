@@ -140,6 +140,16 @@ int main( int argc, char** argv )
 		}
 	}
 
+	{
+		std::locale locale { "" };
+		const auto name { locale.name() };
+		log::info( "System locale: {}", name) );
+		if ( name.find( "UTF-8" ) != std::string::npos || name.find( "utf8" ) != std::string::npos )
+		{
+			log::critical( "System locale is not UTF8, Aborting (IDHAN must see UTF8 to work properly)" );
+		}
+	}
+
 	idhan::ServerContext context { arguments };
 
 	context.run();
