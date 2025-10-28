@@ -11,6 +11,7 @@
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
 #include "splitTag.hpp"
+#include "tags/tags.hpp"
 
 namespace idhan::api
 {
@@ -71,7 +72,7 @@ struct TagPair
 };
 
 drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
-	getIDFromPair( const TagPair& tag, drogon::orm::DbClientPtr transaction )
+	getIDFromPair( const TagPair& tag, drogon::orm::DbClientPtr db )
 {
 	// convert any strings to their ids
 
@@ -79,34 +80,43 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 
 	if ( tag_id ) co_return tag_id.value();
 
-	const auto tag_namespace_is_str { std::holds_alternative< std::string >( tag_namespace ) };
-	const auto tag_subtag_is_str { std::holds_alternative< std::string >( tag_subtag ) };
+	auto tag_namespace_is_str { std::holds_alternative< std::string >( tag_namespace ) };
+	auto tag_subtag_is_str { std::holds_alternative< std::string >( tag_subtag ) };
 
 	if ( tag_namespace_is_str && tag_subtag_is_str )
 	{
-		const auto result { co_await transaction->execSqlCoro(
+		const auto result { co_await db->execSqlCoro(
 			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE namespace_text = $1 AND subtag_text = $2",
 			std::get< std::string >( tag_namespace ),
 			std::get< std::string >( tag_subtag ) ) };
 
 		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
+
+		co_return co_await createTag(
+			std::get< std::string >( tag_namespace ), std::get< std::string >( tag_subtag ), db );
+
+		co_return std::unexpected( createInternalError(
+			R"(Failed to select tag '{}':'{}')",
+			std::get< std::string >( tag_namespace ),
+			std::get< std::string >( tag_subtag ) ) );
 	}
-	else if ( !tag_namespace_is_str && !tag_subtag_is_str )
+
+	if ( !tag_namespace_is_str && !tag_subtag_is_str )
 	{
-		const auto result { co_await transaction->execSqlCoro(
+		const auto result { co_await db->execSqlCoro(
 			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) RETURNING tag_id",
 			std::get< NamespaceID >( tag_namespace ),
 			std::get< SubtagID >( tag_subtag ) ) };
 
 		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
-	}
-	else [[unlikely]]
-	{
-		co_return std::
-			unexpected( createBadRequest( "Tag namespace and subtag must be both strings or both numbers" ) );
+		co_return std::unexpected( createInternalError(
+			R"(Failed to insert tag '{}':'{}')",
+			std::get< NamespaceID >( tag_namespace ),
+			std::get< SubtagID >( tag_subtag ) ) );
 	}
 
-	co_return std::unexpected( createInternalError( "Failed to get ID from pair" ) );
+	co_return std::unexpected(
+		createInternalError( "Failed to get ID from pair, Namespace and Subtag must both be String or Integers" ) );
 }
 
 drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > > getTagPairs( const Json::Value& json )
@@ -152,13 +162,23 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 
 	try
 	{
+		using Task = drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >;
+		std::vector< Task > tasks {};
+
 		for ( const auto& pair : pairs )
 		{
-			const auto result { co_await getIDFromPair( pair, db ) };
+			tasks.emplace_back( getIDFromPair( pair, db ) );
+		}
+
+		const auto finished_tasks { co_await drogon::when_all( std::move( tasks ) ) };
+
+		for ( const std::expected< TagID, drogon::HttpResponsePtr >& result : finished_tasks )
+		{
+			// const auto result { co_await getIDFromPair( pair, db ) };
 			if ( !result ) co_return std::unexpected( result.error() );
 			ids.emplace_back( result.value() );
 
-			if ( !( result.value() > 0 ) )
+			if ( result.value() <= 0 )
 			{
 				co_return std::unexpected(
 					createBadRequest( "Tag ID was not valid. Must be tag_id > 0; Was {}", result.value() ) );
