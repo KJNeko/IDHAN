@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U idhan" ]
+      test: [ "CMD-SHELL", "pg_isready -U idhan -d idhan-db" ]
       interval: 10s
       timeout: 5s
       retries: 5
