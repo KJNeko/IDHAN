@@ -38,7 +38,7 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< std::string > >( st
 	data.reserve( param.size() * 256 );
 	for ( std::size_t i = 0; i < param.size(); i++ )
 	{
-		data += format_ns::format( "\'param[ i ]\'" );
+		data += format_ns::format( "\'{}\'", param[ i ] );
 		if ( i + 1 != param.size() ) data += ",";
 	}
 	data += "}";
