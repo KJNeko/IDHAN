@@ -60,7 +60,7 @@ paths:
   /tags/parents/create:
     $ref: './paths/tags/relationships/parent/create.yaml'
 
-  # Recods
+  # Records
   /records/create:
     $ref: './paths/records/create.yaml'
   /records/tags/add:

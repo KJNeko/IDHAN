@@ -6,7 +6,7 @@
 namespace idhan
 {
 
-drogon::Task< SubtagID > createSubtag( std::string str, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< SubtagID, IDHANError > > createSubtag( std::string str, drogon::orm::DbClientPtr db )
 {
 	const auto search_result { co_await findSubtag( str, db ) };
 	if ( search_result ) co_return *search_result;
@@ -15,7 +15,7 @@ drogon::Task< SubtagID > createSubtag( std::string str, drogon::orm::DbClientPtr
 		co_await db->execSqlCoro( "INSERT INTO tag_subtags (subtag_text) VALUES ($1) RETURNING subtag_id", str )
 	};
 
-	if ( insert_result.empty() ) co_return co_await createSubtag( str, db );
+	if ( insert_result.empty() ) co_return std::unexpected( createError( "Failed to create subtag {}", str ) );
 
 	co_return insert_result[ 0 ][ 0 ].as< NamespaceID >();
 }
