@@ -82,29 +82,31 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	const auto tag_namespace_is_str { std::holds_alternative< std::string >( tag_namespace ) };
 	const auto tag_subtag_is_str { std::holds_alternative< std::string >( tag_subtag ) };
 
-	if ( tag_namespace_is_str && tag_subtag_is_str ) [[likely]]
+	if ( tag_namespace_is_str && tag_subtag_is_str )
 	{
 		const auto result { co_await transaction->execSqlCoro(
 			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE namespace_text = $1 AND subtag_text = $2",
 			std::get< std::string >( tag_namespace ),
 			std::get< std::string >( tag_subtag ) ) };
 
-		if ( result.size() > 0 ) co_return result[ 0 ][ 0 ].as< TagID >();
+		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
 	}
-	else if ( !tag_namespace_is_str && !tag_subtag_is_str ) [[likely]]
+	else if ( !tag_namespace_is_str && !tag_subtag_is_str )
 	{
 		const auto result { co_await transaction->execSqlCoro(
-			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2)",
+			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) RETURNING tag_id",
 			std::get< NamespaceID >( tag_namespace ),
 			std::get< SubtagID >( tag_subtag ) ) };
 
-		if ( result.size() > 0 ) co_return result[ 0 ][ 0 ].as< TagID >();
+		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
 	}
-	else
+	else [[unlikely]]
 	{
 		co_return std::
 			unexpected( createBadRequest( "Tag namespace and subtag must be both strings or both numbers" ) );
 	}
+
+	co_return std::unexpected( createInternalError( "Failed to get ID from pair" ) );
 }
 
 drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > > getTagPairs( const Json::Value& json )
