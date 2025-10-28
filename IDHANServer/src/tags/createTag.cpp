@@ -18,7 +18,7 @@ drogon::Task< std::optional< TagID > >
 	co_return search_result[ 0 ][ 0 ].as< TagID >();
 }
 
-drogon::Task< TagID >
+drogon::Task< std::expected< TagID, IDHANError > >
 	createTag( const std::string tag_namespace, const std::string tag_subtag, drogon::orm::DbClientPtr db )
 {
 	auto namespace_id_t { createNamespace( tag_namespace, db ) };
@@ -26,14 +26,18 @@ drogon::Task< TagID >
 	const auto [ namespace_id, subtag_id ] =
 		co_await drogon::when_all( std::move( namespace_id_t ), std::move( subtag_id_t ) );
 
-	const auto search_result { co_await findTag( namespace_id, subtag_id, db ) };
+	if ( !namespace_id ) co_return std::unexpected( namespace_id.error() );
+	if ( !subtag_id ) co_return std::unexpected( subtag_id.error() );
+
+	const auto search_result { co_await findTag( *namespace_id, *subtag_id, db ) };
 
 	if ( search_result ) co_return *search_result;
 
 	const auto insert_result { co_await db->execSqlCoro(
-		"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) RETURNING tag_id", namespace_id, subtag_id ) };
+		"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) RETURNING tag_id", *namespace_id, *subtag_id ) };
 
-	if ( insert_result.empty() ) co_return co_await createTag( tag_namespace, tag_subtag, db );
+	if ( insert_result.empty() )
+		co_return std::unexpected( createError( "Failed to create tag: {}:{}", *namespace_id, *subtag_id ) );
 
 	co_return insert_result[ 0 ][ 0 ].as< TagID >();
 }

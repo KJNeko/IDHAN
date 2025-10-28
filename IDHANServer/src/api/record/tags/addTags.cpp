@@ -92,13 +92,13 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 
 		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
 
-		co_return co_await createTag(
-			std::get< std::string >( tag_namespace ), std::get< std::string >( tag_subtag ), db );
+		const auto create_status {
+			co_await createTag( std::get< std::string >( tag_namespace ), std::get< std::string >( tag_subtag ), db )
+		};
 
-		co_return std::unexpected( createInternalError(
-			R"(Failed to select tag '{}':'{}')",
-			std::get< std::string >( tag_namespace ),
-			std::get< std::string >( tag_subtag ) ) );
+		if ( create_status ) co_return *create_status;
+
+		co_return std::unexpected( create_status.error()->genResponse() );
 	}
 
 	if ( !tag_namespace_is_str && !tag_subtag_is_str )
@@ -236,7 +236,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::
 
 	if ( !tag_pairs ) co_return tag_pairs.error();
 
-	auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
+	auto tag_pair_ids { co_await getIDsFromPairs( tag_pairs.value(), db ) };
 
 	if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
@@ -293,7 +293,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		if ( !tag_pairs ) co_return tag_pairs.error();
 
-		auto tag_pair_ids { co_await getIDsFromPairs( std::move( tag_pairs.value() ), db ) };
+		auto tag_pair_ids { co_await getIDsFromPairs( tag_pairs.value(), db ) };
 
 		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
@@ -332,7 +332,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 			if ( !tags ) co_return tags.error();
 
-			const auto tag_ids_e { co_await getIDsFromPairs( std::move( tags.value() ), db ) };
+			const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db ) };
 
 			if ( !tag_ids_e ) co_return tag_ids_e.error();
 
