@@ -45,6 +45,7 @@ var namespaceidhan_1_1hyapi =
     [ "getAdvancedUrlInfo", "d2/d18/namespaceidhan_1_1hyapi.html#a0cd7eccc9c02bf9497d1068d5eaad1b5", null ],
     [ "getDefaultedValue", "d2/d18/namespaceidhan_1_1hyapi.html#a5c538865c5ad60aa650c211bfb7a249e", null ],
     [ "getFileInfo", "d2/d18/namespaceidhan_1_1hyapi.html#abe1f267b411335de26f397790642f985", null ],
+    [ "getMetadataFromRow", "d2/d18/namespaceidhan_1_1hyapi.html#a111324af4d94e2b4f8bd69240896c9a4", null ],
     [ "getMetadataInfo", "d2/d18/namespaceidhan_1_1hyapi.html#a91aa1cafd77b35981bd534654c5e8f93", null ],
     [ "getServiceList", "d2/d18/namespaceidhan_1_1hyapi.html#abbdbe7c8606747784d91bb8a1e98f33e", null ],
     [ "HyAPIAuthName", "d2/d18/namespaceidhan_1_1hyapi.html#a720a04837a0444fe8b1ee98d2759cc93", null ],

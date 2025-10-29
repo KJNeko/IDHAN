@@ -16,3 +16,6 @@ properties:
   hydrus_api_version:
     type: integer
     example: 80
+  tag:
+    type: string
+    example: "v1.0"

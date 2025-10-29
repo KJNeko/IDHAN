@@ -5,7 +5,7 @@ var searchData=
   ['readme_2emd_2',['README.md',['../da/ddd/README_8md.html',1,'']]],
   ['recordapi_2ehpp_3',['RecordAPI.hpp',['../d2/d9f/RecordAPI_8hpp.html',1,'']]],
   ['records_2ecpp_4',['records.cpp',['../d5/d42/records_8cpp.html',1,'']]],
-  ['records_2ehpp_5',['records.hpp',['../d6/d8c/api_2helpers_2records_8hpp.html',1,'(Global Namespace)'],['../d2/df1/core_2search_2records_8hpp.html',1,'(Global Namespace)']]],
+  ['records_2ehpp_5',['records.hpp',['../da/d6a/records_8hpp.html',1,'']]],
   ['registermimetype_2ecpp_6',['registerMimeType.cpp',['../dc/d44/registerMimeType_8cpp.html',1,'']]],
   ['remove_2ecpp_7',['remove.cpp',['../da/d8c/remove_8cpp.html',1,'']]],
   ['removetags_2ecpp_8',['removeTags.cpp',['../de/d2b/removeTags_8cpp.html',1,'']]],

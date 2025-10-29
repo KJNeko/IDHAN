@@ -184,8 +184,8 @@ Functions</h2></td></tr>
 <tr class="separator:a3e7bc2a20244506206dcebed435187c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0cd19a5936e8c63a544206a2072250fb" id="r_a0cd19a5936e8c63a544206a2072250fb"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/dcf/namespaceidhan.html#af8dffe5d1800a78e09605b08052fa841">ResponseTask</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0cd19a5936e8c63a544206a2072250fb">createRecordFromJson</a> (const drogon::HttpRequestPtr req)</td></tr>
 <tr class="separator:a0cd19a5936e8c63a544206a2072250fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f937f8d622dc8b90cc208c22d48dc26" id="r_a2f937f8d622dc8b90cc208c22d48dc26"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f937f8d622dc8b90cc208c22d48dc26">getIDFromPair</a> (const <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &amp;tag, drogon::orm::DbClientPtr transaction)</td></tr>
-<tr class="separator:a2f937f8d622dc8b90cc208c22d48dc26"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aafefcf6162937cd235ccfe5fdec9d579" id="r_aafefcf6162937cd235ccfe5fdec9d579"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aafefcf6162937cd235ccfe5fdec9d579">getIDFromPair</a> (const <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &amp;tag, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:aafefcf6162937cd235ccfe5fdec9d579"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aad2e58082017e1fd3b7bf3eb59c861c5" id="r_aad2e58082017e1fd3b7bf3eb59c861c5"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad2e58082017e1fd3b7bf3eb59c861c5">getTagPairs</a> (const Json::Value &amp;json)</td></tr>
 <tr class="separator:aad2e58082017e1fd3b7bf3eb59c861c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a025f1a3ab49e6ff6cb78b95e299ef908" id="r_a025f1a3ab49e6ff6cb78b95e299ef908"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a0ab021b530780b1003469a494332e382">TagID</a> &gt;, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a025f1a3ab49e6ff6cb78b95e299ef908">getIDsFromPairs</a> (const std::vector&lt; <a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a> &gt; &amp;pairs, drogon::orm::DbClientPtr db)</td></tr>
@@ -501,8 +501,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a2f937f8d622dc8b90cc208c22d48dc26" name="a2f937f8d622dc8b90cc208c22d48dc26"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2f937f8d622dc8b90cc208c22d48dc26">&#9670;&#160;</a></span>getIDFromPair()</h2>
+<a id="aafefcf6162937cd235ccfe5fdec9d579" name="aafefcf6162937cd235ccfe5fdec9d579"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aafefcf6162937cd235ccfe5fdec9d579">&#9670;&#160;</a></span>getIDFromPair()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -515,7 +515,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>transaction</em></span>&#160;)</td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

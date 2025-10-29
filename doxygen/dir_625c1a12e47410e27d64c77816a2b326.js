@@ -13,7 +13,7 @@ var dir_625c1a12e47410e27d64c77816a2b326 =
     [ "pgEscape.cpp", "df/ddd/pgEscape_8cpp.html", "df/ddd/pgEscape_8cpp" ],
     [ "pgEscape.hpp", "dc/d4c/pgEscape_8hpp.html", "dc/d4c/pgEscape_8hpp" ],
     [ "records.cpp", "d5/d42/records_8cpp.html", "d5/d42/records_8cpp" ],
-    [ "records.hpp", "d6/d8c/api_2helpers_2records_8hpp.html", "d6/d8c/api_2helpers_2records_8hpp" ],
+    [ "records.hpp", "da/d6a/records_8hpp.html", "da/d6a/records_8hpp" ],
     [ "ResponseCallback.hpp", "de/d0b/ResponseCallback_8hpp.html", "de/d0b/ResponseCallback_8hpp" ],
     [ "urls.cpp", "d9/da1/urls_8cpp.html", "d9/da1/urls_8cpp" ],
     [ "urls.hpp", "dd/d58/helpers_2urls_8hpp.html", "dd/d58/helpers_2urls_8hpp" ]

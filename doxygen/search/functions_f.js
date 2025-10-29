@@ -8,7 +8,7 @@ var searchData=
   ['registermimetype_5',['registerMimeType',['../d4/d9c/namespaceidhan_1_1mime.html#a96c638ae913e30e456c17d6958c1a07f',1,'idhan::mime']]],
   ['reloadclusters_6',['reloadClusters',['../df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html#a23cf01ea08fd3ddb6835da5407c20569',1,'idhan::filesystem::ClusterManager']]],
   ['reloadmime_7',['reloadMime',['../d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#adbe8952010c47392b2a1addc9776e30f',1,'idhan::api::APIMaintenance']]],
-  ['reloadmimeparsers_8',['reloadMimeParsers',['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a36cbe1e79ea189987a6656b2cf001176',1,'idhan::mime::MimeDatabase']]],
+  ['reloadmimeparsers_8',['reloadMimeParsers',['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a3ecd65a6d4c76e1286e90be7531955c1',1,'idhan::mime::MimeDatabase']]],
   ['remove_9',['remove',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#a9216abe93f2de1672996b9333aecc154',1,'idhan::api::ClusterAPI']]],
   ['removesiblings_10',['removeSiblings',['../d9/d46/classidhan_1_1TagSearch.html#a4c81dacf77d00ed231e0b6c3b065c7b2',1,'idhan::TagSearch']]],
   ['removesize_11',['removeSize',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#afecfbc7407c85ccef6c2e1cb0cc20106',1,'idhan::api::ClusterInfo']]],

@@ -49,6 +49,7 @@ var annotated_dup =
         [ "ModuleLoader", "d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html", "d1/d6d/classidhan_1_1modules_1_1ModuleLoader" ]
       ] ],
       [ "ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", "de/d07/structidhan_1_1ConnectionArguments" ],
+      [ "ErrorInfo", "db/d1a/classidhan_1_1ErrorInfo.html", "db/d1a/classidhan_1_1ErrorInfo" ],
       [ "FileInfo", "d8/d58/structidhan_1_1FileInfo.html", "d8/d58/structidhan_1_1FileInfo" ],
       [ "FileIOUring", "d5/d8b/classidhan_1_1FileIOUring.html", "d5/d8b/classidhan_1_1FileIOUring" ],
       [ "FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", "db/de9/classidhan_1_1FileMappedData" ],

@@ -9,6 +9,9 @@ var hierarchy =
     [ "idhan::ConnectionArguments", "de/d07/structidhan_1_1ConnectionArguments.html", null ],
     [ "idhan::mime::Cursor", "d0/d78/classidhan_1_1mime_1_1Cursor.html", null ],
     [ "idhan::mime::CursorData", "db/d0c/classidhan_1_1mime_1_1CursorData.html", null ],
+    [ "std::enable_shared_from_this", null, [
+      [ "idhan::ErrorInfo", "db/d1a/classidhan_1_1ErrorInfo.html", null ]
+    ] ],
     [ "idhan::FileIOUring::FileDescriptor", "db/d9c/structidhan_1_1FileIOUring_1_1FileDescriptor.html", null ],
     [ "idhan::FileInfo", "d8/d58/structidhan_1_1FileInfo.html", null ],
     [ "idhan::FileIOUring", "d5/d8b/classidhan_1_1FileIOUring.html", null ],

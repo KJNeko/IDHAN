@@ -120,12 +120,13 @@ $(function(){initNavTree('dd/d98/getMetadataInfo_8cpp.html','../../'); initResiz
 <code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d4/df6/TagAPI_8hpp_source.html">api/TagAPI.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../de/dbc/createBadRequest_8hpp_source.html">api/helpers/createBadRequest.hpp</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../d6/d8c/api_2helpers_2records_8hpp_source.html">api/helpers/records.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../da/d6a/records_8hpp_source.html">api/helpers/records.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d7/d79/record_2urls_2urls_8hpp_source.html">api/record/urls/urls.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../dd/d85/hydrus__version_8hpp_source.html">constants/hydrus_version.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../db/daf/SearchBuilder_8hpp_source.html">core/search/SearchBuilder.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../db/d73/SHA256_8hpp_source.html">crypto/SHA256.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../df/de2/drogonArrayBind_8hpp_source.html">db/drogonArrayBind.hpp</a>&quot;</code><br />
+<code>#include &quot;drogon/utils/coroutine.h&quot;</code><br />
 <code>#include &quot;fgl/defines.hpp&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d3/d82/ScopedTimer_8hpp_source.html">logging/ScopedTimer.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d1/d12/parseMetadata_8hpp_source.html">metadata/parseMetadata.hpp</a>&quot;</code><br />
@@ -143,6 +144,8 @@ Functions</h2></td></tr>
 <tr class="separator:abe1f267b411335de26f397790642f985"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91aa1cafd77b35981bd534654c5e8f93" id="r_a91aa1cafd77b35981bd534654c5e8f93"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; Json::Value, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d18/namespaceidhan_1_1hyapi.html#a91aa1cafd77b35981bd534654c5e8f93">idhan::hyapi::getMetadataInfo</a> (drogon::orm::DbClientPtr db, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, Json::Value data)</td></tr>
 <tr class="separator:a91aa1cafd77b35981bd534654c5e8f93"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a111324af4d94e2b4f8bd69240896c9a4" id="r_a111324af4d94e2b4f8bd69240896c9a4"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; Json::Value, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d18/namespaceidhan_1_1hyapi.html#a111324af4d94e2b4f8bd69240896c9a4">idhan::hyapi::getMetadataFromRow</a> (drogon::orm::DbClientPtr db, const Json::Value services, const drogon::orm::Row row)</td></tr>
+<tr class="separator:a111324af4d94e2b4f8bd69240896c9a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

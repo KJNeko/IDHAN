@@ -146,12 +146,15 @@ Functions</h2></td></tr>
 <tr class="memitem:af88d7a898e663606f8c188f9070f6a62" id="r_af88d7a898e663606f8c188f9070f6a62"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:af88d7a898e663606f8c188f9070f6a62"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af88d7a898e663606f8c188f9070f6a62">getValue</a> (const std::string_view group, const std::string_view name)</td></tr>
 <tr class="separator:af88d7a898e663606f8c188f9070f6a62"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a85dee5c79fec80c92190afdc59b16b9c" id="r_a85dee5c79fec80c92190afdc59b16b9c"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
-<tr class="memitem:a85dee5c79fec80c92190afdc59b16b9c"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a85dee5c79fec80c92190afdc59b16b9c">get</a> (std::string_view group, std::string_view name)</td></tr>
-<tr class="separator:a85dee5c79fec80c92190afdc59b16b9c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acef2de43bf9050779b9cbe55d58dc06a" id="r_acef2de43bf9050779b9cbe55d58dc06a"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
-<tr class="memitem:acef2de43bf9050779b9cbe55d58dc06a"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#acef2de43bf9050779b9cbe55d58dc06a">get</a> (std::string_view group, std::string_view name, const auto default_value)</td></tr>
-<tr class="separator:acef2de43bf9050779b9cbe55d58dc06a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07af68b110fe7c9d788594b43383efc1" id="r_a07af68b110fe7c9d788594b43383efc1"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a07af68b110fe7c9d788594b43383efc1"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a07af68b110fe7c9d788594b43383efc1">get</a> (const std::string_view group, const std::string_view name)</td></tr>
+<tr class="separator:a07af68b110fe7c9d788594b43383efc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2156840d0242f740aab582b33e280484" id="r_a2156840d0242f740aab582b33e280484"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a2156840d0242f740aab582b33e280484"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2156840d0242f740aab582b33e280484">get</a> (const std::string_view group, const std::string_view name, const auto default_value)</td></tr>
+<tr class="separator:a2156840d0242f740aab582b33e280484"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8b81146a08940087276f2bd9a999f614" id="r_a8b81146a08940087276f2bd9a999f614"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a8b81146a08940087276f2bd9a999f614"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a8b81146a08940087276f2bd9a999f614">getSilentDefault</a> (const std::string_view group, const std::string_view name, const auto default_value)</td></tr>
+<tr class="separator:a8b81146a08940087276f2bd9a999f614"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
@@ -204,8 +207,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a85dee5c79fec80c92190afdc59b16b9c" name="a85dee5c79fec80c92190afdc59b16b9c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a85dee5c79fec80c92190afdc59b16b9c">&#9670;&#160;</a></span>get() <span class="overload">[1/2]</span></h2>
+<a id="a07af68b110fe7c9d788594b43383efc1" name="a07af68b110fe7c9d788594b43383efc1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a07af68b110fe7c9d788594b43383efc1">&#9670;&#160;</a></span>get() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -215,20 +218,20 @@ template&lt;typename T&gt; </div>
         <tr>
           <td class="memname">std::optional&lt; T &gt; idhan::config::get </td>
           <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="acef2de43bf9050779b9cbe55d58dc06a" name="acef2de43bf9050779b9cbe55d58dc06a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acef2de43bf9050779b9cbe55d58dc06a">&#9670;&#160;</a></span>get() <span class="overload">[2/2]</span></h2>
+<a id="a2156840d0242f740aab582b33e280484" name="a2156840d0242f740aab582b33e280484"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2156840d0242f740aab582b33e280484">&#9670;&#160;</a></span>get() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -238,12 +241,12 @@ template&lt;typename T&gt; </div>
         <tr>
           <td class="memname">T idhan::config::get </td>
           <td>(</td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -270,6 +273,34 @@ template&lt;typename T&gt; </div>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8b81146a08940087276f2bd9a999f614" name="a8b81146a08940087276f2bd9a999f614"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b81146a08940087276f2bd9a999f614">&#9670;&#160;</a></span>getSilentDefault()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">T idhan::config::getSilentDefault </td>
+          <td>(</td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const auto</td>          <td class="paramname"><span class="paramname"><em>default_value</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

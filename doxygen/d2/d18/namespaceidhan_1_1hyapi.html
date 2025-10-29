@@ -186,6 +186,8 @@ Functions</h2></td></tr>
 <tr class="separator:abe1f267b411335de26f397790642f985"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91aa1cafd77b35981bd534654c5e8f93" id="r_a91aa1cafd77b35981bd534654c5e8f93"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; Json::Value, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a91aa1cafd77b35981bd534654c5e8f93">getMetadataInfo</a> (drogon::orm::DbClientPtr db, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, Json::Value data)</td></tr>
 <tr class="separator:a91aa1cafd77b35981bd534654c5e8f93"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a111324af4d94e2b4f8bd69240896c9a4" id="r_a111324af4d94e2b4f8bd69240896c9a4"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; Json::Value, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a111324af4d94e2b4f8bd69240896c9a4">getMetadataFromRow</a> (drogon::orm::DbClientPtr db, const Json::Value services, const drogon::orm::Row row)</td></tr>
+<tr class="separator:a111324af4d94e2b4f8bd69240896c9a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abbdbe7c8606747784d91bb8a1e98f33e" id="r_abbdbe7c8606747784d91bb8a1e98f33e"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; Json::Value &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abbdbe7c8606747784d91bb8a1e98f33e">getServiceList</a> (drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:abbdbe7c8606747784d91bb8a1e98f33e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5c538865c5ad60aa650c211bfb7a249e" id="r_a5c538865c5ad60aa650c211bfb7a249e"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
@@ -364,6 +366,32 @@ template&lt;typename T&gt; </div>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">Json::Value</td>          <td class="paramname"><span class="paramname"><em>data</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a111324af4d94e2b4f8bd69240896c9a4" name="a111324af4d94e2b4f8bd69240896c9a4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a111324af4d94e2b4f8bd69240896c9a4">&#9670;&#160;</a></span>getMetadataFromRow()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; std::expected&lt; Json::Value, drogon::HttpResponsePtr &gt; &gt; idhan::hyapi::getMetadataFromRow </td>
+          <td>(</td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const Json::Value</td>          <td class="paramname"><span class="paramname"><em>services</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const drogon::orm::Row</td>          <td class="paramname"><span class="paramname"><em>row</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
