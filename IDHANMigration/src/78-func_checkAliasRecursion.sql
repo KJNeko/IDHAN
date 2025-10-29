@@ -6,8 +6,8 @@ BEGIN
     -- Check for direct circular reference
     IF (SELECT 1
         FROM tag_aliases a
-        WHERE COALESCE(a.ideal_alias_id, a.alias_id) = new.aliased_id
-          AND a.aliased_id = COALESCE(new.ideal_alias_id, new.alias_id)
+        WHERE a.effective_tag_id = new.aliased_id
+          AND a.aliased_id = new.effective_tag_id
           AND a.tag_domain_id = new.tag_domain_id)
     THEN
         RAISE EXCEPTION 'Circular reference detected between aliases';

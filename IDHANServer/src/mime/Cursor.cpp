@@ -11,7 +11,7 @@
 namespace idhan::mime
 {
 
-coro::ImmedientTask<> CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
+ImmedientTask<> CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
 {
 	log::trace( "Requesting data at offset {} with size {}", offset, required_size );
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
@@ -30,7 +30,7 @@ coro::ImmedientTask<> CursorData::requestData( const std::size_t offset, const s
 	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
 }
 
-coro::ImmedientTask< std::pair< const std::byte*, size_t > > CursorData::
+ImmedientTask< std::pair< const std::byte*, size_t > > CursorData::
 	checkData( const std::size_t pos, const std::size_t required_size ) const
 {
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
@@ -98,7 +98,7 @@ std::size_t Cursor::size() const
 	return m_data->size();
 }
 
-coro::ImmedientTask< std::string_view > Cursor::data( const std::size_t d_size ) const
+drogon::Task< std::string_view > Cursor::data( const std::size_t d_size ) const
 {
 	const auto data_result { co_await m_data->checkData( m_pos, d_size ) };
 	const auto [ ptr, size ] = data_result;
@@ -106,7 +106,7 @@ coro::ImmedientTask< std::string_view > Cursor::data( const std::size_t d_size )
 	co_return std::string_view { reinterpret_cast< const char* >( ptr ), size };
 }
 
-coro::ImmedientTask< bool > Cursor::tryMatch( const std::string_view match ) const
+drogon::Task< bool > Cursor::tryMatch( const std::string_view match ) const
 {
 	FGL_ASSERT( m_data, "Data was invalid" );
 	const auto [ ptr, size ] { co_await m_data->checkData( m_pos, match.size() ) };
@@ -121,7 +121,7 @@ coro::ImmedientTask< bool > Cursor::tryMatch( const std::string_view match ) con
 	co_return passes;
 }
 
-coro::ImmedientTask< bool > Cursor::tryMatchInc( const std::string_view match )
+drogon::Task< bool > Cursor::tryMatchInc( const std::string_view match )
 {
 	const bool is_match { co_await tryMatch( match ) };
 	if ( is_match ) inc( match.size() );

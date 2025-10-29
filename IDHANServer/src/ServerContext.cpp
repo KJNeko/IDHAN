@@ -11,6 +11,7 @@
 
 #include <filesystem>
 #include <paths.hpp>
+#include <ranges>
 
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
@@ -137,9 +138,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::debug( "Logging show debug" );
 	log::info( "Logging show info" );
 
-	std::size_t hardware_count { std::min( static_cast< std::size_t >( std::thread::hardware_concurrency() ), 4ul ) };
+	std::size_t hardware_count { std::max( static_cast< std::size_t >( std::thread::hardware_concurrency() ), 4ul ) };
 	std::size_t io_threads { hardware_count };
-	std::size_t db_threads { io_threads * 2 };
+	std::size_t db_threads { hardware_count / 2 };
 
 	log::info( "IO Threads: {}", io_threads );
 	log::info( "DB Connections: {}", db_threads );

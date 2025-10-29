@@ -23,7 +23,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	root[ "height" ] = metadata[ 0 ][ "height" ].as< std::uint32_t >();
 	root[ "channels" ] = metadata[ 0 ][ "channels" ].as< std::uint32_t >();
 
-	co_return {};
+	co_return std::expected< void, drogon::HttpResponsePtr >();
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
@@ -68,7 +68,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 			break;
 	}
 
-	co_return {};
+	co_return std::expected< void, drogon::HttpResponsePtr >();
 }
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::

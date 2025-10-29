@@ -12,7 +12,7 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::HttpRequestPtr request )
 {
 	const auto json_obj { request->getJsonObject() };
 

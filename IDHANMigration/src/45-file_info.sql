@@ -1,8 +1,8 @@
 CREATE TABLE file_info
 (
-    size      BIGINT                                        NOT NULL,
-    record_id INTEGER UNIQUE REFERENCES records (record_id) NOT NULL,
-    mime_id   INTEGER REFERENCES mime (mime_id),
+    size                BIGINT                                        NOT NULL,
+    record_id           INTEGER UNIQUE REFERENCES records (record_id) NOT NULL,
+    mime_id             INTEGER REFERENCES mime (mime_id),
     cluster_store_time  TIMESTAMP WITHOUT TIME ZONE,                    -- Will be set if the file has been stored in a cluster.
     cluster_delete_time TIMESTAMP WITHOUT TIME ZONE,
     extension           TEXT,

@@ -3,11 +3,12 @@
 //
 #pragma once
 
+#include "api/helpers/pgEscape.hpp"
 #include "crypto/SHA256.hpp"
 #include "logging/format_ns.hpp"
 
 std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SHA256 >& data );
-// std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& strings );
+std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& strings );
 std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SmallInt >& data );
 std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::Int >& data );
 std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::BigInt >& data );
@@ -34,21 +35,23 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< idhan::SHA256 > >( 
 template <>
 inline SqlBinder::self& SqlBinder::operator<< < std::vector< std::string > >( std::vector< std::string >&& param )
 {
+	/*
 	std::string data { "{" };
 	data.reserve( param.size() * 256 );
 	for ( std::size_t i = 0; i < param.size(); i++ )
 	{
-		data += format_ns::format( "\'{}\'", param[ i ] );
+		data += format_ns::format( "\"{}\"", idhan::api::helpers::pgEscape( param[ i ] ) );
 		if ( i + 1 != param.size() ) data += ",";
 	}
 	data += "}";
 
 	return *this << data;
-	/*
+	//*/
+	///*
 
 	++parametersNumber_;
 	auto binary_data = std::make_shared<
-		// std::vector< std::byte > >( createPgBinaryArray( std::forward< std::vector< std::string > >( param ) ) );
+		std::vector< std::byte > >( createPgBinaryArray( std::forward< std::vector< std::string > >( param ) ) );
 	objs_.push_back( binary_data );
 
 	parameters_.push_back( reinterpret_cast< const char* >( binary_data->data() ) );
@@ -56,7 +59,7 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< std::string > >( st
 	formats_.push_back( 1 );
 
 	return *this;
-	*/
+	//*/
 }
 
 // Generic template for integer types

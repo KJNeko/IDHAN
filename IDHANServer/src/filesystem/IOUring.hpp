@@ -12,7 +12,6 @@
 #include "WriteAwaiter.hpp"
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
-#include "threading/ImmedientTask.hpp"
 
 namespace idhan
 {
@@ -44,8 +43,8 @@ class [[nodiscard]] FileIOUring
 	[[nodiscard]] std::size_t size() const;
 
 	[[nodiscard]] const std::filesystem::path& path() const;
-	[[nodiscard]] coro::ImmedientTask< std::vector< std::byte > > readAll() const;
-	[[nodiscard]] coro::ImmedientTask< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
+	[[nodiscard]] drogon::Task< std::vector< std::byte > > readAll() const;
+	[[nodiscard]] drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
 	[[nodiscard]] drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 ) const;
 	[[nodiscard]] drogon::Task< std::vector< std::byte > > fallbackRead( std::size_t offset, std::size_t len ) const;
 	[[nodiscard]] drogon::Task< void > fallbackWrite( std::vector< std::byte > data, std::size_t size ) const;

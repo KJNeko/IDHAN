@@ -4,6 +4,10 @@
 
 #include "drogonArrayBind.hpp"
 
+#include <codecvt>
+#include <locale>
+#include <string>
+
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
 #include "spdlog/fmt/bin_to_hex.h"

@@ -21,7 +21,7 @@ class MimeMatchSearch final : public MimeMatchBase
 	std::int64_t m_offset { NO_OFFSET };
 	std::size_t m_limit { std::numeric_limits< std::size_t >::max() };
 
-	coro::ImmedientTask< bool > match( Cursor& cursor ) const override;
+	drogon::Task< bool > match( Cursor& cursor ) const override;
 
   public:
 

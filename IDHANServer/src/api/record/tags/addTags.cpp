@@ -2,11 +2,11 @@
 // Created by kj16609 on 3/11/25.
 //
 
-#include "../../../db/drogonArrayBind.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
@@ -286,6 +286,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	const auto& records_json { json[ "records" ] };
 
+	std::vector< drogon::Task< std::expected< void, drogon::HttpResponsePtr > > > add_results {};
+
 	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
 	if ( const auto& tags_json = json[ "tags" ]; tags_json.isArray() )
 	{
@@ -302,13 +304,19 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 			if ( !record_json.isIntegral() )
 				co_return createBadRequest( "Invalid json item in records list: Expected integral" );
 
-			const auto result { co_await addTagsToRecord(
+			// const auto result { co_await addTagsToRecord(
+			// 	static_cast< RecordID >( record_json.asInt64() ),
+			// 	std::move( tag_pair_ids.value() ),
+			// 	tag_domain_id.value(),
+			// 	db ) };
+
+			// if ( !result ) co_return result.error();
+
+			add_results.emplace_back( addTagsToRecord(
 				static_cast< RecordID >( record_json.asInt64() ),
 				std::move( tag_pair_ids.value() ),
 				tag_domain_id.value(),
-				db ) };
-
-			if ( !result ) co_return result.error();
+				db ) );
 		}
 	}
 	else if ( !tags_json.isNull() )
@@ -325,9 +333,34 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 				records_json.size(),
 				json.toStyledString() );
 
+		using Task = drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >;
+		std::vector< Task > sets_processing_tasks {};
+		sets_processing_tasks.reserve( records_json.size() );
+
+		for ( const auto& set_json : sets_json )
+		{
+			auto task = [ db ]( Json::Value set_json ) -> Task
+			{
+				const auto tags { co_await getTagPairs( set_json ) };
+
+				if ( !tags ) co_return std::unexpected( tags.error() );
+
+				const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db ) };
+
+				if ( !tag_ids_e ) co_return std::unexpected( tag_ids_e.error() );
+
+				co_return *tag_ids_e;
+			};
+
+			sets_processing_tasks.emplace_back( task( set_json ) );
+		}
+
+		auto sets { co_await drogon::when_all( std::move( sets_processing_tasks ) ) };
+
 		for ( Json::ArrayIndex i = 0; i < sets_json.size(); ++i )
 		{
 			// each set will be an array of tags
+			/*
 			const auto tags { co_await getTagPairs( sets_json[ i ] ) };
 
 			if ( !tags ) co_return tags.error();
@@ -335,21 +368,38 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 			const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db ) };
 
 			if ( !tag_ids_e ) co_return tag_ids_e.error();
+			*/
+			const auto& tag_ids_e { sets[ i ] };
 
 			auto tag_ids { tag_ids_e.value() };
 
-			const auto result { co_await addTagsToRecord(
-				static_cast< RecordID >( records_json[ i ].asInt64() ),
-				std::move( tag_ids ),
-				tag_domain_id.value(),
-				db ) };
+			// const auto result { co_await addTagsToRecord(
+			// 	static_cast< RecordID >( records_json[ i ].asInt64() ),
+			// 	std::move( tag_ids ),
+			// 	tag_domain_id.value(),
+			// 	db ) };
 
-			if ( !result ) co_return result.error();
+			const auto record_json { records_json[ i ] };
+
+			add_results.emplace_back( addTagsToRecord(
+				static_cast< RecordID >( record_json.asInt64() ), std::move( tag_ids ), tag_domain_id.value(), db ) );
+
+			// if ( !result ) co_return result.error();
 		}
 	}
 	else if ( !sets_json.isNull() )
 	{
 		co_return createBadRequest( "Invalid json: Sets must be array or null (not present)" );
+	}
+
+	const auto await_result { co_await drogon::when_all( std::move( add_results ) ) };
+
+	for ( const auto& result : await_result )
+	{
+		if ( !result )
+		{
+			co_return result.error();
+		}
 	}
 
 	co_return drogon::HttpResponse::newHttpResponse();
