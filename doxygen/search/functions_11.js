@@ -12,7 +12,7 @@ var searchData=
   ['trantorhook_9',['trantorHook',['../dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8',1,'idhan']]],
   ['trygetcli_10',['tryGetCLI',['../d6/db4/namespaceidhan_1_1config.html#a2f73b3fd9b6fa82c8f984e936cf4fb86',1,'idhan::config']]],
   ['trygetenv_11',['tryGetEnv',['../d6/db4/namespaceidhan_1_1config.html#a92364f7583cb897b92c4ee81038fe395',1,'idhan::config']]],
-  ['trymatch_12',['tryMatch',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#a70f3f2232ec5ac94e2f334cd186c1a9f',1,'idhan::mime::Cursor']]],
-  ['trymatchinc_13',['tryMatchInc',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#a1baf2921764f2bdcfede073a817f1623',1,'idhan::mime::Cursor']]],
+  ['trymatch_12',['tryMatch',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#ae47c61708f017becbd610ad9036902f5',1,'idhan::mime::Cursor']]],
+  ['trymatchinc_13',['tryMatchInc',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#aa3537b85a228c4a2d61e15c16143f7f2',1,'idhan::mime::Cursor']]],
   ['tryparserecordmetadata_14',['tryParseRecordMetadata',['../db/de4/namespaceidhan_1_1api.html#ad195a10296740e562e2cf4d15795a462',1,'idhan::api']]]
 ];

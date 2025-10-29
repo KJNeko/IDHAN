@@ -136,10 +136,10 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a751bd7f6668b2449464dd94410c06bf8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae9e539a1203071a10b15bf014322ae53" id="r_ae9e539a1203071a10b15bf014322ae53"><td class="memItemLeft" align="right" valign="top">const std::filesystem::path &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9e539a1203071a10b15bf014322ae53">path</a> () const</td></tr>
 <tr class="separator:ae9e539a1203071a10b15bf014322ae53"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5b838ad722a4acc80e1b9c270241da27" id="r_a5b838ad722a4acc80e1b9c270241da27"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d9/da5/namespaceidhan_1_1coro.html#a9fea6e44d5f8b6596ea50e9b3377a981">coro::ImmedientTask</a>&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5b838ad722a4acc80e1b9c270241da27">readAll</a> () const</td></tr>
-<tr class="separator:a5b838ad722a4acc80e1b9c270241da27"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad60cfba1b5259ee04c6aef10941caf51" id="r_ad60cfba1b5259ee04c6aef10941caf51"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d9/da5/namespaceidhan_1_1coro.html#a9fea6e44d5f8b6596ea50e9b3377a981">coro::ImmedientTask</a>&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad60cfba1b5259ee04c6aef10941caf51">read</a> (std::size_t offset, std::size_t len) const</td></tr>
-<tr class="separator:ad60cfba1b5259ee04c6aef10941caf51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2697022ca2ada9df751913871510e834" id="r_a2697022ca2ada9df751913871510e834"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2697022ca2ada9df751913871510e834">readAll</a> () const</td></tr>
+<tr class="separator:a2697022ca2ada9df751913871510e834"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63f9cd6379eb1404e3bb7551777488b8" id="r_a63f9cd6379eb1404e3bb7551777488b8"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a63f9cd6379eb1404e3bb7551777488b8">read</a> (std::size_t offset, std::size_t len) const</td></tr>
+<tr class="separator:a63f9cd6379eb1404e3bb7551777488b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a502adaa0964f98a481d1507aa8eb985f" id="r_a502adaa0964f98a481d1507aa8eb985f"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a502adaa0964f98a481d1507aa8eb985f">write</a> (std::vector&lt; std::byte &gt; data, std::size_t offset=0) const</td></tr>
 <tr class="separator:a502adaa0964f98a481d1507aa8eb985f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a588eb355339c04edc5636257f0871471" id="r_a588eb355339c04edc5636257f0871471"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a588eb355339c04edc5636257f0871471">fallbackRead</a> (std::size_t offset, std::size_t len) const</td></tr>
@@ -442,8 +442,8 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="ad60cfba1b5259ee04c6aef10941caf51" name="ad60cfba1b5259ee04c6aef10941caf51"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad60cfba1b5259ee04c6aef10941caf51">&#9670;&#160;</a></span>read()</h2>
+<a id="a63f9cd6379eb1404e3bb7551777488b8" name="a63f9cd6379eb1404e3bb7551777488b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a63f9cd6379eb1404e3bb7551777488b8">&#9670;&#160;</a></span>read()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -452,7 +452,7 @@ Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d9/da5/namespaceidhan_1_1coro.html#a9fea6e44d5f8b6596ea50e9b3377a981">coro::ImmedientTask</a>&lt; std::vector&lt; std::byte &gt; &gt; idhan::FileIOUring::read </td>
+          <td class="memname">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt; idhan::FileIOUring::read </td>
           <td>(</td>
           <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>offset</em></span>, </td>
         </tr>
@@ -471,8 +471,8 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a5b838ad722a4acc80e1b9c270241da27" name="a5b838ad722a4acc80e1b9c270241da27"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5b838ad722a4acc80e1b9c270241da27">&#9670;&#160;</a></span>readAll()</h2>
+<a id="a2697022ca2ada9df751913871510e834" name="a2697022ca2ada9df751913871510e834"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2697022ca2ada9df751913871510e834">&#9670;&#160;</a></span>readAll()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -481,7 +481,7 @@ Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d9/da5/namespaceidhan_1_1coro.html#a9fea6e44d5f8b6596ea50e9b3377a981">coro::ImmedientTask</a>&lt; std::vector&lt; std::byte &gt; &gt; idhan::FileIOUring::readAll </td>
+          <td class="memname">drogon::Task&lt; std::vector&lt; std::byte &gt; &gt; idhan::FileIOUring::readAll </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>

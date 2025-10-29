@@ -29,8 +29,8 @@ var searchData=
   ['thumbnail_26',['Thumbnail',['../index.html#autotoc_md0',1,'']]],
   ['thumbnail_27',['thumbnail',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#af0b1b5cf5917627da42e16a6df6879cb',1,'idhan::hyapi::HydrusAPI']]],
   ['timepoint_28',['TimePoint',['../de/d50/structidhan_1_1logging_1_1ScopedTimer.html#a05297b1820737ce057c423227a8189f7',1,'idhan::logging::ScopedTimer']]],
-  ['to_20build_29',['How to build',['../d0/d30/md_README.html#autotoc_md7',1,'']]],
-  ['to_20configure_30',['How to configure',['../d0/d30/md_README.html#autotoc_md8',1,'']]],
+  ['to_20build_29',['How to build',['../d0/d30/md_README.html#autotoc_md8',1,'']]],
+  ['to_20configure_30',['How to configure',['../d0/d30/md_README.html#autotoc_md9',1,'']]],
   ['to_20idhan_20s_20page_31',['Welcome to IDHAN&apos;s page',['../d0/d30/md_README.html',1,'']]],
   ['to_5fsubmit_32',['to_submit',['../dd/d25/classidhan_1_1IOUring.html#aecd79668806141324f95f1f45d57b578',1,'idhan::IOUring']]],
   ['toqstring_33',['toQString',['../dd/d66/structidhan_1_1IDHANClient_1_1TagInfo.html#abf42bd9ee4c6b03da394c7629e8125b0',1,'idhan::IDHANClient::TagInfo']]],
@@ -43,8 +43,8 @@ var searchData=
   ['trantorhook_40',['trantorHook',['../dd/dcf/namespaceidhan.html#a654cd3b3bfaffed8056f562beb1e47d8',1,'idhan']]],
   ['trygetcli_41',['tryGetCLI',['../d6/db4/namespaceidhan_1_1config.html#a2f73b3fd9b6fa82c8f984e936cf4fb86',1,'idhan::config']]],
   ['trygetenv_42',['tryGetEnv',['../d6/db4/namespaceidhan_1_1config.html#a92364f7583cb897b92c4ee81038fe395',1,'idhan::config']]],
-  ['trymatch_43',['tryMatch',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#a70f3f2232ec5ac94e2f334cd186c1a9f',1,'idhan::mime::Cursor']]],
-  ['trymatchinc_44',['tryMatchInc',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#a1baf2921764f2bdcfede073a817f1623',1,'idhan::mime::Cursor']]],
+  ['trymatch_43',['tryMatch',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#ae47c61708f017becbd610ad9036902f5',1,'idhan::mime::Cursor']]],
+  ['trymatchinc_44',['tryMatchInc',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#aa3537b85a228c4a2d61e15c16143f7f2',1,'idhan::mime::Cursor']]],
   ['tryparserecordmetadata_45',['tryParseRecordMetadata',['../db/de4/namespaceidhan_1_1api.html#ad195a10296740e562e2cf4d15795a462',1,'idhan::api']]],
   ['type_46',['Type',['../d1/d67/structidhan_1_1IOUringUserData.html#a3456a999bbc12bd5d1744bb0c9be1685',1,'idhan::IOUringUserData']]]
 ];

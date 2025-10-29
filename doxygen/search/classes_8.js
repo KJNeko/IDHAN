@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['readawaiter_0',['ReadAwaiter',['../d2/d83/structidhan_1_1ReadAwaiter.html',1,'idhan']]],
-  ['recordapi_1',['RecordAPI',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html',1,'idhan::api']]],
-  ['resolution_2',['Resolution',['../d6/d56/structidhan_1_1mime_1_1Resolution.html',1,'idhan::mime']]]
+  ['promise_5ftype_0',['promise_type',['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html',1,'idhan::ImmedientTask&lt; T &gt;::promise_type'],['../d6/d78/structidhan_1_1ImmedientTask_3_01void_01_4_1_1promise__type.html',1,'idhan::ImmedientTask&lt; void &gt;::promise_type']]]
 ];

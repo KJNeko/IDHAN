@@ -31,11 +31,12 @@ var NAVTREE =
     [ "Mime Parser", "d9/d30/MimeParser.html", null ],
     [ "Welcome to IDHAN's page", "d0/d30/md_README.html", [
       [ "Getting started", "d0/d30/md_README.html#autotoc_md6", [
-        [ "How to build", "d0/d30/md_README.html#autotoc_md7", null ],
-        [ "How to configure", "d0/d30/md_README.html#autotoc_md8", null ]
+        [ "Docker", "d0/d30/md_README.html#autotoc_md7", null ],
+        [ "How to build", "d0/d30/md_README.html#autotoc_md8", null ],
+        [ "How to configure", "d0/d30/md_README.html#autotoc_md9", null ]
       ] ],
-      [ "Clients", "d0/d30/md_README.html#autotoc_md9", null ],
-      [ "Server docs", "d0/d30/md_README.html#autotoc_md10", null ]
+      [ "Clients", "d0/d30/md_README.html#autotoc_md10", null ],
+      [ "Server docs", "d0/d30/md_README.html#autotoc_md11", null ]
     ] ],
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
@@ -78,14 +79,15 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d1/df9/HyAPIResponseEnricher_8hpp_source.html",
-"d3/d67/classidhan_1_1IDHANClient.html#af51ddb59f38262f0d956c17017c2525b",
-"d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a097fdcafa09ecf3cf382200e3bd4890d",
-"d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a6f6395f416e2e85daf81b7f90a27c8c4",
-"db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454",
-"dc/dec/namespacespdlog.html",
-"dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807aac97ad854bf48c774ad3d0863fe1ec8cd",
-"dir_2e7f6124fe61ceba736e0c2c9d2b8342.html"
+"d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a45610fd256854aea54213e9797449565",
+"d3/d67/classidhan_1_1IDHANClient.html#aad54a32d5b8d88fedd9044776d8665a0",
+"d5/d96/decodeHex_8hpp_source.html",
+"d7/d30/structidhan_1_1ImmedientTask.html#a5a22617951f480554fb06f45460ee4dc",
+"d9/d52/structidhan_1_1WriteAwaiter.html#acbd02647c57e56c419b54059fb98515e",
+"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2c988200e952841f7f2895bd2c515046",
+"dd/d91/classidhan_1_1api_1_1Heartbeat.html",
+"de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html#a8f913fd2bfdb07d73f0b8b713aeddc23",
+"index.html#autotoc_md0"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

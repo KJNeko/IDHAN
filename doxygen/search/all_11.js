@@ -4,10 +4,10 @@ var searchData=
   ['ratio_1',['Ratio',['../d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a4c73feb117d14e617579a8278bb3da3e',1,'idhan::hyapi']]],
   ['ratio_2',['ratio',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a8103d35d073e41e522a97a9b76d01147',1,'idhan::api::ClusterInfo']]],
   ['read_3',['READ',['../d1/d67/structidhan_1_1IOUringUserData.html#a3456a999bbc12bd5d1744bb0c9be1685a3466fab4975481651940ed328aa990e4',1,'idhan::IOUringUserData']]],
-  ['read_4',['read',['../d5/d8b/classidhan_1_1FileIOUring.html#ad60cfba1b5259ee04c6aef10941caf51',1,'idhan::FileIOUring']]],
+  ['read_4',['read',['../d5/d8b/classidhan_1_1FileIOUring.html#a63f9cd6379eb1404e3bb7551777488b8',1,'idhan::FileIOUring']]],
   ['read_5fawaiter_5',['read_awaiter',['../d1/d67/structidhan_1_1IOUringUserData.html#a9acea3f1f87d4b9918a0d3879be24d76',1,'idhan::IOUringUserData']]],
   ['read_5fonly_6',['read_only',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a72e7430fde38cd491e8ac54510ea5dca',1,'idhan::api::ClusterInfo']]],
-  ['readall_7',['readAll',['../d5/d8b/classidhan_1_1FileIOUring.html#a5b838ad722a4acc80e1b9c270241da27',1,'idhan::FileIOUring']]],
+  ['readall_7',['readAll',['../d5/d8b/classidhan_1_1FileIOUring.html#a2697022ca2ada9df751913871510e834',1,'idhan::FileIOUring']]],
   ['readawaiter_8',['ReadAwaiter',['../d2/d83/structidhan_1_1ReadAwaiter.html',1,'idhan::ReadAwaiter'],['../d2/d83/structidhan_1_1ReadAwaiter.html#af542d5a3e9675f638669b7c757f5ee9b',1,'idhan::ReadAwaiter::ReadAwaiter()']]],
   ['readawaiter_2ecpp_9',['ReadAwaiter.cpp',['../dd/dbf/ReadAwaiter_8cpp.html',1,'']]],
   ['readawaiter_2ehpp_10',['ReadAwaiter.hpp',['../d9/deb/ReadAwaiter_8hpp.html',1,'']]],
@@ -36,7 +36,7 @@ var searchData=
   ['removeurls_33',['removeUrls',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a495933f9913f58a26fc16e34ab2adb6a',1,'idhan::api::RecordAPI']]],
   ['removeurls_2ecpp_34',['removeUrls.cpp',['../d1/ddd/removeUrls_8cpp.html',1,'']]],
   ['request_35',['Request',['../dd/dcf/namespaceidhan.html#a631bc0d57cda8402afb737a93c7d3c6a',1,'idhan']]],
-  ['requestdata_36',['requestData',['../db/d0c/classidhan_1_1mime_1_1CursorData.html#a44b29a1d5ded1ea4d0f6773476fd27ad',1,'idhan::mime::CursorData']]],
+  ['requestdata_36',['requestData',['../db/d0c/classidhan_1_1mime_1_1CursorData.html#a8490b7197d2833f717f68a6235ef498c',1,'idhan::mime::CursorData']]],
   ['requestnewpermissions_37',['requestNewPermissions',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a18afc80809768409c8cea0f6d68d5969',1,'idhan::hyapi::HydrusAPI']]],
   ['rescanmetadata_38',['rescanMetadata',['../d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#a8443f76224c87e0e136f7361af1a2761',1,'idhan::api::APIMaintenance']]],
   ['rescanmetadata_2ecpp_39',['rescanMetadata.cpp',['../dc/da4/rescanMetadata_8cpp.html',1,'']]],
@@ -46,5 +46,8 @@ var searchData=
   ['responsecallback_2ehpp_43',['ResponseCallback.hpp',['../de/d0b/ResponseCallback_8hpp.html',1,'']]],
   ['responsefunction_44',['ResponseFunction',['../dd/dcf/namespaceidhan.html#ab36e2f7c68cd1ad091d47cc6a44231e1',1,'idhan']]],
   ['responsetask_45',['ResponseTask',['../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#ae87e5f86169969f5fa1ad7cebede9f8d',1,'idhan::api::ClusterAPI::ResponseTask'],['../dd/dcf/namespaceidhan.html#af8dffe5d1800a78e09605b08052fa841',1,'idhan::ResponseTask']]],
-  ['run_46',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
+  ['result_46',['result',['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a7785a570e78af4ca44feb11465283c84',1,'idhan::ImmedientTask::promise_type::result() &amp;&amp;'],['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a28be4dcc39fdbf1bf9107a0221848b5c',1,'idhan::ImmedientTask::promise_type::result() &amp;'],['../d6/d78/structidhan_1_1ImmedientTask_3_01void_01_4_1_1promise__type.html#aae5cfe996dc17eab2e892c5e393b9322',1,'idhan::ImmedientTask&lt; void &gt;::promise_type::result()'],['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a7785a570e78af4ca44feb11465283c84',1,'idhan::ImmedientTask&lt; void &gt;::promise_type::result() &amp;&amp;'],['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a28be4dcc39fdbf1bf9107a0221848b5c',1,'idhan::ImmedientTask&lt; void &gt;::promise_type::result() &amp;']]],
+  ['return_5fvalue_47',['return_value',['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#aa8e0be9f45b5b3299a4a5434074ca5ca',1,'idhan::ImmedientTask::promise_type::return_value(const T &amp;v)'],['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a0607788c234363e928557e80348f6f53',1,'idhan::ImmedientTask::promise_type::return_value(T &amp;&amp;v)'],['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#aa8e0be9f45b5b3299a4a5434074ca5ca',1,'idhan::ImmedientTask&lt; void &gt;::promise_type::return_value(const void &amp;v)'],['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a0607788c234363e928557e80348f6f53',1,'idhan::ImmedientTask&lt; void &gt;::promise_type::return_value(void &amp;&amp;v)']]],
+  ['return_5fvoid_48',['return_void',['../d6/d78/structidhan_1_1ImmedientTask_3_01void_01_4_1_1promise__type.html#ac924abb3af265c541af8f16827b21ef4',1,'idhan::ImmedientTask&lt; void &gt;::promise_type']]],
+  ['run_49',['run',['../d0/d4c/classidhan_1_1ServerContext.html#ab0a3b58db1d4e84d993f2488958625ef',1,'idhan::ServerContext']]]
 ];

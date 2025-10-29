@@ -32,5 +32,6 @@ var searchData=
   ['previouslydeleted_29',['PreviouslyDeleted',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a124ca310f93eccdc9790b24fce74329c',1,'idhan::hyapi']]],
   ['priority_30',['Priority',['../d0/d78/classidhan_1_1mime_1_1Cursor.html#afaab6c8149e922af24480d6db2b5a64d',1,'idhan::mime::Cursor']]],
   ['priority_31',['priority',['../d2/db7/classidhan_1_1mime_1_1MimeIdentifier.html#a949be2e82bf8ce14f6382ddbad921edb',1,'idhan::mime::MimeIdentifier']]],
-  ['ptr_5fservice_32',['PTR_SERVICE',['../d5/d08/namespaceidhan_1_1hydrus_1_1hy__constants.html#a43eaffc63d902c822fe37eef60b0deb0a884b619d080cea7234c8d71658986f15',1,'idhan::hydrus::hy_constants']]]
+  ['promise_5ftype_32',['promise_type',['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html',1,'idhan::ImmedientTask&lt; T &gt;::promise_type'],['../d6/d78/structidhan_1_1ImmedientTask_3_01void_01_4_1_1promise__type.html',1,'idhan::ImmedientTask&lt; void &gt;::promise_type']]],
+  ['ptr_5fservice_33',['PTR_SERVICE',['../d5/d08/namespaceidhan_1_1hydrus_1_1hy__constants.html#a43eaffc63d902c822fe37eef60b0deb0a884b619d080cea7234c8d71658986f15',1,'idhan::hydrus::hy_constants']]]
 ];

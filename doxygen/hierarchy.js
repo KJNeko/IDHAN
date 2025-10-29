@@ -42,6 +42,8 @@ var hierarchy =
     [ "idhan::mime::ImageInfo", "d3/d75/structidhan_1_1mime_1_1ImageInfo.html", [
       [ "idhan::mime::AnimatedInfo", "d4/dd8/structidhan_1_1mime_1_1AnimatedInfo.html", null ]
     ] ],
+    [ "idhan::ImmedientTask< T >", "d7/d30/structidhan_1_1ImmedientTask.html", null ],
+    [ "idhan::ImmedientTask< void >", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html", null ],
     [ "idhan::IOUring", "dd/d25/classidhan_1_1IOUring.html", null ],
     [ "idhan::IOUringUserData", "d1/d67/structidhan_1_1IOUringUserData.html", null ],
     [ "idhan::ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", null ],
@@ -55,6 +57,8 @@ var hierarchy =
     [ "idhan::modules::ModuleHolder", "d0/d85/classidhan_1_1modules_1_1ModuleHolder.html", null ],
     [ "idhan::modules::ModuleLoader", "d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html", null ],
     [ "idhan::IDHANClient::TagInfo::NamespaceInfo", "df/dad/structidhan_1_1IDHANClient_1_1TagInfo_1_1NamespaceInfo.html", null ],
+    [ "idhan::ImmedientTask< T >::promise_type", "d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html", null ],
+    [ "idhan::ImmedientTask< void >::promise_type", "d6/d78/structidhan_1_1ImmedientTask_3_01void_01_4_1_1promise__type.html", null ],
     [ "QObject", null, [
       [ "idhan::Network", "d9/d66/classidhan_1_1Network.html", null ]
     ] ],

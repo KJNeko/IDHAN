@@ -54,6 +54,8 @@ var annotated_dup =
       [ "FileIOUring", "d5/d8b/classidhan_1_1FileIOUring.html", "d5/d8b/classidhan_1_1FileIOUring" ],
       [ "FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", "db/de9/classidhan_1_1FileMappedData" ],
       [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
+      [ "ImmedientTask", "d7/d30/structidhan_1_1ImmedientTask.html", "d7/d30/structidhan_1_1ImmedientTask" ],
+      [ "ImmedientTask< void >", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4" ],
       [ "IOUring", "dd/d25/classidhan_1_1IOUring.html", "dd/d25/classidhan_1_1IOUring" ],
       [ "IOUringUserData", "d1/d67/structidhan_1_1IOUringUserData.html", "d1/d67/structidhan_1_1IOUringUserData" ],
       [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],

@@ -20,9 +20,6 @@ var namespaceidhan =
     [ "constants", "dd/d68/namespaceidhan_1_1constants.html", [
       [ "INVALID_MIME_ID", "dd/d68/namespaceidhan_1_1constants.html#af2ffeb0dfdbb702b153807024d13f160", null ]
     ] ],
-    [ "coro", "d9/da5/namespaceidhan_1_1coro.html", [
-      [ "ImmedientTask", "d9/da5/namespaceidhan_1_1coro.html#a9fea6e44d5f8b6596ea50e9b3377a981", null ]
-    ] ],
     [ "filesystem", "db/d9b/namespaceidhan_1_1filesystem.html", "db/d9b/namespaceidhan_1_1filesystem" ],
     [ "helpers", "d7/dc1/namespaceidhan_1_1helpers.html", [
       [ "fetchUrlsJson", "d7/dc1/namespaceidhan_1_1helpers.html#a1ed3c01830b74e853e4550e2ebe8f545", null ],
@@ -61,6 +58,8 @@ var namespaceidhan =
     [ "FileIOUring", "d5/d8b/classidhan_1_1FileIOUring.html", "d5/d8b/classidhan_1_1FileIOUring" ],
     [ "FileMappedData", "db/de9/classidhan_1_1FileMappedData.html", "db/de9/classidhan_1_1FileMappedData" ],
     [ "IDHANClient", "d3/d67/classidhan_1_1IDHANClient.html", "d3/d67/classidhan_1_1IDHANClient" ],
+    [ "ImmedientTask", "d7/d30/structidhan_1_1ImmedientTask.html", "d7/d30/structidhan_1_1ImmedientTask" ],
+    [ "ImmedientTask< void >", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4" ],
     [ "IOUring", "dd/d25/classidhan_1_1IOUring.html", "dd/d25/classidhan_1_1IOUring" ],
     [ "IOUringUserData", "d1/d67/structidhan_1_1IOUringUserData.html", "d1/d67/structidhan_1_1IOUringUserData" ],
     [ "ManagementConnection", "dc/dc7/classidhan_1_1ManagementConnection.html", "dc/dc7/classidhan_1_1ManagementConnection" ],

@@ -3,7 +3,7 @@ var searchData=
   ['main_0',['main',['../df/d0a/main_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627',1,'main.cpp']]],
   ['managementconnection_1',['ManagementConnection',['../dc/dc7/classidhan_1_1ManagementConnection.html#a73053209304149e4010be8ecc6e3f84a',1,'idhan::ManagementConnection']]],
   ['masscreaterecord_2',['massCreateRecord',['../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a6333bcb5ca7772ce6cd0e487d5b6e060',1,'idhan::api::helpers']]],
-  ['match_3',['match',['../dc/daa/classidhan_1_1mime_1_1MimeMatchInclude.html#abd1d73f68a74f052a6085e3e8f7fbca8',1,'idhan::mime::MimeMatchInclude::match()'],['../d0/db3/classidhan_1_1mime_1_1MimeMatchSearch.html#a671b14d662c35542f0ac33bf9682dba3',1,'idhan::mime::MimeMatchSearch::match()'],['../d2/dc9/structidhan_1_1mime_1_1MimeMatchBase.html#a7a0ece80f169a66b12490537d79bcbd5',1,'idhan::mime::MimeMatchBase::match()']]],
+  ['match_3',['match',['../dc/daa/classidhan_1_1mime_1_1MimeMatchInclude.html#a82eb81474e6946914ea2d97e76531dd1',1,'idhan::mime::MimeMatchInclude::match()'],['../d0/db3/classidhan_1_1mime_1_1MimeMatchSearch.html#ac734da4ae67ef03ba1706298831117e2',1,'idhan::mime::MimeMatchSearch::match()'],['../d2/dc9/structidhan_1_1mime_1_1MimeMatchBase.html#a1799b48b8f0f6c2467c6b834a18550de',1,'idhan::mime::MimeMatchBase::match()']]],
   ['metatypepathid_4',['metaTypePathID',['../db/d9b/namespaceidhan_1_1filesystem.html#af22279849e95364f785f83f943474ae0',1,'idhan::filesystem']]],
   ['mime_5',['mime',['../d2/db7/classidhan_1_1mime_1_1MimeIdentifier.html#a50c118377dce034bdc984d6c66248773',1,'idhan::mime::MimeIdentifier']]],
   ['mimedatabase_6',['MimeDatabase',['../d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a86607f923ec0a6ffa1492114552ca115',1,'idhan::mime::MimeDatabase']]],
