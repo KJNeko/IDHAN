@@ -145,7 +145,20 @@ int main( int argc, char** argv )
 		const auto name { locale.name() };
 		log::debug( "Checking system locale" );
 		log::info( "System locale: {}", name );
-		if ( name.find( "UTF-8" ) != std::string::npos || name.find( "utf8" ) != std::string::npos )
+
+		std::array< std::string_view, 2 > local_matches { "UTF-8", "utf8" };
+
+		bool found_utf8 { false };
+		for ( const auto& match : local_matches )
+		{
+			if ( name.find( match ) != std::string::npos )
+			{
+				found_utf8 = true;
+				break;
+			}
+		}
+
+		if ( !found_utf8 )
 		{
 			log::critical( "System locale is not UTF8, Aborting (IDHAN must see UTF8 to work properly)" );
 			std::terminate();
