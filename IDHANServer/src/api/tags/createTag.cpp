@@ -48,7 +48,7 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 
 	static std::binary_semaphore sem { 1 };
 
-	if ( tag_pairs.size() == 0 )
+	if ( tag_pairs.empty() )
 	{
 		co_return std::unexpected( createBadRequest( "No tags to create" ) );
 	}

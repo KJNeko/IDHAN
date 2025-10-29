@@ -26,9 +26,9 @@ class CursorData
 	mutable std::vector< std::byte > m_buffer {};
 
 	//! Populates the buffer with data from the offset and at least required_size
-	coro::ImmedientTask<> requestData( std::size_t offset, std::size_t required_size ) const;
+	ImmedientTask<> requestData( std::size_t offset, std::size_t required_size ) const;
 
-	coro::ImmedientTask< std::pair< const std::byte*, size_t > > checkData( std::size_t pos, std::size_t required_size )
+	ImmedientTask< std::pair< const std::byte*, size_t > > checkData( std::size_t pos, std::size_t required_size )
 		const;
 
 	friend class Cursor;
@@ -61,13 +61,13 @@ class Cursor
 	FGL_DEFAULT_MOVE( Cursor );
 
 	std::size_t size() const;
-	coro::ImmedientTask< std::string_view > data( std::size_t size ) const;
+	drogon::Task< std::string_view > data( std::size_t size ) const;
 
 	//! Tries to match `match` with current cursor position.
-	coro::ImmedientTask< bool > tryMatch( std::string_view match ) const;
+	drogon::Task< bool > tryMatch( std::string_view match ) const;
 
 	//! Tries to match `match` with the current cursor position, if matched then the cursor will jump forward by match.size()
-	coro::ImmedientTask< bool > tryMatchInc( std::string_view match );
+	drogon::Task< bool > tryMatchInc( std::string_view match );
 
 	void jumpTo( std::int64_t pos );
 

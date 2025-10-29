@@ -6,7 +6,7 @@ BEGIN
     SELECT new_rows.record_id,
            new_rows.tag_id,
            new_rows.tag_domain_id,
-           COALESCE(ta.ideal_alias_id, ta.alias_id, NULL)
+           ta.effective_tag_id
     FROM new_rows
              JOIN file_info fi ON fi.record_id = new_rows.record_id
              LEFT JOIN tag_aliases ta ON ta.aliased_id = new_rows.tag_id
@@ -32,7 +32,7 @@ BEGIN
     -- new_rows is the table NEW (file_info)
 
     INSERT INTO active_tag_mappings (record_id, tag_id, tag_domain_id, ideal_tag_id)
-    SELECT new_rows.record_id, tag_id, tm.tag_domain_id, COALESCE(ta.ideal_alias_id, ta.alias_id, NULL) AS ideal_tag_id
+    SELECT new_rows.record_id, tag_id, tm.tag_domain_id, COALESCE(ta.ideal_alias_id, ta.alias_id) AS ideal_tag_id
     FROM new_rows
              JOIN tag_mappings tm ON tm.record_id = new_rows.record_id
              LEFT JOIN tag_aliases ta ON ta.aliased_id = tm.tag_id

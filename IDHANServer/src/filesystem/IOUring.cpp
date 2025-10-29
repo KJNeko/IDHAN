@@ -15,7 +15,6 @@
 #include "drogon/HttpAppFramework.h"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
-#include "threading/ImmedientTask.hpp"
 
 namespace idhan
 {
@@ -58,13 +57,13 @@ const std::filesystem::path& FileIOUring::path() const
 	return m_path;
 }
 
-coro::ImmedientTask< std::vector< std::byte > > FileIOUring::readAll() const
+drogon::Task< std::vector< std::byte > > FileIOUring::readAll() const
 {
 	const auto file_size { std::filesystem::file_size( m_path ) };
 	co_return co_await read( 0, file_size );
 }
 
-coro::ImmedientTask< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len )
+drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len )
 	const
 {
 	auto& uring { IOUring::getInstance() };

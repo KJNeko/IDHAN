@@ -1,1 +1,0 @@
-CREATE INDEX ON tags_combined (tag_text) INCLUDE (tag_id);

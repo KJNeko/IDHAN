@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION createbatchtags(
 )
     RETURNS TABLE
             (
-                tag_id INTEGER,
+                tag_id         INTEGER,
                 namespace_text TEXT,
                 subtag_text    TEXT
             )
@@ -50,7 +50,11 @@ BEGIN
     RETURN QUERY
         WITH tag_texts AS (SELECT t.namespace_text, t.subtag_text, t.ord
                            FROM UNNEST(namespaces, subtags) WITH ORDINALITY AS t(namespace_text, subtag_text, ord)),
-             component_ids AS (SELECT tag_texts.ord, tag_texts.namespace_text, tag_namespaces.namespace_id, tag_texts.subtag_text, tag_subtags.subtag_id
+             component_ids AS (SELECT tag_texts.ord,
+                                      tag_texts.namespace_text,
+                                      tag_namespaces.namespace_id,
+                                      tag_texts.subtag_text,
+                                      tag_subtags.subtag_id
                                FROM tag_texts
                                         JOIN tag_namespaces ON tag_texts.namespace_text = tag_namespaces.namespace_text
                                         JOIN tag_subtags ON tag_texts.subtag_text = tag_subtags.subtag_text)

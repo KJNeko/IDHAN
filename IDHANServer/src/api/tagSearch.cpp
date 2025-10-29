@@ -12,7 +12,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::
 {
 	auto db { drogon::app().getDbClient() };
 
-	const auto result { co_await db->execSqlCoro( "SELECT tag_id FROM tags_combined WHERE tag_text = $1", tag_text ) };
+	const auto result { co_await db->execSqlCoro( "SELECT tag_id FROM tags WHERE tag_text = $1", tag_text ) };
 
 	Json::Value json {};
 

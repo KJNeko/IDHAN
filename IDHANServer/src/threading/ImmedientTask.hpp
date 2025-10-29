@@ -1,184 +1,144 @@
 //
-// Created by kj16609 on 10/22/25.
+// Created by kj16609 on 10/29/25.
 //
 #pragma once
 #include <coroutine>
-#include <exception>
-#include <expected>
 
-#include "drogon/utils/coroutine.h"
-#include "logging/log.hpp"
-
-namespace idhan::coro
+namespace idhan
 {
 
 template < typename T = void >
-using ImmedientTask = ::drogon::Task<T>;
-
-///*
-// template < typename T = void >
-// struct ImmedientTask;
-
-/*
-using inital_suspend_status = std::suspend_always;
-
-template < typename T >
-struct [[nodiscard]] PromiseType
+struct ImmedientTask
 {
-	using Type = T;
-	std::coroutine_handle<> m_cont {};
-	std::optional< T > m_data { std::nullopt };
-	std::exception_ptr m_exception {};
+	struct promise_type;
+	using handle_type = std::coroutine_handle< promise_type >;
 
-	ImmedientTask< T > get_return_object() noexcept
+	ImmedientTask( handle_type h ) : coro_( h ) {}
+
+	ImmedientTask( const ImmedientTask& ) = delete;
+
+	ImmedientTask( ImmedientTask&& other ) noexcept
 	{
-		return { std::coroutine_handle< PromiseType >::from_promise( *this ) };
+		coro_ = other.coro_;
+		other.coro_ = nullptr;
 	}
 
-	static std::suspend_never initial_suspend() noexcept { return {}; }
-
-	void unhandled_exception() { m_exception = std::current_exception(); }
-
-	auto final_suspend() noexcept
+	~ImmedientTask()
 	{
-		struct awaiter
+		if ( coro_ ) coro_.destroy();
+	}
+
+	ImmedientTask& operator=( const ImmedientTask& ) = delete;
+
+	ImmedientTask& operator=( ImmedientTask&& other ) noexcept
+	{
+		if ( std::addressof( other ) == this ) return *this;
+		if ( coro_ ) coro_.destroy();
+
+		coro_ = other.coro_;
+		other.coro_ = nullptr;
+		return *this;
+	}
+
+	struct promise_type
+	{
+		ImmedientTask< T > get_return_object() { return ImmedientTask< T > { handle_type::from_promise( *this ) }; }
+
+		std::suspend_never initial_suspend() { return {}; }
+
+		void return_value( const T& v ) { value = v; }
+
+		void return_value( T&& v ) { value = std::move( v ); }
+
+		auto final_suspend() noexcept { return drogon::final_awaiter {}; }
+
+		void unhandled_exception() { exception_ = std::current_exception(); }
+
+		T&& result() &&
 		{
-			bool await_ready() noexcept { return false; }
+			if ( exception_ != nullptr ) std::rethrow_exception( exception_ );
+			assert( value.has_value() == true );
+			return std::move( value.value() );
+		}
 
-			void await_resume() noexcept {}
+		T& result() &
+		{
+			if ( exception_ != nullptr ) std::rethrow_exception( exception_ );
+			assert( value.has_value() == true );
+			return value.value();
+		}
 
-			[[nodiscard]] std::coroutine_handle<> await_suspend( std::coroutine_handle< PromiseType > h ) noexcept
-			{
-				if ( auto continuation = h.promise().m_cont )
-				{
-					return continuation;
-				}
-				return std::noop_coroutine();
-			}
-		};
+		void setContinuation( std::coroutine_handle<> handle ) { continuation_ = handle; }
 
-		return awaiter {};
-	}
+		std::optional< T > value;
+		std::exception_ptr exception_;
+		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
+	};
 
-	void return_value( const T& value ) noexcept { m_data = value; }
+	auto operator co_await() const noexcept { return drogon::task_awaiter< promise_type >( coro_ ); }
+
+	handle_type coro_;
 };
 
 template <>
-struct [[nodiscard]] PromiseType< void >
+struct [[nodiscard]] ImmedientTask< void >
 {
-	using Type = void;
-	std::coroutine_handle<> m_cont {};
-	std::exception_ptr m_exception {};
+	struct promise_type;
+	using handle_type = std::coroutine_handle< promise_type >;
 
-	ImmedientTask< void > get_return_object() noexcept;
+	ImmedientTask( handle_type handle ) : coro_( handle ) {}
 
-	static std::suspend_never initial_suspend() noexcept { return {}; }
+	ImmedientTask( const ImmedientTask& ) = delete;
 
-	void unhandled_exception() { m_exception = std::current_exception(); }
-
-	auto final_suspend() noexcept
+	ImmedientTask( ImmedientTask&& other ) noexcept
 	{
-		struct awaiter
-		{
-			bool await_ready() noexcept { return false; }
-
-			void await_resume() noexcept {}
-
-			[[nodiscard]] std::coroutine_handle<> await_suspend( std::coroutine_handle< PromiseType > h ) noexcept
-			{
-				if ( auto continuation = h.promise().m_cont )
-				{
-					return continuation;
-				}
-				return std::noop_coroutine();
-			}
-		};
-
-		return awaiter {};
+		coro_ = other.coro_;
+		other.coro_ = nullptr;
 	}
 
-	void return_void() noexcept {}
+	~ImmedientTask()
+	{
+		if ( coro_ ) coro_.destroy();
+	}
+
+	ImmedientTask& operator=( const ImmedientTask& ) = delete;
+
+	ImmedientTask& operator=( ImmedientTask&& other ) noexcept
+	{
+		if ( std::addressof( other ) == this ) return *this;
+		if ( coro_ ) coro_.destroy();
+
+		coro_ = other.coro_;
+		other.coro_ = nullptr;
+		return *this;
+	}
+
+	struct promise_type
+	{
+		ImmedientTask<> get_return_object() { return ImmedientTask<> { handle_type::from_promise( *this ) }; }
+
+		std::suspend_never initial_suspend() { return {}; }
+
+		void return_void() {}
+
+		auto final_suspend() noexcept { return drogon::final_awaiter {}; }
+
+		void unhandled_exception() { exception_ = std::current_exception(); }
+
+		void result()
+		{
+			if ( exception_ != nullptr ) std::rethrow_exception( exception_ );
+		}
+
+		void setContinuation( std::coroutine_handle<> handle ) { continuation_ = handle; }
+
+		std::exception_ptr exception_;
+		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
+	};
+
+	auto operator co_await() const noexcept { return drogon::task_awaiter< promise_type >( coro_ ); }
+
+	handle_type coro_;
 };
 
-template < typename PromiseType >
-struct Awaiter
-{
-	std::coroutine_handle< PromiseType > m_h;
-	using T = typename PromiseType::Type;
-
-	bool await_ready() noexcept { return !m_h || m_h.done(); }
-
-	std::coroutine_handle<> await_suspend( std::coroutine_handle<> awaiting ) noexcept
-	{
-		if ( !m_h )
-		{
-			log::critical( "Invalid Coro given to Awaiter in Task builder" );
-			std::terminate();
-		}
-
-		if ( m_h.done() )
-		{
-			// go back to running the same coro
-			return std::noop_coroutine();
-		}
-
-		m_h.promise().m_cont = awaiting;
-		return m_h;
-	}
-
-	T await_resume() noexcept
-	{
-		auto& promise { m_h.promise() };
-
-		if ( promise.m_exception )
-		{
-			std::rethrow_exception( promise.m_exception );
-		}
-
-		if constexpr ( !std::is_void_v< T > )
-		{
-			auto& data { promise.m_data };
-
-			if ( !data.has_value() )
-			{
-				log::critical( "Invalid coroutine. Coro did not have value" );
-				std::terminate();
-			}
-
-			return std::move( m_h.promise().m_data.value() );
-		}
-		else
-		{
-			return;
-		}
-	}
-};
-
-template < typename T >
-struct [[nodiscard]] ImmedientTask
-{
-	using promise_type = PromiseType< T >;
-	std::coroutine_handle< promise_type > m_h;
-
-	[[nodiscard]] bool await_ready() const noexcept { return m_h.done(); }
-
-	[[nodiscard]] T await_resume() const noexcept
-	{
-		FGL_ASSERT( m_h.promise().m_data.has_value(), "Promise did not have value" );
-		return m_h.promise().m_data.value();
-	}
-
-	void await_suspend( std::coroutine_handle<> caller ) const noexcept { m_h.promise().m_cont = caller; }
-
-	auto operator co_await() noexcept { return Awaiter { m_h }; }
-
-	~ImmedientTask() {}
-};
-
-inline ImmedientTask< void > PromiseType< void >::get_return_object() noexcept
-{
-	return { std::coroutine_handle< PromiseType >::from_promise( *this ) };
-}
-*/
-
-} // namespace idhan::coro
+} // namespace idhan

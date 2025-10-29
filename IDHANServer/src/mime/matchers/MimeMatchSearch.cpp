@@ -11,12 +11,11 @@
 
 #include "../Cursor.hpp"
 #include "drogon/utils/coroutine.h"
-#include "spdlog/fmt/bin_to_hex.h"
 
 namespace idhan::mime
 {
 
-coro::ImmedientTask< bool > MimeMatchSearch::match( Cursor& cursor ) const
+drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 {
 	if ( m_offset >= 0 && m_offset != NO_OFFSET )
 	{

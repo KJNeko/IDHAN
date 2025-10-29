@@ -7,13 +7,13 @@ BEGIN
 
         -- On INSERT or UPDATE: Recalculate mappings for affected tags
         WHEN 'INSERT' THEN UPDATE active_tag_mappings
-                           SET ideal_tag_id = COALESCE(new.ideal_alias_id, new.alias_id)
+                           SET ideal_tag_id = new.effective_tag_id
                            WHERE tag_id = new.aliased_id
                              AND tag_domain_id = new.tag_domain_id;
         WHEN 'UPDATE' THEN UPDATE active_tag_mappings
-                           SET ideal_tag_id = COALESCE(new.ideal_alias_id, new.alias_id)
+                           SET ideal_tag_id = new.effective_tag_id
                            WHERE tag_id = old.aliased_id
-                             AND ideal_tag_id = COALESCE(old.ideal_alias_id, old.alias_id)
+                             AND ideal_tag_id = old.effective_tag_id
                              AND tag_domain_id = new.tag_domain_id;
         -- On DELETE: Remove mappings that were using the deleted alias
         WHEN 'DELETE' THEN UPDATE active_tag_mappings

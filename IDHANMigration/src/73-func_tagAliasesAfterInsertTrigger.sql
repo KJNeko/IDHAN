@@ -6,17 +6,17 @@ $$
 BEGIN
 
     UPDATE tag_aliases
-    SET ideal_alias_id = COALESCE(new.ideal_alias_id, new.alias_id)
-    WHERE COALESCE(ideal_alias_id, alias_id) = new.aliased_id
+    SET ideal_alias_id = new.effective_tag_id
+    WHERE effective_tag_id = new.aliased_id
       AND tag_domain_id = new.tag_domain_id;
 
     UPDATE tag_parents
-    SET ideal_parent_id = COALESCE(new.ideal_alias_id, new.alias_id)
+    SET ideal_parent_id = new.effective_tag_id
     WHERE parent_id = new.aliased_id
       AND tag_domain_id = new.tag_domain_id;
 
     UPDATE tag_parents
-    SET ideal_child_id = COALESCE(new.ideal_alias_id, new.alias_id)
+    SET ideal_child_id = new.effective_tag_id
     WHERE child_id = new.aliased_id
       AND tag_domain_id = new.tag_domain_id;
 
@@ -37,7 +37,10 @@ AS
 $$
 BEGIN
 
-    new.ideal_alias_id = (SELECT COALESCE(ideal_alias_id, alias_id) FROM tag_aliases fa WHERE fa.aliased_id = new.alias_id AND fa.tag_domain_id = new.tag_domain_id);
+    new.ideal_alias_id = (SELECT fa.effective_tag_id
+                          FROM tag_aliases fa
+                          WHERE fa.aliased_id = new.alias_id
+                            AND fa.tag_domain_id = new.tag_domain_id);
 
     RETURN new;
 END;

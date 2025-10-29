@@ -9,12 +9,11 @@ BEGIN
     WHERE tm.tag_domain_id = new.tag_domain_id
       AND tm.tag_id = new.child_id;
 
-    INSERT INTO active_tag_mappings_parents (record_id, tag_id, origin_id, tag_domain_id, internal, internal_count)
-    SELECT DISTINCT atmp.record_id,
-                    new.parent_id,
-                    new.child_id,
-                    new.tag_domain_id,
-                    TRUE                                          AS internal,
+    INSERT INTO active_tag_mappings_parents (record_id, tag_id, origin_id, tag_domain_id, internal_count)
+    SELECT DISTINCT atmp.record_id                                as record_id,
+                    new.parent_id                                 as tag_id,
+                    new.child_id                                  as origin_id,
+                    new.tag_domain_id                             as tag_domain_id,
                     (SELECT COUNT(*)
                      FROM active_tag_mappings_parents atmp_count
                      WHERE atmp_count.tag_domain_id = new.tag_domain_id
@@ -65,17 +64,16 @@ BEGIN
     -- whenever a mapping is inserted into the active mappings
     -- insert it's parents as well
 
-    INSERT INTO active_tag_mappings_parents (record_id, tag_id, origin_id, tag_domain_id, internal, internal_count)
-    SELECT new.record_id,
-           parent_id,
-           new.tag_id,
-           new.tag_domain_id,
-           FALSE AS internal,
-           0     AS internal_count
+    INSERT INTO active_tag_mappings_parents (record_id, tag_id, origin_id, tag_domain_id, internal_count)
+    SELECT new.record_id     as record_id,
+           parent_id         as tag_id,
+           new.tag_id        as origin_id,
+           new.tag_domain_id as tag_domain_id,
+           0                 AS internal_count
     FROM tag_parents tp
     WHERE tp.tag_domain_id = new.tag_domain_id
       AND tp.child_id = new.tag_id
-    ON CONFLICT (record_id, tag_id, origin_id, tag_domain_id) DO UPDATE SET internal = FALSE;
+    ON CONFLICT (record_id, tag_id, origin_id, tag_domain_id) DO UPDATE SET internal_count = excluded.internal_count + 1;
 
     RETURN new;
 END;
@@ -87,13 +85,10 @@ CREATE TRIGGER trg_insert_active_tag_mappings_parents_from_mappings
     FOR EACH ROW
 EXECUTE FUNCTION insert_active_tag_mappings_parents_from_mappings();
 
-
 CREATE OR REPLACE FUNCTION delete_active_tag_mappings_parents_from_mappings()
     RETURNS TRIGGER AS
 $$
 BEGIN
-
-
     UPDATE active_tag_mappings_parents
     SET internal = TRUE
     WHERE record_id = old.record_id
@@ -120,20 +115,14 @@ CREATE TRIGGER trg_delete_active_tag_mappings_parents_from_mappings
     FOR EACH ROW
 EXECUTE FUNCTION delete_active_tag_mappings_parents_from_mappings();
 
-INSERT INTO active_tag_mappings_parents (record_id, tag_id, origin_id, tag_domain_id)
-SELECT tm.record_id, tp.parent_id, tp.child_id, tp.tag_domain_id
-FROM active_tag_mappings tm
-         JOIN tag_parents tp
-              ON
-                  COALESCE(tm.ideal_tag_id, tm.tag_id) = COALESCE(tp.ideal_child_id, tp.child_id)
-                      AND tm.tag_domain_id = tp.tag_domain_id
-ON CONFLICT DO NOTHING;
-
 CREATE OR REPLACE FUNCTION intercept_active_tag_mappings_parents()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    new.ideal_tag_id = (SELECT ta.ideal_alias_id FROM tag_aliases ta WHERE ta.tag_domain_id = new.tag_domain_id AND ta.aliased_id = new.tag_id);
+    new.ideal_tag_id = (SELECT ta.effective_tag_id
+                        FROM tag_aliases ta
+                        WHERE ta.tag_domain_id = new.tag_domain_id
+                          AND ta.aliased_id = new.tag_id);
 
     RETURN new;
 END;
