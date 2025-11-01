@@ -1,4 +1,4 @@
 var createDomain_8cpp =
 [
-    [ "idhan::api::getTagDomainInfoJson", "db/de4/namespaceidhan_1_1api.html#a1e9ffce36099b3873f44970f216defdd", null ]
+    [ "idhan::api::getTagDomainInfoJson", "db/de4/namespaceidhan_1_1api.html#aa6d13296f504a6e76ff871ee0f977d76", null ]
 ];

@@ -1,5 +1,5 @@
 var fetchInfo_8cpp =
 [
-    [ "idhan::api::addFileSpecificInfo", "db/de4/namespaceidhan_1_1api.html#ac0ec189feb15017b23d667d3407951b4", null ],
-    [ "idhan::api::addImageInfo", "db/de4/namespaceidhan_1_1api.html#a3896ef32c044ea7cac1a4a4c71b2fb8a", null ]
+    [ "idhan::api::addFileSpecificInfo", "db/de4/namespaceidhan_1_1api.html#a082b7a51916c5c086534d8fbc5ad9e8e", null ],
+    [ "idhan::api::addImageInfo", "db/de4/namespaceidhan_1_1api.html#af3153701f8b1e7ca23c9811e1662ddcc", null ]
 ];

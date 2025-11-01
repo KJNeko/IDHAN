@@ -12,7 +12,6 @@ var dir_8b56e136226ae89f755dd9aa547a23fc =
     [ "APIAuth.cpp", "d7/d86/APIAuth_8cpp.html", null ],
     [ "APIAuth.hpp", "da/d3c/APIAuth_8hpp.html", "da/d3c/APIAuth_8hpp" ],
     [ "APIMaintenance.hpp", "d9/d9b/APIMaintenance_8hpp.html", "d9/d9b/APIMaintenance_8hpp" ],
-    [ "ClusterAPI.cpp", "d6/db1/ClusterAPI_8cpp.html", "d6/db1/ClusterAPI_8cpp" ],
     [ "ClusterAPI.hpp", "d0/ddc/ClusterAPI_8hpp.html", "d0/ddc/ClusterAPI_8hpp" ],
     [ "docs.cpp", "d8/d83/docs_8cpp.html", null ],
     [ "Heartbeat.cpp", "de/dfa/Heartbeat_8cpp.html", "de/dfa/Heartbeat_8cpp" ],
@@ -25,5 +24,5 @@ var dir_8b56e136226ae89f755dd9aa547a23fc =
     [ "tagSearch.cpp", "df/dfd/tagSearch_8cpp.html", null ],
     [ "Ui.cpp", "da/d8e/Ui_8cpp.html", null ],
     [ "Ui.hpp", "d1/d56/Ui_8hpp.html", "d1/d56/Ui_8hpp" ],
-    [ "version.cpp", "d5/d1f/version_8cpp.html", "d5/d1f/version_8cpp" ]
+    [ "version.cpp", "d5/d1f/version_8cpp.html", null ]
 ];

@@ -18,5 +18,6 @@ var searchData=
   ['idhan_3a_3alogging_15',['logging',['../d6/d70/namespaceidhan_1_1logging.html',1,'idhan']]],
   ['idhan_3a_3amime_16',['mime',['../d4/d9c/namespaceidhan_1_1mime.html',1,'idhan']]],
   ['idhan_3a_3amodules_17',['modules',['../dd/da9/namespaceidhan_1_1modules.html',1,'idhan']]],
-  ['idhan_3a_3atags_18',['tags',['../dd/dec/namespaceidhan_1_1tags.html',1,'idhan']]]
+  ['idhan_3a_3atags_18',['tags',['../dd/dec/namespaceidhan_1_1tags.html',1,'idhan']]],
+  ['idhan_3a_3atypes_19',['types',['../d9/daf/namespaceidhan_1_1types.html',1,'idhan']]]
 ];

@@ -2,7 +2,7 @@ var structidhan_1_1ImmedientTask_1_1promise__type =
 [
     [ "final_suspend", "d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a5dfa1660e5528d63cf0eb07d2336c3fb", null ],
     [ "get_return_object", "d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#af827d8c2caf2e786bc4471c647b104de", null ],
-    [ "initial_suspend", "d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a40674775d4f977057467c2250e9dbb13", null ],
+    [ "initial_suspend", "d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a573558f0f0d610bbe2108dd18821eb25", null ],
     [ "result", "d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a28be4dcc39fdbf1bf9107a0221848b5c", null ],
     [ "result", "d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a7785a570e78af4ca44feb11465283c84", null ],
     [ "return_value", "d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#aa8e0be9f45b5b3299a4a5434074ca5ca", null ],

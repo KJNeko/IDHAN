@@ -4,8 +4,9 @@ var searchData=
   ['errorinfo_1',['ErrorInfo',['../db/d1a/classidhan_1_1ErrorInfo.html#a490f2d2368e67bd216336d8c6020fade',1,'idhan::ErrorInfo']]],
   ['exceptionhandler_2',['exceptionHandler',['../dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694',1,'idhan']]],
   ['extension_3',['extension',['../db/de9/classidhan_1_1FileMappedData.html#ab31ae6048889dbcedca59258bf70db71',1,'idhan::FileMappedData']]],
-  ['extractidhanhttperror_4',['extractIDHANHTTPError',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#afd0d6d87b1ad0024c4ef51db5676f9d7',1,'idhan::hyapi::helpers']]],
+  ['extracthttpresponseerrormessage_4',['extractHttpResponseErrorMessage',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a55f3323854a34f2f3d456a090ca39a10',1,'idhan::hyapi::helpers']]],
   ['extractrecordidsfromfilesjson_5',['extractRecordIDsFromFilesJson',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce',1,'idhan::hyapi::helpers']]],
   ['extractrecordidsfromparameters_6',['extractRecordIDsFromParameters',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidstojsonfromfiles_7',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]]
+  ['extractrecordidstojsonfromfiles_7',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]],
+  ['extractscanparams_8',['extractScanParams',['../db/de4/namespaceidhan_1_1api.html#a0ac09abca301c31269ea1aea1070e2ba',1,'idhan::api']]]
 ];

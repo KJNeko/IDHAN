@@ -1,5 +1,5 @@
 var MimeDatabase_8cpp =
 [
-    [ "idhan::mime::getIDForStr", "d4/d9c/namespaceidhan_1_1mime.html#aa8be06428d7e89f1676c948f6c8469b5", null ],
-    [ "idhan::mime::getInstance", "d4/d9c/namespaceidhan_1_1mime.html#a1d7a6346a14df758133691706d644832", null ]
+    [ "idhan::mime::getMimeDatabase", "d4/d9c/namespaceidhan_1_1mime.html#a02994699a12be44b522a7dfd5cda679e", null ],
+    [ "idhan::mime::getMimeIDFromStr", "d4/d9c/namespaceidhan_1_1mime.html#adf93149ad5303cfb36def4ea900547ad", null ]
 ];

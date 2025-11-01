@@ -1,9 +1,9 @@
 var searchData=
 [
   ['name_0',['name',['../de/d50/structidhan_1_1logging_1_1ScopedTimer.html#aa3a23cb3a201e8805098c82c5197d68f',1,'idhan::logging::ScopedTimer::name'],['../db/de9/classidhan_1_1FileMappedData.html#a1ac6645b46e7fb60cd59ff664b3afd1c',1,'idhan::FileMappedData::name()']]],
-  ['namespaceid_1',['NamespaceID',['../dd/dcf/namespaceidhan.html#a09cafc4e2171570c26d1a2007f6dabe5',1,'idhan']]],
+  ['namespaceid_1',['NamespaceID',['../d9/daf/namespaceidhan_1_1types.html#a9342366e6cf551324a73d4c658b73eb5',1,'idhan::types']]],
   ['namespaceinfo_2',['NamespaceInfo',['../df/dad/structidhan_1_1IDHANClient_1_1TagInfo_1_1NamespaceInfo.html',1,'idhan::IDHANClient::TagInfo']]],
-  ['net_20kj16609_20idhan_20actions_20workflows_20docker_20build_20yml_20badge_20svg_20branch_20master_20alt_20docker_20build_3',['Docker &lt;img src=&quot;https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master&quot; alt=&quot;Docker Build&quot;/&gt;',['../d0/d30/md_README.html#autotoc_md7',1,'']]],
+  ['net_20kj16609_20idhan_20actions_20workflows_20docker_20build_20yml_20badge_20svg_20branch_20master_20alt_20docker_20build_3',['Docker &lt;img src=&quot;https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master&quot; alt=&quot;Docker Build&quot;/&gt;',['../d0/d30/md_README.html#autotoc_md6',1,'']]],
   ['net_5fconstants_2ehpp_4',['NET_CONSTANTS.hpp',['../da/dbd/NET__CONSTANTS_8hpp.html',1,'']]],
   ['network_5',['Network',['../d9/d66/classidhan_1_1Network.html',1,'idhan::Network'],['../d9/d66/classidhan_1_1Network.html#a5d1dc622f74da8fb412f5d374808da23',1,'idhan::Network::Network()']]],
   ['network_6',['network',['../d3/d67/classidhan_1_1IDHANClient.html#a7d79ee766affc0e5cb520dbe751fd8cf',1,'idhan::IDHANClient']]],
@@ -11,7 +11,7 @@ var searchData=
   ['network_2ehpp_8',['Network.hpp',['../da/d02/Network_8hpp.html',1,'']]],
   ['no_5flimit_9',['NO_LIMIT',['../d0/db3/classidhan_1_1mime_1_1MimeMatchSearch.html#a2f4a91b841ffae00635494de04eed863',1,'idhan::mime::MimeMatchSearch']]],
   ['no_5foffset_10',['NO_OFFSET',['../d0/db3/classidhan_1_1mime_1_1MimeMatchSearch.html#a289a2335d39029f28fe0a1214135be44',1,'idhan::mime::MimeMatchSearch']]],
-  ['none_11',['NONE',['../dd/dcf/namespaceidhan.html#aa1d31e17df641b2a5bb9f146922fe6a0ab50339a10e1de285ac99d4c3990b8693',1,'idhan']]],
+  ['none_11',['NONE',['../d9/daf/namespaceidhan_1_1types.html#ab7c5b838b73bf4aa4f8cfe419d7015c4ab50339a10e1de285ac99d4c3990b8693',1,'idhan::types']]],
   ['normal_12',['NORMAL',['../db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454a2f3832925146c996b37d1534cdcabe28',1,'idhan::filesystem']]],
   ['normal_13',['Normal',['../index.html#autotoc_md1',1,'']]],
   ['notify_14',['Notify',['../d6/d70/namespaceidhan_1_1logging.html#a669e7d4e6d0939442ea601b6967313d3ae5c2f80ff28fc9abad259b09569b00bd',1,'idhan::logging']]],

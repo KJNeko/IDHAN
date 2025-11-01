@@ -121,8 +121,9 @@ $(function(){initNavTree('d5/d4b/FileInfo_8hpp.html','../../'); initResizable(tr
 <div class="textblock"><code>#include &lt;chrono&gt;</code><br />
 <code>#include &lt;expected&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
-<code>#include &quot;drogon/drogon.h&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../da/d3c/APIAuth_8hpp_source.html">api/APIAuth.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../dd/df5/dbTypes_8hpp_source.html">db/dbTypes.hpp</a>&quot;</code><br />
+<code>#include &quot;drogon/drogon.h&quot;</code><br />
 </div>
 <p><a href="../../d5/d4b/FileInfo_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -140,15 +141,15 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a965a01b9430c24e503774ddc28557ffa" id="r_a965a01b9430c24e503774ddc28557ffa"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a965a01b9430c24e503774ddc28557ffa">idhan::gatherFileInfo</a> (<a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a> io_uring, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="memdesc:a965a01b9430c24e503774ddc28557ffa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> struct with information from the data.  <br /></td></tr>
-<tr class="separator:a965a01b9430c24e503774ddc28557ffa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af97a6a91e89c070ccddfd332c6116d2b" id="r_af97a6a91e89c070ccddfd332c6116d2b"><td class="memItemLeft" align="right" valign="top">drogon::Task&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#af97a6a91e89c070ccddfd332c6116d2b">idhan::setFileInfo</a> (const <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, const <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> info, const drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:af97a6a91e89c070ccddfd332c6116d2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77dbcb7102cc7af12dda27f45a99f318" id="r_a77dbcb7102cc7af12dda27f45a99f318"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a77dbcb7102cc7af12dda27f45a99f318">idhan::gatherFileInfo</a> (<a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a> io_uring, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="memdesc:a77dbcb7102cc7af12dda27f45a99f318"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> struct with information from the data.  <br /></td></tr>
+<tr class="separator:a77dbcb7102cc7af12dda27f45a99f318"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9bdcf5d8aa4cb60929c7d34c1fda14ec" id="r_a9bdcf5d8aa4cb60929c7d34c1fda14ec"><td class="memItemLeft" align="right" valign="top">drogon::Task&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html#a9bdcf5d8aa4cb60929c7d34c1fda14ec">idhan::setFileInfo</a> (const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record_id, const <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a> info, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:a9bdcf5d8aa4cb60929c7d34c1fda14ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:af2ffeb0dfdbb702b153807024d13f160" id="r_af2ffeb0dfdbb702b153807024d13f160"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="../../dd/dcf/namespaceidhan.html#aec7f367e1056a0db0b5fed702788be29">MimeID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d68/namespaceidhan_1_1constants.html#af2ffeb0dfdbb702b153807024d13f160">idhan::constants::INVALID_MIME_ID</a> { 0 }</td></tr>
+<tr class="memitem:af2ffeb0dfdbb702b153807024d13f160" id="r_af2ffeb0dfdbb702b153807024d13f160"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#a8a6bd2652259c6ecee8cc910a388178e">MimeID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d68/namespaceidhan_1_1constants.html#af2ffeb0dfdbb702b153807024d13f160">idhan::constants::INVALID_MIME_ID</a> { 0 }</td></tr>
 <tr class="separator:af2ffeb0dfdbb702b153807024d13f160"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->

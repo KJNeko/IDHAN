@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['expectedtask_0',['ExpectedTask',['../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4',1,'ExpectedTask.hpp']]]
+  ['dbclientptr_0',['DbClientPtr',['../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4',1,'idhan']]]
 ];

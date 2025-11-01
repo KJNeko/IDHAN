@@ -1,5 +1,6 @@
 var dir_4d8e21bc94f631230c76e2efe0eee4ca =
 [
+    [ "dbTypes.hpp", "dd/df5/dbTypes_8hpp.html", "dd/df5/dbTypes_8hpp" ],
     [ "drogonArrayBind.cpp", "d8/d1c/drogonArrayBind_8cpp.html", "d8/d1c/drogonArrayBind_8cpp" ],
     [ "drogonArrayBind.hpp", "df/de2/drogonArrayBind_8hpp.html", "df/de2/drogonArrayBind_8hpp" ],
     [ "ManagementConnection.cpp", "dd/d4b/ManagementConnection_8cpp.html", null ],

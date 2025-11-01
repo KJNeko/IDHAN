@@ -26,8 +26,9 @@ var searchData=
   ['expectedtask_2ehpp_23',['ExpectedTask.hpp',['../d6/d3e/ExpectedTask_8hpp.html',1,'']]],
   ['extension_24',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension'],['../db/de9/classidhan_1_1FileMappedData.html#ab31ae6048889dbcedca59258bf70db71',1,'idhan::FileMappedData::extension()']]],
   ['extra_5finfo_25',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]],
-  ['extractidhanhttperror_26',['extractIDHANHTTPError',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#afd0d6d87b1ad0024c4ef51db5676f9d7',1,'idhan::hyapi::helpers']]],
+  ['extracthttpresponseerrormessage_26',['extractHttpResponseErrorMessage',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a55f3323854a34f2f3d456a090ca39a10',1,'idhan::hyapi::helpers']]],
   ['extractrecordidsfromfilesjson_27',['extractRecordIDsFromFilesJson',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce',1,'idhan::hyapi::helpers']]],
   ['extractrecordidsfromparameters_28',['extractRecordIDsFromParameters',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidstojsonfromfiles_29',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]]
+  ['extractrecordidstojsonfromfiles_29',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]],
+  ['extractscanparams_30',['extractScanParams',['../db/de4/namespaceidhan_1_1api.html#a0ac09abca301c31269ea1aea1070e2ba',1,'idhan::api']]]
 ];

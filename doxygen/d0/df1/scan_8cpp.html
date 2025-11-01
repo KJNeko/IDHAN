@@ -111,6 +111,7 @@ $(function(){initNavTree('d0/df1/scan_8cpp.html','../../'); initResizable(true);
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">scan.cpp File Reference</div></div>
@@ -118,18 +119,27 @@ $(function(){initNavTree('d0/df1/scan_8cpp.html','../../'); initResizable(true);
 <div class="contents">
 <div class="textblock"><code>#include &quot;MetadataModule.hpp&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d0/ddc/ClusterAPI_8hpp_source.html">api/ClusterAPI.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d6/d3e/ExpectedTask_8hpp_source.html">api/helpers/ExpectedTask.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../de/dbc/createBadRequest_8hpp_source.html">api/helpers/createBadRequest.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../da/d6a/records_8hpp_source.html">api/helpers/records.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../db/d73/SHA256_8hpp_source.html">crypto/SHA256.hpp</a>&quot;</code><br />
 <code>#include &quot;fgl/size.hpp&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d3/d94/IOUring_8hpp_source.html">filesystem/IOUring.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d1/d4e/utility_8hpp_source.html">filesystem/utility.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d6/d3b/fixme_8hpp_source.html">fixme.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d9/dcc/hyapi_2helpers_8hpp_source.html">hyapi/helpers.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d4/d3d/log_8hpp_source.html">logging/log.hpp</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../d4/dfc/FileMappedData_8hpp_source.html">metadata/FileMappedData.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d1/d12/parseMetadata_8hpp_source.html">metadata/parseMetadata.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d5/d4b/FileInfo_8hpp_source.html">mime/FileInfo.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d6/df0/MimeDatabase_8hpp_source.html">mime/MimeDatabase.hpp</a>&quot;</code><br />
 </div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d39/structidhan_1_1api_1_1ScanParams.html">idhan::api::ScanParams</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dcf/classidhan_1_1api_1_1ScanContext.html">idhan::api::ScanContext</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
@@ -139,8 +149,12 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a518e5ced3a66091321371cf77c108674" id="r_a518e5ced3a66091321371cf77c108674"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a518e5ced3a66091321371cf77c108674">idhan::api::adoptOrphan</a> (<a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a> io_uring, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a518e5ced3a66091321371cf77c108674"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4786e76965b8bc4c5dda31cc83ce8f76" id="r_a4786e76965b8bc4c5dda31cc83ce8f76"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a4786e76965b8bc4c5dda31cc83ce8f76">idhan::api::adoptOrphan</a> (<a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a> io_uring, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:a4786e76965b8bc4c5dda31cc83ce8f76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a00203b685806ece7cc8608b936d12218" id="r_a00203b685806ece7cc8608b936d12218"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a00203b685806ece7cc8608b936d12218">idhan::api::scanFile</a> (std::filesystem::path file_path, std::filesystem::path bad_dir, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> &amp;db, <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a> cluster_id, <a class="el" href="../../d6/d39/structidhan_1_1api_1_1ScanParams.html">ScanParams</a> params)</td></tr>
+<tr class="separator:a00203b685806ece7cc8608b936d12218"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0ac09abca301c31269ea1aea1070e2ba" id="r_a0ac09abca301c31269ea1aea1070e2ba"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d6/d39/structidhan_1_1api_1_1ScanParams.html">ScanParams</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/de4/namespaceidhan_1_1api.html#a0ac09abca301c31269ea1aea1070e2ba">idhan::api::extractScanParams</a> (const drogon::HttpRequestPtr &amp;request)</td></tr>
+<tr class="separator:a0ac09abca301c31269ea1aea1070e2ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

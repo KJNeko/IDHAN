@@ -116,8 +116,9 @@ $(function(){initNavTree('da/d6a/records_8hpp.html','../../'); initResizable(tru
   <div class="headertitle"><div class="title">records.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
-<code>#include &lt;expected&gt;</code><br />
+<div class="textblock"><code>#include &lt;expected&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../da/d68/IDHANTypes_8hpp_source.html">IDHANTypes.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../dd/df5/dbTypes_8hpp_source.html">db/dbTypes.hpp</a>&quot;</code><br />
 <code>#include &quot;drogon/HttpResponse.h&quot;</code><br />
 <code>#include &quot;drogon/orm/DbClient.h&quot;</code><br />
 <code>#include &quot;drogon/utils/coroutine.h&quot;</code><br />
@@ -135,12 +136,12 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a6333bcb5ca7772ce6cd0e487d5b6e060" id="r_a6333bcb5ca7772ce6cd0e487d5b6e060"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a6333bcb5ca7772ce6cd0e487d5b6e060">idhan::api::helpers::massCreateRecord</a> (const std::vector&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &gt; &amp;sha256s, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a6333bcb5ca7772ce6cd0e487d5b6e060"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a961a7797c78aa3c03f0db7bd0a8e034a" id="r_a961a7797c78aa3c03f0db7bd0a8e034a"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a961a7797c78aa3c03f0db7bd0a8e034a">idhan::api::helpers::createRecord</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a961a7797c78aa3c03f0db7bd0a8e034a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adafb2f059e7456de24b9b9de97db05b1" id="r_adafb2f059e7456de24b9b9de97db05b1"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#adafb2f059e7456de24b9b9de97db05b1">idhan::api::helpers::findRecord</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:adafb2f059e7456de24b9b9de97db05b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bf7f1fde6926e426f623e88f05885b7" id="r_a8bf7f1fde6926e426f623e88f05885b7"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8bf7f1fde6926e426f623e88f05885b7">idhan::api::helpers::massCreateRecord</a> (const std::vector&lt; <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &gt; &amp;sha256s, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:a8bf7f1fde6926e426f623e88f05885b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8be2bd937b27481a73ebdffce98862f6" id="r_a8be2bd937b27481a73ebdffce98862f6"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8be2bd937b27481a73ebdffce98862f6">idhan::api::helpers::createRecord</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:a8be2bd937b27481a73ebdffce98862f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a43372c23341d5c5e5596f72ecc21ea3b" id="r_a43372c23341d5c5e5596f72ecc21ea3b"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d86/namespaceidhan_1_1api_1_1helpers.html#a43372c23341d5c5e5596f72ecc21ea3b">idhan::api::helpers::findRecord</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:a43372c23341d5c5e5596f72ecc21ea3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

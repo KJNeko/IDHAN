@@ -1,7 +1,7 @@
 var namespaceidhan_1_1hyapi =
 [
     [ "helpers", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html", [
-      [ "extractIDHANHTTPError", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#afd0d6d87b1ad0024c4ef51db5676f9d7", null ],
+      [ "extractHttpResponseErrorMessage", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a55f3323854a34f2f3d456a090ca39a10", null ],
       [ "extractRecordIDsFromFilesJson", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce", null ],
       [ "extractRecordIDsFromParameters", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1", null ],
       [ "extractRecordIDsToJsonFromFiles", "d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b", null ],
@@ -41,13 +41,13 @@ var namespaceidhan_1_1hyapi =
       [ "PixelHashHex", "d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685ab399b020c4951ac058ad4a2b5ebedda5", null ],
       [ "BlurHash", "d2/d18/namespaceidhan_1_1hyapi.html#af24d6ca3522eb1e648ae39b46e37f685a719b502068d64d2d59de03cf1b31c7c8", null ]
     ] ],
-    [ "convertQueryRecordIDs", "d2/d18/namespaceidhan_1_1hyapi.html#a88116f3b826429453ec6751f70211464", null ],
-    [ "getAdvancedUrlInfo", "d2/d18/namespaceidhan_1_1hyapi.html#a0cd7eccc9c02bf9497d1068d5eaad1b5", null ],
+    [ "convertQueryRecordIDs", "d2/d18/namespaceidhan_1_1hyapi.html#a6e74ca7e6e25323f9f2ac4c1890d7cc4", null ],
+    [ "getAdvancedUrlInfo", "d2/d18/namespaceidhan_1_1hyapi.html#af9d7d2ae59e3df0b87df3d57a4ab4ee8", null ],
     [ "getDefaultedValue", "d2/d18/namespaceidhan_1_1hyapi.html#a5c538865c5ad60aa650c211bfb7a249e", null ],
-    [ "getFileInfo", "d2/d18/namespaceidhan_1_1hyapi.html#abe1f267b411335de26f397790642f985", null ],
-    [ "getMetadataFromRow", "d2/d18/namespaceidhan_1_1hyapi.html#a111324af4d94e2b4f8bd69240896c9a4", null ],
-    [ "getMetadataInfo", "d2/d18/namespaceidhan_1_1hyapi.html#a91aa1cafd77b35981bd534654c5e8f93", null ],
-    [ "getServiceList", "d2/d18/namespaceidhan_1_1hyapi.html#abbdbe7c8606747784d91bb8a1e98f33e", null ],
+    [ "getFileInfo", "d2/d18/namespaceidhan_1_1hyapi.html#a64154c937450888d216cfdb26c967892", null ],
+    [ "getMetadataFromRow", "d2/d18/namespaceidhan_1_1hyapi.html#a86f33e1422bf5f3dfb3bab748eedc440", null ],
+    [ "getMetadataInfo", "d2/d18/namespaceidhan_1_1hyapi.html#a710f37eda87d6256463f1779dd58f101", null ],
+    [ "getServiceList", "d2/d18/namespaceidhan_1_1hyapi.html#ab1658e97a9dc50e3564bad521b3d314d", null ],
     [ "HyAPIAuthName", "d2/d18/namespaceidhan_1_1hyapi.html#a720a04837a0444fe8b1ee98d2759cc93", null ],
     [ "RESPONSE_ENRICHER_NAME", "d2/d18/namespaceidhan_1_1hyapi.html#a4246fea9aa1b5e0375c5b8eaf59955aa", null ]
 ];

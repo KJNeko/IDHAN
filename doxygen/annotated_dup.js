@@ -9,11 +9,12 @@ var annotated_dup =
         [ "APIMaintenance", "d8/dd5/classidhan_1_1api_1_1APIMaintenance.html", "d8/dd5/classidhan_1_1api_1_1APIMaintenance" ],
         [ "AuthEndpoint", "d2/d04/classidhan_1_1api_1_1AuthEndpoint.html", "d2/d04/classidhan_1_1api_1_1AuthEndpoint" ],
         [ "ClusterAPI", "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html", "dc/d8c/classidhan_1_1api_1_1ClusterAPI" ],
-        [ "ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", "d8/d94/structidhan_1_1api_1_1ClusterInfo" ],
         [ "Heartbeat", "dd/d91/classidhan_1_1api_1_1Heartbeat.html", "dd/d91/classidhan_1_1api_1_1Heartbeat" ],
         [ "ImportAPI", "d5/d82/classidhan_1_1api_1_1ImportAPI.html", "d5/d82/classidhan_1_1api_1_1ImportAPI" ],
         [ "InfoAPI", "dd/db3/classidhan_1_1api_1_1InfoAPI.html", "dd/db3/classidhan_1_1api_1_1InfoAPI" ],
         [ "RecordAPI", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html", "d5/dd5/classidhan_1_1api_1_1RecordAPI" ],
+        [ "ScanContext", "d3/dcf/classidhan_1_1api_1_1ScanContext.html", "d3/dcf/classidhan_1_1api_1_1ScanContext" ],
+        [ "ScanParams", "d6/d39/structidhan_1_1api_1_1ScanParams.html", "d6/d39/structidhan_1_1api_1_1ScanParams" ],
         [ "SearchAPI", "da/dd6/classidhan_1_1api_1_1SearchAPI.html", "da/dd6/classidhan_1_1api_1_1SearchAPI" ],
         [ "TagAPI", "d3/dad/classidhan_1_1api_1_1TagAPI.html", "d3/dad/classidhan_1_1api_1_1TagAPI" ],
         [ "TagPair", "d0/d19/structidhan_1_1api_1_1TagPair.html", "d0/d19/structidhan_1_1api_1_1TagPair" ]

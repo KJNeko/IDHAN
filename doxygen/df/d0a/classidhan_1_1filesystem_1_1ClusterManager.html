@@ -134,15 +134,16 @@ Classes</h2></td></tr>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:afeae8aa2c189f8f7799f8a82a8e94ccd" id="r_afeae8aa2c189f8f7799f8a82a8e94ccd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afeae8aa2c189f8f7799f8a82a8e94ccd">ClusterManager</a> ()</td></tr>
 <tr class="separator:afeae8aa2c189f8f7799f8a82a8e94ccd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a23cf01ea08fd3ddb6835da5407c20569" id="r_a23cf01ea08fd3ddb6835da5407c20569"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a23cf01ea08fd3ddb6835da5407c20569">reloadClusters</a> (drogon::orm::DbClientPtr db)</td></tr>
-<tr class="separator:a23cf01ea08fd3ddb6835da5407c20569"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afe2e85643c3ce3dc1855e3607dc45d68" id="r_afe2e85643c3ce3dc1855e3607dc45d68"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe2e85643c3ce3dc1855e3607dc45d68">storeFile</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record, const std::byte *data, std::size_t length, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="memdesc:afe2e85643c3ce3dc1855e3607dc45d68"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stores the data located at <code>stream</code> for a given record id.  <br /></td></tr>
-<tr class="separator:afe2e85643c3ce3dc1855e3607dc45d68"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abbddacf3afb65ce8bdc521675d978617" id="r_abbddacf3afb65ce8bdc521675d978617"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abbddacf3afb65ce8bdc521675d978617">storeThumbnail</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record, const std::byte *data, std::size_t length, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="memitem:afbabe53a13ecbdd7fcd36be7193b1214" id="r_afbabe53a13ecbdd7fcd36be7193b1214"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; void &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afbabe53a13ecbdd7fcd36be7193b1214">reloadClusters</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="memdesc:afbabe53a13ecbdd7fcd36be7193b1214"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reloads the cluster info from the database.  <br /></td></tr>
+<tr class="separator:afbabe53a13ecbdd7fcd36be7193b1214"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a46a344e6a3ea3296c389e4cf1a245e5e" id="r_a46a344e6a3ea3296c389e4cf1a245e5e"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a46a344e6a3ea3296c389e4cf1a245e5e">storeFile</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record, const std::byte *data, std::size_t length, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="memdesc:a46a344e6a3ea3296c389e4cf1a245e5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stores the data located at <code>stream</code> for a given record id.  <br /></td></tr>
+<tr class="separator:a46a344e6a3ea3296c389e4cf1a245e5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abbddacf3afb65ce8bdc521675d978617" id="r_abbddacf3afb65ce8bdc521675d978617"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abbddacf3afb65ce8bdc521675d978617">storeThumbnail</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record, const std::byte *data, std::size_t length, drogon::orm::DbClientPtr db)</td></tr>
 <tr class="separator:abbddacf3afb65ce8bdc521675d978617"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3ed063e6e6aa7f9f4c83dd7482408624" id="r_a3ed063e6e6aa7f9f4c83dd7482408624"><td class="memItemLeft" align="right" valign="top">std::ifstream&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3ed063e6e6aa7f9f4c83dd7482408624">openFile</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record)</td></tr>
-<tr class="separator:a3ed063e6e6aa7f9f4c83dd7482408624"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a65db44fd1fcb6f1fc16034b7ff532522" id="r_a65db44fd1fcb6f1fc16034b7ff532522"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a65db44fd1fcb6f1fc16034b7ff532522">getClusterPath</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a> cluster_id)</td></tr>
+<tr class="separator:a65db44fd1fcb6f1fc16034b7ff532522"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -171,11 +172,11 @@ Private Types</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
-<tr class="memitem:ab2c2f5100d0e47ca6fea025b91c404c2" id="r_ab2c2f5100d0e47ca6fea025b91c404c2"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab2c2f5100d0e47ca6fea025b91c404c2">findBestFolder</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record_id, std::size_t file_size, drogon::orm::DbClientPtr db)</td></tr>
-<tr class="memdesc:ab2c2f5100d0e47ca6fea025b91c404c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds the best folder to add the file too.  <br /></td></tr>
-<tr class="separator:ab2c2f5100d0e47ca6fea025b91c404c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a47c915735b191ea2e955279b318e2409" id="r_a47c915735b191ea2e955279b318e2409"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a47c915735b191ea2e955279b318e2409">storeFile</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a> record, const std::byte *data, std::size_t length, drogon::orm::DbClientPtr db, <a class="el" href="../../db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a> type)</td></tr>
-<tr class="separator:a47c915735b191ea2e955279b318e2409"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0646296d555a69147efce56d2080546c" id="r_a0646296d555a69147efce56d2080546c"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a>, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0646296d555a69147efce56d2080546c">findBestFolder</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record_id, std::size_t file_size, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="memdesc:a0646296d555a69147efce56d2080546c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds the best folder to add the file too.  <br /></td></tr>
+<tr class="separator:a0646296d555a69147efce56d2080546c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa8e0a3b46bfa5e4fc552f49dee218ee" id="r_aaa8e0a3b46bfa5e4fc552f49dee218ee"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaa8e0a3b46bfa5e4fc552f49dee218ee">storeFile</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record, const std::byte *data, std::size_t length, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db, <a class="el" href="../../db/d9b/namespaceidhan_1_1filesystem.html#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a> type)</td></tr>
+<tr class="separator:aaa8e0a3b46bfa5e4fc552f49dee218ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
@@ -183,7 +184,7 @@ Private Attributes</h2></td></tr>
 <tr class="separator:aeea7e5397faa6bc20267d0faef2ece8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6b3f5f5ad78e93868985f5e81e37a7c0" id="r_a6b3f5f5ad78e93868985f5e81e37a7c0"><td class="memItemLeft" align="right" valign="top">std::mutex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6b3f5f5ad78e93868985f5e81e37a7c0">m_mutex</a> {}</td></tr>
 <tr class="separator:a6b3f5f5ad78e93868985f5e81e37a7c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a55ffe37b5e13a7480206858ea0a2ad48" id="r_a55ffe37b5e13a7480206858ea0a2ad48"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a>, <a class="el" href="../../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html">ClusterInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a55ffe37b5e13a7480206858ea0a2ad48">m_folders</a> {}</td></tr>
+<tr class="memitem:a55ffe37b5e13a7480206858ea0a2ad48" id="r_a55ffe37b5e13a7480206858ea0a2ad48"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a>, <a class="el" href="../../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html">ClusterInfo</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a55ffe37b5e13a7480206858ea0a2ad48">m_folders</a> {}</td></tr>
 <tr class="separator:a55ffe37b5e13a7480206858ea0a2ad48"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-static-attribs" name="pri-static-attribs"></a>
@@ -269,8 +270,8 @@ Static Private Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ab2c2f5100d0e47ca6fea025b91c404c2" name="ab2c2f5100d0e47ca6fea025b91c404c2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab2c2f5100d0e47ca6fea025b91c404c2">&#9670;&#160;</a></span>findBestFolder()</h2>
+<a id="a0646296d555a69147efce56d2080546c" name="a0646296d555a69147efce56d2080546c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0646296d555a69147efce56d2080546c">&#9670;&#160;</a></span>findBestFolder()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -279,9 +280,9 @@ Static Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a>, drogon::HttpResponsePtr &gt; &gt; idhan::filesystem::ClusterManager::findBestFolder </td>
+          <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a>, drogon::HttpResponsePtr &gt; &gt; idhan::filesystem::ClusterManager::findBestFolder </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -291,7 +292,7 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a></td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -302,6 +303,23 @@ Static Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Finds the best folder to add the file too. </p>
+
+</div>
+</div>
+<a id="a65db44fd1fcb6f1fc16034b7ff532522" name="a65db44fd1fcb6f1fc16034b7ff532522"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a65db44fd1fcb6f1fc16034b7ff532522">&#9670;&#160;</a></span>getClusterPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt; idhan::filesystem::ClusterManager::getClusterPath </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a></td>          <td class="paramname"><span class="paramname"><em>cluster_id</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -330,25 +348,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a3ed063e6e6aa7f9f4c83dd7482408624" name="a3ed063e6e6aa7f9f4c83dd7482408624"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3ed063e6e6aa7f9f4c83dd7482408624">&#9670;&#160;</a></span>openFile()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::ifstream idhan::filesystem::ClusterManager::openFile </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a23cf01ea08fd3ddb6835da5407c20569" name="a23cf01ea08fd3ddb6835da5407c20569"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a23cf01ea08fd3ddb6835da5407c20569">&#9670;&#160;</a></span>reloadClusters()</h2>
+<a id="afbabe53a13ecbdd7fcd36be7193b1214" name="afbabe53a13ecbdd7fcd36be7193b1214"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbabe53a13ecbdd7fcd36be7193b1214">&#9670;&#160;</a></span>reloadClusters()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -356,16 +357,19 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="memname">drogon::Task&lt; void &gt; idhan::filesystem::ClusterManager::reloadClusters </td>
           <td>(</td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a></td>          <td class="paramname"><span class="paramname"><em>db</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
+<p>Reloads the cluster info from the database. </p>
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
 </div>
 </div>
-<a id="afe2e85643c3ce3dc1855e3607dc45d68" name="afe2e85643c3ce3dc1855e3607dc45d68"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afe2e85643c3ce3dc1855e3607dc45d68">&#9670;&#160;</a></span>storeFile() <span class="overload">[1/2]</span></h2>
+<a id="a46a344e6a3ea3296c389e4cf1a245e5e" name="a46a344e6a3ea3296c389e4cf1a245e5e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a46a344e6a3ea3296c389e4cf1a245e5e">&#9670;&#160;</a></span>storeFile() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -373,7 +377,7 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="memname">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt; idhan::filesystem::ClusterManager::storeFile </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -388,7 +392,7 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a></td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -397,8 +401,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a47c915735b191ea2e955279b318e2409" name="a47c915735b191ea2e955279b318e2409"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a47c915735b191ea2e955279b318e2409">&#9670;&#160;</a></span>storeFile() <span class="overload">[2/2]</span></h2>
+<a id="aaa8e0a3b46bfa5e4fc552f49dee218ee" name="aaa8e0a3b46bfa5e4fc552f49dee218ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaa8e0a3b46bfa5e4fc552f49dee218ee">&#9670;&#160;</a></span>storeFile() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -409,7 +413,7 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="memname">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt; idhan::filesystem::ClusterManager::storeFile </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -424,7 +428,7 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a></td>          <td class="paramname"><span class="paramname"><em>db</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -450,7 +454,7 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="memname">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt; idhan::filesystem::ClusterManager::storeThumbnail </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a400f778b43db61ea6f23b30757c8bc4e">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -483,7 +487,7 @@ Static Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::unordered_map&lt; <a class="el" href="../../dd/dcf/namespaceidhan.html#a514249f8445cc92858a8582726e6f5ec">ClusterID</a>, <a class="el" href="../../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html">ClusterInfo</a> &gt; idhan::filesystem::ClusterManager::m_folders {}</td>
+          <td class="memname">std::unordered_map&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a>, <a class="el" href="../../dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html">ClusterInfo</a> &gt; idhan::filesystem::ClusterManager::m_folders {}</td>
         </tr>
       </table>
   </td>

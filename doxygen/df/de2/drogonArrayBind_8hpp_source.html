@@ -138,8 +138,8 @@ $(function(){initNavTree('df/de2/drogonArrayBind_8hpp_source.html','../../'); in
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>{</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    ++parametersNumber_;</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt;</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>        std::vector&lt; std::byte &gt; &gt;( <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; idhan::SHA256 &gt; &gt;( param ) ) );</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt; std::vector&lt; std::byte &gt; &gt;(</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>        <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; idhan::SHA256 &gt; &gt;( param ) ) );</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    objs_.push_back( binary_data );</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    parameters_.push_back( <span class="keyword">reinterpret_cast&lt;</span> <span class="keyword">const </span><span class="keywordtype">char</span>* <span class="keyword">&gt;</span>( binary_data-&gt;data() ) );</div>
@@ -168,8 +168,8 @@ $(function(){initNavTree('df/de2/drogonArrayBind_8hpp_source.html','../../'); in
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="comment">    //*/</span></div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    ++parametersNumber_;</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt;</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        std::vector&lt; std::byte &gt; &gt;( <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; std::string &gt; &gt;( param ) ) );</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt; std::vector&lt; std::byte &gt; &gt;(</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; std::string &gt; &gt;( param ) ) );</div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    objs_.push_back( binary_data );</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    parameters_.push_back( <span class="keyword">reinterpret_cast&lt;</span> <span class="keyword">const </span><span class="keywordtype">char</span>* <span class="keyword">&gt;</span>( binary_data-&gt;data() ) );</div>
@@ -184,13 +184,13 @@ $(function(){initNavTree('df/de2/drogonArrayBind_8hpp_source.html','../../'); in
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span><span class="comment">// Generic template for integer types</span></div>
 <div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span><span class="keyword">template</span> &lt;&gt;</div>
 <div class="foldopen" id="foldopen00067" data-start="{" data-end="}">
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno"><a class="line" href="../../d2/d4d/namespacedrogon_1_1orm_1_1internal.html#a2e89acb62d29fd6fe9fce33c1431cadc">   67</a></span><span class="keyword">inline</span> SqlBinder::self&amp; SqlBinder::operator&lt;&lt; &lt; std::vector&lt; idhan::SmallInt &gt; &gt;( std::vector&lt; idhan::SmallInt &gt;&amp;&amp;</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>                                                                                      param )</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno"><a class="line" href="../../d2/d4d/namespacedrogon_1_1orm_1_1internal.html#a2e89acb62d29fd6fe9fce33c1431cadc">   67</a></span><span class="keyword">inline</span> SqlBinder::self&amp; SqlBinder::operator&lt;&lt; &lt; std::vector&lt; idhan::SmallInt &gt; &gt;(</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    std::vector&lt; idhan::SmallInt &gt;&amp;&amp; param )</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>{</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    ++parametersNumber_;</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt;</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>        std::vector&lt; std::byte &gt; &gt;( <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; idhan::SmallInt &gt; &gt;( param ) ) );</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt; std::vector&lt; std::byte &gt; &gt;(</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>        <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; idhan::SmallInt &gt; &gt;( param ) ) );</div>
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    objs_.push_back( binary_data );</div>
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span> </div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    parameters_.push_back( <span class="keyword">reinterpret_cast&lt;</span> <span class="keyword">const </span><span class="keywordtype">char</span>* <span class="keyword">&gt;</span>( binary_data-&gt;data() ) );</div>
@@ -207,8 +207,8 @@ $(function(){initNavTree('df/de2/drogonArrayBind_8hpp_source.html','../../'); in
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>{</div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    ++parametersNumber_;</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span> </div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt;</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>        std::vector&lt; std::byte &gt; &gt;( <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; idhan::Int &gt; &gt;( param ) ) );</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt; std::vector&lt; std::byte &gt; &gt;(</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>        <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; idhan::Int &gt; &gt;( param ) ) );</div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    objs_.push_back( binary_data );</div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    parameters_.push_back( <span class="keyword">reinterpret_cast&lt;</span> <span class="keyword">const </span><span class="keywordtype">char</span>* <span class="keyword">&gt;</span>( binary_data-&gt;data() ) );</div>
@@ -225,8 +225,8 @@ $(function(){initNavTree('df/de2/drogonArrayBind_8hpp_source.html','../../'); in
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>{</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    ++parametersNumber_;</div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt;</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>        std::vector&lt; std::byte &gt; &gt;( <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; idhan::BigInt &gt; &gt;( param ) ) );</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keyword">auto</span> binary_data = std::make_shared&lt; std::vector&lt; std::byte &gt; &gt;(</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>        <a class="code hl_function" href="../../d8/d1c/drogonArrayBind_8cpp.html#a64a380c14c749cb95708de904c6f22fa">createPgBinaryArray</a>( std::forward&lt; std::vector&lt; idhan::BigInt &gt; &gt;( param ) ) );</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    objs_.push_back( binary_data );</div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span> </div>
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    parameters_.push_back( <span class="keyword">reinterpret_cast&lt;</span> <span class="keyword">const </span><span class="keywordtype">char</span>* <span class="keyword">&gt;</span>( binary_data-&gt;data() ) );</div>

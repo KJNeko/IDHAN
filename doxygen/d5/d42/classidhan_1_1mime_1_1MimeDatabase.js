@@ -7,7 +7,7 @@ var classidhan_1_1mime_1_1MimeDatabase =
     [ "scan", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#aad5470c84f0e4552f4367da99864b5de", null ],
     [ "scan", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a990b284eba9a4139f29ee68e0106cc34", null ],
     [ "scanFile", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a8ee1f0b366b19029288ea91367728ba0", null ],
-    [ "getInstance", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a06ee048a0e6db422d41a1ef5e2a1f04e", null ],
+    [ "getMimeDatabase", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#ac038682b1b297abd4fa2ce0806b98972", null ],
     [ "active_counter", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a77f49be6ecdf2689ed72cd800aeebb36", null ],
     [ "m_identifiers", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#ad50297c644082c789301821bb61d801a", null ],
     [ "mutex", "d5/d42/classidhan_1_1mime_1_1MimeDatabase.html#a0f79ab2e69982c85b895ecd137efae90", null ],

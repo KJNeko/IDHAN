@@ -2,7 +2,6 @@ var hierarchy =
 [
     [ "idhan::VersionInfo::ApiVersion", "d6/d85/structidhan_1_1VersionInfo_1_1ApiVersion.html", null ],
     [ "idhan::TagCache::CacheItem", "dc/dbd/structidhan_1_1TagCache_1_1CacheItem.html", null ],
-    [ "idhan::api::ClusterInfo", "d8/d94/structidhan_1_1api_1_1ClusterInfo.html", null ],
     [ "idhan::filesystem::ClusterManager::ClusterInfo", "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html", null ],
     [ "idhan::filesystem::ClusterManager", "df/d0a/classidhan_1_1filesystem_1_1ClusterManager.html", null ],
     [ "idhan::IOUring::CommandRingPointers", "de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html", null ],
@@ -64,6 +63,8 @@ var hierarchy =
     ] ],
     [ "idhan::ReadAwaiter", "d2/d83/structidhan_1_1ReadAwaiter.html", null ],
     [ "idhan::mime::Resolution", "d6/d56/structidhan_1_1mime_1_1Resolution.html", null ],
+    [ "idhan::api::ScanContext", "d3/dcf/classidhan_1_1api_1_1ScanContext.html", null ],
+    [ "idhan::api::ScanParams", "d6/d39/structidhan_1_1api_1_1ScanParams.html", null ],
     [ "idhan::logging::ScopedTimer", "de/d50/structidhan_1_1logging_1_1ScopedTimer.html", null ],
     [ "idhan::SearchBuilder", "d7/d1e/classidhan_1_1SearchBuilder.html", null ],
     [ "idhan::ServerContext", "d0/d4c/classidhan_1_1ServerContext.html", null ],

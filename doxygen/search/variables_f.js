@@ -8,5 +8,5 @@ var searchData=
   ['testmode_5',['testmode',['../de/d07/structidhan_1_1ConnectionArguments.html#a832a9898eccb5cd477f4c02e378637df',1,'idhan::ConnectionArguments']]],
   ['text_6',['text',['../dc/dbd/structidhan_1_1TagCache_1_1CacheItem.html#ab529f4b6199374e917175c83528ccbd3',1,'idhan::TagCache::CacheItem']]],
   ['to_5fsubmit_7',['to_submit',['../dd/d25/classidhan_1_1IOUring.html#aecd79668806141324f95f1f45d57b578',1,'idhan::IOUring']]],
-  ['total_8',['total',['../d8/d94/structidhan_1_1api_1_1ClusterInfo.html#a90a7c5b922ea8c9163376b353eee5ed3',1,'idhan::api::ClusterInfo']]]
+  ['trust_5ffilename_8',['trust_filename',['../d6/d39/structidhan_1_1api_1_1ScanParams.html#a56feaed7e5f944872cff7be8d87f6298',1,'idhan::api::ScanParams']]]
 ];

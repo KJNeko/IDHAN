@@ -129,15 +129,36 @@ Enumerations</h2></td></tr>
 , <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454a2f3832925146c996b37d1534cdcabe28">NORMAL</a> = 1
  }</td></tr>
 <tr class="separator:a62ce7ed3bb4de7c10f83b1d173ec3454"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad4dc14792898dcae08096582b6952217" id="r_ad4dc14792898dcae08096582b6952217"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad4dc14792898dcae08096582b6952217">FileState</a> { <a class="el" href="#ad4dc14792898dcae08096582b6952217a2767828026039e8ba7b38973cbb701f2">FileNotFound</a>
+, <a class="el" href="#ad4dc14792898dcae08096582b6952217a3f186a1832a3aa96c76a4ee01b373028">FileInvalidHash</a>
+, <a class="el" href="#ad4dc14792898dcae08096582b6952217a7f22ec93891ebbeba38534904aaad9c5">FileValid</a>
+ }</td></tr>
+<tr class="separator:ad4dc14792898dcae08096582b6952217"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a83ff42972eaad3ab860d851c596029e5" id="r_a83ff42972eaad3ab860d851c596029e5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; bool &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83ff42972eaad3ab860d851c596029e5">checkFileExists</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record_id, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="memdesc:a83ff42972eaad3ab860d851c596029e5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks that a file exists in its respective cluster.  <br /></td></tr>
+<tr class="separator:a83ff42972eaad3ab860d851c596029e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7007bcf3b4f14c107b280d0e1d12dee7" id="r_a7007bcf3b4f14c107b280d0e1d12dee7"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7007bcf3b4f14c107b280d0e1d12dee7">getFilesystemCapacity</a> (const QDir &amp;path)</td></tr>
 <tr class="separator:a7007bcf3b4f14c107b280d0e1d12dee7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af22279849e95364f785f83f943474ae0" id="r_af22279849e95364f785f83f943474ae0"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af22279849e95364f785f83f943474ae0">metaTypePathID</a> (const <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a> type)</td></tr>
 <tr class="separator:af22279849e95364f785f83f943474ae0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad28790b6ff89849d0bdad9ced09c4918" id="r_ad28790b6ff89849d0bdad9ced09c4918"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad28790b6ff89849d0bdad9ced09c4918">createSubpath</a> (const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> &amp;sha256, const <a class="el" href="#a62ce7ed3bb4de7c10f83b1d173ec3454">FileMetaType</a> meta_type)</td></tr>
 <tr class="separator:ad28790b6ff89849d0bdad9ced09c4918"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:addd0c19bb91f1be15a86b8cde1e0f7ff" id="r_addd0c19bb91f1be15a86b8cde1e0f7ff"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#addd0c19bb91f1be15a86b8cde1e0f7ff">getClusterPath</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a> cluster_id)</td></tr>
+<tr class="memdesc:addd0c19bb91f1be15a86b8cde1e0f7ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the path of a cluster.  <br /></td></tr>
+<tr class="separator:addd0c19bb91f1be15a86b8cde1e0f7ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5f5fbb3692d51199d168cd7882f7ec5" id="r_ab5f5fbb3692d51199d168cd7882f7ec5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab5f5fbb3692d51199d168cd7882f7ec5">getFilepath</a> (const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:ab5f5fbb3692d51199d168cd7882f7ec5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a877fd1e02f8451b1318a462a31543c61" id="r_a877fd1e02f8451b1318a462a31543c61"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a877fd1e02f8451b1318a462a31543c61">getTheoreticalFilePath</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a> cluster_id, <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> sha256, std::string extension)</td></tr>
+<tr class="memdesc:a877fd1e02f8451b1318a462a31543c61"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the path that would occur at a given cluster with a given hash.  <br /></td></tr>
+<tr class="separator:a877fd1e02f8451b1318a462a31543c61"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8315e896b96ca8501d96761ef08053b4" id="r_a8315e896b96ca8501d96761ef08053b4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; <a class="el" href="#ad4dc14792898dcae08096582b6952217">FileState</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8315e896b96ca8501d96761ef08053b4">validateFile</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record_id)</td></tr>
+<tr class="memdesc:a8315e896b96ca8501d96761ef08053b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks that a record has a file and it's valid.  <br /></td></tr>
+<tr class="separator:a8315e896b96ca8501d96761ef08053b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aefebb877dfab42528590ccaeadc73f40" id="r_aefebb877dfab42528590ccaeadc73f40"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; <a class="el" href="#ad4dc14792898dcae08096582b6952217">FileState</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aefebb877dfab42528590ccaeadc73f40">validateFile</a> (const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:aefebb877dfab42528590ccaeadc73f40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Enumeration Type Documentation</h2>
 <a id="a62ce7ed3bb4de7c10f83b1d173ec3454" name="a62ce7ed3bb4de7c10f83b1d173ec3454"></a>
@@ -160,7 +181,67 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ad4dc14792898dcae08096582b6952217" name="ad4dc14792898dcae08096582b6952217"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad4dc14792898dcae08096582b6952217">&#9670;&#160;</a></span>FileState</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#ad4dc14792898dcae08096582b6952217">idhan::filesystem::FileState</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel strong">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ad4dc14792898dcae08096582b6952217a2767828026039e8ba7b38973cbb701f2" name="ad4dc14792898dcae08096582b6952217a2767828026039e8ba7b38973cbb701f2"></a>FileNotFound&#160;</td><td class="fielddoc"><p>File was not found at its respective hash. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ad4dc14792898dcae08096582b6952217a3f186a1832a3aa96c76a4ee01b373028" name="ad4dc14792898dcae08096582b6952217a3f186a1832a3aa96c76a4ee01b373028"></a>FileInvalidHash&#160;</td><td class="fielddoc"><p>File's hash did not match it's record hash. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ad4dc14792898dcae08096582b6952217a7f22ec93891ebbeba38534904aaad9c5" name="ad4dc14792898dcae08096582b6952217a7f22ec93891ebbeba38534904aaad9c5"></a>FileValid&#160;</td><td class="fielddoc"><p>File is valid. </p>
+</td></tr>
+</table>
+
+</div>
+</div>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a83ff42972eaad3ab860d851c596029e5" name="a83ff42972eaad3ab860d851c596029e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a83ff42972eaad3ab860d851c596029e5">&#9670;&#160;</a></span>checkFileExists()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; bool &gt; idhan::filesystem::checkFileExists </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Checks that a file exists in its respective cluster. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">record_id</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+</div>
+</div>
 <a id="ad28790b6ff89849d0bdad9ced09c4918" name="ad28790b6ff89849d0bdad9ced09c4918"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad28790b6ff89849d0bdad9ced09c4918">&#9670;&#160;</a></span>createSubpath()</h2>
 
@@ -182,6 +263,53 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="addd0c19bb91f1be15a86b8cde1e0f7ff" name="addd0c19bb91f1be15a86b8cde1e0f7ff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#addd0c19bb91f1be15a86b8cde1e0f7ff">&#9670;&#160;</a></span>getClusterPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt; idhan::filesystem::getClusterPath </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a></td>          <td class="paramname"><span class="paramname"><em>cluster_id</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns the path of a cluster. </p>
+
+</div>
+</div>
+<a id="ab5f5fbb3692d51199d168cd7882f7ec5" name="ab5f5fbb3692d51199d168cd7882f7ec5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab5f5fbb3692d51199d168cd7882f7ec5">&#9670;&#160;</a></span>getFilepath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt; idhan::filesystem::getFilepath </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a></td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">record_id</td><td>Record of which to get a filepath for </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+</div>
+</div>
 <a id="a7007bcf3b4f14c107b280d0e1d12dee7" name="a7007bcf3b4f14c107b280d0e1d12dee7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7007bcf3b4f14c107b280d0e1d12dee7">&#9670;&#160;</a></span>getFilesystemCapacity()</h2>
 
@@ -199,6 +327,34 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a877fd1e02f8451b1318a462a31543c61" name="a877fd1e02f8451b1318a462a31543c61"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a877fd1e02f8451b1318a462a31543c61">&#9670;&#160;</a></span>getTheoreticalFilePath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt; idhan::filesystem::getTheoreticalFilePath </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a></td>          <td class="paramname"><span class="paramname"><em>cluster_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a></td>          <td class="paramname"><span class="paramname"><em>sha256</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>extension</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns the path that would occur at a given cluster with a given hash. </p>
+
+</div>
+</div>
 <a id="af22279849e95364f785f83f943474ae0" name="af22279849e95364f785f83f943474ae0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af22279849e95364f785f83f943474ae0">&#9670;&#160;</a></span>metaTypePathID()</h2>
 
@@ -213,6 +369,53 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<a id="aefebb877dfab42528590ccaeadc73f40" name="aefebb877dfab42528590ccaeadc73f40"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aefebb877dfab42528590ccaeadc73f40">&#9670;&#160;</a></span>validateFile() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; <a class="el" href="#ad4dc14792898dcae08096582b6952217">FileState</a> &gt; idhan::filesystem::validateFile </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a></td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8315e896b96ca8501d96761ef08053b4" name="a8315e896b96ca8501d96761ef08053b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8315e896b96ca8501d96761ef08053b4">&#9670;&#160;</a></span>validateFile() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; <a class="el" href="#ad4dc14792898dcae08096582b6952217">FileState</a> &gt; idhan::filesystem::validateFile </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Checks that a record has a file and it's valid. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">record_id</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
 
 </div>
 </div>

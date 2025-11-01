@@ -30,13 +30,13 @@ var NAVTREE =
     [ "IDHAN API Docs", "dd/df9/APIDocs.html", null ],
     [ "Mime Parser", "d9/d30/MimeParser.html", null ],
     [ "Welcome to IDHAN's page", "d0/d30/md_README.html", [
-      [ "Getting started", "d0/d30/md_README.html#autotoc_md6", [
-        [ "Docker", "d0/d30/md_README.html#autotoc_md7", null ],
-        [ "How to build", "d0/d30/md_README.html#autotoc_md8", null ],
-        [ "How to configure", "d0/d30/md_README.html#autotoc_md9", null ]
+      [ "Getting started", "d0/d30/md_README.html#autotoc_md5", [
+        [ "Docker", "d0/d30/md_README.html#autotoc_md6", null ],
+        [ "How to build", "d0/d30/md_README.html#autotoc_md7", null ],
+        [ "How to configure", "d0/d30/md_README.html#autotoc_md8", null ]
       ] ],
-      [ "Clients", "d0/d30/md_README.html#autotoc_md10", null ],
-      [ "Server docs", "d0/d30/md_README.html#autotoc_md11", null ]
+      [ "Clients", "d0/d30/md_README.html#autotoc_md9", null ],
+      [ "Server docs", "d0/d30/md_README.html#autotoc_md10", null ]
     ] ],
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
@@ -56,7 +56,7 @@ var NAVTREE =
       [ "Class Members", "functions.html", [
         [ "All", "functions.html", "functions_dup" ],
         [ "Functions", "functions_func.html", "functions_func" ],
-        [ "Variables", "functions_vars.html", null ],
+        [ "Variables", "functions_vars.html", "functions_vars" ],
         [ "Typedefs", "functions_type.html", null ],
         [ "Enumerations", "functions_enum.html", null ],
         [ "Enumerator", "functions_eval.html", null ],
@@ -79,15 +79,15 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a45610fd256854aea54213e9797449565",
-"d3/d67/classidhan_1_1IDHANClient.html#aad54a32d5b8d88fedd9044776d8665a0",
-"d5/d96/decodeHex_8hpp_source.html",
-"d7/d30/structidhan_1_1ImmedientTask.html#a5a22617951f480554fb06f45460ee4dc",
-"d9/d52/structidhan_1_1WriteAwaiter.html#acbd02647c57e56c419b54059fb98515e",
-"dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a2c988200e952841f7f2895bd2c515046",
-"dd/d91/classidhan_1_1api_1_1Heartbeat.html",
-"de/d88/structidhan_1_1IOUring_1_1CommandRingPointers.html#a8f913fd2bfdb07d73f0b8b713aeddc23",
-"index.html#autotoc_md0"
+"d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a1af9eab14690ec4bab25cf41b38b38fc",
+"d3/d67/classidhan_1_1IDHANClient.html#aaafc2a2d5864d78ffe535f24e7c2030c",
+"d5/d8b/classidhan_1_1FileIOUring.html#a2697022ca2ada9df751913871510e834",
+"d7/d1e/classidhan_1_1SearchBuilder.html#a6ec061edbd33213fefc1026374be81d4",
+"d9/d52/structidhan_1_1WriteAwaiter.html",
+"db/de4/namespaceidhan_1_1api.html#adbddd3f6d42d995f65075727a70fadd1",
+"dd/d25/classidhan_1_1IOUring.html#a781d1b8e8a2e7ed58320d2396ed5a090",
+"de/d07/structidhan_1_1ConnectionArguments.html#ad4b246767cc0162bf93f75085a5bea0b",
+"functions_func_o.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

@@ -19,7 +19,7 @@ var classidhan_1_1api_1_1RecordAPI =
     [ "addTags", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a59a17e33a1ab91b358586daed73fd9c7", null ],
     [ "addUrls", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a5562ef71f6bd06c4f632e653606a1fa4", null ],
     [ "createRecord", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a34294d8569f9747bb42964e04d3c785f", null ],
-    [ "fetchFile", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a767a2a96f0bde860f4b8a3673e94c0a6", null ],
+    [ "fetchFile", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a724b19d27975f223c8e2d823cb5d61ac", null ],
     [ "fetchInfo", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#aa9d8740c7d308994f4304db4f29236d6", null ],
     [ "fetchThumbnail", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#aacf9481d33957e5c9cce432dc2f9d1aa", null ],
     [ "fetchUrls", "d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a0012ab125667e22cb280da1295bf6e0a", null ],

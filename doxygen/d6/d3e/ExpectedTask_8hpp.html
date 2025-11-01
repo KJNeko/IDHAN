@@ -111,6 +111,7 @@ $(function(){initNavTree('d6/d3e/ExpectedTask_8hpp.html','../../'); initResizabl
 
 <div class="header">
   <div class="summary">
+<a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a>  </div>
   <div class="headertitle"><div class="title">ExpectedTask.hpp File Reference</div></div>
 </div><!--header-->
@@ -121,12 +122,36 @@ $(function(){initNavTree('d6/d3e/ExpectedTask_8hpp.html','../../'); initResizabl
 </div>
 <p><a href="../../d6/d3e/ExpectedTask_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a416bf62825ce0098bb25f0a861f99875" id="r_a416bf62825ce0098bb25f0a861f99875"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a416bf62825ce0098bb25f0a861f99875">return_unexpected_error</a>(type)</td></tr>
+<tr class="separator:a416bf62825ce0098bb25f0a861f99875"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a714fc8bcdace841416da50abe0966af4" id="r_a714fc8bcdace841416da50abe0966af4"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a714fc8bcdace841416da50abe0966af4" id="r_a714fc8bcdace841416da50abe0966af4"><td class="memTemplParams" colspan="2">template&lt;typename T = void&gt; </td></tr>
 <tr class="memitem:a714fc8bcdace841416da50abe0966af4"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a> = drogon::Task&lt; std::expected&lt; T, drogon::HttpResponsePtr &gt; &gt;</td></tr>
 <tr class="separator:a714fc8bcdace841416da50abe0966af4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="a416bf62825ce0098bb25f0a861f99875" name="a416bf62825ce0098bb25f0a861f99875"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a416bf62825ce0098bb25f0a861f99875">&#9670;&#160;</a></span>return_unexpected_error</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define return_unexpected_error</td>
+          <td>(</td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>type</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Value:</b><div class="fragment"><div class="line">    <span class="keywordflow">if</span> ( !type ) <span class="keyword">co_return</span> std::unexpected( type.error() );</div>
+</div><!-- fragment -->
+</div>
+</div>
 <h2 class="groupheader">Typedef Documentation</h2>
 <a id="a714fc8bcdace841416da50abe0966af4" name="a714fc8bcdace841416da50abe0966af4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a714fc8bcdace841416da50abe0966af4">&#9670;&#160;</a></span>ExpectedTask</h2>
@@ -134,7 +159,7 @@ Typedefs</h2></td></tr>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename T&gt; </div>
+template&lt;typename T = void&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">using <a class="el" href="#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a> = drogon::Task&lt; std::expected&lt; T, drogon::HttpResponsePtr &gt; &gt;</td>
