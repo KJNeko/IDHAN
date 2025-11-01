@@ -99,23 +99,47 @@ std::optional< T > tryGetCLI( const std::string_view group, const std::string_vi
 	return std::nullopt;
 }
 
-template < typename T >
-std::optional< T > getValue( const std::string_view path, const std::string_view group, const std::string_view name )
+inline std::filesystem::path expand_home( std::string_view path )
 {
-	if ( !std::filesystem::exists( path ) ) return std::nullopt;
+	if ( !path.starts_with( "~" ) ) return path;
+
+	const char* home_path { std::getenv( "HOME" ) };
+
+	if ( !home_path )
+	{
+		log::warn( "Unable to get home path from ENV" );
+		return { path };
+	}
+
+	const std::filesystem::path home { home_path };
+	return home / path.substr( 2 );
+}
+
+template < typename T >
+std::optional< T > getValueFromFile(
+	const std::string_view path,
+	const std::string_view group,
+	const std::string_view name )
+{
+	const std::filesystem::path p { expand_home( path ) };
+
+	if ( !std::filesystem::exists( p ) ) return std::nullopt;
 
 	try
 	{
-		auto config = toml::parse_file( path.data() );
+		auto config = toml::parse_file( p.string() );
 		if ( auto* table = config[ group ].as_table() )
 		{
 			if ( const auto value = ( *table )[ name ] )
 			{
 				if constexpr (
-					std::is_same_v< T, std::string > || std::is_same_v< T, bool > || std::is_same_v< T, double >
-					|| std::is_same_v< T, std::int64_t > )
+					std::is_same_v< T, bool > || std::is_same_v< T, double > || std::is_same_v< T, std::int64_t > )
 				{
 					return **value.as< T >();
+				}
+				else if constexpr ( std::is_same_v< T, std::string > )
+				{
+					return **value.as_string();
 				}
 				else if constexpr ( std::is_integral_v< T > )
 				{
@@ -148,7 +172,7 @@ std::optional< T > getValue( const std::string_view group, const std::string_vie
 	const auto user_config_path { getUserConfigPath() };
 	if ( user_config_path.empty() )
 	{
-		if ( auto result = getValue< T >( user_config_path, group, name ); result )
+		if ( auto result = getValueFromFile< T >( user_config_path, group, name ); result )
 		{
 			return *result;
 		}
@@ -157,8 +181,9 @@ std::optional< T > getValue( const std::string_view group, const std::string_vie
 	// priority paths
 	for ( const auto& path : config_paths | std::views::reverse )
 	{
-		if ( auto result = getValue< T >( path, group, name ); result )
+		if ( auto result = getValueFromFile< T >( path, group, name ); result )
 		{
+			log::info( "Loaded config from {}: {}.{}={}", path, group, name, *result );
 			return *result;
 		}
 	}
