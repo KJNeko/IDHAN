@@ -12,7 +12,7 @@ namespace idhan::hyapi
 {
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getAdvancedUrlInfo( std::string url_str, [[maybe_unused]] drogon::orm::DbClientPtr db )
+	getAdvancedUrlInfo( std::string url_str, [[maybe_unused]] DbClientPtr db )
 {
 	Json::Value root {};
 

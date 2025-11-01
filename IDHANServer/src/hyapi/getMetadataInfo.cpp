@@ -20,10 +20,11 @@
 namespace idhan::hyapi
 {
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getFileInfo( drogon::orm::DbClientPtr db, const RecordID record_id, Json::Value data )
+	getFileInfo( DbClientPtr db, const RecordID record_id, Json::Value data )
 {
 	const auto file_info { co_await db->execSqlCoro(
-		"SELECT size, mime.name as mime_name, coalesce(extension, best_extension) as extension FROM file_info LEFT JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
+		"SELECT size, mime.name as mime_name, coalesce(extension, best_extension) as extension FROM file_info LEFT JOIN "
+		"mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
 		record_id ) };
 
 	if ( file_info.empty() )
@@ -43,7 +44,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getMetadataInfo( drogon::orm::DbClientPtr db, const RecordID record_id, Json::Value data )
+	getMetadataInfo( DbClientPtr db, const RecordID record_id, Json::Value data )
 {
 	auto metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
 
@@ -69,7 +70,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 		case SimpleMimeType::VIDEO:
 			FGL_UNIMPLEMENTED();
 		case SimpleMimeType::NONE:
-			//NOOP
+			// NOOP
 			break;
 		case SimpleMimeType::IMAGE:
 			{
@@ -111,7 +112,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getMetadataFromRow( drogon::orm::DbClientPtr db, const Json::Value services, const drogon::orm::Row row )
+	getMetadataFromRow( DbClientPtr db, const Json::Value services, const drogon::orm::Row row )
 {
 	const auto& record_id { row[ 0 ].as< RecordID >() };
 	const auto sha256 { SHA256::fromPgCol( row[ 1 ] ) };
@@ -180,7 +181,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	auto display_tags { db->execSqlCoro(
 		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1"
 		" UNION DISTINCT "
-		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_parents NATURAL JOIN tags_combined WHERE record_id = $1",
+		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_parents NATURAL JOIN tags_combined WHERE "
+		"record_id = $1",
 		record_id ) };
 	for ( const auto& display_tag : co_await display_tags )
 	{
@@ -236,8 +238,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 	const auto services { co_await getServiceList( db ) };
 
 	const auto hash_result { co_await db->execSqlCoro(
-		"SELECT record_id, sha256, coalesce(size, 0), coalesce(mime.name, '') as mime_name, coalesce(coalesce(extension, best_extension), '') as extension, cluster_store_time FROM records LEFT JOIN file_info USING (record_id) LEFT JOIN mime USING (mime_id) WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME
-		"[])",
+		"SELECT record_id, sha256, coalesce(size, 0), coalesce(mime.name, '') as mime_name, coalesce(coalesce(extension, "
+		"best_extension), '') as extension, cluster_store_time FROM records LEFT JOIN file_info USING (record_id) LEFT "
+		"JOIN mime USING (mime_id) WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME "[])",
 		std::move( record_ids ) ) };
 
 	struct Info

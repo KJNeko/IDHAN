@@ -12,7 +12,7 @@
 namespace idhan
 {
 
-drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const drogon::orm::DbClientPtr db )
+drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const DbClientPtr db )
 {
 	const trantor::Date date {
 		std::chrono::duration_cast< std::chrono::microseconds >( info.store_time.time_since_epoch() ).count()
@@ -22,7 +22,8 @@ drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const
 	{
 		// the extension is used so we can still find the file even with an invalid mime
 		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, NULL, $3, $4) ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = NULL, cluster_store_time = $3, extension = $4",
+			"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, NULL, $3, $4) "
+			"ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = NULL, cluster_store_time = $3, extension = $4",
 			record_id,
 			info.size,
 			date,
@@ -31,7 +32,8 @@ drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const
 	else
 	{
 		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, $3, $4, NULL) ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = $3, cluster_store_time = $4, extension = NULL",
+			"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, $3, $4, NULL) "
+			"ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = $3, cluster_store_time = $4, extension = NULL",
 			record_id,
 			info.size,
 			info.mime_id,
@@ -40,11 +42,11 @@ drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const
 }
 
 drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
-	gatherFileInfo( FileIOUring io, const drogon::orm::DbClientPtr db )
+	gatherFileInfo( FileIOUring io, const DbClientPtr db )
 {
 	FileInfo info {};
 	info.size = io.size();
-	const auto mime_string { co_await mime::getInstance()->scan( io ) };
+	const auto mime_string { co_await mime::getMimeDatabase()->scan( io ) };
 
 	if ( !mime_string )
 	{

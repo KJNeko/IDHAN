@@ -3,15 +3,16 @@
 //
 
 #include "IDHANTypes.hpp"
+#include "api/helpers/ExpectedTask.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
+#include "drogon/HttpAppFramework.h"
 #include "drogon/orm/DbClient.h"
 
 namespace idhan
 {
 
-drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > >
-	getRecordSHA256( const RecordID id, drogon::orm::DbClientPtr db )
+ExpectedTask< SHA256 > getRecordSHA256( const RecordID id, DbClientPtr db = drogon::app().getFastDbClient() )
 {
 	const auto result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", id ) };
 

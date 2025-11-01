@@ -22,7 +22,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpR
 		co_return drogon::HttpResponse::newHttpJsonResponse( error );
 	}
 
-	const auto mime_str { co_await mime::getInstance()->scan( request_data ) };
+	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data ) };
 
 	Json::Value response;
 
@@ -41,14 +41,14 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpR
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::reloadMime( drogon::HttpRequestPtr request )
 {
-	mime::getInstance()->reloadMimeParsers();
+	mime::getMimeDatabase()->reloadMimeParsers();
 
 	co_return co_await listParsers( request );
 }
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::listParsers( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
-	const auto mime_db { idhan::mime::getInstance() };
+	const auto mime_db { idhan::mime::getMimeDatabase() };
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( mime_db->dump() );
 }

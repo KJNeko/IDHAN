@@ -137,7 +137,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	co_return json_out;
 }
 
-std::string extractIDHANHTTPError( const drogon::HttpResponsePtr response )
+std::string extractHttpResponseErrorMessage( const drogon::HttpResponsePtr response )
 {
 	// The response should contain a json body that has an `error` text string in it
 	if ( response->contentType() != drogon::CT_APPLICATION_JSON )

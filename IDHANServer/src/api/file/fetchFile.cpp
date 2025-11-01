@@ -8,48 +8,23 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
+#include "filesystem/utility.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpRequestPtr request, RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile(
+	drogon::HttpRequestPtr request,
+	RecordID record_id,
+	DbClientPtr db )
 {
-	auto db { drogon::app().getDbClient() };
+	const auto path_e { co_await filesystem::getFilepath( record_id, db ) };
+	if ( !path_e ) co_return path_e.error();
 
-	constexpr auto query { R"(
-	SELECT sha256, best_extension, extension, folder_path FROM records
-	LEFT JOIN file_info ON records.record_id = file_info.record_id
-	LEFT JOIN mime ON file_info.mime_id = mime.mime_id
-	LEFT JOIN file_clusters ON file_info.cluster_id = file_clusters.cluster_id
-	WHERE records.record_id = $1
-	)" };
-
-	const auto result { co_await db->execSqlCoro( query, record_id ) };
-	if ( result.empty() ) co_return createBadRequest( "Invalid record id" );
-
-	const auto& row { result[ 0 ] };
-	const SHA256 hash { row[ "sha256" ] };
-	if ( row[ "folder_path" ].isNull() ) co_return createNotFound( "Record {} has no files stored", record_id );
-	const auto cluster_path { row[ "folder_path" ].as< std::string >() };
-
-	const auto folder_path { row[ "folder_path" ].as< std::string >() };
-	auto extension { row[ "best_extension" ].isNull() ? row[ "extension" ].as< std::string >() :
-		                                                row[ "best_extension" ].as< std::string >() };
-
-	if ( extension.starts_with( '.' ) ) extension = extension.substr( 1 );
-
-	const auto hash_string { hash.hex() };
-	const std::string folder { format_ns::format( "f{}", hash_string.substr( 0, 2 ) ) };
-	const std::string file { format_ns::format( "{}.{}", hash_string, extension ) };
-
-	std::filesystem::path path { cluster_path };
-	path /= folder;
-	path /= file;
-
-	if ( !std::filesystem::exists( path ) )
+	if ( !std::filesystem::exists( *path_e ) )
 	{
-		log::warn( "Expected file at location {} for record {} but no file was found", path.string(), record_id );
+		log::warn( "Expected file at location {} for record {} but no file was found", path_e->string(), record_id );
 		co_return createInternalError( "File was expected but not found. Possible data loss" );
 	}
 
@@ -60,14 +35,14 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 		// add to response header that we support partial requests
 		response->addHeader( "Accept-Ranges", "bytes" );
-		response->addHeader( "Content-Length", std::to_string( std::filesystem::file_size( path ) ) );
+		response->addHeader( "Content-Length", std::to_string( std::filesystem::file_size( *path_e ) ) );
 
 		co_return response;
 	}
 
 	// Get the header for ranges if supplied
 
-	const std::size_t file_size { std::filesystem::file_size( path ) };
+	const std::size_t file_size { std::filesystem::file_size( *path_e ) };
 
 	// Get the header for ranges if supplied
 	const auto& range_header { request->getHeader( "Range" ) };
@@ -114,10 +89,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	if ( request->getOptionalParameter< bool >( "download" ).value_or( false ) )
 	{
 		// send the file as a download instead of letting the browser try to display it
-		co_return drogon::HttpResponse::newFileResponse( path.string(), path.filename().string() );
+		co_return drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() );
 	}
 
-	auto response { drogon::HttpResponse::newFileResponse( path.string(), begin, end - begin ) };
+	auto response { drogon::HttpResponse::newFileResponse( path_e->string(), begin, end - begin ) };
 
 	helpers::addFileCacheHeader(
 		response /* max_age is set to 1 year, Since this is likely to never be changed by IDHAN */ );

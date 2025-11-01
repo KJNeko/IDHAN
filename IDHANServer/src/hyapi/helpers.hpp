@@ -17,14 +17,14 @@ namespace idhan::hyapi::helpers
  * @return
  */
 drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
-	extractRecordIDsFromFilesJson( Json::Value json, drogon::orm::DbClientPtr db );
+	extractRecordIDsFromFilesJson( Json::Value json, DbClientPtr db );
 
 drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
-	extractRecordIDsFromParameters( drogon::HttpRequestPtr request, drogon::orm::DbClientPtr db );
+	extractRecordIDsFromParameters( drogon::HttpRequestPtr request, DbClientPtr db );
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	extractRecordIDsToJsonFromFiles( Json::Value json, drogon::orm::DbClientPtr db );
+	extractRecordIDsToJsonFromFiles( Json::Value json, DbClientPtr db );
 
-std::string extractIDHANHTTPError( const drogon::HttpResponsePtr response );
+std::string extractHttpResponseErrorMessage( const drogon::HttpResponsePtr response );
 
 } // namespace idhan::hyapi::helpers

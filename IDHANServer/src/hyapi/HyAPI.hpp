@@ -22,7 +22,9 @@
 #include <expected>
 
 #include "IDHANTypes.hpp"
+#include "api/helpers/ExpectedTask.hpp"
 #include "api/helpers/ResponseCallback.hpp"
+#include "db/dbTypes.hpp"
 
 namespace idhan::hyapi
 {
@@ -137,15 +139,15 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 };
 
 /**
- * @brief Converts and extracts Hydrus' `file` input from json to record ids, Sets the record parameter `file_ids` to a json array of the record ids
+ * @brief Converts and extracts Hydrus' `file` input from json to record ids, Sets the record parameter `file_ids` to a
+ * json array of the record ids
  * @param request
  * @param hashes
  * @param db
  * @return
  */
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	convertQueryRecordIDs( drogon::HttpRequestPtr& request, drogon::orm::DbClientPtr db );
+ExpectedTask< void > convertQueryRecordIDs( drogon::HttpRequestPtr& request, DbClientPtr db );
 
-drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db );
+drogon::Task< Json::Value > getServiceList( DbClientPtr db );
 
 } // namespace idhan::hyapi

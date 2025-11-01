@@ -3,26 +3,15 @@
 //
 #pragma once
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
-#pragma GCC diagnostic ignored "-Wredundant-tags"
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wnoexcept"
-#pragma GCC diagnostic ignored "-Wredundant-decls"
-#pragma GCC diagnostic ignored "-Wuseless-cast"
-#pragma GCC diagnostic ignored "-Wnoexcept"
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#pragma GCC diagnostic ignored "-Wshadow"
 #include <drogon/drogon.h>
-#pragma GCC diagnostic pop
-
-#include <expected>
 
 #include "IDHANTypes.hpp"
+#include "api/helpers/ExpectedTask.hpp"
+#include "db/dbTypes.hpp"
 
 namespace idhan
 {
+class MetadataModuleI;
 class FileMappedData;
 struct MetadataInfo;
 } // namespace idhan
@@ -30,18 +19,17 @@ struct MetadataInfo;
 namespace idhan::api
 {
 
+drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( std::string mime_name );
+
 //! Triggers the metadata parsing for a record and updates it
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	tryParseRecordMetadata( RecordID record_id, drogon::orm::DbClientPtr db );
+ExpectedTask< void > tryParseRecordMetadata( RecordID record_id, DbClientPtr db );
 
 //! Returns the metadata for a given record after parsing the file
-drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
-	parseMetadata( RecordID record_id, drogon::orm::DbClientPtr db );
+ExpectedTask< MetadataInfo > parseMetadata( RecordID record_id, DbClientPtr db );
 
 //! Updates the record metadata for a record
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	updateRecordMetadata( RecordID record_id, drogon::orm::DbClientPtr db, MetadataInfo metadata );
+ExpectedTask< void > updateRecordMetadata( RecordID record_id, DbClientPtr db, MetadataInfo metadata );
 
-drogon::Task< MetadataInfo > getMetadata( const RecordID record_id, drogon::orm::DbClientPtr db );
+drogon::Task< MetadataInfo > getMetadata( RecordID record_id, DbClientPtr db );
 
 } // namespace idhan::api

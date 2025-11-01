@@ -121,7 +121,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 
 			std::string mime { identifier.mime() };
 
-			const auto id { co_await getIDForStr( mime, db ) };
+			const auto id { co_await getMimeIDFromStr( mime, db ) };
 
 			if ( !id.has_value() )
 			{
@@ -139,15 +139,14 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 	co_return {};
 }
 
-std::shared_ptr< MimeDatabase > getInstance()
+std::shared_ptr< MimeDatabase > getMimeDatabase()
 {
 	static std::shared_ptr< MimeDatabase > instance { std::shared_ptr< MimeDatabase >( new MimeDatabase() ) };
 
 	return instance;
 }
 
-drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
-	getIDForStr( std::string str, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr( std::string str, DbClientPtr db )
 {
 	const auto search_result { co_await db->execSqlCoro( "SELECT mime_id FROM mime WHERE name = $1", str ) };
 

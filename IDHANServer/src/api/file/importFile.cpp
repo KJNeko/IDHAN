@@ -62,7 +62,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const SHA256 sha256 { SHA256::hash( data_ptr, data_length ) };
 
-	const auto mime_str { co_await mime::getInstance()->scan( request_data ) };
+	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data ) };
 
 	const bool overwrite_flag { request->getOptionalParameter< bool >( "overwrite" ).value_or( false ) };
 	const bool import_deleted { request->getOptionalParameter< bool >( "import_deleted" ).value_or( false ) };
@@ -79,10 +79,11 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	if ( is_octet && !force_import )
 	{
 		co_return createBadRequest(
-			"Mime type not known by IDHAN. Either set the force import flag in the parameters, or teach IDHAN how to detect the mime for this file" );
+			"Mime type not known by IDHAN. Either set the force import flag in the parameters, "
+			"or teach IDHAN how to detect the mime for this file" );
 	}
 
-	const auto mime_id { co_await mime::getIDForStr( mime_str.value(), db ) };
+	const auto mime_id { co_await mime::getMimeIDFromStr( mime_str.value(), db ) };
 
 	if ( !mime_id ) co_return mime_id.error();
 
@@ -94,14 +95,15 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	// try to insert info if it's missing
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, mime_id, size) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+		"INSERT INTO file_info (record_id, mime_id, size, cluster_store_time) VALUES ($1, $2, $3, now()) ON CONFLICT DO NOTHING",
 		record_id,
 		*mime_id,
 		data_length );
 
 	// select deleted time and store time
 	const auto delete_time { co_await db->execSqlCoro(
-		"SELECT cluster_delete_time, cluster_store_time, EXTRACT(EPOCH FROM cluster_delete_time)::BIGINT as cluster_delete_time_epoch FROM file_info WHERE record_id = $1 LIMIT 1",
+		"SELECT cluster_delete_time, cluster_store_time, EXTRACT(EPOCH FROM cluster_delete_time)::BIGINT as "
+		"cluster_delete_time_epoch FROM file_info WHERE record_id = $1 LIMIT 1",
 		record_id ) };
 
 	const bool deleted { !delete_time[ 0 ][ "cluster_delete_time" ].isNull() };
@@ -136,7 +138,8 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		record_id ) };
 
 	const auto store_time { co_await db->execSqlCoro(
-		"SELECT cluster_store_time, EXTRACT(EPOCH FROM cluster_store_time)::BIGINT FROM file_info WHERE record_id = $1 LIMIT 1",
+		"SELECT cluster_store_time, EXTRACT(EPOCH FROM cluster_store_time)::BIGINT FROM file_info WHERE record_id = $1 "
+		"LIMIT 1",
 		record_id ) };
 
 	Json::Value root {};

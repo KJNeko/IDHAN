@@ -8,7 +8,8 @@
 
 /**
  * @page IDHANAuth IDHAN Authorization
- * @warning This document is purely for reference for later, The only thing true in this document is the concept of `Access Key`
+ * @warning This document is purely for reference for later, The only thing true in this document is the concept of
+ * `Access Key`
  *
  * IDHAN uses a key system to authorize access to the API. There are various ways to do so however.
  * First, Some terminology.

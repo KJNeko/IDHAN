@@ -24,7 +24,7 @@ class ErrorInfo : public std::enable_shared_from_this< ErrorInfo >
 
 	drogon::HttpResponsePtr genResponse() const;
 
-	//TODO: If stacktrace is available, mark where this is called
+	// TODO: If stacktrace is available, mark where this is called
 	std::shared_ptr< ErrorInfo > error();
 };
 

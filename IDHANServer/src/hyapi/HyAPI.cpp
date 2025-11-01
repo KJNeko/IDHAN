@@ -83,7 +83,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getService( [[maybe_unused]] 
 	FGL_UNIMPLEMENTED();
 }
 
-drogon::Task< Json::Value > getServiceList( drogon::orm::DbClientPtr db )
+drogon::Task< Json::Value > getServiceList( DbClientPtr db )
 {
 	// we start with the local tags services
 	const auto local_tags_result { co_await db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains" ) };
@@ -115,7 +115,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( [[maybe_unused]]
 
 	Json::Value root {};
 
-	//Deprecated in v531
+	// Deprecated in v531
 	root[ "tag_repositories" ] = Json::Value( Json::arrayValue );
 	root[ "local_files" ] = Json::Value( Json::arrayValue );
 	root[ "local_updates" ] = Json::Value( Json::arrayValue );
@@ -218,9 +218,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	builder.setTags( tag_ids );
 
-	//TODO: file domains. For now we'll assume all files
+	// TODO: file domains. For now we'll assume all files
 
-	//TODO: Tag service key, Which tag domain to search. Defaults to all tags
+	// TODO: Tag service key, Which tag domain to search. Defaults to all tags
 
 	// include_current_tags and include_pending_tags are both things that are not needed for IDHAN so we just skip this.
 
@@ -296,7 +296,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( [[maybe_unused]] 
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	convertQueryRecordIDs( drogon::HttpRequestPtr& request, drogon::orm::DbClientPtr db )
+	convertQueryRecordIDs( drogon::HttpRequestPtr& request, DbClientPtr db )
 {
 	const auto out { co_await helpers::extractRecordIDsFromParameters( request, db ) };
 	if ( !out ) co_return std::unexpected( out.error() );
@@ -401,7 +401,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getClientOptions( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
-	//TODO: This. For now i'll just make shit up
+	// TODO: This. For now i'll just make shit up
 	Json::Value json {};
 
 	const std::string RAW_JSON {

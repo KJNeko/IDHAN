@@ -107,14 +107,14 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 
 	if ( !std::filesystem::exists( path.parent_path() ) ) std::filesystem::create_directories( path.parent_path() );
 
-	//TODO: IOuring write wrapper
+	// TODO: IOuring write wrapper
 
 	if ( std::ofstream ofs( path, std::ios::binary ); ofs )
 	{
 		ofs.write( reinterpret_cast< const std::ostream::char_type* >( data ), length );
 
 		ofs.flush();
-		//TODO: Add flag for 'ensure write' to ensure we've always written the data fully to at least some media
+		// TODO: Add flag for 'ensure write' to ensure we've always written the data fully to at least some media
 	}
 	else
 		return std::unexpected(
@@ -124,7 +124,9 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 }
 
 drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManager::findBestFolder(
-	const RecordID record_id, [[maybe_unused]] const std::size_t file_size, drogon::orm::DbClientPtr db )
+	const RecordID record_id,
+	[[maybe_unused]] const std::size_t file_size,
+	DbClientPtr db )
 {
 	const auto cluster_check { co_await db->execSqlCoro(
 		"SELECT cluster_id, cluster_delete_time FROM file_info WHERE record_id = $1 LIMIT 1", record_id ) };
@@ -141,14 +143,14 @@ drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManag
 	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
 
 	if ( clusters.empty() )
-		co_return std::
-			unexpected( createBadRequest( "No clusters available, You must create one before importing files" ) );
+		co_return std::unexpected(
+			createBadRequest( "No clusters available, You must create one before importing files" ) );
 
 	const auto rankCluster = []( const drogon::orm::Row& row ) -> std::size_t
 	{
 		const auto& size_used { row[ "size_used" ].as< std::size_t >() };
 		const auto& size_total { row[ "size_limit" ].as< std::size_t >() };
-		//TODO: Add free capacity to the ranking
+		// TODO: Add free capacity to the ranking
 		const double ratio_used = static_cast< double >( size_used ) / static_cast< double >( size_total );
 		return static_cast< std::size_t >( ratio_used * 100 );
 	};
@@ -160,8 +162,8 @@ drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManag
 		cluster_scores.emplace_back( rankCluster( row ), row[ "cluster_id" ].as< ClusterID >() );
 	}
 
-	std::ranges::
-		sort( cluster_scores, []( const auto& a, const auto& b ) noexcept -> bool { return a.first < b.first; } );
+	std::ranges::sort(
+		cluster_scores, []( const auto& a, const auto& b ) noexcept -> bool { return a.first < b.first; } );
 
 	co_return cluster_scores[ 0 ].second;
 }
@@ -170,7 +172,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const RecordID record,
 	const std::byte* data,
 	const std::size_t length,
-	const drogon::orm::DbClientPtr db,
+	const DbClientPtr db,
 	const FileMetaType type )
 {
 	std::lock_guard lock { m_mutex };
@@ -202,7 +204,7 @@ ClusterManager::ClusterManager()
 	m_instance = this;
 }
 
-drogon::Task< void > ClusterManager::reloadClusters( const drogon::orm::DbClientPtr db )
+drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
 {
 	log::info( "Reloading clusters" );
 	std::lock_guard lock { m_mutex };
@@ -219,16 +221,32 @@ drogon::Task< void > ClusterManager::reloadClusters( const drogon::orm::DbClient
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeFile(
-	const RecordID record, const std::byte* data, const std::size_t length, const drogon::orm::DbClientPtr db )
+	const RecordID record,
+	const std::byte* data,
+	const std::size_t length,
+	const DbClientPtr db )
 {
 	const auto result { co_await storeFile( record, data, length, db, FileMetaType::NORMAL ) };
 	co_return result;
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeThumbnail(
-	const RecordID record, const std::byte* data, const std::size_t length, const drogon::orm::DbClientPtr db )
+	const RecordID record,
+	const std::byte* data,
+	const std::size_t length,
+	const DbClientPtr db )
 {
 	co_return co_await storeFile( record, data, length, db, FileMetaType::THUMBNAIL );
+}
+
+ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const ClusterID cluster_id )
+{
+	std::lock_guard lock { m_mutex };
+	auto itter = m_folders.find( cluster_id );
+	if ( itter == m_folders.end() )
+		co_return std::unexpected( createBadRequest( "Invalid cluster id {}", cluster_id ) );
+
+	co_return itter->second.m_path.filesystemAbsolutePath();
 }
 
 ClusterManager& ClusterManager::getInstance()

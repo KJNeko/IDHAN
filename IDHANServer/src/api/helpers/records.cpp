@@ -8,8 +8,7 @@
 namespace idhan::api::helpers
 {
 
-drogon::Task< std::vector< RecordID > >
-	massCreateRecord( const std::vector< SHA256 >& sha256s, drogon::orm::DbClientPtr db )
+drogon::Task< std::vector< RecordID > > massCreateRecord( const std::vector< SHA256 >& sha256s, DbClientPtr db )
 {
 	if ( sha256s.empty() ) co_return {};
 
@@ -35,8 +34,7 @@ drogon::Task< std::vector< RecordID > >
 	co_return record_ids;
 }
 
-drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > >
-	createRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > > createRecord( const SHA256& sha256, DbClientPtr db )
 {
 	const auto result { co_await findRecord( sha256, db ) };
 
@@ -45,7 +43,8 @@ drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > >
 
 	std::size_t tries { 0 };
 
-	do {
+	do
+	{
 		tries += 1;
 		if ( tries > 16 )
 			co_return std::unexpected( createInternalError( "Failed to insert record {}", sha256.hex() ) );
@@ -62,7 +61,7 @@ drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > >
 	co_return std::unexpected( createBadRequest( "Failed to create record" ) );
 }
 
-drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, drogon::orm::DbClientPtr db )
+drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, DbClientPtr db )
 {
 	const auto search_result {
 		co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", sha256.toVec() )

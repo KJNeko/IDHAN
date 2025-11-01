@@ -57,7 +57,8 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 	const auto start_pos { cursor.pos() };
 
 	const auto pos_limit { m_limit == NO_LIMIT ? NO_LIMIT : cursor.pos() + m_limit };
-	do {
+	do
+	{
 		if ( cursor.pos() >= pos_limit )
 		{
 			// log::debug( "Ending search due to limit being hit. Limit was {}. Started at {}", pos_limit, start_pos );

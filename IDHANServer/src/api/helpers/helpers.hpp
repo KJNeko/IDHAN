@@ -29,7 +29,7 @@ namespace idhan::api::helpers
 {
 
 drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
-	getRecordPath( RecordID record_id, drogon::orm::DbClientPtr db );
+	getRecordPath( RecordID record_id, DbClientPtr db );
 
 std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainID( drogon::HttpRequestPtr request );
 

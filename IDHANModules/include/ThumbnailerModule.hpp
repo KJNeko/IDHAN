@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/11/25.
 //
 #pragma once
+#include <algorithm>
 #include <expected>
 #include <string_view>
 #include <vector>
@@ -21,23 +22,20 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 	};
 
 	ThumbnailerModuleI();
-	virtual ~ThumbnailerModuleI();
+
+	~ThumbnailerModuleI() override;
 
 	virtual std::vector< std::string_view > handleableMimes() = 0;
 
-	bool canHandle( const std::string_view mime )
-	{
-		for ( auto& handleable : handleableMimes() )
-		{
-			if ( handleable == mime ) return true;
-		}
-
-		return false;
-	}
-
 	virtual std::expected< ThumbnailInfo, ModuleError > createThumbnail(
-		void* data, std::size_t length, std::size_t width, std::size_t height, const std::string mime_name ) = 0;
+		void* data,
+		std::size_t length,
+		std::size_t width,
+		std::size_t height,
+		std::string mime_name ) = 0;
 
-	ModuleType type() override { return ModuleTypeFlags::THUMBNAILER; }
+	bool canHandle( std::string_view mime );
+
+	ModuleType type() override;
 };
 } // namespace idhan

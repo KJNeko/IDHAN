@@ -25,7 +25,9 @@ the following section identifies how the mime parser json file should be laid ou
 
 the current fields are:
 - `mime` is a string that identifies the mime, an example of this is `image/jpeg` for a jpg image.
-- `extensions` is an array of extensions the file could possibly possess, this is not used in the detection but is for the user to select one of the extensions to store the files as, the default is the 0th item. If this list is empty the extension `.bin` is used instead
+- `extensions` is an array of extensions the file could possibly possess, this is not used in the detection but is for
+the user to select one of the extensions to store the files as, the default is the 0th item. If this list is empty the
+extension `.bin` is used instead
 - `data` is an array of json objects. The format for this objects is listed in the next section
 - `fast` a boolean value that informs the parser that if it passes it should consider the file found, default true
 
@@ -35,15 +37,16 @@ the current fields are:
 
 List of types:
 - search
-- override
 
 @subsubsection MimeSearch search
 optional fields:
-- `offset`: either an integer value, or a string of an id for a compatible data search. Negative values signify a offset from the end of the data (-1 indicates 1 byte backwards from the size N)
+- `offset`: either an integer value, or a string of an id for a compatible data search. Negative values signify a offset
+from the end of the data (-1 indicates 1 byte backwards from the size N)
 - `strict`: signifies if the offset is a starting point, or the exact point. default true if not present
 
 required fields:
-- `hex`: a hex representation of the data. In order to signify wildcard data, this can also be an array of integer values, with any value beyond the 0-255 range being a wildcard, such as -1
+- `hex`: a hex representation of the data. In order to signify wildcard data, this can also be an array of integer
+values, with any value beyond the 0-255 range being a wildcard, such as -1
 
 @subsubsection MimeOverride override
 Same requirements as @refitem MimeSearch but with an extra field
@@ -55,22 +58,14 @@ An example file
 
   "mime": "image/jpeg",
   "extensions": [
-    "jpg"
+	"jpg"
   ],
   "data": [
-    {
-      "type": "search",
-      "offset": 0,
-      "hex": "89504E0D0A1A0A",
-      "id": "signature"
-    },
-    {
-      "type": "override",
-      "strict": false,
-      "offset": "signature:end",
-      "hex": "6163544C",
-      "override": "image/apng"
-    }
+	{
+	  "type": "search",
+	  "offset": 0,
+	  "hex": "89504E0D0A1A0A"
+	}
   ]
 }
 ```
@@ -83,7 +78,7 @@ class MimeDatabase
 {
 	MimeDatabase();
 
-	friend std::shared_ptr< MimeDatabase > getInstance();
+	friend std::shared_ptr< MimeDatabase > getMimeDatabase();
 
 	std::vector< MimeIdentifier > m_identifiers {};
 
@@ -107,8 +102,7 @@ class MimeDatabase
 	drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();
 };
 
-std::shared_ptr< MimeDatabase > getInstance();
-drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
-	getIDForStr( std::string str, drogon::orm::DbClientPtr db );
+std::shared_ptr< MimeDatabase > getMimeDatabase();
+drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr( std::string str, DbClientPtr db );
 
 } // namespace idhan::mime

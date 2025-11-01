@@ -44,7 +44,7 @@ struct ImmedientTask
 	{
 		ImmedientTask< T > get_return_object() { return ImmedientTask< T > { handle_type::from_promise( *this ) }; }
 
-		std::suspend_never initial_suspend() { return {}; }
+		std::suspend_always initial_suspend() { return {}; }
 
 		void return_value( const T& v ) { value = v; }
 
@@ -117,7 +117,7 @@ struct [[nodiscard]] ImmedientTask< void >
 	{
 		ImmedientTask<> get_return_object() { return ImmedientTask<> { handle_type::from_promise( *this ) }; }
 
-		std::suspend_never initial_suspend() { return {}; }
+		std::suspend_always initial_suspend() { return {}; }
 
 		void return_void() {}
 

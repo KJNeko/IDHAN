@@ -12,7 +12,7 @@ namespace idhan::api
 {
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	addImageInfo( Json::Value& root, const RecordID record_id, drogon::orm::DbClientPtr db )
+	addImageInfo( Json::Value& root, const RecordID record_id, DbClientPtr db )
 {
 	const auto metadata { co_await db->execSqlCoro( "SELECT * FROM image_metadata WHERE record_id = $1", record_id ) };
 
@@ -27,7 +27,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	addFileSpecificInfo( Json::Value& root, const RecordID record_id, drogon::orm::DbClientPtr db )
+	addFileSpecificInfo( Json::Value& root, const RecordID record_id, DbClientPtr db )
 {
 	auto simple_mime_result {
 		co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id )
