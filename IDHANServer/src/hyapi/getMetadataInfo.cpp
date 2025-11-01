@@ -165,7 +165,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	}
 
 	auto storage_tags { db->execSqlCoro(
-		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1",
+		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags WHERE record_id = $1",
 		record_id ) };
 
 	data[ "tags" ] = Json::Value( Json::objectValue );
@@ -183,9 +183,9 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	}
 
 	auto display_tags { db->execSqlCoro(
-		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags_combined WHERE record_id = $1"
+		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags WHERE record_id = $1"
 		" UNION DISTINCT "
-		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_parents NATURAL JOIN tags_combined WHERE "
+		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_parents NATURAL JOIN tags WHERE "
 		"record_id = $1",
 		record_id ) };
 	for ( const auto& display_tag : co_await display_tags )

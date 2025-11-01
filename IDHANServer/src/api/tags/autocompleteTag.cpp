@@ -31,7 +31,7 @@ drogon::Task< Json::Value > getSimilarTags(
 				tag_text = $2											AS exact,
 				similarity(tag_text, $2) * coalesce(display_count, 1)	AS score,
 				COALESCE(tc.display_count, 0)							AS count
-		FROM tags_combined
+		FROM tags
 		         LEFT JOIN total_tag_counts tc USING (tag_id)
 		WHERE tag_text LIKE $1
 		ORDER BY exact DESC, score DESC, similarity DESC

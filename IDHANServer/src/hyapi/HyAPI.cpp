@@ -204,7 +204,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	const auto tag_id_result { co_await db->execSqlCoro(
 		format_ns::format(
-			"SELECT tag_id, tag_text FROM tags_combined WHERE tag_text = ANY(ARRAY[{}]::TEXT[])", tag_array_str ) ) };
+			"SELECT tag_id, tag_text FROM tags WHERE tag_text = ANY(ARRAY[{}]::TEXT[])", tag_array_str ) ) };
 
 	if ( tag_id_result.size() != search_tags.size() ) co_return createInternalError( "Failed to get search tags" );
 
