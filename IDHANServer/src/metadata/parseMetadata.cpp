@@ -111,7 +111,8 @@ ExpectedTask< void > tryParseRecordMetadata( const RecordID record_id, DbClientP
 ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPtr db )
 {
 	auto io { co_await getIOForRecord( record_id, db ) };
-	if ( !io ) co_return std::unexpected( createBadRequest( "Record {} does not exist", record_id ) );
+	return_unexpected_error( io );
+
 	const auto [ data, length ] = io->mmap();
 
 	const auto record_mime {
