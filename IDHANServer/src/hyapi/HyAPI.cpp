@@ -201,12 +201,14 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		tag_array_str += format_ns::format( "\'{}\'", search_tags[ i ] );
 		if ( i + 1 != search_tags.size() ) tag_array_str += ",";
 	}
+	const auto query {
+		format_ns::format( "SELECT tag_id, tag_text FROM tags WHERE tag_text = ANY(ARRAY[{}]::TEXT[])", tag_array_str )
+	};
 
-	const auto tag_id_result { co_await db->execSqlCoro(
-		format_ns::format(
-			"SELECT tag_id, tag_text FROM tags WHERE tag_text = ANY(ARRAY[{}]::TEXT[])", tag_array_str ) ) };
+	const auto tag_id_result { co_await db->execSqlCoro( query ) };
 
-	if ( tag_id_result.size() != search_tags.size() ) co_return createInternalError( "Failed to get search tags" );
+	if ( tag_id_result.size() != search_tags.size() )
+		co_return createInternalError( "Failed to get all search tags ids. Maybe unknown tag?" );
 
 	std::vector< TagID > tag_ids {};
 	tag_ids.reserve( search_tags.size() );
