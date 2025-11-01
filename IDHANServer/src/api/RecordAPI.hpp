@@ -18,6 +18,7 @@
 #pragma GCC diagnostic pop
 
 #include "IDHANTypes.hpp"
+#include "db/dbTypes.hpp"
 #include "helpers/ResponseCallback.hpp"
 
 namespace idhan::api
@@ -38,7 +39,10 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > searchHash( drogon::HttpRequestPtr request );
 
-	drogon::Task< drogon::HttpResponsePtr > fetchFile( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > fetchFile(
+		drogon::HttpRequestPtr request,
+		RecordID record_id,
+		DbClientPtr db );
 
 	drogon::Task< drogon::HttpResponsePtr > fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id );
 

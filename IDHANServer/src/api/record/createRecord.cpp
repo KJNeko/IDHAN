@@ -20,7 +20,7 @@ ResponseTask createRecordFromOctet( [[maybe_unused]] const drogon::HttpRequestPt
 }
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	createRecordsFromJsonArray( const Json::Value& json, drogon::orm::DbClientPtr db )
+	createRecordsFromJsonArray( const Json::Value& json, DbClientPtr db )
 {
 	std::unordered_set< SHA256 > hashes {};
 
@@ -57,7 +57,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	if ( hashes_order.size() != record_id_map.size() )
 	{
 		log::warn(
-			"Create records endpoint got {} hashes but only {} were unique, This impacts performance, Only submit unique hashes",
+			"Create records endpoint got {} hashes but only {} were unique, This impacts performance, Only "
+			"submit unique hashes",
 			hashes_order.size(),
 			record_id_map.size() );
 	}
@@ -84,7 +85,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 	auto db { drogon::app().getDbClient() };
 
-	//test if sha256 is a list or 1 item
+	// test if sha256 is a list or 1 item
 	const auto& sha256s { json[ "sha256" ] };
 	if ( sha256s.isArray() )
 	{
@@ -119,7 +120,8 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "createRecord" };
-	// the request here should be either an octet stream, or json. If it's an octet stream, then it will be a file we can hash.
+	// the request here should be either an octet stream, or json. If it's an octet stream, then it will be a file we
+	// can hash.
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch-enum"

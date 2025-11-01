@@ -15,7 +15,7 @@ namespace idhan
 std::string SearchBuilder::
 	construct( const bool return_ids, const bool return_hashes, [[maybe_unused]] const bool filter_domains )
 {
-	//TODO: Sort tag ids to get the most out of each filter.
+	// TODO: Sort tag ids to get the most out of each filter.
 
 	std::string query {};
 	query.reserve( 1024 );
@@ -26,11 +26,14 @@ std::string SearchBuilder::
 	}
 
 	constexpr std::string_view domain_filter_template {
-		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} AND tag_domain_id = ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id = ANY($1))"
+		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} AND tag_domain_id = "
+		"ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id "
+		"= ANY($1))"
 	};
 
 	constexpr std::string_view domainless_filter_template {
-		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1})"
+		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} UNION DISTINCT SELECT "
+		"record_id FROM active_tag_mappings_parents WHERE tag_id = {1})"
 	};
 
 	m_bind_domains = filter_domains;
@@ -116,10 +119,7 @@ SearchBuilder::SearchBuilder() : m_sort_type(), m_order(), m_tags(), m_display_m
 {}
 
 drogon::Task< drogon::orm::Result > SearchBuilder::query(
-	const drogon::orm::DbClientPtr db,
-	std::vector< TagDomainID > tag_domain_ids,
-	const bool return_ids,
-	const bool return_hashes )
+	const DbClientPtr db, std::vector< TagDomainID > tag_domain_ids, const bool return_ids, const bool return_hashes )
 {
 	const auto query { construct( return_ids, return_hashes, /* filter_domains */ false ) };
 
@@ -166,7 +166,7 @@ void SearchBuilder::setSortOrder( const SortOrder value )
 void SearchBuilder::filterTagDomain( [[maybe_unused]] const TagDomainID value )
 {
 	FGL_UNIMPLEMENTED();
-	//any searches with `tags` should be filtered.
+	// any searches with `tags` should be filtered.
 }
 
 void SearchBuilder::addFileDomain( [[maybe_unused]] const FileDomainID value )

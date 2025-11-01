@@ -27,8 +27,8 @@ struct hash< std::pair< std::string, std::string > >
 namespace idhan::api
 {
 
-drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > createTagsFromPairs(
-	const std::vector< std::pair< std::string, std::string > >& tag_pairs, const drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
+	createTagsFromPairs( const std::vector< std::pair< std::string, std::string > >& tag_pairs, const DbClientPtr db )
 {
 	logging::ScopedTimer timer { "createTags" };
 

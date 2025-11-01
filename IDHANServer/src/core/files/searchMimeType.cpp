@@ -10,7 +10,7 @@
 namespace idhan::mime
 {
 
-std::optional< MimeID > searchMimeType( const std::string& name, drogon::orm::DbClientPtr db )
+std::optional< MimeID > searchMimeType( const std::string& name, DbClientPtr db )
 {
 	// check if the type is already registered
 	const auto search_result { db->execSqlSync( "SELECT mime_id FROM mime WHERE name = $1", name ) };

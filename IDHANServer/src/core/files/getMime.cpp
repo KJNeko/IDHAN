@@ -12,7 +12,7 @@ namespace idhan::mime
 {
 
 drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
-	getMimeIDFromRecord( const RecordID id, drogon::orm::DbClientPtr db )
+	getMimeIDFromRecord( const RecordID id, DbClientPtr db )
 {
 	const auto result { db->execSqlSync( "SELECT mime_id FROM file_info WHERE record_id = $1", id ) };
 
@@ -21,8 +21,7 @@ drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
 	co_return result[ 0 ][ 0 ].as< MimeID >();
 }
 
-drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > >
-	getMime( const MimeID mime_id, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > > getMime( const MimeID mime_id, DbClientPtr db )
 {
 	const auto mime_search { db->execSqlSync( "SELECT name, best_extension FROM mime WHERE mime_id = $1", mime_id ) };
 
@@ -36,7 +35,7 @@ drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > >
-	getRecordMime( const RecordID record_id, drogon::orm::DbClientPtr db )
+	getRecordMime( const RecordID record_id, DbClientPtr db )
 {
 	const auto id { co_await getMimeIDFromRecord( record_id, db ) };
 

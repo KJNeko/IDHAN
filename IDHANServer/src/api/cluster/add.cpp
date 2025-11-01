@@ -13,9 +13,10 @@ namespace idhan::api
 {
 
 /**
- * @brief Finds a valid cluster name, If the cluster name is already taken, then we'll append a unique identifier to the end of it
+ * @brief Finds a valid cluster name, If the cluster name is already taken, then we'll append a unique identifier to the
+ * end of it
  */
-drogon::Task< std::string > findValidClusterName( const std::string desired_name, drogon::orm::DbClientPtr db )
+drogon::Task< std::string > findValidClusterName( const std::string desired_name, DbClientPtr db )
 {
 	const auto result {
 		co_await db->execSqlCoro( "SELECT cluster_name FROM file_clusters WHERE cluster_name = $1", desired_name )
@@ -142,60 +143,40 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	}
 	const std::string cluster_name { request_json[ "name" ].asString() };
 
-	std::string fixed_cluster_name { co_await findValidClusterName( cluster_name, db ) };
+	try
+	{
+		// insert the data
+		const auto insert_result { co_await transaction->execSqlCoro(
+			"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) RETURNING cluster_id",
+			cluster_name,
+			target_path.string() ) };
 
-	log::info( "Creating cluster {} -> {}", cluster_name, fixed_cluster_name );
-
-	bool success { false };
-	std::size_t tries { 0 };
-
-	do {
-		try
+		if ( insert_result.empty() )
 		{
-			// insert the data
-			const auto insert_result { co_await transaction->execSqlCoro(
-				"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) RETURNING cluster_id",
-				fixed_cluster_name,
-				target_path.string() ) };
+			transaction->rollback();
 
-			success = true;
-
-			if ( insert_result.empty() )
-			{
-				transaction->rollback();
-
-				co_return createInternalError( "Failed to insert new cluster into table" );
-			}
-
-			// Set the request cluster_name to match the new name
-			auto& json_object_m { *request->getJsonObject() };
-			json_object_m[ "name" ] = fixed_cluster_name;
-
-			const auto cluster_id { insert_result[ 0 ][ 0 ].as< ClusterID >() };
-
-			log::debug( "Setting cluster info" );
-
-			// Modify will return `{cluster_id}/list` if it succeeds.
-			const auto ret { co_await modifyT( request, cluster_id, transaction ) };
-
-			//TODO: Queue orphan check here.
-			co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
-
-			co_return ret;
+			co_return createInternalError(
+				"Failed to insert new cluster into table. Cluster might already exist with that name?" );
 		}
-		catch ( drogon::orm::UniqueViolation& e )
-		{
-			// NOOP
-		}
-		++tries;
 
-		if ( tries > 16 ) co_return createInternalError( "Failed to create cluster: Too many tries" );
+		const auto cluster_id { insert_result[ 0 ][ 0 ].as< ClusterID >() };
 
-		fixed_cluster_name = co_await findValidClusterName( cluster_name, db );
+		log::debug( "Setting cluster info" );
+
+		// Modify will return `{cluster_id}/list` if it succeeds.
+		const auto ret { co_await modifyT( request, cluster_id, transaction ) };
+
+		// TODO: Queue orphan check here.
+		co_await filesystem::ClusterManager::getInstance().reloadClusters( transaction );
+
+		co_return ret;
 	}
-	while ( !success );
+	catch ( std::exception& e )
+	{
+		transaction->rollback();
 
-	co_return createInternalError( "Somehow escaped cluster building" );
+		co_return createInternalError( "Failed to insert cluster into table: {}", e.what() );
+	}
 }
 
 } // namespace idhan::api

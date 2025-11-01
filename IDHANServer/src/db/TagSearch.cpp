@@ -26,9 +26,7 @@ ExpectedTask< TagID > TagSearch::idealize( const TagID id )
 	co_return result[ 0 ][ "alias_id" ].as< TagID >();
 }
 
-TagSearch::TagSearch( const TagDomainID tag_domain_id, drogon::orm::DbClientPtr db ) :
-  m_db( db ),
-  m_domain( tag_domain_id )
+TagSearch::TagSearch( const TagDomainID tag_domain_id, DbClientPtr db ) : m_db( db ), m_domain( tag_domain_id )
 {}
 
 ExpectedTask< void > TagSearch::addID( const TagID id )
@@ -55,7 +53,8 @@ ExpectedTask< void > TagSearch::addChildren( TagID tag_id )
 
 	queue.push( tag_id );
 
-	do {
+	do
+	{
 		const auto children { co_await m_db->execSqlCoro(
 			"SELECT DISTINCT child_id FROM aliased_parents WHERE parent_id = $1 AND tag_domain_id = $2",
 			queue.front(),
@@ -94,7 +93,8 @@ ExpectedTask< std::vector< TagID > > TagSearch::findSiblings( const TagID id )
 
 	queue.push( id );
 
-	do {
+	do
+	{
 		const auto siblings { co_await m_db->execSqlCoro(
 			"SELECT DISTINCT younger_id FROM aliased_siblings WHERE older_id = $1 AND tag_domain_id = $2",
 			queue.front(),

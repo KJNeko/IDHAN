@@ -66,7 +66,8 @@ class Cursor
 	//! Tries to match `match` with current cursor position.
 	drogon::Task< bool > tryMatch( std::string_view match ) const;
 
-	//! Tries to match `match` with the current cursor position, if matched then the cursor will jump forward by match.size()
+	//! Tries to match `match` with the current cursor position, if matched then the cursor will jump forward by
+	//! match.size()
 	drogon::Task< bool > tryMatchInc( std::string_view match );
 
 	void jumpTo( std::int64_t pos );

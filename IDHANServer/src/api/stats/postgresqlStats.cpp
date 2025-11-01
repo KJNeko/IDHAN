@@ -17,10 +17,9 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto table_list {
-		co_await db->execSqlCoro(
-			"SELECT table_name, pg_relation_size(quote_ident(table_name)::text) AS size FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" )
-	};
+	const auto table_list { co_await db->execSqlCoro(
+		"SELECT table_name, pg_relation_size(quote_ident(table_name)::text) AS size FROM information_schema.tables WHERE "
+		"table_schema = 'public' AND table_type = 'BASE TABLE'" ) };
 
 	for ( const auto& table : table_list )
 	{

@@ -37,14 +37,6 @@ void ReadAwaiter::complete( const int result )
 		log::critical( "ReadWaiter had no coroutine to continue!" );
 	}
 
-	const auto ptr = m_cont.address();
-
-	// Check if the memory at ptr is a 0 byte pointer
-	if ( *reinterpret_cast< std::size_t** >( ptr ) == nullptr )
-	{
-		log::critical( "Internal pointer address was zeroed" );
-	}
-
 	if ( m_cont.done() )
 	{
 		log::critical( "ReadWaiter had a coroutine that was already finished!" );

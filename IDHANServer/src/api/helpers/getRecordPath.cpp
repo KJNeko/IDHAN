@@ -10,7 +10,7 @@
 namespace idhan::api::helpers
 {
 drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
-	getRecordPath( const RecordID record_id, drogon::orm::DbClientPtr db )
+	getRecordPath( const RecordID record_id, DbClientPtr db )
 {
 	const auto result { co_await db->execSqlCoro(
 

@@ -80,8 +80,7 @@ SHA256 SHA256::fromPgCol( const drogon::orm::Field& field )
 	return { field };
 }
 
-drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::
-	fromDB( RecordID record_id, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::fromDB( RecordID record_id, DbClientPtr db )
 {
 	const auto result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", record_id ) };
 
@@ -103,7 +102,7 @@ SHA256::SHA256( QIODevice* io ) : m_data()
 
 SHA256 SHA256::hashFile( const std::filesystem::path& path )
 {
-	//TODO: Switch to mmap instead
+	// TODO: Switch to mmap instead
 	if ( std::ifstream ifs( path, std::ios_base::ate | std::ios_base::binary ); ifs )
 	{
 		std::vector< std::byte > data {};
@@ -144,7 +143,8 @@ drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
 	if ( data.empty() )
 	{
 		log::warn(
-			"While reading file {}, The filesystem said the file was zero bytes, or the read failed! A following warning might occur!",
+			"While reading file {}, The filesystem said the file was zero bytes, or the read failed! A following "
+			"warning might occur!",
 			io_uring.path().string() );
 	}
 

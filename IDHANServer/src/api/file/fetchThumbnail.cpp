@@ -23,14 +23,14 @@ namespace idhan::api
 {
 
 drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
-	getThumbnailPath( const RecordID record_id, drogon::orm::DbClientPtr db )
+	getThumbnailPath( const RecordID record_id, DbClientPtr db )
 {
 	const auto sha256_e { co_await SHA256::fromDB( record_id, db ) };
 	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 
 	const auto& sha256 { sha256_e.value() };
 
-	//Thumbnail should be located in the `thumbnails/f[0:2]/[0:64].thumbnail (XX taken from the hash
+	// Thumbnail should be located in the `thumbnails/f[0:2]/[0:64].thumbnail (XX taken from the hash
 	const auto hex { sha256.hex() };
 	const auto file_location { std::filesystem::current_path() / "thumbnails" / std::format( "t{}", hex.substr( 0, 2 ) )
 		                       / ( std::format( "{}.thumbnail", hex ) ) };
@@ -43,7 +43,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 	auto db { drogon::app().getDbClient() };
 
 	const auto record_info { co_await db->execSqlCoro(
-		"SELECT mime.name as mime_name, cluster_id FROM file_info JOIN mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
+		"SELECT mime.name as mime_name, cluster_id FROM file_info JOIN "
+		"mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
 		record_id ) };
 
 	if ( record_info.empty() )
@@ -63,7 +64,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 	{
 		using namespace std::chrono_literals;
 		logging::ScopedTimer thumbnail_timer { "Thumbnail Process", 5s };
-		//We must generate the thumbnail
+		// We must generate the thumbnail
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 
 		if ( thumbnailers.size() == 0 )

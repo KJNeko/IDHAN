@@ -63,8 +63,7 @@ drogon::Task< std::vector< std::byte > > FileIOUring::readAll() const
 	co_return co_await read( 0, file_size );
 }
 
-drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len )
-	const
+drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len ) const
 {
 	auto& uring { IOUring::getInstance() };
 
@@ -196,7 +195,8 @@ IOUring::SubmissionRingPointers IOUring::setupSubmissionRing()
 	ptrs.tail = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.tail );
 	ptrs.array = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.array );
 	ptrs.mask = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_mask );
-	// ptrs.entries = reinterpret_cast< io_uring_sqe* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_entries );
+	// ptrs.entries = reinterpret_cast< io_uring_sqe* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_entries
+	// );
 	ptrs.flags = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.flags );
 	ptrs.dropped = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.dropped );
 	ptrs.array = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.array );

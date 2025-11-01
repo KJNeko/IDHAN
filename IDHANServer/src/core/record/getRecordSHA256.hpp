@@ -9,7 +9,6 @@
 namespace idhan
 {
 
-drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > >
-	getRecordSHA256( RecordID id, drogon::orm::DbClientPtr db );
+ExpectedTask< SHA256 > getRecordSHA256( RecordID id, DbClientPtr db = drogon::app().getFastDbClient() );
 
 }

@@ -116,7 +116,7 @@ void ModuleLoader::loadModules()
 
 			auto modules = getModules();
 
-			//TODO: Possibly UB, Since apparently libraries have their own heaps?
+			// TODO: Possibly UB, Since apparently libraries have their own heaps?
 
 			for ( const auto& module : modules )
 			{
@@ -144,6 +144,9 @@ void ModuleLoader::loadModules()
 std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnailerFor( const std::string_view mime )
 {
 	std::vector< std::shared_ptr< ThumbnailerModuleI > > ret {};
+
+	if ( m_modules.empty() ) log::warn( "Tried to get thumbnailer for {} but there are no thumbnailers loaded!", mime );
+
 	for ( const auto& module : m_modules )
 	{
 		if ( module->type() == ModuleTypeFlags::THUMBNAILER
@@ -158,6 +161,9 @@ std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnaile
 std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( const std::string_view mime )
 {
 	std::vector< std::shared_ptr< MetadataModuleI > > ret {};
+
+	if ( m_modules.empty() ) log::warn( "Tried to get parser for {} but there are no parsers loaded!", mime );
+
 	for ( const auto& module : m_modules )
 	{
 		if ( module->type() == ModuleTypeFlags::METADATA

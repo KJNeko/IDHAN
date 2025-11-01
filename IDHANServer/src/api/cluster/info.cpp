@@ -18,10 +18,11 @@ ClusterAPI::ResponseTask ClusterAPI::info( drogon::HttpRequestPtr request, const
 }
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getInfo( ClusterID cluster_id, const drogon::orm::DbClientPtr transaction )
+	getInfo( ClusterID cluster_id, const DbClientPtr transaction )
 {
 	const auto cluster_info { co_await transaction->execSqlCoro(
-		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, allowed_thumbnails, allowed_files, cluster_name, folder_path FROM file_clusters WHERE cluster_id = $1",
+		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, allowed_thumbnails, allowed_files, "
+		"cluster_name, folder_path FROM file_clusters WHERE cluster_id = $1",
 		cluster_id ) };
 
 	if ( cluster_info.empty() )
@@ -42,7 +43,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	json[ "size" ][ "used" ] = size_used;
 	json[ "size" ][ "limit" ] = size_limit;
 	// json[ "size" ][ "available" ] = cluster_info[ 0 ][ "available" ].as< int >();
-	if ( size_limit == 0 ) //TODO: Switch this to use the available size as the size remaining in the disk partition
+	if ( size_limit == 0 ) // TODO: Switch this to use the available size as the size remaining in the disk partition
 		json[ "size" ][ "available" ] = std::numeric_limits< std::int64_t >::max();
 	else
 		json[ "size" ][ "available" ] = cluster_info[ 0 ][ "size_limit" ].as< std::int64_t >()
@@ -51,17 +52,15 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	json[ "ratio_number" ] = cluster_info[ 0 ][ "ratio_number" ].as< std::size_t >();
 	json[ "path" ] = cluster_info[ 0 ][ "folder_path" ].as< std::string >();
 
-	//TODO: Type
+	// TODO: Type
 
 	log::debug( "Populated json" );
 
 	co_return json;
 }
 
-ClusterAPI::ResponseTask ClusterAPI::infoT(
-	[[maybe_unused]] drogon::HttpRequestPtr request,
-	const ClusterID cluster_id,
-	const drogon::orm::DbClientPtr transaction )
+ClusterAPI::ResponseTask ClusterAPI::
+	infoT( [[maybe_unused]] drogon::HttpRequestPtr request, const ClusterID cluster_id, const DbClientPtr transaction )
 {
 	const auto result { co_await getInfo( cluster_id, transaction ) };
 

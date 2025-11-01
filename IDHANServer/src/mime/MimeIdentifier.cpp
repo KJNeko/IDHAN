@@ -32,7 +32,6 @@ Json::Value jsonFromFile( const std::filesystem::path& path )
 
 drogon::Task< bool > MimeIdentifier::test( const Cursor cursor ) const
 {
-
 	for ( const auto& matcher : m_matchers )
 	{
 		if ( !co_await matcher->test( cursor ) ) co_return false;

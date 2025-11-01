@@ -7,6 +7,7 @@
 #include <drogon/drogon.h>
 #include <json/json.h>
 
+#include "api/helpers/ExpectedTask.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "filesystem/IOUring.hpp"
@@ -15,8 +16,7 @@
 namespace idhan::api
 {
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	updateRecordMetadata( const RecordID record_id, drogon::orm::DbClientPtr db, MetadataInfo metadata )
+ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr db, MetadataInfo metadata )
 {
 	const auto simple_type { metadata.m_simple_type };
 
@@ -33,8 +33,8 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 		if ( !reader.parse( metadata.m_extra, json ) )
 			co_return std::unexpected( createBadRequest( "Failed to parse metadata \"{}\"", metadata.m_extra ) );
 
-		co_await db
-			->execSqlCoro( "UPDATE metadata SET json = $2 WHERE record_id = $1", record_id, json.toStyledString() );
+		co_await db->execSqlCoro(
+			"UPDATE metadata SET json = $2 WHERE record_id = $1", record_id, json.toStyledString() );
 	}
 
 	switch ( simple_type )
@@ -68,8 +68,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	co_return {};
 }
 
-drogon::Task< MetadataInfo >
-	getMetadata( [[maybe_unused]] const RecordID record_id, [[maybe_unused]] drogon::orm::DbClientPtr db )
+drogon::Task< MetadataInfo > getMetadata( [[maybe_unused]] const RecordID record_id, [[maybe_unused]] DbClientPtr db )
 {
 	FGL_UNIMPLEMENTED();
 }
@@ -84,11 +83,10 @@ drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( const std::st
 	co_return parsers[ 0 ];
 }
 
-drogon::Task< std::expected< FileIOUring, drogon::HttpResponsePtr > >
-	getIOForRecord( const RecordID record_id, drogon::orm::DbClientPtr db )
+ExpectedTask< FileIOUring > getIOForRecord( const RecordID record_id, DbClientPtr db )
 {
 	const auto path { co_await helpers::getRecordPath( record_id, db ) };
-	if ( !path ) co_return std::unexpected( path.error() );
+	return_unexpected_error( path );
 
 	if ( !std::filesystem::exists( *path ) )
 	{
@@ -100,20 +98,17 @@ drogon::Task< std::expected< FileIOUring, drogon::HttpResponsePtr > >
 	co_return uring;
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	tryParseRecordMetadata( const RecordID record_id, drogon::orm::DbClientPtr db )
+ExpectedTask< void > tryParseRecordMetadata( const RecordID record_id, DbClientPtr db )
 {
 	const auto metadata { co_await parseMetadata( record_id, db ) };
-
-	if ( !metadata ) co_return std::unexpected( metadata.error() );
+	return_unexpected_error( metadata );
 
 	co_await updateRecordMetadata( record_id, db, metadata.value() );
 
 	co_return {};
 }
 
-drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
-	parseMetadata( const RecordID record_id, drogon::orm::DbClientPtr db )
+ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPtr db )
 {
 	auto io { co_await getIOForRecord( record_id, db ) };
 	if ( !io ) co_return std::unexpected( createBadRequest( "Record {} does not exist", record_id ) );
@@ -128,7 +123,6 @@ drogon::Task< std::expected< MetadataInfo, drogon::HttpResponsePtr > >
 			"Record {} does not exist or does not have any file info associated with it", record_id ) );
 
 	if ( record_mime[ 0 ][ "mime_id" ].isNull() ) co_return MetadataInfo {};
-	// co_return std::unexpected( createBadRequest( "Record {} does not have a valid mime type", record_id ) );
 
 	const auto mime_id { record_mime[ 0 ][ "mime_id" ].as< MimeID >() };
 

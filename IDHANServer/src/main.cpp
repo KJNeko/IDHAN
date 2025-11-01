@@ -158,6 +158,8 @@ int main( int argc, char** argv )
 			}
 		}
 
+		if ( name == "C" || name == "c" ) found_utf8 = true;
+
 		if ( !found_utf8 )
 		{
 			log::critical( "System locale is not UTF8, Aborting (IDHAN must see UTF8 to work properly)" );

@@ -6,7 +6,6 @@
 
 #include "filesystem/IOUring.hpp"
 #include "logging/log.hpp"
-#include "spdlog/fmt/bin_to_hex.h"
 
 namespace idhan::mime
 {

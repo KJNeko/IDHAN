@@ -7,21 +7,8 @@
 
 #include "IDHANTypes.hpp"
 #include "SearchBuilder.hpp"
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
-#pragma GCC diagnostic ignored "-Wredundant-tags"
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wnoexcept"
-#pragma GCC diagnostic ignored "-Wredundant-decls"
-#pragma GCC diagnostic ignored "-Wuseless-cast"
-#pragma GCC diagnostic ignored "-Wnoexcept"
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#pragma GCC diagnostic ignored "-Wshadow"
+#include "db/dbTypes.hpp"
 #include "drogon/HttpRequest.h"
-#pragma GCC diagnostic pop
-
 #include "drogon/orm/DbClient.h"
 #include "drogon/orm/Result.h"
 #include "drogon/utils/coroutine.h"
@@ -191,10 +178,7 @@ class SearchBuilder
 	SearchBuilder();
 
 	drogon::Task< drogon::orm::Result > query(
-		drogon::orm::DbClientPtr db,
-		std::vector< TagDomainID > tag_domain_ids,
-		bool return_ids = true,
-		bool return_hashes = false );
+		DbClientPtr db, std::vector< TagDomainID > tag_domain_ids, bool return_ids = true, bool return_hashes = false );
 
 	void setSortType( SortType type );
 

@@ -71,8 +71,7 @@ struct TagPair
 	}
 };
 
-drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
-	getIDFromPair( const TagPair& tag, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > > getIDFromPair( const TagPair& tag, DbClientPtr db )
 {
 	// convert any strings to their ids
 
@@ -86,7 +85,8 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >
 	if ( tag_namespace_is_str && tag_subtag_is_str )
 	{
 		const auto result { co_await db->execSqlCoro(
-			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE namespace_text = $1 AND subtag_text = $2",
+			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE "
+			"namespace_text = $1 AND subtag_text = $2",
 			std::get< std::string >( tag_namespace ),
 			std::get< std::string >( tag_subtag ) ) };
 
@@ -155,7 +155,7 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
-	getIDsFromPairs( const std::vector< TagPair >& pairs, drogon::orm::DbClientPtr db )
+	getIDsFromPairs( const std::vector< TagPair >& pairs, DbClientPtr db )
 {
 	std::vector< TagID > ids {};
 	ids.reserve( pairs.size() );
@@ -198,10 +198,7 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
-	const RecordID record_id,
-	std::vector< TagID > tag_ids,
-	const TagDomainID tag_domain_id,
-	drogon::orm::DbClientPtr db )
+	const RecordID record_id, std::vector< TagID > tag_ids, const TagDomainID tag_domain_id, DbClientPtr db )
 {
 	try
 	{
@@ -225,7 +222,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::
 {
 	logging::ScopedTimer timer { "addTags" };
 	// the path will contain a record_id
-	// it will also contain a tag_domain_id as a extra parameter, if no parameter is specified, then it will instead use the 'default' domain
+	// it will also contain a tag_domain_id as a extra parameter, if no parameter is specified, then it will instead use
+	// the 'default' domain
 
 	const auto json_ptr { request->getJsonObject() };
 	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );

@@ -48,7 +48,8 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 		try
 		{
 			co_await db->execSqlCoro(
-				"INSERT INTO tag_parents (tag_domain_id, parent_id, child_id) VALUES ($1, $2, $3) ON CONFLICT(tag_domain_id, parent_id, child_id) DO NOTHING",
+				"INSERT INTO tag_parents (tag_domain_id, parent_id, child_id) VALUES ($1, $2, $3) "
+				"ON CONFLICT(tag_domain_id, parent_id, child_id) DO NOTHING",
 				tag_domain_id.value(),
 				parent_id,
 				child_id );

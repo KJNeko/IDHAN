@@ -33,23 +33,19 @@ class FGL_EXPORT MetadataModuleI : public ModuleBase
 {
   public:
 
-	virtual ~MetadataModuleI() = default;
+	MetadataModuleI();
+
+	~MetadataModuleI() override;
 
 	virtual std::vector< std::string_view > handleableMimes() = 0;
 
-	bool canHandle( const std::string_view mime )
-	{
-		for ( auto& handleable : handleableMimes() )
-		{
-			if ( handleable == mime ) return true;
-		}
+	virtual std::expected< MetadataInfo, ModuleError > parseFile(
+		void* data,
+		std::size_t length,
+		std::string mime_name ) = 0;
 
-		return false;
-	}
+	bool canHandle( std::string_view mime );
 
-	virtual std::expected< MetadataInfo, ModuleError >
-		parseFile( void* data, std::size_t length, std::string mime_name ) = 0;
-
-	ModuleType type() override { return ModuleTypeFlags::METADATA; }
+	ModuleType type() override;
 };
 } // namespace idhan
