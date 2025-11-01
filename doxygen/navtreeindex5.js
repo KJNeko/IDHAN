@@ -1,5 +1,9 @@
 var NAVTREEINDEX5 =
 {
+"d9/d46/classidhan_1_1TagSearch.html#abddf7b75e0f900c4527c48601da8809c":[5,0,3,31,7],
+"d9/d46/classidhan_1_1TagSearch.html#abddf7b75e0f900c4527c48601da8809c":[6,0,1,23,7],
+"d9/d46/classidhan_1_1TagSearch.html#ad5f292cfb0965f47846d911d81f3c0bb":[5,0,3,31,1],
+"d9/d46/classidhan_1_1TagSearch.html#ad5f292cfb0965f47846d911d81f3c0bb":[6,0,1,23,1],
 "d9/d52/structidhan_1_1WriteAwaiter.html":[5,0,3,34],
 "d9/d52/structidhan_1_1WriteAwaiter.html":[6,0,1,26],
 "d9/d52/structidhan_1_1WriteAwaiter.html#a0149305e5b38153b8e9b8e40bcf9f38e":[5,0,3,34,1],
@@ -245,9 +249,5 @@ var NAVTREEINDEX5 =
 "db/de4/namespaceidhan_1_1api.html#a9f8d566d3390c231c7a322099b5cb47d":[5,0,3,0,21],
 "db/de4/namespaceidhan_1_1api.html#aa6d13296f504a6e76ff871ee0f977d76":[5,0,3,0,34],
 "db/de4/namespaceidhan_1_1api.html#aaa1cb1b65cfafb47d0491c39afd88a01":[5,0,3,0,28],
-"db/de4/namespaceidhan_1_1api.html#aad2e58082017e1fd3b7bf3eb59c861c5":[5,0,3,0,35],
-"db/de4/namespaceidhan_1_1api.html#ab39a4fa22e484398ca01d39f4deaa4df":[5,0,3,0,30],
-"db/de4/namespaceidhan_1_1api.html#ab8fc25e1993854b5328d67f9f9119f28":[5,0,3,0,37],
-"db/de4/namespaceidhan_1_1api.html#ad02159251ba0587cbd7328993d38833d":[5,0,3,0,41],
-"db/de4/namespaceidhan_1_1api.html#ad78225c4f836cf770e3ece6add569b88":[5,0,3,0,16]
+"db/de4/namespaceidhan_1_1api.html#aad2e58082017e1fd3b7bf3eb59c861c5":[5,0,3,0,35]
 };

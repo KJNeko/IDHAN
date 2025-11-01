@@ -1,6 +1,8 @@
 var structidhan_1_1api_1_1ScanParams =
 [
     [ "adopt_orphans", "d6/d39/structidhan_1_1api_1_1ScanParams.html#ace6abea94f8ee53db4160df9d758e876", null ],
+    [ "fix_extensions", "d6/d39/structidhan_1_1api_1_1ScanParams.html#a06b75f7edaf1c4feeb174546c87801fe", null ],
+    [ "force_readonly", "d6/d39/structidhan_1_1api_1_1ScanParams.html#ab66ba6f6d6c71dc0317026d5241b852c", null ],
     [ "read_only", "d6/d39/structidhan_1_1api_1_1ScanParams.html#a2b45d3c02592de22e176ea068d16804b", null ],
     [ "recompute_hash", "d6/d39/structidhan_1_1api_1_1ScanParams.html#a5497fb8aec268a29dd211a3c51256338", null ],
     [ "remove_missing_files", "d6/d39/structidhan_1_1api_1_1ScanParams.html#af2403bfcedc8c0fbbb7f4ff959508509", null ],
