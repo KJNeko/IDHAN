@@ -41,7 +41,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpR
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::reloadMime( drogon::HttpRequestPtr request )
 {
-	mime::getMimeDatabase()->reloadMimeParsers();
+	co_await mime::getMimeDatabase()->reloadMimeParsers();
 
 	co_return co_await listParsers( request );
 }
