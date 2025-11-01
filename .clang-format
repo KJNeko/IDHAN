@@ -15,7 +15,7 @@ AlignEscapedNewlines: Right
 AlignOperands: AlignAfterOperator
 AlignTrailingComments: false
 AllowAllArgumentsOnNextLine: true
-AllowAllParametersOfDeclarationOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: false
@@ -27,7 +27,7 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: false
-BinPackParameters: false
+BinPackParameters: OnePerLine
 BitFieldColonSpacing: None
 BreakBeforeBraces: Custom
 BraceWrapping:
@@ -100,8 +100,13 @@ MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 PPIndentWidth: 2
 PackConstructorInitializers: CurrentLine
-PenaltyBreakOpenParenthesis: 999
+PenaltyBreakOpenParenthesis: 200
 PenaltyReturnTypeOnItsOwnLine: 999
+PenaltyBreakTemplateDeclaration: 100
+PenaltyIndentedWhitespace: 5
+PenaltyBreakString: 200
+PenaltyBreakBeforeMemberAccess: 500
+PenaltyBreakAssignment: 200
 PointerAlignment: Left
 QualifierAlignment: Leave
 ReferenceAlignment: Pointer
