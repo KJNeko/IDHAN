@@ -407,24 +407,23 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 
 	const auto expected_extension { mime_info[ 0 ][ 0 ].as< std::string >() };
 
-	if ( expected_extension != m_path.extension().string() )
+	std::string file_extension { m_path.extension().string() };
+	if ( expected_extension.starts_with( "." ) ) file_extension = file_extension.substr( 1 );
+
+	if ( expected_extension != file_extension )
 	{
 		log::warn(
 			"When scanning record {}. It was detected that the extension did not match it's mime, Expected {} got {}",
 			m_record_id,
 			expected_extension,
-			m_path.extension().string() );
+			file_extension );
 
 		if ( !m_params.read_only && m_params.fix_extensions )
 		{
-			auto new_path = m_path.replace_extension( expected_extension );
+			auto new_path = m_path.replace_extension( format_ns::format( ".{}", expected_extension ) );
 			std::filesystem::rename( m_path, new_path );
 			log::info( "Renamed file {} to {} due to extension mismatch", m_path.string(), new_path.string() );
 			m_path = new_path;
-		}
-		else
-		{
-			log::warn( "Because fix_extensions was false in the query the previous issue will not be fixed " );
 		}
 	}
 
