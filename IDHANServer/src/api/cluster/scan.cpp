@@ -419,6 +419,8 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 		{
 			auto new_path = m_path.replace_extension( expected_extension );
 			std::filesystem::rename( m_path, new_path );
+			log::info( "Renamed file {} to {} due to extension mismatch", m_path.string(), new_path.string() );
+			m_path = new_path;
 		}
 		else
 		{
@@ -515,6 +517,9 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 			log::warn( "Failed to process mime for record {} at path {}: {}", m_record_id, m_path.string(), msg );
 			co_return std::unexpected( createInternalError(
 				"Failed to process mime for record {} at path {}: {}", m_record_id, m_path.string(), msg ) );
+
+			// If we fail to detect the mime, then we want to skip even bothering with any kind of metadata scanning
+			m_params.scan_metadata = false;
 		}
 	}
 
