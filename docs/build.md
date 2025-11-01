@@ -8,6 +8,11 @@ cmake -DCMAKE_BUILD_TYPE=System -B build
 cmake --build build -j<THREAD COUNT> --target IDHANServer
 ```
 
+If you want to also build the HydrusImporter you can do
+```
+cmake --build build -j<THREAD COUNT> --target IDHANServer HydrusImporter
+```
+
 # Build steps (Update)
 
 Tags will be in a semver format (Example: `v1.0.0`)
