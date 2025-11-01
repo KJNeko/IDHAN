@@ -1,0 +1,23 @@
+{
+  "mime": "video/quicktime",
+  "extensions": [
+    "mov",
+    "qt"
+  ],
+  "data": [
+    {
+      "type": "search",
+      "offset": 8,
+      "hex": [
+        "71742020",
+        // "qt  "  → official QuickTime brand
+        "6D703431",
+        // "mp41"  → older MPEG-4 base (used by some MOV variants)
+        "6D703432",
+        // "mp42"  → common MPEG-4 version 2 brand
+        "6D703433"
+        // "mp43"  → newer MPEG-4 version 3 brand
+      ]
+    }
+  ]
+}
