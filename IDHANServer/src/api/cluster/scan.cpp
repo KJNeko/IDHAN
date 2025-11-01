@@ -41,6 +41,8 @@ struct ScanParams
 	bool adopt_orphans:1;
 	bool remove_missing_files:1;
 	bool trust_filename:1;
+	bool fix_extensions:1;
+	bool force_readonly:1;
 };
 
 ExpectedTask<> scanFile(
@@ -55,6 +57,7 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 {
 	ScanParams p {};
 	p.read_only = true; // set to false when getting the cluster info only if it's not read only
+	p.force_readonly = request->getOptionalParameter< bool >( "force_read_only" ).value_or( false );
 	p.recompute_hash = request->getOptionalParameter< bool >( "recompute_hash" ).value_or( true );
 	p.trust_filename = request->getOptionalParameter< bool >( "trust_filename" ).value_or( false );
 	p.scan_mime = request->getOptionalParameter< bool >( "scan_mime" ).value_or( true );
@@ -114,12 +117,13 @@ class ScanContext
 drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr request, const ClusterID cluster_id )
 {
 	const auto db { drogon::app().getDbClient() };
+	auto scan_params { extractScanParams( request ) };
+
 	const auto result {
 		co_await db->execSqlCoro( "SELECT folder_path, read_only FROM file_clusters WHERE cluster_id = $1", cluster_id )
 	};
 
-	auto scan_params { extractScanParams( request ) };
-	scan_params.read_only = result[ 0 ][ "read_only" ].as< bool >();
+	scan_params.read_only = scan_params.force_readonly || result[ 0 ][ "read_only" ].as< bool >();
 
 	const std::filesystem::path folder_path { result[ 0 ][ "folder_path" ].as< std::string >() };
 
@@ -393,6 +397,34 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 		m_record_id,
 		m_size,
 		*mime_id_e );
+
+	const auto mime_info {
+		co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE mime_id = $1", *mime_id_e )
+	};
+	if ( mime_info.empty() )
+		co_return std::unexpected(
+			createInternalError( "When selecting mime id {} the DB returned zero rows", *mime_id_e ) );
+
+	const auto expected_extension { mime_info[ 0 ][ 0 ].as< std::string >() };
+
+	if ( expected_extension != m_path.extension().string() )
+	{
+		log::warn(
+			"When scanning record {}. It was detected that the extension did not match it's mime, Expected {} got {}",
+			m_record_id,
+			expected_extension,
+			m_path.extension().string() );
+
+		if ( !m_params.read_only && m_params.fix_extensions )
+		{
+			auto new_path = m_path.replace_extension( expected_extension );
+			std::filesystem::rename( m_path, new_path );
+		}
+		else
+		{
+			log::warn( "Because fix_extensions was false in the query the previous issue will not be fixed " );
+		}
+	}
 
 	co_return {};
 }
