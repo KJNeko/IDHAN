@@ -141,8 +141,10 @@ class IOUring
 
 	std::jthread io_thread;
 
-	friend void
-		ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< std::atomic< bool > > running );
+	friend void ioThread(
+		const std::stop_token& token,
+		IOUring* uring,
+		std::shared_ptr< std::atomic< bool > > running );
 
 	std::atomic< unsigned > to_submit { 0 };
 

@@ -10,5 +10,5 @@
 template < typename T = void >
 using ExpectedTask = drogon::Task< std::expected< T, drogon::HttpResponsePtr > >;
 
-#define return_unexpected_error( type )                                                                                 \
+#define return_unexpected_error( type )                                                                                \
 	if ( !type ) co_return std::unexpected( type.error() );

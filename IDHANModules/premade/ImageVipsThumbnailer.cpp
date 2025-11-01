@@ -17,7 +17,11 @@ std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
 }
 
 std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnail(
-	void* data, const std::size_t length, std::size_t width, std::size_t height, const std::string mime_name )
+	void* data,
+	const std::size_t length,
+	std::size_t width,
+	std::size_t height,
+	const std::string mime_name )
 {
 	VipsImage* image;
 	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() )

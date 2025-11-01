@@ -129,7 +129,9 @@ class IDHANClient
 	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag( const QString& text );
 
 	QFuture< void > addTags(
-		RecordID record_id, TagDomainID tag_domain_id, std::vector< std::pair< std::string, std::string > >&& tags );
+		RecordID record_id,
+		TagDomainID tag_domain_id,
+		std::vector< std::pair< std::string, std::string > >&& tags );
 
 	QFuture< void > addTags(
 		std::vector< RecordID >&& record_ids,
@@ -149,8 +151,9 @@ class IDHANClient
 	 * @return
 	 */
 	QFuture< void > createParentRelationship( TagDomainID tag_domian_id, TagID parent_id, TagID child_id );
-	QFuture< void >
-		createParentRelationship( TagDomainID tag_domian_id, const std::vector< std::pair< TagID, TagID > >& pairs );
+	QFuture< void > createParentRelationship(
+		TagDomainID tag_domian_id,
+		const std::vector< std::pair< TagID, TagID > >& pairs );
 
 	/**
 	 * @brief Creates a new alias for a given tag.
@@ -163,8 +166,9 @@ class IDHANClient
 	 */
 	QFuture< void > createAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
 
-	QFuture< void >
-		createAliasRelationship( TagDomainID tag_domain_id, const std::vector< std::pair< TagID, TagID > >& pairs );
+	QFuture< void > createAliasRelationship(
+		TagDomainID tag_domain_id,
+		const std::vector< std::pair< TagID, TagID > >& pairs );
 
 	/**
 	 * @brief Creates a new tag domain, Throws if the domain exists

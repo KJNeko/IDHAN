@@ -154,8 +154,9 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 	}
 }
 
-drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
-	getIDsFromPairs( const std::vector< TagPair >& pairs, DbClientPtr db )
+drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > getIDsFromPairs(
+	const std::vector< TagPair >& pairs,
+	DbClientPtr db )
 {
 	std::vector< TagID > ids {};
 	ids.reserve( pairs.size() );
@@ -198,7 +199,10 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
-	const RecordID record_id, std::vector< TagID > tag_ids, const TagDomainID tag_domain_id, DbClientPtr db )
+	const RecordID record_id,
+	std::vector< TagID > tag_ids,
+	const TagDomainID tag_domain_id,
+	DbClientPtr db )
 {
 	try
 	{
@@ -217,8 +221,9 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
 
-drogon::Task< drogon::HttpResponsePtr > RecordAPI::
-	addTags( const drogon::HttpRequestPtr request, const RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags(
+	const drogon::HttpRequestPtr request,
+	const RecordID record_id )
 {
 	logging::ScopedTimer timer { "addTags" };
 	// the path will contain a record_id
@@ -274,10 +279,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 		co_return createBadRequest(
 			"Invalid domain ID given: Expected tag_domain_id > 0; Got {}", tag_domain_id.value() );
 
-	const auto domain_search {
-		co_await db
-			->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id.value() )
-	};
+	const auto domain_search { co_await db->execSqlCoro(
+		"SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id.value() ) };
 
 	if ( domain_search.empty() )
 		co_return createBadRequest( "Invalid domain ID given: Got no IDs (searched for {})", tag_domain_id.value() );

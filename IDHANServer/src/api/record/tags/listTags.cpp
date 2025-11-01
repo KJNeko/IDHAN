@@ -7,8 +7,9 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > RecordAPI::
-	listTags( [[maybe_unused]] const drogon::HttpRequestPtr request, const RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::listTags(
+	[[maybe_unused]] const drogon::HttpRequestPtr request,
+	const RecordID record_id )
 {
 	const auto db { drogon::app().getDbClient() };
 

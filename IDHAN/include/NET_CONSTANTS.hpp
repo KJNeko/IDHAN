@@ -9,6 +9,6 @@
 namespace idhan
 {
 
-	constexpr std::uint16_t IDHAN_DEFAULT_PORT { 16609 };
+constexpr std::uint16_t IDHAN_DEFAULT_PORT { 16609 };
 
 }

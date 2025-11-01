@@ -11,7 +11,9 @@ HyAPIAuth::HyAPIAuth()
 {}
 
 void HyAPIAuth::invoke(
-	const drogon::HttpRequestPtr& req, drogon::MiddlewareNextCallback&& nextCb, drogon::MiddlewareCallback&& mcb )
+	const drogon::HttpRequestPtr& req,
+	drogon::MiddlewareNextCallback&& nextCb,
+	drogon::MiddlewareCallback&& mcb )
 {
 	const std::string& hyapi_key { req->getHeader( HY_ACCESS_KEY_HEADER_NAME ) };
 

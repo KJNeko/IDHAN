@@ -15,8 +15,9 @@
 namespace idhan::hyapi::helpers
 {
 
-drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
-	idsFromHashesArray( Json::Value json, const drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > > idsFromHashesArray(
+	Json::Value json,
+	const drogon::orm::DbClientPtr db )
 {
 	std::vector< RecordID > records {};
 
@@ -35,8 +36,9 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 	co_return records;
 }
 
-drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
-	extractRecordIDsFromFilesJson( const Json::Value json, const drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > > extractRecordIDsFromFilesJson(
+	const Json::Value json,
+	const drogon::orm::DbClientPtr db )
 {
 	std::vector< RecordID > records {};
 
@@ -81,8 +83,9 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 		"Unable to extract record ids: None of the expected hydrus `files` json members were identified" ) );
 }
 
-drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
-	extractRecordIDsFromParameters( drogon::HttpRequestPtr request, const drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > > extractRecordIDsFromParameters(
+	drogon::HttpRequestPtr request,
+	const drogon::orm::DbClientPtr db )
 {
 	if ( auto opt = request->getOptionalParameter< std::string >( "hashes" ) )
 	{
@@ -125,8 +128,9 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 		createBadRequest( "Unable to extract record ids: None of the expected parameters were identified" ) );
 }
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	extractRecordIDsToJsonFromFiles( const Json::Value json, const drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > extractRecordIDsToJsonFromFiles(
+	const Json::Value json,
+	const drogon::orm::DbClientPtr db )
 {
 	const auto records_e { co_await extractRecordIDsFromFilesJson( json, db ) };
 	if ( !records_e ) co_return std::unexpected( records_e.error() );

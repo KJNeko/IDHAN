@@ -19,8 +19,10 @@
 
 namespace idhan::hyapi
 {
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getFileInfo( DbClientPtr db, const RecordID record_id, Json::Value data )
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getFileInfo(
+	DbClientPtr db,
+	const RecordID record_id,
+	Json::Value data )
 {
 	const auto file_info { co_await db->execSqlCoro(
 		"SELECT size, mime.name as mime_name, coalesce(extension, best_extension) as extension FROM file_info LEFT JOIN "
@@ -43,8 +45,10 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	co_return data;
 }
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getMetadataInfo( DbClientPtr db, const RecordID record_id, Json::Value data )
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadataInfo(
+	DbClientPtr db,
+	const RecordID record_id,
+	Json::Value data )
 {
 	auto metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
 
@@ -74,10 +78,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 			break;
 		case SimpleMimeType::IMAGE:
 			{
-				const auto image_metadata {
-					co_await db
-						->execSqlCoro( "SELECT width, height FROM image_metadata WHERE record_id = $1", record_id )
-				};
+				const auto image_metadata { co_await db->execSqlCoro(
+					"SELECT width, height FROM image_metadata WHERE record_id = $1", record_id ) };
 
 				if ( !image_metadata.empty() )
 				{
@@ -111,17 +113,19 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	co_return data;
 }
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getMetadataFromRow( DbClientPtr db, const Json::Value services, const drogon::orm::Row row )
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadataFromRow(
+	DbClientPtr db,
+	const Json::Value services,
+	const drogon::orm::Row row )
 {
 	const auto& record_id { row[ 0 ].as< RecordID >() };
 	const auto sha256 { SHA256::fromPgCol( row[ 1 ] ) };
 	const auto& size { row[ 2 ].as< std::size_t >() };
 	const auto mime_name { row[ 3 ].as< std::string_view >() };
 	const auto extension { row[ 4 ].as< std::string_view >() };
-	const auto cluster_store_time_timestamp { row[ "cluster_store_time" ].isNull() ?
-		                                          0 :
-		                                          row[ "cluster_store_time" ].as< std::size_t >() };
+	const auto cluster_store_time_timestamp {
+		row[ "cluster_store_time" ].isNull() ? 0 : row[ "cluster_store_time" ].as< std::size_t >()
+	};
 
 	Json::Value data {};
 

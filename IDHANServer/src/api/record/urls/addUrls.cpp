@@ -29,8 +29,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 
 		if ( !url_id ) co_return url_id.error();
 
-		co_await db
-			->execSqlCoro( "INSERT INTO url_mappings (url_id, record_id) VALUES ($1, $2)", url_id.value(), record_id );
+		co_await db->execSqlCoro(
+			"INSERT INTO url_mappings (url_id, record_id) VALUES ($1, $2)", url_id.value(), record_id );
 	}
 
 	co_return drogon::HttpResponse::newHttpResponse();

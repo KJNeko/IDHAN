@@ -30,8 +30,9 @@ struct FileInfo
 };
 
 //! Populates a FileInfo struct with information from the data
-drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
-	gatherFileInfo( FileIOUring io_uring, DbClientPtr db );
+drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(
+	FileIOUring io_uring,
+	DbClientPtr db );
 
 drogon::Task<> setFileInfo( RecordID record_id, FileInfo info, DbClientPtr db );
 

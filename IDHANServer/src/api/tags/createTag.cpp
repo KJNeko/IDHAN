@@ -27,8 +27,9 @@ struct hash< std::pair< std::string, std::string > >
 namespace idhan::api
 {
 
-drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
-	createTagsFromPairs( const std::vector< std::pair< std::string, std::string > >& tag_pairs, const DbClientPtr db )
+drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > createTagsFromPairs(
+	const std::vector< std::pair< std::string, std::string > >& tag_pairs,
+	const DbClientPtr db )
 {
 	logging::ScopedTimer timer { "createTags" };
 
@@ -67,8 +68,8 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > >
 			const auto& tag_id { row[ "tag_id" ].as< TagID >() };
 
 			if ( !( tag_id > 0 ) ) [[unlikely]]
-				co_return std::
-					unexpected( createInternalError( "Failed to create tag, got {}. Expected tag_id > 0", tag_id ) );
+				co_return std::unexpected(
+					createInternalError( "Failed to create tag, got {}. Expected tag_id > 0", tag_id ) );
 
 			tag_ids.emplace_back( tag_id );
 		}

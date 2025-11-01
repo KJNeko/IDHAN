@@ -11,8 +11,10 @@
 namespace idhan::api
 {
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	addImageInfo( Json::Value& root, const RecordID record_id, DbClientPtr db )
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addImageInfo(
+	Json::Value& root,
+	const RecordID record_id,
+	DbClientPtr db )
 {
 	const auto metadata { co_await db->execSqlCoro( "SELECT * FROM image_metadata WHERE record_id = $1", record_id ) };
 
@@ -26,8 +28,10 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	co_return std::expected< void, drogon::HttpResponsePtr >();
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	addFileSpecificInfo( Json::Value& root, const RecordID record_id, DbClientPtr db )
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addFileSpecificInfo(
+	Json::Value& root,
+	const RecordID record_id,
+	DbClientPtr db )
 {
 	auto simple_mime_result {
 		co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id )
@@ -71,8 +75,9 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
 	co_return std::expected< void, drogon::HttpResponsePtr >();
 }
 
-drogon::Task< drogon::HttpResponsePtr > RecordAPI::
-	fetchInfo( [[maybe_unused]] drogon::HttpRequestPtr request, RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	RecordID record_id )
 {
 	auto db { drogon::app().getDbClient() };
 
@@ -91,10 +96,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::
 	{
 		root[ "size" ] = file_info[ 0 ][ "size" ].as< std::size_t >();
 
-		const auto mime_info {
-			co_await db
-				->execSqlCoro( "SELECT * FROM mime WHERE mime_id = $1", file_info[ 0 ][ "mime_id" ].as< MimeID >() )
-		};
+		const auto mime_info { co_await db->execSqlCoro(
+			"SELECT * FROM mime WHERE mime_id = $1", file_info[ 0 ][ "mime_id" ].as< MimeID >() ) };
 
 		root[ "mime" ] = mime_info[ 0 ][ "name" ].as< std::string >();
 		root[ "extension" ] = mime_info[ 0 ][ "best_extension" ].as< std::string >();

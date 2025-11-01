@@ -8,8 +8,10 @@
 namespace idhan::api
 {
 
-drogon::Task< Json::Value >
-	getSimilarTags( const std::string search_value, drogon::orm::DbClientPtr db, const std::size_t limit )
+drogon::Task< Json::Value > getSimilarTags(
+	const std::string search_value,
+	drogon::orm::DbClientPtr db,
+	const std::size_t limit )
 {
 	LOG_DEBUG << "Searching for tag \"{}\"" << search_value;
 
@@ -57,8 +59,9 @@ drogon::Task< Json::Value >
 	co_return tags;
 }
 
-drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	autocomplete( const drogon::HttpRequestPtr request, const std::string search_value )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::autocomplete(
+	const drogon::HttpRequestPtr request,
+	const std::string search_value )
 {
 	const auto display_type { request->getOptionalParameter< std::string >( "tag_display_type" ) };
 

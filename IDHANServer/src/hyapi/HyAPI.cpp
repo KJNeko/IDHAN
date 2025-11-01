@@ -51,8 +51,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::apiVersion( [[maybe_unused]] 
 }
 
 // /hyapi/access/request_new_permissions
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::requestNewPermissions( [[maybe_unused]] drogon::HttpRequestPtr
-                                                                              request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::requestNewPermissions(
+	[[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	idhan::fixme();
 	FGL_UNIMPLEMENTED();
@@ -224,10 +224,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	// include_current_tags and include_pending_tags are both things that are not needed for IDHAN so we just skip this.
 
-	const auto file_sort_type {
-		static_cast< HydrusSortType >( request->getOptionalParameter< std::uint64_t >( "file_sort_type" )
-		                                   .value_or( HydrusSortType::DEFAULT ) )
-	};
+	const auto file_sort_type { static_cast< HydrusSortType >(
+		request->getOptionalParameter< std::uint64_t >( "file_sort_type" ).value_or( HydrusSortType::DEFAULT ) ) };
 
 	const auto file_sort_asc { request->getOptionalParameter< bool >( "file_sort_asc" ).value_or( true ) };
 
@@ -295,8 +293,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( [[maybe_unused]] 
 	FGL_UNIMPLEMENTED();
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > >
-	convertQueryRecordIDs( drogon::HttpRequestPtr& request, DbClientPtr db )
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > convertQueryRecordIDs(
+	drogon::HttpRequestPtr& request,
+	DbClientPtr db )
 {
 	const auto out { co_await helpers::extractRecordIDsFromParameters( request, db ) };
 	if ( !out ) co_return std::unexpected( out.error() );

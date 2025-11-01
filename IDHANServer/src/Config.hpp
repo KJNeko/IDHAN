@@ -32,10 +32,12 @@ constexpr std::array< std::string_view, 4 > config_paths {
 	{ "/usr/share/idhan/config.toml", "/etc/idhan/config.toml", "~/.config/idhan/config.toml", "./config.toml" }
 };
 #elif defined( _WIN32 )
-constexpr std::array< std::string_view, 4 > config_paths { "%ProgramData%\\idhan\\config.toml",
-	                                                       "%APPDATA%\\idhan\\config.toml",
-	                                                       "%LOCALAPPDATA%\\idhan\\config.toml",
-	                                                       "./config.toml" };
+constexpr std::array< std::string_view, 4 > config_paths {
+	"%ProgramData%\\idhan\\config.toml",
+	"%APPDATA%\\idhan\\config.toml",
+	"%LOCALAPPDATA%\\idhan\\config.toml",
+	"./config.toml"
+};
 #endif
 
 void addCLIConfig( const std::string_view group, const std::string_view name, const std::string_view value );

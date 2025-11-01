@@ -12,8 +12,10 @@
 namespace idhan
 {
 
-std::string SearchBuilder::
-	construct( const bool return_ids, const bool return_hashes, [[maybe_unused]] const bool filter_domains )
+std::string SearchBuilder::construct(
+	const bool return_ids,
+	const bool return_hashes,
+	[[maybe_unused]] const bool filter_domains )
 {
 	// TODO: Sort tag ids to get the most out of each filter.
 
@@ -119,7 +121,10 @@ SearchBuilder::SearchBuilder() : m_sort_type(), m_order(), m_tags(), m_display_m
 {}
 
 drogon::Task< drogon::orm::Result > SearchBuilder::query(
-	const DbClientPtr db, std::vector< TagDomainID > tag_domain_ids, const bool return_ids, const bool return_hashes )
+	const DbClientPtr db,
+	std::vector< TagDomainID > tag_domain_ids,
+	const bool return_ids,
+	const bool return_hashes )
 {
 	const auto query { construct( return_ids, return_hashes, /* filter_domains */ false ) };
 

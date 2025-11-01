@@ -12,8 +12,9 @@
 namespace idhan::api
 {
 
-drogon::Task< std::optional< Json::Value > >
-	getTagDomainInfoJson( const TagDomainID tag_domain_id, const DbClientPtr db )
+drogon::Task< std::optional< Json::Value > > getTagDomainInfoJson(
+	const TagDomainID tag_domain_id,
+	const DbClientPtr db )
 {
 	const auto search { co_await db->execSqlCoro(
 		"SELECT tag_domain_id, domain_name FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id ) };
@@ -82,8 +83,8 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpReq
 	else
 	{
 		log::error( "Failed to parse json" );
-		co_return drogon::HttpResponse::
-			newHttpResponse( drogon::HttpStatusCode::k400BadRequest, drogon::ContentType::CT_NONE );
+		co_return drogon::HttpResponse::newHttpResponse(
+			drogon::HttpStatusCode::k400BadRequest, drogon::ContentType::CT_NONE );
 	}
 
 	FGL_UNREACHABLE();
@@ -115,8 +116,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomains( [[maybe_unused]] 
 	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
 }
 
-drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	getTagDomainInfo( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID tag_domain_id )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomainInfo(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	const TagDomainID tag_domain_id )
 {
 	auto db { drogon::app().getDbClient() };
 
@@ -139,8 +141,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::
 	co_return drogon::HttpResponse::newHttpJsonResponse( *info );
 }
 
-drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	deleteTagDomain( [[maybe_unused]] drogon::HttpRequestPtr request, const TagDomainID tag_domain_id )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::deleteTagDomain(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	const TagDomainID tag_domain_id )
 {
 	auto db { drogon::app().getDbClient() };
 	const auto search { co_await db->execSqlCoro( "DELETE FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id ) };

@@ -19,7 +19,9 @@ drogon::Task< std::optional< SubtagID > > findSubtag( std::string, drogon::orm::
 drogon::Task< std::expected< NamespaceID, IDHANError > > createNamespace( std::string, drogon::orm::DbClientPtr db );
 drogon::Task< std::expected< SubtagID, IDHANError > > createSubtag( std::string, drogon::orm::DbClientPtr db );
 
-drogon::Task< std::expected< TagID, IDHANError > >
-	createTag( std::string tag_namespace, std::string tag_subtag, drogon::orm::DbClientPtr db );
+drogon::Task< std::expected< TagID, IDHANError > > createTag(
+	std::string tag_namespace,
+	std::string tag_subtag,
+	drogon::orm::DbClientPtr db );
 
 } // namespace idhan

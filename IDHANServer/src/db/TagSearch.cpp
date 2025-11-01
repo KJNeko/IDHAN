@@ -67,8 +67,8 @@ ExpectedTask< void > TagSearch::addChildren( TagID tag_id )
 			if ( std::ranges::find( searched, child_id ) != searched.end() )
 			{
 				// TODO: Log cyclic better
-				co_return std::
-					unexpected( createBadRequest( "Cyclic tag parents in tag search: {} <-> {}", tag_id, child_id ) );
+				co_return std::unexpected(
+					createBadRequest( "Cyclic tag parents in tag search: {} <-> {}", tag_id, child_id ) );
 			}
 
 			queue.push( child_id );
@@ -106,8 +106,8 @@ ExpectedTask< std::vector< TagID > > TagSearch::findSiblings( const TagID id )
 
 			if ( std::ranges::find( found, sibling_id ) != found.end() )
 			{
-				co_return std::
-					unexpected( createBadRequest( "Cyclic tag siblings in tag search: {} <-> {}", id, sibling_id ) );
+				co_return std::unexpected(
+					createBadRequest( "Cyclic tag siblings in tag search: {} <-> {}", id, sibling_id ) );
 			}
 
 			found.emplace_back( sibling_id );

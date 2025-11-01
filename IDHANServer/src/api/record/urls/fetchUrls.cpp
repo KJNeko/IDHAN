@@ -13,8 +13,9 @@ namespace idhan
 
 namespace api
 {
-drogon::Task< drogon::HttpResponsePtr > RecordAPI::
-	fetchUrls( [[maybe_unused]] drogon::HttpRequestPtr request, const RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchUrls(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	const RecordID record_id )
 {
 	const auto db { drogon::app().getFastDbClient() };
 	const auto urls { co_await fetchUrlsJson( record_id, db ) };
@@ -28,8 +29,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::
 namespace helpers
 {
 
-drogon::Task< std::expected< std::vector< std::string >, drogon::HttpResponsePtr > >
-	fetchUrlsStrings( const RecordID record_id, DbClientPtr db )
+drogon::Task< std::expected< std::vector< std::string >, drogon::HttpResponsePtr > > fetchUrlsStrings(
+	const RecordID record_id,
+	DbClientPtr db )
 {
 	const auto url_maps { co_await db->execSqlCoro(
 		"SELECT url_id, url FROM url_mappings JOIN urls USING (url_id)  WHERE record_id = $1", record_id ) };
@@ -46,8 +48,9 @@ drogon::Task< std::expected< std::vector< std::string >, drogon::HttpResponsePtr
 	co_return urls;
 }
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	fetchUrlsJson( const RecordID record_id, DbClientPtr db )
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > fetchUrlsJson(
+	const RecordID record_id,
+	DbClientPtr db )
 {
 	const auto urls { co_await fetchUrlsStrings( record_id, db ) };
 
