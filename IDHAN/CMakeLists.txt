@@ -9,11 +9,11 @@ set(HYDRUS_REPO_PATH ${CMAKE_SOURCE_DIR}/3rd-party/hydrus)
 set(HYDRUS_REPO "https://github.com/hydrusnetwork/hydrus.git")
 
 if (NOT EXISTS ${HYDRUS_REPO_PATH})
-    message("Hydrus source file not found. Cloning repository...")
-    execute_process(
-            COMMAND git clone ${HYDRUS_REPO} ${HYDRUS_REPO_PATH}
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/3rd-party
-    )
+	message("Hydrus source file not found. Cloning repository...")
+	execute_process(
+			COMMAND git clone ${HYDRUS_REPO} ${HYDRUS_REPO_PATH}
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/3rd-party
+	)
 endif ()
 
 include(CheckCXXSourceCompiles)
@@ -26,9 +26,9 @@ check_cxx_source_compiles("
     " HAVE_STD_FORMAT)
 
 if (HAVE_STD_FORMAT)
-    target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=1)
+	target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=1)
 else ()
-    target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=0)
+	target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=0)
 endif ()
 
 list(APPEND HYDRUS_SCAN_FILES ${HYDRUS_REPO_PATH}/hydrus/client/gui/pages/ClientGUIPagesCore.py)
@@ -41,16 +41,21 @@ set(GENERATED_HEADERS "")
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus)
 
 foreach (HYDRUS_FILE ${HYDRUS_SCAN_FILES})
-    get_filename_component(FILE_NAME ${HYDRUS_FILE} NAME_WE)
-    set(OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus/${FILE_NAME}_gen.hpp")
-    list(APPEND GENERATED_HEADERS ${OUTPUT_FILE})
+	get_filename_component(FILE_NAME ${HYDRUS_FILE} NAME_WE)
+	set(OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus/${FILE_NAME}_gen.hpp")
+	list(APPEND GENERATED_HEADERS ${OUTPUT_FILE})
 
-    add_custom_command(
-            OUTPUT ${OUTPUT_FILE}
-            DEPENDS ${HYDRUS_FILE}
-            COMMAND ${CMAKE_COMMAND} -DHYDRUS_DIR=${HYDRUS_REPO_PATH} -DHYDRUS_CONSTANTS_FILE=${HYDRUS_FILE} -DOUT_TARGET=${OUTPUT_FILE} -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateHydrusConstants.cmake"
-            COMMENT "Generating ${FILE_NAME} constants file")
+	add_custom_target(
+			generate_${FILE_NAME}_constants ALL
+			COMMAND ${CMAKE_COMMAND}
+			-DHYDRUS_DIR=${HYDRUS_REPO_PATH}
+			-DHYDRUS_CONSTANTS_FILE=${HYDRUS_FILE}
+			-DOUT_TARGET=${OUTPUT_FILE}
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateHydrusConstants.cmake"
+			COMMENT "Generating ${FILE_NAME} constants file"
+	)
 endforeach ()
+
 
 target_sources(IDHAN PUBLIC ${GENERATED_HEADERS})
 
