@@ -22,13 +22,14 @@ var searchData=
   ['exception_5f_19',['exception_',['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a76d9fb0a8adc48bd0bfa3322aeda93ec',1,'idhan::ImmedientTask::promise_type::exception_'],['../d6/d78/structidhan_1_1ImmedientTask_3_01void_01_4_1_1promise__type.html#aa8eeefafa1205120f66e490716d83e37',1,'idhan::ImmedientTask&lt; void &gt;::promise_type::exception_'],['../d8/daa/structidhan_1_1ImmedientTask_1_1promise__type.html#a76d9fb0a8adc48bd0bfa3322aeda93ec',1,'idhan::ImmedientTask&lt; void &gt;::promise_type::exception_']]],
   ['exceptionhandler_20',['exceptionHandler',['../dd/dcf/namespaceidhan.html#a05ffd4928189092728cf8fa8ab20e694',1,'idhan']]],
   ['exists_21',['Exists',['../dd/dcf/namespaceidhan.html#a3030d38d5f41bc49343abe9b786304a2aba7710b08f08a9228fee41ee13261146',1,'idhan']]],
-  ['expectedtask_22',['ExpectedTask',['../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4',1,'ExpectedTask.hpp']]],
-  ['expectedtask_2ehpp_23',['ExpectedTask.hpp',['../d6/d3e/ExpectedTask_8hpp.html',1,'']]],
-  ['extension_24',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension'],['../db/de9/classidhan_1_1FileMappedData.html#ab31ae6048889dbcedca59258bf70db71',1,'idhan::FileMappedData::extension()']]],
-  ['extra_5finfo_25',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]],
-  ['extracthttpresponseerrormessage_26',['extractHttpResponseErrorMessage',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a55f3323854a34f2f3d456a090ca39a10',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidsfromfilesjson_27',['extractRecordIDsFromFilesJson',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidsfromparameters_28',['extractRecordIDsFromParameters',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1',1,'idhan::hyapi::helpers']]],
-  ['extractrecordidstojsonfromfiles_29',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]],
-  ['extractscanparams_30',['extractScanParams',['../db/de4/namespaceidhan_1_1api.html#a0ac09abca301c31269ea1aea1070e2ba',1,'idhan::api']]]
+  ['expand_5fhome_22',['expand_home',['../d6/db4/namespaceidhan_1_1config.html#a1114256c463aefc652df76607a69994a',1,'idhan::config']]],
+  ['expectedtask_23',['ExpectedTask',['../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4',1,'ExpectedTask.hpp']]],
+  ['expectedtask_2ehpp_24',['ExpectedTask.hpp',['../d6/d3e/ExpectedTask_8hpp.html',1,'']]],
+  ['extension_25',['extension',['../db/de8/structidhan_1_1mime_1_1FileMimeInfo.html#a4f8025d00775a4487a4f3fd33c7bfe13',1,'idhan::mime::FileMimeInfo::extension'],['../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc',1,'idhan::FileInfo::extension'],['../db/de9/classidhan_1_1FileMappedData.html#ab31ae6048889dbcedca59258bf70db71',1,'idhan::FileMappedData::extension()']]],
+  ['extra_5finfo_26',['extra_info',['../d7/d2a/structidhan_1_1mime_1_1MimeInfo.html#a36125b5353743e622d8c5524633fb8c0',1,'idhan::mime::MimeInfo']]],
+  ['extracthttpresponseerrormessage_27',['extractHttpResponseErrorMessage',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a55f3323854a34f2f3d456a090ca39a10',1,'idhan::hyapi::helpers']]],
+  ['extractrecordidsfromfilesjson_28',['extractRecordIDsFromFilesJson',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a1d4c0f5c239ab1dcb3ef6962c13714ce',1,'idhan::hyapi::helpers']]],
+  ['extractrecordidsfromparameters_29',['extractRecordIDsFromParameters',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#a325133531e85805d6fb0eb5c5c6624b1',1,'idhan::hyapi::helpers']]],
+  ['extractrecordidstojsonfromfiles_30',['extractRecordIDsToJsonFromFiles',['../d8/da5/namespaceidhan_1_1hyapi_1_1helpers.html#aacd06e651ac88aa1814912078f5cf27b',1,'idhan::hyapi::helpers']]],
+  ['extractscanparams_31',['extractScanParams',['../db/de4/namespaceidhan_1_1api.html#a0ac09abca301c31269ea1aea1070e2ba',1,'idhan::api']]]
 ];

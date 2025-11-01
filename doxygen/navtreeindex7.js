@@ -1,5 +1,6 @@
 var NAVTREEINDEX7 =
 {
+"dd/d25/classidhan_1_1IOUring.html#a771a3535bc90a7e685e7687b08297e2e":[5,0,3,22,2],
 "dd/d25/classidhan_1_1IOUring.html#a771a3535bc90a7e685e7687b08297e2e":[6,0,1,14,2],
 "dd/d25/classidhan_1_1IOUring.html#a77c50ae4dd713ec8baee35b80b0ab446":[5,0,3,22,10],
 "dd/d25/classidhan_1_1IOUring.html#a77c50ae4dd713ec8baee35b80b0ab446":[6,0,1,14,10],
@@ -248,6 +249,5 @@ var NAVTREEINDEX7 =
 "de/d07/structidhan_1_1ConnectionArguments.html#a7dc41c815c884266f303c54ef5c27c50":[6,0,1,6,2],
 "de/d07/structidhan_1_1ConnectionArguments.html#a7dfd95fc91bbb52f20d2d9e4554ca306":[5,0,3,14,1],
 "de/d07/structidhan_1_1ConnectionArguments.html#a7dfd95fc91bbb52f20d2d9e4554ca306":[6,0,1,6,1],
-"de/d07/structidhan_1_1ConnectionArguments.html#a832a9898eccb5cd477f4c02e378637df":[5,0,3,14,7],
-"de/d07/structidhan_1_1ConnectionArguments.html#a832a9898eccb5cd477f4c02e378637df":[6,0,1,6,7]
+"de/d07/structidhan_1_1ConnectionArguments.html#a832a9898eccb5cd477f4c02e378637df":[5,0,3,14,7]
 };

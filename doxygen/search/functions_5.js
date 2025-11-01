@@ -57,5 +57,6 @@ var searchData=
   ['gettypeoid_54',['getTypeOid',['../d8/d1c/drogonArrayBind_8cpp.html#a4bf319a60cc0493a9af63cabdb14d1e4',1,'drogonArrayBind.cpp']]],
   ['geturlinfo_55',['getUrlInfo',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#aea9bb3e8e303683d53a783e5a274e453',1,'idhan::hyapi::HydrusAPI']]],
   ['getuserconfigpath_56',['getUserConfigPath',['../d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2',1,'idhan::config']]],
-  ['getvalue_57',['getValue',['../d6/db4/namespaceidhan_1_1config.html#a7f07951dfb5336e6dcbfc9333801a6a3',1,'idhan::config::getValue(const std::string_view path, const std::string_view group, const std::string_view name)'],['../d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62',1,'idhan::config::getValue(const std::string_view group, const std::string_view name)']]]
+  ['getvalue_57',['getValue',['../d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62',1,'idhan::config']]],
+  ['getvaluefromfile_58',['getValueFromFile',['../d6/db4/namespaceidhan_1_1config.html#a6264b7c321db70b967878755db5f1927',1,'idhan::config']]]
 ];

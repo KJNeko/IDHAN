@@ -140,9 +140,11 @@ Functions</h2></td></tr>
 <tr class="memitem:a2f73b3fd9b6fa82c8f984e936cf4fb86" id="r_a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2f73b3fd9b6fa82c8f984e936cf4fb86">tryGetCLI</a> (const std::string_view group, const std::string_view name)</td></tr>
 <tr class="separator:a2f73b3fd9b6fa82c8f984e936cf4fb86"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f07951dfb5336e6dcbfc9333801a6a3" id="r_a7f07951dfb5336e6dcbfc9333801a6a3"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
-<tr class="memitem:a7f07951dfb5336e6dcbfc9333801a6a3"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a7f07951dfb5336e6dcbfc9333801a6a3">getValue</a> (const std::string_view path, const std::string_view group, const std::string_view name)</td></tr>
-<tr class="separator:a7f07951dfb5336e6dcbfc9333801a6a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1114256c463aefc652df76607a69994a" id="r_a1114256c463aefc652df76607a69994a"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1114256c463aefc652df76607a69994a">expand_home</a> (std::string_view path)</td></tr>
+<tr class="separator:a1114256c463aefc652df76607a69994a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6264b7c321db70b967878755db5f1927" id="r_a6264b7c321db70b967878755db5f1927"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:a6264b7c321db70b967878755db5f1927"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a6264b7c321db70b967878755db5f1927">getValueFromFile</a> (const std::string_view path, const std::string_view group, const std::string_view name)</td></tr>
+<tr class="separator:a6264b7c321db70b967878755db5f1927"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af88d7a898e663606f8c188f9070f6a62" id="r_af88d7a898e663606f8c188f9070f6a62"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:af88d7a898e663606f8c188f9070f6a62"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af88d7a898e663606f8c188f9070f6a62">getValue</a> (const std::string_view group, const std::string_view name)</td></tr>
 <tr class="separator:af88d7a898e663606f8c188f9070f6a62"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -204,6 +206,31 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Locations to search for config info, Searches user path first, then the inverse of this list. </p>
+
+</div>
+</div>
+<a id="a1114256c463aefc652df76607a69994a" name="a1114256c463aefc652df76607a69994a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1114256c463aefc652df76607a69994a">&#9670;&#160;</a></span>expand_home()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path idhan::config::expand_home </td>
+          <td>(</td>
+          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -325,7 +352,7 @@ template&lt;typename T&gt; </div>
 </div>
 </div>
 <a id="af88d7a898e663606f8c188f9070f6a62" name="af88d7a898e663606f8c188f9070f6a62"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af88d7a898e663606f8c188f9070f6a62">&#9670;&#160;</a></span>getValue() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#af88d7a898e663606f8c188f9070f6a62">&#9670;&#160;</a></span>getValue()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -347,8 +374,8 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="a7f07951dfb5336e6dcbfc9333801a6a3" name="a7f07951dfb5336e6dcbfc9333801a6a3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7f07951dfb5336e6dcbfc9333801a6a3">&#9670;&#160;</a></span>getValue() <span class="overload">[2/2]</span></h2>
+<a id="a6264b7c321db70b967878755db5f1927" name="a6264b7c321db70b967878755db5f1927"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6264b7c321db70b967878755db5f1927">&#9670;&#160;</a></span>getValueFromFile()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -356,7 +383,7 @@ template&lt;typename T&gt; </div>
 template&lt;typename T&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">std::optional&lt; T &gt; idhan::config::getValue </td>
+          <td class="memname">std::optional&lt; T &gt; idhan::config::getValueFromFile </td>
           <td>(</td>
           <td class="paramtype">const std::string_view</td>          <td class="paramname"><span class="paramname"><em>path</em></span>, </td>
         </tr>
