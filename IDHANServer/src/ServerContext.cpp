@@ -57,9 +57,9 @@ void ServerContext::setupCORSSupport() const
 			pass();
 		} );
 
-	drogon::app().registerPostHandlingAdvice( []( [[maybe_unused]] const drogon::HttpRequestPtr& request,
-	                                              const drogon::HttpResponsePtr& response )
-	                                          { addCORSHeaders( response ); } );
+	drogon::app().registerPostHandlingAdvice(
+		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
+		{ addCORSHeaders( response ); } );
 }
 
 void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
@@ -102,8 +102,8 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	// stdout log disabled
 	if ( !arguments.use_stdout )
 	{
-		auto logger { std::make_shared<
-			spdlog::logger >( "file_loggers", spdlog::sinks_init_list { info_file_logger, error_file_logger } ) };
+		auto logger { std::make_shared< spdlog::logger >(
+			"file_loggers", spdlog::sinks_init_list { info_file_logger, error_file_logger } ) };
 
 		logger->set_pattern( std::string( server_format_str ) );
 

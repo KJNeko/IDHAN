@@ -99,8 +99,8 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 	co_return co_await scan( cursor );
 }
 
-drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::
-	scanFile( const std::filesystem::path& path )
+drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scanFile(
+	const std::filesystem::path& path )
 {
 	FileIOUring io { path };
 	co_return co_await scan( io );

@@ -7,8 +7,10 @@
 
 namespace idhan
 {
-drogon::Task< std::optional< TagID > >
-	findTag( const NamespaceID namespace_id, const SubtagID subtag_id, drogon::orm::DbClientPtr db )
+drogon::Task< std::optional< TagID > > findTag(
+	const NamespaceID namespace_id,
+	const SubtagID subtag_id,
+	drogon::orm::DbClientPtr db )
 {
 	const auto search_result { co_await db->execSqlCoro(
 		"SELECT tag_id FROM tags WHERE namespace_id = $1 AND subtag_id = $2", namespace_id, subtag_id ) };
@@ -18,8 +20,10 @@ drogon::Task< std::optional< TagID > >
 	co_return search_result[ 0 ][ 0 ].as< TagID >();
 }
 
-drogon::Task< std::expected< TagID, IDHANError > >
-	createTag( const std::string tag_namespace, const std::string tag_subtag, drogon::orm::DbClientPtr db )
+drogon::Task< std::expected< TagID, IDHANError > > createTag(
+	const std::string tag_namespace,
+	const std::string tag_subtag,
+	drogon::orm::DbClientPtr db )
 {
 	auto namespace_id_t { createNamespace( tag_namespace, db ) };
 	auto subtag_id_t { createSubtag( tag_subtag, db ) };

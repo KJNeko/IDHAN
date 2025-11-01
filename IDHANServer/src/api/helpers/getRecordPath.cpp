@@ -9,8 +9,9 @@
 
 namespace idhan::api::helpers
 {
-drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
-	getRecordPath( const RecordID record_id, DbClientPtr db )
+drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > getRecordPath(
+	const RecordID record_id,
+	DbClientPtr db )
 {
 	const auto result { co_await db->execSqlCoro(
 
@@ -30,8 +31,9 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
 	const std::string mime_extension { result[ 0 ][ 2 ].as< std::string >() };
 
 	const auto hex { sha256.hex() };
-	const std::filesystem::path file_location { folder_path / std::format( "f{}", hex.substr( 0, 2 ) )
-		                                        / ( std::format( "{}.{}", hex, mime_extension ) ) };
+	const std::filesystem::path file_location {
+		folder_path / std::format( "f{}", hex.substr( 0, 2 ) ) / ( std::format( "{}.{}", hex, mime_extension ) )
+	};
 
 	co_return file_location;
 }

@@ -124,8 +124,10 @@ IDHANClient::IDHANClient( const QString& client_name, const QString& hostname, c
 	openConnection( hostname, port, use_ssl );
 }
 
-void IDHANClient::
-	sendClientGet( UrlVariant url, IDHANResponseHandler&& responseHandler, IDHANErrorHandler&& errorHandler )
+void IDHANClient::sendClientGet(
+	UrlVariant url,
+	IDHANResponseHandler&& responseHandler,
+	IDHANErrorHandler&& errorHandler )
 {
 	QJsonDocument doc {};
 
@@ -255,8 +257,8 @@ void IDHANClient::sendClientJson(
 				}
 			}
 
-			QThreadPool::globalInstance()
-				->start( std::bind( errorHandler, response, error, response->errorString().toStdString() ) );
+			QThreadPool::globalInstance()->start(
+				std::bind( errorHandler, response, error, response->errorString().toStdString() ) );
 			// errorHandler( response, error );
 			// response->deleteLater();
 		} );

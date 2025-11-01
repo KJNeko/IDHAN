@@ -7,8 +7,9 @@
 
 namespace idhan::api
 {
-drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	search( [[maybe_unused]] drogon::HttpRequestPtr request, const std::string tag_text )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::search(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	const std::string tag_text )
 {
 	auto db { drogon::app().getDbClient() };
 

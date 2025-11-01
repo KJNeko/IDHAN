@@ -11,8 +11,9 @@
 namespace idhan::mime
 {
 
-drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > >
-	getMimeIDFromRecord( const RecordID id, DbClientPtr db )
+drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromRecord(
+	const RecordID id,
+	DbClientPtr db )
 {
 	const auto result { db->execSqlSync( "SELECT mime_id FROM file_info WHERE record_id = $1", id ) };
 
@@ -34,8 +35,9 @@ drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > > getMime( 
 	co_return info;
 }
 
-drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > >
-	getRecordMime( const RecordID record_id, DbClientPtr db )
+drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > > getRecordMime(
+	const RecordID record_id,
+	DbClientPtr db )
 {
 	const auto id { co_await getMimeIDFromRecord( record_id, db ) };
 

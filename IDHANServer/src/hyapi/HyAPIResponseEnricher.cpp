@@ -13,7 +13,9 @@ namespace idhan::hyapi
 HyAPIResponseEnricher::HyAPIResponseEnricher() = default;
 
 void HyAPIResponseEnricher::invoke(
-	const drogon::HttpRequestPtr& req, drogon::MiddlewareNextCallback&& nextCb, drogon::MiddlewareCallback&& mcb )
+	const drogon::HttpRequestPtr& req,
+	drogon::MiddlewareNextCallback&& nextCb,
+	drogon::MiddlewareCallback&& mcb )
 {
 	// Create a custom callback that intercepts the response
 	auto enrichingCallback = [ req ]( const drogon::HttpResponsePtr& resp )

@@ -17,8 +17,9 @@ ClusterAPI::ResponseTask ClusterAPI::info( drogon::HttpRequestPtr request, const
 	co_return co_await infoT( request, cluster_id, db );
 }
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getInfo( ClusterID cluster_id, const DbClientPtr transaction )
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getInfo(
+	ClusterID cluster_id,
+	const DbClientPtr transaction )
 {
 	const auto cluster_info { co_await transaction->execSqlCoro(
 		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, allowed_thumbnails, allowed_files, "
@@ -28,8 +29,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	if ( cluster_info.empty() )
 	{
 		log::warn( "Cluster info could not be found for cluster id: {}", cluster_id );
-		co_return std::
-			unexpected( drogon::HttpResponse::newHttpResponse( drogon::k404NotFound, drogon::CT_TEXT_HTML ) );
+		co_return std::unexpected(
+			drogon::HttpResponse::newHttpResponse( drogon::k404NotFound, drogon::CT_TEXT_HTML ) );
 	}
 	log::debug( "Found info for cluster {}", cluster_id );
 
@@ -59,8 +60,10 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
 	co_return json;
 }
 
-ClusterAPI::ResponseTask ClusterAPI::
-	infoT( [[maybe_unused]] drogon::HttpRequestPtr request, const ClusterID cluster_id, const DbClientPtr transaction )
+ClusterAPI::ResponseTask ClusterAPI::infoT(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	const ClusterID cluster_id,
+	const DbClientPtr transaction )
 {
 	const auto result { co_await getInfo( cluster_id, transaction ) };
 

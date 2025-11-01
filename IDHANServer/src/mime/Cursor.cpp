@@ -29,8 +29,9 @@ ImmedientTask<> CursorData::requestData( const std::size_t offset, const std::si
 	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
 }
 
-ImmedientTask< std::pair< const std::byte*, size_t > > CursorData::
-	checkData( const std::size_t pos, const std::size_t required_size ) const
+ImmedientTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
+	const std::size_t pos,
+	const std::size_t required_size ) const
 {
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
 	{
@@ -47,8 +48,9 @@ ImmedientTask< std::pair< const std::byte*, size_t > > CursorData::
 		const auto pos_size { required_size };
 
 		// check that buffer and pos overlap
-		const auto is_oob { pos_start > buffer_start + buffer_size
-			                || pos_start + pos_size > buffer_start + buffer_size };
+		const auto is_oob {
+			pos_start > buffer_start + buffer_size || pos_start + pos_size > buffer_start + buffer_size
+		};
 
 		if ( is_low || is_small || is_oob )
 		{

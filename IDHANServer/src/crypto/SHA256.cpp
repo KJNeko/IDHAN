@@ -52,8 +52,8 @@ std::expected< SHA256, drogon::HttpResponsePtr > SHA256::fromHex( const std::str
 	// 0xFF = 0b11111111
 	// FGL_ASSERT( str.size() == ( 256 / 8 * 2 ), "Hex string must be exactly 64 characters log" );
 	if ( str.size() != ( 256 / 8 * 2 ) )
-		return std::
-			unexpected( createBadRequest( "Hex string must be exactly 64 characters long, Was {}", str.size() ) );
+		return std::unexpected(
+			createBadRequest( "Hex string must be exactly 64 characters long, Was {}", str.size() ) );
 
 	std::array< std::byte, ( 256 / 8 ) > bytes {};
 

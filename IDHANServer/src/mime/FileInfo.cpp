@@ -41,8 +41,9 @@ drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const
 	}
 }
 
-drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > >
-	gatherFileInfo( FileIOUring io, const DbClientPtr db )
+drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(
+	FileIOUring io,
+	const DbClientPtr db )
 {
 	FileInfo info {};
 	info.size = io.size();

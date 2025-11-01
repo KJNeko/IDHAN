@@ -128,8 +128,8 @@ drogon::Task< std::vector< std::byte > > FileIOUring::fallbackRead( const std::s
 		co_return data;
 	}
 
-	throw std::
-		runtime_error( format_ns::format( "FileIOUring::fallbackRead: Failed to open file {}", m_path.string() ) );
+	throw std::runtime_error(
+		format_ns::format( "FileIOUring::fallbackRead: Failed to open file {}", m_path.string() ) );
 }
 
 drogon::Task< void > FileIOUring::fallbackWrite( const std::vector< std::byte > data, const std::size_t size ) const
@@ -139,8 +139,8 @@ drogon::Task< void > FileIOUring::fallbackWrite( const std::vector< std::byte > 
 		ofs.write( reinterpret_cast< const std::ostream::char_type* >( data.data() ), size );
 	}
 	else
-		throw std::
-			runtime_error( format_ns::format( "FileIOUring::fallbackWrite: Failed to open file {}", m_path.string() ) );
+		throw std::runtime_error(
+			format_ns::format( "FileIOUring::fallbackWrite: Failed to open file {}", m_path.string() ) );
 
 	co_return;
 }
@@ -293,9 +293,8 @@ void ioThread( const std::stop_token& token, IOUring* uring, std::shared_ptr< st
 
 			auto deleter = []( const IOUringUserData* ptr ) -> void { delete ptr; };
 
-			const auto user_data { std::unique_ptr<
-				IOUringUserData,
-				decltype( deleter ) >( reinterpret_cast< IOUringUserData* >( cqe.user_data ), deleter ) };
+			const auto user_data { std::unique_ptr< IOUringUserData, decltype( deleter ) >(
+				reinterpret_cast< IOUringUserData* >( cqe.user_data ), deleter ) };
 
 			switch ( user_data->m_type )
 			{

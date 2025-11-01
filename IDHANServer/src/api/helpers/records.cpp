@@ -21,8 +21,8 @@ drogon::Task< std::vector< RecordID > > massCreateRecord( const std::vector< SHA
 	std::vector< RecordID > record_ids {};
 	record_ids.reserve( sha256s.size() );
 
-	const auto result { co_await db->execSqlCoro< std::vector<
-		SHA256 > >( "SELECT record_id FROM records WHERE sha256 = ANY($1::BYTEA[])", std::move( copy2 ) ) };
+	const auto result { co_await db->execSqlCoro< std::vector< SHA256 > >(
+		"SELECT record_id FROM records WHERE sha256 = ANY($1::BYTEA[])", std::move( copy2 ) ) };
 
 	for ( const auto& row : result )
 	{

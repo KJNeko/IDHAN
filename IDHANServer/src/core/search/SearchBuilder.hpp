@@ -178,7 +178,10 @@ class SearchBuilder
 	SearchBuilder();
 
 	drogon::Task< drogon::orm::Result > query(
-		DbClientPtr db, std::vector< TagDomainID > tag_domain_ids, bool return_ids = true, bool return_hashes = false );
+		DbClientPtr db,
+		std::vector< TagDomainID > tag_domain_ids,
+		bool return_ids = true,
+		bool return_hashes = false );
 
 	void setSortType( SortType type );
 

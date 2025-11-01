@@ -19,8 +19,9 @@ ResponseTask createRecordFromOctet( [[maybe_unused]] const drogon::HttpRequestPt
 	co_return createBadRequest( "Not implemented" );
 }
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	createRecordsFromJsonArray( const Json::Value& json, DbClientPtr db )
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > createRecordsFromJsonArray(
+	const Json::Value& json,
+	DbClientPtr db )
 {
 	std::unordered_set< SHA256 > hashes {};
 

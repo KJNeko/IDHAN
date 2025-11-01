@@ -92,8 +92,9 @@ class SHA256
 	//! Takes the byte representation of a hash from a buffer.
 	static SHA256 fromBuffer( const std::vector< std::byte >& data );
 	static SHA256 fromPgCol( const drogon::orm::Field& field );
-	static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > >
-		fromDB( RecordID record_id, DbClientPtr db );
+	static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
+		RecordID record_id,
+		DbClientPtr db );
 
 	static SHA256 hash( const std::byte* data, std::size_t size );
 	static drogon::Task< SHA256 > hashCoro( FileIOUring uring );

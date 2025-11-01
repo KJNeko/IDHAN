@@ -27,8 +27,8 @@ QFuture< std::vector< TagID > > IDHANClient::createTags( const std::vector< std:
 	return createTags( pairs );
 }
 
-QFuture< std::vector< TagID > > IDHANClient::
-	createTags( const std::vector< std::pair< std::string, std::string > >& tags )
+QFuture< std::vector< TagID > > IDHANClient::createTags(
+	const std::vector< std::pair< std::string, std::string > >& tags )
 {
 	auto promise { std::make_shared< QPromise< std::vector< TagID > > >() };
 

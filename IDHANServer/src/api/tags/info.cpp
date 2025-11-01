@@ -11,8 +11,9 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > TagAPI::
-	getTagInfo( [[maybe_unused]] const drogon::HttpRequestPtr request, const TagID tag_id )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
+	[[maybe_unused]] const drogon::HttpRequestPtr request,
+	const TagID tag_id )
 {
 	Json::Value root {};
 	root[ "tag_id" ] = tag_id;
@@ -39,10 +40,8 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::
 	}
 
 	{
-		const auto count_result {
-			co_await db
-				->execSqlCoro( "SELECT storage_count, display_count FROM total_tag_counts WHERE tag_id = $1", tag_id )
-		};
+		const auto count_result { co_await db->execSqlCoro(
+			"SELECT storage_count, display_count FROM total_tag_counts WHERE tag_id = $1", tag_id ) };
 
 		if ( !count_result.empty() )
 			root[ "items_count" ] = count_result[ 0 ][ 0 ].as< std::size_t >();

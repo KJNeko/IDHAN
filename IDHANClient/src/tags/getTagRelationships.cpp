@@ -12,8 +12,9 @@
 namespace idhan
 {
 
-QFuture< IDHANClient::TagRelationshipInfo > IDHANClient::
-	getTagRelationships( const TagID tag_id, const TagDomainID tag_domain_id )
+QFuture< IDHANClient::TagRelationshipInfo > IDHANClient::getTagRelationships(
+	const TagID tag_id,
+	const TagDomainID tag_domain_id )
 {
 	const auto promise { std::make_shared< QPromise< TagRelationshipInfo > >() };
 	promise->start();

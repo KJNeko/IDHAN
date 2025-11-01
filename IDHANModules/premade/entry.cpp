@@ -19,8 +19,9 @@ using namespace idhan;
 
 std::vector< std::shared_ptr< IDHANModule > > getModules()
 {
-	std::vector< std::shared_ptr< IDHANModule > > ret { std::make_shared< ImageVipsMetadata >(),
-		                                                std::make_shared< ImageVipsThumbnailer >() };
+	std::vector< std::shared_ptr< IDHANModule > > ret {
+		std::make_shared< ImageVipsMetadata >(), std::make_shared< ImageVipsThumbnailer >()
+	};
 
 	return ret;
 }

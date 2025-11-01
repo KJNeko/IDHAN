@@ -8,8 +8,9 @@
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > RecordAPI::
-	removeTags( [[maybe_unused]] const drogon::HttpRequestPtr request, [[maybe_unused]] const RecordID record_id )
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeTags(
+	[[maybe_unused]] const drogon::HttpRequestPtr request,
+	[[maybe_unused]] const RecordID record_id )
 {
 	FGL_UNIMPLEMENTED();
 

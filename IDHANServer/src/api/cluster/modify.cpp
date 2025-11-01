@@ -15,8 +15,10 @@ ClusterAPI::ResponseTask ClusterAPI::modify( drogon::HttpRequestPtr request, con
 	co_return co_await modifyT( request, cluster_id, transaction );
 }
 
-ClusterAPI::ResponseTask ClusterAPI::
-	modifyT( drogon::HttpRequestPtr request, const ClusterID cluster_id, DbClientPtr transaction )
+ClusterAPI::ResponseTask ClusterAPI::modifyT(
+	drogon::HttpRequestPtr request,
+	const ClusterID cluster_id,
+	DbClientPtr transaction )
 {
 	log::debug( "Modifying cluster: {}", cluster_id );
 	const auto cluster_info {

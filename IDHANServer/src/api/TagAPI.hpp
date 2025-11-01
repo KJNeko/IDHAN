@@ -26,18 +26,22 @@ class TagAPI : public drogon::HttpController< TagAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > getTagDomains( drogon::HttpRequestPtr request );
 
-	drogon::Task< drogon::HttpResponsePtr >
-		getTagDomainInfo( drogon::HttpRequestPtr request, TagDomainID tag_domain_id );
+	drogon::Task< drogon::HttpResponsePtr > getTagDomainInfo(
+		drogon::HttpRequestPtr request,
+		TagDomainID tag_domain_id );
 
-	drogon::Task< drogon::HttpResponsePtr >
-		deleteTagDomain( drogon::HttpRequestPtr request, TagDomainID tag_domain_id );
+	drogon::Task< drogon::HttpResponsePtr > deleteTagDomain(
+		drogon::HttpRequestPtr request,
+		TagDomainID tag_domain_id );
 
 	drogon::Task< drogon::HttpResponsePtr > createTagParents( drogon::HttpRequestPtr request );
 
 	drogon::Task< drogon::HttpResponsePtr > createTagAliases( drogon::HttpRequestPtr request );
 
-	drogon::Task< drogon::HttpResponsePtr >
-		getTagRelationships( drogon::HttpRequestPtr request, TagDomainID tag_domain_id, TagID tag_id );
+	drogon::Task< drogon::HttpResponsePtr > getTagRelationships(
+		drogon::HttpRequestPtr request,
+		TagDomainID tag_domain_id,
+		TagID tag_id );
 
   public:
 

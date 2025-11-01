@@ -20,8 +20,9 @@ QFuture< void > IDHANClient::createAliasRelationship( TagDomainID tag_domain_id,
 	return IDHANClient::createAliasRelationship( tag_domain_id, std::move( pairs ) );
 }
 
-QFuture< void > IDHANClient::
-	createAliasRelationship( const TagDomainID tag_domain_id, const std::vector< std::pair< TagID, TagID > >& pairs )
+QFuture< void > IDHANClient::createAliasRelationship(
+	const TagDomainID tag_domain_id,
+	const std::vector< std::pair< TagID, TagID > >& pairs )
 {
 	if ( pairs.size() == 0 )
 	{

@@ -11,8 +11,9 @@
 namespace idhan::hyapi
 {
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > >
-	getAdvancedUrlInfo( std::string url_str, [[maybe_unused]] DbClientPtr db )
+drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getAdvancedUrlInfo(
+	std::string url_str,
+	[[maybe_unused]] DbClientPtr db )
 {
 	Json::Value root {};
 
@@ -71,8 +72,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( const drogon::H
 		{
 			for ( const auto& url_id : url_ids )
 			{
-				co_await db
-					->execSqlCoro( "INSERT INTO url_mappings (record_id, url_id) VALUES ($1, $2)", record_id, url_id );
+				co_await db->execSqlCoro(
+					"INSERT INTO url_mappings (record_id, url_id) VALUES ($1, $2)", record_id, url_id );
 			}
 		}
 	}
@@ -93,8 +94,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( const drogon::H
 		{
 			for ( const auto& url_id : url_ids )
 			{
-				co_await db
-					->execSqlCoro( "DELETE FROM url_mappings WHERE record_id = $1 AND url_id = $2", record_id, url_id );
+				co_await db->execSqlCoro(
+					"DELETE FROM url_mappings WHERE record_id = $1 AND url_id = $2", record_id, url_id );
 			}
 		}
 	}

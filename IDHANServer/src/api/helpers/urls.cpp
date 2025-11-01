@@ -25,10 +25,8 @@ drogon::Task< std::expected< UrlID, drogon::HttpResponsePtr > > findOrCreateUrl(
 			break;
 		}
 
-		const auto insert {
-			co_await db
-				->execSqlCoro( "INSERT INTO urls (url) VALUES ($1) ON CONFLICT DO NOTHING RETURNING url_id", url )
-		};
+		const auto insert { co_await db->execSqlCoro(
+			"INSERT INTO urls (url) VALUES ($1) ON CONFLICT DO NOTHING RETURNING url_id", url ) };
 
 		if ( !insert.empty() ) url_id = insert[ 0 ][ 0 ].as< UrlID >();
 	}

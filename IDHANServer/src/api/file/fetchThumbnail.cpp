@@ -22,8 +22,9 @@
 namespace idhan::api
 {
 
-drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > >
-	getThumbnailPath( const RecordID record_id, DbClientPtr db )
+drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > getThumbnailPath(
+	const RecordID record_id,
+	DbClientPtr db )
 {
 	const auto sha256_e { co_await SHA256::fromDB( record_id, db ) };
 	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );

@@ -31,9 +31,9 @@ int main( int argc, char** argv )
 	parser.addHelpOption();
 	parser.addVersionOption();
 
-	QCommandLineOption log_level { "log_level",
-		                           "Dictates the log level used (trace, debug, info, warning, error, critical",
-		                           "level" };
+	QCommandLineOption log_level {
+		"log_level", "Dictates the log level used (trace, debug, info, warning, error, critical", "level"
+	};
 	log_level.setDefaultValue( "info" );
 	parser.addOption( log_level );
 
@@ -41,9 +41,9 @@ int main( int argc, char** argv )
 	pg_user.setDefaultValue( "idhan" );
 	parser.addOption( pg_user );
 
-	QCommandLineOption pg_host { "pg_host",
-		                         "The host to connect to the database with (default: 'localhost')",
-		                         "pg_host" };
+	QCommandLineOption pg_host {
+		"pg_host", "The host to connect to the database with (default: 'localhost')", "pg_host"
+	};
 	pg_host.setDefaultValue( "localhost" );
 	parser.addOption( pg_host );
 

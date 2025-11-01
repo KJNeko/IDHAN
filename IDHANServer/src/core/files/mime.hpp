@@ -34,6 +34,7 @@ drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > > getMime( 
 
 //! @thorws NoFileInfo if there is no file info for the given record
 //! @throws NoMimeRecord if the mime id is invalid or does not exist.
-drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > >
-	getRecordMime( RecordID record_id, DbClientPtr db );
+drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > > getRecordMime(
+	RecordID record_id,
+	DbClientPtr db );
 } // namespace idhan::mime

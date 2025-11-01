@@ -11,15 +11,18 @@
 namespace idhan
 {
 
-QFuture< void > IDHANClient::
-	createParentRelationship( const TagDomainID tag_domian_id, const TagID parent_id, const TagID child_id )
+QFuture< void > IDHANClient::createParentRelationship(
+	const TagDomainID tag_domian_id,
+	const TagID parent_id,
+	const TagID child_id )
 {
 	std::vector< std::pair< TagID, TagID > > pairs { std::make_pair( parent_id, child_id ) };
 	return IDHANClient::createParentRelationship( tag_domian_id, std::move( pairs ) );
 }
 
-QFuture< void > IDHANClient::
-	createParentRelationship( const TagDomainID tag_domian_id, const std::vector< std::pair< TagID, TagID > >& pairs )
+QFuture< void > IDHANClient::createParentRelationship(
+	const TagDomainID tag_domian_id,
+	const std::vector< std::pair< TagID, TagID > >& pairs )
 {
 	if ( pairs.size() == 0 )
 	{

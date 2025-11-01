@@ -27,8 +27,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeUrls( drogon::HttpReque
 
 		if ( !url_id ) co_return url_id.error();
 
-		co_await db
-			->execSqlCoro( "DELETE FROM url_mappings WHERE url_id = $1 AND record_id = $2", url_id.value(), record_id );
+		co_await db->execSqlCoro(
+			"DELETE FROM url_mappings WHERE url_id = $1 AND record_id = $2", url_id.value(), record_id );
 	}
 
 	co_return drogon::HttpResponse::newHttpResponse();

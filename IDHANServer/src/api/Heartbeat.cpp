@@ -18,7 +18,8 @@ void sendStatusJson( const drogon::WebSocketConnectionPtr& wsConnPtr )
 }
 
 void Heartbeat::handleNewConnection(
-	[[maybe_unused]] const drogon::HttpRequestPtr& req, const drogon::WebSocketConnectionPtr& wsConnPtr )
+	[[maybe_unused]] const drogon::HttpRequestPtr& req,
+	const drogon::WebSocketConnectionPtr& wsConnPtr )
 {
 	std::shared_ptr< trantor::TimerId > timer_id { std::make_shared< trantor::TimerId >( 0 ) };
 	log::info( "WS open" );
@@ -45,8 +46,10 @@ void Heartbeat::handleNewConnection(
 	*timer_id.get() = id;
 }
 
-void Heartbeat::
-	handleNewMessage( const drogon::WebSocketConnectionPtr&, std::string&&, const drogon::WebSocketMessageType& )
+void Heartbeat::handleNewMessage(
+	const drogon::WebSocketConnectionPtr&,
+	std::string&&,
+	const drogon::WebSocketMessageType& )
 {}
 
 void Heartbeat::handleConnectionClosed( const drogon::WebSocketConnectionPtr& )

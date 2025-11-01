@@ -15,10 +15,8 @@ drogon::Task< std::expected< NamespaceID, IDHANError > > createNamespace( std::s
 	const auto search_result { co_await findNamespace( str, db ) };
 	if ( search_result ) co_return *search_result;
 
-	const auto insert_result {
-		co_await db
-			->execSqlCoro( "INSERT INTO tag_namespaces (namespace_text) VALUES ($1) RETURNING namespace_id", str )
-	};
+	const auto insert_result { co_await db->execSqlCoro(
+		"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) RETURNING namespace_id", str ) };
 
 	if ( insert_result.empty() ) co_return std::unexpected( createError( "Failed to create namespace {}", str ) );
 
