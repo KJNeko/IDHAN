@@ -487,7 +487,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 {
 	FileIOUring io_uring { m_path };
 
-	// log::debug( "Scanning file: {}", m_path.string() );
+	log::debug( "Scanning file: {}", m_path.string() );
 
 	if ( m_size == 0 )
 		co_return std::unexpected( createInternalError(
@@ -500,11 +500,14 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 	if ( !record_e ) co_return std::unexpected( record_e.error() );
 	m_record_id = *record_e;
 
+	log::debug( "File {} was detected as record {}", m_path.string(), m_record_id );
+
 	// check if the record has been identified in a cluster before
 	const auto cluster_e { co_await checkCluster( db ) };
 
 	if ( m_params.scan_mime )
 	{
+		log::debug( "Scanning mime for file {}", m_path.string() );
 		const auto mime_e { co_await scanMime( db ) };
 		if ( !mime_e )
 		{
@@ -517,9 +520,12 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 
 	if ( m_params.scan_metadata )
 	{
+		log::debug( "Scanning metadata for file {}", m_path.string() );
 		const auto metadata_e { co_await scanMetadata( db ) };
 		if ( !metadata_e ) co_return std::unexpected( metadata_e.error() );
 	}
+
+	log::debug( "Finished scanning file {}", m_path.string() );
 
 	co_return {};
 }
