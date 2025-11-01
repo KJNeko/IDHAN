@@ -54,8 +54,9 @@ foreach (HYDRUS_FILE ${HYDRUS_SCAN_FILES})
 			-P "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateHydrusConstants.cmake"
 			COMMENT "Generating ${FILE_NAME} constants file"
 	)
-endforeach ()
 
+	add_dependencies(IDHAN generate_${FILE_NAME}_constants)
+endforeach ()
 
 target_sources(IDHAN PUBLIC ${GENERATED_HEADERS})
 
