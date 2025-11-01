@@ -54,14 +54,14 @@ drogon::HttpResponsePtr createNotFound( const format_ns::format_string< Args... 
 template < typename... Args >
 drogon::HttpResponsePtr createInternalError( const format_ns::format_string< Args... > str, Args&&... args )
 {
-	log::error( format_ns::format( str, std::forward< Args >( args )... ) );
+	log::warn( format_ns::format( str, std::forward< Args >( args )... ) );
 	return internal::createBadResponse(
 		format_ns::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k500InternalServerError );
 }
 
 inline drogon::HttpResponsePtr createInternalError( const std::string& msg )
 {
-	log::error( msg );
+	log::warn( msg );
 	return internal::createBadResponse( msg, drogon::HttpStatusCode::k500InternalServerError );
 }
 
