@@ -153,6 +153,8 @@ std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnaile
 		     && std::static_pointer_cast< ThumbnailerModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< ThumbnailerModuleI >( module ) );
+			//TODO: Implement module priority
+			return ret;
 		}
 	}
 	return ret;
@@ -170,6 +172,8 @@ std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( co
 		     && std::static_pointer_cast< MetadataModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< MetadataModuleI >( module ) );
+			//TODO: Implement module priority
+			return ret;
 		}
 	}
 	return ret;
