@@ -89,7 +89,8 @@ COPY --from=builder /build/build/bin/config.toml /usr/share/idhan/config.toml
 ENV IDHAN_DATABASE_HOST=localhost \
     IDHAN_DATABASE_USER=idhan \
     IDHAN_DATABASE_PASSWORD=idhan \
-    IDHAN_DATABASE_DATABASE=idhan-db
+    IDHAN_DATABASE_DATABASE=idhan-db \
+    IDHAN_THUMBNAILS_PATH=/thumbnails
 
 RUN chmod +x /usr/bin/IDHANServer
 
