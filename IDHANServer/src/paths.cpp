@@ -4,6 +4,8 @@
 
 #include "paths.hpp"
 
+#include "Config.hpp"
+
 namespace idhan
 {
 std::vector< std::filesystem::path > getModulePaths()
@@ -70,4 +72,17 @@ std::filesystem::path getStaticPath()
 
 	return static_path;
 }
+
+std::filesystem::path getThumbnailsPath()
+{
+	static std::filesystem::path thumbnails_path {};
+	static std::once_flag thumbnails_path_once {};
+
+	std::call_once(
+		thumbnails_path_once,
+		[]() { thumbnails_path = idhan::config::get< std::string >( "thumbnails", "path", "./thumbnails" ); } );
+
+	return thumbnails_path;
+}
+
 } // namespace idhan

@@ -16,6 +16,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
+#include "paths.hpp"
 #include "trantor/utils/ConcurrentTaskQueue.h"
 #pragma GCC diagnostic pop
 
@@ -33,8 +34,9 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > 
 
 	// Thumbnail should be located in the `thumbnails/f[0:2]/[0:64].thumbnail (XX taken from the hash
 	const auto hex { sha256.hex() };
-	const auto file_location { std::filesystem::current_path() / "thumbnails" / std::format( "t{}", hex.substr( 0, 2 ) )
-		                       / ( std::format( "{}.thumbnail", hex ) ) };
+	const auto file_location {
+		getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / ( std::format( "{}.thumbnail", hex ) )
+	};
 
 	co_return file_location;
 }
@@ -82,11 +84,12 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		// FileMappedData data { record_path.value() };
 		FileIOUring io_uring { record_path.value() };
 
+		//TODO: Allow requesting a specific thumbnail size
 		std::size_t height { 256 };
 		std::size_t width { 256 };
 
 		const auto file_size { std::filesystem::file_size( record_path.value() ) };
-		std::vector< std::byte > data { co_await io_uring.read( 0, file_size ) };
+		std::vector< std::byte > data { co_await io_uring.readAll() };
 
 		const auto thumbnail_info {
 			thumbnailer->createThumbnail( data.data(), data.size(), width, height, mime_name )
@@ -97,14 +100,14 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		std::filesystem::create_directories( thumbnail_location_e.value().parent_path() );
 
 		// const auto& thumbnail_data = thumbnail_info.value().data;
-		auto thumbnail_data {
-			std::make_shared< std::vector< std::byte > >( std::move( thumbnail_info.value().data ) )
-		};
+		auto thumbnail_data { std::make_shared< std::vector< std::byte > >( thumbnail_info.value().data ) };
 
-		const auto thumbnail_location { thumbnail_location_e.value() };
+		const auto& thumbnail_location { thumbnail_location_e.value() };
 
 		std::filesystem::create_directories( thumbnail_location.parent_path() );
 		FileIOUring io_uring_write { thumbnail_location };
+
+		log::debug( "Writing thumbnail to {}", thumbnail_location.string() );
 
 		co_await io_uring_write.write( *thumbnail_data );
 	}

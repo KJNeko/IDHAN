@@ -205,6 +205,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	m_clusters = std::make_unique< filesystem::ClusterManager >();
 	// Register callback to initialize clusters after event loop starts
 
+	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
+
 	drogon::app().getLoop()->runInLoop(
 		[ this ]() -> drogon::Task< void > { co_await m_clusters->reloadClusters( drogon::app().getDbClient() ); } );
 

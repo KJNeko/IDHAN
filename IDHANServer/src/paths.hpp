@@ -30,4 +30,6 @@ namespace idhan
 std::vector< std::filesystem::path > getModulePaths();
 std::vector< std::filesystem::path > getMimeParserPaths();
 std::filesystem::path getStaticPath();
+std::filesystem::path getThumbnailsPath();
+
 } // namespace idhan
