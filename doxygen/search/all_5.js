@@ -4,7 +4,7 @@ var searchData=
   ['failedtoimport_1',['FailedToImport',['../d2/d18/namespaceidhan_1_1hyapi.html#a7eac165bff3e1e9e87331d6b01b0f665a9f16a18233c4dc2278f1ea53ecbdb291',1,'idhan::hyapi']]],
   ['fallbackread_2',['fallbackRead',['../d5/d8b/classidhan_1_1FileIOUring.html#a588eb355339c04edc5636257f0871471',1,'idhan::FileIOUring']]],
   ['fallbackwrite_3',['fallbackWrite',['../d5/d8b/classidhan_1_1FileIOUring.html#aa837fc243f246b21ec8f0f1c9a6bc0d2',1,'idhan::FileIOUring']]],
-  ['fetchfile_4',['fetchFile',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a724b19d27975f223c8e2d823cb5d61ac',1,'idhan::api::RecordAPI']]],
+  ['fetchfile_4',['fetchFile',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html#a767a2a96f0bde860f4b8a3673e94c0a6',1,'idhan::api::RecordAPI']]],
   ['fetchfile_2ecpp_5',['fetchFile.cpp',['../df/d0a/fetchFile_8cpp.html',1,'']]],
   ['fetchinfo_6',['fetchInfo',['../d5/dd5/classidhan_1_1api_1_1RecordAPI.html#aa9d8740c7d308994f4304db4f29236d6',1,'idhan::api::RecordAPI']]],
   ['fetchinfo_2ecpp_7',['fetchInfo.cpp',['../d9/d7f/fetchInfo_8cpp.html',1,'']]],
