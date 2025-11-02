@@ -212,9 +212,11 @@ void TagServiceWorker::processMappingsBatch(
 	const std::string& current_mappings_name )
 {
 	std::vector< MappingPair > pairs {};
-	constexpr std::size_t hash_limit { 200 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
-	constexpr std::size_t average_tags_per_hash { 128 };
+	constexpr std::size_t hash_limit { 128 };
+	constexpr std::size_t average_tags_per_hash { 64 };
 	constexpr std::size_t pair_limit { average_tags_per_hash * hash_limit };
+
+	pairs.reserve( pair_limit );
 
 	idhan::hydrus::Query< int, int > query {
 		mappings_tr, std::format( "SELECT tag_id, hash_id FROM {} ORDER BY hash_id, tag_id", current_mappings_name )
@@ -235,7 +237,7 @@ void TagServiceWorker::processMappingsBatch(
 			hash_id_set.clear();
 			processPairs( pairs );
 			pairs.clear();
-			pairs.reserve( pair_limit );
+			// pairs.reserve( pair_limit ); Not needed as clear() does not affect the result of capacity()
 			emit processedMappings( mappings_counter );
 			mappings_counter = 0;
 		}
