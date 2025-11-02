@@ -84,9 +84,6 @@ class ScanContext
 
 	ScanParams m_params;
 	std::string m_mime_name {};
-	bool m_needs_file_info { false };
-	bool m_needs_mime { false };
-	bool m_needs_metadata { false };
 
 	static constexpr auto INVALID_RECORD { std::numeric_limits< RecordID >::max() };
 	RecordID m_record_id { INVALID_RECORD };
@@ -105,8 +102,6 @@ class ScanContext
 
 	ExpectedTask<> scanMetadata( DbClientPtr db );
 	ExpectedTask< void > checkExtension( DbClientPtr db );
-
-	ExpectedTask< void > checkNeeds( DbClientPtr db );
 
   public:
 
@@ -366,6 +361,9 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 		if ( !current_mime.empty() )
 		{
 			m_mime_name = current_mime[ 0 ][ 1 ].as< std::string >();
+			log::debug(
+				"Skipping mime scan for {} because it's already been scanned and the rescan_mime flag was false",
+				m_record_id );
 			co_return {};
 		}
 	}
@@ -433,6 +431,9 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 		if ( !current_metadata.empty() )
 		{
 			// we are not wanting to rescan metadata, so we abort silently.
+			log::debug(
+				"Skipping metadata scan for {} because it's already been parsed and rescan_metadata was false",
+				m_record_id );
 			co_return {};
 		}
 	}
@@ -470,11 +471,27 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 
 ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 {
-	const auto info_result {
-		co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE name = $1", m_mime_name )
+	auto getExtensionFromMimeName = [ & ]() -> drogon::Task< std::string >
+	{
+		const auto result {
+			co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE name = $1", m_mime_name )
+		};
+
+		co_return result[ 0 ][ 0 ].as< std::string >();
 	};
 
-	const auto expected_extension { info_result[ 0 ][ 0 ].as< std::string >() };
+	auto getExtensionFromRecord = [ & ]() -> drogon::Task< std::string >
+	{
+		const auto result { co_await db->execSqlCoro(
+			"SELECT COALESCE(best_extension, extension) FROM file_info LEFT JOIN mime USING (mime_id) WHERE record_id = $1",
+			m_record_id ) };
+
+		co_return result[ 0 ][ 0 ].as< std::string >();
+	};
+
+	const auto expected_extension {
+		m_mime_name.empty() ? co_await getExtensionFromRecord() : co_await getExtensionFromMimeName()
+	};
 
 	std::string file_extension { m_path.extension().string() };
 	if ( file_extension.starts_with( "." ) ) file_extension = file_extension.substr( 1 );
@@ -495,37 +512,12 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 			m_path = new_path;
 		}
 	}
-
-	co_return {};
-}
-
-ExpectedTask< void > ScanContext::checkNeeds( DbClientPtr db )
-{
-	const auto check_query {
-		R"(
-		SELECT record_id,
-			(file_info.record_id IS NULL)									as needs_file_info,
-			(file_info.mime_id IS NULL AND file_info.extension IS NULL)		as needs_mime,
-			(metadata.record_id IS NULL)									as needs_metadata
-		FROM records
-			LEFT JOIN file_info USING (record_id)
-			LEFT JOIN metadata USING (record_id)
-		WHERE record_id = $1
-		)"
-	};
-
-	const auto check_result { co_await db->execSqlCoro( check_query, m_record_id ) };
-
-	if ( check_result.empty() )
+	else
 	{
-		m_needs_file_info = true;
-		m_needs_metadata = true;
-		m_needs_mime = true;
+		log::debug( "{} passed it's extension check. Expected {}", m_mime_name, file_extension );
 	}
 
-	m_needs_file_info = check_result[ 0 ][ "needs_file_info" ].as< bool >();
-	m_needs_metadata = check_result[ 0 ][ "needs_metadata" ].as< bool >();
-	m_needs_mime = check_result[ 0 ][ "needs_mime" ].as< bool >();
+	co_return {};
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan(
@@ -554,7 +546,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 	// check if the record has been identified in a cluster before
 	const auto cluster_e { co_await checkCluster( db ) };
 
-	if ( ( m_params.scan_mime && m_needs_mime ) || m_params.rescan_mime )
+	if ( m_params.scan_mime )
 	{
 		log::debug( "Scanning mime for file {}", m_path.string() );
 		const auto mime_e { co_await scanMime( db ) };
@@ -571,7 +563,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 	const auto extenion_result { co_await checkExtension( db ) };
 	return_unexpected_error( extenion_result );
 
-	if ( ( m_params.scan_metadata && m_needs_metadata ) || m_params.rescan_metadata )
+	if ( m_params.scan_metadata )
 	{
 		log::debug( "Scanning metadata for file {}", m_path.string() );
 		const auto metadata_e { co_await scanMetadata( db ) };
