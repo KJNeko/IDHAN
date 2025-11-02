@@ -2,6 +2,7 @@ var classidhan_1_1api_1_1ScanContext =
 [
     [ "ScanContext", "d3/dcf/classidhan_1_1api_1_1ScanContext.html#ab0da3b7c0933f02a140f41c805882bc2", null ],
     [ "checkCluster", "d3/dcf/classidhan_1_1api_1_1ScanContext.html#a03bbf7a8643954b3e02fb18f9eef6038", null ],
+    [ "checkExtension", "d3/dcf/classidhan_1_1api_1_1ScanContext.html#a460d677cab8a6c518cb16e4fcf03392a", null ],
     [ "checkRecord", "d3/dcf/classidhan_1_1api_1_1ScanContext.html#ac05e10884052602079b95a0ddfe0fa32", null ],
     [ "checkSHA256", "d3/dcf/classidhan_1_1api_1_1ScanContext.html#ac0a7dff4d941968066f74b0b4898827c", null ],
     [ "cleanupDoubleClusters", "d3/dcf/classidhan_1_1api_1_1ScanContext.html#ae4890ee1076185728d0e4fe3d3848b46", null ],
