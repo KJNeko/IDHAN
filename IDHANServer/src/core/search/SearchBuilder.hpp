@@ -169,6 +169,7 @@ class SearchBuilder
 	 * @brief Constructs a query to be used. $1 is expected to be an array of tag_domain_ids
 	 * @param return_ids
 	 * @param return_hashes
+	 * @param filter_domains
 	 * @return
 	 */
 	std::string construct( bool return_ids = true, bool return_hashes = false, bool filter_domains = false );

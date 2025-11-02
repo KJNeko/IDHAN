@@ -242,7 +242,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const ClusterID cluster_id )
 {
 	std::lock_guard lock { m_mutex };
-	auto itter = m_folders.find( cluster_id );
+	const auto itter { m_folders.find( cluster_id ) };
 	if ( itter == m_folders.end() )
 		co_return std::unexpected( createBadRequest( "Invalid cluster id {}", cluster_id ) );
 

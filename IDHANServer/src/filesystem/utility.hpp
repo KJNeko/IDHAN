@@ -11,6 +11,7 @@ namespace idhan::filesystem
 /**
  *
  * @param record_id Record of which to get a filepath for
+ * @param db
  * @return
  */
 ExpectedTask< std::filesystem::path > getFilepath( RecordID record_id, DbClientPtr db );
@@ -27,6 +28,7 @@ ExpectedTask< std::filesystem::path > getTheoreticalFilePath(
 /**
  * @brief Checks that a file exists in its respective cluster
  * @param record_id
+ * @param db
  * @return
  */
 ExpectedTask< bool > checkFileExists( RecordID record_id, drogon::orm::DbClientPtr db );

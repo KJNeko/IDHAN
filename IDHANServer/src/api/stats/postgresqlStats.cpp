@@ -15,7 +15,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::postgresqlStorageSunData
 	root[ "name" ] = "root";
 	root[ "children" ] = Json::Value( Json::arrayValue );
 
-	auto db { drogon::app().getDbClient() };
+	const auto db { drogon::app().getDbClient() };
 
 	const auto table_list { co_await db->execSqlCoro(
 		"SELECT table_name, pg_relation_size(quote_ident(table_name)::text) AS size FROM information_schema.tables WHERE "

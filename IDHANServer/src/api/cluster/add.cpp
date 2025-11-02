@@ -12,49 +12,6 @@
 namespace idhan::api
 {
 
-/**
- * @brief Finds a valid cluster name, If the cluster name is already taken, then we'll append a unique identifier to the
- * end of it
- */
-drogon::Task< std::string > findValidClusterName( const std::string desired_name, DbClientPtr db )
-{
-	const auto result {
-		co_await db->execSqlCoro( "SELECT cluster_name FROM file_clusters WHERE cluster_name = $1", desired_name )
-	};
-
-	log::info( "Desired name: {}", desired_name );
-
-	if ( result.empty() )
-	{
-		log::info( "Cluster name {} not in use, Trying it", desired_name );
-		co_return desired_name;
-	}
-
-	const auto mark_start { desired_name.find_first_of( ":" ) };
-
-	if ( mark_start == std::string::npos )
-	{
-		co_return co_await findValidClusterName( format_ns::format( "{}: 1", desired_name ), db );
-	}
-
-	const auto mark_number_str { desired_name.substr( mark_start + 1 ) };
-
-	try
-	{
-		const auto mark_number { std::stoull( mark_number_str ) };
-		log::info( "Got UID: {}", mark_number_str );
-		const auto filtered_name { desired_name.substr( 0, mark_start ) };
-
-		co_return co_await findValidClusterName( format_ns::format( "{}: {}", filtered_name, mark_number + 1 ), db );
-	}
-	catch ( std::invalid_argument& arg )
-	{
-		// NOOP
-	}
-
-	co_return co_await findValidClusterName( format_ns::format( "{}: 1", desired_name ), db );
-}
-
 ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };

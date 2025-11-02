@@ -79,8 +79,8 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > > getIDFromPair( c
 
 	if ( tag_id ) co_return tag_id.value();
 
-	auto tag_namespace_is_str { std::holds_alternative< std::string >( tag_namespace ) };
-	auto tag_subtag_is_str { std::holds_alternative< std::string >( tag_subtag ) };
+	const auto tag_namespace_is_str { std::holds_alternative< std::string >( tag_namespace ) };
+	const auto tag_subtag_is_str { std::holds_alternative< std::string >( tag_subtag ) };
 
 	if ( tag_namespace_is_str && tag_subtag_is_str )
 	{
@@ -340,9 +340,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		for ( const auto& set_json : sets_json )
 		{
-			auto task = [ db ]( Json::Value set_json ) -> Task
+			auto task = [ db ]( const Json::Value set_json_current ) -> Task
 			{
-				const auto tags { co_await getTagPairs( set_json ) };
+				const auto tags { co_await getTagPairs( set_json_current ) };
 
 				if ( !tags ) co_return std::unexpected( tags.error() );
 

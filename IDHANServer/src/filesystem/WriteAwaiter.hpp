@@ -23,11 +23,11 @@ struct [[nodiscard]] WriteAwaiter
 	struct promise_type;
 	using handle_type = std::coroutine_handle< promise_type >;
 
-	bool await_ready() const noexcept { return false; }
+	static bool await_ready() noexcept;
 
-	void await_suspend( const std::coroutine_handle<> h );
+	void await_suspend( std::coroutine_handle<> h );
 
-	void await_resume();
+	void await_resume() const;
 
 	std::exception_ptr m_exception { nullptr };
 	std::coroutine_handle<> m_cont {};

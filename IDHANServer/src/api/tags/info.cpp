@@ -21,7 +21,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
 	NamespaceID namespace_id {};
 	SubtagID subtag_id {};
 
-	auto db { drogon::app().getDbClient() };
+	const auto db { drogon::app().getDbClient() };
 
 	{
 		const auto result {

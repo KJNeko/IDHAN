@@ -6,8 +6,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
-#include <ranges>
-
 #include "IDHANClient.hpp"
 #include "logging/logger.hpp"
 

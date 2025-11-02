@@ -54,8 +54,6 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 		// log::debug( "Searching for {}", spdlog::to_hex( match_view ) );
 	}
 
-	const auto start_pos { cursor.pos() };
-
 	const auto pos_limit { m_limit == NO_LIMIT ? NO_LIMIT : cursor.pos() + m_limit };
 	do
 	{

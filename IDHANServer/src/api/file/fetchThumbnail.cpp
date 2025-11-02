@@ -88,7 +88,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		std::size_t height { 256 };
 		std::size_t width { 256 };
 
-		const auto file_size { std::filesystem::file_size( record_path.value() ) };
 		std::vector< std::byte > data { co_await io_uring.readAll() };
 
 		const auto thumbnail_info {

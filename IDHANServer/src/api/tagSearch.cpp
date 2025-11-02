@@ -11,7 +11,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::search(
 	[[maybe_unused]] drogon::HttpRequestPtr request,
 	const std::string tag_text )
 {
-	auto db { drogon::app().getDbClient() };
+	const auto db { drogon::app().getDbClient() };
 
 	const auto result { co_await db->execSqlCoro( "SELECT tag_id FROM tags WHERE tag_text = $1", tag_text ) };
 

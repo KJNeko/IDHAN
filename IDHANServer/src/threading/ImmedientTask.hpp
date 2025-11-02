@@ -44,13 +44,13 @@ struct ImmedientTask
 	{
 		ImmedientTask< T > get_return_object() { return ImmedientTask< T > { handle_type::from_promise( *this ) }; }
 
-		std::suspend_always initial_suspend() { return {}; }
+		static std::suspend_always initial_suspend() { return {}; }
 
 		void return_value( const T& v ) { value = v; }
 
 		void return_value( T&& v ) { value = std::move( v ); }
 
-		auto final_suspend() noexcept { return drogon::final_awaiter {}; }
+		static auto final_suspend() noexcept { return drogon::final_awaiter {}; }
 
 		void unhandled_exception() { exception_ = std::current_exception(); }
 
@@ -68,10 +68,10 @@ struct ImmedientTask
 			return value.value();
 		}
 
-		void setContinuation( std::coroutine_handle<> handle ) { continuation_ = handle; }
+		void setContinuation( const std::coroutine_handle<> handle ) { continuation_ = handle; }
 
-		std::optional< T > value;
-		std::exception_ptr exception_;
+		std::optional< T > value {};
+		std::exception_ptr exception_ {};
 		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
 	};
 
@@ -86,15 +86,11 @@ struct [[nodiscard]] ImmedientTask< void >
 	struct promise_type;
 	using handle_type = std::coroutine_handle< promise_type >;
 
-	ImmedientTask( handle_type handle ) : coro_( handle ) {}
+	ImmedientTask( const handle_type handle ) : coro_( handle ) {}
 
 	ImmedientTask( const ImmedientTask& ) = delete;
 
-	ImmedientTask( ImmedientTask&& other ) noexcept
-	{
-		coro_ = other.coro_;
-		other.coro_ = nullptr;
-	}
+	ImmedientTask( ImmedientTask&& other ) noexcept : coro_( other.coro_ ) { other.coro_ = nullptr; }
 
 	~ImmedientTask()
 	{
@@ -117,22 +113,22 @@ struct [[nodiscard]] ImmedientTask< void >
 	{
 		ImmedientTask<> get_return_object() { return ImmedientTask<> { handle_type::from_promise( *this ) }; }
 
-		std::suspend_always initial_suspend() { return {}; }
+		static std::suspend_always initial_suspend() { return {}; }
 
 		void return_void() {}
 
-		auto final_suspend() noexcept { return drogon::final_awaiter {}; }
+		static auto final_suspend() noexcept { return drogon::final_awaiter {}; }
 
 		void unhandled_exception() { exception_ = std::current_exception(); }
 
-		void result()
+		void result() const
 		{
 			if ( exception_ != nullptr ) std::rethrow_exception( exception_ );
 		}
 
-		void setContinuation( std::coroutine_handle<> handle ) { continuation_ = handle; }
+		void setContinuation( const std::coroutine_handle<> handle ) { continuation_ = handle; }
 
-		std::exception_ptr exception_;
+		std::exception_ptr exception_ {};
 		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
 	};
 

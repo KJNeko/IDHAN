@@ -106,10 +106,8 @@ class SHA256
 
 } // namespace idhan
 
-namespace std
-{
 template <>
-struct hash< idhan::SHA256 >
+struct std::hash< idhan::SHA256 >
 {
 	std::size_t operator()( const idhan::SHA256& sha ) const noexcept
 	{
@@ -122,4 +120,3 @@ struct hash< idhan::SHA256 >
 		return seed;
 	}
 };
-} // namespace std

@@ -147,7 +147,6 @@ class IDHANClient
 	 * @brief Creates a parent/child relationship between two tags
 	 * @param parent_id
 	 * @param child_id
-	 * @param tag_domain_id
 	 * @return
 	 */
 	QFuture< void > createParentRelationship( TagDomainID tag_domian_id, TagID parent_id, TagID child_id );

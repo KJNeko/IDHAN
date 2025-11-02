@@ -98,7 +98,7 @@ void ModuleLoader::loadModules()
 			log::info( "Getting modules from shared lib" );
 
 			using VoidFunc = void* (*)();
-			auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
+			const auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
 			if ( !getModulesFunc )
 			{
 				log::error( "Failed to get getModulesFunc: {}", dlerror() );
@@ -106,7 +106,7 @@ void ModuleLoader::loadModules()
 			}
 
 			using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )();
-			auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
+			const auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
 
 			if ( !getModules )
 			{
@@ -142,6 +142,7 @@ void ModuleLoader::loadModules()
 }
 
 std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnailerFor( const std::string_view mime )
+	const
 {
 	std::vector< std::shared_ptr< ThumbnailerModuleI > > ret {};
 
@@ -160,7 +161,7 @@ std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnaile
 	return ret;
 }
 
-std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( const std::string_view mime )
+std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( const std::string_view mime ) const
 {
 	std::vector< std::shared_ptr< MetadataModuleI > > ret {};
 
