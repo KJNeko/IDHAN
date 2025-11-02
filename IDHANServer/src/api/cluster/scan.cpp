@@ -84,6 +84,9 @@ class ScanContext
 
 	ScanParams m_params;
 	std::string m_mime_name {};
+	bool m_needs_file_info { false };
+	bool m_needs_mime { false };
+	bool m_needs_metadata { false };
 
 	static constexpr auto INVALID_RECORD { std::numeric_limits< RecordID >::max() };
 	RecordID m_record_id { INVALID_RECORD };
@@ -102,6 +105,8 @@ class ScanContext
 
 	ExpectedTask<> scanMetadata( DbClientPtr db );
 	ExpectedTask< void > checkExtension( DbClientPtr db );
+
+	ExpectedTask< void > checkNeeds( DbClientPtr db );
 
   public:
 
@@ -494,6 +499,35 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	co_return {};
 }
 
+ExpectedTask< void > ScanContext::checkNeeds( DbClientPtr db )
+{
+	const auto check_query {
+		R"(
+		SELECT record_id,
+			(file_info.record_id IS NULL)									as needs_file_info,
+			(file_info.mime_id IS NULL AND file_info.extension IS NULL)		as needs_mime,
+			(metadata.record_id IS NULL)									as needs_metadata
+		FROM records
+			LEFT JOIN file_info USING (record_id)
+			LEFT JOIN metadata USING (record_id)
+		WHERE record_id = $1
+		)"
+	};
+
+	const auto check_result { co_await db->execSqlCoro( check_query, m_record_id ) };
+
+	if ( check_result.empty() )
+	{
+		m_needs_file_info = true;
+		m_needs_metadata = true;
+		m_needs_mime = true;
+	}
+
+	m_needs_file_info = check_result[ 0 ][ "needs_file_info" ].as< bool >();
+	m_needs_metadata = check_result[ 0 ][ "needs_metadata" ].as< bool >();
+	m_needs_mime = check_result[ 0 ][ "needs_mime" ].as< bool >();
+}
+
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan(
 	const std::filesystem::path bad_dir,
 	drogon::orm::DbClientPtr db )
@@ -506,6 +540,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 		co_return std::unexpected( createInternalError(
 			"When scanning file: {} it was detected that it has a filesize of zero!", m_path.string() ) );
 
+	// check that the sha256 matches the sha256 name of the file
 	const auto sha256_e { co_await checkSHA256( io_uring, bad_dir ) };
 	return_unexpected_error( sha256_e );
 
@@ -519,7 +554,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 	// check if the record has been identified in a cluster before
 	const auto cluster_e { co_await checkCluster( db ) };
 
-	if ( m_params.scan_mime )
+	if ( ( m_params.scan_mime && m_needs_mime ) || m_params.rescan_mime )
 	{
 		log::debug( "Scanning mime for file {}", m_path.string() );
 		const auto mime_e { co_await scanMime( db ) };
@@ -536,7 +571,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 	const auto extenion_result { co_await checkExtension( db ) };
 	return_unexpected_error( extenion_result );
 
-	if ( m_params.scan_metadata )
+	if ( ( m_params.scan_metadata && m_needs_metadata ) || m_params.rescan_metadata )
 	{
 		log::debug( "Scanning metadata for file {}", m_path.string() );
 		const auto metadata_e { co_await scanMetadata( db ) };
