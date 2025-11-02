@@ -81,13 +81,13 @@ var NAVTREEINDEX =
 "annotated.html",
 "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a1af9eab14690ec4bab25cf41b38b38fc",
 "d3/d67/classidhan_1_1IDHANClient.html#aaafc2a2d5864d78ffe535f24e7c2030c",
-"d5/d8b/classidhan_1_1FileIOUring.html#a26944a4c47f4199840d2b827d723d7fe",
-"d7/d1e/classidhan_1_1SearchBuilder.html#a450567413e0c4bffadfaeeb2daa9d742",
-"d9/d46/classidhan_1_1TagSearch.html#a5df45c90d7ec33096b7835741c69be1b",
-"db/de4/namespaceidhan_1_1api.html#aaa1cb1b65cfafb47d0491c39afd88a01",
-"dd/d25/classidhan_1_1IOUring.html#a7420aa5c12eb3a1a2bb142303537d841",
-"de/d07/structidhan_1_1ConnectionArguments.html#a7dfd95fc91bbb52f20d2d9e4554ca306",
-"functions_func_f.html"
+"d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8d12688bc58bee790b5874ba6baa1db0",
+"d7/d03/namespaceidhan_1_1log.html#af13459524cc53dacaf6736431fae1db1",
+"d9/d46/classidhan_1_1TagSearch.html#a288b215b2431425b2dfecf6541229425",
+"db/de4/namespaceidhan_1_1api.html#a3c430bbdbbde76dec5e737e4fa91f593",
+"dd/d25/classidhan_1_1IOUring.html#a374d4885f69ec4b68796cf0e7e790bc1",
+"de/d07/structidhan_1_1ConnectionArguments.html#a262b24651c48720d52cfeb6563e79e68",
+"functions_enum.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

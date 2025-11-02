@@ -1,5 +1,13 @@
 var NAVTREEINDEX6 =
 {
+"db/de4/namespaceidhan_1_1api.html#a3c430bbdbbde76dec5e737e4fa91f593":[5,0,3,0,39],
+"db/de4/namespaceidhan_1_1api.html#a3e1ab7867f4b263f1227849150d4ea63":[5,0,3,0,28],
+"db/de4/namespaceidhan_1_1api.html#a4786e76965b8bc4c5dda31cc83ce8f76":[5,0,3,0,17],
+"db/de4/namespaceidhan_1_1api.html#a5c5b023d5e1af53fe87c1619750fe72c":[5,0,3,0,32],
+"db/de4/namespaceidhan_1_1api.html#a6858aa866e1493e7714f610ce0867d26":[5,0,3,0,23],
+"db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662":[5,0,3,0,24],
+"db/de4/namespaceidhan_1_1api.html#a9f8d566d3390c231c7a322099b5cb47d":[5,0,3,0,21],
+"db/de4/namespaceidhan_1_1api.html#aa6d13296f504a6e76ff871ee0f977d76":[5,0,3,0,33],
 "db/de4/namespaceidhan_1_1api.html#aaa1cb1b65cfafb47d0491c39afd88a01":[5,0,3,0,27],
 "db/de4/namespaceidhan_1_1api.html#aad2e58082017e1fd3b7bf3eb59c861c5":[5,0,3,0,34],
 "db/de4/namespaceidhan_1_1api.html#ab39a4fa22e484398ca01d39f4deaa4df":[5,0,3,0,29],
@@ -241,13 +249,5 @@ var NAVTREEINDEX6 =
 "dd/d25/classidhan_1_1IOUring.html#a307df6d36dc72eef11fa6d5c439eb9d4":[6,0,1,14,13],
 "dd/d25/classidhan_1_1IOUring.html#a30e7328754f3bf54fe533e2810de5607":[5,0,3,22,8],
 "dd/d25/classidhan_1_1IOUring.html#a30e7328754f3bf54fe533e2810de5607":[6,0,1,14,8],
-"dd/d25/classidhan_1_1IOUring.html#a374d4885f69ec4b68796cf0e7e790bc1":[5,0,3,22,20],
-"dd/d25/classidhan_1_1IOUring.html#a374d4885f69ec4b68796cf0e7e790bc1":[6,0,1,14,20],
-"dd/d25/classidhan_1_1IOUring.html#a4aef7412d5a3a57a151a96e5064d6306":[5,0,3,22,4],
-"dd/d25/classidhan_1_1IOUring.html#a4aef7412d5a3a57a151a96e5064d6306":[6,0,1,14,4],
-"dd/d25/classidhan_1_1IOUring.html#a4c6ef76056384f5257fafd8c7004091f":[5,0,3,22,14],
-"dd/d25/classidhan_1_1IOUring.html#a4c6ef76056384f5257fafd8c7004091f":[6,0,1,14,14],
-"dd/d25/classidhan_1_1IOUring.html#a6e14b0ea344ab78ecd462b602adc8b89":[5,0,3,22,3],
-"dd/d25/classidhan_1_1IOUring.html#a6e14b0ea344ab78ecd462b602adc8b89":[6,0,1,14,3],
-"dd/d25/classidhan_1_1IOUring.html#a7420aa5c12eb3a1a2bb142303537d841":[5,0,3,22,7]
+"dd/d25/classidhan_1_1IOUring.html#a374d4885f69ec4b68796cf0e7e790bc1":[5,0,3,22,20]
 };
