@@ -466,7 +466,7 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 {
 	const auto info_result {
-		co_await db->execSqlCoro( "SELECT best_extension FROM mime_info WHERE mime = $1", m_mime_name )
+		co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE mime = $1", m_mime_name )
 	};
 
 	const auto expected_extension { info_result[ 0 ][ 0 ].as< std::string >() };
