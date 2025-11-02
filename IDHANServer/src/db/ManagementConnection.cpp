@@ -12,11 +12,68 @@
 namespace idhan
 {
 
+void checkPgVersion( const std::string& pg_version )
+{
+	//PostgreSQL 18.0 (Debian 18.0-1.pgdg13+3) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+	if ( pg_version.empty() )
+	{
+		log::critical( "Postgres version string was missing" );
+		std::abort();
+	}
+
+	const auto pre_version { pg_version.find_first_of( ' ' ) };
+	if ( pre_version == std::string::npos )
+	{
+		log::critical( "Failed to parse pg version string" );
+		std::abort();
+	}
+
+	const auto post_version { pg_version.find_first_of( ' ', pre_version + 1 ) };
+
+	if ( post_version == std::string::npos )
+	{
+		log::critical( "Failed to parse postgres version string" );
+		std::abort();
+	}
+
+	const auto divider { pg_version.find_first_of( '.', pre_version + 1 ) };
+
+	if ( divider == std::string::npos )
+	{
+		log::critical( "Failed to parse postgres version string" );
+		std::abort();
+	}
+
+	const auto major_str { pg_version.substr( pre_version, divider ) };
+
+	std::istringstream ss { major_str };
+	std::size_t major { 0 };
+	ss >> major;
+	if ( ss.fail() )
+	{
+		log::critical( "Failed to parse postgres version string" );
+		std::abort();
+	}
+
+	if ( major < 18 )
+	{
+		log::critical( "Minimum of postgres 18 required for IDHAN" );
+		std::abort();
+	}
+}
+
 ManagementConnection::ManagementConnection( const ConnectionArguments& arguments ) : connection( arguments.format() )
 {
-	log::info( "Postgres connection made: {}", arguments.format() );
+	log::info( "Postgres management connection made: {}", arguments.format() );
 
 	pqxx::nontransaction tx { connection };
+
+	log::info( "Interrogating postgres version" );
+	const auto version { tx.exec( "SELECT version()" ) };
+	const auto version_string { version[ 0 ][ 0 ].as< std::string >() };
+	log::info( "Postgres version: {}", version_string );
+
+	checkPgVersion( version_string );
 
 	if ( arguments.testmode )
 	{
