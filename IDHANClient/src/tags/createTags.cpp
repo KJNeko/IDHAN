@@ -34,7 +34,7 @@ QFuture< std::vector< TagID > > IDHANClient::createTags(
 
 	QJsonArray array {};
 
-	if ( tags.size() == 0 ) throw std::runtime_error( "Needs more then 1 tag to make" );
+	if ( tags.empty() ) throw std::runtime_error( "Needs more then 1 tag to make" );
 
 	for ( const auto& [ namespace_text, subtag_text ] : tags )
 	{
