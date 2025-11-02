@@ -101,6 +101,7 @@ class ScanContext
 	ExpectedTask<> scanMime( DbClientPtr db );
 
 	ExpectedTask<> scanMetadata( DbClientPtr db );
+	ExpectedTask< void > checkExtension( DbClientPtr db );
 
   public:
 
@@ -407,26 +408,6 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 
 	const auto expected_extension { mime_info[ 0 ][ 0 ].as< std::string >() };
 
-	std::string file_extension { m_path.extension().string() };
-	if ( expected_extension.starts_with( "." ) ) file_extension = file_extension.substr( 1 );
-
-	if ( expected_extension != file_extension )
-	{
-		log::warn(
-			"When scanning record {}. It was detected that the extension did not match it's mime, Expected {} got {}",
-			m_record_id,
-			expected_extension,
-			file_extension );
-
-		if ( !m_params.read_only && m_params.fix_extensions )
-		{
-			auto new_path = m_path.replace_extension( format_ns::format( ".{}", expected_extension ) );
-			std::filesystem::rename( m_path, new_path );
-			log::info( "Renamed file {} to {} due to extension mismatch", m_path.string(), new_path.string() );
-			m_path = new_path;
-		}
-	}
-
 	co_return {};
 }
 
@@ -482,6 +463,37 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 	co_return {};
 }
 
+ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
+{
+	const auto info_result {
+		co_await db->execSqlCoro( "SELECT best_extension FROM mime_info WHERE mime = $1", m_mime_name )
+	};
+
+	const auto expected_extension { info_result[ 0 ][ 0 ].as< std::string >() };
+
+	std::string file_extension { m_path.extension().string() };
+	if ( file_extension.starts_with( "." ) ) file_extension = file_extension.substr( 1 );
+
+	if ( expected_extension != file_extension )
+	{
+		log::warn(
+			"When scanning record {}. It was detected that the extension did not match it's mime, Expected {} got {}",
+			m_record_id,
+			expected_extension,
+			file_extension );
+
+		if ( !m_params.read_only && m_params.fix_extensions )
+		{
+			auto new_path = m_path.replace_extension( format_ns::format( ".{}", expected_extension ) );
+			std::filesystem::rename( m_path, new_path );
+			log::info( "Renamed file {} to {} due to extension mismatch", m_path.string(), new_path.string() );
+			m_path = new_path;
+		}
+	}
+
+	co_return {};
+}
+
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan(
 	const std::filesystem::path bad_dir,
 	drogon::orm::DbClientPtr db )
@@ -495,10 +507,11 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 			"When scanning file: {} it was detected that it has a filesize of zero!", m_path.string() ) );
 
 	const auto sha256_e { co_await checkSHA256( io_uring, bad_dir ) };
-	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
+	return_unexpected_error( sha256_e );
 
 	const auto record_e { co_await checkRecord( *sha256_e, db ) };
 	if ( !record_e ) co_return std::unexpected( record_e.error() );
+	return_unexpected_error( record_e );
 	m_record_id = *record_e;
 
 	log::debug( "File {} was detected as record {}", m_path.string(), m_record_id );
@@ -518,6 +531,10 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 				"Failed to process mime for record {} at path {}: {}", m_record_id, m_path.string(), msg ) );
 		}
 	}
+
+	// extension check
+	const auto extenion_result { co_await checkExtension( db ) };
+	return_unexpected_error( extenion_result );
 
 	if ( m_params.scan_metadata )
 	{
