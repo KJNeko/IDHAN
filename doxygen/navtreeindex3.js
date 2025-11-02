@@ -1,13 +1,5 @@
 var NAVTREEINDEX3 =
 {
-"d5/d86/namespaceidhan_1_1api_1_1helpers.html#a8d12688bc58bee790b5874ba6baa1db0":[5,0,3,0,0,8],
-"d5/d86/namespaceidhan_1_1api_1_1helpers.html#aa0205aa8fc74efdc527854f3f0d9e8d9":[5,0,3,0,0,3],
-"d5/d8b/classidhan_1_1FileIOUring.html":[5,0,3,17],
-"d5/d8b/classidhan_1_1FileIOUring.html":[6,0,1,9],
-"d5/d8b/classidhan_1_1FileIOUring.html#a0b7126125b6b0f3877a640d22662b986":[5,0,3,17,8],
-"d5/d8b/classidhan_1_1FileIOUring.html#a0b7126125b6b0f3877a640d22662b986":[6,0,1,9,8],
-"d5/d8b/classidhan_1_1FileIOUring.html#a208a36eb20ac258f67614db97d11b695":[5,0,3,17,3],
-"d5/d8b/classidhan_1_1FileIOUring.html#a208a36eb20ac258f67614db97d11b695":[6,0,1,9,3],
 "d5/d8b/classidhan_1_1FileIOUring.html#a26944a4c47f4199840d2b827d723d7fe":[5,0,3,17,10],
 "d5/d8b/classidhan_1_1FileIOUring.html#a26944a4c47f4199840d2b827d723d7fe":[6,0,1,9,10],
 "d5/d8b/classidhan_1_1FileIOUring.html#a2697022ca2ada9df751913871510e834":[5,0,3,17,13],
@@ -249,5 +241,13 @@ var NAVTREEINDEX3 =
 "d7/d03/namespaceidhan_1_1log.html#a36d3f7dbad5875dc7fd29c96c1e69573":[5,0,3,8,6],
 "d7/d03/namespaceidhan_1_1log.html#a39d14c1f94795855b6c7ecc81e224545":[5,0,3,8,2],
 "d7/d03/namespaceidhan_1_1log.html#a648d8630efa447d96ad08b2b5fbff6e6":[5,0,3,8,1],
-"d7/d03/namespaceidhan_1_1log.html#ac698be3533edf7425ae271140a28e896":[5,0,3,8,10]
+"d7/d03/namespaceidhan_1_1log.html#ac698be3533edf7425ae271140a28e896":[5,0,3,8,10],
+"d7/d03/namespaceidhan_1_1log.html#af13459524cc53dacaf6736431fae1db1":[5,0,3,8,8],
+"d7/d1e/classidhan_1_1SearchBuilder.html":[5,0,3,27],
+"d7/d1e/classidhan_1_1SearchBuilder.html":[6,0,1,19],
+"d7/d1e/classidhan_1_1SearchBuilder.html#a11fe172799d4a4358b4bdf05f23cd623":[5,0,3,27,1],
+"d7/d1e/classidhan_1_1SearchBuilder.html#a11fe172799d4a4358b4bdf05f23cd623":[6,0,1,19,1],
+"d7/d1e/classidhan_1_1SearchBuilder.html#a40a255a9e218e28150a14266cffa33cc":[5,0,3,27,7],
+"d7/d1e/classidhan_1_1SearchBuilder.html#a40a255a9e218e28150a14266cffa33cc":[6,0,1,19,7],
+"d7/d1e/classidhan_1_1SearchBuilder.html#a450567413e0c4bffadfaeeb2daa9d742":[5,0,3,27,15]
 };
