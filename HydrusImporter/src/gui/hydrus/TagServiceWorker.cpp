@@ -208,7 +208,8 @@ void TagServiceWorker::processSiblings( const std::vector< std::pair< idhan::Tag
 }
 
 void TagServiceWorker::processMappingsBatch(
-	const idhan::hydrus::TransactionBaseCoro& mappings_tr, const std::string& current_mappings_name )
+	const idhan::hydrus::TransactionBaseCoro& mappings_tr,
+	const std::string& current_mappings_name )
 {
 	std::vector< MappingPair > pairs {};
 	constexpr std::size_t hash_limit { 200 }; // the bulk record insert can only do 100 per, So we'll buffer it to 10
@@ -317,8 +318,9 @@ void TagServiceWorker::processRelationships()
 	std::vector< std::pair< BadTagID, GoodTagID > > hy_siblings {};
 	// Get all the sibling, insert into the tag_set set to get a list of unique ids
 	{
-		Query< int, int > query { client_tr,
-			                      std::format( "SELECT bad_tag_id, good_tag_id FROM {}", current_siblings_name ) };
+		Query< int, int > query {
+			client_tr, std::format( "SELECT bad_tag_id, good_tag_id FROM {}", current_siblings_name )
+		};
 
 		for ( const auto& [ bad_id, good_id ] : query )
 		{
@@ -336,16 +338,16 @@ void TagServiceWorker::processRelationships()
 
 		const auto& [ namespace_id, subtag_id ] = *tag_query;
 
-		Query< std::string_view > namespace_query { master_tr,
-			                                        "SELECT namespace FROM namespaces WHERE namespace_id = $1",
-			                                        namespace_id };
+		Query< std::string_view > namespace_query {
+			master_tr, "SELECT namespace FROM namespaces WHERE namespace_id = $1", namespace_id
+		};
 
 		const auto& [ namespace_text_v ] = *namespace_query;
 		std::string namespace_text { namespace_text_v };
 
-		Query< std::string_view > subtag_query { master_tr,
-			                                     "SELECT subtag FROM subtags WHERE subtag_id = $1",
-			                                     subtag_id };
+		Query< std::string_view > subtag_query {
+			master_tr, "SELECT subtag FROM subtags WHERE subtag_id = $1", subtag_id
+		};
 
 		const auto& [ subtag_text_v ] = *subtag_query;
 		std::string subtag_text { subtag_text_v };
@@ -382,15 +384,18 @@ void TagServiceWorker::processRelationships()
 		}
 	}
 
-	auto tag_f { client.createTags( tags ) };
-	tag_f.waitForFinished();
-	const auto result { tag_f.result() };
+	if ( !tags.empty() )
+	{
+		auto tag_f { client.createTags( tags ) };
+		tag_f.waitForFinished();
+		const auto result { tag_f.result() };
 
-	FGL_ASSERT( tag_order.size() == result.size(), "Tag set was not the same size as result!" );
+		FGL_ASSERT( tag_order.size() == result.size(), "Tag set was not the same size as result!" );
 
-	auto ret_itter = result.begin();
-	auto itter = tag_order.begin();
-	for ( ; itter != tag_order.end(); ++itter, ++ret_itter ) tag_translation_map.emplace( *itter, *ret_itter );
+		auto ret_itter = result.begin();
+		auto itter = tag_order.begin();
+		for ( ; itter != tag_order.end(); ++itter, ++ret_itter ) tag_translation_map.emplace( *itter, *ret_itter );
+	}
 
 	idhan::logging::debug( "Created {} tags", tag_translation_map.size() );
 
