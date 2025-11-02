@@ -318,7 +318,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( const drogon::HttpReque
 
 	if ( hash )
 	{
-		auto db { drogon::app().getDbClient() };
+		const auto db { drogon::app().getDbClient() };
 		const auto sha256 { SHA256::fromHex( hash.value() ) };
 
 		if ( !sha256 ) co_return sha256.error();
@@ -343,14 +343,14 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( const drogon::HttpReque
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( drogon::HttpRequestPtr request )
 {
-	auto file_id { request->getOptionalParameter< RecordID >( "file_id" ) };
+	const auto file_id { request->getOptionalParameter< RecordID >( "file_id" ) };
 	const auto hash { request->getOptionalParameter< std::string >( "hash" ) };
 
 	RecordID record_id { file_id.value_or( 0 ) };
 
 	if ( hash )
 	{
-		auto db { drogon::app().getDbClient() };
+		const auto db { drogon::app().getDbClient() };
 		const auto sha256 { SHA256::fromHex( hash.value() ) };
 
 		if ( const auto record_id_e { co_await api::helpers::findRecord( *sha256, db ) } )

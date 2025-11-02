@@ -10,7 +10,7 @@ namespace idhan
 void checkContentType(
 	const drogon::HttpRequestPtr& request,
 	const ResponseFunction& callback,
-	const std::vector< drogon::ContentType > expected )
+	const std::vector< drogon::ContentType >& expected )
 {
 	for ( const auto& item : expected )
 		if ( request->contentType() == item ) return;

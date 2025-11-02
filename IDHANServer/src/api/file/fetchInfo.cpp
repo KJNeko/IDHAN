@@ -79,7 +79,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 	[[maybe_unused]] drogon::HttpRequestPtr request,
 	RecordID record_id )
 {
-	auto db { drogon::app().getDbClient() };
+	const auto db { drogon::app().getDbClient() };
 
 	Json::Value root {};
 	root[ "record_id" ] = record_id;
@@ -110,11 +110,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::parseFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
-	{
-		auto db { drogon::app().getDbClient() };
-		const auto parse_result { co_await tryParseRecordMetadata( record_id, db ) };
-		if ( !parse_result ) co_return parse_result.error();
-	}
+	const auto db { drogon::app().getDbClient() };
+	const auto parse_result { co_await tryParseRecordMetadata( record_id, db ) };
+	if ( !parse_result ) co_return parse_result.error();
 
 	co_return co_await fetchInfo( request, record_id );
 }

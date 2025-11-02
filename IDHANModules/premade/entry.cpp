@@ -28,7 +28,7 @@ std::vector< std::shared_ptr< IDHANModule > > getModules()
 
 void gLoghandler(
 	[[maybe_unused]] const char* log_domain,
-	GLogLevelFlags log_level,
+	const GLogLevelFlags log_level,
 	const char* message,
 	[[maybe_unused]] gpointer user_data )
 {

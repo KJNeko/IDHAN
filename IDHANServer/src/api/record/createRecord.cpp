@@ -84,7 +84,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 	const Json::Value& json { *json_ptr };
 
-	auto db { drogon::app().getDbClient() };
+	const auto db { drogon::app().getDbClient() };
 
 	// test if sha256 is a list or 1 item
 	const auto& sha256s { json[ "sha256" ] };
@@ -132,18 +132,15 @@ ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )
 		// Here we are expecting that the data being shoved into the request is actually a file.
 		case drogon::CT_APPLICATION_OCTET_STREAM:
 			co_return co_await createRecordFromOctet( request );
-			break;
 		// In this case we have either a list of hashes, or a single hash
 		case drogon::CT_APPLICATION_JSON:
 			co_return co_await createRecordFromJson( request );
-			break;
 		default:
 			co_return createBadRequest( "Unknown content type" );
-			break;
 	}
 #pragma GCC diagnostic pop
 
-	co_return createBadRequest( "Unexpected content type" );
+	FGL_UNREACHABLE();
 }
 
 } // namespace idhan::api

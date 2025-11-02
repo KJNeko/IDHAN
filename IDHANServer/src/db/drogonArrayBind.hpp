@@ -3,9 +3,7 @@
 //
 #pragma once
 
-#include "api/helpers/pgEscape.hpp"
 #include "crypto/SHA256.hpp"
-#include "logging/format_ns.hpp"
 
 std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SHA256 >& data );
 std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& strings );
@@ -21,8 +19,8 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< idhan::SHA256 > >( 
 {
 	++parametersNumber_;
 
-	auto binary_data = std::make_shared< std::vector< std::byte > >(
-		createPgBinaryArray( std::forward< std::vector< idhan::SHA256 > >( param ) ) );
+	const auto binary_data { std::make_shared< std::vector< std::byte > >(
+		createPgBinaryArray( std::forward< std::vector< idhan::SHA256 > >( param ) ) ) };
 	objs_.push_back( binary_data );
 
 	parameters_.push_back( reinterpret_cast< const char* >( binary_data->data() ) );
@@ -50,8 +48,8 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< std::string > >( st
 	///*
 
 	++parametersNumber_;
-	auto binary_data = std::make_shared< std::vector< std::byte > >(
-		createPgBinaryArray( std::forward< std::vector< std::string > >( param ) ) );
+	const auto binary_data { std::make_shared< std::vector< std::byte > >(
+		createPgBinaryArray( std::forward< std::vector< std::string > >( param ) ) ) };
 	objs_.push_back( binary_data );
 
 	parameters_.push_back( reinterpret_cast< const char* >( binary_data->data() ) );
@@ -69,8 +67,8 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< idhan::SmallInt > >
 {
 	++parametersNumber_;
 
-	auto binary_data = std::make_shared< std::vector< std::byte > >(
-		createPgBinaryArray( std::forward< std::vector< idhan::SmallInt > >( param ) ) );
+	const auto binary_data { std::make_shared< std::vector< std::byte > >(
+		createPgBinaryArray( std::forward< std::vector< idhan::SmallInt > >( param ) ) ) };
 	objs_.push_back( binary_data );
 
 	parameters_.push_back( reinterpret_cast< const char* >( binary_data->data() ) );
@@ -85,8 +83,8 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< idhan::Int > >( std
 {
 	++parametersNumber_;
 
-	auto binary_data = std::make_shared< std::vector< std::byte > >(
-		createPgBinaryArray( std::forward< std::vector< idhan::Int > >( param ) ) );
+	const auto binary_data { std::make_shared< std::vector< std::byte > >(
+		createPgBinaryArray( std::forward< std::vector< idhan::Int > >( param ) ) ) };
 	objs_.push_back( binary_data );
 
 	parameters_.push_back( reinterpret_cast< const char* >( binary_data->data() ) );
@@ -101,8 +99,8 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< idhan::BigInt > >( 
 {
 	++parametersNumber_;
 
-	auto binary_data = std::make_shared< std::vector< std::byte > >(
-		createPgBinaryArray( std::forward< std::vector< idhan::BigInt > >( param ) ) );
+	const auto binary_data { std::make_shared< std::vector< std::byte > >(
+		createPgBinaryArray( std::forward< std::vector< idhan::BigInt > >( param ) ) ) };
 	objs_.push_back( binary_data );
 
 	parameters_.push_back( reinterpret_cast< const char* >( binary_data->data() ) );

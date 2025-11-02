@@ -28,8 +28,8 @@ class ModuleLoader
 	void loadModules();
 	void unloadModules();
 
-	std::vector< std::shared_ptr< ThumbnailerModuleI > > getThumbnailerFor( std::string_view mime );
-	std::vector< std::shared_ptr< MetadataModuleI > > getParserFor( std::string_view mime );
+	std::vector< std::shared_ptr< ThumbnailerModuleI > > getThumbnailerFor( std::string_view mime ) const;
+	std::vector< std::shared_ptr< MetadataModuleI > > getParserFor( std::string_view mime ) const;
 };
 
 } // namespace idhan::modules

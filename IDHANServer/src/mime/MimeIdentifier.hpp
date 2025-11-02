@@ -36,8 +36,8 @@ class MimeIdentifier
 	[[nodiscard]] MimeScore priority() const { return m_priority; }
 
 	MimeIdentifier() = delete;
-	MimeIdentifier( const Json::Value& json );
-	MimeIdentifier( const std::filesystem::path& path );
+	explicit MimeIdentifier( const Json::Value& json );
+	explicit MimeIdentifier( const std::filesystem::path& path );
 };
 
 Json::Value jsonFromFile( const std::filesystem::path& path );

@@ -33,9 +33,7 @@ drogon::Task< std::expected< TagID, IDHANError > > createTag(
 	if ( !namespace_id ) co_return std::unexpected( namespace_id.error() );
 	if ( !subtag_id ) co_return std::unexpected( subtag_id.error() );
 
-	const auto search_result { co_await findTag( *namespace_id, *subtag_id, db ) };
-
-	if ( search_result ) co_return *search_result;
+	if ( const auto search_result { co_await findTag( *namespace_id, *subtag_id, db ) } ) co_return *search_result;
 
 	const auto insert_result { co_await db->execSqlCoro(
 		"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) RETURNING tag_id", *namespace_id, *subtag_id ) };

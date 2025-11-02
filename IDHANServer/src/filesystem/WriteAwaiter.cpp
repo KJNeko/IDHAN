@@ -12,6 +12,11 @@
 namespace idhan
 {
 
+bool WriteAwaiter::await_ready() noexcept
+{
+	return false;
+}
+
 void WriteAwaiter::await_suspend( const std::coroutine_handle<> h )
 {
 	m_event_loop = trantor::EventLoop::getEventLoopOfCurrentThread();
@@ -19,8 +24,8 @@ void WriteAwaiter::await_suspend( const std::coroutine_handle<> h )
 
 	std::lock_guard lock { m_uring->mtx };
 
-	unsigned tail = *m_uring->m_submission_ring.tail;
-	unsigned index = tail & *m_uring->m_submission_ring.mask;
+	unsigned tail { *m_uring->m_submission_ring.tail };
+	const unsigned index { tail & *m_uring->m_submission_ring.mask };
 
 	m_sqe.user_data = reinterpret_cast< decltype( m_sqe.user_data ) >( new IOUringUserData( this ) );
 	m_uring->m_submission_ring.entries[ index ] = m_sqe;
@@ -32,16 +37,15 @@ void WriteAwaiter::await_suspend( const std::coroutine_handle<> h )
 	m_uring->notifySubmit( 1 );
 }
 
-void WriteAwaiter::await_resume()
+void WriteAwaiter::await_resume() const
 {
 	if ( m_exception ) std::rethrow_exception( m_exception );
-	return;
 }
 
 WriteAwaiter::WriteAwaiter( IOUring* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
 {}
 
-void WriteAwaiter::complete( int result )
+void WriteAwaiter::complete( const int result )
 {
 	if ( result < 0 )
 	{
@@ -57,9 +61,6 @@ void WriteAwaiter::complete( int result )
 	}
 }
 
-WriteAwaiter::~WriteAwaiter()
-{
-	log::debug( "~WriteAwaiter()" );
-}
+WriteAwaiter::~WriteAwaiter() = default;
 
 } // namespace idhan

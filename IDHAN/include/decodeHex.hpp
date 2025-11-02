@@ -68,7 +68,12 @@ constexpr std::uint8_t decodeHexCharacter( const char h )
 
 constexpr std::uint8_t decodeHexCharacters( const char left, const char right )
 {
-	return decodeHexCharacter( left ) << 4 | decodeHexCharacter( right );
+	const std::uint8_t left_char { static_cast< std::uint8_t >( decodeHexCharacter( left ) << 4 ) };
+	const std::uint8_t right_char { decodeHexCharacter( right ) };
+
+	const std::uint8_t result { static_cast< std::uint8_t >( left_char | right_char ) };
+
+	return result;
 }
 
 static_assert( 0xFF == decodeHexCharacters( 'F', 'F' ) );

@@ -127,7 +127,7 @@ ExpectedTask< void > TagSearch::removeSiblings()
 {
 	std::vector< TagID > to_remove {};
 
-	for ( auto& id : m_ids )
+	for ( const auto& id : m_ids )
 	{
 		const auto siblings { co_await findSiblings( id ) };
 

@@ -42,12 +42,12 @@ drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const
 }
 
 drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(
-	FileIOUring io,
+	FileIOUring io_uring,
 	const DbClientPtr db )
 {
 	FileInfo info {};
-	info.size = io.size();
-	const auto mime_string { co_await mime::getMimeDatabase()->scan( io ) };
+	info.size = io_uring.size();
+	const auto mime_string { co_await mime::getMimeDatabase()->scan( io_uring ) };
 
 	if ( !mime_string )
 	{
@@ -62,7 +62,7 @@ drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInf
 	if ( mime_search.empty() )
 	{
 		info.mime_id = constants::INVALID_MIME_ID;
-		info.extension = io.path().extension();
+		info.extension = io_uring.path().extension();
 		// ensure that it doesn't start with `.`
 		if ( info.extension.starts_with( '.' ) ) info.extension = info.extension.substr( 1 );
 	}
