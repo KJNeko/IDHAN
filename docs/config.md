@@ -19,7 +19,8 @@
 
 IDHAN will search for config information in top-to-bottom order.
 
-All config options can be provided in ENV variables if they are in the toml, the format is `IDHAN_$(GROUP)_$(NAME)`, `IDHAN\_` is
+All config options can be provided in ENV variables if they are in the toml, the format is `IDHAN_$(GROUP)_$(NAME)`,
+`IDHAN\_` is
 use to prevent accidental environment collisions
 
 ## Linux
