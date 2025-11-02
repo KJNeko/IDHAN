@@ -18,6 +18,7 @@ port = 8080
 would be `IDHAN_SERVER_PORT=8080`
 
 # Example docker-compose
+
 You should likely be competent enough to understand how to use this
 
 ```
