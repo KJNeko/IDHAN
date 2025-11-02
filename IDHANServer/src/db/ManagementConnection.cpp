@@ -14,7 +14,7 @@ namespace idhan
 
 ManagementConnection::ManagementConnection( const ConnectionArguments& arguments ) : connection( arguments.format() )
 {
-	log::info( "Postgres connection made: {}", connection.dbname() );
+	log::info( "Postgres connection made: {}", arguments.format() );
 
 	pqxx::nontransaction tx { connection };
 
