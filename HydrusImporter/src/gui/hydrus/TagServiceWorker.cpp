@@ -283,6 +283,108 @@ void TagServiceWorker::importMappings()
 	processRelationships();
 }
 
+void TagServiceWorker::processSiblings(
+	const std::vector< std::pair< int, int > >& hy_siblings,
+	const std::unordered_map< int, std::pair< std::string, std::string > >& tag_pairs,
+	const std::unordered_map< int, idhan::TagID >& tag_translation_map,
+	const std::size_t set_limit )
+{
+	std::vector< std::pair< idhan::TagID, idhan::TagID > > siblings {};
+
+	// These tags cause issues atm so we will just blacklist them
+
+	for ( const auto& [ hy_bad_id, hy_good_id ] : hy_siblings )
+	{
+		if ( hy_bad_id == hy_good_id )
+		{
+			idhan::logging::warn(
+				"Found alias that references itself ({}, {}), {}", hy_bad_id, hy_good_id, tag_pairs.at( hy_bad_id ) );
+			continue;
+		}
+
+		try
+		{
+			const auto idhan_bad_id = tag_translation_map.at( hy_bad_id );
+			const auto idhan_good_id = tag_translation_map.at( hy_good_id );
+
+			if ( idhan_bad_id == idhan_good_id )
+			{
+				throw std::runtime_error(
+					std::format( "Found alias that references itself {} == {}", idhan_bad_id, idhan_good_id ) );
+			}
+
+			siblings.emplace_back( idhan_bad_id, idhan_good_id );
+			if ( siblings.size() >= set_limit )
+			{
+				processSiblings( siblings );
+				emit processedAliases( siblings.size() );
+				siblings.clear();
+			}
+		}
+		catch ( std::exception& e )
+		{
+			idhan::logging::error(
+				"Hydrus set (bad_id, good_id) ({}, {}) caused an error while importing: {}",
+				hy_bad_id,
+				hy_good_id,
+				e.what() );
+
+			if ( std::ofstream ofs( "bad_ids.txt", std::ios::app ); ofs )
+			{
+				const auto [ namespace_text, subtag_text ] = tag_pairs.at( hy_bad_id );
+				const auto [ namespace_text_2, subtag_text_2 ] = tag_pairs.at( hy_good_id );
+				ofs << "'";
+				if ( namespace_text.empty() )
+					ofs << subtag_text;
+				else
+					ofs << namespace_text << ":" << subtag_text;
+
+				ofs << "','";
+
+				if ( namespace_text_2.empty() )
+					ofs << subtag_text_2;
+				else
+					ofs << namespace_text_2 << ":" << subtag_text_2;
+
+				ofs << "'";
+				ofs << std::endl;
+			}
+
+			// Do nothing
+			siblings.clear();
+		}
+	}
+	processSiblings( siblings );
+	emit processedAliases( siblings.size() );
+}
+
+void TagServiceWorker::processParents(
+	const std::vector< std::pair< int, int > >& hy_parents,
+	const std::unordered_map< int, idhan::TagID >& tag_translation_map,
+	const std::size_t set_limit )
+{
+	std::vector< std::pair< idhan::TagID, idhan::TagID > > parents {};
+
+	for ( const auto& [ hy_child_id, hy_parent_id ] : hy_parents )
+	{
+		const auto idhan_child_id = tag_translation_map.at( hy_child_id );
+		const auto idhan_parent_id = tag_translation_map.at( hy_parent_id );
+
+		// parents are expected to be in (parent, child) format
+		parents.emplace_back( idhan_parent_id, idhan_child_id );
+
+		if ( parents.size() >= set_limit )
+		{
+			processParents( parents );
+			emit processedParents( parents.size() );
+			parents.clear();
+		}
+	}
+
+	processParents( parents );
+	emit processedParents( parents.size() );
+}
+
 void TagServiceWorker::processRelationships()
 {
 	using namespace idhan::hydrus;
@@ -363,30 +465,7 @@ void TagServiceWorker::processRelationships()
 	auto& client { idhan::IDHANClient::instance() };
 	tag_translation_map.reserve( tag_pairs.size() );
 
-	for ( const auto& [ tag_id, tag_text ] : tag_pairs )
-	{
-		// const auto& [ namespace_str, subtag_str ] = tag_text;
-		tags.emplace_back( tag_text );
-		tag_order.emplace_back( tag_id );
-
-		if ( tags.size() >= 1024 )
-		{
-			auto tag_f { client.createTags( tags ) };
-			tag_f.waitForFinished();
-			const auto result { tag_f.result() };
-
-			FGL_ASSERT( tag_order.size() == result.size(), "Tag set was not the same size as result!" );
-
-			auto ret_itter = result.begin();
-			auto itter = tag_order.begin();
-			for ( ; itter != tag_order.end(); ++itter, ++ret_itter ) tag_translation_map.emplace( *itter, *ret_itter );
-
-			tags.clear();
-			tag_order.clear();
-		}
-	}
-
-	if ( !tags.empty() )
+	auto flushTags = [ & ]()
 	{
 		auto tag_f { client.createTags( tags ) };
 		tag_f.waitForFinished();
@@ -397,6 +476,26 @@ void TagServiceWorker::processRelationships()
 		auto ret_itter = result.begin();
 		auto itter = tag_order.begin();
 		for ( ; itter != tag_order.end(); ++itter, ++ret_itter ) tag_translation_map.emplace( *itter, *ret_itter );
+
+		tags.clear();
+		tag_order.clear();
+	};
+
+	for ( const auto& [ tag_id, tag_text ] : tag_pairs )
+	{
+		// const auto& [ namespace_str, subtag_str ] = tag_text;
+		tags.emplace_back( tag_text );
+		tag_order.emplace_back( tag_id );
+
+		if ( tags.size() >= 1024 * 4 )
+		{
+			flushTags();
+		}
+	}
+
+	if ( !tags.empty() )
+	{
+		flushTags();
 	}
 
 	idhan::logging::debug( "Created {} tags", tag_translation_map.size() );
@@ -406,99 +505,10 @@ void TagServiceWorker::processRelationships()
 	// For now we are limiting to 1 set until we can make a better rollback system
 	constexpr std::size_t set_limit { 1 };
 
-	{
-		std::vector< std::pair< idhan::TagID, idhan::TagID > > siblings {};
-
-		// These tags cause issues atm so we will just blacklist them
-
-		for ( const auto& [ hy_bad_id, hy_good_id ] : hy_siblings )
-		{
-			if ( hy_bad_id == hy_good_id )
-			{
-				idhan::logging::warn(
-					"Found alias that references itself ({}, {}), {}", hy_bad_id, hy_good_id, tag_pairs[ hy_bad_id ] );
-				continue;
-			}
-
-			try
-			{
-				const auto idhan_bad_id = tag_translation_map.at( hy_bad_id );
-				const auto idhan_good_id = tag_translation_map.at( hy_good_id );
-
-				if ( idhan_bad_id == idhan_good_id )
-				{
-					throw std::runtime_error(
-						std::format( "Found alias that references itself {} == {}", idhan_bad_id, idhan_good_id ) );
-				}
-
-				siblings.emplace_back( idhan_bad_id, idhan_good_id );
-				if ( siblings.size() >= set_limit )
-				{
-					processSiblings( siblings );
-					emit processedAliases( siblings.size() );
-					siblings.clear();
-				}
-			}
-			catch ( std::exception& e )
-			{
-				idhan::logging::error(
-					"Hydrus set (bad_id, good_id) ({}, {}) caused an error while importing: {}",
-					hy_bad_id,
-					hy_good_id,
-					e.what() );
-
-				if ( std::ofstream ofs( "bad_ids.txt", std::ios::app ); ofs )
-				{
-					const auto [ namespace_text, subtag_text ] = tag_pairs[ hy_bad_id ];
-					const auto [ namespace_text_2, subtag_text_2 ] = tag_pairs[ hy_good_id ];
-					ofs << "'";
-					if ( namespace_text.empty() )
-						ofs << subtag_text;
-					else
-						ofs << namespace_text << ":" << subtag_text;
-
-					ofs << "','";
-
-					if ( namespace_text_2.empty() )
-						ofs << subtag_text_2;
-					else
-						ofs << namespace_text_2 << ":" << subtag_text_2;
-
-					ofs << "'";
-					ofs << std::endl;
-				}
-
-				// Do nothing
-				siblings.clear();
-			}
-		}
-		processSiblings( siblings );
-		emit processedAliases( siblings.size() );
-	}
+	processSiblings( hy_siblings, tag_pairs, tag_translation_map, set_limit );
 
 	// Process parents
-	{
-		std::vector< std::pair< idhan::TagID, idhan::TagID > > parents {};
-
-		for ( const auto& [ hy_child_id, hy_parent_id ] : hy_parents )
-		{
-			const auto idhan_child_id = tag_translation_map.at( hy_child_id );
-			const auto idhan_parent_id = tag_translation_map.at( hy_parent_id );
-
-			// parents are expected to be in (parent, child) format
-			parents.emplace_back( idhan_parent_id, idhan_child_id );
-
-			if ( parents.size() >= set_limit )
-			{
-				processParents( parents );
-				emit processedParents( parents.size() );
-				parents.clear();
-			}
-		}
-
-		processParents( parents );
-		emit processedParents( parents.size() );
-	}
+	processParents( hy_parents, tag_translation_map, set_limit );
 }
 
 void TagServiceWorker::run()

@@ -36,6 +36,15 @@ class TagServiceWorker final : public QObject, public QRunnable
 
 	void preprocess();
 	void importMappings();
+	void processSiblings(
+		const std::vector< std::pair< int, int > >& hy_siblings,
+		const std::unordered_map< int, std::pair< std::string, std::string > >& tag_pairs,
+		const std::unordered_map< int, idhan::TagID >& tag_translation_map,
+		size_t set_limit );
+	void processParents(
+		const std::vector< std::pair< int, int > >& hy_parents,
+		const std::unordered_map< int, idhan::TagID >& tag_translation_map,
+		size_t set_limit );
 	void processRelationships();
 	void run() override;
 
