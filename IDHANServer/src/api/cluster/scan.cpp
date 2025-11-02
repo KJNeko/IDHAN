@@ -31,7 +31,7 @@ ExpectedTask< RecordID > adoptOrphan( FileIOUring io_uring, DbClientPtr db )
 
 struct ScanParams
 {
-	bool read_only:1;
+	bool read_only:1 { true };
 	bool recompute_hash:1;
 	bool scan_mime:1;
 	bool rescan_mime:1;
@@ -234,7 +234,7 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256( FileIOUring uring, const std::f
 
 		try
 		{
-			std::filesystem::rename( m_path, new_path );
+			if ( !m_params.read_only ) std::filesystem::rename( m_path, new_path );
 		}
 		catch ( std::exception& e )
 		{
