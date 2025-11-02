@@ -74,11 +74,12 @@ var searchData=
   ['gettheoreticalfilepath_2ecpp_71',['getTheoreticalFilePath.cpp',['../da/ddf/getTheoreticalFilePath_8cpp.html',1,'']]],
   ['getthumbnailerfor_72',['getThumbnailerFor',['../d1/d6d/classidhan_1_1modules_1_1ModuleLoader.html#a5d1ba3a3c57cb4df7df43c4a24bb2377',1,'idhan::modules::ModuleLoader']]],
   ['getthumbnailpath_73',['getThumbnailPath',['../db/de4/namespaceidhan_1_1api.html#a15f28f71f0bb1a5c3a23aec6d389bbf4',1,'idhan::api']]],
-  ['getting_20started_74',['Getting started',['../d0/d30/md_README.html#autotoc_md5',1,'']]],
-  ['gettypeoid_75',['getTypeOid',['../d8/d1c/drogonArrayBind_8cpp.html#a4bf319a60cc0493a9af63cabdb14d1e4',1,'drogonArrayBind.cpp']]],
-  ['geturlinfo_76',['getUrlInfo',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#aea9bb3e8e303683d53a783e5a274e453',1,'idhan::hyapi::HydrusAPI']]],
-  ['getuserconfigpath_77',['getUserConfigPath',['../d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2',1,'idhan::config']]],
-  ['getvalue_78',['getValue',['../d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62',1,'idhan::config']]],
-  ['getvaluefromfile_79',['getValueFromFile',['../d6/db4/namespaceidhan_1_1config.html#a6264b7c321db70b967878755db5f1927',1,'idhan::config']]],
-  ['git_20futuregadgetlabs_20net_20kj16609_20idhan_20actions_20workflows_20docker_20build_20yml_20badge_20svg_20branch_20master_20alt_20docker_20build_80',['Docker &lt;img src=&quot;https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master&quot; alt=&quot;Docker Build&quot;/&gt;',['../d0/d30/md_README.html#autotoc_md6',1,'']]]
+  ['getthumbnailspath_74',['getThumbnailsPath',['../dd/dcf/namespaceidhan.html#af82b195aa92ce78f71e1c63b953597d5',1,'idhan']]],
+  ['getting_20started_75',['Getting started',['../d0/d30/md_README.html#autotoc_md5',1,'']]],
+  ['gettypeoid_76',['getTypeOid',['../d8/d1c/drogonArrayBind_8cpp.html#a4bf319a60cc0493a9af63cabdb14d1e4',1,'drogonArrayBind.cpp']]],
+  ['geturlinfo_77',['getUrlInfo',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#aea9bb3e8e303683d53a783e5a274e453',1,'idhan::hyapi::HydrusAPI']]],
+  ['getuserconfigpath_78',['getUserConfigPath',['../d6/db4/namespaceidhan_1_1config.html#adcb29a021b4a4c53eb3d2bda846dbba2',1,'idhan::config']]],
+  ['getvalue_79',['getValue',['../d6/db4/namespaceidhan_1_1config.html#af88d7a898e663606f8c188f9070f6a62',1,'idhan::config']]],
+  ['getvaluefromfile_80',['getValueFromFile',['../d6/db4/namespaceidhan_1_1config.html#a6264b7c321db70b967878755db5f1927',1,'idhan::config']]],
+  ['git_20futuregadgetlabs_20net_20kj16609_20idhan_20actions_20workflows_20docker_20build_20yml_20badge_20svg_20branch_20master_20alt_20docker_20build_81',['Docker &lt;img src=&quot;https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master&quot; alt=&quot;Docker Build&quot;/&gt;',['../d0/d30/md_README.html#autotoc_md6',1,'']]]
 ];

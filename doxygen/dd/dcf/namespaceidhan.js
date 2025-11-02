@@ -231,6 +231,7 @@ var namespaceidhan =
     [ "getModulePaths", "dd/dcf/namespaceidhan.html#ad1722f80f712430b5d7829c4651c4c24", null ],
     [ "getRecordSHA256", "dd/dcf/namespaceidhan.html#a42fd210af2e9517b4e807c70c4751a12", null ],
     [ "getStaticPath", "dd/dcf/namespaceidhan.html#a145ecba5a01abda0b1d9548a2fcc2829", null ],
+    [ "getThumbnailsPath", "dd/dcf/namespaceidhan.html#af82b195aa92ce78f71e1c63b953597d5", null ],
     [ "handleResponse", "dd/dcf/namespaceidhan.html#a1fb1f5c877cb6dee9d5e5782c056a055", null ],
     [ "handleVersionInfo", "dd/dcf/namespaceidhan.html#aa32290eb8fec468bba8a98213ecf71c2", null ],
     [ "hyToIDHANSortType", "dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150", null ],
