@@ -140,10 +140,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	std::size_t hardware_count { std::max( static_cast< std::size_t >( std::thread::hardware_concurrency() ), 4ul ) };
 	std::size_t io_threads { hardware_count };
-	std::size_t db_threads { hardware_count / 2 };
 
 	log::info( "IO Threads: {}", io_threads );
-	log::info( "DB Connections: {}", db_threads );
 
 	constexpr std::string_view log_directory { "./log/drogon" };
 
@@ -172,13 +170,13 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		app.addListener( "::", IDHAN_DEFAULT_PORT );
 	}
 
-	drogon::orm::PostgresConfig config;
+	drogon::orm::PostgresConfig config {};
 	config.host = arguments.hostname;
 	config.port = arguments.port;
 	config.databaseName = arguments.dbname;
 	config.username = arguments.user;
 	config.password = arguments.password;
-	config.connectionNumber = db_threads;
+	config.connectionNumber = io_threads / 2;
 	config.name = "default";
 	config.isFast = false;
 	config.characterSet = "UTF-8";
@@ -191,6 +189,12 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		config.host,
 		config.port,
 		config.username );
+
+	drogon::app().addDbClient( config );
+
+	config.isFast = true;
+	config.name = "default";
+	config.connectionNumber = 1;
 
 	drogon::app().addDbClient( config );
 
