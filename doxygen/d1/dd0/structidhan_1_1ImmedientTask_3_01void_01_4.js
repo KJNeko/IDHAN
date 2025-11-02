@@ -3,7 +3,7 @@ var structidhan_1_1ImmedientTask_3_01void_01_4 =
     [ "promise_type", "d6/d78/structidhan_1_1ImmedientTask_3_01void_01_4_1_1promise__type.html", "d6/d78/structidhan_1_1ImmedientTask_3_01void_01_4_1_1promise__type" ],
     [ "handle_type", "d7/d30/structidhan_1_1ImmedientTask.html#a85971001bd3d356b696604f43925e5a8", null ],
     [ "handle_type", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a1af9eab14690ec4bab25cf41b38b38fc", null ],
-    [ "ImmedientTask", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a45610fd256854aea54213e9797449565", null ],
+    [ "ImmedientTask", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#aee6c0ab9db2b7ed6c98886e52b9af5b6", null ],
     [ "ImmedientTask", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a489ab218c80dacee198964560e7c4c68", null ],
     [ "ImmedientTask", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a472b2eb72fafba0cfdf02beb1b8b9a73", null ],
     [ "~ImmedientTask", "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a73f61885021caa48024ef24a95025030", null ],

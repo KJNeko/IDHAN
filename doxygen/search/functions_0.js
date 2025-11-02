@@ -27,7 +27,7 @@ var searchData=
   ['associateurl_24',['associateUrl',['../dc/d43/classidhan_1_1hyapi_1_1HydrusAPI.html#a9476e40ba24e0732633c69ce60d7bc23',1,'idhan::hyapi::HydrusAPI']]],
   ['autocomplete_25',['autocomplete',['../d3/dad/classidhan_1_1api_1_1TagAPI.html#a5af50e9d46219cc5ce922acece9744fa',1,'idhan::api::TagAPI']]],
   ['autocompletetag_26',['autocompleteTag',['../d3/d67/classidhan_1_1IDHANClient.html#ac0b9705e4ad9d67ba3777ebe93f55542',1,'idhan::IDHANClient']]],
-  ['await_5fready_27',['await_ready',['../d2/d83/structidhan_1_1ReadAwaiter.html#af2bd9da5db28b4816bf0e267d993af83',1,'idhan::ReadAwaiter::await_ready()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#a145e9d4e6410a506a1b24bc616cb7d3e',1,'idhan::WriteAwaiter::await_ready()']]],
-  ['await_5fresume_28',['await_resume',['../d2/d83/structidhan_1_1ReadAwaiter.html#a9f5ad18b839bb0ba0374077eddba4c10',1,'idhan::ReadAwaiter::await_resume()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#afa540da7f3b46f93a65fd1adfcd3a24e',1,'idhan::WriteAwaiter::await_resume()']]],
-  ['await_5fsuspend_29',['await_suspend',['../d2/d83/structidhan_1_1ReadAwaiter.html#af0aa14cf8ece1565972a3090d682c5d6',1,'idhan::ReadAwaiter::await_suspend()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#a91775a48871679e614197f44bde97f49',1,'idhan::WriteAwaiter::await_suspend()']]]
+  ['await_5fready_27',['await_ready',['../d2/d83/structidhan_1_1ReadAwaiter.html#af2bd9da5db28b4816bf0e267d993af83',1,'idhan::ReadAwaiter::await_ready()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#a035eb2cfc3c2decc985928cffd89a75e',1,'idhan::WriteAwaiter::await_ready()']]],
+  ['await_5fresume_28',['await_resume',['../d2/d83/structidhan_1_1ReadAwaiter.html#a9f5ad18b839bb0ba0374077eddba4c10',1,'idhan::ReadAwaiter::await_resume()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#a25a4ddaf91f42f3d7a73b92fecd03cc8',1,'idhan::WriteAwaiter::await_resume()']]],
+  ['await_5fsuspend_29',['await_suspend',['../d2/d83/structidhan_1_1ReadAwaiter.html#af0aa14cf8ece1565972a3090d682c5d6',1,'idhan::ReadAwaiter::await_suspend()'],['../d9/d52/structidhan_1_1WriteAwaiter.html#ae7821f6cf66443f57aff16cda9260ab2',1,'idhan::WriteAwaiter::await_suspend()']]]
 ];

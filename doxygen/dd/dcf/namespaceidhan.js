@@ -204,7 +204,7 @@ var namespaceidhan =
     ] ],
     [ "addCORSHeaders", "dd/dcf/namespaceidhan.html#abb3675d696d1a47fa1f667dde52d9aaa", null ],
     [ "addIDHANOptions", "dd/dcf/namespaceidhan.html#ae36b565777c7d28ef6f198cbd978cba5", null ],
-    [ "checkContentType", "dd/dcf/namespaceidhan.html#ad4d6cfd89f1d3ee52a7ea1084cd0e824", null ],
+    [ "checkContentType", "dd/dcf/namespaceidhan.html#a8b981e44758bc17ab081f80035232885", null ],
     [ "checkPgVersion", "dd/dcf/namespaceidhan.html#adaa70b9814ee705fc03f33c44987f195", null ],
     [ "createBadRequest", "dd/dcf/namespaceidhan.html#ab5aa5db369621cef0ec9aae2ddfadbf1", null ],
     [ "createBadRequest", "dd/dcf/namespaceidhan.html#ab6f6790f06426a6162f6319329635e8f", null ],

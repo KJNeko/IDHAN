@@ -130,10 +130,10 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aaf7327d4193f5f2b5020663241b181ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a999a56ae67b730346a638100e86fffd8" id="r_a999a56ae67b730346a638100e86fffd8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a999a56ae67b730346a638100e86fffd8">unloadModules</a> ()</td></tr>
 <tr class="separator:a999a56ae67b730346a638100e86fffd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5d1ba3a3c57cb4df7df43c4a24bb2377" id="r_a5d1ba3a3c57cb4df7df43c4a24bb2377"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; ThumbnailerModuleI &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5d1ba3a3c57cb4df7df43c4a24bb2377">getThumbnailerFor</a> (std::string_view mime)</td></tr>
-<tr class="separator:a5d1ba3a3c57cb4df7df43c4a24bb2377"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a77a24738fd584a413da438f3b92eb4fd" id="r_a77a24738fd584a413da438f3b92eb4fd"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; MetadataModuleI &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a77a24738fd584a413da438f3b92eb4fd">getParserFor</a> (std::string_view mime)</td></tr>
-<tr class="separator:a77a24738fd584a413da438f3b92eb4fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a929ca6223b60edbae32f3d57f0d71574" id="r_a929ca6223b60edbae32f3d57f0d71574"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; ThumbnailerModuleI &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a929ca6223b60edbae32f3d57f0d71574">getThumbnailerFor</a> (std::string_view mime) const</td></tr>
+<tr class="separator:a929ca6223b60edbae32f3d57f0d71574"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa37333c6b0a5d1595433adbe2e4e96ee" id="r_aa37333c6b0a5d1595433adbe2e4e96ee"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; MetadataModuleI &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa37333c6b0a5d1595433adbe2e4e96ee">getParserFor</a> (std::string_view mime) const</td></tr>
+<tr class="separator:aa37333c6b0a5d1595433adbe2e4e96ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -171,8 +171,8 @@ Static Private Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a77a24738fd584a413da438f3b92eb4fd" name="a77a24738fd584a413da438f3b92eb4fd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a77a24738fd584a413da438f3b92eb4fd">&#9670;&#160;</a></span>getParserFor()</h2>
+<a id="aa37333c6b0a5d1595433adbe2e4e96ee" name="aa37333c6b0a5d1595433adbe2e4e96ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa37333c6b0a5d1595433adbe2e4e96ee">&#9670;&#160;</a></span>getParserFor()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -181,15 +181,15 @@ Static Private Attributes</h2></td></tr>
           <td class="memname">std::vector&lt; std::shared_ptr&lt; MetadataModuleI &gt; &gt; idhan::modules::ModuleLoader::getParserFor </td>
           <td>(</td>
           <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>mime</em></span></td><td>)</td>
-          <td></td>
+          <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a5d1ba3a3c57cb4df7df43c4a24bb2377" name="a5d1ba3a3c57cb4df7df43c4a24bb2377"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5d1ba3a3c57cb4df7df43c4a24bb2377">&#9670;&#160;</a></span>getThumbnailerFor()</h2>
+<a id="a929ca6223b60edbae32f3d57f0d71574" name="a929ca6223b60edbae32f3d57f0d71574"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a929ca6223b60edbae32f3d57f0d71574">&#9670;&#160;</a></span>getThumbnailerFor()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -198,7 +198,7 @@ Static Private Attributes</h2></td></tr>
           <td class="memname">std::vector&lt; std::shared_ptr&lt; ThumbnailerModuleI &gt; &gt; idhan::modules::ModuleLoader::getThumbnailerFor </td>
           <td>(</td>
           <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>mime</em></span></td><td>)</td>
-          <td></td>
+          <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">

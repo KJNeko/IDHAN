@@ -355,9 +355,9 @@ Functions</h2></td></tr>
 <tr class="separator:aa32290eb8fec468bba8a98213ecf71c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1fb1f5c877cb6dee9d5e5782c056a055" id="r_a1fb1f5c877cb6dee9d5e5782c056a055"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1fb1f5c877cb6dee9d5e5782c056a055">handleResponse</a> (QNetworkReply *response, std::function&lt; void(const QJsonDocument &amp;) &gt; callback)</td></tr>
 <tr class="separator:a1fb1f5c877cb6dee9d5e5782c056a055"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad4d6cfd89f1d3ee52a7ea1084cd0e824" id="r_ad4d6cfd89f1d3ee52a7ea1084cd0e824"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad4d6cfd89f1d3ee52a7ea1084cd0e824">checkContentType</a> (const drogon::HttpRequestPtr &amp;request, const <a class="el" href="#ab36e2f7c68cd1ad091d47cc6a44231e1">ResponseFunction</a> &amp;callback, const std::vector&lt; drogon::ContentType &gt; expected)</td></tr>
-<tr class="memdesc:ad4d6cfd89f1d3ee52a7ea1084cd0e824"><td class="mdescLeft">&#160;</td><td class="mdescRight">Responds with that the content type is unsupported or unknown.  <br /></td></tr>
-<tr class="separator:ad4d6cfd89f1d3ee52a7ea1084cd0e824"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8b981e44758bc17ab081f80035232885" id="r_a8b981e44758bc17ab081f80035232885"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8b981e44758bc17ab081f80035232885">checkContentType</a> (const drogon::HttpRequestPtr &amp;request, const <a class="el" href="#ab36e2f7c68cd1ad091d47cc6a44231e1">ResponseFunction</a> &amp;callback, const std::vector&lt; drogon::ContentType &gt; &amp;expected)</td></tr>
+<tr class="memdesc:a8b981e44758bc17ab081f80035232885"><td class="mdescLeft">&#160;</td><td class="mdescRight">Responds with that the content type is unsupported or unknown.  <br /></td></tr>
+<tr class="separator:a8b981e44758bc17ab081f80035232885"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab5aa5db369621cef0ec9aae2ddfadbf1" id="r_ab5aa5db369621cef0ec9aae2ddfadbf1"><td class="memTemplParams" colspan="2">template&lt;typename... Args&gt; </td></tr>
 <tr class="memitem:ab5aa5db369621cef0ec9aae2ddfadbf1"><td class="memTemplItemLeft" align="right" valign="top">drogon::HttpResponsePtr&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ab5aa5db369621cef0ec9aae2ddfadbf1">createBadRequest</a> (const format_ns::format_string&lt; Args... &gt; str, Args &amp;&amp;... args)</td></tr>
 <tr class="separator:ab5aa5db369621cef0ec9aae2ddfadbf1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -836,8 +836,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="ad4d6cfd89f1d3ee52a7ea1084cd0e824" name="ad4d6cfd89f1d3ee52a7ea1084cd0e824"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad4d6cfd89f1d3ee52a7ea1084cd0e824">&#9670;&#160;</a></span>checkContentType()</h2>
+<a id="a8b981e44758bc17ab081f80035232885" name="a8b981e44758bc17ab081f80035232885"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b981e44758bc17ab081f80035232885">&#9670;&#160;</a></span>checkContentType()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -855,7 +855,7 @@ Variables</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::vector&lt; drogon::ContentType &gt;</td>          <td class="paramname"><span class="paramname"><em>expected</em></span>&#160;)</td>
+          <td class="paramtype">const std::vector&lt; drogon::ContentType &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>expected</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1357,7 +1357,7 @@ template&lt;typename TPromise&gt; </div>
         <tr>
           <td class="memname">drogon::Task&lt; std::expected&lt; <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">FileInfo</a>, drogon::HttpResponsePtr &gt; &gt; idhan::gatherFileInfo </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a></td>          <td class="paramname"><span class="paramname"><em>io</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../d5/d8b/classidhan_1_1FileIOUring.html">FileIOUring</a></td>          <td class="paramname"><span class="paramname"><em>io_uring</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>

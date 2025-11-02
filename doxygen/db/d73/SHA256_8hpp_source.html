@@ -228,27 +228,24 @@ $(function(){initNavTree('db/d73/SHA256_8hpp_source.html','../../'); initResizab
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>} <span class="comment">// namespace idhan</span></div>
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a></div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>{</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span><span class="keyword">template</span> &lt;&gt;</div>
-<div class="foldopen" id="foldopen00112" data-start="{" data-end="};">
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno"><a class="line" href="../../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html">  112</a></span><span class="keyword">struct </span>hash&lt; <a class="code hl_namespace" href="../../dd/dcf/namespaceidhan.html">idhan</a>::SHA256 &gt;</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>{</div>
-<div class="foldopen" id="foldopen00114" data-start="{" data-end="}">
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno"><a class="line" href="../../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html#a1fce87f46bcd4389269f7cdd55f5f62a">  114</a></span>    std::size_t <a class="code hl_function" href="../../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html#a1fce87f46bcd4389269f7cdd55f5f62a">operator()</a>( <span class="keyword">const</span> <a class="code hl_class" href="../../d0/de3/classidhan_1_1SHA256.html">idhan::SHA256</a>&amp; sha ) <span class="keyword">const</span> <span class="keyword">noexcept</span></div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    {</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        std::size_t seed = 0;</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; data = sha.data();</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        <span class="keywordflow">for</span> ( <span class="keyword">const</span> <span class="keyword">auto</span>&amp; <span class="keywordtype">byte</span> : data )</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        {</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>            seed ^= std::hash&lt; std::byte &gt;()( byte ) + 0x9e3779b9 + ( seed &lt;&lt; 6 ) + ( seed &gt;&gt; 2 );</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        }</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        <span class="keywordflow">return</span> seed;</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    }</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span><span class="keyword">template</span> &lt;&gt;</div>
+<div class="foldopen" id="foldopen00110" data-start="{" data-end="};">
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno"><a class="line" href="../../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html">  110</a></span><span class="keyword">struct </span>std::hash&lt; <a class="code hl_namespace" href="../../dd/dcf/namespaceidhan.html">idhan</a>::SHA256 &gt;</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>{</div>
+<div class="foldopen" id="foldopen00112" data-start="{" data-end="}">
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno"><a class="line" href="../../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html#a1fce87f46bcd4389269f7cdd55f5f62a">  112</a></span>    std::size_t <a class="code hl_function" href="../../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html#a1fce87f46bcd4389269f7cdd55f5f62a">operator()</a>( <span class="keyword">const</span> <a class="code hl_class" href="../../d0/de3/classidhan_1_1SHA256.html">idhan::SHA256</a>&amp; sha ) <span class="keyword">const</span> <span class="keyword">noexcept</span></div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    {</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        std::size_t seed = 0;</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; data = sha.data();</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        <span class="keywordflow">for</span> ( <span class="keyword">const</span> <span class="keyword">auto</span>&amp; <span class="keywordtype">byte</span> : data )</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        {</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>            seed ^= std::hash&lt; std::byte &gt;()( byte ) + 0x9e3779b9 + ( seed &lt;&lt; 6 ) + ( seed &gt;&gt; 2 );</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        }</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        <span class="keywordflow">return</span> seed;</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    }</div>
 </div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>};</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>};</div>
 </div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>} <span class="comment">// namespace std</span></div>
 <div class="ttc" id="aIDHANTypes_8hpp_html"><div class="ttname"><a href="../../da/d68/IDHANTypes_8hpp.html">IDHANTypes.hpp</a></div></div>
 <div class="ttc" id="aclassidhan_1_1FileIOUring_html"><div class="ttname"><a href="../../d5/d8b/classidhan_1_1FileIOUring.html">idhan::FileIOUring</a></div><div class="ttdef"><b>Definition</b> IOUring.hpp:20</div></div>
 <div class="ttc" id="aclassidhan_1_1SHA256_html"><div class="ttname"><a href="../../d0/de3/classidhan_1_1SHA256.html">idhan::SHA256</a></div><div class="ttdef"><b>Definition</b> SHA256.hpp:35</div></div>
@@ -279,7 +276,7 @@ $(function(){initNavTree('db/d73/SHA256_8hpp_source.html','../../'); initResizab
 <div class="ttc" id="anamespaceidhan_html"><div class="ttname"><a href="../../dd/dcf/namespaceidhan.html">idhan</a></div><div class="ttdef"><b>Definition</b> ImportCodes.hpp:7</div></div>
 <div class="ttc" id="anamespaceidhan_html_a23209f5c624c06ffdb5da9449e4e32b4"><div class="ttname"><a href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">idhan::DbClientPtr</a></div><div class="ttdeci">drogon::orm::DbClientPtr DbClientPtr</div><div class="ttdef"><b>Definition</b> dbTypes.hpp:9</div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
-<div class="ttc" id="astructstd_1_1hash_3_01idhan_1_1SHA256_01_4_html_a1fce87f46bcd4389269f7cdd55f5f62a"><div class="ttname"><a href="../../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html#a1fce87f46bcd4389269f7cdd55f5f62a">std::hash&lt; idhan::SHA256 &gt;::operator()</a></div><div class="ttdeci">std::size_t operator()(const idhan::SHA256 &amp;sha) const noexcept</div><div class="ttdef"><b>Definition</b> SHA256.hpp:114</div></div>
+<div class="ttc" id="astructstd_1_1hash_3_01idhan_1_1SHA256_01_4_html_a1fce87f46bcd4389269f7cdd55f5f62a"><div class="ttname"><a href="../../d2/d5e/structstd_1_1hash_3_01idhan_1_1SHA256_01_4.html#a1fce87f46bcd4389269f7cdd55f5f62a">std::hash&lt; idhan::SHA256 &gt;::operator()</a></div><div class="ttdeci">std::size_t operator()(const idhan::SHA256 &amp;sha) const noexcept</div><div class="ttdef"><b>Definition</b> SHA256.hpp:112</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

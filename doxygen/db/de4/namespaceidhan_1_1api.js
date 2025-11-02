@@ -37,7 +37,6 @@ var namespaceidhan_1_1api =
     [ "createUnknownMimeResponse", "db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662", null ],
     [ "extractScanParams", "db/de4/namespaceidhan_1_1api.html#a0ac09abca301c31269ea1aea1070e2ba", null ],
     [ "findBestParser", "db/de4/namespaceidhan_1_1api.html#ae85814d877bd9d3b377b694789306e14", null ],
-    [ "findValidClusterName", "db/de4/namespaceidhan_1_1api.html#a3ec8adcf1e0aa3a2361d164ffd173001", null ],
     [ "getIDFromPair", "db/de4/namespaceidhan_1_1api.html#aaa1cb1b65cfafb47d0491c39afd88a01", null ],
     [ "getIDsFromPairs", "db/de4/namespaceidhan_1_1api.html#a3e1ab7867f4b263f1227849150d4ea63", null ],
     [ "getInfo", "db/de4/namespaceidhan_1_1api.html#ab39a4fa22e484398ca01d39f4deaa4df", null ],
