@@ -61,13 +61,14 @@ class TagServiceWorker final : public QObject, public QRunnable
 	void processSiblings( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const;
 
 	void processMappingsBatch(
-		const idhan::hydrus::TransactionBaseCoro& mappings_tr, const std::string& current_mappings_name );
+		const idhan::hydrus::TransactionBaseCoro& mappings_tr,
+		const std::string& current_mappings_name );
 
   public:
 
   signals:
 	void finished();
-	void processedMappings( std::size_t count );
+	void processedMappings( std::size_t count, std::size_t record_count );
 	void processedParents( std::size_t count );
 	void processedAliases( std::size_t count );
 	void processedMaxMappings( std::size_t count );

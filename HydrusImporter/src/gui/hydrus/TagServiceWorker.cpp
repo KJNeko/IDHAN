@@ -230,11 +230,11 @@ void TagServiceWorker::processMappingsBatch(
 
 	auto dumpMappings = [ & ]()
 	{
+		const auto record_count { hash_id_set.size() };
 		hash_id_set.clear();
 		processPairs( pairs );
 		pairs.clear();
-		// pairs.reserve( pair_limit ); Not needed as clear() does not affect the result of capacity()
-		emit processedMappings( mappings_counter );
+		emit processedMappings( mappings_counter, record_count );
 		mappings_counter = 0;
 	};
 
@@ -254,8 +254,6 @@ void TagServiceWorker::processMappingsBatch(
 	}
 
 	dumpMappings();
-
-	emit processedMappings( mappings_counter );
 }
 
 void TagServiceWorker::importMappings()
