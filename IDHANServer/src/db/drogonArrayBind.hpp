@@ -5,11 +5,11 @@
 
 #include "crypto/SHA256.hpp"
 
-std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SHA256 >& data );
-std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& strings );
-std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SmallInt >& data );
-std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::Int >& data );
-std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::BigInt >& data );
+std::vector< std::byte > createPgBinaryArray( std::vector< idhan::SHA256 >&& data );
+std::vector< std::byte > createPgBinaryArray( std::vector< std::string >&& strings );
+std::vector< std::byte > createPgBinaryArray( std::vector< idhan::SmallInt >&& data );
+std::vector< std::byte > createPgBinaryArray( std::vector< idhan::Int >&& data );
+std::vector< std::byte > createPgBinaryArray( std::vector< idhan::BigInt >&& data );
 
 namespace drogon::orm::internal
 {
@@ -33,21 +33,8 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< idhan::SHA256 > >( 
 template <>
 inline SqlBinder::self& SqlBinder::operator<< < std::vector< std::string > >( std::vector< std::string >&& param )
 {
-	/*
-	std::string data { "{" };
-	data.reserve( param.size() * 256 );
-	for ( std::size_t i = 0; i < param.size(); i++ )
-	{
-		data += format_ns::format( "\"{}\"", idhan::api::helpers::pgEscape( param[ i ] ) );
-		if ( i + 1 != param.size() ) data += ",";
-	}
-	data += "}";
-
-	return *this << data;
-	//*/
-	///*
-
 	++parametersNumber_;
+
 	const auto binary_data { std::make_shared< std::vector< std::byte > >(
 		createPgBinaryArray( std::forward< std::vector< std::string > >( param ) ) ) };
 	objs_.push_back( binary_data );
@@ -57,7 +44,6 @@ inline SqlBinder::self& SqlBinder::operator<< < std::vector< std::string > >( st
 	formats_.push_back( 1 );
 
 	return *this;
-	//*/
 }
 
 // Generic template for integer types
