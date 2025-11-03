@@ -212,7 +212,7 @@ void TagServiceWorker::processMappingsBatch(
 	const std::string& current_mappings_name )
 {
 	std::vector< MappingPair > pairs {};
-	constexpr std::size_t hash_limit { 128 };
+	constexpr std::size_t hash_limit { 100 };
 	constexpr std::size_t average_tags_per_hash { 64 };
 	constexpr std::size_t pair_limit { average_tags_per_hash * hash_limit };
 
