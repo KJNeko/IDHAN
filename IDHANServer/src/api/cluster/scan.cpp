@@ -32,17 +32,17 @@ ExpectedTask< RecordID > adoptOrphan( FileIOUring io_uring, DbClientPtr db )
 struct ScanParams
 {
 	bool read_only:1 { true };
-	bool recompute_hash:1;
-	bool scan_mime:1;
-	bool rescan_mime:1;
-	bool scan_metadata:1;
-	bool rescan_metadata:1;
-	bool stop_on_fail:1;
-	bool adopt_orphans:1;
-	bool remove_missing_files:1;
-	bool trust_filename:1;
-	bool fix_extensions:1;
-	bool force_readonly:1;
+	bool recompute_hash:1 { false };
+	bool scan_mime:1 { false };
+	bool rescan_mime:1 { false };
+	bool scan_metadata:1 { false };
+	bool rescan_metadata:1 { false };
+	bool stop_on_fail:1 { false };
+	bool adopt_orphans:1 { false };
+	bool remove_missing_files:1 { false };
+	bool trust_filename:1 { false };
+	bool fix_extensions:1 { false };
+	bool force_readonly:1 { false };
 };
 
 ExpectedTask<> scanFile(
@@ -278,6 +278,13 @@ ExpectedTask< RecordID > ScanContext::checkRecord( const SHA256 sha256, drogon::
 		}
 
 		co_return insert_result[ 0 ][ 0 ].as< RecordID >();
+	}
+	else if ( search_result.empty() )
+	{
+		co_return std::unexpected( createInternalError(
+			"When scanning cluster {} file {} was not found as a existing record and scan was not set to adopt orphans",
+			m_cluster_id,
+			m_path.string() ) );
 	}
 
 	co_return search_result[ 0 ][ 0 ].as< RecordID >();
