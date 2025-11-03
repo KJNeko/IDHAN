@@ -21,6 +21,7 @@ class TagServiceWidget : public QWidget
 	std::size_t mappings_processed { 0 };
 	std::size_t parents_processed { 0 };
 	std::size_t aliases_processed { 0 };
+	std::size_t records_processed { 0 };
 	idhan::hydrus::ServiceInfo m_info;
 	QString m_name;
 	bool m_preprocessed { false };
@@ -63,7 +64,7 @@ class TagServiceWidget : public QWidget
 
 	void updateProcessed();
 
-	void processedMappings( std::size_t count );
+	void processedMappings( std::size_t count, std::size_t record_count );
 	void processedParents( std::size_t count );
 	void processedAliases( std::size_t count );
 
