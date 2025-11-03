@@ -164,17 +164,19 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	const auto ipv4_listener { config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" ) };
 	const auto ipv6_listener { config::get< std::string >( "host", "ipv6_listen", "::1" ) };
 
-	if ( use_tls )
-	{
-		const auto server_cert_path { config::get< std::string >( "host", "server_cert_path", "./server.crt" ) };
-		const auto server_key_path { config::get< std::string >( "host", "server_key_path", "./server.key" ) };
+	const auto server_cert_path {
+		config::get< std::string, config::no_warn_on_default >( "host", "server_cert_path", "./server.crt" )
+	};
 
-		if ( !ipv4_listener.empty() )
-			app.addListener( ipv4_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+	const auto server_key_path {
+		config::get< std::string, config::no_warn_on_default >( "host", "server_key_path", "./server.key" )
+	};
 
-		if ( !ipv6_listener.empty() )
-			app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
-	}
+	if ( !ipv4_listener.empty() )
+		app.addListener( ipv4_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+
+	if ( !ipv6_listener.empty() )
+		app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
 
 	drogon::orm::PostgresConfig config {};
 	config.host = arguments.hostname;
