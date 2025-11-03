@@ -151,9 +151,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a07af68b110fe7c9d788594b43383efc1" id="r_a07af68b110fe7c9d788594b43383efc1"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a07af68b110fe7c9d788594b43383efc1"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a07af68b110fe7c9d788594b43383efc1">get</a> (const std::string_view group, const std::string_view name)</td></tr>
 <tr class="separator:a07af68b110fe7c9d788594b43383efc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2156840d0242f740aab582b33e280484" id="r_a2156840d0242f740aab582b33e280484"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
-<tr class="memitem:a2156840d0242f740aab582b33e280484"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2156840d0242f740aab582b33e280484">get</a> (const std::string_view group, const std::string_view name, const auto default_value)</td></tr>
-<tr class="separator:a2156840d0242f740aab582b33e280484"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a37dc2a21a42cf6124ecdd9e200d1dfba" id="r_a37dc2a21a42cf6124ecdd9e200d1dfba"><td class="memTemplParams" colspan="2">template&lt;typename T, bool warn_when_defaulted = warn_config_default&gt; </td></tr>
+<tr class="memitem:a37dc2a21a42cf6124ecdd9e200d1dfba"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a37dc2a21a42cf6124ecdd9e200d1dfba">get</a> (const std::string_view group, const std::string_view name, const auto default_value)</td></tr>
+<tr class="separator:a37dc2a21a42cf6124ecdd9e200d1dfba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8b81146a08940087276f2bd9a999f614" id="r_a8b81146a08940087276f2bd9a999f614"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a8b81146a08940087276f2bd9a999f614"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a8b81146a08940087276f2bd9a999f614">getSilentDefault</a> (const std::string_view group, const std::string_view name, const auto default_value)</td></tr>
 <tr class="separator:a8b81146a08940087276f2bd9a999f614"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -164,6 +164,12 @@ Variables</h2></td></tr>
 <tr class="separator:afab990a000004246b77833d562707466"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5ce648d3f0a53424434f1a8032fb999a" id="r_a5ce648d3f0a53424434f1a8032fb999a"><td class="memItemLeft" align="right" valign="top">static std::unordered_map&lt; std::pair&lt; std::string, std::string &gt;, std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5ce648d3f0a53424434f1a8032fb999a">CLI_CONFIG</a> {}</td></tr>
 <tr class="separator:a5ce648d3f0a53424434f1a8032fb999a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf49b1c8a9f9f4bb95d5660229effbcf" id="r_adf49b1c8a9f9f4bb95d5660229effbcf"><td class="memItemLeft" align="right" valign="top">constexpr auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf49b1c8a9f9f4bb95d5660229effbcf">warn_on_default</a> { true }</td></tr>
+<tr class="separator:adf49b1c8a9f9f4bb95d5660229effbcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a26dadf41765fa4650dc9e3fe11a0f1e0" id="r_a26dadf41765fa4650dc9e3fe11a0f1e0"><td class="memItemLeft" align="right" valign="top">constexpr auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a26dadf41765fa4650dc9e3fe11a0f1e0">no_warn_on_default</a> { false }</td></tr>
+<tr class="separator:a26dadf41765fa4650dc9e3fe11a0f1e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c8c0546e370908330da5aa8a1b87d4b" id="r_a5c8c0546e370908330da5aa8a1b87d4b"><td class="memItemLeft" align="right" valign="top">constexpr auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5c8c0546e370908330da5aa8a1b87d4b">warn_config_default</a> { <a class="el" href="#adf49b1c8a9f9f4bb95d5660229effbcf">warn_on_default</a> }</td></tr>
+<tr class="separator:a5c8c0546e370908330da5aa8a1b87d4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Typedef Documentation</h2>
 <a id="a01dbecb77029982f954f16adf56d9939" name="a01dbecb77029982f954f16adf56d9939"></a>
@@ -257,13 +263,13 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="a2156840d0242f740aab582b33e280484" name="a2156840d0242f740aab582b33e280484"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2156840d0242f740aab582b33e280484">&#9670;&#160;</a></span>get() <span class="overload">[2/2]</span></h2>
+<a id="a37dc2a21a42cf6124ecdd9e200d1dfba" name="a37dc2a21a42cf6124ecdd9e200d1dfba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37dc2a21a42cf6124ecdd9e200d1dfba">&#9670;&#160;</a></span>get() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename T&gt; </div>
+template&lt;typename T, bool warn_when_defaulted = warn_config_default&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">T idhan::config::get </td>
@@ -488,6 +494,28 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
+<a id="a26dadf41765fa4650dc9e3fe11a0f1e0" name="a26dadf41765fa4650dc9e3fe11a0f1e0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a26dadf41765fa4650dc9e3fe11a0f1e0">&#9670;&#160;</a></span>no_warn_on_default</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">auto idhan::config::no_warn_on_default { false }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="afab990a000004246b77833d562707466" name="afab990a000004246b77833d562707466"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afab990a000004246b77833d562707466">&#9670;&#160;</a></span>user_config_path</h2>
 
@@ -504,6 +532,50 @@ template&lt;typename T&gt; </div>
   </td>
   <td class="mlabels-right">
 <span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5c8c0546e370908330da5aa8a1b87d4b" name="a5c8c0546e370908330da5aa8a1b87d4b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c8c0546e370908330da5aa8a1b87d4b">&#9670;&#160;</a></span>warn_config_default</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">auto idhan::config::warn_config_default { <a class="el" href="#adf49b1c8a9f9f4bb95d5660229effbcf">warn_on_default</a> }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="adf49b1c8a9f9f4bb95d5660229effbcf" name="adf49b1c8a9f9f4bb95d5660229effbcf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adf49b1c8a9f9f4bb95d5660229effbcf">&#9670;&#160;</a></span>warn_on_default</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">auto idhan::config::warn_on_default { true }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel constexpr">constexpr</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">

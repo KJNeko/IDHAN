@@ -114,7 +114,8 @@ $(function(){initNavTree('df/db4/Config_8hpp.html','../../'); initResizable(true
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">Config.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -171,14 +172,23 @@ Functions</h2></td></tr>
 <tr class="memitem:a07af68b110fe7c9d788594b43383efc1" id="r_a07af68b110fe7c9d788594b43383efc1"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a07af68b110fe7c9d788594b43383efc1"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a07af68b110fe7c9d788594b43383efc1">idhan::config::get</a> (const std::string_view group, const std::string_view name)</td></tr>
 <tr class="separator:a07af68b110fe7c9d788594b43383efc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2156840d0242f740aab582b33e280484" id="r_a2156840d0242f740aab582b33e280484"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
-<tr class="memitem:a2156840d0242f740aab582b33e280484"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a2156840d0242f740aab582b33e280484">idhan::config::get</a> (const std::string_view group, const std::string_view name, const auto default_value)</td></tr>
-<tr class="separator:a2156840d0242f740aab582b33e280484"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a37dc2a21a42cf6124ecdd9e200d1dfba" id="r_a37dc2a21a42cf6124ecdd9e200d1dfba"><td class="memTemplParams" colspan="2">template&lt;typename T, bool warn_when_defaulted = warn_config_default&gt; </td></tr>
+<tr class="memitem:a37dc2a21a42cf6124ecdd9e200d1dfba"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a37dc2a21a42cf6124ecdd9e200d1dfba">idhan::config::get</a> (const std::string_view group, const std::string_view name, const auto default_value)</td></tr>
+<tr class="separator:a37dc2a21a42cf6124ecdd9e200d1dfba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8b81146a08940087276f2bd9a999f614" id="r_a8b81146a08940087276f2bd9a999f614"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:a8b81146a08940087276f2bd9a999f614"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a8b81146a08940087276f2bd9a999f614">idhan::config::getSilentDefault</a> (const std::string_view group, const std::string_view name, const auto default_value)</td></tr>
 <tr class="separator:a8b81146a08940087276f2bd9a999f614"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a470e02aa448f04c0dc13a14b6c67bd02" id="r_a470e02aa448f04c0dc13a14b6c67bd02"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a470e02aa448f04c0dc13a14b6c67bd02">idhan::config::setLocation</a> (std::filesystem::path path)</td></tr>
 <tr class="separator:a470e02aa448f04c0dc13a14b6c67bd02"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:adf49b1c8a9f9f4bb95d5660229effbcf" id="r_adf49b1c8a9f9f4bb95d5660229effbcf"><td class="memItemLeft" align="right" valign="top">constexpr auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#adf49b1c8a9f9f4bb95d5660229effbcf">idhan::config::warn_on_default</a> { true }</td></tr>
+<tr class="separator:adf49b1c8a9f9f4bb95d5660229effbcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a26dadf41765fa4650dc9e3fe11a0f1e0" id="r_a26dadf41765fa4650dc9e3fe11a0f1e0"><td class="memItemLeft" align="right" valign="top">constexpr auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a26dadf41765fa4650dc9e3fe11a0f1e0">idhan::config::no_warn_on_default</a> { false }</td></tr>
+<tr class="separator:a26dadf41765fa4650dc9e3fe11a0f1e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c8c0546e370908330da5aa8a1b87d4b" id="r_a5c8c0546e370908330da5aa8a1b87d4b"><td class="memItemLeft" align="right" valign="top">constexpr auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#a5c8c0546e370908330da5aa8a1b87d4b">idhan::config::warn_config_default</a> { <a class="el" href="../../d6/db4/namespaceidhan_1_1config.html#adf49b1c8a9f9f4bb95d5660229effbcf">warn_on_default</a> }</td></tr>
+<tr class="separator:a5c8c0546e370908330da5aa8a1b87d4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

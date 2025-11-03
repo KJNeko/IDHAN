@@ -1,5 +1,8 @@
 var NAVTREEINDEX5 =
 {
+"d9/d46/classidhan_1_1TagSearch.html#a535b2ae1aab32abf6fd26ad54a9ec2ec":[5,0,3,31,0],
+"d9/d46/classidhan_1_1TagSearch.html#a535b2ae1aab32abf6fd26ad54a9ec2ec":[6,0,1,23,0],
+"d9/d46/classidhan_1_1TagSearch.html#a5df45c90d7ec33096b7835741c69be1b":[5,0,3,31,4],
 "d9/d46/classidhan_1_1TagSearch.html#a5df45c90d7ec33096b7835741c69be1b":[6,0,1,23,4],
 "d9/d46/classidhan_1_1TagSearch.html#a9a4689f3f16f7ad65a808f9403a48a2d":[5,0,3,31,9],
 "d9/d46/classidhan_1_1TagSearch.html#a9a4689f3f16f7ad65a808f9403a48a2d":[6,0,1,23,9],
@@ -246,8 +249,5 @@ var NAVTREEINDEX5 =
 "db/de4/namespaceidhan_1_1api.html#a3e1ab7867f4b263f1227849150d4ea63":[5,0,3,0,28],
 "db/de4/namespaceidhan_1_1api.html#a4786e76965b8bc4c5dda31cc83ce8f76":[5,0,3,0,17],
 "db/de4/namespaceidhan_1_1api.html#a5c5b023d5e1af53fe87c1619750fe72c":[5,0,3,0,32],
-"db/de4/namespaceidhan_1_1api.html#a6858aa866e1493e7714f610ce0867d26":[5,0,3,0,23],
-"db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662":[5,0,3,0,24],
-"db/de4/namespaceidhan_1_1api.html#a9f8d566d3390c231c7a322099b5cb47d":[5,0,3,0,21],
-"db/de4/namespaceidhan_1_1api.html#aa6d13296f504a6e76ff871ee0f977d76":[5,0,3,0,33]
+"db/de4/namespaceidhan_1_1api.html#a6858aa866e1493e7714f610ce0867d26":[5,0,3,0,23]
 };
