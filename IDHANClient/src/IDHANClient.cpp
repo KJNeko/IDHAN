@@ -101,7 +101,7 @@ IDHANClient& IDHANClient::instance()
 	return *m_instance;
 }
 
-IDHANClient::IDHANClient( const QString& client_name, const QString& hostname, const qint16 port, const bool use_ssl ) :
+IDHANClient::IDHANClient( const QString& client_name, const QString& hostname, const qint16 port, const bool use_tls ) :
   m_logger( spdlog::stdout_color_mt( client_name.toStdString() ) ),
   network( nullptr )
 {
@@ -121,7 +121,7 @@ IDHANClient::IDHANClient( const QString& client_name, const QString& hostname, c
 		throw std::runtime_error(
 			"IDHANClient expects a Qt instance. Please use QGuiApplication of QApplication before constructing IDHANClient" );
 
-	openConnection( hostname, port, use_ssl );
+	openConnection( hostname, port, use_tls );
 }
 
 void IDHANClient::sendClientGet(
@@ -318,14 +318,14 @@ bool IDHANClient::validConnection() const
 	return future.resultCount() > 0;
 }
 
-void IDHANClient::openConnection( const QString hostname, const qint16 port, const bool use_ssl )
+void IDHANClient::openConnection( const QString hostname, const qint16 port, const bool use_tls )
 {
 	if ( hostname.isEmpty() ) throw std::runtime_error( "hostname must not be empty" );
 
 	m_url_template.setHost( hostname );
 	m_url_template.setPort( port );
 
-	m_url_template.setScheme( use_ssl ? "https" : "http" );
+	m_url_template.setScheme( use_tls ? "https" : "http" );
 }
 
 } // namespace idhan
