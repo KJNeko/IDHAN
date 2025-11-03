@@ -228,18 +228,23 @@ void TagServiceWorker::processMappingsBatch(
 
 	auto last_id { 0 };
 
+	auto dumpMappings = [ & ]()
+	{
+		hash_id_set.clear();
+		processPairs( pairs );
+		pairs.clear();
+		// pairs.reserve( pair_limit ); Not needed as clear() does not affect the result of capacity()
+		emit processedMappings( mappings_counter );
+		mappings_counter = 0;
+	};
+
 	for ( const auto& [ tag_id, hash_id ] : query )
 	{
 		// dump before processing the next item if we are over the limit
 		const auto hash_changed { hash_id != last_id };
 		if ( hash_id_set.size() >= hash_limit && hash_changed )
 		{
-			hash_id_set.clear();
-			processPairs( pairs );
-			pairs.clear();
-			// pairs.reserve( pair_limit ); Not needed as clear() does not affect the result of capacity()
-			emit processedMappings( mappings_counter );
-			mappings_counter = 0;
+			dumpMappings();
 		}
 		last_id = hash_id;
 
@@ -247,6 +252,8 @@ void TagServiceWorker::processMappingsBatch(
 		pairs.emplace_back( hash_id, tag_id );
 		hash_id_set.insert( hash_id );
 	}
+
+	dumpMappings();
 
 	emit processedMappings( mappings_counter );
 }
