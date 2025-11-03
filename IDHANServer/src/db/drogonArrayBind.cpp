@@ -49,7 +49,7 @@ struct Header
 static_assert( sizeof( Header ) == sizeof( std::uint32_t ) * 5, "Header is not sized properly" );
 
 template < typename T >
-std::vector< std::byte > createPgBinaryArrayScalar( const std::vector< T >& data )
+std::vector< std::byte > createPgBinaryArrayScalar( std::vector< T >&& data )
 {
 	struct [[gnu::packed]] Element
 	{
@@ -92,22 +92,22 @@ std::vector< std::byte > createPgBinaryArrayScalar( const std::vector< T >& data
 	return result;
 }
 
-std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SmallInt >& data )
+std::vector< std::byte > createPgBinaryArray( std::vector< idhan::SmallInt >&& data )
 {
-	return createPgBinaryArrayScalar< idhan::SmallInt >( data );
+	return createPgBinaryArrayScalar< idhan::SmallInt >( std::forward< std::vector< idhan::SmallInt > >( data ) );
 }
 
-std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::Int >& data )
+std::vector< std::byte > createPgBinaryArray( std::vector< idhan::Int >&& data )
 {
-	return createPgBinaryArrayScalar< idhan::Int >( data );
+	return createPgBinaryArrayScalar< idhan::Int >( std::forward< std::vector< idhan::Int > >( data ) );
 }
 
-std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::BigInt >& data )
+std::vector< std::byte > createPgBinaryArray( std::vector< idhan::BigInt >&& data )
 {
-	return createPgBinaryArrayScalar< idhan::BigInt >( data );
+	return createPgBinaryArrayScalar< idhan::BigInt >( std::forward< std::vector< idhan::BigInt > >( data ) );
 }
 
-std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& strings )
+std::vector< std::byte > createPgBinaryArray( std::vector< std::string >&& strings )
 {
 	std::vector< std::byte > result {};
 
@@ -144,7 +144,7 @@ std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >& 
 	return result;
 }
 
-std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SHA256 >& data )
+std::vector< std::byte > createPgBinaryArray( std::vector< idhan::SHA256 >&& data )
 {
 	std::vector< std::byte > result {};
 
