@@ -279,6 +279,13 @@ ExpectedTask< RecordID > ScanContext::checkRecord( const SHA256 sha256, drogon::
 
 		co_return insert_result[ 0 ][ 0 ].as< RecordID >();
 	}
+	else if ( search_result.empty() )
+	{
+		co_return std::unexpected( createInternalError(
+			"When scanning cluster {} file {} was not found as a existing record and scan was not set to adopt orphans",
+			m_cluster_id,
+			m_path.string() ) );
+	}
 
 	co_return search_result[ 0 ][ 0 ].as< RecordID >();
 }
