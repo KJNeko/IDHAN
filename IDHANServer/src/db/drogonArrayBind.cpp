@@ -49,7 +49,7 @@ struct Header
 static_assert( sizeof( Header ) == sizeof( std::uint32_t ) * 5, "Header is not sized properly" );
 
 template < typename T >
-std::vector< std::byte > createPgBinaryArrayScalar( std::vector< T >&& data )
+std::vector< std::byte > createPgBinaryArrayScalar( const std::vector< T >&& data )
 {
 	struct [[gnu::packed]] Element
 	{
@@ -107,7 +107,96 @@ std::vector< std::byte > createPgBinaryArray( std::vector< idhan::BigInt >&& dat
 	return createPgBinaryArrayScalar< idhan::BigInt >( std::forward< std::vector< idhan::BigInt > >( data ) );
 }
 
+std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::SmallInt >&& data )
+{
+	return createPgBinaryArrayScalar< idhan::SmallInt >( std::forward< const std::vector< idhan::SmallInt > >( data ) );
+}
+
+std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::Int >&& data )
+{
+	return createPgBinaryArrayScalar< idhan::Int >( std::forward< const std::vector< idhan::Int > >( data ) );
+}
+
+std::vector< std::byte > createPgBinaryArray( const std::vector< idhan::BigInt >&& data )
+{
+	return createPgBinaryArrayScalar< idhan::BigInt >( std::forward< const std::vector< idhan::BigInt > >( data ) );
+}
+
 std::vector< std::byte > createPgBinaryArray( std::vector< std::string >&& strings )
+{
+	std::vector< std::byte > result {};
+
+	std::size_t string_sizes { 0 };
+	for ( const auto& str : strings ) string_sizes += str.size();
+
+	struct [[gnu::packed]] Element
+	{
+		std::uint32_t element_length { 0 };
+	};
+
+	static_assert( sizeof( Element ) == sizeof( std::uint32_t ), "Element is not sized properly" );
+
+	result.resize( sizeof( Header ) + ( sizeof( Element ) * strings.size() ) + string_sizes );
+	std::memset( result.data(), 0xFF, result.size() );
+
+	auto* header = reinterpret_cast< Header* >( result.data() );
+	header->num_dimensions = htonl( 1 ); // dimension count
+	header->data_offset = htonl( 0 ); // any nulls?
+	header->element_type_oid = htonl( OID_TEXT ); // element type
+	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) ); // size of first dimension
+	header->lower_bound = htonl( 1 ); // offset of first dimension
+
+	std::byte* ptr = result.data() + sizeof( Header );
+	for ( const auto& str : strings )
+	{
+		auto& element = *reinterpret_cast< Element* >( ptr );
+		// const auto filtered_string { idhan::api::helpers::pgEscape( str ) };
+		element.element_length = htonl( static_cast< std::uint32_t >( str.size() ) );
+		std::memcpy( ptr + sizeof( Element ), str.data(), str.size() );
+		ptr += sizeof( Element ) + str.size();
+	}
+
+	return result;
+}
+
+std::vector< std::byte > createPgBinaryArray( std::set< std::string >&& strings )
+{
+	std::vector< std::byte > result {};
+
+	std::size_t string_sizes { 0 };
+	for ( const auto& str : strings ) string_sizes += str.size();
+
+	struct [[gnu::packed]] Element
+	{
+		std::uint32_t element_length { 0 };
+	};
+
+	static_assert( sizeof( Element ) == sizeof( std::uint32_t ), "Element is not sized properly" );
+
+	result.resize( sizeof( Header ) + ( sizeof( Element ) * strings.size() ) + string_sizes );
+	std::memset( result.data(), 0xFF, result.size() );
+
+	auto* header = reinterpret_cast< Header* >( result.data() );
+	header->num_dimensions = htonl( 1 ); // dimension count
+	header->data_offset = htonl( 0 ); // any nulls?
+	header->element_type_oid = htonl( OID_TEXT ); // element type
+	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) ); // size of first dimension
+	header->lower_bound = htonl( 1 ); // offset of first dimension
+
+	std::byte* ptr = result.data() + sizeof( Header );
+	for ( const auto& str : strings )
+	{
+		auto& element = *reinterpret_cast< Element* >( ptr );
+		// const auto filtered_string { idhan::api::helpers::pgEscape( str ) };
+		element.element_length = htonl( static_cast< std::uint32_t >( str.size() ) );
+		std::memcpy( ptr + sizeof( Element ), str.data(), str.size() );
+		ptr += sizeof( Element ) + str.size();
+	}
+
+	return result;
+}
+
+std::vector< std::byte > createPgBinaryArray( const std::set< std::string >&& strings )
 {
 	std::vector< std::byte > result {};
 
