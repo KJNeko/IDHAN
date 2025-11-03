@@ -197,18 +197,25 @@ std::optional< T > get( const std::string_view group, const std::string_view nam
 	return getValue< T >( group, name );
 }
 
-template < typename T >
+constexpr auto warn_on_default { true };
+constexpr auto no_warn_on_default { false };
+constexpr auto warn_config_default { warn_on_default };
+
+template < typename T, bool warn_when_defaulted = warn_config_default >
 T get( const std::string_view group, const std::string_view name, const auto default_value )
 {
 	const auto ret { get< T >( group, name ) };
 
 	if ( ret ) return *ret;
 
-	log::warn(
-		R"(Loaded default config from the group: '{}' name: '{}' with default value '{}'. You might wanna set this value in a config file)",
-		group,
-		name,
-		default_value );
+	if constexpr ( warn_when_defaulted )
+	{
+		log::warn(
+			R"(Loaded default config from the group: '{}' name: '{}' with default value '{}'. You might wanna set this value in a config file)",
+			group,
+			name,
+			default_value );
+	}
 
 	return default_value;
 }
