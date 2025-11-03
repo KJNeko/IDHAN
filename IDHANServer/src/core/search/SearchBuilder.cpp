@@ -28,14 +28,14 @@ std::string SearchBuilder::construct(
 	}
 
 	constexpr std::string_view domain_filter_template {
-		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} AND tag_domain_id = "
-		"ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id "
-		"= ANY($1))"
+		"filter_{0} AS ( SELECT DISTINCT record_id FROM active_tag_mappings WHERE tag_id = {1} AND ideal_tag_id IS NULL AND tag_domain_id = ANY($1) UNION DISTINCT SELECT DISTINCT record_id FROM active_tag_mappings WHERE ideal_tag_id = {1} AND tag_domain_id = ANY($1) UNION DISTINCT SELECT DISTINCT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id = ANY($1) )"
+		// "filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE ideal_tag_id IS NULL AND tag_id = {1} AND tag_domain_id = "
+		// "ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id "
+		// "= ANY($1))"
 	};
 
 	constexpr std::string_view domainless_filter_template {
-		"filter_{0} AS (SELECT record_id FROM active_tag_mappings WHERE effective_tag_id = {1} UNION DISTINCT SELECT "
-		"record_id FROM active_tag_mappings_parents WHERE tag_id = {1})"
+		"filter_{0} AS ( SELECT DISTINCT record_id FROM active_tag_mappings WHERE tag_id = {1} AND ideal_tag_id IS NULL UNION DISTINCT SELECT DISTINCT record_id FROM active_tag_mappings WHERE ideal_tag_id = {1} UNION DISTINCT SELECT DISTINCT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} )"
 	};
 
 	m_bind_domains = filter_domains;
