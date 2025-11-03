@@ -80,14 +80,14 @@ var NAVTREEINDEX =
 [
 "annotated.html",
 "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a1af9eab14690ec4bab25cf41b38b38fc",
-"d3/d67/classidhan_1_1IDHANClient.html#a95be5b5135b4ff81f1ab096186a2c71d",
-"d5/d8b/classidhan_1_1FileIOUring.html#a26944a4c47f4199840d2b827d723d7fe",
-"d7/d1e/classidhan_1_1SearchBuilder.html#a40a255a9e218e28150a14266cffa33cc",
-"d9/d46/classidhan_1_1TagSearch.html#a535b2ae1aab32abf6fd26ad54a9ec2ec",
-"db/de4/namespaceidhan_1_1api.html#a6c031c20e9afd0fc0391c9f83a158662",
-"dd/d25/classidhan_1_1IOUring.html#a6e14b0ea344ab78ecd462b602adc8b89",
-"de/d07/structidhan_1_1ConnectionArguments.html#a59dfeb3477eb3eabd96c07dad452e834",
-"functions_func_e.html"
+"d3/d67/classidhan_1_1IDHANClient.html#a8dcafaf7f9ec6f7e4df297062dab9e6e",
+"d5/d86/namespaceidhan_1_1api_1_1helpers.html#aa0205aa8fc74efdc527854f3f0d9e8d9",
+"d7/d03/namespaceidhan_1_1log.html#a648d8630efa447d96ad08b2b5fbff6e6",
+"d9/d46/classidhan_1_1TagSearch.html",
+"db/de4/namespaceidhan_1_1api.html#a00203b685806ece7cc8608b936d12218",
+"dd/d25/classidhan_1_1IOUring.html",
+"dd/dcf/namespaceidhan.html#afe060cb698ab3f6bd48d74c427221afa",
+"dir_e5af04eec824d9452b8c296c923199b7.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

@@ -1,7 +1,9 @@
 var IDHANTypes_8hpp =
 [
     [ "INTEGER_PG_TYPE_NAME", "da/d68/IDHANTypes_8hpp.html#aeb5515ac453078ffac1c0186a5e8ee94", null ],
+    [ "NAMESPACE_ID_PG_TYPE_NAME", "da/d68/IDHANTypes_8hpp.html#a16b4e390f645fc2480afa1ea3be5df99", null ],
     [ "RECORD_PG_TYPE_NAME", "da/d68/IDHANTypes_8hpp.html#a0bac415439c74e611ffb3b14a6a186e7", null ],
+    [ "SUBTAG_ID_PG_TYPE_NAME", "da/d68/IDHANTypes_8hpp.html#aceba4c9ffccad3f3c805d1b89130b0de", null ],
     [ "TAG_PG_TYPE_NAME", "da/d68/IDHANTypes_8hpp.html#a59417a319982863efd2b7aab04819a50", null ],
     [ "idhan::types::BigInt", "d9/daf/namespaceidhan_1_1types.html#a27dbaeb1b29160a325f14f71e72873a3", null ],
     [ "idhan::types::ClusterID", "d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310", null ],
