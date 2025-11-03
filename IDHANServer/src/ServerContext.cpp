@@ -159,7 +159,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	app.setFileTypes( { "html", "wasm", "svg", "js", "png", "jpg" } );
 
-	const bool use_tls { config::get< bool >( "host", "use_tls", true ) };
+	const bool use_tls { config::get< bool >( "host", "use_tls", false ) };
 
 	const auto ipv4_listener { config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" ) };
 	const auto ipv6_listener { config::get< std::string >( "host", "ipv6_listen", "::1" ) };
