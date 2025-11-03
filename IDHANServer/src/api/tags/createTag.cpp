@@ -92,22 +92,32 @@ drogon::Task< std::unordered_map< std::string, SubtagID > > getSubtags(
 		"SELECT subtag_id, subtag_text FROM tag_subtags WHERE subtag_text = ANY($1::TEXT[])",
 		std::forward< std::vector< std::string > >( subtag_texts ) ) };
 
-	if ( subtag_selection.size() != subtag_set.size() )
-	{
-		co_await db->execSqlCoro(
-			"INSERT INTO tag_subtags (subtag_text) VALUES (UNNEST($1::TEXT[])) ON CONFLICT DO NOTHING",
-			std::forward< std::vector< std::string > >( subtag_texts ) );
-
-		subtag_selection = co_await db->execSqlCoro(
-			"SELECT subtag_id, subtag_text FROM tag_subtags WHERE subtag_text = ANY($1::TEXT[])",
-			std::forward< std::vector< std::string > >( subtag_texts ) );
-	}
-
 	for ( const auto& row : subtag_selection )
 	{
 		const auto subtag_id { row[ 0 ].as< SubtagID >() };
 		const auto subtag_text { row[ 1 ].as< std::string >() };
 		map.emplace( subtag_text, subtag_id );
+	}
+
+	std::vector< std::string > unmapped_subtags {};
+	for ( const auto& text : subtag_set )
+	{
+		if ( auto itter = map.find( text ); itter == map.end() ) unmapped_subtags.emplace_back( text );
+	}
+
+	if ( !unmapped_subtags.empty() )
+	{
+		log::debug( "{} of {} subtags were not seen before", unmapped_subtags.size(), subtag_set.size() );
+		const auto insert_result { co_await db->execSqlCoro(
+			"INSERT INTO tag_subtags (subtag_text) VALUES (UNNEST($1::TEXT[])) ON CONFLICT DO NOTHING RETURNING subtag_id, subtag_text",
+			std::forward< std::vector< std::string > >( subtag_texts ) ) };
+
+		for ( const auto& row : insert_result )
+		{
+			const auto subtag_id { row[ 0 ].as< SubtagID >() };
+			const auto subtag_text { row[ 1 ].as< std::string >() };
+			map.emplace( subtag_text, subtag_id );
+		}
 	}
 
 	co_return map;
