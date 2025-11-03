@@ -61,3 +61,28 @@ readonly. You can either modify it to be readonly, or scan with `force_readonly=
 There are too many things to list here for a simple getting started guide, Please see the swagger docs for the various
 tag endpoints. Note that files will NOT be returned in a search UNLESS they've been scanned in a cluster first. Even if
 tagged.
+
+## Getting hydrui/hyweb to work
+If you are not self hosting either, you'll need to setup either a proxy to provide https, or add in your own self-signed keys to IDHAN for it to function properly.
+
+
+### Self-signed keys
+
+You can run `openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -nodes` in a directory that you're happy with for the keys to be in, and then provide IDHAN with the information to use the keys
+Set the following in one of your config files for IDHAN
+```aiignore
+[host]
+use_ssl = true
+server_cert_path = "/home/whatever/yourpath/server.crt"
+server_key_path = "/home/whatever/yourpath/server.key"
+
+# if either are set to "" then it will just not listen on it
+
+ipv4_listen = "127.0.0.1" # localhost only
+# or
+ipv4_listen = "0.0.0.0" # all
+
+ipv6_listen = "::1" #localhost
+# or
+ipv6_listen = "::" # any
+```
