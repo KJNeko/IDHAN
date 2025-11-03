@@ -90,7 +90,9 @@ ENV IDHAN_DATABASE_HOST=localhost \
     IDHAN_DATABASE_USER=idhan \
     IDHAN_DATABASE_PASSWORD=idhan \
     IDHAN_DATABASE_DATABASE=idhan-db \
-    IDHAN_THUMBNAILS_PATH=/thumbnails
+    IDHAN_THUMBNAILS_PATH=/thumbnails \
+    IDHAN_HOST_IPV4_LISTEN=0.0.0.0 \
+    IDHAN_HOST_IPV6_LISTEN=::
 
 RUN chmod +x /usr/bin/IDHANServer
 
@@ -98,4 +100,4 @@ RUN chmod +x /usr/bin/IDHANServer
 EXPOSE 16609
 
 # Default entrypoint
-ENTRYPOINT ["/usr/bin/IDHANServer", "--localhost_only", "false"]
+ENTRYPOINT ["/usr/bin/IDHANServer"]
