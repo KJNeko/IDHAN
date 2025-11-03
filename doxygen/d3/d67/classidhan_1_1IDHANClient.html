@@ -142,16 +142,16 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aad54a32d5b8d88fedd9044776d8665a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45033f1a9634c426b3777ca3cc59b8ec" id="r_a45033f1a9634c426b3777ca3cc59b8ec"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a45033f1a9634c426b3777ca3cc59b8ec">IDHANClient</a> ()=delete</td></tr>
 <tr class="separator:a45033f1a9634c426b3777ca3cc59b8ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9bed7688b68aac4d0f0af4a959ee6528" id="r_a9bed7688b68aac4d0f0af4a959ee6528"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9bed7688b68aac4d0f0af4a959ee6528">IDHANClient</a> (const QString &amp;client_name, const QString &amp;hostname, qint16 port, bool use_ssl=false)</td></tr>
-<tr class="memdesc:a9bed7688b68aac4d0f0af4a959ee6528"><td class="mdescLeft">&#160;</td><td class="mdescRight">Upon construction the class will attempt to get the version info from the <a class="el" href="../../d6/d66/namespaceIDHAN.html">IDHAN</a> server target.  <br /></td></tr>
-<tr class="separator:a9bed7688b68aac4d0f0af4a959ee6528"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bcfcadfef7badd01f812d1466d9b0c6" id="r_a8bcfcadfef7badd01f812d1466d9b0c6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8bcfcadfef7badd01f812d1466d9b0c6">IDHANClient</a> (const QString &amp;client_name, const QString &amp;hostname, qint16 port, bool use_tls=false)</td></tr>
+<tr class="memdesc:a8bcfcadfef7badd01f812d1466d9b0c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Upon construction the class will attempt to get the version info from the <a class="el" href="../../d6/d66/namespaceIDHAN.html">IDHAN</a> server target.  <br /></td></tr>
+<tr class="separator:a8bcfcadfef7badd01f812d1466d9b0c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5c5406c8882641397932f0363e8e39d9" id="r_a5c5406c8882641397932f0363e8e39d9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5c5406c8882641397932f0363e8e39d9">~IDHANClient</a> ()</td></tr>
 <tr class="separator:a5c5406c8882641397932f0363e8e39d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae893b5afe14caf1b4dbb03a7783aee08" id="r_ae893b5afe14caf1b4dbb03a7783aee08"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae893b5afe14caf1b4dbb03a7783aee08">validConnection</a> () const</td></tr>
 <tr class="memdesc:ae893b5afe14caf1b4dbb03a7783aee08"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the server responds (sends back valid version info)  <br /></td></tr>
 <tr class="separator:ae893b5afe14caf1b4dbb03a7783aee08"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:add286a2a8588f21a6eeb2885a4e156d7" id="r_add286a2a8588f21a6eeb2885a4e156d7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add286a2a8588f21a6eeb2885a4e156d7">openConnection</a> (QString hostname, qint16 port, bool use_ssl=false)</td></tr>
-<tr class="separator:add286a2a8588f21a6eeb2885a4e156d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85c09979d8a34abc3e69b63182cdebea" id="r_a85c09979d8a34abc3e69b63182cdebea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a85c09979d8a34abc3e69b63182cdebea">openConnection</a> (QString hostname, qint16 port, bool use_tls=false)</td></tr>
+<tr class="separator:a85c09979d8a34abc3e69b63182cdebea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaafc2a2d5864d78ffe535f24e7c2030c" id="r_aaafc2a2d5864d78ffe535f24e7c2030c"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaafc2a2d5864d78ffe535f24e7c2030c">createRecords</a> (std::vector&lt; std::array&lt; std::byte, 32 &gt; &gt; &amp;hashes)</td></tr>
 <tr class="separator:aaafc2a2d5864d78ffe535f24e7c2030c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8bc0e97b6981ec0af5a020b8de40db5b" id="r_a8bc0e97b6981ec0af5a020b8de40db5b"><td class="memItemLeft" align="right" valign="top">QFuture&lt; std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8bc0e97b6981ec0af5a020b8de40db5b">createRecords</a> (const std::vector&lt; std::string &gt; &amp;hashes)</td></tr>
@@ -294,8 +294,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a9bed7688b68aac4d0f0af4a959ee6528" name="a9bed7688b68aac4d0f0af4a959ee6528"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9bed7688b68aac4d0f0af4a959ee6528">&#9670;&#160;</a></span>IDHANClient() <span class="overload">[2/2]</span></h2>
+<a id="a8bcfcadfef7badd01f812d1466d9b0c6" name="a8bcfcadfef7badd01f812d1466d9b0c6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8bcfcadfef7badd01f812d1466d9b0c6">&#9670;&#160;</a></span>IDHANClient() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -318,7 +318,7 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>use_ssl</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>use_tls</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -330,7 +330,7 @@ Static Private Attributes</h2></td></tr>
     <tr><td class="paramname">client_name</td><td>Name of the client that shows up in the server logs for network logs and in the logging statements </td></tr>
     <tr><td class="paramname">hostname</td><td></td></tr>
     <tr><td class="paramname">port</td><td></td></tr>
-    <tr><td class="paramname">use_ssl</td><td></td></tr>
+    <tr><td class="paramname">use_tls</td><td></td></tr>
   </table>
   </dd>
 </dl>
@@ -992,8 +992,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="add286a2a8588f21a6eeb2885a4e156d7" name="add286a2a8588f21a6eeb2885a4e156d7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#add286a2a8588f21a6eeb2885a4e156d7">&#9670;&#160;</a></span>openConnection()</h2>
+<a id="a85c09979d8a34abc3e69b63182cdebea" name="a85c09979d8a34abc3e69b63182cdebea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85c09979d8a34abc3e69b63182cdebea">&#9670;&#160;</a></span>openConnection()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1011,7 +1011,7 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>use_ssl</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>use_tls</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

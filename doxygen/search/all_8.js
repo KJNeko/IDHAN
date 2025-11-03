@@ -37,7 +37,7 @@ var searchData=
   ['idhan_5fserver_5fminor_34',['IDHAN_SERVER_MINOR',['../d5/dc9/versions_8hpp.html#add92163c1c334819bff214b1ee3e4f5c',1,'versions.hpp']]],
   ['idhan_5fserver_5fpatch_35',['IDHAN_SERVER_PATCH',['../d5/dc9/versions_8hpp.html#ae70c9900eaf59f2d4d275e9c0b64f37e',1,'versions.hpp']]],
   ['idhan_5fserver_5fversion_36',['IDHAN_SERVER_VERSION',['../d5/dc9/versions_8hpp.html#ac034da67f03f490099443dca49ad4515',1,'versions.hpp']]],
-  ['idhanclient_37',['IDHANClient',['../d3/d67/classidhan_1_1IDHANClient.html',1,'idhan::IDHANClient'],['../d3/d67/classidhan_1_1IDHANClient.html#a45033f1a9634c426b3777ca3cc59b8ec',1,'idhan::IDHANClient::IDHANClient()=delete'],['../d3/d67/classidhan_1_1IDHANClient.html#a9bed7688b68aac4d0f0af4a959ee6528',1,'idhan::IDHANClient::IDHANClient(const QString &amp;client_name, const QString &amp;hostname, qint16 port, bool use_ssl=false)']]],
+  ['idhanclient_37',['IDHANClient',['../d3/d67/classidhan_1_1IDHANClient.html',1,'idhan::IDHANClient'],['../d3/d67/classidhan_1_1IDHANClient.html#a45033f1a9634c426b3777ca3cc59b8ec',1,'idhan::IDHANClient::IDHANClient()=delete'],['../d3/d67/classidhan_1_1IDHANClient.html#a8bcfcadfef7badd01f812d1466d9b0c6',1,'idhan::IDHANClient::IDHANClient(const QString &amp;client_name, const QString &amp;hostname, qint16 port, bool use_tls=false)']]],
   ['idhanclient_2ecpp_38',['IDHANClient.cpp',['../d4/da8/IDHANClient_8cpp.html',1,'']]],
   ['idhanclient_2ehpp_39',['IDHANClient.hpp',['../dc/d23/IDHANClient_8hpp.html',1,'']]],
   ['idhanerror_40',['IDHANError',['../dd/dcf/namespaceidhan.html#ac0d5ed4d3d213a94480c7141eac7ce1a',1,'idhan']]],
