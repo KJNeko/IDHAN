@@ -43,100 +43,40 @@ struct std::hash< std::pair< idhan::NamespaceID, idhan::SubtagID > >
 namespace idhan::api
 {
 
-drogon::Task< void > insertMissingNamespaces(
-	const std::set< std::string >& namespace_set,
-	std::unordered_map< std::string, NamespaceID >& map,
-	DbClientPtr db )
-{
-	for ( const auto& namespace_text : namespace_set )
-	{
-		if ( !map.contains( namespace_text ) )
-		{
-			const auto insert_result { co_await db->execSqlCoro(
-				"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) ON CONFLICT DO NOTHING RETURNING namespace_id",
-				namespace_text ) };
-			if ( insert_result.empty() ) continue;
-			const auto namespace_id { insert_result[ 0 ][ 0 ].as< NamespaceID >() };
-			map.emplace( namespace_text, namespace_id );
-		}
-	}
-}
-
-drogon::Task< void > insertExistingNamespaces(
-	const std::set< std::string >& namespace_set,
-	std::unordered_map< std::string, NamespaceID >& map,
-	DbClientPtr db )
-{
-	log::debug(
-		"{} out of {} namespaces needed to be created", namespace_set.size() - map.size(), namespace_set.size() );
-
-	auto subtag_selection { co_await db->execSqlCoro(
-		"SELECT namespace_id, namespace_text FROM tag_namespaces WHERE namespace_text = ANY($1)",
-		std::forward< const std::set< std::string > >( namespace_set ) ) };
-
-	for ( const auto& row : subtag_selection )
-	{
-		const auto namespace_id { row[ 0 ].as< NamespaceID >() };
-		const auto namespace_text { row[ 1 ].as< std::string >() };
-
-		map.emplace( namespace_text, namespace_id );
-	}
-}
-
 drogon::Task< std::unordered_map< std::string, NamespaceID > > getNamespaces(
 	std::set< std::string > namespace_set,
 	DbClientPtr db )
 {
 	std::unordered_map< std::string, NamespaceID > map {};
 
-	co_await insertExistingNamespaces( namespace_set, map, db );
+	std::vector< std::string > namespace_texts {};
+	std::ranges::copy( namespace_set, std::back_inserter( namespace_texts ) );
 
-	if ( map.size() != namespace_set.size() ) co_await insertMissingNamespaces( namespace_set, map, db );
+	auto namespace_selection { co_await db->execSqlCoro(
+		"SELECT namespace_id, namespace_text FROM tag_namespaces WHERE namespace_text = ANY($1::TEXT[])",
+		std::forward< std::vector< std::string > >( namespace_texts ) ) };
 
-	if ( map.size() != namespace_set.size() ) co_await insertExistingNamespaces( namespace_set, map, db );
+	if ( namespace_selection.size() != namespace_set.size() )
+	{
+		// do an insertion
+		co_await db->execSqlCoro(
+			"INSERT INTO tag_namespaces (namespace_text) VALUES (UNNEST($1::TEXT[])) ON CONFLICT DO NOTHING",
+			std::forward< std::vector< std::string > >( namespace_texts ) );
 
-	if ( map.size() != namespace_set.size() ) throw std::runtime_error( "Failed to get or create all namespaces" );
+		// select again
+		namespace_selection = co_await db->execSqlCoro(
+			"SELECT namespace_id, namespace_text FROM tag_namespaces WHERE namespace_text = ANY($1::TEXT[])",
+			std::forward< std::vector< std::string > >( namespace_texts ) );
+	}
+
+	for ( const auto& row : namespace_selection )
+	{
+		const auto namespace_id { row[ 0 ].as< NamespaceID >() };
+		const auto namespace_text { row[ 1 ].as< std::string >() };
+		map.emplace( namespace_text, namespace_id );
+	}
 
 	co_return map;
-}
-
-drogon::Task< void > insertExistingSubtags(
-	const std::set< std::string >& subtag_set,
-	std::unordered_map< std::string, SubtagID >& map,
-	DbClientPtr db )
-{
-	log::debug( "{} out of {} subtags needed to be created", subtag_set.size() - map.size(), subtag_set.size() );
-
-	auto subtag_selection { co_await db->execSqlCoro(
-		"SELECT subtag_id, subtag_text FROM tag_subtags WHERE subtag_text = ANY($1)",
-		std::forward< const std::set< std::string > >( subtag_set ) ) };
-
-	for ( const auto& row : subtag_selection )
-	{
-		const auto subtag_id { row[ 0 ].as< SubtagID >() };
-		const auto subtag_text { row[ 1 ].as< std::string >() };
-
-		map.emplace( subtag_text, subtag_id );
-	}
-}
-
-drogon::Task< void > insertMissingSubtags(
-	std::set< std::string >& subtag_set,
-	std::unordered_map< std::string, SubtagID >& map,
-	DbClientPtr db )
-{
-	for ( const auto& subtag_text : subtag_set )
-	{
-		if ( !map.contains( subtag_text ) )
-		{
-			const auto insert_result { co_await db->execSqlCoro(
-				"INSERT INTO tag_subtags (subtag_text) VALUES ($1) ON CONFLICT DO NOTHING RETURNING subtag_id",
-				subtag_text ) };
-			if ( insert_result.empty() ) continue;
-			const auto subtag_id { insert_result[ 0 ][ 0 ].as< SubtagID >() };
-			map.emplace( subtag_text, subtag_id );
-		}
-	}
 }
 
 drogon::Task< std::unordered_map< std::string, SubtagID > > getSubtags(
@@ -145,37 +85,42 @@ drogon::Task< std::unordered_map< std::string, SubtagID > > getSubtags(
 {
 	std::unordered_map< std::string, SubtagID > map {};
 
-	co_await insertExistingSubtags( subtag_set, map, db );
+	std::vector< std::string > subtag_texts {};
+	std::ranges::copy( subtag_set, std::back_inserter( subtag_texts ) );
 
-	if ( map.size() != subtag_set.size() ) co_await insertMissingSubtags( subtag_set, map, db );
+	auto subtag_selection { co_await db->execSqlCoro(
+		"SELECT subtag_id, subtag_text FROM tag_subtags WHERE subtag_text = ANY($1::TEXT[])",
+		std::forward< std::vector< std::string > >( subtag_texts ) ) };
 
-	if ( map.size() != subtag_set.size() ) co_await insertExistingSubtags( subtag_set, map, db );
+	for ( const auto& row : subtag_selection )
+	{
+		const auto subtag_id { row[ 0 ].as< SubtagID >() };
+		const auto subtag_text { row[ 1 ].as< std::string >() };
+		map.emplace( subtag_text, subtag_id );
+	}
 
-	if ( map.size() != subtag_set.size() ) throw std::runtime_error( "Failed to get or create all subtags" );
+	std::vector< std::string > unmapped_subtags {};
+	for ( const auto& text : subtag_set )
+	{
+		if ( auto itter = map.find( text ); itter == map.end() ) unmapped_subtags.emplace_back( text );
+	}
+
+	if ( !unmapped_subtags.empty() )
+	{
+		log::debug( "{} of {} subtags were not seen before", unmapped_subtags.size(), subtag_set.size() );
+		const auto insert_result { co_await db->execSqlCoro(
+			"INSERT INTO tag_subtags (subtag_text) VALUES (UNNEST($1::TEXT[])) ON CONFLICT DO NOTHING RETURNING subtag_id, subtag_text",
+			std::forward< std::vector< std::string > >( subtag_texts ) ) };
+
+		for ( const auto& row : insert_result )
+		{
+			const auto subtag_id { row[ 0 ].as< SubtagID >() };
+			const auto subtag_text { row[ 1 ].as< std::string >() };
+			map.emplace( subtag_text, subtag_id );
+		}
+	}
 
 	co_return map;
-}
-
-drogon::Task< void > insertMissingTags(
-	const std::vector< NamespaceID >& namespace_ids,
-	const std::vector< SubtagID >& subtag_ids,
-	std::unordered_map< std::pair< NamespaceID, SubtagID >, TagID >& map,
-	DbClientPtr db )
-{
-	const auto select_result { co_await db->execSqlCoro(
-		"WITH t(namespace_id, subtag_id) AS (SELECT * FROM UNNEST($1::" NAMESPACE_ID_PG_TYPE_NAME
-		"[], $2::" SUBTAG_ID_PG_TYPE_NAME
-		"[])) SELECT tag_id, namespace_id, subtag_id FROM t JOIN tags USING (namespace_id, subtag_id)",
-		std::forward< const std::vector< NamespaceID > >( namespace_ids ),
-		std::forward< const std::vector< SubtagID > >( subtag_ids ) ) };
-
-	for ( const auto& row : select_result )
-	{
-		const auto tag_id { row[ 0 ].as< TagID >() };
-		const auto namespace_id { row[ 1 ].as< NamespaceID >() };
-		const auto subtag_id { row[ 2 ].as< SubtagID >() };
-		map.emplace( std::make_pair( namespace_id, subtag_id ), tag_id );
-	}
 }
 
 drogon::Task< std::unordered_map< std::pair< NamespaceID, SubtagID >, TagID > > getTags(
@@ -187,31 +132,42 @@ drogon::Task< std::unordered_map< std::pair< NamespaceID, SubtagID >, TagID > > 
 
 	map.reserve( namespace_ids.size() );
 
-	co_await insertMissingTags( namespace_ids, subtag_ids, map, db );
+	const auto select_result { co_await db->execSqlCoro(
+		"WITH t(namespace_id, subtag_id) AS (SELECT * FROM UNNEST($1::" NAMESPACE_ID_PG_TYPE_NAME
+		"[], $2::" SUBTAG_ID_PG_TYPE_NAME
+		"[])) SELECT tag_id, namespace_id, subtag_id FROM t JOIN tags USING (namespace_id, subtag_id)",
+		std::forward< std::vector< NamespaceID > >( namespace_ids ),
+		std::forward< std::vector< SubtagID > >( subtag_ids ) ) };
 
-	if ( map.size() != namespace_ids.size() )
+	if ( select_result.size() != namespace_ids.size() )
 	{
-		log::debug( "{} out of {} tags needed to be created", namespace_ids.size() - map.size(), namespace_ids.size() );
-		for ( const auto& [ namespace_id, subtag_id ] : std::ranges::views::zip( namespace_ids, subtag_ids ) )
+		const auto new_tag_ids { co_await db->execSqlCoro(
+			"INSERT INTO tags (namespace_id, subtag_id) VALUES (UNNEST($1::" NAMESPACE_ID_PG_TYPE_NAME
+			"[]), UNNEST($2::" SUBTAG_ID_PG_TYPE_NAME
+			"[])) ON CONFLICT DO NOTHING RETURNING tag_id, namespace_id, subtag_id",
+			std::forward< std::vector< NamespaceID > >( namespace_ids ),
+			std::forward< std::vector< SubtagID > >( subtag_ids ) ) };
+
+		for ( const auto& row : new_tag_ids )
 		{
-			const auto id_pair { std::make_pair( namespace_id, subtag_id ) };
-			if ( !map.contains( id_pair ) )
-			{
-				const auto insert_result { co_await db->execSqlCoro(
-					"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING tag_id",
-					namespace_id,
-					subtag_id ) };
-
-				if ( insert_result.empty() ) continue;
-
-				map.emplace( id_pair, insert_result[ 0 ][ 0 ].as< TagID >() );
-			}
+			const auto tag_id { row[ 0 ].as< TagID >() };
+			FGL_ASSERT( tag_id > 0, "Tag ID was not greater then zero!" );
+			const auto namespace_id { row[ 1 ].as< NamespaceID >() };
+			const auto subtag_id { row[ 2 ].as< SubtagID >() };
+			map.emplace( std::make_pair( namespace_id, subtag_id ), tag_id );
 		}
 	}
 
-	if ( map.size() != namespace_ids.size() ) co_await insertMissingTags( namespace_ids, subtag_ids, map, db );
-
-	if ( map.size() != namespace_ids.size() ) throw std::runtime_error( "Failed to get or create all tags" );
+	for ( const auto& row : select_result )
+	{
+		// Tag was created in the previous step, so skip it
+		if ( row[ 0 ].isNull() ) continue;
+		const auto tag_id { row[ 0 ].as< TagID >() };
+		FGL_ASSERT( tag_id > 0, "Tag ID was not greater then zero!" );
+		const auto namespace_id { row[ 1 ].as< NamespaceID >() };
+		const auto subtag_id { row[ 2 ].as< SubtagID >() };
+		map.emplace( std::make_pair( namespace_id, subtag_id ), tag_id );
+	}
 
 	co_return map;
 }
@@ -226,6 +182,9 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 	{
 		co_return std::unexpected( createBadRequest( "No tags to create" ) );
 	}
+
+	std::vector< TagID > tag_ids {};
+	tag_ids.reserve( tag_pairs.size() );
 
 	std::set< std::string > namespace_set {};
 	std::set< std::string > subtag_set {};
@@ -259,9 +218,6 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 	{
 		co_return std::unexpected( createBadRequest( "Tag count mismatch" ) );
 	}
-
-	std::vector< TagID > tag_ids {};
-	tag_ids.reserve( tag_pairs.size() );
 
 	for ( const auto& [ namespace_text, subtag_text ] : tag_pairs )
 	{
