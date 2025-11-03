@@ -159,21 +159,21 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	app.setFileTypes( { "html", "wasm", "svg", "js", "png", "jpg" } );
 
-	const bool use_ssl { config::get< bool >( "host", "use_ssl", true ) };
+	const bool use_tls { config::get< bool >( "host", "use_tls", true ) };
 
 	const auto ipv4_listener { config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" ) };
 	const auto ipv6_listener { config::get< std::string >( "host", "ipv6_listen", "::1" ) };
 
-	if ( use_ssl )
+	if ( use_tls )
 	{
 		const auto server_cert_path { config::get< std::string >( "host", "server_cert_path", "./server.crt" ) };
 		const auto server_key_path { config::get< std::string >( "host", "server_key_path", "./server.key" ) };
 
 		if ( !ipv4_listener.empty() )
-			app.addListener( ipv4_listener, IDHAN_DEFAULT_PORT, use_ssl, server_cert_path, server_key_path );
+			app.addListener( ipv4_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
 
 		if ( !ipv6_listener.empty() )
-			app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_ssl, server_cert_path, server_key_path );
+			app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
 	}
 
 	drogon::orm::PostgresConfig config {};

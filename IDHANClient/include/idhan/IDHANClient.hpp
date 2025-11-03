@@ -88,16 +88,16 @@ class IDHANClient
 	* @param client_name Name of the client that shows up in the server logs for network logs and in the logging statements
 	* @param hostname
 	* @param port
-	* @param use_ssl
+	* @param use_tls
 	*/
-	IDHANClient( const QString& client_name, const QString& hostname, qint16 port, bool use_ssl = false );
+	IDHANClient( const QString& client_name, const QString& hostname, qint16 port, bool use_tls = false );
 
 	~IDHANClient();
 
 	//! Returns true if the server responds (sends back valid version info)
 	bool validConnection() const;
 
-	void openConnection( QString hostname, qint16 port, bool use_ssl = false );
+	void openConnection( QString hostname, qint16 port, bool use_tls = false );
 
 	QFuture< std::vector< RecordID > > createRecords( std::vector< std::array< std::byte, 32 > >& hashes );
 
