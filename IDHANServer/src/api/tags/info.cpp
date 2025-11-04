@@ -41,7 +41,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
 
 	{
 		const auto count_result { co_await db->execSqlCoro(
-			"SELECT storage_count, display_count FROM total_tag_counts WHERE tag_id = $1", tag_id ) };
+			"SELECT storage_count, display_count FROM tag_counts WHERE tag_id = $1", tag_id ) };
 
 		if ( !count_result.empty() )
 			root[ "items_count" ] = count_result[ 0 ][ 0 ].as< std::size_t >();

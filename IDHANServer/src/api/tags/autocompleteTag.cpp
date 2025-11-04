@@ -26,16 +26,20 @@ drogon::Task< Json::Value > getSimilarTags(
 
 	const auto result { co_await db->execSqlCoro(
 		R"(
-		SELECT *,
+		SELECT	tag_text												AS tag_text,
+				tag_id													AS tag_id,
 				similarity(tag_text, $2)								AS similarity,
 				tag_text = $2											AS exact,
-				similarity(tag_text, $2) * coalesce(display_count, 1)	AS score,
-				COALESCE(tc.display_count, 0)							AS count
+				similarity(tag_text, $2) * avg(tc.display_count)		AS score,
+				avg(tc.display_count)									AS display_count,
+				avg(tc.storage_count)									AS storage_count
 		FROM tags
-		         LEFT JOIN total_tag_counts tc USING (tag_id)
-		WHERE tag_text LIKE $1
+		         LEFT JOIN tag_counts tc USING (tag_id)
+		WHERE tag_text LIKE $1 AND COALESCE(tc.display_count, 0) > 0
+		GROUP BY tags.tag_id
 		ORDER BY exact DESC, score DESC, similarity DESC
-		limit $3)",
+		limit $3
+		)",
 		wrapped_search_value,
 		search_value,
 		std::min( limit, max_limit ) ) };
@@ -51,7 +55,7 @@ drogon::Task< Json::Value > getSimilarTags(
 
 		tag[ "similarity" ] = row[ "similarity" ].as< double >();
 		tag[ "tag_id" ] = row[ "tag_id" ].as< TagID >();
-		tag[ "count" ] = row[ "count" ].as< std::size_t >();
+		tag[ "count" ] = row[ "display_count" ].as< std::size_t >();
 
 		tags.append( std::move( tag ) );
 	}
