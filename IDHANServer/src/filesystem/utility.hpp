@@ -49,4 +49,12 @@ enum class FileState
  * @return
  */
 ExpectedTask< FileState > validateFile( RecordID record_id );
+
+/**
+ * @brief Returns the mtime of the file im microseconds
+ * @param path
+ * @return
+ */
+std::int64_t getLastWriteTime( const std::filesystem::path& path );
+
 } // namespace idhan::filesystem
