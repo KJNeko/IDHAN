@@ -14,31 +14,31 @@ namespace idhan
 
 drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const DbClientPtr db )
 {
-	const trantor::Date date {
+	const trantor::Date store_date {
 		std::chrono::duration_cast< std::chrono::microseconds >( info.store_time.time_since_epoch() ).count()
 	};
 
-	if ( info.mime_id == constants::INVALID_MIME_ID ) // if the mime is invalid (unknown)
-	{
-		// the extension is used so we can still find the file even with an invalid mime
-		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, NULL, $3, $4) "
-			"ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = NULL, cluster_store_time = $3, extension = $4",
-			record_id,
-			info.size,
-			date,
-			info.extension );
-	}
-	else
-	{
-		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, extension) VALUES ($1, $2, $3, $4, NULL) "
-			"ON CONFLICT (record_id) DO UPDATE SET size = $2, mime_id = $3, cluster_store_time = $4, extension = NULL",
-			record_id,
-			info.size,
-			info.mime_id,
-			date );
-	}
+	const trantor::Date file_modified_date {
+		std::chrono::duration_cast< std::chrono::microseconds >( info.modified_time.time_since_epoch() ).count()
+	};
+
+	std::optional< MimeID > mime_opt {
+		info.mime_id != constants::INVALID_MIME_ID ? std::optional< MimeID >( info.mime_id ) : std::nullopt
+	};
+	std::optional< std::string > extension_opt {
+		info.mime_id != constants::INVALID_MIME_ID ? std::optional< std::string >( info.extension ) : std::nullopt
+	};
+
+	// the extension is used so we can still find the file even with an invalid mime
+	co_await db->execSqlCoro(
+		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, modified_time, extension) VALUES ($1, $2, $3, $4, $5, $6)"
+		"ON CONFLICT (record_id) DO UPDATE SET mime_id = $3, extension = $5",
+		record_id,
+		info.size,
+		mime_opt,
+		store_date,
+		file_modified_date,
+		extension_opt );
 }
 
 drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(

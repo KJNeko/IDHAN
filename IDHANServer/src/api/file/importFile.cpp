@@ -95,7 +95,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	// try to insert info if it's missing
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, mime_id, size, cluster_store_time) VALUES ($1, $2, $3, now()) ON CONFLICT DO NOTHING",
+		"INSERT INTO file_info (record_id, mime_id, size, cluster_store_time, modified_time) VALUES ($1, $2, $3, now(), now()) ON CONFLICT DO NOTHING",
 		record_id,
 		*mime_id,
 		data_length );
