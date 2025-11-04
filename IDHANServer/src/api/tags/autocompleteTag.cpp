@@ -30,9 +30,9 @@ drogon::Task< Json::Value > getSimilarTags(
 				tag_id													AS tag_id,
 				similarity(tag_text, $2)								AS similarity,
 				tag_text = $2											AS exact,
-				similarity(tag_text, $2) * avg(tc.display_count)		AS score,
-				avg(tc.display_count)									AS display_count,
-				avg(tc.storage_count)									AS storage_count
+				similarity(tag_text, $2) * max(tc.display_count)		AS score,
+				max(tc.display_count)									AS display_count,
+				max(tc.storage_count)									AS storage_count
 		FROM tags
 		         LEFT JOIN tag_counts tc USING (tag_id)
 		WHERE tag_text LIKE $1 AND COALESCE(tc.display_count, 0) > 0
