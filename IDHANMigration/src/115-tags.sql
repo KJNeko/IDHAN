@@ -1,0 +1,1 @@
+CREATE INDEX ON tags USING gin (tag_text gin_trgm_ops);
