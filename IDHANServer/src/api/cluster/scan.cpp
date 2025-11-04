@@ -290,6 +290,18 @@ ExpectedTask< RecordID > ScanContext::checkRecord( const SHA256 sha256, drogon::
 	co_return search_result[ 0 ][ 0 ].as< RecordID >();
 }
 
+trantor::Date getLastWriteTime( const std::filesystem::path& path )
+{
+	const auto file_mtime_local { std::filesystem::last_write_time( path ) };
+	const auto file_mtime_unix { std::chrono::clock_cast< std::chrono::system_clock >( file_mtime_local ) };
+
+	const trantor::Date date {
+		std::chrono::duration_cast< std::chrono::microseconds >( file_mtime_unix.time_since_epoch() ).count()
+	};
+
+	return date;
+}
+
 ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_cluster_id, drogon::orm::DbClientPtr db )
 {
 	if ( co_await filesystem::checkFileExists( m_record_id, db ) )
@@ -324,19 +336,31 @@ ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 {
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
-	const auto file_info {
-		co_await db->execSqlCoro( "SELECT cluster_id FROM file_info WHERE record_id = $1", m_record_id )
-	};
+	const auto file_info { co_await db->execSqlCoro(
+		"SELECT cluster_id, cluster_store_time FROM file_info WHERE record_id = $1", m_record_id ) };
 
 	if ( file_info.empty() )
 	{
+		const trantor::Date date { getLastWriteTime( m_path ) };
+
 		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, cluster_id, size, cluster_store_time) VALUES ($1, $2, $3, now())",
+			"INSERT INTO file_info (record_id, cluster_id, size, cluster_store_time) VALUES ($1, $2, $3, $4)",
 			m_record_id,
 			m_cluster_id,
-			m_size );
+			m_size,
+			date );
 
 		co_return {};
+	}
+
+	if ( file_info[ 0 ][ "cluster_store_time" ].isNull() )
+	{
+		const trantor::Date date { getLastWriteTime( m_path ) };
+
+		log::debug( "mtime is {}", date.toFormattedString( true ) );
+
+		co_await db->execSqlCoro(
+			"UPDATE file_info SET cluster_store_time = $1 WHERE record_id = $2", date, m_record_id );
 	}
 
 	// we found a cluster, check if it's the one we are about to add too
@@ -377,6 +401,8 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 
 	const auto mime_string_e { co_await mime::getMimeDatabase()->scan( file_io ) };
 
+	const auto mtime { getLastWriteTime( m_path ) };
+
 	if ( !mime_string_e )
 	{
 		std::string extension_str { m_path.extension().string() };
@@ -389,10 +415,11 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 			extension_str );
 
 		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, size, extension, cluster_store_time) VALUES ($1, $2, $3, now()) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL",
+			"INSERT INTO file_info (record_id, size, extension, cluster_store_time) VALUES ($1, $2, $3, $4) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL",
 			m_record_id,
 			m_size,
-			extension_str );
+			extension_str,
+			mtime );
 
 		co_return {};
 	}
@@ -404,10 +431,11 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 	return_unexpected_error( mime_id_e );
 
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time) VALUES ($1, $2, $3, now()) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3",
+		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time) VALUES ($1, $2, $3, $4) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3",
 		m_record_id,
 		m_size,
-		*mime_id_e );
+		*mime_id_e,
+		mtime );
 
 	const auto mime_info {
 		co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE mime_id = $1", *mime_id_e )

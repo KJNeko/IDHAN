@@ -1,0 +1,1 @@
+UPDATE file_info SET cluster_store_time = NULL;
