@@ -82,7 +82,7 @@ class ScanContext
 	std::filesystem::path m_path;
 	std::size_t m_size;
 
-	ScanParams m_params;
+	ScanParams m_params {};
 	std::string m_mime_name {};
 
 	static constexpr auto INVALID_RECORD { std::numeric_limits< RecordID >::max() };
@@ -95,8 +95,11 @@ class ScanContext
 	ExpectedTask< RecordID > checkRecord( SHA256 sha256, DbClientPtr db );
 
 	ExpectedTask< void > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
+	drogon::Task<> updateFileModifiedTime( drogon::orm::DbClientPtr db );
+	ExpectedTask< void > insertFileInfo( drogon::orm::DbClientPtr db );
 
 	ExpectedTask< void > checkCluster( DbClientPtr db );
+	ExpectedTask< bool > hasMime( DbClientPtr db );
 
 	ExpectedTask<> scanMime( DbClientPtr db );
 
@@ -224,21 +227,22 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256( FileIOUring uring, const std::f
 				sha256_hex ) );
 		}
 
-		// try to fix the mistake
-		auto new_path { bad_dir / m_path.filename() };
-
 		try
 		{
-			if ( !m_params.read_only ) std::filesystem::rename( m_path, new_path );
-		}
-		catch ( std::exception& e )
-		{
-			co_return std::unexpected( createInternalError(
-				"When scanning file at {} it was detected that the filename does not match the sha256 "
-				"{}. There was an error attempting to fix this: What: {}",
-				m_path.string(),
-				sha256_hex,
-				e.what() ) );
+			if ( !m_params.read_only )
+			{
+				const auto new_path { bad_dir / m_path.filename() };
+
+				// try to fix the mistake
+				std::filesystem::rename( m_path, new_path );
+
+				co_return std::unexpected( createInternalError(
+					"When scanning file at {} it was detected that the filename does "
+					"not match the sha256 {}. The file has been moved to {}",
+					m_path.string(),
+					sha256_hex,
+					new_path.string() ) );
+			}
 		}
 		catch ( ... )
 		{
@@ -248,13 +252,6 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256( FileIOUring uring, const std::f
 				m_path.string(),
 				sha256_hex ) );
 		}
-
-		co_return std::unexpected( createInternalError(
-			"When scanning file at {} it was detected that the filename does "
-			"not match the sha256 {}. The file has been moved to {}",
-			m_path.string(),
-			sha256_hex,
-			new_path.string() ) );
 	}
 
 	co_return *sha256_e;
@@ -310,6 +307,8 @@ ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 
 			std::filesystem::remove( m_path );
 		}
+
+		co_return {};
 	}
 
 	log::warn(
@@ -321,22 +320,43 @@ ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 	co_return {};
 }
 
+drogon::Task<> ScanContext::updateFileModifiedTime( drogon::orm::DbClientPtr db )
+{
+	const trantor::Date date { filesystem::getLastWriteTime( m_path ) };
+
+	log::debug( "mtime is {}", date.toFormattedString( true ) );
+
+	co_await db->execSqlCoro( "UPDATE file_info SET modified_time = $1 WHERE record_id = $2", date, m_record_id );
+}
+
+ExpectedTask<> ScanContext::insertFileInfo( drogon::orm::DbClientPtr db )
+{
+	const trantor::Date date { filesystem::getLastWriteTime( m_path ) };
+	co_await db->execSqlCoro(
+		"INSERT INTO file_info (record_id, cluster_id, size, modified_time) VALUES ($1, $2, $3, $4)",
+		m_record_id,
+		m_cluster_id,
+		m_size,
+		date );
+	co_return {};
+}
+
 ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 {
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
 	const auto file_info {
-		co_await db->execSqlCoro( "SELECT cluster_id FROM file_info WHERE record_id = $1", m_record_id )
+		co_await db->execSqlCoro( "SELECT cluster_id, modified_time FROM file_info WHERE record_id = $1", m_record_id )
 	};
 
+	// create the file info if it doesn't already exist
 	if ( file_info.empty() )
 	{
-		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, cluster_id, size, cluster_store_time) VALUES ($1, $2, $3, now())",
-			m_record_id,
-			m_cluster_id,
-			m_size );
+		co_return co_await insertFileInfo( db );
+	}
 
-		co_return {};
+	if ( file_info[ 0 ][ "modified_time" ].isNull() )
+	{
+		co_await updateFileModifiedTime( db );
 	}
 
 	// we found a cluster, check if it's the one we are about to add too
@@ -348,10 +368,25 @@ ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		// handle the double count, which will check if the found cluster contains the file and delete it from this one
 		// if found. Otherwise the record's cluster is set to the current cluster
 		auto result { co_await cleanupDoubleClusters( found_cluster_id, db ) };
-		if ( !result ) co_return std::unexpected( result.error() );
+		return_unexpected_error( result );
 	}
 
 	co_return {};
+}
+
+ExpectedTask< bool > ScanContext::hasMime( DbClientPtr db )
+{
+	auto current_mime { co_await db->execSqlCoro(
+		"SELECT mime_id, name FROM file_info JOIN mime USING (mime_id) WHERE record_id = $1 AND mime_id IS NOT NULL",
+		m_record_id ) };
+
+	if ( !current_mime.empty() )
+	{
+		m_mime_name = current_mime[ 0 ][ 1 ].as< std::string >();
+		co_return true;
+	}
+
+	co_return false;
 }
 
 ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
@@ -359,23 +394,15 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
 	FileIOUring file_io { m_path };
 
-	if ( !m_params.rescan_mime ) // skip checking if we have a mime if we are going to rescan it
+	// skip checking if we have a mime if we are going to rescan it
+	if ( !m_params.rescan_mime && co_await hasMime( db ) )
 	{
-		auto current_mime { co_await db->execSqlCoro(
-			"SELECT mime_id, name FROM file_info JOIN mime USING (mime_id) WHERE record_id = $1 AND mime_id IS NOT NULL",
-			m_record_id ) };
-
-		if ( !current_mime.empty() )
-		{
-			m_mime_name = current_mime[ 0 ][ 1 ].as< std::string >();
-			log::debug(
-				"Skipping mime scan for {} because it's already been scanned and the rescan_mime flag was false",
-				m_record_id );
-			co_return {};
-		}
+		co_return {};
 	}
 
 	const auto mime_string_e { co_await mime::getMimeDatabase()->scan( file_io ) };
+
+	const auto mtime { filesystem::getLastWriteTime( m_path ) };
 
 	if ( !mime_string_e )
 	{
@@ -389,10 +416,11 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 			extension_str );
 
 		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, size, extension, cluster_store_time) VALUES ($1, $2, $3, now()) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL",
+			"INSERT INTO file_info (record_id, size, extension, modified_time) VALUES ($1, $2, $3, $4) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL",
 			m_record_id,
 			m_size,
-			extension_str );
+			extension_str,
+			mtime );
 
 		co_return {};
 	}
@@ -404,10 +432,11 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 	return_unexpected_error( mime_id_e );
 
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time) VALUES ($1, $2, $3, now()) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3",
+		"INSERT INTO file_info (record_id, size, mime_id, modified_time) VALUES ($1, $2, $3, $4) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3",
 		m_record_id,
 		m_size,
-		*mime_id_e );
+		*mime_id_e,
+		mtime );
 
 	const auto mime_info {
 		co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE mime_id = $1", *mime_id_e )
