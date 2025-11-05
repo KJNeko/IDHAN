@@ -27,6 +27,7 @@ struct FileInfo
 	MimeID mime_id;
 	std::string extension;
 	std::chrono::time_point< std::chrono::system_clock > store_time;
+	std::chrono::time_point< std::chrono::system_clock > modified_time;
 };
 
 //! Populates a FileInfo struct with information from the data
