@@ -182,7 +182,7 @@ void TagServiceWidget::processedMappings( std::size_t count, std::size_t record_
 	QLocale locale { QLocale::English, QLocale::UnitedStates };
 	locale.setNumberOptions( QLocale::DefaultNumberOptions );
 	ui->mappingsCount->setText(
-		QString( "Mappings: %L1 (%L2 processed)\nRecords: (%L3 Records)" )
+		QString( "Mappings: %L1 (%L2 processed)\nRecords: (%L3 processed)" )
 			.arg( m_info.num_mappings )
 			.arg( mappings_processed )
 			.arg( records_processed ) );
@@ -222,7 +222,7 @@ void TagServiceWidget::setMaxMappings( std::size_t count )
 	m_info.num_mappings = count;
 	if ( mappings_processed > 0 )
 		ui->mappingsCount->setText(
-			QString( "Mappings: %L1 (%L2 processed)\nRecords: (%L3 Records)" )
+			QString( "Mappings: %L1 (%L2 processed)\nRecords: (%L3 processed)" )
 				.arg( m_info.num_mappings )
 				.arg( mappings_processed )
 				.arg( records_processed ) );
