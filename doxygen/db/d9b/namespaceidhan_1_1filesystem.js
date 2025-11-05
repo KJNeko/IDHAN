@@ -15,6 +15,7 @@ var namespaceidhan_1_1filesystem =
     [ "getClusterPath", "db/d9b/namespaceidhan_1_1filesystem.html#addd0c19bb91f1be15a86b8cde1e0f7ff", null ],
     [ "getFilepath", "db/d9b/namespaceidhan_1_1filesystem.html#ab5f5fbb3692d51199d168cd7882f7ec5", null ],
     [ "getFilesystemCapacity", "db/d9b/namespaceidhan_1_1filesystem.html#a7007bcf3b4f14c107b280d0e1d12dee7", null ],
+    [ "getLastWriteTime", "db/d9b/namespaceidhan_1_1filesystem.html#addec74e8de616976eb83df14b3426cc9", null ],
     [ "getTheoreticalFilePath", "db/d9b/namespaceidhan_1_1filesystem.html#a877fd1e02f8451b1318a462a31543c61", null ],
     [ "metaTypePathID", "db/d9b/namespaceidhan_1_1filesystem.html#af22279849e95364f785f83f943474ae0", null ],
     [ "validateFile", "db/d9b/namespaceidhan_1_1filesystem.html#aefebb877dfab42528590ccaeadc73f40", null ],

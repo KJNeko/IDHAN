@@ -81,13 +81,13 @@ var NAVTREEINDEX =
 "annotated.html",
 "d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a1af9eab14690ec4bab25cf41b38b38fc",
 "d3/d67/classidhan_1_1IDHANClient.html#a8dcafaf7f9ec6f7e4df297062dab9e6e",
-"d5/d86/namespaceidhan_1_1api_1_1helpers.html#aa0205aa8fc74efdc527854f3f0d9e8d9",
-"d7/d03/namespaceidhan_1_1log.html#a648d8630efa447d96ad08b2b5fbff6e6",
-"d9/d46/classidhan_1_1TagSearch.html",
-"db/de4/namespaceidhan_1_1api.html#a00203b685806ece7cc8608b936d12218",
-"dd/d25/classidhan_1_1IOUring.html",
-"dd/dcf/namespaceidhan.html#afe060cb698ab3f6bd48d74c427221afa",
-"dir_e5af04eec824d9452b8c296c923199b7.html"
+"d5/d86/namespaceidhan_1_1api_1_1helpers.html#a3f4643c98726286a10fa2e41c14c3b78",
+"d7/d03/namespaceidhan_1_1log.html#a1913abc8f4c59b87f781fadae9242020",
+"d8/dd5/classidhan_1_1api_1_1APIMaintenance.html#abc3910239a029caacf93bcf5f430e310",
+"db/d9e/namespacetrantor.html",
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ace286184394f2c684659f9d2f956eb86",
+"dd/dcf/namespaceidhan.html#adaa70b9814ee705fc03f33c44987f195",
+"dir_b5268579c3b8616dd21e6b678a733b98.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

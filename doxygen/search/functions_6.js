@@ -11,8 +11,9 @@ var searchData=
   ['hashcoro_8',['hashCoro',['../d0/de3/classidhan_1_1SHA256.html#acbdf8d0ab51199efe7cbd25d24bb63f6',1,'idhan::SHA256']]],
   ['hashfile_9',['hashFile',['../d0/de3/classidhan_1_1SHA256.html#a697a85896197d81a367596131d2b09fe',1,'idhan::SHA256']]],
   ['hasmatchers_10',['hasMatchers',['../d2/db7/classidhan_1_1mime_1_1MimeIdentifier.html#a0086a989688c651d1dcf50a4ffdac030',1,'idhan::mime::MimeIdentifier']]],
-  ['hex_11',['hex',['../d0/de3/classidhan_1_1SHA256.html#a4cd0626f10d0bccbf0554b1ae9442b8e',1,'idhan::SHA256']]],
-  ['hyapiauth_12',['HyAPIAuth',['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#ad2191a6cdb559cf77538bf4ae55ebf87',1,'idhan::hyapi::HyAPIAuth']]],
-  ['hyapiresponseenricher_13',['HyAPIResponseEnricher',['../d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html#ae847dc56ef9ff8f3101671a11c2d571d',1,'idhan::hyapi::HyAPIResponseEnricher']]],
-  ['hytoidhansorttype_14',['hyToIDHANSortType',['../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150',1,'idhan']]]
+  ['hasmime_11',['hasMime',['../d3/dcf/classidhan_1_1api_1_1ScanContext.html#ac9fc7472da38947343edd5c022e0faf3',1,'idhan::api::ScanContext']]],
+  ['hex_12',['hex',['../d0/de3/classidhan_1_1SHA256.html#a4cd0626f10d0bccbf0554b1ae9442b8e',1,'idhan::SHA256']]],
+  ['hyapiauth_13',['HyAPIAuth',['../de/d61/classidhan_1_1hyapi_1_1HyAPIAuth.html#ad2191a6cdb559cf77538bf4ae55ebf87',1,'idhan::hyapi::HyAPIAuth']]],
+  ['hyapiresponseenricher_14',['HyAPIResponseEnricher',['../d4/d3d/classidhan_1_1hyapi_1_1HyAPIResponseEnricher.html#ae847dc56ef9ff8f3101671a11c2d571d',1,'idhan::hyapi::HyAPIResponseEnricher']]],
+  ['hytoidhansorttype_15',['hyToIDHANSortType',['../dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150',1,'idhan']]]
 ];

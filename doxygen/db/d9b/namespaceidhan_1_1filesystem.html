@@ -151,6 +151,9 @@ Functions</h2></td></tr>
 <tr class="separator:addd0c19bb91f1be15a86b8cde1e0f7ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab5f5fbb3692d51199d168cd7882f7ec5" id="r_ab5f5fbb3692d51199d168cd7882f7ec5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab5f5fbb3692d51199d168cd7882f7ec5">getFilepath</a> (const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
 <tr class="separator:ab5f5fbb3692d51199d168cd7882f7ec5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:addec74e8de616976eb83df14b3426cc9" id="r_addec74e8de616976eb83df14b3426cc9"><td class="memItemLeft" align="right" valign="top">std::int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#addec74e8de616976eb83df14b3426cc9">getLastWriteTime</a> (const std::filesystem::path &amp;path)</td></tr>
+<tr class="memdesc:addec74e8de616976eb83df14b3426cc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the mtime of the file im microseconds.  <br /></td></tr>
+<tr class="separator:addec74e8de616976eb83df14b3426cc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a877fd1e02f8451b1318a462a31543c61" id="r_a877fd1e02f8451b1318a462a31543c61"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; std::filesystem::path &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a877fd1e02f8451b1318a462a31543c61">getTheoreticalFilePath</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acaa4f518bdbc030ffaf3c89146b99310">ClusterID</a> cluster_id, <a class="el" href="../../d0/de3/classidhan_1_1SHA256.html">SHA256</a> sha256, std::string extension)</td></tr>
 <tr class="memdesc:a877fd1e02f8451b1318a462a31543c61"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the path that would occur at a given cluster with a given hash.  <br /></td></tr>
 <tr class="separator:a877fd1e02f8451b1318a462a31543c61"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -326,6 +329,32 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<a id="addec74e8de616976eb83df14b3426cc9" name="addec74e8de616976eb83df14b3426cc9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#addec74e8de616976eb83df14b3426cc9">&#9670;&#160;</a></span>getLastWriteTime()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::int64_t idhan::filesystem::getLastWriteTime </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns the mtime of the file im microseconds. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">path</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd></dd></dl>
 
 </div>
 </div>

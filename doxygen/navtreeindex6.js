@@ -1,5 +1,14 @@
 var NAVTREEINDEX6 =
 {
+"db/d9e/namespacetrantor.html":[5,0,7],
+"db/daf/SearchBuilder_8hpp.html":[7,0,2,0,1,2,1],
+"db/daf/SearchBuilder_8hpp_source.html":[7,0,2,0,1,2,1],
+"db/db0/erver_2src_2logging_2qt__formatters_2qstring_8hpp.html":[7,0,2,0,7,0,0],
+"db/db0/erver_2src_2logging_2qt__formatters_2qstring_8hpp_source.html":[7,0,2,0,7,0,0],
+"db/dbb/IDHANServer_2src_2api_2record_2tags_2addTags_8cpp.html":[7,0,2,0,0,5,0,0],
+"db/dc2/MimeDatabase_8cpp.html":[7,0,2,0,9,5],
+"db/dc3/getFilepath_8cpp.html":[7,0,2,0,5,4],
+"db/de4/namespaceidhan_1_1api.html":[5,0,3,0],
 "db/de4/namespaceidhan_1_1api.html#a00203b685806ece7cc8608b936d12218":[5,0,3,0,37],
 "db/de4/namespaceidhan_1_1api.html#a0210e0c844797b85283cbe09adedafa0":[5,0,3,0,22],
 "db/de4/namespaceidhan_1_1api.html#a082b7a51916c5c086534d8fbc5ad9e8e":[5,0,3,0,14],
@@ -184,8 +193,8 @@ var NAVTREEINDEX6 =
 "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#ae87e5f86169969f5fa1ad7cebede9f8d":[6,0,1,0,3,0],
 "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#aefc09fded5995b964488138b1c6bff4b":[5,0,3,0,4,12],
 "dc/d8c/classidhan_1_1api_1_1ClusterAPI.html#aefc09fded5995b964488138b1c6bff4b":[6,0,1,0,3,12],
-"dc/d90/WriteAwaiter_8hpp.html":[7,0,2,0,5,13],
-"dc/d90/WriteAwaiter_8hpp_source.html":[7,0,2,0,5,13],
+"dc/d90/WriteAwaiter_8hpp.html":[7,0,2,0,5,14],
+"dc/d90/WriteAwaiter_8hpp_source.html":[7,0,2,0,5,14],
 "dc/da4/rescanMetadata_8cpp.html":[7,0,2,0,0,3,0],
 "dc/daa/classidhan_1_1mime_1_1MimeMatchInclude.html":[5,0,3,10,9],
 "dc/daa/classidhan_1_1mime_1_1MimeMatchInclude.html":[6,0,1,4,9],
@@ -240,14 +249,5 @@ var NAVTREEINDEX6 =
 "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a8081e2179fa79c3a42fc8f6e3f9b28a0":[5,0,3,3,0,0,3],
 "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#a8081e2179fa79c3a42fc8f6e3f9b28a0":[6,0,1,1,0,0,3],
 "dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#abba2beb790eb7c75bea3a9467afae20e":[5,0,3,3,0,0,1],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#abba2beb790eb7c75bea3a9467afae20e":[6,0,1,1,0,0,1],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ace286184394f2c684659f9d2f956eb86":[5,0,3,3,0,0,4],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ace286184394f2c684659f9d2f956eb86":[6,0,1,1,0,0,4],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#adc0eaf7dde2a02cd1c8e45ee54d28645":[5,0,3,3,0,0,5],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#adc0eaf7dde2a02cd1c8e45ee54d28645":[6,0,1,1,0,0,5],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ae96d27fca808756eff942c1ae910d0c3":[5,0,3,3,0,0,0],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ae96d27fca808756eff942c1ae910d0c3":[6,0,1,1,0,0,0],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#afd5f6841e291a0a0ef768aedb35e0b89":[5,0,3,3,0,0,10],
-"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#afd5f6841e291a0a0ef768aedb35e0b89":[6,0,1,1,0,0,10],
-"dd/d0a/createRecords_8cpp.html":[7,0,1,1,1,0]
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#abba2beb790eb7c75bea3a9467afae20e":[6,0,1,1,0,0,1]
 };

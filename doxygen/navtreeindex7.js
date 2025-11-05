@@ -1,5 +1,14 @@
 var NAVTREEINDEX7 =
 {
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ace286184394f2c684659f9d2f956eb86":[5,0,3,3,0,0,4],
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ace286184394f2c684659f9d2f956eb86":[6,0,1,1,0,0,4],
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#adc0eaf7dde2a02cd1c8e45ee54d28645":[5,0,3,3,0,0,5],
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#adc0eaf7dde2a02cd1c8e45ee54d28645":[6,0,1,1,0,0,5],
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ae96d27fca808756eff942c1ae910d0c3":[5,0,3,3,0,0,0],
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#ae96d27fca808756eff942c1ae910d0c3":[6,0,1,1,0,0,0],
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#afd5f6841e291a0a0ef768aedb35e0b89":[5,0,3,3,0,0,10],
+"dc/dfd/structidhan_1_1filesystem_1_1ClusterManager_1_1ClusterInfo.html#afd5f6841e291a0a0ef768aedb35e0b89":[6,0,1,1,0,0,10],
+"dd/d0a/createRecords_8cpp.html":[7,0,1,1,1,0],
 "dd/d25/classidhan_1_1IOUring.html":[5,0,3,22],
 "dd/d25/classidhan_1_1IOUring.html":[6,0,1,14],
 "dd/d25/classidhan_1_1IOUring.html#a11fd1cb23262b559aff9de6133cc5503":[5,0,3,22,12],
@@ -113,7 +122,7 @@ var NAVTREEINDEX7 =
 "dd/dbc/TagSearch_8hpp_source.html":[7,0,2,0,3,6],
 "dd/dbe/ImportAPI_8hpp.html":[7,0,2,0,0,16],
 "dd/dbe/ImportAPI_8hpp_source.html":[7,0,2,0,0,16],
-"dd/dbf/ReadAwaiter_8cpp.html":[7,0,2,0,5,8],
+"dd/dbf/ReadAwaiter_8cpp.html":[7,0,2,0,5,9],
 "dd/dcf/namespaceidhan.html":[5,0,3],
 "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880c":[5,0,3,49],
 "dd/dcf/namespaceidhan.html#a017e30cf513c900451d0fe48373e880ca466198b70ed2bb19896f587d392b7739":[5,0,3,49,11],
@@ -240,14 +249,5 @@ var NAVTREEINDEX7 =
 "dd/dcf/namespaceidhan.html#ace19126f81e79d920ce7787ba54d016b":[5,0,3,67],
 "dd/dcf/namespaceidhan.html#acf2de6ab319c3d5893959073ae46e47e":[5,0,3,75],
 "dd/dcf/namespaceidhan.html#ad1722f80f712430b5d7829c4651c4c24":[5,0,3,78],
-"dd/dcf/namespaceidhan.html#ad23693d258282b5457ded516e1a6b0d1":[5,0,3,68],
-"dd/dcf/namespaceidhan.html#adaa70b9814ee705fc03f33c44987f195":[5,0,3,55],
-"dd/dcf/namespaceidhan.html#adb23057f03ee6a0c01bb5c6f844cfbba":[5,0,3,77],
-"dd/dcf/namespaceidhan.html#ae1f955a09fa3220012fb0c401950fcfa":[5,0,3,86],
-"dd/dcf/namespaceidhan.html#ae36b565777c7d28ef6f198cbd978cba5":[5,0,3,53],
-"dd/dcf/namespaceidhan.html#af82b195aa92ce78f71e1c63b953597d5":[5,0,3,81],
-"dd/dcf/namespaceidhan.html#af8dffe5d1800a78e09605b08052fa841":[5,0,3,41],
-"dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1":[5,0,3,50],
-"dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1a65a6d757dbb571ccc3af9706e9a5f607":[5,0,3,50,1],
-"dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1ac6e421eaad140c1bc1a39980502df80c":[5,0,3,50,0]
+"dd/dcf/namespaceidhan.html#ad23693d258282b5457ded516e1a6b0d1":[5,0,3,68]
 };

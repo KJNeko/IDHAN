@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=11"/>
     <meta name="generator" content="Doxygen 1.13.2"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>IDHAN: Member List</title>
+    <title>IDHAN: IDHANServer/src/filesystem/getModifiedTime.cpp File Reference</title>
     <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="../../jquery.js"></script>
     <script type="text/javascript" src="../../dynsections.js"></script>
@@ -84,7 +84,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function(){initNavTree('d8/d58/structidhan_1_1FileInfo.html','../../'); initResizable(true); });
+$(function(){initNavTree('df/d14/getModifiedTime_8cpp.html','../../'); initResizable(true); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -110,22 +110,35 @@ $(function(){initNavTree('d8/d58/structidhan_1_1FileInfo.html','../../'); initRe
 </div>
 
 <div class="header">
-  <div class="headertitle"><div class="title">idhan::FileInfo Member List</div></div>
+  <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
+  <div class="headertitle"><div class="title">getModifiedTime.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-
-<p>This is the complete list of members for <a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">idhan::FileInfo</a>, including all inherited members.</p>
-<table class="directory">
-  <tr class="even"><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html#aa55728a2381499cd66f69274d12caccc">extension</a></td><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">idhan::FileInfo</a></td><td class="entry"></td></tr>
-  <tr class="odd"><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html#a5d6d3b1c12546f0af369ed1253782b81">mime_id</a></td><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">idhan::FileInfo</a></td><td class="entry"></td></tr>
-  <tr class="even"><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html#abed1f6ffad78a56c57f9ddc35d13c556">modified_time</a></td><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">idhan::FileInfo</a></td><td class="entry"></td></tr>
-  <tr class="odd"><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html#af911271ba36c766b86296e955a2326c6">size</a></td><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">idhan::FileInfo</a></td><td class="entry"></td></tr>
-  <tr class="even"><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html#a225acb610a25164bcb81e474debc42f5">store_time</a></td><td class="entry"><a class="el" href="../../d8/d58/structidhan_1_1FileInfo.html">idhan::FileInfo</a></td><td class="entry"></td></tr>
-</table></div><!-- contents -->
+<div class="textblock"><code>#include &lt;chrono&gt;</code><br />
+<code>#include &lt;cstddef&gt;</code><br />
+<code>#include &lt;filesystem&gt;</code><br />
+</div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/dcf/namespaceidhan.html">idhan</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d9b/namespaceidhan_1_1filesystem.html">idhan::filesystem</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:addec74e8de616976eb83df14b3426cc9" id="r_addec74e8de616976eb83df14b3426cc9"><td class="memItemLeft" align="right" valign="top">std::int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d9b/namespaceidhan_1_1filesystem.html#addec74e8de616976eb83df14b3426cc9">idhan::filesystem::getLastWriteTime</a> (const std::filesystem::path &amp;path)</td></tr>
+<tr class="memdesc:addec74e8de616976eb83df14b3426cc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the mtime of the file im microseconds.  <br /></td></tr>
+<tr class="separator:addec74e8de616976eb83df14b3426cc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+</div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
+    <li class="navelem"><a class="el" href="../../dir_0d7b7484720715aeee3813683650051b.html">IDHANServer</a></li><li class="navelem"><a class="el" href="../../dir_b53d693dd61356513165465a726fd284.html">src</a></li><li class="navelem"><a class="el" href="../../dir_3720c38179b88ce0988ecc7325964984.html">filesystem</a></li><li class="navelem"><a class="el" href="../../df/d14/getModifiedTime_8cpp.html">getModifiedTime.cpp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>
