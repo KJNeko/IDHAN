@@ -40,22 +40,23 @@ set(GENERATED_HEADERS "")
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus)
 
+set(COMMAND_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateHydrusConstants.cmake")
+
 foreach (HYDRUS_FILE ${HYDRUS_SCAN_FILES})
 	get_filename_component(FILE_NAME ${HYDRUS_FILE} NAME_WE)
 	set(OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus/${FILE_NAME}_gen.hpp")
 	list(APPEND GENERATED_HEADERS ${OUTPUT_FILE})
 
-	add_custom_target(
-			generate_${FILE_NAME}_constants ALL
+	add_custom_command(
+			OUTPUT ${OUTPUT_FILE}
 			COMMAND ${CMAKE_COMMAND}
 			-DHYDRUS_DIR=${HYDRUS_REPO_PATH}
 			-DHYDRUS_CONSTANTS_FILE=${HYDRUS_FILE}
 			-DOUT_TARGET=${OUTPUT_FILE}
-			-P "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateHydrusConstants.cmake"
+			-P ${COMMAND_FILE}
+			DEPENDS ${HYDRUS_FILE} ${COMMAND_FILE}
 			COMMENT "Generating ${FILE_NAME} constants file"
 	)
-
-	add_dependencies(IDHAN generate_${FILE_NAME}_constants)
 endforeach ()
 
 target_sources(IDHAN PUBLIC ${GENERATED_HEADERS})
