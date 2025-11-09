@@ -2,7 +2,6 @@ project(IDHANServer LANGUAGES CXX C)
 
 AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-
 target_sources(IDHANServer PRIVATE ${MIGRATION_SOURCE})
 
 # Gui is needed for QImage for whatever reason

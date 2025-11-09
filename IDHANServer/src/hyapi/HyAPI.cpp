@@ -8,6 +8,7 @@
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
+#include "api/version.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
@@ -19,7 +20,6 @@
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
 #include "metadata/parseMetadata.hpp"
-#include "versions.hpp"
 
 namespace idhan::hyapi
 {
