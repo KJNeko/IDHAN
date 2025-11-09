@@ -51,6 +51,9 @@ class HydrusImporter
 	HydrusImporter( const std::filesystem::path& path );
 	~HydrusImporter();
 
+	std::unordered_map< HashID, RecordID > mapHydrusRecords( std::vector< HashID > hash_ids ) const;
+	RecordID getRecordIDFromHyID( HashID hash_id );
+
 	bool hasPTR() const;
 
 	std::vector< ServiceInfo > getTagServices();
