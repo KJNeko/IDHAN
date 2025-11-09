@@ -4,11 +4,11 @@
 #pragma once
 
 #include <drogon/HttpResponse.h>
-#include <drogon/orm/DbClient.h>
 
 #include <expected>
 #include <string>
 
+#include "ExpectedTask.hpp"
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
 
@@ -16,5 +16,7 @@ namespace idhan::helpers
 {
 constexpr UrlID INVALID_URL_ID { 0 };
 
-drogon::Task< std::expected< UrlID, drogon::HttpResponsePtr > > findOrCreateUrl( std::string url, DbClientPtr db );
+ExpectedTask< UrlID > findOrCreateUrl( std::string url, DbClientPtr db );
+
+ExpectedTask< UrlDomainID > findOrCreateUrlDomain( std::string url, DbClientPtr db );
 } // namespace idhan::helpers

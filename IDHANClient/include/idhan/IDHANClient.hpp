@@ -238,6 +238,14 @@ class IDHANClient
 		std::uint16_t ratio,
 		bool readonly );
 
+	QFuture< void > addUrls( RecordID record_id, std::vector< std::string >& urls );
+
+	inline QFuture< void > addUrl( const RecordID record_id, std::string url )
+	{
+		std::vector< std::string > urls { { url } };
+		return addUrls( record_id, urls );
+	}
+
   private:
 
 	void sendClientGet( UrlVariant url, IDHANResponseHandler&& responseHandler, IDHANErrorHandler&& errorHandler );
