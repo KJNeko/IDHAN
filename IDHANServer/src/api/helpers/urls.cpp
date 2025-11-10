@@ -58,10 +58,17 @@ ExpectedTask< UrlDomainID > findOrCreateUrlDomain( const std::string url, DbClie
 	const auto insert { co_await db->execSqlCoro(
 		"INSERT INTO url_domains (url_domain) VALUES ($1) ON CONFLICT DO NOTHING RETURNING url_domain_id", domain ) };
 
-	if ( insert.empty() ) [[unlikely]]
-		co_return std::unexpected( createInternalError( "Failed to create URL domain" ) );
+	if ( !insert.empty() ) [[likely]]
+		co_return insert[ 0 ][ 0 ].as< UrlDomainID >();
 
-	co_return insert[ 0 ][ 0 ].as< UrlDomainID >();
+	const auto second_search_result {
+		co_await db->execSqlCoro( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", domain )
+	};
+
+	if ( !second_search_result.empty() ) [[likely]]
+		co_return second_search_result[ 0 ][ 0 ].as< UrlDomainID >();
+
+	co_return std::unexpected( createInternalError( "Failed to create URL domain" ) );
 }
 
 } // namespace idhan::helpers
