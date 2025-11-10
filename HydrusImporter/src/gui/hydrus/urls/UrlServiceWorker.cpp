@@ -64,9 +64,9 @@ void UrlServiceWorker::process()
 		for ( const auto& [ hash_id, idhan_id ] : mapped_ids )
 		{
 			auto urls { current_urls[ hash_id ] };
-			// auto future { client.addUrls( idhan_id, urls ) };
-			futures.emplace_back( client.addUrls( idhan_id, urls ) );
-			// future.waitForFinished();
+			auto future { client.addUrls( idhan_id, urls ) };
+			// futures.emplace_back( client.addUrls( idhan_id, urls ) );
+			future.waitForFinished();
 		}
 
 		for ( auto& future : futures ) future.waitForFinished();
@@ -89,7 +89,11 @@ void UrlServiceWorker::process()
 		}
 
 		url_counter += urls.size();
-		current_urls.emplace( hash_id, std::move( urls ) );
+
+		if ( auto itter = current_urls.find( hash_id ); itter != current_urls.end() )
+			itter->second.insert( itter->second.end(), urls.begin(), urls.end() );
+		else
+			current_urls.emplace( hash_id, std::move( urls ) );
 
 		if ( url_counter % 500 == 0 ) flushUrls();
 	}
