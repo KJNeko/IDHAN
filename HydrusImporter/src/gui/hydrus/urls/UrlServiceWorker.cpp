@@ -42,7 +42,7 @@ void UrlServiceWorker::process()
 
 	std::size_t url_counter { 0 };
 
-	idhan::hydrus::Query< int, int > query { client_tr, "SELECT hash_id, url_id FROM url_map" };
+	idhan::hydrus::Query< int, int > query { client_tr, "SELECT hash_id, url_id FROM url_map ORDER BY hash_id ASC" };
 
 	std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > > current_urls {};
 
