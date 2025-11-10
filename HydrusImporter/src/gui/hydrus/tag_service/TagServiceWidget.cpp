@@ -175,7 +175,11 @@ void TagServiceWidget::updateProcessed()
 	const auto over_limit { to_process > std::numeric_limits< int >::max() };
 	const auto multip { over_limit ? 1024 : 1 };
 
-	ui->progressBar->setValue( static_cast< int >( total_processed / multip ) );
+	if ( total_processed == 0 )
+		ui->progressBar->setValue( -1 );
+	else
+		ui->progressBar->setValue( static_cast< int >( total_processed / multip ) );
+
 	ui->progressBar->setMaximum( static_cast< int >( to_process / multip ) );
 }
 
@@ -220,6 +224,7 @@ void TagServiceWidget::processedAliases( std::size_t count )
 void TagServiceWidget::preprocessingFinished()
 {
 	m_preprocessed = true;
+	updateProcessed();
 	updateTime();
 }
 

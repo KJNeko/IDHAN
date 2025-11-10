@@ -56,7 +56,8 @@
             </size>
            </property>
            <property name="text">
-            <string>Name: Record URLs</string>
+            <string>Name: Record URLs
+Type: URLs</string>
            </property>
           </widget>
          </item>
