@@ -23,10 +23,15 @@ ExpectedTask< UrlDomainID > findOrCreateUrl( const std::string url, DbClientPtr 
 		url,
 		*url_domain_id ) };
 
-	if ( insert.empty() ) [[unlikely]]
-		co_return std::unexpected( createInternalError( "Was unable to create or find url {}", url ) );
+	if ( !insert.empty() ) [[likely]]
+		co_return insert[ 0 ][ 0 ].as< UrlID >();
 
-	co_return insert[ 0 ][ 0 ].as< UrlID >();
+	const auto second_search { co_await db->execSqlCoro( "SELECT url_id FROM urls WHERE url = $1", url ) };
+
+	if ( !second_search.empty() ) [[likely]]
+		co_return second_search[ 0 ][ 0 ].as< UrlID >();
+
+	co_return std::unexpected( createInternalError( "Was unable to create or find url {}", url ) );
 }
 
 ExpectedTask< UrlDomainID > findOrCreateUrlDomain( const std::string url, DbClientPtr db )
