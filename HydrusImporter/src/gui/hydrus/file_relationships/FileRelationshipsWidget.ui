@@ -63,7 +63,7 @@
            </property>
            <property name="text">
             <string>Name: Duplicate &amp; Alternative relationships
-Type:File Relationships</string>
+Type: File Relationships</string>
            </property>
           </widget>
          </item>

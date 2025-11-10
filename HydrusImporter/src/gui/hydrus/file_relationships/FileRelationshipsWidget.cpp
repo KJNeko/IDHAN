@@ -54,7 +54,11 @@ void FileRelationshipsWidget::updateText()
 	}
 
 	ui->progressBar->setMaximum( alternatives_total + duplicates_total );
-	ui->progressBar->setValue( alternatives_processed + duplicates_processed );
+
+	if ( alternatives_processed + duplicates_processed == 0 )
+		ui->progressBar->setValue( -1 );
+	else
+		ui->progressBar->setValue( alternatives_processed + duplicates_processed );
 }
 
 void FileRelationshipsWidget::startImport()
