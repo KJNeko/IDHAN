@@ -138,17 +138,29 @@ SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
 
 drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
 {
-	const auto data { co_await io_uring.readAll() };
+	QCryptographicHash hasher { QCryptographicHash::Sha256 };
 
-	if ( data.empty() )
+	constexpr auto block_size { 1024 * 1024 };
+
+	for ( std::size_t i = 0; i < io_uring.size(); i += block_size )
 	{
-		log::warn(
-			"While reading file {}, The filesystem said the file was zero bytes, or the read failed! A following "
-			"warning might occur!",
-			io_uring.path().string() );
+		const auto data { co_await io_uring.read( i, block_size ) };
+
+		const QByteArrayView view { data.data(), static_cast< qsizetype >( data.size() ) };
+
+		hasher.addData( view );
 	}
 
-	co_return hash( data.data(), data.size() );
+	const auto result { hasher.result() };
+
+	std::vector< std::byte > out_data {};
+	out_data.resize( 256 / 8 );
+
+	FGL_ASSERT( out_data.size() == static_cast< std::size_t >( result.size() ), "Invalid size" );
+
+	std::memcpy( out_data.data(), result.data(), static_cast< std::size_t >( result.size() ) );
+
+	co_return SHA256::fromBuffer( out_data );
 }
 
 } // namespace idhan
