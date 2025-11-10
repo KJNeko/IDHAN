@@ -4,12 +4,13 @@
 
 #include "TagServiceWorker.hpp"
 
+#include <moc_TagServiceWorker.cpp>
+
 #include <QObject>
 #include <QtConcurrent>
 
 #include <fstream>
 
-#include "moc_TagServiceWorker.cpp"
 #include "sqlitehelper/Query.hpp"
 #include "sqlitehelper/Transaction.hpp"
 #include "sqlitehelper/TransactionBaseCoro.hpp"

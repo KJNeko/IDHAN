@@ -53,7 +53,7 @@ TagServiceWidget::~TagServiceWidget()
 void TagServiceWidget::setName( const QString& name )
 {
 	m_name = name;
-	ui->name->setText( QString( "Name: %L1" ).arg( name ) );
+	ui->name->setText( QString( "Name: %L1\nType: Tag Service" ).arg( name ) );
 }
 
 void TagServiceWidget::recordMappingProcessed( std::size_t count )
@@ -112,6 +112,12 @@ void TagServiceWidget::updateTime()
 {
 	const std::size_t to_process { m_info.num_mappings + m_info.num_parents + m_info.num_aliases };
 	const std::size_t total_processed { mappings_processed + parents_processed + aliases_processed };
+
+	if ( total_processed == 0 )
+	{
+		ui->statusLabel->setText( "Ready!" );
+		return;
+	}
 
 	// const bool over_limit { to_process > std::numeric_limits< int >::max() };
 	// const std::size_t multip { over_limit ? 16 : 1 };
@@ -182,7 +188,7 @@ void TagServiceWidget::processedMappings( std::size_t count, std::size_t record_
 	QLocale locale { QLocale::English, QLocale::UnitedStates };
 	locale.setNumberOptions( QLocale::DefaultNumberOptions );
 	ui->mappingsCount->setText(
-		QString( "Mappings: %L1 (%L2 processed)\nRecords: (%L3 Records)" )
+		QString( "Mappings: %L1 (%L2 processed)\nRecords: (%L3 processed)" )
 			.arg( m_info.num_mappings )
 			.arg( mappings_processed )
 			.arg( records_processed ) );
@@ -222,7 +228,7 @@ void TagServiceWidget::setMaxMappings( std::size_t count )
 	m_info.num_mappings = count;
 	if ( mappings_processed > 0 )
 		ui->mappingsCount->setText(
-			QString( "Mappings: %L1 (%L2 processed)\nRecords: (%L3 Records)" )
+			QString( "Mappings: %L1 (%L2 processed)\nRecords: (%L3 processed)" )
 				.arg( m_info.num_mappings )
 				.arg( mappings_processed )
 				.arg( records_processed ) );
