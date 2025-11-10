@@ -200,68 +200,70 @@ void IDHANClient::sendClientJson(
 
 	const auto submit_time { std::chrono::high_resolution_clock::now() };
 
-	QObject::connect(
-		response,
-		&QNetworkReply::finished,
-		[ responseHandler, response, submit_time ]()
+	auto responseSlot = [ responseHandler, response, submit_time ]()
+	{
+		const auto response_in_time { std::chrono::high_resolution_clock::now() };
+
+		if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 5 ) )
 		{
-			const auto response_in_time { std::chrono::high_resolution_clock::now() };
+			logging::warn(
+				"Server took {}ms to response to query {}. Might be doing a lot of work?",
+				std::chrono::duration_cast< std::chrono::milliseconds >( response_time ).count(),
+				response->url().path().toStdString() );
+		}
 
-			if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 5 ) )
-			{
-				logging::warn(
-					"Server took {}ms to response to query {}. Might be doing a lot of work?",
-					std::chrono::duration_cast< std::chrono::milliseconds >( response_time ).count(),
-					response->url().path().toStdString() );
-			}
+		if ( response->error() != QNetworkReply::NoError ) return;
 
-			if ( response->error() != QNetworkReply::NoError ) return;
+		QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
+	};
 
-			QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
-			// responseHandler( response );
-			// response->deleteLater();
-		} );
-
-	QObject::connect(
-		response,
-		&QNetworkReply::errorOccurred,
-		[ errorHandler, response, url ]( const QNetworkReply::NetworkError error )
+	auto errorSlot = [ errorHandler, response, url ]( const QNetworkReply::NetworkError error )
+	{
+		if ( error == QNetworkReply::NetworkError::OperationCanceledError )
 		{
-			if ( error == QNetworkReply::NetworkError::OperationCanceledError )
-			{
-				logging::critical(
-					"Operation timed out with request to {}: {}",
-					url.toString(),
-					response->errorString().toStdString() );
-				std::abort();
-			}
+			logging::critical(
+				"Operation timed out with request to {}: {}", url.toString(), response->errorString().toStdString() );
+			std::abort();
+		}
 
-			// check if this is a special error or not.
-			// It should have json if so
-			auto header = response->header( QNetworkRequest::ContentTypeHeader );
-			if ( header.isValid() && header.toString().contains( "application/json" ) )
+		// check if this is a special error or not.
+		// It should have json if so
+		auto header = response->header( QNetworkRequest::ContentTypeHeader );
+		if ( header.isValid() && header.toString().contains( "application/json" ) )
+		{
+			const auto response_body { response->readAll() };
+			QJsonDocument response_doc { QJsonDocument::fromJson( response_body ) };
+			if ( response_doc.isObject() )
 			{
-				const auto response_body { response->readAll() };
-				QJsonDocument response_doc { QJsonDocument::fromJson( response_body ) };
-				if ( response_doc.isObject() )
+				QJsonObject response_object { response_doc.object() };
+				if ( response_object.contains( "error" ) )
 				{
-					QJsonObject response_object { response_doc.object() };
-					if ( response_object.contains( "error" ) )
-					{
-						const auto error_msg { response_object[ "error" ].toString().toStdString() };
-						// logging::error( object[ "error" ].toString().toStdString() );
+					const auto error_msg { response_object[ "error" ].toString().toStdString() };
+					// logging::error( object[ "error" ].toString().toStdString() );
 
-						QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error, error_msg ) );
-						return;
-					}
+					QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error, error_msg ) );
+					return;
 				}
 			}
+		}
 
-			QThreadPool::globalInstance()->start(
-				std::bind( errorHandler, response, error, response->errorString().toStdString() ) );
-			// errorHandler( response, error );
-			// response->deleteLater();
-		} );
+		QThreadPool::globalInstance()->start(
+			std::bind( errorHandler, response, error, response->errorString().toStdString() ) );
+	};
+
+	const auto response_connection { QObject::connect( response, &QNetworkReply::finished, responseSlot ) };
+	const auto error_connection { QObject::connect( response, &QNetworkReply::errorOccurred, errorSlot ) };
+
+	if ( response->isFinished() )
+	{
+		response->disconnect( response_connection );
+		response->disconnect( error_connection );
+
+		if ( response->error() == QNetworkReply::NoError )
+			responseSlot();
+		else
+			errorSlot( response->error() );
+	}
 }
 
 QFuture< void > IDHANClient::createFileCluster(

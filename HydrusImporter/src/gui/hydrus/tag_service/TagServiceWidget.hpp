@@ -9,7 +9,8 @@
 #include <deque>
 
 #include "HydrusImporter.hpp"
-#include "HydrusImporterWidget.hpp"
+
+class TagServiceWorker;
 
 namespace Ui
 {

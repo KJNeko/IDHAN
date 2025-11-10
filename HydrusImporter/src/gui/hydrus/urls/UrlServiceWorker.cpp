@@ -42,7 +42,7 @@ void UrlServiceWorker::process()
 
 	std::size_t url_counter { 0 };
 
-	idhan::hydrus::Query< int, int > query { client_tr, "SELECT hash_id, url_id FROM url_map" };
+	idhan::hydrus::Query< int, int > query { client_tr, "SELECT hash_id, url_id FROM url_map ORDER BY hash_id ASC" };
 
 	std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > > current_urls {};
 
@@ -56,8 +56,6 @@ void UrlServiceWorker::process()
 		}
 
 		const auto mapped_ids { m_importer->mapHydrusRecords( hashes ) };
-
-		emit statusMessage( "Adding URLs to mapped IDs" );
 
 		for ( const auto& [ hash_id, idhan_id ] : mapped_ids )
 		{
@@ -86,7 +84,7 @@ void UrlServiceWorker::process()
 		url_counter += urls.size();
 		current_urls.emplace( hash_id, std::move( urls ) );
 
-		if ( url_counter % 100 == 0 ) flushUrls();
+		if ( url_counter % 500 == 0 ) flushUrls();
 	}
 
 	flushUrls();

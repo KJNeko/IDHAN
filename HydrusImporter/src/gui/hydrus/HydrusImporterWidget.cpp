@@ -5,15 +5,16 @@
 
 #include "HydrusImporterWidget.hpp"
 
+#include <moc_HydrusImporterWidget.cpp>
+
 #include <QFileDialog>
 #include <QFileInfo>
 
-#include <ui_TagServiceWidget.h>
-
 #include "HydrusImporter.hpp"
-#include "TagServiceWidget.hpp"
-#include "TagServiceWorker.hpp"
+#include "file_relationships/FileRelationshipsWidget.hpp"
+#include "tag_service/TagServiceWidget.hpp"
 #include "ui_HydrusImporterWidget.h"
+#include "urls/UrlServiceWidget.hpp"
 
 class TagServiceWorker;
 
@@ -39,6 +40,93 @@ HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) :
 HydrusImporterWidget::~HydrusImporterWidget()
 {
 	delete ui;
+}
+
+void HydrusImporterWidget::parseTagServices()
+{
+	auto service_infos { m_importer->getTagServices() };
+
+	for ( const auto& service : service_infos )
+	{
+		if ( service.name == "public tag repository" && !ui->cbProcessPTR->isChecked() )
+		{
+			// idhan::logging::info( "Skipping PTR because cbProcessPTR is not checked" );
+			continue;
+		}
+
+		auto widget { new TagServiceWidget( m_importer.get(), this ) };
+
+		widget->setName( service.name );
+		widget->setInfo( service );
+
+		// ui->tagServicesLayout->addWidget( widget );
+		addServiceWidget( widget );
+
+		connect(
+			this,
+			&HydrusImporterWidget::triggerImport,
+			widget,
+			&TagServiceWidget::startImport,
+			Qt::SingleShotConnection );
+		connect(
+			this,
+			&HydrusImporterWidget::triggerPreImport,
+			widget,
+			&TagServiceWidget::startPreImport,
+			Qt::SingleShotConnection );
+	}
+}
+
+void HydrusImporterWidget::addServiceWidget( QWidget* widget )
+{
+	auto* groupFrame = new QFrame( this );
+	groupFrame->setFrameShape( QFrame::Box );
+	groupFrame->setFrameShadow( QFrame::Plain );
+	groupFrame->setLineWidth( 1 );
+	groupFrame->setStyleSheet( "QFrame { border: 1px solid #444; border-radius: 6px; }" );
+
+	auto* groupLayout = new QVBoxLayout( groupFrame );
+	groupLayout->setContentsMargins( 6, 6, 6, 6 );
+	groupLayout->addWidget( widget );
+	widget->setStyleSheet( "QFrame { border: none; }" );
+
+	ui->tagServicesLayout->addWidget( groupFrame );
+}
+
+void HydrusImporterWidget::parseFileRelationships()
+{
+	auto* widget { new FileRelationshipsWidget( m_importer.get() ) };
+
+	connect(
+		this,
+		&HydrusImporterWidget::triggerImport,
+		widget,
+		&FileRelationshipsWidget::startImport,
+		Qt::SingleShotConnection );
+	connect(
+		this,
+		&HydrusImporterWidget::triggerPreImport,
+		widget,
+		&FileRelationshipsWidget::startPreImport,
+		Qt::SingleShotConnection );
+
+	addServiceWidget( widget );
+}
+
+void HydrusImporterWidget::parseUrls()
+{
+	auto* widget { new UrlServiceWidget( m_importer.get() ) };
+
+	connect(
+		this, &HydrusImporterWidget::triggerImport, widget, &UrlServiceWidget::startImport, Qt::SingleShotConnection );
+	connect(
+		this,
+		&HydrusImporterWidget::triggerPreImport,
+		widget,
+		&UrlServiceWidget::startPreImport,
+		Qt::SingleShotConnection );
+
+	addServiceWidget( widget );
 }
 
 void HydrusImporterWidget::on_hydrusFolderPath_textChanged( [[maybe_unused]] const QString& path )
@@ -101,39 +189,11 @@ void HydrusImporterWidget::on_parseHydrusDB_pressed()
 	m_importer = std::make_unique< idhan::hydrus::HydrusImporter >( ui->hydrusFolderPath->text().toStdString() );
 
 	const bool has_ptr { m_importer->hasPTR() };
-
-	auto service_infos { m_importer->getTagServices() };
-
 	ui->parseStatusLabel->setText( QString( "Has PTR: %1" ).arg( has_ptr ? "Yes" : "No" ) );
 
-	for ( const auto& service : service_infos )
-	{
-		if ( service.name == "public tag repository" && !ui->cbProcessPTR->isChecked() )
-		{
-			// idhan::logging::info( "Skipping PTR because cbProcessPTR is not checked" );
-			continue;
-		}
-
-		auto widget { new TagServiceWidget( m_importer.get(), this ) };
-
-		widget->setName( service.name );
-		widget->setInfo( service );
-
-		ui->tagServicesLayout->addWidget( widget );
-
-		connect(
-			this,
-			&HydrusImporterWidget::triggerImport,
-			widget,
-			&TagServiceWidget::startImport,
-			Qt::SingleShotConnection );
-		connect(
-			this,
-			&HydrusImporterWidget::triggerPreImport,
-			widget,
-			&TagServiceWidget::startPreImport,
-			Qt::SingleShotConnection );
-	}
+	parseTagServices();
+	parseFileRelationships();
+	parseUrls();
 
 	emit triggerPreImport();
 

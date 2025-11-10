@@ -27,6 +27,8 @@ struct ServiceInfo
 	ServiceInfo() = default;
 };
 
+using HashID = std::uint32_t;
+
 class HydrusImporter
 {
   public:
