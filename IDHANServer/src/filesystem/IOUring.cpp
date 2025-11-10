@@ -63,7 +63,7 @@ drogon::Task< std::vector< std::byte > > FileIOUring::readAll() const
 	co_return co_await read( 0, file_size );
 }
 
-drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, const std::size_t len ) const
+drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, std::size_t len ) const
 {
 	auto& uring { IOUring::getInstance() };
 
@@ -78,6 +78,20 @@ drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t of
 
 	io_uring_sqe sqe {};
 	std::memset( &sqe, 0, sizeof( sqe ) );
+
+	const auto file_max { size() };
+
+	if ( offset > file_max )
+	{
+		// no bytes would be read because of OOB
+		co_return {};
+	}
+
+	if ( offset + len > file_max )
+	{
+		// clamp the length down
+		len = file_max - offset;
+	}
 
 	auto buffer_ptr { std::make_shared< std::vector< std::byte > >() };
 	buffer_ptr->resize( len );
