@@ -11,8 +11,10 @@
 namespace idhan
 {
 
-QFuture< void > IDHANClient::addUrls( const RecordID record_id, std::vector< std::string >& urls )
+QFuture< void > IDHANClient::addUrls( const RecordID record_id, const std::vector< std::string >& urls )
 {
+	if ( urls.empty() ) return QtFuture::makeReadyVoidFuture();
+
 	QJsonObject json {};
 
 	QJsonArray array {};
@@ -26,20 +28,25 @@ QFuture< void > IDHANClient::addUrls( const RecordID record_id, std::vector< std
 
 	auto promise = std::make_shared< QPromise< void > >();
 
-	auto handleResponse = [ promise ]( QNetworkReply* reply )
+	const auto url { format_ns::format( "/records/{}/urls/add", record_id ) };
+
+	auto handleResponse = [ promise ]( QNetworkReply* response )
 	{
+		const auto data = response->readAll();
+		if ( !response->isFinished() )
+		{
+			logging::info( "Failed to read response" );
+			throw std::runtime_error( "Failed to read response" );
+		}
+
 		promise->finish();
-		reply->deleteLater();
+		response->deleteLater();
 	};
 
 	QJsonDocument doc {};
 	doc.setObject( json );
 
-	sendClientPost(
-		std::move( doc ),
-		format_ns::format( "/records/{}/urls/add", record_id ).data(),
-		handleResponse,
-		defaultErrorHandler( promise ) );
+	sendClientPost( std::move( doc ), url.data(), handleResponse, defaultErrorHandler( promise ) );
 
 	return promise->future();
 }
