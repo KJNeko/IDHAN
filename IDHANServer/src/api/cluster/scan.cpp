@@ -6,6 +6,7 @@
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/ExpectedTask.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/helpers.hpp"
 #include "api/helpers/records.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
@@ -84,15 +85,17 @@ class ScanContext
 
 	ScanParams m_params {};
 	std::string m_mime_name {};
+	SHA256 m_sha256 {};
 
 	static constexpr auto INVALID_RECORD { std::numeric_limits< RecordID >::max() };
 	RecordID m_record_id { INVALID_RECORD };
 
 	ClusterID m_cluster_id;
+	std::filesystem::path m_cluster_path;
 
-	ExpectedTask< SHA256 > checkSHA256( FileIOUring uring, std::filesystem::path bad_dir );
+	ExpectedTask< SHA256 > checkSHA256( std::filesystem::path bad_dir );
 
-	ExpectedTask< RecordID > checkRecord( SHA256 sha256, DbClientPtr db );
+	ExpectedTask< RecordID > checkRecord( DbClientPtr db );
 
 	ExpectedTask< void > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
 	drogon::Task<> updateFileModifiedTime( drogon::orm::DbClientPtr db );
@@ -108,11 +111,16 @@ class ScanContext
 
   public:
 
-	ScanContext( const std::filesystem::path& file_path, const ClusterID cluster_id, const ScanParams params ) :
+	ScanContext(
+		const std::filesystem::path& file_path,
+		const ClusterID cluster_id,
+		const std::filesystem::path& cluster_path,
+		const ScanParams params ) :
 	  m_path( file_path ),
 	  m_size( std::filesystem::file_size( file_path ) ),
 	  m_params( params ),
-	  m_cluster_id( cluster_id )
+	  m_cluster_id( cluster_id ),
+	  m_cluster_path( cluster_path )
 	{}
 
 	ExpectedTask<> scan( std::filesystem::path bad_dir, DbClientPtr db );
@@ -129,15 +137,15 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	scan_params.read_only = scan_params.force_readonly || result[ 0 ][ "read_only" ].as< bool >();
 
-	const std::filesystem::path folder_path { result[ 0 ][ "folder_path" ].as< std::string >() };
+	const std::filesystem::path cluster_path { result[ 0 ][ "folder_path" ].as< std::string >() };
 
-	const auto bad_dir { folder_path / "bad" };
+	const auto bad_dir { cluster_path / "bad" };
 
 	std::vector< drogon::Task< std::expected< void, drogon::HttpResponsePtr > > > scan_tasks {};
 
 	std::filesystem::path last_scanned { "" };
 
-	auto dir_itterator { std::filesystem::recursive_directory_iterator( folder_path ) };
+	auto dir_itterator { std::filesystem::recursive_directory_iterator( cluster_path ) };
 	const auto end { std::filesystem::recursive_directory_iterator() };
 
 	std::vector< ExpectedTask<> > awaiters {};
@@ -172,7 +180,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 			log::info( "Scanning {}", last_scanned.string() );
 		}
 
-		ScanContext ctx { file_path, cluster_id, scan_params };
+		ScanContext ctx { file_path, cluster_id, cluster_path, scan_params };
 
 		const std::expected< void, drogon::HttpResponsePtr > file_result { co_await ctx.scan( bad_dir, db ) };
 
@@ -196,9 +204,10 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
  * @param bad_dir Directory to put failed files, Such as ones that have the wrong filename
  * @return
  */
-ExpectedTask< SHA256 > ScanContext::checkSHA256( FileIOUring uring, const std::filesystem::path bad_dir )
+ExpectedTask< SHA256 > ScanContext::checkSHA256( const std::filesystem::path bad_dir )
 {
 	const auto file_stem { m_path.stem().string() };
+	FileIOUring uring { m_path };
 
 	auto sha256_e { m_params.trust_filename ? SHA256::fromHex( file_stem ) : co_await SHA256::hashCoro( uring ) };
 
@@ -267,21 +276,21 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256( FileIOUring uring, const std::f
 	co_return *sha256_e;
 }
 
-ExpectedTask< RecordID > ScanContext::checkRecord( const SHA256 sha256, drogon::orm::DbClientPtr db )
+ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 {
 	const auto search_result {
-		co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", sha256.toVec() )
+		co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", m_sha256.toVec() )
 	};
 
 	if ( search_result.empty() && m_params.adopt_orphans )
 	{
 		const auto insert_result {
-			co_await db->execSqlCoro( "INSERT INTO records (sha256) VALUES ($1) RETURNING record_id", sha256.toVec() )
+			co_await db->execSqlCoro( "INSERT INTO records (sha256) VALUES ($1) RETURNING record_id", m_sha256.toVec() )
 		};
 
 		if ( insert_result.empty() )
 		{
-			co_return std::unexpected( createInternalError( "Failed to create a record for hash {}", sha256.hex() ) );
+			co_return std::unexpected( createInternalError( "Failed to create a record for hash {}", m_sha256.hex() ) );
 		}
 
 		co_return insert_result[ 0 ][ 0 ].as< RecordID >();
@@ -379,6 +388,31 @@ ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		// if found. Otherwise the record's cluster is set to the current cluster
 		auto result { co_await cleanupDoubleClusters( found_cluster_id, db ) };
 		return_unexpected_error( result );
+	}
+
+	// now check if the file is in the right path
+	const auto current_parent { m_path.parent_path() };
+	const auto expected_cluster_subfolder { helpers::getFileFolder( m_sha256 ) };
+	const auto expected_parent_path { m_cluster_path / expected_cluster_subfolder };
+
+	if ( current_parent != expected_parent_path )
+	{
+		log::warn(
+			"Expected file to be in path {} but was found in {} instead",
+			expected_parent_path.string(),
+			current_parent.string() );
+
+		if ( !m_params.read_only )
+		{
+			const auto new_path { expected_parent_path / m_path.filename() };
+			log::info( "Moving file {} to {}", new_path.string(), new_path.string() );
+
+			std::filesystem::create_directories( expected_parent_path );
+
+			std::filesystem::rename( m_path, new_path );
+
+			m_path = new_path;
+		}
 	}
 
 	co_return {};
@@ -570,8 +604,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 	const std::filesystem::path bad_dir,
 	drogon::orm::DbClientPtr db )
 {
-	FileIOUring io_uring { m_path };
-
 	log::debug( "Scanning file: {}", m_path.string() );
 
 	if ( m_size == 0 )
@@ -579,10 +611,12 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 			"When scanning file: {} it was detected that it has a filesize of zero!", m_path.string() ) );
 
 	// check that the sha256 matches the sha256 name of the file
-	const auto sha256_e { co_await checkSHA256( io_uring, bad_dir ) };
+	const auto sha256_e { co_await checkSHA256( bad_dir ) };
 	return_unexpected_error( sha256_e );
 
-	const auto record_e { co_await checkRecord( *sha256_e, db ) };
+	m_sha256 = *sha256_e;
+
+	const auto record_e { co_await checkRecord( db ) };
 	if ( !record_e ) co_return std::unexpected( record_e.error() );
 	return_unexpected_error( record_e );
 	m_record_id = *record_e;
