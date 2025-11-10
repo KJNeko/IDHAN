@@ -41,7 +41,7 @@ void FileRelationshipsWidget::updateText()
 	if ( alternatives_processed > 0 || duplicates_processed > 0 )
 	{
 		ui->alternativesCount->setText(
-			QString( "Alternative groups: %L1 (%L2 processed)" )
+			QString( "Alternative files: %L1 (%L2 processed)" )
 				.arg( alternatives_total )
 				.arg( alternatives_processed ) );
 		ui->duplicatesCount->setText(
@@ -49,7 +49,7 @@ void FileRelationshipsWidget::updateText()
 	}
 	else
 	{
-		ui->alternativesCount->setText( QString( "Alternative groups: %L1" ).arg( alternatives_total ) );
+		ui->alternativesCount->setText( QString( "Alternative files: %L1" ).arg( alternatives_total ) );
 		ui->duplicatesCount->setText( QString( "Duplicate pairs: %L1" ).arg( duplicates_total ) );
 	}
 
