@@ -57,12 +57,19 @@ void UrlServiceWorker::process()
 
 		const auto mapped_ids { m_importer->mapHydrusRecords( hashes ) };
 
+		emit statusMessage( "Adding URLs to records" );
+
+		std::vector< QFuture< void > > futures {};
+
 		for ( const auto& [ hash_id, idhan_id ] : mapped_ids )
 		{
 			auto urls { current_urls[ hash_id ] };
-			auto future { client.addUrls( idhan_id, urls ) };
-			future.waitForFinished();
+			// auto future { client.addUrls( idhan_id, urls ) };
+			futures.emplace_back( client.addUrls( idhan_id, urls ) );
+			// future.waitForFinished();
 		}
+
+		for ( auto& future : futures ) future.waitForFinished();
 
 		current_urls.clear();
 		emit processedUrls( url_counter );
