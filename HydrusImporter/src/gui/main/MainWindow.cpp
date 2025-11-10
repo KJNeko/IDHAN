@@ -5,14 +5,16 @@
 
 #include "MainWindow.hpp"
 
-#include <QFutureWatcher>
+#include <moc_MainWindow.cpp>
+
 #include <QTimer>
 
 #include <idhan/IDHANClient.hpp>
 
-#include "../hydrus/HydrusImporterWidget.hpp"
 #include "NET_CONSTANTS.hpp"
 #include "SettingsDialog.hpp"
+#include "gui/hydrus/HydrusImporterWidget.hpp"
+#include "gui/hydrus/tag_service/TagServiceWidget.hpp"
 #include "ui_MainWindow.h"
 
 MainWindow::MainWindow( QWidget* parent ) :
@@ -96,10 +98,11 @@ void MainWindow::checkHeartbeat()
 		{
 			const auto result { watcher->result() };
 
-			ui->statusbar->showMessage( QString( "Connected to IDHAN v%1 (Build: %4, Commit: %5)" )
-			                                .arg( result.server.str )
-			                                .arg( result.build_type )
-			                                .arg( result.commit ) );
+			ui->statusbar->showMessage(
+				QString( "Connected to IDHAN v%1 (Build: %4, Commit: %5)" )
+					.arg( result.server.str )
+					.arg( result.build_type )
+					.arg( result.commit ) );
 		}
 		catch ( std::exception& e )
 		{
