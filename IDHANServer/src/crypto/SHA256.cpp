@@ -29,6 +29,11 @@ SHA256::SHA256( const std::string_view& data ) : m_data()
 
 SHA256::SHA256( const drogon::orm::Field& field )
 {
+	if ( field.isNull() )
+	{
+		throw std::invalid_argument( "Field is null" );
+	}
+
 	const auto data { field.as< std::vector< char > >() };
 
 	FGL_ASSERT(
@@ -42,8 +47,7 @@ std::string SHA256::hex() const
 {
 	std::string str {};
 	str.reserve( m_data.size() );
-	for ( std::size_t i = 0; i < m_data.size(); ++i )
-		str += format_ns::format( "{:02x}", static_cast< std::uint8_t >( m_data[ i ] ) );
+	for ( auto i : m_data ) str += format_ns::format( "{:02x}", static_cast< std::uint8_t >( i ) );
 	return str;
 }
 
