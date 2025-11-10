@@ -33,7 +33,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 			"INSERT INTO url_mappings (url_id, record_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", *url_id, record_id );
 	}
 
-	co_return drogon::HttpResponse::newHttpResponse();
+	Json::Value result {};
+	result[ "status" ] = drogon::k200OK;
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( result );
 }
 
 } // namespace idhan::api
