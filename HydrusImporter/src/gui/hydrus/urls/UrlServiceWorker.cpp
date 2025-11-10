@@ -57,8 +57,6 @@ void UrlServiceWorker::process()
 
 		const auto mapped_ids { m_importer->mapHydrusRecords( hashes ) };
 
-		emit statusMessage( "Adding URLs to mapped IDs" );
-
 		for ( const auto& [ hash_id, idhan_id ] : mapped_ids )
 		{
 			auto urls { current_urls[ hash_id ] };
@@ -86,7 +84,7 @@ void UrlServiceWorker::process()
 		url_counter += urls.size();
 		current_urls.emplace( hash_id, std::move( urls ) );
 
-		if ( url_counter % 100 == 0 ) flushUrls();
+		if ( url_counter % 500 == 0 ) flushUrls();
 	}
 
 	flushUrls();

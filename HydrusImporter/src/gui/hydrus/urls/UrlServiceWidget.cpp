@@ -36,7 +36,7 @@ void UrlServiceWidget::startPreImport()
 
 void UrlServiceWidget::startImport()
 {
-	QThreadPool::globalInstance()->start( m_worker );
+	if ( ui->cbShouldImport->isChecked() ) QThreadPool::globalInstance()->start( m_worker );
 }
 
 void UrlServiceWidget::statusMessage( const QString& msg )
