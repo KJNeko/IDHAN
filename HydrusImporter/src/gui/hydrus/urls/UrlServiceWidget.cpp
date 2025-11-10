@@ -46,13 +46,13 @@ void UrlServiceWidget::statusMessage( const QString& msg )
 
 void UrlServiceWidget::processedMaxUrls( const std::size_t count )
 {
-	ui->urlCount->setText( QString( "URLs: %L1" ).arg( count ) );
+	ui->urlCount->setText( QString( "URL mappingss: %L1" ).arg( count ) );
 	ui->progressBar->setMaximum( static_cast< int >( count ) );
 	m_max_urls = count;
 }
 
 void UrlServiceWidget::processedUrls( const std::size_t count )
 {
-	ui->urlCount->setText( QString( "URLs: %L1 (%L2 processed)" ).arg( m_max_urls ).arg( count ) );
+	ui->urlCount->setText( QString( "URL mappingss: %L1 (%L2 processed)" ).arg( m_max_urls ).arg( count ) );
 	ui->progressBar->setValue( static_cast< int >( count ) );
 }
