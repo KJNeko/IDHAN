@@ -68,10 +68,10 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 	p.adopt_orphans = request->getOptionalParameter< bool >( "adopt_orphans" ).value_or( false );
 	p.remove_missing_files = request->getOptionalParameter< bool >( "remove_missing_files" ).value_or( false );
 
-	p.scan_metadata = p.scan_metadata || p.adopt_orphans; // orphans will need to be scanned for metadata
-	p.scan_mime = p.scan_mime || p.scan_metadata; // mime is needed for metadata
-	p.recompute_hash = p.recompute_hash || p.adopt_orphans;
-	p.recompute_hash = p.recompute_hash || p.read_only;
+	p.scan_metadata |= p.adopt_orphans; // orphans will need to be scanned for metadata
+	p.scan_mime |= p.scan_metadata; // mime is needed for metadata
+	p.recompute_hash |= p.adopt_orphans;
+	p.recompute_hash |= p.read_only;
 	// if read only then we need to recompute the hash because the file path can't be trusted anymore
 
 	return p;
@@ -231,6 +231,7 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256( FileIOUring uring, const std::f
 		{
 			if ( !m_params.read_only )
 			{
+				std::filesystem::create_directories( bad_dir );
 				const auto new_path { bad_dir / m_path.filename() };
 
 				// try to fix the mistake
@@ -243,6 +244,15 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256( FileIOUring uring, const std::f
 					sha256_hex,
 					new_path.string() ) );
 			}
+		}
+		catch ( std::exception& e )
+		{
+			co_return std::unexpected( createInternalError(
+				"When scanning file at {} it was detected that the filename does not match the sha256 "
+				"{}. There was an error that prevented this from being fixed: {}",
+				m_path.string(),
+				sha256_hex,
+				e.what() ) );
 		}
 		catch ( ... )
 		{
@@ -595,11 +605,20 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 		}
 	}
 
-	// extension check
-	const auto extenion_result { co_await checkExtension( db ) };
-	return_unexpected_error( extenion_result );
+	const auto has_mime_check {
+		co_await db->execSqlCoro( "SELECT 1 FROM file_info WHERE extension IS NOT NULL OR mime_id IS NOT NULL" )
+	};
 
-	if ( m_params.scan_metadata )
+	const bool has_mime_info { !has_mime_check.empty() };
+
+	if ( has_mime_info )
+	{
+		// extension check
+		const auto extenion_result { co_await checkExtension( db ) };
+		return_unexpected_error( extenion_result );
+	}
+
+	if ( m_params.scan_metadata && has_mime_info )
 	{
 		log::debug( "Scanning metadata for file {}", m_path.string() );
 		const auto metadata_e { co_await scanMetadata( db ) };
