@@ -82,13 +82,15 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	// determine any joins needed
 	if ( m_required_joins.records && false )
 	{
-		query += " JOIN records rc ON rc.record_id = tm.record_id";
+		query += " JOIN records rc USING (record_id)";
 	}
 
-	if ( m_required_joins.file_info )
+	if ( m_required_joins.file_info || true )
 	{
-		query += " JOIN file_info fm ON fm.record_id = tm.record_id";
+		query += " JOIN file_info fm USING (record_id)";
 	}
+
+	query += " WHERE fm.mime_id IS NOT NULL";
 
 	switch ( m_sort_type )
 	{
