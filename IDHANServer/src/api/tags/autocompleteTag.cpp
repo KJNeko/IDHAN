@@ -15,7 +15,9 @@ drogon::Task< Json::Value > getSimilarTags(
 {
 	LOG_DEBUG << "Searching for tag \"{}\"" << search_value;
 
-	const auto wrapped_search_value { '%' + search_value + '%' };
+	const bool is_negative { search_value.starts_with( '-' ) };
+	const std::string real_search_value { is_negative ? search_value.substr( 1 ) : search_value };
+	const auto wrapped_search_value { format_ns::format( "%{}%", real_search_value ) };
 
 	constexpr std::size_t max_limit { 32 };
 
@@ -41,7 +43,7 @@ drogon::Task< Json::Value > getSimilarTags(
 		limit $3
 		)",
 		wrapped_search_value,
-		search_value,
+		real_search_value,
 		std::min( limit, max_limit ) ) };
 
 	Json::Value tags { Json::arrayValue };
@@ -50,8 +52,10 @@ drogon::Task< Json::Value > getSimilarTags(
 	{
 		Json::Value tag;
 
-		tag[ "value" ] = row[ "tag_text" ].as< std::string >();
-		tag[ "tag_text" ] = row[ "tag_text" ].as< std::string >();
+		const auto tag_text { row[ "tag_text" ].as< std::string >() };
+
+		tag[ "value" ] = tag_text;
+		tag[ "tag_text" ] = tag_text;
 
 		tag[ "similarity" ] = row[ "similarity" ].as< double >();
 		tag[ "tag_id" ] = row[ "tag_id" ].as< TagID >();
