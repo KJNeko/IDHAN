@@ -8,8 +8,9 @@ var searchData=
   ['fileinfo_2ehpp_5',['FileInfo.hpp',['../d5/d4b/FileInfo_8hpp.html',1,'']]],
   ['filemappeddata_2ecpp_6',['FileMappedData.cpp',['../d3/d39/FileMappedData_8cpp.html',1,'']]],
   ['filemappeddata_2ehpp_7',['FileMappedData.hpp',['../d4/dfc/FileMappedData_8hpp.html',1,'']]],
-  ['findnamespace_2ecpp_8',['findNamespace.cpp',['../dd/d75/findNamespace_8cpp.html',1,'']]],
-  ['findsubtag_2ecpp_9',['findSubtag.cpp',['../d0/da5/findSubtag_8cpp.html',1,'']]],
-  ['fixme_2ehpp_10',['fixme.hpp',['../d6/d3b/fixme_8hpp.html',1,'']]],
-  ['format_5fns_2ehpp_11',['format_ns.hpp',['../d0/d24/format__ns_8hpp.html',1,'']]]
+  ['filerelationshipsapi_2ehpp_8',['FileRelationshipsAPI.hpp',['../da/db6/FileRelationshipsAPI_8hpp.html',1,'']]],
+  ['findnamespace_2ecpp_9',['findNamespace.cpp',['../dd/d75/findNamespace_8cpp.html',1,'']]],
+  ['findsubtag_2ecpp_10',['findSubtag.cpp',['../d0/da5/findSubtag_8cpp.html',1,'']]],
+  ['fixme_2ehpp_11',['fixme.hpp',['../d6/d3b/fixme_8hpp.html',1,'']]],
+  ['format_5fns_2ehpp_12',['format_ns.hpp',['../d0/d24/format__ns_8hpp.html',1,'']]]
 ];

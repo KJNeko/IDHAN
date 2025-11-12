@@ -6,6 +6,7 @@ var dir_8b56e136226ae89f755dd9aa547a23fc =
     [ "jobs", "dir_6e74b4ec5a1a3d45747d69ae137de1d6.html", "dir_6e74b4ec5a1a3d45747d69ae137de1d6" ],
     [ "maintenance", "dir_e84d74135f8c366c263c4f01c83a87a1.html", "dir_e84d74135f8c366c263c4f01c83a87a1" ],
     [ "record", "dir_d58859b02cb88531b9ec027a398b4ce3.html", "dir_d58859b02cb88531b9ec027a398b4ce3" ],
+    [ "relationships", "dir_4c29e8fbb33fc99674eb43dc255e817f.html", "dir_4c29e8fbb33fc99674eb43dc255e817f" ],
     [ "search", "dir_e04a1ae10351b4defd3799abea39e29c.html", "dir_e04a1ae10351b4defd3799abea39e29c" ],
     [ "stats", "dir_591c70c2161a19d6178e308b3b93a1a1.html", "dir_591c70c2161a19d6178e308b3b93a1a1" ],
     [ "tags", "dir_484b39b0a198af60834e458a13690619.html", "dir_484b39b0a198af60834e458a13690619" ],
@@ -14,6 +15,7 @@ var dir_8b56e136226ae89f755dd9aa547a23fc =
     [ "APIMaintenance.hpp", "d9/d9b/APIMaintenance_8hpp.html", "d9/d9b/APIMaintenance_8hpp" ],
     [ "ClusterAPI.hpp", "d0/ddc/ClusterAPI_8hpp.html", "d0/ddc/ClusterAPI_8hpp" ],
     [ "docs.cpp", "d8/d83/docs_8cpp.html", null ],
+    [ "FileRelationshipsAPI.hpp", "da/db6/FileRelationshipsAPI_8hpp.html", "da/db6/FileRelationshipsAPI_8hpp" ],
     [ "Heartbeat.cpp", "de/dfa/Heartbeat_8cpp.html", "de/dfa/Heartbeat_8cpp" ],
     [ "Heartbeat.hpp", "d2/db1/Heartbeat_8hpp.html", "d2/db1/Heartbeat_8hpp" ],
     [ "ImportAPI.hpp", "dd/dbe/ImportAPI_8hpp.html", "dd/dbe/ImportAPI_8hpp" ],
@@ -24,5 +26,6 @@ var dir_8b56e136226ae89f755dd9aa547a23fc =
     [ "tagSearch.cpp", "df/dfd/tagSearch_8cpp.html", null ],
     [ "Ui.cpp", "da/d8e/Ui_8cpp.html", null ],
     [ "Ui.hpp", "d1/d56/Ui_8hpp.html", "d1/d56/Ui_8hpp" ],
-    [ "version.cpp", "d5/d1f/version_8cpp.html", null ]
+    [ "version.cpp", "d5/d1f/version_8cpp.html", null ],
+    [ "version.hpp", "d7/dad/version_8hpp.html", "d7/dad/version_8hpp" ]
 ];

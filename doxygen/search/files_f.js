@@ -12,8 +12,11 @@ var searchData=
   ['searchorder_2ehpp_9',['SearchOrder.hpp',['../d3/d84/SearchOrder_8hpp.html',1,'']]],
   ['servercontext_2ecpp_10',['ServerContext.cpp',['../d3/d0d/ServerContext_8cpp.html',1,'']]],
   ['servercontext_2ehpp_11',['ServerContext.hpp',['../df/dda/ServerContext_8hpp.html',1,'']]],
-  ['sha256_2ecpp_12',['SHA256.cpp',['../d5/d9f/SHA256_8cpp.html',1,'']]],
-  ['sha256_2ehpp_13',['SHA256.hpp',['../db/d73/SHA256_8hpp.html',1,'']]],
-  ['splittag_2ecpp_14',['splitTag.cpp',['../d3/dc6/splitTag_8cpp.html',1,'']]],
-  ['splittag_2ehpp_15',['splitTag.hpp',['../dd/db8/splitTag_8hpp.html',1,'']]]
+  ['setalternatives_2ecpp_12',['setAlternatives.cpp',['../dc/d83/setAlternatives_8cpp.html',1,'']]],
+  ['setbetterduplicate_2ecpp_13',['setBetterDuplicate.cpp',['../d8/d7a/setBetterDuplicate_8cpp.html',1,'']]],
+  ['setduplicates_2ecpp_14',['setDuplicates.cpp',['../d5/d9d/setDuplicates_8cpp.html',1,'']]],
+  ['sha256_2ecpp_15',['SHA256.cpp',['../d5/d9f/SHA256_8cpp.html',1,'']]],
+  ['sha256_2ehpp_16',['SHA256.hpp',['../db/d73/SHA256_8hpp.html',1,'']]],
+  ['splittag_2ecpp_17',['splitTag.cpp',['../d3/dc6/splitTag_8cpp.html',1,'']]],
+  ['splittag_2ehpp_18',['splitTag.hpp',['../dd/db8/splitTag_8hpp.html',1,'']]]
 ];

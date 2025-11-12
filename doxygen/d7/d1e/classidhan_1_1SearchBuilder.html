@@ -113,6 +113,7 @@ $(function(){initNavTree('d7/d1e/classidhan_1_1SearchBuilder.html','../../'); in
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pri-methods">Private Member Functions</a> &#124;
+<a href="#pri-static-methods">Static Private Member Functions</a> &#124;
 <a href="#pri-attribs">Private Attributes</a> &#124;
 <a href="../../df/dac/classidhan_1_1SearchBuilder-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">idhan::SearchBuilder Class Reference</div></div>
@@ -135,8 +136,12 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a64b41df9d90bf75b3f4a5022342113a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a11fe172799d4a4358b4bdf05f23cd623" id="r_a11fe172799d4a4358b4bdf05f23cd623"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a11fe172799d4a4358b4bdf05f23cd623">addFileDomain</a> (<a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#af06f3216af925a1c845871a81277cc52">FileDomainID</a> value)</td></tr>
 <tr class="separator:a11fe172799d4a4358b4bdf05f23cd623"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab0c0d054f083fbab94914c75e97e3399" id="r_ab0c0d054f083fbab94914c75e97e3399"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0c0d054f083fbab94914c75e97e3399">setTags</a> (const std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; &amp;vector)</td></tr>
-<tr class="separator:ab0c0d054f083fbab94914c75e97e3399"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa50ad2e8f93e3827bfc19a40b4966840" id="r_aa50ad2e8f93e3827bfc19a40b4966840"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, std::shared_ptr&lt; drogon::HttpResponse &gt; &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa50ad2e8f93e3827bfc19a40b4966840">setTags</a> (const std::vector&lt; std::string &gt; &amp;tags)</td></tr>
+<tr class="separator:aa50ad2e8f93e3827bfc19a40b4966840"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae38696db13729ca2746df40ca9750534" id="r_ae38696db13729ca2746df40ca9750534"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae38696db13729ca2746df40ca9750534">setPositiveTags</a> (const std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; &amp;vector)</td></tr>
+<tr class="separator:ae38696db13729ca2746df40ca9750534"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aadd2550deff3bfbac8c5445e3e8a2bfa" id="r_aadd2550deff3bfbac8c5445e3e8a2bfa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aadd2550deff3bfbac8c5445e3e8a2bfa">setNegativeTags</a> (const std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; &amp;tag_ids)</td></tr>
+<tr class="separator:aadd2550deff3bfbac8c5445e3e8a2bfa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac74ffdb5120030d75b96bf047d25c8ad" id="r_ac74ffdb5120030d75b96bf047d25c8ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac74ffdb5120030d75b96bf047d25c8ad">setDisplay</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807a">HydrusDisplayType</a> type)</td></tr>
 <tr class="separator:ac74ffdb5120030d75b96bf047d25c8ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -145,6 +150,11 @@ Private Member Functions</h2></td></tr>
 <tr class="memitem:aa8cc4f836d24ce130a823cd680bcc537" id="r_aa8cc4f836d24ce130a823cd680bcc537"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8cc4f836d24ce130a823cd680bcc537">construct</a> (bool return_ids=true, bool return_hashes=false, bool filter_domains=false)</td></tr>
 <tr class="memdesc:aa8cc4f836d24ce130a823cd680bcc537"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a query to be used. $1 is expected to be an array of tag_domain_ids.  <br /></td></tr>
 <tr class="separator:aa8cc4f836d24ce130a823cd680bcc537"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-static-methods" name="pri-static-methods"></a>
+Static Private Member Functions</h2></td></tr>
+<tr class="memitem:a6c8f3f715c7578d18157919bcd883e86" id="r_a6c8f3f715c7578d18157919bcd883e86"><td class="memItemLeft" align="right" valign="top">static std::unordered_map&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a>, std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6c8f3f715c7578d18157919bcd883e86">createFilters</a> (const std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; &amp;tag_ids, bool filter_domains)</td></tr>
+<tr class="separator:a6c8f3f715c7578d18157919bcd883e86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
@@ -163,8 +173,10 @@ Private Attributes</h2></td></tr>
 <tr class="separator:a450567413e0c4bffadfaeeb2daa9d742"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aed7bf7e9c600b6aeaab9d7d7d7d795e4" id="r_aed7bf7e9c600b6aeaab9d7d7d7d795e4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1">SortOrder</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed7bf7e9c600b6aeaab9d7d7d7d795e4">m_order</a></td></tr>
 <tr class="separator:aed7bf7e9c600b6aeaab9d7d7d7d795e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9af3a9a5693fc46be1304d5e8a9ffa4a" id="r_a9af3a9a5693fc46be1304d5e8a9ffa4a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9af3a9a5693fc46be1304d5e8a9ffa4a">m_tags</a></td></tr>
-<tr class="separator:a9af3a9a5693fc46be1304d5e8a9ffa4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae11b1929f15e3d706db5072b5382200f" id="r_ae11b1929f15e3d706db5072b5382200f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae11b1929f15e3d706db5072b5382200f">m_positive_tags</a></td></tr>
+<tr class="separator:ae11b1929f15e3d706db5072b5382200f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec0aa18be2d8946292eee6c3f391f380" id="r_aec0aa18be2d8946292eee6c3f391f380"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aec0aa18be2d8946292eee6c3f391f380">m_negative_tags</a> {}</td></tr>
+<tr class="separator:aec0aa18be2d8946292eee6c3f391f380"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a830b5531099658f8a6a1b4bc9a9f1393" id="r_a830b5531099658f8a6a1b4bc9a9f1393"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/dcf/namespaceidhan.html#a73650c5f1993b5e6816c6ea26de7807a">HydrusDisplayType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a830b5531099658f8a6a1b4bc9a9f1393">m_display_mode</a></td></tr>
 <tr class="separator:a830b5531099658f8a6a1b4bc9a9f1393"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a58dd5f3b0e7d1d936c44e506adccbd1f" id="r_a58dd5f3b0e7d1d936c44e506adccbd1f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a58dd5f3b0e7d1d936c44e506adccbd1f">m_bind_domains</a> { false }</td></tr>
@@ -251,6 +263,35 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a6c8f3f715c7578d18157919bcd883e86" name="a6c8f3f715c7578d18157919bcd883e86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6c8f3f715c7578d18157919bcd883e86">&#9670;&#160;</a></span>createFilters()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unordered_map&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a>, std::string &gt; idhan::SearchBuilder::createFilters </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tag_ids</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>filter_domains</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a64b41df9d90bf75b3f4a5022342113a0" name="a64b41df9d90bf75b3f4a5022342113a0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a64b41df9d90bf75b3f4a5022342113a0">&#9670;&#160;</a></span>filterTagDomain()</h2>
 
@@ -316,6 +357,40 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aadd2550deff3bfbac8c5445e3e8a2bfa" name="aadd2550deff3bfbac8c5445e3e8a2bfa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aadd2550deff3bfbac8c5445e3e8a2bfa">&#9670;&#160;</a></span>setNegativeTags()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::SearchBuilder::setNegativeTags </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tag_ids</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae38696db13729ca2746df40ca9750534" name="ae38696db13729ca2746df40ca9750534"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae38696db13729ca2746df40ca9750534">&#9670;&#160;</a></span>setPositiveTags()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void idhan::SearchBuilder::setPositiveTags </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vector</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a9955906704ef87cd2b005e93f47f289a" name="a9955906704ef87cd2b005e93f47f289a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9955906704ef87cd2b005e93f47f289a">&#9670;&#160;</a></span>setSortOrder()</h2>
 
@@ -350,16 +425,16 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="ab0c0d054f083fbab94914c75e97e3399" name="ab0c0d054f083fbab94914c75e97e3399"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab0c0d054f083fbab94914c75e97e3399">&#9670;&#160;</a></span>setTags()</h2>
+<a id="aa50ad2e8f93e3827bfc19a40b4966840" name="aa50ad2e8f93e3827bfc19a40b4966840"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa50ad2e8f93e3827bfc19a40b4966840">&#9670;&#160;</a></span>setTags()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void idhan::SearchBuilder::setTags </td>
+          <td class="memname"><a class="el" href="../../d6/d3e/ExpectedTask_8hpp.html#a714fc8bcdace841416da50abe0966af4">ExpectedTask</a>&lt; void &gt; idhan::SearchBuilder::setTags </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vector</em></span></td><td>)</td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>tags</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -448,6 +523,28 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aec0aa18be2d8946292eee6c3f391f380" name="aec0aa18be2d8946292eee6c3f391f380"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aec0aa18be2d8946292eee6c3f391f380">&#9670;&#160;</a></span>m_negative_tags</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; idhan::SearchBuilder::m_negative_tags {}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="aed7bf7e9c600b6aeaab9d7d7d7d795e4" name="aed7bf7e9c600b6aeaab9d7d7d7d795e4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aed7bf7e9c600b6aeaab9d7d7d7d795e4">&#9670;&#160;</a></span>m_order</h2>
 
@@ -459,6 +556,28 @@ Private Attributes</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="../../dd/dcf/namespaceidhan.html#afc75313617103d43e0454bc5365ddbd1">SortOrder</a> idhan::SearchBuilder::m_order</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae11b1929f15e3d706db5072b5382200f" name="ae11b1929f15e3d706db5072b5382200f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae11b1929f15e3d706db5072b5382200f">&#9670;&#160;</a></span>m_positive_tags</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; idhan::SearchBuilder::m_positive_tags</td>
         </tr>
       </table>
   </td>
@@ -497,28 +616,6 @@ Private Attributes</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="../../dd/dcf/namespaceidhan.html#a5c24ee7f031693df1f26c9cb4a207970">SortType</a> idhan::SearchBuilder::m_sort_type</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a9af3a9a5693fc46be1304d5e8a9ffa4a" name="a9af3a9a5693fc46be1304d5e8a9ffa4a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9af3a9a5693fc46be1304d5e8a9ffa4a">&#9670;&#160;</a></span>m_tags</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; idhan::SearchBuilder::m_tags</td>
         </tr>
       </table>
   </td>

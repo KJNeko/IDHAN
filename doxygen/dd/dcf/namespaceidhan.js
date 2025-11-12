@@ -28,7 +28,8 @@ var namespaceidhan =
     [ "helpers", "d7/dc1/namespaceidhan_1_1helpers.html", [
       [ "fetchUrlsJson", "d7/dc1/namespaceidhan_1_1helpers.html#ac40cc222263d6a61524ad06fb9f57f9f", null ],
       [ "fetchUrlsStrings", "d7/dc1/namespaceidhan_1_1helpers.html#a31e4513c6455ee7a5e5ac0fc1515e409", null ],
-      [ "findOrCreateUrl", "d7/dc1/namespaceidhan_1_1helpers.html#ac4604ade5afe344d3226050fd63354f9", null ],
+      [ "findOrCreateUrl", "d7/dc1/namespaceidhan_1_1helpers.html#a72c00c8feaf830383de4711aa63a5dd8", null ],
+      [ "findOrCreateUrlDomain", "d7/dc1/namespaceidhan_1_1helpers.html#aafeddc791d1370541176ba764cfbda88", null ],
       [ "INVALID_URL_ID", "d7/dc1/namespaceidhan_1_1helpers.html#af0f6251a6f830052ed5dc7ac5c0a7ad3", null ]
     ] ],
     [ "hyapi", "d2/d18/namespaceidhan_1_1hyapi.html", "d2/d18/namespaceidhan_1_1hyapi" ],
@@ -239,6 +240,7 @@ var namespaceidhan =
     [ "handleVersionInfo", "dd/dcf/namespaceidhan.html#aa32290eb8fec468bba8a98213ecf71c2", null ],
     [ "hyToIDHANSortType", "dd/dcf/namespaceidhan.html#a9301fcccee80b6f287ded422a44f8150", null ],
     [ "ioThread", "dd/dcf/namespaceidhan.html#a6263c51c6d3d4f2de1823665d392ef42", null ],
+    [ "mapTags", "dd/dcf/namespaceidhan.html#a099c89a8a6e4e95b593b85953ac76716", null ],
     [ "parseArrayParmeters", "dd/dcf/namespaceidhan.html#ae1f955a09fa3220012fb0c401950fcfa", null ],
     [ "setFileInfo", "dd/dcf/namespaceidhan.html#a9bdcf5d8aa4cb60929c7d34c1fda14ec", null ],
     [ "splitTag", "dd/dcf/namespaceidhan.html#a37cff2a5b3a86f9964161d219f392141", null ],

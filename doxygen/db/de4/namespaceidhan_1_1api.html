@@ -113,6 +113,7 @@ $(function(){initNavTree('db/de4/namespaceidhan_1_1api.html','../../'); initResi
   <div class="summary">
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">idhan::api Namespace Reference</div></div>
 </div><!--header-->
@@ -133,6 +134,8 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d8c/classidhan_1_1api_1_1ClusterAPI.html">ClusterAPI</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dd2/classidhan_1_1api_1_1FileRelationshipsAPI.html">FileRelationshipsAPI</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d91/classidhan_1_1api_1_1Heartbeat.html">Heartbeat</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d82/classidhan_1_1api_1_1ImportAPI.html">ImportAPI</a></td></tr>
@@ -151,6 +154,11 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d19/structidhan_1_1api_1_1TagPair.html">TagPair</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
+Typedefs</h2></td></tr>
+<tr class="memitem:a8a61b9a9b3714faf3c8dc1343ab47b9c" id="r_a8a61b9a9b3714faf3c8dc1343ab47b9c"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">GroupID</a> = <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acd88fac2e7d6b30172740a5892dd8b31">idhan::Integer</a></td></tr>
+<tr class="separator:a8a61b9a9b3714faf3c8dc1343ab47b9c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -190,6 +198,18 @@ Functions</h2></td></tr>
 <tr class="separator:a3e1ab7867f4b263f1227849150d4ea63"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad78225c4f836cf770e3ece6add569b88" id="r_ad78225c4f836cf770e3ece6add569b88"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::expected&lt; void, drogon::HttpResponsePtr &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad78225c4f836cf770e3ece6add569b88">addTagsToRecord</a> (const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> record_id, std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acb408bb6165a33911770cf77136ab7ba">TagID</a> &gt; tag_ids, const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#a2b74a7df051672588fe89ebbbe4a5f76">TagDomainID</a> tag_domain_id, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
 <tr class="separator:ad78225c4f836cf770e3ece6add569b88"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a22354667e81bd9d976a1329327919c55" id="r_a22354667e81bd9d976a1329327919c55"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; <a class="el" href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">GroupID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a22354667e81bd9d976a1329327919c55">createNewGroup</a> (<a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:a22354667e81bd9d976a1329327919c55"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af02f25c36dc7d272d27a5d4dae2cbb85" id="r_af02f25c36dc7d272d27a5d4dae2cbb85"><td class="memItemLeft" align="right" valign="top">drogon::Task&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af02f25c36dc7d272d27a5d4dae2cbb85">addItemsToNewGroup</a> (std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt; record_ids, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
+<tr class="separator:af02f25c36dc7d272d27a5d4dae2cbb85"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1713fa4fffc39f877bbe3a309a8ee5cc" id="r_a1713fa4fffc39f877bbe3a309a8ee5cc"><td class="memItemLeft" align="right" valign="top">drogon::Task&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1713fa4fffc39f877bbe3a309a8ee5cc">addItemsToExistingGroup</a> (std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt; record_ids, const std::vector&lt; <a class="el" href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">GroupID</a> &gt; group_ids, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:a1713fa4fffc39f877bbe3a309a8ee5cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeeb46801f48867b3e7a2d603234225c6" id="r_aeeb46801f48867b3e7a2d603234225c6"><td class="memItemLeft" align="right" valign="top">drogon::Task&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeeb46801f48867b3e7a2d603234225c6">addItemsToExistingGroupsMerge</a> (std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt; record_ids, std::vector&lt; <a class="el" href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">GroupID</a> &gt; group_ids, drogon::orm::DbClientPtr db)</td></tr>
+<tr class="separator:aeeb46801f48867b3e7a2d603234225c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add248c9d2f9d2adede17211d3b4d827a" id="r_add248c9d2f9d2adede17211d3b4d827a"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add248c9d2f9d2adede17211d3b4d827a">setBetterDuplicateMultiple</a> (const Json::Value json)</td></tr>
+<tr class="separator:add248c9d2f9d2adede17211d3b4d827a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a843089731c1cfd96fe802cf3e619d80a" id="r_a843089731c1cfd96fe802cf3e619d80a"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; drogon::HttpResponsePtr &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a843089731c1cfd96fe802cf3e619d80a">setBetterDuplicateSingle</a> (const Json::Value json)</td></tr>
+<tr class="separator:a843089731c1cfd96fe802cf3e619d80a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5c5b023d5e1af53fe87c1619750fe72c" id="r_a5c5b023d5e1af53fe87c1619750fe72c"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; Json::Value &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5c5b023d5e1af53fe87c1619750fe72c">getSimilarTags</a> (std::string search_value, <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db, std::size_t limit=10)</td></tr>
 <tr class="separator:a5c5b023d5e1af53fe87c1619750fe72c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa6d13296f504a6e76ff871ee0f977d76" id="r_aa6d13296f504a6e76ff871ee0f977d76"><td class="memItemLeft" align="right" valign="top">drogon::Task&lt; std::optional&lt; Json::Value &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa6d13296f504a6e76ff871ee0f977d76">getTagDomainInfoJson</a> (const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#a2b74a7df051672588fe89ebbbe4a5f76">TagDomainID</a> tag_domain_id, const <a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a> db)</td></tr>
@@ -212,6 +232,21 @@ Functions</h2></td></tr>
 <tr class="memdesc:ab8fc25e1993854b5328d67f9f9119f28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the metadata for a given record after parsing the file.  <br /></td></tr>
 <tr class="separator:ab8fc25e1993854b5328d67f9f9119f28"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Typedef Documentation</h2>
+<a id="a8a61b9a9b3714faf3c8dc1343ab47b9c" name="a8a61b9a9b3714faf3c8dc1343ab47b9c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">&#9670;&#160;</a></span>GroupID</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">idhan::api::GroupID</a> = <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#acd88fac2e7d6b30172740a5892dd8b31">idhan::Integer</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="a082b7a51916c5c086534d8fbc5ad9e8e" name="a082b7a51916c5c086534d8fbc5ad9e8e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a082b7a51916c5c086534d8fbc5ad9e8e">&#9670;&#160;</a></span>addFileSpecificInfo()</h2>
@@ -254,6 +289,79 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a></td>          <td class="paramname"><span class="paramname"><em>record_id</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a></td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a1713fa4fffc39f877bbe3a309a8ee5cc" name="a1713fa4fffc39f877bbe3a309a8ee5cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1713fa4fffc39f877bbe3a309a8ee5cc">&#9670;&#160;</a></span>addItemsToExistingGroup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task idhan::api::addItemsToExistingGroup </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>record_ids</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">GroupID</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>group_ids</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aeeb46801f48867b3e7a2d603234225c6" name="aeeb46801f48867b3e7a2d603234225c6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeeb46801f48867b3e7a2d603234225c6">&#9670;&#160;</a></span>addItemsToExistingGroupsMerge()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task idhan::api::addItemsToExistingGroupsMerge </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>record_ids</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">GroupID</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>group_ids</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">drogon::orm::DbClientPtr</td>          <td class="paramname"><span class="paramname"><em>db</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af02f25c36dc7d272d27a5d4dae2cbb85" name="af02f25c36dc7d272d27a5d4dae2cbb85"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af02f25c36dc7d272d27a5d4dae2cbb85">&#9670;&#160;</a></span>addItemsToNewGroup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task idhan::api::addItemsToNewGroup </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="../../d9/daf/namespaceidhan_1_1types.html#ad8dd08152819612875829d195045dc7f">RecordID</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>record_ids</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -353,6 +461,23 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::size_t</td>          <td class="paramname"><span class="paramname"><em>deleted_time</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a22354667e81bd9d976a1329327919c55" name="a22354667e81bd9d976a1329327919c55"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a22354667e81bd9d976a1329327919c55">&#9670;&#160;</a></span>createNewGroup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; <a class="el" href="#a8a61b9a9b3714faf3c8dc1343ab47b9c">GroupID</a> &gt; idhan::api::createNewGroup </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/dcf/namespaceidhan.html#a23209f5c624c06ffdb5da9449e4e32b4">DbClientPtr</a></td>          <td class="paramname"><span class="paramname"><em>db</em></span></td><td>)</td>
+          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -753,6 +878,40 @@ Functions</h2></td></tr>
           <td class="memname">void idhan::api::sendStatusJson </td>
           <td>(</td>
           <td class="paramtype">const drogon::WebSocketConnectionPtr &amp;</td>          <td class="paramname"><span class="paramname"><em>wsConnPtr</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="add248c9d2f9d2adede17211d3b4d827a" name="add248c9d2f9d2adede17211d3b4d827a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add248c9d2f9d2adede17211d3b4d827a">&#9670;&#160;</a></span>setBetterDuplicateMultiple()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; drogon::HttpResponsePtr &gt; idhan::api::setBetterDuplicateMultiple </td>
+          <td>(</td>
+          <td class="paramtype">const Json::Value</td>          <td class="paramname"><span class="paramname"><em>json</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a843089731c1cfd96fe802cf3e619d80a" name="a843089731c1cfd96fe802cf3e619d80a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a843089731c1cfd96fe802cf3e619d80a">&#9670;&#160;</a></span>setBetterDuplicateSingle()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">drogon::Task&lt; drogon::HttpResponsePtr &gt; idhan::api::setBetterDuplicateSingle </td>
+          <td>(</td>
+          <td class="paramtype">const Json::Value</td>          <td class="paramname"><span class="paramname"><em>json</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>

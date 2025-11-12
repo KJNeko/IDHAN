@@ -1,8 +1,4 @@
 var searchData=
 [
-  ['idhanerror_0',['IDHANError',['../dd/dcf/namespaceidhan.html#ac0d5ed4d3d213a94480c7141eac7ce1a',1,'idhan']]],
-  ['idhanerrorhandler_1',['IDHANErrorHandler',['../dd/dcf/namespaceidhan.html#ab065ab405e7080bdb90b7929a01f07d7',1,'idhan']]],
-  ['idhanresponsehandler_2',['IDHANResponseHandler',['../dd/dcf/namespaceidhan.html#a54a840927284a4b6b83f881e616dd76b',1,'idhan']]],
-  ['int_3',['Int',['../d9/daf/namespaceidhan_1_1types.html#ab896c3dea505f21b0d192cd7f2c035b0',1,'idhan::types']]],
-  ['integer_4',['Integer',['../d9/daf/namespaceidhan_1_1types.html#acd88fac2e7d6b30172740a5892dd8b31',1,'idhan::types']]]
+  ['handle_5ftype_0',['handle_type',['../d9/d52/structidhan_1_1WriteAwaiter.html#a5c5038acef9c6cb58823f1d9784d6eb4',1,'idhan::WriteAwaiter::handle_type'],['../d7/d30/structidhan_1_1ImmedientTask.html#a85971001bd3d356b696604f43925e5a8',1,'idhan::ImmedientTask::handle_type'],['../d1/dd0/structidhan_1_1ImmedientTask_3_01void_01_4.html#a1af9eab14690ec4bab25cf41b38b38fc',1,'idhan::ImmedientTask&lt; void &gt;::handle_type'],['../d7/d30/structidhan_1_1ImmedientTask.html#a85971001bd3d356b696604f43925e5a8',1,'idhan::ImmedientTask&lt; void &gt;::handle_type'],['../d7/d30/structidhan_1_1ImmedientTask.html#a85971001bd3d356b696604f43925e5a8',1,'idhan::ImmedientTask&lt; void &gt;::promise_type::handle_type']]]
 ];

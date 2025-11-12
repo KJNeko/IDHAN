@@ -5,6 +5,7 @@ var drogonArrayBind_8cpp =
     [ "createPgBinaryArray", "d8/d1c/drogonArrayBind_8cpp.html#af2bd2a5c6583a83dc18d121cdbbac933", null ],
     [ "createPgBinaryArray", "d8/d1c/drogonArrayBind_8cpp.html#a3b638270bf7c9c40018bcf61f9fa9d74", null ],
     [ "createPgBinaryArray", "d8/d1c/drogonArrayBind_8cpp.html#a00c8182537556748afcaa25ee98ea787", null ],
+    [ "createPgBinaryArray", "d8/d1c/drogonArrayBind_8cpp.html#a0365b85a310c4f3652ccb068c981a988", null ],
     [ "createPgBinaryArray", "d8/d1c/drogonArrayBind_8cpp.html#a10cb7eca5994faf20c3b2b1fc161fefd", null ],
     [ "createPgBinaryArray", "d8/d1c/drogonArrayBind_8cpp.html#aa2ed4d3e3da0f75f8c35e3a00c595066", null ],
     [ "createPgBinaryArray", "d8/d1c/drogonArrayBind_8cpp.html#ae5cba0267b5db444b5972bbeaa9354d0", null ],
