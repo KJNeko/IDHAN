@@ -31,7 +31,7 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	SearchBuilder builder {};
 
-	builder.setTags( tag_ids );
+	builder.setPositiveTags( tag_ids );
 
 	const auto result { co_await builder.query( db, tag_domain_ids ) };
 

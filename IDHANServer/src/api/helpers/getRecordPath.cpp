@@ -9,6 +9,15 @@
 
 namespace idhan::api::helpers
 {
+
+std::filesystem::path getFileFolder( const SHA256& sha256 )
+{
+	const auto hex { sha256.hex() };
+	const auto folder_name { std::format( "f{}", hex.substr( 0, 2 ) ) };
+
+	return folder_name;
+}
+
 drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > getRecordPath(
 	const RecordID record_id,
 	DbClientPtr db )
@@ -31,9 +40,14 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > 
 	const std::string mime_extension { result[ 0 ][ 2 ].as< std::string >() };
 
 	const auto hex { sha256.hex() };
-	const std::filesystem::path file_location {
-		folder_path / std::format( "f{}", hex.substr( 0, 2 ) ) / ( std::format( "{}.{}", hex, mime_extension ) )
+
+	const auto filename {
+		mime_extension.empty() ? std::format( "{}", hex ) : std::format( "{}.{}", hex, mime_extension )
 	};
+
+	const auto folder_name { getFileFolder( sha256 ) };
+
+	const auto file_location { folder_path / folder_name / filename };
 
 	co_return file_location;
 }

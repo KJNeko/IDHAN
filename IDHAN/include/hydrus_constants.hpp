@@ -4,6 +4,7 @@
 #pragma once
 
 #include "hydrus/HydrusConstants_gen.hpp"
+#include "mime_type_map.hpp"
 
 namespace idhan::hydrus::hy_constants
 {
@@ -35,6 +36,13 @@ inline std::uint16_t simpleToHyType( SimpleMimeType type )
 		case SimpleMimeType::IMAGE_PROJECT:
 			return gen_constants::GENERAL_IMAGE_PROJECT;
 	}
+}
+
+inline std::uint16_t mimeToHyType( const std::string& mime_name )
+{
+	if ( auto itter = hy_type_mime.find( mime_name ); itter != hy_type_mime.end() ) return itter->second;
+
+	return gen_constants::GENERAL_IMAGE;
 }
 
 } // namespace idhan::hydrus::hy_constants

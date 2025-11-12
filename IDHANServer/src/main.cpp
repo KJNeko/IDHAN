@@ -149,6 +149,12 @@ int main( int argc, char** argv )
 		}
 	}
 
+	log::info(
+		"Starting IDHAN context v{}.{}.{}",
+		IDHAN_MAJOR_VERSION,
+		IDHAN_MINOR_VERSION,
+		IDHAN_PATCH_VERSION );
+
 	idhan::ServerContext context { arguments };
 
 	context.run();

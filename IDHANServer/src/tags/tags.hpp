@@ -8,6 +8,8 @@
 #include <IDHANTypes.hpp>
 #include <expected>
 
+#include "api/helpers/ExpectedTask.hpp"
+#include "db/dbTypes.hpp"
 #include "errors/ErrorInfo.hpp"
 
 namespace idhan
@@ -23,5 +25,9 @@ drogon::Task< std::expected< TagID, IDHANError > > createTag(
 	std::string tag_namespace,
 	std::string tag_subtag,
 	drogon::orm::DbClientPtr db );
+
+ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
+	const std::vector< std::string >& tags,
+	DbClientPtr db );
 
 } // namespace idhan

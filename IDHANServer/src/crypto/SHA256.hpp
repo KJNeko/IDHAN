@@ -35,8 +35,6 @@ class SHA256
 {
 	std::array< std::byte, ( 256 / 8 ) > m_data {};
 
-	SHA256() = delete;
-
 	explicit SHA256( const std::byte* data );
 	SHA256( const std::string_view& data );
 
@@ -48,7 +46,7 @@ class SHA256
 
   public:
 
-	static constexpr std::size_t size() { return ( 256 / 8 ); }
+	SHA256() = default;
 
 	SHA256( const drogon::orm::Field& field );
 
@@ -57,6 +55,8 @@ class SHA256
 
 	SHA256& operator=( SHA256&& other ) = default;
 	SHA256( SHA256&& other ) = default;
+
+	static constexpr std::size_t size() { return ( 256 / 8 ); }
 
 	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; }
 

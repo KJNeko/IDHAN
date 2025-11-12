@@ -58,8 +58,14 @@ void ServerContext::setupCORSSupport() const
 		} );
 
 	drogon::app().registerPostHandlingAdvice(
-		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
-		{ addCORSHeaders( response ); } );
+		[ this ]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
+		{
+			if ( args.testmode )
+				log::info( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
+			else
+				log::debug( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
+			addCORSHeaders( response );
+		} );
 }
 
 void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
