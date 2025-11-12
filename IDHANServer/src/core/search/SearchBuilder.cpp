@@ -53,7 +53,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	std::string query { "WITH " };
 	query.reserve( 1024 );
 
-	if ( m_positive_tags.empty() )
+	if ( m_positive_tags.empty() && m_negative_tags.empty() )
 	{
 		return "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL";
 	}
@@ -65,6 +65,12 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	const auto filter_map { createFilters( filtered_tags, filter_domains ) };
 
 	std::string positive_filter { "positive_filter AS (" };
+
+	if ( m_positive_tags.empty() )
+	{
+		// If there is no 'positive tags', we need to populate the positive filter with something to prevent it from returning nothing
+		positive_filter += "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL),";
+	}
 
 	for ( auto itter = m_positive_tags.begin(); itter != m_positive_tags.end(); ++itter )
 	{
