@@ -143,6 +143,18 @@ class IDHANClient
 		TagDomainID tag_domain_id,
 		std::vector< std::vector< std::pair< std::string, std::string > > >&& tag_sets );
 
+	// File relationships
+	QFuture< void > setAlternativeGroups( std::vector< RecordID >& record_ids );
+
+	QFuture< void > setDuplicates( RecordID worse_duplicate, RecordID better_duplicate );
+
+	/**
+	 *
+	 * @param pairs Pairs of ids in a (worse_id, better_id) format
+	 * @return
+	 */
+	QFuture< void > setDuplicates( const std::vector< std::pair< RecordID, RecordID > >& pairs );
+
 	/**
 	 * @brief Creates a parent/child relationship between two tags
 	 * @param parent_id
@@ -237,6 +249,14 @@ class IDHANClient
 		std::size_t byte_limit,
 		std::uint16_t ratio,
 		bool readonly );
+
+	QFuture< void > addUrls( RecordID record_id, const std::vector< std::string >& urls );
+
+	inline QFuture< void > addUrl( const RecordID record_id, std::string url )
+	{
+		std::vector< std::string > urls { { url } };
+		return addUrls( record_id, urls );
+	}
 
   private:
 

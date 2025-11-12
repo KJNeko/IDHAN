@@ -50,7 +50,9 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	const RecordID record_id,
 	Json::Value data )
 {
-	auto metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
+	auto metadata = co_await db->execSqlCoro(
+		"SELECT simple_mime_type, mime.name as mime_name FROM metadata JOIN file_info USING (record_id) JOIN MIME USING (mime_id) WHERE record_id = $1",
+		record_id );
 
 	if ( metadata.empty() )
 	{
@@ -58,16 +60,18 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 		const auto parse_result { co_await api::tryParseRecordMetadata( record_id, db ) };
 		if ( !parse_result ) co_return std::unexpected( parse_result.error() );
 
-		metadata = co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
+		metadata = co_await db->execSqlCoro(
+			"SELECT simple_mime_type, mime.name as mime_name FROM metadata JOIN file_info USING (record_id) JOIN MIME USING (mime_id) WHERE record_id = $1",
+			record_id );
 
 		if ( metadata.empty() )
 			co_return std::unexpected( createInternalError( "Failed to get mime type for record {}", record_id ) );
 	}
 
-	const SimpleMimeType simple_mime_type { metadata[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() };
+	const auto mime_name { metadata[ 0 ][ "mime_name" ].as< std::string >() };
+	data[ "filetype_enum" ] = hydrus::hy_constants::mimeToHyType( mime_name );
 
-	data[ "filetype_enum" ] =
-		static_cast< Json::Value::Int >( hydrus::hy_constants::simpleToHyType( simple_mime_type ) );
+	const SimpleMimeType simple_mime_type { metadata[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() };
 
 	switch ( simple_mime_type )
 	{

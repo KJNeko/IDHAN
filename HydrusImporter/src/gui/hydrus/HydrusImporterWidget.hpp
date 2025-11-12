@@ -36,6 +36,11 @@ class HydrusImporterWidget final : public QWidget
 	explicit HydrusImporterWidget( QWidget* parent = nullptr );
 	~HydrusImporterWidget() override;
 
+	void parseTagServices();
+	void addServiceWidget( QWidget* widget );
+	void parseFileRelationships();
+	void parseUrls();
+
   public slots:
 	void on_hydrusFolderPath_textChanged( const QString& path );
 	void testHydrusPath();

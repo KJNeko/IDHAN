@@ -8,6 +8,7 @@
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/records.hpp"
+#include "api/version.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
@@ -19,7 +20,6 @@
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
 #include "metadata/parseMetadata.hpp"
-#include "versions.hpp"
 
 namespace idhan::hyapi
 {
@@ -194,31 +194,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		search_tags.emplace_back( tag_text );
 	}
 
-	std::string tag_array_str {};
-	tag_array_str.reserve( search_tags.size() * 128 );
-	for ( std::size_t i = 0; i < search_tags.size(); ++i )
-	{
-		tag_array_str += format_ns::format( "\'{}\'", search_tags[ i ] );
-		if ( i + 1 != search_tags.size() ) tag_array_str += ",";
-	}
-	const auto query {
-		format_ns::format( "SELECT tag_id, tag_text FROM tags WHERE tag_text = ANY(ARRAY[{}]::TEXT[])", tag_array_str )
-	};
+	const auto search_result {co_await builder.setTags( search_tags )};
 
-	const auto tag_id_result { co_await db->execSqlCoro( query ) };
-
-	if ( tag_id_result.size() != search_tags.size() )
-		co_return createInternalError( "Failed to get all search tags ids. Maybe unknown tag?" );
-
-	std::vector< TagID > tag_ids {};
-	tag_ids.reserve( search_tags.size() );
-
-	for ( const auto& row : tag_id_result )
-	{
-		tag_ids.emplace_back( row[ "tag_id" ].as< TagID >() );
-	}
-
-	builder.setTags( tag_ids );
 
 	// TODO: file domains. For now we'll assume all files
 

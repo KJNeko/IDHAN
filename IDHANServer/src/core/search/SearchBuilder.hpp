@@ -3,10 +3,12 @@
 //
 #pragma once
 
+#include <expected>
 #include <string_view>
 
 #include "IDHANTypes.hpp"
 #include "SearchBuilder.hpp"
+#include "api/APIAuth.hpp"
 #include "db/dbTypes.hpp"
 #include "drogon/HttpRequest.h"
 #include "drogon/orm/DbClient.h"
@@ -160,11 +162,15 @@ class SearchBuilder
 
 	SortType m_sort_type;
 	SortOrder m_order;
-	std::vector< TagID > m_tags;
+	std::vector< TagID > m_positive_tags;
+	std::vector< TagID > m_negative_tags {};
 
 	HydrusDisplayType m_display_mode;
 	bool m_bind_domains { false };
 
+	static std::unordered_map< TagID, std::string > createFilters(
+		const std::vector< TagID >& tag_ids,
+		bool filter_domains );
 	/**
 	 * @brief Constructs a query to be used. $1 is expected to be an array of tag_domain_ids
 	 * @param return_ids
@@ -191,8 +197,11 @@ class SearchBuilder
 	void filterTagDomain( TagDomainID value );
 
 	void addFileDomain( FileDomainID value );
+	drogon::Task< std::expected< void, std::shared_ptr< drogon::HttpResponse > > > setTags(
+		const std::vector< std::string >& tags );
 
-	void setTags( const std::vector< TagID >& vector );
+	void setPositiveTags( const std::vector< TagID >& vector );
+	void setNegativeTags( const std::vector< TagID >& tag_ids );
 
 	void setDisplay( HydrusDisplayType type );
 };

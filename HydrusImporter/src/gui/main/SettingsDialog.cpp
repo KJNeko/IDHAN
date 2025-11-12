@@ -4,6 +4,8 @@
 
 #include "SettingsDialog.hpp"
 
+#include <moc_SettingsDialog.cpp>
+
 #include <QFutureWatcher>
 
 #include "idhan/IDHANClient.hpp"
@@ -41,10 +43,11 @@ void SettingsDialog::on_testConnection_pressed()
 		{
 			const auto result { watcher->result() };
 
-			ui->networkSettingsLabel->setText( QString( "Connected to IDHAN v%1 (Build: %4, Commit: %5)" )
-			                                       .arg( result.server.str )
-			                                       .arg( result.build_type )
-			                                       .arg( result.commit ) );
+			ui->networkSettingsLabel->setText(
+				QString( "Connected to IDHAN v%1 (Build: %4, Commit: %5)" )
+					.arg( result.server.str )
+					.arg( result.build_type )
+					.arg( result.commit ) );
 		}
 		catch ( std::exception& e )
 		{
