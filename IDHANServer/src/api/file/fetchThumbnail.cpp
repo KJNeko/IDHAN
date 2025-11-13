@@ -78,22 +78,18 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
 
-		const auto record_path { co_await filesystem::getRecordPath( record_id, db ) };
-
-		if ( !record_path ) co_return record_path.error();
-
 		// FileMappedData data { record_path.value() };
-		FileIOUring io_uring { record_path.value() };
+		auto io_uring_e { co_await filesystem::getIOForRecord( record_id, db ) };
+		if ( !io_uring_e ) co_return io_uring_e.error();
+		auto& io_uring { io_uring_e.value() };
 
 		//TODO: Allow requesting a specific thumbnail size
 		std::size_t height { 256 };
 		std::size_t width { 256 };
 
-		std::vector< std::byte > data { co_await io_uring.readAll() };
+		const auto& [ data, data_size ] = io_uring.mmapReadOnly();
 
-		const auto thumbnail_info {
-			thumbnailer->createThumbnail( data.data(), data.size(), width, height, mime_name )
-		};
+		const auto thumbnail_info { thumbnailer->createThumbnail( data, data_size, width, height, mime_name ) };
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 
