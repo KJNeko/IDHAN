@@ -49,11 +49,25 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 					image_metadata.width,
 					image_metadata.height,
 					static_cast< std::uint16_t >( image_metadata.channels ) );
+
 				break;
 			}
 		case SimpleMimeType::VIDEO:
-			FGL_UNIMPLEMENTED();
-			break;
+			{
+				const auto& video_metadata { std::get< MetadataInfoVideo >( metadata.m_metadata ) };
+				co_await db->execSqlCoro(
+					"INSERT INTO video_metadata (record_id, width, height, bitrate, duration, framerate, has_audio) VALUES ($1, $2, $3, $4, $5, $6, $7) "
+					"ON CONFLICT (record_id) DO UPDATE SET width = $2, height = $3, bitrate = $4, duration = $5, framerate = $6, has_audio = $7",
+					record_id,
+					video_metadata.m_width,
+					video_metadata.m_height,
+					video_metadata.m_bitrate,
+					video_metadata.m_duration,
+					video_metadata.m_fps,
+					video_metadata.m_has_audio );
+
+				break;
+			}
 		case SimpleMimeType::ANIMATION:
 			FGL_UNIMPLEMENTED();
 			break;
