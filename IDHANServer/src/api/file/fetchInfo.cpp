@@ -7,8 +7,7 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
-#include "metadata/fetch.hpp"
-#include "metadata/parseMetadata.hpp"
+#include "metadata/metadata.hpp"
 
 namespace idhan::api
 {

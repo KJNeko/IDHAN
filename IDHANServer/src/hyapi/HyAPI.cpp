@@ -19,7 +19,6 @@
 #include "helpers.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
-#include "metadata/parseMetadata.hpp"
 
 namespace idhan::hyapi
 {

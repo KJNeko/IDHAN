@@ -4,7 +4,7 @@
 
 #include "IDHANTypes.hpp"
 #include "api/APIMaintenance.hpp"
-#include "metadata/parseMetadata.hpp"
+#include "metadata/metadata.hpp"
 
 namespace idhan::api
 {
