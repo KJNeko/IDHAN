@@ -75,8 +75,6 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 
 	switch ( simple_mime_type )
 	{
-		case SimpleMimeType::VIDEO:
-			FGL_UNIMPLEMENTED();
 		case SimpleMimeType::NONE:
 			// NOOP
 			break;
@@ -107,8 +105,41 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 			FGL_UNIMPLEMENTED();
 			break;
 		case SimpleMimeType::IMAGE_PROJECT:
-			FGL_UNIMPLEMENTED();
-			break;
+			{
+				const auto project_metadata {
+					co_await db->execSqlCoro( "SELECT * FROM image_project_metadata WHERE record_id = $1", record_id )
+				};
+
+				if ( !project_metadata.empty() )
+				{
+					data[ "width" ] = project_metadata[ 0 ][ "width" ].as< std::uint32_t >();
+					data[ "height" ] = project_metadata[ 0 ][ "height" ].as< std::uint32_t >();
+				}
+				else
+				{
+					data[ "width" ] = 0;
+					data[ "height" ] = 0;
+				}
+
+				break;
+			}
+		case SimpleMimeType::VIDEO:
+			{
+				const auto video_metadata {
+					co_await db->execSqlCoro( "SELECT * FROM video_metadata WHERE record_id = $1", record_id )
+				};
+
+				if ( !video_metadata.empty() )
+				{
+					data[ "width" ] = video_metadata[ 0 ][ "width" ].as< std::uint32_t >();
+					data[ "height" ] = video_metadata[ 0 ][ "height" ].as< std::uint32_t >();
+				}
+				else
+				{
+					data[ "width" ] = 0;
+					data[ "height" ] = 0;
+				}
+			}
 		default:
 			co_return std::unexpected(
 				createInternalError( "Given file with unhandlable simple mime type for record {}", record_id ) );
