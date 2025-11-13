@@ -44,7 +44,7 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart" );
 	ADD_METHOD_TO( APIMaintenance::postgresqlStorageSunData, "/db/stats/sunburst" );
 
-	ADD_METHOD_TO( APIMaintenance::parseMime, "/mime/parse_file" );
+	ADD_METHOD_TO( APIMaintenance::parseMime, "/mime/parse" );
 	ADD_METHOD_TO( APIMaintenance::reloadMime, "/mime/reload" );
 	ADD_METHOD_TO( APIMaintenance::listParsers, "/mime/parsers" );
 

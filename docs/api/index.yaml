@@ -101,6 +101,10 @@ paths:
   /clusters/{cluster_id}/scan:
     $ref: './paths/clusters/scan.yaml'
 
+  # mime
+  /mime/parse:
+    $ref: './paths/mime/parse.yaml'
+
 components:
   schemas:
     TagInfo:
