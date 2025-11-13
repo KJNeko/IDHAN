@@ -12,6 +12,7 @@
 
 namespace idhan
 {
+
 struct MetadataInfoImage
 {
 	int width;
@@ -22,9 +23,15 @@ struct MetadataInfoImage
 struct MetadataInfoAnimation
 {};
 
+struct MetadataInfoImageProject
+{
+	MetadataInfoImage image_info;
+	std::uint8_t layers;
+};
+
 struct MetadataInfo
 {
-	std::variant< std::monostate, MetadataInfoImage, MetadataInfoAnimation > m_metadata {};
+	std::variant< std::monostate, MetadataInfoImageProject, MetadataInfoImage, MetadataInfoAnimation > m_metadata {};
 	std::string m_extra {};
 	SimpleMimeType m_simple_type { SimpleMimeType::NONE };
 };
@@ -40,7 +47,7 @@ class FGL_EXPORT MetadataModuleI : public ModuleBase
 	virtual std::vector< std::string_view > handleableMimes() = 0;
 
 	virtual std::expected< MetadataInfo, ModuleError > parseFile(
-		void* data,
+		const void* data,
 		std::size_t length,
 		std::string mime_name ) = 0;
 

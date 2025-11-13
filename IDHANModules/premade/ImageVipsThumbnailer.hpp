@@ -9,7 +9,7 @@ class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 	std::vector< std::string_view > handleableMimes() override;
 
 	std::expected< ThumbnailInfo, idhan::ModuleError > createThumbnail(
-		void* data,
+		const void* data,
 		std::size_t length,
 		std::size_t width,
 		std::size_t height,

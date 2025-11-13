@@ -17,7 +17,7 @@ std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
 }
 
 std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnail(
-	void* data,
+	const void* data,
 	const std::size_t length,
 	std::size_t width,
 	std::size_t height,
@@ -26,7 +26,7 @@ std::expected< ThumbnailerModuleI::ThumbnailInfo, ModuleError > ImageVipsThumbna
 	VipsImage* image;
 	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() )
 	{
-		if ( it->second( data, length, &image, nullptr ) != 0 )
+		if ( it->second( const_cast< void* >( data ), length, &image, nullptr ) != 0 )
 		{
 			return std::unexpected( ModuleError { "Failed to load image" } );
 		}
