@@ -74,9 +74,23 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 		case SimpleMimeType::AUDIO:
 			FGL_UNIMPLEMENTED();
 			break;
+		case SimpleMimeType::IMAGE_PROJECT:
+			{
+				const auto& project_metadata { std::get< MetadataInfoImageProject >( metadata.m_metadata ) };
+				co_await db->execSqlCoro(
+					"INSERT INTO image_project_metadata (record_id, width, height, channels, layers) VALUES ($1, $2, $3, $4, $5)",
+					record_id,
+					project_metadata.image_info.width,
+					project_metadata.image_info.height,
+					static_cast< SmallInt >( project_metadata.image_info.channels ),
+					static_cast< SmallInt >( project_metadata.layers ) );
+
+				break;
+			}
 		case SimpleMimeType::NONE:
 			break;
-		default:;
+		default:
+			FGL_UNIMPLEMENTED();
 	}
 
 	co_return {};
