@@ -4,6 +4,7 @@
 
 #include <regex>
 
+#include "ServerContext.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
@@ -29,6 +30,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 			path_e->string() );
 	}
 
+	const std::size_t file_size { std::filesystem::file_size( *path_e ) };
+
 	// Check if this is a head request
 	if ( request->isHead() )
 	{
@@ -36,14 +39,30 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 		// add to response header that we support partial requests
 		response->addHeader( "Accept-Ranges", "bytes" );
-		response->addHeader( "Content-Length", std::to_string( std::filesystem::file_size( *path_e ) ) );
+
+		response->addHeader( "Content-Length", std::to_string( file_size ) );
+
+		const auto mime_info {
+			co_await db->execSqlCoro( "SELECT mime.name as mime_name FROM file_info JOIN mime USING (mime_id)" )
+		};
+
+		if ( mime_info.empty() )
+		{
+			response->setContentTypeString( "application/octet-stream" );
+			// response->addHeader( "Content-Type", "application/octet-stream" );
+		}
+		else
+		{
+			response->setContentTypeString( mime_info[ 0 ][ "mime_name" ].as< std::string >() );
+			// response->addHeader( "Content-Type", mime_info[ 0 ][ "mime_name" ].as< std::string >() );
+		}
+
+		response->setPassThrough( true );
 
 		co_return response;
 	}
 
 	// Get the header for ranges if supplied
-
-	const std::size_t file_size { std::filesystem::file_size( *path_e ) };
 
 	// Get the header for ranges if supplied
 	const auto& range_header { request->getHeader( "Range" ) };
@@ -52,7 +71,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 	// This is stupid but apparently valid
 	constexpr auto full_range { "bytes=0-" };
-	if ( !range_header.empty() && range_header != full_range )
+
+	const bool has_range_header { !range_header.empty() };
+	const bool is_full_range { has_range_header && ( range_header == full_range ) };
+	if ( is_full_range )
 	{
 		static const std::regex range_pattern { R"(bytes=(\d*)-(\d*)?)" };
 		std::smatch range_match {};
@@ -90,7 +112,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	if ( request->getOptionalParameter< bool >( "download" ).value_or( false ) )
 	{
 		// send the file as a download instead of letting the browser try to display it
-		co_return drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() );
+		const auto response { drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() ) };
+		co_return response;
 	}
 
 	auto response { drogon::HttpResponse::newFileResponse( path_e->string(), begin, end - begin ) };
