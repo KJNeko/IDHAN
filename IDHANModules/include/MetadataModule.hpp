@@ -31,9 +31,12 @@ struct MetadataInfoImageProject
 
 struct MetadataInfoVideo
 {
-	bool has_audio { false };
-	int width { 0 };
-	int height { 0 };
+	bool m_has_audio { false };
+	int m_width { 0 };
+	int m_height { 0 };
+	int m_bitrate { 0 };
+	double m_duration { 0.0 };
+	double m_fps { 0.0 };
 };
 
 using MetadataVariant = std::
