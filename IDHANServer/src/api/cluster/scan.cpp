@@ -145,51 +145,48 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	std::filesystem::path last_scanned { "" };
 
-	auto dir_itterator { std::filesystem::recursive_directory_iterator( cluster_path ) };
-	const auto end { std::filesystem::recursive_directory_iterator() };
-
 	std::vector< ExpectedTask<> > awaiters {};
 
-	while ( dir_itterator != end )
+	for ( const auto& folder : std::filesystem::directory_iterator( cluster_path ) )
 	{
-		const auto entry { *dir_itterator };
+		if ( !folder.is_directory() ) continue;
 
-		const auto& file_path { entry.path() };
+		if ( folder.path() == bad_dir ) continue;
 
-		if ( file_path == bad_dir )
+		for ( const auto& file : std::filesystem::directory_iterator( folder ) )
 		{
-			dir_itterator.disable_recursion_pending();
+			const auto entry { file };
+
+			const auto& file_path { entry.path() };
+
+			log::info( "Scanner hitting path: {}", file_path.string() );
+
+			if ( !entry.is_regular_file() )
+			{
+				continue;
+			}
+
+			// ignore thumbnails
+			if ( file_path.extension() == ".thumbnail" )
+			{
+				continue;
+			}
+
+			if ( file_path.parent_path() != last_scanned )
+			{
+				last_scanned = file_path.parent_path();
+				log::info( "Scanning {}", last_scanned.string() );
+			}
+
+			ScanContext ctx { file_path, cluster_id, cluster_path, scan_params };
+
+			const std::expected< void, drogon::HttpResponsePtr > file_result { co_await ctx.scan( bad_dir, db ) };
+
+			if ( scan_params.stop_on_fail && !file_result )
+			{
+				co_return file_result.error();
+			};
 		}
-
-		if ( !entry.is_regular_file() )
-		{
-			++dir_itterator;
-			continue;
-		}
-
-		// ignore thumbnails
-		if ( file_path.extension() == ".thumbnail" )
-		{
-			++dir_itterator;
-			continue;
-		}
-
-		if ( file_path.parent_path() != last_scanned )
-		{
-			last_scanned = file_path.parent_path();
-			log::info( "Scanning {}", last_scanned.string() );
-		}
-
-		ScanContext ctx { file_path, cluster_id, cluster_path, scan_params };
-
-		const std::expected< void, drogon::HttpResponsePtr > file_result { co_await ctx.scan( bad_dir, db ) };
-
-		if ( scan_params.stop_on_fail && !file_result )
-		{
-			co_return file_result.error();
-		};
-
-		++dir_itterator;
 	}
 
 	co_await drogon::when_all( std::move( scan_tasks ) );
