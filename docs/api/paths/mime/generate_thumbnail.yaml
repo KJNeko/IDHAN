@@ -1,0 +1,18 @@
+post:
+  summary: Generate thumbnail of given file
+  description: Upload a file to generate it's thumbnail
+  requestBody:
+    required: true
+    content:
+      application/octet-stream:
+        schema:
+          type: string
+          format: binary
+  responses:
+    '200':
+      description: Successfully generated thumbnail
+      content:
+        image/jpeg:
+          schema:
+            type: string
+            format: binary

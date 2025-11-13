@@ -104,6 +104,8 @@ paths:
   # mime
   /mime/parse:
     $ref: './paths/mime/parse.yaml'
+  /mime/generate_thumbnail:
+    $ref: './paths/mime/generate_thumbnail.yaml'
 
 components:
   schemas:
