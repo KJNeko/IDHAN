@@ -2,10 +2,10 @@
 // Created by kj16609 on 7/24/25.
 //
 
+#include "../records/records.hpp"
+#include "../urls/urls.hpp"
 #include "HyAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "api/helpers/records.hpp"
-#include "api/helpers/urls.hpp"
 #include "hyapi/helpers.hpp"
 
 namespace idhan::hyapi

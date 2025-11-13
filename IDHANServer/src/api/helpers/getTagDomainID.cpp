@@ -8,7 +8,7 @@
 namespace idhan::api::helpers
 {
 
-std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainID( drogon::HttpRequestPtr request )
+std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainIDParameter( const drogon::HttpRequestPtr& request )
 {
 	try
 	{

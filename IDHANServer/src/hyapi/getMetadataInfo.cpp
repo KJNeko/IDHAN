@@ -2,11 +2,11 @@
 // Created by kj16609 on 7/23/25.
 //
 
+#include "../records/records.hpp"
 #include "HyAPI.hpp"
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "api/helpers/records.hpp"
 #include "api/record/urls/urls.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
@@ -15,6 +15,7 @@
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
+#include "metadata/fetch.hpp"
 #include "metadata/parseMetadata.hpp"
 
 namespace idhan::hyapi
@@ -57,7 +58,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	if ( metadata.empty() )
 	{
 		log::warn( "Metadata missing for record {} Attempting to acquire metadata", record_id );
-		const auto parse_result { co_await api::tryParseRecordMetadata( record_id, db ) };
+		const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) };
 		if ( !parse_result ) co_return std::unexpected( parse_result.error() );
 
 		metadata = co_await db->execSqlCoro(
@@ -71,79 +72,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	const auto mime_name { metadata[ 0 ][ "mime_name" ].as< std::string >() };
 	data[ "filetype_enum" ] = hydrus::hy_constants::mimeToHyType( mime_name );
 
-	const SimpleMimeType simple_mime_type { metadata[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() };
-
-	switch ( simple_mime_type )
-	{
-		case SimpleMimeType::NONE:
-			// NOOP
-			break;
-		case SimpleMimeType::IMAGE:
-			{
-				const auto image_metadata { co_await db->execSqlCoro(
-					"SELECT width, height FROM image_metadata WHERE record_id = $1", record_id ) };
-
-				if ( !image_metadata.empty() )
-				{
-					data[ "width" ] = image_metadata[ 0 ][ "width" ].as< std::uint32_t >();
-					data[ "height" ] = image_metadata[ 0 ][ "height" ].as< std::uint32_t >();
-				}
-				else
-				{
-					data[ "width" ] = 0;
-					data[ "height" ] = 0;
-				}
-				break;
-			}
-		case SimpleMimeType::ANIMATION:
-			FGL_UNIMPLEMENTED();
-			break;
-		case SimpleMimeType::AUDIO:
-			FGL_UNIMPLEMENTED();
-			break;
-		case SimpleMimeType::ARCHIVE:
-			FGL_UNIMPLEMENTED();
-			break;
-		case SimpleMimeType::IMAGE_PROJECT:
-			{
-				const auto project_metadata {
-					co_await db->execSqlCoro( "SELECT * FROM image_project_metadata WHERE record_id = $1", record_id )
-				};
-
-				if ( !project_metadata.empty() )
-				{
-					data[ "width" ] = project_metadata[ 0 ][ "width" ].as< std::uint32_t >();
-					data[ "height" ] = project_metadata[ 0 ][ "height" ].as< std::uint32_t >();
-				}
-				else
-				{
-					data[ "width" ] = 0;
-					data[ "height" ] = 0;
-				}
-
-				break;
-			}
-		case SimpleMimeType::VIDEO:
-			{
-				const auto video_metadata {
-					co_await db->execSqlCoro( "SELECT * FROM video_metadata WHERE record_id = $1", record_id )
-				};
-
-				if ( !video_metadata.empty() )
-				{
-					data[ "width" ] = video_metadata[ 0 ][ "width" ].as< std::uint32_t >();
-					data[ "height" ] = video_metadata[ 0 ][ "height" ].as< std::uint32_t >();
-				}
-				else
-				{
-					data[ "width" ] = 0;
-					data[ "height" ] = 0;
-				}
-			}
-		default:
-			co_return std::unexpected(
-				createInternalError( "Given file with unhandlable simple mime type for record {}", record_id ) );
-	}
+	co_await metadata::addFileSpecificInfo( data, record_id, db );
 
 	co_return data;
 }

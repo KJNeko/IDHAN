@@ -4,7 +4,7 @@
 
 #include "checkContentType.hpp"
 
-namespace idhan
+namespace idhan::api::helpers
 {
 //! Responds with that the content type is unsupported or unknown
 void checkContentType(
@@ -23,4 +23,4 @@ void checkContentType(
 
 	callback( drogon::HttpResponse::newHttpJsonResponse( json ) );
 }
-} // namespace idhan
+} // namespace idhan::api::helpers

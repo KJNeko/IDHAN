@@ -4,10 +4,10 @@
 
 #include "HyAPI.hpp"
 
+#include "../records/records.hpp"
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "api/helpers/records.hpp"
 #include "api/version.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
@@ -194,8 +194,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		search_tags.emplace_back( tag_text );
 	}
 
-	const auto search_result {co_await builder.setTags( search_tags )};
-
+	const auto search_result { co_await builder.setTags( search_tags ) };
 
 	// TODO: file domains. For now we'll assume all files
 
@@ -330,7 +329,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( drogon::HttpReques
 		const auto db { drogon::app().getDbClient() };
 		const auto sha256 { SHA256::fromHex( hash.value() ) };
 
-		if ( const auto record_id_e { co_await api::helpers::findRecord( *sha256, db ) } )
+		if ( const auto record_id_e { co_await idhan::helpers::findRecord( *sha256, db ) } )
 			record_id = record_id_e.value();
 		else
 			co_return createNotFound( "No record with hash {} found", hash.value() );

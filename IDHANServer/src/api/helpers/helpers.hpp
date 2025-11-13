@@ -15,13 +15,7 @@
 namespace idhan::api::helpers
 {
 
-std::filesystem::path getFileFolder( const SHA256& sha256 );
-
-drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > getRecordPath(
-	RecordID record_id,
-	DbClientPtr db );
-
-std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainID( drogon::HttpRequestPtr request );
+std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainIDParameter( const drogon::HttpRequestPtr& request );
 
 constexpr std::chrono::seconds default_max_age {
 	std::chrono::duration_cast< std::chrono::seconds >( std::chrono::years( 1 ) )

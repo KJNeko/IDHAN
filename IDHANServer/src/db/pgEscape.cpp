@@ -7,7 +7,7 @@
 #include "fgl/defines.hpp"
 #include "logging/format_ns.hpp"
 
-namespace idhan::api::helpers
+namespace idhan::helpers
 {
 
 constexpr std::string pgEscapeI( const std::string& str )
@@ -57,4 +57,4 @@ FGL_FLATTEN std::string pgEscape( const std::string& str )
 	return pgEscapeI( str );
 }
 
-} // namespace idhan::api::helpers
+} // namespace idhan::helpers

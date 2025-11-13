@@ -16,6 +16,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
+#include "filesystem/filesystem.hpp"
 #include "paths.hpp"
 #include "trantor/utils/ConcurrentTaskQueue.h"
 #pragma GCC diagnostic pop
@@ -77,7 +78,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
 
-		const auto record_path { co_await helpers::getRecordPath( record_id, db ) };
+		const auto record_path { co_await filesystem::getRecordPath( record_id, db ) };
 
 		if ( !record_path ) co_return record_path.error();
 

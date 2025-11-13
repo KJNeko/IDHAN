@@ -9,7 +9,7 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
-#include "filesystem/utility.hpp"
+#include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -18,7 +18,7 @@ namespace idhan::api
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	const auto db { drogon::app().getFastDbClient() };
-	const auto path_e { co_await filesystem::getFilepath( record_id, db ) };
+	const auto path_e { co_await filesystem::getRecordPath( record_id, db ) };
 	if ( !path_e ) co_return path_e.error();
 
 	if ( !std::filesystem::exists( *path_e ) )

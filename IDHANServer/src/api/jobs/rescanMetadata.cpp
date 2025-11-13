@@ -19,7 +19,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::rescanMetadata(
 	{
 		const auto record_id { row[ "record_id" ].as< RecordID >() };
 
-		co_await tryParseRecordMetadata( record_id, db );
+		co_await metadata::tryParseRecordMetadata( record_id, db );
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( Json::Value() );

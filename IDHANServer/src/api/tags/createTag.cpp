@@ -18,8 +18,8 @@ struct hash< std::pair< std::string, std::string > >
 };
 } // namespace std
 
+#include "threading/ExpectedTask.hpp"
 #include "api/TagAPI.hpp"
-#include "api/helpers/ExpectedTask.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "fgl/defines.hpp"

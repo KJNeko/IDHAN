@@ -2,8 +2,10 @@
 // Created by kj16609 on 10/30/25.
 //
 
-#include "api/helpers/ExpectedTask.hpp"
-#include "utility.hpp"
+#include "IDHANTypes.hpp"
+#include "db/dbTypes.hpp"
+#include "filesystem.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan::filesystem
 {

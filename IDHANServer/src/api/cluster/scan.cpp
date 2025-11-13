@@ -4,20 +4,20 @@
 
 #include "MetadataModule.hpp"
 #include "api/ClusterAPI.hpp"
-#include "api/helpers/ExpectedTask.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
-#include "api/helpers/records.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "filesystem/IOUring.hpp"
-#include "filesystem/utility.hpp"
+#include "filesystem/filesystem.hpp"
 #include "fixme.hpp"
 #include "hyapi/helpers.hpp"
 #include "logging/log.hpp"
 #include "metadata/parseMetadata.hpp"
 #include "mime/FileInfo.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "records/records.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan::api
 {
@@ -25,7 +25,7 @@ ExpectedTask< RecordID > adoptOrphan( FileIOUring io_uring, DbClientPtr db )
 {
 	const auto data { co_await io_uring.readAll() };
 	const auto sha256 { SHA256::hash( data.data(), data.size() ) };
-	const auto record_result { co_await helpers::createRecord( sha256, db ) };
+	const auto record_result { co_await idhan::helpers::createRecord( sha256, db ) };
 
 	co_return record_result;
 }
@@ -390,7 +390,7 @@ ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 
 	// now check if the file is in the right path
 	const auto current_parent { m_path.parent_path() };
-	const auto expected_cluster_subfolder { helpers::getFileFolder( m_sha256 ) };
+	const auto expected_cluster_subfolder { filesystem::getFileFolder( m_sha256 ) };
 	const auto expected_parent_path { m_cluster_path / expected_cluster_subfolder };
 
 	if ( current_parent != expected_parent_path )
@@ -523,7 +523,7 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 		}
 	}
 
-	const std::shared_ptr< MetadataModuleI > metadata_parser { co_await findBestParser( m_mime_name ) };
+	const std::shared_ptr< MetadataModuleI > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
 
 	// No parser was found
 	if ( !metadata_parser )
@@ -542,7 +542,7 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 
 	if ( metadata_e )
 	{
-		co_await updateRecordMetadata( m_record_id, db, *metadata_e );
+		co_await metadata::updateRecordMetadata( m_record_id, db, *metadata_e );
 	}
 	else
 	{
