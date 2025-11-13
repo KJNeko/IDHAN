@@ -398,9 +398,11 @@ ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 	if ( current_parent != expected_parent_path )
 	{
 		log::warn(
-			"Expected file to be in path {} but was found in {} instead",
+			"Expected file {} to be in path {} but was found in {} instead (Record {})",
+			m_path.filename().string(),
 			expected_parent_path.string(),
-			current_parent.string() );
+			current_parent.string(),
+			m_record_id );
 
 		if ( !m_params.read_only )
 		{
@@ -455,9 +457,10 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 		if ( extension_str.starts_with( "." ) ) extension_str = extension_str.substr( 1 );
 
 		log::warn(
-			"During a cluster scan file {} failed to be detected by any mime parsers; It has been added despite this and has an extension override of \'{}\'",
-			m_path.string(),
-			extension_str );
+			"During a cluster scan file {} failed to be detected by any mime parsers; It has been added despite this and has an extension override of \'{}\' (Record {})",
+			m_path.filename().string(),
+			extension_str,
+			m_record_id );
 
 		co_await db->execSqlCoro(
 			"INSERT INTO file_info (record_id, size, extension, modified_time) VALUES ($1, $2, $3, $4) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL",
@@ -499,8 +502,10 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 	// No mime was found in the previous step
 	if ( m_mime_name.empty() )
 	{
-		co_return std::unexpected(
-			createInternalError( "Unable to determine metadata parser for {}: No mime found", m_record_id ) );
+		co_return std::unexpected( createInternalError(
+			"Unable to determine metadata parser for {} (Record {}): No mime found",
+			m_path.filename().string(),
+			m_record_id ) );
 	}
 
 	if ( !m_params.rescan_metadata )
@@ -579,10 +584,11 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	if ( expected_extension != file_extension )
 	{
 		log::warn(
-			"When scanning record {}. It was detected that the extension did not match it's mime, Expected {} got {}",
-			m_record_id,
+			"When scanning {} it was detected that the extension did not match it's mime, Expected {} got {} (Record {})",
+			m_path.filename().string(),
 			expected_extension,
-			file_extension );
+			file_extension,
+			m_record_id );
 
 		if ( !m_params.read_only && m_params.fix_extensions )
 		{
@@ -633,9 +639,9 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 		if ( !mime_e )
 		{
 			const auto msg( hyapi::helpers::extractHttpResponseErrorMessage( mime_e.error() ) );
-			log::warn( "Failed to process mime for record {} at path {}: {}", m_record_id, m_path.string(), msg );
+			log::warn( "Failed to process mime for {} (Record {}): {}", m_path.filename().string(), m_record_id, msg );
 			co_return std::unexpected( createInternalError(
-				"Failed to process mime for record {} at path {}: {}", m_record_id, m_path.string(), msg ) );
+				"Failed to process mime for {} (Record {}): {}", m_path.filename().string(), m_record_id, msg ) );
 		}
 	}
 
