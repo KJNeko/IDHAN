@@ -92,7 +92,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 
 	const auto file_info { co_await db->execSqlCoro( "SELECT * FROM file_info WHERE record_id = $1", record_id ) };
 
-	if ( !file_info.empty() )
+	if ( !file_info.empty() && !file_info[ 0 ][ "mime_id" ].isNull() )
 	{
 		root[ "size" ] = file_info[ 0 ][ "size" ].as< std::size_t >();
 
