@@ -2,7 +2,8 @@
 # Stage 1: Build environment
 FROM ubuntu:24.04 AS builder
 
-RUN apt-get update && DEBIAN_FRONTNED=noninteractive apt-get install -y \
+RUN apt-get update && \
+    DEBIAN_FRONTNED=noninteractive apt-get install -y \
     build-essential \
     cmake \
     git \
@@ -54,10 +55,9 @@ RUN --mount=type=cache,target=/root/.ccache \
 # Stage 2: Runtime environment
 FROM ubuntu:24.04
 
-RUN apt-get update
-
 # Install runtime dependencies only
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
     # Qt6 runtime libraries
     libqt6core6 \
     libqt6multimedia6 \
