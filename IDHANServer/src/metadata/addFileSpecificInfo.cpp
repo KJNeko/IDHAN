@@ -2,11 +2,8 @@
 // Created by kj16609 on 11/13/25.
 //
 
-#include "fetch.hpp"
-
-#include "threading/ExpectedTask.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "parseMetadata.hpp"
+#include "metadata.hpp"
 
 namespace idhan::metadata
 {
