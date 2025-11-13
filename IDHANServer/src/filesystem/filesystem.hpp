@@ -4,6 +4,7 @@
 #pragma once
 #include <filesystem>
 
+#include "io/IOUring.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan
@@ -23,6 +24,9 @@ std::filesystem::path getFileFolder( const SHA256& sha256 );
  * @return
  */
 ExpectedTask< std::filesystem::path > getRecordPath( RecordID record_id, DbClientPtr db );
+
+//! Returns a FileIOUring instance for the given record
+ExpectedTask< FileIOUring > getIOForRecord( RecordID record_id, DbClientPtr db );
 
 //! Returns the path of a cluster.
 ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );

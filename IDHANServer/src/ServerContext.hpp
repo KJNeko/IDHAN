@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "ConnectionArguments.hpp"
-#include "filesystem/ClusterManager.hpp"
+#include "filesystem/clusters/ClusterManager.hpp"
 #include "modules/ModuleLoader.hpp"
 
 namespace idhan

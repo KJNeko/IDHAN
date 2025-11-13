@@ -13,7 +13,7 @@
 #include "fixme.hpp"
 #include "hyapi/helpers.hpp"
 #include "logging/log.hpp"
-#include "metadata/parseMetadata.hpp"
+#include "metadata/metadata.hpp"
 #include "mime/FileInfo.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "records/records.hpp"

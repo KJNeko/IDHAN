@@ -15,8 +15,7 @@
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
-#include "metadata/fetch.hpp"
-#include "metadata/parseMetadata.hpp"
+#include "metadata/metadata.hpp"
 
 namespace idhan::hyapi
 {
