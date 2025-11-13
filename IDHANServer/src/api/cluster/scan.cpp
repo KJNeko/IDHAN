@@ -34,9 +34,9 @@ struct ScanParams
 {
 	bool read_only:1 { true };
 	bool recompute_hash:1 { false };
-	bool scan_mime:1 { false };
+	bool scan_mime:1 { true };
 	bool rescan_mime:1 { false };
-	bool scan_metadata:1 { false };
+	bool scan_metadata:1 { true };
 	bool rescan_metadata:1 { false };
 	bool stop_on_fail:1 { false };
 	bool adopt_orphans:1 { false };
@@ -102,7 +102,7 @@ class ScanContext
 	ExpectedTask< void > insertFileInfo( drogon::orm::DbClientPtr db );
 
 	ExpectedTask< void > checkCluster( DbClientPtr db );
-	ExpectedTask< bool > hasMime( DbClientPtr db );
+	drogon::Task< bool > hasMime( DbClientPtr db );
 
 	ExpectedTask<> scanMime( DbClientPtr db );
 
@@ -359,6 +359,7 @@ ExpectedTask<> ScanContext::insertFileInfo( drogon::orm::DbClientPtr db )
 
 ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 {
+	log::debug( "Verifying that the record is in the correct cluster" );
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
 	const auto file_info {
 		co_await db->execSqlCoro( "SELECT cluster_id, modified_time FROM file_info WHERE record_id = $1", m_record_id )
@@ -417,13 +418,13 @@ ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 	co_return {};
 }
 
-ExpectedTask< bool > ScanContext::hasMime( DbClientPtr db )
+drogon::Task< bool > ScanContext::hasMime( DbClientPtr db )
 {
 	auto current_mime { co_await db->execSqlCoro(
 		"SELECT mime_id, name FROM file_info JOIN mime USING (mime_id) WHERE record_id = $1 AND mime_id IS NOT NULL",
 		m_record_id ) };
 
-	if ( !current_mime.empty() )
+	if ( !current_mime.empty() && !current_mime[ 0 ][ "mime_id" ].isNull() )
 	{
 		m_mime_name = current_mime[ 0 ][ 1 ].as< std::string >();
 		co_return true;
@@ -438,11 +439,13 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 	FileIOUring file_io { m_path };
 
 	// skip checking if we have a mime if we are going to rescan it
-	if ( !m_params.rescan_mime && co_await hasMime( db ) )
+	if ( ( !m_params.rescan_mime ) && co_await hasMime( db ) )
 	{
+		log::debug( "Skipping metadata scan because it already had metadata and rescan_mime was set to false" );
 		co_return {};
 	}
 
+	log::debug( "Starting metadata scan for {} (Record {})", m_path.filename().string(), m_record_id );
 	const auto mime_string_e { co_await mime::getMimeDatabase()->scan( file_io ) };
 
 	const auto mtime { filesystem::getLastWriteTime( m_path ) };
@@ -481,6 +484,8 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 		m_size,
 		*mime_id_e,
 		mtime );
+
+	log::critical( "Updated mime to {}", *mime_id_e );
 
 	const auto mime_info {
 		co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE mime_id = $1", *mime_id_e )
@@ -629,7 +634,9 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 	// check if the record has been identified in a cluster before
 	const auto cluster_e { co_await checkCluster( db ) };
 
-	if ( m_params.scan_mime )
+	bool has_mime_info { co_await hasMime( db ) };
+
+	if ( ( m_params.scan_mime && !has_mime_info ) || m_params.rescan_mime )
 	{
 		log::debug( "Scanning mime for file {}", m_path.string() );
 		const auto mime_e { co_await scanMime( db ) };
@@ -640,13 +647,8 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 			co_return std::unexpected( createInternalError(
 				"Failed to process mime for {} (Record {}): {}", m_path.filename().string(), m_record_id, msg ) );
 		}
+		has_mime_info = co_await hasMime( db );
 	}
-
-	const auto has_mime_check {
-		co_await db->execSqlCoro( "SELECT 1 FROM file_info WHERE extension IS NOT NULL OR mime_id IS NOT NULL" )
-	};
-
-	const bool has_mime_info { !has_mime_check.empty() };
 
 	if ( has_mime_info )
 	{
