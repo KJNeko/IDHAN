@@ -159,8 +159,9 @@ drogon::Task< void > FileIOUring::fallbackWrite( const std::vector< std::byte > 
 	co_return;
 }
 
-std::pair< void*, std::size_t > FileIOUring::mmap()
+std::pair< void*, std::size_t > FileIOUring::mmapReadOnly()
 {
+	if ( m_mmap_ptr ) return { m_mmap_ptr, size() };
 	void* ptr = ::mmap( nullptr, size(), PROT_READ, MAP_SHARED, m_fd, 0 );
 	m_mmap_ptr = ptr;
 	return std::make_pair( ptr, size() );

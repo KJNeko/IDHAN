@@ -113,7 +113,7 @@ ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPt
 	auto io { co_await getIOForRecord( record_id, db ) };
 	return_unexpected_error( io );
 
-	const auto [ data, length ] = io->mmap();
+	const auto [ data, length ] = io->mmapReadOnly();
 
 	const auto record_mime {
 		co_await db->execSqlCoro( "SELECT mime_id FROM file_info WHERE record_id = $1", record_id )
