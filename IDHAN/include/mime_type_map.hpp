@@ -43,7 +43,7 @@ static const std::unordered_map< std::string_view, int > hy_type_mime {
 	{ "application/x-7z-compressed", idhan::hydrus::gen_constants::APPLICATION_7Z },
 	{ "image/webp", idhan::hydrus::gen_constants::IMAGE_WEBP },
 	{ "image/tiff", idhan::hydrus::gen_constants::IMAGE_TIFF },
-	{ "image/vnd.adobe.photoshop", idhan::hydrus::gen_constants::APPLICATION_PSD },
+	{ "application/psd", idhan::hydrus::gen_constants::APPLICATION_PSD },
 	{ "audio/mp4", idhan::hydrus::gen_constants::AUDIO_M4A },
 	{ "video/x-pn-realvideo", idhan::hydrus::gen_constants::VIDEO_REALMEDIA },
 	{ "audio/x-pn-realaudio", idhan::hydrus::gen_constants::AUDIO_REALMEDIA },
