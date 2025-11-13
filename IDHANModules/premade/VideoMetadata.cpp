@@ -16,7 +16,8 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-inline static std::vector< std::string_view > ffmpeg_handleable_mimes { "video/mp4" };
+inline static std::vector< std::string_view >
+	ffmpeg_handleable_mimes { "video/mp4", "video/webm", "video/mpeg", "video/quicktime" };
 
 std::string_view VideoMetadata::name()
 {
@@ -88,6 +89,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > VideoMetadata::parseFil
 	std::string mime_name )
 {
 	idhan::MetadataInfo base_info {};
+	base_info.m_simple_type = idhan::SimpleMimeType::VIDEO;
 	idhan::MetadataInfoVideo video_metadata {};
 
 	OpaqueInfo opaque_info { .m_data = std::string_view( static_cast< const char* >( data ), length ), .m_cursor = 0 };

@@ -485,8 +485,6 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 		*mime_id_e,
 		mtime );
 
-	log::critical( "Updated mime to {}", *mime_id_e );
-
 	const auto mime_info {
 		co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE mime_id = $1", *mime_id_e )
 	};
