@@ -17,7 +17,11 @@ RUN apt-get update && DEBIAN_FRONTNED=noninteractive apt-get install -y \
     libqt6core6 \
     libqt6multimedia6 \
     libjsoncpp-dev \
-    libvips-dev
+    libvips-dev \
+    libavcodec-dev \
+    libavcodec-extra \
+    libavfilter-dev \
+    libavutil-dev
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -68,7 +72,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     uuid-runtime \
     zlib1g \
     libssl3 \
-    libc-ares2
+    libc-ares2 \
+    ffmpeg
 
 # Cleanup
 RUN apt-get clean
