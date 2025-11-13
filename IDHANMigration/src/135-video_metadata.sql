@@ -1,7 +1,3 @@
-
-
-DROP TABLE video_metadata;
-
 CREATE TABLE video_metadata
 (
     record_id INTEGER REFERENCES records (record_id),
