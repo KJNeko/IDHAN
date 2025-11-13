@@ -6,7 +6,7 @@
 
 #include "ResponseCallback.hpp"
 
-namespace idhan
+namespace idhan::api::helpers
 {
 //! Responds with that the content type is unsupported or unknown
 void checkContentType(

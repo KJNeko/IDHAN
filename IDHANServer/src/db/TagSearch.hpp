@@ -5,8 +5,8 @@
 #include <expected>
 #include <vector>
 
+#include "threading/ExpectedTask.hpp"
 #include "IDHANTypes.hpp"
-#include "api/helpers/ExpectedTask.hpp"
 #include "dbTypes.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "drogon/orm/BaseBuilder.h"

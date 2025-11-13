@@ -7,13 +7,15 @@
 #include <drogon/drogon.h>
 #include <json/json.h>
 
-#include "api/helpers/ExpectedTask.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "filesystem/ClusterManager.hpp"
 #include "filesystem/IOUring.hpp"
+#include "filesystem/filesystem.hpp"
 #include "modules/ModuleLoader.hpp"
+#include "threading/ExpectedTask.hpp"
 
-namespace idhan::api
+namespace idhan::metadata
 {
 
 ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr db, MetadataInfo metadata )
@@ -39,6 +41,20 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 
 	switch ( simple_type )
 	{
+		case SimpleMimeType::IMAGE_PROJECT:
+			{
+				const auto& project_metadata { std::get< MetadataInfoImageProject >( metadata.m_metadata ) };
+				co_await db->execSqlCoro(
+					"INSERT INTO image_project_metadata (record_id, width, height, channels, layers) VALUES ($1, $2, $3, $4, $5) "
+					"ON CONFLICT (record_id) DO UPDATE SET width = $2, height = $3, channels = $4, layers = $5",
+					record_id,
+					project_metadata.image_info.width,
+					project_metadata.image_info.height,
+					static_cast< SmallInt >( project_metadata.image_info.channels ),
+					static_cast< SmallInt >( project_metadata.layers ) );
+
+				break;
+			}
 		case SimpleMimeType::IMAGE:
 			{
 				const auto& image_metadata { std::get< MetadataInfoImage >( metadata.m_metadata ) };
@@ -74,19 +90,7 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 		case SimpleMimeType::AUDIO:
 			FGL_UNIMPLEMENTED();
 			break;
-		case SimpleMimeType::IMAGE_PROJECT:
-			{
-				const auto& project_metadata { std::get< MetadataInfoImageProject >( metadata.m_metadata ) };
-				co_await db->execSqlCoro(
-					"INSERT INTO image_project_metadata (record_id, width, height, channels, layers) VALUES ($1, $2, $3, $4, $5)",
-					record_id,
-					project_metadata.image_info.width,
-					project_metadata.image_info.height,
-					static_cast< SmallInt >( project_metadata.image_info.channels ),
-					static_cast< SmallInt >( project_metadata.layers ) );
 
-				break;
-			}
 		case SimpleMimeType::NONE:
 			break;
 		default:
@@ -113,7 +117,7 @@ drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( const std::st
 
 ExpectedTask< FileIOUring > getIOForRecord( const RecordID record_id, DbClientPtr db )
 {
-	const auto path { co_await helpers::getRecordPath( record_id, db ) };
+	const auto path { co_await filesystem::getRecordPath( record_id, db ) };
 	return_unexpected_error( path );
 
 	if ( !std::filesystem::exists( *path ) )
@@ -179,4 +183,4 @@ ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPt
 	co_return metadata.value();
 }
 
-} // namespace idhan::api
+} // namespace idhan::metadata

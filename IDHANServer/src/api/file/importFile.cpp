@@ -2,9 +2,9 @@
 // Created by kj16609 on 11/15/24.
 //
 
+#include "../../records/records.hpp"
 #include "api/ImportAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "api/helpers/records.hpp"
 #include "codes/ImportCodes.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
@@ -160,7 +160,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
 
-	co_await tryParseRecordMetadata( record_id, db );
+	co_await metadata::tryParseRecordMetadata( record_id, db );
 
 	co_return response;
 }

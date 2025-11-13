@@ -29,7 +29,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRe
 
 	const auto db { drogon::app().getDbClient() };
 
-	const auto tag_domain_id { helpers::getTagDomainID( request ) };
+	const auto tag_domain_id { helpers::getTagDomainIDParameter( request ) };
 
 	if ( !tag_domain_id ) co_return tag_domain_id.error();
 

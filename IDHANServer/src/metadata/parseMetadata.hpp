@@ -5,8 +5,8 @@
 
 #include <drogon/drogon.h>
 
+#include "threading/ExpectedTask.hpp"
 #include "IDHANTypes.hpp"
-#include "api/helpers/ExpectedTask.hpp"
 #include "db/dbTypes.hpp"
 
 namespace idhan
@@ -16,7 +16,7 @@ class FileMappedData;
 struct MetadataInfo;
 } // namespace idhan
 
-namespace idhan::api
+namespace idhan::metadata
 {
 
 drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( std::string mime_name );
@@ -32,4 +32,4 @@ ExpectedTask< void > updateRecordMetadata( RecordID record_id, DbClientPtr db, M
 
 drogon::Task< MetadataInfo > getMetadata( RecordID record_id, DbClientPtr db );
 
-} // namespace idhan::api
+} // namespace idhan::metadata
