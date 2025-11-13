@@ -23,7 +23,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	if ( !std::filesystem::exists( *path_e ) )
 	{
 		log::warn( "Expected file at location {} for record {} but no file was found", path_e->string(), record_id );
-		co_return createInternalError( "File was expected but not found. Possible data loss" );
+		co_return createInternalError(
+			"File not found at expected location. Record ID: {}, Path: {}. This may indicate data corruption or file system issues.",
+			record_id,
+			path_e->string() );
 	}
 
 	// Check if this is a head request
