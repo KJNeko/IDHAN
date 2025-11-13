@@ -24,8 +24,8 @@ std::vector< std::shared_ptr< IDHANModule > > getModules()
 	std::vector< std::shared_ptr< IDHANModule > > ret {
 		std::make_shared< ImageVipsMetadata >(),
 		std::make_shared< ImageVipsThumbnailer >(),
-		std::make_shared< PsdMetadata >()
-		// std::make_shared< VideoMetadata >()
+		std::make_shared< PsdMetadata >(),
+		std::make_shared< VideoMetadata >()
 	};
 
 	return ret;
