@@ -15,9 +15,9 @@ namespace idhan
 
 struct MetadataInfoImage
 {
-	int width;
-	int height;
-	std::uint8_t channels;
+	int width { 0 };
+	int height { 0 };
+	std::uint8_t channels { 0 };
 };
 
 struct MetadataInfoAnimation
@@ -25,13 +25,24 @@ struct MetadataInfoAnimation
 
 struct MetadataInfoImageProject
 {
-	MetadataInfoImage image_info;
-	std::uint8_t layers;
+	MetadataInfoImage image_info {};
+	std::uint8_t layers { 0 };
 };
+
+struct MetadataInfoVideo
+{
+	bool has_audio { false };
+	int width { 0 };
+	int height { 0 };
+};
+
+using MetadataVariant = std::
+	variant< std::monostate, MetadataInfoImage, MetadataInfoVideo, MetadataInfoImageProject, MetadataInfoAnimation >;
 
 struct MetadataInfo
 {
-	std::variant< std::monostate, MetadataInfoImageProject, MetadataInfoImage, MetadataInfoAnimation > m_metadata {};
+	MetadataVariant m_metadata {};
+
 	std::string m_extra {};
 	SimpleMimeType m_simple_type { SimpleMimeType::NONE };
 };
