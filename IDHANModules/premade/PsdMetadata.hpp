@@ -38,7 +38,7 @@ class PsdThumbnailer final : public idhan::ThumbnailerModuleI
 	std::expected< ThumbnailInfo, idhan::ModuleError > createThumbnail(
 		const void* data,
 		std::size_t length,
-		std::size_t target_width,
-		std::size_t target_height,
+		std::size_t width,
+		std::size_t height,
 		std::string mime_name ) override;
 };
