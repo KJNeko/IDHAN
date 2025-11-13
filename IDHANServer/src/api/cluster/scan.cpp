@@ -657,7 +657,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 		return_unexpected_error( extenion_result );
 	}
 
-	if ( m_params.scan_metadata && has_mime_info )
+	if ( ( m_params.scan_metadata || m_params.rescan_metadata ) && has_mime_info )
 	{
 		log::debug( "Scanning metadata for file {}", m_path.string() );
 		const auto metadata_e { co_await scanMetadata( db ) };
