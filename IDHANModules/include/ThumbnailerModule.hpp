@@ -28,7 +28,7 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 	virtual std::vector< std::string_view > handleableMimes() = 0;
 
 	virtual std::expected< ThumbnailInfo, ModuleError > createThumbnail(
-		void* data,
+		const void* data,
 		std::size_t length,
 		std::size_t width,
 		std::size_t height,

@@ -5,6 +5,7 @@
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "modules/ModuleLoader.hpp"
 
 namespace idhan::api
 {
@@ -12,7 +13,8 @@ namespace idhan::api
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpRequestPtr request )
 {
 	if ( request->contentType() != drogon::CT_APPLICATION_OCTET_STREAM )
-		co_return createBadRequest( "Content type must be octet-stream" );
+		co_return createBadRequest(
+			"Content type must be octet-stream was {}", static_cast< int >( request->contentType() ) );
 	const auto request_data { request->getBody() };
 
 	if ( request_data.empty() )
@@ -35,6 +37,20 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpR
 
 	response[ "success" ] = true;
 	response[ "mime" ] = mime_str.value();
+
+	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
+
+	response[ "metadata_modules" ] = {};
+
+	for ( const auto& metadata_module : metadata_modules )
+	{
+		Json::Value metadata_obj {};
+		metadata_obj[ "name" ] = std::string( metadata_module->name() );
+
+		auto metadata_info { metadata_module->parseFile( request_data.data(), request_data.size(), *mime_str ) };
+
+		response[ "metadata_modules" ].append( std::move( metadata_obj ) );
+	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }

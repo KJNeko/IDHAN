@@ -6,74 +6,11 @@
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
-#include "metadata/parseMetadata.hpp"
+#include "fgl/defines.hpp"
+#include "metadata/metadata.hpp"
 
 namespace idhan::api
 {
-
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addImageInfo(
-	Json::Value& root,
-	const RecordID record_id,
-	DbClientPtr db )
-{
-	const auto metadata { co_await db->execSqlCoro( "SELECT * FROM image_metadata WHERE record_id = $1", record_id ) };
-
-	if ( metadata.empty() )
-		co_return std::unexpected( createInternalError( "Could not find image metadata for record {}", record_id ) );
-
-	root[ "width" ] = metadata[ 0 ][ "width" ].as< std::uint32_t >();
-	root[ "height" ] = metadata[ 0 ][ "height" ].as< std::uint32_t >();
-	root[ "channels" ] = metadata[ 0 ][ "channels" ].as< std::uint32_t >();
-
-	co_return std::expected< void, drogon::HttpResponsePtr >();
-}
-
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addFileSpecificInfo(
-	Json::Value& root,
-	const RecordID record_id,
-	DbClientPtr db )
-{
-	auto simple_mime_result {
-		co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id )
-	};
-
-	if ( simple_mime_result.empty() ) // Could not find any mime info for this record, Try parsing for it.
-	{
-		const auto parsed_metadata { co_await tryParseRecordMetadata( record_id, db ) };
-
-		if ( !parsed_metadata ) co_return std::unexpected( parsed_metadata.error() );
-
-		simple_mime_result =
-			co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id );
-	}
-
-	if ( simple_mime_result.empty() )
-		co_return std::unexpected( createInternalError( "Failed to get simple mime type for record {}", record_id ) );
-
-	const SimpleMimeType simple_mime_type { simple_mime_result[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() };
-
-	switch ( simple_mime_type )
-	{
-		case SimpleMimeType::IMAGE:
-			{
-				const auto result { co_await addImageInfo( root, record_id, db ) };
-				if ( !result ) co_return std::unexpected( result.error() );
-				break;
-			}
-		case SimpleMimeType::VIDEO:
-			break;
-		case SimpleMimeType::ANIMATION:
-			break;
-		case SimpleMimeType::AUDIO:
-			break;
-		case SimpleMimeType::NONE:
-			[[fallthrough]];
-		default:
-			break;
-	}
-
-	co_return std::expected< void, drogon::HttpResponsePtr >();
-}
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 	[[maybe_unused]] drogon::HttpRequestPtr request,
@@ -92,7 +29,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 
 	const auto file_info { co_await db->execSqlCoro( "SELECT * FROM file_info WHERE record_id = $1", record_id ) };
 
-	if ( !file_info.empty() )
+	if ( !file_info.empty() && !file_info[ 0 ][ "mime_id" ].isNull() )
 	{
 		root[ "size" ] = file_info[ 0 ][ "size" ].as< std::size_t >();
 
@@ -102,7 +39,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 		root[ "mime" ] = mime_info[ 0 ][ "name" ].as< std::string >();
 		root[ "extension" ] = mime_info[ 0 ][ "best_extension" ].as< std::string >();
 
-		co_await addFileSpecificInfo( root, record_id, db );
+		co_await metadata::addFileSpecificInfo( root, record_id, db );
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
@@ -111,7 +48,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::parseFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	const auto db { drogon::app().getDbClient() };
-	const auto parse_result { co_await tryParseRecordMetadata( record_id, db ) };
+	const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) };
 	if ( !parse_result ) co_return parse_result.error();
 
 	co_return co_await fetchInfo( request, record_id );

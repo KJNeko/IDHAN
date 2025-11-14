@@ -1,0 +1,42 @@
+post:
+  summary: Parse file metadata
+  description: Upload a file to parse its metadata
+  requestBody:
+    required: true
+    content:
+      application/octet-stream:
+        schema:
+          type: string
+          format: binary
+  responses:
+    '200':
+      description: Successful metadata parse
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              mime_type:
+                type: string
+              metadata:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  duration:
+                    type: number
+                  width:
+                    type: integer
+                  height:
+                    type: integer
+                  codec:
+                    type: string
+    '400':
+      description: Invalid file or parsing error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

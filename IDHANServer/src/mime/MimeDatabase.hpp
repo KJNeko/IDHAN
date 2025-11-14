@@ -7,9 +7,9 @@
 #include <filesystem>
 #include <memory>
 
+#include "../filesystem/io/IOUring.hpp"
 #include "MimeIdentifier.hpp"
 #include "MimeInfo.hpp"
-#include "filesystem/IOUring.hpp"
 
 namespace idhan::mime
 {

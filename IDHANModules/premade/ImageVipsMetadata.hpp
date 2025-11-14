@@ -17,7 +17,7 @@ class ImageVipsMetadata final : public idhan::MetadataModuleI
 
 	std::vector< std::string_view > handleableMimes() override;
 	std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile(
-		void* data,
+		const void* data,
 		std::size_t length,
 		std::string mime_name ) override;
 

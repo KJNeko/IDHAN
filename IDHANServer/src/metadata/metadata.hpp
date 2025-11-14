@@ -1,13 +1,14 @@
 //
-// Created by kj16609 on 6/12/25.
+// Created by kj16609 on 11/13/25.
 //
 #pragma once
-
-#include <drogon/drogon.h>
+#include <expected>
 
 #include "IDHANTypes.hpp"
-#include "api/helpers/ExpectedTask.hpp"
 #include "db/dbTypes.hpp"
+#include "drogon/HttpResponse.h"
+#include "drogon/utils/coroutine.h"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan
 {
@@ -16,8 +17,14 @@ class FileMappedData;
 struct MetadataInfo;
 } // namespace idhan
 
-namespace idhan::api
+namespace idhan::metadata
 {
+
+// DB
+
+ExpectedTask< void > addFileSpecificInfo( Json::Value& root, RecordID record_id, DbClientPtr db );
+
+// Parsing
 
 drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( std::string mime_name );
 
@@ -32,4 +39,4 @@ ExpectedTask< void > updateRecordMetadata( RecordID record_id, DbClientPtr db, M
 
 drogon::Task< MetadataInfo > getMetadata( RecordID record_id, DbClientPtr db );
 
-} // namespace idhan::api
+} // namespace idhan::metadata

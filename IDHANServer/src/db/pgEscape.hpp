@@ -5,7 +5,7 @@
 
 #include <string>
 
-namespace idhan::api::helpers
+namespace idhan::helpers
 {
 std::string pgEscape( const std::string& s );
 }

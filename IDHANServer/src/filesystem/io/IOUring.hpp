@@ -50,7 +50,7 @@ class [[nodiscard]] FileIOUring
 	[[nodiscard]] drogon::Task< void > fallbackWrite( std::vector< std::byte > data, std::size_t size ) const;
 
 	//! Mmaps the file into memory, Read only
-	[[nodiscard]] std::pair< void*, std::size_t > mmap();
+	[[nodiscard]] std::pair< void*, std::size_t > mmapReadOnly();
 
 	FileIOUring() = delete;
 	[[nodiscard]] FileIOUring( const FileIOUring& );

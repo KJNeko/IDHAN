@@ -4,11 +4,12 @@
 
 #include <regex>
 
+#include "ServerContext.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
-#include "filesystem/utility.hpp"
+#include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -17,14 +18,19 @@ namespace idhan::api
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	const auto db { drogon::app().getFastDbClient() };
-	const auto path_e { co_await filesystem::getFilepath( record_id, db ) };
+	const auto path_e { co_await filesystem::getRecordPath( record_id, db ) };
 	if ( !path_e ) co_return path_e.error();
 
 	if ( !std::filesystem::exists( *path_e ) )
 	{
 		log::warn( "Expected file at location {} for record {} but no file was found", path_e->string(), record_id );
-		co_return createInternalError( "File was expected but not found. Possible data loss" );
+		co_return createInternalError(
+			"File not found at expected location. Record ID: {}, Path: {}. This may indicate data corruption or file system issues.",
+			record_id,
+			path_e->string() );
 	}
+
+	const std::size_t file_size { std::filesystem::file_size( *path_e ) };
 
 	// Check if this is a head request
 	if ( request->isHead() )
@@ -33,14 +39,30 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 		// add to response header that we support partial requests
 		response->addHeader( "Accept-Ranges", "bytes" );
-		response->addHeader( "Content-Length", std::to_string( std::filesystem::file_size( *path_e ) ) );
+
+		response->addHeader( "Content-Length", std::to_string( file_size ) );
+
+		const auto mime_info {
+			co_await db->execSqlCoro( "SELECT mime.name as mime_name FROM file_info JOIN mime USING (mime_id)" )
+		};
+
+		if ( mime_info.empty() )
+		{
+			response->setContentTypeString( "application/octet-stream" );
+			// response->addHeader( "Content-Type", "application/octet-stream" );
+		}
+		else
+		{
+			response->setContentTypeString( mime_info[ 0 ][ "mime_name" ].as< std::string >() );
+			// response->addHeader( "Content-Type", mime_info[ 0 ][ "mime_name" ].as< std::string >() );
+		}
+
+		response->setPassThrough( true );
 
 		co_return response;
 	}
 
 	// Get the header for ranges if supplied
-
-	const std::size_t file_size { std::filesystem::file_size( *path_e ) };
 
 	// Get the header for ranges if supplied
 	const auto& range_header { request->getHeader( "Range" ) };
@@ -49,12 +71,16 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 	// This is stupid but apparently valid
 	constexpr auto full_range { "bytes=0-" };
-	if ( !range_header.empty() && range_header != full_range )
+
+	const bool has_range_header { !range_header.empty() };
+	const bool is_full_range { has_range_header && ( range_header == full_range ) };
+	if ( !is_full_range && has_range_header )
 	{
-		static const std::regex range_pattern { R"(bytes=(\d*)-(\d*)?)" };
+		constexpr auto regex_pattern { R"(bytes=(\d*)-(\d*)?)" };
+		static const std::regex regex { regex_pattern };
 		std::smatch range_match {};
 
-		if ( std::regex_match( range_header, range_match, range_pattern ) )
+		if ( std::regex_match( range_header, range_match, regex ) )
 		{
 			if ( range_match.size() != 3 )
 			{
@@ -65,14 +91,20 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 			try
 			{
 				if ( range_match[ 1 ].matched )
+				{
+					log::debug( "Regex range header match 1: {}", range_match[ 1 ].str() );
 					begin = static_cast< std::size_t >( std::stoull( range_match[ 1 ].str() ) );
+				}
 				if ( range_match[ 2 ].matched )
+				{
+					log::debug( "Regex range header match 2: {}", range_match[ 2 ].str() );
 					end = static_cast< std::size_t >( std::stoull( range_match[ 2 ].str() ) );
+				}
 			}
 			catch ( std::exception& e )
 			{
-				log::error( "Error with range header: {}", e.what() );
-				co_return createBadRequest( "Invalid Range Header" );
+				log::error( "Error with range header: {}, Header was {}", e.what(), range_header );
+				co_return createBadRequest( "Error with range header: {}, Header was {}", e.what(), range_header );
 			}
 
 			// Ensure the range is valid
@@ -80,14 +112,15 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 		}
 		else
 		{
-			co_return createBadRequest( "Invalid Range Header Format" );
+			co_return createBadRequest( "Invalid Range Header Format Regex failed: {}", regex_pattern );
 		}
 	}
 
 	if ( request->getOptionalParameter< bool >( "download" ).value_or( false ) )
 	{
 		// send the file as a download instead of letting the browser try to display it
-		co_return drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() );
+		const auto response { drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() ) };
+		co_return response;
 	}
 
 	auto response { drogon::HttpResponse::newFileResponse( path_e->string(), begin, end - begin ) };

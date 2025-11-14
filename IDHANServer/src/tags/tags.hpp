@@ -8,7 +8,7 @@
 #include <IDHANTypes.hpp>
 #include <expected>
 
-#include "api/helpers/ExpectedTask.hpp"
+#include "threading/ExpectedTask.hpp"
 #include "db/dbTypes.hpp"
 #include "errors/ErrorInfo.hpp"
 

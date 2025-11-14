@@ -19,14 +19,14 @@ std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
 }
 
 std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile(
-	void* data,
+	const void* data,
 	const std::size_t length,
 	const std::string mime_name )
 {
 	VipsImage* image;
 	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() )
 	{
-		if ( it->second( data, length, &image, nullptr ) != 0 )
+		if ( it->second( const_cast< void* >( data ), length, &image, nullptr ) != 0 )
 		{
 			return std::unexpected( ModuleError { "Failed to load image" } );
 		}

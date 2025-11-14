@@ -2,9 +2,9 @@
 // Created by kj16609 on 10/30/25.
 //
 
-#include "ClusterManager.hpp"
 #include "IDHANTypes.hpp"
-#include "api/helpers/ExpectedTask.hpp"
+#include "clusters/ClusterManager.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan::filesystem
 {
