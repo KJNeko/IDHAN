@@ -12,21 +12,20 @@
 #include <memory>
 #include <vector>
 
+#include "FFMPEGMetadata.hpp"
+#include "FFMPEGThumbnailer.hpp"
 #include "ImageVipsMetadata.hpp"
 #include "ImageVipsThumbnailer.hpp"
 #include "PsdMetadata.hpp"
-#include "VideoMetadata.hpp"
 
 using namespace idhan;
 
 std::vector< std::shared_ptr< IDHANModule > > getModules()
 {
 	std::vector< std::shared_ptr< IDHANModule > > ret {
-		std::make_shared< ImageVipsMetadata >(),
-		std::make_shared< ImageVipsThumbnailer >(),
-		std::make_shared< PsdMetadata >(),
-		std::make_shared< PsdThumbnailer >(),
-		std::make_shared< VideoMetadata >()
+		std::make_shared< ImageVipsMetadata >(), std::make_shared< ImageVipsThumbnailer >(),
+		std::make_shared< PsdMetadata >(),       std::make_shared< PsdThumbnailer >(),
+		std::make_shared< FFMPEGMetadata >(),    std::make_shared< FFMPEGThumbnailer >(),
 	};
 
 	return ret;

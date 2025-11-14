@@ -1,11 +1,11 @@
 //
-// Created by kj16609 on 11/12/25.
+// Created by kj16609 on 11/13/25.
 //
 #pragma once
-#include "MetadataModule.hpp"
 
+#include "ThumbnailerModule.hpp"
 
-class VideoMetadata final : public idhan::MetadataModuleI
+class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 {
   public:
 
@@ -15,8 +15,10 @@ class VideoMetadata final : public idhan::MetadataModuleI
 
 	std::vector< std::string_view > handleableMimes() override;
 
-	std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile(
+	std::expected< ThumbnailInfo, idhan::ModuleError > createThumbnail(
 		const void* data,
 		std::size_t length,
+		std::size_t width,
+		std::size_t height,
 		std::string mime_name ) override;
 };
