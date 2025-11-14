@@ -18,10 +18,7 @@ namespace idhan::metadata
 
 ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPtr db )
 {
-	auto io { co_await filesystem::getIOForRecord( record_id, db ) };
-	return_unexpected_error( io );
-
-	const auto [ data, length ] = io->mmapReadOnly();
+	log::debug( "Processing metadata for {}", record_id );
 
 	const auto record_mime {
 		co_await db->execSqlCoro( "SELECT mime_id FROM file_info WHERE record_id = $1", record_id )
@@ -31,7 +28,18 @@ ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPt
 		co_return std::unexpected( createBadRequest(
 			"Record {} does not exist or does not have any file info associated with it", record_id ) );
 
-	if ( record_mime[ 0 ][ "mime_id" ].isNull() ) co_return MetadataInfo {};
+	if ( record_mime[ 0 ][ "mime_id" ].isNull() )
+	{
+		log::warn(
+			"When trying to parse file for record {} for metadata, there was no mime associated with it", record_id );
+		co_return std::unexpected( createBadRequest(
+			"Record {} does not have any mime associated with it, Cannot parse metadata", record_id ) );
+	}
+
+	auto io { co_await filesystem::getIOForRecord( record_id, db ) };
+	return_unexpected_error( io );
+
+	const auto [ data, length ] = io->mmapReadOnly();
 
 	const auto mime_id { record_mime[ 0 ][ "mime_id" ].as< MimeID >() };
 

@@ -22,7 +22,7 @@ ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, D
 {
 	const auto result { co_await db->execSqlCoro(
 
-		R"(SELECT folder_path, sha256, COALESCE(extension, best_extension) as extension
+		R"(SELECT folder_path, sha256, COALESCE(extension, best_extension, '') as extension
 				FROM records
 						 JOIN file_info ON records.record_id = file_info.record_id
 						 LEFT JOIN mime ON file_info.mime_id = mime.mime_id

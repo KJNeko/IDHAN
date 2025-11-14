@@ -4,6 +4,7 @@
 
 #include "IDHANTypes.hpp"
 #include "api/APIMaintenance.hpp"
+#include "logging/log.hpp"
 #include "metadata/metadata.hpp"
 
 namespace idhan::api
@@ -21,6 +22,8 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::rescanMetadata(
 
 		co_await metadata::tryParseRecordMetadata( record_id, db );
 	}
+
+	log::info( "Finished scanning metadata for records" );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( Json::Value() );
 }
