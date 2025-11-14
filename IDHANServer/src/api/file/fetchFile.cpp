@@ -74,12 +74,13 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 	const bool has_range_header { !range_header.empty() };
 	const bool is_full_range { has_range_header && ( range_header == full_range ) };
-	if ( is_full_range )
+	if ( !is_full_range && has_range_header )
 	{
-		static const std::regex range_pattern { R"(bytes=(\d*)-(\d*)?)" };
+		constexpr auto regex_pattern { R"(bytes=(\d*)-(\d*)?)" };
+		static const std::regex regex { regex_pattern };
 		std::smatch range_match {};
 
-		if ( std::regex_match( range_header, range_match, range_pattern ) )
+		if ( std::regex_match( range_header, range_match, regex ) )
 		{
 			if ( range_match.size() != 3 )
 			{
@@ -90,14 +91,20 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 			try
 			{
 				if ( range_match[ 1 ].matched )
+				{
+					log::debug( "Regex range header match 1: {}", range_match[ 1 ].str() );
 					begin = static_cast< std::size_t >( std::stoull( range_match[ 1 ].str() ) );
+				}
 				if ( range_match[ 2 ].matched )
+				{
+					log::debug( "Regex range header match 2: {}", range_match[ 2 ].str() );
 					end = static_cast< std::size_t >( std::stoull( range_match[ 2 ].str() ) );
+				}
 			}
 			catch ( std::exception& e )
 			{
-				log::error( "Error with range header: {}", e.what() );
-				co_return createBadRequest( "Invalid Range Header" );
+				log::error( "Error with range header: {}, Header was {}", e.what(), range_header );
+				co_return createBadRequest( "Error with range header: {}, Header was {}", e.what(), range_header );
 			}
 
 			// Ensure the range is valid
@@ -105,7 +112,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 		}
 		else
 		{
-			co_return createBadRequest( "Invalid Range Header Format" );
+			co_return createBadRequest( "Invalid Range Header Format Regex failed: {}", regex_pattern );
 		}
 	}
 
