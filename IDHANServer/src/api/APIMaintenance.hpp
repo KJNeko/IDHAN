@@ -37,6 +37,8 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	drogon::Task< drogon::HttpResponsePtr > reloadMime( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > listParsers( drogon::HttpRequestPtr request );
 
+	drogon::Task< drogon::HttpResponsePtr > purgeThumbnails( drogon::HttpRequestPtr request );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -51,6 +53,8 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	ADD_METHOD_TO( APIMaintenance::listParsers, "/mime/parsers" );
 
 	ADD_METHOD_TO( APIMaintenance::integrityCheck, "/integrity" );
+
+	ADD_METHOD_TO( APIMaintenance::purgeThumbnails, "/purge/thumbnails" );
 
 	// ADD_METHOD_TO( APIMaintenance::test, "/test" );
 
