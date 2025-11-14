@@ -20,7 +20,7 @@ ExpectedTask< FileIOUring > getIOForRecord( const RecordID record_id, DbClientPt
 	if ( !std::filesystem::exists( *path ) )
 	{
 		co_return std::unexpected(
-			createInternalError( "Record {} does not exist at the expected path {}.", record_id, path->string() ) );
+			createInternalError( "Record {} does not exist at the expected path \'{}\'.", record_id, path->string() ) );
 	}
 
 	FileIOUring uring { *path };

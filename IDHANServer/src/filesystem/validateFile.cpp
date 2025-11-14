@@ -18,6 +18,7 @@ ExpectedTask< FileState > validateFile( const RecordID record_id, DbClientPtr db
 	if ( *file_exists_e ) co_return FileState::FileNotFound;
 
 	// TODO: Validate hash
+	FGL_UNIMPLEMENTED();
 }
 
 } // namespace idhan::filesystem
