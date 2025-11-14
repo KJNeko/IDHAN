@@ -4,18 +4,19 @@
 
 #include <fstream>
 
+#include "../../filesystem/io/IOUring.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "drogon/utils/coroutine.h"
-#include "filesystem/IOUring.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "modules/ModuleLoader.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
+#include "filesystem/filesystem.hpp"
 #include "paths.hpp"
 #include "trantor/utils/ConcurrentTaskQueue.h"
 #pragma GCC diagnostic pop
@@ -70,36 +71,29 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		// We must generate the thumbnail
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 
-		if ( thumbnailers.size() == 0 )
+		if ( thumbnailers.empty() )
 		{
 			co_return createBadRequest( "No thumbnailer for mime type {} provided by modules", mime_name );
 		}
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
 
-		const auto record_path { co_await helpers::getRecordPath( record_id, db ) };
-
-		if ( !record_path ) co_return record_path.error();
-
 		// FileMappedData data { record_path.value() };
-		FileIOUring io_uring { record_path.value() };
+		auto io_uring_e { co_await filesystem::getIOForRecord( record_id, db ) };
+		if ( !io_uring_e ) co_return io_uring_e.error();
+		auto& io_uring { io_uring_e.value() };
 
 		//TODO: Allow requesting a specific thumbnail size
 		std::size_t height { 256 };
 		std::size_t width { 256 };
 
-		std::vector< std::byte > data { co_await io_uring.readAll() };
+		const auto& [ data, data_size ] = io_uring.mmapReadOnly();
 
-		const auto thumbnail_info {
-			thumbnailer->createThumbnail( data.data(), data.size(), width, height, mime_name )
-		};
+		const auto thumbnail_info { thumbnailer->createThumbnail( data, data_size, width, height, mime_name ) };
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 
 		std::filesystem::create_directories( thumbnail_location_e.value().parent_path() );
-
-		// const auto& thumbnail_data = thumbnail_info.value().data;
-		auto thumbnail_data { std::make_shared< std::vector< std::byte > >( thumbnail_info.value().data ) };
 
 		const auto& thumbnail_location { thumbnail_location_e.value() };
 
@@ -108,11 +102,12 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		log::debug( "Writing thumbnail to {}", thumbnail_location.string() );
 
-		co_await io_uring_write.write( *thumbnail_data );
+		co_await io_uring_write.write( thumbnail_info->data );
 	}
 
-	auto response { drogon::HttpResponse::newFileResponse(
-		thumbnail_location_e.value(), thumbnail_location_e.value().filename(), drogon::ContentType::CT_IMAGE_PNG ) };
+	auto response {
+		drogon::HttpResponse::newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG )
+	};
 
 	const auto duration { std::chrono::hours( 1 ) };
 

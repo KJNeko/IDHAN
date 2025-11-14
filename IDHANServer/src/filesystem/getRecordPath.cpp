@@ -2,12 +2,12 @@
 // Created by kj16609 on 6/12/25.
 //
 
-#include "createBadRequest.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/utils/coroutine.h"
-#include "helpers.hpp"
+#include "threading/ExpectedTask.hpp"
 
-namespace idhan::api::helpers
+namespace idhan::filesystem
 {
 
 std::filesystem::path getFileFolder( const SHA256& sha256 )
@@ -18,13 +18,11 @@ std::filesystem::path getFileFolder( const SHA256& sha256 )
 	return folder_name;
 }
 
-drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > getRecordPath(
-	const RecordID record_id,
-	DbClientPtr db )
+ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, DbClientPtr db )
 {
 	const auto result { co_await db->execSqlCoro(
 
-		R"(SELECT folder_path, sha256, COALESCE(extension, best_extension) as extension
+		R"(SELECT folder_path, sha256, COALESCE(extension, best_extension, '') as extension
 				FROM records
 						 JOIN file_info ON records.record_id = file_info.record_id
 						 LEFT JOIN mime ON file_info.mime_id = mime.mime_id
@@ -51,4 +49,4 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > 
 
 	co_return file_location;
 }
-} // namespace idhan::api::helpers
+} // namespace idhan::filesystem

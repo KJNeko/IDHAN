@@ -21,8 +21,8 @@
 
 #include <expected>
 
+#include "threading/ExpectedTask.hpp"
 #include "IDHANTypes.hpp"
-#include "api/helpers/ExpectedTask.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "db/dbTypes.hpp"
 

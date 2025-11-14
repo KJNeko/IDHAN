@@ -1,11 +1,11 @@
 #include "records.hpp"
 
-#include "createBadRequest.hpp"
+#include "../api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "fgl/defines.hpp"
 
-namespace idhan::api::helpers
+namespace idhan::helpers
 {
 
 drogon::Task< std::vector< RecordID > > massCreateRecord( const std::vector< SHA256 >& sha256s, DbClientPtr db )
@@ -84,4 +84,4 @@ drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, DbCl
 	co_return search_result[ 0 ][ 0 ].as< RecordID >();
 }
 
-} // namespace idhan::api::helpers
+} // namespace idhan::helpers

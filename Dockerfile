@@ -2,7 +2,8 @@
 # Stage 1: Build environment
 FROM ubuntu:24.04 AS builder
 
-RUN apt-get update && DEBIAN_FRONTNED=noninteractive apt-get install -y \
+RUN apt-get update && \
+    DEBIAN_FRONTNED=noninteractive apt-get install -y \
     build-essential \
     cmake \
     git \
@@ -17,7 +18,11 @@ RUN apt-get update && DEBIAN_FRONTNED=noninteractive apt-get install -y \
     libqt6core6 \
     libqt6multimedia6 \
     libjsoncpp-dev \
-    libvips-dev
+    libvips-dev \
+    libavcodec-dev \
+    libavcodec-extra \
+    libavfilter-dev \
+    libavutil-dev
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -50,10 +55,9 @@ RUN --mount=type=cache,target=/root/.ccache \
 # Stage 2: Runtime environment
 FROM ubuntu:24.04
 
-RUN apt-get update
-
 # Install runtime dependencies only
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
     # Qt6 runtime libraries
     libqt6core6 \
     libqt6multimedia6 \
@@ -68,7 +72,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     uuid-runtime \
     zlib1g \
     libssl3 \
-    libc-ares2
+    libc-ares2 \
+    ffmpeg
 
 # Cleanup
 RUN apt-get clean

@@ -243,7 +243,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags(
 
 	if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
-	const auto tag_domain_id { helpers::getTagDomainID( request ) };
+	const auto tag_domain_id { helpers::getTagDomainIDParameter( request ) };
 
 	if ( !tag_domain_id ) co_return tag_domain_id.error();
 
@@ -271,7 +271,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 	if ( !json[ "records" ].isArray() )
 		co_return createBadRequest( "Invalid json: Array of ids called 'records' must be present." );
 
-	const auto tag_domain_id { helpers::getTagDomainID( request ) };
+	const auto tag_domain_id { helpers::getTagDomainIDParameter( request ) };
 
 	if ( !tag_domain_id ) co_return tag_domain_id.error();
 

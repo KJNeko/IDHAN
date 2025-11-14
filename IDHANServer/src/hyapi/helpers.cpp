@@ -4,9 +4,9 @@
 
 #include "helpers.hpp"
 
+#include "../records/records.hpp"
 #include "IDHANTypes.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "api/helpers/records.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "drogon/HttpResponse.h"
@@ -28,7 +28,7 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 		const auto hash { json[ i ].asString() };
 		const auto sha256 { SHA256::fromHex( hash ) };
 		if ( !sha256 ) co_return std::unexpected( sha256.error() );
-		const auto record_id { co_await api::helpers::findRecord( *sha256, db ) };
+		const auto record_id { co_await idhan::helpers::findRecord( *sha256, db ) };
 		if ( !record_id ) co_return std::unexpected( createBadRequest( "Invalid SHA256" ) );
 		records.emplace_back( record_id.value() );
 	}
@@ -51,7 +51,7 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 		const auto hash { json[ "hash" ].asString() };
 		const auto sha256 { SHA256::fromHex( hash ) };
 		if ( !sha256 ) co_return std::unexpected( sha256.error() );
-		const auto record_id { co_await api::helpers::findRecord( *sha256, db ) };
+		const auto record_id { co_await idhan::helpers::findRecord( *sha256, db ) };
 		if ( !record_id ) co_return std::unexpected( createBadRequest( "Invalid SHA256" ) );
 		records.emplace_back( record_id.value() );
 		co_return records;
@@ -112,7 +112,7 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 	{
 		const auto sha256 { SHA256::fromHex( opt.value() ) };
 		if ( !sha256 ) co_return std::unexpected( sha256.error() );
-		const auto record_id { co_await api::helpers::findRecord( *sha256, db ) };
+		const auto record_id { co_await idhan::helpers::findRecord( *sha256, db ) };
 		if ( !record_id ) co_return std::unexpected( createBadRequest( "Invalid SHA256" ) );
 		std::vector< RecordID > records { record_id.value() };
 		co_return records;

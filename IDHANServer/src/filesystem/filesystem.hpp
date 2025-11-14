@@ -1,20 +1,32 @@
 //
-// Created by kj16609 on 10/30/25.
+// Created by kj16609 on 11/13/25.
 //
 #pragma once
-#include "IDHANTypes.hpp"
-#include "api/helpers/ExpectedTask.hpp"
-#include "crypto/SHA256.hpp"
+#include <filesystem>
+
+#include "io/IOUring.hpp"
+#include "threading/ExpectedTask.hpp"
+
+namespace idhan
+{
+class SHA256;
+}
 
 namespace idhan::filesystem
 {
+
+std::filesystem::path getFileFolder( const SHA256& sha256 );
+
 /**
  *
  * @param record_id Record of which to get a filepath for
  * @param db
  * @return
  */
-ExpectedTask< std::filesystem::path > getFilepath( RecordID record_id, DbClientPtr db );
+ExpectedTask< std::filesystem::path > getRecordPath( RecordID record_id, DbClientPtr db );
+
+//! Returns a FileIOUring instance for the given record
+ExpectedTask< FileIOUring > getIOForRecord( RecordID record_id, DbClientPtr db );
 
 //! Returns the path of a cluster.
 ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );
