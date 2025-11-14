@@ -1,13 +1,14 @@
 //
 // Created by kj16609 on 11/12/25.
 //
-#include "VideoMetadata.hpp"
+#include "FFMPEGMetadata.hpp"
 
 #include <array>
 #include <cstring>
 #include <iostream>
 #include <memory>
 
+#include "ffmpeg.hpp"
 #include "fgl/defines.hpp"
 
 extern "C" {
@@ -16,74 +17,24 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-inline static std::vector< std::string_view >
-	ffmpeg_handleable_mimes { "video/mp4", "video/webm", "video/mpeg", "video/quicktime" };
 
-std::string_view VideoMetadata::name()
+
+std::string_view FFMPEGMetadata::name()
 {
 	return "Video Metadata Module";
 }
 
-idhan::ModuleVersion VideoMetadata::version()
+idhan::ModuleVersion FFMPEGMetadata::version()
 {
 	return { .m_major = 1, .m_minor = 0, .m_patch = 0 };
 }
 
-std::vector< std::string_view > VideoMetadata::handleableMimes()
+std::vector< std::string_view > FFMPEGMetadata::handleableMimes()
 {
 	return ffmpeg_handleable_mimes;
 }
 
-struct OpaqueInfo
-{
-	std::string_view m_data;
-	std::int64_t m_cursor { 0 };
-};
-
-// copies
-int readFunction( void* opaque, std::uint8_t* buffer, int buffer_size )
-{
-	auto& buffer_view { *static_cast< OpaqueInfo* >( opaque ) };
-
-	auto* data { buffer_view.m_data.data() };
-	if ( buffer_view.m_cursor >= buffer_view.m_data.size() ) return 0;
-
-	data += buffer_view.m_cursor;
-	const std::int64_t size { static_cast< std::int64_t >( buffer_view.m_data.size() ) - buffer_view.m_cursor };
-	const std::int64_t min_size { std::min( size, static_cast< std::int64_t >( buffer_size ) ) };
-	std::memcpy( buffer, data, min_size );
-
-	buffer_view.m_cursor += min_size;
-
-	return min_size;
-}
-
-// Add after readFunction
-std::int64_t seekFunction( void* opaque, std::int64_t offset, int whence )
-{
-	auto& buffer_view { *static_cast< OpaqueInfo* >( opaque ) };
-
-	switch ( whence )
-	{
-		case SEEK_SET:
-			buffer_view.m_cursor = offset;
-			break;
-		case SEEK_CUR:
-			buffer_view.m_cursor += offset;
-			break;
-		case SEEK_END:
-			buffer_view.m_cursor = static_cast< std::int64_t >( buffer_view.m_data.size() ) + offset;
-			break;
-		case AVSEEK_SIZE:
-			return static_cast< std::int64_t >( buffer_view.m_data.size() );
-		default:
-			return -1;
-	}
-
-	return buffer_view.m_cursor;
-}
-
-std::expected< idhan::MetadataInfo, idhan::ModuleError > VideoMetadata::parseFile(
+std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFile(
 	const void* data,
 	std::size_t length,
 	std::string mime_name )
@@ -109,10 +60,6 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > VideoMetadata::parseFil
 			seekFunction ),
 		&av_free );
 
-	// auto format_context_u { std::unique_ptr< AVFormatContext, void ( * )( AVFormatContext* ) >(
-	// ::avformat_alloc_context(), freeAVFormatContext ) };
-
-	// auto format_context { format_context_u.get() };
 	const auto format_context_p =
 		std::shared_ptr< AVFormatContext >( avformat_alloc_context(), &avformat_free_context );
 	auto format_context { format_context_p.get() };

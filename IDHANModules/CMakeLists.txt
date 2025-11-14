@@ -9,7 +9,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
 		libavcodec
 		libavformat
-		libavutil)
+		libavutil
+		libswscale)
 
 # ImageVipsMetadata & ImageVipsThumbnailer
 pkg_check_modules(VIPS REQUIRED vips)
