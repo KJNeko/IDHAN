@@ -71,7 +71,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		// We must generate the thumbnail
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 
-		if ( thumbnailers.size() == 0 )
+		if ( thumbnailers.empty() )
 		{
 			co_return createBadRequest( "No thumbnailer for mime type {} provided by modules", mime_name );
 		}
@@ -95,9 +95,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		std::filesystem::create_directories( thumbnail_location_e.value().parent_path() );
 
-		// const auto& thumbnail_data = thumbnail_info.value().data;
-		auto thumbnail_data { std::make_shared< std::vector< std::byte > >( thumbnail_info.value().data ) };
-
 		const auto& thumbnail_location { thumbnail_location_e.value() };
 
 		std::filesystem::create_directories( thumbnail_location.parent_path() );
@@ -105,11 +102,12 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		log::debug( "Writing thumbnail to {}", thumbnail_location.string() );
 
-		co_await io_uring_write.write( *thumbnail_data );
+		co_await io_uring_write.write( thumbnail_info->data );
 	}
 
-	auto response { drogon::HttpResponse::newFileResponse(
-		thumbnail_location_e.value(), thumbnail_location_e.value().filename(), drogon::ContentType::CT_IMAGE_PNG ) };
+	auto response {
+		drogon::HttpResponse::newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG )
+	};
 
 	const auto duration { std::chrono::hours( 1 ) };
 
