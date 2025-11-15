@@ -3,21 +3,17 @@
 //
 #include "FFMPEGMetadata.hpp"
 
-#include <array>
 #include <cstring>
 #include <iostream>
 #include <memory>
 
 #include "ffmpeg.hpp"
-#include "fgl/defines.hpp"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 }
-
-
 
 std::string_view FFMPEGMetadata::name()
 {
