@@ -158,7 +158,84 @@ class SearchBuilder
 	{
 		bool file_info { false };
 		bool records { false };
+
+		bool left_video_metadata { false };
+		bool video_metadata { false };
+
+		bool left_image_metadata { false };
+		bool image_metadata { false };
 	} m_required_joins {};
+
+	bool m_search_everything { false };
+
+	using SearchOperation = std::uint8_t;
+
+	enum SearchOperationFlags : SearchOperation
+	{
+		GreaterThan = 1 << 0, // >
+		LessThan = 1 << 1, // <
+		Equal = 1 << 2, // =
+		Not = 1 << 3, // !
+		// Approximate = 1 << 4, // ~
+		Approximate = Equal, // ~
+
+		// helpers
+		NotLessThan = Not | LessThan, // ~<
+		NotGreaterThan = Not | GreaterThan, // ~>
+
+		GreaterThanEqual = GreaterThan | Equal, // >=
+		LessThanEqual = LessThan | Equal, // <=
+		NotGreaterThanEqual = Not | GreaterThanEqual, // ~>=
+		NotLessThanEqual = Not | LessThanEqual, // ~<=
+
+		NotEqual = Not | Equal, // ~=
+	};
+
+	enum class DurationSearchType
+	{
+		DontCare = 0,
+		HasDuration,
+		NoDuration
+	} m_duration_search { DurationSearchType::DontCare };
+
+	enum class AudioSearchType
+	{
+		DontCare = 0,
+		HasAudio,
+		NoAudio
+	} m_audio_search { AudioSearchType::DontCare };
+
+	enum class ExitSearchType
+	{
+		DontCare = 0,
+		HasExif,
+		NoExif
+	} m_exif_search { ExitSearchType::DontCare };
+
+	enum class TagCountSearchType
+	{
+		DontCare = 0,
+		HasTags,
+		NoTags,
+		HasCount
+	} m_has_tags_search { TagCountSearchType::DontCare };
+
+	struct RangeSearchInfo
+	{
+		//! If true then this count and operation are put into effect
+		bool m_active { false };
+		std::size_t count { 0 };
+		SearchOperation operation { 0 };
+	};
+
+	static void parseRangeSearch( RangeSearchInfo& target, std::string_view tag );
+
+	RangeSearchInfo m_tag_count_search {};
+
+	RangeSearchInfo m_width_search {};
+	RangeSearchInfo m_height_search {};
+
+	RangeSearchInfo m_limit_search {};
 
 	SortType m_sort_type;
 	SortOrder m_order;
@@ -171,6 +248,13 @@ class SearchBuilder
 	static std::unordered_map< TagID, std::string > createFilters(
 		const std::vector< TagID >& tag_ids,
 		bool filter_domains );
+	std::string buildPositiveFilter() const;
+	std::string buildNegativeFilter() const;
+
+	void generateOrderByClause( std::string& query ) const;
+	void determineJoinsForQuery( std::string& query );
+	void determineSelectClause( std::string& query, bool return_ids, bool return_hashes );
+	void generateWhereClauses( std::string& query );
 	/**
 	 * @brief Constructs a query to be used. $1 is expected to be an array of tag_domain_ids
 	 * @param return_ids
@@ -202,6 +286,7 @@ class SearchBuilder
 
 	void setPositiveTags( const std::vector< TagID >& vector );
 	void setNegativeTags( const std::vector< TagID >& tag_ids );
+	void setSystemTags( const std::vector< std::string >& vector );
 
 	void setDisplay( HydrusDisplayType type );
 };
