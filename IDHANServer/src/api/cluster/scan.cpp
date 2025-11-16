@@ -32,18 +32,20 @@ ExpectedTask< RecordID > adoptOrphan( FileIOUring io_uring, DbClientPtr db )
 
 struct ScanParams
 {
-	bool read_only:1 { true };
-	bool recompute_hash:1 { false };
-	bool scan_mime:1 { true };
-	bool rescan_mime:1 { false };
-	bool scan_metadata:1 { true };
-	bool rescan_metadata:1 { false };
-	bool stop_on_fail:1 { false };
-	bool adopt_orphans:1 { false };
-	bool remove_missing_files:1 { false };
-	bool trust_filename:1 { false };
-	bool fix_extensions:1 { false };
-	bool force_readonly:1 { false };
+	bool read_only { true };
+	bool recompute_hash { false };
+	bool scan_mime { true };
+	bool rescan_mime { false };
+	bool scan_metadata { true };
+	bool rescan_metadata { false };
+	bool stop_on_fail { false };
+	bool adopt_orphans { false };
+	bool remove_missing_files { false };
+	bool trust_filename { false };
+	bool fix_extensions { false };
+	bool force_readonly { false };
+
+	ScanParams() = default;
 };
 
 ExpectedTask<> scanFile(
@@ -99,7 +101,6 @@ class ScanContext
 
 	ExpectedTask< void > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
 	drogon::Task<> updateFileModifiedTime( drogon::orm::DbClientPtr db );
-	ExpectedTask< void > insertFileInfo( drogon::orm::DbClientPtr db );
 
 	ExpectedTask< void > checkCluster( DbClientPtr db );
 	drogon::Task< bool > hasMime( DbClientPtr db );
@@ -155,7 +156,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		for ( const auto& file : std::filesystem::directory_iterator( folder ) )
 		{
-			const auto entry { file };
+			const auto& entry { file };
 
 			const auto& file_path { entry.path() };
 
@@ -185,7 +186,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 			if ( scan_params.stop_on_fail && !file_result )
 			{
 				co_return file_result.error();
-			};
+			}
 		}
 	}
 
@@ -195,12 +196,6 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 	co_return co_await drogon::app().forwardCoro( request );
 }
 
-/**
- *
- * @param uring
- * @param bad_dir Directory to put failed files, Such as ones that have the wrong filename
- * @return
- */
 ExpectedTask< SHA256 > ScanContext::checkSHA256( const std::filesystem::path bad_dir )
 {
 	const auto file_stem { m_path.stem().string() };
@@ -345,18 +340,6 @@ drogon::Task<> ScanContext::updateFileModifiedTime( drogon::orm::DbClientPtr db 
 	co_await db->execSqlCoro( "UPDATE file_info SET modified_time = $1 WHERE record_id = $2", date, m_record_id );
 }
 
-ExpectedTask<> ScanContext::insertFileInfo( drogon::orm::DbClientPtr db )
-{
-	const trantor::Date date { filesystem::getLastWriteTime( m_path ) };
-	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, cluster_id, size, modified_time) VALUES ($1, $2, $3, $4)",
-		m_record_id,
-		m_cluster_id,
-		m_size,
-		date );
-	co_return {};
-}
-
 ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 {
 	log::debug( "Verifying that the record is in the correct cluster" );
@@ -365,10 +348,10 @@ ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		co_await db->execSqlCoro( "SELECT cluster_id, modified_time FROM file_info WHERE record_id = $1", m_record_id )
 	};
 
-	// create the file info if it doesn't already exist
 	if ( file_info.empty() )
 	{
-		co_return co_await insertFileInfo( db );
+		co_return {};
+		// co_return co_await insertFileInfo( db );
 	}
 
 	if ( file_info[ 0 ][ "modified_time" ].isNull() )
@@ -436,10 +419,10 @@ drogon::Task< bool > ScanContext::hasMime( DbClientPtr db )
 ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 {
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
-	FileIOUring file_io { m_path };
+	const FileIOUring file_io { m_path };
 
 	// skip checking if we have a mime if we are going to rescan it
-	if ( ( !m_params.rescan_mime ) && co_await hasMime( db ) )
+	if ( !m_params.rescan_mime && co_await hasMime( db ) )
 	{
 		log::debug( "Skipping metadata scan because it already had metadata and rescan_mime was set to false" );
 		co_return {};
