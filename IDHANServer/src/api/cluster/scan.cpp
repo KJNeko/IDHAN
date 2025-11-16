@@ -16,19 +16,10 @@
 #include "metadata/metadata.hpp"
 #include "mime/FileInfo.hpp"
 #include "mime/MimeDatabase.hpp"
-#include "records/records.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan::api
 {
-ExpectedTask< RecordID > adoptOrphan( FileIOUring io_uring, DbClientPtr db )
-{
-	const auto data { co_await io_uring.readAll() };
-	const auto sha256 { SHA256::hash( data.data(), data.size() ) };
-	const auto record_result { co_await idhan::helpers::createRecord( sha256, db ) };
-
-	co_return record_result;
-}
 
 struct ScanParams
 {
@@ -517,11 +508,11 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 
 	//TODO: In order to protect the main process from poorly written modules, Either fork or launch a new process to actually run the parser
 
-	FileIOUring file_io { m_path };
+	FileIOUring file_io { m_path, FileIOUring::ReadOnly };
 
-	std::vector< std::byte > file_data { co_await file_io.readAll() };
+	const auto [ file_data, file_size ] { file_io.mmapReadOnly() };
 
-	const auto metadata_e { metadata_parser->parseFile( file_data.data(), file_data.size(), m_mime_name ) };
+	const auto metadata_e { metadata_parser->parseFile( file_data, file_size, m_mime_name ) };
 
 	if ( metadata_e )
 	{
