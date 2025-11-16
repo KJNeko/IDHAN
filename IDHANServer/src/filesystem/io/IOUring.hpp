@@ -29,21 +29,25 @@ class [[nodiscard]] FileIOUring
 		operator int() const;
 	};
 
-	FileDescriptor m_fd { -1 };
-	std::size_t m_size { 0 };
+	FileDescriptor m_fd;
+	std::size_t m_size;
 	std::filesystem::path m_path;
-	void* m_mmap_ptr { nullptr };
+	void* m_mmap_ptr;
+	bool m_readonly;
 
   public:
 
-	FileIOUring( const std::filesystem::path& path );
+	constexpr auto static ReadOnly { true };
+	constexpr auto static ReadWrite { true };
+
+	FileIOUring( const std::filesystem::path& path, bool readonly = ReadOnly );
 
 	~FileIOUring();
 
 	[[nodiscard]] std::size_t size() const;
 
 	[[nodiscard]] const std::filesystem::path& path() const;
-	[[nodiscard]] drogon::Task< std::vector< std::byte > > readAll() const;
+	// [[nodiscard]] drogon::Task< std::vector< std::byte > > readAll() const;
 	[[nodiscard]] drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
 	[[nodiscard]] drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 ) const;
 	[[nodiscard]] drogon::Task< std::vector< std::byte > > fallbackRead( std::size_t offset, std::size_t len ) const;

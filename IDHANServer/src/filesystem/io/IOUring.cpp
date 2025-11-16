@@ -34,10 +34,12 @@ FileIOUring::FileDescriptor::operator int() const
 	return *m_fd;
 }
 
-FileIOUring::FileIOUring( const std::filesystem::path& path ) :
-  m_fd( open( path.c_str(), O_RDWR | O_CREAT, 0666 ) ),
+FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly ) :
+  m_fd( open( path.c_str(), ( readonly ? O_RDONLY : ( O_RDWR | O_CREAT ) ), 0666 ) ),
   m_size( std::filesystem::file_size( path ) ),
-  m_path( path )
+  m_path( path ),
+  m_mmap_ptr( nullptr ),
+  m_readonly( readonly )
 {
 	if ( m_fd <= 0 ) throw std::runtime_error( format_ns::format( "Failed to open file {}", path.string() ) );
 }
@@ -57,11 +59,13 @@ const std::filesystem::path& FileIOUring::path() const
 	return m_path;
 }
 
+/*
 drogon::Task< std::vector< std::byte > > FileIOUring::readAll() const
 {
 	const auto file_size { std::filesystem::file_size( m_path ) };
 	co_return co_await read( 0, file_size );
 }
+*/
 
 drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, std::size_t len ) const
 {
@@ -103,6 +107,7 @@ drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t of
 
 drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, const std::size_t offset ) const
 {
+	if ( m_readonly ) throw std::runtime_error( "Unable to write due to file being in readonly" );
 	auto& uring { IOUring::getInstance() };
 
 	if ( uring.m_iouring_setup == false ) co_await fallbackWrite( data, offset );
