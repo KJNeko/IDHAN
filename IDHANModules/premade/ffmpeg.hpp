@@ -50,27 +50,27 @@ inline std::int64_t seekFunction( void* opaque, std::int64_t offset, int whence 
 {
 	auto& buffer_view { *static_cast< OpaqueInfo* >( opaque ) };
 
-	idhan::log::info( "Asked to seek from whence {} and offset {}", whence, offset );
+	idhan::log::trace( "Asked to seek from whence {} and offset {}", whence, offset );
 	switch ( whence )
 	{
 		case SEEK_SET:
-			idhan::log::info( "Asked to seek to specific offset {}", offset );
+			idhan::log::trace( "Asked to seek to specific offset {}", offset );
 			buffer_view.m_cursor = offset;
 			break;
 		case SEEK_CUR:
-			idhan::log::info( "Asked to seek to an +{} from cursor", offset );
+			idhan::log::trace( "Asked to seek to an +{} from cursor", offset );
 			buffer_view.m_cursor += offset;
 			break;
 		case SEEK_END:
-			idhan::log::info( "Asked to seek to end" );
+			idhan::log::trace( "Asked to seek to end" );
 			buffer_view.m_cursor = static_cast< std::int64_t >( buffer_view.m_data.size() ) + offset;
 			break;
 		case AVSEEK_SIZE:
-			idhan::log::info( "Asked to seek size" );
+			idhan::log::trace( "Asked to seek size" );
 			return static_cast< std::int64_t >( buffer_view.m_data.size() );
 		default:
 			{
-				idhan::log::info( "Asked to seek to whence that ended in default" );
+				idhan::log::warn( "Asked to seek to whence that ended in default" );
 				return -1;
 			}
 	}
