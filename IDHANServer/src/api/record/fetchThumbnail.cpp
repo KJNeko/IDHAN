@@ -105,6 +105,13 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		co_await io_uring_write.write( thumbnail_info->data );
 	}
 
+	if ( !std::filesystem::exists( *thumbnail_location_e ) )
+	{
+		co_return createInternalError(
+			"Thumbnail did not exist for record {}, Writing might have failed. See previous warnings/errors",
+			thumbnail_location_e->string() );
+	}
+
 	auto response {
 		drogon::HttpResponse::newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG )
 	};
