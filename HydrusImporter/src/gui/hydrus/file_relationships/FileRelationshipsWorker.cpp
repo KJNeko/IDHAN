@@ -172,7 +172,7 @@ void FileRelationshipsWorker::process()
 
 	std::size_t alternative_count { 0 };
 
-	for ( const auto hy_hashes : alternative_map | std::views::values )
+	for ( const auto& hy_hashes : alternative_map | std::views::values )
 	{
 		std::vector< idhan::RecordID > record_ids {};
 		for ( const auto& hy_hash : hy_hashes ) record_ids.emplace_back( record_map.at( hy_hash ) );
