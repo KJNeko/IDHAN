@@ -212,7 +212,11 @@ void IDHANClient::sendClientJson(
 				response->url().path().toStdString() );
 		}
 
-		if ( response->error() != QNetworkReply::NoError ) return;
+		if ( response->error() != QNetworkReply::NoError )
+		{
+			logging::critical( "When handling the request for a valid response, the response was actually an error!" );
+			std::abort();
+		}
 
 		QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
 	};
