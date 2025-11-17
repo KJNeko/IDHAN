@@ -269,21 +269,28 @@ void TagServiceWorker::importMappings()
 
 	const std::string service_name { m_service.name.toStdString() };
 
-	auto tag_domain_f { client.createTagDomain( service_name ) };
-
-	//TODO: Add handling for conflicting tag domains
-	try
+	auto tag_domain_search_f { client.getTagDomain( service_name ) };
+	tag_domain_search_f.waitForFinished();
+	if ( auto result = tag_domain_search_f.result(); result.has_value() )
 	{
-		tag_domain_f.waitForFinished();
+		tag_domain_id = result.value();
 	}
-	catch ( std::exception& e )
+	else
 	{
-		idhan::logging::info( "Got exception: {} when trying to create tag domain for {}", e.what(), service_name );
-		tag_domain_f = client.getTagDomain( service_name );
-		tag_domain_f.waitForFinished();
-	}
+		auto tag_domain_f { client.createTagDomain( service_name ) };
 
-	tag_domain_id = tag_domain_f.result();
+		//TODO: Add handling for conflicting tag domains
+		try
+		{
+			tag_domain_f.waitForFinished();
+			tag_domain_id = tag_domain_f.result();
+		}
+		catch ( std::exception& e )
+		{
+			idhan::logging::info( "Got exception: {} when trying to create tag domain for {}", e.what(), service_name );
+			return;
+		}
+	}
 
 	processMappingsBatch( mappings_tr, current_mappings_name );
 	processRelationships();

@@ -196,7 +196,7 @@ class IDHANClient
 	 * @throws DomainDoesNotExist
 	 * @return
 	 */
-	QFuture< TagDomainID > getTagDomain( std::string_view name );
+	QFuture< std::optional<TagDomainID> > getTagDomain( std::string_view name );
 
 	struct TagRelationshipInfo
 	{
