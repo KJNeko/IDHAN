@@ -16,6 +16,7 @@ TagServiceWidget::TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWi
   m_name(),
   m_worker( new TagServiceWorker( this, importer ) ),
   m_start(),
+  m_mapping_records(),
   ui( new Ui::TagServiceWidget )
 {
 	ui->setupUi( this );
