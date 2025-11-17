@@ -214,7 +214,7 @@ void IDHANClient::sendClientJson(
 
 		if ( response->error() != QNetworkReply::NoError ) return;
 
-		QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
+		QThreadPool::globalInstance()->start( [ responseHandler, response ] { responseHandler( response ); } );
 	};
 
 	auto errorSlot = [ errorHandler, response, url ]( const QNetworkReply::NetworkError error )
@@ -241,14 +241,16 @@ void IDHANClient::sendClientJson(
 					const auto error_msg { response_object[ "error" ].toString().toStdString() };
 					// logging::error( object[ "error" ].toString().toStdString() );
 
-					QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error, error_msg ) );
+					QThreadPool::globalInstance()->start( [ errorHandler, response, error, error_msg ]
+					                                      { errorHandler( response, error, error_msg ); } );
 					return;
 				}
 			}
 		}
 
 		QThreadPool::globalInstance()->start(
-			std::bind( errorHandler, response, error, response->errorString().toStdString() ) );
+			[ errorHandler, response, error, capture0 = response->errorString().toStdString() ]
+			{ errorHandler( response, error, capture0 ); } );
 	};
 
 	const auto response_connection { QObject::connect( response, &QNetworkReply::finished, responseSlot ) };
@@ -260,9 +262,18 @@ void IDHANClient::sendClientJson(
 		response->disconnect( error_connection );
 
 		if ( response->error() == QNetworkReply::NoError )
-			responseSlot();
+		{
+			QThreadPool::globalInstance()->start( [ responseHandler, response ] { responseHandler( response ); } );
+		}
 		else
-			errorSlot( response->error() );
+		{
+			QThreadPool::globalInstance()->start(
+				[ errorHandler,
+			      response,
+			      capture0 = response->error(),
+			      capture1 = response->errorString().toStdString() ]
+				{ errorHandler( response, capture0, capture1 ); } );
+		}
 	}
 }
 
