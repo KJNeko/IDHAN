@@ -80,9 +80,9 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 	// return promise->future();
 }
 
-QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
+QFuture< std::optional< TagDomainID > > IDHANClient::getTagDomain( const std::string_view name )
 {
-	auto promise { std::make_shared< QPromise< TagDomainID > >() };
+	auto promise { std::make_shared< QPromise< std::optional< TagDomainID > > >() };
 	promise->start();
 
 	QJsonObject object {};
@@ -107,8 +107,8 @@ QFuture< TagDomainID > IDHANClient::getTagDomain( const std::string_view name )
 			}
 		}
 
-		const std::runtime_error exception { format_ns::format( "Error: No tag domain by name {}", name ) };
-		promise->setException( std::make_exception_ptr( exception ) );
+		promise->addResult( std::nullopt );
+		promise->finish();
 
 		response->deleteLater();
 	};
