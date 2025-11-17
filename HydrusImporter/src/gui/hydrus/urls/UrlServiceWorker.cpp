@@ -95,7 +95,7 @@ void UrlServiceWorker::process()
 		else
 			current_urls.emplace( hash_id, std::move( urls ) );
 
-		if ( url_counter % 500 == 0 ) flushUrls();
+		if ( url_counter % 50 == 0 ) flushUrls();
 	}
 
 	flushUrls();
