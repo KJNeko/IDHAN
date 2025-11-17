@@ -15,6 +15,7 @@ TagServiceWidget::TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWi
   m_info(),
   m_name(),
   m_worker( new TagServiceWorker( this, importer ) ),
+  m_start(),
   ui( new Ui::TagServiceWidget )
 {
 	ui->setupUi( this );
@@ -121,8 +122,6 @@ void TagServiceWidget::updateTime()
 
 	// const bool over_limit { to_process > std::numeric_limits< int >::max() };
 	// const std::size_t multip { over_limit ? 16 : 1 };
-
-	if ( total_processed == -1 ) return;
 
 	const auto time_elapsed {
 		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::high_resolution_clock::now() - m_start )
