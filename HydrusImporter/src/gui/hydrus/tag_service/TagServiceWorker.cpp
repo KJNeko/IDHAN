@@ -155,41 +155,24 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 		tag_sets.emplace_back( std::move( tag_pairs ) );
 	}
 
-	// Get unique tag ids
-
-	using namespace idhan;
-
-	mappings_semaphore.acquire();
-	while ( !m_futures.empty() && m_futures.front().isFinished() )
+	try
 	{
-		m_futures.pop();
+		auto& client = idhan::IDHANClient::instance();
+		auto record_future = client.createRecords( hashes );
+
+		record_future.waitForFinished();
+		auto records = record_future.result();
+		FGL_ASSERT( records.size() == hashes.size(), "Records size was different from hashes size!" );
+		FGL_ASSERT( records.size() == tag_sets.size(), "Records size was different from tag sets size!" );
+		auto tag_future = client.addTags( std::move( records ), tag_domain_id, std::move( tag_sets ) );
+
+		tag_future.waitForFinished();
 	}
-
-	m_futures.push(
-		QtConcurrent::run(
-			[ this, hashes = std::move( hashes ), tag_sets_i = std::move( tag_sets ) ]() mutable
-			{
-				try
-				{
-					auto& client = idhan::IDHANClient::instance();
-					auto record_future = client.createRecords( hashes );
-					auto tag_sets_c { tag_sets_i };
-
-					record_future.waitForFinished();
-					auto records = record_future.result();
-					FGL_ASSERT( records.size() == hashes.size(), "Records size was different from hashes size!" );
-					FGL_ASSERT( records.size() == tag_sets_c.size(), "Records size was different from tag sets size!" );
-					auto tag_future = client.addTags( std::move( records ), tag_domain_id, std::move( tag_sets_c ) );
-
-					tag_future.waitForFinished();
-					mappings_semaphore.release();
-				}
-				catch ( std::exception& e )
-				{
-					idhan::logging::error( "Got exception: {} when trying to create mappings", e.what() );
-					std::abort();
-				}
-			} ) );
+	catch ( std::exception& e )
+	{
+		idhan::logging::error( "Got exception: {} when trying to create mappings", e.what() );
+		std::abort();
+	}
 }
 
 void TagServiceWorker::processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const

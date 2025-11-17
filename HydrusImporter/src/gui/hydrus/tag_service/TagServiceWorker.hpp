@@ -20,10 +20,6 @@ class TagServiceWorker final : public QObject, public QRunnable
 	bool m_processing { false };
 	idhan::TagDomainID tag_domain_id { 0 };
 
-	mutable std::queue< QFuture< void > > m_futures {};
-	constexpr static auto sem_count { 4 };
-	mutable std::counting_semaphore< sem_count > mappings_semaphore { sem_count };
-
   public:
 
 	bool m_ptr { false };
