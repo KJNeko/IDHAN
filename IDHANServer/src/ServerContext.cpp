@@ -221,17 +221,21 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
 
-	drogon::app().getLoop()->runInLoop(
-		[ this ]() -> drogon::Task< void > { co_await m_clusters->reloadClusters( drogon::app().getDbClient() ); } );
-
 	drogon::app().registerBeginningAdvice(
-		[]()
+		[ this ]()
 		{
+			drogon::sync_wait(
+				[ this ]() -> drogon::Task< void >
+				{
+					const auto db { drogon::app().getDbClient() };
+					co_await m_clusters->reloadClusters( db );
+					co_return;
+				}() );
+
+			log::info( "IDHAN initialization finished" );
 			log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
 			log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
 		} );
-
-	log::info( "IDHAN initialization finished" );
 }
 
 void trantorHook( const char* msg, const std::uint64_t len )
