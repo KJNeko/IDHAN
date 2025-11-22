@@ -110,7 +110,7 @@ class ClusterManager
 	};
 
 	std::mutex m_mutex {};
-	std::unordered_map< ClusterID, ClusterInfo > m_folders {};
+	std::unordered_map< ClusterID, ClusterInfo > m_clusters {};
 
 	enum ClusterTargetType
 	{
