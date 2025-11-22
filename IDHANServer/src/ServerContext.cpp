@@ -132,6 +132,60 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	}
 }
 
+void setupTempPath()
+{
+	const std::filesystem::path tmp_path { config::getSilentDefault< std::string >( "temp", "path", "/tmp/idhan" ) };
+
+	// create marker
+	constexpr std::string_view marker_file { "idhan.active" };
+	const auto marker_path { tmp_path / marker_file };
+
+	if ( std::filesystem::exists( tmp_path ) )
+	{
+		// it exists. can we find out marker?
+		if ( std::ifstream ifs( marker_path ); ifs )
+		{
+			__pid_t pid;
+			ifs >> pid;
+
+			// check if the PID still exists
+			if ( 0 == kill( pid, 0 ) )
+			{
+				log::critical(
+					"Marker remains from previous IDHAN instance at {}, Delete it only if you are sure the old instance is dead (PID {} is still alive)",
+					marker_path.string(),
+					pid );
+				std::abort();
+			}
+			else
+			{
+				log::warn(
+					"The marker file found at {} indicates that IDHAN should be running as PID {}, But there was no process with that PID! May indicate a bad shutdown",
+					marker_path.string(),
+					pid );
+			}
+			// if kill returns non-zero then the pid likely does not exist.
+		}
+
+		//no marker?
+	}
+
+	std::filesystem::create_directories( tmp_path );
+
+	if ( std::ofstream ofs( marker_path ); ofs )
+	{
+		ofs << getpid();
+	}
+	else
+	{
+		log::critical( "IDHAN could not create it's running marker at {}", marker_path.string() );
+		std::abort();
+	}
+
+	auto& app = drogon::app();
+	app.setUploadPath( tmp_path );
+}
+
 ServerContext::ServerContext( const ConnectionArguments& arguments ) :
   m_logger( createLogger( arguments ) ),
   m_postgresql_management( std::make_unique< ManagementConnection >( arguments ) ),
@@ -153,13 +207,16 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	std::filesystem::create_directories( log_directory );
 
-	auto& app = drogon::app()
-	                .setLogLevel( trantor::Logger::kInfo )
-	                .setThreadNum( io_threads )
-	                .setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() )
-	                .setDocumentRoot( getStaticPath() )
-	                .setExceptionHandler( exceptionHandler )
-	                .setLogPath( std::string( log_directory ), "", 1024 * 1024 * 1024, 8, true );
+	auto& app = drogon::app();
+
+	app.setLogLevel( trantor::Logger::kInfo );
+	app.setThreadNum( io_threads );
+	app.setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() );
+	app.setDocumentRoot( getStaticPath() );
+	app.setExceptionHandler( exceptionHandler );
+	app.setLogPath( std::string( log_directory ), "", 1024 * 1024 * 1024, 8, true );
+
+	setupTempPath();
 
 	app.registerCustomExtensionMime( "wasm", "application/wasm" );
 
@@ -255,6 +312,9 @@ void ServerContext::run()
 }
 
 ServerContext::~ServerContext()
-{}
+{
+	const auto upload_path { config::getSilentDefault< std::string >( "temp", "path", "/tmp/idhan" ) };
+	std::filesystem::remove_all( upload_path );
+}
 
 } // namespace idhan
