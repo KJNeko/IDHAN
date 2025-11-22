@@ -180,20 +180,24 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 	const auto& sha256 { sha256_e.value() };
 
-	const auto& target_cluster_r { co_await findBestFolder( record, length, db ) };
+	const auto& target_id { co_await findBestFolder( record, length, db ) };
+	return_unexpected_error( target_id );
 
-	if ( !target_cluster_r ) co_return std::unexpected( target_cluster_r.error() );
-	const auto& target_folder { m_folders.at( target_cluster_r.value() ) };
+	if ( !m_clusters.contains( *target_id ) )
+		co_return std::unexpected( createInternalError( "Failed to find cluster with id {}", *target_id ) );
 
+	const auto& target_cluster { m_clusters.at( *target_id ) };
+
+	log::debug( "Storing file for record {} in cluster {}", record, *target_id );
 	const auto record_mime { co_await mime::getRecordMime( record, db ) };
 
-	const auto result { target_folder.storeFile( sha256, data, length, record_mime.value().extension, type ) };
+	const auto result { target_cluster.storeFile( sha256, data, length, record_mime.value().extension, type ) };
 
 	if ( !result ) co_return result;
 
 	constexpr auto query { "UPDATE file_info SET cluster_store_time = now(), cluster_id = $2 WHERE record_id = $1" };
 
-	co_await db->execSqlCoro( query, record, target_folder.m_id );
+	co_await db->execSqlCoro( query, record, target_cluster.m_id );
 
 	co_return {};
 }
@@ -208,7 +212,7 @@ drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
 {
 	log::info( "Reloading clusters" );
 	std::lock_guard lock { m_mutex };
-	m_folders.clear();
+	m_clusters.clear();
 
 	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
 
@@ -216,7 +220,7 @@ drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
 	{
 		log::info( "Found cluster {}", cluster[ "folder_path" ].as< std::string >() );
 		const auto cluster_id { cluster[ "cluster_id" ].as< ClusterID >() };
-		m_folders.emplace( cluster_id, cluster );
+		m_clusters.emplace( cluster_id, cluster );
 	}
 }
 
@@ -242,8 +246,8 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const ClusterID cluster_id )
 {
 	std::lock_guard lock { m_mutex };
-	const auto itter { m_folders.find( cluster_id ) };
-	if ( itter == m_folders.end() )
+	const auto itter { m_clusters.find( cluster_id ) };
+	if ( itter == m_clusters.end() )
 		co_return std::unexpected( createBadRequest( "Invalid cluster id {}", cluster_id ) );
 
 	co_return itter->second.m_path.filesystemAbsolutePath();

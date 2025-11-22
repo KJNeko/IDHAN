@@ -9,6 +9,7 @@
 #include "codes/ImportCodes.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
+#include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 #include "metadata/metadata.hpp"
 #include "mime/MimeDatabase.hpp"
@@ -64,8 +65,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data ) };
 
-	const bool overwrite_flag { request->getOptionalParameter< bool >( "overwrite" ).value_or( false ) };
-	const bool import_deleted { request->getOptionalParameter< bool >( "import_deleted" ).value_or( false ) };
+	const bool force_import { request->getOptionalParameter< bool >( "force_import" ).value_or( false ) };
 
 	if ( !mime_str )
 	{
@@ -74,7 +74,6 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	}
 
 	const bool is_octet { mime_str == INVALID_MIME_NAME };
-	const bool force_import { request->getOptionalParameter< bool >( "force" ).value_or( false ) };
 
 	if ( is_octet && !force_import )
 	{
@@ -93,7 +92,6 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const auto record_id { record_id_e.value() };
 
-	// try to insert info if it's missing
 	co_await db->execSqlCoro(
 		"INSERT INTO file_info (record_id, mime_id, size, cluster_store_time, modified_time) VALUES ($1, $2, $3, now(), now()) ON CONFLICT DO NOTHING",
 		record_id,
@@ -101,27 +99,39 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		data_length );
 
 	// select deleted time and store time
-	const auto delete_time { co_await db->execSqlCoro(
-		"SELECT cluster_delete_time, cluster_store_time, EXTRACT(EPOCH FROM cluster_delete_time)::BIGINT as "
-		"cluster_delete_time_epoch FROM file_info WHERE record_id = $1 LIMIT 1",
+	const auto cluster_timestamps { co_await db->execSqlCoro(
+		"SELECT cluster_delete_time, cluster_store_time, "
+		"EXTRACT(EPOCH FROM cluster_delete_time)::BIGINT as cluster_delete_time_epoch, "
+		"EXTRACT(EPOCH FROM cluster_store_time)::BIGINT AS cluster_store_time_epoch "
+		"FROM file_info WHERE record_id = $1 LIMIT 1",
 		record_id ) };
 
-	const bool deleted { !delete_time[ 0 ][ "cluster_delete_time" ].isNull() };
-	const bool stored {
-		!delete_time[ 0 ][ "cluster_store_time" ].isNull() && !overwrite_flag
-	}; // if the file is not deleted, it is stored, But if the overwrite flag is on. Store it anyway
+	//! True if there is a delete recorded
+	const bool delete_recorded { !cluster_timestamps[ 0 ][ "cluster_delete_time" ].isNull() };
+	//! True if there has been a store recorded
+	const bool store_recorded { !cluster_timestamps[ 0 ][ "cluster_store_time" ].isNull() };
+	// if the file is not deleted, it is stored, But if the overwrite flag is on. Store it anyway
 	// T (store time is not null) && F (overwrite flag is true) // Not stored
 
-	if ( deleted && !import_deleted )
+	if ( delete_recorded && !force_import )
 	{
 		// file was deleted, we can simply return now.
-		co_return drogon::HttpResponse::newHttpJsonResponse(
-			createDeletedResponse( record_id, delete_time[ 0 ][ "cluster_delete_time_epoch" ].as< std::size_t >() ) );
+		co_return drogon::HttpResponse::newHttpJsonResponse( createDeletedResponse(
+			record_id, cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< std::size_t >() ) );
 	}
 
-	const bool should_store { ( !deleted && !stored ) || ( !stored && import_deleted ) };
+	//! True if the file has been confirmed to be stored still
+	const auto filepath { co_await filesystem::getRecordPath( record_id, db ) };
+	const bool store_confirmed { filepath ? std::filesystem::exists( *filepath ) : false };
 
-	if ( should_store || overwrite_flag )
+	// If there is no delete recorded & no store recorded, store it
+	// If force import is true, then store it anyway
+	// if there is a store, but no delete request, and the file is not present. store it again
+	const bool should_store {
+		( !delete_recorded && !store_recorded ) || force_import || ( !store_confirmed && store_recorded )
+	};
+
+	if ( should_store )
 	{
 		const auto store_result {
 			co_await filesystem::ClusterManager::getInstance().storeFile( record_id, data_ptr, data_length, db )
@@ -133,30 +143,19 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		}
 	}
 
-	const auto creation_time { co_await db->execSqlCoro(
-		"SELECT creation_time, EXTRACT(EPOCH FROM creation_time)::BIGINT FROM records WHERE record_id = $1 LIMIT 1",
-		record_id ) };
-
-	const auto store_time { co_await db->execSqlCoro(
-		"SELECT cluster_store_time, EXTRACT(EPOCH FROM cluster_store_time)::BIGINT FROM file_info WHERE record_id = $1 "
-		"LIMIT 1",
-		record_id ) };
-
 	Json::Value root {};
 
-	root[ "status" ] = static_cast< Json::Value::UInt >( stored ? ImportStatus::Exists : ImportStatus::Success );
+	root[ "status" ] =
+		static_cast< Json::Value::UInt >( store_recorded ? ImportStatus::Exists : ImportStatus::Success );
 	root[ "record_id" ] = record_id;
 
 	root[ "record" ][ "id" ] = record_id;
 
-	root[ "record" ][ "creation_time_human" ] = creation_time[ 0 ][ 0 ].as< std::string >();
-	root[ "record" ][ "creation_time" ] = creation_time[ 0 ][ 1 ].as< std::size_t >();
+	root[ "file" ][ "import_time_human" ] = cluster_timestamps[ 0 ][ "cluster_store_time" ].as< std::string >();
+	root[ "file" ][ "import_time" ] = cluster_timestamps[ 0 ][ "cluster_store_time_epoch" ].as< std::size_t >();
 
-	root[ "file" ][ "import_time_human" ] = store_time[ 0 ][ 0 ].as< std::string >();
-	root[ "file" ][ "import_time" ] = store_time[ 0 ][ 1 ].as< std::size_t >();
-
-	root[ "file" ][ "deleted_time_human" ] = delete_time[ 0 ][ "cluster_delete_time" ].as< std::string >();
-	root[ "file" ][ "deleted_time" ] = delete_time[ 0 ][ "cluster_delete_time_epoch" ].as< std::size_t >();
+	root[ "file" ][ "deleted_time_human" ] = cluster_timestamps[ 0 ][ "cluster_delete_time" ].as< std::string >();
+	root[ "file" ][ "deleted_time" ] = cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< std::size_t >();
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
 
