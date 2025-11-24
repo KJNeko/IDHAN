@@ -194,7 +194,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 			scan_tasks.emplace_back( scanFolder( folder, scan_params, cluster_id, cluster_path ) );
 	}
 
-	co_await drogon::when_all( std::move( scan_tasks ) );
+	if ( scan_tasks.size() > 0 ) co_await drogon::when_all( std::move( scan_tasks ) );
 
 	request->setPath( format_ns::format( "/clusters/{}/info", cluster_id ) );
 	co_return co_await drogon::app().forwardCoro( request );
