@@ -198,7 +198,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::debug( "Logging show debug" );
 	log::info( "Logging show info" );
 
-	std::size_t hardware_count { std::max( static_cast< std::size_t >( std::thread::hardware_concurrency() ), 4ul ) };
+	std::size_t config_threads { config::getSilentDefault< std::size_t >( "threads", "count", 0 ) };
+	if ( config_threads == 0 ) config_threads = std::thread::hardware_concurrency();
+	std::size_t hardware_count { std::max( config_threads, 2ul ) };
 	std::size_t io_threads { hardware_count };
 
 	log::info( "IO Threads: {}", io_threads );
