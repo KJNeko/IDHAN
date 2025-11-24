@@ -280,6 +280,7 @@ ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 
 	if ( search_result.empty() && m_params.adopt_orphans )
 	{
+		log::debug( "Hashing file at {} because it's never been seen before to verify the filename", m_path.string() );
 		m_params.verify_hash = true;
 		const auto verified_hash { co_await checkSHA256() };
 		if ( !verified_hash ) co_return std::unexpected( verified_hash.error() );
