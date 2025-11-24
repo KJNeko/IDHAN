@@ -89,9 +89,11 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	constexpr std::size_t KiB { 1024 };
 	constexpr std::size_t MiB { KiB * 1024 };
 
+	const std::filesystem::path log_path { config::getSilentDefault< std::string >( "logging", "path", "./log" ) };
+
 	// logs all info & errors to a specific file
 	auto info_file_logger {
-		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( "./log/info.log", MiB * 2, 4, true )
+		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "info.log", MiB * 2, 4, true )
 	};
 
 	info_file_logger->set_pattern( std::string( server_format_str ) );
@@ -99,7 +101,7 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	// logs all errors to a specific file
 	auto error_file_logger {
-		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( "./log/error.log", MiB * 16, 4, true )
+		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "error.log", MiB * 16, 4, true )
 	};
 
 	error_file_logger->set_pattern( std::string( server_format_str ) );
@@ -134,7 +136,9 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 void setupTempPath()
 {
-	const std::filesystem::path tmp_path { config::getSilentDefault< std::string >( "temp", "path", "/tmp/idhan" ) };
+	const std::filesystem::path tmp_path {
+		config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
+	};
 
 	// create marker
 	constexpr std::string_view marker_file { "idhan.active" };
@@ -198,14 +202,14 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::debug( "Logging show debug" );
 	log::info( "Logging show info" );
 
-	std::size_t config_threads { config::getSilentDefault< std::size_t >( "threads", "count", 0 ) };
+	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "threads", 0 ) };
 	if ( config_threads == 0 ) config_threads = std::thread::hardware_concurrency();
 	std::size_t hardware_count { std::max( config_threads, 2ul ) };
 	std::size_t io_threads { hardware_count };
 
 	log::info( "IO Threads: {}", io_threads );
 
-	constexpr std::string_view log_directory { "./log/drogon" };
+	const std::string log_directory { config::getSilentDefault< std::string >( "logging", "path", "./log" ) };
 
 	std::filesystem::create_directories( log_directory );
 

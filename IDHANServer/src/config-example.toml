@@ -11,9 +11,10 @@
 #port = 16609
 #threads = 4
 #use_stdout = true
+#tmp_path = /tmp/idhan
 
 [logging]
 # Loggin level: trace, debug, info, warn, error, critical
 level = "info"
 # Logging output location
-#file = "./logs/idhan.log"
+path = "./log"
