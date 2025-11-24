@@ -36,7 +36,7 @@ FileIOUring::FileDescriptor::operator int() const
 
 FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly ) :
   m_fd( open( path.c_str(), ( readonly ? O_RDONLY : ( O_RDWR | O_CREAT ) ), 0666 ) ),
-  m_size( std::filesystem::file_size( path ) ),
+  m_size( std::filesystem::exists( path ) ? std::filesystem::file_size( path ) : 0 ),
   m_path( path ),
   m_mmap_ptr( nullptr ),
   m_readonly( readonly )

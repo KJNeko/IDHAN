@@ -38,7 +38,7 @@ class [[nodiscard]] FileIOUring
   public:
 
 	constexpr auto static ReadOnly { true };
-	constexpr auto static ReadWrite { true };
+	constexpr auto static ReadWrite { false };
 
 	FileIOUring( const std::filesystem::path& path, bool readonly = ReadOnly );
 
