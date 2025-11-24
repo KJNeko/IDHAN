@@ -100,8 +100,6 @@ class SHA256
 	static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
 
 	static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
-
-	static SHA256 hashFile( const std::filesystem::path& path );
 };
 
 } // namespace idhan

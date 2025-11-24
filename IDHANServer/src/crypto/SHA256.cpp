@@ -111,22 +111,6 @@ SHA256::SHA256( QIODevice* io ) : m_data()
 }
 */
 
-SHA256 SHA256::hashFile( const std::filesystem::path& path )
-{
-	// TODO: Switch to mmap instead
-	if ( std::ifstream ifs( path, std::ios_base::ate | std::ios_base::binary ); ifs )
-	{
-		std::vector< std::byte > data {};
-		data.resize( ifs.tellg() );
-		ifs.seekg( 0 );
-		ifs.read( reinterpret_cast< char* >( data.data() ), data.size() );
-
-		return SHA256::hash( data );
-	}
-
-	throw std::runtime_error( "Failed to open file" );
-}
-
 SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
 {
 	QCryptographicHash hasher { QCryptographicHash::Sha256 };
