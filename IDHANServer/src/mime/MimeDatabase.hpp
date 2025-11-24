@@ -93,7 +93,9 @@ class MimeDatabase
 
 	Json::Value dump() const;
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( std::string_view data );
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
+		std::string_view data,
+		std::string file_name );
 	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
 
 	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );

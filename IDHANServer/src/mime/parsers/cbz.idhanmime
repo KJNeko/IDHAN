@@ -3,16 +3,12 @@
   "extensions": [
     "cbz"
   ],
+  "require_extension": true,
   "priority": 150,
   "data": [
     {
       "type": "include",
       "file": "zip.idhanmime"
-    },
-    {
-      "type": "search",
-      "hex": "89504E470D0A1A0A",
-      "limit": 1024
     }
   ]
 }

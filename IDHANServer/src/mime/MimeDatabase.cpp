@@ -87,9 +87,11 @@ Json::Value MimeDatabase::dump() const
 	return json;
 }
 
-drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( std::string_view data )
+drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan(
+	std::string_view data,
+	const std::string file_name )
 {
-	Cursor cursor { data };
+	Cursor cursor { data, file_name };
 	co_return co_await scan( cursor );
 }
 

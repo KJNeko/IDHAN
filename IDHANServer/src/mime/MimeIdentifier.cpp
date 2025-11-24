@@ -37,6 +37,23 @@ drogon::Task< bool > MimeIdentifier::test( const Cursor cursor ) const
 		if ( !co_await matcher->test( cursor ) ) co_return false;
 	}
 
+	if ( this->m_require_extension )
+	{
+		// if the matcher tests, and it has trust_extension. then the extension must also match in order for this to be passing
+		auto extension { cursor.fileExtension() };
+		if ( extension.starts_with( '.' ) ) extension = extension.substr( 1 );
+
+		if ( extension.empty() ) co_return false;
+
+		for ( const auto& match_extension : m_extensions )
+		{
+			if ( extension == match_extension ) co_return true;
+		}
+
+		// none of the extensions matched what we were expecting
+		co_return false;
+	}
+
 	co_return true;
 }
 
@@ -71,6 +88,8 @@ MimeIdentifier::MimeIdentifier( const Json::Value& json )
 		m_matchers = parseDataJson( json[ "data" ] );
 	else
 		log::warn( "Mime parser for {} did not have any matchers", m_mime );
+
+	if ( json.isMember( "require_extension" ) ) m_require_extension = json[ "require_extension" ].asBool();
 }
 
 MimeIdentifier::MimeIdentifier( const std::filesystem::path& path ) : MimeIdentifier( jsonFromFile( path ) )

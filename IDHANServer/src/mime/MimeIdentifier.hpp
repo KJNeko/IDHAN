@@ -19,6 +19,7 @@ class MimeIdentifier
 	std::string m_mime {};
 	std::vector< std::string > m_extensions {};
 	std::string m_best_extension { "bin" };
+	bool m_require_extension { false };
 
 	std::vector< MimeMatcher > m_matchers {};
 	MimeScore m_priority { 25 };

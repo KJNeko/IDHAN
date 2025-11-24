@@ -88,10 +88,14 @@ std::size_t CursorData::size() const
 	throw std::runtime_error( "Unable to get size of data. No implemented reader for variant" );
 }
 
-Cursor::Cursor( FileIOUring uring ) : m_data( std::make_shared< CursorData >( uring ) )
+Cursor::Cursor( FileIOUring uring ) :
+  m_data( std::make_shared< CursorData >( uring ) ),
+  m_extension( uring.path().extension().string() )
 {}
 
-Cursor::Cursor( std::string_view view ) : m_data( std::make_shared< CursorData >( view ) )
+Cursor::Cursor( std::string_view view, const std::string& file_name ) :
+  m_data( std::make_shared< CursorData >( view ) ),
+  m_extension( std::filesystem::path( file_name ).extension().string() )
 {}
 
 std::size_t Cursor::size() const

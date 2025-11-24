@@ -63,7 +63,8 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const SHA256 sha256 { SHA256::hash( data_ptr, data_length ) };
 
-	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data ) };
+	//TODO: Add multipart for getting the file name
+	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
 
 	const bool force_import { request->getOptionalParameter< bool >( "force_import" ).value_or( false ) };
 
