@@ -112,6 +112,11 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 			thumbnail_location_e->string() );
 	}
 
+	if ( !std::filesystem::exists( *thumbnail_location_e ) )
+	{
+		co_return createInternalError( "Failed to find filepath {}", thumbnail_location_e->string() );
+	}
+
 	auto response {
 		drogon::HttpResponse::newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG )
 	};

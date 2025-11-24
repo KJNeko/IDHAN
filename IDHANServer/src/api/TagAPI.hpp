@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <string>
 
+#include "APIAuth.hpp"
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
 #include "drogon/HttpController.h"
@@ -48,23 +49,27 @@ class TagAPI : public drogon::HttpController< TagAPI >
 	TagAPI() = default;
 
 	METHOD_LIST_BEGIN
-	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/{tag_id}/info", drogon::Get );
-	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/info?tag_id={1}", drogon::Get );
-	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/info?tag_ids={1}", drogon::Get );
-	ADD_METHOD_TO( TagAPI::getTagRelationships, "/tags/{domain_id}/{tag_id}/relationships", drogon::Get );
+	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/{tag_id}/info", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/info?tag_id={1}", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::getTagInfo, "/tags/info?tag_ids={1}", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO(
+		TagAPI::getTagRelationships,
+		"/tags/{domain_id}/{tag_id}/relationships",
+		drogon::Get,
+		IDHANAPIAuthName );
 
-	ADD_METHOD_TO( TagAPI::search, "/tags/search?tag={1}", drogon::Get );
-	ADD_METHOD_TO( TagAPI::autocomplete, "/tags/autocomplete?tag={1}", drogon::Get );
+	ADD_METHOD_TO( TagAPI::search, "/tags/search?tag={1}", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::autocomplete, "/tags/autocomplete?tag={1}", drogon::Get, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( TagAPI::createTagsFromRequest, "/tags/create", drogon::Post );
+	ADD_METHOD_TO( TagAPI::createTagsFromRequest, "/tags/create", drogon::Post, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( TagAPI::createTagDomain, "/tags/domain/create", drogon::Post );
-	ADD_METHOD_TO( TagAPI::getTagDomains, "/tags/domain/list", drogon::Get );
-	ADD_METHOD_TO( TagAPI::getTagDomainInfo, "/tags/domain/{tag_domain_id}/info", drogon::Get );
-	ADD_METHOD_TO( TagAPI::deleteTagDomain, "/tags/domain/{tag_domain_id}/delete", drogon::Delete );
+	ADD_METHOD_TO( TagAPI::createTagDomain, "/tags/domain/create", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::getTagDomains, "/tags/domain/list", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::getTagDomainInfo, "/tags/domain/{tag_domain_id}/info", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::deleteTagDomain, "/tags/domain/{tag_domain_id}/delete", drogon::Delete, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( TagAPI::createTagParents, "/tags/parents/create", drogon::Post );
-	ADD_METHOD_TO( TagAPI::createTagAliases, "/tags/alias/create", drogon::Post );
+	ADD_METHOD_TO( TagAPI::createTagParents, "/tags/parents/create", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::createTagAliases, "/tags/alias/create", drogon::Post, IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

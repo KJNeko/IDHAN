@@ -10,27 +10,26 @@ namespace idhan::hyapi
 HyAPIAuth::HyAPIAuth()
 {}
 
-void HyAPIAuth::invoke(
-	const drogon::HttpRequestPtr& req,
-	drogon::MiddlewareNextCallback&& nextCb,
-	drogon::MiddlewareCallback&& mcb )
+drogon::Task< drogon::HttpResponsePtr > HyAPIAuth::doFilter( const drogon::HttpRequestPtr& req )
 {
-	const std::string& hyapi_key { req->getHeader( HY_ACCESS_KEY_HEADER_NAME ) };
+	const auto param_key { req->getOptionalParameter< std::string >( HY_ACCESS_KEY_HEADER_NAME ) };
+	const auto header_key { req->getHeader( HY_ACCESS_KEY_HEADER_NAME ) };
+	const auto key { param_key ? *param_key : header_key };
 
-	nextCb( std::move( mcb ) );
-	return;
-
-	if ( hyapi_key.empty() )
+	if ( key == "" )
 	{
 		Json::Value root;
 		root[ "error" ] = "No access key or session key provided!";
 		root[ "exception_type" ] = "MissingCredentialsException";
 		root[ "status_code" ] = 401;
 
-		mcb( drogon::HttpResponse::newHttpJsonResponse( root ) );
-		return;
+		co_return drogon::HttpResponse::newHttpJsonResponse( root );
 	}
 
-	nextCb( std::move( mcb ) );
+	// add the key from the expected hydrus key header to our own header
+	req->addHeader( "IDHAN-API-Key", key );
+
+	co_return nullptr;
 }
+
 } // namespace idhan::hyapi

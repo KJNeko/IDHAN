@@ -19,6 +19,9 @@
 
 #include <expected>
 
+#include "APIAuth.hpp"
+#include "hyapi/HyAPIAuth.hpp"
+
 namespace idhan::api
 {
 
@@ -43,18 +46,18 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( APIMaintenance::rescanMetadata, "/jobs/metadata/rescan" );
-	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart" );
-	ADD_METHOD_TO( APIMaintenance::postgresqlStorageSunData, "/db/stats/sunburst" );
+	ADD_METHOD_TO( APIMaintenance::rescanMetadata, "/jobs/metadata/rescan", IDHANAPIAuthName );
+	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart", IDHANAPIAuthName );
+	ADD_METHOD_TO( APIMaintenance::postgresqlStorageSunData, "/db/stats/sunburst", IDHANAPIAuthName );
 
-	ADD_METHOD_TO( APIMaintenance::parseMime, "/mime/parse" );
-	ADD_METHOD_TO( APIMaintenance::createThumbnail, "/mime/generate_thumbnail" );
-	ADD_METHOD_TO( APIMaintenance::reloadMime, "/mime/reload" );
-	ADD_METHOD_TO( APIMaintenance::listParsers, "/mime/parsers" );
+	ADD_METHOD_TO( APIMaintenance::parseMime, "/mime/parse", IDHANAPIAuthName );
+	ADD_METHOD_TO( APIMaintenance::createThumbnail, "/mime/generate_thumbnail", IDHANAPIAuthName );
+	ADD_METHOD_TO( APIMaintenance::reloadMime, "/mime/reload", IDHANAPIAuthName );
+	ADD_METHOD_TO( APIMaintenance::listParsers, "/mime/parsers", IDHANAPIAuthName );
 
-	ADD_METHOD_TO( APIMaintenance::integrityCheck, "/integrity" );
+	ADD_METHOD_TO( APIMaintenance::integrityCheck, "/integrity", IDHANAPIAuthName );
 
-	ADD_METHOD_TO( APIMaintenance::purgeThumbnails, "/purge/thumbnails" );
+	ADD_METHOD_TO( APIMaintenance::purgeThumbnails, "/purge/thumbnails", IDHANAPIAuthName );
 
 	// ADD_METHOD_TO( APIMaintenance::test, "/test" );
 
