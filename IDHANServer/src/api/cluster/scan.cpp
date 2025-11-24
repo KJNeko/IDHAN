@@ -3,6 +3,7 @@
 //
 
 #include "../../filesystem/io/IOUring.hpp"
+#include "Config.hpp"
 #include "MetadataModule.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -187,8 +188,10 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( folder.path() == bad_dir ) continue;
 
-		scan_tasks.emplace_back( scanFolder( folder, scan_params, cluster_id, cluster_path ) );
-		// co_await scanFolder( folder, scan_params, cluster_id, cluster_path );
+		if ( config::getSilentDefault( "server", "slow_down", false ) )
+			co_await scanFolder( folder, scan_params, cluster_id, cluster_path );
+		else
+			scan_tasks.emplace_back( scanFolder( folder, scan_params, cluster_id, cluster_path ) );
 	}
 
 	co_await drogon::when_all( std::move( scan_tasks ) );
