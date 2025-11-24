@@ -48,6 +48,7 @@ class Cursor
 {
 	std::shared_ptr< CursorData > m_data {};
 	std::size_t m_pos { 0 };
+	std::string m_extension { "" };
 
 	using Priority = int;
 
@@ -55,7 +56,7 @@ class Cursor
 
 	Cursor() = delete;
 	Cursor( FileIOUring uring );
-	Cursor( std::string_view view );
+	Cursor( std::string_view view, const std::string& file_name );
 
 	FGL_DEFAULT_COPY( Cursor );
 	FGL_DEFAULT_MOVE( Cursor );
@@ -69,6 +70,8 @@ class Cursor
 	//! Tries to match `match` with the current cursor position, if matched then the cursor will jump forward by
 	//! match.size()
 	drogon::Task< bool > tryMatchInc( std::string_view match );
+
+	std::string_view fileExtension() const { return m_extension; }
 
 	void jumpTo( std::int64_t pos );
 

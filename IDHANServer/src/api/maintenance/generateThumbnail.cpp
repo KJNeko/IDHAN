@@ -24,7 +24,8 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 		co_return drogon::HttpResponse::newHttpJsonResponse( error );
 	}
 
-	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data ) };
+	//TODO: Create handle for multipart to get filenames
+	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
 
 	if ( !mime_str )
 	{
