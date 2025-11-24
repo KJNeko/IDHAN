@@ -183,7 +183,7 @@ std::optional< T > getValue( const std::string_view group, const std::string_vie
 	{
 		if ( auto result = getValueFromFile< T >( path, group, name ); result )
 		{
-			log::info( "Loaded config from {}: {}.{}={}", path, group, name, *result );
+			log::debug( "Loaded config from {}: {}.{}={}", path, group, name, *result );
 			return *result;
 		}
 	}
