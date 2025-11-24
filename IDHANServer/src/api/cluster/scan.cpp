@@ -188,7 +188,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( folder.path() == bad_dir ) continue;
 
-		if ( config::getSilentDefault( "server", "slow_down", false ) )
+		if ( config::getSilentDefault< bool >( "server", "slow_down", false ) )
 			co_await scanFolder( folder, scan_params, cluster_id, cluster_path );
 		else
 			scan_tasks.emplace_back( scanFolder( folder, scan_params, cluster_id, cluster_path ) );
