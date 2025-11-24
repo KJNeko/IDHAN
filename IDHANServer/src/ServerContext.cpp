@@ -216,7 +216,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	app.setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() );
 	app.setDocumentRoot( getStaticPath() );
 	app.setExceptionHandler( exceptionHandler );
-	app.setLogPath( std::string( log_directory ), "", 1024 * 1024 * 1024, 8, true );
+	app.setLogPath( std::string( log_directory ), "", 1024 * 1024 * 4, 8, true );
 
 	setupTempPath();
 
