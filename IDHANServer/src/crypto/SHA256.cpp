@@ -53,22 +53,29 @@ std::string SHA256::hex() const
 
 std::expected< SHA256, drogon::HttpResponsePtr > SHA256::fromHex( const std::string& str )
 {
-	// 0xFF = 0b11111111
-	// FGL_ASSERT( str.size() == ( 256 / 8 * 2 ), "Hex string must be exactly 64 characters log" );
-	if ( str.size() != ( 256 / 8 * 2 ) )
-		return std::unexpected(
-			createBadRequest( "Hex string must be exactly 64 characters long, Was {}", str.size() ) );
-
-	std::array< std::byte, ( 256 / 8 ) > bytes {};
-
-	for ( std::size_t i = 0; i < str.size(); i += 2 )
+	try
 	{
-		bytes[ i / 2 ] = static_cast< std::byte >( decodeHexCharacters( str[ i ], str[ i + 1 ] ) );
+		// 0xFF = 0b11111111
+		// FGL_ASSERT( str.size() == ( 256 / 8 * 2 ), "Hex string must be exactly 64 characters log" );
+		if ( str.size() != ( 256 / 8 * 2 ) )
+			return std::unexpected(
+				createBadRequest( "Hex string must be exactly 64 characters long, Was {}", str.size() ) );
+
+		std::array< std::byte, ( 256 / 8 ) > bytes {};
+
+		for ( std::size_t i = 0; i < str.size(); i += 2 )
+		{
+			bytes[ i / 2 ] = static_cast< std::byte >( decodeHexCharacters( str[ i ], str[ i + 1 ] ) );
+		}
+
+		SHA256 sha256 { std::move( bytes ) };
+
+		return sha256;
 	}
-
-	SHA256 sha256 { std::move( bytes ) };
-
-	return sha256;
+	catch ( std::exception& e )
+	{
+		return std::unexpected( createBadRequest( e.what() ) );
+	}
 }
 
 SHA256 SHA256::fromBuffer( const std::vector< std::byte >& data )

@@ -17,6 +17,7 @@
 #include "drogon/HttpController.h"
 #pragma GCC diagnostic pop
 
+#include "APIAuth.hpp"
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
 #include "helpers/ResponseCallback.hpp"
@@ -54,27 +55,26 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( RecordAPI::createRecord, "/records/create" );
+	ADD_METHOD_TO( RecordAPI::createRecord, "/records/create", IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::fetchUrls, "/records/{record_id}/urls" );
-	ADD_METHOD_TO( RecordAPI::addUrls, "/records/{record_id}/urls/add" );
-	ADD_METHOD_TO( RecordAPI::removeUrls, "/records/{record_id}/urls/remove" );
+	ADD_METHOD_TO( RecordAPI::fetchUrls, "/records/{record_id}/urls", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::addUrls, "/records/{record_id}/urls/add", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::removeUrls, "/records/{record_id}/urls/remove", IDHANAPIAuthName );
 
 	// tags
-	ADD_METHOD_TO( RecordAPI::addMultipleTags, "/records/tags/add" );
+	ADD_METHOD_TO( RecordAPI::addMultipleTags, "/records/tags/add", IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::addTags, "/records/{record_id}/tags/add" );
-	ADD_METHOD_TO( RecordAPI::removeTags, "/records/{record_id}/tags/remove" );
-	ADD_METHOD_TO( RecordAPI::listTags, "/records/{record_id}/tags" );
+	ADD_METHOD_TO( RecordAPI::addTags, "/records/{record_id}/tags/add", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::removeTags, "/records/{record_id}/tags/remove", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::listTags, "/records/{record_id}/tags", IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::searchHash, "/records/search" );
+	ADD_METHOD_TO( RecordAPI::searchHash, "/records/search", IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::fetchThumbnail, "/records/{record_id}/thumbnail" );
-	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}/file" );
-	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}" );
-	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/info" );
-	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/metadata" ); // Legacy path for compatibility
-	ADD_METHOD_TO( RecordAPI::parseFile, "/records/{record_id}/metadata/scan" );
+	ADD_METHOD_TO( RecordAPI::fetchThumbnail, "/records/{record_id}/thumbnail", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}/file", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/info", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::parseFile, "/records/{record_id}/metadata/scan", IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

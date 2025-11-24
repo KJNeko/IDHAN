@@ -3,32 +3,19 @@
 //
 #pragma once
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
-#pragma GCC diagnostic ignored "-Wredundant-tags"
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wnoexcept"
-#pragma GCC diagnostic ignored "-Wredundant-decls"
-#pragma GCC diagnostic ignored "-Wuseless-cast"
-#pragma GCC diagnostic ignored "-Wnoexcept"
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#pragma GCC diagnostic ignored "-Wshadow"
+#include <drogon/HttpFilter.h>
 #include <drogon/HttpMiddleware.h>
-#pragma GCC diagnostic pop
 
 namespace idhan::hyapi
 {
-class HyAPIAuth : public drogon::HttpMiddleware< HyAPIAuth >
+
+class HyAPIAuth : public drogon::HttpCoroFilter< HyAPIAuth >
 {
   public:
 
 	HyAPIAuth();
 
-	void invoke(
-		const drogon::HttpRequestPtr& req,
-		drogon::MiddlewareNextCallback&& nextCb,
-		drogon::MiddlewareCallback&& mcb ) override;
+	drogon::Task< std::shared_ptr< drogon::HttpResponse > > doFilter( const drogon::HttpRequestPtr& req ) override;
 };
 
 constexpr auto* const HyAPIAuthName { "idhan::hyapi::HyAPIAuth" };

@@ -2,6 +2,7 @@
 // Created by kj16609 on 11/5/25.
 //
 #pragma once
+#include "APIAuth.hpp"
 #include "drogon/HttpController.h"
 
 namespace idhan::api
@@ -16,9 +17,9 @@ class FileRelationshipsAPI : public drogon::HttpController< FileRelationshipsAPI
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( FileRelationshipsAPI::setBetterDuplicate, "/relationships/duplicates/add" );
+	ADD_METHOD_TO( FileRelationshipsAPI::setBetterDuplicate, "/relationships/duplicates/add", IDHANAPIAuthName );
 
-	ADD_METHOD_TO( FileRelationshipsAPI::addAlternative, "/relationships/alternatives/add" );
+	ADD_METHOD_TO( FileRelationshipsAPI::addAlternative, "/relationships/alternatives/add", IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

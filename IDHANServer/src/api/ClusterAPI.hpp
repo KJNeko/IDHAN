@@ -6,9 +6,10 @@
 #include <drogon/HttpController.h>
 #include <drogon/utils/coroutine.h>
 
-#include "threading/ExpectedTask.hpp"
+#include "APIAuth.hpp"
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan::api
 {
@@ -37,12 +38,12 @@ class ClusterAPI : public drogon::HttpController< ClusterAPI >
   public:
 
 	METHOD_LIST_BEGIN
-	ADD_METHOD_TO( ClusterAPI::add, "/clusters/add" );
-	ADD_METHOD_TO( ClusterAPI::list, "/clusters/list" );
-	ADD_METHOD_TO( ClusterAPI::info, "/clusters/{cluster_id}/info" );
-	ADD_METHOD_TO( ClusterAPI::modify, "/clusters/{cluster_id}/modify" );
-	ADD_METHOD_TO( ClusterAPI::remove, "/clusters/{cluster_id}/remove" );
-	ADD_METHOD_TO( ClusterAPI::scan, "/clusters/{cluster_id}/scan" );
+	ADD_METHOD_TO( ClusterAPI::add, "/clusters/add", IDHANAPIAuthName );
+	ADD_METHOD_TO( ClusterAPI::list, "/clusters/list", IDHANAPIAuthName );
+	ADD_METHOD_TO( ClusterAPI::info, "/clusters/{cluster_id}/info", IDHANAPIAuthName );
+	ADD_METHOD_TO( ClusterAPI::modify, "/clusters/{cluster_id}/modify", IDHANAPIAuthName );
+	ADD_METHOD_TO( ClusterAPI::remove, "/clusters/{cluster_id}/remove", IDHANAPIAuthName );
+	ADD_METHOD_TO( ClusterAPI::scan, "/clusters/{cluster_id}/scan", IDHANAPIAuthName );
 	METHOD_LIST_END
 };
 } // namespace idhan::api

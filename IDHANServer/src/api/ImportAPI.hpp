@@ -5,6 +5,8 @@
 
 #include <drogon/HttpController.h>
 
+#include "APIAuth.hpp"
+
 namespace idhan::api
 {
 
@@ -16,7 +18,7 @@ class ImportAPI final : public drogon::HttpController< ImportAPI >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( ImportAPI::importFile, "/file/import" );
+	ADD_METHOD_TO( ImportAPI::importFile, "/file/import", IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

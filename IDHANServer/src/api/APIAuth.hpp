@@ -45,16 +45,13 @@
 namespace idhan::api
 {
 
-class APIAuth : public drogon::HttpMiddleware< APIAuth >
+class APIAuth : public drogon::HttpCoroFilter< APIAuth >
 {
   public:
 
 	APIAuth() = default;
 
-	void invoke(
-		const drogon::HttpRequestPtr& req,
-		drogon::MiddlewareNextCallback&& nextCb,
-		drogon::MiddlewareCallback&& mcb ) override;
+	drogon::Task< drogon::HttpResponsePtr > doFilter( const drogon::HttpRequestPtr& req ) override;
 };
 
 class AuthEndpoint : public drogon::HttpController< AuthEndpoint >
@@ -67,5 +64,7 @@ class AuthEndpoint : public drogon::HttpController< AuthEndpoint >
 	ADD_METHOD_TO( AuthEndpoint::verifyAccessKey, "/hyapi/verify_access_key" );
 	METHOD_LIST_END
 };
+
+constexpr auto IDHANAPIAuthName { "idhan::api::APIAuth" };
 
 } // namespace idhan::api
