@@ -22,7 +22,8 @@ RUN apt-get update && \
     libavcodec-dev \
     libavcodec-extra \
     libavfilter-dev \
-    libavutil-dev
+    libavutil-dev \
+    libjsoncpp-dev
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -105,4 +106,4 @@ RUN chmod +x /usr/bin/IDHANServer
 EXPOSE 16609
 
 # Default entrypoint
-ENTRYPOINT ["/usr/bin/IDHANServer"]
+ENTRYPOINT ["/usr/bin/IDHANServer", "--force_start=true"]

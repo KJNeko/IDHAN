@@ -2,6 +2,7 @@
 // Created by kj16609 on 6/11/25.
 //
 #pragma once
+#include <array>
 #include <expected>
 #include <string>
 #include <variant>
@@ -39,14 +40,28 @@ struct MetadataInfoVideo
 	double m_fps { 0.0 };
 };
 
-using MetadataVariant = std::
-	variant< std::monostate, MetadataInfoImage, MetadataInfoVideo, MetadataInfoImageProject, MetadataInfoAnimation >;
+struct MetadataInfoArchive
+{
+	//! Hashes of all contained files
+	std::vector< std::array< std::byte, ( 256 / 8 ) > > contained_hashes {};
+	//! The size of all files when decompressed
+	std::size_t m_size { 0 };
+	bool encrypted { false };
+};
+
+using MetadataVariant = std::variant<
+	std::monostate,
+	MetadataInfoImage,
+	MetadataInfoVideo,
+	MetadataInfoImageProject,
+	MetadataInfoAnimation,
+	MetadataInfoArchive >;
 
 struct MetadataInfo
 {
 	MetadataVariant m_metadata {};
 
-	std::string m_extra {};
+	Json::Value m_extra {};
 	SimpleMimeType m_simple_type { SimpleMimeType::NONE };
 };
 
@@ -54,16 +69,15 @@ class FGL_EXPORT MetadataModuleI : public ModuleBase
 {
   public:
 
-	MetadataModuleI();
+	MetadataModuleI() = delete;
+
+	MetadataModuleI( ModuleCallbacks callbacks ) : ModuleBase( callbacks ) {}
 
 	~MetadataModuleI() override;
 
 	virtual std::vector< std::string_view > handleableMimes() = 0;
 
-	virtual std::expected< MetadataInfo, ModuleError > parseFile(
-		const void* data,
-		std::size_t length,
-		std::string mime_name ) = 0;
+	virtual std::expected< MetadataInfo, ModuleError > parseFile( ModuleCallData& data ) = 0;
 
 	bool canHandle( std::string_view mime );
 

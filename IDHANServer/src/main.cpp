@@ -3,6 +3,8 @@
 //
 
 #include <QCommandLineParser>
+// FUCKING QT IS RETARDED
+#undef signals
 
 #include <cstdlib>
 
@@ -23,8 +25,12 @@ void applyCLISettings(
 	}
 }
 
+
+
 int main( int argc, char** argv )
 {
+	setlocale( LC_ALL, "" );
+
 	using namespace idhan;
 
 	QCommandLineParser parser {};
@@ -58,12 +64,27 @@ int main( int argc, char** argv )
 	config_location.setDefaultValue( "./config.json" );
 	parser.addOption( config_location );
 
+	QCommandLineOption force_start {
+		"force_start", "Forces IDHAN to start even if it thinks it shouldn't", "force_start"
+	};
+	force_start.setDefaultValue( "false" );
+	parser.addOption( force_start );
+
 	QCoreApplication app { argc, argv };
 	app.setApplicationName( "IDHAN" );
 
 	parser.process( app );
 
 	applyCLISettings( "database", "hostname", parser, pg_host );
+
+	if ( parser.isSet( force_start ) && parser.value( force_start ) == "true" )
+	{
+		const std::filesystem::path tmp_path {
+			config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
+		};
+		constexpr std::string_view marker_file { "idhan.active" };
+		std::filesystem::remove( tmp_path / marker_file );
+	}
 
 	idhan::ConnectionArguments arguments {};
 
@@ -149,11 +170,7 @@ int main( int argc, char** argv )
 		}
 	}
 
-	log::info(
-		"Starting IDHAN context v{}.{}.{}",
-		IDHAN_MAJOR_VERSION,
-		IDHAN_MINOR_VERSION,
-		IDHAN_PATCH_VERSION );
+	log::info( "Starting IDHAN context v{}.{}.{}", IDHAN_MAJOR_VERSION, IDHAN_MINOR_VERSION, IDHAN_PATCH_VERSION );
 
 	idhan::ServerContext context { arguments };
 

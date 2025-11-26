@@ -2,11 +2,11 @@
 // Created by kj16609 on 11/17/24.
 //
 
-#include "../../records/records.hpp"
+#include "crypto/SHA256.hpp"
+#include "records/records.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"

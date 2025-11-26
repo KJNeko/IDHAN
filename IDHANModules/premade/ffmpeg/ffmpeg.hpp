@@ -13,6 +13,8 @@ extern "C" {
 #include <cstdint>
 #include <string_view>
 
+#include "ModuleBase.hpp"
+
 namespace idhan
 {
 namespace log = spdlog;
@@ -20,7 +22,7 @@ namespace log = spdlog;
 
 struct OpaqueInfo
 {
-	std::string_view m_data;
+	idhan::data_view m_data;
 	std::int64_t m_cursor { 0 };
 };
 

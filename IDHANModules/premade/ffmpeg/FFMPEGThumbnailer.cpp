@@ -1,6 +1,7 @@
 //
 // Created by kj16609 on 11/13/25.
 //
+
 #include "FFMPEGThumbnailer.hpp"
 
 #include <vips/vips8>
@@ -114,14 +115,12 @@ std::vector< std::string_view > FFMPEGThumbnailer::handleableMimes()
 	return ffmpeg_handleable_mimes;
 }
 
-std::expected< idhan::ThumbnailerModuleI::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::createThumbnail(
-	const void* data,
-	std::size_t length,
+std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::createThumbnail(
+	idhan::ModuleCallData& data,
 	std::size_t width,
-	std::size_t height,
-	std::string mime_name )
+	std::size_t height )
 {
-	OpaqueInfo opaque_info { .m_data = std::string_view( static_cast< const char* >( data ), length ), .m_cursor = 0 };
+	OpaqueInfo opaque_info { .m_data = data.file_view, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
 	std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
@@ -303,13 +302,8 @@ std::expected< idhan::ThumbnailerModuleI::ThumbnailInfo, idhan::ModuleError > FF
 			packed_line_size );
 	}
 
-	std::unique_ptr< VipsImage, VipsImageDeleter > image( vips_image_new_from_memory(
-		packed_data.data(), packed_size, rgb_frame->width, rgb_frame->height, 3, VIPS_FORMAT_UCHAR ) );
-
-	if ( !image )
-	{
-		return std::unexpected( idhan::ModuleError { "Failed to create VIPS image" } );
-	}
+	vips::VImage image { vips::VImage::new_from_memory(
+		packed_data.data(), packed_size, rgb_frame->width, rgb_frame->height, 3, VIPS_FORMAT_UCHAR ) };
 
 	const float source_aspect { static_cast< float >( rgb_frame->width ) / static_cast< float >( rgb_frame->height ) };
 	const float target_aspect { static_cast< float >( width ) / static_cast< float >( height ) };
@@ -319,28 +313,7 @@ std::expected< idhan::ThumbnailerModuleI::ThumbnailInfo, idhan::ModuleError > FF
 	else
 		height = static_cast< std::size_t >( static_cast< float >( width ) / source_aspect );
 
-	VipsImage* resized { nullptr };
-	if ( vips_resize(
-			 image.get(),
-			 &resized,
-			 static_cast< double >( width ) / static_cast< double >( vips_image_get_width( image.get() ) ),
-			 nullptr ) )
-	{
-		return std::unexpected( idhan::ModuleError { "Failed to resize image" } );
-	}
-	std::unique_ptr< VipsImage, VipsImageDeleter > resized_image( resized );
+	auto resized { image.resize( static_cast< double >( width ) / static_cast< double >( image.width() ) ) };
 
-	// Encode to PNG
-	void* output_buffer { nullptr };
-	std::size_t output_length { 0 };
-	if ( vips_pngsave_buffer( resized_image.get(), &output_buffer, &output_length, nullptr ) )
-	{
-		return std::unexpected( idhan::ModuleError( "Failed to encode PNG" ) );
-	}
-
-	const std::vector< std::byte > output(
-		static_cast< std::byte* >( output_buffer ), static_cast< std::byte* >( output_buffer ) + output_length );
-	g_free( output_buffer );
-
-	return idhan::ThumbnailerModuleI::ThumbnailInfo { .data = std::move( output ), .width = width, .height = height };
+	return { resized };
 }

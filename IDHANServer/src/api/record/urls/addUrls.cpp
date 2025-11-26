@@ -4,7 +4,7 @@
 
 #include <expected>
 
-#include "../../../urls/urls.hpp"
+#include "urls/urls.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"

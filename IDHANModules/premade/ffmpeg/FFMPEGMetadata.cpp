@@ -1,6 +1,7 @@
 //
 // Created by kj16609 on 11/12/25.
 //
+
 #include "FFMPEGMetadata.hpp"
 
 #include <cstring>
@@ -30,30 +31,21 @@ std::vector< std::string_view > FFMPEGMetadata::handleableMimes()
 	return ffmpeg_handleable_mimes;
 }
 
-std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFile(
-	const void* data,
-	std::size_t length,
-	std::string mime_name )
+std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFile( idhan::ModuleCallData& data )
 {
 	idhan::MetadataInfo base_info {};
 	base_info.m_simple_type = idhan::SimpleMimeType::VIDEO;
 	idhan::MetadataInfoVideo video_metadata {};
 
-	OpaqueInfo opaque_info { .m_data = std::string_view( static_cast< const char* >( data ), length ), .m_cursor = 0 };
+	OpaqueInfo opaque_info { .m_data = data.file_view, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
 	// std::array< std::byte, BUFFER_SIZE > buffer {};
-	std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
+	// std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
+	unsigned char* buffer_ptr { static_cast< unsigned char* >( av_malloc( BUFFER_SIZE ) ) };
 
 	const std::shared_ptr< AVIOContext > avio_context(
-		avio_alloc_context(
-			reinterpret_cast< unsigned char* >( buffer_ptr ),
-			BUFFER_SIZE,
-			0,
-			&opaque_info,
-			&readFunction,
-			nullptr,
-			seekFunction ),
+		avio_alloc_context( buffer_ptr, BUFFER_SIZE, 0, &opaque_info, &readFunction, nullptr, seekFunction ),
 		&av_free );
 
 	const auto format_context_p =

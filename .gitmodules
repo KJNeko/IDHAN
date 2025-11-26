@@ -52,3 +52,12 @@
 [submodule "3rd-party/hydrui"]
 	path = 3rd-party/hydrui
 	url = https://github.com/hydrui/hydrui.git
+[submodule "dependencies/libarchive"]
+	path = dependencies/libarchive
+	url = https://github.com/libarchive/libarchive.git
+[submodule "dependencies/jsoncpp"]
+	path = dependencies/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
+[submodule "dependencies/chardet"]
+	path = dependencies/chardet
+	url = https://github.com/Joungkyun/libchardet.git

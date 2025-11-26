@@ -5,6 +5,8 @@
 #include "ClusterManager.hpp"
 
 #include <QStorageInfo>
+// FUCKING QT IS RETARDED
+#undef signals
 
 #include <fstream>
 

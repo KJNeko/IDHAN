@@ -10,6 +10,37 @@
 namespace idhan::api
 {
 
+drogon::Task< Json::Value > processMetadata( const std::string mime_str, const std::string_view request_data )
+{
+	Json::Value response {};
+	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_str ) };
+	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
+	for ( const auto& metadata_module : metadata_modules )
+	{
+		Json::Value metadata_obj {};
+		metadata_obj[ "name" ] = std::string( metadata_module->name() );
+
+		ModuleCallData data { .file_view = data_view, .mime_name = mime_str, .extra = {} };
+
+		auto metadata_info { metadata_module->parseFile( data ) };
+
+		const auto metadata { metadata_info->m_metadata };
+
+		if ( std::holds_alternative< MetadataInfoArchive >( metadata ) )
+		{
+			const auto& info { std::get< MetadataInfoArchive >( metadata ) };
+			metadata_obj[ "count" ] = info.contained_hashes.size();
+			metadata_obj[ "uncompressed_size" ] = info.m_size;
+		}
+
+		metadata_obj[ "extra" ] = metadata_info->m_extra;
+
+		response.append( std::move( metadata_obj ) );
+	}
+
+	co_return response;
+}
+
 drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr request )
 {
 	const auto request_data { request->getBody() };
@@ -35,19 +66,7 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr r
 	response[ "success" ] = true;
 	response[ "mime" ] = mime_str.value();
 
-	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
-
-	response[ "metadata_modules" ] = {};
-
-	for ( const auto& metadata_module : metadata_modules )
-	{
-		Json::Value metadata_obj {};
-		metadata_obj[ "name" ] = std::string( metadata_module->name() );
-
-		auto metadata_info { metadata_module->parseFile( request_data.data(), request_data.size(), *mime_str ) };
-
-		response[ "metadata_modules" ].append( std::move( metadata_obj ) );
-	}
+	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, request_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
@@ -94,17 +113,7 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 
 	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
 
-	response[ "metadata_modules" ] = {};
-
-	for ( const auto& metadata_module : metadata_modules )
-	{
-		Json::Value metadata_obj {};
-		metadata_obj[ "name" ] = std::string( metadata_module->name() );
-
-		auto metadata_info { metadata_module->parseFile( request_data.data(), request_data.size(), *mime_str ) };
-
-		response[ "metadata_modules" ].append( std::move( metadata_obj ) );
-	}
+	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, request_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }

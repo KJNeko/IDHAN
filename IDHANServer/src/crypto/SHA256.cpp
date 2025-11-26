@@ -4,14 +4,17 @@
 
 #include "SHA256.hpp"
 
+#include <openssl/evp.h>
+#include <openssl/sha.h>
+
 #include <expected>
 #include <fstream>
-#include <istream>
 
-#include "../filesystem/io/IOUring.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/simpleHasher.hpp"
 #include "decodeHex.hpp"
 #include "fgl/defines.hpp"
+#include "filesystem/io/IOUring.hpp"
 
 namespace idhan
 {
@@ -86,6 +89,11 @@ SHA256 SHA256::fromBuffer( const std::vector< std::byte >& data )
 	return SHA256( data.data() );
 }
 
+SHA256 SHA256::fromBuffer( const std::array< std::byte, 256 / 8 >& data )
+{
+	return SHA256 { data };
+}
+
 SHA256 SHA256::fromPgCol( const drogon::orm::Field& field )
 {
 	return { field };
@@ -100,60 +108,42 @@ drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::fromDB(
 	co_return SHA256::fromPgCol( result[ 0 ][ 0 ] );
 }
 
-/*
-SHA256::SHA256( QIODevice* io ) : m_data()
-{
-	QCryptographicHash hasher { QCryptographicHash::Sha256 };
-	hasher.addData( io );
-
-	const auto result { hasher.result() };
-	std::memcpy( m_data.data(), result.data(), result.size() );
-}
-*/
-
 SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
 {
-	QCryptographicHash hasher { QCryptographicHash::Sha256 };
-
-	const QByteArrayView view { data, static_cast< qsizetype >( size ) };
-
-	hasher.addData( view );
-
-	const auto result { hasher.result() };
-
-	std::vector< std::byte > out_data {};
-	out_data.resize( 256 / 8 );
-
-	FGL_ASSERT( out_data.size() == static_cast< std::size_t >( result.size() ), "Invalid size" );
-
-	std::memcpy( out_data.data(), result.data(), static_cast< std::size_t >( result.size() ) );
-
-	return SHA256::fromBuffer( out_data );
+	return SHA256::fromBuffer( crypto::hashData( data, size ) );
 }
 
 drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
 {
-	QCryptographicHash hasher { QCryptographicHash::Sha256 };
-
 	constexpr auto block_size { 1024 * 1024 };
+
+	const std::unique_ptr< EVP_MD_CTX, void ( * )( EVP_MD_CTX* ) > ctx {
+		EVP_MD_CTX_new(), []( EVP_MD_CTX* ptr ) { EVP_MD_CTX_free( ptr ); }
+	};
+	if ( !ctx ) throw std::runtime_error( "EVP_MD_CTX_new() failed" );
+
+	if ( EVP_DigestInit_ex( ctx.get(), EVP_sha256(), nullptr ) != 1 )
+		throw std::runtime_error( "EVP_DigestInit_ex() failed" );
 
 	for ( std::size_t i = 0; i < io_uring.size(); i += block_size )
 	{
 		const auto data { co_await io_uring.read( i, block_size ) };
 
-		const QByteArrayView view { data.data(), static_cast< qsizetype >( data.size() ) };
-
-		hasher.addData( view );
+		if ( EVP_DigestUpdate( ctx.get(), data.data(), data.size() ) != 1 )
+			throw std::runtime_error( "EVP_DigestUpdate() failed" );
 	}
 
-	const auto result { hasher.result() };
+	unsigned char hash[ EVP_MAX_MD_SIZE ];
+	unsigned int hash_length { 0 };
 
-	std::vector< std::byte > out_data {};
-	out_data.resize( 256 / 8 );
+	if ( EVP_DigestFinal_ex( ctx.get(), hash, &hash_length ) != 1 )
+		throw std::runtime_error( "EVP_DigestFinal_ex() failed" );
 
-	FGL_ASSERT( out_data.size() == static_cast< std::size_t >( result.size() ), "Invalid size" );
+	std::array< std::byte, 256 / 8 > out_data {};
 
-	std::memcpy( out_data.data(), result.data(), static_cast< std::size_t >( result.size() ) );
+	FGL_ASSERT( out_data.size() == static_cast< std::size_t >( hash_length ), "Invalid size" );
+
+	std::memcpy( out_data.data(), hash, static_cast< std::size_t >( hash_length ) );
 
 	co_return SHA256::fromBuffer( out_data );
 }

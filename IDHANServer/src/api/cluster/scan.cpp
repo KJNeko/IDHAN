@@ -2,13 +2,13 @@
 // Created by kj16609 on 3/20/25.
 //
 
-#include "../../filesystem/io/IOUring.hpp"
+#include "crypto/SHA256.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "Config.hpp"
 #include "MetadataModule.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
-#include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "filesystem/filesystem.hpp"
 #include "fixme.hpp"
@@ -540,7 +540,9 @@ ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
 
 	const auto [ file_data, file_size ] { file_io.mmapReadOnly() };
 
-	const auto metadata_e { metadata_parser->parseFile( file_data, file_size, m_mime_name ) };
+	idhan::data_view data_view { static_cast< const std::uint8_t* >( file_data ), file_size };
+	idhan::ModuleCallData call_data { .file_view = data_view, .mime_name = m_mime_name, .extra = {} };
+	const auto metadata_e { metadata_parser->parseFile( call_data ) };
 
 	if ( metadata_e )
 	{

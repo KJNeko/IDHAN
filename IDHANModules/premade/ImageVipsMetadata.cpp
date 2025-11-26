@@ -18,15 +18,17 @@ std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
 	return vipsHandleable();
 }
 
-std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile(
-	const void* data,
-	const std::size_t length,
-	const std::string mime_name )
+std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleCallData& data )
 {
 	VipsImage* image;
-	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() )
+	if ( const auto it = VIPS_FUNC_MAP.find( data.mime_name ); it != VIPS_FUNC_MAP.end() )
 	{
-		if ( it->second( const_cast< void* >( data ), length, &image, nullptr ) != 0 )
+		if ( it->second(
+				 const_cast< void* >( static_cast< const void* >( data.file_view.data() ) ),
+				 data.file_view.size(),
+				 &image,
+				 nullptr )
+		     != 0 )
 		{
 			return std::unexpected( ModuleError { "Failed to load image" } );
 		}
@@ -48,10 +50,7 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile(
 		.channels = static_cast< std::uint8_t >( image->Bands )
 	};
 
-// Fucking macros
-#undef IMAGE
-
-	info.m_simple_type = idhan::SimpleMimeType::IMAGE;
+	info.m_simple_type = idhan::SimpleMimeType::IMAGE_TYPE;
 
 	g_object_unref( image );
 
