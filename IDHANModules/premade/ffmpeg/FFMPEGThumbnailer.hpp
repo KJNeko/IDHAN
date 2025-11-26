@@ -9,16 +9,18 @@ class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 {
   public:
 
+	FFMPEGThumbnailer() = delete;
+
+	FFMPEGThumbnailer( idhan::ModuleCallbacks callbacks ) : ThumbnailerModuleI( callbacks ) {}
+
 	std::string_view name() override;
 
 	idhan::ModuleVersion version() override;
 
 	std::vector< std::string_view > handleableMimes() override;
 
-	std::expected< ThumbnailInfo, idhan::ModuleError > createThumbnail(
-		const void* data,
-		std::size_t length,
+	std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(
+		idhan::ModuleCallData& data,
 		std::size_t width,
-		std::size_t height,
-		std::string mime_name ) override;
+		std::size_t height ) override;
 };

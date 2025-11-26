@@ -35,7 +35,7 @@ using UrlDomainID = Integer;
 enum class SimpleMimeType : std::uint16_t
 {
 	NONE = 0,
-	IMAGE = 1,
+	IMAGE_TYPE = 1,
 	VIDEO = 2,
 	ANIMATION = 3,
 	AUDIO = 4,

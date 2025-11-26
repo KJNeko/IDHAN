@@ -4,14 +4,14 @@
 
 #include "HyAPI.hpp"
 
-#include "../records/records.hpp"
+#include "crypto/SHA256.hpp"
+#include "records/records.hpp"
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/version.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
-#include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "drogon/HttpClient.h"
 #include "fgl/defines.hpp"

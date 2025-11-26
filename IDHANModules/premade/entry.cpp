@@ -12,20 +12,26 @@
 #include <memory>
 #include <vector>
 
-#include "FFMPEGMetadata.hpp"
-#include "FFMPEGThumbnailer.hpp"
 #include "ImageVipsMetadata.hpp"
-#include "ImageVipsThumbnailer.hpp"
-#include "PsdMetadata.hpp"
+#include "archives/ArchiveGenerator.hpp"
+#include "archives/ArchiveMetadata.hpp"
+#include "archives/ArchiveThumbnailer.hpp"
+#include "ffmpeg/FFMPEGMetadata.hpp"
+#include "ffmpeg/FFMPEGThumbnailer.hpp"
+#include "psd/PsdMetadata.hpp"
+#include "psd/PsdThumbnailer.hpp"
+#include "thumbnailers/ImageVipsThumbnailer.hpp"
 
 using namespace idhan;
 
-std::vector< std::shared_ptr< IDHANModule > > getModules()
+std::vector< std::shared_ptr< IDHANModule > > getModules( ModuleCallbacks callbacks )
 {
 	std::vector< std::shared_ptr< IDHANModule > > ret {
-		std::make_shared< ImageVipsMetadata >(), std::make_shared< ImageVipsThumbnailer >(),
-		std::make_shared< PsdMetadata >(),       std::make_shared< PsdThumbnailer >(),
-		std::make_shared< FFMPEGMetadata >(),    std::make_shared< FFMPEGThumbnailer >(),
+		std::make_shared< ImageVipsMetadata >( callbacks ),  std::make_shared< ImageVipsThumbnailer >( callbacks ),
+		std::make_shared< PsdMetadata >( callbacks ),        std::make_shared< PsdThumbnailer >( callbacks ),
+		std::make_shared< FFMPEGMetadata >( callbacks ),     std::make_shared< FFMPEGThumbnailer >( callbacks ),
+		std::make_shared< ArchiveMetadata >( callbacks ),    std::make_shared< ArchiveGenerator >( callbacks ),
+		std::make_shared< ArchiveThumbnailer >( callbacks ),
 	};
 
 	return ret;
@@ -78,7 +84,6 @@ void* getModulesFunc()
 void init()
 {
 	// Take over the libVIPS logger
-
 	constexpr auto VIPS_LOG_DOMAIN { "VIPS" };
 	g_log_set_handler( VIPS_LOG_DOMAIN, G_LOG_LEVEL_MASK, &gLoghandler, nullptr );
 	g_logv( VIPS_LOG_DOMAIN, G_LOG_LEVEL_INFO, "VIPS Logger taken over", nullptr );

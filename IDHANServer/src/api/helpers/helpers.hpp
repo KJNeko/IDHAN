@@ -9,7 +9,7 @@
 #include <expected>
 #include <vector>
 
-#include "../../db/drogonArrayBind.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "IDHANTypes.hpp"
 
 namespace idhan::api::helpers

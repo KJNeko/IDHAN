@@ -2,9 +2,9 @@
 // Created by kj16609 on 3/11/25.
 //
 
+#include "crypto/SHA256.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "crypto/SHA256.hpp"
 
 namespace idhan::api
 {

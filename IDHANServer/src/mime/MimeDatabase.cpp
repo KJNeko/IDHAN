@@ -8,9 +8,10 @@
 #include <fstream>
 #include <paths.hpp>
 
-#include "../filesystem/io/IOUring.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "Cursor.hpp"
 #include "MimeIdentifier.hpp"
+#include "ModuleBase.hpp"
 #include "api/helpers/createBadRequest.hpp"
 
 namespace idhan::mime
@@ -92,6 +93,15 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 	const std::string file_name )
 {
 	Cursor cursor { data, file_name };
+	co_return co_await scan( cursor );
+}
+
+drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan(
+	data_view data,
+	const std::string file_name )
+{
+	const std::string_view data_view { reinterpret_cast< const char* >( data.data() ), data.size() };
+	Cursor cursor { data_view, file_name };
 	co_return co_await scan( cursor );
 }
 

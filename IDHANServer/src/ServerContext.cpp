@@ -10,6 +10,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <filesystem>
+#include <fstream>
 #include <paths.hpp>
 #include <ranges>
 
@@ -78,6 +79,16 @@ void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& re
 
 	callback( response );
 	// drogon::defaultExceptionHandler( e, request, std::move( callback ) );
+}
+
+void printCoreLocation()
+{
+	if ( std::ifstream ifs( "/proc/sys/kernel/core_pattern" ); ifs )
+	{
+		std::string loc {};
+		ifs >> loc;
+		log::info( "Core dumps located at: {}", loc );
+	}
 }
 
 std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionArguments& arguments )
@@ -201,6 +212,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	log::debug( "Logging show debug" );
 	log::info( "Logging show info" );
+	printCoreLocation();
 
 	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "threads", 0 ) };
 	if ( config_threads == 0 ) config_threads = std::thread::hardware_concurrency();

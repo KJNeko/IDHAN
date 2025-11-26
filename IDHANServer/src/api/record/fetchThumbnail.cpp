@@ -4,13 +4,13 @@
 
 #include <fstream>
 
-#include "../../filesystem/io/IOUring.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "drogon/utils/coroutine.h"
+#include "filesystem/io/IOUring.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "modules/ModuleLoader.hpp"
 
@@ -89,7 +89,19 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		const auto& [ data, data_size ] = io_uring.mmapReadOnly();
 
-		const auto thumbnail_info { thumbnailer->createThumbnail( data, data_size, width, height, mime_name ) };
+		const idhan::data_view data_view { static_cast< const std::uint8_t* >( data ), data_size };
+		ModuleCallData call_data { .file_view = data_view, .mime_name = mime_name, .extra = {} };
+
+		// check if we have any metadata for this
+		const auto extra_metadata {
+			co_await db->execSqlCoro( "SELECT json FROM metadata WHERE record_id = $1", record_id )
+		};
+		if ( extra_metadata.size() > 0 )
+		{
+			call_data.extra = extra_metadata[ 0 ][ 0 ].as< Json::Value >();
+		}
+
+		const auto thumbnail_info { thumbnailer->createThumbnailFile( call_data, width, height ) };
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 
