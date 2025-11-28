@@ -118,6 +118,8 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 	}
 	while ( ret == ARCHIVE_OK );
 
+	json[ "encrypted" ] = archive_metadata.encrypted;
+
 	spdlog::info( "Finished processing" );
 
 	if ( ret != ARCHIVE_EOF )
