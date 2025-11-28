@@ -178,8 +178,6 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	const auto bad_dir { cluster_path / "bad" };
 
-	std::vector< drogon::Task< drogon::HttpResponsePtr > > scan_tasks {};
-
 	for ( const auto& folder : std::filesystem::directory_iterator( cluster_path ) )
 	{
 		if ( !folder.is_directory() ) continue;
@@ -196,20 +194,7 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 				co_return folder_result;
 			}
 		}
-		// else
-			// scan_tasks.emplace_back( scanFolder( folder, scan_params, cluster_id, cluster_path ) );
 	}
-
-	/*
-	if ( !scan_tasks.empty() )
-	{
-		const auto results { co_await drogon::when_all( std::move( scan_tasks ) ) };
-		for ( const auto& task_result : results )
-		{
-			if ( task_result ) co_return *task_result;
-		}
-	}
-	*/
 
 	request->setPath( format_ns::format( "/clusters/{}/info", cluster_id ) );
 	co_return co_await drogon::app().forwardCoro( request );
