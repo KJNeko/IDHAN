@@ -7,6 +7,7 @@
 namespace idhan
 {
 
+/*
 template < typename T = void >
 struct ImmedientTask
 {
@@ -136,5 +137,9 @@ struct [[nodiscard]] ImmedientTask< void >
 
 	handle_type coro_;
 };
+*/
+
+template < typename T = void >
+using ImmedientTask = drogon::Task< T >;
 
 } // namespace idhan
