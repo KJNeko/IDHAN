@@ -36,10 +36,8 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 		archive_read_new(), []( archive* ptr ) { archive_read_free( ptr ); }
 	};
 
-	spdlog::info( "Created archive context" );
 	archive_read_support_format_all( a.get() );
 	archive_read_support_filter_all( a.get() );
-	spdlog::info( "Added read support for all" );
 
 	if ( const int r = archive_read_open_memory( a.get(), data.file_view.data(), data.file_view.size() ); r != 0 )
 	{
@@ -53,8 +51,6 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	Json::Value json {};
 
-	spdlog::info( "Getting headers" );
-
 	auto ret { archive_read_next_header( a.get(), &entry ) };
 
 	do
@@ -67,13 +63,11 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 		if ( archive_entry_is_encrypted( entry ) )
 		{
-			spdlog::info( "Archive has an encrypted item" );
+			spdlog::debug( "Archive has an encrypted item" );
 			archive_metadata.encrypted = true;
 			ret = archive_read_next_header( a.get(), &entry );
 			continue;
 		}
-
-		spdlog::info( "Getting path" );
 
 		const char* filename_raw { archive_entry_pathname( entry ) };
 
@@ -85,7 +79,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 			}
 			else
 			{
-				spdlog::warn( "No file name for iten in archive?" );
+				spdlog::warn( "No file name for item in archive?" );
 				ret = archive_read_next_header( a.get(), &entry );
 				continue;
 			}
@@ -94,7 +88,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 		const auto filename { sanitizeEncoding( filename_raw ) };
 		if ( !filename ) return std::unexpected( filename.error() );
 
-		spdlog::info( "Cleaned path to {}", *filename );
+		spdlog::trace( "Cleaned path to {}", *filename );
 
 		const auto file_size { static_cast< std::size_t >( archive_entry_size( entry ) ) };
 
@@ -112,7 +106,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 		archive_metadata.contained_hashes.emplace_back( file_hash );
 		archive_metadata.m_size += file_size;
 		json[ idhan::crypto::toHex( file_hash ) ] = *filename;
-		spdlog::info( "Got hash {}", idhan::crypto::toHex( file_hash ) );
+		spdlog::trace( "Got hash {}", idhan::crypto::toHex( file_hash ) );
 
 		ret = archive_read_next_header( a.get(), &entry );
 	}
@@ -120,7 +114,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	json[ "encrypted" ] = archive_metadata.encrypted;
 
-	spdlog::info( "Finished processing" );
+	spdlog::trace( "Finished processing" );
 
 	if ( ret != ARCHIVE_EOF )
 	{
