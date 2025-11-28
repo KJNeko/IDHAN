@@ -90,6 +90,11 @@ std::string SearchBuilder::buildPositiveFilter() const
 {
 	std::string positive_filter { "positive_filter AS (" };
 
+	if ( m_in_archive_search == ArchiveSearchType::InArchive )
+	{
+		positive_filter += "SELECT DISTINCT record_id FROM archive_map INTERSECT ";
+	}
+
 	if ( m_positive_tags.empty() )
 	{
 		// If there is no 'positive tags', we need to populate the positive filter with something to prevent it from returning nothing
@@ -113,6 +118,15 @@ std::string SearchBuilder::buildPositiveFilter() const
 std::string SearchBuilder::buildNegativeFilter() const
 {
 	std::string negative_filters { "negative_filter AS (" };
+
+	if ( m_in_archive_search == ArchiveSearchType::NoArchive )
+	{
+		negative_filters += "SELECT DISTINCT record_id FROM archive_map";
+		if ( m_negative_tags.empty() )
+			negative_filters += "),";
+		else
+			negative_filters += " UNION DISTINCT ";
+	}
 
 	for ( auto itter = m_negative_tags.begin(); itter != m_negative_tags.end(); ++itter )
 	{
@@ -164,23 +178,19 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 		m_required_joins.left_video_metadata |= true;
 	}
 
-	if ( m_required_joins.left_video_metadata )
-	{
-		query += " LEFT JOIN video_metadata USING (record_id)";
-	}
+	if ( m_archive_search.m_active ) m_required_joins.archive_map |= true;
 
-	if ( m_required_joins.video_metadata && !m_required_joins.left_video_metadata )
+	if ( m_in_archive_search == ArchiveSearchType::NoArchive ) m_required_joins.left_archive_map |= true;
+
+	if ( m_required_joins.video_metadata || m_required_joins.left_video_metadata )
 	{
+		if ( m_required_joins.left_video_metadata ) query += " LEFT";
 		query += " JOIN video_metadata USING (record_id)";
 	}
 
-	if ( m_required_joins.left_image_metadata )
+	if ( m_required_joins.image_metadata || m_required_joins.left_image_metadata )
 	{
-		query += " LEFT JOIN image_metadata USING (record_id)";
-	}
-
-	if ( m_required_joins.image_metadata && !m_required_joins.left_image_metadata )
-	{
+		if ( m_required_joins.left_image_metadata ) query += " LEFT";
 		query += " JOIN image_metadata USING (record_id)";
 	}
 
@@ -193,6 +203,12 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 	if ( m_required_joins.file_info )
 	{
 		query += " JOIN file_info fm USING (record_id)";
+	}
+
+	if ( m_required_joins.archive_map || m_required_joins.left_archive_map )
+	{
+		if ( m_required_joins.left_archive_map ) query += " LEFT";
+		query += " JOIN archive_map am USING (record_id)";
 	}
 }
 
@@ -286,6 +302,38 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 		}
 
 		query += std::to_string( m_width_search.count );
+	}
+
+	if ( m_archive_search.m_active )
+	{
+		const auto operation { m_archive_search.operation };
+		if ( operation & SearchOperationFlags::Not )
+			query += " AND NOT";
+		else
+			query += " AND";
+
+		query += " am.archive_id";
+
+		if ( operation & SearchOperationFlags::Equal )
+		{
+			query += "= ";
+		}
+
+		if ( operation & SearchOperationFlags::GreaterThan )
+		{
+			query += "> ";
+		}
+		else if ( operation & SearchOperationFlags::LessThan )
+		{
+			query += "< ";
+		}
+
+		query += std::to_string( m_archive_search.count );
+	}
+
+	if ( m_in_archive_search != ArchiveSearchType::DontCare )
+	{
+		if ( m_in_archive_search == ArchiveSearchType::NoArchive ) query += " AND am.archive_id IS NULL";
 	}
 }
 
@@ -451,6 +499,199 @@ void SearchBuilder::setNegativeTags( const std::vector< TagID >& tag_ids )
 	m_negative_tags = tag_ids;
 }
 
+bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
+{
+	// system:everything
+	if ( system_subtag == "everything" )
+	{
+		m_search_everything = true;
+		return true;
+	}
+	// system:inbox
+	// system:archive
+	// system:has duration
+	if ( system_subtag == "has duration" )
+	{
+		m_duration_search = DurationSearchType::HasDuration;
+		return true;
+	}
+	// system:no duration
+	if ( system_subtag == "no duration" )
+	{
+		m_duration_search = DurationSearchType::NoDuration;
+		return true;
+	}
+	// system:is the best quality file of its duplicate group
+	// system:is not the best quality file of its duplicate group
+	// system:has audio
+	if ( system_subtag == "has audio" )
+	{
+		m_audio_search = AudioSearchType::HasAudio;
+		return true;
+	}
+	// system:no audio
+	if ( system_subtag == "no audio" )
+	{
+		m_audio_search = AudioSearchType::NoAudio;
+		return true;
+	}
+	// system:has exif
+	if ( system_subtag == "has exif" )
+	{
+		m_exif_search = ExitSearchType::HasExif;
+		return true;
+	}
+	// system:no exif
+	if ( system_subtag == "no exif" )
+	{
+		m_exif_search = ExitSearchType::NoExif;
+		return true;
+	}
+	// system:has embedded metadata
+	// system:no embedded metadata
+	// system:has icc profile
+	// system:no icc profile
+	// system:has tags
+	if ( system_subtag == "has tags" )
+	{
+		m_has_tags_search = TagCountSearchType::HasTags;
+		return true;
+	}
+	// system:no tags // system:untagged // MERGED
+	if ( ( system_subtag == "no tags" ) || ( system_subtag == "untagged" ) )
+	{
+		m_has_tags_search = TagCountSearchType::NoTags;
+		return true;
+	}
+	// system:number of tags > 5 // system:number of tags ~= 10 // system:number of tags > 0
+	if ( system_subtag.starts_with( "number of tags" ) )
+	{
+		parseRangeSearch( m_tag_count_search, system_subtag );
+		return true;
+	}
+
+	// system:number of words < 2
+	// system:height = 600 // system:height > 900
+	if ( system_subtag.starts_with( "height" ) )
+	{
+		parseRangeSearch( m_height_search, system_subtag );
+		return true;
+	}
+	// system:width < 200 // system:width > 1000
+	if ( system_subtag.starts_with( "width" ) )
+	{
+		parseRangeSearch( m_width_search, system_subtag );
+		return true;
+	}
+	// system:filesize ~= 50 kilobytes // system:filesize > 10megabytes // system:filesize < 1 GB // system:filesize > 0 B
+	if ( system_subtag.starts_with( "filesize" ) )
+	{
+		return true;
+	}
+	// system:similar to abcdef01 abcdef02 abcdef03, abcdef04 with distance 3
+	// system:similar to abcdef distance 5
+	// system:limit = 100
+	if ( system_subtag.starts_with( "limit" ) )
+	{
+		parseRangeSearch( m_limit_search, system_subtag );
+		return true;
+	}
+	// system:filetype = image/jpg, image/png, apng
+	if ( system_subtag.starts_with( "filetype" ) )
+	{
+		return true;
+	}
+	// system:hash = abcdef01 abcdef02 abcdef03 (this does sha256)
+	// system:hash = abcdef01 abcdef02 md5
+	if ( system_subtag.starts_with( "hash" ) )
+	{
+		return true;
+	}
+	// system:modified date < 7 years 45 days 7h // system:modified date > 2011-06-04
+	// system:date modified > 7 years 2 months // system:date modified < 0 years 1 month 1 day 1 hour
+	if ( system_subtag.starts_with( "modified date" ) || system_subtag.starts_with( "date modified" ) )
+	{
+		return true;
+	}
+	// system:last viewed time < 7 years 45 days 7h
+	// system:last view time < 7 years 45 days 7h
+	// system:import time < 7 years 45 days 7h
+	// system:time imported < 7 years 45 days 7h // system:time imported > 2011-06-04
+	// system:time imported > 7 years 2 months // system:time imported < 0 years 1 month 1 day 1 hour
+	// system:time imported ~= 2011-1-3 // system:time imported ~= 1996-05-2
+	if ( system_subtag.starts_with( "time imported" ) )
+	{
+		return true;
+	}
+	// system:duration < 5 seconds
+	// system:duration ~= 600 msecs
+	// system:duration > 3 milliseconds
+	// system:file service is pending to my files
+	// system:file service currently in my files
+	// system:file service is not currently in my files
+	// system:file service is not pending to my files
+	// system:number of file relationships = 2 duplicates
+	// system:number of file relationships > 10 potential duplicates
+	// system:num file relationships < 3 alternates
+	// system:num file relationships > 3 false positives
+	// system:ratio is wider than 16:9
+	if ( system_subtag.starts_with( "ratio wider than" ) )
+	{
+		return true;
+	}
+	// system:ratio is 16:9
+	if ( system_subtag.starts_with( "ratio is" ) )
+	{
+		return true;
+	}
+	// system:ratio taller than 1:1
+	if ( system_subtag.starts_with( "ratio taller than" ) )
+	{
+		return true;
+	}
+	// system:num pixels > 50 px // system:num pixels < 1 megapixels // system:num pixels ~= 5 kilopixel
+	if ( system_subtag.starts_with( "num pixels" ) )
+	{
+		return true;
+	}
+	// system:views in media ~= 10
+	// system:views in preview < 10
+	// system:views > 0
+	// system:viewtime in client api < 1 days 1 hour 0 minutes
+	// system:viewtime in media, client api, preview ~= 1 day 30 hours 100 minutes 90s
+	// system:has url matching regex index\.php
+	// system:does not have a url matching regex index\.php
+	// system:has url https://somebooru.org/posts/123456
+	if ( system_subtag.starts_with( "has url" ) )
+	{
+		return true;
+	}
+	// system:does not have url https://somebooru.org/posts/123456
+	if ( system_subtag.starts_with( "does not have url" ) )
+	{
+		return true;
+	}
+	// system:has domain safebooru.com
+	// system:does not have domain safebooru.com
+	// system:has a url with class safebooru file page
+	// system:does not have a url with url class safebooru file page
+	// system:tag as number page < 5
+	// system:has notes
+	// system:no notes
+	// system:does not have notes
+	// system:num notes is 5
+	// system:num notes > 1
+	// system:has note with name note name
+	// system:no note with name note name
+	// system:does not have note with name note name
+	// system:has a rating for service_name
+	// system:does not have a rating for service_name
+	// system:rating for service_name > ⅗ (numerical services)
+	// system:rating for service_name is like (like/dislike services)
+	// system:rating for service_name = 13 (inc/dec services)
+	return false;
+}
+
 void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 {
 	log::debug( "Got {} system tags", vector.size() );
@@ -465,194 +706,25 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 
 		log::debug( "Got system tag \'{}\'", system_subtag );
 
-		// system:everything
-		if ( system_subtag == "everything" )
+		if ( setHydrusSystemTags( system_subtag ) ) continue;
+
+		// IDHAN SPECIFIC
+		if ( system_subtag.starts_with( "archive" ) )
 		{
-			m_search_everything = true;
-			continue;
-		}
-		// system:inbox
-		// system:archive
-		// system:has duration
-		if ( system_subtag == "has duration" )
-		{
-			m_duration_search = DurationSearchType::HasDuration;
-			continue;
-		}
-		// system:no duration
-		if ( system_subtag == "no duration" )
-		{
-			m_duration_search = DurationSearchType::NoDuration;
-			continue;
-		}
-		// system:is the best quality file of its duplicate group
-		// system:is not the best quality file of its duplicate group
-		// system:has audio
-		if ( system_subtag == "has audio" )
-		{
-			m_audio_search = AudioSearchType::HasAudio;
-			continue;
-		}
-		// system:no audio
-		if ( system_subtag == "no audio" )
-		{
-			m_audio_search = AudioSearchType::NoAudio;
-			continue;
-		}
-		// system:has exif
-		if ( system_subtag == "has exif" )
-		{
-			m_exif_search = ExitSearchType::HasExif;
-			continue;
-		}
-		// system:no exif
-		if ( system_subtag == "no exif" )
-		{
-			m_exif_search = ExitSearchType::NoExif;
-			continue;
-		}
-		// system:has embedded metadata
-		// system:no embedded metadata
-		// system:has icc profile
-		// system:no icc profile
-		// system:has tags
-		if ( system_subtag == "has tags" )
-		{
-			m_has_tags_search = TagCountSearchType::HasTags;
-			continue;
-		}
-		// system:no tags // system:untagged // MERGED
-		if ( ( system_subtag == "no tags" ) || ( system_subtag == "untagged" ) )
-		{
-			m_has_tags_search = TagCountSearchType::NoTags;
-			continue;
-		}
-		// system:number of tags > 5 // system:number of tags ~= 10 // system:number of tags > 0
-		if ( system_subtag.starts_with( "number of tags" ) )
-		{
-			parseRangeSearch( m_tag_count_search, system_subtag );
+			parseRangeSearch( m_archive_search, system_subtag );
 			continue;
 		}
 
-		// system:number of words < 2
-		// system:height = 600 // system:height > 900
-		if ( system_subtag.starts_with( "height" ) )
+		if ( system_subtag.starts_with( "in archive" ) )
 		{
-			parseRangeSearch( m_height_search, system_subtag );
+			m_in_archive_search = ArchiveSearchType::InArchive;
 			continue;
 		}
-		// system:width < 200 // system:width > 1000
-		if ( system_subtag.starts_with( "width" ) )
+
+		if ( system_subtag.starts_with( "not in archive" ) )
 		{
-			parseRangeSearch( m_width_search, system_subtag );
-			continue;
+			m_in_archive_search = ArchiveSearchType::NoArchive;
 		}
-		// system:filesize ~= 50 kilobytes // system:filesize > 10megabytes // system:filesize < 1 GB // system:filesize > 0 B
-		if ( system_subtag.starts_with( "filesize" ) )
-		{
-			continue;
-		}
-		// system:similar to abcdef01 abcdef02 abcdef03, abcdef04 with distance 3
-		// system:similar to abcdef distance 5
-		// system:limit = 100
-		if ( system_subtag.starts_with( "limit" ) )
-		{
-			parseRangeSearch( m_limit_search, system_subtag );
-			continue;
-		}
-		// system:filetype = image/jpg, image/png, apng
-		if ( system_subtag.starts_with( "filetype" ) )
-		{
-			continue;
-		}
-		// system:hash = abcdef01 abcdef02 abcdef03 (this does sha256)
-		// system:hash = abcdef01 abcdef02 md5
-		if ( system_subtag.starts_with( "hash" ) )
-		{
-			continue;
-		}
-		// system:modified date < 7 years 45 days 7h // system:modified date > 2011-06-04
-		// system:date modified > 7 years 2 months // system:date modified < 0 years 1 month 1 day 1 hour
-		if ( system_subtag.starts_with( "modified date" ) || system_subtag.starts_with( "date modified" ) )
-		{
-			continue;
-		}
-		// system:last viewed time < 7 years 45 days 7h
-		// system:last view time < 7 years 45 days 7h
-		// system:import time < 7 years 45 days 7h
-		// system:time imported < 7 years 45 days 7h // system:time imported > 2011-06-04
-		// system:time imported > 7 years 2 months // system:time imported < 0 years 1 month 1 day 1 hour
-		// system:time imported ~= 2011-1-3 // system:time imported ~= 1996-05-2
-		if ( system_subtag.starts_with( "time imported" ) )
-		{
-			continue;
-		}
-		// system:duration < 5 seconds
-		// system:duration ~= 600 msecs
-		// system:duration > 3 milliseconds
-		// system:file service is pending to my files
-		// system:file service currently in my files
-		// system:file service is not currently in my files
-		// system:file service is not pending to my files
-		// system:number of file relationships = 2 duplicates
-		// system:number of file relationships > 10 potential duplicates
-		// system:num file relationships < 3 alternates
-		// system:num file relationships > 3 false positives
-		// system:ratio is wider than 16:9
-		if ( system_subtag.starts_with( "ratio wider than" ) )
-		{
-			continue;
-		}
-		// system:ratio is 16:9
-		if ( system_subtag.starts_with( "ratio is" ) )
-		{
-			continue;
-		}
-		// system:ratio taller than 1:1
-		if ( system_subtag.starts_with( "ratio taller than" ) )
-		{
-			continue;
-		}
-		// system:num pixels > 50 px // system:num pixels < 1 megapixels // system:num pixels ~= 5 kilopixel
-		if ( system_subtag.starts_with( "num pixels" ) )
-		{
-			continue;
-		}
-		// system:views in media ~= 10
-		// system:views in preview < 10
-		// system:views > 0
-		// system:viewtime in client api < 1 days 1 hour 0 minutes
-		// system:viewtime in media, client api, preview ~= 1 day 30 hours 100 minutes 90s
-		// system:has url matching regex index\.php
-		// system:does not have a url matching regex index\.php
-		// system:has url https://somebooru.org/posts/123456
-		if ( system_subtag.starts_with( "has url" ) )
-		{
-			continue;
-		}
-		// system:does not have url https://somebooru.org/posts/123456
-		if ( system_subtag.starts_with( "does not have url" ) )
-		{
-			continue;
-		}
-		// system:has domain safebooru.com
-		// system:does not have domain safebooru.com
-		// system:has a url with class safebooru file page
-		// system:does not have a url with url class safebooru file page
-		// system:tag as number page < 5
-		// system:has notes
-		// system:no notes
-		// system:does not have notes
-		// system:num notes is 5
-		// system:num notes > 1
-		// system:has note with name note name
-		// system:no note with name note name
-		// system:does not have note with name note name
-		// system:has a rating for service_name
-		// system:does not have a rating for service_name
-		// system:rating for service_name > ⅗ (numerical services)
-		// system:rating for service_name is like (like/dislike services)
-		// system:rating for service_name = 13 (inc/dec services)
 
 		log::warn( "Unsupported system tag system: \'{}\'", system_subtag );
 	}
