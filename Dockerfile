@@ -33,13 +33,23 @@ RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 
-COPY . /build/
+COPY dependencies /build/dependencies
+COPY 3rd-party/hydrus /build/3rd-party/hydrus
+COPY docs /build/docs
+COPY IDHAN /build/IDHAN
+COPY IDHANModules /build/IDHANModules
+COPY IDHANMigration /build/IDHANMigration
+COPY IDHANServer /build/IDHANServer
+COPY CMakeLists.txt /build/CMakeLists.txt
 
 # Initialize git submodules if needed
 RUN if [ -f .gitmodules ]; then git submodule update --init --recursive || true; fi
 
+ENV CCACHE_DIR=/root/.ccache
+
 # Build IDHANServer
-RUN cmake -S . -B build \
+RUN --mount=type=cache,target=/build/build \
+    cmake -S . -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_STANDARD=23 \
     -DBUILD_IDHAN_TESTS=OFF \
@@ -47,11 +57,9 @@ RUN cmake -S . -B build \
     -DBUILD_IDHAN_DOCS=ON \
     -DBUILD_IDHAN_WEBUI=OFF \
     -DBUILD_IDHAN_CLIENT=OFF \
-    -DBUILD_IDHAN_TOOLS=OFF
-
-ENV CCACHE_DIR=/root/.ccache
-RUN --mount=type=cache,target=/root/.ccache \
-    cmake --build build --target IDHANServer -j$(nproc)
+    -DBUILD_IDHAN_TOOLS=OFF && \
+    cmake --build build --target IDHANServer -j$(nproc) && \
+    cp /build/build/bin /build/bin -r
 
 # Stage 2: Runtime environment
 FROM ubuntu:24.04
@@ -85,11 +93,11 @@ RUN rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /usr/share/idhan/
 
 # Copy built artifacts from builder stage
-COPY --from=builder /build/build/bin/IDHANServer/ /usr/bin/IDHANServer
-COPY --from=builder /build/build/bin/static/ /usr/share/idhan/static
-COPY --from=builder /build/build/bin/modules/ /usr/share/idhan/modules
-COPY --from=builder /build/build/bin/mime/ /usr/share/idhan/mime
-COPY --from=builder /build/build/bin/config.toml /usr/share/idhan/config.toml
+COPY --from=builder /build/bin/IDHANServer/ /usr/bin/IDHANServer
+COPY --from=builder /build/bin/static/ /usr/share/idhan/static
+COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
+COPY --from=builder /build/bin/mime/ /usr/share/idhan/mime
+COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
 
 # Environment variables for database configuration
 ENV IDHAN_DATABASE_HOST=localhost \
