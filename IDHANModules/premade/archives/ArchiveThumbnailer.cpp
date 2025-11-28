@@ -82,6 +82,12 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 	std::size_t counter { 0 };
 	for ( const auto& member : members )
 	{
+		if ( member.size() != ( 256 / 8 ) * 2 )
+		{
+			// fixes trying to use members that are not hashes
+			continue;
+		}
+
 		// member should be a hex string of a sha256
 		const auto hash { idhan::crypto::fromHex( member ) };
 		const auto file_path_str { extra[ member ].asString() };
