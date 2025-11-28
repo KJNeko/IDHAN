@@ -11,9 +11,10 @@
 namespace idhan
 {
 
-ThumbnailInfo::ThumbnailInfo( vips::VImage& image ) :
+ThumbnailInfo::ThumbnailInfo( vips::VImage& image, const bool do_cache_thumbnail ) :
   width( image.width() ),
   height( image.height() ),
+  cache_thumbnail( do_cache_thumbnail ),
   m_mode( ThumbnailInfo::RAW )
 {
 	std::size_t output_length { 0 };
@@ -35,7 +36,7 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 	const auto thumbnail { createThumbnail( data, width, height ) };
 	if ( !thumbnail ) return std::unexpected( thumbnail.error() );
 
-	const auto [ thumbnail_rgb, thumbnail_width, thumbnail_height, _ ] = *thumbnail;
+	const auto [ thumbnail_rgb, thumbnail_width, thumbnail_height, _, cache_thumbnail ] = *thumbnail;
 
 	vips::VImage resized { vips::VImage::new_from_memory_copy(
 		const_cast< void* >( static_cast< const void* >( thumbnail_rgb.data() ) ),
@@ -56,6 +57,7 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 	info.width = width;
 	info.height = height;
 	info.m_mode = ThumbnailInfo::FILE_PNG;
+	info.cache_thumbnail = cache_thumbnail;
 
 	return info;
 }

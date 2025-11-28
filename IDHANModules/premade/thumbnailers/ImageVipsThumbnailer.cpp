@@ -68,7 +68,8 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 
 	if ( resized.bands() > 3 )
 	{
-		resized = resized.extract_band( 0, vips::VImage::option()->set( "n", 3 ) );
+		// resized = resized.extract_band( 0, vips::VImage::option()->set( "n", 3 ) );
+		resized = resized.flatten();
 	}
 
 	idhan::ThumbnailInfo ret { resized };
