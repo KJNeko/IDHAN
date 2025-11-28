@@ -15,6 +15,8 @@ using Int = Integer;
 using RecordID = Integer;
 #define RECORD_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 
+using ArchiveID = Integer;
+
 using NamespaceID = Integer;
 #define NAMESPACE_ID_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 using SubtagID = Integer;
