@@ -38,6 +38,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	archive_read_support_format_all( a.get() );
 	archive_read_support_filter_all( a.get() );
+	archive_read_set_option( a.get(), "zip", "compact-utf8", "on" );
 
 	if ( const int r = archive_read_open_memory( a.get(), data.file_view.data(), data.file_view.size() ); r != 0 )
 	{
@@ -53,7 +54,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	auto ret { archive_read_next_header( a.get(), &entry ) };
 
-	do
+	while ( ret == ARCHIVE_OK )
 	{
 		if ( archive_entry_filetype( entry ) != AE_IFREG ) // skip anything that isn't a file
 		{
@@ -69,13 +70,19 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 			continue;
 		}
 
-		const char* filename_raw { archive_entry_pathname( entry ) };
+		const char* filename_raw { nullptr };
 
-		if ( filename_raw == nullptr )
+		if ( filename_raw = archive_entry_pathname( entry ); filename_raw == nullptr )
 		{
-			if ( const auto filename_utf8 = archive_entry_pathname_utf8( entry ); filename_utf8 )
+			if ( const auto utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
 			{
-				filename_raw = filename_utf8;
+				filename_raw = utf8_filename_raw;
+			}
+			else if ( const auto w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
+			{
+				spdlog::warn( "No file name for item in archive? It was W!" );
+				ret = archive_read_next_header( a.get(), &entry );
+				continue;
 			}
 			else
 			{
@@ -110,7 +117,6 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 		ret = archive_read_next_header( a.get(), &entry );
 	}
-	while ( ret == ARCHIVE_OK );
 
 	json[ "encrypted" ] = archive_metadata.encrypted;
 
