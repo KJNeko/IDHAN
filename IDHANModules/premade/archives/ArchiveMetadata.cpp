@@ -73,7 +73,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 		if ( filename_raw == nullptr )
 		{
-			if ( auto filename_utf8 = archive_entry_pathname( entry ); filename_utf8 )
+			if ( const auto filename_utf8 = archive_entry_pathname_utf8( entry ); filename_utf8 )
 			{
 				filename_raw = filename_utf8;
 			}
