@@ -15,6 +15,7 @@ struct ThumbnailInfo
 {
 	std::vector< std::byte > data {};
 	std::size_t width, height;
+	bool cache_thumbnail { true };
 
 	enum ThumbnailMode
 	{
@@ -22,7 +23,9 @@ struct ThumbnailInfo
 		FILE_PNG
 	} m_mode;
 
-	ThumbnailInfo( vips::VImage& image );
+	static constexpr auto NOCACHE { false };
+
+	ThumbnailInfo( vips::VImage& image, bool cache_thumbnail = true );
 
 	ThumbnailInfo() : width( 0 ), height( 0 ), m_mode( FILE_PNG ) {}
 };
