@@ -2,15 +2,15 @@
 // Created by kj16609 on 3/20/25.
 //
 
-#include "crypto/SHA256.hpp"
-#include "filesystem/io/IOUring.hpp"
 #include "Config.hpp"
 #include "MetadataModule.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "filesystem/filesystem.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "fixme.hpp"
 #include "hyapi/helpers.hpp"
 #include "logging/log.hpp"
@@ -137,7 +137,7 @@ drogon::Task< drogon::HttpResponsePtr > scanFolder(
 
 		const auto& file_path { entry.path() };
 
-		log::trace( "Scanner hitting path: {}", file_path.string() );
+		log::info( "Scanner hitting path: {}", file_path.string() );
 
 		if ( !entry.is_regular_file() )
 		{
@@ -178,8 +178,6 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 	const auto bad_dir { cluster_path / "bad" };
 
-	std::filesystem::path last_scanned { "" };
-
 	std::vector< drogon::Task< drogon::HttpResponsePtr > > scan_tasks {};
 
 	for ( const auto& folder : std::filesystem::directory_iterator( cluster_path ) )
@@ -188,13 +186,30 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( folder.path() == bad_dir ) continue;
 
-		if ( config::getSilentDefault< bool >( "server", "slow_down", false ) )
-			co_await scanFolder( folder, scan_params, cluster_id, cluster_path );
-		else
-			scan_tasks.emplace_back( scanFolder( folder, scan_params, cluster_id, cluster_path ) );
+		//TODO: Ignore folders we don't have permissions for, as this crashes us otherwise
+		// if ( scan_params.stop_on_fail || config::getSilentDefault< bool >( "server", "slow_down", true ) )
+		{
+			const auto folder_result { co_await scanFolder( folder, scan_params, cluster_id, cluster_path ) };
+
+			if ( scan_params.stop_on_fail && folder_result )
+			{
+				co_return folder_result;
+			}
+		}
+		// else
+			// scan_tasks.emplace_back( scanFolder( folder, scan_params, cluster_id, cluster_path ) );
 	}
 
-	if ( scan_tasks.size() > 0 ) co_await drogon::when_all( std::move( scan_tasks ) );
+	/*
+	if ( !scan_tasks.empty() )
+	{
+		const auto results { co_await drogon::when_all( std::move( scan_tasks ) ) };
+		for ( const auto& task_result : results )
+		{
+			if ( task_result ) co_return *task_result;
+		}
+	}
+	*/
 
 	request->setPath( format_ns::format( "/clusters/{}/info", cluster_id ) );
 	co_return co_await drogon::app().forwardCoro( request );
@@ -283,7 +298,7 @@ ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 
 	if ( search_result.empty() && m_params.adopt_orphans )
 	{
-		log::debug( "Hashing file at {} because it's never been seen before to verify the filename", m_path.string() );
+		log::trace( "Hashing file at {} because it's never been seen before to verify the filename", m_path.string() );
 		m_params.verify_hash = true;
 		const auto verified_hash { co_await checkSHA256() };
 		if ( !verified_hash ) co_return std::unexpected( verified_hash.error() );
@@ -415,11 +430,14 @@ ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		}
 	}
 
+	log::trace( "Record {} was in the correct cluster", m_record_id );
+
 	co_return {};
 }
 
 drogon::Task< bool > ScanContext::hasMime( DbClientPtr db )
 {
+	log::trace( "Checking if record {} has a mime", m_record_id );
 	auto current_mime { co_await db->execSqlCoro(
 		"SELECT mime_id, name FROM file_info JOIN mime USING (mime_id) WHERE record_id = $1 AND mime_id IS NOT NULL",
 		m_record_id ) };
@@ -427,9 +445,11 @@ drogon::Task< bool > ScanContext::hasMime( DbClientPtr db )
 	if ( !current_mime.empty() && !current_mime[ 0 ][ "mime_id" ].isNull() )
 	{
 		m_mime_name = current_mime[ 0 ][ 1 ].as< std::string >();
+		log::trace( "Found that record {} has mime {}", m_record_id, m_mime_name );
 		co_return true;
 	}
 
+	log::trace( "Record {} does not have a mime", m_record_id );
 	co_return false;
 }
 
