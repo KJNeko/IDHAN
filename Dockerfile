@@ -84,6 +84,15 @@ RUN apt-get update && \
     libc-ares2 \
     ffmpeg
 
+# Locale setup
+RUN apt-get update && \
+    apt-get install -y locales && \
+    locale-gen en_US.UTF-8 && \
+    update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
 # Cleanup
 RUN apt-get clean
 
@@ -91,6 +100,9 @@ RUN rm -rf /var/lib/apt/lists/*
 
 # Create directories
 RUN mkdir -p /usr/share/idhan/
+
+# Cleanup
+RUN rm -rf /var/lib/apt/lists/*
 
 # Copy built artifacts from builder stage
 COPY --from=builder /build/bin/IDHANServer/ /usr/bin/IDHANServer

@@ -25,12 +25,8 @@ void applyCLISettings(
 	}
 }
 
-
-
 int main( int argc, char** argv )
 {
-	setlocale( LC_ALL, "" );
-
 	using namespace idhan;
 
 	QCommandLineParser parser {};
