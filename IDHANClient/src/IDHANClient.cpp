@@ -86,7 +86,7 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 
 void IDHANClient::addKeyHeader( QNetworkRequest& request )
 {
-	request.setRawHeader( "IDHAN-Api-Key", "lolicon" );
+	request.setRawHeader( "IDHAN-Api-Key", m_key.toUtf8() );
 }
 
 void IDHANClient::setUrlInfo( QUrl& url )
@@ -101,7 +101,12 @@ IDHANClient& IDHANClient::instance()
 	return *m_instance;
 }
 
-IDHANClient::IDHANClient( const QString& client_name, const QString& hostname, const qint16 port, const bool use_tls ) :
+IDHANClient::IDHANClient(
+	const QString& client_name,
+	const QString& hostname,
+	const qint16 port,
+	const QString& key,
+	const bool use_tls ) :
   m_logger( spdlog::stdout_color_mt( client_name.toStdString() ) ),
   network( nullptr )
 {
@@ -121,7 +126,7 @@ IDHANClient::IDHANClient( const QString& client_name, const QString& hostname, c
 		throw std::runtime_error(
 			"IDHANClient expects a Qt instance. Please use QGuiApplication of QApplication before constructing IDHANClient" );
 
-	openConnection( hostname, port, use_tls );
+	openConnection( hostname, port, key, use_tls );
 }
 
 void IDHANClient::sendClientGet(
@@ -200,27 +205,6 @@ void IDHANClient::sendClientJson(
 
 	const auto submit_time { std::chrono::high_resolution_clock::now() };
 
-	auto responseSlot = [ responseHandler, response, submit_time ]()
-	{
-		const auto response_in_time { std::chrono::high_resolution_clock::now() };
-
-		if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 5 ) )
-		{
-			logging::warn(
-				"Server took {}ms to response to query {}. Might be doing a lot of work?",
-				std::chrono::duration_cast< std::chrono::milliseconds >( response_time ).count(),
-				response->url().path().toStdString() );
-		}
-
-		if ( response->error() != QNetworkReply::NoError )
-		{
-			logging::critical( "When handling the request for a valid response, the response was actually an error!" );
-			std::abort();
-		}
-
-		QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
-	};
-
 	auto errorSlot = [ errorHandler, response, url ]( const QNetworkReply::NetworkError error )
 	{
 		if ( error == QNetworkReply::NetworkError::OperationCanceledError )
@@ -228,6 +212,12 @@ void IDHANClient::sendClientJson(
 			logging::critical(
 				"Operation timed out with request to {}: {}", url.toString(), response->errorString().toStdString() );
 			std::abort();
+		}
+
+		if ( error == QNetworkReply::ConnectionRefusedError )
+		{
+			QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error, "Connection refused" ) );
+			return;
 		}
 
 		// check if this is a special error or not.
@@ -253,6 +243,34 @@ void IDHANClient::sendClientJson(
 
 		QThreadPool::globalInstance()->start(
 			std::bind( errorHandler, response, error, response->errorString().toStdString() ) );
+	};
+
+	auto responseSlot = [ responseHandler, response, submit_time, errorSlot ]()
+	{
+		const auto response_in_time { std::chrono::high_resolution_clock::now() };
+
+		if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 5 ) )
+		{
+			logging::warn(
+				"Server took {}ms to response to query {}. Might be doing a lot of work?",
+				std::chrono::duration_cast< std::chrono::milliseconds >( response_time ).count(),
+				response->url().path().toStdString() );
+		}
+
+		if ( response->error() == QNetworkReply::ConnectionRefusedError )
+		{
+			errorSlot( response->error() );
+			return;
+		}
+
+		if ( response->error() != QNetworkReply::NoError )
+		{
+			logging::critical( "When handling the request for a valid response, the response was actually an error!" );
+			std::abort();
+			return;
+		}
+
+		QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
 	};
 
 	const auto response_connection { QObject::connect( response, &QNetworkReply::finished, responseSlot ) };
@@ -324,12 +342,19 @@ bool IDHANClient::validConnection() const
 	return future.resultCount() > 0;
 }
 
-void IDHANClient::openConnection( const QString hostname, const qint16 port, const bool use_tls )
+void IDHANClient::setAPIKey( const QString& key )
+{
+	m_key = key;
+}
+
+void IDHANClient::openConnection( const QString& hostname, const qint16 port, const QString key, const bool use_tls )
 {
 	if ( hostname.isEmpty() ) throw std::runtime_error( "hostname must not be empty" );
 
 	m_url_template.setHost( hostname );
 	m_url_template.setPort( port );
+
+	this->setAPIKey( key );
 
 	m_url_template.setScheme( use_tls ? "https" : "http" );
 }
