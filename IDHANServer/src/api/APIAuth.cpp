@@ -10,7 +10,9 @@
 namespace idhan::api
 {
 
-static constexpr std::array< std::string, 3 > key_headers { { "Authorization", "X-API-Key", "IDHAN-API-Key" } };
+static constexpr std::array< std::string, 5 > key_headers {
+	{ "Authorization", "X-API-Key", "IDHAN-API-Key", "X-Api-Key", "IDHAN-Api-Key" }
+};
 
 //! Checks all of the common headers that we'll use for the idhan key
 std::string getHeaderKeys( const drogon::HttpRequestPtr& req )
