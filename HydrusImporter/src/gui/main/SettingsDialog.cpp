@@ -78,7 +78,11 @@ void SettingsDialog::loadSettings()
 }
 
 void SettingsDialog::on_saveSettings_pressed()
-{}
+{
+	settings.setValue( "hostname", ui->leHostname->text() );
+	settings.setValue( "port", ui->lePort->text().toInt() );
+	settings.setValue( "key", ui->leKey->text() );
+}
 
 void SettingsDialog::on_cancelSettings_pressed()
 {
@@ -89,6 +93,7 @@ void SettingsDialog::on_applySettings_pressed()
 {
 	settings.setValue( "hostname", ui->leHostname->text() );
 	settings.setValue( "port", ui->lePort->text().toInt() );
+	settings.setValue( "key", ui->leKey->text() );
 }
 
 void SettingsDialog::wakeButtons()
