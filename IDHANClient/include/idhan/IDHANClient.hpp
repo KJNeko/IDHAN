@@ -70,6 +70,8 @@ class IDHANClient
 
 	void addKeyHeader( QNetworkRequest& request );
 
+	QString m_key {};
+
   public:
 
 	std::shared_ptr< spdlog::logger > getLogger() const { return m_logger; }
@@ -88,16 +90,24 @@ class IDHANClient
 	* @param client_name Name of the client that shows up in the server logs for network logs and in the logging statements
 	* @param hostname
 	* @param port
+	* @param key
 	* @param use_tls
 	*/
-	IDHANClient( const QString& client_name, const QString& hostname, qint16 port, bool use_tls = false );
+	IDHANClient(
+		const QString& client_name,
+		const QString& hostname,
+		qint16 port,
+		const QString& key,
+		bool use_tls = false );
 
 	~IDHANClient();
 
 	//! Returns true if the server responds (sends back valid version info)
-	bool validConnection() const;
+	[[nodiscard]] bool validConnection() const;
 
-	void openConnection( QString hostname, qint16 port, bool use_tls = false );
+	void setAPIKey( const QString& key );
+
+	void openConnection( const QString& hostname, qint16 port, QString key, bool use_tls = false );
 
 	QFuture< std::vector< RecordID > > createRecords( std::vector< std::array< std::byte, 32 > >& hashes );
 
@@ -196,7 +206,7 @@ class IDHANClient
 	 * @throws DomainDoesNotExist
 	 * @return
 	 */
-	QFuture< std::optional<TagDomainID> > getTagDomain( std::string_view name );
+	QFuture< std::optional< TagDomainID > > getTagDomain( std::string_view name );
 
 	struct TagRelationshipInfo
 	{
