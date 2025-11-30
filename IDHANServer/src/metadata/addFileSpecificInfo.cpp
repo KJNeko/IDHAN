@@ -62,7 +62,7 @@ ExpectedTask< void > addImageProjectInfo( Json::Value& root, const RecordID reco
 ExpectedTask< void > addFileSpecificInfo( Json::Value& root, const RecordID record_id, DbClientPtr db )
 {
 	auto simple_mime_result {
-		co_await db->execSqlCoro( "SELECT simple_mime_type FROM metadata WHERE record_id = $1", record_id )
+		co_await db->execSqlCoro( "SELECT simple_mime_type, json FROM metadata WHERE record_id = $1", record_id )
 	};
 
 	if ( simple_mime_result.empty() ) // Could not find any mime info for this record, Try parsing for it.
@@ -80,9 +80,11 @@ ExpectedTask< void > addFileSpecificInfo( Json::Value& root, const RecordID reco
 
 	const SimpleMimeType simple_mime_type { simple_mime_result[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() };
 
+	root[ "extra" ] = simple_mime_result[ 0 ][ "json" ].as< Json::Value >();
+
 	switch ( simple_mime_type )
 	{
-		case SimpleMimeType::IMAGE:
+		case SimpleMimeType::IMAGE_TYPE:
 			{
 				const auto result { co_await addImageInfo( root, record_id, db ) };
 				if ( !result ) co_return std::unexpected( result.error() );
@@ -98,6 +100,10 @@ ExpectedTask< void > addFileSpecificInfo( Json::Value& root, const RecordID reco
 			{
 				const auto result { co_await addImageProjectInfo( root, record_id, db ) };
 				if ( !result ) co_return std::unexpected( result.error() );
+				break;
+			}
+		case SimpleMimeType::ARCHIVE:
+			{
 				break;
 			}
 		case SimpleMimeType::ANIMATION:

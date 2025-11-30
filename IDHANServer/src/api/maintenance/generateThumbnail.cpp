@@ -35,6 +35,22 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 		co_return drogon::HttpResponse::newHttpJsonResponse( response );
 	}
 
+	const auto metadata_parser { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
+	if ( metadata_parser.empty() )
+	{
+		co_return createInternalError( "Was unable to find parser for {}", *mime_str );
+	}
+
+	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
+	ModuleCallData call_data { .file_view = data_view, .mime_name = *mime_str, .extra = {} };
+	const auto metadata_json { metadata_parser[ 0 ]->parseFile( call_data ) };
+
+	if ( !metadata_json )
+		co_return createInternalError(
+			"Unable to parse metadata for mime {} Reason: {}", *mime_str, metadata_json.error() );
+
+	call_data.extra = metadata_json->m_extra;
+
 	auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( *mime_str ) };
 
 	if ( thumbnailers.empty() )
@@ -48,9 +64,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 	//grab first thumbnailer
 	auto thumbnailer { thumbnailers.at( 0 ) };
 
-	const auto thumbnail_data {
-		thumbnailer->createThumbnail( request_data.data(), request_data.size(), 128, 128, *mime_str )
-	};
+	const auto thumbnail_data { thumbnailer->createThumbnailFile( call_data, 128, 128 ) };
 
 	if ( !thumbnailer )
 	{
@@ -58,6 +72,11 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 		response[ "success" ] = false;
 		response[ "error" ] = "Failed to parse thumbnail type";
 		co_return drogon::HttpResponse::newHttpJsonResponse( response );
+	}
+
+	if ( !thumbnail_data )
+	{
+		co_return createInternalError( thumbnail_data.error() );
 	}
 
 	const auto& thumb_info { *thumbnail_data };

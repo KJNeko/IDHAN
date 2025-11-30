@@ -4,10 +4,11 @@
 #pragma once
 #include "MetadataModule.hpp"
 
-
 class FFMPEGMetadata final : public idhan::MetadataModuleI
 {
   public:
+
+	FFMPEGMetadata( idhan::ModuleCallbacks callbacks ) : MetadataModuleI( callbacks ) {}
 
 	std::string_view name() override;
 
@@ -15,8 +16,5 @@ class FFMPEGMetadata final : public idhan::MetadataModuleI
 
 	std::vector< std::string_view > handleableMimes() override;
 
-	std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile(
-		const void* data,
-		std::size_t length,
-		std::string mime_name ) override;
+	std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data ) override;
 };

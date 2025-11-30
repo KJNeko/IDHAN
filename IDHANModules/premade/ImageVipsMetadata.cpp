@@ -9,6 +9,7 @@
 #include <cstring>
 #include <unordered_map>
 
+#include "spdlog/spdlog.h"
 #include "vips.hpp"
 
 using namespace idhan;
@@ -18,42 +19,43 @@ std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
 	return vipsHandleable();
 }
 
-std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile(
-	const void* data,
-	const std::size_t length,
-	const std::string mime_name )
+std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleCallData& data )
 {
-	VipsImage* image;
-	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() )
+	VipsImage* image_ptr;
+	if ( const auto it = VIPS_FUNC_MAP.find( data.mime_name ); it != VIPS_FUNC_MAP.end() )
 	{
-		if ( it->second( const_cast< void* >( data ), length, &image, nullptr ) != 0 )
+		if ( it->second(
+				 const_cast< void* >( static_cast< const void* >( data.file_view.data() ) ),
+				 data.file_view.size(),
+				 &image_ptr,
+				 nullptr )
+		     != 0 )
 		{
 			return std::unexpected( ModuleError { "Failed to load image" } );
 		}
+
+		spdlog::debug( "Decoded image" );
 	}
 	else
 	{
 		return std::unexpected( ModuleError { "Unsupported mime type" } );
 	}
 
-	if ( !image )
+	if ( !image_ptr )
 	{
 		return std::unexpected( ModuleError { "Failed to load image" } );
 	}
 
+	const vips::VImage image { image_ptr };
+
 	MetadataInfo info {};
 	info.m_metadata = MetadataInfoImage {
-		.width = static_cast< int >( image->Xsize ),
-		.height = static_cast< int >( image->Ysize ),
-		.channels = static_cast< std::uint8_t >( image->Bands )
+		.width = static_cast< int >( image.width() ),
+		.height = static_cast< int >( image.height() ),
+		.channels = static_cast< std::uint8_t >( image.bands() )
 	};
 
-// Fucking macros
-#undef IMAGE
-
-	info.m_simple_type = idhan::SimpleMimeType::IMAGE;
-
-	g_object_unref( image );
+	info.m_simple_type = idhan::SimpleMimeType::IMAGE_TYPE;
 
 	return info;
 }

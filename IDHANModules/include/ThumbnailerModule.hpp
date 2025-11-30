@@ -2,6 +2,9 @@
 // Created by kj16609 on 6/11/25.
 //
 #pragma once
+
+#include <vips/vips8>
+
 #include <algorithm>
 #include <expected>
 #include <string_view>
@@ -15,24 +18,25 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 {
   public:
 
-	struct ThumbnailInfo
-	{
-		std::vector< std::byte > data {};
-		std::size_t width, height;
-	};
+	ThumbnailerModuleI() = delete;
 
-	ThumbnailerModuleI();
+	ThumbnailerModuleI( ModuleCallbacks callbacks ) : ModuleBase( callbacks ) {}
 
 	~ThumbnailerModuleI() override;
 
 	virtual std::vector< std::string_view > handleableMimes() = 0;
 
+	//! Returns a raw thumbnail in RGB format
 	virtual std::expected< ThumbnailInfo, ModuleError > createThumbnail(
-		const void* data,
-		std::size_t length,
+		ModuleCallData& data,
 		std::size_t width,
-		std::size_t height,
-		std::string mime_name ) = 0;
+		std::size_t height ) = 0;
+
+	//! Returns the thumbnail in a in-memory PNG file
+	std::expected< ThumbnailInfo, ModuleError > createThumbnailFile(
+		ModuleCallData& data,
+		std::size_t width,
+		std::size_t height );
 
 	bool canHandle( std::string_view mime );
 

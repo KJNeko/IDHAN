@@ -164,6 +164,9 @@ class SearchBuilder
 
 		bool left_image_metadata { false };
 		bool image_metadata { false };
+
+		bool archive_map { false };
+		bool left_archive_map { false };
 	} m_required_joins {};
 
 	bool m_search_everything { false };
@@ -220,6 +223,13 @@ class SearchBuilder
 		HasCount
 	} m_has_tags_search { TagCountSearchType::DontCare };
 
+	enum class ArchiveSearchType
+	{
+		DontCare = 0,
+		InArchive,
+		NoArchive
+	} m_in_archive_search { ArchiveSearchType::DontCare };
+
 	struct RangeSearchInfo
 	{
 		//! If true then this count and operation are put into effect
@@ -236,6 +246,8 @@ class SearchBuilder
 	RangeSearchInfo m_height_search {};
 
 	RangeSearchInfo m_limit_search {};
+
+	RangeSearchInfo m_archive_search {};
 
 	SortType m_sort_type;
 	SortOrder m_order;
@@ -286,6 +298,7 @@ class SearchBuilder
 
 	void setPositiveTags( const std::vector< TagID >& vector );
 	void setNegativeTags( const std::vector< TagID >& tag_ids );
+	bool setHydrusSystemTags( std::string_view system_subtag );
 	void setSystemTags( const std::vector< std::string >& vector );
 
 	void setDisplay( HydrusDisplayType type );

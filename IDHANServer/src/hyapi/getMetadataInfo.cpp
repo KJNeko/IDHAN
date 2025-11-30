@@ -2,7 +2,8 @@
 // Created by kj16609 on 7/23/25.
 //
 
-#include "../records/records.hpp"
+#include "crypto/SHA256.hpp"
+#include "records/records.hpp"
 #include "HyAPI.hpp"
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
@@ -10,7 +11,6 @@
 #include "api/record/urls/urls.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
-#include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"

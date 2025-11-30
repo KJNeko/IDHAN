@@ -9,9 +9,9 @@
 #include <drogon/drogon.h>
 #include <json/json.h>
 
+#include "crypto/SHA256.hpp"
 #include "IDHANTypes.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "records/records.hpp"
 

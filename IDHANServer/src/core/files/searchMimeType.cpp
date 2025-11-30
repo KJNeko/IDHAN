@@ -2,8 +2,6 @@
 // Created by kj16609 on 11/15/24.
 //
 
-#include <QMimeDatabase>
-
 #include "IDHANTypes.hpp"
 #include "mime.hpp"
 

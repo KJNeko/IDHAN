@@ -4,12 +4,13 @@
 #include <drogon/drogon.h>
 #include <json/json.h>
 
-#include "../filesystem/clusters/ClusterManager.hpp"
-#include "../filesystem/io/IOUring.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "filesystem/clusters/ClusterManager.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "metadata.hpp"
 #include "modules/ModuleLoader.hpp"
+#include "records/records.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan::metadata
@@ -25,16 +26,8 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 		record_id,
 		simple_type );
 
-	Json::Value json {};
-	Json::Reader reader {};
-	if ( !metadata.m_extra.empty() )
-	{
-		if ( !reader.parse( metadata.m_extra, json ) )
-			co_return std::unexpected( createBadRequest( "Failed to parse metadata \"{}\"", metadata.m_extra ) );
-
-		co_await db->execSqlCoro(
-			"UPDATE metadata SET json = $2 WHERE record_id = $1", record_id, json.toStyledString() );
-	}
+	const Json::Value& json { metadata.m_extra };
+	co_await db->execSqlCoro( "UPDATE metadata SET json = $2 WHERE record_id = $1", record_id, json.toStyledString() );
 
 	switch ( simple_type )
 	{
@@ -52,7 +45,7 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 
 				break;
 			}
-		case SimpleMimeType::IMAGE:
+		case SimpleMimeType::IMAGE_TYPE:
 			{
 				const auto& image_metadata { std::get< MetadataInfoImage >( metadata.m_metadata ) };
 				co_await db->execSqlCoro(
@@ -81,13 +74,64 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 
 				break;
 			}
+		case SimpleMimeType::ARCHIVE:
+			{
+				const auto& archive_metadata { std::get< MetadataInfoArchive >( metadata.m_metadata ) };
+
+				// map the archive hashes to real records
+				std::vector< RecordID > records {};
+				for ( const auto& record_sha256 : archive_metadata.contained_hashes )
+				{
+					const SHA256 sha256 { SHA256::fromBuffer( record_sha256 ) };
+
+					const auto contained_record_id { co_await helpers::createRecord( sha256, db ) };
+					return_unexpected_error( contained_record_id );
+
+					records.emplace_back( *contained_record_id );
+				}
+
+				// check if there is already metadata for an archive
+				const auto existing_metadata { co_await db->execSqlCoro(
+					"SELECT archive_id FROM archive_metadata WHERE record_id = $1", record_id ) };
+
+				std::uint32_t archive_id { 0 };
+
+				if ( existing_metadata.size() > 0 )
+				{
+					archive_id = existing_metadata[ 0 ][ 0 ].as< std::uint32_t >();
+				}
+
+				if ( archive_id == 0 )
+				{
+					const auto inserted_archive_id {
+						co_await db->execSqlCoro( "INSERT INTO archives DEFAULT VALUES RETURNING archive_id" )
+					};
+
+					archive_id = inserted_archive_id[ 0 ][ 0 ].as< std::uint32_t >();
+				}
+
+				for ( const auto stored_record_id : records )
+				{
+					co_await db->execSqlCoro(
+						"INSERT INTO archive_map (archive_id, record_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+						archive_id,
+						stored_record_id );
+				}
+
+				co_await db->execSqlCoro(
+					"INSERT INTO archive_metadata (record_id, archive_id, encrypted) VALUES ($1, $2, $3) ON CONFLICT (record_id) DO UPDATE SET encrypted = $3",
+					record_id,
+					archive_id,
+					archive_metadata.encrypted );
+
+				break;
+			}
 		case SimpleMimeType::ANIMATION:
 			FGL_UNIMPLEMENTED();
 			break;
 		case SimpleMimeType::AUDIO:
 			FGL_UNIMPLEMENTED();
 			break;
-
 		case SimpleMimeType::NONE:
 			break;
 		default:

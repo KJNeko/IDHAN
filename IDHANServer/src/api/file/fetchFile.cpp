@@ -4,11 +4,11 @@
 
 #include <regex>
 
+#include "crypto/SHA256.hpp"
 #include "ServerContext.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
-#include "crypto/SHA256.hpp"
 #include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 
