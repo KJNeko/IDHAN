@@ -1,6 +1,6 @@
 #include "records.hpp"
 
-#include "../api/helpers/createBadRequest.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "fgl/defines.hpp"

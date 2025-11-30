@@ -72,7 +72,6 @@ constexpr std::uint8_t decodeHexCharacters( const char left, const char right )
 	const std::uint8_t right_char { decodeHexCharacter( right ) };
 
 	const std::uint8_t result { static_cast< std::uint8_t >( left_char | right_char ) };
-
 	return result;
 }
 
@@ -83,6 +82,7 @@ static_assert( 0x00 == decodeHexCharacters( '0', '0' ) );
 static_assert( 0x61 == decodeHexCharacters( '6', '1' ) );
 
 inline std::vector< std::byte > decodeHex( const std::string& str )
+try
 {
 	std::vector< std::byte > result {};
 	result.resize( str.size() / 2 );
@@ -96,6 +96,10 @@ inline std::vector< std::byte > decodeHex( const std::string& str )
 	}
 
 	return result;
+}
+catch ( std::exception& e )
+{
+	throw std::invalid_argument( "Invalid argument when parsing '" + str + "': " + std::string( e.what() ) );
 }
 
 static_assert( decodeHexCharacter( 'F' ) == 0xF );

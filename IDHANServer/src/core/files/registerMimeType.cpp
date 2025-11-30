@@ -3,6 +3,8 @@
 //
 
 #include <QMimeDatabase>
+// FUCKING QT IS RETARDED
+#undef signals
 
 #include "IDHANTypes.hpp"
 #include "mime.hpp"

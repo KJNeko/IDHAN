@@ -2,9 +2,9 @@
 // Created by kj16609 on 11/14/25.
 //
 
+#include "crypto/SHA256.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "core/search/SearchBuilder.hpp"
-#include "crypto/SHA256.hpp"
 #include "hyapi/HyAPI.hpp"
 #include "logging/ScopedTimer.hpp"
 

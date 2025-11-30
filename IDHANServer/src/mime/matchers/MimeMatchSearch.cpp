@@ -9,8 +9,8 @@
 
 #include <decodeHex.hpp>
 
-#include "../Cursor.hpp"
 #include "drogon/utils/coroutine.h"
+#include "mime/Cursor.hpp"
 
 namespace idhan::mime
 {

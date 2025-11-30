@@ -1,0 +1,2 @@
+ALTER TABLE archive_metadata
+    ADD COLUMN encrypted BOOLEAN DEFAULT FALSE NOT NULL;

@@ -2,7 +2,7 @@
 // Created by kj16609 on 10/21/25.
 //
 #pragma once
-#include "../MimeMatchBase.hpp"
+#include "mime/MimeMatchBase.hpp"
 
 namespace Json
 {

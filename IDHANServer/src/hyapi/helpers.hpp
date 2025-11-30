@@ -3,8 +3,8 @@
 //
 #pragma once
 
-#include "IDHANTypes.hpp"
 #include "crypto/SHA256.hpp"
+#include "IDHANTypes.hpp"
 #include "drogon/orm/DbClient.h"
 
 namespace idhan::hyapi::helpers

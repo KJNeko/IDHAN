@@ -1,0 +1,1 @@
+add_subdirectory(${IDHAN_DEPENDENCIES}/libarchive ${CMAKE_CURRENT_BINARY_DIR}/libarchive)

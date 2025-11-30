@@ -3,8 +3,14 @@
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(BUILD_STATIC_LIBS_ONLY ON)
+set(BUILD_STATIC_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
+
 cmake_minimum_required(VERSION 3.28)
 project(IDHAN LANGUAGES CXX)
+
+set(IDHAN_DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
 
 enable_testing()
 
@@ -40,6 +46,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #IDHANServer/IDHANClient
 include(postgres)
 include(toml)
+
+add_subdirectory(${IDHAN_DEPENDENCIES}/jsoncpp ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp)
 
 add_subdirectory(IDHAN)
 if (BUILD_IDHAN_SERVER)

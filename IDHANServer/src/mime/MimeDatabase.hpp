@@ -7,9 +7,10 @@
 #include <filesystem>
 #include <memory>
 
-#include "../filesystem/io/IOUring.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "MimeIdentifier.hpp"
 #include "MimeInfo.hpp"
+#include "ModuleBase.hpp"
 
 namespace idhan::mime
 {
@@ -96,6 +97,9 @@ class MimeDatabase
 	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
 		std::string_view data,
 		std::string file_name );
+
+	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( data_view data, std::string file_name );
+
 	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
 
 	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );

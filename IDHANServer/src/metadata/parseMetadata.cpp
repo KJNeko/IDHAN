@@ -4,8 +4,6 @@
 
 #include <drogon/drogon.h>
 
-#include "../filesystem/clusters/ClusterManager.hpp"
-#include "../filesystem/io/IOUring.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "filesystem/filesystem.hpp"
@@ -55,7 +53,9 @@ ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPt
 	if ( parser == nullptr )
 		co_return std::unexpected( createBadRequest( "No parser found for mime type {}", mime_name ) );
 
-	const auto metadata { parser->parseFile( data, length, mime_name ) };
+	idhan::data_view data_view { static_cast< const std::uint8_t* >( data ), length };
+	ModuleCallData call_data { .file_view = data_view, .mime_name = mime_name, .extra = {} };
+	const auto metadata { parser->parseFile( call_data ) };
 
 	if ( !metadata )
 	{

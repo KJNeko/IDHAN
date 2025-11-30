@@ -2,12 +2,11 @@
 // Created by kj16609 on 11/14/25.
 //
 
-#include "../APIMaintenance.hpp"
-
-#include "../../paths.hpp"
-#include "../../logging/log.hpp"
-
 #include <filesystem>
+
+#include "api/APIMaintenance.hpp"
+#include "logging/log.hpp"
+#include "paths.hpp"
 
 namespace idhan::api
 {

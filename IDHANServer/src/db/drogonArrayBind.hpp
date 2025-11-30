@@ -2,7 +2,7 @@
 // Created by kj16609 on 8/2/25.
 //
 #pragma once
-
+#include "IDHANTypes.hpp"
 #include "crypto/SHA256.hpp"
 
 std::vector< std::byte > createPgBinaryArray( std::vector< idhan::SHA256 >&& data );

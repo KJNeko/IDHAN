@@ -13,13 +13,12 @@ class ImageVipsMetadata final : public idhan::MetadataModuleI
 {
   public:
 
-	ImageVipsMetadata() = default;
+	ImageVipsMetadata( idhan::ModuleCallbacks callbacks ) : MetadataModuleI( callbacks ) {}
+
+	ImageVipsMetadata() = delete;
 
 	std::vector< std::string_view > handleableMimes() override;
-	std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile(
-		const void* data,
-		std::size_t length,
-		std::string mime_name ) override;
+	std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data ) override;
 
 	std::string_view name() override { return "JPG Metadata Parser"; }
 

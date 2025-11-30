@@ -1,16 +1,17 @@
 //
-// Created by kj16609 on 11/12/25.
+// Created by kj16609 on 11/25/25.
 //
-#include "PsdMetadata.hpp"
 
-#include <vips/vips8>
+#include "psd.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
+#include <memory>
 
-#include "ModuleBase.hpp"
-
-namespace
+namespace psd
 {
 
 std::uint16_t readUint16BE( const std::uint8_t* data )
@@ -30,20 +31,11 @@ float readFloat32BE( const std::uint8_t* data )
 	return *reinterpret_cast< float* >( &bits );
 }
 
-struct PSDHeader
-{
-	std::uint16_t channels;
-	std::uint32_t height;
-	std::uint32_t width;
-	std::uint16_t depth;
-	std::uint16_t colorMode;
-};
-
 std::optional< PSDHeader > parsePSDHeader( const std::uint8_t* data, const std::size_t length )
 {
 	if ( length < 26 ) return std::nullopt;
 
-	if ( memcmp( data, "8BPS", 4 ) != 0 ) return std::nullopt;
+	if ( std::memcmp( data, "8BPS", 4 ) != 0 ) return std::nullopt;
 
 	const std::uint16_t version { readUint16BE( data + 4 ) };
 	if ( version != 1 ) return std::nullopt; // TODO: support v2 "large" format
@@ -301,7 +293,7 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 	const std::int16_t rawLayerCount { static_cast< int16_t >( readUint16BE( data + offset ) ) };
 	offset += 2;
 
-	const std::uint16_t layerCount { std::abs< std::uint16_t >( rawLayerCount ) };
+	const std::uint16_t layerCount { static_cast< std::uint16_t >( std::abs( rawLayerCount ) ) };
 	std::uint32_t realLayerCount = 0;
 
 	// Parse each layer to determine groupType
@@ -385,208 +377,4 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 	return realLayerCount;
 }
 
-} // namespace
-
-std::vector< std::string_view > PsdMetadata::handleableMimes()
-{
-	return { "application/psd" };
-}
-
-std::string_view PsdMetadata::name()
-{
-	return "PSD Metadata Parser";
-}
-
-idhan::ModuleVersion PsdMetadata::version()
-{
-	return { .m_major = 1, .m_minor = 0, .m_patch = 0 };
-}
-
-std::expected< idhan::MetadataInfo, idhan::ModuleError > PsdMetadata::parseFile(
-	const void* data,
-	const std::size_t length,
-	[[maybe_unused]] std::string mime_name )
-{
-	const auto* bytes { static_cast< const std::uint8_t* >( data ) };
-
-	const auto header { parsePSDHeader( bytes, length ) };
-	if ( !header )
-	{
-		return std::unexpected( idhan::ModuleError { "Invalid PSD header" } );
-	}
-
-	idhan::MetadataInfo generic_metadata {};
-	idhan::MetadataInfoImageProject project_metadata {};
-
-	project_metadata.image_info.width = static_cast< int >( header->width );
-	project_metadata.image_info.height = static_cast< int >( header->height );
-	project_metadata.image_info.channels = static_cast< std::uint8_t >( header->channels );
-	project_metadata.layers = countPSDLayers( bytes, length );
-
-	generic_metadata.m_simple_type = idhan::SimpleMimeType::IMAGE_PROJECT;
-	generic_metadata.m_metadata = project_metadata;
-
-	return generic_metadata;
-}
-
-std::vector< std::string_view > PsdThumbnailer::handleableMimes()
-{
-	return { "application/psd" };
-}
-
-std::string_view PsdThumbnailer::name()
-{
-	return "PSD Thumbnailer Parser";
-}
-
-idhan::ModuleVersion PsdThumbnailer::version()
-{
-	return { .m_major = 1, .m_minor = 0, .m_patch = 0 };
-}
-
-std::expected< idhan::ThumbnailerModuleI::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::createThumbnail(
-	const void* data,
-	const std::size_t length,
-	std::size_t width,
-	std::size_t height,
-	[[maybe_unused]] std::string mime_name )
-{
-	const auto bytes { static_cast< const std::uint8_t* >( data ) };
-
-	const auto header { parsePSDHeader( bytes, length ) };
-	if ( !header )
-	{
-		return std::unexpected( idhan::ModuleError { "Invalid PSD header" } );
-	}
-
-	if ( header->depth != 8 && header->depth != 16 && header->depth != 32 )
-	{
-		return std::unexpected( idhan::ModuleError { "Unsupported bit depth" } );
-	}
-
-	std::size_t offset { 26 };
-
-	if ( offset + 4 > length ) return std::unexpected( idhan::ModuleError { "Truncated file" } );
-	const std::uint32_t colorModeLength { readUint32BE( bytes + offset ) };
-	offset += 4;
-
-	if ( offset + colorModeLength > length ) return std::unexpected( idhan::ModuleError { "Truncated file" } );
-	const std::basic_string_view colorTable { bytes + offset, colorModeLength };
-	offset += colorModeLength;
-
-	if ( offset + 4 > length ) return std::unexpected( idhan::ModuleError { "Truncated file" } );
-	const std::uint32_t resourcesLength { readUint32BE( bytes + offset ) };
-	offset += 4 + resourcesLength;
-
-	if ( offset + 4 > length ) return std::unexpected( idhan::ModuleError { "Truncated file" } );
-	const std::uint32_t layerMaskLength { readUint32BE( bytes + offset ) };
-	offset += 4 + layerMaskLength;
-
-	if ( offset + 2 > length ) return std::unexpected( idhan::ModuleError { "Truncated file" } );
-	const std::uint16_t compression { readUint16BE( bytes + offset ) };
-	offset += 2;
-
-	const std::size_t bytesPerSample { static_cast< std::size_t >( header->depth / 8 ) };
-	const std::size_t planeSize { static_cast< std::size_t >( header->width ) * header->height };
-	std::vector< std::uint8_t > planarData;
-
-	switch ( compression )
-	{
-		case 0: // Uncompressed
-			{
-				std::size_t expectedSize { planeSize * header->channels * bytesPerSample };
-
-				if ( offset + expectedSize > length )
-				{
-					return std::unexpected( idhan::ModuleError { "Insufficient image data" } );
-				}
-
-				planarData.assign( bytes + offset, bytes + offset + expectedSize );
-			}
-			break;
-		case 1: // PackBits
-			{
-				planarData = unpackRaster( bytes, offset, length, header->width, header->height, header->channels );
-				if ( planarData.empty() )
-				{
-					return std::unexpected( idhan::ModuleError { "Failed to decompress RLE data" } );
-				}
-			}
-			break;
-		default:
-			return std::unexpected( idhan::ModuleError { "Unsupported compression method" } );
-	}
-
-	std::size_t totalPixels { planeSize * header->channels };
-	std::vector< std::uint8_t > planar8bit { convertToTargetDepth( planarData, header->depth, totalPixels ) };
-	if ( planar8bit.empty() )
-	{
-		return std::unexpected( idhan::ModuleError { "Failed to convert bit depth" } );
-	}
-
-	auto interleavedRGB { convertPlanarToInterleavedRGB(
-		std::basic_string_view( planar8bit.data(), planar8bit.size() ),
-		header->colorMode,
-		header->width,
-		header->height,
-		header->channels,
-		colorTable ) };
-
-	if ( !interleavedRGB.has_value() )
-	{
-		return std::unexpected( interleavedRGB.error() );
-	}
-
-	VipsImage* image { vips_image_new_from_memory(
-		interleavedRGB->data(),
-		interleavedRGB->size(),
-		static_cast< int >( header->width ),
-		static_cast< int >( header->height ),
-		3,
-		VIPS_FORMAT_UCHAR ) };
-
-	if ( !image )
-	{
-		return std::unexpected( idhan::ModuleError { "Failed to create image from PSD data" } );
-	}
-
-	const float source_aspect { static_cast< float >( header->width ) / static_cast< float >( header->height ) };
-	const float target_aspect { static_cast< float >( width ) / static_cast< float >( height ) };
-
-	if ( target_aspect > source_aspect )
-		width = static_cast< std::size_t >( static_cast< float >( height ) * source_aspect );
-	else
-		height = static_cast< std::size_t >( static_cast< float >( width ) / source_aspect );
-
-	VipsImage* resized { nullptr };
-	if ( vips_resize(
-			 image,
-			 &resized,
-			 static_cast< double >( width ) / static_cast< double >( vips_image_get_width( image ) ),
-			 nullptr ) )
-	{
-		g_object_unref( image );
-		return std::unexpected( idhan::ModuleError { "Failed to resize image" } );
-	}
-	g_object_unref( image );
-
-	void* output_buffer { nullptr };
-	std::size_t output_length { 0 };
-	if ( vips_pngsave_buffer( resized, &output_buffer, &output_length, nullptr ) )
-	{
-		g_object_unref( resized );
-		return std::unexpected( idhan::ModuleError { "Failed to save thumbnail" } );
-	}
-	g_object_unref( resized );
-
-	std::vector< std::byte > output(
-		static_cast< std::byte* >( output_buffer ), static_cast< std::byte* >( output_buffer ) + output_length );
-	g_free( output_buffer );
-
-	ThumbnailInfo info {};
-	info.data = std::move( output );
-	info.width = width;
-	info.height = height;
-
-	return info;
-}
+} // namespace psd

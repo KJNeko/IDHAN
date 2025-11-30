@@ -5,9 +5,10 @@ AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_sources(IDHANServer PRIVATE ${MIGRATION_SOURCE})
 
 # Gui is needed for QImage for whatever reason
-find_package(Qt6 REQUIRED COMPONENTS Core Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(spdlog REQUIRED)
 find_package(drogon REQUIRED)
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 
 if (spdlog_FOUND)
 else ()
@@ -15,9 +16,10 @@ else ()
 endif ()
 
 target_link_libraries(IDHANServer PUBLIC spdlog drogon)
-target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core Qt6::Multimedia tomlplusplus::tomlplusplus uring)
+target_link_libraries(IDHANServer PRIVATE pqxx Qt6::Core tomlplusplus::tomlplusplus uring)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
 target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANMigration)
+target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
 
 # Copy page info to the output directory

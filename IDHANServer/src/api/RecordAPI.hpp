@@ -74,6 +74,7 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}/file", IDHANAPIAuthName );
 	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}", IDHANAPIAuthName );
 	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/info", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/metadata", IDHANAPIAuthName );
 	ADD_METHOD_TO( RecordAPI::parseFile, "/records/{record_id}/metadata/scan", IDHANAPIAuthName );
 
 	METHOD_LIST_END

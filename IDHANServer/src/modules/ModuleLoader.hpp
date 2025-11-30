@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "GeneratorModule.hpp"
 #include "MetadataModule.hpp"
 #include "ModuleBase.hpp"
 #include "ThumbnailerModule.hpp"
@@ -30,6 +31,7 @@ class ModuleLoader
 
 	std::vector< std::shared_ptr< ThumbnailerModuleI > > getThumbnailerFor( std::string_view mime ) const;
 	std::vector< std::shared_ptr< MetadataModuleI > > getParserFor( std::string_view mime ) const;
+	std::vector< std::shared_ptr< GeneratorModuleI > > getGeneratorsFor( std::string_view mime ) const;
 };
 
 } // namespace idhan::modules

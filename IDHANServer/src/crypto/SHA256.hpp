@@ -4,14 +4,10 @@
 
 #pragma once
 
-#include <QCryptographicHash>
-
 #include <drogon/HttpResponse.h>
 #include <drogon/orm/DbClient.h>
-#include <drogon/orm/Field.h>
 #include <drogon/orm/SqlBinder.h>
 #include <drogon/utils/coroutine.h>
-#include <openssl/sha.h>
 
 #include <array>
 #include <cassert>
@@ -43,6 +39,8 @@ class SHA256
 	explicit SHA256( std::array< std::byte, ( 256 / 8 ) >&& data ) :
 	  m_data( std::forward< decltype( m_data ) >( data ) )
 	{}
+
+	explicit SHA256( const std::array< std::byte, ( 256 / 8 ) >& data ) : m_data( data ) {}
 
   public:
 
@@ -91,6 +89,7 @@ class SHA256
 	static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
 	//! Takes the byte representation of a hash from a buffer.
 	static SHA256 fromBuffer( const std::vector< std::byte >& data );
+	static SHA256 fromBuffer( const std::array< std::byte, 256 / 8 >& data );
 	static SHA256 fromPgCol( const drogon::orm::Field& field );
 	static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
 		RecordID record_id,
