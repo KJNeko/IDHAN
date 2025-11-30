@@ -94,6 +94,7 @@ void SettingsDialog::on_applySettings_pressed()
 	settings.setValue( "hostname", ui->leHostname->text() );
 	settings.setValue( "port", ui->lePort->text().toInt() );
 	settings.setValue( "key", ui->leKey->text() );
+	this->close();
 }
 
 void SettingsDialog::wakeButtons()
