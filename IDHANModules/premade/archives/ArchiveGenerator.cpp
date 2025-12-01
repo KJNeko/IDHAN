@@ -76,5 +76,5 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > ArchiveGenerator::
 		}
 	}
 
-	return std::unexpected( idhan::ModuleError { "Failed to generated: No match found" } );
+	return std::unexpected( idhan::ModuleError { "Failed to generate: No match found" } );
 }
