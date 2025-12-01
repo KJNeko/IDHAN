@@ -36,7 +36,7 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 	const auto thumbnail { createThumbnail( data, width, height ) };
 	if ( !thumbnail ) return std::unexpected( thumbnail.error() );
 
-	const auto [ thumbnail_rgb, thumbnail_width, thumbnail_height, _, cache_thumbnail ] = *thumbnail;
+	const auto [ thumbnail_rgb, thumbnail_width, thumbnail_height, cache_thumbnail, _ ] = *thumbnail;
 
 	vips::VImage resized { vips::VImage::new_from_memory_copy(
 		const_cast< void* >( static_cast< const void* >( thumbnail_rgb.data() ) ),

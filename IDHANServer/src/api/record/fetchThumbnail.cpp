@@ -120,6 +120,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		}
 		else
 		{
+			log::debug( "Skipping thumbnail cache due to module returning NOCACHE flag" );
 			auto response { drogon::HttpResponse::newHttpResponse(
 				drogon::HttpStatusCode::k200OK, drogon::ContentType::CT_IMAGE_PNG ) };
 
