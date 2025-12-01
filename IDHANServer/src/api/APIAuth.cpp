@@ -31,17 +31,13 @@ drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpReq
 {
 	// is there a cookie for us?
 	const auto idhan_key_session { req->getCookie( "idhan_key_session" ) };
-	if ( idhan_key_session != "" )
-	{
-		// yes.
-	}
 
 	// check if there is a `idhan_key` parameter
 	const auto idhan_key_param { req->getOptionalParameter< std::string >( "idhan_key" ) };
 
 	const auto idhan_key_header { getHeaderKeys( req ) };
 
-	if ( idhan_key_header == "" && !idhan_key_param )
+	if ( idhan_key_header.empty() && !idhan_key_param )
 	{
 		co_return createBadRequest( "idhan_key parameter not provided in parameters or header" );
 	}

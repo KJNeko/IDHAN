@@ -5,10 +5,12 @@
 
 #include <archive.h>
 #include <archive_entry.h>
+#include <iostream>
 
 #include "MetadataModule.hpp"
 #include "archives.hpp"
 #include "crypto/simpleHasher.hpp"
+#include "spdlog/spdlog.h"
 
 std::vector< std::string_view > ArchiveGenerator::handleableMimes()
 {
@@ -44,22 +46,39 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > ArchiveGenerator::
 	idhan::MetadataInfo metadata {};
 	idhan::MetadataInfoArchive archive_metadata {};
 
-	while ( archive_read_next_header( a.get(), &entry ) == ARCHIVE_OK )
+	auto ret { archive_read_next_header( a.get(), &entry ) };
+
+	while ( ret == ARCHIVE_OK )
 	{
-		if ( archive_entry_filetype( entry ) != AE_IFREG )
+		if ( archive_entry_filetype( entry ) != AE_IFREG ) // skip any non-files
 		{
-			archive_read_next_header( a.get(), &entry );
+			ret = archive_read_next_header( a.get(), &entry );
 			continue;
 		}
 
-		const char* filename_raw { archive_entry_pathname( entry ) };
-		if ( filename_raw == nullptr )
+		const char* filename_raw { nullptr };
+
+		if ( filename_raw = archive_entry_pathname( entry ); filename_raw == nullptr )
 		{
-			archive_read_next_header( a.get(), &entry );
-			continue;
+			if ( const auto utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
+			{
+				filename_raw = utf8_filename_raw;
+			}
+			else if ( const auto w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
+			{
+				spdlog::warn( "No file name for item in archive? It was W! Tell the dev" );
+				ret = archive_read_next_header( a.get(), &entry );
+				continue;
+			}
+			else
+			{
+				spdlog::warn( "No file name for item in archive? Maybe encrypted but not flagged as such?" );
+				ret = archive_read_next_header( a.get(), &entry );
+				continue;
+			}
 		}
+
 		const auto filename { sanitizeEncoding( filename_raw ) };
-		if ( !filename ) return std::unexpected( filename.error() );
 
 		const std::size_t file_size { static_cast< std::size_t >( archive_entry_size( entry ) ) };
 
@@ -74,7 +93,11 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > ArchiveGenerator::
 
 			return file_data;
 		}
+
+		ret = archive_read_next_header( a.get(), &entry );
 	}
 
-	return std::unexpected( idhan::ModuleError { "Failed to generate: No match found" } );
+	return std::unexpected(
+		idhan::ModuleError {
+			format_ns::format( "Failed to generate: No match found. Wanted to find \'{}\'", target_filename ) } );
 }
