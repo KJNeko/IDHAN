@@ -27,11 +27,16 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 	std::cout << "Json: " << extra.toStyledString() << std::endl;
 
-	const auto members { extra.getMemberNames() };
-
 	if ( extra.isNull() )
 	{
 		return std::unexpected( idhan::ModuleError { "Expected an extra json for archive thumbnailer" } );
+	}
+
+	auto members { extra.getMemberNames() };
+
+	if ( !extra.isMember( "encrypted" ) )
+	{
+		return std::unexpected( idhan::ModuleError { "Generator missing extra info: encrypted flag" } );
 	}
 
 	const bool is_encrypted { extra[ "encrypted" ].asBool() };
@@ -58,25 +63,21 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		return info;
 	}
 
-	if ( members.size() == 0 )
+	if ( members.size() <= 1 ) // we will always expect 'encrypted' to be a member here as well
 		return std::unexpected( idhan::ModuleError { "Zero members for archive. Unable to create thumbnail" } );
 
-	// determine a grid
-	std::size_t grid_size { 1 };
-	std::size_t grid_width { 1 };
-	while ( grid_size < members.size() )
-	{
-		grid_width += 1;
-		grid_size = std::pow( grid_width, 2 );
-	}
+	const std::size_t child_thumbnails {
+		!members.empty() ? members.size() - 1 : members.size()
+	}; // subtract the 'encrypted' member
 
-	std::cout << "Grid size: " << grid_size << std::endl;
+	// determine a grid
+	std::size_t grid_size { static_cast< std::size_t >( std::sqrt( child_thumbnails ) ) };
 
 	constexpr auto thumb_width { 128 };
 	constexpr auto thumb_height { 128 };
 
 	vips::VImage canvas { vips::VImage::black(
-		thumb_width * grid_width, thumb_height * grid_width, vips::VImage::option()->set( "bands", 3 ) ) };
+		thumb_width * grid_size, thumb_height * grid_size, vips::VImage::option()->set( "bands", 3 ) ) };
 
 	bool flag_cache_thumbnail { true };
 	std::size_t counter { 0 };
@@ -118,12 +119,15 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 			continue;
 		}
 
+		// if the grid size is 1 just return the image
+		if ( grid_size == 1 ) return thumbnail_rgb;
+
 		// figure out where in the grid we should put this thumbnail
-		const auto x { counter % grid_width };
-		const auto y { counter / grid_width };
+		const auto x { counter % grid_size };
+		const auto y { counter / grid_size };
 		counter += 1;
 		const auto& image_rgb { thumbnail_rgb->data };
-		const auto& [ rgb, gen_thumb_width, gen_thumb_height, _, cache_thumbnail ] = *thumbnail_rgb;
+		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail, _ ] = *thumbnail_rgb;
 
 		if ( !cache_thumbnail ) flag_cache_thumbnail = false;
 
@@ -136,8 +140,17 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 			VIPS_FORMAT_UCHAR ) };
 
 		//TODO: Center image
-		canvas =
-			canvas.insert( thumb, x * thumb_width, y * thumb_height, vips::VImage::option()->set( "expand", true ) );
+
+		const auto generated_width { thumb.width() };
+		const auto offset_width { ( thumb_width - generated_width ) / 2 };
+		const auto generated_height { thumb.height() };
+		const auto offset_height { ( thumb_height - generated_height ) / 2 };
+
+		canvas = canvas.insert(
+			thumb,
+			x * thumb_width + offset_width,
+			y * thumb_height + offset_height,
+			vips::VImage::option()->set( "expand", true ) );
 	}
 
 	if ( all_generate_failed )
