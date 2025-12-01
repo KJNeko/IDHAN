@@ -80,13 +80,13 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 			}
 			else if ( const auto w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
 			{
-				spdlog::warn( "No file name for item in archive? It was W!" );
+				spdlog::warn( "No file name for item in archive? It was W! Tell the dev" );
 				ret = archive_read_next_header( a.get(), &entry );
 				continue;
 			}
 			else
 			{
-				spdlog::warn( "No file name for item in archive?" );
+				spdlog::warn( "No file name for item in archive? Maybe encrypted?" );
 				ret = archive_read_next_header( a.get(), &entry );
 				continue;
 			}
