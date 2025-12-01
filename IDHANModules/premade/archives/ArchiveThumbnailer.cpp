@@ -80,6 +80,9 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 	bool flag_cache_thumbnail { true };
 	std::size_t counter { 0 };
+	bool generated_failed { true };
+	std::optional< idhan::ModuleError > last_error { std::nullopt };
+
 	for ( const auto& member : members )
 	{
 		if ( member.size() != ( 256 / 8 ) * 2 )
@@ -96,7 +99,16 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		const auto generated_file {
 			this->m_callbacks.generate( file_view, hash, data.extra, path.filename().string() )
 		};
-		if ( !generated_file ) return std::unexpected( generated_file.error() );
+
+		if ( !generated_file )
+		{
+			//TODO: Log warn here
+			last_error = generated_file.error();
+			continue;
+			// return std::unexpected( generated_file.error() );
+		}
+
+		generated_failed |= false;
 
 		const auto thumbnail_rgb { this->m_callbacks.thumbnail( *generated_file, {}, path.filename().string() ) };
 
@@ -126,6 +138,11 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		//TODO: Center image
 		canvas =
 			canvas.insert( thumb, x * thumb_width, y * thumb_height, vips::VImage::option()->set( "expand", true ) );
+	}
+
+	if ( generated_failed )
+	{
+		return std::unexpected( *last_error );
 	}
 
 	idhan::ThumbnailInfo info { canvas, flag_cache_thumbnail };
