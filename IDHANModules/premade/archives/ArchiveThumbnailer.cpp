@@ -115,6 +115,8 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		if ( !thumbnail_rgb )
 		{
+			// Do not cache the thumbnail if we failed to thumbnail whatever was generated
+			flag_cache_thumbnail = false;
 			counter += 1;
 			continue;
 		}
