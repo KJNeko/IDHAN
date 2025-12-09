@@ -27,7 +27,7 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/dependencies")
 PreSetup()
 
 option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
-option(BUILD_IDHAN_WEBUI "Builds the WASM WebUI for IDHAN server" ON)
+option(BUILD_IDHAN_WEBUI "Builds the WASM WebUI for IDHAN server" OFF)
 option(BUILD_IDHAN_SERVER "Builds the server" ON)
 
 option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
