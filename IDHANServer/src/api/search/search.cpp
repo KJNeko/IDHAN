@@ -19,13 +19,13 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	// Drogon does not support tag_id=1?tag_id=2 for some reason, But it's possible to be sent like that, So we'll
 	// handle it here. Support both tag_id (singular) and tag_ids (plural) for compatibility
-	std::vector< TagID > tag_ids { parseArrayParmeters< TagID >( request, "tag_ids" ) };
+	std::vector< TagID > tag_ids { parseArrayParameters< TagID >( request, "tag_ids" ) };
 	if ( tag_ids.empty() )
 	{
-		tag_ids = parseArrayParmeters< TagID >( request, "tag_id" );
+		tag_ids = parseArrayParameters< TagID >( request, "tag_id" );
 	}
 
-	const auto tag_domain_ids { parseArrayParmeters< TagDomainID >( request, "tag_domains" ) };
+	const auto tag_domain_ids { parseArrayParameters< TagDomainID >( request, "tag_domains" ) };
 
 	// const bool use_stored { request->getOptionalParameter< bool >( "use_stored" ).value_or( false ) };
 
