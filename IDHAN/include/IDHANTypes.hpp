@@ -6,9 +6,13 @@
 namespace idhan::types
 {
 using SmallInt = std::int16_t;
+#define SMALLINT_PG_TYPE_NAME "SMALLINT"
+
 using Integer = std::int32_t;
 #define INTEGER_PG_TYPE_NAME "INTEGER"
+
 using BigInt = std::int64_t;
+#define BIGINT_PG_TYPE_NAME "BIGINT"
 
 using Int = Integer;
 
@@ -25,14 +29,22 @@ using TagID = Integer;
 #define TAG_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 
 using ClusterID = SmallInt;
+#define CLUSTER_ID_PG_TYPE_NAME SMALLINT_PG_TYPE_NAME
 
 using MimeID = Integer;
+#define MIME_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 
 using TagDomainID = SmallInt;
+#define TAG_DOMAIN_PG_TYPE_NAME SMALLINT_PG_TYPE_NAME
 using FileDomainID = SmallInt;
+#define FILE_DOMAIN_PG_TYPE_NAME SMALLINT_PG_TYPE_NAME
 
 using UrlID = Integer;
+#define URL_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 using UrlDomainID = Integer;
+#define URL_DOMAIN_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
+
+using CursorID = Integer;
 
 enum class SimpleMimeType : std::uint16_t
 {
