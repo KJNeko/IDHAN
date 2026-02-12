@@ -267,6 +267,9 @@ class SearchBuilder
 	void determineJoinsForQuery( std::string& query );
 	void determineSelectClause( std::string& query, bool return_ids, bool return_hashes );
 	void generateWhereClauses( std::string& query );
+
+  public:
+
 	/**
 	 * @brief Constructs a query to be used. $1 is expected to be an array of tag_domain_ids
 	 * @param return_ids
@@ -275,8 +278,6 @@ class SearchBuilder
 	 * @return
 	 */
 	std::string construct( bool return_ids = true, bool return_hashes = false, bool filter_domains = false );
-
-  public:
 
 	SearchBuilder();
 
