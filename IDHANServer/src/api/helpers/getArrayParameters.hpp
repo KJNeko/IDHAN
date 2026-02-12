@@ -10,7 +10,7 @@ namespace idhan
 {
 
 template < typename T >
-std::vector< T > parseArrayParmeters( drogon::HttpRequestPtr request, const std::string_view target )
+std::vector< T > parseArrayParameters( drogon::HttpRequestPtr request, const std::string_view target )
 {
 	const auto query { request->getQuery() };
 
