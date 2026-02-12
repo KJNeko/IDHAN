@@ -25,6 +25,87 @@ void applyCLISettings(
 	}
 }
 
+void checkForceStart( const QCommandLineParser& parser, const QCommandLineOption& force_start )
+{
+	if ( parser.isSet( force_start ) && parser.value( force_start ) == "true" )
+	{
+		const std::filesystem::path tmp_path {
+			idhan::config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
+		};
+		constexpr std::string_view marker_file { "idhan.active" };
+		std::filesystem::remove( tmp_path / marker_file );
+	}
+}
+
+auto strToSpdlogLevel( const std::string& level )
+{
+	if ( level == "trace" ) return spdlog::level::trace;
+	if ( level == "debug" ) return spdlog::level::debug;
+	if ( level == "info" ) return spdlog::level::info;
+	if ( level == "warning" || level == "warn" ) return spdlog::level::warn;
+	if ( level == "error" ) return spdlog::level::err;
+	if ( level == "critical" ) return spdlog::level::critical;
+	// invalid level, throw
+	spdlog::critical( "Invalid log level, Expected one of: (trace, debug, info, (warning/warn), error, critical)" );
+	std::terminate();
+}
+
+void configureLoggingLevel(
+	const QCommandLineParser& parser,
+	const QCommandLineOption& log_level,
+	idhan::ConnectionArguments& arguments )
+{
+	if ( !parser.isSet( log_level ) )
+	{
+		const auto level { idhan::config::get< std::string >( "logging", "level", "info" ) };
+		spdlog::info( "Logging level: {}", level );
+
+#ifdef NDEBUG
+		arguments.log_level = strToSpdlogLevel( level );
+#else
+		arguments.log_level = spdlog::level::debug;
+#endif
+
+		spdlog::set_level( arguments.log_level );
+	}
+	else
+	{
+		const auto level { parser.value( log_level ).toStdString() };
+		spdlog::info( "Logging level: {}", level );
+		spdlog::set_level( strToSpdlogLevel( level ) );
+		arguments.log_level = strToSpdlogLevel( level );
+	}
+}
+
+void checkSystemLocale()
+{
+	std::locale locale { "" };
+	const auto name { locale.name() };
+	idhan::log::debug( "Checking system locale" );
+	idhan::log::info( "System locale: {}", name );
+
+	const std::array< std::string_view, 2 > local_matches { "UTF-8", "utf8" };
+
+	bool found_utf8 { false };
+	for ( const auto& match : local_matches )
+	{
+		if ( name.find( match ) != std::string::npos )
+		{
+			found_utf8 = true;
+			break;
+		}
+	}
+
+	if ( name == "C" || name == "c" ) found_utf8 = true;
+
+	if ( !found_utf8 )
+	{
+		idhan::log::critical( "System locale is not UTF8, Aborting (IDHAN must see UTF8 to work properly)" );
+		std::terminate();
+		FGL_UNREACHABLE();
+	}
+}
+
 int main( int argc, char** argv )
 {
 	using namespace idhan;
@@ -73,14 +154,7 @@ int main( int argc, char** argv )
 
 	applyCLISettings( "database", "hostname", parser, pg_host );
 
-	if ( parser.isSet( force_start ) && parser.value( force_start ) == "true" )
-	{
-		const std::filesystem::path tmp_path {
-			config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
-		};
-		constexpr std::string_view marker_file { "idhan.active" };
-		std::filesystem::remove( tmp_path / marker_file );
-	}
+	checkForceStart( parser, force_start );
 
 	idhan::ConnectionArguments arguments {};
 
@@ -90,83 +164,23 @@ int main( int argc, char** argv )
 		idhan::config::setLocation( location );
 	}
 
-	const auto strToSpdlogLevel = []( const std::string& level )
-	{
-		if ( level == "trace" ) return spdlog::level::trace;
-		if ( level == "debug" ) return spdlog::level::debug;
-		if ( level == "info" ) return spdlog::level::info;
-		if ( level == "warning" || level == "warn" ) return spdlog::level::warn;
-		if ( level == "error" ) return spdlog::level::err;
-		if ( level == "critical" ) return spdlog::level::critical;
-		// invalid level, throw
-		spdlog::critical( "Invalid log level, Expected one of: (trace, debug, info, (warning/warn), error, critical)" );
-		std::terminate();
-	};
+	configureLoggingLevel( parser, log_level, arguments );
 
-	if ( !parser.isSet( log_level ) )
-	{
-		const auto level { idhan::config::get< std::string >( "logging", "level", "info" ) };
-		spdlog::info( "Logging level: {}", level );
+	arguments.testmode |= parser.isSet( use_testmode );
 
-#ifdef NDEBUG
-		arguments.log_level = strToSpdlogLevel( level );
-#else
-		arguments.log_level = spdlog::level::debug;
-#endif
-
-		spdlog::set_level( arguments.log_level );
-	}
-	else
-	{
-		const auto level { parser.value( log_level ).toStdString() };
-		spdlog::info( "Logging level: {}", level );
-		spdlog::set_level( strToSpdlogLevel( level ) );
-		arguments.log_level = strToSpdlogLevel( level );
-	}
-
-	if ( parser.isSet( use_testmode ) )
-	{
-		spdlog::warn( "Using testmode" );
-		arguments.testmode = true;
-	}
+	if ( arguments.testmode ) spdlog::warn( "Using testmode" );
 
 	if ( parser.isSet( use_stdout ) && ( parser.value( use_stdout ).toInt() == 0 ) )
 	{
 		arguments.use_stdout = false;
 	}
-	else
-	{
-		spdlog::info( "Using stdout for logging" );
-	}
 
-	{
-		std::locale locale { "" };
-		const auto name { locale.name() };
-		log::debug( "Checking system locale" );
-		log::info( "System locale: {}", name );
+	if ( arguments.use_stdout ) spdlog::info( "Using stdout for logging" );
 
-		std::array< std::string_view, 2 > local_matches { "UTF-8", "utf8" };
+	// Terminates if locale is bad
+	checkSystemLocale();
 
-		bool found_utf8 { false };
-		for ( const auto& match : local_matches )
-		{
-			if ( name.find( match ) != std::string::npos )
-			{
-				found_utf8 = true;
-				break;
-			}
-		}
-
-		if ( name == "C" || name == "c" ) found_utf8 = true;
-
-		if ( !found_utf8 )
-		{
-			log::critical( "System locale is not UTF8, Aborting (IDHAN must see UTF8 to work properly)" );
-			std::terminate();
-		}
-	}
-
-	log::info( "Starting IDHAN context v{}.{}.{}", IDHAN_MAJOR_VERSION, IDHAN_MINOR_VERSION, IDHAN_PATCH_VERSION );
+	log::info( "Starting IDHAN v{}.{}.{}", IDHAN_MAJOR_VERSION, IDHAN_MINOR_VERSION, IDHAN_PATCH_VERSION );
 
 	idhan::ServerContext context { arguments };
 
