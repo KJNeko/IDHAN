@@ -8,8 +8,11 @@ build/
 *.swp
 *.swo
 
+dev/
+
 # Test directories
 tests/
+docs/out
 
 # Documentation
 Doxyfile
