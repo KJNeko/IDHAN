@@ -86,9 +86,9 @@ struct IOUringUserData
 
 class IOUring
 {
-	io_uring_params m_params {};
-	int uring_fd { 0 };
-	std::shared_ptr< std::atomic< bool > > io_run { std::make_shared< std::atomic< bool > >( false ) };
+	io_uring_params m_params;
+	int uring_fd;
+	std::shared_ptr< std::atomic< bool > > io_run;
 
 	int setupUring();
 
@@ -110,10 +110,7 @@ class IOUring
 		unsigned* dropped { nullptr };
 		unsigned* array { nullptr };
 
-		~SubmissionRingPointers()
-		{
-			if ( length > 0 ) munmap( mmap, length );
-		}
+		~SubmissionRingPointers();
 	} m_submission_ring;
 
 	struct CommandRingPointers
@@ -127,10 +124,7 @@ class IOUring
 		io_uring_cqe* cqes { nullptr };
 		unsigned* flags { nullptr };
 
-		~CommandRingPointers()
-		{
-			if ( length > 0 ) munmap( mmap, length );
-		}
+		~CommandRingPointers();
 	} m_command_ring;
 
   private:
