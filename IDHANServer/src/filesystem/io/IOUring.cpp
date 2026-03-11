@@ -189,6 +189,16 @@ int IOUring::setupUring()
 	return io_uring_setup( queue_depth, &m_params );
 }
 
+IOUring::SubmissionRingPointers::~SubmissionRingPointers()
+{
+	if ( length > 0 ) munmap( mmap, length );
+}
+
+IOUring::CommandRingPointers::~CommandRingPointers()
+{
+	if ( length > 0 ) munmap( mmap, length );
+}
+
 IOUring::SubmissionRingPointers IOUring::setupSubmissionRing()
 {
 	SubmissionRingPointers ptrs {};
@@ -382,7 +392,9 @@ void IOUring::notifySubmit( unsigned int count ) const
 }
 
 IOUring::IOUring() :
+  m_params(),
   uring_fd( setupUring() ),
+  io_run( std::make_shared< std::atomic< bool > >( false ) ),
   m_submission_ring( setupSubmissionRing() ),
   m_command_ring( setupCommandRing() ),
   m_submission_entries( static_cast< io_uring_sqe* >( setupSubmissionEntries() ) ),
