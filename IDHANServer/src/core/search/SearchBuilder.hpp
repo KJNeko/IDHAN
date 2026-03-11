@@ -22,7 +22,9 @@ namespace idhan
 enum class SortOrder
 {
 	ASC,
-	DESC
+	DESC,
+
+	DEFAULT = ASC
 };
 
 enum class SortType
@@ -91,7 +93,9 @@ enum HydrusSortType
 enum class HydrusDisplayType
 {
 	STORED,
-	DISPLAY
+	DISPLAY,
+
+	DEFAULT = DISPLAY
 };
 
 constexpr SortType hyToIDHANSortType( const HydrusSortType hy_sort )
@@ -218,8 +222,11 @@ class SearchBuilder
 	enum class TagCountSearchType
 	{
 		DontCare = 0,
+		//! > 0 tags
 		HasTags,
+		//! <= 0 tags
 		NoTags,
+		//! ?? N tags
 		HasCount
 	} m_has_tags_search { TagCountSearchType::DontCare };
 
