@@ -9,6 +9,7 @@
 #include "APIAuth.hpp"
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
+#include "jobs/JobContext.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan::api

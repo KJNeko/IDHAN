@@ -62,7 +62,7 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > getPages( drogon::HttpRequestPtr request );
 
-#define HYAPI_AUTH_FILTERS HyAPIAuthName, api::IDHANAPIAuthName
+#define HYAPI_AUTH_FILTERS HyAPIAuthName
 
   public:
 

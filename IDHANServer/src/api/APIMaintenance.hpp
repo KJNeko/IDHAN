@@ -20,6 +20,7 @@
 #include <expected>
 
 #include "APIAuth.hpp"
+#include "IDHANTypes.hpp"
 #include "hyapi/HyAPIAuth.hpp"
 
 namespace idhan::api
@@ -42,6 +43,10 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 
 	drogon::Task< drogon::HttpResponsePtr > purgeThumbnails( drogon::HttpRequestPtr request );
 
+	drogon::Task< drogon::HttpResponsePtr > testJob( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > jobStatus( drogon::HttpRequestPtr request, idhan::JobID job_id );
+	drogon::Task< drogon::HttpResponsePtr > jobsStatus( drogon::HttpRequestPtr request );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -59,7 +64,9 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 
 	ADD_METHOD_TO( APIMaintenance::purgeThumbnails, "/purge/thumbnails", IDHANAPIAuthName );
 
-	// ADD_METHOD_TO( APIMaintenance::test, "/test" );
+	ADD_METHOD_TO( APIMaintenance::testJob, "/test" );
+	ADD_METHOD_TO( APIMaintenance::jobStatus, "/job/{job_id}/status" );
+	ADD_METHOD_TO( APIMaintenance::jobsStatus, "/jobs/status" );
 
 	METHOD_LIST_END
 };

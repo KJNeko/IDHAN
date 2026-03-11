@@ -5,6 +5,7 @@
 #include "Config.hpp"
 #include "MetadataModule.hpp"
 #include "api/ClusterAPI.hpp"
+#include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "crypto/SHA256.hpp"
@@ -13,6 +14,7 @@
 #include "filesystem/io/IOUring.hpp"
 #include "fixme.hpp"
 #include "hyapi/helpers.hpp"
+#include "jobs/JobContext.hpp"
 #include "logging/log.hpp"
 #include "metadata/metadata.hpp"
 #include "mime/FileInfo.hpp"
@@ -123,7 +125,15 @@ class ScanContext
 	ExpectedTask<> scan( std::filesystem::path bad_dir, DbClientPtr db );
 };
 
-drogon::Task< drogon::HttpResponsePtr > scanFolder(
+/**
+ *
+ * @param folder Folder to scan
+ * @param scan_params Parameters for scanning
+ * @param cluster_id Cluster ID this folder is in
+ * @param cluster_path Path to the root of the cluster
+ * @return Returns void if successful, an error if any files in the folder fail to scan, if scan_params.stop_on_fail is false then the scanFolder will complete successfully in all cases
+ */
+ExpectedTask< void > scanFolder(
 	const std::filesystem::path folder,
 	const ScanParams& scan_params,
 	const ClusterID cluster_id,
@@ -154,28 +164,17 @@ drogon::Task< drogon::HttpResponsePtr > scanFolder(
 
 		const std::expected< void, drogon::HttpResponsePtr > file_result { co_await ctx.scan( bad_dir, db ) };
 
-		if ( scan_params.stop_on_fail && !file_result )
-		{
-			co_return file_result.error();
-		}
+		if ( scan_params.stop_on_fail ) return_unexpected_error( file_result );
 	}
 
-	co_return nullptr;
+	co_return {};
 }
 
-drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr request, const ClusterID cluster_id )
+ExpectedTask< void > scanCluster(
+	const ClusterID cluster_id,
+	const std::filesystem::path cluster_path,
+	const ScanParams& scan_params )
 {
-	const auto db { drogon::app().getDbClient() };
-	auto scan_params { extractScanParams( request ) };
-
-	const auto result {
-		co_await db->execSqlCoro( "SELECT folder_path, read_only FROM file_clusters WHERE cluster_id = $1", cluster_id )
-	};
-
-	scan_params.read_only = scan_params.force_readonly || result[ 0 ][ "read_only" ].as< bool >();
-
-	const std::filesystem::path cluster_path { result[ 0 ][ "folder_path" ].as< std::string >() };
-
 	const auto bad_dir { cluster_path / "bad" };
 
 	for ( const auto& folder : std::filesystem::directory_iterator( cluster_path ) )
@@ -184,20 +183,49 @@ drogon::Task< drogon::HttpResponsePtr > ClusterAPI::scan( drogon::HttpRequestPtr
 
 		if ( folder.path() == bad_dir ) continue;
 
-		//TODO: Ignore folders we don't have permissions for, as this crashes us otherwise
-		// if ( scan_params.stop_on_fail || config::getSilentDefault< bool >( "server", "slow_down", true ) )
-		{
-			const auto folder_result { co_await scanFolder( folder, scan_params, cluster_id, cluster_path ) };
+		const auto folder_result { co_await scanFolder( folder.path(), scan_params, cluster_id, cluster_path ) };
 
-			if ( scan_params.stop_on_fail && folder_result )
-			{
-				co_return folder_result;
-			}
-		}
+		if ( !folder_result && scan_params.stop_on_fail ) return_unexpected_error( folder_result );
 	}
 
-	request->setPath( format_ns::format( "/clusters/{}/info", cluster_id ) );
-	co_return co_await drogon::app().forwardCoro( request );
+	co_return {};
+}
+
+JobTask scanJob( const ClusterID cluster_id, const std::filesystem::path cluster_path, const ScanParams scan_params )
+{
+	const auto cluster_result { co_await scanCluster( cluster_id, cluster_path, scan_params ) };
+
+	if ( !cluster_result ) co_return cluster_result.error();
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( Json::Value( "completed" ) );
+}
+
+ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const ClusterID cluster_id )
+{
+	const auto db { drogon::app().getDbClient() };
+	auto scan_params { extractScanParams( request ) };
+
+	const auto result {
+		co_await db->execSqlCoro( "SELECT folder_path, read_only FROM file_clusters WHERE cluster_id = $1", cluster_id )
+	};
+
+	if ( result.empty() )
+	{
+		co_return createBadRequest( "Cluster not found" );
+	}
+
+	scan_params.read_only = scan_params.force_readonly || result[ 0 ][ "read_only" ].as< bool >();
+
+	const std::filesystem::path cluster_path { result[ 0 ][ "folder_path" ].as< std::string >() };
+
+	auto job_ctx {
+		queueJob( scanJob( cluster_id, cluster_path, scan_params ), std::format( "Scanning cluster {}", cluster_id ) )
+	};
+
+	Json::Value response;
+	response[ "job_id" ] = static_cast< Json::UInt64 >( job_ctx->id() );
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
 
 ExpectedTask< SHA256 > ScanContext::checkSHA256()
@@ -235,23 +263,21 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256()
 				sha256_hex ) );
 		}
 
+		// Try to fix the filename since we are not readonly and can exit the files. Fix it to be it's sha256
 		try
 		{
-			if ( !m_params.read_only )
-			{
-				std::filesystem::create_directories( m_bad_dir );
-				const auto new_path { m_bad_dir / m_path.filename() };
+			std::filesystem::create_directories( m_bad_dir );
+			const auto new_path { m_bad_dir / m_path.filename() };
 
-				// try to fix the mistake
-				std::filesystem::rename( m_path, new_path );
+			// try to fix the mistake
+			std::filesystem::rename( m_path, new_path );
 
-				co_return std::unexpected( createInternalError(
-					"When scanning file at {} it was detected that the filename does "
-					"not match the sha256 {}. The file has been moved to {}",
-					m_path.string(),
-					sha256_hex,
-					new_path.string() ) );
-			}
+			co_return std::unexpected( createInternalError(
+				"When scanning file at {} it was detected that the filename does "
+				"not match the sha256 {}. The file has been moved to {}",
+				m_path.string(),
+				sha256_hex,
+				new_path.string() ) );
 		}
 		catch ( std::exception& e )
 		{

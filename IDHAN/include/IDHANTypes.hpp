@@ -59,6 +59,8 @@ enum class SimpleMimeType : std::uint16_t
 
 constexpr TagID INVALID_TAG_ID { 0 };
 
+using JobID = std::uint64_t;
+
 } // namespace idhan::types
 
 namespace idhan
