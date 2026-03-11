@@ -22,7 +22,11 @@ MainWindow::MainWindow( QWidget* parent ) :
   m_client(
 	  std::make_unique< idhan::IDHANClient >(
 		  "Importer",
+#ifndef IMPORTER_TESTS
 		  settings.value( "hostname", "localhost" ).toString(),
+#else
+		  settings.value( "hostname", "dev.idhan" ).toString(),
+#endif
 		  settings.value( "port", static_cast< uint >( idhan::IDHAN_DEFAULT_PORT ) ).toUInt(),
 		  settings.value( "key", "" ).toString() ) ),
   ui( new Ui::MainWindow )
