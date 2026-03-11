@@ -40,3 +40,5 @@ IDHANServer/src/db/pre-dev.sql
 .env
 publish.sh
 push-nas.sh
+
+/dev/http-client.private.env.json

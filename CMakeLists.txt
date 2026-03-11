@@ -14,11 +14,6 @@ set(IDHAN_DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
 
 enable_testing()
 
-find_program(CCACHE_FOUND ccache)
-if (CCACHE_FOUND)
-	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-endif ()
-
 # Includes fgl_cmake_modules
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/libFGL)
 

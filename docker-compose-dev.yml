@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: idhan
       POSTGRES_DB: idhan-db
     volumes:
-      - idhan_pg18:/var/lib/postgresql
+      #      - idhan_pg18:/var/lib/postgresql
+      - /db:/var/lib/postgresql
     ports:
       - "5432:5432"
     healthcheck:
@@ -33,7 +34,9 @@ services:
     depends_on:
       idhan-postgres:
         condition: service_healthy
+    volumes:
+      - /media:/media
     restart: unless-stopped
 
-volumes:
-  idhan_pg18:
+#volumes:
+#  idhan_pg18:
