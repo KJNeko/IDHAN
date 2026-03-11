@@ -18,6 +18,7 @@
 #include "NET_CONSTANTS.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/log.hpp"
@@ -214,7 +215,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::info( "Logging show info" );
 	printCoreLocation();
 
-	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "threads", 0 ) };
+	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", 0 ) };
 	if ( config_threads == 0 ) config_threads = std::thread::hardware_concurrency();
 	std::size_t hardware_count { std::max( config_threads, 2ul ) };
 	std::size_t io_threads { hardware_count };
@@ -310,6 +311,30 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 			log::info( "IDHAN initialization finished" );
 			log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
 			log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
+		} );
+
+	drogon::app().registerBeginningAdvice(
+		[]()
+		{
+			drogon::sync_wait(
+				[]() -> drogon::Task< void >
+				{
+					const auto db { drogon::app().getDbClient() };
+					const auto key_count_search { co_await db->execSqlCoro( "SELECT count(*) FROM auth_keys" ) };
+
+					const auto key_count {
+						key_count_search.empty() ? 0 : key_count_search[ 0 ][ 0 ].as< std::size_t >()
+					};
+
+					if ( key_count == 0 )
+					{
+						// no key, Create a starter one.
+						log::warn(
+							"No API keys found, One will be generated at first navigation to /generate_api_key" );
+					}
+
+					co_return;
+				}() );
 		} );
 }
 

@@ -57,11 +57,13 @@ class APIAuth : public drogon::HttpCoroFilter< APIAuth >
 class AuthEndpoint : public drogon::HttpController< AuthEndpoint >
 {
 	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( drogon::HttpRequestPtr req );
+	drogon::Task< drogon::HttpResponsePtr > generateApiKey( drogon::HttpRequestPtr req );
 
   public:
 
 	METHOD_LIST_BEGIN
 	ADD_METHOD_TO( AuthEndpoint::verifyAccessKey, "/hyapi/verify_access_key" );
+	ADD_METHOD_TO( AuthEndpoint::generateApiKey, "/generate_api_key" );
 	METHOD_LIST_END
 };
 

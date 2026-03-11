@@ -12,6 +12,9 @@ namespace idhan::threading
 template < typename T = void >
 using ExpectedTask = drogon::Task< std::expected< T, drogon::HttpResponsePtr > >;
 
+template < typename T = void >
+using ExpectedResponse = std::expected< T, drogon::HttpResponsePtr >;
+
 #define return_unexpected_error( type )                                                                                \
 	if ( !type ) co_return std::unexpected( type.error() );
 } // namespace idhan::threading
