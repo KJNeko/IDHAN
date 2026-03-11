@@ -169,7 +169,7 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 
 	if ( m_duration_search == DurationSearchType::NoDuration )
 	{
-		m_required_joins.left_video_metadata |= true;
+		m_required_joins.video_metadata |= true;
 	}
 
 	if ( m_width_search.m_active || m_height_search.m_active )
@@ -250,85 +250,54 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 		query += " AND video_metadata.duration IS NULL";
 	}
 
-	if ( m_height_search.m_active )
+	//!
+	auto numericSearchAdd = [ & ]( const SearchOperation operation, const auto value, const std::string_view comp )
 	{
-		const auto operation { m_height_search.operation };
 		if ( operation & SearchOperationFlags::Not )
 			query += " AND NOT";
 		else
 			query += " AND";
 
-		query += " COALESCE(image_metadata.height, video_metadata.height) ";
+		query += comp;
+
+		if ( operation & SearchOperationFlags::GreaterThan )
+		{
+			query += ">";
+		}
+		else if ( operation & SearchOperationFlags::LessThan )
+		{
+			query += "<";
+		}
 
 		if ( operation & SearchOperationFlags::Equal )
 		{
 			query += "= ";
 		}
-
-		if ( operation & SearchOperationFlags::GreaterThan )
+		else
 		{
-			query += "> ";
-		}
-		else if ( operation & SearchOperationFlags::LessThan )
-		{
-			query += "< ";
+			query += " ";
 		}
 
-		query += std::to_string( m_height_search.count );
+		query += std::to_string( value );
+	};
+
+	if ( m_height_search.m_active )
+	{
+		numericSearchAdd(
+			m_height_search.operation,
+			m_height_search.count,
+			"COALESCE(image_metadata.height, video_metadata.height) " );
 	}
 
 	if ( m_width_search.m_active )
 	{
-		const auto operation { m_width_search.operation };
-		if ( operation & SearchOperationFlags::Not )
-			query += " AND NOT";
-		else
-			query += " AND";
-
-		query += " COALESCE(image_metadata.width, video_metadata.width) ";
-
-		if ( operation & SearchOperationFlags::Equal )
-		{
-			query += "= ";
-		}
-
-		if ( operation & SearchOperationFlags::GreaterThan )
-		{
-			query += "> ";
-		}
-		else if ( operation & SearchOperationFlags::LessThan )
-		{
-			query += "< ";
-		}
-
-		query += std::to_string( m_width_search.count );
+		numericSearchAdd(
+			m_width_search.operation, m_width_search.count, "COALESCE(image_metadata.width, video_metadata.width) " );
 	}
 
 	if ( m_archive_search.m_active )
 	{
-		const auto operation { m_archive_search.operation };
-		if ( operation & SearchOperationFlags::Not )
-			query += " AND NOT";
-		else
-			query += " AND";
-
-		query += " am.archive_id";
-
-		if ( operation & SearchOperationFlags::Equal )
-		{
-			query += "= ";
-		}
-
-		if ( operation & SearchOperationFlags::GreaterThan )
-		{
-			query += "> ";
-		}
-		else if ( operation & SearchOperationFlags::LessThan )
-		{
-			query += "< ";
-		}
-
-		query += std::to_string( m_archive_search.count );
+		numericSearchAdd( m_archive_search.m_active, m_archive_search.count, "am.archive_id" );
 	}
 
 	if ( m_in_archive_search != ArchiveSearchType::DontCare )
@@ -346,7 +315,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 
 	if ( m_positive_tags.empty() && m_negative_tags.empty() )
 	{
-		// return "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL";
+		return "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL";
 	}
 
 	std::vector< TagID > filtered_tags {};
@@ -359,7 +328,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 
 	std::string final_filter {};
 
-	if ( m_negative_tags.size() > 0 )
+	if ( !m_negative_tags.empty() )
 	{
 		final_filter +=
 			"final_filter AS (SELECT record_id FROM positive_filter EXCEPT SELECT record_id FROM negative_filter)";
@@ -376,7 +345,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 		query += filter + ",";
 	}
 	query += positive_filter;
-	if ( m_negative_tags.size() > 0 ) query += negative_filter;
+	if ( !m_negative_tags.empty() ) query += negative_filter;
 	query += final_filter;
 
 	log::info( "{}", query );
@@ -396,7 +365,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	return query;
 }
 
-SearchBuilder::SearchBuilder() : m_sort_type(), m_order(), m_positive_tags(), m_display_mode()
+SearchBuilder::SearchBuilder() : m_sort_type(), m_order(), m_positive_tags(), m_negative_tags(), m_display_mode()
 {}
 
 drogon::Task< drogon::orm::Result > SearchBuilder::query(
