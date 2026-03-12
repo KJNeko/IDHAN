@@ -2,7 +2,7 @@
 // Created by kj16609 on 8/18/25.
 //
 
-#include "ServerDBFixture.hpp"
+#include "db/fixtures/ServerDBFixture.hpp"
 
 #include <pqxx/connection>
 #include <pqxx/nontransaction>
@@ -16,6 +16,7 @@ void ServerDBFixture::SetUp()
 	conn = std::make_unique< pqxx::connection >(
 		"dbname=idhan-test "
 		"user=idhan "
+		"password=idhan "
 		"host=localhost "
 		"port=5432" );
 

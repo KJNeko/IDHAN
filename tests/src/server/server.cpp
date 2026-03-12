@@ -8,7 +8,7 @@
 
 #include "NET_CONSTANTS.hpp"
 #include "idhan/IDHANClient.hpp"
-#include "serverStarterHelper.hpp"
+#include "helpers/serverStarterHelper.hpp"
 
 TEST( ServerTests, ServerSetup )
 {

@@ -9,8 +9,8 @@
 #include <random>
 
 #include "NET_CONSTANTS.hpp"
+#include "helpers/serverStarterHelper.hpp"
 #include "idhan/IDHANClient.hpp"
-#include "serverStarterHelper.hpp"
 
 template < typename T >
 void qtWaitFuture( QFuture< T >& future )
@@ -182,7 +182,8 @@ struct ClientTests : public ::testing::Test
 	{
 		app = std::make_unique< QCoreApplication >( argc, nullptr );
 		server_handle = std::make_unique< ServerHandle >( startServer() );
-		client = std::make_unique< idhan::IDHANClient >( "test", "localhost", idhan::IDHAN_DEFAULT_PORT, false );
+		client =
+			std::make_unique< idhan::IDHANClient >( "test", "localhost", idhan::IDHAN_DEFAULT_PORT, "testkey", false );
 	}
 };
 
@@ -192,8 +193,7 @@ TEST_F( ClientTests, ClientTest )
 }
 
 class ClientTagTests : public ClientTests
-{
-};
+{};
 
 TEST_F( ClientTagTests, CreateTagSingleString )
 {

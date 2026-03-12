@@ -2,6 +2,8 @@
 // Created by kj16609 on 7/15/25.
 //
 
+#include "serverStarterHelper.hpp"
+
 #include <spdlog/spdlog.h>
 #include <sys/prctl.h>
 
@@ -11,14 +13,14 @@
 #include <signal.h>
 #include <unistd.h>
 
-#include "serverStarterHelper.hpp"
-
 [[nodiscard]] ServerHandle startServer()
 {
 	constexpr std::string_view executable_name { "IDHANServer" };
 	const std::filesystem::path current_dir { std::filesystem::current_path() };
 	const auto executable { current_dir / executable_name };
-	if ( !std::filesystem::exists( executable ) ) throw std::runtime_error( "IDHANServer executable does not exist" );
+	if ( !std::filesystem::exists( executable ) )
+		throw std::runtime_error(
+			std::format( "IDHANServer executable does not exist. Searched {}", executable.string() ) );
 
 	const std::array< char*, 4 > args {
 		const_cast< char* >( executable.c_str() ), "--testmode=1", "--use_stdout=0", nullptr
