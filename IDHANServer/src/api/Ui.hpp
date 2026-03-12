@@ -16,6 +16,7 @@ class Ui : public drogon::HttpController< Ui >
 	METHOD_LIST_BEGIN
 
 	ADD_METHOD_TO( Ui::index, "/" );
+	ADD_METHOD_TO( Ui::index, "/ui" );
 
 	METHOD_LIST_END
 };

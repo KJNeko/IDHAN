@@ -38,7 +38,15 @@ if (EMSCRIPTEN)
 	# For Qt WASM, also set the specific output directory
 	set_target_properties(IDHANWebUI PROPERTIES
 			QT_WASM_OUTPUT_DIRECTORY ${OUT_DIR}
+			QT_WASM_PWA_MANIFEST_FILE "IDHANWebUI.html" # Doesn't work for name, but good to have
 	)
 endif ()
+
+# Add copy command to ensure it exists as IDHANWebUI.html
+add_custom_command(TARGET IDHANWebUI POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OUT_DIR}/IDHANWebUI.html ${OUT_DIR}/index.html 2>/dev/null || ${CMAKE_COMMAND} -E true
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OUT_DIR}/index.html ${OUT_DIR}/IDHANWebUI.html 2>/dev/null || ${CMAKE_COMMAND} -E true
+		COMMENT "Ensuring IDHANWebUI.html exists"
+)
 
 target_link_libraries(IDHANWebUI PRIVATE Qt6::Widgets Qt6::Network)

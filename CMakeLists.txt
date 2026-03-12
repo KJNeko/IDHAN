@@ -64,58 +64,51 @@ if (BUILD_IDHAN_WEBUI)
 	include(ExternalProject)
 
 	if (NOT DEFINED QT_WASM)
-		message(FATAL_ERROR "You must define QT_WASM during cmake config")
+		if (DEFINED ENV{QT_WASM})
+			set(QT_WASM $ENV{QT_WASM})
+		elseif (DEFINED ENV{QT_WASM_PATH})
+			set(QT_WASM $ENV{QT_WASM_PATH})
+		endif ()
 	endif ()
 
-	set(EMSDK ${QT_WASM}/emsdk)
-	set(EMSDK_TOOLCHAIN)
-
 	find_program(QTCMAKE_EXECUTABLE qt-cmake
-			PATHS "${QT_WASM}/bin"
-			NO_DEFAULT_PATH)
+			HINTS
+			"${QT_WASM}/bin"
+			"/opt/qt6-wasm/bin"
+			"/opt/qt/wasm_64/bin"
+			"/usr/lib/qt6/bin"
+			"/usr/lib/qt/bin"
+			"/usr/lib/qt6/wasm-64/bin"
+			"/usr/lib/qt6/wasm-emscripten/bin")
 
 	if (NOT QTCMAKE_EXECUTABLE)
-		message(FATAL_ERROR "qt-cmake not found for wasm")
+		message(FATAL_ERROR "qt-cmake not found for wasm. Please define QT_WASM during cmake config or set QT_WASM env variable.")
+	endif ()
+
+	if (NOT QT_WASM)
+		get_filename_component(QT_WASM_BIN_DIR "${QTCMAKE_EXECUTABLE}" DIRECTORY)
+		get_filename_component(QT_WASM "${QT_WASM_BIN_DIR}" DIRECTORY)
 	endif ()
 
 	set(WEBUI_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/IDHANWebUI)
 	set(WEBUI_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/IDHANWebUI)
 
-	# In order for this to work you need to set the env variables in /opt/qt6-wasm/qtwasm_env.sh
-	# The following is a copy of that file
-	#    #/opt/qt6-wasm/emsdk/emsdk activate 3.1.70
-	#
-	#    # load emsdk environment
-	#    # EM_CACHE issue: https://github.com/emscripten-core/emsdk/issues/535
-	#    EM_CACHE_PATH=~/.cache/qt6-wasm
-	#    export EM_CACHE=$EM_CACHE_PATH
-	#    source /opt/qt6-wasm/emsdk/emsdk_env.sh
-	#    export EM_CACHE=$EM_CACHE_PATH
-	#    echo "EM_CACHE (override) = $EM_CACHE"
-	#
-	#    # Export Qt6 WebAssembly bin Path
-	#    echo $PATH | grep -w "/opt/qt6-wasm/bin" > /dev/null
-	#    if [ $? -ne 0 ]; then
-	#    export PATH=/opt/qt6-wasm/bin:$PATH
-	#    fi
-
-
 	ExternalProject_Add(
 			IDHANWebUI_WASM
 			SOURCE_DIR ${WEBUI_SOURCE_DIR}
 			BINARY_DIR ${WEBUI_BUILD_DIR}
-			CONFIGURE_COMMAND ${CMAKE_COMMAND}
+			CONFIGURE_COMMAND ${QTCMAKE_EXECUTABLE}
 			-S ${WEBUI_SOURCE_DIR}
 			-B ${WEBUI_BUILD_DIR}
 			-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
 			-DWASM_OUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/bin/static
+			-DCMAKE_CXX_STANDARD=23
 			BUILD_COMMAND ${CMAKE_COMMAND} --build ${WEBUI_BUILD_DIR}
 			INSTALL_COMMAND "" # Needed or this errors
 			BUILD_ALWAYS YES
 	)
 
-	add_custom_target(IDHANWebUIFiles DEPENDS ${WEBUI_FILES_OUTPUT})
-	add_dependencies(IDHANServer IDHANWebUI_WASM IDHANWebUIFiles)
+	add_dependencies(IDHANServer IDHANWebUI_WASM)
 endif ()
 
 if (BUILD_IDHAN_TESTS)
