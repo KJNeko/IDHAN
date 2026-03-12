@@ -22,6 +22,10 @@ target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANMigration)
 target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
 
+if (BUILD_IDHAN_WEBUI)
+	target_compile_definitions(IDHANServer PRIVATE IDHAN_STATIC_PATH="${CMAKE_BINARY_DIR}/bin/static")
+endif ()
+
 # Copy page info to the output directory
 
 file(GLOB_RECURSE PAGE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/static/*")
