@@ -1,6 +1,6 @@
 
-#include "MappingFixture.hpp"
-#include "ServerTagFixture.hpp"
+#include "db/fixtures/MappingFixture.hpp"
+#include "db/fixtures/ServerTagFixture.hpp"
 
 TEST_F( MappingFixture, TagParentCreation )
 {

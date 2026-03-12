@@ -2,10 +2,10 @@
 // Created by kj16609 on 8/18/25.
 //
 
-#include "ServerTagFixture.hpp"
+#include "db/fixtures/ServerTagFixture.hpp"
 
-#include "MappingFixture.hpp"
-#include "ServerDBFixture.hpp"
+#include "db/fixtures/MappingFixture.hpp"
+#include "db/fixtures/ServerDBFixture.hpp"
 #include "logging/format_ns.hpp"
 #include "migrations.hpp"
 #include "splitTag.hpp"
@@ -21,11 +21,15 @@ idhan::TagDomainID ServerTagFixture::createDomain( const std::string_view name )
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
 	pqxx::work tx { *conn };
 
-	const auto result { tx.exec_params( "INSERT INTO tag_domains (domain_name) VALUES ($1) ON CONFLICT DO NOTHING RETURNING tag_domain_id", pqxx::params { name } ) };
+	const auto result { tx.exec_params(
+		"INSERT INTO tag_domains (domain_name) VALUES ($1) ON CONFLICT DO NOTHING RETURNING tag_domain_id",
+		pqxx::params { name } ) };
 
 	if ( result.empty() )
 	{
-		const auto search_result { tx.exec_params( "SELECT tag_domain_id FROM tag_domains WHERE domain_name = $1", pqxx::params { name } ) };
+		const auto search_result {
+			tx.exec_params( "SELECT tag_domain_id FROM tag_domains WHERE domain_name = $1", pqxx::params { name } )
+		};
 		if ( search_result.empty() ) throw std::runtime_error( "Failed to create domain" );
 		return search_result[ 0 ][ 0 ].as< idhan::TagDomainID >();
 	}
@@ -46,7 +50,9 @@ idhan::TagID ServerTagFixture::createTag( const std::string_view text ) const
 	std::vector< std::string > subtag_texts {};
 	subtag_texts.emplace_back( subtag_text );
 
-	const auto result { tx.exec_params( "SELECT tag_id FROM createBatchTags($1, $2) ", pqxx::params { namespace_texts, subtag_texts } ) };
+	const auto result {
+		tx.exec_params( "SELECT tag_id FROM createBatchTags($1, $2) ", pqxx::params { namespace_texts, subtag_texts } )
+	};
 
 	tx.commit();
 
@@ -60,7 +66,9 @@ void ServerTagFixture::createAlias( const TagID aliased_id, const TagID alias_id
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
 	pqxx::work tx { *conn };
 
-	tx.exec_params( "INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id) VALUES ($1, $2, $3)", pqxx::params { aliased_id, alias_id, default_domain_id } );
+	tx.exec_params(
+		"INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id) VALUES ($1, $2, $3)",
+		pqxx::params { aliased_id, alias_id, default_domain_id } );
 
 	tx.commit();
 }
@@ -70,7 +78,9 @@ bool ServerTagFixture::aliasExists( const TagID aliased_id, const TagID alias_id
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
 	pqxx::work tx { *conn };
 
-	const auto result { tx.exec_params( "SELECT EXISTS(SELECT 1 FROM tag_aliases WHERE aliased_id = $1 AND alias_id = $2 AND tag_domain_id = $3)", pqxx::params { aliased_id, alias_id, default_domain_id } ) };
+	const auto result { tx.exec_params(
+		"SELECT EXISTS(SELECT 1 FROM tag_aliases WHERE aliased_id = $1 AND alias_id = $2 AND tag_domain_id = $3)",
+		pqxx::params { aliased_id, alias_id, default_domain_id } ) };
 
 	tx.commit();
 
@@ -82,7 +92,9 @@ void ServerTagFixture::createParent( TagID parent_id, TagID child_id )
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
 	pqxx::work tx { *conn };
 
-	tx.exec_params( "INSERT INTO tag_parents (parent_id, child_id, tag_domain_id) VALUES ($1, $2, $3)", pqxx::params { parent_id, child_id, default_domain_id } );
+	tx.exec_params(
+		"INSERT INTO tag_parents (parent_id, child_id, tag_domain_id) VALUES ($1, $2, $3)",
+		pqxx::params { parent_id, child_id, default_domain_id } );
 
 	tx.commit();
 
@@ -94,7 +106,9 @@ bool ServerTagFixture::parentExists( TagID parent_id, TagID child_id )
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
 	pqxx::work tx { *conn };
 
-	const auto result { tx.exec_params( "SELECT EXISTS(SELECT 1 FROM tag_parents WHERE parent_id = $1 AND child_id = $2 AND tag_domain_id = $3)", pqxx::params { parent_id, child_id, default_domain_id } ) };
+	const auto result { tx.exec_params(
+		"SELECT EXISTS(SELECT 1 FROM tag_parents WHERE parent_id = $1 AND child_id = $2 AND tag_domain_id = $3)",
+		pqxx::params { parent_id, child_id, default_domain_id } ) };
 
 	return result[ 0 ][ 0 ].as< bool >();
 }
@@ -114,15 +128,22 @@ testing::AssertionResult dumpParents( testing::AssertionResult result, pqxx::wor
 
 		if ( is_parent_ideal && is_child_ideal )
 		{
-			result << format_ns::format( "({}, {}, {}, {})\n", parent_id, child_id, row[ "ideal_parent_id" ].as< TagID >(), row[ "ideal_child_id" ].as< TagID >() );
+			result << format_ns::format(
+				"({}, {}, {}, {})\n",
+				parent_id,
+				child_id,
+				row[ "ideal_parent_id" ].as< TagID >(),
+				row[ "ideal_child_id" ].as< TagID >() );
 		}
 		else if ( is_parent_ideal )
 		{
-			result << format_ns::format( "({}, {}, {}, NULL)\n", parent_id, child_id, row[ "ideal_parent_id" ].as< TagID >() );
+			result << format_ns::format(
+				"({}, {}, {}, NULL)\n", parent_id, child_id, row[ "ideal_parent_id" ].as< TagID >() );
 		}
 		else if ( is_child_ideal )
 		{
-			result << format_ns::format( "({}, {}, NULL, {})\n", parent_id, child_id, row[ "ideal_child_id" ].as< TagID >() );
+			result << format_ns::format(
+				"({}, {}, NULL, {})\n", parent_id, child_id, row[ "ideal_child_id" ].as< TagID >() );
 		}
 		else
 		{
@@ -148,13 +169,13 @@ testing::AssertionResult dumpMappings( testing::AssertionResult result, pqxx::wo
 		const bool is_ideal { !row[ "ideal_tag_id" ].is_null() };
 
 		if ( is_ideal )
-			result << format_ns::format( "({}, {}, {}, {})\n", record_id, tag_id, tag_domain_id, row[ "ideal_tag_id" ].as< TagID >() );
+			result << format_ns::format(
+				"({}, {}, {}, {})\n", record_id, tag_id, tag_domain_id, row[ "ideal_tag_id" ].as< TagID >() );
 		else
 			result << format_ns::format( "({}, {}, {}, NULL)\n", record_id, tag_id, tag_domain_id );
 	}
 
-	if ( table_printout.size() == 0 )
-		result << "\t\t\tNo rows found\n";
+	if ( table_printout.size() == 0 ) result << "\t\t\tNo rows found\n";
 
 	return result;
 }
@@ -178,21 +199,27 @@ testing::AssertionResult dumpParentMappings( testing::AssertionResult result, pq
 		const bool internal { row[ "internal" ].as< bool >() };
 		const auto internal_count { row[ "internal_count" ].as< std::uint32_t >() };
 
-		result << format_ns::format( "({}, {}, {}, {}, {}, {})\n", record_id, tag_id, origin_id, tag_domain_id, internal, internal_count );
+		result << format_ns::format(
+			"({}, {}, {}, {}, {}, {})\n", record_id, tag_id, origin_id, tag_domain_id, internal, internal_count );
 	}
 
-	if ( table_printout.size() == 0 )
-		result << "\t\t\tNo rows found\n";
+	if ( table_printout.size() == 0 ) result << "\t\t\tNo rows found\n";
 
 	return result;
 }
 
-testing::AssertionResult ServerTagFixture::parentInternalExists( const RecordID record_id, TagID parent_id, TagID child_id, std::uint32_t count )
+testing::AssertionResult ServerTagFixture::parentInternalExists(
+	const RecordID record_id,
+	TagID parent_id,
+	TagID child_id,
+	std::uint32_t count )
 {
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
 	pqxx::work tx { *conn };
 
-	const auto result { tx.exec_params( "SELECT EXISTS(SELECT 1 FROM active_tag_mappings_parents WHERE record_id = $5 AND tag_id = $1 AND origin_id = $2 AND tag_domain_id = $3 AND internal_count = $4)", pqxx::params { parent_id, child_id, default_domain_id, count, record_id } ) };
+	const auto result { tx.exec_params(
+		"SELECT EXISTS(SELECT 1 FROM active_tag_mappings_parents WHERE record_id = $5 AND tag_id = $1 AND origin_id = $2 AND tag_domain_id = $3 AND internal_count = $4)",
+		pqxx::params { parent_id, child_id, default_domain_id, count, record_id } ) };
 
 	if ( result[ 0 ][ 0 ].as< bool >() == false )
 	{
