@@ -2,8 +2,11 @@
 # Stage 1: Build environment
 FROM ubuntu:24.04 AS builder
 
-RUN apt-get update && \
-    DEBIAN_FRONTNED=noninteractive apt-get install -y \
+# Use build mounts for apt cache to speed up re-builds
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     git \
@@ -15,9 +18,6 @@ RUN apt-get update && \
     liburing-dev \
     qt6-base-dev \
     qt6-multimedia-dev \
-    libqt6core6 \
-    libqt6multimedia6 \
-    libjsoncpp-dev \
     libvips-dev \
     libavcodec-dev \
     libavcodec-extra \
@@ -29,26 +29,24 @@ RUN apt-get update && \
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
 
-RUN rm -rf /var/lib/apt/lists/*
-
 WORKDIR /build
 
+# Copy dependencies first to maximize cache hits
 COPY dependencies /build/dependencies
 COPY 3rd-party/hydrus /build/3rd-party/hydrus
-COPY docs /build/docs
+
+# Copy the rest of the source code
 COPY IDHAN /build/IDHAN
 COPY IDHANModules /build/IDHANModules
 COPY IDHANMigration /build/IDHANMigration
 COPY IDHANServer /build/IDHANServer
 COPY CMakeLists.txt /build/CMakeLists.txt
+COPY docs /build/docs
 
-# Initialize git submodules if needed
-RUN if [ -f .gitmodules ]; then git submodule update --init --recursive || true; fi
-
+# Build IDHANServer with ccache mount
 ENV CCACHE_DIR=/root/.ccache
-
-# Build IDHANServer
-RUN --mount=type=cache,target=/build/build \
+RUN --mount=type=cache,target=/root/.ccache \
+    --mount=type=cache,target=/build/build \
     cmake -S . -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_STANDARD=23 \
@@ -57,52 +55,33 @@ RUN --mount=type=cache,target=/build/build \
     -DBUILD_IDHAN_DOCS=ON \
     -DBUILD_IDHAN_WEBUI=OFF \
     -DBUILD_IDHAN_CLIENT=OFF \
-    -DBUILD_IDHAN_TOOLS=OFF && \
+    -DBUILD_IDHAN_TOOLS=OFF \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
     cmake --build build --target IDHANServer -j$(nproc) && \
     cp /build/build/bin /build/bin -r
 
 # Stage 2: Runtime environment
 FROM ubuntu:24.04
 
-# Install runtime dependencies only
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    # Qt6 runtime libraries
+# Install runtime dependencies and setup locale in one layer
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     libqt6core6 \
     libqt6multimedia6 \
-    # PostgreSQL client
     libpq5 \
-    # Image processing
     libvips42 \
-    # Async I/O
     liburing2 \
-    # Supporting libraries
     libjsoncpp25 \
     uuid-runtime \
     zlib1g \
     libssl3 \
     libc-ares2 \
-    ffmpeg
-
-# Locale setup
-RUN apt-get update && \
-    apt-get install -y locales && \
+    ffmpeg \
+    locales && \
     locale-gen en_US.UTF-8 && \
     update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
-
-ENV LANG=en_US.UTF-8
-ENV LC_ALL=en_US.UTF-8
-
-# Cleanup
-RUN apt-get clean
-
-RUN rm -rf /var/lib/apt/lists/*
-
-# Create directories
-RUN mkdir -p /usr/share/idhan/
-
-# Cleanup
-RUN rm -rf /var/lib/apt/lists/*
 
 # Copy built artifacts from builder stage
 COPY --from=builder /build/bin/IDHANServer/ /usr/bin/IDHANServer
@@ -118,11 +97,13 @@ ENV IDHAN_DATABASE_HOST=localhost \
     IDHAN_DATABASE_DATABASE=idhan-db \
     IDHAN_THUMBNAILS_PATH=/thumbnails \
     IDHAN_HOST_IPV4_LISTEN=0.0.0.0 \
-    IDHAN_HOST_IPV6_LISTEN=::
+    IDHAN_HOST_IPV6_LISTEN=:: \
+    LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
 
 RUN chmod +x /usr/bin/IDHANServer
 
-# Expose default port (adjust based on your config)
+# Expose default port
 EXPOSE 16609
 
 # Default entrypoint
