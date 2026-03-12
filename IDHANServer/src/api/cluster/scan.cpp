@@ -42,12 +42,6 @@ struct ScanParams
 	ScanParams() = default;
 };
 
-ExpectedTask<> scanFile(
-	std::filesystem::path file_path,
-	std::filesystem::path bad_dir,
-	const DbClientPtr& db,
-	ClusterID cluster_id,
-	ScanParams params );
 
 // Extracts boolean parameters safely
 static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
@@ -94,18 +88,13 @@ class ScanContext
 	std::filesystem::path m_cluster_path;
 
 	ExpectedTask< SHA256 > checkSHA256();
-
 	ExpectedTask< RecordID > checkRecord( DbClientPtr db );
-
 	ExpectedTask< void > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
-	drogon::Task<> updateFileModifiedTime( drogon::orm::DbClientPtr db );
-
+	drogon::Task<> updateFileModifiedTime( DbClientPtr db );
 	ExpectedTask< void > checkCluster( DbClientPtr db );
 	drogon::Task< bool > hasMime( DbClientPtr db );
-
-	ExpectedTask<> scanMime( DbClientPtr db );
-
-	ExpectedTask<> scanMetadata( DbClientPtr db );
+	ExpectedTask< void > scanMime( DbClientPtr db );
+	ExpectedTask< void > scanMetadata( DbClientPtr db );
 	ExpectedTask< void > checkExtension( DbClientPtr db );
 
   public:
@@ -122,7 +111,7 @@ class ScanContext
 	  m_cluster_path( cluster_path )
 	{}
 
-	ExpectedTask<> scan( std::filesystem::path bad_dir, DbClientPtr db );
+	ExpectedTask< void > scan( std::filesystem::path bad_dir, DbClientPtr db );
 };
 
 /**
@@ -238,64 +227,52 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256()
 	if ( !sha256_e )
 	{
 		log::warn(
-			"When attempting to get hash from {}, The has gotten from the filename was invalid or not a hash. Forcing hashing of file",
+			"When attempting to get hash from {}, the hash from the filename was invalid or not a hash. Forcing hashing of file",
 			m_path.string() );
-		// hash the file anyways
 		sha256_e = co_await SHA256::hashCoro( uring );
 	}
 
 	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 
 	const auto sha256_hex { sha256_e->hex() };
-	if ( sha256_hex != file_stem )
+	if ( sha256_hex == file_stem ) co_return *sha256_e;
+
+	log::warn(
+		"While scanning file at {} it was detected that the filename does not match the SHA256 {}",
+		m_path.string(),
+		sha256_hex );
+
+	if ( m_params.read_only )
 	{
-		log::warn(
-			"While scanning file at {} it was detected that the filename does not match the SHA256 {}",
+		co_return std::unexpected( createInternalError(
+			"When scanning file at {} it was detected that the filename does not match the sha256 {}. "
+			"Because the cluster is in readonly mode, this could not be automatically fixed",
 			m_path.string(),
-			sha256_hex );
+			sha256_hex ) );
+	}
 
-		if ( m_params.read_only )
-		{
-			co_return std::unexpected( createInternalError(
-				"When scanning file at {} it was detected that the filename does not match the sha256 "
-				"{}. Because the cluster is in readonly mode, This could not be automatically fixed",
-				m_path.string(),
-				sha256_hex ) );
-		}
+	// Move the file to bad directory
+	try
+	{
+		std::filesystem::create_directories( m_bad_dir );
+		const auto new_path { m_bad_dir / m_path.filename() };
+		std::filesystem::rename( m_path, new_path );
 
-		// Try to fix the filename since we are not readonly and can exit the files. Fix it to be it's sha256
-		try
-		{
-			std::filesystem::create_directories( m_bad_dir );
-			const auto new_path { m_bad_dir / m_path.filename() };
-
-			// try to fix the mistake
-			std::filesystem::rename( m_path, new_path );
-
-			co_return std::unexpected( createInternalError(
-				"When scanning file at {} it was detected that the filename does "
-				"not match the sha256 {}. The file has been moved to {}",
-				m_path.string(),
-				sha256_hex,
-				new_path.string() ) );
-		}
-		catch ( std::exception& e )
-		{
-			co_return std::unexpected( createInternalError(
-				"When scanning file at {} it was detected that the filename does not match the sha256 "
-				"{}. There was an error that prevented this from being fixed: {}",
-				m_path.string(),
-				sha256_hex,
-				e.what() ) );
-		}
-		catch ( ... )
-		{
-			co_return std::unexpected( createInternalError(
-				"When scanning file at {} it was detected that the filename does not match the sha256 "
-				"{}. There was an unknown error that prevented this from being fixed",
-				m_path.string(),
-				sha256_hex ) );
-		}
+		co_return std::unexpected( createInternalError(
+			"When scanning file at {} it was detected that the filename does not match the sha256 {}. "
+			"The file has been moved to {}",
+			m_path.string(),
+			sha256_hex,
+			new_path.string() ) );
+	}
+	catch ( const std::exception& e )
+	{
+		co_return std::unexpected( createInternalError(
+			"When scanning file at {} it was detected that the filename does not match the sha256 {}. "
+			"There was an error that prevented this from being fixed: {}",
+			m_path.string(),
+			sha256_hex,
+			e.what() ) );
 	}
 
 	co_return *sha256_e;
@@ -311,9 +288,9 @@ ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 	{
 		log::trace( "Hashing file at {} because it's never been seen before to verify the filename", m_path.string() );
 		m_params.verify_hash = true;
-		const auto verified_hash { co_await checkSHA256() };
-		if ( !verified_hash ) co_return std::unexpected( verified_hash.error() );
-		m_sha256 = *verified_hash;
+		const auto verified_hash_result { co_await checkSHA256() };
+		return_unexpected_error( verified_hash_result );
+		m_sha256 = *verified_hash_result;
 
 		const auto insert_result {
 			co_await db->execSqlCoro( "INSERT INTO records (sha256) VALUES ($1) RETURNING record_id", m_sha256.toVec() )
@@ -381,7 +358,7 @@ drogon::Task<> ScanContext::updateFileModifiedTime( drogon::orm::DbClientPtr db 
 	co_await db->execSqlCoro( "UPDATE file_info SET modified_time = $1 WHERE record_id = $2", date, m_record_id );
 }
 
-ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
+ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 {
 	log::trace( "Verifying that the record is in the correct cluster" );
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
@@ -410,8 +387,8 @@ ExpectedTask<> ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 	{
 		// handle the double count, which will check if the found cluster contains the file and delete it from this one
 		// if found. Otherwise the record's cluster is set to the current cluster
-		auto result { co_await cleanupDoubleClusters( found_cluster_id, db ) };
-		return_unexpected_error( result );
+		const auto cleanup_result { co_await cleanupDoubleClusters( found_cluster_id, db ) };
+		return_unexpected_error( cleanup_result );
 	}
 
 	// now check if the file is in the right path
@@ -464,7 +441,7 @@ drogon::Task< bool > ScanContext::hasMime( DbClientPtr db )
 	co_return false;
 }
 
-ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
+ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 {
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
 	const FileIOUring file_io { m_path };
@@ -530,7 +507,7 @@ ExpectedTask<> ScanContext::scanMime( DbClientPtr db )
 	co_return {};
 }
 
-ExpectedTask<> ScanContext::scanMetadata( DbClientPtr db )
+ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 {
 	// No mime was found in the previous step
 	if ( m_mime_name.empty() )
@@ -641,8 +618,7 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	co_return {};
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan(
-	const std::filesystem::path bad_dir,
+ExpectedTask< void > ScanContext::scan( const std::filesystem::path bad_dir,
 	drogon::orm::DbClientPtr db )
 {
 	log::trace( "Scanning file: {}", m_path.string() );
@@ -651,35 +627,35 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 		co_return std::unexpected( createInternalError(
 			"When scanning file: {} it was detected that it has a filesize of zero!", m_path.string() ) );
 
-	// check that the sha256 matches the sha256 name of the file
 	m_bad_dir = bad_dir;
-	const auto sha256_e { co_await checkSHA256() };
-	return_unexpected_error( sha256_e );
+	const auto sha256_result { co_await checkSHA256() };
+	return_unexpected_error( sha256_result );
 
-	m_sha256 = *sha256_e;
+	m_sha256 = *sha256_result;
 
-	const auto record_e { co_await checkRecord( db ) };
-	if ( !record_e ) co_return std::unexpected( record_e.error() );
-	return_unexpected_error( record_e );
-	m_record_id = *record_e;
+	const auto record_result { co_await checkRecord( db ) };
+	return_unexpected_error( record_result );
+	m_record_id = *record_result;
 
 	log::trace( "File {} was detected as record {}", m_path.string(), m_record_id );
 
 	// check if the record has been identified in a cluster before
-	const auto cluster_e { co_await checkCluster( db ) };
+	const auto cluster_result { co_await checkCluster( db ) };
+	return_unexpected_error( cluster_result );
 
 	bool has_mime_info { co_await hasMime( db ) };
 
 	if ( ( m_params.scan_mime && !has_mime_info ) || m_params.rescan_mime )
 	{
 		log::trace( "Scanning mime for file {}", m_path.string() );
-		const auto mime_e { co_await scanMime( db ) };
-		if ( !mime_e )
+		const auto mime_result { co_await scanMime( db ) };
+		if ( !mime_result )
 		{
-			const auto msg( hyapi::helpers::extractHttpResponseErrorMessage( mime_e.error() ) );
-			log::warn( "Failed to process mime for {} (Record {}): {}", m_path.filename().string(), m_record_id, msg );
-			co_return std::unexpected( createInternalError(
-				"Failed to process mime for {} (Record {}): {}", m_path.filename().string(), m_record_id, msg ) );
+			const auto msg { hyapi::helpers::extractHttpResponseErrorMessage( mime_result.error() ) };
+			const auto error_msg { std::format(
+				"Failed to process mime for {} (Record {}): {}", m_path.filename().string(), m_record_id, msg ) };
+			log::warn( error_msg );
+			co_return std::unexpected( createInternalError( error_msg ) );
 		}
 		has_mime_info = co_await hasMime( db );
 	}
@@ -694,8 +670,8 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ScanContext::scan
 	if ( ( m_params.scan_metadata || m_params.rescan_metadata ) && has_mime_info )
 	{
 		log::trace( "Scanning metadata for file {}", m_path.string() );
-		const auto metadata_e { co_await scanMetadata( db ) };
-		if ( !metadata_e ) co_return std::unexpected( metadata_e.error() );
+		const auto metadata_result { co_await scanMetadata( db ) };
+		return_unexpected_error( metadata_result );
 	}
 
 	log::trace( "Finished scanning file {}", m_path.string() );
