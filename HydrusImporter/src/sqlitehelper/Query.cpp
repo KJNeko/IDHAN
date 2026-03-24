@@ -9,6 +9,9 @@ namespace idhan::hydrus
 
 std::unique_ptr< sqlite3_stmt, StmtDeleter > prepareStatement( TransactionBaseCoro tr, std::string_view sql )
 {
+	FGL_ASSERT( tr.db() != nullptr, "Database pointer was null in prepareStatement" );
+	FGL_ASSERT( !sql.empty(), "SQL query was empty in prepareStatement" );
+
 	sqlite3_stmt* stmt { nullptr };
 	const char* unused_query { nullptr };
 	const auto prepare_ret {

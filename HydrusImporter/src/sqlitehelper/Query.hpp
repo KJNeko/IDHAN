@@ -130,7 +130,6 @@ RowGenerator< TArgs... >
 				break;
 			case SQLITE_DONE:
 				co_return;
-				break;
 		}
 	}
 	while ( step_ret == SQLITE_ROW );

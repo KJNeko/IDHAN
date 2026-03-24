@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#include <fgl/defines.hpp>
 #include <sqlite3.h>
 
 namespace idhan::hydrus
@@ -14,9 +15,16 @@ class TransactionBaseCoro
 
   public:
 
-	sqlite3* db() { return m_db; }
+	sqlite3* db()
+	{
+		FGL_ASSERT( m_db != nullptr, "Database pointer was null in TransactionBaseCoro" );
+		return m_db;
+	}
 
-	TransactionBaseCoro( sqlite3* db ) : m_db( db ) {}
+	TransactionBaseCoro( sqlite3* db ) : m_db( db )
+	{
+		FGL_ASSERT( db != nullptr, "Database pointer was null in TransactionBaseCoro constructor" );
+	}
 };
 
 } // namespace idhan::hydrus

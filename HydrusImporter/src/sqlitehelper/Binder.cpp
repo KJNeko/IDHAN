@@ -8,62 +8,68 @@
 
 namespace idhan::hydrus
 {
-	Binder::Binder( sqlite3* db, const std::string_view sql ) : ptr( db )
+
+Binder::Binder( sqlite3* db, const std::string_view sql ) : ptr( db )
+{
+	FGL_ASSERT( db != nullptr, "Database pointer was null in Binder constructor" );
+	FGL_ASSERT( !sql.empty(), "SQL query was empty in Binder constructor" );
+
+	const char* unused { nullptr };
+	const auto prepare_ret {
+		sqlite3_prepare_v2( ptr, sql.data(), static_cast< int >( sql.size() + 1 ), &stmt, &unused )
+	};
+
+	if ( unused != nullptr && strlen( unused ) > 0 )
 	{
-		const char* unused { nullptr };
-		const auto prepare_ret {
-			sqlite3_prepare_v2( ptr, sql.data(), static_cast< int >( sql.size() + 1 ), &stmt, &unused )
-		};
-
-		if ( unused != nullptr && strlen( unused ) > 0 )
+		//Check if the string is just empty (\n or \t)
+		const std::string_view leftovers { unused };
+		auto itter { leftovers.begin() };
+		while ( itter != leftovers.end() )
 		{
-			//Check if the string is just empty (\n or \t)
-			const std::string_view leftovers { unused };
-			auto itter { leftovers.begin() };
-			while ( itter != leftovers.end() )
+			if ( *itter == '\n' || *itter == '\t' )
 			{
-				if ( *itter == '\n' || *itter == '\t' )
-				{
-					++itter;
-					continue;
-				}
-				else
-					throw std::runtime_error(
-						std::format( "Query had unused portions of the input. Unused: \"{}\"", unused ) );
+				++itter;
+				continue;
 			}
+			else
+				throw std::runtime_error(
+					std::format( "Query had unused portions of the input. Unused: \"{}\"", unused ) );
 		}
-
-		if ( stmt == nullptr )
-			throw std::runtime_error( std::format( "Failed to prepare stmt, {}", sqlite3_errmsg( ptr ) ) );
-
-		if ( prepare_ret != SQLITE_OK )
-		{
-			throw std::runtime_error(
-				std::format( "DB: Failed to prepare statement: \"{}\", Reason: \"{}\"", sql, sqlite3_errmsg( ptr ) ) );
-		}
-
-		max_param_count = sqlite3_bind_parameter_count( stmt );
 	}
 
-	Binder::~Binder()
-	{
-		try
-		{
-			if ( !ran )
-			{
-				std::optional< std::tuple<> > tpl;
-				executeQuery( tpl );
-			}
+	if ( stmt == nullptr )
+		throw std::runtime_error( std::format( "Failed to prepare stmt, {}", sqlite3_errmsg( ptr ) ) );
 
-			sqlite3_finalize( stmt );
-		}
-		catch ( std::exception& e )
-		{
-			IDHAN::log::critical( "Binder's dtor has thrown!, {}", e.what() );
-		}
-		catch ( ... )
-		{
-			IDHAN::log::critical( "Binder's dtor has thrown!, ..." );
-		}
+	if ( prepare_ret != SQLITE_OK )
+	{
+		throw std::runtime_error(
+			std::format( R"(DB: Failed to prepare statement: "{}", Reason: "{}")", sql, sqlite3_errmsg( ptr ) ) );
 	}
+
+	max_param_count = sqlite3_bind_parameter_count( stmt );
+	FGL_ASSERT( max_param_count >= 0, "max_param_count was negative" );
+}
+
+Binder::~Binder()
+{
+	try
+	{
+		if ( !ran )
+		{
+			std::optional< std::tuple<> > tpl;
+			executeQuery( tpl );
+		}
+
+		sqlite3_finalize( stmt );
+	}
+	catch ( std::exception& e )
+	{
+		IDHAN::log::critical( "Binder's dtor has thrown!, {}", e.what() );
+	}
+	catch ( ... )
+	{
+		IDHAN::log::critical( "Binder's dtor has thrown!, ..." );
+	}
+}
+
 } // namespace idhan::hydrus

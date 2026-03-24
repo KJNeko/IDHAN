@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <fgl/defines.hpp>
+
 #include <qpoint.h>
 #include <sqlite3.h>
 #include <string>
@@ -29,33 +31,31 @@ class Binder
 
 	Binder() = delete;
 
-	Binder( sqlite3* ptr, const std::string_view sql );
+	[[nodiscard]] Binder( sqlite3* ptr, std::string_view sql );
 
 	template < typename T >
-	// Why was this here? What reason did I put it here for?
-	//requires( !std::is_same_v< std::remove_reference_t< T >, std::string > )
-	Binder& operator<<( T t )
+	Binder& operator<<( T&& t )
 	{
 		if ( param_counter > max_param_count )
 		{
+			FGL_ASSERT( stmt != nullptr, "stmt was nullptr when checking param_counter" );
 			throw std::runtime_error(
 				std::format(
 					"param_counter > param_count = {} > {} for query \"{}\"",
 					param_counter,
 					sqlite3_bind_parameter_count( stmt ),
-					std::string( sqlite3_sql( stmt ) ) ) );
+					std::string_view( sqlite3_sql( stmt ) ) ) );
 		}
 
-		switch ( bindParameter< std::remove_reference_t< T > >( stmt, std::move( t ), ++param_counter ) )
+		FGL_ASSERT( ptr != nullptr, "Database pointer was null" );
+		FGL_ASSERT( stmt != nullptr, "Statement was null during parameter binding" );
+
+		if ( const auto ret =
+		         bindParameter< std::remove_reference_t< T > >( stmt, std::forward< T >( t ), ++param_counter );
+		     ret != SQLITE_OK )
 		{
-			case SQLITE_OK:
-				break;
-			default:
-				{
-					throw std::runtime_error(
-						std::format(
-							"Failed to bind to \"{}\": Reason: \"{}\"", sqlite3_sql( stmt ), sqlite3_errmsg( ptr ) ) );
-				}
+			throw std::runtime_error(
+				std::format( "Failed to bind to \"{}\": Reason: \"{}\"", sqlite3_sql( stmt ), sqlite3_errmsg( ptr ) ) );
 		}
 
 		return *this;
@@ -71,7 +71,7 @@ class Binder
 		executeQuery( tpl );
 
 		if ( tpl )
-			t = std::move( std::get< 0, T >( tpl.value() ) );
+			t = std::move( std::get< 0 >( tpl.value() ) );
 		else
 			throw std::runtime_error( std::format( "No rows returned for query \"{}\"", sqlite3_sql( stmt ) ) );
 	}
@@ -86,7 +86,7 @@ class Binder
 		executeQuery( tpl );
 
 		if ( tpl )
-			t = std::move( std::get< 0, T >( tpl.value() ) );
+			t = std::move( std::get< 0 >( tpl.value() ) );
 		else
 			t = std::nullopt;
 	}
@@ -123,8 +123,6 @@ class Binder
 			tpl = std::move( opt_tpl.value() );
 		else
 			throw std::runtime_error( "No rows returned for query" );
-
-		return;
 	}
 
   private:
@@ -136,16 +134,14 @@ class Binder
 		if ( param_counter != max_param_count )
 			throw std::runtime_error(
 				std::format(
-					"Not enough parameters given for query! Given {}, Expected {}. param_counter != max_param_count = {} != {} for query \"{}\"",
+					"Not enough parameters given for query! Given {}, Expected {} for query \"{}\"",
 					param_counter,
 					max_param_count,
-					param_counter,
-					max_param_count,
-					std::string_view( sqlite3_sql(
-						stmt ) ) ) ); // String view is safe here since the string is owned by sqlite3 and not freed until the statement is finalized
+					std::string_view( sqlite3_sql( stmt ) ) ) );
 
 		ran = true;
 
+		FGL_ASSERT( stmt != nullptr, "stmt was nullptr before executing query" );
 		if ( stmt == nullptr ) throw std::runtime_error( "stmt was nullptr" );
 
 		const auto step_ret { sqlite3_step( stmt ) };
@@ -174,21 +170,20 @@ class Binder
 					//Help hint to the compiler that it shouldn't keep an empty tuple around
 					if constexpr ( sizeof...( Ts ) > 0 ) tpl_opt = std::nullopt;
 					return;
-
-					default:
-						[[fallthrough]];
-					case SQLITE_MISUSE:
-						[[fallthrough]];
-					case SQLITE_BUSY:
-						[[fallthrough]];
-					case SQLITE_ERROR:
-						{
-							throw std::runtime_error(
-								std::format(
-									"DB: Query error: \"{}\", Query: \"{}\"",
-									sqlite3_errmsg( ptr ),
-									sqlite3_expanded_sql( stmt ) ) );
-						}
+				}
+			default:
+				[[fallthrough]];
+			case SQLITE_MISUSE:
+				[[fallthrough]];
+			case SQLITE_BUSY:
+				[[fallthrough]];
+			case SQLITE_ERROR:
+				{
+					throw std::runtime_error(
+						std::format(
+							"DB: Query error: \"{}\", Query: \"{}\"",
+							sqlite3_errmsg( ptr ),
+							sqlite3_expanded_sql( stmt ) ) );
 				}
 		}
 	}
@@ -197,4 +192,5 @@ class Binder
 
 	~Binder();
 };
+
 } // namespace idhan::hydrus
