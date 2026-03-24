@@ -5,6 +5,13 @@
 
 #include <moc_UrlServiceWorker.cpp>
 
+#include <QFutureSynchronizer>
+
+#include <IDHAN>
+#include <optional>
+#include <ranges>
+#include <unordered_set>
+
 #include "sqlitehelper/Query.hpp"
 #include "sqlitehelper/TransactionBaseCoro.hpp"
 
@@ -18,89 +25,165 @@ UrlServiceWorker::UrlServiceWorker( QObject* parent, idhan::hydrus::HydrusImport
 
 void UrlServiceWorker::preprocess()
 {
-	idhan::hydrus::TransactionBaseCoro client_tr { m_importer->client_db };
-
-	std::size_t url_counter { 0 };
-
-	idhan::hydrus::Query< int, int > query { client_tr, "SELECT hash_id, url_id FROM url_map" };
-
-	for ( [[maybe_unused]] const auto& [ hash_id, url_id ] : query )
+	try
 	{
-		url_counter += 1;
-		if ( url_counter % 10'000 == 0 ) emit processedMaxUrls( url_counter );
-	}
+		idhan::hydrus::TransactionBaseCoro client_tr { m_importer->client_db };
 
-	emit processedMaxUrls( url_counter );
+		std::size_t url_counter { 0 };
+
+		// Use COUNT for more efficient counting
+		idhan::hydrus::Query< std::size_t > count_query { client_tr, "SELECT COUNT(*) FROM url_map" };
+
+		for ( const auto& [ count ] : count_query )
+		{
+			url_counter = count;
+			break;
+		}
+
+		emit processedMaxUrls( url_counter );
+	}
+	catch ( const std::exception& e )
+	{
+		emit statusMessage( QString( "Error during preprocessing: %1" ).arg( e.what() ) );
+	}
 }
 
 void UrlServiceWorker::process()
 {
-	auto& client { idhan::IDHANClient::instance() };
-
-	idhan::hydrus::TransactionBaseCoro client_tr { m_importer->client_db };
-	idhan::hydrus::TransactionBaseCoro master_tr { m_importer->master_db };
-
-	std::size_t url_counter { 0 };
-
-	idhan::hydrus::Query< int, int > query { client_tr, "SELECT hash_id, url_id FROM url_map ORDER BY hash_id ASC" };
-
-	std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > > current_urls {};
-
-	auto flushUrls = [ &, this ]()
+	try
 	{
-		emit statusMessage( "Mapping hydrus IDs to IDHAN IDs" );
-		std::vector< idhan::hydrus::HashID > hashes {};
-		for ( const auto& hash_id : current_urls | std::views::keys )
-		{
-			hashes.emplace_back( hash_id );
-		}
+		auto& client { idhan::IDHANClient::instance() };
 
-		const auto mapped_ids { m_importer->mapHydrusRecords( hashes ) };
+		idhan::hydrus::TransactionBaseCoro client_tr { m_importer->client_db };
+		idhan::hydrus::TransactionBaseCoro master_tr { m_importer->master_db };
 
-		emit statusMessage( "Adding URLs to records" );
+		std::size_t url_counter { 0 };
+		std::size_t total_records_processed = 0;
 
-		std::vector< QFuture< void > > futures {};
+		constexpr std::size_t URL_MAX = 500; // Max URLs to scan per burst
 
-		for ( const auto& [ hash_id, idhan_id ] : mapped_ids )
-		{
-			auto urls { current_urls[ hash_id ] };
-			auto future { client.addUrls( idhan_id, urls ) };
-			// futures.emplace_back( client.addUrls( idhan_id, urls ) );
-			future.waitForFinished();
-		}
+		emit statusMessage( "Processing URLs" );
 
-		for ( auto& future : futures ) future.waitForFinished();
+		std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > > current_urls;
+		std::size_t urls_scanned = 0;
+		std::size_t records_processed = 0;
 
-		current_urls.clear();
-		emit processedUrls( url_counter );
-	};
-
-	for ( [[maybe_unused]] const auto& [ hash_id, url_id ] : query )
-	{
-		idhan::hydrus::Query< std::string_view > url_query {
-			master_tr, "SELECT url FROM urls WHERE url_id = $1", url_id
+		idhan::hydrus::Query< int > url_ids_query {
+			client_tr, "SELECT DISTINCT url_id FROM url_map ORDER BY url_id DESC"
 		};
 
-		std::vector< std::string > urls {};
-
-		for ( const auto& [ url ] : url_query )
+		for ( const auto& [ url_id ] : url_ids_query )
 		{
-			urls.emplace_back( url );
+			idhan::hydrus::Query< std::string_view > url_query {
+				master_tr, "SELECT url FROM urls WHERE url_id = ?", url_id
+			};
+
+			std::string url;
+			bool url_found = false;
+			for ( const auto& [ url_str ] : url_query )
+			{
+				url = url_str;
+				url_found = true;
+				break;
+			}
+
+			if ( !url_found ) continue;
+
+			idhan::hydrus::Query< int > records_map {
+				client_tr, "SELECT hash_id FROM url_map WHERE url_id = ?", url_id
+			};
+
+			std::vector< int > hash_ids {};
+			hash_ids.reserve( URL_MAX );
+			for ( const auto& [ hash_id ] : records_map )
+			{
+				hash_ids.push_back( hash_id );
+			}
+
+			// Add this URL to all associated hashes
+			for ( int hash_id : hash_ids )
+			{
+				current_urls[ hash_id ].emplace_back( url );
+				++records_processed;
+			}
+
+			++urls_scanned;
+
+			// Check if we've hit either limit
+			if ( urls_scanned >= URL_MAX )
+			{
+				// Flush the URLs we've collected
+				if ( !current_urls.empty() )
+				{
+					total_records_processed += records_processed;
+					flushUrls( current_urls, client, total_records_processed );
+				}
+
+				// Reset counters for next batch
+				urls_scanned = 0;
+				records_processed = 0;
+			}
 		}
 
-		url_counter += urls.size();
+		// Flush any remaining URLs
+		if ( !current_urls.empty() )
+		{
+			total_records_processed += records_processed;
+			flushUrls( current_urls, client, total_records_processed );
+		}
 
-		if ( auto itter = current_urls.find( hash_id ); itter != current_urls.end() )
-			itter->second.insert( itter->second.end(), urls.begin(), urls.end() );
-		else
-			current_urls.emplace( hash_id, std::move( urls ) );
-
-		if ( url_counter % 50 == 0 ) flushUrls();
+		emit statusMessage( "Finished!" );
 	}
 
-	flushUrls();
+	catch ( const std::exception& e )
+	{
+		emit statusMessage( QString( "Error during processing: %1" ).arg( e.what() ) );
+	}
+}
 
-	emit statusMessage( "Finished!" );
+void UrlServiceWorker::flushUrls(
+	std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > >& current_urls,
+	idhan::IDHANClient& client,
+	std::size_t url_counter )
+{
+	if ( current_urls.empty() ) return;
+
+	std::vector< idhan::hydrus::HashID > hashes;
+	hashes.reserve( current_urls.size() );
+
+	for ( const auto& hash_id : current_urls | std::views::keys )
+	{
+		hashes.emplace_back( hash_id );
+	}
+
+	const auto mapped_ids { m_importer->mapHydrusRecords( hashes ) };
+
+	// Count actual unique URLs using a set
+	std::unordered_set< std::string > unique_urls;
+	for ( const auto& [ hash_id, urls ] : current_urls )
+	{
+		for ( const auto& url : urls )
+		{
+			unique_urls.insert( url );
+		}
+	}
+
+	emit statusMessage(
+		QString( "Adding %2 unique URLs to %1 mappings" ).arg( mapped_ids.size() ).arg( unique_urls.size() ) );
+
+	// Use QFutureSynchronizer for proper parallel processing
+	QFutureSynchronizer< void > synchronizer;
+
+	for ( const auto& [ hash_id, idhan_id ] : mapped_ids )
+	{
+		auto urls { std::move( current_urls[ hash_id ] ) };
+		synchronizer.addFuture( client.addUrls( idhan_id, std::move( urls ) ) );
+	}
+
+	synchronizer.waitForFinished();
+
+	current_urls.clear();
+	emit processedUrls( url_counter );
 }
 
 void UrlServiceWorker::run()
