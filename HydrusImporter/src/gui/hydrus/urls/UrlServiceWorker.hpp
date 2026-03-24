@@ -7,6 +7,11 @@
 
 #include "HydrusImporter.hpp"
 
+namespace idhan::hydrus
+{
+class TransactionBaseCoro;
+}
+
 class UrlServiceWorker : public QObject, public QRunnable
 {
 	Q_OBJECT
@@ -26,4 +31,11 @@ class UrlServiceWorker : public QObject, public QRunnable
 	void process();
 
 	void run() override;
+
+  private:
+
+	void flushUrls(
+		std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > >& current_urls,
+		idhan::IDHANClient& client,
+		std::size_t url_counter );
 };
