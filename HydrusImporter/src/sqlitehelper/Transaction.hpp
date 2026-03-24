@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fgl/defines.hpp>
 #include <mutex>
 #include <string_view>
 
@@ -25,7 +26,11 @@ struct TransactionBase
 	sqlite3* sqlite_db;
 	std::mutex self_mtx {};
 
-	inline Binder operator<<( std::string_view sql ) { return { sqlite_db, sql }; }
+	[[nodiscard]] inline Binder operator<<( std::string_view sql )
+	{
+		FGL_ASSERT( sqlite_db != nullptr, "Database pointer was null in TransactionBase" );
+		return { sqlite_db, sql };
+	}
 
 	template < std::uint64_t size >
 	inline Binder operator<<( const char ( &raw_str )[ size - 1 ] )
@@ -36,6 +41,8 @@ struct TransactionBase
 };
 
 inline TransactionBase::TransactionBase( sqlite3* ptr ) : sqlite_db( ptr )
-{}
+{
+	FGL_ASSERT( ptr != nullptr, "Database pointer was null in TransactionBase constructor" );
+}
 
 } // namespace idhan::hydrus
