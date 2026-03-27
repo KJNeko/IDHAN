@@ -22,6 +22,7 @@
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/log.hpp"
+#include "spdlog/async.h"
 
 namespace idhan
 {
@@ -94,56 +95,48 @@ void printCoreLocation()
 
 std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionArguments& arguments )
 {
-	constexpr std::string_view server_format_str { "[%Y-%m-%d %H:%M:%S.%e] [SERVER] [%^%l%$] [thread %t] %v" };
+	constexpr std::string_view server_format_str { "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v" };
 
 	if ( !arguments.use_stdout ) log::warn( "use_stdout is false, This will be the last IDHAN output via stdout!" );
 
 	constexpr std::size_t KiB { 1024 };
 	constexpr std::size_t MiB { KiB * 1024 };
 
-	const std::filesystem::path log_path { config::getSilentDefault< std::string >( "logging", "path", "./log" ) };
+	const std::filesystem::path log_path { config::getLogPath() };
+
+	std::vector< spdlog::sink_ptr > sinks {};
 
 	// logs all info & errors to a specific file
-	auto info_file_logger {
-		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "info.log", MiB * 2, 4, true )
-	};
+	auto& info_file_logger { sinks.emplace_back(
+		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "info.log", MiB * 2, 4, true ) ) };
 
 	info_file_logger->set_pattern( std::string( server_format_str ) );
 	info_file_logger->set_level( spdlog::level::info );
 
 	// logs all errors to a specific file
-	auto error_file_logger {
-		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "error.log", MiB * 16, 4, true )
-	};
+	auto& error_file_logger { sinks.emplace_back(
+		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "error.log", MiB * 16, 4, true ) ) };
 
 	error_file_logger->set_pattern( std::string( server_format_str ) );
 	error_file_logger->set_level( spdlog::level::err );
 
-	// stdout log disabled
-	if ( !arguments.use_stdout )
+	if ( arguments.use_stdout )
 	{
-		auto logger { std::make_shared< spdlog::logger >(
-			"file_loggers", spdlog::sinks_init_list { info_file_logger, error_file_logger } ) };
-
-		logger->set_pattern( std::string( server_format_str ) );
-
-		spdlog::set_default_logger( logger );
-		trantor::Logger::enableSpdLog( logger );
-
-		return logger;
+		auto& stdout_logger { sinks.emplace_back( std::make_shared< spdlog::sinks::stdout_color_sink_mt >() ) };
+		stdout_logger->set_level( spdlog::level::debug );
 	}
-	else
-	{
-		auto stdout_logger { std::make_shared< spdlog::sinks::stdout_color_sink_mt >() };
 
-		auto logger { std::make_shared< spdlog::logger >(
-			"multi_sink", spdlog::sinks_init_list { stdout_logger, info_file_logger, error_file_logger } ) };
+	auto logger { std::make_shared< spdlog::logger >( "default", sinks.begin(), sinks.end() ) };
 
-		logger->set_pattern( std::string( server_format_str ) );
+	logger->set_pattern( std::string( server_format_str ) );
 
-		trantor::Logger::enableSpdLog( logger );
-		return logger;
-	}
+	spdlog::set_default_logger( logger );
+	trantor::Logger::enableSpdLog( logger );
+
+	logger->flush_on( spdlog::level::warn );
+	spdlog::flush_every( std::chrono::seconds( 5 ) );
+
+	return logger;
 }
 
 void setupTempPath()
@@ -222,10 +215,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	log::info( "IO Threads: {}", io_threads );
 
-	const std::string log_directory { config::getSilentDefault< std::string >( "logging", "path", "./log" ) };
-
-	std::filesystem::create_directories( log_directory );
-
 	auto& app = drogon::app();
 
 	app.setLogLevel( trantor::Logger::kInfo );
@@ -233,7 +222,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	app.setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() );
 	app.setDocumentRoot( getStaticPath() );
 	app.setExceptionHandler( exceptionHandler );
-	app.setLogPath( std::string( log_directory ), "", 1024 * 1024 * 4, 8, true );
+	app.setLogPath( std::string( config::getLogPath() ), "", 1024 * 1024 * 4, 8, true );
 
 	setupTempPath();
 

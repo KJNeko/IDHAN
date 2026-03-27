@@ -4,8 +4,8 @@
 
 #include <fstream>
 
-#include "InfoAPI.hpp"
-#include "helpers/createBadRequest.hpp"
+#include "api/InfoAPI.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "paths.hpp"
 
 namespace idhan::api

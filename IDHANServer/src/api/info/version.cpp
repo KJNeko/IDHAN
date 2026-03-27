@@ -2,11 +2,11 @@
 // Created by kj16609 on 11/8/24.
 //
 
-#include "version.hpp"
+#include "api/version.hpp"
 
 #include <paths.hpp>
 
-#include "InfoAPI.hpp"
+#include "api/InfoAPI.hpp"
 #include "hyapi/constants/hydrus_version.hpp"
 #include "idhan/versions.hpp"
 #include "logging/log.hpp"

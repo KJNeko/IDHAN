@@ -232,4 +232,6 @@ T getSilentDefault( const std::string_view group, const std::string_view name, c
 
 void setLocation( std::filesystem::path path );
 
+std::filesystem::path getLogPath();
+
 } // namespace idhan::config

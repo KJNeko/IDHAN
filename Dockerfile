@@ -32,15 +32,15 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
 WORKDIR /build
 
 # Copy dependencies first to maximize cache hits
-COPY dependencies /build/dependencies
 COPY 3rd-party/hydrus /build/3rd-party/hydrus
+COPY dependencies /build/dependencies
 
 # Copy the rest of the source code
+COPY CMakeLists.txt /build/CMakeLists.txt
 COPY IDHAN /build/IDHAN
 COPY IDHANModules /build/IDHANModules
 COPY IDHANMigration /build/IDHANMigration
 COPY IDHANServer /build/IDHANServer
-COPY CMakeLists.txt /build/CMakeLists.txt
 COPY docs /build/docs
 
 # Build IDHANServer with ccache mount
