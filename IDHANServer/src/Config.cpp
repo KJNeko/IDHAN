@@ -33,4 +33,16 @@ void setLocation( std::filesystem::path path )
 	user_config_path = path;
 }
 
+std::filesystem::path getLogPath()
+{
+	const std::string log_directory { config::getSilentDefault< std::string >( "logging", "path", "./log" ) };
+
+	if ( !std::filesystem::exists( log_directory ) )
+	{
+		std::filesystem::create_directories( log_directory );
+	}
+
+	return log_directory;
+}
+
 } // namespace idhan::config
