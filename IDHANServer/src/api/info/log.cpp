@@ -72,10 +72,6 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 	const auto log_level { parseLevelString( level_str.value_or( "info" ) ) };
 	const auto since_str { request->getOptionalParameter< std::uint64_t >( "since" ) };
 
-	const auto raw_log { request->getOptionalParameter< bool >( "raw" ) };
-
-	const bool give_raw_log { raw_log.has_value() ? raw_log.value() : false };
-
 	std::vector< std::string > log_entries {};
 
 	const auto log_path { config::getLogPath() };
@@ -115,30 +111,25 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 		}
 	}
 
-	if ( give_raw_log )
+	std::string log_out {};
+	log_out.reserve( 1024 * 8 );
+
+	for ( const auto& log_line : log_entries )
 	{
-		std::string log_out {};
-		log_out.reserve( 1024 * 8 );
+		if ( !logEntryMatchesLevel( log_line, log_level ) ) continue;
 
-		for ( const auto& log_line : log_entries )
-		{
-			if ( !logEntryMatchesLevel( log_line, log_level ) ) continue;
+		if ( !logEntryMatchesTime( log_line, since_str ) ) continue;
 
-			if ( !logEntryMatchesTime( log_line, since_str ) ) continue;
-
-			log_out += log_line;
-			log_out += "\n";
-		}
-
-		auto response { drogon::HttpResponse::newHttpResponse() };
-		response->setBody( log_out );
-		response->setStatusCode( drogon::HttpStatusCode::k200OK );
-		response->setContentTypeCode( drogon::CT_TEXT_PLAIN );
-
-		co_return response;
+		log_out += log_line;
+		log_out += "\n";
 	}
 
-	co_return drogon::HttpResponse::newHttpJsonResponse( "test" );
+	auto response { drogon::HttpResponse::newHttpResponse() };
+	response->setBody( log_out );
+	response->setStatusCode( drogon::HttpStatusCode::k200OK );
+	response->setContentTypeCode( drogon::CT_TEXT_PLAIN );
+
+	co_return response;
 }
 
 } // namespace idhan::api
