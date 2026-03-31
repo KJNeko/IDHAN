@@ -8,17 +8,10 @@
 namespace idhan::api
 {
 
-ClusterAPI::ResponseTask ClusterAPI::modify( drogon::HttpRequestPtr request, const ClusterID cluster_id )
-{
-	auto db { drogon::app().getDbClient() };
-	auto transaction { co_await db->newTransactionCoro() };
-	co_return co_await modifyT( request, cluster_id, transaction );
-}
-
 ClusterAPI::ResponseTask ClusterAPI::modifyT(
-	drogon::HttpRequestPtr request,
+	const drogon::HttpRequestPtr request,
 	const ClusterID cluster_id,
-	DbClientPtr transaction )
+	const DbClientPtr transaction )
 {
 	log::debug( "Modifying cluster: {}", cluster_id );
 	const auto cluster_info {
@@ -68,6 +61,13 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 	}
 
 	co_return co_await infoT( request, cluster_id, transaction );
+}
+
+ClusterAPI::ResponseTask ClusterAPI::modify( drogon::HttpRequestPtr request, const ClusterID cluster_id )
+{
+	const auto db { drogon::app().getDbClient() };
+	const auto transaction { co_await db->newTransactionCoro() };
+	co_return co_await modifyT( request, cluster_id, transaction );
 }
 
 } // namespace idhan::api

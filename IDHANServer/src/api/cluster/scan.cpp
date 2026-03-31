@@ -2,6 +2,8 @@
 // Created by kj16609 on 3/20/25.
 //
 
+#include <utility>
+
 #include "Config.hpp"
 #include "MetadataModule.hpp"
 #include "api/ClusterAPI.hpp"
@@ -41,7 +43,6 @@ struct ScanParams
 
 	ScanParams() = default;
 };
-
 
 // Extracts boolean parameters safely
 static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
@@ -87,7 +88,7 @@ class ScanContext
 	ClusterID m_cluster_id;
 	std::filesystem::path m_cluster_path;
 
-	ExpectedTask< SHA256 > checkSHA256();
+	ExpectedTask< SHA256 > checkSHA256() const;
 	ExpectedTask< RecordID > checkRecord( DbClientPtr db );
 	ExpectedTask< void > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
 	drogon::Task<> updateFileModifiedTime( DbClientPtr db );
@@ -103,7 +104,7 @@ class ScanContext
 		const std::filesystem::path& file_path,
 		const ClusterID cluster_id,
 		const std::filesystem::path& cluster_path,
-		const ScanParams params ) :
+		const ScanParams& params ) :
 	  m_path( file_path ),
 	  m_size( std::filesystem::file_size( file_path ) ),
 	  m_params( params ),
@@ -207,7 +208,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 
 	const std::filesystem::path cluster_path { result[ 0 ][ "folder_path" ].as< std::string >() };
 
-	auto job_ctx {
+	const auto job_ctx {
 		queueJob( scanJob( cluster_id, cluster_path, scan_params ), std::format( "Scanning cluster {}", cluster_id ) )
 	};
 
@@ -217,10 +218,10 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
 
-ExpectedTask< SHA256 > ScanContext::checkSHA256()
+ExpectedTask< SHA256 > ScanContext::checkSHA256() const
 {
 	const auto file_stem { m_path.stem().string() };
-	FileIOUring uring { m_path };
+	const FileIOUring uring { m_path };
 
 	auto sha256_e { m_params.verify_hash ? co_await SHA256::hashCoro( uring ) : SHA256::fromHex( file_stem ) };
 
@@ -426,7 +427,7 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 drogon::Task< bool > ScanContext::hasMime( DbClientPtr db )
 {
 	log::trace( "Checking if record {} has a mime", m_record_id );
-	auto current_mime { co_await db->execSqlCoro(
+	const auto current_mime { co_await db->execSqlCoro(
 		"SELECT mime_id, name FROM file_info JOIN mime USING (mime_id) WHERE record_id = $1 AND mime_id IS NOT NULL",
 		m_record_id ) };
 
@@ -548,7 +549,7 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	const auto [ file_data, file_size ] { file_io.mmapReadOnly() };
 
-	idhan::data_view data_view { static_cast< const std::uint8_t* >( file_data ), file_size };
+	const idhan::data_view data_view { static_cast< const std::uint8_t* >( file_data ), file_size };
 	idhan::ModuleCallData call_data { .file_view = data_view, .mime_name = m_mime_name, .extra = {} };
 	const auto metadata_e { metadata_parser->parseFile( call_data ) };
 
@@ -604,7 +605,7 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 
 		if ( !m_params.read_only && m_params.fix_extensions )
 		{
-			auto new_path = m_path.replace_extension( format_ns::format( ".{}", expected_extension ) );
+			const auto new_path { m_path.replace_extension( format_ns::format( ".{}", expected_extension ) ) };
 			std::filesystem::rename( m_path, new_path );
 			log::info( "Renamed file {} to {} due to extension mismatch", m_path.string(), new_path.string() );
 			m_path = new_path;
@@ -618,8 +619,7 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	co_return {};
 }
 
-ExpectedTask< void > ScanContext::scan( const std::filesystem::path bad_dir,
-	drogon::orm::DbClientPtr db )
+ExpectedTask< void > ScanContext::scan( const std::filesystem::path bad_dir, drogon::orm::DbClientPtr db )
 {
 	log::trace( "Scanning file: {}", m_path.string() );
 
