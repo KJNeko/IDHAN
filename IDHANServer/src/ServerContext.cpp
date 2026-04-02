@@ -249,18 +249,20 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	if ( !ipv6_listener.empty() )
 		app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
 
-	drogon::orm::PostgresConfig config {};
-	config.host = arguments.hostname;
-	config.port = arguments.port;
-	config.databaseName = arguments.dbname;
-	config.username = arguments.user;
-	config.password = arguments.password;
-	config.connectionNumber = io_threads / 2;
-	config.name = "default";
-	config.isFast = false;
-	config.characterSet = "UTF-8";
-	config.timeout = 60.0f;
-	config.autoBatch = false;
+	drogon::orm::PostgresConfig config {
+		.host = arguments.hostname,
+		.port = arguments.port,
+		.databaseName = arguments.dbname,
+		.username = arguments.user,
+		.password = arguments.password,
+		.connectionNumber = 1,
+		.name = "default",
+		.isFast = false,
+		.characterSet = "UTF-8",
+		.timeout = 60.0,
+		.autoBatch = false,
+		.connectOptions = {}
+	};
 
 	log::info(
 		"Connecting to database {} at {}:{} with user {}",
@@ -268,12 +270,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		config.host,
 		config.port,
 		config.username );
-
-	drogon::app().addDbClient( config );
-
-	config.isFast = true;
-	config.name = "default";
-	config.connectionNumber = 1;
 
 	drogon::app().addDbClient( config );
 

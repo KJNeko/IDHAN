@@ -17,7 +17,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchUrls(
 	[[maybe_unused]] drogon::HttpRequestPtr request,
 	const RecordID record_id )
 {
-	const auto db { drogon::app().getFastDbClient() };
+	const auto db { drogon::app().getDbClient() };
 	const auto urls { co_await fetchUrlsJson( record_id, db ) };
 
 	if ( !urls ) co_return urls.error();
