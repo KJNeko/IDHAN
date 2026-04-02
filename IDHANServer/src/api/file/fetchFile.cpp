@@ -17,7 +17,7 @@ namespace idhan::api
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
-	const auto db { drogon::app().getFastDbClient() };
+	const auto db { drogon::app().getDbClient() };
 	const auto path_e { co_await filesystem::getRecordPath( record_id, db ) };
 	if ( !path_e ) co_return path_e.error();
 

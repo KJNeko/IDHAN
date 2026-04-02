@@ -68,7 +68,7 @@ drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpReq
 
 	auto& sha256_key { *key_res };
 
-	auto db { drogon::app().getFastDbClient() };
+	auto db { drogon::app().getDbClient() };
 
 	const auto select_key {
 		co_await db->execSqlCoro( "SELECT key_id FROM auth_keys WHERE key_hash = $1", sha256_key.toVec() )
@@ -96,7 +96,7 @@ drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyAccessKey( drogon::H
 
 	auto& sha256_key { *key_res };
 
-	auto db { drogon::app().getFastDbClient() };
+	auto db { drogon::app().getDbClient() };
 
 	const auto select_key {
 		co_await db->execSqlCoro( "SELECT key_id FROM auth_keys WHERE key_hash = $1", sha256_key.toVec() )
