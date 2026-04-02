@@ -21,6 +21,8 @@ services:
   idhan-server:
     build:
       context: .
+      args:
+        IDHAN_DISABLE_API_AUTH: "ON"
     container_name: idhan-server
     environment:
       IDHAN_DATABASE_HOST: idhan-postgres
