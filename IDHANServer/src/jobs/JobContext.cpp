@@ -12,7 +12,7 @@
 #include "logging/log.hpp"
 #include "trantor/net/EventLoopThreadPool.h"
 
-inline static std::atomic< idhan::JobID > job_id_counter {};
+inline static std::atomic< idhan::JobID > job_id_counter { 1 };
 
 using namespace idhan;
 
@@ -28,8 +28,7 @@ std::shared_ptr< JobContext > JobRuntime::getNextJob()
 	return job;
 }
 
-const auto active_jobs_per_thread { 4 };
-
+// ... existing code ...
 void JobRuntime::runner()
 {
 	while ( !m_hard_stop )
@@ -71,18 +70,14 @@ void JobRuntime::cleanup()
 					const auto status = job->status();
 					if ( !status ) return true; // Should not happen
 
-					if ( status->m_failed )
-					{
-						return status->m_cleanup_requested;
-					}
+					if ( status->m_cleanup_requested ) return true;
 
-					// Successful job
 					const auto now = std::chrono::steady_clock::now();
-					const auto retention_period = std::chrono::minutes( 10 );
+					const auto retention_period = std::chrono::hours( 1 );
 					return ( now - status->m_completion_time ) > retention_period;
 				} );
 		}
-		std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+		std::this_thread::sleep_for( std::chrono::seconds( 10 ) );
 	}
 }
 
@@ -101,6 +96,18 @@ std::shared_ptr< JobContext > JobRuntime::getJob( idhan::JobID id )
 	std::lock_guard lock { m_queue_mtx };
 	if ( m_jobs.contains( id ) ) return m_jobs.at( id );
 	return nullptr;
+}
+
+std::vector< std::shared_ptr< JobContext > > JobRuntime::getAllJobs()
+{
+	std::lock_guard lock { m_queue_mtx };
+	std::vector< std::shared_ptr< JobContext > > result;
+	result.reserve( m_jobs.size() );
+	for ( const auto& job : m_jobs | std::views::values )
+	{
+		result.push_back( job );
+	}
+	return result;
 }
 
 JobRuntime::JobRuntime() : m_pool( nullptr ), m_queue_mtx(), m_cv(), m_queue(), m_runner_thread(), m_cleanup_thread()
@@ -151,12 +158,17 @@ bool JobContext::run()
 {
 	if ( m_coro.m_handle.done() ) return true;
 
+	if ( m_coro.m_status && m_coro.m_status->m_start_time == std::chrono::steady_clock::time_point {} )
+	{
+		m_coro.m_status->m_start_time = std::chrono::steady_clock::now();
+	}
+
 	m_coro.m_handle.resume();
 
 	return m_coro.m_handle.done();
 }
 
-idhan::JobID getJobID()
+idhan::JobID generateNewJobID()
 {
 	return job_id_counter++;
 }
@@ -171,10 +183,11 @@ JobRuntime& getJobRuntime()
 
 std::shared_ptr< JobContext > queueJob( JobTask task, const std::string_view name, const std::source_location loc )
 {
-	const auto job_id { getJobID() };
+	const auto job_id { generateNewJobID() };
 
 	if ( task.m_status )
 	{
+		task.m_status->m_id = job_id;
 		task.m_status->m_function_name = name;
 		task.m_status->m_location = loc;
 	}

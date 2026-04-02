@@ -24,10 +24,7 @@ struct JobTaskPromise
 
 	std::suspend_always final_suspend() noexcept;
 
-	// Implement return_value overloads
-	void return_value( drogon::HttpResponsePtr response );
-
-	void return_value( Json::Value response );
+	void return_void() {}
 
 	void unhandled_exception();
 };

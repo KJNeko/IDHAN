@@ -12,8 +12,11 @@
 #include <thread>
 #include <unordered_map>
 
+#include <coroutine>
+
 #include "IDHANTypes.hpp"
 #include "JobTask.hpp"
+#include "JobTaskStatus.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
@@ -29,7 +32,7 @@ class Value;
 
 class JobRuntime
 {
-	std::unique_ptr< trantor::EventLoopThreadPool > m_pool;
+	std::unique_ptr< trantor::EventLoopThreadPool > m_pool{};
 	std::mutex m_queue_mtx {};
 	std::condition_variable m_cv;
 	using JobPtr = std::shared_ptr< JobContext >;
@@ -54,6 +57,8 @@ class JobRuntime
 
 	std::shared_ptr< JobContext > getJob( idhan::JobID id );
 
+	std::vector< std::shared_ptr< JobContext > > getAllJobs();
+
 	JobRuntime();
 	~JobRuntime();
 };
@@ -67,18 +72,75 @@ class JobContext
 
 	JobContext( JobTask&& coro, idhan::JobID id ) noexcept;
 
-	auto id() const { return m_id; }
+	[[nodiscard]] auto id() const { return m_id; }
 
-	bool done() const;
+	[[nodiscard]] bool done() const;
 
-	std::shared_ptr< JobTaskStatus > status() const { return m_coro.m_status; }
+	[[nodiscard]] std::shared_ptr< JobTaskStatus > status() const { return m_coro.m_status; }
 
 	bool run();
 };
 
-idhan::JobID getJobID();
+idhan::JobID generateNewJobID();
+
+struct JobIDWaitable
+{
+	idhan::JobID m_id { 0 };
+
+	static bool await_ready() noexcept { return false; }
+
+	template < typename Promise >
+	bool await_suspend( std::coroutine_handle< Promise > h ) noexcept
+	{
+		static_assert( requires { h.promise().m_status->m_id; }, "Promise must have m_status->m_id" );
+		m_id = h.promise().m_status->m_id;
+		return false;
+	}
+
+	[[nodiscard]] idhan::JobID await_resume() const noexcept { return m_id; }
+};
+
+inline JobIDWaitable getJobID()
+{
+	return {};
+}
+
+struct SetJobResponseWaitable
+{
+	drogon::HttpResponsePtr m_response;
+
+	explicit SetJobResponseWaitable( drogon::HttpResponsePtr response ) : m_response( std::move( response ) ) {}
+
+	explicit SetJobResponseWaitable( const Json::Value& response ) :
+		m_response( drogon::HttpResponse::newHttpJsonResponse( response ) )
+	{}
+
+	static bool await_ready() noexcept { return false; }
+
+	template < typename Promise >
+	bool await_suspend( std::coroutine_handle< Promise > h ) noexcept
+	{
+		static_assert( requires { h.promise().m_status->m_response; }, "Promise must have m_status->m_response" );
+		h.promise().m_status->m_response = m_response;
+		return false;
+	}
+
+	void await_resume() const noexcept {}
+};
+
+inline SetJobResponseWaitable setJobResponse( drogon::HttpResponsePtr response )
+{
+	return SetJobResponseWaitable { std::move( response ) };
+}
+
+inline SetJobResponseWaitable setJobResponse( const Json::Value& response )
+{
+	return SetJobResponseWaitable { response };
+}
 
 JobRuntime& getJobRuntime();
 
-std::shared_ptr< JobContext >
-  queueJob( JobTask task, std::string_view name = "", std::source_location loc = std::source_location::current() );
+std::shared_ptr< JobContext > queueJob(
+	JobTask task,
+	std::string_view name = "",
+	std::source_location loc = std::source_location::current() );

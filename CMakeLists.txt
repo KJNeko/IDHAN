@@ -28,6 +28,7 @@ option(BUILD_IDHAN_SERVER "Builds the server" ON)
 option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
 
 option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)
+option(IDHAN_DISABLE_API_AUTH "Disable the API access key checks" OFF)
 
 option(BUILD_IDHAN_TOOLS "Builds all tools" OFF)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)

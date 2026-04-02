@@ -8,6 +8,7 @@
 #include <moc_MainWindow.cpp>
 
 #include <QTimer>
+#include <QUrl>
 
 #include <idhan/IDHANClient.hpp>
 
@@ -17,20 +18,36 @@
 #include "gui/hydrus/tag_service/TagServiceWidget.hpp"
 #include "ui_MainWindow.h"
 
-MainWindow::MainWindow( QWidget* parent ) :
-  QMainWindow( parent ),
-  m_client(
-	  std::make_unique< idhan::IDHANClient >(
-		  "Importer",
-#ifndef IMPORTER_TESTS
-		  settings.value( "hostname", "localhost" ).toString(),
-#else
-		  settings.value( "hostname", "dev.idhan" ).toString(),
-#endif
-		  settings.value( "port", static_cast< uint >( idhan::IDHAN_DEFAULT_PORT ) ).toUInt(),
-		  settings.value( "key", "" ).toString() ) ),
-  ui( new Ui::MainWindow )
+MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )
 {
+	QString hostname;
+	qint16 port;
+	bool use_tls = false;
+
+	if ( const auto env_url { qgetenv( "IDHAN_URL" ) }; !env_url.isEmpty() )
+	{
+		QUrl url { env_url };
+		if ( url.scheme().isEmpty() )
+		{
+			// Try prepending a scheme to help QUrl parse host/port
+			url = QUrl( "http://" + env_url );
+		}
+
+		hostname = url.host();
+		port = static_cast< qint16 >( url.port( idhan::IDHAN_DEFAULT_PORT ) );
+		use_tls = url.scheme() == "https";
+	}
+	else
+	{
+		hostname = settings.value( "hostname", "localhost" ).toString();
+		port = static_cast< qint16 >(
+			settings.value( "port", static_cast< uint >( idhan::IDHAN_DEFAULT_PORT ) ).toUInt() );
+		use_tls = settings.value( "use_tls", false ).toBool();
+	}
+
+	m_client = std::make_unique< idhan::IDHANClient >(
+		"Importer", hostname, port, settings.value( "key", "" ).toString(), use_tls );
+
 	ui->setupUi( this );
 
 	connect( ui->actionOptions, &QAction::triggered, this, &MainWindow::openSettings );

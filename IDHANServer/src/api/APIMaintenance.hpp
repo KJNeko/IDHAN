@@ -65,7 +65,7 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	ADD_METHOD_TO( APIMaintenance::purgeThumbnails, "/purge/thumbnails", IDHANAPIAuthName );
 
 	ADD_METHOD_TO( APIMaintenance::testJob, "/test" );
-	ADD_METHOD_TO( APIMaintenance::jobStatus, "/job/{job_id}/status" );
+	ADD_METHOD_TO( APIMaintenance::jobStatus, "/jobs/{job_id}/status" );
 	ADD_METHOD_TO( APIMaintenance::jobsStatus, "/jobs/status" );
 
 	METHOD_LIST_END

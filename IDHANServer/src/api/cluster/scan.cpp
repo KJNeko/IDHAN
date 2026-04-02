@@ -185,9 +185,14 @@ JobTask scanJob( const ClusterID cluster_id, const std::filesystem::path cluster
 {
 	const auto cluster_result { co_await scanCluster( cluster_id, cluster_path, scan_params ) };
 
-	if ( !cluster_result ) co_return cluster_result.error();
+	if ( !cluster_result )
+	{
+		co_await setJobResponse( cluster_result.error() );
+		co_return;
+	}
 
-	co_return drogon::HttpResponse::newHttpJsonResponse( Json::Value( "completed" ) );
+	co_await setJobResponse( Json::Value( "completed" ) );
+	co_return;
 }
 
 ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const ClusterID cluster_id )

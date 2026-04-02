@@ -15,6 +15,7 @@
 #include "drogon/orm/Result.h"
 #include "drogon/utils/coroutine.h"
 #include "hydrus/ClientConstants_gen.hpp"
+#include "threading/IDHANTask.hpp"
 
 namespace idhan
 {
@@ -301,7 +302,7 @@ class SearchBuilder
 	void filterTagDomain( TagDomainID value );
 
 	void addFileDomain( FileDomainID value );
-	drogon::Task< std::expected< void, std::shared_ptr< drogon::HttpResponse > > > setTags(
+	IDHANTask< std::expected< void, std::shared_ptr< drogon::HttpResponse > > > setTags(
 		const std::vector< std::string >& tags );
 
 	void setPositiveTags( const std::vector< TagID >& vector );

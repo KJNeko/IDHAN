@@ -2,36 +2,37 @@
 // Created by kj16609 on 10/29/25.
 //
 #pragma once
+#include <drogon/utils/coroutine.h>
+
 #include <coroutine>
 
 namespace idhan
 {
 
-/*
 template < typename T = void >
-struct ImmedientTask
+struct [[nodiscard]] IDHANTask
 {
 	struct promise_type;
 	using handle_type = std::coroutine_handle< promise_type >;
 
-	ImmedientTask( handle_type h ) : coro_( h ) {}
+	IDHANTask( handle_type h ) : coro_( h ) {}
 
-	ImmedientTask( const ImmedientTask& ) = delete;
+	IDHANTask( const IDHANTask& ) = delete;
 
-	ImmedientTask( ImmedientTask&& other ) noexcept
+	IDHANTask( IDHANTask&& other ) noexcept
 	{
 		coro_ = other.coro_;
 		other.coro_ = nullptr;
 	}
 
-	~ImmedientTask()
+	~IDHANTask()
 	{
 		if ( coro_ ) coro_.destroy();
 	}
 
-	ImmedientTask& operator=( const ImmedientTask& ) = delete;
+	IDHANTask& operator=( const IDHANTask& ) = delete;
 
-	ImmedientTask& operator=( ImmedientTask&& other ) noexcept
+	IDHANTask& operator=( IDHANTask&& other ) noexcept
 	{
 		if ( std::addressof( other ) == this ) return *this;
 		if ( coro_ ) coro_.destroy();
@@ -43,7 +44,7 @@ struct ImmedientTask
 
 	struct promise_type
 	{
-		ImmedientTask< T > get_return_object() { return ImmedientTask< T > { handle_type::from_promise( *this ) }; }
+		IDHANTask< T > get_return_object() { return IDHANTask< T > { handle_type::from_promise( *this ) }; }
 
 		static std::suspend_always initial_suspend() { return {}; }
 
@@ -82,25 +83,25 @@ struct ImmedientTask
 };
 
 template <>
-struct [[nodiscard]] ImmedientTask< void >
+struct [[nodiscard]] IDHANTask< void >
 {
 	struct promise_type;
 	using handle_type = std::coroutine_handle< promise_type >;
 
-	ImmedientTask( const handle_type handle ) : coro_( handle ) {}
+	IDHANTask( const handle_type handle ) : coro_( handle ) {}
 
-	ImmedientTask( const ImmedientTask& ) = delete;
+	IDHANTask( const IDHANTask& ) = delete;
 
-	ImmedientTask( ImmedientTask&& other ) noexcept : coro_( other.coro_ ) { other.coro_ = nullptr; }
+	IDHANTask( IDHANTask&& other ) noexcept : coro_( other.coro_ ) { other.coro_ = nullptr; }
 
-	~ImmedientTask()
+	~IDHANTask()
 	{
 		if ( coro_ ) coro_.destroy();
 	}
 
-	ImmedientTask& operator=( const ImmedientTask& ) = delete;
+	IDHANTask& operator=( const IDHANTask& ) = delete;
 
-	ImmedientTask& operator=( ImmedientTask&& other ) noexcept
+	IDHANTask& operator=( IDHANTask&& other ) noexcept
 	{
 		if ( std::addressof( other ) == this ) return *this;
 		if ( coro_ ) coro_.destroy();
@@ -112,7 +113,7 @@ struct [[nodiscard]] ImmedientTask< void >
 
 	struct promise_type
 	{
-		ImmedientTask<> get_return_object() { return ImmedientTask<> { handle_type::from_promise( *this ) }; }
+		IDHANTask<> get_return_object() { return IDHANTask<> { handle_type::from_promise( *this ) }; }
 
 		static std::suspend_always initial_suspend() { return {}; }
 
@@ -137,9 +138,5 @@ struct [[nodiscard]] ImmedientTask< void >
 
 	handle_type coro_;
 };
-*/
-
-template < typename T = void >
-using ImmedientTask = drogon::Task< T >;
 
 } // namespace idhan
