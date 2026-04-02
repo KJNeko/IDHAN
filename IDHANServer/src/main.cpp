@@ -58,11 +58,12 @@ void configureLoggingLevel(
 	if ( !parser.isSet( log_level ) )
 	{
 		const auto level { idhan::config::get< std::string >( "logging", "level", "info" ) };
-		spdlog::info( "Logging level: {}", level );
 
 #ifdef NDEBUG
+		spdlog::info( "Logging level: {}", level );
 		arguments.log_level = strToSpdlogLevel( level );
 #else
+		spdlog::info( "Logging level: debug" );
 		arguments.log_level = spdlog::level::debug;
 #endif
 
