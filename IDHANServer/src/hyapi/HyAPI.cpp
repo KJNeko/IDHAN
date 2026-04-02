@@ -148,9 +148,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileHashes( [[maybe_unused]] 
 	FGL_UNIMPLEMENTED();
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > convertQueryRecordIDs(
-	drogon::HttpRequestPtr& request,
-	DbClientPtr db )
+ExpectedTask< void > convertQueryRecordIDs( drogon::HttpRequestPtr& request, DbClientPtr db )
 {
 	const auto out { co_await helpers::extractRecordIDsFromParameters( request, db ) };
 	if ( !out ) co_return std::unexpected( out.error() );

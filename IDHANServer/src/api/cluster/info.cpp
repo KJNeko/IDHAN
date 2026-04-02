@@ -17,9 +17,7 @@ ClusterAPI::ResponseTask ClusterAPI::info( drogon::HttpRequestPtr request, const
 	co_return co_await infoT( request, cluster_id, db );
 }
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getInfo(
-	ClusterID cluster_id,
-	const DbClientPtr transaction )
+ExpectedTask< Json::Value > getInfo( ClusterID cluster_id, const DbClientPtr transaction )
 {
 	const auto cluster_info { co_await transaction->execSqlCoro(
 		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, allowed_thumbnails, allowed_files, "

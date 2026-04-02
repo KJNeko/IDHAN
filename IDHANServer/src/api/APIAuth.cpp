@@ -59,6 +59,10 @@ static std::expected< SHA256, drogon::HttpResponsePtr > getAndValidateKey( const
 
 drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpRequestPtr& req )
 {
+#ifdef IDHAN_DISABLE_API_AUTH
+	log::warn( "!!! API Auth Disabled. Approving all requests !!!" );
+	co_return nullptr;
+#else
 	// is there a cookie for us?
 	const auto idhan_key_session { req->getCookie( "idhan_key_session" ) };
 
@@ -86,10 +90,18 @@ drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpReq
 
 	// do nothing. filter passed
 	co_return nullptr;
+#endif
 }
 
 drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyAccessKey( drogon::HttpRequestPtr req )
 {
+#ifdef IDHAN_DISABLE_API_AUTH
+	log::warn( "!!! API Auth Disabled. Approving all requests !!!" );
+	Json::Value out_json {};
+	out_json[ "success" ] = true;
+	out_json[ "message" ] = "Key is valid (Auth Disabled)";
+	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
+#else
 	auto key_res { getAndValidateKey( req ) };
 
 	if ( !key_res ) co_return key_res.error();
@@ -116,6 +128,7 @@ drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyAccessKey( drogon::H
 	out_json[ "success" ] = true;
 	out_json[ "message" ] = "Key is valid";
 	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
+#endif
 }
 
 drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::generateApiKey( [[maybe_unused]] drogon::HttpRequestPtr req )

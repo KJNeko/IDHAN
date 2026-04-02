@@ -32,16 +32,6 @@ std::suspend_always JobTaskPromise::final_suspend() noexcept
 	return {};
 }
 
-void JobTaskPromise::return_value( drogon::HttpResponsePtr response )
-{
-	m_status->m_response = response;
-}
-
-void JobTaskPromise::return_value( Json::Value response )
-{
-	m_status->m_response = drogon::HttpResponse::newHttpJsonResponse( response );
-}
-
 void JobTaskPromise::unhandled_exception()
 {
 	m_status->m_failed = true;

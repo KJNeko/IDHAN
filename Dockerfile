@@ -44,6 +44,7 @@ COPY IDHANServer /build/IDHANServer
 COPY docs /build/docs
 
 # Build IDHANServer with ccache mount
+ARG IDHAN_DISABLE_API_AUTH=OFF
 ENV CCACHE_DIR=/root/.ccache
 RUN --mount=type=cache,target=/root/.ccache \
     --mount=type=cache,target=/build/build \
@@ -56,6 +57,7 @@ RUN --mount=type=cache,target=/root/.ccache \
     -DBUILD_IDHAN_WEBUI=OFF \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
+    -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
     cmake --build build --target IDHANServer -j$(nproc) && \
     cp /build/build/bin /build/bin -r

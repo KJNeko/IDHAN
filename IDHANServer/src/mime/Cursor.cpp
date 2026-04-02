@@ -10,7 +10,7 @@
 namespace idhan::mime
 {
 
-ImmedientTask<> CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
+IDHANTask<> CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
 {
 	log::trace( "Requesting data at offset {} with size {}", offset, required_size );
 	if ( std::holds_alternative< FileIOUring >( m_io ) )
@@ -29,7 +29,7 @@ ImmedientTask<> CursorData::requestData( const std::size_t offset, const std::si
 	throw std::runtime_error( "Unable to read data from file. No implemented reader for variant" );
 }
 
-ImmedientTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
+IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 	const std::size_t pos,
 	const std::size_t required_size ) const
 {

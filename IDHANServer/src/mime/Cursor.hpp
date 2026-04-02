@@ -11,7 +11,7 @@
 
 #include "drogon/utils/coroutine.h"
 #include "filesystem/io/IOUring.hpp"
-#include "threading/ImmedientTask.hpp"
+#include "threading/IDHANTask.hpp"
 
 namespace idhan::mime
 {
@@ -26,10 +26,9 @@ class CursorData
 	mutable std::vector< std::byte > m_buffer {};
 
 	//! Populates the buffer with data from the offset and at least required_size
-	ImmedientTask<> requestData( std::size_t offset, std::size_t required_size ) const;
+	IDHANTask<> requestData( std::size_t offset, std::size_t required_size ) const;
 
-	ImmedientTask< std::pair< const std::byte*, size_t > > checkData( std::size_t pos, std::size_t required_size )
-		const;
+	IDHANTask< std::pair< const std::byte*, size_t > > checkData( std::size_t pos, std::size_t required_size ) const;
 
 	friend class Cursor;
 

@@ -29,9 +29,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchUrls(
 namespace helpers
 {
 
-drogon::Task< std::expected< std::vector< std::string >, drogon::HttpResponsePtr > > fetchUrlsStrings(
-	const RecordID record_id,
-	DbClientPtr db )
+ExpectedTask< std::vector< std::string > > fetchUrlsStrings( const RecordID record_id, DbClientPtr db )
 {
 	const auto url_maps { co_await db->execSqlCoro(
 		"SELECT url_id, url FROM url_mappings JOIN urls USING (url_id)  WHERE record_id = $1", record_id ) };
@@ -48,9 +46,7 @@ drogon::Task< std::expected< std::vector< std::string >, drogon::HttpResponsePtr
 	co_return urls;
 }
 
-drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > fetchUrlsJson(
-	const RecordID record_id,
-	DbClientPtr db )
+ExpectedTask< Json::Value > fetchUrlsJson( const RecordID record_id, DbClientPtr db )
 {
 	const auto urls { co_await fetchUrlsStrings( record_id, db ) };
 
