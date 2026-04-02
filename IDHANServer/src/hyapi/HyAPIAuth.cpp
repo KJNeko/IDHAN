@@ -12,6 +12,9 @@ HyAPIAuth::HyAPIAuth()
 
 drogon::Task< drogon::HttpResponsePtr > HyAPIAuth::doFilter( const drogon::HttpRequestPtr& req )
 {
+#ifdef IDHAN_DISABLE_API_AUTH
+	co_return nullptr;
+#else
 	const auto param_key { req->getOptionalParameter< std::string >( HY_ACCESS_KEY_HEADER_NAME ) };
 	const auto header_key { req->getHeader( HY_ACCESS_KEY_HEADER_NAME ) };
 	const auto key { param_key ? *param_key : header_key };
@@ -30,6 +33,7 @@ drogon::Task< drogon::HttpResponsePtr > HyAPIAuth::doFilter( const drogon::HttpR
 	req->addHeader( "IDHAN-API-Key", key );
 
 	co_return nullptr;
+#endif
 }
 
 } // namespace idhan::hyapi
