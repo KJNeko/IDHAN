@@ -296,7 +296,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		if ( !tag_pairs ) co_return tag_pairs.error();
 
-		auto tag_pair_ids { co_await getIDsFromPairs( tag_pairs.value(), db ) };
+		const auto tag_pair_ids { co_await getIDsFromPairs( tag_pairs.value(), db ) };
 
 		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
@@ -305,19 +305,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 			if ( !record_json.isIntegral() )
 				co_return createBadRequest( "Invalid json item in records list: Expected integral" );
 
-			// const auto result { co_await addTagsToRecord(
-			// 	static_cast< RecordID >( record_json.asInt64() ),
-			// 	std::move( tag_pair_ids.value() ),
-			// 	tag_domain_id.value(),
-			// 	db ) };
-
-			// if ( !result ) co_return result.error();
-
 			add_results.emplace_back( addTagsToRecord(
-				static_cast< RecordID >( record_json.asInt64() ),
-				std::move( tag_pair_ids.value() ),
-				tag_domain_id.value(),
-				db ) );
+				static_cast< RecordID >( record_json.asInt64() ), tag_pair_ids.value(), tag_domain_id.value(), db ) );
 		}
 	}
 	else if ( !tags_json.isNull() )
@@ -360,25 +349,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		for ( Json::ArrayIndex i = 0; i < sets_json.size(); ++i )
 		{
-			// each set will be an array of tags
-			/*
-			const auto tags { co_await getTagPairs( sets_json[ i ] ) };
-
-			if ( !tags ) co_return tags.error();
-
-			const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db ) };
-
-			if ( !tag_ids_e ) co_return tag_ids_e.error();
-			*/
 			const auto& tag_ids_e { sets[ i ] };
 
 			auto tag_ids { tag_ids_e.value() };
-
-			// const auto result { co_await addTagsToRecord(
-			// 	static_cast< RecordID >( records_json[ i ].asInt64() ),
-			// 	std::move( tag_ids ),
-			// 	tag_domain_id.value(),
-			// 	db ) };
 
 			const auto record_json { records_json[ i ] };
 
