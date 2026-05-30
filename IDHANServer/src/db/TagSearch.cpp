@@ -4,11 +4,12 @@
 #include "TagSearch.hpp"
 
 #include <expected>
+#include <utility>
 
-#include "threading/ExpectedTask.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/log.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan
 {
@@ -24,26 +25,6 @@ ExpectedTask< TagID > TagSearch::idealize( const TagID id )
 	if ( result.empty() ) co_return id;
 
 	co_return result[ 0 ][ "alias_id" ].as< TagID >();
-}
-
-TagSearch::TagSearch( const TagDomainID tag_domain_id, DbClientPtr db ) : m_db( db ), m_domain( tag_domain_id )
-{}
-
-ExpectedTask< void > TagSearch::addID( const TagID id )
-{
-	const auto idealized_id { co_await idealize( id ) };
-
-	if ( !idealized_id ) co_return std::unexpected( idealized_id.error() );
-
-	m_ids.emplace_back( *idealized_id );
-
-	const auto children_result { co_await addChildren( *idealized_id ) };
-	if ( !children_result ) co_return std::unexpected( children_result.error() );
-
-	// const auto siblings_result { co_await removeSiblings( *idealized_id ) };
-	// if ( !siblings_result ) co_return std::unexpected( siblings_result.error() );
-
-	co_return {};
 }
 
 ExpectedTask< void > TagSearch::addChildren( TagID tag_id )
@@ -118,7 +99,9 @@ ExpectedTask< std::vector< TagID > > TagSearch::findSiblings( const TagID id )
 	}
 	while ( !queue.empty() );
 
-	std::ranges::unique( found );
+	std::ranges::sort( found );
+	auto ret { std::ranges::unique( found ) };
+	found.erase( ret.begin(), ret.end() );
 
 	co_return found;
 }
@@ -136,19 +119,45 @@ ExpectedTask< void > TagSearch::removeSiblings()
 		to_remove.insert( to_remove.end(), siblings->begin(), siblings->end() );
 	}
 
-	std::ranges::unique( to_remove );
+	auto ret = std::ranges::unique( to_remove );
+	to_remove.erase( ret.begin(), ret.end() );
 
 	for ( auto& id : to_remove )
 	{
-		std::ranges::remove_if( m_ids, [ &id ]( const auto& i ) noexcept -> bool { return i == id; } );
+		const auto remove_ret {
+			std::ranges::remove_if( m_ids, [ &id ]( const auto& i ) noexcept -> bool { return i == id; } )
+		};
+		to_remove.erase( remove_ret.begin(), remove_ret.end() );
 	}
+
+	co_return {};
+}
+
+TagSearch::TagSearch( const TagDomainID tag_domain_id, DbClientPtr db ) :
+  m_db( std::move( db ) ),
+  m_domain( tag_domain_id )
+{}
+
+ExpectedTask< void > TagSearch::addID( const TagID id )
+{
+	const auto idealized_id { co_await idealize( id ) };
+
+	if ( !idealized_id ) co_return std::unexpected( idealized_id.error() );
+
+	m_ids.emplace_back( *idealized_id );
+
+	const auto children_result { co_await addChildren( *idealized_id ) };
+	if ( !children_result ) co_return std::unexpected( children_result.error() );
+
+	// const auto siblings_result { co_await removeSiblings( *idealized_id ) };
+	// if ( !siblings_result ) co_return std::unexpected( siblings_result.error() );
 
 	co_return {};
 }
 
 ExpectedTask< std::vector< RecordID > > TagSearch::search()
 {
-	co_await removeSiblings();
+	(void)co_await removeSiblings();
 
 	std::vector< RecordID > found {};
 
