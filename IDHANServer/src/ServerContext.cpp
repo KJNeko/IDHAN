@@ -129,6 +129,7 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	auto logger { std::make_shared< spdlog::logger >( "default", sinks.begin(), sinks.end() ) };
 
 	logger->set_pattern( std::string( server_format_str ) );
+	logger->set_level( spdlog::level::debug );
 
 	spdlog::set_default_logger( logger );
 	trantor::Logger::enableSpdLog( logger );

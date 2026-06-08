@@ -40,8 +40,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
 	}
 
 	{
-		const auto count_result { co_await db->execSqlCoro(
-			"SELECT storage_count, display_count FROM tag_counts WHERE tag_id = $1", tag_id ) };
+		const auto count_result {
+			co_await db->execSqlCoro( "SELECT storage_count, display_count FROM tag_counts WHERE tag_id = $1", tag_id )
+		};
 
 		if ( !count_result.empty() )
 			root[ "items_count" ] = count_result[ 0 ][ 0 ].as< std::size_t >();
@@ -52,17 +53,18 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
 	// find namespace info
 	{
 		const auto result { co_await db->execSqlCoro(
-			"SELECT namespace_text, color FROM tag_namespaces WHERE namespace_id = $1", namespace_id ) };
+			"SELECT namespace_text FROM tag_namespaces WHERE namespace_id = $1", namespace_id ) };
 
 		if ( result.empty() )
 		{
-			co_return createInternalError(
+			co_return createBadRequest(
 				"No namespace found for tag {}. Expected namespace ID {}", tag_id, namespace_id );
 		}
 
 		root[ "namespace" ][ "id" ] = namespace_id;
 		root[ "namespace" ][ "text" ] = result[ 0 ][ 0 ].as< std::string >();
 
+		/*
 		if ( !result[ 0 ][ 1 ].isNull() )
 		{
 			const auto& color { result[ 0 ][ 1 ].as< std::vector< char > >() };
@@ -77,6 +79,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
 			root[ "color" ][ "g" ] = static_cast< int >( color[ 1 ] );
 			root[ "color" ][ "b" ] = static_cast< int >( color[ 2 ] );
 		}
+		*/
 	}
 
 	{
@@ -86,7 +89,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
 
 		if ( result.empty() )
 		{
-			co_return createInternalError( "No subtag found for tag {}, Expected subtag ID {}", tag_id, subtag_id );
+			co_return createBadRequest( "No subtag found for tag {}, Expected subtag ID {}", tag_id, subtag_id );
 		}
 
 		root[ "subtag" ][ "id" ] = subtag_id;

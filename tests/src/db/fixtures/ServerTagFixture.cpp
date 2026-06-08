@@ -228,3 +228,99 @@ testing::AssertionResult ServerTagFixture::parentInternalExists(
 
 	return testing::AssertionSuccess();
 }
+
+TagID ServerTagFixture::getIdealAliasId( const TagID aliased_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT COALESCE(ideal_alias_id, alias_id) FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2",
+		pqxx::params { aliased_id, default_domain_id } ) };
+
+	if ( result.empty() ) return 0;
+
+	return result[ 0 ][ 0 ].as< TagID >();
+}
+
+std::size_t ServerTagFixture::getTagStorageCount( const TagID tag_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result {
+		tx.exec_params( "SELECT storage_count FROM tag_counts WHERE tag_id = $1", pqxx::params { tag_id } )
+	};
+
+	if ( result.empty() ) return 0;
+
+	return result[ 0 ][ 0 ].as< std::size_t >();
+}
+
+std::size_t ServerTagFixture::getTagDisplayCount( const TagID tag_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result {
+		tx.exec_params( "SELECT display_count FROM tag_counts WHERE tag_id = $1", pqxx::params { tag_id } )
+	};
+
+	if ( result.empty() ) return 0;
+
+	return result[ 0 ][ 0 ].as< std::size_t >();
+}
+
+bool ServerTagFixture::activeMappingExists( const RecordID record_id, const TagID tag_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT EXISTS(SELECT 1 FROM active_tag_mappings WHERE record_id = $1 AND tag_id = $2 AND tag_domain_id = $3)",
+		pqxx::params { record_id, tag_id, default_domain_id } ) };
+
+	return result[ 0 ][ 0 ].as< bool >();
+}
+
+std::size_t ServerTagFixture::countMappingsForRecord( const RecordID record_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT COUNT(*) FROM active_tag_mappings WHERE record_id = $1 AND tag_domain_id = $2",
+		pqxx::params { record_id, default_domain_id } ) };
+
+	return result[ 0 ][ 0 ].as< std::size_t >();
+}
+
+std::vector< TagID > ServerTagFixture::getChildrenForParent( const TagID parent_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT child_id FROM tag_parents WHERE parent_id = $1 AND tag_domain_id = $2",
+		pqxx::params { parent_id, default_domain_id } ) };
+
+	std::vector< TagID > children {};
+	for ( const auto& row : result ) children.push_back( row[ 0 ].as< TagID >() );
+
+	return children;
+}
+
+std::vector< TagID > ServerTagFixture::getParentsForChild( const TagID child_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT parent_id FROM tag_parents WHERE child_id = $1 AND tag_domain_id = $2",
+		pqxx::params { child_id, default_domain_id } ) };
+
+	std::vector< TagID > parents {};
+	for ( const auto& row : result ) parents.push_back( row[ 0 ].as< TagID >() );
+
+	return parents;
+}

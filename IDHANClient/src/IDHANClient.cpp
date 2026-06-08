@@ -265,7 +265,10 @@ void IDHANClient::sendClientJson(
 
 		if ( response->error() != QNetworkReply::NoError )
 		{
-			logging::critical( "When handling the request for a valid response, the response was actually an error!" );
+			logging::critical(
+				"Response for {} was actually an error but we entered the response handler: {}",
+				response->url().path().toStdString(),
+				response->errorString().toStdString() );
 			std::abort();
 			return;
 		}

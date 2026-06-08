@@ -31,5 +31,16 @@ class ServerTagFixture : public ServerDBFixture
 
 	testing::AssertionResult parentInternalExists( RecordID record_id, TagID parent_id, TagID child_id, std::uint32_t count = 1 );
 
+	TagID getIdealAliasId( TagID aliased_id );
+
+	std::size_t getTagStorageCount( TagID tag_id );
+	std::size_t getTagDisplayCount( TagID tag_id );
+
+	bool activeMappingExists( RecordID record_id, TagID tag_id );
+	std::size_t countMappingsForRecord( RecordID record_id );
+
+	std::vector< TagID > getChildrenForParent( TagID parent_id );
+	std::vector< TagID > getParentsForChild( TagID child_id );
+
 	TagDomainID default_domain_id { 0 };
 };

@@ -79,7 +79,7 @@ QFuture< std::vector< std::pair< TagID, std::string > > > IDHANClient::autocompl
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
 		const QJsonDocument response_doc { QJsonDocument::fromJson( data ) };
-		const auto array = response_doc[ "tags" ].toArray();
+		const auto array { response_doc.array() };
 
 		std::vector< std::pair< TagID, std::string > > results {};
 
