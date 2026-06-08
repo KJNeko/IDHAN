@@ -7,5 +7,6 @@ CREATE TABLE tag_aliases
     effective_tag_id INTEGER GENERATED ALWAYS AS (COALESCE(ideal_alias_id, alias_id)) VIRTUAL,
     PRIMARY KEY (aliased_id, alias_id, tag_domain_id),
     UNIQUE (tag_domain_id, aliased_id),
-    CHECK ( aliased_id != alias_id )
+    CHECK ( aliased_id != alias_id ),
+    CHECK ( aliased_id != ideal_alias_id )
 ) PARTITION BY LIST (tag_domain_id);
