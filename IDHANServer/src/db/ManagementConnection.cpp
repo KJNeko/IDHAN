@@ -79,7 +79,6 @@ ManagementConnection::ManagementConnection( const ConnectionArguments& arguments
 	{
 		tx.exec( "DROP SCHEMA IF EXISTS test CASCADE" );
 		tx.exec( "CREATE SCHEMA test" );
-		tx.exec( "SET schema 'test'" );
 		constexpr std::string_view schema { "test" };
 		db::updateMigrations( tx, schema );
 	}
@@ -105,7 +104,7 @@ std::string ConnectionArguments::format() const
 	str += format_ns::format( "dbname={} ", dbname );
 	str += format_ns::format( "user={} ", user );
 	if ( !password.empty() ) str += format_ns::format( "password={} ", password );
-	if ( testmode ) str += "options='-c search_path=test -c client_min_messages=debug1'";
+	if ( testmode ) str += "options='-c search_path=test,public -c client_min_messages=debug1'";
 
 	log::debug( "Connecting using: {}", str );
 

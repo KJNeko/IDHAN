@@ -22,8 +22,8 @@
 		throw std::runtime_error(
 			std::format( "IDHANServer executable does not exist. Searched {}", executable.string() ) );
 
-	const std::array< char*, 4 > args {
-		const_cast< char* >( executable.c_str() ), "--testmode=1", "--use_stdout=0", nullptr
+	const std::array< char*, 5 > args {
+		const_cast< char* >( executable.c_str() ), "--testmode=1", "--use_stdout=1", "--log_level=debug", nullptr
 	};
 
 	if ( const pid_t server_pid = fork(); server_pid == 0 )

@@ -74,5 +74,9 @@ class TagAPI : public drogon::HttpController< TagAPI >
 	METHOD_LIST_END
 };
 
-drogon::Task< Json::Value > getSimilarTags( std::string search_value, DbClientPtr db, std::size_t limit = 10 );
+drogon::Task< Json::Value > getSimilarTags(
+	std::string search_value,
+	DbClientPtr db,
+	std::size_t limit = 10,
+	bool include_unused = true );
 } // namespace idhan::api

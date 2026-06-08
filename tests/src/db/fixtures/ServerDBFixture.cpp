@@ -22,6 +22,9 @@ void ServerDBFixture::SetUp()
 
 	pqxx::nontransaction tx { *conn };
 
+	// Drop extensions first so their objects aren't orphaned when schema is dropped
+	tx.exec( "DROP EXTENSION IF EXISTS pg_trgm" );
+	tx.exec( "DROP EXTENSION IF EXISTS pgcrypto" );
 	tx.exec( "DROP SCHEMA IF EXISTS public CASCADE" );
 	tx.exec( "CREATE SCHEMA public" );
 
