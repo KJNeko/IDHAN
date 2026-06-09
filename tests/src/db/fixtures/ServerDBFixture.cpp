@@ -14,21 +14,20 @@
 void ServerDBFixture::SetUp()
 {
 	conn = std::make_unique< pqxx::connection >(
-		"dbname=idhan-test "
+		"dbname=idhan-db "
 		"user=idhan "
 		"password=idhan "
 		"host=localhost "
-		"port=5432" );
+		"port=5432 "
+		"options='-c search_path=test'" );
 
 	pqxx::nontransaction tx { *conn };
 
 	// Drop extensions first so their objects aren't orphaned when schema is dropped
-	tx.exec( "DROP EXTENSION IF EXISTS pg_trgm" );
-	tx.exec( "DROP EXTENSION IF EXISTS pgcrypto" );
-	tx.exec( "DROP SCHEMA IF EXISTS public CASCADE" );
-	tx.exec( "CREATE SCHEMA public" );
+	tx.exec( "DROP SCHEMA IF EXISTS test CASCADE" );
+	tx.exec( "CREATE SCHEMA test" );
 
-	idhan::db::updateMigrations( tx, "public" );
+	idhan::db::updateMigrations( tx, "test" );
 }
 
 void ServerDBFixture::TearDown()

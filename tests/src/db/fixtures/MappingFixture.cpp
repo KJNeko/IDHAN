@@ -41,7 +41,10 @@ RecordID MappingFixture::createRecord( const std::string_view data )
 
 	if ( result.empty() ) throw std::runtime_error( "Failed to create record" );
 
-	tx.exec_params( "INSERT INTO file_info (size, record_id) VALUES ($1, $2)", 1, result[ 0 ][ 0 ].as< RecordID >() );
+	tx.exec_params(
+		"INSERT INTO file_info (size, record_id, cluster_delete_time, extension) VALUES ($1, $2, NOW(), 'test')",
+		1,
+		result[ 0 ][ 0 ].as< RecordID >() );
 
 	tx.commit();
 

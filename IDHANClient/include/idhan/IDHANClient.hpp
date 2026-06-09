@@ -74,7 +74,7 @@ class IDHANClient
 
   public:
 
-	std::shared_ptr< spdlog::logger > getLogger() const { return m_logger; }
+	[[nodiscard]] std::shared_ptr< spdlog::logger > getLogger() const { return m_logger; }
 
 	void setUrlInfo( QUrl& url );
 
@@ -109,7 +109,7 @@ class IDHANClient
 
 	void openConnection( const QString& hostname, qint16 port, QString key, bool use_tls = false );
 
-	QFuture< std::vector< RecordID > > createRecords( std::vector< std::array< std::byte, 32 > >& hashes );
+	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::array< std::byte, 32 > >& hashes );
 
 	/**
 	 * @brief

@@ -207,6 +207,8 @@ void IDHANClient::sendClientJson(
 
 	auto errorSlot = [ errorHandler, response, url ]( const QNetworkReply::NetworkError error )
 	{
+		response->disconnect();
+
 		if ( error == QNetworkReply::NetworkError::OperationCanceledError )
 		{
 			logging::critical(
@@ -247,6 +249,8 @@ void IDHANClient::sendClientJson(
 
 	auto responseSlot = [ responseHandler, response, submit_time, errorSlot ]()
 	{
+		response->disconnect();
+
 		const auto response_in_time { std::chrono::high_resolution_clock::now() };
 
 		if ( const auto response_time = response_in_time - submit_time; response_time > std::chrono::seconds( 5 ) )
@@ -257,32 +261,22 @@ void IDHANClient::sendClientJson(
 				response->url().path().toStdString() );
 		}
 
-		if ( response->error() == QNetworkReply::ConnectionRefusedError )
-		{
-			errorSlot( response->error() );
-			return;
-		}
-
 		if ( response->error() != QNetworkReply::NoError )
 		{
-			logging::critical(
-				"Response for {} was actually an error but we entered the response handler: {}",
-				response->url().path().toStdString(),
-				response->errorString().toStdString() );
-			std::abort();
+			errorSlot( response->error() );
 			return;
 		}
 
 		QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
 	};
 
-	const auto response_connection { QObject::connect( response, &QNetworkReply::finished, responseSlot ) };
 	const auto error_connection { QObject::connect( response, &QNetworkReply::errorOccurred, errorSlot ) };
+	const auto response_connection { QObject::connect( response, &QNetworkReply::finished, responseSlot ) };
 
 	if ( response->isFinished() )
 	{
-		response->disconnect( response_connection );
-		response->disconnect( error_connection );
+		QNetworkReply::disconnect( response_connection );
+		QNetworkReply::disconnect( error_connection );
 
 		if ( response->error() == QNetworkReply::NoError )
 			responseSlot();
@@ -321,7 +315,7 @@ QFuture< void > IDHANClient::createFileCluster(
 	};
 
 	QJsonDocument doc {};
-	doc.setObject( std::move( object ) );
+	doc.setObject( object );
 
 	sendClientPost( std::move( doc ), "/clusters/add", handleResponse, defaultErrorHandler( promise ) );
 
@@ -339,7 +333,7 @@ IDHANClient::~IDHANClient()
 
 bool IDHANClient::validConnection() const
 {
-	auto future { this->m_instance->queryVersion() };
+	auto future { idhan::IDHANClient::m_instance->queryVersion() };
 	future.waitForFinished();
 
 	return future.resultCount() > 0;

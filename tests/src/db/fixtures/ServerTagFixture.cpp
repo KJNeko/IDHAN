@@ -31,9 +31,11 @@ idhan::TagDomainID ServerTagFixture::createDomain( const std::string_view name )
 			tx.exec_params( "SELECT tag_domain_id FROM tag_domains WHERE domain_name = $1", pqxx::params { name } )
 		};
 		if ( search_result.empty() ) throw std::runtime_error( "Failed to create domain" );
+		tx.commit();
 		return search_result[ 0 ][ 0 ].as< idhan::TagDomainID >();
 	}
 
+	tx.commit();
 	return result[ 0 ][ 0 ].as< idhan::TagDomainID >();
 }
 
@@ -243,6 +245,59 @@ TagID ServerTagFixture::getIdealAliasId( const TagID aliased_id )
 	return result[ 0 ][ 0 ].as< TagID >();
 }
 
+TagID ServerTagFixture::getIdealAliasIdRaw( const TagID aliased_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT ideal_alias_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2",
+		pqxx::params { aliased_id, default_domain_id } ) };
+
+	if ( result.empty() ) return 0;
+	if ( result[ 0 ][ 0 ].is_null() ) return 0;
+
+	return result[ 0 ][ 0 ].as< TagID >();
+}
+
+TagID ServerTagFixture::getAliasEffectiveTagId( const TagID aliased_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT effective_tag_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2",
+		pqxx::params { aliased_id, default_domain_id } ) };
+
+	if ( result.empty() ) return 0;
+
+	return result[ 0 ][ 0 ].as< TagID >();
+}
+
+void ServerTagFixture::removeAlias( const TagID aliased_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	tx.exec_params(
+		"DELETE FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2",
+		pqxx::params { aliased_id, default_domain_id } );
+
+	tx.commit();
+}
+
+void ServerTagFixture::removeParent( const TagID parent_id, const TagID child_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	tx.exec_params(
+		"DELETE FROM tag_parents WHERE parent_id = $1 AND child_id = $2 AND tag_domain_id = $3",
+		pqxx::params { parent_id, child_id, default_domain_id } );
+
+	tx.commit();
+}
+
 std::size_t ServerTagFixture::getTagStorageCount( const TagID tag_id )
 {
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
@@ -271,6 +326,18 @@ std::size_t ServerTagFixture::getTagDisplayCount( const TagID tag_id )
 	return result[ 0 ][ 0 ].as< std::size_t >();
 }
 
+bool ServerTagFixture::tagCountsExist( const TagID tag_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result {
+		tx.exec_params( "SELECT EXISTS(SELECT 1 FROM tag_counts WHERE tag_id = $1)", pqxx::params { tag_id } )
+	};
+
+	return result[ 0 ][ 0 ].as< bool >();
+}
+
 bool ServerTagFixture::activeMappingExists( const RecordID record_id, const TagID tag_id )
 {
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
@@ -283,6 +350,21 @@ bool ServerTagFixture::activeMappingExists( const RecordID record_id, const TagI
 	return result[ 0 ][ 0 ].as< bool >();
 }
 
+TagID ServerTagFixture::getActiveMappingIdeal( const RecordID record_id, const TagID tag_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT ideal_tag_id FROM active_tag_mappings WHERE record_id = $1 AND tag_id = $2 AND tag_domain_id = $3",
+		pqxx::params { record_id, tag_id, default_domain_id } ) };
+
+	if ( result.empty() ) return 0;
+	if ( result[ 0 ][ 0 ].is_null() ) return 0;
+
+	return result[ 0 ][ 0 ].as< TagID >();
+}
+
 std::size_t ServerTagFixture::countMappingsForRecord( const RecordID record_id )
 {
 	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
@@ -290,6 +372,54 @@ std::size_t ServerTagFixture::countMappingsForRecord( const RecordID record_id )
 
 	const auto result { tx.exec_params(
 		"SELECT COUNT(*) FROM active_tag_mappings WHERE record_id = $1 AND tag_domain_id = $2",
+		pqxx::params { record_id, default_domain_id } ) };
+
+	return result[ 0 ][ 0 ].as< std::size_t >();
+}
+
+std::size_t ServerTagFixture::countParentMappings( const RecordID record_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT COUNT(*) FROM active_tag_mappings_parents WHERE record_id = $1 AND tag_domain_id = $2",
+		pqxx::params { record_id, default_domain_id } ) };
+
+	return result[ 0 ][ 0 ].as< std::size_t >();
+}
+
+bool ServerTagFixture::parentMappingExists( const RecordID record_id, const TagID tag_id, const TagID origin_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT EXISTS(SELECT 1 FROM active_tag_mappings_parents WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3 AND tag_domain_id = $4)",
+		pqxx::params { record_id, tag_id, origin_id, default_domain_id } ) };
+
+	return result[ 0 ][ 0 ].as< bool >();
+}
+
+bool ServerTagFixture::finalViewMappingExists( const RecordID record_id, const TagID tag_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT EXISTS(SELECT 1 FROM active_tag_mappings_final WHERE record_id = $1 AND tag_id = $2 AND tag_domain_id = $3)",
+		pqxx::params { record_id, tag_id, default_domain_id } ) };
+
+	return result[ 0 ][ 0 ].as< bool >();
+}
+
+std::size_t ServerTagFixture::countFinalViewMappings( const RecordID record_id )
+{
+	if ( !conn ) throw std::runtime_error( "Connection was nullptr" );
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params(
+		"SELECT COUNT(*) FROM active_tag_mappings_final WHERE record_id = $1 AND tag_domain_id = $2",
 		pqxx::params { record_id, default_domain_id } ) };
 
 	return result[ 0 ][ 0 ].as< std::size_t >();

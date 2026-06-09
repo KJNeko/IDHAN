@@ -265,6 +265,11 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.connectOptions = {}
 	};
 
+	if ( arguments.testmode )
+	{
+		config.connectOptions.insert_or_assign( "search_path", "test" );
+	}
+
 	log::info(
 		"Connecting to database {} at {}:{} with user {}",
 		config.databaseName,

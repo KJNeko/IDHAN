@@ -38,9 +38,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpReq
 		co_return createBadRequest( "No valid json input" );
 	}
 
-	const auto json { *json_obj };
+	const auto& json { *json_obj };
 
-	const auto name { json[ "name" ] };
+	const auto& name { json[ "name" ] };
 
 	auto db { drogon::app().getDbClient() };
 
@@ -54,8 +54,11 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpReq
 		{
 			const auto tag_domain_id { search[ 0 ][ 0 ].as< TagDomainID >() };
 
-			if ( std::optional< Json::Value > out_json { co_await getTagDomainInfoJson( tag_domain_id, db ) } )
+			if ( std::optional< Json::Value > out_json { co_await getTagDomainInfoJson( tag_domain_id, db ) };
+			     out_json.has_value() )
 			{
+				log::debug( "Found existing tag domain with name '{}'", name.asString() );
+
 				auto response { drogon::HttpResponse::newHttpJsonResponse( out_json.value() ) };
 				response->setStatusCode( drogon::k409Conflict );
 

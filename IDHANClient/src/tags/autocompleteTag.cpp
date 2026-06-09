@@ -78,20 +78,30 @@ QFuture< std::vector< std::pair< TagID, std::string > > > IDHANClient::autocompl
 	{
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
-		const QJsonDocument response_doc { QJsonDocument::fromJson( data ) };
-		const auto array { response_doc.array() };
+
+		// Wrap the bare array in an object so QJsonDocument handles it correctly
+		const auto wrapped { "{\"tags\":" + data + "}" };
+		QJsonParseError parseError {};
+		const QJsonDocument response_doc { QJsonDocument::fromJson( wrapped, &parseError ) };
 
 		std::vector< std::pair< TagID, std::string > > results {};
 
-		for ( const auto& row : array )
+		if ( response_doc.isObject() )
 		{
-			const auto& object { row.toObject() };
+			const auto array = response_doc[ "tags" ].toArray();
 
-			const auto tag_id { object[ "tag_id" ].toInteger() };
+			for ( const auto& row : array )
+			{
+				if ( !row.isObject() ) continue;
 
-			const auto tag_text { object[ "tag_text" ].toString().toStdString() };
+				const auto object { row.toObject() };
 
-			results.emplace_back( tag_id, tag_text );
+				const auto tag_id { object[ "tag_id" ].toInteger() };
+
+				const auto tag_text { object[ "tag_text" ].toString().toStdString() };
+
+				results.emplace_back( tag_id, tag_text );
+			}
 		}
 
 		promise->addResult( std::move( results ) );

@@ -7,6 +7,7 @@
 #include <spdlog/spdlog.h>
 #include <sys/prctl.h>
 
+#include <array>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -16,8 +17,25 @@
 [[nodiscard]] ServerHandle startServer()
 {
 	constexpr std::string_view executable_name { "IDHANServer" };
-	const std::filesystem::path current_dir { std::filesystem::current_path() };
-	const auto executable { current_dir / executable_name };
+
+	// Search relative to the test binary's own location
+	std::filesystem::path executable;
+	{
+		std::array< char, 4096 > buf {};
+		const auto len { readlink( "/proc/self/exe", buf.data(), buf.size() - 1 ) };
+		if ( len > 0 )
+		{
+			buf[ len ] = '\0';
+			executable = std::filesystem::path( buf.data() ).parent_path() / executable_name;
+		}
+	}
+
+	if ( executable.empty() || !std::filesystem::exists( executable ) )
+	{
+		// Fallback: search cwd
+		executable = std::filesystem::current_path() / executable_name;
+	}
+
 	if ( !std::filesystem::exists( executable ) )
 		throw std::runtime_error(
 			std::format( "IDHANServer executable does not exist. Searched {}", executable.string() ) );

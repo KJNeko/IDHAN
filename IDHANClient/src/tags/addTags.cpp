@@ -37,6 +37,7 @@ QFuture< void > IDHANClient::addTags(
 			QJsonObject object {};
 			object[ "namespace" ] = QString::fromStdString( namespace_t );
 			object[ "subtag" ] = QString::fromStdString( subtag_t );
+			array.append( object );
 		}
 		return array;
 	};
