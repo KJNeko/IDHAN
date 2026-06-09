@@ -1,0 +1,2 @@
+ALTER TABLE active_tag_mappings
+    ADD COLUMN silenced BOOLEAN NOT NULL DEFAULT FALSE;

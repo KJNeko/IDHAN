@@ -139,7 +139,7 @@ TEST_F( ServerTagFixture, ThreeDeepCycleRejected )
 	ASSERT_EQ( getIdealAliasId( tag_3 ), 0 );
 }
 
-TEST_F( ServerTagFixture, AutoResolveThroughExistingChain )
+TEST_F( ServerTagFixture, InsertionAutoResolvesChain )
 {
 	const auto tag_a { createTag( "alias:auto_a" ) };
 	const auto tag_b { createTag( "alias:auto_b" ) };
