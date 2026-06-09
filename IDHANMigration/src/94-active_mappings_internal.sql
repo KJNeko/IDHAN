@@ -40,9 +40,14 @@ BEGIN
       AND origin_id = old.tag_id
       AND tag_domain_id = old.tag_domain_id;
 
-    DELETE FROM active_tag_mappings_parents WHERE internal AND internal_count = 0;
+    DELETE
+    FROM active_tag_mappings_parents
+    WHERE record_id = old.record_id
+      AND origin_id = old.tag_id
+      AND tag_domain_id = old.tag_domain_id
+      AND internal_count = 0;
 
-    RETURN new;
+    RETURN old;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 

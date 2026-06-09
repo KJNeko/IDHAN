@@ -225,7 +225,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 	const std::string search_value { search.value_or( "" ) };
 
 	// any empty text should return an empty list and 200-OK according to hydrus spec
-	if ( search_value == "" )
+	if ( search_value.empty() )
 	{
 		Json::Value root;
 		root[ "tags" ] = Json::Value( Json::arrayValue );
@@ -246,7 +246,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 	const auto result { co_await api::getSimilarTags( search_value, db ) };
 
 	Json::Value root;
-	root[ "tags" ] = std::move( result );
+	root[ "tags" ] = result;
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }

@@ -92,8 +92,10 @@ QFuture< std::optional< TagDomainID > > IDHANClient::getTagDomain( const std::st
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
 
-		const QJsonDocument doc { QJsonDocument::fromJson( data ) };
-		const auto array = doc.array();
+		// Wrap bare array in an object to work around Qt6 QJsonDocument bare-array parse issue
+		const auto wrapped { "{\"domains\":" + data + "}" };
+		const QJsonDocument doc { QJsonDocument::fromJson( wrapped ) };
+		const auto array = doc[ "domains" ].toArray();
 
 		for ( const auto& row : array )
 		{
