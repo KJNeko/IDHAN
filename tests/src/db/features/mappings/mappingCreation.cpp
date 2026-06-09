@@ -4,7 +4,7 @@
 
 #include "db/fixtures/MappingFixture.hpp"
 
-TEST_F( MappingFixture, StorageMapping )
+TEST_F( MappingFixture, MappingStoredSuccessfully )
 {
 	const auto tag_1 { createTag( "tag:1" ) };
 	const auto tag_2 { createTag( "tag:2" ) };

@@ -4,7 +4,7 @@
 
 #include "db/fixtures/ServerTagFixture.hpp"
 
-TEST_F( ServerTagFixture, TagAliasCreation )
+TEST_F( ServerTagFixture, AliasCreatedAndVerified )
 {
 	const auto tag_1 { createTag( "tag:1" ) };
 	const auto tag_2 { createTag( "tag:2" ) };
@@ -16,7 +16,7 @@ TEST_F( ServerTagFixture, TagAliasCreation )
 	SUCCEED();
 }
 
-TEST_F( ServerTagFixture, RecursiveProtection )
+TEST_F( ServerTagFixture, RecursiveAliasRejected )
 {
 	const auto tag_1 { createTag( "tag:1" ) };
 	const auto tag_2 { createTag( "tag:2" ) };

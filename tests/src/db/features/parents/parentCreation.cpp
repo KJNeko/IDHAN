@@ -2,7 +2,7 @@
 #include "db/fixtures/MappingFixture.hpp"
 #include "db/fixtures/ServerTagFixture.hpp"
 
-TEST_F( MappingFixture, TagParentCreation )
+TEST_F( MappingFixture, ParentCreatedAndVerified )
 {
 	const auto tag_ahri { createTag( "ahri (league of legends)" ) };
 	const auto tag_kogmaw { createTag( "kogmaw (league of legends)" ) };
