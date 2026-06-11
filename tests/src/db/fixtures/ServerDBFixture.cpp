@@ -19,7 +19,7 @@ void ServerDBFixture::SetUp()
 		"password=idhan "
 		"host=localhost "
 		"port=5432 "
-		"options='-c search_path=test'" );
+		"options='-c search_path=test,public'" );
 
 	pqxx::nontransaction tx { *conn };
 

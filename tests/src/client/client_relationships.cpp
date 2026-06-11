@@ -252,3 +252,64 @@ TEST_F( ClientRelationshipTests, CyclicAliasRejected )
 	// rather than throwing, so we just check that both futures complete
 	SUCCEED();
 }
+
+TEST_F( ClientRelationshipTests, CreateSiblingViaClient )
+{
+	auto tag_a_future { client->createTag( "rel:sibling_a" ) };
+	qtWaitFuture( tag_a_future );
+	const auto tag_a { tag_a_future.result() };
+
+	auto tag_b_future { client->createTag( "rel:sibling_b" ) };
+	qtWaitFuture( tag_b_future );
+	const auto tag_b { tag_b_future.result() };
+
+	auto sibling_future { client->createSiblingRelationship( default_domain, tag_a, tag_b ) };
+	qtWaitFuture( sibling_future );
+	SUCCEED();
+}
+
+TEST_F( ClientRelationshipTests, GetSiblingRelationships )
+{
+	auto tag_a_future { client->createTag( "rel:get_sibling_a" ) };
+	qtWaitFuture( tag_a_future );
+	const auto tag_a { tag_a_future.result() };
+
+	auto tag_b_future { client->createTag( "rel:get_sibling_b" ) };
+	qtWaitFuture( tag_b_future );
+	const auto tag_b { tag_b_future.result() };
+
+	auto sibling_future { client->createSiblingRelationship( default_domain, tag_a, tag_b ) };
+	qtWaitFuture( sibling_future );
+
+	auto rel_a_future { client->getTagRelationships( tag_a, default_domain ) };
+	qtWaitFuture( rel_a_future );
+	const auto rel_a { rel_a_future.result() };
+
+	// tag_a is older, so younger_siblings should contain tag_b
+	bool younger_found { false };
+	for ( const auto& s : rel_a.m_younger_siblings )
+	{
+		if ( s == tag_b )
+		{
+			younger_found = true;
+			break;
+		}
+	}
+	ASSERT_TRUE( younger_found );
+
+	auto rel_b_future { client->getTagRelationships( tag_b, default_domain ) };
+	qtWaitFuture( rel_b_future );
+	const auto rel_b { rel_b_future.result() };
+
+	// tag_b is younger, so older_siblings should contain tag_a
+	bool older_found { false };
+	for ( const auto& s : rel_b.m_older_siblings )
+	{
+		if ( s == tag_a )
+		{
+			older_found = true;
+			break;
+		}
+	}
+	ASSERT_TRUE( older_found );
+}
