@@ -37,6 +37,7 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > removeTags( drogon::HttpRequestPtr request, RecordID record_id );
 	drogon::Task< drogon::HttpResponsePtr > listTags( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > listActiveTags( drogon::HttpRequestPtr request, RecordID record_id );
 
 	drogon::Task< drogon::HttpResponsePtr > searchHash( drogon::HttpRequestPtr request );
 
@@ -67,6 +68,7 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 	ADD_METHOD_TO( RecordAPI::addTags, "/records/{record_id}/tags/add", IDHANAPIAuthName );
 	ADD_METHOD_TO( RecordAPI::removeTags, "/records/{record_id}/tags/remove", IDHANAPIAuthName );
 	ADD_METHOD_TO( RecordAPI::listTags, "/records/{record_id}/tags", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::listActiveTags, "/records/{record_id}/tags/active", IDHANAPIAuthName );
 
 	ADD_METHOD_TO( RecordAPI::searchHash, "/records/search", IDHANAPIAuthName );
 

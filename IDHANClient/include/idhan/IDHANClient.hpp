@@ -68,8 +68,6 @@ class IDHANClient
 
 	using UrlVariant = std::variant< QString, QUrl >;
 
-	void addKeyHeader( QNetworkRequest& request );
-
 	QString m_key {};
 
   public:
@@ -79,6 +77,10 @@ class IDHANClient
 	void setUrlInfo( QUrl& url );
 
 	static IDHANClient& instance();
+
+	QUrl getBaseUrl() const { return m_url_template; }
+
+	void addKeyHeader( QNetworkRequest& request );
 
 	Q_DISABLE_COPY_MOVE( IDHANClient );
 
@@ -131,6 +133,7 @@ class IDHANClient
 	QFuture< TagID > createTag( const std::string& tag_text );
 
 	QFuture< std::vector< TagID > > getRecordTags( RecordID record_id, TagDomainID tag_domain_id );
+	QFuture< std::vector< TagID > > getActiveRecordTags( RecordID record_id, TagDomainID tag_domain_id );
 
 	QFuture< std::vector< std::string > > getTagText( std::vector< TagID >& tag_ids );
 
@@ -152,6 +155,8 @@ class IDHANClient
 		std::vector< RecordID >&& record_ids,
 		TagDomainID tag_domain_id,
 		std::vector< std::vector< std::pair< std::string, std::string > > >&& tag_sets );
+
+	QFuture< void > removeTags( RecordID record_id, TagDomainID tag_domain_id, const std::vector< TagID >& tag_ids );
 
 	// File relationships
 	QFuture< void > setAlternativeGroups( std::vector< RecordID >& record_ids );
@@ -188,6 +193,34 @@ class IDHANClient
 	QFuture< void > createAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
 
 	QFuture< void > createAliasRelationship(
+		TagDomainID tag_domain_id,
+		const std::vector< std::pair< TagID, TagID > >& pairs );
+
+	/**
+	 * @brief Creates a new sibling relationship between two tags.
+	 * @param tag_domain_id
+	 * @param older_id
+	 * @param younger_id
+	 * @return
+	 */
+	QFuture< void > createSiblingRelationship( TagDomainID tag_domain_id, TagID older_id, TagID younger_id );
+
+	QFuture< void > createSiblingRelationship(
+		TagDomainID tag_domain_id,
+		const std::vector< std::pair< TagID, TagID > >& pairs );
+
+	QFuture< void > removeParentRelationship( TagDomainID tag_domain_id, TagID parent_id, TagID child_id );
+	QFuture< void > removeParentRelationship(
+		TagDomainID tag_domain_id,
+		const std::vector< std::pair< TagID, TagID > >& pairs );
+
+	QFuture< void > removeSiblingRelationship( TagDomainID tag_domain_id, TagID older_id, TagID younger_id );
+	QFuture< void > removeSiblingRelationship(
+		TagDomainID tag_domain_id,
+		const std::vector< std::pair< TagID, TagID > >& pairs );
+
+	QFuture< void > removeAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
+	QFuture< void > removeAliasRelationship(
 		TagDomainID tag_domain_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
@@ -247,11 +280,17 @@ class IDHANClient
 
 	QFuture< TagInfo > getTagInfo( TagID tag_id );
 
+	struct TagDomainInfo
+	{
+		TagDomainID m_id;
+		std::string m_name;
+	};
+
 	/**
 	 * @brief Returns a list of all tag domain ids
 	 * @return
 	 */
-	QFuture< std::vector< TagDomainID > > getTagDomains();
+	QFuture< std::vector< TagDomainInfo > > getTagDomains();
 
 	QFuture< void > createFileCluster(
 		const std::filesystem::path& server_path,
@@ -309,5 +348,6 @@ auto defaultErrorHandler( TPromise&& promise )
 
 using TagRelationshipInfo = IDHANClient::TagRelationshipInfo;
 using TagInfo = IDHANClient::TagInfo;
+using TagDomainInfo = IDHANClient::TagDomainInfo;
 
 } // namespace idhan

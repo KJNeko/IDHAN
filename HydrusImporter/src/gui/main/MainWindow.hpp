@@ -5,6 +5,7 @@
 #define MAINWINDOW_HPP
 
 #include <QCompleter>
+#include <QDialog>
 #include <QMainWindow>
 #include <QSettings>
 #include <QTimer>
@@ -13,6 +14,8 @@ namespace idhan
 {
 class IDHANClient;
 }
+
+class RecordTagWidget;
 
 QT_BEGIN_NAMESPACE
 
@@ -49,7 +52,13 @@ class MainWindow final : public QMainWindow
 
   private:
 
+	void onDetachRecordTag();
+	void onReattachRecordTag( int result );
+
 	Ui::MainWindow* ui;
+	RecordTagWidget* m_recordTagWidget { nullptr };
+	QDialog* m_recordTagDialog { nullptr };
+	int m_recordTagTabIndex { -1 };
 };
 
 #endif //MAINWINDOW_HPP

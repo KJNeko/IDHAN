@@ -25,6 +25,29 @@ struct TagCache
 	std::unordered_map< TagID, CacheItem > m_tags;
 };
 
+QFuture< std::vector< std::string > > IDHANClient::getTagText( std::vector< TagID >& tag_ids )
+{
+	std::vector< QFuture< std::string > > futures;
+	futures.reserve( tag_ids.size() );
+	for ( const auto& id : tag_ids )
+	{
+		futures.emplace_back( getTagText( id ) );
+	}
+
+	return QtFuture::whenAll( futures.begin(), futures.end() )
+	    .then(
+			[]( [[maybe_unused]] QList< QFuture< std::string > > finished_futures )
+			{
+				std::vector< std::string > results;
+				results.reserve( finished_futures.size() );
+				for ( auto& f : finished_futures )
+				{
+					results.emplace_back( f.result() );
+				}
+				return results;
+			} );
+}
+
 QFuture< std::string > IDHANClient::getTagText( const TagID tag_id )
 {
 	static TagCache s_cache {};
@@ -61,8 +84,9 @@ QFuture< std::string > IDHANClient::getTagText( const TagID tag_id )
 	return getTagInfo( tag_id ).then(
 		[]( const TagInfo& info ) -> std::string
 		{
-			s_cache.m_tags.emplace( info.m_id, TagCache::CacheItem { 1, info.m_subtag.m_text } );
-			return info.toStdString();
+			auto full_text = info.toStdString();
+			s_cache.m_tags.emplace( info.m_id, TagCache::CacheItem { 1, full_text } );
+			return full_text;
 		} );
 }
 

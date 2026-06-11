@@ -1,0 +1,65 @@
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+
+#include "IDHANClient.hpp"
+
+namespace idhan
+{
+
+QFuture< void > IDHANClient::removeAliasRelationship(
+	const TagDomainID tag_domain_id,
+	const TagID aliased_id,
+	const TagID alias_id )
+{
+	std::vector< std::pair< TagID, TagID > > pairs { std::make_pair( aliased_id, alias_id ) };
+	return IDHANClient::removeAliasRelationship( tag_domain_id, std::move( pairs ) );
+}
+
+QFuture< void > IDHANClient::removeAliasRelationship(
+	const TagDomainID tag_domain_id,
+	const std::vector< std::pair< TagID, TagID > >& pairs )
+{
+	if ( pairs.empty() )
+	{
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 6, 0 )
+		return QtFuture::makeReadyVoidFuture();
+#else
+		return QFuture< void > {};
+#endif
+	}
+
+	QJsonArray array {};
+
+	for ( const auto& [ aliased_id, alias_id ] : pairs )
+	{
+		QJsonObject object {};
+		object[ "aliased_id" ] = static_cast< qint64 >( aliased_id );
+		object[ "alias_id" ] = static_cast< qint64 >( alias_id );
+		array.append( object );
+	}
+
+	QJsonDocument doc {};
+	doc.setArray( array );
+
+	QUrl url {};
+	url.setPath( "/tags/alias/remove" );
+	QUrlQuery query {};
+	query.addQueryItem( "tag_domain_id", QString::number( tag_domain_id ) );
+	url.setQuery( query );
+
+	auto promise { std::make_shared< QPromise< void > >() };
+	promise->start();
+
+	auto handleResponse = [ promise ]( QNetworkReply* reply )
+	{
+		promise->finish();
+		reply->deleteLater();
+	};
+
+	sendClientPost( std::move( doc ), url, handleResponse, defaultErrorHandler( promise ) );
+
+	return promise->future();
+}
+
+} // namespace idhan

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>TagManagementWidget</class>
+    <widget class="QWidget" name="TagManagementWidget">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>800</width>
+                <height>600</height>
+            </rect>
+        </property>
+        <property name="windowTitle">
+            <string>Tag Management</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_search">
+                    <item>
+                        <widget class="QLabel" name="label">
+                            <property name="text">
+                                <string>Tag Search:</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QLineEdit" name="tagSearchEdit">
+                            <property name="placeholderText">
+                                <string>Enter tag name...</string>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <widget class="QListWidget" name="autocompleteList">
+                    <property name="maximumSize">
+                        <size>
+                            <width>16777215</width>
+                            <height>100</height>
+                        </size>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_currentTag">
+                    <item>
+                        <widget class="QLabel" name="currentTagLabel">
+                            <property name="text">
+                                <string>Current Tag:</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QLineEdit" name="currentTagEdit">
+                            <property name="readOnly">
+                                <bool>true</bool>
+                            </property>
+                            <property name="placeholderText">
+                                <string>No tag selected</string>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <widget class="QTabWidget" name="domainTabs">
+                    <property name="currentIndex">
+                        <number>-1</number>
+                    </property>
+                </widget>
+            </item>
+        </layout>
+    </widget>
+    <resources/>
+    <connections/>
+</ui>

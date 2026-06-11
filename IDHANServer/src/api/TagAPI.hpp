@@ -39,6 +39,14 @@ class TagAPI : public drogon::HttpController< TagAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > createTagAliases( drogon::HttpRequestPtr request );
 
+	drogon::Task< drogon::HttpResponsePtr > createTagSiblings( drogon::HttpRequestPtr request );
+
+	drogon::Task< drogon::HttpResponsePtr > removeTagParents( drogon::HttpRequestPtr request );
+
+	drogon::Task< drogon::HttpResponsePtr > removeTagSiblings( drogon::HttpRequestPtr request );
+
+	drogon::Task< drogon::HttpResponsePtr > removeTagAliases( drogon::HttpRequestPtr request );
+
 	drogon::Task< drogon::HttpResponsePtr > getTagRelationships(
 		drogon::HttpRequestPtr request,
 		TagDomainID tag_domain_id,
@@ -70,6 +78,11 @@ class TagAPI : public drogon::HttpController< TagAPI >
 
 	ADD_METHOD_TO( TagAPI::createTagParents, "/tags/parents/create", drogon::Post, IDHANAPIAuthName );
 	ADD_METHOD_TO( TagAPI::createTagAliases, "/tags/alias/create", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::createTagSiblings, "/tags/siblings/create", drogon::Post, IDHANAPIAuthName );
+
+	ADD_METHOD_TO( TagAPI::removeTagParents, "/tags/parents/remove", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::removeTagSiblings, "/tags/siblings/remove", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( TagAPI::removeTagAliases, "/tags/alias/remove", drogon::Post, IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

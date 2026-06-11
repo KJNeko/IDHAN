@@ -102,20 +102,40 @@
       </widget>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="tagServicesLayout"/>
-     </item>
-     <item>
-      <spacer name="verticalSpacer">
-       <property name="orientation">
-        <enum>Qt::Orientation::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
+         <widget class="QTabWidget" name="tabWidget">
+             <property name="currentIndex">
+                 <number>0</number>
+             </property>
+             <widget class="QWidget" name="importTab">
+                 <attribute name="title">
+                     <string>Import</string>
+                 </attribute>
+                 <layout class="QVBoxLayout" name="verticalLayout_import">
+                     <item>
+                         <layout class="QVBoxLayout" name="tagServicesLayout"/>
+                     </item>
+                     <item>
+                         <spacer name="verticalSpacer">
+                             <property name="orientation">
+                                 <enum>Qt::Orientation::Vertical</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                                 <size>
+                                     <width>20</width>
+                                     <height>40</height>
+                                 </size>
+                             </property>
+                         </spacer>
+                     </item>
+                 </layout>
+             </widget>
+             <widget class="QWidget" name="tagsTab">
+                 <attribute name="title">
+                     <string>Tags</string>
+                 </attribute>
+                 <layout class="QVBoxLayout" name="verticalLayout_tags"/>
+             </widget>
+         </widget>
      </item>
     </layout>
    </item>

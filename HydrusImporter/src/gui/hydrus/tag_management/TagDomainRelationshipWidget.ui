@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>TagDomainRelationshipWidget</class>
+    <widget class="QWidget" name="TagDomainRelationshipWidget">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>600</width>
+                <height>400</height>
+            </rect>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayout">
+                    <item>
+                        <layout class="QVBoxLayout" name="verticalLayout_left">
+                            <item>
+                                <layout class="QVBoxLayout" name="verticalLayout_parents">
+                                    <item>
+                                        <widget class="QLabel" name="label_parents">
+                                            <property name="text">
+                                                <string>Parents:</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item>
+                                        <widget class="QListWidget" name="parentsList"/>
+                                    </item>
+                                    <item>
+                                        <layout class="QHBoxLayout" name="horizontalLayout_parentButtons">
+                                            <item>
+                                                <widget class="QPushButton" name="addParentButton">
+                                                    <property name="text">
+                                                        <string>+</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                            <item>
+                                                <widget class="QPushButton" name="removeParentButton">
+                                                    <property name="text">
+                                                        <string>-</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                        </layout>
+                                    </item>
+                                </layout>
+                            </item>
+                            <item>
+                                <layout class="QVBoxLayout" name="verticalLayout_children">
+                                    <item>
+                                        <widget class="QLabel" name="label_children">
+                                            <property name="text">
+                                                <string>Children:</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item>
+                                        <widget class="QListWidget" name="childrenList"/>
+                                    </item>
+                                    <item>
+                                        <layout class="QHBoxLayout" name="horizontalLayout_childButtons">
+                                            <item>
+                                                <widget class="QPushButton" name="addChildButton">
+                                                    <property name="text">
+                                                        <string>+</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                            <item>
+                                                <widget class="QPushButton" name="removeChildButton">
+                                                    <property name="text">
+                                                        <string>-</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                        </layout>
+                                    </item>
+                                </layout>
+                            </item>
+                        </layout>
+                    </item>
+                    <item>
+                        <layout class="QVBoxLayout" name="verticalLayout_right">
+                            <item>
+                                <layout class="QVBoxLayout" name="verticalLayout_olderSiblings">
+                                    <item>
+                                        <widget class="QLabel" name="label_olderSiblings">
+                                            <property name="text">
+                                                <string>Older Siblings:</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item>
+                                        <widget class="QListWidget" name="olderSiblingsList"/>
+                                    </item>
+                                    <item>
+                                        <layout class="QHBoxLayout" name="horizontalLayout_olderSiblingButtons">
+                                            <item>
+                                                <widget class="QPushButton" name="addOlderSiblingButton">
+                                                    <property name="text">
+                                                        <string>+</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                            <item>
+                                                <widget class="QPushButton" name="removeOlderSiblingButton">
+                                                    <property name="text">
+                                                        <string>-</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                        </layout>
+                                    </item>
+                                </layout>
+                            </item>
+                            <item>
+                                <layout class="QVBoxLayout" name="verticalLayout_youngerSiblings">
+                                    <item>
+                                        <widget class="QLabel" name="label_youngerSiblings">
+                                            <property name="text">
+                                                <string>Younger Siblings:</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item>
+                                        <widget class="QListWidget" name="youngerSiblingsList"/>
+                                    </item>
+                                    <item>
+                                        <layout class="QHBoxLayout" name="horizontalLayout_youngerSiblingButtons">
+                                            <item>
+                                                <widget class="QPushButton" name="addYoungerSiblingButton">
+                                                    <property name="text">
+                                                        <string>+</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                            <item>
+                                                <widget class="QPushButton" name="removeYoungerSiblingButton">
+                                                    <property name="text">
+                                                        <string>-</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                        </layout>
+                                    </item>
+                                </layout>
+                            </item>
+                        </layout>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <layout class="QVBoxLayout" name="verticalLayout_aliasedBy">
+                    <item>
+                        <widget class="QLabel" name="label_aliasedBy">
+                            <property name="text">
+                                <string>Aliased by:</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QListWidget" name="aliasedByList"/>
+                    </item>
+                    <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout_aliasedByButtons">
+                            <item>
+                                <widget class="QPushButton" name="addAliasedByButton">
+                                    <property name="text">
+                                        <string>+</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QPushButton" name="removeAliasedByButton">
+                                    <property name="text">
+                                        <string>-</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <layout class="QVBoxLayout" name="verticalLayout_aliasTarget">
+                    <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout_aliasTarget">
+                            <item>
+                                <widget class="QLabel" name="label_aliasTarget">
+                                    <property name="text">
+                                        <string>Alias to:</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QLineEdit" name="aliasTargetEdit">
+                                    <property name="readOnly">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="placeholderText">
+                                        <string>NOT SET</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QPushButton" name="setAliasTargetButton">
+                                    <property name="text">
+                                        <string>Set Alias Target</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </item>
+                    <item>
+                        <widget class="QListWidget" name="aliasTargetResults">
+                            <property name="visible">
+                                <bool>false</bool>
+                            </property>
+                            <property name="maximumSize">
+                                <size>
+                                    <width>16777215</width>
+                                    <height>150</height>
+                                </size>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+        </layout>
+    </widget>
+    <resources/>
+    <connections/>
+</ui>

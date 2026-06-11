@@ -1,5 +1,5 @@
 //
-// Created by kj16609 on 6/26/25.
+// Created by kj16609 on 5/2/25.
 //
 // You may need to build the project (run Qt uic code generator) to get "ui_MainWindow.h" resolved
 
@@ -15,7 +15,9 @@
 #include "NET_CONSTANTS.hpp"
 #include "SettingsDialog.hpp"
 #include "gui/hydrus/HydrusImporterWidget.hpp"
+#include "gui/hydrus/tag_management/TagManagementWidget.hpp"
 #include "gui/hydrus/tag_service/TagServiceWidget.hpp"
+#include "gui/recordtag/RecordTagWidget.hpp"
 #include "ui_MainWindow.h"
 
 MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )
@@ -69,6 +71,14 @@ MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::M
 #if IMPORTER_TESTS
 	on_actionImport_Hydrus_triggered();
 #endif
+
+	ui->importTabs->addTab( new TagManagementWidget( this ), "Tag Management" );
+	ui->importTabs->setCurrentIndex( ui->importTabs->count() - 1 );
+
+	// Record Tag Editor tab
+	m_recordTagWidget = new RecordTagWidget( this );
+	m_recordTagTabIndex = ui->importTabs->addTab( m_recordTagWidget, "Record Tag Editor" );
+	connect( m_recordTagWidget, &RecordTagWidget::detachRequested, this, &MainWindow::onDetachRecordTag );
 }
 
 MainWindow::~MainWindow()
@@ -147,4 +157,42 @@ void MainWindow::on_actionImport_File_triggered()
 void MainWindow::on_actionImport_Hydrus_triggered()
 {
 	ui->importTabs->addTab( new HydrusImporterWidget( this ), "Hydrus Importer" );
+}
+
+void MainWindow::onDetachRecordTag()
+{
+	if ( m_recordTagDialog != nullptr ) return;
+
+	// Remove widget from tab
+	ui->importTabs->removeTab( m_recordTagTabIndex );
+
+	// Create dialog and add widget
+	m_recordTagDialog = new QDialog( nullptr, Qt::Window );
+	m_recordTagDialog->setWindowTitle( "Record Tag Editor" );
+	m_recordTagDialog->resize( 800, 600 );
+
+	m_recordTagWidget->setParent( m_recordTagDialog );
+	auto* layout = new QVBoxLayout( m_recordTagDialog );
+	layout->setContentsMargins( 0, 0, 0, 0 );
+	layout->addWidget( m_recordTagWidget );
+	m_recordTagDialog->setLayout( layout );
+
+	connect( m_recordTagDialog, &QDialog::finished, this, &MainWindow::onReattachRecordTag );
+
+	m_recordTagDialog->show();
+}
+
+void MainWindow::onReattachRecordTag( [[maybe_unused]] int result )
+{
+	if ( m_recordTagDialog == nullptr ) return;
+
+	// Remove widget from dialog
+	m_recordTagWidget->setParent( this );
+	m_recordTagDialog->hide();
+	m_recordTagDialog->deleteLater();
+	m_recordTagDialog = nullptr;
+
+	// Add widget back to tab
+	m_recordTagTabIndex = ui->importTabs->addTab( m_recordTagWidget, "Record Tag Editor" );
+	ui->importTabs->setCurrentIndex( m_recordTagTabIndex );
 }
