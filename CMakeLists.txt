@@ -30,7 +30,7 @@ option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
 option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)
 option(IDHAN_DISABLE_API_AUTH "Disable the API access key checks" OFF)
 
-option(BUILD_IDHAN_TOOLS "Builds all tools" OFF)
+option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
 if (BUILD_HYDRUS_IMPORTER)
@@ -64,6 +64,15 @@ endif ()
 if (BUILD_IDHAN_WEBUI)
 	include(ExternalProject)
 
+	find_program(EMPP_EXECUTABLE em++
+			HINTS
+			"/usr/lib/emscripten")
+
+	if (NOT EMPP_EXECUTABLE)
+		message(FATAL_ERROR "em++ not found. Emscripten SDK must be installed to build the WebUI. "
+				"Set -DBUILD_IDHAN_WEBUI=OFF to skip the WebUI.")
+	endif ()
+
 	if (NOT DEFINED QT_WASM)
 		if (DEFINED ENV{QT_WASM})
 			set(QT_WASM $ENV{QT_WASM})
@@ -75,12 +84,7 @@ if (BUILD_IDHAN_WEBUI)
 	find_program(QTCMAKE_EXECUTABLE qt-cmake
 			HINTS
 			"${QT_WASM}/bin"
-			"/opt/qt6-wasm/bin"
-			"/opt/qt/wasm_64/bin"
-			"/usr/lib/qt6/bin"
-			"/usr/lib/qt/bin"
-			"/usr/lib/qt6/wasm-64/bin"
-			"/usr/lib/qt6/wasm-emscripten/bin")
+			NO_DEFAULT_PATH)
 
 	if (NOT QTCMAKE_EXECUTABLE)
 		message(FATAL_ERROR "qt-cmake not found for wasm. Please define QT_WASM during cmake config or set QT_WASM env variable.")
@@ -101,9 +105,12 @@ if (BUILD_IDHAN_WEBUI)
 			CONFIGURE_COMMAND ${QTCMAKE_EXECUTABLE}
 			-S ${WEBUI_SOURCE_DIR}
 			-B ${WEBUI_BUILD_DIR}
+			-G${CMAKE_GENERATOR}
 			-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+			-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
 			-DWASM_OUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/bin/static
 			-DCMAKE_CXX_STANDARD=23
+			-DQT_HOST_PATH=/usr
 			BUILD_COMMAND ${CMAKE_COMMAND} --build ${WEBUI_BUILD_DIR}
 			INSTALL_COMMAND "" # Needed or this errors
 			BUILD_ALWAYS YES

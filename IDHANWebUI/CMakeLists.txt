@@ -42,11 +42,4 @@ if (EMSCRIPTEN)
 	)
 endif ()
 
-# Add copy command to ensure it exists as IDHANWebUI.html
-add_custom_command(TARGET IDHANWebUI POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OUT_DIR}/IDHANWebUI.html ${OUT_DIR}/index.html 2>/dev/null || ${CMAKE_COMMAND} -E true
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OUT_DIR}/index.html ${OUT_DIR}/IDHANWebUI.html 2>/dev/null || ${CMAKE_COMMAND} -E true
-		COMMENT "Ensuring IDHANWebUI.html exists"
-)
-
 target_link_libraries(IDHANWebUI PRIVATE Qt6::Widgets Qt6::Network)
