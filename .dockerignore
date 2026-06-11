@@ -24,7 +24,6 @@ tools/
 
 # Non-server components
 IDHANClient/
-IDHANWebUI/
 HydrusImporter/
 
 # Misc

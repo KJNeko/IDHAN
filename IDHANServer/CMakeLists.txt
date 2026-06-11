@@ -26,10 +26,6 @@ if (IDHAN_DISABLE_API_AUTH)
 	target_compile_definitions(IDHANServer PRIVATE IDHAN_DISABLE_API_AUTH)
 endif ()
 
-if (BUILD_IDHAN_WEBUI)
-	target_compile_definitions(IDHANServer PRIVATE IDHAN_STATIC_PATH="${CMAKE_BINARY_DIR}/bin/static")
-endif ()
-
 # Copy page info to the output directory
 
 file(GLOB_RECURSE PAGE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/static/*")
@@ -94,6 +90,3 @@ add_dependencies(IDHANServer IDHANConfig)
 
 add_dependencies(IDHANServer IDHANPremadeModules)
 
-if (DEFINED IDHAN_WEBUI AND IDHAN_WEBUI EQUAL ON)
-	add_dependencies(IDHANServer IDHANWebUI)
-endif ()

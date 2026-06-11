@@ -23,7 +23,23 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libavcodec-extra \
     libavfilter-dev \
     libavutil-dev \
-    libjsoncpp-dev
+    libjsoncpp-dev \
+    python3 \
+    python3-pip
+
+RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk
+
+RUN cd /opt/emsdk && \
+    ./emsdk install latest && \
+    ./emsdk activate latest
+
+ENV EMSDK=/opt/emsdk
+ENV PATH="/opt/emsdk:/opt/emsdk/upstream/emscripten:${PATH}"
+
+RUN pip3 install aqtinstall --break-system-packages
+
+RUN aqt install-qt linux desktop 6.9.1 linux_gcc_64
+RUN aqt install-qt all_os wasm 6.9.1 wasm_multithread -m qtcharts --autodesktop
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -41,6 +57,7 @@ COPY IDHAN /build/IDHAN
 COPY IDHANModules /build/IDHANModules
 COPY IDHANMigration /build/IDHANMigration
 COPY IDHANServer /build/IDHANServer
+COPY IDHANWebUI /build/IDHANWebUI
 COPY docs /build/docs
 
 # Build IDHANServer with ccache mount
@@ -54,7 +71,7 @@ RUN --mount=type=cache,target=/root/.ccache \
     -DBUILD_IDHAN_TESTS=OFF \
     -DBUILD_HYDRUS_IMPORTER=OFF \
     -DBUILD_IDHAN_DOCS=ON \
-    -DBUILD_IDHAN_WEBUI=OFF \
+    -DBUILD_IDHAN_WEBUI=ON \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \

@@ -16,5 +16,5 @@ int main( int argc, char** argv )
 
 	webui->show();
 
-	return EXIT_SUCCESS;
+	return app->exec();
 }
