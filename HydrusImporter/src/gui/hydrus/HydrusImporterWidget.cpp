@@ -12,6 +12,7 @@
 
 #include "HydrusImporter.hpp"
 #include "file_relationships/FileRelationshipsWidget.hpp"
+#include "tag_management/TagManagementWidget.hpp"
 #include "tag_service/TagServiceWidget.hpp"
 #include "ui_HydrusImporterWidget.h"
 #include "urls/UrlServiceWidget.hpp"
@@ -24,6 +25,8 @@ HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) :
   ui( new Ui::HydrusImporterWidget )
 {
 	ui->setupUi( this );
+
+	ui->verticalLayout_tags->addWidget( new TagManagementWidget( this ) );
 
 	ui->cbProcessPTR->setChecked( true );
 

@@ -28,9 +28,7 @@ class MainWindow final : public QMainWindow
 
   public:
 
-	idhan::IDHANClientConfig m_client_config { "localhost", idhan::IDHAN_DEFAULT_PORT, "Tag Editor", false };
-
-	idhan::IDHANClient m_client { m_client_config };
+	idhan::IDHANClient m_client { "Tag Editor", "localhost", idhan::IDHAN_DEFAULT_PORT, "", false };
 
 	QCompleter m_completer { this };
 	std::unordered_map< std::string, idhan::TagID > tag_map {};
