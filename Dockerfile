@@ -29,42 +29,34 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk
 
+# Set C++23 capable compiler as default
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+
 RUN cd /opt/emsdk && \
-    ./emsdk install latest && \
-    ./emsdk activate latest
+    ./emsdk install 4.0.7 && \
+    ./emsdk activate 4.0.7
 
 ENV EMSDK=/opt/emsdk
 ENV PATH="/opt/emsdk:/opt/emsdk/upstream/emscripten:${PATH}"
 
 RUN pip3 install aqtinstall --break-system-packages
 
-RUN aqt install-qt linux desktop 6.9.1 linux_gcc_64
-RUN aqt install-qt all_os wasm 6.9.1 wasm_multithread -m qtcharts --autodesktop
+RUN aqt install-qt linux desktop 6.11.1 linux_gcc_64 --outputdir /opt/qt6
+RUN aqt install-qt all_os wasm 6.11.1 wasm_singlethread -m qtcharts --autodesktop --outputdir /opt/qt6
 
-# Set C++23 capable compiler as default
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+ENV QT_WASM=/opt/qt6/6.11.1/wasm_singlethread
+ENV QT_HOST_PATH=/opt/qt6/6.11.1/gcc_64
+ENV EM_CACHE=/root/.cache/emscripten
 
 WORKDIR /build
 
-# Copy dependencies first to maximize cache hits
-COPY 3rd-party/hydrus /build/3rd-party/hydrus
-COPY dependencies /build/dependencies
-
-# Copy the rest of the source code
-COPY CMakeLists.txt /build/CMakeLists.txt
-COPY IDHAN /build/IDHAN
-COPY IDHANModules /build/IDHANModules
-COPY IDHANMigration /build/IDHANMigration
-COPY IDHANServer /build/IDHANServer
-COPY IDHANWebUI /build/IDHANWebUI
-COPY docs /build/docs
+COPY . /build
 
 # Build IDHANServer with ccache mount
 ARG IDHAN_DISABLE_API_AUTH=OFF
 ENV CCACHE_DIR=/root/.ccache
 RUN --mount=type=cache,target=/root/.ccache \
-    --mount=type=cache,target=/build/build \
     cmake -S . -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_STANDARD=23 \
@@ -75,7 +67,8 @@ RUN --mount=type=cache,target=/root/.ccache \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    -DIDHAN_WASM_TOOLCHAIN_FILE=/opt/qt6/6.11.1/wasm_singlethread/lib/cmake/Qt6/qt.toolchain.cmake && \
     cmake --build build --target IDHANServer -j$(nproc) && \
     cp /build/build/bin /build/bin -r
 

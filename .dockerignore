@@ -2,6 +2,15 @@
 build/
 **/cmake-build-*/
 
+# LLM Garbage
+.junie
+.opencode
+
+3rd-party/web.sh
+3rd-party/hyui.sh
+3rd-party/hydrus-web
+3rd-party/hydrui
+
 # IDE and editor files
 .idea/
 .vscode/
