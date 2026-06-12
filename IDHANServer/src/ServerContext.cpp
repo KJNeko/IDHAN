@@ -33,6 +33,10 @@ void addCORSHeaders( const drogon::HttpResponsePtr& response )
 	response->addHeader( "Access-Control-Allow-Origin", "*" );
 	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
 	response->addHeader( "Access-Control-Max-Age", "86400" );
+
+	// Required by Qt WASM (wasm_multithread) for SharedArrayBuffer support
+	response->addHeader( "Cross-Origin-Opener-Policy", "same-origin" );
+	response->addHeader( "Cross-Origin-Embedder-Policy", "require-corp" );
 }
 
 void ServerContext::setupCORSSupport() const
