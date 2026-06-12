@@ -77,6 +77,8 @@ COPY docs /build/docs
 ARG IDHAN_DISABLE_API_AUTH=OFF
 ENV CCACHE_DIR=/root/.ccache
 RUN --mount=type=cache,target=/root/.ccache \
+    --mount=type=cache,target=/build/build \
+    --mount=type=cache,target=/root/.cache/emscripten \
     cmake -S . -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_STANDARD=23 \

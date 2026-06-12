@@ -28,9 +28,6 @@ push-nas.sh
 .env
 .env.remote
 
-# Git
-.git/
-
 # Large 3rd-party repos (not used in Docker build)
 3rd-party/web.sh
 3rd-party/hyui.sh
