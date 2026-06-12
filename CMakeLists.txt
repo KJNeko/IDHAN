@@ -33,7 +33,7 @@ option(IDHAN_DISABLE_API_AUTH "Disable the API access key checks" OFF)
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
-if (BUILD_HYDRUS_IMPORTER)
+if (BUILD_HYDRUS_IMPORTER EQUAL 1)
 	set(BUILD_IDHAN_CLIENT ON)
 endif ()
 
@@ -54,9 +54,13 @@ endif ()
 if (BUILD_IDHAN_CLIENT)
 	add_subdirectory(IDHANClient)
 endif ()
-if (BUILD_IDHAN_TOOLS)
-	add_subdirectory(tools/TagEditor)
+
+if (BUILD_HYDRUS_IMPORTER OR BUILD_IDHAN_TOOLS)
+	#HydrusImporter
+	include(sqlite3)
+	add_subdirectory(tools/HydrusImporter)
 endif ()
+
 if (BUILD_IDHAN_DOCS)
 	add_subdirectory(docs)
 endif ()
@@ -144,10 +148,5 @@ if (BUILD_IDHAN_TESTS)
 	add_subdirectory(tests)
 endif ()
 
-if (BUILD_HYDRUS_IMPORTER)
-	#HydrusImporter
-	include(sqlite3)
-	add_subdirectory(HydrusImporter)
-endif ()
 
 PostSetup()

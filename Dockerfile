@@ -51,7 +51,27 @@ ENV EM_CACHE=/root/.cache/emscripten
 
 WORKDIR /build
 
-COPY . /build
+# Copy dependencies first (rarely changes)
+COPY 3rd-party/hydrus /build/3rd-party/hydrus
+COPY dependencies /build/dependencies
+
+# Copy CMakeLists.txt
+COPY CMakeLists.txt /build/CMakeLists.txt
+
+# Copy core libraries
+COPY IDHAN /build/IDHAN
+COPY IDHANClient /build/IDHANClient
+COPY IDHANModules /build/IDHANModules
+COPY IDHANMigration /build/IDHANMigration
+
+# Copy server (most frequently changed source)
+COPY IDHANServer /build/IDHANServer
+
+# Copy WebUI
+COPY IDHANWebUI /build/IDHANWebUI
+
+# Copy docs and remaining
+COPY docs /build/docs
 
 # Build IDHANServer with ccache mount
 ARG IDHAN_DISABLE_API_AUTH=OFF
