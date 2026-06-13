@@ -9,6 +9,8 @@ file(GLOB_RECURSE UI_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/**.
 
 target_sources(HydrusImporter PRIVATE ${UI_FILES})
 
+target_compile_options(HydrusImporter PRIVATE "-Wno-mismatched-tags")
+
 if (DEFINED IMPORTER_TESTS AND IMPORTER_TESTS EQUAL 1)
 	target_compile_definitions(HydrusImporter PUBLIC IMPORTER_TESTS=1)
 endif ()

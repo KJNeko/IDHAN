@@ -533,4 +533,6 @@ void TagServiceWorker::run()
 		idhan::logging::error( "Unknown exception" );
 		std::terminate();
 	}
+
+	return;
 }

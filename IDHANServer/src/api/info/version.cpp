@@ -20,8 +20,16 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::version( [[maybe_unused]] drogo
 
 	Json::Value json;
 
-	json[ "idhan_server_version" ][ "string" ] =
-		format_ns::format( "{}.{}.{}", IDHAN_MAJOR_VERSION, IDHAN_MINOR_VERSION, IDHAN_PATCH_VERSION );
+	{
+		auto version_str =
+			format_ns::format( "{}.{}.{}", IDHAN_MAJOR_VERSION, IDHAN_MINOR_VERSION, IDHAN_PATCH_VERSION );
+
+#if defined( FGL_GIT_UNSYNCED ) && FGL_GIT_UNSYNCED == 1
+		version_str += "-tainted";
+#endif
+
+		json[ "idhan_server_version" ][ "string" ] = version_str;
+	}
 	json[ "idhan_server_version" ][ "major" ] = IDHAN_MAJOR_VERSION;
 	json[ "idhan_server_version" ][ "minor" ] = IDHAN_MINOR_VERSION;
 	json[ "idhan_server_version" ][ "patch" ] = IDHAN_PATCH_VERSION;
@@ -39,6 +47,7 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::version( [[maybe_unused]] drogo
 	json[ "commit" ] = FGL_GIT_COMMIT;
 	json[ "tag" ] = FGL_GIT_TAG;
 	json[ "build" ] = FGL_BUILD_TYPE;
+	json[ "unsynced" ] = FGL_GIT_UNSYNCED;
 	json[ "build_on" ] = IDHAN_BUILD_DATE ", " IDHAN_BUILD_TIME;
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );

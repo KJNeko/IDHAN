@@ -123,6 +123,8 @@ class IDHANClient
 
 	QFuture< std::optional< RecordID > > getRecordID( const std::string& sha256 );
 
+	QFuture< RecordID > getRandomActiveRecord();
+
 	QFuture< VersionInfo > queryVersion();
 
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::string >& tags );
@@ -248,6 +250,17 @@ class IDHANClient
 
 	QFuture< TagRelationshipInfo > getTagRelationships( TagID tag_id, TagDomainID tag_domain_id );
 
+	struct ActiveTagVerboseInfo
+	{
+		TagID tag_id;
+		TagDomainID tag_domain_id;
+		bool is_explicit;
+		std::vector< TagID > aliased_from;
+		std::vector< TagID > inherited_from;
+	};
+
+	QFuture< std::vector< ActiveTagVerboseInfo > > getActiveRecordTagsVerbose( RecordID record_id );
+
 	struct TagInfo
 	{
 		TagID m_id;
@@ -349,5 +362,6 @@ auto defaultErrorHandler( TPromise&& promise )
 using TagRelationshipInfo = IDHANClient::TagRelationshipInfo;
 using TagInfo = IDHANClient::TagInfo;
 using TagDomainInfo = IDHANClient::TagDomainInfo;
+using ActiveTagVerboseInfo = IDHANClient::ActiveTagVerboseInfo;
 
 } // namespace idhan

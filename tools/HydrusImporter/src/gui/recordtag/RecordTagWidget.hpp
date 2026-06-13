@@ -7,9 +7,29 @@
 #include <QListWidget>
 #include <QNetworkAccessManager>
 #include <QPushButton>
+#include <QStyledItemDelegate>
 #include <QWidget>
 
 #include <idhan/IDHANClient.hpp>
+
+class ActiveTagDelegate final : public QStyledItemDelegate
+{
+  public:
+
+	using QStyledItemDelegate::QStyledItemDelegate;
+
+	enum class TagRelationshipType
+	{
+		None,
+		Aliased,
+		Inherited,
+		Both
+	};
+
+	static constexpr int RelationshipTypeRole = Qt::UserRole + 1;
+
+	void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
+};
 
 class RecordTagWidget final : public QWidget
 {
@@ -25,6 +45,7 @@ class RecordTagWidget final : public QWidget
 
   private slots:
 	void onLoadRecord();
+	void onRandomRecord();
 	void onAddTag();
 	void onRemoveTag();
 	void onDetach();
@@ -44,6 +65,7 @@ class RecordTagWidget final : public QWidget
 
 	QLineEdit* m_recordIdInput;
 	QPushButton* m_loadButton;
+	QPushButton* m_randomButton;
 	QComboBox* m_domainCombo;
 	QPushButton* m_detachButton;
 	QLabel* m_previewLabel;
@@ -62,11 +84,17 @@ class RecordTagWidget final : public QWidget
 
 	QNetworkAccessManager* m_networkManager;
 
+	ActiveTagDelegate* m_activeTagDelegate;
+
+	QFutureWatcher< idhan::RecordID >* m_randomWatcher { nullptr };
 	QFutureWatcher< std::vector< idhan::TagDomainInfo > >* m_domainWatcher { nullptr };
 	QFutureWatcher< std::vector< idhan::TagID > >* m_rawTagsWatcher { nullptr };
 	QFutureWatcher< std::vector< idhan::TagID > >* m_activeTagsWatcher { nullptr };
 	QFutureWatcher< std::vector< std::string > >* m_tagTextWatcher { nullptr };
 	QFutureWatcher< std::vector< std::pair< idhan::TagID, std::string > > >* m_autocompleteWatcher { nullptr };
+	QFutureWatcher< std::vector< idhan::ActiveTagVerboseInfo > >* m_verboseWatcher { nullptr };
+
+	std::unordered_map< idhan::TagID, idhan::ActiveTagVerboseInfo > m_verboseMap;
 
 	idhan::TagID m_selectedAutocompleteTagId { 0 };
 	std::vector< std::pair< idhan::TagID, std::string > > m_lastAutocompleteResults;

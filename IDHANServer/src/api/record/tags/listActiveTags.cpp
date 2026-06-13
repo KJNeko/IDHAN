@@ -14,7 +14,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::listActiveTags(
 	const auto db { drogon::app().getDbClient() };
 
 	const auto result { co_await db->execSqlCoro(
-		"SELECT tag_id, tag_domain_id FROM active_tag_mappings_final WHERE record_id = $1", record_id ) };
+		"SELECT DISTINCT tag_id, tag_domain_id FROM active_tag_mappings_final WHERE record_id = $1", record_id ) };
 
 	Json::Value json {};
 
