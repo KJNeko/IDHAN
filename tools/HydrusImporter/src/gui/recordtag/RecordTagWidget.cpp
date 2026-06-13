@@ -1,8 +1,46 @@
 #include "RecordTagWidget.hpp"
+#include "RecordTagColors.hpp"
 
 #include <QHBoxLayout>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPainter>
+
+
+void ActiveTagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
+{
+	// Draw base item first (background, selection highlight, text)
+	QStyledItemDelegate::paint( painter, option, index );
+
+	const auto type = static_cast< TagRelationshipType >( index.data( RelationshipTypeRole ).toInt() );
+
+	if ( type != TagRelationshipType::None )
+	{
+		painter->save();
+		painter->setOpacity( 0.35 );
+
+		if ( type == TagRelationshipType::Both )
+		{
+			const auto mid = option.rect.top() + option.rect.height() / 2;
+			const QRect top_half( option.rect.left(), option.rect.top(), option.rect.width(), mid - option.rect.top() );
+			const QRect bottom_half(
+				option.rect.left(), mid, option.rect.width(), option.rect.bottom() - mid );
+
+			painter->fillRect( top_half, idhan::tag_colors::ALIASED );
+			painter->fillRect( bottom_half, idhan::tag_colors::INHERITED );
+		}
+		else if ( type == TagRelationshipType::Aliased )
+		{
+			painter->fillRect( option.rect, idhan::tag_colors::ALIASED );
+		}
+		else if ( type == TagRelationshipType::Inherited )
+		{
+			painter->fillRect( option.rect, idhan::tag_colors::INHERITED );
+		}
+
+		painter->restore();
+	}
+}
 
 RecordTagWidget::RecordTagWidget( QWidget* parent ) :
   QWidget( parent ),
@@ -16,12 +54,14 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 	m_recordIdInput = new QLineEdit( this );
 	m_recordIdInput->setPlaceholderText( "Enter record ID" );
 	m_loadButton = new QPushButton( "Load", this );
+	m_randomButton = new QPushButton( "Random", this );
 	m_domainCombo = new QComboBox( this );
 	m_detachButton = new QPushButton( "Detach", this );
 
 	top_layout->addWidget( record_id_label );
 	top_layout->addWidget( m_recordIdInput );
 	top_layout->addWidget( m_loadButton );
+	top_layout->addWidget( m_randomButton );
 	top_layout->addWidget( m_domainCombo );
 	top_layout->addWidget( m_detachButton );
 	main_layout->addLayout( top_layout );
@@ -48,6 +88,8 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 	auto* active_layout = new QVBoxLayout( active_group );
 	auto* active_label = new QLabel( "Active Tags (active_tag_mappings_final)", active_group );
 	m_activeTagsList = new QListWidget( active_group );
+	m_activeTagDelegate = new ActiveTagDelegate( this );
+	m_activeTagsList->setItemDelegate( m_activeTagDelegate );
 	active_layout->addWidget( active_label );
 	active_layout->addWidget( m_activeTagsList );
 	middle_layout->addWidget( active_group );
@@ -68,13 +110,15 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 
 	// Autocomplete popup
 	m_autocompletePopup = new QListWidget( this );
-	m_autocompletePopup->setWindowFlags( Qt::Popup | Qt::FramelessWindowHint );
+	m_autocompletePopup->setWindowFlags( Qt::Popup | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus );
+	m_autocompletePopup->setAttribute( Qt::WA_ShowWithoutActivating );
 	m_autocompletePopup->setFocusPolicy( Qt::NoFocus );
 	m_autocompletePopup->setMouseTracking( true );
 	m_autocompletePopup->hide();
 
 	// Connections
 	connect( m_loadButton, &QPushButton::clicked, this, &RecordTagWidget::onLoadRecord );
+	connect( m_randomButton, &QPushButton::clicked, this, &RecordTagWidget::onRandomRecord );
 	connect( m_recordIdInput, &QLineEdit::returnPressed, this, &RecordTagWidget::onLoadRecord );
 	connect( m_detachButton, &QPushButton::clicked, this, &RecordTagWidget::onDetach );
 	connect( m_addTagButton, &QPushButton::clicked, this, &RecordTagWidget::onAddTag );
@@ -82,6 +126,15 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 	connect( m_removeTagButton, &QPushButton::clicked, this, &RecordTagWidget::onRemoveTag );
 	connect( m_addTagInput, &QLineEdit::textChanged, this, &RecordTagWidget::onAddTagTextChanged );
 	connect( m_autocompletePopup, &QListWidget::itemClicked, this, &RecordTagWidget::onAutocompleteItemClicked );
+
+	connect(
+		m_domainCombo,
+		&QComboBox::currentIndexChanged,
+		this,
+		[ this ]()
+		{
+			if ( m_currentRecordId != 0 ) loadTags();
+		} );
 
 	loadDomains();
 }
@@ -137,11 +190,48 @@ void RecordTagWidget::onLoadRecord()
 	fetchThumbnail();
 }
 
+void RecordTagWidget::onRandomRecord()
+{
+	if ( m_randomWatcher != nullptr ) return;
+
+	m_previewLabel->setText( "Loading random..." );
+	m_rawTagsList->clear();
+	m_activeTagsList->clear();
+
+	auto& client { idhan::IDHANClient::instance() };
+	auto future { client.getRandomActiveRecord() };
+
+	m_randomWatcher = new QFutureWatcher< idhan::RecordID >( this );
+	m_randomWatcher->setFuture( future );
+
+	connect(
+		m_randomWatcher,
+		&QFutureWatcherBase::finished,
+		this,
+		[ this ]()
+		{
+			try
+			{
+				const auto record_id = m_randomWatcher->result();
+				m_recordIdInput->setText( QString::number( record_id ) );
+				onLoadRecord();
+			}
+			catch ( ... )
+			{
+				m_previewLabel->setText( "No active records" );
+			}
+			m_randomWatcher->deleteLater();
+			m_randomWatcher = nullptr;
+		} );
+}
+
 void RecordTagWidget::loadTags()
 {
 	const auto domain_id = static_cast< idhan::TagDomainID >( m_domainCombo->currentData().toULongLong() );
 	if ( domain_id == 0 ) return;
 	m_currentDomainId = domain_id;
+
+	m_verboseMap.clear();
 
 	auto& client { idhan::IDHANClient::instance() };
 
@@ -194,16 +284,52 @@ void RecordTagWidget::loadTags()
 				populateLists();
 			} );
 	}
+
+	{
+		auto future { client.getActiveRecordTagsVerbose( m_currentRecordId ) };
+		m_verboseWatcher = new QFutureWatcher< std::vector< idhan::ActiveTagVerboseInfo > >( this );
+		m_verboseWatcher->setFuture( future );
+
+		connect(
+			m_verboseWatcher,
+			&QFutureWatcherBase::finished,
+			this,
+			[ this ]()
+			{
+				try
+				{
+					for ( const auto& info : m_verboseWatcher->result() )
+					{
+						if ( info.tag_domain_id != m_currentDomainId ) continue;
+						m_verboseMap[ info.tag_id ] = info;
+					}
+				}
+				catch ( ... )
+				{
+					m_verboseMap.clear();
+				}
+				m_verboseWatcher->deleteLater();
+				m_verboseWatcher = nullptr;
+				populateLists();
+			} );
+	}
 }
 
 void RecordTagWidget::populateLists()
 {
-	if ( m_rawTagsWatcher != nullptr || m_activeTagsWatcher != nullptr ) return;
+	if ( m_rawTagsWatcher != nullptr || m_activeTagsWatcher != nullptr || m_verboseWatcher != nullptr ) return;
 
 	std::vector< idhan::TagID > all_ids;
 	all_ids.reserve( m_rawTagIds.size() + m_activeTagIds.size() );
 	all_ids.insert( all_ids.end(), m_rawTagIds.begin(), m_rawTagIds.end() );
 	all_ids.insert( all_ids.end(), m_activeTagIds.begin(), m_activeTagIds.end() );
+
+	// Collect extra IDs from verbose info for tag text resolution
+	for ( const auto& [ tag_id, info ] : m_verboseMap )
+	{
+		for ( const auto id : info.aliased_from ) all_ids.push_back( id );
+		for ( const auto id : info.inherited_from ) all_ids.push_back( id );
+	}
 
 	if ( all_ids.empty() )
 	{
@@ -251,6 +377,50 @@ void RecordTagWidget::populateLists()
 						( it != id_to_text.end() ) ? it->second : format_ns::format( "Unknown ({})", tag_id );
 					auto* item = new QListWidgetItem( QString::fromStdString( text ), m_activeTagsList );
 					item->setData( Qt::UserRole, static_cast< qlonglong >( tag_id ) );
+
+					// Build tooltip and relationship type from verbose info
+					QStringList tooltip_lines;
+					auto rel_type = ActiveTagDelegate::TagRelationshipType::None;
+
+					if ( const auto vit = m_verboseMap.find( tag_id ); vit != m_verboseMap.end() )
+					{
+						const auto& info = vit->second;
+
+						if ( !info.aliased_from.empty() )
+						{
+							rel_type = ActiveTagDelegate::TagRelationshipType::Aliased;
+							for ( const auto orig_id : info.aliased_from )
+							{
+								const auto ot = id_to_text.find( orig_id );
+								const auto orig_text = ( ot != id_to_text.end() ) ?
+							                               ot->second :
+							                               format_ns::format( "Unknown ({})", orig_id );
+								tooltip_lines.push_back(
+									QString::fromStdString( format_ns::format( "Aliased from: {}", orig_text ) ) );
+							}
+						}
+
+						if ( !info.inherited_from.empty() )
+						{
+							rel_type = rel_type == ActiveTagDelegate::TagRelationshipType::Aliased ?
+						                   ActiveTagDelegate::TagRelationshipType::Both :
+						                   ActiveTagDelegate::TagRelationshipType::Inherited;
+							for ( const auto origin_id : info.inherited_from )
+							{
+								const auto ot = id_to_text.find( origin_id );
+								const auto origin_text = ( ot != id_to_text.end() ) ?
+							                                 ot->second :
+							                                 format_ns::format( "Unknown ({})", origin_id );
+								tooltip_lines.push_back(
+									QString::fromStdString( format_ns::format( "Inherited from: {}", origin_text ) ) );
+							}
+						}
+					}
+
+					if ( tooltip_lines.isEmpty() ) tooltip_lines.push_back( "No Relationships" );
+
+					item->setToolTip( tooltip_lines.join( '\n' ) );
+					item->setData( ActiveTagDelegate::RelationshipTypeRole, static_cast< int >( rel_type ) );
 				}
 			}
 			catch ( ... )
@@ -365,6 +535,7 @@ void RecordTagWidget::onAutocompleteFinished()
 		m_autocompletePopup->move( pos );
 		m_autocompletePopup->show();
 		m_autocompletePopup->setCurrentRow( 0 );
+		m_addTagInput->setFocus();
 	}
 	catch ( ... )
 	{
@@ -382,6 +553,7 @@ void RecordTagWidget::onAutocompleteItemClicked( QListWidgetItem* item )
 	m_addTagInput->setText( item->text() );
 	m_autocompletePopup->hide();
 	onAddTag();
+	m_addTagInput->setFocus();
 }
 
 void RecordTagWidget::onAddTagReturnPressed()
@@ -417,6 +589,7 @@ void RecordTagWidget::onAddTag()
 
 	m_autocompletePopup->hide();
 	m_addTagInput->clear();
+	m_addTagInput->setFocus();
 
 	const auto domain_id = m_currentDomainId;
 	if ( domain_id == 0 ) return;
