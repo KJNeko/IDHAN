@@ -37,43 +37,22 @@
                                 </property>
                             </widget>
                         </item>
-                        <item>
-                            <widget class="QPushButton" name="scanButton">
-                                <property name="enabled">
-                                    <bool>false</bool>
-                                </property>
-                                <property name="text">
-                                    <string>Scan</string>
-                                </property>
-                            </widget>
-                        </item>
                     </layout>
                 </widget>
             </item>
             <item>
                 <widget class="QLabel" name="statusLabel">
                     <property name="text">
-                        <string>Select a directory and press Scan</string>
+                        <string>Select a directory and click Import</string>
                     </property>
                 </widget>
             </item>
             <item>
-                <layout class="QHBoxLayout" name="infoLayout">
-                    <item>
-                        <widget class="QLabel" name="fileCountLabel">
-                            <property name="text">
-                                <string>PTR files: --</string>
-                            </property>
-                        </widget>
-                    </item>
-                    <item>
-                        <widget class="QLabel" name="mappingCountLabel">
-                            <property name="text">
-                                <string>Definitions: -- | Content: --</string>
-                            </property>
-                        </widget>
-                    </item>
-                </layout>
+                <widget class="QLabel" name="fileCountLabel">
+                    <property name="text">
+                        <string>Files: --</string>
+                    </property>
+                </widget>
             </item>
             <item>
                 <widget class="QProgressBar" name="progressBar">
@@ -83,14 +62,28 @@
                 </widget>
             </item>
             <item>
-                <widget class="QPushButton" name="importButton">
-                    <property name="enabled">
-                        <bool>false</bool>
-                    </property>
-                    <property name="text">
-                        <string>Import PTR Files</string>
-                    </property>
-                </widget>
+                <layout class="QHBoxLayout" name="buttonLayout">
+                    <item>
+                        <widget class="QPushButton" name="importButton">
+                            <property name="enabled">
+                                <bool>false</bool>
+                            </property>
+                            <property name="text">
+                                <string>Import PTR Files</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QPushButton" name="cancelButton">
+                            <property name="enabled">
+                                <bool>false</bool>
+                            </property>
+                            <property name="text">
+                                <string>Cancel</string>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
             </item>
             <item>
                 <spacer name="verticalSpacer">
