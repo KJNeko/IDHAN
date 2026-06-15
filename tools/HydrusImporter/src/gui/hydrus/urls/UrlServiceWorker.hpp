@@ -20,9 +20,11 @@ class UrlServiceWorker : public QObject, public QRunnable
 	bool m_preprocessed { false };
 
   signals:
+	void finished();
 	void processedMaxUrls( std::size_t counter );
 	void processedUrls( std::size_t counter );
 	void statusMessage( const QString& message );
+	void errorOccurred( const QString& message );
 
   public:
 

@@ -22,6 +22,7 @@ UrlServiceWidget::UrlServiceWidget( idhan::hydrus::HydrusImporter* get, QWidget*
 	connect( m_worker, &UrlServiceWorker::processedMaxUrls, this, &UrlServiceWidget::processedMaxUrls );
 	connect( m_worker, &UrlServiceWorker::processedUrls, this, &UrlServiceWidget::processedUrls );
 	connect( m_worker, &UrlServiceWorker::statusMessage, this, &UrlServiceWidget::statusMessage );
+	connect( m_worker, &UrlServiceWorker::finished, this, &UrlServiceWidget::preprocessingComplete );
 }
 
 UrlServiceWidget::~UrlServiceWidget()

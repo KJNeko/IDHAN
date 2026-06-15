@@ -19,6 +19,8 @@ class TagServiceWidget;
 
 class TagServiceWidget : public QWidget
 {
+	Q_OBJECT
+
 	std::size_t mappings_processed { 0 };
 	std::size_t parents_processed { 0 };
 	std::size_t aliases_processed { 0 };
@@ -58,6 +60,9 @@ class TagServiceWidget : public QWidget
 	double getMappingsPerSecond() const { return getAverageMappingsPerMinute() / 60.0; }
 
 	double getAverageMappingsPerMinute() const;
+
+  signals:
+	void preprocessingComplete();
 
   public slots:
 	void startImport();

@@ -12,7 +12,6 @@
 
 #include "HydrusImporter.hpp"
 #include "file_relationships/FileRelationshipsWidget.hpp"
-#include "tag_management/TagManagementWidget.hpp"
 #include "tag_service/TagServiceWidget.hpp"
 #include "ui_HydrusImporterWidget.h"
 #include "urls/UrlServiceWidget.hpp"
@@ -25,8 +24,6 @@ HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) :
   ui( new Ui::HydrusImporterWidget )
 {
 	ui->setupUi( this );
-
-	ui->verticalLayout_tags->addWidget( new TagManagementWidget( this ) );
 
 	ui->cbProcessPTR->setChecked( true );
 
@@ -77,6 +74,8 @@ void HydrusImporterWidget::parseTagServices()
 			widget,
 			&TagServiceWidget::startPreImport,
 			Qt::SingleShotConnection );
+		connect(
+			widget, &TagServiceWidget::preprocessingComplete, this, &HydrusImporterWidget::onPreprocessingComplete );
 	}
 }
 
@@ -94,6 +93,7 @@ void HydrusImporterWidget::addServiceWidget( QWidget* widget )
 	widget->setStyleSheet( "QFrame { border: none; }" );
 
 	ui->tagServicesLayout->addWidget( groupFrame );
+	++m_total_preprocess;
 }
 
 void HydrusImporterWidget::parseFileRelationships()
@@ -112,6 +112,8 @@ void HydrusImporterWidget::parseFileRelationships()
 		widget,
 		&FileRelationshipsWidget::startPreImport,
 		Qt::SingleShotConnection );
+	connect(
+		widget, &FileRelationshipsWidget::preprocessingComplete, this, &HydrusImporterWidget::onPreprocessingComplete );
 
 	addServiceWidget( widget );
 }
@@ -128,6 +130,7 @@ void HydrusImporterWidget::parseUrls()
 		widget,
 		&UrlServiceWidget::startPreImport,
 		Qt::SingleShotConnection );
+	connect( widget, &UrlServiceWidget::preprocessingComplete, this, &HydrusImporterWidget::onPreprocessingComplete );
 
 	addServiceWidget( widget );
 }
@@ -192,15 +195,56 @@ void HydrusImporterWidget::on_parseHydrusDB_pressed()
 	m_importer = std::make_unique< idhan::hydrus::HydrusImporter >( ui->hydrusFolderPath->text().toStdString() );
 
 	const bool has_ptr { m_importer->hasPTR() };
-	ui->parseStatusLabel->setText( QString( "Has PTR: %1" ).arg( has_ptr ? "Yes" : "No" ) );
+
+	m_total_preprocess = 0;
+	m_completed_preprocess = 0;
 
 	parseTagServices();
 	parseFileRelationships();
 	parseUrls();
 
-	emit triggerPreImport();
+	updatePreprocessProgress();
+	ui->importButton->setEnabled( false );
+	ui->parseHydrusDB->setEnabled( false );
 
-	ui->importButton->setEnabled( true );
+	emit triggerPreImport();
+}
+
+void HydrusImporterWidget::onPreprocessingComplete()
+{
+	++m_completed_preprocess;
+	updatePreprocessProgress();
+
+	if ( m_completed_preprocess >= m_total_preprocess )
+	{
+		ui->importButton->setEnabled( true );
+		ui->parseHydrusDB->setEnabled( true );
+	}
+}
+
+void HydrusImporterWidget::updatePreprocessProgress()
+{
+	const bool has_ptr { m_importer ? m_importer->hasPTR() : false };
+
+	if ( m_total_preprocess == 0 )
+	{
+		ui->parseStatusLabel->setText( QString( "Has PTR: %1 | Scanning..." ).arg( has_ptr ? "Yes" : "No" ) );
+		return;
+	}
+
+	if ( m_completed_preprocess >= m_total_preprocess )
+	{
+		ui->parseStatusLabel->setText(
+			QString( "Has PTR: %1 | Preprocessing complete" ).arg( has_ptr ? "Yes" : "No" ) );
+	}
+	else
+	{
+		ui->parseStatusLabel->setText(
+			QString( "Has PTR: %1 | Preprocessing: %2/%3" )
+				.arg( has_ptr ? "Yes" : "No" )
+				.arg( m_completed_preprocess )
+				.arg( m_total_preprocess ) );
+	}
 }
 
 void HydrusImporterWidget::on_importButton_pressed()

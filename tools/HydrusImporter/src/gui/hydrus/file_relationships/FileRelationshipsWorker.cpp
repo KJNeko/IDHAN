@@ -6,6 +6,7 @@
 #include <moc_FileRelationshipsWorker.cpp>
 
 #include "sqlitehelper/Query.hpp"
+#include "sqlitehelper/Transaction.hpp"
 #include "sqlitehelper/TransactionBaseCoro.hpp"
 
 FileRelationshipsWorker::FileRelationshipsWorker( QObject* parent, idhan::hydrus::HydrusImporter* importer ) :
@@ -18,38 +19,22 @@ FileRelationshipsWorker::FileRelationshipsWorker( QObject* parent, idhan::hydrus
 
 void FileRelationshipsWorker::preprocess()
 {
-	idhan::hydrus::TransactionBaseCoro client_tr { m_importer->client_db };
-
-	idhan::hydrus::Query< int, int > duplicate_file_members {
-		client_tr,
-		"SELECT hash_id, king_hash_id FROM duplicate_file_members dfm JOIN duplicate_files df ON dfm.media_id = df.media_id WHERE hash_id != king_hash_id"
-	};
-
-	std::size_t duplicate_file_members_counter { 0 };
-
-	for ( [[maybe_unused]] const auto& [ media_id, hash_id ] : duplicate_file_members )
 	{
-		duplicate_file_members_counter++;
+		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 
-		if ( duplicate_file_members_counter % 1000 == 0 ) emit processedMaxDuplicates( duplicate_file_members_counter );
+		client_tr
+				<< "SELECT COUNT(*) FROM duplicate_file_members dfm JOIN duplicate_files df ON dfm.media_id = df.media_id WHERE hash_id != king_hash_id"
+			>> [ & ]( std::size_t count ) { emit processedMaxDuplicates( count ); };
 	}
 
-	emit processedMaxDuplicates( duplicate_file_members_counter );
-
-	idhan::hydrus::Query< int, int > alternative_file_members {
-		client_tr, "SELECT * FROM alternate_file_group_members JOIN duplicate_file_members USING (media_id)"
-	};
-	std::size_t alternative_file_members_counter { 0 };
-
-	for ( [[maybe_unused]] const auto& [ media_id, hash_id ] : alternative_file_members )
 	{
-		alternative_file_members_counter++;
+		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 
-		if ( alternative_file_members_counter % 1000 == 0 )
-			emit processedMaxAlternatives( alternative_file_members_counter );
+		client_tr << "SELECT COUNT(*) FROM alternate_file_group_members JOIN duplicate_file_members USING (media_id)" >>
+			[ & ]( std::size_t count ) { emit processedMaxAlternatives( count ); };
 	}
 
-	emit processedMaxAlternatives( alternative_file_members_counter );
+	emit finished();
 }
 
 void FileRelationshipsWorker::process()
@@ -189,12 +174,25 @@ void FileRelationshipsWorker::process()
 
 void FileRelationshipsWorker::run()
 {
-	if ( !m_preprocessed )
+	try
 	{
-		m_preprocessed = true;
-		preprocess();
-		return;
-	}
+		if ( !m_preprocessed )
+		{
+			m_preprocessed = true;
+			preprocess();
+			return;
+		}
 
-	process();
+		process();
+	}
+	catch ( std::exception& e )
+	{
+		idhan::logging::error( e.what() );
+		emit errorOccurred( QString::fromStdString( e.what() ) );
+	}
+	catch ( ... )
+	{
+		idhan::logging::error( "Unknown exception in FileRelationshipsWorker" );
+		emit errorOccurred( "Unknown exception during file relationship import" );
+	}
 }

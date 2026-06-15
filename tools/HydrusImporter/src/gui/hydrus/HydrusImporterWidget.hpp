@@ -29,6 +29,9 @@ class HydrusImporterWidget final : public QWidget
 
 	QThreadPool m_threads;
 
+	std::size_t m_total_preprocess { 0 };
+	std::size_t m_completed_preprocess { 0 };
+
   public:
 
 	Q_DISABLE_COPY_MOVE( HydrusImporterWidget )
@@ -47,12 +50,15 @@ class HydrusImporterWidget final : public QWidget
 	void on_selectHydrusPath_clicked();
 	void on_parseHydrusDB_pressed();
 	void on_importButton_pressed();
+	void onPreprocessingComplete();
 
   signals:
 	void triggerPreImport();
 	void triggerImport();
 
   private:
+
+	void updatePreprocessProgress();
 
 	Ui::HydrusImporterWidget* ui;
 };

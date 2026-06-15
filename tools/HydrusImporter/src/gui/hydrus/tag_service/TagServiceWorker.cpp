@@ -42,35 +42,35 @@ void TagServiceWorker::preprocess()
 	std::size_t parent_counter { 0 };
 	std::size_t sibling_counter { 0 };
 
-	idhan::hydrus::Query< int, int > query { mappings_tr, std::format( "SELECT * FROM {}", current_mappings_name ) };
-
-	for ( [[maybe_unused]] const auto& [ tag_id, hash_id ] : query )
+	// Batched COUNT(*) queries instead of full table scans
 	{
-		mappings_counter += 1;
-		if ( mappings_counter % 500'000 == 0 ) emit processedMaxMappings( mappings_counter );
-	};
+		idhan::hydrus::Query< std::size_t > count_query {
+			mappings_tr, std::format( "SELECT COUNT(*) FROM {}", current_mappings_name )
+		};
+
+		for ( const auto& [ count ] : count_query )
+		{
+			mappings_counter = count;
+		}
+	}
 
 	emit processedMaxMappings( mappings_counter );
 
 	const auto current_parents_name { std::format( "current_tag_parents_{}", id ) };
 
-	idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
-
-	client_tr << std::format( "SELECT * FROM {}", current_parents_name ) >>
-		[ & ]( [[maybe_unused]] const int child_id, [[maybe_unused]] const int parent_id )
 	{
-		parent_counter += 1;
-		if ( parent_counter % 64'000 == 0 ) emit processedMaxParents( parent_counter );
-	};
+		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
+		client_tr << std::format( "SELECT COUNT(*) FROM {}", current_parents_name ) >> [ & ]( std::size_t count )
+		{ parent_counter = count; };
+	}
 	emit processedMaxParents( parent_counter );
 
 	const auto current_siblings_name { std::format( "current_tag_siblings_{}", id ) };
-	client_tr << std::format( "SELECT * FROM {}", current_siblings_name ) >>
-		[ & ]( [[maybe_unused]] const int bad_id, [[maybe_unused]] const int good_id )
 	{
-		sibling_counter += 1;
-		if ( sibling_counter % 64'000 ) emit processedMaxAliases( sibling_counter );
-	};
+		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
+		client_tr << std::format( "SELECT COUNT(*) FROM {}", current_siblings_name ) >> [ & ]( std::size_t count )
+		{ sibling_counter = count; };
+	}
 
 	emit processedMaxAliases( sibling_counter );
 
@@ -82,7 +82,6 @@ void TagServiceWorker::preprocess()
 void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) const
 {
 	FGL_ASSERT( m_importer, "Importer was null!" );
-	idhan::hydrus::TransactionBase master_tr { m_importer->master_db };
 
 	using HyHashID = int;
 	using HyTagID = int;
@@ -92,38 +91,92 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 	hy_hash_tag_map.reserve( pairs.size() );
 	std::unordered_set< HyHashID > hy_hash_id_set {};
 	hy_hash_id_set.reserve( pairs.size() );
-	std::unordered_map< HyTagID, TagPair > hy_tag_map {};
-	hy_tag_map.reserve( pairs.size() );
 
-	// process tag ids
+	// First pass: collect unique hash and tag ids
 	for ( const auto& [ hash_id, tag_id ] : pairs )
 	{
 		hy_hash_id_set.emplace( hash_id );
+		hy_hash_tag_map[ hash_id ].emplace_back( tag_id );
+	}
 
-		if ( !hy_hash_tag_map.contains( hash_id ) )
+	// --- Batch query tag names ---
+	std::unordered_map< HyTagID, TagPair > hy_tag_map {};
+	{
+		std::vector< HyTagID > all_tag_ids;
+		all_tag_ids.reserve( pairs.size() );
+		for ( const auto& [ hash_id, tag_id ] : pairs )
 		{
-			hy_hash_tag_map[ hash_id ] = {};
+			if ( !hy_tag_map.contains( tag_id ) )
+			{
+				all_tag_ids.emplace_back( tag_id );
+				hy_tag_map[ tag_id ] = {}; // placeholder
+			}
 		}
 
-		hy_hash_tag_map[ hash_id ].emplace_back( tag_id );
-
-		if ( !hy_tag_map.contains( tag_id ) )
+		constexpr std::size_t CHUNK_SIZE = 500;
+		for ( std::size_t offset = 0; offset < all_tag_ids.size(); offset += CHUNK_SIZE )
 		{
-			TagPair tag_pair {};
+			const auto chunk_end = std::min( offset + CHUNK_SIZE, all_tag_ids.size() );
+			const auto chunk_size = chunk_end - offset;
 
-			idhan::hydrus::TransactionBaseCoro master_tr_coro { m_importer->master_db };
-			idhan::hydrus::Query< std::string_view, std::string_view > query {
-				master_tr_coro,
-				"SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id = $1",
-				tag_id
-			};
+			std::string sql =
+				"SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN (";
+			for ( std::size_t i = 0; i < chunk_size; ++i )
+			{
+				if ( i > 0 ) sql += ", ";
+				sql += "?";
+			}
+			sql += ")";
 
-			const auto [ namespace_id, subtag_i ] = *query;
-			tag_pair = std::make_pair( namespace_id, subtag_i );
-			hy_tag_map[ tag_id ] = tag_pair;
+			idhan::hydrus::TransactionBase master_tr { m_importer->master_db };
+			auto binder = master_tr << sql;
+			for ( std::size_t i = 0; i < chunk_size; ++i )
+			{
+				binder << all_tag_ids[ offset + i ];
+			}
+
+			binder >> [ & ]( HyTagID tag_id, std::string_view ns, std::string_view sub )
+			{ hy_tag_map[ tag_id ] = std::make_pair( std::string( ns ), std::string( sub ) ); };
 		}
 	}
 
+	// --- Batch query hashes ---
+	std::unordered_map< HyHashID, std::string > hash_map {};
+	{
+		std::vector< HyHashID > hash_ids_vec( hy_hash_id_set.begin(), hy_hash_id_set.end() );
+
+		constexpr std::size_t CHUNK_SIZE = 500;
+		for ( std::size_t offset = 0; offset < hash_ids_vec.size(); offset += CHUNK_SIZE )
+		{
+			const auto chunk_end = std::min( offset + CHUNK_SIZE, hash_ids_vec.size() );
+			const auto chunk_size = chunk_end - offset;
+
+			std::string sql = "SELECT hash_id, hex(hash) FROM hashes WHERE hash_id IN (";
+			for ( std::size_t i = 0; i < chunk_size; ++i )
+			{
+				if ( i > 0 ) sql += ", ";
+				sql += "?";
+			}
+			sql += ")";
+
+			idhan::hydrus::TransactionBase master_tr { m_importer->master_db };
+			auto binder = master_tr << sql;
+			for ( std::size_t i = 0; i < chunk_size; ++i )
+			{
+				binder << hash_ids_vec[ offset + i ];
+			}
+
+			binder >> [ & ]( HyHashID hash_id, std::string_view hash_str )
+			{
+				if ( hash_str.size() == ( 256 / 8 * 2 ) )
+				{
+					hash_map.emplace( hash_id, std::string( hash_str ) );
+				}
+			};
+		}
+	}
+
+	// Build hashes and tag_sets vectors from the batched maps
 	std::vector< std::string > hashes {};
 	hashes.reserve( hy_hash_id_set.size() );
 	std::vector< std::vector< TagPair > > tag_sets {};
@@ -131,27 +184,17 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 
 	for ( const auto& hash_id : hy_hash_id_set )
 	{
-		std::string hash {};
-		hash.reserve( 256 / 8 );
-		bool invalid_hash { false };
-		master_tr << "SELECT hex(hash) FROM hashes WHERE hash_id = $1" << hash_id >>
-			[ & ]( const std::string_view hash_i )
-		{
-			if ( hash_i.size() != ( 256 / 8 * 2 ) ) invalid_hash = true;
-			hash = hash_i;
-		};
+		const auto hash_it = hash_map.find( hash_id );
+		if ( hash_it == hash_map.end() ) continue;
 
-		if ( invalid_hash ) continue;
-
-		hashes.emplace_back( hash );
+		hashes.emplace_back( hash_it->second );
 
 		std::vector< TagPair > tag_pairs {};
 		tag_pairs.reserve( hy_hash_tag_map[ hash_id ].size() );
 		for ( const auto& tag_id : hy_hash_tag_map[ hash_id ] )
 		{
-			tag_pairs.emplace_back( hy_tag_map[ tag_id ] );
+			tag_pairs.emplace_back( hy_tag_map.at( tag_id ) );
 		}
-
 		tag_sets.emplace_back( std::move( tag_pairs ) );
 	}
 
@@ -171,7 +214,7 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 	catch ( std::exception& e )
 	{
 		idhan::logging::error( "Got exception: {} when trying to create mappings", e.what() );
-		std::abort();
+		throw;
 	}
 }
 
@@ -431,28 +474,35 @@ void TagServiceWorker::processRelationships()
 	}
 
 	std::unordered_map< int, std::pair< std::string, std::string > > tag_pairs {};
-	// get all the unique tags component ids and their associated strings
-	for ( const auto& tag_id : tag_set )
+	// Batch query all unique tag names in one go instead of N+1 individual queries
 	{
-		Query< int, int > tag_query { master_tr, "SELECT namespace_id, subtag_id FROM tags WHERE tag_id = $1", tag_id };
+		std::vector< HyTagID > tag_ids_vec( tag_set.begin(), tag_set.end() );
 
-		const auto& [ namespace_id, subtag_id ] = *tag_query;
+		constexpr std::size_t CHUNK_SIZE = 500;
+		for ( std::size_t offset = 0; offset < tag_ids_vec.size(); offset += CHUNK_SIZE )
+		{
+			const auto chunk_end = std::min( offset + CHUNK_SIZE, tag_ids_vec.size() );
+			const auto chunk_size = chunk_end - offset;
 
-		Query< std::string_view > namespace_query {
-			master_tr, "SELECT namespace FROM namespaces WHERE namespace_id = $1", namespace_id
-		};
+			std::string sql =
+				"SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN (";
+			for ( std::size_t i = 0; i < chunk_size; ++i )
+			{
+				if ( i > 0 ) sql += ", ";
+				sql += "?";
+			}
+			sql += ")";
 
-		const auto& [ namespace_text_v ] = *namespace_query;
-		std::string namespace_text { namespace_text_v };
+			TransactionBase tag_tr { m_importer->master_db };
+			auto binder = tag_tr << sql;
+			for ( std::size_t i = 0; i < chunk_size; ++i )
+			{
+				binder << tag_ids_vec[ offset + i ];
+			}
 
-		Query< std::string_view > subtag_query {
-			master_tr, "SELECT subtag FROM subtags WHERE subtag_id = $1", subtag_id
-		};
-
-		const auto& [ subtag_text_v ] = *subtag_query;
-		std::string subtag_text { subtag_text_v };
-
-		tag_pairs.emplace( tag_id, std::make_pair( namespace_text, subtag_text ) );
+			binder >> [ & ]( HyTagID tag_id, std::string_view ns, std::string_view sub )
+			{ tag_pairs.emplace( tag_id, std::make_pair( std::string( ns ), std::string( sub ) ) ); };
+		}
 	}
 
 	std::vector< std::pair< std::string, std::string > > tags {};
@@ -526,12 +576,14 @@ void TagServiceWorker::run()
 	catch ( std::exception& e )
 	{
 		idhan::logging::error( e.what() );
-		std::terminate();
+		emit errorOccurred( QString::fromStdString( e.what() ) );
+		emit finished();
 	}
 	catch ( ... )
 	{
 		idhan::logging::error( "Unknown exception" );
-		std::terminate();
+		emit errorOccurred( "Unknown exception during import" );
+		emit finished();
 	}
 
 	return;

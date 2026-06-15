@@ -31,6 +31,9 @@ class UrlServiceWidget : public QWidget
 	UrlServiceWorker* m_worker { nullptr };
 	std::size_t m_max_urls { 0 };
 
+  signals:
+	void preprocessingComplete();
+
   public:
 
 	explicit UrlServiceWidget( idhan::hydrus::HydrusImporter* get, QWidget* parent = nullptr );

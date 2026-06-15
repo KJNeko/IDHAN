@@ -2,8 +2,9 @@
 // Created by kj16609 on 11/5/25.
 //
 #pragma once
+#include <QWidget>
+
 #include "FileRelationshipsWorker.hpp"
-#include "gui/hydrus/HydrusImporterWidget.hpp"
 
 namespace Ui
 {
@@ -12,6 +13,7 @@ class FileRelationshipsWidget;
 
 class FileRelationshipsWidget : public QWidget
 {
+	Q_OBJECT
 	idhan::hydrus::HydrusImporter* m_importer;
 
 	std::size_t alternatives_processed { 0 };
@@ -20,6 +22,9 @@ class FileRelationshipsWidget : public QWidget
 	std::size_t duplicates_processed { 0 };
 	std::size_t duplicates_total { 0 };
 	FileRelationshipsWorker* m_worker;
+
+  signals:
+	void preprocessingComplete();
 
   public:
 

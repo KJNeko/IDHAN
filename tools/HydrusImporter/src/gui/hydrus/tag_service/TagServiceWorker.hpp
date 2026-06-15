@@ -64,6 +64,7 @@ class TagServiceWorker final : public QObject, public QRunnable
 
   signals:
 	void finished();
+	void errorOccurred( const QString& message );
 	void processedMappings( std::size_t count, std::size_t record_count );
 	void processedParents( std::size_t count );
 	void processedAliases( std::size_t count );
