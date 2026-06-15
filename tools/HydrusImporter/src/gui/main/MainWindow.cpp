@@ -18,6 +18,8 @@
 #include "gui/hydrus/tag_management/TagManagementWidget.hpp"
 #include "gui/hydrus/tag_service/TagServiceWidget.hpp"
 #include "gui/recordtag/RecordTagWidget.hpp"
+#include "ptr/gui/PTRDownloadWidget.hpp"
+#include "ptr/gui/PTRImportWidget.hpp"
 #include "ui_MainWindow.h"
 
 MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::MainWindow )
@@ -79,6 +81,10 @@ MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::M
 	m_recordTagWidget = new RecordTagWidget( this );
 	m_recordTagTabIndex = ui->importTabs->addTab( m_recordTagWidget, "Record Tag Editor" );
 	connect( m_recordTagWidget, &RecordTagWidget::detachRequested, this, &MainWindow::onDetachRecordTag );
+
+	// PTR Importer tab (sub-tabs: Download + Import)
+	connect( ui->actionImport_PTR, &QAction::triggered, this, &MainWindow::on_actionImport_PTR_triggered );
+	on_actionImport_PTR_triggered();
 }
 
 MainWindow::~MainWindow()
@@ -157,6 +163,20 @@ void MainWindow::on_actionImport_File_triggered()
 void MainWindow::on_actionImport_Hydrus_triggered()
 {
 	ui->importTabs->addTab( new HydrusImporterWidget( this ), "Hydrus Importer" );
+}
+
+void MainWindow::on_actionImport_PTR_triggered()
+{
+	auto* ptr_tabs = new QTabWidget( this );
+	auto* download_widget = new PTRDownloadWidget( ptr_tabs );
+	auto* import_widget = new PTRImportWidget( ptr_tabs );
+	ptr_tabs->addTab( download_widget, "Download" );
+	ptr_tabs->addTab( import_widget, "Import" );
+
+	connect( download_widget, &PTRDownloadWidget::directoryChanged, import_widget, &PTRImportWidget::setDirectory );
+
+	ui->importTabs->addTab( ptr_tabs, "PTR Importer" );
+	ui->importTabs->setCurrentIndex( ui->importTabs->count() - 1 );
 }
 
 void MainWindow::onDetachRecordTag()

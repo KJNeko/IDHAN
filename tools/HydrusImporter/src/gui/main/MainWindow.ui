@@ -34,8 +34,10 @@
      <string>File</string>
     </property>
     <addaction name="actionImport_File"/>
-    <addaction name="actionImport_Hydrus"/>
-    <addaction name="actionOptions"/>
+       <addaction name="actionImport_Hydrus"/>
+       <addaction name="actionImport_PTR"/>
+       <addaction name="separator"/>
+       <addaction name="actionOptions"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -53,6 +55,11 @@
   <action name="actionOptions">
    <property name="text">
     <string>Options</string>
+   </property>
+  </action>
+     <action name="actionImport_PTR">
+         <property name="text">
+             <string>Import PTR...</string>
    </property>
   </action>
  </widget>

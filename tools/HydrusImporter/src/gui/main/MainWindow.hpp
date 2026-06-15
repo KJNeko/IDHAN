@@ -49,6 +49,7 @@ class MainWindow final : public QMainWindow
 	// Import Widgets
 	void on_actionImport_File_triggered();
 	void on_actionImport_Hydrus_triggered();
+	void on_actionImport_PTR_triggered();
 
   private:
 
