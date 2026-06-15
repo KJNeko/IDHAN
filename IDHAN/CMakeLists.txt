@@ -31,6 +31,10 @@ else ()
 	target_compile_definitions(IDHAN PUBLIC IDHAN_USE_STD_FORMAT=0)
 endif ()
 
+if (NOT IDHAN_ENABLE_TRACE)
+	target_compile_definitions(IDHAN PUBLIC IDHAN_DISABLE_TRACE_LOGGING)
+endif ()
+
 list(APPEND HYDRUS_SCAN_FILES ${HYDRUS_REPO_PATH}/hydrus/client/gui/pages/ClientGUIPagesCore.py)
 list(APPEND HYDRUS_SCAN_FILES ${HYDRUS_REPO_PATH}/hydrus/core/HydrusSerialisable.py)
 list(APPEND HYDRUS_SCAN_FILES ${HYDRUS_REPO_PATH}/hydrus/client/ClientConstants.py)

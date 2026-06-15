@@ -32,28 +32,47 @@ Json::Value jsonFromFile( const std::filesystem::path& path )
 
 drogon::Task< bool > MimeIdentifier::test( const Cursor cursor ) const
 {
-	for ( const auto& matcher : m_matchers )
+	log::trace( "MimeIdentifier::test: entering test for '{}'", m_mime );
+
+	for ( std::size_t i = 0; i < m_matchers.size(); ++i )
 	{
-		if ( !co_await matcher->test( cursor ) ) co_return false;
+		log::trace( "MimeIdentifier::test: '{}' running matcher {}/{}", m_mime, i + 1, m_matchers.size() );
+		if ( !co_await m_matchers[ i ]->test( cursor ) )
+		{
+			log::trace( "MimeIdentifier::test: '{}' matcher {} failed", m_mime, i + 1 );
+			co_return false;
+		}
+		log::trace( "MimeIdentifier::test: '{}' matcher {} passed", m_mime, i + 1 );
 	}
 
 	if ( this->m_require_extension )
 	{
-		// if the matcher tests, and it has trust_extension. then the extension must also match in order for this to be passing
 		auto extension { cursor.fileExtension() };
 		if ( extension.starts_with( '.' ) ) extension = extension.substr( 1 );
 
-		if ( extension.empty() ) co_return false;
+		log::trace(
+			"MimeIdentifier::test: '{}' checking extension '{}' against required extensions", m_mime, extension );
+		if ( extension.empty() )
+		{
+			log::trace( "MimeIdentifier::test: '{}' extension was empty, failing", m_mime );
+			co_return false;
+		}
 
 		for ( const auto& match_extension : m_extensions )
 		{
-			if ( extension == match_extension ) co_return true;
+			if ( extension == match_extension )
+			{
+				log::trace( "MimeIdentifier::test: '{}' extension '{}' matched", m_mime, extension );
+				co_return true;
+			}
 		}
 
-		// none of the extensions matched what we were expecting
+		log::trace(
+			"MimeIdentifier::test: '{}' extension '{}' did not match any required extension", m_mime, extension );
 		co_return false;
 	}
 
+	log::trace( "MimeIdentifier::test: '{}' all matchers passed", m_mime );
 	co_return true;
 }
 

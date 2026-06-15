@@ -52,6 +52,8 @@ std::vector< std::filesystem::path > getMimeParserPaths()
 		}
 	}
 
+	log::debug( "Found {} mime parsers", paths.size() );
+
 	return paths;
 }
 

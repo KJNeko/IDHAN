@@ -30,11 +30,17 @@ option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
 option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)
 option(IDHAN_DISABLE_API_AUTH "Disable the API access key checks" OFF)
 
+option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
+
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
 if (BUILD_HYDRUS_IMPORTER EQUAL 1)
 	set(BUILD_IDHAN_CLIENT ON)
+endif ()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(IDHAN_ENABLE_TRACE OFF)
 endif ()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

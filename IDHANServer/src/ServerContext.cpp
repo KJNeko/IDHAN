@@ -6,6 +6,7 @@
 
 #include <spdlog/async_logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/ringbuffer_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -22,6 +23,7 @@
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "logging/log.hpp"
+#include "mime/MimeDatabase.hpp"
 #include "spdlog/async.h"
 
 namespace idhan
@@ -108,7 +110,23 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	const std::filesystem::path log_path { config::getLogPath() };
 
+	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 1000000 ) };
+
 	std::vector< spdlog::sink_ptr > sinks {};
+
+	// In-memory ring buffer — captures every level for the /log endpoint
+	auto& ring_buffer {
+		sinks.emplace_back( std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size ) )
+	};
+	ring_buffer->set_pattern( std::string( server_format_str ) );
+	ring_buffer->set_level( spdlog::level::trace );
+
+	// logs all trace messages to a specific file
+	auto& trace_file_logger { sinks.emplace_back(
+		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "trace.log", MiB * 2, 4, true ) ) };
+
+	trace_file_logger->set_pattern( std::string( server_format_str ) );
+	trace_file_logger->set_level( spdlog::level::trace );
 
 	// logs all info & errors to a specific file
 	auto& info_file_logger { sinks.emplace_back(
@@ -122,24 +140,28 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "error.log", MiB * 16, 4, true ) ) };
 
 	error_file_logger->set_pattern( std::string( server_format_str ) );
-	error_file_logger->set_level( spdlog::level::err );
+	error_file_logger->set_level( spdlog::level::warn );
 
 	if ( arguments.use_stdout )
 	{
 		auto& stdout_logger { sinks.emplace_back( std::make_shared< spdlog::sinks::stdout_color_sink_mt >() ) };
-		stdout_logger->set_level( spdlog::level::debug );
+		stdout_logger->set_level( arguments.log_level );
 	}
 
 	auto logger { std::make_shared< spdlog::logger >( "default", sinks.begin(), sinks.end() ) };
 
 	logger->set_pattern( std::string( server_format_str ) );
-	logger->set_level( spdlog::level::debug );
+	logger->set_level( spdlog::level::trace );
 
 	spdlog::set_default_logger( logger );
 	trantor::Logger::enableSpdLog( logger );
 
 	logger->flush_on( spdlog::level::warn );
 	spdlog::flush_every( std::chrono::seconds( 5 ) );
+
+	spdlog::trace( "Trace logging enabled" );
+	spdlog::debug( "Debug logging enabled" );
+	spdlog::info( "Info logging enabled" );
 
 	return logger;
 }
@@ -207,19 +229,26 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 {
 	log::info( "IDHAN initialization starting" );
 
+	log::trace( "ServerContext constructor entered" );
+
 	spdlog::enable_backtrace( 32 );
 
+	log::trace( "Backtrace buffer enabled (32 entries)" );
 	log::debug( "Logging show debug" );
 	log::info( "Logging show info" );
+	log::trace( "Calling printCoreLocation" );
 	printCoreLocation();
+	log::trace( "printCoreLocation completed" );
 
 	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", 0 ) };
 	if ( config_threads == 0 ) config_threads = std::thread::hardware_concurrency();
 	std::size_t hardware_count { std::max( config_threads, 2ul ) };
 	std::size_t io_threads { hardware_count };
 
+	log::trace( "IO threads calculated: {}", io_threads );
 	log::info( "IO Threads: {}", io_threads );
 
+	log::trace( "Configuring drogon app" );
 	auto& app = drogon::app();
 
 	app.setLogLevel( trantor::Logger::kInfo );
@@ -229,7 +258,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	app.setExceptionHandler( exceptionHandler );
 	app.setLogPath( std::string( config::getLogPath() ), "", 1024 * 1024 * 4, 8, true );
 
+	log::trace( "Setting up temp path" );
 	setupTempPath();
+	log::trace( "Temp path setup completed" );
 
 	app.registerCustomExtensionMime( "wasm", "application/wasm" );
 
@@ -248,11 +279,19 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		config::get< std::string, config::no_warn_on_default >( "host", "server_key_path", "./server.key" )
 	};
 
+	log::trace( "use_tls: {}", use_tls );
+
 	if ( !ipv4_listener.empty() )
+	{
+		log::trace( "Adding IPv4 listener on {}:{}", ipv4_listener, IDHAN_DEFAULT_PORT );
 		app.addListener( ipv4_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+	}
 
 	if ( !ipv6_listener.empty() )
+	{
+		log::trace( "Adding IPv6 listener on {}:{}", ipv6_listener, IDHAN_DEFAULT_PORT );
 		app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+	}
 
 	drogon::orm::PostgresConfig config {
 		.host = arguments.hostname,
@@ -274,6 +313,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		config.connectOptions.insert_or_assign( "search_path", "test" );
 	}
 
+	log::trace( "Database config prepared, adding DB client" );
 	log::info(
 		"Connecting to database {} at {}:{} with user {}",
 		config.databaseName,
@@ -283,7 +323,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	drogon::app().addDbClient( config );
 
+	log::trace( "Setting up CORS support" );
 	setupCORSSupport();
+	log::trace( "CORS support configured" );
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();
 
@@ -300,6 +342,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				{
 					const auto db { drogon::app().getDbClient() };
 					co_await m_clusters->reloadClusters( db );
+					co_await mime::getMimeDatabase()->reloadMimeParsers();
 					co_return;
 				}() );
 
