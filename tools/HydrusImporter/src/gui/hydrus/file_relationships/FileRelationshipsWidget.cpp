@@ -3,6 +3,8 @@
 //
 #include "FileRelationshipsWidget.hpp"
 
+#include <moc_FileRelationshipsWidget.cpp>
+
 #include "FileRelationshipsWorker.hpp"
 #include "ui_FileRelationshipsWidget.h"
 
@@ -34,6 +36,7 @@ FileRelationshipsWidget::FileRelationshipsWidget( idhan::hydrus::HydrusImporter*
 		&FileRelationshipsWidget::processedAlternatives );
 
 	connect( m_worker, &FileRelationshipsWorker::statusMessage, this, &FileRelationshipsWidget::statusMessage );
+	connect( m_worker, &FileRelationshipsWorker::finished, this, &FileRelationshipsWidget::preprocessingComplete );
 }
 
 void FileRelationshipsWidget::updateText()

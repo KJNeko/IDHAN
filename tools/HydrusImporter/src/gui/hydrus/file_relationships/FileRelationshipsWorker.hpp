@@ -16,9 +16,11 @@ class FileRelationshipsWorker : public QObject, public QRunnable
 
   signals:
 
+	void finished();
 	void processedMaxDuplicates( std::size_t counter );
 	void processedMaxAlternatives( std::size_t counter );
 	void statusMessage( const QString& message );
+	void errorOccurred( const QString& message );
 	void processedDuplicates( std::size_t );
 	void processedAlternatives( std::size_t );
 

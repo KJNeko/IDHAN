@@ -52,7 +52,6 @@ HydrusImporter::~HydrusImporter()
 
 std::unordered_map< HashID, RecordID > HydrusImporter::mapHydrusRecords( std::vector< HashID > hash_ids ) const
 {
-	idhan::hydrus::TransactionBase master_tr { master_db };
 	if ( hash_ids.empty() ) return {};
 
 	std::ranges::sort( hash_ids );
@@ -61,21 +60,35 @@ std::unordered_map< HashID, RecordID > HydrusImporter::mapHydrusRecords( std::ve
 	std::unordered_map< std::uint32_t, std::string > hashes_map {};
 	hashes_map.reserve( hash_ids.size() );
 
-	for ( const auto& hash_id : hash_ids )
+	// Build batched IN clause query instead of N+1 individual queries
 	{
-		master_tr << "SELECT hex(hash) FROM hashes WHERE hash_id = $1" << hash_id >>
-			[ & ]( const std::string_view hash_i )
+		std::string sql = "SELECT hash_id, hex(hash) FROM hashes WHERE hash_id IN (";
+		for ( size_t i = 0; i < hash_ids.size(); ++i )
+		{
+			if ( i > 0 ) sql += ", ";
+			sql += "?";
+		}
+		sql += ")";
+
+		idhan::hydrus::TransactionBase master_tr { master_db };
+		auto binder = master_tr << sql;
+		for ( const auto& hash_id : hash_ids )
+		{
+			binder << hash_id;
+		}
+
+		binder >> [ & ]( HashID hash_id, std::string_view hash_i )
 		{
 			if ( hash_i.size() != ( 256 / 8 * 2 ) )
 			{
 				return;
 			}
-			hashes_map.emplace( hash_id, hash_i );
+			hashes_map.emplace( hash_id, std::string( hash_i ) );
 		};
 	}
 
 	std::vector< std::string > hashes {};
-	hashes.reserve( hash_ids.size() );
+	hashes.reserve( hashes_map.size() );
 	for ( const auto& hash : hashes_map | std::views::values ) hashes.emplace_back( hash );
 
 	auto& client { idhan::IDHANClient::instance() };

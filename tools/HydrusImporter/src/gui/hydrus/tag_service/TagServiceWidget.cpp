@@ -226,6 +226,7 @@ void TagServiceWidget::preprocessingFinished()
 	m_preprocessed = true;
 	updateProcessed();
 	updateTime();
+	emit preprocessingComplete();
 }
 
 void TagServiceWidget::setMaxMappings( std::size_t count )
