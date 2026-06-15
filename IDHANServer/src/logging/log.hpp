@@ -18,11 +18,17 @@
 namespace idhan::log
 {
 
+#ifndef IDHAN_DISABLE_TRACE_LOGGING
 template < typename... Ts >
 void trace( const format_ns::format_string< Ts... > str, Ts&&... ts )
 {
 	::spdlog::trace( format_ns::format( str, std::forward< Ts >( ts )... ) );
 }
+#else
+template < typename... Ts >
+void trace( [[maybe_unused]] const format_ns::format_string< Ts... > str, [[maybe_unused]] Ts&&... ts )
+{}
+#endif
 
 template < typename... Ts >
 void debug( const format_ns::format_string< Ts... > str, Ts&&... ts )

@@ -25,6 +25,7 @@ services:
         IDHAN_DISABLE_API_AUTH: "ON"
     container_name: idhan-server
     environment:
+      IDHAN_LOGGING_LEVEL: debug
       IDHAN_DATABASE_HOST: idhan-postgres
       IDHAN_DATABASE_USER: idhan
       IDHAN_DATABASE_PASSWORD: idhan

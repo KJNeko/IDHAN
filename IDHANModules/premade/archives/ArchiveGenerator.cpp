@@ -32,7 +32,8 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > ArchiveGenerator::
 
 	if ( const int r = archive_read_open_memory( a.get(), data.file_view.data(), data.file_view.size() ); r != 0 )
 	{
-		return std::unexpected( idhan::ModuleError { archive_error_string( a.get() ) } );
+		const char* err { archive_error_string( a.get() ) };
+		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_open_memory failed" } );
 	}
 
 	const auto target_hex { idhan::crypto::toHex( desired_hash ) };
@@ -88,7 +89,8 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > ArchiveGenerator::
 			file_data.resize( file_size );
 			if ( archive_read_data( a.get(), file_data.data(), file_size ) < 0 )
 			{
-				return std::unexpected( idhan::ModuleError { archive_error_string( a.get() ) } );
+				const char* err { archive_error_string( a.get() ) };
+				return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
 			}
 
 			return file_data;

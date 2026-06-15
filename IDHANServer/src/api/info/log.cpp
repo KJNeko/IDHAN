@@ -2,7 +2,11 @@
 // Created by kj16609 on 3/26/26.
 //
 
+#include <spdlog/pattern_formatter.h>
+#include <spdlog/sinks/ringbuffer_sink.h>
+
 #include <chrono>
+#include <memory>
 
 #include "Config.hpp"
 #include "api/InfoAPI.hpp"
@@ -22,45 +26,6 @@ auto parseLevelString( const std::string& level_str )
 	return spdlog::level::info;
 }
 
-//FORMAT: [YYYY-MM-DD HH-MM-SS.TTTT] [SERVER] [level] [thread <>] <MSG>
-
-bool logEntryMatchesLevel( const std::string& log_entry, const spdlog::level::level_enum level )
-{
-	// Extract level from log entry format: [YYYY-MM-DD HH-MM-SS.TTTT] [SERVER] [level] [thread <>] <MSG>
-	const auto level_start = log_entry.find( "] [" );
-	if ( level_start == std::string::npos ) return false;
-
-	const auto level_start_pos = level_start + 3; // Skip "] ["
-	const auto level_end = log_entry.find( ']', level_start_pos );
-	if ( level_end == std::string::npos ) return false;
-
-	const std::string entry_level_str = log_entry.substr( level_start_pos, level_end - level_start_pos );
-	const auto entry_level = parseLevelString( entry_level_str );
-
-	// Include higher levels: warn includes error, info includes error and warn, etc.
-	return entry_level >= level;
-}
-
-bool logEntryMatchesTime( const std::string& log_entry, const auto since_ms )
-{
-	const auto time_start = log_entry.find_first_of( '[' );
-	const auto time_end = log_entry.find_first_of( ']' );
-	const auto time_string = log_entry.substr( time_start + 1, time_end - time_start - 1 );
-
-	const auto sub_seconds_start = time_string.find_first_of( '.' );
-	const std::string time_sanitized = time_string.substr( 0, sub_seconds_start ); // "YYYY-MM-DD HH:MM:SS"
-
-	std::tm tm {};
-	std::istringstream ss( time_sanitized );
-	ss >> std::get_time( &tm, "%Y-%m-%d %H:%M:%S" );
-	if ( ss.fail() ) return false;
-
-	std::time_t t { std::mktime( &tm ) };
-	unsigned long log_time_ms { static_cast< unsigned long >( t ) };
-
-	return since_ms.has_value() ? log_time_ms >= since_ms.value() : true;
-}
-
 drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr request )
 {
 	// /log?since=<unix_timestamp>&level=<level>
@@ -69,59 +34,49 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 	logger->flush();
 
 	const auto level_str { request->getOptionalParameter< std::string >( "level" ) };
-	const auto log_level { parseLevelString( level_str.value_or( "info" ) ) };
-	const auto since_str { request->getOptionalParameter< std::uint64_t >( "since" ) };
+	const auto req_level { parseLevelString( level_str.value_or( "info" ) ) };
+	const auto since_ms { request->getOptionalParameter< std::uint64_t >( "since" ) };
 
-	std::vector< std::string > log_entries {};
-
-	const auto log_path { config::getLogPath() };
-
-	const auto info_log_file { log_path / "info.log" };
-	const auto error_log_file { log_path / "error.log" };
-
-	if ( std::ifstream ifs( info_log_file, std::ios::binary ); ifs )
+	// Locate the ringbuffer sink in the logger
+	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_sink;
+	for ( auto& s : logger->sinks() )
 	{
-		log::debug( "Loading {}", info_log_file.string() );
-		while ( !ifs.eof() && ifs.good() )
-		{
-			std::string line {};
-			std::getline( ifs, line );
-			log_entries.emplace_back( line );
-		}
-
-		if ( !ifs.eof() )
-		{
-			co_return createInternalError( "Failed to read info file, Reached abnormal state" );
-		}
+		ring_sink = std::dynamic_pointer_cast< spdlog::sinks::ringbuffer_sink_mt >( s );
+		if ( ring_sink ) break;
 	}
 
-	if ( std::ifstream ifs( error_log_file, std::ios::binary ); ifs )
+	if ( !ring_sink )
 	{
-		log::debug( "Loading {}", error_log_file.string() );
-		while ( !ifs.eof() && ifs.good() )
-		{
-			std::string line {};
-			std::getline( ifs, line );
-			log_entries.emplace_back( line );
-		}
-
-		if ( !ifs.eof() )
-		{
-			co_return createInternalError( "Failed to read error file, Reached abnormal state" );
-		}
+		auto response { drogon::HttpResponse::newHttpResponse() };
+		response->setBody( "Ring buffer sink not available\n" );
+		response->setStatusCode( drogon::HttpStatusCode::k500InternalServerError );
+		response->setContentTypeCode( drogon::CT_TEXT_PLAIN );
+		co_return response;
 	}
+
+	constexpr std::string_view server_fmt { "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v" };
+	spdlog::pattern_formatter formatter { std::string( server_fmt ) };
+
+	const auto raw_entries { ring_sink->last_raw( 0 ) };
 
 	std::string log_out {};
 	log_out.reserve( 1024 * 8 );
 
-	for ( const auto& log_line : log_entries )
+	for ( const auto& entry : raw_entries )
 	{
-		if ( !logEntryMatchesLevel( log_line, log_level ) ) continue;
+		if ( entry.level < req_level ) continue;
 
-		if ( !logEntryMatchesTime( log_line, since_str ) ) continue;
+		if ( since_ms.has_value() )
+		{
+			const auto entry_ms {
+				std::chrono::duration_cast< std::chrono::seconds >( entry.time.time_since_epoch() ).count()
+			};
+			if ( static_cast< std::uint64_t >( entry_ms ) < *since_ms ) continue;
+		}
 
-		log_out += log_line;
-		log_out += "\n";
+		spdlog::memory_buf_t buf;
+		formatter.format( entry, buf );
+		log_out += SPDLOG_BUF_TO_STRING( buf );
 	}
 
 	auto response { drogon::HttpResponse::newHttpResponse() };

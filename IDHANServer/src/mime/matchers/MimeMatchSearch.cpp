@@ -19,62 +19,54 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 {
 	if ( m_offset >= 0 && m_offset != NO_OFFSET )
 	{
+		log::trace( "MimeMatchSearch::match: fixed offset mode at {}", m_offset );
 		cursor.jumpTo( m_offset );
 
-		for ( const auto& match : m_match_data )
+		for ( std::size_t i = 0; i < m_match_data.size(); ++i )
 		{
+			const auto& match { m_match_data[ i ] };
 			const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
+			log::trace( "MimeMatchSearch::match: trying match {} at offset {}", i + 1, cursor.pos() );
 			if ( co_await cursor.tryMatch( match_view ) )
 			{
-				// log::debug( "PASS Match found {} at offset {}", spdlog::to_hex( match_view ), cursor.pos() );
+				log::trace( "MimeMatchSearch::match: PASS match {} found at offset {}", i + 1, cursor.pos() );
 				cursor.inc( match_view.size() );
 				co_return true;
 			}
 			else
 			{
-				/*
-				const auto data { co_await cursor.data( std::min( match.size(), 16ul ) ) };
-
-				if ( data.size() > 0 )
-					log::debug(
-						"No match found {}\nvs{}",
-						spdlog::to_hex( match_view ),
-						spdlog::to_hex( data.substr( 0, match.size() ) ) );
-				*/
+				log::trace( "MimeMatchSearch::match: FAIL match {} at offset {}", i + 1, cursor.pos() );
 			}
 		}
 
 		co_return false;
 	}
 
-	for ( const auto& match : m_match_data )
-	{
-		const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
-
-		// log::debug( "Searching for {}", spdlog::to_hex( match_view ) );
-	}
-
+	log::trace( "MimeMatchSearch::match: scan mode starting at cursor pos={}", cursor.pos() );
 	const auto pos_limit { m_limit == NO_LIMIT ? NO_LIMIT : cursor.pos() + m_limit };
 	do
 	{
 		if ( cursor.pos() >= pos_limit )
 		{
-			// log::debug( "Ending search due to limit being hit. Limit was {}. Started at {}", pos_limit, start_pos );
+			log::trace( "MimeMatchSearch::match: ending scan at pos {} (limit {})", cursor.pos(), pos_limit );
 			break;
 		}
 
-		for ( const auto& match : m_match_data )
+		for ( std::size_t i = 0; i < m_match_data.size(); ++i )
 		{
+			const auto& match { m_match_data[ i ] };
 			const std::string_view match_view { reinterpret_cast< const char* >( match.data() ), match.size() };
 
 			if ( co_await cursor.tryMatchInc( match_view ) )
 			{
+				log::trace( "MimeMatchSearch::match: scan found match {} at pos {}", i + 1, cursor.pos() );
 				co_return true;
 			}
 		}
 	}
 	while ( cursor.inc() );
 
+	log::trace( "MimeMatchSearch::match: scan mode exhausted, no match found" );
 	co_return false;
 }
 

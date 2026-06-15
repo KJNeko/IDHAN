@@ -42,7 +42,8 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	if ( const int r = archive_read_open_memory( a.get(), data.file_view.data(), data.file_view.size() ); r != 0 )
 	{
-		return std::unexpected( idhan::ModuleError { archive_error_string( a.get() ) } );
+		const char* err { archive_error_string( a.get() ) };
+		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_open_memory failed" } );
 	}
 
 	idhan::MetadataInfo metadata {};
@@ -105,7 +106,8 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 		if ( archive_read_data( a.get(), file_data.data(), file_size ) < 0 )
 		{
 			spdlog::error( "Unable to read archive data" );
-			return std::unexpected( idhan::ModuleError { archive_error_string( a.get() ) } );
+			const char* err { archive_error_string( a.get() ) };
+			return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
 		}
 
 		const auto file_hash { idhan::crypto::hashData( file_data.data(), file_data.size() ) };
@@ -124,7 +126,8 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	if ( ret != ARCHIVE_EOF )
 	{
-		return std::unexpected( idhan::ModuleError { archive_error_string( a.get() ) } );
+		const char* err { archive_error_string( a.get() ) };
+		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_next_header failed" } );
 	}
 
 	metadata.m_simple_type = idhan::SimpleMimeType::ARCHIVE;

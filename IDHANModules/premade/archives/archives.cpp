@@ -23,14 +23,25 @@ std::expected< std::string, idhan::ModuleError > encoding( const char* str )
 	switch ( detect( str, &obj ) )
 	{
 		case CHARDET_OUT_OF_MEMORY:
+			detect_obj_free( &obj );
 			return std::unexpected( idhan::ModuleError { "chardet OOM error" } );
 		case CHARDET_NULL_OBJECT:
+			detect_obj_free( &obj );
 			return std::unexpected( idhan::ModuleError { "Null chardet object" } );
+		case CHARDET_NO_RESULT:
+			detect_obj_free( &obj );
+			return std::unexpected( idhan::ModuleError { "chardet no result" } );
 		default:
 			break;
 	}
 
-	std::string encoding { obj->encoding };
+	const char* encoding_str { obj->encoding };
+	if ( !encoding_str )
+	{
+		detect_obj_free( &obj );
+		return std::unexpected( idhan::ModuleError { "chardet returned null encoding" } );
+	}
+	std::string encoding { encoding_str };
 
 	detect_obj_free( &obj );
 

@@ -2,6 +2,7 @@
 // Created by kj16609 on 2/21/26.
 //
 #pragma once
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <memory>
@@ -39,8 +40,8 @@ class JobRuntime
 	std::queue< std::shared_ptr< JobContext > > m_queue {};
 	std::unordered_map< idhan::JobID, JobPtr > m_jobs {};
 
-	bool m_soft_stop { false };
-	bool m_hard_stop { false };
+	std::atomic< bool > m_soft_stop { false };
+	std::atomic< bool > m_hard_stop { false };
 
 	std::jthread m_runner_thread;
 	std::jthread m_cleanup_thread;
@@ -61,6 +62,8 @@ class JobRuntime
 
 	JobRuntime();
 	~JobRuntime();
+
+	void requestStop();
 };
 
 class JobContext

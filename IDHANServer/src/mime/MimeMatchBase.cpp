@@ -54,18 +54,29 @@ std::vector< MimeMatcher > parseDataJson( const Json::Value& json )
 
 drogon::Task< bool > MimeMatchBase::test( Cursor cursor )
 {
+	log::trace( "MimeMatchBase::test: entering (cursor pos={})", cursor.pos() );
 	const auto does_match { co_await this->match( cursor ) };
 
-	if ( !does_match ) co_return false;
-
-	for ( const auto& child : m_children )
+	if ( !does_match )
 	{
-		if ( !co_await child->test( cursor ) )
+		log::trace( "MimeMatchBase::test: self-match failed at pos={}", cursor.pos() );
+		co_return false;
+	}
+	log::trace(
+		"MimeMatchBase::test: self-match passed at pos={}, checking {} children", cursor.pos(), m_children.size() );
+
+	for ( std::size_t i = 0; i < m_children.size(); ++i )
+	{
+		log::trace( "MimeMatchBase::test: checking child {}/{}", i + 1, m_children.size() );
+		if ( !co_await m_children[ i ]->test( cursor ) )
 		{
+			log::trace( "MimeMatchBase::test: child {} failed", i + 1 );
 			co_return false;
 		}
+		log::trace( "MimeMatchBase::test: child {} passed", i + 1 );
 	}
 
+	log::trace( "MimeMatchBase::test: all matchers passed (cursor pos={})", cursor.pos() );
 	co_return true;
 }
 

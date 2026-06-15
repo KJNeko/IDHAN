@@ -5,6 +5,7 @@
 
 #include <json/value.h>
 
+#include "logging/log.hpp"
 #include "mime/Cursor.hpp"
 #include "mime/MimeIdentifier.hpp"
 #include "paths.hpp"
@@ -19,17 +20,24 @@ MimeMatchInclude::MimeMatchInclude( std::vector< MimeMatcher >&& matchers, const
 
 drogon::Task< bool > MimeMatchInclude::match( Cursor& cursor ) const
 {
-	for ( const auto& matcher : m_matchers )
+	log::trace( "MimeMatchInclude::match: entering with {} sub-matchers", m_matchers.size() );
+	for ( std::size_t i = 0; i < m_matchers.size(); ++i )
 	{
-		if ( !co_await matcher->test( cursor ) ) co_return false;
+		log::trace( "MimeMatchInclude::match: testing sub-matcher {}/{}", i + 1, m_matchers.size() );
+		if ( !co_await m_matchers[ i ]->test( cursor ) )
+		{
+			log::trace( "MimeMatchInclude::match: sub-matcher {} failed", i + 1 );
+			co_return false;
+		}
+		log::trace( "MimeMatchInclude::match: sub-matcher {} passed", i + 1 );
 	}
 
+	log::trace( "MimeMatchInclude::match: all sub-matchers passed" );
 	co_return true;
 }
 
 MimeMatcher MimeMatchInclude::createFromJson( const Json::Value& json )
 {
-	// This mime matcher will just simply insert the `data` from a file into another
 	if ( !json.isMember( "file" ) )
 	{
 		throw std::runtime_error(
@@ -37,11 +45,13 @@ MimeMatcher MimeMatchInclude::createFromJson( const Json::Value& json )
 	}
 
 	const auto desired_filename { json[ "file" ].asString() };
+	log::trace( "MimeMatchInclude::createFromJson: looking for included file '{}'", desired_filename );
 
 	for ( const auto& mime_file : getMimeParserPaths() )
 	{
 		if ( mime_file.filename().string() == desired_filename )
 		{
+			log::trace( "MimeMatchInclude::createFromJson: found included file at {}", mime_file.string() );
 			Json::Value file_json { jsonFromFile( mime_file ) };
 
 			if ( !file_json.isMember( "data" ) )
@@ -51,6 +61,7 @@ MimeMatcher MimeMatchInclude::createFromJson( const Json::Value& json )
 			}
 
 			std::vector< MimeMatcher > matchers { parseDataJson( file_json[ "data" ] ) };
+			log::trace( "MimeMatchInclude::createFromJson: parsed {} matchers from included file", matchers.size() );
 
 			return std::make_unique< MimeMatchInclude >( std::move( matchers ), json );
 		}

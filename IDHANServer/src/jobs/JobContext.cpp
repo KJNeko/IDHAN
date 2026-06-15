@@ -19,7 +19,13 @@ using namespace idhan;
 std::shared_ptr< JobContext > JobRuntime::getNextJob()
 {
 	std::unique_lock lock { m_queue_mtx };
-	m_cv.wait( lock, [ this ]() { return !m_queue.empty() || m_hard_stop || m_soft_stop; } );
+	m_cv.wait(
+		lock,
+		[ this ]()
+		{
+			return !m_queue.empty() || m_hard_stop.load( std::memory_order_acquire )
+		        || m_soft_stop.load( std::memory_order_acquire );
+		} );
 
 	if ( m_queue.empty() ) return nullptr;
 
@@ -31,9 +37,9 @@ std::shared_ptr< JobContext > JobRuntime::getNextJob()
 // ... existing code ...
 void JobRuntime::runner()
 {
-	while ( !m_hard_stop )
+	while ( !m_hard_stop.load( std::memory_order_acquire ) )
 	{
-		if ( m_soft_stop && m_queue.empty() ) break;
+		if ( m_soft_stop.load( std::memory_order_acquire ) && m_queue.empty() ) break;
 
 		const auto job { getNextJob() };
 		if ( !job ) continue;
@@ -56,7 +62,7 @@ void JobRuntime::runner()
 
 void JobRuntime::cleanup()
 {
-	while ( !m_hard_stop )
+	while ( !m_hard_stop.load( std::memory_order_acquire ) )
 	{
 		{
 			std::lock_guard lock { m_queue_mtx };
@@ -125,10 +131,15 @@ JobRuntime::JobRuntime() : m_pool( nullptr ), m_queue_mtx(), m_cv(), m_queue(), 
 
 using Clock = std::chrono::steady_clock;
 
+void JobRuntime::requestStop()
+{
+	m_soft_stop.store( true, std::memory_order_release );
+	m_cv.notify_all();
+}
+
 JobRuntime::~JobRuntime()
 {
-	m_soft_stop = true;
-	m_cv.notify_all();
+	requestStop();
 
 	const auto begin_stop { Clock::now() };
 	const auto timeout { std::chrono::seconds( 10 ) };
@@ -142,7 +153,7 @@ JobRuntime::~JobRuntime()
 		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 	}
 
-	m_hard_stop = true;
+	m_hard_stop.store( true, std::memory_order_release );
 	m_cv.notify_all();
 }
 
@@ -163,6 +174,7 @@ bool JobContext::run()
 		m_coro.m_status->m_start_time = std::chrono::steady_clock::now();
 	}
 
+	log::debug( "Resuming job {}", m_id );
 	m_coro.m_handle.resume();
 
 	return m_coro.m_handle.done();
@@ -173,12 +185,10 @@ idhan::JobID generateNewJobID()
 	return job_id_counter++;
 }
 
-static std::unique_ptr< JobRuntime > job_runtime { nullptr };
-
 JobRuntime& getJobRuntime()
 {
-	if ( !job_runtime ) job_runtime = std::make_unique< JobRuntime >();
-	return *job_runtime;
+	static JobRuntime job_runtime;
+	return job_runtime;
 }
 
 std::shared_ptr< JobContext > queueJob( JobTask task, const std::string_view name, const std::source_location loc )

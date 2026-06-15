@@ -22,7 +22,7 @@ IDHANTask<> CursorData::requestData( const std::size_t offset, const std::size_t
 	}
 	if ( std::holds_alternative< std::string_view >( m_io ) )
 	{
-		// explicitly left as NOOP
+		log::trace( "CursorData::requestData: string_view source, no read needed" );
 		co_return;
 	}
 
@@ -54,12 +54,17 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 
 		if ( is_low || is_small || is_oob )
 		{
-			// log::debug(
-			// 	"access is lower than buffer: {}, access is larger than buffer: {}, access would oob: {}",
-			// 	is_low,
-			// 	is_small,
-			// 	is_oob );
+			log::trace(
+				"CursorData::checkData: re-reading at pos {} (low={}, small={}, oob={})",
+				pos,
+				is_low,
+				is_small,
+				is_oob );
 			co_await requestData( pos, required_size );
+		}
+		else
+		{
+			log::trace( "CursorData::checkData: buffer OK at pos {} (need {} bytes)", pos, required_size );
 		}
 
 		FGL_ASSERT( m_buffer_pos <= pos, "Buffer was not expected at it's current pos" );
@@ -116,12 +121,20 @@ drogon::Task< bool > Cursor::tryMatch( const std::string_view match ) const
 	FGL_ASSERT( m_data, "Data was invalid" );
 	const auto [ ptr, size ] { co_await m_data->checkData( m_pos, match.size() ) };
 
-	if ( !ptr ) co_return false;
+	if ( !ptr )
+	{
+		log::trace( "Cursor::tryMatch: ptr was null at pos {} for {} bytes", m_pos, match.size() );
+		co_return false;
+	}
 
-	if ( size < match.size() ) co_return false;
+	if ( size < match.size() )
+	{
+		log::trace( "Cursor::tryMatch: not enough data at pos {}: need {} have {}", m_pos, match.size(), size );
+		co_return false;
+	}
 
-	// if memcmp returns zero, They are identical.
 	const bool passes { std::memcmp( ptr, match.data(), match.size() ) == 0 };
+	log::trace( "Cursor::tryMatch: at pos {} -> {}", m_pos, passes ? "PASS" : "FAIL" );
 
 	co_return passes;
 }
@@ -129,7 +142,11 @@ drogon::Task< bool > Cursor::tryMatch( const std::string_view match ) const
 drogon::Task< bool > Cursor::tryMatchInc( const std::string_view match )
 {
 	const bool is_match { co_await tryMatch( match ) };
-	if ( is_match ) inc( match.size() );
+	if ( is_match )
+	{
+		log::trace( "Cursor::tryMatchInc: advance by {} to pos {}", match.size(), m_pos + match.size() );
+		inc( match.size() );
+	}
 	co_return is_match;
 }
 
