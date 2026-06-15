@@ -1,13 +1,9 @@
 #include "PTRImportWorker.hpp"
 
-#include <QCryptographicHash>
-#include <QThread>
-
 #include <json/json.h>
 #include <spdlog/spdlog.h>
 
 #include <fstream>
-#include <map>
 #include <ranges>
 #include <set>
 
@@ -35,17 +31,15 @@ void PTRImportWorker::run()
 
 	try
 	{
-		emit progress( "Scanning directory..." );
-		scanDirectory();
+		emit progress( "Loading metadata..." );
+		loadMetadata();
 
-		emit progress( "Loading metadata for ordering..." );
-		loadMetadataForOrdering();
-
-		emit progress( "Building translation tables from definitions..." );
-		buildTranslationTables();
-
-		emit progress( "Importing content files..." );
-		processContentFiles();
+		emit progress( "Processing files in metadata order..." );
+		if ( processInOrder() )
+		{
+			emit finished( false, "Cancelled" );
+			return;
+		}
 
 		spdlog::info( "PTR import completed successfully" );
 		emit finished( true, "PTR import completed successfully." );
@@ -57,325 +51,224 @@ void PTRImportWorker::run()
 	}
 }
 
-void PTRImportWorker::scanDirectory()
+void PTRImportWorker::loadMetadata()
 {
-	m_file_entries.clear();
-
-	if ( !std::filesystem::exists( m_ptr_directory ) ) throw std::runtime_error( "PTR directory does not exist" );
-
-	for ( const auto& entry : std::filesystem::directory_iterator( m_ptr_directory ) )
+	// Try ptr_metadata.json first — written by the downloader, already parsed JSON
+	const auto meta_json_path = m_ptr_directory / "ptr_metadata.json";
 	{
-		if ( m_cancelled ) return;
+		std::ifstream file( meta_json_path );
+		if ( file )
+		{
+			Json::Value root;
+			Json::CharReaderBuilder builder;
+			std::string errors;
+			if ( Json::parseFromStream( builder, file, &root, &errors ) )
+			{
+				const auto& updates_arr = root[ "updates" ];
+				if ( updates_arr.isArray() )
+				{
+					for ( const auto& u : updates_arr )
+					{
+						MetadataUpdateEntry entry;
+						entry.index = u[ "index" ].asInt();
+						const auto& hashes = u[ "hashes" ];
+						if ( hashes.isArray() )
+						{
+							for ( const auto& h : hashes ) entry.hashes.push_back( h.asString() );
+						}
+						entry.begin = u[ "begin" ].asInt64();
+						entry.end = u[ "end" ].asInt64();
+						m_metadata.updates.push_back( std::move( entry ) );
+					}
+				}
+				m_metadata.next_update_due = root.get( "next_update_due", 0 ).asInt64();
 
-		if ( !entry.is_regular_file() ) continue;
+				const auto& imported = root[ "imported_files" ];
+				if ( imported.isObject() )
+				{
+					for ( const auto& hash : imported.getMemberNames() )
+					{
+						if ( imported[ hash ].asBool() ) m_imported_hashes.insert( hash );
+					}
+				}
 
-		const auto ext = entry.path().extension().string();
-		if ( ext != ".ptrupdate" ) continue;
+				spdlog::info(
+					"Loaded metadata from ptr_metadata.json: {} update indices, {} previously imported",
+					m_metadata.updates.size(),
+					m_imported_hashes.size() );
+				return;
+			}
+			spdlog::warn( "Failed to parse ptr_metadata.json: {}", errors );
+		}
+	}
 
-		FileEntry fe;
-		fe.path = entry.path();
-		fe.hash_hex = entry.path().stem().string();
-
-		// Determine type by reading the file
+	// Fall back to parsing metadata.ptrupdate (raw PTR server metadata)
+	const auto meta_ptr_path = m_ptr_directory / "metadata.ptrupdate";
+	if ( std::filesystem::exists( meta_ptr_path ) )
+	{
 		try
 		{
-			const auto data = readFile( fe.path );
-			const auto root = decompressToJson( data );
-			fe.type = detectUpdateType( root );
-		}
-		catch ( ... )
-		{
-			spdlog::warn( "Skipping unparseable file: {}", fe.path.string() );
-			continue;
-		}
-
-		m_file_entries.push_back( std::move( fe ) );
-	}
-
-	int def_count = 0, content_count = 0, unknown_count = 0;
-	for ( const auto& fe : m_file_entries )
-	{
-		if ( fe.is_definitions() )
-			++def_count;
-		else if ( fe.is_content() )
-			++content_count;
-		else
-			++unknown_count;
-	}
-
-	spdlog::info(
-		"Found {} PTR files in directory ({} definitions, {} content, {} unknown)",
-		m_file_entries.size(),
-		def_count,
-		content_count,
-		unknown_count );
-}
-
-void PTRImportWorker::loadMetadataForOrdering()
-{
-	const auto meta_path = m_ptr_directory / "ptr_metadata.json";
-	std::ifstream file( meta_path );
-	if ( !file )
-	{
-		spdlog::warn( "No ptr_metadata.json found; using file modification time for ordering" );
-		return;
-	}
-
-	Json::Value root;
-	Json::CharReaderBuilder builder;
-	std::string errors;
-	if ( !Json::parseFromStream( builder, file, &root, &errors ) )
-	{
-		spdlog::warn( "Failed to parse ptr_metadata.json; using file mtime for ordering" );
-		return;
-	}
-
-	// Parse metadata
-	const auto& updates_arr = root[ "updates" ];
-	if ( updates_arr.isArray() )
-	{
-		for ( const auto& u : updates_arr )
-		{
-			MetadataUpdateEntry entry;
-			entry.index = u[ "index" ].asInt();
-			const auto& hashes = u[ "hashes" ];
-			if ( hashes.isArray() )
+			auto parsed = parseUpdateFile( meta_ptr_path );
+			if ( auto* meta = std::get_if< MetadataUpdate >( &parsed ) )
 			{
-				for ( const auto& h : hashes ) entry.hashes.push_back( h.asString() );
+				m_metadata = std::move( *meta );
+				spdlog::info(
+					"Loaded metadata from metadata.ptrupdate: {} update indices", m_metadata.updates.size() );
+				return;
 			}
-			entry.begin = u[ "begin" ].asInt64();
-			entry.end = u[ "end" ].asInt64();
-			m_metadata.updates.push_back( std::move( entry ) );
-		}
-	}
-	m_metadata.next_update_due = root.get( "next_update_due", 0 ).asInt64();
-
-	// Parse imported files tracking
-	const auto& imported = root[ "imported_files" ];
-	if ( imported.isObject() )
-	{
-		for ( const auto& hash : imported.getMemberNames() )
-		{
-			if ( imported[ hash ].asBool() ) m_imported_hashes.insert( hash );
-		}
-	}
-
-	spdlog::info(
-		"Loaded metadata: {} update indices, {} previously imported files",
-		m_metadata.updates.size(),
-		m_imported_hashes.size() );
-
-	// Map update index to file entries
-	std::map< int, std::vector< FileEntry* > > index_map;
-	for ( auto& fe : m_file_entries ) fe.update_index = -1;
-
-	// Build lookup from hash_hex to file entry
-	std::unordered_map< std::string, FileEntry* > hash_to_entry;
-	for ( auto& fe : m_file_entries ) hash_to_entry[ fe.hash_hex ] = &fe;
-
-	// Assign indices
-	for ( const auto& u : m_metadata.updates )
-	{
-		for ( const auto& h : u.hashes )
-		{
-			auto it = hash_to_entry.find( h );
-			if ( it != hash_to_entry.end() ) it->second->update_index = u.index;
-		}
-	}
-}
-
-void PTRImportWorker::buildTranslationTables()
-{
-	// Sort files: definitions first, then by update_index, then by mtime
-	std::vector< FileEntry* > ordered;
-	for ( auto& fe : m_file_entries )
-	{
-		if ( fe.is_definitions() ) ordered.push_back( &fe );
-	}
-
-	std::ranges::sort(
-		ordered,
-		[]( const FileEntry* a, const FileEntry* b )
-		{
-			if ( a->update_index != b->update_index ) return a->update_index < b->update_index;
-			return a->path < b->path;
-		} );
-
-	spdlog::info( "Processing {} definition files for translation tables...", ordered.size() );
-
-	int processed = 0;
-	for ( auto* fe : ordered )
-	{
-		if ( m_cancelled ) return;
-
-		spdlog::trace( "Processing definition file: {}", fe->path.string() );
-
-		try
-		{
-			auto parsed = parseUpdateFile( fe->path );
-			auto* defs = std::get_if< DefinitionsUpdate >( &parsed );
-			if ( !defs )
-			{
-				spdlog::warn( "File {} is not a definitions update, skipping", fe->path.string() );
-				continue;
-			}
-
-			spdlog::trace(
-				"Definitions in {}: {} hashes, {} tags",
-				fe->path.filename().string(),
-				defs->hash_ids_to_hashes.size(),
-				defs->tag_ids_to_tags.size() );
-
-			// Merge into translation tables
-			for ( auto& [ hash_id, hash_hex ] : defs->hash_ids_to_hashes )
-				m_tables.hash_id_to_sha256[ hash_id ] = std::move( hash_hex );
-
-			for ( auto& [ tag_id, tag_str ] : defs->tag_ids_to_tags )
-				m_tables.tag_id_to_tag[ tag_id ] = std::move( tag_str );
-
-			++processed;
-
-			if ( processed % 100 == 0 )
-			{
-				emit progress( QString( "Building translations: %1 files, %2 hashes, %3 tags" )
-				                   .arg( processed )
-				                   .arg( m_tables.hash_id_to_sha256.size() )
-				                   .arg( m_tables.tag_id_to_tag.size() ) );
-			}
+			spdlog::warn( "metadata.ptrupdate did not parse as MetadataUpdate" );
 		}
 		catch ( const std::exception& e )
 		{
-			spdlog::warn( "Failed to parse definition file {}: {}", fe->path.string(), e.what() );
+			spdlog::warn( "Failed to parse metadata.ptrupdate: {}", e.what() );
 		}
 	}
 
-	spdlog::info(
-		"Translation tables built: {} hashes, {} tags from {} files",
-		m_tables.hash_id_to_sha256.size(),
-		m_tables.tag_id_to_tag.size(),
-		processed );
+	throw std::runtime_error( "No metadata found in directory. Run the download step first." );
 }
 
-void PTRImportWorker::processContentFiles()
+bool PTRImportWorker::processInOrder()
 {
-	std::vector< FileEntry* > ordered;
-	for ( auto& fe : m_file_entries )
-	{
-		if ( fe.is_content() ) ordered.push_back( &fe );
-	}
-
+	// Sort update entries by index so we always process definitions before content that depends on them
 	std::ranges::sort(
-		ordered,
-		[]( const FileEntry* a, const FileEntry* b )
-		{
-			if ( a->update_index != b->update_index ) return a->update_index < b->update_index;
-			return a->path < b->path;
-		} );
+		m_metadata.updates, []( const MetadataUpdateEntry& a, const MetadataUpdateEntry& b ) { return a.index < b.index; } );
 
-	// Remove already-imported files
-	std::vector< FileEntry* > to_process;
-	for ( auto* fe : ordered )
-	{
-		if ( m_imported_hashes.find( fe->hash_hex ) == m_imported_hashes.end() ) to_process.push_back( fe );
-	}
+	int64_t total_files = 0;
+	for ( const auto& u : m_metadata.updates ) total_files += static_cast< int64_t >( u.hashes.size() );
 
 	spdlog::info(
-		"Content files to process: {} ({} already imported)", to_process.size(), ordered.size() - to_process.size() );
+		"Processing up to {} files across {} update indices", total_files, m_metadata.updates.size() );
 
-	if ( to_process.empty() )
-	{
-		emit progress( "All content files already imported." );
-		return;
-	}
-
+	// Get or create the tag domain once before the loop
 	auto& client = IDHANClient::instance();
-
-	// Create or find tag domain
 	const std::string domain_name = "public tag repository";
 	TagDomainID domain_id = 0;
 
-	auto domain_search_f = client.getTagDomain( domain_name );
-	domain_search_f.waitForFinished();
-	auto domain_result = domain_search_f.result();
-	if ( domain_result.has_value() )
 	{
-		domain_id = domain_result.value();
-		spdlog::info( "Using existing tag domain: {} (id={})", domain_name, domain_id );
-	}
-	else
-	{
-		auto domain_f = client.createTagDomain( domain_name );
-		domain_f.waitForFinished();
-		domain_id = domain_f.result();
-		spdlog::info( "Created new tag domain: {} (id={})", domain_name, domain_id );
-	}
-
-	int processed = 0;
-	const int total = static_cast< int >( to_process.size() );
-
-	for ( auto* fe : to_process )
-	{
-		if ( m_cancelled )
+		auto f = client.getTagDomain( domain_name );
+		f.waitForFinished();
+		auto result = f.result();
+		if ( result.has_value() )
 		{
-			spdlog::warn( "Import cancelled by user" );
-			emit finished( false, "Cancelled" );
-			return;
+			domain_id = result.value();
+			spdlog::info( "Using existing tag domain: {} (id={})", domain_name, domain_id );
 		}
-
-		spdlog::debug( "Processing content file {}/{}: {}", processed + 1, total, fe->path.filename().string() );
-
-		try
+		else
 		{
-			auto parsed = parseUpdateFile( fe->path );
-			auto* content = std::get_if< ContentUpdate >( &parsed );
-			if ( !content )
-			{
-				spdlog::warn( "File {} is not a content update, skipping", fe->path.string() );
-				continue;
-			}
+			auto cf = client.createTagDomain( domain_name );
+			cf.waitForFinished();
+			domain_id = cf.result();
+			spdlog::info( "Created new tag domain: {} (id={})", domain_name, domain_id );
+		}
+	}
 
-			spdlog::trace(
-				"Content in {}: {} mappings, {} parents, {} siblings",
-				fe->hash_hex,
-				content->mappings_add.size(),
-				content->tag_parents_add.size(),
-				content->tag_siblings_add.size() );
+	if ( domain_id == TagDomainID( 0 ) )
+		throw std::runtime_error( "Failed to get or create tag domain '" + domain_name + "'" );
 
-			processSingleContentFile( *fe, *content, domain_id );
+	int64_t processed = 0;
+	int64_t definitions_processed = 0;
+	int64_t content_processed = 0;
+
+	for ( const auto& update_entry : m_metadata.updates )
+	{
+		if ( m_cancelled ) return true;
+
+		for ( const auto& hash_hex : update_entry.hashes )
+		{
+			if ( m_cancelled ) return true;
 
 			++processed;
 
-			emit progress(
-				QString( "Imported %1/%2: %3 (mappings: %4, parents: %5, siblings: %6)" )
-					.arg( processed )
-					.arg( total )
-					.arg( QString::fromStdString( fe->hash_hex ) )
-					.arg( content->mappings_add.size() )
-					.arg( content->tag_parents_add.size() )
-					.arg( content->tag_siblings_add.size() ) );
+			if ( m_imported_hashes.count( hash_hex ) )
+			{
+				spdlog::debug( "Skipping already-imported file: {}", hash_hex );
+				emit fileProcessed( static_cast< int >( processed ), static_cast< int >( total_files ) );
+				continue;
+			}
 
-			emit fileProcessed( QString::fromStdString( fe->hash_hex ), processed, total );
-		}
-		catch ( const std::exception& e )
-		{
-			spdlog::error( "Failed to process {}: {}", fe->path.string(), e.what() );
-			// Continue with next file
+			const auto file_path = m_ptr_directory / ( hash_hex + ".ptrupdate" );
+			if ( !std::filesystem::exists( file_path ) )
+			{
+				spdlog::warn( "File not found, skipping: {}", file_path.string() );
+				emit fileProcessed( static_cast< int >( processed ), static_cast< int >( total_files ) );
+				continue;
+			}
+
+			try
+			{
+				auto parsed = parseUpdateFile( file_path );
+
+				if ( auto* defs = std::get_if< DefinitionsUpdate >( &parsed ) )
+				{
+					spdlog::trace(
+						"Definitions [{}]: {} hashes, {} tags",
+						hash_hex,
+						defs->hash_ids_to_hashes.size(),
+						defs->tag_ids_to_tags.size() );
+
+					for ( auto& [ hash_id, hex ] : defs->hash_ids_to_hashes )
+						m_tables.hash_id_to_sha256[ hash_id ] = std::move( hex );
+
+					for ( auto& [ tag_id, tag ] : defs->tag_ids_to_tags )
+						m_tables.tag_id_to_tag[ tag_id ] = std::move( tag );
+
+					++definitions_processed;
+
+					emit progress(
+						QString( "Update %1: definitions (%2 hashes, %3 tags known)" )
+							.arg( update_entry.index )
+							.arg( m_tables.hash_id_to_sha256.size() )
+							.arg( m_tables.tag_id_to_tag.size() ) );
+				}
+				else if ( auto* content = std::get_if< ContentUpdate >( &parsed ) )
+				{
+					spdlog::debug(
+						"Content [{}]: {} mappings, {} parents, {} siblings",
+						hash_hex,
+						content->mappings_add.size(),
+						content->tag_parents_add.size(),
+						content->tag_siblings_add.size() );
+
+					processSingleContentFile( hash_hex, *content, domain_id );
+					++content_processed;
+
+					emit progress(
+						QString( "Update %1: content %2/%3 (%4 mappings, %5 parents, %6 siblings)" )
+							.arg( update_entry.index )
+							.arg( processed )
+							.arg( total_files )
+							.arg( content->mappings_add.size() )
+							.arg( content->tag_parents_add.size() )
+							.arg( content->tag_siblings_add.size() ) );
+				}
+				// Metadata-type files in the directory are silently skipped
+			}
+			catch ( const std::exception& e )
+			{
+				spdlog::error( "Failed to process {}: {}", hash_hex, e.what() );
+				// Continue with next file rather than aborting the whole import
+			}
+
+			emit fileProcessed( static_cast< int >( processed ), static_cast< int >( total_files ) );
 		}
 	}
 
-	spdlog::info( "PTR import completed: {} content files processed", processed );
+	spdlog::info(
+		"PTR import pass complete: {} definitions files, {} content files processed",
+		definitions_processed,
+		content_processed );
+	return false;
 }
 
 void PTRImportWorker::processSingleContentFile(
-	const FileEntry& entry,
+	const std::string& hash_hex,
 	const ContentUpdate& content,
 	const TagDomainID domain_id )
 {
 	auto& client = IDHANClient::instance();
 
-	spdlog::trace( "Processing content file: {}", entry.hash_hex );
+	spdlog::trace( "Processing content file: {}", hash_hex );
 
-	// ── Phase 1: Collect all unique hashes and tags ──
 	std::unordered_map< int /*hash_id*/, std::set< int /*tag_id*/ > > hash_to_tags;
 	std::unordered_set< int > all_hash_ids;
 	std::unordered_set< int > all_tag_ids;
@@ -407,7 +300,6 @@ void PTRImportWorker::processSingleContentFile(
 
 	spdlog::trace( "Phase 1: {} unique hash_ids, {} unique tag_ids", all_hash_ids.size(), all_tag_ids.size() );
 
-	// ── Phase 2: Translate hash_ids to SHA-256 hex strings ──
 	std::vector< std::string > hash_hexes;
 	hash_hexes.reserve( all_hash_ids.size() );
 
@@ -426,9 +318,10 @@ void PTRImportWorker::processSingleContentFile(
 
 	spdlog::trace( "Phase 2: {} hash_ids translated to SHA-256", hash_hexes.size() );
 
-	// ── Phase 3: Translate tag_ids to (namespace, subtag) pairs ──
 	std::vector< std::pair< std::string, std::string > > tag_pairs;
+	std::vector< int > translated_tag_ids; // parallel to tag_pairs — same index → same position
 	tag_pairs.reserve( all_tag_ids.size() );
+	translated_tag_ids.reserve( all_tag_ids.size() );
 
 	std::unordered_map< int, std::pair< std::string, std::string > > tag_id_to_pair;
 	for ( const auto& tid : all_tag_ids )
@@ -439,13 +332,14 @@ void PTRImportWorker::processSingleContentFile(
 			spdlog::warn( "Missing tag definition for tag_id={}, skipping", tid );
 			continue;
 		}
-		tag_id_to_pair[ tid ] = splitTag( it->second );
-		tag_pairs.push_back( tag_id_to_pair[ tid ] );
+		auto pair = splitTag( it->second );
+		tag_id_to_pair[ tid ] = pair;
+		tag_pairs.push_back( std::move( pair ) );
+		translated_tag_ids.push_back( tid );
 	}
 
 	spdlog::trace( "Phase 3: {} tag_ids translated to strings", tag_pairs.size() );
 
-	// ── Phase 4: Create records in IDHAN ──
 	std::unordered_map< std::string, RecordID > hex_to_record_id;
 	if ( !hash_hexes.empty() )
 	{
@@ -455,10 +349,18 @@ void PTRImportWorker::processSingleContentFile(
 		const auto record_ids = records_future.result();
 
 		spdlog::trace( "Phase 4: got {} record IDs back", record_ids.size() );
+		if ( record_ids.size() != hash_hexes.size() )
+		{
+			spdlog::error(
+				"createRecords returned {} IDs for {} hashes — skipping content file {}",
+				record_ids.size(),
+				hash_hexes.size(),
+				hash_hex );
+			return;
+		}
 		for ( size_t i = 0; i < hash_hexes.size(); ++i ) hex_to_record_id[ hash_hexes[ i ] ] = record_ids[ i ];
 	}
 
-	// ── Phase 5: Create tags in IDHAN ──
 	std::unordered_map< int, TagID > tag_id_to_idhan_id;
 	if ( !tag_pairs.empty() )
 	{
@@ -467,19 +369,22 @@ void PTRImportWorker::processSingleContentFile(
 		tags_future.waitForFinished();
 		const auto idhan_tag_ids = tags_future.result();
 
-		size_t idx = 0;
-		for ( const auto& tid : all_tag_ids )
+		if ( idhan_tag_ids.size() != translated_tag_ids.size() )
 		{
-			if ( tag_id_to_pair.contains( tid ) )
-			{
-				tag_id_to_idhan_id[ tid ] = idhan_tag_ids[ idx ];
-				++idx;
-			}
+			spdlog::error(
+				"createTags returned {} IDs for {} tags — skipping content file {}",
+				idhan_tag_ids.size(),
+				translated_tag_ids.size(),
+				hash_hex );
+			return;
 		}
+
+		for ( size_t i = 0; i < translated_tag_ids.size(); ++i )
+			tag_id_to_idhan_id[ translated_tag_ids[ i ] ] = idhan_tag_ids[ i ];
+
 		spdlog::trace( "Phase 5: {} tags registered in IDHAN", tag_id_to_idhan_id.size() );
 	}
 
-	// ── Phase 6: Apply mappings ──
 	if ( !hash_to_tags.empty() )
 	{
 		spdlog::trace( "Phase 6: applying {} hash->tag mappings", hash_to_tags.size() );
@@ -517,7 +422,6 @@ void PTRImportWorker::processSingleContentFile(
 		}
 	}
 
-	// ── Phase 7: Apply parent relationships ──
 	if ( !content.tag_parents_add.empty() )
 	{
 		spdlog::trace( "Phase 7: applying {} parent relationships", content.tag_parents_add.size() );
@@ -538,7 +442,6 @@ void PTRImportWorker::processSingleContentFile(
 		}
 	}
 
-	// ── Phase 8: Apply sibling/alias relationships ──
 	if ( !content.tag_siblings_add.empty() )
 	{
 		spdlog::trace( "Phase 8: applying {} sibling relationships", content.tag_siblings_add.size() );
@@ -559,7 +462,7 @@ void PTRImportWorker::processSingleContentFile(
 		}
 	}
 
-	spdlog::debug( "Finished processing content file: {}", entry.hash_hex );
+	spdlog::debug( "Finished processing content file: {}", hash_hex );
 }
 
 } // namespace idhan::hydrus::ptr

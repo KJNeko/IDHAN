@@ -4,12 +4,12 @@
 #include <QRunnable>
 
 #include <IDHANTypes.hpp>
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
 #include "PTRFileParser.hpp"
 
@@ -35,50 +35,32 @@ class PTRImportWorker : public QObject, public QRunnable
 
 	explicit PTRImportWorker( const std::filesystem::path& ptr_directory, QObject* parent = nullptr );
 
+	Q_DISABLE_COPY_MOVE( PTRImportWorker );
 	~PTRImportWorker() override;
 	void run() override;
 
-	// For cancellation from another thread
 	void requestCancel() { m_cancelled = true; }
-
-	bool isCancelled() const { return m_cancelled; }
 
   signals:
 
 	void progress( const QString& status );
-	void fileProcessed( const QString& hash_hex, int current, int total );
+	void fileProcessed( int current, int total );
 	void finished( bool success, const QString& message );
 
   private:
 
-	struct FileEntry
-	{
-		std::filesystem::path path;
-		std::string hash_hex; // filename without extension
-		int update_index { -1 }; // from metadata, or -1 if unknown
-		UpdateType type { UpdateType::Unknown };
+	void loadMetadata();
+	bool processInOrder(); // returns true if cancelled mid-run
 
-		bool is_definitions() const { return type == UpdateType::Definitions; }
-
-		bool is_content() const { return type == UpdateType::Content; }
-	};
-
-	void scanDirectory();
-	void loadMetadataForOrdering();
-	void buildTranslationTables();
-	void processContentFiles();
-
-	void processSingleContentFile( const FileEntry& entry, const ContentUpdate& content, idhan::TagDomainID domain_id );
+	void processSingleContentFile( const std::string& hash_hex, const ContentUpdate& content, idhan::TagDomainID domain_id );
 
 	std::filesystem::path m_ptr_directory;
 	TranslationTables m_tables;
-	std::vector< FileEntry > m_file_entries;
 
-	// For ordering
 	MetadataUpdate m_metadata;
-	std::unordered_set< std::string > m_imported_hashes; // hashes already imported in previous runs
+	std::unordered_set< std::string > m_imported_hashes;
 
-	bool m_cancelled { false };
+	std::atomic< bool > m_cancelled { false };
 };
 
 } // namespace idhan::hydrus::ptr
