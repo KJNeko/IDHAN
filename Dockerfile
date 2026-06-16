@@ -75,12 +75,13 @@ COPY docs /build/docs
 
 # Build IDHANServer with ccache mount
 ARG IDHAN_DISABLE_API_AUTH=OFF
+ARG CMAKE_BUILD_TYPE=Release
 ENV CCACHE_DIR=/root/.ccache
 RUN --mount=type=cache,target=/root/.ccache \
     --mount=type=cache,target=/build/build \
     --mount=type=cache,target=/root/.cache/emscripten \
     cmake -S . -B build \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
     -DCMAKE_CXX_STANDARD=23 \
     -DBUILD_IDHAN_TESTS=OFF \
     -DBUILD_HYDRUS_IMPORTER=OFF \
