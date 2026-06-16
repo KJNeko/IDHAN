@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLocale>
 #include <QNetworkRequest>
 #include <QUrlQuery>
 
@@ -317,7 +318,7 @@ void PTRDownloader::downloadMetadata()
 	spdlog::debug( "Metadata URL: {}", url.toString().toStdString() );
 	spdlog::debug( "Requesting metadata since index {}", since );
 
-	emit progress( QString( "Downloading metadata (since index %1)..." ).arg( since ) );
+	emit progress( QString( "Downloading metadata (since index %1)..." ).arg( QLocale::system().toString( since ) ) );
 
 	QNetworkRequest request( url );
 	request.setRawHeader( "User-Agent", "IDHAN PTR Importer/0.1" );
@@ -461,7 +462,7 @@ void PTRDownloader::downloadNextUpdate()
 		spdlog::info( "All {} updates downloaded successfully", m_completed_downloads );
 		m_state = State::Done;
 		saveMetadata();
-		emit finished( true, QString( "Downloaded %1 files." ).arg( m_completed_downloads ) );
+		emit finished( true, QString( "Downloaded %1 files." ).arg( QLocale::system().toString( m_completed_downloads ) ) );
 		return;
 	}
 
@@ -477,8 +478,8 @@ void PTRDownloader::downloadNextUpdate()
 
 	emit fileDownloading( QString::fromStdString( hash_hex ), m_current_download_index + 1, m_total_downloads );
 	emit progress( QString( "Downloading %1/%2: %3" )
-	                   .arg( m_current_download_index + 1 )
-	                   .arg( m_total_downloads )
+	                   .arg( QLocale::system().toString( m_current_download_index + 1 ) )
+	                   .arg( QLocale::system().toString( m_total_downloads ) )
 	                   .arg( QString::fromStdString( hash_hex ) ) );
 
 	auto url = makeUrl( "update" );

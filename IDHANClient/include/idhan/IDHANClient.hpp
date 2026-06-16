@@ -160,6 +160,11 @@ class IDHANClient
 
 	QFuture< void > removeTags( RecordID record_id, TagDomainID tag_domain_id, const std::vector< TagID >& tag_ids );
 
+	QFuture< void > removeTags(
+		std::vector< RecordID >&& record_ids,
+		TagDomainID tag_domain_id,
+		std::vector< std::vector< TagID > >&& tag_sets );
+
 	// File relationships
 	QFuture< void > setAlternativeGroups( std::vector< RecordID >& record_ids );
 

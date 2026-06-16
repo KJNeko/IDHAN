@@ -1,6 +1,7 @@
 #include "PTRDownloadWidget.hpp"
 
 #include <QFileDialog>
+#include <QLocale>
 #include <QThreadPool>
 
 #include "ptr/PTRDownloader.hpp"
@@ -86,8 +87,8 @@ void PTRDownloadWidget::onDownload()
 
 void PTRDownloadWidget::onMetadataReceived( int total_updates, int total_files )
 {
-	ui->updateCountLabel->setText( QString( "Updates: %1" ).arg( total_updates ) );
-	ui->fileCountLabel->setText( QString( "Files: %1" ).arg( total_files ) );
+	ui->updateCountLabel->setText( QString( "Updates: %1" ).arg( QLocale::system().toString( total_updates ) ) );
+	ui->fileCountLabel->setText( QString( "Files: %1" ).arg( QLocale::system().toString( total_files ) ) );
 	ui->progressBar->setMaximum( total_files );
 }
 
@@ -103,7 +104,9 @@ void PTRDownloadWidget::onFileDownloaded( const QString& hash_hex, int current, 
 	Q_UNUSED( hash_hex );
 	ui->progressBar->setValue( current );
 	ui->progressBar->setMaximum( total );
-	ui->fileCountLabel->setText( QString( "Files: %1/%2" ).arg( current ).arg( total ) );
+	ui->fileCountLabel->setText( QString( "Files: %1/%2" )
+	                                 .arg( QLocale::system().toString( current ) )
+	                                 .arg( QLocale::system().toString( total ) ) );
 }
 
 void PTRDownloadWidget::onDownloadFinished( bool success, const QString& message )

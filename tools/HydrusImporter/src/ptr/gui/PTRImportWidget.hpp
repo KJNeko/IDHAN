@@ -32,7 +32,9 @@ class PTRImportWidget final : public QWidget
 	void onImport();
 	void onCancel();
 	void onProgress( const QString& status );
+	void onSubProgress( int current, int total, const QString& status );
 	void onFileProcessed( int current, int total );
+	void onUpdateCompleted( const QString& summary );
 	void onImportFinished( bool success, const QString& message );
 
   private:

@@ -36,6 +36,7 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 	drogon::Task< drogon::HttpResponsePtr > addMultipleTags( drogon::HttpRequestPtr request );
 
 	drogon::Task< drogon::HttpResponsePtr > removeTags( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > removeMultipleTags( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > listTags( drogon::HttpRequestPtr request, RecordID record_id );
 	drogon::Task< drogon::HttpResponsePtr > listActiveTags( drogon::HttpRequestPtr request, RecordID record_id );
 	drogon::Task< drogon::HttpResponsePtr > listActiveTagsVerbose( drogon::HttpRequestPtr request, RecordID record_id );
@@ -67,6 +68,7 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 
 	// tags
 	ADD_METHOD_TO( RecordAPI::addMultipleTags, "/records/tags/add", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::removeMultipleTags, "/records/tags/remove", IDHANAPIAuthName );
 
 	ADD_METHOD_TO( RecordAPI::addTags, "/records/{record_id}/tags/add", IDHANAPIAuthName );
 	ADD_METHOD_TO( RecordAPI::removeTags, "/records/{record_id}/tags/remove", IDHANAPIAuthName );

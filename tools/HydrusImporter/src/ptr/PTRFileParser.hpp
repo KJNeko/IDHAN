@@ -36,6 +36,10 @@ struct ContentUpdate
 	std::vector< ContentUpdateMapping > mappings_add;
 	std::vector< std::pair< int, int > > tag_parents_add; // (child_id, parent_id)
 	std::vector< std::pair< int, int > > tag_siblings_add; // (bad_id, good_id)
+
+	std::vector< ContentUpdateMapping > mappings_delete;
+	std::vector< std::pair< int, int > > tag_parents_delete; // (child_id, parent_id)
+	std::vector< std::pair< int, int > > tag_siblings_delete; // (bad_id, good_id)
 };
 
 struct MetadataUpdateEntry
