@@ -1,6 +1,7 @@
 #include "PTRImportWidget.hpp"
 
 #include <QFileDialog>
+#include <QLocale>
 #include <QThreadPool>
 
 #include "ptr/PTRImportWorker.hpp"
@@ -59,16 +60,26 @@ void PTRImportWidget::onImport()
 	m_importing = true;
 	ui->importButton->setEnabled( false );
 	ui->cancelButton->setEnabled( true );
+	ui->batchSize->setEnabled( false );
 	ui->progressBar->setValue( 0 );
+	ui->subProgressBar->setValue( 0 );
 	ui->statusLabel->setStyleSheet( "" );
 	ui->statusLabel->setText( "Importing..." );
 	ui->fileCountLabel->setText( "Files: --" );
+	ui->historyLog->clear();
 
 	m_worker = std::make_unique< idhan::hydrus::ptr::PTRImportWorker >( dir_text.toStdString() );
+	m_worker->setBatchSize( static_cast< std::size_t >( ui->batchSize->value() ) );
 
 	connect( m_worker.get(), &idhan::hydrus::ptr::PTRImportWorker::progress, this, &PTRImportWidget::onProgress );
+	connect( m_worker.get(), &idhan::hydrus::ptr::PTRImportWorker::subProgress, this, &PTRImportWidget::onSubProgress );
 	connect(
 		m_worker.get(), &idhan::hydrus::ptr::PTRImportWorker::fileProcessed, this, &PTRImportWidget::onFileProcessed );
+	connect(
+		m_worker.get(),
+		&idhan::hydrus::ptr::PTRImportWorker::updateCompleted,
+		this,
+		&PTRImportWidget::onUpdateCompleted );
 	connect( m_worker.get(), &idhan::hydrus::ptr::PTRImportWorker::finished, this, &PTRImportWidget::onImportFinished );
 
 	QThreadPool::globalInstance()->start( m_worker.get() );
@@ -84,11 +95,26 @@ void PTRImportWidget::onProgress( const QString& status )
 	ui->statusLabel->setText( status );
 }
 
+void PTRImportWidget::onSubProgress( int current, int total, const QString& status )
+{
+	ui->statusLabel->setText( status );
+	ui->subProgressBar->setMaximum( total );
+	ui->subProgressBar->setValue( current );
+}
+
 void PTRImportWidget::onFileProcessed( int current, int total )
 {
 	ui->progressBar->setMaximum( total );
 	ui->progressBar->setValue( current );
-	ui->fileCountLabel->setText( QString( "Files: %1 / %2" ).arg( current ).arg( total ) );
+	ui->fileCountLabel->setText( QString( "Files: %1 / %2" )
+	                                 .arg( QLocale::system().toString( current ) )
+	                                 .arg( QLocale::system().toString( total ) ) );
+	ui->subProgressBar->setValue( 0 ); // Reset sub-progress for next file
+}
+
+void PTRImportWidget::onUpdateCompleted( const QString& summary )
+{
+	ui->historyLog->appendPlainText( summary );
 }
 
 void PTRImportWidget::onImportFinished( bool success, const QString& message )
@@ -96,6 +122,8 @@ void PTRImportWidget::onImportFinished( bool success, const QString& message )
 	m_importing = false;
 	ui->importButton->setEnabled( !ui->directoryPath->text().isEmpty() );
 	ui->cancelButton->setEnabled( false );
+	ui->batchSize->setEnabled( true );
+	ui->subProgressBar->setValue( 0 );
 
 	ui->statusLabel->setText( message );
 	ui->statusLabel->setStyleSheet( success ? "QLabel { color: green; }" : "QLabel { color: red; }" );

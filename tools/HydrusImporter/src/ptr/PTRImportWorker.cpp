@@ -1,5 +1,7 @@
 #include "PTRImportWorker.hpp"
 
+#include <QLocale>
+
 #include <json/json.h>
 #include <spdlog/spdlog.h>
 
@@ -112,8 +114,7 @@ void PTRImportWorker::loadMetadata()
 			if ( auto* meta = std::get_if< MetadataUpdate >( &parsed ) )
 			{
 				m_metadata = std::move( *meta );
-				spdlog::info(
-					"Loaded metadata from metadata.ptrupdate: {} update indices", m_metadata.updates.size() );
+				spdlog::info( "Loaded metadata from metadata.ptrupdate: {} update indices", m_metadata.updates.size() );
 				return;
 			}
 			spdlog::warn( "metadata.ptrupdate did not parse as MetadataUpdate" );
@@ -131,13 +132,13 @@ bool PTRImportWorker::processInOrder()
 {
 	// Sort update entries by index so we always process definitions before content that depends on them
 	std::ranges::sort(
-		m_metadata.updates, []( const MetadataUpdateEntry& a, const MetadataUpdateEntry& b ) { return a.index < b.index; } );
+		m_metadata.updates,
+		[]( const MetadataUpdateEntry& a, const MetadataUpdateEntry& b ) { return a.index < b.index; } );
 
 	int64_t total_files = 0;
 	for ( const auto& u : m_metadata.updates ) total_files += static_cast< int64_t >( u.hashes.size() );
 
-	spdlog::info(
-		"Processing up to {} files across {} update indices", total_files, m_metadata.updates.size() );
+	spdlog::info( "Processing up to {} files across {} update indices", total_files, m_metadata.updates.size() );
 
 	// Get or create the tag domain once before the loop
 	auto& client = IDHANClient::instance();
@@ -169,15 +170,27 @@ bool PTRImportWorker::processInOrder()
 	int64_t definitions_processed = 0;
 	int64_t content_processed = 0;
 
-	for ( const auto& update_entry : m_metadata.updates )
+	for ( std::size_t update_index = 0; update_index < m_metadata.updates.size(); ++update_index )
 	{
+		const auto& update_entry = m_metadata.updates[ update_index ];
+
 		if ( m_cancelled ) return true;
+
+		const auto update_file_count = static_cast< int64_t >( update_entry.hashes.size() );
+		int64_t update_file_index = 0;
+		ContentStats update_stats;
+
+		emit progress( QString( "Processing update %1/%2 (%3 files)" )
+		                   .arg( QLocale::system().toString( static_cast< qlonglong >( update_index + 1 ) ) )
+		                   .arg( QLocale::system().toString( static_cast< qlonglong >( m_metadata.updates.size() ) ) )
+		                   .arg( QLocale::system().toString( update_file_count ) ) );
 
 		for ( const auto& hash_hex : update_entry.hashes )
 		{
 			if ( m_cancelled ) return true;
 
 			++processed;
+			++update_file_index;
 
 			if ( m_imported_hashes.count( hash_hex ) )
 			{
@@ -198,6 +211,11 @@ bool PTRImportWorker::processInOrder()
 			{
 				auto parsed = parseUpdateFile( file_path );
 
+				QString prefix = QString( "Update %1: file %2/%3" )
+				                     .arg( QLocale::system().toString( update_entry.index ) )
+				                     .arg( QLocale::system().toString( update_file_index ) )
+				                     .arg( QLocale::system().toString( update_file_count ) );
+
 				if ( auto* defs = std::get_if< DefinitionsUpdate >( &parsed ) )
 				{
 					spdlog::trace(
@@ -215,33 +233,37 @@ bool PTRImportWorker::processInOrder()
 					++definitions_processed;
 
 					emit progress(
-						QString( "Update %1: definitions (%2 hashes, %3 tags known)" )
-							.arg( update_entry.index )
-							.arg( m_tables.hash_id_to_sha256.size() )
-							.arg( m_tables.tag_id_to_tag.size() ) );
+						QString( "%1 - definitions (%2 hashes, %3 tags known)" )
+							.arg( prefix )
+							.arg(
+								QLocale::system().toString(
+									static_cast< qlonglong >( m_tables.hash_id_to_sha256.size() ) ) )
+							.arg(
+								QLocale::system().toString(
+									static_cast< qlonglong >( m_tables.tag_id_to_tag.size() ) ) ) );
 				}
 				else if ( auto* content = std::get_if< ContentUpdate >( &parsed ) )
 				{
 					spdlog::debug(
-						"Content [{}]: {} mappings, {} parents, {} siblings",
+						"Content [{}]: {} mappings ({} delete), {} parents ({} delete), {} siblings ({} delete)",
 						hash_hex,
 						content->mappings_add.size(),
+						content->mappings_delete.size(),
 						content->tag_parents_add.size(),
-						content->tag_siblings_add.size() );
+						content->tag_parents_delete.size(),
+						content->tag_siblings_add.size(),
+						content->tag_siblings_delete.size() );
 
-					processSingleContentFile( hash_hex, *content, domain_id );
+					auto file_stats = processSingleContentFile( hash_hex, *content, domain_id, prefix );
+					update_stats.records_created += file_stats.records_created;
+					update_stats.tags_added += file_stats.tags_added;
+					update_stats.tags_removed += file_stats.tags_removed;
+					update_stats.parents_added += file_stats.parents_added;
+					update_stats.parents_removed += file_stats.parents_removed;
+					update_stats.aliases_added += file_stats.aliases_added;
+					update_stats.aliases_removed += file_stats.aliases_removed;
 					++content_processed;
-
-					emit progress(
-						QString( "Update %1: content %2/%3 (%4 mappings, %5 parents, %6 siblings)" )
-							.arg( update_entry.index )
-							.arg( processed )
-							.arg( total_files )
-							.arg( content->mappings_add.size() )
-							.arg( content->tag_parents_add.size() )
-							.arg( content->tag_siblings_add.size() ) );
 				}
-				// Metadata-type files in the directory are silently skipped
 			}
 			catch ( const std::exception& e )
 			{
@@ -251,6 +273,20 @@ bool PTRImportWorker::processInOrder()
 
 			emit fileProcessed( static_cast< int >( processed ), static_cast< int >( total_files ) );
 		}
+
+		QString summary =
+			QString(
+				"Update %1: %2 files | %3 records, %4 tags +, %5 tags -, %6 parents +, %7 parents -, %8 aliases +, %9 aliases -" )
+				.arg( QLocale::system().toString( update_entry.index ) )
+				.arg( QLocale::system().toString( update_file_count ) )
+				.arg( QLocale::system().toString( update_stats.records_created ) )
+				.arg( QLocale::system().toString( update_stats.tags_added ) )
+				.arg( QLocale::system().toString( update_stats.tags_removed ) )
+				.arg( QLocale::system().toString( update_stats.parents_added ) )
+				.arg( QLocale::system().toString( update_stats.parents_removed ) )
+				.arg( QLocale::system().toString( update_stats.aliases_added ) )
+				.arg( QLocale::system().toString( update_stats.aliases_removed ) );
+		emit updateCompleted( summary );
 	}
 
 	spdlog::info(
@@ -260,23 +296,26 @@ bool PTRImportWorker::processInOrder()
 	return false;
 }
 
-void PTRImportWorker::processSingleContentFile(
+ContentStats PTRImportWorker::processSingleContentFile(
 	const std::string& hash_hex,
 	const ContentUpdate& content,
-	const TagDomainID domain_id )
+	const TagDomainID domain_id,
+	const QString& progress_prefix )
 {
+	ContentStats stats;
 	auto& client = IDHANClient::instance();
 
+	emit subProgress( 0, 0, progress_prefix + " - Analyzing..." );
 	spdlog::trace( "Processing content file: {}", hash_hex );
 
 	std::unordered_map< int /*hash_id*/, std::set< int /*tag_id*/ > > hash_to_tags;
+	std::unordered_map< int /*hash_id*/, std::set< int /*tag_id*/ > > hash_to_tags_delete;
 	std::unordered_set< int > all_hash_ids;
 	std::unordered_set< int > all_tag_ids;
 
 	for ( const auto& mapping : content.mappings_add )
 	{
 		all_tag_ids.insert( mapping.tag_id );
-		spdlog::trace( "  mapping: tag_id={} -> {} hash_ids", mapping.tag_id, mapping.hash_ids.size() );
 		for ( const auto& hid : mapping.hash_ids )
 		{
 			all_hash_ids.insert( hid );
@@ -284,18 +323,38 @@ void PTRImportWorker::processSingleContentFile(
 		}
 	}
 
+	for ( const auto& mapping : content.mappings_delete )
+	{
+		all_tag_ids.insert( mapping.tag_id );
+		for ( const auto& hid : mapping.hash_ids )
+		{
+			all_hash_ids.insert( hid );
+			hash_to_tags_delete[ hid ].insert( mapping.tag_id );
+		}
+	}
+
 	for ( const auto& [ child_id, parent_id ] : content.tag_parents_add )
 	{
 		all_tag_ids.insert( child_id );
 		all_tag_ids.insert( parent_id );
-		spdlog::trace( "  parent: child_id={}, parent_id={}", child_id, parent_id );
+	}
+
+	for ( const auto& [ child_id, parent_id ] : content.tag_parents_delete )
+	{
+		all_tag_ids.insert( child_id );
+		all_tag_ids.insert( parent_id );
 	}
 
 	for ( const auto& [ bad_id, good_id ] : content.tag_siblings_add )
 	{
 		all_tag_ids.insert( bad_id );
 		all_tag_ids.insert( good_id );
-		spdlog::trace( "  sibling: bad_id={}, good_id={}", bad_id, good_id );
+	}
+
+	for ( const auto& [ bad_id, good_id ] : content.tag_siblings_delete )
+	{
+		all_tag_ids.insert( bad_id );
+		all_tag_ids.insert( good_id );
 	}
 
 	spdlog::trace( "Phase 1: {} unique hash_ids, {} unique tag_ids", all_hash_ids.size(), all_tag_ids.size() );
@@ -304,6 +363,7 @@ void PTRImportWorker::processSingleContentFile(
 	hash_hexes.reserve( all_hash_ids.size() );
 
 	std::unordered_map< int, std::string > hash_id_to_hex;
+	hash_id_to_hex.reserve( all_hash_ids.size() );
 	for ( const auto& hid : all_hash_ids )
 	{
 		auto it = m_tables.hash_id_to_sha256.find( hid );
@@ -324,6 +384,7 @@ void PTRImportWorker::processSingleContentFile(
 	translated_tag_ids.reserve( all_tag_ids.size() );
 
 	std::unordered_map< int, std::pair< std::string, std::string > > tag_id_to_pair;
+	tag_id_to_pair.reserve( all_tag_ids.size() );
 	for ( const auto& tid : all_tag_ids )
 	{
 		auto it = m_tables.tag_id_to_tag.find( tid );
@@ -341,42 +402,93 @@ void PTRImportWorker::processSingleContentFile(
 	spdlog::trace( "Phase 3: {} tag_ids translated to strings", tag_pairs.size() );
 
 	std::unordered_map< std::string, RecordID > hex_to_record_id;
+	hex_to_record_id.reserve( hash_hexes.size() );
+
+	std::vector< RecordID > record_ids;
 	if ( !hash_hexes.empty() )
 	{
 		spdlog::trace( "Phase 4: creating {} records via IDHAN API", hash_hexes.size() );
-		auto records_future = client.createRecords( hash_hexes );
-		records_future.waitForFinished();
-		const auto record_ids = records_future.result();
+		record_ids.reserve( hash_hexes.size() );
+
+		for ( std::size_t i = 0; i < hash_hexes.size(); i += m_batch_size )
+		{
+			if ( m_cancelled ) return stats;
+
+			const std::size_t count = std::min( m_batch_size, hash_hexes.size() - i );
+			std::vector< std::string > batch(
+				hash_hexes.begin() + static_cast< std::ptrdiff_t >( i ),
+				hash_hexes.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+
+			emit subProgress(
+				static_cast< int >( i ),
+				static_cast< int >( hash_hexes.size() ),
+				progress_prefix
+					+ QString( " - creating records (%1/%2)" )
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( hash_hexes.size() ) ) ) );
+
+			auto records_future = client.createRecords( batch );
+			records_future.waitForFinished();
+			auto batch_results = records_future.result();
+
+			if ( batch_results.size() != batch.size() )
+			{
+				spdlog::error(
+					"createRecords returned {} IDs for {} hashes in batch starting at {}",
+					batch_results.size(),
+					batch.size(),
+					i );
+				return stats;
+			}
+
+			record_ids.insert( record_ids.end(), batch_results.begin(), batch_results.end() );
+		}
 
 		spdlog::trace( "Phase 4: got {} record IDs back", record_ids.size() );
-		if ( record_ids.size() != hash_hexes.size() )
-		{
-			spdlog::error(
-				"createRecords returned {} IDs for {} hashes — skipping content file {}",
-				record_ids.size(),
-				hash_hexes.size(),
-				hash_hex );
-			return;
-		}
 		for ( size_t i = 0; i < hash_hexes.size(); ++i ) hex_to_record_id[ hash_hexes[ i ] ] = record_ids[ i ];
+		stats.records_created = static_cast< int >( record_ids.size() );
 	}
 
 	std::unordered_map< int, TagID > tag_id_to_idhan_id;
+	tag_id_to_idhan_id.reserve( tag_pairs.size() );
 	if ( !tag_pairs.empty() )
 	{
 		spdlog::trace( "Phase 5: creating {} tags via IDHAN API", tag_pairs.size() );
-		auto tags_future = client.createTags( tag_pairs );
-		tags_future.waitForFinished();
-		const auto idhan_tag_ids = tags_future.result();
+		std::vector< TagID > idhan_tag_ids;
+		idhan_tag_ids.reserve( tag_pairs.size() );
 
-		if ( idhan_tag_ids.size() != translated_tag_ids.size() )
+		for ( std::size_t i = 0; i < tag_pairs.size(); i += m_batch_size )
 		{
-			spdlog::error(
-				"createTags returned {} IDs for {} tags — skipping content file {}",
-				idhan_tag_ids.size(),
-				translated_tag_ids.size(),
-				hash_hex );
-			return;
+			if ( m_cancelled ) return stats;
+
+			const std::size_t count = std::min( m_batch_size, tag_pairs.size() - i );
+			std::vector< std::pair< std::string, std::string > > batch(
+				tag_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
+				tag_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+
+			emit subProgress(
+				static_cast< int >( i ),
+				static_cast< int >( tag_pairs.size() ),
+				progress_prefix
+					+ QString( " - creating tags (%1/%2)" )
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( tag_pairs.size() ) ) ) );
+
+			auto tags_future = client.createTags( batch );
+			tags_future.waitForFinished();
+			auto batch_results = tags_future.result();
+
+			if ( batch_results.size() != batch.size() )
+			{
+				spdlog::error(
+					"createTags returned {} IDs for {} tags in batch starting at {}",
+					batch_results.size(),
+					batch.size(),
+					i );
+				return stats;
+			}
+
+			idhan_tag_ids.insert( idhan_tag_ids.end(), batch_results.begin(), batch_results.end() );
 		}
 
 		for ( size_t i = 0; i < translated_tag_ids.size(); ++i )
@@ -416,9 +528,45 @@ void PTRImportWorker::processSingleContentFile(
 		if ( !record_ids.empty() )
 		{
 			spdlog::trace( "Phase 6: calling addTags with {} records", record_ids.size() );
-			auto add_future = client.addTags( std::move( record_ids ), domain_id, std::move( tag_sets ) );
-			add_future.waitForFinished();
+			for ( std::size_t i = 0; i < record_ids.size(); i += m_batch_size )
+			{
+				if ( m_cancelled ) return stats;
+
+				const std::size_t end = std::min( i + m_batch_size, record_ids.size() );
+				const std::size_t count = end - i;
+
+				emit subProgress(
+					static_cast< int >( i ),
+					static_cast< int >( record_ids.size() ),
+					progress_prefix
+						+ QString( " - applying tags (%1/%2 records)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids.size() ) ) ) );
+
+				std::vector< RecordID > batch_record_ids;
+				batch_record_ids.reserve( count );
+				std::vector< std::vector< std::pair< std::string, std::string > > > batch_tag_sets;
+				batch_tag_sets.reserve( count );
+
+				for ( std::size_t j = i; j < end; ++j )
+				{
+					batch_record_ids.push_back( record_ids[ j ] );
+					batch_tag_sets.push_back( std::move( tag_sets[ j ] ) );
+				}
+
+				spdlog::trace( "Phase 6: calling addTags batch {}-{} ({} records)", i, end - 1, count );
+				auto add_future =
+					client.addTags( std::move( batch_record_ids ), domain_id, std::move( batch_tag_sets ) );
+				add_future.waitForFinished();
+			}
+			emit subProgress(
+				static_cast< int >( record_ids.size() ),
+				static_cast< int >( record_ids.size() ),
+				progress_prefix
+					+ QString( " - tags applied (%1 records)" )
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids.size() ) ) ) );
 			spdlog::trace( "Phase 6: addTags completed" );
+			for ( const auto& tag_set : tag_sets ) stats.tags_added += static_cast< int >( tag_set.size() );
 		}
 	}
 
@@ -426,6 +574,7 @@ void PTRImportWorker::processSingleContentFile(
 	{
 		spdlog::trace( "Phase 7: applying {} parent relationships", content.tag_parents_add.size() );
 		std::vector< std::pair< TagID, TagID > > parent_pairs;
+		parent_pairs.reserve( content.tag_parents_add.size() );
 		for ( const auto& [ child_id, parent_id ] : content.tag_parents_add )
 		{
 			auto child_it = tag_id_to_idhan_id.find( child_id );
@@ -437,8 +586,27 @@ void PTRImportWorker::processSingleContentFile(
 		if ( !parent_pairs.empty() )
 		{
 			spdlog::trace( "Phase 7: creating {} parent relationships", parent_pairs.size() );
-			auto parent_future = client.createParentRelationship( domain_id, parent_pairs );
-			parent_future.waitForFinished();
+			for ( std::size_t i = 0; i < parent_pairs.size(); i += m_batch_size )
+			{
+				if ( m_cancelled ) return stats;
+
+				const std::size_t count = std::min( m_batch_size, parent_pairs.size() - i );
+				std::vector< std::pair< TagID, TagID > > batch(
+					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
+					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+
+				emit subProgress(
+					static_cast< int >( i ),
+					static_cast< int >( parent_pairs.size() ),
+					progress_prefix
+						+ QString( " - adding parent relationships (%1/%2)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( parent_pairs.size() ) ) ) );
+
+				auto parent_future = client.createParentRelationship( domain_id, batch );
+				parent_future.waitForFinished();
+			}
+			stats.parents_added = static_cast< int >( parent_pairs.size() );
 		}
 	}
 
@@ -446,6 +614,7 @@ void PTRImportWorker::processSingleContentFile(
 	{
 		spdlog::trace( "Phase 8: applying {} sibling relationships", content.tag_siblings_add.size() );
 		std::vector< std::pair< TagID, TagID > > sibling_pairs;
+		sibling_pairs.reserve( content.tag_siblings_add.size() );
 		for ( const auto& [ bad_id, good_id ] : content.tag_siblings_add )
 		{
 			auto bad_it = tag_id_to_idhan_id.find( bad_id );
@@ -457,12 +626,185 @@ void PTRImportWorker::processSingleContentFile(
 		if ( !sibling_pairs.empty() )
 		{
 			spdlog::trace( "Phase 8: creating {} alias relationships", sibling_pairs.size() );
-			auto sibling_future = client.createAliasRelationship( domain_id, sibling_pairs );
-			sibling_future.waitForFinished();
+			for ( std::size_t i = 0; i < sibling_pairs.size(); i += m_batch_size )
+			{
+				if ( m_cancelled ) return stats;
+
+				const std::size_t count = std::min( m_batch_size, sibling_pairs.size() - i );
+				std::vector< std::pair< TagID, TagID > > batch(
+					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
+					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+
+				emit subProgress(
+					static_cast< int >( i ),
+					static_cast< int >( sibling_pairs.size() ),
+					progress_prefix
+						+ QString( " - adding alias relationships (%1/%2)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( sibling_pairs.size() ) ) ) );
+
+				auto sibling_future = client.createAliasRelationship( domain_id, batch );
+				sibling_future.waitForFinished();
+			}
+			stats.aliases_added = static_cast< int >( sibling_pairs.size() );
 		}
 	}
 
+	if ( !hash_to_tags_delete.empty() )
+	{
+		spdlog::trace( "Phase 9: removing {} hash->tag mappings", hash_to_tags_delete.size() );
+		std::vector< RecordID > record_ids_del;
+		record_ids_del.reserve( hash_to_tags_delete.size() );
+		std::vector< std::vector< TagID > > tag_id_sets;
+		tag_id_sets.reserve( hash_to_tags_delete.size() );
+
+		for ( const auto& [ hid, tag_id_set ] : hash_to_tags_delete )
+		{
+			auto hex_it = hash_id_to_hex.find( hid );
+			if ( hex_it == hash_id_to_hex.end() ) continue;
+
+			auto rec_it = hex_to_record_id.find( hex_it->second );
+			if ( rec_it == hex_to_record_id.end() ) continue;
+
+			std::vector< TagID > file_tag_ids;
+			file_tag_ids.reserve( tag_id_set.size() );
+			for ( const auto& tid : tag_id_set )
+			{
+				auto tag_it = tag_id_to_idhan_id.find( tid );
+				if ( tag_it != tag_id_to_idhan_id.end() ) file_tag_ids.push_back( tag_it->second );
+			}
+
+			if ( !file_tag_ids.empty() )
+			{
+				record_ids_del.push_back( rec_it->second );
+				tag_id_sets.push_back( std::move( file_tag_ids ) );
+			}
+		}
+
+		if ( !record_ids_del.empty() )
+		{
+			spdlog::trace( "Phase 9: calling removeTags with {} records", record_ids_del.size() );
+			for ( std::size_t i = 0; i < record_ids_del.size(); i += m_batch_size )
+			{
+				if ( m_cancelled ) return stats;
+
+				const std::size_t end = std::min( i + m_batch_size, record_ids_del.size() );
+				const std::size_t count = end - i;
+
+				emit subProgress(
+					static_cast< int >( i ),
+					static_cast< int >( record_ids_del.size() ),
+					progress_prefix
+						+ QString( " - removing tags (%1/%2 records)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids_del.size() ) ) ) );
+
+				std::vector< RecordID > batch_record_ids(
+					record_ids_del.begin() + static_cast< std::ptrdiff_t >( i ),
+					record_ids_del.begin() + static_cast< std::ptrdiff_t >( end ) );
+				std::vector< std::vector< TagID > > batch_tag_sets(
+					tag_id_sets.begin() + static_cast< std::ptrdiff_t >( i ),
+					tag_id_sets.begin() + static_cast< std::ptrdiff_t >( end ) );
+
+				spdlog::trace( "Phase 9: calling removeTags batch {}-{} ({} records)", i, end - 1, count );
+				auto remove_future =
+					client.removeTags( std::move( batch_record_ids ), domain_id, std::move( batch_tag_sets ) );
+				remove_future.waitForFinished();
+			}
+			emit subProgress(
+				static_cast< int >( record_ids_del.size() ),
+				static_cast< int >( record_ids_del.size() ),
+				progress_prefix
+					+ QString( " - tags removed (%1 records)" )
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids_del.size() ) ) ) );
+			spdlog::trace( "Phase 9: removeTags completed" );
+			for ( const auto& tag_set : tag_id_sets ) stats.tags_removed += static_cast< int >( tag_set.size() );
+		}
+	}
+
+	if ( !content.tag_parents_delete.empty() )
+	{
+		spdlog::trace( "Phase 10: removing {} parent relationships", content.tag_parents_delete.size() );
+		std::vector< std::pair< TagID, TagID > > parent_pairs;
+		parent_pairs.reserve( content.tag_parents_delete.size() );
+		for ( const auto& [ child_id, parent_id ] : content.tag_parents_delete )
+		{
+			auto child_it = tag_id_to_idhan_id.find( child_id );
+			auto parent_it = tag_id_to_idhan_id.find( parent_id );
+			if ( child_it != tag_id_to_idhan_id.end() && parent_it != tag_id_to_idhan_id.end() )
+				parent_pairs.emplace_back( parent_it->second, child_it->second );
+		}
+
+		if ( !parent_pairs.empty() )
+		{
+			spdlog::trace( "Phase 10: removing {} parent relationships", parent_pairs.size() );
+			for ( std::size_t i = 0; i < parent_pairs.size(); i += m_batch_size )
+			{
+				if ( m_cancelled ) return stats;
+
+				const std::size_t count = std::min( m_batch_size, parent_pairs.size() - i );
+				std::vector< std::pair< TagID, TagID > > batch(
+					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
+					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+
+				emit subProgress(
+					static_cast< int >( i ),
+					static_cast< int >( parent_pairs.size() ),
+					progress_prefix
+						+ QString( " - removing parent relationships (%1/%2)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( parent_pairs.size() ) ) ) );
+
+				auto parent_future = client.removeParentRelationship( domain_id, batch );
+				parent_future.waitForFinished();
+			}
+			stats.parents_removed = static_cast< int >( parent_pairs.size() );
+		}
+	}
+
+	if ( !content.tag_siblings_delete.empty() )
+	{
+		spdlog::trace( "Phase 11: removing {} sibling relationships", content.tag_siblings_delete.size() );
+		std::vector< std::pair< TagID, TagID > > sibling_pairs;
+		sibling_pairs.reserve( content.tag_siblings_delete.size() );
+		for ( const auto& [ bad_id, good_id ] : content.tag_siblings_delete )
+		{
+			auto bad_it = tag_id_to_idhan_id.find( bad_id );
+			auto good_it = tag_id_to_idhan_id.find( good_id );
+			if ( bad_it != tag_id_to_idhan_id.end() && good_it != tag_id_to_idhan_id.end() )
+				sibling_pairs.emplace_back( bad_it->second, good_it->second );
+		}
+
+		if ( !sibling_pairs.empty() )
+		{
+			spdlog::trace( "Phase 11: removing {} alias relationships", sibling_pairs.size() );
+			for ( std::size_t i = 0; i < sibling_pairs.size(); i += m_batch_size )
+			{
+				if ( m_cancelled ) return stats;
+
+				const std::size_t count = std::min( m_batch_size, sibling_pairs.size() - i );
+				std::vector< std::pair< TagID, TagID > > batch(
+					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
+					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+
+				emit subProgress(
+					static_cast< int >( i ),
+					static_cast< int >( sibling_pairs.size() ),
+					progress_prefix
+						+ QString( " - removing alias relationships (%1/%2)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( sibling_pairs.size() ) ) ) );
+
+				auto sibling_future = client.removeAliasRelationship( domain_id, batch );
+				sibling_future.waitForFinished();
+			}
+			stats.aliases_removed = static_cast< int >( sibling_pairs.size() );
+		}
+	}
+
+	emit subProgress( 1, 1, progress_prefix + " - Done" );
 	spdlog::debug( "Finished processing content file: {}", hash_hex );
+	return stats;
 }
 
 } // namespace idhan::hydrus::ptr

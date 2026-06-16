@@ -199,7 +199,9 @@ ContentUpdate parseContentUpdate( const Json::Value& serialisable_info )
 			if ( !action_entry.isArray() || action_entry.size() < 2 ) continue;
 
 			const auto action = action_entry[ 0 ].asInt();
-			if ( action != CONTENT_UPDATE_ADD ) continue;
+			if ( action != CONTENT_UPDATE_ADD && action != CONTENT_UPDATE_DELETE ) continue;
+
+			const bool is_delete = ( action == CONTENT_UPDATE_DELETE );
 
 			const auto& data_rows = action_entry[ 1 ];
 			if ( !data_rows.isArray() ) continue;
@@ -219,7 +221,10 @@ ContentUpdate parseContentUpdate( const Json::Value& serialisable_info )
 							for ( const auto& hid : hash_ids )
 								mapping.hash_ids.push_back( hid.asInt() );
 						}
-						result.mappings_add.push_back( std::move( mapping ) );
+						if ( is_delete )
+							result.mappings_delete.push_back( std::move( mapping ) );
+						else
+							result.mappings_add.push_back( std::move( mapping ) );
 					}
 					break;
 				}
@@ -230,7 +235,10 @@ ContentUpdate parseContentUpdate( const Json::Value& serialisable_info )
 						if ( !row.isArray() || row.size() < 2 ) continue;
 						const auto child_id = row[ 0 ].asInt();
 						const auto parent_id = row[ 1 ].asInt();
-						result.tag_parents_add.emplace_back( child_id, parent_id );
+						if ( is_delete )
+							result.tag_parents_delete.emplace_back( child_id, parent_id );
+						else
+							result.tag_parents_add.emplace_back( child_id, parent_id );
 					}
 					break;
 				}
@@ -241,7 +249,10 @@ ContentUpdate parseContentUpdate( const Json::Value& serialisable_info )
 						if ( !row.isArray() || row.size() < 2 ) continue;
 						const auto bad_id = row[ 0 ].asInt();
 						const auto good_id = row[ 1 ].asInt();
-						result.tag_siblings_add.emplace_back( bad_id, good_id );
+						if ( is_delete )
+							result.tag_siblings_delete.emplace_back( bad_id, good_id );
+						else
+							result.tag_siblings_add.emplace_back( bad_id, good_id );
 					}
 					break;
 				}
