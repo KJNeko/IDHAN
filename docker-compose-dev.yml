@@ -23,6 +23,7 @@ services:
       context: .
       args:
         IDHAN_DISABLE_API_AUTH: "ON"
+        CMAKE_BUILD_TYPE: "Debug"
     container_name: idhan-server
     environment:
       IDHAN_LOGGING_LEVEL: debug
