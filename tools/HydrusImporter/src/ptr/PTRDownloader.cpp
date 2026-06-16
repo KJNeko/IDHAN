@@ -1,5 +1,6 @@
 #include "PTRDownloader.hpp"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QFile>
 #include <QJsonArray>
@@ -206,22 +207,12 @@ bool PTRDownloader::loadCachedMetadata()
 		const auto data = readFile( meta_path );
 		const auto meta = parseMetadataBytes( QByteArray( data.data(), static_cast< int >( data.size() ) ) );
 
-		// Merge with existing local metadata (downloaded_hashes, etc.)
-		for ( auto& entry : meta.updates )
+		this->m_metadata = meta;
+
+		for ( const auto& u : this->m_metadata.updates )
 		{
-			// Only add entries not already present
-			bool found = false;
-			for ( const auto& existing : m_metadata.updates )
-			{
-				if ( existing.index == entry.index )
-				{
-					found = true;
-					break;
-				}
-			}
-			if ( !found ) m_metadata.updates.push_back( std::move( entry ) );
+			if ( u.index > m_last_update_index ) m_last_update_index = u.index;
 		}
-		m_metadata.next_update_due = meta.next_update_due;
 
 		return true;
 	}
@@ -236,46 +227,79 @@ void PTRDownloader::buildDownloadQueue()
 {
 	m_pending_downloads.clear();
 
+	if ( !m_metadata.updates.empty() )
+	{
+		std::set< int > indices;
+		for ( const auto& u : m_metadata.updates ) indices.insert( u.index );
+
+		if ( !indices.empty() )
+		{
+			const int max_index = *indices.rbegin();
+			std::vector< int > missing;
+			for ( int i = 0; i <= max_index; ++i )
+			{
+				if ( indices.find( i ) == indices.end() ) missing.push_back( i );
+			}
+			if ( !missing.empty() )
+			{
+				spdlog::warn(
+					"Missing update indices in metadata: {} entries missing from 0 to {}", missing.size(), max_index );
+				for ( const auto& idx : missing ) spdlog::warn( "  Missing update index: {}", idx );
+			}
+			else
+			{
+				spdlog::debug( "Update sequence complete: indices 0 to {} ({} updates)", max_index, indices.size() );
+			}
+		}
+	}
+
 	for ( const auto& u : m_metadata.updates )
 	{
+		int files_present = 0;
+		int files_missing = 0;
+
 		for ( const auto& h : u.hashes )
 		{
-			if ( m_downloaded_hashes.find( h ) != m_downloaded_hashes.end() ) continue;
-			// Skip if file already exists on disk (permanent cache)
 			const auto file_path = m_output_dir / ( h + ".ptrupdate" );
-
-			emit progress( "Checking existing updates" );
 
 			if ( std::filesystem::exists( file_path ) )
 			{
-				// Verify the hash matches before skipping
-				try
-				{
-					const auto file_data = readFile( file_path );
-					const QByteArray qdata( file_data.data(), static_cast< int >( file_data.size() ) );
-					const auto actual_hash =
-						QCryptographicHash::hash( qdata, QCryptographicHash::Sha256 ).toHex().toStdString();
-					if ( actual_hash == h )
-					{
-						m_downloaded_hashes.insert( h );
-						spdlog::trace( "  {} already on disk with valid hash, skipping", h );
-						continue;
-					}
-					else
-					{
-						spdlog::warn(
-							"  {} exists but hash mismatch: expected={}, actual={}, will re-download",
-							h,
-							h,
-							actual_hash );
-					}
-				}
-				catch ( const std::exception& e )
-				{
-					spdlog::warn( "  {} exists but failed to verify hash: {}, will re-download", h, e.what() );
-				}
+				m_downloaded_hashes.insert( h );
+				++files_present;
 			}
-			m_pending_downloads.push_back( h );
+			else
+			{
+				if ( m_downloaded_hashes.count( h ) )
+				{
+					spdlog::warn( "  {} marked as downloaded but file missing, will re-download", h );
+					m_downloaded_hashes.erase( h );
+				}
+
+				++files_missing;
+				m_pending_downloads.push_back( h );
+			}
+
+			QCoreApplication::processEvents();
+			if ( m_cancelled )
+			{
+				m_state = State::Idle;
+				emit finished( false, "Cancelled" );
+				return;
+			}
+		}
+
+		if ( files_missing > 0 )
+		{
+			spdlog::info(
+				"Update {}: {}/{} files present, {} to download",
+				u.index,
+				files_present,
+				u.hashes.size(),
+				files_missing );
+		}
+		else
+		{
+			spdlog::debug( "Update {}: all {} files present", u.index, files_present );
 		}
 	}
 
@@ -307,7 +331,7 @@ void PTRDownloader::downloadMetadata()
 {
 	m_state = State::DownloadingMetadata;
 
-	const int since = ( m_last_update_index >= 0 ) ? m_last_update_index + 1 : 0;
+	const int since = 0;
 
 	auto url = makeUrl( "metadata" );
 	QUrlQuery query;
@@ -316,9 +340,9 @@ void PTRDownloader::downloadMetadata()
 
 	spdlog::info( "Downloading metadata from {}:{}", m_host.toStdString(), m_port );
 	spdlog::debug( "Metadata URL: {}", url.toString().toStdString() );
-	spdlog::debug( "Requesting metadata since index {}", since );
+	spdlog::debug( "Requesting metadata from index 0 to ensure completeness" );
 
-	emit progress( QString( "Downloading metadata (since index %1)..." ).arg( QLocale::system().toString( since ) ) );
+	emit progress( "Downloading metadata (from index 0)..." );
 
 	QNetworkRequest request( url );
 	request.setRawHeader( "User-Agent", "IDHAN PTR Importer/0.1" );
@@ -711,30 +735,13 @@ void PTRDownloader::processMetadataResponse( const QByteArray& data )
 	spdlog::info(
 		"Received metadata: {} update entries, next_update_due={}", new_meta.updates.size(), new_meta.next_update_due );
 
-	// Log individual update entries at trace level
 	for ( const auto& u : new_meta.updates )
 	{
 		spdlog::trace( "  update index={}: {} hashes, begin={}, end={}", u.index, u.hashes.size(), u.begin, u.end );
 	}
 
-	// Merge with existing metadata
-	if ( this->m_metadata.updates.empty() )
-	{
-		spdlog::debug( "No existing metadata, using fresh response" );
-		this->m_metadata = std::move( new_meta );
-	}
-	else
-	{
-		spdlog::debug(
-			"Merging {} new entries with {} existing", new_meta.updates.size(), this->m_metadata.updates.size() );
-		for ( auto& entry : new_meta.updates )
-		{
-			this->m_metadata.updates.push_back( std::move( entry ) );
-		}
-		this->m_metadata.next_update_due = new_meta.next_update_due;
-	}
+	this->m_metadata = std::move( new_meta );
 
-	// Update last_update_index
 	for ( const auto& u : this->m_metadata.updates )
 	{
 		if ( u.index > m_last_update_index ) m_last_update_index = u.index;

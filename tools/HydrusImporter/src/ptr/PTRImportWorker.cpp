@@ -6,8 +6,11 @@
 #include <spdlog/spdlog.h>
 
 #include <fstream>
+#include <optional>
 #include <ranges>
 #include <set>
+#include <deque>
+#include <QEventLoop>
 
 #include "PTRConstants.hpp"
 #include "PTRFileParser.hpp"
@@ -179,6 +182,7 @@ bool PTRImportWorker::processInOrder()
 		const auto update_file_count = static_cast< int64_t >( update_entry.hashes.size() );
 		int64_t update_file_index = 0;
 		ContentStats update_stats;
+		std::unordered_set< int > unique_tag_ids;
 
 		emit progress( QString( "Processing update %1/%2 (%3 files)" )
 		                   .arg( QLocale::system().toString( static_cast< qlonglong >( update_index + 1 ) ) )
@@ -254,10 +258,10 @@ bool PTRImportWorker::processInOrder()
 						content->tag_siblings_add.size(),
 						content->tag_siblings_delete.size() );
 
-					auto file_stats = processSingleContentFile( hash_hex, *content, domain_id, prefix );
+					auto file_stats = processSingleContentFile( hash_hex, *content, domain_id, prefix, unique_tag_ids );
 					update_stats.records_created += file_stats.records_created;
-					update_stats.tags_added += file_stats.tags_added;
-					update_stats.tags_removed += file_stats.tags_removed;
+					update_stats.mappings_added += file_stats.mappings_added;
+					update_stats.mappings_removed += file_stats.mappings_removed;
 					update_stats.parents_added += file_stats.parents_added;
 					update_stats.parents_removed += file_stats.parents_removed;
 					update_stats.aliases_added += file_stats.aliases_added;
@@ -274,18 +278,21 @@ bool PTRImportWorker::processInOrder()
 			emit fileProcessed( static_cast< int >( processed ), static_cast< int >( total_files ) );
 		}
 
+		update_stats.tags_created = static_cast< int >( unique_tag_ids.size() );
+
 		QString summary =
 			QString(
-				"Update %1: %2 files | %3 records, %4 tags +, %5 tags -, %6 parents +, %7 parents -, %8 aliases +, %9 aliases -" )
-				.arg( QLocale::system().toString( update_entry.index ) )
-				.arg( QLocale::system().toString( update_file_count ) )
-				.arg( QLocale::system().toString( update_stats.records_created ) )
-				.arg( QLocale::system().toString( update_stats.tags_added ) )
-				.arg( QLocale::system().toString( update_stats.tags_removed ) )
-				.arg( QLocale::system().toString( update_stats.parents_added ) )
-				.arg( QLocale::system().toString( update_stats.parents_removed ) )
-				.arg( QLocale::system().toString( update_stats.aliases_added ) )
-				.arg( QLocale::system().toString( update_stats.aliases_removed ) );
+				"Update %1: %2 files | %3 records, %4 tags, %5 mappings +, %6 mappings -, %7 parents +, %8 parents -, %9 aliases +, %10 aliases -" )
+				.arg( QLocale::system().toString( update_entry.index ), 4 )
+				.arg( QLocale::system().toString( update_file_count ), 8 )
+				.arg( QLocale::system().toString( update_stats.records_created ), 8 )
+				.arg( QLocale::system().toString( update_stats.tags_created ), 8 )
+				.arg( QLocale::system().toString( update_stats.mappings_added ), 8 )
+				.arg( QLocale::system().toString( update_stats.mappings_removed ), 8 )
+				.arg( QLocale::system().toString( update_stats.parents_added ), 8 )
+				.arg( QLocale::system().toString( update_stats.parents_removed ), 8 )
+				.arg( QLocale::system().toString( update_stats.aliases_added ), 8 )
+				.arg( QLocale::system().toString( update_stats.aliases_removed ), 8 );
 		emit updateCompleted( summary );
 	}
 
@@ -300,10 +307,22 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	const std::string& hash_hex,
 	const ContentUpdate& content,
 	const TagDomainID domain_id,
-	const QString& progress_prefix )
+	const QString& progress_prefix,
+	std::unordered_set< int >& unique_tag_ids )
 {
 	ContentStats stats;
 	auto& client = IDHANClient::instance();
+
+	for ( const auto& mapping : content.mappings_add )
+		stats.mappings_added += static_cast< int >( mapping.hash_ids.size() );
+
+	for ( const auto& mapping : content.mappings_delete )
+		stats.mappings_removed += static_cast< int >( mapping.hash_ids.size() );
+
+	stats.parents_added = static_cast< int >( content.tag_parents_add.size() );
+	stats.parents_removed = static_cast< int >( content.tag_parents_delete.size() );
+	stats.aliases_added = static_cast< int >( content.tag_siblings_add.size() );
+	stats.aliases_removed = static_cast< int >( content.tag_siblings_delete.size() );
 
 	emit subProgress( 0, 0, progress_prefix + " - Analyzing..." );
 	spdlog::trace( "Processing content file: {}", hash_hex );
@@ -359,6 +378,8 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 	spdlog::trace( "Phase 1: {} unique hash_ids, {} unique tag_ids", all_hash_ids.size(), all_tag_ids.size() );
 
+	unique_tag_ids.insert( all_tag_ids.begin(), all_tag_ids.end() );
+
 	std::vector< std::string > hash_hexes;
 	hash_hexes.reserve( all_hash_ids.size() );
 
@@ -407,45 +428,93 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	std::vector< RecordID > record_ids;
 	if ( !hash_hexes.empty() )
 	{
-		spdlog::trace( "Phase 4: creating {} records via IDHAN API", hash_hexes.size() );
+		spdlog::trace( "Phase 4: creating {} records via IDHAN API (concurrency={})", hash_hexes.size(), CONCURRENCY );
 		record_ids.reserve( hash_hexes.size() );
 
-		for ( std::size_t i = 0; i < hash_hexes.size(); i += m_batch_size )
+		const std::size_t total_batches = ( hash_hexes.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
+		std::vector< std::optional< std::vector< RecordID > > > batch_results( total_batches );
+		std::vector< QFuture< std::vector< RecordID > > > futures;
+		futures.reserve( CONCURRENCY );
+		std::vector< std::size_t > batch_indices;
+		batch_indices.reserve( CONCURRENCY );
+
+		for ( std::size_t batch_idx = 0; batch_idx < total_batches; ++batch_idx )
 		{
 			if ( m_cancelled ) return stats;
 
-			const std::size_t count = std::min( m_batch_size, hash_hexes.size() - i );
+			const std::size_t start = batch_idx * BATCH_SIZE;
+			const std::size_t end = std::min( start + BATCH_SIZE, hash_hexes.size() );
 			std::vector< std::string > batch(
-				hash_hexes.begin() + static_cast< std::ptrdiff_t >( i ),
-				hash_hexes.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+				hash_hexes.begin() + static_cast< std::ptrdiff_t >( start ),
+				hash_hexes.begin() + static_cast< std::ptrdiff_t >( end ) );
 
 			emit subProgress(
-				static_cast< int >( i ),
-				static_cast< int >( hash_hexes.size() ),
+				static_cast< int >( batch_idx ),
+				static_cast< int >( total_batches ),
 				progress_prefix
 					+ QString( " - creating records (%1/%2)" )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( hash_hexes.size() ) ) ) );
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
 
-			auto records_future = client.createRecords( batch );
-			records_future.waitForFinished();
-			auto batch_results = records_future.result();
+			futures.push_back( client.createRecords( batch ) );
+			batch_indices.push_back( batch_idx );
 
-			if ( batch_results.size() != batch.size() )
+			if ( futures.size() >= CONCURRENCY )
 			{
-				spdlog::error(
-					"createRecords returned {} IDs for {} hashes in batch starting at {}",
-					batch_results.size(),
-					batch.size(),
-					i );
-				return stats;
+				for ( std::size_t i = 0; i < futures.size(); ++i )
+				{
+					try
+					{
+						futures[ i ].waitForFinished();
+						batch_results[ batch_indices[ i ] ] = futures[ i ].result();
+					}
+					catch ( const std::exception& e )
+					{
+						spdlog::error( "createRecords batch {} failed: {}", batch_indices[ i ], e.what() );
+						emit progress(
+							progress_prefix
+							+ QString( " - batch %1 failed: %2" ).arg( batch_indices[ i ] ).arg( e.what() ) );
+					}
+				}
+				futures.clear();
+				batch_indices.clear();
 			}
+		}
 
-			record_ids.insert( record_ids.end(), batch_results.begin(), batch_results.end() );
+		for ( std::size_t i = 0; i < futures.size(); ++i )
+		{
+			try
+			{
+				futures[ i ].waitForFinished();
+				batch_results[ batch_indices[ i ] ] = futures[ i ].result();
+			}
+			catch ( const std::exception& e )
+			{
+				spdlog::error( "createRecords batch {} failed: {}", batch_indices[ i ], e.what() );
+				emit progress(
+					progress_prefix + QString( " - batch %1 failed: %2" ).arg( batch_indices[ i ] ).arg( e.what() ) );
+			}
+		}
+
+		for ( std::size_t b = 0; b < batch_results.size(); ++b )
+		{
+			if ( batch_results[ b ].has_value() )
+			{
+				const auto& results = batch_results[ b ].value();
+				const std::size_t start = b * BATCH_SIZE;
+				for ( std::size_t j = 0; j < results.size(); ++j )
+				{
+					const std::size_t hex_index = start + j;
+					if ( hex_index < hash_hexes.size() )
+					{
+						hex_to_record_id[ hash_hexes[ hex_index ] ] = results[ j ];
+						record_ids.push_back( results[ j ] );
+					}
+				}
+			}
 		}
 
 		spdlog::trace( "Phase 4: got {} record IDs back", record_ids.size() );
-		for ( size_t i = 0; i < hash_hexes.size(); ++i ) hex_to_record_id[ hash_hexes[ i ] ] = record_ids[ i ];
 		stats.records_created = static_cast< int >( record_ids.size() );
 	}
 
@@ -453,46 +522,100 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	tag_id_to_idhan_id.reserve( tag_pairs.size() );
 	if ( !tag_pairs.empty() )
 	{
-		spdlog::trace( "Phase 5: creating {} tags via IDHAN API", tag_pairs.size() );
+		spdlog::trace( "Phase 5: creating {} tags via IDHAN API (concurrency={})", tag_pairs.size(), CONCURRENCY );
 		std::vector< TagID > idhan_tag_ids;
 		idhan_tag_ids.reserve( tag_pairs.size() );
 
-		for ( std::size_t i = 0; i < tag_pairs.size(); i += m_batch_size )
+		const std::size_t total_batches = ( tag_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
+		std::vector< std::optional< std::vector< TagID > > > batch_results( total_batches );
+		std::vector< QFuture< std::vector< TagID > > > futures;
+		futures.reserve( CONCURRENCY );
+		std::vector< std::size_t > batch_indices;
+		batch_indices.reserve( CONCURRENCY );
+
+		for ( std::size_t batch_idx = 0; batch_idx < total_batches; ++batch_idx )
 		{
 			if ( m_cancelled ) return stats;
 
-			const std::size_t count = std::min( m_batch_size, tag_pairs.size() - i );
+			const std::size_t start = batch_idx * BATCH_SIZE;
+			const std::size_t end = std::min( start + BATCH_SIZE, tag_pairs.size() );
 			std::vector< std::pair< std::string, std::string > > batch(
-				tag_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
-				tag_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+				tag_pairs.begin() + static_cast< std::ptrdiff_t >( start ),
+				tag_pairs.begin() + static_cast< std::ptrdiff_t >( end ) );
 
 			emit subProgress(
-				static_cast< int >( i ),
-				static_cast< int >( tag_pairs.size() ),
+				static_cast< int >( batch_idx ),
+				static_cast< int >( total_batches ),
 				progress_prefix
 					+ QString( " - creating tags (%1/%2)" )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( tag_pairs.size() ) ) ) );
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
+						  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
 
-			auto tags_future = client.createTags( batch );
-			tags_future.waitForFinished();
-			auto batch_results = tags_future.result();
+			futures.push_back( client.createTags( batch ) );
+			batch_indices.push_back( batch_idx );
 
-			if ( batch_results.size() != batch.size() )
+			if ( futures.size() >= CONCURRENCY )
 			{
-				spdlog::error(
-					"createTags returned {} IDs for {} tags in batch starting at {}",
-					batch_results.size(),
-					batch.size(),
-					i );
-				return stats;
+				for ( std::size_t i = 0; i < futures.size(); ++i )
+				{
+					try
+					{
+						futures[ i ].waitForFinished();
+						batch_results[ batch_indices[ i ] ] = futures[ i ].result();
+					}
+					catch ( const std::exception& e )
+					{
+						spdlog::error( "createTags batch {} failed: {}", batch_indices[ i ], e.what() );
+						emit progress(
+							progress_prefix
+							+ QString( " - batch %1 failed: %2" ).arg( batch_indices[ i ] ).arg( e.what() ) );
+					}
+				}
+				futures.clear();
+				batch_indices.clear();
 			}
-
-			idhan_tag_ids.insert( idhan_tag_ids.end(), batch_results.begin(), batch_results.end() );
 		}
 
-		for ( size_t i = 0; i < translated_tag_ids.size(); ++i )
-			tag_id_to_idhan_id[ translated_tag_ids[ i ] ] = idhan_tag_ids[ i ];
+		for ( std::size_t i = 0; i < futures.size(); ++i )
+		{
+			try
+			{
+				futures[ i ].waitForFinished();
+				batch_results[ batch_indices[ i ] ] = futures[ i ].result();
+			}
+			catch ( const std::exception& e )
+			{
+				spdlog::error( "createTags batch {} failed: {}", batch_indices[ i ], e.what() );
+				emit progress(
+					progress_prefix + QString( " - batch %1 failed: %2" ).arg( batch_indices[ i ] ).arg( e.what() ) );
+			}
+		}
+
+		for ( std::size_t b = 0; b < batch_results.size(); ++b )
+		{
+			if ( batch_results[ b ].has_value() )
+			{
+				const auto& results = batch_results[ b ].value();
+				idhan_tag_ids.insert( idhan_tag_ids.end(), results.begin(), results.end() );
+			}
+		}
+
+		for ( std::size_t b = 0; b < batch_results.size(); ++b )
+		{
+			if ( batch_results[ b ].has_value() )
+			{
+				const auto& results = batch_results[ b ].value();
+				const std::size_t batch_start = b * BATCH_SIZE;
+				for ( std::size_t j = 0; j < results.size(); ++j )
+				{
+					const std::size_t tag_idx = batch_start + j;
+					if ( tag_idx < translated_tag_ids.size() )
+					{
+						tag_id_to_idhan_id[ translated_tag_ids[ tag_idx ] ] = results[ j ];
+					}
+				}
+			}
+		}
 
 		spdlog::trace( "Phase 5: {} tags registered in IDHAN", tag_id_to_idhan_id.size() );
 	}
@@ -527,21 +650,26 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 		if ( !record_ids.empty() )
 		{
-			spdlog::trace( "Phase 6: calling addTags with {} records", record_ids.size() );
-			for ( std::size_t i = 0; i < record_ids.size(); i += m_batch_size )
+			spdlog::trace(
+				"Phase 6: calling addTags with {} records (concurrency={})", record_ids.size(), CONCURRENCY );
+			const std::size_t total_batches = ( record_ids.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
+			std::deque< QFuture< void > > in_flight;
+			std::size_t batch_idx = 0;
+
+			for ( std::size_t i = 0; i < record_ids.size(); i += BATCH_SIZE )
 			{
 				if ( m_cancelled ) return stats;
 
-				const std::size_t end = std::min( i + m_batch_size, record_ids.size() );
+				const std::size_t end = std::min( i + BATCH_SIZE, record_ids.size() );
 				const std::size_t count = end - i;
 
 				emit subProgress(
-					static_cast< int >( i ),
-					static_cast< int >( record_ids.size() ),
+					static_cast< int >( batch_idx ),
+					static_cast< int >( total_batches ),
 					progress_prefix
-						+ QString( " - applying tags (%1/%2 records)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids.size() ) ) ) );
+						+ QString( " - applying tags (%1/%2 batches)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
 
 				std::vector< RecordID > batch_record_ids;
 				batch_record_ids.reserve( count );
@@ -554,19 +682,47 @@ ContentStats PTRImportWorker::processSingleContentFile(
 					batch_tag_sets.push_back( std::move( tag_sets[ j ] ) );
 				}
 
-				spdlog::trace( "Phase 6: calling addTags batch {}-{} ({} records)", i, end - 1, count );
-				auto add_future =
-					client.addTags( std::move( batch_record_ids ), domain_id, std::move( batch_tag_sets ) );
-				add_future.waitForFinished();
+				spdlog::trace( "Phase 6: launching addTags batch {} ({} records)", batch_idx, count );
+				in_flight.push_back(
+					client.addTags( std::move( batch_record_ids ), domain_id, std::move( batch_tag_sets ) ) );
+
+				if ( in_flight.size() >= CONCURRENCY )
+				{
+					try
+					{
+						in_flight.front().waitForFinished();
+					}
+					catch ( const std::exception& e )
+					{
+						spdlog::error( "addTags batch failed: {}", e.what() );
+						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+					}
+					in_flight.pop_front();
+				}
+
+				++batch_idx;
 			}
+
+			for ( auto& future : in_flight )
+			{
+				try
+				{
+					future.waitForFinished();
+				}
+				catch ( const std::exception& e )
+				{
+					spdlog::error( "addTags batch failed: {}", e.what() );
+					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+				}
+			}
+
 			emit subProgress(
-				static_cast< int >( record_ids.size() ),
-				static_cast< int >( record_ids.size() ),
+				static_cast< int >( total_batches ),
+				static_cast< int >( total_batches ),
 				progress_prefix
 					+ QString( " - tags applied (%1 records)" )
 						  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids.size() ) ) ) );
 			spdlog::trace( "Phase 6: addTags completed" );
-			for ( const auto& tag_set : tag_sets ) stats.tags_added += static_cast< int >( tag_set.size() );
 		}
 	}
 
@@ -585,28 +741,60 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 		if ( !parent_pairs.empty() )
 		{
-			spdlog::trace( "Phase 7: creating {} parent relationships", parent_pairs.size() );
-			for ( std::size_t i = 0; i < parent_pairs.size(); i += m_batch_size )
+			spdlog::trace(
+				"Phase 7: creating {} parent relationships (concurrency={})", parent_pairs.size(), CONCURRENCY );
+			const std::size_t total_batches = ( parent_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
+			std::deque< QFuture< void > > in_flight;
+			std::size_t batch_idx = 0;
+
+			for ( std::size_t i = 0; i < parent_pairs.size(); i += BATCH_SIZE )
 			{
 				if ( m_cancelled ) return stats;
 
-				const std::size_t count = std::min( m_batch_size, parent_pairs.size() - i );
+				const std::size_t count = std::min( BATCH_SIZE, parent_pairs.size() - i );
 				std::vector< std::pair< TagID, TagID > > batch(
 					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
 					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
 
 				emit subProgress(
-					static_cast< int >( i ),
-					static_cast< int >( parent_pairs.size() ),
+					static_cast< int >( batch_idx ),
+					static_cast< int >( total_batches ),
 					progress_prefix
 						+ QString( " - adding parent relationships (%1/%2)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( parent_pairs.size() ) ) ) );
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
 
-				auto parent_future = client.createParentRelationship( domain_id, batch );
-				parent_future.waitForFinished();
+				in_flight.push_back( client.createParentRelationship( domain_id, batch ) );
+
+				if ( in_flight.size() >= CONCURRENCY )
+				{
+					try
+					{
+						in_flight.front().waitForFinished();
+					}
+					catch ( const std::exception& e )
+					{
+						spdlog::error( "createParentRelationship batch failed: {}", e.what() );
+						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+					}
+					in_flight.pop_front();
+				}
+
+				++batch_idx;
 			}
-			stats.parents_added = static_cast< int >( parent_pairs.size() );
+
+			for ( auto& future : in_flight )
+			{
+				try
+				{
+					future.waitForFinished();
+				}
+				catch ( const std::exception& e )
+				{
+					spdlog::error( "createParentRelationship batch failed: {}", e.what() );
+					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+				}
+			}
 		}
 	}
 
@@ -625,28 +813,60 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 		if ( !sibling_pairs.empty() )
 		{
-			spdlog::trace( "Phase 8: creating {} alias relationships", sibling_pairs.size() );
-			for ( std::size_t i = 0; i < sibling_pairs.size(); i += m_batch_size )
+			spdlog::trace(
+				"Phase 8: creating {} alias relationships (concurrency={})", sibling_pairs.size(), CONCURRENCY );
+			const std::size_t total_batches = ( sibling_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
+			std::deque< QFuture< void > > in_flight;
+			std::size_t batch_idx = 0;
+
+			for ( std::size_t i = 0; i < sibling_pairs.size(); i += BATCH_SIZE )
 			{
 				if ( m_cancelled ) return stats;
 
-				const std::size_t count = std::min( m_batch_size, sibling_pairs.size() - i );
+				const std::size_t count = std::min( BATCH_SIZE, sibling_pairs.size() - i );
 				std::vector< std::pair< TagID, TagID > > batch(
 					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
 					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
 
 				emit subProgress(
-					static_cast< int >( i ),
-					static_cast< int >( sibling_pairs.size() ),
+					static_cast< int >( batch_idx ),
+					static_cast< int >( total_batches ),
 					progress_prefix
 						+ QString( " - adding alias relationships (%1/%2)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( sibling_pairs.size() ) ) ) );
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
 
-				auto sibling_future = client.createAliasRelationship( domain_id, batch );
-				sibling_future.waitForFinished();
+				in_flight.push_back( client.createAliasRelationship( domain_id, batch ) );
+
+				if ( in_flight.size() >= CONCURRENCY )
+				{
+					try
+					{
+						in_flight.front().waitForFinished();
+					}
+					catch ( const std::exception& e )
+					{
+						spdlog::error( "createAliasRelationship batch failed: {}", e.what() );
+						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+					}
+					in_flight.pop_front();
+				}
+
+				++batch_idx;
 			}
-			stats.aliases_added = static_cast< int >( sibling_pairs.size() );
+
+			for ( auto& future : in_flight )
+			{
+				try
+				{
+					future.waitForFinished();
+				}
+				catch ( const std::exception& e )
+				{
+					spdlog::error( "createAliasRelationship batch failed: {}", e.what() );
+					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+				}
+			}
 		}
 	}
 
@@ -683,21 +903,26 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 		if ( !record_ids_del.empty() )
 		{
-			spdlog::trace( "Phase 9: calling removeTags with {} records", record_ids_del.size() );
-			for ( std::size_t i = 0; i < record_ids_del.size(); i += m_batch_size )
+			spdlog::trace(
+				"Phase 9: calling removeTags with {} records (concurrency={})", record_ids_del.size(), CONCURRENCY );
+			const std::size_t total_batches = ( record_ids_del.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
+			std::deque< QFuture< void > > in_flight;
+			std::size_t batch_idx = 0;
+
+			for ( std::size_t i = 0; i < record_ids_del.size(); i += BATCH_SIZE )
 			{
 				if ( m_cancelled ) return stats;
 
-				const std::size_t end = std::min( i + m_batch_size, record_ids_del.size() );
+				const std::size_t end = std::min( i + BATCH_SIZE, record_ids_del.size() );
 				const std::size_t count = end - i;
 
 				emit subProgress(
-					static_cast< int >( i ),
-					static_cast< int >( record_ids_del.size() ),
+					static_cast< int >( batch_idx ),
+					static_cast< int >( total_batches ),
 					progress_prefix
-						+ QString( " - removing tags (%1/%2 records)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids_del.size() ) ) ) );
+						+ QString( " - removing tags (%1/%2 batches)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
 
 				std::vector< RecordID > batch_record_ids(
 					record_ids_del.begin() + static_cast< std::ptrdiff_t >( i ),
@@ -706,19 +931,47 @@ ContentStats PTRImportWorker::processSingleContentFile(
 					tag_id_sets.begin() + static_cast< std::ptrdiff_t >( i ),
 					tag_id_sets.begin() + static_cast< std::ptrdiff_t >( end ) );
 
-				spdlog::trace( "Phase 9: calling removeTags batch {}-{} ({} records)", i, end - 1, count );
-				auto remove_future =
-					client.removeTags( std::move( batch_record_ids ), domain_id, std::move( batch_tag_sets ) );
-				remove_future.waitForFinished();
+				spdlog::trace( "Phase 9: launching removeTags batch {} ({} records)", batch_idx, count );
+				in_flight.push_back(
+					client.removeTags( std::move( batch_record_ids ), domain_id, std::move( batch_tag_sets ) ) );
+
+				if ( in_flight.size() >= CONCURRENCY )
+				{
+					try
+					{
+						in_flight.front().waitForFinished();
+					}
+					catch ( const std::exception& e )
+					{
+						spdlog::error( "removeTags batch failed: {}", e.what() );
+						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+					}
+					in_flight.pop_front();
+				}
+
+				++batch_idx;
 			}
+
+			for ( auto& future : in_flight )
+			{
+				try
+				{
+					future.waitForFinished();
+				}
+				catch ( const std::exception& e )
+				{
+					spdlog::error( "removeTags batch failed: {}", e.what() );
+					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+				}
+			}
+
 			emit subProgress(
-				static_cast< int >( record_ids_del.size() ),
-				static_cast< int >( record_ids_del.size() ),
+				static_cast< int >( total_batches ),
+				static_cast< int >( total_batches ),
 				progress_prefix
 					+ QString( " - tags removed (%1 records)" )
 						  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids_del.size() ) ) ) );
 			spdlog::trace( "Phase 9: removeTags completed" );
-			for ( const auto& tag_set : tag_id_sets ) stats.tags_removed += static_cast< int >( tag_set.size() );
 		}
 	}
 
@@ -737,28 +990,60 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 		if ( !parent_pairs.empty() )
 		{
-			spdlog::trace( "Phase 10: removing {} parent relationships", parent_pairs.size() );
-			for ( std::size_t i = 0; i < parent_pairs.size(); i += m_batch_size )
+			spdlog::trace(
+				"Phase 10: removing {} parent relationships (concurrency={})", parent_pairs.size(), CONCURRENCY );
+			const std::size_t total_batches = ( parent_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
+			std::deque< QFuture< void > > in_flight;
+			std::size_t batch_idx = 0;
+
+			for ( std::size_t i = 0; i < parent_pairs.size(); i += BATCH_SIZE )
 			{
 				if ( m_cancelled ) return stats;
 
-				const std::size_t count = std::min( m_batch_size, parent_pairs.size() - i );
+				const std::size_t count = std::min( BATCH_SIZE, parent_pairs.size() - i );
 				std::vector< std::pair< TagID, TagID > > batch(
 					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
 					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
 
 				emit subProgress(
-					static_cast< int >( i ),
-					static_cast< int >( parent_pairs.size() ),
+					static_cast< int >( batch_idx ),
+					static_cast< int >( total_batches ),
 					progress_prefix
 						+ QString( " - removing parent relationships (%1/%2)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( parent_pairs.size() ) ) ) );
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
 
-				auto parent_future = client.removeParentRelationship( domain_id, batch );
-				parent_future.waitForFinished();
+				in_flight.push_back( client.removeParentRelationship( domain_id, batch ) );
+
+				if ( in_flight.size() >= CONCURRENCY )
+				{
+					try
+					{
+						in_flight.front().waitForFinished();
+					}
+					catch ( const std::exception& e )
+					{
+						spdlog::error( "removeParentRelationship batch failed: {}", e.what() );
+						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+					}
+					in_flight.pop_front();
+				}
+
+				++batch_idx;
 			}
-			stats.parents_removed = static_cast< int >( parent_pairs.size() );
+
+			for ( auto& future : in_flight )
+			{
+				try
+				{
+					future.waitForFinished();
+				}
+				catch ( const std::exception& e )
+				{
+					spdlog::error( "removeParentRelationship batch failed: {}", e.what() );
+					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+				}
+			}
 		}
 	}
 
@@ -777,28 +1062,60 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 		if ( !sibling_pairs.empty() )
 		{
-			spdlog::trace( "Phase 11: removing {} alias relationships", sibling_pairs.size() );
-			for ( std::size_t i = 0; i < sibling_pairs.size(); i += m_batch_size )
+			spdlog::trace(
+				"Phase 11: removing {} alias relationships (concurrency={})", sibling_pairs.size(), CONCURRENCY );
+			const std::size_t total_batches = ( sibling_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
+			std::deque< QFuture< void > > in_flight;
+			std::size_t batch_idx = 0;
+
+			for ( std::size_t i = 0; i < sibling_pairs.size(); i += BATCH_SIZE )
 			{
 				if ( m_cancelled ) return stats;
 
-				const std::size_t count = std::min( m_batch_size, sibling_pairs.size() - i );
+				const std::size_t count = std::min( BATCH_SIZE, sibling_pairs.size() - i );
 				std::vector< std::pair< TagID, TagID > > batch(
 					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
 					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
 
 				emit subProgress(
-					static_cast< int >( i ),
-					static_cast< int >( sibling_pairs.size() ),
+					static_cast< int >( batch_idx ),
+					static_cast< int >( total_batches ),
 					progress_prefix
 						+ QString( " - removing alias relationships (%1/%2)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( i ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( sibling_pairs.size() ) ) ) );
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
 
-				auto sibling_future = client.removeAliasRelationship( domain_id, batch );
-				sibling_future.waitForFinished();
+				in_flight.push_back( client.removeAliasRelationship( domain_id, batch ) );
+
+				if ( in_flight.size() >= CONCURRENCY )
+				{
+					try
+					{
+						in_flight.front().waitForFinished();
+					}
+					catch ( const std::exception& e )
+					{
+						spdlog::error( "removeAliasRelationship batch failed: {}", e.what() );
+						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+					}
+					in_flight.pop_front();
+				}
+
+				++batch_idx;
 			}
-			stats.aliases_removed = static_cast< int >( sibling_pairs.size() );
+
+			for ( auto& future : in_flight )
+			{
+				try
+				{
+					future.waitForFinished();
+				}
+				catch ( const std::exception& e )
+				{
+					spdlog::error( "removeAliasRelationship batch failed: {}", e.what() );
+					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
+				}
+			}
 		}
 	}
 
