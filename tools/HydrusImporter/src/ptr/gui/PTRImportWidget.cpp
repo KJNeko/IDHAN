@@ -1,6 +1,8 @@
 #include "PTRImportWidget.hpp"
 
 #include <QFileDialog>
+#include <QFont>
+#include <QFontDatabase>
 #include <QLocale>
 #include <QThreadPool>
 
@@ -14,6 +16,9 @@ PTRImportWidget::PTRImportWidget( QWidget* parent ) : QWidget( parent ), ui( new
 	ui->directoryPath->setText( "./ptrfiles" );
 	ui->importButton->setEnabled( true );
 	ui->cancelButton->setEnabled( false );
+
+	QFont monospace_font = QFontDatabase::systemFont( QFontDatabase::SystemFont::FixedFont );
+	ui->historyLog->setFont( monospace_font );
 
 	connect( ui->selectDirectory, &QToolButton::clicked, this, &PTRImportWidget::onSelectDirectory );
 	connect(
@@ -60,7 +65,6 @@ void PTRImportWidget::onImport()
 	m_importing = true;
 	ui->importButton->setEnabled( false );
 	ui->cancelButton->setEnabled( true );
-	ui->batchSize->setEnabled( false );
 	ui->progressBar->setValue( 0 );
 	ui->subProgressBar->setValue( 0 );
 	ui->statusLabel->setStyleSheet( "" );
@@ -69,7 +73,6 @@ void PTRImportWidget::onImport()
 	ui->historyLog->clear();
 
 	m_worker = std::make_unique< idhan::hydrus::ptr::PTRImportWorker >( dir_text.toStdString() );
-	m_worker->setBatchSize( static_cast< std::size_t >( ui->batchSize->value() ) );
 
 	connect( m_worker.get(), &idhan::hydrus::ptr::PTRImportWorker::progress, this, &PTRImportWidget::onProgress );
 	connect( m_worker.get(), &idhan::hydrus::ptr::PTRImportWorker::subProgress, this, &PTRImportWidget::onSubProgress );
@@ -122,7 +125,6 @@ void PTRImportWidget::onImportFinished( bool success, const QString& message )
 	m_importing = false;
 	ui->importButton->setEnabled( !ui->directoryPath->text().isEmpty() );
 	ui->cancelButton->setEnabled( false );
-	ui->batchSize->setEnabled( true );
 	ui->subProgressBar->setValue( 0 );
 
 	ui->statusLabel->setText( message );

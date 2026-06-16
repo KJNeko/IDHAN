@@ -30,8 +30,9 @@ struct TranslationTables
 struct ContentStats
 {
 	int records_created = 0;
-	int tags_added = 0;
-	int tags_removed = 0;
+	int tags_created = 0;
+	int mappings_added = 0;
+	int mappings_removed = 0;
 	int parents_added = 0;
 	int parents_removed = 0;
 	int aliases_added = 0;
@@ -44,6 +45,9 @@ class PTRImportWorker : public QObject, public QRunnable
 
   public:
 
+	static constexpr std::size_t BATCH_SIZE = 250;
+	static constexpr std::size_t CONCURRENCY = 4;
+
 	explicit PTRImportWorker( const std::filesystem::path& ptr_directory, QObject* parent = nullptr );
 
 	Q_DISABLE_COPY_MOVE( PTRImportWorker );
@@ -51,10 +55,6 @@ class PTRImportWorker : public QObject, public QRunnable
 	void run() override;
 
 	void requestCancel() { m_cancelled = true; }
-
-	void setBatchSize( std::size_t batch_size ) { m_batch_size = batch_size; }
-
-	[[nodiscard]] std::size_t batchSize() const { return m_batch_size; }
 
   signals:
 
@@ -73,14 +73,14 @@ class PTRImportWorker : public QObject, public QRunnable
 		const std::string& hash_hex,
 		const ContentUpdate& content,
 		idhan::TagDomainID domain_id,
-		const QString& progress_prefix );
+		const QString& progress_prefix,
+		std::unordered_set< int >& unique_tag_ids );
 
 	std::filesystem::path m_ptr_directory;
 	TranslationTables m_tables;
 
 	MetadataUpdate m_metadata;
 	std::unordered_set< std::string > m_imported_hashes;
-	std::size_t m_batch_size { 250 };
 
 	std::atomic< bool > m_cancelled { false };
 };
