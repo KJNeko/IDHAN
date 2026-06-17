@@ -5,6 +5,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMutex>
+#include <QMutexLocker>
 
 #include <algorithm>
 
@@ -22,6 +24,7 @@ struct TagCache
 		std::string text;
 	};
 
+	QMutex mutex {};
 	std::unordered_map< TagID, CacheItem > m_tags;
 };
 
@@ -52,39 +55,44 @@ QFuture< std::string > IDHANClient::getTagText( const TagID tag_id )
 {
 	static TagCache s_cache {};
 
-	if ( auto itter = s_cache.m_tags.find( tag_id ); itter != s_cache.m_tags.end() )
 	{
-		auto& [ hit_count, text ] = itter->second;
-		hit_count += 1;
+		QMutexLocker locker( &s_cache.mutex );
 
-		if ( s_cache.m_tags.size() > 1024 * 64 )
+		if ( auto itter = s_cache.m_tags.find( tag_id ); itter != s_cache.m_tags.end() )
 		{
-			// find the lowest 512 tags by hit count and remove them
-			std::vector< std::pair< TagID, std::size_t > > sorted_tags;
-			sorted_tags.reserve( s_cache.m_tags.size() );
-			for ( const auto& [ id, item ] : s_cache.m_tags )
+			auto& [ hit_count, text ] = itter->second;
+			hit_count += 1;
+
+			if ( s_cache.m_tags.size() > 1024 * 64 )
 			{
-				sorted_tags.emplace_back( id, item.hit_count );
+				// find the lowest 512 tags by hit count and remove them
+				std::vector< std::pair< TagID, std::size_t > > sorted_tags;
+				sorted_tags.reserve( s_cache.m_tags.size() );
+				for ( const auto& [ id, item ] : s_cache.m_tags )
+				{
+					sorted_tags.emplace_back( id, item.hit_count );
+				}
+
+				std::ranges::partial_sort(
+					sorted_tags,
+					sorted_tags.begin() + 512,
+					[]( const auto& a, const auto& b ) noexcept -> bool { return a.second < b.second; } );
+
+				for ( std::size_t i = 0; i < 512; ++i )
+				{
+					s_cache.m_tags.erase( sorted_tags[ i ].first );
+				}
 			}
 
-			std::ranges::partial_sort(
-				sorted_tags,
-				sorted_tags.begin() + 512,
-				[]( const auto& a, const auto& b ) noexcept -> bool { return a.second < b.second; } );
-
-			for ( std::size_t i = 0; i < 512; ++i )
-			{
-				s_cache.m_tags.erase( sorted_tags[ i ].first );
-			}
+			return QtFuture::makeReadyValueFuture( text );
 		}
-
-		return QtFuture::makeReadyValueFuture( text );
-	}
+	} // unlock before async call
 
 	return getTagInfo( tag_id ).then(
 		[]( const TagInfo& info ) -> std::string
 		{
 			auto full_text = info.toStdString();
+			QMutexLocker locker( &s_cache.mutex );
 			s_cache.m_tags.emplace( info.m_id, TagCache::CacheItem { 1, full_text } );
 			return full_text;
 		} );
@@ -94,9 +102,6 @@ QFuture< std::vector< std::pair< TagID, std::string > > > IDHANClient::autocompl
 {
 	const auto promise { std::make_shared< QPromise< std::vector< std::pair< TagID, std::string > > > >() };
 	promise->start();
-
-	QJsonObject doc;
-	doc[ "text" ] = text;
 
 	auto handleResponse = [ promise ]( QNetworkReply* response )
 	{

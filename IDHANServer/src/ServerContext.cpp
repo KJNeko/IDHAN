@@ -299,7 +299,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.databaseName = arguments.dbname,
 		.username = arguments.user,
 		.password = arguments.password,
-		.connectionNumber = io_threads,
+		.connectionNumber = std::min( io_threads, std::size_t( 16 ) ),
 		.name = "default",
 		.isFast = false,
 		.characterSet = "UTF-8",
