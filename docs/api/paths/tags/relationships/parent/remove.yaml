@@ -1,0 +1,39 @@
+post:
+  tags:
+    - parents
+  summary: Removes parent/child relationships between tags
+  parameters:
+    - name: tag_domain_id
+      in: query
+      required: true
+      schema:
+        $ref: '../../../../schemas/TagDomainID.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            type: object
+            required:
+              - parent_id
+              - child_id
+            properties:
+              parent_id:
+                $ref: '../../../../schemas/TagID.yaml'
+              child_id:
+                $ref: '../../../../schemas/TagID.yaml'
+        examples:
+          remove_parent:
+            summary: Remove parent/child relationship
+            value:
+              - parent_id: 10
+                child_id: 20
+  responses:
+    200:
+      description: Parent relationships removed successfully
+    400:
+      description: Invalid request body
+    500:
+      description: Internal server error

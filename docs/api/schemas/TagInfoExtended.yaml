@@ -22,5 +22,3 @@ allOf:
       items_count:
         type: integer
         description: "Number of items with this tag"
-      color:
-        $ref: './TagColor.yaml'

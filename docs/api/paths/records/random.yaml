@@ -1,0 +1,22 @@
+get:
+  tags:
+    - records
+  summary: Returns a random record that has been parsed
+  description: Returns a random record that has a MIME type assigned (i.e. has been scanned in a cluster).
+  responses:
+    200:
+      description: A random active record ID
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_id:
+                $ref: '../../schemas/RecordID.yaml'
+          examples:
+            random:
+              summary: Random record ID
+              value:
+                record_id: 42
+    400:
+      description: No active records found

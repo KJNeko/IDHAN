@@ -22,6 +22,6 @@ For configuration options and setup, check out our [Configuration Guide](docs/co
 
 # Server docs
 
-The API docs can be found (add link)[HERE]().
+The API docs can be found at `/api` when the server is running (Swagger UI).
 
-The Source docs can be found (add link)[HERE]().
+<!-- TODO: add hosted source docs link -->

@@ -1,6 +1,35 @@
 get:
   tags:
     - records
-  summary: Returns information about a file
+  summary: Returns information about a record
+  description: |
+    Returns metadata for a record including its SHA-256 hash and, if the file has been
+    parsed, its MIME type, size, and extension. Additional file-type-specific metadata
+    fields may be present depending on the file type.
   parameters:
     - $ref: '../../parameters/record_id.yaml'
+  responses:
+    200:
+      description: Record information
+      content:
+        application/json:
+          schema:
+            $ref: '../../schemas/RecordInfo.yaml'
+          examples:
+            parsed:
+              summary: Record with parsed MIME info
+              value:
+                record_id: 42
+                hashes:
+                  sha256: "a3f0c1d2e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1"
+                size: 1048576
+                mime: "image/jpeg"
+                extension: "jpg"
+            unparsed:
+              summary: Record without MIME info (not yet scanned)
+              value:
+                record_id: 7
+                hashes:
+                  sha256: "b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2"
+    400:
+      description: Record ID not found
