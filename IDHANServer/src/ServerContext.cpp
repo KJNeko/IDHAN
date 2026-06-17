@@ -299,7 +299,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.databaseName = arguments.dbname,
 		.username = arguments.user,
 		.password = arguments.password,
-		.connectionNumber = 1,
+		.connectionNumber = io_threads,
 		.name = "default",
 		.isFast = false,
 		.characterSet = "UTF-8",
