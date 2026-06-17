@@ -45,7 +45,8 @@ post:
                 subtag: 1
 
 
-  200:
-    description: All tags added successfully
-  400:
-    description: One or more ids were invalid
+  responses:
+    200:
+      description: All tags added successfully
+    400:
+      description: One or more ids were invalid

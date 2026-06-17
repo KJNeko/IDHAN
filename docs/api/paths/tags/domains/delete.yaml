@@ -1,4 +1,4 @@
-get:
+delete:
   tags:
     - tag domains
   summary: Deletes a given tag domain
@@ -10,8 +10,11 @@ get:
         $ref: '../../../schemas/TagDomainID.yaml'
   responses:
     200:
-      description: Json object with domain info
+      description: Tag domain deleted successfully
       content:
         application/json:
           schema:
-            $ref: '../../../schemas/TagDomainInfo.yaml'
+            type: object
+            properties:
+              tag_domain_id:
+                $ref: '../../../schemas/TagDomainID.yaml'

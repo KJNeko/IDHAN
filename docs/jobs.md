@@ -20,7 +20,7 @@ Scans a given cluster for files that are missing or corrupted.
   paused.
 - Completed: The job has finished execution
 - Failed: The job has failed to execute
-- Await Depencency: The job is waiting on another job to complete before starting.
+- Await Dependency: The job is waiting on another job to complete before starting.
 
 # Internals
 
@@ -30,7 +30,7 @@ from the `jobs` table and execute them given a few rules.
 
 A job can have a dependency on another job being completed.
 
-- A job is requsted
+- A job is requested
 - The job context is created with the information required
 - `prepare()` is called, This will create any dependency jobs and prepare the context further.
 

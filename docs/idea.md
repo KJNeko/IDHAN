@@ -1,6 +1,5 @@
-This document contains a lot of the key ideas and concepts for the current and future development.\
-Note that this document might not match the current state of IDHAN and is mostly a guide for myself to stay on track
-that this document might not match the current state of IDHAN and is mostly a guide for myself to stay on track.
+This document contains a lot of the key ideas and concepts for the current and future development.
+Note that this document might not match the current state of IDHAN and is mostly a guide for myself to stay on track.
 
 The application/concept name is **IDHAN** (**I** **D**on't **H**ave **A** **N**ame). (Better name maybe pending)
 

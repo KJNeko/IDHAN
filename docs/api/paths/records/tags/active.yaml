@@ -1,0 +1,39 @@
+get:
+  tags:
+    - tags
+    - records
+  summary: Returns the resolved (active) tags for a record
+  description: |
+    Returns tags after applying alias resolution, parent inheritance, and sibling conflict
+    resolution. Use `/records/{record_id}/tags` for the raw stored tags without resolution.
+  parameters:
+    - name: record_id
+      in: path
+      required: true
+      schema:
+        $ref: '../../../schemas/RecordID.yaml'
+  responses:
+    200:
+      description: Array of domain-grouped resolved tag IDs
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - tag_domain_id
+                - tag_ids
+              properties:
+                tag_domain_id:
+                  $ref: '../../../schemas/TagDomainID.yaml'
+                tag_ids:
+                  type: array
+                  items:
+                    $ref: '../../../schemas/TagID.yaml'
+          examples:
+            active_tags:
+              summary: Resolved tags grouped by domain
+              value:
+                - tag_domain_id: 1
+                  tag_ids: [10, 20, 30]

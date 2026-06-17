@@ -1,0 +1,44 @@
+post:
+  tags:
+    - records
+  summary: Adds one or more URLs to a record
+  parameters:
+    - name: record_id
+      in: path
+      required: true
+      schema:
+        $ref: '../../../schemas/RecordID.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - urls
+          properties:
+            urls:
+              type: array
+              items:
+                type: string
+                format: uri
+        examples:
+          add_urls:
+            summary: Add source URLs
+            value:
+              urls:
+                - "https://example.com/image.jpg"
+                - "https://other.com/img.png"
+  responses:
+    200:
+      description: URLs added successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: integer
+                example: 200
+    400:
+      description: Missing or invalid request body

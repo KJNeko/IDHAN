@@ -1,0 +1,50 @@
+post:
+  tags:
+    - tags
+  summary: Creates alias relationships between tags
+  description: |
+    Marks `aliased_id` as an alias for `alias_id`. When a record has `aliased_id`, it is
+    transparently treated as `alias_id` in resolved tag views. A tag cannot alias itself.
+    Duplicate entries are silently ignored.
+  parameters:
+    - name: tag_domain_id
+      in: query
+      required: true
+      schema:
+        $ref: '../../../../schemas/TagDomainID.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            type: object
+            required:
+              - aliased_id
+              - alias_id
+            properties:
+              aliased_id:
+                allOf:
+                  - $ref: '../../../../schemas/TagID.yaml'
+                description: The tag being aliased (the "old" tag)
+              alias_id:
+                allOf:
+                  - $ref: '../../../../schemas/TagID.yaml'
+                description: The canonical target tag
+        examples:
+          create_alias:
+            summary: Alias tag 10 to canonical tag 20
+            value:
+              - aliased_id: 10
+                alias_id: 20
+  responses:
+    200:
+      description: Aliases created successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            nullable: true
+    400:
+      description: Invalid request body

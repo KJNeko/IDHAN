@@ -1,5 +1,36 @@
-delete:
+post:
   tags:
     - tags
     - records
-  summary: Removes a tag from a given file
+  summary: Removes tags from a given record
+  parameters:
+    - name: record_id
+      in: path
+      required: true
+      schema:
+        $ref: '../../../schemas/RecordID.yaml'
+    - name: tag_domain_id
+      in: query
+      required: true
+      schema:
+        $ref: '../../../schemas/TagDomainID.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            $ref: '../../../schemas/TagID.yaml'
+        examples:
+          tag_ids:
+            summary: Array of tag IDs to remove
+            value:
+              - 101
+              - 102
+              - 103
+  responses:
+    200:
+      description: Tags removed successfully
+    400:
+      description: Invalid request body or missing tag_domain_id
