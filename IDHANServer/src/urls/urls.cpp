@@ -8,6 +8,27 @@
 
 namespace idhan::helpers
 {
+std::string extractDomain( const std::string& url )
+{
+	const auto protocol_end { url.find( "://" ) };
+	const auto start_pos { protocol_end != std::string::npos ? protocol_end + 3 : 0 };
+	const auto path_start { url.find( '/', start_pos ) };
+	std::string domain {
+		path_start != std::string::npos ? url.substr( start_pos, path_start - start_pos ) : url.substr( start_pos )
+	};
+	if ( !domain.empty() && domain[ 0 ] == '[' )
+	{
+		// IPv6 literal: "[::1]:8080" → "::1"
+		const auto close_bracket { domain.find( ']' ) };
+		domain = ( close_bracket != std::string::npos ) ? domain.substr( 1, close_bracket - 1 ) : domain.substr( 1 );
+	}
+	else if ( const auto port_pos { domain.find( ':' ) }; port_pos != std::string::npos )
+	{
+		domain = domain.substr( 0, port_pos );
+	}
+	return domain;
+}
+
 ExpectedTask< UrlDomainID > findOrCreateUrl( const std::string url, DbClientPtr db )
 {
 	const auto search_result { co_await db->execSqlCoro( "SELECT url_id FROM urls WHERE url = $1", url ) };
@@ -36,17 +57,7 @@ ExpectedTask< UrlDomainID > findOrCreateUrl( const std::string url, DbClientPtr 
 
 ExpectedTask< UrlDomainID > findOrCreateUrlDomain( const std::string url, DbClientPtr db )
 {
-	// Extract domain from URL (netloc/host part)
-	const auto protocol_end = url.find( "://" );
-	const auto start_pos = protocol_end != std::string::npos ? protocol_end + 3 : 0;
-	const auto path_start = url.find( '/', start_pos );
-	std::string domain {
-		path_start != std::string::npos ? url.substr( start_pos, path_start - start_pos ) : url.substr( start_pos )
-	};
-
-	// Remove port if present
-	const auto port_pos = domain.find( ':' );
-	if ( port_pos != std::string::npos ) domain = domain.substr( 0, port_pos );
+	const std::string domain { extractDomain( url ) };
 
 	const auto search_result {
 		co_await db->execSqlCoro( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", domain )

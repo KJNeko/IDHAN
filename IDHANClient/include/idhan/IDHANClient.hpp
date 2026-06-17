@@ -104,8 +104,8 @@ class IDHANClient
 
 	~IDHANClient();
 
-	//! Returns true if the server responds (sends back valid version info)
-	[[nodiscard]] bool validConnection() const;
+	//! Returns a future that resolves to true if the server responds with valid version info.
+	[[nodiscard]] QFuture< bool > validConnection() const;
 
 	void setAPIKey( const QString& key );
 

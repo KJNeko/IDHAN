@@ -331,12 +331,11 @@ IDHANClient::~IDHANClient()
 	m_instance = nullptr;
 }
 
-bool IDHANClient::validConnection() const
+QFuture< bool > IDHANClient::validConnection() const
 {
-	auto future { idhan::IDHANClient::m_instance->queryVersion() };
-	future.waitForFinished();
-
-	return future.resultCount() > 0;
+	return idhan::IDHANClient::m_instance->queryVersion()
+	    .then( []( const VersionInfo& ) -> bool { return true; } )
+	    .onFailed( []( const std::exception& ) { return false; } );
 }
 
 void IDHANClient::setAPIKey( const QString& key )

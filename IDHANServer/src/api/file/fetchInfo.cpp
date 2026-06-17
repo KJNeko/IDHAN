@@ -21,25 +21,26 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 	Json::Value root {};
 	root[ "record_id" ] = record_id;
 
-	const auto record_info { co_await db->execSqlCoro( "SELECT * FROM records WHERE record_id = $1", record_id ) };
+	const auto result { co_await db->execSqlCoro(
+		"SELECT r.sha256, fi.size, fi.mime_id, m.name, m.best_extension "
+		"FROM records r "
+		"LEFT JOIN file_info fi ON fi.record_id = r.record_id "
+		"LEFT JOIN mime m ON m.mime_id = fi.mime_id "
+		"WHERE r.record_id = $1",
+		record_id ) };
 
-	if ( record_info.empty() ) co_return createBadRequest( "Record ID was not found" );
+	if ( result.empty() ) co_return createBadRequest( "Record ID was not found" );
 
-	root[ "hashes" ][ "sha256" ] = SHA256::fromPgCol( record_info[ 0 ][ "sha256" ] ).hex();
+	root[ "hashes" ][ "sha256" ] = SHA256::fromPgCol( result[ 0 ][ "sha256" ] ).hex();
 
-	const auto file_info { co_await db->execSqlCoro( "SELECT * FROM file_info WHERE record_id = $1", record_id ) };
-
-	if ( !file_info.empty() && !file_info[ 0 ][ "mime_id" ].isNull() )
+	if ( !result[ 0 ][ "mime_id" ].isNull() )
 	{
-		root[ "size" ] = file_info[ 0 ][ "size" ].as< std::size_t >();
+		root[ "size" ] = result[ 0 ][ "size" ].as< std::size_t >();
+		root[ "mime" ] = result[ 0 ][ "name" ].as< std::string >();
+		root[ "extension" ] = result[ 0 ][ "best_extension" ].as< std::string >();
 
-		const auto mime_info { co_await db->execSqlCoro(
-			"SELECT * FROM mime WHERE mime_id = $1", file_info[ 0 ][ "mime_id" ].as< MimeID >() ) };
-
-		root[ "mime" ] = mime_info[ 0 ][ "name" ].as< std::string >();
-		root[ "extension" ] = mime_info[ 0 ][ "best_extension" ].as< std::string >();
-
-		co_await metadata::addFileSpecificInfo( root, record_id, db );
+		const auto metadata_result { co_await metadata::addFileSpecificInfo( root, record_id, db ) };
+		if ( !metadata_result ) co_return metadata_result.error();
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );

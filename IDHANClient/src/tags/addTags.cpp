@@ -171,31 +171,46 @@ QFuture< void > IDHANClient::addTags(
 		counter += set.size();
 	}
 
-	auto tags_future { this->createTags( unique_tags ) };
-
-	std::vector< std::vector< TagID > > ids {};
-
-	tags_future.waitForFinished();
-
-	const auto tag_ids { tags_future.result() };
-
-	FGL_ASSERT(
-		tag_ids.size() == unique_tags.size(),
-		format_ns::format(
-			"IDHAN returned not the correct number of tags back, {} != {}", tag_ids.size(), unique_tags.size() ) );
-
-	for ( const auto& set : tag_set_indicies )
+	struct State
 	{
-		std::vector< TagID > set_ids {};
-		for ( const auto& i : set )
-		{
-			set_ids.emplace_back( tag_ids.at( i ) );
-		}
+		std::vector< RecordID > record_ids;
+		TagDomainID tag_domain_id;
+		std::vector< std::vector< std::size_t > > tag_set_indicies;
+		std::size_t expected_tag_count;
+	};
 
-		ids.emplace_back( std::move( set_ids ) );
-	}
+	auto state { std::make_shared< State >( State {
+		std::move( record_ids ),
+		tag_domain_id,
+		std::move( tag_set_indicies ),
+		unique_tags.size() } ) };
 
-	return addTags( std::move( record_ids ), tag_domain_id, std::move( ids ) );
+	auto* self { this };
+
+	return this->createTags( unique_tags )
+	    .then(
+			[ self, state ]( std::vector< TagID > tag_ids ) -> QFuture< void >
+			{
+				FGL_ASSERT(
+					tag_ids.size() == state->expected_tag_count,
+					format_ns::format(
+						"IDHAN returned not the correct number of tags back, {} != {}",
+						tag_ids.size(),
+						state->expected_tag_count ) );
+
+				std::vector< std::vector< TagID > > ids {};
+				ids.reserve( state->tag_set_indicies.size() );
+				for ( const auto& set : state->tag_set_indicies )
+				{
+					std::vector< TagID > set_ids {};
+					set_ids.reserve( set.size() );
+					for ( const auto& i : set ) set_ids.emplace_back( tag_ids.at( i ) );
+					ids.emplace_back( std::move( set_ids ) );
+				}
+
+				return self->addTags( std::move( state->record_ids ), state->tag_domain_id, std::move( ids ) );
+			} )
+	    .unwrap();
 }
 
 } // namespace idhan
