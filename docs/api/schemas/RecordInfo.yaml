@@ -1,4 +1,26 @@
 type: object
+required:
+  - record_id
+  - hashes
 properties:
   record_id:
     $ref: 'RecordID.yaml'
+  hashes:
+    type: object
+    required:
+      - sha256
+    properties:
+      sha256:
+        $ref: 'SHA256.yaml'
+  size:
+    type: integer
+    format: int64
+    description: File size in bytes (present only if MIME has been parsed)
+  mime:
+    type: string
+    description: MIME type string (present only if MIME has been parsed)
+    example: "image/jpeg"
+  extension:
+    type: string
+    description: Best file extension (present only if MIME has been parsed)
+    example: "jpg"

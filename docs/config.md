@@ -1,73 +1,84 @@
 # Config file location
 
-- IDHAN will look for a config file next to it's executable first (`./config.toml`)
-- If one cannot be found there it will look for one in `~/.config/idhan/config.toml`, You can also pass the config to
-  executable (see launch options)
-- IDHAN will only create a config file if it can't find one
+- IDHAN looks for a config file next to its executable first (`./config.toml`)
+- If one cannot be found there it looks for one at `~/.config/idhan/config.toml`
+- You can also specify the config path with `--config <PATH>` — this replaces the file search entirely (see launch options)
+- IDHAN will only create a default config file if it cannot find one
 
 # Launch options
 
-- `-h` `--help`: Self explanitory
-- `--testmode`: Forces postgresql db schema to use the schema `test` instead of `public` (Used for running automated
-  tests)
-- `--use_stdout`: Enables the logger to output to stdout (Useful for preventing test output clutter)
-- `--config <PATH>` Overrides the config location. IDHAN will not load configs from other locations.
-- `--pg_user` Specifies a postgresql users to use (Overrides the config file)
-- `--pg_host` Specifies a hostname for the PG server to be found at (Overrides the config file)
+- `-h` `--help`: Print help
+- `--testmode`: Forces the PostgreSQL schema to `test` instead of `public` (used for automated tests)
+- `--use_stdout`: Enable logging to stdout
+- `--config <PATH>`: Use this config file exclusively. IDHAN will not load configs from other locations.
+- `--pg_user <USER>`: PostgreSQL user (overrides the config file)
+- `--pg_host <HOST>`: PostgreSQL hostname (overrides the config file)
 
 # Config order
 
-IDHAN will search for config information in top-to-bottom order.
+IDHAN searches for each config value in the following order (highest priority first).
 
-All config options can be provided in ENV variables if they are in the toml, the format is `IDHAN_$(GROUP)_$(NAME)`,
-`IDHAN\_` is
-use to prevent accidental environment collisions
+All config options can also be set via environment variables using the format `IDHAN_<GROUP>_<NAME>` (e.g. `IDHAN_DATABASE_HOST=localhost`). ENV variables take priority over config files. If `--config <PATH>` is passed, only that file is consulted — the paths below are skipped.
 
 ## Linux
 
-- CLI
-- ENV
-- `./config.toml`
-- `~/.config/idhan/config.toml`
-- `/etc/idhan/config.toml`
-- `/usr/share/idhan/config.toml`
+1. CLI flags (`--pg_user`, `--pg_host`)
+2. Environment variables (`IDHAN_<GROUP>_<NAME>`)
+3. `./config.toml`
+4. `~/.config/idhan/config.toml`
+5. `/etc/idhan/config.toml`
+6. `/usr/share/idhan/config.toml`
 
 ## Windows
 
-- CLI
-- ENV
-- `./config.toml`
-- `%LOCALAPPDATA%\idhan\config.toml`
-- `%APPDATA%\idhan\config.toml`
-- `%PROGRAMDATA%\idhan\config.toml`
+1. CLI flags
+2. Environment variables
+3. `./config.toml`
+4. `%LOCALAPPDATA%\idhan\config.toml`
+5. `%APPDATA%\idhan\config.toml`
+6. `%ProgramData%\idhan\config.toml`
 
 # Config options (`config.toml`)
 
-The following is a example config file to use
+The following example covers the most common options. Commented-out lines show the default values.
 
 ```toml
 [database]
 #host = "localhost"
 #port = 5432
 #user = "idhan"
-#password = "your_password_here"
+#password = "idhan"
 #database = "idhan-db"
 
-
 [server]
-#host = "0.0.0.0"
-#port = 16609
-#threads = 4
-#use_stdout = true
+# Number of IO threads (0 = auto-detect from hardware)
+#io_threads = 0
+# Temporary file path for uploads
+#temp_path = "/tmp/idhan"
+
+[host]
+# Listen address for IPv4 (set to "" to disable)
+#ipv4_listen = "127.0.0.1"
+# Listen address for IPv6 (set to "" to disable)
+#ipv6_listen = "::1"
+# Enable TLS
+#use_tls = false
+# Paths to TLS certificate and key (required when use_tls = true)
+#server_cert_path = "./server.crt"
+#server_key_path = "./server.key"
+
+[thumbnails]
+#path = "./thumbnails"
 
 [logging]
-# Loggin level: trace, debug, info, warn, error, critical
-level = "info"
-# Logging output location
-#file = "./logs/idhan.log"
+# Logging level: trace, debug, info, warn, error, critical
+#level = "info"
+# Log output directory
+#path = "./log"
+# Ring buffer size for the async logger
+#buffer_size = 1000000
+# Warn when a request exceeds the performance threshold
+#enable_perf_warnings = false
 ```
 
-
-
-
-
+> **Note:** The server always listens on port **16609**. This is not configurable via the config file.

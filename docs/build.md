@@ -1,30 +1,29 @@
 # Build steps (First time)
 
-Note: Replace BUILD_TYPE with either `Release` or `Debug` depending on your requirements, If you are running this on the
-system you are building on, use `System` instead
+Replace `BUILD_TYPE` with `Release` or `Debug` depending on your requirements. Use `System` when building on the machine you will run the server on.
 
-```
-git clone https://github.com/KJNeko/FGLEngine.git --recursive
+```bash
+git clone https://git.futuregadgetlabs.net/kj16609/IDHAN.git --recursive
 cmake -DCMAKE_BUILD_TYPE=System -B build
-cmake --build build -j<THREAD COUNT> --target IDHANServer
+cmake --build build -j$(nproc) --target IDHANServer
 ```
 
-If you want to also build the HydrusImporter you can do
+To also build the HydrusImporter:
 
-```
-cmake --build build -j<THREAD COUNT> --target IDHANServer HydrusImporter
+```bash
+cmake --build build -j$(nproc) --target IDHANServer HydrusImporter
 ```
 
 # Build steps (Update)
 
-Tags will be in a semver format (Example: `v1.0.0`)
+Tags follow semver (example: `v1.0.0`).
 
-```
+```bash
+git fetch --tags
 git checkout <TAG>
-git pull
 git submodule update --init --recursive
 cmake -DCMAKE_BUILD_TYPE=System -B build
-cmake --build build -j<THREAD COUNT> --target IDHANServer
+cmake --build build -j$(nproc) --target IDHANServer
 ```
 
 # [Getting started](setup.md)

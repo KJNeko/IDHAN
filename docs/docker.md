@@ -1,27 +1,23 @@
 # Docker image
 
-The docker image can be found at `git.futuregadgetlabs.net/kj16609/idhan::latest`
-
-This latest image will be built with each tag. If you want a bleeding edge image, you can use the `dev` tag
+Images are available at `git.futuregadgetlabs.net/kj16609/idhan`:
+- `latest` — built from each release tag
+- `dev` — bleeding edge, built from the `master` branch
 
 # Important notes
 
-All of IDHAN's configs can be set via ENV variables. It will be a higher priority then the config file, but lower then
-CLI variables
-The format is `IDHAN_{GROUP}_{NAME}` so a config that would fit under:
+All IDHAN config options can be set via environment variables. ENV variables take priority over the config file but are lower priority than CLI flags. The format is `IDHAN_<GROUP>_<NAME>`, for example:
 
 ```toml
 [server]
-port = 8080
+io_threads = 4
 ```
 
-would be `IDHAN_SERVER_PORT=8080`
+is equivalent to `IDHAN_SERVER_IO_THREADS=4`.
 
 # Example docker-compose
 
-You should likely be competent enough to understand how to use this
-
-```
+```yaml
 services:
   idhan_postgres:
     image: postgres:18
@@ -40,7 +36,7 @@ services:
     restart: unless-stopped
 
   idhan_server:
-    image: git.futuregadgetlabs.net/kj16609/idhan:dev
+    image: git.futuregadgetlabs.net/kj16609/idhan:latest
     container_name: idhan-server
     environment:
       IDHAN_DATABASE_HOST: idhan-postgres
@@ -51,7 +47,7 @@ services:
     ports:
       - "16609:16609"
     volumes:
-      - /mnt/bucket-of-bits/Media/IDHAN:/files
+      - /path/to/your/media:/files
     security_opt:
       - seccomp=unconfined
     depends_on:

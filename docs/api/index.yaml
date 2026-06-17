@@ -7,10 +7,12 @@ info:
   version: "0.1.0"
   title: IDHAN API
   contact:
-    url: https://github.com/KJNeko/IDHAN
+    url: https://git.futuregadgetlabs.net/kj16609/IDHAN
 tags:
   - name: public
     description: Publicly accessible endpoints that don't require authentication
+  - name: auth
+    description: API key management
   - name: records
     description: |
       File record operations including creation, retrieval, tagging, and metadata management.
@@ -28,6 +30,8 @@ tags:
     description: Global search functionality across records
   - name: parents
     description: Tag parent operations
+  - name: relationships
+    description: File relationship management (duplicates, alternatives)
 
 security:
   - KeyAuth: [ ]
@@ -35,6 +39,9 @@ security:
 paths:
   /version:
     $ref: './paths/version.yaml'
+
+  /generate_api_key:
+    $ref: './paths/auth/generate_key.yaml'
 
   # Tags
   /tags/create:
@@ -51,28 +58,56 @@ paths:
     $ref: './paths/tags/domains/create.yaml'
   /tags/domain/list:
     $ref: './paths/tags/domains/list.yaml'
-  /tags/domain/{domain_id}/info:
+  /tags/domain/{tag_domain_id}/info:
     $ref: './paths/tags/domains/info.yaml'
-  /tags/domain/{domain_id}/delete:
+  /tags/domain/{tag_domain_id}/delete:
     $ref: './paths/tags/domains/delete.yaml'
 
   # Tag Relationships
   /tags/parents/create:
     $ref: './paths/tags/relationships/parent/create.yaml'
+  /tags/parents/remove:
+    $ref: './paths/tags/relationships/parent/remove.yaml'
+  /tags/alias/create:
+    $ref: './paths/tags/relationships/alias/create.yaml'
+  /tags/alias/remove:
+    $ref: './paths/tags/relationships/alias/remove.yaml'
+  /tags/siblings/create:
+    $ref: './paths/tags/relationships/sibling/create.yaml'
+  /tags/siblings/remove:
+    $ref: './paths/tags/relationships/sibling/remove.yaml'
 
   # Records
   /records/create:
     $ref: './paths/records/create.yaml'
+  /records/random:
+    $ref: './paths/records/random.yaml'
   /records/tags/add:
     $ref: './paths/records/tags/addgroup.yaml'
+  /records/tags/remove:
+    $ref: './paths/records/tags/removegroup.yaml'
+  /records/{record_id}/urls:
+    $ref: './paths/records/urls/fetch.yaml'
+  /records/{record_id}/urls/add:
+    $ref: './paths/records/urls/add.yaml'
+  /records/{record_id}/urls/remove:
+    $ref: './paths/records/urls/remove.yaml'
   /records/{record_id}/tags/add:
     $ref: './paths/records/tags/add.yaml'
   /records/{record_id}/tags/remove:
     $ref: './paths/records/tags/remove.yaml'
   /records/{record_id}/tags:
     $ref: './paths/records/tags/info.yaml'
+  /records/{record_id}/tags/active:
+    $ref: './paths/records/tags/active.yaml'
+  /records/{record_id}/tags/active/verbose:
+    $ref: './paths/records/tags/activeverbose.yaml'
   /records/{record_id}/info:
     $ref: './paths/records/info.yaml'
+  /records/{record_id}/metadata:
+    $ref: './paths/records/info.yaml'
+  /records/{record_id}/metadata/scan:
+    $ref: './paths/records/metadatascan.yaml'
   /records/{record_id}:
     $ref: './paths/records/file.yaml'
   /records/{record_id}/file:
@@ -100,6 +135,12 @@ paths:
     $ref: './paths/clusters/remove.yaml'
   /clusters/{cluster_id}/scan:
     $ref: './paths/clusters/scan.yaml'
+
+  # File relationships
+  /relationships/duplicates/add:
+    $ref: './paths/relationships/duplicates/add.yaml'
+  /relationships/alternatives/add:
+    $ref: './paths/relationships/alternatives/add.yaml'
 
   # mime
   /mime/parse:

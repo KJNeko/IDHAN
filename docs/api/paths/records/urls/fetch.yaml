@@ -1,0 +1,26 @@
+get:
+  tags:
+    - records
+  summary: Returns the list of URLs associated with a record
+  parameters:
+    - name: record_id
+      in: path
+      required: true
+      schema:
+        $ref: '../../../schemas/RecordID.yaml'
+  responses:
+    200:
+      description: Array of URL strings
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+              format: uri
+          examples:
+            urls:
+              summary: List of source URLs
+              value:
+                - "https://example.com/image.jpg"
+                - "https://other.com/img.png"
