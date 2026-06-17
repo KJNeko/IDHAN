@@ -1,0 +1,39 @@
+post:
+  tags:
+    - tags
+  summary: Removes sibling (exclusive tag) relationships
+  parameters:
+    - name: tag_domain_id
+      in: query
+      required: true
+      schema:
+        $ref: '../../../../schemas/TagDomainID.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            type: object
+            required:
+              - older_id
+              - younger_id
+            properties:
+              older_id:
+                $ref: '../../../../schemas/TagID.yaml'
+              younger_id:
+                $ref: '../../../../schemas/TagID.yaml'
+        examples:
+          remove_sibling:
+            summary: Remove sibling relationship
+            value:
+              - older_id: 50
+                younger_id: 51
+  responses:
+    200:
+      description: Sibling relationships removed successfully
+    400:
+      description: Invalid request body
+    500:
+      description: Internal server error

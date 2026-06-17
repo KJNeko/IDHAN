@@ -3,7 +3,9 @@ post:
     - tags
     - records
   summary: Adds tags to multiple records
-  description: Bulk operation to add tags or tag sets to multiple records. For single record operations, use /records/{record_id}/tags/add
+  description: |
+    Bulk operation to add tags or tag sets to multiple records. For single record operations, use /records/{record_id}/tags/add.
+    If neither `tags` nor `sets` is provided, the request succeeds with 200 but no changes are made.
   parameters:
     - name: tag_domain_id
       in: query
@@ -36,9 +38,6 @@ post:
                 items:
                   $ref: '../../../schemas/TagInput.yaml'
               description: Individual tag sets for each record (must match records array length)
-          oneOf:
-            - required: [ tags ]
-            - required: [ sets ]
         examples:
           bulk_tags:
             summary: Add same tags to multiple records

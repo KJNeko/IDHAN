@@ -1,0 +1,33 @@
+post:
+  tags:
+    - relationships
+  summary: Adds records to an alternative group
+  description: |
+    Groups records together as alternatives of each other (e.g. different crops or versions
+    of the same image). If the records span multiple existing alternative groups, those groups
+    are merged. If some records are already in a group, the others are added to it.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            $ref: '../../../schemas/RecordID.yaml'
+          minItems: 2
+        examples:
+          group:
+            summary: Group three records as alternatives
+            value:
+              - 1
+              - 2
+              - 3
+  responses:
+    200:
+      description: Records added to alternative group
+      content:
+        application/json:
+          schema:
+            type: object
+    400:
+      description: Invalid request body — must be an array

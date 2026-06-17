@@ -42,7 +42,7 @@ and have an extension, It will ONLY make changes or place files if it is NOT set
 any new cluster during creation.
 
 To easily make a cluster without any 3rd-party tool. You can start the server and access the swagger api docs via
-`/docs` If this does not result in a valid webpage or has errors, See the troubleshooting guide
+`/api`. If this does not result in a valid webpage or has errors, See the troubleshooting guide
 
 One you've opened the swagger docs, go down to `clusters` and find `/clusters/add`, Expand it and hit `try it out`
 from there you can then change the template json to fit your requirements. If the creation succeeds you should see a
@@ -70,9 +70,9 @@ If you are not self hosting either, you'll need to setup either a proxy to provi
 
 You can run `openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -nodes` in a directory that you're happy with for the keys to be in, and then provide IDHAN with the information to use the keys
 Set the following in one of your config files for IDHAN
-```aiignore
+```toml
 [host]
-use_ssl = true
+use_tls = true
 server_cert_path = "/home/whatever/yourpath/server.crt"
 server_key_path = "/home/whatever/yourpath/server.key"
 

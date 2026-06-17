@@ -1,0 +1,59 @@
+get:
+  tags:
+    - tags
+    - records
+  summary: Returns resolved tags with provenance information
+  description: |
+    Like `/records/{record_id}/tags/active` but includes provenance: whether each tag was
+    explicitly stored, resolved from an alias, or inherited from a parent relationship.
+  parameters:
+    - name: record_id
+      in: path
+      required: true
+      schema:
+        $ref: '../../../schemas/RecordID.yaml'
+  responses:
+    200:
+      description: Array of resolved tags with provenance
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - tag_id
+                - tag_domain_id
+                - explicit
+              properties:
+                tag_id:
+                  $ref: '../../../schemas/TagID.yaml'
+                tag_domain_id:
+                  $ref: '../../../schemas/TagDomainID.yaml'
+                explicit:
+                  type: boolean
+                  description: True if the tag was directly stored on the record
+                aliased_from:
+                  type: array
+                  items:
+                    $ref: '../../../schemas/TagID.yaml'
+                  description: Tag IDs this tag was resolved from via aliases
+                inherited_from:
+                  type: array
+                  items:
+                    $ref: '../../../schemas/TagID.yaml'
+                  description: Tag IDs that caused this tag to be added via parent inheritance
+          examples:
+            verbose:
+              summary: Verbose resolved tags
+              value:
+                - tag_id: 10
+                  tag_domain_id: 1
+                  explicit: true
+                  aliased_from: []
+                  inherited_from: []
+                - tag_id: 30
+                  tag_domain_id: 1
+                  explicit: false
+                  aliased_from: [25]
+                  inherited_from: []

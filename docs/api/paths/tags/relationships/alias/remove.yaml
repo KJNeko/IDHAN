@@ -1,0 +1,39 @@
+post:
+  tags:
+    - tags
+  summary: Removes alias relationships between tags
+  parameters:
+    - name: tag_domain_id
+      in: query
+      required: true
+      schema:
+        $ref: '../../../../schemas/TagDomainID.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            type: object
+            required:
+              - aliased_id
+              - alias_id
+            properties:
+              aliased_id:
+                $ref: '../../../../schemas/TagID.yaml'
+              alias_id:
+                $ref: '../../../../schemas/TagID.yaml'
+        examples:
+          remove_alias:
+            summary: Remove alias from tag 10 to tag 20
+            value:
+              - aliased_id: 10
+                alias_id: 20
+  responses:
+    200:
+      description: Aliases removed successfully
+    400:
+      description: Invalid request body
+    500:
+      description: Internal server error
