@@ -13,7 +13,7 @@ set(USE_SPDLOG ON)
 
 set(BUILD_TESTING OFF)
 
-set(USE_SUBMODULE OFF)
+set(USE_SUBMODULE ON)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/dependencies/drogon ${CMAKE_CURRENT_BINARY_DIR}/drogon)
 set(drogon_FOUND TRUE)
