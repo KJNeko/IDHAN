@@ -90,6 +90,7 @@ RUN --mount=type=cache,target=/root/.ccache \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
+    -DTRANTOR_USE_TLS=none \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DIDHAN_WASM_TOOLCHAIN_FILE=/opt/qt6/6.11.1/wasm_singlethread/lib/cmake/Qt6/qt.toolchain.cmake && \
     cmake --build build --target IDHANServer -j$(nproc) && \

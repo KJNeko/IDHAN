@@ -6,7 +6,6 @@
 #ifdef IDHAN_USE_STD_FORMAT
 #include <format>
 namespace format_ns = std;
-#define SPDLOG_USE_STD_FORMAT 1
 #else
 #include <fmt/format.h>
 namespace format_ns = fmt;
