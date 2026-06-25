@@ -24,7 +24,7 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 		"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2) "
 		"ON CONFLICT (record_id) DO UPDATE SET simple_mime_type = $2",
 		record_id,
-		simple_type );
+		std::to_underlying( simple_type ) );
 
 	const Json::Value& json { metadata.m_extra };
 	co_await db->execSqlCoro( "UPDATE metadata SET json = $2 WHERE record_id = $1", record_id, json.toStyledString() );
