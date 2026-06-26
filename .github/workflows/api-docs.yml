@@ -1,0 +1,61 @@
+name: Deploy API Docs
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/api/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-api-docs:
+    runs-on: ubuntu-latest
+    if: github.server_url == 'https://git.futuregadgetlabs.net'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Bundle OpenAPI spec
+        run: npx --yes @redocly/cli bundle docs/api/index.yaml -o dist/openapi.yaml
+
+      - name: Generate Swagger UI page
+        run: |
+          mkdir -p dist
+          cat > dist/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>IDHAN API Docs</title>
+            <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" />
+          </head>
+          <body>
+            <div id="swagger-ui"></div>
+            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+            <script>
+              SwaggerUIBundle({
+                url: "./openapi.yaml",
+                dom_id: '#swagger-ui',
+                presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+                layout: "BaseLayout",
+                deepLinking: true,
+              });
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to gitea-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gitea-pages
+          commit_message: "Deploy API docs from ${{ github.sha }}"
