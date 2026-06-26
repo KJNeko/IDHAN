@@ -67,36 +67,36 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( RecordAPI::getNotes, "/records/{record_id}/notes", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::addNote, "/records/{record_id}/add_note", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::removeNote, "/records/{record_id}/remove_note/{note_id}", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::getNotes, "/records/{record_id}/notes", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::addNote, "/records/{record_id}/add_note", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::removeNote, "/records/{record_id}/remove_note/{note_id}", drogon::Delete, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::createRecord, "/records/create", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::createRecord, "/records/create", drogon::Post, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::fetchUrls, "/records/{record_id}/urls", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::addUrls, "/records/{record_id}/urls/add", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::removeUrls, "/records/{record_id}/urls/remove", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchUrls, "/records/{record_id}/urls", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::addUrls, "/records/{record_id}/urls/add", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::removeUrls, "/records/{record_id}/urls/remove", drogon::Post, IDHANAPIAuthName );
 
 	// tags
-	ADD_METHOD_TO( RecordAPI::addMultipleTags, "/records/tags/add", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::removeMultipleTags, "/records/tags/remove", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::addMultipleTags, "/records/tags/add", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::removeMultipleTags, "/records/tags/remove", drogon::Post, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::addTags, "/records/{record_id}/tags/add", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::removeTags, "/records/{record_id}/tags/remove", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::listTags, "/records/{record_id}/tags", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::listActiveTags, "/records/{record_id}/tags/active", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::listActiveTagsVerbose, "/records/{record_id}/tags/active/verbose", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::addTags, "/records/{record_id}/tags/add", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::removeTags, "/records/{record_id}/tags/remove", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::listTags, "/records/{record_id}/tags", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::listActiveTags, "/records/{record_id}/tags/active", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::listActiveTagsVerbose, "/records/{record_id}/tags/active/verbose", drogon::Get, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::searchHash, "/records/search", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::searchHash, "/records/search", drogon::Get, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::getRandomActiveRecord, "/records/random", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::getRandomActiveRecord, "/records/random", drogon::Get, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( RecordAPI::fetchThumbnail, "/records/{record_id}/thumbnail", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}/file", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/info", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/metadata", IDHANAPIAuthName );
-	ADD_METHOD_TO( RecordAPI::parseFile, "/records/{record_id}/metadata/scan", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchThumbnail, "/records/{record_id}/thumbnail", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}/file", drogon::Get, drogon::Head, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchFile, "/records/{record_id}", drogon::Get, drogon::Head, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/info", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchInfo, "/records/{record_id}/metadata", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::parseFile, "/records/{record_id}/metadata/scan", drogon::Post, IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

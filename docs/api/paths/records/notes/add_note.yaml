@@ -4,8 +4,9 @@ post:
     - notes
   summary: Add a note to a record
   description: |
-    Creates a new note with the provided text and associates it with the given record.
-    Returns the updated map of all notes for the record after insertion.
+    Creates a new note with the provided text (or reuses an existing one with the same text)
+    and associates it with the given record. Returns the updated array of all notes for the
+    record after insertion.
   parameters:
     - $ref: '../../../parameters/record_id.yaml'
   requestBody:
@@ -19,20 +20,28 @@ post:
             summary: A short note
             value: "This image is from episode 3."
   responses:
-    200:
-      description: Updated map of note_id to note text for the record
+    '200':
+      description: Updated list of notes for the record after insertion
       content:
         application/json:
           schema:
-            type: object
-            additionalProperties:
-              type: string
+            type: array
+            items:
+              type: object
+              required: [note_id, text]
+              properties:
+                note_id:
+                  type: integer
+                  format: int32
+                text:
+                  type: string
           examples:
             after_insert:
               summary: Notes after adding one
               value:
-                1: "This image is from episode 3."
-    400:
+                - note_id: 1
+                  text: "This image is from episode 3."
+    '400':
       description: Content-Type was not text/plain, or record_id is invalid
-    500:
+    '500':
       description: Internal error while creating or mapping the note

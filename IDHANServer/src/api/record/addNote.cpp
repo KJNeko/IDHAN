@@ -2,31 +2,72 @@
 // Created by kj16609 on 11/17/24.
 //
 
+#include <drogon/orm/Exception.h>
+
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "noteHelpers.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< drogon::HttpResponsePtr > RecordAPI::getNotes( drogon::HttpRequestPtr request, RecordID record_id )
+ExpectedTask< NoteID > findOrCreateNote( DbClientPtr db, std::string text )
 {
-	auto db { drogon::app().getDbClient() };
+	NoteID note_id {};
+	bool insert_conflicted { false };
 
+	try
+	{
+		const auto note_creation {
+			co_await db->execSqlCoro( "INSERT INTO notes (note) VALUES ($1) RETURNING note_id", text )
+		};
+		if ( note_creation.empty() )
+			co_return std::unexpected( createInternalError( "Failed to create new note text" ) );
+		note_id = note_creation[ 0 ][ 0 ].as< NoteID >();
+	}
+	catch ( const drogon::orm::DrogonDbException& )
+	{
+		insert_conflicted = true;
+	}
+
+	if ( insert_conflicted )
+	{
+		// UNIQUE constraint on notes.note fired — co_await is forbidden inside catch, so we re-query here
+		const auto existing {
+			co_await db->execSqlCoro( "SELECT note_id FROM notes WHERE note = $1", text )
+		};
+		if ( existing.empty() )
+			co_return std::unexpected( createInternalError( "Failed to find existing note after insert conflict" ) );
+		note_id = existing[ 0 ][ 0 ].as< NoteID >();
+	}
+
+	co_return note_id;
+}
+
+ExpectedTask< Json::Value > getRecordNotes( DbClientPtr db, RecordID record_id )
+{
 	const auto result { co_await db->execSqlCoro(
 		"SELECT note, note_id FROM record_notes JOIN notes USING (note_id) WHERE record_id = $1", record_id ) };
 
-	Json::Value json {};
+	Json::Value json { Json::arrayValue };
 
 	for ( const auto& note : result )
 	{
-		const auto note_text { note[ "note" ].as< std::string >() };
-		const auto note_id { note[ "note_id" ].as< NoteID >() };
-
-		json[ note_id ] = note_text;
+		Json::Value obj {};
+		obj[ "note_id" ] = note[ "note_id" ].as< NoteID >();
+		obj[ "text" ]    = note[ "note" ].as< std::string >();
+		json.append( obj );
 	}
 
-	co_return drogon::HttpResponse::newHttpJsonResponse( json );
+	co_return json;
+}
+
+drogon::Task< drogon::HttpResponsePtr > RecordAPI::getNotes( drogon::HttpRequestPtr request, RecordID record_id )
+{
+	const auto notes { co_await getRecordNotes( drogon::app().getDbClient(), record_id ) };
+	if ( !notes ) co_return notes.error();
+	co_return drogon::HttpResponse::newHttpJsonResponse( notes.value() );
 }
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::addNote( drogon::HttpRequestPtr request, RecordID record_id )
@@ -36,23 +77,17 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addNote( drogon::HttpRequestP
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto text { request->getBody() };
+	const auto note_id_result { co_await findOrCreateNote( db, std::string( request->getBody() ) ) };
+	if ( !note_id_result ) co_return note_id_result.error();
 
-	const auto note_creation {
-		co_await db->execSqlCoro( "INSERT INTO notes (note) VALUES ($1) RETURNING note_id", text )
-	};
+	co_await db->execSqlCoro(
+		"INSERT INTO record_notes (record_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+		record_id,
+		note_id_result.value() );
 
-	if ( note_creation.empty() ) co_return createInternalError( "Failed to create new note text" );
-
-	const auto note_id { note_creation[ 0 ][ 0 ].as< NoteID >() };
-
-	const auto mapping_creation {
-		co_await db->execSqlCoro( "INSERT INTO record_notes (record_id, note_id) VALUES ($1, $2)", record_id, note_id )
-	};
-
-	if ( mapping_creation.affectedRows() == 0 ) co_return createInternalError( "Failed to insert mapping for note" );
-
-	co_return co_await getNotes( request, record_id );
+	const auto notes { co_await getRecordNotes( db, record_id ) };
+	if ( !notes ) co_return notes.error();
+	co_return drogon::HttpResponse::newHttpJsonResponse( notes.value() );
 }
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeNote(
@@ -64,7 +99,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeNote(
 
 	co_await db->execSqlCoro( "DELETE FROM record_notes WHERE record_id = $1 AND note_id = $2", record_id, note_id );
 
-	co_return co_await getNotes( request, record_id );
+	const auto notes { co_await getRecordNotes( db, record_id ) };
+	if ( !notes ) co_return notes.error();
+	co_return drogon::HttpResponse::newHttpJsonResponse( notes.value() );
 }
 
 } // namespace idhan::api

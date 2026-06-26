@@ -18,7 +18,7 @@ class ImportAPI final : public drogon::HttpController< ImportAPI >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( ImportAPI::importFile, "/file/import", IDHANAPIAuthName );
+	ADD_METHOD_TO( ImportAPI::importFile, "/file/import", drogon::Post, IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

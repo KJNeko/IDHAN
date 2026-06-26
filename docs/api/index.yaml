@@ -127,6 +127,8 @@ paths:
     $ref: './paths/tags/domains/delete.yaml'
 
   # ── Tag relationships ──────────────────────────────────────────────────────
+  /tags/{domain_id}/{tag_id}/relationships:
+    $ref: './paths/tags/relationships/get.yaml'
   /tags/parents/create:
     $ref: './paths/tags/relationships/parent/create.yaml'
   /tags/parents/remove:

@@ -1,6 +1,7 @@
 get:
   tags:
     - records
+    - urls
   summary: Returns the list of URLs associated with a record
   parameters:
     - name: record_id

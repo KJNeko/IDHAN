@@ -1,6 +1,6 @@
 post:
   tags:
-    - parents
+    - tags
   summary: Removes parent/child relationships between tags
   parameters:
     - name: tag_domain_id

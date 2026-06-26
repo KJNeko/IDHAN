@@ -1,6 +1,6 @@
 post:
   tags:
-    - parents
+    - tags
   description: Creates a parent/child relationship between two tags
   parameters:
     - name: tag_domain_id

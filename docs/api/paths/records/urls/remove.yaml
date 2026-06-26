@@ -1,6 +1,7 @@
 post:
   tags:
     - records
+    - urls
   summary: Removes one or more URLs from a record
   parameters:
     - name: record_id

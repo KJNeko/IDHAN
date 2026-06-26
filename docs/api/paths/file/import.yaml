@@ -2,132 +2,103 @@ post:
   tags:
     - records
   summary: Imports a given file.
+  description: |
+    Imports a file into IDHAN. The `status` field in the response discriminates the outcome:
+    - `1` — new file imported successfully
+    - `2` — file already exists in IDHAN
+    - `3` — file was previously deleted
+    - `4` — MIME type could not be determined (unknown mime)
   requestBody:
+    required: true
     content:
       application/octet-stream:
         schema:
           type: string
           format: binary
   responses:
-    success:
-      description: Successful import and record creation of the file
+    '200':
+      description: Import processed (check `status` field for outcome)
       content:
         application/json:
           schema:
             type: object
+            required: [status]
             properties:
-              file:
-                type: object
-                properties:
-                  import_time:
-                    type: integer
-                    example: 1749642232
-                  import_time_human:
-                    type: string
-                    example: "2025-06-11 11:43:51.627481"
-              record:
-                type: object
-                properties:
-                  creation_time:
-                    type: integer
-                    example: 1749642039
-                  creation_time_human:
-                    type: string
-                    example: "2025-06-11 11:40:38.572907"
-                  id:
-                    type: integer
-                    example: 43
-              record_id:
-                type: integer
-                example: 43
-              status:
-                oneOf:
-                  - type: integer
-                    example: 1
-    already exists:
-      description: IDHAN already has the file
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              file:
-                type: object
-                properties:
-                  import_time:
-                    type: integer
-                    example: 1749642232
-                  import_time_human:
-                    type: string
-                    example: "2025-06-11 11:43:51.627481"
-              record:
-                type: object
-                properties:
-                  creation_time:
-                    type: integer
-                    example: 1749642039
-                  creation_time_human:
-                    type: string
-                    example: "2025-06-11 11:40:38.572907"
-                  id:
-                    type: integer
-                    example: 43
-              record_id:
-                type: integer
-                example: 43
               status:
                 type: integer
-                example: 2
-    previously deleted:
-      description: IDHAN has been told to delete this file
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              file:
-                type: object
-                properties:
-                  import_time:
-                    type: integer
-                    example: 1749642232
-                  import_time_human:
-                    type: string
-                    example: "2025-06-11 11:43:51.627481"
+                enum: [1, 2, 3, 4]
+                description: |
+                  1=imported, 2=already exists, 3=previously deleted, 4=unknown mime
+              record_id:
+                type: integer
               record:
                 type: object
                 properties:
+                  id:
+                    type: integer
                   creation_time:
                     type: integer
-                    example: 1749642039
                   creation_time_human:
                     type: string
-                    example: "2025-06-11 11:40:38.572907"
                   deleted_time:
                     type: integer
-                    example: 1749642300
+                    description: Only present when status=3
                   deleted_time_human:
                     type: string
-                    example: "2025-06-11 11:45:00.000000"
-                  id:
+                    description: Only present when status=3
+              file:
+                type: object
+                properties:
+                  import_time:
                     type: integer
-                    example: 43
-              record_id:
-                type: integer
-                example: 43
-              status:
-                type: integer
-                example: 3
-    failed:
-      description: IDHAN failed to determine the file's mime
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              status:
-                type: integer
-                example: 4
+                  import_time_human:
+                    type: string
               reason:
                 type: string
-                example: unknown mime
+                description: Only present when status=4 (e.g. "unknown mime")
+          examples:
+            imported:
+              summary: New file imported (status=1)
+              value:
+                status: 1
+                record_id: 43
+                record:
+                  id: 43
+                  creation_time: 1749642039
+                  creation_time_human: "2025-06-11 11:40:38.572907"
+                file:
+                  import_time: 1749642232
+                  import_time_human: "2025-06-11 11:43:51.627481"
+            already_exists:
+              summary: File already exists (status=2)
+              value:
+                status: 2
+                record_id: 43
+                record:
+                  id: 43
+                  creation_time: 1749642039
+                  creation_time_human: "2025-06-11 11:40:38.572907"
+                file:
+                  import_time: 1749642232
+                  import_time_human: "2025-06-11 11:43:51.627481"
+            previously_deleted:
+              summary: File was previously deleted (status=3)
+              value:
+                status: 3
+                record_id: 43
+                record:
+                  id: 43
+                  creation_time: 1749642039
+                  creation_time_human: "2025-06-11 11:40:38.572907"
+                  deleted_time: 1749642300
+                  deleted_time_human: "2025-06-11 11:45:00.000000"
+                file:
+                  import_time: 1749642232
+                  import_time_human: "2025-06-11 11:43:51.627481"
+            unknown_mime:
+              summary: MIME type unknown (status=4)
+              value:
+                status: 4
+                reason: "unknown mime"
+    '400':
+      description: Content-Type is not application/octet-stream
