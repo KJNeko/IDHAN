@@ -25,8 +25,6 @@ services:
       IDHAN_DATABASE_DATABASE: idhan-db
     ports:
       - "16609:16609"
-    security_opt:
-      - seccomp=unconfined
     depends_on:
       idhan-postgres:
         condition: service_healthy
