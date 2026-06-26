@@ -19,9 +19,6 @@
 [submodule "dependencies/drogon"]
 	path = dependencies/drogon
 	url = https://github.com/kjneko/drogon.git
-[submodule "fgl_cmake_modules"]
-	path = fgl_cmake_modules
-	url = git@github.com:KJNeko/fgl_cmake_modules.git
 [submodule "dependencies/libpqxx"]
 	path = dependencies/libpqxx
 	url = https://github.com/jtv/libpqxx.git
@@ -45,7 +42,7 @@
     url = https://github.com/marzer/tomlplusplus
 [submodule "dependencies/libFGL"]
 	path = dependencies/libFGL
-	url = https://github.com/KJNeko/libFGL.git
+	url = https://git.futuregadgetlabs.net/KJ16609/libFGL.git
 [submodule "dependencies/trantor"]
 	path = dependencies/trantor
 	url = https://github.com/KJNeko/trantor.git
