@@ -56,9 +56,20 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 
 	drogon::Task< drogon::HttpResponsePtr > getRandomActiveRecord( drogon::HttpRequestPtr request );
 
+	drogon::Task< drogon::HttpResponsePtr > getNotes( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > addNote( drogon::HttpRequestPtr request, RecordID record_id );
+	drogon::Task< drogon::HttpResponsePtr > removeNote(
+		drogon::HttpRequestPtr request,
+		RecordID record_id,
+		NoteID note_id );
+
   public:
 
 	METHOD_LIST_BEGIN
+
+	ADD_METHOD_TO( RecordAPI::getNotes, "/records/{record_id}/notes", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::addNote, "/records/{record_id}/add_note", IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::removeNote, "/records/{record_id}/remove_note/{node_id}", IDHANAPIAuthName );
 
 	ADD_METHOD_TO( RecordAPI::createRecord, "/records/create", IDHANAPIAuthName );
 

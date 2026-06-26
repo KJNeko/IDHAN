@@ -46,6 +46,9 @@ using UrlDomainID = Integer;
 
 using CursorID = Integer;
 
+using NoteID = Integer;
+#define NOTE_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
+
 enum class SimpleMimeType : std::uint16_t
 {
 	NONE = 0,

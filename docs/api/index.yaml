@@ -116,6 +116,12 @@ paths:
     $ref: './paths/records/thumbnail.yaml'
   /records/search:
     $ref: './paths/records/search.yaml'
+  /records/{record_id}/notes:
+    $ref: './paths/records/notes/get_notes.yaml'
+  /records/{record_id}/add_note:
+    $ref: './paths/records/notes/add_note.yaml'
+  /records/{record_id}/remove_note/{note_id}:
+    $ref: './paths/records/notes/remove_note.yaml'
 
   /search:
     $ref: './paths/search/search.yaml'
