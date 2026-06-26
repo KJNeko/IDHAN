@@ -1,11 +1,37 @@
 get:
   tags:
     - search
-  summary: Searches for a given file using tags
+  summary: Searches for records using tag IDs
+  description: >
+    Returns an array of record IDs whose active tag mappings satisfy the
+    supplied positive tag filter. If no tag IDs are given, all records that
+    have a file stored are returned.
+
+
+    Results are always sorted by file size ascending (sort controls are not
+    yet exposed). The response is always a plain array of record IDs
+    (hash return is not yet exposed).
+
+
+    Note: domain filtering is accepted via `tag_domains` but is not yet
+    implemented — the search always spans all tag domains.
   parameters:
     - name: tag_ids
       in: query
-      description: An array of tag IDs to search with. If empty, Default all files
+      description: >
+        Positive tag IDs to intersect. Repeat the parameter for multiple values
+        (`?tag_ids=1&tag_ids=2`). The singular alias `tag_id` is also accepted
+        and used as a fallback when `tag_ids` is absent.
+      required: false
+      schema:
+        type: array
+        items:
+          type: integer
+    - name: tag_id
+      in: query
+      description: >
+        Singular alias for `tag_ids`. Only consulted when `tag_ids` is not
+        present in the query string.
       required: false
       schema:
         type: array
@@ -13,47 +39,24 @@ get:
           type: integer
     - name: tag_domains
       in: query
-      description: The tag domains to search in. Default all
+      description: >
+        Tag domain IDs to restrict the search to. Accepted but not yet
+        implemented — domain filtering is currently a no-op and all tag domains
+        are always searched.
       required: false
       schema:
         type: array
         items:
           type: integer
-    - name: has_file
-      in: query
-      description: If true then the record must have a file stored. Default true
-      required: false
-      schema:
-        type: boolean
-    - name: sort_type
-      in: query
-      description: The sorting method. Default is import time
-      required: false
-      schema:
-        type: integer
-    - name: sort_order
-      in: query
-      description: Ascending/Newest/Smallest (true/non-zero) or descending/oldest/largest (false/zero)
-      schema:
-        type: boolean
-    - name: return_hashes
-      in: query
-      required: false
-      description: If true then the hash will also be returned
-      schema:
-        type: boolean
-    - name: return_ids
-      in: query
-      required: false
-      description: If true then the record id will be returned
-      schema:
-        type: boolean
   responses:
     200:
-      description: Successfully found records
+      description: Successfully found records (empty array when nothing matches)
       content:
         application/json:
           schema:
             type: array
             items:
               type: integer
+              description: record_id
+    401:
+      description: Missing or invalid API key

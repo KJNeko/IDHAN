@@ -2,6 +2,11 @@ get:
   tags:
     - clusters
   summary: Scans a cluster for files
+  description: >
+    Enqueues an asynchronous scan job for the given cluster and returns the
+    job ID immediately. The scan verifies file hashes, resolves cluster
+    assignments, optionally detects MIME types and extracts metadata, and
+    can adopt orphaned files into the database.
   parameters:
     - name: cluster_id
       in: path
@@ -9,62 +14,101 @@ get:
       description: ID of the cluster to scan
       schema:
         type: integer
-    - name: recompute_hash
+    - name: verify_hash
       in: query
       required: false
-      description: If false then the filename will be trusted and the hash will not be recomputed
+      description: >
+        If true, the file is hashed from disk to verify its content matches
+        the filename stem. If false, the filename stem is trusted as the hash.
       schema:
         type: boolean
-        default: true
+        default: false
+    - name: readonly
+      in: query
+      required: false
+      description: >
+        Force the scan to treat the cluster as read-only regardless of the
+        cluster's stored read_only flag. Files will not be moved or renamed.
+      schema:
+        type: boolean
+        default: false
     - name: scan_mime
       in: query
       required: false
-      description: Scans the mime if the file has not been scanned previously
+      description: Scans the MIME type if the file has not been scanned previously
       schema:
         type: boolean
         default: true
     - name: rescan_mime
       in: query
       required: false
-      description: Rescans the mime type for all files
+      description: Rescans the MIME type for all files, even if already detected
       schema:
         type: boolean
         default: false
     - name: scan_metadata
       in: query
       required: false
-      description: Scans the metadata if the file has not been scanned previously
+      description: Scans metadata if the file has not been scanned previously
       schema:
         type: boolean
         default: true
     - name: rescan_metadata
       in: query
       required: false
-      description: Rescans the metadata for all files
-      schema:
-        type: boolean
-        default: false
-    - name: stop_on_fail
-      in: query
-      required: false
-      description: If false, The scanner will not stop on any fail condition.
+      description: Rescans metadata for all files, even if already parsed
       schema:
         type: boolean
         default: true
+    - name: stop_on_fail
+      in: query
+      required: false
+      description: If true, the scanner stops on the first failure. If false, scanning continues past failures.
+      schema:
+        type: boolean
+        default: false
     - name: adopt_orphans
       in: query
       required: false
-      description: If true, Upon finding an orphan file. IDHAN will adopt it.
+      description: >
+        If true, files found on disk that have no corresponding DB record are
+        adopted (a new record is created for them). Enabling this forces
+        verify_hash and scan_mime to be active.
+      schema:
+        type: boolean
+        default: false
+    - name: remove_missing_files
+      in: query
+      required: false
+      description: If true, DB records for files that are no longer present on disk are removed
+      schema:
+        type: boolean
+        default: false
+    - name: fix_extensions
+      in: query
+      required: false
+      description: >
+        If true (and the cluster is not read-only), files whose extension does
+        not match their detected MIME type are renamed to the correct extension.
       schema:
         type: boolean
         default: false
   responses:
     200:
-      description: Returns a json status with scan results
+      description: Scan job successfully enqueued; returns the job ID
       content:
         application/json:
           schema:
             type: object
+            properties:
+              job_id:
+                type: integer
+                format: uint64
+                description: ID of the queued scan job
+            required:
+              - job_id
+          example:
+            job_id: 42
     400:
       description: Bad request
       content:
@@ -78,11 +122,7 @@ get:
             cluster_not_found:
               summary: Cluster not found
               value:
-                error: "Cluster not found with ID {cluster_id}"
-            readonly_hash_required:
-              summary: Hash recomputation required for read-only cluster
-              value:
-                error: "Must recompute hash for read only folders (recompute hash was set to false)"
+                error: "Cluster not found"
     500:
       description: Internal server error
       content:
@@ -93,20 +133,31 @@ get:
               error:
                 type: string
           examples:
-            hash_failed:
-              summary: Failed to compute hash
-              value:
-                error: "Failed to get hash for file"
             hash_mismatch:
-              summary: File hash mismatch
+              summary: File hash does not match its filename (read-only cluster)
               value:
-                error: "While scanning cluster {cluster_id} file {path} was found to have name of {name} but hash of {hash}"
+                error: "When scanning file at {path} it was detected that the filename does not match the sha256 {hash}. Because the cluster is in readonly mode, this could not be automatically fixed"
+            zero_size_file:
+              summary: File has zero size
+              value:
+                error: "When scanning file: {path} it was detected that it has a filesize of zero!"
             orphan_file:
-              summary: Orphan file found
-              description: If an orphan file is found and `adopt_orphans` is true, this error will not be returned
+              summary: File not in DB and adopt_orphans is false
               value:
-                error: "During scan of cluster {cluster_id} file {path} was found to have hash {hash} but was not in the DB. Possible orphan file"
-            metadata_error:
-              summary: Metadata parsing error
+                error: "When scanning cluster {cluster_id} file {path} was not found as a existing record and scan was not set to adopt orphans"
+            mime_scan_failed:
+              summary: MIME detection failed for a file
               value:
-                error: "Metadata returned invalid response internally"
+                error: "Failed to process mime for {filename} (Record {record_id}): {reason}"
+            metadata_no_parser:
+              summary: No metadata parser found for the detected MIME type
+              value:
+                error: "Unable to determine metadata parser for {record_id}: No metadata parser for {mime}"
+            metadata_parse_failed:
+              summary: Metadata parser returned an error
+              value:
+                error: "Could not parse record {record_id} using metadata parser: {reason}"
+            folder_scan_failed:
+              summary: Filesystem error while reading a cluster folder
+              value:
+                error: "Failed to scan folder {path}: {reason}"

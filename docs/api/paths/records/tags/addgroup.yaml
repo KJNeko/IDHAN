@@ -59,4 +59,6 @@ post:
     200:
       description: Tags added successfully to all records
     400:
-      description: Invalid request data
+      description: Invalid request data (malformed JSON, invalid records array, mismatched sets/records count, unknown tag_domain_id)
+    500:
+      description: Internal server error (database failure while inserting tag mappings)

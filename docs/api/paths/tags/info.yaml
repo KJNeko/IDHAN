@@ -15,3 +15,5 @@ get:
         application/json:
           schema:
             $ref: '../../schemas/TagInfoExtended.yaml'
+    "400":
+      description: "Tag not found — the tag_id does not exist or has not been committed yet"

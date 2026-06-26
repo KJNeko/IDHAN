@@ -3,6 +3,10 @@ get:
     - tags
     - records
   summary: Returns a list of tags on this file
+  description: |
+    Returns the raw tag mappings directly applied to a record, grouped by tag domain.
+    These are the unresolved mappings from the `tag_mappings` table. Use
+    `/records/{record_id}/tags/active` for tags after alias, sibling, and parent resolution.
   parameters:
     - name: record_id
       in: path
@@ -10,7 +14,8 @@ get:
       schema:
         $ref: '../../../schemas/RecordID.yaml'
   responses:
-    "200":
+    200:
+      description: Array of domain-grouped raw tag IDs
       content:
         application/json:
           schema:
@@ -27,3 +32,9 @@ get:
                   type: array
                   items:
                     $ref: '../../../schemas/TagID.yaml'
+          examples:
+            raw_tags:
+              summary: Raw tags grouped by domain
+              value:
+                - tag_domain_id: 1
+                  tag_ids: [10, 20, 30]

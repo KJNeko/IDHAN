@@ -8,6 +8,7 @@ info:
   title: IDHAN API
   contact:
     url: https://git.futuregadgetlabs.net/kj16609/IDHAN
+
 tags:
   - name: public
     description: Publicly accessible endpoints that don't require authentication
@@ -16,44 +17,106 @@ tags:
   - name: records
     description: |
       File record operations including creation, retrieval, tagging, and metadata management.
-      Records represent individual files recorded in IDHAN's system
-  - name: tag domains
-    description: |
-      Tag domain management for organizing tags into logical groups
+      Records represent individual files tracked in IDHAN's system.
+  - name: notes
+    description: Per-record text notes
+  - name: urls
+    description: Per-record URL associations
   - name: tags
-    description: |
-      Tag management operations including creation, search, and relationships
+    description: Tag management — creation, search, info, and relationships
+  - name: tag domains
+    description: Tag domain management for organizing tags into logical groups
   - name: clusters
-    description: |
-      File cluster operations for managing groups of related files.
+    description: File cluster operations for managing on-disk storage locations
   - name: search
     description: Global search functionality across records
-  - name: parents
-    description: Tag parent operations
   - name: relationships
     description: File relationship management (duplicates, alternatives)
+  - name: mime
+    description: MIME type detection and parser management
+  - name: jobs
+    description: Asynchronous background job dispatch and status polling
+  - name: maintenance
+    description: Server maintenance operations (integrity checks, purges, rescans)
+  - name: database
+    description: Database introspection and statistics
 
 security:
-  - KeyAuth: [ ]
+  - KeyAuth: []
 
 paths:
+
+  # ── Public / info ──────────────────────────────────────────────────────────
   /version:
     $ref: './paths/version.yaml'
 
+  # ── Auth ───────────────────────────────────────────────────────────────────
   /generate_api_key:
     $ref: './paths/auth/generate_key.yaml'
 
-  # Tags
+  # ── Records ────────────────────────────────────────────────────────────────
+  /records/create:
+    $ref: './paths/records/create.yaml'
+  /records/random:
+    $ref: './paths/records/random.yaml'
+  /records/search:
+    $ref: './paths/records/search.yaml'
+  /records/{record_id}:
+    $ref: './paths/records/file.yaml'
+  /records/{record_id}/file:
+    $ref: './paths/records/file.yaml'
+  /records/{record_id}/info:
+    $ref: './paths/records/info.yaml'
+  /records/{record_id}/metadata:
+    $ref: './paths/records/info.yaml'
+  /records/{record_id}/metadata/scan:
+    $ref: './paths/records/metadatascan.yaml'
+  /records/{record_id}/thumbnail:
+    $ref: './paths/records/thumbnail.yaml'
+
+  # ── Record tags ────────────────────────────────────────────────────────────
+  /records/tags/add:
+    $ref: './paths/records/tags/addgroup.yaml'
+  /records/tags/remove:
+    $ref: './paths/records/tags/removegroup.yaml'
+  /records/{record_id}/tags:
+    $ref: './paths/records/tags/info.yaml'
+  /records/{record_id}/tags/add:
+    $ref: './paths/records/tags/add.yaml'
+  /records/{record_id}/tags/remove:
+    $ref: './paths/records/tags/remove.yaml'
+  /records/{record_id}/tags/active:
+    $ref: './paths/records/tags/active.yaml'
+  /records/{record_id}/tags/active/verbose:
+    $ref: './paths/records/tags/activeverbose.yaml'
+
+  # ── Record notes ───────────────────────────────────────────────────────────
+  /records/{record_id}/notes:
+    $ref: './paths/records/notes/get_notes.yaml'
+  /records/{record_id}/add_note:
+    $ref: './paths/records/notes/add_note.yaml'
+  /records/{record_id}/remove_note/{note_id}:
+    $ref: './paths/records/notes/remove_note.yaml'
+
+  # ── Record URLs ────────────────────────────────────────────────────────────
+  /records/{record_id}/urls:
+    $ref: './paths/records/urls/fetch.yaml'
+  /records/{record_id}/urls/add:
+    $ref: './paths/records/urls/add.yaml'
+  /records/{record_id}/urls/remove:
+    $ref: './paths/records/urls/remove.yaml'
+
+  # ── Tags ───────────────────────────────────────────────────────────────────
   /tags/create:
     $ref: './paths/tags/create.yaml'
   /tags/search:
     $ref: './paths/tags/search.yaml'
-  /tags/{tag_id}/info:
-    $ref: './paths/tags/info.yaml'
   /tags/autocomplete:
     $ref: './paths/tags/autocomplete.yaml'
+  /tags/{tag_id}/info:
+    $ref: './paths/tags/info.yaml'
 
-  # Tag domains
+  # ── Tag domains ────────────────────────────────────────────────────────────
   /tags/domain/create:
     $ref: './paths/tags/domains/create.yaml'
   /tags/domain/list:
@@ -63,7 +126,7 @@ paths:
   /tags/domain/{tag_domain_id}/delete:
     $ref: './paths/tags/domains/delete.yaml'
 
-  # Tag Relationships
+  # ── Tag relationships ──────────────────────────────────────────────────────
   /tags/parents/create:
     $ref: './paths/tags/relationships/parent/create.yaml'
   /tags/parents/remove:
@@ -77,58 +140,7 @@ paths:
   /tags/siblings/remove:
     $ref: './paths/tags/relationships/sibling/remove.yaml'
 
-  # Records
-  /records/create:
-    $ref: './paths/records/create.yaml'
-  /records/random:
-    $ref: './paths/records/random.yaml'
-  /records/tags/add:
-    $ref: './paths/records/tags/addgroup.yaml'
-  /records/tags/remove:
-    $ref: './paths/records/tags/removegroup.yaml'
-  /records/{record_id}/urls:
-    $ref: './paths/records/urls/fetch.yaml'
-  /records/{record_id}/urls/add:
-    $ref: './paths/records/urls/add.yaml'
-  /records/{record_id}/urls/remove:
-    $ref: './paths/records/urls/remove.yaml'
-  /records/{record_id}/tags/add:
-    $ref: './paths/records/tags/add.yaml'
-  /records/{record_id}/tags/remove:
-    $ref: './paths/records/tags/remove.yaml'
-  /records/{record_id}/tags:
-    $ref: './paths/records/tags/info.yaml'
-  /records/{record_id}/tags/active:
-    $ref: './paths/records/tags/active.yaml'
-  /records/{record_id}/tags/active/verbose:
-    $ref: './paths/records/tags/activeverbose.yaml'
-  /records/{record_id}/info:
-    $ref: './paths/records/info.yaml'
-  /records/{record_id}/metadata:
-    $ref: './paths/records/info.yaml'
-  /records/{record_id}/metadata/scan:
-    $ref: './paths/records/metadatascan.yaml'
-  /records/{record_id}:
-    $ref: './paths/records/file.yaml'
-  /records/{record_id}/file:
-    $ref: './paths/records/file.yaml'
-  /records/{record_id}/thumbnail:
-    $ref: './paths/records/thumbnail.yaml'
-  /records/search:
-    $ref: './paths/records/search.yaml'
-  /records/{record_id}/notes:
-    $ref: './paths/records/notes/get_notes.yaml'
-  /records/{record_id}/add_note:
-    $ref: './paths/records/notes/add_note.yaml'
-  /records/{record_id}/remove_note/{note_id}:
-    $ref: './paths/records/notes/remove_note.yaml'
-
-  /search:
-    $ref: './paths/search/search.yaml'
-
-  /file/import:
-    $ref: './paths/file/import.yaml'
-
+  # ── Clusters ───────────────────────────────────────────────────────────────
   /clusters/add:
     $ref: './paths/clusters/add.yaml'
   /clusters/list:
@@ -142,17 +154,47 @@ paths:
   /clusters/{cluster_id}/scan:
     $ref: './paths/clusters/scan.yaml'
 
-  # File relationships
+  # ── Search ─────────────────────────────────────────────────────────────────
+  /search:
+    $ref: './paths/search/search.yaml'
+
+  # ── File import ────────────────────────────────────────────────────────────
+  /file/import:
+    $ref: './paths/file/import.yaml'
+
+  # ── File relationships ─────────────────────────────────────────────────────
   /relationships/duplicates/add:
     $ref: './paths/relationships/duplicates/add.yaml'
   /relationships/alternatives/add:
     $ref: './paths/relationships/alternatives/add.yaml'
 
-  # mime
+  # ── MIME ───────────────────────────────────────────────────────────────────
   /mime/parse:
     $ref: './paths/mime/parse.yaml'
   /mime/generate_thumbnail:
     $ref: './paths/mime/generate_thumbnail.yaml'
+  /mime/reload:
+    $ref: './paths/mime/reload.yaml'
+  /mime/parsers:
+    $ref: './paths/mime/parsers.yaml'
+
+  # ── Jobs ───────────────────────────────────────────────────────────────────
+  /jobs/metadata/rescan:
+    $ref: './paths/jobs/rescan_metadata.yaml'
+  /jobs/{job_id}/status:
+    $ref: './paths/jobs/status.yaml'
+  /jobs/status:
+    $ref: './paths/jobs/status_all.yaml'
+
+  # ── Maintenance ────────────────────────────────────────────────────────────
+  /integrity:
+    $ref: './paths/integrity.yaml'
+  /purge/thumbnails:
+    $ref: './paths/purge/thumbnails.yaml'
+
+  # ── Database stats ─────────────────────────────────────────────────────────
+  /db/stats/sunburst:
+    $ref: './paths/db/stats/sunburst.yaml'
 
 components:
   schemas:

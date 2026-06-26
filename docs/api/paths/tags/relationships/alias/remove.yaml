@@ -34,6 +34,6 @@ post:
     200:
       description: Aliases removed successfully
     400:
-      description: Invalid request body
+      description: Missing or invalid tag_domain_id query parameter, missing or non-array request body, or non-integer aliased_id/alias_id field
     500:
       description: Internal server error

@@ -1,0 +1,27 @@
+get:
+  tags:
+    - maintenance
+  summary: Run integrity check
+  description: |
+    Returns information about the server's static file paths and lists all files
+    found under the static directory tree. Useful for diagnosing missing or
+    unexpected files on disk.
+  responses:
+    200:
+      description: Integrity check results
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              static:
+                type: string
+                description: Path to the static directory
+              static_exists:
+                type: string
+                enum: ["true", "false"]
+              files:
+                type: array
+                items:
+                  type: string
+                description: All regular files found under the static parent directory

@@ -2,9 +2,21 @@ get:
   tags:
     - records
   summary: Get record thumbnail
-  description: Returns a PNG thumbnail for the specified record
+  description: >
+    Returns a PNG thumbnail for the specified record. If no cached thumbnail
+    exists it is generated on demand by the first available thumbnailer module
+    for the record's mime type and then cached to disk. Subsequent requests
+    serve the cached file. Pass `regenerate=true` to force regeneration even
+    when a cached thumbnail already exists.
   parameters:
     - $ref: '../../parameters/record_id.yaml'
+    - name: regenerate
+      in: query
+      required: false
+      description: Force regeneration of the thumbnail even if a cached copy already exists
+      schema:
+        type: boolean
+        default: false
   responses:
     '200':
       description: Thumbnail image
@@ -14,7 +26,9 @@ get:
             type: string
             format: binary
     '400':
-      description: Bad request - Record does not exist or has no associated file
+      description: >
+        Bad request - record does not exist, has no associated file info, or no
+        thumbnailer module is available for the record's mime type
       content:
         application/json:
           schema:
@@ -23,7 +37,7 @@ get:
               error:
                 type: string
     '500':
-      description: Internal server error
+      description: Internal server error - thumbnail generation failed or the cached file could not be written
       content:
         application/json:
           schema:

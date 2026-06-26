@@ -1,41 +1,90 @@
 post:
-  summary: Parse file metadata
-  description: Upload a file to parse its metadata
+  summary: Parse file MIME type and metadata
+  description: |
+    Upload a file to detect its MIME type and run all registered metadata parser modules against it.
+
+    Two content types are accepted:
+    - `application/octet-stream` — raw file bytes in the request body.
+    - `multipart/form-data` — exactly one file part; the filename is forwarded to the MIME scanner as a hint.
+
+    The `success` field in the 200 response distinguishes a successful parse from a detection failure.
   requestBody:
     required: true
     content:
+      application/octet-stream:
+        schema:
+          type: string
+          format: binary
+          description: Raw file bytes.
       multipart/form-data:
         schema:
           type: object
+          required:
+            - file
           properties:
             file:
               type: string
               format: binary
+              description: The file to parse. Exactly one file part must be provided.
   responses:
     '200':
-      description: Successful metadata parse
+      description: |
+        MIME scan attempted. Always check the `success` field — a false value means the MIME type
+        could not be determined (or no data was provided) and the response will contain `error` instead of `mime`.
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              mime_type:
-                type: string
-              metadata:
+            oneOf:
+              - description: MIME type detected successfully.
                 type: object
+                required:
+                  - success
+                  - mime
+                  - metadata_modules
                 properties:
-                  title:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  mime:
                     type: string
-                  duration:
-                    type: number
-                  width:
-                    type: integer
-                  height:
-                    type: integer
-                  codec:
+                    description: Detected MIME type string (e.g. `image/png`).
+                  metadata_modules:
+                    type: array
+                    description: Results from each metadata parser module that matched the MIME type.
+                    items:
+                      type: object
+                      required:
+                        - name
+                        - extra
+                      properties:
+                        name:
+                          type: string
+                          description: Name of the metadata module.
+                        count:
+                          type: integer
+                          description: Number of contained entries (archive files only).
+                        uncompressed_size:
+                          type: integer
+                          description: Total uncompressed size in bytes (archive files only).
+                        extra:
+                          type: object
+                          description: Additional module-specific metadata fields.
+              - description: MIME detection failed or no data was provided.
+                type: object
+                required:
+                  - error
+                properties:
+                  success:
+                    type: boolean
+                    enum: [false]
+                  error:
                     type: string
+                    description: Human-readable reason for the failure.
     '400':
-      description: Invalid file or parsing error
+      description: |
+        Invalid request. Returned when:
+        - The `Content-Type` is neither `application/octet-stream` nor `multipart/form-data`.
+        - A multipart request contains anything other than exactly one file part.
       content:
         application/json:
           schema:

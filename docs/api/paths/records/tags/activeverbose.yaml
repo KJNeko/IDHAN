@@ -25,6 +25,8 @@ get:
                 - tag_id
                 - tag_domain_id
                 - explicit
+                - aliased_from
+                - inherited_from
               properties:
                 tag_id:
                   $ref: '../../../schemas/TagID.yaml'

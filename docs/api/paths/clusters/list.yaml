@@ -1,15 +1,60 @@
 get:
   tags:
     - clusters
-  summary: Returns a json list of all cluster ids in use.
+  summary: Returns a json list of all clusters with their info.
   responses:
     200:
-      description: Returns a json array with the ids currently in use
+      description: Returns a json array of cluster info objects for every cluster currently registered
       content:
         application/json:
           schema:
             type: array
+            items:
+              type: object
+              properties:
+                cluster_id:
+                  type: integer
+                  description: The unique cluster ID
+                readonly:
+                  type: boolean
+                  description: Whether the cluster is read-only
+                name:
+                  type: string
+                  description: Human-readable name of the cluster
+                size:
+                  type: object
+                  properties:
+                    used:
+                      type: integer
+                      format: int64
+                      description: Bytes currently used by files in this cluster
+                    limit:
+                      type: integer
+                      format: int64
+                      description: Maximum bytes allowed (0 means no limit)
+                    available:
+                      type: integer
+                      format: int64
+                      description: Bytes available; set to int64 max when limit is 0
+                file_count:
+                  type: integer
+                  description: Number of files stored in this cluster
+                ratio_number:
+                  type: integer
+                  description: Ratio number controlling how frequently this cluster is selected for new writes
+                path:
+                  type: string
+                  description: Absolute filesystem path to the cluster folder
             example:
-              - 1
-              - 2
-              - 3
+              - cluster_id: 1
+                readonly: false
+                name: "main"
+                size:
+                  used: 1073741824
+                  limit: 0
+                  available: 9223372036854775807
+                file_count: 1234
+                ratio_number: 1
+                path: "/data/clusters/1"
+    404:
+      description: A cluster ID was retrieved from the database but its detailed info could not be found (rare race condition)

@@ -1,20 +1,34 @@
 get:
   tags:
     - tags
-  summary: Searches for a given tag id from a given text
+  summary: Look up a tag ID by exact tag text
+  description: >
+    Performs an exact-match lookup of a tag by its full text (e.g. `character:reimu`).
+    Always returns HTTP 200. The `found` field indicates whether the tag exists;
+    `tag_id` is only present in the response when `found` is `true`.
   parameters:
     - in: query
       name: tag
       required: true
+      description: Full tag text to look up (exact match, e.g. `character:reimu`).
+      schema:
+        type: string
   responses:
     200:
-      description: Returns a json object with a flag indicating if it was found, if so. the tag_id field is also present
+      description: >
+        Lookup result. `found` is always present. `tag_id` is only present when
+        `found` is `true`.
       content:
         application/json:
           schema:
             type: object
+            required:
+              - found
             properties:
               found:
                 type: boolean
+                description: Whether the tag text was found in the database.
               tag_id:
                 type: integer
+                description: >
+                  The numeric ID of the tag. Only present when `found` is `true`.

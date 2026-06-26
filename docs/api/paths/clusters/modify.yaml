@@ -11,13 +11,17 @@ patch:
   parameters:
     - in: path
       name: cluster_id
+      required: true
       schema:
         type: integer
   responses:
     200:
+      description: Cluster was successfully modified. Returns the updated cluster info.
       content:
         application/json:
           schema:
             $ref: '../../schemas/ClusterInfo.yaml'
     404:
       description: Cluster id was invalid or not found.
+    500:
+      description: Internal server error. Returned when the request body is missing or not valid JSON.

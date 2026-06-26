@@ -1,0 +1,47 @@
+post:
+  tags:
+    - maintenance
+  summary: Purge all thumbnails
+  description: |
+    Deletes all thumbnail files from the thumbnails directory and removes any
+    resulting empty subdirectories. Returns counts of deleted and failed files.
+  responses:
+    200:
+      description: Purge result
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              deleted_count:
+                type: integer
+              failed_count:
+                type: integer
+              message:
+                type: string
+          examples:
+            success:
+              value:
+                success: true
+                deleted_count: 1042
+                failed_count: 0
+                message: "Thumbnails purged successfully"
+            no_directory:
+              value:
+                success: true
+                deleted_count: 0
+                message: "Thumbnails directory does not exist"
+    500:
+      description: Unexpected error during purge
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string

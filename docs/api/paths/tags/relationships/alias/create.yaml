@@ -44,7 +44,6 @@ post:
       content:
         application/json:
           schema:
-            type: object
             nullable: true
     400:
       description: Invalid request body

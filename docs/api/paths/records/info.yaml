@@ -16,8 +16,8 @@ get:
           schema:
             $ref: '../../schemas/RecordInfo.yaml'
           examples:
-            parsed:
-              summary: Record with parsed MIME info
+            parsed_image:
+              summary: Parsed JPEG image record
               value:
                 record_id: 42
                 hashes:
@@ -25,6 +25,25 @@ get:
                 size: 1048576
                 mime: "image/jpeg"
                 extension: "jpg"
+                extra: {}
+                width: 1920
+                height: 1080
+                channels: 3
+            parsed_video:
+              summary: Parsed video record
+              value:
+                record_id: 99
+                hashes:
+                  sha256: "c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3"
+                size: 52428800
+                mime: "video/mp4"
+                extension: "mp4"
+                extra: {}
+                width: 1280
+                height: 720
+                duration: 120.5
+                bitrate: 4000000
+                has_audio: true
             unparsed:
               summary: Record without MIME info (not yet scanned)
               value:
@@ -32,4 +51,8 @@ get:
                 hashes:
                   sha256: "b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2"
     400:
-      description: Record ID not found
+      description: Record ID not found in the database
+    500:
+      description: >
+        Internal error — metadata row missing after parse attempt, or the record's
+        MIME category has no metadata handler (e.g. audio, animation).

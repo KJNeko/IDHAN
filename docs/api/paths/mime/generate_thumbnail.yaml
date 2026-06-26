@@ -1,6 +1,6 @@
 post:
   summary: Generate thumbnail of given file
-  description: Upload a file to generate it's thumbnail
+  description: Upload a file to generate its thumbnail
   requestBody:
     required: true
     content:
@@ -12,7 +12,11 @@ post:
     '200':
       description: Successfully generated thumbnail
       content:
-        image/jpeg:
+        image/png:
           schema:
             type: string
             format: binary
+    '400':
+      description: Request body is missing or content type is not application/octet-stream
+    '500':
+      description: Internal error (no parser or thumbnailer available for the detected MIME type, or processing failed)

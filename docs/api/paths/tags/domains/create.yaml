@@ -9,15 +9,27 @@ post:
       application/json:
         schema:
           type: object
+          required:
+            - name
           properties:
             name:
               type: string
               example: "my domain"
   responses:
     "200":
-      description: Json object with the domain info
+      description: Domain was created; returns the new domain info
       content:
         application/json:
           schema:
             $ref: '../../../schemas/TagDomainInfo.yaml'
+    "400":
+      description: Request body is missing, not valid JSON, or the `name` field is absent or not a string
+    "409":
+      description: A domain with that name already exists; returns the existing domain info
+      content:
+        application/json:
+          schema:
+            $ref: '../../../schemas/TagDomainInfo.yaml'
+    "500":
+      description: Internal error fetching or storing domain info after a successful DB operation
 

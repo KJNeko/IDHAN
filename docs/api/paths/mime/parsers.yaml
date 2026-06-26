@@ -1,0 +1,14 @@
+get:
+  tags:
+    - mime
+  summary: List loaded MIME parsers
+  description: |
+    Returns a dump of the current MIME database showing all loaded parser modules
+    and the MIME types they handle.
+  responses:
+    200:
+      description: MIME database dump
+      content:
+        application/json:
+          schema:
+            type: object
