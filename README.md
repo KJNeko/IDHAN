@@ -18,10 +18,6 @@ For detailed build instructions, please refer to our [Build Guide](docs/build.md
 
 For configuration options and setup, check out our [Configuration Guide](docs/config.md).
 
-# Clients
-
 # Server docs
 
-The API docs can be found at `/api` when the server is running (Swagger UI).
-
-<!-- TODO: add hosted source docs link -->
+The server listens on port **16609** by default. Interactive API docs (Swagger UI) are available at `/api` when the server is running.

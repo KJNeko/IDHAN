@@ -27,7 +27,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	std::filesystem::path target_path { request_json[ "path" ].asString() };
 	if ( target_path.is_relative() ) target_path = std::filesystem::absolute( target_path );
 
-	const bool readonly { request_json[ "readonly" ].asBool() };
+	const bool readonly { request_json[ "readonly" ].isBool() ? request_json[ "readonly" ].asBool() : true };
 
 	if ( readonly && !std::filesystem::exists( target_path ) )
 	{

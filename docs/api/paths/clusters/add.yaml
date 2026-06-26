@@ -8,6 +8,22 @@ post:
       application/json:
         schema:
           $ref: '../../schemas/ClusterInfo.yaml'
+        examples:
+          readonly_existing:
+            summary: Point at an existing directory (readonly, recommended for migrations)
+            value:
+              name: "My Media"
+              path: "/mnt/media/idhan"
+              readonly: true
+          managed_new:
+            summary: Create a new managed cluster IDHAN can write to
+            value:
+              name: "My Media"
+              path: "/mnt/media/idhan"
+              readonly: false
+              ratio: 1
+              size:
+                limit: 0
   responses:
     200:
       description: The cluster was successfully created. Returns the newly created cluster's info.

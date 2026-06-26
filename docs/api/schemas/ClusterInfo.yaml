@@ -6,11 +6,14 @@ properties:
   readonly:
     type: boolean
     default: true
+    description: >
+      When true IDHAN will not add, move, or rename files in this cluster.
+      Omitting this field defaults to true.
   name:
     type: string
   path:
     type: string
-    example: ./files
+    example: /mnt/media/idhan
   size:
     type: object
     properties:
@@ -19,6 +22,9 @@ properties:
         readOnly: true
       limit:
         type: integer
+        description: >
+          Maximum bytes this cluster may hold. 0 means unlimited.
+        default: 0
       available:
         type: integer
         readOnly: true
@@ -26,8 +32,21 @@ properties:
     description: Number of files in the cluster
     type: integer
     readOnly: true
-  ratio_number:
-    description: Ratio of files that should be placed in this cluster. ( Ratio / TotalRatio )
+  ratio:
+    description: >
+      Relative weight used when IDHAN picks a cluster for new files.
+      The effective probability is this cluster's ratio divided by the sum of
+      all cluster ratios. Only used on write (response field is ratio_number).
     type: integer
     example: 1
     default: 1
+    writeOnly: true
+  ratio_number:
+    description: >
+      Stored ratio weight (read-only; use the ratio field when creating or
+      modifying a cluster).
+    type: integer
+    readOnly: true
+required:
+  - name
+  - path

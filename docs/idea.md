@@ -1,7 +1,7 @@
 This document contains a lot of the key ideas and concepts for the current and future development.
 Note that this document might not match the current state of IDHAN and is mostly a guide for myself to stay on track.
 
-The application/concept name is **IDHAN** (**I** **D**on't **H**ave **A** **N**ame). (Better name maybe pending)
+The application/concept name is **IDHAN** (**I** **D**on't **H**ave **A** **N**ame).
 
 # Notes
 
@@ -126,8 +126,7 @@ other viewer tools
 
 # File clusters
 
-A file cluster is the storage point for files. It can be set in the server through the `clusters.yaml` config file.
-Alternatively it can be configured through the management endpoint at `<url>/manage`
+A file cluster is the storage point for files. Clusters are managed via the REST API (see `/api` Swagger docs or `docs/setup.md`).
 
 There are a few key config options for it
 
@@ -145,12 +144,9 @@ The tags of a collection follow the same tags as individual records.
 
 # Generators
 
-Generators are used in order to provide a way for IDHAN to keep a record of a source of multiple files, Examples of this
-would be the ability to store a single PSD and generate variants of an image without needing to store the variants.
-Generators will be capable of being defined by a python script that will register itself to handle specific files. Upon
-doing so each file that the generator can apply too will be scanned and processed through the generator's pre-processing
-stage. This will collect information that can be used to configure the generation process by the user.
+Generators are used in order to provide a way for IDHAN to keep a record of a source of multiple files. An example
+would be storing a single PSD and generating image variants without needing to store each variant separately.
 
-An example of this generator system would be the ability to register a PSD file that contains layers that allow for
-variants of an image to be created, Such as differences in clothing depending on enabled layers. The API will expose a
-way to configure the data for generation that is defined by the python script.
+Generators are implemented as C++ plugin modules (see `IDHANModules/`) that implement the `GeneratorModule` interface.
+At runtime the server loads all `.so` files from the modules directory via `dlopen`. The API exposes endpoints for
+configuring and triggering generation. A premade PSD generator (via libvips) is included in `IDHANPremadeModules`.
