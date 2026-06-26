@@ -1,4 +1,6 @@
 post:
+  tags:
+    - mime
   summary: Generate thumbnail of given file
   description: Upload a file to generate its thumbnail
   requestBody:

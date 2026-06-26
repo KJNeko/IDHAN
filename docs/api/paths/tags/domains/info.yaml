@@ -9,9 +9,11 @@ get:
       schema:
         $ref: '../../../schemas/TagDomainID.yaml'
   responses:
-    200:
+    '200':
       description: Json object with domain info
       content:
         application/json:
           schema:
             $ref: '../../../schemas/TagDomainInfo.yaml'
+    '400':
+      description: No tag domain found with the given ID

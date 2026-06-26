@@ -1,0 +1,76 @@
+get:
+  tags:
+    - tags
+  summary: Get all relationships for a tag
+  description: |
+    Returns all relationships for the given tag within the given tag domain.
+    Includes parent/child relationships, sibling relationships, and alias relationships.
+  parameters:
+    - name: domain_id
+      in: path
+      required: true
+      schema:
+        $ref: '../../../schemas/TagDomainID.yaml'
+    - name: tag_id
+      in: path
+      required: true
+      schema:
+        $ref: '../../../schemas/TagID.yaml'
+  responses:
+    '200':
+      description: All relationships for the tag
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [parents, children, older_siblings, younger_siblings, aliases, aliased]
+            properties:
+              parents:
+                type: array
+                items:
+                  $ref: '../../../schemas/TagID.yaml'
+                description: IDs of tags that are parents of this tag
+              children:
+                type: array
+                items:
+                  $ref: '../../../schemas/TagID.yaml'
+                description: IDs of tags that are children of this tag
+              older_siblings:
+                type: array
+                items:
+                  $ref: '../../../schemas/TagID.yaml'
+                description: IDs of tags that are older siblings of this tag
+              younger_siblings:
+                type: array
+                items:
+                  $ref: '../../../schemas/TagID.yaml'
+                description: IDs of tags that are younger siblings of this tag
+              aliases:
+                type: array
+                items:
+                  $ref: '../../../schemas/TagID.yaml'
+                description: IDs of tags that alias to this tag
+              aliased:
+                type: array
+                items:
+                  $ref: '../../../schemas/TagID.yaml'
+                description: IDs of tags that this tag is aliased to
+          examples:
+            with_relationships:
+              summary: Tag with a parent and an alias
+              value:
+                parents: [5]
+                children: []
+                older_siblings: []
+                younger_siblings: []
+                aliases: [12]
+                aliased: []
+            no_relationships:
+              summary: Tag with no relationships
+              value:
+                parents: []
+                children: []
+                older_siblings: []
+                younger_siblings: []
+                aliases: []
+                aliased: []

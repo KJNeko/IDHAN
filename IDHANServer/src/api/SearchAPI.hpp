@@ -18,7 +18,7 @@ class SearchAPI : public drogon::HttpController< SearchAPI >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( SearchAPI::search, "/search", IDHANAPIAuthName );
+	ADD_METHOD_TO( SearchAPI::search, "/search", drogon::Get, IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };
