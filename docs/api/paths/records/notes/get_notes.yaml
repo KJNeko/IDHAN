@@ -1,0 +1,32 @@
+get:
+  tags:
+    - records
+    - notes
+  summary: Get all notes for a record
+  description: |
+    Returns a map of note IDs to note text for all notes attached to the given record.
+  parameters:
+    - $ref: '../../../parameters/record_id.yaml'
+  responses:
+    200:
+      description: Map of note_id to note text
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+            description: Keys are note IDs (as strings), values are note text
+          examples:
+            with_notes:
+              summary: Record with two notes
+              value:
+                1: "This image is from episode 3."
+                2: "Original source unknown."
+            no_notes:
+              summary: Record with no notes
+              value: {}
+    400:
+      description: Invalid record_id
+    500:
+      description: Internal error while fetching notes

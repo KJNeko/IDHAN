@@ -1,0 +1,32 @@
+delete:
+  tags:
+    - records
+    - notes
+  summary: Remove a note from a record
+  description: |
+    Removes the association between the given note and record. Returns the updated
+    map of all remaining notes for the record.
+  parameters:
+    - $ref: '../../../parameters/record_id.yaml'
+    - $ref: '../../../parameters/note_id.yaml'
+  responses:
+    200:
+      description: Updated map of note_id to note text after removal
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+          examples:
+            after_remove:
+              summary: Notes after removing one
+              value:
+                2: "Original source unknown."
+            empty:
+              summary: No notes remaining
+              value: {}
+    400:
+      description: Invalid record_id or note_id
+    500:
+      description: Internal error while removing the note mapping
