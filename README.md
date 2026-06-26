@@ -21,3 +21,5 @@ For configuration options and setup, check out our [Configuration Guide](docs/co
 # Server docs
 
 The server listens on port **16609** by default. Interactive API docs (Swagger UI) are available at `/api` when the server is running.
+
+A hosted version of the API docs is available at [idhan.futuregadgetlabs.net](https://idhan.futuregadgetlabs.net).
