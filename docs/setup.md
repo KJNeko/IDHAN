@@ -37,24 +37,53 @@ be wiped if you just drop all the tables.
 
 ###### If you are coming from Hydrus, This is just a file path set in the 'database' management stuff.
 
-A cluster is a file location that IDHAN can put files, It will expect all files placed there to be named with their hash
-and have an extension, It will ONLY make changes or place files if it is NOT set to readonly, which is the default for
-any new cluster during creation.
+A cluster is a file location that IDHAN can read files from and write files to. IDHAN expects files in a cluster to be
+named by their hash with an extension. A cluster marked **readonly** will never have files added, moved, or renamed by
+IDHAN — it will only index what is already there.
 
-To easily make a cluster without any 3rd-party tool. You can start the server and access the swagger api docs via
-`/api`. If this does not result in a valid webpage or has errors, See the troubleshooting guide
+**New clusters default to readonly.** This is intentional: it gives you a chance to verify the scan results before
+allowing IDHAN to make any changes to your files. If you are pointing IDHAN at an existing collection (e.g. migrating
+from Hydrus or another tool), keep readonly enabled until you are confident the scan looks correct.
 
-One you've opened the swagger docs, go down to `clusters` and find `/clusters/add`, Expand it and hit `try it out`
-from there you can then change the template json to fit your requirements. If the creation succeeds you should see a
-result that contains much of the information you've just entered, as wel as some extra info along with a cluster_id.
-Once you've done that you can then hit the scan endpoint (Read below)
+To create a cluster, start the server and open the Swagger docs at `/api`. If this does not result in a valid webpage or
+has errors, see the troubleshooting guide.
+
+Go to `clusters` and find `/clusters/add`, expand it and hit `try it out`. Change the `path` and `name` fields to
+match your setup. If the creation succeeds you will receive a response containing the assigned `cluster_id`.
+
+### Expected file structure
+
+IDHAN organises files inside a cluster using the file's SHA-256 hash. Files are placed in a two-character prefix
+subdirectory derived from the first two hex characters of the hash:
+
+```
+cluster_root/
+  f{hex[0:2]}/
+    {full_sha256}.{ext}
+  bad/                   # created by a non-readonly scan; files that fail validation are moved here
+```
+
+For example, a JPEG whose hash starts with `ab` would be at:
+
+```
+cluster_root/fab/ab3f7c....jpg
+```
+
+If you are pointing IDHAN at an existing collection the files **must already follow this layout**. Any file that does
+not match the expected name or is in the wrong subdirectory will be treated as missing or corrupted during a scan.
+
+> **Note:** Thumbnails are **not** stored in clusters. They are written to a separate path configured via
+> `[thumbnails] path` in the config file (default: `./thumbnails`), using the layout
+> `t{hex[0:2]}/{sha256}.thumbnail`.
 
 ## Scanning a cluster
 
-To scan a cluster you can use the `/clusters/{id}/scan` endpoint. However, please read the swagger docs for the various
-parameters you can enter. The defaults *should* work for the most part, If the cluster was not created as readonly it
-might make some changes to the structure without asking. If this is a worry for you and you have NOT set the cluster to
-readonly. You can either modify it to be readonly, or scan with `force_readonly=true` as one of the query parameters.
+To scan a cluster use the `/clusters/{cluster_id}/scan` endpoint (POST). The scan indexes files present in the cluster
+directory without modifying anything while the cluster is readonly.
+
+If you have reviewed the scan results and want IDHAN to actively manage the cluster (renaming or reorganising files),
+set `read_only` to `false` via the cluster update endpoint first — or pass `readonly=true` to the scan endpoint to
+force a non-destructive scan regardless of the cluster's stored setting.
 
 ## Tagging/Getting files
 

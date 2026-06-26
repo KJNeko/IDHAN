@@ -4,6 +4,14 @@ Images are available at `git.futuregadgetlabs.net/kj16609/idhan`:
 - `latest` — built from each release tag
 - `dev` — bleeding edge, built from the `master` branch
 
+# Performance note: seccomp and io_uring
+
+IDHAN uses io_uring for file I/O. Docker's default seccomp profile blocks the `io_uring_setup` and related syscalls, which prevents io_uring from working and causes a significant performance degradation.
+
+The example compose below uses `seccomp=unconfined` to avoid this. This disables Docker's syscall filter entirely, which is a security trade-off — only do this if you understand the implications. A safer alternative is to write a custom seccomp profile that allows only the io_uring syscalls (`io_uring_setup`, `io_uring_enter`, `io_uring_register`) rather than disabling the filter completely.
+
+Running without `seccomp=unconfined` (or an io_uring-permissive profile) is supported but will fall back to standard I/O and may noticeably reduce throughput on large collections.
+
 # Important notes
 
 All IDHAN config options can be set via environment variables. ENV variables take priority over the config file but are lower priority than CLI flags. The format is `IDHAN_<GROUP>_<NAME>`, for example:

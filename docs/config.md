@@ -9,10 +9,12 @@
 
 - `-h` `--help`: Print help
 - `--testmode`: Forces the PostgreSQL schema to `test` instead of `public` (used for automated tests)
-- `--use_stdout`: Enable logging to stdout
+- `--use_stdout`: Enable logging to stdout (enabled by default; pass `--use_stdout 0` to disable)
+- `--log_level <LEVEL>`: Set the log level (`trace`, `debug`, `info`, `warning`, `error`, `critical`)
 - `--config <PATH>`: Use this config file exclusively. IDHAN will not load configs from other locations.
 - `--pg_user <USER>`: PostgreSQL user (overrides the config file)
 - `--pg_host <HOST>`: PostgreSQL hostname (overrides the config file)
+- `--force_start`: Force IDHAN to start even if it detects a previous instance may still be running
 
 # Config order
 

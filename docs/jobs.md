@@ -3,15 +3,19 @@
 - [Job types](#job-types)
     - [Cluster Scan](#cluster-scan)
 
+# Job endpoints
+
+- `GET /jobs/status` — list status of all jobs
+- `GET /jobs/{job_id}/status` — status of a specific job
+- `POST /jobs/metadata/rescan` — trigger a metadata rescan job
+
 # Job types
 
 ## Cluster Scan
 
-Example: `$url/jobs/start?type=cluster_scan&cluster_id=1`
+Cluster scan jobs are started via the cluster API: `POST /clusters/{cluster_id}/scan`
 
-The `cluster_scan` job type is responsible for scanning and analyzing cluster data.
-
-Scans a given cluster for files that are missing or corrupted.
+The cluster scan job scans a given cluster for files that are missing or corrupted.
 
 # Job Statuses
 
