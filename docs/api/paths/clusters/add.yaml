@@ -10,22 +10,79 @@ post:
           $ref: '../../schemas/ClusterInfo.yaml'
   responses:
     200:
-      description: The cluster was successfully created
-    422:
-      description: The cluster was not able to be created.
+      description: The cluster was successfully created. Returns the newly created cluster's info.
+      content:
+        application/json:
+          schema:
+            $ref: '../../schemas/ClusterInfo.yaml'
+    400:
+      description: Bad request. Returned when no JSON body is supplied, the path does not exist for a read-only cluster, or the cluster name is missing.
       content:
         application/json:
           schema:
             type: object
             properties:
-              code:
-                type: integer
-              message:
+              error:
                 type: string
+              status:
+                type: integer
           examples:
-            folder invalid:
-              summary: Access error
-              description: The folder could not be created or accessed due to filesystem permission errors.
+            no json:
+              summary: No JSON body supplied
               value:
-                code: 422
-                message: Unable to create directory.
+                error: No json data supplied
+                status: 400
+            readonly path missing:
+              summary: Path does not exist but readonly was requested
+              value:
+                error: "Path /some/path does not exist, but was requested as read only. This seems wrong"
+                status: 400
+            missing name:
+              summary: Cluster name not specified
+              value:
+                error: Cluster name must be specified
+                status: 400
+    409:
+      description: A cluster with the given path already exists.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              status:
+                type: integer
+          examples:
+            path exists:
+              summary: Path already in cluster list
+              value:
+                error: "Path /some/path already exists in the cluster list"
+                status: 409
+    500:
+      description: Internal server error. Returned when the directory cannot be created, the write test fails, or the database insert fails.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              status:
+                type: integer
+          examples:
+            create directory failed:
+              summary: Could not create directory
+              value:
+                error: "Was unable to create directory /some/path"
+                status: 500
+            write test failed:
+              summary: Write test failed
+              value:
+                error: "Failed to write to file /some/path/write_test.txt as write test for cluster"
+                status: 500
+            insert failed:
+              summary: Database insert failed
+              value:
+                error: "Failed to insert new cluster into table. Cluster might already exist with that name?"
+                status: 500

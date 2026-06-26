@@ -15,8 +15,18 @@ get:
         application/json:
           schema:
             type: object
+            required:
+              - found
             properties:
               found:
                 type: boolean
+                description: Whether a record with the given hash exists.
               record_id:
                 type: integer
+                description: >
+                  The ID of the matching record. Only present when `found` is
+                  `true`.
+    400:
+      description: >
+        Bad request. Returned when the `sha256` parameter is missing, is not
+        exactly 64 hex characters, or contains invalid hex digits.

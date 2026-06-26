@@ -16,6 +16,17 @@ properties:
   hydrus_api_version:
     type: integer
     example: 80
+  hydrus_version:
+    type: integer
+    example: 617
   tag:
     type: string
     example: "v1.0"
+  unsynced:
+    type: integer
+    description: "1 if the build was made from an unsynced (dirty) working tree, 0 otherwise"
+    example: 0
+  build_on:
+    type: string
+    description: "Build timestamp combining compile date and time"
+    example: "Jun 25 2026, 12:34:56"

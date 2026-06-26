@@ -8,6 +8,8 @@ post:
       application/json:
         schema:
           type: object
+          required:
+            - sha256
           properties:
             sha256:
               oneOf:
@@ -37,14 +39,10 @@ post:
                     type: integer
                 example:
                   record_id: 1234
-              - type: object
-                properties:
-                  record_ids:
-                    type: array
-                    items:
-                      type: integer
-                example:
-                  record_ids: [ 1234, 5678 ]
+              - type: array
+                items:
+                  type: integer
+                example: [ 1234, 5678 ]
           examples:
             single:
               summary: Single hash
@@ -52,7 +50,8 @@ post:
                 record_id: 1234
             array:
               summary: Array of hashes
-              value:
-                record_ids: [ 1234, 5678 ]
+              value: [ 1234, 5678 ]
     400:
-      description: Bad request
+      description: Bad request (invalid content type, invalid SHA256 hex string, or malformed JSON array)
+    500:
+      description: Internal server error (record insert failed after retries)

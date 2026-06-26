@@ -2,8 +2,13 @@ get:
   tags:
     - tags
     - search
-  description: Returns the best possible tag for a given input. The list will be capped at a maximum of the input `limit` or until all items above the the `lowest_match` value are found, Whichever happens first.
-  summary: Returns a list of tags that are the best possible fits for a given input.
+  summary: Returns a list of tags that best match a given partial input.
+  description: >
+    Searches for tags whose text matches the given `tag` input using PostgreSQL
+    similarity scoring. Results are ordered by exact match first, then by a
+    combined score of similarity and display count, then by similarity alone.
+    The `limit` is capped at a hard maximum of 32 regardless of the value
+    supplied.
   parameters:
     - in: query
       name: tag
@@ -11,54 +16,102 @@ get:
         type: string
         default: ""
       required: true
-      description: Partial text of a tag to search
+      description: Partial text of a tag to search. A leading `-` is treated as a negation prefix and stripped before matching.
     - in: query
       name: limit
       schema:
         type: integer
         default: 10
+        maximum: 32
       required: false
-      description: Maximum number of items to return
+      description: Maximum number of results to return. Values above 32 are silently clamped to 32.
     - in: query
-      name: pre_search
+      name: include_unused
       schema:
         type: boolean
         default: true
-      description: Allows for text before the tag to be counted. If false then it will assume that the tag follows `^tag.*$`
+      required: false
+      description: >
+        When `true` (default), tags with a display count of zero are included in
+        results. When `false`, only tags that have been applied to at least one
+        record are returned.
     - in: query
-      name: post_search
+      name: tag_display_type
       schema:
-        type: boolean
-        default: true
-      description: Reverse of pre_search. Tag expected to be `^.*tag$`
-    - in: query
-      name: threshold
-      schema:
-        type: integer
-        minimum: 0
-        maximum: 100
-        default: 0
-      description: threshold that a tag will be added to the list. 0% to 100% match. Note that the order of returns is in highest match to lowest match. The match value must be above the threshold to be added.
+        type: string
+        enum:
+          - storage
+          - display
+        default: storage
+      required: false
+      description: >
+        Controls which count perspective is used for scoring. `storage` (default)
+        uses the raw storage count; `display` uses the display count after tag
+        relationship resolution. An invalid value results in a 400 response.
 
   responses:
     "200":
-      description: An array of tags stored in json. The order is from greatest match to least match
+      description: >
+        An array of tag match objects ordered from greatest similarity to least.
+        Each object contains both a `value`/`tag_text` field (the full tag
+        string) and scoring metadata.
       content:
         application/json:
           schema:
             type: array
             items:
-              $ref: '../../schemas/TagInfo.yaml'
+              type: object
+              properties:
+                tag_id:
+                  type: integer
+                  description: Unique identifier for the tag.
+                  example: 42
+                value:
+                  type: string
+                  description: Full tag text (same as `tag_text`). Provided for UI convenience.
+                  example: "species:catgirl"
+                tag_text:
+                  type: string
+                  description: Full tag text in `namespace:subtag` form (or just the subtag when the namespace is empty).
+                  example: "species:catgirl"
+                similarity:
+                  type: number
+                  format: double
+                  description: PostgreSQL `similarity()` score between the search input and this tag (0.0–1.0).
+                  example: 0.8
+                count:
+                  type: integer
+                  description: Display count — number of records this tag is applied to.
+                  example: 17
+              required:
+                - tag_id
+                - value
+                - tag_text
+                - similarity
+                - count
           examples:
-            CatTag:
-              summary: Tag was 'cat'
+            CatQuery:
+              summary: Query was 'cat'
               value:
-                - tag_id: 3
-                  namespace: ""
-                  subtag: "cat ears"
-                - tag_id: 2
-                  namespace: ""
-                  subtag: "catgirl"
                 - tag_id: 1
-                  namespace: "species"
-                  subtag: "catgirl"
+                  value: "species:catgirl"
+                  tag_text: "species:catgirl"
+                  similarity: 0.5
+                  count: 120
+                - tag_id: 2
+                  value: "cat ears"
+                  tag_text: "cat ears"
+                  similarity: 0.36
+                  count: 45
+    "400":
+      description: >
+        Returned when `tag_display_type` is supplied but is not one of the
+        accepted values (`storage` or `display`).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Invalid tag display type"

@@ -23,4 +23,13 @@ post:
                 $ref: '../../../../schemas/TagID.yaml'
   responses:
     200:
-      description: Tags relationship created
+      description: All parent/child relationships created successfully
+    400:
+      description: |
+        Bad request. Possible causes:
+        - Missing or invalid `tag_domain_id` query parameter
+        - Request body is not valid JSON
+        - JSON root is not an array
+        - A `parent_id` or `child_id` value is not an integer
+    500:
+      description: Internal server error while inserting into the database

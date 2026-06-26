@@ -26,12 +26,8 @@ properties:
     description: Number of files in the cluster
     type: integer
     readOnly: true
-  ratio:
+  ratio_number:
     description: Ratio of files that should be placed in this cluster. ( Ratio / TotalRatio )
     type: integer
     example: 1
     default: 1
-  type:
-    type: string
-    enum: [ All, Files, Thumbnails ]
-    default: All

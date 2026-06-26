@@ -1,4 +1,4 @@
-get:
+post:
   tags:
     - public
   summary: Generates the initial API key

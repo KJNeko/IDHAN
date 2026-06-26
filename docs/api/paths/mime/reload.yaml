@@ -1,0 +1,15 @@
+post:
+  tags:
+    - mime
+    - maintenance
+  summary: Reload MIME parsers
+  description: |
+    Reloads all MIME parser modules from disk and returns the updated parser list,
+    identical to the response from `GET /mime/parsers`.
+  responses:
+    200:
+      description: Updated list of loaded parsers after reload
+      content:
+        application/json:
+          schema:
+            type: object

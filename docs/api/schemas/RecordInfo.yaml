@@ -24,3 +24,50 @@ properties:
     type: string
     description: Best file extension (present only if MIME has been parsed)
     example: "jpg"
+  extra:
+    type: object
+    description: >
+      Freeform JSON metadata blob stored in the `metadata.json` column.
+      Present for all records whose MIME type has been parsed.
+    additionalProperties: true
+  width:
+    type: integer
+    format: int32
+    description: >
+      Width in pixels. Present for image, video, and image-project MIME categories.
+    example: 1920
+  height:
+    type: integer
+    format: int32
+    description: >
+      Height in pixels. Present for image, video, and image-project MIME categories.
+    example: 1080
+  channels:
+    type: integer
+    format: int32
+    description: >
+      Number of colour channels. Present for image and image-project MIME categories.
+    example: 3
+  duration:
+    type: number
+    format: double
+    description: >
+      Duration in seconds. Present for video MIME category.
+    example: 120.5
+  bitrate:
+    type: integer
+    format: int32
+    description: >
+      Bitrate in bits per second. Present for video MIME category.
+    example: 4000000
+  has_audio:
+    type: boolean
+    description: >
+      Whether the video contains an audio track. Present for video MIME category.
+    example: true
+  layers:
+    type: integer
+    format: int32
+    description: >
+      Number of layers. Present for image-project MIME category (e.g. PSD files).
+    example: 5

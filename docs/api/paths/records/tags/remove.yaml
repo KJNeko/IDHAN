@@ -34,3 +34,5 @@ post:
       description: Tags removed successfully
     400:
       description: Invalid request body or missing tag_domain_id
+    500:
+      description: Internal server error (database operation failed)

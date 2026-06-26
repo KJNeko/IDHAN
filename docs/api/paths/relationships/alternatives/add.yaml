@@ -30,4 +30,6 @@ post:
           schema:
             type: object
     400:
-      description: Invalid request body — must be an array
+      description: Invalid request body — JSON body is required and must be an array of record IDs
+    500:
+      description: Database error while creating or merging alternative groups

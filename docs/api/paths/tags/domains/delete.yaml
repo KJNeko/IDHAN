@@ -18,3 +18,5 @@ delete:
             properties:
               tag_domain_id:
                 $ref: '../../../schemas/TagDomainID.yaml'
+    400:
+      description: Tag domain not found for the given id

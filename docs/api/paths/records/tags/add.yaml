@@ -49,4 +49,6 @@ post:
     200:
       description: All tags added successfully
     400:
-      description: One or more ids were invalid
+      description: One or more ids were invalid, tag_domain_id missing/invalid, or request body malformed
+    500:
+      description: Internal error while resolving or inserting tags (e.g. failed DB insert)

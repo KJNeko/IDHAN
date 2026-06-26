@@ -1,39 +1,47 @@
 post:
   tags:
     - tags
-  summary: Creates a new tag, Or returns an ID of an existing one
+  summary: Create tags and return their IDs
+  description: >
+    Accepts an array of namespace/subtag pairs and creates any tags that do not
+    already exist. Returns an array of tag IDs in the same order as the input.
+    If a tag already exists its existing ID is returned unchanged.
   requestBody:
-    description: Json object with a namespace id or text, and a subtag id, or text
+    description: Array of namespace/subtag string pairs
     required: true
     content:
       application/json:
         schema:
-          $ref: '../../schemas/TagSet.yaml'
+          type: array
+          items:
+            type: object
+            required:
+              - namespace
+              - subtag
+            properties:
+              namespace:
+                type: string
+                description: >
+                  The namespace component of the tag. Use an empty string for
+                  tags with no namespace (e.g. a plain "catgirl" tag).
+                example: "character"
+              subtag:
+                type: string
+                example: "toujou koneko"
         examples:
-          SingleText:
-            summary: Single text string
-            description: This is for ease of use. The internals will split the tag on the `:` character, Or if there is no `:` character it will treat the entire tag as a subtag component with a blank namespace.
+          single:
+            summary: Single tag (as a one-element array)
             value:
-              tag: "character:toujou koneko"
-          TextWNamespace:
-            summary: Text with namespace
-            description: This shows an example of a tag that would look like "`character`:`toujou koneko`"
+              - namespace: "character"
+                subtag: "toujou koneko"
+          noNamespace:
+            summary: Tag with no namespace
+            description: Use an empty string for the namespace when the tag has no prefix.
             value:
-              namespace: "character"
-              subtag: "toujou koneko"
-          TextWONamespace:
-            summary: Text without namespace
-            description: This shows an empty tag, The value `0` can also be used instead of an empty string
-            value:
-              namespace: ""
-              subtag: "catgirl"
-          ids:
-            value:
-              namespace: 0
-              subtag: 0
-          array:
-            summary: Array of tags
-            description: This shows an example of how you can use an tag objects.
+              - namespace: ""
+                subtag: "catgirl"
+          multiple:
+            summary: Multiple tags
             value:
               - namespace: "character"
                 subtag: "toujou koneko"
@@ -42,20 +50,50 @@ post:
 
   responses:
     "200":
-      description: "Json object with tag info"
+      description: Array of tag IDs in the same order as the request
       content:
         application/json:
           schema:
-            $ref: '../../schemas/TagInfo.yaml'
+            type: array
+            items:
+              $ref: '../../schemas/TagInfo.yaml'
           examples:
-            singlesent:
-              summary: "Single tag in request (non array)"
-              description: "Single tag in request"
+            single:
+              summary: Response for a one-element input array
               value:
-                tag_id: 0
-            array:
-              summary: "Array of tags sent"
-              description: "Even if 1 tag is present in the array, The return will always be an array if you send the request as an array"
+                - tag_id: 42
+            multiple:
+              summary: Response for a multi-element input array
               value:
-                - tag_id: 0
-                - tag_id: 1
+                - tag_id: 42
+                - tag_id: 7
+    "400":
+      description: >
+        Bad request. Returned when the request body is missing, the array is
+        empty, or any element has a namespace or subtag that is not a string.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+          examples:
+            noBody:
+              summary: No JSON body provided
+              value:
+                error: "No json data"
+            emptyArray:
+              summary: Empty array
+              value:
+                error: "No tags to create"
+            invalidNamespace:
+              summary: Namespace is not a string
+              value:
+                error: "Invalid namespace: Expected string"
+            invalidSubtag:
+              summary: Subtag is not a string
+              value:
+                error: "Invalid subtag: Expected string"
+    "500":
+      description: Internal server error while inserting tags into the database.
