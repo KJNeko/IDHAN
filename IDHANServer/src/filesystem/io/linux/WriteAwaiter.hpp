@@ -2,6 +2,7 @@
 // Created by kj16609 on 8/1/25.
 //
 #pragma once
+#ifdef __linux__
 
 #include <coroutine>
 #include <exception>
@@ -16,30 +17,25 @@ class EventLoop;
 
 namespace idhan
 {
-class IOUring;
+
+class IOUringLinux;
 
 struct [[nodiscard]] WriteAwaiter
 {
-	struct promise_type;
-	using handle_type = std::coroutine_handle< promise_type >;
-
 	static bool await_ready() noexcept;
-
 	void await_suspend( std::coroutine_handle<> h );
-
 	void await_resume() const;
 
 	std::exception_ptr m_exception { nullptr };
 	std::coroutine_handle<> m_cont {};
-
-	IOUring* m_uring { nullptr };
+	IOUringLinux* m_uring { nullptr };
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 	io_uring_sqe m_sqe {};
 #pragma GCC diagnostic pop
 	trantor::EventLoop* m_event_loop { nullptr };
 
-	WriteAwaiter( IOUring* uring, io_uring_sqe sqe );
+	WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe );
 
 	FGL_DELETE_ALL_RO5( WriteAwaiter );
 
@@ -49,3 +45,5 @@ struct [[nodiscard]] WriteAwaiter
 };
 
 } // namespace idhan
+
+#endif // __linux__

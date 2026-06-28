@@ -3,7 +3,13 @@
 //
 #include "ModuleLoader.hpp"
 
+#ifdef __linux__
 #include <dlfcn.h>
+#elif defined( _WIN32 )
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include <filesystem>
 #include <functional>
 #include <paths.hpp>
@@ -26,7 +32,12 @@ ModuleLoader::ModuleLoader() : m_modules(), m_libs()
 
 class ModuleHolder
 {
+#ifdef __linux__
 	void* m_handle;
+#elif defined( _WIN32 )
+	HMODULE m_handle;
+#endif
+
 	using VoidFunc = void* (*)();
 	VoidFunc initFunc { nullptr };
 	VoidFunc deinitFunc { nullptr };
@@ -35,33 +46,51 @@ class ModuleHolder
 
 	FGL_DELETE_ALL_RO5( ModuleHolder );
 
+#ifdef __linux__
 	[[nodiscard]] void* handle() const { return m_handle; }
+#elif defined( _WIN32 )
+	[[nodiscard]] HMODULE handle() const { return m_handle; }
+#endif
 
-	ModuleHolder( const std::filesystem::path& path ) : m_handle( dlopen( path.c_str(), RTLD_LAZY | RTLD_GLOBAL ) )
+	ModuleHolder( const std::filesystem::path& path )
 	{
 		if ( !std::filesystem::exists( path ) )
 		{
-			log::critical( "Failed to find module at path {}, {}", path.string(), dlerror() );
+			log::critical( "Failed to find module at path {}", path.string() );
 			std::abort();
 		}
 
+#ifdef __linux__
+		m_handle = dlopen( path.c_str(), RTLD_LAZY | RTLD_GLOBAL );
 		if ( !m_handle )
 		{
-			log::critical( "Failed to load module {}, {}", path.string(), dlerror() );
+			log::critical( "Failed to load module {}: {}", path.string(), dlerror() );
 			std::abort();
 		}
 
-		initFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
+		initFunc   = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
+		deinitFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) );
+#elif defined( _WIN32 )
+		m_handle = LoadLibraryW( path.wstring().c_str() );
+		if ( !m_handle )
+		{
+			log::critical( "Failed to load module {}: error {}", path.string(), GetLastError() );
+			std::abort();
+		}
+
+		initFunc   = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "init" ) );
+		deinitFunc = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "deinit" ) );
+#endif
+
 		if ( !initFunc )
 		{
-			log::critical( "Failed to interrogate module {}, deinitFunc not found", path.string() );
+			log::critical( "Failed to find 'init' export in module {}", path.string() );
 			std::abort();
 		}
 
-		deinitFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) );
 		if ( !deinitFunc )
 		{
-			log::critical( "Failed to interrogate module {}, initFunc not found", path.string() );
+			log::critical( "Failed to find 'deinit' export in module {}", path.string() );
 			std::abort();
 		}
 
@@ -71,7 +100,11 @@ class ModuleHolder
 	~ModuleHolder()
 	{
 		deinitFunc();
+#ifdef __linux__
 		dlclose( m_handle );
+#elif defined( _WIN32 )
+		FreeLibrary( m_handle );
+#endif
 	}
 };
 
@@ -91,8 +124,7 @@ std::expected< std::vector< std::byte >, ModuleError > generate(
 		[ & ]() -> drogon::Task< void >
 		{
 			auto coro = mime_db->scan( data, file_name );
-
-			exp = co_await coro;
+			exp       = co_await coro;
 		} );
 
 	if ( !exp ) return std::unexpected( ModuleError { "Unable to scan for mime" } );
@@ -125,8 +157,7 @@ std::expected< ThumbnailInfo, ModuleError > thumbnail(
 		[ & ]() -> drogon::Task< void >
 		{
 			auto coro = mime_db->scan( data_view, file_name );
-
-			exp = co_await coro;
+			exp       = co_await coro;
 		} );
 
 	if ( !exp ) return std::unexpected( ModuleError { "Unable to scan for mime" } );
@@ -157,65 +188,75 @@ void ModuleLoader::loadModules()
 		const auto extension { path.extension() };
 		const auto name { path.filename().string() };
 
-		if ( extension == ".so" )
+#ifdef __linux__
+		constexpr std::string_view module_ext { ".so" };
+#elif defined( _WIN32 )
+		constexpr std::string_view module_ext { ".dll" };
+#endif
+
+		if ( extension != module_ext ) continue;
+
+		log::info( "Library found: {}", name );
+
+		std::shared_ptr< ModuleHolder > holder { std::make_shared< ModuleHolder >( path ) };
+		m_libs.emplace_back( holder );
+
+		if ( !holder->handle() )
 		{
-			log::info( "Library found: {}", name );
+			log::error( "Failed to load module: {}", name );
+			continue;
+		}
 
-			// void* handle = dlopen( entry.path().c_str(), RTLD_LAZY | RTLD_GLOBAL );
-			std::shared_ptr< ModuleHolder > holder { std::make_shared< ModuleHolder >( path ) };
-			m_libs.emplace_back( holder );
+		log::info( "Getting modules from shared lib" );
 
-			if ( !holder->handle() )
+		using VoidFunc = void* (*)();
+
+#ifdef __linux__
+		const auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
+#elif defined( _WIN32 )
+		const auto getModulesFunc {
+			reinterpret_cast< VoidFunc >( GetProcAddress( holder->handle(), "getModulesFunc" ) )
+		};
+#endif
+
+		if ( !getModulesFunc )
+		{
+			log::error( "Failed to find 'getModulesFunc' in module {}", name );
+			continue;
+		}
+
+		using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )( ModuleCallbacks );
+		const auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
+
+		if ( !getModules )
+		{
+			log::error( "getModulesFunc returned null in module {}", name );
+			continue;
+		}
+
+		auto modules = getModules( generateCallbacks() );
+
+		for ( const auto& module : modules )
+		{
+			log::info( "Interrogating module from {} named {}", name, module->name() );
+
+			switch ( module->type() )
 			{
-				log::error( "Failed to load module: {}", dlerror() );
-				continue;
+				default:
+					log::error( "Unknown module type: {}", module->type() );
+					break;
+				case ModuleTypeFlags::GENERATOR:
+					log::info( "Module type: Generator" );
+					break;
+				case ModuleTypeFlags::METADATA:
+					log::info( "Module type: Metadata" );
+					break;
+				case ModuleTypeFlags::THUMBNAILER:
+					log::info( "Module type: Thumbnailer" );
+					break;
 			}
 
-			log::info( "Getting modules from shared lib" );
-
-			using VoidFunc = void* (*)();
-			const auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
-			if ( !getModulesFunc )
-			{
-				log::error( "Failed to get getModulesFunc: {}", dlerror() );
-				continue;
-			}
-
-			using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )( ModuleCallbacks );
-			const auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
-
-			if ( !getModules )
-			{
-				log::error( "Failed to get modules function: {}", dlerror() );
-				continue;
-			}
-
-			auto modules = getModules( generateCallbacks() );
-
-			// TODO: Possibly UB, Since apparently libraries have their own heaps?
-
-			for ( const auto& module : modules )
-			{
-				log::info( "Interrogating module from {} named {}", name, module->name() );
-
-				switch ( module->type() )
-				{
-					default:
-						log::error( "Unknown module type: {}", module->type() );
-						break;
-					case ModuleTypeFlags::GENERATOR:
-						log::info( "Module type: Generator" );
-						break;
-					case ModuleTypeFlags::METADATA:
-						log::info( "Module type: Metadata" );
-						break;
-					case ModuleTypeFlags::THUMBNAILER:
-						log::info( "Module type: Thumbnailer" );
-						break;
-				}
-
-				m_modules.push_back( module );
-			}
+			m_modules.push_back( module );
 		}
 	}
 }
@@ -225,7 +266,7 @@ std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnaile
 {
 	std::vector< std::shared_ptr< ThumbnailerModuleI > > ret {};
 
-	if ( m_modules.empty() ) log::warn( "Tried to get thumbnailer for {} but there are no thumbnailers loaded!", mime );
+	if ( m_modules.empty() ) log::warn( "Tried to get thumbnailer for {} but no modules are loaded", mime );
 
 	for ( const auto& module : m_modules )
 	{
@@ -233,7 +274,6 @@ std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnaile
 		     && std::static_pointer_cast< ThumbnailerModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< ThumbnailerModuleI >( module ) );
-			//TODO: Implement module priority
 			return ret;
 		}
 	}
@@ -244,7 +284,7 @@ std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( co
 {
 	std::vector< std::shared_ptr< MetadataModuleI > > ret {};
 
-	if ( m_modules.empty() ) log::warn( "Tried to get parser for {} but there are no parsers loaded!", mime );
+	if ( m_modules.empty() ) log::warn( "Tried to get parser for {} but no modules are loaded", mime );
 
 	for ( const auto& module : m_modules )
 	{
@@ -252,7 +292,6 @@ std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( co
 		     && std::static_pointer_cast< MetadataModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< MetadataModuleI >( module ) );
-			//TODO: Implement module priority
 			return ret;
 		}
 	}
@@ -263,7 +302,7 @@ std::vector< std::shared_ptr< GeneratorModuleI > > ModuleLoader::getGeneratorsFo
 {
 	std::vector< std::shared_ptr< GeneratorModuleI > > ret {};
 
-	if ( m_modules.empty() ) log::warn( "Tried to get generator for {} but there are no parsers loaded!", mime );
+	if ( m_modules.empty() ) log::warn( "Tried to get generator for {} but no modules are loaded", mime );
 
 	for ( const auto& module : m_modules )
 	{
@@ -271,7 +310,6 @@ std::vector< std::shared_ptr< GeneratorModuleI > > ModuleLoader::getGeneratorsFo
 		     && std::static_pointer_cast< GeneratorModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< GeneratorModuleI >( module ) );
-			//TODO: Implement module priority
 			return ret;
 		}
 	}

@@ -8,18 +8,20 @@
 
 namespace idhan
 {
-std::vector< std::filesystem::path > getModulePaths()
-{
-	constexpr std::array< std::string_view, 2 > module_paths { { "./modules", "/usr/share/idhan/modules" } };
 
-	std::vector< std::filesystem::path > paths {};
 #ifdef __linux__
 #define MODULE_EXT ".so"
+#elif defined( _WIN32 )
+#define MODULE_EXT ".dll"
+#else
+#error "No module extension defined for this OS"
 #endif
 
-#ifndef MODULE_EXT
-#error "No module extension given for this OS. Please report to dev"
-#endif
+std::vector< std::filesystem::path > getModulePaths()
+{
+	constexpr std::array< std::string_view, 2 > module_paths { { "./modules", IDHAN_MODULES_PATH } };
+
+	std::vector< std::filesystem::path > paths {};
 
 	for ( const auto& search_path : module_paths )
 	{
@@ -39,7 +41,7 @@ std::vector< std::filesystem::path > getMimeParserPaths()
 {
 	std::vector< std::filesystem::path > paths {};
 
-	constexpr std::array< std::string_view, 2 > parser_paths { { "./mime", "/usr/share/idhan/mime" } };
+	constexpr std::array< std::string_view, 2 > parser_paths { { "./mime", IDHAN_MIME_PATH } };
 
 	for ( const auto& search_path : parser_paths )
 	{
