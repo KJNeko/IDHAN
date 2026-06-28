@@ -24,8 +24,6 @@ jobs:
           push: false
           load: true
           tags: idhan:extract
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Extract artifacts from image
         run: |
