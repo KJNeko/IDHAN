@@ -11,7 +11,11 @@
 
 #include "ThumbnailInfo.hpp"
 
+#ifdef _WIN32
+#define FGL_EXPORT __declspec( dllexport )
+#else
 #define FGL_EXPORT __attribute__( ( visibility( "default" ) ) )
+#endif
 
 namespace idhan
 {

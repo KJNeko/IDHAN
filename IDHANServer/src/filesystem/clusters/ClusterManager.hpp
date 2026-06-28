@@ -18,7 +18,6 @@
 
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
-#include "filesystem/io/IOUring.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan
@@ -79,8 +78,6 @@ class ClusterManager
 		STORES_ALL = STORES_THUMBNAILS | STORES_ARCHIVES | STORES_GENERATORS | STORES_FILES,
 		STORES_DEFAULT = STORES_ALL
 	};
-
-	IOUring m_io_uring {};
 
 	struct ClusterInfo
 	{

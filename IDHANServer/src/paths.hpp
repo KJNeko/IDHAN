@@ -20,8 +20,22 @@
 #ifndef IDHAN_MODULES_PATH
 #define IDHAN_MODULES_PATH "/usr/share/idhan/modules"
 #endif
+
+#elif defined( _WIN32 )
+#ifndef IDHAN_STATIC_PATH
+#define IDHAN_STATIC_PATH "C:\\ProgramData\\IDHAN\\static"
+#endif
+
+#ifndef IDHAN_MIME_PATH
+#define IDHAN_MIME_PATH "C:\\ProgramData\\IDHAN\\mime"
+#endif
+
+#ifndef IDHAN_MODULES_PATH
+#define IDHAN_MODULES_PATH "C:\\ProgramData\\IDHAN\\modules"
+#endif
+
 #else
-#error "No paths supplied for finding IDHAN info. Likely incompatable OS"
+#error "No paths supplied for finding IDHAN info. Unsupported OS"
 #endif
 
 namespace idhan

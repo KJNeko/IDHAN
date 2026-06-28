@@ -10,6 +10,7 @@
 
 #include "ConnectionArguments.hpp"
 #include "ServerContext.hpp"
+#include "fgl/defines.hpp"
 #include "logging/log.hpp"
 
 void applyCLISettings(
