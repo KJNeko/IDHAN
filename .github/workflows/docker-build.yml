@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - dev
     tags:
       - '*'
 
@@ -41,9 +42,18 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
             type=ref,event=tag
-            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set cache ref
+        id: cache
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/dev" ]; then
+            echo "ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-buildcache" >> $GITHUB_OUTPUT
+          else
+            echo "ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -52,5 +62,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+          cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}
+          cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
