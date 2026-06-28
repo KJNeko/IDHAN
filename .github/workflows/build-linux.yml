@@ -1,0 +1,63 @@
+name: Build Linux Native Binary
+
+on:
+  push:
+    branches: [dev, master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config \
+            gcc-14 g++-14 \
+            libpq-dev \
+            liburing-dev \
+            libvips-dev \
+            libavcodec-dev libavcodec-extra libavfilter-dev libavutil-dev \
+            libarchive-dev \
+            python3 python3-pip
+
+      - name: Install Qt via aqt
+        run: |
+          pip3 install aqtinstall
+          aqt install-qt linux desktop 6.11.1 linux_gcc_64 --outputdir /opt/qt6
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=g++-14 \
+            -DCMAKE_C_COMPILER=gcc-14 \
+            -DCMAKE_PREFIX_PATH=/opt/qt6/6.11.1/gcc_64 \
+            -DBUILD_IDHAN_WEBUI=OFF \
+            -DBUILD_HYDRUS_IMPORTER=OFF \
+            -DBUILD_IDHAN_CLIENT=OFF \
+            -DBUILD_IDHAN_TESTS=OFF \
+            -DTRANTOR_USE_TLS=none
+
+      - name: Build
+        run: cmake --build build -j$(nproc) --target IDHANServer
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IDHANServer-linux-x86_64
+          path: |
+            build/bin/IDHANServer
+            build/bin/modules/
+            build/bin/mime/
+            build/bin/static/
+            build/bin/config.toml
