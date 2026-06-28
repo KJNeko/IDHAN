@@ -115,6 +115,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libssl3 \
     libc-ares2 \
     ffmpeg \
+    curl \
     locales && \
     locale-gen en_US.UTF-8 && \
     update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
@@ -141,6 +142,9 @@ RUN chmod +x /usr/bin/IDHANServer
 
 # Expose default port
 EXPOSE 16609
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl --fail --silent http://localhost:16609/health || exit 1
 
 # Default entrypoint
 ENTRYPOINT ["/usr/bin/IDHANServer", "--force_start=true"]

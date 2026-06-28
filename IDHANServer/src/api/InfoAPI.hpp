@@ -34,6 +34,7 @@ class InfoAPI : public drogon::HttpController< InfoAPI >
 	drogon::Task< drogon::HttpResponsePtr > apiDocs( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > version( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > log( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > health( drogon::HttpRequestPtr request );
 
   public:
 
@@ -45,6 +46,8 @@ class InfoAPI : public drogon::HttpController< InfoAPI >
 	ADD_METHOD_TO( InfoAPI::version, "/version" );
 
 	ADD_METHOD_TO( InfoAPI::log, "/log" );
+
+	ADD_METHOD_TO( InfoAPI::health, "/health", drogon::Get );
 
 	METHOD_LIST_END
 };

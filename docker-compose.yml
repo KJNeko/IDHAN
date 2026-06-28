@@ -25,6 +25,12 @@ services:
       IDHAN_DATABASE_DATABASE: idhan-db
     ports:
       - "16609:16609"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:16609/health" ]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
     depends_on:
       idhan-postgres:
         condition: service_healthy
