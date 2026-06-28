@@ -62,7 +62,7 @@ jobs:
             | xargs -I{} cp -n {} build/bin/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: IDHANServer-windows-x86_64
           path: |

@@ -37,7 +37,7 @@ jobs:
           docker rm extract
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: IDHANServer-linux-x86_64
           path: artifacts/
