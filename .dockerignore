@@ -33,3 +33,10 @@ push-nas.sh
 3rd-party/hyui.sh
 3rd-party/hydrus-web
 3rd-party/hydrui
+
+# CI and Docker config (not needed in build context)
+.github/
+docker-compose*.yml
+
+# Client library (BUILD_IDHAN_CLIENT=OFF in Docker build)
+IDHANClient/
