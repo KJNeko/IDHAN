@@ -23,8 +23,13 @@ services:
       IDHAN_DATABASE_USER: idhan
       IDHAN_DATABASE_PASSWORD: idhan
       IDHAN_DATABASE_DATABASE: idhan-db
+      # Route thumbnails into the persistent volume.
+      # File clusters must also be registered under /media/clusters/ via the API.
+      IDHAN_THUMBNAILS_PATH: /media/thumbnails
     ports:
       - "16609:16609"
+    volumes:
+      - idhan_media:/media
     healthcheck:
       test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:16609/health" ]
       interval: 30s
@@ -38,3 +43,4 @@ services:
 
 volumes:
   idhan_pg18:
+  idhan_media:

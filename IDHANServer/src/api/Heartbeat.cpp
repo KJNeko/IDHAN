@@ -9,6 +9,11 @@
 namespace idhan::api
 {
 
+struct HeartbeatContext
+{
+	trantor::TimerId timer_id { trantor::InvalidTimerId };
+};
+
 void sendStatusJson( const drogon::WebSocketConnectionPtr& wsConnPtr )
 {
 	Json::Value json {};
@@ -21,29 +26,19 @@ void Heartbeat::handleNewConnection(
 	[[maybe_unused]] const drogon::HttpRequestPtr& req,
 	const drogon::WebSocketConnectionPtr& wsConnPtr )
 {
-	std::shared_ptr< trantor::TimerId > timer_id { std::make_shared< trantor::TimerId >( 0 ) };
 	log::info( "WS open" );
 
-	using namespace std::chrono_literals;
+	auto ctx = std::make_shared< HeartbeatContext >();
+	wsConnPtr->setContext( ctx );
 
-	auto task = [ wsConnPtr, timer_id ]()
+	auto task = [ wsConnPtr ]()
 	{
 		if ( wsConnPtr->connected() )
-		{
 			sendStatusJson( wsConnPtr );
-		}
-		else
-		{
-			// Kill the timer if we are no longer connected
-			log::info( "WS closed" );
-			drogon::app().getLoop()->invalidateTimer( *timer_id.get() );
-		}
 	};
 
-	const auto id { drogon::app().getLoop()->runEvery( 10.0, task ) };
+	ctx->timer_id = drogon::app().getLoop()->runEvery( 10.0, task );
 	sendStatusJson( wsConnPtr );
-
-	*timer_id.get() = id;
 }
 
 void Heartbeat::handleNewMessage(
@@ -52,7 +47,12 @@ void Heartbeat::handleNewMessage(
 	const drogon::WebSocketMessageType& )
 {}
 
-void Heartbeat::handleConnectionClosed( const drogon::WebSocketConnectionPtr& )
-{}
+void Heartbeat::handleConnectionClosed( const drogon::WebSocketConnectionPtr& wsConnPtr )
+{
+	log::info( "WS closed" );
+	auto ctx = wsConnPtr->getContext< HeartbeatContext >();
+	if ( ctx && ctx->timer_id != trantor::InvalidTimerId )
+		drogon::app().getLoop()->invalidateTimer( ctx->timer_id );
+}
 
 } // namespace idhan::api
