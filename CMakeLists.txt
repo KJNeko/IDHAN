@@ -51,7 +51,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(postgres)
 include(toml)
 
-add_subdirectory(${IDHAN_DEPENDENCIES}/jsoncpp ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp)
+find_package(spdlog REQUIRED)
+find_package(Jsoncpp REQUIRED)
 
 add_subdirectory(IDHAN)
 if (BUILD_IDHAN_SERVER)
