@@ -65,4 +65,4 @@ endforeach ()
 
 target_sources(IDHAN PUBLIC ${GENERATED_HEADERS})
 
-target_link_libraries(IDHAN PUBLIC libFGL jsoncpp)
+target_link_libraries(IDHAN PUBLIC libFGL Jsoncpp_lib)

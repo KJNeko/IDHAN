@@ -21,7 +21,7 @@ bool tableExists( pqxx::nontransaction& tx, const std::string_view name, const s
 	pqxx::params params {};
 	params.append( name );
 	params.append( schema );
-	const pqxx::result table_result { tx.exec(
+	const pqxx::result table_result { tx.exec_params(
 		"SELECT table_name FROM information_schema.tables WHERE table_name = $1 AND table_schema = $2", params ) };
 
 	return table_result.size() > 0;
@@ -32,11 +32,11 @@ std::uint16_t getTableVersion( pqxx::nontransaction& tx, const std::string_view 
 {
 	pqxx::params params {};
 	params.append( name );
-	const auto result { tx.exec( "SELECT table_version FROM idhan_info WHERE table_name = $1", params ) };
+	const auto result { tx.exec_params( "SELECT table_version FROM idhan_info WHERE table_name = $1", params ) };
 
 	if ( result.size() == 0 ) return 0;
 
-	return std::get< 0 >( result.at( 0 ).as< std::uint16_t >() );
+	return result.at( 0 )[ 0 ].as< std::uint16_t >();
 }
 
 void addTableToInfo(
@@ -49,7 +49,7 @@ void addTableToInfo(
 	params.append( name );
 	params.append( migration_id );
 	params.append( creation_query );
-	tx.exec(
+	tx.exec_params(
 		R"(
 					INSERT INTO idhan_info (table_name, last_migration_id, queries)
 					VALUES( $1, $2, ARRAY[$3] )

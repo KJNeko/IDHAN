@@ -1,33 +1,3 @@
-[submodule "dependencies/tracy"]
-	path = dependencies/tracy
-	url = https://github.com/wolfpld/tracy.git
-[submodule "dependencies/Catch2"]
-	path = dependencies/Catch2
-	url = https://github.com/catchorg/Catch2.git
-[submodule "dependencies/asio"]
-	path = dependencies/asio
-	url = https://github.com/chriskohlhoff/asio.git
-[submodule "dependencies/spdlog"]
-	path = dependencies/spdlog
-	url = https://github.com/gabime/spdlog.git
-[submodule "submodules/websocket"]
-	path = submodules/websocket
-	url = https://gitlab.com/eidheim/Simple-WebSocket-Server.git
-[submodule "submodules/webserver"]
-	path = submodules/webserver
-	url = https://github.com/dendisuhubdy/asio-webserver.git
-[submodule "dependencies/drogon"]
-	path = dependencies/drogon
-	url = https://github.com/kjneko/drogon.git
-[submodule "dependencies/libpqxx"]
-	path = dependencies/libpqxx
-	url = https://github.com/jtv/libpqxx.git
-[submodule "dependencies/postgres"]
-	path = dependencies/postgres
-	url = https://github.com/postgres/postgres.git
-[submodule "dependencies/sqlite3"]
-	path = dependencies/sqlite3
-	url = https://github.com/sqlite/sqlite.git
 [submodule "3rd-party/hydrus-web"]
 	path = 3rd-party/hydrus-web
 	url = https://github.com/floogulinc/hydrus-web.git
@@ -37,27 +7,15 @@
 [submodule "docs/doxygen-awesome-css"]
 	path = docs/doxygen-awesome-css
 	url = https://github.com/jothepro/doxygen-awesome-css.git
-[submodule "dependencies/tomlplusplus"]
-    path = dependencies/tomlplusplus
-    url = https://github.com/marzer/tomlplusplus
 [submodule "dependencies/libFGL"]
 	path = dependencies/libFGL
 	url = https://git.futuregadgetlabs.net/KJ16609/libFGL.git
-[submodule "dependencies/trantor"]
-	path = dependencies/trantor
-	url = https://github.com/KJNeko/trantor.git
 [submodule "3rd-party/hydrui"]
 	path = 3rd-party/hydrui
 	url = https://github.com/hydrui/hydrui.git
-[submodule "dependencies/libarchive"]
-	path = dependencies/libarchive
-	url = https://github.com/libarchive/libarchive.git
-[submodule "dependencies/jsoncpp"]
-	path = dependencies/jsoncpp
-	url = https://github.com/open-source-parsers/jsoncpp.git
 [submodule "dependencies/chardet"]
 	path = dependencies/chardet
 	url = https://github.com/Joungkyun/libchardet.git
-[submodule "dependencies/fmt"]
-	path = dependencies/fmt
-	url = https://github.com/fmtlib/fmt.git
+[submodule "dependencies/drogon"]
+	path = dependencies/drogon
+	url = https://github.com/drogonframework/drogon.git

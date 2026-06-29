@@ -2,6 +2,9 @@
 # Stage 1: Build environment
 FROM ubuntu:24.04 AS builder
 
+# Enable universe repository (needed for drogon, spdlog, pqxx, tomlplusplus, etc.)
+RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
+
 # Use build mounts for apt cache to speed up re-builds
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -24,14 +27,36 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libavfilter-dev \
     libavutil-dev \
     libjsoncpp-dev \
+    libfmt-dev \
+    libspdlog-dev \
+    libarchive-dev \
+    libtomlplusplus-dev \
+    libc-ares-dev \
+    uuid-dev \
+    libbrotli-dev \
+    libssl-dev \
     python3 \
     python3-pip
-
-RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+
+# Build libpqxx from source: Ubuntu 24.04 ships 7.8.1 compiled without C++23
+# std::source_location support, causing undefined symbol errors at link time.
+RUN git clone --depth 1 --branch 7.10.1 https://github.com/jtv/libpqxx.git /tmp/libpqxx && \
+    cmake -S /tmp/libpqxx -B /tmp/libpqxx-build \
+        -DCMAKE_CXX_STANDARD=23 \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DBUILD_DOC=OFF \
+        -DBUILD_TEST=OFF \
+        -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake --build /tmp/libpqxx-build -j$(nproc) && \
+    cmake --install /tmp/libpqxx-build && \
+    rm -rf /tmp/libpqxx /tmp/libpqxx-build
+
+RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk
 
 RUN cd /opt/emsdk && \
     ./emsdk install 4.0.7 && \
@@ -99,6 +124,7 @@ RUN --mount=type=cache,target=/root/.ccache \
 FROM ubuntu:24.04
 
 # Install runtime dependencies and setup locale in one layer
+RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
@@ -113,6 +139,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     zlib1g \
     libssl3 \
     libc-ares2 \
+    libfmt9 \
+    libspdlog1.12 \
+    libarchive13 \
+    libtomlplusplus3t64 \
     ffmpeg \
     curl \
     locales && \
