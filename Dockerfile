@@ -60,7 +60,6 @@ COPY CMakeLists.txt /build/CMakeLists.txt
 
 # Copy core libraries
 COPY IDHAN /build/IDHAN
-COPY IDHANClient /build/IDHANClient
 COPY IDHANModules /build/IDHANModules
 COPY IDHANMigration /build/IDHANMigration
 
