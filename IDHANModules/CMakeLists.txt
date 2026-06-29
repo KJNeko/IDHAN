@@ -11,7 +11,7 @@ target_include_directories(IDHANModules PUBLIC ${VIPS_INCLUDE_DIRS})
 
 include(ExternalProject)
 
-find_package(libarchive REQUIRED)
+find_package(LibArchive REQUIRED)
 
 # VideoMetadata & VideoThumbnailer
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
@@ -21,7 +21,8 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
 		libswscale)
 
 AddFGLModule(IDHANPremadeModules ${CMAKE_CURRENT_SOURCE_DIR}/premade)
-target_link_libraries(IDHANPremadeModules PUBLIC IDHANModules IDHAN spdlog)
+target_link_libraries(IDHANPremadeModules PUBLIC IDHANModules IDHAN spdlog::spdlog)
+target_link_libraries(IDHANPremadeModules PRIVATE LibArchive::LibArchive)
 
 # Vips
 target_link_libraries(IDHANPremadeModules PUBLIC ${VIPS_LIBRARIES})
