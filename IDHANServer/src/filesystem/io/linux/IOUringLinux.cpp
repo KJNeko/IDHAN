@@ -11,9 +11,9 @@
 #include <liburing.h>
 #include <stdexcept>
 
+#include "drogon/HttpAppFramework.h"
 #include "filesystem/io/linux/ReadAwaiter.hpp"
 #include "filesystem/io/linux/WriteAwaiter.hpp"
-#include "drogon/HttpAppFramework.h"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
 
@@ -57,6 +57,9 @@ FileIOUring::~FileIOUring()
 
 IOUring::NativeHandle FileIOUring::nativeHandle() const
 {
+	if ( static_cast< int >( m_fd ) <= 0 )
+		throw std::runtime_error( format_ns::format( "Invalid file descriptor for file {}", m_path.string() ) );
+
 	// Cast via unsigned int to avoid sign-extension of potentially negative (invalid) fds.
 	return static_cast< IOUring::NativeHandle >( static_cast< unsigned int >( static_cast< int >( m_fd ) ) );
 }
@@ -104,8 +107,7 @@ static IOUringLinux* g_linux_instance { nullptr };
 
 IOUring& IOUring::getInstance()
 {
-	if ( !g_linux_instance )
-		throw std::runtime_error( "IOUring not initialised — call IOUring::init() at startup" );
+	if ( !g_linux_instance ) throw std::runtime_error( "IOUring not initialised — call IOUring::init() at startup" );
 	return *g_linux_instance;
 }
 
@@ -157,11 +159,11 @@ IOUringLinux::SubmissionRingPointers IOUringLinux::setupSubmissionRing()
 	}
 
 	const auto& sq_off { m_params.sq_off };
-	ptrs.head    = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.head );
-	ptrs.tail    = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.tail );
-	ptrs.array   = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.array );
-	ptrs.mask    = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_mask );
-	ptrs.flags   = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.flags );
+	ptrs.head = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.head );
+	ptrs.tail = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.tail );
+	ptrs.array = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.array );
+	ptrs.mask = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.ring_mask );
+	ptrs.flags = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.flags );
 	ptrs.dropped = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + sq_off.dropped );
 
 	return ptrs;
@@ -174,21 +176,22 @@ IOUringLinux::CommandRingPointers IOUringLinux::setupCommandRing()
 	if ( m_params.features & IORING_FEAT_SINGLE_MMAP )
 	{
 		ptrs.length = 0;
-		ptrs.mmap   = m_submission_ring.mmap;
+		ptrs.mmap = m_submission_ring.mmap;
 	}
 	else
 	{
 		ptrs.length = m_params.cq_off.cqes + m_params.cq_entries * sizeof( io_uring_cqe );
-		ptrs.mmap   = mmap(
-            nullptr, ptrs.length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_CQ_RING );
+		ptrs.mmap = mmap(
+			nullptr, ptrs.length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_CQ_RING );
 	}
 
-	ptrs.head     = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.head );
-	ptrs.tail     = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.tail );
-	ptrs.mask     = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.ring_mask );
-	ptrs.overflow = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.overflow );
-	ptrs.cqes     = reinterpret_cast< io_uring_cqe* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.cqes );
-	ptrs.flags    = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.flags );
+	ptrs.head = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.head );
+	ptrs.tail = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.tail );
+	ptrs.mask = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.ring_mask );
+	ptrs.overflow =
+		reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.overflow );
+	ptrs.cqes = reinterpret_cast< io_uring_cqe* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.cqes );
+	ptrs.flags = reinterpret_cast< unsigned* >( static_cast< std::uint8_t* >( ptrs.mmap ) + m_params.cq_off.flags );
 
 	return ptrs;
 }
@@ -286,7 +289,7 @@ void IOUringLinux::sendNop()
 	io_uring_prep_nop( &sqe );
 
 	m_submission_ring.entries[ index ] = sqe;
-	m_submission_ring.array[ index ]   = index;
+	m_submission_ring.array[ index ] = index;
 	tail++;
 
 	io_uring_smp_store_release( m_submission_ring.tail, tail );
@@ -315,7 +318,7 @@ IOUringLinux::IOUringLinux() :
   io_thread( &ioThread, this, io_run )
 {
 	m_submission_ring.entries = m_submission_entries;
-	m_iouring_setup           = uring_fd > 0;
+	m_iouring_setup = uring_fd > 0;
 
 	if ( !m_iouring_setup )
 	{
@@ -347,8 +350,10 @@ ReadAwaiter IOUringLinux::sendRead( const io_uring_sqe& sqe, std::shared_ptr< st
 	return ReadAwaiter { this, sqe, data };
 }
 
-drogon::Task< std::vector< std::byte > >
-	IOUringLinux::read( const NativeHandle handle, const std::size_t offset, const std::size_t len )
+drogon::Task< std::vector< std::byte > > IOUringLinux::read(
+	const NativeHandle handle,
+	const std::size_t offset,
+	const std::size_t len )
 {
 	if ( !m_iouring_setup )
 	{
@@ -356,8 +361,7 @@ drogon::Task< std::vector< std::byte > >
 		std::vector< std::byte > data {};
 		data.resize( len );
 		const auto bytes { pread( static_cast< int >( handle ), data.data(), len, static_cast< off_t >( offset ) ) };
-		if ( bytes < 0 )
-			throw std::runtime_error( format_ns::format( "pread failed: {}", strerror( errno ) ) );
+		if ( bytes < 0 ) throw std::runtime_error( format_ns::format( "pread failed: {}", strerror( errno ) ) );
 		data.resize( static_cast< std::size_t >( bytes ) );
 		co_return data;
 	}
@@ -375,8 +379,10 @@ drogon::Task< std::vector< std::byte > >
 	co_return co_await sendRead( sqe, buffer_ptr );
 }
 
-drogon::Task< void >
-	IOUringLinux::write( const NativeHandle handle, std::vector< std::byte > data, const std::size_t offset )
+drogon::Task< void > IOUringLinux::write(
+	const NativeHandle handle,
+	std::vector< std::byte > data,
+	const std::size_t offset )
 {
 	if ( !m_iouring_setup )
 	{
@@ -384,8 +390,7 @@ drogon::Task< void >
 		const auto bytes {
 			pwrite( static_cast< int >( handle ), data.data(), data.size(), static_cast< off_t >( offset ) )
 		};
-		if ( bytes < 0 )
-			throw std::runtime_error( format_ns::format( "pwrite failed: {}", strerror( errno ) ) );
+		if ( bytes < 0 ) throw std::runtime_error( format_ns::format( "pwrite failed: {}", strerror( errno ) ) );
 		co_return;
 	}
 
@@ -394,8 +399,7 @@ drogon::Task< void >
 
 	io_uring_sqe sqe {};
 	std::memset( &sqe, 0, sizeof( sqe ) );
-	io_uring_prep_write(
-		&sqe, static_cast< int >( handle ), data.data(), static_cast< __u32 >( data.size() ), offset );
+	io_uring_prep_write( &sqe, static_cast< int >( handle ), data.data(), static_cast< __u32 >( data.size() ), offset );
 
 	co_await sendWrite( sqe );
 }
