@@ -12,14 +12,14 @@ class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 
 	ImageVipsThumbnailer( idhan::ModuleCallbacks callbacks ) : ThumbnailerModuleI( callbacks ) {}
 
-	std::vector< std::string_view > handleableMimes() override;
+	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 
-	std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(
+	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(
 		idhan::ModuleCallData& data,
 		std::size_t width,
 		std::size_t height ) override;
 
-	std::string_view name() override { return "JPG Thumbnailer"; }
+	[[nodiscard]] std::string_view name() override { return "JPG Thumbnailer"; }
 
-	idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
+	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 };

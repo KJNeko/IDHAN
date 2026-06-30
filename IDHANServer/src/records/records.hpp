@@ -22,10 +22,10 @@ namespace idhan::helpers
  * @note Hashes MUST be unique
  * @return
  */
-drogon::Task< std::vector< RecordID > > massCreateRecord( const std::vector< SHA256 >& sha256s, DbClientPtr db );
+[[nodiscard]] drogon::Task< std::vector< RecordID > > massCreateRecord( const std::vector< SHA256 >& sha256s, DbClientPtr db );
 
-drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > > createRecord( const SHA256& sha256, DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > > createRecord( const SHA256& sha256, DbClientPtr db );
 
-drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, DbClientPtr db );
+[[nodiscard]] drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, DbClientPtr db );
 
 } // namespace idhan::helpers

@@ -15,18 +15,18 @@
 namespace idhan
 {
 
-drogon::Task< std::optional< NamespaceID > > findNamespace( std::string, drogon::orm::DbClientPtr db );
-drogon::Task< std::optional< SubtagID > > findSubtag( std::string, drogon::orm::DbClientPtr db );
+[[nodiscard]] drogon::Task< std::optional< NamespaceID > > findNamespace( std::string, drogon::orm::DbClientPtr db );
+[[nodiscard]] drogon::Task< std::optional< SubtagID > > findSubtag( std::string, drogon::orm::DbClientPtr db );
 
-drogon::Task< std::expected< NamespaceID, IDHANError > > createNamespace( std::string, drogon::orm::DbClientPtr db );
-drogon::Task< std::expected< SubtagID, IDHANError > > createSubtag( std::string, drogon::orm::DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< NamespaceID, IDHANError > > createNamespace( std::string, drogon::orm::DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< SubtagID, IDHANError > > createSubtag( std::string, drogon::orm::DbClientPtr db );
 
-drogon::Task< std::expected< TagID, IDHANError > > createTag(
+[[nodiscard]] drogon::Task< std::expected< TagID, IDHANError > > createTag(
 	std::string tag_namespace,
 	std::string tag_subtag,
 	drogon::orm::DbClientPtr db );
 
-ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
+[[nodiscard]] ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
 	const std::vector< std::string >& tags,
 	DbClientPtr db );
 

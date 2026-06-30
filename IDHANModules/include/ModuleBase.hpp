@@ -78,7 +78,7 @@ class FGL_EXPORT ModuleBase
 
 	ModuleCallbacks m_callbacks;
 
-	virtual std::string_view name() = 0;
+	[[nodiscard]] virtual std::string_view name() = 0;
 
 	ModuleBase() = delete;
 
@@ -86,11 +86,11 @@ class FGL_EXPORT ModuleBase
 
 	virtual ~ModuleBase() = default;
 
-	virtual bool threadSafe() { return false; }
+	[[nodiscard]] virtual bool threadSafe() { return false; }
 
-	virtual ModuleType type() = 0;
+	[[nodiscard]] virtual ModuleType type() = 0;
 
-	virtual ModuleVersion version() = 0;
+	[[nodiscard]] virtual ModuleVersion version() = 0;
 };
 
 using IDHANModule = ModuleBase;

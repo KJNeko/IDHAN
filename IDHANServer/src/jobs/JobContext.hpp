@@ -56,9 +56,9 @@ class JobRuntime
 
 	void enqueue( const std::shared_ptr< JobContext >& ctx );
 
-	std::shared_ptr< JobContext > getJob( idhan::JobID id );
+	[[nodiscard]] std::shared_ptr< JobContext > getJob( idhan::JobID id );
 
-	std::vector< std::shared_ptr< JobContext > > getAllJobs();
+	[[nodiscard]] std::vector< std::shared_ptr< JobContext > > getAllJobs();
 
 	JobRuntime();
 	~JobRuntime();
@@ -81,10 +81,10 @@ class JobContext
 
 	[[nodiscard]] std::shared_ptr< JobTaskStatus > status() const { return m_coro.m_status; }
 
-	bool run();
+	[[nodiscard]] bool run();
 };
 
-idhan::JobID generateNewJobID();
+[[nodiscard]] idhan::JobID generateNewJobID();
 
 struct JobIDWaitable
 {
@@ -103,7 +103,7 @@ struct JobIDWaitable
 	[[nodiscard]] idhan::JobID await_resume() const noexcept { return m_id; }
 };
 
-inline JobIDWaitable getJobID()
+[[nodiscard]] inline JobIDWaitable getJobID()
 {
 	return {};
 }
@@ -143,7 +143,7 @@ inline SetJobResponseWaitable setJobResponse( const Json::Value& response )
 
 JobRuntime& getJobRuntime();
 
-std::shared_ptr< JobContext > queueJob(
+[[nodiscard]] std::shared_ptr< JobContext > queueJob(
 	JobTask task,
 	std::string_view name = "",
 	std::source_location loc = std::source_location::current() );

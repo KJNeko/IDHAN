@@ -83,22 +83,22 @@ class SHA256
 		return false;
 	}
 
-	std::string hex() const;
+	[[nodiscard]] std::string hex() const;
 
 	//! Turns a HEX string into a SHA256 object. Str must be exactly (256 / 8) * 2, 64 characters long
-	static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
+	[[nodiscard]] static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
 	//! Takes the byte representation of a hash from a buffer.
-	static SHA256 fromBuffer( const std::vector< std::byte >& data );
-	static SHA256 fromBuffer( const std::array< std::byte, 256 / 8 >& data );
-	static SHA256 fromPgCol( const drogon::orm::Field& field );
-	static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
+	[[nodiscard]] static SHA256 fromBuffer( const std::vector< std::byte >& data );
+	[[nodiscard]] static SHA256 fromBuffer( const std::array< std::byte, 256 / 8 >& data );
+	[[nodiscard]] static SHA256 fromPgCol( const drogon::orm::Field& field );
+	[[nodiscard]] static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
 		RecordID record_id,
 		DbClientPtr db );
 
-	static SHA256 hash( const std::byte* data, std::size_t size );
-	static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
+	[[nodiscard]] static SHA256 hash( const std::byte* data, std::size_t size );
+	[[nodiscard]] static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
 
-	static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
+	[[nodiscard]] static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
 };
 
 } // namespace idhan
