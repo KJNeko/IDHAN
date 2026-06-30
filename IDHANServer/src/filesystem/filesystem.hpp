@@ -15,7 +15,7 @@ class SHA256;
 namespace idhan::filesystem
 {
 
-std::filesystem::path getFileFolder( const SHA256& sha256 );
+[[nodiscard]] std::filesystem::path getFileFolder( const SHA256& sha256 );
 
 /**
  *
@@ -67,6 +67,6 @@ ExpectedTask< FileState > validateFile( RecordID record_id );
  * @param path
  * @return
  */
-std::int64_t getLastWriteTime( const std::filesystem::path& path );
+[[nodiscard]] std::int64_t getLastWriteTime( const std::filesystem::path& path );
 
 } // namespace idhan::filesystem

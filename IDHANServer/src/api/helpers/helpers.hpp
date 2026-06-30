@@ -15,7 +15,7 @@
 namespace idhan::api::helpers
 {
 
-std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainIDParameter( const drogon::HttpRequestPtr& request );
+[[nodiscard]] std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainIDParameter( const drogon::HttpRequestPtr& request );
 
 constexpr std::chrono::seconds default_max_age {
 	std::chrono::duration_cast< std::chrono::seconds >( std::chrono::years( 1 ) )

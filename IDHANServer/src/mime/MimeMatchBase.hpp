@@ -31,8 +31,8 @@ struct MimeMatchBase
 	MimeMatchBase( const Json::Value& json );
 	virtual ~MimeMatchBase() = default;
 
-	drogon::Task< bool > test( Cursor cursor );
-	virtual drogon::Task< bool > match( Cursor& cursor ) const = 0;
+	[[nodiscard]] drogon::Task< bool > test( Cursor cursor );
+	[[nodiscard]] virtual drogon::Task< bool > match( Cursor& cursor ) const = 0;
 };
 
 } // namespace idhan::mime

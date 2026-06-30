@@ -26,7 +26,7 @@ ExpectedTask< void > addFileSpecificInfo( Json::Value& root, RecordID record_id,
 
 // Parsing
 
-drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( std::string mime_name );
+[[nodiscard]] drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( std::string mime_name );
 
 //! Triggers the metadata parsing for a record and updates it
 ExpectedTask< void > tryParseRecordMetadata( RecordID record_id, DbClientPtr db );
@@ -37,6 +37,6 @@ ExpectedTask< MetadataInfo > parseMetadata( RecordID record_id, DbClientPtr db )
 //! Updates the record metadata for a record
 ExpectedTask< void > updateRecordMetadata( RecordID record_id, DbClientPtr db, MetadataInfo metadata );
 
-drogon::Task< MetadataInfo > getMetadata( RecordID record_id, DbClientPtr db );
+[[nodiscard]] drogon::Task< MetadataInfo > getMetadata( RecordID record_id, DbClientPtr db );
 
 } // namespace idhan::metadata

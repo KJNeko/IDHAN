@@ -285,11 +285,11 @@ class SearchBuilder
 	 * @param filter_domains
 	 * @return
 	 */
-	std::string construct( bool return_ids = true, bool return_hashes = false, bool filter_domains = false );
+	[[nodiscard]] std::string construct( bool return_ids = true, bool return_hashes = false, bool filter_domains = false );
 
 	SearchBuilder();
 
-	drogon::Task< drogon::orm::Result > query(
+	[[nodiscard]] drogon::Task< drogon::orm::Result > query(
 		DbClientPtr db,
 		std::vector< TagDomainID > tag_domain_ids,
 		bool return_ids = true,
@@ -307,7 +307,7 @@ class SearchBuilder
 
 	void setPositiveTags( const std::vector< TagID >& vector );
 	void setNegativeTags( const std::vector< TagID >& tag_ids );
-	bool setHydrusSystemTags( std::string_view system_subtag );
+	[[nodiscard]] bool setHydrusSystemTags( std::string_view system_subtag );
 	void setSystemTags( const std::vector< std::string >& vector );
 
 	void setDisplay( HydrusDisplayType type );

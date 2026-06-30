@@ -92,23 +92,23 @@ class MimeDatabase
 
   public:
 
-	Json::Value dump() const;
+	[[nodiscard]] Json::Value dump() const;
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
+	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
 		std::string_view data,
 		std::string file_name );
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( data_view data, std::string file_name );
+	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( data_view data, std::string file_name );
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
+	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
+	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
 
 	//! Reloads all the 3rd party mime parsers
-	drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();
+	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();
 };
 
-std::shared_ptr< MimeDatabase > getMimeDatabase();
-drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr( std::string str, DbClientPtr db );
+[[nodiscard]] std::shared_ptr< MimeDatabase > getMimeDatabase();
+[[nodiscard]] drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr( std::string str, DbClientPtr db );
 
 } // namespace idhan::mime

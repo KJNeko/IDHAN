@@ -22,13 +22,13 @@ class FGL_EXPORT GeneratorModuleI : public ModuleBase
 
 	~GeneratorModuleI() override;
 
-	virtual std::vector< std::string_view > handleableMimes() = 0;
+	[[nodiscard]] virtual std::vector< std::string_view > handleableMimes() = 0;
 
-	virtual std::expected< std::vector< std::byte >, idhan::ModuleError > generate(
+	[[nodiscard]] virtual std::expected< std::vector< std::byte >, idhan::ModuleError > generate(
 		ModuleCallData& data,
 		std::array< std::byte, 256 / 8 > desired_hash ) = 0;
 
-	bool canHandle( std::string_view mime );
+	[[nodiscard]] bool canHandle( std::string_view mime );
 
 	ModuleType type() override;
 };

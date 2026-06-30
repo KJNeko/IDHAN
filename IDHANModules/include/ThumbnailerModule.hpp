@@ -24,21 +24,21 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 
 	~ThumbnailerModuleI() override;
 
-	virtual std::vector< std::string_view > handleableMimes() = 0;
+	[[nodiscard]] virtual std::vector< std::string_view > handleableMimes() = 0;
 
 	//! Returns a raw thumbnail in RGB format
-	virtual std::expected< ThumbnailInfo, ModuleError > createThumbnail(
+	[[nodiscard]] virtual std::expected< ThumbnailInfo, ModuleError > createThumbnail(
 		ModuleCallData& data,
 		std::size_t width,
 		std::size_t height ) = 0;
 
 	//! Returns the thumbnail in a in-memory PNG file
-	std::expected< ThumbnailInfo, ModuleError > createThumbnailFile(
+	[[nodiscard]] std::expected< ThumbnailInfo, ModuleError > createThumbnailFile(
 		ModuleCallData& data,
 		std::size_t width,
 		std::size_t height );
 
-	bool canHandle( std::string_view mime );
+	[[nodiscard]] bool canHandle( std::string_view mime );
 
 	ModuleType type() override;
 };

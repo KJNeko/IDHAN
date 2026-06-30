@@ -13,11 +13,11 @@ const static std::vector< std::string_view > archive_handleable_mimes {
 	"application/vnd.comicbook+zip"
 };
 
-inline std::vector< std::string_view > getHandleableMimesForArchives()
+[[nodiscard]] inline std::vector< std::string_view > getHandleableMimesForArchives()
 {
 	return archive_handleable_mimes;
 }
 
-std::expected< std::string, idhan::ModuleError > encoding( const char* str );
+[[nodiscard]] std::expected< std::string, idhan::ModuleError > encoding( const char* str );
 
-std::expected< std::string, idhan::ModuleError > sanitizeEncoding( const char* str );
+[[nodiscard]] std::expected< std::string, idhan::ModuleError > sanitizeEncoding( const char* str );

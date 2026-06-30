@@ -25,11 +25,11 @@ class FGL_EXPORT MetadataModuleI : public ModuleBase
 
 	~MetadataModuleI() override;
 
-	virtual std::vector< std::string_view > handleableMimes() = 0;
+	[[nodiscard]] virtual std::vector< std::string_view > handleableMimes() = 0;
 
-	virtual std::expected< MetadataInfo, ModuleError > parseFile( ModuleCallData& data ) = 0;
+	[[nodiscard]] virtual std::expected< MetadataInfo, ModuleError > parseFile( ModuleCallData& data ) = 0;
 
-	bool canHandle( std::string_view mime );
+	[[nodiscard]] bool canHandle( std::string_view mime );
 
 	ModuleType type() override;
 };

@@ -17,10 +17,10 @@ class ImageVipsMetadata final : public idhan::MetadataModuleI
 
 	ImageVipsMetadata() = delete;
 
-	std::vector< std::string_view > handleableMimes() override;
-	std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data ) override;
+	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
+	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data ) override;
 
-	std::string_view name() override { return "JPG Metadata Parser"; }
+	[[nodiscard]] std::string_view name() override { return "JPG Metadata Parser"; }
 
-	idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
+	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 };
