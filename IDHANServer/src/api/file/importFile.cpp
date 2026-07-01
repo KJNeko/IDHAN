@@ -28,16 +28,6 @@ Json::Value createDeletedResponse( const RecordID record_id, const int64_t delet
 	return root;
 }
 
-Json::Value createAlreadyImportedResponse( const RecordID record_id, const int64_t import_time )
-{
-	Json::Value root {};
-
-	root[ "record_id" ] = record_id;
-	root[ "cluster_store_time" ] = import_time;
-	root[ "status" ] = static_cast< Json::Value::UInt >( Exists );
-
-	return root;
-}
 
 Json::Value createUnknownMimeResponse()
 {
