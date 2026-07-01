@@ -103,7 +103,7 @@ drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::fromDB(
 {
 	const auto result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", record_id ) };
 
-	if ( result.empty() ) co_return std::unexpected( createBadRequest( "Record not found" ) );
+	if ( result.empty() ) co_return std::unexpected( createNotFound( "Record not found" ) );
 
 	co_return SHA256::fromPgCol( result[ 0 ][ 0 ] );
 }

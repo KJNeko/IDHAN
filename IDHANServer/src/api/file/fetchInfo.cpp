@@ -29,7 +29,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 		"WHERE r.record_id = $1",
 		record_id ) };
 
-	if ( result.empty() ) co_return createBadRequest( "Record ID was not found" );
+	if ( result.empty() ) co_return createNotFound( "Record ID was not found" );
 
 	root[ "hashes" ][ "sha256" ] = SHA256::fromPgCol( result[ 0 ][ "sha256" ] ).hex();
 

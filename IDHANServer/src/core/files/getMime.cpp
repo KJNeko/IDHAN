@@ -17,7 +17,7 @@ drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromRe
 {
 	const auto result { db->execSqlSync( "SELECT mime_id FROM file_info WHERE record_id = $1", id ) };
 
-	if ( result.empty() ) co_return std::unexpected( createBadRequest( "Invalid file info" ) );
+	if ( result.empty() ) co_return std::unexpected( createNotFound( "No file info for record {}", id ) );
 
 	co_return result[ 0 ][ 0 ].as< MimeID >();
 }
