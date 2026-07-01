@@ -23,7 +23,7 @@ static std::string getHeaderKeys( const drogon::HttpRequestPtr& req )
 {
 	for ( const auto& header : key_headers )
 	{
-		const auto header_data { req->getHeader( header ) };
+		const auto header_data { req->getHeader( std::string( header ) ) };
 
 		if ( !header_data.empty() ) return header_data;
 	}
