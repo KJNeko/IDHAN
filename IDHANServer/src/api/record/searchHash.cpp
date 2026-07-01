@@ -37,7 +37,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::searchHash( [[maybe_unused]] 
 	}
 
 	json[ "found" ] = true;
-	json[ "record_id" ] = result[ 0 ][ 0 ].as< std::size_t >();
+	json[ "record_id" ] = result[ 0 ][ 0 ].as< RecordID >();
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }
 

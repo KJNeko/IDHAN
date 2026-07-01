@@ -45,7 +45,7 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	for ( const auto& row : result )
 	{
-		const auto id { row[ 0 ].as< std::size_t >() };
+		const auto id { row[ 0 ].as< RecordID >() };
 		file_ids.append( id );
 	}
 
