@@ -17,7 +17,7 @@
 namespace idhan::api
 {
 
-Json::Value createDeletedResponse( const RecordID record_id, const std::size_t deleted_time )
+Json::Value createDeletedResponse( const RecordID record_id, const int64_t deleted_time )
 {
 	Json::Value root {};
 
@@ -28,7 +28,7 @@ Json::Value createDeletedResponse( const RecordID record_id, const std::size_t d
 	return root;
 }
 
-Json::Value createAlreadyImportedResponse( const RecordID record_id, const std::size_t import_time )
+Json::Value createAlreadyImportedResponse( const RecordID record_id, const int64_t import_time )
 {
 	Json::Value root {};
 
@@ -118,7 +118,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	{
 		// file was deleted, we can simply return now.
 		co_return drogon::HttpResponse::newHttpJsonResponse( createDeletedResponse(
-			record_id, cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< std::size_t >() ) );
+			record_id, cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >() ) );
 	}
 
 	//! True if the file has been confirmed to be stored still
@@ -153,10 +153,10 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	root[ "record" ][ "id" ] = record_id;
 
 	root[ "file" ][ "import_time_human" ] = cluster_timestamps[ 0 ][ "cluster_store_time" ].as< std::string >();
-	root[ "file" ][ "import_time" ] = cluster_timestamps[ 0 ][ "cluster_store_time_epoch" ].as< std::size_t >();
+	root[ "file" ][ "import_time" ] = cluster_timestamps[ 0 ][ "cluster_store_time_epoch" ].as< int64_t >();
 
 	root[ "file" ][ "deleted_time_human" ] = cluster_timestamps[ 0 ][ "cluster_delete_time" ].as< std::string >();
-	root[ "file" ][ "deleted_time" ] = cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< std::size_t >();
+	root[ "file" ][ "deleted_time" ] = cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >();
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
 
