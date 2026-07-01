@@ -5,6 +5,8 @@
 #include "APIAuth.hpp"
 
 #include <expected>
+#include <mutex>
+#include <string_view>
 
 #include "crypto/SHA256.hpp"
 #include "helpers/createBadRequest.hpp"
@@ -12,12 +14,12 @@
 namespace idhan::api
 {
 
-static constexpr std::array< std::string, 5 > key_headers {
+static constexpr std::array< std::string_view, 5 > key_headers {
 	{ "Authorization", "X-API-Key", "IDHAN-API-Key", "X-Api-Key", "IDHAN-Api-Key" }
 };
 
 //! Checks all of the common headers that we'll use for the idhan key
-std::string getHeaderKeys( const drogon::HttpRequestPtr& req )
+static std::string getHeaderKeys( const drogon::HttpRequestPtr& req )
 {
 	for ( const auto& header : key_headers )
 	{
@@ -60,7 +62,8 @@ static std::expected< SHA256, drogon::HttpResponsePtr > getAndValidateKey( const
 drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpRequestPtr& req )
 {
 #ifdef IDHAN_DISABLE_API_AUTH
-	log::warn( "!!! API Auth Disabled. Approving all requests !!!" );
+	static std::once_flag auth_disabled_flag;
+	std::call_once( auth_disabled_flag, [] { log::warn( "!!! API Auth Disabled. Approving all requests !!!" ); } );
 	co_return nullptr;
 #else
 	// is there a cookie for us?
@@ -137,9 +140,9 @@ drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::generateApiKey( [[maybe_un
 
 	const auto key_count_search { co_await db->execSqlCoro( "SELECT count(*) FROM auth_keys" ) };
 
-	if ( !key_count_search.empty() && key_count_search[ 0 ][ 0 ].as< std::size_t >() > 0 )
+	if ( !key_count_search.empty() && key_count_search[ 0 ][ 0 ].as< int64_t >() > 0 )
 	{
-		co_return drogon::HttpResponsePtr {};
+		co_return createConflict( "An API key already exists. Use the existing key to manage keys." );
 	}
 
 	const auto key_gen {
