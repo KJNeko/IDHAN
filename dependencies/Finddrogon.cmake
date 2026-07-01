@@ -7,7 +7,7 @@ if(NOT TARGET drogon)
     set(BUILD_BROTLI OFF CACHE BOOL "" FORCE)
     set(BUILD_YAML_CONFIG OFF CACHE BOOL "" FORCE)
     set(BUILD_CTL OFF CACHE BOOL "" FORCE)
-    add_subdirectory(${CMAKE_SOURCE_DIR}/dependencies/drogon ${CMAKE_BINARY_DIR}/drogon-build)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/dependencies/drogon ${CMAKE_BINARY_DIR}/drogon-build SYSTEM)
 endif()
 
 set(drogon_FOUND TRUE)
