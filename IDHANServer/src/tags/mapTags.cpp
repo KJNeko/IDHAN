@@ -34,7 +34,7 @@ ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
 
 	for ( const auto& tag : tags )
 		if ( !tag_ids_result.contains( tag ) ) [[unlikely]]
-			co_return std::unexpected( createBadRequest( "Was unable to get ID for tag {}, Tag does not exist", tag ) );
+			co_return std::unexpected( createNotFound( "Was unable to get ID for tag {}, Tag does not exist", tag ) );
 
 	co_return tag_ids_result;
 }

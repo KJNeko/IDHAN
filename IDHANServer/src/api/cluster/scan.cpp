@@ -328,7 +328,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 
 	if ( result.empty() )
 	{
-		co_return createBadRequest( "Cluster not found" );
+		co_return createNotFound( "Cluster not found" );
 	}
 
 	scan_params.read_only = scan_params.force_readonly || result[ 0 ][ "read_only" ].as< bool >();

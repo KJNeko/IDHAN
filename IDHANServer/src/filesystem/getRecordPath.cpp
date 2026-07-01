@@ -31,7 +31,7 @@ ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, D
 		record_id ) };
 
 	if ( result.empty() )
-		co_return std::unexpected( createBadRequest( "Record {} is not stored in any cluster", record_id ) );
+		co_return std::unexpected( createNotFound( "Record {} is not stored in any cluster", record_id ) );
 
 	const std::filesystem::path folder_path { result[ 0 ][ 0 ].as< std::string >() };
 	const SHA256 sha256 { SHA256::fromPgCol( result[ 0 ][ 1 ] ) };

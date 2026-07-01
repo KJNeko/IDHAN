@@ -131,7 +131,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomainInfo(
 
 	if ( search.empty() )
 	{
-		co_return createBadRequest( "Domain id {} does not exists", tag_domain_id );
+		co_return createNotFound( "Domain id {} does not exist", tag_domain_id );
 	}
 
 	const auto info { co_await getTagDomainInfoJson( tag_domain_id, db ) };
@@ -153,7 +153,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::deleteTagDomain(
 		co_await db->execSqlCoro( "DELETE FROM tag_domains WHERE tag_domain_id = $1 RETURNING tag_domain_id", tag_domain_id )
 	};
 
-	if ( search.empty() ) co_return createBadRequest( "Failed to find tag domain by id {}", tag_domain_id );
+	if ( search.empty() ) co_return createNotFound( "Failed to find tag domain by id {}", tag_domain_id );
 
 	Json::Value out_json {};
 
