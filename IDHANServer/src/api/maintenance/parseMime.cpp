@@ -111,9 +111,7 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 	response[ "success" ] = true;
 	response[ "mime" ] = mime_str.value();
 
-	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
-
-	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, request_data );
+	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, file_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
