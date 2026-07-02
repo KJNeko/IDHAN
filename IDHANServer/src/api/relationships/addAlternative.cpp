@@ -80,6 +80,8 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 
 	if ( !json.isArray() ) co_return createBadRequest( "Expected json array of integers" );
 
+	if ( json.size() < 2 ) co_return createBadRequest( "Expected at least 2 record ids to form an alternative group" );
+
 	std::vector< RecordID > record_ids {};
 
 	for ( const auto& id : json )
