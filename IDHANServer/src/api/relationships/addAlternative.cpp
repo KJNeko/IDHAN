@@ -84,6 +84,8 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 
 	for ( const auto& id : json )
 	{
+		if ( !id.isUInt() ) co_return createBadRequest( "Expected json array of unsigned integers" );
+
 		record_ids.emplace_back( id.as< RecordID >() );
 	}
 
