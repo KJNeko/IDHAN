@@ -24,6 +24,8 @@ drogon::Task< drogon::HttpResponsePtr > setBetterDuplicateMultiple( const Json::
 		const RecordID worse_id { object[ "worse_id" ].as< RecordID >() };
 		const RecordID better_id { object[ "better_id" ].as< RecordID >() };
 
+		if ( worse_id == better_id ) co_return createBadRequest( "`worse_id` and `better_id` cannot be the same record" );
+
 		co_await db->execSqlCoro( "SELECT insert_duplicate_pair($1, $2)", worse_id, better_id );
 	}
 
@@ -39,6 +41,8 @@ drogon::Task< drogon::HttpResponsePtr > setBetterDuplicateSingle( const Json::Va
 
 	const RecordID worse_id { json[ "worse_id" ].as< RecordID >() };
 	const RecordID better_id { json[ "better_id" ].as< RecordID >() };
+
+	if ( worse_id == better_id ) co_return createBadRequest( "`worse_id` and `better_id` cannot be the same record" );
 
 	co_await db->execSqlCoro( "SELECT insert_duplicate_pair($1, $2)", worse_id, better_id );
 
