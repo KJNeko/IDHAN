@@ -26,7 +26,15 @@ drogon::Task< drogon::HttpResponsePtr > setBetterDuplicateMultiple( const Json::
 
 		if ( worse_id == better_id ) co_return createBadRequest( "`worse_id` and `better_id` cannot be the same record" );
 
-		co_await db->execSqlCoro( "SELECT insert_duplicate_pair($1, $2)", worse_id, better_id );
+		try
+		{
+			co_await db->execSqlCoro( "SELECT insert_duplicate_pair($1, $2)", worse_id, better_id );
+		}
+		catch ( const std::exception& e )
+		{
+			co_return createConflict(
+				"Failed to set record {} as a worse duplicate of {}: {}", worse_id, better_id, e.what() );
+		}
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( {} );
@@ -44,7 +52,15 @@ drogon::Task< drogon::HttpResponsePtr > setBetterDuplicateSingle( const Json::Va
 
 	if ( worse_id == better_id ) co_return createBadRequest( "`worse_id` and `better_id` cannot be the same record" );
 
-	co_await db->execSqlCoro( "SELECT insert_duplicate_pair($1, $2)", worse_id, better_id );
+	try
+	{
+		co_await db->execSqlCoro( "SELECT insert_duplicate_pair($1, $2)", worse_id, better_id );
+	}
+	catch ( const std::exception& e )
+	{
+		co_return createConflict(
+			"Failed to set record {} as a worse duplicate of {}: {}", worse_id, better_id, e.what() );
+	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( {} );
 }
