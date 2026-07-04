@@ -62,10 +62,12 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 
 	if ( json[ "size" ].isObject() && json[ "size" ][ "limit" ].isIntegral() )
 	{
+		const auto size_limit { json[ "size" ][ "limit" ].asInt64() };
+
+		if ( size_limit < 0 ) co_return createBadRequest( "size limit cannot be negative, got {}", size_limit );
+
 		co_await transaction->execSqlCoro(
-			"UPDATE file_clusters SET size_limit = $1 WHERE cluster_id = $2",
-			json[ "size" ][ "limit" ].asInt64(),
-			cluster_id );
+			"UPDATE file_clusters SET size_limit = $1 WHERE cluster_id = $2", size_limit, cluster_id );
 	}
 
 	co_return co_await infoT( request, cluster_id, transaction );
