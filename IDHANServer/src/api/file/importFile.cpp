@@ -83,11 +83,21 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const auto record_id { record_id_e.value() };
 
+	// A file_info row must either name a cluster or carry a delete time (cluster_id_xor_delete_time),
+	// so the target cluster has to be chosen before the row can be created. The store time is only
+	// set once the bytes actually land in the cluster.
+	const auto target_cluster {
+		co_await filesystem::ClusterManager::getInstance().findBestFolder( record_id, data_length, db )
+	};
+
+	if ( !target_cluster ) co_return target_cluster.error();
+
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, mime_id, size, cluster_store_time, modified_time) VALUES ($1, $2, $3, now(), now()) ON CONFLICT DO NOTHING",
+		"INSERT INTO file_info (record_id, mime_id, size, cluster_id, modified_time) VALUES ($1, $2, $3, $4, now()) ON CONFLICT DO NOTHING",
 		record_id,
 		*mime_id,
-		data_length );
+		data_length,
+		*target_cluster );
 
 	// select deleted time and store time
 	const auto cluster_timestamps { co_await db->execSqlCoro(
@@ -134,6 +144,14 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		}
 	}
 
+	// re-read the timestamps, a store that just happened updated cluster_store_time
+	const auto final_timestamps { co_await db->execSqlCoro(
+		"SELECT cluster_delete_time, cluster_store_time, "
+		"EXTRACT(EPOCH FROM cluster_delete_time)::BIGINT as cluster_delete_time_epoch, "
+		"EXTRACT(EPOCH FROM cluster_store_time)::BIGINT AS cluster_store_time_epoch "
+		"FROM file_info WHERE record_id = $1 LIMIT 1",
+		record_id ) };
+
 	Json::Value root {};
 
 	root[ "status" ] =
@@ -142,11 +160,11 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	root[ "record" ][ "id" ] = record_id;
 
-	root[ "file" ][ "import_time_human" ] = cluster_timestamps[ 0 ][ "cluster_store_time" ].as< std::string >();
-	root[ "file" ][ "import_time" ] = cluster_timestamps[ 0 ][ "cluster_store_time_epoch" ].as< int64_t >();
+	root[ "file" ][ "import_time_human" ] = final_timestamps[ 0 ][ "cluster_store_time" ].as< std::string >();
+	root[ "file" ][ "import_time" ] = final_timestamps[ 0 ][ "cluster_store_time_epoch" ].as< int64_t >();
 
-	root[ "file" ][ "deleted_time_human" ] = cluster_timestamps[ 0 ][ "cluster_delete_time" ].as< std::string >();
-	root[ "file" ][ "deleted_time" ] = cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >();
+	root[ "file" ][ "deleted_time_human" ] = final_timestamps[ 0 ][ "cluster_delete_time" ].as< std::string >();
+	root[ "file" ][ "deleted_time" ] = final_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >();
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
 
