@@ -329,20 +329,22 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		for ( const auto& set_json : sets_json )
 		{
-			auto task = [ db ]( const Json::Value set_json_current ) -> Task
+			// The coroutine only starts running at when_all, after this closure is destroyed —
+			// db must be a parameter (copied into the coroutine frame), not a capture.
+			auto task = []( DbClientPtr db_c, const Json::Value set_json_current ) -> Task
 			{
 				const auto tags { co_await getTagPairs( set_json_current ) };
 
 				if ( !tags ) co_return std::unexpected( tags.error() );
 
-				const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db ) };
+				const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db_c ) };
 
 				if ( !tag_ids_e ) co_return std::unexpected( tag_ids_e.error() );
 
 				co_return *tag_ids_e;
 			};
 
-			sets_processing_tasks.emplace_back( task( set_json ) );
+			sets_processing_tasks.emplace_back( task( db, set_json ) );
 		}
 
 		auto sets { co_await drogon::when_all( std::move( sets_processing_tasks ) ) };
