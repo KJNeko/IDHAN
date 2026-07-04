@@ -167,11 +167,31 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	root[ "record" ][ "id" ] = record_id;
 
-	root[ "file" ][ "import_time_human" ] = final_timestamps[ 0 ][ "cluster_store_time" ].as< std::string >();
-	root[ "file" ][ "import_time" ] = final_timestamps[ 0 ][ "cluster_store_time_epoch" ].as< int64_t >();
+	const auto& ts_row { final_timestamps[ 0 ] };
 
-	root[ "file" ][ "deleted_time_human" ] = final_timestamps[ 0 ][ "cluster_delete_time" ].as< std::string >();
-	root[ "file" ][ "deleted_time" ] = final_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >();
+	// NULL timestamps must come through as json null, Field::as<T>() would silently
+	// turn them into "" and 0 (epoch 1970)
+	if ( ts_row[ "cluster_store_time" ].isNull() )
+	{
+		root[ "file" ][ "import_time_human" ] = Json::Value {};
+		root[ "file" ][ "import_time" ] = Json::Value {};
+	}
+	else
+	{
+		root[ "file" ][ "import_time_human" ] = ts_row[ "cluster_store_time" ].as< std::string >();
+		root[ "file" ][ "import_time" ] = ts_row[ "cluster_store_time_epoch" ].as< int64_t >();
+	}
+
+	if ( ts_row[ "cluster_delete_time" ].isNull() )
+	{
+		root[ "file" ][ "deleted_time_human" ] = Json::Value {};
+		root[ "file" ][ "deleted_time" ] = Json::Value {};
+	}
+	else
+	{
+		root[ "file" ][ "deleted_time_human" ] = ts_row[ "cluster_delete_time" ].as< std::string >();
+		root[ "file" ][ "deleted_time" ] = ts_row[ "cluster_delete_time_epoch" ].as< int64_t >();
+	}
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
 
