@@ -49,12 +49,12 @@ struct TagPair
 			{
 				tag_namespace = j_namespace.as< NamespaceID >();
 			}
-			else if ( j_subtag.isString() )
+			else if ( j_namespace.isString() )
 			{
 				tag_namespace = j_namespace.asString();
 			}
 			else
-				throw std::invalid_argument( "Invalid tag namespace" );
+				throw std::invalid_argument( "Invalid tag namespace: Namespace was neither numeric nor string" );
 
 			if ( j_subtag.isIntegral() )
 				tag_subtag = j_subtag.as< SubtagID >();
