@@ -103,8 +103,12 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > > getIDFromPair( c
 
 	if ( !tag_namespace_is_str && !tag_subtag_is_str )
 	{
+		// the no-op DO UPDATE makes RETURNING yield the existing tag_id on conflict,
+		// where DO NOTHING would return an empty result set
 		const auto result { co_await db->execSqlCoro(
-			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) RETURNING tag_id",
+			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) "
+			"ON CONFLICT (namespace_id, subtag_id) DO UPDATE SET namespace_id = EXCLUDED.namespace_id "
+			"RETURNING tag_id",
 			std::get< NamespaceID >( tag_namespace ),
 			std::get< SubtagID >( tag_subtag ) ) };
 
