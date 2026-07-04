@@ -31,10 +31,12 @@ void Heartbeat::handleNewConnection(
 	auto ctx = std::make_shared< HeartbeatContext >();
 	wsConnPtr->setContext( ctx );
 
-	auto task = [ wsConnPtr ]()
+	// weak capture: the repeating timer outlives the connection (invalidation only takes
+	// effect at the timer's next expiry), a strong capture would hold the closed
+	// connection alive until then
+	auto task = [ weak_conn = std::weak_ptr( wsConnPtr ) ]()
 	{
-		if ( wsConnPtr->connected() )
-			sendStatusJson( wsConnPtr );
+		if ( const auto conn = weak_conn.lock(); conn && conn->connected() ) sendStatusJson( conn );
 	};
 
 	ctx->timer_id = drogon::app().getLoop()->runEvery( 10.0, task );
