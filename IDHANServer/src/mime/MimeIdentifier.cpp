@@ -99,7 +99,12 @@ MimeIdentifier::MimeIdentifier( const Json::Value& json )
 	if ( !m_extensions.empty() ) m_best_extension = m_extensions.at( 0 );
 
 	if ( json.isMember( "priority" ) )
-		m_priority = static_cast< std::size_t >( json[ "priority" ].asInt() );
+	{
+		// MimeScore is unsigned, so a negative value would wrap into a top-priority score
+		if ( !json[ "priority" ].isIntegral() || json[ "priority" ].asInt() < 0 )
+			throw std::runtime_error( "priority must be a non-negative integer" );
+		m_priority = static_cast< MimeScore >( json[ "priority" ].asInt() );
+	}
 	else
 		m_priority = 25;
 
