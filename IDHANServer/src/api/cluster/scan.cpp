@@ -58,7 +58,7 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 	p.rescan_mime = request->getOptionalParameter< bool >( "rescan_mime" ).value_or( false );
 
 	p.scan_metadata = request->getOptionalParameter< bool >( "scan_metadata" ).value_or( true );
-	p.rescan_metadata = request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( true );
+	p.rescan_metadata = request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( false );
 
 	p.stop_on_fail = request->getOptionalParameter< bool >( "stop_on_fail" ).value_or( false );
 
