@@ -4,6 +4,8 @@
 
 #include "Cursor.hpp"
 
+#include <tuple>
+
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 
@@ -145,15 +147,24 @@ drogon::Task< bool > Cursor::tryMatchInc( const std::string_view match )
 	if ( is_match )
 	{
 		log::trace( "Cursor::tryMatchInc: advance by {} to pos {}", match.size(), m_pos + match.size() );
-		inc( match.size() );
+		std::ignore = inc( match.size() );
 	}
 	co_return is_match;
 }
 
 void Cursor::jumpTo( const std::int64_t pos )
 {
-	if ( pos < 0 ) m_pos = size() - static_cast< std::size_t >( std::abs( pos ) );
-	m_pos = static_cast< std::size_t >( pos );
+	if ( pos < 0 )
+	{
+		// negative positions are relative to the end of the data (-1 = last byte);
+		// one further back than the data has is unsatisfiable, so park at EOF where matches fail
+		const auto from_end { static_cast< std::size_t >( -pos ) };
+		m_pos = from_end > size() ? size() : size() - from_end;
+	}
+	else
+	{
+		m_pos = static_cast< std::size_t >( pos );
+	}
 }
 
 bool Cursor::inc( const std::size_t i )
