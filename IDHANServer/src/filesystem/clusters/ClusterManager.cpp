@@ -133,13 +133,16 @@ drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManag
 	const auto cluster_check { co_await db->execSqlCoro(
 		"SELECT cluster_id, cluster_delete_time FROM file_info WHERE record_id = $1 LIMIT 1", record_id ) };
 
-	const bool seen_before { cluster_check[ 0 ][ 0 ].isNull() };
-	const bool file_deleted { cluster_check[ 0 ][ 1 ].isNull() };
-
-	if ( seen_before && !file_deleted )
+	if ( !cluster_check.empty() )
 	{
-		// We might still have the file, So we'll return the cluster it should be in.
-		co_return cluster_check[ 0 ][ 0 ].as< ClusterID >();
+		const bool has_cluster { !cluster_check[ 0 ][ 0 ].isNull() };
+		const bool file_deleted { !cluster_check[ 0 ][ 1 ].isNull() };
+
+		if ( has_cluster && !file_deleted )
+		{
+			// We might still have the file, So we'll return the cluster it should be in.
+			co_return cluster_check[ 0 ][ 0 ].as< ClusterID >();
+		}
 	}
 
 	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
