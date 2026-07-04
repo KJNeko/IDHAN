@@ -30,8 +30,8 @@ drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const
 
 	// the extension is used so we can still find the file even with an invalid mime
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, modified_time, extension) VALUES ($1, $2, $3, $4, $5, $6)"
-		"ON CONFLICT (record_id) DO UPDATE SET mime_id = $3, extension = $5",
+		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, modified_time, extension) VALUES ($1, $2, $3, $4, $5, $6) "
+		"ON CONFLICT (record_id) DO UPDATE SET mime_id = EXCLUDED.mime_id, extension = EXCLUDED.extension",
 		record_id,
 		info.size,
 		mime_opt,
