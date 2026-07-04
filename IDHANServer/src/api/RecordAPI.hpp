@@ -27,8 +27,6 @@ namespace idhan::api
 
 class RecordAPI : public drogon::HttpController< RecordAPI >
 {
-	// drogon::Task< drogon::HttpResponsePtr > importFile( const drogon::HttpRequestPtr request );
-
 	//! Creates a new record in the database. Responds with the record id in a json format.
 	drogon::Task< drogon::HttpResponsePtr > createRecord( drogon::HttpRequestPtr request );
 
