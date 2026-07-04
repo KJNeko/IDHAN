@@ -41,13 +41,13 @@ class InfoAPI : public drogon::HttpController< InfoAPI >
 
 	METHOD_LIST_BEGIN
 
-	ADD_METHOD_TO( InfoAPI::api, "/api" );
-	ADD_METHOD_VIA_REGEX( InfoAPI::apiDocs, "/api/.*\\.yaml" );
+	ADD_METHOD_TO( InfoAPI::api, "/api", drogon::Get );
+	ADD_METHOD_VIA_REGEX( InfoAPI::apiDocs, "/api/.*\\.yaml", drogon::Get );
 
-	ADD_METHOD_TO( InfoAPI::version, "/version" );
+	ADD_METHOD_TO( InfoAPI::version, "/version", drogon::Get );
 
 	// unlike /version and /health this exposes full trace-level logs, so it needs the api key
-	ADD_METHOD_TO( InfoAPI::log, "/log", IDHANAPIAuthName );
+	ADD_METHOD_TO( InfoAPI::log, "/log", drogon::Get, IDHANAPIAuthName );
 
 	ADD_METHOD_TO( InfoAPI::health, "/health", drogon::Get );
 
