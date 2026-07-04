@@ -168,18 +168,10 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 			std::string mime { identifier.mime() };
 			log::debug( "reloadMimeParsers: loaded parser for mime type '{}' from {}", mime, path.filename().string() );
 
-			const auto id { co_await getMimeIDFromStr( mime, db ) };
-
-			if ( !id.has_value() )
-			{
-				log::trace( "reloadMimeParsers: inserting new mime type '{}' into DB", mime );
-				co_await db->execSqlCoro(
-					"INSERT INTO mime(name, best_extension) VALUES ($1, $2)", mime, identifier.getBestExtension() );
-			}
-			else
-			{
-				log::trace( "reloadMimeParsers: mime type '{}' already exists in DB (id={})", mime, *id );
-			}
+			co_await db->execSqlCoro(
+				"INSERT INTO mime(name, best_extension) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING",
+				mime,
+				identifier.getBestExtension() );
 		}
 		catch ( std::exception& e )
 		{
