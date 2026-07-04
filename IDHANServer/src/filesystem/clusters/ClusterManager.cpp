@@ -195,6 +195,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 
 	log::debug( "Storing file for record {} in cluster {}", record, *target_id );
 	const auto record_mime { co_await mime::getRecordMime( record, db ) };
+	return_unexpected_error( record_mime );
 
 	const auto result { target_cluster.storeFile( sha256, data, length, record_mime.value().extension, type ) };
 
