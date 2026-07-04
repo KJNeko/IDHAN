@@ -78,7 +78,7 @@ drogon::Task< bool > MimeIdentifier::test( const Cursor cursor ) const
 
 MimeIdentifier::MimeIdentifier( const Json::Value& json )
 {
-	if ( !json.isMember( "mime" ) )
+	if ( !json.isMember( "mime" ) || !json[ "mime" ].isString() )
 	{
 		throw std::runtime_error( "Missing mime field" );
 	}
@@ -92,7 +92,7 @@ MimeIdentifier::MimeIdentifier( const Json::Value& json )
 
 	for ( const auto& extension : json[ "extensions" ] )
 	{
-		if ( !extension.isString() ) throw std::runtime_error( "Missing extensions array" );
+		if ( !extension.isString() ) throw std::runtime_error( "extensions array entries must be strings" );
 		m_extensions.emplace_back( extension.asString() );
 	}
 
