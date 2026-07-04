@@ -36,6 +36,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 
 	for ( const auto& url : urls )
 	{
+		if ( !url.isString() ) co_return createBadRequest( "Invalid item in urls array: Expected string" );
+
 		auto url_str { url.asString() };
 		domain_strings.push_back( helpers::extractDomain( url_str ) );
 		url_strings.push_back( std::move( url_str ) );
