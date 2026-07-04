@@ -23,7 +23,11 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeUrls( drogon::HttpReque
 
 	std::vector< std::string > url_strings;
 	url_strings.reserve( urls.size() );
-	for ( const auto& url : urls ) url_strings.push_back( url.asString() );
+	for ( const auto& url : urls )
+	{
+		if ( !url.isString() ) co_return createBadRequest( "Invalid item in urls array: Expected string" );
+		url_strings.push_back( url.asString() );
+	}
 
 	co_await db->execSqlCoro(
 		"DELETE FROM url_mappings um "
