@@ -16,7 +16,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::listActiveTags(
 	const auto result { co_await db->execSqlCoro(
 		"SELECT DISTINCT tag_id, tag_domain_id FROM active_tag_mappings_final WHERE record_id = $1", record_id ) };
 
-	Json::Value json {};
+	// arrayValue so a record with no tags responds with [] rather than null
+	Json::Value json { Json::arrayValue };
 
 	std::unordered_map< TagDomainID, std::vector< TagID > > domain_map {};
 
