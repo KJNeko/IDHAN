@@ -14,7 +14,13 @@ namespace idhan::api
 drogon::Task< drogon::HttpResponsePtr > InfoAPI::apiDocs( drogon::HttpRequestPtr request )
 {
 	const std::string path_str { request->getPath() };
-	const std::filesystem::path file_path { path_str.substr( 1 ) };
+	const std::filesystem::path file_path { std::filesystem::path( path_str.substr( 1 ) ).lexically_normal() };
+
+	// the regex route passes the raw url path through to the filesystem; after
+	// normalization any remaining ".." component escapes the static directory
+	for ( const auto& part : file_path )
+		if ( part == ".." ) co_return createBadRequest( "Invalid docs path: {}", path_str );
+
 	const auto static_path { getStaticPath() };
 
 	log::info( "Attempting to get api docs from {}", ( static_path / file_path ).string() );
