@@ -200,7 +200,11 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 
 	if ( !result ) co_return result;
 
-	constexpr auto query { "UPDATE file_info SET cluster_store_time = now(), cluster_id = $2 WHERE record_id = $1" };
+	// clear cluster_delete_time: the record is stored again, and cluster_id_xor_delete_time
+	// forbids a row having both a cluster and a delete time
+	constexpr auto query {
+		"UPDATE file_info SET cluster_store_time = now(), cluster_id = $2, cluster_delete_time = NULL WHERE record_id = $1"
+	};
 
 	co_await db->execSqlCoro( query, record, target_cluster.m_id );
 
