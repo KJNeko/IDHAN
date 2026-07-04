@@ -79,8 +79,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 {
 	logging::ScopedTimer timer { "createRecordFromJson" };
 	const auto json_ptr { req->getJsonObject() };
-	if ( json_ptr == nullptr ) // Data was invalid?
-		throw std::invalid_argument( "json_ptr is null" );
+	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );
 
 	const Json::Value& json { *json_ptr };
 
