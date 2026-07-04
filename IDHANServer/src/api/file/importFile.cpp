@@ -58,13 +58,20 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const bool force_import { request->getOptionalParameter< bool >( "force_import" ).value_or( false ) };
 
-	if ( !mime_str )
+	std::string mime_name {};
+
+	if ( mime_str )
+		mime_name = mime_str.value();
+	else if ( force_import )
+		// the file could not be identified, force imports store it under the unknown mime
+		mime_name = INVALID_MIME_NAME;
+	else
 	{
 		// If the mime type is not known, Then simply skip it.
 		co_return drogon::HttpResponse::newHttpJsonResponse( createUnknownMimeResponse() );
 	}
 
-	const bool is_octet { mime_str == INVALID_MIME_NAME };
+	const bool is_octet { mime_name == INVALID_MIME_NAME };
 
 	if ( is_octet && !force_import )
 	{
@@ -73,7 +80,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 			"or teach IDHAN how to detect the mime for this file" );
 	}
 
-	const auto mime_id { co_await mime::getMimeIDFromStr( mime_str.value(), db ) };
+	const auto mime_id { co_await mime::getMimeIDFromStr( mime_name, db ) };
 
 	if ( !mime_id ) co_return mime_id.error();
 
