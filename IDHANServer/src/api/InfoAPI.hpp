@@ -2,6 +2,7 @@
 // Created by kj16609 on 11/8/24.
 //
 #pragma once
+#include "APIAuth.hpp"
 #include "IDHANTypes.hpp"
 #include "drogon/HttpController.h"
 #include "helpers/ResponseCallback.hpp"
@@ -45,7 +46,8 @@ class InfoAPI : public drogon::HttpController< InfoAPI >
 
 	ADD_METHOD_TO( InfoAPI::version, "/version" );
 
-	ADD_METHOD_TO( InfoAPI::log, "/log" );
+	// unlike /version and /health this exposes full trace-level logs, so it needs the api key
+	ADD_METHOD_TO( InfoAPI::log, "/log", IDHANAPIAuthName );
 
 	ADD_METHOD_TO( InfoAPI::health, "/health", drogon::Get );
 
