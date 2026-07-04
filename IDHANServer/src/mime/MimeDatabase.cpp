@@ -84,7 +84,8 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 
 Json::Value MimeDatabase::dump() const
 {
-	Json::Value json {};
+	// arrayValue so an empty parser list responds with [] rather than null
+	Json::Value json { Json::arrayValue };
 
 	std::vector< Json::Value > items {};
 
