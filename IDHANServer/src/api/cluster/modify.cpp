@@ -3,6 +3,7 @@
 //
 
 #include "api/ClusterAPI.hpp"
+#include "api/helpers/createBadRequest.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -28,7 +29,7 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 
 	const auto json_ptr { request->getJsonObject() };
 
-	if ( json_ptr == nullptr ) throw std::runtime_error( "No json object found" );
+	if ( json_ptr == nullptr ) co_return createBadRequest( "No json data supplied" );
 
 	const auto& json { *json_ptr };
 
