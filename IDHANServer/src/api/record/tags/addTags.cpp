@@ -353,14 +353,14 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 		{
 			const auto& tag_ids_e { sets[ i ] };
 
+			if ( !tag_ids_e ) co_return tag_ids_e.error();
+
 			auto tag_ids { tag_ids_e.value() };
 
 			const auto record_json { records_json[ i ] };
 
 			add_results.emplace_back( addTagsToRecord(
 				static_cast< RecordID >( record_json.asInt64() ), std::move( tag_ids ), tag_domain_id.value(), db ) );
-
-			// if ( !result ) co_return result.error();
 		}
 	}
 	else if ( !sets_json.isNull() )
