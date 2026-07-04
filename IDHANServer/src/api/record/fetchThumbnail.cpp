@@ -33,7 +33,7 @@ drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > 
 
 	const auto& sha256 { sha256_e.value() };
 
-	// Thumbnail should be located in the `thumbnails/f[0:2]/[0:64].thumbnail (XX taken from the hash
+	// Thumbnail should be located in `thumbnails/t[0:2]/[0:64].thumbnail` (prefix taken from the hash)
 	const auto hex { sha256.hex() };
 	const auto file_location {
 		getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / ( std::format( "{}.thumbnail", hex ) )
@@ -52,7 +52,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		record_id ) };
 
 	if ( record_info.empty() )
-		co_return createBadRequest(
+		co_return createNotFound(
 			"Record {} does not exist or does not have any file info associated with it", record_id );
 
 	const bool force_regenerate { request->getOptionalParameter< bool >( "regenerate" ).value_or( false ) };
@@ -142,11 +142,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		co_return createInternalError(
 			"Thumbnail did not exist for record {}, Writing might have failed. See previous warnings/errors",
 			thumbnail_location_e->string() );
-	}
-
-	if ( !std::filesystem::exists( *thumbnail_location_e ) )
-	{
-		co_return createInternalError( "Failed to find filepath {}", thumbnail_location_e->string() );
 	}
 
 	auto response {
