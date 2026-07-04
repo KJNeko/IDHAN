@@ -77,9 +77,13 @@ MimeMatchSearch::MimeMatchSearch( const Json::Value& json ) : MimeMatchBase( jso
 	{
 		m_offset = NO_OFFSET;
 	}
+	else if ( json[ "offset" ].isIntegral() )
+	{
+		m_offset = json[ "offset" ].asInt64();
+	}
 	else
 	{
-		m_offset = json[ "offset" ].asInt();
+		throw std::runtime_error( "MimeMatchSearch: offset must be an integer" );
 	}
 
 	if ( !json.isMember( "hex" ) )
@@ -91,6 +95,8 @@ MimeMatchSearch::MimeMatchSearch( const Json::Value& json ) : MimeMatchBase( jso
 	{
 		for ( const auto& hex_str : json[ "hex" ] )
 		{
+			if ( !hex_str.isString() )
+				throw std::runtime_error( "MimeMatchSearch: hex array entries must be hex strings" );
 			m_match_data.emplace_back( decodeHex( hex_str.asString() ) );
 		}
 	}
@@ -98,14 +104,28 @@ MimeMatchSearch::MimeMatchSearch( const Json::Value& json ) : MimeMatchBase( jso
 	{
 		m_match_data.emplace_back( decodeHex( json[ "hex" ].asString() ) );
 	}
-
-	if ( json.isMember( "limit" ) )
+	else
 	{
-		m_limit = static_cast< std::size_t >( json[ "limit" ].asInt() );
+		throw std::runtime_error( "MimeMatchSearch: hex must be a hex string or an array of hex strings" );
+	}
+
+	// an empty pattern would either match everything or nothing depending on the data source
+	if ( m_match_data.empty() ) throw std::runtime_error( "MimeMatchSearch: hex must contain at least one pattern" );
+
+	for ( const auto& match : m_match_data )
+		if ( match.empty() ) throw std::runtime_error( "MimeMatchSearch: hex patterns must not be empty" );
+
+	if ( !json.isMember( "limit" ) )
+	{
+		m_limit = NO_LIMIT;
+	}
+	else if ( json[ "limit" ].isIntegral() && json[ "limit" ].asInt64() > 0 )
+	{
+		m_limit = static_cast< std::size_t >( json[ "limit" ].asInt64() );
 	}
 	else
 	{
-		m_limit = std::numeric_limits< std::size_t >::max();
+		throw std::runtime_error( "MimeMatchSearch: limit must be a positive integer" );
 	}
 }
 
