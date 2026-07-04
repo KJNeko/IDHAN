@@ -47,9 +47,16 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 
 	if ( json[ "ratio" ].isInt64() )
 	{
+		const auto ratio { json[ "ratio" ].asInt64() };
+
+		// ratio_number is a SMALLINT; anything outside its range would silently wrap
+		if ( ratio < 0 || ratio > std::numeric_limits< std::int16_t >::max() )
+			co_return createBadRequest(
+				"ratio must be between 0 and {}, got {}", std::numeric_limits< std::int16_t >::max(), ratio );
+
 		co_await transaction->execSqlCoro(
 			"UPDATE file_clusters SET ratio_number = $1 WHERE cluster_id = $2",
-			static_cast< std::uint16_t >( json[ "ratio" ].asInt64() ),
+			static_cast< std::int16_t >( ratio ),
 			cluster_id );
 	}
 
