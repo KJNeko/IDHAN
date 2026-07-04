@@ -5,6 +5,8 @@
 
 #include <json/value.h>
 
+#include <algorithm>
+
 #include "logging/log.hpp"
 #include "mime/Cursor.hpp"
 #include "mime/MimeIdentifier.hpp"
@@ -12,6 +14,22 @@
 
 namespace idhan::mime
 {
+
+namespace
+{
+// Parsing is fully synchronous (no co_await between include expansions), so a thread_local
+// stack of the files currently being expanded is enough to detect include cycles.
+thread_local std::vector< std::string > include_stack {};
+
+struct IncludeStackGuard
+{
+	IncludeStackGuard( const std::string& filename ) { include_stack.emplace_back( filename ); }
+
+	~IncludeStackGuard() { include_stack.pop_back(); }
+
+	FGL_DELETE_ALL_RO5( IncludeStackGuard );
+};
+} // namespace
 
 MimeMatchInclude::MimeMatchInclude( std::vector< MimeMatcher >&& matchers, const Json::Value& json ) :
   MimeMatchBase( json ),
@@ -47,11 +65,18 @@ MimeMatcher MimeMatchInclude::createFromJson( const Json::Value& json )
 	const auto desired_filename { json[ "file" ].asString() };
 	log::trace( "MimeMatchInclude::createFromJson: looking for included file '{}'", desired_filename );
 
+	if ( std::ranges::contains( include_stack, desired_filename ) )
+	{
+		throw std::runtime_error(
+			format_ns::format( "Circular mime parser include detected: {} includes itself", desired_filename ) );
+	}
+
 	for ( const auto& mime_file : getMimeParserPaths() )
 	{
 		if ( mime_file.filename().string() == desired_filename )
 		{
 			log::trace( "MimeMatchInclude::createFromJson: found included file at {}", mime_file.string() );
+			const IncludeStackGuard stack_guard { desired_filename };
 			Json::Value file_json { jsonFromFile( mime_file ) };
 
 			if ( !file_json.isMember( "data" ) )
