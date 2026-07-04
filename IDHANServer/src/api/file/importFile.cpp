@@ -46,6 +46,8 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	const auto request_data { request->getBody() };
 	[[maybe_unused]] const auto content_type { request->getContentType() };
 
+	if ( request_data.empty() ) co_return createBadRequest( "No file data supplied in the request body" );
+
 	auto db { drogon::app().getDbClient() };
 
 	const std::byte* data_ptr { reinterpret_cast< const std::byte* >( request_data.data() ) };
