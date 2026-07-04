@@ -42,7 +42,7 @@ class InfoAPI : public drogon::HttpController< InfoAPI >
 	METHOD_LIST_BEGIN
 
 	ADD_METHOD_TO( InfoAPI::api, "/api" );
-	ADD_METHOD_VIA_REGEX( InfoAPI::apiDocs, "/api.*.yaml" );
+	ADD_METHOD_VIA_REGEX( InfoAPI::apiDocs, "/api/.*\\.yaml" );
 
 	ADD_METHOD_TO( InfoAPI::version, "/version" );
 
