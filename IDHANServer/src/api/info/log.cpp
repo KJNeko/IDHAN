@@ -15,6 +15,8 @@
 namespace idhan::api
 {
 
+namespace
+{
 auto parseLevelString( const std::string& level_str )
 {
 	if ( level_str == "trace" ) return spdlog::level::trace;
@@ -25,6 +27,7 @@ auto parseLevelString( const std::string& level_str )
 	if ( level_str == "critical" ) return spdlog::level::critical;
 	return spdlog::level::info;
 }
+} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr request )
 {
@@ -35,7 +38,8 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 
 	const auto level_str { request->getOptionalParameter< std::string >( "level" ) };
 	const auto req_level { parseLevelString( level_str.value_or( "info" ) ) };
-	const auto since_ms { request->getOptionalParameter< std::uint64_t >( "since" ) };
+	// unix timestamp in seconds, matching the granularity compared below
+	const auto since_seconds { request->getOptionalParameter< std::uint64_t >( "since" ) };
 
 	// Locate the ringbuffer sink in the logger
 	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_sink;
@@ -66,12 +70,12 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 	{
 		if ( entry.level < req_level ) continue;
 
-		if ( since_ms.has_value() )
+		if ( since_seconds.has_value() )
 		{
-			const auto entry_ms {
+			const auto entry_seconds {
 				std::chrono::duration_cast< std::chrono::seconds >( entry.time.time_since_epoch() ).count()
 			};
-			if ( static_cast< std::uint64_t >( entry_ms ) < *since_ms ) continue;
+			if ( static_cast< std::uint64_t >( entry_seconds ) < *since_seconds ) continue;
 		}
 
 		spdlog::memory_buf_t buf;
