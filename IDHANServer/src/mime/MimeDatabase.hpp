@@ -23,49 +23,59 @@ class Cursor;
 
 @subsection MimeParserFile idhanmime file
 the following section identifies how the mime parser json file should be laid out.
+`//` comments are permitted.
 
 the current fields are:
 - `mime` is a string that identifies the mime, an example of this is `image/jpeg` for a jpg image.
 - `extensions` is an array of extensions the file could possibly possess, this is not used in the detection but is for
 the user to select one of the extensions to store the files as, the default is the 0th item. If this list is empty the
-extension `.bin` is used instead
+extension `bin` is used instead
 - `data` is an array of json objects. The format for this objects is listed in the next section
-- `fast` a boolean value that informs the parser that if it passes it should consider the file found, default true
+- `priority` a non-negative integer used to rank multiple positive matches, highest wins (default 25). Ties are broken
+by mime name.
+- `require_extension` a boolean; if true the identifier only matches when the file's extension is in `extensions`
+(default false). Note that scans without a file name (e.g. raw octet-stream uploads) can never match such identifiers.
 
 @subsubsection MimeParserFileData data
 - `type`: the only required field is a `type` field that signifies the type of operation taking place.
-- `id`: this is used for other components of the parser.
+- `data`: any matcher may carry a nested `data` array of child matchers. Children run only if the matcher itself
+passed, and continue from the position where its match ended. Sibling matchers each start from their parent's
+position.
 
 List of types:
 - search
+- include
 
 @subsubsection MimeSearch search
 optional fields:
-- `offset`: either an integer value, or a string of an id for a compatible data search. Negative values signify a offset
-from the end of the data (-1 indicates 1 byte backwards from the size N)
-- `strict`: signifies if the offset is a starting point, or the exact point. default true if not present
+- `offset`: an integer. If present, the match is tested at exactly this position. Negative values signify an offset
+from the end of the data (-1 indicates the last byte). If absent, the data is scanned forward from the current
+position until a match is found.
+- `limit`: a positive integer bounding how many scan positions are tried (only meaningful without `offset`).
+Unlimited if absent.
 
 required fields:
-- `hex`: a hex representation of the data. In order to signify wildcard data, this can also be an array of integer
-values, with any value beyond the 0-255 range being a wildcard, such as -1
+- `hex`: a hex string of the data to match, or an array of hex strings of which any one matching passes (used e.g.
+for the mp4 brand list). Patterns must be non-empty and of even length.
 
-@subsubsection MimeOverride override
-Same requirements as @refitem MimeSearch but with an extra field
-- `override`: The mime type to override to if this search passes.
+@subsubsection MimeInclude include
+required fields:
+- `file`: the file name of another idhanmime file whose `data` matchers are run as part of this matcher. Circular
+includes are rejected at load time.
 
 An example file
 ```json
 {
 
-  "mime": "image/jpeg",
+  "mime": "image/png",
   "extensions": [
-	"jpg"
+	"png"
   ],
   "data": [
 	{
 	  "type": "search",
 	  "offset": 0,
-	  "hex": "89504E0D0A1A0A"
+	  "hex": "89504E470D0A1A0A"
 	}
   ]
 }
