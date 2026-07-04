@@ -17,7 +17,8 @@ namespace idhan::mime
 
 drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 {
-	if ( m_offset >= 0 && m_offset != NO_OFFSET )
+	// negative offsets are relative to the end of the data; only an absent offset means scan mode
+	if ( m_offset != NO_OFFSET )
 	{
 		log::trace( "MimeMatchSearch::match: fixed offset mode at {}", m_offset );
 		cursor.jumpTo( m_offset );
@@ -30,7 +31,7 @@ drogon::Task< bool > MimeMatchSearch::match( Cursor& cursor ) const
 			if ( co_await cursor.tryMatch( match_view ) )
 			{
 				log::trace( "MimeMatchSearch::match: PASS match {} found at offset {}", i + 1, cursor.pos() );
-				cursor.inc( match_view.size() );
+				std::ignore = cursor.inc( match_view.size() );
 				co_return true;
 			}
 			else
