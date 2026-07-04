@@ -115,7 +115,8 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );
 	}
 
-	FGL_UNREACHABLE();
+	// sha256 was missing, or neither an array nor a string
+	co_return createBadRequest( "Invalid json: 'sha256' must be a hex string or an array of hex strings" );
 }
 
 ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )
