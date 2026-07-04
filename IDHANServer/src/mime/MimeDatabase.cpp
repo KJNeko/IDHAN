@@ -62,9 +62,11 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 		log::debug( "MimeDatabase::scan: no identifiers matched" );
 		co_return std::unexpected( createBadRequest( "Could not identify mime from file" ) );
 	}
+	// tie-break equal priorities by name so the selected mime doesn't depend on parser load order
 	std::ranges::sort(
 		positive_matches,
-		[]( const auto& left, const auto& right ) noexcept -> bool { return left.second > right.second; } );
+		[]( const auto& left, const auto& right ) noexcept -> bool
+		{ return left.second != right.second ? left.second > right.second : left.first < right.first; } );
 
 	std::string matches_out {};
 	for ( std::size_t i = 0; i < positive_matches.size(); ++i )
