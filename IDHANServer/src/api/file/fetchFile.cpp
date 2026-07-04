@@ -2,6 +2,8 @@
 // Created by kj16609 on 3/22/25.
 //
 
+#include <algorithm>
+#include <format>
 #include <limits>
 #include <regex>
 
@@ -82,14 +84,21 @@ std::optional< drogon::HttpResponsePtr > parseRangeHeader(
 			return createBadRequest( "Error with range header: {}, Header was {}", e.what(), range_header );
 		}
 
-		// Ensure the range is valid
+		// A first-byte-pos past EOF makes the range unsatisfiable: 416, not 400 (RFC 7233 §4.4)
+		if ( begin >= file_size )
+		{
+			auto response { drogon::HttpResponse::newHttpResponse() };
+			response->setStatusCode( drogon::k416RequestedRangeNotSatisfiable );
+			response->addHeader( "Content-Range", std::format( "bytes */{}", file_size ) );
+			return response;
+		}
+
 		if ( end_pos != std::numeric_limits< std::size_t >::max() )
 		{
-			if ( begin > end_pos || end_pos >= file_size ) return createBadRequest( "Invalid Range Header" );
-		}
-		else if ( begin >= file_size )
-		{
-			return createBadRequest( "Invalid Range Header" );
+			if ( begin > end_pos ) return createBadRequest( "Invalid Range Header" );
+
+			// A last-byte-pos past EOF is not an error, it is clamped to the end of the file (RFC 7233 §2.1)
+			end_pos = std::min( end_pos, file_size - 1 );
 		}
 	}
 	else
