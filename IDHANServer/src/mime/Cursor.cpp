@@ -79,7 +79,8 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 		const auto& string_view { std::get< std::string_view >( m_io ) };
 		const auto* data_ptr { reinterpret_cast< const std::byte* >( string_view.data() ) };
 		const std::size_t length { string_view.size() };
-		if ( pos + required_size >= length || length < pos ) co_return std::make_pair( nullptr, 0 );
+		// pos + required_size == length is a valid exact fit ending on the last byte
+		if ( pos + required_size > length || length < pos ) co_return std::make_pair( nullptr, 0 );
 		const auto leftover_size { length - pos };
 		m_buffer_pos = pos;
 		co_return std::make_pair( data_ptr + pos, std::min( required_size, leftover_size ) );
