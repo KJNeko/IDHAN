@@ -11,7 +11,6 @@
 #pragma GCC diagnostic ignored "-Wnoexcept"
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #pragma GCC diagnostic ignored "-Wuseless-cast"
-#pragma GCC diagnostic ignored "-Wnoexcept"
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #pragma GCC diagnostic ignored "-Wshadow"
 #include <drogon/HttpController.h>
