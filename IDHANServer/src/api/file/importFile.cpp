@@ -197,7 +197,9 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
 
-	co_await metadata::tryParseRecordMetadata( record_id, db );
+	// a metadata failure should not fail the import, the file itself was stored fine
+	if ( const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) }; !parse_result )
+		log::warn( "importFile: failed to parse metadata for record {}", record_id );
 
 	co_return response;
 }
