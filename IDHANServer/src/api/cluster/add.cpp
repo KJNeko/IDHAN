@@ -24,6 +24,9 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	const auto& request_json { *request_json_ptr };
 
+	if ( !request_json[ "path" ].isString() || request_json[ "path" ].asString().empty() )
+		co_return createBadRequest( "Cluster path must be specified as a non-empty string" );
+
 	std::filesystem::path target_path { request_json[ "path" ].asString() };
 	if ( target_path.is_relative() ) target_path = std::filesystem::absolute( target_path );
 
