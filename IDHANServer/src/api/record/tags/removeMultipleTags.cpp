@@ -76,9 +76,12 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeMultipleTags( drogon::H
 		{
 			if ( tag_sets[ i ].empty() ) continue;
 
-			auto task = [ db, record_id = record_ids[ i ], tag_ids = std::move( tag_sets[ i ] ), domain_id = tag_domain_id.value() ]() -> Task
+			// The coroutine only starts running at when_all, long after this loop iteration's
+			// closure is gone — everything must be passed as parameters (copied into the
+			// coroutine frame), never as captures.
+			auto task = []( DbClientPtr db_c, const RecordID record_id, std::vector< TagID > tag_ids, const TagDomainID domain_id ) -> Task
 			{
-				co_await db->execSqlCoro(
+				co_await db_c->execSqlCoro(
 					"DELETE FROM tag_mappings WHERE record_id = $1 AND tag_id IN (SELECT UNNEST($2::" TAG_PG_TYPE_NAME
 					"[])) AND tag_domain_id = $3",
 					record_id,
@@ -87,7 +90,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeMultipleTags( drogon::H
 				co_return nullptr;
 			};
 
-			tasks.emplace_back( task() );
+			tasks.emplace_back( task( db, record_ids[ i ], std::move( tag_sets[ i ] ), tag_domain_id.value() ) );
 		}
 
 		co_await drogon::when_all( std::move( tasks ) );
