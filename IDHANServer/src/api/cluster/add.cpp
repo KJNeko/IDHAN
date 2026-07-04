@@ -2,6 +2,8 @@
 // Created by kj16609 on 11/18/24.
 //
 
+#include <drogon/orm/Exception.h>
+
 #include <fstream>
 
 #include "filesystem/clusters/ClusterManager.hpp"
@@ -143,6 +145,16 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 		co_await filesystem::ClusterManager::getInstance().reloadClusters( transaction );
 
 		co_return ret;
+	}
+	catch ( const drogon::orm::SqlError& e )
+	{
+		transaction->rollback();
+
+		// unique_violation: cluster_name and folder_path both carry UNIQUE constraints
+		if ( e.sqlState() == "23505" )
+			co_return createConflict( "A cluster with that name or path already exists: {}", e.what() );
+
+		co_return createInternalError( "Failed to insert cluster into table: {}", e.what() );
 	}
 	catch ( std::exception& e )
 	{
