@@ -43,16 +43,8 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 		// buffer is not large enough. we need more data
 		const bool is_small { required_size > m_buffer.size() };
 
-		// access would not be in bounds
-		const auto buffer_start { m_buffer_pos };
-		const auto buffer_size { m_buffer.size() };
-		const auto pos_start { pos };
-		const auto pos_size { required_size };
-
-		// check that buffer and pos overlap
-		const auto is_oob {
-			pos_start > buffer_start + buffer_size || pos_start + pos_size > buffer_start + buffer_size
-		};
+		// access would not be in bounds: the requested range must end within the buffer
+		const auto is_oob { pos + required_size > m_buffer_pos + m_buffer.size() };
 
 		if ( is_low || is_small || is_oob )
 		{
@@ -72,7 +64,11 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 		FGL_ASSERT( m_buffer_pos <= pos, "Buffer was not expected at it's current pos" );
 		const std::size_t offset { pos - m_buffer_pos };
 
-		co_return std::make_pair( m_buffer.data() + offset, m_buffer.size() );
+		// only the bytes from pos onward are valid; reporting the full buffer size here
+		// would let callers read past the end of m_buffer
+		const std::size_t available { offset <= m_buffer.size() ? m_buffer.size() - offset : 0 };
+
+		co_return std::make_pair( m_buffer.data() + offset, available );
 	}
 	if ( std::holds_alternative< std::string_view >( m_io ) )
 	{
