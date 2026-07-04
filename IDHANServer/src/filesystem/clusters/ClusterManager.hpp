@@ -119,12 +119,6 @@ class ClusterManager
 		FILES
 	};
 
-	//! Finds the best folder to add the file too.
-	[[nodiscard]] drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > findBestFolder(
-		RecordID record_id,
-		std::size_t file_size,
-		DbClientPtr db );
-
 	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeFile(
 		RecordID record,
 		const std::byte* data,
@@ -143,6 +137,12 @@ class ClusterManager
 	 * @return
 	 */
 	drogon::Task< void > reloadClusters( DbClientPtr db );
+
+	//! Finds the best folder to add the file too.
+	[[nodiscard]] drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > findBestFolder(
+		RecordID record_id,
+		std::size_t file_size,
+		DbClientPtr db );
 
 	//! Stores the data located at `stream` for a given record id.
 	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeFile(
