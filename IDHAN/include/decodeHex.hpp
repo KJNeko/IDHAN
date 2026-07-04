@@ -84,6 +84,9 @@ static_assert( 0x61 == decodeHexCharacters( '6', '1' ) );
 inline std::vector< std::byte > decodeHex( const std::string& str )
 try
 {
+	// an odd-length string would read past the final character and write one byte past the vector
+	if ( str.size() % 2 != 0 ) throw std::invalid_argument( "Hex string must have an even number of characters" );
+
 	std::vector< std::byte > result {};
 	result.resize( str.size() / 2 );
 
