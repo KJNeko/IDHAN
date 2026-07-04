@@ -12,6 +12,18 @@
 namespace idhan::api
 {
 
+namespace
+{
+// Normalizes a path so that equivalent spellings ("/a/b/", "/a/b/.", "/a/b") compare equal
+std::filesystem::path normalizeClusterPath( std::filesystem::path path )
+{
+	path = path.lexically_normal();
+	// lexically_normal keeps a trailing separator; strip it so "/a/b/" and "/a/b" match
+	if ( !path.has_filename() ) path = path.parent_path();
+	return path;
+}
+} // namespace
+
 ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };
@@ -29,6 +41,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	std::filesystem::path target_path { request_json[ "path" ].asString() };
 	if ( target_path.is_relative() ) target_path = std::filesystem::absolute( target_path );
+	target_path = normalizeClusterPath( target_path );
 
 	const bool readonly { request_json[ "readonly" ].isBool() ? request_json[ "readonly" ].asBool() : true };
 
@@ -50,7 +63,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 			[[maybe_unused]] const auto cluster_id { row[ 0 ].as< ClusterID >() };
 			const auto cluster_path { row[ 1 ].as< std::string >() };
 
-			const std::filesystem::path path { cluster_path };
+			const std::filesystem::path path { normalizeClusterPath( cluster_path ) };
 			if ( target_path == path )
 			{
 				transaction->rollback();
