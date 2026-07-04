@@ -22,12 +22,20 @@ MimeDatabase::MimeDatabase()
 	log::trace( "MimeDatabase constructor: deferred initialization to startup" );
 }
 
+std::shared_ptr< const std::vector< MimeIdentifier > > MimeDatabase::identifiers() const
+{
+	std::lock_guard lock { m_identifiers_mutex };
+	return m_identifiers;
+}
+
 drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( const Cursor cursor )
 {
-	log::trace( "MimeDatabase::scan: starting scan with {} identifiers", m_identifiers.size() );
+	// snapshot so a concurrent reload can't invalidate the vector mid-iteration
+	const auto identifiers { this->identifiers() };
+	log::trace( "MimeDatabase::scan: starting scan with {} identifiers", identifiers->size() );
 	std::vector< std::pair< std::string, MimeScore > > positive_matches {};
 
-	for ( const auto& identifier : m_identifiers )
+	for ( const auto& identifier : *identifiers )
 	{
 		if ( !identifier.hasMatchers() )
 		{
@@ -80,7 +88,9 @@ Json::Value MimeDatabase::dump() const
 
 	std::vector< Json::Value > items {};
 
-	for ( const auto& identifier : m_identifiers )
+	const auto identifiers { this->identifiers() };
+
+	for ( const auto& identifier : *identifiers )
 	{
 		Json::Value item {};
 
@@ -140,7 +150,8 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 {
 	auto db { drogon::app().getDbClient() };
 
-	m_identifiers.clear();
+	// built fully before being swapped in, so in-flight scans keep their old snapshot
+	auto new_identifiers { std::make_shared< std::vector< MimeIdentifier > >() };
 	const std::vector< std::filesystem::path > paths { getMimeParserPaths() };
 	log::trace( "reloadMimeParsers: found {} parser paths", paths.size() );
 
@@ -149,7 +160,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 		log::trace( "reloadMimeParsers: loading parser from {}", path.filename().string() );
 		try
 		{
-			auto& identifier { m_identifiers.emplace_back( path ) };
+			auto& identifier { new_identifiers->emplace_back( path ) };
 
 			std::string mime { identifier.mime() };
 			log::debug( "reloadMimeParsers: loaded parser for mime type '{}' from {}", mime, path.filename().string() );
@@ -173,7 +184,13 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 		}
 	}
 
-	log::trace( "reloadMimeParsers: completed, {} identifiers loaded", m_identifiers.size() );
+	log::trace( "reloadMimeParsers: completed, {} identifiers loaded", new_identifiers->size() );
+
+	{
+		std::lock_guard lock { m_identifiers_mutex };
+		m_identifiers = std::move( new_identifiers );
+	}
+
 	co_return {};
 }
 

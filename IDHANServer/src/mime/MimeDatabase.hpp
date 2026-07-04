@@ -2,10 +2,10 @@
 // Created by kj16609 on 12/18/24.
 //
 #pragma once
-#include <condition_variable>
 #include <expected>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 
 #include "filesystem/io/IOUring.hpp"
 #include "MimeIdentifier.hpp"
@@ -81,12 +81,15 @@ class MimeDatabase
 
 	friend std::shared_ptr< MimeDatabase > getMimeDatabase();
 
-	std::vector< MimeIdentifier > m_identifiers {};
+	// Copy-on-write: scans hold a snapshot of this pointer across their co_awaits, so a
+	// concurrent reloadMimeParsers() swapping in a new vector can never invalidate what
+	// an in-flight scan is iterating. The lock is only ever held for the pointer copy/swap.
+	std::shared_ptr< const std::vector< MimeIdentifier > > m_identifiers {
+		std::make_shared< std::vector< MimeIdentifier > >()
+	};
+	mutable std::mutex m_identifiers_mutex {};
 
-	std::condition_variable update_condition {};
-	std::mutex mutex {};
-	std::atomic< bool > updating_flag {};
-	std::atomic< int > active_counter {};
+	[[nodiscard]] std::shared_ptr< const std::vector< MimeIdentifier > > identifiers() const;
 
 	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( Cursor cursor );
 
