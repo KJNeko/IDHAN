@@ -47,12 +47,16 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		}
 	}
 
+	if ( !tags_json.isArray() ) co_return createBadRequest( "tags must be an array of strings" );
+
 	std::vector< std::string > search_tags {};
 	search_tags.reserve( tags_json.size() );
 	std::vector< std::string > system_tags {};
 
 	for ( const auto& tag : tags_json )
 	{
+		// asString() throws on non-string values
+		if ( !tag.isString() ) co_return createBadRequest( "tags must be an array of strings" );
 		const auto tag_text { tag.asString() };
 		if ( tag_text.starts_with( "system:" ) )
 		{
@@ -66,7 +70,15 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	const auto search_result { co_await builder.setTags( search_tags ) };
 	// an unchecked failure here would leave the builder with no tags and search everything
 	if ( !search_result ) co_return search_result.error();
-	builder.setSystemTags( system_tags );
+
+	try
+	{
+		builder.setSystemTags( system_tags );
+	}
+	catch ( const std::invalid_argument& e )
+	{
+		co_return createBadRequest( "Invalid system tag: {}", e.what() );
+	}
 
 	// TODO: file domains. For now we'll assume all files
 
