@@ -64,6 +64,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	}
 
 	const auto search_result { co_await builder.setTags( search_tags ) };
+	// an unchecked failure here would leave the builder with no tags and search everything
+	if ( !search_result ) co_return search_result.error();
 	builder.setSystemTags( system_tags );
 
 	// TODO: file domains. For now we'll assume all files
