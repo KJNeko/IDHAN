@@ -701,7 +701,10 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 		if ( setHydrusSystemTags( system_subtag ) ) continue;
 
 		// IDHAN SPECIFIC
-		if ( system_subtag.starts_with( "archive" ) )
+		// the digit check keeps Hydrus's plain 'system:archive' (and other digitless
+		// variants) out of the range parser; they fall through to the unsupported warning
+		if ( system_subtag.starts_with( "archive" )
+		     && system_subtag.find_first_of( "0123456789" ) != std::string_view::npos )
 		{
 			parseRangeSearch( m_archive_search, system_subtag );
 			continue;
