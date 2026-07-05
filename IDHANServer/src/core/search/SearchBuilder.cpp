@@ -256,9 +256,9 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 	auto numericSearchAdd = [ & ]( const SearchOperation operation, const auto value, const std::string_view comp )
 	{
 		if ( operation & SearchOperationFlags::Not )
-			query += " AND NOT";
+			query += " AND NOT ";
 		else
-			query += " AND";
+			query += " AND ";
 
 		query += comp;
 
