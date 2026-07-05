@@ -390,13 +390,14 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 
 void SearchBuilder::setSortType( const SortType type )
 {
+	m_sort_type = type;
+
 	switch ( type )
 	{
 		default:
 			[[fallthrough]];
 		case SortType::FILESIZE:
 			{
-				m_sort_type = type;
 				m_required_joins.file_info = true;
 				break;
 			}
