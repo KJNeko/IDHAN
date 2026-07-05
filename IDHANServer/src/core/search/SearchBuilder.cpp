@@ -185,15 +185,17 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 
 	if ( m_in_archive_search == ArchiveSearchType::NoArchive ) m_required_joins.left_archive_map |= true;
 
+	// an inner join acts as a filter (e.g. has-duration), so it must win over a LEFT
+	// request for the same table coming from another predicate
 	if ( m_required_joins.video_metadata || m_required_joins.left_video_metadata )
 	{
-		if ( m_required_joins.left_video_metadata ) query += " LEFT";
+		if ( m_required_joins.left_video_metadata && !m_required_joins.video_metadata ) query += " LEFT";
 		query += " JOIN video_metadata USING (record_id)";
 	}
 
 	if ( m_required_joins.image_metadata || m_required_joins.left_image_metadata )
 	{
-		if ( m_required_joins.left_image_metadata ) query += " LEFT";
+		if ( m_required_joins.left_image_metadata && !m_required_joins.image_metadata ) query += " LEFT";
 		query += " JOIN image_metadata USING (record_id)";
 	}
 
