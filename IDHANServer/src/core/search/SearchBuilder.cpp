@@ -352,6 +352,10 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 
 	determineSelectClause( query, return_ids, return_hashes );
 
+	// the unconditional mime filter below and the filesize sort both read from the fm alias,
+	// so the file_info join must always be present
+	m_required_joins.file_info = true;
+
 	determineJoinsForQuery( query );
 
 	query += " WHERE fm.mime_id IS NOT NULL";
