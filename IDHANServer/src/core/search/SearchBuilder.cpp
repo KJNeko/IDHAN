@@ -38,9 +38,14 @@ void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view 
 
 	// find begining of number
 	const auto number_start { tag.find_first_of( "0123456789" ) };
+
+	if ( number_start == std::string_view::npos )
+		throw std::invalid_argument( format_ns::format( "No number found in range search tag: {}", tag ) );
+
 	const auto number_end { tag.find_last_of( "0123456789" ) };
 
-	const std::string number_substr { tag.substr( number_start, number_end ) };
+	// substr takes a length, not an end index
+	const std::string number_substr { tag.substr( number_start, number_end - number_start + 1 ) };
 
 	log::debug( "Got number from \'{}\'", number_substr );
 
