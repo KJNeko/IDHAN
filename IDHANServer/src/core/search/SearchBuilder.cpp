@@ -719,6 +719,7 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 		if ( system_subtag.starts_with( "not in archive" ) )
 		{
 			m_in_archive_search = ArchiveSearchType::NoArchive;
+			continue;
 		}
 
 		log::warn( "Unsupported system tag system: \'{}\'", system_subtag );
