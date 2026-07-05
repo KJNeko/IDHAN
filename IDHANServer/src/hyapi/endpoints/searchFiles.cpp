@@ -102,7 +102,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	log::info( "Setup took {}ms", diff );
 
 	auto query_start = std::chrono::system_clock::now();
-	const auto result { co_await builder.query( db, {} ) };
+	const auto result { co_await builder.query( db, {}, return_file_ids, return_hashes ) };
 	auto query_end = std::chrono::system_clock::now();
 	const auto query_diff {
 		std::chrono::duration_cast< std::chrono::milliseconds >( query_end - query_start ).count()
