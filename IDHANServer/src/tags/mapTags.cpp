@@ -22,9 +22,8 @@ ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
 		co_await db->execSqlCoro( query, std::forward< const std::vector< std::string > >( tags ) )
 	};
 
-	if ( tag_id_result.size() != tags.size() )
-		co_return std::unexpected( createInternalError( "Failed to get all search tags ids. Maybe unknown tag?" ) );
-
+	// no size pre-check here: an unknown tag must reach the loop below for a proper 404,
+	// and duplicated input tags legitimately return fewer rows than tags.size()
 	std::unordered_map< std::string, TagID > tag_ids_result {};
 
 	for ( const auto& row : tag_id_result )
