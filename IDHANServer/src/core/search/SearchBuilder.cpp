@@ -299,7 +299,7 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 
 	if ( m_archive_search.m_active )
 	{
-		numericSearchAdd( m_archive_search.m_active, m_archive_search.count, "am.archive_id" );
+		numericSearchAdd( m_archive_search.operation, m_archive_search.count, "am.archive_id " );
 	}
 
 	if ( m_in_archive_search != ArchiveSearchType::DontCare )
