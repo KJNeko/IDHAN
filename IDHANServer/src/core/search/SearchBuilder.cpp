@@ -155,7 +155,8 @@ void SearchBuilder::generateOrderByClause( std::string& query ) const
 			query += " ORDER BY fm.cluster_store_time ";
 			break;
 		case SortType::RECORD_TIME:
-			query += " ORDER BY records.creation_time ";
+			// the records join aliases the table as rc
+			query += " ORDER BY rc.creation_time ";
 			break;
 	}
 }
