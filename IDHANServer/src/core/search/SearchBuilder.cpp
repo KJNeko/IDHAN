@@ -170,7 +170,9 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 
 	if ( m_duration_search == DurationSearchType::NoDuration )
 	{
-		m_required_joins.video_metadata |= true;
+		// duration is a NOT NULL column, so 'no duration' means the record has no
+		// video_metadata row at all — an inner join could never produce such a row
+		m_required_joins.left_video_metadata |= true;
 	}
 
 	if ( m_width_search.m_active || m_height_search.m_active )
