@@ -219,12 +219,13 @@ void SearchBuilder::determineSelectClause( std::string& query, const bool return
 	if ( return_ids && return_hashes )
 	{
 		m_required_joins.records = true;
-		constexpr std::string_view select_both { " SELECT tm.record_id, sha256 FROM final_filter tm" };
+		constexpr std::string_view select_both { " SELECT tm.record_id, rc.sha256 FROM final_filter tm" };
 		query += select_both;
 	}
 	else if ( return_hashes )
 	{
-		constexpr std::string_view select_sha256 { " SELECT tm.sha256 FROM final_filter tm" };
+		// sha256 lives in the joined records table (rc); the final_filter CTE only has record_id
+		constexpr std::string_view select_sha256 { " SELECT rc.sha256 FROM final_filter tm" };
 		query += select_sha256;
 		m_required_joins.records = true;
 	}
