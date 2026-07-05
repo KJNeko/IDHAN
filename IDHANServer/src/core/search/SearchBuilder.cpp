@@ -396,7 +396,9 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 	const bool return_ids,
 	const bool return_hashes )
 {
-	const auto query { construct( return_ids, return_hashes, /* filter_domains */ false ) };
+	// only filter by domain when the caller actually supplied domains; the domain
+	// filter template references $1, which must then be bound below
+	const auto query { construct( return_ids, return_hashes, !tag_domain_ids.empty() ) };
 
 	log::info( "Search: Trying to run {}", query );
 
