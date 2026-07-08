@@ -81,7 +81,7 @@ class JobContext
 
 	[[nodiscard]] std::shared_ptr< JobTaskStatus > status() const { return m_coro.m_status; }
 
-	[[nodiscard]] bool run();
+	void run();
 };
 
 [[nodiscard]] idhan::JobID generateNewJobID();
