@@ -45,6 +45,11 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 		const TagID parent_id { parent.as< TagID >() };
 		const TagID child_id { child.as< TagID >() };
 
+		// the check_parent_cycle trigger only walks existing rows, so a direct
+		// self-parent would pass it and create self-referential parent mappings
+		if ( parent_id == child_id )
+			co_return createBadRequest( "Cannot parent a tag to itself {} == {}", parent_id, child_id );
+
 		try
 		{
 			co_await db->execSqlCoro(
