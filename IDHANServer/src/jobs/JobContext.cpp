@@ -165,9 +165,9 @@ bool JobContext::done() const
 	return m_coro.m_status && m_coro.m_status->m_done;
 }
 
-bool JobContext::run()
+void JobContext::run()
 {
-	if ( m_coro.m_handle.done() ) return true;
+	if ( m_coro.m_handle.done() ) return;
 
 	if ( m_coro.m_status && m_coro.m_status->m_start_time == std::chrono::steady_clock::time_point {} )
 	{
@@ -177,7 +177,9 @@ bool JobContext::run()
 	log::debug( "Resuming job {}", m_id );
 	m_coro.m_handle.resume();
 
-	return m_coro.m_handle.done();
+	// no m_handle.done() check after resume(): once the job suspends on an awaitable it is
+	// resumed (and may finish) on another thread, so touching the handle here would race it.
+	// Completion is tracked through m_status->m_done instead.
 }
 
 idhan::JobID generateNewJobID()
