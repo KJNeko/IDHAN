@@ -3,20 +3,6 @@
 //
 
 #include <expected>
-#include <functional>
-#include <ranges>
-
-namespace std
-{
-template <>
-struct hash< std::pair< std::string, std::string > >
-{
-	std::size_t operator()( const std::pair< std::string, std::string >& p ) const noexcept
-	{
-		return std::hash< std::string > {}( p.first + ":" + p.second );
-	}
-};
-} // namespace std
 
 #include "threading/ExpectedTask.hpp"
 #include "api/TagAPI.hpp"
