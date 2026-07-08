@@ -131,7 +131,7 @@ std::expected< std::vector< std::byte >, ModuleError > generate(
 
 		const auto generator { generators.at( 0 ) };
 
-		ModuleCallData call_data { .file_view = data, .extra = extra };
+		ModuleCallData call_data { .file_view = data, .mime_name = *exp, .extra = extra };
 
 		const auto generated_file { generator->generate( call_data, hash ) };
 		return generated_file;
@@ -157,7 +157,7 @@ std::expected< ThumbnailInfo, ModuleError > thumbnail(
 
 	const auto thumbnailer { thumbnailers.at( 0 ) };
 
-	ModuleCallData call_data { .file_view = data_view, .mime_name = *exp, .extra = {} };
+	ModuleCallData call_data { .file_view = data_view, .mime_name = *exp, .extra = extra };
 
 	return thumbnailer->createThumbnail( call_data, 128, 128 );
 }
