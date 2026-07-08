@@ -26,6 +26,10 @@ namespace idhan::api::helpers
 	std::vector< TagID > tag_ids,
 	DbClientPtr db );
 
+//! 404 if any referenced record does not exist. Used by the record mutation endpoints
+//! for the same reason as validateRelationshipIds
+[[nodiscard]] ExpectedTask< void > validateRecordIds( std::vector< RecordID > record_ids, DbClientPtr db );
+
 constexpr std::chrono::seconds default_max_age {
 	std::chrono::duration_cast< std::chrono::seconds >( std::chrono::years( 1 ) )
 };

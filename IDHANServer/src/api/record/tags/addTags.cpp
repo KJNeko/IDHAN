@@ -305,6 +305,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 		record_ids.push_back( static_cast< RecordID >( record_json.asInt64() ) );
 	}
 
+	// unknown records would otherwise surface as FK-violation 500s in the mapping inserts
+	const auto record_validation { co_await helpers::validateRecordIds( record_ids, db ) };
+	if ( !record_validation ) co_return record_validation.error();
+
 	std::vector< drogon::Task< std::expected< void, drogon::HttpResponsePtr > > > add_results {};
 
 	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
