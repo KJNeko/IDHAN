@@ -67,11 +67,11 @@ Json::Value getJobStatusJson(
 	const auto now = std::chrono::steady_clock::now();
 	const auto system_now = std::chrono::system_clock::now();
 
-	if ( status->m_start_time != std::chrono::steady_clock::time_point {} )
+	const auto start_time { status->m_start_time.load() };
+	if ( start_time != std::chrono::steady_clock::time_point {} )
 	{
 		const auto start_system =
-			system_now
-			+ std::chrono::duration_cast< std::chrono::system_clock::duration >( status->m_start_time - now );
+			system_now + std::chrono::duration_cast< std::chrono::system_clock::duration >( start_time - now );
 		const auto epoch =
 			std::chrono::duration_cast< std::chrono::seconds >( start_system.time_since_epoch() ).count();
 		response[ "start_time" ] = static_cast< Json::UInt64 >( epoch );
