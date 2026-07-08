@@ -294,6 +294,17 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	const auto& records_json { json[ "records" ] };
 
+	// validate once here: the "sets" branch below reads these with asInt64(), which
+	// throws on non-integral values and would surface as a 500
+	std::vector< RecordID > record_ids {};
+	record_ids.reserve( records_json.size() );
+	for ( const auto& record_json : records_json )
+	{
+		if ( !record_json.isIntegral() )
+			co_return createBadRequest( "Invalid json item in records list: Expected integral" );
+		record_ids.push_back( static_cast< RecordID >( record_json.asInt64() ) );
+	}
+
 	std::vector< drogon::Task< std::expected< void, drogon::HttpResponsePtr > > > add_results {};
 
 	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
@@ -307,13 +318,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
-		for ( const auto& record_json : records_json )
+		for ( const auto record_id : record_ids )
 		{
-			if ( !record_json.isIntegral() )
-				co_return createBadRequest( "Invalid json item in records list: Expected integral" );
-
-			add_results.emplace_back( addTagsToRecord(
-				static_cast< RecordID >( record_json.asInt64() ), tag_pair_ids.value(), tag_domain_id.value(), db ) );
+			add_results.emplace_back( addTagsToRecord( record_id, tag_pair_ids.value(), tag_domain_id.value(), db ) );
 		}
 	}
 	else if ( !tags_json.isNull() )
@@ -364,10 +371,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 			auto tag_ids { tag_ids_e.value() };
 
-			const auto record_json { records_json[ i ] };
-
-			add_results.emplace_back( addTagsToRecord(
-				static_cast< RecordID >( record_json.asInt64() ), std::move( tag_ids ), tag_domain_id.value(), db ) );
+			add_results.emplace_back(
+				addTagsToRecord( record_ids[ i ], std::move( tag_ids ), tag_domain_id.value(), db ) );
 		}
 	}
 	else if ( !sets_json.isNull() )
