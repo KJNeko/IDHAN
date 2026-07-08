@@ -16,8 +16,11 @@ class ModuleHolder;
 
 class ModuleLoader
 {
-	std::vector< std::shared_ptr< IDHANModule > > m_modules;
+	// m_libs must be declared before m_modules: the module objects (code, vtables and
+	// shared_ptr control blocks) live inside the dlopened libraries, so the modules must be
+	// destroyed before the ModuleHolders dlclose them
 	std::vector< std::shared_ptr< ModuleHolder > > m_libs;
+	std::vector< std::shared_ptr< IDHANModule > > m_modules;
 	inline static ModuleLoader* m_instance;
 
   public:

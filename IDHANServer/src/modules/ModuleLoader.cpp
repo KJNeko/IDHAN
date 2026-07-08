@@ -23,7 +23,7 @@
 namespace idhan::modules
 {
 
-ModuleLoader::ModuleLoader() : m_modules(), m_libs()
+ModuleLoader::ModuleLoader() : m_libs(), m_modules()
 {
 	FGL_ASSERT( m_instance == nullptr, "ModuleLoader is a singleton" );
 	m_instance = this;
