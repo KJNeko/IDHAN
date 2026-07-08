@@ -24,6 +24,13 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 
 		auto metadata_info { metadata_module->parseFile( data ) };
 
+		if ( !metadata_info )
+		{
+			metadata_obj[ "error" ] = metadata_info.error();
+			response.append( std::move( metadata_obj ) );
+			continue;
+		}
+
 		const auto metadata { metadata_info->m_metadata };
 
 		if ( std::holds_alternative< MetadataInfoArchive >( metadata ) )
