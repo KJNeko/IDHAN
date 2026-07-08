@@ -34,6 +34,11 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 
 	if ( !tag_domain_id ) co_return tag_domain_id.error();
 
+	std::vector< std::pair< TagID, TagID > > pairs {};
+	pairs.reserve( json.size() );
+	std::vector< TagID > referenced_tags {};
+	referenced_tags.reserve( static_cast< std::size_t >( json.size() ) * 2 );
+
 	for ( const auto& item : json )
 	{
 		const auto& parent { item[ "parent_id" ] };
@@ -50,6 +55,18 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 		if ( parent_id == child_id )
 			co_return createBadRequest( "Cannot parent a tag to itself {} == {}", parent_id, child_id );
 
+		pairs.emplace_back( parent_id, child_id );
+		referenced_tags.emplace_back( parent_id );
+		referenced_tags.emplace_back( child_id );
+	}
+
+	// unknown IDs would otherwise surface as FK-violation 500s
+	const auto validation { co_await helpers::validateRelationshipIds(
+		tag_domain_id.value(), std::move( referenced_tags ), db ) };
+	if ( !validation ) co_return validation.error();
+
+	for ( const auto& [ parent_id, child_id ] : pairs )
+	{
 		try
 		{
 			co_await db->execSqlCoro(
@@ -61,6 +78,10 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 		}
 		catch ( std::exception& e )
 		{
+			// the check_parent_cycle trigger raises with this exact text (migration 105);
+			// a rejected cycle is a conflict with existing relationships, not a server fault
+			if ( std::string_view( e.what() ).find( "Cycle detected" ) != std::string_view::npos )
+				co_return createConflict( "Error adding tag parents: {}", e.what() );
 			co_return createInternalError( "Error adding tag parents: {}", e.what() );
 		}
 	}
