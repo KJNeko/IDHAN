@@ -48,8 +48,6 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 		subtag_params.emplace_back( subtag_text );
 	}
 
-	static std::binary_semaphore sem { 1 };
-
 	if ( tag_pairs.empty() )
 	{
 		co_return std::unexpected( createBadRequest( "No tags to create" ) );
@@ -57,8 +55,6 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 
 	try
 	{
-		sem.acquire();
-
 		const auto result { co_await db->execSqlCoro(
 			"SELECT tag_id FROM createBatchTags($1::TEXT[], $2::TEXT[])",
 			std::move( namespace_params ),
@@ -77,22 +73,16 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 
 		if ( tag_ids.size() != tag_pairs.size() )
 		{
-			sem.release();
 			co_return std::unexpected( createInternalError(
 				"Failed to create tags. Count mismatch Expected {} got {} ", tag_pairs.size(), tag_ids.size() ) );
 		}
 
-		sem.release();
 		co_return tag_ids;
 	}
 	catch ( std::exception& e )
 	{
-		sem.release();
 		co_return std::unexpected( createInternalError( "Failed to create tags: {}", e.what() ) );
 	}
-
-	sem.release();
-	co_return std::unexpected( createInternalError( "Failed to create tags" ) );
 }
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagsFromRequest( const drogon::HttpRequestPtr request )
