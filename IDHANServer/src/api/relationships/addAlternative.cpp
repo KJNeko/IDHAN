@@ -5,6 +5,7 @@
 #include "IDHANTypes.hpp"
 #include "api/FileRelationshipsAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/helpers.hpp"
 #include "db/drogonArrayBind.hpp"
 
 namespace idhan::api
@@ -90,6 +91,10 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 
 		record_ids.emplace_back( id.as< RecordID >() );
 	}
+
+	// unknown records would otherwise surface as FK-violation 500s in the member inserts
+	const auto validation { co_await helpers::validateRecordIds( record_ids, db ) };
+	if ( !validation ) co_return validation.error();
 
 	const auto group_search { co_await db->execSqlCoro(
 		"SELECT DISTINCT group_id FROM alternative_group_members WHERE record_id = ANY($1)",
