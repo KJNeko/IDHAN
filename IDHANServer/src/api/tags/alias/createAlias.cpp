@@ -96,11 +96,10 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRe
 		}
 		catch ( std::exception& e )
 		{
-			// after ID validation the realistic failure here is the aliased_id != ideal_alias_id
-			// CHECK, i.e. the chain would loop back on itself. The message text is
-			// PostgreSQL's (locale-dependent), so match on the constraint mechanism only
-			if ( std::string_view( e.what() ).find( "check constraint" ) != std::string_view::npos )
-				co_return createConflict( "Creating alias {} -> {} would form an alias cycle", aliased_id, alias_id );
+			// the tag_aliases_before_insert trigger raises with this exact text (migration 187);
+			// a rejected cycle is a conflict with existing relationships, not a server fault
+			if ( std::string_view( e.what() ).find( "Cycle detected" ) != std::string_view::npos )
+				co_return createConflict( "Error adding tag aliases: {}", e.what() );
 			co_return createInternalError( "Failed to create alias: {}", e.what() );
 		}
 	}
