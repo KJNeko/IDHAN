@@ -83,6 +83,9 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 	const Json::Value& json { *json_ptr };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	const auto db { drogon::app().getDbClient() };
 
 	// test if sha256 is a list or 1 item

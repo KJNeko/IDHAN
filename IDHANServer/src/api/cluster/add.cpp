@@ -38,6 +38,9 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	const auto& request_json { *request_json_ptr };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !request_json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	if ( !request_json[ "path" ].isString() || request_json[ "path" ].asString().empty() )
 		co_return createBadRequest( "Cluster path must be specified as a non-empty string" );
 
