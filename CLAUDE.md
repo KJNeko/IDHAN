@@ -143,7 +143,7 @@ Files are stored in on-disk "clusters" managed by `filesystem::ClusterManager` (
 
 ### Job system
 
-Long-running work is broken into `JobTask` coroutines stored in the DB. A job can declare dependencies on other jobs. Statuses: Pending → Started → Completed / Failed / Await Dependency. The `prepare()` step creates any child/dependency jobs before the main job starts.
+Long-running work is broken into `JobTask` coroutines (`IDHANServer/src/jobs/`) run by the in-memory `JobRuntime` singleton on a dedicated trantor event-loop thread pool (25% of hardware threads, min 2; `server.job_threads` config). Jobs are deliberately **not** persisted to the DB: IDs are process-local and reset on restart. `queueJob(task, name)` enqueues and returns a `JobContext`; endpoints respond immediately with the `job_id` and clients poll `/jobs/{job_id}/status` (or `/jobs/status` for a batch). Inside a job coroutine, `co_await getJobID()` yields the job's ID and `co_await setJobResponse(json_or_response)` stores the result exposed by the status endpoints. Completed jobs are retained for one hour, or until a status query requests cleanup.
 
 ### Search
 
