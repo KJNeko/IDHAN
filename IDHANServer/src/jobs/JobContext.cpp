@@ -39,7 +39,12 @@ void JobRuntime::runner()
 {
 	while ( !m_hard_stop.load( std::memory_order_acquire ) )
 	{
-		if ( m_soft_stop.load( std::memory_order_acquire ) && m_queue.empty() ) break;
+		if ( m_soft_stop.load( std::memory_order_acquire ) )
+		{
+			// the queue must not be inspected without the mutex; enqueue() mutates it concurrently
+			std::lock_guard lock { m_queue_mtx };
+			if ( m_queue.empty() ) break;
+		}
 
 		const auto job { getNextJob() };
 		if ( !job ) continue;
