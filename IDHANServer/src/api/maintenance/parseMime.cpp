@@ -12,7 +12,9 @@ namespace idhan::api
 
 drogon::Task< Json::Value > processMetadata( const std::string mime_str, const std::string_view request_data )
 {
-	Json::Value response {};
+	// a default-constructed Json::Value is null until first append, so no matching
+	// modules would serialize metadata_modules as null instead of []
+	Json::Value response { Json::arrayValue };
 	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_str ) };
 	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
 	for ( const auto& metadata_module : metadata_modules )
@@ -141,7 +143,10 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpR
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::reloadMime( drogon::HttpRequestPtr request )
 {
-	co_await mime::getMimeDatabase()->reloadMimeParsers();
+	const auto reload_result { co_await mime::getMimeDatabase()->reloadMimeParsers() };
+
+	// a swallowed reload failure would report the stale parser list as a success
+	if ( !reload_result ) co_return reload_result.error();
 
 	co_return co_await listParsers( request );
 }
