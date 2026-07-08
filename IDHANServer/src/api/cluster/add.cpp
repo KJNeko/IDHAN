@@ -2,8 +2,6 @@
 // Created by kj16609 on 11/18/24.
 //
 
-#include <drogon/orm/Exception.h>
-
 #include <fstream>
 
 #include "filesystem/clusters/ClusterManager.hpp"
@@ -123,9 +121,12 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	try
 	{
-		// insert the data
+		// the PG backend throws no typed exception for unique violations (SqlError with
+		// sqlState() is MySQL/SQLite-only), so detect the conflict via the empty result
+		// instead. cluster_name and folder_path both carry UNIQUE constraints.
 		const auto insert_result { co_await transaction->execSqlCoro(
-			"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) RETURNING cluster_id",
+			"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) "
+			"ON CONFLICT DO NOTHING RETURNING cluster_id",
 			cluster_name,
 			target_path.string() ) };
 
@@ -133,8 +134,8 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 		{
 			transaction->rollback();
 
-			co_return createInternalError(
-				"Failed to insert new cluster into table. Cluster might already exist with that name?" );
+			co_return createConflict(
+				"A cluster with the name {} or path {} already exists", cluster_name, target_path.string() );
 		}
 
 		const auto cluster_id { insert_result[ 0 ][ 0 ].as< ClusterID >() };
@@ -148,16 +149,6 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 		co_await filesystem::ClusterManager::getInstance().reloadClusters( transaction );
 
 		co_return ret;
-	}
-	catch ( const drogon::orm::SqlError& e )
-	{
-		transaction->rollback();
-
-		// unique_violation: cluster_name and folder_path both carry UNIQUE constraints
-		if ( e.sqlState() == "23505" )
-			co_return createConflict( "A cluster with that name or path already exists: {}", e.what() );
-
-		co_return createInternalError( "Failed to insert cluster into table: {}", e.what() );
 	}
 	catch ( std::exception& e )
 	{
