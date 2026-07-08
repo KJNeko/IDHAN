@@ -19,9 +19,11 @@ struct JobTaskStatus
 	std::atomic< bool > m_done { false };
 	std::atomic< bool > m_failed { false };
 	std::string m_error_message {};
-	std::chrono::steady_clock::time_point m_start_time {};
+	// atomic: written by the job thread on first resume while API threads read it for running jobs
+	std::atomic< std::chrono::steady_clock::time_point > m_start_time {};
 	std::chrono::steady_clock::time_point m_completion_time {};
-	bool m_cleanup_requested { false };
+	// atomic: set by API handler threads, read by the cleanup thread
+	std::atomic< bool > m_cleanup_requested { false };
 
 	idhan::JobID m_id { 0 };
 

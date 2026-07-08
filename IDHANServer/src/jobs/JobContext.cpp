@@ -174,7 +174,7 @@ void JobContext::run()
 {
 	if ( m_coro.m_handle.done() ) return;
 
-	if ( m_coro.m_status && m_coro.m_status->m_start_time == std::chrono::steady_clock::time_point {} )
+	if ( m_coro.m_status && m_coro.m_status->m_start_time.load() == std::chrono::steady_clock::time_point {} )
 	{
 		m_coro.m_status->m_start_time = std::chrono::steady_clock::now();
 	}
