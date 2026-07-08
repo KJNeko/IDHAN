@@ -54,20 +54,22 @@ drogon::Task<> addItemsToExistingGroupsMerge(
 {
 	const auto group_id { co_await createNewGroup( db ) };
 
+	// group_ids is bound again in the DELETE below; binding an rvalue hands the vector
+	// to the SqlBinder, so the first use must be a copy
 	co_await db->execSqlCoro(
 		"UPDATE alternative_group_members SET group_id = $1 WHERE group_id = ANY($2)",
 		group_id,
-		std::forward< std::vector< GroupID > >( group_ids ) );
+		std::vector< GroupID >( group_ids ) );
 
 	co_await db->execSqlCoro(
 		"INSERT INTO alternative_group_members (group_id, record_id) VALUES ($1, UNNEST($2::" RECORD_PG_TYPE_NAME
 		"[])) ON CONFLICT (group_id, record_id) DO NOTHING",
 		group_id,
-		std::forward< std::vector< RecordID > >( record_ids ) );
+		std::move( record_ids ) );
 
 	co_await db->execSqlCoro(
 		"DELETE FROM alternative_groups WHERE group_id = ANY($1)",
-		std::forward< std::vector< GroupID > >( group_ids ) );
+		std::move( group_ids ) );
 }
 
 drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( drogon::HttpRequestPtr request )
@@ -96,9 +98,11 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 	const auto validation { co_await helpers::validateRecordIds( record_ids, db ) };
 	if ( !validation ) co_return validation.error();
 
+	// record_ids is reused below; binding an rvalue hands the vector to the SqlBinder,
+	// so pass a copy here
 	const auto group_search { co_await db->execSqlCoro(
 		"SELECT DISTINCT group_id FROM alternative_group_members WHERE record_id = ANY($1)",
-		std::forward< std::vector< RecordID > >( record_ids ) ) };
+		std::vector< RecordID >( record_ids ) ) };
 
 	std::vector< GroupID > group_ids {};
 
@@ -108,7 +112,8 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 	}
 
 	std::ranges::sort( group_ids );
-	std::ranges::unique( group_ids );
+	const auto duplicates { std::ranges::unique( group_ids ) };
+	group_ids.erase( duplicates.begin(), duplicates.end() );
 
 	const bool no_existing_groups { group_ids.empty() };
 	const bool existing_groups { not no_existing_groups };
