@@ -2,6 +2,8 @@
 // Created by kj16609 on 3/11/25.
 //
 
+#include <limits>
+
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -136,8 +138,17 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 		{
 			if ( item.isObject() )
 				tags.emplace_back( TagPair( item ) );
-			else if ( item.isUInt64() )
-				tags.emplace_back< TagPair >( static_cast< TagID >( item.asUInt64() ) );
+			else if ( item.isIntegral() )
+			{
+				// isInt64 excludes values above int64 range, where asInt64 would throw.
+				// TagID is 32-bit; a larger value would silently wrap into a different tag
+				if ( !item.isInt64() || item.asInt64() <= 0
+				     || item.asInt64() > std::numeric_limits< TagID >::max() )
+					co_return std::unexpected(
+						createBadRequest( "Invalid tag id {}: out of range", item.asString() ) );
+
+				tags.emplace_back< TagPair >( static_cast< TagID >( item.asInt64() ) );
+			}
 			else if ( item.isString() )
 				tags.emplace_back( TagPair::fromSplit( item.asString() ) );
 			else
