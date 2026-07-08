@@ -40,6 +40,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpReq
 
 	const auto& json { *json_obj };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	const auto& name { json[ "name" ] };
 
 	auto db { drogon::app().getDbClient() };

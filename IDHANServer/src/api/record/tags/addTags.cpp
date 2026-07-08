@@ -272,6 +272,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	const auto& json { *json_ptr };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	if ( !json[ "records" ].isArray() )
 		co_return createBadRequest( "Invalid json: Array of ids called 'records' must be present." );
 

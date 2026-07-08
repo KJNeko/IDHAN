@@ -19,6 +19,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 	if ( !json_object ) co_return createBadRequest( "Json object malformed or null" );
 
 	const auto& json { *json_object };
+
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	const auto& urls { json[ "urls" ] };
 	if ( !urls.isArray() ) co_return createBadRequest( "No urls array in json" );
 

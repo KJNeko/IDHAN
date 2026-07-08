@@ -33,6 +33,9 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 
 	const auto& json { *json_ptr };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	if ( json[ "readonly" ].isBool() )
 	{
 		co_await transaction->execSqlCoro(
