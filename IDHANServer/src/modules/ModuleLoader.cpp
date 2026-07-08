@@ -118,14 +118,10 @@ std::expected< std::vector< std::byte >, ModuleError > generate(
 {
 	auto mime_db { getMimeDatabase() };
 
-	std::expected< std::string, drogon::HttpResponsePtr > exp {};
-
-	drogon::async_run(
-		[ & ]() -> drogon::Task< void >
-		{
-			auto coro = mime_db->scan( data, file_name );
-			exp       = co_await coro;
-		} );
+	// sync_wait, not async_run: async_run detaches at the first suspension point, which would
+	// leave exp unset here (a default expected holds a value, so the failure check can't catch
+	// it) and the detached coroutine would later write through dangling stack references
+	const auto exp { drogon::sync_wait( mime_db->scan( data, file_name ) ) };
 
 	if ( !exp ) return std::unexpected( ModuleError { "Unable to scan for mime" } );
 	{
@@ -149,16 +145,10 @@ std::expected< ThumbnailInfo, ModuleError > thumbnail(
 {
 	auto mime_db { getMimeDatabase() };
 
-	std::expected< std::string, drogon::HttpResponsePtr > exp {};
-
 	idhan::data_view data_view { reinterpret_cast< const unsigned char* >( data.data() ), data.size() };
 
-	drogon::async_run(
-		[ & ]() -> drogon::Task< void >
-		{
-			auto coro = mime_db->scan( data_view, file_name );
-			exp       = co_await coro;
-		} );
+	// sync_wait, not async_run: see generate() above
+	const auto exp { drogon::sync_wait( mime_db->scan( data_view, file_name ) ) };
 
 	if ( !exp ) return std::unexpected( ModuleError { "Unable to scan for mime" } );
 
