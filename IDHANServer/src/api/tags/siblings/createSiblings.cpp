@@ -32,6 +32,11 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagSiblings( const drogon:
 
 	if ( !tag_domain_id ) co_return tag_domain_id.error();
 
+	std::vector< std::pair< TagID, TagID > > pairs {};
+	pairs.reserve( json.size() );
+	std::vector< TagID > referenced_tags {};
+	referenced_tags.reserve( static_cast< std::size_t >( json.size() ) * 2 );
+
 	for ( const auto& item : json )
 	{
 		const auto& older { item[ "older_id" ] };
@@ -46,6 +51,18 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagSiblings( const drogon:
 		if ( older_id == younger_id )
 			co_return createBadRequest( "Cannot sibling a tag to itself {} == {}", older_id, younger_id );
 
+		pairs.emplace_back( older_id, younger_id );
+		referenced_tags.emplace_back( older_id );
+		referenced_tags.emplace_back( younger_id );
+	}
+
+	// unknown IDs would otherwise surface as FK-violation 500s
+	const auto validation { co_await helpers::validateRelationshipIds(
+		tag_domain_id.value(), std::move( referenced_tags ), db ) };
+	if ( !validation ) co_return validation.error();
+
+	for ( const auto& [ older_id, younger_id ] : pairs )
+	{
 		try
 		{
 			co_await db->execSqlCoro(
