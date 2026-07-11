@@ -11,6 +11,7 @@
 #include "Config.hpp"
 #include "api/InfoAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "logging/log.hpp"
 
 namespace idhan::api
 {
@@ -33,7 +34,10 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 {
 	// /log?since=<unix_timestamp>&level=<level>
 
-	auto logger { spdlog::get( "default" ) };
+	auto logger { log::getServerLogger() };
+
+	if ( !logger ) co_return createInternalError( "Could not get default spdlog logger" );
+
 	logger->flush();
 
 	const auto level_str { request->getOptionalParameter< std::string >( "level" ) };
@@ -41,22 +45,9 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 	// unix timestamp in seconds, matching the granularity compared below
 	const auto since_seconds { request->getOptionalParameter< std::uint64_t >( "since" ) };
 
-	// Locate the ringbuffer sink in the logger
-	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_sink;
-	for ( auto& s : logger->sinks() )
-	{
-		ring_sink = std::dynamic_pointer_cast< spdlog::sinks::ringbuffer_sink_mt >( s );
-		if ( ring_sink ) break;
-	}
+	auto ring_sink { log::getServerRingBufferSink() };
 
-	if ( !ring_sink )
-	{
-		auto response { drogon::HttpResponse::newHttpResponse() };
-		response->setBody( "Ring buffer sink not available\n" );
-		response->setStatusCode( drogon::HttpStatusCode::k500InternalServerError );
-		response->setContentTypeCode( drogon::CT_TEXT_PLAIN );
-		co_return response;
-	}
+	if ( !ring_sink ) co_return createInternalError( "Could not find Ring buffer sink in logger" );
 
 	constexpr std::string_view server_fmt { "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v" };
 	spdlog::pattern_formatter formatter { std::string( server_fmt ) };

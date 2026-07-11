@@ -115,9 +115,11 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	std::vector< spdlog::sink_ptr > sinks {};
 
 	// In-memory ring buffer — captures every level for the /log endpoint
-	auto& ring_buffer {
-		sinks.emplace_back( std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size ) )
-	};
+	// Kept as a concrete-typed pointer (see log::setServerLogger) rather than rediscovered later via
+	// dynamic_pointer_cast on the logger's type-erased sinks, since that cast has been observed to fail
+	// across the module .so boundary on some platforms/spdlog builds.
+	auto ring_buffer { std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size ) };
+	sinks.emplace_back( ring_buffer );
 	ring_buffer->set_pattern( std::string( server_format_str ) );
 	ring_buffer->set_level( spdlog::level::trace );
 
@@ -155,6 +157,7 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	spdlog::set_default_logger( logger );
 	trantor::Logger::enableSpdLog( logger );
+	log::setServerLogger( logger, ring_buffer );
 
 	logger->flush_on( spdlog::level::warn );
 	spdlog::flush_every( std::chrono::seconds( 5 ) );
