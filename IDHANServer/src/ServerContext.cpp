@@ -22,6 +22,7 @@
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
+#include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "spdlog/async.h"
@@ -331,6 +332,10 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::trace( "CORS support configured" );
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();
+
+	// Must happen before anything can touch FileIOUring (e.g. ClusterManager reading/writing files);
+	// IOUring::getInstance() throws if init() was never called.
+	IOUring::init();
 
 	m_clusters = std::make_unique< filesystem::ClusterManager >();
 	// Register callback to initialize clusters after event loop starts
