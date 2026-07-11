@@ -40,6 +40,7 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > getService( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > getServices( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > clientInfo( drogon::HttpRequestPtr request );
 
 	// Importing and deleting files (import)
 	drogon::Task< drogon::HttpResponsePtr > addFile( drogon::HttpRequestPtr request );
@@ -97,6 +98,12 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	ADD_METHOD_TO(
 		HydrusAPI::getServices,
 		"/hyapi/get_services",
+		drogon::Get,
+		HYAPI_AUTH_FILTERS,
+		RESPONSE_ENRICHER_NAME );
+	ADD_METHOD_TO(
+		HydrusAPI::clientInfo,
+		"/hyapi/client_info",
 		drogon::Get,
 		HYAPI_AUTH_FILTERS,
 		RESPONSE_ENRICHER_NAME );
