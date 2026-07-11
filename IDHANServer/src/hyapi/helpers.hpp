@@ -30,4 +30,8 @@ namespace idhan::hyapi::helpers
 
 [[nodiscard]] std::string extractHttpResponseErrorMessage( const drogon::HttpResponsePtr response );
 
+//! IDHAN stores file extensions without a leading dot (e.g. "jpg"), but the Hydrus API's `ext`
+//! field is expected to have one (e.g. ".jpg"). Leaves an empty extension untouched.
+[[nodiscard]] std::string withLeadingDot( std::string_view extension );
+
 } // namespace idhan::hyapi::helpers
