@@ -11,6 +11,7 @@
 #include "drogon/HttpAppFramework.h"
 #include "drogon/HttpResponse.h"
 #include "drogon/orm/DbClient.h"
+#include "logging/format_ns.hpp"
 
 namespace idhan::hyapi::helpers
 {
@@ -157,6 +158,12 @@ std::string extractHttpResponseErrorMessage( const drogon::HttpResponsePtr respo
 		throw std::invalid_argument( "Unable to extract IDHANHTTP error: Missing error field" );
 
 	return json[ "error" ].asString();
+}
+
+std::string withLeadingDot( const std::string_view extension )
+{
+	if ( extension.empty() || extension.starts_with( '.' ) ) return std::string( extension );
+	return format_ns::format( ".{}", extension );
 }
 
 } // namespace idhan::hyapi::helpers
