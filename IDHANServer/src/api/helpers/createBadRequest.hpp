@@ -73,4 +73,12 @@ drogon::HttpResponsePtr createConflict( const format_ns::format_string< Args... 
 		format_ns::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k409Conflict );
 }
 
+template < typename... Args >
+drogon::HttpResponsePtr createNotImplemented( const format_ns::format_string< Args... > str, Args&&... args )
+{
+	log::warn( format_ns::format( str, std::forward< Args >( args )... ) );
+	return internal::createBadResponse(
+		format_ns::format( str, std::forward< Args >( args )... ), drogon::HttpStatusCode::k501NotImplemented );
+}
+
 } // namespace idhan
