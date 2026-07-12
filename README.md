@@ -6,7 +6,7 @@ Linux, Windows releases will be coming eventually but aren't a priority.
 
 # Getting started
 
-## Docker ![Docker Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master)
+## Docker
 
 For detailed docker instructions, please refer to [Docker Guide](docs/docker.md)
 
