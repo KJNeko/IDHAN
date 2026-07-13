@@ -167,6 +167,10 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertCMYKtoIn
 	const std::basic_string_view< std::uint8_t > cmyk,
 	const std::size_t pixelCount )
 {
+	// need four planes (C, M, Y, K) of pixelCount bytes each; division form avoids overflow
+	if ( pixelCount > cmyk.size() / 4 )
+		return std::unexpected( idhan::ModuleError { "CMYK plane data too small" } );
+
 	std::vector< std::uint8_t > rgb( pixelCount * 3 );
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 	{
@@ -186,6 +190,9 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertGrayscal
 	const std::basic_string_view< std::uint8_t > gray,
 	const std::size_t pixelCount )
 {
+	if ( gray.size() < pixelCount )
+		return std::unexpected( idhan::ModuleError { "Grayscale plane data too small" } );
+
 	std::vector< std::uint8_t > rgb( pixelCount * 3 );
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 	{
@@ -206,6 +213,8 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertIndexedT
 	{
 		return std::unexpected( idhan::ModuleError { "Short color table" } );
 	}
+	if ( indexed.size() < pixelCount )
+		return std::unexpected( idhan::ModuleError { "Indexed plane data too small" } );
 	std::vector< std::uint8_t > rgb( pixelCount * 3 );
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 	{
@@ -222,6 +231,10 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertPlanarRG
 	const std::size_t pixelCount,
 	const std::uint16_t channels )
 {
+	const std::size_t planes { std::min< std::size_t >( channels, 3 ) };
+	if ( planes != 0 && planarData.size() / planes < pixelCount )
+		return std::unexpected( idhan::ModuleError { "Planar RGB plane data too small" } );
+
 	std::vector< std::uint8_t > interleaved( pixelCount * 3 );
 	for ( std::size_t c = 0; c < std::min< std::size_t >( channels, 3 ); ++c )
 	{
