@@ -57,29 +57,28 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > ArchiveGenerator::
 			continue;
 		}
 
-		const char* filename_raw { nullptr };
+		std::expected< std::string, idhan::ModuleError > filename {};
 
-		if ( filename_raw = archive_entry_pathname( entry ); filename_raw == nullptr )
+		if ( const char* filename_raw = archive_entry_pathname( entry ); filename_raw != nullptr )
 		{
-			if ( const auto utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
-			{
-				filename_raw = utf8_filename_raw;
-			}
-			else if ( const auto w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
-			{
-				spdlog::warn( "No file name for item in archive? It was W! Tell the dev" );
-				ret = archive_read_next_header( a.get(), &entry );
-				continue;
-			}
-			else
-			{
-				spdlog::warn( "No file name for item in archive? Maybe encrypted but not flagged as such?" );
-				ret = archive_read_next_header( a.get(), &entry );
-				continue;
-			}
+			filename = sanitizeEncoding( filename_raw );
+		}
+		else if ( const char* utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
+		{
+			filename = sanitizeEncoding( utf8_filename_raw );
+		}
+		else if ( const wchar_t* w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
+		{
+			// Wide-only name: convert it rather than dropping the entry.
+			filename = wideToUtf8( w_filename_raw );
+		}
+		else
+		{
+			spdlog::warn( "No file name for item in archive? Maybe encrypted but not flagged as such?" );
+			ret = archive_read_next_header( a.get(), &entry );
+			continue;
 		}
 
-		const auto filename { sanitizeEncoding( filename_raw ) };
 		if ( !filename ) return std::unexpected( filename.error() );
 
 		if ( *filename == target_filename )
