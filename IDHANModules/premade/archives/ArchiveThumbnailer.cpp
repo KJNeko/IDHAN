@@ -14,6 +14,23 @@
 #include "crypto/simpleHasher.hpp"
 #include "spdlog/spdlog.h"
 
+namespace
+{
+// Guards against archive-in-archive recursion: createThumbnail calls back into the generate and
+// thumbnail callbacks, which re-dispatch by MIME and can re-enter this thumbnailer for a nested
+// archive. Those callbacks run synchronously on the calling thread, so a thread_local depth
+// counter bounds the recursion and stops an archive bomb from exhausting the stack.
+thread_local std::size_t g_archive_thumbnail_depth { 0 };
+constexpr std::size_t MAX_ARCHIVE_THUMBNAIL_DEPTH { 4 };
+
+struct ArchiveThumbnailDepthGuard
+{
+	ArchiveThumbnailDepthGuard() { ++g_archive_thumbnail_depth; }
+
+	~ArchiveThumbnailDepthGuard() { --g_archive_thumbnail_depth; }
+};
+} // namespace
+
 std::vector< std::string_view > ArchiveThumbnailer::handleableMimes()
 {
 	return getHandleableMimesForArchives();
@@ -24,6 +41,10 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 	std::size_t width,
 	std::size_t height )
 {
+	const ArchiveThumbnailDepthGuard depth_guard {};
+	if ( g_archive_thumbnail_depth > MAX_ARCHIVE_THUMBNAIL_DEPTH )
+		return std::unexpected( idhan::ModuleError { "Archive nesting too deep for thumbnailing" } );
+
 	const auto [ file_view, mime, extra ] = data;
 
 	std::cout << "Json: " << extra.toStyledString() << std::endl;
