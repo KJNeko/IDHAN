@@ -21,5 +21,5 @@ class PsdThumbnailer final : public idhan::ThumbnailerModuleI
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(
 		idhan::ModuleCallData& data,
 		std::size_t width,
-		std::size_t height );
+		std::size_t height ) override;
 };
