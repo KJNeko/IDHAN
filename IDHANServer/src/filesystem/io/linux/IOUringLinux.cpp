@@ -240,12 +240,10 @@ void ioThread( const std::stop_token& token, IOUringLinux* uring, std::shared_pt
 			const unsigned index { head & *uring->m_command_ring.mask };
 			const auto& cqe { uring->m_command_ring.cqes[ index ] };
 
-			if ( cqe.res < 0 )
-			{
-				log::error( "io_uring completion error: {}", strerror( abs( cqe.res ) ) );
-				head++;
-				continue;
-			}
+			// negative cqe.res still carries a valid user_data that must be dispatched (to
+			// resume the awaiting coroutine with an exception and free the allocation below) --
+			// it must not be `continue`d past
+			if ( cqe.res < 0 ) log::error( "io_uring completion error: {}", strerror( -cqe.res ) );
 
 			if ( cqe.user_data == 0 )
 			{

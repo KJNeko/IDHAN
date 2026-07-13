@@ -28,9 +28,10 @@ void ReadAwaiter::complete( const int result )
 {
 	if ( result < 0 )
 	{
-		log::error( "Failed to read file: {}", strerror( errno ) );
-		m_exception =
-			std::make_exception_ptr( std::runtime_error( std::string( "Failed to read file: " ) + strerror( errno ) ) );
+		// result is -errno from the io_uring completion, not the thread-local errno
+		log::error( "Failed to read file: {}", strerror( -result ) );
+		m_exception = std::make_exception_ptr(
+			std::runtime_error( std::string( "Failed to read file: " ) + strerror( -result ) ) );
 	}
 
 	if ( !m_cont ) log::critical( "ReadAwaiter had no coroutine to resume" );
