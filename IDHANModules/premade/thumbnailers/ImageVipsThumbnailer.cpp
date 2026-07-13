@@ -25,7 +25,7 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 	const auto& [ data_view, mime_name, extra ] = data;
 
 	VipsImage* image_ptr;
-	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() )
+	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() && it->second != nullptr )
 	{
 		if ( it->second(
 				 const_cast< void* >( static_cast< const void* >( data_view.data() ) ),
