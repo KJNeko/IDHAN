@@ -4,7 +4,9 @@
 
 #include "archives.hpp"
 
+#include <archive.h>
 #include <chardet.h>
+#include <array>
 #include <expected>
 #include <iconv.h>
 #include <string>
@@ -94,4 +96,29 @@ std::expected< std::string, idhan::ModuleError > sanitizeEncoding( const char* s
 	std::string out_string { out_buffer.data(), out_buffer.size() - out_size };
 
 	return out_string;
+}
+
+std::expected< std::vector< std::byte >, idhan::ModuleError > readArchiveEntryData( archive* a )
+{
+	std::vector< std::byte > data {};
+
+	// archive_read_data may return fewer bytes than requested (short read) and does not need the
+	// entry size to be known in advance, so grow the buffer as we go rather than trusting
+	// archive_entry_size() for a single allocate-and-read.
+	constexpr std::size_t chunk_size { 64 * 1024 };
+	std::array< std::byte, chunk_size > buffer {};
+
+	la_ssize_t read { 0 };
+	while ( ( read = archive_read_data( a, buffer.data(), buffer.size() ) ) > 0 )
+	{
+		data.insert( data.end(), buffer.begin(), buffer.begin() + read );
+	}
+
+	if ( read < 0 )
+	{
+		const char* err { archive_error_string( a ) };
+		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
+	}
+
+	return data;
 }

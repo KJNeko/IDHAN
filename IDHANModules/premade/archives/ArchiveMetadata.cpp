@@ -98,22 +98,18 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 		spdlog::trace( "Cleaned path to {}", *filename );
 
-		const auto file_size { static_cast< std::size_t >( archive_entry_size( entry ) ) };
-
-		std::vector< std::byte > file_data {};
-		file_data.resize( file_size );
-
-		if ( archive_read_data( a.get(), file_data.data(), file_size ) < 0 )
+		const auto file_data_e { readArchiveEntryData( a.get() ) };
+		if ( !file_data_e )
 		{
 			spdlog::error( "Unable to read archive data" );
-			const char* err { archive_error_string( a.get() ) };
-			return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
+			return std::unexpected( file_data_e.error() );
 		}
+		const auto& file_data { *file_data_e };
 
 		const auto file_hash { idhan::crypto::hashData( file_data.data(), file_data.size() ) };
 
 		archive_metadata.contained_hashes.emplace_back( file_hash );
-		archive_metadata.m_size += file_size;
+		archive_metadata.m_size += file_data.size();
 		json[ idhan::crypto::toHex( file_hash ) ] = *filename;
 		spdlog::trace( "Got hash {}", idhan::crypto::toHex( file_hash ) );
 
