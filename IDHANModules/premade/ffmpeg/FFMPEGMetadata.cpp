@@ -73,7 +73,11 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 		return std::unexpected( idhan::ModuleError( "Failed to open file" ) );
 	}
 
-	const auto format_context_p = std::shared_ptr< AVFormatContext >( format_context, &avformat_free_context );
+	// avformat_close_input (not avformat_free_context) is the correct counterpart to a successful
+	// avformat_open_input: it runs the demuxer's read_close and releases internal buffers.
+	// AVFMT_FLAG_CUSTOM_IO is set, so it leaves the custom pb (avio_context) for us to free.
+	const auto format_context_p = std::shared_ptr< AVFormatContext >(
+		format_context, []( AVFormatContext* ctx ) { avformat_close_input( &ctx ); } );
 	format_context = format_context_p.get();
 
 	if ( avformat_find_stream_info( format_context, nullptr ) < 0 )
