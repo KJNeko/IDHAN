@@ -40,10 +40,23 @@ std::optional< PSDHeader > parsePSDHeader( const std::uint8_t* data, const std::
 	const std::uint16_t version { readUint16BE( data + 4 ) };
 	if ( version != 1 ) return std::nullopt; // TODO: support v2 "large" format
 
+	const std::uint16_t channels { readUint16BE( data + 12 ) };
+	const std::uint32_t height { readUint32BE( data + 14 ) };
+	const std::uint32_t width { readUint32BE( data + 18 ) };
+
+	// PSD (version 1) constrains each dimension to 1..30000 and the channel count to 1..56.
+	// Rejecting out-of-range headers stops a crafted file from driving a multi-gigabyte
+	// allocation (planeSize = width * height) downstream, and rules out the width/height == 0
+	// that would otherwise divide by zero in the aspect-ratio maths.
+	constexpr std::uint32_t max_dimension { 30000 };
+	constexpr std::uint16_t max_channels { 56 };
+	if ( width == 0 || height == 0 || width > max_dimension || height > max_dimension ) return std::nullopt;
+	if ( channels == 0 || channels > max_channels ) return std::nullopt;
+
 	return { {
-		.channels = readUint16BE( data + 12 ),
-		.height = readUint32BE( data + 14 ),
-		.width = readUint32BE( data + 18 ),
+		.channels = channels,
+		.height = height,
+		.width = width,
 		.depth = readUint16BE( data + 22 ),
 		.colorMode = readUint16BE( data + 24 ),
 	} };
