@@ -44,7 +44,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 	if ( g_archive_thumbnail_depth > MAX_ARCHIVE_THUMBNAIL_DEPTH )
 		return std::unexpected( idhan::ModuleError { "Archive nesting too deep for thumbnailing" } );
 
-	const auto [ file_view, mime, extra ] = data;
+	const auto& [ file_view, mime, extra ] = data;
 
 	spdlog::trace( "Archive thumbnailer extra json: {}", extra.toStyledString() );
 
