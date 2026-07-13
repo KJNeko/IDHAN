@@ -28,7 +28,7 @@ drogon::Task<> addItemsToNewGroup( std::vector< RecordID > record_ids, DbClientP
 	const auto group_id { co_await createNewGroup( db ) };
 	co_await db->execSqlCoro(
 		"INSERT INTO alternative_group_members (group_id, record_id) VALUES ($1, UNNEST($2::" RECORD_PG_TYPE_NAME
-		"[]))",
+		"[])) ON CONFLICT (group_id, record_id) DO NOTHING",
 		group_id,
 		std::move( record_ids ) );
 }
