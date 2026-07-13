@@ -260,7 +260,7 @@ std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnaile
 
 	for ( const auto& module : m_modules )
 	{
-		if ( module->type() == ModuleTypeFlags::THUMBNAILER
+		if ( ( module->type() & ModuleTypeFlags::THUMBNAILER )
 		     && std::static_pointer_cast< ThumbnailerModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< ThumbnailerModuleI >( module ) );
@@ -278,7 +278,7 @@ std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( co
 
 	for ( const auto& module : m_modules )
 	{
-		if ( module->type() == ModuleTypeFlags::METADATA
+		if ( ( module->type() & ModuleTypeFlags::METADATA )
 		     && std::static_pointer_cast< MetadataModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< MetadataModuleI >( module ) );
@@ -296,7 +296,7 @@ std::vector< std::shared_ptr< GeneratorModuleI > > ModuleLoader::getGeneratorsFo
 
 	for ( const auto& module : m_modules )
 	{
-		if ( module->type() == ModuleTypeFlags::GENERATOR
+		if ( ( module->type() & ModuleTypeFlags::GENERATOR )
 		     && std::static_pointer_cast< GeneratorModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< GeneratorModuleI >( module ) );
