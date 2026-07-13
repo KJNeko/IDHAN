@@ -44,9 +44,18 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 	// std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
 	unsigned char* buffer_ptr { static_cast< unsigned char* >( av_malloc( BUFFER_SIZE ) ) };
 
+	// the buffer may have been freed and replaced by libavformat, so the deleter must free
+	// ctx->buffer rather than the original allocation
 	const std::shared_ptr< AVIOContext > avio_context(
 		avio_alloc_context( buffer_ptr, BUFFER_SIZE, 0, &opaque_info, &readFunction, nullptr, seekFunction ),
-		&av_free );
+		[]( AVIOContext* ctx )
+		{
+			if ( ctx )
+			{
+				av_free( ctx->buffer );
+				av_free( ctx );
+			}
+		} );
 
 	AVFormatContext* format_context { avformat_alloc_context() };
 	if ( !format_context )
