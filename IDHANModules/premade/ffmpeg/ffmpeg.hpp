@@ -30,7 +30,7 @@ inline int readFunction( void* opaque, std::uint8_t* buffer, int buffer_size )
 {
 	auto& buffer_view { *static_cast< OpaqueInfo* >( opaque ) };
 
-	const bool cursor_oob { buffer_view.m_cursor > buffer_view.m_data.size() };
+	const bool cursor_oob { buffer_view.m_cursor > static_cast< std::int64_t >( buffer_view.m_data.size() ) };
 	if ( cursor_oob ) return AVERROR_EOF;
 
 	auto* data { buffer_view.m_data.data() };
@@ -79,8 +79,8 @@ inline std::int64_t seekFunction( void* opaque, std::int64_t offset, int whence 
 
 	if ( buffer_view.m_cursor < 0 )
 		buffer_view.m_cursor = 0;
-	else if ( buffer_view.m_cursor >= buffer_view.m_data.size() )
-		buffer_view.m_cursor = buffer_view.m_data.size();
+	else if ( buffer_view.m_cursor >= static_cast< std::int64_t >( buffer_view.m_data.size() ) )
+		buffer_view.m_cursor = static_cast< std::int64_t >( buffer_view.m_data.size() );
 
 	return buffer_view.m_cursor;
 }
