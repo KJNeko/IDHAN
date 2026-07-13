@@ -57,6 +57,14 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 			}
 		} );
 
+	if ( !avio_context )
+	{
+		// avio_alloc_context does not take ownership of the buffer on failure, so free it here
+		// (the deleter above is a no-op for a null context).
+		av_free( buffer_ptr );
+		return std::unexpected( idhan::ModuleError( "Failed to allocate AVIO context" ) );
+	}
+
 	AVFormatContext* format_context { avformat_alloc_context() };
 	if ( !format_context )
 	{
