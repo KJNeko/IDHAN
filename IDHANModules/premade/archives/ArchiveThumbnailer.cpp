@@ -12,6 +12,7 @@
 
 #include "archives.hpp"
 #include "crypto/simpleHasher.hpp"
+#include "spdlog/spdlog.h"
 
 std::vector< std::string_view > ArchiveThumbnailer::handleableMimes()
 {
@@ -103,10 +104,12 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		if ( !generated_file )
 		{
-			//TODO: Log warn here
-			// last_error = generated_file.error();
-			// continue;
-			return std::unexpected( generated_file.error() );
+			// Skip this child rather than failing the whole archive thumbnail; only if every child
+			// fails do we surface an error (see the all_generate_failed check below).
+			spdlog::warn( "Archive thumbnailer: failed to generate '{}': {}", member, generated_file.error() );
+			last_error = generated_file.error();
+			flag_cache_thumbnail = false;
+			continue;
 		}
 
 		all_generate_failed = false;
@@ -157,7 +160,10 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 	if ( all_generate_failed )
 	{
-		return std::unexpected( *last_error );
+		// last_error may be empty if no member was a valid hash (nothing to generate); never
+		// dereference a disengaged optional here.
+		return std::unexpected(
+			last_error.value_or( idhan::ModuleError { "No thumbnailable entries found in archive" } ) );
 	}
 
 	idhan::ThumbnailInfo info { canvas, flag_cache_thumbnail };
