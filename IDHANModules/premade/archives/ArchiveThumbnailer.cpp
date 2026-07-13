@@ -8,7 +8,6 @@
 #include <vips/vips8>
 
 #include <filesystem>
-#include <iostream>
 
 #include "archives.hpp"
 #include "crypto/simpleHasher.hpp"
@@ -47,7 +46,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 	const auto [ file_view, mime, extra ] = data;
 
-	std::cout << "Json: " << extra.toStyledString() << std::endl;
+	spdlog::trace( "Archive thumbnailer extra json: {}", extra.toStyledString() );
 
 	if ( extra.isNull() )
 	{
