@@ -9,7 +9,7 @@ using VipsFunc = int ( * )( void*, size_t, VipsImage**, ... );
 inline static std::unordered_map< std::string, VipsFunc > VIPS_FUNC_MAP {
 	{ "image/png", vips_pngload_buffer },   { "image/jpeg", vips_jpegload_buffer },
 	{ "image/webp", vips_webpload_buffer }, { "image/gif", vips_gifload_buffer },
-	{ "image/heif", vips_heifload_buffer }, { "image/svg", vips_svgload_buffer },
+	{ "image/heif", vips_heifload_buffer }, { "image/svg+xml", vips_svgload_buffer },
 	{ "image/webp", vips_webpload_buffer }, { "image/tiff", vips_tiffload_buffer }
 };
 
