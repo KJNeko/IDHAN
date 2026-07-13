@@ -56,7 +56,9 @@ class [[nodiscard]] FileIOUring
 	};
 
 	FileDescriptor m_fd;
-	void* m_mmap_ptr { nullptr };
+	// shared (not raw) so a copied/moved FileIOUring can't leave two instances calling munmap()
+	// on the same address
+	std::shared_ptr< void > m_mmap_ptr {};
 #elif defined( _WIN32 )
 	void* m_handle { nullptr };                    // HANDLE — void* avoids pulling <windows.h> into this header
 	mutable std::vector< std::byte > m_mmap_buffer {}; // populated lazily on first mmapReadOnly()
