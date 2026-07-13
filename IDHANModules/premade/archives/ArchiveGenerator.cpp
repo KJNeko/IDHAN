@@ -82,19 +82,10 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > ArchiveGenerator::
 		const auto filename { sanitizeEncoding( filename_raw ) };
 		if ( !filename ) return std::unexpected( filename.error() );
 
-		const std::size_t file_size { static_cast< std::size_t >( archive_entry_size( entry ) ) };
-
 		if ( *filename == target_filename )
 		{
-			std::vector< std::byte > file_data {};
-			file_data.resize( file_size );
-			if ( archive_read_data( a.get(), file_data.data(), file_size ) < 0 )
-			{
-				const char* err { archive_error_string( a.get() ) };
-				return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
-			}
-
-			return file_data;
+			// streams the entry, handling short reads and entries with no stored size
+			return readArchiveEntryData( a.get() );
 		}
 
 		ret = archive_read_next_header( a.get(), &entry );
