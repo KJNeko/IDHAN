@@ -22,4 +22,7 @@ class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 	[[nodiscard]] std::string_view name() override { return "JPG Thumbnailer"; }
 
 	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
+
+	// no shared mutable state: each call builds its own vips image, safe to run concurrently
+	[[nodiscard]] bool threadSafe() override { return true; }
 };

@@ -19,5 +19,8 @@ class PsdMetadata final : public idhan::MetadataModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override;
 
+	// pure parsing of the input buffer, no shared mutable state: safe to run concurrently
+	[[nodiscard]] bool threadSafe() override { return true; }
+
 	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data ) override;
 };

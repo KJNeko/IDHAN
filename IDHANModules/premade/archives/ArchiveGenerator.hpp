@@ -16,6 +16,9 @@ class ArchiveGenerator : public idhan::GeneratorModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 
+	// each call opens its own libarchive handle, no shared state: safe to run concurrently
+	[[nodiscard]] bool threadSafe() override { return true; }
+
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 
 	[[nodiscard]] std::expected< std::vector< std::byte >, idhan::ModuleError > generate(

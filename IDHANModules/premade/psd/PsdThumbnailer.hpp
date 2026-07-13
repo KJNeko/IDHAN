@@ -18,6 +18,9 @@ class PsdThumbnailer final : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override;
 
+	// pure parsing of the input buffer, no shared mutable state: safe to run concurrently
+	[[nodiscard]] bool threadSafe() override { return true; }
+
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(
 		idhan::ModuleCallData& data,
 		std::size_t width,
