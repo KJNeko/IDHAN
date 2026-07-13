@@ -55,8 +55,17 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	auto ret { archive_read_next_header( a.get(), &entry ) };
 
-	while ( ret == ARCHIVE_OK )
+	while ( ret == ARCHIVE_OK || ret == ARCHIVE_WARN )
 	{
+		// ARCHIVE_WARN is recoverable: the entry is still usable, so log and carry on rather than
+		// aborting the whole archive (the post-loop ret != ARCHIVE_EOF check would otherwise treat
+		// the warning as fatal).
+		if ( ret == ARCHIVE_WARN )
+		{
+			const char* warn { archive_error_string( a.get() ) };
+			spdlog::warn( "Archive warning while reading entry: {}", warn ? warn : "unknown" );
+		}
+
 		if ( archive_entry_filetype( entry ) != AE_IFREG ) // skip anything that isn't a file
 		{
 			ret = archive_read_next_header( a.get(), &entry );
