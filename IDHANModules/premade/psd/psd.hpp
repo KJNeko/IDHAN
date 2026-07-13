@@ -43,7 +43,8 @@ void unpackScanline(
 	std::size_t dataLength,
 	std::uint32_t width,
 	std::uint32_t height,
-	std::uint16_t channels );
+	std::uint16_t channels,
+	std::size_t bytesPerSample );
 
 [[nodiscard]] std::vector< std::uint8_t > convert16to8bit( const std::vector< std::uint8_t >& buffer, std::size_t pixelCount );
 

@@ -96,7 +96,8 @@ std::vector< std::uint8_t > unpackRaster(
 	const std::size_t dataLength,
 	const std::uint32_t width,
 	const std::uint32_t height,
-	const std::uint16_t channels )
+	const std::uint16_t channels,
+	const std::size_t bytesPerSample )
 {
 	const std::size_t scanlineCountsSize { height * channels * 2 };
 	if ( offset + scanlineCountsSize > dataLength )
@@ -111,8 +112,13 @@ std::vector< std::uint8_t > unpackRaster(
 	}
 	offset += scanlineCountsSize;
 
+	// Each row decompresses to width * bytesPerSample bytes (PackBits runs over the raw sample
+	// bytes, not whole pixels), so both the row stride and the plane buffer scale with
+	// bytesPerSample. Ignoring it truncated every 16/32-bit RLE PSD to a width-sized buffer and
+	// made the subsequent depth conversion reject the data.
+	const std::size_t rowBytes { static_cast< std::size_t >( width ) * bytesPerSample };
 	const std::size_t planeSize { static_cast< std::size_t >( width ) * height };
-	std::vector< std::uint8_t > planarData( planeSize * channels );
+	std::vector< std::uint8_t > planarData( planeSize * channels * bytesPerSample );
 
 	std::size_t outputOffset { 0 };
 	for ( const std::uint16_t scanlineLength : scanlineLengths )
@@ -124,10 +130,10 @@ std::vector< std::uint8_t > unpackRaster(
 			return {};
 		}
 
-		unpackScanline( buffer + offset, compressedLength, planarData.data() + outputOffset, width );
+		unpackScanline( buffer + offset, compressedLength, planarData.data() + outputOffset, rowBytes );
 
 		offset += compressedLength;
-		outputOffset += width;
+		outputOffset += rowBytes;
 	}
 
 	return planarData;
