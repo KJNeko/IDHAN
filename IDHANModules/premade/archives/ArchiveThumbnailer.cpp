@@ -71,8 +71,10 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		!members.empty() ? members.size() - 1 : members.size()
 	}; // subtract the 'encrypted' member
 
-	// determine a grid
-	std::size_t grid_size { static_cast< std::size_t >( std::sqrt( child_thumbnails ) ) };
+	// determine a grid; ceil(sqrt) so the canvas is large enough for every child. floor() left
+	// non-perfect-square counts with an undersized canvas (relying on insert's expand to paper
+	// over it) and collapsed 2-3 child archives to grid_size 1, discarding all but the first.
+	std::size_t grid_size { static_cast< std::size_t >( std::ceil( std::sqrt( static_cast< double >( child_thumbnails ) ) ) ) };
 
 	constexpr auto thumb_width { 128 };
 	constexpr auto thumb_height { 128 };
