@@ -9,6 +9,7 @@
 #undef signals
 
 #include <fstream>
+#include <optional>
 
 #include "api/helpers/createBadRequest.hpp"
 #include "core/files/mime.hpp"
@@ -180,7 +181,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const DbClientPtr db,
 	const FileMetaType type )
 {
-	std::lock_guard lock { m_mutex };
 	const auto sha256_e { co_await getRecordSHA256( record, db ) };
 	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 	const auto& sha256 { sha256_e.value() };
@@ -188,10 +188,17 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const auto& target_id { co_await findBestFolder( record, length, db ) };
 	return_unexpected_error( target_id );
 
-	if ( !m_clusters.contains( *target_id ) )
-		co_return std::unexpected( createInternalError( "Failed to find cluster with id {}", *target_id ) );
-
-	const auto& target_cluster { m_clusters.at( *target_id ) };
+	// copied out under lock rather than held by reference: a concurrent reloadClusters()
+	// could otherwise invalidate the reference while we're still using it below
+	std::optional< ClusterInfo > target_cluster_copy {};
+	{
+		std::lock_guard lock { m_mutex };
+		const auto itter { m_clusters.find( *target_id ) };
+		if ( itter == m_clusters.end() )
+			co_return std::unexpected( createInternalError( "Failed to find cluster with id {}", *target_id ) );
+		target_cluster_copy = itter->second;
+	}
+	const auto& target_cluster { *target_cluster_copy };
 
 	log::debug( "Storing file for record {} in cluster {}", record, *target_id );
 	const auto record_mime { co_await mime::getRecordMime( record, db ) };
@@ -221,10 +228,10 @@ ClusterManager::ClusterManager()
 drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
 {
 	log::info( "Reloading clusters" );
+	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
+
 	std::lock_guard lock { m_mutex };
 	m_clusters.clear();
-
-	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
 
 	for ( const auto& cluster : clusters )
 	{
