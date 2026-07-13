@@ -17,6 +17,9 @@ class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override;
 
+	// each call owns its AVFormatContext/codec contexts, no shared state: safe to run concurrently
+	[[nodiscard]] bool threadSafe() override { return true; }
+
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(

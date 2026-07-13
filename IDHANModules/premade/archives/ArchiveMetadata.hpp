@@ -18,6 +18,9 @@ class ArchiveMetadata : public idhan::MetadataModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override;
 
+	// each call opens its own libarchive handle, no shared state: safe to run concurrently
+	[[nodiscard]] bool threadSafe() override { return true; }
+
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 
 	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data ) override;
