@@ -86,7 +86,12 @@ std::expected< std::string, idhan::ModuleError > sanitizeEncoding( const char* s
 
 	iconv_close( iconv_cd );
 
-	std::string out_string { out_buffer.data(), strlen( out_buffer.data() ) };
+	if ( result == static_cast< std::size_t >( -1 ) )
+		return std::unexpected( idhan::ModuleError { "iconv conversion failed" } );
+
+	// use the byte count iconv actually wrote rather than strlen(): out_buffer isn't guaranteed
+	// to contain a null terminator if the conversion filled it exactly
+	std::string out_string { out_buffer.data(), out_buffer.size() - out_size };
 
 	return out_string;
 }
