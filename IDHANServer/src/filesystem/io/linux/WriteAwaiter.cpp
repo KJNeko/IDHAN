@@ -49,9 +49,10 @@ void WriteAwaiter::complete( const int result )
 {
 	if ( result < 0 )
 	{
-		log::error( "Failed to write file: {}", strerror( errno ) );
-		m_exception =
-			std::make_exception_ptr( std::runtime_error( std::string( "Failed to write file: " ) + strerror( errno ) ) );
+		// result is -errno from the io_uring completion, not the thread-local errno
+		log::error( "Failed to write file: {}", strerror( -result ) );
+		m_exception = std::make_exception_ptr(
+			std::runtime_error( std::string( "Failed to write file: " ) + strerror( -result ) ) );
 	}
 
 	if ( m_cont ) m_event_loop->queueInLoop( m_cont );
