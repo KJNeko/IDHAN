@@ -80,6 +80,7 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > ArchiveGenerator::
 		}
 
 		const auto filename { sanitizeEncoding( filename_raw ) };
+		if ( !filename ) return std::unexpected( filename.error() );
 
 		const std::size_t file_size { static_cast< std::size_t >( archive_entry_size( entry ) ) };
 
