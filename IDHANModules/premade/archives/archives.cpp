@@ -7,6 +7,7 @@
 #include <archive.h>
 #include <chardet.h>
 #include <array>
+#include <cwchar>
 #include <expected>
 #include <iconv.h>
 #include <string>
@@ -121,4 +122,34 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > readArchiveEntryDa
 	}
 
 	return data;
+}
+
+std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str )
+{
+	// "WCHAR_T" is iconv's name for the platform's wchar_t encoding, so this is portable across
+	// Linux (UTF-32) and Windows (UTF-16) without hand-rolling the codec.
+	const auto iconv_cd { iconv_open( "UTF-8", "WCHAR_T" ) };
+	if ( iconv_cd == reinterpret_cast< iconv_t >( -1 ) )
+		return std::unexpected( idhan::ModuleError { "Failed to open iconv for WCHAR_T" } );
+
+	const std::size_t in_bytes { std::wcslen( str ) * sizeof( wchar_t ) };
+	std::vector< char > in_buffer( in_bytes );
+	std::memcpy( in_buffer.data(), str, in_bytes );
+	// UTF-8 needs at most 4 bytes per code point; sizeof(wchar_t) >= 2 already covers that per
+	// input unit, so 2x plus slack is comfortably enough.
+	std::vector< char > out_buffer( in_bytes * 2 + 4 );
+
+	auto* in_buffer_ptr { in_buffer.data() };
+	auto* out_buffer_ptr { out_buffer.data() };
+	std::size_t in_size { in_buffer.size() };
+	std::size_t out_size { out_buffer.size() };
+
+	const auto result { iconv( iconv_cd, &in_buffer_ptr, &in_size, &out_buffer_ptr, &out_size ) };
+
+	iconv_close( iconv_cd );
+
+	if ( result == static_cast< std::size_t >( -1 ) )
+		return std::unexpected( idhan::ModuleError { "iconv WCHAR_T conversion failed" } );
+
+	return std::string { out_buffer.data(), out_buffer.size() - out_size };
 }

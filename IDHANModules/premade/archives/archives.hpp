@@ -30,3 +30,6 @@ const static std::vector< std::string_view > archive_handleable_mimes {
 /** Loops over short reads and streams entries whose uncompressed size is not stored in the
  *  header, so callers never rely on archive_entry_size() for allocation. */
 [[nodiscard]] std::expected< std::vector< std::byte >, idhan::ModuleError > readArchiveEntryData( archive* a );
+
+//! Converts a wide (wchar_t) archive path to UTF-8 via iconv (WCHAR_T -> UTF-8).
+[[nodiscard]] std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str );
