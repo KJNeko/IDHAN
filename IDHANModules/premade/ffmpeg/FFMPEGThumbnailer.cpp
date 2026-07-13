@@ -139,23 +139,23 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		return std::unexpected( idhan::ModuleError( "Failed to allocate AVIO context" ) );
 	}
 
-	std::unique_ptr< AVFormatContext, AVFormatContextDeleter > format_context( avformat_alloc_context() );
-	if ( !format_context )
+	AVFormatContext* format_context_raw { avformat_alloc_context() };
+	if ( !format_context_raw )
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to allocate format context" ) );
 	}
 
-	format_context->pb = avio_context.get();
-	format_context->flags |= AVFMT_FLAG_CUSTOM_IO;
+	format_context_raw->pb = avio_context.get();
+	format_context_raw->flags |= AVFMT_FLAG_CUSTOM_IO;
 
-	AVFormatContext* format_context_raw = format_context.get();
+	// avformat_open_input frees format_context_raw itself on failure; only take ownership once
+	// it succeeds, otherwise the unique_ptr below would double-free it
 	if ( avformat_open_input( &format_context_raw, "", nullptr, nullptr ) < 0 )
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to open file" ) );
 	}
-	// avformat_open_input may reallocate the context, update our unique_ptr
-	format_context.release();
-	format_context.reset( format_context_raw );
+
+	std::unique_ptr< AVFormatContext, AVFormatContextDeleter > format_context( format_context_raw );
 
 	if ( avformat_find_stream_info( format_context.get(), nullptr ) < 0 )
 	{

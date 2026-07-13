@@ -48,17 +48,24 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 		avio_alloc_context( buffer_ptr, BUFFER_SIZE, 0, &opaque_info, &readFunction, nullptr, seekFunction ),
 		&av_free );
 
-	const auto format_context_p =
-		std::shared_ptr< AVFormatContext >( avformat_alloc_context(), &avformat_free_context );
-	auto format_context { format_context_p.get() };
+	AVFormatContext* format_context { avformat_alloc_context() };
+	if ( !format_context )
+	{
+		return std::unexpected( idhan::ModuleError( "Failed to allocate format context" ) );
+	}
 
 	format_context->pb = avio_context.get();
 	format_context->flags |= AVFMT_FLAG_CUSTOM_IO;
 
+	// avformat_open_input frees format_context itself on failure; only take ownership once it
+	// succeeds, otherwise the shared_ptr below would double-free it
 	if ( avformat_open_input( &format_context, "", nullptr, nullptr ) < 0 )
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to open file" ) );
 	}
+
+	const auto format_context_p = std::shared_ptr< AVFormatContext >( format_context, &avformat_free_context );
+	format_context = format_context_p.get();
 
 	if ( avformat_find_stream_info( format_context, nullptr ) < 0 )
 	{
