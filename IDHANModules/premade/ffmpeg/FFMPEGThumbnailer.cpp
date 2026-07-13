@@ -84,6 +84,9 @@ struct AVIOContextDeleter
 	{
 		if ( ctx )
 		{
+			// the buffer may have been freed and replaced by libavformat, so free ctx->buffer
+			// rather than the original allocation
+			av_free( ctx->buffer );
 			av_free( ctx );
 		}
 	}
@@ -123,7 +126,9 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	OpaqueInfo opaque_info { .m_data = data.file_view, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
-	std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
+	// must be av_malloc'd: libavformat may free()/realloc() this buffer internally, and freeing
+	// operator new[] memory through ffmpeg's allocator (or vice versa) is UB
+	auto* buffer_ptr { static_cast< std::byte* >( av_malloc( BUFFER_SIZE ) ) };
 
 	std::unique_ptr< AVIOContext, AVIOContextDeleter > avio_context( avio_alloc_context(
 		reinterpret_cast< unsigned char* >( buffer_ptr ),
