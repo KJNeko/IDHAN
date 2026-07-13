@@ -3,6 +3,7 @@
 //
 #include "JobContext.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -149,12 +150,19 @@ JobRuntime::~JobRuntime()
 	const auto begin_stop { Clock::now() };
 	const auto timeout { std::chrono::seconds( 10 ) };
 
+	// wait for dispatched jobs to actually finish, not just for the dispatch queue to drain --
+	// a job can be popped off m_queue and handed to the pool while still running, and hard-stop
+	// destroys m_pool right after this loop
 	while ( Clock::now() < begin_stop + timeout )
 	{
+		bool all_finished { false };
 		{
 			std::lock_guard lock { m_queue_mtx };
-			if ( m_queue.empty() ) break;
+			all_finished = m_queue.empty()
+			            && std::ranges::all_of(
+							   m_jobs | std::views::values, []( const auto& job ) { return job->done(); } );
 		}
+		if ( all_finished ) break;
 		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 	}
 
