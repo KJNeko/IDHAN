@@ -50,10 +50,7 @@ FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly
 		throw std::runtime_error( format_ns::format( "Failed to open file {}", path.string() ) );
 }
 
-FileIOUring::~FileIOUring()
-{
-	if ( m_mmap_ptr ) munmap( m_mmap_ptr, m_size );
-}
+FileIOUring::~FileIOUring() = default;
 
 IOUring::NativeHandle FileIOUring::nativeHandle() const
 {
@@ -91,9 +88,14 @@ drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, co
 
 std::pair< void*, std::size_t > FileIOUring::mmapReadOnly()
 {
-	if ( m_mmap_ptr ) return { m_mmap_ptr, m_size };
-	m_mmap_ptr = ::mmap( nullptr, m_size, PROT_READ, MAP_SHARED, static_cast< int >( m_fd ), 0 );
-	return { m_mmap_ptr, m_size };
+	if ( m_mmap_ptr ) return { m_mmap_ptr.get(), m_size };
+
+	void* const raw { ::mmap( nullptr, m_size, PROT_READ, MAP_SHARED, static_cast< int >( m_fd ), 0 ) };
+	if ( raw == MAP_FAILED ) return { nullptr, 0 };
+
+	const auto size { m_size };
+	m_mmap_ptr = std::shared_ptr< void >( raw, [ size ]( const void* ptr ) { munmap( const_cast< void* >( ptr ), size ); } );
+	return { m_mmap_ptr.get(), m_size };
 }
 
 FileIOUring::FileIOUring( const FileIOUring& ) = default;
