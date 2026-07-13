@@ -5,6 +5,7 @@
 #include "psd.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -27,8 +28,8 @@ std::uint32_t readUint32BE( const std::uint8_t* data )
 
 float readFloat32BE( const std::uint8_t* data )
 {
-	std::uint32_t bits { readUint32BE( data ) };
-	return *reinterpret_cast< float* >( &bits );
+	const std::uint32_t bits { readUint32BE( data ) };
+	return std::bit_cast< float >( bits );
 }
 
 std::optional< PSDHeader > parsePSDHeader( const std::uint8_t* data, const std::size_t length )
