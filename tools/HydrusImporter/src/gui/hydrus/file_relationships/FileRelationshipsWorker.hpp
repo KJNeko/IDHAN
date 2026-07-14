@@ -7,6 +7,7 @@
 
 #include "HydrusImporter.hpp"
 
+//! QRunnable that imports Hydrus file relationships (duplicates and alternatives) into IDHAN.
 class FileRelationshipsWorker : public QObject, public QRunnable
 {
 	Q_OBJECT

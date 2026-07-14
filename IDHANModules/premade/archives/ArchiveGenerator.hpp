@@ -4,6 +4,7 @@
 #pragma once
 #include "GeneratorModule.hpp"
 
+//! Generator that extracts a specific member file from an archive, addressed by its SHA-256 hash.
 class ArchiveGenerator : public idhan::GeneratorModuleI
 {
   public:

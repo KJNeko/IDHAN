@@ -24,22 +24,29 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 
 	~ThumbnailerModuleI() override;
 
+	//! The canonical MIME types this thumbnailer can render.
 	[[nodiscard]] virtual std::vector< std::string_view > handleableMimes() = 0;
 
-	//! Returns a raw thumbnail in RGB format
+	//! Renders a thumbnail as raw interleaved RGB pixels.
+	//! \param data The source file and its MIME (see ModuleCallData).
+	//! \param width,height Target thumbnail dimensions in pixels.
+	//! \return The thumbnail, or a ModuleError describing why it could not be produced.
 	[[nodiscard]] virtual std::expected< ThumbnailInfo, ModuleError > createThumbnail(
 		ModuleCallData& data,
 		std::size_t width,
 		std::size_t height ) = 0;
 
-	//! Returns the thumbnail in a in-memory PNG file
+	//! Like createThumbnail but returns the thumbnail encoded as an in-memory PNG file.
+	//! \copydetails createThumbnail
 	[[nodiscard]] std::expected< ThumbnailInfo, ModuleError > createThumbnailFile(
 		ModuleCallData& data,
 		std::size_t width,
 		std::size_t height );
 
+	//! \return true if \p mime is one of handleableMimes().
 	[[nodiscard]] bool canHandle( std::string_view mime );
 
+	//! \return ModuleTypeFlags::THUMBNAILER.
 	ModuleType type() override;
 };
 } // namespace idhan

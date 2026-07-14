@@ -17,6 +17,7 @@ namespace Ui
 class TagServiceWidget;
 }
 
+//! Qt widget presenting a single Hydrus tag service and its import progress (driven by TagServiceWorker).
 class TagServiceWidget : public QWidget
 {
 	Q_OBJECT

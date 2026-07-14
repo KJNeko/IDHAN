@@ -6,6 +6,7 @@
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
 
+//! Metadata parser for archives via libarchive (contained file hashes, decompressed size, encryption).
 class ArchiveMetadata : public idhan::MetadataModuleI
 {
   public:

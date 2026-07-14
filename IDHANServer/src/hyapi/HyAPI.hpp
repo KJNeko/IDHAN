@@ -29,6 +29,8 @@
 
 namespace idhan::hyapi
 {
+//! Implements the Hydrus Network client API (the /hyapi/* endpoints) for compatibility with existing
+//! Hydrus clients.
 class HydrusAPI : public drogon::HttpController< HydrusAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > unsupported( drogon::HttpRequestPtr request );

@@ -85,6 +85,10 @@ An example file
 //! This mime type is used for unknown mime types
 constexpr auto INVALID_MIME_NAME { "unknown/unknown" };
 
+//! Identifies a file's MIME type by matching its bytes (and, where required, its filename/extension)
+//! against the loaded idhanmime parser definitions documented on the \ref MimeParser page. The
+//! identifier list is copy-on-write, so a scan holds a stable snapshot across its co_awaits even if
+//! reloadMimeParsers() swaps in a new set concurrently. Singleton via getMimeDatabase().
 class MimeDatabase
 {
 	MimeDatabase();
@@ -105,23 +109,31 @@ class MimeDatabase
 
   public:
 
+	//! \return A JSON dump of the loaded identifiers, for inspection/debugging.
 	[[nodiscard]] Json::Value dump() const;
 
+	//! Detects the MIME type of \p data, using \p file_name for extension-gated matchers.
+	//! \return The canonical MIME name, or an error response if scanning fails.
 	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
 		std::string_view data,
 		std::string file_name );
 
+	//! \copydoc scan(std::string_view,std::string)
 	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( data_view data, std::string file_name );
 
+	//! Detects the MIME type of a file opened via io_uring.
 	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
 
+	//! Opens \p path and detects its MIME type. \return The canonical MIME name, or an error response.
 	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
 
 	//! Reloads all the 3rd party mime parsers
 	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();
 };
 
+//! \return The process-wide MimeDatabase singleton.
 [[nodiscard]] std::shared_ptr< MimeDatabase > getMimeDatabase();
+//! Resolves a MIME name string to its MimeID row in the database (inserting it if not yet present).
 [[nodiscard]] drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr( std::string str, DbClientPtr db );
 
 } // namespace idhan::mime

@@ -9,12 +9,15 @@
 namespace idhan::hydrus::hy_constants
 {
 
+//! Hydrus service-type values IDHAN presents for its tag services.
 enum ServiceTypes
 {
-	PTR_SERVICE = gen_constants::TAG_REPOSITORY,
-	TAG_SERVICE = gen_constants::LOCAL_TAG
+	PTR_SERVICE = gen_constants::TAG_REPOSITORY, //!< A public tag repository (PTR).
+	TAG_SERVICE = gen_constants::LOCAL_TAG       //!< A local tag service.
 };
 
+//! Maps a canonical MIME string to its Hydrus mime constant.
+//! \return The matching Hydrus constant, or GENERAL_IMAGE if \p mime_name is unknown.
 inline std::uint16_t mimeToHyType( const std::string& mime_name )
 {
 	if ( auto itter = hy_type_mime.find( mime_name ); itter != hy_type_mime.end() ) return itter->second;

@@ -4,6 +4,8 @@
 #pragma once
 #include "ThumbnailerModule.hpp"
 
+//! Thumbnailer for archives: composites thumbnails of contained files into a grid. Re-entrant (it
+//! asks the host to thumbnail members), bounded by a thread_local depth guard.
 class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 {
   public:

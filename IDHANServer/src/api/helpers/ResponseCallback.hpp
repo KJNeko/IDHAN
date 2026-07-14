@@ -22,9 +22,12 @@
 
 namespace idhan
 {
+//! Callback invoked with the HTTP response once a handler has produced it.
 using ResponseFunction = std::function< void( const drogon::HttpResponsePtr& ) >;
 
+//! Coroutine return type for API handlers: co_returns the HTTP response to send back.
 using ResponseTask = drogon::Task< drogon::HttpResponsePtr >;
+//! Shorthand for an incoming HTTP request pointer.
 using Request = drogon::HttpRequestPtr;
 
 } // namespace idhan

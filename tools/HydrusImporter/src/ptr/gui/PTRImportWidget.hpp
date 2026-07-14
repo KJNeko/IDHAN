@@ -14,6 +14,7 @@ namespace Ui
 class PTRImportWidget;
 }
 
+//! Qt widget driving the import of downloaded PTR update files (wraps PTRImportWorker) and showing progress.
 class PTRImportWidget final : public QWidget
 {
 	Q_OBJECT

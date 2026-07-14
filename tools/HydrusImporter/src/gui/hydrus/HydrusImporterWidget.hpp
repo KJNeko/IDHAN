@@ -20,6 +20,8 @@ namespace Ui
 class HydrusImporterWidget;
 }
 
+//! Widget that drives a Hydrus database import: pick the Hydrus folder, parse its tag services, file
+//! relationships and URLs, then run the import across a thread pool.
 class HydrusImporterWidget final : public QWidget
 {
 	Q_OBJECT

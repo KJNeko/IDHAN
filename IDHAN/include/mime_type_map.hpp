@@ -7,6 +7,9 @@
 
 #include "hydrus/HydrusConstants_gen.hpp"
 
+//! Maps a canonical MIME string to the Hydrus mime constant IDHAN reports over the Hydrus API.
+//! Hydrus enum values IDHAN has no distinct MIME for are mapped to "unknown"; several such entries
+//! therefore share that key, so this map is one-directional (mime constant -> string), not a bijection.
 static const std::unordered_map< std::string_view, int > hy_type_mime {
 	{ "unknown", idhan::hydrus::gen_constants::APPLICATION_HYDRUS_CLIENT_COLLECTION },
 	{ "image/jpeg", idhan::hydrus::gen_constants::IMAGE_JPEG },

@@ -9,6 +9,7 @@
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
 
+//! Metadata parser for raster image formats handled by libvips (JPEG, PNG, WebP, TIFF, ...).
 class ImageVipsMetadata final : public idhan::MetadataModuleI
 {
   public:

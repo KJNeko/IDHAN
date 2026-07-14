@@ -14,6 +14,7 @@ namespace Ui
 class PTRDownloadWidget;
 }
 
+//! Qt widget driving PTR update-file downloads (wraps PTRDownloader) and showing progress.
 class PTRDownloadWidget final : public QWidget
 {
 	Q_OBJECT
