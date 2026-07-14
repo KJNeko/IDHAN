@@ -5,6 +5,7 @@
 
 #include "ThumbnailerModule.hpp"
 
+//! Thumbnailer for video via FFmpeg, decoding a representative frame to RGB.
 class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 {
   public:

@@ -20,12 +20,17 @@ namespace idhan
 namespace log = spdlog;
 }
 
+//! State backing a custom FFmpeg AVIO context: an in-memory file and a read/seek cursor. Passed as
+//! the opaque pointer to readFunction/seekFunction so FFmpeg can demux a buffer without touching disk.
 struct OpaqueInfo
 {
-	idhan::data_view m_data;
-	std::int64_t m_cursor { 0 };
+	idhan::data_view m_data;      //!< The in-memory file bytes (not owned).
+	std::int64_t m_cursor { 0 };  //!< Current read position, in bytes from the start.
 };
 
+//! AVIO read callback: copies up to \p buffer_size bytes from the OpaqueInfo cursor into \p buffer.
+//! \param opaque Pointer to the OpaqueInfo.
+//! \return Number of bytes read, or AVERROR_EOF at end of data.
 inline int readFunction( void* opaque, std::uint8_t* buffer, int buffer_size )
 {
 	auto& buffer_view { *static_cast< OpaqueInfo* >( opaque ) };
@@ -48,6 +53,11 @@ inline int readFunction( void* opaque, std::uint8_t* buffer, int buffer_size )
 	return static_cast< int >( min_size );
 }
 
+//! AVIO seek callback: moves the OpaqueInfo cursor, clamped to the buffer bounds.
+//! \param opaque Pointer to the OpaqueInfo.
+//! \param offset Target offset, interpreted relative to \p whence.
+//! \param whence SEEK_SET/SEEK_CUR/SEEK_END, or AVSEEK_SIZE to query the total size.
+//! \return The new cursor position, the size for AVSEEK_SIZE, or -1 for an unsupported \p whence.
 inline std::int64_t seekFunction( void* opaque, std::int64_t offset, int whence )
 {
 	auto& buffer_view { *static_cast< OpaqueInfo* >( opaque ) };
@@ -85,5 +95,6 @@ inline std::int64_t seekFunction( void* opaque, std::int64_t offset, int whence 
 	return buffer_view.m_cursor;
 }
 
+//! The canonical MIME types the FFmpeg thumbnailer/metadata modules advertise support for.
 inline static std::vector< std::string_view >
 	ffmpeg_handleable_mimes { "video/mp4", "video/webm", "video/mpeg", "video/quicktime" };

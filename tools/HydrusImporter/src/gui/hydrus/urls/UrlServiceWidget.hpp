@@ -22,6 +22,7 @@ class UrlServiceWidget;
 
 QT_END_NAMESPACE
 
+//! Qt widget presenting the Hydrus URL import and its progress (driven by UrlServiceWorker).
 class UrlServiceWidget : public QWidget
 {
 	Q_OBJECT

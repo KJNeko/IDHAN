@@ -4,6 +4,7 @@
 #pragma once
 #include "ThumbnailerModule.hpp"
 
+//! Thumbnailer for raster image formats handled by libvips (JPEG, PNG, WebP, TIFF, ...).
 class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 {
   public:

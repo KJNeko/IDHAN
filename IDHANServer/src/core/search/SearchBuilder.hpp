@@ -20,6 +20,7 @@
 namespace idhan
 {
 
+//! Direction results are ordered in.
 enum class SortOrder
 {
 	ASC,
@@ -28,6 +29,8 @@ enum class SortOrder
 	DEFAULT = ASC
 };
 
+//! Column/metric results are ordered by. The HY_* aliases map Hydrus sort types onto the subset
+//! IDHAN currently implements (several collapse to DEFAULT until natively supported).
 enum class SortType
 {
 	FILESIZE,
@@ -63,6 +66,7 @@ enum class SortType
 	// END_HYDRUS_CONVERT
 };
 
+//! Hydrus API sort-type constants, as received from Hydrus-compatible clients.
 enum HydrusSortType
 {
 	HY_FILESIZE = hydrus::gen_constants::SORT_FILES_BY_FILESIZE,
@@ -91,6 +95,8 @@ enum HydrusSortType
 	DEFAULT = HY_IMPORT_TIME
 };
 
+//! Which mapping layer a search runs against: raw STORED mappings, or the sibling/parent-resolved
+//! DISPLAY mappings.
 enum class HydrusDisplayType
 {
 	STORED,
@@ -99,6 +105,7 @@ enum class HydrusDisplayType
 	DEFAULT = DISPLAY
 };
 
+//! Maps a Hydrus sort type onto the nearest IDHAN SortType (see SortType's HY_* aliases).
 constexpr SortType hyToIDHANSortType( const HydrusSortType hy_sort )
 {
 	switch ( hy_sort )
@@ -154,6 +161,11 @@ constexpr SortType hyToIDHANSortType( const HydrusSortType hy_sort )
 	}
 }
 
+//! Builds a PostgreSQL search query from accumulated criteria — positive/negative tag IDs, system
+//! predicates (file size, dimensions, tag count, archive/audio/duration/exif flags, limit), sort
+//! order and the JOINs those require — and emits a single SQL string. In the generated SQL, $1 is
+//! always bound to an array of tag_domain_ids. Use construct() for the SQL, or query() to build and
+//! execute it in one step.
 class SearchBuilder
 {
 	std::string file_records_filter {};
@@ -289,27 +301,43 @@ class SearchBuilder
 
 	SearchBuilder();
 
+	//! Builds (via construct()) and executes the search against \p db.
+	//! \param tag_domain_ids Bound to $1 in the query.
+	//! \param return_ids,return_hashes Which columns the SELECT returns.
+	//! \return The result rows.
 	[[nodiscard]] drogon::Task< drogon::orm::Result > query(
 		DbClientPtr db,
 		std::vector< TagDomainID > tag_domain_ids,
 		bool return_ids = true,
 		bool return_hashes = false );
 
+	//! Sets the column/metric results are ordered by.
 	void setSortType( SortType type );
 
+	//! Sets the ordering direction.
 	void setSortOrder( SortOrder value );
 
+	//! Restricts the search to a tag domain; may be called repeatedly to allow several.
 	void filterTagDomain( TagDomainID value );
 
+	//! Restricts the search to records in the given file domain.
 	void addFileDomain( FileDomainID value );
+
+	//! Resolves tag strings to IDs and splits them into the positive/negative sets, also extracting
+	//! any "system:" predicates. \return an error response if a tag cannot be resolved.
 	IDHANTask< std::expected< void, std::shared_ptr< drogon::HttpResponse > > > setTags(
 		const std::vector< std::string >& tags );
 
+	//! Sets the tags a record must have.
 	void setPositiveTags( const std::vector< TagID >& vector );
+	//! Sets the tags a record must not have.
 	void setNegativeTags( const std::vector< TagID >& tag_ids );
+	//! Parses a single Hydrus "system:" predicate into search criteria. \return false if unrecognised.
 	[[nodiscard]] bool setHydrusSystemTags( std::string_view system_subtag );
+	//! Parses IDHAN system predicates (width, height, filesize, limit, tag count, ...) from tag strings.
 	void setSystemTags( const std::vector< std::string >& vector );
 
+	//! Selects STORED vs DISPLAY (sibling/parent-resolved) mappings for the search.
 	void setDisplay( HydrusDisplayType type );
 };
 

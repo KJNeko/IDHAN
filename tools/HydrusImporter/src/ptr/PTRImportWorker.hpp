@@ -21,12 +21,14 @@ class IDHANClient;
 namespace idhan::hydrus::ptr
 {
 
+//! PTR id→value lookup tables, accumulated from the definitions updates.
 struct TranslationTables
 {
 	std::unordered_map< int, std::string > hash_id_to_sha256; // service_hash_id → hex SHA-256
 	std::unordered_map< int, std::string > tag_id_to_tag; // service_tag_id → "namespace:subtag"
 };
 
+//! Running counts of what applying a content update produced.
 struct ContentStats
 {
 	int records_created = 0;
@@ -39,6 +41,8 @@ struct ContentStats
 	int aliases_removed = 0;
 };
 
+//! QRunnable that imports downloaded PTR update files from a directory into IDHAN, applying them in
+//! dependency order and in batches. Cancellable via requestCancel(); progress via the signals below.
 class PTRImportWorker : public QObject, public QRunnable
 {
 	Q_OBJECT

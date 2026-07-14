@@ -4,6 +4,7 @@
 #pragma once
 #include "ThumbnailerModule.hpp"
 
+//! Thumbnailer for Photoshop PSD files, decoding the composited raster to RGB.
 class PsdThumbnailer final : public idhan::ThumbnailerModuleI
 {
   public:

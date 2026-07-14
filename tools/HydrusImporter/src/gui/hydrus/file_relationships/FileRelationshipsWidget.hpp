@@ -11,6 +11,7 @@ namespace Ui
 class FileRelationshipsWidget;
 }
 
+//! Qt widget presenting the Hydrus file-relationships import and its progress (driven by FileRelationshipsWorker).
 class FileRelationshipsWidget : public QWidget
 {
 	Q_OBJECT

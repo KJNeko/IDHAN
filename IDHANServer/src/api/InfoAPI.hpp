@@ -8,6 +8,7 @@
 namespace idhan::api
 {
 
+//! Informational endpoints: API description, server version, log tail, and health check.
 class InfoAPI : public drogon::HttpController< InfoAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > api( drogon::HttpRequestPtr request );

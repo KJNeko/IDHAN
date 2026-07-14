@@ -54,6 +54,7 @@ class APIAuth : public drogon::HttpCoroFilter< APIAuth >
 	drogon::Task< drogon::HttpResponsePtr > doFilter( const drogon::HttpRequestPtr& req ) override;
 };
 
+//! Endpoints for API-key authentication: verifying an access key and generating new API keys.
 class AuthEndpoint : public drogon::HttpController< AuthEndpoint >
 {
 	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( drogon::HttpRequestPtr req );

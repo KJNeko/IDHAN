@@ -5,6 +5,7 @@
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
 
+//! Metadata parser for Photoshop PSD files (canvas dimensions, layer count).
 class PsdMetadata final : public idhan::MetadataModuleI
 {
   public:

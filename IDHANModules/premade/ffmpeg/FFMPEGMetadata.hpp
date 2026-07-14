@@ -4,6 +4,7 @@
 #pragma once
 #include "MetadataModule.hpp"
 
+//! Metadata parser for video/audio containers via FFmpeg (dimensions, duration, bitrate, fps, audio).
 class FFMPEGMetadata final : public idhan::MetadataModuleI
 {
   public:

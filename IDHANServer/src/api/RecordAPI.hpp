@@ -26,6 +26,8 @@
 namespace idhan::api
 {
 
+//! Endpoints for record operations: notes, URLs, tag add/remove/list (raw and active), record
+//! creation, hash search, random record, and thumbnail/file retrieval.
 class RecordAPI : public drogon::HttpController< RecordAPI >
 {
 	//! Creates a new record in the database. Responds with the record id in a json format.

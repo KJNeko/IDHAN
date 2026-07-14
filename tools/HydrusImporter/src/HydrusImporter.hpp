@@ -16,6 +16,7 @@ namespace idhan::hydrus
 
 struct Set;
 
+//! Summary of a Hydrus tag service: its id, name, and mapping/alias/parent counts.
 struct ServiceInfo
 {
 	std::size_t service_id { static_cast< std::size_t >( ~0 ) };
@@ -27,8 +28,12 @@ struct ServiceInfo
 	ServiceInfo() = default;
 };
 
+//! A Hydrus-internal hash identifier (row id of a hash in the Hydrus database).
 using HashID = std::uint32_t;
 
+//! Drives a one-time import from a Hydrus SQLite database set (master, client and mappings DBs).
+//! Opens the databases, copies the file storage into IDHAN, maps Hydrus hash IDs to IDHAN RecordIDs,
+//! and enumerates the available tag services.
 class HydrusImporter
 {
   public:
@@ -47,17 +52,22 @@ class HydrusImporter
 	FGL_DELETE_COPY( HydrusImporter );
 	FGL_DELETE_MOVE( HydrusImporter );
 
+	//! Copies the Hydrus file storage into IDHAN's clusters.
 	void copyFileStorage();
 
 	HydrusImporter() = delete;
 	HydrusImporter( const std::filesystem::path& path );
 	~HydrusImporter();
 
+	//! Maps a batch of Hydrus hash IDs to their corresponding IDHAN RecordIDs.
 	std::unordered_map< HashID, RecordID > mapHydrusRecords( std::vector< HashID > hash_ids ) const;
+	//! \return The IDHAN RecordID for a single Hydrus hash ID.
 	RecordID getRecordIDFromHyID( HashID hash_id );
 
+	//! \return true if the Hydrus database contains PTR (public tag repository) data.
 	bool hasPTR() const;
 
+	//! \return Summaries of all tag services present in the Hydrus database.
 	std::vector< ServiceInfo > getTagServices();
 };
 

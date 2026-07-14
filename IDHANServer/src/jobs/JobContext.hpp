@@ -31,6 +31,9 @@ namespace Json
 class Value;
 };
 
+//! Runs JobTask coroutines on a dedicated trantor event-loop thread pool. Jobs are process-local
+//! (IDs are not persisted and reset on restart) and completed jobs are retained for one hour. Access
+//! the single instance via getJobRuntime(); enqueue work with queueJob().
 class JobRuntime
 {
 	std::unique_ptr< trantor::EventLoopThreadPool > m_pool{};
@@ -54,18 +57,24 @@ class JobRuntime
 
   public:
 
+	//! Adds a job to the run queue and wakes the runner thread. Prefer queueJob() at call sites.
 	void enqueue( const std::shared_ptr< JobContext >& ctx );
 
+	//! \return The tracked job with \p id, or nullptr if it is unknown or has been cleaned up.
 	[[nodiscard]] std::shared_ptr< JobContext > getJob( idhan::JobID id );
 
+	//! \return All currently tracked jobs (queued, running and recently completed).
 	[[nodiscard]] std::vector< std::shared_ptr< JobContext > > getAllJobs();
 
 	JobRuntime();
 	~JobRuntime();
 
+	//! Requests shutdown; in-flight jobs are allowed to finish before the runner stops.
 	void requestStop();
 };
 
+//! Owns a single job's running coroutine and its process-local JobID, and exposes the job's status
+//! to the /jobs status endpoints.
 class JobContext
 {
 	JobTask m_coro;
@@ -75,15 +84,20 @@ class JobContext
 
 	JobContext( JobTask&& coro, idhan::JobID id ) noexcept;
 
+	//! \return This job's process-local ID.
 	[[nodiscard]] auto id() const { return m_id; }
 
+	//! \return true once the job's coroutine has run to completion.
 	[[nodiscard]] bool done() const;
 
+	//! \return The shared status object holding the job's result response and completion flag.
 	[[nodiscard]] std::shared_ptr< JobTaskStatus > status() const { return m_coro.m_status; }
 
+	//! Runs/resumes the job's coroutine.
 	void run();
 };
 
+//! \return A fresh, process-local job ID.
 [[nodiscard]] idhan::JobID generateNewJobID();
 
 struct JobIDWaitable
@@ -103,6 +117,7 @@ struct JobIDWaitable
 	[[nodiscard]] idhan::JobID await_resume() const noexcept { return m_id; }
 };
 
+//! From inside a job coroutine, `co_await getJobID()` yields that job's JobID.
 [[nodiscard]] inline JobIDWaitable getJobID()
 {
 	return {};
@@ -131,18 +146,26 @@ struct SetJobResponseWaitable
 	void await_resume() const noexcept {}
 };
 
+//! From inside a job coroutine, `co_await setJobResponse(response_or_json)` stores the result that
+//! the /jobs status endpoints will later return for this job.
 inline SetJobResponseWaitable setJobResponse( drogon::HttpResponsePtr response )
 {
 	return SetJobResponseWaitable { std::move( response ) };
 }
 
+//! \copydoc setJobResponse(drogon::HttpResponsePtr)
 inline SetJobResponseWaitable setJobResponse( const Json::Value& response )
 {
 	return SetJobResponseWaitable { response };
 }
 
+//! \return The process-wide JobRuntime singleton.
 JobRuntime& getJobRuntime();
 
+//! Enqueues \p task as a new job and returns its JobContext immediately (endpoints respond with the
+//! job_id and clients poll for status).
+//! \param name Human-readable label used in logging.
+//! \param loc Captured call site, for diagnostics.
 [[nodiscard]] std::shared_ptr< JobContext > queueJob(
 	JobTask task,
 	std::string_view name = "",

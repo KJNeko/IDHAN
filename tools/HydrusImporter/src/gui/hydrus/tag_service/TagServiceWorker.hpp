@@ -10,6 +10,8 @@ namespace idhan::hydrus
 class TransactionBaseCoro;
 }
 
+//! QRunnable that imports a single Hydrus tag service into IDHAN — its tag→file mappings and its
+//! sibling/parent relationships — reporting progress and errors through the signals below.
 class TagServiceWorker final : public QObject, public QRunnable
 {
 	Q_OBJECT
@@ -46,6 +48,7 @@ class TagServiceWorker final : public QObject, public QRunnable
 
   private:
 
+	//! A single (hash, tag) pair read from a Hydrus mappings table.
 	struct MappingPair
 	{
 		int hash_id;

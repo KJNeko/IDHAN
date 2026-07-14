@@ -20,6 +20,9 @@
 namespace idhan::hydrus
 {
 
+//! Coroutine generator that yields one decoded row at a time from a stepping SQLite statement.
+//! initial_suspend never suspends so the query starts executing eagerly; each `co_yield` produces the
+//! next row as a TupleStore. \tparam TArgs The column types of a result row.
 template < typename... TArgs >
 struct RowGenerator
 {
@@ -80,6 +83,7 @@ struct RowGenerator
 	~RowGenerator() { m_h.destroy(); }
 };
 
+//! unique_ptr deleter that finalizes a sqlite3_stmt.
 struct StmtDeleter
 {
 	void operator()( sqlite3_stmt* stmt ) const
@@ -88,8 +92,13 @@ struct StmtDeleter
 	}
 };
 
+//! Prepares \p sql on \p tr's connection into an owned, auto-finalizing statement handle.
 std::unique_ptr< sqlite3_stmt, StmtDeleter > prepareStatement( TransactionBaseCoro tr, std::string_view sql );
 
+//! Binds \p sql_args to the prepared statement and steps it, yielding each result row.
+//! The statement is owned by the caller (via \p stmt_holder) because finalizing it inside the
+//! coroutine would break the final co_return.
+//! \throws std::runtime_error on a bind-count mismatch, a bind failure, or a SQLite step error.
 template < typename... TArgs >
 RowGenerator< TArgs... >
 	buildQuery( TransactionBaseCoro tr, std::unique_ptr< sqlite3_stmt, StmtDeleter >& stmt_holder, auto... sql_args )
@@ -139,6 +148,9 @@ RowGenerator< TArgs... >
 	FGL_UNREACHABLE();
 }
 
+//! Range-style wrapper over a prepared SQLite query. Iterate with begin()/end() for one TupleStore
+//! per row, or dereference (operator*) when exactly one row is expected.
+//! \tparam TArgs The column types of each result row.
 template < typename... TArgs >
 class Query
 {
