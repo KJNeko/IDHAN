@@ -76,20 +76,10 @@ class SHA256
 		return std::memcmp( m_data.data(), other.m_data.data(), m_data.size() ) == 0;
 	}
 
-	//! Lexicographic byte ordering.
-	//! \bug Does not short-circuit when a byte is greater: on the first differing byte it only returns
-	//!      true for a<b, otherwise continues, so e.g. {0x02,0x00} < {0x01,0xFF} wrongly returns true.
-	//!      This is not a strict weak ordering; std::map/std::set<SHA256> will misbehave. A correct
-	//!      implementation should `return a < b;` (or `std::memcmp(...) < 0`) at the first difference.
+	//! Lexicographic unsigned byte ordering; a valid strict weak ordering for use as a map/set key.
 	bool operator<( const SHA256& other ) const
 	{
-		for ( std::size_t i = 0; i < m_data.size(); ++i )
-		{
-			const auto& a = m_data[ i ];
-			const auto& b = other.m_data[ i ];
-			if ( a < b ) return true;
-		}
-		return false;
+		return std::memcmp( m_data.data(), other.m_data.data(), m_data.size() ) < 0;
 	}
 
 	//! \return The lowercase 64-character hex representation of the hash.
