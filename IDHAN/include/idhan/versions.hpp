@@ -4,11 +4,8 @@
 
 #pragma once
 
-//! Packs a semantic version (major, minor, patch) into a single int.
-//! \bug The minor term is written `minor < 8` (a comparison yielding 0 or 1) instead of
-//!      `minor << 8`, so the minor version is not encoded into its byte. Left as-is here; fixing it
-//!      changes the numeric value of IDHAN_VERSION and should be done deliberately.
-#define MAKE_IDHAN_VERSION( major, minor, patch ) int( ( major << 16 ) | ( minor < 8 ) | patch )
+//! Packs a semantic version into a single int as (major << 16) | (minor << 8) | patch.
+#define MAKE_IDHAN_VERSION( major, minor, patch ) int( ( major << 16 ) | ( minor << 8 ) | patch )
 
 #ifndef IDHAN_MAJOR_VERSION
 #error Major version must be specified for release builds
