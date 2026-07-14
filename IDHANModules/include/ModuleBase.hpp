@@ -86,6 +86,15 @@ class FGL_EXPORT ModuleBase
 
 	virtual ~ModuleBase() = default;
 
+	// Reports whether concurrent calls into this module are safe. Default is false (assume unsafe) so
+	// a module must explicitly opt in. This is the hook for a planned dispatch feature: modules that
+	// return false will be serialized — never run on more than one thread at once — so thread-hostile
+	// modules don't error. It is intentionally unused for now; do not remove it.
+	//
+	// A future serializer must key the lock per-module and use a recursive lock: the thumbnail/generate
+	// callbacks re-dispatch through ModuleLoader synchronously and can re-enter the SAME module on the
+	// SAME thread (e.g. nested archives). Any module that recurses into itself must therefore report
+	// true, as the premade Archive modules do, so they are never serialized.
 	[[nodiscard]] virtual bool threadSafe() { return false; }
 
 	[[nodiscard]] virtual ModuleType type() = 0;
