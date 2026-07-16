@@ -70,8 +70,8 @@ Json::Value getJobStatusJson(
 	const auto start_time { status->m_start_time.load() };
 	if ( start_time != std::chrono::steady_clock::time_point {} )
 	{
-		const auto start_system =
-			system_now + std::chrono::duration_cast< std::chrono::system_clock::duration >( start_time - now );
+		const auto start_system = system_now
+		                        + std::chrono::duration_cast< std::chrono::system_clock::duration >( start_time - now );
 		const auto epoch =
 			std::chrono::duration_cast< std::chrono::seconds >( start_system.time_since_epoch() ).count();
 		response[ "start_time" ] = static_cast< Json::UInt64 >( epoch );
@@ -129,13 +129,13 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::testJob( [[maybe_unused]
 }
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::jobStatus(
-	[[maybe_unused]] drogon::HttpRequestPtr request, idhan::JobID job_id )
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	idhan::JobID job_id )
 {
 	auto& runtime = getJobRuntime();
 	auto job = runtime.getJob( job_id );
 
-	if ( !job )
-		co_return createNotFound( "Job {} not found", job_id );
+	if ( !job ) co_return createNotFound( "Job {} not found", job_id );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( getJobStatusJson( job_id, job, true ) );
 }

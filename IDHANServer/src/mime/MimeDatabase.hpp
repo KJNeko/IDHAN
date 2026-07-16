@@ -7,10 +7,10 @@
 #include <memory>
 #include <mutex>
 
-#include "filesystem/io/IOUring.hpp"
 #include "MimeIdentifier.hpp"
 #include "MimeInfo.hpp"
 #include "ModuleBase.hpp"
+#include "filesystem/io/IOUring.hpp"
 
 namespace idhan::mime
 {
@@ -119,13 +119,16 @@ class MimeDatabase
 		std::string file_name );
 
 	//! \copydoc scan(std::string_view,std::string)
-	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( data_view data, std::string file_name );
+	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
+		data_view data,
+		std::string file_name );
 
 	//! Detects the MIME type of a file opened via io_uring.
 	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
 
 	//! Opens \p path and detects its MIME type. \return The canonical MIME name, or an error response.
-	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
+	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile(
+		const std::filesystem::path& path );
 
 	//! Reloads all the 3rd party mime parsers
 	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();
@@ -134,6 +137,8 @@ class MimeDatabase
 //! \return The process-wide MimeDatabase singleton.
 [[nodiscard]] std::shared_ptr< MimeDatabase > getMimeDatabase();
 //! Resolves a MIME name string to its MimeID row in the database (inserting it if not yet present).
-[[nodiscard]] drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr( std::string str, DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr(
+	std::string str,
+	DbClientPtr db );
 
 } // namespace idhan::mime

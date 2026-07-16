@@ -12,7 +12,10 @@
 namespace idhan::api::helpers
 {
 
-ExpectedTask< void > validateRelationshipIds( const TagDomainID tag_domain_id, std::vector< TagID > tag_ids, DbClientPtr db )
+ExpectedTask< void > validateRelationshipIds(
+	const TagDomainID tag_domain_id,
+	std::vector< TagID > tag_ids,
+	DbClientPtr db )
 {
 	const auto domain_result {
 		co_await db->execSqlCoro( "SELECT 1 FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id )

@@ -23,9 +23,9 @@ namespace idhan
 //! METADATA | THUMBNAILER); ModuleBase::type() returns the OR of the flags it supports.
 enum ModuleTypeFlags : std::uint16_t
 {
-	METADATA = 1 << 0,    //!< Implements MetadataModuleI::parseFile.
+	METADATA = 1 << 0, //!< Implements MetadataModuleI::parseFile.
 	THUMBNAILER = 1 << 1, //!< Implements ThumbnailerModuleI::createThumbnail.
-	GENERATOR = 1 << 2,   //!< Implements GeneratorModuleI::generate.
+	GENERATOR = 1 << 2, //!< Implements GeneratorModuleI::generate.
 };
 
 //! Bitwise-OR of ModuleTypeFlags values; the concrete return type of ModuleBase::type().
@@ -49,8 +49,8 @@ using ModuleError = std::string;
 struct ModuleCallData
 {
 	idhan::data_view file_view; //!< The file's raw bytes; not owned, valid only for the call's duration.
-	std::string mime_name;      //!< Canonical MIME type of the file, as resolved by the mime database.
-	Json::Value extra;          //!< Optional caller-supplied parameters; contents are operation-specific.
+	std::string mime_name; //!< Canonical MIME type of the file, as resolved by the mime database.
+	Json::Value extra; //!< Optional caller-supplied parameters; contents are operation-specific.
 };
 
 //! Host callbacks handed to every module at construction so it can re-dispatch work back through the
@@ -66,7 +66,7 @@ struct FGL_EXPORT ModuleCallbacks
 		ModuleError >( data_view, std::array< std::byte, 256 / 8 >, Json::Value, std::string ) >;
 
 	ThumbnailFunc thumbnail; //!< Ask the host to thumbnail the given bytes (data, extra, file_name).
-	GenerateFunc generate;   //!< Ask the host to generate a derived file matching the desired hash.
+	GenerateFunc generate; //!< Ask the host to generate a derived file matching the desired hash.
 
 	/*
 	//! Generates a thumbnail for the given file. Returns it in a RGB format

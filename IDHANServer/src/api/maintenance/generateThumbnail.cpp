@@ -18,18 +18,15 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	const auto request_data { request->getBody() };
 
-	if ( request_data.empty() )
-		co_return createBadRequest( "No data provided in POST request" );
+	if ( request_data.empty() ) co_return createBadRequest( "No data provided in POST request" );
 
 	//TODO: Create handle for multipart to get filenames
 	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
 
-	if ( !mime_str )
-		co_return createBadRequest( "Failed to detect mime type" );
+	if ( !mime_str ) co_return createBadRequest( "Failed to detect mime type" );
 
 	const auto metadata_parser { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
-	if ( metadata_parser.empty() )
-		co_return createInternalError( "Was unable to find parser for {}", *mime_str );
+	if ( metadata_parser.empty() ) co_return createInternalError( "Was unable to find parser for {}", *mime_str );
 
 	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
 	ModuleCallData call_data { .file_view = data_view, .mime_name = *mime_str, .extra = {} };
@@ -43,13 +40,11 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( *mime_str ) };
 
-	if ( thumbnailers.empty() )
-		co_return createNotFound( "No thumbnailer available for mime type {}", *mime_str );
+	if ( thumbnailers.empty() ) co_return createNotFound( "No thumbnailer available for mime type {}", *mime_str );
 
 	const auto thumbnail_data { thumbnailers.at( 0 )->createThumbnailFile( call_data, 128, 128 ) };
 
-	if ( !thumbnail_data )
-		co_return createInternalError( thumbnail_data.error() );
+	if ( !thumbnail_data ) co_return createInternalError( thumbnail_data.error() );
 
 	const auto& thumb_info { *thumbnail_data };
 

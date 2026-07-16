@@ -6,9 +6,8 @@
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
 #include <stdexcept>
+#include <windows.h>
 
 #include "filesystem/io/IOUring.hpp"
 #include "filesystem/io/windows/IOUringW10.hpp"
@@ -25,8 +24,7 @@ static IOUring* g_win_instance { nullptr };
 
 IOUring& IOUring::getInstance()
 {
-	if ( !g_win_instance )
-		throw std::runtime_error( "IOUring not initialised — call IOUring::init() at startup" );
+	if ( !g_win_instance ) throw std::runtime_error( "IOUring not initialised — call IOUring::init() at startup" );
 	return *g_win_instance;
 }
 
@@ -65,8 +63,7 @@ FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly
 
 	// Get file size
 	LARGE_INTEGER file_size {};
-	if ( GetFileSizeEx( m_handle, &file_size ) )
-		m_size = static_cast< std::size_t >( file_size.QuadPart );
+	if ( GetFileSizeEx( m_handle, &file_size ) ) m_size = static_cast< std::size_t >( file_size.QuadPart );
 
 	// Associate with the backend (required by IOCP; no-op for IoRing)
 	IOUring::getInstance().associateHandle( nativeHandle() );
@@ -119,8 +116,7 @@ std::pair< void*, std::size_t > FileIOUring::mmapReadOnly()
 	DWORD bytes_read { 0 };
 	// Synchronous read into the buffer (mmapReadOnly is not on a hot coroutine path)
 	if ( !ReadFile( m_handle, m_mmap_buffer.data(), static_cast< DWORD >( m_size ), &bytes_read, nullptr ) )
-		throw std::runtime_error(
-			format_ns::format( "mmapReadOnly: ReadFile failed for {}", m_path.string() ) );
+		throw std::runtime_error( format_ns::format( "mmapReadOnly: ReadFile failed for {}", m_path.string() ) );
 
 	m_mmap_buffer.resize( bytes_read );
 	return { m_mmap_buffer.data(), m_mmap_buffer.size() };
@@ -135,14 +131,9 @@ FileIOUring::FileIOUring( const FileIOUring& other ) :
 	// Duplicate the handle so both instances are independently closeable
 	if ( other.m_handle && other.m_handle != INVALID_HANDLE_VALUE )
 	{
-		if ( !DuplicateHandle(
-				 GetCurrentProcess(),
-				 other.m_handle,
-				 GetCurrentProcess(),
-				 &m_handle,
-				 0,
-				 FALSE,
-				 DUPLICATE_SAME_ACCESS ) )
+		if (
+			!DuplicateHandle(
+				GetCurrentProcess(), other.m_handle, GetCurrentProcess(), &m_handle, 0, FALSE, DUPLICATE_SAME_ACCESS ) )
 		{
 			throw std::runtime_error( "FileIOUring copy: DuplicateHandle failed" );
 		}
@@ -156,8 +147,8 @@ FileIOUring& FileIOUring::operator=( const FileIOUring& other )
 	FileIOUring tmp { other };
 	std::swap( m_handle, tmp.m_handle );
 	std::swap( m_mmap_buffer, tmp.m_mmap_buffer );
-	m_size     = other.m_size;
-	m_path     = other.m_path;
+	m_size = other.m_size;
+	m_path = other.m_path;
 	m_readonly = other.m_readonly;
 	return *this;
 }
@@ -174,11 +165,11 @@ FileIOUring& FileIOUring::operator=( FileIOUring&& other ) noexcept
 {
 	if ( this == &other ) return *this;
 	if ( m_handle && m_handle != INVALID_HANDLE_VALUE ) CloseHandle( m_handle );
-	m_handle       = std::exchange( other.m_handle, nullptr );
-	m_mmap_buffer  = std::move( other.m_mmap_buffer );
-	m_size         = other.m_size;
-	m_path         = std::move( other.m_path );
-	m_readonly     = other.m_readonly;
+	m_handle = std::exchange( other.m_handle, nullptr );
+	m_mmap_buffer = std::move( other.m_mmap_buffer );
+	m_size = other.m_size;
+	m_path = std::move( other.m_path );
+	m_readonly = other.m_readonly;
 	return *this;
 }
 

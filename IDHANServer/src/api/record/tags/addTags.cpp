@@ -142,10 +142,8 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 			{
 				// isInt64 excludes values above int64 range, where asInt64 would throw.
 				// TagID is 32-bit; a larger value would silently wrap into a different tag
-				if ( !item.isInt64() || item.asInt64() <= 0
-				     || item.asInt64() > std::numeric_limits< TagID >::max() )
-					co_return std::unexpected(
-						createBadRequest( "Invalid tag id {}: out of range", item.asString() ) );
+				if ( !item.isInt64() || item.asInt64() <= 0 || item.asInt64() > std::numeric_limits< TagID >::max() )
+					co_return std::unexpected( createBadRequest( "Invalid tag id {}: out of range", item.asString() ) );
 
 				tags.emplace_back< TagPair >( static_cast< TagID >( item.asInt64() ) );
 			}

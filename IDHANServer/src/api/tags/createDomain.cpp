@@ -152,9 +152,8 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::deleteTagDomain(
 	const TagDomainID tag_domain_id )
 {
 	auto db { drogon::app().getDbClient() };
-	const auto search {
-		co_await db->execSqlCoro( "DELETE FROM tag_domains WHERE tag_domain_id = $1 RETURNING tag_domain_id", tag_domain_id )
-	};
+	const auto search { co_await db->execSqlCoro(
+		"DELETE FROM tag_domains WHERE tag_domain_id = $1 RETURNING tag_domain_id", tag_domain_id ) };
 
 	if ( search.empty() ) co_return createNotFound( "Failed to find tag domain by id {}", tag_domain_id );
 

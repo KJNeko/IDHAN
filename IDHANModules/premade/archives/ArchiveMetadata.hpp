@@ -24,5 +24,6 @@ class ArchiveMetadata : public idhan::MetadataModuleI
 
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 
-	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data ) override;
+	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data )
+		override;
 };

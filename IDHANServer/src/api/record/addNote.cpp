@@ -39,7 +39,7 @@ ExpectedTask< Json::Value > getRecordNotes( DbClientPtr db, RecordID record_id )
 	{
 		Json::Value obj {};
 		obj[ "note_id" ] = note[ "note_id" ].as< NoteID >();
-		obj[ "text" ]    = note[ "note" ].as< std::string >();
+		obj[ "text" ] = note[ "note" ].as< std::string >();
 		json.append( obj );
 	}
 

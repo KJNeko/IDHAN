@@ -8,9 +8,9 @@
 #include <expected>
 #include <string>
 
-#include "threading/ExpectedTask.hpp"
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan::helpers
 {

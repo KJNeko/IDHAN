@@ -67,9 +67,7 @@ drogon::Task<> addItemsToExistingGroupsMerge(
 		group_id,
 		std::move( record_ids ) );
 
-	co_await db->execSqlCoro(
-		"DELETE FROM alternative_groups WHERE group_id = ANY($1)",
-		std::move( group_ids ) );
+	co_await db->execSqlCoro( "DELETE FROM alternative_groups WHERE group_id = ANY($1)", std::move( group_ids ) );
 }
 
 drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( drogon::HttpRequestPtr request )

@@ -13,7 +13,7 @@ namespace idhan::hydrus::hy_constants
 enum ServiceTypes
 {
 	PTR_SERVICE = gen_constants::TAG_REPOSITORY, //!< A public tag repository (PTR).
-	TAG_SERVICE = gen_constants::LOCAL_TAG       //!< A local tag service.
+	TAG_SERVICE = gen_constants::LOCAL_TAG //!< A local tag service.
 };
 
 //! Maps a canonical MIME string to its Hydrus mime constant.

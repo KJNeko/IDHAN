@@ -326,10 +326,10 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 
 	// the fast path is only valid when nothing would filter the result set; system
 	// predicates and archive filters must go through the full construction below
-	const bool has_system_predicates { m_duration_search != DurationSearchType::DontCare
-		                               || m_in_archive_search != ArchiveSearchType::DontCare
-		                               || m_width_search.m_active || m_height_search.m_active
-		                               || m_archive_search.m_active };
+	const bool has_system_predicates {
+		m_duration_search != DurationSearchType::DontCare || m_in_archive_search != ArchiveSearchType::DontCare
+		|| m_width_search.m_active || m_height_search.m_active || m_archive_search.m_active
+	};
 
 	if ( m_positive_tags.empty() && m_negative_tags.empty() && !has_system_predicates )
 	{

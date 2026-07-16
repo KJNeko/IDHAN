@@ -74,16 +74,14 @@ bool IOUringW11::isAvailable()
 	return false;
 }
 
-IOUringW11::IOUringW11() :
-  m_running( std::make_shared< std::atomic< bool > >( false ) )
+IOUringW11::IOUringW11() : m_running( std::make_shared< std::atomic< bool > >( false ) )
 {
 	const IORING_CREATE_FLAGS flags {};
 	if ( const HRESULT hr { CreateIoRing( IORING_VERSION_3, flags, 64, 128, &m_ring ) }; FAILED( hr ) )
 		throw std::runtime_error( "IOUringW11: CreateIoRing failed" );
 
 	m_completion_event = CreateEvent( nullptr, FALSE, FALSE, nullptr );
-	if ( m_completion_event == INVALID_HANDLE_VALUE )
-		throw std::runtime_error( "IOUringW11: CreateEvent failed" );
+	if ( m_completion_event == INVALID_HANDLE_VALUE ) throw std::runtime_error( "IOUringW11: CreateEvent failed" );
 
 	if ( const HRESULT hr { SetIoRingCompletionEvent( m_ring, m_completion_event ) }; FAILED( hr ) )
 		throw std::runtime_error( "IOUringW11: SetIoRingCompletionEvent failed" );
@@ -106,8 +104,10 @@ IOUringW11::~IOUringW11()
 	if ( m_completion_event != INVALID_HANDLE_VALUE ) CloseHandle( m_completion_event );
 }
 
-drogon::Task< std::vector< std::byte > >
-	IOUringW11::read( const NativeHandle handle, const std::size_t offset, const std::size_t len )
+drogon::Task< std::vector< std::byte > > IOUringW11::read(
+	const NativeHandle handle,
+	const std::size_t offset,
+	const std::size_t len )
 {
 	const HANDLE h { reinterpret_cast< HANDLE >( handle ) };
 
@@ -127,7 +127,7 @@ drogon::Task< std::vector< std::byte > >
 			 offset,
 			 reinterpret_cast< UINT_PTR >( &awaiter ),
 			 IOSQE_FLAGS_NONE ) };
-		 FAILED( hr ) )
+	     FAILED( hr ) )
 	{
 		throw std::runtime_error( "IOUringW11::read: BuildIoRingReadFile failed" );
 	}
@@ -138,8 +138,10 @@ drogon::Task< std::vector< std::byte > >
 	co_return co_await awaiter;
 }
 
-drogon::Task< void >
-	IOUringW11::write( const NativeHandle handle, std::vector< std::byte > data, const std::size_t offset )
+drogon::Task< void > IOUringW11::write(
+	const NativeHandle handle,
+	std::vector< std::byte > data,
+	const std::size_t offset )
 {
 	const HANDLE h { reinterpret_cast< HANDLE >( handle ) };
 
@@ -157,7 +159,7 @@ drogon::Task< void >
 			 FILE_WRITE_FLAGS_NONE,
 			 reinterpret_cast< UINT_PTR >( &awaiter ),
 			 IOSQE_FLAGS_NONE ) };
-		 FAILED( hr ) )
+	     FAILED( hr ) )
 	{
 		throw std::runtime_error( "IOUringW11::write: BuildIoRingWriteFile failed" );
 	}

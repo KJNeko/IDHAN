@@ -8,9 +8,9 @@
 #include <IDHANTypes.hpp>
 #include <expected>
 
-#include "threading/ExpectedTask.hpp"
 #include "db/dbTypes.hpp"
 #include "errors/ErrorInfo.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan
 {
@@ -18,8 +18,12 @@ namespace idhan
 [[nodiscard]] drogon::Task< std::optional< NamespaceID > > findNamespace( std::string, drogon::orm::DbClientPtr db );
 [[nodiscard]] drogon::Task< std::optional< SubtagID > > findSubtag( std::string, drogon::orm::DbClientPtr db );
 
-[[nodiscard]] drogon::Task< std::expected< NamespaceID, IDHANError > > createNamespace( std::string, drogon::orm::DbClientPtr db );
-[[nodiscard]] drogon::Task< std::expected< SubtagID, IDHANError > > createSubtag( std::string, drogon::orm::DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< NamespaceID, IDHANError > > createNamespace(
+	std::string,
+	drogon::orm::DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< SubtagID, IDHANError > > createSubtag(
+	std::string,
+	drogon::orm::DbClientPtr db );
 
 [[nodiscard]] drogon::Task< std::expected< TagID, IDHANError > > createTag(
 	std::string tag_namespace,

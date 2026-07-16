@@ -297,7 +297,10 @@ class SearchBuilder
 	 * @param filter_domains
 	 * @return
 	 */
-	[[nodiscard]] std::string construct( bool return_ids = true, bool return_hashes = false, bool filter_domains = false );
+	[[nodiscard]] std::string construct(
+		bool return_ids = true,
+		bool return_hashes = false,
+		bool filter_domains = false );
 
 	SearchBuilder();
 

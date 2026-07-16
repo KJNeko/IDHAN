@@ -9,15 +9,16 @@
 #include <expected>
 #include <vector>
 
+#include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
 #include "db/drogonArrayBind.hpp"
-#include "IDHANTypes.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan::api::helpers
 {
 
-[[nodiscard]] std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainIDParameter( const drogon::HttpRequestPtr& request );
+[[nodiscard]] std::expected< TagDomainID, drogon::HttpResponsePtr > getTagDomainIDParameter(
+	const drogon::HttpRequestPtr& request );
 
 //! 404 if the tag domain or any referenced tag does not exist. Used by the tag relationship
 //! endpoints: the PG backend reports FK violations as a bare Failure, which would surface as 500s

@@ -43,7 +43,8 @@ void WriteAwaiter::await_resume() const
 	if ( m_exception ) std::rethrow_exception( m_exception );
 }
 
-WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe ) {}
+WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
+{}
 
 void WriteAwaiter::complete( const int result )
 {

@@ -38,11 +38,11 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
 			tag_id );
 	}
 
-	root[ "namespace" ][ "id" ]  = result[ 0 ][ "namespace_id" ].as< NamespaceID >();
+	root[ "namespace" ][ "id" ] = result[ 0 ][ "namespace_id" ].as< NamespaceID >();
 	root[ "namespace" ][ "text" ] = result[ 0 ][ "namespace_text" ].as< std::string >();
-	root[ "subtag" ][ "id" ]     = result[ 0 ][ "subtag_id" ].as< SubtagID >();
-	root[ "subtag" ][ "text" ]   = result[ 0 ][ "subtag_text" ].as< std::string >();
-	root[ "items_count" ]         = result[ 0 ][ "storage_count" ].as< std::size_t >();
+	root[ "subtag" ][ "id" ] = result[ 0 ][ "subtag_id" ].as< SubtagID >();
+	root[ "subtag" ][ "text" ] = result[ 0 ][ "subtag_text" ].as< std::string >();
+	root[ "items_count" ] = result[ 0 ][ "storage_count" ].as< std::size_t >();
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }

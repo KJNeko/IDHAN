@@ -61,8 +61,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 	}
 
 	// unknown IDs would otherwise surface as FK-violation 500s
-	const auto validation { co_await helpers::validateRelationshipIds(
-		tag_domain_id.value(), std::move( referenced_tags ), db ) };
+	const auto validation {
+		co_await helpers::validateRelationshipIds( tag_domain_id.value(), std::move( referenced_tags ), db )
+	};
 	if ( !validation ) co_return validation.error();
 
 	for ( const auto& [ parent_id, child_id ] : pairs )

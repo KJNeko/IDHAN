@@ -29,11 +29,9 @@ drogon::Task< drogon::HttpResponsePtr > createHttpHeadForFile(
 
 	response->addHeader( "Content-Length", std::to_string( file_size ) );
 
-	const auto mime_info {
-		co_await db->execSqlCoro(
-			"SELECT mime.name as mime_name FROM file_info JOIN mime USING (mime_id) WHERE file_info.record_id = $1",
-			record_id )
-	};
+	const auto mime_info { co_await db->execSqlCoro(
+		"SELECT mime.name as mime_name FROM file_info JOIN mime USING (mime_id) WHERE file_info.record_id = $1",
+		record_id ) };
 
 	if ( mime_info.empty() )
 	{

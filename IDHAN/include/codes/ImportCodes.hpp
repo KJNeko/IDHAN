@@ -12,16 +12,16 @@ namespace idhan
 enum ImportStatus : std::uint8_t
 {
 	Success = 1, //!< File was newly imported.
-	Exists = 2,  //!< File was already present; nothing was added.
+	Exists = 2, //!< File was already present; nothing was added.
 	Deleted = 3, //!< File matches a record previously marked deleted.
-	Failed = 4,  //!< Import failed; see the accompanying ImportFailureCode.
+	Failed = 4, //!< Import failed; see the accompanying ImportFailureCode.
 };
 
 //! Reason an import returned ImportStatus::Failed.
 enum ImportFailureCode : std::uint8_t
 {
 	UnknownReason = 0, //!< Failure with no more specific code.
-	UnknownMime = 1,   //!< The file's MIME type could not be determined or is unsupported.
+	UnknownMime = 1, //!< The file's MIME type could not be determined or is unsupported.
 };
 
 } // namespace idhan
