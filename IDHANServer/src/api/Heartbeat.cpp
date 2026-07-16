@@ -53,8 +53,7 @@ void Heartbeat::handleConnectionClosed( const drogon::WebSocketConnectionPtr& ws
 {
 	log::info( "WS closed" );
 	auto ctx = wsConnPtr->getContext< HeartbeatContext >();
-	if ( ctx && ctx->timer_id != trantor::InvalidTimerId )
-		drogon::app().getLoop()->invalidateTimer( ctx->timer_id );
+	if ( ctx && ctx->timer_id != trantor::InvalidTimerId ) drogon::app().getLoop()->invalidateTimer( ctx->timer_id );
 }
 
 } // namespace idhan::api

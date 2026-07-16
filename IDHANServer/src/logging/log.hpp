@@ -32,7 +32,8 @@ namespace idhan::log
 [[nodiscard]] std::shared_ptr< spdlog::logger > getServerLogger();
 [[nodiscard]] std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > getServerRingBufferSink();
 void setServerLogger(
-	std::shared_ptr< spdlog::logger > logger, std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_buffer_sink );
+	std::shared_ptr< spdlog::logger > logger,
+	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_buffer_sink );
 
 #ifndef IDHAN_DISABLE_TRACE_LOGGING
 template < typename... Ts >

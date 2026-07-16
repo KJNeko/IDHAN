@@ -94,7 +94,8 @@ std::pair< void*, std::size_t > FileIOUring::mmapReadOnly()
 	if ( raw == MAP_FAILED ) return { nullptr, 0 };
 
 	const auto size { m_size };
-	m_mmap_ptr = std::shared_ptr< void >( raw, [ size ]( const void* ptr ) { munmap( const_cast< void* >( ptr ), size ); } );
+	m_mmap_ptr =
+		std::shared_ptr< void >( raw, [ size ]( const void* ptr ) { munmap( const_cast< void* >( ptr ), size ); } );
 	return { m_mmap_ptr.get(), m_size };
 }
 

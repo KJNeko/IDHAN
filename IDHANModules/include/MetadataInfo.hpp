@@ -28,7 +28,7 @@ struct MetadataInfoAnimation
 struct MetadataInfoImageProject
 {
 	MetadataInfoImage image_info {}; //!< Dimensions of the flattened canvas.
-	std::uint8_t layers { 0 };       //!< Number of layers.
+	std::uint8_t layers { 0 }; //!< Number of layers.
 };
 
 //! Metadata for a video (or audio-bearing container).
@@ -37,9 +37,9 @@ struct MetadataInfoVideo
 	bool m_has_audio { false };
 	int m_width { 0 };
 	int m_height { 0 };
-	int m_bitrate { 0 };      //!< Overall bitrate in bits per second.
+	int m_bitrate { 0 }; //!< Overall bitrate in bits per second.
 	double m_duration { 0.0 }; //!< Duration in seconds.
-	double m_fps { 0.0 };      //!< Frames per second.
+	double m_fps { 0.0 }; //!< Frames per second.
 };
 
 //! Metadata for an archive (zip, rar, etc.).
@@ -66,7 +66,7 @@ struct MetadataInfo
 {
 	MetadataVariant m_metadata {}; //!< Category-specific fields (see MetadataVariant).
 
-	Json::Value m_extra {};        //!< Free-form extra metadata the module chose to surface.
+	Json::Value m_extra {}; //!< Free-form extra metadata the module chose to surface.
 	SimpleMimeType m_simple_type { SimpleMimeType::NONE }; //!< Coarse media category of the file.
 };
 

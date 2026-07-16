@@ -37,7 +37,8 @@ std::expected< std::pair< RecordID, RecordID >, drogon::HttpResponsePtr > parseD
 	return std::pair { worse_id, better_id };
 }
 
-drogon::Task< drogon::HttpResponsePtr > insertDuplicatePairs( const std::vector< std::pair< RecordID, RecordID > > pairs )
+drogon::Task< drogon::HttpResponsePtr > insertDuplicatePairs(
+	const std::vector< std::pair< RecordID, RecordID > > pairs )
 {
 	auto db { drogon::app().getDbClient() };
 

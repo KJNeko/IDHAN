@@ -158,9 +158,9 @@ JobRuntime::~JobRuntime()
 		bool all_finished { false };
 		{
 			std::lock_guard lock { m_queue_mtx };
-			all_finished = m_queue.empty()
-			            && std::ranges::all_of(
-							   m_jobs | std::views::values, []( const auto& job ) { return job->done(); } );
+			all_finished =
+				m_queue.empty()
+				&& std::ranges::all_of( m_jobs | std::views::values, []( const auto& job ) { return job->done(); } );
 		}
 		if ( all_finished ) break;
 		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );

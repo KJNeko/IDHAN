@@ -5,7 +5,8 @@ namespace idhan::api
 {
 
 // See createSiblings.cpp.
-drogon::Task< drogon::HttpResponsePtr > TagAPI::removeTagSiblings( [[maybe_unused]] const drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > TagAPI::removeTagSiblings(
+	[[maybe_unused]] const drogon::HttpRequestPtr request )
 {
 	co_return createNotImplemented( "Tag siblings are not currently resolved; this endpoint is disabled" );
 }

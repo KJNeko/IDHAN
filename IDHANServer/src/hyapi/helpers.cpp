@@ -4,14 +4,14 @@
 
 #include "helpers.hpp"
 
-#include "crypto/SHA256.hpp"
-#include "records/records.hpp"
 #include "IDHANTypes.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/SHA256.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "drogon/HttpResponse.h"
 #include "drogon/orm/DbClient.h"
 #include "logging/format_ns.hpp"
+#include "records/records.hpp"
 
 namespace idhan::hyapi::helpers
 {

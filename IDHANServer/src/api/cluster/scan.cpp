@@ -631,7 +631,8 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 	log::trace( "Starting mime scan for {} (Record {})", m_path.filename().string(), m_record_id );
 	const auto mime_string_e { co_await mime::getMimeDatabase()->scan( file_io ) };
-	log::trace( "Mime scan completed for {} (Record {}), result: {}",
+	log::trace(
+		"Mime scan completed for {} (Record {}), result: {}",
 		m_path.filename().string(),
 		m_record_id,
 		mime_string_e.has_value() ? mime_string_e.value() : "nullopt" );

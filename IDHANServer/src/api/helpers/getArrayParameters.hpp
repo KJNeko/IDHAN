@@ -20,7 +20,9 @@ std::vector< T > parseArrayParameters( drogon::HttpRequestPtr request, const std
 	for ( std::size_t i = 0; i < query.size(); )
 	{
 		const auto separator { query.find( '&', i ) };
-		const auto param { query.substr( i, separator == std::string_view::npos ? std::string_view::npos : separator - i ) };
+		const auto param {
+			query.substr( i, separator == std::string_view::npos ? std::string_view::npos : separator - i )
+		};
 		i = separator == std::string_view::npos ? query.size() : separator + 1;
 
 		// each parameter must be exactly `target=value`; a bare prefix test would also

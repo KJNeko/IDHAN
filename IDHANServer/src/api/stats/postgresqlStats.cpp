@@ -31,7 +31,12 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::postgresqlStorageSunData
 	std::string current_table {};
 	Json::Value current_table_json {};
 
-	const auto flush { [ & ]() { if ( !current_table.empty() ) root[ "children" ].append( current_table_json ); } };
+	const auto flush {
+		[ & ]()
+		{
+			if ( !current_table.empty() ) root[ "children" ].append( current_table_json );
+		}
+	};
 
 	for ( const auto& row : rows )
 	{

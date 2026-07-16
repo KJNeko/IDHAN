@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "IDHANTypes.hpp"
 #include <drogon/HttpResponse.h>
 
 #include <atomic>
@@ -12,6 +11,8 @@
 #include <optional>
 #include <source_location>
 #include <string>
+
+#include "IDHANTypes.hpp"
 
 struct JobTaskStatus
 {

@@ -14,15 +14,15 @@ namespace idhan
 //! A generated thumbnail, either raw RGB pixels or an encoded PNG (see m_mode).
 struct ThumbnailInfo
 {
-	std::vector< std::byte > data {};    //!< The thumbnail bytes; interpretation depends on m_mode.
-	std::size_t width, height;           //!< Thumbnail dimensions in pixels.
-	bool cache_thumbnail { true };       //!< Whether the host should persist this thumbnail to its cache.
+	std::vector< std::byte > data {}; //!< The thumbnail bytes; interpretation depends on m_mode.
+	std::size_t width, height; //!< Thumbnail dimensions in pixels.
+	bool cache_thumbnail { true }; //!< Whether the host should persist this thumbnail to its cache.
 
 	//! How to interpret ::data.
 	enum ThumbnailMode
 	{
-		RAW,      //!< Raw interleaved RGB pixels.
-		FILE_PNG  //!< A complete in-memory PNG file.
+		RAW, //!< Raw interleaved RGB pixels.
+		FILE_PNG //!< A complete in-memory PNG file.
 	} m_mode;
 
 	//! Convenience value for the cache_thumbnail argument, expressing "do not cache".

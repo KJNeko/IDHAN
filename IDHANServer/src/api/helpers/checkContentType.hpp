@@ -14,4 +14,4 @@ void checkContentType(
 	const ResponseFunction& callback,
 	const std::vector< drogon::ContentType >& expected );
 
-} // namespace idhan
+} // namespace idhan::api::helpers

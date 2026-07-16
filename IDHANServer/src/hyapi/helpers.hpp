@@ -3,8 +3,8 @@
 //
 #pragma once
 
-#include "crypto/SHA256.hpp"
 #include "IDHANTypes.hpp"
+#include "crypto/SHA256.hpp"
 #include "drogon/orm/DbClient.h"
 
 namespace idhan::hyapi::helpers
@@ -16,13 +16,11 @@ namespace idhan::hyapi::helpers
  * @param db
  * @return
  */
-[[nodiscard]] drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > > extractRecordIDsFromFilesJson(
-	Json::Value json,
-	DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
+	extractRecordIDsFromFilesJson( Json::Value json, DbClientPtr db );
 
-[[nodiscard]] drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > > extractRecordIDsFromParameters(
-	drogon::HttpRequestPtr request,
-	DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
+	extractRecordIDsFromParameters( drogon::HttpRequestPtr request, DbClientPtr db );
 
 [[nodiscard]] drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > extractRecordIDsToJsonFromFiles(
 	Json::Value json,

@@ -68,7 +68,7 @@ class ModuleHolder
 			std::abort();
 		}
 
-		initFunc   = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
+		initFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
 		deinitFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) );
 #elif defined( _WIN32 )
 		m_handle = LoadLibraryW( path.wstring().c_str() );
@@ -78,7 +78,7 @@ class ModuleHolder
 			std::abort();
 		}
 
-		initFunc   = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "init" ) );
+		initFunc = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "init" ) );
 		deinitFunc = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "deinit" ) );
 #endif
 
@@ -133,8 +133,7 @@ std::expected< std::vector< std::byte >, ModuleError > generate(
 
 		ModuleCallData call_data { .file_view = data, .mime_name = *exp, .extra = extra };
 
-		const auto generated_file { generator->generate( call_data, hash ) };
-		return generated_file;
+		return generator->generate( call_data, hash );
 	}
 }
 

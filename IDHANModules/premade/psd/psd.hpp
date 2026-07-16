@@ -26,10 +26,10 @@ namespace psd
 //! The parsed fields of a PSD file header.
 struct PSDHeader
 {
-	std::uint16_t channels;  //!< Number of channels (colour + alpha).
-	std::uint32_t height;    //!< Image height in pixels.
-	std::uint32_t width;     //!< Image width in pixels.
-	std::uint16_t depth;     //!< Bits per channel sample (1, 8, 16 or 32).
+	std::uint16_t channels; //!< Number of channels (colour + alpha).
+	std::uint32_t height; //!< Image height in pixels.
+	std::uint32_t width; //!< Image width in pixels.
+	std::uint16_t depth; //!< Bits per channel sample (1, 8, 16 or 32).
 	std::uint16_t colorMode; //!< PSD colour mode (0 bitmap, 1 grayscale, 2 indexed, 3 RGB, 4 CMYK, ...).
 };
 
@@ -69,10 +69,14 @@ void unpackScanline(
 	std::size_t bytesPerSample );
 
 //! Down-converts 16-bit-per-sample data to 8-bit. \param pixelCount Total samples to convert.
-[[nodiscard]] std::vector< std::uint8_t > convert16to8bit( const std::vector< std::uint8_t >& buffer, std::size_t pixelCount );
+[[nodiscard]] std::vector< std::uint8_t > convert16to8bit(
+	const std::vector< std::uint8_t >& buffer,
+	std::size_t pixelCount );
 
 //! Down-converts 32-bit float samples to 8-bit. \param pixelCount Total samples to convert.
-[[nodiscard]] std::vector< std::uint8_t > convert32to8bit( const std::vector< std::uint8_t >& buffer, std::size_t pixelCount );
+[[nodiscard]] std::vector< std::uint8_t > convert32to8bit(
+	const std::vector< std::uint8_t >& buffer,
+	std::size_t pixelCount );
 
 //! Normalises samples of the given \p depth (16 or 32) down to 8-bit; passes 8-bit input through.
 [[nodiscard]] std::vector< std::uint8_t > convertToTargetDepth(

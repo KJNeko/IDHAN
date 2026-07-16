@@ -88,8 +88,8 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 			break;
 		case 1: // PackBits
 			{
-				planarData =
-					unpackRaster( bytes, offset, length, header->width, header->height, header->channels, bytesPerSample );
+				planarData = unpackRaster(
+					bytes, offset, length, header->width, header->height, header->channels, bytesPerSample );
 				if ( planarData.empty() )
 				{
 					return std::unexpected( idhan::ModuleError { "Failed to decompress RLE data" } );

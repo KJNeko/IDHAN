@@ -24,8 +24,8 @@ namespace log = spdlog;
 //! the opaque pointer to readFunction/seekFunction so FFmpeg can demux a buffer without touching disk.
 struct OpaqueInfo
 {
-	idhan::data_view m_data;      //!< The in-memory file bytes (not owned).
-	std::int64_t m_cursor { 0 };  //!< Current read position, in bytes from the start.
+	idhan::data_view m_data; //!< The in-memory file bytes (not owned).
+	std::int64_t m_cursor { 0 }; //!< Current read position, in bytes from the start.
 };
 
 //! AVIO read callback: copies up to \p buffer_size bytes from the OpaqueInfo cursor into \p buffer.

@@ -5,8 +5,8 @@
 #include "archives.hpp"
 
 #include <archive.h>
-#include <chardet.h>
 #include <array>
+#include <chardet.h>
 #include <cwchar>
 #include <expected>
 #include <iconv.h>

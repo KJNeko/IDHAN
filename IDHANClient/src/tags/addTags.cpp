@@ -180,10 +180,7 @@ QFuture< void > IDHANClient::addTags(
 	};
 
 	auto state { std::make_shared< State >( State {
-		std::move( record_ids ),
-		tag_domain_id,
-		std::move( tag_set_indicies ),
-		unique_tags.size() } ) };
+		std::move( record_ids ), tag_domain_id, std::move( tag_set_indicies ), unique_tags.size() } ) };
 
 	auto* self { this };
 

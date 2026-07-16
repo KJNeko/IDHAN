@@ -4,6 +4,7 @@
 #pragma once
 #include <atomic>
 #include <condition_variable>
+#include <coroutine>
 #include <functional>
 #include <memory>
 #include <queue>
@@ -12,8 +13,6 @@
 #include <string_view>
 #include <thread>
 #include <unordered_map>
-
-#include <coroutine>
 
 #include "IDHANTypes.hpp"
 #include "JobTask.hpp"
@@ -36,7 +35,7 @@ class Value;
 //! the single instance via getJobRuntime(); enqueue work with queueJob().
 class JobRuntime
 {
-	std::unique_ptr< trantor::EventLoopThreadPool > m_pool{};
+	std::unique_ptr< trantor::EventLoopThreadPool > m_pool {};
 	std::mutex m_queue_mtx {};
 	std::condition_variable m_cv;
 	using JobPtr = std::shared_ptr< JobContext >;
@@ -130,7 +129,7 @@ struct SetJobResponseWaitable
 	explicit SetJobResponseWaitable( drogon::HttpResponsePtr response ) : m_response( std::move( response ) ) {}
 
 	explicit SetJobResponseWaitable( const Json::Value& response ) :
-		m_response( drogon::HttpResponse::newHttpJsonResponse( response ) )
+	  m_response( drogon::HttpResponse::newHttpJsonResponse( response ) )
 	{}
 
 	static bool await_ready() noexcept { return false; }

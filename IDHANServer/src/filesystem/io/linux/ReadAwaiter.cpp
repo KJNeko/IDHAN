@@ -14,10 +14,7 @@
 namespace idhan
 {
 
-ReadAwaiter::ReadAwaiter(
-	IOUringLinux* uring,
-	io_uring_sqe sqe,
-	std::shared_ptr< std::vector< std::byte > >& data ) :
+ReadAwaiter::ReadAwaiter( IOUringLinux* uring, io_uring_sqe sqe, std::shared_ptr< std::vector< std::byte > >& data ) :
   m_data( data ),
   m_cont(),
   m_uring( uring ),

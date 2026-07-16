@@ -99,12 +99,13 @@ void IOUringW10::associateHandle( const NativeHandle handle )
 	const HANDLE h { reinterpret_cast< HANDLE >( handle ) };
 	if ( CreateIoCompletionPort( h, m_iocp, reinterpret_cast< ULONG_PTR >( h ), 0 ) == nullptr )
 		throw std::runtime_error(
-			"IOUringW10::associateHandle: CreateIoCompletionPort failed, error: " +
-			std::to_string( GetLastError() ) );
+			"IOUringW10::associateHandle: CreateIoCompletionPort failed, error: " + std::to_string( GetLastError() ) );
 }
 
-drogon::Task< std::vector< std::byte > >
-	IOUringW10::read( const NativeHandle handle, const std::size_t offset, const std::size_t len )
+drogon::Task< std::vector< std::byte > > IOUringW10::read(
+	const NativeHandle handle,
+	const std::size_t offset,
+	const std::size_t len )
 {
 	const HANDLE h { reinterpret_cast< HANDLE >( handle ) };
 
@@ -112,12 +113,10 @@ drogon::Task< std::vector< std::byte > >
 	buffer->resize( len );
 
 	ReadAwaiterWin awaiter { buffer };
-	awaiter.m_overlapped.Offset     = static_cast< DWORD >( offset & 0xFFFFFFFF );
+	awaiter.m_overlapped.Offset = static_cast< DWORD >( offset & 0xFFFFFFFF );
 	awaiter.m_overlapped.OffsetHigh = static_cast< DWORD >( ( offset >> 32 ) & 0xFFFFFFFF );
 
-	const BOOL ok {
-		ReadFile( h, buffer->data(), static_cast< DWORD >( len ), nullptr, &awaiter.m_overlapped )
-	};
+	const BOOL ok { ReadFile( h, buffer->data(), static_cast< DWORD >( len ), nullptr, &awaiter.m_overlapped ) };
 
 	if ( !ok )
 	{
@@ -138,18 +137,18 @@ drogon::Task< std::vector< std::byte > >
 	co_return co_await awaiter;
 }
 
-drogon::Task< void >
-	IOUringW10::write( const NativeHandle handle, std::vector< std::byte > data, const std::size_t offset )
+drogon::Task< void > IOUringW10::write(
+	const NativeHandle handle,
+	std::vector< std::byte > data,
+	const std::size_t offset )
 {
 	const HANDLE h { reinterpret_cast< HANDLE >( handle ) };
 
 	WriteAwaiterWin awaiter {};
-	awaiter.m_overlapped.Offset     = static_cast< DWORD >( offset & 0xFFFFFFFF );
+	awaiter.m_overlapped.Offset = static_cast< DWORD >( offset & 0xFFFFFFFF );
 	awaiter.m_overlapped.OffsetHigh = static_cast< DWORD >( ( offset >> 32 ) & 0xFFFFFFFF );
 
-	const BOOL ok {
-		WriteFile( h, data.data(), static_cast< DWORD >( data.size() ), nullptr, &awaiter.m_overlapped )
-	};
+	const BOOL ok { WriteFile( h, data.data(), static_cast< DWORD >( data.size() ), nullptr, &awaiter.m_overlapped ) };
 
 	if ( !ok )
 	{
