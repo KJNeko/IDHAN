@@ -174,7 +174,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	{
 		if ( format_context->streams[ i ]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
 		{
-			video_stream_index = i;
+			video_stream_index = static_cast< int >( i );
 			codec_params = format_context->streams[ i ]->codecpar;
 			break;
 		}
@@ -186,9 +186,9 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	}
 
 	// Calculate 10% duration and seek to it
-	const auto duration { av_rescale_q(
-		format_context->duration, AV_TIME_BASE_Q, format_context->streams[ video_stream_index ]->time_base ) };
-	const auto target_timestamp { static_cast< int64_t >( duration * 0.10 ) };
+	const auto& stream { format_context->streams[ video_stream_index ] };
+	const auto duration { av_rescale_q( format_context->duration, AV_TIME_BASE_Q, stream->time_base ) };
+	const auto target_timestamp { duration / 10 }; // 10% of the total duration
 
 	if ( av_seek_frame( format_context.get(), video_stream_index, target_timestamp, AVSEEK_FLAG_BACKWARD ) < 0 )
 	{

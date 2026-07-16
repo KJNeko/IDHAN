@@ -28,9 +28,11 @@ std::shared_ptr< JobContext > JobRuntime::getNextJob()
 		        || m_soft_stop.load( std::memory_order_acquire );
 		} );
 
-	if ( m_queue.empty() ) return nullptr;
+	std::shared_ptr< JobContext > job { nullptr };
 
-	auto job { m_queue.front() };
+	if ( m_queue.empty() ) return job;
+
+	job = m_queue.front();
 	m_queue.pop();
 	return job;
 }

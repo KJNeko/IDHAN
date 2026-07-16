@@ -151,14 +151,24 @@ IOUringLinux::SubmissionRingPointers IOUringLinux::setupSubmissionRing()
 		const auto sq_len { m_params.sq_off.array + m_params.sq_entries * sizeof( unsigned ) };
 		const auto cq_len { m_params.cq_off.cqes + m_params.cq_entries * sizeof( io_uring_cqe ) };
 		const auto length { std::max( sq_len, cq_len ) };
-		ptrs.mmap =
-			mmap( nullptr, length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_SQ_RING );
+		ptrs.mmap = mmap(
+			nullptr,
+			length,
+			PROT_READ | PROT_WRITE,
+			MAP_SHARED | MAP_POPULATE,
+			static_cast< int >( uring_fd ),
+			IORING_OFF_SQ_RING );
 	}
 	else
 	{
 		ptrs.length = m_params.sq_off.array + m_params.sq_entries * sizeof( unsigned );
 		ptrs.mmap = mmap(
-			nullptr, ptrs.length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, uring_fd, IORING_OFF_SQ_RING );
+			nullptr,
+			ptrs.length,
+			PROT_READ | PROT_WRITE,
+			MAP_SHARED | MAP_POPULATE,
+			static_cast< int >( uring_fd ),
+			IORING_OFF_SQ_RING );
 	}
 
 	const auto& sq_off { m_params.sq_off };

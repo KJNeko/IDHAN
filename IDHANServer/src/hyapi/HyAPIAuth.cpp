@@ -7,8 +7,8 @@
 
 namespace idhan::hyapi
 {
-HyAPIAuth::HyAPIAuth()
-{}
+
+HyAPIAuth::HyAPIAuth() = default;
 
 drogon::Task< drogon::HttpResponsePtr > HyAPIAuth::doFilter( const drogon::HttpRequestPtr& req )
 {

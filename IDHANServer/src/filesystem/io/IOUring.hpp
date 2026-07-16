@@ -34,8 +34,8 @@ class IOUring
 	virtual void associateHandle( [[maybe_unused]] NativeHandle handle ) {}
 
 	virtual ~IOUring() = default;
-
 	IOUring() = default;
+
 	FGL_DELETE_COPY( IOUring );
 	FGL_DELETE_MOVE( IOUring );
 

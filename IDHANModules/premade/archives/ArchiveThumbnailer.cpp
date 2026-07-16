@@ -92,15 +92,17 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 	// determine a grid; ceil(sqrt) so the canvas is large enough for every child. floor() left
 	// non-perfect-square counts with an undersized canvas (relying on insert's expand to paper
 	// over it) and collapsed 2-3 child archives to grid_size 1, discarding all but the first.
-	std::size_t grid_size {
+	auto grid_size {
 		static_cast< std::size_t >( std::ceil( std::sqrt( static_cast< double >( child_thumbnails ) ) ) )
 	};
 
 	constexpr auto thumb_width { 128 };
 	constexpr auto thumb_height { 128 };
 
-	vips::VImage canvas { vips::VImage::black(
-		thumb_width * grid_size, thumb_height * grid_size, vips::VImage::option()->set( "bands", 3 ) ) };
+	const int grid_width { thumb_width * static_cast< int >( grid_size ) };
+	const int grid_height { thumb_height * static_cast< int >( grid_size ) };
+
+	vips::VImage canvas { vips::VImage::black( grid_width, grid_height, vips::VImage::option()->set( "bands", 3 ) ) };
 
 	bool flag_cache_thumbnail { true };
 	std::size_t counter { 0 };
@@ -153,7 +155,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		const auto x { counter % grid_size };
 		const auto y { counter / grid_size };
 		counter += 1;
-		const auto& image_rgb { thumbnail_rgb->data };
 		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail, _ ] = *thumbnail_rgb;
 
 		if ( !cache_thumbnail ) flag_cache_thumbnail = false;
@@ -161,8 +162,8 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		vips::VImage thumb { vips::VImage::new_from_memory_copy(
 			const_cast< void* >( static_cast< const void* >( rgb.data() ) ),
 			rgb.size(),
-			gen_thumb_width,
-			gen_thumb_height,
+			static_cast< int >( gen_thumb_width ),
+			static_cast< int >( gen_thumb_height ),
 			3,
 			VIPS_FORMAT_UCHAR ) };
 
