@@ -32,7 +32,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 	std::size_t height )
 {
 	const auto& [ data_view, mime, extra ] = data;
-	const auto bytes { static_cast< const std::uint8_t* >( data_view.data() ) };
+	const auto* bytes { ( data_view.data() ) };
 	const auto length { data_view.size() };
 
 	const auto header { parsePSDHeader( bytes, length ) };

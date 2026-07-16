@@ -52,7 +52,7 @@ class ModuleHolder
 	[[nodiscard]] HMODULE handle() const { return m_handle; }
 #endif
 
-	ModuleHolder( const std::filesystem::path& path )
+	ModuleHolder( const std::filesystem::path& path ) : m_handle( nullptr )
 	{
 		if ( !std::filesystem::exists( path ) )
 		{

@@ -101,9 +101,10 @@ std::vector< std::uint8_t > unpackRaster(
 	const std::size_t bytesPerSample )
 {
 	const std::size_t scanlineCountsSize { height * channels * 2 };
+	std::vector< std::uint8_t > planarData {};
 	if ( offset + scanlineCountsSize > dataLength )
 	{
-		return {};
+		return planarData;
 	}
 
 	std::vector< std::uint16_t > scanlineLengths( height * channels );
@@ -119,7 +120,7 @@ std::vector< std::uint8_t > unpackRaster(
 	// made the subsequent depth conversion reject the data.
 	const std::size_t rowBytes { static_cast< std::size_t >( width ) * bytesPerSample };
 	const std::size_t planeSize { static_cast< std::size_t >( width ) * height };
-	std::vector< std::uint8_t > planarData( planeSize * channels * bytesPerSample );
+	planarData.resize( planeSize * channels * bytesPerSample );
 
 	std::size_t outputOffset { 0 };
 	for ( const std::uint16_t scanlineLength : scanlineLengths )
@@ -128,7 +129,7 @@ std::vector< std::uint8_t > unpackRaster(
 
 		if ( offset + compressedLength > dataLength )
 		{
-			return {};
+			return planarData;
 		}
 
 		unpackScanline( buffer + offset, compressedLength, planarData.data() + outputOffset, rowBytes );
@@ -142,11 +143,14 @@ std::vector< std::uint8_t > unpackRaster(
 
 std::vector< std::uint8_t > convert16to8bit( const std::vector< std::uint8_t >& buffer, const std::size_t pixelCount )
 {
+	std::vector< std::uint8_t > result {};
 	if ( buffer.size() < pixelCount * 2 )
 	{
-		return {};
+		return result;
 	}
-	std::vector< std::uint8_t > result( pixelCount );
+
+	result.resize( pixelCount );
+
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 		result[ i ] = static_cast< std::uint8_t >( readUint16BE( &buffer[ i * 2 ] ) >> 8 );
 	return result;
@@ -154,11 +158,14 @@ std::vector< std::uint8_t > convert16to8bit( const std::vector< std::uint8_t >& 
 
 std::vector< std::uint8_t > convert32to8bit( const std::vector< std::uint8_t >& buffer, const std::size_t pixelCount )
 {
+	std::vector< std::uint8_t > result {};
 	if ( buffer.size() < pixelCount * 4 )
 	{
-		return {};
+		return result;
 	}
-	std::vector< std::uint8_t > result( pixelCount );
+
+	result.resize( pixelCount );
+
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 		result[ i ] =
 			static_cast< std::uint8_t >( std::clamp( readFloat32BE( &buffer[ i * 4 ] ), 0.0f, 1.0f ) * 255.0f );
@@ -236,9 +243,9 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertIndexedT
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 	{
 		const std::uint8_t value { indexed[ i ] };
-		rgb[ i * 3 + 0 ] = colorTable[ value + 0x000 ];
-		rgb[ i * 3 + 1 ] = colorTable[ value + 0x100 ];
-		rgb[ i * 3 + 2 ] = colorTable[ value + 0x200 ];
+		rgb[ i * 3 + 0 ] = colorTable[ static_cast< std::ptrdiff_t >( value ) + 0x000 ];
+		rgb[ i * 3 + 1 ] = colorTable[ static_cast< std::ptrdiff_t >( value ) + 0x100 ];
+		rgb[ i * 3 + 2 ] = colorTable[ static_cast< std::ptrdiff_t >( value ) + 0x200 ];
 	}
 	return rgb;
 }

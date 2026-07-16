@@ -16,7 +16,11 @@ constexpr std::string pgEscapeI( const std::string& str )
 	cleaned.reserve( str.size() * 2 );
 
 	// if ( str.empty() ) return "\"\"";
-	if ( str == "null" ) return "\"null\"";
+	if ( str == "null" )
+	{
+		cleaned = "\"null\"";
+		return cleaned;
+	}
 
 	bool contains_comma { false };
 
@@ -45,7 +49,7 @@ constexpr std::string pgEscapeI( const std::string& str )
 		}
 	}
 
-	if ( contains_comma ) return format_ns::format( "\"{}\"", cleaned );
+	if ( contains_comma ) cleaned = format_ns::format( "\"{}\"", cleaned );
 	return cleaned;
 }
 

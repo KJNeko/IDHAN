@@ -50,9 +50,7 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 
 	MetadataInfo info {};
 	info.m_metadata = MetadataInfoImage {
-		.width = static_cast< int >( image.width() ),
-		.height = static_cast< int >( image.height() ),
-		.channels = static_cast< std::uint8_t >( image.bands() )
+		.width = image.width(), .height = image.height(), .channels = static_cast< std::uint8_t >( image.bands() )
 	};
 
 	info.m_simple_type = idhan::SimpleMimeType::IMAGE_TYPE;
