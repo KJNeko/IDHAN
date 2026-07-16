@@ -89,7 +89,7 @@ class IDHANClient
 
 	void addKeyHeader( QNetworkRequest& request );
 
-	Q_DISABLE_COPY_MOVE( IDHANClient );
+	Q_DISABLE_COPY_MOVE( IDHANClient )
 
 	IDHANClient() = delete;
 
