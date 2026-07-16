@@ -44,9 +44,9 @@ Json::Value decompressToJson( const std::vector< char >& compressed_data )
 	spdlog::trace( "Decompressing {} bytes of zlib data", compressed_data.size() );
 
 	z_stream strm {};
-	strm.zalloc = Z_NULL;
-	strm.zfree = Z_NULL;
-	strm.opaque = Z_NULL;
+	strm.zalloc = nullptr;
+	strm.zfree = nullptr;
+	strm.opaque = nullptr;
 	strm.next_in = reinterpret_cast< Bytef* >( const_cast< char* >( compressed_data.data() ) );
 	strm.avail_in = compressed_data.size();
 

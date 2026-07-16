@@ -243,9 +243,9 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertIndexedT
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 	{
 		const std::uint8_t value { indexed[ i ] };
-		rgb[ i * 3 + 0 ] = colorTable[ static_cast< std::ptrdiff_t >( value ) + 0x000 ];
-		rgb[ i * 3 + 1 ] = colorTable[ static_cast< std::ptrdiff_t >( value ) + 0x100 ];
-		rgb[ i * 3 + 2 ] = colorTable[ static_cast< std::ptrdiff_t >( value ) + 0x200 ];
+		rgb[ i * 3 + 0 ] = colorTable[ static_cast< std::size_t >( value ) + 0x000 ];
+		rgb[ i * 3 + 1 ] = colorTable[ static_cast< std::size_t >( value ) + 0x100 ];
+		rgb[ i * 3 + 2 ] = colorTable[ static_cast< std::size_t >( value ) + 0x200 ];
 	}
 	return rgb;
 }
@@ -346,8 +346,8 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 		offset += 2;
 
 		// Skip channel info
-		if ( offset + channelCount * 6 > length ) return realLayerCount;
-		offset += channelCount * 6;
+		if ( offset + static_cast< std::size_t >( channelCount ) * 6 > length ) return realLayerCount;
+		offset += static_cast< std::size_t >( channelCount ) * 6;
 
 		// Skip signature, blend mode, opacity, clipping, flags, filler
 		if ( offset + 12 > length ) return realLayerCount;

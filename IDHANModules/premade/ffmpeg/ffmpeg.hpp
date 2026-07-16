@@ -31,7 +31,7 @@ struct OpaqueInfo
 //! AVIO read callback: copies up to \p buffer_size bytes from the OpaqueInfo cursor into \p buffer.
 //! \param opaque Pointer to the OpaqueInfo.
 //! \return Number of bytes read, or AVERROR_EOF at end of data.
-inline int readFunction( void* opaque, std::uint8_t* buffer, int buffer_size )
+inline int readFunction( void* opaque, std::uint8_t* buffer, const int buffer_size )
 {
 	auto& buffer_view { *static_cast< OpaqueInfo* >( opaque ) };
 
@@ -46,7 +46,7 @@ inline int readFunction( void* opaque, std::uint8_t* buffer, int buffer_size )
 
 	if ( min_size == 0 ) return AVERROR_EOF;
 
-	std::memcpy( buffer, data, min_size );
+	std::memcpy( buffer, data, static_cast< std::size_t >( min_size ) );
 
 	buffer_view.m_cursor += min_size;
 
