@@ -28,7 +28,7 @@ class JobContext;
 namespace Json
 {
 class Value;
-};
+}
 
 //! Runs JobTask coroutines on a dedicated trantor event-loop thread pool. Jobs are process-local
 //! (IDs are not persisted and reset on restart) and completed jobs are retained for one hour. Access
