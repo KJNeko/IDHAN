@@ -5,7 +5,7 @@
 #pragma once
 
 //! Packs a semantic version into a single int as (major << 16) | (minor << 8) | patch.
-#define MAKE_IDHAN_VERSION( major, minor, patch ) int( ( major << 16 ) | ( minor << 8 ) | patch )
+#define MAKE_IDHAN_VERSION( major, minor, patch ) ( ( major << 16 ) | ( minor << 8 ) | patch )
 
 #ifndef IDHAN_MAJOR_VERSION
 #error Major version must be specified for release builds
