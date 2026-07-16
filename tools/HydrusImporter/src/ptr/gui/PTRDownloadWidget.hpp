@@ -24,7 +24,7 @@ class PTRDownloadWidget final : public QWidget
 	explicit PTRDownloadWidget( QWidget* parent = nullptr );
 	~PTRDownloadWidget() override;
 
-	Q_DISABLE_COPY_MOVE( PTRDownloadWidget );
+	Q_DISABLE_COPY_MOVE( PTRDownloadWidget )
 
   signals:
 

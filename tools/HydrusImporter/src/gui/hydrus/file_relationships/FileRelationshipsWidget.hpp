@@ -29,7 +29,7 @@ class FileRelationshipsWidget : public QWidget
 
   public:
 
-	Q_DISABLE_COPY_MOVE( FileRelationshipsWidget );
+	Q_DISABLE_COPY_MOVE( FileRelationshipsWidget )
 
 	explicit FileRelationshipsWidget( idhan::hydrus::HydrusImporter* importer, QWidget* parent = nullptr );
 

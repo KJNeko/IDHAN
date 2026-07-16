@@ -54,7 +54,7 @@ class PTRImportWorker : public QObject, public QRunnable
 
 	explicit PTRImportWorker( const std::filesystem::path& ptr_directory, QObject* parent = nullptr );
 
-	Q_DISABLE_COPY_MOVE( PTRImportWorker );
+	Q_DISABLE_COPY_MOVE( PTRImportWorker )
 	~PTRImportWorker() override;
 	void run() override;
 

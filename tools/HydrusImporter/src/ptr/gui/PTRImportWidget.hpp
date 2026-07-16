@@ -24,7 +24,7 @@ class PTRImportWidget final : public QWidget
 	explicit PTRImportWidget( QWidget* parent = nullptr );
 	~PTRImportWidget() override;
 
-	Q_DISABLE_COPY_MOVE( PTRImportWidget );
+	Q_DISABLE_COPY_MOVE( PTRImportWidget )
 
   public slots:
 
