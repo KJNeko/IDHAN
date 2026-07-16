@@ -60,27 +60,15 @@ class SHA256
 	static constexpr std::size_t size() { return ( 256 / 8 ); }
 
 	//! \return A copy of the raw 32 hash bytes.
-	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; }
+	std::array< std::byte, ( 256 / 8 ) > data() const;
 
 	//! Supplied so we can work with drogon until I figure out how the fuck to overload their operators.
-	inline std::vector< char > toVec() const
-	{
-		std::vector< char > data {};
-		data.resize( m_data.size() );
-		std::memcpy( data.data(), m_data.data(), m_data.size() );
-		return data;
-	}
+	std::vector< char > toVec() const;
 
-	bool operator==( const SHA256& other ) const
-	{
-		return std::memcmp( m_data.data(), other.m_data.data(), m_data.size() ) == 0;
-	}
+	bool operator==( const SHA256& other ) const;
 
 	//! Lexicographic unsigned byte ordering; a valid strict weak ordering for use as a map/set key.
-	bool operator<( const SHA256& other ) const
-	{
-		return std::memcmp( m_data.data(), other.m_data.data(), m_data.size() ) < 0;
-	}
+	bool operator<( const SHA256& other ) const;
 
 	//! \return The lowercase 64-character hex representation of the hash.
 	[[nodiscard]] std::string hex() const;
@@ -104,7 +92,10 @@ class SHA256
 	[[nodiscard]] static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
 
 	//! \copydoc hash(const std::byte*,std::size_t)
-	[[nodiscard]] static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
+	[[nodiscard]] static SHA256 hash( const std::vector< std::byte >& data )
+	{
+		return hash( data.data(), data.size() );
+	}
 };
 
 } // namespace idhan
