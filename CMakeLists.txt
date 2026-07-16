@@ -16,12 +16,15 @@ set(IDHAN_DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
 
 enable_testing()
 
-# Includes fgl_cmake_modules
+# Includes fgl_cmake_modules (defines AddFGLLibrary/AddFGLExecutable/AddFGLModule
+# and the fgl::flags target). This configures the FGL build helpers on include;
+# there is no separate PreSetup()/PostSetup() step.
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/libFGL)
 
+# Find-modules (Finddrogon.cmake, postgres.cmake, ...) and config packages live
+# under dependencies/.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dependencies")
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/dependencies")
-
-PreSetup()
 
 option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
 option(BUILD_IDHAN_WEBUI "Builds the WASM WebUI for IDHAN server" OFF)
@@ -156,6 +159,3 @@ if (BUILD_IDHAN_TESTS)
 	#IDHANTests
 	add_subdirectory(tests)
 endif ()
-
-
-PostSetup()
