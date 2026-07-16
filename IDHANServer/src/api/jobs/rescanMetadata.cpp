@@ -38,7 +38,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::rescanMetadata(
 	auto job_ctx { queueJob( rescanMetadataJobTask(), "rescanMetadata" ) };
 
 	Json::Value response;
-	response[ "job_id" ] = static_cast< Json::UInt64 >( job_ctx->id() );
+	response[ "job_id" ] = job_ctx->id();
 	response[ "status" ] = "dispatched";
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }

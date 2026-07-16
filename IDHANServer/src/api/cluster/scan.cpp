@@ -342,7 +342,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 	};
 
 	Json::Value response;
-	response[ "job_id" ] = static_cast< Json::UInt64 >( job_ctx->id() );
+	response[ "job_id" ] = job_ctx->id();
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }

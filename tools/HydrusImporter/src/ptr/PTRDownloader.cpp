@@ -107,9 +107,9 @@ void PTRDownloader::saveMetadata()
 {
 	Json::Value root;
 	root[ "schema_version" ] = 1;
-	root[ "last_sync_time" ] = static_cast< Json::Int64 >(
+	root[ "last_sync_time" ] =
 		std::chrono::duration_cast< std::chrono::seconds >( std::chrono::system_clock::now().time_since_epoch() )
-			.count() );
+			.count();
 	root[ "last_update_index" ] = m_last_update_index;
 	root[ "next_update_due" ] = static_cast< Json::Int64 >( m_metadata.next_update_due );
 

@@ -122,7 +122,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::testJob( [[maybe_unused]
 	log::debug( "Job created" );
 
 	Json::Value response;
-	response[ "job_id" ] = static_cast< Json::UInt64 >( job_ctx->id() );
+	response[ "job_id" ] = job_ctx->id();
 	response[ "status" ] = "dispatched";
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
