@@ -9,8 +9,8 @@
 #include <thread>
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <ioringapi.h>
+#include <windows.h>
 
 #include "fgl/defines.hpp"
 #include "filesystem/io/IOUring.hpp"

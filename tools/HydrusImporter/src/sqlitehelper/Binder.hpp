@@ -17,6 +17,9 @@
 namespace idhan::hydrus
 {
 
+//! Fluent SQLite statement wrapper for the Hydrus import: bind parameters with operator<<, then
+//! execute and consume results with operator>> (into a value, a std::optional, a tuple, or a per-row
+//! callback). \note Unrelated to the server's Drogon SqlBinder; this operates directly on sqlite3.
 class Binder
 {
 	sqlite3* ptr;
@@ -33,6 +36,8 @@ class Binder
 
 	[[nodiscard]] Binder( sqlite3* ptr, std::string_view sql );
 
+	//! Binds \p t as the next positional parameter. \throws std::runtime_error if too many parameters
+	//! are supplied or the SQLite bind fails.
 	template < typename T >
 	Binder& operator<<( T&& t )
 	{
@@ -61,6 +66,8 @@ class Binder
 		return *this;
 	}
 
+	//! Executes the query and stores the first row's single column into \p t.
+	//! \throws std::runtime_error if the query returns no rows.
 	// Feed into value directly
 	template < typename T >
 		requires( ( !is_optional< T > ) && (!is_tuple< T >))
@@ -76,6 +83,7 @@ class Binder
 			throw std::runtime_error( std::format( "No rows returned for query \"{}\"", sqlite3_sql( stmt ) ) );
 	}
 
+	//! Executes the query and stores the first row's single column, or std::nullopt if there were none.
 	// Feed output into optional
 	template < typename T >
 		requires( !is_optional< T > && (!is_tuple< T >))
@@ -91,6 +99,7 @@ class Binder
 			t = std::nullopt;
 	}
 
+	//! Executes the query and invokes \p func once per result row with the decoded columns as arguments.
 	// Call function using output
 	template < typename Function >
 		requires( ( !is_optional< Function > ) && (!is_tuple< Function >))
@@ -109,6 +118,8 @@ class Binder
 		}
 	}
 
+	//! Executes the query and stores the first row's columns into \p tpl.
+	//! \throws std::runtime_error if the query returns no rows.
 	// Feed output into tuple
 	template < typename... Ts >
 		requires( !( is_optional< Ts > && ... ) ) && ( !( is_tuple< Ts > && ... ) )

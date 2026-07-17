@@ -64,21 +64,21 @@ class Cursor
 	drogon::Task< std::string_view > data( std::size_t size ) const;
 
 	//! Tries to match `match` with current cursor position.
-	drogon::Task< bool > tryMatch( std::string_view match ) const;
+	[[nodiscard]] drogon::Task< bool > tryMatch( std::string_view match ) const;
 
 	//! Tries to match `match` with the current cursor position, if matched then the cursor will jump forward by
 	//! match.size()
-	drogon::Task< bool > tryMatchInc( std::string_view match );
+	[[nodiscard]] drogon::Task< bool > tryMatchInc( std::string_view match );
 
-	std::string_view fileExtension() const { return m_extension; }
+	[[nodiscard]] std::string_view fileExtension() const { return m_extension; }
 
 	void jumpTo( std::int64_t pos );
 
-	bool inc( std::size_t i = 1 );
+	[[nodiscard]] bool inc( std::size_t i = 1 );
 
 	void dec( std::size_t i = 1 );
 
-	std::size_t pos() const;
+	[[nodiscard]] std::size_t pos() const;
 };
 
 } // namespace idhan::mime

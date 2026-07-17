@@ -6,9 +6,9 @@
 namespace idhan
 {
 
-std::shared_ptr< ErrorInfo > ErrorInfo::setCode( const drogon::HttpStatusCode code )
+std::shared_ptr< ErrorInfo > ErrorInfo::setCode( const drogon::HttpStatusCode new_code )
 {
-	this->code = code;
+	this->code = new_code;
 	return shared_from_this();
 }
 

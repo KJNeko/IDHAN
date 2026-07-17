@@ -12,7 +12,9 @@ namespace idhan::api
 
 drogon::Task< Json::Value > processMetadata( const std::string mime_str, const std::string_view request_data )
 {
-	Json::Value response {};
+	// a default-constructed Json::Value is null until first append, so no matching
+	// modules would serialize metadata_modules as null instead of []
+	Json::Value response { Json::arrayValue };
 	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_str ) };
 	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
 	for ( const auto& metadata_module : metadata_modules )
@@ -23,6 +25,13 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 		ModuleCallData data { .file_view = data_view, .mime_name = mime_str, .extra = {} };
 
 		auto metadata_info { metadata_module->parseFile( data ) };
+
+		if ( !metadata_info )
+		{
+			metadata_obj[ "error" ] = metadata_info.error();
+			response.append( std::move( metadata_obj ) );
+			continue;
+		}
 
 		const auto metadata { metadata_info->m_metadata };
 
@@ -111,9 +120,7 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 	response[ "success" ] = true;
 	response[ "mime" ] = mime_str.value();
 
-	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
-
-	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, request_data );
+	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, file_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
@@ -136,7 +143,10 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpR
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::reloadMime( drogon::HttpRequestPtr request )
 {
-	co_await mime::getMimeDatabase()->reloadMimeParsers();
+	const auto reload_result { co_await mime::getMimeDatabase()->reloadMimeParsers() };
+
+	// a swallowed reload failure would report the stale parser list as a success
+	if ( !reload_result ) co_return reload_result.error();
 
 	co_return co_await listParsers( request );
 }

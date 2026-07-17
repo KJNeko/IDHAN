@@ -22,14 +22,22 @@ class FGL_EXPORT GeneratorModuleI : public ModuleBase
 
 	~GeneratorModuleI() override;
 
-	virtual std::vector< std::string_view > handleableMimes() = 0;
+	//! The canonical MIME types this generator can produce derived files from.
+	[[nodiscard]] virtual std::vector< std::string_view > handleableMimes() = 0;
 
-	virtual std::expected< std::vector< std::byte >, idhan::ModuleError > generate(
+	//! Produces a derived file (e.g. extracting a specific member from an archive).
+	//! \param data The source file and its MIME (see ModuleCallData).
+	//! \param desired_hash SHA-256 of the derived file the caller wants; the module locates and
+	//!        returns the matching output.
+	//! \return The derived file's bytes, or a ModuleError if it could not be produced.
+	[[nodiscard]] virtual std::expected< std::vector< std::byte >, idhan::ModuleError > generate(
 		ModuleCallData& data,
 		std::array< std::byte, 256 / 8 > desired_hash ) = 0;
 
-	bool canHandle( std::string_view mime );
+	//! \return true if \p mime is one of handleableMimes().
+	[[nodiscard]] bool canHandle( std::string_view mime );
 
+	//! \return ModuleTypeFlags::GENERATOR.
 	ModuleType type() override;
 };
 

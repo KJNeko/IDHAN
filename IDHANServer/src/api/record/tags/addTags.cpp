@@ -2,6 +2,8 @@
 // Created by kj16609 on 3/11/25.
 //
 
+#include <limits>
+
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -49,12 +51,12 @@ struct TagPair
 			{
 				tag_namespace = j_namespace.as< NamespaceID >();
 			}
-			else if ( j_subtag.isString() )
+			else if ( j_namespace.isString() )
 			{
 				tag_namespace = j_namespace.asString();
 			}
 			else
-				throw std::invalid_argument( "Invalid tag namespace" );
+				throw std::invalid_argument( "Invalid tag namespace: Namespace was neither numeric nor string" );
 
 			if ( j_subtag.isIntegral() )
 				tag_subtag = j_subtag.as< SubtagID >();
@@ -103,8 +105,12 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > > getIDFromPair( c
 
 	if ( !tag_namespace_is_str && !tag_subtag_is_str )
 	{
+		// the no-op DO UPDATE makes RETURNING yield the existing tag_id on conflict,
+		// where DO NOTHING would return an empty result set
 		const auto result { co_await db->execSqlCoro(
-			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) RETURNING tag_id",
+			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) "
+			"ON CONFLICT (namespace_id, subtag_id) DO UPDATE SET namespace_id = EXCLUDED.namespace_id "
+			"RETURNING tag_id",
 			std::get< NamespaceID >( tag_namespace ),
 			std::get< SubtagID >( tag_subtag ) ) };
 
@@ -132,8 +138,15 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 		{
 			if ( item.isObject() )
 				tags.emplace_back( TagPair( item ) );
-			else if ( item.isUInt64() )
-				tags.emplace_back< TagPair >( static_cast< TagID >( item.asUInt64() ) );
+			else if ( item.isIntegral() )
+			{
+				// isInt64 excludes values above int64 range, where asInt64 would throw.
+				// TagID is 32-bit; a larger value would silently wrap into a different tag
+				if ( !item.isInt64() || item.asInt64() <= 0 || item.asInt64() > std::numeric_limits< TagID >::max() )
+					co_return std::unexpected( createBadRequest( "Invalid tag id {}: out of range", item.asString() ) );
+
+				tags.emplace_back< TagPair >( static_cast< TagID >( item.asInt64() ) );
+			}
 			else if ( item.isString() )
 				tags.emplace_back( TagPair::fromSplit( item.asString() ) );
 			else
@@ -268,6 +281,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	const auto& json { *json_ptr };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	if ( !json[ "records" ].isArray() )
 		co_return createBadRequest( "Invalid json: Array of ids called 'records' must be present." );
 
@@ -287,6 +303,21 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	const auto& records_json { json[ "records" ] };
 
+	// validate once here: the "sets" branch below reads these with asInt64(), which
+	// throws on non-integral values and would surface as a 500
+	std::vector< RecordID > record_ids {};
+	record_ids.reserve( records_json.size() );
+	for ( const auto& record_json : records_json )
+	{
+		if ( !record_json.isIntegral() )
+			co_return createBadRequest( "Invalid json item in records list: Expected integral" );
+		record_ids.push_back( static_cast< RecordID >( record_json.asInt64() ) );
+	}
+
+	// unknown records would otherwise surface as FK-violation 500s in the mapping inserts
+	const auto record_validation { co_await helpers::validateRecordIds( record_ids, db ) };
+	if ( !record_validation ) co_return record_validation.error();
+
 	std::vector< drogon::Task< std::expected< void, drogon::HttpResponsePtr > > > add_results {};
 
 	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
@@ -300,13 +331,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
-		for ( const auto& record_json : records_json )
+		for ( const auto record_id : record_ids )
 		{
-			if ( !record_json.isIntegral() )
-				co_return createBadRequest( "Invalid json item in records list: Expected integral" );
-
-			add_results.emplace_back( addTagsToRecord(
-				static_cast< RecordID >( record_json.asInt64() ), tag_pair_ids.value(), tag_domain_id.value(), db ) );
+			add_results.emplace_back( addTagsToRecord( record_id, tag_pair_ids.value(), tag_domain_id.value(), db ) );
 		}
 	}
 	else if ( !tags_json.isNull() )
@@ -329,20 +356,22 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		for ( const auto& set_json : sets_json )
 		{
-			auto task = [ db ]( const Json::Value set_json_current ) -> Task
+			// The coroutine only starts running at when_all, after this closure is destroyed —
+			// db must be a parameter (copied into the coroutine frame), not a capture.
+			auto task = []( DbClientPtr db_c, const Json::Value set_json_current ) -> Task
 			{
 				const auto tags { co_await getTagPairs( set_json_current ) };
 
 				if ( !tags ) co_return std::unexpected( tags.error() );
 
-				const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db ) };
+				const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db_c ) };
 
 				if ( !tag_ids_e ) co_return std::unexpected( tag_ids_e.error() );
 
 				co_return *tag_ids_e;
 			};
 
-			sets_processing_tasks.emplace_back( task( set_json ) );
+			sets_processing_tasks.emplace_back( task( db, set_json ) );
 		}
 
 		auto sets { co_await drogon::when_all( std::move( sets_processing_tasks ) ) };
@@ -351,14 +380,12 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 		{
 			const auto& tag_ids_e { sets[ i ] };
 
+			if ( !tag_ids_e ) co_return tag_ids_e.error();
+
 			auto tag_ids { tag_ids_e.value() };
 
-			const auto record_json { records_json[ i ] };
-
-			add_results.emplace_back( addTagsToRecord(
-				static_cast< RecordID >( record_json.asInt64() ), std::move( tag_ids ), tag_domain_id.value(), db ) );
-
-			// if ( !result ) co_return result.error();
+			add_results.emplace_back(
+				addTagsToRecord( record_ids[ i ], std::move( tag_ids ), tag_domain_id.value(), db ) );
 		}
 	}
 	else if ( !sets_json.isNull() )

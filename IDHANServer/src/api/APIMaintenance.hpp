@@ -26,6 +26,8 @@
 namespace idhan::api
 {
 
+//! Maintenance and administrative endpoints: metadata rescans, DB storage stats, MIME
+//! parse/thumbnail/reload/parser-listing, integrity checks, thumbnail purge, and job-status polling.
 class APIMaintenance : public drogon::HttpController< APIMaintenance >
 {
 	drogon::Task< drogon::HttpResponsePtr > rescanMetadata( drogon::HttpRequestPtr request );
@@ -64,7 +66,7 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 
 	ADD_METHOD_TO( APIMaintenance::purgeThumbnails, "/purge/thumbnails", drogon::Post, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( APIMaintenance::testJob, "/test" );
+	ADD_METHOD_TO( APIMaintenance::testJob, "/test", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::jobStatus, "/jobs/{job_id}/status", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::jobsStatus, "/jobs/status", drogon::Get, IDHANAPIAuthName );
 

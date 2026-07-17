@@ -1,7 +1,7 @@
+#include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
-#include "IDHANTypes.hpp"
 #include "logging/ScopedTimer.hpp"
 
 namespace idhan::api
@@ -14,6 +14,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeMultipleTags( drogon::H
 	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );
 
 	const auto& json { *json_ptr };
+
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
 
 	if ( !json[ "records" ].isArray() )
 		co_return createBadRequest( "Invalid json: Array of ids called 'records' must be present." );
@@ -48,16 +51,14 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeMultipleTags( drogon::H
 
 	for ( const auto& set_json : sets_json )
 	{
-		if ( !set_json.isArray() )
-			co_return createBadRequest( "Invalid json: Each set must be an array of tag_ids" );
+		if ( !set_json.isArray() ) co_return createBadRequest( "Invalid json: Each set must be an array of tag_ids" );
 
 		std::vector< TagID > tag_ids;
 		tag_ids.reserve( set_json.size() );
 
 		for ( const auto& item : set_json )
 		{
-			if ( !item.isIntegral() )
-				co_return createBadRequest( "Invalid tag_id in set: Must be integral" );
+			if ( !item.isIntegral() ) co_return createBadRequest( "Invalid tag_id in set: Must be integral" );
 			tag_ids.push_back( item.as< TagID >() );
 		}
 
@@ -76,9 +77,16 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeMultipleTags( drogon::H
 		{
 			if ( tag_sets[ i ].empty() ) continue;
 
-			auto task = [ db, record_id = record_ids[ i ], tag_ids = std::move( tag_sets[ i ] ), domain_id = tag_domain_id.value() ]() -> Task
+			// The coroutine only starts running at when_all, long after this loop iteration's
+			// closure is gone — everything must be passed as parameters (copied into the
+			// coroutine frame), never as captures.
+			auto task =
+				[]( DbClientPtr db_c,
+			        const RecordID record_id,
+			        std::vector< TagID > tag_ids,
+			        const TagDomainID domain_id ) -> Task
 			{
-				co_await db->execSqlCoro(
+				co_await db_c->execSqlCoro(
 					"DELETE FROM tag_mappings WHERE record_id = $1 AND tag_id IN (SELECT UNNEST($2::" TAG_PG_TYPE_NAME
 					"[])) AND tag_domain_id = $3",
 					record_id,
@@ -87,7 +95,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeMultipleTags( drogon::H
 				co_return nullptr;
 			};
 
-			tasks.emplace_back( task() );
+			tasks.emplace_back( task( db, record_ids[ i ], std::move( tag_sets[ i ] ), tag_domain_id.value() ) );
 		}
 
 		co_await drogon::when_all( std::move( tasks ) );

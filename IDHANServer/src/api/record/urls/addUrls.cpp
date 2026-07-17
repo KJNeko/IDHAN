@@ -2,11 +2,11 @@
 // Created by kj16609 on 7/24/25.
 //
 
-#include "urls/urls.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "db/drogonArrayBind.hpp"
+#include "urls/urls.hpp"
 
 namespace idhan::api
 {
@@ -19,6 +19,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 	if ( !json_object ) co_return createBadRequest( "Json object malformed or null" );
 
 	const auto& json { *json_object };
+
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	const auto& urls { json[ "urls" ] };
 	if ( !urls.isArray() ) co_return createBadRequest( "No urls array in json" );
 
@@ -36,6 +40,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 
 	for ( const auto& url : urls )
 	{
+		if ( !url.isString() ) co_return createBadRequest( "Invalid item in urls array: Expected string" );
+
 		auto url_str { url.asString() };
 		domain_strings.push_back( helpers::extractDomain( url_str ) );
 		url_strings.push_back( std::move( url_str ) );

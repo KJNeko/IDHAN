@@ -23,7 +23,7 @@ QFuture< RecordID > IDHANClient::getRandomActiveRecord()
 		const QJsonDocument doc { QJsonDocument::fromJson( data ) };
 		const auto obj = doc.object();
 
-		promise->addResult( static_cast< RecordID >( obj[ "record_id" ].toInt() ) );
+		promise->addResult( obj[ "record_id" ].toInt() );
 		promise->finish();
 
 		response->deleteLater();

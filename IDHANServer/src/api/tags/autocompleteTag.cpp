@@ -55,7 +55,8 @@ drogon::Task< Json::Value > getSimilarTags(
 		         LEFT JOIN tag_counts tc USING (tag_id)
 		WHERE tag_text LIKE $1
 		GROUP BY tags.tag_id
-		ORDER BY exact DESC, score DESC, similarity DESC
+		-- score is NULL for unused tags; plain DESC is NULLS FIRST and would rank them above every used tag
+		ORDER BY exact DESC, score DESC NULLS LAST, similarity DESC
 		limit $3
 		)" };
 

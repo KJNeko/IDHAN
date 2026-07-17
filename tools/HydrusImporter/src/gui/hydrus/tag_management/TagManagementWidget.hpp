@@ -13,6 +13,7 @@ namespace Ui
 class TagManagementWidget;
 }
 
+//! Qt widget for reviewing tag domains and their relationships around a Hydrus import.
 class TagManagementWidget : public QWidget
 {
 	Q_OBJECT

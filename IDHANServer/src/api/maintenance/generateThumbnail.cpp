@@ -15,31 +15,18 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 	if ( request->contentType() != drogon::CT_APPLICATION_OCTET_STREAM )
 		co_return createBadRequest(
 			"Content type must be octet-stream was {}", static_cast< int >( request->contentType() ) );
+
 	const auto request_data { request->getBody() };
 
-	if ( request_data.empty() )
-	{
-		Json::Value error;
-		error[ "error" ] = "No data provided in POST request";
-		co_return drogon::HttpResponse::newHttpJsonResponse( error );
-	}
+	if ( request_data.empty() ) co_return createBadRequest( "No data provided in POST request" );
 
 	//TODO: Create handle for multipart to get filenames
 	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
 
-	if ( !mime_str )
-	{
-		Json::Value response;
-		response[ "success" ] = false;
-		response[ "error" ] = "Failed to parse mime type";
-		co_return drogon::HttpResponse::newHttpJsonResponse( response );
-	}
+	if ( !mime_str ) co_return createBadRequest( "Failed to detect mime type" );
 
 	const auto metadata_parser { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
-	if ( metadata_parser.empty() )
-	{
-		co_return createInternalError( "Was unable to find parser for {}", *mime_str );
-	}
+	if ( metadata_parser.empty() ) co_return createInternalError( "Was unable to find parser for {}", *mime_str );
 
 	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
 	ModuleCallData call_data { .file_view = data_view, .mime_name = *mime_str, .extra = {} };
@@ -53,35 +40,15 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( *mime_str ) };
 
-	if ( thumbnailers.empty() )
-	{
-		Json::Value response;
-		response[ "success" ] = false;
-		response[ "error" ] = "Failed to find thumbnailer for mime";
-		co_return drogon::HttpResponse::newHttpJsonResponse( response );
-	}
+	if ( thumbnailers.empty() ) co_return createNotFound( "No thumbnailer available for mime type {}", *mime_str );
 
-	//grab first thumbnailer
-	auto thumbnailer { thumbnailers.at( 0 ) };
+	const auto thumbnail_data { thumbnailers.at( 0 )->createThumbnailFile( call_data, 128, 128 ) };
 
-	const auto thumbnail_data { thumbnailer->createThumbnailFile( call_data, 128, 128 ) };
-
-	if ( !thumbnailer )
-	{
-		Json::Value response;
-		response[ "success" ] = false;
-		response[ "error" ] = "Failed to parse thumbnail type";
-		co_return drogon::HttpResponse::newHttpJsonResponse( response );
-	}
-
-	if ( !thumbnail_data )
-	{
-		co_return createInternalError( thumbnail_data.error() );
-	}
+	if ( !thumbnail_data ) co_return createInternalError( thumbnail_data.error() );
 
 	const auto& thumb_info { *thumbnail_data };
 
-	auto response = drogon::HttpResponse::newHttpResponse();
+	auto response { drogon::HttpResponse::newHttpResponse() };
 	response->setContentTypeCode( drogon::CT_IMAGE_PNG );
 	response->setBody(
 		std::string( reinterpret_cast< const char* >( thumb_info.data.data() ), thumb_info.data.size() ) );

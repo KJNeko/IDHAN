@@ -86,7 +86,7 @@ void checkSystemLocale()
 	idhan::log::debug( "Checking system locale" );
 	idhan::log::info( "System locale: {}", name );
 
-	const std::array< std::string_view, 2 > local_matches { "UTF-8", "utf8" };
+	const std::array< std::string_view, 2 > local_matches { { "UTF-8", "utf8" } };
 
 	bool found_utf8 { false };
 	for ( const auto& match : local_matches )

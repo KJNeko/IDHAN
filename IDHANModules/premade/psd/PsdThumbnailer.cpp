@@ -32,7 +32,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 	std::size_t height )
 {
 	const auto& [ data_view, mime, extra ] = data;
-	const auto bytes { static_cast< const std::uint8_t* >( data_view.data() ) };
+	const auto* bytes { ( data_view.data() ) };
 	const auto length { data_view.size() };
 
 	const auto header { parsePSDHeader( bytes, length ) };
@@ -88,7 +88,8 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 			break;
 		case 1: // PackBits
 			{
-				planarData = unpackRaster( bytes, offset, length, header->width, header->height, header->channels );
+				planarData = unpackRaster(
+					bytes, offset, length, header->width, header->height, header->channels, bytesPerSample );
 				if ( planarData.empty() )
 				{
 					return std::unexpected( idhan::ModuleError { "Failed to decompress RLE data" } );

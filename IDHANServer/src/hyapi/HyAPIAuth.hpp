@@ -9,7 +9,7 @@
 namespace idhan::hyapi
 {
 
-class HyAPIAuth : public drogon::HttpCoroFilter< HyAPIAuth >
+class HyAPIAuth final : public drogon::HttpCoroFilter< HyAPIAuth >
 {
   public:
 

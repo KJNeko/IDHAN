@@ -13,6 +13,7 @@
 
 #include "Config.hpp"
 
+//! Default PostgreSQL port used when none is configured.
 #ifndef IDHAN_DEFAULT_POSTRES_PORT
 constexpr std::uint16_t IDHAN_DEFAULT_POSTGRES_PORT { 5432 };
 #endif
@@ -20,6 +21,9 @@ constexpr std::uint16_t IDHAN_DEFAULT_POSTGRES_PORT { 5432 };
 namespace idhan
 {
 
+//! Resolved server startup configuration: PostgreSQL connection settings plus logging and test-mode
+//! flags. Each field defaults from the config system (config::get), overridable per the config
+//! priority order (CLI > env > config files).
 struct ConnectionArguments
 {
 	std::string hostname { config::get< std::string >( "database", "host", "localhost" ) };
@@ -32,6 +36,7 @@ struct ConnectionArguments
 	bool use_stdout { true };
 	spdlog::level::level_enum log_level { spdlog::level::info };
 
+	//! \return A libpq connection string built from these arguments.
 	std::string format() const;
 };
 

@@ -66,8 +66,12 @@ enum FileMetaType
 	// VIRTUAL = 5,
 };
 
+//! Manages the on-disk file "clusters" (storage directories). Maps each ClusterID to a directory,
+//! picks the best cluster for a new file by free space and capability flags, and stores/retrieves
+//! files and thumbnails addressed by their SHA-256. Process-wide singleton (see getInstance()).
 class ClusterManager
 {
+	//! Capabilities a cluster directory may be flagged to store.
 	enum ClusterFlags
 	{
 		STORES_THUMBNAILS = 1 << 0,
@@ -98,7 +102,7 @@ class ClusterManager
 		//! Max size this folder can contain. 0 == unlimited
 		std::size_t m_max_capacity;
 
-		std::expected< void, drogon::HttpResponsePtr > storeFile(
+		[[nodiscard]] std::expected< void, drogon::HttpResponsePtr > storeFile(
 			const SHA256& sha256,
 			const std::byte* data,
 			std::size_t length,
@@ -119,13 +123,7 @@ class ClusterManager
 		FILES
 	};
 
-	//! Finds the best folder to add the file too.
-	drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > findBestFolder(
-		RecordID record_id,
-		std::size_t file_size,
-		DbClientPtr db );
-
-	drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeFile(
+	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeFile(
 		RecordID record,
 		const std::byte* data,
 		std::size_t length,
@@ -144,21 +142,30 @@ class ClusterManager
 	 */
 	drogon::Task< void > reloadClusters( DbClientPtr db );
 
+	//! Finds the best folder to add the file too.
+	[[nodiscard]] drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > findBestFolder(
+		RecordID record_id,
+		std::size_t file_size,
+		DbClientPtr db );
+
 	//! Stores the data located at `stream` for a given record id.
-	drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeFile(
+	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeFile(
 		RecordID record,
 		const std::byte* data,
 		std::size_t length,
 		DbClientPtr db );
 
-	drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeThumbnail(
+	//! Stores \p data as the thumbnail for \p record in a thumbnail-capable cluster.
+	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeThumbnail(
 		RecordID record,
 		const std::byte* data,
 		std::size_t length,
 		drogon::orm::DbClientPtr db );
 
-	ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );
+	//! \return The on-disk directory path for \p cluster_id, or an error response if it is unknown.
+	[[nodiscard]] ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );
 
+	//! \return The process-wide ClusterManager singleton.
 	static ClusterManager& getInstance();
 };
 } // namespace idhan::filesystem

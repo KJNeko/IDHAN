@@ -2,14 +2,14 @@
 // Created by kj16609 on 11/17/24.
 //
 
-#include "crypto/SHA256.hpp"
-#include "records/records.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
+#include "records/records.hpp"
 
 namespace idhan::api
 {
@@ -79,10 +79,12 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 {
 	logging::ScopedTimer timer { "createRecordFromJson" };
 	const auto json_ptr { req->getJsonObject() };
-	if ( json_ptr == nullptr ) // Data was invalid?
-		throw std::invalid_argument( "json_ptr is null" );
+	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );
 
 	const Json::Value& json { *json_ptr };
+
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
 
 	const auto db { drogon::app().getDbClient() };
 
@@ -115,7 +117,8 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );
 	}
 
-	FGL_UNREACHABLE();
+	// sha256 was missing, or neither an array nor a string
+	co_return createBadRequest( "Invalid json: 'sha256' must be a hex string or an array of hex strings" );
 }
 
 ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )

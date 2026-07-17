@@ -44,21 +44,49 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 	// std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
 	unsigned char* buffer_ptr { static_cast< unsigned char* >( av_malloc( BUFFER_SIZE ) ) };
 
+	// the buffer may have been freed and replaced by libavformat, so the deleter must free
+	// ctx->buffer rather than the original allocation
 	const std::shared_ptr< AVIOContext > avio_context(
 		avio_alloc_context( buffer_ptr, BUFFER_SIZE, 0, &opaque_info, &readFunction, nullptr, seekFunction ),
-		&av_free );
+		[]( AVIOContext* ctx )
+		{
+			if ( ctx )
+			{
+				av_free( ctx->buffer );
+				av_free( ctx );
+			}
+		} );
 
-	const auto format_context_p =
-		std::shared_ptr< AVFormatContext >( avformat_alloc_context(), &avformat_free_context );
-	auto format_context { format_context_p.get() };
+	if ( !avio_context )
+	{
+		// avio_alloc_context does not take ownership of the buffer on failure, so free it here
+		// (the deleter above is a no-op for a null context).
+		av_free( buffer_ptr );
+		return std::unexpected( idhan::ModuleError( "Failed to allocate AVIO context" ) );
+	}
+
+	AVFormatContext* format_context { avformat_alloc_context() };
+	if ( !format_context )
+	{
+		return std::unexpected( idhan::ModuleError( "Failed to allocate format context" ) );
+	}
 
 	format_context->pb = avio_context.get();
 	format_context->flags |= AVFMT_FLAG_CUSTOM_IO;
 
+	// avformat_open_input frees format_context itself on failure; only take ownership once it
+	// succeeds, otherwise the shared_ptr below would double-free it
 	if ( avformat_open_input( &format_context, "", nullptr, nullptr ) < 0 )
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to open file" ) );
 	}
+
+	// avformat_close_input (not avformat_free_context) is the correct counterpart to a successful
+	// avformat_open_input: it runs the demuxer's read_close and releases internal buffers.
+	// AVFMT_FLAG_CUSTOM_IO is set, so it leaves the custom pb (avio_context) for us to free.
+	const auto format_context_p = std::shared_ptr< AVFormatContext >(
+		format_context, []( AVFormatContext* ctx ) { avformat_close_input( &ctx ); } );
+	format_context = format_context_p.get();
 
 	if ( avformat_find_stream_info( format_context, nullptr ) < 0 )
 	{

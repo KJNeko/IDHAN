@@ -11,6 +11,7 @@ namespace Ui
 class TagDomainRelationshipWidget;
 }
 
+//! Qt widget for configuring how a Hydrus tag service maps onto an IDHAN tag domain.
 class TagDomainRelationshipWidget : public QWidget
 {
 	Q_OBJECT

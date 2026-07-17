@@ -2,10 +2,10 @@
 // Created by kj16609 on 6/12/25.
 //
 
-#include "crypto/SHA256.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
 #include "metadata/metadata.hpp"
 
@@ -29,7 +29,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 		"WHERE r.record_id = $1",
 		record_id ) };
 
-	if ( result.empty() ) co_return createBadRequest( "Record ID was not found" );
+	if ( result.empty() ) co_return createNotFound( "Record ID was not found" );
 
 	root[ "hashes" ][ "sha256" ] = SHA256::fromPgCol( result[ 0 ][ "sha256" ] ).hex();
 

@@ -35,8 +35,10 @@ class QNetworkReply;
 namespace idhan::logging
 {
 
+//! \return The client's shared spdlog logger (created on first use).
 std::shared_ptr< spdlog::logger > getLogger();
 
+//! Logs at "notify" level (see the namespace description for level semantics).
 template < typename... Ts >
 void notify( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
@@ -98,6 +100,7 @@ void critical( format_ns::format_string< Ts... > fmt, Ts&&... ts )
  */
 void logResponse( QNetworkReply* reply );
 
+//! Bitmask of log levels a callback subscribes to (see registerCallback).
 enum CallbackLevel : uint8_t
 {
 	Notify = 1 << 0,
@@ -108,6 +111,7 @@ enum CallbackLevel : uint8_t
 	All = Notify | Info | Warn | Error | Critical
 };
 
+//! Callback signature receiving the log level and the formatted message.
 using CallbackFunction = std::function< void( CallbackLevel level, std::string_view message ) >;
 
 //! Registers a callback. The level will act as a mask for specific events

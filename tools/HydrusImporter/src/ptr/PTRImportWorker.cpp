@@ -425,7 +425,7 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	std::unordered_map< std::string, RecordID > hex_to_record_id;
 	hex_to_record_id.reserve( hash_hexes.size() );
 
-	std::vector< RecordID > record_ids;
+	std::vector< RecordID > phase4_record_ids;
 	if ( !hash_hexes.empty() )
 	{
 		spdlog::trace( "Phase 4: creating {} records via IDHAN API (concurrency={})", hash_hexes.size(), CONCURRENCY );

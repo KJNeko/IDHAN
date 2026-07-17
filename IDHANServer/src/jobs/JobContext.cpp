@@ -3,6 +3,7 @@
 //
 #include "JobContext.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -27,9 +28,11 @@ std::shared_ptr< JobContext > JobRuntime::getNextJob()
 		        || m_soft_stop.load( std::memory_order_acquire );
 		} );
 
-	if ( m_queue.empty() ) return nullptr;
+	std::shared_ptr< JobContext > job { nullptr };
 
-	auto job { m_queue.front() };
+	if ( m_queue.empty() ) return job;
+
+	job = m_queue.front();
 	m_queue.pop();
 	return job;
 }
@@ -39,7 +42,12 @@ void JobRuntime::runner()
 {
 	while ( !m_hard_stop.load( std::memory_order_acquire ) )
 	{
-		if ( m_soft_stop.load( std::memory_order_acquire ) && m_queue.empty() ) break;
+		if ( m_soft_stop.load( std::memory_order_acquire ) )
+		{
+			// the queue must not be inspected without the mutex; enqueue() mutates it concurrently
+			std::lock_guard lock { m_queue_mtx };
+			if ( m_queue.empty() ) break;
+		}
 
 		const auto job { getNextJob() };
 		if ( !job ) continue;
@@ -144,12 +152,19 @@ JobRuntime::~JobRuntime()
 	const auto begin_stop { Clock::now() };
 	const auto timeout { std::chrono::seconds( 10 ) };
 
+	// wait for dispatched jobs to actually finish, not just for the dispatch queue to drain --
+	// a job can be popped off m_queue and handed to the pool while still running, and hard-stop
+	// destroys m_pool right after this loop
 	while ( Clock::now() < begin_stop + timeout )
 	{
+		bool all_finished { false };
 		{
 			std::lock_guard lock { m_queue_mtx };
-			if ( m_queue.empty() ) break;
+			all_finished =
+				m_queue.empty()
+				&& std::ranges::all_of( m_jobs | std::views::values, []( const auto& job ) { return job->done(); } );
 		}
+		if ( all_finished ) break;
 		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 	}
 
@@ -165,11 +180,11 @@ bool JobContext::done() const
 	return m_coro.m_status && m_coro.m_status->m_done;
 }
 
-bool JobContext::run()
+void JobContext::run()
 {
-	if ( m_coro.m_handle.done() ) return true;
+	if ( m_coro.m_handle.done() ) return;
 
-	if ( m_coro.m_status && m_coro.m_status->m_start_time == std::chrono::steady_clock::time_point {} )
+	if ( m_coro.m_status && m_coro.m_status->m_start_time.load() == std::chrono::steady_clock::time_point {} )
 	{
 		m_coro.m_status->m_start_time = std::chrono::steady_clock::now();
 	}
@@ -177,7 +192,9 @@ bool JobContext::run()
 	log::debug( "Resuming job {}", m_id );
 	m_coro.m_handle.resume();
 
-	return m_coro.m_handle.done();
+	// no m_handle.done() check after resume(): once the job suspends on an awaitable it is
+	// resumed (and may finish) on another thread, so touching the handle here would race it.
+	// Completion is tracked through m_status->m_done instead.
 }
 
 idhan::JobID generateNewJobID()

@@ -4,7 +4,10 @@
 
 #include "archives.hpp"
 
+#include <archive.h>
+#include <array>
 #include <chardet.h>
+#include <cwchar>
 #include <expected>
 #include <iconv.h>
 #include <string>
@@ -86,7 +89,67 @@ std::expected< std::string, idhan::ModuleError > sanitizeEncoding( const char* s
 
 	iconv_close( iconv_cd );
 
-	std::string out_string { out_buffer.data(), strlen( out_buffer.data() ) };
+	if ( result == static_cast< std::size_t >( -1 ) )
+		return std::unexpected( idhan::ModuleError { "iconv conversion failed" } );
+
+	// use the byte count iconv actually wrote rather than strlen(): out_buffer isn't guaranteed
+	// to contain a null terminator if the conversion filled it exactly
+	std::string out_string { out_buffer.data(), out_buffer.size() - out_size };
 
 	return out_string;
+}
+
+std::expected< std::vector< std::byte >, idhan::ModuleError > readArchiveEntryData( archive* a )
+{
+	std::vector< std::byte > data {};
+
+	// archive_read_data may return fewer bytes than requested (short read) and does not need the
+	// entry size to be known in advance, so grow the buffer as we go rather than trusting
+	// archive_entry_size() for a single allocate-and-read.
+	constexpr std::size_t chunk_size { 64 * 1024 };
+	std::array< std::byte, chunk_size > buffer {};
+
+	la_ssize_t read { 0 };
+	while ( ( read = archive_read_data( a, buffer.data(), buffer.size() ) ) > 0 )
+	{
+		data.insert( data.end(), buffer.begin(), buffer.begin() + read );
+	}
+
+	if ( read < 0 )
+	{
+		const char* err { archive_error_string( a ) };
+		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
+	}
+
+	return data;
+}
+
+std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str )
+{
+	// "WCHAR_T" is iconv's name for the platform's wchar_t encoding, so this is portable across
+	// Linux (UTF-32) and Windows (UTF-16) without hand-rolling the codec.
+	const auto iconv_cd { iconv_open( "UTF-8", "WCHAR_T" ) };
+	if ( iconv_cd == reinterpret_cast< iconv_t >( -1 ) )
+		return std::unexpected( idhan::ModuleError { "Failed to open iconv for WCHAR_T" } );
+
+	const std::size_t in_bytes { std::wcslen( str ) * sizeof( wchar_t ) };
+	std::vector< char > in_buffer( in_bytes );
+	std::memcpy( in_buffer.data(), str, in_bytes );
+	// UTF-8 needs at most 4 bytes per code point; sizeof(wchar_t) >= 2 already covers that per
+	// input unit, so 2x plus slack is comfortably enough.
+	std::vector< char > out_buffer( in_bytes * 2 + 4 );
+
+	auto* in_buffer_ptr { in_buffer.data() };
+	auto* out_buffer_ptr { out_buffer.data() };
+	std::size_t in_size { in_buffer.size() };
+	std::size_t out_size { out_buffer.size() };
+
+	const auto result { iconv( iconv_cd, &in_buffer_ptr, &in_size, &out_buffer_ptr, &out_size ) };
+
+	iconv_close( iconv_cd );
+
+	if ( result == static_cast< std::size_t >( -1 ) )
+		return std::unexpected( idhan::ModuleError { "iconv WCHAR_T conversion failed" } );
+
+	return std::string { out_buffer.data(), out_buffer.size() - out_size };
 }

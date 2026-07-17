@@ -27,6 +27,8 @@ class FileIOUring;
 namespace idhan
 {
 
+//! A 32-byte SHA-256 hash — IDHAN's content address for every record and stored file. Converts
+//! to/from hex and PostgreSQL bytea columns, and is hashable for use as a map/set key.
 class SHA256
 {
 	std::array< std::byte, ( 256 / 8 ) > m_data {};
@@ -54,55 +56,51 @@ class SHA256
 	SHA256& operator=( SHA256&& other ) = default;
 	SHA256( SHA256&& other ) = default;
 
+	//! \return The hash length in bytes (32).
 	static constexpr std::size_t size() { return ( 256 / 8 ); }
 
-	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; }
+	//! \return A copy of the raw 32 hash bytes.
+	std::array< std::byte, ( 256 / 8 ) > data() const;
 
 	//! Supplied so we can work with drogon until I figure out how the fuck to overload their operators.
-	inline std::vector< char > toVec() const
-	{
-		std::vector< char > data {};
-		data.resize( m_data.size() );
-		std::memcpy( data.data(), m_data.data(), m_data.size() );
-		return data;
-	}
+	std::vector< char > toVec() const;
 
-	bool operator==( const SHA256& other ) const
-	{
-		return std::memcmp( m_data.data(), other.m_data.data(), m_data.size() ) == 0;
-	}
+	bool operator==( const SHA256& other ) const;
 
-	bool operator<( const SHA256& other ) const
-	{
-		for ( std::size_t i = 0; i < m_data.size(); ++i )
-		{
-			const auto& a = m_data[ i ];
-			const auto& b = other.m_data[ i ];
-			if ( a < b ) return true;
-		}
-		return false;
-	}
+	//! Lexicographic unsigned byte ordering; a valid strict weak ordering for use as a map/set key.
+	bool operator<( const SHA256& other ) const;
 
-	std::string hex() const;
+	//! \return The lowercase 64-character hex representation of the hash.
+	[[nodiscard]] std::string hex() const;
 
 	//! Turns a HEX string into a SHA256 object. Str must be exactly (256 / 8) * 2, 64 characters long
-	static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
+	[[nodiscard]] static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
 	//! Takes the byte representation of a hash from a buffer.
-	static SHA256 fromBuffer( const std::vector< std::byte >& data );
-	static SHA256 fromBuffer( const std::array< std::byte, 256 / 8 >& data );
-	static SHA256 fromPgCol( const drogon::orm::Field& field );
-	static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
+	[[nodiscard]] static SHA256 fromBuffer( const std::vector< std::byte >& data );
+	//! \copydoc fromBuffer(const std::vector<std::byte>&)
+	[[nodiscard]] static SHA256 fromBuffer( const std::array< std::byte, 256 / 8 >& data );
+	//! Builds a SHA256 from a PostgreSQL bytea field.
+	[[nodiscard]] static SHA256 fromPgCol( const drogon::orm::Field& field );
+	//! Fetches the SHA-256 of \p record_id from the database. \return the hash, or an error response.
+	[[nodiscard]] static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
 		RecordID record_id,
 		DbClientPtr db );
 
-	static SHA256 hash( const std::byte* data, std::size_t size );
-	static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
+	//! Computes the SHA-256 of \p size bytes at \p data.
+	[[nodiscard]] static SHA256 hash( const std::byte* data, std::size_t size );
+	//! Computes the SHA-256 of a file streamed via io_uring.
+	[[nodiscard]] static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
 
-	static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
+	//! \copydoc hash(const std::byte*,std::size_t)
+	[[nodiscard]] static SHA256 hash( const std::vector< std::byte >& data )
+	{
+		return hash( data.data(), data.size() );
+	}
 };
 
 } // namespace idhan
 
+//! std::hash specialization so SHA256 can be used as a key in unordered containers.
 template <>
 struct std::hash< idhan::SHA256 >
 {

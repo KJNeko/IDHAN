@@ -22,6 +22,7 @@
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
+#include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "spdlog/async.h"
@@ -115,9 +116,11 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	std::vector< spdlog::sink_ptr > sinks {};
 
 	// In-memory ring buffer — captures every level for the /log endpoint
-	auto& ring_buffer {
-		sinks.emplace_back( std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size ) )
-	};
+	// Kept as a concrete-typed pointer (see log::setServerLogger) rather than rediscovered later via
+	// dynamic_pointer_cast on the logger's type-erased sinks, since that cast has been observed to fail
+	// across the module .so boundary on some platforms/spdlog builds.
+	auto ring_buffer { std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size ) };
+	sinks.emplace_back( ring_buffer );
 	ring_buffer->set_pattern( std::string( server_format_str ) );
 	ring_buffer->set_level( spdlog::level::trace );
 
@@ -155,6 +158,7 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	spdlog::set_default_logger( logger );
 	trantor::Logger::enableSpdLog( logger );
+	log::setServerLogger( logger, ring_buffer );
 
 	logger->flush_on( spdlog::level::warn );
 	spdlog::flush_every( std::chrono::seconds( 5 ) );
@@ -328,6 +332,10 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::trace( "CORS support configured" );
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();
+
+	// Must happen before anything can touch FileIOUring (e.g. ClusterManager reading/writing files);
+	// IOUring::getInstance() throws if init() was never called.
+	IOUring::init();
 
 	m_clusters = std::make_unique< filesystem::ClusterManager >();
 	// Register callback to initialize clusters after event loop starts
