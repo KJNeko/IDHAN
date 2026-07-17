@@ -1,0 +1,46 @@
+:root {
+  color-scheme: dark light;
+  --bg: #16181d;
+  --fg: #e6e8ec;
+  --muted: #9aa0aa;
+  --error: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 system-ui, sans-serif;
+}
+
+.shell {
+  padding: 2rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--error);
+}
+
+.version {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.version dt {
+  color: var(--muted);
+}
+
+.version dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

@@ -7,11 +7,10 @@
 namespace idhan
 {
 
-//! Serves the bundled web UI pages (index, status, webui).
+//! Serves the WebUI entry point. Deep links are handled by the SPA fallback in ServerContext.
 class Ui : public drogon::HttpController< Ui >
 {
 	drogon::Task< drogon::HttpResponsePtr > index( drogon::HttpRequestPtr );
-	drogon::Task< drogon::HttpResponsePtr > indexWebUI( drogon::HttpRequestPtr );
 
   public:
 
@@ -19,7 +18,6 @@ class Ui : public drogon::HttpController< Ui >
 
 	ADD_METHOD_TO( Ui::index, "/" );
 	ADD_METHOD_TO( Ui::index, "/status" );
-	ADD_METHOD_TO( Ui::indexWebUI, "/webui" );
 
 	METHOD_LIST_END
 };

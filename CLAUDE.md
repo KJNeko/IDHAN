@@ -38,7 +38,7 @@ cmake --build build/debug --target IDHANServer
 | `BUILD_IDHAN_CLIENT` | ON | Qt client shared library |
 | `BUILD_HYDRUS_IMPORTER` | ON | Qt GUI import tool |
 | `BUILD_IDHAN_TESTS` | OFF | GoogleTest suite |
-| `BUILD_IDHAN_WEBUI` | OFF | WASM frontend (requires Emscripten + Qt for WASM) |
+| `BUILD_IDHAN_WEB` | ON | React WebUI in `IDHANWeb/` (requires `pnpm`; warns and skips if absent) |
 | `IDHAN_DISABLE_API_AUTH` | OFF | Disable API key checks (dev only) |
 
 ## Tests
