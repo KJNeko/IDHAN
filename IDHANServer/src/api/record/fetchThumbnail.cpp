@@ -2,6 +2,8 @@
 // Created by kj16609 on 6/11/25.
 //
 
+#include <algorithm>
+#include <array>
 #include <fstream>
 
 #include "api/RecordAPI.hpp"
@@ -24,23 +26,25 @@
 namespace idhan::api
 {
 
-drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > getThumbnailPath(
-	const RecordID record_id,
-	DbClientPtr db )
+namespace
 {
-	const auto sha256_e { co_await SHA256::fromDB( record_id, db ) };
-	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
+//! Discrete thumbnail sizes. A closed set bounds cache growth and gives the grid fixed tile heights.
+constexpr std::array< std::size_t, 3 > allowed_thumbnail_sizes { 128, 256, 512 };
 
-	const auto& sha256 { sha256_e.value() };
-
-	// Thumbnail should be located in `thumbnails/t[0:2]/[0:64].thumbnail` (prefix taken from the hash)
-	const auto hex { sha256.hex() };
-	const auto file_location {
-		getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / ( std::format( "{}.thumbnail", hex ) )
-	};
-
-	co_return file_location;
+//! Size-and-format-keyed cache path: thumbnails/t[hash 0:2]/[hash].[size].png
+std::filesystem::path thumbnailPath( const std::string& hex, const std::size_t size )
+{
+	return getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) )
+	     / std::format( "{}.{}.png", hex, size );
 }
+
+//! Pre-size cache path (thumbnails/t[hash 0:2]/[hash].thumbnail). Files written before size support
+//! were all 256px PNG, so this is only a valid fallback at size 256.
+std::filesystem::path legacyThumbnailPath( const std::string& hex )
+{
+	return getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / std::format( "{}.thumbnail", hex );
+}
+} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id )
 {
@@ -57,14 +61,40 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	const bool force_regenerate { request->getOptionalParameter< bool >( "regenerate" ).value_or( false ) };
 
+	const std::size_t size { request->getOptionalParameter< std::size_t >( "size" ).value_or( 256 ) };
+	if ( std::ranges::find( allowed_thumbnail_sizes, size ) == allowed_thumbnail_sizes.end() )
+		co_return createBadRequest( "Unsupported thumbnail size {}. Allowed sizes: 128, 256, 512", size );
+
 	const auto mime_name { record_info[ 0 ][ "mime_name" ].as< std::string >() };
 	[[maybe_unused]] const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
 
-	const auto thumbnail_location_e { co_await getThumbnailPath( record_id, db ) };
+	const auto sha256_e { co_await SHA256::fromDB( record_id, db ) };
+	if ( !sha256_e ) co_return sha256_e.error();
+	const auto hex { sha256_e.value().hex() };
 
-	if ( !thumbnail_location_e ) co_return thumbnail_location_e.error();
+	const auto thumbnail_location { thumbnailPath( hex, size ) };
 
-	if ( !std::filesystem::exists( thumbnail_location_e.value() ) || force_regenerate )
+	// Content-addressed and size-keyed, so the bytes at this URL never change. Let a client that
+	// already holds them skip the transfer entirely.
+	const auto etag { std::format( "\"{}-{}\"", hex, size ) };
+	if ( !force_regenerate && request->getHeader( "If-None-Match" ) == etag )
+		co_return drogon::HttpResponse::newHttpResponse(
+			drogon::HttpStatusCode::k304NotModified, drogon::ContentType::CT_NONE );
+
+	// Serve a pre-size cache file if one exists and the request is for the old default (256px PNG),
+	// so upgrading does not trigger a full regeneration storm.
+	if ( !force_regenerate && !std::filesystem::exists( thumbnail_location ) && size == 256 )
+	{
+		if ( const auto legacy { legacyThumbnailPath( hex ) }; std::filesystem::exists( legacy ) )
+		{
+			auto response { drogon::HttpResponse::newFileResponse( legacy, "", drogon::ContentType::CT_IMAGE_PNG ) };
+			helpers::addFileCacheHeader( response );
+			response->addHeader( "ETag", etag );
+			co_return response;
+		}
+	}
+
+	if ( !std::filesystem::exists( thumbnail_location ) || force_regenerate )
 	{
 		using namespace std::chrono_literals;
 		logging::ScopedTimer thumbnail_timer { "Thumbnail Process", 5s };
@@ -83,9 +113,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		if ( !io_uring_e ) co_return io_uring_e.error();
 		auto& io_uring { io_uring_e.value() };
 
-		//TODO: Allow requesting a specific thumbnail size
-		std::size_t height { 256 };
-		std::size_t width { 256 };
+		const std::size_t height { size };
+		const std::size_t width { size };
 
 		const auto& [ data, data_size ] = io_uring.mmapReadOnly();
 
@@ -104,10 +133,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		const auto thumbnail_info { thumbnailer->createThumbnailFile( call_data, width, height ) };
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
-
-		std::filesystem::create_directories( thumbnail_location_e.value().parent_path() );
-
-		const auto& thumbnail_location { thumbnail_location_e.value() };
 
 		if ( thumbnail_info->cache_thumbnail )
 		{
@@ -129,28 +154,33 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 			};
 			response->setBody( std::move( body ) );
 
-			const auto duration { std::chrono::hours( 1 ) };
-
-			helpers::addFileCacheHeader( response, duration );
+			// NOCACHE thumbnails are re-derived each time, so they are not immutable — keep them short.
+			helpers::addFileCacheHeader( response, std::chrono::hours( 1 ) );
+			response->addHeader( "ETag", etag );
 
 			co_return response;
 		}
 	}
 
-	if ( !std::filesystem::exists( *thumbnail_location_e ) )
+	if ( !std::filesystem::exists( thumbnail_location ) )
 	{
 		co_return createInternalError(
 			"Thumbnail did not exist for record {}, Writing might have failed. See previous warnings/errors",
-			thumbnail_location_e->string() );
+			thumbnail_location.string() );
 	}
 
 	auto response {
-		drogon::HttpResponse::newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG )
+		drogon::HttpResponse::newFileResponse( thumbnail_location, "", drogon::ContentType::CT_IMAGE_PNG )
 	};
 
-	const auto duration { std::chrono::hours( 1 ) };
+	if ( force_regenerate )
+		// A regenerate request must not be answered from a shared cache next time.
+		response->addHeader( "Cache-Control", "no-store" );
+	else
+		// Content-addressed and size-keyed: immutable for a year (addFileCacheHeader's default).
+		helpers::addFileCacheHeader( response );
 
-	helpers::addFileCacheHeader( response, duration );
+	response->addHeader( "ETag", etag );
 
 	co_return response;
 }
