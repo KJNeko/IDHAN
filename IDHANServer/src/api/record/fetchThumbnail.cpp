@@ -44,6 +44,15 @@ std::filesystem::path legacyThumbnailPath( const std::string& hex )
 {
 	return getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / std::format( "{}.thumbnail", hex );
 }
+
+//! Cache-Control for a served thumbnail. There is no revalidation: within max-age the browser reuses
+//! its copy with no request at all. Invalidation is manual — after changing generation settings the
+//! operator regenerates/purges, and clients pick up the change once their cache entry ages out (or
+//! they clear it). max-age comes from [thumbnails] max_age (default 7 days).
+std::string thumbnailCacheControl()
+{
+	return std::format( "private, max-age={}", getThumbnailMaxAge().count() );
+}
 } // namespace
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id )
@@ -74,13 +83,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	const auto thumbnail_location { thumbnailPath( hex, size ) };
 
-	// Content-addressed and size-keyed, so the bytes at this URL never change. Let a client that
-	// already holds them skip the transfer entirely.
-	const auto etag { std::format( "\"{}-{}\"", hex, size ) };
-	if ( !force_regenerate && request->getHeader( "If-None-Match" ) == etag )
-		co_return drogon::HttpResponse::newHttpResponse(
-			drogon::HttpStatusCode::k304NotModified, drogon::ContentType::CT_NONE );
-
 	// Serve a pre-size cache file if one exists and the request is for the old default (256px PNG),
 	// so upgrading does not trigger a full regeneration storm.
 	if ( !force_regenerate && !std::filesystem::exists( thumbnail_location ) && size == 256 )
@@ -88,8 +90,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		if ( const auto legacy { legacyThumbnailPath( hex ) }; std::filesystem::exists( legacy ) )
 		{
 			auto response { drogon::HttpResponse::newFileResponse( legacy, "", drogon::ContentType::CT_IMAGE_PNG ) };
-			helpers::addFileCacheHeader( response );
-			response->addHeader( "ETag", etag );
+			response->addHeader( "Cache-Control", thumbnailCacheControl() );
 			co_return response;
 		}
 	}
@@ -154,9 +155,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 			};
 			response->setBody( std::move( body ) );
 
-			// NOCACHE thumbnails are re-derived each time, so they are not immutable — keep them short.
-			helpers::addFileCacheHeader( response, std::chrono::hours( 1 ) );
-			response->addHeader( "ETag", etag );
+			// The module opted out of caching this thumbnail, so tell the browser not to store it either.
+			response->addHeader( "Cache-Control", "no-store" );
 
 			co_return response;
 		}
@@ -173,14 +173,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		drogon::HttpResponse::newFileResponse( thumbnail_location, "", drogon::ContentType::CT_IMAGE_PNG )
 	};
 
-	if ( force_regenerate )
-		// A regenerate request must not be answered from a shared cache next time.
-		response->addHeader( "Cache-Control", "no-store" );
-	else
-		// Content-addressed and size-keyed: immutable for a year (addFileCacheHeader's default).
-		helpers::addFileCacheHeader( response );
-
-	response->addHeader( "ETag", etag );
+	response->addHeader( "Cache-Control", thumbnailCacheControl() );
 
 	co_return response;
 }
