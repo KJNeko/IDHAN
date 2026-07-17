@@ -20,11 +20,14 @@ drogon::Task< Json::Value > getSimilarTags(
 	const std::string real_search_value { is_negative ? search_value.substr( 1 ) : search_value };
 	const auto wrapped_search_value { format_ns::format( "%{}%", real_search_value ) };
 
-	constexpr std::size_t max_limit { 32 };
+	// A serious tag editor shows many suggestions at once (Hydrus routinely 100+); the previous cap
+	// of 32 was too low. The trigram GIN index makes the cap cheap — it bounds the sort, not the scan.
+	constexpr std::size_t max_limit { 256 };
 
 	if ( limit > max_limit )
 	{
-		log::warn( "Tag search came in with absurdly high limit (was {}, clamped to {})", limit, max_limit );
+		// Not a warning: a UI legitimately requests large pages. Only truly extreme values matter.
+		log::debug( "Tag search limit {} exceeds the cap; clamped to {}", limit, max_limit );
 	}
 
 	const auto only_used_query { R"(
