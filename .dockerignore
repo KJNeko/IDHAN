@@ -2,6 +2,11 @@
 build/
 **/cmake-build-*/
 
+# Node dependencies and web build output — installed/built inside the image. Copying the host's
+# node_modules would clobber the image's freshly installed deps with broken store symlinks.
+**/node_modules/
+IDHANWeb/dist/
+
 # IDE and editor files
 .idea/
 .vscode/

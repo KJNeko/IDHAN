@@ -2,9 +2,14 @@
 # Stage 1: Build environment
 # Stage 0: Build the React WebUI
 FROM node:22-slim AS webbuilder
+# corepack activates the exact pnpm from package.json's "packageManager" field (pinned to 10.x, where
+# the onlyBuiltDependencies allow-list actually works). Disable the prompt so the fetch is non-interactive.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 WORKDIR /web
-COPY IDHANWeb/package.json IDHANWeb/pnpm-lock.yaml ./
+# pnpm-workspace.yaml carries onlyBuiltDependencies (esbuild), without which pnpm 10+ aborts the
+# install on an ignored build script — so it must be present before `pnpm install`, not just at build.
+COPY IDHANWeb/package.json IDHANWeb/pnpm-lock.yaml IDHANWeb/pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/pnpm-store \
     pnpm config set store-dir /pnpm-store && pnpm install --frozen-lockfile
 COPY IDHANWeb/ ./
