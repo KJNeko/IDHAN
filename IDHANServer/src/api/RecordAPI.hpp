@@ -49,6 +49,9 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 	drogon::Task< drogon::HttpResponsePtr > fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id );
 
 	drogon::Task< drogon::HttpResponsePtr > fetchInfo( drogon::HttpRequestPtr request, RecordID record_id );
+	//! Batch counterpart to fetchInfo: one set-based query for many records, so a grid does not issue
+	//! a request per tile. Body { record_ids: [...], include: ["basic"] }.
+	drogon::Task< drogon::HttpResponsePtr > fetchMetadataBatch( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > parseFile( drogon::HttpRequestPtr request, RecordID record_id );
 
 	drogon::Task< drogon::HttpResponsePtr > fetchUrls( drogon::HttpRequestPtr request, RecordID record_id );
@@ -88,6 +91,7 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 		IDHANRecordValidatorName );
 
 	ADD_METHOD_TO( RecordAPI::createRecord, "/records/create", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( RecordAPI::fetchMetadataBatch, "/records/metadata", drogon::Post, IDHANAPIAuthName );
 
 	ADD_METHOD_TO(
 		RecordAPI::fetchUrls,
