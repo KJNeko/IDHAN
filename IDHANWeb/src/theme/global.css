@@ -21,6 +21,79 @@ body {
   padding: 2rem;
 }
 
+.shell-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  color: var(--fg);
+}
+
+.login {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(22rem, 100%);
+}
+
+.login-card h1 {
+  margin: 0;
+}
+
+.login-card p {
+  margin: 0;
+}
+
+.login-input {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #2a2e37;
+  border-radius: 6px;
+  background: #1b1e24;
+  color: var(--fg);
+  font: inherit;
+  font-family: ui-monospace, monospace;
+}
+
+.login-input:focus {
+  outline: none;
+  border-color: #4a80ff;
+}
+
+.login-button {
+  padding: 0.6rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  background: #3a63c0;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.login-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .muted {
   color: var(--muted);
 }

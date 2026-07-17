@@ -1,57 +1,44 @@
 import { useEffect, useState } from 'react';
+import { ApiError, api } from '../api/client';
+import type { VersionInfo } from '../api/types';
+import { LoginScreen } from '../auth/LoginScreen';
+import { useAuth } from '../auth/AuthProvider';
 
-interface SemVer {
-  major: number;
-  minor: number;
-  patch: number;
-  string: string;
-}
-
-interface VersionInfo {
-  idhan_server_version: SemVer;
-  // An object, unlike hydrus_api_version, which really is a bare number.
-  idhan_api_version: SemVer;
-  hydrus_api_version: number;
-  hydrus_version: number;
-  branch: string;
-  commit: string;
-  build: string;
-}
-
-type State =
+type VersionState =
   | { status: 'loading' }
   | { status: 'ok'; version: VersionInfo }
   | { status: 'error'; message: string };
 
 /**
- * Placeholder shell for the WebUI.
- *
- * It calls /version rather than rendering a static greeting so that a successful load proves the
- * whole path works end to end: the bundle is served, the API prefix reaches the server (through the
- * Vite proxy in dev, same-origin in production), and JSON comes back.
+ * Authenticated shell. For M1 it just proves the authenticated path works end to end — the key is
+ * accepted and the API is reachable — by reading /version and offering logout. The panel/layout UI
+ * (M3/M4) replaces the body.
  */
-export function App() {
-  const [state, setState] = useState<State>({ status: 'loading' });
+function AppShell() {
+  const { logout } = useAuth();
+  const [state, setState] = useState<VersionState>({ status: 'loading' });
 
   useEffect(() => {
     const controller = new AbortController();
-
-    fetch('/version', { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`/version returned ${response.status}`);
-        setState({ status: 'ok', version: (await response.json()) as VersionInfo });
-      })
+    api
+      .version(controller.signal)
+      .then((version) => setState({ status: 'ok', version }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        setState({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+        const message = error instanceof ApiError ? error.message : error instanceof Error ? error.message : String(error);
+        setState({ status: 'error', message });
       });
-
     return () => controller.abort();
   }, []);
 
   return (
     <main className="shell">
-      <h1>IDHAN</h1>
+      <header className="shell-header">
+        <h1>IDHAN</h1>
+        <button type="button" className="link-button" onClick={() => void logout()}>
+          Sign out
+        </button>
+      </header>
       {state.status === 'loading' && <p className="muted">Contacting server…</p>}
       {state.status === 'error' && <p className="error">Could not reach the server: {state.message}</p>}
       {state.status === 'ok' && (
@@ -70,4 +57,18 @@ export function App() {
       )}
     </main>
   );
+}
+
+export function App() {
+  const { status } = useAuth();
+
+  if (status === 'restoring') {
+    return (
+      <main className="shell">
+        <p className="muted">Restoring session…</p>
+      </main>
+    );
+  }
+  if (status === 'unauthenticated') return <LoginScreen />;
+  return <AppShell />;
 }
