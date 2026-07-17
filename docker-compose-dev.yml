@@ -23,6 +23,15 @@ services:
       args:
         IDHAN_DISABLE_API_AUTH: "ON"
         CMAKE_BUILD_TYPE: "Debug"
+        # Git metadata for /version. The container has no .git, so the host supplies it. Populate with:
+        #   FGL_GIT_TAG=$(git describe --tags --always) \
+        #   FGL_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD) \
+        #   FGL_GIT_COMMIT=$(git rev-parse --short HEAD) \
+        #   docker compose -f docker-compose-dev.yml up --build
+        # Unset, it falls back to unknown/0.0.0 (same as before).
+        FGL_GIT_BRANCH: ${FGL_GIT_BRANCH:-unknown}
+        FGL_GIT_COMMIT: ${FGL_GIT_COMMIT:-unknown}
+        FGL_GIT_TAG: ${FGL_GIT_TAG:-v0.0.0}
     container_name: idhan-server
     environment:
       IDHAN_LOGGING_LEVEL: debug

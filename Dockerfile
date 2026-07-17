@@ -99,6 +99,12 @@ COPY docs /build/docs
 # Build IDHANServer with ccache mount
 ARG IDHAN_DISABLE_API_AUTH=OFF
 ARG CMAKE_BUILD_TYPE=Release
+# Git metadata for the /version endpoint. The build context omits the 1.7 GB .git, so the container
+# cannot run `git describe` itself — the host passes these in. FGL_GIT_TAG drives both the displayed
+# tag and the parsed version; defaults leave the pre-fix behaviour (unknown / 0.0.0) when unset.
+ARG FGL_GIT_BRANCH=unknown
+ARG FGL_GIT_COMMIT=unknown
+ARG FGL_GIT_TAG=v0.0.0
 ENV CCACHE_DIR=/root/.ccache
 RUN --mount=type=cache,target=/root/.ccache \
     --mount=type=cache,target=/build/build \
@@ -112,6 +118,9 @@ RUN --mount=type=cache,target=/root/.ccache \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
+    -DFGL_GIT_BRANCH=${FGL_GIT_BRANCH} \
+    -DFGL_GIT_COMMIT=${FGL_GIT_COMMIT} \
+    -DFGL_GIT_TAG=${FGL_GIT_TAG} \
     -DTRANTOR_USE_TLS=none \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
     cmake --build build --target IDHANServer -j$(nproc) && \
