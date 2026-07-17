@@ -4,6 +4,7 @@
 #pragma once
 
 #include <expected>
+#include <optional>
 #include <string_view>
 
 #include "IDHANTypes.hpp"
@@ -271,6 +272,12 @@ class SearchBuilder
 
 	SortType m_sort_type;
 	SortOrder m_order;
+
+	//! Explicit result-window bounds set via the API. An explicit limit takes precedence over the
+	//! system:limit predicate (m_limit_search).
+	std::optional< std::size_t > m_limit {};
+	std::optional< std::size_t > m_offset {};
+
 	std::vector< TagID > m_positive_tags;
 	std::vector< TagID > m_negative_tags {};
 
@@ -283,7 +290,12 @@ class SearchBuilder
 	std::string buildPositiveFilter() const;
 	std::string buildNegativeFilter() const;
 
-	void generateOrderByClause( std::string& query ) const;
+	//! Appends the ORDER BY clause, including sort direction and a stable record_id tiebreak so that
+	//! ties order deterministically (a prerequisite for sound pagination). \p record_id_alias names
+	//! the table the driving record_id comes from ("tm" on the full path, "fm" on the fast path).
+	void generateOrderByClause( std::string& query, std::string_view record_id_alias ) const;
+	//! Appends LIMIT/OFFSET when set. An explicit m_limit wins over the system:limit predicate.
+	void appendLimitOffset( std::string& query ) const;
 	void determineJoinsForQuery( std::string& query );
 	void determineSelectClause( std::string& query, bool return_ids, bool return_hashes );
 	void generateWhereClauses( std::string& query );
@@ -319,6 +331,11 @@ class SearchBuilder
 
 	//! Sets the ordering direction.
 	void setSortOrder( SortOrder value );
+
+	//! Limits the number of rows returned. Overrides any system:limit predicate. Pass nullopt to clear.
+	void setLimit( std::optional< std::size_t > value );
+	//! Skips this many leading rows. Pass nullopt or 0 for none.
+	void setOffset( std::optional< std::size_t > value );
 
 	//! Restricts the search to a tag domain; may be called repeatedly to allow several.
 	void filterTagDomain( TagDomainID value );

@@ -146,24 +146,47 @@ std::string SearchBuilder::buildNegativeFilter() const
 	return negative_filters;
 }
 
-void SearchBuilder::generateOrderByClause( std::string& query ) const
+void SearchBuilder::generateOrderByClause( std::string& query, const std::string_view record_id_alias ) const
 {
+	query += " ORDER BY ";
+
 	switch ( m_sort_type )
 	{
 		// DEFAULT and HY_* should not be used here.
 		default:
 			[[fallthrough]];
 		case SortType::FILESIZE:
-			query += " ORDER BY fm.size";
+			query += "fm.size";
 			break;
 		case SortType::IMPORT_TIME:
-			query += " ORDER BY fm.cluster_store_time ";
+			query += "fm.cluster_store_time";
 			break;
 		case SortType::RECORD_TIME:
 			// the records join aliases the table as rc
-			query += " ORDER BY rc.creation_time ";
+			query += "rc.creation_time";
 			break;
 	}
+
+	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
+
+	// A stable tiebreak on the unique record_id. Without it, rows with equal sort keys order
+	// arbitrarily, so identical queries can disagree and offset-based paging can skip or repeat rows.
+	query += ", ";
+	query += record_id_alias;
+	query += ".record_id ASC";
+}
+
+void SearchBuilder::appendLimitOffset( std::string& query ) const
+{
+	// An explicit API limit wins; otherwise honour a system:limit predicate.
+	const std::optional< std::size_t > limit { m_limit.has_value() ?
+		                                           m_limit :
+		                                           ( m_limit_search.m_active ?
+		                                                 std::optional< std::size_t > { m_limit_search.count } :
+		                                                 std::nullopt ) };
+
+	if ( limit ) query += " LIMIT " + std::to_string( *limit );
+	if ( m_offset && *m_offset > 0 ) query += " OFFSET " + std::to_string( *m_offset );
 }
 
 void SearchBuilder::determineJoinsForQuery( std::string& query )
@@ -331,9 +354,23 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 		|| m_width_search.m_active || m_height_search.m_active || m_archive_search.m_active
 	};
 
-	if ( m_positive_tags.empty() && m_negative_tags.empty() && !has_system_predicates )
+	// Fast path: nothing filters the result set, so skip the tag-filter CTE chain entirely. It still
+	// has to honour sort, tiebreak, limit and offset — this is the "browse everything" case the grid
+	// hits on first load, and returning the whole table unordered and unbounded is neither correct
+	// nor affordable. Only for id-returning searches; hashes need the records join, handled below.
+	if ( m_positive_tags.empty() && m_negative_tags.empty() && !has_system_predicates && !return_hashes )
 	{
-		return "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL";
+		query = "SELECT fm.record_id FROM file_info fm";
+
+		// record-time sort reads creation_time from the records table
+		if ( m_sort_type == SortType::RECORD_TIME ) query += " JOIN records rc USING (record_id)";
+
+		query += " WHERE fm.mime_id IS NOT NULL";
+
+		generateOrderByClause( query, "fm" );
+		appendLimitOffset( query );
+
+		return query;
 	}
 
 	std::vector< TagID > filtered_tags {};
@@ -380,9 +417,11 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 
 	generateWhereClauses( query );
 
-	generateOrderByClause( query );
+	// final_filter is aliased tm and file_info is always joined as fm; both carry record_id, so tm
+	// is the natural driving alias for the tiebreak.
+	generateOrderByClause( query, "tm" );
 
-	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
+	appendLimitOffset( query );
 
 	return query;
 }
@@ -439,6 +478,16 @@ void SearchBuilder::setSortType( const SortType type )
 void SearchBuilder::setSortOrder( const SortOrder value )
 {
 	m_order = value;
+}
+
+void SearchBuilder::setLimit( const std::optional< std::size_t > value )
+{
+	m_limit = value;
+}
+
+void SearchBuilder::setOffset( const std::optional< std::size_t > value )
+{
+	m_offset = value;
 }
 
 void SearchBuilder::filterTagDomain( [[maybe_unused]] const TagDomainID value )
