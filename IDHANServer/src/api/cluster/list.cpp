@@ -12,7 +12,7 @@ ClusterAPI::ResponseTask ClusterAPI::list( [[maybe_unused]] drogon::HttpRequestP
 	auto db { drogon::app().getDbClient() };
 	const auto result { co_await db->execSqlCoro( "SELECT cluster_id FROM file_clusters" ) };
 
-	Json::Value root {};
+	Json::Value root { Json::arrayValue };
 
 	for ( Json::ArrayIndex i = 0; i < result.size(); ++i )
 	{

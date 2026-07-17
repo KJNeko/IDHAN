@@ -58,7 +58,7 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 	p.rescan_mime = request->getOptionalParameter< bool >( "rescan_mime" ).value_or( false );
 
 	p.scan_metadata = request->getOptionalParameter< bool >( "scan_metadata" ).value_or( true );
-	p.rescan_metadata = request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( true );
+	p.rescan_metadata = request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( false );
 
 	p.stop_on_fail = request->getOptionalParameter< bool >( "stop_on_fail" ).value_or( false );
 
@@ -90,7 +90,9 @@ class ScanContext
 
 	[[nodiscard]] ExpectedTask< SHA256 > checkSHA256() const;
 	[[nodiscard]] ExpectedTask< RecordID > checkRecord( DbClientPtr db );
-	[[nodiscard]] ExpectedTask< void > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
+	//! Returns true if the duplicate file at m_path was deleted (record already stored correctly
+	//! in found_cluster_id) -- the caller must not touch m_path any further in that case.
+	[[nodiscard]] ExpectedTask< bool > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
 	[[nodiscard]] Task<> updateFileModifiedTime( DbClientPtr db );
 	[[nodiscard]] ExpectedTask< void > checkCluster( DbClientPtr db );
 	[[nodiscard]] Task< bool > hasMime( DbClientPtr db );
@@ -328,7 +330,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 
 	if ( result.empty() )
 	{
-		co_return createBadRequest( "Cluster not found" );
+		co_return createNotFound( "Cluster not found" );
 	}
 
 	scan_params.read_only = scan_params.force_readonly || result[ 0 ][ "read_only" ].as< bool >();
@@ -340,7 +342,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 	};
 
 	Json::Value response;
-	response[ "job_id" ] = static_cast< Json::UInt64 >( job_ctx->id() );
+	response[ "job_id" ] = job_ctx->id();
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
@@ -461,14 +463,14 @@ ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 	co_return found_record_id;
 }
 
-ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_cluster_id, drogon::orm::DbClientPtr db )
+ExpectedTask< bool > ScanContext::cleanupDoubleClusters( const ClusterID found_cluster_id, drogon::orm::DbClientPtr db )
 {
 	log::trace(
 		"cleanupDoubleClusters: record_id={}, found_cluster_id={}, current_cluster_id={}",
 		m_record_id,
 		found_cluster_id,
 		m_cluster_id );
-	if ( found_cluster_id == 0 ) co_return {};
+	if ( found_cluster_id == 0 ) co_return false;
 
 	if ( co_await filesystem::checkFileExists( m_record_id, db ) )
 	{
@@ -487,9 +489,10 @@ ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 				found_cluster_id );
 
 			std::filesystem::remove( m_path );
+			co_return true;
 		}
 
-		co_return {};
+		co_return false;
 	}
 
 	log::warn(
@@ -500,7 +503,7 @@ ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 
 	co_await db->execSqlCoro( "UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", m_cluster_id, m_record_id );
 
-	co_return {};
+	co_return false;
 }
 
 Task<> ScanContext::updateFileModifiedTime( DbClientPtr db )
@@ -551,6 +554,9 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		// if found. Otherwise the record's cluster is set to the current cluster
 		const auto cleanup_result { co_await cleanupDoubleClusters( found_cluster_id, db ) };
 		return_unexpected_error( cleanup_result );
+
+		// m_path was deleted as a duplicate; nothing left at this path to path-check or move
+		if ( cleanup_result.value() ) co_return {};
 	}
 
 	// now check if the file is in the right path
@@ -625,7 +631,8 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 	log::trace( "Starting mime scan for {} (Record {})", m_path.filename().string(), m_record_id );
 	const auto mime_string_e { co_await mime::getMimeDatabase()->scan( file_io ) };
-	log::trace( "Mime scan completed for {} (Record {}), result: {}",
+	log::trace(
+		"Mime scan completed for {} (Record {}), result: {}",
 		m_path.filename().string(),
 		m_record_id,
 		mime_string_e.has_value() ? mime_string_e.value() : "nullopt" );

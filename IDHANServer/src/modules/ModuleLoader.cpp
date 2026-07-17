@@ -23,7 +23,7 @@
 namespace idhan::modules
 {
 
-ModuleLoader::ModuleLoader() : m_modules(), m_libs()
+ModuleLoader::ModuleLoader() : m_libs(), m_modules()
 {
 	FGL_ASSERT( m_instance == nullptr, "ModuleLoader is a singleton" );
 	m_instance = this;
@@ -52,7 +52,7 @@ class ModuleHolder
 	[[nodiscard]] HMODULE handle() const { return m_handle; }
 #endif
 
-	ModuleHolder( const std::filesystem::path& path )
+	ModuleHolder( const std::filesystem::path& path ) : m_handle( nullptr )
 	{
 		if ( !std::filesystem::exists( path ) )
 		{
@@ -68,7 +68,7 @@ class ModuleHolder
 			std::abort();
 		}
 
-		initFunc   = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
+		initFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
 		deinitFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) );
 #elif defined( _WIN32 )
 		m_handle = LoadLibraryW( path.wstring().c_str() );
@@ -78,7 +78,7 @@ class ModuleHolder
 			std::abort();
 		}
 
-		initFunc   = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "init" ) );
+		initFunc = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "init" ) );
 		deinitFunc = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "deinit" ) );
 #endif
 
@@ -118,14 +118,10 @@ std::expected< std::vector< std::byte >, ModuleError > generate(
 {
 	auto mime_db { getMimeDatabase() };
 
-	std::expected< std::string, drogon::HttpResponsePtr > exp {};
-
-	drogon::async_run(
-		[ & ]() -> drogon::Task< void >
-		{
-			auto coro = mime_db->scan( data, file_name );
-			exp       = co_await coro;
-		} );
+	// sync_wait, not async_run: async_run detaches at the first suspension point, which would
+	// leave exp unset here (a default expected holds a value, so the failure check can't catch
+	// it) and the detached coroutine would later write through dangling stack references
+	const auto exp { drogon::sync_wait( mime_db->scan( data, file_name ) ) };
 
 	if ( !exp ) return std::unexpected( ModuleError { "Unable to scan for mime" } );
 	{
@@ -135,10 +131,9 @@ std::expected< std::vector< std::byte >, ModuleError > generate(
 
 		const auto generator { generators.at( 0 ) };
 
-		ModuleCallData call_data { .file_view = data, .extra = extra };
+		ModuleCallData call_data { .file_view = data, .mime_name = *exp, .extra = extra };
 
-		const auto generated_file { generator->generate( call_data, hash ) };
-		return generated_file;
+		return generator->generate( call_data, hash );
 	}
 }
 
@@ -149,16 +144,10 @@ std::expected< ThumbnailInfo, ModuleError > thumbnail(
 {
 	auto mime_db { getMimeDatabase() };
 
-	std::expected< std::string, drogon::HttpResponsePtr > exp {};
-
 	idhan::data_view data_view { reinterpret_cast< const unsigned char* >( data.data() ), data.size() };
 
-	drogon::async_run(
-		[ & ]() -> drogon::Task< void >
-		{
-			auto coro = mime_db->scan( data_view, file_name );
-			exp       = co_await coro;
-		} );
+	// sync_wait, not async_run: see generate() above
+	const auto exp { drogon::sync_wait( mime_db->scan( data_view, file_name ) ) };
 
 	if ( !exp ) return std::unexpected( ModuleError { "Unable to scan for mime" } );
 
@@ -167,7 +156,7 @@ std::expected< ThumbnailInfo, ModuleError > thumbnail(
 
 	const auto thumbnailer { thumbnailers.at( 0 ) };
 
-	ModuleCallData call_data { .file_view = data_view, .mime_name = *exp, .extra = {} };
+	ModuleCallData call_data { .file_view = data_view, .mime_name = *exp, .extra = extra };
 
 	return thumbnailer->createThumbnail( call_data, 128, 128 );
 }
@@ -270,7 +259,7 @@ std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnaile
 
 	for ( const auto& module : m_modules )
 	{
-		if ( module->type() == ModuleTypeFlags::THUMBNAILER
+		if ( ( module->type() & ModuleTypeFlags::THUMBNAILER )
 		     && std::static_pointer_cast< ThumbnailerModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< ThumbnailerModuleI >( module ) );
@@ -288,7 +277,7 @@ std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( co
 
 	for ( const auto& module : m_modules )
 	{
-		if ( module->type() == ModuleTypeFlags::METADATA
+		if ( ( module->type() & ModuleTypeFlags::METADATA )
 		     && std::static_pointer_cast< MetadataModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< MetadataModuleI >( module ) );
@@ -306,7 +295,7 @@ std::vector< std::shared_ptr< GeneratorModuleI > > ModuleLoader::getGeneratorsFo
 
 	for ( const auto& module : m_modules )
 	{
-		if ( module->type() == ModuleTypeFlags::GENERATOR
+		if ( ( module->type() & ModuleTypeFlags::GENERATOR )
 		     && std::static_pointer_cast< GeneratorModuleI >( module )->canHandle( mime ) )
 		{
 			ret.push_back( std::static_pointer_cast< GeneratorModuleI >( module ) );

@@ -17,12 +17,16 @@
 namespace idhan::hydrus::ptr
 {
 
+//! Downloads PTR (public tag repository) update files from a Hydrus PTR server into an output
+//! directory, resuming from previously cached metadata and rate-limiting requests. Drive it with
+//! startSync(); progress and completion are reported via the signals below.
 class PTRDownloader : public QObject
 {
 	Q_OBJECT
 
   public:
 
+	//! Current stage of the download.
 	enum class State
 	{
 		Idle,

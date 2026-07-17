@@ -43,15 +43,17 @@ void WriteAwaiter::await_resume() const
 	if ( m_exception ) std::rethrow_exception( m_exception );
 }
 
-WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe ) {}
+WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
+{}
 
 void WriteAwaiter::complete( const int result )
 {
 	if ( result < 0 )
 	{
-		log::error( "Failed to write file: {}", strerror( errno ) );
-		m_exception =
-			std::make_exception_ptr( std::runtime_error( std::string( "Failed to write file: " ) + strerror( errno ) ) );
+		// result is -errno from the io_uring completion, not the thread-local errno
+		log::error( "Failed to write file: {}", strerror( -result ) );
+		m_exception = std::make_exception_ptr(
+			std::runtime_error( std::string( "Failed to write file: " ) + strerror( -result ) ) );
 	}
 
 	if ( m_cont ) m_event_loop->queueInLoop( m_cont );

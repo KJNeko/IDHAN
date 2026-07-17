@@ -26,7 +26,7 @@ namespace idhan
 //! IOCP watcher casts lpOverlapped back to this to dispatch to the right awaiter type.
 struct WinAwaiterBase
 {
-	OVERLAPPED m_overlapped {};  // MUST be first member
+	OVERLAPPED m_overlapped {}; // MUST be first member
 
 	enum class Type : std::uint8_t
 	{

@@ -23,8 +23,10 @@ class IOUring
 	//! Platform-agnostic file handle. Stores int (Linux fd) or HANDLE (Windows, pointer-sized).
 	using NativeHandle = std::uintptr_t;
 
-	virtual drogon::Task< std::vector< std::byte > >
-		read( NativeHandle handle, std::size_t offset, std::size_t len ) = 0;
+	virtual drogon::Task< std::vector< std::byte > > read(
+		NativeHandle handle,
+		std::size_t offset,
+		std::size_t len ) = 0;
 
 	virtual drogon::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) = 0;
 
@@ -32,8 +34,8 @@ class IOUring
 	virtual void associateHandle( [[maybe_unused]] NativeHandle handle ) {}
 
 	virtual ~IOUring() = default;
-
 	IOUring() = default;
+
 	FGL_DELETE_COPY( IOUring );
 	FGL_DELETE_MOVE( IOUring );
 
@@ -56,9 +58,11 @@ class [[nodiscard]] FileIOUring
 	};
 
 	FileDescriptor m_fd;
-	void* m_mmap_ptr { nullptr };
+	// shared (not raw) so a copied/moved FileIOUring can't leave two instances calling munmap()
+	// on the same address
+	std::shared_ptr< void > m_mmap_ptr {};
 #elif defined( _WIN32 )
-	void* m_handle { nullptr };                    // HANDLE — void* avoids pulling <windows.h> into this header
+	void* m_handle { nullptr }; // HANDLE — void* avoids pulling <windows.h> into this header
 	mutable std::vector< std::byte > m_mmap_buffer {}; // populated lazily on first mmapReadOnly()
 #endif
 

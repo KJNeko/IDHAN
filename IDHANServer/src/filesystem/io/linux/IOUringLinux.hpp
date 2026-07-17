@@ -18,8 +18,8 @@
 namespace idhan
 {
 
-class ReadAwaiter;
-class WriteAwaiter;
+struct ReadAwaiter;
+struct WriteAwaiter;
 
 struct IOUringUserData
 {
@@ -46,7 +46,7 @@ class IOUringLinux final : public IOUring
 {
 	// Member order matters for initializer-list construction order
 	io_uring_params m_params;
-	int uring_fd;
+	unsigned int uring_fd;
 	std::shared_ptr< std::atomic< bool > > io_run;
 
 	int setupUring();

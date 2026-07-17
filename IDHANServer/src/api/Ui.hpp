@@ -7,6 +7,7 @@
 namespace idhan
 {
 
+//! Serves the bundled web UI pages (index, status, webui).
 class Ui : public drogon::HttpController< Ui >
 {
 	drogon::Task< drogon::HttpResponsePtr > index( drogon::HttpRequestPtr );

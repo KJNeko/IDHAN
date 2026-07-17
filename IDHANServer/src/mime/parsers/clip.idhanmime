@@ -10,8 +10,11 @@
       "hex": "4353464348554E4B",
       "data": [
         {
+          // CHNKHead directly follows the 24 byte CSFCHUNK header; without a limit a
+          // truncated/corrupt file would be scanned in full looking for it
           "type": "search",
-          "hex": "1843484E4B48656164"
+          "hex": "1843484E4B48656164",
+          "limit": 256
         }
       ]
     }

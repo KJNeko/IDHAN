@@ -13,6 +13,8 @@
 
 namespace idhan::api
 {
+//! Endpoints for tags: info/search/autocomplete/create, tag domains, and tag relationships
+//! (parents, aliases, siblings).
 class TagAPI : public drogon::HttpController< TagAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > getTagInfo( drogon::HttpRequestPtr request, TagID tag_id );
@@ -87,7 +89,7 @@ class TagAPI : public drogon::HttpController< TagAPI >
 	METHOD_LIST_END
 };
 
-drogon::Task< Json::Value > getSimilarTags(
+[[nodiscard]] drogon::Task< Json::Value > getSimilarTags(
 	std::string search_value,
 	DbClientPtr db,
 	std::size_t limit = 10,

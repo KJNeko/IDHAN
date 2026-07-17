@@ -43,7 +43,7 @@ struct [[nodiscard]] ReadAwaiter
 
 	[[nodiscard]] bool await_ready() const noexcept;
 	void await_suspend( std::coroutine_handle<> h );
-	std::vector< std::byte > await_resume() const;
+	[[nodiscard]] std::vector< std::byte > await_resume() const;
 
 	~ReadAwaiter();
 };

@@ -7,7 +7,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(VIPS REQUIRED vips-cpp)
 
 target_link_libraries(IDHANModules PUBLIC IDHAN ${VIPS_LIBRARIES})
-target_include_directories(IDHANModules PUBLIC ${VIPS_INCLUDE_DIRS})
+# SYSTEM: libvips headers should not be checked against our strict warning set.
+target_include_directories(IDHANModules SYSTEM PUBLIC ${VIPS_INCLUDE_DIRS})
 
 include(ExternalProject)
 
@@ -26,7 +27,7 @@ target_link_libraries(IDHANPremadeModules PRIVATE LibArchive::LibArchive)
 
 # Vips
 target_link_libraries(IDHANPremadeModules PUBLIC ${VIPS_LIBRARIES})
-target_include_directories(IDHANPremadeModules PRIVATE ${VIPS_INCLUDE_DIRS})
+target_include_directories(IDHANPremadeModules SYSTEM PRIVATE ${VIPS_INCLUDE_DIRS})
 #target_link_libraries(IDHANPremadeModules PRIVATE PkgConfig::VIPS)
 
 target_link_libraries(IDHANPremadeModules PRIVATE chardet)

@@ -2,9 +2,9 @@
 // Created by kj16609 on 3/11/25.
 //
 
-#include "crypto/SHA256.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/SHA256.hpp"
 
 namespace idhan::api
 {
@@ -37,7 +37,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::searchHash( [[maybe_unused]] 
 	}
 
 	json[ "found" ] = true;
-	json[ "record_id" ] = result[ 0 ][ 0 ].as< std::size_t >();
+	json[ "record_id" ] = result[ 0 ][ 0 ].as< RecordID >();
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }
 

@@ -12,6 +12,7 @@ namespace idhan::hydrus
 class TransactionBaseCoro;
 }
 
+//! QRunnable that imports Hydrus URL associations (each record's known URLs) into IDHAN.
 class UrlServiceWorker : public QObject, public QRunnable
 {
 	Q_OBJECT

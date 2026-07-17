@@ -4,6 +4,8 @@
 #pragma once
 #include "ThumbnailerModule.hpp"
 
+//! Thumbnailer for archives: composites thumbnails of contained files into a grid. Re-entrant (it
+//! asks the host to thumbnail members), bounded by a thread_local depth guard.
 class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 {
   public:
@@ -12,13 +14,17 @@ class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 
 	ArchiveThumbnailer( idhan::ModuleCallbacks callbacks ) : ThumbnailerModuleI( callbacks ) {}
 
-	std::string_view name() override { return "Archive generator module"; }
+	[[nodiscard]] std::string_view name() override { return "Archive generator module"; }
 
-	idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
+	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 
-	std::vector< std::string_view > handleableMimes() override;
+	// re-entrancy is bounded by a thread_local depth guard and all state is per-call: safe to run
+	// concurrently
+	[[nodiscard]] bool threadSafe() override { return true; }
 
-	std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(
+	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
+
+	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(
 		idhan::ModuleCallData& data,
 		std::size_t width,
 		std::size_t height ) override;

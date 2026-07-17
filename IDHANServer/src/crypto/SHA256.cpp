@@ -46,6 +46,43 @@ SHA256::SHA256( const drogon::orm::Field& field )
 	std::memcpy( m_data.data(), data.data(), data.size() );
 }
 
+std::array< std::byte, ( 256 / 8 ) > SHA256::data() const
+{
+	return m_data;
+}
+
+std::vector< char > SHA256::toVec() const
+{
+	std::vector< char > data {};
+	data.resize( m_data.size() );
+	std::memcpy( data.data(), m_data.data(), m_data.size() );
+	return data;
+}
+
+bool SHA256::operator==( const SHA256& other ) const
+{
+	for ( std::size_t i = 0; i < other.m_data.size(); ++i )
+	{
+		if ( m_data[ i ] != other.m_data[ i ] )
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool SHA256::operator<( const SHA256& other ) const
+{
+	for ( std::size_t i = 0; i < other.m_data.size(); ++i )
+	{
+		if ( other.m_data[ i ] < this->m_data[ i ] ) return true;
+		if ( other.m_data[ i ] > this->m_data[ i ] ) return false;
+		// equal compare next byte
+	}
+	// all bytes are equal
+	return false;
+}
+
 std::string SHA256::hex() const
 {
 	std::string str {};
@@ -103,7 +140,7 @@ drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::fromDB(
 {
 	const auto result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", record_id ) };
 
-	if ( result.empty() ) co_return std::unexpected( createBadRequest( "Record not found" ) );
+	if ( result.empty() ) co_return std::unexpected( createNotFound( "Record not found" ) );
 
 	co_return SHA256::fromPgCol( result[ 0 ][ 0 ] );
 }

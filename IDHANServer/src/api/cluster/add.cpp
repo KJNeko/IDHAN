@@ -4,13 +4,25 @@
 
 #include <fstream>
 
-#include "filesystem/clusters/ClusterManager.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "filesystem/clusters/ClusterManager.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
 {
+
+namespace
+{
+// Normalizes a path so that equivalent spellings ("/a/b/", "/a/b/.", "/a/b") compare equal
+std::filesystem::path normalizeClusterPath( std::filesystem::path path )
+{
+	path = path.lexically_normal();
+	// lexically_normal keeps a trailing separator; strip it so "/a/b/" and "/a/b" match
+	if ( !path.has_filename() ) path = path.parent_path();
+	return path;
+}
+} // namespace
 
 ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 {
@@ -24,8 +36,15 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	const auto& request_json { *request_json_ptr };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !request_json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
+	if ( !request_json[ "path" ].isString() || request_json[ "path" ].asString().empty() )
+		co_return createBadRequest( "Cluster path must be specified as a non-empty string" );
+
 	std::filesystem::path target_path { request_json[ "path" ].asString() };
 	if ( target_path.is_relative() ) target_path = std::filesystem::absolute( target_path );
+	target_path = normalizeClusterPath( target_path );
 
 	const bool readonly { request_json[ "readonly" ].isBool() ? request_json[ "readonly" ].asBool() : true };
 
@@ -47,7 +66,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 			[[maybe_unused]] const auto cluster_id { row[ 0 ].as< ClusterID >() };
 			const auto cluster_path { row[ 1 ].as< std::string >() };
 
-			const std::filesystem::path path { cluster_path };
+			const std::filesystem::path path { normalizeClusterPath( cluster_path ) };
 			if ( target_path == path )
 			{
 				transaction->rollback();
@@ -102,9 +121,12 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	try
 	{
-		// insert the data
+		// the PG backend throws no typed exception for unique violations (SqlError with
+		// sqlState() is MySQL/SQLite-only), so detect the conflict via the empty result
+		// instead. cluster_name and folder_path both carry UNIQUE constraints.
 		const auto insert_result { co_await transaction->execSqlCoro(
-			"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) RETURNING cluster_id",
+			"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) "
+			"ON CONFLICT DO NOTHING RETURNING cluster_id",
 			cluster_name,
 			target_path.string() ) };
 
@@ -112,8 +134,8 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 		{
 			transaction->rollback();
 
-			co_return createInternalError(
-				"Failed to insert new cluster into table. Cluster might already exist with that name?" );
+			co_return createConflict(
+				"A cluster with the name {} or path {} already exists", cluster_name, target_path.string() );
 		}
 
 		const auto cluster_id { insert_result[ 0 ][ 0 ].as< ClusterID >() };

@@ -38,9 +38,14 @@ void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view 
 
 	// find begining of number
 	const auto number_start { tag.find_first_of( "0123456789" ) };
+
+	if ( number_start == std::string_view::npos )
+		throw std::invalid_argument( format_ns::format( "No number found in range search tag: {}", tag ) );
+
 	const auto number_end { tag.find_last_of( "0123456789" ) };
 
-	const std::string number_substr { tag.substr( number_start, number_end ) };
+	// substr takes a length, not an end index
+	const std::string number_substr { tag.substr( number_start, number_end - number_start + 1 ) };
 
 	log::debug( "Got number from \'{}\'", number_substr );
 
@@ -155,7 +160,8 @@ void SearchBuilder::generateOrderByClause( std::string& query ) const
 			query += " ORDER BY fm.cluster_store_time ";
 			break;
 		case SortType::RECORD_TIME:
-			query += " ORDER BY records.creation_time ";
+			// the records join aliases the table as rc
+			query += " ORDER BY rc.creation_time ";
 			break;
 	}
 }
@@ -169,7 +175,9 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 
 	if ( m_duration_search == DurationSearchType::NoDuration )
 	{
-		m_required_joins.video_metadata |= true;
+		// duration is a NOT NULL column, so 'no duration' means the record has no
+		// video_metadata row at all — an inner join could never produce such a row
+		m_required_joins.left_video_metadata |= true;
 	}
 
 	if ( m_width_search.m_active || m_height_search.m_active )
@@ -182,15 +190,17 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 
 	if ( m_in_archive_search == ArchiveSearchType::NoArchive ) m_required_joins.left_archive_map |= true;
 
+	// an inner join acts as a filter (e.g. has-duration), so it must win over a LEFT
+	// request for the same table coming from another predicate
 	if ( m_required_joins.video_metadata || m_required_joins.left_video_metadata )
 	{
-		if ( m_required_joins.left_video_metadata ) query += " LEFT";
+		if ( m_required_joins.left_video_metadata && !m_required_joins.video_metadata ) query += " LEFT";
 		query += " JOIN video_metadata USING (record_id)";
 	}
 
 	if ( m_required_joins.image_metadata || m_required_joins.left_image_metadata )
 	{
-		if ( m_required_joins.left_image_metadata ) query += " LEFT";
+		if ( m_required_joins.left_image_metadata && !m_required_joins.image_metadata ) query += " LEFT";
 		query += " JOIN image_metadata USING (record_id)";
 	}
 
@@ -218,12 +228,13 @@ void SearchBuilder::determineSelectClause( std::string& query, const bool return
 	if ( return_ids && return_hashes )
 	{
 		m_required_joins.records = true;
-		constexpr std::string_view select_both { " SELECT tm.record_id, sha256 FROM final_filter tm" };
+		constexpr std::string_view select_both { " SELECT tm.record_id, rc.sha256 FROM final_filter tm" };
 		query += select_both;
 	}
 	else if ( return_hashes )
 	{
-		constexpr std::string_view select_sha256 { " SELECT tm.sha256 FROM final_filter tm" };
+		// sha256 lives in the joined records table (rc); the final_filter CTE only has record_id
+		constexpr std::string_view select_sha256 { " SELECT rc.sha256 FROM final_filter tm" };
 		query += select_sha256;
 		m_required_joins.records = true;
 	}
@@ -254,9 +265,9 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 	auto numericSearchAdd = [ & ]( const SearchOperation operation, const auto value, const std::string_view comp )
 	{
 		if ( operation & SearchOperationFlags::Not )
-			query += " AND NOT";
+			query += " AND NOT ";
 		else
-			query += " AND";
+			query += " AND ";
 
 		query += comp;
 
@@ -297,7 +308,7 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 
 	if ( m_archive_search.m_active )
 	{
-		numericSearchAdd( m_archive_search.m_active, m_archive_search.count, "am.archive_id" );
+		numericSearchAdd( m_archive_search.operation, m_archive_search.count, "am.archive_id " );
 	}
 
 	if ( m_in_archive_search != ArchiveSearchType::DontCare )
@@ -313,7 +324,14 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	std::string query { "WITH " };
 	query.reserve( 1024 );
 
-	if ( m_positive_tags.empty() && m_negative_tags.empty() )
+	// the fast path is only valid when nothing would filter the result set; system
+	// predicates and archive filters must go through the full construction below
+	const bool has_system_predicates {
+		m_duration_search != DurationSearchType::DontCare || m_in_archive_search != ArchiveSearchType::DontCare
+		|| m_width_search.m_active || m_height_search.m_active || m_archive_search.m_active
+	};
+
+	if ( m_positive_tags.empty() && m_negative_tags.empty() && !has_system_predicates )
 	{
 		return "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL";
 	}
@@ -352,6 +370,10 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 
 	determineSelectClause( query, return_ids, return_hashes );
 
+	// the unconditional mime filter below and the filesize sort both read from the fm alias,
+	// so the file_info join must always be present
+	m_required_joins.file_info = true;
+
 	determineJoinsForQuery( query );
 
 	query += " WHERE fm.mime_id IS NOT NULL";
@@ -374,7 +396,9 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 	const bool return_ids,
 	const bool return_hashes )
 {
-	const auto query { construct( return_ids, return_hashes, /* filter_domains */ false ) };
+	// only filter by domain when the caller actually supplied domains; the domain
+	// filter template references $1, which must then be bound below
+	const auto query { construct( return_ids, return_hashes, !tag_domain_ids.empty() ) };
 
 	log::info( "Search: Trying to run {}", query );
 
@@ -386,13 +410,14 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 
 void SearchBuilder::setSortType( const SortType type )
 {
+	m_sort_type = type;
+
 	switch ( type )
 	{
 		default:
 			[[fallthrough]];
 		case SortType::FILESIZE:
 			{
-				m_sort_type = type;
 				m_required_joins.file_info = true;
 				break;
 			}
@@ -678,7 +703,10 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 		if ( setHydrusSystemTags( system_subtag ) ) continue;
 
 		// IDHAN SPECIFIC
-		if ( system_subtag.starts_with( "archive" ) )
+		// the digit check keeps Hydrus's plain 'system:archive' (and other digitless
+		// variants) out of the range parser; they fall through to the unsupported warning
+		if ( system_subtag.starts_with( "archive" )
+		     && system_subtag.find_first_of( "0123456789" ) != std::string_view::npos )
 		{
 			parseRangeSearch( m_archive_search, system_subtag );
 			continue;
@@ -693,6 +721,7 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 		if ( system_subtag.starts_with( "not in archive" ) )
 		{
 			m_in_archive_search = ArchiveSearchType::NoArchive;
+			continue;
 		}
 
 		log::warn( "Unsupported system tag system: \'{}\'", system_subtag );

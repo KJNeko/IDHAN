@@ -55,8 +55,17 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	auto ret { archive_read_next_header( a.get(), &entry ) };
 
-	while ( ret == ARCHIVE_OK )
+	while ( ret == ARCHIVE_OK || ret == ARCHIVE_WARN )
 	{
+		// ARCHIVE_WARN is recoverable: the entry is still usable, so log and carry on rather than
+		// aborting the whole archive (the post-loop ret != ARCHIVE_EOF check would otherwise treat
+		// the warning as fatal).
+		if ( ret == ARCHIVE_WARN )
+		{
+			const char* warn { archive_error_string( a.get() ) };
+			spdlog::warn( "Archive warning while reading entry: {}", warn ? warn : "unknown" );
+		}
+
 		if ( archive_entry_filetype( entry ) != AE_IFREG ) // skip anything that isn't a file
 		{
 			ret = archive_read_next_header( a.get(), &entry );
@@ -71,49 +80,44 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 			continue;
 		}
 
-		const char* filename_raw { nullptr };
+		std::expected< std::string, idhan::ModuleError > filename {};
 
-		if ( filename_raw = archive_entry_pathname( entry ); filename_raw == nullptr )
+		if ( const char* filename_raw = archive_entry_pathname( entry ); filename_raw != nullptr )
 		{
-			if ( const auto utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
-			{
-				filename_raw = utf8_filename_raw;
-			}
-			else if ( const auto w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
-			{
-				spdlog::warn( "No file name for item in archive? It was W! Tell the dev" );
-				ret = archive_read_next_header( a.get(), &entry );
-				continue;
-			}
-			else
-			{
-				spdlog::warn( "No file name for item in archive? Maybe encrypted?" );
-				ret = archive_read_next_header( a.get(), &entry );
-				continue;
-			}
+			filename = sanitizeEncoding( filename_raw );
+		}
+		else if ( const char* utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
+		{
+			filename = sanitizeEncoding( utf8_filename_raw );
+		}
+		else if ( const wchar_t* w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
+		{
+			// Wide-only name: convert it rather than dropping the entry.
+			filename = wideToUtf8( w_filename_raw );
+		}
+		else
+		{
+			spdlog::warn( "No file name for item in archive? Maybe encrypted?" );
+			ret = archive_read_next_header( a.get(), &entry );
+			continue;
 		}
 
-		const auto filename { sanitizeEncoding( filename_raw ) };
 		if ( !filename ) return std::unexpected( filename.error() );
 
 		spdlog::trace( "Cleaned path to {}", *filename );
 
-		const auto file_size { static_cast< std::size_t >( archive_entry_size( entry ) ) };
-
-		std::vector< std::byte > file_data {};
-		file_data.resize( file_size );
-
-		if ( archive_read_data( a.get(), file_data.data(), file_size ) < 0 )
+		const auto file_data_e { readArchiveEntryData( a.get() ) };
+		if ( !file_data_e )
 		{
 			spdlog::error( "Unable to read archive data" );
-			const char* err { archive_error_string( a.get() ) };
-			return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
+			return std::unexpected( file_data_e.error() );
 		}
+		const auto& file_data { *file_data_e };
 
 		const auto file_hash { idhan::crypto::hashData( file_data.data(), file_data.size() ) };
 
 		archive_metadata.contained_hashes.emplace_back( file_hash );
-		archive_metadata.m_size += file_size;
+		archive_metadata.m_size += file_data.size();
 		json[ idhan::crypto::toHex( file_hash ) ] = *filename;
 		spdlog::trace( "Got hash {}", idhan::crypto::toHex( file_hash ) );
 

@@ -46,7 +46,7 @@ bool ReadAwaiterWin::await_ready() const noexcept
 void ReadAwaiterWin::await_suspend( const std::coroutine_handle<> h )
 {
 	m_event_loop = trantor::EventLoop::getEventLoopOfCurrentThread();
-	m_cont       = h;
+	m_cont = h;
 }
 
 std::vector< std::byte > ReadAwaiterWin::await_resume() const
@@ -57,7 +57,8 @@ std::vector< std::byte > ReadAwaiterWin::await_resume() const
 
 // ─── WriteAwaiterWin ──────────────────────────────────────────────────────────
 
-WriteAwaiterWin::WriteAwaiterWin() : WinAwaiterBase( Type::WRITE ) {}
+WriteAwaiterWin::WriteAwaiterWin() : WinAwaiterBase( Type::WRITE )
+{}
 
 void WriteAwaiterWin::complete( [[maybe_unused]] const DWORD bytes_transferred, const bool success )
 {
@@ -83,7 +84,7 @@ bool WriteAwaiterWin::await_ready() noexcept
 void WriteAwaiterWin::await_suspend( const std::coroutine_handle<> h )
 {
 	m_event_loop = trantor::EventLoop::getEventLoopOfCurrentThread();
-	m_cont       = h;
+	m_cont = h;
 }
 
 void WriteAwaiterWin::await_resume() const

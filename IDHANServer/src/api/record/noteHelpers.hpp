@@ -2,9 +2,9 @@
 // Created by kj16609 on 6/25/26.
 //
 #pragma once
-#include <string>
-
 #include <json/json.h>
+
+#include <string>
 
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"

@@ -4,6 +4,8 @@
 
 #include "Cursor.hpp"
 
+#include <tuple>
+
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 
@@ -41,16 +43,8 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 		// buffer is not large enough. we need more data
 		const bool is_small { required_size > m_buffer.size() };
 
-		// access would not be in bounds
-		const auto buffer_start { m_buffer_pos };
-		const auto buffer_size { m_buffer.size() };
-		const auto pos_start { pos };
-		const auto pos_size { required_size };
-
-		// check that buffer and pos overlap
-		const auto is_oob {
-			pos_start > buffer_start + buffer_size || pos_start + pos_size > buffer_start + buffer_size
-		};
+		// access would not be in bounds: the requested range must end within the buffer
+		const auto is_oob { pos + required_size > m_buffer_pos + m_buffer.size() };
 
 		if ( is_low || is_small || is_oob )
 		{
@@ -70,14 +64,19 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 		FGL_ASSERT( m_buffer_pos <= pos, "Buffer was not expected at it's current pos" );
 		const std::size_t offset { pos - m_buffer_pos };
 
-		co_return std::make_pair( m_buffer.data() + offset, m_buffer.size() );
+		// only the bytes from pos onward are valid; reporting the full buffer size here
+		// would let callers read past the end of m_buffer
+		const std::size_t available { offset <= m_buffer.size() ? m_buffer.size() - offset : 0 };
+
+		co_return std::make_pair( m_buffer.data() + offset, available );
 	}
 	if ( std::holds_alternative< std::string_view >( m_io ) )
 	{
 		const auto& string_view { std::get< std::string_view >( m_io ) };
 		const auto* data_ptr { reinterpret_cast< const std::byte* >( string_view.data() ) };
 		const std::size_t length { string_view.size() };
-		if ( pos + required_size >= length || length < pos ) co_return std::make_pair( nullptr, 0 );
+		// pos + required_size == length is a valid exact fit ending on the last byte
+		if ( pos + required_size > length || length < pos ) co_return std::make_pair( nullptr, 0 );
 		const auto leftover_size { length - pos };
 		m_buffer_pos = pos;
 		co_return std::make_pair( data_ptr + pos, std::min( required_size, leftover_size ) );
@@ -145,15 +144,24 @@ drogon::Task< bool > Cursor::tryMatchInc( const std::string_view match )
 	if ( is_match )
 	{
 		log::trace( "Cursor::tryMatchInc: advance by {} to pos {}", match.size(), m_pos + match.size() );
-		inc( match.size() );
+		std::ignore = inc( match.size() );
 	}
 	co_return is_match;
 }
 
 void Cursor::jumpTo( const std::int64_t pos )
 {
-	if ( pos < 0 ) m_pos = size() - static_cast< std::size_t >( std::abs( pos ) );
-	m_pos = static_cast< std::size_t >( pos );
+	if ( pos < 0 )
+	{
+		// negative positions are relative to the end of the data (-1 = last byte);
+		// one further back than the data has is unsatisfiable, so park at EOF where matches fail
+		const auto from_end { static_cast< std::size_t >( -pos ) };
+		m_pos = from_end > size() ? size() : size() - from_end;
+	}
+	else
+	{
+		m_pos = static_cast< std::size_t >( pos );
+	}
 }
 
 bool Cursor::inc( const std::size_t i )

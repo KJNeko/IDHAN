@@ -14,6 +14,7 @@ namespace Ui
 class PTRImportWidget;
 }
 
+//! Qt widget driving the import of downloaded PTR update files (wraps PTRImportWorker) and showing progress.
 class PTRImportWidget final : public QWidget
 {
 	Q_OBJECT
@@ -23,7 +24,7 @@ class PTRImportWidget final : public QWidget
 	explicit PTRImportWidget( QWidget* parent = nullptr );
 	~PTRImportWidget() override;
 
-	Q_DISABLE_COPY_MOVE( PTRImportWidget );
+	Q_DISABLE_COPY_MOVE( PTRImportWidget )
 
   public slots:
 

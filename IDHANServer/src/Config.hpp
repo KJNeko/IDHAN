@@ -47,7 +47,7 @@ const char* getCLIConfig( const std::string_view group, const std::string_view n
 std::string_view getUserConfigPath();
 
 template < typename T >
-std::optional< T > tryGetEnv( const std::string_view group, const std::string_view name )
+[[nodiscard]] std::optional< T > tryGetEnv( const std::string_view group, const std::string_view name )
 {
 	auto upper_group { std::string( group ) };
 	std::transform( upper_group.begin(), upper_group.end(), upper_group.begin(), ::toupper );
@@ -77,7 +77,7 @@ std::optional< T > tryGetEnv( const std::string_view group, const std::string_vi
 }
 
 template < typename T >
-std::optional< T > tryGetCLI( const std::string_view group, const std::string_view name )
+[[nodiscard]] std::optional< T > tryGetCLI( const std::string_view group, const std::string_view name )
 {
 	if ( const char* value = getCLIConfig( group, name ) )
 	{
@@ -116,7 +116,7 @@ inline std::filesystem::path expand_home( std::string_view path )
 }
 
 template < typename T >
-std::optional< T > getValueFromFile(
+[[nodiscard]] std::optional< T > getValueFromFile(
 	const std::string_view path,
 	const std::string_view group,
 	const std::string_view name )
@@ -161,7 +161,7 @@ std::optional< T > getValueFromFile(
 }
 
 template < typename T >
-std::optional< T > getValue( const std::string_view group, const std::string_view name )
+[[nodiscard]] std::optional< T > getValue( const std::string_view group, const std::string_view name )
 {
 	// TODO: Get arguments from CLI
 
@@ -192,7 +192,7 @@ std::optional< T > getValue( const std::string_view group, const std::string_vie
 }
 
 template < typename T >
-std::optional< T > get( const std::string_view group, const std::string_view name )
+[[nodiscard]] std::optional< T > get( const std::string_view group, const std::string_view name )
 {
 	return getValue< T >( group, name );
 }
@@ -202,7 +202,7 @@ constexpr auto no_warn_on_default { false };
 constexpr auto warn_config_default { warn_on_default };
 
 template < typename T, bool warn_when_defaulted = warn_config_default >
-T get( const std::string_view group, const std::string_view name, const auto default_value )
+[[nodiscard]] T get( const std::string_view group, const std::string_view name, const auto default_value )
 {
 	const auto ret { get< T >( group, name ) };
 
@@ -221,7 +221,7 @@ T get( const std::string_view group, const std::string_view name, const auto def
 }
 
 template < typename T >
-T getSilentDefault( const std::string_view group, const std::string_view name, const auto default_value )
+[[nodiscard]] T getSilentDefault( const std::string_view group, const std::string_view name, const auto default_value )
 {
 	const auto ret { get< T >( group, name ) };
 

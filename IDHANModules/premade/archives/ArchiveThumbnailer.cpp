@@ -8,10 +8,27 @@
 #include <vips/vips8>
 
 #include <filesystem>
-#include <iostream>
 
 #include "archives.hpp"
 #include "crypto/simpleHasher.hpp"
+#include "spdlog/spdlog.h"
+
+namespace
+{
+// Guards against archive-in-archive recursion: createThumbnail calls back into the generate and
+// thumbnail callbacks, which re-dispatch by MIME and can re-enter this thumbnailer for a nested
+// archive. Those callbacks run synchronously on the calling thread, so a thread_local depth
+// counter bounds the recursion and stops an archive bomb from exhausting the stack.
+thread_local std::size_t g_archive_thumbnail_depth { 0 };
+constexpr std::size_t MAX_ARCHIVE_THUMBNAIL_DEPTH { 4 };
+
+struct ArchiveThumbnailDepthGuard
+{
+	ArchiveThumbnailDepthGuard() { ++g_archive_thumbnail_depth; }
+
+	~ArchiveThumbnailDepthGuard() { --g_archive_thumbnail_depth; }
+};
+} // namespace
 
 std::vector< std::string_view > ArchiveThumbnailer::handleableMimes()
 {
@@ -23,9 +40,13 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 	std::size_t width,
 	std::size_t height )
 {
-	const auto [ file_view, mime, extra ] = data;
+	const ArchiveThumbnailDepthGuard depth_guard {};
+	if ( g_archive_thumbnail_depth > MAX_ARCHIVE_THUMBNAIL_DEPTH )
+		return std::unexpected( idhan::ModuleError { "Archive nesting too deep for thumbnailing" } );
 
-	std::cout << "Json: " << extra.toStyledString() << std::endl;
+	const auto& [ file_view, mime, extra ] = data;
+
+	spdlog::trace( "Archive thumbnailer extra json: {}", extra.toStyledString() );
 
 	if ( extra.isNull() )
 	{
@@ -43,8 +64,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 	if ( is_encrypted )
 	{
-		VipsImage* ptr { nullptr };
-
 		const auto svg_data_sized { format_ns::format(
 			R"(<?xml version="1.0" ?><svg width="{}px" height="{}px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title/><g id="Complete"><g id="lock"><g><rect fill="none" height="10" rx="2" ry="2" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" width="16" x="4" y="11"/><path d="M16.5,11V8h0c0-2.8-.5-5-4.5-5S7.5,5.2,7.5,8h0v3" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></g></g></g></svg>)",
 			width,
@@ -70,14 +89,20 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		!members.empty() ? members.size() - 1 : members.size()
 	}; // subtract the 'encrypted' member
 
-	// determine a grid
-	std::size_t grid_size { static_cast< std::size_t >( std::sqrt( child_thumbnails ) ) };
+	// determine a grid; ceil(sqrt) so the canvas is large enough for every child. floor() left
+	// non-perfect-square counts with an undersized canvas (relying on insert's expand to paper
+	// over it) and collapsed 2-3 child archives to grid_size 1, discarding all but the first.
+	auto grid_size {
+		static_cast< std::size_t >( std::ceil( std::sqrt( static_cast< double >( child_thumbnails ) ) ) )
+	};
 
 	constexpr auto thumb_width { 128 };
 	constexpr auto thumb_height { 128 };
 
-	vips::VImage canvas { vips::VImage::black(
-		thumb_width * grid_size, thumb_height * grid_size, vips::VImage::option()->set( "bands", 3 ) ) };
+	const int grid_width { thumb_width * static_cast< int >( grid_size ) };
+	const int grid_height { thumb_height * static_cast< int >( grid_size ) };
+
+	vips::VImage canvas { vips::VImage::black( grid_width, grid_height, vips::VImage::option()->set( "bands", 3 ) ) };
 
 	bool flag_cache_thumbnail { true };
 	std::size_t counter { 0 };
@@ -103,10 +128,12 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		if ( !generated_file )
 		{
-			//TODO: Log warn here
-			// last_error = generated_file.error();
-			// continue;
-			return std::unexpected( generated_file.error() );
+			// Skip this child rather than failing the whole archive thumbnail; only if every child
+			// fails do we surface an error (see the all_generate_failed check below).
+			spdlog::warn( "Archive thumbnailer: failed to generate '{}': {}", member, generated_file.error() );
+			last_error = generated_file.error();
+			flag_cache_thumbnail = false;
+			continue;
 		}
 
 		all_generate_failed = false;
@@ -128,7 +155,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		const auto x { counter % grid_size };
 		const auto y { counter / grid_size };
 		counter += 1;
-		const auto& image_rgb { thumbnail_rgb->data };
 		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail, _ ] = *thumbnail_rgb;
 
 		if ( !cache_thumbnail ) flag_cache_thumbnail = false;
@@ -136,8 +162,8 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		vips::VImage thumb { vips::VImage::new_from_memory_copy(
 			const_cast< void* >( static_cast< const void* >( rgb.data() ) ),
 			rgb.size(),
-			gen_thumb_width,
-			gen_thumb_height,
+			static_cast< int >( gen_thumb_width ),
+			static_cast< int >( gen_thumb_height ),
 			3,
 			VIPS_FORMAT_UCHAR ) };
 
@@ -157,7 +183,10 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 	if ( all_generate_failed )
 	{
-		return std::unexpected( *last_error );
+		// last_error may be empty if no member was a valid hash (nothing to generate); never
+		// dereference a disengaged optional here.
+		return std::unexpected(
+			last_error.value_or( idhan::ModuleError { "No thumbnailable entries found in archive" } ) );
 	}
 
 	idhan::ThumbnailInfo info { canvas, flag_cache_thumbnail };

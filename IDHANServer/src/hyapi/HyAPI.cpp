@@ -4,14 +4,18 @@
 
 #include "HyAPI.hpp"
 
-#include "crypto/SHA256.hpp"
-#include "records/records.hpp"
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <random>
+
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/version.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
+#include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "drogon/HttpClient.h"
 #include "fgl/defines.hpp"
@@ -19,6 +23,7 @@
 #include "helpers.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
+#include "records/records.hpp"
 
 namespace idhan::hyapi
 {
@@ -128,6 +133,52 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( [[maybe_unused]]
 	root[ "services" ] = co_await getServiceList( db );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
+}
+
+namespace
+{
+struct BootInfo
+{
+	std::string boot_id;
+	double boot_time;
+};
+
+const BootInfo& getBootInfo()
+{
+	static const BootInfo info {
+		[]
+		{
+			std::array< std::byte, SHA256::size() > bytes {};
+
+			std::random_device rd {};
+			std::mt19937_64 gen { rd() };
+			std::uniform_int_distribution< std::uint32_t > dist { 0, 255 };
+
+			for ( auto& byte : bytes ) byte = static_cast< std::byte >( dist( gen ) );
+
+			const auto now { std::chrono::system_clock::now() };
+			const double boot_time { std::chrono::duration< double >( now.time_since_epoch() ).count() };
+
+			return BootInfo { SHA256::fromBuffer( bytes ).hex(), boot_time };
+		}()
+	};
+
+	return info;
+}
+} // namespace
+
+// /hyapi/client_info
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::clientInfo( [[maybe_unused]] drogon::HttpRequestPtr request )
+{
+	const auto& boot_info { getBootInfo() };
+
+	Json::Value json;
+	json[ "boot_id" ] = boot_info.boot_id;
+	json[ "boot_time" ] = boot_info.boot_time;
+	// TODO: Reflect the actual job runtime/idle state once IDHAN has an equivalent concept.
+	json[ "currently_idle" ] = false;
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::addFile( [[maybe_unused]] drogon::HttpRequestPtr request )

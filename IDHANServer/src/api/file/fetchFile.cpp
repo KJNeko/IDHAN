@@ -2,9 +2,11 @@
 // Created by kj16609 on 3/22/25.
 //
 
+#include <algorithm>
+#include <format>
+#include <limits>
 #include <regex>
 
-#include "crypto/SHA256.hpp"
 #include "ServerContext.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -14,6 +16,96 @@
 
 namespace idhan::api
 {
+
+drogon::Task< drogon::HttpResponsePtr > createHttpHeadForFile(
+	const drogon::orm::DbClientPtr db,
+	const std::size_t file_size,
+	const RecordID record_id )
+{
+	auto response { drogon::HttpResponse::newHttpResponse() };
+
+	// add to response header that we support partial requests
+	response->addHeader( "Accept-Ranges", "bytes" );
+
+	response->addHeader( "Content-Length", std::to_string( file_size ) );
+
+	const auto mime_info { co_await db->execSqlCoro(
+		"SELECT mime.name as mime_name FROM file_info JOIN mime USING (mime_id) WHERE file_info.record_id = $1",
+		record_id ) };
+
+	if ( mime_info.empty() )
+	{
+		response->setContentTypeString( "application/octet-stream" );
+	}
+	else
+	{
+		response->setContentTypeString( mime_info[ 0 ][ "mime_name" ].as< std::string >() );
+	}
+
+	response->setPassThrough( true );
+	co_return response;
+}
+
+std::optional< drogon::HttpResponsePtr > parseRangeHeader(
+	const std::size_t file_size,
+	const std::string& range_header,
+	std::size_t& begin,
+	std::size_t& end_pos )
+{
+	constexpr auto regex_pattern { R"(bytes=(\d+)-(\d*)?)" };
+	static const std::regex regex { regex_pattern };
+	std::smatch range_match {};
+
+	if ( std::regex_match( range_header, range_match, regex ) )
+	{
+		if ( range_match.size() != 3 )
+		{
+			log::error( "Invalid Range Header. Expected 3 matches, Got {}", range_match.size() );
+			return createBadRequest( "Invalid Range Header. Expected 3 matches, Got {}", range_match.size() );
+		}
+
+		try
+		{
+			log::debug( "Regex range header match 1: {}", range_match[ 1 ].str() );
+			begin = static_cast< std::size_t >( std::stoull( range_match[ 1 ].str() ) );
+
+			// Empty group 2 means open-ended range (bytes=N-); leave end_pos as sentinel
+			if ( range_match[ 2 ].matched && !range_match[ 2 ].str().empty() )
+			{
+				log::debug( "Regex range header match 2: {}", range_match[ 2 ].str() );
+				end_pos = static_cast< std::size_t >( std::stoull( range_match[ 2 ].str() ) );
+			}
+		}
+		catch ( std::exception& e )
+		{
+			log::error( "Error with range header: {}, Header was {}", e.what(), range_header );
+			return createBadRequest( "Error with range header: {}, Header was {}", e.what(), range_header );
+		}
+
+		// A first-byte-pos past EOF makes the range unsatisfiable: 416, not 400 (RFC 7233 §4.4)
+		if ( begin >= file_size )
+		{
+			auto response { drogon::HttpResponse::newHttpResponse() };
+			response->setStatusCode( drogon::k416RequestedRangeNotSatisfiable );
+			response->addHeader( "Content-Range", std::format( "bytes */{}", file_size ) );
+			return response;
+		}
+
+		if ( end_pos != std::numeric_limits< std::size_t >::max() )
+		{
+			if ( begin > end_pos ) return createBadRequest( "Invalid Range Header" );
+
+			// A last-byte-pos past EOF is not an error, it is clamped to the end of the file (RFC 7233 §2.1)
+			end_pos = std::min( end_pos, file_size - 1 );
+		}
+	}
+	else
+	{
+		return createBadRequest( "Invalid Range Header Format Regex failed: {}", regex_pattern );
+	}
+
+	return std::nullopt;
+}
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
@@ -35,85 +127,23 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	// Check if this is a head request
 	if ( request->isHead() )
 	{
-		auto response { drogon::HttpResponse::newHttpResponse() };
-
-		// add to response header that we support partial requests
-		response->addHeader( "Accept-Ranges", "bytes" );
-
-		response->addHeader( "Content-Length", std::to_string( file_size ) );
-
-		const auto mime_info {
-			co_await db->execSqlCoro( "SELECT mime.name as mime_name FROM file_info JOIN mime USING (mime_id)" )
-		};
-
-		if ( mime_info.empty() )
-		{
-			response->setContentTypeString( "application/octet-stream" );
-			// response->addHeader( "Content-Type", "application/octet-stream" );
-		}
-		else
-		{
-			response->setContentTypeString( mime_info[ 0 ][ "mime_name" ].as< std::string >() );
-			// response->addHeader( "Content-Type", mime_info[ 0 ][ "mime_name" ].as< std::string >() );
-		}
-
-		response->setPassThrough( true );
-
-		co_return response;
+		co_return co_await createHttpHeadForFile( db, file_size, record_id );
 	}
-
-	// Get the header for ranges if supplied
 
 	// Get the header for ranges if supplied
 	const auto& range_header { request->getHeader( "Range" ) };
 	std::size_t begin { 0 };
-	std::size_t end { 0 };
+	std::size_t end_pos { std::numeric_limits< std::size_t >::max() }; // max = open-ended (serve to EOF)
+
+	const bool has_range_header { !range_header.empty() };
 
 	// This is stupid but apparently valid
 	constexpr auto full_range { "bytes=0-" };
-
-	const bool has_range_header { !range_header.empty() };
 	const bool is_full_range { has_range_header && ( range_header == full_range ) };
-	if ( !is_full_range && has_range_header )
+
+	if ( !is_full_range && has_range_header ) // needs to parse
 	{
-		constexpr auto regex_pattern { R"(bytes=(\d*)-(\d*)?)" };
-		static const std::regex regex { regex_pattern };
-		std::smatch range_match {};
-
-		if ( std::regex_match( range_header, range_match, regex ) )
-		{
-			if ( range_match.size() != 3 )
-			{
-				log::error( "Invalid Range Header. Expected 3 matches, Got {}", range_match.size() );
-				co_return createBadRequest( "Invalid Range Header. Expected 3 matches, Got {}", range_match.size() );
-			}
-
-			try
-			{
-				if ( range_match[ 1 ].matched )
-				{
-					log::debug( "Regex range header match 1: {}", range_match[ 1 ].str() );
-					begin = static_cast< std::size_t >( std::stoull( range_match[ 1 ].str() ) );
-				}
-				if ( range_match[ 2 ].matched )
-				{
-					log::debug( "Regex range header match 2: {}", range_match[ 2 ].str() );
-					end = static_cast< std::size_t >( std::stoull( range_match[ 2 ].str() ) );
-				}
-			}
-			catch ( std::exception& e )
-			{
-				log::error( "Error with range header: {}, Header was {}", e.what(), range_header );
-				co_return createBadRequest( "Error with range header: {}, Header was {}", e.what(), range_header );
-			}
-
-			// Ensure the range is valid
-			if ( begin > end || end >= file_size ) co_return createBadRequest( "Invalid Range Header" );
-		}
-		else
-		{
-			co_return createBadRequest( "Invalid Range Header Format Regex failed: {}", regex_pattern );
-		}
+		if ( auto value = parseRangeHeader( file_size, range_header, begin, end_pos ); value ) co_return *value;
 	}
 
 	if ( request->getOptionalParameter< bool >( "download" ).value_or( false ) )
@@ -123,7 +153,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 		co_return response;
 	}
 
-	auto response { drogon::HttpResponse::newFileResponse( path_e->string(), begin, end - begin ) };
+	// length=0 means "serve from begin to EOF" in Drogon; use it for no-range and open-ended ranges
+	const std::size_t length { end_pos != std::numeric_limits< std::size_t >::max() ? end_pos - begin + 1 : 0 };
+	auto response { drogon::HttpResponse::newFileResponse( path_e->string(), begin, length ) };
 
 	helpers::addFileCacheHeader(
 		response /* max_age is set to 1 year, Since this is likely to never be changed by IDHAN */ );

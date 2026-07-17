@@ -2,9 +2,6 @@
 // Created by kj16609 on 2/27/26.
 //
 
-#include <chrono>
-#include <thread>
-
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "jobs/JobContext.hpp"
@@ -17,13 +14,11 @@
 namespace idhan::api
 {
 
-// A simple test JobTask that simulates some asynchronous work
+// A simple test JobTask that exercises the job system and DB connectivity
 JobTask testJobTask()
 {
 	const auto job_id { co_await getJobID() };
 	log::debug( "JOB TEST {}: Entered", job_id );
-	std::this_thread::sleep_for( std::chrono::seconds( 10 ) );
-	log::debug( "JOB TEST {}: Slept", job_id );
 
 	auto db { drogon::app().getDbClient() };
 
@@ -32,15 +27,13 @@ JobTask testJobTask()
 	if ( !db_result.empty() )
 	{
 		const auto num { db_result[ 0 ][ 0 ].as< int >() };
-
-		log::debug( "Result got: {}", num );
+		log::debug( "JOB TEST {}: DB result got: {}", job_id, num );
 	}
 	else
 	{
-		log::warn( "Whut" );
+		log::warn( "JOB TEST {}: DB returned empty result", job_id );
 	}
 
-	// Return a success response
 	Json::Value result;
 	result[ "message" ] = "Test job completed successfully";
 	result[ "job_id" ] = static_cast< Json::UInt64 >( job_id );
@@ -74,11 +67,11 @@ Json::Value getJobStatusJson(
 	const auto now = std::chrono::steady_clock::now();
 	const auto system_now = std::chrono::system_clock::now();
 
-	if ( status->m_start_time != std::chrono::steady_clock::time_point {} )
+	const auto start_time { status->m_start_time.load() };
+	if ( start_time != std::chrono::steady_clock::time_point {} )
 	{
-		const auto start_system =
-			system_now
-			+ std::chrono::duration_cast< std::chrono::system_clock::duration >( status->m_start_time - now );
+		const auto start_system = system_now
+		                        + std::chrono::duration_cast< std::chrono::system_clock::duration >( start_time - now );
 		const auto epoch =
 			std::chrono::duration_cast< std::chrono::seconds >( start_system.time_since_epoch() ).count();
 		response[ "start_time" ] = static_cast< Json::UInt64 >( epoch );
@@ -111,7 +104,6 @@ Json::Value getJobStatusJson(
 
 		if ( cleanup_on_completion )
 		{
-			// Requirement: delete it after we've checked for it once.
 			status->m_cleanup_requested = true;
 		}
 	}
@@ -124,48 +116,28 @@ Json::Value getJobStatusJson(
 	return response;
 }
 
-// Endpoint handler: Dispatches the test job and returns its ID
-drogon::Task< drogon::HttpResponsePtr > APIMaintenance::testJob( drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > APIMaintenance::testJob( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
-	// Dispatch the test job to the job system
-	auto job_ctx = queueJob( testJobTask(), "testJobTask" );
+	auto job_ctx { queueJob( testJobTask(), "testJobTask" ) };
 	log::debug( "Job created" );
 
-	// Prepare response with job details
 	Json::Value response;
-	response[ "job_id" ] = static_cast< Json::Int64 >( job_ctx->id() );
+	response[ "job_id" ] = job_ctx->id();
 	response[ "status" ] = "dispatched";
-	response[ "message" ] = "Test job has been dispatched. Check /jobs/{job_id}/status for updates.";
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
 
-drogon::Task< drogon::HttpResponsePtr > APIMaintenance::jobStatus( drogon::HttpRequestPtr request, idhan::JobID job_id )
+drogon::Task< drogon::HttpResponsePtr > APIMaintenance::jobStatus(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	idhan::JobID job_id )
 {
 	auto& runtime = getJobRuntime();
 	auto job = runtime.getJob( job_id );
 
-	if ( !job )
-	{
-		co_return drogon::HttpResponse::newNotFoundResponse();
-	}
+	if ( !job ) co_return createNotFound( "Job {} not found", job_id );
 
-	Json::Value response = getJobStatusJson( job_id, job, true );
-
-	// Requirement: If the job is not complete. Return the full json body as well as the response
-	// (Assuming "full json body" refers to the request body if it was JSON)
-	if ( !job->done() )
-	{
-		if ( request->contentType() == drogon::CT_APPLICATION_JSON )
-		{
-			if ( auto req_body = request->getJsonObject() )
-			{
-				response[ "request_body" ] = *req_body;
-			}
-		}
-	}
-
-	co_return drogon::HttpResponse::newHttpJsonResponse( response );
+	co_return drogon::HttpResponse::newHttpJsonResponse( getJobStatusJson( job_id, job, true ) );
 }
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::jobsStatus( drogon::HttpRequestPtr request )
@@ -178,7 +150,6 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::jobsStatus( drogon::Http
 
 	const auto body { request->getJsonObject() };
 
-	// If a list of job IDs is provided, return their status
 	if ( body && body->isObject() && body->isMember( "job_ids" ) && ( *body )[ "job_ids" ].isArray() )
 	{
 		const auto& job_ids_json = ( *body )[ "job_ids" ];
@@ -195,7 +166,6 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::jobsStatus( drogon::Http
 	}
 	else
 	{
-		// Requirement: Return all currently in progress jobs
 		for ( const auto& job : runtime.getAllJobs() )
 		{
 			jobs_json.append( getJobStatusJson( job->id(), job, cleanup ) );

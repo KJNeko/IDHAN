@@ -39,37 +39,37 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagRelationships(
 
 	for ( const auto& row : co_await parents_result )
 	{
-		const auto parent_id { row[ 0 ].as< std::size_t >() };
+		const auto parent_id { row[ 0 ].as< TagID >() };
 		json[ "parents" ].append( parent_id );
 	}
 
 	for ( const auto& row : co_await children_result )
 	{
-		const auto child_id { row[ 0 ].as< std::size_t >() };
+		const auto child_id { row[ 0 ].as< TagID >() };
 		json[ "children" ].append( child_id );
 	}
 
 	for ( const auto& row : co_await older_siblings )
 	{
-		const auto older_id { row[ 0 ].as< std::size_t >() };
+		const auto older_id { row[ 0 ].as< TagID >() };
 		json[ "older_siblings" ].append( older_id );
 	}
 
 	for ( const auto& row : co_await younger_siblings )
 	{
-		const auto younger_id { row[ 0 ].as< std::size_t >() };
+		const auto younger_id { row[ 0 ].as< TagID >() };
 		json[ "younger_siblings" ].append( younger_id );
 	}
 
 	for ( const auto& row : co_await aliases_result )
 	{
-		const auto alias_id { row[ 0 ].as< std::size_t >() };
+		const auto alias_id { row[ 0 ].as< TagID >() };
 		json[ "aliases" ].append( alias_id );
 	}
 
 	for ( const auto& row : co_await aliased_result )
 	{
-		const auto aliased_id { row[ 0 ].as< std::size_t >() };
+		const auto aliased_id { row[ 0 ].as< TagID >() };
 		json[ "aliased" ].append( aliased_id );
 	}
 

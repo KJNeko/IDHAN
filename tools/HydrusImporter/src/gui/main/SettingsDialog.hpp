@@ -11,6 +11,7 @@ namespace Ui
 class SettingsDialog;
 }
 
+//! Dialog for editing the importer's server-connection and application settings.
 class SettingsDialog final : public QDialog
 {
 	Q_OBJECT

@@ -8,11 +8,11 @@
 #include <fstream>
 #include <paths.hpp>
 
-#include "filesystem/io/IOUring.hpp"
 #include "Cursor.hpp"
 #include "MimeIdentifier.hpp"
 #include "ModuleBase.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "filesystem/io/IOUring.hpp"
 
 namespace idhan::mime
 {
@@ -22,12 +22,20 @@ MimeDatabase::MimeDatabase()
 	log::trace( "MimeDatabase constructor: deferred initialization to startup" );
 }
 
+std::shared_ptr< const std::vector< MimeIdentifier > > MimeDatabase::identifiers() const
+{
+	std::lock_guard lock { m_identifiers_mutex };
+	return m_identifiers;
+}
+
 drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( const Cursor cursor )
 {
-	log::trace( "MimeDatabase::scan: starting scan with {} identifiers", m_identifiers.size() );
+	// snapshot so a concurrent reload can't invalidate the vector mid-iteration
+	const auto identifiers { this->identifiers() };
+	log::trace( "MimeDatabase::scan: starting scan with {} identifiers", identifiers->size() );
 	std::vector< std::pair< std::string, MimeScore > > positive_matches {};
 
-	for ( const auto& identifier : m_identifiers )
+	for ( const auto& identifier : *identifiers )
 	{
 		if ( !identifier.hasMatchers() )
 		{
@@ -54,9 +62,11 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 		log::debug( "MimeDatabase::scan: no identifiers matched" );
 		co_return std::unexpected( createBadRequest( "Could not identify mime from file" ) );
 	}
+	// tie-break equal priorities by name so the selected mime doesn't depend on parser load order
 	std::ranges::sort(
 		positive_matches,
-		[]( const auto& left, const auto& right ) noexcept -> bool { return left.second > right.second; } );
+		[]( const auto& left, const auto& right ) noexcept -> bool
+		{ return left.second != right.second ? left.second > right.second : left.first < right.first; } );
 
 	std::string matches_out {};
 	for ( std::size_t i = 0; i < positive_matches.size(); ++i )
@@ -76,11 +86,14 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 
 Json::Value MimeDatabase::dump() const
 {
-	Json::Value json {};
+	// arrayValue so an empty parser list responds with [] rather than null
+	Json::Value json { Json::arrayValue };
 
 	std::vector< Json::Value > items {};
 
-	for ( const auto& identifier : m_identifiers )
+	const auto identifiers { this->identifiers() };
+
+	for ( const auto& identifier : *identifiers )
 	{
 		Json::Value item {};
 
@@ -140,7 +153,8 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 {
 	auto db { drogon::app().getDbClient() };
 
-	m_identifiers.clear();
+	// built fully before being swapped in, so in-flight scans keep their old snapshot
+	auto new_identifiers { std::make_shared< std::vector< MimeIdentifier > >() };
 	const std::vector< std::filesystem::path > paths { getMimeParserPaths() };
 	log::trace( "reloadMimeParsers: found {} parser paths", paths.size() );
 
@@ -149,23 +163,15 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 		log::trace( "reloadMimeParsers: loading parser from {}", path.filename().string() );
 		try
 		{
-			auto& identifier { m_identifiers.emplace_back( path ) };
+			auto& identifier { new_identifiers->emplace_back( path ) };
 
 			std::string mime { identifier.mime() };
 			log::debug( "reloadMimeParsers: loaded parser for mime type '{}' from {}", mime, path.filename().string() );
 
-			const auto id { co_await getMimeIDFromStr( mime, db ) };
-
-			if ( !id.has_value() )
-			{
-				log::trace( "reloadMimeParsers: inserting new mime type '{}' into DB", mime );
-				co_await db->execSqlCoro(
-					"INSERT INTO mime(name, best_extension) VALUES ($1, $2)", mime, identifier.getBestExtension() );
-			}
-			else
-			{
-				log::trace( "reloadMimeParsers: mime type '{}' already exists in DB (id={})", mime, *id );
-			}
+			co_await db->execSqlCoro(
+				"INSERT INTO mime(name, best_extension) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING",
+				mime,
+				identifier.getBestExtension() );
 		}
 		catch ( std::exception& e )
 		{
@@ -173,7 +179,13 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 		}
 	}
 
-	log::trace( "reloadMimeParsers: completed, {} identifiers loaded", m_identifiers.size() );
+	log::trace( "reloadMimeParsers: completed, {} identifiers loaded", new_identifiers->size() );
+
+	{
+		std::lock_guard lock { m_identifiers_mutex };
+		m_identifiers = std::move( new_identifiers );
+	}
+
 	co_return {};
 }
 

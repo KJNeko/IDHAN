@@ -21,8 +21,8 @@ std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
 
 std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleCallData& data )
 {
-	VipsImage* image_ptr;
-	if ( const auto it = VIPS_FUNC_MAP.find( data.mime_name ); it != VIPS_FUNC_MAP.end() )
+	VipsImage* image_ptr { nullptr };
+	if ( const auto it = VIPS_FUNC_MAP.find( data.mime_name ); it != VIPS_FUNC_MAP.end() && it->second != nullptr )
 	{
 		if ( it->second(
 				 const_cast< void* >( static_cast< const void* >( data.file_view.data() ) ),
@@ -50,9 +50,7 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 
 	MetadataInfo info {};
 	info.m_metadata = MetadataInfoImage {
-		.width = static_cast< int >( image.width() ),
-		.height = static_cast< int >( image.height() ),
-		.channels = static_cast< std::uint8_t >( image.bands() )
+		.width = image.width(), .height = image.height(), .channels = static_cast< std::uint8_t >( image.bands() )
 	};
 
 	info.m_simple_type = idhan::SimpleMimeType::IMAGE_TYPE;

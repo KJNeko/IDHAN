@@ -84,6 +84,9 @@ struct AVIOContextDeleter
 	{
 		if ( ctx )
 		{
+			// the buffer may have been freed and replaced by libavformat, so free ctx->buffer
+			// rather than the original allocation
+			av_free( ctx->buffer );
 			av_free( ctx );
 		}
 	}
@@ -123,7 +126,9 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	OpaqueInfo opaque_info { .m_data = data.file_view, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
-	std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
+	// must be av_malloc'd: libavformat may free()/realloc() this buffer internally, and freeing
+	// operator new[] memory through ffmpeg's allocator (or vice versa) is UB
+	auto* buffer_ptr { static_cast< std::byte* >( av_malloc( BUFFER_SIZE ) ) };
 
 	std::unique_ptr< AVIOContext, AVIOContextDeleter > avio_context( avio_alloc_context(
 		reinterpret_cast< unsigned char* >( buffer_ptr ),
@@ -139,23 +144,23 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		return std::unexpected( idhan::ModuleError( "Failed to allocate AVIO context" ) );
 	}
 
-	std::unique_ptr< AVFormatContext, AVFormatContextDeleter > format_context( avformat_alloc_context() );
-	if ( !format_context )
+	AVFormatContext* format_context_raw { avformat_alloc_context() };
+	if ( !format_context_raw )
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to allocate format context" ) );
 	}
 
-	format_context->pb = avio_context.get();
-	format_context->flags |= AVFMT_FLAG_CUSTOM_IO;
+	format_context_raw->pb = avio_context.get();
+	format_context_raw->flags |= AVFMT_FLAG_CUSTOM_IO;
 
-	AVFormatContext* format_context_raw = format_context.get();
+	// avformat_open_input frees format_context_raw itself on failure; only take ownership once
+	// it succeeds, otherwise the unique_ptr below would double-free it
 	if ( avformat_open_input( &format_context_raw, "", nullptr, nullptr ) < 0 )
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to open file" ) );
 	}
-	// avformat_open_input may reallocate the context, update our unique_ptr
-	format_context.release();
-	format_context.reset( format_context_raw );
+
+	std::unique_ptr< AVFormatContext, AVFormatContextDeleter > format_context( format_context_raw );
 
 	if ( avformat_find_stream_info( format_context.get(), nullptr ) < 0 )
 	{
@@ -169,7 +174,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	{
 		if ( format_context->streams[ i ]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
 		{
-			video_stream_index = i;
+			video_stream_index = static_cast< int >( i );
 			codec_params = format_context->streams[ i ]->codecpar;
 			break;
 		}
@@ -181,9 +186,9 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	}
 
 	// Calculate 10% duration and seek to it
-	const auto duration { av_rescale_q(
-		format_context->duration, AV_TIME_BASE_Q, format_context->streams[ video_stream_index ]->time_base ) };
-	const auto target_timestamp { static_cast< int64_t >( duration * 0.10 ) };
+	const auto& stream { format_context->streams[ video_stream_index ] };
+	const auto duration { av_rescale_q( format_context->duration, AV_TIME_BASE_Q, stream->time_base ) };
+	const auto target_timestamp { duration / 10 }; // 10% of the total duration
 
 	if ( av_seek_frame( format_context.get(), video_stream_index, target_timestamp, AVSEEK_FLAG_BACKWARD ) < 0 )
 	{

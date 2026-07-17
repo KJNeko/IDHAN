@@ -32,7 +32,7 @@ idhan::ModuleVersion PsdMetadata::version()
 std::expected< idhan::MetadataInfo, idhan::ModuleError > PsdMetadata::parseFile( idhan::ModuleCallData& data )
 {
 	const auto& [ data_view, mime, extra ] = data;
-	const auto* bytes { static_cast< const std::uint8_t* >( data_view.data() ) };
+	const auto* bytes { data_view.data() };
 
 	const auto header { parsePSDHeader( bytes, data_view.size() ) };
 	if ( !header )
