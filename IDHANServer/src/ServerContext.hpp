@@ -41,6 +41,9 @@ class ServerContext
 	ServerContext( const ConnectionArguments& arguments );
 
 	void setupCORSSupport() const;
+
+	//! Serves the WebUI's index.html for unmatched non-API navigations so client-side routes survive a reload.
+	void setupSPAFallback() const;
 	static std::shared_ptr< spdlog::logger > createLogger( const ConnectionArguments& arguments );
 	void run();
 
