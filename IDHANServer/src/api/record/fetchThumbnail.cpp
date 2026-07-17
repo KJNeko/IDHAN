@@ -46,12 +46,13 @@ std::filesystem::path legacyThumbnailPath( const std::string& hex )
 }
 
 //! Cache-Control for a served thumbnail. There is no revalidation: within max-age the browser reuses
-//! its copy with no request at all. Invalidation is manual — after changing generation settings the
-//! operator regenerates/purges, and clients pick up the change once their cache entry ages out (or
-//! they clear it). max-age comes from [thumbnails] max_age (default 7 days).
+//! its copy with no request at all. The window is a fixed one year (not immutable, and not operator
+//! configurable). Invalidation is manual — after changing generation settings the operator
+//! regenerates/purges, and clients pick up the change once their cache entry ages out (or they clear
+//! it).
 std::string thumbnailCacheControl()
 {
-	return std::format( "private, max-age={}", getThumbnailMaxAge().count() );
+	return std::format( "private, max-age={}", helpers::default_max_age.count() );
 }
 } // namespace
 
