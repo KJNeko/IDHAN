@@ -54,7 +54,13 @@ function persistWorking(doc: LayoutDocument): void {
 }
 
 function loadSaved(): Record<string, LayoutDocument> {
-  const raw = safeParse(localStorage.getItem(SAVED_KEY));
+  let text: string | null = null;
+  try {
+    text = localStorage.getItem(SAVED_KEY);
+  } catch {
+    text = null;
+  }
+  const raw = safeParse(text);
   const out: Record<string, LayoutDocument> = {};
   if (raw && typeof raw === 'object') {
     for (const [id, value] of Object.entries(raw as Record<string, unknown>)) {
