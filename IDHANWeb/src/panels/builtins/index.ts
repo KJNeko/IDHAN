@@ -9,6 +9,9 @@ import { registerPanel } from '../registry';
 import { serverStatusPanel } from './ServerStatusPanel';
 import { selectionInspectorPanel } from './SelectionInspectorPanel';
 import { searchPanel } from './SearchPanel';
+import { gridPanel } from './GridPanel';
+import { mediaViewerPanel } from './MediaViewerPanel';
+import { recordInfoPanel } from './RecordInfoPanel';
 
 let registered = false;
 
@@ -16,6 +19,9 @@ export function registerBuiltinPanels(): void {
   if (registered) return;
   registered = true;
   registerPanel(searchPanel);
+  registerPanel(gridPanel);
+  registerPanel(mediaViewerPanel);
+  registerPanel(recordInfoPanel);
   registerPanel(serverStatusPanel);
   registerPanel(selectionInspectorPanel);
 }
