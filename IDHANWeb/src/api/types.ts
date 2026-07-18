@@ -80,6 +80,28 @@ export interface AutocompleteResult {
   similarity?: number;
 }
 
+/** A panel a plugin advertises in its manifest (for display before the bundle is loaded). */
+export interface PluginPanelInfo {
+  type: string;
+  title?: string;
+}
+
+/**
+ * One entry from GET /plugins. Mirrors the plugin's manifest.json with two server-resolved fields:
+ * `dir` (its directory name) and `entry` (the bundle URL to dynamic-import, e.g. /plugins/hello/index.js).
+ */
+export interface PluginManifest {
+  id: string;
+  name: string;
+  version: string;
+  /** Semver range of the host API this plugin targets, e.g. "^1.0.0". */
+  hostApi: string;
+  description?: string;
+  dir: string;
+  entry: string;
+  panels?: PluginPanelInfo[];
+}
+
 /** One row from GET /layouts — server-stored layout metadata. The document itself is fetched lazily. */
 export interface ServerLayoutMeta {
   id: string;

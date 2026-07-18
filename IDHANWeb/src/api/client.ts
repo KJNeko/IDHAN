@@ -14,6 +14,7 @@ import type {
   AutocompleteResult,
   MetadataRequest,
   MetadataResponse,
+  PluginManifest,
   SearchRequest,
   SearchResponse,
   ServerLayoutMeta,
@@ -187,6 +188,13 @@ export const tags = {
       body: { records: recordIds, sets: recordIds.map(() => tagIds) },
       signal,
     });
+  },
+};
+
+/** WebUI plugin discovery (M6). Returns the validated index; bundles are dynamic-imported client-side. */
+export const plugins = {
+  list(signal?: AbortSignal): Promise<PluginManifest[]> {
+    return request<PluginManifest[]>('/plugins', { signal });
   },
 };
 

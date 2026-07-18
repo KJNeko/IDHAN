@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
 import { LoginScreen } from '../auth/LoginScreen';
 import { useAuth } from '../auth/AuthProvider';
 import { LayoutToolbar } from '../layout/LayoutToolbar';
 import { Workspace } from '../layout/Workspace';
+import { useLayoutStore } from '../layout/store';
+import { loadPlugins } from '../plugins/loader';
 import { ToastHost } from '../host/ToastHost';
 
 /**
@@ -10,6 +13,16 @@ import { ToastHost } from '../host/ToastHost';
  */
 function AppShell() {
   const { logout } = useAuth();
+
+  // Load third-party panel plugins once, now that we hold a credential for the /plugins call. When any
+  // register, bump the catalog so the picker and workspace pick up the new types. Failures are handled
+  // inside loadPlugins (warn + skip), so this never blocks the shell.
+  useEffect(() => {
+    void loadPlugins().then((count) => {
+      if (count > 0) useLayoutStore.getState().bumpCatalog();
+    });
+  }, []);
+
   return (
     <div className="app">
       <LayoutToolbar onSignOut={() => void logout()} />

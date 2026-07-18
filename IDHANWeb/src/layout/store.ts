@@ -107,6 +107,8 @@ interface LayoutStore {
   editMode: boolean;
   /** Increments when the whole tree is swapped (load/new/reset) to force a Workspace remount. */
   generation: number;
+  /** Increments when the panel catalog changes (e.g. plugins finish loading), to refresh the picker. */
+  catalogVersion: number;
   savedLayouts: LayoutMeta[];
   /** Metadata for layouts stored on the server; refreshed on demand, empty until first fetch. */
   serverLayouts: ServerLayoutMeta[];
@@ -115,6 +117,8 @@ interface LayoutStore {
 
   setApi: (api: DockviewApi | null) => void;
   toggleEditMode: () => void;
+  /** Signal that the registered panel catalog changed (plugins loaded), so views re-read the registry. */
+  bumpCatalog: () => void;
 
   /** Persist the serialized engine tree and prune config for panels the user closed. */
   setEngineTree: (tree: SerializedDockview) => void;
@@ -154,6 +158,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
   api: null,
   editMode: false,
   generation: 0,
+  catalogVersion: 0,
   savedLayouts: metaList(loadSaved()),
   serverLayouts: [],
   serverBusy: false,
@@ -161,6 +166,8 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
   setApi: (api) => set({ api }),
 
   toggleEditMode: () => set((s) => ({ editMode: !s.editMode })),
+
+  bumpCatalog: () => set((s) => ({ catalogVersion: s.catalogVersion + 1 })),
 
   setEngineTree: (tree) => {
     const { doc } = get();

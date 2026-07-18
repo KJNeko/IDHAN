@@ -4,7 +4,7 @@
  * push/pull); localStorage remains the source of truth and the server copy is opt-in.
  */
 
-import { type ChangeEvent, type SyntheticEvent } from 'react';
+import { type ChangeEvent, type SyntheticEvent, useMemo } from 'react';
 import { ApiError } from '../api/client';
 import { listPanels } from '../panels/registry';
 import { useLayoutStore } from './store';
@@ -29,8 +29,12 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
   const serverLayouts = useLayoutStore((s) => s.serverLayouts);
   const serverBusy = useLayoutStore((s) => s.serverBusy);
   const activeId = useLayoutStore((s) => s.doc.id);
+  const catalogVersion = useLayoutStore((s) => s.catalogVersion);
 
   const store = useLayoutStore.getState();
+
+  // Re-read the registry when the catalog changes (a plugin registered new panel types).
+  const panels = useMemo(() => listPanels(), [catalogVersion]);
 
   function onAddPanel(event: ChangeEvent<HTMLSelectElement>) {
     const type = event.target.value;
@@ -92,7 +96,7 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
 
       <select className="toolbar-add" value="" onChange={onAddPanel} aria-label="Add panel">
         <option value="">Add panel…</option>
-        {listPanels().map((panel) => (
+        {panels.map((panel) => (
           <option key={panel.type} value={panel.type}>
             {panel.title}
           </option>
