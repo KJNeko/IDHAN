@@ -89,4 +89,13 @@ std::filesystem::path getThumbnailsPath()
 	return thumbnails_path;
 }
 
+std::vector< std::size_t > getCacheableThumbnailSizes()
+{
+	// Read live (no call_once): an operator can edit cacheable_sizes while the server runs and have it
+	// take effect on the next thumbnail generation. The config layer re-reads the file per call; this is
+	// only reached on a cache miss, so the parse cost is dwarfed by the generation it gates.
+	return idhan::config::getArray< std::size_t >(
+		"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
+}
+
 } // namespace idhan

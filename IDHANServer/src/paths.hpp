@@ -46,4 +46,9 @@ std::vector< std::filesystem::path > getMimeParserPaths();
 std::filesystem::path getStaticPath();
 std::filesystem::path getThumbnailsPath();
 
+//! Square thumbnail edge lengths (px) the server is permitted to write to its on-disk cache. Requests
+//! for other sizes are still generated and served, just never cached. Config: `[thumbnails] cacheable_sizes`.
+//! Read live per call so an operator can change it without restarting; only hit on a cache miss.
+std::vector< std::size_t > getCacheableThumbnailSizes();
+
 } // namespace idhan

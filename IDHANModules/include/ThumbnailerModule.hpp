@@ -31,13 +31,13 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 	//! \param data The source file and its MIME (see ModuleCallData).
 	//! \param width,height Target thumbnail dimensions in pixels.
 	//! \return The thumbnail, or a ModuleError describing why it could not be produced.
-	[[nodiscard]] virtual std::expected< ThumbnailInfo, ModuleError > createThumbnail(
+	[[nodiscard]] virtual std::expected< ThumbnailInfo, ModuleError > createThumbnailRaw(
 		ModuleCallData& data,
 		std::size_t width,
 		std::size_t height ) = 0;
 
-	//! Like createThumbnail but returns the thumbnail encoded as an in-memory PNG file.
-	//! \copydetails createThumbnail
+	//! Like createThumbnail but returns the thumbnail encoded as an in-memory WEBP file.
+	//! \copydetails createThumbnailRaw
 	[[nodiscard]] std::expected< ThumbnailInfo, ModuleError > createThumbnailFile(
 		ModuleCallData& data,
 		std::size_t width,

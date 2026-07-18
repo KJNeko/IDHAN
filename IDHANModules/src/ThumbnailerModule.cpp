@@ -14,14 +14,13 @@ namespace idhan
 ThumbnailInfo::ThumbnailInfo( vips::VImage& image, const bool do_cache_thumbnail ) :
   width( static_cast< std::size_t >( image.width() ) ),
   height( static_cast< std::size_t >( image.height() ) ),
-  cache_thumbnail( do_cache_thumbnail ),
-  m_mode( ThumbnailInfo::RAW )
+  cache_thumbnail( do_cache_thumbnail )
 {
 	std::size_t output_length { 0 };
 	auto image_data { image.write_to_memory( &output_length ) };
 
-	this->data.resize( output_length );
-	std::memcpy( this->data.data(), image_data, output_length );
+	this->m_pixel_data.resize( output_length );
+	std::memcpy( this->m_pixel_data.data(), image_data, output_length );
 
 	// write_to_memory returns a g_malloc'd buffer owned by the caller
 	g_free( image_data );
@@ -31,15 +30,15 @@ ThumbnailerModuleI::~ThumbnailerModuleI() = default;
 
 std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailFile(
 	ModuleCallData& data,
-	std::size_t width,
-	std::size_t height )
+	const std::size_t width,
+	const std::size_t height )
 {
-	const auto thumbnail { createThumbnail( data, width, height ) };
+	const auto thumbnail { createThumbnailRaw( data, width, height ) };
 	if ( !thumbnail ) return std::unexpected( thumbnail.error() );
 
-	const auto [ thumbnail_rgb, thumbnail_width, thumbnail_height, cache_thumbnail, _ ] = *thumbnail;
+	const auto [ thumbnail_rgb, thumbnail_width, thumbnail_height, cache_thumbnail ] = *thumbnail;
 
-	vips::VImage resized { vips::VImage::new_from_memory_copy(
+	const vips::VImage resized { vips::VImage::new_from_memory_copy(
 		const_cast< void* >( static_cast< const void* >( thumbnail_rgb.data() ) ),
 		thumbnail_rgb.size(),
 		static_cast< int >( thumbnail_width ),
@@ -47,20 +46,19 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 		3,
 		VIPS_FORMAT_UCHAR ) };
 
-	const auto png_data { resized.pngsave_buffer() };
+	//TODO: Allow webp config settings in toml settings file
+	const auto file_data { resized.webpsave_buffer() };
 
 	std::vector< std::byte > output(
-		static_cast< std::byte* >( png_data->area.data ),
-		static_cast< std::byte* >( png_data->area.data ) + png_data->area.length );
+		static_cast< std::byte* >( file_data->area.data ),
+		static_cast< std::byte* >( file_data->area.data ) + file_data->area.length );
 
-	// pngsave_buffer returns a VipsBlob the caller must unref
-	vips_area_unref( VIPS_AREA( png_data ) );
+	vips_area_unref( VIPS_AREA( file_data ) );
 
 	ThumbnailInfo info {};
-	info.data = std::move( output );
+	info.m_pixel_data = std::move( output );
 	info.width = width;
 	info.height = height;
-	info.m_mode = ThumbnailInfo::FILE_PNG;
 	info.cache_thumbnail = cache_thumbnail;
 
 	return info;

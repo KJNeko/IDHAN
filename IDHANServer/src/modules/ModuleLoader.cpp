@@ -158,7 +158,7 @@ std::expected< ThumbnailInfo, ModuleError > thumbnail(
 
 	ModuleCallData call_data { .file_view = data_view, .mime_name = *exp, .extra = extra };
 
-	return thumbnailer->createThumbnail( call_data, 128, 128 );
+	return thumbnailer->createThumbnailRaw( call_data, 128, 128 );
 }
 
 } // namespace callbacks

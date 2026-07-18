@@ -23,7 +23,7 @@ class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 
-	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnail(
+	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
 		idhan::ModuleCallData& data,
 		std::size_t width,
 		std::size_t height ) override;

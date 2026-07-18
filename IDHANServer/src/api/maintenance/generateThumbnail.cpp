@@ -49,9 +49,9 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 	const auto& thumb_info { *thumbnail_data };
 
 	auto response { drogon::HttpResponse::newHttpResponse() };
-	response->setContentTypeCode( drogon::CT_IMAGE_PNG );
+	response->setContentTypeCode( drogon::CT_IMAGE_WEBP );
 	response->setBody(
-		std::string( reinterpret_cast< const char* >( thumb_info.data.data() ), thumb_info.data.size() ) );
+		std::string( reinterpret_cast< const char* >( thumb_info.m_pixel_data.data() ), thumb_info.m_pixel_data.size() ) );
 	co_return response;
 }
 
