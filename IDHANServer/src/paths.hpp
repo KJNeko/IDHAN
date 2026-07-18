@@ -51,4 +51,11 @@ std::filesystem::path getThumbnailsPath();
 //! Read live per call so an operator can change it without restarting; only hit on a cache miss.
 std::vector< std::size_t > getCacheableThumbnailSizes();
 
+//! Directory scanned for WebUI plugin bundles — each `<dir>/manifest.json` describes one plugin.
+//! Defaults to `<static>/plugins` so the existing static file router serves the bundles at `/plugins/...`
+//! with no extra routing. Configurable via `[plugins] path`; an override must still be reachable under
+//! the `/plugins` URL (i.e. live under the static root) for the browser to fetch the bundle. Cached
+//! after first resolution.
+std::filesystem::path getPluginsPath();
+
 } // namespace idhan
