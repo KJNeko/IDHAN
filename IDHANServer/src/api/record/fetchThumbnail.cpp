@@ -28,21 +28,11 @@ namespace idhan::api
 
 namespace
 {
-//! Discrete thumbnail sizes. A closed set bounds cache growth and gives the grid fixed tile heights.
-constexpr std::array< std::size_t, 3 > allowed_thumbnail_sizes { 128, 256, 512 };
 
-//! Size-and-format-keyed cache path: thumbnails/t[hash 0:2]/[hash].[size].png
+//! Size-and-format-keyed cache path: thumbnails/t[hash 0:2]/[hash].[size].webp
 std::filesystem::path thumbnailPath( const std::string& hex, const std::size_t size )
 {
-	return getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) )
-	     / std::format( "{}.{}.png", hex, size );
-}
-
-//! Pre-size cache path (thumbnails/t[hash 0:2]/[hash].thumbnail). Files written before size support
-//! were all 256px PNG, so this is only a valid fallback at size 256.
-std::filesystem::path legacyThumbnailPath( const std::string& hex )
-{
-	return getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / std::format( "{}.thumbnail", hex );
+	return getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / std::format( "{}.{}.webp", hex, size );
 }
 
 //! Cache-Control for a served thumbnail. There is no revalidation: within max-age the browser reuses
@@ -72,8 +62,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 	const bool force_regenerate { request->getOptionalParameter< bool >( "regenerate" ).value_or( false ) };
 
 	const std::size_t size { request->getOptionalParameter< std::size_t >( "size" ).value_or( 256 ) };
-	if ( std::ranges::find( allowed_thumbnail_sizes, size ) == allowed_thumbnail_sizes.end() )
-		co_return createBadRequest( "Unsupported thumbnail size {}. Allowed sizes: 128, 256, 512", size );
 
 	const auto mime_name { record_info[ 0 ][ "mime_name" ].as< std::string >() };
 	[[maybe_unused]] const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
@@ -83,18 +71,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 	const auto hex { sha256_e.value().hex() };
 
 	const auto thumbnail_location { thumbnailPath( hex, size ) };
-
-	// Serve a pre-size cache file if one exists and the request is for the old default (256px PNG),
-	// so upgrading does not trigger a full regeneration storm.
-	if ( !force_regenerate && !std::filesystem::exists( thumbnail_location ) && size == 256 )
-	{
-		if ( const auto legacy { legacyThumbnailPath( hex ) }; std::filesystem::exists( legacy ) )
-		{
-			auto response { drogon::HttpResponse::newFileResponse( legacy, "", drogon::ContentType::CT_IMAGE_PNG ) };
-			response->addHeader( "Cache-Control", thumbnailCacheControl() );
-			co_return response;
-		}
-	}
 
 	if ( !std::filesystem::exists( thumbnail_location ) || force_regenerate )
 	{
@@ -136,24 +112,32 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 
-		if ( thumbnail_info->cache_thumbnail )
+		// Cache to disk only for sizes the operator has opted in; other sizes are still generated and
+		// served, just never written (keeps the cache from exploding across arbitrary requested sizes).
+		const bool size_is_cacheable { std::ranges::contains( getCacheableThumbnailSizes(), size ) };
+		const bool should_cache { thumbnail_info->cache_thumbnail && size_is_cacheable };
+
+		if ( should_cache )
 		{
 			std::filesystem::create_directories( thumbnail_location.parent_path() );
 			FileIOUring io_uring_write { thumbnail_location, FileIOUring::ReadWrite };
 
 			log::debug( "Writing thumbnail to {}", thumbnail_location.string() );
 
-			co_await io_uring_write.write( thumbnail_info->data );
+			co_await io_uring_write.write( thumbnail_info->m_pixel_data );
 		}
 		else
 		{
-			log::debug( "Skipping thumbnail cache due to module returning NOCACHE flag" );
-			auto response { drogon::HttpResponse::newHttpResponse(
-				drogon::HttpStatusCode::k200OK, drogon::ContentType::CT_IMAGE_PNG ) };
+			if ( !thumbnail_info->cache_thumbnail )
+				log::debug( "Skipping thumbnail cache due to module returning NOCACHE flag" );
+			else
+				log::debug( "Skipping thumbnail cache: size {} is not in the cacheable set", size );
 
-			std::string body {
-				reinterpret_cast< const char* >( thumbnail_info->data.data() ), thumbnail_info->data.size()
-			};
+			auto response { drogon::HttpResponse::newHttpResponse(
+				drogon::HttpStatusCode::k200OK, drogon::ContentType::CT_IMAGE_WEBP ) };
+
+			std::string body { reinterpret_cast< const char* >( thumbnail_info->m_pixel_data.data() ),
+				               thumbnail_info->m_pixel_data.size() };
 			response->setBody( std::move( body ) );
 
 			// The module opted out of caching this thumbnail, so tell the browser not to store it either.
@@ -171,7 +155,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 	}
 
 	auto response {
-		drogon::HttpResponse::newFileResponse( thumbnail_location, "", drogon::ContentType::CT_IMAGE_PNG )
+		drogon::HttpResponse::newFileResponse( thumbnail_location, "", drogon::ContentType::CT_IMAGE_WEBP )
 	};
 
 	response->addHeader( "Cache-Control", thumbnailCacheControl() );

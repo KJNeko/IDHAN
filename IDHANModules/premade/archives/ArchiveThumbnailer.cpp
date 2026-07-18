@@ -35,7 +35,7 @@ std::vector< std::string_view > ArchiveThumbnailer::handleableMimes()
 	return getHandleableMimesForArchives();
 }
 
-std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::createThumbnail(
+std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::createThumbnailRaw(
 	idhan::ModuleCallData& data,
 	std::size_t width,
 	std::size_t height )
@@ -155,7 +155,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		const auto x { counter % grid_size };
 		const auto y { counter / grid_size };
 		counter += 1;
-		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail, _ ] = *thumbnail_rgb;
+		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail ] = *thumbnail_rgb;
 
 		if ( !cache_thumbnail ) flag_cache_thumbnail = false;
 

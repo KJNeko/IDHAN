@@ -18,3 +18,11 @@
 level = "info"
 # Logging output location
 path = "./log"
+
+[thumbnails]
+# Where generated thumbnails are cached on disk
+#path = "./thumbnails"
+# Square thumbnail edge lengths (px) the server is allowed to write to the on-disk cache. Any other
+# requested size is still generated and served, just never cached (so arbitrary sizes can't grow the
+# cache without bound). Edited live — no restart needed.
+#cacheable_sizes = [128, 256, 512]

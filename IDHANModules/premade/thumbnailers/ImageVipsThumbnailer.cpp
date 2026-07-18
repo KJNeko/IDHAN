@@ -17,7 +17,7 @@ std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
 	return vipsHandleable();
 }
 
-std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnail(
+std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnailRaw(
 	ModuleCallData& data,
 	std::size_t width,
 	std::size_t height )
