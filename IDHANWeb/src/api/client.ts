@@ -18,6 +18,9 @@ import type {
   SessionCheck,
   SessionGrant,
   SessionRevoke,
+  TagDomain,
+  TagInfo,
+  VerboseTag,
   VersionInfo,
 } from './types';
 
@@ -146,6 +149,44 @@ interface AutocompleteRow {
   count?: number;
   similarity?: number;
 }
+
+export const tags = {
+  listDomains(signal?: AbortSignal): Promise<TagDomain[]> {
+    return request<TagDomain[]>('/tags/domain/list', { signal });
+  },
+
+  info(tagId: number, signal?: AbortSignal): Promise<TagInfo> {
+    return request<TagInfo>(`/tags/${tagId}/info`, { signal });
+  },
+
+  activeVerbose(recordId: number, signal?: AbortSignal): Promise<VerboseTag[]> {
+    return request<VerboseTag[]>(`/records/${recordId}/tags/active/verbose`, { signal });
+  },
+
+  /**
+   * Add tags (text "namespace:subtag", a bare subtag, or an existing tag id) to every record in the
+   * list, in one domain. Unknown text tags are created server-side.
+   */
+  addToRecords(recordIds: number[], tagsToAdd: Array<string | number>, tagDomainId: number, signal?: AbortSignal): Promise<void> {
+    return request<void>(`/records/tags/add?tag_domain_id=${tagDomainId}`, {
+      method: 'POST',
+      body: { records: recordIds, tags: tagsToAdd },
+      signal,
+    });
+  },
+
+  /**
+   * Remove tag ids from records. The remove endpoint is per-record (a "set" per record), so the same
+   * ids are removed from each. Removal is by id only — resolve text to an id first.
+   */
+  removeFromRecords(recordIds: number[], tagIds: number[], tagDomainId: number, signal?: AbortSignal): Promise<void> {
+    return request<void>(`/records/tags/remove?tag_domain_id=${tagDomainId}`, {
+      method: 'POST',
+      body: { records: recordIds, sets: recordIds.map(() => tagIds) },
+      signal,
+    });
+  },
+};
 
 /**
  * URL for an <img> or <video> whose element cannot set request headers. The credential therefore

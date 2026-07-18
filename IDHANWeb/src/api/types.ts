@@ -79,3 +79,30 @@ export interface AutocompleteResult {
   /** Trigram similarity to the query, server-ranked. Present for server results, absent for cache reuse. */
   similarity?: number;
 }
+
+/** A tag service domain (GET /tags/domain/list). */
+export interface TagDomain {
+  tag_domain_id: number;
+  domain_name: string;
+}
+
+/**
+ * One active tag on a record with its provenance (GET /records/{id}/tags/active/verbose). Note it
+ * carries only tag *ids* — resolve them to text via GET /tags/{id}/info. `aliased_from`/`inherited_from`
+ * are the ids this tag was derived from (via a sibling/alias, or a parent respectively).
+ */
+export interface VerboseTag {
+  tag_id: number;
+  tag_domain_id: number;
+  explicit: boolean;
+  aliased_from: number[];
+  inherited_from: number[];
+}
+
+/** A single tag's namespace/subtag decomposition (GET /tags/{id}/info). */
+export interface TagInfo {
+  tag_id: number;
+  namespace: { id: number; text: string };
+  subtag: { id: number; text: string };
+  items_count: number;
+}
