@@ -10,7 +10,14 @@
  */
 
 import type { ComponentType } from 'react';
-import type { AutocompleteResult, MetadataResponse, SearchRequest, SearchResponse } from '../api/types';
+import type {
+  AutocompleteResult,
+  MetadataResponse,
+  SearchRequest,
+  SearchResponse,
+  TagDomain,
+  VerboseTag,
+} from '../api/types';
 
 /** Bumped on breaking changes to the surface below; plugin manifests will declare a compatible range. */
 export const HOST_API_VERSION = '1.0.0';
@@ -104,6 +111,26 @@ export interface TagsApi {
     opts?: { domain?: number; limit?: number },
     signal?: AbortSignal,
   ): Promise<AutocompleteResult[]>;
+  /** List the tag service domains a record's tags can live in. */
+  listDomains(signal?: AbortSignal): Promise<TagDomain[]>;
+  /** Active tags on a record with provenance. Carries ids only — pair with resolve() for text. */
+  activeVerbose(recordId: RecordId, signal?: AbortSignal): Promise<VerboseTag[]>;
+  /** Resolve tag ids to "namespace:subtag" text, cached and coalesced across panels. */
+  resolve(tagIds: readonly number[]): Promise<Map<number, string>>;
+  /** Add tags (text "namespace:subtag" or an existing tag id) to every record, in one domain. */
+  addToRecords(
+    recordIds: readonly RecordId[],
+    tags: ReadonlyArray<string | number>,
+    tagDomainId: number,
+    signal?: AbortSignal,
+  ): Promise<void>;
+  /** Remove tag ids from every record, in one domain. */
+  removeFromRecords(
+    recordIds: readonly RecordId[],
+    tagIds: readonly number[],
+    tagDomainId: number,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }
 
 export interface JobHandle {

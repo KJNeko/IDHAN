@@ -4,10 +4,11 @@
  * layout store, so the host stays decoupled from the store's internals.
  */
 
-import { api, getKey } from '../api/client';
+import { api, getKey, tags as tagApi } from '../api/client';
 import { thumbnailUrl as buildThumbnailUrl, fileUrl as buildFileUrl } from '../api/client';
 import { getMetadata } from './metadataCache';
 import { autocomplete } from './autocompleteCache';
+import { resolveTags } from './tagInfoCache';
 import { globalServices } from './globalServices';
 import type { HostApi, JobHandle, PanelInstanceId, SettingsApi } from './types';
 import { HOST_API_VERSION } from './types';
@@ -83,6 +84,13 @@ export function createHost(instanceId: PanelInstanceId, settings: SettingsBindin
     },
     tags: {
       autocomplete: (prefix, opts, signal) => autocomplete(prefix, opts, signal),
+      listDomains: (signal) => tagApi.listDomains(signal),
+      activeVerbose: (recordId, signal) => tagApi.activeVerbose(recordId, signal),
+      resolve: (tagIds) => resolveTags(tagIds),
+      addToRecords: (recordIds, tagsToAdd, tagDomainId, signal) =>
+        tagApi.addToRecords([...recordIds], [...tagsToAdd], tagDomainId, signal),
+      removeFromRecords: (recordIds, tagIds, tagDomainId, signal) =>
+        tagApi.removeFromRecords([...recordIds], [...tagIds], tagDomainId, signal),
     },
     selection: globalServices.selection,
     results: globalServices.results,

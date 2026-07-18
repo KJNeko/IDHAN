@@ -661,3 +661,103 @@ body {
   font-variant-numeric: tabular-nums;
   word-break: break-word;
 }
+
+/* ---- Tag editor panel ---- */
+.tag-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow: visible;
+}
+
+.tag-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tag-domain {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+.tag-domain select {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #2a2e37;
+  border-radius: 5px;
+  background: #1b1e24;
+  color: var(--fg);
+  font: inherit;
+}
+
+.tag-add {
+  position: relative;
+}
+
+.tag-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+}
+
+.tag-item:hover {
+  background: #1b1e24;
+}
+
+.tag-text {
+  flex: 1 1 auto;
+  word-break: break-word;
+}
+
+.tag-badge {
+  font-size: 0.75em;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  color: var(--muted);
+  border: 1px solid #2a2e37;
+}
+
+.tag-badge.inherited {
+  color: #9ac2ff;
+  border-color: #2e5a7d;
+}
+
+.tag-badge.alias {
+  color: #d0a6ff;
+  border-color: #5a3a7d;
+}
+
+.tag-remove {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 1.1em;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+
+.tag-remove:hover {
+  color: var(--error);
+}
+
+.tag-remove:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

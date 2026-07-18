@@ -12,6 +12,7 @@ import { searchPanel } from './SearchPanel';
 import { gridPanel } from './GridPanel';
 import { mediaViewerPanel } from './MediaViewerPanel';
 import { recordInfoPanel } from './RecordInfoPanel';
+import { tagEditorPanel } from './TagEditorPanel';
 
 let registered = false;
 
@@ -22,6 +23,7 @@ export function registerBuiltinPanels(): void {
   registerPanel(gridPanel);
   registerPanel(mediaViewerPanel);
   registerPanel(recordInfoPanel);
+  registerPanel(tagEditorPanel);
   registerPanel(serverStatusPanel);
   registerPanel(selectionInspectorPanel);
 }
