@@ -88,6 +88,17 @@ describe('layout store', () => {
     expect(useLayoutStore.getState().doc.id).toBe(firstId);
   });
 
+  it('importLayout adopts a valid document and rejects a bad one', () => {
+    const incoming = createEmptyLayout('Imported');
+    expect(useLayoutStore.getState().importLayout(incoming)).toBe(true);
+    expect(useLayoutStore.getState().doc.id).toBe(incoming.id);
+    expect(useLayoutStore.getState().doc.name).toBe('Imported');
+
+    const before = useLayoutStore.getState().doc;
+    expect(useLayoutStore.getState().importLayout({ nope: true })).toBe(false);
+    expect(useLayoutStore.getState().doc).toBe(before); // unchanged on rejection
+  });
+
   it('setPanelConfig merges a patch and persists', () => {
     const doc = createEmptyLayout('L');
     doc.panels = { inst: { type: 'selection-inspector', config: { showIds: true }, configVersion: 1 } };

@@ -133,6 +133,12 @@ interface LayoutStore {
   loadNamedLayout: (id: string) => void;
   deleteNamedLayout: (id: string) => void;
 
+  /**
+   * Adopt an externally-provided blob (a file import) as the working document. Migrated on the way in,
+   * so an older or corrupt file is upgraded or rejected. Returns false if it isn't a readable layout.
+   */
+  importLayout: (raw: unknown) => boolean;
+
   /** Fetch the server layout list into `serverLayouts`. Rejects (with ApiError) on failure. */
   refreshServerLayouts: () => Promise<void>;
   /** Push the working document to the server (upsert), then refresh the list. */
@@ -256,6 +262,14 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
     delete saved[id];
     persistSaved(saved);
     set({ savedLayouts: metaList(saved) });
+  },
+
+  importLayout: (raw) => {
+    const doc = migrateLayout(raw);
+    if (!doc) return false;
+    set((s) => ({ doc, generation: s.generation + 1 }));
+    persistWorking(doc);
+    return true;
   },
 
   refreshServerLayouts: async () => {
