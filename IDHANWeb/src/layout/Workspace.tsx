@@ -10,9 +10,20 @@ import 'dockview/dist/styles/dockview.css';
 import { globalServices } from '../host/globalServices';
 import { hasPanel } from '../panels/registry';
 import { buildComponents } from './panelComponents';
-import { useLayoutStore } from './store';
+import { useLayoutStore, type PanelPosition } from './store';
 
-const DEFAULT_SEED_PANEL = 'server-status';
+/**
+ * The workspace a fresh install boots into: Search on the left, the Grid filling the centre, and a
+ * right column with the Media Viewer over a Record Info / Tag Editor tab pair. Only seeded when there
+ * is no saved tree; users reshape it freely and it persists.
+ */
+function seedDefaultLayout(add: (type: string, position?: PanelPosition) => string | null): void {
+  const search = add('search');
+  const grid = add('grid', search ? { referencePanel: search, direction: 'right' } : undefined);
+  const viewer = add('media-viewer', grid ? { referencePanel: grid, direction: 'right' } : undefined);
+  const info = add('record-info', viewer ? { referencePanel: viewer, direction: 'below' } : undefined);
+  if (info) add('tag-editor', { referencePanel: info, direction: 'within' });
+}
 
 export function Workspace() {
   const generation = useLayoutStore((s) => s.generation);
@@ -49,7 +60,7 @@ export function Workspace() {
         }
       }
       if (api.panels.length === 0) {
-        useLayoutStore.getState().addPanel(DEFAULT_SEED_PANEL);
+        seedDefaultLayout(useLayoutStore.getState().addPanel);
       }
 
       api.onDidLayoutChange(() => setEngineTree(api.toJSON()));
