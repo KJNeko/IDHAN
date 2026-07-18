@@ -43,6 +43,37 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
     if (chosen) store.newLayout(chosen.trim() || 'Untitled');
   }
 
+  // Download the working document as a JSON file so it can be moved without a server round-trip.
+  function onExport() {
+    const doc = useLayoutStore.getState().doc;
+    const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${doc.name || 'layout'}.idhan-layout.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function onImport(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // let the same file be picked again after a failure
+    if (!file) return;
+    file
+      .text()
+      .then((text) => {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          window.alert('That file is not valid JSON.');
+          return;
+        }
+        if (!store.importLayout(parsed)) window.alert('That file is not a readable IDHAN layout.');
+      })
+      .catch(() => window.alert('Could not read the file.'));
+  }
+
   // Refresh the server list when the menu opens, so it reflects what other browsers have pushed.
   function onMenuToggle(event: SyntheticEvent<HTMLDetailsElement>) {
     if (event.currentTarget.open) run(store.refreshServerLayouts());
@@ -81,6 +112,13 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
           <button type="button" className="dropdown-item" onClick={onNewLayout}>
             New layout…
           </button>
+          <button type="button" className="dropdown-item" onClick={onExport}>
+            Export to file…
+          </button>
+          <label className="dropdown-item">
+            Import from file…
+            <input type="file" accept="application/json,.json" onChange={onImport} hidden />
+          </label>
           {savedLayouts.length > 0 && <div className="dropdown-divider" />}
           {savedLayouts.map((layout) => (
             <div key={layout.id} className={`dropdown-row${layout.id === activeId ? ' is-active' : ''}`}>
