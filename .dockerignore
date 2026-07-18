@@ -33,6 +33,11 @@ push-nas.sh
 .env
 .env.remote
 
+# Submodule git histories (multi-GB). The top-level .git IS shipped so the build can derive the
+# /version metadata (branch/commit/tag) itself — `git describe` on the parent repo never consults
+# these, so dropping them keeps the git payload at ~24 MB instead of ~1.7 GB.
+.git/modules/
+
 # Large 3rd-party repos (not used in Docker build)
 3rd-party/web.sh
 3rd-party/hyui.sh
