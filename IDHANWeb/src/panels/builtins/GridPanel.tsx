@@ -15,19 +15,20 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PanelProps, RecordId, SearchResultSet } from '../../host/types';
 
-type TileSize = 128 | 256 | 512;
-const TILE_SIZES: readonly TileSize[] = [128, 256, 512];
+// Convenience presets offered in the size dropdown; the server accepts any positive edge length.
+const TILE_SIZES: readonly number[] = [128, 256, 512];
 const GAP = 6;
 const OVERSCAN_ROWS = 2;
 
-type Config = { tileSize: TileSize };
+type Config = { tileSize: number };
 const DEFAULT_CONFIG: Config = { tileSize: 256 };
 
 /** Bus topic the grid emits on double-click / Enter; the viewer focuses the activated record. */
 export const RECORD_ACTIVATE_TOPIC = 'record:activate';
 
-function readTileSize(raw: Partial<Config>): TileSize {
-  return TILE_SIZES.includes(raw.tileSize as TileSize) ? (raw.tileSize as TileSize) : DEFAULT_CONFIG.tileSize;
+function readTileSize(raw: Partial<Config>): number {
+  const size = raw.tileSize;
+  return typeof size === 'number' && Number.isFinite(size) && size > 0 ? Math.round(size) : DEFAULT_CONFIG.tileSize;
 }
 
 /** Track the scroll container's content width so we can pack a whole number of fixed-width tiles per row. */
@@ -54,7 +55,7 @@ interface ContextMenuState {
 }
 
 function GridPanel({ host }: PanelProps) {
-  const [tileSize, setTileSize] = useState<TileSize>(() => readTileSize(host.settings.get() as Partial<Config>));
+  const [tileSize, setTileSize] = useState<number>(() => readTileSize(host.settings.get() as Partial<Config>));
   const [results, setResults] = useState<SearchResultSet>(() => host.results.get());
   const [selected, setSelected] = useState<ReadonlySet<RecordId>>(() => new Set(host.selection.get()));
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
@@ -85,7 +86,7 @@ function GridPanel({ host }: PanelProps) {
     [host],
   );
 
-  function changeTileSize(size: TileSize) {
+  function changeTileSize(size: number) {
     setTileSize(size);
     host.settings.set({ tileSize: size });
   }
@@ -152,7 +153,7 @@ function GridPanel({ host }: PanelProps) {
         </span>
         <label className="grid-size">
           Size
-          <select value={tileSize} onChange={(e) => changeTileSize(Number(e.target.value) as TileSize)}>
+          <select value={tileSize} onChange={(e) => changeTileSize(Number(e.target.value))}>
             {TILE_SIZES.map((s) => (
               <option key={s} value={s}>
                 {s}px

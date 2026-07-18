@@ -101,7 +101,8 @@ export interface RecordsApi {
    * from melting to the first naive panel.
    */
   getMetadata(ids: readonly RecordId[], include?: string[]): Promise<MetadataResponse>;
-  thumbnailUrl(id: RecordId, size?: 128 | 256 | 512): string;
+  /** URL for a square thumbnail at any positive edge length (px). Defaults to 256. */
+  thumbnailUrl(id: RecordId, size?: number): string;
   fileUrl(id: RecordId, opts?: { download?: boolean }): string;
 }
 
