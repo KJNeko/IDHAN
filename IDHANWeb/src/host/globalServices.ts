@@ -4,7 +4,7 @@
  * an instance-scoped settings object.
  */
 
-import type { RecordId, ThemeMode, ToastOptions, Unsubscribe } from './types';
+import type { RecordId, SearchResultSet, ThemeMode, ToastOptions, Unsubscribe } from './types';
 
 function createSelection() {
   let ids: readonly RecordId[] = [];
@@ -16,6 +16,24 @@ function createSelection() {
       for (const listener of listeners) listener(ids);
     },
     subscribe: (listener: (ids: readonly RecordId[]) => void): Unsubscribe => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
+const EMPTY_RESULTS: SearchResultSet = { ids: new Int32Array(0), queryMs: 0, query: [] };
+
+function createResults() {
+  let current: SearchResultSet = EMPTY_RESULTS;
+  const listeners = new Set<(results: SearchResultSet) => void>();
+  return {
+    get: (): SearchResultSet => current,
+    set: (next: SearchResultSet): void => {
+      current = next;
+      for (const listener of listeners) listener(current);
+    },
+    subscribe: (listener: (results: SearchResultSet) => void): Unsubscribe => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
@@ -89,6 +107,7 @@ function createToasts() {
 
 export const globalServices = {
   selection: createSelection(),
+  results: createResults(),
   bus: createBus(),
   theme: createTheme(),
   toasts: createToasts(),

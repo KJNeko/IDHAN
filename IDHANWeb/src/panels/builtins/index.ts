@@ -8,12 +8,14 @@
 import { registerPanel } from '../registry';
 import { serverStatusPanel } from './ServerStatusPanel';
 import { selectionInspectorPanel } from './SelectionInspectorPanel';
+import { searchPanel } from './SearchPanel';
 
 let registered = false;
 
 export function registerBuiltinPanels(): void {
   if (registered) return;
   registered = true;
+  registerPanel(searchPanel);
   registerPanel(serverStatusPanel);
   registerPanel(selectionInspectorPanel);
 }
