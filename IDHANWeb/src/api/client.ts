@@ -194,8 +194,10 @@ export const tags = {
  * why the browser holds a session key rather than the permanent API key: a session key in a URL
  * (logs, history) is revocable and expiring, so the exposure is bounded.
  */
-export function thumbnailUrl(recordId: number, size: 128 | 256 | 512 = 256): string {
-  const params = new URLSearchParams({ size: String(size) });
+export function thumbnailUrl(recordId: number, size = 256): string {
+  // The server generates a square thumbnail at any requested edge length; clamp to a positive integer.
+  const edge = Math.max(1, Math.round(size));
+  const params = new URLSearchParams({ size: String(edge) });
   if (currentKey) params.set('idhan_key', currentKey);
   return `/records/${recordId}/thumbnail?${params.toString()}`;
 }
