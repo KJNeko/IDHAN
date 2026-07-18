@@ -27,13 +27,16 @@ function seedDefaultLayout(add: (type: string, position?: PanelPosition) => stri
 
 export function Workspace() {
   const generation = useLayoutStore((s) => s.generation);
+  // A catalog bump (plugins finished loading) rebuilds components so newly-registered types render
+  // instead of showing as tombstones. Remounting is fine — the tree is persisted and restored on ready.
+  const catalogVersion = useLayoutStore((s) => s.catalogVersion);
   const setApi = useLayoutStore((s) => s.setApi);
   const setEngineTree = useLayoutStore((s) => s.setEngineTree);
   const [mode, setMode] = useState(() => globalServices.theme.mode());
 
   useEffect(() => globalServices.theme.subscribe(setMode), []);
 
-  // Recomputed on layout swap; includes tombstones for any unknown panel types the document references.
+  // Recomputed on layout swap or catalog change; includes tombstones for still-unknown panel types.
   const components = useMemo(() => {
     const { doc } = useLayoutStore.getState();
     const unknown = [
@@ -44,7 +47,8 @@ export function Workspace() {
       ),
     ];
     return buildComponents(unknown);
-  }, [generation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generation, catalogVersion]);
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
@@ -71,7 +75,7 @@ export function Workspace() {
   return (
     <div className="workspace">
       <DockviewReact
-        key={generation}
+        key={`${generation}.${catalogVersion}`}
         components={components}
         onReady={onReady}
         theme={mode === 'light' ? themeLight : themeAbyss}

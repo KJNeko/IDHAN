@@ -4,6 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IDHAN</title>
+    <!--
+      Import map for dynamically-loaded plugin bundles. Plugins mark react / react-dom /
+      react/jsx-runtime / @idhan/host as external and emit bare specifiers; these resolve to stable
+      public shim modules that re-export the host's own instances (see public/idhan-runtime/*, wired up
+      in src/plugins/runtime.ts). Must precede any module script so the browser accepts it.
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "/idhan-runtime/react.mjs",
+          "react-dom": "/idhan-runtime/react-dom.mjs",
+          "react/jsx-runtime": "/idhan-runtime/jsx-runtime.mjs",
+          "@idhan/host": "/idhan-runtime/host.mjs"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
