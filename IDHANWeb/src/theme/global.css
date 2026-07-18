@@ -588,9 +588,14 @@ body {
 
 .viewer-stage {
   flex: 1 1 auto;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* min-height:0 lets this flex child shrink below content; overflow guards against any residual spill.
+     Flex centering (not grid) is deliberate: max-height:100% on the media then resolves against the
+     stage's definite height, whereas a grid's auto row track grows to a tall image and defeats it. */
   min-height: 0;
+  overflow: hidden;
   padding: 0.5rem;
   background: #0b0c0f;
 }
@@ -598,6 +603,8 @@ body {
 .viewer-media {
   max-width: 100%;
   max-height: 100%;
+  /* Without this a wide image's automatic flex min-size (min-width:auto) floors it at intrinsic width. */
+  min-width: 0;
   object-fit: contain;
 }
 
