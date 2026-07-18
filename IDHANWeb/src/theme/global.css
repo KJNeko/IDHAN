@@ -114,6 +114,23 @@ body {
   background: #2f333c;
 }
 
+.dropdown-item:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.dropdown-item:disabled:hover {
+  background: none;
+}
+
+.dropdown-heading {
+  padding: 0.25rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .dropdown-row {
   display: flex;
   align-items: center;

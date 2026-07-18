@@ -1,16 +1,33 @@
 /**
  * Top bar: layout name, add-panel picker, edit-mode toggle, the named-layout menu, and sign-out.
- * Named layouts are localStorage snapshots for now; server push/pull lands in M5.
+ * The menu covers both localStorage snapshots ("Saved") and server-stored layouts ("On server",
+ * push/pull); localStorage remains the source of truth and the server copy is opt-in.
  */
 
-import { type ChangeEvent } from 'react';
+import { type ChangeEvent, type SyntheticEvent } from 'react';
+import { ApiError } from '../api/client';
 import { listPanels } from '../panels/registry';
 import { useLayoutStore } from './store';
+
+/** Runs a store server-action and surfaces any failure without leaving the promise unhandled. */
+function run(promise: Promise<unknown>): void {
+  promise.catch((error: unknown) => {
+    const message =
+      error instanceof ApiError
+        ? `${error.message}${error.status === 409 ? ' (name already taken on the server)' : ''}`
+        : error instanceof Error
+          ? error.message
+          : 'Unknown error';
+    window.alert(`Layout sync failed: ${message}`);
+  });
+}
 
 export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
   const name = useLayoutStore((s) => s.doc.name);
   const editMode = useLayoutStore((s) => s.editMode);
   const savedLayouts = useLayoutStore((s) => s.savedLayouts);
+  const serverLayouts = useLayoutStore((s) => s.serverLayouts);
+  const serverBusy = useLayoutStore((s) => s.serverBusy);
   const activeId = useLayoutStore((s) => s.doc.id);
 
   const store = useLayoutStore.getState();
@@ -24,6 +41,11 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
   function onNewLayout() {
     const chosen = window.prompt('Name for the new layout:', 'Untitled');
     if (chosen) store.newLayout(chosen.trim() || 'Untitled');
+  }
+
+  // Refresh the server list when the menu opens, so it reflects what other browsers have pushed.
+  function onMenuToggle(event: SyntheticEvent<HTMLDetailsElement>) {
+    if (event.currentTarget.open) run(store.refreshServerLayouts());
   }
 
   return (
@@ -50,7 +72,7 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
         {editMode ? 'Done' : 'Edit'}
       </button>
 
-      <details className="toolbar-menu">
+      <details className="toolbar-menu" onToggle={onMenuToggle}>
         <summary className="toolbar-button">Layouts</summary>
         <div className="toolbar-dropdown">
           <button type="button" className="dropdown-item" onClick={() => store.saveNamedLayout()}>
@@ -70,6 +92,38 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
                 className="dropdown-item delete"
                 aria-label={`Delete ${layout.name}`}
                 onClick={() => store.deleteNamedLayout(layout.id)}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+
+          <div className="dropdown-divider" />
+          <div className="dropdown-heading">On server</div>
+          <button
+            type="button"
+            className="dropdown-item"
+            disabled={serverBusy}
+            onClick={() => run(store.pushLayoutToServer())}
+          >
+            Push “{name}” to server
+          </button>
+          {serverLayouts.map((layout) => (
+            <div key={layout.id} className={`dropdown-row${layout.id === activeId ? ' is-active' : ''}`}>
+              <button
+                type="button"
+                className="dropdown-item grow"
+                disabled={serverBusy}
+                onClick={() => run(store.pullLayoutFromServer(layout.id))}
+              >
+                {layout.name}
+              </button>
+              <button
+                type="button"
+                className="dropdown-item delete"
+                disabled={serverBusy}
+                aria-label={`Delete ${layout.name} from server`}
+                onClick={() => run(store.deleteServerLayout(layout.id))}
               >
                 ✕
               </button>
