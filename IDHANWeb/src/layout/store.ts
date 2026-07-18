@@ -26,6 +26,12 @@ export interface LayoutMeta {
   name: string;
 }
 
+/** Where to place a new panel relative to an existing one; mirrors dockview's position option. */
+export interface PanelPosition {
+  referencePanel?: string;
+  direction?: 'left' | 'right' | 'above' | 'below' | 'within';
+}
+
 function safeParse(text: string | null): unknown {
   if (!text) return null;
   try {
@@ -104,7 +110,11 @@ interface LayoutStore {
 
   /** Persist the serialized engine tree and prune config for panels the user closed. */
   setEngineTree: (tree: SerializedDockview) => void;
-  addPanel: (type: string) => void;
+  /**
+   * Add a panel of `type`, optionally positioned relative to an existing panel (dockview position).
+   * Returns the new instance id (or the existing one for a focused singleton), or null if no engine.
+   */
+  addPanel: (type: string, position?: PanelPosition) => string | null;
 
   getPanelConfig: (instanceId: string) => Record<string, unknown>;
   setPanelConfig: (instanceId: string, patch: Record<string, unknown>) => void;
@@ -139,16 +149,16 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
     persistWorking(next);
   },
 
-  addPanel: (type) => {
+  addPanel: (type, position) => {
     const { api, doc } = get();
-    if (!api) return;
+    if (!api) return null;
     const def = getPanel(type);
 
     if (def?.singleton) {
       const existing = Object.entries(doc.panels).find(([, state]) => state.type === type);
       if (existing) {
         api.getPanel(existing[0])?.api.setActive();
-        return;
+        return existing[0];
       }
     }
 
@@ -164,8 +174,18 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
     set({ doc: next });
     persistWorking(next);
 
-    api.addPanel({ id: instanceId, component: type, params: { instanceId }, title: def?.title ?? type });
+    const referencePanel = position?.referencePanel;
+    api.addPanel({
+      id: instanceId,
+      component: type,
+      params: { instanceId },
+      title: def?.title ?? type,
+      ...(position?.direction && referencePanel
+        ? { position: { referencePanel, direction: position.direction } }
+        : {}),
+    });
     // dockview fires a layout change → setEngineTree persists the new tree.
+    return instanceId;
   },
 
   getPanelConfig: (instanceId) => (get().doc.panels[instanceId]?.config ?? {}) as Record<string, unknown>,
