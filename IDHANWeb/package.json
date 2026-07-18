@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.12",
     "dockview": "^7.0.2",
     "dockview-react": "^7.0.2",
     "react": "^19.1.0",

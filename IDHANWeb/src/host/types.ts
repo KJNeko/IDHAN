@@ -35,6 +35,31 @@ export interface BusApi {
   on(topic: string, listener: (payload: unknown) => void): Unsubscribe;
 }
 
+/**
+ * An ordered, immutable set of record ids produced by a search. This is what backs the grid — kept
+ * separate from `selection` (which is the user's chosen subset). Ids are an `Int32Array` so a 100k
+ * result set costs ~400 KB rather than a boxed `number[]`, and index math against it is pure
+ * arithmetic (see the grid's virtualization).
+ */
+export interface SearchResultSet {
+  readonly ids: Int32Array;
+  /** Server-reported query time in ms, for display. */
+  readonly queryMs: number;
+  /** Human-readable tokens describing the query that produced this set. */
+  readonly query: readonly string[];
+}
+
+/**
+ * The active search result set, shared through the host so the Search panel can publish and the grid,
+ * viewer, and info panels all page against the same ordered ids. Retains its last value, so a panel
+ * mounted after a search still sees the current results.
+ */
+export interface ResultsApi {
+  get(): SearchResultSet;
+  set(next: SearchResultSet): void;
+  subscribe(listener: (results: SearchResultSet) => void): Unsubscribe;
+}
+
 /** Per-instance persisted settings. Writes land in the layout document, so they survive reload. */
 export interface SettingsApi<T = Record<string, unknown>> {
   get(): T;
@@ -101,6 +126,7 @@ export interface HostApi {
   records: RecordsApi;
   tags: TagsApi;
   selection: SelectionApi;
+  results: ResultsApi;
   bus: BusApi;
   settings: SettingsApi;
   theme: ThemeApi;

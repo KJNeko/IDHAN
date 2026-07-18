@@ -118,15 +118,34 @@ export const api = {
     return request<MetadataResponse>('/records/metadata', { method: 'POST', body, signal });
   },
 
-  autocompleteTags(prefix: string, opts: { domain?: number; limit?: number } = {}, signal?: AbortSignal): Promise<
-    AutocompleteResult[]
-  > {
+  async autocompleteTags(
+    prefix: string,
+    opts: { domain?: number; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<AutocompleteResult[]> {
     const params = new URLSearchParams({ tag: prefix });
     if (opts.domain !== undefined) params.set('tag_domain', String(opts.domain));
     if (opts.limit !== undefined) params.set('limit', String(opts.limit));
-    return request<AutocompleteResult[]>(`/tags/autocomplete?${params.toString()}`, { signal });
+    // The server emits {value, tag_text, tag_id, count, similarity}; normalise to the AutocompleteResult
+    // shape panels consume. `value`/`tag_text` are the same string; either is the tag text.
+    const raw = await request<AutocompleteRow[]>(`/tags/autocomplete?${params.toString()}`, { signal });
+    return raw.map((row) => ({
+      tag_id: row.tag_id,
+      text: row.tag_text ?? row.value ?? '',
+      count: row.count,
+      similarity: row.similarity,
+    }));
   },
 };
+
+/** Raw wire row from GET /tags/autocomplete, before normalisation to AutocompleteResult. */
+interface AutocompleteRow {
+  tag_id: number;
+  tag_text?: string;
+  value?: string;
+  count?: number;
+  similarity?: number;
+}
 
 /**
  * URL for an <img> or <video> whose element cannot set request headers. The credential therefore

@@ -7,6 +7,7 @@
 import { api, getKey } from '../api/client';
 import { thumbnailUrl as buildThumbnailUrl, fileUrl as buildFileUrl } from '../api/client';
 import { getMetadata } from './metadataCache';
+import { autocomplete } from './autocompleteCache';
 import { globalServices } from './globalServices';
 import type { HostApi, JobHandle, PanelInstanceId, SettingsApi } from './types';
 import { HOST_API_VERSION } from './types';
@@ -81,9 +82,10 @@ export function createHost(instanceId: PanelInstanceId, settings: SettingsBindin
       fileUrl: (id, opts) => buildFileUrl(id, opts),
     },
     tags: {
-      autocomplete: (prefix, opts, signal) => api.autocompleteTags(prefix, opts, signal),
+      autocomplete: (prefix, opts, signal) => autocomplete(prefix, opts, signal),
     },
     selection: globalServices.selection,
+    results: globalServices.results,
     bus: globalServices.bus,
     settings,
     theme: {

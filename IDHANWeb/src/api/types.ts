@@ -76,4 +76,6 @@ export interface AutocompleteResult {
   tag_id: number;
   text: string;
   count?: number;
+  /** Trigram similarity to the query, server-ranked. Present for server results, absent for cache reuse. */
+  similarity?: number;
 }
