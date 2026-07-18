@@ -108,10 +108,15 @@ ARG CMAKE_BUILD_TYPE=Release
 ENV CCACHE_DIR=/root/.ccache
 # safe.directory: the copied .git is root-owned like the build user, but declare it explicitly so
 # git never refuses with "dubious ownership" under a different build UID.
+# -UFGL_GIT_*: the /build/build cache mount persists CMakeCache.txt across builds. An earlier image
+# built with the old -DFGL_GIT_*=unknown args left those overrides cached; reconfiguring without -D
+# does NOT clear them, so FGLGit would keep taking the stale-override path and skip git. -U removes
+# them each configure, forcing in-container `git describe` to win.
 RUN --mount=type=cache,target=/root/.ccache \
     --mount=type=cache,target=/build/build \
     git config --global --add safe.directory /build && \
     cmake -S . -B build \
+    -UFGL_GIT_BRANCH -UFGL_GIT_COMMIT -UFGL_GIT_TAG \
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
     -DCMAKE_CXX_STANDARD=23 \
     -DBUILD_IDHAN_TESTS=OFF \
