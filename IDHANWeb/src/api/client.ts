@@ -9,12 +9,14 @@
  * later layer (M3) built on top of these methods, not baked in here.
  */
 
+import type { LayoutDocument } from '../layout/document';
 import type {
   AutocompleteResult,
   MetadataRequest,
   MetadataResponse,
   SearchRequest,
   SearchResponse,
+  ServerLayoutMeta,
   SessionCheck,
   SessionGrant,
   SessionRevoke,
@@ -185,6 +187,37 @@ export const tags = {
       body: { records: recordIds, sets: recordIds.map(() => tagIds) },
       signal,
     });
+  },
+};
+
+/**
+ * Server-stored named layouts (M5). The browser's localStorage remains the source of truth; these
+ * endpoints move a layout between browsers. Identity is the document's own uuid, so `push` is an
+ * upsert to that id.
+ */
+export const layouts = {
+  /** Metadata for every server-stored layout (no documents). */
+  list(signal?: AbortSignal): Promise<ServerLayoutMeta[]> {
+    return request<ServerLayoutMeta[]>('/layouts', { signal });
+  },
+
+  /** The full stored document for `id`. Throws ApiError(404) if it isn't on the server. */
+  get(id: string, signal?: AbortSignal): Promise<LayoutDocument> {
+    return request<LayoutDocument>(`/layouts/${encodeURIComponent(id)}`, { signal });
+  },
+
+  /** Push-to-server upsert. Idempotent for the same id; ApiError(409) if the name belongs to another. */
+  push(doc: LayoutDocument, signal?: AbortSignal): Promise<{ id: string }> {
+    return request<{ id: string }>(`/layouts/${encodeURIComponent(doc.id)}`, {
+      method: 'PUT',
+      body: doc,
+      signal,
+    });
+  },
+
+  /** Remove a server-stored layout. `deleted` is false if nothing matched. */
+  remove(id: string, signal?: AbortSignal): Promise<{ deleted: boolean }> {
+    return request<{ deleted: boolean }>(`/layouts/${encodeURIComponent(id)}`, { method: 'DELETE', signal });
   },
 };
 

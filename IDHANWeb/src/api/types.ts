@@ -80,6 +80,16 @@ export interface AutocompleteResult {
   similarity?: number;
 }
 
+/** One row from GET /layouts — server-stored layout metadata. The document itself is fetched lazily. */
+export interface ServerLayoutMeta {
+  id: string;
+  name: string;
+  schema: number;
+  /** Unix seconds. */
+  created_at: number;
+  updated_at: number;
+}
+
 /** A tag service domain (GET /tags/domain/list). */
 export interface TagDomain {
   tag_domain_id: number;

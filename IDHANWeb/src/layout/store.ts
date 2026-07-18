@@ -4,11 +4,15 @@
  *  - this store owns *config* (per-instance settings) plus persistence and the named-layout catalog.
  *
  * The working document is auto-saved to localStorage. Named layouts are snapshots the user saves and
- * can reload; server push/pull arrives in M5. Identity is the document uuid — the name is renameable.
+ * can reload. A layout can also be pushed to / pulled from the server (M5) to move it between
+ * browsers; localStorage stays the source of truth. Identity is the document uuid — the name is
+ * renameable.
  */
 
 import { create } from 'zustand';
 import type { DockviewApi } from 'dockview-react';
+import { layouts as layoutApi } from '../api/client';
+import type { ServerLayoutMeta } from '../api/types';
 import { getPanel } from '../panels/registry';
 import {
   createEmptyLayout,
@@ -104,6 +108,10 @@ interface LayoutStore {
   /** Increments when the whole tree is swapped (load/new/reset) to force a Workspace remount. */
   generation: number;
   savedLayouts: LayoutMeta[];
+  /** Metadata for layouts stored on the server; refreshed on demand, empty until first fetch. */
+  serverLayouts: ServerLayoutMeta[];
+  /** True while a push/pull/refresh is in flight, so the UI can disable server actions. */
+  serverBusy: boolean;
 
   setApi: (api: DockviewApi | null) => void;
   toggleEditMode: () => void;
@@ -124,6 +132,15 @@ interface LayoutStore {
   saveNamedLayout: () => void;
   loadNamedLayout: (id: string) => void;
   deleteNamedLayout: (id: string) => void;
+
+  /** Fetch the server layout list into `serverLayouts`. Rejects (with ApiError) on failure. */
+  refreshServerLayouts: () => Promise<void>;
+  /** Push the working document to the server (upsert), then refresh the list. */
+  pushLayoutToServer: () => Promise<void>;
+  /** Replace the working document with a server-stored one (migrated on the way in). */
+  pullLayoutFromServer: (id: string) => Promise<void>;
+  /** Delete a server-stored layout, then refresh the list. */
+  deleteServerLayout: (id: string) => Promise<void>;
 }
 
 export const useLayoutStore = create<LayoutStore>((set, get) => ({
@@ -132,6 +149,8 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
   editMode: false,
   generation: 0,
   savedLayouts: metaList(loadSaved()),
+  serverLayouts: [],
+  serverBusy: false,
 
   setApi: (api) => set({ api }),
 
@@ -237,5 +256,51 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
     delete saved[id];
     persistSaved(saved);
     set({ savedLayouts: metaList(saved) });
+  },
+
+  refreshServerLayouts: async () => {
+    set({ serverBusy: true });
+    try {
+      const list = await layoutApi.list();
+      set({ serverLayouts: list });
+    } finally {
+      set({ serverBusy: false });
+    }
+  },
+
+  pushLayoutToServer: async () => {
+    set({ serverBusy: true });
+    try {
+      await layoutApi.push(get().doc);
+      const list = await layoutApi.list();
+      set({ serverLayouts: list });
+    } finally {
+      set({ serverBusy: false });
+    }
+  },
+
+  pullLayoutFromServer: async (id) => {
+    set({ serverBusy: true });
+    try {
+      // Migrate the server copy on the way in — it may predate the current schema, and this also
+      // rejects a corrupt document instead of adopting it as the working layout.
+      const doc = migrateLayout(await layoutApi.get(id));
+      if (!doc) throw new Error('The server returned an unreadable layout document');
+      set((s) => ({ doc, generation: s.generation + 1 }));
+      persistWorking(doc);
+    } finally {
+      set({ serverBusy: false });
+    }
+  },
+
+  deleteServerLayout: async (id) => {
+    set({ serverBusy: true });
+    try {
+      await layoutApi.remove(id);
+      const list = await layoutApi.list();
+      set({ serverLayouts: list });
+    } finally {
+      set({ serverBusy: false });
+    }
   },
 }));
