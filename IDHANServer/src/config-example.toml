@@ -26,3 +26,9 @@ path = "./log"
 # requested size is still generated and served, just never cached (so arbitrary sizes can't grow the
 # cache without bound). Edited live — no restart needed.
 #cacheable_sizes = [128, 256, 512]
+
+[plugins]
+# Directory scanned for WebUI plugin bundles — each subdirectory with a manifest.json is one plugin.
+# Defaults to "<static>/plugins" so the static file server serves the bundles at /plugins/... with no
+# extra configuration. An override must still live under the static root to be reachable by the browser.
+#path = "./static/plugins"
