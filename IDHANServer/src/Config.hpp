@@ -163,8 +163,10 @@ template < typename T >
 //! Read a homogeneous TOML array (e.g. `sizes = [128, 256, 512]`) from a single file. Elements that
 //! don't parse to T are skipped rather than aborting the whole array.
 template < typename T >
-[[nodiscard]] std::optional< std::vector< T > >
-	getArrayFromFile( const std::string_view path, const std::string_view group, const std::string_view name )
+[[nodiscard]] std::optional< std::vector< T > > getArrayFromFile(
+	const std::string_view path,
+	const std::string_view group,
+	const std::string_view name )
 {
 	const std::filesystem::path p { expand_home( path ) };
 
@@ -218,8 +220,10 @@ template < typename T >
 }
 
 template < typename T >
-[[nodiscard]] std::vector< T >
-	getArray( const std::string_view group, const std::string_view name, std::vector< T > default_value )
+[[nodiscard]] std::vector< T > getArray(
+	const std::string_view group,
+	const std::string_view name,
+	std::vector< T > default_value )
 {
 	if ( auto result = getArray< T >( group, name ); result ) return std::move( *result );
 	return default_value;

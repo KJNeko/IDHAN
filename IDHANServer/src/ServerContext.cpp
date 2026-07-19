@@ -98,7 +98,7 @@ void ServerContext::setupSPAFallback() const
 			const bool wants_html { request->getHeader( "Accept" ).find( "text/html" ) != std::string::npos };
 
 			if ( is_navigation && wants_html && !api::isApiPath( request->path() )
-			     && std::filesystem::exists( index_path ) )
+		         && std::filesystem::exists( index_path ) )
 			{
 				callback( drogon::HttpResponse::newFileResponse( index_path.string() ) );
 				return;
@@ -302,9 +302,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	// Drogon 404s any extension absent from this list, so it must cover everything a WebUI build
 	// emits. `wasm` stays because WebUI plugins may ship it.
-	app.setFileTypes( { "html", "css",  "js",   "mjs",  "map",  "json", "txt",  "xml", "webmanifest",
-	                    "svg",  "png",  "jpg",  "jpeg", "gif",  "webp", "avif", "ico", "bmp",
-	                    "woff", "woff2", "ttf", "otf",  "mp4",  "webm", "wasm" } );
+	app.setFileTypes( { "html", "css",   "js",  "mjs",  "map", "json", "txt",  "xml", "webmanifest",
+	                    "svg",  "png",   "jpg", "jpeg", "gif", "webp", "avif", "ico", "bmp",
+	                    "woff", "woff2", "ttf", "otf",  "mp4", "webm", "wasm" } );
 
 	const bool use_tls { config::get< bool >( "host", "use_tls", false ) };
 

@@ -32,8 +32,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchMetadataBatch( drogon::H
 		co_return createBadRequest( "'record_ids' must be an array of integers" );
 
 	if ( json[ "record_ids" ].size() > max_record_ids )
-		co_return createBadRequest(
-			"Too many record_ids: {} (max {})", json[ "record_ids" ].size(), max_record_ids );
+		co_return createBadRequest( "Too many record_ids: {} (max {})", json[ "record_ids" ].size(), max_record_ids );
 
 	std::vector< RecordID > record_ids {};
 	record_ids.reserve( json[ "record_ids" ].size() );
