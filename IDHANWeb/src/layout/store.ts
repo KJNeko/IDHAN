@@ -21,6 +21,7 @@ import {
   type PanelState,
   type SerializedDockview,
 } from './document';
+import { uuid } from '../util/uuid';
 
 const WORKING_KEY = 'idhan.layout.working';
 const SAVED_KEY = 'idhan.layouts';
@@ -194,7 +195,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
       }
     }
 
-    const instanceId = crypto.randomUUID();
+    const instanceId = uuid();
     const config = def?.defaultConfig ? structuredClone(def.defaultConfig) : {};
     const configVersion = def?.configVersion ?? 1;
 
