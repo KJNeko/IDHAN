@@ -25,8 +25,7 @@ export function TagPicker({ host, value, onPick, domain, placeholder, disabled }
   const [suggestions, setSuggestions] = useState<AutocompleteResult[]>([]);
   const [highlight, setHighlight] = useState(-1);
 
-  // Debounced, abortable autocomplete (cache + prefix-reuse live host-side). 2-char minimum matches
-  // the server's real bottleneck note: 1-char prefixes scan the whole tag table.
+  // 2-char minimum: 1-char prefixes scan the whole tag table server-side.
   useEffect(() => {
     const token = input.trim();
     if (token.length < 2) {
