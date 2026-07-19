@@ -1,8 +1,9 @@
 /**
  * Registers the built-in panel catalog. Import this once at startup for its side effects.
  *
- * These are the M3 seed panels that prove the layout + host loop end to end; the P0 workhorses
- * (Search, Grid, Viewer, Record Info, Tag Editor) arrive in M4 and register the same way.
+ * Registration is the same path third-party plugins use. The catalog now spans P0 (Search, Grid,
+ * Viewer, Record Info, Tag Editor), P1 (Import, Job Monitor, Server Status, Notes, URLs), and P2
+ * (Log Viewer, Cluster Manager, Sunburst Stats, Tag Domain Manager, Tag Relationships).
  */
 
 import { registerPanel } from '../registry';
@@ -17,6 +18,11 @@ import { urlListPanel } from './UrlListPanel';
 import { notesPanel } from './NotesPanel';
 import { importPanel } from './ImportPanel';
 import { jobMonitorPanel } from './JobMonitorPanel';
+import { logViewerPanel } from './LogViewerPanel';
+import { clusterManagerPanel } from './ClusterManagerPanel';
+import { sunburstStatsPanel } from './SunburstStatsPanel';
+import { tagDomainManagerPanel } from './TagDomainManagerPanel';
+import { tagRelationshipsPanel } from './TagRelationshipsPanel';
 
 let registered = false;
 
@@ -32,6 +38,11 @@ export function registerBuiltinPanels(): void {
   registerPanel(notesPanel);
   registerPanel(importPanel);
   registerPanel(jobMonitorPanel);
+  registerPanel(logViewerPanel);
+  registerPanel(clusterManagerPanel);
+  registerPanel(sunburstStatsPanel);
+  registerPanel(tagDomainManagerPanel);
+  registerPanel(tagRelationshipsPanel);
   registerPanel(serverStatusPanel);
   registerPanel(selectionInspectorPanel);
 }
