@@ -175,7 +175,19 @@ function ImportPanel({ host }: PanelProps) {
               </div>
               {item.info && (
                 <div className="import-meta">
-                  <RecordInfoView info={item.info} />
+                  <div className="import-meta-info grow">
+                    <RecordInfoView info={item.info} />
+                  </div>
+                  {item.recordId !== undefined && (
+                    <img
+                      className="import-thumb"
+                      src={host.records.thumbnailUrl(item.recordId, 128)}
+                      alt={`Thumbnail of #${item.recordId}`}
+                      loading="lazy"
+                      decoding="async"
+                      draggable={false}
+                    />
+                  )}
                 </div>
               )}
             </li>
