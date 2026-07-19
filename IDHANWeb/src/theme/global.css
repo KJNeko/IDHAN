@@ -973,3 +973,315 @@ body {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- P2 panels (M8): Log Viewer, Cluster Manager, Sunburst, Tag Domains, Tag Relationships ---- */
+
+/* A destructive action button; still a .toolbar-button. */
+.toolbar-button.danger {
+  border-color: #5a2e34;
+  color: #ff9a9a;
+}
+.toolbar-button.danger:hover {
+  background: #2d1f22;
+}
+.toolbar-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Shared small checkbox/radio label used across the P2 panels. */
+.log-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Log Viewer */
+.log-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+}
+.log-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.log-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+.log-level select {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #2a2e37;
+  border-radius: 5px;
+  background: #1b1e24;
+  color: var(--fg);
+  font: inherit;
+}
+.log-body {
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0.5rem;
+  overflow: auto;
+  background: #0f1115;
+  border: 1px solid #2a2e37;
+  border-radius: 5px;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre;
+  color: var(--fg);
+}
+.log-body.wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Tag Domain Manager */
+.domain-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.domain-add {
+  display: flex;
+  gap: 0.4rem;
+}
+.domain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+.domain-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.35rem;
+  border-radius: 4px;
+}
+.domain-row:hover {
+  background: #1b1e24;
+}
+.domain-id {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cluster Manager */
+.cluster-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.cluster-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.cluster-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+}
+.cluster-card {
+  border: 1px solid #2a2e37;
+  border-radius: 6px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: #1b1e24;
+}
+.cluster-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cluster-name {
+  font-weight: 600;
+}
+.cluster-path {
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+.cluster-stats {
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+.cluster-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: #2a2e37;
+  overflow: hidden;
+}
+.cluster-bar-fill {
+  height: 100%;
+  background: #4a90d9;
+}
+.cluster-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* Tag Relationships */
+.tag-relationships {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.rel-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.rel-kind {
+  display: flex;
+  gap: 0.8rem;
+}
+.rel-pair {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.rel-end {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.rel-end-label {
+  font-size: 0.8em;
+}
+.rel-arrow {
+  padding-bottom: 0.4rem;
+  white-space: nowrap;
+  font-size: 0.85em;
+}
+.rel-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.rel-note {
+  font-size: 0.85em;
+  border-top: 1px solid #2a2e37;
+  padding-top: 0.6rem;
+}
+
+/* Tag picker (shared by Tag Relationships) */
+.tagpick {
+  position: relative;
+}
+.tagpick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #2a2e37;
+  border-radius: 5px;
+  background: #23262d;
+  max-width: 100%;
+}
+.tagpick-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tagpick-clear {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 1.1em;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.tagpick-clear:hover {
+  color: var(--error);
+}
+
+/* Sunburst Stats */
+.sunburst-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+}
+.sunburst-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.sunburst-wrap {
+  display: flex;
+  gap: 1rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-wrap: wrap;
+}
+.sunburst-svg {
+  flex: 0 0 auto;
+  width: 320px;
+  max-width: 100%;
+  height: auto;
+}
+.sunburst-arc {
+  stroke: #16181d;
+  stroke-width: 1;
+  cursor: pointer;
+  transition: opacity 0.1s;
+}
+.sunburst-arc.hot {
+  opacity: 0.75;
+}
+.sunburst-center-name {
+  fill: var(--fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+.sunburst-center-value {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.sunburst-legend {
+  flex: 1 1 12rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  min-width: 0;
+}
+.sunburst-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.sunburst-legend-row:hover {
+  background: #1b1e24;
+}
+.sunburst-swatch {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
