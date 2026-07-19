@@ -885,6 +885,31 @@ body {
   font-size: 0.85em;
 }
 
+/* Import rows stack a header line over the optional inline metadata, so override the shared row flex. */
+.import-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 4px;
+  background: #1b1e24;
+}
+
+.import-row-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.import-meta {
+  border-top: 1px solid #2a2e37;
+  padding-top: 0.35rem;
+}
+
+.import-meta .info-list {
+  margin: 0;
+}
+
 .import-row.state-done .import-status {
   color: #63c07a;
 }
