@@ -5,7 +5,7 @@
 
 #include "idhan/versions.hpp"
 
-#define IDHAN_API_MAJOR 0
+#define IDHAN_API_MAJOR 1
 #define IDHAN_API_MINOR 0
 #define IDHAN_API_PATCH 0
 
