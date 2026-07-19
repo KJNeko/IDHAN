@@ -10,6 +10,7 @@
 
 import type { DockviewApi } from 'dockview-react';
 import type { PanelInstanceId } from '../host/types';
+import { uuid } from '../util/uuid';
 
 /** dockview's serialized tree. Derived from the API so we don't depend on the type being re-exported. */
 export type SerializedDockview = ReturnType<DockviewApi['toJSON']>;
@@ -39,7 +40,7 @@ export interface LayoutDocument {
 }
 
 function newId(): string {
-  return crypto.randomUUID();
+  return uuid();
 }
 
 export function createEmptyLayout(name: string): LayoutDocument {
