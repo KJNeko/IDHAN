@@ -58,7 +58,7 @@ constexpr auto IDHANAPIAuthName { "idhan::api::APIAuth" };
 
 //! Endpoints for API-key authentication: verifying an access key, generating API keys, and
 //! exchanging an API key for a temporary session key.
-class AuthEndpoint : public drogon::HttpController< AuthEndpoint >
+class AuthEndpoint final : public drogon::HttpController< AuthEndpoint >
 {
 	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( drogon::HttpRequestPtr req );
 	drogon::Task< drogon::HttpResponsePtr > generateApiKey( drogon::HttpRequestPtr req );
