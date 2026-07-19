@@ -904,10 +904,23 @@ body {
 .import-meta {
   border-top: 1px solid #2a2e37;
   padding-top: 0.35rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
 }
 
 .import-meta .info-list {
   margin: 0;
+}
+
+/* Imported-record thumbnail, pinned to the right of the metadata. */
+.import-thumb {
+  flex: 0 0 auto;
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  background: #0b0c0f;
+  border-radius: 4px;
 }
 
 .import-row.state-done .import-status {
