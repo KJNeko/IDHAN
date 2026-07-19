@@ -1,16 +1,16 @@
 #include "PTRImportWorker.hpp"
 
+#include <QEventLoop>
 #include <QLocale>
 
 #include <json/json.h>
 #include <spdlog/spdlog.h>
 
+#include <deque>
 #include <fstream>
 #include <optional>
 #include <ranges>
 #include <set>
-#include <deque>
-#include <QEventLoop>
 
 #include "PTRConstants.hpp"
 #include "PTRFileParser.hpp"
@@ -425,11 +425,11 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	std::unordered_map< std::string, RecordID > hex_to_record_id;
 	hex_to_record_id.reserve( hash_hexes.size() );
 
-	std::vector< RecordID > phase4_record_ids;
+	std::vector< RecordID > phase4_record_ids {};
 	if ( !hash_hexes.empty() )
 	{
 		spdlog::trace( "Phase 4: creating {} records via IDHAN API (concurrency={})", hash_hexes.size(), CONCURRENCY );
-		record_ids.reserve( hash_hexes.size() );
+		phase4_record_ids.reserve( hash_hexes.size() );
 
 		const std::size_t total_batches = ( hash_hexes.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
 		std::vector< std::optional< std::vector< RecordID > > > batch_results( total_batches );
@@ -508,14 +508,14 @@ ContentStats PTRImportWorker::processSingleContentFile(
 					if ( hex_index < hash_hexes.size() )
 					{
 						hex_to_record_id[ hash_hexes[ hex_index ] ] = results[ j ];
-						record_ids.push_back( results[ j ] );
+						phase4_record_ids.push_back( results[ j ] );
 					}
 				}
 			}
 		}
 
-		spdlog::trace( "Phase 4: got {} record IDs back", record_ids.size() );
-		stats.records_created = static_cast< int >( record_ids.size() );
+		spdlog::trace( "Phase 4: got {} record IDs back", phase4_record_ids.size() );
+		stats.records_created = static_cast< int >( phase4_record_ids.size() );
 	}
 
 	std::unordered_map< int, TagID > tag_id_to_idhan_id;
