@@ -118,7 +118,6 @@ function SunburstStatsPanel({ host }: PanelProps) {
         ring: 'table',
       });
 
-      // Outer ring: heap first, then each index, filling the same wedge proportionally.
       const parts: RawNode[] = [{ name: `${t.name} (heap)`, value: t.heap }, ...t.indexes];
       let inner = a0;
       parts.forEach((p, j) => {

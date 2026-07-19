@@ -86,8 +86,7 @@ function ImportPanel({ host }: PanelProps) {
             if (typeof data.record_id === 'number') {
               imported.push(data.record_id);
               patch(item.id, { state: 'done', detail: `#${data.record_id}`, recordId: data.record_id });
-              // Best-effort: show the metadata we got, the same view as the Record Info panel. A failure
-              // here just leaves the row without the detail block — the import itself already succeeded.
+              // Best-effort: a failure just leaves the row without the detail block.
               try {
                 const infoRes = await host.http.fetch(`/records/${data.record_id}/info`);
                 if (infoRes.ok) patch(item.id, { info: (await infoRes.json()) as RecordInfo });

@@ -5,9 +5,6 @@
  * /create|remove, keyed by ?tag_domain_id=); there is no endpoint to *list* a tag's existing
  * relationships, so this panel is an editor, not a browser. Siblings are omitted because that endpoint
  * is currently disabled server-side. The panel says so rather than pretending otherwise.
- *
- * Parent: the child tag gains the parent tag. Alias: the alias tag resolves to the aliased (canonical)
- * tag. Both directions are named explicitly in the UI so the asymmetric pairs aren't guesswork.
  */
 
 import { useEffect, useState } from 'react';
