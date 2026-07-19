@@ -913,14 +913,14 @@ body {
   margin: 0;
 }
 
-/* Imported-record thumbnail, pinned to the right of the metadata. Bounded to a 128px box but kept at
-   its natural aspect ratio (no fixed square + background, which letterboxed non-square thumbnails). */
+/* Imported-record thumbnail, pinned to the right of the metadata. Fixed 128px square so rows stay
+   aligned; object-fit:contain keeps aspect ratio, and with no background the letterbox area is
+   transparent (the row shows through) rather than black bars. */
 .import-thumb {
   flex: 0 0 auto;
-  width: auto;
-  height: auto;
-  max-width: 128px;
-  max-height: 128px;
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
   border-radius: 4px;
 }
 
