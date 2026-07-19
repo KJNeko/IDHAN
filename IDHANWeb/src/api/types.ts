@@ -138,3 +138,18 @@ export interface TagInfo {
   subtag: { id: number; text: string };
   items_count: number;
 }
+
+/**
+ * A tag's relationships within one domain (GET /tags/{domain_id}/{tag_id}/relationships). All ids;
+ * resolve to text only for display. `parents`/`children` are the parent-tag and child-tag directions
+ * of the parent relation; `aliases` are tags that alias *to* this one, `aliased` the tag(s) this one
+ * aliases to.
+ */
+export interface TagRelationships {
+  parents: number[];
+  children: number[];
+  older_siblings: number[];
+  younger_siblings: number[];
+  aliases: number[];
+  aliased: number[];
+}

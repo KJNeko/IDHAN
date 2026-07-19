@@ -23,6 +23,7 @@ import type {
   SessionRevoke,
   TagDomain,
   TagInfo,
+  TagRelationships,
   VerboseTag,
   VersionInfo,
 } from './types';
@@ -160,6 +161,11 @@ export const tags = {
 
   info(tagId: number, signal?: AbortSignal): Promise<TagInfo> {
     return request<TagInfo>(`/tags/${tagId}/info`, { signal });
+  },
+
+  /** A tag's parent/child/alias/sibling relationships in one domain, as ids (GET .../relationships). */
+  relationships(tagDomainId: number, tagId: number, signal?: AbortSignal): Promise<TagRelationships> {
+    return request<TagRelationships>(`/tags/${tagDomainId}/${tagId}/relationships`, { signal });
   },
 
   activeVerbose(recordId: number, signal?: AbortSignal): Promise<VerboseTag[]> {
