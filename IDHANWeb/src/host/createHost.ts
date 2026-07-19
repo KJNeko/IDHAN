@@ -87,6 +87,7 @@ export function createHost(instanceId: PanelInstanceId, settings: SettingsBindin
       listDomains: (signal) => tagApi.listDomains(signal),
       activeVerbose: (recordId, signal) => tagApi.activeVerbose(recordId, signal),
       resolve: (tagIds) => resolveTags(tagIds),
+      relationships: (tagDomainId, tagId, signal) => tagApi.relationships(tagDomainId, tagId, signal),
       addToRecords: (recordIds, tagsToAdd, tagDomainId, signal) =>
         tagApi.addToRecords([...recordIds], [...tagsToAdd], tagDomainId, signal),
       removeFromRecords: (recordIds, tagIds, tagDomainId, signal) =>

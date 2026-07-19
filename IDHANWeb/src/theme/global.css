@@ -1142,6 +1142,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden; /* the all-relationships section scrolls internally, not the whole panel */
+}
+.tag-relationships > :not(.rel-all) {
+  flex: 0 0 auto; /* keep the notice, domain, tag search and editor at natural height */
 }
 .rel-row {
   display: flex;
@@ -1178,10 +1184,154 @@ body {
   display: flex;
   gap: 0.5rem;
 }
-.rel-note {
+.rel-instant-notice {
+  font-size: 0.8em;
+  color: #9aa4b2;
+  background: #1b1e24;
+  border: 1px solid #2a2e37;
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+  margin: 0;
+}
+.rel-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.rel-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.rel-box-title {
   font-size: 0.85em;
+  font-weight: 600;
+}
+.rel-box-hint {
+  font-weight: 400;
+  font-size: 0.9em;
+}
+.rel-all {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
   border-top: 1px solid #2a2e37;
-  padding-top: 0.6rem;
+  padding-top: 0.8rem;
+  flex: 1 1 auto; /* fills the space below the editor; editor stays pinned at the top */
+  min-height: 0;
+  overflow-y: auto;
+}
+.rel-all-head {
+  font-size: 0.9em;
+  font-weight: 600;
+}
+.rel-domain-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.rel-domain-name {
+  font-size: 0.9em;
+  font-weight: 700;
+  color: var(--fg);
+  border-bottom: 1px solid #2a2e37;
+  padding-bottom: 0.25rem;
+}
+.rel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.rel-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0.1rem 0;
+  cursor: pointer;
+  color: var(--fg);
+  text-align: left;
+  width: 100%;
+}
+.rel-caret {
+  color: var(--muted);
+  font-size: 0.8em;
+  width: 0.8em;
+}
+.rel-group-title {
+  font-size: 0.8em;
+  font-weight: 600;
+}
+.rel-group-count {
+  font-size: 0.75em;
+  background: #23262d;
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.rel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding-left: 1.2rem;
+}
+.rel-chip {
+  font-size: 0.85em;
+  padding: 0.1rem 0.45rem;
+  background: #1b1e24;
+  border: 1px solid #2a2e37;
+  border-radius: 999px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+.rel-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.4rem 0.2rem 0.2rem;
+  background: #1b1e24;
+  border: 1px solid #2a2e37;
+  border-radius: 4px;
+  min-width: 0;
+}
+.rel-item .grow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rel-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid #7f1d1d;
+  border-radius: 4px;
+  background: #b91c1c;
+  color: #fff;
+  cursor: pointer;
+}
+.rel-del:hover:not(:disabled) {
+  background: #dc2626;
+}
+.rel-del:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* Tag picker (shared by Tag Relationships) */

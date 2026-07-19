@@ -16,6 +16,7 @@ import type {
   SearchRequest,
   SearchResponse,
   TagDomain,
+  TagRelationships,
   VerboseTag,
 } from '../api/types';
 
@@ -118,6 +119,8 @@ export interface TagsApi {
   activeVerbose(recordId: RecordId, signal?: AbortSignal): Promise<VerboseTag[]>;
   /** Resolve tag ids to "namespace:subtag" text, cached and coalesced across panels. */
   resolve(tagIds: readonly number[]): Promise<Map<number, string>>;
+  /** A tag's parent/child/alias/sibling relationships in one domain, as ids (pair with resolve() for text). */
+  relationships(tagDomainId: number, tagId: number, signal?: AbortSignal): Promise<TagRelationships>;
   /** Add tags (text "namespace:subtag" or an existing tag id) to every record, in one domain. */
   addToRecords(
     recordIds: readonly RecordId[],
