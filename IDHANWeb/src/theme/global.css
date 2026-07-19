@@ -913,13 +913,14 @@ body {
   margin: 0;
 }
 
-/* Imported-record thumbnail, pinned to the right of the metadata. */
+/* Imported-record thumbnail, pinned to the right of the metadata. Bounded to a 128px box but kept at
+   its natural aspect ratio (no fixed square + background, which letterboxed non-square thumbnails). */
 .import-thumb {
   flex: 0 0 auto;
-  width: 128px;
-  height: 128px;
-  object-fit: contain;
-  background: #0b0c0f;
+  width: auto;
+  height: auto;
+  max-width: 128px;
+  max-height: 128px;
   border-radius: 4px;
 }
 
