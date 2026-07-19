@@ -785,3 +785,152 @@ body {
   opacity: 0.4;
   cursor: default;
 }
+
+/* ---- P1 panels (M7): URLs, Notes, Import, Job Monitor ---- */
+
+/* Shared: a flex child that takes remaining space and may shrink below content width. */
+.grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.url-add,
+.note-add {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.url-add input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.note-add {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.note-add textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+}
+
+.url-items,
+.note-items,
+.import-items,
+.job-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.url-row,
+.note-row,
+.import-row,
+.job-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.url-link {
+  color: #6ea8ff;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.url-link:hover {
+  text-decoration: underline;
+}
+
+.note-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Import */
+.import-drop {
+  border: 1px dashed #3a3f4a;
+  border-radius: 6px;
+  padding: 1.25rem;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+}
+
+.import-drop.is-over {
+  border-color: #6ea8ff;
+  background: #1b2534;
+  color: var(--fg);
+}
+
+.import-force {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+}
+
+.import-status {
+  flex: 0 0 auto;
+  font-size: 0.85em;
+}
+
+.import-row.state-done .import-status {
+  color: #63c07a;
+}
+
+.import-row.state-error .import-status {
+  color: var(--error);
+}
+
+/* Job Monitor */
+.job-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.job-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--muted);
+}
+
+.job-status {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: #23262d;
+}
+
+.job-status.ok {
+  color: #63c07a;
+}
+
+.job-status.error {
+  color: var(--error);
+}
+
+.job-status.running {
+  color: #6ea8ff;
+}
+
+.job-elapsed {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}

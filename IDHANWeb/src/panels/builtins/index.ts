@@ -13,6 +13,10 @@ import { gridPanel } from './GridPanel';
 import { mediaViewerPanel } from './MediaViewerPanel';
 import { recordInfoPanel } from './RecordInfoPanel';
 import { tagEditorPanel } from './TagEditorPanel';
+import { urlListPanel } from './UrlListPanel';
+import { notesPanel } from './NotesPanel';
+import { importPanel } from './ImportPanel';
+import { jobMonitorPanel } from './JobMonitorPanel';
 
 let registered = false;
 
@@ -24,6 +28,10 @@ export function registerBuiltinPanels(): void {
   registerPanel(mediaViewerPanel);
   registerPanel(recordInfoPanel);
   registerPanel(tagEditorPanel);
+  registerPanel(urlListPanel);
+  registerPanel(notesPanel);
+  registerPanel(importPanel);
+  registerPanel(jobMonitorPanel);
   registerPanel(serverStatusPanel);
   registerPanel(selectionInspectorPanel);
 }
