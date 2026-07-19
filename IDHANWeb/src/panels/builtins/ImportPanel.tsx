@@ -7,6 +7,7 @@
 
 import { useCallback, useRef, useState, type DragEvent } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
+import { RecordInfoView, type RecordInfo } from './RecordInfoView';
 
 const MAX_CONCURRENT = 3;
 
@@ -19,6 +20,8 @@ interface Item {
   state: ItemState;
   detail?: string;
   recordId?: RecordId;
+  /** Metadata fetched after a successful import, shown inline (same view as the Record Info panel). */
+  info?: RecordInfo;
 }
 
 /** Run `worker` over `items` with at most `limit` in flight at once. */
@@ -83,6 +86,14 @@ function ImportPanel({ host }: PanelProps) {
             if (typeof data.record_id === 'number') {
               imported.push(data.record_id);
               patch(item.id, { state: 'done', detail: `#${data.record_id}`, recordId: data.record_id });
+              // Best-effort: show the metadata we got, the same view as the Record Info panel. A failure
+              // here just leaves the row without the detail block — the import itself already succeeded.
+              try {
+                const infoRes = await host.http.fetch(`/records/${data.record_id}/info`);
+                if (infoRes.ok) patch(item.id, { info: (await infoRes.json()) as RecordInfo });
+              } catch {
+                /* ignore */
+              }
             } else {
               // e.g. unknown mime without force: the server returns a reason, not a record.
               patch(item.id, { state: 'error', detail: data.reason ?? 'not imported' });
@@ -154,12 +165,19 @@ function ImportPanel({ host }: PanelProps) {
         <ul className="import-items">
           {items.map((item) => (
             <li key={item.id} className={`import-row state-${item.state}`}>
-              <span className="grow" title={item.name}>
-                {item.name}
-              </span>
-              <span className="muted import-status">
-                {item.state === 'done' ? item.detail : item.state === 'error' ? `✕ ${item.detail ?? ''}` : item.state}
-              </span>
+              <div className="import-row-head">
+                <span className="grow" title={item.name}>
+                  {item.name}
+                </span>
+                <span className="muted import-status">
+                  {item.state === 'done' ? item.detail : item.state === 'error' ? `✕ ${item.detail ?? ''}` : item.state}
+                </span>
+              </div>
+              {item.info && (
+                <div className="import-meta">
+                  <RecordInfoView info={item.info} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
