@@ -96,8 +96,7 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 	}
 
 	// --- display mode ------------------------------------------------------------------------
-	if ( json.isMember( "display" ) && json[ "display" ].isString()
-	     && json[ "display" ].asString() == "storage" )
+	if ( json.isMember( "display" ) && json[ "display" ].isString() && json[ "display" ].asString() == "storage" )
 		builder.setDisplay( HydrusDisplayType::STORED );
 	else
 		builder.setDisplay( HydrusDisplayType::DISPLAY );
@@ -140,8 +139,10 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 		{
 			if ( !r.isString() ) continue;
 			const auto s { r.asString() };
-			if ( s == "ids" ) return_ids = true;
-			else if ( s == "hashes" ) return_hashes = true;
+			if ( s == "ids" )
+				return_ids = true;
+			else if ( s == "hashes" )
+				return_hashes = true;
 		}
 		if ( !return_ids && !return_hashes ) return_ids = true; // never return nothing
 	}
@@ -172,9 +173,11 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 
 	// "truncated" flags that a limit was applied and fully consumed, so more may exist. It is a hint
 	// (count could equal the limit exactly by chance); the client re-queries with a higher offset.
-	const auto limit_param { json.isMember( "limit" ) && json[ "limit" ].isIntegral()
-		                         ? std::optional< std::int64_t > { json[ "limit" ].asInt64() }
-		                         : std::nullopt };
+	const auto limit_param {
+		json.isMember( "limit" ) && json[ "limit" ].isIntegral() ?
+			std::optional< std::int64_t > { json[ "limit" ].asInt64() } :
+			std::nullopt
+	};
 	out[ "truncated" ] = limit_param.has_value() && count == *limit_param;
 
 	const auto elapsed {

@@ -179,11 +179,11 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 void SearchBuilder::appendLimitOffset( std::string& query ) const
 {
 	// An explicit API limit wins; otherwise honour a system:limit predicate.
-	const std::optional< std::size_t > limit { m_limit.has_value() ?
-		                                           m_limit :
-		                                           ( m_limit_search.m_active ?
-		                                                 std::optional< std::size_t > { m_limit_search.count } :
-		                                                 std::nullopt ) };
+	const std::optional< std::size_t > limit {
+		m_limit.has_value() ?
+			m_limit :
+			( m_limit_search.m_active ? std::optional< std::size_t > { m_limit_search.count } : std::nullopt )
+	};
 
 	if ( limit ) query += " LIMIT " + std::to_string( *limit );
 	if ( m_offset && *m_offset > 0 ) query += " OFFSET " + std::to_string( *m_offset );

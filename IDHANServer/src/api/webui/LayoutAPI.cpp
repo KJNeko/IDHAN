@@ -118,10 +118,9 @@ drogon::Task< drogon::HttpResponsePtr > LayoutAPI::createLayout( drogon::HttpReq
 
 	// Pre-check for clean 409s rather than surfacing the PK / unique-index violation as a 500. A small
 	// TOCTOU race exists; on a self-hosted single-operator server it is not worth a locking dance.
-	const auto id_exists {
-		co_await db->execSqlCoro( "SELECT 1 FROM webui_layouts WHERE layout_id = $1::uuid", id )
-	};
-	if ( !id_exists.empty() ) co_return createConflict( "A layout with id {} already exists; use PUT to update it", id );
+	const auto id_exists { co_await db->execSqlCoro( "SELECT 1 FROM webui_layouts WHERE layout_id = $1::uuid", id ) };
+	if ( !id_exists.empty() )
+		co_return createConflict( "A layout with id {} already exists; use PUT to update it", id );
 
 	const auto name_taken {
 		co_await db->execSqlCoro( "SELECT 1 FROM webui_layouts WHERE lower(name) = lower($1)", name )
@@ -143,15 +142,15 @@ drogon::Task< drogon::HttpResponsePtr > LayoutAPI::createLayout( drogon::HttpReq
 	co_return response;
 }
 
-drogon::Task< drogon::HttpResponsePtr > LayoutAPI::getLayout( [[maybe_unused]] drogon::HttpRequestPtr req, std::string id )
+drogon::Task< drogon::HttpResponsePtr > LayoutAPI::getLayout(
+	[[maybe_unused]] drogon::HttpRequestPtr req,
+	std::string id )
 {
 	if ( !isUuidShaped( id ) ) co_return createBadRequest( "Layout id must be a uuid" );
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto rows {
-		co_await db->execSqlCoro( "SELECT document FROM webui_layouts WHERE layout_id = $1::uuid", id )
-	};
+	const auto rows { co_await db->execSqlCoro( "SELECT document FROM webui_layouts WHERE layout_id = $1::uuid", id ) };
 
 	if ( rows.empty() ) co_return createNotFound( "No layout with id {}", id );
 
@@ -170,7 +169,8 @@ drogon::Task< drogon::HttpResponsePtr > LayoutAPI::putLayout( drogon::HttpReques
 	// The URL id is authoritative for the row. A document whose own id disagrees would pull back under a
 	// different identity than it was pushed to, so reject the mismatch instead of silently reconciling.
 	if ( json[ "id" ].asString() != id )
-		co_return createBadRequest( "Layout document 'id' ({}) does not match the URL id ({})", json[ "id" ].asString(), id );
+		co_return createBadRequest(
+			"Layout document 'id' ({}) does not match the URL id ({})", json[ "id" ].asString(), id );
 
 	const auto name { json[ "name" ].asString() };
 
@@ -197,15 +197,15 @@ drogon::Task< drogon::HttpResponsePtr > LayoutAPI::putLayout( drogon::HttpReques
 	co_return drogon::HttpResponse::newHttpJsonResponse( out );
 }
 
-drogon::Task< drogon::HttpResponsePtr > LayoutAPI::deleteLayout( [[maybe_unused]] drogon::HttpRequestPtr req, std::string id )
+drogon::Task< drogon::HttpResponsePtr > LayoutAPI::deleteLayout(
+	[[maybe_unused]] drogon::HttpRequestPtr req,
+	std::string id )
 {
 	if ( !isUuidShaped( id ) ) co_return createBadRequest( "Layout id must be a uuid" );
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto deleted {
-		co_await db->execSqlCoro( "DELETE FROM webui_layouts WHERE layout_id = $1::uuid", id )
-	};
+	const auto deleted { co_await db->execSqlCoro( "DELETE FROM webui_layouts WHERE layout_id = $1::uuid", id ) };
 
 	Json::Value out {};
 	out[ "deleted" ] = deleted.affectedRows() > 0;
