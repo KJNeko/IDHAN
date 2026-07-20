@@ -127,6 +127,7 @@ post:
                     - filesize
                     - import_time
                     - record_time
+                    - modified_time
                   description: >
                     `size` is also accepted as an alias for `filesize`, and
                     `creation_time` for `record_time`. `record_time` reflects
