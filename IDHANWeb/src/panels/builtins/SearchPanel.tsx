@@ -19,6 +19,7 @@ const SORT_OPTIONS = [
   { value: 'creation_time', label: 'Record creation time' },
   { value: 'size', label: 'File size' },
   { value: 'modified_time', label: 'File modified time' },
+  { value: 'mime', label: 'Filetype' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];
