@@ -153,3 +153,34 @@ export interface TagRelationships {
   aliases: number[];
   aliased: number[];
 }
+
+/** One row of a mime breakdown (count + total bytes). `mime` is null for files not yet obtained. */
+export interface MimeCount {
+  mime: string | null;
+  count: number;
+  /** Total on-disk bytes (file_info.size) across records with this mime. */
+  bytes: number;
+}
+
+/**
+ * Aggregate database counts (GET /db/stats). `mappings` is normally a fast reltuples estimate over the
+ * partitioned tag_mappings table (exact COUNT would be a full scan); when the estimate is unavailable
+ * (table not yet analysed) the server falls back to an exact count. `mappings_estimated` says which,
+ * so the UI only shows a "≈" qualifier when it really is an estimate. Pairs with GET /db/stats/sunburst
+ * (per-table storage) to back the Database Stats panel.
+ */
+export interface DatabaseStats {
+  records: number;
+  tags: number;
+  mappings: number;
+  /** True when `mappings` is a reltuples estimate rather than an exact count. */
+  mappings_estimated: boolean;
+  clusters: number;
+}
+
+/** A node in the GET /db/stats/sunburst storage tree: a table (with index children) or an index. */
+export interface StorageNode {
+  name: string;
+  value: number;
+  children?: StorageNode[];
+}

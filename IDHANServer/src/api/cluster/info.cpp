@@ -51,6 +51,31 @@ ExpectedTask< Json::Value > getInfo( ClusterID cluster_id, const DbClientPtr tra
 	json[ "ratio_number" ] = cluster_info[ 0 ][ "ratio_number" ].as< std::size_t >();
 	json[ "path" ] = cluster_info[ 0 ][ "folder_path" ].as< std::string >();
 
+	// Mime breakdown of the files stored in this specific cluster; LEFT JOIN so the null-mime bucket
+	// (files not yet obtained) still appears.
+	const auto mime_rows { co_await transaction->execSqlCoro(
+		"SELECT m.name AS mime, COUNT(fi.record_id) AS cnt, COALESCE(SUM(fi.size), 0) AS bytes "
+		"FROM file_info fi "
+		"LEFT JOIN mime m ON fi.mime_id = m.mime_id "
+		"WHERE fi.cluster_id = $1 "
+		"GROUP BY m.name "
+		"ORDER BY bytes DESC",
+		cluster_id ) };
+
+	Json::Value by_mime { Json::arrayValue };
+	for ( const auto& row : mime_rows )
+	{
+		Json::Value entry {};
+		if ( row[ "mime" ].isNull() )
+			entry[ "mime" ] = Json::Value::null;
+		else
+			entry[ "mime" ] = row[ "mime" ].as< std::string >();
+		entry[ "count" ] = row[ "cnt" ].as< int64_t >();
+		entry[ "bytes" ] = row[ "bytes" ].as< int64_t >();
+		by_mime.append( entry );
+	}
+	json[ "by_mime" ] = by_mime;
+
 	// TODO: Type
 
 	log::debug( "Populated json" );

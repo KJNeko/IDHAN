@@ -3,7 +3,7 @@
  *
  * Registration is the same path third-party plugins use. The catalog now spans P0 (Search, Grid,
  * Viewer, Record Info, Tag Editor), P1 (Import, Job Monitor, Server Status, Notes, URLs), and P2
- * (Log Viewer, Cluster Manager, Sunburst Stats, Tag Domain Manager, Tag Relationships).
+ * (Log Viewer, Cluster Manager, Database Stats, Tag Domain Manager, Tag Relationships).
  */
 
 import { registerPanel } from '../registry';
@@ -20,7 +20,7 @@ import { importPanel } from './ImportPanel';
 import { jobMonitorPanel } from './JobMonitorPanel';
 import { logViewerPanel } from './LogViewerPanel';
 import { clusterManagerPanel } from './ClusterManagerPanel';
-import { sunburstStatsPanel } from './SunburstStatsPanel';
+import { databaseStatsPanel } from './DatabaseStatsPanel';
 import { tagDomainManagerPanel } from './TagDomainManagerPanel';
 import { tagRelationshipsPanel } from './TagRelationshipsPanel';
 
@@ -40,7 +40,7 @@ export function registerBuiltinPanels(): void {
   registerPanel(jobMonitorPanel);
   registerPanel(logViewerPanel);
   registerPanel(clusterManagerPanel);
-  registerPanel(sunburstStatsPanel);
+  registerPanel(databaseStatsPanel);
   registerPanel(tagDomainManagerPanel);
   registerPanel(tagRelationshipsPanel);
   registerPanel(serverStatusPanel);

@@ -20,7 +20,9 @@ import type {
   ServerLayoutMeta,
   SessionCheck,
   SessionGrant,
+  DatabaseStats,
   SessionRevoke,
+  StorageNode,
   TagDomain,
   TagInfo,
   TagRelationships,
@@ -194,6 +196,19 @@ export const tags = {
       body: { records: recordIds, sets: recordIds.map(() => tagIds) },
       signal,
     });
+  },
+};
+
+/** Database statistics for the Database Stats panel. */
+export const stats = {
+  /** Aggregate counts (records, tags, mappings estimate, clusters) and record-count-by-mime. */
+  database(signal?: AbortSignal): Promise<DatabaseStats> {
+    return request<DatabaseStats>('/db/stats', { signal });
+  },
+
+  /** Per-table PostgreSQL storage as a tree (table → indexes), sized in bytes. */
+  storage(signal?: AbortSignal): Promise<StorageNode> {
+    return request<StorageNode>('/db/stats/sunburst', { signal });
   },
 };
 

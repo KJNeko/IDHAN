@@ -4,7 +4,7 @@
  * layout store, so the host stays decoupled from the store's internals.
  */
 
-import { api, getKey, tags as tagApi } from '../api/client';
+import { api, getKey, stats as statsApi, tags as tagApi } from '../api/client';
 import { thumbnailUrl as buildThumbnailUrl, fileUrl as buildFileUrl } from '../api/client';
 import { getMetadata } from './metadataCache';
 import { autocomplete } from './autocompleteCache';
@@ -106,6 +106,10 @@ export function createHost(instanceId: PanelInstanceId, settings: SettingsBindin
     },
     jobs: {
       watch: watchJob,
+    },
+    stats: {
+      database: (signal) => statsApi.database(signal),
+      storage: (signal) => statsApi.storage(signal),
     },
     http: {
       fetch: (input, init) => fetch(input, { ...init, headers: authHeaders(init?.headers) }),
