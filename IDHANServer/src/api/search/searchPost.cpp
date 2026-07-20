@@ -9,25 +9,12 @@
 
 #include "api/SearchAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/search/parseSortType.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
 
 namespace idhan::api
 {
-
-namespace
-{
-
-//! Maps a "sort.by" string onto a SortType. Unknown values fall back to import time.
-SortType parseSortType( const std::string& by )
-{
-	if ( by == "filesize" || by == "size" ) return SortType::FILESIZE;
-	if ( by == "record_time" || by == "creation_time" ) return SortType::RECORD_TIME;
-	// "import_time" and anything unrecognised
-	return SortType::IMPORT_TIME;
-}
-
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpRequestPtr request )
 {
