@@ -165,6 +165,9 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 			// the records join aliases the table as rc
 			query += "rc.creation_time";
 			break;
+		case SortType::MODIFIED_TIME:
+			query += "fm.modified_time";
+			break;
 	}
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
@@ -475,6 +478,11 @@ void SearchBuilder::setSortType( const SortType type )
 			{
 				// comes from creation_time in `records`
 				m_required_joins.records = true;
+				break;
+			}
+		case SortType::MODIFIED_TIME:
+			{
+				m_required_joins.file_info = true;
 				break;
 			}
 	}

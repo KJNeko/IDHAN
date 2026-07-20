@@ -18,6 +18,7 @@ const SORT_OPTIONS = [
   { value: 'import_time', label: 'Import time' },
   { value: 'creation_time', label: 'Record creation time' },
   { value: 'size', label: 'File size' },
+  { value: 'modified_time', label: 'File modified time' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];

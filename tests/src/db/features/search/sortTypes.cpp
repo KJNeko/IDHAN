@@ -34,6 +34,16 @@ TEST_F( SearchFixture, RecordTimeOrdersByCreationTimeAndDoesNotError )
 	EXPECT_LT( indexOf( ids, r_mid ), indexOf( ids, r_new ) );
 }
 
+TEST_F( SearchFixture, ModifiedTimeOrders )
+{
+	const auto r_old { createSearchableRecord( "modified_old", 100, "image/jpeg", -300 ) };
+	const auto r_new { createSearchableRecord( "modified_new", 100, "image/jpeg", 0 ) };
+
+	const auto ids { sortedIds( SortType::MODIFIED_TIME ) };
+
+	EXPECT_LT( indexOf( ids, r_old ), indexOf( ids, r_new ) );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
