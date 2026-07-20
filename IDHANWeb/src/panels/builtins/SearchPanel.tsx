@@ -24,6 +24,7 @@ const SORT_OPTIONS = [
   { value: 'random', label: 'Random' },
   { value: 'duration', label: 'Duration' },
   { value: 'framerate', label: 'Framerate' },
+  { value: 'has_audio', label: 'Has audio' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];
