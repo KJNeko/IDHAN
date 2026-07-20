@@ -248,13 +248,18 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 			break;
 	}
 
-	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
+	const std::string_view direction { m_order == SortOrder::ASC ? " ASC" : " DESC" };
+	query += direction;
 
 	// A stable tiebreak on the unique record_id. Without it, rows with equal sort keys order
-	// arbitrarily, so identical queries can disagree and offset-based paging can skip or repeat rows.
+	// arbitrarily, so identical queries can disagree and offset-based paging can skip or repeat
+	// rows. Matches the primary sort's direction (rather than always ASC) so a single ascending
+	// (col, record_id) index can serve both directions: a forward scan for ASC, a backward scan
+	// for DESC — one index instead of two per sort column.
 	query += ", ";
 	query += record_id_alias;
-	query += ".record_id ASC";
+	query += ".record_id";
+	query += direction;
 }
 
 void SearchBuilder::appendLimitOffset( std::string& query ) const
@@ -349,6 +354,7 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 		// that sorts by NUM_TAGS, including on the fast/browse-everything path. A materialized
 		// per-record tag-count column (mirroring the per-tag tag_counts/total_tag_counts pattern in
 		// 93-tag_counts.sql, inverted to per-record) would be the real fix; out of scope for now.
+		//TODO: Optimize this somehow
 		query += " LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
 				 " FROM active_tag_mappings_final GROUP BY record_id) ntc USING (record_id)";
 	}
