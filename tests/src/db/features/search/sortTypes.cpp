@@ -180,6 +180,21 @@ TEST_F( SearchFixture, WidthOrdersAcrossAllThreeMetadataTablesAndExcludesRecords
 	EXPECT_LT( indexOf( ids, r_video ), indexOf( ids, r_project ) );
 }
 
+TEST_F( SearchFixture, HeightOrdersAndExcludesRecordsWithNone )
+{
+	const auto r_short { createSearchableRecord( "height_short", 100, "image/jpeg" ) };
+	insertImageMetadata( r_short, 100, 50 );
+
+	const auto r_tall { createSearchableRecord( "height_tall", 100, "image/jpeg" ) };
+	insertImageMetadata( r_tall, 100, 900 );
+
+	createSearchableRecord( "height_none" );
+
+	const auto ids { sortedIds( SortType::HEIGHT ) };
+	EXPECT_EQ( ids.size(), 2u );
+	EXPECT_LT( indexOf( ids, r_short ), indexOf( ids, r_tall ) );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };

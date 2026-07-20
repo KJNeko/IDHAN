@@ -26,6 +26,7 @@ const SORT_OPTIONS = [
   { value: 'framerate', label: 'Framerate' },
   { value: 'has_audio', label: 'Has audio' },
   { value: 'width', label: 'Width' },
+  { value: 'height', label: 'Height' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];
