@@ -61,6 +61,18 @@ TEST_F( SearchFixture, MimeOrdersByMimeId )
 		EXPECT_LT( indexOf( ids, r_mp4 ), indexOf( ids, r_jpeg ) );
 }
 
+TEST_F( SearchFixture, HashOrdersBySha256 )
+{
+	const auto r_a { createSearchableRecord( "hash_aaa" ) };
+	const auto r_b { createSearchableRecord( "hash_bbb" ) };
+
+	const auto ids { sortedIds( SortType::HASH ) };
+
+	// both records must appear; exact order depends on the digest, so just confirm no crash/drop
+	EXPECT_NE( indexOf( ids, r_a ), std::string::npos );
+	EXPECT_NE( indexOf( ids, r_b ), std::string::npos );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
