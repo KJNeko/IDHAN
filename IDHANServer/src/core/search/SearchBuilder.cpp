@@ -25,6 +25,9 @@ namespace
 constexpr std::string_view width_expr {
 	"COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)"
 };
+constexpr std::string_view height_expr {
+	"COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height)"
+};
 
 } // namespace
 
@@ -212,6 +215,9 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 			break;
 		case SortType::WIDTH:
 			query += width_expr;
+			break;
+		case SortType::HEIGHT:
+			query += height_expr;
 			break;
 	}
 
@@ -410,6 +416,11 @@ void SearchBuilder::generateSortFilterClause( std::string& query ) const
 			query += width_expr;
 			query += " IS NOT NULL";
 			break;
+		case SortType::HEIGHT:
+			query += " AND ";
+			query += height_expr;
+			query += " IS NOT NULL";
+			break;
 		default:
 			break;
 	}
@@ -585,6 +596,7 @@ void SearchBuilder::setSortType( const SortType type )
 				break;
 			}
 		case SortType::WIDTH:
+		case SortType::HEIGHT:
 			{
 				// LEFT: resolution can come from any of three tables, so none can be an INNER join
 				// on its own; generateSortFilterClause() excludes records with no match in any of
