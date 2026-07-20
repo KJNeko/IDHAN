@@ -326,6 +326,12 @@ class SearchBuilder
 	void determineJoinsForQuery( std::string& query );
 	void determineSelectClause( std::string& query, bool return_ids, bool return_hashes );
 	void generateWhereClauses( std::string& query );
+	//! Appends an `AND <expr> IS NOT NULL` filter when the active sort type reads from a nullable
+	//! column that an INNER join alone can't exclude (e.g. a single nullable column already reached
+	//! via a join that's shared with non-null-requiring sorts, or a value COALESCEd across several
+	//! LEFT-joined tables). For these sort types, NULL is treated as "excluded", not "sorts last" —
+	//! called from both of construct()'s code paths, right after the unconditional mime_id filter.
+	void generateSortFilterClause( std::string& query ) const;
 
   public:
 

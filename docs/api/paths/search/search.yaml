@@ -139,6 +139,9 @@ post:
                     `import_time` (file import time) — records created before
                     this sort was added were backfilled with the migration's
                     run time, not their true historical creation time.
+                    `modified_time` is unset until a record is actually
+                    modified, and sorting by it excludes records where it's
+                    still unset.
                     `random` ignores `order` and reorders on every call, so
                     paging through a `random` sort with `limit`/`offset` does
                     not yield a stable sequence. `duration`, `framerate` and
