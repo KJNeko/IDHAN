@@ -172,6 +172,10 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 			// sorts by the raw mime_id FK, not a semantic filetype-category ordering
 			query += "fm.mime_id";
 			break;
+		case SortType::HASH:
+			// the records join aliases the table as rc
+			query += "rc.sha256";
+			break;
 	}
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
@@ -492,6 +496,12 @@ void SearchBuilder::setSortType( const SortType type )
 		case SortType::MIME:
 			{
 				m_required_joins.file_info = true;
+				break;
+			}
+		case SortType::HASH:
+			{
+				// comes from sha256 in `records`
+				m_required_joins.records = true;
 				break;
 			}
 	}

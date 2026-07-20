@@ -18,6 +18,7 @@ inline SortType parseSortType( const std::string& by )
 	if ( by == "record_time" || by == "creation_time" ) return SortType::RECORD_TIME;
 	if ( by == "modified_time" ) return SortType::MODIFIED_TIME;
 	if ( by == "mime" || by == "filetype" ) return SortType::MIME;
+	if ( by == "hash" ) return SortType::HASH;
 	// "import_time" and anything unrecognised
 	return SortType::IMPORT_TIME;
 }
