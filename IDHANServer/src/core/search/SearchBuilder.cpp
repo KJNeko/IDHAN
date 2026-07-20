@@ -29,6 +29,14 @@ constexpr std::string_view height_expr {
 	"COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height)"
 };
 
+// The full ratio expression, not just width_expr/height_expr individually: used identically for
+// both the ORDER BY value and the exclusion filter, so a zero height (which NULLIF turns into a
+// NULL ratio) is excluded the same way a record with no resolution data at all is.
+constexpr std::string_view ratio_expr {
+	"(COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)::float"
+	" / NULLIF(COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height), 0))"
+};
+
 } // namespace
 
 void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view tag )
@@ -218,6 +226,9 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 			break;
 		case SortType::HEIGHT:
 			query += height_expr;
+			break;
+		case SortType::RATIO:
+			query += ratio_expr;
 			break;
 	}
 
@@ -421,6 +432,13 @@ void SearchBuilder::generateSortFilterClause( std::string& query ) const
 			query += height_expr;
 			query += " IS NOT NULL";
 			break;
+		case SortType::RATIO:
+			// checks the full ratio expression, not just presence of width/height — a zero height
+			// (NULLIF'd to NULL) is excluded here too, not just missing resolution data entirely
+			query += " AND ";
+			query += ratio_expr;
+			query += " IS NOT NULL";
+			break;
 		default:
 			break;
 	}
@@ -597,6 +615,7 @@ void SearchBuilder::setSortType( const SortType type )
 			}
 		case SortType::WIDTH:
 		case SortType::HEIGHT:
+		case SortType::RATIO:
 			{
 				// LEFT: resolution can come from any of three tables, so none can be an INNER join
 				// on its own; generateSortFilterClause() excludes records with no match in any of

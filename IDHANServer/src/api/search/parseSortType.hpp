@@ -25,6 +25,7 @@ inline SortType parseSortType( const std::string& by )
 	if ( by == "has_audio" ) return SortType::HAS_AUDIO;
 	if ( by == "width" ) return SortType::WIDTH;
 	if ( by == "height" ) return SortType::HEIGHT;
+	if ( by == "ratio" ) return SortType::RATIO;
 	// "import_time" and anything unrecognised
 	return SortType::IMPORT_TIME;
 }

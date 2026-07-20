@@ -27,6 +27,7 @@ const SORT_OPTIONS = [
   { value: 'has_audio', label: 'Has audio' },
   { value: 'width', label: 'Width' },
   { value: 'height', label: 'Height' },
+  { value: 'ratio', label: 'Aspect ratio' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];

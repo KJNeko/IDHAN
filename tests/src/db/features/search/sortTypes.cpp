@@ -195,6 +195,27 @@ TEST_F( SearchFixture, HeightOrdersAndExcludesRecordsWithNone )
 	EXPECT_LT( indexOf( ids, r_short ), indexOf( ids, r_tall ) );
 }
 
+TEST_F( SearchFixture, RatioExcludesZeroHeightAndMissingResolution )
+{
+	const auto r_wide { createSearchableRecord( "ratio_wide", 100, "image/jpeg" ) };
+	insertImageMetadata( r_wide, 16, 9 );
+
+	const auto r_tall { createSearchableRecord( "ratio_tall", 100, "image/jpeg" ) };
+	insertImageMetadata( r_tall, 9, 16 );
+
+	// a zero height must not crash the query via division by zero, and — per the exclusion
+	// policy — must not appear in the results either, since NULLIF turns its ratio into NULL
+	const auto r_zero_height { createSearchableRecord( "ratio_zero_height", 100, "image/jpeg" ) };
+	insertImageMetadata( r_zero_height, 16, 0 );
+
+	createSearchableRecord( "ratio_none" );
+
+	const auto ids { sortedIds( SortType::RATIO, SortOrder::ASC ) };
+	EXPECT_EQ( ids.size(), 2u );
+	EXPECT_LT( indexOf( ids, r_tall ), indexOf( ids, r_wide ) );
+	EXPECT_EQ( indexOf( ids, r_zero_height ), std::string::npos );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
