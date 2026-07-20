@@ -130,6 +130,7 @@ post:
                     - modified_time
                     - mime
                     - hash
+                    - random
                   description: >
                     `size` is also accepted as an alias for `filesize`, and
                     `creation_time` for `record_time`. `record_time` reflects
@@ -137,6 +138,9 @@ post:
                     `import_time` (file import time) — records created before
                     this sort was added were backfilled with the migration's
                     run time, not their true historical creation time.
+                    `random` ignores `order` and reorders on every call, so
+                    paging through a `random` sort with `limit`/`offset` does
+                    not yield a stable sequence.
                 order:
                   type: string
                   enum: [asc, desc]

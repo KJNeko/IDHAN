@@ -150,10 +150,23 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 {
 	query += " ORDER BY ";
 
+	if ( m_sort_type == SortType::RANDOM )
+	{
+		// Non-deterministic per query execution — direction, NULLS ordering and the record_id
+		// tiebreak below are all meaningless here, and offset-based pagination is inherently
+		// unstable under this sort (each page re-randomizes independently).
+		query += "random()";
+		return;
+	}
+
 	switch ( m_sort_type )
 	{
 		// DEFAULT and HY_* should not be used here.
 		default:
+			[[fallthrough]];
+		case SortType::RANDOM:
+			// unreachable: handled by the early return above; case exists only to satisfy
+			// -Wswitch-enum
 			[[fallthrough]];
 		case SortType::FILESIZE:
 			query += "fm.size";
@@ -502,6 +515,11 @@ void SearchBuilder::setSortType( const SortType type )
 			{
 				// comes from sha256 in `records`
 				m_required_joins.records = true;
+				break;
+			}
+		case SortType::RANDOM:
+			{
+				// no data needed
 				break;
 			}
 	}

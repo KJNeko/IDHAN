@@ -73,6 +73,32 @@ TEST_F( SearchFixture, HashOrdersBySha256 )
 	EXPECT_NE( indexOf( ids, r_b ), std::string::npos );
 }
 
+TEST_F( SearchFixture, RandomReturnsFullSetWithoutErroring )
+{
+	createSearchableRecord( "random_1" );
+	createSearchableRecord( "random_2" );
+	createSearchableRecord( "random_3" );
+
+	const auto ids { sortedIds( SortType::RANDOM ) };
+
+	// order is inherently unassertable; only the full-count-without-error property is checked
+	EXPECT_EQ( ids.size(), 3u );
+}
+
+TEST_F( SearchFixture, RandomWorksWithLimitOffset )
+{
+	createSearchableRecord( "random_lo_1" );
+	createSearchableRecord( "random_lo_2" );
+
+	SearchBuilder builder {};
+	builder.setSortType( SortType::RANDOM );
+	builder.setLimit( 1 );
+
+	const auto ids { runQuery( builder.construct( true, false, false ) ) };
+
+	EXPECT_EQ( ids.size(), 1u );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
