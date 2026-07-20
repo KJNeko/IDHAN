@@ -27,6 +27,7 @@ inline SortType parseSortType( const std::string& by )
 	if ( by == "height" ) return SortType::HEIGHT;
 	if ( by == "ratio" ) return SortType::RATIO;
 	if ( by == "num_pixels" ) return SortType::NUM_PIXELS;
+	if ( by == "num_tags" ) return SortType::NUM_TAGS;
 	// "import_time" and anything unrecognised
 	return SortType::IMPORT_TIME;
 }

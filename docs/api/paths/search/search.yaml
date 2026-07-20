@@ -138,6 +138,7 @@ post:
                     - height
                     - ratio
                     - num_pixels
+                    - num_tags
                   description: >
                     `size` is also accepted as an alias for `filesize`, and
                     `creation_time` for `record_time`. `record_time` reflects
@@ -155,7 +156,10 @@ post:
                     sorting by one of these excludes records that lack the
                     data (NULL is treated as a non-match, not "sorts last").
                     The same applies to `width`, `height`, `ratio` and
-                    `num_pixels`, which require resolution data.
+                    `num_pixels`, which require resolution data. `num_tags`
+                    is the exception to this exclusion policy: a record with
+                    zero tags has a real, sortable count of 0, so it is
+                    never excluded.
                 order:
                   type: string
                   enum: [asc, desc]

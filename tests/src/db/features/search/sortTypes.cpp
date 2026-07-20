@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "api/search/parseSortType.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "db/fixtures/SearchFixture.hpp"
 
@@ -231,6 +232,59 @@ TEST_F( SearchFixture, NumPixelsHandlesLargeResolutionWithoutOverflowAndExcludes
 	const auto ids { sortedIds( SortType::NUM_PIXELS, SortOrder::ASC ) };
 	EXPECT_EQ( ids.size(), 2u );
 	EXPECT_LT( indexOf( ids, r_small ), indexOf( ids, r_huge ) );
+}
+
+TEST_F( SearchFixture, NumTagsCountsZeroDirectAndParentImpliedTagsAndNeverExcludes )
+{
+	const auto tag_direct { createTag( "num_tags:direct" ) };
+	const auto tag_parent { createTag( "num_tags:parent" ) };
+	const auto tag_child { createTag( "num_tags:child" ) };
+	createParent( tag_parent, tag_child );
+
+	// zero tags is a real, sortable value here — unlike the other nullable sorts, this record
+	// must NOT be excluded
+	const auto r_zero { createSearchableRecord( "num_tags_zero" ) };
+
+	const auto r_one { createSearchableRecord( "num_tags_one" ) };
+	createMapping( tag_direct, r_one );
+
+	// tagging with the child implies the parent via active_tag_mappings_parents — a record with
+	// zero *direct* active_tag_mappings rows here still has one parent-implied tag, which the raw
+	// active_tag_mappings table alone would miss
+	const auto r_parent_implied { createSearchableRecord( "num_tags_parent_implied" ) };
+	createMapping( tag_child, r_parent_implied );
+
+	const auto ids { sortedIds( SortType::NUM_TAGS, SortOrder::ASC ) };
+	EXPECT_EQ( ids.size(), 3u );
+	EXPECT_LT( indexOf( ids, r_zero ), indexOf( ids, r_one ) );
+	// r_parent_implied has 2 active tags (child + implied parent), r_one has 1
+	EXPECT_LT( indexOf( ids, r_one ), indexOf( ids, r_parent_implied ) );
+}
+
+TEST_F( SearchFixture, ParseSortTypeCoversEveryKey )
+{
+	using idhan::api::parseSortType;
+
+	EXPECT_EQ( parseSortType( "filesize" ), SortType::FILESIZE );
+	EXPECT_EQ( parseSortType( "size" ), SortType::FILESIZE );
+	EXPECT_EQ( parseSortType( "import_time" ), SortType::IMPORT_TIME );
+	EXPECT_EQ( parseSortType( "record_time" ), SortType::RECORD_TIME );
+	EXPECT_EQ( parseSortType( "creation_time" ), SortType::RECORD_TIME );
+	EXPECT_EQ( parseSortType( "modified_time" ), SortType::MODIFIED_TIME );
+	EXPECT_EQ( parseSortType( "mime" ), SortType::MIME );
+	EXPECT_EQ( parseSortType( "filetype" ), SortType::MIME );
+	EXPECT_EQ( parseSortType( "hash" ), SortType::HASH );
+	EXPECT_EQ( parseSortType( "random" ), SortType::RANDOM );
+	EXPECT_EQ( parseSortType( "duration" ), SortType::DURATION );
+	EXPECT_EQ( parseSortType( "framerate" ), SortType::FRAMERATE );
+	EXPECT_EQ( parseSortType( "has_audio" ), SortType::HAS_AUDIO );
+	EXPECT_EQ( parseSortType( "width" ), SortType::WIDTH );
+	EXPECT_EQ( parseSortType( "height" ), SortType::HEIGHT );
+	EXPECT_EQ( parseSortType( "ratio" ), SortType::RATIO );
+	EXPECT_EQ( parseSortType( "num_pixels" ), SortType::NUM_PIXELS );
+	EXPECT_EQ( parseSortType( "num_tags" ), SortType::NUM_TAGS );
+	// unknown values fall back to import time
+	EXPECT_EQ( parseSortType( "not_a_real_sort_key" ), SortType::IMPORT_TIME );
 }
 
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )

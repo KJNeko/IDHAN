@@ -239,6 +239,13 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 		case SortType::NUM_PIXELS:
 			query += num_pixels_expr;
 			break;
+		case SortType::NUM_TAGS:
+			// ntc ("num tags count") is the per-record subquery join set up when
+			// m_required_joins.num_tags is set — see determineJoinsForQuery(). COALESCE handles
+			// zero-tag records (no ntc row) — 0 is a real answer here, not missing data, so unlike
+			// the other nullable sorts this one is never excluded.
+			query += "COALESCE(ntc.tag_count, 0)";
+			break;
 	}
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
@@ -323,6 +330,27 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 	{
 		if ( m_required_joins.left_archive_map ) query += " LEFT";
 		query += " JOIN archive_map am USING (record_id)";
+	}
+
+	if ( m_required_joins.num_tags )
+	{
+		// Per-record tag count for the NUM_TAGS sort, backing the "ntc" alias used in
+		// generateOrderByClause(). LEFT so zero-tag records aren't dropped from the sort.
+		//
+		// Counts from active_tag_mappings_final (active_tag_mappings UNION ALL the parent-implied
+		// active_tag_mappings_parents, both alias-resolved to a plain tag_id column), not the raw
+		// active_tag_mappings table alone, since the raw table omits parent-implied tags.
+		//
+		// Deliberately NOT scoped to the searched tag domains: doing so would require binding $1
+		// inside this subquery, but $1 is only bound when m_bind_domains is set (construct()'s
+		// fast path never sets it), so a domain-agnostic count avoids a fast-path-only failure mode.
+		//
+		// Performance note: this aggregates the entire active_tag_mappings_final view on every query
+		// that sorts by NUM_TAGS, including on the fast/browse-everything path. A materialized
+		// per-record tag-count column (mirroring the per-tag tag_counts/total_tag_counts pattern in
+		// 93-tag_counts.sql, inverted to per-record) would be the real fix; out of scope for now.
+		query += " LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
+				 " FROM active_tag_mappings_final GROUP BY record_id) ntc USING (record_id)";
 	}
 }
 
@@ -638,6 +666,11 @@ void SearchBuilder::setSortType( const SortType type )
 				m_required_joins.left_image_metadata = true;
 				m_required_joins.left_video_metadata = true;
 				m_required_joins.left_image_project_metadata = true;
+				break;
+			}
+		case SortType::NUM_TAGS:
+			{
+				m_required_joins.num_tags = true;
 				break;
 			}
 	}

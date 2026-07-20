@@ -29,6 +29,7 @@ const SORT_OPTIONS = [
   { value: 'height', label: 'Height' },
   { value: 'ratio', label: 'Aspect ratio' },
   { value: 'num_pixels', label: 'Resolution (pixels)' },
+  { value: 'num_tags', label: 'Number of tags' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];
