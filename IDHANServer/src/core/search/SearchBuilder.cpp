@@ -192,6 +192,9 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 		case SortType::DURATION:
 			query += "video_metadata.duration";
 			break;
+		case SortType::FRAMERATE:
+			query += "video_metadata.framerate";
+			break;
 	}
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
@@ -542,9 +545,10 @@ void SearchBuilder::setSortType( const SortType type )
 				break;
 			}
 		case SortType::DURATION:
+		case SortType::FRAMERATE:
 			{
-				// INNER: a NULL duration (no video_metadata row) is treated as excluded from a
-				// duration-sorted search, not sorted to the end — this sort doubles as a filter.
+				// INNER: a record with no video_metadata row is excluded from a duration/framerate-
+				// sorted search, not sorted to the end — this sort doubles as a filter.
 				m_required_joins.video_metadata = true;
 				break;
 			}

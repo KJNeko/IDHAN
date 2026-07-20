@@ -23,6 +23,7 @@ const SORT_OPTIONS = [
   { value: 'hash', label: 'Hash' },
   { value: 'random', label: 'Random' },
   { value: 'duration', label: 'Duration' },
+  { value: 'framerate', label: 'Framerate' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];
