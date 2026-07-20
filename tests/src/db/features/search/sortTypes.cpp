@@ -216,6 +216,23 @@ TEST_F( SearchFixture, RatioExcludesZeroHeightAndMissingResolution )
 	EXPECT_EQ( indexOf( ids, r_zero_height ), std::string::npos );
 }
 
+TEST_F( SearchFixture, NumPixelsHandlesLargeResolutionWithoutOverflowAndExcludesMissing )
+{
+	const auto r_small { createSearchableRecord( "pixels_small", 100, "image/jpeg" ) };
+	insertImageMetadata( r_small, 10, 10 ); // 100
+
+	// 50000 * 50000 = 2.5e9, which overflows a 32-bit int (max ~2.147e9); the bigint cast must
+	// prevent this from wrapping negative and sorting first instead of last
+	const auto r_huge { createSearchableRecord( "pixels_huge", 100, "image/jpeg" ) };
+	insertImageMetadata( r_huge, 50000, 50000 );
+
+	createSearchableRecord( "pixels_none" );
+
+	const auto ids { sortedIds( SortType::NUM_PIXELS, SortOrder::ASC ) };
+	EXPECT_EQ( ids.size(), 2u );
+	EXPECT_LT( indexOf( ids, r_small ), indexOf( ids, r_huge ) );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
