@@ -11,6 +11,8 @@ class SearchFixture : public MappingFixture
 {
   protected:
 
+	MimeID getMimeId( std::string_view mime_name );
+
 	//! Creates a record with a file_info row that satisfies SearchBuilder's unconditional
 	//! `mime_id IS NOT NULL` filter (unlike MappingFixture::createRecord, which leaves mime_id
 	//! NULL). cluster_store_time and modified_time are both set to NOW() + time_offset_seconds,

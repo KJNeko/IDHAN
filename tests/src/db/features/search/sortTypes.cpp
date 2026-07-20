@@ -44,6 +44,23 @@ TEST_F( SearchFixture, ModifiedTimeOrders )
 	EXPECT_LT( indexOf( ids, r_old ), indexOf( ids, r_new ) );
 }
 
+TEST_F( SearchFixture, MimeOrdersByMimeId )
+{
+	const auto jpeg_id { getMimeId( "image/jpeg" ) };
+	const auto mp4_id { getMimeId( "video/mp4" ) };
+
+	const auto r_jpeg { createSearchableRecord( "mime_jpeg", 100, "image/jpeg" ) };
+	const auto r_mp4 { createSearchableRecord( "mime_mp4", 100, "video/mp4" ) };
+
+	const auto ids { sortedIds( SortType::MIME ) };
+
+	// only asserts relative order matches mime_id order, not any particular absolute mime_id
+	if ( jpeg_id < mp4_id )
+		EXPECT_LT( indexOf( ids, r_jpeg ), indexOf( ids, r_mp4 ) );
+	else
+		EXPECT_LT( indexOf( ids, r_mp4 ), indexOf( ids, r_jpeg ) );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };

@@ -4,6 +4,17 @@
 
 #include "SearchFixture.hpp"
 
+MimeID SearchFixture::getMimeId( const std::string_view mime_name )
+{
+	pqxx::work tx { *conn };
+
+	const auto result { tx.exec_params( "SELECT mime_id FROM mime WHERE name = $1", pqxx::params { mime_name } ) };
+
+	if ( result.empty() ) throw std::runtime_error( "Unknown mime name in test fixture" );
+
+	return result[ 0 ][ 0 ].as< MimeID >();
+}
+
 RecordID SearchFixture::createSearchableRecord(
 	const std::string_view data,
 	const std::int64_t size,

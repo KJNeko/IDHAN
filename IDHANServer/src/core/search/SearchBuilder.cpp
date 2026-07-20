@@ -168,6 +168,10 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 		case SortType::MODIFIED_TIME:
 			query += "fm.modified_time";
 			break;
+		case SortType::MIME:
+			// sorts by the raw mime_id FK, not a semantic filetype-category ordering
+			query += "fm.mime_id";
+			break;
 	}
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
@@ -481,6 +485,11 @@ void SearchBuilder::setSortType( const SortType type )
 				break;
 			}
 		case SortType::MODIFIED_TIME:
+			{
+				m_required_joins.file_info = true;
+				break;
+			}
+		case SortType::MIME:
 			{
 				m_required_joins.file_info = true;
 				break;
