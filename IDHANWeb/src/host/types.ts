@@ -12,9 +12,11 @@
 import type { ComponentType } from 'react';
 import type {
   AutocompleteResult,
+  DatabaseStats,
   MetadataResponse,
   SearchRequest,
   SearchResponse,
+  StorageNode,
   TagDomain,
   TagRelationships,
   VerboseTag,
@@ -137,6 +139,14 @@ export interface TagsApi {
   ): Promise<void>;
 }
 
+/** Read-only database statistics, for the Database Stats panel. */
+export interface StatsApi {
+  /** Aggregate counts (records, tags, mappings estimate, clusters) and record-count-by-mime. */
+  database(signal?: AbortSignal): Promise<DatabaseStats>;
+  /** Per-table PostgreSQL storage as a tree (table → indexes), sized in bytes. */
+  storage(signal?: AbortSignal): Promise<StorageNode>;
+}
+
 export interface JobHandle {
   cancel(): void;
 }
@@ -163,6 +173,7 @@ export interface HostApi {
   theme: ThemeApi;
   ui: UiApi;
   jobs: JobsApi;
+  stats: StatsApi;
   /** Escape hatch: authenticated fetch against the API. Trusted only; a hard wall just gets bypassed. */
   http: { fetch(input: string, init?: RequestInit): Promise<Response> };
 }

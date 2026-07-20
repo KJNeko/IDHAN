@@ -72,6 +72,11 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 	return p;
 }
 
+struct ScanData
+{
+	std::size_t m_file_size { 0 };
+};
+
 class ScanContext
 {
 	std::filesystem::path m_path;
@@ -114,7 +119,7 @@ class ScanContext
 	  m_cluster_path( std::move( cluster_path ) )
 	{}
 
-	ExpectedTask< void > scan( std::filesystem::path bad_dir, DbClientPtr db );
+	ExpectedTask< ScanData > scan( std::filesystem::path bad_dir, DbClientPtr db );
 };
 
 /**
@@ -148,7 +153,13 @@ static std::size_t countScanableFiles( const std::filesystem::path& directory )
 	return count;
 }
 
-ExpectedTask< void > scanFolder(
+struct FolderScanTotals
+{
+	std::size_t byte_size { 0 };
+	std::size_t file_count { 0 };
+};
+
+ExpectedTask< FolderScanTotals > scanFolder(
 	const std::filesystem::path folder,
 	const ScanParams& scan_params,
 	const ClusterID cluster_id,
@@ -159,6 +170,7 @@ ExpectedTask< void > scanFolder(
 	const std::filesystem::path bad_dir { cluster_path / "bad" };
 	auto db { drogon::app().getDbClient() };
 
+	FolderScanTotals totals {};
 	try
 	{
 		for ( const auto& file : std::filesystem::directory_iterator( folder ) )
@@ -189,12 +201,18 @@ ExpectedTask< void > scanFolder(
 
 			ScanContext ctx { file_path, cluster_id, cluster_path, scan_params };
 
-			const std::expected< void, drogon::HttpResponsePtr > file_result { co_await ctx.scan( bad_dir, db ) };
+			const auto file_result { co_await ctx.scan( bad_dir, db ) };
 
 			++processed_files;
 			log::trace( "Scan progress: {}/{}", processed_files.load(), total_files );
 
 			if ( scan_params.stop_on_fail ) return_unexpected_error( file_result );
+
+			if ( file_result )
+			{
+				totals.byte_size += file_result->m_file_size;
+				++totals.file_count;
+			}
 		}
 	}
 	catch ( const std::filesystem::filesystem_error& e )
@@ -203,7 +221,7 @@ ExpectedTask< void > scanFolder(
 		co_return std::unexpected( createInternalError( "Failed to scan folder {}: {}", folder.string(), e.what() ) );
 	}
 
-	co_return {};
+	co_return totals;
 }
 
 ExpectedTask< void > scanCluster(
@@ -235,6 +253,8 @@ ExpectedTask< void > scanCluster(
 	log::debug( "Estimated files to scan: {}", total_files );
 
 	std::atomic< std::size_t > processed_files { 0 };
+	std::size_t cluster_byte_size_total { 0 };
+	std::size_t cluster_file_count_total { 0 };
 
 	try
 	{
@@ -262,6 +282,11 @@ ExpectedTask< void > scanCluster(
 				log::warn( "Folder {} scan failed in cluster {}", folder.path().string(), cluster_id );
 				if ( scan_params.stop_on_fail ) return_unexpected_error( folder_result );
 			}
+			else
+			{
+				cluster_byte_size_total += folder_result->byte_size;
+				cluster_file_count_total += folder_result->file_count;
+			}
 		}
 	}
 	catch ( const std::filesystem::filesystem_error& e )
@@ -270,6 +295,13 @@ ExpectedTask< void > scanCluster(
 		co_return std::unexpected(
 			createInternalError( "Cannot list cluster directory {}: {}", cluster_path.string(), e.what() ) );
 	}
+
+	const auto db { drogon::app().getDbClient() };
+	co_await db->execSqlCoro(
+		"UPDATE file_clusters SET size_used = $1, file_count = $2 WHERE cluster_id = $3",
+		cluster_byte_size_total,
+		static_cast< std::int32_t >( cluster_file_count_total ),
+		cluster_id );
 
 	log::info( "Completed scan of cluster {}", cluster_id );
 	co_return {};
@@ -828,9 +860,11 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	co_return {};
 }
 
-ExpectedTask< void > ScanContext::scan( const std::filesystem::path bad_dir, drogon::orm::DbClientPtr db )
+ExpectedTask< ScanData > ScanContext::scan( const std::filesystem::path bad_dir, drogon::orm::DbClientPtr db )
 {
 	log::info( "Scanning file: {} (size: {})", m_path.string(), m_size );
+
+	ScanData data {};
 
 	if ( m_size == 0 )
 	{
@@ -889,6 +923,8 @@ ExpectedTask< void > ScanContext::scan( const std::filesystem::path bad_dir, dro
 		log::trace( "Step 5/6: Skipping extension check (no mime info) for record {}", m_record_id );
 	}
 
+	data.m_file_size = std::filesystem::file_size( m_path );
+
 	if ( ( m_params.scan_metadata || m_params.rescan_metadata ) && has_mime_info )
 	{
 		log::trace( "Step 6/6: Scanning metadata for record {} ({})", m_record_id, m_path.filename().string() );
@@ -907,6 +943,6 @@ ExpectedTask< void > ScanContext::scan( const std::filesystem::path bad_dir, dro
 
 	log::trace( "Finished scanning file {} (Record {})", m_path.string(), m_record_id );
 
-	co_return {};
+	co_return data;
 }
 } // namespace idhan::api

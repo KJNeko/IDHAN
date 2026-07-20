@@ -974,7 +974,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- P2 panels (M8): Log Viewer, Cluster Manager, Sunburst, Tag Domains, Tag Relationships ---- */
+/* ---- P2 panels (M8): Log Viewer, Cluster Manager, Database Stats, Tag Domains, Tag Relationships ---- */
 
 /* A destructive action button; still a .toolbar-button. */
 .toolbar-button.danger {
@@ -1366,72 +1366,211 @@ body {
   color: var(--error);
 }
 
-/* Sunburst Stats */
-.sunburst-stats {
+/* Database Stats — flat technical readout: sharp corners, hairline rules, monospace on aligned
+   columns only. A deliberate departure from the app's soft 4-6px chrome, matching .log-body's
+   already-flat console identity for this and the other "technical" P2 panels. */
+.dbstats {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  height: 100%;
+  gap: 0.6rem;
 }
-.sunburst-toolbar {
+.dbstat-toolbar {
   display: flex;
   align-items: center;
   gap: 0.6rem;
 }
-.sunburst-wrap {
-  display: flex;
-  gap: 1rem;
-  flex: 1 1 auto;
-  min-height: 0;
-  flex-wrap: wrap;
+.dbstat-build {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8em;
 }
-.sunburst-svg {
-  flex: 0 0 auto;
-  width: 320px;
-  max-width: 100%;
-  height: auto;
+
+.dbstat-section {
+  border-radius: 0;
 }
-.sunburst-arc {
-  stroke: #16181d;
-  stroke-width: 1;
-  cursor: pointer;
-  transition: opacity 0.1s;
-}
-.sunburst-arc.hot {
-  opacity: 0.75;
-}
-.sunburst-center-name {
-  fill: var(--fg);
-  font-size: 12px;
-  font-weight: 600;
-}
-.sunburst-center-value {
-  fill: var(--muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-.sunburst-legend {
-  flex: 1 1 12rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  min-width: 0;
-}
-.sunburst-legend-row {
+.dbstat-section-head {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.15rem 0.3rem;
-  border-radius: 4px;
+  width: 100%;
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: 1px solid #2a2e37;
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+}
+.dbstat-section-head:hover {
+  border-bottom-color: #3a63c0;
+}
+.dbstat-section-title {
+  font-size: 0.72em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.dbstat-section-summary {
+  margin-left: auto;
+  font-size: 0.8em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }
-.sunburst-legend-row:hover {
+.dbstat-caret {
+  flex: 0 0 auto;
+  width: 0.7rem;
+  font-size: 0.75em;
+  color: var(--muted);
+}
+.dbstat-section-body {
+  padding: 0.7rem 0 0.9rem;
+}
+
+.dbstat-overview {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dbstat-overview-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  padding: 0.1rem 0;
+}
+.dbstat-overview-label::after {
+  content: ':';
+}
+.dbstat-overview-value {
+  font-weight: 600;
+}
+.dbstat-overview-sub {
+  font-weight: 400;
+}
+
+/* Donut charts (Storage by table, Clusters) — hand-rolled SVG, no charting library. */
+.dbstat-donut-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+.dbstat-donut {
+  flex: 0 0 auto;
+  width: 9rem;
+  height: 9rem;
+  max-width: 100%;
+}
+.dbstat-donut-seg {
+  outline: none;
+  cursor: default;
+  transition: opacity 0.1s ease;
+}
+.dbstat-donut-seg[role='button'] {
+  cursor: pointer;
+}
+.dbstat-donut-seg:hover,
+.dbstat-donut-seg:focus-visible,
+.dbstat-donut-seg.is-selected {
+  opacity: 0.7;
+}
+.dbstat-donut-side {
+  flex: 1 1 14rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.dbstat-donut-readout {
+  min-height: 1.2em;
+  font-size: 0.8em;
+}
+.dbstat-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dbstat-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.2rem 0.3rem;
+  color: var(--fg);
+  cursor: default;
+}
+.dbstat-legend-row[role='button'] {
+  cursor: pointer;
+}
+.dbstat-legend-row:hover,
+.dbstat-legend-row:focus-visible {
   background: #1b1e24;
 }
-.sunburst-swatch {
+.dbstat-legend-row.is-selected {
+  background: #1b1e24;
+  box-shadow: inset 2px 0 0 #3a63c0;
+}
+.dbstat-legend-swatch {
   flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  width: 0.6rem;
+  height: 0.6rem;
+}
+.dbstat-legend-caret {
+  display: inline-block;
+  width: 0.7rem;
+  font-size: 0.9em;
+  color: var(--muted);
+}
+.dbstat-legend-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-left: 1px solid #2a2e37;
+}
+.dbstat-legend-label-group {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.dbstat-legend-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85em;
+}
+.dbstat-legend-sub {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72em;
+}
+.dbstat-legend-value,
+.dbstat-legend-pct {
+  flex: 0 0 auto;
+  font-size: 0.8em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.dbstat-legend-pct {
+  min-width: 3rem;
+  text-align: right;
+}
+.dbstat-legend-heading {
+  margin-top: 0.4rem;
+  font-size: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
