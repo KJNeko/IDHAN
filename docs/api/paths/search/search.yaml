@@ -8,9 +8,11 @@ get:
     have a file stored are returned.
 
 
-    Results are always sorted by file size ascending (sort controls are not
-    yet exposed). The response is always a plain array of record IDs
-    (hash return is not yet exposed).
+    Defaults to file size ascending when `by`/`order` are omitted, matching
+    this endpoint's long-standing behavior. The response is always a plain
+    array of record IDs (hash return is not yet exposed); for the fuller
+    search surface — negated/system: tags, pagination, hash return — use
+    `POST /search`.
 
 
     Note: domain filtering is accepted via `tag_domains` but is not yet
@@ -48,6 +50,21 @@ get:
         type: array
         items:
           type: integer
+    - name: by
+      in: query
+      description: >
+        Sort key. See the `sort.by` enum on `POST /search` for the full list
+        of accepted values. Defaults to `filesize`.
+      required: false
+      schema:
+        type: string
+    - name: order
+      in: query
+      description: Sort direction. Defaults to `asc`.
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
   responses:
     200:
       description: Successfully found records (empty array when nothing matches)
