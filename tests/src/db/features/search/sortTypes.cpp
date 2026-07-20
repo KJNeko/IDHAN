@@ -130,6 +130,21 @@ TEST_F( SearchFixture, DurationOrdersAndExcludesNonVideoRecords )
 	EXPECT_LT( indexOf( ids_desc, r_long ), indexOf( ids_desc, r_short ) );
 }
 
+TEST_F( SearchFixture, FramerateOrdersAndExcludesNonVideoRecords )
+{
+	const auto r_low { createSearchableRecord( "framerate_low", 100, "video/mp4" ) };
+	insertVideoMetadata( r_low, 10.0, 24.0, 640, 480, 1000, false );
+
+	const auto r_high { createSearchableRecord( "framerate_high", 100, "video/mp4" ) };
+	insertVideoMetadata( r_high, 10.0, 60.0, 640, 480, 1000, false );
+
+	createSearchableRecord( "framerate_none", 100, "image/jpeg" );
+
+	const auto ids { sortedIds( SortType::FRAMERATE ) };
+	EXPECT_EQ( ids.size(), 2u );
+	EXPECT_LT( indexOf( ids, r_low ), indexOf( ids, r_high ) );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
