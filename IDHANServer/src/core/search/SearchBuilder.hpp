@@ -38,31 +38,53 @@ enum class SortType
 	IMPORT_TIME,
 	RECORD_TIME,
 
+	MODIFIED_TIME,
+	MIME,
+	HASH,
+	RANDOM,
+	DURATION,
+	FRAMERATE,
+	HAS_AUDIO,
+	WIDTH,
+	HEIGHT,
+	RATIO,
+	NUM_PIXELS,
+	NUM_TAGS,
+
 	DEFAULT = FILESIZE,
 
 	// BEGIN_HYDRUS_CONVERT
 	HY_FILESIZE = FILESIZE,
-	HY_DURATION = DEFAULT,
+	HY_DURATION = DURATION,
 	HY_IMPORT_TIME = IMPORT_TIME,
-	HY_MIME = DEFAULT,
-	HY_RANDOM = DEFAULT,
-	HY_WIDTH = DEFAULT,
-	HY_HEIGHT = DEFAULT,
-	HY_RATIO = DEFAULT,
-	HY_NUM_PIXELS = DEFAULT,
-	HY_NUM_TAGS = DEFAULT,
+	HY_MIME = MIME,
+	HY_RANDOM = RANDOM,
+	HY_WIDTH = WIDTH,
+	HY_HEIGHT = HEIGHT,
+	HY_RATIO = RATIO,
+	HY_NUM_PIXELS = NUM_PIXELS,
+	HY_NUM_TAGS = NUM_TAGS,
+	// no per-file view-tracking subsystem exists yet
 	HY_MEDIA_VIEWS = DEFAULT,
 	HY_MEDIA_VIEWTIME = DEFAULT,
+	// Hydrus derives this from num_frames, which IDHAN doesn't store
 	HY_APPROX_BITRATE = DEFAULT,
-	HY_HAS_AUDIO = DEFAULT,
-	HY_FILE_MODIFIED_TIMESTAMP = DEFAULT,
-	HY_FRAMERATE = DEFAULT,
+	HY_HAS_AUDIO = HAS_AUDIO,
+	HY_FILE_MODIFIED_TIMESTAMP = MODIFIED_TIME,
+	HY_FRAMERATE = FRAMERATE,
+	// num_frames isn't captured at import time
 	HY_NUM_FRAMES = DEFAULT,
+	// IDHAN has no collections concept
 	HY_NUM_COLLECTION_FILES = DEFAULT,
+	// no per-file view-tracking subsystem exists yet
 	HY_LAST_VIEWED_TIME = DEFAULT,
+	// IDHAN's archive_map/archive_metadata are encrypted archive containers, unrelated to
+	// Hydrus's inbox/archive review-state concept, which IDHAN doesn't implement
 	HY_ARCHIVED_TIMESTAMP = DEFAULT,
-	HY_HASH = DEFAULT,
+	HY_HASH = HASH,
+	// no pixel_hash column
 	HY_PIXEL_HASH = DEFAULT,
+	// blurhash isn't generated
 	HY_BLURHASH = DEFAULT,
 	// END_HYDRUS_CONVERT
 };
@@ -183,8 +205,13 @@ class SearchBuilder
 		bool left_image_metadata { false };
 		bool image_metadata { false };
 
+		bool left_image_project_metadata { false };
+
 		bool archive_map { false };
 		bool left_archive_map { false };
+
+		//! Drives a LEFT JOIN to a per-record tag-count subquery (see NUM_TAGS in generateOrderByClause).
+		bool num_tags { false };
 	} m_required_joins {};
 
 	bool m_search_everything { false };

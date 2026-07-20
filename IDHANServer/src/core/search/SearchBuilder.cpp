@@ -362,8 +362,13 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	{
 		query = "SELECT fm.record_id FROM file_info fm";
 
-		// record-time sort reads creation_time from the records table
-		if ( m_sort_type == SortType::RECORD_TIME ) query += " JOIN records rc USING (record_id)";
+		// fm is already the driving FROM alias here, so suppress the redundant `JOIN file_info fm`
+		// that determineJoinsForQuery() would otherwise emit for sort types that read from file_info.
+		// Every other join the current sort type needs (records, future metadata-table sorts) is
+		// still driven by the flags setSortType() set — this path only ever reaches sort-driven
+		// joins, since it's gated on !has_system_predicates.
+		m_required_joins.file_info = false;
+		determineJoinsForQuery( query );
 
 		query += " WHERE fm.mime_id IS NOT NULL";
 

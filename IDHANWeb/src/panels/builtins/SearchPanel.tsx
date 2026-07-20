@@ -13,10 +13,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PanelProps } from '../../host/types';
 import type { AutocompleteResult, SortOrder } from '../../api/types';
 
-/** Matches the sort keys POST /search understands (searchPost.cpp parseSortType). */
+/** Matches the sort keys POST /search understands (parseSortType.hpp). */
 const SORT_OPTIONS = [
   { value: 'import_time', label: 'Import time' },
-  { value: 'creation_time', label: 'Creation time' },
+  { value: 'creation_time', label: 'Record creation time' },
   { value: 'size', label: 'File size' },
 ] as const;
 

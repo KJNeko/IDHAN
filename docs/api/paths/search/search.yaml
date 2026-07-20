@@ -60,3 +60,105 @@ get:
               description: record_id
     401:
       description: Missing or invalid API key
+
+post:
+  tags:
+    - search
+  summary: Full-featured record search
+  description: >
+    The search surface the WebUI uses: tag text with `-negation` and
+    `system:` predicates (or raw `tag_ids`), a single sort key/direction,
+    pagination, and a choice of returning record IDs, hashes, or both.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            tags:
+              type: array
+              items:
+                type: string
+              description: >
+                Tag text. A leading `-` negates the tag; a `system:` prefix is
+                parsed as a system predicate (width, height, filesize, limit,
+                tag count, duration, has audio, archive status, ...) instead
+                of a literal tag. Mutually exclusive with `tag_ids`.
+            tag_ids:
+              type: array
+              items:
+                type: integer
+              description: Positive tag IDs directly, bypassing text resolution.
+            tag_domains:
+              type: array
+              items:
+                type: integer
+              description: Tag domain IDs to restrict the search to.
+            display:
+              type: string
+              enum: [display, storage]
+              description: >
+                `display` (default) resolves aliases/siblings/parents;
+                `storage` searches raw applied mappings only.
+            sort:
+              type: object
+              properties:
+                by:
+                  type: string
+                  enum:
+                    - filesize
+                    - import_time
+                    - record_time
+                  description: >
+                    `size` is also accepted as an alias for `filesize`, and
+                    `creation_time` for `record_time`. `record_time` reflects
+                    each record's own creation time, distinct from
+                    `import_time` (file import time) — records created before
+                    this sort was added were backfilled with the migration's
+                    run time, not their true historical creation time.
+                order:
+                  type: string
+                  enum: [asc, desc]
+              description: Defaults to import time, descending.
+            limit:
+              type: integer
+              minimum: 0
+            offset:
+              type: integer
+              minimum: 0
+            return:
+              type: array
+              items:
+                type: string
+                enum: [ids, hashes]
+              description: Defaults to `["ids"]`.
+  responses:
+    200:
+      description: Search results
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_ids:
+                type: array
+                items:
+                  type: integer
+              hashes:
+                type: array
+                items:
+                  type: string
+              count:
+                type: integer
+              truncated:
+                type: boolean
+                description: >
+                  True when a limit was applied and fully consumed, meaning
+                  more results may exist.
+              query_ms:
+                type: integer
+    400:
+      description: Malformed request body
+    401:
+      description: Missing or invalid API key
