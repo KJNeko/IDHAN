@@ -21,6 +21,7 @@ const SORT_OPTIONS = [
   { value: 'modified_time', label: 'File modified time' },
   { value: 'mime', label: 'Filetype' },
   { value: 'hash', label: 'Hash' },
+  { value: 'random', label: 'Random' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];
@@ -267,9 +268,10 @@ function SearchPanel({ host }: PanelProps) {
           type="button"
           className="search-order"
           onClick={() => changeSort(sortBy, sortOrder === 'desc' ? 'asc' : 'desc')}
-          title={sortOrder === 'desc' ? 'Descending' : 'Ascending'}
+          disabled={sortBy === 'random'}
+          title={sortBy === 'random' ? 'Direction has no effect on a random sort' : sortOrder === 'desc' ? 'Descending' : 'Ascending'}
         >
-          {sortOrder === 'desc' ? '↓' : '↑'}
+          {sortBy === 'random' ? '⇅' : sortOrder === 'desc' ? '↓' : '↑'}
         </button>
         <button type="button" className="search-run" onClick={() => void runSearch(tags, sortBy, sortOrder)} disabled={running}>
           {running ? 'Searching…' : 'Search'}
