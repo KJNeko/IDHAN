@@ -37,6 +37,12 @@ constexpr std::string_view ratio_expr {
 	" / NULLIF(COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height), 0))"
 };
 
+// bigint casts prevent int*int overflow on large images (e.g. 50000x50000 exceeds INT32_MAX).
+constexpr std::string_view num_pixels_expr {
+	"(COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)::bigint"
+	" * COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height)::bigint)"
+};
+
 } // namespace
 
 void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view tag )
@@ -229,6 +235,9 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 			break;
 		case SortType::RATIO:
 			query += ratio_expr;
+			break;
+		case SortType::NUM_PIXELS:
+			query += num_pixels_expr;
 			break;
 	}
 
@@ -439,6 +448,11 @@ void SearchBuilder::generateSortFilterClause( std::string& query ) const
 			query += ratio_expr;
 			query += " IS NOT NULL";
 			break;
+		case SortType::NUM_PIXELS:
+			query += " AND ";
+			query += num_pixels_expr;
+			query += " IS NOT NULL";
+			break;
 		default:
 			break;
 	}
@@ -616,6 +630,7 @@ void SearchBuilder::setSortType( const SortType type )
 		case SortType::WIDTH:
 		case SortType::HEIGHT:
 		case SortType::RATIO:
+		case SortType::NUM_PIXELS:
 			{
 				// LEFT: resolution can come from any of three tables, so none can be an INNER join
 				// on its own; generateSortFilterClause() excludes records with no match in any of

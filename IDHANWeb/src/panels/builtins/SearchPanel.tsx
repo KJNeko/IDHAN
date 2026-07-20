@@ -28,6 +28,7 @@ const SORT_OPTIONS = [
   { value: 'width', label: 'Width' },
   { value: 'height', label: 'Height' },
   { value: 'ratio', label: 'Aspect ratio' },
+  { value: 'num_pixels', label: 'Resolution (pixels)' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];
