@@ -34,14 +34,25 @@ TEST_F( SearchFixture, RecordTimeOrdersByCreationTimeAndDoesNotError )
 	EXPECT_LT( indexOf( ids, r_mid ), indexOf( ids, r_new ) );
 }
 
-TEST_F( SearchFixture, ModifiedTimeOrders )
+TEST_F( SearchFixture, ModifiedTimeOrdersAndExcludesUnmodifiedRecords )
 {
 	const auto r_old { createSearchableRecord( "modified_old", 100, "image/jpeg", -300 ) };
 	const auto r_new { createSearchableRecord( "modified_new", 100, "image/jpeg", 0 ) };
 
+	// createSearchableRecord always stamps modified_time; NULL it out here to model a record
+	// that's never actually been modified, which sorting by modified_time should exclude
+	const auto r_unmodified { createSearchableRecord( "modified_none" ) };
+	{
+		pqxx::work tx { *conn };
+		tx.exec_params( "UPDATE file_info SET modified_time = NULL WHERE record_id = $1", pqxx::params { r_unmodified } );
+		tx.commit();
+	}
+
 	const auto ids { sortedIds( SortType::MODIFIED_TIME ) };
 
+	EXPECT_EQ( ids.size(), 2u );
 	EXPECT_LT( indexOf( ids, r_old ), indexOf( ids, r_new ) );
+	EXPECT_EQ( indexOf( ids, r_unmodified ), std::string::npos );
 }
 
 TEST_F( SearchFixture, MimeOrdersByMimeId )

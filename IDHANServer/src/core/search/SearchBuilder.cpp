@@ -367,6 +367,20 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 	}
 }
 
+void SearchBuilder::generateSortFilterClause( std::string& query ) const
+{
+	switch ( m_sort_type )
+	{
+		case SortType::MODIFIED_TIME:
+			// modified_time has no NOT NULL constraint (unset until a record is actually
+			// modified) — a record with no modified_time has nothing to sort by here.
+			query += " AND fm.modified_time IS NOT NULL";
+			break;
+		default:
+			break;
+	}
+}
+
 std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes, const bool filter_domains )
 {
 	// TODO: Sort tag ids to get the most out of each filter.
@@ -398,6 +412,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 		determineJoinsForQuery( query );
 
 		query += " WHERE fm.mime_id IS NOT NULL";
+		generateSortFilterClause( query );
 
 		generateOrderByClause( query, "fm" );
 		appendLimitOffset( query );
@@ -446,6 +461,7 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	determineJoinsForQuery( query );
 
 	query += " WHERE fm.mime_id IS NOT NULL";
+	generateSortFilterClause( query );
 
 	generateWhereClauses( query );
 
