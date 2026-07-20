@@ -145,6 +145,21 @@ TEST_F( SearchFixture, FramerateOrdersAndExcludesNonVideoRecords )
 	EXPECT_LT( indexOf( ids, r_low ), indexOf( ids, r_high ) );
 }
 
+TEST_F( SearchFixture, HasAudioOrdersAndExcludesNonVideoRecords )
+{
+	const auto r_silent { createSearchableRecord( "audio_false", 100, "video/mp4" ) };
+	insertVideoMetadata( r_silent, 10.0, 30.0, 640, 480, 1000, false );
+
+	const auto r_audio { createSearchableRecord( "audio_true", 100, "video/mp4" ) };
+	insertVideoMetadata( r_audio, 10.0, 30.0, 640, 480, 1000, true );
+
+	createSearchableRecord( "audio_none", 100, "image/jpeg" );
+
+	const auto ids { sortedIds( SortType::HAS_AUDIO, SortOrder::ASC ) };
+	EXPECT_EQ( ids.size(), 2u );
+	EXPECT_LT( indexOf( ids, r_silent ), indexOf( ids, r_audio ) );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
