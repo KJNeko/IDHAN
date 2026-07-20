@@ -134,6 +134,7 @@ post:
                     - duration
                     - framerate
                     - has_audio
+                    - width
                   description: >
                     `size` is also accepted as an alias for `filesize`, and
                     `creation_time` for `record_time`. `record_time` reflects

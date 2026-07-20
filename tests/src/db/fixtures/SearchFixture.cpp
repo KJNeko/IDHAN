@@ -61,6 +61,33 @@ void SearchFixture::insertVideoMetadata(
 	tx.commit();
 }
 
+void SearchFixture::insertImageMetadata( const RecordID record_id, const int width, const int height, const int channels )
+{
+	pqxx::work tx { *conn };
+
+	tx.exec_params(
+		"INSERT INTO image_metadata (record_id, width, height, channels) VALUES ($1, $2, $3, $4)",
+		pqxx::params { record_id, width, height, channels } );
+
+	tx.commit();
+}
+
+void SearchFixture::insertImageProjectMetadata(
+	const RecordID record_id,
+	const int width,
+	const int height,
+	const int channels,
+	const int layers )
+{
+	pqxx::work tx { *conn };
+
+	tx.exec_params(
+		"INSERT INTO image_project_metadata (record_id, width, height, channels, layers) VALUES ($1, $2, $3, $4, $5)",
+		pqxx::params { record_id, width, height, channels, layers } );
+
+	tx.commit();
+}
+
 std::vector< RecordID > SearchFixture::runQuery( const std::string& sql )
 {
 	pqxx::work tx { *conn };

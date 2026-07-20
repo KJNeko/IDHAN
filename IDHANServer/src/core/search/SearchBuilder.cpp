@@ -16,6 +16,18 @@
 namespace idhan
 {
 
+namespace
+{
+
+// Resolution is split across three mime-specific metadata tables; COALESCE picks whichever
+// applies to the record's mime type. Shared between generateOrderByClause() (the ORDER BY
+// expression) and generateSortFilterClause() (the "has any resolution data at all" WHERE check).
+constexpr std::string_view width_expr {
+	"COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)"
+};
+
+} // namespace
+
 void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view tag )
 {
 	target.m_active = true;
@@ -198,6 +210,9 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 		case SortType::HAS_AUDIO:
 			query += "video_metadata.has_audio";
 			break;
+		case SortType::WIDTH:
+			query += width_expr;
+			break;
 	}
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
@@ -258,6 +273,13 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 	{
 		if ( m_required_joins.left_image_metadata && !m_required_joins.image_metadata ) query += " LEFT";
 		query += " JOIN image_metadata USING (record_id)";
+	}
+
+	if ( m_required_joins.left_image_project_metadata )
+	{
+		// no INNER variant exists: nothing currently filters on this table via a join alone, only
+		// generateSortFilterClause()'s WHERE check does
+		query += " LEFT JOIN image_project_metadata USING (record_id)";
 	}
 
 	// determine any joins needed
@@ -381,6 +403,12 @@ void SearchBuilder::generateSortFilterClause( std::string& query ) const
 			// modified_time has no NOT NULL constraint (unset until a record is actually
 			// modified) — a record with no modified_time has nothing to sort by here.
 			query += " AND fm.modified_time IS NOT NULL";
+			break;
+		case SortType::WIDTH:
+			// a record with no row in any of the three resolution tables has no width to sort by
+			query += " AND ";
+			query += width_expr;
+			query += " IS NOT NULL";
 			break;
 		default:
 			break;
@@ -554,6 +582,16 @@ void SearchBuilder::setSortType( const SortType type )
 				// INNER: a record with no video_metadata row is excluded from a duration/framerate/
 				// has_audio-sorted search, not sorted to the end — this sort doubles as a filter.
 				m_required_joins.video_metadata = true;
+				break;
+			}
+		case SortType::WIDTH:
+			{
+				// LEFT: resolution can come from any of three tables, so none can be an INNER join
+				// on its own; generateSortFilterClause() excludes records with no match in any of
+				// them, since a plain join can't express "at least one of these three has a row".
+				m_required_joins.left_image_metadata = true;
+				m_required_joins.left_video_metadata = true;
+				m_required_joins.left_image_project_metadata = true;
 				break;
 			}
 	}

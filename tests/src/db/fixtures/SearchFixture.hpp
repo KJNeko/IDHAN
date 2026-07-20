@@ -33,6 +33,10 @@ class SearchFixture : public MappingFixture
 		int bitrate,
 		bool has_audio );
 
+	void insertImageMetadata( RecordID record_id, int width, int height, int channels = 3 );
+
+	void insertImageProjectMetadata( RecordID record_id, int width, int height, int channels = 3, int layers = 1 );
+
 	//! Reads back the ordered list of record_ids a raw SQL query produces (column 0).
 	std::vector< RecordID > runQuery( const std::string& sql );
 

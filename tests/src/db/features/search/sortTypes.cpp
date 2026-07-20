@@ -160,6 +160,26 @@ TEST_F( SearchFixture, HasAudioOrdersAndExcludesNonVideoRecords )
 	EXPECT_LT( indexOf( ids, r_silent ), indexOf( ids, r_audio ) );
 }
 
+TEST_F( SearchFixture, WidthOrdersAcrossAllThreeMetadataTablesAndExcludesRecordsWithNone )
+{
+	const auto r_image { createSearchableRecord( "width_image", 100, "image/jpeg" ) };
+	insertImageMetadata( r_image, 100, 100 );
+
+	const auto r_video { createSearchableRecord( "width_video", 100, "video/mp4" ) };
+	insertVideoMetadata( r_video, 10.0, 30.0, 500, 500, 1000, false );
+
+	const auto r_project { createSearchableRecord( "width_project", 100, "image/jpeg" ) };
+	insertImageProjectMetadata( r_project, 900, 900 );
+
+	// no resolution data anywhere — excluded, not sorted last
+	createSearchableRecord( "width_none" );
+
+	const auto ids { sortedIds( SortType::WIDTH ) };
+	EXPECT_EQ( ids.size(), 3u );
+	EXPECT_LT( indexOf( ids, r_image ), indexOf( ids, r_video ) );
+	EXPECT_LT( indexOf( ids, r_video ), indexOf( ids, r_project ) );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
