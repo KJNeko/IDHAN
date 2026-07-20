@@ -20,6 +20,7 @@ inline SortType parseSortType( const std::string& by )
 	if ( by == "mime" || by == "filetype" ) return SortType::MIME;
 	if ( by == "hash" ) return SortType::HASH;
 	if ( by == "random" ) return SortType::RANDOM;
+	if ( by == "duration" ) return SortType::DURATION;
 	// "import_time" and anything unrecognised
 	return SortType::IMPORT_TIME;
 }

@@ -189,6 +189,9 @@ void SearchBuilder::generateOrderByClause( std::string& query, const std::string
 			// the records join aliases the table as rc
 			query += "rc.sha256";
 			break;
+		case SortType::DURATION:
+			query += "video_metadata.duration";
+			break;
 	}
 
 	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
@@ -520,6 +523,13 @@ void SearchBuilder::setSortType( const SortType type )
 		case SortType::RANDOM:
 			{
 				// no data needed
+				break;
+			}
+		case SortType::DURATION:
+			{
+				// INNER: a NULL duration (no video_metadata row) is treated as excluded from a
+				// duration-sorted search, not sorted to the end — this sort doubles as a filter.
+				m_required_joins.video_metadata = true;
 				break;
 			}
 	}
