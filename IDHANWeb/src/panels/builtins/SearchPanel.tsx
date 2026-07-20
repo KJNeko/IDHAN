@@ -22,6 +22,7 @@ const SORT_OPTIONS = [
   { value: 'mime', label: 'Filetype' },
   { value: 'hash', label: 'Hash' },
   { value: 'random', label: 'Random' },
+  { value: 'duration', label: 'Duration' },
 ] as const;
 
 type SortBy = (typeof SORT_OPTIONS)[number]['value'];

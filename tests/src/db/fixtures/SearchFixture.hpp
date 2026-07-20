@@ -24,6 +24,15 @@ class SearchFixture : public MappingFixture
 		std::string_view mime_name = "image/jpeg",
 		std::int64_t time_offset_seconds = 0 );
 
+	void insertVideoMetadata(
+		RecordID record_id,
+		double duration,
+		double framerate,
+		int width,
+		int height,
+		int bitrate,
+		bool has_audio );
+
 	//! Reads back the ordered list of record_ids a raw SQL query produces (column 0).
 	std::vector< RecordID > runQuery( const std::string& sql );
 

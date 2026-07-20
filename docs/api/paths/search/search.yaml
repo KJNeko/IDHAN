@@ -131,6 +131,7 @@ post:
                     - mime
                     - hash
                     - random
+                    - duration
                   description: >
                     `size` is also accepted as an alias for `filesize`, and
                     `creation_time` for `record_time`. `record_time` reflects
@@ -140,7 +141,12 @@ post:
                     run time, not their true historical creation time.
                     `random` ignores `order` and reorders on every call, so
                     paging through a `random` sort with `limit`/`offset` does
-                    not yield a stable sequence.
+                    not yield a stable sequence. `duration`, `framerate` and
+                    `has_audio` are populated for video/audio records only;
+                    sorting by one of these excludes records that lack the
+                    data (NULL is treated as a non-match, not "sorts last").
+                    The same applies to `width`, `height`, `ratio` and
+                    `num_pixels`, which require resolution data.
                 order:
                   type: string
                   enum: [asc, desc]

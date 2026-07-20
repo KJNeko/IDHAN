@@ -42,6 +42,25 @@ RecordID SearchFixture::createSearchableRecord(
 	return record_id;
 }
 
+void SearchFixture::insertVideoMetadata(
+	const RecordID record_id,
+	const double duration,
+	const double framerate,
+	const int width,
+	const int height,
+	const int bitrate,
+	const bool has_audio )
+{
+	pqxx::work tx { *conn };
+
+	tx.exec_params(
+		"INSERT INTO video_metadata (record_id, duration, framerate, width, height, bitrate, has_audio) "
+		"VALUES ($1, $2, $3, $4, $5, $6, $7)",
+		pqxx::params { record_id, duration, framerate, width, height, bitrate, has_audio } );
+
+	tx.commit();
+}
+
 std::vector< RecordID > SearchFixture::runQuery( const std::string& sql )
 {
 	pqxx::work tx { *conn };

@@ -99,6 +99,26 @@ TEST_F( SearchFixture, RandomWorksWithLimitOffset )
 	EXPECT_EQ( ids.size(), 1u );
 }
 
+TEST_F( SearchFixture, DurationOrdersAndExcludesNonVideoRecords )
+{
+	const auto r_short { createSearchableRecord( "duration_short", 100, "video/mp4" ) };
+	insertVideoMetadata( r_short, /* duration */ 5.0, 30.0, 640, 480, 1000, false );
+
+	const auto r_long { createSearchableRecord( "duration_long", 100, "video/mp4" ) };
+	insertVideoMetadata( r_long, /* duration */ 60.0, 30.0, 640, 480, 1000, false );
+
+	// no video_metadata row at all — NULL duration means "excluded", not "sorts last"
+	createSearchableRecord( "duration_none", 100, "image/jpeg" );
+
+	const auto ids_asc { sortedIds( SortType::DURATION, SortOrder::ASC ) };
+	EXPECT_EQ( ids_asc.size(), 2u );
+	EXPECT_LT( indexOf( ids_asc, r_short ), indexOf( ids_asc, r_long ) );
+
+	const auto ids_desc { sortedIds( SortType::DURATION, SortOrder::DESC ) };
+	EXPECT_EQ( ids_desc.size(), 2u );
+	EXPECT_LT( indexOf( ids_desc, r_long ), indexOf( ids_desc, r_short ) );
+}
+
 TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 {
 	const auto tag { createTag( "sort_parity:tag" ) };
