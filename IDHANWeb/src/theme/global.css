@@ -1574,3 +1574,58 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* ---- Debug panel: Sort Profiler ---- */
+.debug-section-title {
+    margin: 0 0 0.5rem;
+    font-size: 0.72em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.debug-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.debug-progress {
+    font-size: 0.85em;
+    font-variant-numeric: tabular-nums;
+}
+
+.debug-sort-table {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 0.85em;
+}
+
+.debug-sort-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.25rem 0.3rem;
+}
+
+.debug-sort-row:not(.debug-sort-head):hover {
+    background: #1b1e24;
+}
+
+.debug-sort-head {
+    font-size: 0.72em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #2a2e37;
+    padding-bottom: 0.4rem;
+}
+
+.debug-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
