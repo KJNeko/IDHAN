@@ -2,8 +2,9 @@
  * Registers the built-in panel catalog. Import this once at startup for its side effects.
  *
  * Registration is the same path third-party plugins use. The catalog now spans P0 (Search, Grid,
- * Viewer, Record Info, Tag Editor), P1 (Import, Job Monitor, Server Status, Notes, URLs), and P2
- * (Log Viewer, Cluster Manager, Database Stats, Tag Domain Manager, Tag Relationships).
+ * Viewer, Record Info, Tag Editor), P1 (Import, Job Monitor, Server Status, Notes, URLs), P2
+ * (Log Viewer, Cluster Manager, Database Stats, Tag Domain Manager, Tag Relationships), and a Debug
+ * panel for developer diagnostics.
  */
 
 import { registerPanel } from '../registry';
@@ -23,6 +24,7 @@ import { clusterManagerPanel } from './ClusterManagerPanel';
 import { databaseStatsPanel } from './DatabaseStatsPanel';
 import { tagDomainManagerPanel } from './TagDomainManagerPanel';
 import { tagRelationshipsPanel } from './TagRelationshipsPanel';
+import {debugPanel} from './DebugPanel';
 
 let registered = false;
 
@@ -45,4 +47,5 @@ export function registerBuiltinPanels(): void {
   registerPanel(tagRelationshipsPanel);
   registerPanel(serverStatusPanel);
   registerPanel(selectionInspectorPanel);
+    registerPanel(debugPanel);
 }
