@@ -7,7 +7,9 @@
 
 #include <sys/mman.h>
 
+#include <cerrno>
 #include <cmath>
+#include <cstring>
 #include <liburing.h>
 #include <stdexcept>
 
@@ -129,7 +131,17 @@ int IOUringLinux::setupUring()
 	static constexpr std::size_t queue_depth { 64 };
 	static_assert( queue_depth <= 4096, "Queue depth must be less than 4096" );
 
-	return io_uring_setup( queue_depth, &m_params );
+	// io_uring_setup returns the ring fd, or a negative errno on failure. On failure we log why and
+	// return the negative value; the caller detects it (uring_fd is signed) and falls back to
+	// synchronous pread/pwrite.
+	const int ret { io_uring_setup( queue_depth, &m_params ) };
+
+	if ( ret < 0 )
+		log::error( "io_uring_setup failed: {} ({}); using synchronous I/O", ret, std::strerror( -ret ) );
+	else
+		log::debug( "io_uring_setup ok: fd={}, features=0x{:x}", ret, static_cast< unsigned >( m_params.features ) );
+
+	return ret;
 }
 
 IOUringLinux::SubmissionRingPointers::~SubmissionRingPointers()
@@ -235,7 +247,9 @@ void ioThread( const std::stop_token& token, IOUringLinux* uring, std::shared_pt
 	while ( !token.stop_requested() )
 	{
 		FGL_ASSERT( uring->uring_fd > 0, "Invalid io_uring fd" );
-		const auto ret { io_uring_enter( uring->uring_fd, 0, 1, IORING_ENTER_GETEVENTS, nullptr ) };
+		const auto ret {
+			io_uring_enter( static_cast< unsigned int >( uring->uring_fd ), 0, 1, IORING_ENTER_GETEVENTS, nullptr )
+		};
 
 		if ( ret < 0 )
 		{
@@ -315,7 +329,8 @@ IOUringLinux& IOUringLinux::getLinuxInstance()
 
 void IOUringLinux::notifySubmit( const unsigned int count ) const
 {
-	if ( const auto ret { io_uring_enter( uring_fd, count, 0, IORING_ENTER_SQ_WAKEUP, nullptr ) }; ret < 0 )
+	if ( const auto ret { io_uring_enter( static_cast< unsigned int >( uring_fd ), count, 0, IORING_ENTER_SQ_WAKEUP, nullptr ) };
+	     ret < 0 )
 		throw std::runtime_error( "io_uring_enter (submit) failed" );
 }
 
