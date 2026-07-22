@@ -5,6 +5,28 @@ Configure: `cmake -DIDHAN_ENABLE_TRACY=ON -B build/tracy && cmake --build build/
 Run the server, then open the Tracy profiler GUI and connect (on-demand: collection starts on connect).
 Intended for *scenario* profiling — trace one search / one import, capture, analyze — not 24/7.
 
+## Profiling the Docker container
+
+The image builds Tracy in only when asked, and the dev compose publishes the profiler port:
+
+```bash
+IDHAN_ENABLE_TRACY=ON docker compose -f docker-compose-dev.yml up --build
+```
+
+Then point the Tracy GUI at **`localhost:8086`** (enter the address manually in the connect dialog —
+UDP broadcast discovery generally does not cross Docker's bridge network, but the TCP data port is
+published so a manual connect works). `TRACY_ON_DEMAND` means the container runs with no profiling
+cost until the GUI connects.
+
+Notes:
+- `IDHAN_ENABLE_TRACY` defaults to `OFF`, so a plain `docker compose ... up --build` stays lean.
+- Port `8086` (tcp + udp) is always published in the dev compose; it is simply idle when the build is
+  not Tracy-enabled.
+- The dev compose already runs with `seccomp=unconfined`, which io_uring needs; unrelated to Tracy.
+- For a tagged/production image (`docker-compose.yml`, prebuilt `:latest`), Tracy is not compiled in —
+  build a Tracy image yourself (`docker build --build-arg IDHAN_ENABLE_TRACY=ON ...`) and publish 8086
+  if you need to profile that path.
+
 ## Coverage
 
 - **IDHAN-owned coroutines** (`IDHANTask`, `ExpectedTask`, `JobTask`) are traced as Tracy fibers via
