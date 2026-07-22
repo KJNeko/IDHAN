@@ -6,6 +6,7 @@
 
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "db/drogonArrayBind.hpp"
@@ -171,33 +172,70 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > g
 	const std::vector< TagPair >& pairs,
 	DbClientPtr db )
 {
-	std::vector< TagID > ids {};
-	ids.reserve( pairs.size() );
+	std::vector< TagID > ids( pairs.size(), INVALID_TAG_ID );
+
+	// The common case — pairs whose namespace and subtag are both strings — is resolved in one
+	// batched find-or-create call instead of a find-or-create round-trip per pair. Pairs that
+	// already carry a tag_id are filled directly; the rarer integer-component / mixed pairs still
+	// go through getIDFromPair (concurrently). Every result is written back to its original slot,
+	// so the output order matches the input.
+	std::vector< std::pair< std::string, std::string > > string_pairs {};
+	std::vector< std::size_t > string_indices {};
+	std::vector< std::size_t > other_indices {};
+
+	for ( std::size_t i = 0; i < pairs.size(); ++i )
+	{
+		const auto& pair { pairs[ i ] };
+
+		if ( pair.tag_id )
+		{
+			ids[ i ] = *pair.tag_id;
+		}
+		else if (
+			std::holds_alternative< std::string >( pair.tag_namespace )
+			&& std::holds_alternative< std::string >( pair.tag_subtag ) )
+		{
+			string_indices.emplace_back( i );
+			string_pairs.emplace_back(
+				std::get< std::string >( pair.tag_namespace ), std::get< std::string >( pair.tag_subtag ) );
+		}
+		else
+		{
+			other_indices.emplace_back( i );
+		}
+	}
 
 	try
 	{
-		using Task = drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >;
-		std::vector< Task > tasks {};
-
-		for ( const auto& pair : pairs )
+		if ( !string_pairs.empty() )
 		{
-			tasks.emplace_back( getIDFromPair( pair, db ) );
+			const auto batch_ids { co_await createTagsFromPairs( string_pairs, db ) };
+			if ( !batch_ids ) co_return std::unexpected( batch_ids.error() );
+
+			for ( std::size_t k = 0; k < string_indices.size(); ++k )
+				ids[ string_indices[ k ] ] = batch_ids.value()[ k ];
 		}
 
-		const auto finished_tasks { co_await drogon::when_all( std::move( tasks ) ) };
-
-		for ( const std::expected< TagID, drogon::HttpResponsePtr >& result : finished_tasks )
+		if ( !other_indices.empty() )
 		{
-			// const auto result { co_await getIDFromPair( pair, db ) };
-			if ( !result ) co_return std::unexpected( result.error() );
-			ids.emplace_back( result.value() );
+			using Task = drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >;
+			std::vector< Task > tasks {};
+			tasks.reserve( other_indices.size() );
+			for ( const auto index : other_indices ) tasks.emplace_back( getIDFromPair( pairs[ index ], db ) );
 
-			if ( result.value() <= 0 )
+			const auto finished_tasks { co_await drogon::when_all( std::move( tasks ) ) };
+
+			for ( std::size_t k = 0; k < other_indices.size(); ++k )
 			{
-				co_return std::unexpected(
-					createBadRequest( "Tag ID was not valid. Must be tag_id > 0; Was {}", result.value() ) );
+				const auto& result { finished_tasks[ k ] };
+				if ( !result ) co_return std::unexpected( result.error() );
+				ids[ other_indices[ k ] ] = result.value();
 			}
 		}
+
+		for ( const auto& id : ids )
+			if ( id <= 0 )
+				co_return std::unexpected( createBadRequest( "Tag ID was not valid. Must be tag_id > 0; Was {}", id ) );
 	}
 	catch ( std::exception& e )
 	{

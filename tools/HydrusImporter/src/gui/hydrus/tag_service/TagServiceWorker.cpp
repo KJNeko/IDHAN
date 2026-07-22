@@ -74,8 +74,6 @@ void TagServiceWorker::preprocess()
 
 	emit processedMaxAliases( sibling_counter );
 
-	m_preprocessed = true;
-
 	emit finished();
 }
 
@@ -313,7 +311,8 @@ void TagServiceWorker::importMappings()
 		}
 		catch ( std::exception& e )
 		{
-			idhan::logging::info( "Got exception: {} when trying to create tag domain for {}", e.what(), service_name );
+			idhan::logging::error(
+				"Got exception: {} when trying to create tag domain for {}", e.what(), service_name );
 			return;
 		}
 	}
@@ -330,7 +329,9 @@ void TagServiceWorker::processSiblings(
 {
 	std::vector< std::pair< idhan::TagID, idhan::TagID > > siblings {};
 
-	// These tags cause issues atm so we will just blacklist them
+	// These tags cause issues atm so we will just blacklist them.
+	// Opened lazily on the first failure so a clean import leaves no stray file.
+	std::ofstream bad_ids {};
 
 	for ( const auto& [ hy_bad_id, hy_good_id ] : hy_siblings )
 	{
@@ -368,25 +369,26 @@ void TagServiceWorker::processSiblings(
 				hy_good_id,
 				e.what() );
 
-			if ( std::ofstream ofs( "bad_ids.txt", std::ios::app ); ofs )
+			if ( !bad_ids.is_open() ) bad_ids.open( "bad_ids.txt", std::ios::app );
+			if ( bad_ids )
 			{
 				const auto [ namespace_text, subtag_text ] = tag_pairs.at( hy_bad_id );
 				const auto [ namespace_text_2, subtag_text_2 ] = tag_pairs.at( hy_good_id );
-				ofs << "'";
+				bad_ids << "'";
 				if ( namespace_text.empty() )
-					ofs << subtag_text;
+					bad_ids << subtag_text;
 				else
-					ofs << namespace_text << ":" << subtag_text;
+					bad_ids << namespace_text << ":" << subtag_text;
 
-				ofs << "','";
+				bad_ids << "','";
 
 				if ( namespace_text_2.empty() )
-					ofs << subtag_text_2;
+					bad_ids << subtag_text_2;
 				else
-					ofs << namespace_text_2 << ":" << subtag_text_2;
+					bad_ids << namespace_text_2 << ":" << subtag_text_2;
 
-				ofs << "'";
-				ofs << std::endl;
+				bad_ids << "'";
+				bad_ids << '\n';
 			}
 
 			// Do nothing
@@ -406,16 +408,30 @@ void TagServiceWorker::processParents(
 
 	for ( const auto& [ hy_child_id, hy_parent_id ] : hy_parents )
 	{
-		const auto idhan_child_id = tag_translation_map.at( hy_child_id );
-		const auto idhan_parent_id = tag_translation_map.at( hy_parent_id );
-
-		// parents are expected to be in (parent, child) format
-		parents.emplace_back( idhan_parent_id, idhan_child_id );
-
-		if ( parents.size() >= set_limit )
+		try
 		{
-			processParents( parents );
-			emit processedParents( parents.size() );
+			const auto idhan_child_id = tag_translation_map.at( hy_child_id );
+			const auto idhan_parent_id = tag_translation_map.at( hy_parent_id );
+
+			// parents are expected to be in (parent, child) format
+			parents.emplace_back( idhan_parent_id, idhan_child_id );
+
+			if ( parents.size() >= set_limit )
+			{
+				processParents( parents );
+				emit processedParents( parents.size() );
+				parents.clear();
+			}
+		}
+		catch ( std::exception& e )
+		{
+			idhan::logging::error(
+				"Hydrus parent set (child_id, parent_id) ({}, {}) caused an error while importing: {}",
+				hy_child_id,
+				hy_parent_id,
+				e.what() );
+
+			// Drop the partially-built batch so one bad relationship can't corrupt the set
 			parents.clear();
 		}
 	}
@@ -529,7 +545,6 @@ void TagServiceWorker::processRelationships()
 
 	for ( const auto& [ tag_id, tag_text ] : tag_pairs )
 	{
-		// const auto& [ namespace_str, subtag_str ] = tag_text;
 		tags.emplace_back( tag_text );
 		tag_order.emplace_back( tag_id );
 
@@ -545,8 +560,6 @@ void TagServiceWorker::processRelationships()
 	}
 
 	idhan::logging::debug( "Created {} tags", tag_translation_map.size() );
-
-	// idhan::logging::debug( "Finished processing tags" );
 
 	// For now we are limiting to 1 set until we can make a better rollback system
 	constexpr std::size_t set_limit { 1 };
@@ -568,7 +581,6 @@ void TagServiceWorker::run()
 		}
 		else
 		{
-			m_processing = true;
 			importMappings();
 			emit finished();
 		}

@@ -36,23 +36,21 @@ using HashID = std::uint32_t;
 //! and enumerates the available tag services.
 class HydrusImporter
 {
+	//! Opens a Hydrus SQLite database read-only, throwing a descriptive error if it cannot be opened.
+	static void openDatabase( const std::filesystem::path& db_path, sqlite3** db );
+
   public:
 
 	sqlite3* master_db { nullptr };
 	sqlite3* client_db { nullptr };
 	sqlite3* mappings_db { nullptr };
 	std::filesystem::path m_path;
-	QFuture< void > final_future;
-
-	QFutureSynchronizer< void > sync {};
-	std::size_t thread_count { 1 };
-	bool m_process_ptr_mappings;
-	const std::chrono::time_point< std::chrono::steady_clock > start_time { std::chrono::steady_clock::now() };
 
 	FGL_DELETE_COPY( HydrusImporter );
 	FGL_DELETE_MOVE( HydrusImporter );
 
 	//! Copies the Hydrus file storage into IDHAN's clusters.
+	//! TODO: intentional stub — not yet wired into the import flow (see on_parseHydrusDB_pressed).
 	void copyFileStorage();
 
 	HydrusImporter() = delete;
@@ -61,8 +59,6 @@ class HydrusImporter
 
 	//! Maps a batch of Hydrus hash IDs to their corresponding IDHAN RecordIDs.
 	std::unordered_map< HashID, RecordID > mapHydrusRecords( std::vector< HashID > hash_ids ) const;
-	//! \return The IDHAN RecordID for a single Hydrus hash ID.
-	RecordID getRecordIDFromHyID( HashID hash_id );
 
 	//! \return true if the Hydrus database contains PTR (public tag repository) data.
 	bool hasPTR() const;

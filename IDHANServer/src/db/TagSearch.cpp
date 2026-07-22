@@ -62,7 +62,8 @@ ExpectedTask< void > TagSearch::addChildren( TagID tag_id )
 	while ( !queue.empty() );
 
 	std::ranges::sort( m_ids );
-	std::ranges::unique( m_ids );
+	const auto duplicates { std::ranges::unique( m_ids ) };
+	m_ids.erase( duplicates.begin(), duplicates.end() );
 
 	co_return {};
 }
@@ -127,7 +128,7 @@ ExpectedTask< void > TagSearch::removeSiblings()
 		const auto remove_ret {
 			std::ranges::remove_if( m_ids, [ &id ]( const auto& i ) noexcept -> bool { return i == id; } )
 		};
-		to_remove.erase( remove_ret.begin(), remove_ret.end() );
+		m_ids.erase( remove_ret.begin(), remove_ret.end() );
 	}
 
 	co_return {};
