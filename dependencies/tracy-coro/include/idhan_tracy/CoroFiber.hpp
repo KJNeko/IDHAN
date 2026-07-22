@@ -41,13 +41,19 @@ inline std::string makeFiberName( const char* prefix )
 
 } // namespace idhan::tracy_coro
 
-	#include <tracy/Tracy.hpp>
-
 	#include <coroutine>
 	#include <utility>
 
 namespace idhan::tracy_coro
 {
+
+//! Forwarding shims over Tracy's fiber API. Declared (not defined) here on purpose: this header is
+//! pulled in almost everywhere via the drogon coroutine shim, so it must NOT include
+//! <tracy/Tracy.hpp> — that drags Tracy's heavy client headers (tracy_concurrentqueue.h, etc.) into
+//! every TU and collides with system/Qt macros (e.g. BLOCK_SIZE from <linux/*>). The definitions
+//! live in exactly one TU, CoroFiber.cpp, which is the only place that includes <tracy/Tracy.hpp>.
+void fiberEnter( const char* name ) noexcept;
+void fiberLeave() noexcept;
 
 //! Normalize any awaitable to its awaiter: member operator co_await, free operator co_await, or the
 //! object itself when it is already an awaiter (has await_ready).
@@ -70,7 +76,10 @@ decltype( auto ) asAwaiter( A&& awaitable )
 template < typename Awaitable >
 struct FiberAwaiter
 {
-	Awaitable m_awaitable;
+	// Stored by reference, never by value: the co_await operand (and its temporaries) is guaranteed
+	// to outlive the suspension, so we can bind to it without moving. This is required — drogon's
+	// WhenAllAwaiter holds a std::atomic and is immovable, so a by-value member would fail to compile.
+	Awaitable&& m_awaitable;
 	const char* m_name;
 	decltype( asAwaiter( std::declval< Awaitable& >() ) ) m_awaiter;
 
@@ -85,13 +94,13 @@ struct FiberAwaiter
 	template < typename Handle >
 	auto await_suspend( Handle handle )
 	{
-		TracyFiberLeave;
+		fiberLeave();
 		return m_awaiter.await_suspend( handle );
 	}
 
 	decltype( auto ) await_resume()
 	{
-		TracyFiberEnter( m_name );
+		fiberEnter( m_name );
 		return m_awaiter.await_resume();
 	}
 };
@@ -106,7 +115,7 @@ struct FiberInitialAwaiter
 
 	void await_suspend( std::coroutine_handle<> ) const noexcept {}
 
-	void await_resume() const noexcept { TracyFiberEnter( m_name ); }
+	void await_resume() const noexcept { fiberEnter( m_name ); }
 };
 
 //! Final awaiter wrapping an inner final awaiter (e.g. drogon::final_awaiter). Leaves the fiber
@@ -121,7 +130,7 @@ struct FiberFinalAwaiter
 	template < typename Handle >
 	auto await_suspend( Handle handle ) noexcept
 	{
-		TracyFiberLeave;
+		fiberLeave();
 		return m_inner.await_suspend( handle );
 	}
 
