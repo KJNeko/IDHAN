@@ -39,6 +39,11 @@ option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
 
 option(IDHAN_ENABLE_TRACY "Enable Tracy profiler instrumentation" OFF)
 
+# Builds the Tracy profiler GUI from the vendored source as the `tracy-profiler` target (so it can be
+# built from an IDE like CLion). Independent of IDHAN_ENABLE_TRACY: the GUI connects to any Tracy
+# client, and building it pins the GUI to the same v0.11.1 protocol as our instrumented client.
+option(IDHAN_BUILD_TRACY_PROFILER "Build the Tracy profiler GUI (tracy-profiler target)" OFF)
+
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
@@ -69,6 +74,22 @@ if (IDHAN_ENABLE_TRACY)
 	target_include_directories(idhan_tracy_coro PUBLIC
 		${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy-coro/include)
 	target_link_libraries(idhan_tracy_coro PUBLIC Tracy::TracyClient)
+endif ()
+
+if (IDHAN_BUILD_TRACY_PROFILER)
+	# Prefer system libraries over CPM network downloads (capstone defaults to force-download upstream).
+	# The default backend on Linux is native Wayland (needs wayland-scanner + wayland-* dev libs); for an
+	# X11 session, configure the profiler subdir with -DLEGACY=ON (uses GLFW, which is also present).
+	set(DOWNLOAD_CAPSTONE OFF CACHE BOOL "" FORCE)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy/profiler)
+	if (TARGET tracy-profiler)
+		# Tracy 0.11.1's vendored server/tracy_robin_hood.h uses uint*_t without including <cstdint>;
+		# newer libstdc++ (GCC 13+) no longer pulls it in transitively. Force-include it — but only for
+		# C++ sources (the target also has C files, for which <cstdint> does not exist).
+		target_compile_options(tracy-profiler PRIVATE
+			$<$<COMPILE_LANGUAGE:CXX>:-include>
+			$<$<COMPILE_LANGUAGE:CXX>:cstdint>)
+	endif ()
 endif ()
 
 #IDHANServer/IDHANClient
