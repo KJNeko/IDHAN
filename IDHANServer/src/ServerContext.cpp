@@ -29,6 +29,10 @@
 #include "profiling/tracy.hpp"
 #include "spdlog/async.h"
 
+#ifdef TRACY_ENABLE
+	#include "idhan_tracy/CoroFiber.hpp"
+#endif
+
 namespace idhan
 {
 
@@ -59,6 +63,14 @@ void ServerContext::setupCORSSupport() const
 			else
 				log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
 
+#ifdef TRACY_ENABLE
+				// Best-effort: names the handler coroutine (constructed on this thread right after
+				// routing) with the request line. Stored per-thread; the string is owned by the request.
+				static thread_local std::string tag;
+				tag = request->getMethodString() + std::string( " " ) + request->getPath();
+				idhan::tracy_coro::currentFiberTag() = tag.c_str();
+#endif
+
 			if ( request->method() == drogon::Options )
 			{
 				const auto response { drogon::HttpResponse::newHttpResponse() };
@@ -81,6 +93,10 @@ void ServerContext::setupCORSSupport() const
 			else
 				log::debug( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
 			addCORSHeaders( response );
+
+#ifdef TRACY_ENABLE
+				idhan::tracy_coro::currentFiberTag() = nullptr;
+#endif
 		} );
 }
 
