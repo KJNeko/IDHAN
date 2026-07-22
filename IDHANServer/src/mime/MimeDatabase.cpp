@@ -13,6 +13,7 @@
 #include "ModuleBase.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "filesystem/io/IOUring.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::mime
 {
@@ -30,6 +31,7 @@ std::shared_ptr< const std::vector< MimeIdentifier > > MimeDatabase::identifiers
 
 drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( const Cursor cursor )
 {
+	ZoneScopedN( "MimeDatabase::scan" );
 	// snapshot so a concurrent reload can't invalidate the vector mid-iteration
 	const auto identifiers { this->identifiers() };
 	log::trace( "MimeDatabase::scan: starting scan with {} identifiers", identifiers->size() );

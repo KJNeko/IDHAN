@@ -12,6 +12,7 @@
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
 #include "tags/tags.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan
 {
@@ -494,6 +495,7 @@ void SearchBuilder::generateSortFilterClause( std::string& query ) const
 
 std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes, const bool filter_domains )
 {
+	ZoneScopedN( "SearchBuilder::construct" );
 	// TODO: Sort tag ids to get the most out of each filter.
 
 	std::string query { "WITH " };
@@ -594,6 +596,7 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 	const bool return_ids,
 	const bool return_hashes )
 {
+	ZoneScopedN( "SearchBuilder::query" );
 	// only filter by domain when the caller actually supplied domains; the domain
 	// filter template references $1, which must then be bound below
 	const auto query { construct( return_ids, return_hashes, !tag_domain_ids.empty() ) };

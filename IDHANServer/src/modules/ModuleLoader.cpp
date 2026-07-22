@@ -19,6 +19,7 @@
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::modules
 {
@@ -133,6 +134,7 @@ std::expected< std::vector< std::byte >, ModuleError > generate(
 
 		ModuleCallData call_data { .file_view = data, .mime_name = *exp, .extra = extra };
 
+		ZoneScopedN( "module::generate" );
 		return generator->generate( call_data, hash );
 	}
 }
@@ -158,6 +160,7 @@ std::expected< ThumbnailInfo, ModuleError > thumbnail(
 
 	ModuleCallData call_data { .file_view = data_view, .mime_name = *exp, .extra = extra };
 
+	ZoneScopedN( "module::thumbnail" );
 	return thumbnailer->createThumbnailRaw( call_data, 128, 128 );
 }
 
