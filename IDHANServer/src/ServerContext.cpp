@@ -26,6 +26,7 @@
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "profiling/tracy.hpp"
 #include "spdlog/async.h"
 
 namespace idhan
@@ -428,6 +429,7 @@ void trantorHook( const char* msg, const std::uint64_t len )
 
 void ServerContext::run()
 {
+	ZoneScoped;
 	log::info( "Starting runtime" );
 
 	trantor::Logger::setOutputFunction( trantorHook, []() noexcept {} );

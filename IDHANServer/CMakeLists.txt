@@ -20,6 +20,11 @@ target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANMigration)
 target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
 
+if (IDHAN_ENABLE_TRACY)
+	target_link_libraries(IDHANServer PUBLIC Tracy::TracyClient idhan_tracy_coro)
+	target_compile_definitions(IDHANServer PUBLIC IDHAN_ENABLE_TRACY)
+endif ()
+
 if (IDHAN_DISABLE_API_AUTH)
 	target_compile_definitions(IDHANServer PRIVATE IDHAN_DISABLE_API_AUTH)
 endif ()
