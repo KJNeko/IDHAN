@@ -30,8 +30,14 @@ void FileRelationshipsWorker::preprocess()
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 
-		client_tr << "SELECT COUNT(*) FROM alternate_file_group_members JOIN duplicate_file_members USING (media_id)" >>
-			[ & ]( std::size_t count ) { emit processedMaxAlternatives( count ); };
+		// Alternates link the king of each media in a group. Hydrus only treats a group with more than one
+		// member as a real alternate group (and the server rejects groups smaller than two), so count only
+		// the kings that belong to such groups.
+		client_tr << "SELECT COALESCE( SUM( member_count ), 0 ) FROM "
+					 "( SELECT COUNT(*) AS member_count FROM alternate_file_group_members "
+					 "JOIN duplicate_files USING (media_id) GROUP BY alternates_group_id ) grouped "
+					 "WHERE member_count > 1"
+			>> [ & ]( std::size_t count ) { emit processedMaxAlternatives( count ); };
 	}
 
 	emit finished();
@@ -41,7 +47,6 @@ void FileRelationshipsWorker::process()
 {
 	idhan::hydrus::TransactionBaseCoro client_tr { m_importer->client_db };
 
-	using MediaID = std::uint32_t;
 	using HashID = std::uint32_t;
 	using KingID = std::uint32_t;
 
@@ -55,10 +60,12 @@ void FileRelationshipsWorker::process()
 	{
 		emit statusMessage( "Mapping Hydrus IDs to IDHAN IDs" );
 		std::ranges::sort( hash_ids );
-		std::ranges::unique( hash_ids );
+		const auto duplicates { std::ranges::unique( hash_ids ) };
+		hash_ids.erase( duplicates.begin(), duplicates.end() );
 
-		std::ranges::remove_if(
-			hash_ids, [ &record_map ]( const HashID hash_id ) -> bool { return record_map.contains( hash_id ); } );
+		const auto already_mapped { std::ranges::remove_if(
+			hash_ids, [ &record_map ]( const HashID hash_id ) -> bool { return record_map.contains( hash_id ); } ) };
+		hash_ids.erase( already_mapped.begin(), already_mapped.end() );
 
 		if ( hash_ids.empty() ) return;
 
@@ -89,20 +96,29 @@ void FileRelationshipsWorker::process()
 		emit statusMessage( "Setting duplicates for batch" );
 
 		std::vector< std::pair< idhan::RecordID, idhan::RecordID > > idhan_pairs {};
+		idhan_pairs.reserve( pairs.size() );
 
 		for ( const auto& [ hy_hash_id, hy_king_id ] : pairs )
 		{
-			const auto idhan_hash_id { record_map.at( hy_hash_id ) };
-			const auto idhan_king_id { record_map.at( hy_king_id ) };
+			const auto hash_it { record_map.find( hy_hash_id ) };
+			const auto king_it { record_map.find( hy_king_id ) };
 
-			idhan_pairs.emplace_back( idhan_hash_id, idhan_king_id );
+			// A hash that failed to map (e.g. a malformed hash row) would otherwise throw and abort the whole
+			// import; skip the pair instead.
+			if ( hash_it == record_map.end() || king_it == record_map.end() ) continue;
 
-			// auto future = client.setDuplicates( pairs );
-			// future.waitForFinished();
+			idhan_pairs.emplace_back( hash_it->second, king_it->second );
 		}
 
-		auto future { client.setDuplicates( idhan_pairs ) };
-		future.waitForFinished();
+		try
+		{
+			auto future { client.setDuplicates( idhan_pairs ) };
+			future.waitForFinished();
+		}
+		catch ( const std::exception& e )
+		{
+			idhan::logging::error( "Failed to set duplicate batch of {} pairs: {}", idhan_pairs.size(), e.what() );
+		}
 
 		processed_count += pairs.size();
 		emit processedDuplicates( processed_count );
@@ -128,27 +144,29 @@ void FileRelationshipsWorker::process()
 
 	flushPairs();
 
-	idhan::hydrus::Query< HashID, MediaID > alternative_files {
-		client_tr,
-		"SELECT hash_id, alternates_group_id FROM alternate_file_group_members JOIN duplicate_file_members USING (media_id);"
-	};
-
 	using GroupID = std::uint32_t;
+
+	// Alternates link the king of each media in a group (duplicates within a media are handled above), so
+	// join duplicate_files (one king per media) rather than duplicate_file_members (every hash).
+	idhan::hydrus::Query< HashID, GroupID > alternative_files {
+		client_tr,
+		"SELECT king_hash_id, alternates_group_id FROM alternate_file_group_members JOIN duplicate_files USING (media_id)"
+	};
 
 	std::unordered_map< GroupID, std::vector< idhan::hydrus::HashID > > alternative_map {};
 
 	emit statusMessage( "Mapping alternative hashes to IDHAN" );
 
-	for ( const auto& [ hash_id, alternative_group_id ] : alternative_files )
+	for ( const auto& [ king_hash_id, alternative_group_id ] : alternative_files )
 	{
-		hash_ids.push_back( hash_id );
+		hash_ids.push_back( king_hash_id );
 
 		if ( hash_ids.size() >= 64 ) flushHashIDs();
 
 		if ( auto itter = alternative_map.find( alternative_group_id ); itter != alternative_map.end() )
-			itter->second.push_back( hash_id );
+			itter->second.push_back( king_hash_id );
 		else
-			alternative_map.emplace( alternative_group_id, std::vector< idhan::hydrus::HashID > { hash_id } );
+			alternative_map.emplace( alternative_group_id, std::vector< idhan::hydrus::HashID > { king_hash_id } );
 	}
 
 	flushHashIDs();
@@ -160,13 +178,34 @@ void FileRelationshipsWorker::process()
 	for ( const auto& hy_hashes : alternative_map | std::views::values )
 	{
 		std::vector< idhan::RecordID > record_ids {};
-		for ( const auto& hy_hash : hy_hashes ) record_ids.emplace_back( record_map.at( hy_hash ) );
+		record_ids.reserve( hy_hashes.size() );
+		for ( const auto& hy_hash : hy_hashes )
+		{
+			const auto itter { record_map.find( hy_hash ) };
+			if ( itter != record_map.end() ) record_ids.emplace_back( itter->second );
+		}
 
-		alternative_count += record_ids.size();
+		// A record may be shared between kings in the group; de-duplicate before forming the group.
+		std::ranges::sort( record_ids );
+		const auto dupes { std::ranges::unique( record_ids ) };
+		record_ids.erase( dupes.begin(), dupes.end() );
 
-		auto future = client.setAlternativeGroups( record_ids );
-		future.waitForFinished();
-		emit processedAlternatives( alternative_count );
+		// The server rejects groups smaller than two, and single-member Hydrus groups aren't real
+		// alternates. Skip them so one lone member can't abort the whole batch.
+		if ( record_ids.size() < 2 ) continue;
+
+		try
+		{
+			auto future = client.setAlternativeGroups( record_ids );
+			future.waitForFinished();
+
+			alternative_count += record_ids.size();
+			emit processedAlternatives( alternative_count );
+		}
+		catch ( const std::exception& e )
+		{
+			idhan::logging::error( "Failed to set alternative group of {} records: {}", record_ids.size(), e.what() );
+		}
 	}
 
 	emit statusMessage( "Finished" );

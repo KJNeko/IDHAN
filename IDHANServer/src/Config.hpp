@@ -18,7 +18,11 @@ struct std::hash< std::pair< std::string, std::string > >
 {
 	std::size_t operator()( const std::pair< std::string, std::string >& p ) const noexcept
 	{
-		return std::hash< std::string > {}( p.first ) ^ ( std::hash< std::string > {}( p.second ) << 1 );
+		// boost::hash_combine (matches the server's SHA256.hpp)
+		std::size_t seed { 0 };
+		seed ^= std::hash< std::string > {}( p.first ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+		seed ^= std::hash< std::string > {}( p.second ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+		return seed;
 	}
 };
 

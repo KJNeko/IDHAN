@@ -45,7 +45,8 @@ void UrlServiceWorker::preprocess()
 	}
 	catch ( const std::exception& e )
 	{
-		emit statusMessage( QString( "Error during preprocessing: %1" ).arg( e.what() ) );
+		idhan::logging::error( "Error during URL preprocessing: {}", e.what() );
+		emit errorOccurred( QString( "Error during preprocessing: %1" ).arg( e.what() ) );
 	}
 
 	emit finished();
@@ -152,7 +153,8 @@ void UrlServiceWorker::process()
 	}
 	catch ( const std::exception& e )
 	{
-		emit statusMessage( QString( "Error during processing: %1" ).arg( e.what() ) );
+		idhan::logging::error( "Error during URL processing: {}", e.what() );
+		emit errorOccurred( QString( "Error during processing: %1" ).arg( e.what() ) );
 	}
 }
 
@@ -163,19 +165,25 @@ void UrlServiceWorker::flushUrls(
 {
 	if ( current_urls.empty() ) return;
 
-	std::vector< idhan::hydrus::HashID > hashes;
-	hashes.reserve( current_urls.size() );
+	// Only map hashes we haven't already resolved on a previous chunk.
+	std::vector< idhan::hydrus::HashID > uncached;
+	uncached.reserve( current_urls.size() );
 
 	for ( const auto& hash_id : current_urls | std::views::keys )
 	{
-		hashes.emplace_back( hash_id );
+		if ( !m_record_cache.contains( hash_id ) ) uncached.emplace_back( hash_id );
 	}
 
-	const auto mapped_ids { m_importer->mapHydrusRecords( hashes ) };
+	if ( !uncached.empty() )
+	{
+		const auto mapped_ids { m_importer->mapHydrusRecords( uncached ) };
+		for ( const auto& [ hy_hash_id, idhan_id ] : mapped_ids )
+			m_record_cache.insert_or_assign( hy_hash_id, idhan_id );
+	}
 
 	// Count actual unique URLs using a set
 	std::unordered_set< std::string > unique_urls;
-	for ( const auto& [ hash_id, urls ] : current_urls )
+	for ( const auto& urls : current_urls | std::views::values )
 	{
 		for ( const auto& url : urls )
 		{
@@ -183,15 +191,18 @@ void UrlServiceWorker::flushUrls(
 		}
 	}
 
-	emit statusMessage( QString( "Adding %1 URLs to %2 records" ).arg( unique_urls.size() ).arg( mapped_ids.size() ) );
+	emit statusMessage(
+		QString( "Adding %1 URLs to %2 records" ).arg( unique_urls.size() ).arg( current_urls.size() ) );
 
 	// Use QFutureSynchronizer for proper parallel processing
 	QFutureSynchronizer< void > synchronizer;
 
-	for ( const auto& [ hash_id, idhan_id ] : mapped_ids )
+	for ( auto& [ hash_id, urls ] : current_urls )
 	{
-		auto urls { std::move( current_urls[ hash_id ] ) };
-		synchronizer.addFuture( client.addUrls( idhan_id, std::move( urls ) ) );
+		const auto itter { m_record_cache.find( hash_id ) };
+		if ( itter == m_record_cache.end() ) continue; // hash could not be mapped to a record
+
+		synchronizer.addFuture( client.addUrls( itter->second, std::move( urls ) ) );
 	}
 
 	synchronizer.waitForFinished();

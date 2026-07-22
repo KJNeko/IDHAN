@@ -19,7 +19,6 @@ class TagServiceWorker final : public QObject, public QRunnable
 	idhan::hydrus::ServiceInfo m_service;
 	idhan::hydrus::HydrusImporter* m_importer;
 	bool m_preprocessed { false };
-	bool m_processing { false };
 	idhan::TagDomainID tag_domain_id { 0 };
 
   public:

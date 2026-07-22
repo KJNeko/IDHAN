@@ -4,6 +4,8 @@
 
 #include "idhan/IDHANClient.hpp"
 
+#include "idhan/TagCache.hpp"
+
 #include <QCoreApplication>
 #include <QHttpPart>
 #include <QJsonObject>
@@ -108,7 +110,8 @@ IDHANClient::IDHANClient(
 	const QString& key,
 	const bool use_tls ) :
   m_logger( spdlog::stdout_color_mt( client_name.toStdString() ) ),
-  network( nullptr )
+  network( nullptr ),
+  m_tag_cache( std::make_unique< TagCache >() )
 {
 	if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
 	m_instance = this;
@@ -127,6 +130,11 @@ IDHANClient::IDHANClient(
 			"IDHANClient expects a Qt instance. Please use QGuiApplication of QApplication before constructing IDHANClient" );
 
 	openConnection( hostname, port, key, use_tls );
+}
+
+void IDHANClient::setTagCacheBudget( const std::size_t bytes )
+{
+	m_tag_cache->setBudget( bytes );
 }
 
 void IDHANClient::sendClientGet(
