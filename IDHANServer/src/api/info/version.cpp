@@ -50,6 +50,14 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::version( [[maybe_unused]] drogo
 	json[ "unsynced" ] = FGL_GIT_UNSYNCED;
 	json[ "build_on" ] = IDHAN_BUILD_DATE ", " IDHAN_BUILD_TIME;
 
+	// Whether this build was compiled with Tracy profiler instrumentation (IDHAN_ENABLE_TRACY). Lets a
+	// client tell if it can connect a Tracy profiler to this server (port 8086) without guessing.
+#ifdef TRACY_ENABLE
+	json[ "tracy_enabled" ] = true;
+#else
+	json[ "tracy_enabled" ] = false;
+#endif
+
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }
 
