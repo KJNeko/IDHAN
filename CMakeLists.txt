@@ -37,6 +37,8 @@ option(IDHAN_DISABLE_API_AUTH "Disable the API access key checks" OFF)
 
 option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
 
+option(IDHAN_ENABLE_TRACY "Enable Tracy profiler instrumentation" OFF)
+
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
@@ -49,6 +51,20 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif ()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+if (IDHAN_ENABLE_TRACY)
+	# Tracy client options must be set before its add_subdirectory so they bake into the target.
+	set(TRACY_ENABLE ON CACHE BOOL "" FORCE)      # defines TRACY_ENABLE PUBLIC on Tracy::TracyClient
+	set(TRACY_FIBERS ON CACHE BOOL "" FORCE)      # enables fiber (coroutine) support
+	set(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)   # only collect once a profiler connects
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy)
+	# Dependency-level shared coroutine-fiber helpers, included by both IDHAN promises and the
+	# drogon patch. Exposed as an INTERFACE target so its include dir propagates cleanly.
+	add_library(idhan_tracy_coro INTERFACE)
+	target_include_directories(idhan_tracy_coro INTERFACE
+		${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy-coro/include)
+	target_link_libraries(idhan_tracy_coro INTERFACE Tracy::TracyClient)
+endif ()
 
 #IDHANServer/IDHANClient
 include(postgres)

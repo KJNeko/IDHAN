@@ -19,3 +19,6 @@
 [submodule "dependencies/drogon"]
 	path = dependencies/drogon
 	url = https://github.com/drogonframework/drogon.git
+[submodule "dependencies/tracy"]
+	path = dependencies/tracy
+	url = https://github.com/wolfpld/tracy.git
