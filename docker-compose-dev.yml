@@ -16,13 +16,40 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    # If you experienced with testing yourself, Configure using the tuning guide https://postgresqlco.nf/tuning-guide
+    # Baseline perf tuning for a typical home server/desktop (16GB RAM, 4 cores, SSD/NVMe) — stock
+    # postgres:18 defaults are sized for ~1GB-RAM machines. Scale *_buffers/*_mem roughly with RAM.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=4GB # ~25% of RAM
+      - -c
+      - effective_cache_size=12GB # ~75% of RAM
+      - -c
+      - work_mem=64MB # per sort/hash; too low and queries spill to disk temp files
+      - -c
+      - maintenance_work_mem=1GB
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - max_wal_size=4GB
+      - -c
+      - min_wal_size=128MB # Minimum reserved disk usage space for WAL
+      - -c
+      - random_page_cost=1.0 # assumes SSD/NVMe; set back to 4 for spinning disks
+      - -c
+      - max_worker_processes=6 # Set to 75% to 90% of available cores for best performance.
+      - -c
+      - max_parallel_workers_per_gather=2 # (Default) Raise only if you have actually observed a requirement for it
+      - -c
+      - max_parallel_workers=6 # Dependent on above values
 
   idhan-server:
     build:
       context: .
       args:
         IDHAN_DISABLE_API_AUTH: "ON"
-        CMAKE_BUILD_TYPE: "Debug"
+        CMAKE_BUILD_TYPE: "System"
         # /version metadata (branch/commit/tag) is derived automatically: the top-level .git ships in
         # the build context (see .dockerignore) and FGLGit runs `git describe` inside the container.
         # No host-side build args needed — a plain `docker compose -f docker-compose-dev.yml up --build`
