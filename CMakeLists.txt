@@ -58,12 +58,17 @@ if (IDHAN_ENABLE_TRACY)
 	set(TRACY_FIBERS ON CACHE BOOL "" FORCE)      # enables fiber (coroutine) support
 	set(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)   # only collect once a profiler connects
 	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy)
-	# Dependency-level shared coroutine-fiber helpers, included by both IDHAN promises and the
-	# drogon patch. Exposed as an INTERFACE target so its include dir propagates cleanly.
-	add_library(idhan_tracy_coro INTERFACE)
-	target_include_directories(idhan_tracy_coro INTERFACE
+	# Dependency-level shared coroutine-fiber helpers, included by both IDHAN promises and the drogon
+	# coroutine shim. A STATIC lib (not INTERFACE) so it can compile CoroFiber.cpp — the ONE TU that
+	# includes <tracy/Tracy.hpp> and defines the fiberEnter/fiberLeave shims. This keeps the public
+	# header free of Tracy's heavy client headers (which otherwise collide with system/Qt macros in
+	# every TU that transitively includes the shimmed drogon coroutine.h). Tracy is linked PUBLIC so
+	# consumers get TRACY_ENABLE + the include dir.
+	add_library(idhan_tracy_coro STATIC
+		${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy-coro/src/CoroFiber.cpp)
+	target_include_directories(idhan_tracy_coro PUBLIC
 		${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy-coro/include)
-	target_link_libraries(idhan_tracy_coro INTERFACE Tracy::TracyClient)
+	target_link_libraries(idhan_tracy_coro PUBLIC Tracy::TracyClient)
 endif ()
 
 #IDHANServer/IDHANClient
