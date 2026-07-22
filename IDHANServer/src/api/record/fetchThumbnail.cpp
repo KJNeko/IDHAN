@@ -23,6 +23,8 @@
 #include "trantor/utils/ConcurrentTaskQueue.h"
 #pragma GCC diagnostic pop
 
+#include "profiling/tracy.hpp"
+
 namespace idhan::api
 {
 
@@ -108,6 +110,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 			call_data.extra = extra_metadata[ 0 ][ 0 ].as< Json::Value >();
 		}
 
+		ZoneScopedN( "module::thumbnail" );
 		const auto thumbnail_info { thumbnailer->createThumbnailFile( call_data, width, height ) };
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );

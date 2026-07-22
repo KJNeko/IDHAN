@@ -12,6 +12,7 @@
 #include "JobTaskStatus.hpp"
 #include "logging/log.hpp"
 #include "trantor/net/EventLoopThreadPool.h"
+#include "profiling/tracy.hpp"
 
 inline static std::atomic< idhan::JobID > job_id_counter { 1 };
 
@@ -42,6 +43,7 @@ void JobRuntime::runner()
 {
 	while ( !m_hard_stop.load( std::memory_order_acquire ) )
 	{
+		FrameMarkNamed( "jobs" );
 		if ( m_soft_stop.load( std::memory_order_acquire ) )
 		{
 			// the queue must not be inspected without the mutex; enqueue() mutates it concurrently

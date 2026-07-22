@@ -15,6 +15,7 @@
 #include "decodeHex.hpp"
 #include "fgl/defines.hpp"
 #include "filesystem/io/IOUring.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan
 {
@@ -147,11 +148,13 @@ drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::fromDB(
 
 SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
 {
+	ZoneScopedN( "SHA256::hash" );
 	return SHA256::fromBuffer( crypto::hashData( data, size ) );
 }
 
 drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
 {
+	ZoneScopedN( "SHA256::hashCoro" );
 	constexpr auto block_size { 1024 * 1024 };
 
 	const std::unique_ptr< EVP_MD_CTX, void ( * )( EVP_MD_CTX* ) > ctx {
