@@ -23,7 +23,8 @@ PTRImportWidget::PTRImportWidget( QWidget* parent ) :
 	ui->cancelButton->setEnabled( false );
 
 	ui->historyView->setModel( m_history_model );
-	ui->historyView->horizontalHeader()->setSectionResizeMode( QHeaderView::ResizeToContents );
+	ui->historyView->horizontalHeader()->setSectionResizeMode( QHeaderView::Interactive );
+	ui->historyView->resizeColumnsToContents();
 
 	connect( ui->selectDirectory, &QToolButton::clicked, this, &PTRImportWidget::onSelectDirectory );
 	connect(
@@ -124,6 +125,11 @@ void PTRImportWidget::onUpdateCompleted( const idhan::hydrus::ptr::PTRHistoryEnt
 {
 	m_history_model->addEntry( entry );
 	ui->historyView->scrollToBottom();
+
+	// Re-measuring column widths against every row is O(n) per insert, which gets expensive over a
+	// long PTR sync — so only do it every so often rather than on every single completed update.
+	constexpr int COLUMN_RESIZE_INTERVAL = 20;
+	if ( m_history_model->rowCount() % COLUMN_RESIZE_INTERVAL == 0 ) ui->historyView->resizeColumnsToContents();
 }
 
 void PTRImportWidget::onImportFinished( bool success, const QString& message )
