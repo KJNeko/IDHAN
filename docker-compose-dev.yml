@@ -22,6 +22,8 @@ services:
     command:
       - postgres
       - -c
+      - shared_preload_libraries=pg_stat_statements # required at startup for the pg_stat_statements extension
+      - -c
       - shared_buffers=4GB # ~25% of RAM
       - -c
       - effective_cache_size=12GB # ~75% of RAM
