@@ -331,6 +331,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	const auto ipv4_listener { config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" ) };
 	const auto ipv6_listener { config::get< std::string >( "host", "ipv6_listen", "::1" ) };
+	const auto listen_port { config::get< std::uint16_t >( "server", "port", IDHAN_DEFAULT_PORT ) };
 
 	const auto server_cert_path {
 		config::get< std::string, config::no_warn_on_default >( "host", "server_cert_path", "./server.crt" )
@@ -344,14 +345,14 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	if ( !ipv4_listener.empty() )
 	{
-		log::trace( "Adding IPv4 listener on {}:{}", ipv4_listener, IDHAN_DEFAULT_PORT );
-		app.addListener( ipv4_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+		log::trace( "Adding IPv4 listener on {}:{}", ipv4_listener, listen_port );
+		app.addListener( ipv4_listener, listen_port, use_tls, server_cert_path, server_key_path );
 	}
 
 	if ( !ipv6_listener.empty() )
 	{
-		log::trace( "Adding IPv6 listener on {}:{}", ipv6_listener, IDHAN_DEFAULT_PORT );
-		app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+		log::trace( "Adding IPv6 listener on {}:{}", ipv6_listener, listen_port );
+		app.addListener( ipv6_listener, listen_port, use_tls, server_cert_path, server_key_path );
 	}
 
 	drogon::orm::PostgresConfig config {
@@ -401,7 +402,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
 
 	drogon::app().registerBeginningAdvice(
-		[ this ]()
+		[ this, listen_port ]()
 		{
 			drogon::sync_wait(
 				[ this ]() -> drogon::Task< void >
@@ -413,8 +414,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				}() );
 
 			log::info( "IDHAN initialization finished" );
-			log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
-			log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
+			log::info( "Server available at http://localhost:{}", listen_port );
+			log::info( "Swagger docs available at http://localhost:{}/api", listen_port );
 		} );
 
 	drogon::app().registerBeginningAdvice(
