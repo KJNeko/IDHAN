@@ -8,12 +8,14 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "logging/log.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::HttpRequestPtr request )
 {
+	ZoneScopedN( "TagAPI::createTagParents" );
 	const auto json_obj { request->getJsonObject() };
 
 	if ( json_obj == nullptr )
@@ -66,6 +68,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 	};
 	if ( !validation ) co_return validation.error();
 
+	ZoneNamedN( apply_zone, "TagAPI::createTagParents apply", true );
 	for ( const auto& [ parent_id, child_id ] : pairs )
 	{
 		try

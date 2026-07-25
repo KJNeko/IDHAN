@@ -11,7 +11,11 @@
 	#define ZoneScoped
 	#define ZoneScopedN( name )
 	#define ZoneScopedNC( name, color )
-	#define ZoneText( txt, size )
+// Named variants take an explicit variable name, so more than one can share a scope
+// (ZoneScoped/ZoneScopedN all declare the same hidden variable and cannot).
+#define ZoneNamed( var, active )
+#define ZoneNamedN( var, name, active )
+#define ZoneText( txt, size )
 	#define ZoneName( txt, size )
 	#define FrameMark
 	#define FrameMarkNamed( name )

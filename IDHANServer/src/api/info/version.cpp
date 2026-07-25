@@ -10,12 +10,14 @@
 #include "hyapi/constants/hydrus_version.hpp"
 #include "idhan/versions.hpp"
 #include "logging/log.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > InfoAPI::version( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
+	ZoneScoped;
 	log::debug( "/version" );
 
 	Json::Value json;

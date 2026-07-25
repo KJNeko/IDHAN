@@ -48,6 +48,7 @@ constexpr std::string_view num_pixels_expr {
 
 void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view tag )
 {
+	ZoneScoped;
 	target.m_active = true;
 
 	const bool is_greater_than { tag.contains( ">" ) };
@@ -95,6 +96,7 @@ std::unordered_map< TagID, std::string > SearchBuilder::createFilters(
 	const std::vector< TagID >& tag_ids,
 	const bool filter_domains )
 {
+	ZoneScoped;
 	std::unordered_map< TagID, std::string > filters {};
 	filters.reserve( tag_ids.size() );
 
@@ -123,6 +125,7 @@ std::unordered_map< TagID, std::string > SearchBuilder::createFilters(
 
 std::string SearchBuilder::buildPositiveFilter() const
 {
+	ZoneScoped;
 	std::string positive_filter { "positive_filter AS (" };
 
 	if ( m_in_archive_search == ArchiveSearchType::InArchive )
@@ -152,6 +155,7 @@ std::string SearchBuilder::buildPositiveFilter() const
 
 std::string SearchBuilder::buildNegativeFilter() const
 {
+	ZoneScoped;
 	std::string negative_filters { "negative_filter AS (" };
 
 	if ( m_in_archive_search == ArchiveSearchType::NoArchive )
@@ -178,6 +182,7 @@ std::string SearchBuilder::buildNegativeFilter() const
 
 void SearchBuilder::generateOrderByClause( std::string& query, const std::string_view record_id_alias ) const
 {
+	ZoneScoped;
 	query += " ORDER BY ";
 
 	if ( m_sort_type == SortType::RANDOM )
@@ -278,6 +283,7 @@ void SearchBuilder::appendLimitOffset( std::string& query ) const
 
 void SearchBuilder::determineJoinsForQuery( std::string& query )
 {
+	ZoneScoped;
 	if ( m_duration_search == DurationSearchType::HasDuration )
 	{
 		m_required_joins.video_metadata |= true;
@@ -363,6 +369,7 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 
 void SearchBuilder::determineSelectClause( std::string& query, const bool return_ids, const bool return_hashes )
 {
+	ZoneScoped;
 	// determine the SELECT
 	if ( return_ids && return_hashes )
 	{
@@ -386,6 +393,7 @@ void SearchBuilder::determineSelectClause( std::string& query, const bool return
 
 void SearchBuilder::generateWhereClauses( std::string& query )
 {
+	ZoneScoped;
 	// These are added after the join clauses
 	/*
 	// Not needed due to the JOIN being a filter
@@ -458,6 +466,7 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 
 void SearchBuilder::generateSortFilterClause( std::string& query ) const
 {
+	ZoneScoped;
 	switch ( m_sort_type )
 	{
 		case SortType::MODIFIED_TIME:
@@ -495,7 +504,7 @@ void SearchBuilder::generateSortFilterClause( std::string& query ) const
 
 std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes, const bool filter_domains )
 {
-	ZoneScopedN( "SearchBuilder::construct" );
+	ZoneScoped;
 	// TODO: Sort tag ids to get the most out of each filter.
 
 	std::string query { "WITH " };
@@ -596,7 +605,7 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 	const bool return_ids,
 	const bool return_hashes )
 {
-	ZoneScopedN( "SearchBuilder::query" );
+	ZoneScoped;
 	// only filter by domain when the caller actually supplied domains; the domain
 	// filter template references $1, which must then be bound below
 	const auto query { construct( return_ids, return_hashes, !tag_domain_ids.empty() ) };
@@ -611,6 +620,7 @@ drogon::Task< drogon::orm::Result > SearchBuilder::query(
 
 void SearchBuilder::setSortType( const SortType type )
 {
+	ZoneScoped;
 	m_sort_type = type;
 
 	switch ( type )
@@ -713,6 +723,7 @@ void SearchBuilder::addFileDomain( [[maybe_unused]] const FileDomainID value )
 
 ExpectedTask< void > SearchBuilder::setTags( const std::vector< std::string >& tags )
 {
+	ZoneScoped;
 	std::vector< std::string > positive_tags {};
 	std::vector< std::string > negative_tags {};
 
@@ -754,6 +765,7 @@ void SearchBuilder::setNegativeTags( const std::vector< TagID >& tag_ids )
 
 bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 {
+	ZoneScoped;
 	// system:everything
 	if ( system_subtag == "everything" )
 	{
@@ -947,6 +959,7 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 
 void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 {
+	ZoneScoped;
 	log::debug( "Got {} system tags", vector.size() );
 	for ( const auto& tag : vector )
 	{

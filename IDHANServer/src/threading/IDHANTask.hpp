@@ -57,7 +57,7 @@ struct [[nodiscard]] IDHANTask
 		IDHANTask< T > get_return_object() { return IDHANTask< T > { handle_type::from_promise( *this ) }; }
 
 #ifdef TRACY_ENABLE
-		auto initial_suspend() noexcept { return idhan::tracy_coro::FiberInitialAwaiter { m_fiber_name.c_str() }; }
+		auto initial_suspend() noexcept { return idhan::tracy_coro::FiberInitialAwaiter { m_fiber_name, m_fiber_ctx }; }
 #else
 		static std::suspend_always initial_suspend() { return {}; }
 #endif
@@ -97,8 +97,8 @@ struct [[nodiscard]] IDHANTask
 		template < typename Awaitable >
 		auto await_transform( Awaitable&& awaitable )
 		{
-			return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ),
-				                                                   m_fiber_name.c_str() };
+			return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ), m_fiber_name, m_fiber_ctx
+			};
 		}
 #endif
 
@@ -106,7 +106,8 @@ struct [[nodiscard]] IDHANTask
 		std::exception_ptr exception_ {};
 		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
 #ifdef TRACY_ENABLE
-		std::string m_fiber_name { idhan::tracy_coro::makeFiberName( "idhan" ) };
+		idhan::tracy_coro::FiberCtx m_fiber_ctx { idhan::tracy_coro::makeChildCtx( "idhan" ) };
+		const char* m_fiber_name { idhan::tracy_coro::internFiberNameFor( m_fiber_ctx ) };
 #endif
 	};
 
@@ -150,7 +151,7 @@ struct [[nodiscard]] IDHANTask< void >
 		IDHANTask<> get_return_object() { return IDHANTask<> { handle_type::from_promise( *this ) }; }
 
 #ifdef TRACY_ENABLE
-		auto initial_suspend() noexcept { return idhan::tracy_coro::FiberInitialAwaiter { m_fiber_name.c_str() }; }
+		auto initial_suspend() noexcept { return idhan::tracy_coro::FiberInitialAwaiter { m_fiber_name, m_fiber_ctx }; }
 #else
 		static std::suspend_always initial_suspend() { return {}; }
 #endif
@@ -179,15 +180,16 @@ struct [[nodiscard]] IDHANTask< void >
 		template < typename Awaitable >
 		auto await_transform( Awaitable&& awaitable )
 		{
-			return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ),
-				                                                   m_fiber_name.c_str() };
+			return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ), m_fiber_name, m_fiber_ctx
+			};
 		}
 #endif
 
 		std::exception_ptr exception_ {};
 		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
 #ifdef TRACY_ENABLE
-		std::string m_fiber_name { idhan::tracy_coro::makeFiberName( "idhan" ) };
+		idhan::tracy_coro::FiberCtx m_fiber_ctx { idhan::tracy_coro::makeChildCtx( "idhan" ) };
+		const char* m_fiber_name { idhan::tracy_coro::internFiberNameFor( m_fiber_ctx ) };
 #endif
 	};
 

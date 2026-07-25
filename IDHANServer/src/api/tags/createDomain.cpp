@@ -8,6 +8,7 @@
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
@@ -16,6 +17,7 @@ drogon::Task< std::optional< Json::Value > > getTagDomainInfoJson(
 	const TagDomainID tag_domain_id,
 	const DbClientPtr db )
 {
+	ZoneScopedN( "getTagDomainInfoJson" );
 	const auto search { co_await db->execSqlCoro(
 		"SELECT tag_domain_id, domain_name FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id ) };
 
@@ -31,6 +33,7 @@ drogon::Task< std::optional< Json::Value > > getTagDomainInfoJson(
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpRequestPtr request )
 {
+	ZoneScopedN( "TagAPI::createTagDomain" );
 	const auto json_obj { request->getJsonObject() };
 
 	if ( json_obj == nullptr )
@@ -98,6 +101,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpReq
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomains( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
+	ZoneScopedN( "TagAPI::getTagDomains" );
 	auto db { drogon::app().getDbClient() };
 
 	const auto search { co_await db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains" ) };
@@ -126,6 +130,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomainInfo(
 	[[maybe_unused]] drogon::HttpRequestPtr request,
 	const TagDomainID tag_domain_id )
 {
+	ZoneScopedN( "TagAPI::getTagDomainInfo" );
 	auto db { drogon::app().getDbClient() };
 
 	const auto search {
@@ -151,6 +156,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::deleteTagDomain(
 	[[maybe_unused]] drogon::HttpRequestPtr request,
 	const TagDomainID tag_domain_id )
 {
+	ZoneScopedN( "TagAPI::deleteTagDomain" );
 	auto db { drogon::app().getDbClient() };
 	const auto search { co_await db->execSqlCoro(
 		"DELETE FROM tag_domains WHERE tag_domain_id = $1 RETURNING tag_domain_id", tag_domain_id ) };
