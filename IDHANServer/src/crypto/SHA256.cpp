@@ -11,6 +11,7 @@
 #include <fstream>
 
 #include "api/helpers/createBadRequest.hpp"
+#include "caching/recordCaches.hpp"
 #include "crypto/simpleHasher.hpp"
 #include "decodeHex.hpp"
 #include "fgl/defines.hpp"
@@ -139,11 +140,18 @@ SHA256 SHA256::fromPgCol( const drogon::orm::Field& field )
 
 drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::fromDB( RecordID record_id, DbClientPtr db )
 {
+	auto& cache { caching::recordSha256Cache() };
+	if ( const auto cached { cache.get( record_id ) } ) co_return *cached;
+
 	const auto result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", record_id ) };
 
 	if ( result.empty() ) co_return std::unexpected( createNotFound( "Record not found" ) );
 
-	co_return SHA256::fromPgCol( result[ 0 ][ 0 ] );
+	const auto sha256 { SHA256::fromPgCol( result[ 0 ][ 0 ] ) };
+
+	cache.put( record_id, sha256 );
+
+	co_return sha256;
 }
 
 SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
