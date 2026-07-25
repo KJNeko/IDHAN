@@ -33,7 +33,24 @@ PTRDownloader::PTRDownloader(
   m_host( std::move( host ) ),
   m_port( port ),
   m_access_key( std::move( access_key ) )
-{}
+{
+	m_heartbeat_timer.setInterval( HEARTBEAT_INTERVAL_MS );
+	connect(
+		&m_heartbeat_timer,
+		&QTimer::timeout,
+		this,
+		[ this ]()
+		{
+			try
+			{
+				saveMetadata();
+			}
+			catch ( const std::exception& e )
+			{
+				spdlog::warn( "Heartbeat metadata save failed: {}", e.what() );
+			}
+		} );
+}
 
 PTRDownloader::~PTRDownloader() = default;
 
@@ -112,6 +129,7 @@ void PTRDownloader::saveMetadata()
 			.count();
 	root[ "last_update_index" ] = m_last_update_index;
 	root[ "next_update_due" ] = static_cast< Json::Int64 >( m_metadata.next_update_due );
+	root[ "state" ] = m_persist_state.toStdString();
 
 	Json::Value updates_arr( Json::arrayValue );
 	for ( const auto& u : m_metadata.updates )
@@ -137,10 +155,19 @@ void PTRDownloader::saveMetadata()
 	writer_builder[ "indentation" ] = "  ";
 	const auto json_str = Json::writeString( writer_builder, root );
 
+	// Write to a temp file then rename over the real one, so a PTRImportWorker polling this file
+	// concurrently never observes a partially-written/torn JSON document.
 	const auto meta_path = m_output_dir / "ptr_metadata.json";
-	std::ofstream file( meta_path );
-	if ( !file ) throw std::runtime_error( "Failed to write ptr_metadata.json" );
-	file << json_str;
+	const auto tmp_path = m_output_dir / "ptr_metadata.json.tmp";
+	{
+		std::ofstream file( tmp_path, std::ios::binary | std::ios::trunc );
+		if ( !file ) throw std::runtime_error( "Failed to write ptr_metadata.json.tmp" );
+		file << json_str;
+	}
+
+	std::error_code ec;
+	std::filesystem::rename( tmp_path, meta_path, ec );
+	if ( ec ) throw std::runtime_error( "Failed to finalize ptr_metadata.json: " + ec.message() );
 }
 
 void PTRDownloader::startSync()
@@ -151,6 +178,7 @@ void PTRDownloader::startSync()
 		return;
 	}
 	m_cancelled = false;
+	m_persist_state = "running";
 
 	spdlog::info( "Starting PTR sync to directory: {}", m_output_dir.string() );
 
@@ -226,6 +254,8 @@ bool PTRDownloader::loadCachedMetadata()
 void PTRDownloader::buildDownloadQueue()
 {
 	m_pending_downloads.clear();
+	m_hash_to_index.clear();
+	m_remaining_for_index.clear();
 
 	if ( !m_metadata.updates.empty() )
 	{
@@ -260,6 +290,8 @@ void PTRDownloader::buildDownloadQueue()
 
 		for ( const auto& h : u.hashes )
 		{
+			m_hash_to_index[ h ] = u.index;
+
 			const auto file_path = m_output_dir / ( h + ".ptrupdate" );
 
 			if ( std::filesystem::exists( file_path ) )
@@ -283,6 +315,15 @@ void PTRDownloader::buildDownloadQueue()
 			if ( m_cancelled )
 			{
 				m_state = State::Idle;
+				m_persist_state = "cancelled";
+				try
+				{
+					saveMetadata();
+				}
+				catch ( const std::exception& e )
+				{
+					spdlog::warn( "Failed to persist cancelled state: {}", e.what() );
+				}
 				emit finished( false, "Cancelled" );
 				return;
 			}
@@ -296,6 +337,7 @@ void PTRDownloader::buildDownloadQueue()
 				files_present,
 				u.hashes.size(),
 				files_missing );
+			m_remaining_for_index[ u.index ] = files_missing;
 		}
 		else
 		{
@@ -318,12 +360,14 @@ void PTRDownloader::buildDownloadQueue()
 	{
 		spdlog::info( "No pending downloads, metadata is up to date" );
 		m_state = State::Done;
+		m_persist_state = "done";
 		saveMetadata();
 		emit finished( true, "Already up to date. No new files." );
 		return;
 	}
 
 	emit metadataReceived( static_cast< int >( m_metadata.updates.size() ), m_total_downloads );
+	m_heartbeat_timer.start();
 	downloadNextUpdate();
 }
 
@@ -477,6 +521,16 @@ void PTRDownloader::downloadNextUpdate()
 	{
 		spdlog::warn( "Download cancelled during update fetch" );
 		m_state = State::Idle;
+		m_heartbeat_timer.stop();
+		m_persist_state = "cancelled";
+		try
+		{
+			saveMetadata();
+		}
+		catch ( const std::exception& e )
+		{
+			spdlog::warn( "Failed to persist cancelled state: {}", e.what() );
+		}
 		emit finished( false, "Cancelled" );
 		return;
 	}
@@ -485,6 +539,8 @@ void PTRDownloader::downloadNextUpdate()
 	{
 		spdlog::info( "All {} updates downloaded successfully", m_completed_downloads );
 		m_state = State::Done;
+		m_heartbeat_timer.stop();
+		m_persist_state = "done";
 		saveMetadata();
 		emit finished( true, QString( "Downloaded %1 files." ).arg( QLocale::system().toString( m_completed_downloads ) ) );
 		return;
@@ -641,6 +697,25 @@ void PTRDownloader::onUpdateReply( QNetworkReply* reply, QString hash_hex )
 								data.size() );
 
 							emit fileDownloaded( hash_hex, m_completed_downloads, m_total_downloads );
+
+							// If this was the last missing file for its update index, persist progress now
+							// so a concurrently-running PTRImportWorker can pick the index up immediately.
+							if ( const auto idx_it = m_hash_to_index.find( hash_hex.toStdString() );
+							     idx_it != m_hash_to_index.end() )
+							{
+								if ( const auto rem_it = m_remaining_for_index.find( idx_it->second );
+								     rem_it != m_remaining_for_index.end() && --rem_it->second <= 0 )
+								{
+									try
+									{
+										saveMetadata();
+									}
+									catch ( const std::exception& e )
+									{
+										spdlog::warn( "Failed to persist index completion: {}", e.what() );
+									}
+								}
+							}
 						}
 					}
 				}
