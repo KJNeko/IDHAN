@@ -22,6 +22,7 @@ function ClusterManagerPanel({ host }: PanelProps) {
   const [clusters, setClusters] = useState<Cluster[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+    const [newName, setNewName] = useState('');
   const [newPath, setNewPath] = useState('');
   const [newReadonly, setNewReadonly] = useState(true);
 
@@ -68,21 +69,23 @@ function ClusterManagerPanel({ host }: PanelProps) {
 
   async function add() {
     const path = newPath.trim();
-    if (path.length === 0) return;
+      const name = newName.trim();
+      if (path.length === 0 || name.length === 0) return;
     setBusy(true);
     try {
       const res = await host.http.fetch('/clusters/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path, readonly: newReadonly }),
+          body: JSON.stringify({name, path, readonly: newReadonly}),
       });
       if (res.status === 409) {
-        host.ui.toast('A cluster with that path already exists.', { kind: 'error' });
+          host.ui.toast('A cluster with that name or path already exists.', {kind: 'error'});
       } else if (!res.ok) {
         const reason = (await res.text()).slice(0, 200);
         throw new Error(reason || `add → ${res.status}`);
       } else {
-        host.ui.toast(`Added cluster at ${path}.`, { kind: 'success' });
+          host.ui.toast(`Added cluster "${name}" at ${path}.`, {kind: 'success'});
+          setNewName('');
         setNewPath('');
         await refresh();
       }
@@ -144,6 +147,18 @@ function ClusterManagerPanel({ host }: PanelProps) {
   return (
     <div className="panel-body cluster-manager">
       <div className="cluster-add">
+          <input
+              className="search-input"
+              value={newName}
+              placeholder="Cluster name…"
+              disabled={busy}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                  if (e.key === 'Enter') void add();
+              }}
+              spellCheck={false}
+              autoComplete="off"
+          />
         <input
           className="search-input grow"
           value={newPath}
@@ -160,7 +175,12 @@ function ClusterManagerPanel({ host }: PanelProps) {
           <input type="checkbox" checked={newReadonly} onChange={(e) => setNewReadonly(e.target.checked)} />
           Read-only
         </label>
-        <button type="button" className="toolbar-button" disabled={busy || newPath.trim().length === 0} onClick={() => void add()}>
+          <button
+              type="button"
+              className="toolbar-button"
+              disabled={busy || newPath.trim().length === 0 || newName.trim().length === 0}
+              onClick={() => void add()}
+          >
           Add
         </button>
       </div>
