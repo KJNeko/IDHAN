@@ -39,7 +39,7 @@ HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent 
 {
 	ui->setupUi( this );
 
-	ui->cbProcessPTR->setChecked( true );
+	ui->cbProcessPTR->setChecked( false );
 
 	ui->hyFolderStatusLabel->setText( "Invalid" );
 	ui->hyFolderStatusLabel->setStyleSheet( "QLabel { color: red; }" );

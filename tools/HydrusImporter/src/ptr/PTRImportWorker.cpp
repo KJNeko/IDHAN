@@ -6,11 +6,13 @@
 #include <json/json.h>
 #include <spdlog/spdlog.h>
 
+#include <chrono>
 #include <deque>
 #include <fstream>
 #include <optional>
 #include <ranges>
 #include <set>
+#include <thread>
 
 #include "PTRConstants.hpp"
 #include "PTRFileParser.hpp"
@@ -26,6 +28,7 @@ PTRImportWorker::PTRImportWorker( const std::filesystem::path& ptr_directory, QO
   m_ptr_directory( ptr_directory )
 {
 	setAutoDelete( false );
+	qRegisterMetaType< PTRHistoryEntry >( "PTRHistoryEntry" );
 }
 
 PTRImportWorker::~PTRImportWorker() = default;
@@ -131,6 +134,78 @@ void PTRImportWorker::loadMetadata()
 	throw std::runtime_error( "No metadata found in directory. Run the download step first." );
 }
 
+PTRImportWorker::DownloadStatus PTRImportWorker::readDownloadStatus() const
+{
+	const auto meta_json_path = m_ptr_directory / "ptr_metadata.json";
+	{
+		std::ifstream file( meta_json_path );
+		if ( file )
+		{
+			Json::Value root;
+			Json::CharReaderBuilder builder;
+			std::string errors;
+			if ( Json::parseFromStream( builder, file, &root, &errors ) )
+			{
+				// Missing "state" means this file was written before/without this feature, or by a
+				// run that only ever wrote it once at the very end — either way, treat as done.
+				const auto state = root.get( "state", "done" ).asString();
+				const auto last_sync_time = root.get( "last_sync_time", Json::Int64( 0 ) ).asInt64();
+				const auto now = std::chrono::duration_cast< std::chrono::seconds >(
+									 std::chrono::system_clock::now().time_since_epoch() )
+				                     .count();
+				const auto age = std::max< std::int64_t >( 0, now - last_sync_time );
+				return { state, std::chrono::seconds( age ) };
+			}
+			spdlog::warn( "Failed to parse ptr_metadata.json while polling: {}", errors );
+		}
+	}
+
+	// No usable ptr_metadata.json yet — if the raw metadata.ptrupdate exists, the downloader has at
+	// least started and just hasn't finished its first update index; treat it as still running.
+	const auto meta_ptr_path = m_ptr_directory / "metadata.ptrupdate";
+	std::error_code ec;
+	const auto mtime = std::filesystem::last_write_time( meta_ptr_path, ec );
+	if ( !ec )
+	{
+		const auto age = std::filesystem::file_time_type::clock::now() - mtime;
+		return { "running", std::chrono::duration_cast< std::chrono::seconds >( age ) };
+	}
+
+	return { "running", std::chrono::seconds( 0 ) };
+}
+
+bool PTRImportWorker::waitForFile( const std::filesystem::path& file_path )
+{
+	while ( !std::filesystem::exists( file_path ) )
+	{
+		if ( m_cancelled ) return false;
+
+		const auto status = readDownloadStatus();
+		const bool terminal = status.state == "done" || status.state == "error" || status.state == "cancelled";
+		if ( terminal )
+		{
+			spdlog::debug(
+				"Downloader reported state '{}', giving up waiting for {}", status.state, file_path.string() );
+			return false;
+		}
+
+		if ( status.heartbeat_age >= FILE_WAIT_STALL_TIMEOUT )
+		{
+			spdlog::warn(
+				"Downloader heartbeat stale ({}s), giving up waiting for {}",
+				status.heartbeat_age.count(),
+				file_path.string() );
+			return false;
+		}
+
+		emit progress( QString( "Waiting for downloader to fetch %1..." )
+		                   .arg( QString::fromStdString( file_path.filename().string() ) ) );
+		std::this_thread::sleep_for( FILE_WAIT_POLL_INTERVAL );
+	}
+
+	return true;
+}
+
 bool PTRImportWorker::processInOrder()
 {
 	// Sort update entries by index so we always process definitions before content that depends on them
@@ -204,9 +279,11 @@ bool PTRImportWorker::processInOrder()
 			}
 
 			const auto file_path = m_ptr_directory / ( hash_hex + ".ptrupdate" );
-			if ( !std::filesystem::exists( file_path ) )
+			if ( !std::filesystem::exists( file_path ) && !waitForFile( file_path ) )
 			{
-				spdlog::warn( "File not found, skipping: {}", file_path.string() );
+				if ( m_cancelled ) return true;
+
+				spdlog::warn( "File never arrived, skipping: {}", file_path.string() );
 				emit fileProcessed( static_cast< int >( processed ), static_cast< int >( total_files ) );
 				continue;
 			}
@@ -280,20 +357,11 @@ bool PTRImportWorker::processInOrder()
 
 		update_stats.tags_created = static_cast< int >( unique_tag_ids.size() );
 
-		QString summary =
-			QString(
-				"Update %1: %2 files | %3 records, %4 tags, %5 mappings +, %6 mappings -, %7 parents +, %8 parents -, %9 aliases +, %10 aliases -" )
-				.arg( QLocale::system().toString( update_entry.index ), 4 )
-				.arg( QLocale::system().toString( update_file_count ), 8 )
-				.arg( QLocale::system().toString( update_stats.records_created ), 8 )
-				.arg( QLocale::system().toString( update_stats.tags_created ), 8 )
-				.arg( QLocale::system().toString( update_stats.mappings_added ), 8 )
-				.arg( QLocale::system().toString( update_stats.mappings_removed ), 8 )
-				.arg( QLocale::system().toString( update_stats.parents_added ), 8 )
-				.arg( QLocale::system().toString( update_stats.parents_removed ), 8 )
-				.arg( QLocale::system().toString( update_stats.aliases_added ), 8 )
-				.arg( QLocale::system().toString( update_stats.aliases_removed ), 8 );
-		emit updateCompleted( summary );
+		PTRHistoryEntry history_entry;
+		history_entry.update_index = update_entry.index;
+		history_entry.file_count = update_file_count;
+		history_entry.stats = update_stats;
+		emit updateCompleted( history_entry );
 	}
 
 	spdlog::info(
