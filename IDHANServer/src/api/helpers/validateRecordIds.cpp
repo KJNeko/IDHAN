@@ -6,8 +6,10 @@
 
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "caching/LRUCache.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "drogon/HttpAppFramework.h"
+#include "fgl/literals.hpp"
 
 namespace idhan::api::helpers
 {
@@ -17,6 +19,8 @@ ExpectedTask< void > validateRecordIds( std::vector< RecordID > record_ids, DbCl
 	std::ranges::sort( record_ids );
 	const auto duplicates { std::ranges::unique( record_ids ) };
 	record_ids.erase( duplicates.begin(), duplicates.end() );
+
+	using namespace fgl::literals;
 
 	const auto records_result { co_await db->execSqlCoro(
 		"SELECT record_id FROM records WHERE record_id = ANY($1::INTEGER[])",

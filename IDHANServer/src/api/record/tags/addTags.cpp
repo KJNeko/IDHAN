@@ -272,6 +272,84 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
 
+// Applies the same tag set to many records in a single statement (cross join of the two arrays),
+// instead of one INSERT per record. The per-record statement-level trigger on tag_mappings
+// (func_tag_mappings_after_insert) then fires once for the whole batch rather than once per record.
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecords(
+	std::vector< RecordID > record_ids,
+	std::vector< TagID > tag_ids,
+	const TagDomainID tag_domain_id,
+	DbClientPtr db )
+{
+	if ( record_ids.empty() || tag_ids.empty() ) co_return std::expected< void, drogon::HttpResponsePtr > {};
+
+	try
+	{
+		co_await db->execSqlCoro(
+			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
+			"SELECT r, t, $3 "
+			"FROM UNNEST($1::INTEGER[]) AS r "
+			"CROSS JOIN UNNEST($2::" TAG_PG_TYPE_NAME "[]) AS t "
+			"ON CONFLICT DO NOTHING",
+			std::move( record_ids ),
+			std::move( tag_ids ),
+			tag_domain_id );
+	}
+	catch ( std::exception& e )
+	{
+		co_return std::unexpected( createInternalError( "Error adding tags: {}", e.what() ) );
+	}
+
+	co_return std::expected< void, drogon::HttpResponsePtr > {};
+}
+
+// Applies a distinct tag set per record in a single statement. record_ids and tag_sets must be
+// parallel (tag_sets[i] applies to record_ids[i]); the pairs are flattened client-side into two
+// parallel arrays and zipped back together via UNNEST(a, b) server-side.
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagSetsToRecords(
+	const std::vector< RecordID >& record_ids,
+	const std::vector< std::vector< TagID > >& tag_sets,
+	const TagDomainID tag_domain_id,
+	DbClientPtr db )
+{
+	FGL_ASSERT( record_ids.size() == tag_sets.size(), "record_ids and tag_sets must be the same size" );
+
+	std::size_t total { 0 };
+	for ( const auto& set : tag_sets ) total += set.size();
+
+	std::vector< RecordID > flat_record_ids {};
+	std::vector< TagID > flat_tag_ids {};
+	flat_record_ids.reserve( total );
+	flat_tag_ids.reserve( total );
+
+	for ( std::size_t i = 0; i < record_ids.size(); ++i )
+		for ( const auto tag_id : tag_sets[ i ] )
+		{
+			flat_record_ids.push_back( record_ids[ i ] );
+			flat_tag_ids.push_back( tag_id );
+		}
+
+	if ( flat_record_ids.empty() ) co_return std::expected< void, drogon::HttpResponsePtr > {};
+
+	try
+	{
+		co_await db->execSqlCoro(
+			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
+			"SELECT pairs.record_id, pairs.tag_id, $3 "
+			"FROM UNNEST($1::INTEGER[], $2::" TAG_PG_TYPE_NAME "[]) AS pairs(record_id, tag_id) "
+			"ON CONFLICT DO NOTHING",
+			std::move( flat_record_ids ),
+			std::move( flat_tag_ids ),
+			tag_domain_id );
+	}
+	catch ( std::exception& e )
+	{
+		co_return std::unexpected( createInternalError( "Error adding tags: {}", e.what() ) );
+	}
+
+	co_return std::expected< void, drogon::HttpResponsePtr > {};
+}
+
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags(
 	const drogon::HttpRequestPtr request,
 	const RecordID record_id )
@@ -356,8 +434,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 	const auto record_validation { co_await helpers::validateRecordIds( record_ids, db ) };
 	if ( !record_validation ) co_return record_validation.error();
 
-	std::vector< drogon::Task< std::expected< void, drogon::HttpResponsePtr > > > add_results {};
-
 	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
 	if ( const auto& tags_json = json[ "tags" ]; tags_json.isArray() )
 	{
@@ -369,10 +445,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
-		for ( const auto record_id : record_ids )
-		{
-			add_results.emplace_back( addTagsToRecord( record_id, tag_pair_ids.value(), tag_domain_id.value(), db ) );
-		}
+		const auto result { co_await addTagsToRecords( record_ids, tag_pair_ids.value(), tag_domain_id.value(), db ) };
+
+		if ( !result ) co_return result.error();
 	}
 	else if ( !tags_json.isNull() )
 	{
@@ -414,31 +489,25 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		auto sets { co_await drogon::when_all( std::move( sets_processing_tasks ) ) };
 
+		std::vector< std::vector< TagID > > tag_sets {};
+		tag_sets.reserve( sets_json.size() );
+
 		for ( Json::ArrayIndex i = 0; i < sets_json.size(); ++i )
 		{
 			const auto& tag_ids_e { sets[ i ] };
 
 			if ( !tag_ids_e ) co_return tag_ids_e.error();
 
-			auto tag_ids { tag_ids_e.value() };
-
-			add_results.emplace_back(
-				addTagsToRecord( record_ids[ i ], std::move( tag_ids ), tag_domain_id.value(), db ) );
+			tag_sets.emplace_back( tag_ids_e.value() );
 		}
+
+		const auto result { co_await addTagSetsToRecords( record_ids, tag_sets, tag_domain_id.value(), db ) };
+
+		if ( !result ) co_return result.error();
 	}
 	else if ( !sets_json.isNull() )
 	{
 		co_return createBadRequest( "Invalid json: Sets must be array or null (not present)" );
-	}
-
-	const auto await_result { co_await drogon::when_all( std::move( add_results ) ) };
-
-	for ( const auto& result : await_result )
-	{
-		if ( !result )
-		{
-			co_return result.error();
-		}
 	}
 
 	co_return drogon::HttpResponse::newHttpResponse();
