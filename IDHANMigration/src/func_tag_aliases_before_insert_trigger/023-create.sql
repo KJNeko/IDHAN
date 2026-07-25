@@ -1,0 +1,34 @@
+-- Resolves ideal_alias_id to the end of the alias chain, and rejects alias cycles with a
+-- controlled message. The 'Cycle detected' prefix matches check_parent_cycle's convention and is
+-- matched by the createTagAliases endpoint to return 409; the CHECK ( aliased_id != ideal_alias_id )
+-- on tag_aliases remains as a backstop.
+CREATE OR REPLACE FUNCTION tag_aliases_before_insert_trigger()
+    RETURNS TRIGGER
+AS
+$$
+BEGIN
+
+    -- set the ideal id to be the highest id of the chain
+    new.ideal_alias_id = (SELECT fa.effective_tag_id
+                          FROM tag_aliases fa
+                          WHERE fa.aliased_id = new.alias_id
+                            AND fa.tag_domain_id = new.tag_domain_id);
+
+    -- the chain starting at the new alias target ends back at the aliased tag:
+    -- inserting this row would close a loop
+    IF new.ideal_alias_id = new.aliased_id THEN
+        RAISE EXCEPTION 'Cycle detected: aliasing % to % would create an alias cycle in domain %',
+            new.aliased_id, new.alias_id, new.tag_domain_id;
+    END IF;
+
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql;
+
+-- This trigger is for ensuring the ideal_alias_id is the highest of the chain
+-- So if A->B is inserted and B->C exists already, A->(B)C, aliased_id -> (alias_id)ideal_alias_id will be created virtually
+CREATE TRIGGER tag_aliases_before_insert
+    BEFORE INSERT
+    ON tag_aliases
+    FOR EACH ROW
+EXECUTE FUNCTION tag_aliases_before_insert_trigger();

@@ -13,7 +13,7 @@
         migration_id = MIGRATION_TARGET_ID;
 
         tx.exec( query );
-		addTableToInfo(tx, "MIGRATION_TABLE", query, MIGRATION_TARGET_ID);
+		addTableToInfo(tx, "MIGRATION_TABLE", "MIGRATION_OPERATION", query, MIGRATION_TARGET_ID);
     }
 
 NEXT_MIGRATION

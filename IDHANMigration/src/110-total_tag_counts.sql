@@ -1,1 +1,0 @@
-DROP TABLE total_tag_counts;
