@@ -7,6 +7,7 @@
 #include <charconv>
 
 #include "IDHANTypes.hpp"
+#include "caching/recordCaches.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "helpers/createBadRequest.hpp"
 
@@ -30,11 +31,19 @@ drogon::Task< drogon::HttpResponsePtr > RecordValidator::doFilter( const drogon:
 	if ( ec != std::errc {} || end != id_str.data() + id_str.size() || record_id <= 0 )
 		co_return createBadRequest( "Invalid record id: {}", id_str );
 
+	auto& cache { caching::recordExistsCache() };
+
+	// known-present record: skip the DB round-trip entirely
+	if ( cache.contains( record_id ) ) co_return nullptr;
+
 	auto db { drogon::app().getDbClient() };
 
 	const auto search { co_await db->execSqlCoro( "SELECT 1 FROM records WHERE record_id = $1", record_id ) };
 
 	if ( search.empty() ) co_return createNotFound( "Record {} does not exist", record_id );
+
+	// confirmed to exist; remember it (records are append-only, so this never goes stale)
+	cache.insert( record_id );
 
 	// filter passed
 	co_return nullptr;
