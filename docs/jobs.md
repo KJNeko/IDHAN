@@ -1,47 +1,70 @@
-# Table of Contents
+# Jobs
 
-- [Job types](#job-types)
-    - [Cluster Scan](#cluster-scan)
+Long-running work (cluster scans, metadata rescans) is broken into coroutine **jobs** run off the
+request thread. A job is dispatched immediately, the endpoint responds with a `job_id`, and the
+client polls a status endpoint until the job completes.
+
+Jobs are **not persisted to the database**. IDs are process-local and reset on restart; there is no
+`jobs` table. Everything below is in-memory state owned by the `JobRuntime` singleton
+(`IDHANServer/src/jobs/`).
 
 # Job endpoints
 
-- `GET /jobs/status` — list status of all jobs
-- `GET /jobs/{job_id}/status` — status of a specific job
-- `POST /jobs/metadata/rescan` — trigger a metadata rescan job
+- `GET /jobs/status` — status of all currently tracked jobs
+- `GET /jobs/{job_id}/status` — status of a single job
+- `POST /jobs/metadata/rescan` — dispatch a metadata rescan job
+
+Cluster scans are dispatched through the cluster API rather than a `/jobs` route:
+
+- `POST /clusters/{cluster_id}/scan` — dispatch a scan of the given cluster
 
 # Job types
 
+Anything queued via `queueJob()` is a job. The current job types are:
+
 ## Cluster Scan
 
-Cluster scan jobs are started via the cluster API: `POST /clusters/{cluster_id}/scan`
+Dispatched by `POST /clusters/{cluster_id}/scan`. Scans a cluster's directory for files that are
+present, missing, or corrupted, and indexes what it finds. While the cluster is read-only the scan
+never modifies files.
 
-The cluster scan job scans a given cluster for files that are missing or corrupted.
+## Metadata Rescan
 
-# Job Statuses
+Dispatched by `POST /jobs/metadata/rescan`. Re-runs metadata extraction over records.
 
-- Pending: The job has not been started but the information is stored in the table
-- Started: The job has started execution, If a job supports being canceled then it can return to `PENDING` if it's
-  paused.
-- Completed: The job has finished execution
-- Failed: The job has failed to execute
-- Await Dependency: The job is waiting on another job to complete before starting.
+## Test Job
+
+Dispatched by `GET /test`. A trivial job (runs a `SELECT 1`) used to exercise the job machinery.
+
+# Job status
+
+The status endpoints return a JSON object per job. `status` is one of:
+
+- `dispatched` — returned by the dispatching endpoint the moment a job is queued
+- `running` — the job coroutine has started and has not finished
+- `completed` — the job finished successfully; a `response` field carries its stored result
+- `failed` — the job finished with an error; an `error` field carries the message
+- `not_found` — no job with that id is currently tracked (never existed, or already cleaned up)
+
+Other fields include `job_id`, `job_name`, `location` (the source location that dispatched it), and,
+once started, `start_time`.
+
+Inside a job coroutine, `co_await getJobID()` yields the job's id and
+`co_await setJobResponse(json_or_response)` stores the result later exposed as `response`.
 
 # Internals
 
-When a job is created, It will begin with preparing the context and send it to the DB. From there a worker will take
-jobs
-from the `jobs` table and execute them given a few rules.
+`JobRuntime` (`getJobRuntime()`, a process-wide singleton) owns an in-memory queue and two threads:
 
-A job can have a dependency on another job being completed.
+- a **runner** thread that pops queued jobs and dispatches each onto a `trantor::EventLoopThreadPool`,
+- a **cleanup** thread that reaps finished jobs.
 
-- A job is requested
-- The job context is created with the information required
-- `prepare()` is called, This will create any dependency jobs and prepare the context further.
+The pool size comes from `server.job_threads` (config), defaulting to
+`hardware_concurrency / 4`, minimum 2.
 
-# Job Dependencies
+`queueJob(task, name)` enqueues a `JobTask` coroutine, wakes the runner, and returns a `JobContext`
+(shared pointer) whose `id()` is the job id handed back to the client. Completed jobs are retained
+for one hour so their result stays pollable, or dropped sooner once a status query has read them.
 
-Job dependencies are used to break up large jobs into smaller jobs that can be completed in parallel on multiple
-threads.
-One example of this is a cluster scan job. The cluster scan job will start scan jobs on every file in the cluster.
-Which also have dependencies such as mime scanning and mime parsing (metadata)
-The cluster scan job will not report completed until all other jobs have completed.
+There is no dependency graph, no `prepare()` phase, and no pause/resume: a job runs to completion (or
+failure) once dispatched.
