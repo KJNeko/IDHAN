@@ -105,7 +105,6 @@ COPY .git /build/.git
 # Build IDHANServer with ccache mount
 ARG IDHAN_DISABLE_API_AUTH=OFF
 ARG CMAKE_BUILD_TYPE=Release
-ARG IDHAN_ENABLE_TRACY=OFF
 ENV CCACHE_DIR=/root/.ccache
 # safe.directory: the copied .git is root-owned like the build user, but declare it explicitly so
 # git never refuses with "dubious ownership" under a different build UID.
@@ -127,7 +126,6 @@ RUN --mount=type=cache,target=/root/.ccache \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
-    -DIDHAN_ENABLE_TRACY=${IDHAN_ENABLE_TRACY} \
     -DTRANTOR_USE_TLS=none \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
     cmake --build build --target IDHANServer -j$(nproc) && \
@@ -183,10 +181,7 @@ ENV IDHAN_DATABASE_HOST=localhost \
 
 RUN chmod +x /usr/bin/IDHANServer
 
-# Expose default port, plus Tracy's profiler port (8086, TCP data + UDP broadcast) which the client
-# listens on when the image is built with --build-arg IDHAN_ENABLE_TRACY=ON. EXPOSE is metadata only;
-# publish the port (compose `ports:`) to actually reach it from the host.
-EXPOSE 16609 8086 8086/udp
+EXPOSE 16609
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD curl --fail --silent http://localhost:16609/health || exit 1
