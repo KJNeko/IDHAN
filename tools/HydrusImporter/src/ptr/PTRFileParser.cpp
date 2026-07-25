@@ -280,19 +280,53 @@ MetadataUpdate parseMetadataUpdate( const Json::Value& serialisable_info )
 	{
 		if ( !entry.isArray() || entry.size() < 4 ) continue;
 
+		const auto& hashes = entry[ 1 ];
+		if ( !hashes.isArray() )
+		{
+			spdlog::warn(
+				"Skipping metadata update entry (index={}) with missing/invalid \"hashes\" field", entry[ 0 ].asInt() );
+			continue;
+		}
+
 		MetadataUpdateEntry ue;
 		ue.index = entry[ 0 ].asInt();
-		const auto& hashes = entry[ 1 ];
-		if ( hashes.isArray() )
-		{
-			for ( const auto& h : hashes )
-				ue.hashes.push_back( h.asString() );
-		}
+		for ( const auto& h : hashes ) ue.hashes.push_back( h.asString() );
 		ue.begin = entry[ 2 ].asInt64();
 		ue.end = entry[ 3 ].asInt64();
 
 		result.updates.push_back( std::move( ue ) );
 	}
+
+	return result;
+}
+
+MetadataUpdate parseMetadataCacheJson( const Json::Value& root )
+{
+	MetadataUpdate result;
+
+	const auto& updates_arr = root[ "updates" ];
+	if ( updates_arr.isArray() )
+	{
+		for ( const auto& u : updates_arr )
+		{
+			const auto& hashes = u[ "hashes" ];
+			if ( !hashes.isArray() )
+			{
+				spdlog::warn(
+					"Skipping ptr_metadata.json update entry (index={}) with missing/invalid \"hashes\" field",
+					u.get( "index", -1 ).asInt() );
+				continue;
+			}
+
+			MetadataUpdateEntry entry;
+			entry.index = u[ "index" ].asInt();
+			for ( const auto& h : hashes ) entry.hashes.push_back( h.asString() );
+			entry.begin = u[ "begin" ].asInt64();
+			entry.end = u[ "end" ].asInt64();
+			result.updates.push_back( std::move( entry ) );
+		}
+	}
+	result.next_update_due = root.get( "next_update_due", 0 ).asInt64();
 
 	return result;
 }

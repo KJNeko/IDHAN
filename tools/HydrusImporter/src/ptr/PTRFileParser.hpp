@@ -90,4 +90,10 @@ ContentUpdate parseContentUpdate( const Json::Value& serialisable_info );
 //! Parses the metadata payload of an update's serialisable info.
 MetadataUpdate parseMetadataUpdate( const Json::Value& serialisable_info );
 
+//! Parses the "updates" array of the app's own ptr_metadata.json cache format (object-shaped
+//! entries: index/hashes/begin/end), as opposed to parseMetadataUpdate's raw Hydrus array format.
+//! An entry whose "hashes" field is missing or not an array is logged and skipped rather than kept
+//! with an empty hash list.
+MetadataUpdate parseMetadataCacheJson( const Json::Value& root );
+
 } // namespace idhan::hydrus::ptr

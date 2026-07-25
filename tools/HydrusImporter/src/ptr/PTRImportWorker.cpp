@@ -72,24 +72,7 @@ void PTRImportWorker::loadMetadata()
 			std::string errors;
 			if ( Json::parseFromStream( builder, file, &root, &errors ) )
 			{
-				const auto& updates_arr = root[ "updates" ];
-				if ( updates_arr.isArray() )
-				{
-					for ( const auto& u : updates_arr )
-					{
-						MetadataUpdateEntry entry;
-						entry.index = u[ "index" ].asInt();
-						const auto& hashes = u[ "hashes" ];
-						if ( hashes.isArray() )
-						{
-							for ( const auto& h : hashes ) entry.hashes.push_back( h.asString() );
-						}
-						entry.begin = u[ "begin" ].asInt64();
-						entry.end = u[ "end" ].asInt64();
-						m_metadata.updates.push_back( std::move( entry ) );
-					}
-				}
-				m_metadata.next_update_due = root.get( "next_update_due", 0 ).asInt64();
+				m_metadata = parseMetadataCacheJson( root );
 
 				const auto& imported = root[ "imported_files" ];
 				if ( imported.isObject() )
