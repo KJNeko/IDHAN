@@ -87,25 +87,7 @@ void PTRDownloader::loadMetadata()
 	}
 
 	m_last_update_index = root.get( "last_update_index", -1 ).asInt();
-	m_metadata.next_update_due = root.get( "next_update_due", 0 ).asInt64();
-
-	const auto& updates_arr = root[ "updates" ];
-	if ( updates_arr.isArray() )
-	{
-		for ( const auto& u : updates_arr )
-		{
-			MetadataUpdateEntry entry;
-			entry.index = u[ "index" ].asInt();
-			const auto& hashes = u[ "hashes" ];
-			if ( hashes.isArray() )
-			{
-				for ( const auto& h : hashes ) entry.hashes.push_back( h.asString() );
-			}
-			entry.begin = u[ "begin" ].asInt64();
-			entry.end = u[ "end" ].asInt64();
-			m_metadata.updates.push_back( std::move( entry ) );
-		}
-	}
+	m_metadata = parseMetadataCacheJson( root );
 
 	const auto& dl_hashes = root[ "downloaded_hashes" ];
 	if ( dl_hashes.isArray() )
