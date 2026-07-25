@@ -4,6 +4,7 @@
 
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
@@ -14,6 +15,7 @@ drogon::Task< Json::Value > getSimilarTags(
 	const std::size_t limit,
 	const bool include_unused )
 {
+	ZoneScopedN( "getSimilarTags" );
 	log::debug( "Searching for tag \"{}\"", search_value );
 
 	const bool is_negative { search_value.starts_with( '-' ) };
@@ -100,6 +102,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::autocomplete(
 	const drogon::HttpRequestPtr request,
 	const std::string search_value )
 {
+	ZoneScopedN( "TagAPI::autocomplete" );
 	const auto display_type { request->getOptionalParameter< std::string >( "tag_display_type" ) };
 
 	const std::string display_type_str { display_type.value_or( "storage" ) };

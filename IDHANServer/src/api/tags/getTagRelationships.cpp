@@ -3,6 +3,7 @@
 //
 
 #include "api/TagAPI.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
@@ -12,6 +13,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagRelationships(
 	const TagDomainID tag_domain_id,
 	const TagID tag_id )
 {
+	ZoneScopedN( "TagAPI::getTagRelationships" );
 	const auto db { drogon::app().getDbClient() };
 
 	auto parents_result { db->execSqlCoro(

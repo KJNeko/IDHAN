@@ -23,7 +23,7 @@ JobTask JobTaskPromise::get_return_object()
 #ifdef TRACY_ENABLE
 idhan::tracy_coro::FiberInitialAwaiter JobTaskPromise::initial_suspend()
 {
-	return { m_fiber_name.c_str() };
+	return { m_fiber_name, m_fiber_ctx };
 }
 #else
 std::suspend_always JobTaskPromise::initial_suspend()

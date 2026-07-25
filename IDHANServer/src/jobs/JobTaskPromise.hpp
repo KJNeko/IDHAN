@@ -27,7 +27,8 @@ struct JobTaskPromise
 	JobTask get_return_object();
 
 #ifdef TRACY_ENABLE
-	std::string m_fiber_name { idhan::tracy_coro::makeFiberName( "job" ) };
+	idhan::tracy_coro::FiberCtx m_fiber_ctx { idhan::tracy_coro::makeChildCtx( "job" ) };
+	const char* m_fiber_name { idhan::tracy_coro::internFiberNameFor( m_fiber_ctx ) };
 
 	idhan::tracy_coro::FiberInitialAwaiter initial_suspend();
 
@@ -36,8 +37,8 @@ struct JobTaskPromise
 	template < typename Awaitable >
 	auto await_transform( Awaitable&& awaitable )
 	{
-		return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ),
-			                                                   m_fiber_name.c_str() };
+		return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ), m_fiber_name, m_fiber_ctx
+		};
 	}
 #else
 	std::suspend_always initial_suspend();

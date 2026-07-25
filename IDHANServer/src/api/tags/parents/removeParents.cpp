@@ -2,12 +2,14 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "logging/log.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::removeTagParents( const drogon::HttpRequestPtr request )
 {
+	ZoneScopedN( "TagAPI::removeTagParents" );
 	const auto json_obj { request->getJsonObject() };
 
 	if ( json_obj == nullptr ) co_return createBadRequest( "No valid json object" );

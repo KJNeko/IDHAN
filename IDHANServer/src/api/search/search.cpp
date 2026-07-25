@@ -10,12 +10,14 @@
 #include "core/search/SearchBuilder.hpp"
 #include "db/TagSearch.hpp"
 #include "logging/log.hpp"
+#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPtr request )
 {
+	ZoneScoped;
 	auto db { drogon::app().getDbClient() };
 
 	// Drogon does not support tag_id=1?tag_id=2 for some reason, But it's possible to be sent like that, So we'll
