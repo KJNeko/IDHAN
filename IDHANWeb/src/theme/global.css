@@ -1136,6 +1136,55 @@ body {
   gap: 0.35rem;
   flex-wrap: wrap;
 }
+.scan-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.scan-modal {
+  width: min(440px, 92vw);
+  background: #1b1e24;
+  border: 1px solid #2a2e37;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.scan-modal-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.scan-modal-preset {
+  align-self: flex-start;
+}
+.scan-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 1rem;
+}
+.scan-modal-advanced {
+  border-top: 1px solid #2a2e37;
+  padding-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.scan-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.log-check.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 /* Tag Relationships */
 .tag-relationships {
