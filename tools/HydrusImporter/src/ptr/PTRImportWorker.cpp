@@ -1,23 +1,90 @@
 #include "PTRImportWorker.hpp"
 
 #include <QEventLoop>
+#include <QFuture>
 #include <QLocale>
 
 #include <json/json.h>
 #include <spdlog/spdlog.h>
 
 #include <chrono>
-#include <deque>
 #include <fstream>
-#include <optional>
+#include <iterator>
 #include <ranges>
 #include <set>
 #include <thread>
+#include <type_traits>
 
 #include "PTRConstants.hpp"
 #include "PTRFileParser.hpp"
 #include "idhan/IDHANClient.hpp"
 #include "splitTag.hpp"
+
+namespace
+{
+
+//! Split [0,n) into [start,end) chunks of at most \p batch_size and invoke \p launch(start,end) for
+//! each, returning all the futures it produced. Nothing is awaited here — every batch is submitted
+//! before any is waited on, so they run concurrently (bounded only by QNetworkAccessManager).
+template < typename Launch >
+auto launchBatches( const std::size_t n, const std::size_t batch_size, Launch&& launch )
+{
+	using Future = std::invoke_result_t< Launch&, std::size_t, std::size_t >;
+	std::vector< Future > futures {};
+	futures.reserve( n / batch_size + 1 );
+	for ( std::size_t start = 0; start < n; start += batch_size )
+		futures.push_back( launch( start, std::min( start + batch_size, n ) ) );
+	return futures;
+}
+
+//! Wait for every value-returning future, invoking assign(input_index, value) for each result while
+//! preserving batch alignment: a batch that throws leaves its indices unassigned rather than
+//! shifting the ones after it. \p on_progress is called with (completed_batches, total_batches).
+template < typename T, typename Assign, typename OnProgress >
+void awaitBatches(
+	std::vector< QFuture< std::vector< T > > >& futures,
+	const std::size_t batch_size,
+	const char* const what,
+	Assign&& assign,
+	OnProgress&& on_progress )
+{
+	for ( std::size_t b = 0; b < futures.size(); ++b )
+	{
+		try
+		{
+			futures[ b ].waitForFinished();
+			const auto& results = futures[ b ].result();
+			const std::size_t start = b * batch_size;
+			for ( std::size_t j = 0; j < results.size(); ++j ) assign( start + j, results[ j ] );
+		}
+		catch ( const std::exception& e )
+		{
+			spdlog::error( "{} batch {} failed: {}", what, b, e.what() );
+		}
+		on_progress( b + 1, futures.size() );
+	}
+}
+
+//! Wait for every void future, logging any that threw. \p on_progress is called with
+//! (completed, total) after each future resolves.
+template < typename OnProgress >
+void awaitBatches( std::vector< QFuture< void > >& futures, const char* const what, OnProgress&& on_progress )
+{
+	for ( std::size_t i = 0; i < futures.size(); ++i )
+	{
+		try
+		{
+			futures[ i ].waitForFinished();
+		}
+		catch ( const std::exception& e )
+		{
+			spdlog::error( "{} batch {} failed: {}", what, i, e.what() );
+		}
+		on_progress( i + 1, futures.size() );
+	}
+}
+
+} // namespace
 
 namespace idhan::hydrus::ptr
 {
@@ -364,20 +431,10 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	ContentStats stats;
 	auto& client = IDHANClient::instance();
 
-	for ( const auto& mapping : content.mappings_add )
-		stats.mappings_added += static_cast< int >( mapping.hash_ids.size() );
-
-	for ( const auto& mapping : content.mappings_delete )
-		stats.mappings_removed += static_cast< int >( mapping.hash_ids.size() );
-
-	stats.parents_added = static_cast< int >( content.tag_parents_add.size() );
-	stats.parents_removed = static_cast< int >( content.tag_parents_delete.size() );
-	stats.aliases_added = static_cast< int >( content.tag_siblings_add.size() );
-	stats.aliases_removed = static_cast< int >( content.tag_siblings_delete.size() );
-
 	emit subProgress( 0, 0, progress_prefix + " - Analyzing..." );
 	spdlog::trace( "Processing content file: {}", hash_hex );
 
+	// ---- Gather unique ids and per-record tag sets in a single pass over each list ----
 	std::unordered_map< int /*hash_id*/, std::set< int /*tag_id*/ > > hash_to_tags;
 	std::unordered_map< int /*hash_id*/, std::set< int /*tag_id*/ > > hash_to_tags_delete;
 	std::unordered_set< int > all_hash_ids;
@@ -386,6 +443,7 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	for ( const auto& mapping : content.mappings_add )
 	{
 		all_tag_ids.insert( mapping.tag_id );
+		stats.mappings_added += static_cast< int >( mapping.hash_ids.size() );
 		for ( const auto& hid : mapping.hash_ids )
 		{
 			all_hash_ids.insert( hid );
@@ -396,6 +454,7 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	for ( const auto& mapping : content.mappings_delete )
 	{
 		all_tag_ids.insert( mapping.tag_id );
+		stats.mappings_removed += static_cast< int >( mapping.hash_ids.size() );
 		for ( const auto& hid : mapping.hash_ids )
 		{
 			all_hash_ids.insert( hid );
@@ -408,766 +467,327 @@ ContentStats PTRImportWorker::processSingleContentFile(
 		all_tag_ids.insert( child_id );
 		all_tag_ids.insert( parent_id );
 	}
-
 	for ( const auto& [ child_id, parent_id ] : content.tag_parents_delete )
 	{
 		all_tag_ids.insert( child_id );
 		all_tag_ids.insert( parent_id );
 	}
-
 	for ( const auto& [ bad_id, good_id ] : content.tag_siblings_add )
 	{
 		all_tag_ids.insert( bad_id );
 		all_tag_ids.insert( good_id );
 	}
-
 	for ( const auto& [ bad_id, good_id ] : content.tag_siblings_delete )
 	{
 		all_tag_ids.insert( bad_id );
 		all_tag_ids.insert( good_id );
 	}
 
-	spdlog::trace( "Phase 1: {} unique hash_ids, {} unique tag_ids", all_hash_ids.size(), all_tag_ids.size() );
+	stats.parents_added = static_cast< int >( content.tag_parents_add.size() );
+	stats.parents_removed = static_cast< int >( content.tag_parents_delete.size() );
+	stats.aliases_added = static_cast< int >( content.tag_siblings_add.size() );
+	stats.aliases_removed = static_cast< int >( content.tag_siblings_delete.size() );
 
 	unique_tag_ids.insert( all_tag_ids.begin(), all_tag_ids.end() );
 
-	std::vector< std::string > hash_hexes;
-	hash_hexes.reserve( all_hash_ids.size() );
+	spdlog::trace( "Phase 1: {} unique hash_ids, {} unique tag_ids", all_hash_ids.size(), all_tag_ids.size() );
 
+	// ---- Translate hash_ids -> hex, tag_ids -> (namespace, subtag) ----
+	std::vector< std::string > hash_hexes;
 	std::unordered_map< int, std::string > hash_id_to_hex;
+	hash_hexes.reserve( all_hash_ids.size() );
 	hash_id_to_hex.reserve( all_hash_ids.size() );
 	for ( const auto& hid : all_hash_ids )
 	{
-		auto it = m_tables.hash_id_to_sha256.find( hid );
+		const auto it = m_tables.hash_id_to_sha256.find( hid );
 		if ( it == m_tables.hash_id_to_sha256.end() )
 		{
 			spdlog::warn( "Missing hash definition for hash_id={}, skipping", hid );
 			continue;
 		}
-		hash_id_to_hex[ hid ] = it->second;
+		// A SHA-256 hex string is exactly 64 characters. Anything else is a malformed definition —
+		// skip it so it never reaches the createRecords batch (mappings referencing it are dropped
+		// downstream, since it won't be in hash_id_to_hex).
+		if ( it->second.size() != 64 )
+		{
+			spdlog::warn( "Invalid hash for hash_id={} ({} chars, expected 64), skipping", hid, it->second.size() );
+			continue;
+		}
+		hash_id_to_hex.emplace( hid, it->second );
 		hash_hexes.push_back( it->second );
 	}
-
-	spdlog::trace( "Phase 2: {} hash_ids translated to SHA-256", hash_hexes.size() );
 
 	std::vector< std::pair< std::string, std::string > > tag_pairs;
 	std::vector< int > translated_tag_ids; // parallel to tag_pairs — same index → same position
 	tag_pairs.reserve( all_tag_ids.size() );
 	translated_tag_ids.reserve( all_tag_ids.size() );
-
-	std::unordered_map< int, std::pair< std::string, std::string > > tag_id_to_pair;
-	tag_id_to_pair.reserve( all_tag_ids.size() );
 	for ( const auto& tid : all_tag_ids )
 	{
-		auto it = m_tables.tag_id_to_tag.find( tid );
+		const auto it = m_tables.tag_id_to_tag.find( tid );
 		if ( it == m_tables.tag_id_to_tag.end() )
 		{
 			spdlog::warn( "Missing tag definition for tag_id={}, skipping", tid );
 			continue;
 		}
-		auto pair = splitTag( it->second );
-		tag_id_to_pair[ tid ] = pair;
-		tag_pairs.push_back( std::move( pair ) );
+		tag_pairs.push_back( splitTag( it->second ) );
 		translated_tag_ids.push_back( tid );
 	}
 
-	spdlog::trace( "Phase 3: {} tag_ids translated to strings", tag_pairs.size() );
+	spdlog::trace( "Phase 2/3: {} hashes, {} tags translated", hash_hexes.size(), tag_pairs.size() );
 
+	if ( m_cancelled ) return stats;
+
+	// ---- Phase A: create records and tags. Both are independent, so every batch of both is
+	// submitted before either is awaited — records and tags are created concurrently. ----
 	std::unordered_map< std::string, RecordID > hex_to_record_id;
-	hex_to_record_id.reserve( hash_hexes.size() );
-
-	std::vector< RecordID > phase4_record_ids {};
-	if ( !hash_hexes.empty() )
-	{
-		spdlog::trace( "Phase 4: creating {} records via IDHAN API (concurrency={})", hash_hexes.size(), CONCURRENCY );
-		phase4_record_ids.reserve( hash_hexes.size() );
-
-		const std::size_t total_batches = ( hash_hexes.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
-		std::vector< std::optional< std::vector< RecordID > > > batch_results( total_batches );
-		std::vector< QFuture< std::vector< RecordID > > > futures;
-		futures.reserve( CONCURRENCY );
-		std::vector< std::size_t > batch_indices;
-		batch_indices.reserve( CONCURRENCY );
-
-		for ( std::size_t batch_idx = 0; batch_idx < total_batches; ++batch_idx )
-		{
-			if ( m_cancelled ) return stats;
-
-			const std::size_t start = batch_idx * BATCH_SIZE;
-			const std::size_t end = std::min( start + BATCH_SIZE, hash_hexes.size() );
-			std::vector< std::string > batch(
-				hash_hexes.begin() + static_cast< std::ptrdiff_t >( start ),
-				hash_hexes.begin() + static_cast< std::ptrdiff_t >( end ) );
-
-			emit subProgress(
-				static_cast< int >( batch_idx ),
-				static_cast< int >( total_batches ),
-				progress_prefix
-					+ QString( " - creating records (%1/%2)" )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
-
-			futures.push_back( client.createRecords( batch ) );
-			batch_indices.push_back( batch_idx );
-
-			if ( futures.size() >= CONCURRENCY )
-			{
-				for ( std::size_t i = 0; i < futures.size(); ++i )
-				{
-					try
-					{
-						futures[ i ].waitForFinished();
-						batch_results[ batch_indices[ i ] ] = futures[ i ].result();
-					}
-					catch ( const std::exception& e )
-					{
-						spdlog::error( "createRecords batch {} failed: {}", batch_indices[ i ], e.what() );
-						emit progress(
-							progress_prefix
-							+ QString( " - batch %1 failed: %2" ).arg( batch_indices[ i ] ).arg( e.what() ) );
-					}
-				}
-				futures.clear();
-				batch_indices.clear();
-			}
-		}
-
-		for ( std::size_t i = 0; i < futures.size(); ++i )
-		{
-			try
-			{
-				futures[ i ].waitForFinished();
-				batch_results[ batch_indices[ i ] ] = futures[ i ].result();
-			}
-			catch ( const std::exception& e )
-			{
-				spdlog::error( "createRecords batch {} failed: {}", batch_indices[ i ], e.what() );
-				emit progress(
-					progress_prefix + QString( " - batch %1 failed: %2" ).arg( batch_indices[ i ] ).arg( e.what() ) );
-			}
-		}
-
-		for ( std::size_t b = 0; b < batch_results.size(); ++b )
-		{
-			if ( batch_results[ b ].has_value() )
-			{
-				const auto& results = batch_results[ b ].value();
-				const std::size_t start = b * BATCH_SIZE;
-				for ( std::size_t j = 0; j < results.size(); ++j )
-				{
-					const std::size_t hex_index = start + j;
-					if ( hex_index < hash_hexes.size() )
-					{
-						hex_to_record_id[ hash_hexes[ hex_index ] ] = results[ j ];
-						phase4_record_ids.push_back( results[ j ] );
-					}
-				}
-			}
-		}
-
-		spdlog::trace( "Phase 4: got {} record IDs back", phase4_record_ids.size() );
-		stats.records_created = static_cast< int >( phase4_record_ids.size() );
-	}
-
 	std::unordered_map< int, TagID > tag_id_to_idhan_id;
+	hex_to_record_id.reserve( hash_hexes.size() );
 	tag_id_to_idhan_id.reserve( tag_pairs.size() );
-	if ( !tag_pairs.empty() )
+
 	{
-		spdlog::trace( "Phase 5: creating {} tags via IDHAN API (concurrency={})", tag_pairs.size(), CONCURRENCY );
-		std::vector< TagID > idhan_tag_ids;
-		idhan_tag_ids.reserve( tag_pairs.size() );
-
-		const std::size_t total_batches = ( tag_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
-		std::vector< std::optional< std::vector< TagID > > > batch_results( total_batches );
-		std::vector< QFuture< std::vector< TagID > > > futures;
-		futures.reserve( CONCURRENCY );
-		std::vector< std::size_t > batch_indices;
-		batch_indices.reserve( CONCURRENCY );
-
-		for ( std::size_t batch_idx = 0; batch_idx < total_batches; ++batch_idx )
-		{
-			if ( m_cancelled ) return stats;
-
-			const std::size_t start = batch_idx * BATCH_SIZE;
-			const std::size_t end = std::min( start + BATCH_SIZE, tag_pairs.size() );
-			std::vector< std::pair< std::string, std::string > > batch(
-				tag_pairs.begin() + static_cast< std::ptrdiff_t >( start ),
-				tag_pairs.begin() + static_cast< std::ptrdiff_t >( end ) );
-
-			emit subProgress(
-				static_cast< int >( batch_idx ),
-				static_cast< int >( total_batches ),
-				progress_prefix
-					+ QString( " - creating tags (%1/%2)" )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
-
-			futures.push_back( client.createTags( batch ) );
-			batch_indices.push_back( batch_idx );
-
-			if ( futures.size() >= CONCURRENCY )
+		auto record_futures = launchBatches(
+			hash_hexes.size(),
+			BATCH_SIZE,
+			[ & ]( const std::size_t s, const std::size_t e )
 			{
-				for ( std::size_t i = 0; i < futures.size(); ++i )
+				return client.createRecords( std::vector< std::string >(
+					hash_hexes.begin() + static_cast< std::ptrdiff_t >( s ),
+					hash_hexes.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+			} );
+
+		auto tag_futures = launchBatches(
+			tag_pairs.size(),
+			BATCH_SIZE,
+			[ & ]( const std::size_t s, const std::size_t e )
+			{
+				return client.createTags( std::vector< std::pair< std::string, std::string > >(
+					tag_pairs.begin() + static_cast< std::ptrdiff_t >( s ),
+					tag_pairs.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+			} );
+
+		spdlog::trace(
+			"Phase A: creating {} records / {} tags across {} + {} batches",
+			hash_hexes.size(),
+			tag_pairs.size(),
+			record_futures.size(),
+			tag_futures.size() );
+
+		awaitBatches(
+			record_futures,
+			BATCH_SIZE,
+			"createRecords",
+			[ & ]( const std::size_t i, const RecordID rid )
+			{
+				if ( i < hash_hexes.size() )
 				{
-					try
-					{
-						futures[ i ].waitForFinished();
-						batch_results[ batch_indices[ i ] ] = futures[ i ].result();
-					}
-					catch ( const std::exception& e )
-					{
-						spdlog::error( "createTags batch {} failed: {}", batch_indices[ i ], e.what() );
-						emit progress(
-							progress_prefix
-							+ QString( " - batch %1 failed: %2" ).arg( batch_indices[ i ] ).arg( e.what() ) );
-					}
+					hex_to_record_id[ hash_hexes[ i ] ] = rid;
+					++stats.records_created;
 				}
-				futures.clear();
-				batch_indices.clear();
-			}
-		}
-
-		for ( std::size_t i = 0; i < futures.size(); ++i )
-		{
-			try
+			},
+			[ & ]( const std::size_t done, const std::size_t total )
 			{
-				futures[ i ].waitForFinished();
-				batch_results[ batch_indices[ i ] ] = futures[ i ].result();
-			}
-			catch ( const std::exception& e )
-			{
-				spdlog::error( "createTags batch {} failed: {}", batch_indices[ i ], e.what() );
-				emit progress(
-					progress_prefix + QString( " - batch %1 failed: %2" ).arg( batch_indices[ i ] ).arg( e.what() ) );
-			}
-		}
+				emit subProgress(
+					static_cast< int >( done ),
+					static_cast< int >( total ),
+					progress_prefix + " - creating records" );
+			} );
 
-		for ( std::size_t b = 0; b < batch_results.size(); ++b )
-		{
-			if ( batch_results[ b ].has_value() )
+		awaitBatches(
+			tag_futures,
+			BATCH_SIZE,
+			"createTags",
+			[ & ]( const std::size_t i, const TagID tid )
 			{
-				const auto& results = batch_results[ b ].value();
-				idhan_tag_ids.insert( idhan_tag_ids.end(), results.begin(), results.end() );
-			}
-		}
-
-		for ( std::size_t b = 0; b < batch_results.size(); ++b )
-		{
-			if ( batch_results[ b ].has_value() )
+				if ( i < translated_tag_ids.size() ) tag_id_to_idhan_id[ translated_tag_ids[ i ] ] = tid;
+			},
+			[ & ]( const std::size_t done, const std::size_t total )
 			{
-				const auto& results = batch_results[ b ].value();
-				const std::size_t batch_start = b * BATCH_SIZE;
-				for ( std::size_t j = 0; j < results.size(); ++j )
-				{
-					const std::size_t tag_idx = batch_start + j;
-					if ( tag_idx < translated_tag_ids.size() )
-					{
-						tag_id_to_idhan_id[ translated_tag_ids[ tag_idx ] ] = results[ j ];
-					}
-				}
-			}
-		}
+				emit subProgress(
+					static_cast< int >( done ),
+					static_cast< int >( total ),
+					progress_prefix + " - creating tags" );
+			} );
 
-		spdlog::trace( "Phase 5: {} tags registered in IDHAN", tag_id_to_idhan_id.size() );
+		spdlog::trace( "Phase A: {} records, {} tags registered", stats.records_created, tag_id_to_idhan_id.size() );
 	}
 
-	if ( !hash_to_tags.empty() )
+	if ( m_cancelled ) return stats;
+
+	// ---- Phase B: apply every mapping/relationship change. Each depends only on Phase A, not on
+	// one another (adds and deletes within one update touch disjoint rows), so all of them are
+	// launched up front and awaited together as one concurrent pool of void futures. ----
+
+	// Build parallel (record_ids, tag_id_sets) from a hash_id -> tag_id_set map, resolving through
+	// the ids Phase A already produced. Using TagIDs here avoids the string-pair addTags overload,
+	// which would re-create every tag server-side (they already exist from Phase A).
+	const auto buildRecordTagSets = [ & ]( const auto& hash_to_tagids )
 	{
-		spdlog::trace( "Phase 6: applying {} hash->tag mappings", hash_to_tags.size() );
-		std::vector< RecordID > record_ids;
-		std::vector< std::vector< std::pair< std::string, std::string > > > tag_sets;
-
-		for ( const auto& [ hid, tag_id_set ] : hash_to_tags )
+		std::vector< RecordID > recs;
+		std::vector< std::vector< TagID > > sets;
+		recs.reserve( hash_to_tagids.size() );
+		sets.reserve( hash_to_tagids.size() );
+		for ( const auto& [ hid, tid_set ] : hash_to_tagids )
 		{
-			auto hex_it = hash_id_to_hex.find( hid );
+			const auto hex_it = hash_id_to_hex.find( hid );
 			if ( hex_it == hash_id_to_hex.end() ) continue;
-
-			auto rec_it = hex_to_record_id.find( hex_it->second );
+			const auto rec_it = hex_to_record_id.find( hex_it->second );
 			if ( rec_it == hex_to_record_id.end() ) continue;
 
-			std::vector< std::pair< std::string, std::string > > file_tags;
-			for ( const auto& tid : tag_id_set )
+			std::vector< TagID > ids;
+			ids.reserve( tid_set.size() );
+			for ( const auto& tid : tid_set )
 			{
-				auto tag_it = tag_id_to_pair.find( tid );
-				if ( tag_it != tag_id_to_pair.end() ) file_tags.push_back( tag_it->second );
+				const auto it = tag_id_to_idhan_id.find( tid );
+				if ( it != tag_id_to_idhan_id.end() ) ids.push_back( it->second );
 			}
-
-			if ( !file_tags.empty() )
+			if ( !ids.empty() )
 			{
-				record_ids.push_back( rec_it->second );
-				tag_sets.push_back( std::move( file_tags ) );
+				recs.push_back( rec_it->second );
+				sets.push_back( std::move( ids ) );
 			}
 		}
+		return std::pair { std::move( recs ), std::move( sets ) };
+	};
 
-		if ( !record_ids.empty() )
-		{
-			spdlog::trace(
-				"Phase 6: calling addTags with {} records (concurrency={})", record_ids.size(), CONCURRENCY );
-			const std::size_t total_batches = ( record_ids.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
-			std::deque< QFuture< void > > in_flight;
-			std::size_t batch_idx = 0;
-
-			for ( std::size_t i = 0; i < record_ids.size(); i += BATCH_SIZE )
-			{
-				if ( m_cancelled ) return stats;
-
-				const std::size_t end = std::min( i + BATCH_SIZE, record_ids.size() );
-				const std::size_t count = end - i;
-
-				emit subProgress(
-					static_cast< int >( batch_idx ),
-					static_cast< int >( total_batches ),
-					progress_prefix
-						+ QString( " - applying tags (%1/%2 batches)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
-
-				std::vector< RecordID > batch_record_ids;
-				batch_record_ids.reserve( count );
-				std::vector< std::vector< std::pair< std::string, std::string > > > batch_tag_sets;
-				batch_tag_sets.reserve( count );
-
-				for ( std::size_t j = i; j < end; ++j )
-				{
-					batch_record_ids.push_back( record_ids[ j ] );
-					batch_tag_sets.push_back( std::move( tag_sets[ j ] ) );
-				}
-
-				spdlog::trace( "Phase 6: launching addTags batch {} ({} records)", batch_idx, count );
-				in_flight.push_back(
-					client.addTags( std::move( batch_record_ids ), domain_id, std::move( batch_tag_sets ) ) );
-
-				if ( in_flight.size() >= CONCURRENCY )
-				{
-					try
-					{
-						in_flight.front().waitForFinished();
-					}
-					catch ( const std::exception& e )
-					{
-						spdlog::error( "addTags batch failed: {}", e.what() );
-						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-					}
-					in_flight.pop_front();
-				}
-
-				++batch_idx;
-			}
-
-			for ( auto& future : in_flight )
-			{
-				try
-				{
-					future.waitForFinished();
-				}
-				catch ( const std::exception& e )
-				{
-					spdlog::error( "addTags batch failed: {}", e.what() );
-					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-				}
-			}
-
-			emit subProgress(
-				static_cast< int >( total_batches ),
-				static_cast< int >( total_batches ),
-				progress_prefix
-					+ QString( " - tags applied (%1 records)" )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids.size() ) ) ) );
-			spdlog::trace( "Phase 6: addTags completed" );
-		}
-	}
-
-	if ( !content.tag_parents_add.empty() )
+	// Translate raw (tag_id, tag_id) pairs into IDHAN (TagID, TagID) pairs, applying \p order to the
+	// resolved ids to get the argument order each relationship endpoint expects.
+	const auto translatePairs = [ & ]( const auto& raw, auto order )
 	{
-		spdlog::trace( "Phase 7: applying {} parent relationships", content.tag_parents_add.size() );
-		std::vector< std::pair< TagID, TagID > > parent_pairs;
-		parent_pairs.reserve( content.tag_parents_add.size() );
-		for ( const auto& [ child_id, parent_id ] : content.tag_parents_add )
+		std::vector< std::pair< TagID, TagID > > out;
+		out.reserve( raw.size() );
+		for ( const auto& [ a, b ] : raw )
 		{
-			auto child_it = tag_id_to_idhan_id.find( child_id );
-			auto parent_it = tag_id_to_idhan_id.find( parent_id );
-			if ( child_it != tag_id_to_idhan_id.end() && parent_it != tag_id_to_idhan_id.end() )
-				parent_pairs.emplace_back( parent_it->second, child_it->second );
+			const auto ia = tag_id_to_idhan_id.find( a );
+			const auto ib = tag_id_to_idhan_id.find( b );
+			if ( ia != tag_id_to_idhan_id.end() && ib != tag_id_to_idhan_id.end() )
+				out.push_back( order( ia->second, ib->second ) );
 		}
+		return out;
+	};
 
-		if ( !parent_pairs.empty() )
-		{
-			spdlog::trace(
-				"Phase 7: creating {} parent relationships (concurrency={})", parent_pairs.size(), CONCURRENCY );
-			const std::size_t total_batches = ( parent_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
-			std::deque< QFuture< void > > in_flight;
-			std::size_t batch_idx = 0;
+	// parent endpoints want (parent, child); raw pairs are (child, parent).
+	const auto parent_order = []( const TagID child, const TagID parent ) { return std::pair { parent, child }; };
+	// alias endpoints want (bad, good); raw pairs are already (bad, good).
+	const auto alias_order = []( const TagID bad, const TagID good ) { return std::pair { bad, good }; };
 
-			for ( std::size_t i = 0; i < parent_pairs.size(); i += BATCH_SIZE )
-			{
-				if ( m_cancelled ) return stats;
+	auto add_mappings = buildRecordTagSets( hash_to_tags );
+	auto& add_recs = add_mappings.first;
+	auto& add_sets = add_mappings.second;
+	auto del_mappings = buildRecordTagSets( hash_to_tags_delete );
+	auto& del_recs = del_mappings.first;
+	auto& del_sets = del_mappings.second;
+	auto parent_add = translatePairs( content.tag_parents_add, parent_order );
+	auto parent_del = translatePairs( content.tag_parents_delete, parent_order );
+	auto alias_add = translatePairs( content.tag_siblings_add, alias_order );
+	auto alias_del = translatePairs( content.tag_siblings_delete, alias_order );
 
-				const std::size_t count = std::min( BATCH_SIZE, parent_pairs.size() - i );
-				std::vector< std::pair< TagID, TagID > > batch(
-					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
-					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+	std::vector< QFuture< void > > ops;
 
-				emit subProgress(
-					static_cast< int >( batch_idx ),
-					static_cast< int >( total_batches ),
-					progress_prefix
-						+ QString( " - adding parent relationships (%1/%2)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
-
-				in_flight.push_back( client.createParentRelationship( domain_id, batch ) );
-
-				if ( in_flight.size() >= CONCURRENCY )
-				{
-					try
-					{
-						in_flight.front().waitForFinished();
-					}
-					catch ( const std::exception& e )
-					{
-						spdlog::error( "createParentRelationship batch failed: {}", e.what() );
-						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-					}
-					in_flight.pop_front();
-				}
-
-				++batch_idx;
-			}
-
-			for ( auto& future : in_flight )
-			{
-				try
-				{
-					future.waitForFinished();
-				}
-				catch ( const std::exception& e )
-				{
-					spdlog::error( "createParentRelationship batch failed: {}", e.what() );
-					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-				}
-			}
-		}
-	}
-
-	if ( !content.tag_siblings_add.empty() )
+	const auto append = [ &ops ]( auto&& futures )
 	{
-		spdlog::trace( "Phase 8: applying {} sibling relationships", content.tag_siblings_add.size() );
-		std::vector< std::pair< TagID, TagID > > sibling_pairs;
-		sibling_pairs.reserve( content.tag_siblings_add.size() );
-		for ( const auto& [ bad_id, good_id ] : content.tag_siblings_add )
+		ops.insert(
+			ops.end(), std::make_move_iterator( futures.begin() ), std::make_move_iterator( futures.end() ) );
+	};
+
+	// Phase 6: apply mappings
+	append( launchBatches(
+		add_recs.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
 		{
-			auto bad_it = tag_id_to_idhan_id.find( bad_id );
-			auto good_it = tag_id_to_idhan_id.find( good_id );
-			if ( bad_it != tag_id_to_idhan_id.end() && good_it != tag_id_to_idhan_id.end() )
-				sibling_pairs.emplace_back( bad_it->second, good_it->second );
-		}
+			std::vector< RecordID > br(
+				add_recs.begin() + static_cast< std::ptrdiff_t >( s ),
+				add_recs.begin() + static_cast< std::ptrdiff_t >( e ) );
+			std::vector< std::vector< TagID > > bs(
+				std::make_move_iterator( add_sets.begin() + static_cast< std::ptrdiff_t >( s ) ),
+				std::make_move_iterator( add_sets.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+			return client.addTags( std::move( br ), domain_id, std::move( bs ) );
+		} ) );
 
-		if ( !sibling_pairs.empty() )
+	// Phase 7: add parent relationships
+	append( launchBatches(
+		parent_add.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
 		{
-			spdlog::trace(
-				"Phase 8: creating {} alias relationships (concurrency={})", sibling_pairs.size(), CONCURRENCY );
-			const std::size_t total_batches = ( sibling_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
-			std::deque< QFuture< void > > in_flight;
-			std::size_t batch_idx = 0;
+			return client.createParentRelationship(
+				domain_id,
+				std::vector< std::pair< TagID, TagID > >(
+					parent_add.begin() + static_cast< std::ptrdiff_t >( s ),
+					parent_add.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+		} ) );
 
-			for ( std::size_t i = 0; i < sibling_pairs.size(); i += BATCH_SIZE )
-			{
-				if ( m_cancelled ) return stats;
+	// Phase 8: add alias relationships
+	append( launchBatches(
+		alias_add.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
+		{
+			return client.createAliasRelationship(
+				domain_id,
+				std::vector< std::pair< TagID, TagID > >(
+					alias_add.begin() + static_cast< std::ptrdiff_t >( s ),
+					alias_add.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+		} ) );
 
-				const std::size_t count = std::min( BATCH_SIZE, sibling_pairs.size() - i );
-				std::vector< std::pair< TagID, TagID > > batch(
-					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
-					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
+	// Phase 9: remove mappings
+	append( launchBatches(
+		del_recs.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
+		{
+			std::vector< RecordID > br(
+				del_recs.begin() + static_cast< std::ptrdiff_t >( s ),
+				del_recs.begin() + static_cast< std::ptrdiff_t >( e ) );
+			std::vector< std::vector< TagID > > bs(
+				std::make_move_iterator( del_sets.begin() + static_cast< std::ptrdiff_t >( s ) ),
+				std::make_move_iterator( del_sets.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+			return client.removeTags( std::move( br ), domain_id, std::move( bs ) );
+		} ) );
 
-				emit subProgress(
-					static_cast< int >( batch_idx ),
-					static_cast< int >( total_batches ),
-					progress_prefix
-						+ QString( " - adding alias relationships (%1/%2)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
+	// Phase 10: remove parent relationships
+	append( launchBatches(
+		parent_del.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
+		{
+			return client.removeParentRelationship(
+				domain_id,
+				std::vector< std::pair< TagID, TagID > >(
+					parent_del.begin() + static_cast< std::ptrdiff_t >( s ),
+					parent_del.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+		} ) );
 
-				in_flight.push_back( client.createAliasRelationship( domain_id, batch ) );
+	// Phase 11: remove alias relationships
+	append( launchBatches(
+		alias_del.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
+		{
+			return client.removeAliasRelationship(
+				domain_id,
+				std::vector< std::pair< TagID, TagID > >(
+					alias_del.begin() + static_cast< std::ptrdiff_t >( s ),
+					alias_del.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+		} ) );
 
-				if ( in_flight.size() >= CONCURRENCY )
-				{
-					try
-					{
-						in_flight.front().waitForFinished();
-					}
-					catch ( const std::exception& e )
-					{
-						spdlog::error( "createAliasRelationship batch failed: {}", e.what() );
-						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-					}
-					in_flight.pop_front();
-				}
-
-				++batch_idx;
-			}
-
-			for ( auto& future : in_flight )
-			{
-				try
-				{
-					future.waitForFinished();
-				}
-				catch ( const std::exception& e )
-				{
-					spdlog::error( "createAliasRelationship batch failed: {}", e.what() );
-					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-				}
-			}
-		}
-	}
-
-	if ( !hash_to_tags_delete.empty() )
+	if ( !ops.empty() )
 	{
-		spdlog::trace( "Phase 9: removing {} hash->tag mappings", hash_to_tags_delete.size() );
-		std::vector< RecordID > record_ids_del;
-		record_ids_del.reserve( hash_to_tags_delete.size() );
-		std::vector< std::vector< TagID > > tag_id_sets;
-		tag_id_sets.reserve( hash_to_tags_delete.size() );
-
-		for ( const auto& [ hid, tag_id_set ] : hash_to_tags_delete )
-		{
-			auto hex_it = hash_id_to_hex.find( hid );
-			if ( hex_it == hash_id_to_hex.end() ) continue;
-
-			auto rec_it = hex_to_record_id.find( hex_it->second );
-			if ( rec_it == hex_to_record_id.end() ) continue;
-
-			std::vector< TagID > file_tag_ids;
-			file_tag_ids.reserve( tag_id_set.size() );
-			for ( const auto& tid : tag_id_set )
+		spdlog::trace( "Phase B: applying {} update batches concurrently", ops.size() );
+		emit subProgress( 0, static_cast< int >( ops.size() ), progress_prefix + " - applying updates..." );
+		awaitBatches(
+			ops,
+			"content update",
+			[ & ]( const std::size_t done, const std::size_t total )
 			{
-				auto tag_it = tag_id_to_idhan_id.find( tid );
-				if ( tag_it != tag_id_to_idhan_id.end() ) file_tag_ids.push_back( tag_it->second );
-			}
-
-			if ( !file_tag_ids.empty() )
-			{
-				record_ids_del.push_back( rec_it->second );
-				tag_id_sets.push_back( std::move( file_tag_ids ) );
-			}
-		}
-
-		if ( !record_ids_del.empty() )
-		{
-			spdlog::trace(
-				"Phase 9: calling removeTags with {} records (concurrency={})", record_ids_del.size(), CONCURRENCY );
-			const std::size_t total_batches = ( record_ids_del.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
-			std::deque< QFuture< void > > in_flight;
-			std::size_t batch_idx = 0;
-
-			for ( std::size_t i = 0; i < record_ids_del.size(); i += BATCH_SIZE )
-			{
-				if ( m_cancelled ) return stats;
-
-				const std::size_t end = std::min( i + BATCH_SIZE, record_ids_del.size() );
-				const std::size_t count = end - i;
-
 				emit subProgress(
-					static_cast< int >( batch_idx ),
-					static_cast< int >( total_batches ),
+					static_cast< int >( done ),
+					static_cast< int >( total ),
 					progress_prefix
-						+ QString( " - removing tags (%1/%2 batches)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
-
-				std::vector< RecordID > batch_record_ids(
-					record_ids_del.begin() + static_cast< std::ptrdiff_t >( i ),
-					record_ids_del.begin() + static_cast< std::ptrdiff_t >( end ) );
-				std::vector< std::vector< TagID > > batch_tag_sets(
-					tag_id_sets.begin() + static_cast< std::ptrdiff_t >( i ),
-					tag_id_sets.begin() + static_cast< std::ptrdiff_t >( end ) );
-
-				spdlog::trace( "Phase 9: launching removeTags batch {} ({} records)", batch_idx, count );
-				in_flight.push_back(
-					client.removeTags( std::move( batch_record_ids ), domain_id, std::move( batch_tag_sets ) ) );
-
-				if ( in_flight.size() >= CONCURRENCY )
-				{
-					try
-					{
-						in_flight.front().waitForFinished();
-					}
-					catch ( const std::exception& e )
-					{
-						spdlog::error( "removeTags batch failed: {}", e.what() );
-						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-					}
-					in_flight.pop_front();
-				}
-
-				++batch_idx;
-			}
-
-			for ( auto& future : in_flight )
-			{
-				try
-				{
-					future.waitForFinished();
-				}
-				catch ( const std::exception& e )
-				{
-					spdlog::error( "removeTags batch failed: {}", e.what() );
-					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-				}
-			}
-
-			emit subProgress(
-				static_cast< int >( total_batches ),
-				static_cast< int >( total_batches ),
-				progress_prefix
-					+ QString( " - tags removed (%1 records)" )
-						  .arg( QLocale::system().toString( static_cast< qlonglong >( record_ids_del.size() ) ) ) );
-			spdlog::trace( "Phase 9: removeTags completed" );
-		}
-	}
-
-	if ( !content.tag_parents_delete.empty() )
-	{
-		spdlog::trace( "Phase 10: removing {} parent relationships", content.tag_parents_delete.size() );
-		std::vector< std::pair< TagID, TagID > > parent_pairs;
-		parent_pairs.reserve( content.tag_parents_delete.size() );
-		for ( const auto& [ child_id, parent_id ] : content.tag_parents_delete )
-		{
-			auto child_it = tag_id_to_idhan_id.find( child_id );
-			auto parent_it = tag_id_to_idhan_id.find( parent_id );
-			if ( child_it != tag_id_to_idhan_id.end() && parent_it != tag_id_to_idhan_id.end() )
-				parent_pairs.emplace_back( parent_it->second, child_it->second );
-		}
-
-		if ( !parent_pairs.empty() )
-		{
-			spdlog::trace(
-				"Phase 10: removing {} parent relationships (concurrency={})", parent_pairs.size(), CONCURRENCY );
-			const std::size_t total_batches = ( parent_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
-			std::deque< QFuture< void > > in_flight;
-			std::size_t batch_idx = 0;
-
-			for ( std::size_t i = 0; i < parent_pairs.size(); i += BATCH_SIZE )
-			{
-				if ( m_cancelled ) return stats;
-
-				const std::size_t count = std::min( BATCH_SIZE, parent_pairs.size() - i );
-				std::vector< std::pair< TagID, TagID > > batch(
-					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
-					parent_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
-
-				emit subProgress(
-					static_cast< int >( batch_idx ),
-					static_cast< int >( total_batches ),
-					progress_prefix
-						+ QString( " - removing parent relationships (%1/%2)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
-
-				in_flight.push_back( client.removeParentRelationship( domain_id, batch ) );
-
-				if ( in_flight.size() >= CONCURRENCY )
-				{
-					try
-					{
-						in_flight.front().waitForFinished();
-					}
-					catch ( const std::exception& e )
-					{
-						spdlog::error( "removeParentRelationship batch failed: {}", e.what() );
-						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-					}
-					in_flight.pop_front();
-				}
-
-				++batch_idx;
-			}
-
-			for ( auto& future : in_flight )
-			{
-				try
-				{
-					future.waitForFinished();
-				}
-				catch ( const std::exception& e )
-				{
-					spdlog::error( "removeParentRelationship batch failed: {}", e.what() );
-					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-				}
-			}
-		}
-	}
-
-	if ( !content.tag_siblings_delete.empty() )
-	{
-		spdlog::trace( "Phase 11: removing {} sibling relationships", content.tag_siblings_delete.size() );
-		std::vector< std::pair< TagID, TagID > > sibling_pairs;
-		sibling_pairs.reserve( content.tag_siblings_delete.size() );
-		for ( const auto& [ bad_id, good_id ] : content.tag_siblings_delete )
-		{
-			auto bad_it = tag_id_to_idhan_id.find( bad_id );
-			auto good_it = tag_id_to_idhan_id.find( good_id );
-			if ( bad_it != tag_id_to_idhan_id.end() && good_it != tag_id_to_idhan_id.end() )
-				sibling_pairs.emplace_back( bad_it->second, good_it->second );
-		}
-
-		if ( !sibling_pairs.empty() )
-		{
-			spdlog::trace(
-				"Phase 11: removing {} alias relationships (concurrency={})", sibling_pairs.size(), CONCURRENCY );
-			const std::size_t total_batches = ( sibling_pairs.size() + BATCH_SIZE - 1 ) / BATCH_SIZE;
-			std::deque< QFuture< void > > in_flight;
-			std::size_t batch_idx = 0;
-
-			for ( std::size_t i = 0; i < sibling_pairs.size(); i += BATCH_SIZE )
-			{
-				if ( m_cancelled ) return stats;
-
-				const std::size_t count = std::min( BATCH_SIZE, sibling_pairs.size() - i );
-				std::vector< std::pair< TagID, TagID > > batch(
-					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i ),
-					sibling_pairs.begin() + static_cast< std::ptrdiff_t >( i + count ) );
-
-				emit subProgress(
-					static_cast< int >( batch_idx ),
-					static_cast< int >( total_batches ),
-					progress_prefix
-						+ QString( " - removing alias relationships (%1/%2)" )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( batch_idx ) ) )
-							  .arg( QLocale::system().toString( static_cast< qlonglong >( total_batches ) ) ) );
-
-				in_flight.push_back( client.removeAliasRelationship( domain_id, batch ) );
-
-				if ( in_flight.size() >= CONCURRENCY )
-				{
-					try
-					{
-						in_flight.front().waitForFinished();
-					}
-					catch ( const std::exception& e )
-					{
-						spdlog::error( "removeAliasRelationship batch failed: {}", e.what() );
-						emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-					}
-					in_flight.pop_front();
-				}
-
-				++batch_idx;
-			}
-
-			for ( auto& future : in_flight )
-			{
-				try
-				{
-					future.waitForFinished();
-				}
-				catch ( const std::exception& e )
-				{
-					spdlog::error( "removeAliasRelationship batch failed: {}", e.what() );
-					emit progress( progress_prefix + QString( " - batch failed: %1" ).arg( e.what() ) );
-				}
-			}
-		}
+						+ QString( " - applying updates (%1/%2)" )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( done ) ) )
+							  .arg( QLocale::system().toString( static_cast< qlonglong >( total ) ) ) );
+			} );
 	}
 
 	emit subProgress( 1, 1, progress_prefix + " - Done" );
