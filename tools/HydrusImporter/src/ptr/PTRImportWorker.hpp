@@ -66,8 +66,10 @@ class PTRImportWorker : public QObject, public QRunnable
 
   public:
 
-	static constexpr std::size_t BATCH_SIZE = 250;
-	static constexpr std::size_t CONCURRENCY = 4;
+	// Rows per request. There is deliberately no cap on how many batches are in flight at once:
+	// requests are handed straight to QNetworkAccessManager, which throttles the real socket count
+	// per host, so we submit everything and let it pipeline.
+	static constexpr std::size_t BATCH_SIZE { 128 };
 
 	// How often to re-check for a not-yet-downloaded file, and how long to keep waiting on one
 	// with no progress from the downloader before giving up and treating it as a real gap.
