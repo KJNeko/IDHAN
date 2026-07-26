@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <stdexcept>
+#include <string>
 
 #include <zlib.h>
 
@@ -160,9 +161,22 @@ DefinitionsUpdate parseDefinitionsUpdate( const Json::Value& serialisable_info )
 			{
 				if ( !def.isArray() || def.size() < 2 ) continue;
 				const auto tag_id = def[ 0 ].asInt();
-				const auto tag = def[ 1 ].asString();
+				auto tag = def[ 1 ].asString();
+
+				// A null byte (0x00) in tag text is not legitimate content — it indicates corruption in
+				// the PTR server's data. PostgreSQL's TEXT type also cannot store it, so left in place it
+				// would sink the entire createTags batch downstream. Catch it here, at ingestion, log it
+				// loudly so the corruption is visible, and strip it so the rest of the import proceeds.
+				if ( tag.find( '\0' ) != std::string::npos )
+				{
+					spdlog::warn(
+						"PTR data corruption: tag definition tag_id={} contains a null byte (0x00); stripping it",
+						tag_id );
+					std::erase( tag, '\0' );
+				}
+
 				spdlog::trace( "  tag_id={} -> {}", tag_id, tag );
-				result.tag_ids_to_tags.emplace( tag_id, tag );
+				result.tag_ids_to_tags.emplace( tag_id, std::move( tag ) );
 			}
 		}
 	}
