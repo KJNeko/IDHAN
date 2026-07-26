@@ -30,7 +30,7 @@
 #include "spdlog/async.h"
 
 #ifdef TRACY_ENABLE
-	#include "idhan_tracy/CoroFiber.hpp"
+#include "idhan_tracy/CoroFiber.hpp"
 #endif
 
 namespace idhan
@@ -58,18 +58,15 @@ void ServerContext::setupCORSSupport() const
 		[ this ](
 			const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
 		{
-			if ( args.testmode )
-				log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
-			else
-				log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
+			log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
 
 #ifdef TRACY_ENABLE
 			// Best-effort: seeds the fiber context for the handler coroutine (constructed on this
 			// thread right after routing). The tag (request line) becomes "X"; a fresh query id
 			// becomes "A", shared by every coroutine of this request; depth -1 makes the handler
 			// itself depth 0. The tag string is per-thread and owned for the request's duration.
-			static thread_local std::string tag;
-				tag = request->getMethodString() + std::string( " " ) + request->getPath();
+			static thread_local std::string tag {};
+			tag = request->getMethodString() + std::string( " " ) + request->getPath();
 			idhan::tracy_coro::currentFiberContext() = idhan::tracy_coro::FiberCtx {
 				tag.c_str(), idhan::tracy_coro::nextFiberId() + 1, -1
 			};
