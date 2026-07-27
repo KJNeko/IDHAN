@@ -13,8 +13,8 @@ namespace idhan::threading
 
 //! The coroutine type used throughout the server (currently IDHANTask).
 template < typename T = void >
-// using Task = drogon::Task< T >;
-using Task = IDHANTask< T >;
+using Task = drogon::Task< T >;
+// using Task = IDHANTask< T >;
 
 //! A coroutine returning either a value of type \p T or an HTTP error response. Handlers co_await it
 //! and use return_unexpected_error() to forward the error, or read .value() on success.
@@ -29,6 +29,10 @@ using ExpectedResponse = std::expected< T, drogon::HttpResponsePtr >;
 //! must be a std::expected (e.g. the result of co_awaiting an ExpectedTask helper).
 #define return_unexpected_error( type )                                                                                \
 	if ( !type ) co_return std::unexpected( type.error() );
+
+#define return_optional_error( type )                                                                                  \
+	if ( type ) co_return *type
+
 } // namespace idhan::threading
 
 namespace idhan

@@ -1,9 +1,8 @@
 /**
  * Typed IDHAN REST client.
  *
- * One key is presented on every authenticated call via the `X-API-Key` header. The server accepts an
- * API key and a session key interchangeably in that slot, so this client is deliberately blind to
- * which kind it holds — see src/auth/session.ts for how the credential is obtained.
+ * The permanent API key is presented on every authenticated call via the `X-API-Key` header — see
+ * src/auth/session.ts for how the credential is obtained and stored.
  *
  * This is the raw client. The coalescing/caching host API (batched metadata, thumbnail LRU) is a
  * later layer (M3) built on top of these methods, not baked in here.
@@ -18,10 +17,8 @@ import type {
   SearchRequest,
   SearchResponse,
   ServerLayoutMeta,
-  SessionCheck,
-  SessionGrant,
+    KeyCheck,
   DatabaseStats,
-  SessionRevoke,
   StorageNode,
   TagDomain,
   TagInfo,
@@ -105,17 +102,9 @@ export const api = {
   },
 
   auth: {
-    /** Exchange a permanent API key for a session key. 401 if the key is invalid or already a session. */
-    createSession(apiKey: string, signal?: AbortSignal): Promise<SessionGrant> {
-      return request<SessionGrant>('/auth/session', { method: 'POST', key: apiKey, signal });
-    },
-    /** Confirm a key is currently accepted. Throws ApiError(401) if not. */
-    checkSession(key: string, signal?: AbortSignal): Promise<SessionCheck> {
-      return request<SessionCheck>('/auth/session', { key, signal });
-    },
-    /** Revoke a session key. A no-op (revoked:false) for a permanent API key. */
-    deleteSession(key: string, signal?: AbortSignal): Promise<SessionRevoke> {
-      return request<SessionRevoke>('/auth/session', { method: 'DELETE', key, signal });
+      /** Confirm an API key is currently accepted. Throws ApiError(401) if not. */
+      verifyKey(key: string, signal?: AbortSignal): Promise<KeyCheck> {
+          return request<KeyCheck>('/auth/verify', {key, signal});
     },
   },
 
@@ -252,9 +241,7 @@ export const layouts = {
 
 /**
  * URL for an <img> or <video> whose element cannot set request headers. The credential therefore
- * rides in the `idhan_key` query parameter, which the server accepts alongside the header. This is
- * why the browser holds a session key rather than the permanent API key: a session key in a URL
- * (logs, history) is revocable and expiring, so the exposure is bounded.
+ * rides in the `idhan_key` query parameter, which the server accepts alongside the header.
  */
 export function thumbnailUrl(recordId: number, size = 256): string {
   // The server generates a square thumbnail at any requested edge length; clamp to a positive integer.

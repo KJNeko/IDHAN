@@ -103,13 +103,28 @@
                 </widget>
             </item>
             <item>
-                <widget class="QPlainTextEdit" name="historyLog">
-                    <property name="readOnly">
+                <widget class="QTableView" name="historyView">
+                    <property name="editTriggers">
+                        <set>QAbstractItemView::NoEditTriggers</set>
+                    </property>
+                    <property name="selectionMode">
+                        <enum>QAbstractItemView::SingleSelection</enum>
+                    </property>
+                    <property name="selectionBehavior">
+                        <enum>QAbstractItemView::SelectRows</enum>
+                    </property>
+                    <property name="alternatingRowColors">
                         <bool>true</bool>
                     </property>
-                    <property name="maximumBlockCount">
-                        <number>1000</number>
+                    <property name="sortingEnabled">
+                        <bool>false</bool>
                     </property>
+                    <attribute name="horizontalHeaderStretchLastSection">
+                        <bool>true</bool>
+                    </attribute>
+                    <attribute name="verticalHeaderVisible">
+                        <bool>false</bool>
+                    </attribute>
                 </widget>
             </item>
         </layout>

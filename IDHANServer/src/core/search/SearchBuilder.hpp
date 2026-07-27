@@ -11,12 +11,11 @@
 #include "SearchBuilder.hpp"
 #include "api/APIAuth.hpp"
 #include "db/dbTypes.hpp"
-#include "drogon/HttpRequest.h"
 #include "drogon/orm/DbClient.h"
 #include "drogon/orm/Result.h"
 #include "drogon/utils/coroutine.h"
 #include "hydrus/ClientConstants_gen.hpp"
-#include "threading/IDHANTask.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan
 {
@@ -378,8 +377,7 @@ class SearchBuilder
 
 	//! Resolves tag strings to IDs and splits them into the positive/negative sets, also extracting
 	//! any "system:" predicates. \return an error response if a tag cannot be resolved.
-	IDHANTask< std::expected< void, std::shared_ptr< drogon::HttpResponse > > > setTags(
-		const std::vector< std::string >& tags );
+	Task< std::optional< drogon::HttpResponsePtr > > setTags( const std::vector< std::string >& tags );
 
 	//! Sets the tags a record must have.
 	void setPositiveTags( const std::vector< TagID >& vector );

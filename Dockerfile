@@ -181,7 +181,6 @@ ENV IDHAN_DATABASE_HOST=localhost \
 
 RUN chmod +x /usr/bin/IDHANServer
 
-# Expose default port
 EXPOSE 16609
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \

@@ -3,11 +3,12 @@
 //
 #include "PsdThumbnailer.hpp"
 
-#include <vips/vips8>
+#include <vips/vips.h>
 
 #include <string>
 
 #include "psd.hpp"
+#include "vips.hpp"
 
 std::vector< std::string_view > PsdThumbnailer::handleableMimes()
 {
@@ -31,6 +32,8 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 	std::size_t width,
 	std::size_t height )
 {
+	return std::unexpected( idhan::ModuleError { "Testing error" } );
+
 	const auto& [ data_view, mime, extra ] = data;
 	const auto* bytes { ( data_view.data() ) };
 	const auto length { data_view.size() };
@@ -120,10 +123,14 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 		return std::unexpected( interleavedRGB.error() );
 	}
 
-	vips::VImage image { vips_image_new_from_memory(
-		interleavedRGB->data(), interleavedRGB->size(), header->width, header->height, 3, VIPS_FORMAT_UCHAR ) };
-
-	// return std::unexpected( idhan::ModuleError { "Failed to create image from PSD data" } );
+	idhan::VipsImagePtr image { vips_image_new_from_memory(
+		interleavedRGB->data(),
+		interleavedRGB->size(),
+		static_cast< int >( header->width ),
+		static_cast< int >( header->height ),
+		3,
+		VIPS_FORMAT_UCHAR ) };
+	if ( !image ) return std::unexpected( idhan::ModuleError { "Failed to create image from PSD data" } );
 
 	const float source_aspect { static_cast< float >( header->width ) / static_cast< float >( header->height ) };
 	const float target_aspect { static_cast< float >( width ) / static_cast< float >( height ) };
@@ -133,9 +140,17 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 	else
 		height = static_cast< std::size_t >( static_cast< float >( width ) / source_aspect );
 
-	auto resized { image.resize( static_cast< double >( width ) / static_cast< double >( image.width() ) ) };
+	VipsImage* resized_raw { nullptr };
+	if ( vips_resize(
+			 image.get(),
+			 &resized_raw,
+			 static_cast< double >( width ) / static_cast< double >( vips_image_get_width( image.get() ) ),
+			 nullptr )
+	     != 0 )
+		return std::unexpected( idhan::ModuleError { "Failed to resize PSD image" } );
+	idhan::VipsImagePtr resized { resized_raw };
 
-	idhan::ThumbnailInfo info { resized };
-
-	return info;
+	// write_to_memory (in ThumbnailInfo) computes the pipeline here, while interleavedRGB -- which
+	// vips_image_new_from_memory references without copying -- is still alive on the stack.
+	return idhan::ThumbnailInfo { std::move( resized ) };
 }

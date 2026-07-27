@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "PTRFileParser.hpp"
@@ -19,7 +20,10 @@ namespace idhan::hydrus::ptr
 
 //! Downloads PTR (public tag repository) update files from a Hydrus PTR server into an output
 //! directory, resuming from previously cached metadata and rate-limiting requests. Drive it with
-//! startSync(); progress and completion are reported via the signals below.
+//! startSync(); progress and completion are reported via the signals below. Writes its progress
+//! and state incrementally to ptr_metadata.json (index-by-index, plus a periodic heartbeat) so a
+//! PTRImportWorker pointed at the same directory can import concurrently instead of waiting for
+//! the whole sync to finish.
 class PTRDownloader : public QObject
 {
 	Q_OBJECT
@@ -86,6 +90,7 @@ class PTRDownloader : public QObject
 
 	static constexpr const char* METADATA_FILENAME = "metadata.ptrupdate";
 	static constexpr std::chrono::hours METADATA_MAX_AGE { 24 };
+	static constexpr int HEARTBEAT_INTERVAL_MS = 30'000;
 
 	QNetworkAccessManager m_network;
 	std::filesystem::path m_output_dir;
@@ -95,6 +100,11 @@ class PTRDownloader : public QObject
 
 	State m_state { State::Idle };
 	bool m_cancelled { false };
+
+	// Persisted into ptr_metadata.json's "state" field so a concurrently-running PTRImportWorker
+	// can tell whether a missing file is still coming or never will be.
+	QString m_persist_state { "running" };
+	QTimer m_heartbeat_timer;
 
 	// Metadata tracking
 	MetadataUpdate m_metadata;
@@ -106,6 +116,11 @@ class PTRDownloader : public QObject
 	int m_current_download_index { 0 };
 	int m_total_downloads { 0 };
 	int m_completed_downloads { 0 };
+
+	// hash -> update index, and remaining-missing-file count per update index, so we can detect
+	// the moment an entire update index finishes downloading and persist progress incrementally.
+	std::unordered_map< std::string, int > m_hash_to_index;
+	std::unordered_map< int, int > m_remaining_for_index;
 
 	// Rate limiting — 5s fixed delay between downloads
 };

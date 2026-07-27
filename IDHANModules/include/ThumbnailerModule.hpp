@@ -3,8 +3,6 @@
 //
 #pragma once
 
-#include <vips/vips8>
-
 #include <algorithm>
 #include <expected>
 #include <string_view>
@@ -14,6 +12,7 @@
 
 namespace idhan
 {
+
 class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 {
   public:

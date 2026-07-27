@@ -339,21 +339,6 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 
 	if ( m_required_joins.num_tags )
 	{
-		// Per-record tag count for the NUM_TAGS sort, backing the "ntc" alias used in
-		// generateOrderByClause(). LEFT so zero-tag records aren't dropped from the sort.
-		//
-		// Counts from active_tag_mappings_final (active_tag_mappings UNION ALL the parent-implied
-		// active_tag_mappings_parents, both alias-resolved to a plain tag_id column), not the raw
-		// active_tag_mappings table alone, since the raw table omits parent-implied tags.
-		//
-		// Deliberately NOT scoped to the searched tag domains: doing so would require binding $1
-		// inside this subquery, but $1 is only bound when m_bind_domains is set (construct()'s
-		// fast path never sets it), so a domain-agnostic count avoids a fast-path-only failure mode.
-		//
-		// Performance note: this aggregates the entire active_tag_mappings_final view on every query
-		// that sorts by NUM_TAGS, including on the fast/browse-everything path. A materialized
-		// per-record tag-count column (mirroring the per-tag tag_counts/total_tag_counts pattern in
-		// 93-tag_counts.sql, inverted to per-record) would be the real fix; out of scope for now.
 		//TODO: Optimize this somehow
 		query += " LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
 				 " FROM active_tag_mappings_final GROUP BY record_id) ntc USING (record_id)";
@@ -708,7 +693,7 @@ void SearchBuilder::addFileDomain( [[maybe_unused]] const FileDomainID value )
 	FGL_UNIMPLEMENTED();
 }
 
-ExpectedTask< void > SearchBuilder::setTags( const std::vector< std::string >& tags )
+Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setTags( const std::vector< std::string >& tags )
 {
 	std::vector< std::string > positive_tags {};
 	std::vector< std::string > negative_tags {};
@@ -724,9 +709,9 @@ ExpectedTask< void > SearchBuilder::setTags( const std::vector< std::string >& t
 	auto db { drogon::app().getDbClient() };
 
 	const auto positive_map { co_await mapTags( positive_tags, db ) };
+	if ( !positive_map ) co_return positive_map.error();
 	const auto negative_map { co_await mapTags( negative_tags, db ) };
-	return_unexpected_error( positive_map );
-	return_unexpected_error( negative_map );
+	if ( !negative_map ) co_return negative_map.error();
 
 	std::vector< TagID > positive_ids {};
 	for ( const auto& tag_id : *positive_map | std::views::values ) positive_ids.emplace_back( tag_id );

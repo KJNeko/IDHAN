@@ -61,7 +61,7 @@ class ModuleHolder
 		}
 
 #ifdef __linux__
-		m_handle = dlopen( path.c_str(), RTLD_LAZY | RTLD_GLOBAL );
+		m_handle = dlopen( path.c_str(), RTLD_LAZY | RTLD_LOCAL );
 		if ( !m_handle )
 		{
 			log::critical( "Failed to load module {}: {}", path.string(), dlerror() );
@@ -139,12 +139,12 @@ std::expected< std::vector< std::byte >, ModuleError > generate(
 
 std::expected< ThumbnailInfo, ModuleError > thumbnail(
 	const std::vector< std::byte >& data,
-	const Json::Value extra,
-	const std::string file_name )
+	const Json::Value& extra,
+	const std::string& file_name )
 {
-	auto mime_db { getMimeDatabase() };
+	const auto mime_db { getMimeDatabase() };
 
-	idhan::data_view data_view { reinterpret_cast< const unsigned char* >( data.data() ), data.size() };
+	const idhan::data_view data_view { reinterpret_cast< const unsigned char* >( data.data() ), data.size() };
 
 	// sync_wait, not async_run: see generate() above
 	const auto exp { drogon::sync_wait( mime_db->scan( data_view, file_name ) ) };
@@ -154,11 +154,12 @@ std::expected< ThumbnailInfo, ModuleError > thumbnail(
 	const auto thumbnailers { ModuleLoader::instance().getThumbnailerFor( *exp ) };
 	if ( thumbnailers.empty() ) return std::unexpected( ModuleError { "Thumbnailers not found" } );
 
-	const auto thumbnailer { thumbnailers.at( 0 ) };
+	const auto& thumbnailer { thumbnailers.at( 0 ) };
 
 	ModuleCallData call_data { .file_view = data_view, .mime_name = *exp, .extra = extra };
 
-	return thumbnailer->createThumbnailRaw( call_data, 128, 128 );
+	auto thumbnail_data { thumbnailer->createThumbnailRaw( call_data, 128, 128 ) };
+	return thumbnail_data;
 }
 
 } // namespace callbacks
@@ -248,6 +249,19 @@ void ModuleLoader::loadModules()
 			m_modules.push_back( module );
 		}
 	}
+}
+
+void ModuleLoader::unloadModules()
+{
+	log::info( "Unloading {} module(s) from {} librar(y/ies)", m_modules.size(), m_libs.size() );
+
+	// m_modules must be cleared before m_libs: the module objects (code, vtables and shared_ptr
+	// control blocks) live inside the dlopened libraries, so they must be destroyed before the
+	// ModuleHolders dlclose them
+	m_modules.clear();
+	m_libs.clear();
+
+	log::info( "All modules unloaded" );
 }
 
 std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnailerFor( const std::string_view mime )

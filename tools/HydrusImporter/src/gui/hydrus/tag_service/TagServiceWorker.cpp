@@ -237,11 +237,9 @@ void TagServiceWorker::processMappingsBatch(
 	const std::string& current_mappings_name )
 {
 	std::vector< MappingPair > pairs {};
-	constexpr std::size_t hash_limit { 100 };
-	constexpr std::size_t average_tags_per_hash { 64 };
-	constexpr std::size_t pair_limit { average_tags_per_hash * hash_limit };
+	constexpr std::size_t hash_limit { 1000 * 2 };
 
-	pairs.reserve( pair_limit );
+	pairs.reserve( hash_limit * 64 );
 
 	idhan::hydrus::Query< int, int > query {
 		mappings_tr, std::format( "SELECT tag_id, hash_id FROM {} ORDER BY hash_id, tag_id", current_mappings_name )

@@ -106,18 +106,19 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 		spdlog::trace( "Cleaned path to {}", *filename );
 
-		const auto file_data_e { readArchiveEntryData( a.get() ) };
-		if ( !file_data_e )
+		// Only the digest and size are needed here, so stream the entry through an incremental hash
+		// rather than buffering the whole (decompressed) entry -- a large member or decompression bomb
+		// would otherwise inflate memory to the entry's uncompressed size.
+		const auto entry_hash_e { hashArchiveEntryData( a.get() ) };
+		if ( !entry_hash_e )
 		{
 			spdlog::error( "Unable to read archive data" );
-			return std::unexpected( file_data_e.error() );
+			return std::unexpected( entry_hash_e.error() );
 		}
-		const auto& file_data { *file_data_e };
-
-		const auto file_hash { idhan::crypto::hashData( file_data.data(), file_data.size() ) };
+		const auto& [ file_hash, file_size ] { *entry_hash_e };
 
 		archive_metadata.contained_hashes.emplace_back( file_hash );
-		archive_metadata.m_size += file_data.size();
+		archive_metadata.m_size += file_size;
 		json[ idhan::crypto::toHex( file_hash ) ] = *filename;
 		spdlog::trace( "Got hash {}", idhan::crypto::toHex( file_hash ) );
 

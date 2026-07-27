@@ -5,11 +5,15 @@
 #include "archives.hpp"
 
 #include <archive.h>
+#include <openssl/evp.h>
+
 #include <array>
 #include <chardet.h>
+#include <cstring>
 #include <cwchar>
 #include <expected>
 #include <iconv.h>
+#include <memory>
 #include <string>
 
 #include "ModuleBase.hpp"
@@ -122,6 +126,53 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > readArchiveEntryDa
 	}
 
 	return data;
+}
+
+std::expected< ArchiveEntryHash, idhan::ModuleError > hashArchiveEntryData( archive* a )
+{
+	const std::unique_ptr< EVP_MD_CTX, void ( * )( EVP_MD_CTX* ) > ctx {
+		EVP_MD_CTX_new(), []( EVP_MD_CTX* ptr ) { EVP_MD_CTX_free( ptr ); }
+	};
+	if ( !ctx ) return std::unexpected( idhan::ModuleError { "EVP_MD_CTX_new() failed" } );
+
+	if ( EVP_DigestInit_ex( ctx.get(), EVP_sha256(), nullptr ) != 1 )
+		return std::unexpected( idhan::ModuleError { "EVP_DigestInit_ex() failed" } );
+
+	// Fold each chunk into the digest as it is read; never hold more than one chunk, so peak memory
+	// stays O(chunk_size) no matter how large the entry decompresses to. archive_read_data may return
+	// short reads and does not need the entry size known in advance.
+	constexpr std::size_t chunk_size { 64 * 1024 };
+	std::array< std::byte, chunk_size > buffer {};
+
+	ArchiveEntryHash result {};
+
+	la_ssize_t read { 0 };
+	while ( ( read = archive_read_data( a, buffer.data(), buffer.size() ) ) > 0 )
+	{
+		if ( EVP_DigestUpdate( ctx.get(), buffer.data(), static_cast< std::size_t >( read ) ) != 1 )
+			return std::unexpected( idhan::ModuleError { "EVP_DigestUpdate() failed" } );
+
+		result.m_size += static_cast< std::size_t >( read );
+	}
+
+	if ( read < 0 )
+	{
+		const char* err { archive_error_string( a ) };
+		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
+	}
+
+	unsigned char hash[ EVP_MAX_MD_SIZE ];
+	unsigned int hash_length { 0 };
+
+	if ( EVP_DigestFinal_ex( ctx.get(), hash, &hash_length ) != 1 )
+		return std::unexpected( idhan::ModuleError { "EVP_DigestFinal_ex() failed" } );
+
+	if ( hash_length != result.m_hash.size() )
+		return std::unexpected( idhan::ModuleError { "SHA-256 produced an unexpected digest length" } );
+
+	std::memcpy( result.m_hash.data(), hash, hash_length );
+
+	return result;
 }
 
 std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str )

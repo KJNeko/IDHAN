@@ -22,6 +22,8 @@ services:
     command:
       - postgres
       - -c
+      - shared_preload_libraries=pg_stat_statements # required at startup for the pg_stat_statements extension
+      - -c
       - shared_buffers=4GB # ~25% of RAM
       - -c
       - effective_cache_size=12GB # ~75% of RAM
@@ -49,11 +51,7 @@ services:
       context: .
       args:
         IDHAN_DISABLE_API_AUTH: "ON"
-        CMAKE_BUILD_TYPE: "System"
-        # /version metadata (branch/commit/tag) is derived automatically: the top-level .git ships in
-        # the build context (see .dockerignore) and FGLGit runs `git describe` inside the container.
-        # No host-side build args needed — a plain `docker compose -f docker-compose-dev.yml up --build`
-        # reports the correct version.
+        CMAKE_BUILD_TYPE: "Debug"
     container_name: idhan-server
     environment:
       IDHAN_LOGGING_LEVEL: debug

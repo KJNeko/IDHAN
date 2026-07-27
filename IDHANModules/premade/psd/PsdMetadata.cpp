@@ -3,8 +3,6 @@
 //
 #include "PsdMetadata.hpp"
 
-#include <vips/vips8>
-
 #include <algorithm>
 #include <cstring>
 #include <memory>

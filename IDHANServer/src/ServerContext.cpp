@@ -50,14 +50,9 @@ void addCORSHeaders( const drogon::HttpResponsePtr& response )
 void ServerContext::setupCORSSupport() const
 {
 	drogon::app().registerPreRoutingAdvice(
-		[ this ](
-			const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
+		[]( const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
 		{
-			if ( args.testmode )
-				log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
-			else
-				log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
-
+			log::info( "Routing for {}", request->path() );
 			if ( request->method() == drogon::Options )
 			{
 				const auto response { drogon::HttpResponse::newHttpResponse() };
@@ -73,12 +68,9 @@ void ServerContext::setupCORSSupport() const
 		} );
 
 	drogon::app().registerPostHandlingAdvice(
-		[ this ]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
+		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
 		{
-			if ( args.testmode )
-				log::info( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
-			else
-				log::debug( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
+			log::info( "Finished handling {}", request->path() );
 			addCORSHeaders( response );
 		} );
 }
@@ -141,18 +133,29 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	const std::filesystem::path log_path { config::getLogPath() };
 
-	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 1000000 ) };
+	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 0 ) };
 
 	std::vector< spdlog::sink_ptr > sinks {};
 
-	// In-memory ring buffer — captures every level for the /log endpoint
+	// In-memory ring buffer — captures every level for the /log endpoint. It retains a copy of every
+	// message it sees (at trace level) up to buffer_size entries, so a large budget can dominate RSS.
+	// A buffer_size of 0 disables it entirely; the /log endpoint then reports the sink as unavailable.
+	//
 	// Kept as a concrete-typed pointer (see log::setServerLogger) rather than rediscovered later via
 	// dynamic_pointer_cast on the logger's type-erased sinks, since that cast has been observed to fail
-	// across the module .so boundary on some platforms/spdlog builds.
-	auto ring_buffer { std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size ) };
-	sinks.emplace_back( ring_buffer );
-	ring_buffer->set_pattern( std::string( server_format_str ) );
-	ring_buffer->set_level( spdlog::level::trace );
+	// across the module .so boundary on some platforms/spdlog builds. Null when disabled.
+	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_buffer {};
+	if ( ring_buffer_size > 0 )
+	{
+		ring_buffer = std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size );
+		sinks.emplace_back( ring_buffer );
+		ring_buffer->set_pattern( std::string( server_format_str ) );
+		ring_buffer->set_level( spdlog::level::trace );
+	}
+	else
+	{
+		log::info( "In-memory log ring buffer disabled (logging.buffer_size=0); /log endpoint unavailable" );
+	}
 
 	// logs all trace messages to a specific file
 	auto& trace_file_logger { sinks.emplace_back(
@@ -310,6 +313,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	const auto ipv4_listener { config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" ) };
 	const auto ipv6_listener { config::get< std::string >( "host", "ipv6_listen", "::1" ) };
+	const auto listen_port { config::get< std::uint16_t >( "server", "port", IDHAN_DEFAULT_PORT ) };
 
 	const auto server_cert_path {
 		config::get< std::string, config::no_warn_on_default >( "host", "server_cert_path", "./server.crt" )
@@ -323,14 +327,14 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	if ( !ipv4_listener.empty() )
 	{
-		log::trace( "Adding IPv4 listener on {}:{}", ipv4_listener, IDHAN_DEFAULT_PORT );
-		app.addListener( ipv4_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+		log::trace( "Adding IPv4 listener on {}:{}", ipv4_listener, listen_port );
+		app.addListener( ipv4_listener, listen_port, use_tls, server_cert_path, server_key_path );
 	}
 
 	if ( !ipv6_listener.empty() )
 	{
-		log::trace( "Adding IPv6 listener on {}:{}", ipv6_listener, IDHAN_DEFAULT_PORT );
-		app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+		log::trace( "Adding IPv6 listener on {}:{}", ipv6_listener, listen_port );
+		app.addListener( ipv6_listener, listen_port, use_tls, server_cert_path, server_key_path );
 	}
 
 	drogon::orm::PostgresConfig config {
@@ -339,7 +343,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.databaseName = arguments.dbname,
 		.username = arguments.user,
 		.password = arguments.password,
-		.connectionNumber = std::min( io_threads, std::size_t( 16 ) ),
+		.connectionNumber = io_threads,
 		.name = "default",
 		.isFast = false,
 		.characterSet = "UTF-8",
@@ -380,7 +384,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
 
 	drogon::app().registerBeginningAdvice(
-		[ this ]()
+		[ this, listen_port ]()
 		{
 			drogon::sync_wait(
 				[ this ]() -> drogon::Task< void >
@@ -392,8 +396,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				}() );
 
 			log::info( "IDHAN initialization finished" );
-			log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
-			log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
+			log::info( "Server available at http://localhost:{}", listen_port );
+			log::info( "Swagger docs available at http://localhost:{}/api", listen_port );
 		} );
 
 	drogon::app().registerBeginningAdvice(

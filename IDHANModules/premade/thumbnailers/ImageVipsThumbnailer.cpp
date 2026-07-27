@@ -3,7 +3,7 @@
 //
 #include "ImageVipsThumbnailer.hpp"
 
-#include <vips/vips8>
+#include <vips/vips.h>
 
 #include <unordered_map>
 
@@ -24,55 +24,40 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 {
 	const auto& [ data_view, mime_name, extra ] = data;
 
-	VipsImage* image_ptr { nullptr };
-	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it != VIPS_FUNC_MAP.end() && it->second != nullptr )
-	{
-		if ( it->second(
-				 const_cast< void* >( static_cast< const void* >( data_view.data() ) ),
-				 data_view.size(),
-				 &image_ptr,
-				 nullptr )
-		     != 0 )
-		{
-			return std::unexpected( ModuleError { "Failed to load image" } );
-		}
-	}
-	else
-	{
+	// Only attempt formats we declare handleable (handleableMimes() is derived from this same map).
+	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it == VIPS_FUNC_MAP.end() || it->second == nullptr )
 		return std::unexpected( ModuleError { "Unsupported mime type" } );
-	}
 
-	if ( !image_ptr )
+	VipsImage* thumb_raw { nullptr };
+	if ( vips_thumbnail_buffer(
+			 const_cast< void* >( static_cast< const void* >( data_view.data() ) ),
+			 data_view.size(),
+			 &thumb_raw,
+			 static_cast< int >( width ),
+			 "height",
+			 static_cast< int >( height ),
+			 nullptr )
+	     != 0 )
+		return std::unexpected( ModuleError { "Failed to generate thumbnail" } );
+	VipsImagePtr thumb { thumb_raw };
+
+	// Downstream (ThumbnailInfo) expects packed 3-band sRGB uchar data. vips_thumbnail already
+	// colour-manages to sRGB in the common case; this is a safety net.
+	if ( vips_image_get_interpretation( thumb.get() ) != VIPS_INTERPRETATION_sRGB )
 	{
-		return std::unexpected( ModuleError { "Failed to load image" } );
+		VipsImage* srgb_raw { nullptr };
+		if ( vips_colourspace( thumb.get(), &srgb_raw, VIPS_INTERPRETATION_sRGB, nullptr ) != 0 )
+			return std::unexpected( ModuleError { "Failed to convert to sRGB" } );
+		thumb.reset( srgb_raw );
 	}
 
-	vips::VImage image { image_ptr };
-
-	const auto source_width { image.width() };
-	const auto source_height { image.height() };
-
-	const float source_aspect { static_cast< float >( source_width ) / static_cast< float >( source_height ) };
-	const float target_aspect { static_cast< float >( width ) / static_cast< float >( height ) };
-
-	if ( target_aspect > source_aspect )
-		width = static_cast< std::size_t >( static_cast< float >( height ) * source_aspect );
-	else
-		height = static_cast< std::size_t >( static_cast< float >( width ) / source_aspect );
-
-	auto resized { image.resize( static_cast< double >( width ) / static_cast< double >( image.width() ) ) };
-	if ( resized.interpretation() != VIPS_INTERPRETATION_sRGB )
+	if ( vips_image_get_bands( thumb.get() ) > 3 )
 	{
-		resized = resized.colourspace( VIPS_INTERPRETATION_sRGB );
+		VipsImage* flat_raw { nullptr };
+		if ( vips_flatten( thumb.get(), &flat_raw, nullptr ) != 0 )
+			return std::unexpected( ModuleError { "Failed to flatten alpha channel" } );
+		thumb.reset( flat_raw );
 	}
 
-	if ( resized.bands() > 3 )
-	{
-		// resized = resized.extract_band( 0, vips::VImage::option()->set( "n", 3 ) );
-		resized = resized.flatten();
-	}
-
-	idhan::ThumbnailInfo ret { resized };
-
-	return ret;
+	return idhan::ThumbnailInfo { std::move( thumb ) };
 }

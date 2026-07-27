@@ -1,24 +1,30 @@
 #include "PTRImportWidget.hpp"
 
 #include <QFileDialog>
-#include <QFont>
-#include <QFontDatabase>
+#include <QHeaderView>
 #include <QLocale>
+#include <QStandardPaths>
 #include <QThreadPool>
 
+#include "PTRHistoryModel.hpp"
 #include "ptr/PTRImportWorker.hpp"
 #include "ui_PTRImportWidget.h"
 
-PTRImportWidget::PTRImportWidget( QWidget* parent ) : QWidget( parent ), ui( new Ui::PTRImportWidget )
+PTRImportWidget::PTRImportWidget( QWidget* parent ) :
+  QWidget( parent ),
+  ui( new Ui::PTRImportWidget ),
+  m_history_model( new PTRHistoryModel( this ) )
 {
 	ui->setupUi( this );
 
-	ui->directoryPath->setText( "./ptrfiles" );
+	const QString default_dir = QStandardPaths::writableLocation( QStandardPaths::DownloadLocation ) + "/ptrfiles";
+	ui->directoryPath->setText( default_dir );
 	ui->importButton->setEnabled( true );
 	ui->cancelButton->setEnabled( false );
 
-	QFont monospace_font = QFontDatabase::systemFont( QFontDatabase::SystemFont::FixedFont );
-	ui->historyLog->setFont( monospace_font );
+	ui->historyView->setModel( m_history_model );
+	ui->historyView->horizontalHeader()->setSectionResizeMode( QHeaderView::Interactive );
+	ui->historyView->resizeColumnsToContents();
 
 	connect( ui->selectDirectory, &QToolButton::clicked, this, &PTRImportWidget::onSelectDirectory );
 	connect(
@@ -70,7 +76,7 @@ void PTRImportWidget::onImport()
 	ui->statusLabel->setStyleSheet( "" );
 	ui->statusLabel->setText( "Importing..." );
 	ui->fileCountLabel->setText( "Files: --" );
-	ui->historyLog->clear();
+	m_history_model->clear();
 
 	m_worker = std::make_unique< idhan::hydrus::ptr::PTRImportWorker >( dir_text.toStdString() );
 
@@ -115,9 +121,15 @@ void PTRImportWidget::onFileProcessed( int current, int total )
 	ui->subProgressBar->setValue( 0 ); // Reset sub-progress for next file
 }
 
-void PTRImportWidget::onUpdateCompleted( const QString& summary )
+void PTRImportWidget::onUpdateCompleted( const idhan::hydrus::ptr::PTRHistoryEntry& entry )
 {
-	ui->historyLog->appendPlainText( summary );
+	m_history_model->addEntry( entry );
+	ui->historyView->scrollToBottom();
+
+	// Re-measuring column widths against every row is O(n) per insert, which gets expensive over a
+	// long PTR sync — so only do it every so often rather than on every single completed update.
+	constexpr int COLUMN_RESIZE_INTERVAL = 20;
+	if ( m_history_model->rowCount() % COLUMN_RESIZE_INTERVAL == 0 ) ui->historyView->resizeColumnsToContents();
 }
 
 void PTRImportWidget::onImportFinished( bool success, const QString& message )
