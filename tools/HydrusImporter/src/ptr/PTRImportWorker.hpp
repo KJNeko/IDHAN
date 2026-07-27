@@ -1,10 +1,12 @@
 #pragma once
 
+#include <QMetaType>
 #include <QObject>
 #include <QRunnable>
 
 #include <IDHANTypes.hpp>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -41,6 +43,21 @@ struct ContentStats
 	int aliases_removed = 0;
 };
 
+//! One row of PTR import history — the stats for a single completed PTR update batch.
+struct PTRHistoryEntry
+{
+	int update_index = 0;
+	int64_t file_count = 0;
+	ContentStats stats;
+};
+
+} // namespace idhan::hydrus::ptr
+
+Q_DECLARE_METATYPE( idhan::hydrus::ptr::PTRHistoryEntry )
+
+namespace idhan::hydrus::ptr
+{
+
 //! QRunnable that imports downloaded PTR update files from a directory into IDHAN, applying them in
 //! dependency order and in batches. Cancellable via requestCancel(); progress via the signals below.
 class PTRImportWorker : public QObject, public QRunnable
@@ -49,8 +66,15 @@ class PTRImportWorker : public QObject, public QRunnable
 
   public:
 
-	static constexpr std::size_t BATCH_SIZE = 250;
-	static constexpr std::size_t CONCURRENCY = 4;
+	// Rows per request. There is deliberately no cap on how many batches are in flight at once:
+	// requests are handed straight to QNetworkAccessManager, which throttles the real socket count
+	// per host, so we submit everything and let it pipeline.
+	static constexpr std::size_t BATCH_SIZE { 128 };
+
+	// How often to re-check for a not-yet-downloaded file, and how long to keep waiting on one
+	// with no progress from the downloader before giving up and treating it as a real gap.
+	static constexpr std::chrono::seconds FILE_WAIT_POLL_INTERVAL { 3 };
+	static constexpr std::chrono::seconds FILE_WAIT_STALL_TIMEOUT { 180 };
 
 	explicit PTRImportWorker( const std::filesystem::path& ptr_directory, QObject* parent = nullptr );
 
@@ -65,13 +89,25 @@ class PTRImportWorker : public QObject, public QRunnable
 	void progress( const QString& status );
 	void subProgress( int current, int total, const QString& status );
 	void fileProcessed( int current, int total );
-	void updateCompleted( const QString& summary );
+	void updateCompleted( const PTRHistoryEntry& entry );
 	void finished( bool success, const QString& message );
 
   private:
 
+	//! The downloader's last-known progress state, read from ptr_metadata.json's "state" field
+	//! (or inferred as "running" from metadata.ptrupdate's mtime if that file doesn't exist yet).
+	struct DownloadStatus
+	{
+		std::string state; // "running" | "done" | "error" | "cancelled"
+		std::chrono::seconds heartbeat_age;
+	};
+
 	void loadMetadata();
 	bool processInOrder(); // returns true if cancelled mid-run
+	DownloadStatus readDownloadStatus() const;
+	//! Blocks (polling) until file_path exists, the downloader reports a terminal state, its
+	//! heartbeat goes stale, or cancellation is requested. Returns true iff the file now exists.
+	bool waitForFile( const std::filesystem::path& file_path );
 
 	ContentStats processSingleContentFile(
 		const std::string& hash_hex,

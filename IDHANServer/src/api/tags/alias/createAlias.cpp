@@ -69,31 +69,12 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRe
 	{
 		try
 		{
-			const auto insert_result { co_await db->execSqlCoro(
+			co_await db->execSqlCoro(
 				"INSERT INTO tag_aliases (tag_domain_id, aliased_id, alias_id) VALUES "
 				"($1, $2, $3) ON CONFLICT(tag_domain_id, aliased_id) DO NOTHING RETURNING alias_id",
 				tag_domain_id.value(),
 				aliased_id,
-				alias_id ) };
-
-			if ( insert_result.empty() )
-			{
-				// conflict: this tag already has an alias in this domain. DO NOTHING would
-				// silently drop a request for a different target, so report that as a conflict
-				const auto existing { co_await db->execSqlCoro(
-					"SELECT alias_id FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2",
-					tag_domain_id.value(),
-					aliased_id ) };
-
-				if ( !existing.empty() && existing[ 0 ][ 0 ].as< TagID >() != alias_id )
-					co_return createConflict(
-						"Tag {} is already aliased to {} in domain {}",
-						aliased_id,
-						existing[ 0 ][ 0 ].as< TagID >(),
-						tag_domain_id.value() );
-
-				// already aliased to the requested target: idempotent success
-			}
+				alias_id );
 		}
 		catch ( std::exception& e )
 		{

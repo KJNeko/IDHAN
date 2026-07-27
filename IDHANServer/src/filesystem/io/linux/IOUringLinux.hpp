@@ -46,7 +46,10 @@ class IOUringLinux final : public IOUring
 {
 	// Member order matters for initializer-list construction order
 	io_uring_params m_params;
-	unsigned int uring_fd;
+	// Signed: io_uring_setup() returns a negative errno on failure. A previous `unsigned` type made a
+	// failed setup (e.g. -ENOMEM) read as a huge positive fd, so `uring_fd > 0` wrongly reported
+	// success and the watcher spun on io_uring_enter with a bogus fd instead of using the sync fallback.
+	int uring_fd;
 	std::shared_ptr< std::atomic< bool > > io_run;
 
 	int setupUring();

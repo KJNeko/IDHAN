@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <fstream>
+#include <vector>
 
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -22,6 +23,7 @@
 #include "paths.hpp"
 #include "trantor/utils/ConcurrentTaskQueue.h"
 #pragma GCC diagnostic pop
+
 
 namespace idhan::api
 {
@@ -74,9 +76,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	if ( !std::filesystem::exists( thumbnail_location ) || force_regenerate )
 	{
-		using namespace std::chrono_literals;
-		logging::ScopedTimer thumbnail_timer { "Thumbnail Process", 5s };
-		// We must generate the thumbnail
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 
 		if ( thumbnailers.empty() )
@@ -94,9 +93,20 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		const std::size_t height { size };
 		const std::size_t width { size };
 
-		const auto& [ data, data_size ] = io_uring.mmapReadOnly();
+		std::vector< std::byte > buffer {};
 
-		const idhan::data_view data_view { static_cast< const std::uint8_t* >( data ), data_size };
+		try
+		{
+			buffer = co_await io_uring.readAll();
+		}
+		catch ( const std::exception& e )
+		{
+			co_return createInternalError( "Failed to read file for record {}: {}", record_id, e.what() );
+		}
+
+		// buffer must outlive createThumbnailFile below -- file_view does not own its bytes. Both
+		// live in this same block, so the lifetime holds.
+		const idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( buffer.data() ), buffer.size() };
 		ModuleCallData call_data { .file_view = data_view, .mime_name = mime_name, .extra = {} };
 
 		// check if we have any metadata for this

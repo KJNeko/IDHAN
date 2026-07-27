@@ -43,8 +43,8 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 				text_tags.emplace_back( std::move( tag_text ) );
 		}
 
-		const auto tag_result { co_await builder.setTags( text_tags ) };
-		if ( !tag_result ) co_return tag_result.error();
+		const auto tag_result_error { co_await builder.setTags( text_tags ) };
+		if ( tag_result_error ) co_return *tag_result_error;
 
 		try
 		{

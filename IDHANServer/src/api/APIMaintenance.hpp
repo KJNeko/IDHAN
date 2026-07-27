@@ -50,6 +50,10 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	drogon::Task< drogon::HttpResponsePtr > jobStatus( drogon::HttpRequestPtr request, idhan::JobID job_id );
 	drogon::Task< drogon::HttpResponsePtr > jobsStatus( drogon::HttpRequestPtr request );
 
+	// TEMPORARY (coroutine frame leak hunt): lists live coroutine frames. Only reports real data when
+	// the build was configured with -DIDHAN_TRACK_CORO_FRAMES=ON. Remove with the probe.
+	drogon::Task< drogon::HttpResponsePtr > coroFrames( drogon::HttpRequestPtr request );
+
   public:
 
 	METHOD_LIST_BEGIN
@@ -71,6 +75,8 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	ADD_METHOD_TO( APIMaintenance::testJob, "/test", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::jobStatus, "/jobs/{job_id}/status", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::jobsStatus, "/jobs/status", drogon::Get, IDHANAPIAuthName );
+
+	ADD_METHOD_TO( APIMaintenance::coroFrames, "/coro/frames", drogon::Get, IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

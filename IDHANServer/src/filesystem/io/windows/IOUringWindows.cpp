@@ -53,7 +53,7 @@ FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly
 	const DWORD share { FILE_SHARE_READ };
 	const DWORD disposition { readonly ? OPEN_EXISTING : OPEN_ALWAYS };
 	// FILE_FLAG_OVERLAPPED is required for IOCP async I/O.
-	// FILE_FLAG_SEQUENTIAL_SCAN hints to the prefetcher (safe for reads without mmapReadOnly).
+	// FILE_FLAG_SEQUENTIAL_SCAN hints to the prefetcher.
 	const DWORD flags { FILE_FLAG_OVERLAPPED | FILE_FLAG_SEQUENTIAL_SCAN };
 
 	m_handle = CreateFileW( path.wstring().c_str(), access, share, nullptr, disposition, flags, nullptr );
@@ -104,24 +104,6 @@ drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, co
 	co_await IOUring::getInstance().write( nativeHandle(), data, offset );
 }
 
-std::pair< void*, std::size_t > FileIOUring::mmapReadOnly()
-{
-	if ( !m_mmap_buffer.empty() ) return { m_mmap_buffer.data(), m_mmap_buffer.size() };
-
-	// Windows fallback: read the whole file into an owned buffer.
-	// True MapViewOfFile would require a separate HANDLE and adds bookkeeping for no practical gain
-	// given the short-lived per-request contexts that call this.
-	m_mmap_buffer.resize( m_size );
-
-	DWORD bytes_read { 0 };
-	// Synchronous read into the buffer (mmapReadOnly is not on a hot coroutine path)
-	if ( !ReadFile( m_handle, m_mmap_buffer.data(), static_cast< DWORD >( m_size ), &bytes_read, nullptr ) )
-		throw std::runtime_error( format_ns::format( "mmapReadOnly: ReadFile failed for {}", m_path.string() ) );
-
-	m_mmap_buffer.resize( bytes_read );
-	return { m_mmap_buffer.data(), m_mmap_buffer.size() };
-}
-
 FileIOUring::FileIOUring( const FileIOUring& other ) :
   m_handle( nullptr ),
   m_size( other.m_size ),
@@ -146,7 +128,6 @@ FileIOUring& FileIOUring::operator=( const FileIOUring& other )
 	if ( this == &other ) return *this;
 	FileIOUring tmp { other };
 	std::swap( m_handle, tmp.m_handle );
-	std::swap( m_mmap_buffer, tmp.m_mmap_buffer );
 	m_size = other.m_size;
 	m_path = other.m_path;
 	m_readonly = other.m_readonly;
@@ -155,7 +136,6 @@ FileIOUring& FileIOUring::operator=( const FileIOUring& other )
 
 FileIOUring::FileIOUring( FileIOUring&& other ) noexcept :
   m_handle( std::exchange( other.m_handle, nullptr ) ),
-  m_mmap_buffer( std::move( other.m_mmap_buffer ) ),
   m_size( other.m_size ),
   m_path( std::move( other.m_path ) ),
   m_readonly( other.m_readonly )
@@ -166,7 +146,6 @@ FileIOUring& FileIOUring::operator=( FileIOUring&& other ) noexcept
 	if ( this == &other ) return *this;
 	if ( m_handle && m_handle != INVALID_HANDLE_VALUE ) CloseHandle( m_handle );
 	m_handle = std::exchange( other.m_handle, nullptr );
-	m_mmap_buffer = std::move( other.m_mmap_buffer );
 	m_size = other.m_size;
 	m_path = std::move( other.m_path );
 	m_readonly = other.m_readonly;

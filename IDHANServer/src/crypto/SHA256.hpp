@@ -89,7 +89,7 @@ class SHA256
 	//! Computes the SHA-256 of \p size bytes at \p data.
 	[[nodiscard]] static SHA256 hash( const std::byte* data, std::size_t size );
 	//! Computes the SHA-256 of a file streamed via io_uring.
-	[[nodiscard]] static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
+	[[nodiscard]] static drogon::Task< SHA256 > hashCoro( std::shared_ptr< FileIOUring > io_uring );
 
 	//! \copydoc hash(const std::byte*,std::size_t)
 	[[nodiscard]] static SHA256 hash( const std::vector< std::byte >& data )

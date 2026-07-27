@@ -40,6 +40,27 @@ option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
+# Links the server against jemalloc instead of using the system (glibc) allocator.
+#
+# Thumbnail generation allocates a full-resolution decode buffer per request -- tens of megabytes for
+# a large image. glibc's dynamic mmap threshold moves allocations that size out of mmap and into the
+# per-thread arenas after it has seen a few of them, and arena memory is never returned to the OS, so
+# RSS settles at roughly (threads that generated a thumbnail) x (largest decode buffer). jemalloc
+# purges on a decay timer instead and gives the pages back.
+option(IDHAN_USE_JEMALLOC "Link the server against jemalloc instead of the system allocator" OFF)
+
+# TEMPORARY (coroutine frame leak hunt): embeds a lifetime probe in drogon's promise types so live
+# coroutine frames can be listed via GET /coro/frames. This changes drogon::Task's promise_type
+# layout, so it is applied by patching a build-tree COPY of drogon's coroutine.h and setting the
+# define PUBLIC on the drogon target -- see dependencies/Finddrogon.cmake. Never set the define on an
+# individual target that links drogon; that is an ODR violation.
+#
+# Driven purely by the build type: on in Debug, absent everywhere else. Deliberately NOT an option()
+# -- there is no flag to remember to set, and no cache entry that can go stale against the build type.
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(IDHAN_TRACK_CORO_FRAMES ON)
+endif ()
+
 if (BUILD_HYDRUS_IMPORTER EQUAL 1)
 	set(BUILD_IDHAN_CLIENT ON)
 endif ()

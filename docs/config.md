@@ -53,6 +53,8 @@ The following example covers the most common options. Commented-out lines show t
 #database = "idhan-db"
 
 [server]
+# TCP port the HTTP server listens on
+#port = 16609
 # Number of IO threads (0 = auto-detect from hardware)
 #io_threads = 0
 # Temporary file path for uploads
@@ -83,4 +85,5 @@ The following example covers the most common options. Commented-out lines show t
 #enable_perf_warnings = false
 ```
 
-> **Note:** The server always listens on port **16609**. This is not configurable via the config file.
+> **Note:** The server listens on port **16609** by default. Override it with `[server] port` (or
+> `IDHAN_SERVER_PORT`). Both the IPv4 and IPv6 listeners use this port.

@@ -67,9 +67,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		search_tags.emplace_back( tag_text );
 	}
 
-	const auto search_result { co_await builder.setTags( search_tags ) };
+	const auto search_result_error { co_await builder.setTags( search_tags ) };
 	// an unchecked failure here would leave the builder with no tags and search everything
-	if ( !search_result ) co_return search_result.error();
+	if ( !search_result_error ) co_return *search_result_error;
 
 	try
 	{

@@ -1,6 +1,12 @@
 This document contains a lot of the key ideas and concepts for the current and future development.
 Note that this document might not match the current state of IDHAN and is mostly a guide for myself to stay on track.
 
+> **This is a roadmap/vision document, not a reference.** Sections here describe intended design and
+> may be ahead of (or diverge from) the implementation — for example the "Order of application" and
+> "Siblings" sections describe planned resolution behaviour, whereas `tag_siblings` is currently
+> read-only. For the *authoritative* current state see
+> [Database Schema](database-schema.md) and the [Tag System Trigger Review](tag-system-triggers.md).
+
 The application/concept name is **IDHAN** (**I** **D**on't **H**ave **A** **N**ame).
 
 # Notes

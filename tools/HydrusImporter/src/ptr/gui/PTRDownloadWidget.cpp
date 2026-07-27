@@ -2,6 +2,7 @@
 
 #include <QFileDialog>
 #include <QLocale>
+#include <QStandardPaths>
 #include <QThreadPool>
 
 #include "ptr/PTRDownloader.hpp"
@@ -11,8 +12,9 @@ PTRDownloadWidget::PTRDownloadWidget( QWidget* parent ) : QWidget( parent ), ui(
 {
 	ui->setupUi( this );
 
-	ui->directoryPath->setText( "./ptrfiles" );
-	m_directory = "./ptrfiles";
+	const QString default_dir = QStandardPaths::writableLocation( QStandardPaths::DownloadLocation ) + "/ptrfiles";
+	ui->directoryPath->setText( default_dir );
+	m_directory = default_dir.toStdString();
 	ui->downloadButton->setEnabled( true );
 
 	connect( ui->selectDirectory, &QToolButton::clicked, this, &PTRDownloadWidget::onSelectDirectory );

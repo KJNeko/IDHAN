@@ -115,18 +115,14 @@ Json::Value MimeDatabase::dump() const
 	return json;
 }
 
-drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan(
-	std::string_view data,
-	const std::string file_name )
+ExpectedTask< std::string > MimeDatabase::scan( std::string_view data, const std::string file_name )
 {
 	log::trace( "MimeDatabase::scan(string_view, file_name={})", file_name );
 	Cursor cursor { data, file_name };
 	co_return co_await scan( cursor );
 }
 
-drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan(
-	data_view data,
-	const std::string file_name )
+ExpectedTask< std::string > MimeDatabase::scan( data_view data, const std::string file_name )
 {
 	log::trace( "MimeDatabase::scan(data_view, file_name={})", file_name );
 	const std::string_view data_view { reinterpret_cast< const char* >( data.data() ), data.size() };
@@ -134,19 +130,17 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 	co_return co_await scan( cursor );
 }
 
-drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scan( FileIOUring file_io )
+ExpectedTask< std::string > MimeDatabase::scan( std::shared_ptr< FileIOUring > file_io )
 {
-	log::trace( "MimeDatabase::scan(FileIOUring, path={})", file_io.path().string() );
+	log::trace( "MimeDatabase::scan(FileIOUring, path={})", file_io->path().string() );
 	Cursor cursor { file_io };
 	co_return co_await scan( cursor );
 }
 
-drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDatabase::scanFile(
-	const std::filesystem::path& path )
+ExpectedTask< std::string > MimeDatabase::scanFile( const std::filesystem::path& path )
 {
 	log::trace( "MimeDatabase::scanFile(path={})", path.string() );
-	FileIOUring io { path };
-	co_return co_await scan( io );
+	co_return co_await scan( std::make_shared< FileIOUring >( path ) );
 }
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::reloadMimeParsers()

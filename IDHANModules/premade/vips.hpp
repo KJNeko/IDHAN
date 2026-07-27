@@ -2,7 +2,14 @@
 // Created by kj16609 on 6/12/25.
 //
 #pragma once
+#include <vips/vips.h>
+
+#include <memory>
 #include <ranges>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
 using VipsFunc = int ( * )( void*, size_t, VipsImage**, ... );
 

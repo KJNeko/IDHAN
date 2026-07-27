@@ -27,35 +27,26 @@ bool tableExists( pqxx::nontransaction& tx, const std::string_view name, const s
 	return table_result.size() > 0;
 }
 
-//! Returns the table version.
-std::uint16_t getTableVersion( pqxx::nontransaction& tx, const std::string_view name )
-{
-	pqxx::params params {};
-	params.append( name );
-	const auto result { tx.exec_params( "SELECT table_version FROM idhan_info WHERE table_name = $1", params ) };
-
-	if ( result.size() == 0 ) return 0;
-
-	return result.at( 0 )[ 0 ].as< std::uint16_t >();
-}
-
 void addTableToInfo(
 	pqxx::nontransaction& tx,
 	const std::string_view name,
+	const std::string_view operation,
 	const std::string_view creation_query,
 	const std::size_t migration_id )
 {
 	pqxx::params params {};
 	params.append( name );
 	params.append( migration_id );
+	params.append( operation );
 	params.append( creation_query );
 	tx.exec_params(
 		R"(
-					INSERT INTO idhan_info (table_name, last_migration_id, queries)
-					VALUES( $1, $2, ARRAY[$3] )
-					ON CONFLICT (table_name) DO UPDATE SET
+					INSERT INTO idhan_info (object_name, last_migration_id, last_operation, queries)
+					VALUES( $1, $2, $3, ARRAY[$4] )
+					ON CONFLICT (object_name) DO UPDATE SET
 						queries = idhan_info.queries || EXCLUDED.queries,
-		                last_migration_id = EXCLUDED.last_migration_id;)",
+		                last_migration_id = EXCLUDED.last_migration_id,
+		                last_operation = EXCLUDED.last_operation;)",
 		params );
 }
 

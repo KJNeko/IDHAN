@@ -4,10 +4,9 @@
 
 #include <memory>
 
-namespace idhan::hydrus::ptr
-{
-class PTRImportWorker;
-}
+#include "ptr/PTRImportWorker.hpp"
+
+class PTRHistoryModel;
 
 namespace Ui
 {
@@ -35,12 +34,13 @@ class PTRImportWidget final : public QWidget
 	void onProgress( const QString& status );
 	void onSubProgress( int current, int total, const QString& status );
 	void onFileProcessed( int current, int total );
-	void onUpdateCompleted( const QString& summary );
+	void onUpdateCompleted( const idhan::hydrus::ptr::PTRHistoryEntry& entry );
 	void onImportFinished( bool success, const QString& message );
 
   private:
 
 	Ui::PTRImportWidget* ui;
 	std::unique_ptr< idhan::hydrus::ptr::PTRImportWorker > m_worker;
+	PTRHistoryModel* m_history_model;
 	bool m_importing { false };
 };

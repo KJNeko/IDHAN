@@ -11,6 +11,7 @@
 #include "MimeInfo.hpp"
 #include "ModuleBase.hpp"
 #include "filesystem/io/IOUring.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan::mime
 {
@@ -114,21 +115,16 @@ class MimeDatabase
 
 	//! Detects the MIME type of \p data, using \p file_name for extension-gated matchers.
 	//! \return The canonical MIME name, or an error response if scanning fails.
-	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
-		std::string_view data,
-		std::string file_name );
+	[[nodiscard]] ExpectedTask< std::string > scan( std::string_view data, std::string file_name );
 
 	//! \copydoc scan(std::string_view,std::string)
-	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
-		data_view data,
-		std::string file_name );
+	[[nodiscard]] ExpectedTask< std::string > scan( data_view data, std::string file_name );
 
 	//! Detects the MIME type of a file opened via io_uring.
-	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
+	[[nodiscard]] ExpectedTask< std::string > scan( std::shared_ptr< FileIOUring > file_io );
 
 	//! Opens \p path and detects its MIME type. \return The canonical MIME name, or an error response.
-	[[nodiscard]] drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile(
-		const std::filesystem::path& path );
+	[[nodiscard]] ExpectedTask< std::string > scanFile( const std::filesystem::path& path );
 
 	//! Reloads all the 3rd party mime parsers
 	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();

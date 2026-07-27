@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <stdexcept>
+#include <string>
 
 #include <zlib.h>
 
@@ -160,9 +161,22 @@ DefinitionsUpdate parseDefinitionsUpdate( const Json::Value& serialisable_info )
 			{
 				if ( !def.isArray() || def.size() < 2 ) continue;
 				const auto tag_id = def[ 0 ].asInt();
-				const auto tag = def[ 1 ].asString();
+				auto tag = def[ 1 ].asString();
+
+				// A null byte (0x00) in tag text is not legitimate content — it indicates corruption in
+				// the PTR server's data. PostgreSQL's TEXT type also cannot store it, so left in place it
+				// would sink the entire createTags batch downstream. Catch it here, at ingestion, log it
+				// loudly so the corruption is visible, and strip it so the rest of the import proceeds.
+				if ( tag.find( '\0' ) != std::string::npos )
+				{
+					spdlog::warn(
+						"PTR data corruption: tag definition tag_id={} contains a null byte (0x00); stripping it",
+						tag_id );
+					std::erase( tag, '\0' );
+				}
+
 				spdlog::trace( "  tag_id={} -> {}", tag_id, tag );
-				result.tag_ids_to_tags.emplace( tag_id, tag );
+				result.tag_ids_to_tags.emplace( tag_id, std::move( tag ) );
 			}
 		}
 	}
@@ -280,19 +294,53 @@ MetadataUpdate parseMetadataUpdate( const Json::Value& serialisable_info )
 	{
 		if ( !entry.isArray() || entry.size() < 4 ) continue;
 
+		const auto& hashes = entry[ 1 ];
+		if ( !hashes.isArray() )
+		{
+			spdlog::warn(
+				"Skipping metadata update entry (index={}) with missing/invalid \"hashes\" field", entry[ 0 ].asInt() );
+			continue;
+		}
+
 		MetadataUpdateEntry ue;
 		ue.index = entry[ 0 ].asInt();
-		const auto& hashes = entry[ 1 ];
-		if ( hashes.isArray() )
-		{
-			for ( const auto& h : hashes )
-				ue.hashes.push_back( h.asString() );
-		}
+		for ( const auto& h : hashes ) ue.hashes.push_back( h.asString() );
 		ue.begin = entry[ 2 ].asInt64();
 		ue.end = entry[ 3 ].asInt64();
 
 		result.updates.push_back( std::move( ue ) );
 	}
+
+	return result;
+}
+
+MetadataUpdate parseMetadataCacheJson( const Json::Value& root )
+{
+	MetadataUpdate result;
+
+	const auto& updates_arr = root[ "updates" ];
+	if ( updates_arr.isArray() )
+	{
+		for ( const auto& u : updates_arr )
+		{
+			const auto& hashes = u[ "hashes" ];
+			if ( !hashes.isArray() )
+			{
+				spdlog::warn(
+					"Skipping ptr_metadata.json update entry (index={}) with missing/invalid \"hashes\" field",
+					u.get( "index", -1 ).asInt() );
+				continue;
+			}
+
+			MetadataUpdateEntry entry;
+			entry.index = u[ "index" ].asInt();
+			for ( const auto& h : hashes ) entry.hashes.push_back( h.asString() );
+			entry.begin = u[ "begin" ].asInt64();
+			entry.end = u[ "end" ].asInt64();
+			result.updates.push_back( std::move( entry ) );
+		}
+	}
+	result.next_update_due = root.get( "next_update_due", 0 ).asInt64();
 
 	return result;
 }

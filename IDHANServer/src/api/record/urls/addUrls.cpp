@@ -33,8 +33,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 		co_return drogon::HttpResponse::newHttpJsonResponse( result );
 	}
 
-	std::vector< std::string > url_strings;
-	std::vector< std::string > domain_strings;
+	std::vector< std::string > url_strings {};
+	std::vector< std::string > domain_strings {};
 	url_strings.reserve( urls.size() );
 	domain_strings.reserve( urls.size() );
 
@@ -46,6 +46,11 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 		domain_strings.push_back( helpers::extractDomain( url_str ) );
 		url_strings.push_back( std::move( url_str ) );
 	}
+
+	// Deduplicate domain_strings to avoid redundant DB operations
+	std::ranges::sort( domain_strings );
+	const auto [ uniq_beg, uniq_end ] = std::ranges::unique( domain_strings );
+	domain_strings.erase( uniq_beg, uniq_end );
 
 	// 1. Batch upsert all domains (copy — domain_strings needed again in step 2)
 	co_await db->execSqlCoro(
