@@ -59,6 +59,11 @@ class RunLoopResumer final : public Resumer
 
 	explicit RunLoopResumer( RunLoop& loop ) noexcept : m_loop( &loop ) {}
 
+	// Already implicitly deleted via Resumer's deleted copy/move, but -Weffc++ does not reason
+	// through the base class -- it just sees a pointer member with no copy/move declared here.
+	FGL_DELETE_COPY( RunLoopResumer );
+	FGL_DELETE_MOVE( RunLoopResumer );
+
 	void resume( std::coroutine_handle<> handle ) noexcept override;
 };
 
