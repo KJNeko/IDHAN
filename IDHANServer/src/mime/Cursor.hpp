@@ -20,7 +20,7 @@ constexpr std::size_t min_request_size { 32 * 1024 };
 
 class CursorData
 {
-	std::variant< FileIOUring, std::string_view > m_io;
+	std::variant< std::shared_ptr< FileIOUring >, std::string_view > m_io;
 
 	mutable std::size_t m_buffer_pos { 0 };
 	mutable std::vector< std::byte > m_buffer {};
@@ -38,13 +38,14 @@ class CursorData
 
 	FGL_DELETE_ALL_RO5( CursorData );
 
-	CursorData( FileIOUring uring ) : m_io { uring } {}
+	CursorData( std::shared_ptr< FileIOUring > uring ) : m_io { std::move( uring ) } {}
 
 	CursorData( std::string_view data ) noexcept : m_io { data } {}
 };
 
 class Cursor
 {
+	std::shared_ptr< FileIOUring > m_io;
 	std::shared_ptr< CursorData > m_data {};
 	std::size_t m_pos { 0 };
 	std::string m_extension { "" };
@@ -54,7 +55,7 @@ class Cursor
   public:
 
 	Cursor() = delete;
-	Cursor( FileIOUring uring );
+	Cursor( std::shared_ptr< FileIOUring > uring );
 	Cursor( std::string_view view, const std::string& file_name );
 
 	FGL_DEFAULT_COPY( Cursor );

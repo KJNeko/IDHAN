@@ -12,14 +12,12 @@
 #include "api/search/parseSortType.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
-#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpRequestPtr request )
 {
-	ZoneScoped;
 	const auto start { std::chrono::steady_clock::now() };
 
 	const auto body { request->getJsonObject() };
@@ -45,8 +43,8 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 				text_tags.emplace_back( std::move( tag_text ) );
 		}
 
-		const auto tag_result { co_await builder.setTags( text_tags ) };
-		if ( !tag_result ) co_return tag_result.error();
+		const auto tag_result_error { co_await builder.setTags( text_tags ) };
+		if ( tag_result_error ) co_return *tag_result_error;
 
 		try
 		{
@@ -152,7 +150,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 	}
 	if ( return_hashes )
 	{
-		ZoneScopedN( "searchPost: serialize hashes" );
 		Json::Value hashes { Json::arrayValue };
 		for ( const auto& row : result ) hashes.append( SHA256::fromPgCol( row[ "sha256" ] ).hex() );
 		out[ "hashes" ] = std::move( hashes );

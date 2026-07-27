@@ -4,7 +4,7 @@
 
 #include "ImageVipsMetadata.hpp"
 
-#include <vips/vips8>
+#include <vips/vips.h>
 
 #include <cstring>
 #include <unordered_map>
@@ -46,11 +46,13 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 		return std::unexpected( ModuleError { "Failed to load image" } );
 	}
 
-	const vips::VImage image { image_ptr };
+	VipsImagePtr image { image_ptr };
 
 	MetadataInfo info {};
 	info.m_metadata = MetadataInfoImage {
-		.width = image.width(), .height = image.height(), .channels = static_cast< std::uint8_t >( image.bands() )
+		.width = vips_image_get_width( image.get() ),
+		.height = vips_image_get_height( image.get() ),
+		.channels = static_cast< std::uint8_t >( vips_image_get_bands( image.get() ) )
 	};
 
 	info.m_simple_type = idhan::SimpleMimeType::IMAGE_TYPE;

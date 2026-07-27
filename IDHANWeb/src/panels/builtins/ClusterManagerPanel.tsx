@@ -38,7 +38,7 @@ export const DEFAULT_SCAN_PARAMS: ScanParams = {
 //   scan_metadata |= adopt_orphans; scan_mime |= scan_metadata;
 // so adopt_orphans MUST be cleared too, else mime + metadata come back on.
 export function fastScanPreset(params: ScanParams): ScanParams {
-  return { ...params, scan_mime: false, scan_metadata: false, adopt_orphans: false };
+    return {...params, scan_mime: true, scan_metadata: false, adopt_orphans: true};
 }
 
 // Void out params that require write access when the scan will run read-only —
@@ -47,7 +47,7 @@ export function fastScanPreset(params: ScanParams): ScanParams {
 export function sanitizeScanParams(params: ScanParams, clusterReadonly: boolean): ScanParams {
   const readOnly = clusterReadonly || params.readonly;
   if (!readOnly) return params;
-  return { ...params, fix_extensions: false };
+    return {...params, fix_extensions: false, remove_missing_files: false};
 }
 
 // Encode as ?scan_mime=true&... — Drogon's fromString<bool> reads "true"/"false".
@@ -382,7 +382,7 @@ function ClusterManagerPanel({ host }: PanelProps) {
             <div className="scan-modal-advanced">
               <span className="muted">Advanced</span>
               <div className="scan-modal-grid">
-                {scanCheck('remove_missing_files', 'Remove missing files')}
+                  {!scanTarget.readonly && scanCheck('remove_missing_files', 'Remove missing files')}
                 {!scanTarget.readonly && scanCheck('readonly', 'Force read-only')}
               </div>
             </div>

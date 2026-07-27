@@ -4,9 +4,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
-#include <memory>
-#include <utility>
 #include <vector>
 
 #include "drogon/utils/coroutine.h"
@@ -52,25 +51,31 @@ class [[nodiscard]] FileIOUring
 #ifdef __linux__
 	struct FileDescriptor
 	{
-		std::shared_ptr< int > m_fd;
+		int m_fd { -1 };
 		explicit FileDescriptor( int fd );
+
+		~FileDescriptor();
+
+		// Owns the fd; copying would double-close. Move transfers ownership and resets the source to -1.
+		FGL_DELETE_COPY( FileDescriptor );
+		FileDescriptor( FileDescriptor&& other ) noexcept;
+		FileDescriptor& operator=( FileDescriptor&& other ) noexcept;
+
 		operator int() const;
 	};
 
 	FileDescriptor m_fd;
-	// shared (not raw) so a copied/moved FileIOUring can't leave two instances calling munmap()
-	// on the same address
-	std::shared_ptr< void > m_mmap_ptr {};
 #elif defined( _WIN32 )
 	void* m_handle { nullptr }; // HANDLE — void* avoids pulling <windows.h> into this header
-	mutable std::vector< std::byte > m_mmap_buffer {}; // populated lazily on first mmapReadOnly()
 #endif
 
 	std::size_t m_size;
 	std::filesystem::path m_path;
-	bool m_readonly;
+	bool m_readonly { true };
 
 	[[nodiscard]] IOUring::NativeHandle nativeHandle() const;
+
+	FGL_DELETE_COPY( FileIOUring );
 
   public:
 
@@ -79,21 +84,20 @@ class [[nodiscard]] FileIOUring
 
 	explicit FileIOUring( const std::filesystem::path& path, bool readonly = ReadOnly );
 	~FileIOUring();
+	FGL_DEFAULT_MOVE( FileIOUring );
 
 	[[nodiscard]] std::size_t size() const;
 	[[nodiscard]] const std::filesystem::path& path() const;
 
 	[[nodiscard]] drogon::Task< std::vector< std::byte > > read( std::size_t offset, std::size_t len ) const;
+
+	//! Reads the whole file into one owned buffer. Chunked at 512 MiB because io_uring's per-SQE
+	//! length field is a __u32, so no single op can cover a file of 4 GiB or more.
+	[[nodiscard]] drogon::Task< std::vector< std::byte > > readAll() const;
+
 	[[nodiscard]] drogon::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 ) const;
 
-	//! Memory-maps the file read-only. Lifetime of returned pointer tied to this FileIOUring instance.
-	[[nodiscard]] std::pair< void*, std::size_t > mmapReadOnly();
-
 	FileIOUring() = delete;
-	[[nodiscard]] FileIOUring( const FileIOUring& );
-	[[nodiscard]] FileIOUring& operator=( const FileIOUring& );
-	[[nodiscard]] FileIOUring( FileIOUring&& ) noexcept;
-	[[nodiscard]] FileIOUring& operator=( FileIOUring&& ) noexcept;
 };
 
 } // namespace idhan

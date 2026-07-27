@@ -26,12 +26,7 @@
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
-#include "profiling/tracy.hpp"
 #include "spdlog/async.h"
-
-#ifdef TRACY_ENABLE
-#include "idhan_tracy/CoroFiber.hpp"
-#endif
 
 namespace idhan
 {
@@ -55,23 +50,9 @@ void addCORSHeaders( const drogon::HttpResponsePtr& response )
 void ServerContext::setupCORSSupport() const
 {
 	drogon::app().registerPreRoutingAdvice(
-		[ this ](
-			const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
+		[]( const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
 		{
-			log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
-
-#ifdef TRACY_ENABLE
-			// Best-effort: seeds the fiber context for the handler coroutine (constructed on this
-			// thread right after routing). The tag (request line) becomes "X"; a fresh query id
-			// becomes "A", shared by every coroutine of this request; depth -1 makes the handler
-			// itself depth 0. The tag string is per-thread and owned for the request's duration.
-			static thread_local std::string tag {};
-			tag = request->getMethodString() + std::string( " " ) + request->getPath();
-			idhan::tracy_coro::currentFiberContext() = idhan::tracy_coro::FiberCtx {
-				tag.c_str(), idhan::tracy_coro::nextFiberId() + 1, -1
-			};
-#endif
-
+			log::info( "Routing for {}", request->path() );
 			if ( request->method() == drogon::Options )
 			{
 				const auto response { drogon::HttpResponse::newHttpResponse() };
@@ -87,17 +68,10 @@ void ServerContext::setupCORSSupport() const
 		} );
 
 	drogon::app().registerPostHandlingAdvice(
-		[ this ]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
+		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
 		{
-			if ( args.testmode )
-				log::info( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
-			else
-				log::debug( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
+			log::info( "Finished handling {}", request->path() );
 			addCORSHeaders( response );
-
-#ifdef TRACY_ENABLE
-			idhan::tracy_coro::currentFiberContext() = idhan::tracy_coro::FiberCtx {};
-#endif
 		} );
 }
 
@@ -159,18 +133,29 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	const std::filesystem::path log_path { config::getLogPath() };
 
-	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 1000000 ) };
+	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 0 ) };
 
 	std::vector< spdlog::sink_ptr > sinks {};
 
-	// In-memory ring buffer — captures every level for the /log endpoint
+	// In-memory ring buffer — captures every level for the /log endpoint. It retains a copy of every
+	// message it sees (at trace level) up to buffer_size entries, so a large budget can dominate RSS.
+	// A buffer_size of 0 disables it entirely; the /log endpoint then reports the sink as unavailable.
+	//
 	// Kept as a concrete-typed pointer (see log::setServerLogger) rather than rediscovered later via
 	// dynamic_pointer_cast on the logger's type-erased sinks, since that cast has been observed to fail
-	// across the module .so boundary on some platforms/spdlog builds.
-	auto ring_buffer { std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size ) };
-	sinks.emplace_back( ring_buffer );
-	ring_buffer->set_pattern( std::string( server_format_str ) );
-	ring_buffer->set_level( spdlog::level::trace );
+	// across the module .so boundary on some platforms/spdlog builds. Null when disabled.
+	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_buffer {};
+	if ( ring_buffer_size > 0 )
+	{
+		ring_buffer = std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size );
+		sinks.emplace_back( ring_buffer );
+		ring_buffer->set_pattern( std::string( server_format_str ) );
+		ring_buffer->set_level( spdlog::level::trace );
+	}
+	else
+	{
+		log::info( "In-memory log ring buffer disabled (logging.buffer_size=0); /log endpoint unavailable" );
+	}
 
 	// logs all trace messages to a specific file
 	auto& trace_file_logger { sinks.emplace_back(
@@ -358,7 +343,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.databaseName = arguments.dbname,
 		.username = arguments.user,
 		.password = arguments.password,
-		.connectionNumber = std::min( io_threads, std::size_t( 16 ) ),
+		.connectionNumber = io_threads,
 		.name = "default",
 		.isFast = false,
 		.characterSet = "UTF-8",
@@ -447,7 +432,6 @@ void trantorHook( const char* msg, const std::uint64_t len )
 
 void ServerContext::run()
 {
-	ZoneScoped;
 	log::info( "Starting runtime" );
 
 	trantor::Logger::setOutputFunction( trantorHook, []() noexcept {} );

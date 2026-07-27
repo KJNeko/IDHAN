@@ -62,7 +62,7 @@ tag_domains ────┼┴─► tag_mappings   (record_id, tag_id, tag_doma
 
 active_tag_mappings_final  -- VIEW: union of active_tag_mappings + parents, fully alias-resolved
 
-auth_keys ─< auth_sessions          webui_layouts          idhan_info (migration bookkeeping)
+auth_keys                           webui_layouts          idhan_info (migration bookkeeping)
 ```
 
 ---
@@ -424,13 +424,8 @@ Free-text notes attachable to records, with an optional label taxonomy.
 
 ## Authentication
 
-- **`auth_keys`** — permanent API keys. `key_id SERIAL PK`, `key_hash BYTEA UNIQUE NOT NULL CHECK
-  (length = 32)`.
-- **`auth_sessions`** — temporary session keys exchanged from a permanent key via
-  `POST /auth/session` (migration 192). `session_key BYTEA PK CHECK (length = 32)` (stored verbatim
-  — 256 bits of entropy, so hashing buys nothing), `key_id → auth_keys ON DELETE CASCADE`,
-  `created_at TIMESTAMPTZ DEFAULT now()`, `expires_at TIMESTAMPTZ NOT NULL`. Index on `expires_at`
-  for the per-request expiry filter and bulk cleanup.
+- **`auth_keys`** — permanent API keys, presented directly on every authenticated request. `key_id
+  SERIAL PK`, `key_hash BYTEA UNIQUE NOT NULL CHECK (length = 32)`.
 
 ---
 

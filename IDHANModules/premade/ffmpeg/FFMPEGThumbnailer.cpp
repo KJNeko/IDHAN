@@ -4,7 +4,7 @@
 
 #include "FFMPEGThumbnailer.hpp"
 
-#include <vips/vips8>
+#include <vips/vips.h>
 
 #include <cstring>
 #include <memory>
@@ -88,17 +88,6 @@ struct AVIOContextDeleter
 			// rather than the original allocation
 			av_free( ctx->buffer );
 			av_free( ctx );
-		}
-	}
-};
-
-struct VipsImageDeleter
-{
-	void operator()( VipsImage* img ) const
-	{
-		if ( img )
-		{
-			g_object_unref( img );
 		}
 	}
 };
@@ -307,8 +296,9 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 			packed_line_size );
 	}
 
-	vips::VImage image { vips::VImage::new_from_memory(
+	idhan::VipsImagePtr image { vips_image_new_from_memory(
 		packed_data.data(), packed_size, rgb_frame->width, rgb_frame->height, 3, VIPS_FORMAT_UCHAR ) };
+	if ( !image ) return std::unexpected( idhan::ModuleError( "Failed to create image from frame" ) );
 
 	const float source_aspect { static_cast< float >( rgb_frame->width ) / static_cast< float >( rgb_frame->height ) };
 	const float target_aspect { static_cast< float >( width ) / static_cast< float >( height ) };
@@ -318,7 +308,17 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	else
 		height = static_cast< std::size_t >( static_cast< float >( width ) / source_aspect );
 
-	auto resized { image.resize( static_cast< double >( width ) / static_cast< double >( image.width() ) ) };
+	VipsImage* resized_raw { nullptr };
+	if ( vips_resize(
+			 image.get(),
+			 &resized_raw,
+			 static_cast< double >( width ) / static_cast< double >( vips_image_get_width( image.get() ) ),
+			 nullptr )
+	     != 0 )
+		return std::unexpected( idhan::ModuleError( "Failed to resize frame image" ) );
+	idhan::VipsImagePtr resized { resized_raw };
 
-	return { resized };
+	// write_to_memory (in ThumbnailInfo) computes the pipeline here, while packed_data -- which
+	// vips_image_new_from_memory references without copying -- is still alive on the stack.
+	return idhan::ThumbnailInfo { std::move( resized ) };
 }

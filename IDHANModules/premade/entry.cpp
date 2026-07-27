@@ -88,6 +88,9 @@ void init()
 	g_log_set_handler( VIPS_LOG_DOMAIN, G_LOG_LEVEL_MASK, &gLoghandler, nullptr );
 	g_logv( VIPS_LOG_DOMAIN, G_LOG_LEVEL_INFO, "VIPS Logger taken over", nullptr );
 	VIPS_INIT( "IDHANPremadeModules" );
+	vips_leak_set( TRUE );
+	vips_cache_set_max( 0 );
+	vips_cache_set_max_mem( 0 );
 }
 
 // Defined and implemented if a library used by these modules must be initalized first

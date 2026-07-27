@@ -24,7 +24,7 @@ ExpectedTask< FileIOUring > getIOForRecord( const RecordID record_id, DbClientPt
 	}
 
 	FileIOUring uring { *path };
-	co_return uring;
+	co_return std::move( uring );
 }
 
 } // namespace idhan::filesystem

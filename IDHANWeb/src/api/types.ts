@@ -23,21 +23,9 @@ export interface VersionInfo {
   build: string;
 }
 
-/** Response of POST /auth/session. Under IDHAN_DISABLE_API_AUTH this is a placeholder (all-zero key). */
-export interface SessionGrant {
-  session_key: string;
-  /** Unix seconds. 0 for the auth-disabled placeholder. */
-  expires_at: number;
-}
-
-/** Response of GET /auth/session — reaching it at all means the key was accepted. */
-export interface SessionCheck {
+/** Response of GET /auth/verify — reaching it at all means the API key was accepted. */
+export interface KeyCheck {
   authenticated: boolean;
-}
-
-/** Response of DELETE /auth/session. */
-export interface SessionRevoke {
-  revoked: boolean;
 }
 
 export type SortOrder = 'asc' | 'desc';

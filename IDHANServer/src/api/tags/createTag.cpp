@@ -9,7 +9,6 @@
 #include "db/drogonArrayBind.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
-#include "profiling/tracy.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan::api
@@ -19,7 +18,6 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 	const std::vector< std::pair< std::string, std::string > >& tag_pairs,
 	const DbClientPtr db )
 {
-	ZoneScopedN( "createTagsFromPairs" );
 	logging::ScopedTimer timer { "createTags" };
 
 	std::vector< TagID > tag_ids {};
@@ -75,7 +73,6 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > c
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagsFromRequest( const drogon::HttpRequestPtr request )
 {
-	ZoneScopedN( "TagAPI::createTagsFromRequest" );
 	logging::ScopedTimer timer { "createBatchedTag" };
 	const auto input_json { request->jsonObject() };
 

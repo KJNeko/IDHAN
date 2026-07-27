@@ -16,7 +16,6 @@
 #include "decodeHex.hpp"
 #include "fgl/defines.hpp"
 #include "filesystem/io/IOUring.hpp"
-#include "profiling/tracy.hpp"
 
 namespace idhan
 {
@@ -156,13 +155,11 @@ drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::fromDB(
 
 SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
 {
-	ZoneScopedN( "SHA256::hash" );
 	return SHA256::fromBuffer( crypto::hashData( data, size ) );
 }
 
-drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
+drogon::Task< SHA256 > SHA256::hashCoro( std::shared_ptr< FileIOUring > io_uring )
 {
-	ZoneScopedN( "SHA256::hashCoro" );
 	constexpr auto block_size { 1024 * 1024 };
 
 	const std::unique_ptr< EVP_MD_CTX, void ( * )( EVP_MD_CTX* ) > ctx {
@@ -173,9 +170,9 @@ drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
 	if ( EVP_DigestInit_ex( ctx.get(), EVP_sha256(), nullptr ) != 1 )
 		throw std::runtime_error( "EVP_DigestInit_ex() failed" );
 
-	for ( std::size_t i = 0; i < io_uring.size(); i += block_size )
+	for ( std::size_t i = 0; i < io_uring->size(); i += block_size )
 	{
-		const auto data { co_await io_uring.read( i, block_size ) };
+		const auto data { co_await io_uring->read( i, block_size ) };
 
 		if ( EVP_DigestUpdate( ctx.get(), data.data(), data.size() ) != 1 )
 			throw std::runtime_error( "EVP_DigestUpdate() failed" );

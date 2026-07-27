@@ -20,13 +20,29 @@ target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANMigration)
 target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
 
-if (IDHAN_ENABLE_TRACY)
-	target_link_libraries(IDHANServer PUBLIC Tracy::TracyClient idhan_tracy_coro)
-	target_compile_definitions(IDHANServer PUBLIC IDHAN_ENABLE_TRACY)
-endif ()
+# TEMPORARY (coroutine frame leak hunt): live coroutine frame accounting, exposed via GET /coro/frames.
+# Always on in Debug and absent everywhere else -- no feature flag to remember to set. A frame that is
+# never destroyed keeps every local held across a co_await alive with it, so a climbing live count names
+# the leaking coroutine type directly. Remove src/profiling/CoroFrameStats.*,
+# src/api/maintenance/coroFrames.cpp and the  uses once the leak is found.
+#
+# IDHAN_TRACK_CORO_FRAMES itself is deliberately NOT defined here: it also changes drogon::Task's
+# promise_type via the coroutine.h shim, so it has to be uniform across drogon and every consumer or it
+# is an ODR violation. It is set PUBLIC on the drogon target in dependencies/Finddrogon.cmake and
+# reaches this target through that link, which is the only place it may be set.
 
 if (IDHAN_DISABLE_API_AUTH)
 	target_compile_definitions(IDHANServer PRIVATE IDHAN_DISABLE_API_AUTH)
+endif ()
+
+# jemalloc interposes malloc/free process-wide, so linking it here also covers libvips and everything
+# else the dlopen'd modules allocate through -- there is nothing to link into the modules themselves.
+# Requested explicitly, so a missing jemalloc is an error rather than a silent fall back to glibc.
+if (IDHAN_USE_JEMALLOC)
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(JEMALLOC REQUIRED IMPORTED_TARGET jemalloc)
+	target_link_libraries(IDHANServer PRIVATE PkgConfig::JEMALLOC)
+	message(STATUS "IDHANServer: using jemalloc ${JEMALLOC_VERSION}")
 endif ()
 
 # Copy page info to the output directory

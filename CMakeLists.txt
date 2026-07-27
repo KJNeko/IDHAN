@@ -37,15 +37,17 @@ option(IDHAN_DISABLE_API_AUTH "Disable the API access key checks" OFF)
 
 option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
 
-option(IDHAN_ENABLE_TRACY "Enable Tracy profiler instrumentation" OFF)
-
-# Builds the Tracy profiler GUI from the vendored source as the `tracy-profiler` target (so it can be
-# built from an IDE like CLion). Independent of IDHAN_ENABLE_TRACY: the GUI connects to any Tracy
-# client, and building it pins the GUI to the same v0.11.1 protocol as our instrumented client.
-option(IDHAN_BUILD_TRACY_PROFILER "Build the Tracy profiler GUI (tracy-profiler target)" OFF)
-
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
+
+# Links the server against jemalloc instead of using the system (glibc) allocator.
+#
+# Thumbnail generation allocates a full-resolution decode buffer per request -- tens of megabytes for
+# a large image. glibc's dynamic mmap threshold moves allocations that size out of mmap and into the
+# per-thread arenas after it has seen a few of them, and arena memory is never returned to the OS, so
+# RSS settles at roughly (threads that generated a thumbnail) x (largest decode buffer). jemalloc
+# purges on a decay timer instead and gives the pages back.
+option(IDHAN_USE_JEMALLOC "Link the server against jemalloc instead of the system allocator" OFF)
 
 if (BUILD_HYDRUS_IMPORTER EQUAL 1)
 	set(BUILD_IDHAN_CLIENT ON)
@@ -56,41 +58,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif ()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-if (IDHAN_ENABLE_TRACY)
-	# Tracy client options must be set before its add_subdirectory so they bake into the target.
-	set(TRACY_ENABLE ON CACHE BOOL "" FORCE)      # defines TRACY_ENABLE PUBLIC on Tracy::TracyClient
-	set(TRACY_FIBERS ON CACHE BOOL "" FORCE)      # enables fiber (coroutine) support
-	set(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)   # only collect once a profiler connects
-	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy)
-	# Dependency-level shared coroutine-fiber helpers, included by both IDHAN promises and the drogon
-	# coroutine shim. A STATIC lib (not INTERFACE) so it can compile CoroFiber.cpp — the ONE TU that
-	# includes <tracy/Tracy.hpp> and defines the fiberEnter/fiberLeave shims. This keeps the public
-	# header free of Tracy's heavy client headers (which otherwise collide with system/Qt macros in
-	# every TU that transitively includes the shimmed drogon coroutine.h). Tracy is linked PUBLIC so
-	# consumers get TRACY_ENABLE + the include dir.
-	add_library(idhan_tracy_coro STATIC
-		${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy-coro/src/CoroFiber.cpp)
-	target_include_directories(idhan_tracy_coro PUBLIC
-		${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy-coro/include)
-	target_link_libraries(idhan_tracy_coro PUBLIC Tracy::TracyClient)
-endif ()
-
-if (IDHAN_BUILD_TRACY_PROFILER)
-	# Prefer system libraries over CPM network downloads (capstone defaults to force-download upstream).
-	# The default backend on Linux is native Wayland (needs wayland-scanner + wayland-* dev libs); for an
-	# X11 session, configure the profiler subdir with -DLEGACY=ON (uses GLFW, which is also present).
-	set(DOWNLOAD_CAPSTONE OFF CACHE BOOL "" FORCE)
-	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/tracy/profiler)
-	if (TARGET tracy-profiler)
-		# Tracy 0.11.1's vendored server/tracy_robin_hood.h uses uint*_t without including <cstdint>;
-		# newer libstdc++ (GCC 13+) no longer pulls it in transitively. Force-include it — but only for
-		# C++ sources (the target also has C files, for which <cstdint> does not exist).
-		target_compile_options(tracy-profiler PRIVATE
-			$<$<COMPILE_LANGUAGE:CXX>:-include>
-			$<$<COMPILE_LANGUAGE:CXX>:cstdint>)
-	endif ()
-endif ()
 
 #IDHANServer/IDHANClient
 include(postgres)

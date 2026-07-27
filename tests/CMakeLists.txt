@@ -11,8 +11,6 @@ target_link_libraries(IDHANTests PUBLIC IDHAN GTest::gtest_main IDHANClient libp
 target_include_directories(IDHANTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src)
 target_compile_definitions(IDHANTests PRIVATE
 		IDHAN_WEB_PREFIXES_TS="${CMAKE_SOURCE_DIR}/IDHANWeb/src/api/prefixes.ts")
-target_include_directories(IDHANTests PRIVATE ${CMAKE_SOURCE_DIR}/dependencies/tracy-coro/include)
-
 add_dependencies(IDHANTests IDHANServer)
 
 include(CTest)

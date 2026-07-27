@@ -7,7 +7,6 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "drogon/HttpResponse.h"
 #include "logging/format_ns.hpp"
-#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
@@ -16,7 +15,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagInfo(
 	[[maybe_unused]] const drogon::HttpRequestPtr request,
 	const TagID tag_id )
 {
-	ZoneScopedN( "TagAPI::getTagInfo" );
 	Json::Value root {};
 	root[ "tag_id" ] = tag_id;
 

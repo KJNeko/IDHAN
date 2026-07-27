@@ -382,7 +382,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 ExpectedTask< SHA256 > ScanContext::checkSHA256() const
 {
 	const auto file_stem { m_path.stem().string() };
-	const FileIOUring uring { m_path };
+	std::shared_ptr< FileIOUring > uring { std::make_shared< FileIOUring >( m_path ) };
 
 	auto sha256_e { m_params.verify_hash ? co_await SHA256::hashCoro( uring ) : SHA256::fromHex( file_stem ) };
 
@@ -652,7 +652,7 @@ Task< bool > ScanContext::hasMime( DbClientPtr db )
 ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 {
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
-	const FileIOUring file_io { m_path };
+	auto file_io { std::make_shared< FileIOUring >( m_path ) };
 
 	// skip checking if we have a mime if we are going to rescan it
 	if ( !m_params.rescan_mime && co_await hasMime( db ) )
@@ -766,9 +766,22 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	FileIOUring file_io { m_path, FileIOUring::ReadOnly };
 
-	const auto [ file_data, file_size ] { file_io.mmapReadOnly() };
+	std::vector< std::byte > buffer {};
 
-	const idhan::data_view data_view { static_cast< const std::uint8_t* >( file_data ), file_size };
+	try
+	{
+		buffer = co_await file_io.readAll();
+	}
+	catch ( const std::exception& e )
+	{
+		// This runs inside a job coroutine. An escaping exception takes down the whole job rather
+		// than failing the one record, so the read failure has to be caught and reported here.
+		co_return std::unexpected(
+			createInternalError( "Failed to read file for record {}: {}", m_record_id, e.what() ) );
+	}
+
+	// buffer must outlive parseFile below -- file_view does not own its bytes.
+	const idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( buffer.data() ), buffer.size() };
 	idhan::ModuleCallData call_data { .file_view = data_view, .mime_name = m_mime_name, .extra = {} };
 	const auto metadata_e { metadata_parser->parseFile( call_data ) };
 

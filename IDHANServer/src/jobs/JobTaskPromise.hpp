@@ -7,14 +7,26 @@
 
 #include "drogon/HttpResponse.h"
 
-#ifdef TRACY_ENABLE
-	#include "idhan_tracy/CoroFiber.hpp"
-
-	#include <string>
-#endif
-
 struct JobTaskStatus;
 struct JobTask;
+struct JobTaskPromise;
+
+//! Final awaiter for a job coroutine.
+//!
+//! Completion is published from await_suspend rather than from final_suspend() itself. JobRuntime's
+//! cleanup thread destroys a job's handle as soon as it observes m_done, so the flag must not become
+//! visible while the frame is still running: final_suspend() returns to compiler-generated code that
+//! is still executing in the frame, whereas by the time await_suspend is called the coroutine is
+//! fully suspended and another thread may legally destroy it. Nothing here touches the frame after
+//! the store.
+struct JobFinalAwaiter
+{
+	[[nodiscard]] static bool await_ready() noexcept { return false; }
+
+	void await_suspend( std::coroutine_handle< JobTaskPromise > handle ) const noexcept;
+
+	void await_resume() const noexcept {}
+};
 
 struct JobTaskPromise
 {
@@ -26,25 +38,9 @@ struct JobTaskPromise
 	// Implement get_return_object
 	JobTask get_return_object();
 
-#ifdef TRACY_ENABLE
-	idhan::tracy_coro::FiberCtx m_fiber_ctx { idhan::tracy_coro::makeChildCtx( "job" ) };
-	const char* m_fiber_name { idhan::tracy_coro::internFiberNameFor( m_fiber_ctx ) };
-
-	idhan::tracy_coro::FiberInitialAwaiter initial_suspend();
-
-	idhan::tracy_coro::FiberFinalAwaiter< std::suspend_always > final_suspend() noexcept;
-
-	template < typename Awaitable >
-	auto await_transform( Awaitable&& awaitable )
-	{
-		return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ), m_fiber_name, m_fiber_ctx
-		};
-	}
-#else
 	std::suspend_always initial_suspend();
 
-	std::suspend_always final_suspend() noexcept;
-#endif
+	JobFinalAwaiter final_suspend() noexcept;
 
 	void return_void() {}
 

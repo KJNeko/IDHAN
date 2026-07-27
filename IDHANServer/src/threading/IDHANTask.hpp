@@ -6,10 +6,6 @@
 
 #include <coroutine>
 
-#ifdef TRACY_ENABLE
-	#include "idhan_tracy/CoroFiber.hpp"
-#endif
-
 namespace idhan
 {
 
@@ -56,24 +52,13 @@ struct [[nodiscard]] IDHANTask
 	{
 		IDHANTask< T > get_return_object() { return IDHANTask< T > { handle_type::from_promise( *this ) }; }
 
-#ifdef TRACY_ENABLE
-		auto initial_suspend() noexcept { return idhan::tracy_coro::FiberInitialAwaiter { m_fiber_name, m_fiber_ctx }; }
-#else
 		static std::suspend_always initial_suspend() { return {}; }
-#endif
 
 		void return_value( const T& v ) { value = v; }
 
 		void return_value( T&& v ) { value = std::move( v ); }
 
-#ifdef TRACY_ENABLE
-		auto final_suspend() noexcept
-		{
-			return idhan::tracy_coro::FiberFinalAwaiter< drogon::final_awaiter > { drogon::final_awaiter {} };
-		}
-#else
 		static auto final_suspend() noexcept { return drogon::final_awaiter {}; }
-#endif
 
 		void unhandled_exception() { exception_ = std::current_exception(); }
 
@@ -93,22 +78,9 @@ struct [[nodiscard]] IDHANTask
 
 		void setContinuation( const std::coroutine_handle<> handle ) { continuation_ = handle; }
 
-#ifdef TRACY_ENABLE
-		template < typename Awaitable >
-		auto await_transform( Awaitable&& awaitable )
-		{
-			return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ), m_fiber_name, m_fiber_ctx
-			};
-		}
-#endif
-
 		std::optional< T > value {};
 		std::exception_ptr exception_ {};
 		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
-#ifdef TRACY_ENABLE
-		idhan::tracy_coro::FiberCtx m_fiber_ctx { idhan::tracy_coro::makeChildCtx( "idhan" ) };
-		const char* m_fiber_name { idhan::tracy_coro::internFiberNameFor( m_fiber_ctx ) };
-#endif
 	};
 
 	auto operator co_await() const noexcept { return drogon::task_awaiter< promise_type >( coro_ ); }
@@ -150,22 +122,11 @@ struct [[nodiscard]] IDHANTask< void >
 	{
 		IDHANTask<> get_return_object() { return IDHANTask<> { handle_type::from_promise( *this ) }; }
 
-#ifdef TRACY_ENABLE
-		auto initial_suspend() noexcept { return idhan::tracy_coro::FiberInitialAwaiter { m_fiber_name, m_fiber_ctx }; }
-#else
 		static std::suspend_always initial_suspend() { return {}; }
-#endif
 
 		void return_void() {}
 
-#ifdef TRACY_ENABLE
-		auto final_suspend() noexcept
-		{
-			return idhan::tracy_coro::FiberFinalAwaiter< drogon::final_awaiter > { drogon::final_awaiter {} };
-		}
-#else
 		static auto final_suspend() noexcept { return drogon::final_awaiter {}; }
-#endif
 
 		void unhandled_exception() { exception_ = std::current_exception(); }
 
@@ -176,21 +137,8 @@ struct [[nodiscard]] IDHANTask< void >
 
 		void setContinuation( const std::coroutine_handle<> handle ) { continuation_ = handle; }
 
-#ifdef TRACY_ENABLE
-		template < typename Awaitable >
-		auto await_transform( Awaitable&& awaitable )
-		{
-			return idhan::tracy_coro::FiberAwaiter< Awaitable > { std::forward< Awaitable >( awaitable ), m_fiber_name, m_fiber_ctx
-			};
-		}
-#endif
-
 		std::exception_ptr exception_ {};
 		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
-#ifdef TRACY_ENABLE
-		idhan::tracy_coro::FiberCtx m_fiber_ctx { idhan::tracy_coro::makeChildCtx( "idhan" ) };
-		const char* m_fiber_name { idhan::tracy_coro::internFiberNameFor( m_fiber_ctx ) };
-#endif
 	};
 
 	auto operator co_await() const noexcept { return drogon::task_awaiter< promise_type >( coro_ ); }
