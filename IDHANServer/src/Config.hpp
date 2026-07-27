@@ -18,7 +18,11 @@ struct std::hash< std::pair< std::string, std::string > >
 {
 	std::size_t operator()( const std::pair< std::string, std::string >& p ) const noexcept
 	{
-		return std::hash< std::string > {}( p.first ) ^ ( std::hash< std::string > {}( p.second ) << 1 );
+		// boost::hash_combine (matches the server's SHA256.hpp)
+		std::size_t seed { 0 };
+		seed ^= std::hash< std::string > {}( p.first ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+		seed ^= std::hash< std::string > {}( p.second ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+		return seed;
 	}
 };
 
@@ -158,6 +162,75 @@ template < typename T >
 	}
 
 	return std::nullopt;
+}
+
+//! Read a homogeneous TOML array (e.g. `sizes = [128, 256, 512]`) from a single file. Elements that
+//! don't parse to T are skipped rather than aborting the whole array.
+template < typename T >
+[[nodiscard]] std::optional< std::vector< T > > getArrayFromFile(
+	const std::string_view path,
+	const std::string_view group,
+	const std::string_view name )
+{
+	const std::filesystem::path p { expand_home( path ) };
+
+	if ( !std::filesystem::exists( p ) ) return std::nullopt;
+
+	try
+	{
+		auto config = toml::parse_file( p.string() );
+		if ( auto* table = config[ group ].as_table() )
+		{
+			auto* arr = ( *table )[ name ].as_array();
+			if ( !arr ) return std::nullopt;
+
+			std::vector< T > out {};
+			for ( auto& element : *arr )
+			{
+				if constexpr ( std::is_integral_v< T > )
+				{
+					if ( const auto value = element.template value< std::int64_t >() )
+						out.push_back( static_cast< T >( *value ) );
+				}
+				else if constexpr ( std::is_same_v< T, std::string > )
+				{
+					if ( const auto value = element.template value< std::string >() ) out.push_back( *value );
+				}
+				else
+					static_assert( false, "Unsupported toml array element type" );
+			}
+			return out;
+		}
+		return std::nullopt;
+	}
+	catch ( const toml::parse_error& err )
+	{
+		log::warn( "Failed to parse config file: {}", err.what() );
+	}
+
+	return std::nullopt;
+}
+
+//! Array counterpart of getValue: same priority-path search, returns the first file that defines the key.
+template < typename T >
+[[nodiscard]] std::optional< std::vector< T > > getArray( const std::string_view group, const std::string_view name )
+{
+	for ( const auto& path : config_paths | std::views::reverse )
+	{
+		if ( auto result = getArrayFromFile< T >( path, group, name ); result ) return result;
+	}
+
+	return std::nullopt;
+}
+
+template < typename T >
+[[nodiscard]] std::vector< T > getArray(
+	const std::string_view group,
+	const std::string_view name,
+	std::vector< T > default_value )
+{
+	if ( auto result = getArray< T >( group, name ); result ) return std::move( *result );
+	return default_value;
 }
 
 template < typename T >

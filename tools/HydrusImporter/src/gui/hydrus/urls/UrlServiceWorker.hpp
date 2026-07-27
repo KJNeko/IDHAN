@@ -20,6 +20,9 @@ class UrlServiceWorker : public QObject, public QRunnable
 	idhan::hydrus::HydrusImporter* m_importer;
 	bool m_preprocessed { false };
 
+	//! Caches Hydrus-hash-id -> IDHAN-record-id across chunks so a record shared by several URLs is only mapped once.
+	std::unordered_map< idhan::hydrus::HashID, idhan::RecordID > m_record_cache {};
+
   signals:
 	void finished();
 	void processedMaxUrls( std::size_t counter );

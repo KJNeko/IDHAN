@@ -16,6 +16,35 @@
 namespace idhan
 {
 
+namespace
+{
+
+// Resolution is split across three mime-specific metadata tables; COALESCE picks whichever
+// applies to the record's mime type. Shared between generateOrderByClause() (the ORDER BY
+// expression) and generateSortFilterClause() (the "has any resolution data at all" WHERE check).
+constexpr std::string_view width_expr {
+	"COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)"
+};
+constexpr std::string_view height_expr {
+	"COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height)"
+};
+
+// The full ratio expression, not just width_expr/height_expr individually: used identically for
+// both the ORDER BY value and the exclusion filter, so a zero height (which NULLIF turns into a
+// NULL ratio) is excluded the same way a record with no resolution data at all is.
+constexpr std::string_view ratio_expr {
+	"(COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)::float"
+	" / NULLIF(COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height), 0))"
+};
+
+// bigint casts prevent int*int overflow on large images (e.g. 50000x50000 exceeds INT32_MAX).
+constexpr std::string_view num_pixels_expr {
+	"(COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)::bigint"
+	" * COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height)::bigint)"
+};
+
+} // namespace
+
 void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view tag )
 {
 	target.m_active = true;
@@ -146,24 +175,104 @@ std::string SearchBuilder::buildNegativeFilter() const
 	return negative_filters;
 }
 
-void SearchBuilder::generateOrderByClause( std::string& query ) const
+void SearchBuilder::generateOrderByClause( std::string& query, const std::string_view record_id_alias ) const
 {
+	query += " ORDER BY ";
+
+	if ( m_sort_type == SortType::RANDOM )
+	{
+		// Non-deterministic per query execution — direction, NULLS ordering and the record_id
+		// tiebreak below are all meaningless here, and offset-based pagination is inherently
+		// unstable under this sort (each page re-randomizes independently).
+		query += "random()";
+		return;
+	}
+
 	switch ( m_sort_type )
 	{
 		// DEFAULT and HY_* should not be used here.
 		default:
 			[[fallthrough]];
+		case SortType::RANDOM:
+			// unreachable: handled by the early return above; case exists only to satisfy
+			// -Wswitch-enum
+			[[fallthrough]];
 		case SortType::FILESIZE:
-			query += " ORDER BY fm.size";
+			query += "fm.size";
 			break;
 		case SortType::IMPORT_TIME:
-			query += " ORDER BY fm.cluster_store_time ";
+			query += "fm.cluster_store_time";
 			break;
 		case SortType::RECORD_TIME:
 			// the records join aliases the table as rc
-			query += " ORDER BY rc.creation_time ";
+			query += "rc.creation_time";
+			break;
+		case SortType::MODIFIED_TIME:
+			query += "fm.modified_time";
+			break;
+		case SortType::MIME:
+			// sorts by the raw mime_id FK, not a semantic filetype-category ordering
+			query += "fm.mime_id";
+			break;
+		case SortType::HASH:
+			// the records join aliases the table as rc
+			query += "rc.sha256";
+			break;
+		case SortType::DURATION:
+			query += "video_metadata.duration";
+			break;
+		case SortType::FRAMERATE:
+			query += "video_metadata.framerate";
+			break;
+		case SortType::HAS_AUDIO:
+			query += "video_metadata.has_audio";
+			break;
+		case SortType::WIDTH:
+			query += width_expr;
+			break;
+		case SortType::HEIGHT:
+			query += height_expr;
+			break;
+		case SortType::RATIO:
+			query += ratio_expr;
+			break;
+		case SortType::NUM_PIXELS:
+			query += num_pixels_expr;
+			break;
+		case SortType::NUM_TAGS:
+			// ntc ("num tags count") is the per-record subquery join set up when
+			// m_required_joins.num_tags is set — see determineJoinsForQuery(). COALESCE handles
+			// zero-tag records (no ntc row) — 0 is a real answer here, not missing data, so unlike
+			// the other nullable sorts this one is never excluded.
+			query += "COALESCE(ntc.tag_count, 0)";
 			break;
 	}
+
+	const std::string_view direction { m_order == SortOrder::ASC ? " ASC" : " DESC" };
+	query += direction;
+
+	// A stable tiebreak on the unique record_id. Without it, rows with equal sort keys order
+	// arbitrarily, so identical queries can disagree and offset-based paging can skip or repeat
+	// rows. Matches the primary sort's direction (rather than always ASC) so a single ascending
+	// (col, record_id) index can serve both directions: a forward scan for ASC, a backward scan
+	// for DESC — one index instead of two per sort column.
+	query += ", ";
+	query += record_id_alias;
+	query += ".record_id";
+	query += direction;
+}
+
+void SearchBuilder::appendLimitOffset( std::string& query ) const
+{
+	// An explicit API limit wins; otherwise honour a system:limit predicate.
+	const std::optional< std::size_t > limit {
+		m_limit.has_value() ?
+			m_limit :
+			( m_limit_search.m_active ? std::optional< std::size_t > { m_limit_search.count } : std::nullopt )
+	};
+
+	if ( limit ) query += " LIMIT " + std::to_string( *limit );
+	if ( m_offset && *m_offset > 0 ) query += " OFFSET " + std::to_string( *m_offset );
 }
 
 void SearchBuilder::determineJoinsForQuery( std::string& query )
@@ -204,6 +313,13 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 		query += " JOIN image_metadata USING (record_id)";
 	}
 
+	if ( m_required_joins.left_image_project_metadata )
+	{
+		// no INNER variant exists: nothing currently filters on this table via a join alone, only
+		// generateSortFilterClause()'s WHERE check does
+		query += " LEFT JOIN image_project_metadata USING (record_id)";
+	}
+
 	// determine any joins needed
 	if ( m_required_joins.records )
 	{
@@ -219,6 +335,28 @@ void SearchBuilder::determineJoinsForQuery( std::string& query )
 	{
 		if ( m_required_joins.left_archive_map ) query += " LEFT";
 		query += " JOIN archive_map am USING (record_id)";
+	}
+
+	if ( m_required_joins.num_tags )
+	{
+		// Per-record tag count for the NUM_TAGS sort, backing the "ntc" alias used in
+		// generateOrderByClause(). LEFT so zero-tag records aren't dropped from the sort.
+		//
+		// Counts from active_tag_mappings_final (active_tag_mappings UNION ALL the parent-implied
+		// active_tag_mappings_parents, both alias-resolved to a plain tag_id column), not the raw
+		// active_tag_mappings table alone, since the raw table omits parent-implied tags.
+		//
+		// Deliberately NOT scoped to the searched tag domains: doing so would require binding $1
+		// inside this subquery, but $1 is only bound when m_bind_domains is set (construct()'s
+		// fast path never sets it), so a domain-agnostic count avoids a fast-path-only failure mode.
+		//
+		// Performance note: this aggregates the entire active_tag_mappings_final view on every query
+		// that sorts by NUM_TAGS, including on the fast/browse-everything path. A materialized
+		// per-record tag-count column (mirroring the per-tag tag_counts/total_tag_counts pattern in
+		// 93-tag_counts.sql, inverted to per-record) would be the real fix; out of scope for now.
+		//TODO: Optimize this somehow
+		query += " LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
+				 " FROM active_tag_mappings_final GROUP BY record_id) ntc USING (record_id)";
 	}
 }
 
@@ -317,6 +455,43 @@ void SearchBuilder::generateWhereClauses( std::string& query )
 	}
 }
 
+void SearchBuilder::generateSortFilterClause( std::string& query ) const
+{
+	switch ( m_sort_type )
+	{
+		case SortType::MODIFIED_TIME:
+			// modified_time has no NOT NULL constraint (unset until a record is actually
+			// modified) — a record with no modified_time has nothing to sort by here.
+			query += " AND fm.modified_time IS NOT NULL";
+			break;
+		case SortType::WIDTH:
+			// a record with no row in any of the three resolution tables has no width to sort by
+			query += " AND ";
+			query += width_expr;
+			query += " IS NOT NULL";
+			break;
+		case SortType::HEIGHT:
+			query += " AND ";
+			query += height_expr;
+			query += " IS NOT NULL";
+			break;
+		case SortType::RATIO:
+			// checks the full ratio expression, not just presence of width/height — a zero height
+			// (NULLIF'd to NULL) is excluded here too, not just missing resolution data entirely
+			query += " AND ";
+			query += ratio_expr;
+			query += " IS NOT NULL";
+			break;
+		case SortType::NUM_PIXELS:
+			query += " AND ";
+			query += num_pixels_expr;
+			query += " IS NOT NULL";
+			break;
+		default:
+			break;
+	}
+}
+
 std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes, const bool filter_domains )
 {
 	// TODO: Sort tag ids to get the most out of each filter.
@@ -331,9 +506,29 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 		|| m_width_search.m_active || m_height_search.m_active || m_archive_search.m_active
 	};
 
-	if ( m_positive_tags.empty() && m_negative_tags.empty() && !has_system_predicates )
+	// Fast path: nothing filters the result set, so skip the tag-filter CTE chain entirely. It still
+	// has to honour sort, tiebreak, limit and offset — this is the "browse everything" case the grid
+	// hits on first load, and returning the whole table unordered and unbounded is neither correct
+	// nor affordable. Only for id-returning searches; hashes need the records join, handled below.
+	if ( m_positive_tags.empty() && m_negative_tags.empty() && !has_system_predicates && !return_hashes )
 	{
-		return "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL";
+		query = "SELECT fm.record_id FROM file_info fm";
+
+		// fm is already the driving FROM alias here, so suppress the redundant `JOIN file_info fm`
+		// that determineJoinsForQuery() would otherwise emit for sort types that read from file_info.
+		// Every other join the current sort type needs (records, future metadata-table sorts) is
+		// still driven by the flags setSortType() set — this path only ever reaches sort-driven
+		// joins, since it's gated on !has_system_predicates.
+		m_required_joins.file_info = false;
+		determineJoinsForQuery( query );
+
+		query += " WHERE fm.mime_id IS NOT NULL";
+		generateSortFilterClause( query );
+
+		generateOrderByClause( query, "fm" );
+		appendLimitOffset( query );
+
+		return query;
 	}
 
 	std::vector< TagID > filtered_tags {};
@@ -377,12 +572,15 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	determineJoinsForQuery( query );
 
 	query += " WHERE fm.mime_id IS NOT NULL";
+	generateSortFilterClause( query );
 
 	generateWhereClauses( query );
 
-	generateOrderByClause( query );
+	// final_filter is aliased tm and file_info is always joined as fm; both carry record_id, so tm
+	// is the natural driving alias for the tiebreak.
+	generateOrderByClause( query, "tm" );
 
-	query += ( m_order == SortOrder::ASC ? " ASC" : " DESC" );
+	appendLimitOffset( query );
 
 	return query;
 }
@@ -433,12 +631,70 @@ void SearchBuilder::setSortType( const SortType type )
 				m_required_joins.records = true;
 				break;
 			}
+		case SortType::MODIFIED_TIME:
+			{
+				m_required_joins.file_info = true;
+				break;
+			}
+		case SortType::MIME:
+			{
+				m_required_joins.file_info = true;
+				break;
+			}
+		case SortType::HASH:
+			{
+				// comes from sha256 in `records`
+				m_required_joins.records = true;
+				break;
+			}
+		case SortType::RANDOM:
+			{
+				// no data needed
+				break;
+			}
+		case SortType::DURATION:
+		case SortType::FRAMERATE:
+		case SortType::HAS_AUDIO:
+			{
+				// INNER: a record with no video_metadata row is excluded from a duration/framerate/
+				// has_audio-sorted search, not sorted to the end — this sort doubles as a filter.
+				m_required_joins.video_metadata = true;
+				break;
+			}
+		case SortType::WIDTH:
+		case SortType::HEIGHT:
+		case SortType::RATIO:
+		case SortType::NUM_PIXELS:
+			{
+				// LEFT: resolution can come from any of three tables, so none can be an INNER join
+				// on its own; generateSortFilterClause() excludes records with no match in any of
+				// them, since a plain join can't express "at least one of these three has a row".
+				m_required_joins.left_image_metadata = true;
+				m_required_joins.left_video_metadata = true;
+				m_required_joins.left_image_project_metadata = true;
+				break;
+			}
+		case SortType::NUM_TAGS:
+			{
+				m_required_joins.num_tags = true;
+				break;
+			}
 	}
 }
 
 void SearchBuilder::setSortOrder( const SortOrder value )
 {
 	m_order = value;
+}
+
+void SearchBuilder::setLimit( const std::optional< std::size_t > value )
+{
+	m_limit = value;
+}
+
+void SearchBuilder::setOffset( const std::optional< std::size_t > value )
+{
+	m_offset = value;
 }
 
 void SearchBuilder::filterTagDomain( [[maybe_unused]] const TagDomainID value )

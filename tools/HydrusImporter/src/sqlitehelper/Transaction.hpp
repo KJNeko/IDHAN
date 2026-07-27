@@ -5,7 +5,6 @@
 #pragma once
 
 #include <fgl/defines.hpp>
-#include <mutex>
 #include <string_view>
 
 #include "Binder.hpp"
@@ -24,7 +23,6 @@ struct TransactionBase
 
 	bool m_finished { false };
 	sqlite3* sqlite_db;
-	std::mutex self_mtx {};
 
 	[[nodiscard]] inline Binder operator<<( std::string_view sql )
 	{

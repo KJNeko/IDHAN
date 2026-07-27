@@ -33,6 +33,7 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	drogon::Task< drogon::HttpResponsePtr > rescanMetadata( drogon::HttpRequestPtr request );
 	// drogon::Task< drogon::HttpResponsePtr > postgresqlStorage( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > postgresqlStorageSunData( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > databaseStats( drogon::HttpRequestPtr request );
 
 	drogon::Task< drogon::HttpResponsePtr > test( drogon::HttpRequestPtr request );
 
@@ -56,6 +57,7 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	ADD_METHOD_TO( APIMaintenance::rescanMetadata, "/jobs/metadata/rescan", drogon::Post, IDHANAPIAuthName );
 	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart", IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::postgresqlStorageSunData, "/db/stats/sunburst", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( APIMaintenance::databaseStats, "/db/stats", drogon::Get, IDHANAPIAuthName );
 
 	ADD_METHOD_TO( APIMaintenance::parseMime, "/mime/parse", drogon::Post, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::createThumbnail, "/mime/generate_thumbnail", drogon::Post, IDHANAPIAuthName );

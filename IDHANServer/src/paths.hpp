@@ -46,4 +46,16 @@ std::vector< std::filesystem::path > getMimeParserPaths();
 std::filesystem::path getStaticPath();
 std::filesystem::path getThumbnailsPath();
 
+//! Square thumbnail edge lengths (px) the server is permitted to write to its on-disk cache. Requests
+//! for other sizes are still generated and served, just never cached. Config: `[thumbnails] cacheable_sizes`.
+//! Read live per call so an operator can change it without restarting; only hit on a cache miss.
+std::vector< std::size_t > getCacheableThumbnailSizes();
+
+//! Directory scanned for WebUI plugin bundles — each `<dir>/manifest.json` describes one plugin.
+//! Defaults to `<static>/plugins` so the existing static file router serves the bundles at `/plugins/...`
+//! with no extra routing. Configurable via `[plugins] path`; an override must still be reachable under
+//! the `/plugins` URL (i.e. live under the static root) for the browser to fetch the bundle. Cached
+//! after first resolution.
+std::filesystem::path getPluginsPath();
+
 } // namespace idhan

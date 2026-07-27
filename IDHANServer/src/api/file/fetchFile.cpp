@@ -29,6 +29,10 @@ drogon::Task< drogon::HttpResponsePtr > createHttpHeadForFile(
 
 	response->addHeader( "Content-Length", std::to_string( file_size ) );
 
+	// A record's file bytes are content-addressed and never change, so a HEAD may be cached as
+	// hard as the GET: immutable for a year.
+	helpers::addFileCacheHeader( response );
+
 	const auto mime_info { co_await db->execSqlCoro(
 		"SELECT mime.name as mime_name FROM file_info JOIN mime USING (mime_id) WHERE file_info.record_id = $1",
 		record_id ) };
@@ -150,12 +154,18 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	{
 		// send the file as a download instead of letting the browser try to display it
 		const auto response { drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() ) };
+		// Same content-addressed bytes as the inline response — safe to cache immutably.
+		helpers::addFileCacheHeader( response );
 		co_return response;
 	}
 
 	// length=0 means "serve from begin to EOF" in Drogon; use it for no-range and open-ended ranges
 	const std::size_t length { end_pos != std::numeric_limits< std::size_t >::max() ? end_pos - begin + 1 : 0 };
 	auto response { drogon::HttpResponse::newFileResponse( path_e->string(), begin, length ) };
+
+	// Advertise range support on GET too, not just HEAD: some players (notably Safari) probe with a
+	// plain GET and only enable seeking when they see this header.
+	response->addHeader( "Accept-Ranges", "bytes" );
 
 	helpers::addFileCacheHeader(
 		response /* max_age is set to 1 year, Since this is likely to never be changed by IDHAN */ );

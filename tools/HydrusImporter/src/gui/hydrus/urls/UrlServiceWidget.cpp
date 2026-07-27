@@ -22,6 +22,7 @@ UrlServiceWidget::UrlServiceWidget( idhan::hydrus::HydrusImporter* get, QWidget*
 	connect( m_worker, &UrlServiceWorker::processedMaxUrls, this, &UrlServiceWidget::processedMaxUrls );
 	connect( m_worker, &UrlServiceWorker::processedUrls, this, &UrlServiceWidget::processedUrls );
 	connect( m_worker, &UrlServiceWorker::statusMessage, this, &UrlServiceWidget::statusMessage );
+	connect( m_worker, &UrlServiceWorker::errorOccurred, this, &UrlServiceWidget::statusMessage );
 	connect( m_worker, &UrlServiceWorker::finished, this, &UrlServiceWidget::preprocessingComplete );
 }
 
@@ -48,12 +49,13 @@ void UrlServiceWidget::statusMessage( const QString& msg )
 void UrlServiceWidget::processedMaxUrls( const std::size_t count )
 {
 	ui->urlCount->setText( QString( "URL mappings: %L1" ).arg( count ) );
-	ui->progressBar->setMaximum( static_cast< int >( count ) );
+	// Percentage-based so counts beyond INT_MAX can't overflow the bar.
+	ui->progressBar->setMaximum( 100 );
 	m_max_urls = count;
 }
 
 void UrlServiceWidget::processedUrls( const std::size_t count )
 {
 	ui->urlCount->setText( QString( "URL mappings: %L1 (%L2 processed)" ).arg( m_max_urls ).arg( count ) );
-	ui->progressBar->setValue( static_cast< int >( count ) );
+	ui->progressBar->setValue( m_max_urls == 0 ? 0 : static_cast< int >( ( count * 100 ) / m_max_urls ) );
 }

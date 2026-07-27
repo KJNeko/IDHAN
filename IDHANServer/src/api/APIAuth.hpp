@@ -54,20 +54,32 @@ class APIAuth : public drogon::HttpCoroFilter< APIAuth >
 	drogon::Task< drogon::HttpResponsePtr > doFilter( const drogon::HttpRequestPtr& req ) override;
 };
 
-//! Endpoints for API-key authentication: verifying an access key and generating new API keys.
-class AuthEndpoint : public drogon::HttpController< AuthEndpoint >
+constexpr auto IDHANAPIAuthName { "idhan::api::APIAuth" };
+
+//! Endpoints for API-key authentication: verifying an access key, generating API keys, and
+//! exchanging an API key for a temporary session key.
+class AuthEndpoint final : public drogon::HttpController< AuthEndpoint >
 {
 	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( drogon::HttpRequestPtr req );
 	drogon::Task< drogon::HttpResponsePtr > generateApiKey( drogon::HttpRequestPtr req );
+
+	//! Exchanges a permanent API key for a temporary session key. Unauthenticated: it validates the
+	//! supplied key itself, and only a permanent key (not another session key) may mint a session.
+	drogon::Task< drogon::HttpResponsePtr > createSession( drogon::HttpRequestPtr req );
+	//! Confirms the presented key (session or permanent) is valid; used by the client on boot.
+	drogon::Task< drogon::HttpResponsePtr > checkSession( drogon::HttpRequestPtr req );
+	//! Revokes the presented session key. A no-op for a permanent key.
+	drogon::Task< drogon::HttpResponsePtr > deleteSession( drogon::HttpRequestPtr req );
 
   public:
 
 	METHOD_LIST_BEGIN
 	ADD_METHOD_TO( AuthEndpoint::verifyAccessKey, "/hyapi/verify_access_key", drogon::Get );
 	ADD_METHOD_TO( AuthEndpoint::generateApiKey, "/generate_api_key", drogon::Post );
+	ADD_METHOD_TO( AuthEndpoint::createSession, "/auth/session", drogon::Post );
+	ADD_METHOD_TO( AuthEndpoint::checkSession, "/auth/session", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( AuthEndpoint::deleteSession, "/auth/session", drogon::Delete, IDHANAPIAuthName );
 	METHOD_LIST_END
 };
-
-constexpr auto IDHANAPIAuthName { "idhan::api::APIAuth" };
 
 } // namespace idhan::api

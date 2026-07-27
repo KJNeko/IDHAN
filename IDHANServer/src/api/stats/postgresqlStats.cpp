@@ -65,6 +65,46 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::postgresqlStorageSunData
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
+drogon::Task< drogon::HttpResponsePtr > APIMaintenance::databaseStats( [[maybe_unused]] drogon::HttpRequestPtr request )
+{
+	const auto db { drogon::app().getDbClient() };
+
+	// Exact counts for the small tables; a reltuples estimate for tag_mappings, which is partitioned by
+	// tag_domain_id and can hold millions of rows where an exact COUNT(*) is a full scan. reltuples is
+	// summed over the leaf partitions via pg_inherits (naming-independent); to_regclass yields NULL
+	// rather than throwing if the table is absent. reltuples is -1 for a partition that has never been
+	// ANALYZEd, so GREATEST clamps those to 0 — meaning the estimate reads 0 on a fresh/tiny schema.
+	const auto counts { co_await db->execSqlCoro(
+		"SELECT (SELECT COUNT(*) FROM records)       AS records, "
+		"       (SELECT COUNT(*) FROM tags)          AS tags, "
+		"       (SELECT COUNT(*) FROM file_clusters) AS clusters, "
+		"       (SELECT COALESCE(SUM(GREATEST(c.reltuples, 0)), 0)::bigint "
+		"          FROM pg_inherits i "
+		"          JOIN pg_class c ON c.oid = i.inhrelid "
+		"         WHERE i.inhparent = to_regclass(current_schema() || '.tag_mappings')) AS mappings_est" ) };
+
+	// A zero estimate is ambiguous — the table is either genuinely empty or simply not analysed yet —
+	// so resolve it with an exact COUNT, which is cheap when the true count really is small. A non-zero
+	// estimate is trusted as-is (the whole point: never full-scan a large mappings table).
+	int64_t mappings { counts[ 0 ][ "mappings_est" ].as< int64_t >() };
+	bool mappings_estimated { true };
+	if ( mappings == 0 )
+	{
+		const auto exact { co_await db->execSqlCoro( "SELECT COUNT(*) AS n FROM tag_mappings" ) };
+		mappings = exact[ 0 ][ "n" ].as< int64_t >();
+		mappings_estimated = false;
+	}
+
+	Json::Value json {};
+	json[ "records" ] = counts[ 0 ][ "records" ].as< int64_t >();
+	json[ "tags" ] = counts[ 0 ][ "tags" ].as< int64_t >();
+	json[ "clusters" ] = counts[ 0 ][ "clusters" ].as< int64_t >();
+	json[ "mappings" ] = mappings;
+	json[ "mappings_estimated" ] = mappings_estimated;
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( json );
+}
+
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::test( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	co_return drogon::HttpResponse::newHttpJsonResponse( Json::Value() );

@@ -89,4 +89,33 @@ std::filesystem::path getThumbnailsPath()
 	return thumbnails_path;
 }
 
+std::filesystem::path getPluginsPath()
+{
+	static std::filesystem::path plugins_path {};
+	static std::once_flag plugins_path_once {};
+
+	std::call_once(
+		plugins_path_once,
+		[]()
+		{
+			// Empty (unconfigured) → default under the static root so the static router serves the bundles.
+			const auto configured { idhan::config::getSilentDefault< std::string >( "plugins", "path", "" ) };
+			if ( !configured.empty() )
+				plugins_path = configured;
+			else
+				plugins_path = getStaticPath() / "plugins";
+		} );
+
+	return plugins_path;
+}
+
+std::vector< std::size_t > getCacheableThumbnailSizes()
+{
+	// Read live (no call_once): an operator can edit cacheable_sizes while the server runs and have it
+	// take effect on the next thumbnail generation. The config layer re-reads the file per call; this is
+	// only reached on a cache miss, so the parse cost is dwarfed by the generation it gates.
+	return idhan::config::getArray< std::size_t >(
+		"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
+}
+
 } // namespace idhan
