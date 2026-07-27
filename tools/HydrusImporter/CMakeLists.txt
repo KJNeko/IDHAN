@@ -17,7 +17,7 @@ target_compile_options(HydrusImporter PRIVATE "-Wno-mismatched-tags")
 # GET /coro/frames -- call idhan::profiling::snapshotCoroFrames() from here to read them. The server
 # gets these two settings from the drogon target instead; see dependencies/Finddrogon.cmake.
 target_include_directories(HydrusImporter PRIVATE
-		${CMAKE_SOURCE_DIR}/dependencies//include)
+		${CMAKE_SOURCE_DIR}/dependencies/coroprobe/include)
 target_compile_definitions(HydrusImporter PRIVATE $<$<CONFIG:Debug>:IDHAN_TRACK_CORO_FRAMES>)
 
 if (DEFINED IMPORTER_TESTS AND IMPORTER_TESTS EQUAL 1)

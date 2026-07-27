@@ -24,31 +24,32 @@ if(NOT TARGET drogon)
 		endforeach ()
 	endif ()
 
-	# Tracy fiber tracing for drogon::Task WITHOUT modifying the drogon submodule: generate a patched
-	# COPY of coroutine.h in the build tree and shadow the original by placing the copy's include dir
-	# ahead of drogon's -- for both drogon's own build and its consumers. The submodule stays pristine;
-	# the patch lives at dependencies/patches/drogon-tracy-fibers.patch and is tracked and reviewable.
-	if (IDHAN_ENABLE_TRACY AND TARGET Tracy::TracyClient)
+	# TEMPORARY (coroutine frame leak hunt): embed a lifetime probe in drogon's promise types WITHOUT
+	# modifying the drogon submodule. Generate a patched COPY of coroutine.h in the build tree and
+	# shadow the original by placing the copy's include dir ahead of drogon's -- for both drogon's own
+	# build and its consumers. The submodule stays pristine; the patch lives at
+	# dependencies/patches/drogon-coro-frame-probe.patch and is tracked and reviewable.
+	if (IDHAN_TRACK_CORO_FRAMES)
 		find_package(Git REQUIRED)
 
 		set(_drogon_pristine_hdr ${CMAKE_SOURCE_DIR}/dependencies/drogon/lib/inc/drogon/utils/coroutine.h)
-		set(_drogon_tracy_patch ${CMAKE_SOURCE_DIR}/dependencies/patches/drogon-tracy-fibers.patch)
-		set(_drogon_shim_dir ${CMAKE_BINARY_DIR}/drogon-tracy-shim)
+		set(_drogon_probe_patch ${CMAKE_SOURCE_DIR}/dependencies/patches/drogon-coro-frame-probe.patch)
+		set(_drogon_shim_dir ${CMAKE_BINARY_DIR}/drogon-coroprobe-shim)
 		set(_drogon_shim_hdr ${_drogon_shim_dir}/lib/inc/drogon/utils/coroutine.h)
 
 		# Re-copy the pristine header on every configure so the patch always applies to a clean base
 		# (it can never double-apply), then patch the copy in place.
 		configure_file(${_drogon_pristine_hdr} ${_drogon_shim_hdr} COPYONLY)
 		execute_process(
-			COMMAND ${GIT_EXECUTABLE} apply --unsafe-paths -p1 --directory=${_drogon_shim_dir} ${_drogon_tracy_patch}
+				COMMAND ${GIT_EXECUTABLE} apply --unsafe-paths -p1 --directory=${_drogon_shim_dir} ${_drogon_probe_patch}
 			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 			RESULT_VARIABLE _drogon_patch_result
 			ERROR_VARIABLE _drogon_patch_error)
 		if (NOT _drogon_patch_result EQUAL 0)
 			message(FATAL_ERROR
-				"Failed to apply ${_drogon_tracy_patch} to the drogon coroutine.h shim. The drogon "
+					"Failed to apply ${_drogon_probe_patch} to the drogon coroutine.h shim. The drogon "
 				"submodule was likely bumped and the patch no longer matches its coroutine.h. Update "
-				"dependencies/patches/drogon-tracy-fibers.patch to match and reconfigure.\n"
+					"dependencies/patches/drogon-coro-frame-probe.patch to match and reconfigure.\n"
 				"git apply error:\n${_drogon_patch_error}")
 		endif ()
 
@@ -58,9 +59,12 @@ if(NOT TARGET drogon)
 		# all other drogon headers still resolve from the pristine include dir behind it.
 		target_include_directories(drogon BEFORE PUBLIC $<BUILD_INTERFACE:${_drogon_shim_dir}/lib/inc>)
 
-		target_link_libraries(drogon PUBLIC
-			$<BUILD_INTERFACE:Tracy::TracyClient>
-			$<BUILD_INTERFACE:idhan_tracy_coro>)
+		# The probe header the patched coroutine.h includes, and the define that activates it. Both
+		# PUBLIC on drogon so drogon and every consumer agree on promise_type's layout. This is the
+		# ONLY place IDHAN_TRACK_CORO_FRAMES may be set for anything that links drogon.
+		target_include_directories(drogon PUBLIC
+				$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/dependencies/coroprobe/include>)
+		target_compile_definitions(drogon PUBLIC IDHAN_TRACK_CORO_FRAMES)
 	endif ()
 endif()
 
