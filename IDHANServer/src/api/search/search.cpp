@@ -6,6 +6,7 @@
 
 #include "api/SearchAPI.hpp"
 #include "api/helpers/getArrayParameters.hpp"
+#include "api/search/parseSortType.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "db/TagSearch.hpp"
 #include "logging/log.hpp"
@@ -32,6 +33,13 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 	SearchBuilder builder {};
 
 	builder.setPositiveTags( tag_ids );
+
+	// Sort params are optional; the default (filesize ascending) matches this endpoint's
+	// long-standing documented behavior, so omitting them changes nothing for existing callers.
+	const auto by { request->getOptionalParameter< std::string >( "by" ) };
+	const auto order { request->getOptionalParameter< std::string >( "order" ) };
+	if ( by ) builder.setSortType( parseSortType( *by ) );
+	if ( order ) builder.setSortOrder( *order == "desc" ? SortOrder::DESC : SortOrder::ASC );
 
 	const auto result { co_await builder.query( db, tag_domain_ids ) };
 

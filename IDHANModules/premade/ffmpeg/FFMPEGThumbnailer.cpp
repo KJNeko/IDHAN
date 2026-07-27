@@ -118,7 +118,7 @@ std::vector< std::string_view > FFMPEGThumbnailer::handleableMimes()
 	return ffmpeg_handleable_mimes;
 }
 
-std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::createThumbnail(
+std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::createThumbnailRaw(
 	idhan::ModuleCallData& data,
 	std::size_t width,
 	std::size_t height )

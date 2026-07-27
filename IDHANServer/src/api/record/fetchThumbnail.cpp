@@ -2,6 +2,8 @@
 // Created by kj16609 on 6/11/25.
 //
 
+#include <algorithm>
+#include <array>
 #include <fstream>
 
 #include "api/RecordAPI.hpp"
@@ -24,23 +26,25 @@
 namespace idhan::api
 {
 
-drogon::Task< std::expected< std::filesystem::path, drogon::HttpResponsePtr > > getThumbnailPath(
-	const RecordID record_id,
-	DbClientPtr db )
+namespace
 {
-	const auto sha256_e { co_await SHA256::fromDB( record_id, db ) };
-	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 
-	const auto& sha256 { sha256_e.value() };
-
-	// Thumbnail should be located in `thumbnails/t[0:2]/[0:64].thumbnail` (prefix taken from the hash)
-	const auto hex { sha256.hex() };
-	const auto file_location {
-		getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / ( std::format( "{}.thumbnail", hex ) )
-	};
-
-	co_return file_location;
+//! Size-and-format-keyed cache path: thumbnails/t[hash 0:2]/[hash].[size].webp
+std::filesystem::path thumbnailPath( const std::string& hex, const std::size_t size )
+{
+	return getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / std::format( "{}.{}.webp", hex, size );
 }
+
+//! Cache-Control for a served thumbnail. There is no revalidation: within max-age the browser reuses
+//! its copy with no request at all. The window is a fixed one year (not immutable, and not operator
+//! configurable). Invalidation is manual — after changing generation settings the operator
+//! regenerates/purges, and clients pick up the change once their cache entry ages out (or they clear
+//! it).
+std::string thumbnailCacheControl()
+{
+	return std::format( "private, max-age={}", helpers::default_max_age.count() );
+}
+} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id )
 {
@@ -57,14 +61,18 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	const bool force_regenerate { request->getOptionalParameter< bool >( "regenerate" ).value_or( false ) };
 
+	const std::size_t size { request->getOptionalParameter< std::size_t >( "size" ).value_or( 256 ) };
+
 	const auto mime_name { record_info[ 0 ][ "mime_name" ].as< std::string >() };
 	[[maybe_unused]] const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
 
-	const auto thumbnail_location_e { co_await getThumbnailPath( record_id, db ) };
+	const auto sha256_e { co_await SHA256::fromDB( record_id, db ) };
+	if ( !sha256_e ) co_return sha256_e.error();
+	const auto hex { sha256_e.value().hex() };
 
-	if ( !thumbnail_location_e ) co_return thumbnail_location_e.error();
+	const auto thumbnail_location { thumbnailPath( hex, size ) };
 
-	if ( !std::filesystem::exists( thumbnail_location_e.value() ) || force_regenerate )
+	if ( !std::filesystem::exists( thumbnail_location ) || force_regenerate )
 	{
 		using namespace std::chrono_literals;
 		logging::ScopedTimer thumbnail_timer { "Thumbnail Process", 5s };
@@ -83,9 +91,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		if ( !io_uring_e ) co_return io_uring_e.error();
 		auto& io_uring { io_uring_e.value() };
 
-		//TODO: Allow requesting a specific thumbnail size
-		std::size_t height { 256 };
-		std::size_t width { 256 };
+		const std::size_t height { size };
+		const std::size_t width { size };
 
 		const auto& [ data, data_size ] = io_uring.mmapReadOnly();
 
@@ -105,52 +112,53 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 
-		std::filesystem::create_directories( thumbnail_location_e.value().parent_path() );
+		// Cache to disk only for sizes the operator has opted in; other sizes are still generated and
+		// served, just never written (keeps the cache from exploding across arbitrary requested sizes).
+		const bool size_is_cacheable { std::ranges::contains( getCacheableThumbnailSizes(), size ) };
+		const bool should_cache { thumbnail_info->cache_thumbnail && size_is_cacheable };
 
-		const auto& thumbnail_location { thumbnail_location_e.value() };
-
-		if ( thumbnail_info->cache_thumbnail )
+		if ( should_cache )
 		{
 			std::filesystem::create_directories( thumbnail_location.parent_path() );
 			FileIOUring io_uring_write { thumbnail_location, FileIOUring::ReadWrite };
 
 			log::debug( "Writing thumbnail to {}", thumbnail_location.string() );
 
-			co_await io_uring_write.write( thumbnail_info->data );
+			co_await io_uring_write.write( thumbnail_info->m_pixel_data );
 		}
 		else
 		{
-			log::debug( "Skipping thumbnail cache due to module returning NOCACHE flag" );
-			auto response { drogon::HttpResponse::newHttpResponse(
-				drogon::HttpStatusCode::k200OK, drogon::ContentType::CT_IMAGE_PNG ) };
+			if ( !thumbnail_info->cache_thumbnail )
+				log::debug( "Skipping thumbnail cache due to module returning NOCACHE flag" );
+			else
+				log::debug( "Skipping thumbnail cache: size {} is not in the cacheable set", size );
 
-			std::string body {
-				reinterpret_cast< const char* >( thumbnail_info->data.data() ), thumbnail_info->data.size()
-			};
+			auto response { drogon::HttpResponse::newHttpResponse(
+				drogon::HttpStatusCode::k200OK, drogon::ContentType::CT_IMAGE_WEBP ) };
+
+			std::string body { reinterpret_cast< const char* >( thumbnail_info->m_pixel_data.data() ),
+				               thumbnail_info->m_pixel_data.size() };
 			response->setBody( std::move( body ) );
 
-			const auto duration { std::chrono::hours( 1 ) };
-
-			helpers::addFileCacheHeader( response, duration );
+			// The module opted out of caching this thumbnail, so tell the browser not to store it either.
+			response->addHeader( "Cache-Control", "no-store" );
 
 			co_return response;
 		}
 	}
 
-	if ( !std::filesystem::exists( *thumbnail_location_e ) )
+	if ( !std::filesystem::exists( thumbnail_location ) )
 	{
 		co_return createInternalError(
 			"Thumbnail did not exist for record {}, Writing might have failed. See previous warnings/errors",
-			thumbnail_location_e->string() );
+			thumbnail_location.string() );
 	}
 
 	auto response {
-		drogon::HttpResponse::newFileResponse( thumbnail_location_e.value(), "", drogon::ContentType::CT_IMAGE_PNG )
+		drogon::HttpResponse::newFileResponse( thumbnail_location, "", drogon::ContentType::CT_IMAGE_WEBP )
 	};
 
-	const auto duration { std::chrono::hours( 1 ) };
-
-	helpers::addFileCacheHeader( response, duration );
+	response->addHeader( "Cache-Control", thumbnailCacheControl() );
 
 	co_return response;
 }

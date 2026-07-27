@@ -1,0 +1,8 @@
+# esbuild ships a postinstall that wires up its native binary, which Vite needs. Since pnpm 10, an
+# ignored dependency build script makes `pnpm install` fail outright (ERR_PNPM_IGNORED_BUILDS), so it
+# must be approved non-interactively — CI and Docker cannot run `pnpm approve-builds`.
+#
+# This allow-list only takes effect on pnpm 10.x; on pnpm 11 it is silently ignored (a regression),
+# which is why package.json pins packageManager to pnpm@10.15.1. Keep the pin and this file in sync.
+onlyBuiltDependencies:
+  - esbuild

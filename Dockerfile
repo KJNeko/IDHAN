@@ -1,5 +1,21 @@
 # Multi-stage build for IDHANServer
 # Stage 1: Build environment
+# Stage 0: Build the React WebUI
+FROM node:22-slim AS webbuilder
+# corepack activates the exact pnpm from package.json's "packageManager" field (pinned to 10.x, where
+# the onlyBuiltDependencies allow-list actually works). Disable the prompt so the fetch is non-interactive.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+WORKDIR /web
+# pnpm-workspace.yaml carries onlyBuiltDependencies (esbuild), without which pnpm 10+ aborts the
+# install on an ignored build script — so it must be present before `pnpm install`, not just at build.
+COPY IDHANWeb/package.json IDHANWeb/pnpm-lock.yaml IDHANWeb/pnpm-workspace.yaml ./
+RUN --mount=type=cache,target=/pnpm-store \
+    pnpm config set store-dir /pnpm-store && pnpm install --frozen-lockfile
+COPY IDHANWeb/ ./
+RUN pnpm exec vite build --outDir /web/dist
+
+# Stage 1: Build IDHANServer
 FROM ubuntu:24.04 AS builder
 
 # Enable universe repository (needed for drogon, spdlog, pqxx, tomlplusplus, etc.)
@@ -56,23 +72,9 @@ RUN git clone --depth 1 --branch 7.10.1 https://github.com/jtv/libpqxx.git /tmp/
     cmake --install /tmp/libpqxx-build && \
     rm -rf /tmp/libpqxx /tmp/libpqxx-build
 
-RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk
-
-RUN cd /opt/emsdk && \
-    ./emsdk install 4.0.7 && \
-    ./emsdk activate 4.0.7
-
-ENV EMSDK=/opt/emsdk
-ENV PATH="/opt/emsdk:/opt/emsdk/upstream/emscripten:${PATH}"
-
 RUN pip3 install aqtinstall --break-system-packages
 
 RUN aqt install-qt linux desktop 6.11.1 linux_gcc_64 --outputdir /opt/qt6
-RUN aqt install-qt all_os wasm 6.11.1 wasm_singlethread -m qtcharts --autodesktop --outputdir /opt/qt6
-
-ENV QT_WASM=/opt/qt6/6.11.1/wasm_singlethread
-ENV QT_HOST_PATH=/opt/qt6/6.11.1/gcc_64
-ENV EM_CACHE=/root/.cache/emscripten
 
 WORKDIR /build
 
@@ -91,32 +93,41 @@ COPY IDHANMigration /build/IDHANMigration
 # Copy server (most frequently changed source)
 COPY IDHANServer /build/IDHANServer
 
-# Copy WebUI
-COPY IDHANWebUI /build/IDHANWebUI
-
 # Copy docs and remaining
 COPY docs /build/docs
+
+# Copy the top-level git metadata so FGLGit can derive the /version endpoint's branch/commit/tag in
+# the container — no host-side build args required. .dockerignore drops .git/modules (the multi-GB
+# submodule histories); the parent repo's `git describe` doesn't need them, so this stays ~24 MB.
+# Copied last so a new commit only invalidates the build layer below, not the dependency install.
+COPY .git /build/.git
 
 # Build IDHANServer with ccache mount
 ARG IDHAN_DISABLE_API_AUTH=OFF
 ARG CMAKE_BUILD_TYPE=Release
 ENV CCACHE_DIR=/root/.ccache
+# safe.directory: the copied .git is root-owned like the build user, but declare it explicitly so
+# git never refuses with "dubious ownership" under a different build UID.
+# -UFGL_GIT_*: the /build/build cache mount persists CMakeCache.txt across builds. An earlier image
+# built with the old -DFGL_GIT_*=unknown args left those overrides cached; reconfiguring without -D
+# does NOT clear them, so FGLGit would keep taking the stale-override path and skip git. -U removes
+# them each configure, forcing in-container `git describe` to win.
 RUN --mount=type=cache,target=/root/.ccache \
     --mount=type=cache,target=/build/build \
-    --mount=type=cache,target=/root/.cache/emscripten \
+    git config --global --add safe.directory /build && \
     cmake -S . -B build \
+    -UFGL_GIT_BRANCH -UFGL_GIT_COMMIT -UFGL_GIT_TAG \
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
     -DCMAKE_CXX_STANDARD=23 \
     -DBUILD_IDHAN_TESTS=OFF \
     -DBUILD_HYDRUS_IMPORTER=OFF \
     -DBUILD_IDHAN_DOCS=ON \
-    -DBUILD_IDHAN_WEBUI=ON \
+    -DBUILD_IDHAN_WEB=OFF \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
     -DTRANTOR_USE_TLS=none \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    -DIDHAN_WASM_TOOLCHAIN_FILE=/opt/qt6/6.11.1/wasm_singlethread/lib/cmake/Qt6/qt.toolchain.cmake && \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
     cmake --build build --target IDHANServer -j$(nproc) && \
     cp /build/build/bin /build/bin -r
 
@@ -152,6 +163,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # Copy built artifacts from builder stage
 COPY --from=builder /build/bin/IDHANServer/ /usr/bin/IDHANServer
 COPY --from=builder /build/bin/static/ /usr/share/idhan/static
+COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
 COPY --from=builder /build/bin/mime/ /usr/share/idhan/mime
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml

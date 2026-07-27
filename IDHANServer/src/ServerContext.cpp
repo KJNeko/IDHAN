@@ -17,6 +17,7 @@
 
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
+#include "api/apiPrefixes.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
@@ -34,12 +35,16 @@ void addCORSHeaders( const drogon::HttpResponsePtr& response )
 {
 	response->addHeader( "Access-Control-Allow-Headers", "*" );
 	response->addHeader( "Access-Control-Allow-Origin", "*" );
-	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
+	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD" );
 	response->addHeader( "Access-Control-Max-Age", "86400" );
 
-	// Required by Qt WASM (wasm_multithread) for SharedArrayBuffer support
+	// The wildcard origin above is deliberately not credential-capable: the WebUI is same-origin in
+	// production and same-origin via the Vite dev proxy, so its session cookie never needs CORS.
+	// Sending credentials would require reflecting a specific origin, because `*` is a literal
+	// string rather than a wildcard in credentialed CORS.
+
+	// Isolates cross-origin window references. Unrelated to the WebUI; we open no cross-origin popups.
 	response->addHeader( "Cross-Origin-Opener-Policy", "same-origin" );
-	response->addHeader( "Cross-Origin-Embedder-Policy", "require-corp" );
 }
 
 void ServerContext::setupCORSSupport() const
@@ -75,6 +80,31 @@ void ServerContext::setupCORSSupport() const
 			else
 				log::debug( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
 			addCORSHeaders( response );
+		} );
+}
+
+void ServerContext::setupSPAFallback() const
+{
+	// Drogon routes to controllers first, then to the static file router, which hands anything with
+	// an unknown or absent extension to this handler. That makes it the natural home for the SPA's
+	// history fallback: API routes have already matched by the time we get here, so serving
+	// index.html cannot mask a real API 404.
+	drogon::app().setDefaultHandler(
+		[]( const drogon::HttpRequestPtr& request, std::function< void( const drogon::HttpResponsePtr& ) >&& callback )
+		{
+			const auto index_path { getStaticPath() / "index.html" };
+
+			const bool is_navigation { request->method() == drogon::Get || request->method() == drogon::Head };
+			const bool wants_html { request->getHeader( "Accept" ).find( "text/html" ) != std::string::npos };
+
+			if ( is_navigation && wants_html && !api::isApiPath( request->path() )
+		         && std::filesystem::exists( index_path ) )
+			{
+				callback( drogon::HttpResponse::newFileResponse( index_path.string() ) );
+				return;
+			}
+
+			callback( drogon::HttpResponse::newNotFoundResponse( request ) );
 		} );
 }
 
@@ -267,8 +297,14 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::trace( "Temp path setup completed" );
 
 	app.registerCustomExtensionMime( "wasm", "application/wasm" );
+	app.registerCustomExtensionMime( "mjs", "text/javascript" );
+	app.registerCustomExtensionMime( "webmanifest", "application/manifest+json" );
 
-	app.setFileTypes( { "html", "wasm", "svg", "js", "png", "jpg" } );
+	// Drogon 404s any extension absent from this list, so it must cover everything a WebUI build
+	// emits. `wasm` stays because WebUI plugins may ship it.
+	app.setFileTypes( { "html", "css",   "js",  "mjs",  "map", "json", "txt",  "xml", "webmanifest",
+	                    "svg",  "png",   "jpg", "jpeg", "gif", "webp", "avif", "ico", "bmp",
+	                    "woff", "woff2", "ttf", "otf",  "mp4", "webm", "wasm" } );
 
 	const bool use_tls { config::get< bool >( "host", "use_tls", false ) };
 
@@ -329,6 +365,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	log::trace( "Setting up CORS support" );
 	setupCORSSupport();
+	setupSPAFallback();
 	log::trace( "CORS support configured" );
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();

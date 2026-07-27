@@ -2,6 +2,11 @@
 build/
 **/cmake-build-*/
 
+# Node dependencies and web build output — installed/built inside the image. Copying the host's
+# node_modules would clobber the image's freshly installed deps with broken store symlinks.
+**/node_modules/
+IDHANWeb/dist/
+
 # IDE and editor files
 .idea/
 .vscode/
@@ -27,6 +32,11 @@ push-nas.sh
 # Environment
 .env
 .env.remote
+
+# Submodule git histories (multi-GB). The top-level .git IS shipped so the build can derive the
+# /version metadata (branch/commit/tag) itself — `git describe` on the parent repo never consults
+# these, so dropping them keeps the git payload at ~24 MB instead of ~1.7 GB.
+.git/modules/
 
 # Large 3rd-party repos (not used in Docker build)
 3rd-party/web.sh

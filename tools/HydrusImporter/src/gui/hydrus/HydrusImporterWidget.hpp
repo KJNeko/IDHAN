@@ -6,14 +6,9 @@
 #include <QSettings>
 #include <QWidget>
 
-#include <qthreadpool.h>
+#include "HydrusImporter.hpp"
 
 class TagServiceWorker;
-
-namespace idhan::hydrus
-{
-class HydrusImporter;
-}
 
 namespace Ui
 {
@@ -29,7 +24,8 @@ class HydrusImporterWidget final : public QWidget
 	QSettings settings { QSettings::IniFormat, QSettings::UserScope, "IDHAN", "IDHAN Importer" };
 	std::unique_ptr< idhan::hydrus::HydrusImporter > m_importer { nullptr };
 
-	QThreadPool m_threads;
+	//! Cached once the database is parsed so progress updates don't re-query the DB on the GUI thread.
+	bool m_has_ptr { false };
 
 	std::size_t m_total_preprocess { 0 };
 	std::size_t m_completed_preprocess { 0 };
@@ -41,7 +37,7 @@ class HydrusImporterWidget final : public QWidget
 	explicit HydrusImporterWidget( QWidget* parent = nullptr );
 	~HydrusImporterWidget() override;
 
-	void parseTagServices();
+	void parseTagServices( const std::vector< idhan::hydrus::ServiceInfo >& services );
 	void addServiceWidget( QWidget* widget );
 	void parseFileRelationships();
 	void parseUrls();

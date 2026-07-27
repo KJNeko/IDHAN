@@ -4,6 +4,7 @@
 #pragma once
 
 #include <expected>
+#include <optional>
 #include <string_view>
 
 #include "IDHANTypes.hpp"
@@ -37,31 +38,53 @@ enum class SortType
 	IMPORT_TIME,
 	RECORD_TIME,
 
+	MODIFIED_TIME,
+	MIME,
+	HASH,
+	RANDOM,
+	DURATION,
+	FRAMERATE,
+	HAS_AUDIO,
+	WIDTH,
+	HEIGHT,
+	RATIO,
+	NUM_PIXELS,
+	NUM_TAGS,
+
 	DEFAULT = FILESIZE,
 
 	// BEGIN_HYDRUS_CONVERT
 	HY_FILESIZE = FILESIZE,
-	HY_DURATION = DEFAULT,
+	HY_DURATION = DURATION,
 	HY_IMPORT_TIME = IMPORT_TIME,
-	HY_MIME = DEFAULT,
-	HY_RANDOM = DEFAULT,
-	HY_WIDTH = DEFAULT,
-	HY_HEIGHT = DEFAULT,
-	HY_RATIO = DEFAULT,
-	HY_NUM_PIXELS = DEFAULT,
-	HY_NUM_TAGS = DEFAULT,
+	HY_MIME = MIME,
+	HY_RANDOM = RANDOM,
+	HY_WIDTH = WIDTH,
+	HY_HEIGHT = HEIGHT,
+	HY_RATIO = RATIO,
+	HY_NUM_PIXELS = NUM_PIXELS,
+	HY_NUM_TAGS = NUM_TAGS,
+	// no per-file view-tracking subsystem exists yet
 	HY_MEDIA_VIEWS = DEFAULT,
 	HY_MEDIA_VIEWTIME = DEFAULT,
+	// Hydrus derives this from num_frames, which IDHAN doesn't store
 	HY_APPROX_BITRATE = DEFAULT,
-	HY_HAS_AUDIO = DEFAULT,
-	HY_FILE_MODIFIED_TIMESTAMP = DEFAULT,
-	HY_FRAMERATE = DEFAULT,
+	HY_HAS_AUDIO = HAS_AUDIO,
+	HY_FILE_MODIFIED_TIMESTAMP = MODIFIED_TIME,
+	HY_FRAMERATE = FRAMERATE,
+	// num_frames isn't captured at import time
 	HY_NUM_FRAMES = DEFAULT,
+	// IDHAN has no collections concept
 	HY_NUM_COLLECTION_FILES = DEFAULT,
+	// no per-file view-tracking subsystem exists yet
 	HY_LAST_VIEWED_TIME = DEFAULT,
+	// IDHAN's archive_map/archive_metadata are encrypted archive containers, unrelated to
+	// Hydrus's inbox/archive review-state concept, which IDHAN doesn't implement
 	HY_ARCHIVED_TIMESTAMP = DEFAULT,
-	HY_HASH = DEFAULT,
+	HY_HASH = HASH,
+	// no pixel_hash column
 	HY_PIXEL_HASH = DEFAULT,
+	// blurhash isn't generated
 	HY_BLURHASH = DEFAULT,
 	// END_HYDRUS_CONVERT
 };
@@ -182,8 +205,13 @@ class SearchBuilder
 		bool left_image_metadata { false };
 		bool image_metadata { false };
 
+		bool left_image_project_metadata { false };
+
 		bool archive_map { false };
 		bool left_archive_map { false };
+
+		//! Drives a LEFT JOIN to a per-record tag-count subquery (see NUM_TAGS in generateOrderByClause).
+		bool num_tags { false };
 	} m_required_joins {};
 
 	bool m_search_everything { false };
@@ -271,6 +299,12 @@ class SearchBuilder
 
 	SortType m_sort_type;
 	SortOrder m_order;
+
+	//! Explicit result-window bounds set via the API. An explicit limit takes precedence over the
+	//! system:limit predicate (m_limit_search).
+	std::optional< std::size_t > m_limit {};
+	std::optional< std::size_t > m_offset {};
+
 	std::vector< TagID > m_positive_tags;
 	std::vector< TagID > m_negative_tags {};
 
@@ -283,10 +317,21 @@ class SearchBuilder
 	std::string buildPositiveFilter() const;
 	std::string buildNegativeFilter() const;
 
-	void generateOrderByClause( std::string& query ) const;
+	//! Appends the ORDER BY clause, including sort direction and a stable record_id tiebreak so that
+	//! ties order deterministically (a prerequisite for sound pagination). \p record_id_alias names
+	//! the table the driving record_id comes from ("tm" on the full path, "fm" on the fast path).
+	void generateOrderByClause( std::string& query, std::string_view record_id_alias ) const;
+	//! Appends LIMIT/OFFSET when set. An explicit m_limit wins over the system:limit predicate.
+	void appendLimitOffset( std::string& query ) const;
 	void determineJoinsForQuery( std::string& query );
 	void determineSelectClause( std::string& query, bool return_ids, bool return_hashes );
 	void generateWhereClauses( std::string& query );
+	//! Appends an `AND <expr> IS NOT NULL` filter when the active sort type reads from a nullable
+	//! column that an INNER join alone can't exclude (e.g. a single nullable column already reached
+	//! via a join that's shared with non-null-requiring sorts, or a value COALESCEd across several
+	//! LEFT-joined tables). For these sort types, NULL is treated as "excluded", not "sorts last" —
+	//! called from both of construct()'s code paths, right after the unconditional mime_id filter.
+	void generateSortFilterClause( std::string& query ) const;
 
   public:
 
@@ -319,6 +364,11 @@ class SearchBuilder
 
 	//! Sets the ordering direction.
 	void setSortOrder( SortOrder value );
+
+	//! Limits the number of rows returned. Overrides any system:limit predicate. Pass nullopt to clear.
+	void setLimit( std::optional< std::size_t > value );
+	//! Skips this many leading rows. Pass nullopt or 0 for none.
+	void setOffset( std::optional< std::size_t > value );
 
 	//! Restricts the search to a tag domain; may be called repeatedly to allow several.
 	void filterTagDomain( TagDomainID value );

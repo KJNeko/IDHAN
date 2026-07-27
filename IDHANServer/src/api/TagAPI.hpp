@@ -4,7 +4,10 @@
 #pragma once
 
 #include <algorithm>
+#include <expected>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "APIAuth.hpp"
 #include "IDHANTypes.hpp"
@@ -94,4 +97,10 @@ class TagAPI : public drogon::HttpController< TagAPI >
 	DbClientPtr db,
 	std::size_t limit = 10,
 	bool include_unused = true );
+
+//! Find-or-create tags for a batch of (namespace, subtag) text pairs in a single DB round-trip,
+//! returning their ids in the same order as the input.
+[[nodiscard]] drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > createTagsFromPairs(
+	const std::vector< std::pair< std::string, std::string > >& tag_pairs,
+	DbClientPtr db );
 } // namespace idhan::api

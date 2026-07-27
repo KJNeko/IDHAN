@@ -26,7 +26,7 @@ idhan::ModuleVersion PsdThumbnailer::version()
 
 using namespace psd;
 
-std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::createThumbnail(
+std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::createThumbnailRaw(
 	idhan::ModuleCallData& data,
 	std::size_t width,
 	std::size_t height )

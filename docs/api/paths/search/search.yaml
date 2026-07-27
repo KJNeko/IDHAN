@@ -8,9 +8,11 @@ get:
     have a file stored are returned.
 
 
-    Results are always sorted by file size ascending (sort controls are not
-    yet exposed). The response is always a plain array of record IDs
-    (hash return is not yet exposed).
+    Defaults to file size ascending when `by`/`order` are omitted, matching
+    this endpoint's long-standing behavior. The response is always a plain
+    array of record IDs (hash return is not yet exposed); for the fuller
+    search surface — negated/system: tags, pagination, hash return — use
+    `POST /search`.
 
 
     Note: domain filtering is accepted via `tag_domains` but is not yet
@@ -48,6 +50,21 @@ get:
         type: array
         items:
           type: integer
+    - name: by
+      in: query
+      description: >
+        Sort key. See the `sort.by` enum on `POST /search` for the full list
+        of accepted values. Defaults to `filesize`.
+      required: false
+      schema:
+        type: string
+    - name: order
+      in: query
+      description: Sort direction. Defaults to `asc`.
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
   responses:
     200:
       description: Successfully found records (empty array when nothing matches)
@@ -58,5 +75,133 @@ get:
             items:
               type: integer
               description: record_id
+    401:
+      description: Missing or invalid API key
+
+post:
+  tags:
+    - search
+  summary: Full-featured record search
+  description: >
+    The search surface the WebUI uses: tag text with `-negation` and
+    `system:` predicates (or raw `tag_ids`), a single sort key/direction,
+    pagination, and a choice of returning record IDs, hashes, or both.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            tags:
+              type: array
+              items:
+                type: string
+              description: >
+                Tag text. A leading `-` negates the tag; a `system:` prefix is
+                parsed as a system predicate (width, height, filesize, limit,
+                tag count, duration, has audio, archive status, ...) instead
+                of a literal tag. Mutually exclusive with `tag_ids`.
+            tag_ids:
+              type: array
+              items:
+                type: integer
+              description: Positive tag IDs directly, bypassing text resolution.
+            tag_domains:
+              type: array
+              items:
+                type: integer
+              description: Tag domain IDs to restrict the search to.
+            display:
+              type: string
+              enum: [display, storage]
+              description: >
+                `display` (default) resolves aliases/siblings/parents;
+                `storage` searches raw applied mappings only.
+            sort:
+              type: object
+              properties:
+                by:
+                  type: string
+                  enum:
+                    - filesize
+                    - import_time
+                    - record_time
+                    - modified_time
+                    - mime
+                    - hash
+                    - random
+                    - duration
+                    - framerate
+                    - has_audio
+                    - width
+                    - height
+                    - ratio
+                    - num_pixels
+                    - num_tags
+                  description: >
+                    `size` is also accepted as an alias for `filesize`, and
+                    `creation_time` for `record_time`. `record_time` reflects
+                    each record's own creation time, distinct from
+                    `import_time` (file import time) — records created before
+                    this sort was added were backfilled with the migration's
+                    run time, not their true historical creation time.
+                    `modified_time` is unset until a record is actually
+                    modified, and sorting by it excludes records where it's
+                    still unset.
+                    `random` ignores `order` and reorders on every call, so
+                    paging through a `random` sort with `limit`/`offset` does
+                    not yield a stable sequence. `duration`, `framerate` and
+                    `has_audio` are populated for video/audio records only;
+                    sorting by one of these excludes records that lack the
+                    data (NULL is treated as a non-match, not "sorts last").
+                    The same applies to `width`, `height`, `ratio` and
+                    `num_pixels`, which require resolution data. `num_tags`
+                    is the exception to this exclusion policy: a record with
+                    zero tags has a real, sortable count of 0, so it is
+                    never excluded.
+                order:
+                  type: string
+                  enum: [asc, desc]
+              description: Defaults to import time, descending.
+            limit:
+              type: integer
+              minimum: 0
+            offset:
+              type: integer
+              minimum: 0
+            return:
+              type: array
+              items:
+                type: string
+                enum: [ids, hashes]
+              description: Defaults to `["ids"]`.
+  responses:
+    200:
+      description: Search results
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_ids:
+                type: array
+                items:
+                  type: integer
+              hashes:
+                type: array
+                items:
+                  type: string
+              count:
+                type: integer
+              truncated:
+                type: boolean
+                description: >
+                  True when a limit was applied and fully consumed, meaning
+                  more results may exist.
+              query_ms:
+                type: integer
+    400:
+      description: Malformed request body
     401:
       description: Missing or invalid API key
