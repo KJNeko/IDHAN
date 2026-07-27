@@ -21,15 +21,22 @@ target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
 
 # TEMPORARY (coroutine frame leak hunt): live coroutine frame accounting, exposed via GET /coro/frames.
-# Always on in Debug and absent everywhere else -- no feature flag to remember to set. A frame that is
-# never destroyed keeps every local held across a co_await alive with it, so a climbing live count names
-# the leaking coroutine type directly. Remove src/profiling/CoroFrameStats.*,
-# src/api/maintenance/coroFrames.cpp and the  uses once the leak is found.
+# Always on in Debug builds and absent everywhere else -- no feature flag to remember to set; the root
+# CMakeLists.txt sets IDHAN_TRACK_CORO_FRAMES from CMAKE_BUILD_TYPE. A frame that is never destroyed
+# keeps every local held across a co_await alive with it, so a live count that climbs and never settles
+# names the leaking coroutine type directly. Remove dependencies/coroprobe/,
+# dependencies/patches/drogon-coro-frame-probe.patch, src/api/maintenance/coroFrames.cpp, the option,
+# and the block in dependencies/Finddrogon.cmake together once the leak is found.
 #
 # IDHAN_TRACK_CORO_FRAMES itself is deliberately NOT defined here: it also changes drogon::Task's
 # promise_type via the coroutine.h shim, so it has to be uniform across drogon and every consumer or it
 # is an ODR violation. It is set PUBLIC on the drogon target in dependencies/Finddrogon.cmake and
 # reaches this target through that link, which is the only place it may be set.
+#
+# The include dir is added unconditionally, though: coroFrames.cpp includes the probe header whether or
+# not tracking is on (the header degrades to an empty struct when the define is absent), and drogon only
+# exports this dir in the ON case.
+target_include_directories(IDHANServer PRIVATE ${CMAKE_SOURCE_DIR}/dependencies/coroprobe/include)
 
 if (IDHAN_DISABLE_API_AUTH)
 	target_compile_definitions(IDHANServer PRIVATE IDHAN_DISABLE_API_AUTH)
