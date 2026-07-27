@@ -51,11 +51,7 @@ services:
       context: .
       args:
         IDHAN_DISABLE_API_AUTH: "ON"
-        CMAKE_BUILD_TYPE: "System"
-        # /version metadata (branch/commit/tag) is derived automatically: the top-level .git ships in
-        # the build context (see .dockerignore) and FGLGit runs `git describe` inside the container.
-        # No host-side build args needed — a plain `docker compose -f docker-compose-dev.yml up --build`
-        # reports the correct version.
+        CMAKE_BUILD_TYPE: "Debug"
     container_name: idhan-server
     environment:
       IDHAN_LOGGING_LEVEL: debug
@@ -66,10 +62,6 @@ services:
       IDHAN_THUMBNAILS_PATH: /media/thumbnails
     ports:
       - "16609:16609"
-      # Tracy profiler: TCP is the data connection (connect the GUI to localhost:8086); UDP is the
-      # discovery broadcast. Harmless when the build is not Tracy-enabled (nothing listens).
-      - "8086:8086"
-      - "8086:8086/udp"
     security_opt:
       - seccomp=unconfined
     healthcheck:

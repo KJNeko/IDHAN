@@ -7,14 +7,12 @@
 #include "api/helpers/helpers.hpp"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
-#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRequestPtr request )
 {
-	ZoneScopedN( "TagAPI::createTagAliases" );
 	const auto json_obj { request->getJsonObject() };
 
 	if ( json_obj == nullptr )
@@ -67,7 +65,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRe
 	};
 	if ( !validation ) co_return validation.error();
 
-	ZoneNamedN( apply_zone, "TagAPI::createTagAliases apply", true );
 	for ( const auto& [ aliased_id, alias_id ] : pairs )
 	{
 		try

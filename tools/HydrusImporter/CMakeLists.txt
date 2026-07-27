@@ -12,6 +12,14 @@ target_sources(HydrusImporter PRIVATE ${UI_FILES})
 
 target_compile_options(HydrusImporter PRIVATE "-Wno-mismatched-tags")
 
+# TEMPORARY (coroutine frame leak hunt): RowGenerator is the only coroutine in this tool, and this is a
+# separate process from the server, so its counters are NOT visible through the server's
+# GET /coro/frames -- call idhan::profiling::snapshotCoroFrames() from here to read them. The server
+# gets these two settings from the drogon target instead; see dependencies/Finddrogon.cmake.
+target_include_directories(HydrusImporter PRIVATE
+		${CMAKE_SOURCE_DIR}/dependencies//include)
+target_compile_definitions(HydrusImporter PRIVATE $<$<CONFIG:Debug>:IDHAN_TRACK_CORO_FRAMES>)
+
 if (DEFINED IMPORTER_TESTS AND IMPORTER_TESTS EQUAL 1)
 	target_compile_definitions(HydrusImporter PUBLIC IMPORTER_TESTS=1)
 endif ()

@@ -15,10 +15,10 @@ namespace idhan::mime
 IDHANTask<> CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
 {
 	log::trace( "Requesting data at offset {} with size {}", offset, required_size );
-	if ( std::holds_alternative< FileIOUring >( m_io ) )
+	if ( std::holds_alternative< std::shared_ptr< FileIOUring > >( m_io ) )
 	{
-		auto& uring = std::get< FileIOUring >( m_io );
-		m_buffer = co_await uring.read( offset, std::max( required_size, min_request_size ) );
+		const auto& uring = std::get< std::shared_ptr< FileIOUring > >( m_io );
+		m_buffer = co_await uring->read( offset, std::max( required_size, min_request_size ) );
 		m_buffer_pos = offset;
 		co_return;
 	}
@@ -35,7 +35,7 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 	const std::size_t pos,
 	const std::size_t required_size ) const
 {
-	if ( std::holds_alternative< FileIOUring >( m_io ) )
+	if ( std::holds_alternative< std::shared_ptr< FileIOUring > >( m_io ) )
 	{
 		// buffer is for a range greater then the current pos. We need to go back
 		const bool is_low { pos < m_buffer_pos };
@@ -87,14 +87,16 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 
 std::size_t CursorData::size() const
 {
-	if ( std::holds_alternative< FileIOUring >( m_io ) ) return std::get< FileIOUring >( m_io ).size();
+	if ( std::holds_alternative< std::shared_ptr< FileIOUring > >( m_io ) )
+		return std::get< std::shared_ptr< FileIOUring > >( m_io )->size();
 	if ( std::holds_alternative< std::string_view >( m_io ) ) return std::get< std::string_view >( m_io ).size();
 	throw std::runtime_error( "Unable to get size of data. No implemented reader for variant" );
 }
 
-Cursor::Cursor( FileIOUring uring ) :
+Cursor::Cursor( std::shared_ptr< FileIOUring > uring ) :
+  m_io( uring ),
   m_data( std::make_shared< CursorData >( uring ) ),
-  m_extension( uring.path().extension().string() )
+  m_extension( uring->path().extension().string() )
 {}
 
 Cursor::Cursor( std::string_view view, const std::string& file_name ) :

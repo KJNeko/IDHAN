@@ -74,15 +74,8 @@ drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpReq
 
 	auto db { drogon::app().getDbClient() };
 
-	// The presented key may be either a permanent API key or a temporary session key; they are
-	// indistinguishable at this point (both 32-byte blobs), so accept either. Expired sessions do
-	// not match.
-	const auto select_key { co_await db->execSqlCoro(
-		"SELECT key_id FROM auth_keys WHERE key_hash = $1 "
-		"UNION ALL "
-		"SELECT key_id FROM auth_sessions WHERE session_key = $1 AND expires_at > now() "
-		"LIMIT 1",
-		sha256_key.toVec() ) };
+	const auto select_key { co_await db->execSqlCoro( "SELECT key_id FROM auth_keys WHERE key_hash = $1 LIMIT 1", sha256_key.toVec() )
+	};
 
 	if ( select_key.empty() )
 	{
@@ -160,95 +153,12 @@ drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::generateApiKey( [[maybe_un
 	co_return drogon::HttpResponse::newHttpJsonResponse( value );
 }
 
-//! How long a freshly minted session key remains valid.
-[[maybe_unused]] static constexpr int session_lifetime_days { 30 };
-
-drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::createSession( [[maybe_unused]] drogon::HttpRequestPtr req )
+drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyKey( [[maybe_unused]] drogon::HttpRequestPtr req )
 {
-#ifdef IDHAN_DISABLE_API_AUTH
-	// Auth is disabled, so the filter approves everything and the returned key is never actually
-	// checked. Hand back a placeholder so the client has something to store and its normal flow
-	// works unchanged.
-	log::warn( "!!! API Auth Disabled. Issuing a placeholder session key !!!" );
-	Json::Value out {};
-	out[ "session_key" ] = std::string( 64, '0' );
-	out[ "expires_at" ] = 0;
-	co_return drogon::HttpResponse::newHttpJsonResponse( out );
-#else
-	auto key_res { getAndValidateKey( req ) };
-
-	if ( !key_res ) co_return key_res.error();
-
-	auto& sha256_key { *key_res };
-
-	auto db { drogon::app().getDbClient() };
-
-	// Only a permanent API key may mint a session — deliberately not auth_sessions, so a session
-	// key cannot be used to spawn further sessions and extend itself indefinitely.
-	const auto select_key {
-		co_await db->execSqlCoro( "SELECT key_id FROM auth_keys WHERE key_hash = $1", sha256_key.toVec() )
-	};
-
-	if ( select_key.empty() )
-	{
-		auto response { drogon::HttpResponse::newHttpResponse() };
-		log::warn( "Session requested with an invalid API key!" );
-		response->setStatusCode( drogon::k401Unauthorized );
-		response->setBody( "Invalid API Key" );
-		co_return response;
-	}
-
-	const auto key_id { select_key[ 0 ][ 0 ].as< std::int32_t >() };
-
-	const auto session_gen { co_await db->execSqlCoro(
-		"INSERT INTO auth_sessions (session_key, key_id, expires_at) "
-		"VALUES (gen_random_bytes(32), $1, now() + make_interval(days => $2)) "
-		"RETURNING session_key, extract(epoch FROM expires_at)::bigint",
-		key_id,
-		session_lifetime_days ) };
-
-	const SHA256 session_key { SHA256::fromPgCol( session_gen[ 0 ][ 0 ] ) };
-
-	Json::Value out {};
-	out[ "session_key" ] = session_key.hex();
-	out[ "expires_at" ] = session_gen[ 0 ][ 1 ].as< std::int64_t >();
-
-	co_return drogon::HttpResponse::newHttpJsonResponse( out );
-#endif
-}
-
-drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::checkSession( [[maybe_unused]] drogon::HttpRequestPtr req )
-{
-	// Reaching this handler means the auth filter already accepted the key.
+	// Reaching this handler means the auth filter already accepted the API key.
 	Json::Value out {};
 	out[ "authenticated" ] = true;
 	co_return drogon::HttpResponse::newHttpJsonResponse( out );
-}
-
-drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::deleteSession( [[maybe_unused]] drogon::HttpRequestPtr req )
-{
-	Json::Value out {};
-
-#ifdef IDHAN_DISABLE_API_AUTH
-	out[ "revoked" ] = false;
-	co_return drogon::HttpResponse::newHttpJsonResponse( out );
-#else
-	auto key_res { getAndValidateKey( req ) };
-
-	if ( !key_res ) co_return key_res.error();
-
-	auto& sha256_key { *key_res };
-
-	auto db { drogon::app().getDbClient() };
-
-	// Deletes only if the presented key is a session key; a permanent key matches nothing here.
-	const auto deleted {
-		co_await db->execSqlCoro( "DELETE FROM auth_sessions WHERE session_key = $1", sha256_key.toVec() )
-	};
-
-	out[ "revoked" ] = deleted.affectedRows() > 0;
-	co_return drogon::HttpResponse::newHttpJsonResponse( out );
-#endif
 }
 
 } // namespace idhan::api

@@ -2,14 +2,12 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "logging/log.hpp"
-#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::removeTagAliases( const drogon::HttpRequestPtr request )
 {
-	ZoneScopedN( "TagAPI::removeTagAliases" );
 	const auto json_obj { request->getJsonObject() };
 
 	if ( json_obj == nullptr ) co_return createBadRequest( "No valid json object" );

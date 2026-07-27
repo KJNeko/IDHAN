@@ -1,7 +1,6 @@
 /**
- * Single-field login: paste an IDHAN key (API or session) and go. There is no separate "exchange"
- * step in the UI — the session layer upgrades an API key to a session key behind the scenes when it
- * can, but from the user's point of view it is just one key.
+ * Single-field login: paste an IDHAN API key and go. The key is validated against the server and,
+ * once accepted, used directly on every request.
  */
 
 import { useState, type FormEvent } from 'react';

@@ -4,6 +4,8 @@
 
 #include <drogon/drogon.h>
 
+#include <vector>
+
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "filesystem/filesystem.hpp"
@@ -37,8 +39,6 @@ ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPt
 	auto io { co_await filesystem::getIOForRecord( record_id, db ) };
 	return_unexpected_error( io );
 
-	const auto [ data, length ] = io->mmapReadOnly();
-
 	const auto mime_id { record_mime[ 0 ][ "mime_id" ].as< MimeID >() };
 
 	const auto mime_info { co_await db->execSqlCoro( "SELECT * FROM mime WHERE mime_id = $1", mime_id ) };
@@ -53,7 +53,22 @@ ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPt
 	if ( parser == nullptr )
 		co_return std::unexpected( createBadRequest( "No parser found for mime type {}", mime_name ) );
 
-	idhan::data_view data_view { static_cast< const std::uint8_t* >( data ), length };
+	// Read only once a parser is known: this pulls the entire file into memory, so doing it before
+	// the lookup would burn a whole-file allocation on records we are about to reject.
+	std::vector< std::byte > buffer {};
+
+	try
+	{
+		buffer = co_await io->readAll();
+	}
+	catch ( const std::exception& e )
+	{
+		co_return std::unexpected(
+			createInternalError( "Failed to read file for record {}: {}", record_id, e.what() ) );
+	}
+
+	// buffer must outlive parseFile below -- file_view does not own its bytes.
+	const idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( buffer.data() ), buffer.size() };
 	ModuleCallData call_data { .file_view = data_view, .mime_name = mime_name, .extra = {} };
 	const auto metadata { parser->parseFile( call_data ) };
 

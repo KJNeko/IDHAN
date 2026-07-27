@@ -6,7 +6,6 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "modules/ModuleLoader.hpp"
-#include "profiling/tracy.hpp"
 
 namespace idhan::api
 {
@@ -43,7 +42,6 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	if ( thumbnailers.empty() ) co_return createNotFound( "No thumbnailer available for mime type {}", *mime_str );
 
-	ZoneScopedN( "module::thumbnail" );
 	const auto thumbnail_data { thumbnailers.at( 0 )->createThumbnailFile( call_data, 128, 128 ) };
 
 	if ( !thumbnail_data ) co_return createInternalError( thumbnail_data.error() );

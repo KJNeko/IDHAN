@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstring>
 #include <liburing.h>
+#include <malloc.h>
 #include <stdexcept>
 
 #include "drogon/HttpAppFramework.h"
@@ -24,26 +25,39 @@ namespace idhan
 
 // ─── FileDescriptor ───────────────────────────────────────────────────────────
 
-static void fileDescriptorDeleter( const int* fd )
+FileIOUring::FileDescriptor::FileDescriptor( const int fd ) : m_fd( fd )
+{}
+
+FileIOUring::FileDescriptor::~FileDescriptor()
 {
-	close( *fd );
-	delete fd;
+	if ( m_fd > 0 ) close( m_fd );
 }
 
-FileIOUring::FileDescriptor::FileDescriptor( const int fd ) :
-  m_fd( std::shared_ptr< int > { new int( fd ), fileDescriptorDeleter } )
-{}
+FileIOUring::FileDescriptor::FileDescriptor( FileDescriptor&& other ) noexcept : m_fd( other.m_fd )
+{
+	other.m_fd = -1;
+}
+
+FileIOUring::FileDescriptor& FileIOUring::FileDescriptor::operator=( FileDescriptor&& other ) noexcept
+{
+	if ( this != &other )
+	{
+		if ( m_fd > 0 ) close( m_fd );
+		m_fd = other.m_fd;
+		other.m_fd = -1;
+	}
+	return *this;
+}
 
 FileIOUring::FileDescriptor::operator int() const
 {
-	return *m_fd;
+	return m_fd;
 }
 
 // ─── FileIOUring (Linux) ──────────────────────────────────────────────────────
 
 FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly ) :
   m_fd( open( path.c_str(), ( readonly ? O_RDONLY : ( O_RDWR | O_CREAT ) ), 0666 ) ),
-  m_mmap_ptr( nullptr ),
   m_size( std::filesystem::exists( path ) ? std::filesystem::file_size( path ) : 0 ),
   m_path( path ),
   m_readonly( readonly )
@@ -88,23 +102,8 @@ drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, co
 	co_await IOUring::getInstance().write( nativeHandle(), data, offset );
 }
 
-std::pair< void*, std::size_t > FileIOUring::mmapReadOnly()
-{
-	if ( m_mmap_ptr ) return { m_mmap_ptr.get(), m_size };
-
-	void* const raw { ::mmap( nullptr, m_size, PROT_READ, MAP_SHARED, static_cast< int >( m_fd ), 0 ) };
-	if ( raw == MAP_FAILED ) return { nullptr, 0 };
-
-	const auto size { m_size };
-	m_mmap_ptr =
-		std::shared_ptr< void >( raw, [ size ]( const void* ptr ) { munmap( const_cast< void* >( ptr ), size ); } );
-	return { m_mmap_ptr.get(), m_size };
-}
-
-FileIOUring::FileIOUring( const FileIOUring& ) = default;
-FileIOUring& FileIOUring::operator=( const FileIOUring& ) = default;
-FileIOUring::FileIOUring( FileIOUring&& ) noexcept = default;
-FileIOUring& FileIOUring::operator=( FileIOUring&& ) noexcept = default;
+// Copy is deleted (FGL_DELETE_COPY); move is defaulted inline in the header (FGL_DEFAULT_MOVE) and relies on
+// FileDescriptor's move ops above to transfer the fd without double-closing.
 
 // ─── IOUring base: Linux dispatch ─────────────────────────────────────────────
 
@@ -329,7 +328,8 @@ IOUringLinux& IOUringLinux::getLinuxInstance()
 
 void IOUringLinux::notifySubmit( const unsigned int count ) const
 {
-	if ( const auto ret { io_uring_enter( static_cast< unsigned int >( uring_fd ), count, 0, IORING_ENTER_SQ_WAKEUP, nullptr ) };
+	if ( const auto ret {
+			 io_uring_enter( static_cast< unsigned int >( uring_fd ), count, 0, IORING_ENTER_SQ_WAKEUP, nullptr ) };
 	     ret < 0 )
 		throw std::runtime_error( "io_uring_enter (submit) failed" );
 }

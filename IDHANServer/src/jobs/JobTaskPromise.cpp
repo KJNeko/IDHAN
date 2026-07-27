@@ -20,33 +20,28 @@ JobTask JobTaskPromise::get_return_object()
 	return JobTask { std::coroutine_handle< JobTaskPromise >::from_promise( *this ) };
 }
 
-#ifdef TRACY_ENABLE
-idhan::tracy_coro::FiberInitialAwaiter JobTaskPromise::initial_suspend()
-{
-	return { m_fiber_name, m_fiber_ctx };
-}
-#else
 std::suspend_always JobTaskPromise::initial_suspend()
 {
 	return {};
 }
-#endif
 
-#ifdef TRACY_ENABLE
-idhan::tracy_coro::FiberFinalAwaiter< std::suspend_always > JobTaskPromise::final_suspend() noexcept
+void JobFinalAwaiter::await_suspend( const std::coroutine_handle< JobTaskPromise > handle ) const noexcept
 {
-	m_status->m_completion_time = std::chrono::steady_clock::now();
-	m_status->m_done = true;
-	return { std::suspend_always {} };
+	// Take our own reference to the status before publishing: the instant m_done is visible the
+	// cleanup thread may erase the JobContext and destroy this frame, so the status must be reachable
+	// without touching the promise again, and nothing may read the frame after the store below.
+	const std::shared_ptr< JobTaskStatus > status { handle.promise().m_status };
+
+	status->m_completion_time = std::chrono::steady_clock::now();
+
+	// Release: pairs with the cleanup thread's load of m_done, so it sees m_completion_time written.
+	status->m_done.store( true, std::memory_order_release );
 }
-#else
-std::suspend_always JobTaskPromise::final_suspend() noexcept
+
+JobFinalAwaiter JobTaskPromise::final_suspend() noexcept
 {
-	m_status->m_completion_time = std::chrono::steady_clock::now();
-	m_status->m_done = true;
 	return {};
 }
-#endif
 
 void JobTaskPromise::unhandled_exception()
 {

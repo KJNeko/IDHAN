@@ -5,13 +5,14 @@
 
 #include <json/reader.h>
 #include <json/value.h>
-#include <vips/vips8>
+#include <vips/vips.h>
 
 #include <filesystem>
 
 #include "archives.hpp"
 #include "crypto/simpleHasher.hpp"
 #include "spdlog/spdlog.h"
+#include "vips.hpp"
 
 namespace
 {
@@ -69,17 +70,26 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 			width,
 			height ) };
 
-		auto blob { vips_blob_new( nullptr, svg_data_sized.data(), svg_data_sized.size() ) };
+		// The C loader takes the raw buffer directly -- no VipsBlob to allocate and hand-free.
+		VipsImage* svg_raw { nullptr };
+		if ( vips_svgload_buffer(
+				 const_cast< void* >( static_cast< const void* >( svg_data_sized.data() ) ),
+				 svg_data_sized.size(),
+				 &svg_raw,
+				 nullptr )
+		     != 0 )
+			return std::unexpected( idhan::ModuleError { "Failed to load SVG placeholder" } );
+		idhan::VipsImagePtr image { svg_raw };
 
-		vips::VImage image { vips::VImage::svgload_buffer( blob ) };
-
-		if ( image.bands() > 3 )
+		if ( vips_image_get_bands( image.get() ) > 3 )
 		{
-			image = image.flatten();
+			VipsImage* flat_raw { nullptr };
+			if ( vips_flatten( image.get(), &flat_raw, nullptr ) != 0 )
+				return std::unexpected( idhan::ModuleError { "Failed to flatten SVG placeholder" } );
+			image.reset( flat_raw );
 		}
 
-		idhan::ThumbnailInfo info { image, idhan::ThumbnailInfo::NOCACHE };
-		return info;
+		return idhan::ThumbnailInfo { std::move( image ), idhan::ThumbnailInfo::NOCACHE };
 	}
 
 	if ( members.size() <= 1 ) // we will always expect 'encrypted' to be a member here as well
@@ -102,7 +112,10 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 	const int grid_width { thumb_width * static_cast< int >( grid_size ) };
 	const int grid_height { thumb_height * static_cast< int >( grid_size ) };
 
-	vips::VImage canvas { vips::VImage::black( grid_width, grid_height, vips::VImage::option()->set( "bands", 3 ) ) };
+	VipsImage* canvas_raw { nullptr };
+	if ( vips_black( &canvas_raw, grid_width, grid_height, "bands", 3, nullptr ) != 0 )
+		return std::unexpected( idhan::ModuleError { "Failed to create archive thumbnail canvas" } );
+	idhan::VipsImagePtr canvas { canvas_raw };
 
 	bool flag_cache_thumbnail { true };
 	std::size_t counter { 0 };
@@ -159,26 +172,36 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		if ( !cache_thumbnail ) flag_cache_thumbnail = false;
 
-		vips::VImage thumb { vips::VImage::new_from_memory_copy(
-			const_cast< void* >( static_cast< const void* >( rgb.data() ) ),
+		VipsImage* thumb_raw { vips_image_new_from_memory_copy(
+			rgb.data(),
 			rgb.size(),
 			static_cast< int >( gen_thumb_width ),
 			static_cast< int >( gen_thumb_height ),
 			3,
 			VIPS_FORMAT_UCHAR ) };
+		if ( !thumb_raw ) return std::unexpected( idhan::ModuleError { "Failed to wrap child thumbnail pixels" } );
+		idhan::VipsImagePtr thumb { thumb_raw };
 
 		//TODO: Center image
 
-		const auto generated_width { thumb.width() };
-		const auto offset_width { ( thumb_width - generated_width ) / 2 };
-		const auto generated_height { thumb.height() };
-		const auto offset_height { ( thumb_height - generated_height ) / 2 };
+		const int generated_width { vips_image_get_width( thumb.get() ) };
+		const int offset_width { ( thumb_width - generated_width ) / 2 };
+		const int generated_height { vips_image_get_height( thumb.get() ) };
+		const int offset_height { ( thumb_height - generated_height ) / 2 };
 
-		canvas = canvas.insert(
-			thumb,
-			x * thumb_width + offset_width,
-			y * thumb_height + offset_height,
-			vips::VImage::option()->set( "expand", true ) );
+		VipsImage* new_canvas_raw { nullptr };
+		if ( vips_insert(
+				 canvas.get(),
+				 thumb.get(),
+				 &new_canvas_raw,
+				 static_cast< int >( x ) * thumb_width + offset_width,
+				 static_cast< int >( y ) * thumb_height + offset_height,
+				 "expand",
+				 TRUE,
+				 nullptr )
+		     != 0 )
+			return std::unexpected( idhan::ModuleError { "Failed to composite archive thumbnail" } );
+		canvas.reset( new_canvas_raw );
 	}
 
 	if ( all_generate_failed )
@@ -189,7 +212,5 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 			last_error.value_or( idhan::ModuleError { "No thumbnailable entries found in archive" } ) );
 	}
 
-	idhan::ThumbnailInfo info { canvas, flag_cache_thumbnail };
-
-	return info;
+	return idhan::ThumbnailInfo { std::move( canvas ), flag_cache_thumbnail };
 }
