@@ -48,10 +48,16 @@ exactly. Once the layer is drogon-free in place, it is moved wholesale to `IDHAN
   `metadata/parseMetadata.cpp`, `mime/MimeDatabase.hpp`, `mime/Cursor.hpp`, `mime/Cursor.cpp`, `mime/FileInfo.cpp`.
 - **Build command** (substitute another pre-configured tree from `build/` if the user prefers):
   `cmake --build build/debug --target IDHANServer`
-- **Test build command:** `cmake -DBUILD_IDHAN_TESTS=ON -B build/debug && cmake --build build/debug --target IDHANTests`
-- **Test run command:** `./build/bin/IDHANTests --gtest_filter="<Suite>.*" --use_stdout`
+- **Test build command:** `cmake -DBUILD_IDHAN_TESTS=ON -B build/debug && cmake --build build/debug --target IDHANCoreTests`
+- **Test run command:** `./build/debug/bin/IDHANCoreTests --gtest_filter="<Suite>.*" --use_stdout`
   Do **not** run bare `ctest` for these tasks: the rest of the suite needs a live PostgreSQL instance, and every test
   added by this plan is deliberately DB-free.
+- **`IDHANTests` is pre-existing broken and is not this plan's problem.** It has never linked in this tree. Three of
+  its sources — `tests/src/db/fixtures/SearchFixture.{cpp,hpp}` and `tests/src/db/features/search/sortTypes.cpp` —
+  reference `idhan::SearchBuilder` and `idhan::api::AuthEndpoint`, which are compiled into the `IDHANServer`
+  **executable** and therefore cannot be linked into a test binary. That is why this plan's tests live in a separate
+  `IDHANCoreTests` target (added in Task 1) that links only `IDHAN` and `GTest::gtest_main`. **Do not** attempt to fix,
+  exclude, or delete anything under `tests/src/` — leave `IDHANTests` exactly as it is.
 
 ---
 
@@ -60,7 +66,8 @@ exactly. Once the layer is drogon-free in place, it is moved wholesale to `IDHAN
 **Files:**
 
 - Create: `IDHAN/include/coro/Task.hpp`
-- Test: `tests/src/coro/task.cpp`
+- Create: `tests/core/coro/task.cpp`
+- Modify: `tests/CMakeLists.txt` (append the `IDHANCoreTests` target)
 
 **Interfaces:**
 
@@ -72,9 +79,28 @@ exactly. Once the layer is drogon-free in place, it is moved wholesale to `IDHAN
 **Why this is first:** everything downstream is typed in terms of it, and it is the one piece with no platform or
 build-layout entanglement, so it can be written and tested on its own.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Add the IDHANCoreTests target**
 
-Create `tests/src/coro/task.cpp`:
+`IDHANTests` cannot link (see Global Constraints), so this plan's suites need their own target. It depends only on
+`IDHAN` and GoogleTest, which is exactly the point: it proves the coro and io layers stand up without drogon, without
+the server, and without a database.
+
+Append to `tests/CMakeLists.txt`, **after** the existing `include(GoogleTest)` line so `gtest_discover_tests` is
+already defined:
+
+```cmake
+
+# Plan-1 coro/io suites. Deliberately separate from IDHANTests: that target globs sources which call
+# into IDHANServer executable code (SearchBuilder, AuthEndpoint) and has never linked. This one
+# depends on IDHAN and GoogleTest only, so it needs neither drogon nor a live PostgreSQL.
+AddFGLExecutable(IDHANCoreTests ${CMAKE_CURRENT_SOURCE_DIR}/core)
+target_link_libraries(IDHANCoreTests PUBLIC IDHAN GTest::gtest_main)
+gtest_discover_tests(IDHANCoreTests)
+```
+
+- [ ] **Step 2: Write the failing test**
+
+Create `tests/core/coro/task.cpp`:
 
 ```cpp
 //
@@ -225,17 +251,17 @@ TEST( CoroTask, voidSpecialisationRuns )
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **Step 3: Run the test to verify it fails**
 
 Ask the user to run:
 
 ```bash
-cmake -DBUILD_IDHAN_TESTS=ON -B build/debug && cmake --build build/debug --target IDHANTests
+cmake -DBUILD_IDHAN_TESTS=ON -B build/debug && cmake --build build/debug --target IDHANCoreTests
 ```
 
 Expected: **compile failure**, `fatal error: coro/Task.hpp: No such file or directory`.
 
-- [ ] **Step 3: Create the header**
+- [ ] **Step 4: Create the header**
 
 Create `IDHAN/include/coro/Task.hpp`:
 
@@ -453,20 +479,20 @@ class [[nodiscard]] Task< void >
 } // namespace idhan::coro
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [ ] **Step 5: Run the tests to verify they pass**
 
 Ask the user to run:
 
 ```bash
-cmake --build build/debug --target IDHANTests && ./build/bin/IDHANTests --gtest_filter="CoroTask.*" --use_stdout
+cmake --build build/debug --target IDHANCoreTests && ./build/debug/bin/IDHANCoreTests --gtest_filter="CoroTask.*" --use_stdout
 ```
 
 Expected: 6 tests from `CoroTask` run, all PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add IDHAN/include/coro/Task.hpp tests/src/coro/task.cpp
+git add IDHAN/include/coro/Task.hpp tests/core/coro/task.cpp tests/CMakeLists.txt
 git commit -m "feat(coro): add neutral Task<T> coroutine type with no drogon dependency"
 ```
 
@@ -478,7 +504,7 @@ git commit -m "feat(coro): add neutral Task<T> coroutine type with no drogon dep
 
 - Create: `IDHAN/include/coro/Resumer.hpp`
 - Create: `IDHAN/src/coro/Resumer.cpp`
-- Test: `tests/src/coro/resumer.cpp`
+- Test: `tests/core/coro/resumer.cpp`
 
 **Interfaces:**
 
@@ -500,7 +526,7 @@ time. There is no allocation on the suspend path either way.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `tests/src/coro/resumer.cpp`:
+Create `tests/core/coro/resumer.cpp`:
 
 ```cpp
 //
@@ -577,7 +603,7 @@ TEST( CoroResumer, resumeIsForwardedToTheResumer )
 Ask the user to run:
 
 ```bash
-cmake --build build/debug --target IDHANTests
+cmake --build build/debug --target IDHANCoreTests
 ```
 
 Expected: **compile failure**, `fatal error: coro/Resumer.hpp: No such file or directory`.
@@ -679,7 +705,7 @@ Resumer* currentResumer() noexcept
 Ask the user to run:
 
 ```bash
-cmake --build build/debug --target IDHANTests && ./build/bin/IDHANTests --gtest_filter="CoroResumer.*" --use_stdout
+cmake --build build/debug --target IDHANCoreTests && ./build/debug/bin/IDHANCoreTests --gtest_filter="CoroResumer.*" --use_stdout
 ```
 
 Expected: 3 tests from `CoroResumer` run, all PASS.
@@ -687,7 +713,7 @@ Expected: 3 tests from `CoroResumer` run, all PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add IDHAN/include/coro/Resumer.hpp IDHAN/src/coro/Resumer.cpp tests/src/coro/resumer.cpp
+git add IDHAN/include/coro/Resumer.hpp IDHAN/src/coro/Resumer.cpp tests/core/coro/resumer.cpp
 git commit -m "feat(coro): add Resumer interface and process-wide provider"
 ```
 
@@ -699,7 +725,7 @@ git commit -m "feat(coro): add Resumer interface and process-wide provider"
 
 - Create: `IDHAN/include/coro/RunLoop.hpp`
 - Create: `IDHAN/src/coro/RunLoop.cpp`
-- Test: `tests/src/coro/runloop.cpp`
+- Test: `tests/core/coro/runloop.cpp`
 
 **Interfaces:**
 
@@ -720,7 +746,7 @@ variant and drop queued work on the second. The io layer's synchronous `pread`/`
 
 - [ ] **Step 1: Write the failing test**
 
-Create `tests/src/coro/runloop.cpp`:
+Create `tests/core/coro/runloop.cpp`:
 
 ```cpp
 //
@@ -844,7 +870,7 @@ TEST( CoroRunLoop, resumerPostsToTheLoop )
 Ask the user to run:
 
 ```bash
-cmake --build build/debug --target IDHANTests
+cmake --build build/debug --target IDHANCoreTests
 ```
 
 Expected: **compile failure**, `fatal error: coro/RunLoop.hpp: No such file or directory`.
@@ -1073,7 +1099,7 @@ void RunLoopResumer::resume( const std::coroutine_handle<> handle ) noexcept
 Ask the user to run:
 
 ```bash
-cmake --build build/debug --target IDHANTests && ./build/bin/IDHANTests --gtest_filter="CoroRunLoop.*" --use_stdout
+cmake --build build/debug --target IDHANCoreTests && ./build/debug/bin/IDHANCoreTests --gtest_filter="CoroRunLoop.*" --use_stdout
 ```
 
 Expected: 5 tests from `CoroRunLoop` run, all PASS.
@@ -1081,7 +1107,7 @@ Expected: 5 tests from `CoroRunLoop` run, all PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add IDHAN/include/coro/RunLoop.hpp IDHAN/src/coro/RunLoop.cpp tests/src/coro/runloop.cpp
+git add IDHAN/include/coro/RunLoop.hpp IDHAN/src/coro/RunLoop.cpp tests/core/coro/runloop.cpp
 git commit -m "feat(coro): add RunLoop, RunLoopResumer and runOnLoop"
 ```
 
@@ -2011,7 +2037,7 @@ git commit -m "refactor(io): move the io_uring backend from IDHANServer into the
 
 **Files:**
 
-- Test: `tests/src/io/ioUringRunLoop.cpp`
+- Test: `tests/core/io/ioUringRunLoop.cpp`
 
 **Interfaces:**
 
@@ -2021,7 +2047,7 @@ git commit -m "refactor(io): move the io_uring backend from IDHANServer into the
 
 **What this proves:** that a process with no drogon and no trantor event loop can open a file, submit a real io_uring
 read, and have the completion resume its coroutine — which is precisely what `IDHANWorker` and `IDHANMonitor` will do
-in Plan 3. Before this plan, `IDHANTests` could not link `FileIOUring` at all: it lived in the server **executable**.
+in Plan 3. Before this plan, no test target could link `FileIOUring` at all: it lived in the server **executable**.
 
 **Note on `IOUring::init()`:** it installs a process-wide singleton and starts a watcher thread, and there is no
 teardown entry point. Exactly one test in the binary may call it, and it must be this one. Do not add a second test
@@ -2029,7 +2055,7 @@ that calls `init()`.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `tests/src/io/ioUringRunLoop.cpp`:
+Create `tests/core/io/ioUringRunLoop.cpp`:
 
 ```cpp
 //
@@ -2106,7 +2132,7 @@ If Task 8 has not been applied yet, this fails to compile on `io/IOUring.hpp`. I
 which is the expected outcome here, because Tasks 1 through 8 are what make it work. Ask the user to run:
 
 ```bash
-cmake --build build/debug --target IDHANTests && ./build/bin/IDHANTests --gtest_filter="IOUringRunLoop.*" --use_stdout
+cmake --build build/debug --target IDHANCoreTests && ./build/debug/bin/IDHANCoreTests --gtest_filter="IOUringRunLoop.*" --use_stdout
 ```
 
 Expected: 1 test runs and PASSES.
@@ -2121,7 +2147,7 @@ completes without suspending, and the test asserts the same bytes. Report which 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add tests/src/io/ioUringRunLoop.cpp
+git add tests/core/io/ioUringRunLoop.cpp
 git commit -m "test(io): drive an io_uring read from a RunLoop with no trantor present"
 ```
 
@@ -2157,16 +2183,19 @@ Ask the user to run:
 cmake --build build/debug -j$(nproc)
 ```
 
-Expected: every target builds — `IDHANServer`, `IDHANClient`, `IDHANPremadeModules`, `HydrusImporter`, `IDHANTests`.
-This is the first step that exercises the non-server consumers of `IDHAN`, which now carry the io objects and the
-`uring` link.
+Expected: `IDHANServer`, `IDHANClient`, `IDHANPremadeModules`, `HydrusImporter` and `IDHANCoreTests` all build. This is
+the first step that exercises the non-server consumers of `IDHAN`, which now carry the io objects and the `uring` link.
+
+`IDHANTests` will still fail to link, exactly as it did before this plan started — see the Global Constraints note. That
+failure is pre-existing and out of scope; confirm the undefined symbols are the same `SearchBuilder` / `AuthEndpoint` /
+drogon set and move on. If any **new** undefined symbol appears, that is this plan's problem and must be reported.
 
 - [ ] **Step 3: Run the full set of new tests**
 
 Ask the user to run:
 
 ```bash
-./build/bin/IDHANTests --gtest_filter="CoroTask.*:CoroResumer.*:CoroRunLoop.*:IOUringRunLoop.*" --use_stdout
+./build/debug/bin/IDHANCoreTests --gtest_filter="CoroTask.*:CoroResumer.*:CoroRunLoop.*:IOUringRunLoop.*" --use_stdout
 ```
 
 Expected: 15 tests, all PASS (6 `CoroTask`, 3 `CoroResumer`, 5 `CoroRunLoop`, 1 `IOUringRunLoop`).
