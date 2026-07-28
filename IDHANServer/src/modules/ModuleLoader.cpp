@@ -33,10 +33,12 @@ ModuleLoader::ModuleLoader() : m_libs(), m_modules()
 class ModuleHolder
 {
 #ifdef __linux__
-	void* m_handle;
+	using Handle = void*;
 #elif defined( _WIN32 )
-	HMODULE m_handle;
+	using Handle = HMODULE;
 #endif
+
+	Handle m_handle;
 
 	using VoidFunc = void* (*)();
 	VoidFunc initFunc { nullptr };
@@ -46,11 +48,7 @@ class ModuleHolder
 
 	FGL_DELETE_ALL_RO5( ModuleHolder );
 
-#ifdef __linux__
-	[[nodiscard]] void* handle() const { return m_handle; }
-#elif defined( _WIN32 )
-	[[nodiscard]] HMODULE handle() const { return m_handle; }
-#endif
+	[[nodiscard]] Handle handle() const { return m_handle; }
 
 	ModuleHolder( const std::filesystem::path& path ) : m_handle( nullptr )
 	{
@@ -110,6 +108,7 @@ class ModuleHolder
 
 namespace callbacks
 {
+
 std::expected< std::vector< std::byte >, ModuleError > generate(
 	const data_view data,
 	std::array< std::byte, 256 / 8 > hash,
