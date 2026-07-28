@@ -32,8 +32,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 	std::size_t width,
 	std::size_t height )
 {
-	return std::unexpected( idhan::ModuleError { "Testing error" } );
-
 	const auto& [ data_view, mime, extra ] = data;
 	const auto* bytes { ( data_view.data() ) };
 	const auto length { data_view.size() };
