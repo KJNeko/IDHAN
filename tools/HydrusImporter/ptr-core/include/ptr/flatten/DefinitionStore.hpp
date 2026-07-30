@@ -26,10 +26,15 @@ std::optional< std::array< std::byte, SHA256_BYTES > > decodeSha256Hex( std::str
 //! tags.idx is a fixed 8-byte stride of (u32 offset, u32 length) into tags.blob; a zero length
 //! means absent. Because the id is the offset, nothing is sorted and nothing is searched, and
 //! the files are sparse so unused id ranges cost no blocks.
+//!
+//! \warning Construction TRUNCATES all three files, so only one writer may exist per directory
+//!          per run. Constructing a second one discards everything the first wrote. A scan builds
+//!          exactly one and keeps it for the whole corpus.
 class DefinitionWriter
 {
   public:
 
+	//! \warning Truncates hashes.bin, tags.idx and tags.blob in \p dir. See the class note.
 	explicit DefinitionWriter( const std::filesystem::path& dir );
 
 	DefinitionWriter( const DefinitionWriter& ) = delete;
