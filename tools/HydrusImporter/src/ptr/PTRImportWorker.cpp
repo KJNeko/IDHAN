@@ -17,6 +17,10 @@
 
 #include "ptr/PTRConstants.hpp"
 #include "ptr/PTRFileParser.hpp"
+#include "ptr/flatten/ChunkFormat.hpp"
+#include "ptr/flatten/HexEncode.hpp"
+#include "ptr/flatten/Manifest.hpp"
+#include "ptr/flatten/RunFlatten.hpp"
 #include "idhan/IDHANClient.hpp"
 #include "splitTag.hpp"
 
@@ -109,11 +113,23 @@ void PTRImportWorker::run()
 		emit progress( "Loading metadata..." );
 		loadMetadata();
 
-		emit progress( "Processing files in metadata order..." );
-		if ( processInOrder() )
+		if ( m_compacted )
 		{
-			emit finished( false, "Cancelled" );
-			return;
+			emit progress( "Importing compacted chunks..." );
+			if ( processCompacted( ensureTagDomain() ) )
+			{
+				emit finished( false, "Cancelled" );
+				return;
+			}
+		}
+		else
+		{
+			emit progress( "Processing files in metadata order..." );
+			if ( processInOrder() )
+			{
+				emit finished( false, "Cancelled" );
+				return;
+			}
 		}
 
 		spdlog::info( "PTR import completed successfully" );
@@ -128,60 +144,52 @@ void PTRImportWorker::run()
 
 void PTRImportWorker::loadMetadata()
 {
-	// Try ptr_metadata.json first — written by the downloader, already parsed JSON
+	// A compacted directory is marked by its manifest, which the flattener writes last. A partial
+	// or cancelled flatten therefore never looks importable.
+	if ( isCompactedDirectory( m_ptr_directory ) )
+	{
+		m_compacted = true;
+		m_manifest = readManifest( m_ptr_directory );
+		loadImportedChunks();
+
+		spdlog::info(
+			"Loaded compacted manifest: {} chunks, {} previously imported",
+			m_manifest.chunks.size(),
+			m_imported_chunks.size() );
+		return;
+	}
+
+	m_metadata = loadCorpusMetadata( m_ptr_directory );
+
+	// The downloader records which raw files it has already handed over.
 	const auto meta_json_path = m_ptr_directory / "ptr_metadata.json";
+	std::ifstream file( meta_json_path );
+	if ( file )
 	{
-		std::ifstream file( meta_json_path );
-		if ( file )
+		Json::Value root;
+		Json::CharReaderBuilder builder;
+		std::string errors;
+		if ( Json::parseFromStream( builder, file, &root, &errors ) )
 		{
-			Json::Value root;
-			Json::CharReaderBuilder builder;
-			std::string errors;
-			if ( Json::parseFromStream( builder, file, &root, &errors ) )
+			const auto& imported = root[ "imported_files" ];
+			if ( imported.isObject() )
 			{
-				m_metadata = parseMetadataCacheJson( root );
-
-				const auto& imported = root[ "imported_files" ];
-				if ( imported.isObject() )
+				for ( const auto& hash : imported.getMemberNames() )
 				{
-					for ( const auto& hash : imported.getMemberNames() )
-					{
-						if ( imported[ hash ].asBool() ) m_imported_hashes.insert( hash );
-					}
+					if ( imported[ hash ].asBool() ) m_imported_hashes.insert( hash );
 				}
-
-				spdlog::info(
-					"Loaded metadata from ptr_metadata.json: {} update indices, {} previously imported",
-					m_metadata.updates.size(),
-					m_imported_hashes.size() );
-				return;
 			}
-			spdlog::warn( "Failed to parse ptr_metadata.json: {}", errors );
+		}
+		else
+		{
+			spdlog::warn( "Failed to parse ptr_metadata.json for the imported list: {}", errors );
 		}
 	}
 
-	// Fall back to parsing metadata.ptrupdate (raw PTR server metadata)
-	const auto meta_ptr_path = m_ptr_directory / "metadata.ptrupdate";
-	if ( std::filesystem::exists( meta_ptr_path ) )
-	{
-		try
-		{
-			auto parsed = parseUpdateFile( meta_ptr_path );
-			if ( auto* meta = std::get_if< MetadataUpdate >( &parsed ) )
-			{
-				m_metadata = std::move( *meta );
-				spdlog::info( "Loaded metadata from metadata.ptrupdate: {} update indices", m_metadata.updates.size() );
-				return;
-			}
-			spdlog::warn( "metadata.ptrupdate did not parse as MetadataUpdate" );
-		}
-		catch ( const std::exception& e )
-		{
-			spdlog::warn( "Failed to parse metadata.ptrupdate: {}", e.what() );
-		}
-	}
-
-	throw std::runtime_error( "No metadata found in directory. Run the download step first." );
+	spdlog::info(
+		"Loaded metadata: {} update indices, {} previously imported",
+		m_metadata.updates.size(),
+		m_imported_hashes.size() );
 }
 
 PTRImportWorker::DownloadStatus PTRImportWorker::readDownloadStatus() const
@@ -269,30 +277,7 @@ bool PTRImportWorker::processInOrder()
 	spdlog::info( "Processing up to {} files across {} update indices", total_files, m_metadata.updates.size() );
 
 	// Get or create the tag domain once before the loop
-	auto& client = IDHANClient::instance();
-	const std::string domain_name = "public tag repository";
-	TagDomainID domain_id = 0;
-
-	{
-		auto f = client.getTagDomain( domain_name );
-		f.waitForFinished();
-		auto result = f.result();
-		if ( result.has_value() )
-		{
-			domain_id = result.value();
-			spdlog::info( "Using existing tag domain: {} (id={})", domain_name, domain_id );
-		}
-		else
-		{
-			auto cf = client.createTagDomain( domain_name );
-			cf.waitForFinished();
-			domain_id = cf.result();
-			spdlog::info( "Created new tag domain: {} (id={})", domain_name, domain_id );
-		}
-	}
-
-	if ( domain_id == TagDomainID( 0 ) )
-		throw std::runtime_error( "Failed to get or create tag domain '" + domain_name + "'" );
+	const TagDomainID domain_id = ensureTagDomain();
 
 	int64_t processed = 0;
 	int64_t definitions_processed = 0;
@@ -793,6 +778,322 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	emit subProgress( 1, 1, progress_prefix + " - Done" );
 	spdlog::debug( "Finished processing content file: {}", hash_hex );
 	return stats;
+}
+
+TagDomainID PTRImportWorker::ensureTagDomain()
+{
+	auto& client = IDHANClient::instance();
+	const std::string domain_name = "public tag repository";
+
+	TagDomainID domain_id = 0;
+
+	auto existing = client.getTagDomain( domain_name );
+	existing.waitForFinished();
+	if ( const auto result = existing.result(); result.has_value() )
+	{
+		domain_id = result.value();
+		spdlog::info( "Using existing tag domain: {} (id={})", domain_name, domain_id );
+	}
+	else
+	{
+		auto created = client.createTagDomain( domain_name );
+		created.waitForFinished();
+		domain_id = created.result();
+		spdlog::info( "Created new tag domain: {} (id={})", domain_name, domain_id );
+	}
+
+	if ( domain_id == TagDomainID( 0 ) )
+		throw std::runtime_error( "Failed to get or create tag domain '" + domain_name + "'" );
+
+	return domain_id;
+}
+
+void PTRImportWorker::loadImportedChunks()
+{
+	std::ifstream file( m_ptr_directory / "imported_chunks.json" );
+	if ( !file ) return;
+
+	Json::Value root;
+	Json::CharReaderBuilder builder;
+	std::string errors;
+	if ( !Json::parseFromStream( builder, file, &root, &errors ) )
+	{
+		spdlog::warn( "Failed to parse imported_chunks.json: {}", errors );
+		return;
+	}
+
+	if ( !root.isArray() ) return;
+	for ( const auto& entry : root )
+	{
+		if ( entry.isString() ) m_imported_chunks.insert( entry.asString() );
+	}
+}
+
+void PTRImportWorker::saveImportedChunks() const
+{
+	// Seeded as an array so an empty set serialises as [] rather than null.
+	Json::Value root { Json::arrayValue };
+	for ( const auto& chunk : m_imported_chunks ) root.append( chunk );
+
+	std::ofstream file( m_ptr_directory / "imported_chunks.json", std::ios::trunc );
+	if ( !file )
+	{
+		spdlog::warn( "Failed to write imported_chunks.json; resume will redo work" );
+		return;
+	}
+
+	Json::StreamWriterBuilder builder;
+	file << Json::writeString( builder, root );
+}
+
+std::vector< TagID > PTRImportWorker::resolveChunkTags( const Chunk& chunk, const QString& progress_prefix )
+{
+	auto& client = IDHANClient::instance();
+
+	std::vector< TagID > resolved( chunk.strings.size(), TagID( 0 ) );
+
+	// Only the ids never seen before need creating. Across the corpus this makes each tag exactly
+	// one createTags row, even though hundreds of chunks carry its text.
+	std::vector< std::size_t > unseen;
+	std::vector< std::pair< std::string, std::string > > to_create;
+
+	for ( std::size_t i = 0; i < chunk.strings.size(); ++i )
+	{
+		const auto ptr_tag_id = chunk.strings[ i ].ptr_tag_id;
+
+		if ( ptr_tag_id >= m_ptr_tag_to_idhan.size() ) m_ptr_tag_to_idhan.resize( ptr_tag_id + 1, TagID( 0 ) );
+
+		if ( const auto known = m_ptr_tag_to_idhan[ ptr_tag_id ]; known != TagID( 0 ) )
+		{
+			resolved[ i ] = known;
+			continue;
+		}
+
+		unseen.push_back( i );
+		to_create.push_back( splitTag( chunk.strings[ i ].tag ) );
+	}
+
+	if ( to_create.empty() ) return resolved;
+
+	auto futures = launchBatches(
+		to_create.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
+		{
+			return client.createTags( std::vector< std::pair< std::string, std::string > >(
+				to_create.begin() + static_cast< std::ptrdiff_t >( s ),
+				to_create.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+		} );
+
+	awaitBatches(
+		futures,
+		BATCH_SIZE,
+		"createTags",
+		[ & ]( const std::size_t i, const TagID tag_id )
+		{
+			if ( i >= unseen.size() ) return;
+			const auto string_index = unseen[ i ];
+			resolved[ string_index ] = tag_id;
+			m_ptr_tag_to_idhan[ chunk.strings[ string_index ].ptr_tag_id ] = tag_id;
+		},
+		[ & ]( const std::size_t done, const std::size_t total )
+		{
+			emit subProgress(
+				static_cast< int >( done ), static_cast< int >( total ), progress_prefix + " - creating tags" );
+		} );
+
+	return resolved;
+}
+
+ContentStats
+	PTRImportWorker::importChunk( const Chunk& chunk, const TagDomainID domain_id, const QString& progress_prefix )
+{
+	ContentStats stats;
+	auto& client = IDHANClient::instance();
+
+	const auto resolved = resolveChunkTags( chunk, progress_prefix );
+	if ( m_cancelled ) return stats;
+
+	std::vector< std::string > hashes;
+	hashes.reserve( chunk.records.size() );
+	for ( const auto& record : chunk.records ) hashes.push_back( toHex( record.sha256 ) );
+
+	// Index-parallel to chunk.records, so no hash-to-record map is ever built.
+	std::vector< RecordID > record_ids( hashes.size(), RecordID( 0 ) );
+
+	{
+		auto futures = launchBatches(
+			hashes.size(),
+			BATCH_SIZE,
+			[ & ]( const std::size_t s, const std::size_t e )
+			{
+				return client.createRecords( std::vector< std::string >(
+					hashes.begin() + static_cast< std::ptrdiff_t >( s ),
+					hashes.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+			} );
+
+		awaitBatches(
+			futures,
+			BATCH_SIZE,
+			"createRecords",
+			[ & ]( const std::size_t i, const RecordID record_id )
+			{
+				if ( i >= record_ids.size() ) return;
+				record_ids[ i ] = record_id;
+				++stats.records_created;
+			},
+			[ & ]( const std::size_t done, const std::size_t total )
+			{
+				emit subProgress(
+					static_cast< int >( done ), static_cast< int >( total ), progress_prefix + " - creating records" );
+			} );
+	}
+
+	if ( m_cancelled ) return stats;
+
+	// Build the two (records, tag sets) pairs. A record contributes to a list only if it has
+	// something in it, so empty sets never reach the API.
+	std::vector< RecordID > add_records;
+	std::vector< std::vector< TagID > > add_sets;
+	std::vector< RecordID > del_records;
+	std::vector< std::vector< TagID > > del_sets;
+
+	const auto gather = [ & ]( const std::vector< std::uint32_t >& indices )
+	{
+		std::vector< TagID > out;
+		out.reserve( indices.size() );
+		for ( const auto index : indices )
+		{
+			if ( index >= resolved.size() ) continue;
+			if ( const auto tag_id = resolved[ index ]; tag_id != TagID( 0 ) ) out.push_back( tag_id );
+		}
+		return out;
+	};
+
+	for ( std::size_t i = 0; i < chunk.records.size(); ++i )
+	{
+		if ( record_ids[ i ] == RecordID( 0 ) ) continue;
+
+		if ( auto adds = gather( chunk.records[ i ].add_indices ); !adds.empty() )
+		{
+			stats.mappings_added += static_cast< int >( adds.size() );
+			add_records.push_back( record_ids[ i ] );
+			add_sets.push_back( std::move( adds ) );
+		}
+
+		if ( auto dels = gather( chunk.records[ i ].del_indices ); !dels.empty() )
+		{
+			stats.mappings_removed += static_cast< int >( dels.size() );
+			del_records.push_back( record_ids[ i ] );
+			del_sets.push_back( std::move( dels ) );
+		}
+	}
+
+	std::vector< QFuture< void > > ops;
+	const auto append = [ &ops ]( auto&& futures )
+	{
+		ops.insert( ops.end(), std::make_move_iterator( futures.begin() ), std::make_move_iterator( futures.end() ) );
+	};
+
+	append( launchBatches(
+		add_records.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
+		{
+			std::vector< RecordID > br(
+				add_records.begin() + static_cast< std::ptrdiff_t >( s ),
+				add_records.begin() + static_cast< std::ptrdiff_t >( e ) );
+			std::vector< std::vector< TagID > > bs(
+				std::make_move_iterator( add_sets.begin() + static_cast< std::ptrdiff_t >( s ) ),
+				std::make_move_iterator( add_sets.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+			return client.addTags( std::move( br ), domain_id, std::move( bs ) );
+		} ) );
+
+	append( launchBatches(
+		del_records.size(),
+		BATCH_SIZE,
+		[ & ]( const std::size_t s, const std::size_t e )
+		{
+			std::vector< RecordID > br(
+				del_records.begin() + static_cast< std::ptrdiff_t >( s ),
+				del_records.begin() + static_cast< std::ptrdiff_t >( e ) );
+			std::vector< std::vector< TagID > > bs(
+				std::make_move_iterator( del_sets.begin() + static_cast< std::ptrdiff_t >( s ) ),
+				std::make_move_iterator( del_sets.begin() + static_cast< std::ptrdiff_t >( e ) ) );
+			return client.removeTags( std::move( br ), domain_id, std::move( bs ) );
+		} ) );
+
+	if ( !ops.empty() )
+	{
+		awaitBatches(
+			ops,
+			"chunk mappings",
+			[ & ]( const std::size_t done, const std::size_t total )
+			{
+				emit subProgress(
+					static_cast< int >( done ), static_cast< int >( total ), progress_prefix + " - applying mappings" );
+			} );
+	}
+
+	return stats;
+}
+
+bool PTRImportWorker::processCompacted( const TagDomainID domain_id )
+{
+	const auto total = m_manifest.chunks.size();
+	std::size_t done { 0 };
+
+	spdlog::info( "Importing {} compacted chunks", total );
+
+	for ( const auto& entry : m_manifest.chunks )
+	{
+		if ( m_cancelled ) return true;
+
+		++done;
+
+		if ( m_imported_chunks.count( entry.file ) )
+		{
+			spdlog::debug( "Skipping already-imported chunk: {}", entry.file );
+			emit fileProcessed( static_cast< int >( done ), static_cast< int >( total ) );
+			continue;
+		}
+
+		const auto prefix = QString( "Chunk %1/%2" )
+		                        .arg( QLocale::system().toString( static_cast< qlonglong >( done ) ) )
+		                        .arg( QLocale::system().toString( static_cast< qlonglong >( total ) ) );
+
+		emit progress( prefix + QString( " - %1" ).arg( QString::fromStdString( entry.file ) ) );
+
+		ContentStats stats;
+		try
+		{
+			const auto chunk = readChunk( m_ptr_directory / entry.file );
+			stats = importChunk( chunk, domain_id, prefix );
+		}
+		catch ( const std::exception& e )
+		{
+			// One unreadable chunk must not end the import; the rest are independent.
+			spdlog::error( "Failed to import chunk {}: {}", entry.file, e.what() );
+			emit fileProcessed( static_cast< int >( done ), static_cast< int >( total ) );
+			continue;
+		}
+
+		if ( m_cancelled ) return true;
+
+		m_imported_chunks.insert( entry.file );
+		saveImportedChunks();
+
+		PTRHistoryEntry history_entry;
+		history_entry.update_index = static_cast< int >( done );
+		history_entry.file_count = static_cast< std::int64_t >( entry.records );
+		history_entry.stats = stats;
+		emit updateCompleted( history_entry );
+
+		emit fileProcessed( static_cast< int >( done ), static_cast< int >( total ) );
+	}
+
+	spdlog::info( "Compacted import complete: {} chunks", total );
+	return false;
 }
 
 } // namespace idhan::hydrus::ptr
