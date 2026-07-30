@@ -65,10 +65,15 @@ MetadataUpdate loadCorpusMetadata( const std::filesystem::path& dir );
 //!
 //! \param max_records_per_chunk Overridable for tests; production uses MAX_RECORDS_PER_CHUNK.
 //! \param required_free_bytes Overridable for tests; production uses REQUIRED_FREE_BYTES.
+//! \param scan_thread_count Overridable for tests; production uses defaultScanThreadCount() (0).
+//! \param collapse_thread_count Overridable for tests; production uses defaultCollapseThreadCount()
+//!        (0).
 FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
                            const std::filesystem::path& out_dir,
                            const FlattenCallbacks& callbacks,
                            std::size_t max_records_per_chunk = MAX_RECORDS_PER_CHUNK,
-                           std::uint64_t required_free_bytes = REQUIRED_FREE_BYTES );
+                           std::uint64_t required_free_bytes = REQUIRED_FREE_BYTES,
+                           unsigned scan_thread_count = 0,
+                           unsigned collapse_thread_count = 0 );
 
 } // namespace idhan::hydrus::ptr

@@ -86,7 +86,9 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
                            const std::filesystem::path& out_dir,
                            const FlattenCallbacks& callbacks,
                            const std::size_t max_records_per_chunk,
-                           const std::uint64_t required_free_bytes )
+                           const std::uint64_t required_free_bytes,
+                           const unsigned scan_thread_count,
+                           const unsigned collapse_thread_count )
 {
 	FlattenOutcome outcome {};
 
@@ -128,7 +130,7 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 			if ( callbacks.statsUpdated ) callbacks.statsUpdated( live );
 		};
 
-		const auto scan = scanCorpus( ptr_dir, metadata, work_dir, scan_callbacks );
+		const auto scan = scanCorpus( ptr_dir, metadata, work_dir, scan_callbacks, scan_thread_count );
 
 		if ( scan.cancelled )
 		{
@@ -164,7 +166,8 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 				if ( callbacks.statsUpdated ) callbacks.statsUpdated( live );
 			};
 
-			collapse = collapseBuckets( work_dir, out_dir, definitions, max_records_per_chunk, collapse_callbacks );
+			collapse = collapseBuckets(
+				work_dir, out_dir, definitions, max_records_per_chunk, collapse_callbacks, collapse_thread_count );
 
 			if ( collapse.cancelled )
 			{

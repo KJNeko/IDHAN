@@ -4,6 +4,7 @@
 # glob-recursed by AddFGLExecutable.
 
 find_package(ZLIB REQUIRED)
+find_package(Threads REQUIRED)
 
 AddFGLLibrary(PTRCore STATIC
 		${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -12,4 +13,4 @@ AddFGLLibrary(PTRCore STATIC
 # IDHAN is PUBLIC because it transitively supplies Jsoncpp_lib, and PTRFileParser.hpp
 # includes <json/json.h>.
 target_link_libraries(PTRCore PUBLIC IDHAN)
-target_link_libraries(PTRCore PRIVATE ZLIB::ZLIB spdlog::spdlog)
+target_link_libraries(PTRCore PRIVATE ZLIB::ZLIB spdlog::spdlog Threads::Threads)
