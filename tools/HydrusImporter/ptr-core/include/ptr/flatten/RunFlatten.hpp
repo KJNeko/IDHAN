@@ -8,6 +8,7 @@
 
 #include "ptr/PTRFileParser.hpp"
 #include "ptr/flatten/FlattenCollapse.hpp"
+#include "ptr/flatten/FlattenLiveStats.hpp"
 #include "ptr/flatten/Manifest.hpp"
 
 namespace idhan::hydrus::ptr
@@ -39,6 +40,8 @@ struct FlattenCallbacks
 	std::function< void( std::string_view ) > stage {};
 	//! (done, total, status text) within the current stage.
 	std::function< void( std::size_t, std::size_t, std::string_view ) > progress {};
+	//! Running counters, merged across scan and collapse. Fired at the same cadence as progress.
+	std::function< void( const FlattenLiveStats& ) > statsUpdated {};
 };
 
 //! What a flatten run produced.

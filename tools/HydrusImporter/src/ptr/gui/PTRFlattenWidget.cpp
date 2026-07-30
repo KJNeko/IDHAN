@@ -1,6 +1,7 @@
 #include "PTRFlattenWidget.hpp"
 
 #include <QFileDialog>
+#include <QLocale>
 #include <QStandardPaths>
 #include <QThreadPool>
 
@@ -90,15 +91,29 @@ void PTRFlattenWidget::onFlatten()
 	ui->progressBar->setValue( 0 );
 	ui->statusLabel->setStyleSheet( "" );
 	ui->statusLabel->setText( "Starting..." );
+	resetStats();
 
 	m_worker = std::make_unique< idhan::hydrus::ptr::PTRFlattenWorker >( source.toStdString(), output.toStdString() );
 
 	connect( m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::progress, this, &PTRFlattenWidget::onProgress );
 	connect(
 		m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::subProgress, this, &PTRFlattenWidget::onSubProgress );
+	connect(
+		m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::statsUpdated, this, &PTRFlattenWidget::onStatsUpdated );
 	connect( m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::finished, this, &PTRFlattenWidget::onFinished );
 
 	QThreadPool::globalInstance()->start( m_worker.get() );
+}
+
+void PTRFlattenWidget::resetStats()
+{
+	ui->eventsScannedValue->setText( "0" );
+	ui->recordsFlattenedValue->setText( "0" );
+	ui->chainsCollapsedValue->setText( "0" );
+	ui->terminalDeletesValue->setText( "0" );
+	ui->chunksWrittenValue->setText( "0" );
+	ui->skippedFilesValue->setText( "0" );
+	ui->skippedMissingDefinitionsValue->setText( "0" );
 }
 
 void PTRFlattenWidget::onCancel()
@@ -116,6 +131,25 @@ void PTRFlattenWidget::onSubProgress( const int current, const int total, const 
 	ui->statusLabel->setText( status );
 	ui->progressBar->setMaximum( total );
 	ui->progressBar->setValue( current );
+}
+
+void PTRFlattenWidget::onStatsUpdated( const quint64 eventsScanned,
+                                       const quint64 recordsFlattened,
+                                       const quint64 chainsCollapsed,
+                                       const quint64 terminalDeletes,
+                                       const quint64 chunksWritten,
+                                       const quint64 skippedFiles,
+                                       const quint64 skippedMissingDefinitions )
+{
+	const auto& locale = QLocale::system();
+	ui->eventsScannedValue->setText( locale.toString( static_cast< qulonglong >( eventsScanned ) ) );
+	ui->recordsFlattenedValue->setText( locale.toString( static_cast< qulonglong >( recordsFlattened ) ) );
+	ui->chainsCollapsedValue->setText( locale.toString( static_cast< qulonglong >( chainsCollapsed ) ) );
+	ui->terminalDeletesValue->setText( locale.toString( static_cast< qulonglong >( terminalDeletes ) ) );
+	ui->chunksWrittenValue->setText( locale.toString( static_cast< qulonglong >( chunksWritten ) ) );
+	ui->skippedFilesValue->setText( locale.toString( static_cast< qulonglong >( skippedFiles ) ) );
+	ui->skippedMissingDefinitionsValue->setText(
+		locale.toString( static_cast< qulonglong >( skippedMissingDefinitions ) ) );
 }
 
 void PTRFlattenWidget::onFinished( const bool success, const QString& message )

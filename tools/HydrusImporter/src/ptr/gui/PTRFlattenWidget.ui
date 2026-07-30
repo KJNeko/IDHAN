@@ -66,6 +66,113 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="statsGroup">
+     <property name="title">
+      <string>Progress</string>
+     </property>
+     <layout class="QFormLayout" name="statsForm">
+      <item row="0" column="0">
+       <widget class="QLabel" name="eventsScannedLabel">
+        <property name="text">
+         <string>Events scanned:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="eventsScannedValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="recordsFlattenedLabel">
+        <property name="text">
+         <string>Records flattened:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="recordsFlattenedValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="chainsCollapsedLabel">
+        <property name="text">
+         <string>Chains collapsed:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="chainsCollapsedValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="terminalDeletesLabel">
+        <property name="text">
+         <string>Terminal deletes kept:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="terminalDeletesValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="chunksWrittenLabel">
+        <property name="text">
+         <string>Chunks written:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLabel" name="chunksWrittenValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="skippedFilesLabel">
+        <property name="text">
+         <string>Files skipped:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QLabel" name="skippedFilesValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="skippedMissingDefinitionsLabel">
+        <property name="text">
+         <string>Missing tag definitions skipped:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QLabel" name="skippedMissingDefinitionsValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="buttonLayout">
      <item>
       <widget class="QPushButton" name="flattenButton">

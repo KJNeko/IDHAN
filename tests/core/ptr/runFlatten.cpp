@@ -324,6 +324,42 @@ TEST_F( RunFlattenTest, MissingMetadataFails )
 	EXPECT_FALSE( isCompactedDirectory( m_out ) );
 }
 
+TEST_F( RunFlattenTest, ReportsLiveStatsMergedAcrossStagesWithoutRegressing )
+{
+	const auto defs = fakeHashHex( 1 );
+	const auto add = fakeHashHex( 2 );
+	const auto del = fakeHashHex( 3 );
+	writeUpdateFile( m_corpus, defs, makeDefinitions( { { 100, fakeHashHex( 100 ) } }, { { 7, "solo" } } ) );
+	writeUpdateFile( m_corpus, add, makeContent( { { 7, { 100 } } }, {} ) );
+	writeUpdateFile( m_corpus, del, makeContent( {}, { { 7, { 100 } } } ) );
+	writeMetadataCache( { { 0, { defs, add } }, { 1, { del } } } );
+
+	std::vector< FlattenLiveStats > seen;
+	m_callbacks.statsUpdated = [ &seen ]( const FlattenLiveStats& stats ) { seen.push_back( stats ); };
+
+	const auto outcome = runFlatten( m_corpus, m_out, m_callbacks );
+	ASSERT_TRUE( outcome.success ) << outcome.message;
+
+	ASSERT_FALSE( seen.empty() );
+
+	// events_scanned and skipped_files are scan-owned: once scan finishes they must never change
+	// again, even while collapse-owned fields keep filling in.
+	const auto scan_final = std::ranges::find_if(
+		seen, []( const FlattenLiveStats& s ) { return s.records_flattened > 0 || s.chunks_written > 0; } );
+	ASSERT_NE( scan_final, seen.end() );
+	for ( auto it = scan_final; it != seen.end(); ++it )
+	{
+		EXPECT_EQ( it->events_scanned, seen.back().events_scanned );
+		EXPECT_EQ( it->skipped_files, seen.back().skipped_files );
+	}
+
+	const auto& last = seen.back();
+	EXPECT_EQ( last.events_scanned, outcome.manifest.stats.events_scanned );
+	EXPECT_EQ( last.records_flattened, 1u );
+	EXPECT_EQ( last.terminal_deletes, outcome.manifest.stats.terminal_deletes );
+	EXPECT_EQ( last.chunks_written, outcome.manifest.chunks.size() );
+}
+
 TEST_F( RunFlattenTest, ReportsProgress )
 {
 	const auto defs = fakeHashHex( 1 );

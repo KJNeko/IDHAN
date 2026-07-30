@@ -236,6 +236,55 @@ TEST_F( FlattenCollapseTest, RecordWithNoHashDefinitionIsDropped )
 	EXPECT_TRUE( readAll( result ).empty() );
 }
 
+TEST_F( FlattenCollapseTest, StatsUpdatedReportsRunningTotals )
+{
+	// Two records on different hashes land in different buckets (hash_id % BUCKET_COUNT), so the
+	// callback should fire at least twice and its last call should match the final result.
+	define( { 1, 2 }, { { 7, "kept" }, { 8, "removed" } } );
+	spill( { ev( 1, 7, 0, EventOp::Add ),
+	         ev( 2, 8, 0, EventOp::Add ),
+	         ev( 2, 8, 1, EventOp::Delete ),
+	         ev( 2, 8, 2, EventOp::Add ),
+	         ev( 2, 8, 3, EventOp::Delete ) } );
+
+	struct Snapshot
+	{
+		std::uint64_t records_flattened;
+		std::uint64_t chains_collapsed;
+		std::uint64_t terminal_deletes;
+		std::uint64_t chunks_written;
+		std::uint64_t skipped_missing_definitions;
+	};
+	std::vector< Snapshot > seen;
+	m_callbacks.statsUpdated = [ &seen ]( const std::uint64_t records_flattened,
+	                                      const std::uint64_t chains_collapsed,
+	                                      const std::uint64_t terminal_deletes,
+	                                      const std::uint64_t chunks_written,
+	                                      const std::uint64_t skipped_missing_definitions )
+	{ seen.push_back( { records_flattened, chains_collapsed, terminal_deletes, chunks_written,
+		                skipped_missing_definitions } ); };
+
+	const DefinitionReader definitions { m_work };
+	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+
+	ASSERT_FALSE( seen.empty() );
+	// Two occupied buckets, plus one final call once the trailing open chunk is closed.
+	EXPECT_EQ( seen.size(), 3u );
+
+	const auto& last = seen.back();
+	EXPECT_EQ( last.records_flattened, 2u );
+	EXPECT_EQ( last.chains_collapsed, result.stats.events_collapsed );
+	EXPECT_EQ( last.terminal_deletes, result.stats.terminal_deletes );
+	EXPECT_EQ( last.skipped_missing_definitions, 0u );
+
+	// Running totals never decrease across calls.
+	for ( std::size_t i = 1; i < seen.size(); ++i )
+	{
+		EXPECT_GE( seen[ i ].records_flattened, seen[ i - 1 ].records_flattened );
+		EXPECT_GE( seen[ i ].chunks_written, seen[ i - 1 ].chunks_written );
+	}
+}
+
 TEST_F( FlattenCollapseTest, EmptyWorkDirectoryProducesNoChunks )
 {
 	const DefinitionReader definitions { m_work };

@@ -18,13 +18,18 @@ namespace idhan::hydrus::ptr
 //! At the default the full corpus produces roughly 975 chunks in place of 26,324 update files.
 inline constexpr std::size_t MAX_RECORDS_PER_CHUNK { 200'000 };
 
-//! Host hooks. Both may be empty; collapseBuckets checks before calling.
+//! Host hooks. All may be empty; collapseBuckets checks before calling.
 struct CollapseCallbacks
 {
 	//! Polled once per bucket. Return true to stop early.
 	std::function< bool() > cancelled {};
 	//! (buckets done, buckets total, current status text)
 	std::function< void( std::size_t, std::size_t, std::string_view ) > progress {};
+	//! Fired once per non-empty bucket, after it is processed: (records flattened so far, chains
+	//! collapsed so far, terminal deletes kept so far, chunks written so far, tag definitions
+	//! missing so far).
+	std::function< void( std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t ) >
+		statsUpdated {};
 };
 
 //! What the collapse produced.

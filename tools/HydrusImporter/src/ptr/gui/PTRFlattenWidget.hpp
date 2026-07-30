@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <QtGlobal>
 
 #include <memory>
 
@@ -44,12 +45,23 @@ class PTRFlattenWidget : public QWidget
 	void onCancel();
 	void onProgress( const QString& status );
 	void onSubProgress( int current, int total, const QString& status );
+	void onStatsUpdated( quint64 eventsScanned,
+	                     quint64 recordsFlattened,
+	                     quint64 chainsCollapsed,
+	                     quint64 terminalDeletes,
+	                     quint64 chunksWritten,
+	                     quint64 skippedFiles,
+	                     quint64 skippedMissingDefinitions );
 	void onFinished( bool success, const QString& message );
 
   private:
 
 	//! The compacted subdirectory of \p source, which is where output goes by default.
 	static QString defaultOutputFor( const QString& source );
+
+	//! Zeroes the stats panel at the start of a run, so it never shows a stale count from a
+	//! previous flatten.
+	void resetStats();
 
 	Ui::PTRFlattenWidget* ui;
 	std::unique_ptr< idhan::hydrus::ptr::PTRFlattenWorker > m_worker {};
