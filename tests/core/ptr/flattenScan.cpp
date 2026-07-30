@@ -221,6 +221,9 @@ TEST_F( FlattenScanTest, StopsWhenCancelled )
 
 TEST_F( FlattenScanTest, StatsUpdatedFiresOncePerFileWithRunningTotals )
 {
+	// Scan is multi-threaded, so completion order across files is not guaranteed -- only that
+	// there is one call per file, that the running totals never decrease, and that the last call
+	// matches the final result.
 	const auto defs = fakeHashHex( 1 );
 	const auto good = fakeHashHex( 2 );
 	const auto missing = fakeHashHex( 99 );
@@ -237,12 +240,17 @@ TEST_F( FlattenScanTest, StatsUpdatedFiresOncePerFileWithRunningTotals )
 
 	// One call per file: definitions (no event), the mapping (one event), the missing file (a skip).
 	ASSERT_EQ( seen.size(), 3u );
-	EXPECT_EQ( seen[ 0 ], ( std::pair< std::uint64_t, std::uint64_t > { 0u, 0u } ) );
-	EXPECT_EQ( seen[ 1 ], ( std::pair< std::uint64_t, std::uint64_t > { 1u, 0u } ) );
-	EXPECT_EQ( seen[ 2 ], ( std::pair< std::uint64_t, std::uint64_t > { 1u, 1u } ) );
+
+	for ( std::size_t i = 1; i < seen.size(); ++i )
+	{
+		EXPECT_GE( seen[ i ].first, seen[ i - 1 ].first );
+		EXPECT_GE( seen[ i ].second, seen[ i - 1 ].second );
+	}
 
 	EXPECT_EQ( seen.back().first, result.events_written );
 	EXPECT_EQ( seen.back().second, result.skipped_files );
+	EXPECT_EQ( result.events_written, 1u );
+	EXPECT_EQ( result.skipped_files, 1u );
 }
 
 TEST_F( FlattenScanTest, RejectsAnUpdateIndexBeyondTheSixteenBitRange )

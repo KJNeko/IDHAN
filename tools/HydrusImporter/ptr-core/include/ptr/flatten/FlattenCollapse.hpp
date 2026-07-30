@@ -12,6 +12,12 @@
 namespace idhan::hydrus::ptr
 {
 
+//! Worker threads collapseBuckets uses when \p thread_count is 0 (the default): every reported
+//! hardware thread. Every bucket is self-sufficient (MappingEvent.hpp), so reading, sorting, and
+//! walking chains for different buckets is independent work; only handing survivors to the shared
+//! chunk writer is serialised.
+unsigned defaultCollapseThreadCount();
+
 //! Records per output chunk. Compile-time by design, alongside PTRImportWorker::BATCH_SIZE.
 //!
 //! This bounds the importer too: it holds one chunk's records and their RecordIDs at a time.
@@ -46,6 +52,12 @@ struct CollapseResult
 //! chain contiguous and chronological, so collapsing is a local decision over a span. Because a
 //! bucket holds every event for each of its records, a record's output is final when its span ends.
 //!
+//! \p thread_count worker threads read, sort, and walk chains for different buckets concurrently;
+//! only handing the survivors to the shared chunk writer is serialised, since that part is cheap
+//! next to a bucket's disk read and sort. Buckets no longer necessarily complete in index order, so
+//! which chunk a given record lands in is not deterministic across runs -- every record's final
+//! tag set is unaffected. 0 (the default) picks defaultCollapseThreadCount().
+//!
 //! The chunk stays open across bucket boundaries. A bucket holds far fewer records than the cap,
 //! so confining a chunk to one bucket would make \p max_records_per_chunk unreachable. This is
 //! safe because every event for a record lives in exactly one bucket.
@@ -56,6 +68,7 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
                                 const std::filesystem::path& out_dir,
                                 const DefinitionReader& definitions,
                                 std::size_t max_records_per_chunk,
-                                const CollapseCallbacks& callbacks );
+                                const CollapseCallbacks& callbacks,
+                                unsigned thread_count = 0 );
 
 } // namespace idhan::hydrus::ptr

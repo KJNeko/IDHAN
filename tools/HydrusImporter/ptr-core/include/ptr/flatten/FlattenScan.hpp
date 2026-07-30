@@ -12,6 +12,12 @@
 namespace idhan::hydrus::ptr
 {
 
+//! Worker threads scanCorpus uses when \p thread_count is 0 (the default): every reported
+//! hardware thread. Decompressing and JSON-parsing each update file is the CPU-bound part of a
+//! flatten pass, and each file is independent until the merge step, so this scales close to
+//! linearly with cores.
+unsigned defaultScanThreadCount();
+
 #pragma pack( push, 1 )
 
 //! An add-or-delete of one tag relationship. For parents (a, b) is (child, parent); for siblings
@@ -55,8 +61,14 @@ struct ScanResult
 	bool cancelled { false };
 };
 
-//! Reads every update file listed in \p metadata, in ascending update index, writing definitions
-//! into \p work_dir's definition store and mapping events into its buckets.
+//! Reads every update file listed in \p metadata, writing definitions into \p work_dir's
+//! definition store and mapping events into its buckets.
+//!
+//! \p thread_count worker threads decompress and parse update files concurrently; only the actual
+//! writes (definitions, bucket events, result counters, callbacks) are serialised, since those are
+//! cheap next to zlib inflate and JSON parsing. Each event still carries its true update_index, so
+//! ordering downstream of the scan is unaffected by which thread happened to process which file.
+//! 0 (the default) picks defaultScanThreadCount().
 //!
 //! A file that is missing or fails to parse is logged, counted in skipped_files, and stepped over:
 //! one bad file must not abort a multi-hour run.
@@ -66,6 +78,7 @@ struct ScanResult
 ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
                        const MetadataUpdate& metadata,
                        const std::filesystem::path& work_dir,
-                       const ScanCallbacks& callbacks );
+                       const ScanCallbacks& callbacks,
+                       unsigned thread_count = 0 );
 
 } // namespace idhan::hydrus::ptr

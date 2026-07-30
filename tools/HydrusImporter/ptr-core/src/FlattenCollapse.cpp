@@ -6,8 +6,10 @@
 #include <array>
 #include <format>
 #include <memory>
+#include <mutex>
 #include <span>
 #include <string>
+#include <thread>
 #include <utility>
 
 #include "ptr/flatten/BucketSpill.hpp"
@@ -17,8 +19,104 @@
 namespace idhan::hydrus::ptr
 {
 
+unsigned defaultCollapseThreadCount()
+{
+	return std::max( 1u, std::thread::hardware_concurrency() );
+}
+
 namespace
 {
+
+//! One record surviving a bucket's collapse, not yet handed to the (shared, locked) chunk sink.
+struct CollapsedRecord
+{
+	std::array< std::byte, SHA256_BYTES > sha256;
+	std::vector< std::uint32_t > adds;
+	std::vector< std::uint32_t > dels;
+};
+
+//! Everything one bucket's collapse produced, computed with no shared state touched.
+struct BucketCollapseResult
+{
+	std::vector< CollapsedRecord > records {};
+	std::uint64_t events_scanned { 0 };
+	std::uint64_t mappings_after_collapse { 0 };
+	std::uint64_t terminal_deletes { 0 };
+};
+
+//! Reads, sorts, and walks one bucket's events into whole records. Touches only its arguments --
+//! safe to run concurrently for different buckets.
+BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
+                                        const std::size_t bucket,
+                                        const DefinitionReader& definitions )
+{
+	BucketCollapseResult out {};
+
+	auto events = readBucket( bucketPath( work_dir, bucket ) );
+	if ( events.empty() ) return out;
+
+	out.events_scanned = events.size();
+
+	std::ranges::sort( events, eventLess );
+
+	// Equal hash_id values are contiguous after the sort, and inside a record so are equal tag_id
+	// values, so one linear walk yields whole records without any lookaside structure.
+	std::size_t record_start { 0 };
+	while ( record_start < events.size() )
+	{
+		const auto hash_id = events[ record_start ].hash_id;
+
+		std::size_t record_end { record_start };
+		while ( record_end < events.size() && events[ record_end ].hash_id == hash_id ) ++record_end;
+
+		const auto sha = definitions.hash( hash_id );
+		if ( !sha.has_value() )
+		{
+			spdlog::warn(
+				"No hash definition for hash_id={}, dropping its {} events", hash_id, record_end - record_start );
+			record_start = record_end;
+			continue;
+		}
+
+		std::vector< std::uint32_t > adds;
+		std::vector< std::uint32_t > dels;
+
+		std::size_t chain_start { record_start };
+		while ( chain_start < record_end )
+		{
+			const auto tag_id = events[ chain_start ].tag_id;
+
+			std::size_t chain_end { chain_start };
+			while ( chain_end < record_end && events[ chain_end ].tag_id == tag_id ) ++chain_end;
+
+			const std::span< const MappingEvent > chain { events.data() + chain_start, chain_end - chain_start };
+			if ( const auto collapsed = collapseChain( chain ); collapsed.has_value() )
+			{
+				if ( collapsed->op == EventOp::Add )
+				{
+					adds.push_back( tag_id );
+				}
+				else
+				{
+					dels.push_back( tag_id );
+					++out.terminal_deletes;
+				}
+				++out.mappings_after_collapse;
+			}
+
+			chain_start = chain_end;
+		}
+
+		std::array< std::byte, SHA256_BYTES > sha_bytes {};
+		std::ranges::copy( *sha, sha_bytes.begin() );
+
+		out.records.push_back( { sha_bytes, std::move( adds ), std::move( dels ) } );
+
+		record_start = record_end;
+	}
+
+	return out;
+}
 
 //! Owns the chunk currently being filled and rolls over to a new one at the cap. Kept separate
 //! from the bucket loop so a chunk can span buckets.
@@ -92,7 +190,8 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
                                 const std::filesystem::path& out_dir,
                                 const DefinitionReader& definitions,
                                 const std::size_t max_records_per_chunk,
-                                const CollapseCallbacks& callbacks )
+                                const CollapseCallbacks& callbacks,
+                                const unsigned thread_count )
 {
 	CollapseResult result {};
 
@@ -106,88 +205,67 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 	// stats panel calls "records flattened".
 	std::uint64_t records_flattened { 0 };
 
-	for ( std::size_t bucket = 0; bucket < BUCKET_COUNT; ++bucket )
+	// Everything below is shared mutable state; every access to it (including the callbacks) is
+	// made through this one lock. Reading, sorting, and chain-walking a bucket -- the CPU-bound
+	// part -- runs unlocked in collapseOneBucket.
+	std::mutex state_mutex;
+	std::size_t next_bucket { 0 };
+
+	const auto worker = [ & ]
 	{
-		if ( callbacks.cancelled && callbacks.cancelled() )
+		for ( ;; )
 		{
-			result.cancelled = true;
-			break;
-		}
-
-		if ( callbacks.progress )
-			callbacks.progress( bucket + 1, BUCKET_COUNT, std::format( "Collapsing bucket {}", bucket ) );
-
-		auto events = readBucket( bucketPath( work_dir, bucket ) );
-		if ( events.empty() ) continue;
-
-		result.stats.events_scanned += events.size();
-
-		std::ranges::sort( events, eventLess );
-
-		// Equal hash_id values are contiguous after the sort, and inside a record so are equal
-		// tag_id values, so one linear walk yields whole records without any lookaside structure.
-		std::size_t record_start { 0 };
-		while ( record_start < events.size() )
-		{
-			const auto hash_id = events[ record_start ].hash_id;
-
-			std::size_t record_end { record_start };
-			while ( record_end < events.size() && events[ record_end ].hash_id == hash_id ) ++record_end;
-
-			const auto sha = definitions.hash( hash_id );
-			if ( !sha.has_value() )
+			std::size_t bucket {};
 			{
-				spdlog::warn(
-					"No hash definition for hash_id={}, dropping its {} events", hash_id, record_end - record_start );
-				record_start = record_end;
-				continue;
+				std::lock_guard< std::mutex > lock { state_mutex };
+
+				if ( callbacks.cancelled && callbacks.cancelled() ) result.cancelled = true;
+				if ( result.cancelled || next_bucket >= BUCKET_COUNT ) return;
+
+				bucket = next_bucket++;
 			}
 
-			std::vector< std::uint32_t > adds;
-			std::vector< std::uint32_t > dels;
+			auto collapsed = collapseOneBucket( work_dir, bucket, definitions );
 
-			std::size_t chain_start { record_start };
-			while ( chain_start < record_end )
+			std::lock_guard< std::mutex > lock { state_mutex };
+
+			if ( callbacks.progress )
+				callbacks.progress( bucket + 1, BUCKET_COUNT, std::format( "Collapsing bucket {}", bucket ) );
+
+			// A bucket with events but zero surviving records (every record's hash undefined) still
+			// contributed events_scanned, so the gate is "had events", not "produced records" --
+			// otherwise those events would silently vanish from the live and final counters.
+			if ( collapsed.events_scanned > 0 )
 			{
-				const auto tag_id = events[ chain_start ].tag_id;
+				result.stats.events_scanned += collapsed.events_scanned;
+				result.stats.mappings_after_collapse += collapsed.mappings_after_collapse;
+				result.stats.terminal_deletes += collapsed.terminal_deletes;
 
-				std::size_t chain_end { chain_start };
-				while ( chain_end < record_end && events[ chain_end ].tag_id == tag_id ) ++chain_end;
-
-				const std::span< const MappingEvent > chain { events.data() + chain_start, chain_end - chain_start };
-				if ( const auto collapsed = collapseChain( chain ); collapsed.has_value() )
+				for ( auto& record : collapsed.records )
 				{
-					if ( collapsed->op == EventOp::Add )
-					{
-						adds.push_back( tag_id );
-					}
-					else
-					{
-						dels.push_back( tag_id );
-						++result.stats.terminal_deletes;
-					}
-					++result.stats.mappings_after_collapse;
+					sink.add( record.sha256, std::move( record.adds ), std::move( record.dels ) );
+					++records_flattened;
 				}
 
-				chain_start = chain_end;
+				if ( callbacks.statsUpdated )
+					callbacks.statsUpdated(
+						records_flattened,
+						result.stats.events_scanned - result.stats.mappings_after_collapse,
+						result.stats.terminal_deletes,
+						sink.entries().size(),
+						sink.missingDefinitions() );
 			}
-
-			std::array< std::byte, SHA256_BYTES > sha_bytes {};
-			std::ranges::copy( *sha, sha_bytes.begin() );
-
-			sink.add( sha_bytes, std::move( adds ), std::move( dels ) );
-			++records_flattened;
-
-			record_start = record_end;
 		}
+	};
 
-		if ( callbacks.statsUpdated )
-			callbacks.statsUpdated(
-				records_flattened,
-				result.stats.events_scanned - result.stats.mappings_after_collapse,
-				result.stats.terminal_deletes,
-				sink.entries().size(),
-				sink.missingDefinitions() );
+	// Never spawn more workers than there are buckets; harmless but pointless for a tiny corpus.
+	const auto requested = thread_count != 0 ? thread_count : defaultCollapseThreadCount();
+	const auto workers = static_cast< unsigned >( std::min< std::size_t >( requested, BUCKET_COUNT ) );
+	{
+		std::vector< std::jthread > pool;
+		pool.reserve( workers );
+		for ( unsigned t = 0; t < workers; ++t ) pool.emplace_back( worker );
+		// pool's destructor joins every thread here before the function continues.
 	}
 
 	sink.close();

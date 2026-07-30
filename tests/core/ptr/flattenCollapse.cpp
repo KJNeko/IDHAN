@@ -234,6 +234,10 @@ TEST_F( FlattenCollapseTest, RecordWithNoHashDefinitionIsDropped )
 	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
 
 	EXPECT_TRUE( readAll( result ).empty() );
+
+	// The bucket's event was still scanned even though it produced no surviving record; a bucket
+	// whose every record lacks a hash definition must not make its events vanish from the count.
+	EXPECT_EQ( result.stats.events_scanned, 1u );
 }
 
 TEST_F( FlattenCollapseTest, StatsUpdatedReportsRunningTotals )
