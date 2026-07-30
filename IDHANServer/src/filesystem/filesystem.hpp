@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include "io/IOUring.hpp"
+#include "ipc/Blob.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan
@@ -27,6 +28,16 @@ ExpectedTask< std::filesystem::path > getRecordPath( RecordID record_id, DbClien
 
 //! Returns a FileIOUring instance for the given record
 ExpectedTask< FileIOUring > getIOForRecord( RecordID record_id, DbClientPtr db );
+
+//! Maps a record's file into a blob that can be handed to a module worker.
+/** Replaces the read-the-whole-file-into-a-vector pattern the module call sites used. The bytes are
+ *  copied once, inside the kernel, into a sealed anonymous mapping; the server reads them through
+ *  blob.view() for its own MIME scanning and passes the same object to the module, which receives
+ *  only a pointer and a length.
+ *
+ *  The blob must outlive any module call made with it. That used to be a comment repeated at every
+ *  call site; now it is just ordinary object lifetime. */
+ExpectedTask< ipc::Blob > mapRecordBlob( RecordID record_id, DbClientPtr db );
 
 //! Returns the path of a cluster.
 ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );

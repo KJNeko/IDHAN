@@ -14,13 +14,17 @@ class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 
 	ArchiveThumbnailer( idhan::ModuleCallbacks callbacks ) : ThumbnailerModuleI( callbacks ) {}
 
-	[[nodiscard]] std::string_view name() override { return "Archive generator module"; }
+	[[nodiscard]] std::string_view name() override { return "Archive thumbnailer module"; }
 
 	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 
 	// re-entrancy is bounded by a thread_local depth guard and all state is per-call: safe to run
 	// concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
+
+	// The cost is one nested host thumbnail call per member, so it scales with the member count in
+	// data.extra rather than with the archive's byte size.
+	[[nodiscard]] std::chrono::milliseconds estimateDuration( const idhan::ModuleCallData& data ) override;
 
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 

@@ -28,9 +28,16 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 	const auto metadata_parser { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
 	if ( metadata_parser.empty() ) co_return createInternalError( "Was unable to find parser for {}", *mime_str );
 
-	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
-	ModuleCallData call_data { .file_view = data_view, .mime_name = *mime_str, .extra = {} };
-	const auto metadata_json { metadata_parser[ 0 ]->parseFile( call_data ) };
+	// The bytes arrived in the request body rather than from a cluster, so they are copied into a
+	// blob here instead of being mapped from a file.
+	auto blob { ipc::Blob::fromBytes(
+		std::span< const std::byte > {
+			reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() } ) };
+
+	if ( !blob ) co_return createInternalError( "Could not stage the request body for a module: {}", blob.error() );
+
+	modules::RemoteCallData call_data { .blob = &blob.value(), .mime_name = *mime_str, .extra = {}, .depth = 0 };
+	const auto metadata_json { co_await metadata_parser[ 0 ]->parseFile( call_data ) };
 
 	if ( !metadata_json )
 		co_return createInternalError(
@@ -42,7 +49,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	if ( thumbnailers.empty() ) co_return createNotFound( "No thumbnailer available for mime type {}", *mime_str );
 
-	const auto thumbnail_data { thumbnailers.at( 0 )->createThumbnailFile( call_data, 128, 128 ) };
+	const auto thumbnail_data { co_await thumbnailers.at( 0 )->createThumbnailFile( call_data, 128, 128 ) };
 
 	if ( !thumbnail_data ) co_return createInternalError( thumbnail_data.error() );
 

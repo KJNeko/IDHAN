@@ -85,29 +85,16 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
 
-		// FileMappedData data { record_path.value() };
-		auto io_uring_e { co_await filesystem::getIOForRecord( record_id, db ) };
-		if ( !io_uring_e ) co_return io_uring_e.error();
-		auto& io_uring { io_uring_e.value() };
+		// Sealed anonymous mapping rather than a heap buffer: this is what gets handed to the module
+		// worker, and it owns the bytes for as long as the call needs them.
+		auto blob_e { co_await filesystem::mapRecordBlob( record_id, db ) };
+		if ( !blob_e ) co_return blob_e.error();
+		const auto& blob { blob_e.value() };
 
 		const std::size_t height { size };
 		const std::size_t width { size };
 
-		std::vector< std::byte > buffer {};
-
-		try
-		{
-			buffer = co_await io_uring.readAll();
-		}
-		catch ( const std::exception& e )
-		{
-			co_return createInternalError( "Failed to read file for record {}: {}", record_id, e.what() );
-		}
-
-		// buffer must outlive createThumbnailFile below -- file_view does not own its bytes. Both
-		// live in this same block, so the lifetime holds.
-		const idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( buffer.data() ), buffer.size() };
-		ModuleCallData call_data { .file_view = data_view, .mime_name = mime_name, .extra = {} };
+		modules::RemoteCallData call_data { .blob = &blob, .mime_name = mime_name, .extra = {}, .depth = 0 };
 
 		// check if we have any metadata for this
 		const auto extra_metadata {
@@ -118,7 +105,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 			call_data.extra = extra_metadata[ 0 ][ 0 ].as< Json::Value >();
 		}
 
-		const auto thumbnail_info { thumbnailer->createThumbnailFile( call_data, width, height ) };
+		const auto thumbnail_info { co_await thumbnailer->createThumbnailFile( call_data, width, height ) };
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 

@@ -22,6 +22,9 @@ class PsdThumbnailer final : public idhan::ThumbnailerModuleI
 	// pure parsing of the input buffer, no shared mutable state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
+	// composites through vips, so this worker pays VIPS_INIT
+	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
+
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
 		idhan::ModuleCallData& data,
 		std::size_t width,

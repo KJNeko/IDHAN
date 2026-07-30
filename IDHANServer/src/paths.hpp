@@ -21,6 +21,10 @@
 #define IDHAN_MODULES_PATH "/usr/share/idhan/modules"
 #endif
 
+#ifndef IDHAN_MODULE_RUNNER_PATH
+#define IDHAN_MODULE_RUNNER_PATH "/usr/bin/IDHANModuleRunner"
+#endif
+
 #elif defined( _WIN32 )
 #ifndef IDHAN_STATIC_PATH
 #define IDHAN_STATIC_PATH "C:\\ProgramData\\IDHAN\\static"
@@ -34,6 +38,10 @@
 #define IDHAN_MODULES_PATH "C:\\ProgramData\\IDHAN\\modules"
 #endif
 
+#ifndef IDHAN_MODULE_RUNNER_PATH
+#define IDHAN_MODULE_RUNNER_PATH "C:\\ProgramData\\IDHAN\\IDHANModuleRunner.exe"
+#endif
+
 #else
 #error "No paths supplied for finding IDHAN info. Unsupported OS"
 #endif
@@ -41,7 +49,18 @@
 namespace idhan
 {
 
+//! Directory containing the running executable, resolved via /proc/self/exe.
+/** Everything that ships alongside the binary is looked up relative to this rather than to the
+ *  working directory, so the server behaves the same however it was launched. */
+std::filesystem::path getExecutableDir();
+
 std::vector< std::filesystem::path > getModulePaths();
+
+//! Path to the IDHANModuleRunner executable, which hosts one module library per process.
+/** Looked for next to the server binary first, then on the install path, so a build tree and an
+ *  installed package both work without configuration. Override with `[modules] runner_path`. */
+std::filesystem::path getModuleRunnerPath();
+
 std::vector< std::filesystem::path > getMimeParserPaths();
 std::filesystem::path getStaticPath();
 std::filesystem::path getThumbnailsPath();

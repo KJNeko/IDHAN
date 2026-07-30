@@ -16,7 +16,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif ()
 target_link_libraries(IDHANServer PRIVATE libpqxx::pqxx Qt6::Core tomlplusplus::tomlplusplus)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
-target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANMigration)
+target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANModuleIPC IDHANMigration)
 target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
 
@@ -115,4 +115,6 @@ add_custom_target(IDHANConfig DEPENDS ${CONFIG_OUTPUT})
 add_dependencies(IDHANServer IDHANConfig)
 
 add_dependencies(IDHANServer IDHANPremadeModules)
+# The server spawns this per module library; it must exist before the server is useful.
+add_dependencies(IDHANServer IDHANModuleRunner)
 

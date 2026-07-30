@@ -4,6 +4,7 @@
 #pragma once
 #include <json/value.h>
 
+#include <chrono>
 #include <cstdint>
 #include <expected>
 #include <functional>
@@ -31,6 +32,22 @@ enum ModuleTypeFlags : std::uint16_t
 //! Bitwise-OR of ModuleTypeFlags values; the concrete return type of ModuleBase::type().
 using ModuleType = std::uint16_t;
 
+//! How the host runs a module, as reported by ModuleBase::residency().
+//!
+//! Modules run in a worker process, never in the server. Residency picks how long that process
+//! lives. The worker hosts one shared library, so a library is treated as PERSISTENT if *any*
+//! module it exports asks for it.
+enum class ModuleResidency : std::uint8_t
+{
+	//! A fresh process per call, killed the moment the call returns. Nothing a module leaks or
+	//! corrupts survives the call. The default: a module opts out of it, never into it.
+	SINGLE_RUN,
+	//! A long-lived worker reused across calls. For modules whose one-time initialisation is too
+	//! expensive to pay per call (VIPS_INIT, codec registration). The host still retires the
+	//! worker once it goes over its RSS ceiling or sits idle.
+	PERSISTENT,
+};
+
 //! Semantic version of a module, reported by ModuleBase::version().
 struct ModuleVersion
 {
@@ -53,6 +70,15 @@ struct ModuleCallData
 	Json::Value extra; //!< Optional caller-supplied parameters; contents are operation-specific.
 };
 
+//! What the module system can do with a given blob, as answered by ModuleCallbacks::probe.
+struct ModuleCapability
+{
+	std::string mime; //!< The MIME the host resolved the bytes to.
+	bool has_metadata { false }; //!< Some module can parse metadata from these bytes.
+	bool has_thumbnailer { false }; //!< Some module can thumbnail these bytes.
+	bool has_generator { false }; //!< Some module can generate derived files from these bytes.
+};
+
 //! Host callbacks handed to every module at construction so it can re-dispatch work back through the
 //! module system — e.g. an archive thumbnailer asking the host to thumbnail a contained file. The
 //! host resolves the target module by MIME. These run synchronously and may re-enter the calling
@@ -64,9 +90,13 @@ struct FGL_EXPORT ModuleCallbacks
 	using GenerateFunc = std::function< std::expected<
 		std::vector< std::byte >,
 		ModuleError >( data_view, std::array< std::byte, 256 / 8 >, Json::Value, std::string ) >;
+	using ProbeFunc = std::function< std::expected< ModuleCapability, ModuleError >( data_view, std::string ) >;
 
 	ThumbnailFunc thumbnail; //!< Ask the host to thumbnail the given bytes (data, extra, file_name).
 	GenerateFunc generate; //!< Ask the host to generate a derived file matching the desired hash.
+	//! Ask the host what, if anything, can handle these bytes (data, file_name) — one round trip,
+	//! so a module can check before committing to a thumbnail or generate call it expects to fail.
+	ProbeFunc probe;
 
 	/*
 	//! Generates a thumbnail for the given file. Returns it in a RGB format
@@ -115,6 +145,29 @@ class FGL_EXPORT ModuleBase
 
 	//! The module's semantic version.
 	[[nodiscard]] virtual ModuleVersion version() = 0;
+
+	//! How the host should run this module (see ModuleResidency). Default SINGLE_RUN: a module has
+	//! to justify keeping a process alive, and paying a fork per call is always correct if slow.
+	[[nodiscard]] virtual ModuleResidency residency() { return ModuleResidency::SINGLE_RUN; }
+
+	//! How long this module expects the given call to take. The host arms its watchdog from this,
+	//! so scale it with data.file_view.size() rather than returning a constant — a module that
+	//! under-reports gets killed mid-call. The default is deliberately generous.
+	[[nodiscard]] virtual std::chrono::milliseconds estimateDuration( const ModuleCallData& data )
+	{
+		(void)data;
+		return std::chrono::seconds { 30 };
+	}
+
+	//! Called once after the library's init(), before the first call reaches this module.
+	virtual void startup() {}
+
+	//! Used for reclaiming resources. Called when the host is under memory pressure; drop caches
+	//! but stay usable — this is not a teardown.
+	virtual void restart() {}
+
+	//! Called once before the worker process exits.
+	virtual void shutdown() {}
 };
 
 using IDHANModule = ModuleBase;
