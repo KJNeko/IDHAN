@@ -1,4 +1,4 @@
-#include "PTRFileParser.hpp"
+#include "ptr/PTRFileParser.hpp"
 
 #include <fstream>
 #include <stdexcept>
@@ -10,7 +10,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "PTRConstants.hpp"
+#include "ptr/PTRConstants.hpp"
 
 namespace idhan::hydrus::ptr
 {

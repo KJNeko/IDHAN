@@ -15,8 +15,8 @@
 #include <thread>
 #include <type_traits>
 
-#include "PTRConstants.hpp"
-#include "PTRFileParser.hpp"
+#include "ptr/PTRConstants.hpp"
+#include "ptr/PTRFileParser.hpp"
 #include "idhan/IDHANClient.hpp"
 #include "splitTag.hpp"
 
