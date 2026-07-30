@@ -18,6 +18,14 @@ namespace idhan::hydrus::ptr
 //! is needed at import time.
 inline constexpr const char* WORK_SUBDIRECTORY { "work" };
 
+//! Conventional output location: a subdirectory of the PTR files directory, so a corpus and its
+//! compacted form travel together rather than as unrelated sibling folders.
+//!
+//! Nesting the output inside the source is safe. The scan resolves update files by exact name
+//! from the metadata rather than globbing the directory, so it never sees the output, and the
+//! Import tab keys on compact_manifest.json, which exists only in the subdirectory.
+inline constexpr const char* COMPACT_SUBDIRECTORY { "compact" };
+
 //! Free space required before a flatten will start. The full corpus spills roughly 38 GB of
 //! buckets plus 7.6 GB of definitions; 60 GB leaves room for the chunks written alongside.
 inline constexpr std::uint64_t REQUIRED_FREE_BYTES { 60ULL * 1024 * 1024 * 1024 };

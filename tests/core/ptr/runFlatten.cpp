@@ -259,6 +259,62 @@ TEST_F( RunFlattenTest, CancelledRunLeavesNoManifest )
 	EXPECT_FALSE( isCompactedDirectory( m_out ) );
 }
 
+TEST_F( RunFlattenTest, OutputNestedInsideTheCorpusWorks )
+{
+	// The default layout puts the compacted output in a subdirectory of the PTR files directory.
+	// The scan resolves update files by exact name rather than globbing, so its own output sitting
+	// inside the scanned directory must not perturb it.
+	const auto defs = fakeHashHex( 1 );
+	const auto content = fakeHashHex( 2 );
+	const auto record_hex = fakeHashHex( 100 );
+
+	writeUpdateFile( m_corpus, defs, makeDefinitions( { { 100, record_hex } }, { { 7, "solo" } } ) );
+	writeUpdateFile( m_corpus, content, makeContent( { { 7, { 100 } } }, {} ) );
+	writeMetadataCache( { { 0, { defs, content } } } );
+
+	const auto nested = m_corpus / COMPACT_SUBDIRECTORY;
+	const auto outcome = runFlatten( m_corpus, nested, m_callbacks );
+
+	ASSERT_TRUE( outcome.success ) << outcome.message;
+	EXPECT_TRUE( isCompactedDirectory( nested ) );
+
+	// The corpus itself must not now look compacted; only the subdirectory does.
+	EXPECT_FALSE( isCompactedDirectory( m_corpus ) );
+
+	const auto manifest = readManifest( nested );
+	EXPECT_EQ( manifest.stats.events_scanned, 1u );
+	EXPECT_EQ( manifest.stats.mappings_after_collapse, 1u );
+
+	ASSERT_FALSE( manifest.chunks.empty() );
+	const auto chunk = readChunk( nested / manifest.chunks.at( 0 ).file );
+	ASSERT_EQ( chunk.records.size(), 1u );
+	ASSERT_EQ( chunk.records[ 0 ].add_indices.size(), 1u );
+	EXPECT_EQ( chunk.strings[ chunk.records[ 0 ].add_indices[ 0 ] ].tag, "solo" );
+}
+
+TEST_F( RunFlattenTest, RerunningOverAnExistingNestedOutputStillWorks )
+{
+	// Flattening twice into the same nested directory must not accumulate stale chunks or read
+	// the previous run's output as corpus input.
+	const auto defs = fakeHashHex( 1 );
+	const auto content = fakeHashHex( 2 );
+
+	writeUpdateFile( m_corpus, defs, makeDefinitions( { { 100, fakeHashHex( 100 ) } }, { { 7, "solo" } } ) );
+	writeUpdateFile( m_corpus, content, makeContent( { { 7, { 100 } } }, {} ) );
+	writeMetadataCache( { { 0, { defs, content } } } );
+
+	const auto nested = m_corpus / COMPACT_SUBDIRECTORY;
+
+	ASSERT_TRUE( runFlatten( m_corpus, nested, m_callbacks ).success );
+	const auto first = readManifest( nested );
+
+	ASSERT_TRUE( runFlatten( m_corpus, nested, m_callbacks ).success );
+	const auto second = readManifest( nested );
+
+	EXPECT_EQ( second.stats.events_scanned, first.stats.events_scanned );
+	EXPECT_EQ( second.chunks.size(), first.chunks.size() );
+}
+
 TEST_F( RunFlattenTest, MissingMetadataFails )
 {
 	const auto outcome = runFlatten( m_corpus, m_out, m_callbacks );

@@ -15,8 +15,8 @@
 namespace idhan::hydrus::ptr
 {
 
-inline constexpr std::array< char, 8 > CHUNK_MAGIC { 'I', 'D', 'H', 'A', 'N', 'P', 'T', 'C' };
-inline constexpr std::array< char, 8 > RELATIONS_MAGIC { 'I', 'D', 'H', 'A', 'N', 'P', 'T', 'R' };
+inline constexpr std::array< char, 8 > CHUNK_MAGIC { { 'I', 'D', 'H', 'A', 'N', 'P', 'T', 'C' } };
+inline constexpr std::array< char, 8 > RELATIONS_MAGIC { { 'I', 'D', 'H', 'A', 'N', 'P', 'T', 'R' } };
 inline constexpr std::uint32_t CHUNK_FORMAT_VERSION { 1 };
 
 #pragma pack( push, 1 )

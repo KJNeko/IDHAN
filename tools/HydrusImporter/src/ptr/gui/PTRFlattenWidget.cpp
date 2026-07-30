@@ -4,7 +4,10 @@
 #include <QStandardPaths>
 #include <QThreadPool>
 
+#include <filesystem>
+
 #include "ptr/PTRFlattenWorker.hpp"
+#include "ptr/flatten/RunFlatten.hpp"
 #include "ui_PTRFlattenWidget.h"
 
 PTRFlattenWidget::PTRFlattenWidget( QWidget* parent ) : QWidget( parent ), ui( new Ui::PTRFlattenWidget )
@@ -12,8 +15,7 @@ PTRFlattenWidget::PTRFlattenWidget( QWidget* parent ) : QWidget( parent ), ui( n
 	ui->setupUi( this );
 
 	const QString downloads = QStandardPaths::writableLocation( QStandardPaths::DownloadLocation );
-	ui->sourcePath->setText( downloads + "/ptrfiles" );
-	ui->outputPath->setText( downloads + "/ptrfiles-compact" );
+	setDirectory( downloads + "/ptrfiles" );
 
 	ui->flattenButton->setEnabled( true );
 	ui->cancelButton->setEnabled( false );
@@ -22,6 +24,19 @@ PTRFlattenWidget::PTRFlattenWidget( QWidget* parent ) : QWidget( parent ), ui( n
 	connect( ui->selectOutput, &QToolButton::clicked, this, &PTRFlattenWidget::onSelectOutput );
 	connect( ui->flattenButton, &QPushButton::clicked, this, &PTRFlattenWidget::onFlatten );
 	connect( ui->cancelButton, &QPushButton::clicked, this, &PTRFlattenWidget::onCancel );
+
+	// The output follows the source until the user picks one themselves. textEdited rather than
+	// textChanged, so the programmatic updates below do not read as a manual override.
+	connect( ui->sourcePath, &QLineEdit::textEdited, this, &PTRFlattenWidget::onSourceEdited );
+	connect( ui->outputPath, &QLineEdit::textEdited, this, [ this ] { m_output_overridden = true; } );
+}
+
+//! The compacted output lives in a subdirectory of the corpus, so the two travel together.
+QString PTRFlattenWidget::defaultOutputFor( const QString& source )
+{
+	if ( source.isEmpty() ) return {};
+	return QString::fromStdString(
+		( std::filesystem::path( source.toStdString() ) / idhan::hydrus::ptr::COMPACT_SUBDIRECTORY ).string() );
 }
 
 PTRFlattenWidget::~PTRFlattenWidget()
@@ -38,20 +53,29 @@ PTRFlattenWidget::~PTRFlattenWidget()
 void PTRFlattenWidget::setDirectory( const QString& path )
 {
 	ui->sourcePath->setText( path );
+	if ( !m_output_overridden ) ui->outputPath->setText( defaultOutputFor( path ) );
+}
+
+void PTRFlattenWidget::onSourceEdited( const QString& path )
+{
+	if ( !m_output_overridden ) ui->outputPath->setText( defaultOutputFor( path ) );
 }
 
 void PTRFlattenWidget::onSelectSource()
 {
 	const QString dir = QFileDialog::getExistingDirectory(
 		this, "Select PTR files directory", ui->sourcePath->text(), QFileDialog::ShowDirsOnly );
-	if ( !dir.isEmpty() ) ui->sourcePath->setText( dir );
+	if ( !dir.isEmpty() ) setDirectory( dir );
 }
 
 void PTRFlattenWidget::onSelectOutput()
 {
 	const QString dir = QFileDialog::getExistingDirectory(
 		this, "Select output directory", ui->outputPath->text(), QFileDialog::ShowDirsOnly );
-	if ( !dir.isEmpty() ) ui->outputPath->setText( dir );
+	if ( dir.isEmpty() ) return;
+
+	ui->outputPath->setText( dir );
+	m_output_overridden = true;
 }
 
 void PTRFlattenWidget::onFlatten()
