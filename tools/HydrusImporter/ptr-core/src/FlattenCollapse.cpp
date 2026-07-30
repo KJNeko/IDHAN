@@ -102,6 +102,10 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 
 	ChunkSink sink { out_dir, max_records_per_chunk, lookup };
 
+	// Counts every record handed to the sink, independent of chunk boundaries -- what the live
+	// stats panel calls "records flattened".
+	std::uint64_t records_flattened { 0 };
+
 	for ( std::size_t bucket = 0; bucket < BUCKET_COUNT; ++bucket )
 	{
 		if ( callbacks.cancelled && callbacks.cancelled() )
@@ -172,9 +176,18 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 			std::ranges::copy( *sha, sha_bytes.begin() );
 
 			sink.add( sha_bytes, std::move( adds ), std::move( dels ) );
+			++records_flattened;
 
 			record_start = record_end;
 		}
+
+		if ( callbacks.statsUpdated )
+			callbacks.statsUpdated(
+				records_flattened,
+				result.stats.events_scanned - result.stats.mappings_after_collapse,
+				result.stats.terminal_deletes,
+				sink.entries().size(),
+				sink.missingDefinitions() );
 	}
 
 	sink.close();
@@ -182,6 +195,16 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 	result.chunks = std::move( sink.entries() );
 	result.stats.skipped_missing_definitions = sink.missingDefinitions();
 	result.stats.events_collapsed = result.stats.events_scanned - result.stats.mappings_after_collapse;
+
+	// sink.close() may have just finished the last, still-open chunk -- report it so the final
+	// live snapshot matches the manifest rather than permanently undercounting by one.
+	if ( callbacks.statsUpdated )
+		callbacks.statsUpdated(
+			records_flattened,
+			result.stats.events_collapsed,
+			result.stats.terminal_deletes,
+			result.chunks.size(),
+			result.stats.skipped_missing_definitions );
 
 	spdlog::info(
 		"Collapse complete: {} events scanned, {} mappings survived ({} collapsed away), {} chunks",

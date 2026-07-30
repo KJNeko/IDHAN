@@ -118,42 +118,45 @@ ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
 			{
 				spdlog::warn( "Update file missing, skipping: {}", path.string() );
 				++result.skipped_files;
-				continue;
 			}
-
-			try
+			else
 			{
-				auto parsed = parseUpdateFile( path );
-
-				if ( const auto* const defs = std::get_if< DefinitionsUpdate >( &parsed ) )
+				try
 				{
-					for ( const auto& [ hash_id, hex ] : defs->hash_ids_to_hashes )
-						definitions.writeHash( static_cast< std::uint32_t >( hash_id ), hex );
+					auto parsed = parseUpdateFile( path );
 
-					for ( const auto& [ tag_id, tag ] : defs->tag_ids_to_tags )
-						definitions.writeTag( static_cast< std::uint32_t >( tag_id ), tag );
+					if ( const auto* const defs = std::get_if< DefinitionsUpdate >( &parsed ) )
+					{
+						for ( const auto& [ hash_id, hex ] : defs->hash_ids_to_hashes )
+							definitions.writeHash( static_cast< std::uint32_t >( hash_id ), hex );
+
+						for ( const auto& [ tag_id, tag ] : defs->tag_ids_to_tags )
+							definitions.writeTag( static_cast< std::uint32_t >( tag_id ), tag );
+					}
+					else if ( const auto* const content = std::get_if< ContentUpdate >( &parsed ) )
+					{
+						const auto before = buckets.written();
+
+						spillMappings( buckets, content->mappings_add, update_index, EventOp::Add );
+						spillMappings( buckets, content->mappings_delete, update_index, EventOp::Delete );
+
+						result.events_written += buckets.written() - before;
+
+						appendRelations( result.parents, content->tag_parents_add, update_index, EventOp::Add );
+						appendRelations( result.parents, content->tag_parents_delete, update_index, EventOp::Delete );
+						appendRelations( result.siblings, content->tag_siblings_add, update_index, EventOp::Add );
+						appendRelations( result.siblings, content->tag_siblings_delete, update_index, EventOp::Delete );
+					}
 				}
-				else if ( const auto* const content = std::get_if< ContentUpdate >( &parsed ) )
+				catch ( const std::exception& e )
 				{
-					const auto before = buckets.written();
-
-					spillMappings( buckets, content->mappings_add, update_index, EventOp::Add );
-					spillMappings( buckets, content->mappings_delete, update_index, EventOp::Delete );
-
-					result.events_written += buckets.written() - before;
-
-					appendRelations( result.parents, content->tag_parents_add, update_index, EventOp::Add );
-					appendRelations( result.parents, content->tag_parents_delete, update_index, EventOp::Delete );
-					appendRelations( result.siblings, content->tag_siblings_add, update_index, EventOp::Add );
-					appendRelations( result.siblings, content->tag_siblings_delete, update_index, EventOp::Delete );
+					// One unreadable file must not end a multi-hour scan.
+					spdlog::error( "Failed to scan {}: {}", hash_hex, e.what() );
+					++result.skipped_files;
 				}
 			}
-			catch ( const std::exception& e )
-			{
-				// One unreadable file must not end a multi-hour scan.
-				spdlog::error( "Failed to scan {}: {}", hash_hex, e.what() );
-				++result.skipped_files;
-			}
+
+			if ( callbacks.statsUpdated ) callbacks.statsUpdated( result.events_written, result.skipped_files );
 		}
 	}
 

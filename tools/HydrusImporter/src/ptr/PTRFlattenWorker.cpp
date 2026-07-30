@@ -46,6 +46,18 @@ void PTRFlattenWorker::run()
 				.arg( QLocale::system().toString( static_cast< qlonglong >( total ) ) ) );
 	};
 
+	callbacks.statsUpdated = [ this ]( const FlattenLiveStats& stats )
+	{
+		emit statsUpdated(
+			stats.events_scanned,
+			stats.records_flattened,
+			stats.chains_collapsed,
+			stats.terminal_deletes,
+			stats.chunks_written,
+			stats.skipped_files,
+			stats.skipped_missing_definitions );
+	};
+
 	const auto outcome = runFlatten( m_ptr_directory, m_output_directory, callbacks );
 
 	if ( outcome.cancelled )

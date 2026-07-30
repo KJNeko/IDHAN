@@ -219,6 +219,32 @@ TEST_F( FlattenScanTest, StopsWhenCancelled )
 	EXPECT_LT( result.events_written, 10u );
 }
 
+TEST_F( FlattenScanTest, StatsUpdatedFiresOncePerFileWithRunningTotals )
+{
+	const auto defs = fakeHashHex( 1 );
+	const auto good = fakeHashHex( 2 );
+	const auto missing = fakeHashHex( 99 );
+
+	writeUpdateFile( m_corpus, defs, makeDefinitions( { { 100, fakeHashHex( 50 ) } }, { { 7, "solo" } } ) );
+	writeUpdateFile( m_corpus, good, makeContent( { { 7, { 100 } } }, {} ) );
+
+	std::vector< std::pair< std::uint64_t, std::uint64_t > > seen;
+	m_callbacks.statsUpdated = [ &seen ]( const std::uint64_t events_written, const std::uint64_t skipped_files )
+	{ seen.emplace_back( events_written, skipped_files ); };
+
+	const auto metadata = makeMetadata( { { 0, { defs, good, missing } } } );
+	const auto result = scanCorpus( m_corpus, metadata, m_work, m_callbacks );
+
+	// One call per file: definitions (no event), the mapping (one event), the missing file (a skip).
+	ASSERT_EQ( seen.size(), 3u );
+	EXPECT_EQ( seen[ 0 ], ( std::pair< std::uint64_t, std::uint64_t > { 0u, 0u } ) );
+	EXPECT_EQ( seen[ 1 ], ( std::pair< std::uint64_t, std::uint64_t > { 1u, 0u } ) );
+	EXPECT_EQ( seen[ 2 ], ( std::pair< std::uint64_t, std::uint64_t > { 1u, 1u } ) );
+
+	EXPECT_EQ( seen.back().first, result.events_written );
+	EXPECT_EQ( seen.back().second, result.skipped_files );
+}
+
 TEST_F( FlattenScanTest, RejectsAnUpdateIndexBeyondTheSixteenBitRange )
 {
 	const auto defs = fakeHashHex( 1 );

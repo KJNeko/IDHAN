@@ -112,10 +112,21 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 		announce( callbacks, "Loading metadata" );
 		const auto metadata = loadCorpusMetadata( ptr_dir );
 
+		// Owned here and updated in place by both stages' callbacks below, so scan-stage fields
+		// stay put once collapse begins instead of resetting to zero.
+		FlattenLiveStats live {};
+
 		announce( callbacks, "Scanning update files" );
 		ScanCallbacks scan_callbacks {};
 		scan_callbacks.cancelled = callbacks.cancelled;
 		scan_callbacks.progress = callbacks.progress;
+		scan_callbacks.statsUpdated =
+			[ &callbacks, &live ]( const std::uint64_t events_scanned, const std::uint64_t skipped_files )
+		{
+			live.events_scanned = events_scanned;
+			live.skipped_files = skipped_files;
+			if ( callbacks.statsUpdated ) callbacks.statsUpdated( live );
+		};
 
 		const auto scan = scanCorpus( ptr_dir, metadata, work_dir, scan_callbacks );
 
@@ -139,6 +150,19 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 			CollapseCallbacks collapse_callbacks {};
 			collapse_callbacks.cancelled = callbacks.cancelled;
 			collapse_callbacks.progress = callbacks.progress;
+			collapse_callbacks.statsUpdated = [ &callbacks, &live ]( const std::uint64_t records_flattened,
+			                                                        const std::uint64_t chains_collapsed,
+			                                                        const std::uint64_t terminal_deletes,
+			                                                        const std::uint64_t chunks_written,
+			                                                        const std::uint64_t skipped_missing_definitions )
+			{
+				live.records_flattened = records_flattened;
+				live.chains_collapsed = chains_collapsed;
+				live.terminal_deletes = terminal_deletes;
+				live.chunks_written = chunks_written;
+				live.skipped_missing_definitions = skipped_missing_definitions;
+				if ( callbacks.statsUpdated ) callbacks.statsUpdated( live );
+			};
 
 			collapse = collapseBuckets( work_dir, out_dir, definitions, max_records_per_chunk, collapse_callbacks );
 

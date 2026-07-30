@@ -29,13 +29,16 @@ struct RelationEvent
 
 static_assert( sizeof( RelationEvent ) == 12 );
 
-//! Host hooks. Both may be empty; scanCorpus checks before calling.
+//! Host hooks. All may be empty; scanCorpus checks before calling.
 struct ScanCallbacks
 {
 	//! Polled once per update file. Return true to stop early.
 	std::function< bool() > cancelled {};
 	//! (files done, files total, current status text)
 	std::function< void( std::size_t, std::size_t, std::string_view ) > progress {};
+	//! Fired once per update file, after it is processed: (events written to buckets so far,
+	//! update files skipped so far).
+	std::function< void( std::uint64_t, std::uint64_t ) > statsUpdated {};
 };
 
 //! What the scan produced. Mapping events are on disk in the work directory's buckets;
