@@ -181,15 +181,26 @@ inline Json::Value makeContent( const std::vector< MappingRow >& mappings_add,
 }
 
 //! A 64-character hex string derived from \p seed, usable as both a file name and a hash value.
-//! The first byte equals seed & 0xFF, so a test can key a decoded hash back to its seed.
+//!
+//! Injective over the whole 32-bit seed range: bytes 0-3 are the seed itself, little-endian.
+//! An earlier version used (seed + i) & 0xFF for every byte, which only distinguished seeds
+//! modulo 256 -- so fakeHashHex(257) collided with fakeHashHex(1) and a content file silently
+//! overwrote the definitions file it depended on.
+//!
+//! Byte 0 is the seed's low byte, so a test whose seeds are all below 256 can key a decoded
+//! hash back to its seed.
 inline std::string fakeHashHex( const unsigned seed )
 {
 	std::string out;
 	out.reserve( 64 );
+
 	for ( int i = 0; i < 32; ++i )
 	{
 		constexpr char DIGITS[] = "0123456789abcdef";
-		const auto byte = static_cast< unsigned >( ( seed + static_cast< unsigned >( i ) ) & 0xFFu );
+
+		const auto byte = i < 4 ? ( seed >> ( 8 * static_cast< unsigned >( i ) ) ) & 0xFFu
+		                        : ( seed * 31u + static_cast< unsigned >( i ) ) & 0xFFu;
+
 		out.push_back( DIGITS[ ( byte >> 4 ) & 0xF ] );
 		out.push_back( DIGITS[ byte & 0xF ] );
 	}
