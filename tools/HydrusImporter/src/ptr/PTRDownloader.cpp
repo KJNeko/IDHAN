@@ -16,8 +16,8 @@
 #include <fstream>
 #include <stdexcept>
 
-#include "PTRConstants.hpp"
-#include "PTRFileParser.hpp"
+#include "ptr/PTRConstants.hpp"
+#include "ptr/PTRFileParser.hpp"
 
 namespace idhan::hydrus::ptr
 {

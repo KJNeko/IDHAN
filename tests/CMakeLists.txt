@@ -21,5 +21,5 @@ gtest_discover_tests(IDHANTests)
 # into IDHANServer executable code (SearchBuilder, AuthEndpoint) and has never linked. This one
 # depends on IDHAN and GoogleTest only, so it needs neither drogon nor a live PostgreSQL.
 AddFGLExecutable(IDHANCoreTests ${CMAKE_CURRENT_SOURCE_DIR}/core)
-target_link_libraries(IDHANCoreTests PUBLIC IDHAN GTest::gtest_main)
+target_link_libraries(IDHANCoreTests PUBLIC IDHAN GTest::gtest_main PTRCore)
 gtest_discover_tests(IDHANCoreTests)

@@ -88,6 +88,10 @@ if (BUILD_IDHAN_CLIENT)
 	add_subdirectory(IDHANClient)
 endif ()
 
+# Unconditional: PTRCore is Qt-free and IDHANCoreTests links it, so it must exist even when
+# the importer itself is not being built.
+add_subdirectory(tools/HydrusImporter/ptr-core)
+
 if (BUILD_HYDRUS_IMPORTER OR BUILD_IDHAN_TOOLS)
 	#HydrusImporter
 	include(sqlite3)
