@@ -162,6 +162,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # Copy built artifacts from builder stage
 COPY --from=builder /build/bin/IDHANServer/ /usr/bin/IDHANServer
+# Modules run out of process; the server spawns one of these per module library. Without it every
+# library is skipped at startup and no metadata parser or thumbnailer exists at all.
+COPY --from=builder /build/bin/IDHANModuleRunner /usr/bin/IDHANModuleRunner
 COPY --from=builder /build/bin/static/ /usr/share/idhan/static
 COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
@@ -179,7 +182,7 @@ ENV IDHAN_DATABASE_HOST=localhost \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
 
-RUN chmod +x /usr/bin/IDHANServer
+RUN chmod +x /usr/bin/IDHANServer /usr/bin/IDHANModuleRunner
 
 EXPOSE 16609
 

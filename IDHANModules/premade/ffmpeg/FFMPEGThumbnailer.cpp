@@ -6,6 +6,7 @@
 
 #include <vips/vips.h>
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -105,6 +106,22 @@ idhan::ModuleVersion FFMPEGThumbnailer::version()
 std::vector< std::string_view > FFMPEGThumbnailer::handleableMimes()
 {
 	return ffmpeg_handleable_mimes;
+}
+
+std::chrono::milliseconds FFMPEGThumbnailer::estimateDuration( const idhan::ModuleCallData& data )
+{
+	// Probing the container and decoding to the first keyframe costs roughly linearly in file size:
+	// avformat_find_stream_info reads ahead, and a seek in a file without an index degenerates to a
+	// scan. 1s per 64 MiB is a deliberate over-estimate -- the host multiplies this to get its kill
+	// deadline, and killing a video worker that is merely slow is worse than waiting.
+	constexpr std::size_t BYTES_PER_SECOND { 64ULL * 1024ULL * 1024ULL };
+	constexpr std::chrono::milliseconds FLOOR { 15'000 };
+
+	const std::chrono::seconds scaled {
+		static_cast< std::chrono::seconds::rep >( data.file_view.size() / BYTES_PER_SECOND )
+	};
+
+	return std::max( FLOOR, std::chrono::duration_cast< std::chrono::milliseconds >( scaled ) );
 }
 
 std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::createThumbnailRaw(

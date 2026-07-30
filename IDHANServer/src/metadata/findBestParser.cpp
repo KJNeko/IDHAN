@@ -8,7 +8,7 @@
 namespace idhan::metadata
 {
 
-drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( const std::string mime_name )
+drogon::Task< std::shared_ptr< modules::RemoteModule > > findBestParser( const std::string mime_name )
 {
 	auto parsers { modules::ModuleLoader::instance().getParserFor( mime_name ) };
 

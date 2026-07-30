@@ -27,6 +27,56 @@ path = "./log"
 # cache without bound). Edited live — no restart needed.
 #cacheable_sizes = [128, 256, 512]
 
+[modules]
+# Media modules (libvips, FFmpeg, libarchive, PSD) never run inside the server. Each module library
+# is hosted by its own IDHANModuleRunner process, so a module that leaks, corrupts its heap or
+# crashes outright takes only that process with it.
+#
+# A library declares whether it wants a long-lived worker (libvips, whose VIPS_INIT is far too
+# expensive to pay per call) or a fresh process per call (total leak immunity). That choice comes
+# from the modules themselves and is not configurable here.
+
+# Path to IDHANModuleRunner. Found automatically next to the server binary, then on the install
+# path; set this only if it lives somewhere else.
+#runner_path = "/usr/bin/IDHANModuleRunner"
+
+# Worker threads inside each worker process. More than one is required, not merely faster: an
+# archive thumbnailer asks the host to thumbnail each member, and that nested call comes back into
+# the same process, so it has to be served on a different thread than the one waiting for it.
+#pool_threads = 4
+
+# A persistent worker is retired once it exceeds this resident size, at its next moment with no call
+# in flight. This is what bounds a leak rather than merely isolating it.
+#rss_limit_mb = 2048
+
+# A persistent worker with nothing to do for this long is retired.
+#idle_timeout_sec = 300
+
+# Each module reports how long it expects a call to take, scaled with the input where that matters
+# (video decode with file size, archive thumbnails with member count). The kill deadline is that
+# estimate multiplied by this factor, since an estimate is a guess and killing a module that is
+# merely slower than predicted is worse than waiting.
+#timeout_multiplier = 4
+
+# Ceiling on that deadline regardless of what a module estimates, so a bad estimate cannot disable
+# the watchdog entirely.
+#max_timeout_sec = 600
+
+# Workers report in on this interval, carrying their resident size. Missing them for longer than the
+# grace period gets the worker killed. Note this proves the process is alive, not that the module is
+# making progress -- that is what the estimate-based deadline above is for.
+#heartbeat_interval_ms = 1000
+#liveness_grace_ms = 5000
+
+# How deeply module calls may nest (an archive inside an archive inside an archive). Enforced by the
+# server, which is the only party that sees the whole chain: the recursion crosses process
+# boundaries, so no counter inside a single worker can bound it.
+#max_call_depth = 4
+
+# How long to wait for a library to describe what it exports at startup. A library that hangs here
+# is skipped with a warning; it does not stop the server from starting.
+#describe_timeout_sec = 10
+
 [plugins]
 # Directory scanned for WebUI plugin bundles — each subdirectory with a manifest.json is one plugin.
 # Defaults to "<static>/plugins" so the static file server serves the bundles at /plugins/... with no

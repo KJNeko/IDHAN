@@ -395,6 +395,17 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 					co_return;
 				}() );
 
+			// Persistent module workers are long-lived, and the whole reason they run out of process
+			// is that modules leak. Sweeping them on a timer is what turns "the leak is contained" into
+			// "the leak is bounded": a worker over its RSS ceiling, or idle, is retired at its next
+			// quiescent moment.
+			drogon::app().getLoop()->runEvery(
+				std::chrono::seconds { 30 },
+				[ this ]()
+				{
+					if ( m_module_loader != nullptr ) m_module_loader->maintainWorkers();
+				} );
+
 			log::info( "IDHAN initialization finished" );
 			log::info( "Server available at http://localhost:{}", listen_port );
 			log::info( "Swagger docs available at http://localhost:{}/api", listen_port );

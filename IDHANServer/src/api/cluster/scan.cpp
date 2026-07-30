@@ -6,6 +6,7 @@
 
 #include "Config.hpp"
 #include "MetadataModule.hpp"
+#include "modules/RemoteModule.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -750,7 +751,7 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		}
 	}
 
-	const std::shared_ptr< MetadataModuleI > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
+	const std::shared_ptr< modules::RemoteModule > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
 
 	// No parser was found
 	if ( !metadata_parser )
@@ -762,28 +763,22 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	log::trace( "Found metadata parser for mime {} (Record {})", m_mime_name, m_record_id );
 
-	//TODO: In order to protect the main process from poorly written modules, Either fork or launch a new process to actually run the parser
+	// The parser runs in a worker process, so a module that leaks, corrupts its heap or crashes
+	// outright takes that process with it and leaves this job -- and the server -- standing.
+	auto blob { ipc::Blob::fromFile( m_path ) };
 
-	FileIOUring file_io { m_path, FileIOUring::ReadOnly };
-
-	std::vector< std::byte > buffer {};
-
-	try
-	{
-		buffer = co_await file_io.readAll();
-	}
-	catch ( const std::exception& e )
+	if ( !blob )
 	{
 		// This runs inside a job coroutine. An escaping exception takes down the whole job rather
-		// than failing the one record, so the read failure has to be caught and reported here.
+		// than failing the one record, so the failure has to be reported rather than thrown.
 		co_return std::unexpected(
-			createInternalError( "Failed to read file for record {}: {}", m_record_id, e.what() ) );
+			createInternalError( "Failed to map file for record {}: {}", m_record_id, blob.error() ) );
 	}
 
-	// buffer must outlive parseFile below -- file_view does not own its bytes.
-	const idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( buffer.data() ), buffer.size() };
-	idhan::ModuleCallData call_data { .file_view = data_view, .mime_name = m_mime_name, .extra = {} };
-	const auto metadata_e { metadata_parser->parseFile( call_data ) };
+	const modules::RemoteCallData call_data {
+		.blob = &blob.value(), .mime_name = m_mime_name, .extra = {}, .depth = 0
+	};
+	const auto metadata_e { co_await metadata_parser->parseFile( call_data ) };
 
 	if ( metadata_e )
 	{

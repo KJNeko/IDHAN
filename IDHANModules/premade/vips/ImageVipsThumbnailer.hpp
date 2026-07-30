@@ -26,4 +26,7 @@ class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 
 	// no shared mutable state: each call builds its own vips image, safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
+
+	// VIPS_INIT builds the operation and type registries; far too expensive to pay per call
+	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 };

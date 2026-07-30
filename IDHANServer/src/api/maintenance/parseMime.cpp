@@ -16,15 +16,29 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 	// modules would serialize metadata_modules as null instead of []
 	Json::Value response { Json::arrayValue };
 	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_str ) };
-	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
+
+	auto blob { ipc::Blob::fromBytes(
+		std::span< const std::byte > {
+			reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() } ) };
+
+	if ( !blob )
+	{
+		// This helper hands back a JSON array, not a response, so the failure is reported as an entry
+		// in that array rather than as an HTTP error.
+		Json::Value failure {};
+		failure[ "error" ] = std::format( "Could not stage the request body for a module: {}", blob.error() );
+		response.append( std::move( failure ) );
+		co_return response;
+	}
+
 	for ( const auto& metadata_module : metadata_modules )
 	{
 		Json::Value metadata_obj {};
 		metadata_obj[ "name" ] = std::string( metadata_module->name() );
 
-		ModuleCallData data { .file_view = data_view, .mime_name = mime_str, .extra = {} };
+		const modules::RemoteCallData data { .blob = &blob.value(), .mime_name = mime_str, .extra = {}, .depth = 0 };
 
-		auto metadata_info { metadata_module->parseFile( data ) };
+		auto metadata_info { co_await metadata_module->parseFile( data ) };
 
 		if ( !metadata_info )
 		{

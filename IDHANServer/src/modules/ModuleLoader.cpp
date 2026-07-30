@@ -3,18 +3,14 @@
 //
 #include "ModuleLoader.hpp"
 
-#ifdef __linux__
-#include <dlfcn.h>
-#elif defined( _WIN32 )
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
+#include <algorithm>
 #include <filesystem>
-#include <functional>
+#include <format>
+
 #include <paths.hpp>
 
-#include "crypto/SHA256.hpp"
+#include "Config.hpp"
+#include "crypto/simpleHasher.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
@@ -23,299 +19,372 @@
 namespace idhan::modules
 {
 
-ModuleLoader::ModuleLoader() : m_libs(), m_modules()
+namespace
+{
+
+//! Size the host asks for when a module re-dispatches a thumbnail through the callbacks.
+/** Fixed because ModuleCallbacks::thumbnail has no size parameter -- a module asking the host to
+ *  thumbnail some bytes has no way to say how big it wants the result. Making it caller-specified
+ *  would mean widening that signature, which is a module-ABI change; until then the archive
+ *  thumbnailer (the only caller) gets tiles at this size to composite. */
+constexpr std::size_t CALLBACK_THUMBNAIL_SIZE { 128 };
+
+[[nodiscard]] WorkerSettings settingsFor( const std::filesystem::path& library )
+{
+	WorkerSettings settings {};
+
+	settings.library = library;
+	settings.runner = getModuleRunnerPath();
+	settings.pool_threads = config::get< std::size_t >( "modules", "pool_threads", 4 );
+	settings.heartbeat_interval = std::chrono::milliseconds {
+		config::get< std::size_t >( "modules", "heartbeat_interval_ms", 1000 )
+	};
+	settings.liveness_grace = std::chrono::milliseconds {
+		config::get< std::size_t >( "modules", "liveness_grace_ms", 5000 )
+	};
+	settings.timeout_multiplier =
+		static_cast< double >( config::get< std::size_t >( "modules", "timeout_multiplier", 4 ) );
+	settings.max_timeout = std::chrono::seconds { config::get< std::size_t >( "modules", "max_timeout_sec", 600 ) };
+
+	return settings;
+}
+
+[[nodiscard]] std::uint32_t maxCallDepth()
+{
+	return static_cast< std::uint32_t >( config::get< std::size_t >( "modules", "max_call_depth", 4 ) );
+}
+
+} // namespace
+
+ModuleLoader::ModuleLoader()
 {
 	FGL_ASSERT( m_instance == nullptr, "ModuleLoader is a singleton" );
 	m_instance = this;
 	loadModules();
 }
 
-class ModuleHolder
+ModuleLoader::~ModuleLoader()
 {
-#ifdef __linux__
-	using Handle = void*;
-#elif defined( _WIN32 )
-	using Handle = HMODULE;
-#endif
-
-	Handle m_handle;
-
-	using VoidFunc = void* (*)();
-	VoidFunc initFunc { nullptr };
-	VoidFunc deinitFunc { nullptr };
-
-  public:
-
-	FGL_DELETE_ALL_RO5( ModuleHolder );
-
-	[[nodiscard]] Handle handle() const { return m_handle; }
-
-	ModuleHolder( const std::filesystem::path& path ) : m_handle( nullptr )
-	{
-		if ( !std::filesystem::exists( path ) )
-		{
-			log::critical( "Failed to find module at path {}", path.string() );
-			std::abort();
-		}
-
-#ifdef __linux__
-		m_handle = dlopen( path.c_str(), RTLD_LAZY | RTLD_LOCAL );
-		if ( !m_handle )
-		{
-			log::critical( "Failed to load module {}: {}", path.string(), dlerror() );
-			std::abort();
-		}
-
-		initFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "init" ) );
-		deinitFunc = reinterpret_cast< VoidFunc >( dlsym( m_handle, "deinit" ) );
-#elif defined( _WIN32 )
-		m_handle = LoadLibraryW( path.wstring().c_str() );
-		if ( !m_handle )
-		{
-			log::critical( "Failed to load module {}: error {}", path.string(), GetLastError() );
-			std::abort();
-		}
-
-		initFunc = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "init" ) );
-		deinitFunc = reinterpret_cast< VoidFunc >( GetProcAddress( m_handle, "deinit" ) );
-#endif
-
-		if ( !initFunc )
-		{
-			log::critical( "Failed to find 'init' export in module {}", path.string() );
-			std::abort();
-		}
-
-		if ( !deinitFunc )
-		{
-			log::critical( "Failed to find 'deinit' export in module {}", path.string() );
-			std::abort();
-		}
-
-		initFunc();
-	}
-
-	~ModuleHolder()
-	{
-		deinitFunc();
-#ifdef __linux__
-		dlclose( m_handle );
-#elif defined( _WIN32 )
-		FreeLibrary( m_handle );
-#endif
-	}
-};
-
-namespace callbacks
-{
-
-std::expected< std::vector< std::byte >, ModuleError > generate(
-	const data_view data,
-	std::array< std::byte, 256 / 8 > hash,
-	const Json::Value extra,
-	const std::string file_name )
-{
-	auto mime_db { getMimeDatabase() };
-
-	// sync_wait, not async_run: async_run detaches at the first suspension point, which would
-	// leave exp unset here (a default expected holds a value, so the failure check can't catch
-	// it) and the detached coroutine would later write through dangling stack references
-	const auto exp { drogon::sync_wait( mime_db->scan( data, file_name ) ) };
-
-	if ( !exp ) return std::unexpected( ModuleError { "Unable to scan for mime" } );
-	{
-		const auto generators { ModuleLoader::instance().getGeneratorsFor( *exp ) };
-
-		if ( generators.empty() ) return std::unexpected( idhan::ModuleError { "No generator for given mime" } );
-
-		const auto generator { generators.at( 0 ) };
-
-		ModuleCallData call_data { .file_view = data, .mime_name = *exp, .extra = extra };
-
-		return generator->generate( call_data, hash );
-	}
+	unloadModules();
+	m_instance = nullptr;
 }
 
-std::expected< ThumbnailInfo, ModuleError > thumbnail(
-	const std::vector< std::byte >& data,
-	const Json::Value& extra,
-	const std::string& file_name )
+bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 {
-	const auto mime_db { getMimeDatabase() };
+	std::vector< ipc::ManifestEntry > entries {};
 
-	const idhan::data_view data_view { reinterpret_cast< const unsigned char* >( data.data() ), data.size() };
+	{
+		// A throwaway process whose only job is to say what the library exports. --describe skips the
+		// library's init(), so enumerating modules never pays VIPS_INIT.
+		auto settings { settingsFor( path ) };
+		settings.describe_only = true;
 
-	// sync_wait, not async_run: see generate() above
-	const auto exp { drogon::sync_wait( mime_db->scan( data_view, file_name ) ) };
+		const auto interrogator { std::make_shared< WorkerProcess >( settings, nullptr ) };
 
-	if ( !exp ) return std::unexpected( ModuleError { "Unable to scan for mime" } );
+		if ( const auto started { interrogator->start() }; !started )
+		{
+			log::warn( "Skipping module library {}: {}", path.string(), started.error() );
+			return false;
+		}
 
-	const auto thumbnailers { ModuleLoader::instance().getThumbnailerFor( *exp ) };
-	if ( thumbnailers.empty() ) return std::unexpected( ModuleError { "Thumbnailers not found" } );
+		auto manifest { interrogator->awaitManifest(
+			std::chrono::seconds { config::get< std::size_t >( "modules", "describe_timeout_sec", 10 ) } ) };
 
-	const auto& thumbnailer { thumbnailers.at( 0 ) };
+		if ( !manifest )
+		{
+			// Deliberately not fatal. The previous in-process loader called std::abort() here, so a
+			// single unusable third-party .so stopped the server from starting at all.
+			log::warn( "Skipping module library {}: {}", path.string(), manifest.error() );
+			interrogator->terminate( "interrogation failed" );
+			return false;
+		}
 
-	ModuleCallData call_data { .file_view = data_view, .mime_name = *exp, .extra = extra };
+		entries = std::move( *manifest );
+		interrogator->terminate( "interrogation finished" );
+	}
 
-	auto thumbnail_data { thumbnailer->createThumbnailRaw( call_data, 128, 128 ) };
-	return thumbnail_data;
-}
+	if ( entries.empty() )
+	{
+		log::warn( "Skipping module library {}: it exports no modules", path.string() );
+		return false;
+	}
 
-} // namespace callbacks
+	// A library is persistent if any one of its modules asked to be: residency is declared per
+	// module, but the process hosts the whole library, so the longest-lived request wins.
+	const bool persistent { std::ranges::any_of(
+		entries, []( const auto& entry ) { return entry.residency == ModuleResidency::PERSISTENT; } ) };
 
-ModuleCallbacks generateCallbacks()
-{
-	return ModuleCallbacks { .thumbnail = &callbacks::thumbnail, .generate = &callbacks::generate };
+	auto settings { settingsFor( path ) };
+	settings.expected_signature = ipc::manifestSignature( entries );
+
+	const auto library_index { m_pools.size() };
+
+	auto pool { std::make_shared< WorkerPool >(
+		settings,
+		persistent ? ModuleResidency::PERSISTENT : ModuleResidency::SINGLE_RUN,
+		config::get< std::size_t >( "modules", "rss_limit_mb", 2048 ) * 1024,
+		std::chrono::seconds { config::get< std::size_t >( "modules", "idle_timeout_sec", 300 ) },
+		[ this ]( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
+		{ serviceCallback( std::move( worker ), std::move( frame ) ); } ) };
+
+	m_pools.emplace_back( pool );
+
+	for ( const auto& entry : entries )
+	{
+		m_descriptors.emplace_back(
+			ModuleDescriptor {
+				.library_index = library_index,
+				.module_index = entry.index,
+				.name = entry.name,
+				.type = entry.type,
+				.version = entry.version,
+				.thread_safe = entry.thread_safe,
+				.residency = entry.residency,
+				.mimes = entry.mimes } );
+
+		const auto slot { m_modules.size() };
+
+		m_modules.emplace_back(
+			std::make_shared< RemoteModule >( pool, entry.index, entry.name, entry.type, entry.version, entry.mimes ) );
+
+		for ( const auto& mime : entry.mimes )
+		{
+			if ( ( entry.type & ModuleTypeFlags::METADATA ) != 0 ) m_by_mime_metadata[ mime ].emplace_back( slot );
+			if ( ( entry.type & ModuleTypeFlags::THUMBNAILER ) != 0 )
+				m_by_mime_thumbnailer[ mime ].emplace_back( slot );
+			if ( ( entry.type & ModuleTypeFlags::GENERATOR ) != 0 ) m_by_mime_generator[ mime ].emplace_back( slot );
+		}
+
+		log::info(
+			"Registered module '{}' from {} [index {}, {} mimes, {}]",
+			entry.name,
+			path.filename().string(),
+			entry.index,
+			entry.mimes.size(),
+			ipc::toString( entry.residency ) );
+	}
+
+	pool->prewarm();
+
+	return true;
 }
 
 void ModuleLoader::loadModules()
 {
-	const auto module_paths { getModulePaths() };
-
-	for ( const std::filesystem::path& path : module_paths )
+	for ( const auto& path : getModulePaths() )
 	{
-		const auto extension { path.extension() };
-		const auto name { path.filename().string() };
-
-#ifdef __linux__
-		constexpr std::string_view module_ext { ".so" };
-#elif defined( _WIN32 )
-		constexpr std::string_view module_ext { ".dll" };
-#endif
-
-		if ( extension != module_ext ) continue;
-
-		log::info( "Library found: {}", name );
-
-		std::shared_ptr< ModuleHolder > holder { std::make_shared< ModuleHolder >( path ) };
-		m_libs.emplace_back( holder );
-
-		if ( !holder->handle() )
-		{
-			log::error( "Failed to load module: {}", name );
-			continue;
-		}
-
-		log::info( "Getting modules from shared lib" );
-
-		using VoidFunc = void* (*)();
-
-#ifdef __linux__
-		const auto getModulesFunc { reinterpret_cast< VoidFunc >( dlsym( holder->handle(), "getModulesFunc" ) ) };
-#elif defined( _WIN32 )
-		const auto getModulesFunc {
-			reinterpret_cast< VoidFunc >( GetProcAddress( holder->handle(), "getModulesFunc" ) )
-		};
-#endif
-
-		if ( !getModulesFunc )
-		{
-			log::error( "Failed to find 'getModulesFunc' in module {}", name );
-			continue;
-		}
-
-		using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )( ModuleCallbacks );
-		const auto getModules { reinterpret_cast< GetModulesFunc >( getModulesFunc() ) };
-
-		if ( !getModules )
-		{
-			log::error( "getModulesFunc returned null in module {}", name );
-			continue;
-		}
-
-		auto modules = getModules( generateCallbacks() );
-
-		for ( const auto& module : modules )
-		{
-			log::info( "Interrogating module from {} named {}", name, module->name() );
-
-			switch ( module->type() )
-			{
-				default:
-					log::error( "Unknown module type: {}", module->type() );
-					break;
-				case ModuleTypeFlags::GENERATOR:
-					log::info( "Module type: Generator" );
-					break;
-				case ModuleTypeFlags::METADATA:
-					log::info( "Module type: Metadata" );
-					break;
-				case ModuleTypeFlags::THUMBNAILER:
-					log::info( "Module type: Thumbnailer" );
-					break;
-			}
-
-			m_modules.push_back( module );
-		}
+		if ( !std::filesystem::is_regular_file( path ) ) continue;
+		[[maybe_unused]] const auto registered { registerLibrary( path ) };
 	}
+
+	log::info( "Module system ready: {} modules across {} libraries", m_modules.size(), m_pools.size() );
 }
 
 void ModuleLoader::unloadModules()
 {
-	log::info( "Unloading {} module(s) from {} librar(y/ies)", m_modules.size(), m_libs.size() );
+	for ( const auto& pool : m_pools ) pool->shutdown();
 
-	// m_modules must be cleared before m_libs: the module objects (code, vtables and shared_ptr
-	// control blocks) live inside the dlopened libraries, so they must be destroyed before the
-	// ModuleHolders dlclose them
+	m_by_mime_metadata.clear();
+	m_by_mime_thumbnailer.clear();
+	m_by_mime_generator.clear();
 	m_modules.clear();
-	m_libs.clear();
-
-	log::info( "All modules unloaded" );
+	m_descriptors.clear();
+	m_pools.clear();
 }
 
-std::vector< std::shared_ptr< ThumbnailerModuleI > > ModuleLoader::getThumbnailerFor( const std::string_view mime )
-	const
+void ModuleLoader::maintainWorkers()
 {
-	std::vector< std::shared_ptr< ThumbnailerModuleI > > ret {};
-
-	if ( m_modules.empty() ) log::warn( "Tried to get thumbnailer for {} but no modules are loaded", mime );
-
-	for ( const auto& module : m_modules )
-	{
-		if ( ( module->type() & ModuleTypeFlags::THUMBNAILER )
-		     && std::static_pointer_cast< ThumbnailerModuleI >( module )->canHandle( mime ) )
-		{
-			ret.push_back( std::static_pointer_cast< ThumbnailerModuleI >( module ) );
-			return ret;
-		}
-	}
-	return ret;
+	for ( const auto& pool : m_pools ) pool->maintain();
 }
 
-std::vector< std::shared_ptr< MetadataModuleI > > ModuleLoader::getParserFor( const std::string_view mime ) const
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::lookup(
+	const std::unordered_map< std::string, std::vector< std::size_t > >& index,
+	const std::string_view mime ) const
 {
-	std::vector< std::shared_ptr< MetadataModuleI > > ret {};
+	std::vector< std::shared_ptr< RemoteModule > > modules {};
 
-	if ( m_modules.empty() ) log::warn( "Tried to get parser for {} but no modules are loaded", mime );
+	const auto found { index.find( std::string { mime } ) };
+	if ( found == index.end() ) return modules;
 
-	for ( const auto& module : m_modules )
-	{
-		if ( ( module->type() & ModuleTypeFlags::METADATA )
-		     && std::static_pointer_cast< MetadataModuleI >( module )->canHandle( mime ) )
-		{
-			ret.push_back( std::static_pointer_cast< MetadataModuleI >( module ) );
-			return ret;
-		}
-	}
-	return ret;
+	modules.reserve( found->second.size() );
+	for ( const auto slot : found->second ) modules.emplace_back( m_modules[ slot ] );
+
+	return modules;
 }
 
-std::vector< std::shared_ptr< GeneratorModuleI > > ModuleLoader::getGeneratorsFor( std::string_view mime ) const
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getThumbnailerFor( const std::string_view mime ) const
 {
-	std::vector< std::shared_ptr< GeneratorModuleI > > ret {};
+	return lookup( m_by_mime_thumbnailer, mime );
+}
 
-	if ( m_modules.empty() ) log::warn( "Tried to get generator for {} but no modules are loaded", mime );
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getParserFor( const std::string_view mime ) const
+{
+	return lookup( m_by_mime_metadata, mime );
+}
 
-	for ( const auto& module : m_modules )
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( const std::string_view mime ) const
+{
+	return lookup( m_by_mime_generator, mime );
+}
+
+//! Does the work behind one CALLBACK frame.
+/** A free coroutine taking everything by value: parameters are copied into the coroutine frame,
+ *  whereas a capturing lambda's closure is not, and IDHANTask/drogon::Task are lazy enough that the
+ *  distinction is the difference between working code and a use-after-free. */
+namespace
+{
+
+drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
+{
+	const std::uint64_t callback_id { frame.body[ ipc::field::CALLBACK_ID ].asUInt64() };
+	const auto kind { ipc::callbackKindFromString( frame.body[ ipc::field::KIND ].asString() ) };
+	const std::uint32_t depth { frame.body[ ipc::field::DEPTH ].asUInt() };
+	const auto file_name { frame.body[ ipc::field::FILE_NAME ].asString() };
+
+	Json::Value reply {};
+	reply[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::CALLBACK_RESULT ) };
+	reply[ ipc::field::CALLBACK_ID ] = Json::UInt64 { callback_id };
+	reply[ ipc::field::OK ] = false;
+	reply[ ipc::field::ERROR ] = "";
+
+	std::vector< int > reply_fds {};
+	//! Kept alive until the reply has been queued: FrameWriter dups the descriptor when it takes the
+	//! frame, but not before.
+	ipc::Blob produced {};
+
+	if ( !kind )
 	{
-		if ( ( module->type() & ModuleTypeFlags::GENERATOR )
-		     && std::static_pointer_cast< GeneratorModuleI >( module )->canHandle( mime ) )
+		reply[ ipc::field::ERROR ] = "unknown callback kind";
+	}
+	else if ( frame.fds.empty() )
+	{
+		reply[ ipc::field::ERROR ] = "callback arrived without its payload";
+	}
+	else if ( depth + 1 > maxCallDepth() )
+	{
+		// Enforced in the host because the host is the only party that sees the whole chain: the
+		// recursion crosses process boundaries, so no per-process counter can bound it.
+		reply[ ipc::field::ERROR ] = std::format( "module call nesting exceeded the limit of {}", maxCallDepth() );
+	}
+	else if ( auto payload { ipc::Blob::adopt( std::move( frame.fds.front() ) ) }; !payload )
+	{
+		reply[ ipc::field::ERROR ] = payload.error();
+	}
+	else if ( const auto detected { co_await getMimeDatabase()->scan( payload->view(), file_name ) }; !detected )
+	{
+		reply[ ipc::field::ERROR ] = "could not determine the mime type of the callback payload";
+	}
+	else
+	{
+		auto& loader { ModuleLoader::instance() };
+
+		RemoteCallData data {
+			.blob = &payload.value(),
+			.mime_name = *detected,
+			.extra = frame.body[ ipc::field::EXTRA ],
+			.depth = depth + 1
+		};
+
+		switch ( *kind )
 		{
-			ret.push_back( std::static_pointer_cast< GeneratorModuleI >( module ) );
-			return ret;
+			case ipc::CallbackKind::PROBE:
+				{
+					ModuleCapability capability {};
+					capability.mime = *detected;
+					capability.has_metadata = !loader.getParserFor( *detected ).empty();
+					capability.has_thumbnailer = !loader.getThumbnailerFor( *detected ).empty();
+					capability.has_generator = !loader.getGeneratorsFor( *detected ).empty();
+
+					reply[ ipc::field::CAPABILITY ] = ipc::toJson( capability );
+				reply[ ipc::field::OK ] = true;
+				break;
+			}
+			case ipc::CallbackKind::THUMBNAIL:
+			{
+				const auto thumbnailers { loader.getThumbnailerFor( *detected ) };
+				if ( thumbnailers.empty() )
+				{
+					reply[ ipc::field::ERROR ] = std::format( "no thumbnailer for mime type {}", *detected );
+					break;
+				}
+
+				auto thumbnail { co_await thumbnailers.front()->createThumbnailRaw(
+					std::move( data ), CALLBACK_THUMBNAIL_SIZE, CALLBACK_THUMBNAIL_SIZE ) };
+
+				if ( !thumbnail )
+				{
+					reply[ ipc::field::ERROR ] = thumbnail.error();
+					break;
+				}
+
+				auto blob { ipc::Blob::fromBytes( thumbnail->m_pixel_data ) };
+				if ( !blob )
+				{
+					reply[ ipc::field::ERROR ] = blob.error();
+					break;
+				}
+
+				produced = std::move( *blob );
+				reply_fds.emplace_back( produced.fd() );
+				reply[ ipc::field::THUMBNAIL ] = ipc::thumbnailHeaderToJson( *thumbnail );
+				reply[ ipc::field::OK ] = true;
+				break;
+			}
+			case ipc::CallbackKind::GENERATE:
+				{
+					const auto generators { loader.getGeneratorsFor( *detected ) };
+					if ( generators.empty() )
+					{
+						reply[ ipc::field::ERROR ] = std::format( "no generator for mime type {}", *detected );
+						break;
+					}
+
+					const auto hex { frame.body[ ipc::field::HASH ].asString() };
+				if ( hex.size() != ( 256 / 8 ) * 2 )
+				{
+					reply[ ipc::field::ERROR ] = "generate callback did not carry a sha256 hash";
+					break;
+				}
+
+				auto generated { co_await generators.front()->generate( std::move( data ), crypto::fromHex( hex ) ) };
+
+				if ( !generated )
+				{
+					reply[ ipc::field::ERROR ] = generated.error();
+					break;
+				}
+
+				auto blob { ipc::Blob::fromBytes( *generated ) };
+				if ( !blob )
+				{
+					reply[ ipc::field::ERROR ] = blob.error();
+					break;
+				}
+
+				produced = std::move( *blob );
+				reply_fds.emplace_back( produced.fd() );
+				reply[ ipc::field::OK ] = true;
+				break;
+				}
 		}
 	}
-	return ret;
+
+	if ( const auto posted { worker->post( reply, reply_fds ) }; !posted )
+		log::warn( "Could not answer module callback {}: {}", callback_id, posted.error() );
+
+	co_return;
+}
+
+} // namespace
+
+void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
+{
+	// Runs on a drogon loop, never on the worker's IO thread. Servicing a callback means a MIME scan
+	// and usually a call into another worker; the IO thread has to stay free to keep reading, because
+	// the module that raised this callback is blocked waiting for the answer to come back down it.
+	drogon::async_run(
+		[ worker = std::move( worker ), frame = std::move( frame ) ]() mutable -> drogon::Task< void >
+		{ co_await runCallback( std::move( worker ), std::move( frame ) ); } );
 }
 
 } // namespace idhan::modules
