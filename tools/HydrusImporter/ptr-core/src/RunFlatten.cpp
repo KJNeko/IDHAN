@@ -7,8 +7,10 @@
 #include <format>
 #include <fstream>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "ptr/flatten/DefinitionStore.hpp"
 #include "ptr/flatten/FlattenScan.hpp"
@@ -33,6 +35,42 @@ void removeWorkDirectory( const std::filesystem::path& work_dir )
 	std::error_code ec;
 	std::filesystem::remove_all( work_dir, ec );
 	if ( ec ) spdlog::warn( "Failed to remove the flatten work directory {}: {}", work_dir.string(), ec.message() );
+}
+
+//! Moves the finished chunks and the relations file out of the staging directory into \p out_dir.
+//!
+//! Everything a run produces is written inside the work directory until this call, so a cancelled
+//! or failed run leaves the output directory exactly as it found it. Without that, a run abandoned
+//! partway through the collapse would strand hundreds of chunk files that no manifest describes and
+//! that cannot be told apart from a previous good run's output.
+//!
+//! Staging is nested inside \p out_dir, so the two are always on one filesystem and every move is a
+//! rename rather than a copy.
+void publishStagedOutput( const std::filesystem::path& staging_dir,
+                          const std::filesystem::path& out_dir,
+                          const CompactManifest& manifest )
+{
+	std::vector< std::filesystem::path > moved;
+
+	const auto move = [ & ]( const std::string& name )
+	{
+		std::filesystem::rename( staging_dir / name, out_dir / name );
+		moved.push_back( out_dir / name );
+	};
+
+	try
+	{
+		for ( const auto& chunk : manifest.chunks ) move( chunk.file );
+		if ( !manifest.relations_file.empty() ) move( manifest.relations_file );
+	}
+	catch ( ... )
+	{
+		// Put the output directory back the way it was found. A partial chunk set with no manifest
+		// is not importable, but it is still wasted disk and a puzzle for whoever looks next.
+		std::error_code ec;
+		for ( const auto& path : moved ) std::filesystem::remove( path, ec );
+		throw;
+	}
 }
 
 } // namespace
@@ -93,6 +131,10 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 	FlattenOutcome outcome {};
 
 	const auto work_dir = out_dir / WORK_SUBDIRECTORY;
+
+	// Chunks and the relations file are built in here and moved out only once the run has actually
+	// succeeded, so removing the work directory is all the cleanup any failure path needs.
+	const auto staging_dir = work_dir / OUTPUT_STAGING_SUBDIRECTORY;
 
 	try
 	{
@@ -167,7 +209,7 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 			};
 
 			collapse = collapseBuckets(
-				work_dir, out_dir, definitions, max_records_per_chunk, collapse_callbacks, collapse_thread_count );
+				work_dir, staging_dir, definitions, max_records_per_chunk, collapse_callbacks, collapse_thread_count );
 
 			if ( collapse.cancelled )
 			{
@@ -184,7 +226,7 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 
 			const TagLookup lookup = [ &definitions ]( const std::uint32_t tag_id )
 			{ return definitions.tag( tag_id ); };
-			relation_stats = writeRelationsFile( out_dir / RELATIONS_FILENAME, parents, siblings, lookup );
+			relation_stats = writeRelationsFile( staging_dir / RELATIONS_FILENAME, parents, siblings, lookup );
 		}
 
 		outcome.manifest.format_version = CHUNK_FORMAT_VERSION;
@@ -199,6 +241,7 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 
 		// Written last. Until this exists the directory is not a compacted directory.
 		announce( callbacks, "Writing manifest" );
+		publishStagedOutput( staging_dir, out_dir, outcome.manifest );
 		writeManifest( out_dir, outcome.manifest );
 
 		removeWorkDirectory( work_dir );
