@@ -88,11 +88,9 @@ struct FGL_EXPORT ModuleCallbacks
 		std::function< std::expected< ThumbnailInfo, ModuleError >( const ModuleFile&, Json::Value, std::string ) >;
 	//! Returns a handle rather than bytes, so a generated file the host produced in shared memory
 	//! can be passed straight on to another callback without ever landing in this module's heap.
-	using GenerateFunc = std::function< std::expected< std::unique_ptr< ModuleFile >, ModuleError >(
-		const ModuleFile&,
-		std::array< std::byte, 256 / 8 >,
-		Json::Value,
-		std::string ) >;
+	using GenerateFunc = std::function< std::expected<
+		std::unique_ptr< ModuleFile >,
+		ModuleError >( const ModuleFile&, std::array< std::byte, 256 / 8 >, Json::Value, std::string ) >;
 	using ProbeFunc = std::function< std::expected< ModuleCapability, ModuleError >( const ModuleFile&, std::string ) >;
 
 	ThumbnailFunc thumbnail; //!< Ask the host to thumbnail the given bytes (data, extra, file_name).

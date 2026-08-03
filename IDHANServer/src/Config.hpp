@@ -216,8 +216,7 @@ template < typename T >
 				else
 					static_assert( false, "Unsupported toml config type" );
 
-				log::warn(
-					"Ignoring [{}] {} in {}: the value is not the expected type", group, name, p.string() );
+				log::warn( "Ignoring [{}] {} in {}: the value is not the expected type", group, name, p.string() );
 				return std::nullopt;
 			}
 			return std::nullopt;

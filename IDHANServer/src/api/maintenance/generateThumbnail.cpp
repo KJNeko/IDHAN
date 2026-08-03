@@ -38,7 +38,8 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	auto input_e { modules::CallInput::forBlob( std::move( *blob ) ) };
 
-	if ( !input_e ) co_return createInternalError( "Could not stage the request body for a module: {}", input_e.error() );
+	if ( !input_e )
+		co_return createInternalError( "Could not stage the request body for a module: {}", input_e.error() );
 
 	const auto input { std::make_shared< const modules::CallInput >( std::move( *input_e ) ) };
 

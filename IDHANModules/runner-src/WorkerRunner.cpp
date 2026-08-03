@@ -5,6 +5,7 @@
 #include "WorkerRunner.hpp"
 
 #include <spdlog/spdlog.h>
+#include <sys/eventfd.h>
 
 #include <algorithm>
 #include <array>
@@ -13,7 +14,6 @@
 #include <format>
 #include <fstream>
 #include <poll.h>
-#include <sys/eventfd.h>
 #include <unistd.h>
 #include <utility>
 
@@ -64,14 +64,15 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 	if ( !sink ) return std::unexpected( sink.error() );
 
 	const std::size_t total { file.size() };
-	if ( const auto reserved { ( *sink )->reserve( total ) }; !reserved )
-		return std::unexpected( reserved.error() );
+	if ( const auto reserved { ( *sink )->reserve( total ) }; !reserved ) return std::unexpected( reserved.error() );
 
 	std::vector< std::byte > buffer( std::min( total, COPY_CHUNK ) );
 
 	for ( std::size_t offset = 0; offset < total; )
 	{
-		const auto count { file.read( std::span { buffer }.first( std::min( buffer.size(), total - offset ) ), offset ) };
+		const auto count {
+			file.read( std::span { buffer }.first( std::min( buffer.size(), total - offset ) ), offset )
+		};
 		if ( !count ) return std::unexpected( count.error() );
 
 		// A short read before the declared size means the handle disagrees with itself; continuing
@@ -546,8 +547,9 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 				auto sink { ipc::MemfdSink::create() };
 				if ( !sink ) return std::unexpected( sink.error() );
 
-				const auto result { std::static_pointer_cast< GeneratorModuleI >( module )
-					                    ->generate( data, call.hash, **sink ) };
+				const auto result {
+					std::static_pointer_cast< GeneratorModuleI >( module )->generate( data, call.hash, **sink )
+				};
 				if ( !result ) return std::unexpected( result.error() );
 
 				auto generated { ( *sink )->finish() };
@@ -757,18 +759,18 @@ std::expected< void, std::string > WorkerRunner::run()
 			next_heartbeat = now + m_options.heartbeat_interval;
 		}
 
-		const auto wait { std::chrono::duration_cast< std::chrono::milliseconds >(
-			next_heartbeat - std::chrono::steady_clock::now() ) };
+		const auto wait {
+			std::chrono::duration_cast< std::chrono::milliseconds >( next_heartbeat - std::chrono::steady_clock::now() )
+		};
 
 		std::array< pollfd, 2 > waiting {
-			{ { .fd = m_socket,
-			    .events = static_cast< short >( POLLIN | ( want_write ? POLLOUT : 0 ) ),
-			    .revents = 0 },
+			{ { .fd = m_socket, .events = static_cast< short >( POLLIN | ( want_write ? POLLOUT : 0 ) ), .revents = 0 },
 			  { .fd = m_wakeup.get(), .events = POLLIN, .revents = 0 } }
 		};
 
-		const int ready { ::poll(
-			waiting.data(), waiting.size(), static_cast< int >( std::max( wait.count(), std::int64_t { 0 } ) ) ) };
+		const int ready {
+			::poll( waiting.data(), waiting.size(), static_cast< int >( std::max( wait.count(), std::int64_t { 0 } ) ) )
+		};
 
 		if ( ready < 0 && errno != EINTR )
 		{

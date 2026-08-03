@@ -6,7 +6,6 @@
 
 #include "Config.hpp"
 #include "MetadataModule.hpp"
-#include "modules/RemoteModule.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -22,6 +21,7 @@
 #include "metadata/metadata.hpp"
 #include "mime/FileInfo.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "modules/RemoteModule.hpp"
 #include "threading/ExpectedTask.hpp"
 #include "trantor/net/EventLoopThread.h"
 #include "trantor/net/EventLoopThreadPool.h"

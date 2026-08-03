@@ -4,17 +4,17 @@
 
 #include "archives.hpp"
 
-#include <archive.h>
-#include <archive_entry.h>
-#include <langinfo.h>
 #include <openssl/evp.h>
 
+#include <archive.h>
+#include <archive_entry.h>
 #include <array>
 #include <chardet.h>
 #include <cstring>
 #include <cwchar>
 #include <expected>
 #include <iconv.h>
+#include <langinfo.h>
 #include <memory>
 #include <span>
 #include <string>
@@ -173,8 +173,8 @@ std::expected< void, idhan::ModuleError > writeArchiveEntryData( archive* const 
 	la_ssize_t read { 0 };
 	while ( ( read = archive_read_data( a, buffer.data(), buffer.size() ) ) > 0 )
 	{
-		if ( const auto written { out.write( std::span< const std::byte > { buffer.data(),
-			                                                                static_cast< std::size_t >( read ) } ) };
+		if ( const auto written {
+				 out.write( std::span< const std::byte > { buffer.data(), static_cast< std::size_t >( read ) } ) };
 		     !written )
 			return std::unexpected( written.error() );
 	}

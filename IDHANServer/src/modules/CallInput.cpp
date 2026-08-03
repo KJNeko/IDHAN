@@ -4,9 +4,10 @@
 
 #include "CallInput.hpp"
 
+#include <sys/stat.h>
+
 #include <fcntl.h>
 #include <format>
-#include <sys/stat.h>
 
 namespace idhan::modules
 {

@@ -41,7 +41,6 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile( 
 	return buffer;
 }
 
-
 std::uint16_t readUint16BE( const std::uint8_t* data )
 {
 	return ( static_cast< std::uint16_t >( data[ 0 ] ) << 8 ) | ( static_cast< std::uint16_t >( data[ 1 ] ) << 0 );

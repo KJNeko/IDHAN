@@ -4,8 +4,6 @@
 
 #include "idhan/IDHANClient.hpp"
 
-#include "idhan/TagCache.hpp"
-
 #include <QCoreApplication>
 #include <QHttpPart>
 #include <QJsonObject>
@@ -14,6 +12,7 @@
 
 #include <qtconcurrentrun.h>
 
+#include "idhan/TagCache.hpp"
 #include "logging/logger.hpp"
 #include "spdlog/sinks/stdout_color_sinks.h"
 

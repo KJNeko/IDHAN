@@ -3,14 +3,14 @@
 //
 #include "ModuleLoader.hpp"
 
+#include <sys/prctl.h>
+
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
 #include <cstring>
-#include <sys/prctl.h>
 #include <filesystem>
 #include <format>
-
 #include <paths.hpp>
 
 #include "Config.hpp"
@@ -78,7 +78,8 @@ void ModuleLoader::applyHardening()
 	// becomes reachable: nothing has forked a worker yet.
 	if ( ::prctl( PR_SET_DUMPABLE, 0, 0, 0, 0 ) < 0 )
 	{
-		log::warn( "Could not disable ptrace of the server: {}. Module workers can attach to it.", std::strerror( errno ) );
+		log::warn(
+			"Could not disable ptrace of the server: {}. Module workers can attach to it.", std::strerror( errno ) );
 		return;
 	}
 
@@ -299,9 +300,11 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	// Resolved before anything else touches the payload. A module that hands back the input of the
 	// call it is currently serving sends no descriptor at all -- the server still holds that call's
 	// input, so the archive does not travel a second time for every member thumbnailed out of it.
-	const InFlightInput referenced { frame.body[ ipc::field::INPUT_REF ].isIntegral() ?
-		                                 worker->inputForCall( frame.body[ ipc::field::INPUT_REF ].asUInt64() ) :
-		                                 InFlightInput {} };
+	const InFlightInput referenced {
+		frame.body[ ipc::field::INPUT_REF ].isIntegral() ?
+			worker->inputForCall( frame.body[ ipc::field::INPUT_REF ].asUInt64() ) :
+			InFlightInput {}
+	};
 
 	const bool by_reference { referenced.input != nullptr };
 
@@ -328,9 +331,9 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	// A referenced input keeps the MIME the server already resolved for the call it belongs to.
 	// Re-deriving it is not merely wasteful, it is impossible on the ring path: detection reads
 	// content, and the whole point of the ring is that the server never made a copy to read.
-	else if ( const auto detected { by_reference ?
-		          ExpectedMime { referenced.mime } :
-		          co_await getMimeDatabase()->scan( ( *input )->blob().view(), file_name ) };
+	else if ( const auto detected {
+				  by_reference ? ExpectedMime { referenced.mime } :
+								 co_await getMimeDatabase()->scan( ( *input )->blob().view(), file_name ) };
 	          !detected )
 	{
 		reply[ ipc::field::ERROR ] = "could not determine the mime type of the callback payload";
@@ -340,10 +343,7 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 		auto& loader { ModuleLoader::instance() };
 
 		RemoteCallData data {
-			.input = *input,
-			.mime_name = *detected,
-			.extra = frame.body[ ipc::field::EXTRA ],
-			.depth = depth + 1
+			.input = *input, .mime_name = *detected, .extra = frame.body[ ipc::field::EXTRA ], .depth = depth + 1
 		};
 
 		switch ( *kind )
@@ -357,40 +357,40 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 					capability.has_generator = !loader.getGeneratorsFor( *detected ).empty();
 
 					reply[ ipc::field::CAPABILITY ] = ipc::toJson( capability );
-				reply[ ipc::field::OK ] = true;
-				break;
-			}
+					reply[ ipc::field::OK ] = true;
+					break;
+				}
 			case ipc::CallbackKind::THUMBNAIL:
-			{
-				const auto thumbnailers { loader.getThumbnailerFor( *detected ) };
-				if ( thumbnailers.empty() )
 				{
-					reply[ ipc::field::ERROR ] = std::format( "no thumbnailer for mime type {}", *detected );
+					const auto thumbnailers { loader.getThumbnailerFor( *detected ) };
+					if ( thumbnailers.empty() )
+					{
+						reply[ ipc::field::ERROR ] = std::format( "no thumbnailer for mime type {}", *detected );
+						break;
+					}
+
+					auto thumbnail { co_await thumbnailers.front()->createThumbnailRaw(
+						std::move( data ), CALLBACK_THUMBNAIL_SIZE, CALLBACK_THUMBNAIL_SIZE ) };
+
+					if ( !thumbnail )
+					{
+						reply[ ipc::field::ERROR ] = thumbnail.error();
+						break;
+					}
+
+					auto blob { ipc::Blob::fromBytes( thumbnail->m_pixel_data ) };
+					if ( !blob )
+					{
+						reply[ ipc::field::ERROR ] = blob.error();
+						break;
+					}
+
+					produced = std::move( *blob );
+					reply_fds.emplace_back( produced.fd() );
+					reply[ ipc::field::THUMBNAIL ] = ipc::thumbnailHeaderToJson( *thumbnail );
+					reply[ ipc::field::OK ] = true;
 					break;
 				}
-
-				auto thumbnail { co_await thumbnailers.front()->createThumbnailRaw(
-					std::move( data ), CALLBACK_THUMBNAIL_SIZE, CALLBACK_THUMBNAIL_SIZE ) };
-
-				if ( !thumbnail )
-				{
-					reply[ ipc::field::ERROR ] = thumbnail.error();
-					break;
-				}
-
-				auto blob { ipc::Blob::fromBytes( thumbnail->m_pixel_data ) };
-				if ( !blob )
-				{
-					reply[ ipc::field::ERROR ] = blob.error();
-					break;
-				}
-
-				produced = std::move( *blob );
-				reply_fds.emplace_back( produced.fd() );
-				reply[ ipc::field::THUMBNAIL ] = ipc::thumbnailHeaderToJson( *thumbnail );
-				reply[ ipc::field::OK ] = true;
-				break;
-			}
 			case ipc::CallbackKind::GENERATE:
 				{
 					const auto generators { loader.getGeneratorsFor( *detected ) };
@@ -401,26 +401,28 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 					}
 
 					const auto hex { frame.body[ ipc::field::HASH ].asString() };
-				if ( hex.size() != ( 256 / 8 ) * 2 )
-				{
-					reply[ ipc::field::ERROR ] = "generate callback did not carry a sha256 hash";
+					if ( hex.size() != ( 256 / 8 ) * 2 )
+					{
+						reply[ ipc::field::ERROR ] = "generate callback did not carry a sha256 hash";
+						break;
+					}
+
+					auto generated {
+						co_await generators.front()->generate( std::move( data ), crypto::fromHex( hex ) )
+					};
+
+					if ( !generated )
+					{
+						reply[ ipc::field::ERROR ] = generated.error();
+						break;
+					}
+
+					// Forwarded, not copied: this is the memfd the generator wrote into, and the module
+					// waiting on this answer will read it directly.
+					produced = std::move( *generated );
+					reply_fds.emplace_back( produced.fd() );
+					reply[ ipc::field::OK ] = true;
 					break;
-				}
-
-				auto generated { co_await generators.front()->generate( std::move( data ), crypto::fromHex( hex ) ) };
-
-				if ( !generated )
-				{
-					reply[ ipc::field::ERROR ] = generated.error();
-					break;
-				}
-
-				// Forwarded, not copied: this is the memfd the generator wrote into, and the module
-				// waiting on this answer will read it directly.
-				produced = std::move( *generated );
-				reply_fds.emplace_back( produced.fd() );
-				reply[ ipc::field::OK ] = true;
-				break;
 				}
 		}
 	}
