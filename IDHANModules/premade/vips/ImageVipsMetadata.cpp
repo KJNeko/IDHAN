@@ -21,30 +21,21 @@ std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
 
 std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleCallData& data )
 {
-	VipsImage* image_ptr { nullptr };
-	if ( const auto it = VIPS_FUNC_MAP.find( data.mime_name ); it != VIPS_FUNC_MAP.end() && it->second != nullptr )
-	{
-		if ( it->second(
-				 const_cast< void* >( static_cast< const void* >( data.file_view.data() ) ),
-				 data.file_view.size(),
-				 &image_ptr,
-				 nullptr )
-		     != 0 )
-		{
-			return std::unexpected( ModuleError { "Failed to load image" } );
-		}
+	if ( !VIPS_MIMES.contains( data.mime_name ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
 
-		spdlog::debug( "Decoded image" );
-	}
-	else
-	{
-		return std::unexpected( ModuleError { "Unsupported mime type" } );
-	}
+	VipsModuleSource source { data.file };
+	if ( !source.valid() ) return std::unexpected( ModuleError { "Failed to open the file as a vips source" } );
 
-	if ( !image_ptr )
+	// Nothing here needs pixels, only the header -- so the source is read lazily and a large image
+	// never lands in this process at all.
+	VipsImage* const image_ptr { vips_image_new_from_source( source.get(), "", nullptr ) };
+
+	if ( image_ptr == nullptr )
 	{
 		return std::unexpected( ModuleError { "Failed to load image" } );
 	}
+
+	spdlog::debug( "Decoded image" );
 
 	VipsImagePtr image { image_ptr };
 

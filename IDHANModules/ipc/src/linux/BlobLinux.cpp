@@ -204,14 +204,17 @@ std::expected< Blob, std::string > Blob::fromFile( const std::filesystem::path& 
 
 	if ( !S_ISREG( info.st_mode ) ) return std::unexpected( std::format( "{} is not a regular file", path.string() ) );
 
-	const auto size { static_cast< std::size_t >( info.st_size ) };
+	return fromFd( source.get(), static_cast< std::size_t >( info.st_size ) );
+}
 
+std::expected< Blob, std::string > Blob::fromFd( const int source, const std::size_t size )
+{
 	auto fd { createMemfd( size ) };
 	if ( !fd ) return std::unexpected( fd.error() );
 
 	if ( size > 0 )
 	{
-		const auto copied { copyIntoBlob( source.get(), fd->get(), size ) };
+		const auto copied { copyIntoBlob( source, fd->get(), size ) };
 		if ( !copied ) return std::unexpected( copied.error() );
 	}
 

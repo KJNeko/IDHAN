@@ -24,7 +24,6 @@
 #include "trantor/utils/ConcurrentTaskQueue.h"
 #pragma GCC diagnostic pop
 
-
 namespace idhan::api
 {
 
@@ -74,7 +73,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	const auto thumbnail_location { thumbnailPath( hex, size ) };
 
-	if ( !std::filesystem::exists( thumbnail_location ) || force_regenerate )
+	const bool cache_enabled { getThumbnailCachingEnabled() };
+
+	if ( !cache_enabled || !std::filesystem::exists( thumbnail_location ) || force_regenerate )
 	{
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 
@@ -85,22 +86,20 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
 
-		// Sealed anonymous mapping rather than a heap buffer: this is what gets handed to the module
-		// worker, and it owns the bytes for as long as the call needs them.
-		auto blob_e { co_await filesystem::mapRecordBlob( record_id, db ) };
-		if ( !blob_e ) co_return blob_e.error();
-		const auto& blob { blob_e.value() };
+		auto input_e { co_await filesystem::openRecordInput( record_id, db ) };
+		if ( !input_e ) co_return input_e.error();
 
 		const std::size_t height { size };
 		const std::size_t width { size };
 
-		modules::RemoteCallData call_data { .blob = &blob, .mime_name = mime_name, .extra = {}, .depth = 0 };
+		modules::RemoteCallData call_data { .input = *input_e, .mime_name = mime_name, .extra = {}, .depth = 0 };
 
 		// check if we have any metadata for this
 		const auto extra_metadata {
 			co_await db->execSqlCoro( "SELECT json FROM metadata WHERE record_id = $1", record_id )
 		};
-		if ( extra_metadata.size() > 0 )
+
+		if ( !extra_metadata.empty() )
 		{
 			call_data.extra = extra_metadata[ 0 ][ 0 ].as< Json::Value >();
 		}
@@ -112,7 +111,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		// Cache to disk only for sizes the operator has opted in; other sizes are still generated and
 		// served, just never written (keeps the cache from exploding across arbitrary requested sizes).
 		const bool size_is_cacheable { std::ranges::contains( getCacheableThumbnailSizes(), size ) };
-		const bool should_cache { thumbnail_info->cache_thumbnail && size_is_cacheable };
+		const bool should_cache { cache_enabled && thumbnail_info->cache_thumbnail && size_is_cacheable };
 
 		if ( should_cache )
 		{
@@ -125,7 +124,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		}
 		else
 		{
-			if ( !thumbnail_info->cache_thumbnail )
+			if ( !cache_enabled )
+				log::debug( "Skipping thumbnail cache: the on-disk cache is disabled" );
+			else if ( !thumbnail_info->cache_thumbnail )
 				log::debug( "Skipping thumbnail cache due to module returning NOCACHE flag" );
 			else
 				log::debug( "Skipping thumbnail cache: size {} is not in the cacheable set", size );

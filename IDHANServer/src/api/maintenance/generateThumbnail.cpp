@@ -36,7 +36,13 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	if ( !blob ) co_return createInternalError( "Could not stage the request body for a module: {}", blob.error() );
 
-	modules::RemoteCallData call_data { .blob = &blob.value(), .mime_name = *mime_str, .extra = {}, .depth = 0 };
+	auto input_e { modules::CallInput::forBlob( std::move( *blob ) ) };
+
+	if ( !input_e ) co_return createInternalError( "Could not stage the request body for a module: {}", input_e.error() );
+
+	const auto input { std::make_shared< const modules::CallInput >( std::move( *input_e ) ) };
+
+	modules::RemoteCallData call_data { .input = input, .mime_name = *mime_str, .extra = {}, .depth = 0 };
 	const auto metadata_json { co_await metadata_parser[ 0 ]->parseFile( call_data ) };
 
 	if ( !metadata_json )

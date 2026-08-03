@@ -22,16 +22,15 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 	std::size_t width,
 	std::size_t height )
 {
-	const auto& [ data_view, mime_name, extra ] = data;
+	// Only attempt formats we declare handleable (handleableMimes() is derived from this same set).
+	if ( !VIPS_MIMES.contains( data.mime_name ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
 
-	// Only attempt formats we declare handleable (handleableMimes() is derived from this same map).
-	if ( const auto it = VIPS_FUNC_MAP.find( mime_name ); it == VIPS_FUNC_MAP.end() || it->second == nullptr )
-		return std::unexpected( ModuleError { "Unsupported mime type" } );
+	VipsModuleSource source { data.file };
+	if ( !source.valid() ) return std::unexpected( ModuleError { "Failed to open the file as a vips source" } );
 
 	VipsImage* thumb_raw { nullptr };
-	if ( vips_thumbnail_buffer(
-			 const_cast< void* >( static_cast< const void* >( data_view.data() ) ),
-			 data_view.size(),
+	if ( vips_thumbnail_source(
+			 source.get(),
 			 &thumb_raw,
 			 static_cast< int >( width ),
 			 "height",

@@ -32,28 +32,6 @@ std::vector< std::string_view > ArchiveThumbnailer::handleableMimes()
 	return getHandleableMimesForArchives();
 }
 
-std::chrono::milliseconds ArchiveThumbnailer::estimateDuration( const idhan::ModuleCallData& data )
-{
-	// Every member costs an extraction plus a nested host thumbnail call, so a large archive is
-	// slow for reasons that have nothing to do with its byte size. Counting the hash-keyed members
-	// of extra mirrors exactly what createThumbnailRaw will iterate over.
-	std::size_t members { 0 };
-	if ( data.extra.isObject() )
-	{
-		for ( const auto& member : data.extra.getMemberNames() )
-		{
-			if ( member.size() == ( 256 / 8 ) * 2 ) ++members;
-		}
-	}
-
-	constexpr std::chrono::milliseconds PER_MEMBER { 2'000 };
-	constexpr std::chrono::milliseconds FLOOR { 30'000 };
-
-	// The cast keeps the multiplication in milliseconds' own rep: size_t would widen the result to
-	// an unsigned duration, which is not the same type as FLOOR.
-	return std::max( FLOOR, PER_MEMBER * static_cast< std::chrono::milliseconds::rep >( members ) );
-}
-
 std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::createThumbnailRaw(
 	idhan::ModuleCallData& data,
 	std::size_t width,
@@ -150,7 +128,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		const std::filesystem::path path { file_path_str };
 
 		const auto generated_file {
-			this->m_callbacks.generate( file_view, hash, data.extra, path.filename().string() )
+			this->m_callbacks.generate( data.file, hash, data.extra, path.filename().string() )
 		};
 
 		if ( !generated_file )
@@ -165,7 +143,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		all_generate_failed = false;
 
-		const auto thumbnail_rgb { this->m_callbacks.thumbnail( *generated_file, {}, path.filename().string() ) };
+		const auto thumbnail_rgb { this->m_callbacks.thumbnail( **generated_file, {}, path.filename().string() ) };
 
 		if ( !thumbnail_rgb )
 		{

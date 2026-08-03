@@ -57,7 +57,11 @@ class WorkerPool
 	[[nodiscard]] ModuleResidency residency() const { return m_residency; }
 
 	//! Runs one call, retrying once in a fresh process if the worker died mid-flight.
-	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > dispatch( Json::Value body, std::vector< int > fds );
+	/** The input rather than a descriptor, because the retry needs to build its own: a ring is bound
+	 *  to the worker that adopted it and cannot be handed to the replacement. */
+	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > dispatch(
+		Json::Value body,
+		std::shared_ptr< const CallInput > input );
 
 	//! Spawns the persistent worker ahead of the first request. No-op for single-run libraries.
 	void prewarm();

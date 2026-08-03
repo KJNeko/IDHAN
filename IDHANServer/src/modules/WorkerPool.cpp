@@ -51,7 +51,9 @@ void WorkerPool::prewarm()
 		log::warn( "Could not pre-warm the worker for {}: {}", m_settings.library.string(), worker.error() );
 }
 
-IDHANTask< std::shared_ptr< CallOutcome > > WorkerPool::dispatch( Json::Value body, std::vector< int > fds )
+IDHANTask< std::shared_ptr< CallOutcome > > WorkerPool::dispatch(
+	Json::Value body,
+	std::shared_ptr< const CallInput > input )
 {
 	// Two attempts at most. A worker that dies mid-call takes an innocent request with it, so one
 	// retry in a fresh process is worth it -- but a module that rejects a file will reject it again,
@@ -69,10 +71,10 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerPool::dispatch( Json::Value bo
 			co_return outcome;
 		}
 
-		auto outcome { co_await ( *worker )->call( body, fds ) };
+		auto outcome { co_await ( *worker )->call( body, input ) };
 
 		if ( m_residency == ModuleResidency::SINGLE_RUN )
-			( *worker )->terminate( "single-run worker finished its call" );
+			( *worker )->terminate( "single-run worker finished its call", Termination::EXPECTED );
 
 		if ( outcome->ok || !outcome->worker_died ) co_return outcome;
 
@@ -127,7 +129,7 @@ void WorkerPool::maintain()
 	}
 
 	log::info( "Retiring the module worker for {}: {}", m_settings.library.string(), reason );
-	retiring->terminate( reason );
+	retiring->terminate( reason, Termination::EXPECTED );
 }
 
 void WorkerPool::shutdown()
@@ -141,7 +143,7 @@ void WorkerPool::shutdown()
 		m_worker.reset();
 	}
 
-	if ( worker != nullptr ) worker->terminate( "server is shutting down" );
+	if ( worker != nullptr ) worker->terminate( "server is shutting down", Termination::EXPECTED );
 }
 
 } // namespace idhan::modules

@@ -156,9 +156,13 @@ each — `IDHANVips`, `IDHANFFmpeg`, `IDHANPsd`, `IDHANArchive` — in `build/bi
   not stop the server. Modules are addressed by `(library, module_index)` — the index in the factory's returned vector.
   Names are never used for routing. Every worker re-announces its manifest and the pool compares a signature, so a `.so`
   rebuilt under a running server fails loudly instead of dispatching to a stale index.
-- **File data** — files reach modules as a sealed anonymous `memfd` (`ipc::Blob`, via `filesystem::mapRecordBlob`),
-  mapped read-only in the worker. A module sees a pointer and a length; it cannot learn the cluster path. Use `Blob`,
-  not `readAll()`, for anything headed to a module.
+- **File data** — files reach modules as a `ModuleFile` handle (`size()` + `read(span, offset)`), never as a buffer.
+  Call sites build one with `filesystem::openRecordInput`; `modules::CallInput` decides how it travels. Normally that
+  is an io_uring restricted to reading that one file, registered so the worker cannot name what it is reading and no
+  copy is made; where io_uring is unavailable it falls back to a sealed anonymous `memfd` (`ipc::Blob`), which costs a
+  whole-file copy. Modules never learn which they got. There is deliberately no `readAll()` — a module that needs the
+  file contiguous allocates that itself, so the cost is visible where it is incurred. Generator output goes the other
+  way through `ModuleSink`, written straight into the memory that carries it back.
 - **Calling** — `ModuleLoader::getParserFor` / `getThumbnailerFor` / `getGeneratorsFor` return `RemoteModule` proxies
   whose methods are coroutines: `co_await parser->parseFile( call_data )`.
 - **Cross-module calls** — `ModuleCallbacks` (`thumbnail`, `generate`, `probe`) still work; they marshal back to the
@@ -167,8 +171,12 @@ each — `IDHANVips`, `IDHANFFmpeg`, `IDHANPsd`, `IDHANArchive` — in `build/bi
 - **Threading** — a worker has an IO thread that never runs module code plus a work pool. `threadSafe()` is
   load-bearing: modules returning false are serialised behind a per-module lock. The pool is what lets
   `ArchiveThumbnailer` → `generate` → `ArchiveGenerator` (same library, same process) complete without deadlocking.
-- **Timeouts** — `estimateDuration()` lets a module say how long a call should take, scaled with the input; the server
-  arms a watchdog from it, and heartbeats separately prove the process is alive.
+- **Backlog, not deadlines** — a worker queues calls and serves them `pool_threads` at a time, so a call can wait as
+  long as the backlog ahead of it. There is no per-call timeout: waiting costs a suspended coroutine and no thread,
+  and a deadline could not tell a queued call from a wedged one. Heartbeats are the only watchdog, and they ask only
+  whether the process still exists — a worker answers them from its IO loop, which never runs module code. Both ends
+  of the channel queue their outbound frames (`ipc::FrameWriter`); neither ever writes straight to the socket, so a
+  slow reader cannot wedge the writer or drop a frame on `EAGAIN`.
 
 Platform-specific IPC lives in `IDHANModules/ipc/src/linux/` behind neutral headers (`Blob`, `Frame`, `UniqueFd`). *
 *Modules are Linux-only**; a Windows backend would add `ipc/src/windows/` without changing callers.

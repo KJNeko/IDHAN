@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "CallInput.hpp"
 #include "MetadataInfo.hpp"
 #include "ThumbnailInfo.hpp"
 #include "WorkerPool.hpp"
@@ -19,11 +20,17 @@ namespace idhan::modules
 {
 
 //! The input to a remote module call. The out-of-process analogue of ModuleCallData.
-/** Carries the blob rather than a data_view: the bytes have to reach another process, and the only
- *  thing that can cross is the descriptor. */
+/** Carries a CallInput rather than a data_view: the bytes have to reach another process, and the
+ *  only thing that can cross is a descriptor.
+ *
+ *  Shared rather than borrowed because the input outlives this struct in one specific case that
+ *  matters. A module can hand its own input back through a callback, and the answer to that is to
+ *  reuse the descriptor the server already holds instead of shipping the file again -- which means
+ *  the worker registry has to keep the input alive for as long as the call is in flight, alongside
+ *  whatever coroutine frame originally created it. */
 struct RemoteCallData
 {
-	const ipc::Blob* blob { nullptr };
+	std::shared_ptr< const CallInput > input {};
 	std::string mime_name {};
 	Json::Value extra {};
 
@@ -82,7 +89,12 @@ class RemoteModule
 		std::size_t width,
 		std::size_t height ) const;
 
-	[[nodiscard]] IDHANTask< std::expected< std::vector< std::byte >, ModuleError > > generate(
+	//! Generates a derived file, returned as the memfd the worker wrote it into.
+	/** A blob rather than a vector because generator output is large by nature -- an extracted
+	 *  archive member, a decoded page -- and the worker already wrote it exactly once, into shared
+	 *  memory. Copying it into a vector here would put a second copy in the server's heap on the way
+	 *  to handing the descriptor straight back out again. */
+	[[nodiscard]] IDHANTask< std::expected< ipc::Blob, ModuleError > > generate(
 		RemoteCallData data,
 		std::array< std::byte, 256 / 8 > desired_hash ) const;
 };

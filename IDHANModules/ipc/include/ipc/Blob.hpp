@@ -55,6 +55,13 @@ class Blob
 	 *  process's heap. */
 	[[nodiscard]] static std::expected< Blob, std::string > fromFile( const std::filesystem::path& path );
 
+	//! Creates a blob holding a copy of the first \p size bytes readable from \p source.
+	/** \p source is borrowed and is read from offset zero without disturbing its file position.
+	 *
+	 *  For the fallback input path, where the caller already holds an open descriptor and no longer
+	 *  has -- or should not re-open -- the path it came from. */
+	[[nodiscard]] static std::expected< Blob, std::string > fromFd( int source, std::size_t size );
+
 	//! Creates a blob holding a copy of \p bytes. Used for data that is already in memory, e.g. a
 	//! request body or a buffer a module produced and asked the host to re-dispatch.
 	[[nodiscard]] static std::expected< Blob, std::string > fromBytes( std::span< const std::byte > bytes );
@@ -76,9 +83,18 @@ class Blob
 	//! The descriptor to attach to an outgoing frame. Ownership stays with the blob.
 	[[nodiscard]] int fd() const { return m_fd.get(); }
 
+	//! Closes the descriptor, keeping the mapping.
+	/** A mapping outlives the descriptor it was made from, so this costs nothing and removes the
+	 *  /proc/self/fd entry naming what was mapped. Used on a worker's call input, where the module
+	 *  must not be able to name its file; not used on blobs the worker has to forward onwards, which
+	 *  still need something to attach to a frame. */
+	void closeDescriptor() { m_fd.reset(); }
+
 	[[nodiscard]] std::size_t size() const { return m_size; }
 
-	[[nodiscard]] bool valid() const { return static_cast< bool >( m_fd ); }
+	//! Whether this blob holds anything. Stays true after closeDescriptor(), which drops the
+	//! descriptor but not the mapping.
+	[[nodiscard]] bool valid() const { return static_cast< bool >( m_fd ) || m_mapping != nullptr; }
 };
 
 } // namespace idhan::ipc

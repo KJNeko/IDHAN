@@ -89,8 +89,6 @@ COPY CMakeLists.txt /build/CMakeLists.txt
 COPY IDHAN /build/IDHAN
 COPY IDHANModules /build/IDHANModules
 COPY IDHANMigration /build/IDHANMigration
-
-# Copy server (most frequently changed source)
 COPY IDHANServer /build/IDHANServer
 
 # Copy docs and remaining

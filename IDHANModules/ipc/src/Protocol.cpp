@@ -61,8 +61,6 @@ std::string_view toString( const MessageType value ) noexcept
 			return "shutdown";
 		case MessageType::MANIFEST:
 			return "manifest";
-		case MessageType::ACK:
-			return "ack";
 		case MessageType::HEARTBEAT:
 			return "heartbeat";
 		case MessageType::RESULT:
@@ -126,7 +124,6 @@ std::optional< MessageType > messageTypeFromString( const std::string_view value
 	if ( value == "reclaim" ) return MessageType::RECLAIM;
 	if ( value == "shutdown" ) return MessageType::SHUTDOWN;
 	if ( value == "manifest" ) return MessageType::MANIFEST;
-	if ( value == "ack" ) return MessageType::ACK;
 	if ( value == "heartbeat" ) return MessageType::HEARTBEAT;
 	if ( value == "result" ) return MessageType::RESULT;
 	if ( value == "callback" ) return MessageType::CALLBACK;

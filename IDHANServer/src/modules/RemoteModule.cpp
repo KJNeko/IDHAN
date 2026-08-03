@@ -57,11 +57,11 @@ Json::Value RemoteModule::baseBody( const ipc::CallOp op, const RemoteCallData& 
 
 IDHANTask< std::expected< MetadataInfo, ModuleError > > RemoteModule::parseFile( RemoteCallData data ) const
 {
-	if ( data.blob == nullptr ) co_return std::unexpected( ModuleError { "no input blob supplied" } );
+	if ( data.input == nullptr ) co_return std::unexpected( ModuleError { "no input supplied" } );
 
 	Json::Value body { baseBody( ipc::CallOp::METADATA, data ) };
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), { data.blob->fd() } ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
 
@@ -76,13 +76,13 @@ IDHANTask< std::expected< ThumbnailInfo, ModuleError > > RemoteModule::createThu
 	const std::size_t width,
 	const std::size_t height ) const
 {
-	if ( data.blob == nullptr ) co_return std::unexpected( ModuleError { "no input blob supplied" } );
+	if ( data.input == nullptr ) co_return std::unexpected( ModuleError { "no input supplied" } );
 
 	Json::Value body { baseBody( ipc::CallOp::THUMB_RAW, data ) };
 	body[ ipc::field::WIDTH ] = Json::UInt64 { width };
 	body[ ipc::field::HEIGHT ] = Json::UInt64 { height };
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), { data.blob->fd() } ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
 
@@ -97,13 +97,13 @@ IDHANTask< std::expected< ThumbnailInfo, ModuleError > > RemoteModule::createThu
 	const std::size_t width,
 	const std::size_t height ) const
 {
-	if ( data.blob == nullptr ) co_return std::unexpected( ModuleError { "no input blob supplied" } );
+	if ( data.input == nullptr ) co_return std::unexpected( ModuleError { "no input supplied" } );
 
 	Json::Value body { baseBody( ipc::CallOp::THUMB_FILE, data ) };
 	body[ ipc::field::WIDTH ] = Json::UInt64 { width };
 	body[ ipc::field::HEIGHT ] = Json::UInt64 { height };
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), { data.blob->fd() } ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
 
@@ -113,20 +113,20 @@ IDHANTask< std::expected< ThumbnailInfo, ModuleError > > RemoteModule::createThu
 	co_return std::move( *thumbnail );
 }
 
-IDHANTask< std::expected< std::vector< std::byte >, ModuleError > > RemoteModule::generate(
+IDHANTask< std::expected< ipc::Blob, ModuleError > > RemoteModule::generate(
 	RemoteCallData data,
 	const std::array< std::byte, 256 / 8 > desired_hash ) const
 {
-	if ( data.blob == nullptr ) co_return std::unexpected( ModuleError { "no input blob supplied" } );
+	if ( data.input == nullptr ) co_return std::unexpected( ModuleError { "no input supplied" } );
 
 	Json::Value body { baseBody( ipc::CallOp::GENERATE, data ) };
 	body[ ipc::field::HASH ] = crypto::toHex( desired_hash );
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), { data.blob->fd() } ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
 
-	co_return toVector( outcome->blob );
+	co_return std::move( outcome->blob );
 }
 
 } // namespace idhan::modules

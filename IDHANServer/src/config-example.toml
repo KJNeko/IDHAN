@@ -22,6 +22,15 @@ path = "./log"
 [thumbnails]
 # Where generated thumbnails are cached on disk
 #path = "./thumbnails"
+# Whether the on-disk cache is used at all. Off bypasses it in both directions -- nothing is read
+# from it and nothing is written to it, so every request regenerates through the thumbnailer. Meant
+# for working on a thumbnailer module, where serving yesterday's cached output hides your changes.
+# Read live, so it can be flipped without restarting.
+#cache = true
+# Empty the cache directory during startup. Applies at startup only; nothing purges the cache again
+# while the server runs. Safe at any time -- the cache is plain files with no database state behind
+# it, so a purged thumbnail is simply regenerated on the next request.
+#purge_on_boot = false
 # Square thumbnail edge lengths (px) the server is allowed to write to the on-disk cache. Any other
 # requested size is still generated and served, just never cached (so arbitrary sizes can't grow the
 # cache without bound). Edited live — no restart needed.
@@ -52,19 +61,15 @@ path = "./log"
 # A persistent worker with nothing to do for this long is retired.
 #idle_timeout_sec = 300
 
-# Each module reports how long it expects a call to take, scaled with the input where that matters
-# (video decode with file size, archive thumbnails with member count). The kill deadline is that
-# estimate multiplied by this factor, since an estimate is a guess and killing a module that is
-# merely slower than predicted is worse than waiting.
-#timeout_multiplier = 4
-
-# Ceiling on that deadline regardless of what a module estimates, so a bad estimate cannot disable
-# the watchdog entirely.
-#max_timeout_sec = 600
-
 # Workers report in on this interval, carrying their resident size. Missing them for longer than the
-# grace period gets the worker killed. Note this proves the process is alive, not that the module is
-# making progress -- that is what the estimate-based deadline above is for.
+# grace period gets the worker killed.
+#
+# This is the only thing that will kill a call, and it asks one question: does the process still
+# exist? A worker answers heartbeats from its IO loop, which never runs module code, so beats keep
+# arriving however deep its backlog is. There is deliberately no per-call deadline: a call queued
+# behind a hundred others is indistinguishable from a wedged one, and the old deadline took down the
+# whole worker -- and every other call in flight on it -- to kill a single slow request. A waiting
+# call costs a suspended coroutine and no thread, so waiting is cheap.
 #heartbeat_interval_ms = 1000
 #liveness_grace_ms = 5000
 

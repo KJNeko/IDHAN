@@ -6,6 +6,9 @@
 
 #include <drogon/HttpAppFramework.h>
 #include <sys/eventfd.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
+#include <csignal>
 #include <sys/wait.h>
 #include <trantor/net/EventLoop.h>
 
@@ -16,6 +19,10 @@
 #include <fcntl.h>
 #include <format>
 #include <poll.h>
+// std::views::values in failAll(). Included explicitly rather than leaned on through <algorithm>:
+// libstdc++ 15 pulls <ranges> in that way and GCC 14 does not, so the transitive path builds here
+// and fails in the Ubuntu 24.04 container.
+#include <ranges>
 #include <signal.h>
 #include <span>
 #include <unistd.h>
@@ -32,6 +39,28 @@ namespace
 //! fixed number is the only part of the child setup that has to happen after fork and before exec.
 constexpr int CHILD_CHANNEL_FD { 3 };
 
+//! Where a call's continuation should be resumed, given the thread that issued the call.
+/** Falls back to the main loop when the caller is not on one, rather than leaving it null: a null
+ *  loop used to mean "resume inline", and inline means on the IO thread, which is the one place a
+ *  continuation must never run. The resumed coroutine owns the shared_ptr to this worker, so the
+ *  frame's destruction -- and with it ~WorkerProcess, which joins the IO thread -- would land on the
+ *  IO thread itself. Joining yourself is EDEADLK, which is a throw out of a noexcept destructor and
+ *  takes the whole server with it. */
+[[nodiscard]] trantor::EventLoop* resumptionLoop()
+{
+	auto* const current { trantor::EventLoop::getEventLoopOfCurrentThread() };
+	return current != nullptr ? current : drogon::app().getLoop();
+}
+
+//! Resumes a parked call, always on an event loop and never on the calling thread's stack.
+void resumeOnLoop( std::coroutine_handle<> continuation, trantor::EventLoop* loop )
+{
+	if ( !continuation ) return;
+	if ( loop == nullptr ) loop = drogon::app().getLoop();
+
+	loop->queueInLoop( [ continuation ]() mutable { continuation.resume(); } );
+}
+
 } // namespace
 
 WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callback ) :
@@ -39,9 +68,12 @@ WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callba
   m_on_callback( std::move( on_callback ) )
 {}
 
+//! \warning Must not run on the worker's own IO thread -- the join below would be a self-join, and
+//!          EDEADLK out of a destructor aborts the process. Nothing that could hold the last
+//!          reference is ever resumed on the IO thread; see resumptionLoop().
 WorkerProcess::~WorkerProcess()
 {
-	terminate( "worker owner destroyed" );
+	terminate( "worker owner destroyed", Termination::EXPECTED );
 
 	if ( m_io.joinable() )
 	{
@@ -69,10 +101,19 @@ std::expected< void, std::string > WorkerProcess::start()
 	const auto runner { m_settings.runner.string() };
 	const auto child_fd { std::to_string( CHILD_CHANNEL_FD ) };
 	const bool describe_only { m_settings.describe_only };
+#ifdef IDHAN_HARDEN
+	constexpr bool harden_workers { true };
+#else
+	constexpr bool harden_workers { false };
+#endif
 
 	// Read before forking: touching m_settings in the child would be reading through `this` after a
 	// fork from a threaded parent, and every value the child needs is cheap to copy out here.
 	const int child_end { channel->second.get() };
+
+	// Our own pid, so the child can tell whether it is still ours. Compared by value rather than
+	// against 1, because in a container the server *is* pid 1 and every child would look orphaned.
+	const pid_t parent_pid { ::getpid() };
 
 	const pid_t pid { ::fork() };
 	if ( pid < 0 ) return std::unexpected( std::format( "fork failed: {}", std::strerror( errno ) ) );
@@ -91,6 +132,48 @@ std::expected< void, std::string > WorkerProcess::start()
 		else if ( ::dup2( child_end, CHILD_CHANNEL_FD ) < 0 )
 		{
 			::_exit( 126 );
+		}
+
+		// Everything above the channel goes. The server has a database pool, cluster files and the
+		// other workers' sockets open, and none of them are reliably FD_CLOEXEC -- libpq's are not.
+		// Without this a compromised worker inherits a live connection to the database.
+		if ( ::close_range( CHILD_CHANNEL_FD + 1, ~0U, 0 ) < 0 ) ::_exit( 126 );
+
+		// Undo the server's PR_SET_DUMPABLE(0) (see ModuleLoader::applyHardening) for this child only.
+		// That flag is inherited across fork and still set at execve, and a non-dumpable image execs
+		// in the kernel's secure-exec mode -- where the dynamic linker stops honouring the
+		// $ORIGIN-relative RUNPATH that finds libIDHAN.so next to the runner. The worker then dies
+		// before main(), so it cannot report anything, and all the host sees is a closed channel.
+		//
+		// Costs nothing that was being bought: the point of the server being non-dumpable is that
+		// nothing can ptrace *the server*, and ptrace_may_access tests the target's flag, not the
+		// caller's. The server stays non-dumpable; worker cores are handled by RLIMIT_CORE below.
+		if ( ::prctl( PR_SET_DUMPABLE, 1, 0, 0, 0 ) < 0 ) ::_exit( 126 );
+
+		// No setuid or file-capability binary this process execs can gain privilege. Cheap on its
+		// own, and a prerequisite for the follow-up spec's seccomp filter, which cannot be installed
+		// unprivileged without it.
+		if ( ::prctl( PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0 ) < 0 ) ::_exit( 126 );
+
+		// Workers currently outlive a SIGKILLed server, which leaves orphaned processes holding
+		// mappings of cluster files.
+		if ( ::prctl( PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0 ) < 0 ) ::_exit( 126 );
+
+		// PDEATHSIG is delivered on the death of the forking *thread*, and it is armed after the
+		// fork -- so a parent that died in between would never signal us at all. Re-checking closes
+		// that window: a parent id that is no longer the one that forked us means we were reparented.
+		//
+		// Compared against the recorded pid, never against 1. Under Docker the server is pid 1, so
+		// `getppid() == 1` is true for every healthy worker -- that test exited each one before it
+		// could exec, and every module library was skipped as having died before announcing itself.
+		if ( ::getppid() != parent_pid ) ::_exit( 0 );
+
+		if ( harden_workers )
+		{
+			// A core from a worker contains the decoded media it was working on, written wherever
+			// the pattern points. Off by default outside Debug; see IDHAN_HARDEN.
+			const rlimit no_core { .rlim_cur = 0, .rlim_max = 0 };
+			if ( ::setrlimit( RLIMIT_CORE, &no_core ) < 0 ) ::_exit( 126 );
 		}
 
 		if ( describe_only )
@@ -133,6 +216,14 @@ std::expected< void, std::string > WorkerProcess::start()
 
 	m_io = std::jthread( [ this ]( const std::stop_token& stop ) { ioLoop( stop ); } );
 
+	// An interrogator is an implementation detail of startup -- one per library, immediately followed
+	// by the Registered module lines that actually tell you what was found. Only a serving worker is
+	// worth an info line.
+	if ( m_settings.describe_only )
+		log::debug( "Interrogating module library {}", m_settings.library.string() );
+	else
+		log::info( "Started module {}", m_settings.library.string() );
+
 	return {};
 }
 
@@ -163,11 +254,18 @@ void WorkerProcess::ioLoop( const std::stop_token& stop )
 
 		if ( m_reader.atEof() )
 		{
-			terminate( "worker closed the channel" );
+			// An interrogator is *supposed* to end this way: --describe announces the manifest and
+			// exits, so its channel closing is the successful path, not a death. Anything else closing
+			// its channel has genuinely gone away mid-service.
+			const bool announced_and_done { m_settings.describe_only && manifestSeen() };
+
+			terminate(
+				announced_and_done ? "interrogator finished announcing" : "worker closed the channel",
+				announced_and_done ? Termination::EXPECTED : Termination::FAILURE );
 			return;
 		}
 
-		checkDeadlines();
+		checkLiveness();
 
 		std::array< pollfd, 2 > waiting {
 			{ { .fd = m_socket.get(),
@@ -176,7 +274,7 @@ void WorkerProcess::ioLoop( const std::stop_token& stop )
 			  { .fd = m_wakeup.get(), .events = POLLIN, .revents = 0 } }
 		};
 
-		// Capped so deadline and liveness checks still happen on an otherwise silent channel.
+		// Capped so the liveness check still happens on an otherwise silent channel.
 		const int ready { ::poll( waiting.data(), waiting.size(), 200 ) };
 
 		if ( ready < 0 && errno != EINTR )
@@ -235,27 +333,6 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 				// instead of quietly running the wrong module.
 				if ( !mismatch.empty() ) terminate( mismatch );
 
-				return;
-			}
-		case ipc::MessageType::ACK:
-			{
-				const std::uint64_t call_id { frame.body[ ipc::field::CALL_ID ].asUInt64() };
-				const auto estimate { std::chrono::milliseconds { frame.body[ ipc::field::ESTIMATE_MS ].asUInt64() } };
-
-				// The module's own estimate, scaled and capped. Scaled because an estimate is a guess and
-				// killing a module that is merely slower than it predicted is worse than waiting; capped
-				// because a module that returns something absurd must not disable the watchdog.
-				const auto scaled {
-					std::chrono::duration_cast< std::chrono::milliseconds >( estimate * m_settings.timeout_multiplier )
-				};
-				const auto budget { std::min( scaled, m_settings.max_timeout ) };
-
-				const std::lock_guard< std::mutex > guard { m_calls_mutex };
-				if ( const auto found { m_calls.find( call_id ) }; found != m_calls.end() )
-				{
-					found->second.acked = true;
-					found->second.deadline = std::chrono::steady_clock::now() + budget;
-				}
 				return;
 			}
 		case ipc::MessageType::HEARTBEAT:
@@ -323,14 +400,7 @@ void WorkerProcess::finish( const std::uint64_t call_id, CallOutcome outcome )
 
 	*pending.outcome = std::move( outcome );
 
-	if ( pending.continuation )
-	{
-		auto continuation { pending.continuation };
-		if ( pending.loop != nullptr )
-			pending.loop->queueInLoop( [ continuation ]() mutable { continuation.resume(); } );
-		else
-			continuation.resume();
-	}
+	resumeOnLoop( pending.continuation, pending.loop );
 }
 
 void WorkerProcess::failAll( const std::string& reason, const bool died )
@@ -338,7 +408,7 @@ void WorkerProcess::failAll( const std::string& reason, const bool died )
 	std::vector< PendingCall > pending {};
 	{
 		const std::lock_guard< std::mutex > guard { m_calls_mutex };
-		for ( auto& [ id, call ] : m_calls ) pending.emplace_back( std::move( call ) );
+		for ( auto& call : m_calls | std::views::values ) pending.emplace_back( std::move( call ) );
 		m_calls.clear();
 	}
 
@@ -348,56 +418,33 @@ void WorkerProcess::failAll( const std::string& reason, const bool died )
 		call.outcome->error = reason;
 		call.outcome->worker_died = died;
 
-		if ( call.continuation )
-		{
-			auto continuation { call.continuation };
-			if ( call.loop != nullptr )
-				call.loop->queueInLoop( [ continuation ]() mutable { continuation.resume(); } );
-			else
-				continuation.resume();
-		}
+		resumeOnLoop( call.continuation, call.loop );
 	}
 }
 
-void WorkerProcess::checkDeadlines()
+void WorkerProcess::checkLiveness()
 {
 	const auto now { std::chrono::steady_clock::now() };
 
-	// Two independent guards. The deadline covers a module that is wedged inside a call; the
-	// heartbeat covers a process that has stopped existing in any useful sense -- and a heartbeat
-	// only proves the IO thread is alive, which is why the deadline is still needed.
+	// The only guard left, and it deliberately asks one question: does this process still exist? A
+	// worker answers heartbeats from its IO loop, which never runs module code, so a heartbeat keeps
+	// arriving however long the backlog is. Slowness is not a failure here -- only death is.
 	if ( now - m_last_heartbeat > m_settings.liveness_grace )
-	{
 		terminate(
 			std::format(
 				"worker for {} missed heartbeats for {}ms",
 				m_settings.library.string(),
 				std::chrono::duration_cast< std::chrono::milliseconds >( now - m_last_heartbeat ).count() ) );
-		return;
-	}
-
-	bool expired { false };
-	{
-		const std::lock_guard< std::mutex > guard { m_calls_mutex };
-		for ( const auto& [ id, call ] : m_calls )
-		{
-			if ( call.acked && now > call.deadline )
-			{
-				expired = true;
-				break;
-			}
-		}
-	}
-
-	if ( expired )
-		terminate( std::format( "worker for {} exceeded its own duration estimate", m_settings.library.string() ) );
 }
 
-void WorkerProcess::terminate( const std::string& reason )
+void WorkerProcess::terminate( const std::string& reason, const Termination kind )
 {
 	if ( !m_alive.exchange( false ) ) return;
 
-	log::warn( "Terminating module worker for {}: {}", m_settings.library.string(), reason );
+	if ( kind == Termination::FAILURE )
+		log::warn( "Terminating module worker for {}: {}", m_settings.library.string(), reason );
+	else
+		log::debug( "Retiring module worker for {}: {}", m_settings.library.string(), reason );
 
 	if ( m_pid > 0 )
 	{
@@ -405,6 +452,23 @@ void WorkerProcess::terminate( const std::string& reason )
 
 		int status { 0 };
 		::waitpid( m_pid, &status, 0 );
+
+		// Reported, because every failure between fork and exec is a silent _exit and the worker's own
+		// logging cannot cover them -- it does not exist yet. This status is the only evidence of what
+		// happened, and discarding it left "worker closed the channel" as the whole diagnosis.
+		//
+		//   126     the child setup failed: close_range, PR_SET_NO_NEW_PRIVS, PR_SET_PDEATHSIG, or
+		//           the RLIMIT_CORE clamp
+		//   127     execl failed -- the runner path is wrong or not executable
+		//   0       the child decided it had been reparented, or exited cleanly
+		//   SIGKILL either this terminate(), or PR_SET_PDEATHSIG firing because the *thread* that
+		//           forked has since exited
+		if ( WIFEXITED( status ) && WEXITSTATUS( status ) != 0 )
+			log::warn(
+				"Module worker for {} exited with status {}", m_settings.library.string(), WEXITSTATUS( status ) );
+		else if ( WIFSIGNALED( status ) && WTERMSIG( status ) != SIGKILL )
+			log::warn( "Module worker for {} died on signal {}", m_settings.library.string(), WTERMSIG( status ) );
+
 		m_pid = -1;
 	}
 
@@ -427,6 +491,12 @@ std::string WorkerProcess::signature()
 {
 	const std::lock_guard< std::mutex > guard { m_manifest_mutex };
 	return m_signature;
+}
+
+bool WorkerProcess::manifestSeen()
+{
+	const std::lock_guard< std::mutex > guard { m_manifest_mutex };
+	return m_manifest_seen;
 }
 
 std::expected< std::vector< ipc::ManifestEntry >, std::string > WorkerProcess::awaitManifest(
@@ -470,13 +540,45 @@ std::expected< void, std::string > WorkerProcess::post( const Json::Value& body,
 	return {};
 }
 
-IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call( Json::Value body, std::vector< int > fds )
+InFlightInput WorkerProcess::inputForCall( const std::uint64_t call_id )
+{
+	const std::lock_guard< std::mutex > guard { m_calls_mutex };
+
+	const auto found { m_call_inputs.find( call_id ) };
+
+	return found == m_call_inputs.end() ? InFlightInput {} : found->second;
+}
+
+IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
+	Json::Value body,
+	std::shared_ptr< const CallInput > input )
 {
 	// Assigned here rather than by the caller: this is the map the id has to be unique in.
 	const std::uint64_t call_id { m_next_call_id.fetch_add( 1 ) };
 	body[ ipc::field::CALL_ID ] = Json::UInt64 { call_id };
 
 	auto outcome { std::make_shared< CallOutcome >() };
+
+	if ( input == nullptr )
+	{
+		outcome->ok = false;
+		outcome->error = "call has no input";
+		co_return outcome;
+	}
+
+	body[ ipc::field::FILE_SIZE ] = Json::UInt64 { input->size() };
+
+	// Borrowed for the length of the send; the input owns it and outlives the call, which is also
+	// what lets a nested call reuse the same descriptor through INPUT_REF.
+	const std::vector< int > fds { input->fd() };
+
+	// Registered for the whole call so a module handing its own input back through a callback can be
+	// answered with the descriptor we already hold, rather than the file being shipped a second time.
+	{
+		const std::lock_guard< std::mutex > guard { m_calls_mutex };
+		m_call_inputs.emplace(
+			call_id, InFlightInput { .input = std::move( input ), .mime = body[ ipc::field::MIME ].asString() } );
+	}
 
 	//! Registers the call, posts it, and parks the coroutine until the result comes back.
 	/** A local class so it can reach the worker's internals; it has the same access as the member
@@ -505,9 +607,9 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call( Json::Value bod
 					return false;
 				}
 
-				// Null when this coroutine was resumed off a loop thread; finish() then resumes
-				// inline rather than pretending it knows where to go.
-				auto* const loop { trantor::EventLoop::getEventLoopOfCurrentThread() };
+				// Never null: a call issued off a loop thread still has to be resumed on one, because
+				// the only other thread available is the callee's IO thread.
+				auto* const loop { resumptionLoop() };
 
 				worker->m_calls.emplace(
 					call_id, PendingCall { .continuation = handle, .loop = loop, .outcome = outcome } );
@@ -533,6 +635,11 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call( Json::Value bod
 	};
 
 	co_await Suspender { .worker = this, .call_id = call_id, .outcome = outcome, .body = &body, .fds = &fds };
+
+	{
+		const std::lock_guard< std::mutex > guard { m_calls_mutex };
+		m_call_inputs.erase( call_id );
+	}
 
 	co_return outcome;
 }
