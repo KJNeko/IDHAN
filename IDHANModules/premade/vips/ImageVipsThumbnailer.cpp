@@ -30,12 +30,7 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 
 	VipsImage* thumb_raw { nullptr };
 	if ( vips_thumbnail_source(
-			 source.get(),
-			 &thumb_raw,
-			 static_cast< int >( width ),
-			 "height",
-			 static_cast< int >( height ),
-			 nullptr )
+			 source.get(), &thumb_raw, static_cast< int >( width ), "height", static_cast< int >( height ), nullptr )
 	     != 0 )
 		return std::unexpected( ModuleError { "Failed to generate thumbnail" } );
 	VipsImagePtr thumb { thumb_raw };

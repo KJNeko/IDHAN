@@ -8,13 +8,13 @@
 #include <sys/eventfd.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
-#include <csignal>
 #include <sys/wait.h>
 #include <trantor/net/EventLoop.h>
 
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <csignal>
 #include <cstring>
 #include <fcntl.h>
 #include <format>

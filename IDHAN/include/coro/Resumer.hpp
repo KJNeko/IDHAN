@@ -36,7 +36,7 @@ class Resumer
 //! Returns the Resumer that a coroutine suspending on the CALLING thread must be resumed through.
 //! Implementations are free to return a thread_local (the server does, one per event loop) or a
 //! single process-wide object (the Monitor and Worker do).
-using ResumerProvider = Resumer* ( * )() noexcept;
+using ResumerProvider = Resumer* (*)() noexcept;
 
 //! Installs the process-wide provider. Call once at startup, before any io is submitted. Passing
 //! nullptr uninstalls it, which is only useful in tests.

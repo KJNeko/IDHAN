@@ -80,8 +80,8 @@ std::expected< void, ModuleError > MemfdSink::write( const std::span< const std:
 		// A zero return with bytes still outstanding means no progress is being made; looping would
 		// spin forever.
 		return std::unexpected(
-			ModuleError { result == 0 ? std::string { "write to sink made no progress" }
-									  : errnoMessage( "write to sink failed" ) } );
+			ModuleError { result == 0 ? std::string { "write to sink made no progress" } :
+		                                errnoMessage( "write to sink failed" ) } );
 	}
 
 	m_written += sent;

@@ -27,8 +27,9 @@ class MemoryFile final : public ModuleFile
 
 	[[nodiscard]] std::size_t size() const override { return m_bytes.size(); }
 
-	[[nodiscard]] std::expected< std::size_t, ModuleError > read( const std::span< std::byte > out, const std::size_t offset )
-		const override
+	[[nodiscard]] std::expected< std::size_t, ModuleError > read(
+		const std::span< std::byte > out,
+		const std::size_t offset ) const override
 	{
 		// Past the end is not an error: a demuxer probing beyond the end of a file is ordinary
 		// behaviour, and every backend has to agree on that or modules would need a branch per
