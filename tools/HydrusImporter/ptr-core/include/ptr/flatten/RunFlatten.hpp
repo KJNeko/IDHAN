@@ -19,6 +19,11 @@ namespace idhan::hydrus::ptr
 //! is needed at import time.
 inline constexpr const char* WORK_SUBDIRECTORY { "work" };
 
+//! Where chunks and the relations file are built, inside the work directory. They are moved into
+//! the output directory only once the run has succeeded, so a cancelled or failed run leaves the
+//! output directory untouched instead of stranding chunks that no manifest describes.
+inline constexpr const char* OUTPUT_STAGING_SUBDIRECTORY { "output" };
+
 //! Conventional output location: a subdirectory of the PTR files directory, so a corpus and its
 //! compacted form travel together rather than as unrelated sibling folders.
 //!
@@ -60,8 +65,9 @@ MetadataUpdate loadCorpusMetadata( const std::filesystem::path& dir );
 
 //! Scans, collapses, writes relations, and finally writes the manifest.
 //!
-//! The manifest is written last on purpose: its presence is what marks a directory as compacted,
-//! so a cancelled or crashed run leaves output that cannot be mistaken for importable.
+//! Every file the run produces is built inside the work directory and moved into \p out_dir at the
+//! end, with the manifest written last of all: its presence is what marks a directory as compacted.
+//! A cancelled or failed run therefore leaves \p out_dir exactly as it found it.
 //!
 //! \param max_records_per_chunk Overridable for tests; production uses MAX_RECORDS_PER_CHUNK.
 //! \param required_free_bytes Overridable for tests; production uses REQUIRED_FREE_BYTES.
