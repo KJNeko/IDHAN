@@ -217,4 +217,21 @@ std::vector< std::size_t > getCacheableThumbnailSizes()
 		"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
 }
 
+bool getThumbnailCachingEnabled()
+{
+	// Read live for the same reason as the size list above: it only gates work that follows a cache
+	// miss, so re-reading costs nothing next to the generation it guards, and an operator debugging a
+	// thumbnailer can turn the cache off without restarting.
+	//
+	// Silent default: config::get would log "you might wanna set this value" on every miss for a key
+	// almost nobody needs to set, which is a warning per generated thumbnail.
+	return idhan::config::getSilentDefault< bool >( "thumbnails", "cache", true );
+}
+
+bool getPurgeThumbnailsOnBoot()
+{
+	// Silent for the same reason -- an optional debugging toggle should not nag on every boot.
+	return idhan::config::getSilentDefault< bool >( "thumbnails", "purge_on_boot", false );
+}
+
 } // namespace idhan

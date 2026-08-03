@@ -50,6 +50,40 @@ const char* getCLIConfig( const std::string_view group, const std::string_view n
 
 std::string_view getUserConfigPath();
 
+//! Parses a boolean written as text, the way an env var or a CLI flag carries one.
+/** Environment and CLI values are strings, so a bool arrives as "true"/"false" -- and bool satisfies
+ *  std::is_integral, so without this it would fall into the numeric branch and std::stoll would
+ *  throw on the word. Accepts the spellings people actually write, case-insensitively; anything else
+ *  is not a boolean and is reported as such rather than guessed at. */
+[[nodiscard]] inline std::optional< bool > parseBool( const std::string_view value )
+{
+	std::string lowered { value };
+	std::transform( lowered.begin(), lowered.end(), lowered.begin(), ::tolower );
+
+	if ( lowered == "true" || lowered == "1" || lowered == "on" || lowered == "yes" ) return true;
+	if ( lowered == "false" || lowered == "0" || lowered == "off" || lowered == "no" ) return false;
+
+	return std::nullopt;
+}
+
+//! Parses an integer written as text, without letting a malformed one abort the process.
+/** std::stoll throws, and a config read happens on paths with no handler above them -- a typo in one
+ *  env var used to be a terminate() at startup. An unusable value is reported and treated as absent,
+ *  so the next source down (config file, then the default) answers instead. */
+template < typename T >
+[[nodiscard]] std::optional< T > parseIntegral( const std::string_view value, const std::string_view source )
+{
+	try
+	{
+		return static_cast< T >( std::stoll( std::string { value } ) );
+	}
+	catch ( const std::exception& e )
+	{
+		log::warn( "Ignoring {}: '{}' is not a number ({})", source, value, e.what() );
+		return std::nullopt;
+	}
+}
+
 template < typename T >
 [[nodiscard]] std::optional< T > tryGetEnv( const std::string_view group, const std::string_view name )
 {
@@ -67,9 +101,18 @@ template < typename T >
 		{
 			return std::string( value );
 		}
+		// Before the integral branch, not inside it: bool is an integral type, and "false" is not a
+		// number.
+		else if constexpr ( std::is_same_v< T, bool > )
+		{
+			if ( const auto parsed { parseBool( value ) } ) return *parsed;
+
+			log::warn( "Ignoring {}: '{}' is not a boolean (try true or false)", env_name, value );
+			return std::nullopt;
+		}
 		else if constexpr ( std::is_integral_v< T > )
 		{
-			return std::optional< T >( std::stoll( value ) );
+			return parseIntegral< T >( value, env_name );
 		}
 		else
 		{
@@ -90,9 +133,17 @@ template < typename T >
 		{
 			return std::string( value );
 		}
+		// Same ordering as tryGetEnv: bool is integral, so it has to be taken first.
+		else if constexpr ( std::is_same_v< T, bool > )
+		{
+			if ( const auto parsed { parseBool( value ) } ) return *parsed;
+
+			log::warn( "Ignoring --{}.{}: '{}' is not a boolean (try true or false)", group, name, value );
+			return std::nullopt;
+		}
 		else if constexpr ( std::is_integral_v< T > )
 		{
-			return std::optional< T >( std::stoll( value ) );
+			return parseIntegral< T >( value, std::format( "{}.{}", group, name ) );
 		}
 		else
 		{
@@ -136,21 +187,38 @@ template < typename T >
 		{
 			if ( const auto value = ( *table )[ name ] )
 			{
-				if constexpr (
-					std::is_same_v< T, bool > || std::is_same_v< T, double > || std::is_same_v< T, std::int64_t > )
+				// Every branch checks the accessor before dereferencing it. toml++ returns null when
+				// the value in the file is not the type being asked for -- `use_tls = "true"` rather
+				// than `use_tls = true` -- and dereferencing that killed the process over a typo.
+				if constexpr ( std::is_same_v< T, std::string > )
 				{
-					return **value.as< T >();
+					if ( const auto* string_value = value.as_string() ) return **string_value;
 				}
-				else if constexpr ( std::is_same_v< T, std::string > )
+				else if constexpr ( std::is_same_v< T, bool > )
 				{
-					return **value.as_string();
+					if ( const auto* bool_value = value.as_boolean() ) return **bool_value;
+
+					// Quoted in the file. Accepted rather than rejected: the intent is unambiguous,
+					// and it is the same spelling the env var and CLI paths take.
+					if ( const auto* string_value = value.as_string() )
+					{
+						if ( const auto parsed { parseBool( **string_value ) } ) return parsed;
+					}
+				}
+				else if constexpr ( std::is_same_v< T, double > )
+				{
+					if ( const auto* double_value = value.as< double >() ) return **double_value;
 				}
 				else if constexpr ( std::is_integral_v< T > )
 				{
-					return static_cast< T >( **value.as< std::int64_t >() );
+					if ( const auto* int_value = value.as< std::int64_t >() ) return static_cast< T >( **int_value );
 				}
 				else
 					static_assert( false, "Unsupported toml config type" );
+
+				log::warn(
+					"Ignoring [{}] {} in {}: the value is not the expected type", group, name, p.string() );
+				return std::nullopt;
 			}
 			return std::nullopt;
 		}
@@ -270,7 +338,7 @@ template < typename T >
 	return getValue< T >( group, name );
 }
 
-constexpr auto warn_on_default { true };
+constexpr auto warn_on_default { false };
 constexpr auto no_warn_on_default { false };
 constexpr auto warn_config_default { warn_on_default };
 

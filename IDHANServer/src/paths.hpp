@@ -70,6 +70,17 @@ std::filesystem::path getThumbnailsPath();
 //! Read live per call so an operator can change it without restarting; only hit on a cache miss.
 std::vector< std::size_t > getCacheableThumbnailSizes();
 
+//! Whether the on-disk thumbnail cache is used at all. Config: `[thumbnails] cache`, default true.
+/** Off means bypassed in both directions: nothing is read from the cache and nothing is written to
+ *  it, so every request regenerates. Half-disabling it -- refusing to write but still serving what
+ *  is already there -- would leave a stale thumbnail being served with no way to tell why, which is
+ *  the opposite of what turning the cache off is for. Read live per call, like the size list. */
+bool getThumbnailCachingEnabled();
+
+//! Whether to empty the thumbnail cache directory during startup. Config: `[thumbnails] purge_on_boot`.
+/** Applies at startup only -- once the server is up, nothing purges the cache again on its own. */
+bool getPurgeThumbnailsOnBoot();
+
 //! Directory scanned for WebUI plugin bundles — each `<dir>/manifest.json` describes one plugin.
 //! Defaults to `<static>/plugins` so the existing static file router serves the bundles at `/plugins/...`
 //! with no extra routing. Configurable via `[plugins] path`; an override must still be reachable under
