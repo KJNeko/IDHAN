@@ -36,6 +36,11 @@ struct RelationEvent
 static_assert( sizeof( RelationEvent ) == 12 );
 
 //! Host hooks. All may be empty; scanCorpus checks before calling.
+//!
+//! \warning These are called from scanCorpus's worker threads, not from the calling thread. They
+//!          are serialised against each other, so they need no locking of their own and may share
+//!          mutable state -- but one slow callback stalls every worker, so keep them to bumping
+//!          counters or emitting a queued signal.
 struct ScanCallbacks
 {
 	//! Polled once per update file. Return true to stop early.
@@ -56,6 +61,8 @@ struct ScanResult
 	std::uint64_t events_written { 0 };
 	std::uint64_t skipped_files { 0 }; //!< missing or unparseable
 	std::uint64_t rejected_hashes { 0 };
+	//! In no particular order: files complete concurrently. collapseRelations sorts by the full key
+	//! before doing anything with these, so the order they arrive in cannot affect its output.
 	std::vector< RelationEvent > parents {};
 	std::vector< RelationEvent > siblings {};
 	bool cancelled { false };
@@ -64,17 +71,23 @@ struct ScanResult
 //! Reads every update file listed in \p metadata, writing definitions into \p work_dir's
 //! definition store and mapping events into its buckets.
 //!
-//! \p thread_count worker threads decompress and parse update files concurrently; only the actual
-//! writes (definitions, bucket events, result counters, callbacks) are serialised, since those are
-//! cheap next to zlib inflate and JSON parsing. Each event still carries its true update_index, so
-//! ordering downstream of the scan is unaffected by which thread happened to process which file.
-//! 0 (the default) picks defaultScanThreadCount().
+//! \p thread_count worker threads process update files concurrently; 0 (the default) picks
+//! defaultScanThreadCount(). A file is handled end to end -- inflate, parse, hex-decode, definition
+//! writes, bucket spilling -- with no lock held: the definition store addresses its output by id
+//! and the bucket writer locks per bucket, so neither needs the caller to serialise it. Only
+//! merging the relation events and firing the callbacks is serialised, and that is a few
+//! microseconds per file.
+//!
+//! Each event carries its true update_index, so ordering downstream of the scan is unaffected by
+//! which thread happened to process which file.
 //!
 //! A file that is missing or fails to parse is logged, counted in skipped_files, and stepped over:
 //! one bad file must not abort a multi-hour run.
 //!
 //! \throws std::runtime_error if an update index exceeds MAX_UPDATE_INDEX. Truncating it would
 //!         silently corrupt chain ordering, so this fails loudly instead.
+//! \throws Anything a worker threw -- a full disk, a short write -- rethrown here once the pool has
+//!         joined, so a failure mid-run is reportable rather than fatal to the process.
 ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
                        const MetadataUpdate& metadata,
                        const std::filesystem::path& work_dir,

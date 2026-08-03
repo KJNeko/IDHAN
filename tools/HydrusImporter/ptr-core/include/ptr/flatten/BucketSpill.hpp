@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #include "ptr/flatten/MappingEvent.hpp"
@@ -23,6 +24,12 @@ std::vector< MappingEvent > readBucket( const std::filesystem::path& path );
 //! The buffers are the dominant memory cost of the scan stage: BUCKET_COUNT * buffer_events *
 //! sizeof(MappingEvent). The default of 5461 events per bucket is roughly 64 KB each, about
 //! 256 MB in total. Lower it if that is too much.
+//!
+//! write() is thread-safe. Each bucket carries its own lock, so two writers only ever contend when
+//! their events land in the same one of BUCKET_COUNT buckets -- and the mid-stream file write a
+//! full buffer triggers blocks only the other writers to that same bucket. flush(), written() and
+//! the destructor are safe to call concurrently with each other but not with write(): call them
+//! once the writers are done.
 class BucketWriter
 {
   public:
@@ -44,7 +51,10 @@ class BucketWriter
 	//! Writes out every buffer; call before reading any bucket back.
 	void flush();
 
-	std::uint64_t written() const noexcept { return m_written; }
+	//! Total events accepted, buffered or not. Counted per bucket under that bucket's lock rather
+	//! than in one shared atomic: a single counter touched once per event would put every worker
+	//! on the same cache line, and the corpus writes roughly 3.2 billion of them.
+	std::uint64_t written() const;
 
   private:
 
@@ -55,13 +65,19 @@ class BucketWriter
 
 	using FilePtr = std::unique_ptr< std::FILE, FileCloser >;
 
+	//! \pre The caller holds m_mutexes[ bucket ].
 	void flushBucket( std::size_t bucket );
 
 	std::filesystem::path m_dir;
 	std::size_t m_buffer_events;
+
+	//! One per bucket, guarding that bucket's file, buffer and counter and nothing else.
+	//! Mutable so written() can take them on a const writer.
+	mutable std::vector< std::mutex > m_mutexes;
+
 	std::vector< FilePtr > m_files {};
 	std::vector< std::vector< MappingEvent > > m_buffers {};
-	std::uint64_t m_written { 0 };
+	std::vector< std::uint64_t > m_counts {};
 };
 
 } // namespace idhan::hydrus::ptr
