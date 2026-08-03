@@ -42,7 +42,6 @@ inline constexpr auto DEPTH { "depth" };
 inline constexpr auto FILE_NAME { "file_name" };
 inline constexpr auto OK { "ok" };
 inline constexpr auto ERROR { "error" };
-inline constexpr auto ESTIMATE_MS { "estimate_ms" };
 inline constexpr auto RSS_KB { "rss_kb" };
 inline constexpr auto ACTIVE_CALLS { "active_calls" };
 inline constexpr auto MODULES { "modules" };
@@ -65,6 +64,8 @@ inline constexpr auto CACHE_THUMBNAIL { "cache_thumbnail" };
 inline constexpr auto SIMPLE_TYPE { "simple_type" };
 inline constexpr auto VARIANT { "variant" };
 inline constexpr auto VALUE { "value" };
+inline constexpr auto FILE_SIZE { "file_size" };
+inline constexpr auto INPUT_REF { "input_ref" };
 } // namespace field
 
 //! Every message the protocol carries.
@@ -78,7 +79,6 @@ enum class MessageType : std::uint8_t
 
 	// worker -> host
 	MANIFEST, //!< Sent unsolicited at startup: what this library exports.
-	ACK, //!< A CALL was picked up, with the module's own duration estimate.
 	HEARTBEAT, //!< Periodic proof of life, plus RSS for the recycling decision.
 	RESULT, //!< A CALL finished. Carries the output blob, if any.
 	CALLBACK, //!< A module is asking the host to re-dispatch work.

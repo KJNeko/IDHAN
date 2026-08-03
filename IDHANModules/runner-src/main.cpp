@@ -5,6 +5,7 @@
 #include <spdlog/spdlog.h>
 
 #include <charconv>
+#include <clocale>
 #include <cstdio>
 #include <string_view>
 
@@ -43,6 +44,15 @@ template < typename T >
 
 int main( int argc, char** argv )
 {
+	// Before the library is loaded, because module code converts text through the C locale and a fresh
+	// process starts in "C", where the charset is ASCII. libarchive converts a member name to the
+	// locale's charset for archive_entry_pathname(), so in "C" a name like "钓鲨鱼/7.jpg" has nowhere
+	// to go and the accessor returns null -- the module then sees a nameless entry and skips it. The
+	// server never had to ask for this because constructing a QCoreApplication does it; a worker has
+	// no Qt.
+	if ( std::setlocale( LC_ALL, "" ) == nullptr )
+		spdlog::warn( "Could not adopt the system locale; non-ASCII names may not resolve" );
+
 	idhan::runner::RunnerOptions options {};
 	options.socket_fd = NO_CHANNEL;
 

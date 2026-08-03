@@ -2,8 +2,13 @@
 // Created by kj16609 on 11/13/25.
 //
 #pragma once
+#include <expected>
 #include <filesystem>
+#include <memory>
+#include <string>
 
+#include "IDHANTypes.hpp"
+#include "db/dbTypes.hpp"
 #include "io/IOUring.hpp"
 #include "ipc/Blob.hpp"
 #include "threading/ExpectedTask.hpp"
@@ -11,6 +16,11 @@
 namespace idhan
 {
 class SHA256;
+}
+
+namespace idhan::modules
+{
+class CallInput;
 }
 
 namespace idhan::filesystem
@@ -29,15 +39,25 @@ ExpectedTask< std::filesystem::path > getRecordPath( RecordID record_id, DbClien
 //! Returns a FileIOUring instance for the given record
 ExpectedTask< FileIOUring > getIOForRecord( RecordID record_id, DbClientPtr db );
 
-//! Maps a record's file into a blob that can be handed to a module worker.
-/** Replaces the read-the-whole-file-into-a-vector pattern the module call sites used. The bytes are
- *  copied once, inside the kernel, into a sealed anonymous mapping; the server reads them through
- *  blob.view() for its own MIME scanning and passes the same object to the module, which receives
- *  only a pointer and a length.
+//! Prepares a record's file as the input to a module call.
+/** Whether the bytes reach the worker through a restricted io_uring or through a copy in anonymous
+ *  memory is CallInput's decision, not the call site's -- which is why call sites ask for this
+ *  rather than for a blob.
  *
- *  The blob must outlive any module call made with it. That used to be a comment repeated at every
- *  call site; now it is just ordinary object lifetime. */
-ExpectedTask< ipc::Blob > mapRecordBlob( RecordID record_id, DbClientPtr db );
+ *  The input must outlive any module call made with it. It is shared rather than owned because the
+ *  worker registry also holds it: a module can pass its own input back through a callback, and
+ *  answering that by reference is what keeps a large file from being shipped twice. */
+ExpectedTask< std::shared_ptr< const modules::CallInput > > openRecordInput( RecordID record_id, DbClientPtr db );
+
+//! Empties the on-disk thumbnail cache (`[thumbnails] path`) and recreates the directory.
+/** Cache-only state: fetchThumbnail decides what to serve purely by whether the file is there, with
+ *  no database rows behind it, so a purged entry simply regenerates on the next request. Thumbnails
+ *  stored inside clusters are a different thing entirely and are not touched.
+ *
+ *  \return How many files were removed, or why the purge failed. A missing directory is not a
+ *          failure -- there was nothing to delete. Reports errors rather than throwing, because both
+ *          callers (the maintenance endpoint and startup) have to survive a failed purge. */
+[[nodiscard]] std::expected< std::size_t, std::string > clearThumbnailCache();
 
 //! Returns the path of a cluster.
 ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );

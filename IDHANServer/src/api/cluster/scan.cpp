@@ -765,18 +765,21 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	// The parser runs in a worker process, so a module that leaks, corrupts its heap or crashes
 	// outright takes that process with it and leaves this job -- and the server -- standing.
-	auto blob { ipc::Blob::fromFile( m_path ) };
+	auto input_e { modules::CallInput::forPath( m_path ) };
 
-	if ( !blob )
+	if ( !input_e )
 	{
 		// This runs inside a job coroutine. An escaping exception takes down the whole job rather
 		// than failing the one record, so the failure has to be reported rather than thrown.
 		co_return std::unexpected(
-			createInternalError( "Failed to map file for record {}: {}", m_record_id, blob.error() ) );
+			createInternalError( "Failed to open file for record {}: {}", m_record_id, input_e.error() ) );
 	}
 
 	const modules::RemoteCallData call_data {
-		.blob = &blob.value(), .mime_name = m_mime_name, .extra = {}, .depth = 0
+		.input = std::make_shared< const modules::CallInput >( std::move( *input_e ) ),
+		.mime_name = m_mime_name,
+		.extra = {},
+		.depth = 0
 	};
 	const auto metadata_e { co_await metadata_parser->parseFile( call_data ) };
 

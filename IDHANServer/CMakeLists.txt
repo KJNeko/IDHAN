@@ -38,6 +38,10 @@ target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
 # exports this dir in the ON case.
 target_include_directories(IDHANServer PRIVATE ${CMAKE_SOURCE_DIR}/dependencies/coroprobe/include)
 
+if (IDHAN_HARDEN)
+	target_compile_definitions(IDHANServer PRIVATE IDHAN_HARDEN)
+endif ()
+
 if (IDHAN_DISABLE_API_AUTH)
 	target_compile_definitions(IDHANServer PRIVATE IDHAN_DISABLE_API_AUTH)
 endif ()

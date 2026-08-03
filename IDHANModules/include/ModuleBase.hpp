@@ -4,19 +4,18 @@
 #pragma once
 #include <json/value.h>
 
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <functional>
+#include <memory>
 #include <string>
 
+#include "ModuleCommon.hpp"
+#include "ModuleFile.hpp"
 #include "ThumbnailInfo.hpp"
-
-#ifdef _WIN32
-#define FGL_EXPORT __declspec( dllexport )
-#else
-#define FGL_EXPORT __attribute__( ( visibility( "default" ) ) )
-#endif
 
 namespace idhan
 {
@@ -56,16 +55,16 @@ struct ModuleVersion
 	std::size_t m_patch { 0 };
 };
 
-//! Non-owning view over raw file bytes handed to a module.
+//! Non-owning view over raw bytes. Still used by the mime scanner and by Blob, which genuinely do
+//! hold whole buffers; it is no longer how a file reaches a module (see ModuleFile).
 using data_view = std::basic_string_view< std::uint8_t >;
-
-//! Human-readable error message returned (via std::expected) when a module operation fails.
-using ModuleError = std::string;
 
 //! Input passed to a module for a single operation.
 struct ModuleCallData
 {
-	idhan::data_view file_view; //!< The file's raw bytes; not owned, valid only for the call's duration.
+	//! The file being operated on. Valid only for the call's duration -- a module must not retain
+	//! it, and reads through it after the call returns are undefined.
+	const ModuleFile& file;
 	std::string mime_name; //!< Canonical MIME type of the file, as resolved by the mime database.
 	Json::Value extra; //!< Optional caller-supplied parameters; contents are operation-specific.
 };
@@ -85,32 +84,22 @@ struct ModuleCapability
 //! module (see ModuleBase::threadSafe).
 struct FGL_EXPORT ModuleCallbacks
 {
-	using ThumbnailFunc = std::function<
-		std::expected< ThumbnailInfo, ModuleError >( const std::vector< std::byte >&, Json::Value, std::string ) >;
-	using GenerateFunc = std::function< std::expected<
-		std::vector< std::byte >,
-		ModuleError >( data_view, std::array< std::byte, 256 / 8 >, Json::Value, std::string ) >;
-	using ProbeFunc = std::function< std::expected< ModuleCapability, ModuleError >( data_view, std::string ) >;
+	using ThumbnailFunc =
+		std::function< std::expected< ThumbnailInfo, ModuleError >( const ModuleFile&, Json::Value, std::string ) >;
+	//! Returns a handle rather than bytes, so a generated file the host produced in shared memory
+	//! can be passed straight on to another callback without ever landing in this module's heap.
+	using GenerateFunc = std::function< std::expected< std::unique_ptr< ModuleFile >, ModuleError >(
+		const ModuleFile&,
+		std::array< std::byte, 256 / 8 >,
+		Json::Value,
+		std::string ) >;
+	using ProbeFunc = std::function< std::expected< ModuleCapability, ModuleError >( const ModuleFile&, std::string ) >;
 
 	ThumbnailFunc thumbnail; //!< Ask the host to thumbnail the given bytes (data, extra, file_name).
 	GenerateFunc generate; //!< Ask the host to generate a derived file matching the desired hash.
 	//! Ask the host what, if anything, can handle these bytes (data, file_name) — one round trip,
 	//! so a module can check before committing to a thumbnail or generate call it expects to fail.
 	ProbeFunc probe;
-
-	/*
-	//! Generates a thumbnail for the given file. Returns it in a RGB format
-	virtual std::expected< ThumbnailInfo, ModuleError > thumbnail(
-		const std::vector< std::byte >& data,
-		Json::Value extra = {},
-		std::string file_name = "" ) = 0;
-
-	virtual std::expected< std::vector< std::byte >, ModuleError > generate(
-		data_view data,
-		std::array< std::byte, 256 / 8 > hash,
-		Json::Value extra = {},
-		std::string file_name = "" ) = 0;
-	*/
 };
 
 class FGL_EXPORT ModuleBase
@@ -149,15 +138,6 @@ class FGL_EXPORT ModuleBase
 	//! How the host should run this module (see ModuleResidency). Default SINGLE_RUN: a module has
 	//! to justify keeping a process alive, and paying a fork per call is always correct if slow.
 	[[nodiscard]] virtual ModuleResidency residency() { return ModuleResidency::SINGLE_RUN; }
-
-	//! How long this module expects the given call to take. The host arms its watchdog from this,
-	//! so scale it with data.file_view.size() rather than returning a constant — a module that
-	//! under-reports gets killed mid-call. The default is deliberately generous.
-	[[nodiscard]] virtual std::chrono::milliseconds estimateDuration( const ModuleCallData& data )
-	{
-		(void)data;
-		return std::chrono::seconds { 30 };
-	}
 
 	//! Called once after the library's init(), before the first call reaches this module.
 	virtual void startup() {}

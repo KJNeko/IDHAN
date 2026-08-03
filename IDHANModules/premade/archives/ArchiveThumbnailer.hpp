@@ -22,10 +22,6 @@ class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 	// concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
-	// The cost is one nested host thumbnail call per member, so it scales with the member count in
-	// data.extra rather than with the archive's byte size.
-	[[nodiscard]] std::chrono::milliseconds estimateDuration( const idhan::ModuleCallData& data ) override;
-
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(

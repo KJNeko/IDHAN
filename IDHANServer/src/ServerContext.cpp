@@ -23,6 +23,7 @@
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
+#include "filesystem/filesystem.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
@@ -382,6 +383,17 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	// Register callback to initialize clusters after event loop starts
 
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
+
+	// Startup only, and before drogon starts listening: the cache is plain files with no database
+	// state behind it, so emptying it here cannot race a request writing into it, and a purge that
+	// fails is never a reason to refuse to start.
+	if ( getPurgeThumbnailsOnBoot() )
+	{
+		if ( const auto deleted { filesystem::clearThumbnailCache() } )
+			log::info( "Purged {} cached thumbnails on boot", *deleted );
+		else
+			log::warn( "Could not purge the thumbnail cache on boot: {}", deleted.error() );
+	}
 
 	drogon::app().registerBeginningAdvice(
 		[ this, listen_port ]()

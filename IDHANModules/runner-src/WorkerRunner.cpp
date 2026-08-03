@@ -6,11 +6,14 @@
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
+#include <array>
 #include <cerrno>
 #include <cstring>
 #include <format>
 #include <fstream>
 #include <poll.h>
+#include <sys/eventfd.h>
 #include <unistd.h>
 #include <utility>
 
@@ -18,6 +21,8 @@
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
 #include "crypto/simpleHasher.hpp"
+#include "ipc/BlobFile.hpp"
+#include "ipc/MemfdSink.hpp"
 
 namespace idhan::runner
 {
@@ -35,18 +40,51 @@ struct CallScope
 {
 	std::uint64_t call_id { 0 };
 	std::uint32_t depth { 0 };
+	//! This call's own input, so a callback can recognise a module handing it straight back and ask
+	//! the host to reuse the descriptor it already holds rather than shipping a copy of it.
+	const ModuleFile* input { nullptr };
 };
 
 thread_local CallScope t_scope {};
 
-[[nodiscard]] std::span< const std::byte > toBytes( const data_view view )
-{
-	return std::span< const std::byte > { reinterpret_cast< const std::byte* >( view.data() ), view.size() };
-}
-
 [[nodiscard]] std::vector< std::byte > toVector( const std::span< const std::byte > bytes )
 {
 	return std::vector< std::byte > { bytes.begin(), bytes.end() };
+}
+
+//! How much of a ModuleFile is moved per read when one has to be copied into a memfd.
+/** Only reached for handles whose bytes are already in this process (ModuleFile::fromBytes), so this
+ *  bounds the transient buffer, not the total. */
+constexpr std::size_t COPY_CHUNK { 256u * 1024u };
+
+//! Copies a handle's contents into a fresh sealed memfd.
+[[nodiscard]] std::expected< ipc::UniqueFd, std::string > copyToMemfd( const ModuleFile& file )
+{
+	auto sink { ipc::MemfdSink::create() };
+	if ( !sink ) return std::unexpected( sink.error() );
+
+	const std::size_t total { file.size() };
+	if ( const auto reserved { ( *sink )->reserve( total ) }; !reserved )
+		return std::unexpected( reserved.error() );
+
+	std::vector< std::byte > buffer( std::min( total, COPY_CHUNK ) );
+
+	for ( std::size_t offset = 0; offset < total; )
+	{
+		const auto count { file.read( std::span { buffer }.first( std::min( buffer.size(), total - offset ) ), offset ) };
+		if ( !count ) return std::unexpected( count.error() );
+
+		// A short read before the declared size means the handle disagrees with itself; continuing
+		// would silently seal a truncated file that the host then treats as complete.
+		if ( *count == 0 ) return std::unexpected( std::format( "handle ended at {} of {} bytes", offset, total ) );
+
+		if ( const auto written { ( *sink )->write( std::span { buffer }.first( *count ) ) }; !written )
+			return std::unexpected( written.error() );
+
+		offset += *count;
+	}
+
+	return ( *sink )->finish();
 }
 
 } // namespace
@@ -76,8 +114,37 @@ WorkerRunner::WorkerRunner( RunnerOptions options ) : m_options( std::move( opti
 
 std::expected< void, std::string > WorkerRunner::send( const Json::Value& body, const std::span< const int > fds )
 {
-	const std::lock_guard< std::mutex > guard { m_write_mutex };
-	return ipc::sendFrame( m_socket, body, fds );
+	{
+		const std::lock_guard< std::mutex > guard { m_write_mutex };
+		if ( const auto queued { m_writer.enqueue( body, fds ) }; !queued ) return std::unexpected( queued.error() );
+	}
+
+	// Absent only on the --describe path, which has no IO loop and flushes by hand.
+	if ( !m_wakeup ) return {};
+
+	const std::uint64_t one { 1 };
+	if ( ::write( m_wakeup.get(), &one, sizeof( one ) ) < 0 && errno != EAGAIN )
+		return std::unexpected( std::format( "waking the worker IO loop failed: {}", std::strerror( errno ) ) );
+
+	return {};
+}
+
+std::expected< void, std::string > WorkerRunner::flush()
+{
+	while ( true )
+	{
+		{
+			const std::lock_guard< std::mutex > guard { m_write_mutex };
+
+			const auto drained { m_writer.drain( m_socket ) };
+			if ( !drained ) return std::unexpected( drained.error() );
+			if ( *drained ) return {};
+		}
+
+		pollfd waiting { .fd = m_socket, .events = POLLOUT, .revents = 0 };
+		if ( ::poll( &waiting, 1, -1 ) < 0 && errno != EINTR )
+			return std::unexpected( std::format( "waiting for the host to read failed: {}", std::strerror( errno ) ) );
+	}
 }
 
 std::expected< void, std::string > WorkerRunner::load()
@@ -109,24 +176,80 @@ Json::Value WorkerRunner::manifestJson() const
 
 std::expected< void, std::string > WorkerRunner::describe()
 {
-	return send( manifestJson() );
+	if ( const auto queued { send( manifestJson() ) }; !queued ) return std::unexpected( queued.error() );
+
+	// Flushed rather than left to the IO loop: --describe sends this and exits, so nothing else would
+	// ever drain it.
+	return flush();
+}
+
+std::expected< WorkerRunner::CallbackInput, std::string > WorkerRunner::describeInput( const ModuleFile& file )
+{
+	CallbackInput input {};
+
+	// The module handed back the very file it was given. The host still holds the descriptor for
+	// this call, so naming the call is enough -- and this is the case that matters, because it is
+	// what an archive thumbnailer does with a multi-gigabyte archive on every member it renders.
+	if ( &file == t_scope.input )
+	{
+		input.fields[ ipc::field::INPUT_REF ] = static_cast< Json::UInt64 >( t_scope.call_id );
+		return input;
+	}
+
+	input.fields[ ipc::field::FILE_SIZE ] = Json::UInt64 { file.size() };
+
+	// Already a memfd we still hold a descriptor for -- the output of a nested generate, on its way
+	// into a nested thumbnail. Forward that descriptor rather than reading the bytes back out and
+	// copying them into a second one.
+	//
+	// A call's own input does not qualify: its descriptor was dropped once mapped, and it does not
+	// need one, because passing it back is the INPUT_REF case handled above.
+	if ( const auto* existing { dynamic_cast< const ipc::BlobFile* >( &file ) };
+	     existing != nullptr && existing->fd() >= 0 )
+	{
+		input.fd = existing->fd();
+		return input;
+	}
+
+	auto copied { copyToMemfd( file ) };
+	if ( !copied ) return std::unexpected( copied.error() );
+
+	input.owned = std::move( *copied );
+	input.fd = input.owned.get();
+
+	return input;
 }
 
 ModuleCallbacks WorkerRunner::makeCallbacks()
 {
 	ModuleCallbacks callbacks {};
 
-	callbacks.thumbnail = [ this ]( const std::vector< std::byte >& data, Json::Value extra, std::string file_name )
+	// Fills in the input fields of an outgoing callback frame and yields the descriptor to attach.
+	// Shared by all three because the decision is identical for each: whether the payload can be
+	// referenced, forwarded, or must be copied is a property of the handle, not of the question being
+	// asked about it. The result must outlive the dispatch -- it owns any memfd that was created.
+	const auto attach =
+		[ this ]( const ModuleFile& file, Json::Value& body ) -> std::expected< CallbackInput, ModuleError >
+	{
+		auto described { describeInput( file ) };
+		if ( !described ) return std::unexpected( ModuleError { described.error() } );
+
+		for ( const auto& key : described->fields.getMemberNames() ) body[ key ] = described->fields[ key ];
+
+		return std::move( *described );
+	};
+
+	callbacks.thumbnail = [ this, attach ]( const ModuleFile& file, Json::Value extra, std::string file_name )
 		-> std::expected< ThumbnailInfo, ModuleError >
 	{
-		auto payload { ipc::Blob::fromBytes( data ) };
-		if ( !payload ) return std::unexpected( ModuleError { payload.error() } );
-
 		Json::Value body {};
 		body[ ipc::field::EXTRA ] = std::move( extra );
 		body[ ipc::field::FILE_NAME ] = std::move( file_name );
 
-		auto pending { dispatchCallback( ipc::CallbackKind::THUMBNAIL, body, *payload ) };
+		auto payload { attach( file, body ) };
+		if ( !payload ) return std::unexpected( payload.error() );
+
+		auto pending { dispatchCallback( ipc::CallbackKind::THUMBNAIL, body, payload->fds() ) };
 		if ( !pending ) return std::unexpected( ModuleError { pending.error() } );
 
 		auto& answer { **pending };
@@ -137,39 +260,42 @@ ModuleCallbacks WorkerRunner::makeCallbacks()
 	};
 
 	callbacks.generate =
-		[ this ](
-			const data_view data,
+		[ this, attach ](
+			const ModuleFile& file,
 			const std::array< std::byte, 256 / 8 > hash,
 			Json::Value extra,
-			std::string file_name ) -> std::expected< std::vector< std::byte >, ModuleError >
+			std::string file_name ) -> std::expected< std::unique_ptr< ModuleFile >, ModuleError >
 	{
-		auto payload { ipc::Blob::fromBytes( toBytes( data ) ) };
-		if ( !payload ) return std::unexpected( ModuleError { payload.error() } );
-
 		Json::Value body {};
 		body[ ipc::field::HASH ] = crypto::toHex( hash );
 		body[ ipc::field::EXTRA ] = std::move( extra );
 		body[ ipc::field::FILE_NAME ] = std::move( file_name );
 
-		auto pending { dispatchCallback( ipc::CallbackKind::GENERATE, body, *payload ) };
+		auto payload { attach( file, body ) };
+		if ( !payload ) return std::unexpected( payload.error() );
+
+		auto pending { dispatchCallback( ipc::CallbackKind::GENERATE, body, payload->fds() ) };
 		if ( !pending ) return std::unexpected( ModuleError { pending.error() } );
 
 		auto& answer { **pending };
 		if ( !answer.ok ) return std::unexpected( ModuleError { answer.error } );
 
-		return toVector( answer.blob.bytes() );
+		// The generated file goes back as a handle over the memfd the host sent, so a caller chaining
+		// this into another callback forwards that same descriptor instead of materialising the
+		// bytes -- which for a generator's output is the whole point.
+		return std::make_unique< ipc::BlobFile >( std::move( answer.blob ) );
 	};
 
-	callbacks.probe =
-		[ this ]( const data_view data, std::string file_name ) -> std::expected< ModuleCapability, ModuleError >
+	callbacks.probe = [ this, attach ]( const ModuleFile& file, std::string file_name )
+		-> std::expected< ModuleCapability, ModuleError >
 	{
-		auto payload { ipc::Blob::fromBytes( toBytes( data ) ) };
-		if ( !payload ) return std::unexpected( ModuleError { payload.error() } );
-
 		Json::Value body {};
 		body[ ipc::field::FILE_NAME ] = std::move( file_name );
 
-		auto pending { dispatchCallback( ipc::CallbackKind::PROBE, body, *payload ) };
+		auto payload { attach( file, body ) };
+		if ( !payload ) return std::unexpected( payload.error() );
+
+		auto pending { dispatchCallback( ipc::CallbackKind::PROBE, body, payload->fds() ) };
 		if ( !pending ) return std::unexpected( ModuleError { pending.error() } );
 
 		auto& answer { **pending };
@@ -185,7 +311,7 @@ ModuleCallbacks WorkerRunner::makeCallbacks()
 std::expected< std::shared_ptr< WorkerRunner::PendingCallback >, std::string > WorkerRunner::dispatchCallback(
 	const ipc::CallbackKind kind,
 	const Json::Value& body,
-	const ipc::Blob& payload )
+	const std::span< const int > fds )
 {
 	auto pending { std::make_shared< PendingCallback >() };
 
@@ -207,7 +333,6 @@ std::expected< std::shared_ptr< WorkerRunner::PendingCallback >, std::string > W
 	// possible across a process boundary.
 	frame[ ipc::field::DEPTH ] = static_cast< Json::UInt >( t_scope.depth );
 
-	const std::array< int, 1 > fds { { payload.fd() } };
 	const auto sent { send( frame, fds ) };
 
 	if ( !sent )
@@ -286,6 +411,23 @@ void WorkerRunner::failAllCallbacks( const std::string& reason )
 	}
 }
 
+std::expected< std::unique_ptr< ModuleFile >, std::string > WorkerRunner::adoptInput( ipc::Frame& frame )
+{
+	if ( frame.fds.empty() ) return std::unexpected( std::string { "call arrived without its input descriptor" } );
+
+	auto blob { ipc::Blob::adopt( std::move( frame.fds.front() ) ) };
+	if ( !blob ) return std::unexpected( blob.error() );
+
+	// The mapping is all a module needs, and a mapping outlives the descriptor it was made from.
+	// Dropping it here removes the /proc/self/fd entry naming the file -- partial, since
+	// /proc/self/maps still names it and only the sandbox closes that, but there is no reason to
+	// leave two ways to learn the same thing. Before the call reaches a pool thread, so no module
+	// code has run.
+	blob->closeDescriptor();
+
+	return std::make_unique< ipc::BlobFile >( std::move( *blob ) );
+}
+
 void WorkerRunner::handleCall( ipc::Frame&& frame )
 {
 	QueuedCall call {};
@@ -324,19 +466,16 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 		if ( hex.size() == ( 256 / 8 ) * 2 ) call.hash = crypto::fromHex( hex );
 	}
 
-	if ( frame.fds.empty() )
+	// Adopted here rather than on the pool thread, and that placement is the security property, not
+	// an optimisation: a ring's descriptor has to be registered and closed before any module code
+	// runs, because while it exists /proc/self/fdinfo prints the path of the file it was given.
+	auto file { adoptInput( frame ) };
+	if ( !file )
 	{
-		reject( "call arrived without its input blob" );
+		reject( file.error() );
 		return;
 	}
-
-	auto blob { ipc::Blob::adopt( std::move( frame.fds.front() ) ) };
-	if ( !blob )
-	{
-		reject( blob.error() );
-		return;
-	}
-	call.blob = std::move( *blob );
+	call.file = std::move( *file );
 
 	{
 		const std::lock_guard< std::mutex > guard { m_queue_mutex };
@@ -346,11 +485,11 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 	m_queue_ready.notify_one();
 }
 
-std::expected< std::pair< Json::Value, ipc::Blob >, std::string > WorkerRunner::invoke(
+std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunner::invoke(
 	const QueuedCall& call,
 	const std::shared_ptr< IDHANModule >& module )
 {
-	ModuleCallData data { .file_view = call.blob.view(), .mime_name = call.mime, .extra = call.extra };
+	ModuleCallData data { .file = *call.file, .mime_name = call.mime, .extra = call.extra };
 
 	// Serialise only what asks to be serialised. Everything premade reports true, so in practice
 	// this lock is uncontended -- but a third-party module that is honest about being thread-hostile
@@ -358,17 +497,6 @@ std::expected< std::pair< Json::Value, ipc::Blob >, std::string > WorkerRunner::
 	std::unique_lock< std::recursive_mutex > serialised {};
 	if ( !module->threadSafe() && call.module_index < m_module_locks.size() )
 		serialised = std::unique_lock< std::recursive_mutex > { *m_module_locks[ call.module_index ] };
-
-	// Sent from here, with the lock held and immediately before the work starts, so the host's
-	// deadline covers the call itself rather than however long it queued behind other work.
-	{
-		Json::Value ack {};
-		ack[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::ACK ) };
-		ack[ ipc::field::CALL_ID ] = static_cast< Json::UInt64 >( call.call_id );
-		ack[ ipc::field::ESTIMATE_MS ] = static_cast< Json::UInt64 >( module->estimateDuration( data ).count() );
-
-		if ( const auto sent { send( ack ) }; !sent ) return std::unexpected( sent.error() );
-	}
 
 	Json::Value body {};
 
@@ -380,7 +508,7 @@ std::expected< std::pair< Json::Value, ipc::Blob >, std::string > WorkerRunner::
 				if ( !result ) return std::unexpected( result.error() );
 
 				body[ ipc::field::METADATA ] = ipc::toJson( *result );
-				return std::pair { std::move( body ), ipc::Blob {} };
+				return std::pair { std::move( body ), ipc::UniqueFd {} };
 			}
 		case ipc::CallOp::THUMB_RAW:
 			[[fallthrough]];
@@ -394,7 +522,18 @@ std::expected< std::pair< Json::Value, ipc::Blob >, std::string > WorkerRunner::
 
 				if ( !result ) return std::unexpected( result.error() );
 
-				auto pixels { ipc::Blob::fromBytes( result->m_pixel_data ) };
+				// Through a sink rather than Blob::fromBytes, which would also map the result into
+				// this process -- pointlessly, since a worker never reads back what it produced.
+				auto sink { ipc::MemfdSink::create() };
+				if ( !sink ) return std::unexpected( sink.error() );
+
+				if ( const auto reserved { ( *sink )->reserve( result->m_pixel_data.size() ) }; !reserved )
+					return std::unexpected( reserved.error() );
+
+				if ( const auto written { ( *sink )->write( result->m_pixel_data ) }; !written )
+					return std::unexpected( written.error() );
+
+				auto pixels { ( *sink )->finish() };
 				if ( !pixels ) return std::unexpected( pixels.error() );
 
 				body[ ipc::field::THUMBNAIL ] = ipc::thumbnailHeaderToJson( *result );
@@ -402,10 +541,16 @@ std::expected< std::pair< Json::Value, ipc::Blob >, std::string > WorkerRunner::
 			}
 		case ipc::CallOp::GENERATE:
 			{
-				auto result { std::static_pointer_cast< GeneratorModuleI >( module )->generate( data, call.hash ) };
+				// The module writes straight into the memory that will carry the result back, so a
+				// large generated file exists once rather than in the module's heap and again here.
+				auto sink { ipc::MemfdSink::create() };
+				if ( !sink ) return std::unexpected( sink.error() );
+
+				const auto result { std::static_pointer_cast< GeneratorModuleI >( module )
+					                    ->generate( data, call.hash, **sink ) };
 				if ( !result ) return std::unexpected( result.error() );
 
-				auto generated { ipc::Blob::fromBytes( *result ) };
+				auto generated { ( *sink )->finish() };
 				if ( !generated ) return std::unexpected( generated.error() );
 
 				return std::pair { std::move( body ), std::move( *generated ) };
@@ -417,13 +562,13 @@ std::expected< std::pair< Json::Value, ipc::Blob >, std::string > WorkerRunner::
 
 void WorkerRunner::runCall( QueuedCall call )
 {
-	t_scope = CallScope { .call_id = call.call_id, .depth = call.depth };
+	t_scope = CallScope { .call_id = call.call_id, .depth = call.depth, .input = call.file.get() };
 
 	Json::Value body {};
 	body[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::RESULT ) };
 	body[ ipc::field::CALL_ID ] = static_cast< Json::UInt64 >( call.call_id );
 
-	ipc::Blob payload {};
+	ipc::UniqueFd payload {};
 	std::string failure {};
 
 	const auto module { m_library.at( call.module_index ) };
@@ -473,7 +618,7 @@ void WorkerRunner::runCall( QueuedCall call )
 	if ( !failure.empty() ) body[ ipc::field::ERROR ] = failure;
 
 	std::vector< int > fds {};
-	if ( failure.empty() && payload.valid() ) fds.emplace_back( payload.fd() );
+	if ( failure.empty() && payload ) fds.emplace_back( payload.get() );
 
 	if ( const auto sent { send( body, fds ) }; !sent )
 		spdlog::error( "Worker could not send the result for call {}: {}", call.call_id, sent.error() );
@@ -510,14 +655,9 @@ void WorkerRunner::sendHeartbeat()
 	body[ ipc::field::RSS_KB ] = Json::UInt64 { residentSetKb() };
 	body[ ipc::field::ACTIVE_CALLS ] = Json::UInt64 { m_active_calls.load() };
 
-	// try_lock rather than lock: the heartbeat is the host's proof that this process still exists,
-	// and blocking it behind a pool thread writing a large result would make a busy worker look
-	// dead. A skipped beat is harmless, the grace period covers several.
-	std::unique_lock< std::mutex > guard { m_write_mutex, std::try_to_lock };
-	if ( !guard.owns_lock() ) return;
-
-	if ( const auto sent { ipc::sendFrame( m_socket, body ) }; !sent )
-		spdlog::debug( "Worker heartbeat failed: {}", sent.error() );
+	// Queueing takes the write lock only long enough to append, so a busy worker no longer has to
+	// skip beats to avoid waiting behind a pool thread mid-write.
+	if ( const auto sent { send( body ) }; !sent ) spdlog::debug( "Worker heartbeat failed: {}", sent.error() );
 }
 
 void WorkerRunner::handleFrame( ipc::Frame&& frame )
@@ -546,8 +686,6 @@ void WorkerRunner::handleFrame( ipc::Frame&& frame )
 			return;
 		case ipc::MessageType::MANIFEST:
 			[[fallthrough]];
-		case ipc::MessageType::ACK:
-			[[fallthrough]];
 		case ipc::MessageType::HEARTBEAT:
 			[[fallthrough]];
 		case ipc::MessageType::RESULT:
@@ -563,6 +701,9 @@ std::expected< void, std::string > WorkerRunner::run()
 	if ( const auto configured { ipc::setNonBlocking( m_socket ) }; !configured )
 		return std::unexpected( configured.error() );
 
+	m_wakeup = ipc::UniqueFd { ::eventfd( 0, EFD_CLOEXEC | EFD_NONBLOCK ) };
+	if ( !m_wakeup ) return std::unexpected( std::format( "eventfd failed: {}", std::strerror( errno ) ) );
+
 	if ( const auto announced { describe() }; !announced ) return std::unexpected( announced.error() );
 
 	m_library.startup();
@@ -575,6 +716,21 @@ std::expected< void, std::string > WorkerRunner::run()
 
 	while ( true )
 	{
+		// Drained here and nowhere else. Pool threads only ever queue, so a result written while this
+		// loop was in poll() goes out on the next pass -- which the wakeup eventfd makes immediate.
+		bool want_write { false };
+		{
+			const std::lock_guard< std::mutex > guard { m_write_mutex };
+
+			const auto drained { m_writer.drain( m_socket ) };
+			if ( !drained )
+			{
+				exit_reason = drained.error();
+				break;
+			}
+			want_write = !*drained;
+		}
+
 		auto frames { m_reader.read( m_socket ) };
 
 		if ( !frames )
@@ -601,15 +757,29 @@ std::expected< void, std::string > WorkerRunner::run()
 			next_heartbeat = now + m_options.heartbeat_interval;
 		}
 
-		const auto wait { std::chrono::duration_cast< std::chrono::milliseconds >( next_heartbeat - now ) };
+		const auto wait { std::chrono::duration_cast< std::chrono::milliseconds >(
+			next_heartbeat - std::chrono::steady_clock::now() ) };
 
-		pollfd waiting { .fd = m_socket, .events = POLLIN, .revents = 0 };
-		const int ready { ::poll( &waiting, 1, static_cast< int >( std::max( wait.count(), std::int64_t { 0 } ) ) ) };
+		std::array< pollfd, 2 > waiting {
+			{ { .fd = m_socket,
+			    .events = static_cast< short >( POLLIN | ( want_write ? POLLOUT : 0 ) ),
+			    .revents = 0 },
+			  { .fd = m_wakeup.get(), .events = POLLIN, .revents = 0 } }
+		};
+
+		const int ready { ::poll(
+			waiting.data(), waiting.size(), static_cast< int >( std::max( wait.count(), std::int64_t { 0 } ) ) ) };
 
 		if ( ready < 0 && errno != EINTR )
 		{
 			exit_reason = std::format( "poll on the host channel failed: {}", std::strerror( errno ) );
 			break;
+		}
+
+		if ( ( waiting[ 1 ].revents & POLLIN ) != 0 )
+		{
+			std::uint64_t pending { 0 };
+			[[maybe_unused]] const auto ignored { ::read( m_wakeup.get(), &pending, sizeof( pending ) ) };
 		}
 	}
 
@@ -624,6 +794,14 @@ std::expected< void, std::string > WorkerRunner::run()
 	m_pool.clear();
 
 	m_library.shutdown();
+
+	// A result finished just before the loop broke is still queued, and the host has a coroutine
+	// parked on it. Pointless once the channel is gone, so only attempted while it is still open.
+	if ( !m_reader.atEof() )
+	{
+		if ( const auto flushed { flush() }; !flushed )
+			spdlog::warn( "Worker could not flush its outbound queue: {}", flushed.error() );
+	}
 
 	if ( !exit_reason.empty() ) spdlog::info( "Worker exiting: {}", exit_reason );
 

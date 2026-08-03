@@ -4,6 +4,10 @@
 #include "ModuleLoader.hpp"
 
 #include <algorithm>
+#include <atomic>
+#include <cerrno>
+#include <cstring>
+#include <sys/prctl.h>
 #include <filesystem>
 #include <format>
 
@@ -42,9 +46,6 @@ constexpr std::size_t CALLBACK_THUMBNAIL_SIZE { 128 };
 	settings.liveness_grace = std::chrono::milliseconds {
 		config::get< std::size_t >( "modules", "liveness_grace_ms", 5000 )
 	};
-	settings.timeout_multiplier =
-		static_cast< double >( config::get< std::size_t >( "modules", "timeout_multiplier", 4 ) );
-	settings.max_timeout = std::chrono::seconds { config::get< std::size_t >( "modules", "max_timeout_sec", 600 ) };
 
 	return settings;
 }
@@ -60,7 +61,32 @@ ModuleLoader::ModuleLoader()
 {
 	FGL_ASSERT( m_instance == nullptr, "ModuleLoader is a singleton" );
 	m_instance = this;
+
+	applyHardening();
 	loadModules();
+}
+
+void ModuleLoader::applyHardening()
+{
+#ifdef IDHAN_HARDEN
+	// Blocks same-uid ptrace of this process. Module workers run as us, so without this a codec
+	// exploit inside one can attach to the server and read the database credentials out of its
+	// memory -- on any host with yama.ptrace_scope=0, which is the default on plenty of them. That
+	// would make the rest of the worker sandbox decorative.
+	//
+	// Applied here rather than at main() because this is the point where untrusted code first
+	// becomes reachable: nothing has forked a worker yet.
+	if ( ::prctl( PR_SET_DUMPABLE, 0, 0, 0, 0 ) < 0 )
+	{
+		log::warn( "Could not disable ptrace of the server: {}. Module workers can attach to it.", std::strerror( errno ) );
+		return;
+	}
+
+	// Logged deliberately. A `gdb -p` that fails with "Operation not permitted" and no explanation
+	// is an hour lost for no reason, and the name of the switch that caused it belongs in the log
+	// rather than in someone's memory of the build system.
+	log::info( "Hardening active (IDHAN_HARDEN): server is not ptrace-able, worker core dumps disabled" );
+#endif
 }
 
 ModuleLoader::~ModuleLoader()
@@ -100,7 +126,7 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 		}
 
 		entries = std::move( *manifest );
-		interrogator->terminate( "interrogation finished" );
+		interrogator->terminate( "interrogation finished", Termination::EXPECTED );
 	}
 
 	if ( entries.empty() )
@@ -234,6 +260,24 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( c
 namespace
 {
 
+//! What MimeDatabase::scan yields, so a resolved MIME and a scanned one can share a branch.
+using ExpectedMime = std::expected< std::string, drogon::HttpResponsePtr >;
+
+//! A resolved callback input, or why one could not be made.
+using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::string >;
+
+//! Wraps a descriptor a module sent with its callback as an input for the nested call.
+[[nodiscard]] ExpectedInput makeCallbackInput( ipc::UniqueFd fd )
+{
+	auto blob { ipc::Blob::adopt( std::move( fd ) ) };
+	if ( !blob ) return std::unexpected( blob.error() );
+
+	auto input { CallInput::forBlob( std::move( *blob ) ) };
+	if ( !input ) return std::unexpected( input.error() );
+
+	return std::make_shared< const CallInput >( std::move( *input ) );
+}
+
 drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {
 	const std::uint64_t callback_id { frame.body[ ipc::field::CALLBACK_ID ].asUInt64() };
@@ -252,11 +296,20 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	//! frame, but not before.
 	ipc::Blob produced {};
 
+	// Resolved before anything else touches the payload. A module that hands back the input of the
+	// call it is currently serving sends no descriptor at all -- the server still holds that call's
+	// input, so the archive does not travel a second time for every member thumbnailed out of it.
+	const InFlightInput referenced { frame.body[ ipc::field::INPUT_REF ].isIntegral() ?
+		                                 worker->inputForCall( frame.body[ ipc::field::INPUT_REF ].asUInt64() ) :
+		                                 InFlightInput {} };
+
+	const bool by_reference { referenced.input != nullptr };
+
 	if ( !kind )
 	{
 		reply[ ipc::field::ERROR ] = "unknown callback kind";
 	}
-	else if ( frame.fds.empty() )
+	else if ( !by_reference && frame.fds.empty() )
 	{
 		reply[ ipc::field::ERROR ] = "callback arrived without its payload";
 	}
@@ -266,11 +319,19 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 		// recursion crosses process boundaries, so no per-process counter can bound it.
 		reply[ ipc::field::ERROR ] = std::format( "module call nesting exceeded the limit of {}", maxCallDepth() );
 	}
-	else if ( auto payload { ipc::Blob::adopt( std::move( frame.fds.front() ) ) }; !payload )
+	else if ( auto input { by_reference ? ExpectedInput { referenced.input } :
+	                                      makeCallbackInput( std::move( frame.fds.front() ) ) };
+	          !input )
 	{
-		reply[ ipc::field::ERROR ] = payload.error();
+		reply[ ipc::field::ERROR ] = input.error();
 	}
-	else if ( const auto detected { co_await getMimeDatabase()->scan( payload->view(), file_name ) }; !detected )
+	// A referenced input keeps the MIME the server already resolved for the call it belongs to.
+	// Re-deriving it is not merely wasteful, it is impossible on the ring path: detection reads
+	// content, and the whole point of the ring is that the server never made a copy to read.
+	else if ( const auto detected { by_reference ?
+		          ExpectedMime { referenced.mime } :
+		          co_await getMimeDatabase()->scan( ( *input )->blob().view(), file_name ) };
+	          !detected )
 	{
 		reply[ ipc::field::ERROR ] = "could not determine the mime type of the callback payload";
 	}
@@ -279,7 +340,7 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 		auto& loader { ModuleLoader::instance() };
 
 		RemoteCallData data {
-			.blob = &payload.value(),
+			.input = *input,
 			.mime_name = *detected,
 			.extra = frame.body[ ipc::field::EXTRA ],
 			.depth = depth + 1
@@ -354,14 +415,9 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 					break;
 				}
 
-				auto blob { ipc::Blob::fromBytes( *generated ) };
-				if ( !blob )
-				{
-					reply[ ipc::field::ERROR ] = blob.error();
-					break;
-				}
-
-				produced = std::move( *blob );
+				// Forwarded, not copied: this is the memfd the generator wrote into, and the module
+				// waiting on this answer will read it directly.
+				produced = std::move( *generated );
 				reply_fds.emplace_back( produced.fd() );
 				reply[ ipc::field::OK ] = true;
 				break;
@@ -379,12 +435,29 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 
 void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {
-	// Runs on a drogon loop, never on the worker's IO thread. Servicing a callback means a MIME scan
-	// and usually a call into another worker; the IO thread has to stay free to keep reading, because
-	// the module that raised this callback is blocked waiting for the answer to come back down it.
-	drogon::async_run(
-		[ worker = std::move( worker ), frame = std::move( frame ) ]() mutable -> drogon::Task< void >
-		{ co_await runCallback( std::move( worker ), std::move( frame ) ); } );
+	// Handed to a drogon loop first. This is called on the worker's IO thread, and async_run starts an
+	// eager coroutine -- calling it here would run the callback body, a MIME scan and usually a call
+	// into another worker, on the thread that has to stay free to keep reading, because the module
+	// that raised this callback is blocked waiting for the answer to come back down that channel.
+	// Round-robined over the IO loops so an archive compositing a page of tiles does not queue every
+	// callback behind the last one; getIOLoop wraps the index itself.
+	static std::atomic< std::size_t > next_loop { 0 };
+
+	auto* const loop { drogon::app().getIOLoop( next_loop.fetch_add( 1 ) ) };
+
+	// Boxed because queueInLoop takes a std::function, which has to be copyable, and a frame owns its
+	// descriptors and is therefore move-only.
+	auto payload { std::make_shared< std::pair< std::shared_ptr< WorkerProcess >, ipc::Frame > >(
+		std::move( worker ), std::move( frame ) ) };
+
+	auto body = [ payload ]() mutable
+	{
+		drogon::async_run(
+			[ payload ]() mutable -> drogon::Task< void >
+			{ co_await runCallback( std::move( payload->first ), std::move( payload->second ) ); } );
+	};
+
+	( loop != nullptr ? loop : drogon::app().getLoop() )->queueInLoop( std::move( body ) );
 }
 
 } // namespace idhan::modules

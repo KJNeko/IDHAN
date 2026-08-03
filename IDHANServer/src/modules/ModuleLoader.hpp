@@ -61,6 +61,11 @@ class ModuleLoader
 	//! Services a callback a module raised: a probe, or a re-dispatched thumbnail or generate.
 	void serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame );
 
+	//! Applies the process-wide half of IDHAN_HARDEN, before the first worker can exist.
+	/** No-op when the option is off. The worker-side half (RLIMIT_CORE) is applied per fork in
+	 *  WorkerProcess::start, since it has to land after the fork and before the exec. */
+	static void applyHardening();
+
   public:
 
 	ModuleLoader();

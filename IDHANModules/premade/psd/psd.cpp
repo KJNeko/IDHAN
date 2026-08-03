@@ -10,10 +10,37 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <format>
 #include <memory>
+#include <span>
 
 namespace psd
 {
+
+std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile( const idhan::ModuleFile& file )
+{
+	std::vector< std::uint8_t > buffer( file.size() );
+
+	std::size_t filled { 0 };
+	while ( filled < buffer.size() )
+	{
+		const auto count { file.read(
+			std::span< std::byte > { reinterpret_cast< std::byte* >( buffer.data() ) + filled, buffer.size() - filled },
+			filled ) };
+
+		if ( !count ) return std::unexpected( count.error() );
+
+		// The file ended before it said it would. Carrying on would parse zeroes as PSD structure.
+		if ( *count == 0 )
+			return std::unexpected(
+				idhan::ModuleError { std::format( "PSD ended at {} of {} bytes", filled, buffer.size() ) } );
+
+		filled += *count;
+	}
+
+	return buffer;
+}
+
 
 std::uint16_t readUint16BE( const std::uint8_t* data )
 {

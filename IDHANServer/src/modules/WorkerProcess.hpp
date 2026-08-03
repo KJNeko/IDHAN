@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "CallInput.hpp"
 #include "ipc/Blob.hpp"
 #include "ipc/Frame.hpp"
 #include "ipc/Protocol.hpp"
@@ -38,8 +39,6 @@ struct WorkerSettings
 	std::size_t pool_threads { 4 };
 	std::chrono::milliseconds heartbeat_interval { 1000 };
 	std::chrono::milliseconds liveness_grace { 5000 };
-	double timeout_multiplier { 4.0 };
-	std::chrono::milliseconds max_timeout { std::chrono::minutes { 10 } };
 	bool describe_only { false }; //!< Startup interrogation: announce and exit.
 
 	//! What this library's manifest must look like, from the interrogation at startup.
@@ -48,6 +47,17 @@ struct WorkerSettings
 	 *  during development -- an index registered against the old build could address a different
 	 *  module in the new one. Empty disables the check, which is what interrogation itself uses. */
 	std::string expected_signature {};
+};
+
+//! Why a worker is being torn down.
+/** Only a failure deserves a warning. Most terminations are routine -- an interrogator exiting after
+ *  it announced itself, a single-run worker that finished its call, a retirement on the idle or RSS
+ *  policy, shutdown -- and logging those at the same level as a crash made a healthy startup read
+ *  like four libraries had died. */
+enum class Termination : std::uint8_t
+{
+	EXPECTED,
+	FAILURE
 };
 
 //! What a module call produced, once it has come back across the wire.
@@ -62,6 +72,18 @@ struct CallOutcome
 	/** The pool retries these once in a fresh process; a module that simply cannot handle a file
 	 *  would fail identically on a second attempt, so only this kind is worth repeating. */
 	bool worker_died { false };
+};
+
+//! A call's input, held for as long as the call is in flight.
+/** The MIME travels with it because a callback that references an input cannot re-derive one. MIME
+ *  detection reads content, and on the io_uring path the server has no copy of the content to read
+ *  -- not making one is the entire point. It does not need to: the referenced input is the input of
+ *  a call whose MIME the server resolved before dispatching it, so the answer is already known and
+ *  is exact rather than re-guessed. */
+struct InFlightInput
+{
+	std::shared_ptr< const CallInput > input {};
+	std::string mime {};
 };
 
 //! One IDHANModuleRunner process and the channel to it.
@@ -80,15 +102,16 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
   private:
 
 	//! A call that has been sent and is waiting for its RESULT.
+	/** Deliberately unbounded in time. A worker serves calls from a queue \p pool_threads wide, so a
+	 *  call can sit there for as long as the backlog ahead of it takes, and no estimate the module
+	 *  could offer would distinguish that from being wedged. The coroutine waiting here costs a frame
+	 *  and nothing else -- no thread is held -- so waiting is cheap and killing is not: the previous
+	 *  deadline took down the worker, and with it every other call in flight on the same process. */
 	struct PendingCall
 	{
 		std::coroutine_handle<> continuation {};
 		trantor::EventLoop* loop { nullptr };
 		std::shared_ptr< CallOutcome > outcome {};
-
-		//! Armed from the worker's ACK. Until then only the liveness heartbeat guards this call.
-		std::chrono::steady_clock::time_point deadline { std::chrono::steady_clock::time_point::max() };
-		bool acked { false };
 	};
 
 	WorkerSettings m_settings;
@@ -105,6 +128,10 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 
 	std::mutex m_calls_mutex {};
 	std::unordered_map< std::uint64_t, PendingCall > m_calls {};
+	//! The input of every call currently in flight, so a module passing its own input back through a
+	//! callback can be answered by reusing it. Shares m_calls_mutex: the two are written together and
+	//! a second lock would only create an ordering to get wrong.
+	std::unordered_map< std::uint64_t, InFlightInput > m_call_inputs {};
 	std::atomic< std::uint64_t > m_next_call_id { 1 };
 
 	std::atomic< bool > m_alive { false };
@@ -125,7 +152,7 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	void handleFrame( ipc::Frame&& frame );
 	void finish( std::uint64_t call_id, CallOutcome outcome );
 	void failAll( const std::string& reason, bool died );
-	void checkDeadlines();
+	void checkLiveness();
 
   public:
 
@@ -141,7 +168,9 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	[[nodiscard]] std::expected< void, std::string > start();
 
 	//! Kills the process and fails everything outstanding.
-	void terminate( const std::string& reason );
+	/** \param kind Whether this is routine teardown or a failure. Only affects how it is logged, and
+	 *              defaults to FAILURE so a new call site is loud rather than silent. */
+	void terminate( const std::string& reason, Termination kind = Termination::FAILURE );
 
 	[[nodiscard]] bool alive() const { return m_alive.load(); }
 
@@ -156,6 +185,9 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 
 	[[nodiscard]] std::string signature();
 
+	//! Whether this worker has announced its manifest yet.
+	[[nodiscard]] bool manifestSeen();
+
 	//! Blocks until the worker announces its manifest, or the timeout expires. Startup only.
 	[[nodiscard]] std::expected< std::vector< ipc::ManifestEntry >, std::string > awaitManifest(
 		std::chrono::milliseconds timeout );
@@ -164,9 +196,18 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	[[nodiscard]] std::expected< void, std::string > post( const Json::Value& body, std::span< const int > fds = {} );
 
 	//! Sends a call and suspends the calling coroutine until its result arrives.
-	//! fds is taken by value rather than as a span: the coroutine suspends, and a span would point
-	//! at caller storage that has long since gone out of scope by the time the frame is written.
-	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > call( Json::Value body, std::vector< int > fds );
+	/** Takes the input rather than a descriptor because the frame's input fields, and the ring behind
+	 *  them, can only be built once the call id exists -- and have to be rebuilt if this call is
+	 *  retried in a different process. */
+	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > call(
+		Json::Value body,
+		std::shared_ptr< const CallInput > input );
+
+	//! The input of an in-flight call, for resolving INPUT_REF on a callback.
+	/** \return An entry with a null input if the call has already finished -- which a module cannot
+	 *          cause, since it is blocked inside that very call while the callback is outstanding,
+	 *          but which a misbehaving or replayed frame could ask for. */
+	[[nodiscard]] InFlightInput inputForCall( std::uint64_t call_id );
 
 	//! Allocates the next call id.
 	[[nodiscard]] std::uint64_t nextCallId() { return m_next_call_id.fetch_add( 1 ); }

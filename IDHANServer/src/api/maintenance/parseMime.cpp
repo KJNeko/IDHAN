@@ -31,12 +31,24 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 		co_return response;
 	}
 
+	auto input_e { modules::CallInput::forBlob( std::move( blob.value() ) ) };
+
+	if ( !input_e )
+	{
+		Json::Value failure {};
+		failure[ "error" ] = std::format( "Could not stage the request body for a module: {}", input_e.error() );
+		response.append( std::move( failure ) );
+		co_return response;
+	}
+
+	const auto input { std::make_shared< const modules::CallInput >( std::move( *input_e ) ) };
+
 	for ( const auto& metadata_module : metadata_modules )
 	{
 		Json::Value metadata_obj {};
 		metadata_obj[ "name" ] = std::string( metadata_module->name() );
 
-		const modules::RemoteCallData data { .blob = &blob.value(), .mime_name = mime_str, .extra = {}, .depth = 0 };
+		const modules::RemoteCallData data { .input = input, .mime_name = mime_str, .extra = {}, .depth = 0 };
 
 		auto metadata_info { co_await metadata_module->parseFile( data ) };
 

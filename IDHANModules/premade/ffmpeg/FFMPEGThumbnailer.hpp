@@ -24,10 +24,6 @@ class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 	// createThumbnailFile encodes through vips, so this worker pays VIPS_INIT as well as codec setup
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
-	// Decoding walks the container to find a keyframe, so the cost tracks file size rather than
-	// output size. Deliberately generous: a slow seek on a large remote-ish file must not be killed.
-	[[nodiscard]] std::chrono::milliseconds estimateDuration( const idhan::ModuleCallData& data ) override;
-
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
