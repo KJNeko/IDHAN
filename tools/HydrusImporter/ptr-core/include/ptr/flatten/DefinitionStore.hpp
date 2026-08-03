@@ -1,9 +1,11 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <mutex>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -26,6 +28,15 @@ std::optional< std::array< std::byte, SHA256_BYTES > > decodeSha256Hex( std::str
 //! tags.idx is a fixed 8-byte stride of (u32 offset, u32 length) into tags.blob; a zero length
 //! means absent. Because the id is the offset, nothing is sorted and nothing is searched, and
 //! the files are sparse so unused id ranges cost no blocks.
+//!
+//! writeHash and writeTag are thread-safe. Both address their output by id rather than appending,
+//! so concurrent writers cannot interleave: the only shared state is the tags.blob allocation
+//! cursor, and that is held just long enough to reserve a range -- the write itself happens outside
+//! the lock.
+//!
+//! \note If two update files define one tag_id with different text, whichever index write lands
+//!       last wins, so which is kept is not deterministic across runs. PTR ids are stable, so in
+//!       practice the text is identical and the choice does not matter.
 //!
 //! \warning Construction TRUNCATES all three files, so only one writer may exist per directory
 //!          per run. Constructing a second one discards everything the first wrote. A scan builds
@@ -52,15 +63,19 @@ class DefinitionWriter
 	//! An empty tag is ignored: a zero length is how the index encodes "absent".
 	void writeTag( std::uint32_t tag_id, std::string_view tag );
 
-	std::uint64_t rejectedHashes() const noexcept { return m_rejected_hashes; }
+	std::uint64_t rejectedHashes() const noexcept { return m_rejected_hashes.load( std::memory_order_relaxed ); }
 
   private:
 
 	int m_hashes_fd { -1 };
 	int m_tag_index_fd { -1 };
 	int m_tag_blob_fd { -1 };
+
+	//! Guards m_blob_offset only. Held for the reservation, never for the write.
+	std::mutex m_blob_mutex {};
 	std::uint64_t m_blob_offset { 0 };
-	std::uint64_t m_rejected_hashes { 0 };
+
+	std::atomic< std::uint64_t > m_rejected_hashes { 0 };
 };
 
 //! Read-only mmap over the files DefinitionWriter produced. Resident cost is page cache, which

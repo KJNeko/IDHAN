@@ -47,12 +47,16 @@ std::vector< MappingEvent > readBucket( const std::filesystem::path& path )
 
 BucketWriter::BucketWriter( std::filesystem::path dir, const std::size_t buffer_events ) :
   m_dir( std::move( dir ) ),
-  m_buffer_events( buffer_events == 0 ? 1 : buffer_events )
+  m_buffer_events( buffer_events == 0 ? 1 : buffer_events ),
+  // std::mutex is neither copyable nor movable, so the count has to be given at construction;
+  // resize() would need to move the existing elements.
+  m_mutexes( BUCKET_COUNT )
 {
 	std::filesystem::create_directories( m_dir );
 
 	m_files.resize( BUCKET_COUNT );
 	m_buffers.resize( BUCKET_COUNT );
+	m_counts.resize( BUCKET_COUNT );
 	for ( auto& buffer : m_buffers ) buffer.reserve( m_buffer_events );
 }
 
@@ -71,15 +75,33 @@ BucketWriter::~BucketWriter()
 void BucketWriter::write( const MappingEvent& event )
 {
 	const auto bucket = bucketFor( event.hash_id );
+
+	std::lock_guard< std::mutex > lock { m_mutexes[ bucket ] };
+
 	m_buffers[ bucket ].push_back( event );
-	++m_written;
+	++m_counts[ bucket ];
 
 	if ( m_buffers[ bucket ].size() >= m_buffer_events ) flushBucket( bucket );
 }
 
 void BucketWriter::flush()
 {
-	for ( std::size_t bucket = 0; bucket < BUCKET_COUNT; ++bucket ) flushBucket( bucket );
+	for ( std::size_t bucket = 0; bucket < BUCKET_COUNT; ++bucket )
+	{
+		std::lock_guard< std::mutex > lock { m_mutexes[ bucket ] };
+		flushBucket( bucket );
+	}
+}
+
+std::uint64_t BucketWriter::written() const
+{
+	std::uint64_t total { 0 };
+	for ( std::size_t bucket = 0; bucket < BUCKET_COUNT; ++bucket )
+	{
+		std::lock_guard< std::mutex > lock { m_mutexes[ bucket ] };
+		total += m_counts[ bucket ];
+	}
+	return total;
 }
 
 void BucketWriter::flushBucket( const std::size_t bucket )

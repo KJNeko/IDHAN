@@ -98,10 +98,12 @@ bool DefinitionWriter::writeHash( const std::uint32_t hash_id, const std::string
 	if ( !decoded.has_value() )
 	{
 		spdlog::warn( "Rejecting malformed hash definition for hash_id={} ({} chars)", hash_id, sha256_hex.size() );
-		++m_rejected_hashes;
+		m_rejected_hashes.fetch_add( 1, std::memory_order_relaxed );
 		return false;
 	}
 
+	// Nothing shared to guard: the offset comes from hash_id, so two threads writing different
+	// hashes cannot overlap, and two writing the same hash write the same 32 bytes.
 	writeAt( m_hashes_fd, decoded->data(), SHA256_BYTES, static_cast< std::uint64_t >( hash_id ) * SHA256_BYTES );
 	return true;
 }
@@ -110,16 +112,26 @@ void DefinitionWriter::writeTag( const std::uint32_t tag_id, const std::string_v
 {
 	if ( tag.empty() ) return;
 
-	if ( m_blob_offset + tag.size() > std::numeric_limits< std::uint32_t >::max() )
-		throw std::runtime_error( "tags.blob exceeded 4 GB; TagIndexEntry offsets are 32-bit" );
+	// The lock covers reserving a blob range and nothing else. Copying the text into the file is
+	// the expensive half and needs no exclusion once the range belongs to this caller.
+	std::uint64_t offset { 0 };
+	{
+		std::lock_guard< std::mutex > lock { m_blob_mutex };
 
-	writeAt( m_tag_blob_fd, tag.data(), tag.size(), m_blob_offset );
+		if ( m_blob_offset + tag.size() > std::numeric_limits< std::uint32_t >::max() )
+			throw std::runtime_error( "tags.blob exceeded 4 GB; TagIndexEntry offsets are 32-bit" );
 
-	const TagIndexEntry entry { static_cast< std::uint32_t >( m_blob_offset ),
-		                        static_cast< std::uint32_t >( tag.size() ) };
+		offset = m_blob_offset;
+		m_blob_offset += tag.size();
+	}
+
+	writeAt( m_tag_blob_fd, tag.data(), tag.size(), offset );
+
+	// Written second so the index never points at bytes that are not there yet. Nothing reads the
+	// store until the scan's writers have joined, but the ordering costs nothing and keeps the
+	// files consistent if a run dies partway.
+	const TagIndexEntry entry { static_cast< std::uint32_t >( offset ), static_cast< std::uint32_t >( tag.size() ) };
 	writeAt( m_tag_index_fd, &entry, sizeof( entry ), static_cast< std::uint64_t >( tag_id ) * sizeof( entry ) );
-
-	m_blob_offset += tag.size();
 }
 
 DefinitionReader::Mapping DefinitionReader::mapFile( const std::filesystem::path& path )
