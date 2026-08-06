@@ -26,25 +26,53 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 
 	SearchBuilder builder {};
 
-	// --- tags: text with '-' negation and system: predicates ---------------------------------
 	if ( json.isMember( "tags" ) )
 	{
 		if ( !json[ "tags" ].isArray() ) co_return createBadRequest( "'tags' must be an array of strings" );
 
 		std::vector< std::string > text_tags {};
+		// System tags `system:`
 		std::vector< std::string > system_tags {};
+		// Tags like `filename:*`
+		std::vector< std::string > wildcard_namespaces {};
+		// Tags that are like `cat*girl` (where 'catgirl' and 'cat girl' are both valid)
+		std::vector< std::string > wildcard_tags {};
 		for ( const auto& tag : json[ "tags" ] )
 		{
 			if ( !tag.isString() ) co_return createBadRequest( "'tags' must be an array of strings" );
 			auto tag_text { tag.asString() };
+			// A bare `namespace:*` is the only form the namespace path can serve: it matches on
+			// namespace_id, so it has nowhere to put a pattern. Anything else carrying a `*` --
+			// `character:*girl`, `*:cat girl`, `cat*girl` -- is a tag wildcard matched against the
+			// full tag text. Testing `contains(":*")` here would capture `character:*girl` and
+			// search it as a plain `character:*`, silently dropping the `girl`.
+			const bool is_namespace_wildcard {
+				tag_text.ends_with( ":*" ) && tag_text.find( '*' ) == tag_text.size() - 1
+			};
+
 			if ( tag_text.starts_with( "system:" ) )
 				system_tags.emplace_back( std::move( tag_text ) );
+			else if ( is_namespace_wildcard )
+				wildcard_namespaces.emplace_back( std::move( tag_text ) );
+			else if ( tag_text.contains( "*" ) )
+				wildcard_tags.emplace_back( std::move( tag_text ) );
 			else
 				text_tags.emplace_back( std::move( tag_text ) );
 		}
 
+		log::info(
+			"Search got {} tags, {} system tags, {} wildcard namespaces, {} wildcard tags",
+			text_tags.size(),
+			system_tags.size(),
+			wildcard_namespaces.size(),
+			wildcard_tags.size() );
+
 		const auto tag_result_error { co_await builder.setTags( text_tags ) };
 		if ( tag_result_error ) co_return *tag_result_error;
+		const auto namespace_result_error { co_await builder.setWildcardNamespaces( wildcard_namespaces ) };
+		if ( namespace_result_error ) co_return *namespace_result_error;
+		const auto wildcard_result_error { co_await builder.setWildcardTags( wildcard_tags ) };
+		if ( wildcard_result_error ) co_return *wildcard_result_error;
 
 		try
 		{
@@ -66,7 +94,7 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 			if ( !id.isIntegral() ) co_return createBadRequest( "'tag_ids' must be an array of integers" );
 			tag_ids.emplace_back( static_cast< TagID >( id.asInt64() ) );
 		}
-		builder.setPositiveTags( tag_ids );
+		builder.addPositiveTags( tag_ids );
 	}
 
 	// --- tag domains -------------------------------------------------------------------------

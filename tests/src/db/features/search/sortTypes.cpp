@@ -305,7 +305,7 @@ TEST_F( SearchFixture, FastPathAndGeneralPathAgreeOnOrdering )
 	SearchBuilder general_builder {};
 	general_builder.setSortType( SortType::FILESIZE );
 	general_builder.setSortOrder( SortOrder::ASC );
-	general_builder.setPositiveTags( { tag } );
+	general_builder.addPositiveTags( { tag } );
 	const auto general_path_ids { runQuery( general_builder.construct( true, false, false ) ) };
 
 	ASSERT_EQ( general_path_ids.size(), 3u );

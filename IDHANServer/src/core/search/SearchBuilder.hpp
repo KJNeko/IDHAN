@@ -304,14 +304,37 @@ class SearchBuilder
 	std::optional< std::size_t > m_limit {};
 	std::optional< std::size_t > m_offset {};
 
-	std::vector< TagID > m_positive_tags;
+	std::vector< TagID > m_positive_tags {};
 	std::vector< TagID > m_negative_tags {};
+	// Namespaces wildcards to search for ( `namespace:*` )
+	std::vector< NamespaceID > m_namespace_ids {};
+
+	//! One entry per subtag wildcard (`cat*girl`), each holding every tag the pattern resolved to.
+	//! Within a group the tags are OR'd (any one of them satisfies the wildcard); across groups the
+	//! results are combined the same way plain tags are — positives INTERSECT, negatives UNION.
+	std::vector< std::vector< TagID > > m_positive_wildcards {};
+	std::vector< std::vector< TagID > > m_negative_wildcards {};
 
 	HydrusDisplayType m_display_mode;
 	bool m_bind_domains { false };
 
 	static std::unordered_map< TagID, std::string > createFilters(
 		const std::vector< TagID >& tag_ids,
+		bool filter_domains );
+	//! Builds one `filter_namespace_N` CTE per requested namespace. Each narrows positive_filter, so
+	//! these must be emitted after it.
+	static std::unordered_map< NamespaceID, std::string > createNamespaceFilters(
+		const std::vector< NamespaceID >& namespace_ids,
+		bool filter_domains );
+	//! Intersects the per-namespace CTEs into `filter_namespaces`. Empty when no namespaces are set.
+	std::string buildNamespaceFilter() const;
+	//! Builds one `filter_wildcard_N` CTE per resolved wildcard group. Unlike the namespace CTEs
+	//! these stand alone (they reference no other CTE), so they may be emitted before positive_filter
+	//! — which is required, since positive_filter intersects them. \p first_index is where this
+	//! call's numbering starts, so positives and negatives share one flat, collision-free sequence.
+	static std::vector< std::string > createWildcardFilters(
+		const std::vector< std::vector< TagID > >& wildcard_groups,
+		std::size_t first_index,
 		bool filter_domains );
 	std::string buildPositiveFilter() const;
 	std::string buildNegativeFilter() const;
@@ -379,10 +402,36 @@ class SearchBuilder
 	//! any "system:" predicates. \return an error response if a tag cannot be resolved.
 	Task< std::optional< drogon::HttpResponsePtr > > setTags( const std::vector< std::string >& tags );
 
+	//! Resolves `namespace:*` wildcards to namespace IDs. \return an error response if a namespace
+	//! cannot be resolved, or if the wildcard is negated (not supported yet).
+	Task< std::optional< drogon::HttpResponsePtr > > setWildcardNamespaces( const std::vector< std::string >& vector );
+
+	//! Resolves subtag wildcards (`cat*girl`, `*:cat girl`, `cat girl*`) to the tags they match and
+	//! adds each match set as a wildcard group. A leading `-` negates. \return an error response if
+	//! a wildcard matches no existing tag.
+	Task< std::optional< drogon::HttpResponsePtr > > setWildcardTags( const std::vector< std::string >& vector );
+
+	//! Translates a user-facing wildcard into a SQL LIKE pattern for `tags.tag_text`: `*` becomes
+	//! `%`, and any `%`, `_` or `\` the user typed is backslash-escaped so it matches literally.
+	//! LIKE is implicitly anchored at both ends, which is what makes `cat*girl` reject `cat girls`.
+	[[nodiscard]] static std::string wildcardToLikePattern( std::string_view wildcard );
+
+	//! Resolves \p wildcard against the tags table. Exposed so tests can pin the match set a pattern
+	//! produces without standing up the coroutine/HTTP path around setWildcardTags(). $1 is the LIKE
+	//! pattern from wildcardToLikePattern().
+	static constexpr std::string_view wildcard_tag_query { "SELECT tag_id FROM tags WHERE tag_text LIKE $1" };
+
+	//! Adds a resolved wildcard match set that a record must carry at least one of.
+	void addPositiveWildcard( std::vector< TagID > tag_ids );
+	//! Adds a resolved wildcard match set that a record must carry none of.
+	void addNegativeWildcard( std::vector< TagID > tag_ids );
+
 	//! Sets the tags a record must have.
-	void setPositiveTags( const std::vector< TagID >& vector );
+	void addPositiveTags( std::vector< TagID > tag_ids );
 	//! Sets the tags a record must not have.
-	void setNegativeTags( const std::vector< TagID >& tag_ids );
+	void addNegativeTags( std::vector< TagID > tag_ids );
+	//! Sets the namespaces a record must carry at least one tag in (the `namespace:*` wildcard).
+	void addNamespaces( std::vector< NamespaceID > namespace_ids );
 	//! Parses a single Hydrus "system:" predicate into search criteria. \return false if unrecognised.
 	[[nodiscard]] bool setHydrusSystemTags( std::string_view system_subtag );
 	//! Parses IDHAN system predicates (width, height, filesize, limit, tag count, ...) from tag strings.
