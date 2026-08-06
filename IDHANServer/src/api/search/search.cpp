@@ -32,7 +32,7 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	SearchBuilder builder {};
 
-	builder.setPositiveTags( tag_ids );
+	builder.addPositiveTags( tag_ids );
 
 	// Sort params are optional; the default (filesize ascending) matches this endpoint's
 	// long-standing documented behavior, so omitting them changes nothing for existing callers.

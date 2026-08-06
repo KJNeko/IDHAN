@@ -120,6 +120,158 @@ std::unordered_map< TagID, std::string > SearchBuilder::createFilters(
 	return filters;
 }
 
+std::unordered_map< NamespaceID, std::string > SearchBuilder::createNamespaceFilters(
+	const std::vector< NamespaceID >& namespace_ids,
+	const bool filter_domains )
+{
+	std::unordered_map< NamespaceID, std::string > filters {};
+	filters.reserve( namespace_ids.size() );
+
+	// Each filter narrows positive_filter rather than scanning the mappings tables outright: a
+	// bare `namespace:*` matches an enormous number of records, so the join has to be seeded by
+	// the already-restricted positive set. This is why these CTEs must be emitted after
+	// positive_filter in construct().
+
+	// 0 == filter_id, 1 == namespace_id
+	// uses $1 for domains
+	constexpr std::string_view domain_filter_template {
+		"filter_namespace_{0} AS ( "
+		"SELECT record_id FROM active_tag_mappings			JOIN positive_filter USING (record_id) JOIN tags USING (tag_id)											WHERE namespace_id = {1} AND ideal_tag_id IS NULL AND tag_domain_id = ANY($1) "
+		"UNION DISTINCT "
+		"SELECT record_id FROM active_tag_mappings			JOIN positive_filter USING (record_id) JOIN tags ON tags.tag_id = active_tag_mappings.ideal_tag_id		WHERE namespace_id = {1} AND tag_domain_id = ANY($1) "
+		"UNION DISTINCT "
+		"SELECT record_id FROM active_tag_mappings_parents	JOIN positive_filter USING (record_id) JOIN tags USING (tag_id)											WHERE namespace_id = {1} AND tag_domain_id = ANY($1) )"
+	};
+
+	// 0 == filter_id, 1 == namespace_id
+	// Has no binds
+	constexpr std::string_view domainless_filter_template {
+		"filter_namespace_{0} AS ( "
+		"SELECT record_id FROM active_tag_mappings			JOIN positive_filter USING (record_id) JOIN tags USING (tag_id)											WHERE namespace_id = {1} AND ideal_tag_id IS NULL "
+		"UNION DISTINCT "
+		"SELECT record_id FROM active_tag_mappings			JOIN positive_filter USING (record_id) JOIN tags ON tags.tag_id = active_tag_mappings.ideal_tag_id		WHERE namespace_id = {1} "
+		"UNION DISTINCT "
+		"SELECT record_id FROM active_tag_mappings_parents	JOIN positive_filter USING (record_id) JOIN tags USING (tag_id)											WHERE namespace_id = {1} )"
+	};
+
+	for ( const auto& tag_namespace : namespace_ids )
+	{
+		const auto filled_template {
+			filter_domains ? format_ns::format( domain_filter_template, tag_namespace, tag_namespace ) :
+							 format_ns::format( domainless_filter_template, tag_namespace, tag_namespace )
+		};
+
+		filters.insert_or_assign( tag_namespace, filled_template );
+	}
+
+	return filters;
+}
+
+std::string SearchBuilder::wildcardToLikePattern( const std::string_view wildcard )
+{
+	std::string pattern {};
+	// worst case every character needs an escape byte
+	pattern.reserve( wildcard.size() * 2 );
+
+	for ( const char c : wildcard )
+	{
+		switch ( c )
+		{
+			case '*':
+				// the wildcard itself: the only character that keeps its LIKE meaning
+				pattern += '%';
+				break;
+			// LIKE's own metacharacters. A tag may legitimately contain any of them, so they are
+			// escaped to match literally -- otherwise a tag like `100%` would silently behave as a
+			// wildcard the user never typed. Backslash is LIKE's default escape character, so no
+			// ESCAPE clause is needed at the call site.
+			case '%':
+			case '_':
+			case '\\':
+				pattern += '\\';
+				pattern += c;
+				break;
+			default:
+				pattern += c;
+				break;
+		}
+	}
+
+	return pattern;
+}
+
+std::vector< std::string > SearchBuilder::createWildcardFilters(
+	const std::vector< std::vector< TagID > >& wildcard_groups,
+	const std::size_t first_index,
+	const bool filter_domains )
+{
+	std::vector< std::string > filters {};
+	filters.reserve( wildcard_groups.size() );
+
+	// Same three-branch shape as createFilters(), with `= {1}` widened to `= ANY({1})`: that ANY is
+	// the OR across every tag the wildcard resolved to. Aliases and parents are followed exactly as
+	// they are for an explicitly typed tag, so `cat*girl` finds a record tagged with something that
+	// merely resolves to a matching tag.
+
+	// 0 == filter_id, 1 == tag id array literal
+	// uses $1 for domains
+	constexpr std::string_view domain_filter_template {
+		"filter_wildcard_{0} AS ( SELECT record_id FROM active_tag_mappings WHERE tag_id = ANY({1}) AND ideal_tag_id IS NULL AND tag_domain_id = ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings WHERE ideal_tag_id = ANY({1}) AND tag_domain_id = ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = ANY({1}) AND tag_domain_id = ANY($1) )"
+	};
+
+	// 0 == filter_id, 1 == tag id array literal
+	// Has no binds
+	constexpr std::string_view domainless_filter_template {
+		"filter_wildcard_{0} AS ( SELECT record_id FROM active_tag_mappings WHERE tag_id = ANY({1}) AND ideal_tag_id IS NULL UNION DISTINCT SELECT record_id FROM active_tag_mappings WHERE ideal_tag_id = ANY({1}) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = ANY({1}) )"
+	};
+
+	for ( std::size_t i = 0; i < wildcard_groups.size(); ++i )
+	{
+		// The cast is explicit so an empty group renders as `ARRAY[]::integer[]` rather than an
+		// untyped `ARRAY[]`, which postgres rejects. An empty group matches nothing, which is the
+		// safe reading: setWildcardTags() 404s before one can reach here, so this only guards
+		// direct API misuse, where silently matching *everything* would widen the search instead.
+		std::string array_literal { "ARRAY[" };
+		const auto& tag_ids { wildcard_groups[ i ] };
+		for ( auto itter = tag_ids.begin(); itter != tag_ids.end(); ++itter )
+		{
+			array_literal += std::to_string( *itter );
+			if ( itter + 1 != tag_ids.end() ) array_literal += ',';
+		}
+		array_literal += "]::integer[]";
+
+		const auto filter_id { first_index + i };
+
+		filters.emplace_back(
+			filter_domains ? format_ns::format( domain_filter_template, filter_id, array_literal ) :
+							 format_ns::format( domainless_filter_template, filter_id, array_literal ) );
+	}
+
+	return filters;
+}
+
+std::string SearchBuilder::buildNamespaceFilter() const
+{
+	// A record must carry a tag in *every* requested namespace, so the per-namespace CTEs are
+	// intersected. Each of them is already restricted to positive_filter, so no further narrowing
+	// is needed here.
+	if ( m_namespace_ids.empty() ) return {};
+
+	std::string namespace_filter { "filter_namespaces AS (" };
+
+	for ( auto itter = m_namespace_ids.begin(); itter != m_namespace_ids.end(); ++itter )
+	{
+		namespace_filter += format_ns::format( "SELECT record_id FROM filter_namespace_{}", *itter );
+
+		if ( itter + 1 != m_namespace_ids.end() )
+			namespace_filter += " INTERSECT ";
+		else
+			namespace_filter += "),";
+	}
+
+	return namespace_filter;
+}
+
 std::string SearchBuilder::buildPositiveFilter() const
 {
 	std::string positive_filter { "positive_filter AS (" };
@@ -129,18 +281,28 @@ std::string SearchBuilder::buildPositiveFilter() const
 		positive_filter += "SELECT DISTINCT record_id FROM archive_map INTERSECT ";
 	}
 
-	if ( m_positive_tags.empty() )
+	// A wildcard narrows the result set exactly like an explicitly typed tag does -- the OR across
+	// the tags it matched is already inside its own CTE -- so its term joins the same INTERSECT
+	// chain. Positive wildcards are numbered from 0; see construct() for the shared numbering.
+	std::vector< std::string > terms {};
+	terms.reserve( m_positive_tags.size() + m_positive_wildcards.size() );
+	for ( const auto& tag : m_positive_tags )
+		terms.emplace_back( format_ns::format( "SELECT record_id FROM filter_{}", tag ) );
+	for ( std::size_t i = 0; i < m_positive_wildcards.size(); ++i )
+		terms.emplace_back( format_ns::format( "SELECT record_id FROM filter_wildcard_{}", i ) );
+
+	if ( terms.empty() )
 	{
 		// If there is no 'positive tags', we need to populate the positive filter with something to prevent it from returning nothing
 		positive_filter += "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL),";
 		return positive_filter;
 	}
 
-	for ( auto itter = m_positive_tags.begin(); itter != m_positive_tags.end(); ++itter )
+	for ( auto itter = terms.begin(); itter != terms.end(); ++itter )
 	{
-		positive_filter += format_ns::format( "SELECT record_id FROM filter_{}", *itter );
+		positive_filter += *itter;
 
-		if ( itter + 1 != m_positive_tags.end() )
+		if ( itter + 1 != terms.end() )
 			positive_filter += " INTERSECT ";
 		else
 			positive_filter += "),";
@@ -153,20 +315,32 @@ std::string SearchBuilder::buildNegativeFilter() const
 {
 	std::string negative_filters { "negative_filter AS (" };
 
+	// Negatives are UNION'd rather than INTERSECT'd: the whole set is subtracted from the positives
+	// in one EXCEPT, so matching *any* excluded tag drops the record. A negated wildcard therefore
+	// removes a record carrying any tag its pattern matched. Negative wildcards are numbered after
+	// the positive ones so both share one collision-free CTE name sequence.
+	std::vector< std::string > terms {};
+	terms.reserve( m_negative_tags.size() + m_negative_wildcards.size() );
+	for ( const auto& tag : m_negative_tags )
+		terms.emplace_back( format_ns::format( "SELECT record_id FROM filter_{}", tag ) );
+	for ( std::size_t i = 0; i < m_negative_wildcards.size(); ++i )
+		terms.emplace_back(
+			format_ns::format( "SELECT record_id FROM filter_wildcard_{}", m_positive_wildcards.size() + i ) );
+
 	if ( m_in_archive_search == ArchiveSearchType::NoArchive )
 	{
 		negative_filters += "SELECT DISTINCT record_id FROM archive_map";
-		if ( m_negative_tags.empty() )
+		if ( terms.empty() )
 			negative_filters += "),";
 		else
 			negative_filters += " UNION DISTINCT ";
 	}
 
-	for ( auto itter = m_negative_tags.begin(); itter != m_negative_tags.end(); ++itter )
+	for ( auto itter = terms.begin(); itter != terms.end(); ++itter )
 	{
-		negative_filters += format_ns::format( "SELECT record_id FROM filter_{}", *itter );
+		negative_filters += *itter;
 
-		if ( itter + 1 != m_negative_tags.end() )
+		if ( itter + 1 != terms.end() )
 			negative_filters += " UNION DISTINCT ";
 		else
 			negative_filters += "),";
@@ -495,7 +669,8 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	// has to honour sort, tiebreak, limit and offset — this is the "browse everything" case the grid
 	// hits on first load, and returning the whole table unordered and unbounded is neither correct
 	// nor affordable. Only for id-returning searches; hashes need the records join, handled below.
-	if ( m_positive_tags.empty() && m_negative_tags.empty() && !has_system_predicates && !return_hashes )
+	if ( m_positive_tags.empty() && m_negative_tags.empty() && m_namespace_ids.empty() && m_positive_wildcards.empty()
+	     && m_negative_wildcards.empty() && !has_system_predicates && !return_hashes )
 	{
 		query = "SELECT fm.record_id FROM file_info fm";
 
@@ -521,20 +696,32 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	std::ranges::copy( m_positive_tags, std::back_inserter( filtered_tags ) );
 	std::ranges::copy( m_negative_tags, std::back_inserter( filtered_tags ) );
 	const auto filter_map { createFilters( filtered_tags, filter_domains ) };
+	const auto namespace_filter_map { createNamespaceFilters( m_namespace_ids, filter_domains ) };
+	// One flat numbering across both lists: positives take [0, positives.size()), negatives continue
+	// from there. buildPositiveFilter()/buildNegativeFilter() derive their CTE names the same way.
+	const auto positive_wildcard_filters { createWildcardFilters( m_positive_wildcards, 0, filter_domains ) };
+	const auto negative_wildcard_filters {
+		createWildcardFilters( m_negative_wildcards, m_positive_wildcards.size(), filter_domains )
+	};
 	const auto positive_filter { buildPositiveFilter() };
 	const auto negative_filter { buildNegativeFilter() };
+	const auto namespace_filter { buildNamespaceFilter() };
 
-	std::string final_filter {};
+	const bool has_namespaces { !m_namespace_ids.empty() };
+	const bool has_negatives { !m_negative_tags.empty() || !m_negative_wildcards.empty() };
 
-	if ( !m_negative_tags.empty() )
-	{
-		final_filter +=
-			"final_filter AS (SELECT record_id FROM positive_filter EXCEPT SELECT record_id FROM negative_filter)";
-	}
+	std::string final_filter { "final_filter AS (SELECT DISTINCT record_id FROM " };
+
+	if ( has_namespaces )
+		final_filter += "filter_namespaces INTERSECT SELECT record_id FROM positive_filter";
 	else
-	{
-		final_filter += "final_filter AS (SELECT DISTINCT record_id FROM positive_filter)";
-	}
+		final_filter += "positive_filter";
+
+	// INTERSECT binds tighter than EXCEPT in postgres, so the namespace narrowing above is applied
+	// before the negative tags are subtracted, without needing explicit parentheses.
+	if ( has_negatives ) final_filter += " EXCEPT SELECT record_id FROM negative_filter";
+
+	final_filter += ")";
 
 	m_bind_domains = filter_domains;
 
@@ -542,8 +729,31 @@ std::string SearchBuilder::construct( const bool return_ids, const bool return_h
 	{
 		query += filter + ",";
 	}
+
+	// The wildcard CTEs reference nothing but the mappings tables, so unlike the namespace ones they
+	// belong here -- positive_filter intersects them and a non-recursive WITH may only reference
+	// CTEs declared before it. Negatives are emitted alongside the positives so both are in scope
+	// regardless of which filters end up using them.
+	for ( const auto& filter : positive_wildcard_filters )
+	{
+		query += filter + ",";
+	}
+	for ( const auto& filter : negative_wildcard_filters )
+	{
+		query += filter + ",";
+	}
+
 	query += positive_filter;
-	if ( !m_negative_tags.empty() ) query += negative_filter;
+
+	// The per-namespace CTEs join positive_filter, and a non-recursive WITH may only reference
+	// CTEs declared before it, so these have to follow positive_filter.
+	for ( const auto& filter : namespace_filter_map | std::views::values )
+	{
+		query += filter + ",";
+	}
+	query += namespace_filter;
+
+	if ( has_negatives ) query += negative_filter;
 	query += final_filter;
 
 	log::info( "{}", query );
@@ -718,20 +928,175 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setTags( const s
 	std::vector< TagID > negative_ids {};
 	for ( const auto& tag_id : *negative_map | std::views::values ) negative_ids.emplace_back( tag_id );
 
-	setPositiveTags( positive_ids );
-	setNegativeTags( negative_ids );
+	addPositiveTags( positive_ids );
+	addNegativeTags( negative_ids );
 
 	co_return {};
 }
 
-void SearchBuilder::setPositiveTags( const std::vector< TagID >& vector )
+Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardNamespaces(
+	const std::vector< std::string >& vector )
 {
-	m_positive_tags = vector;
+	if ( vector.empty() ) co_return std::nullopt;
+	auto db { drogon::app().getDbClient() };
+
+	std::vector< std::string > namespaces {};
+	namespaces.reserve( vector.size() );
+	for ( const auto& tag : vector )
+	{
+		// Negation would need an excluding filter shape the CTE chain does not build yet; without
+		// this guard the '-' is swallowed into the namespace name and surfaces as a confusing 404.
+		if ( tag.starts_with( "-" ) )
+			co_return createBadRequest( "Negated namespace wildcards are not supported yet: \'{}\'", tag );
+
+		const auto namespace_end { tag.find_first_of( ":" ) };
+		// `namespace:*` -> `namespace`
+		if ( namespace_end == std::string::npos || namespace_end == 0 )
+			co_return createBadRequest( "Invalid namespace wildcard: \'{}\'", tag );
+		namespaces.emplace_back( tag.substr( 0, namespace_end ) );
+	}
+
+	// Deduplicated so the count check below compares like with like; `character:*` given twice is
+	// one namespace, not a missing one.
+	std::ranges::sort( namespaces );
+	{
+		const auto [ beg, end ] = std::ranges::unique( namespaces );
+		namespaces.erase( beg, end );
+	}
+
+	const auto namespace_search { co_await db->execSqlCoro(
+		"SELECT namespace_id FROM tag_namespaces WHERE namespace_text = ANY($1)", std::move( namespaces ) ) };
+
+	// A namespace nothing has ever been tagged with cannot match any record. Silently dropping it
+	// would widen the search to everything the *other* predicates matched, so 404 instead — same
+	// contract mapTags() gives for an unknown tag.
+	if ( namespace_search.size() != namespaces.size() )
+		co_return createNotFound( "One or more namespaces in the search do not exist" );
+
+	std::vector< NamespaceID > resolved {};
+	resolved.reserve( namespace_search.size() );
+	for ( const auto& row : namespace_search )
+	{
+		resolved.emplace_back( row[ "namespace_id" ].as< NamespaceID >() );
+	}
+	addNamespaces( std::move( resolved ) );
+
+	co_return std::nullopt;
 }
 
-void SearchBuilder::setNegativeTags( const std::vector< TagID >& tag_ids )
+Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardTags(
+	const std::vector< std::string >& vector )
 {
-	m_negative_tags = tag_ids;
+	if ( vector.empty() ) co_return std::nullopt;
+	auto db { drogon::app().getDbClient() };
+
+	// The pattern is matched against the whole `tags.tag_text`, namespace included, rather than
+	// against the namespace and subtag separately. That single rule covers every form: `cat*girl`
+	// stays unnamespaced (nothing before `cat` may differ), `*cat girl` reaches into any namespace,
+	// `*:cat girl` demands one, and `cat girl*` is a prefix search. It also rides the existing
+	// gin_trgm_ops index on tags.tag_text, so no new index is needed.
+	for ( const auto& tag : vector )
+	{
+		const bool negated { tag.starts_with( "-" ) };
+		const std::string_view wildcard { negated ? std::string_view { tag }.substr( 1 ) : std::string_view { tag } };
+
+		if ( wildcard.empty() ) co_return createBadRequest( "Empty tag wildcard: \'{}\'", tag );
+
+		const auto pattern { wildcardToLikePattern( wildcard ) };
+
+		const auto matched { co_await db->execSqlCoro( std::string { wildcard_tag_query }, pattern ) };
+
+		// A wildcard that matches no existing tag cannot match any record. Silently dropping it
+		// would widen the search to whatever the *other* predicates matched, so 404 instead -- the
+		// same contract mapTags() gives for an unknown tag and setWildcardNamespaces() for an
+		// unknown namespace. A negated wildcard is no different: it would subtract nothing, and
+		// answering a search whose exclusion never applied is the same silent widening.
+		if ( matched.empty() ) co_return createNotFound( "No tags match wildcard \'{}\'", wildcard );
+
+		std::vector< TagID > tag_ids {};
+		tag_ids.reserve( matched.size() );
+		for ( const auto& row : matched ) tag_ids.emplace_back( row[ "tag_id" ].as< TagID >() );
+
+		if ( negated )
+			addNegativeWildcard( std::move( tag_ids ) );
+		else
+			addPositiveWildcard( std::move( tag_ids ) );
+	}
+
+	co_return std::nullopt;
+}
+
+namespace
+{
+
+//! Merges \p incoming into \p target, keeping the result sorted and duplicate-free. Duplicates
+//! matter beyond wasted work: every id becomes a CTE named after it, and postgres rejects a WITH
+//! clause that declares the same name twice.
+template < typename T >
+void mergeUnique( std::vector< T >& target, std::vector< T > incoming )
+{
+	if ( target.empty() )
+	{
+		std::ranges::sort( incoming );
+		const auto [ dup_beg, dup_end ] = std::ranges::unique( incoming );
+		incoming.erase( dup_beg, dup_end );
+		target = std::move( incoming );
+		return;
+	}
+
+	std::ranges::sort( target );
+	std::ranges::sort( incoming );
+
+	std::vector< T > merged( target.size() + incoming.size() );
+	std::ranges::merge( target, incoming, merged.begin() );
+	const auto [ beg, end ] = std::ranges::unique( merged );
+	merged.erase( beg, end );
+
+	target = std::move( merged );
+}
+
+} // namespace
+
+void SearchBuilder::addPositiveTags( std::vector< TagID > tag_ids )
+{
+	mergeUnique( m_positive_tags, std::move( tag_ids ) );
+}
+
+void SearchBuilder::addNegativeTags( std::vector< TagID > tag_ids )
+{
+	mergeUnique( m_negative_tags, std::move( tag_ids ) );
+}
+
+void SearchBuilder::addNamespaces( std::vector< NamespaceID > namespace_ids )
+{
+	mergeUnique( m_namespace_ids, std::move( namespace_ids ) );
+}
+
+namespace
+{
+
+//! Sorts and dedupes a wildcard's match set, then appends it as its own group. Unlike the plain tag
+//! lists these are not merged across wildcards: each pattern is a separate predicate, so `cat*` and
+//! `*girl` must stay two INTERSECT terms rather than collapsing into one OR'd set.
+void appendWildcardGroup( std::vector< std::vector< TagID > >& groups, std::vector< TagID > tag_ids )
+{
+	std::ranges::sort( tag_ids );
+	const auto [ beg, end ] = std::ranges::unique( tag_ids );
+	tag_ids.erase( beg, end );
+
+	groups.emplace_back( std::move( tag_ids ) );
+}
+
+} // namespace
+
+void SearchBuilder::addPositiveWildcard( std::vector< TagID > tag_ids )
+{
+	appendWildcardGroup( m_positive_wildcards, std::move( tag_ids ) );
+}
+
+void SearchBuilder::addNegativeWildcard( std::vector< TagID > tag_ids )
+{
+	appendWildcardGroup( m_negative_wildcards, std::move( tag_ids ) );
 }
 
 bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
