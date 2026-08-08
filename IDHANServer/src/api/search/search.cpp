@@ -43,19 +43,11 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	const auto result { co_await builder.query( db, tag_domain_ids ) };
 
-	if ( result.empty() )
-	{
-		Json::Value root { Json::arrayValue };
-		co_return drogon::HttpResponse::newHttpJsonResponse( root );
-	}
+	// arrayValue explicitly: a default-constructed Json::Value is null until first append, so an
+	// empty result would otherwise serialise as `null` rather than `[]`.
+	Json::Value file_ids { Json::arrayValue };
 
-	Json::Value file_ids {};
-
-	for ( const auto& row : result )
-	{
-		const auto id { row[ 0 ].as< RecordID >() };
-		file_ids.append( id );
-	}
+	for ( const auto id : result.record_ids ) file_ids.append( id );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( file_ids );
 }

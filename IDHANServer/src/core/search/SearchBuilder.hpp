@@ -3,218 +3,51 @@
 //
 #pragma once
 
-#include <expected>
+#include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 
 #include "IDHANTypes.hpp"
-#include "SearchBuilder.hpp"
+#include "SearchStats.hpp"
+#include "SearchTypes.hpp"
+#include "Set.hpp"
+#include "SetSource.hpp"
 #include "api/APIAuth.hpp"
 #include "db/dbTypes.hpp"
-#include "drogon/orm/DbClient.h"
-#include "drogon/orm/Result.h"
 #include "drogon/utils/coroutine.h"
-#include "hydrus/ClientConstants_gen.hpp"
 #include "threading/ExpectedTask.hpp"
 
 namespace idhan
 {
 
-//! Direction results are ordered in.
-enum class SortOrder
+//! What a search returns. Hashes are populated only when the caller asked for them; ids always are,
+//! since the algebra produces them either way.
+struct SearchResults
 {
-	ASC,
-	DESC,
+	std::vector< RecordID > record_ids {};
+	std::vector< SHA256 > hashes {};
 
-	DEFAULT = ASC
+	[[nodiscard]] std::size_t size() const noexcept { return record_ids.size(); }
 };
 
-//! Column/metric results are ordered by. The HY_* aliases map Hydrus sort types onto the subset
-//! IDHAN currently implements (several collapse to DEFAULT until natively supported).
-enum class SortType
-{
-	FILESIZE,
-	IMPORT_TIME,
-	RECORD_TIME,
-
-	MODIFIED_TIME,
-	MIME,
-	HASH,
-	RANDOM,
-	DURATION,
-	FRAMERATE,
-	HAS_AUDIO,
-	WIDTH,
-	HEIGHT,
-	RATIO,
-	NUM_PIXELS,
-	NUM_TAGS,
-
-	DEFAULT = FILESIZE,
-
-	// BEGIN_HYDRUS_CONVERT
-	HY_FILESIZE = FILESIZE,
-	HY_DURATION = DURATION,
-	HY_IMPORT_TIME = IMPORT_TIME,
-	HY_MIME = MIME,
-	HY_RANDOM = RANDOM,
-	HY_WIDTH = WIDTH,
-	HY_HEIGHT = HEIGHT,
-	HY_RATIO = RATIO,
-	HY_NUM_PIXELS = NUM_PIXELS,
-	HY_NUM_TAGS = NUM_TAGS,
-	// no per-file view-tracking subsystem exists yet
-	HY_MEDIA_VIEWS = DEFAULT,
-	HY_MEDIA_VIEWTIME = DEFAULT,
-	// Hydrus derives this from num_frames, which IDHAN doesn't store
-	HY_APPROX_BITRATE = DEFAULT,
-	HY_HAS_AUDIO = HAS_AUDIO,
-	HY_FILE_MODIFIED_TIMESTAMP = MODIFIED_TIME,
-	HY_FRAMERATE = FRAMERATE,
-	// num_frames isn't captured at import time
-	HY_NUM_FRAMES = DEFAULT,
-	// IDHAN has no collections concept
-	HY_NUM_COLLECTION_FILES = DEFAULT,
-	// no per-file view-tracking subsystem exists yet
-	HY_LAST_VIEWED_TIME = DEFAULT,
-	// IDHAN's archive_map/archive_metadata are encrypted archive containers, unrelated to
-	// Hydrus's inbox/archive review-state concept, which IDHAN doesn't implement
-	HY_ARCHIVED_TIMESTAMP = DEFAULT,
-	HY_HASH = HASH,
-	// no pixel_hash column
-	HY_PIXEL_HASH = DEFAULT,
-	// blurhash isn't generated
-	HY_BLURHASH = DEFAULT,
-	// END_HYDRUS_CONVERT
-};
-
-//! Hydrus API sort-type constants, as received from Hydrus-compatible clients.
-enum HydrusSortType
-{
-	HY_FILESIZE = hydrus::gen_constants::SORT_FILES_BY_FILESIZE,
-	HY_DURATION = hydrus::gen_constants::SORT_FILES_BY_DURATION,
-	HY_IMPORT_TIME = hydrus::gen_constants::SORT_FILES_BY_IMPORT_TIME,
-	HY_MIME = hydrus::gen_constants::SORT_FILES_BY_MIME,
-	HY_RANDOM = hydrus::gen_constants::SORT_FILES_BY_RANDOM,
-	HY_WIDTH = hydrus::gen_constants::SORT_FILES_BY_WIDTH,
-	HY_HEIGHT = hydrus::gen_constants::SORT_FILES_BY_HEIGHT,
-	HY_RATIO = hydrus::gen_constants::SORT_FILES_BY_RATIO,
-	HY_NUM_PIXELS = hydrus::gen_constants::SORT_FILES_BY_NUM_PIXELS,
-	HY_NUM_TAGS = hydrus::gen_constants::SORT_FILES_BY_NUM_TAGS,
-	HY_MEDIA_VIEWS = hydrus::gen_constants::SORT_FILES_BY_MEDIA_VIEWS,
-	HY_MEDIA_VIEWTIME = hydrus::gen_constants::SORT_FILES_BY_MEDIA_VIEWTIME,
-	HY_APPROX_BITRATE = hydrus::gen_constants::SORT_FILES_BY_APPROX_BITRATE,
-	HY_HAS_AUDIO = hydrus::gen_constants::SORT_FILES_BY_HAS_AUDIO,
-	HY_FILE_MODIFIED_TIMESTAMP = hydrus::gen_constants::SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP,
-	HY_FRAMERATE = hydrus::gen_constants::SORT_FILES_BY_FRAMERATE,
-	HY_NUM_FRAMES = hydrus::gen_constants::SORT_FILES_BY_NUM_FRAMES,
-	HY_NUM_COLLECTION_FILES = hydrus::gen_constants::SORT_FILES_BY_NUM_COLLECTION_FILES,
-	HY_LAST_VIEWED_TIME = hydrus::gen_constants::SORT_FILES_BY_LAST_VIEWED_TIME,
-	HY_ARCHIVED_TIMESTAMP = hydrus::gen_constants::SORT_FILES_BY_ARCHIVED_TIMESTAMP,
-	HY_HASH = hydrus::gen_constants::SORT_FILES_BY_HASH,
-	HY_PIXEL_HASH = hydrus::gen_constants::SORT_FILES_BY_PIXEL_HASH,
-	HY_BLURHASH = hydrus::gen_constants::SORT_FILES_BY_BLURHASH,
-	DEFAULT = HY_IMPORT_TIME
-};
-
-//! Which mapping layer a search runs against: raw STORED mappings, or the sibling/parent-resolved
-//! DISPLAY mappings.
-enum class HydrusDisplayType
-{
-	STORED,
-	DISPLAY,
-
-	DEFAULT = DISPLAY
-};
-
-//! Maps a Hydrus sort type onto the nearest IDHAN SortType (see SortType's HY_* aliases).
-constexpr SortType hyToIDHANSortType( const HydrusSortType hy_sort )
-{
-	switch ( hy_sort )
-	{
-		case HydrusSortType::HY_FILESIZE:
-			return SortType::HY_FILESIZE;
-		case HydrusSortType::HY_DURATION:
-			return SortType::HY_DURATION;
-		case HydrusSortType::HY_IMPORT_TIME:
-			return SortType::HY_IMPORT_TIME;
-		case HydrusSortType::HY_MIME:
-			return SortType::HY_MIME;
-		case HydrusSortType::HY_RANDOM:
-			return SortType::HY_RANDOM;
-		case HydrusSortType::HY_WIDTH:
-			return SortType::HY_WIDTH;
-		case HydrusSortType::HY_HEIGHT:
-			return SortType::HY_HEIGHT;
-		case HydrusSortType::HY_RATIO:
-			return SortType::HY_RATIO;
-		case HydrusSortType::HY_NUM_PIXELS:
-			return SortType::HY_NUM_PIXELS;
-		case HydrusSortType::HY_NUM_TAGS:
-			return SortType::HY_NUM_TAGS;
-		case HydrusSortType::HY_MEDIA_VIEWS:
-			return SortType::HY_MEDIA_VIEWS;
-		case HydrusSortType::HY_MEDIA_VIEWTIME:
-			return SortType::HY_MEDIA_VIEWTIME;
-		case HydrusSortType::HY_APPROX_BITRATE:
-			return SortType::HY_APPROX_BITRATE;
-		case HydrusSortType::HY_HAS_AUDIO:
-			return SortType::HY_HAS_AUDIO;
-		case HydrusSortType::HY_FILE_MODIFIED_TIMESTAMP:
-			return SortType::HY_FILE_MODIFIED_TIMESTAMP;
-		case HydrusSortType::HY_FRAMERATE:
-			return SortType::HY_FRAMERATE;
-		case HydrusSortType::HY_NUM_FRAMES:
-			return SortType::HY_NUM_FRAMES;
-		case HydrusSortType::HY_NUM_COLLECTION_FILES:
-			return SortType::HY_NUM_COLLECTION_FILES;
-		case HydrusSortType::HY_LAST_VIEWED_TIME:
-			return SortType::HY_LAST_VIEWED_TIME;
-		case HydrusSortType::HY_ARCHIVED_TIMESTAMP:
-			return SortType::HY_ARCHIVED_TIMESTAMP;
-		case HydrusSortType::HY_HASH:
-			return SortType::HY_HASH;
-		case HydrusSortType::HY_PIXEL_HASH:
-			return SortType::HY_PIXEL_HASH;
-		case HydrusSortType::HY_BLURHASH:
-			return SortType::HY_BLURHASH;
-		default:
-			return SortType::DEFAULT;
-	}
-}
-
-//! Builds a PostgreSQL search query from accumulated criteria — positive/negative tag IDs, system
-//! predicates (file size, dimensions, tag count, archive/audio/duration/exif flags, limit), sort
-//! order and the JOINs those require — and emits a single SQL string. In the generated SQL, $1 is
-//! always bound to an array of tag_domain_ids. Use construct() for the SQL, or query() to build and
-//! execute it in one step.
+/**
+ * @brief Accumulates search criteria and answers them as a set algebra over record ids.
+ *
+ * Each term -- a tag, a resolved wildcard group, a namespace, a system predicate -- becomes one
+ * search::Set fetched by one indexed query (see SetSource.hpp). Those Sets are then intersected,
+ * unioned and subtracted in C++ rather than by a generated CTE chain, and the finished Set is
+ * sliced to the requested page. Sort keys travel inside the Sets, so an ordinary search needs no
+ * query at all after the terms are in hand.
+ *
+ * Negation never constructs the universe: it rides as a flag on the Set and is rewritten through De
+ * Morgan at every operation. Only a result that is still inverted once the fold is done -- a search
+ * made entirely of exclusions -- reaches the database again, as a `!= ALL(...)` on the page query.
+ */
 class SearchBuilder
 {
-	std::string file_records_filter {};
-
-	//! Contains a list of all required joins for this query and it's sorting options
-	struct
-	{
-		bool file_info { false };
-		bool records { false };
-
-		bool left_video_metadata { false };
-		bool video_metadata { false };
-
-		bool left_image_metadata { false };
-		bool image_metadata { false };
-
-		bool left_image_project_metadata { false };
-
-		bool archive_map { false };
-		bool left_archive_map { false };
-
-		//! Drives a LEFT JOIN to a per-record tag-count subquery (see NUM_TAGS in generateOrderByClause).
-		bool num_tags { false };
-	} m_required_joins {};
-
-	bool m_search_everything { false };
-
 	using SearchOperation = std::uint8_t;
 
 	enum SearchOperationFlags : SearchOperation
@@ -222,20 +55,23 @@ class SearchBuilder
 		GreaterThan = 1 << 0, // >
 		LessThan = 1 << 1, // <
 		Equal = 1 << 2, // =
-		Not = 1 << 3, // !
-		// Approximate = 1 << 4, // ~
-		Approximate = Equal, // ~
+		Not = 1 << 3, // !, ≠
+		//! Its own bit rather than an alias of Equal: `~=` has to be distinguishable from `=` to
+		//! render as a tolerance band, and aliasing them made `system:filesize ~= 50KB` an exact
+		//! byte-for-byte match -- a search that essentially never returns anything.
+		Approximate = 1 << 4, // ~, ≈
 
 		// helpers
-		NotLessThan = Not | LessThan, // ~<
-		NotGreaterThan = Not | GreaterThan, // ~>
+		NotLessThan = Not | LessThan, // !<
+		NotGreaterThan = Not | GreaterThan, // !>
 
 		GreaterThanEqual = GreaterThan | Equal, // >=
 		LessThanEqual = LessThan | Equal, // <=
-		NotGreaterThanEqual = Not | GreaterThanEqual, // ~>=
-		NotLessThanEqual = Not | LessThanEqual, // ~<=
+		NotGreaterThanEqual = Not | GreaterThanEqual, // !>=
+		NotLessThanEqual = Not | LessThanEqual, // !<=
 
-		NotEqual = Not | Equal, // ~=
+		NotEqual = Not | Equal, // !=
+		ApproximateEqual = Approximate | Equal, // ~=
 	};
 
 	enum class DurationSearchType
@@ -277,15 +113,80 @@ class SearchBuilder
 		NoArchive
 	} m_in_archive_search { ArchiveSearchType::DontCare };
 
-	struct RangeSearchInfo
+	//! One comparison as it was parsed, before it is folded into a range: `> 1KB` is
+	//! (GreaterThan, 1024).
+	struct RangeTerm
 	{
-		//! If true then this count and operation are put into effect
-		bool m_active { false };
-		std::size_t count { 0 };
 		SearchOperation operation { 0 };
+		std::size_t value { 0 };
 	};
 
+	/**
+	 * @brief The accumulated constraint on one numeric column.
+	 *
+	 * Every predicate naming the same column narrows the same pair of bounds, so `system:size > 1KB`
+	 * with `system:size < 1MB` is the single range 1025..1048575 -- one indexed scan -- rather than
+	 * whichever of the two happened to be parsed last, which is what a search built from a min/max
+	 * pair used to collapse to. Two bounds on the same side keep the tighter one, so `< 1KB` with
+	 * `< 1MB` is `< 1KB`.
+	 */
+	struct RangeSearchInfo
+	{
+		//! If true then these bounds are put into effect
+		bool m_active { false };
+		//! Inclusive, and nullopt for an unbounded side. `>` and `<` are folded to `>=` and `<=` as
+		//! they are parsed, which is what lets narrowing be a plain max/min.
+		std::optional< std::size_t > lower {};
+		std::optional< std::size_t > upper {};
+		//! Set by a term no value can satisfy on its own (`> SIZE_MAX`), which is not something a
+		//! pair of bounds can express.
+		bool m_unsatisfiable { false };
+		//! Negated terms, as parsed. `!= 500` is the union of two intervals rather than one, so it
+		//! cannot narrow the bounds; it is AND-ed on as its own conjunct at render time.
+		std::vector< RangeTerm > negated {};
+
+		//! True when no value can satisfy the accumulated constraint -- `< 1KB` together with
+		//! `> 1MB`. The search holding it matches nothing, and does so before any query runs.
+		[[nodiscard]] bool impossible() const noexcept
+		{
+			return m_unsatisfiable || ( lower && upper && *lower > *upper );
+		}
+	};
+
+	//! Reads the operators and the number out of \p tag.
+	//! \throws std::invalid_argument if it holds no number.
+	static RangeTerm parseRangeTerm( std::string_view tag );
+
+	//! Narrows \p target by \p term, keeping whichever bound is tighter on each side.
+	static void narrowRange( RangeSearchInfo& target, RangeTerm term );
+
 	static void parseRangeSearch( RangeSearchInfo& target, std::string_view tag );
+
+	//! parseRangeSearch() plus the byte unit trailing the number, so `system:filesize < 1 GB` bounds
+	//! at 1073741823 rather than 0. \throws std::invalid_argument if the unit is not one we know.
+	static void parseFilesizeSearch( RangeSearchInfo& target, std::string_view tag );
+
+	//! Renders \p operation and \p value as a SQL comparison against \p expression, e.g.
+	//! `NOT (COALESCE(pim.width, pvm.width) >= 500)`. An Approximate operation widens \p value into
+	//! a ±15% band first, so `~=` renders as a BETWEEN and `~>`/`~<` against the band's near edge.
+	static std::string renderComparison( std::string_view expression, SearchOperation operation, std::size_t value );
+
+	//! Renders accumulated \p bounds as one SQL condition over \p expression: `BETWEEN` when both
+	//! sides are bounded, a single comparison when one is, and `FALSE` when they cross. Negated
+	//! terms are AND-ed on after it.
+	static std::string renderBounds( std::string_view expression, const RangeSearchInfo& bounds );
+
+	//! Names the first predicate whose bounds cannot be satisfied, or nullopt when they all can. The
+	//! name is for the log and the step label; what matters to the search is only that there is one,
+	//! since a single unsatisfiable term empties the whole intersection.
+	[[nodiscard]] std::optional< std::string_view > impossiblePredicate() const;
+
+	//! Every system predicate that is actually applied, as the SQL that enumerates it. Predicates
+	//! the parser accepts but has never implemented (filetype, date, url, notes, ...) contribute
+	//! nothing here, exactly as before the rewrite.
+	[[nodiscard]] std::vector< search::PredicateSource > buildPredicates() const;
+
+	bool m_search_everything { false };
 
 	RangeSearchInfo m_tag_count_search {};
 
@@ -296,8 +197,10 @@ class SearchBuilder
 
 	RangeSearchInfo m_archive_search {};
 
-	SortType m_sort_type;
-	SortOrder m_order;
+	RangeSearchInfo m_filesize_search {};
+
+	SortType m_sort_type { SortType::DEFAULT };
+	SortOrder m_order { SortOrder::DEFAULT };
 
 	//! Explicit result-window bounds set via the API. An explicit limit takes precedence over the
 	//! system:limit predicate (m_limit_search).
@@ -309,77 +212,73 @@ class SearchBuilder
 	// Namespaces wildcards to search for ( `namespace:*` )
 	std::vector< NamespaceID > m_namespace_ids {};
 
-	//! One entry per subtag wildcard (`cat*girl`), each holding every tag the pattern resolved to.
-	//! Within a group the tags are OR'd (any one of them satisfies the wildcard); across groups the
-	//! results are combined the same way plain tags are — positives INTERSECT, negatives UNION.
-	std::vector< std::vector< TagID > > m_positive_wildcards {};
-	std::vector< std::vector< TagID > > m_negative_wildcards {};
+	//! Display text for the ids above, so a step label can say `+tag:'character:reimu'` rather than
+	//! `+tag:6500`. Filled in as a side effect of the lookups that resolved the ids in the first
+	//! place, so the usual search path already has every name it needs; ids that arrived without one
+	//! (addPositiveTags and friends, taken by id) are looked up once in evaluate().
+	std::unordered_map< TagID, std::string > m_tag_names {};
+	std::unordered_map< NamespaceID, std::string > m_namespace_names {};
 
-	HydrusDisplayType m_display_mode;
-	bool m_bind_domains { false };
+	//! One subtag wildcard (`cat*girl`) and every tag it resolved to. Within a group the tags are
+	//! OR'd (any one of them satisfies the wildcard); across groups the results are combined the same
+	//! way plain tags are — positives INTERSECT, negatives UNION.
+	struct WildcardGroup
+	{
+		std::vector< TagID > tag_ids {};
+		//! The pattern as it was typed, kept only so the step label can name it. Empty when the group
+		//! was added by id alone, in which case the label falls back to the group's index.
+		std::string pattern {};
+	};
 
-	static std::unordered_map< TagID, std::string > createFilters(
-		const std::vector< TagID >& tag_ids,
-		bool filter_domains );
-	//! Builds one `filter_namespace_N` CTE per requested namespace. Each narrows positive_filter, so
-	//! these must be emitted after it.
-	static std::unordered_map< NamespaceID, std::string > createNamespaceFilters(
-		const std::vector< NamespaceID >& namespace_ids,
-		bool filter_domains );
-	//! Intersects the per-namespace CTEs into `filter_namespaces`. Empty when no namespaces are set.
-	std::string buildNamespaceFilter() const;
-	//! Builds one `filter_wildcard_N` CTE per resolved wildcard group. Unlike the namespace CTEs
-	//! these stand alone (they reference no other CTE), so they may be emitted before positive_filter
-	//! — which is required, since positive_filter intersects them. \p first_index is where this
-	//! call's numbering starts, so positives and negatives share one flat, collision-free sequence.
-	static std::vector< std::string > createWildcardFilters(
-		const std::vector< std::vector< TagID > >& wildcard_groups,
-		std::size_t first_index,
-		bool filter_domains );
-	std::string buildPositiveFilter() const;
-	std::string buildNegativeFilter() const;
+	std::vector< WildcardGroup > m_positive_wildcards {};
+	std::vector< WildcardGroup > m_negative_wildcards {};
 
-	//! Appends the ORDER BY clause, including sort direction and a stable record_id tiebreak so that
-	//! ties order deterministically (a prerequisite for sound pagination). \p record_id_alias names
-	//! the table the driving record_id comes from ("tm" on the full path, "fm" on the fast path).
-	void generateOrderByClause( std::string& query, std::string_view record_id_alias ) const;
-	//! Appends LIMIT/OFFSET when set. An explicit m_limit wins over the system:limit predicate.
-	void appendLimitOffset( std::string& query ) const;
-	void determineJoinsForQuery( std::string& query );
-	void determineSelectClause( std::string& query, bool return_ids, bool return_hashes );
-	void generateWhereClauses( std::string& query );
-	//! Appends an `AND <expr> IS NOT NULL` filter when the active sort type reads from a nullable
-	//! column that an INNER join alone can't exclude (e.g. a single nullable column already reached
-	//! via a join that's shared with non-null-requiring sorts, or a value COALESCEd across several
-	//! LEFT-joined tables). For these sort types, NULL is treated as "excluded", not "sorts last" —
-	//! called from both of construct()'s code paths, right after the unconditional mime_id filter.
-	void generateSortFilterClause( std::string& query ) const;
+	//! How a wildcard term reads in a step label: the pattern it came from when the group carries one,
+	//! and the group's position when it does not. \p sign is '+' or '-'.
+	[[nodiscard]] static std::string wildcardLabel( char sign, const WildcardGroup& group, std::size_t index );
+
+	HydrusDisplayType m_display_mode { HydrusDisplayType::DEFAULT };
+
+	//! The effective page limit: an explicit setLimit() wins over a system:limit predicate.
+	[[nodiscard]] std::optional< std::size_t > effectiveLimit() const;
+
+	//! Per-step row counts for the most recent evaluate(). Shared rather than owned because every
+	//! concurrent fetch records into it. Null until evaluate() runs.
+	std::shared_ptr< search::SearchStats > m_stats {};
 
   public:
 
+	SearchBuilder() = default;
+
 	/**
-	 * @brief Constructs a query to be used. $1 is expected to be an array of tag_domain_ids
-	 * @param return_ids
-	 * @param return_hashes
-	 * @param filter_domains
-	 * @return
+	 * @brief Fetches every term and folds them into the search's answer.
+	 *
+	 * The returned Set is the whole result, in ascending composite order and not yet paged. It is
+	 * inverted when the search consists only of exclusions, in which case it denotes everything
+	 * @em except the ids it holds.
 	 */
-	[[nodiscard]] std::string construct(
-		bool return_ids = true,
-		bool return_hashes = false,
-		bool filter_domains = false );
+	[[nodiscard]] Task< search::Set > evaluate(
+		DbClientPtr db,
+		std::vector< TagDomainID > tag_domain_ids,
+		bool want_hashes );
 
-	SearchBuilder();
-
-	//! Builds (via construct()) and executes the search against \p db.
-	//! \param tag_domain_ids Bound to $1 in the query.
-	//! \param return_ids,return_hashes Which columns the SELECT returns.
-	//! \return The result rows.
-	[[nodiscard]] drogon::Task< drogon::orm::Result > query(
+	//! Runs the search and returns the requested page.
+	//! \param tag_domain_ids Restricts mapping lookups; empty searches every domain.
+	//! \param return_ids Retained for call-site compatibility; ids are always produced.
+	//! \param return_hashes Populates SearchResults::hashes.
+	[[nodiscard]] Task< SearchResults > query(
 		DbClientPtr db,
 		std::vector< TagDomainID > tag_domain_ids,
 		bool return_ids = true,
 		bool return_hashes = false );
+
+	//! The SQL for the unfiltered browse case: every record with a mime, in the configured sort,
+	//! limit and offset. Exposed so the sort-type tests can pin an ordering without a drogon client.
+	[[nodiscard]] std::string browseQuery( bool return_hashes = false ) const;
+
+	//! Per-step row counts from the most recent evaluate()/query(). Null before either has run.
+	//! Always written to the debug log; exposed here so an endpoint can also return it.
+	[[nodiscard]] const std::shared_ptr< search::SearchStats >& stats() const noexcept { return m_stats; }
 
 	//! Sets the column/metric results are ordered by.
 	void setSortType( SortType type );
@@ -421,10 +320,11 @@ class SearchBuilder
 	//! pattern from wildcardToLikePattern().
 	static constexpr std::string_view wildcard_tag_query { "SELECT tag_id FROM tags WHERE tag_text LIKE $1" };
 
-	//! Adds a resolved wildcard match set that a record must carry at least one of.
-	void addPositiveWildcard( std::vector< TagID > tag_ids );
-	//! Adds a resolved wildcard match set that a record must carry none of.
-	void addNegativeWildcard( std::vector< TagID > tag_ids );
+	//! Adds a resolved wildcard match set that a record must carry at least one of. \p pattern is the
+	//! wildcard the set came from, used only to name the term in the search's step labels.
+	void addPositiveWildcard( std::vector< TagID > tag_ids, std::string pattern = {} );
+	//! Adds a resolved wildcard match set that a record must carry none of. \p pattern as above.
+	void addNegativeWildcard( std::vector< TagID > tag_ids, std::string pattern = {} );
 
 	//! Sets the tags a record must have.
 	void addPositiveTags( std::vector< TagID > tag_ids );

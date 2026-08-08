@@ -4,7 +4,12 @@
 
 #include "SearchBuilder.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <limits>
 #include <ranges>
+#include <unordered_map>
 
 #include "api/helpers/helpers.hpp"
 #include "db/drogonArrayBind.hpp"
@@ -19,41 +24,140 @@ namespace idhan
 namespace
 {
 
-// Resolution is split across three mime-specific metadata tables; COALESCE picks whichever
-// applies to the record's mime type. Shared between generateOrderByClause() (the ORDER BY
-// expression) and generateSortFilterClause() (the "has any resolution data at all" WHERE check).
-constexpr std::string_view width_expr {
-	"COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)"
-};
-constexpr std::string_view height_expr {
-	"COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height)"
+//! Copies a finished Set into the shape the API handlers consume.
+SearchResults toResults( const search::Set& set, const bool want_hashes )
+{
+	SearchResults out {};
+	out.record_ids = set.ids();
+	if ( want_hashes && set.hashes() ) out.hashes = *set.hashes();
+	return out;
+}
+
+// Width/height predicates coalesce across image and video metadata only -- not
+// image_project_metadata, which the pre-rewrite predicate did not consult either. The `p` prefix
+// keeps these aliases clear of the sort key's, so a predicate and the sort can read the same
+// table without colliding.
+constexpr std::string_view predicate_resolution_joins {
+	" LEFT JOIN image_metadata pim USING (record_id)"
+	" LEFT JOIN video_metadata pvm USING (record_id)"
 };
 
-// The full ratio expression, not just width_expr/height_expr individually: used identically for
-// both the ORDER BY value and the exclusion filter, so a zero height (which NULLIF turns into a
-// NULL ratio) is excluded the same way a record with no resolution data at all is.
-constexpr std::string_view ratio_expr {
-	"(COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)::float"
-	" / NULLIF(COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height), 0))"
+// Both take the ids as $1 and return them as `id`/`name`, so one reader serves either.
+// `tags.tag_text` is a stored generated column, so neither lookup builds anything.
+constexpr std::string_view tag_name_query {
+	"SELECT tag_id AS id, tag_text AS name FROM tags"
+	" WHERE tag_id = ANY($1)"
+};
+constexpr std::string_view namespace_name_query {
+	"SELECT namespace_id AS id, namespace_text AS name FROM tag_namespaces WHERE namespace_id = ANY($1)"
 };
 
-// bigint casts prevent int*int overflow on large images (e.g. 50000x50000 exceeds INT32_MAX).
-constexpr std::string_view num_pixels_expr {
-	"(COALESCE(image_metadata.width, video_metadata.width, image_project_metadata.width)::bigint"
-	" * COALESCE(image_metadata.height, video_metadata.height, image_project_metadata.height)::bigint)"
+using NameMap = std::unordered_map< TagID, std::string >;
+
+//! Looks up the display text for whichever of \p ids \p names does not already carry. Names exist
+//! only so the step labels can say what a term searched for, so this is deliberately forgiving:
+//! nothing missing issues no query at all, and an id the lookup does not return simply keeps its
+//! number in the label.
+//!
+//! \p ids and \p names are taken by reference rather than by value because this is always awaited
+//! where it is called -- the lazy-coroutine hazard is storing one of these to await later, which
+//! nothing here does.
+Task<> completeNames( DbClientPtr db, std::string query, const std::vector< TagID >& ids, NameMap& names )
+{
+	std::vector< TagID > missing {};
+	for ( const auto id : ids )
+		if ( !names.contains( id ) ) missing.push_back( id );
+
+	if ( missing.empty() ) co_return;
+
+	const auto result { co_await db->execSqlCoro( std::move( query ), std::move( missing ) ) };
+
+	for ( const auto& row : result )
+		names.insert_or_assign( row[ "id" ].as< TagID >(), row[ "name" ].as< std::string >() );
+}
+
+//! How an id reads in a step label: its quoted text when the lookup found it, the bare number when
+//! it did not. A tag deleted between the search resolving it and the labels being built is the
+//! only way that happens, and it is not worth failing a search that already has its answer.
+std::string nameOf( const NameMap& names, const TagID id )
+{
+	const auto it { names.find( id ) };
+	if ( it == names.end() ) return std::to_string( id );
+	return format_ns::format( "\'{}\'", it->second );
+}
+
+//! Bytes per unit suffix. Binary multipliers, matching Hydrus -- `KB` there is 1024 bytes -- so a
+//! filesize search copied out of Hydrus selects the same files here. \p unit is the text trailing
+//! the number, whitespace and casing included; empty means the number was already in bytes.
+//! \throws std::invalid_argument for anything else, which the search endpoints turn into a 400.
+//! Silently reading an unknown unit as bytes would answer a different question than the one asked.
+std::uint64_t byteUnitMultiplier( const std::string_view unit )
+{
+	// "  MegaBytes" and "mb" have to land on the same key: drop everything that is not a letter,
+	// lowercase what remains, then drop a trailing plural.
+	std::string normalized {};
+	normalized.reserve( unit.size() );
+	for ( const char c : unit )
+		if ( std::isalpha( static_cast< unsigned char >( c ) ) )
+			normalized += static_cast< char >( std::tolower( static_cast< unsigned char >( c ) ) );
+
+	if ( normalized.ends_with( 's' ) ) normalized.pop_back();
+
+	constexpr std::uint64_t kilo { 1024 };
+
+	if ( normalized.empty() || normalized == "b" || normalized == "byte" ) return 1;
+	if ( normalized == "k" || normalized == "kb" || normalized == "kib" || normalized == "kilobyte" ) return kilo;
+	if ( normalized == "m" || normalized == "mb" || normalized == "mib" || normalized == "megabyte" )
+		return kilo * kilo;
+	if ( normalized == "g" || normalized == "gb" || normalized == "gib" || normalized == "gigabyte" )
+		return kilo * kilo * kilo;
+	if ( normalized == "t" || normalized == "tb" || normalized == "tib" || normalized == "terabyte" )
+		return kilo * kilo * kilo * kilo;
+
+	throw std::invalid_argument( format_ns::format( "Unknown filesize unit: \'{}\'", unit ) );
+}
+
+//! Hydrus's tolerance for its approximate operator (ClientNumberTest.py, extra_value 0.15), and the
+//! reason it is a percentage rather than an absolute: `~= 50KB` has to widen by 7.5KB while
+//! `~= 500` (a width) widens by 75.
+constexpr std::size_t approximate_percent { 15 };
+
+//! The ±15% band `~` widens a value into.
+struct ApproximateBand
+{
+	std::size_t lower {};
+	std::size_t upper {};
 };
+
+//! Widens \p value by approximate_percent in both directions, saturating at the top. A band is a
+//! relaxation of a search, so it must never come back narrower than the value it was built from --
+//! which is what a wrapped upper bound would do.
+ApproximateBand approximateBand( const std::size_t value )
+{
+	// floor(value * pct / 100), computed so neither multiply can overflow: the left is bounded by
+	// value itself, and the right by 99 * pct. The obvious `value * pct / 100` would wrap on a
+	// number the user is free to type, and a wrapped band silently answers a different search.
+	const std::size_t delta { value / 100 * approximate_percent + ( value % 100 ) * approximate_percent / 100 };
+
+	// Every column these compare against is INTEGER or BIGINT, so the band tops out where BIGINT
+	// does; a larger literal is a postgres error rather than a search.
+	constexpr auto ceiling { static_cast< std::size_t >( std::numeric_limits< std::int64_t >::max() ) };
+
+	// delta <= 0.15 * value, so the lower bound can never underflow.
+	return { value - delta, ( value > ceiling - delta ) ? ceiling : value + delta };
+}
 
 } // namespace
 
-void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view tag )
+SearchBuilder::RangeTerm SearchBuilder::parseRangeTerm( const std::string_view tag )
 {
-	target.m_active = true;
-
 	const bool is_greater_than { tag.contains( ">" ) };
 	const bool is_less_than { tag.contains( "<" ) };
 	const bool is_equal_to { tag.contains( "=" ) };
 	const bool is_not { tag.contains( "!" ) || tag.contains( "≠" ) }; // ew
-	const bool is_approximate { tag.contains( "~" ) };
+	// Hydrus writes its own predicates with U+2248, so a search pasted out of it has to parse here;
+	// `~` is the ASCII spelling for anyone typing one by hand.
+	const bool is_approximate { tag.contains( "~" ) || tag.contains( "≈" ) };
 
 	SearchOperation op { 0 };
 	if ( is_greater_than ) op |= SearchOperationFlags::GreaterThan;
@@ -61,7 +165,6 @@ void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view 
 	if ( is_equal_to ) op |= SearchOperationFlags::Equal;
 	if ( is_not ) op |= SearchOperationFlags::Not;
 	if ( is_approximate ) op |= SearchOperationFlags::Approximate;
-	target.operation = op;
 
 	log::debug( "Parsing range for {}", tag );
 
@@ -78,803 +181,484 @@ void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, std::string_view 
 
 	log::debug( "Got number from \'{}\'", number_substr );
 
+	std::size_t value { 0 };
+
 	try
 	{
 		std::size_t remaining_characters_pos { 0 };
-		target.count = std::stoull( number_substr, &remaining_characters_pos );
+		value = std::stoull( number_substr, &remaining_characters_pos );
 	}
 	catch ( std::exception& e )
 	{
 		throw std::invalid_argument(
 			format_ns::format( "Failed to parse number using stoull: {}: {}", tag, e.what() ) );
 	}
+
+	return { op, value };
 }
 
-std::unordered_map< TagID, std::string > SearchBuilder::createFilters(
-	const std::vector< TagID >& tag_ids,
-	const bool filter_domains )
+void SearchBuilder::narrowRange( RangeSearchInfo& target, const RangeTerm term )
 {
-	std::unordered_map< TagID, std::string > filters {};
-	filters.reserve( tag_ids.size() );
+	target.m_active = true;
 
-	// 0 == filter_id, 1 == tag_id
-	// uses $1 for domains
-	constexpr std::string_view domain_filter_template {
-		"filter_{0} AS ( SELECT record_id FROM active_tag_mappings WHERE tag_id = {1} AND ideal_tag_id IS NULL AND tag_domain_id = ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings WHERE ideal_tag_id = {1} AND tag_domain_id = ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} AND tag_domain_id = ANY($1) )"
-	};
-
-	// 0 == filter_id, 1 == tag_id
-	// Has no binds
-	constexpr std::string_view domainless_filter_template {
-		"filter_{0} AS ( SELECT record_id FROM active_tag_mappings WHERE tag_id = {1} AND ideal_tag_id IS NULL UNION DISTINCT SELECT record_id FROM active_tag_mappings WHERE ideal_tag_id = {1} UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = {1} )"
-	};
-
-	for ( const auto& tag : tag_ids )
+	if ( term.operation & SearchOperationFlags::Not )
 	{
-		const auto filled_template { filter_domains ? format_ns::format( domain_filter_template, tag, tag ) :
-			                                          format_ns::format( domainless_filter_template, tag, tag ) };
-
-		filters.insert_or_assign( tag, filled_template );
-	}
-
-	return filters;
-}
-
-std::unordered_map< NamespaceID, std::string > SearchBuilder::createNamespaceFilters(
-	const std::vector< NamespaceID >& namespace_ids,
-	const bool filter_domains )
-{
-	std::unordered_map< NamespaceID, std::string > filters {};
-	filters.reserve( namespace_ids.size() );
-
-	// Each filter narrows positive_filter rather than scanning the mappings tables outright: a
-	// bare `namespace:*` matches an enormous number of records, so the join has to be seeded by
-	// the already-restricted positive set. This is why these CTEs must be emitted after
-	// positive_filter in construct().
-
-	// 0 == filter_id, 1 == namespace_id
-	// uses $1 for domains
-	constexpr std::string_view domain_filter_template {
-		"filter_namespace_{0} AS ( "
-		"SELECT record_id FROM active_tag_mappings			JOIN positive_filter USING (record_id) JOIN tags USING (tag_id)											WHERE namespace_id = {1} AND ideal_tag_id IS NULL AND tag_domain_id = ANY($1) "
-		"UNION DISTINCT "
-		"SELECT record_id FROM active_tag_mappings			JOIN positive_filter USING (record_id) JOIN tags ON tags.tag_id = active_tag_mappings.ideal_tag_id		WHERE namespace_id = {1} AND tag_domain_id = ANY($1) "
-		"UNION DISTINCT "
-		"SELECT record_id FROM active_tag_mappings_parents	JOIN positive_filter USING (record_id) JOIN tags USING (tag_id)											WHERE namespace_id = {1} AND tag_domain_id = ANY($1) )"
-	};
-
-	// 0 == filter_id, 1 == namespace_id
-	// Has no binds
-	constexpr std::string_view domainless_filter_template {
-		"filter_namespace_{0} AS ( "
-		"SELECT record_id FROM active_tag_mappings			JOIN positive_filter USING (record_id) JOIN tags USING (tag_id)											WHERE namespace_id = {1} AND ideal_tag_id IS NULL "
-		"UNION DISTINCT "
-		"SELECT record_id FROM active_tag_mappings			JOIN positive_filter USING (record_id) JOIN tags ON tags.tag_id = active_tag_mappings.ideal_tag_id		WHERE namespace_id = {1} "
-		"UNION DISTINCT "
-		"SELECT record_id FROM active_tag_mappings_parents	JOIN positive_filter USING (record_id) JOIN tags USING (tag_id)											WHERE namespace_id = {1} )"
-	};
-
-	for ( const auto& tag_namespace : namespace_ids )
-	{
-		const auto filled_template {
-			filter_domains ? format_ns::format( domain_filter_template, tag_namespace, tag_namespace ) :
-							 format_ns::format( domainless_filter_template, tag_namespace, tag_namespace )
-		};
-
-		filters.insert_or_assign( tag_namespace, filled_template );
-	}
-
-	return filters;
-}
-
-std::string SearchBuilder::wildcardToLikePattern( const std::string_view wildcard )
-{
-	std::string pattern {};
-	// worst case every character needs an escape byte
-	pattern.reserve( wildcard.size() * 2 );
-
-	for ( const char c : wildcard )
-	{
-		switch ( c )
-		{
-			case '*':
-				// the wildcard itself: the only character that keeps its LIKE meaning
-				pattern += '%';
-				break;
-			// LIKE's own metacharacters. A tag may legitimately contain any of them, so they are
-			// escaped to match literally -- otherwise a tag like `100%` would silently behave as a
-			// wildcard the user never typed. Backslash is LIKE's default escape character, so no
-			// ESCAPE clause is needed at the call site.
-			case '%':
-			case '_':
-			case '\\':
-				pattern += '\\';
-				pattern += c;
-				break;
-			default:
-				pattern += c;
-				break;
-		}
-	}
-
-	return pattern;
-}
-
-std::vector< std::string > SearchBuilder::createWildcardFilters(
-	const std::vector< std::vector< TagID > >& wildcard_groups,
-	const std::size_t first_index,
-	const bool filter_domains )
-{
-	std::vector< std::string > filters {};
-	filters.reserve( wildcard_groups.size() );
-
-	// Same three-branch shape as createFilters(), with `= {1}` widened to `= ANY({1})`: that ANY is
-	// the OR across every tag the wildcard resolved to. Aliases and parents are followed exactly as
-	// they are for an explicitly typed tag, so `cat*girl` finds a record tagged with something that
-	// merely resolves to a matching tag.
-
-	// 0 == filter_id, 1 == tag id array literal
-	// uses $1 for domains
-	constexpr std::string_view domain_filter_template {
-		"filter_wildcard_{0} AS ( SELECT record_id FROM active_tag_mappings WHERE tag_id = ANY({1}) AND ideal_tag_id IS NULL AND tag_domain_id = ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings WHERE ideal_tag_id = ANY({1}) AND tag_domain_id = ANY($1) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = ANY({1}) AND tag_domain_id = ANY($1) )"
-	};
-
-	// 0 == filter_id, 1 == tag id array literal
-	// Has no binds
-	constexpr std::string_view domainless_filter_template {
-		"filter_wildcard_{0} AS ( SELECT record_id FROM active_tag_mappings WHERE tag_id = ANY({1}) AND ideal_tag_id IS NULL UNION DISTINCT SELECT record_id FROM active_tag_mappings WHERE ideal_tag_id = ANY({1}) UNION DISTINCT SELECT record_id FROM active_tag_mappings_parents WHERE tag_id = ANY({1}) )"
-	};
-
-	for ( std::size_t i = 0; i < wildcard_groups.size(); ++i )
-	{
-		// The cast is explicit so an empty group renders as `ARRAY[]::integer[]` rather than an
-		// untyped `ARRAY[]`, which postgres rejects. An empty group matches nothing, which is the
-		// safe reading: setWildcardTags() 404s before one can reach here, so this only guards
-		// direct API misuse, where silently matching *everything* would widen the search instead.
-		std::string array_literal { "ARRAY[" };
-		const auto& tag_ids { wildcard_groups[ i ] };
-		for ( auto itter = tag_ids.begin(); itter != tag_ids.end(); ++itter )
-		{
-			array_literal += std::to_string( *itter );
-			if ( itter + 1 != tag_ids.end() ) array_literal += ',';
-		}
-		array_literal += "]::integer[]";
-
-		const auto filter_id { first_index + i };
-
-		filters.emplace_back(
-			filter_domains ? format_ns::format( domain_filter_template, filter_id, array_literal ) :
-							 format_ns::format( domainless_filter_template, filter_id, array_literal ) );
-	}
-
-	return filters;
-}
-
-std::string SearchBuilder::buildNamespaceFilter() const
-{
-	// A record must carry a tag in *every* requested namespace, so the per-namespace CTEs are
-	// intersected. Each of them is already restricted to positive_filter, so no further narrowing
-	// is needed here.
-	if ( m_namespace_ids.empty() ) return {};
-
-	std::string namespace_filter { "filter_namespaces AS (" };
-
-	for ( auto itter = m_namespace_ids.begin(); itter != m_namespace_ids.end(); ++itter )
-	{
-		namespace_filter += format_ns::format( "SELECT record_id FROM filter_namespace_{}", *itter );
-
-		if ( itter + 1 != m_namespace_ids.end() )
-			namespace_filter += " INTERSECT ";
-		else
-			namespace_filter += "),";
-	}
-
-	return namespace_filter;
-}
-
-std::string SearchBuilder::buildPositiveFilter() const
-{
-	std::string positive_filter { "positive_filter AS (" };
-
-	if ( m_in_archive_search == ArchiveSearchType::InArchive )
-	{
-		positive_filter += "SELECT DISTINCT record_id FROM archive_map INTERSECT ";
-	}
-
-	// A wildcard narrows the result set exactly like an explicitly typed tag does -- the OR across
-	// the tags it matched is already inside its own CTE -- so its term joins the same INTERSECT
-	// chain. Positive wildcards are numbered from 0; see construct() for the shared numbering.
-	std::vector< std::string > terms {};
-	terms.reserve( m_positive_tags.size() + m_positive_wildcards.size() );
-	for ( const auto& tag : m_positive_tags )
-		terms.emplace_back( format_ns::format( "SELECT record_id FROM filter_{}", tag ) );
-	for ( std::size_t i = 0; i < m_positive_wildcards.size(); ++i )
-		terms.emplace_back( format_ns::format( "SELECT record_id FROM filter_wildcard_{}", i ) );
-
-	if ( terms.empty() )
-	{
-		// If there is no 'positive tags', we need to populate the positive filter with something to prevent it from returning nothing
-		positive_filter += "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL),";
-		return positive_filter;
-	}
-
-	for ( auto itter = terms.begin(); itter != terms.end(); ++itter )
-	{
-		positive_filter += *itter;
-
-		if ( itter + 1 != terms.end() )
-			positive_filter += " INTERSECT ";
-		else
-			positive_filter += "),";
-	}
-
-	return positive_filter;
-}
-
-std::string SearchBuilder::buildNegativeFilter() const
-{
-	std::string negative_filters { "negative_filter AS (" };
-
-	// Negatives are UNION'd rather than INTERSECT'd: the whole set is subtracted from the positives
-	// in one EXCEPT, so matching *any* excluded tag drops the record. A negated wildcard therefore
-	// removes a record carrying any tag its pattern matched. Negative wildcards are numbered after
-	// the positive ones so both share one collision-free CTE name sequence.
-	std::vector< std::string > terms {};
-	terms.reserve( m_negative_tags.size() + m_negative_wildcards.size() );
-	for ( const auto& tag : m_negative_tags )
-		terms.emplace_back( format_ns::format( "SELECT record_id FROM filter_{}", tag ) );
-	for ( std::size_t i = 0; i < m_negative_wildcards.size(); ++i )
-		terms.emplace_back(
-			format_ns::format( "SELECT record_id FROM filter_wildcard_{}", m_positive_wildcards.size() + i ) );
-
-	if ( m_in_archive_search == ArchiveSearchType::NoArchive )
-	{
-		negative_filters += "SELECT DISTINCT record_id FROM archive_map";
-		if ( terms.empty() )
-			negative_filters += "),";
-		else
-			negative_filters += " UNION DISTINCT ";
-	}
-
-	for ( auto itter = terms.begin(); itter != terms.end(); ++itter )
-	{
-		negative_filters += *itter;
-
-		if ( itter + 1 != terms.end() )
-			negative_filters += " UNION DISTINCT ";
-		else
-			negative_filters += "),";
-	}
-
-	return negative_filters;
-}
-
-void SearchBuilder::generateOrderByClause( std::string& query, const std::string_view record_id_alias ) const
-{
-	query += " ORDER BY ";
-
-	if ( m_sort_type == SortType::RANDOM )
-	{
-		// Non-deterministic per query execution — direction, NULLS ordering and the record_id
-		// tiebreak below are all meaningless here, and offset-based pagination is inherently
-		// unstable under this sort (each page re-randomizes independently).
-		query += "random()";
+		// `!= 500` is everything under 500 unioned with everything over it. That is two intervals and
+		// the bounds hold one, so it cannot narrow them -- it rides alongside and is AND-ed on when
+		// the predicate renders.
+		target.negated.push_back( term );
 		return;
 	}
 
-	switch ( m_sort_type )
+	const bool is_greater_than { ( term.operation & SearchOperationFlags::GreaterThan ) != 0 };
+	const bool is_less_than { ( term.operation & SearchOperationFlags::LessThan ) != 0 };
+
+	// Whichever bound is already there wins if it is the tighter one, which is what makes
+	// `< 1KB` with `< 1MB` mean `< 1KB` rather than whichever was typed second.
+	const auto raiseLower = [ &target ]( const std::size_t value )
+	{ target.lower = target.lower ? std::max( *target.lower, value ) : value; };
+
+	const auto lowerUpper = [ &target ]( const std::size_t value )
+	{ target.upper = target.upper ? std::min( *target.upper, value ) : value; };
+
+	// Each operator has to bound the range by exactly what renderComparison would have written for
+	// it on its own: the meaning of `~>` cannot depend on whether one predicate names it or two do.
+	if ( term.operation & SearchOperationFlags::Approximate )
 	{
-		// DEFAULT and HY_* should not be used here.
-		default:
-			[[fallthrough]];
-		case SortType::RANDOM:
-			// unreachable: handled by the early return above; case exists only to satisfy
-			// -Wswitch-enum
-			[[fallthrough]];
-		case SortType::FILESIZE:
-			query += "fm.size";
-			break;
-		case SortType::IMPORT_TIME:
-			query += "fm.cluster_store_time";
-			break;
-		case SortType::RECORD_TIME:
-			// the records join aliases the table as rc
-			query += "rc.creation_time";
-			break;
-		case SortType::MODIFIED_TIME:
-			query += "fm.modified_time";
-			break;
-		case SortType::MIME:
-			// sorts by the raw mime_id FK, not a semantic filetype-category ordering
-			query += "fm.mime_id";
-			break;
-		case SortType::HASH:
-			// the records join aliases the table as rc
-			query += "rc.sha256";
-			break;
-		case SortType::DURATION:
-			query += "video_metadata.duration";
-			break;
-		case SortType::FRAMERATE:
-			query += "video_metadata.framerate";
-			break;
-		case SortType::HAS_AUDIO:
-			query += "video_metadata.has_audio";
-			break;
-		case SortType::WIDTH:
-			query += width_expr;
-			break;
-		case SortType::HEIGHT:
-			query += height_expr;
-			break;
-		case SortType::RATIO:
-			query += ratio_expr;
-			break;
-		case SortType::NUM_PIXELS:
-			query += num_pixels_expr;
-			break;
-		case SortType::NUM_TAGS:
-			// ntc ("num tags count") is the per-record subquery join set up when
-			// m_required_joins.num_tags is set — see determineJoinsForQuery(). COALESCE handles
-			// zero-tag records (no ntc row) — 0 is a real answer here, not missing data, so unlike
-			// the other nullable sorts this one is never excluded.
-			query += "COALESCE(ntc.tag_count, 0)";
-			break;
+		const auto [ lower, upper ] { approximateBand( term.value ) };
+
+		if ( is_greater_than && !is_less_than )
+			raiseLower( lower );
+		else if ( is_less_than && !is_greater_than )
+			lowerUpper( upper );
+		else
+		{
+			raiseLower( lower );
+			lowerUpper( upper );
+		}
+		return;
 	}
 
-	const std::string_view direction { m_order == SortOrder::ASC ? " ASC" : " DESC" };
-	query += direction;
-
-	// A stable tiebreak on the unique record_id. Without it, rows with equal sort keys order
-	// arbitrarily, so identical queries can disagree and offset-based paging can skip or repeat
-	// rows. Matches the primary sort's direction (rather than always ASC) so a single ascending
-	// (col, record_id) index can serve both directions: a forward scan for ASC, a backward scan
-	// for DESC — one index instead of two per sort column.
-	query += ", ";
-	query += record_id_alias;
-	query += ".record_id";
-	query += direction;
-}
-
-void SearchBuilder::appendLimitOffset( std::string& query ) const
-{
-	// An explicit API limit wins; otherwise honour a system:limit predicate.
-	const std::optional< std::size_t > limit {
-		m_limit.has_value() ?
-			m_limit :
-			( m_limit_search.m_active ? std::optional< std::size_t > { m_limit_search.count } : std::nullopt )
+	// renderComparison's reading of a bare "system:width 500": naming no direction means equality.
+	const bool is_inclusive {
+		( term.operation & SearchOperationFlags::Equal ) || !( is_greater_than || is_less_than )
 	};
 
-	if ( limit ) query += " LIMIT " + std::to_string( *limit );
-	if ( m_offset && *m_offset > 0 ) query += " OFFSET " + std::to_string( *m_offset );
+	// `>` before `<`, mirroring renderComparison's else-if: a tag naming both is nonsense either way,
+	// but the two have to agree on which nonsense, or a negated term would bound differently from
+	// the identical positive one.
+	if ( is_greater_than )
+	{
+		// Exclusive bounds are folded inward by one so both sides are inclusive and compose by max/min.
+		if ( is_inclusive )
+			raiseLower( term.value );
+		else if ( term.value == std::numeric_limits< std::size_t >::max() )
+			// nothing is above the largest number there is
+			target.m_unsatisfiable = true;
+		else
+			raiseLower( term.value + 1 );
+		return;
+	}
+
+	if ( is_less_than )
+	{
+		if ( is_inclusive )
+			lowerUpper( term.value );
+		else if ( term.value == 0 )
+			// and nothing is below zero, on columns that are all non-negative
+			target.m_unsatisfiable = true;
+		else
+			lowerUpper( term.value - 1 );
+		return;
+	}
+
+	// No direction named, or both: equality, which pins the range to a point.
+	raiseLower( term.value );
+	lowerUpper( term.value );
 }
 
-void SearchBuilder::determineJoinsForQuery( std::string& query )
+void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, const std::string_view tag )
 {
-	if ( m_duration_search == DurationSearchType::HasDuration )
-	{
-		m_required_joins.video_metadata |= true;
-	}
-
-	if ( m_duration_search == DurationSearchType::NoDuration )
-	{
-		// duration is a NOT NULL column, so 'no duration' means the record has no
-		// video_metadata row at all — an inner join could never produce such a row
-		m_required_joins.left_video_metadata |= true;
-	}
-
-	if ( m_width_search.m_active || m_height_search.m_active )
-	{
-		m_required_joins.left_image_metadata |= true;
-		m_required_joins.left_video_metadata |= true;
-	}
-
-	if ( m_archive_search.m_active ) m_required_joins.archive_map |= true;
-
-	if ( m_in_archive_search == ArchiveSearchType::NoArchive ) m_required_joins.left_archive_map |= true;
-
-	// an inner join acts as a filter (e.g. has-duration), so it must win over a LEFT
-	// request for the same table coming from another predicate
-	if ( m_required_joins.video_metadata || m_required_joins.left_video_metadata )
-	{
-		if ( m_required_joins.left_video_metadata && !m_required_joins.video_metadata ) query += " LEFT";
-		query += " JOIN video_metadata USING (record_id)";
-	}
-
-	if ( m_required_joins.image_metadata || m_required_joins.left_image_metadata )
-	{
-		if ( m_required_joins.left_image_metadata && !m_required_joins.image_metadata ) query += " LEFT";
-		query += " JOIN image_metadata USING (record_id)";
-	}
-
-	if ( m_required_joins.left_image_project_metadata )
-	{
-		// no INNER variant exists: nothing currently filters on this table via a join alone, only
-		// generateSortFilterClause()'s WHERE check does
-		query += " LEFT JOIN image_project_metadata USING (record_id)";
-	}
-
-	// determine any joins needed
-	if ( m_required_joins.records )
-	{
-		query += " JOIN records rc USING (record_id)";
-	}
-
-	if ( m_required_joins.file_info )
-	{
-		query += " JOIN file_info fm USING (record_id)";
-	}
-
-	if ( m_required_joins.archive_map || m_required_joins.left_archive_map )
-	{
-		if ( m_required_joins.left_archive_map ) query += " LEFT";
-		query += " JOIN archive_map am USING (record_id)";
-	}
-
-	if ( m_required_joins.num_tags )
-	{
-		//TODO: Optimize this somehow
-		query += " LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
-				 " FROM active_tag_mappings_final GROUP BY record_id) ntc USING (record_id)";
-	}
+	narrowRange( target, parseRangeTerm( tag ) );
 }
 
-void SearchBuilder::determineSelectClause( std::string& query, const bool return_ids, const bool return_hashes )
+void SearchBuilder::parseFilesizeSearch( RangeSearchInfo& target, const std::string_view tag )
 {
-	// determine the SELECT
-	if ( return_ids && return_hashes )
+	auto term { parseRangeTerm( tag ) };
+
+	// parseRangeTerm has already established there is a number; whatever follows its last digit is
+	// the unit. Rescanning for it rather than having parseRangeTerm report where the number ended
+	// keeps an out-parameter out of the one path that has no units to care about.
+	const auto number_end { tag.find_last_of( "0123456789" ) };
+	const auto multiplier { byteUnitMultiplier( tag.substr( number_end + 1 ) ) };
+
+	// The comparison lands on a BIGINT column, so a value that cannot be one is not a search that can
+	// be answered -- and scaling into a wrapped number would answer some other search instead.
+	constexpr auto max_size { static_cast< std::uint64_t >( std::numeric_limits< std::int64_t >::max() ) };
+	if ( term.value > max_size / multiplier )
+		throw std::invalid_argument( format_ns::format( "Filesize out of range: {}", tag ) );
+
+	term.value *= multiplier;
+
+	narrowRange( target, term );
+}
+
+std::string SearchBuilder::renderComparison(
+	const std::string_view expression,
+	const SearchOperation operation,
+	const std::size_t value )
+{
+	const bool is_greater_than { ( operation & SearchOperationFlags::GreaterThan ) != 0 };
+	const bool is_less_than { ( operation & SearchOperationFlags::LessThan ) != 0 };
+
+	std::string comparison {};
+
+	if ( operation & SearchOperationFlags::Approximate )
 	{
-		m_required_joins.records = true;
-		constexpr std::string_view select_both { " SELECT tm.record_id, rc.sha256 FROM final_filter tm" };
-		query += select_both;
-	}
-	else if ( return_hashes )
-	{
-		// sha256 lives in the joined records table (rc); the final_filter CTE only has record_id
-		constexpr std::string_view select_sha256 { " SELECT rc.sha256 FROM final_filter tm" };
-		query += select_sha256;
-		m_required_joins.records = true;
+		// Approximate replaces the target with a band, and each operator then tests against the edge
+		// of it nearest to what it was asking for: `~>` takes everything from the bottom of the band
+		// upwards, `~<` everything up to the top, and `~=` -- which names no direction -- is exactly
+		// both of those at once. So `~=` stays the conjunction of `~>` and `~<`, as it reads.
+		const auto [ lower, upper ] { approximateBand( value ) };
+
+		if ( is_greater_than && !is_less_than )
+			comparison = format_ns::format( "{} >= {}", expression, lower );
+		else if ( is_less_than && !is_greater_than )
+			comparison = format_ns::format( "{} <= {}", expression, upper );
+		else
+			comparison = format_ns::format( "{} BETWEEN {} AND {}", expression, lower, upper );
 	}
 	else
 	{
-		constexpr std::string_view select_record_id { " SELECT tm.record_id FROM final_filter tm" };
-		query += select_record_id;
+		comparison = expression;
+		comparison += ' ';
+
+		if ( is_greater_than )
+			comparison += '>';
+		else if ( is_less_than )
+			comparison += '<';
+
+		// A predicate that named no comparison at all ("system:width 500") would otherwise render as
+		// `expr 500`, which is a syntax error rather than a search. Equality is the reading the user
+		// most plausibly meant.
+		if ( ( operation & SearchOperationFlags::Equal ) || !( is_greater_than || is_less_than ) ) comparison += '=';
+
+		comparison += ' ';
+		comparison += std::to_string( value );
 	}
+
+	if ( operation & SearchOperationFlags::Not ) comparison = format_ns::format( "NOT ({})", comparison );
+
+	return comparison;
 }
 
-void SearchBuilder::generateWhereClauses( std::string& query )
+std::string SearchBuilder::renderBounds( const std::string_view expression, const RangeSearchInfo& bounds )
 {
-	// These are added after the join clauses
-	/*
-	// Not needed due to the JOIN being a filter
-	if ( m_duration_search == DurationSearchType::HasDuration )
+	// Bounds that cross describe no value at all. evaluate() answers such a search without asking
+	// the database anything, so this is only reached by a caller rendering one directly -- but it
+	// has to be the empty set there too, not a range that silently reads backwards.
+	if ( bounds.impossible() ) return "FALSE";
+
+	std::vector< std::string > conjuncts {};
+
+	// BETWEEN rather than two comparisons: one range predicate is what the planner needs to see to
+	// drive a single scan of the (size, record_id) index rather than intersecting two.
+	if ( bounds.lower && bounds.upper && *bounds.lower == *bounds.upper )
+		conjuncts.push_back( format_ns::format( "{} = {}", expression, *bounds.lower ) );
+	else if ( bounds.lower && bounds.upper )
+		conjuncts.push_back( format_ns::format( "{} BETWEEN {} AND {}", expression, *bounds.lower, *bounds.upper ) );
+	else if ( bounds.lower )
+		conjuncts.push_back( format_ns::format( "{} >= {}", expression, *bounds.lower ) );
+	else if ( bounds.upper )
+		conjuncts.push_back( format_ns::format( "{} <= {}", expression, *bounds.upper ) );
+
+	for ( const auto& term : bounds.negated )
+		conjuncts.push_back( renderComparison( expression, term.operation, term.value ) );
+
+	// A predicate that bounded nothing -- `system:width ~> 0`, whose band bottoms out where the
+	// column already does -- still has to render as a condition, because a fetch's where is never
+	// empty. Not TRUE though: every other rendering here implicitly requires the record to have the
+	// column at all (a NULL width satisfies no comparison), and dropping that only for the one input
+	// that constrains nothing else would quietly widen it instead.
+	if ( conjuncts.empty() ) return format_ns::format( "{} IS NOT NULL", expression );
+
+	std::string rendered {};
+	for ( const auto& conjunct : conjuncts )
 	{
-		query += " WHERE vm_hd.duration IS NOT NULL";
+		if ( !rendered.empty() ) rendered += " AND ";
+		rendered += conjunct;
 	}
-	*/
 
-	if ( m_duration_search == DurationSearchType::NoDuration )
+	return rendered;
+}
+
+std::optional< std::string_view > SearchBuilder::impossiblePredicate() const
+{
+	if ( m_filesize_search.impossible() ) return "filesize";
+	if ( m_width_search.impossible() ) return "width";
+	if ( m_height_search.impossible() ) return "height";
+	if ( m_archive_search.impossible() ) return "archive";
+	return std::nullopt;
+}
+
+std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
+{
+	std::vector< search::PredicateSource > predicates {};
+
+	// EXISTS rather than a join throughout: archive_map holds one row per (archive, record), so
+	// joining it would duplicate a record that lives in two archives, and a duplicate would break
+	// the uniqueness the merge relies on.
+
+	// The description is how the predicate reads back to whoever typed it -- the step labels show it
+	// rather than the SQL, which names table aliases the searcher never wrote and does not have.
+	const auto add = [ &predicates ]( std::string joins, std::string where, std::string description )
 	{
-		query += " AND video_metadata.duration IS NULL";
-	}
-
-	//!
-	auto numericSearchAdd = [ & ]( const SearchOperation operation, const auto value, const std::string_view comp )
-	{
-		if ( operation & SearchOperationFlags::Not )
-			query += " AND NOT ";
-		else
-			query += " AND ";
-
-		query += comp;
-
-		if ( operation & SearchOperationFlags::GreaterThan )
-		{
-			query += ">";
-		}
-		else if ( operation & SearchOperationFlags::LessThan )
-		{
-			query += "<";
-		}
-
-		if ( operation & SearchOperationFlags::Equal )
-		{
-			query += "= ";
-		}
-		else
-		{
-			query += " ";
-		}
-
-		query += std::to_string( value );
+		predicates.push_back(
+			search::PredicateSource { std::move( joins ), std::move( where ), std::move( description ) } );
 	};
 
-	if ( m_height_search.m_active )
-	{
-		numericSearchAdd(
-			m_height_search.operation,
-			m_height_search.count,
-			"COALESCE(image_metadata.height, video_metadata.height) " );
-	}
+	if ( m_duration_search == DurationSearchType::HasDuration )
+		add( {},
+		     "EXISTS (SELECT 1 FROM video_metadata pvmd WHERE pvmd.record_id = fi.record_id)",
+		     "system:has duration" );
+
+	if ( m_duration_search == DurationSearchType::NoDuration )
+		// duration is NOT NULL, so "no duration" means no video_metadata row at all
+		add( {},
+		     "NOT EXISTS (SELECT 1 FROM video_metadata pvmd WHERE pvmd.record_id = fi.record_id)",
+		     "system:no duration" );
+
+	if ( m_in_archive_search == ArchiveSearchType::InArchive )
+		add( {}, "EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)", "system:in archive" );
+
+	if ( m_in_archive_search == ArchiveSearchType::NoArchive )
+		add( {},
+		     "NOT EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)",
+		     "system:not in archive" );
+
+	// Each of these is one predicate per column no matter how many system tags named it: the bounds
+	// were already merged as they were parsed, so `system:size > 1KB` with `system:size < 1MB` is a
+	// single BETWEEN and a single Set rather than two of each intersected afterwards.
+	if ( m_archive_search.m_active )
+		add( {},
+		     format_ns::format(
+				 "EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id AND {})",
+				 renderBounds( "pam.archive_id", m_archive_search ) ),
+		     format_ns::format( "system:{}", renderBounds( "archive", m_archive_search ) ) );
 
 	if ( m_width_search.m_active )
-	{
-		numericSearchAdd(
-			m_width_search.operation, m_width_search.count, "COALESCE(image_metadata.width, video_metadata.width) " );
-	}
+		add( std::string { predicate_resolution_joins },
+		     renderBounds( "COALESCE(pim.width, pvm.width)", m_width_search ),
+		     format_ns::format( "system:{}", renderBounds( "width", m_width_search ) ) );
 
-	if ( m_archive_search.m_active )
-	{
-		numericSearchAdd( m_archive_search.operation, m_archive_search.count, "am.archive_id " );
-	}
+	if ( m_height_search.m_active )
+		add( std::string { predicate_resolution_joins },
+		     renderBounds( "COALESCE(pim.height, pvm.height)", m_height_search ),
+		     format_ns::format( "system:{}", renderBounds( "height", m_height_search ) ) );
 
-	if ( m_in_archive_search != ArchiveSearchType::DontCare )
-	{
-		if ( m_in_archive_search == ArchiveSearchType::NoArchive ) query += " AND am.archive_id IS NULL";
-	}
+	// No joins: size lives on file_info itself, and (size, record_id) is indexed, so a filesize term
+	// is answered by an index-only scan that is already in the sort's tiebreak order.
+	if ( m_filesize_search.m_active )
+		add( {},
+		     renderBounds( "fi.size", m_filesize_search ),
+		     format_ns::format( "system:{}", renderBounds( "filesize", m_filesize_search ) ) );
+
+	return predicates;
 }
 
-void SearchBuilder::generateSortFilterClause( std::string& query ) const
+std::optional< std::size_t > SearchBuilder::effectiveLimit() const
 {
-	switch ( m_sort_type )
-	{
-		case SortType::MODIFIED_TIME:
-			// modified_time has no NOT NULL constraint (unset until a record is actually
-			// modified) — a record with no modified_time has nothing to sort by here.
-			query += " AND fm.modified_time IS NOT NULL";
-			break;
-		case SortType::WIDTH:
-			// a record with no row in any of the three resolution tables has no width to sort by
-			query += " AND ";
-			query += width_expr;
-			query += " IS NOT NULL";
-			break;
-		case SortType::HEIGHT:
-			query += " AND ";
-			query += height_expr;
-			query += " IS NOT NULL";
-			break;
-		case SortType::RATIO:
-			// checks the full ratio expression, not just presence of width/height — a zero height
-			// (NULLIF'd to NULL) is excluded here too, not just missing resolution data entirely
-			query += " AND ";
-			query += ratio_expr;
-			query += " IS NOT NULL";
-			break;
-		case SortType::NUM_PIXELS:
-			query += " AND ";
-			query += num_pixels_expr;
-			query += " IS NOT NULL";
-			break;
-		default:
-			break;
-	}
+	// An explicit API limit wins; otherwise honour a system:limit predicate. A limit is a cap, so the
+	// upper bound is the only side that means anything: `system:limit = 100` and `system:limit < 100`
+	// both bound it, and `system:limit > 100`, which asks for nothing coherent, leaves it unset.
+	if ( m_limit ) return m_limit;
+	if ( m_limit_search.m_active ) return m_limit_search.upper;
+	return std::nullopt;
 }
 
-std::string SearchBuilder::construct( const bool return_ids, const bool return_hashes, const bool filter_domains )
-{
-	// TODO: Sort tag ids to get the most out of each filter.
-
-	std::string query { "WITH " };
-	query.reserve( 1024 );
-
-	// the fast path is only valid when nothing would filter the result set; system
-	// predicates and archive filters must go through the full construction below
-	const bool has_system_predicates {
-		m_duration_search != DurationSearchType::DontCare || m_in_archive_search != ArchiveSearchType::DontCare
-		|| m_width_search.m_active || m_height_search.m_active || m_archive_search.m_active
-	};
-
-	// Fast path: nothing filters the result set, so skip the tag-filter CTE chain entirely. It still
-	// has to honour sort, tiebreak, limit and offset — this is the "browse everything" case the grid
-	// hits on first load, and returning the whole table unordered and unbounded is neither correct
-	// nor affordable. Only for id-returning searches; hashes need the records join, handled below.
-	if ( m_positive_tags.empty() && m_negative_tags.empty() && m_namespace_ids.empty() && m_positive_wildcards.empty()
-	     && m_negative_wildcards.empty() && !has_system_predicates && !return_hashes )
-	{
-		query = "SELECT fm.record_id FROM file_info fm";
-
-		// fm is already the driving FROM alias here, so suppress the redundant `JOIN file_info fm`
-		// that determineJoinsForQuery() would otherwise emit for sort types that read from file_info.
-		// Every other join the current sort type needs (records, future metadata-table sorts) is
-		// still driven by the flags setSortType() set — this path only ever reaches sort-driven
-		// joins, since it's gated on !has_system_predicates.
-		m_required_joins.file_info = false;
-		determineJoinsForQuery( query );
-
-		query += " WHERE fm.mime_id IS NOT NULL";
-		generateSortFilterClause( query );
-
-		generateOrderByClause( query, "fm" );
-		appendLimitOffset( query );
-
-		return query;
-	}
-
-	std::vector< TagID > filtered_tags {};
-	filtered_tags.reserve( 16 );
-	std::ranges::copy( m_positive_tags, std::back_inserter( filtered_tags ) );
-	std::ranges::copy( m_negative_tags, std::back_inserter( filtered_tags ) );
-	const auto filter_map { createFilters( filtered_tags, filter_domains ) };
-	const auto namespace_filter_map { createNamespaceFilters( m_namespace_ids, filter_domains ) };
-	// One flat numbering across both lists: positives take [0, positives.size()), negatives continue
-	// from there. buildPositiveFilter()/buildNegativeFilter() derive their CTE names the same way.
-	const auto positive_wildcard_filters { createWildcardFilters( m_positive_wildcards, 0, filter_domains ) };
-	const auto negative_wildcard_filters {
-		createWildcardFilters( m_negative_wildcards, m_positive_wildcards.size(), filter_domains )
-	};
-	const auto positive_filter { buildPositiveFilter() };
-	const auto negative_filter { buildNegativeFilter() };
-	const auto namespace_filter { buildNamespaceFilter() };
-
-	const bool has_namespaces { !m_namespace_ids.empty() };
-	const bool has_negatives { !m_negative_tags.empty() || !m_negative_wildcards.empty() };
-
-	std::string final_filter { "final_filter AS (SELECT DISTINCT record_id FROM " };
-
-	if ( has_namespaces )
-		final_filter += "filter_namespaces INTERSECT SELECT record_id FROM positive_filter";
-	else
-		final_filter += "positive_filter";
-
-	// INTERSECT binds tighter than EXCEPT in postgres, so the namespace narrowing above is applied
-	// before the negative tags are subtracted, without needing explicit parentheses.
-	if ( has_negatives ) final_filter += " EXCEPT SELECT record_id FROM negative_filter";
-
-	final_filter += ")";
-
-	m_bind_domains = filter_domains;
-
-	for ( const auto& filter : filter_map | std::views::values )
-	{
-		query += filter + ",";
-	}
-
-	// The wildcard CTEs reference nothing but the mappings tables, so unlike the namespace ones they
-	// belong here -- positive_filter intersects them and a non-recursive WITH may only reference
-	// CTEs declared before it. Negatives are emitted alongside the positives so both are in scope
-	// regardless of which filters end up using them.
-	for ( const auto& filter : positive_wildcard_filters )
-	{
-		query += filter + ",";
-	}
-	for ( const auto& filter : negative_wildcard_filters )
-	{
-		query += filter + ",";
-	}
-
-	query += positive_filter;
-
-	// The per-namespace CTEs join positive_filter, and a non-recursive WITH may only reference
-	// CTEs declared before it, so these have to follow positive_filter.
-	for ( const auto& filter : namespace_filter_map | std::views::values )
-	{
-		query += filter + ",";
-	}
-	query += namespace_filter;
-
-	if ( has_negatives ) query += negative_filter;
-	query += final_filter;
-
-	log::info( "{}", query );
-
-	determineSelectClause( query, return_ids, return_hashes );
-
-	// the unconditional mime filter below and the filesize sort both read from the fm alias,
-	// so the file_info join must always be present
-	m_required_joins.file_info = true;
-
-	determineJoinsForQuery( query );
-
-	query += " WHERE fm.mime_id IS NOT NULL";
-	generateSortFilterClause( query );
-
-	generateWhereClauses( query );
-
-	// final_filter is aliased tm and file_info is always joined as fm; both carry record_id, so tm
-	// is the natural driving alias for the tiebreak.
-	generateOrderByClause( query, "tm" );
-
-	appendLimitOffset( query );
-
-	return query;
-}
-
-SearchBuilder::SearchBuilder() : m_sort_type(), m_order(), m_positive_tags(), m_negative_tags(), m_display_mode()
-{}
-
-drogon::Task< drogon::orm::Result > SearchBuilder::query(
-	const DbClientPtr db,
+Task< search::Set > SearchBuilder::evaluate(
+	DbClientPtr db,
 	std::vector< TagDomainID > tag_domain_ids,
-	const bool return_ids,
+	const bool want_hashes )
+{
+	m_stats = std::make_shared< search::SearchStats >();
+
+	const auto key_type { search::sortKeySpec( m_sort_type ).type };
+
+	// A search whose bounds cross -- `system:size < 1KB` together with `system:size > 1MB` -- has an
+	// answer, and the answer is nothing. Returning it here rather than sending postgres a `WHERE
+	// FALSE` costs no round trip, and none of the other terms need fetching either: whatever they
+	// would have matched, intersecting it with nothing is still nothing.
+	if ( const auto impossible { impossiblePredicate() } )
+	{
+		log::warn( "system:{} was bounded to a range nothing can satisfy; the search matches no records", *impossible );
+		m_stats->record( format_ns::format( "system:{} (impossible range)", *impossible ), 0, search::StepKind::Fold );
+		co_return search::Set::emptyOf( key_type );
+	}
+
+	// Labels name what the search asked for -- `+tag:'character:reimu'`, not `+tag:6500`. The ids are
+	// what got resolved, but they are not what anyone reading the log was looking at. A search whose
+	// terms arrived as text already has every name, so this costs nothing on the usual path; only ids
+	// handed straight to addPositiveTags() and friends need a primary-key lookup before the fetches.
+	std::vector< TagID > tag_ids { m_positive_tags };
+	tag_ids.insert( tag_ids.end(), m_negative_tags.begin(), m_negative_tags.end() );
+
+	co_await completeNames( db, std::string { tag_name_query }, tag_ids, m_tag_names );
+	co_await completeNames( db, std::string { namespace_name_query }, m_namespace_ids, m_namespace_names );
+
+	const search::FetchContext ctx { std::move( db ), m_sort_type, want_hashes, std::move( tag_domain_ids ), m_stats };
+
+	// Every term is an independent query, so they all go out together. The fetch functions take
+	// their arguments by value, which is what makes this safe to store and await later: a capturing
+	// lambda's closure would be destroyed before these lazy coroutines ever started running.
+	std::vector< Task< search::Set > > tasks {};
+	// Labels are kept alongside so the fold can name the term it is folding in; the fetches record
+	// their own row counts, but only the fold knows what each one did to the running result.
+	std::vector< std::string > labels {};
+
+	// The task is built in its own statement before the label is moved. Written as a single call the
+	// two arguments would be unsequenced, so the move could run first and hand the fetch an empty
+	// label -- silently, since nothing else reads it.
+	const auto queue = [ &tasks, &labels ]( Task< search::Set > task, std::string label )
+	{
+		tasks.emplace_back( std::move( task ) );
+		labels.emplace_back( std::move( label ) );
+	};
+
+	for ( const auto tag : m_positive_tags )
+	{
+		auto label { format_ns::format( "+tag:{}", nameOf( m_tag_names, tag ) ) };
+		auto task { search::fetchTag( ctx, tag, label ) };
+		queue( std::move( task ), std::move( label ) );
+	}
+
+	for ( std::size_t i = 0; i < m_positive_wildcards.size(); ++i )
+	{
+		auto label { wildcardLabel( '+', m_positive_wildcards[ i ], i ) };
+		auto task { search::fetchAnyTag( ctx, m_positive_wildcards[ i ].tag_ids, label ) };
+		queue( std::move( task ), std::move( label ) );
+	}
+
+	for ( const auto tag_namespace : m_namespace_ids )
+	{
+		auto label { format_ns::format( "+namespace:{}", nameOf( m_namespace_names, tag_namespace ) ) };
+		auto task { search::fetchNamespace( ctx, tag_namespace, label ) };
+		queue( std::move( task ), std::move( label ) );
+	}
+
+	for ( auto& predicate : buildPredicates() )
+	{
+		auto label { format_ns::format( "+{}", predicate.description ) };
+		auto task { search::fetchPredicate( ctx, std::move( predicate ), label ) };
+		queue( std::move( task ), std::move( label ) );
+	}
+
+	// Everything queued so far narrows the search; everything after it is subtracted.
+	const std::size_t positive_count { tasks.size() };
+
+	for ( const auto tag : m_negative_tags )
+	{
+		auto label { format_ns::format( "-tag:{}", nameOf( m_tag_names, tag ) ) };
+		auto task { search::fetchTag( ctx, tag, label ) };
+		queue( std::move( task ), std::move( label ) );
+	}
+
+	for ( std::size_t i = 0; i < m_negative_wildcards.size(); ++i )
+	{
+		auto label { wildcardLabel( '-', m_negative_wildcards[ i ], i ) };
+		auto task { search::fetchAnyTag( ctx, m_negative_wildcards[ i ].tag_ids, label ) };
+		queue( std::move( task ), std::move( label ) );
+	}
+
+	// awaiter bound to a named local first, matching getMetadataInfo's usage: the awaiter owns the
+	// task vector, and awaiting a temporary would end its lifetime at the end of the full expression
+	auto when_all_awaiter { drogon::when_all( std::move( tasks ) ) };
+	auto sets { co_await when_all_awaiter };
+
+	search::Set result {};
+	bool narrowed { false };
+
+	for ( std::size_t i = 0; i < positive_count; ++i )
+	{
+		// spelled out rather than as a ternary: a ternary between a prvalue and an xvalue collapses
+		// to a prvalue, which would copy the first Set instead of moving it
+		if ( narrowed )
+			result = result & sets[ i ];
+		else
+			result = std::move( sets[ i ] );
+
+		narrowed = true;
+		// the same label as the fetch, so a consumer can pair the two without parsing
+		m_stats->record( labels[ i ], result.size(), search::StepKind::Fold, 0, result.inverted() );
+	}
+
+	// With nothing to narrow it, the search starts from the universe -- an inverted empty Set, which
+	// is the complement of nothing. That costs no query: a result still inverted at the end is
+	// handed to fetchPage(), which applies the exclusions and the window in one pass.
+	if ( !narrowed ) result = ~search::Set::emptyOf( key_type );
+
+	for ( std::size_t i = positive_count; i < sets.size(); ++i )
+	{
+		result = result & ~std::move( sets[ i ] );
+		// the same label as the fetch, so a consumer can pair the two without parsing
+		m_stats->record( labels[ i ], result.size(), search::StepKind::Fold, 0, result.inverted() );
+	}
+
+	co_return result;
+}
+
+Task< SearchResults > SearchBuilder::query(
+	DbClientPtr db,
+	std::vector< TagDomainID > tag_domain_ids,
+	[[maybe_unused]] const bool return_ids,
 	const bool return_hashes )
 {
-	// only filter by domain when the caller actually supplied domains; the domain
-	// filter template references $1, which must then be bound below
-	const auto query { construct( return_ids, return_hashes, !tag_domain_ids.empty() ) };
+	const auto limit { effectiveLimit() };
+	const std::size_t offset { m_offset.value_or( 0 ) };
 
-	log::info( "Search: Trying to run {}", query );
+	auto set { co_await evaluate( db, std::move( tag_domain_ids ), return_hashes ) };
 
-	if ( m_bind_domains )
-		co_return co_await db->execSqlCoro( query, std::move( tag_domain_ids ) );
-	else
-		co_return co_await db->execSqlCoro( query );
+	if ( set.inverted() )
+	{
+		// Nothing positive narrowed the search: it is either a pure blacklist (`-gore -scat`) or has
+		// no terms at all. The database applies the exclusion, the order and the window in one pass,
+		// so the universe never has to exist in memory.
+		const search::FetchContext page_ctx { std::move( db ), m_sort_type, return_hashes, {}, m_stats };
+		const auto page { co_await search::fetchPage( page_ctx, set.ids(), m_order, offset, limit ) };
+
+		log::debug( "{}", m_stats->summary() );
+
+		co_return toResults( page, return_hashes );
+	}
+
+	if ( m_sort_type == SortType::RANDOM )
+		// direction is meaningless under a random sort
+		set.shuffle();
+	else if ( m_order == SortOrder::DESC )
+		// the fetches always produce ascending order, so one reversal serves the whole result
+		set.reverse();
+
+	set.slice( offset, limit );
+
+	m_stats->record(
+		format_ns::format( "page (offset {}, limit {})", offset, limit ? std::to_string( *limit ) : "none" ),
+		set.size(),
+		search::StepKind::Page );
+
+	log::debug( "{}", m_stats->summary() );
+
+	co_return toResults( set, return_hashes );
+}
+
+std::string SearchBuilder::browseQuery( const bool return_hashes ) const
+{
+	return search::buildPageQuery(
+		m_sort_type, return_hashes, false, m_order, m_offset.value_or( 0 ), effectiveLimit() );
 }
 
 void SearchBuilder::setSortType( const SortType type )
 {
 	m_sort_type = type;
-
-	switch ( type )
-	{
-		default:
-			[[fallthrough]];
-		case SortType::FILESIZE:
-			{
-				m_required_joins.file_info = true;
-				break;
-			}
-		case SortType::IMPORT_TIME:
-			{
-				// comes from `cluster_store_time` timestamp in `file_info`
-				m_required_joins.file_info = true;
-				break;
-			}
-		case SortType::RECORD_TIME:
-			{
-				// comes from creation_time in `records`
-				m_required_joins.records = true;
-				break;
-			}
-		case SortType::MODIFIED_TIME:
-			{
-				m_required_joins.file_info = true;
-				break;
-			}
-		case SortType::MIME:
-			{
-				m_required_joins.file_info = true;
-				break;
-			}
-		case SortType::HASH:
-			{
-				// comes from sha256 in `records`
-				m_required_joins.records = true;
-				break;
-			}
-		case SortType::RANDOM:
-			{
-				// no data needed
-				break;
-			}
-		case SortType::DURATION:
-		case SortType::FRAMERATE:
-		case SortType::HAS_AUDIO:
-			{
-				// INNER: a record with no video_metadata row is excluded from a duration/framerate/
-				// has_audio-sorted search, not sorted to the end — this sort doubles as a filter.
-				m_required_joins.video_metadata = true;
-				break;
-			}
-		case SortType::WIDTH:
-		case SortType::HEIGHT:
-		case SortType::RATIO:
-		case SortType::NUM_PIXELS:
-			{
-				// LEFT: resolution can come from any of three tables, so none can be an INNER join
-				// on its own; generateSortFilterClause() excludes records with no match in any of
-				// them, since a plain join can't express "at least one of these three has a row".
-				m_required_joins.left_image_metadata = true;
-				m_required_joins.left_video_metadata = true;
-				m_required_joins.left_image_project_metadata = true;
-				break;
-			}
-		case SortType::NUM_TAGS:
-			{
-				m_required_joins.num_tags = true;
-				break;
-			}
-	}
 }
 
 void SearchBuilder::setSortOrder( const SortOrder value )
@@ -928,6 +712,11 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setTags( const s
 	std::vector< TagID > negative_ids {};
 	for ( const auto& tag_id : *negative_map | std::views::values ) negative_ids.emplace_back( tag_id );
 
+	// The text the search was written in, kept for the step labels: it is what the searcher will
+	// recognise, and having it here is what spares evaluate() a lookup it would otherwise need.
+	for ( const auto& [ text, tag_id ] : *positive_map ) m_tag_names.insert_or_assign( tag_id, text );
+	for ( const auto& [ text, tag_id ] : *negative_map ) m_tag_names.insert_or_assign( tag_id, text );
+
 	addPositiveTags( positive_ids );
 	addNegativeTags( negative_ids );
 
@@ -944,8 +733,8 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardNames
 	namespaces.reserve( vector.size() );
 	for ( const auto& tag : vector )
 	{
-		// Negation would need an excluding filter shape the CTE chain does not build yet; without
-		// this guard the '-' is swallowed into the namespace name and surfaces as a confusing 404.
+		// Negation would need an excluding filter shape the fold does not build yet; without this
+		// guard the '-' is swallowed into the namespace name and surfaces as a confusing 404.
 		if ( tag.starts_with( "-" ) )
 			co_return createBadRequest( "Negated namespace wildcards are not supported yet: \'{}\'", tag );
 
@@ -964,24 +753,65 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardNames
 		namespaces.erase( beg, end );
 	}
 
+	// Read before the bind: the array parameter takes `namespaces` by rvalue reference.
+	const auto requested_count { namespaces.size() };
+
+	// namespace_text comes back with the id so the step labels can name the namespace the search
+	// asked for without looking it up again.
 	const auto namespace_search { co_await db->execSqlCoro(
-		"SELECT namespace_id FROM tag_namespaces WHERE namespace_text = ANY($1)", std::move( namespaces ) ) };
+		"SELECT namespace_id, namespace_text FROM tag_namespaces WHERE namespace_text = ANY($1)",
+		std::move( namespaces ) ) };
 
 	// A namespace nothing has ever been tagged with cannot match any record. Silently dropping it
 	// would widen the search to everything the *other* predicates matched, so 404 instead — same
 	// contract mapTags() gives for an unknown tag.
-	if ( namespace_search.size() != namespaces.size() )
+	if ( namespace_search.size() != requested_count )
 		co_return createNotFound( "One or more namespaces in the search do not exist" );
 
 	std::vector< NamespaceID > resolved {};
 	resolved.reserve( namespace_search.size() );
 	for ( const auto& row : namespace_search )
 	{
-		resolved.emplace_back( row[ "namespace_id" ].as< NamespaceID >() );
+		const auto namespace_id { row[ "namespace_id" ].as< NamespaceID >() };
+		resolved.emplace_back( namespace_id );
+		m_namespace_names.insert_or_assign( namespace_id, row[ "namespace_text" ].as< std::string >() );
 	}
 	addNamespaces( std::move( resolved ) );
 
 	co_return std::nullopt;
+}
+
+std::string SearchBuilder::wildcardToLikePattern( const std::string_view wildcard )
+{
+	std::string pattern {};
+	// worst case every character needs an escape byte
+	pattern.reserve( wildcard.size() * 2 );
+
+	for ( const char c : wildcard )
+	{
+		switch ( c )
+		{
+			case '*':
+				// the wildcard itself: the only character that keeps its LIKE meaning
+				pattern += '%';
+				break;
+			// LIKE's own metacharacters. A tag may legitimately contain any of them, so they are
+			// escaped to match literally -- otherwise a tag like `100%` would silently behave as a
+			// wildcard the user never typed. Backslash is LIKE's default escape character, so no
+			// ESCAPE clause is needed at the call site.
+			case '%':
+			case '_':
+			case '\\':
+				pattern += '\\';
+				pattern += c;
+				break;
+			default:
+				pattern += c;
+				break;
+		}
+	}
+
+	return pattern;
 }
 
 Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardTags(
@@ -1017,10 +847,11 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardTags(
 		tag_ids.reserve( matched.size() );
 		for ( const auto& row : matched ) tag_ids.emplace_back( row[ "tag_id" ].as< TagID >() );
 
+		// The pattern without its leading '-': the label's sign already carries the negation.
 		if ( negated )
-			addNegativeWildcard( std::move( tag_ids ) );
+			addNegativeWildcard( std::move( tag_ids ), std::string { wildcard } );
 		else
-			addPositiveWildcard( std::move( tag_ids ) );
+			addPositiveWildcard( std::move( tag_ids ), std::string { wildcard } );
 	}
 
 	co_return std::nullopt;
@@ -1029,9 +860,9 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardTags(
 namespace
 {
 
-//! Merges \p incoming into \p target, keeping the result sorted and duplicate-free. Duplicates
-//! matter beyond wasted work: every id becomes a CTE named after it, and postgres rejects a WITH
-//! clause that declares the same name twice.
+//! Merges \p incoming into \p target, keeping the result sorted and duplicate-free. A duplicated
+//! tag would otherwise become a second identical term in the fold -- harmless to the answer,
+//! since intersecting a Set with itself is a no-op, but a whole wasted query.
 template < typename T >
 void mergeUnique( std::vector< T >& target, std::vector< T > incoming )
 {
@@ -1075,28 +906,39 @@ void SearchBuilder::addNamespaces( std::vector< NamespaceID > namespace_ids )
 namespace
 {
 
-//! Sorts and dedupes a wildcard's match set, then appends it as its own group. Unlike the plain tag
-//! lists these are not merged across wildcards: each pattern is a separate predicate, so `cat*` and
-//! `*girl` must stay two INTERSECT terms rather than collapsing into one OR'd set.
-void appendWildcardGroup( std::vector< std::vector< TagID > >& groups, std::vector< TagID > tag_ids )
+//! Sorts and dedupes a wildcard's match set, then appends it as its own group. Unlike the plain
+//! tag lists these are not merged across wildcards: each pattern is a separate predicate, so
+//! `cat*` and `*girl` must stay two intersecting terms rather than collapsing into one OR'd set.
+template < typename Group >
+void appendWildcardGroup( std::vector< Group >& groups, std::vector< TagID > tag_ids, std::string pattern )
 {
 	std::ranges::sort( tag_ids );
 	const auto [ beg, end ] = std::ranges::unique( tag_ids );
 	tag_ids.erase( beg, end );
 
-	groups.emplace_back( std::move( tag_ids ) );
+	groups.emplace_back( Group { std::move( tag_ids ), std::move( pattern ) } );
 }
 
 } // namespace
 
-void SearchBuilder::addPositiveWildcard( std::vector< TagID > tag_ids )
+std::string SearchBuilder::wildcardLabel( const char sign, const WildcardGroup& group, const std::size_t index )
 {
-	appendWildcardGroup( m_positive_wildcards, std::move( tag_ids ) );
+	// The tag count stays either way: a wildcard that resolved to one tag and one that resolved to
+	// forty thousand are the same term to read and very different terms to run.
+	if ( group.pattern.empty() )
+		return format_ns::format( "{}wildcard[{}] ({} tags)", sign, index, group.tag_ids.size() );
+
+	return format_ns::format( "{}wildcard:\'{}\' ({} tags)", sign, group.pattern, group.tag_ids.size() );
 }
 
-void SearchBuilder::addNegativeWildcard( std::vector< TagID > tag_ids )
+void SearchBuilder::addPositiveWildcard( std::vector< TagID > tag_ids, std::string pattern )
 {
-	appendWildcardGroup( m_negative_wildcards, std::move( tag_ids ) );
+	appendWildcardGroup( m_positive_wildcards, std::move( tag_ids ), std::move( pattern ) );
+}
+
+void SearchBuilder::addNegativeWildcard( std::vector< TagID > tag_ids, std::string pattern )
+{
+	appendWildcardGroup( m_negative_wildcards, std::move( tag_ids ), std::move( pattern ) );
 }
 
 bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
@@ -1184,8 +1026,9 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 		return true;
 	}
 	// system:filesize ~= 50 kilobytes // system:filesize > 10megabytes // system:filesize < 1 GB // system:filesize > 0 B
-	if ( system_subtag.starts_with( "filesize" ) )
+	if ( system_subtag.starts_with( "filesize" ) || system_subtag.starts_with( "size" ) )
 	{
+		parseFilesizeSearch( m_filesize_search, system_subtag );
 		return true;
 	}
 	// system:similar to abcdef01 abcdef02 abcdef03, abcdef04 with distance 3
@@ -1330,7 +1173,7 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 			continue;
 		}
 
-		log::warn( "Unsupported system tag system: \'{}\'", system_subtag );
+		log::warn( "Unsupported system tag: \'{}\'", system_subtag );
 	}
 }
 

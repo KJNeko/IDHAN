@@ -485,6 +485,76 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.search-breakdown-toggle {
+    padding: 0.3rem 0.55rem;
+    border: 1px solid #2a2e37;
+    border-radius: 5px;
+    background: #23262d;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.search-breakdown-toggle.on {
+    border-color: #2e5a7d;
+    background: #23303a;
+    color: var(--fg);
+}
+
+/* Query breakdown: one row per term, in the order the search applied them. The table earns its
+   space by putting what a term cost (Matched, Time) next to what it did (Removed), which is the
+   only way to see a term that reads 800k rows to eliminate nothing. */
+.search-breakdown {
+    overflow-x: auto;
+}
+
+.breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+    font-variant-numeric: tabular-nums;
+}
+
+.breakdown-table th,
+.breakdown-table td {
+    padding: 0.25rem 0.5rem 0.25rem 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.breakdown-table thead th {
+    color: var(--muted);
+    font-weight: 500;
+    border-bottom: 1px solid #2a2e37;
+}
+
+/* the term itself is the row's identity, so it leads and stays readable while the numbers align */
+.breakdown-table th[scope='row'],
+.breakdown-table thead th:first-child {
+    width: 100%;
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    font-weight: 400;
+}
+
+.breakdown-table tbody tr.no-effect th[scope='row'],
+.breakdown-table tbody tr.no-effect td {
+    color: var(--muted);
+}
+
+.breakdown-table tfoot th,
+.breakdown-table tfoot td {
+    border-top: 1px solid #2a2e37;
+    padding-top: 0.35rem;
+}
+
+.breakdown-not {
+    color: var(--muted);
+}
+
 /* ---- Thumbnail grid panel ---- */
 .grid-panel {
   display: flex;
