@@ -108,5 +108,5 @@ std::vector< RecordID > SearchFixture::sortedIds( const idhan::SortType type, co
 	idhan::SearchBuilder builder {};
 	builder.setSortType( type );
 	builder.setSortOrder( order );
-	return runQuery( builder.construct( true, false, false ) );
+	return runQuery( builder.browseQuery() );
 }

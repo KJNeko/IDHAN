@@ -173,13 +173,13 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 	if ( return_ids )
 	{
 		Json::Value ids { Json::arrayValue };
-		for ( const auto& row : result ) ids.append( row[ "record_id" ].as< RecordID >() );
+		for ( const auto id : result.record_ids ) ids.append( id );
 		out[ "record_ids" ] = std::move( ids );
 	}
 	if ( return_hashes )
 	{
 		Json::Value hashes { Json::arrayValue };
-		for ( const auto& row : result ) hashes.append( SHA256::fromPgCol( row[ "sha256" ] ).hex() );
+		for ( const auto& hash : result.hashes ) hashes.append( hash.hex() );
 		out[ "hashes" ] = std::move( hashes );
 	}
 
@@ -199,6 +199,36 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - start ).count()
 	};
 	out[ "query_ms" ] = static_cast< std::int64_t >( elapsed );
+
+	// Opt-in: the per-step row counts are always in the debug log, but returning them lets a client
+	// see which term actually narrowed the search without server log access. "rows" on an
+	// "inverted" step is the size of the *exclusion*, not of the result.
+	if ( json.isMember( "debug" ) && json[ "debug" ].isBool() && json[ "debug" ].asBool() && builder.stats() )
+	{
+		Json::Value steps { Json::arrayValue };
+		for ( const auto& step : builder.stats()->steps() )
+		{
+			Json::Value entry {};
+			entry[ "step" ] = step.label;
+			entry[ "rows" ] = static_cast< Json::Int64 >( step.rows );
+			entry[ "inverted" ] = step.inverted;
+			switch ( step.kind )
+			{
+				case search::StepKind::Fetch:
+					entry[ "kind" ] = "fetch";
+					break;
+				case search::StepKind::Fold:
+					entry[ "kind" ] = "fold";
+					break;
+				case search::StepKind::Page:
+					entry[ "kind" ] = "page";
+					break;
+			}
+			if ( step.micros > 0 ) entry[ "micros" ] = static_cast< Json::Int64 >( step.micros );
+			steps.append( std::move( entry ) );
+		}
+		out[ "stats" ] = std::move( steps );
+	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( out );
 }

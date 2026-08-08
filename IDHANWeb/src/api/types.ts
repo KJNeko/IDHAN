@@ -39,6 +39,25 @@ export interface SearchRequest {
   /** Omit both to get the full ordered id set (the grid's default). */
   limit?: number;
   offset?: number;
+    /** Ask the server to return per-step row counts in `stats`. Always written to its debug log regardless. */
+    debug?: boolean;
+}
+
+/**
+ * `fetch` is one term's query and `rows` is what the database returned for it. `fold` is that same
+ * term combined into the running result, carrying the *same* `step` label as its fetch, and `rows`
+ * is what survived. `page` is the window actually returned.
+ */
+export type SearchStepKind = 'fetch' | 'fold' | 'page';
+
+export interface SearchStep {
+    step: string;
+    rows: number;
+    kind: SearchStepKind;
+    /** When true, `rows` counts what is excluded rather than what matched. */
+    inverted: boolean;
+    /** Present on fetch and page steps only; folds are in-memory merges. */
+    micros?: number;
 }
 
 export interface SearchResponse {
@@ -46,6 +65,8 @@ export interface SearchResponse {
   count: number;
   truncated: boolean;
   query_ms: number;
+    /** Only present when the request set `debug`. */
+    stats?: SearchStep[];
 }
 
 export interface MetadataRequest {
