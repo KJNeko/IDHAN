@@ -147,8 +147,13 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 			const auto embedder { std::static_pointer_cast< EmbeddingModuleI >( module ) };
 			model_name = std::string { embedder->modelName() };
 			dimensions = static_cast< std::uint32_t >( embedder->dimensions() );
-			// Asked after startup(), so a text tower that failed to load or failed its parity check
-			// reports false here rather than being advertised and then refusing every call.
+			// Asked BEFORE startup(): the worker announces its manifest and only then brings modules
+			// up (WorkerRunner::run), because --describe must enumerate models without paying session
+			// creation for each one. So this has to be answerable from what is on disk -- a text graph
+			// and a tokenizer beside it -- and cannot reflect anything learned by loading them.
+			//
+			// A text tower that turns out to be unloadable, or that fails its parity check, therefore
+			// still reports true here and refuses at call time with the reason instead.
 			supports_text = embedder->supportsText();
 		}
 
