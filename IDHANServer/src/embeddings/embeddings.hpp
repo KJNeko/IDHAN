@@ -40,4 +40,10 @@ JobTask backfillJob( std::int32_t model_id, std::string model_name );
  *  set lives beside the job rather than beside the endpoint that calls this. */
 [[nodiscard]] bool tryBeginBackfill( std::int32_t model_id );
 
+//! Releases a claim taken by tryBeginBackfill without a job having run.
+/** Only for a caller that claimed a model to keep a backfill out while it did something else --
+ *  deleting the model, in practice. A backfill releases its own claim through the guard in its
+ *  coroutine frame and must never call this. */
+void endBackfill( std::int32_t model_id );
+
 } // namespace idhan::embeddings
