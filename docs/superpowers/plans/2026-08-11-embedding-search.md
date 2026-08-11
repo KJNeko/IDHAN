@@ -10,6 +10,21 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-11-embedding-search-design.md`
 
+> **STATUS — read before executing.**
+>
+> Tasks 2, 3, 4, 5, 8 and 9 are **implemented** (commits `e3c334c5`, `111fbf90`, `b01c7df6`). Their
+> test steps were skipped at the user's direction, so they are compile-verified only.
+>
+> Tasks **1, 6 and 7 are superseded** and must not be executed as written. They assume the model is
+> produced by `export_siglip2.py` and that the tokenizer lives inside the ONNX graph via
+> `onnxruntime-extensions`. The governing constraint has since changed to *setup is one `git clone`
+> of a HuggingFace ONNX repository*, which removes the export step from the setup path entirely.
+> See "Section 1: the text tower" in the spec for what replaces them — model discovery from the
+> clone, a BPE tokenizer over the clone's own `tokenizer.json`, and parity fixtures checked into
+> IDHAN rather than generated at export.
+>
+> Replacement tasks have not been written yet.
+
 ## Global Constraints
 
 - All integer IDs use the aliases in `IDHAN/include/IDHANTypes.hpp` (`RecordID`, etc.), never raw integers.
