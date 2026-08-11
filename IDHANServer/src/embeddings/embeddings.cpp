@@ -186,6 +186,12 @@ bool tryBeginBackfill( const std::int32_t model_id )
 	return g_running.insert( model_id ).second;
 }
 
+void endBackfill( const std::int32_t model_id )
+{
+	const std::lock_guard< std::mutex > lock { g_running_mutex };
+	g_running.erase( model_id );
+}
+
 JobTask backfillJob( const std::int32_t model_id, std::string model_name )
 {
 	// Lives in the coroutine frame, so the claim is released whether this returns normally, returns

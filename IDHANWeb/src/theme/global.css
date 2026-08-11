@@ -1142,6 +1142,29 @@ body {
     color: var(--error);
 }
 
+/* The delete confirmation. Deliberately conspicuous: it is the only irreversible action in this
+   panel, and it destroys work that only another full backfill can replace. */
+.embed-confirm {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--error);
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+.embed-confirm span {
+    flex: 1 1 16rem;
+}
+
+.toolbar-button.state-error {
+    border-color: var(--error);
+    color: var(--error);
+}
+
 /* Shared small checkbox/radio label used across the P2 panels. */
 .log-check {
   display: inline-flex;

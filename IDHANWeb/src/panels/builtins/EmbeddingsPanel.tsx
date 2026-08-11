@@ -13,6 +13,12 @@ interface EmbeddingModel {
     dimensions: number;
     /** Whether a loaded module is currently routing this model name. */
     available: boolean;
+    /**
+     * Roughly how many records this model has embedded, from pg_class.reltuples. Absent when the
+     * table has never been analysed — reported as unknown rather than zero, because "0 embeddings"
+     * would read as "nothing to lose" on the delete confirmation.
+     */
+    embedding_estimate?: number;
 }
 
 /** Shape of the JSON `setJobResponse` publishes for an embedding backfill, both mid-run and final. */
@@ -71,6 +77,8 @@ function EmbeddingsPanel({host}: PanelProps) {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [jobs, setJobs] = useState<Record<string, ActiveJob>>({});
+    /** Which model the delete button has been pressed for once. Deleting is irreversible. */
+    const [confirming, setConfirming] = useState<number | null>(null);
     const timers = useRef<Record<string, number>>({});
 
     const refreshModels = useCallback(
@@ -178,6 +186,25 @@ function EmbeddingsPanel({host}: PanelProps) {
         [host, pollJob],
     );
 
+    const deleteModel = useCallback(
+        async (model: EmbeddingModel) => {
+            setConfirming(null);
+            try {
+                const res = await host.http.fetch(`/embeddings/models/${model.model_id}`, {method: 'DELETE'});
+                if (!res.ok) {
+                    // The server's messages say which model and why — a running backfill reads very
+                    // differently from a missing one, and both are worth showing verbatim.
+                    throw new Error((await res.text()) || `/embeddings/models → ${res.status}`);
+                }
+                host.ui.toast(`Deleted "${model.model_name}" and its embeddings.`, {kind: 'info'});
+                await refreshModels();
+            } catch (err) {
+                host.ui.toast(`Failed to delete: ${err instanceof Error ? err.message : String(err)}`, {kind: 'error'});
+            }
+        },
+        [host, refreshModels],
+    );
+
     return (
         <div className="panel-body embeddings">
             <div className="embed-toolbar">
@@ -221,7 +248,38 @@ function EmbeddingsPanel({host}: PanelProps) {
                                     >
                                         {running ? 'Running…' : 'Generate'}
                                     </button>
+                                    <button
+                                        type="button"
+                                        className="toolbar-button"
+                                        disabled={running}
+                                        title={running ? 'A backfill is running for this model' : 'Delete this model and every embedding it holds'}
+                                        onClick={() => setConfirming(model.model_id)}
+                                    >
+                                        Delete
+                                    </button>
                                 </div>
+                                {confirming === model.model_id && (
+                                    <div className="embed-confirm">
+                                        {/* Stated rather than implied: a backfill over a large
+                                            collection is hours of work, and only another backfill
+                                            can replace it. */}
+                                        <span>
+                                            Delete <strong>{model.model_name}</strong> and{' '}
+                                            {typeof model.embedding_estimate === 'number'
+                                                ? `about ${model.embedding_estimate.toLocaleString()} embeddings`
+                                                : 'every embedding it holds'}
+                                            ? This cannot be undone; regenerating them means another full backfill.
+                                        </span>
+                                        <button type="button" className="toolbar-button"
+                                                onClick={() => setConfirming(null)}>
+                                            Cancel
+                                        </button>
+                                        <button type="button" className="toolbar-button state-error"
+                                                onClick={() => void deleteModel(model)}>
+                                            Delete permanently
+                                        </button>
+                                    </div>
+                                )}
                                 {job?.data && <EmbedProgress data={job.data}/>}
                             </li>
                         );

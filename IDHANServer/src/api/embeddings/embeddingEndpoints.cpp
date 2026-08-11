@@ -60,6 +60,23 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::listModels( [[maybe_unused
 		// submitting a query that comes back 400 is not an acceptable substitute.
 		model[ "supports_text" ] = module != nullptr && module->supportsText();
 
+		// reltuples, not count(*): this is shown so somebody can see what deleting a model would
+		// destroy, and an estimate answers that perfectly well. An exact count would seq-scan every
+		// model's table on every page load of the panel.
+		//
+		// -1 means the table has never been analysed, which for a freshly created one is the honest
+		// answer -- reported as unknown rather than rounded to zero, since "0 embeddings" would read
+		// as "nothing to lose".
+		const auto stats { co_await db->execSqlCoro(
+			"SELECT reltuples FROM pg_class WHERE oid = to_regclass($1)",
+			std::format( "embeddings_{}", model[ "model_id" ].asInt() ) ) };
+
+		if ( !stats.empty() && !stats[ 0 ][ "reltuples" ].isNull() )
+		{
+			if ( const auto estimate { stats[ 0 ][ "reltuples" ].as< double >() }; estimate >= 0.0 )
+				model[ "embedding_estimate" ] = static_cast< Json::Int64 >( estimate );
+		}
+
 		models.append( std::move( model ) );
 	}
 
@@ -231,6 +248,53 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 	response[ "distances" ] = std::move( distances );
 	response[ "query_ms" ] = static_cast< Json::UInt64 >(
 		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started ).count() );
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( response );
+}
+
+drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::deleteModel(
+	[[maybe_unused]] drogon::HttpRequestPtr request,
+	const std::int32_t model_id )
+{
+	auto db { drogon::app().getDbClient() };
+
+	const auto rows { co_await db->execSqlCoro(
+		"SELECT model_name FROM embedding_models WHERE model_id = $1", model_id ) };
+
+	if ( rows.empty() ) co_return createNotFound( "No embedding model with id {}", model_id );
+
+	const auto model_name { rows[ 0 ][ "model_name" ].as< std::string >() };
+
+	// Claimed rather than merely checked. A backfill starting between a check and the delete would
+	// spend the rest of its run writing rows into a table that no longer exists, one failed page at
+	// a time. Holding the claim makes the two mutually exclusive.
+	if ( !embeddings::tryBeginBackfill( model_id ) )
+		co_return createConflict(
+			"A backfill for \"{}\" is running. Wait for it to finish before deleting the model", model_name );
+
+	try
+	{
+		// The AFTER DELETE trigger drops embeddings_<model_id>. Doing it there rather than here means
+		// the table cannot outlive its row whatever removes it, and DDL being transactional means a
+		// failure takes the drop with it.
+		co_await db->execSqlCoro( "DELETE FROM embedding_models WHERE model_id = $1", model_id );
+	}
+	catch ( const std::exception& e )
+	{
+		embeddings::endBackfill( model_id );
+		co_return createInternalError( "Could not delete \"{}\": {}", model_name, e.what() );
+	}
+
+	embeddings::endBackfill( model_id );
+
+	// Deliberately loud. This destroys every vector computed for the model, which for a large
+	// collection is hours of work that only a fresh backfill can replace.
+	log::info( "Deleted embedding model '{}' (id {}) and every embedding it held", model_name, model_id );
+
+	Json::Value response {};
+	response[ "model_id" ] = model_id;
+	response[ "model_name" ] = model_name;
+	response[ "deleted" ] = true;
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
