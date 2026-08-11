@@ -12,6 +12,7 @@
 
 #include "api/helpers/createBadRequest.hpp"
 #include "db/drogonArrayBind.hpp"
+#include "logging/log.hpp"
 #include "modules/RemoteModule.hpp"
 #include "queryVector.hpp"
 
@@ -136,12 +137,33 @@ ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 
 	co_await transaction->execSqlCoro( std::format( "SET LOCAL hnsw.ef_search = {}", ef_search ) );
 
-	const auto rows { co_await transaction->execSqlCoro(
-		std::format(
-			"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}",
-			table,
-			limit ),
-		toHalfvecLiteral( *query_vector ) ) };
+	const auto literal { toHalfvecLiteral( *query_vector ) };
+
+	const auto select { std::format(
+		"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}",
+		table,
+		limit ) };
+
+	// Logged as something that can be pasted into a database client and run unchanged, which means
+	// two departures from what is actually executed:
+	//
+	// The vector is inlined rather than left as $1, because a statement with an unbound parameter
+	// cannot be run and nobody is going to reconstruct 768 floats by hand. Quoting it needs no
+	// escaping -- toHalfvecLiteral emits only digits, '.', '-', 'e', ',' and brackets, so there is no
+	// quote in it to break out of.
+	//
+	// The transaction is spelled out because SET LOCAL outside one is discarded: pasting the SELECT
+	// on its own would measure a plan the server never used.
+	log::debug(
+		"Embedding search on {}:\nBEGIN;\nSET LOCAL hnsw.ef_search = {};\nSELECT record_id, embedding <=> "
+		"'{}'::halfvec AS distance FROM {} ORDER BY distance LIMIT {};\nCOMMIT;",
+		table,
+		ef_search,
+		literal,
+		table,
+		limit );
+
+	const auto rows { co_await transaction->execSqlCoro( select, literal ) };
 
 	std::vector< SearchHit > hits {};
 	hits.reserve( rows.size() );
