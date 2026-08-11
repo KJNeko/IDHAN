@@ -13,7 +13,8 @@ process model demand it.
 
 In:
 
-- A text tower exported alongside the existing image tower, so a phrase becomes a vector.
+- Loading a HuggingFace ONNX model clone directly, so setup is one `git clone` and nothing else.
+- A BPE tokenizer reading the clone's own `tokenizer.json`, so a phrase becomes a vector.
 - `EmbeddingModuleI::embedText`, and the IPC to reach it.
 - `POST /embeddings/search`: signed weighted sum of terms, nearest neighbours, top K.
 - An HNSW index on every per-model embedding table.
@@ -57,65 +58,138 @@ Two consequences worth stating up front, because both are easy to get wrong late
 
 ## Section 1: the text tower
 
-### The blocker
+### The problem
 
-`export_siglip2.py` wraps `encode_image` only. There is no text tower in the exported graph and no
-tokenizer beside it, so today there is no path from a phrase to a vector. SigLIP2's text side uses the
-Gemma tokenizer: BPE, 256k vocab, a 34 MB `tokenizer.json`, `context_length: 64`, and
-`tokenizer_kwargs: {clean: canonicalize}` (`open_clip_config.json`).
+`export_siglip2.py` wraps `encode_image` only, so there is no text tower in the exported graph and no
+tokenizer beside it. Today there is no path from a phrase to a vector.
 
-A tokenizer that is subtly wrong yields a plausible vector and no error anywhere. This is the central
-risk of the feature, and the design below is shaped around making it loud.
+### Setup is the governing constraint
 
-### Approach: tokenizer inside the graph
+The whole of model setup must be:
 
-The text tower is exported with the tokenizer baked in as an `onnxruntime-extensions` custom op, so
-the ONNX graph takes a string and emits a vector. Tokenizer correctness then lives in Python, where it
-is verified once at export against the library that trained the model, rather than being
-re-implemented in C++.
-
-**This is gated by a spike** (see Plan of work). `onnxruntime-extensions` is not packaged on Arch and
-is absent from the reference project's venv — only base `onnxruntime` 1.28 is present — so the spike
-must confirm two separate things:
-
-1. The extensions tokenizer ops cover this Gemma tokenizer.
-2. `libortextensions.so` can be obtained and loaded from C++ via `RegisterCustomOpsLibrary`. It ships
-   in the pip wheel; the Dockerfile's existing `modelbuilder` stage can copy it into the runtime image
-   the same way it already copies models. Local non-Docker development needs it fetched too.
-
-If either fails, the fallback is `tokenizers-cpp` (MLC's wrapper over the HuggingFace Rust tokenizers
-library), which reads `tokenizer.json` directly and is bit-identical to Python by construction, at the
-cost of a Rust toolchain in the build. **Only this section changes** if the fallback is taken; sections
-2 and 3 are unaffected.
-
-### Export
-
-`export_siglip2.py --with-text` emits `text.onnx` beside `model.onnx`. A `TextEncoder` wrapper mirrors
-the existing `ImageEncoder`: `encode_text` with the L2 normalisation folded into the graph, for the
-reason the existing wrapper already gives — no consumer can then forget it.
-
-`model.json` gains:
-
-```json
-"text_onnx": "text.onnx",
-"text_input_name": "text",
-"text_output_name": "text_features",
-"context_length": 64
+```
+git clone https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX
 ```
 
-### Parity sidecar
+into the models directory. Nothing to install, nothing to convert, nothing to run. This is already how
+the LanceProject prototype works -- `models/ViT-B-16-SigLIP2` is literally a clone of
+`https://huggingface.co/timm/ViT-B-16-SigLIP2` -- and it is the bar to match.
 
-The export also writes `text_parity.json`: a handful of fixed phrases with the vectors Python produced
-for them.
+Python can consume that `timm/` clone because open_clip *constructs* the model: `factory.py:139` reads
+`open_clip_config.json`, builds the PyTorch architecture from `model_cfg`, and loads
+`open_clip_model.safetensors` into it. C++ cannot. ONNX Runtime executes a graph that already exists;
+`safetensors` is a tensor bag with no graph in it. So the repository we clone must already contain
+ONNX.
 
-At startup the module embeds those same phrases and compares. A mismatch beyond tolerance disables the
-text tower with a loud error rather than serving quietly-wrong vectors. This is the only mechanism that
-converts the tokenizer risk into a visible failure, and it follows the same instinct as the existing
-norm and output-dimension checks in `OnnxEmbedder::startup`.
+**It does.** `onnx-community/siglip2-*-ONNX` ships exactly the layout this design needs:
 
-Tolerance follows `NORM_TOLERANCE` reasoning: loose enough for fp accumulation differences across
-runtimes, tight enough to catch a different tokenisation, which moves a vector far more than rounding
-does.
+```
+onnx/vision_model.onnx      372 MB   (+ fp16 / int8 / q4 / q4f16 variants)
+onnx/text_model.onnx       1.13 GB   (+ the same variants)
+tokenizer.json            34.4 MB
+tokenizer.model           4.24 MB    (sentencepiece proto; unused)
+config.json
+preprocessor_config.json
+```
+
+Separate vision and text towers, which is already this system's two-call shape, plus the tokenizer and
+the preprocessing parameters.
+
+Consequences:
+
+- **`export_siglip2.py` leaves the setup path** and becomes optional tooling for models that have no
+  ONNX repository. It is no longer required to use IDHAN.
+- **`model.json` is no longer required.** A file the clone does not contain cannot be mandatory. It
+  remains supported for hand-prepared model directories, and when present it overrides what is
+  discovered.
+- **Quantized variants come free.** `model_q4f16.onnx` at 497 MB against 1.5 GB is a real option for a
+  CPU-only deployment, selected by config rather than by re-exporting.
+
+### Rejected alternatives, and why
+
+- **`onnxruntime-extensions`** (tokenizer inside the graph): not packaged on Arch, and ships
+  `libortextensions.so` only inside a pip wheel, so every developer and image must extract it from
+  Python packaging by hand.
+- **`tokenizers-cpp`**: bit-identical to Python by construction, but puts a Rust toolchain in the
+  build for every developer, CI job and Docker stage.
+- **`sentencepiece`**: the natural fit, since Gemma's tokenizer is SentencePiece-based and the clone
+  even ships `tokenizer.model` -- but it is not in the Arch repositories.
+
+Each fails the same test: the operator has to obtain something that is not in the clone.
+
+### Discovery, not configuration
+
+Everything is read from the clone, and where the clone is ambiguous, **from the ONNX graph itself**,
+which is authoritative in a way a config file is not.
+
+| Fact | Source |
+| --- | --- |
+| Output dimensionality | text/vision graph output shape (already done for the image tower) |
+| Image geometry | vision graph input shape `[N, 3, H, W]`, cross-checked against `preprocessor_config.json` |
+| Mean / std / rescale | `preprocessor_config.json` |
+| Context length | text graph input shape `[N, L]`; 64 when that axis is dynamic |
+| Input / output tensor names | `Session::GetInputNameAllocated` / `GetOutputNameAllocated` |
+| Tokenizer | `tokenizer.json` |
+
+Reading names from the graph rather than hard-coding them is what lets a differently-exported model
+work without new C++.
+
+`config.json` is deliberately **not** relied upon for geometry. The onnx-community config is minimal --
+`hidden_size`, `image_size`, `patch_size` and `max_position_embeddings` are all absent, inherited from
+transformers' Python-side class defaults, which are not in the repository at all. A reader that trusted
+it would have to hard-code another project's defaults.
+
+`preprocessor_config.json` confirms the image path already matches: `size` 224x224, `image_mean` and
+`image_std` all 0.5, `rescale_factor` 1/255, and a resize to exactly `height` x `width` with no aspect
+preservation -- which is the `resize_mode: force` the module already requests.
+
+### What the tokenizer must do
+
+From `tokenizer.json` and `tokenizer_config.json` in the clone:
+
+1. **Clean**: lowercase (`do_lower_case: true`), and strip ASCII punctuation. Whitespace is collapsed
+   and trimmed.
+2. **Normalize**: replace `" "` with `"▁"`.
+3. **Pre-tokenize**: split on `" "`, `MergedWithPrevious`.
+4. **BPE**: 256,000 vocabulary entries, 580,604 ranked merges, `byte_fallback: true` -- an unknown
+   character becomes its `<0xNN>` byte tokens rather than a single unk.
+5. **Terminate and pad**: append `<eos>` (`add_eos_token: true`, `add_bos_token: false`), then pad
+   right with `<pad>` to the context length.
+
+`model_max_length` in `tokenizer_config.json` is the `1e30` sentinel and carries no information; the
+context length comes from the graph.
+
+Steps 1, 2, 3 and 5 are a few dozen lines. Step 4 is the standard ranked-merge algorithm. The
+preprocessing is described by the model rather than hard-coded -- `clean` selects `canonicalize`,
+`lower` or `none`, and the normalizer, pre-tokenizer and byte-fallback are all read from
+`tokenizer.json` -- so a differently-tokenized model ships a different description instead of needing
+new C++.
+
+### The honest risk: parity has no free source
+
+A hand-written tokenizer that is subtly wrong produces plausible vectors and no error. The earlier
+design answered that with a parity sidecar written by the export script. **Git-clone-only removes that
+answer**, because there is no export step to generate one.
+
+Worse, there is a specific known ambiguity. `tokenizer_class` here is `GemmaTokenizer`, not
+`SiglipTokenizer`, and `do_lower_case: true` is stated while punctuation stripping is not. open_clip's
+`canonicalize_text` (`tokenizer.py:104`) removes punctuation; whether the transformers path does the
+same for SigLIP2 is not answerable from the files in the clone.
+
+Three mitigations, in order of value:
+
+1. **Parity fixtures checked into IDHAN**, not into the clone: for each model IDHAN is tested against,
+   a small file of phrases with their expected token ids and vectors. Verified at startup exactly as
+   the sidecar would have been. Present for known models, absent for others -- so its absence is a
+   warning, never a failure, or an unknown model could not be used at all.
+2. **A tokenization diagnostic**: `POST /embeddings/tokenize` returning the token ids and their
+   decoded pieces for a phrase, so a mismatch can be found by eye and compared against Python in
+   seconds rather than inferred from bad search results.
+3. **The export script, retained**, which can still generate a parity fixture for any model where
+   Python and torch are available. Optional tooling, off the setup path.
+
+This is a real reduction in safety compared with the export-generated sidecar, accepted deliberately in
+exchange for setup being one `git clone`.
 
 ### Module interface
 
@@ -129,13 +203,12 @@ does.
 [[nodiscard]] virtual std::expected< EmbeddingInfo, ModuleError > embedText( std::string_view phrase ) = 0;
 ```
 
-Text support is **optional at runtime**. A model with no `text.onnx`, a missing extensions library, or
-a failed parity check still registers and still serves record-reference search; only text terms are
-refused, naming the reason. This matches how the build already treats onnxruntime itself — absent means
-a reduced feature set, not a failure.
+Text support is **optional at runtime**. A model with no text graph, an unparseable `tokenizer.json`,
+or a failed parity check still registers and still serves record-reference search; only text terms are
+refused, naming the reason. This matches how the build already treats onnxruntime itself -- absent
+means a reduced feature set, not a failure.
 
-`embedText` runs one forward pass per call, consistent with the CPU-only, no-batching decision already
-taken for the image path.
+Both are defaulted rather than pure, so an existing embedding module keeps compiling unchanged.
 
 ### IPC
 
@@ -143,15 +216,17 @@ A new `ipc::CallOp::EMBED_TEXT` carries the phrase in the body and returns the v
 exactly as `EMBED` does and for the same reason: a vector is a few KiB, and a memfd per call would cost
 more than the text does.
 
-This is the first call **with no file attached**, which is a real change rather than just a new enum
-value:
+This is the first call **with no file attached**, which is a change to the IPC layer rather than just a
+new enum value:
 
-- `WorkerRunner::runCall` builds `ModuleCallData` from `call.file`, and `dispatchCall` expects a
-  descriptor. Both need a fileless path.
-- `requiredFlag( call.op )` gains the `EMBEDDING` mapping for the new op.
-- `describeResult` gains an `EMBED_TEXT` arm.
+- `WorkerRunner::handleCall` must skip `adoptInput` for it.
+- `WorkerRunner::invoke` must answer it *before* building `ModuleCallData`, which holds a
+  `ModuleFile&` bound from `*call.file` -- null for this op.
+- `WorkerProcess::call` rejected a null input outright and must stop doing so.
+- `requiredFlag` gains the `EMBEDDING` mapping; `describeResult` gains an arm.
 
-`RemoteModule` gains a matching `embedText( std::string )` coroutine.
+`RemoteModule` gains a matching `embedText( std::string )` coroutine and a `supportsText()` accessor
+fed from the manifest.
 
 ## Section 2: database and endpoint
 
@@ -318,33 +393,43 @@ Behaviour:
 
 In order of what each actually protects:
 
-1. **Parity** — the module's `embedText` against the vectors recorded by the export script. This is the
-   only test that catches tokenizer drift, which is the one failure mode here that produces no error
-   signal of its own.
-2. **Integration without ONNX** — seed known vectors directly into `embeddings_N` through
+1. **Tokenizer parity** — the module's tokenization and `embedText` against fixtures checked into
+   IDHAN, comparing token ids exactly and vectors within tolerance. This is the only thing that
+   catches tokenizer drift, the one failure mode here that produces no error signal of its own. Ids
+   and vectors are compared separately because they fail for different reasons: ids differing means
+   the C++ tokenizer is wrong, ids matching while vectors differ means the graph is.
+2. **Tokenizer units, no model needed** — the clean/normalize/pre-tokenize steps and byte-fallback
+   against hand-written expectations, so the cheap half of the tokenizer is covered without a
+   1.5 GB download in the loop.
+3. **Integration without ONNX** — seed known vectors directly into `embeddings_N` through
    `ServerDBFixture`, then `POST /embeddings/search` with a record term and assert the ordering,
    including that the reference record itself returns first at distance ≈ 0. Requires no model and no
    onnxruntime, so it runs in any environment.
-3. **Unit** — the `:weight` parse rule (including the two-colon and no-number cases above), the signed
+4. **Unit** — the `:weight` parse rule (including the two-colon and no-number cases above), the signed
    weighted sum, and zero-vector rejection.
-4. **Migration** — the index exists both on a newly registered model and on a table the old trigger had
+5. **Migration** — the index exists both on a newly registered model and on a table the old trigger had
    already created.
 
 ## Plan of work
 
-Ordered so that the risky, gating item comes first and nothing downstream is built on an unverified
-assumption.
+Ordered so the record-reference half -- which needs no model at all -- lands and is provable first,
+and the tokenizer, which is the only genuinely risky part, comes last with its verification attached.
 
-1. **Spike: `onnxruntime-extensions`.** Export the SigLIP2 text tower with the tokenizer baked in;
-   load it from a throwaway C++ binary; compare a few phrases against Python. Decide extensions vs
-   `tokenizers-cpp` on the result. Nothing else starts until this resolves.
-2. **Migration 192** — HNSW on new and existing tables. Independent of the spike.
-3. **Export script** — `--with-text`, `model.json` fields, parity sidecar.
-4. **Module** — `supportsText`, `embedText`, parity check at startup, graceful degradation.
-5. **IPC** — `EMBED_TEXT`, the fileless call path, `RemoteModule::embedText`.
-6. **Server** — `searchEmbeddings`, `POST /embeddings/search`.
-7. **Panel** — `EmbeddingSearchPanel`, registration.
-8. **Tests** — as above; 2 and 3 land with the code they cover.
+1. **Migration 192** — HNSW on new and existing tables. *(done)*
+2. **Query vector assembly** — header-only, so it is testable without linking the server. *(done)*
+3. **Server** — `searchEmbeddings`, `POST /embeddings/search`, record terms. *(done)*
+4. **IPC** — `EMBED_TEXT`, the fileless call path, `RemoteModule::embedText`. *(done)*
+5. **Text terms in search** — `supports_text` on `GET /embeddings/models`. *(done)*
+6. **Panel** — `EmbeddingSearchPanel`, registration. *(done)*
+7. **Model discovery** — read an `onnx-community` clone: locate `onnx/vision_model.onnx` and
+   `onnx/text_model.onnx`, read geometry and tensor names from the graphs, mean/std from
+   `preprocessor_config.json`. `model.json` becomes an optional override rather than a requirement.
+8. **Tokenizer** — parse `tokenizer.json`; implement clean, normalize, pre-tokenize, BPE with
+   byte-fallback, eos and padding. Unit-tested against hand-written expectations.
+9. **Text tower in the module** — `supportsText`, `embedText`, parity fixtures checked at startup,
+   graceful degradation to image-only on any failure.
+10. **Tokenization diagnostic** — `POST /embeddings/tokenize`, so a mismatch is findable by eye rather
+    than inferred from bad search results.
 
-Steps 2 and 6 are testable end-to-end with seeded vectors before any of the text work exists, so
-record-reference search can be proven independently of the spike outcome.
+Steps 1-6 are complete and record-reference search works today. Steps 7-9 are what `catgirl:0.5`
+needs; step 10 exists because step 8 is hand-written and will eventually be wrong about something.
