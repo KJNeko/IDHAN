@@ -41,6 +41,11 @@ struct WorkerSettings
 	std::chrono::milliseconds liveness_grace { 5000 };
 	bool describe_only { false }; //!< Startup interrogation: announce and exit.
 
+	//! spdlog level name the worker starts at. A worker is a separate process and does not inherit
+	//! our logger, so without this it sits at spdlog's default of info and discards every debug line
+	//! a module writes, however the server was invoked.
+	std::string log_level { "info" };
+
 	//! What this library's manifest must look like, from the interrogation at startup.
 	/** Checked when the worker announces itself. Module indexes only mean anything relative to the
 	 *  factory that produced them, so if the .so was rebuilt while the server was running -- routine

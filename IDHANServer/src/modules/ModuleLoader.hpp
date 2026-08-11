@@ -26,6 +26,9 @@ struct ModuleDescriptor
 	bool thread_safe { false };
 	ModuleResidency residency { ModuleResidency::SINGLE_RUN };
 	std::vector< std::string > mimes {};
+	//! EMBEDDING modules only: the model this one provides, and the width of its vectors.
+	std::string model_name {};
+	std::uint32_t dimensions { 0 };
 };
 
 //! Finds the modules the server can call and routes requests to them by MIME.
@@ -48,6 +51,11 @@ class ModuleLoader
 	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_metadata {};
 	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_thumbnailer {};
 	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_generator {};
+
+	//! Model name to a single index into m_modules. Not a vector like the MIME maps: two modules
+	//! offering the same model would make dispatch order-dependent, so the duplicate is refused at
+	//! registration rather than silently preferred here.
+	std::unordered_map< std::string, std::size_t > m_by_model_embedding {};
 
 	inline static ModuleLoader* m_instance;
 
@@ -95,6 +103,13 @@ class ModuleLoader
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getParserFor( std::string_view mime ) const;
 	//! \return The generator modules that can handle \p mime.
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getGeneratorsFor( std::string_view mime ) const;
+
+	//! \return The module providing \p model_name, or nullptr if no loaded library offers it.
+	[[nodiscard]] std::shared_ptr< RemoteModule > getEmbedderFor( std::string_view model_name ) const;
+
+	//! \return Every registered embedding model, as (name, dimensions) pairs.
+	/** Used at startup to register models in the database and create their per-model tables. */
+	[[nodiscard]] std::vector< std::pair< std::string, std::uint32_t > > embeddingModels() const;
 
 	[[nodiscard]] const std::vector< ModuleDescriptor >& descriptors() const { return m_descriptors; }
 };

@@ -66,6 +66,9 @@ inline constexpr auto VARIANT { "variant" };
 inline constexpr auto VALUE { "value" };
 inline constexpr auto FILE_SIZE { "file_size" };
 inline constexpr auto INPUT_REF { "input_ref" };
+inline constexpr auto EMBEDDING { "embedding" };
+inline constexpr auto MODEL_NAME { "model_name" };
+inline constexpr auto DIMENSIONS { "dimensions" };
 } // namespace field
 
 //! Every message the protocol carries.
@@ -91,6 +94,7 @@ enum class CallOp : std::uint8_t
 	THUMB_RAW, //!< ThumbnailerModuleI::createThumbnailRaw -- raw interleaved RGB
 	THUMB_FILE, //!< ThumbnailerModuleI::createThumbnailFile -- encoded image
 	GENERATE, //!< GeneratorModuleI::generate
+	EMBED, //!< EmbeddingModuleI::embed
 };
 
 //! What a module is asking the host for when it sends a CALLBACK.
@@ -127,6 +131,8 @@ enum class CallbackKind : std::uint8_t
 			return ModuleTypeFlags::THUMBNAILER;
 		case CallOp::GENERATE:
 			return ModuleTypeFlags::GENERATOR;
+		case CallOp::EMBED:
+			return ModuleTypeFlags::EMBEDDING;
 	}
 
 	return 0;
@@ -144,6 +150,11 @@ struct ManifestEntry
 	bool thread_safe { false };
 	ModuleResidency residency { ModuleResidency::SINGLE_RUN };
 	std::vector< std::string > mimes {};
+	//! EMBEDDING modules only; empty otherwise. The routing key for embed calls -- unlike `name`,
+	//! this must be unique and stable, because it is also a database key.
+	std::string model_name {};
+	//! EMBEDDING modules only; zero otherwise. The width of the halfvec column built for this model.
+	std::uint32_t dimensions { 0 };
 };
 
 [[nodiscard]] Json::Value toJson( const ManifestEntry& entry );

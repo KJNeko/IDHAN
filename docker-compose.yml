@@ -1,6 +1,6 @@
 services:
   idhan-postgres:
-    image: postgres:18
+    image: pgvector/pgvector:pg18-trixie
     container_name: idhan-postgres
     environment:
       POSTGRES_USER: idhan

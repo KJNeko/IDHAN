@@ -10,13 +10,16 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <format>
 #include <fstream>
 #include <poll.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <utility>
 
+#include "EmbeddingModule.hpp"
 #include "GeneratorModule.hpp"
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
@@ -86,6 +89,51 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 	}
 
 	return ( *sink )->finish();
+}
+
+//! Size of a sealed payload descriptor, for logging only.
+/** fstat rather than lseek: the host mmaps this descriptor, and moving its offset to measure it
+ *  would be a side effect paid on every call to serve a debug line. Returns 0 on anything odd,
+ *  because a log line is never worth failing a completed call over. */
+[[nodiscard]] std::size_t payloadSize( const int fd )
+{
+	if ( fd < 0 ) return 0;
+
+	struct stat info {};
+	if ( ::fstat( fd, &info ) < 0 ) return 0;
+
+	return static_cast< std::size_t >( info.st_size );
+}
+
+//! One phrase describing what a completed call produced, for the per-call debug line.
+/** Read out of the reply body rather than the module's return value, so the summary can only ever
+ *  describe what the host is actually about to receive. */
+[[nodiscard]] std::string describeResult( const ipc::CallOp op, const Json::Value& body, const int payload_fd )
+{
+	switch ( op )
+	{
+		case ipc::CallOp::METADATA:
+			return std::format( "{} metadata fields", body[ ipc::field::METADATA ].size() );
+		case ipc::CallOp::THUMB_RAW:
+			[[fallthrough]];
+		case ipc::CallOp::THUMB_FILE:
+			{
+				const auto& thumbnail { body[ ipc::field::THUMBNAIL ] };
+
+				return std::format(
+					"{}x{} RGB, {} bytes{}",
+					thumbnail[ ipc::field::WIDTH ].asUInt64(),
+					thumbnail[ ipc::field::HEIGHT ].asUInt64(),
+					payloadSize( payload_fd ),
+					thumbnail[ ipc::field::CACHE_THUMBNAIL ].asBool() ? "" : ", not cacheable" );
+			}
+		case ipc::CallOp::GENERATE:
+			return std::format( "{} bytes generated", payloadSize( payload_fd ) );
+		case ipc::CallOp::EMBED:
+			return std::format( "{}-dimension vector", body[ ipc::field::EMBEDDING ].size() );
+	}
+
+	return "done";
 }
 
 } // namespace
@@ -557,6 +605,35 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 
 				return std::pair { std::move( body ), std::move( *generated ) };
 			}
+		case ipc::CallOp::EMBED:
+			{
+				const auto embedder { std::static_pointer_cast< EmbeddingModuleI >( module ) };
+
+				auto result { embedder->embed( data ) };
+				if ( !result ) return std::unexpected( result.error() );
+
+				// A vector of the wrong width would be written into a fixed-width halfvec column, so
+				// it is caught at the boundary rather than several hops later in a bulk insert.
+				if ( result->m_vector.size() != embedder->dimensions() )
+					return std::unexpected(
+						ModuleError { std::format(
+							"embedding module '{}' returned {} values but declares {} dimensions",
+							embedder->modelName(),
+							result->m_vector.size(),
+							embedder->dimensions() ) } );
+
+				// Inline JSON rather than a blob. The rule elsewhere is that bulk data travels as a
+				// descriptor, but a 1152-dimension vector is ~4.6 KiB and a memfd per call to carry
+				// that costs more than the text does. Precision is not the objection either: the
+				// destination column is fp16, so the round trip discards nothing it would have kept.
+				Json::Value values { Json::arrayValue };
+				// Explicit widening: jsoncpp stores a double, and letting the float promote
+				// implicitly trips -Wdouble-promotion under this project's warning set.
+				for ( const float value : result->m_vector ) values.append( static_cast< double >( value ) );
+
+				body[ ipc::field::EMBEDDING ] = std::move( values );
+				return std::pair { std::move( body ), ipc::UniqueFd {} };
+			}
 	}
 
 	return std::unexpected( std::string { "unreachable operation" } );
@@ -574,6 +651,19 @@ void WorkerRunner::runCall( QueuedCall call )
 	std::string failure {};
 
 	const auto module { m_library.at( call.module_index ) };
+
+	const auto started { std::chrono::steady_clock::now() };
+
+	// Emitted before the work, not merely alongside it: a call that never finishes produces this line
+	// and no completion, which is the only signal that distinguishes a wedged module from a slow one.
+	spdlog::trace(
+		"Call {} started: {} on '{}' ({}, {} bytes), depth {}",
+		call.call_id,
+		toString( call.op ),
+		module != nullptr ? module->name() : std::string_view { "<none>" },
+		call.mime,
+		call.file != nullptr ? call.file->size() : 0,
+		call.depth );
 
 	if ( module == nullptr )
 	{
@@ -621,6 +711,32 @@ void WorkerRunner::runCall( QueuedCall call )
 
 	std::vector< int > fds {};
 	if ( failure.empty() && payload ) fds.emplace_back( payload.get() );
+
+	const auto elapsed_ms {
+		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started ).count()
+	};
+
+	// The whole point of the exercise: one line per call saying which module ran, on what, for how
+	// long, and what came out. A failure is logged here too rather than only at the host, because the
+	// host sees the message but not the timing or which of several candidate modules produced it.
+	if ( failure.empty() )
+		spdlog::debug(
+			"Call {} finished: {} on '{}' ({}) in {}ms -- {}",
+			call.call_id,
+			toString( call.op ),
+			module != nullptr ? module->name() : std::string_view { "<none>" },
+			call.mime,
+			elapsed_ms,
+			describeResult( call.op, body, payload.get() ) );
+	else
+		spdlog::debug(
+			"Call {} failed: {} on '{}' ({}) after {}ms -- {}",
+			call.call_id,
+			toString( call.op ),
+			module != nullptr ? module->name() : std::string_view { "<none>" },
+			call.mime,
+			elapsed_ms,
+			failure );
 
 	if ( const auto sent { send( body, fds ) }; !sent )
 		spdlog::error( "Worker could not send the result for call {}: {}", call.call_id, sent.error() );

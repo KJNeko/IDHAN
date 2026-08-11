@@ -1059,6 +1059,89 @@ body {
   cursor: default;
 }
 
+/* Embeddings */
+.embed-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.embed-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    overflow-y: auto;
+}
+
+.embed-card {
+    border: 1px solid #2a2e37;
+    border-radius: 6px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    background: #1b1e24;
+}
+
+.embed-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.embed-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.embed-dims {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+}
+
+.embed-avail {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: #23262d;
+}
+
+.embed-avail.ok {
+    color: #63c07a;
+}
+
+.embed-avail.error {
+    color: var(--error);
+}
+
+.embed-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85em;
+}
+
+.embed-progress-counts {
+    font-variant-numeric: tabular-nums;
+}
+
+.embed-progress.state-done {
+    color: #63c07a;
+}
+
+.embed-progress.state-error {
+    color: var(--error);
+}
+
 /* Shared small checkbox/radio label used across the P2 panels. */
 .log-check {
   display: inline-flex;

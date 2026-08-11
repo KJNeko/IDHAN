@@ -82,6 +82,20 @@ path = "./log"
 # is skipped with a warning; it does not stop the server from starting.
 #describe_timeout_sec = 10
 
+[embeddings]
+# Directory scanned for image embedding models. Each subdirectory holding both a model.onnx and a
+# model.json is registered as one model, named by its model.json; anything else is ignored with a
+# warning naming what was wrong. A directory that does not exist is not an error -- the server logs
+# that no embedding model is available and every other module carries on.
+#
+# Defaults to a "models" directory beside IDHANModuleRunner, which is convenient for a build tree
+# and rarely what a deployment wants. Set it explicitly anywhere the runner is installed to a bin
+# directory you do not control.
+#
+# The models themselves are exported offline; see tools/embedding-export/export_siglip2.py. Nothing
+# in the server converts a checkpoint, so a directory of PyTorch weights registers nothing.
+#model_path = "/usr/share/idhan/models"
+
 [plugins]
 # Directory scanned for WebUI plugin bundles — each subdirectory with a manifest.json is one plugin.
 # Defaults to "<static>/plugins" so the static file server serves the bundles at /plugins/... with no

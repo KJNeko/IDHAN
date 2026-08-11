@@ -84,6 +84,8 @@ std::string_view toString( const CallOp value ) noexcept
 			return "thumb_file";
 		case CallOp::GENERATE:
 			return "generate";
+		case CallOp::EMBED:
+			return "embed";
 	}
 
 	return "unknown";
@@ -137,6 +139,7 @@ std::optional< CallOp > callOpFromString( const std::string_view value ) noexcep
 	if ( value == "thumb_raw" ) return CallOp::THUMB_RAW;
 	if ( value == "thumb_file" ) return CallOp::THUMB_FILE;
 	if ( value == "generate" ) return CallOp::GENERATE;
+	if ( value == "embed" ) return CallOp::EMBED;
 
 	return std::nullopt;
 }
@@ -192,6 +195,11 @@ Json::Value toJson( const ManifestEntry& entry )
 	for ( const auto& mime : entry.mimes ) mimes.append( mime );
 	json[ field::MIMES ] = mimes;
 
+	// Meaningful only for EMBEDDING modules, but always emitted so the reader never has to branch on
+	// the type flag to know whether the fields are present.
+	json[ field::MODEL_NAME ] = entry.model_name;
+	json[ field::DIMENSIONS ] = static_cast< Json::UInt >( entry.dimensions );
+
 	return json;
 }
 
@@ -219,6 +227,35 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 	entry.version = moduleVersionFromJson( json[ field::VERSION ] );
 	entry.thread_safe = json[ field::THREAD_SAFE ].asBool();
 	entry.residency = *residency;
+
+	// Absent on manifests from a library built before EMBEDDING existed; default to the empty
+	// non-embedding values rather than rejecting the whole entry.
+	if ( json.isMember( field::MODEL_NAME ) )
+	{
+		if ( !json[ field::MODEL_NAME ].isString() )
+			return std::unexpected( std::string { "manifest entry has a non-string model_name" } );
+
+		entry.model_name = json[ field::MODEL_NAME ].asString();
+	}
+
+	if ( json.isMember( field::DIMENSIONS ) )
+	{
+		if ( !json[ field::DIMENSIONS ].isIntegral() )
+			return std::unexpected( std::string { "manifest entry has a non-integral dimensions" } );
+
+		entry.dimensions = static_cast< std::uint32_t >( json[ field::DIMENSIONS ].asUInt() );
+	}
+
+	if ( ( entry.type & ModuleTypeFlags::EMBEDDING ) != 0 )
+	{
+		if ( entry.model_name.empty() )
+			return std::unexpected( std::string { "embedding module declared no model_name" } );
+
+		// A zero-width model would produce halfvec(0), which PostgreSQL rejects at table creation.
+		// Catching it here names the offending module instead of failing later inside a migration.
+		if ( entry.dimensions == 0 )
+			return std::unexpected( std::format( "embedding module '{}' declared zero dimensions", entry.model_name ) );
+	}
 
 	const auto& mimes { json[ field::MIMES ] };
 	if ( !mimes.isArray() ) return std::unexpected( std::string { "manifest entry has no mime array" } );
@@ -252,6 +289,12 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 			signature += mime;
 			signature += ',';
 		}
+
+		// The model identity is part of the signature, not decoration. Without it, re-exporting a
+		// model at a different width and rebuilding the .so under a running server would leave the
+		// pool dispatching to an index whose vectors no longer fit the halfvec column they are
+		// written to -- a silent mismatch rather than a loud reload.
+		signature += std::format( "|{}|{}", entry.model_name, entry.dimensions );
 
 		signature += '\n';
 	}

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "CallInput.hpp"
+#include "EmbeddingModule.hpp"
 #include "MetadataInfo.hpp"
 #include "ThumbnailInfo.hpp"
 #include "WorkerPool.hpp"
@@ -51,6 +52,9 @@ class RemoteModule
 	ModuleType m_type { 0 };
 	ModuleVersion m_version {};
 	std::vector< std::string > m_mimes {};
+	//! EMBEDDING modules only. Empty/zero for every other kind.
+	std::string m_model_name {};
+	std::uint32_t m_dimensions { 0 };
 
 	//! Builds the common part of a CALL body.
 	[[nodiscard]] Json::Value baseBody( ipc::CallOp op, const RemoteCallData& data ) const;
@@ -63,7 +67,9 @@ class RemoteModule
 		std::string name,
 		ModuleType type,
 		ModuleVersion version,
-		std::vector< std::string > mimes );
+		std::vector< std::string > mimes,
+		std::string model_name = {},
+		std::uint32_t dimensions = 0 );
 
 	[[nodiscard]] std::string_view name() const { return m_name; }
 
@@ -97,6 +103,15 @@ class RemoteModule
 	[[nodiscard]] IDHANTask< std::expected< ipc::Blob, ModuleError > > generate(
 		RemoteCallData data,
 		std::array< std::byte, 256 / 8 > desired_hash ) const;
+
+	//! The model this module wraps. Empty unless type() includes EMBEDDING.
+	[[nodiscard]] std::string_view modelName() const { return m_model_name; }
+
+	//! The width of the vectors this module produces. Zero unless type() includes EMBEDDING.
+	[[nodiscard]] std::uint32_t dimensions() const { return m_dimensions; }
+
+	//! Embeds one file into an L2-normalised vector of dimensions() floats.
+	[[nodiscard]] IDHANTask< std::expected< EmbeddingInfo, ModuleError > > embed( RemoteCallData data ) const;
 };
 
 } // namespace idhan::modules
