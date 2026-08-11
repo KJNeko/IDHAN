@@ -28,11 +28,30 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 	VipsModuleSource source { data.file };
 	if ( !source.valid() ) return std::unexpected( ModuleError { "Failed to open the file as a vips source" } );
 
+	// "force" squashes to exactly width x height, discarding aspect ratio. vips defaults to
+	// VIPS_SIZE_BOTH, which fits within the box instead -- correct for a thumbnail, wrong for a
+	// model whose preprocessing squashes, because feeding it aspect-preserved input yields a
+	// plausible-looking but incorrect result with no error anywhere.
+	const bool force_exact { data.extra.isObject() && data.extra[ "resize_mode" ].isString()
+		                     && data.extra[ "resize_mode" ].asString() == "force" };
+
 	VipsImage* thumb_raw { nullptr };
-	if ( vips_thumbnail_source(
-			 source.get(), &thumb_raw, static_cast< int >( width ), "height", static_cast< int >( height ), nullptr )
-	     != 0 )
-		return std::unexpected( ModuleError { "Failed to generate thumbnail" } );
+	const int result {
+		force_exact ?
+			vips_thumbnail_source(
+				source.get(),
+				&thumb_raw,
+				static_cast< int >( width ),
+				"height",
+				static_cast< int >( height ),
+				"size",
+				VIPS_SIZE_FORCE,
+				nullptr ) :
+			vips_thumbnail_source(
+				source.get(), &thumb_raw, static_cast< int >( width ), "height", static_cast< int >( height ), nullptr )
+	};
+
+	if ( result != 0 ) return std::unexpected( ModuleError { "Failed to generate thumbnail" } );
 	VipsImagePtr thumb { thumb_raw };
 
 	// Downstream (ThumbnailInfo) expects packed 3-band sRGB uchar data. vips_thumbnail already
@@ -53,5 +72,7 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 		thumb.reset( flat_raw );
 	}
 
-	return idhan::ThumbnailInfo { std::move( thumb ) };
+	// A squashed tile is model input, not a thumbnail. Caching it would put an aspect-distorted image
+	// into the cache under the same key a real thumbnail request would later read.
+	return idhan::ThumbnailInfo { std::move( thumb ), force_exact ? ThumbnailInfo::NOCACHE : true };
 }

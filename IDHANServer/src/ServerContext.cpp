@@ -26,6 +26,7 @@
 #include "filesystem/filesystem.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
+#include "embeddings/embeddings.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "spdlog/async.h"
 
@@ -353,10 +354,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.connectOptions = {}
 	};
 
-	if ( arguments.testmode )
-	{
-		config.connectOptions.insert_or_assign( "search_path", "test" );
-	}
+	// Same derivation as the migration connection. These two drifted apart when each spelled the
+	// path out by hand, which left public-owned objects resolvable by migrations but not at runtime.
+	config.connectOptions.insert_or_assign( "search_path", arguments.searchPath() );
 
 	log::trace( "Database config prepared, adding DB client" );
 	log::info(
@@ -404,6 +404,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 					const auto db { drogon::app().getDbClient() };
 					co_await m_clusters->reloadClusters( db );
 					co_await mime::getMimeDatabase()->reloadMimeParsers();
+					// After the module loader has interrogated its libraries: this reads what they
+					// reported and creates each model's per-width table if it does not exist yet.
+					co_await embeddings::registerEmbeddingModels( db );
 					co_return;
 				}() );
 

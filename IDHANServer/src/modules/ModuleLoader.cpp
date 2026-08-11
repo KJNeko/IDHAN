@@ -8,10 +8,12 @@
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <format>
 #include <paths.hpp>
+#include <string>
 
 #include "Config.hpp"
 #include "crypto/simpleHasher.hpp"
@@ -26,12 +28,30 @@ namespace idhan::modules
 namespace
 {
 
-//! Size the host asks for when a module re-dispatches a thumbnail through the callbacks.
-/** Fixed because ModuleCallbacks::thumbnail has no size parameter -- a module asking the host to
- *  thumbnail some bytes has no way to say how big it wants the result. Making it caller-specified
- *  would mean widening that signature, which is a module-ABI change; until then the archive
- *  thumbnailer (the only caller) gets tiles at this size to composite. */
+//! Size the host asks for when a module re-dispatches a thumbnail through the callbacks and does not
+//! ask for a specific one.
+/** ModuleCallbacks::thumbnail still has no size parameter, but it does carry an `extra` json object
+ *  that already travels module -> host -> thumbnailer. A caller that wants a specific size puts
+ *  `width`/`height` there; anything that does not (the archive thumbnailer, which just wants tiles
+ *  to composite) keeps getting this. No ABI change was needed after all. */
 constexpr std::size_t CALLBACK_THUMBNAIL_SIZE { 128 };
+
+//! Upper bound on a caller-requested callback thumbnail edge.
+/** A module names the size it wants, and a module is exactly the thing this system assumes may be
+ *  compromised by a crafted file. An unbounded value here would be an allocation of the module's
+ *  choosing inside the thumbnailer. */
+constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
+
+//! Reads a caller-requested thumbnail edge out of a callback's `extra`, clamped and defaulted.
+[[nodiscard]] std::size_t requestedThumbnailEdge( const Json::Value& extra, const char* const key )
+{
+	if ( !extra.isObject() || !extra[ key ].isIntegral() ) return CALLBACK_THUMBNAIL_SIZE;
+
+	const auto requested { extra[ key ].asInt64() };
+	if ( requested < 1 ) return CALLBACK_THUMBNAIL_SIZE;
+
+	return std::min( static_cast< std::size_t >( requested ), MAX_CALLBACK_THUMBNAIL_SIZE );
+}
 
 [[nodiscard]] WorkerSettings settingsFor( const std::filesystem::path& library )
 {
@@ -47,12 +67,45 @@ constexpr std::size_t CALLBACK_THUMBNAIL_SIZE { 128 };
 		config::get< std::size_t >( "modules", "liveness_grace_ms", 5000 )
 	};
 
+	// Read from the live logger rather than from config, so --log_level on the command line reaches
+	// the workers too. Their stderr is ours, so the effect of asking for debug is that module call
+	// detail appears in the same stream as everything else.
+	// Built from data/size: under SPDLOG_FMT_EXTERNAL this is an fmt::string_view, which does not
+	// convert to std::string_view.
+	const auto level_name { spdlog::level::to_string_view( spdlog::get_level() ) };
+	settings.log_level = std::string { level_name.data(), level_name.size() };
+
 	return settings;
 }
 
 [[nodiscard]] std::uint32_t maxCallDepth()
 {
 	return static_cast< std::uint32_t >( config::get< std::size_t >( "modules", "max_call_depth", 4 ) );
+}
+
+//! Publishes the configured embedding model directory into the environment workers inherit.
+/** The embedding module runs in a worker process and reads IDHAN_EMBEDDING_MODELS itself, because a
+ *  module library has no access to the server's config. Workers are fork+exec'd and so inherit our
+ *  environment: setting it here, once, before any worker exists is what makes the setting reachable
+ *  from config.toml and the IDHAN_EMBEDDINGS_MODEL_PATH env var rather than only from a variable the
+ *  operator had to know the module's internal name for.
+ *
+ *  Left unset, the module keeps its own default of a `models` directory beside the runner binary. */
+void publishEmbeddingModelPath()
+{
+	const auto path { config::get< std::string >( "embeddings", "model_path", std::string {} ) };
+
+	if ( path.empty() ) return;
+
+	// Overwrite: config has already folded in the environment, so an IDHAN_EMBEDDING_MODELS inherited
+	// from elsewhere must not outrank what the operator actually configured.
+	if ( ::setenv( "IDHAN_EMBEDDING_MODELS", path.c_str(), 1 ) != 0 )
+	{
+		log::error( "Could not set IDHAN_EMBEDDING_MODELS to {}: {}", path, std::strerror( errno ) );
+		return;
+	}
+
+	log::info( "Embedding models will be searched for in {}", path );
 }
 
 } // namespace
@@ -63,6 +116,9 @@ ModuleLoader::ModuleLoader()
 	m_instance = this;
 
 	applyHardening();
+	// Before loadModules: the interrogation pass it runs forks the first workers, and a worker only
+	// ever sees the environment as it stood at fork.
+	publishEmbeddingModelPath();
 	loadModules();
 }
 
@@ -167,12 +223,40 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 				.version = entry.version,
 				.thread_safe = entry.thread_safe,
 				.residency = entry.residency,
-				.mimes = entry.mimes } );
+				.mimes = entry.mimes,
+				.model_name = entry.model_name,
+				.dimensions = entry.dimensions } );
 
 		const auto slot { m_modules.size() };
 
 		m_modules.emplace_back(
-			std::make_shared< RemoteModule >( pool, entry.index, entry.name, entry.type, entry.version, entry.mimes ) );
+			std::make_shared< RemoteModule >(
+				pool,
+				entry.index,
+				entry.name,
+				entry.type,
+				entry.version,
+				entry.mimes,
+				entry.model_name,
+				entry.dimensions ) );
+
+		// Embedding modules route by model name, not by MIME -- they declare no MIMEs at all, since
+		// what they can handle is whatever some thumbnailer can decode, which only the server knows.
+		if ( ( entry.type & ModuleTypeFlags::EMBEDDING ) != 0 )
+		{
+			if ( const auto [ it, inserted ] { m_by_model_embedding.try_emplace( entry.model_name, slot ) }; !inserted )
+			{
+				// Two libraries claiming one model name would make dispatch depend on load order, and
+				// the loser's vectors would silently be written under the winner's model_id.
+				log::warn(
+					"Module '{}' from {} claims model '{}', which is already provided by module '{}'. Ignoring the "
+					"duplicate.",
+					entry.name,
+					path.filename().string(),
+					entry.model_name,
+					m_descriptors[ it->second ].name );
+			}
+		}
 
 		for ( const auto& mime : entry.mimes )
 		{
@@ -247,6 +331,25 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getThumbnailerFor( 
 std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getParserFor( const std::string_view mime ) const
 {
 	return lookup( m_by_mime_metadata, mime );
+}
+
+std::shared_ptr< RemoteModule > ModuleLoader::getEmbedderFor( const std::string_view model_name ) const
+{
+	const auto found { m_by_model_embedding.find( std::string { model_name } ) };
+	if ( found == m_by_model_embedding.end() ) return nullptr;
+
+	return m_modules[ found->second ];
+}
+
+std::vector< std::pair< std::string, std::uint32_t > > ModuleLoader::embeddingModels() const
+{
+	std::vector< std::pair< std::string, std::uint32_t > > models {};
+	models.reserve( m_by_model_embedding.size() );
+
+	for ( const auto& [ model_name, slot ] : m_by_model_embedding )
+		models.emplace_back( model_name, m_descriptors[ slot ].dimensions );
+
+	return models;
 }
 
 std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( const std::string_view mime ) const
@@ -369,8 +472,13 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 						break;
 					}
 
-					auto thumbnail { co_await thumbnailers.front()->createThumbnailRaw(
-						std::move( data ), CALLBACK_THUMBNAIL_SIZE, CALLBACK_THUMBNAIL_SIZE ) };
+					// Read before the move: `data` owns the extra the caller sent.
+					const auto width { requestedThumbnailEdge( data.extra, ipc::field::WIDTH ) };
+					const auto height { requestedThumbnailEdge( data.extra, ipc::field::HEIGHT ) };
+
+					auto thumbnail {
+						co_await thumbnailers.front()->createThumbnailRaw( std::move( data ), width, height )
+					};
 
 					if ( !thumbnail )
 					{

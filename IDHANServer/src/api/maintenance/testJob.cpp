@@ -88,18 +88,6 @@ Json::Value getJobStatusJson(
 		else
 		{
 			response[ "status" ] = "completed";
-			if ( status->m_response )
-			{
-				auto resp = status->m_response.value();
-				if ( resp->contentType() == drogon::CT_APPLICATION_JSON )
-				{
-					response[ "response" ] = *( resp->getJsonObject() );
-				}
-				else
-				{
-					response[ "response" ] = std::string( resp->getBody() );
-				}
-			}
 		}
 
 		if ( cleanup_on_completion )
@@ -111,6 +99,22 @@ Json::Value getJobStatusJson(
 	{
 		response[ "completed" ] = false;
 		response[ "status" ] = "running";
+	}
+
+	// Surfaced regardless of completion: a long-running job (e.g. an embedding backfill) calls
+	// setJobResponse() repeatedly to publish progress, and a poller must see those updates before the
+	// job finishes, not just the final one.
+	if ( status->m_response )
+	{
+		auto resp = status->m_response.value();
+		if ( resp->contentType() == drogon::CT_APPLICATION_JSON )
+		{
+			response[ "response" ] = *( resp->getJsonObject() );
+		}
+		else
+		{
+			response[ "response" ] = std::string( resp->getBody() );
+		}
 	}
 
 	return response;

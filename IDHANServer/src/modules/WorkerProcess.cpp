@@ -100,6 +100,7 @@ std::expected< void, std::string > WorkerProcess::start()
 	const auto library { m_settings.library.string() };
 	const auto runner { m_settings.runner.string() };
 	const auto child_fd { std::to_string( CHILD_CHANNEL_FD ) };
+	const auto log_level { m_settings.log_level };
 	const bool describe_only { m_settings.describe_only };
 #ifdef IDHAN_HARDEN
 	constexpr bool harden_workers { true };
@@ -184,6 +185,8 @@ std::expected< void, std::string > WorkerProcess::start()
 				library.c_str(),
 				"--socket-fd",
 				child_fd.c_str(),
+				"--log-level",
+				log_level.c_str(),
 				"--describe",
 				static_cast< char* >( nullptr ) );
 		else
@@ -198,6 +201,8 @@ std::expected< void, std::string > WorkerProcess::start()
 				pool_threads.c_str(),
 				"--heartbeat-ms",
 				heartbeat.c_str(),
+				"--log-level",
+				log_level.c_str(),
 				static_cast< char* >( nullptr ) );
 
 		::_exit( 127 );

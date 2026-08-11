@@ -7,6 +7,7 @@
 #include <charconv>
 #include <clocale>
 #include <cstdio>
+#include <string>
 #include <string_view>
 
 #include "WorkerRunner.hpp"
@@ -29,7 +30,8 @@ void usage()
 		"  --socket-fd <n>        Inherited worker channel descriptor\n"
 		"  --describe             Report the library's manifest and exit\n"
 		"  --pool-threads <n>     Worker threads (default 4)\n"
-		"  --heartbeat-ms <n>     Heartbeat interval in ms (default 1000)\n",
+		"  --heartbeat-ms <n>     Heartbeat interval in ms (default 1000)\n"
+		"  --log-level <name>     trace, debug, info, warn, error, critical, off (default info)\n",
 		stderr );
 }
 
@@ -55,6 +57,8 @@ int main( int argc, char** argv )
 
 	idhan::runner::RunnerOptions options {};
 	options.socket_fd = NO_CHANNEL;
+
+	std::string log_level { "info" };
 
 	for ( int i = 1; i < argc; ++i )
 	{
@@ -97,6 +101,15 @@ int main( int argc, char** argv )
 				return 2;
 			}
 		}
+		else if ( argument == "--log-level" )
+		{
+			if ( !next() )
+			{
+				usage();
+				return 2;
+			}
+			log_level = value;
+		}
 		else if ( argument == "--heartbeat-ms" )
 		{
 			std::size_t milliseconds { 0 };
@@ -130,6 +143,21 @@ int main( int argc, char** argv )
 	// Logs go to stderr, which the server inherits, so a module's diagnostics land wherever the
 	// server's do rather than vanishing into a process nobody is watching.
 	spdlog::set_pattern( "[module-worker] [%^%l%$] %v" );
+
+	// Without this the worker sits at spdlog's default of info no matter what the server was told,
+	// so every spdlog::debug in module and runner code is compiled in and then silently discarded --
+	// which is exactly what made per-call detail impossible to see. The server passes its own level
+	// down, so --log_level debug covers the workers too.
+	if ( const auto level { spdlog::level::from_str( log_level ) }; level != spdlog::level::off || log_level == "off" )
+	{
+		spdlog::set_level( level );
+	}
+	else
+	{
+		// from_str reports anything unrecognised as `off`, which would silence the worker entirely
+		// over a typo. Keep the default and say so.
+		spdlog::warn( "Unknown log level '{}'; staying at info", log_level );
+	}
 
 	idhan::runner::WorkerRunner runner { options };
 

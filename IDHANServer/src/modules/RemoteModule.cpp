@@ -29,13 +29,17 @@ RemoteModule::RemoteModule(
 	std::string name,
 	const ModuleType type,
 	const ModuleVersion version,
-	std::vector< std::string > mimes ) :
+	std::vector< std::string > mimes,
+	std::string model_name,
+	const std::uint32_t dimensions ) :
   m_pool( std::move( pool ) ),
   m_module_index( module_index ),
   m_name( std::move( name ) ),
   m_type( type ),
   m_version( version ),
-  m_mimes( std::move( mimes ) )
+  m_mimes( std::move( mimes ) ),
+  m_model_name( std::move( model_name ) ),
+  m_dimensions( dimensions )
 {}
 
 bool RemoteModule::canHandle( const std::string_view mime ) const
@@ -127,6 +131,43 @@ IDHANTask< std::expected< ipc::Blob, ModuleError > > RemoteModule::generate(
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
 
 	co_return std::move( outcome->blob );
+}
+
+IDHANTask< std::expected< EmbeddingInfo, ModuleError > > RemoteModule::embed( RemoteCallData data ) const
+{
+	if ( data.input == nullptr ) co_return std::unexpected( ModuleError { "no input supplied" } );
+
+	Json::Value body { baseBody( ipc::CallOp::EMBED, data ) };
+
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
+
+	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
+
+	const auto& values { outcome->body[ ipc::field::EMBEDDING ] };
+	if ( !values.isArray() ) co_return std::unexpected( ModuleError { "embed result carried no vector" } );
+
+	// The worker already checks the width against what the module declares. Checking it again here
+	// is not redundant: this side is what feeds a fixed-width halfvec column, and the two ends can
+	// disagree if a library is rebuilt underneath a running server.
+	if ( values.size() != m_dimensions )
+		co_return std::unexpected(
+			ModuleError { std::format(
+				"embed result for model '{}' had {} values, expected {}",
+				m_model_name,
+				values.size(),
+				m_dimensions ) } );
+
+	EmbeddingInfo info {};
+	info.m_vector.reserve( values.size() );
+
+	for ( const auto& value : values )
+	{
+		if ( !value.isNumeric() ) co_return std::unexpected( ModuleError { "embed result had a non-numeric value" } );
+
+		info.m_vector.push_back( static_cast< float >( value.asDouble() ) );
+	}
+
+	co_return info;
 }
 
 } // namespace idhan::modules

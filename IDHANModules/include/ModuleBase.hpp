@@ -26,6 +26,7 @@ enum ModuleTypeFlags : std::uint16_t
 	METADATA = 1 << 0, //!< Implements MetadataModuleI::parseFile.
 	THUMBNAILER = 1 << 1, //!< Implements ThumbnailerModuleI::createThumbnail.
 	GENERATOR = 1 << 2, //!< Implements GeneratorModuleI::generate.
+	EMBEDDING = 1 << 3, //!< Implements EmbeddingModuleI::embed.
 };
 
 //! Bitwise-OR of ModuleTypeFlags values; the concrete return type of ModuleBase::type().

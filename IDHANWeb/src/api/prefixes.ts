@@ -14,6 +14,7 @@ export const API_PREFIXES = [
   '/auth',
   '/clusters',
   '/db',
+    '/embeddings',
   '/file',
   '/generate_api_key',
   '/health',

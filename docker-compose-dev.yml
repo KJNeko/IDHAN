@@ -1,13 +1,13 @@
 services:
   idhan-postgres:
-    image: postgres:18
+    image: pgvector/pgvector:pg18-trixie
     container_name: idhan-postgres
     environment:
       POSTGRES_USER: idhan
       POSTGRES_PASSWORD: idhan
       POSTGRES_DB: idhan-db
     volumes:
-      - /db:/var/lib/postgresql
+      - idhan_pg18:/var/lib/postgresql
     ports:
       - "5432:5432"
     healthcheck:
@@ -83,3 +83,7 @@ services:
     volumes:
       - /media:/media
     restart: unless-stopped
+
+volumes:
+  idhan_pg18:
+  idhan_thumbnails:

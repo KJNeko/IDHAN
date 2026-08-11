@@ -14,6 +14,15 @@
 #include <signal.h>
 #include <unistd.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#include <pqxx/connection>
+#pragma GCC diagnostic pop
+
+#include "helpers/testSchema.hpp"
+
 [[nodiscard]] ServerHandle startServer()
 {
 	constexpr std::string_view executable_name { "IDHANServer" };
@@ -40,8 +49,19 @@
 		throw std::runtime_error(
 			std::format( "IDHANServer executable does not exist. Searched {}", executable.string() ) );
 
+	// The schema reset belongs to the test suite, not the server. Done here so the server binary
+	// needs no flag that drops anything.
+	{
+		pqxx::connection conn { testConnectionString() };
+		resetTestSchema( conn );
+	}
+
 	const std::array< char*, 5 > args {
-		{ const_cast< char* >( executable.c_str() ), "--testmode=1", "--use_stdout=1", "--log_level=debug", nullptr }
+		{ const_cast< char* >( executable.c_str() ),
+		  "--pg_schema=test",
+		  "--use_stdout=1",
+		  "--log_level=debug",
+		  nullptr }
 	};
 
 	if ( const pid_t server_pid = fork(); server_pid == 0 )

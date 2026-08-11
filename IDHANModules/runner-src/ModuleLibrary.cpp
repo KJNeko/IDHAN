@@ -8,6 +8,7 @@
 #include <format>
 #include <utility>
 
+#include "EmbeddingModule.hpp"
 #include "GeneratorModule.hpp"
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
@@ -135,6 +136,18 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 	{
 		const auto& module { m_modules[ index ] };
 
+		// An embedding module is routed by model name rather than by MIME, so its identity has to
+		// reach the host through the manifest -- there is nothing else in the entry that names it.
+		std::string model_name {};
+		std::uint32_t dimensions { 0 };
+
+		if ( ( module->type() & ModuleTypeFlags::EMBEDDING ) != 0 )
+		{
+			const auto embedder { std::static_pointer_cast< EmbeddingModuleI >( module ) };
+			model_name = std::string { embedder->modelName() };
+			dimensions = static_cast< std::uint32_t >( embedder->dimensions() );
+		}
+
 		entries.emplace_back(
 			ipc::ManifestEntry {
 				.index = index,
@@ -143,7 +156,9 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 				.version = module->version(),
 				.thread_safe = module->threadSafe(),
 				.residency = module->residency(),
-				.mimes = handleableMimesOf( module ) } );
+				.mimes = handleableMimesOf( module ),
+				.model_name = std::move( model_name ),
+				.dimensions = dimensions } );
 	}
 
 	return entries;

@@ -63,6 +63,19 @@ AddPremadeModule(IDHANFFmpeg ${CMAKE_CURRENT_SOURCE_DIR}/premade/ffmpeg)
 AddPremadeModule(IDHANPsd ${CMAKE_CURRENT_SOURCE_DIR}/premade/psd)
 AddPremadeModule(IDHANArchive ${CMAKE_CURRENT_SOURCE_DIR}/premade/archives)
 
+# Optional: the embedding backend needs onnxruntime, which is a heavy dependency and not something
+# every deployment wants. Absent, the library is simply not built and the server logs that no
+# embedding model is available -- exactly as it behaves when the models directory is empty.
+pkg_check_modules(ONNXRUNTIME IMPORTED_TARGET libonnxruntime)
+
+if (ONNXRUNTIME_FOUND)
+	AddPremadeModule(IDHANEmbedding ${CMAKE_CURRENT_SOURCE_DIR}/premade/embedding)
+	target_link_libraries(IDHANEmbedding PRIVATE PkgConfig::ONNXRUNTIME)
+	message(STATUS "onnxruntime ${ONNXRUNTIME_VERSION} found -- building IDHANEmbedding")
+else ()
+	message(STATUS "onnxruntime not found -- skipping IDHANEmbedding (image embeddings unavailable)")
+endif ()
+
 # Backend-specific dependencies. Keeping these off the shared helper is the point of the split:
 # only the FFmpeg worker links FFmpeg, only the archive worker links libarchive.
 target_link_libraries(IDHANFFmpeg PRIVATE PkgConfig::FFMPEG)
@@ -71,3 +84,7 @@ target_link_libraries(IDHANArchive PRIVATE LibArchive::LibArchive chardet)
 # Convenience target so consumers can depend on "all premade modules" without naming each one.
 add_custom_target(IDHANPremadeModules)
 add_dependencies(IDHANPremadeModules IDHANVips IDHANFFmpeg IDHANPsd IDHANArchive)
+
+if (ONNXRUNTIME_FOUND)
+	add_dependencies(IDHANPremadeModules IDHANEmbedding)
+endif ()
