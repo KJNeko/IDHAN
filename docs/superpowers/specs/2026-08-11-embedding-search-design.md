@@ -13,8 +13,7 @@ process model demand it.
 
 In:
 
-- Loading a HuggingFace model clone directly, in either the ONNX or the safetensors layout, so setup
-  is one `git clone` and nothing else.
+- Loading a HuggingFace ONNX model clone directly, so setup is one `git clone` and nothing else.
 - A BPE tokenizer reading the clone's own `tokenizer.json`, so a phrase becomes a vector.
 - `EmbeddingModuleI::embedText`, and the IPC to reach it.
 - `POST /embeddings/search`: signed weighted sum of terms, nearest neighbours, top K.
@@ -66,43 +65,60 @@ tokenizer beside it. Today there is no path from a phrase to a vector.
 
 ### Setup is the governing constraint
 
-Model setup must be one `git clone` into the models directory. That is already how the LanceProject
-prototype works -- `models/ViT-B-16-SigLIP2` is literally a clone of
-`https://huggingface.co/timm/ViT-B-16-SigLIP2` -- and it is the bar to match.
+Model setup is one `git clone` into the models directory, and nothing else:
 
-The obstacle is that the canonical repositories ship no graph. `timm/ViT-B-16-SigLIP2` contains
-`open_clip_model.safetensors` and `open_clip_pytorch_model.bin` -- both of which are bags of named
-tensors with nothing describing what multiplies what, in what order. Python can use them because
-open_clip *constructs* the architecture (`factory.py:139` reads `open_clip_config.json`, builds the
-PyTorch modules, then pours the weights in). ONNX Runtime cannot: it executes a graph that already
-exists.
+```
+git clone https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX
+```
 
-### Both layouts, decided by what was cloned
+Nothing to install, nothing to convert, nothing to run. This matches how the LanceProject prototype is
+set up -- `models/ViT-B-16-SigLIP2` is literally a clone of `https://huggingface.co/timm/ViT-B-16-SigLIP2`
+-- while being reachable from C++, which that clone is not.
 
-IDHAN therefore accepts either repository shape and decides by inspection. Neither is privileged, and
-the heavier dependency is paid only by whoever actually needs it.
+**ONNX is the only accepted format.** A clone must contain the graphs; IDHAN never converts anything.
 
-| The clone contains | What happens | Requires |
-| --- | --- | --- |
-| `onnx/*.onnx` | loaded directly | nothing |
-| `*.safetensors` + a config | converted once, then cached and reused | Python + torch |
-| neither | skipped, with the reason logged | — |
+### Why the canonical repositories cannot be used directly
 
-- **`onnx-community/siglip2-*-ONNX`** hits the first row: separate `onnx/vision_model.onnx` and
-  `onnx/text_model.onnx`, plus `tokenizer.json` and `preprocessor_config.json`. Nothing to install,
-  nothing to convert. Quantized variants (`*_q4f16.onnx` at 497 MB against 1.5 GB) come free and are
-  selectable by config rather than by re-exporting.
-- **`timm/ViT-B-16-SigLIP2`** hits the second: a one-time conversion driven by `export_siglip2.py`,
-  which stops being a manual setup step and becomes something the server runs on the operator's
-  behalf. Output is cached in `.idhan/` inside the model directory, so the cost is paid once per
-  clone rather than per start.
-- **A clone missing both** is skipped exactly as an unloadable module library is: logged and stepped
-  over, never fatal.
+`timm/ViT-B-16-SigLIP2` and `google/siglip2-base-patch16-224` ship `open_clip_model.safetensors` and
+`.bin` files -- bags of named tensors, with nothing describing what multiplies what, in what order.
+Python can use them because open_clip *constructs* the architecture (`factory.py:139` reads
+`open_clip_config.json`, builds the PyTorch modules, then pours the weights in). ONNX Runtime cannot:
+it executes a graph that already exists.
 
-The conversion path needs torch present. In the Docker image that is a decision about whether the
-existing `modelbuilder` stage's dependencies move into the runtime image; outside Docker it is the
-operator's own Python. Where torch is absent the first row still works with no dependency at all,
-which is why detection matters more than picking a winner.
+Converting one requires torch, which would put roughly 3 GB of Python into the runtime image to serve
+a step that only ever runs once per model. `onnx-community` has already done that conversion, so the
+clone contains the result.
+
+### The model
+
+`onnx-community/siglip2-base-patch16-224-ONNX`, converted from `google/siglip2-base-patch16-224`:
+
+```
+onnx/vision_model.onnx      372 MB   (+ fp16 / int8 / q4 / q4f16 variants)
+onnx/text_model.onnx       1.13 GB   (+ the same variants)
+tokenizer.json            34.4 MB
+tokenizer.model           4.24 MB    (sentencepiece proto; unused)
+config.json
+preprocessor_config.json
+```
+
+Separate vision and text towers, which is already this system's two-call shape, plus the tokenizer and
+the preprocessing parameters. 768 dimensions, 224x224 input -- the same shape the image tower already
+handles.
+
+Quantized variants come free: `text_model_q4f16.onnx` at 443 MB against 1.13 GB is a real option for a
+CPU-only deployment, selected by config rather than by re-exporting anything.
+
+`export_siglip2.py` leaves the setup path entirely. It is retained only as optional tooling, for
+generating parity fixtures (below) and for anyone preparing a model directory by hand.
+
+This also empties the Dockerfile's `modelbuilder` stage of its heaviest content. Today that stage
+installs torch and open_clip, downloads a 1.5 GB checkpoint, and runs an export
+(`Dockerfile:138-172`). It becomes a plain fetch of the already-converted repository, so the build
+stops depending on PyTorch at all.
+
+A model directory without `onnx/*.onnx` is skipped exactly as an unloadable module library is: logged
+with the reason, never fatal.
 
 ### Rejected alternatives, and why
 
@@ -127,8 +143,8 @@ On inference:
   It also doubles the verification problem rather than reducing it. The tokenizer is already
   hand-written and can be silently wrong; a hand-written model has the identical failure signature --
   a subtly wrong attention mask or pooling head yields plausible vectors and no error -- and there is
-  no free parity source to check either against. Worth revisiting if the conversion dependency ever
-  becomes the binding constraint, but not for the first version.
+  no free parity source to check either against. Worth revisiting only if published ONNX conversions
+  stop being available for the models IDHAN wants.
 
 ### Discovery, not configuration
 
@@ -434,11 +450,11 @@ and the tokenizer, which is the only genuinely risky part, comes last with its v
 4. **IPC** — `EMBED_TEXT`, the fileless call path, `RemoteModule::embedText`. *(done)*
 5. **Text terms in search** — `supports_text` on `GET /embeddings/models`. *(done)*
 6. **Panel** — `EmbeddingSearchPanel`, registration. *(done)*
-7. **Model discovery** — detect the clone's layout. Load `onnx/*.onnx` directly where present;
-   otherwise convert from safetensors when torch is available, caching into `.idhan/`; otherwise skip
-   with the reason logged. Read geometry and tensor names from the graphs, mean/std from
-   `preprocessor_config.json`. `model.json` becomes an optional override rather than a requirement --
-   a file the clone does not contain cannot be mandatory.
+7. **Model discovery** — locate `onnx/vision_model.onnx` and `onnx/text_model.onnx` in the clone,
+   honouring a configured quantization suffix. Read geometry and tensor names from the graphs, and
+   mean/std from `preprocessor_config.json`. `model.json` becomes an optional override rather than a
+   requirement -- a file the clone does not contain cannot be mandatory. A directory with no graphs is
+   skipped with the reason logged.
 8. **Tokenizer** — parse `tokenizer.json`; implement clean, normalize, pre-tokenize, BPE with
    byte-fallback, eos and padding. Unit-tested against hand-written expectations.
 9. **Text tower in the module** — `supportsText`, `embedText`, parity fixtures checked at startup,
