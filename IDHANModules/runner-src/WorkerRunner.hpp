@@ -140,6 +140,11 @@ class WorkerRunner
 	std::atomic< bool > m_stopping { false };
 	std::atomic< std::size_t > m_active_calls { 0 };
 
+	//! False until every module's startup() has returned.
+	/** Pool threads park on this rather than serving calls, because a module that has not started is
+	 *  not ready to be called. The IO loop deliberately does not wait for it -- see run(). */
+	std::atomic< bool > m_ready { false };
+
 	//! Declared last so it is destroyed first: the module instances hold the callbacks that capture
 	//! this runner, and they must be gone before anything they might touch is.
 	ModuleLibrary m_library {};
