@@ -74,6 +74,24 @@ class FGL_EXPORT EmbeddingModuleI : public ModuleBase
 	//! \return An L2-normalised vector of dimensions() floats, or a ModuleError.
 	[[nodiscard]] virtual std::expected< EmbeddingInfo, ModuleError > embed( ModuleCallData& data ) = 0;
 
+	//! Whether this model has a text tower.
+	/** False is a normal configuration rather than an error: a model may ship image-only, its text
+	 *  graph may be absent, or its tokenizer may have failed the parity check at startup. Callers
+	 *  ask before sending text rather than discovering it from a failed call.
+	 *
+	 *  Defaulted, not pure, so an existing embedding module keeps compiling unchanged. */
+	[[nodiscard]] virtual bool supportsText() { return false; }
+
+	//! Embeds a phrase into the same space as embed().
+	/** Takes no file, so none of the file plumbing applies -- this is the one call that operates on
+	 *  nothing but a string. Must not be called unless supportsText().
+	 *  \return An L2-normalised vector of dimensions() floats, or a ModuleError. */
+	[[nodiscard]] virtual std::expected< EmbeddingInfo, ModuleError > embedText(
+		[[maybe_unused]] std::string_view phrase )
+	{
+		return std::unexpected( ModuleError { "this model has no text encoder" } );
+	}
+
 	//! \return ModuleTypeFlags::EMBEDDING.
 	ModuleType type() override;
 };

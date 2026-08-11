@@ -48,7 +48,7 @@ namespace
 } // namespace
 
 ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
-	[[maybe_unused]] std::shared_ptr< modules::RemoteModule > module,
+	std::shared_ptr< modules::RemoteModule > module,
 	const std::int32_t model_id,
 	const std::size_t dimensions,
 	std::vector< QueryTerm > terms,
@@ -86,10 +86,23 @@ ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 	{
 		if ( term.m_is_text )
 		{
-			// Replaced once the text tower exists. Refused rather than skipped: dropping a term
-			// silently turns the query into one the caller did not ask for.
-			co_return std::unexpected(
-				createBadRequest( "Text terms are not supported yet; use record references" ) );
+			// The caller guarantees a module whenever a text term is present, so this is a
+			// programming error rather than a user one.
+			if ( module == nullptr )
+				co_return std::unexpected(
+					createInternalError( "A text term reached the resolver with no module to embed it" ) );
+
+			// One call per phrase rather than one batched call: phrases are few, the text tower is
+			// small, and resolving them individually is what lets the error name the phrase that
+			// failed.
+			const auto embedded { co_await module->embedText( term.m_text ) };
+
+			if ( !embedded )
+				co_return std::unexpected(
+					createBadRequest( "Could not embed \"{}\": {}", term.m_text, embedded.error() ) );
+
+			resolved.emplace_back( WeightedVector { .m_vector = embedded->m_vector, .m_weight = term.m_weight } );
+			continue;
 		}
 
 		const auto found { vectors.find( term.m_record_id ) };

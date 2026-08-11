@@ -238,7 +238,8 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 				entry.version,
 				entry.mimes,
 				entry.model_name,
-				entry.dimensions ) );
+				entry.dimensions,
+				entry.supports_text ) );
 
 		// Embedding modules route by model name, not by MIME -- they declare no MIMEs at all, since
 		// what they can handle is whatever some thumbnailer can decode, which only the server knows.

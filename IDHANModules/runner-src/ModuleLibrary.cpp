@@ -140,12 +140,16 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 		// reach the host through the manifest -- there is nothing else in the entry that names it.
 		std::string model_name {};
 		std::uint32_t dimensions { 0 };
+		bool supports_text { false };
 
 		if ( ( module->type() & ModuleTypeFlags::EMBEDDING ) != 0 )
 		{
 			const auto embedder { std::static_pointer_cast< EmbeddingModuleI >( module ) };
 			model_name = std::string { embedder->modelName() };
 			dimensions = static_cast< std::uint32_t >( embedder->dimensions() );
+			// Asked after startup(), so a text tower that failed to load or failed its parity check
+			// reports false here rather than being advertised and then refusing every call.
+			supports_text = embedder->supportsText();
 		}
 
 		entries.emplace_back(
@@ -158,7 +162,8 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 				.residency = module->residency(),
 				.mimes = handleableMimesOf( module ),
 				.model_name = std::move( model_name ),
-				.dimensions = dimensions } );
+				.dimensions = dimensions,
+				.supports_text = supports_text } );
 	}
 
 	return entries;

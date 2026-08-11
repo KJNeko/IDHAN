@@ -130,6 +130,8 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 		case ipc::CallOp::GENERATE:
 			return std::format( "{} bytes generated", payloadSize( payload_fd ) );
 		case ipc::CallOp::EMBED:
+			[[fallthrough]];
+		case ipc::CallOp::EMBED_TEXT:
 			return std::format( "{}-dimension vector", body[ ipc::field::EMBEDDING ].size() );
 	}
 
@@ -486,6 +488,7 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 	call.extra = frame.body[ ipc::field::EXTRA ];
 	call.width = frame.body[ ipc::field::WIDTH ].asUInt64();
 	call.height = frame.body[ ipc::field::HEIGHT ].asUInt64();
+	call.phrase = frame.body[ ipc::field::PHRASE ].asString();
 	call.depth = frame.body[ ipc::field::DEPTH ].asUInt();
 
 	const auto op { ipc::callOpFromString( frame.body[ ipc::field::OP ].asString() ) };
@@ -518,13 +521,19 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 	// Adopted here rather than on the pool thread, and that placement is the security property, not
 	// an optimisation: a ring's descriptor has to be registered and closed before any module code
 	// runs, because while it exists /proc/self/fdinfo prints the path of the file it was given.
-	auto file { adoptInput( frame ) };
-	if ( !file )
+	//
+	// EMBED_TEXT is the one op with nothing to adopt -- it operates on a phrase, not a file -- so
+	// demanding a descriptor here would reject it before it ever reached a module.
+	if ( call.op != ipc::CallOp::EMBED_TEXT )
 	{
-		reject( file.error() );
-		return;
+		auto file { adoptInput( frame ) };
+		if ( !file )
+		{
+			reject( file.error() );
+			return;
+		}
+		call.file = std::move( *file );
 	}
-	call.file = std::move( *file );
 
 	{
 		const std::lock_guard< std::mutex > guard { m_queue_mutex };
@@ -538,8 +547,6 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 	const QueuedCall& call,
 	const std::shared_ptr< IDHANModule >& module )
 {
-	ModuleCallData data { .file = *call.file, .mime_name = call.mime, .extra = call.extra };
-
 	// Serialise only what asks to be serialised. Everything premade reports true, so in practice
 	// this lock is uncontended -- but a third-party module that is honest about being thread-hostile
 	// gets to be, instead of being called concurrently and crashing the worker.
@@ -548,6 +555,38 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 		serialised = std::unique_lock< std::recursive_mutex > { *m_module_locks[ call.module_index ] };
 
 	Json::Value body {};
+
+	// Handled before ModuleCallData is built, because this op has no file and ModuleCallData holds
+	// a reference to one.
+	if ( call.op == ipc::CallOp::EMBED_TEXT )
+	{
+		const auto embedder { std::static_pointer_cast< EmbeddingModuleI >( module ) };
+
+		if ( !embedder->supportsText() ) return std::unexpected( std::string { "this model has no text encoder" } );
+
+		auto result { embedder->embedText( call.phrase ) };
+		if ( !result ) return std::unexpected( result.error() );
+
+		// Same boundary check the file path makes, and for the same reason: a vector of the wrong
+		// width would be written into a fixed-width halfvec column several hops later.
+		if ( result->m_vector.size() != embedder->dimensions() )
+			return std::unexpected(
+				std::format(
+					"embedding module '{}' returned {} values but declares {} dimensions",
+					embedder->modelName(),
+					result->m_vector.size(),
+					embedder->dimensions() ) );
+
+		Json::Value values { Json::arrayValue };
+		// Explicit widening: jsoncpp stores a double, and letting the float promote implicitly trips
+		// -Wdouble-promotion under this project's warning set.
+		for ( const float value : result->m_vector ) values.append( static_cast< double >( value ) );
+
+		body[ ipc::field::EMBEDDING ] = std::move( values );
+		return std::pair { std::move( body ), ipc::UniqueFd {} };
+	}
+
+	ModuleCallData data { .file = *call.file, .mime_name = call.mime, .extra = call.extra };
 
 	switch ( call.op )
 	{
@@ -634,6 +673,9 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 				body[ ipc::field::EMBEDDING ] = std::move( values );
 				return std::pair { std::move( body ), ipc::UniqueFd {} };
 			}
+		case ipc::CallOp::EMBED_TEXT:
+			// Returned above, before ModuleCallData was built. Listed only so -Wswitch-enum passes.
+			break;
 	}
 
 	return std::unexpected( std::string { "unreachable operation" } );

@@ -56,6 +56,10 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::listModels( [[maybe_unused
 		const auto module { modules::ModuleLoader::instance().getEmbedderFor( model[ "model_name" ].asString() ) };
 		model[ "available" ] = module != nullptr;
 
+		// The search panel needs this to decide whether to enable its text input. Discovering it by
+		// submitting a query that comes back 400 is not an acceptable substitute.
+		model[ "supports_text" ] = module != nullptr && module->supportsText();
+
 		models.append( std::move( model ) );
 	}
 
@@ -184,12 +188,31 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 			DEFAULT_EF_SEARCH
 	};
 
+	// A record-only query never touches the module system at all: every vector it needs is already
+	// in the table. The module is resolved only when a phrase has to be embedded.
+	const auto has_text_term {
+		std::ranges::any_of( terms, []( const auto& term ) { return term.m_is_text; } )
+	};
+
+	std::shared_ptr< modules::RemoteModule > module {};
+
+	if ( has_text_term )
+	{
+		module = modules::ModuleLoader::instance().getEmbedderFor( model_name );
+
+		if ( module == nullptr )
+			co_return createNotFound(
+				"No loaded module provides the model \"{}\", so text terms cannot be embedded", model_name );
+
+		if ( !module->supportsText() )
+			co_return createBadRequest(
+				"The model \"{}\" has no text encoder; use record references instead", model_name );
+	}
+
 	const auto started { std::chrono::steady_clock::now() };
 
-	// Null module: no text terms are resolvable yet, so a record-only query never needs one and a
-	// query with text terms is refused inside searchEmbeddings.
 	const auto hits { co_await embeddings::searchEmbeddings(
-		nullptr, model_id, dimensions, std::move( terms ), limit, ef_search, db ) };
+		module, model_id, dimensions, std::move( terms ), limit, ef_search, db ) };
 
 	if ( !hits ) co_return hits.error();
 

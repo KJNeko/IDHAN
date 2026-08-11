@@ -31,7 +31,8 @@ RemoteModule::RemoteModule(
 	const ModuleVersion version,
 	std::vector< std::string > mimes,
 	std::string model_name,
-	const std::uint32_t dimensions ) :
+	const std::uint32_t dimensions,
+	const bool supports_text ) :
   m_pool( std::move( pool ) ),
   m_module_index( module_index ),
   m_name( std::move( name ) ),
@@ -39,7 +40,8 @@ RemoteModule::RemoteModule(
   m_version( version ),
   m_mimes( std::move( mimes ) ),
   m_model_name( std::move( model_name ) ),
-  m_dimensions( dimensions )
+  m_dimensions( dimensions ),
+  m_supports_text( supports_text )
 {}
 
 bool RemoteModule::canHandle( const std::string_view mime ) const
@@ -163,6 +165,52 @@ IDHANTask< std::expected< EmbeddingInfo, ModuleError > > RemoteModule::embed( Re
 	for ( const auto& value : values )
 	{
 		if ( !value.isNumeric() ) co_return std::unexpected( ModuleError { "embed result had a non-numeric value" } );
+
+		info.m_vector.push_back( static_cast< float >( value.asDouble() ) );
+	}
+
+	co_return info;
+}
+
+IDHANTask< std::expected< EmbeddingInfo, ModuleError > > RemoteModule::embedText( std::string phrase ) const
+{
+	if ( !m_supports_text ) co_return std::unexpected( ModuleError { "this model has no text encoder" } );
+
+	// baseBody is not reused: it stamps MIME, extra and depth, all of which describe a file this
+	// call does not have.
+	Json::Value body {};
+	body[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::CALL ) };
+	body[ ipc::field::OP ] = std::string { toString( ipc::CallOp::EMBED_TEXT ) };
+	body[ ipc::field::MODULE_INDEX ] = Json::UInt64 { m_module_index };
+	body[ ipc::field::PHRASE ] = std::move( phrase );
+
+	// Null input: the one call with no file to send. WorkerProcess::call skips the descriptor, the
+	// size field, and the INPUT_REF registration for exactly this case.
+	auto outcome { co_await m_pool->dispatch( std::move( body ), nullptr ) };
+
+	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
+
+	const auto& values { outcome->body[ ipc::field::EMBEDDING ] };
+	if ( !values.isArray() ) co_return std::unexpected( ModuleError { "embed_text result carried no vector" } );
+
+	// Checked again on this side for the same reason embed() does: this is the end that feeds a
+	// fixed-width halfvec column, and the two ends can disagree if a library is rebuilt underneath
+	// a running server.
+	if ( values.size() != m_dimensions )
+		co_return std::unexpected(
+			ModuleError { std::format(
+				"embed_text result for model '{}' had {} values, expected {}",
+				m_model_name,
+				values.size(),
+				m_dimensions ) } );
+
+	EmbeddingInfo info {};
+	info.m_vector.reserve( values.size() );
+
+	for ( const auto& value : values )
+	{
+		if ( !value.isNumeric() )
+			co_return std::unexpected( ModuleError { "embed_text result had a non-numeric value" } );
 
 		info.m_vector.push_back( static_cast< float >( value.asDouble() ) );
 	}

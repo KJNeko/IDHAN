@@ -564,22 +564,22 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 
 	auto outcome { std::make_shared< CallOutcome >() };
 
-	if ( input == nullptr )
+	// A null input used to be rejected outright, because every op operated on a file. EMBED_TEXT
+	// does not: it carries a phrase and nothing else, so there is no descriptor to send, nothing to
+	// register for INPUT_REF reuse, and no size to declare.
+	std::vector< int > fds {};
+
+	if ( input != nullptr )
 	{
-		outcome->ok = false;
-		outcome->error = "call has no input";
-		co_return outcome;
-	}
+		body[ ipc::field::FILE_SIZE ] = Json::UInt64 { input->size() };
 
-	body[ ipc::field::FILE_SIZE ] = Json::UInt64 { input->size() };
+		// Borrowed for the length of the send; the input owns it and outlives the call, which is also
+		// what lets a nested call reuse the same descriptor through INPUT_REF.
+		fds.emplace_back( input->fd() );
 
-	// Borrowed for the length of the send; the input owns it and outlives the call, which is also
-	// what lets a nested call reuse the same descriptor through INPUT_REF.
-	const std::vector< int > fds { input->fd() };
-
-	// Registered for the whole call so a module handing its own input back through a callback can be
-	// answered with the descriptor we already hold, rather than the file being shipped a second time.
-	{
+		// Registered for the whole call so a module handing its own input back through a callback can
+		// be answered with the descriptor we already hold, rather than the file being shipped a
+		// second time.
 		const std::lock_guard< std::mutex > guard { m_calls_mutex };
 		m_call_inputs.emplace(
 			call_id, InFlightInput { .input = std::move( input ), .mime = body[ ipc::field::MIME ].asString() } );
