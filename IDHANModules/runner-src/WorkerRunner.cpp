@@ -794,7 +794,14 @@ void WorkerRunner::workerLoop( const std::stop_token& stop )
 
 		{
 			std::unique_lock< std::mutex > guard { m_queue_mutex };
-			m_queue_ready.wait( guard, [ this, &stop ] { return stop.stop_requested() || !m_queue.empty(); } );
+
+			// m_ready as well as the queue: a call can arrive before startup() has returned, and
+			// dispatching it then would reach a module that has not initialised. It waits instead,
+			// which is exactly what the host's backlog model already expects of a busy worker.
+			m_queue_ready.wait(
+				guard,
+				[ this, &stop ]
+				{ return stop.stop_requested() || ( m_ready.load() && !m_queue.empty() ); } );
 
 			if ( m_queue.empty() ) continue;
 
@@ -866,7 +873,35 @@ std::expected< void, std::string > WorkerRunner::run()
 
 	if ( const auto announced { describe() }; !announced ) return std::unexpected( announced.error() );
 
-	m_library.startup();
+	// Startup runs on its own thread, and this is load-bearing rather than tidy.
+	//
+	// It used to run here, inline, before the loop below began. Heartbeats are sent from that loop,
+	// so a module whose startup() was slow sent none for its whole duration and the host killed it
+	// for being unresponsive -- then respawned it, and killed it again. An embedding model loading a
+	// 1.13 GB text graph and a 34 MB tokenizer passes the five second liveness grace easily, so this
+	// was an unbootable worker rather than a slow one.
+	//
+	// It also restores the invariant this design claims: the IO thread never runs module code.
+	// startup() is module code, and running it here was the one place that was untrue.
+	std::jthread starting {
+		[ this ]
+		{
+			m_library.startup();
+
+			// Set under the queue mutex, not merely atomically. A pool thread evaluates the wait
+			// predicate with that mutex held, so storing outside it leaves a window where the thread
+			// reads false, the store and notify land, and only then does it go to sleep -- missing
+			// the wakeup and stalling the first call until some later one happened to arrive.
+			{
+				const std::lock_guard< std::mutex > guard { m_queue_mutex };
+				m_ready.store( true );
+			}
+
+			// Calls that arrived while modules were coming up are sitting in the queue with every
+			// pool thread parked on m_ready. Nothing else will wake them.
+			m_queue_ready.notify_all();
+		}
+	};
 
 	for ( std::size_t i = 0; i < m_options.pool_threads; ++i )
 		m_pool.emplace_back( [ this ]( const std::stop_token& stop ) { workerLoop( stop ); } );
@@ -952,6 +987,13 @@ std::expected< void, std::string > WorkerRunner::run()
 	for ( auto& thread : m_pool ) thread.request_stop();
 	m_queue_ready.notify_all();
 	m_pool.clear();
+
+	// Waited out before shutting anything down. A module must not have shutdown() called while its
+	// startup() is still running, and startup() has no way to be interrupted -- so a worker told to
+	// stop mid-load finishes loading and then unloads, rather than tearing down underneath itself.
+	// Without this the jthread's destructor would join at the end of this function, which is after
+	// m_library.shutdown().
+	if ( starting.joinable() ) starting.join();
 
 	m_library.shutdown();
 
