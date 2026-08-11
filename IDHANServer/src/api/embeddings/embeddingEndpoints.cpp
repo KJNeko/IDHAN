@@ -11,12 +11,26 @@
 #include "api/EmbeddingAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "embeddings/embeddings.hpp"
+#include "embeddings/searchEmbeddings.hpp"
 #include "jobs/JobContext.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "modules/RemoteModule.hpp"
 
 namespace idhan::api
 {
+
+namespace
+{
+
+//! Upper bound on results. A caller-chosen limit is an allocation of the caller's choosing.
+constexpr std::size_t MAX_SEARCH_LIMIT { 5000 };
+constexpr std::size_t DEFAULT_SEARCH_LIMIT { 200 };
+
+//! HNSW recall knob: how much of the graph a search walks. Higher is better recall and more time.
+constexpr std::size_t MAX_EF_SEARCH { 1000 };
+constexpr std::size_t DEFAULT_EF_SEARCH { 100 };
+
+} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::listModels( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
@@ -90,6 +104,110 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::generate( drogon::HttpRequ
 	response[ "job_id" ] = job_ctx->id();
 	response[ "model_id" ] = model_id;
 	response[ "status" ] = "dispatched";
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( response );
+}
+
+drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpRequestPtr request )
+{
+	const auto json { request->getJsonObject() };
+	if ( json == nullptr ) co_return createBadRequest( "Expected a JSON body" );
+
+	if ( !( *json )[ "model_name" ].isString() ) co_return createBadRequest( "Expected a string \"model_name\"" );
+
+	const auto model_name { ( *json )[ "model_name" ].asString() };
+
+	const auto& terms_json { ( *json )[ "terms" ] };
+	if ( !terms_json.isArray() ) co_return createBadRequest( "Expected an array \"terms\"" );
+	if ( terms_json.empty() ) co_return createBadRequest( "A query needs at least one term" );
+
+	std::vector< embeddings::QueryTerm > terms {};
+	terms.reserve( terms_json.size() );
+
+	for ( const auto& entry : terms_json )
+	{
+		if ( !entry.isObject() ) co_return createBadRequest( "Every term must be an object" );
+		if ( !entry[ "type" ].isString() ) co_return createBadRequest( "Every term needs a string \"type\"" );
+
+		const auto type { entry[ "type" ].asString() };
+
+		embeddings::QueryTerm term {};
+
+		// Defaulted rather than required: an unweighted term is the common case, and 1.0 is where a
+		// freshly added term starts.
+		term.m_weight = entry[ "weight" ].isNumeric() ? static_cast< float >( entry[ "weight" ].asDouble() ) : 1.0f;
+
+		if ( type == "text" )
+		{
+			if ( !entry[ "text" ].isString() ) co_return createBadRequest( "A text term needs a string \"text\"" );
+
+			term.m_is_text = true;
+			term.m_text = entry[ "text" ].asString();
+
+			if ( term.m_text.empty() ) co_return createBadRequest( "A text term cannot be empty" );
+		}
+		else if ( type == "record" )
+		{
+			if ( !entry[ "record_id" ].isIntegral() )
+				co_return createBadRequest( "A record term needs an integral \"record_id\"" );
+
+			term.m_is_text = false;
+			term.m_record_id = static_cast< RecordID >( entry[ "record_id" ].asInt64() );
+		}
+		else
+		{
+			co_return createBadRequest( "Unknown term type \"{}\"; expected \"text\" or \"record\"", type );
+		}
+
+		terms.emplace_back( std::move( term ) );
+	}
+
+	auto db { drogon::app().getDbClient() };
+
+	const auto rows { co_await db->execSqlCoro(
+		"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+
+	if ( rows.empty() ) co_return createNotFound( "The model \"{}\" is not registered", model_name );
+
+	const auto model_id { rows[ 0 ][ "model_id" ].as< std::int32_t >() };
+	const auto dimensions { static_cast< std::size_t >( rows[ 0 ][ "model_dimensions" ].as< std::int32_t >() ) };
+
+	const auto limit {
+		( *json )[ "limit" ].isIntegral() && ( *json )[ "limit" ].asInt64() > 0 ?
+			std::min( static_cast< std::size_t >( ( *json )[ "limit" ].asInt64() ), MAX_SEARCH_LIMIT ) :
+			DEFAULT_SEARCH_LIMIT
+	};
+
+	const auto ef_search {
+		( *json )[ "ef_search" ].isIntegral() && ( *json )[ "ef_search" ].asInt64() > 0 ?
+			std::min( static_cast< std::size_t >( ( *json )[ "ef_search" ].asInt64() ), MAX_EF_SEARCH ) :
+			DEFAULT_EF_SEARCH
+	};
+
+	const auto started { std::chrono::steady_clock::now() };
+
+	// Null module: no text terms are resolvable yet, so a record-only query never needs one and a
+	// query with text terms is refused inside searchEmbeddings.
+	const auto hits { co_await embeddings::searchEmbeddings(
+		nullptr, model_id, dimensions, std::move( terms ), limit, ef_search, db ) };
+
+	if ( !hits ) co_return hits.error();
+
+	// arrayValue explicitly: an empty result must serialise as [] rather than null.
+	Json::Value record_ids { Json::arrayValue };
+	Json::Value distances { Json::arrayValue };
+
+	for ( const auto& hit : hits.value() )
+	{
+		record_ids.append( hit.m_record_id );
+		distances.append( hit.m_distance );
+	}
+
+	Json::Value response {};
+	response[ "record_ids" ] = std::move( record_ids );
+	response[ "distances" ] = std::move( distances );
+	response[ "query_ms" ] = static_cast< Json::UInt64 >(
+		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started ).count() );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
