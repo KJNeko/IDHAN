@@ -66,8 +66,11 @@ class WorkerRunner
 		std::size_t height { 0 };
 		std::array< std::byte, 256 / 8 > hash {};
 		std::uint32_t depth { 0 };
+		//! EMBED_TEXT only. The phrase to embed; that op carries no file at all.
+		std::string phrase {};
 		//! The input, already adopted. Built on the IO thread rather than here: a ring has to have its
 		//! descriptor registered and closed before any module code can run (see RingFile::adopt).
+		//! Null for EMBED_TEXT, which is the one op with no input to adopt.
 		std::unique_ptr< ModuleFile > file {};
 	};
 

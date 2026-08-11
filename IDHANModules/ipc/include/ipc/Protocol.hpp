@@ -69,6 +69,8 @@ inline constexpr auto INPUT_REF { "input_ref" };
 inline constexpr auto EMBEDDING { "embedding" };
 inline constexpr auto MODEL_NAME { "model_name" };
 inline constexpr auto DIMENSIONS { "dimensions" };
+inline constexpr auto PHRASE { "phrase" };
+inline constexpr auto SUPPORTS_TEXT { "supports_text" };
 } // namespace field
 
 //! Every message the protocol carries.
@@ -95,6 +97,7 @@ enum class CallOp : std::uint8_t
 	THUMB_FILE, //!< ThumbnailerModuleI::createThumbnailFile -- encoded image
 	GENERATE, //!< GeneratorModuleI::generate
 	EMBED, //!< EmbeddingModuleI::embed
+	EMBED_TEXT, //!< EmbeddingModuleI::embedText -- the only op that carries no file
 };
 
 //! What a module is asking the host for when it sends a CALLBACK.
@@ -132,6 +135,8 @@ enum class CallbackKind : std::uint8_t
 		case CallOp::GENERATE:
 			return ModuleTypeFlags::GENERATOR;
 		case CallOp::EMBED:
+			[[fallthrough]];
+		case CallOp::EMBED_TEXT:
 			return ModuleTypeFlags::EMBEDDING;
 	}
 
@@ -155,6 +160,10 @@ struct ManifestEntry
 	std::string model_name {};
 	//! EMBEDDING modules only; zero otherwise. The width of the halfvec column built for this model.
 	std::uint32_t dimensions { 0 };
+	//! EMBEDDING modules only. Whether this model has a text tower, so the host can refuse text
+	//! queries up front instead of discovering it from a failed call. False is a normal
+	//! configuration -- an image-only export, or a text tower that failed its parity check.
+	bool supports_text { false };
 };
 
 [[nodiscard]] Json::Value toJson( const ManifestEntry& entry );

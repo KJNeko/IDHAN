@@ -86,6 +86,8 @@ std::string_view toString( const CallOp value ) noexcept
 			return "generate";
 		case CallOp::EMBED:
 			return "embed";
+		case CallOp::EMBED_TEXT:
+			return "embed_text";
 	}
 
 	return "unknown";
@@ -140,6 +142,7 @@ std::optional< CallOp > callOpFromString( const std::string_view value ) noexcep
 	if ( value == "thumb_file" ) return CallOp::THUMB_FILE;
 	if ( value == "generate" ) return CallOp::GENERATE;
 	if ( value == "embed" ) return CallOp::EMBED;
+	if ( value == "embed_text" ) return CallOp::EMBED_TEXT;
 
 	return std::nullopt;
 }
@@ -199,6 +202,7 @@ Json::Value toJson( const ManifestEntry& entry )
 	// the type flag to know whether the fields are present.
 	json[ field::MODEL_NAME ] = entry.model_name;
 	json[ field::DIMENSIONS ] = static_cast< Json::UInt >( entry.dimensions );
+	json[ field::SUPPORTS_TEXT ] = entry.supports_text;
 
 	return json;
 }
@@ -245,6 +249,11 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 
 		entry.dimensions = static_cast< std::uint32_t >( json[ field::DIMENSIONS ].asUInt() );
 	}
+
+	// Absent on manifests from a library built before the text tower existed. Defaulting to false
+	// is the safe direction: the host refuses text queries rather than sending one to a module that
+	// cannot answer it.
+	if ( json.isMember( field::SUPPORTS_TEXT ) ) entry.supports_text = json[ field::SUPPORTS_TEXT ].asBool();
 
 	if ( ( entry.type & ModuleTypeFlags::EMBEDDING ) != 0 )
 	{
@@ -294,7 +303,7 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 		// model at a different width and rebuilding the .so under a running server would leave the
 		// pool dispatching to an index whose vectors no longer fit the halfvec column they are
 		// written to -- a silent mismatch rather than a loud reload.
-		signature += std::format( "|{}|{}", entry.model_name, entry.dimensions );
+		signature += std::format( "|{}|{}|{}", entry.model_name, entry.dimensions, entry.supports_text );
 
 		signature += '\n';
 	}

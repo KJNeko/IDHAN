@@ -55,6 +55,7 @@ class RemoteModule
 	//! EMBEDDING modules only. Empty/zero for every other kind.
 	std::string m_model_name {};
 	std::uint32_t m_dimensions { 0 };
+	bool m_supports_text { false };
 
 	//! Builds the common part of a CALL body.
 	[[nodiscard]] Json::Value baseBody( ipc::CallOp op, const RemoteCallData& data ) const;
@@ -69,7 +70,8 @@ class RemoteModule
 		ModuleVersion version,
 		std::vector< std::string > mimes,
 		std::string model_name = {},
-		std::uint32_t dimensions = 0 );
+		std::uint32_t dimensions = 0,
+		bool supports_text = false );
 
 	[[nodiscard]] std::string_view name() const { return m_name; }
 
@@ -112,6 +114,14 @@ class RemoteModule
 
 	//! Embeds one file into an L2-normalised vector of dimensions() floats.
 	[[nodiscard]] IDHANTask< std::expected< EmbeddingInfo, ModuleError > > embed( RemoteCallData data ) const;
+
+	//! Whether this model has a text tower, as its manifest reported after startup.
+	/** Callers check this before building a query out of phrases, so a model that ships image-only
+	 *  is a refusal with a reason rather than a failed call. */
+	[[nodiscard]] bool supportsText() const { return m_supports_text; }
+
+	//! Embeds a phrase into the same space as embed(). Carries no file.
+	[[nodiscard]] IDHANTask< std::expected< EmbeddingInfo, ModuleError > > embedText( std::string phrase ) const;
 };
 
 } // namespace idhan::modules
