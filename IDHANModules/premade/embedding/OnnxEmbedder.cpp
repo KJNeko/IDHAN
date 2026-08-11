@@ -84,12 +84,57 @@ void OnnxEmbedder::startup()
 		m_config.m_dimensions,
 		m_config.m_preprocess.m_width,
 		m_config.m_preprocess.m_height );
+
+	if ( !supportsText() ) return;
+
+	// Degraded rather than fatal throughout: a text tower that will not load costs text queries and
+	// nothing else. Image embedding and record-reference search are unaffected, and a server that
+	// refuses to start over an optional half is worse than one that says what it lost.
+	auto tokenizer { BpeTokenizer::load( m_config.m_tokenizer_path, m_config.m_context_length ) };
+
+	if ( !tokenizer )
+	{
+		m_text_failure = std::format( "tokenizer would not load: {}", tokenizer.error() );
+		spdlog::error( "Model '{}': {}. Text queries will be refused", m_config.m_model_name, m_text_failure );
+		return;
+	}
+
+	m_tokenizer = std::move( *tokenizer );
+
+	try
+	{
+		Ort::SessionOptions text_options {};
+		text_options.SetGraphOptimizationLevel( GraphOptimizationLevel::ORT_ENABLE_ALL );
+		// Same reasoning as the image tower: parallelism comes from the worker's pool, and a second
+		// wide pool here would oversubscribe rather than accelerate.
+		text_options.SetIntraOpNumThreads( 1 );
+
+		m_text_session = std::make_unique< Ort::Session >( *m_env, m_config.m_text_onnx_path.c_str(), text_options );
+	}
+	catch ( const Ort::Exception& e )
+	{
+		m_text_failure = std::format( "text graph would not load: {}", e.what() );
+		spdlog::error( "Model '{}': {}. Text queries will be refused", m_config.m_model_name, m_text_failure );
+		m_text_session.reset();
+		return;
+	}
+
+	spdlog::info(
+		"Embedding model '{}' text tower ready: context {}, input '{}', output '{}'",
+		m_config.m_model_name,
+		m_tokenizer.contextLength(),
+		m_config.m_text_input_name,
+		m_config.m_text_output_name );
 }
 
 void OnnxEmbedder::shutdown()
 {
 	// No handshake needed: the worker joins its pool threads before calling this, so no call is in
 	// flight and there is nothing parked waiting to be woken.
+	//
+	// Sessions before the env: both hold it, and releasing what owns them first is how ORT is
+	// documented to come down.
+	m_text_session.reset();
 	m_session.reset();
 	m_memory_info.reset();
 	m_env.reset();
@@ -174,6 +219,80 @@ std::expected< std::vector< float >, ModuleError > OnnxEmbedder::runOne( std::ve
 	{
 		return std::unexpected( ModuleError { std::format( "onnxruntime failed: {}", e.what() ) } );
 	}
+}
+
+std::expected< std::vector< float >, ModuleError > OnnxEmbedder::runText( std::vector< std::int64_t >& ids )
+{
+	try
+	{
+		const std::array< std::int64_t, 2 > shape { { 1, static_cast< std::int64_t >( ids.size() ) } };
+
+		// Borrows `ids` rather than copying, so the caller's vector has to outlive the Run -- which is
+		// why this takes a reference instead of consuming it, as runOne does.
+		auto input_tensor { Ort::Value::CreateTensor< std::int64_t >(
+			*m_memory_info, ids.data(), ids.size(), shape.data(), shape.size() ) };
+
+		const std::array< const char*, 1 > input_names { { m_config.m_text_input_name.c_str() } };
+		const std::array< const char*, 1 > output_names { { m_config.m_text_output_name.c_str() } };
+
+		auto outputs { m_text_session->Run(
+			Ort::RunOptions { nullptr }, input_names.data(), &input_tensor, 1, output_names.data(), 1 ) };
+
+		const float* const data { outputs.front().GetTensorData< float >() };
+
+		std::vector< float > vector( data, data + m_config.m_dimensions );
+
+		float sum { 0.0f };
+		for ( const float value : vector ) sum += value * value;
+
+		const float norm { std::sqrt( sum ) };
+
+		// Upstream ONNX exports return raw pooled features, so this is the normalisation rather than
+		// a check on someone else's. A zero-magnitude result would divide by zero and produce NaNs
+		// that only surface later as a NaN distance.
+		if ( norm < NORM_TOLERANCE )
+			return std::unexpected(
+				ModuleError { std::format( "text tower for '{}' produced a zero vector", m_config.m_model_name ) } );
+
+		if ( !m_config.m_normalized_output )
+		{
+			for ( float& value : vector ) value /= norm;
+			return vector;
+		}
+
+		if ( std::abs( norm - 1.0f ) > NORM_TOLERANCE )
+			return std::unexpected(
+				ModuleError { std::format(
+					"model '{}' claims normalized output but its text tower produced a vector of norm {}",
+					m_config.m_model_name,
+					norm ) } );
+
+		return vector;
+	}
+	catch ( const Ort::Exception& e )
+	{
+		return std::unexpected( ModuleError { std::format( "onnxruntime failed on text: {}", e.what() ) } );
+	}
+}
+
+std::expected< EmbeddingInfo, ModuleError > OnnxEmbedder::embedText( const std::string_view phrase )
+{
+	// supportsText() answered from disk before startup() ran, so reaching here with no session means
+	// the tower was advertised and then failed to come up. The recorded reason is the useful part.
+	if ( m_text_session == nullptr )
+		return std::unexpected(
+			ModuleError { m_text_failure.empty() ? std::string { "this model has no text encoder" } :
+			                                       m_text_failure } );
+
+	auto ids { m_tokenizer.encode( phrase ) };
+
+	auto vector { runText( ids ) };
+	if ( !vector ) return std::unexpected( vector.error() );
+
+	EmbeddingInfo info {};
+	info.m_vector = std::move( *vector );
+
+	return info;
 }
 
 std::expected< EmbeddingInfo, ModuleError > OnnxEmbedder::embed( ModuleCallData& data )

@@ -40,7 +40,10 @@ struct ModelConfig
 	std::filesystem::path m_text_onnx_path {};
 	std::string m_text_input_name { "input_ids" };
 	std::string m_text_output_name { "text_features" };
-	std::size_t m_context_length { 64 };
+	//! Zero means the graph left its sequence axis dynamic, as upstream's text tower does. The
+	//! tokenizer then takes the length from tokenizer.json's own padding strategy, which is the
+	//! model's actual statement of what it was trained with.
+	std::size_t m_context_length { 0 };
 	std::filesystem::path m_tokenizer_path {};
 };
 

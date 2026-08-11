@@ -219,8 +219,8 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 			const auto* const text_output { chooseEmbeddingOutput( *text ) };
 			if ( text_output != nullptr ) config.m_text_output_name = text_output->m_name;
 
-			// [batch, sequence]. A fixed sequence length is the context the tokenizer pads to; a
-			// dynamic one leaves the default in place.
+			// [batch, sequence]. A fixed sequence length is authoritative; upstream leaves it
+			// dynamic, and zero tells the tokenizer to use tokenizer.json's padding strategy.
 			if ( const auto& shape { text->m_inputs.front().m_shape }; shape.size() == 2 && shape[ 1 ] > 0 )
 				config.m_context_length = static_cast< std::size_t >( shape[ 1 ] );
 
