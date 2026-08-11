@@ -11,6 +11,7 @@
 
 #include "EmbeddingModule.hpp"
 #include "ModelConfig.hpp"
+#include "Tokenizer.hpp"
 
 namespace premade
 {
@@ -35,11 +36,24 @@ class OnnxEmbedder final : public idhan::EmbeddingModuleI
 	std::unique_ptr< Ort::Session > m_session {};
 	std::unique_ptr< Ort::MemoryInfo > m_memory_info {};
 
+	//! Built in startup() when the model ships a text tower. Null otherwise, and null when building
+	//! it failed -- in which case m_text_failure says why.
+	std::unique_ptr< Ort::Session > m_text_session {};
+	BpeTokenizer m_tokenizer {};
+
+	//! Why text queries are being refused, when the model declares a text tower but cannot serve one.
+	/** Kept as a string rather than a bool because the caller sees this: "no text encoder" is useless
+	 *  next to naming the file that would not load. */
+	std::string m_text_failure {};
+
 	//! Converts packed 8-bit RGB into the normalised CHW tensor the graph expects.
 	[[nodiscard]] std::vector< float > toTensor( const std::vector< std::byte >& pixels ) const;
 
 	//! Runs one forward pass over \p tensor and returns the L2-normalised output vector.
 	[[nodiscard]] std::expected< std::vector< float >, idhan::ModuleError > runOne( std::vector< float >& tensor );
+
+	//! Runs one text forward pass over \p ids and returns the L2-normalised output vector.
+	[[nodiscard]] std::expected< std::vector< float >, idhan::ModuleError > runText( std::vector< std::int64_t >& ids );
 
   public:
 
@@ -73,6 +87,22 @@ class OnnxEmbedder final : public idhan::EmbeddingModuleI
 	void shutdown() override;
 
 	[[nodiscard]] std::expected< idhan::EmbeddingInfo, idhan::ModuleError > embed( idhan::ModuleCallData& data )
+		override;
+
+	//! Whether this model ships a text tower.
+	/** Answered from what is on disk, deliberately, because the worker announces its manifest before
+	 *  it calls startup() -- so no session exists yet and none can be created here without paying the
+	 *  very cost --describe is cheap in order to avoid.
+	 *
+	 *  The consequence is that a text tower which then fails to load is still advertised, and
+	 *  embedText() refuses with the reason instead. Advertising nothing until startup() had run would
+	 *  mean the host could never register a model's text support at all. */
+	[[nodiscard]] bool supportsText() override
+	{
+		return !m_config.m_text_onnx_path.empty() && !m_config.m_tokenizer_path.empty();
+	}
+
+	[[nodiscard]] std::expected< idhan::EmbeddingInfo, idhan::ModuleError > embedText( std::string_view phrase )
 		override;
 };
 
