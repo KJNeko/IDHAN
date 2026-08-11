@@ -22,13 +22,18 @@ namespace idhan::api
 namespace
 {
 
-//! Upper bound on results. A caller-chosen limit is an allocation of the caller's choosing.
-constexpr std::size_t MAX_SEARCH_LIMIT { 5000 };
-constexpr std::size_t DEFAULT_SEARCH_LIMIT { 200 };
-
 //! HNSW recall knob: how much of the graph a search walks. Higher is better recall and more time.
+/** pgvector caps hnsw.ef_search at 1000, and an HNSW scan returns at most ef_search rows -- so this
+ *  is also the ceiling on how many results the index can serve at all. */
 constexpr std::size_t MAX_EF_SEARCH { 1000 };
 constexpr std::size_t DEFAULT_EF_SEARCH { 100 };
+
+//! Upper bound on results. A caller-chosen limit is an allocation of the caller's choosing.
+/** Matched to MAX_EF_SEARCH deliberately. Asking for more than the index can walk does not fail --
+ *  it quietly returns fewer rows than requested, which is indistinguishable from the collection
+ *  simply not having more. Refusing the larger limit is the honest answer. */
+constexpr std::size_t MAX_SEARCH_LIMIT { MAX_EF_SEARCH };
+constexpr std::size_t DEFAULT_SEARCH_LIMIT { 200 };
 
 } // namespace
 
@@ -199,11 +204,17 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 			DEFAULT_SEARCH_LIMIT
 	};
 
-	const auto ef_search {
+	const auto requested_ef {
 		( *json )[ "ef_search" ].isIntegral() && ( *json )[ "ef_search" ].asInt64() > 0 ?
 			std::min( static_cast< std::size_t >( ( *json )[ "ef_search" ].asInt64() ), MAX_EF_SEARCH ) :
 			DEFAULT_EF_SEARCH
 	};
+
+	// Never below the limit. An HNSW scan visits ef_search candidates and can return no more than
+	// that, so ef_search < limit silently yields a short result set -- and a short set looks exactly
+	// like a collection that had nothing else to give. The default of 100 against the default limit
+	// of 200 would have done this on every unparameterised search.
+	const auto ef_search { std::max( requested_ef, limit ) };
 
 	// A record-only query never touches the module system at all: every vector it needs is already
 	// in the table. The module is resolved only when a phrase has to be embedded.
