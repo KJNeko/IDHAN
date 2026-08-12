@@ -100,3 +100,32 @@ export function termsToTokens(terms: readonly Term[]): string[] {
       return term.weight === 1 ? `${sign}${body}` : `${sign}${body}:${term.weight}`;
     });
 }
+
+/**
+ * A term in the Embedding Compare panel. No weight and no sign, unlike a search term: compare scores
+ * every term on its own, and cosine distance is scale-invariant in the query vector, so a weight on a
+ * lone term could not change the distance it reports.
+ */
+export type CompareTerm =
+  | { kind: 'text'; text: string; enabled: boolean }
+  | { kind: 'record'; recordId: number; enabled: boolean };
+
+/**
+ * Parses one compare term. Shares the record-reference forms with parseTermInput and nothing else:
+ * with no weights in this panel there is no `:weight` suffix to strip, so `sunset:2019` stays the
+ * phrase that was typed rather than becoming `sunset` at weight 2019.
+ */
+export function parseCompareTerm(input: string): CompareTerm | null {
+  const rest = input.trim();
+  if (!rest) return null;
+
+  const reference = rest.match(RECORD_REF);
+  if (reference) return { kind: 'record', recordId: Number(reference[1]), enabled: true };
+
+  return { kind: 'text', text: rest, enabled: true };
+}
+
+/** The label a compare term carries in its row. Records read as an id, since that is all there is. */
+export function compareTermLabel(term: CompareTerm): string {
+  return term.kind === 'text' ? term.text : `record ${term.recordId}`;
+}
