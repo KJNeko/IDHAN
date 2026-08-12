@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "IDHANTypes.hpp"
@@ -16,6 +17,7 @@
 #include "Set.hpp"
 #include "SetSource.hpp"
 #include "api/APIAuth.hpp"
+#include "crypto/SHA256.hpp"
 #include "db/dbTypes.hpp"
 #include "drogon/utils/coroutine.h"
 #include "threading/ExpectedTask.hpp"
@@ -157,6 +159,26 @@ class SearchBuilder
 	//! \throws std::invalid_argument if it holds no number.
 	static RangeTerm parseRangeTerm( std::string_view tag );
 
+	/**
+	 * @brief Reads the hash out of \p arguments, the part of a hash predicate following its keyword.
+	 *
+	 * Exactly one hash, and only `=`. A list would read as OR -- the one relation the search has no
+	 * way to express, since every term it holds is intersected -- so accepting one here would answer
+	 * a different question than it appears to ask. Naming several is refused until there is an OR to
+	 * put them in.
+	 *
+	 * \throws std::invalid_argument if it names no hash, more than one, a malformed one, a
+	 *         comparison other than `=`, or an algorithm other than sha256 -- which is the only one
+	 *         stored, so any other is a search that cannot be answered rather than one that matches
+	 *         nothing.
+	 */
+	static SHA256 parseHashSearch( std::string_view arguments );
+
+	//! parseHashSearch() plus the check that no earlier predicate already named a hash.
+	//! \throws std::invalid_argument on the second one, rather than letting two hashes intersect to
+	//!         the empty set -- which is what they would silently do, and never what was meant.
+	void setHashSearch( std::string_view arguments );
+
 	//! Narrows \p target by \p term, keeping whichever bound is tighter on each side.
 	static void narrowRange( RangeSearchInfo& target, RangeTerm term );
 
@@ -198,6 +220,24 @@ class SearchBuilder
 	RangeSearchInfo m_archive_search {};
 
 	RangeSearchInfo m_filesize_search {};
+
+	/**
+	 * @brief `system:sha256 = <hex>`, in the hash's own binary form.
+	 *
+	 * Stored as the 32 bytes rather than the 64 hex characters it was typed as: hex is how a hash is
+	 * transported, not what it is, and the column it compares against is `bytea`.
+	 *
+	 * A variant rather than an optional because monostate is the only alternative that means
+	 * "absent" -- everything else it will grow (md5, sha1) is another kind of hash, and each has its
+	 * own width and its own column. An optional<SHA256> would have to become a variant the moment a
+	 * second algorithm is stored, so it is one now.
+	 */
+	std::variant< std::monostate, SHA256 > m_hash_search {};
+
+	//! `system:record = 1234`, and the reason record ids are searchable at all: nothing else addresses
+	//! a single known record. A range rather than an equality because it costs nothing here and makes
+	//! `system:record > 5000` -- everything imported after a known point -- fall out of the same code.
+	RangeSearchInfo m_record_search {};
 
 	SortType m_sort_type { SortType::DEFAULT };
 	SortOrder m_order { SortOrder::DEFAULT };
