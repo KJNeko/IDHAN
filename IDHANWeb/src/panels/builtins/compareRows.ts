@@ -37,14 +37,18 @@ export function buildCompareRows(
   const rows: CompareRow[] = [];
 
   for (let index = 0; index < Math.min(terms.length, distances.length); index += 1) {
+    const term = terms[index];
     const pair = distances[index];
-    if (!pair || pair.length < 2) continue;
+    if (!term || !pair) continue;
+
+    const [distanceA, distanceB] = pair;
+    if (distanceA === undefined || distanceB === undefined) continue;
 
     rows.push({
-      label: compareTermLabel(terms[index]),
-      distanceA: pair[0],
-      distanceB: pair[1],
-      delta: pair[0] - pair[1],
+      label: compareTermLabel(term),
+      distanceA,
+      distanceB,
+      delta: distanceA - distanceB,
     });
   }
 
