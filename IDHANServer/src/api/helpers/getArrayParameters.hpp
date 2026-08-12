@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 4/18/25.
-//
 #pragma once
 #include <charconv>
 #include <string_view>

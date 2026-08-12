@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/5/25.
-//
 #include "FileRelationshipsWorker.hpp"
 
 #include <moc_FileRelationshipsWorker.cpp>

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/30/26.
-//
-
 #include <gtest/gtest.h>
 
 #include <array>

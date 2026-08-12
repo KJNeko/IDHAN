@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/24/25.
-//
 #pragma once
 #include "GeneratorModule.hpp"
 #include "MetadataModule.hpp"

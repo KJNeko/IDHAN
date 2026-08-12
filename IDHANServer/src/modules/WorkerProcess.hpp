@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/28/26.
-//
 #pragma once
 
 #include <atomic>
@@ -41,24 +38,21 @@ struct WorkerSettings
 	std::chrono::milliseconds liveness_grace { 5000 };
 	bool describe_only { false }; //!< Startup interrogation: announce and exit.
 
-	//! spdlog level name the worker starts at. A worker is a separate process and does not inherit
-	//! our logger, so without this it sits at spdlog's default of info and discards every debug line
-	//! a module writes, however the server was invoked.
+	//! spdlog level name the worker starts at. A worker is a separate process and does not inherit our
+	//! logger, so without this it sits at info and discards every debug line a module writes.
 	std::string log_level { "info" };
 
 	//! What this library's manifest must look like, from the interrogation at startup.
 	/** Checked when the worker announces itself. Module indexes only mean anything relative to the
-	 *  factory that produced them, so if the .so was rebuilt while the server was running -- routine
-	 *  during development -- an index registered against the old build could address a different
-	 *  module in the new one. Empty disables the check, which is what interrogation itself uses. */
+	 *  factory that produced them, so a .so rebuilt under a running server could have an index
+	 *  addressing a different module. Empty disables the check, which interrogation itself uses. */
 	std::string expected_signature {};
 };
 
 //! Why a worker is being torn down.
-/** Only a failure deserves a warning. Most terminations are routine -- an interrogator exiting after
- *  it announced itself, a single-run worker that finished its call, a retirement on the idle or RSS
- *  policy, shutdown -- and logging those at the same level as a crash made a healthy startup read
- *  like four libraries had died. */
+/** Only a failure deserves a warning. Most terminations are routine -- interrogation, a single-run
+ *  worker finishing, an idle or RSS retirement, shutdown -- and logging those at the same level as a
+ *  crash made a healthy startup read like four libraries had died. */
 enum class Termination : std::uint8_t
 {
 	EXPECTED,
@@ -80,11 +74,10 @@ struct CallOutcome
 };
 
 //! A call's input, held for as long as the call is in flight.
-/** The MIME travels with it because a callback that references an input cannot re-derive one. MIME
- *  detection reads content, and on the io_uring path the server has no copy of the content to read
- *  -- not making one is the entire point. It does not need to: the referenced input is the input of
- *  a call whose MIME the server resolved before dispatching it, so the answer is already known and
- *  is exact rather than re-guessed. */
+/** The MIME travels with it because a callback referencing an input cannot re-derive one: detection
+ *  reads content, and on the io_uring path the server holds no copy to read -- not making one is the
+ *  entire point. It does not need to, since the server resolved that MIME before dispatching the
+ *  call, so the answer is already known and exact rather than re-guessed. */
 struct InFlightInput
 {
 	std::shared_ptr< const CallInput > input {};
@@ -92,10 +85,9 @@ struct InFlightInput
 };
 
 //! One IDHANModuleRunner process and the channel to it.
-/** Owns a dedicated IO thread rather than sharing a drogon loop. The thread does the blocking parts
- *  -- poll, read, write -- and never runs anything that could take long, while coroutines waiting on
- *  a result are always resumed back on a drogon event loop so handler code stays where it expects to
- *  be. */
+/** Owns a dedicated IO thread rather than sharing a drogon loop: it does the blocking parts and
+ *  never runs anything long. Coroutines waiting on a result are resumed back on a drogon event loop,
+ *  so handler code stays where it expects to be. */
 class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 {
   public:
@@ -107,11 +99,10 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
   private:
 
 	//! A call that has been sent and is waiting for its RESULT.
-	/** Deliberately unbounded in time. A worker serves calls from a queue \p pool_threads wide, so a
-	 *  call can sit there for as long as the backlog ahead of it takes, and no estimate the module
-	 *  could offer would distinguish that from being wedged. The coroutine waiting here costs a frame
-	 *  and nothing else -- no thread is held -- so waiting is cheap and killing is not: the previous
-	 *  deadline took down the worker, and with it every other call in flight on the same process. */
+	/** Deliberately unbounded in time. A worker serves calls \p pool_threads at a time, so a call can
+	 *  wait as long as the backlog ahead of it, and nothing distinguishes that from being wedged. The
+	 *  waiting coroutine costs a frame and holds no thread, so waiting is cheap and killing is not:
+	 *  the previous deadline took down the worker and every other call in flight on it. */
 	struct PendingCall
 	{
 		std::coroutine_handle<> continuation {};
@@ -133,9 +124,9 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 
 	std::mutex m_calls_mutex {};
 	std::unordered_map< std::uint64_t, PendingCall > m_calls {};
-	//! The input of every call currently in flight, so a module passing its own input back through a
-	//! callback can be answered by reusing it. Shares m_calls_mutex: the two are written together and
-	//! a second lock would only create an ordering to get wrong.
+	//! The input of every in-flight call, so a module passing its own input back through a callback is
+	//! answered by reusing it. Shares m_calls_mutex: the two are written together, and a second lock
+	//! would only create an ordering to get wrong.
 	std::unordered_map< std::uint64_t, InFlightInput > m_call_inputs {};
 	std::atomic< std::uint64_t > m_next_call_id { 1 };
 
@@ -209,9 +200,8 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 		std::shared_ptr< const CallInput > input );
 
 	//! The input of an in-flight call, for resolving INPUT_REF on a callback.
-	/** \return An entry with a null input if the call has already finished -- which a module cannot
-	 *          cause, since it is blocked inside that very call while the callback is outstanding,
-	 *          but which a misbehaving or replayed frame could ask for. */
+	/** \return An entry with a null input if the call already finished. A module cannot cause that --
+	 *          it is blocked inside that very call -- but a replayed frame could ask for it. */
 	[[nodiscard]] InFlightInput inputForCall( std::uint64_t call_id );
 
 	//! Allocates the next call id.

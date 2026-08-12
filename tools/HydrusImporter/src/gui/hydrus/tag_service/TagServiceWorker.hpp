@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/29/25.
-//
 #pragma once
 
 #include "HydrusImporter.hpp"

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/6/26.
-//
-
 #include "SearchStats.hpp"
 
 #include <algorithm>
@@ -10,9 +6,6 @@
 #include "logging/format_ns.hpp"
 
 namespace idhan::search
-{
-
-namespace
 {
 
 // The indent is derived from the kind, so a fold step reads as belonging to the fetch above it
@@ -37,7 +30,6 @@ std::string formatMillis( const std::int64_t micros )
 	return format_ns::format( "{:.0f}ms", ms );
 }
 
-} // namespace
 
 void SearchStats::record(
 	std::string label,

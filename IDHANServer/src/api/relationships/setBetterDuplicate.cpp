@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/5/25.
-//
-
 #include <expected>
 
 #include "IDHANTypes.hpp"
@@ -10,9 +6,6 @@
 #include "api/helpers/helpers.hpp"
 
 namespace idhan::api
-{
-
-namespace
 {
 
 std::expected< std::pair< RecordID, RecordID >, drogon::HttpResponsePtr > parseDuplicatePair(
@@ -77,8 +70,6 @@ drogon::Task< drogon::HttpResponsePtr > insertDuplicatePairs(
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( {} );
 }
-
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::setBetterDuplicate( const drogon::HttpRequestPtr request )
 {

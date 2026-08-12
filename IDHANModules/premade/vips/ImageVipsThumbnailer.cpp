@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/12/25.
-//
 #include "ImageVipsThumbnailer.hpp"
 
 #include <vips/vips.h>

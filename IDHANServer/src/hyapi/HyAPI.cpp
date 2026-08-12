@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/6/24.
-//
-
 #include "HyAPI.hpp"
 
 #include <array>
@@ -142,8 +138,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( [[maybe_unused]]
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
-namespace
-{
 struct BootInfo
 {
 	std::string boot_id;
@@ -172,7 +166,6 @@ const BootInfo& getBootInfo()
 
 	return info;
 }
-} // namespace
 
 // /hyapi/client_info
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::clientInfo( [[maybe_unused]] drogon::HttpRequestPtr request )

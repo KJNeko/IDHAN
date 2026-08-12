@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/25/26.
-//
 #pragma once
 #include <json/json.h>
 

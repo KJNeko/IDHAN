@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 10/21/25.
-//
 #include "MimeMatchInclude.hpp"
 
 #include <json/value.h>
@@ -15,8 +12,6 @@
 namespace idhan::mime
 {
 
-namespace
-{
 // Parsing is fully synchronous (no co_await between include expansions), so a thread_local
 // stack of the files currently being expanded is enough to detect include cycles.
 thread_local std::vector< std::string > include_stack {};
@@ -29,7 +24,6 @@ struct IncludeStackGuard
 
 	FGL_DELETE_ALL_RO5( IncludeStackGuard );
 };
-} // namespace
 
 MimeMatchInclude::MimeMatchInclude( std::vector< MimeMatcher >&& matchers, const Json::Value& json ) :
   MimeMatchBase( json ),

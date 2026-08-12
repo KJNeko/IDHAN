@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/29/25.
-//
-
 #include "TagServiceWorker.hpp"
 
 #include <moc_TagServiceWorker.cpp>

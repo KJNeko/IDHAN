@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/11/26.
-//
 #pragma once
 
 #include <array>

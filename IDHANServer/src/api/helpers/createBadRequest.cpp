@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/6/25.
-//
-
 #include "createBadRequest.hpp"
 
 namespace idhan::internal

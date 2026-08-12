@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/13/25.
-//
-
 #include "drogon/utils/coroutine.h"
 #include "modules/ModuleLoader.hpp"
 

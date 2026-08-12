@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/15/25.
-//
-
 #include "HyAPI.hpp"
 #include "hydrus/ClientConstants_gen.hpp"
 #include "hydrus/ClientGUIPagesCore_gen.hpp"

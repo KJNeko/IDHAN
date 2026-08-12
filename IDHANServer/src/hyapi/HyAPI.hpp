@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/6/24.
-//
 #pragma once
 #include "HyAPIAuth.hpp"
 #include "HyAPIResponseEnricher.hpp"
@@ -212,10 +209,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 /**
  * @brief Converts and extracts Hydrus' `file` input from json to record ids, Sets the record parameter `file_ids` to a
  * json array of the record ids
- * @param request
- * @param hashes
- * @param db
- * @return
  */
 ExpectedTask< void > convertQueryRecordIDs( drogon::HttpRequestPtr& request, DbClientPtr db );
 

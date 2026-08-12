@@ -1,11 +1,8 @@
-//
-// Created by kj16609 on 7/28/26.
-//
-
 #include "WorkerRunner.hpp"
 
 #include <spdlog/spdlog.h>
 #include <sys/eventfd.h>
+#include <sys/stat.h>
 
 #include <algorithm>
 #include <array>
@@ -15,7 +12,6 @@
 #include <format>
 #include <fstream>
 #include <poll.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <utility>
 
@@ -36,15 +32,14 @@ namespace
 //! The call a pool thread is currently running.
 /** Callbacks are issued from deep inside module code, which has no idea it is running in a worker
  *  and cannot be asked to thread a call id through. The depth in particular has to survive the trip
- *  so the host can enforce a nesting bound across processes -- the thread_local depth counter the
- *  archive thumbnailer used to keep stopped meaning anything the moment recursion started crossing
- *  process boundaries. */
+ *  so the host can enforce a nesting bound across processes: a per-process counter stopped meaning
+ *  anything once recursion started crossing process boundaries. */
 struct CallScope
 {
 	std::uint64_t call_id { 0 };
 	std::uint32_t depth { 0 };
-	//! This call's own input, so a callback can recognise a module handing it straight back and ask
-	//! the host to reuse the descriptor it already holds rather than shipping a copy of it.
+	//! This call's own input, so a callback can recognise a module handing it straight back and ask the
+	//! host to reuse the descriptor it already holds.
 	const ModuleFile* input { nullptr };
 };
 
@@ -93,8 +88,8 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 
 //! Size of a sealed payload descriptor, for logging only.
 /** fstat rather than lseek: the host mmaps this descriptor, and moving its offset to measure it
- *  would be a side effect paid on every call to serve a debug line. Returns 0 on anything odd,
- *  because a log line is never worth failing a completed call over. */
+ *  would be a side effect paid on every call to serve a debug line. Returns 0 on anything odd -- a
+ *  log line is never worth failing a completed call over. */
 [[nodiscard]] std::size_t payloadSize( const int fd )
 {
 	if ( fd < 0 ) return 0;
@@ -238,9 +233,9 @@ std::expected< WorkerRunner::CallbackInput, std::string > WorkerRunner::describe
 {
 	CallbackInput input {};
 
-	// The module handed back the very file it was given. The host still holds the descriptor for
-	// this call, so naming the call is enough -- and this is the case that matters, because it is
-	// what an archive thumbnailer does with a multi-gigabyte archive on every member it renders.
+	// The module handed back the very file it was given, and the host still holds that descriptor, so
+	// naming the call is enough. This is the case that matters: it is what an archive thumbnailer does
+	// with a multi-gigabyte archive on every member it renders.
 	if ( &file == t_scope.input )
 	{
 		input.fields[ ipc::field::INPUT_REF ] = static_cast< Json::UInt64 >( t_scope.call_id );
@@ -249,12 +244,11 @@ std::expected< WorkerRunner::CallbackInput, std::string > WorkerRunner::describe
 
 	input.fields[ ipc::field::FILE_SIZE ] = Json::UInt64 { file.size() };
 
-	// Already a memfd we still hold a descriptor for -- the output of a nested generate, on its way
-	// into a nested thumbnail. Forward that descriptor rather than reading the bytes back out and
-	// copying them into a second one.
+	// Already a memfd we hold a descriptor for -- a nested generate's output, on its way into a nested
+	// thumbnail. Forward it rather than reading the bytes back out into a second one.
 	//
-	// A call's own input does not qualify: its descriptor was dropped once mapped, and it does not
-	// need one, because passing it back is the INPUT_REF case handled above.
+	// A call's own input does not qualify: its descriptor was dropped once mapped, and it needs none,
+	// because passing it back is the INPUT_REF case handled above.
 	if ( const auto* existing { dynamic_cast< const ipc::BlobFile* >( &file ) };
 	     existing != nullptr && existing->fd() >= 0 )
 	{
@@ -276,9 +270,9 @@ ModuleCallbacks WorkerRunner::makeCallbacks()
 	ModuleCallbacks callbacks {};
 
 	// Fills in the input fields of an outgoing callback frame and yields the descriptor to attach.
-	// Shared by all three because the decision is identical for each: whether the payload can be
-	// referenced, forwarded, or must be copied is a property of the handle, not of the question being
-	// asked about it. The result must outlive the dispatch -- it owns any memfd that was created.
+	// Shared by all three: whether the payload can be referenced, forwarded, or must be copied is a
+	// property of the handle, not of the question asked about it. The result must outlive the
+	// dispatch -- it owns any memfd that was created.
 	const auto attach =
 		[ this ]( const ModuleFile& file, Json::Value& body ) -> std::expected< CallbackInput, ModuleError >
 	{
@@ -331,9 +325,8 @@ ModuleCallbacks WorkerRunner::makeCallbacks()
 		auto& answer { **pending };
 		if ( !answer.ok ) return std::unexpected( ModuleError { answer.error } );
 
-		// The generated file goes back as a handle over the memfd the host sent, so a caller chaining
-		// this into another callback forwards that same descriptor instead of materialising the
-		// bytes -- which for a generator's output is the whole point.
+		// A handle over the memfd the host sent, so a caller chaining this into another callback
+		// forwards that same descriptor instead of materialising the bytes.
 		return std::make_unique< ipc::BlobFile >( std::move( answer.blob ) );
 	};
 
@@ -469,11 +462,10 @@ std::expected< std::unique_ptr< ModuleFile >, std::string > WorkerRunner::adoptI
 	auto blob { ipc::Blob::adopt( std::move( frame.fds.front() ) ) };
 	if ( !blob ) return std::unexpected( blob.error() );
 
-	// The mapping is all a module needs, and a mapping outlives the descriptor it was made from.
-	// Dropping it here removes the /proc/self/fd entry naming the file -- partial, since
-	// /proc/self/maps still names it and only the sandbox closes that, but there is no reason to
-	// leave two ways to learn the same thing. Before the call reaches a pool thread, so no module
-	// code has run.
+	// The mapping is all a module needs, and it outlives the descriptor it was made from. Dropping
+	// the descriptor here removes the /proc/self/fd entry naming the file -- partial, since
+	// /proc/self/maps still names it and only the sandbox closes that. Before the call reaches a
+	// pool thread, so no module code has run.
 	blob->closeDescriptor();
 
 	return std::make_unique< ipc::BlobFile >( std::move( *blob ) );
@@ -518,12 +510,11 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 		if ( hex.size() == ( 256 / 8 ) * 2 ) call.hash = crypto::fromHex( hex );
 	}
 
-	// Adopted here rather than on the pool thread, and that placement is the security property, not
-	// an optimisation: a ring's descriptor has to be registered and closed before any module code
-	// runs, because while it exists /proc/self/fdinfo prints the path of the file it was given.
+	// Adopted here rather than on the pool thread, and that placement is the security property: a
+	// ring's descriptor must be registered and closed before any module code runs, because while it
+	// exists /proc/self/fdinfo prints the path of the file it was given.
 	//
-	// EMBED_TEXT is the one op with nothing to adopt -- it operates on a phrase, not a file -- so
-	// demanding a descriptor here would reject it before it ever reached a module.
+	// EMBED_TEXT is the one op with nothing to adopt, so demanding a descriptor would reject it.
 	if ( call.op != ipc::CallOp::EMBED_TEXT )
 	{
 		auto file { adoptInput( frame ) };
@@ -547,9 +538,8 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 	const QueuedCall& call,
 	const std::shared_ptr< IDHANModule >& module )
 {
-	// Serialise only what asks to be serialised. Everything premade reports true, so in practice
-	// this lock is uncontended -- but a third-party module that is honest about being thread-hostile
-	// gets to be, instead of being called concurrently and crashing the worker.
+	// Serialise only what asks to be serialised. Everything premade reports true, so this lock is
+	// uncontended in practice -- but a module honest about being thread-hostile gets to be.
 	std::unique_lock< std::recursive_mutex > serialised {};
 	if ( !module->threadSafe() && call.module_index < m_module_locks.size() )
 		serialised = std::unique_lock< std::recursive_mutex > { *m_module_locks[ call.module_index ] };
@@ -661,10 +651,9 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 							result->m_vector.size(),
 							embedder->dimensions() ) } );
 
-				// Inline JSON rather than a blob. The rule elsewhere is that bulk data travels as a
-				// descriptor, but a 1152-dimension vector is ~4.6 KiB and a memfd per call to carry
-				// that costs more than the text does. Precision is not the objection either: the
-				// destination column is fp16, so the round trip discards nothing it would have kept.
+				// Inline JSON rather than a blob. Bulk data normally travels as a descriptor, but a
+				// 1152-dimension vector is ~4.6 KiB and a memfd per call costs more than the text. The
+				// destination column is fp16, so the round trip discards no precision it would have kept.
 				Json::Value values { Json::arrayValue };
 				// Explicit widening: jsoncpp stores a double, and letting the float promote
 				// implicitly trips -Wdouble-promotion under this project's warning set.
@@ -758,9 +747,8 @@ void WorkerRunner::runCall( QueuedCall call )
 		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started ).count()
 	};
 
-	// The whole point of the exercise: one line per call saying which module ran, on what, for how
-	// long, and what came out. A failure is logged here too rather than only at the host, because the
-	// host sees the message but not the timing or which of several candidate modules produced it.
+	// One line per call: which module ran, on what, for how long, and what came out. Failures are
+	// logged here too -- the host sees the message but not the timing or which module produced it.
 	if ( failure.empty() )
 		spdlog::debug(
 			"Call {} finished: {} on '{}' ({}) in {}ms -- {}",
@@ -795,13 +783,11 @@ void WorkerRunner::workerLoop( const std::stop_token& stop )
 		{
 			std::unique_lock< std::mutex > guard { m_queue_mutex };
 
-			// m_ready as well as the queue: a call can arrive before startup() has returned, and
-			// dispatching it then would reach a module that has not initialised. It waits instead,
-			// which is exactly what the host's backlog model already expects of a busy worker.
+			// m_ready as well as the queue: a call can arrive before startup() has returned, and dispatching
+			// it then would reach an uninitialised module. It waits instead, which is what the host's
+			// backlog model already expects of a busy worker.
 			m_queue_ready.wait(
-				guard,
-				[ this, &stop ]
-				{ return stop.stop_requested() || ( m_ready.load() && !m_queue.empty() ); } );
+				guard, [ this, &stop ] { return stop.stop_requested() || ( m_ready.load() && !m_queue.empty() ); } );
 
 			if ( m_queue.empty() ) continue;
 
@@ -875,23 +861,19 @@ std::expected< void, std::string > WorkerRunner::run()
 
 	// Startup runs on its own thread, and this is load-bearing rather than tidy.
 	//
-	// It used to run here, inline, before the loop below began. Heartbeats are sent from that loop,
-	// so a module whose startup() was slow sent none for its whole duration and the host killed it
-	// for being unresponsive -- then respawned it, and killed it again. An embedding model loading a
-	// 1.13 GB text graph and a 34 MB tokenizer passes the five second liveness grace easily, so this
-	// was an unbootable worker rather than a slow one.
+	// It used to run inline before the loop below. Heartbeats are sent from that loop, so a module
+	// with a slow startup() sent none for its whole duration and the host killed it as unresponsive,
+	// then respawned and killed it again -- an unbootable worker rather than a slow one.
 	//
 	// It also restores the invariant this design claims: the IO thread never runs module code.
-	// startup() is module code, and running it here was the one place that was untrue.
 	std::jthread starting {
 		[ this ]
 		{
 			m_library.startup();
 
-			// Set under the queue mutex, not merely atomically. A pool thread evaluates the wait
-			// predicate with that mutex held, so storing outside it leaves a window where the thread
-			// reads false, the store and notify land, and only then does it go to sleep -- missing
-			// the wakeup and stalling the first call until some later one happened to arrive.
+			// Set under the queue mutex, not merely atomically. A pool thread evaluates the wait predicate
+			// with that mutex held, so storing outside it leaves a window where the thread reads false, the
+			// store and notify land, and only then does it sleep -- missing the wakeup.
 			{
 				const std::lock_guard< std::mutex > guard { m_queue_mutex };
 				m_ready.store( true );
@@ -988,11 +970,9 @@ std::expected< void, std::string > WorkerRunner::run()
 	m_queue_ready.notify_all();
 	m_pool.clear();
 
-	// Waited out before shutting anything down. A module must not have shutdown() called while its
-	// startup() is still running, and startup() has no way to be interrupted -- so a worker told to
-	// stop mid-load finishes loading and then unloads, rather than tearing down underneath itself.
-	// Without this the jthread's destructor would join at the end of this function, which is after
-	// m_library.shutdown().
+	// Waited out before shutting anything down: a module must not have shutdown() called while its
+	// startup() is still running, and startup() cannot be interrupted. Without this the jthread's
+	// destructor would join at the end of this function, after m_library.shutdown().
 	if ( starting.joinable() ) starting.join();
 
 	m_library.shutdown();

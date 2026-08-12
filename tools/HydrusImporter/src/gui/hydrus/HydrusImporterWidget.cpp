@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/28/25.
-//
 // You may need to build the project (run Qt uic code generator) to get "ui_HydrusImporter.h" resolved
 
 #include "HydrusImporterWidget.hpp"

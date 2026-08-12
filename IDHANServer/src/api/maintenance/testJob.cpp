@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 2/27/26.
-//
-
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "jobs/JobContext.hpp"

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/6/26.
-//
 // A set of record ids carrying, in parallel, the value the search sorts by and (when the caller
 // asked for hashes) each record's sha256.
 //

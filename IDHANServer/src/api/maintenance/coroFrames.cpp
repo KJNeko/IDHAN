@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/27/26.
-//
 // TEMPORARY (coroutine frame leak hunt): exposes the live coroutine frame registry.
 //
 // The probe lives in drogon's promise types via a patched build-tree copy of coroutine.h; see

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/2/26.
-//
-
 #include <expected>
 #include <filesystem>
 #include <format>

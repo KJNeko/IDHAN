@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/16/25.
-//
 #pragma once
 
 //! Alias for the active formatting library: std::format when IDHAN_USE_STD_FORMAT is defined,

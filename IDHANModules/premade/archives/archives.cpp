@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/25/25.
-//
-
 #include "archives.hpp"
 
 #include <openssl/evp.h>

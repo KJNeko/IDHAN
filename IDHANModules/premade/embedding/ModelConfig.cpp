@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/10/26.
-//
-
 #include "ModelConfig.hpp"
 
 #include <json/reader.h>
@@ -157,8 +153,7 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 	// is no halfvec column to create, and without knowing which tensor is the embedding there is
 	// nothing meaningful to store in it.
 	if ( vision_output == nullptr )
-		return std::unexpected(
-			std::format( "{} declares no embedding output", config.m_onnx_path.string() ) );
+		return std::unexpected( std::format( "{} declares no embedding output", config.m_onnx_path.string() ) );
 
 	config.m_output_name = vision_output->m_name;
 	config.m_dimensions = declaredWidth( vision_output );

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/20/25.
-//
-
 #include <utility>
 
 #include "Config.hpp"

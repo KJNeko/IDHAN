@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/10/26.
-//
-
 #include "embeddings.hpp"
 
 // Before drogon.h and before any execSqlCoro call: this supplies the SqlBinder specialisations that
@@ -23,9 +19,6 @@
 #include "modules/RemoteModule.hpp"
 
 namespace idhan::embeddings
-{
-
-namespace
 {
 
 //! model_ids with a backfill currently running.
@@ -122,7 +115,6 @@ drogon::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
 	co_return std::pair { record_id, toVectorLiteral( result->m_vector ) };
 }
 
-} // namespace
 
 IDHANTask< void > registerEmbeddingModels( DbClientPtr db )
 {

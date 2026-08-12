@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/21/25.
-//
-
 #include "MimeMatchSearch.hpp"
 
 #include <json/value.h>

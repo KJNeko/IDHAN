@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/6/26.
-//
 // Turns one search term into one Set. Every function here issues a single indexed query that
 // answers exactly one question -- which records satisfy this term, and what is their sort key --
 // and hands the answer to the algebra in Set.hpp. No term knows about any other term.

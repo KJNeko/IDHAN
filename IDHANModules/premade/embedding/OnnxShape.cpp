@@ -1,17 +1,13 @@
-//
-// Created by kj16609 on 8/11/26.
-//
-
 #include "OnnxShape.hpp"
 
-#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 #include <cstring>
+#include <fcntl.h>
 #include <format>
 #include <span>
+#include <unistd.h>
 
 namespace premade
 {
@@ -276,7 +272,8 @@ class Mapping
 	[[nodiscard]] std::expected< void, std::string > open( const std::filesystem::path& path )
 	{
 		const int fd { ::open( path.c_str(), O_RDONLY | O_CLOEXEC ) };
-		if ( fd < 0 ) return std::unexpected( std::format( "could not open {}: {}", path.string(), std::strerror( errno ) ) );
+		if ( fd < 0 )
+			return std::unexpected( std::format( "could not open {}: {}", path.string(), std::strerror( errno ) ) );
 
 		struct stat info {};
 		if ( ::fstat( fd, &info ) < 0 )

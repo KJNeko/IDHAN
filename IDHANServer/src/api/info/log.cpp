@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/26/26.
-//
-
 #include "logging/log.hpp"
 
 #include <spdlog/pattern_formatter.h>
@@ -17,8 +13,6 @@
 namespace idhan::api
 {
 
-namespace
-{
 auto parseLevelString( const std::string& level_str )
 {
 	if ( level_str == "trace" ) return spdlog::level::trace;
@@ -29,7 +23,6 @@ auto parseLevelString( const std::string& level_str )
 	if ( level_str == "critical" ) return spdlog::level::critical;
 	return spdlog::level::info;
 }
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr request )
 {

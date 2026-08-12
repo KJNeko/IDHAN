@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/6/26.
-//
 // Row-count accounting for one search: what each term's query returned, what the running result
 // looked like after each fold step, and what survived paging.
 //

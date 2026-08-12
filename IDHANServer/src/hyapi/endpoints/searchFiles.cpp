@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/14/25.
-//
-
 #include "api/helpers/createBadRequest.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"

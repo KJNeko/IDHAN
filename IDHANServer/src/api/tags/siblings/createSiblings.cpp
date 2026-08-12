@@ -1,7 +1,3 @@
-//
-// Created by Junie on 6/11/26.
-//
-
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 

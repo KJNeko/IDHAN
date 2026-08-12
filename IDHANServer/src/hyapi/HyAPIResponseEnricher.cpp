@@ -1,6 +1,3 @@
-//
-// Created by claude on 10/15/25.
-//
 #include "HyAPIResponseEnricher.hpp"
 
 #include <json/json.h>

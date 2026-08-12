@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/8/26.
-//
-
 #include <algorithm>
 
 #include "api/helpers/createBadRequest.hpp"

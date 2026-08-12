@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/14/25.
-//
-
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "filesystem/filesystem.hpp"

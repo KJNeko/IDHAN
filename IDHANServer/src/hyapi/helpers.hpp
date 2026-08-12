@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/24/25.
-//
 #pragma once
 
 #include "IDHANTypes.hpp"
@@ -11,10 +8,7 @@ namespace idhan::hyapi::helpers
 {
 
 /**
- * @brief
  * @param json Converts a hydrus `files` json array to contain a array of record_ids
- * @param db
- * @return
  */
 [[nodiscard]] drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > >
 	extractRecordIDsFromFilesJson( Json::Value json, DbClientPtr db );

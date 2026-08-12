@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/6/26.
-//
-
 #include "Set.hpp"
 
 #include <algorithm>
@@ -11,9 +7,6 @@
 #include <stdexcept>
 
 namespace idhan::search
-{
-
-namespace
 {
 
 //! The composite (key, record_id) ordering every Set is held in. For a keyless column all keys
@@ -48,7 +41,6 @@ void applyPermutation( std::vector< T >& values, const std::vector< std::size_t 
 	values = std::move( permuted );
 }
 
-} // namespace
 
 Set::Set(
 	std::vector< RecordID > ids,

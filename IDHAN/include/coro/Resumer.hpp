@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/27/26.
-//
 // Decides where a completed asynchronous operation resumes the coroutine that was awaiting it.
 //
 // The io backend runs completions on its own watcher thread, but a coroutine generally must not

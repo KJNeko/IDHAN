@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #pragma once
 
 #include <QCommandLineParser>
@@ -102,10 +98,6 @@ class IDHANClient
 	* @brief Upon construction the class will attempt to get the version info from the IDHAN server target.
 	* @note Qt must be initalized before construction of this class. Either a QGuiApplication or an QApplication instance
 	* @param client_name Name of the client that shows up in the server logs for network logs and in the logging statements
-	* @param hostname
-	* @param port
-	* @param key
-	* @param use_tls
 	*/
 	IDHANClient(
 		const QString& client_name,
@@ -128,10 +120,7 @@ class IDHANClient
 	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::array< std::byte, 32 > >& hashes );
 
 	/**
-	 * @brief
 	 * @param hashes Hex representations of hashes
-	 * @param network
-	 * @return
 	 */
 	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::string >& hashes );
 
@@ -201,18 +190,11 @@ class IDHANClient
 	QFuture< void > setDuplicates( RecordID worse_duplicate, RecordID better_duplicate );
 
 	/**
-	 *
 	 * @param pairs Pairs of ids in a (worse_id, better_id) format
-	 * @return
 	 */
 	QFuture< void > setDuplicates( const std::vector< std::pair< RecordID, RecordID > >& pairs );
 
-	/**
-	 * @brief Creates a parent/child relationship between two tags
-	 * @param parent_id
-	 * @param child_id
-	 * @return
-	 */
+	//! Creates a parent/child relationship between two tags
 	QFuture< void > createParentRelationship( TagDomainID tag_domian_id, TagID parent_id, TagID child_id );
 	QFuture< void > createParentRelationship(
 		TagDomainID tag_domian_id,
@@ -220,12 +202,8 @@ class IDHANClient
 
 	/**
 	 * @brief Creates a new alias for a given tag.
-	 * @param aliased_id
-	 * @param alias_id
-	 * @param tag_domain_id
 	 * @throws AliasLoopException Throws an exception if a loop is detected
 	 * @throws InvalidTagID
-	 * @return
 	 */
 	QFuture< void > createAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
 
@@ -233,13 +211,7 @@ class IDHANClient
 		TagDomainID tag_domain_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
-	/**
-	 * @brief Creates a new sibling relationship between two tags.
-	 * @param tag_domain_id
-	 * @param older_id
-	 * @param younger_id
-	 * @return
-	 */
+	//! Creates a new sibling relationship between two tags.
 	QFuture< void > createSiblingRelationship( TagDomainID tag_domain_id, TagID older_id, TagID younger_id );
 
 	QFuture< void > createSiblingRelationship(
@@ -263,18 +235,13 @@ class IDHANClient
 
 	/**
 	 * @brief Creates a new tag domain, Throws if the domain exists
-	 * @param name
-	 * @param network
 	 * @throws DomainExists
-	 * @return
 	 */
 	QFuture< TagDomainID > createTagDomain( const std::string& name );
 
 	/**
 	 * @brief Searches for an existing tag domain. Throws if it does not exist
-	 * @param name
 	 * @throws DomainDoesNotExist
-	 * @return
 	 */
 	QFuture< std::optional< TagDomainID > > getTagDomain( std::string_view name );
 
@@ -334,10 +301,7 @@ class IDHANClient
 		std::string m_name;
 	};
 
-	/**
-	 * @brief Returns a list of all tag domain ids
-	 * @return
-	 */
+	//! Returns a list of all tag domain ids
 	QFuture< std::vector< TagDomainInfo > > getTagDomains();
 
 	QFuture< void > createFileCluster(

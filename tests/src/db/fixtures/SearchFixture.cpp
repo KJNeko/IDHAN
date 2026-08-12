@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/20/26.
-//
-
 #include "SearchFixture.hpp"
 
 MimeID SearchFixture::getMimeId( const std::string_view mime_name )

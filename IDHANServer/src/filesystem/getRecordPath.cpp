@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/12/25.
-//
-
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/utils/coroutine.h"

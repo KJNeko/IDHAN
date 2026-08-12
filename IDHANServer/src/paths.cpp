@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/13/25.
-//
-
 #include "paths.hpp"
 
 #include <set>

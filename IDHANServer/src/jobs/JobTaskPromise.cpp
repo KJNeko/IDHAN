@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 2/27/26.
-//
-
 #include "JobTaskPromise.hpp"
 
 #include <drogon/HttpResponse.h>

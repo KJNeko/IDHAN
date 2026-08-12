@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/18/25.
-//
-
 #include "db/fixtures/MappingFixture.hpp"
 
 TEST_F( MappingFixture, MappingStoredSuccessfully )

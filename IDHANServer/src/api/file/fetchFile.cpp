@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/22/25.
-//
-
 #include <algorithm>
 #include <format>
 #include <limits>

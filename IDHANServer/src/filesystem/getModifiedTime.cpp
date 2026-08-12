@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/4/25.
-//
-
 #include <chrono>
 #include <cstddef>
 #include <filesystem>

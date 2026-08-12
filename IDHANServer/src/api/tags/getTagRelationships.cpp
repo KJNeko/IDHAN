@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 5/3/25.
-//
-
 #include "api/TagAPI.hpp"
 
 namespace idhan::api
