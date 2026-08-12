@@ -1,8 +1,10 @@
 # Docker image
 
 Images are available at `git.futuregadgetlabs.net/kj16609/idhan`:
-- `latest` — built from each release tag
-- `dev` — bleeding edge, built from the `master` branch
+
+- `latest`: built from the `master` branch
+- `dev`: bleeding edge, built from the `dev` branch
+- `vX.Y.0`: built from each matching release tag
 
 # Performance note: seccomp and io_uring
 
