@@ -39,6 +39,11 @@ class PTRImportWidget final : public QWidget
 
   private:
 
+	//! Shows what is notable about the corpus at the current path, or hides the note if there is
+	//! nothing to say. Reads the manifest directly rather than waiting for the worker: the point is
+	//! to tell the user what an import will do before they start one.
+	void updateCorpusNote();
+
 	Ui::PTRImportWidget* ui;
 	std::unique_ptr< idhan::hydrus::ptr::PTRImportWorker > m_worker;
 	PTRHistoryModel* m_history_model;

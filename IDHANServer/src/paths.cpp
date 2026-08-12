@@ -1,8 +1,6 @@
-//
-// Created by kj16609 on 10/13/25.
-//
-
 #include "paths.hpp"
+
+#include <set>
 
 #include "Config.hpp"
 
@@ -17,24 +15,121 @@ namespace idhan
 #error "No module extension defined for this OS"
 #endif
 
+std::filesystem::path getExecutableDir()
+{
+	static std::filesystem::path executable_dir {};
+	static std::once_flag executable_dir_once {};
+
+	std::call_once(
+		executable_dir_once,
+		[]()
+		{
+#ifdef __linux__
+			std::error_code error {};
+			const auto self { std::filesystem::read_symlink( "/proc/self/exe", error ) };
+
+			if ( !error )
+			{
+				executable_dir = self.parent_path();
+				return;
+			}
+
+			log::warn( "Could not resolve /proc/self/exe; falling back to the working directory" );
+#endif
+			executable_dir = std::filesystem::current_path();
+		} );
+
+	return executable_dir;
+}
+
 std::vector< std::filesystem::path > getModulePaths()
 {
-	constexpr std::array< std::string_view, 2 > module_paths { { "./modules", IDHAN_MODULES_PATH } };
+	// Relative to the binary before the working directory. A build tree keeps modules/ next to the
+	// server binary, and resolving against the CWD meant the server only found its own modules when
+	// launched from that directory -- silently finding nothing otherwise.
+	const std::array< std::filesystem::path, 3 > module_paths {
+		{ getExecutableDir() / "modules", "./modules", IDHAN_MODULES_PATH }
+	};
 
 	std::vector< std::filesystem::path > paths {};
+
+	// Canonical, because the search locations overlap: launched from the build tree's bin/, the
+	// executable's directory and the working directory are the same place. Registering a library
+	// twice would give it two sets of module indexes and two worker processes.
+	std::set< std::filesystem::path > seen {};
 
 	for ( const auto& search_path : module_paths )
 	{
 		if ( !std::filesystem::exists( search_path ) ) continue;
-		log::info( "Searching for modules at {}", search_path );
-		for ( const auto& file : std::filesystem::recursive_directory_iterator( search_path ) )
+
+		std::error_code error {};
+		const auto canonical_root { std::filesystem::canonical( search_path, error ) };
+		if ( error || !seen.insert( canonical_root ).second ) continue;
+
+		log::info( "Searching for modules at {}", canonical_root.string() );
+
+		for ( const auto& file : std::filesystem::recursive_directory_iterator( canonical_root ) )
 		{
 			if ( !file.is_regular_file() ) continue;
 			if ( file.path().extension() == MODULE_EXT ) paths.emplace_back( file.path() );
 		}
 	}
 
+	if ( paths.empty() )
+		log::error(
+			"No module libraries found. Searched {}/modules, ./modules and {} -- without them the server "
+			"has no metadata parsers or thumbnailers.",
+			getExecutableDir().string(),
+			IDHAN_MODULES_PATH );
+
 	return paths;
+}
+
+std::filesystem::path getModuleRunnerPath()
+{
+	static std::filesystem::path runner_path {};
+	static std::once_flag runner_path_once {};
+
+	std::call_once(
+		runner_path_once,
+		[]()
+		{
+			if ( const auto configured {
+					 idhan::config::getSilentDefault< std::string >( "modules", "runner_path", "" ) };
+		         !configured.empty() )
+			{
+				runner_path = configured;
+				return;
+			}
+
+			// Next to the server binary first, and resolved against the binary rather than the working
+			// directory: a build tree keeps the runner beside IDHANServer, and preferring it means a
+			// development build never picks up an installed copy built against a different module ABI.
+			const std::array< std::filesystem::path, 3 > candidates {
+				{ getExecutableDir() / "IDHANModuleRunner", "./IDHANModuleRunner", IDHAN_MODULE_RUNNER_PATH }
+			};
+
+			for ( const auto& candidate : candidates )
+			{
+				if ( std::filesystem::exists( candidate ) )
+				{
+					runner_path = std::filesystem::absolute( candidate );
+					log::info( "Module runner: {}", runner_path.string() );
+					return;
+				}
+			}
+
+			log::error(
+				"Could not find IDHANModuleRunner (looked in {}, ./ and {}). Modules run out of process, so "
+				"without it every module library is skipped and no parsers or thumbnailers will exist. Set "
+				"[modules] runner_path to override.",
+				getExecutableDir().string(),
+				IDHAN_MODULE_RUNNER_PATH );
+
+			runner_path = IDHAN_MODULE_RUNNER_PATH;
+		} );
+
+	return runner_path;
 }
 
 std::vector< std::filesystem::path > getMimeParserPaths()
@@ -116,6 +211,23 @@ std::vector< std::size_t > getCacheableThumbnailSizes()
 	// only reached on a cache miss, so the parse cost is dwarfed by the generation it gates.
 	return idhan::config::getArray< std::size_t >(
 		"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
+}
+
+bool getThumbnailCachingEnabled()
+{
+	// Read live for the same reason as the size list above: it only gates work that follows a cache
+	// miss, so re-reading costs nothing next to the generation it guards, and an operator debugging a
+	// thumbnailer can turn the cache off without restarting.
+	//
+	// Silent default: config::get would log "you might wanna set this value" on every miss for a key
+	// almost nobody needs to set, which is a warning per generated thumbnail.
+	return idhan::config::getSilentDefault< bool >( "thumbnails", "cache", true );
+}
+
+bool getPurgeThumbnailsOnBoot()
+{
+	// Silent for the same reason -- an optional debugging toggle should not nag on every boot.
+	return idhan::config::getSilentDefault< bool >( "thumbnails", "purge_on_boot", false );
 }
 
 } // namespace idhan

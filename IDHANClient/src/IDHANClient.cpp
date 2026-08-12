@@ -1,10 +1,4 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #include "idhan/IDHANClient.hpp"
-
-#include "idhan/TagCache.hpp"
 
 #include <QCoreApplication>
 #include <QHttpPart>
@@ -14,6 +8,7 @@
 
 #include <qtconcurrentrun.h>
 
+#include "idhan/TagCache.hpp"
 #include "logging/logger.hpp"
 #include "spdlog/sinks/stdout_color_sinks.h"
 

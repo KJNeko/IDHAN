@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/24/24.
-//
-
 #include "ManagementConnection.hpp"
 
 #include "ConnectionArguments.hpp"
@@ -75,19 +71,8 @@ ManagementConnection::ManagementConnection( const ConnectionArguments& arguments
 
 	checkPgVersion( version_string );
 
-	if ( arguments.testmode )
-	{
-		tx.exec( "DROP SCHEMA IF EXISTS test CASCADE" );
-		tx.exec( "CREATE SCHEMA test" );
-		constexpr std::string_view schema { "test" };
-		db::updateMigrations( tx, schema );
-	}
-	else
-	{
-		tx.exec( "CREATE SCHEMA IF NOT EXISTS public" );
-		constexpr std::string_view schema { "public" };
-		db::updateMigrations( tx, schema );
-	}
+	tx.exec( "CREATE SCHEMA IF NOT EXISTS " + tx.quote_name( arguments.schema ) );
+	db::updateMigrations( tx, arguments.schema );
 
 	log::info( "Database loading finished" );
 }
@@ -104,7 +89,11 @@ std::string ConnectionArguments::format() const
 	str += format_ns::format( "dbname={} ", dbname );
 	str += format_ns::format( "user={} ", user );
 	if ( !password.empty() ) str += format_ns::format( "password={} ", password );
-	if ( testmode ) str += "options='-c search_path=test,public -c client_min_messages=debug1'";
+	str += "options='-c search_path=" + searchPath();
+	// Verbosity is a logging concern and has nothing to do with which schema is in use; it only ever
+	// rode along on the old test-mode flag because both happened to be true at the same time.
+	if ( log_level <= spdlog::level::debug ) str += " -c client_min_messages=debug1";
+	str += "'";
 
 	log::debug( "Connecting using: {}", str );
 

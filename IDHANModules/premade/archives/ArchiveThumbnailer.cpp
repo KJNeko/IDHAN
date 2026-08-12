@@ -1,12 +1,10 @@
-//
-// Created by kj16609 on 11/25/25.
-//
 #include "ArchiveThumbnailer.hpp"
 
 #include <json/reader.h>
 #include <json/value.h>
 #include <vips/vips.h>
 
+#include <algorithm>
 #include <filesystem>
 
 #include "archives.hpp"
@@ -14,22 +12,17 @@
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
-namespace
-{
-// Guards against archive-in-archive recursion: createThumbnail calls back into the generate and
-// thumbnail callbacks, which re-dispatch by MIME and can re-enter this thumbnailer for a nested
-// archive. Those callbacks run synchronously on the calling thread, so a thread_local depth
-// counter bounds the recursion and stops an archive bomb from exhausting the stack.
-thread_local std::size_t g_archive_thumbnail_depth { 0 };
-constexpr std::size_t MAX_ARCHIVE_THUMBNAIL_DEPTH { 4 };
-
-struct ArchiveThumbnailDepthGuard
-{
-	ArchiveThumbnailDepthGuard() { ++g_archive_thumbnail_depth; }
-
-	~ArchiveThumbnailDepthGuard() { --g_archive_thumbnail_depth; }
-};
-} // namespace
+// Archive-in-archive recursion used to be bounded here, by a thread_local depth counter: the
+// thumbnail and generate callbacks re-dispatch by MIME and can come back round to this thumbnailer
+// for a nested archive.
+//
+// That counter no longer describes reality. Modules run in worker processes now, and a nested call
+// leaves this process entirely -- out to the host, which resolves it and dispatches it to whichever
+// worker handles that MIME, quite possibly a different one, and on a different thread if it does
+// come back here. A per-thread counter in one process cannot see any of that.
+//
+// The host carries the depth in the call itself and enforces the ceiling (config: modules
+// max_call_depth), because the host is the only party that sees the whole chain.
 
 std::vector< std::string_view > ArchiveThumbnailer::handleableMimes()
 {
@@ -41,10 +34,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 	std::size_t width,
 	std::size_t height )
 {
-	const ArchiveThumbnailDepthGuard depth_guard {};
-	if ( g_archive_thumbnail_depth > MAX_ARCHIVE_THUMBNAIL_DEPTH )
-		return std::unexpected( idhan::ModuleError { "Archive nesting too deep for thumbnailing" } );
-
 	const auto& [ file_view, mime, extra ] = data;
 
 	spdlog::trace( "Archive thumbnailer extra json: {}", extra.toStyledString() );
@@ -136,7 +125,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		const std::filesystem::path path { file_path_str };
 
 		const auto generated_file {
-			this->m_callbacks.generate( file_view, hash, data.extra, path.filename().string() )
+			this->m_callbacks.generate( data.file, hash, data.extra, path.filename().string() )
 		};
 
 		if ( !generated_file )
@@ -151,7 +140,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		all_generate_failed = false;
 
-		const auto thumbnail_rgb { this->m_callbacks.thumbnail( *generated_file, {}, path.filename().string() ) };
+		const auto thumbnail_rgb { this->m_callbacks.thumbnail( **generated_file, {}, path.filename().string() ) };
 
 		if ( !thumbnail_rgb )
 		{

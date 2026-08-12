@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/12/25.
-//
-
 #include <drogon/drogon.h>
 
 #include <vector>
@@ -36,9 +32,6 @@ ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPt
 			"Record {} does not have any mime associated with it, Cannot parse metadata", record_id ) );
 	}
 
-	auto io { co_await filesystem::getIOForRecord( record_id, db ) };
-	return_unexpected_error( io );
-
 	const auto mime_id { record_mime[ 0 ][ "mime_id" ].as< MimeID >() };
 
 	const auto mime_info { co_await db->execSqlCoro( "SELECT * FROM mime WHERE mime_id = $1", mime_id ) };
@@ -48,29 +41,18 @@ ExpectedTask< MetadataInfo > parseMetadata( const RecordID record_id, DbClientPt
 
 	const auto mime_name { mime_info[ 0 ][ "name" ].as< std::string >() };
 
-	const std::shared_ptr< MetadataModuleI > parser { co_await findBestParser( mime_name ) };
+	const std::shared_ptr< modules::RemoteModule > parser { co_await findBestParser( mime_name ) };
 
 	if ( parser == nullptr )
 		co_return std::unexpected( createBadRequest( "No parser found for mime type {}", mime_name ) );
 
-	// Read only once a parser is known: this pulls the entire file into memory, so doing it before
-	// the lookup would burn a whole-file allocation on records we are about to reject.
-	std::vector< std::byte > buffer {};
+	// Opened only once a parser is known: doing it before the lookup would set up an input -- and on
+	// the fallback path copy a whole file -- for a record we are about to reject.
+	auto input { co_await filesystem::openRecordInput( record_id, db ) };
+	return_unexpected_error( input );
 
-	try
-	{
-		buffer = co_await io->readAll();
-	}
-	catch ( const std::exception& e )
-	{
-		co_return std::unexpected(
-			createInternalError( "Failed to read file for record {}: {}", record_id, e.what() ) );
-	}
-
-	// buffer must outlive parseFile below -- file_view does not own its bytes.
-	const idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( buffer.data() ), buffer.size() };
-	ModuleCallData call_data { .file_view = data_view, .mime_name = mime_name, .extra = {} };
-	const auto metadata { parser->parseFile( call_data ) };
+	const modules::RemoteCallData call_data { .input = *input, .mime_name = mime_name, .extra = {}, .depth = 0 };
+	const auto metadata { co_await parser->parseFile( call_data ) };
 
 	if ( !metadata )
 	{

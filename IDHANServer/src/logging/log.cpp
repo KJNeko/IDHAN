@@ -1,17 +1,10 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #include "log.hpp"
 
 namespace idhan::log
 {
 
-namespace
-{
 std::shared_ptr< spdlog::logger > g_server_logger {};
 std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > g_server_ring_buffer_sink {};
-} // namespace
 
 std::shared_ptr< spdlog::logger > getServerLogger()
 {

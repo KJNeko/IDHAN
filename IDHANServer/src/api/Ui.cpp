@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/28/25.
-//
 #include "Ui.hpp"
 
 #include "paths.hpp"

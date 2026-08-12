@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 4/3/25.
-//
 #pragma once
 
 #include "hydrus/HydrusConstants_gen.hpp"

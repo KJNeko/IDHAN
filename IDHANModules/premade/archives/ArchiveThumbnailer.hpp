@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/25/25.
-//
 #pragma once
 #include "ThumbnailerModule.hpp"
 
@@ -14,7 +11,7 @@ class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 
 	ArchiveThumbnailer( idhan::ModuleCallbacks callbacks ) : ThumbnailerModuleI( callbacks ) {}
 
-	[[nodiscard]] std::string_view name() override { return "Archive generator module"; }
+	[[nodiscard]] std::string_view name() override { return "Archive thumbnailer module"; }
 
 	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 

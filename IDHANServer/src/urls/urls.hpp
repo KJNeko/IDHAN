@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/24/25.
-//
 #pragma once
 
 #include <drogon/HttpResponse.h>

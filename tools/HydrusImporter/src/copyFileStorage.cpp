@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 2/20/25.
-//
-
 #include "HydrusImporter.hpp"
 #include "sqlitehelper/Query.hpp"
 #include "sqlitehelper/Transaction.hpp"

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/19/24.
-//
-
 #include <expected>
 
 #include "api/helpers/createBadRequest.hpp"

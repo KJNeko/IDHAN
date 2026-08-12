@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/23/25.
-//
-
 #include "HyAPI.hpp"
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"

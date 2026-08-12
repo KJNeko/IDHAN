@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/8/24.
-//
-
 #include "APIAuth.hpp"
 
 #include <expected>
@@ -74,7 +70,8 @@ drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpReq
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto select_key { co_await db->execSqlCoro( "SELECT key_id FROM auth_keys WHERE key_hash = $1 LIMIT 1", sha256_key.toVec() )
+	const auto select_key {
+		co_await db->execSqlCoro( "SELECT key_id FROM auth_keys WHERE key_hash = $1 LIMIT 1", sha256_key.toVec() )
 	};
 
 	if ( select_key.empty() )

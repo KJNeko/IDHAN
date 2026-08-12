@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/12/25.
-//
 #pragma once
 #include "MetadataModule.hpp"
 
@@ -17,6 +14,9 @@ class FFMPEGMetadata final : public idhan::MetadataModuleI
 
 	// each call owns its AVFormatContext/codec contexts, no shared state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
+
+	// shares a worker with FFMPEGThumbnailer, whose vips init is what makes the process worth keeping
+	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 

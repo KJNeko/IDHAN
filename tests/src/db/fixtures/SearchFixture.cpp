@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/20/26.
-//
-
 #include "SearchFixture.hpp"
 
 MimeID SearchFixture::getMimeId( const std::string_view mime_name )
@@ -108,5 +104,5 @@ std::vector< RecordID > SearchFixture::sortedIds( const idhan::SortType type, co
 	idhan::SearchBuilder builder {};
 	builder.setSortType( type );
 	builder.setSortOrder( order );
-	return runQuery( builder.construct( true, false, false ) );
+	return runQuery( builder.browseQuery() );
 }

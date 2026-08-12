@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/13/25.
-//
 #pragma once
 #include <type_traits>
 

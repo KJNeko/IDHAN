@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/10/24.
-//
-
 #include <fstream>
 
 #include "api/InfoAPI.hpp"

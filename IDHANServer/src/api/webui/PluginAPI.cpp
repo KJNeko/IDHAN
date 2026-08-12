@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/18/26.
-//
 // Plugin discovery for the WebUI. Scans <static>/plugins/<dir>/manifest.json, validates each, and
 // publishes an index with the bundle URL resolved. The bundles are served by the static file router
 // and executed in the browser — the server never loads plugin code itself.
@@ -20,9 +17,6 @@
 #include "paths.hpp"
 
 namespace idhan::api
-{
-
-namespace
 {
 
 //! Cached scan result. Populated lazily on first request and refreshed on ?rescan=true. Guarded by the
@@ -117,8 +111,6 @@ Json::Value scanPlugins()
 	log::info( "Scanned {} for plugins; {} valid", root.string(), out.size() );
 	return out;
 }
-
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > PluginAPI::listPlugins( drogon::HttpRequestPtr req )
 {

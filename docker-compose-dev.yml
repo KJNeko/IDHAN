@@ -1,13 +1,13 @@
 services:
   idhan-postgres:
-    image: postgres:18
+    image: pgvector/pgvector:pg18-trixie
     container_name: idhan-postgres
     environment:
       POSTGRES_USER: idhan
       POSTGRES_PASSWORD: idhan
       POSTGRES_DB: idhan-db
     volumes:
-      - /db:/var/lib/postgresql
+      - idhan_pg18:/var/lib/postgresql
     ports:
       - "5432:5432"
     healthcheck:
@@ -16,6 +16,11 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    # Parallel query puts its shared state (hash tables, tuple queues) in /dev/shm, which Docker
+    # defaults to 64MB. With the work_mem and max_parallel_workers set below that is far too small,
+    # and workers abort mid-query with "could not resize shared memory segment". Unrelated to
+    # shared_buffers, which is an anonymous mapping and does not consume /dev/shm.
+    shm_size: 1gb
     # If you experienced with testing yourself, Configure using the tuning guide https://postgresqlco.nf/tuning-guide
     # Baseline perf tuning for a typical home server/desktop (16GB RAM, 4 cores, SSD/NVMe) — stock
     # postgres:18 defaults are sized for ~1GB-RAM machines. Scale *_buffers/*_mem roughly with RAM.
@@ -60,6 +65,8 @@ services:
       IDHAN_DATABASE_PASSWORD: idhan
       IDHAN_DATABASE_DATABASE: idhan-db
       IDHAN_THUMBNAILS_PATH: /media/thumbnails
+      IDHAN_THUMBNAILS_CACHE: true
+      IDHAN_THUMBNAILS_PURGE_ON_BOOT: true
     ports:
       - "16609:16609"
     security_opt:
@@ -76,3 +83,7 @@ services:
     volumes:
       - /media:/media
     restart: unless-stopped
+
+volumes:
+  idhan_pg18:
+  idhan_thumbnails:

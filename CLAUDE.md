@@ -139,7 +139,47 @@ Files are stored in on-disk "clusters" managed by `filesystem::ClusterManager` (
 
 ### Module system
 
-`IDHANModules/include/` defines three plugin interfaces: `MetadataModule.hpp`, `ThumbnailerModule.hpp`, `GeneratorModule.hpp`. Premade implementations (vips, FFmpeg, libarchive, PSD) are compiled into `IDHANPremadeModules`, a shared library placed in `build/bin/modules/`. At runtime, `ModuleLoader` `dlopen`s everything in that directory. New modules must implement `ModuleBase` (from `IDHANModules/include/ModuleBase.hpp`) and export a factory with `FGL_EXPORT` (`__attribute__((visibility("default")))`). The `ModuleTypeFlags` bitmask declares which interfaces a module implements.
+`IDHANModules/include/` defines three plugin interfaces: `MetadataModule.hpp`, `ThumbnailerModule.hpp`,
+`GeneratorModule.hpp`. New modules implement `ModuleBase` (`IDHANModules/include/ModuleBase.hpp`) and export a factory
+with `FGL_EXPORT`. The `ModuleTypeFlags` bitmask declares which interfaces a module implements — one flag per module in
+practice, since `handleableMimes()` would be ambiguous across two interface bases.
+
+**Modules never run inside the server.** Each module library is hosted by its own `IDHANModuleRunner` process, so a
+module that leaks, corrupts its heap, or crashes takes only that process with it. Premade backends are one library
+each — `IDHANVips`, `IDHANFFmpeg`, `IDHANPsd`, `IDHANArchive` — in `build/bin/modules/`.
+
+- **Residency** — a module returns `SINGLE_RUN` (fresh process per call, total leak immunity; the default) or
+  `PERSISTENT` from `residency()`. A library is persistent if any of its modules asks for it. Persistent workers are
+  still retired on an RSS ceiling or idle timeout, so a leak is bounded rather than merely isolated.
+- **Interrogation** — at startup `ModuleLoader` runs `IDHANModuleRunner --describe` per library and registers the
+  returned manifest. A library that fails to load, hangs, or exports the wrong symbols is logged and skipped; it does
+  not stop the server. Modules are addressed by `(library, module_index)` — the index in the factory's returned vector.
+  Names are never used for routing. Every worker re-announces its manifest and the pool compares a signature, so a `.so`
+  rebuilt under a running server fails loudly instead of dispatching to a stale index.
+- **File data** — files reach modules as a `ModuleFile` handle (`size()` + `read(span, offset)`), never as a buffer.
+  Call sites build one with `filesystem::openRecordInput`; `modules::CallInput` decides how it travels. Normally that
+  is an io_uring restricted to reading that one file, registered so the worker cannot name what it is reading and no
+  copy is made; where io_uring is unavailable it falls back to a sealed anonymous `memfd` (`ipc::Blob`), which costs a
+  whole-file copy. Modules never learn which they got. There is deliberately no `readAll()` — a module that needs the
+  file contiguous allocates that itself, so the cost is visible where it is incurred. Generator output goes the other
+  way through `ModuleSink`, written straight into the memory that carries it back.
+- **Calling** — `ModuleLoader::getParserFor` / `getThumbnailerFor` / `getGeneratorsFor` return `RemoteModule` proxies
+  whose methods are coroutines: `co_await parser->parseFile( call_data )`.
+- **Cross-module calls** — `ModuleCallbacks` (`thumbnail`, `generate`, `probe`) still work; they marshal back to the
+  server, which re-dispatches. Nesting depth travels in the call and is bounded by the server (
+  `modules.max_call_depth`), because the recursion crosses process boundaries and no per-process counter can see it.
+- **Threading** — a worker has an IO thread that never runs module code plus a work pool. `threadSafe()` is
+  load-bearing: modules returning false are serialised behind a per-module lock. The pool is what lets
+  `ArchiveThumbnailer` → `generate` → `ArchiveGenerator` (same library, same process) complete without deadlocking.
+- **Backlog, not deadlines** — a worker queues calls and serves them `pool_threads` at a time, so a call can wait as
+  long as the backlog ahead of it. There is no per-call timeout: waiting costs a suspended coroutine and no thread,
+  and a deadline could not tell a queued call from a wedged one. Heartbeats are the only watchdog, and they ask only
+  whether the process still exists — a worker answers them from its IO loop, which never runs module code. Both ends
+  of the channel queue their outbound frames (`ipc::FrameWriter`); neither ever writes straight to the socket, so a
+  slow reader cannot wedge the writer or drop a frame on `EAGAIN`.
+
+Platform-specific IPC lives in `IDHANModules/ipc/src/linux/` behind neutral headers (`Blob`, `Frame`, `UniqueFd`). *
+*Modules are Linux-only**; a Windows backend would add `ipc/src/windows/` without changing callers.
 
 ### Job system
 

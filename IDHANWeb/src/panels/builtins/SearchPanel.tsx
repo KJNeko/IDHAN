@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PanelProps } from '../../host/types';
-import type { AutocompleteResult, SortOrder } from '../../api/types';
+import type {AutocompleteResult, SearchStep, SortOrder} from '../../api/types';
 
 /** Matches the sort keys POST /search understands (parseSortType.hpp). */
 export const SORT_OPTIONS = [
@@ -38,9 +38,10 @@ type Config = {
   tags: string[];
   sortBy: SortBy;
   sortOrder: SortOrder;
+    showBreakdown: boolean;
 };
 
-const DEFAULT_CONFIG: Config = { tags: [], sortBy: 'import_time', sortOrder: 'desc' };
+const DEFAULT_CONFIG: Config = {tags: [], sortBy: 'import_time', sortOrder: 'desc', showBreakdown: false};
 const DEBOUNCE_MS = 130;
 
 function readConfig(raw: Partial<Config>): Config {
@@ -48,7 +49,71 @@ function readConfig(raw: Partial<Config>): Config {
     tags: Array.isArray(raw.tags) ? raw.tags : DEFAULT_CONFIG.tags,
     sortBy: SORT_OPTIONS.some((o) => o.value === raw.sortBy) ? (raw.sortBy as SortBy) : DEFAULT_CONFIG.sortBy,
     sortOrder: raw.sortOrder === 'asc' ? 'asc' : DEFAULT_CONFIG.sortOrder,
+      showBreakdown: raw.showBreakdown === true,
   };
+}
+
+/** One term, as the breakdown table shows it: what its query cost against what it actually did. */
+type TermRow = {
+    term: string;
+    /** Rows the term's own query returned. */
+    fetched: number;
+    /** Rows this term took out of the running result. Null for the term that established it. */
+    removed: number | null;
+    /** Rows still in the running result after this term — or, when `inverted`, rows excluded from it. */
+    left: number;
+    /** True when `left` counts exclusions rather than matches (a search made only of negations). */
+    inverted: boolean;
+    micros: number;
+};
+
+/**
+ * Pairs each `fetch` step with the `fold` step of the same name, so a row can show what a term cost
+ * next to what it accomplished. They are matched by label rather than by position because the
+ * fetches run concurrently and are recorded in completion order, not query order.
+ */
+function toTermRows(steps: SearchStep[]): TermRow[] {
+    const rows: TermRow[] = [];
+    let previous: number | null = null;
+
+    // Driven off the fold steps, since those are recorded in the order terms were applied. The fetches
+    // are recorded in completion order, which is arbitrary — reading the table in that order would
+    // imply a sequence the search never had.
+    for (const fold of steps.filter((s) => s.kind === 'fold')) {
+        const fetch = steps.find((s) => s.kind === 'fetch' && s.step === fold.step);
+
+        // On an inverted result the counted set is the exclusion, so it *grows* as terms are added and
+        // the subtraction runs the other way. A search is inverted for all of its folds or none of
+        // them — a positive term always establishes a non-inverted result — so this never mixes regimes
+        // mid-table.
+        const removed =
+            previous === null ? null : Math.max(0, fold.inverted ? fold.rows - previous : previous - fold.rows);
+
+        rows.push({
+            term: fold.step,
+            fetched: fetch?.rows ?? 0,
+            removed,
+            left: fold.rows,
+            inverted: fold.inverted,
+            micros: fetch?.micros ?? 0,
+        });
+        previous = fold.rows;
+    }
+
+    return rows;
+}
+
+/**
+ * Always milliseconds, with the precision the magnitude deserves. An index-only tag lookup runs in
+ * well under a millisecond, so sub-ms values keep three decimals rather than collapsing to `0.0 ms`
+ * and hiding the difference between a fast term and a free one.
+ */
+function formatMs(micros: number): string {
+    if (micros <= 0) return '';
+    const ms = micros / 1000;
+    if (ms < 1) return `${ms.toFixed(3)} ms`;
+    if (ms < 100) return `${ms.toFixed(1)} ms`;
+    return `${Math.round(ms)} ms`;
 }
 
 /** The tag text to autocomplete: the current token minus a leading `-`. `system:` tokens don't autocomplete. */
@@ -97,6 +162,13 @@ function SearchPanel({ host }: PanelProps) {
   const [highlight, setHighlight] = useState(-1);
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
+    const [showBreakdown, setShowBreakdown] = useState(initial.showBreakdown);
+    const [steps, setSteps] = useState<SearchStep[] | null>(null);
+
+    // Read through a ref so runSearch does not have to re-create itself (and re-run the mount effect's
+    // dependency) every time the toggle flips.
+    const breakdownRef = useRef(showBreakdown);
+    breakdownRef.current = showBreakdown;
 
   const suggestions = useAutocomplete(host, input);
   const negated = input.trim().startsWith('-');
@@ -113,14 +185,17 @@ function SearchPanel({ host }: PanelProps) {
         const response = await host.search.run({
           tags: queryTags,
           sort: { by, order },
+            debug: breakdownRef.current,
         });
         const ids = Int32Array.from(response.record_ids);
         host.results.set({ ids, queryMs: response.query_ms, query: queryTags });
         setSummary(`${ids.length.toLocaleString()} result${ids.length === 1 ? '' : 's'} · ${response.query_ms} ms`);
+          setSteps(response.stats ?? null);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         host.ui.toast(`Search failed: ${message}`, { kind: 'error' });
         setSummary(null);
+          setSteps(null);
       } finally {
         setRunning(false);
       }
@@ -207,6 +282,22 @@ function SearchPanel({ host }: PanelProps) {
     void runSearch(tags, by, order);
   }
 
+    function toggleBreakdown() {
+        const next = !showBreakdown;
+        setShowBreakdown(next);
+        breakdownRef.current = next;
+        persist({showBreakdown: next});
+
+        // The server only returns the breakdown when asked, so switching it on has nothing to show until
+        // the next search. Re-run only if there is already a result on screen — turning it on before
+        // searching should not fire a query the user did not ask for.
+        if (next && summary !== null) void runSearch(tags, sortBy, sortOrder);
+        if (!next) setSteps(null);
+    }
+
+    const termRows = steps ? toTermRows(steps) : [];
+    const pageStep = steps?.find((s) => s.kind === 'page') ?? null;
+
   return (
     <div className="panel-body search-panel">
       <div className="search-chips">
@@ -281,12 +372,69 @@ function SearchPanel({ host }: PanelProps) {
         >
           {sortBy === 'random' ? '⇅' : sortOrder === 'desc' ? '↓' : '↑'}
         </button>
+          <button
+              type="button"
+              className={`search-breakdown-toggle${showBreakdown ? ' on' : ''}`}
+              onClick={toggleBreakdown}
+              aria-pressed={showBreakdown}
+              title="Show how many records each term matched and removed"
+          >
+              Breakdown
+        </button>
         <button type="button" className="search-run" onClick={() => void runSearch(tags, sortBy, sortOrder)} disabled={running}>
           {running ? 'Searching…' : 'Search'}
         </button>
       </div>
 
       {summary && <p className="muted search-summary">{summary}</p>}
+
+        {showBreakdown && (
+            <div className="search-breakdown">
+                {termRows.length === 0 && pageStep === null ? (
+                    <p className="muted">Run a search to see how each term narrowed it.</p>
+                ) : (
+                    <table className="breakdown-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">Term</th>
+                            <th scope="col">Matched</th>
+                            <th scope="col">Removed</th>
+                            <th scope="col">Left</th>
+                            <th scope="col">Time</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {termRows.map((row) => (
+                            <tr
+                                key={row.term}
+                                className={row.removed === 0 ? 'no-effect' : undefined}
+                                title={row.removed === 0 ? 'This term matched records but removed none from the result' : undefined}
+                            >
+                                <th scope="row">{row.term}</th>
+                                <td>{row.fetched.toLocaleString()}</td>
+                                <td>{row.removed === null ? '—' : row.removed.toLocaleString()}</td>
+                                <td>
+                                    {row.inverted && <span className="breakdown-not">not </span>}
+                                    {row.left.toLocaleString()}
+                                </td>
+                                <td>{formatMs(row.micros)}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                        {pageStep && (
+                            <tfoot>
+                            <tr>
+                                <th scope="row">Returned</th>
+                                <td colSpan={2}/>
+                                <td>{pageStep.rows.toLocaleString()}</td>
+                                <td>{formatMs(pageStep.micros ?? 0)}</td>
+                            </tr>
+                            </tfoot>
+                        )}
+                    </table>
+                )}
+            </div>
+        )}
     </div>
   );
 }

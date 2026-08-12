@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/20/25.
-//
-
 #include "SHA256.hpp"
 
 #include <openssl/evp.h>
@@ -13,6 +9,7 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "caching/recordCaches.hpp"
 #include "crypto/simpleHasher.hpp"
+#include "db/dbTypes.hpp"
 #include "decodeHex.hpp"
 #include "fgl/defines.hpp"
 #include "filesystem/io/IOUring.hpp"

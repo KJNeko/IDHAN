@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/20/25.
-//
-
 #include <utility>
 
 #include "Config.hpp"
@@ -21,6 +17,7 @@
 #include "metadata/metadata.hpp"
 #include "mime/FileInfo.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "modules/RemoteModule.hpp"
 #include "threading/ExpectedTask.hpp"
 #include "trantor/net/EventLoopThread.h"
 #include "trantor/net/EventLoopThreadPool.h"
@@ -750,7 +747,7 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		}
 	}
 
-	const std::shared_ptr< MetadataModuleI > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
+	const std::shared_ptr< modules::RemoteModule > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
 
 	// No parser was found
 	if ( !metadata_parser )
@@ -762,28 +759,25 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	log::trace( "Found metadata parser for mime {} (Record {})", m_mime_name, m_record_id );
 
-	//TODO: In order to protect the main process from poorly written modules, Either fork or launch a new process to actually run the parser
+	// The parser runs in a worker process, so a module that leaks, corrupts its heap or crashes
+	// outright takes that process with it and leaves this job -- and the server -- standing.
+	auto input_e { modules::CallInput::forPath( m_path ) };
 
-	FileIOUring file_io { m_path, FileIOUring::ReadOnly };
-
-	std::vector< std::byte > buffer {};
-
-	try
-	{
-		buffer = co_await file_io.readAll();
-	}
-	catch ( const std::exception& e )
+	if ( !input_e )
 	{
 		// This runs inside a job coroutine. An escaping exception takes down the whole job rather
-		// than failing the one record, so the read failure has to be caught and reported here.
+		// than failing the one record, so the failure has to be reported rather than thrown.
 		co_return std::unexpected(
-			createInternalError( "Failed to read file for record {}: {}", m_record_id, e.what() ) );
+			createInternalError( "Failed to open file for record {}: {}", m_record_id, input_e.error() ) );
 	}
 
-	// buffer must outlive parseFile below -- file_view does not own its bytes.
-	const idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( buffer.data() ), buffer.size() };
-	idhan::ModuleCallData call_data { .file_view = data_view, .mime_name = m_mime_name, .extra = {} };
-	const auto metadata_e { metadata_parser->parseFile( call_data ) };
+	const modules::RemoteCallData call_data {
+		.input = std::make_shared< const modules::CallInput >( std::move( *input_e ) ),
+		.mime_name = m_mime_name,
+		.extra = {},
+		.depth = 0
+	};
+	const auto metadata_e { co_await metadata_parser->parseFile( call_data ) };
 
 	if ( metadata_e )
 	{

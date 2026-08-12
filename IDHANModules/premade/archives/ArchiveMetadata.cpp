@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/24/25.
-//
-
 #include "ArchiveMetadata.hpp"
 
 #include <json/value.h>
@@ -32,6 +28,10 @@ std::vector< std::string_view > ArchiveMetadata::handleableMimes()
 
 std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseFile( idhan::ModuleCallData& data )
 {
+	// Declared before the handle so it outlives it: libarchive holds a pointer into the reader's
+	// chunk, and reverse-order destruction is what keeps that pointer valid for the handle's life.
+	ArchiveModuleReader reader { data.file };
+
 	std::unique_ptr< archive, void ( * )( archive* ) > a {
 		archive_read_new(), []( archive* ptr ) { archive_read_free( ptr ); }
 	};
@@ -40,11 +40,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 	archive_read_support_filter_all( a.get() );
 	archive_read_set_option( a.get(), "zip", "compact-utf8", "on" );
 
-	if ( const int r = archive_read_open_memory( a.get(), data.file_view.data(), data.file_view.size() ); r != 0 )
-	{
-		const char* err { archive_error_string( a.get() ) };
-		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_open_memory failed" } );
-	}
+	if ( const auto opened { reader.open( a.get() ) }; !opened ) return std::unexpected( opened.error() );
 
 	idhan::MetadataInfo metadata {};
 	idhan::MetadataInfoArchive archive_metadata {};
@@ -82,22 +78,8 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 		std::expected< std::string, idhan::ModuleError > filename {};
 
-		if ( const char* filename_raw = archive_entry_pathname( entry ); filename_raw != nullptr )
+		if ( entryFilename( entry, filename ) == EntryNameResult::UNNAMED )
 		{
-			filename = sanitizeEncoding( filename_raw );
-		}
-		else if ( const char* utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
-		{
-			filename = sanitizeEncoding( utf8_filename_raw );
-		}
-		else if ( const wchar_t* w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
-		{
-			// Wide-only name: convert it rather than dropping the entry.
-			filename = wideToUtf8( w_filename_raw );
-		}
-		else
-		{
-			spdlog::warn( "No file name for item in archive? Maybe encrypted?" );
 			ret = archive_read_next_header( a.get(), &entry );
 			continue;
 		}

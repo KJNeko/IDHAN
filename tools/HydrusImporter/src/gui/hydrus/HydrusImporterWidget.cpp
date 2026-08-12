@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/28/25.
-//
 // You may need to build the project (run Qt uic code generator) to get "ui_HydrusImporter.h" resolved
 
 #include "HydrusImporterWidget.hpp"
@@ -20,9 +17,6 @@
 
 class TagServiceWorker;
 
-namespace
-{
-
 //! Result of opening a Hydrus database off the GUI thread. Holds a raw importer pointer (HydrusImporter is
 //! non-movable, so it can't be returned by value) that the GUI thread adopts into a unique_ptr.
 struct ParseResult
@@ -33,7 +27,6 @@ struct ParseResult
 	QString error {};
 };
 
-} // namespace
 
 HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent ), ui( new Ui::HydrusImporterWidget )
 {

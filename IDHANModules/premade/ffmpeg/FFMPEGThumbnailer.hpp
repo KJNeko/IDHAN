@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/13/25.
-//
 #pragma once
 
 #include "ThumbnailerModule.hpp"
@@ -20,6 +17,9 @@ class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 
 	// each call owns its AVFormatContext/codec contexts, no shared state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
+
+	// createThumbnailFile encodes through vips, so this worker pays VIPS_INIT as well as codec setup
+	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
 

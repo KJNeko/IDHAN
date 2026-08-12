@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/18/26.
-//
 // CRUD for WebUI named layouts. Layouts are primarily a browser (localStorage) concept; this is the
 // optional server-side copy a user pushes to move a layout between browsers. Identity is the
 // client-generated uuid, so PUT is an upsert. No ownership, no user system.
@@ -13,9 +10,6 @@
 #include "api/helpers/createBadRequest.hpp"
 
 namespace idhan::api
-{
-
-namespace
 {
 
 //! A layout document can grow with panel count; setClientMaxBodySize is effectively unbounded, so we
@@ -76,8 +70,6 @@ std::expected< Json::Value, drogon::HttpResponsePtr > parseDocumentBody( const d
 
 	return json;
 }
-
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > LayoutAPI::listLayouts( [[maybe_unused]] drogon::HttpRequestPtr req )
 {

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/2/24.
-//
-
 #pragma once
 #include <cstdint>
 #include <functional>
@@ -95,9 +91,7 @@ void critical( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 	logger->critical( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
-/**
- * @brief Logs the network error response to the local log only.
- */
+//! Logs the network error response to the local log only.
 void logResponse( QNetworkReply* reply );
 
 //! Bitmask of log levels a callback subscribes to (see registerCallback).

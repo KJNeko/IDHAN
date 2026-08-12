@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #include "ServerContext.hpp"
 
 #include <spdlog/async_logger.h>
@@ -23,8 +19,10 @@
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
+#include "filesystem/filesystem.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
+#include "embeddings/embeddings.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "spdlog/async.h"
 
@@ -352,10 +350,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.connectOptions = {}
 	};
 
-	if ( arguments.testmode )
-	{
-		config.connectOptions.insert_or_assign( "search_path", "test" );
-	}
+	// Same derivation as the migration connection. These two drifted apart when each spelled the
+	// path out by hand, which left public-owned objects resolvable by migrations but not at runtime.
+	config.connectOptions.insert_or_assign( "search_path", arguments.searchPath() );
 
 	log::trace( "Database config prepared, adding DB client" );
 	log::info(
@@ -383,6 +380,17 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
 
+	// Startup only, and before drogon starts listening: the cache is plain files with no database
+	// state behind it, so emptying it here cannot race a request writing into it, and a purge that
+	// fails is never a reason to refuse to start.
+	if ( getPurgeThumbnailsOnBoot() )
+	{
+		if ( const auto deleted { filesystem::clearThumbnailCache() } )
+			log::info( "Purged {} cached thumbnails on boot", *deleted );
+		else
+			log::warn( "Could not purge the thumbnail cache on boot: {}", deleted.error() );
+	}
+
 	drogon::app().registerBeginningAdvice(
 		[ this, listen_port ]()
 		{
@@ -392,8 +400,22 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 					const auto db { drogon::app().getDbClient() };
 					co_await m_clusters->reloadClusters( db );
 					co_await mime::getMimeDatabase()->reloadMimeParsers();
+					// After the module loader has interrogated its libraries: this reads what they
+					// reported and creates each model's per-width table if it does not exist yet.
+					co_await embeddings::registerEmbeddingModels( db );
 					co_return;
 				}() );
+
+			// Persistent module workers are long-lived, and the whole reason they run out of process
+			// is that modules leak. Sweeping them on a timer is what turns "the leak is contained" into
+			// "the leak is bounded": a worker over its RSS ceiling, or idle, is retired at its next
+			// quiescent moment.
+			drogon::app().getLoop()->runEvery(
+				std::chrono::seconds { 30 },
+				[ this ]()
+				{
+					if ( m_module_loader != nullptr ) m_module_loader->maintainWorkers();
+				} );
 
 			log::info( "IDHAN initialization finished" );
 			log::info( "Server available at http://localhost:{}", listen_port );

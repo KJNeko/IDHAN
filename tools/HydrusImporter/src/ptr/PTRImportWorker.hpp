@@ -13,7 +13,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "PTRFileParser.hpp"
+#include "ptr/PTRFileParser.hpp"
+#include "ptr/flatten/ChunkFormat.hpp"
+#include "ptr/flatten/Manifest.hpp"
 
 namespace idhan
 {
@@ -116,11 +118,39 @@ class PTRImportWorker : public QObject, public QRunnable
 		const QString& progress_prefix,
 		std::unordered_set< int >& unique_tag_ids );
 
+	//! Looks up, or creates, the "public tag repository" tag domain.
+	//! \throws std::runtime_error if it can be neither found nor created.
+	static idhan::TagDomainID ensureTagDomain();
+
+	//! Imports every chunk the manifest lists. Returns true if cancelled mid-run.
+	bool processCompacted( idhan::TagDomainID domain_id );
+
+	//! Creates any tag in \p chunk's string table not yet in m_ptr_tag_to_idhan, then returns the
+	//! chunk's local string indices resolved to IDHAN TagIDs. Index i of the result corresponds to
+	//! chunk.strings[i]; an entry is 0 if the tag could not be created.
+	std::vector< idhan::TagID > resolveChunkTags( const Chunk& chunk, const QString& progress_prefix );
+
+	ContentStats importChunk( const Chunk& chunk, idhan::TagDomainID domain_id, const QString& progress_prefix );
+
+	void loadImportedChunks();
+	void saveImportedChunks() const;
+
 	std::filesystem::path m_ptr_directory;
 	TranslationTables m_tables;
 
 	MetadataUpdate m_metadata;
 	std::unordered_set< std::string > m_imported_hashes;
+
+	//! True when the directory holds compacted output rather than raw update files.
+	bool m_compacted { false };
+	CompactManifest m_manifest;
+
+	//! ptr_tag_id -> IDHAN TagID, 0 meaning not yet created. A flat array rather than a map: at
+	//! PTR's 47M tag ids this is 188 MB of TagIDs with no strings, and it is what lets each tag be
+	//! created exactly once even though every chunk carries its own copy of the text.
+	std::vector< idhan::TagID > m_ptr_tag_to_idhan;
+
+	std::unordered_set< std::string > m_imported_chunks;
 
 	std::atomic< bool > m_cancelled { false };
 };

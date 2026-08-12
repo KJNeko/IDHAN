@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/18/24.
-//
-
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
