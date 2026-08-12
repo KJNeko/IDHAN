@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/24/25.
-//
-
 #include "HyAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "hyapi/helpers.hpp"

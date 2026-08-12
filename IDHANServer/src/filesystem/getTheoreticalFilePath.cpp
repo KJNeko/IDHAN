@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/30/25.
-//
-
 #include "IDHANTypes.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/HttpAppFramework.h"

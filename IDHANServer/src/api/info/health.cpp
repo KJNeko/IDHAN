@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/28/26.
-//
-
 #include "api/InfoAPI.hpp"
 
 namespace idhan::api

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/29/25.
-//
 // Windows dispatch: IOUring::getInstance() / IOUring::init() and FileIOUring Windows implementation.
 //
 #ifdef _WIN32

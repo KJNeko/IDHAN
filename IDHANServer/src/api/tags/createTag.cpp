@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/9/24.
-//
-
 #include <expected>
 
 #include "api/TagAPI.hpp"

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/12/25.
-//
 #pragma once
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
@@ -22,6 +19,9 @@ class PsdMetadata final : public idhan::MetadataModuleI
 
 	// pure parsing of the input buffer, no shared mutable state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
+
+	// shares a worker with PsdThumbnailer, which composites through vips
+	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
 	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data )
 		override;

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/10/25.
-//
 #include <QFuture>
 #include <QJsonArray>
 #include <QJsonObject>

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/17/26.
-//
 #pragma once
 
 #include <algorithm>
@@ -22,10 +19,10 @@ namespace idhan::api
  * production. tests/src/api/apiPrefixes.cpp asserts the two agree.
  */
 constexpr std::array api_prefixes { std::to_array< std::string_view >(
-	{ "/api",    "/auth",      "/clusters", "/db",        "/file",    "/generate_api_key",
-	  "/health", "/heartbeat", "/hyapi",    "/integrity", "/jobs",    "/layouts",
-	  "/log",    "/mime",      "/plugins",  "/purge",     "/records", "/relationships",
-	  "/search", "/tags",      "/test",     "/version" } ) };
+	{ "/api",    "/auth",      "/clusters", "/db",        "/embeddings",    "/file",    "/generate_api_key",
+	  "/health", "/heartbeat", "/hyapi",    "/integrity", "/jobs",          "/layouts", "/log",
+	  "/mime",   "/plugins",   "/purge",    "/records",   "/relationships", "/search",  "/tags",
+	  "/test",   "/version" } ) };
 
 /**
  * @brief True when @p path belongs to the API and must never fall back to the SPA.

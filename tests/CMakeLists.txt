@@ -16,3 +16,12 @@ add_dependencies(IDHANTests IDHANServer)
 include(CTest)
 include(GoogleTest)
 gtest_discover_tests(IDHANTests)
+
+# Plan-1 coro/io suites. Deliberately separate from IDHANTests: that target globs sources which call
+# into IDHANServer executable code (SearchBuilder, AuthEndpoint) and has never linked. This one
+# depends on IDHAN and GoogleTest only, so it needs neither drogon nor a live PostgreSQL.
+AddFGLExecutable(IDHANCoreTests ${CMAKE_CURRENT_SOURCE_DIR}/core)
+# IDHANModuleIPC for the moduleio suite: BlobFile and MemfdSink are the two ends of the module input
+# and output paths, and neither needs a worker, a server or a database to exercise.
+target_link_libraries(IDHANCoreTests PUBLIC IDHAN GTest::gtest_main PTRCore IDHANModuleIPC)
+gtest_discover_tests(IDHANCoreTests)

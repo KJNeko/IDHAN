@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/18/25.
-//
-
 #pragma once
 
 #include <drogon/HttpResponse.h>
@@ -17,7 +13,6 @@
 #include <vector>
 
 #include "IDHANTypes.hpp"
-#include "db/dbTypes.hpp"
 
 namespace idhan
 {
@@ -84,7 +79,7 @@ class SHA256
 	//! Fetches the SHA-256 of \p record_id from the database. \return the hash, or an error response.
 	[[nodiscard]] static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
 		RecordID record_id,
-		DbClientPtr db );
+		drogon::orm::DbClientPtr db );
 
 	//! Computes the SHA-256 of \p size bytes at \p data.
 	[[nodiscard]] static SHA256 hash( const std::byte* data, std::size_t size );

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/28/25.
-//
 #include "TagServiceWidget.hpp"
 
 #include <QWidget>

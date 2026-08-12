@@ -1,22 +1,22 @@
-//
-// Created by kj16609 on 11/25/25.
-//
-
 #include "archives.hpp"
 
-#include <archive.h>
 #include <openssl/evp.h>
 
+#include <archive.h>
+#include <archive_entry.h>
 #include <array>
 #include <chardet.h>
 #include <cstring>
 #include <cwchar>
 #include <expected>
 #include <iconv.h>
+#include <langinfo.h>
 #include <memory>
+#include <span>
 #include <string>
 
 #include "ModuleBase.hpp"
+#include "spdlog/spdlog.h"
 
 std::expected< std::string, idhan::ModuleError > encoding( const char* str )
 {
@@ -128,6 +128,62 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > readArchiveEntryDa
 	return data;
 }
 
+std::int64_t ArchiveModuleReader::onRead( archive* const a, void* const client_data, const void** const buffer )
+{
+	auto* const self { static_cast< ArchiveModuleReader* >( client_data ) };
+
+	*buffer = self->m_chunk.data();
+
+	const auto count { self->m_file->read( std::span< std::byte > { self->m_chunk }, self->m_position ) };
+
+	if ( !count )
+	{
+		// Stashed as well as set on the handle: archive_set_error copies the string, but keeping our
+		// own means the caller still has the real cause if libarchive overwrites it.
+		self->m_error = count.error();
+		archive_set_error( a, EIO, "%s", self->m_error.c_str() );
+		return -1;
+	}
+
+	self->m_position += *count;
+
+	return static_cast< std::int64_t >( *count );
+}
+
+std::expected< void, idhan::ModuleError > ArchiveModuleReader::open( archive* const a )
+{
+	if ( archive_read_open( a, this, nullptr, &ArchiveModuleReader::onRead, nullptr ) != ARCHIVE_OK )
+	{
+		const char* err { archive_error_string( a ) };
+		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_open failed" } );
+	}
+
+	return {};
+}
+
+std::expected< void, idhan::ModuleError > writeArchiveEntryData( archive* const a, idhan::ModuleSink& out )
+{
+	constexpr std::size_t chunk_size { 64 * 1024 };
+	std::array< std::byte, chunk_size > buffer {};
+
+	la_ssize_t read { 0 };
+	while ( ( read = archive_read_data( a, buffer.data(), buffer.size() ) ) > 0 )
+	{
+		if ( const auto written {
+				 out.write( std::span< const std::byte > { buffer.data(), static_cast< std::size_t >( read ) } ) };
+		     !written )
+			return std::unexpected( written.error() );
+	}
+
+	if ( read < 0 )
+	{
+		const char* err { archive_error_string( a ) };
+		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
+	}
+
+	return {};
+}
+
 std::expected< ArchiveEntryHash, idhan::ModuleError > hashArchiveEntryData( archive* a )
 {
 	const std::unique_ptr< EVP_MD_CTX, void ( * )( EVP_MD_CTX* ) > ctx {
@@ -203,4 +259,36 @@ std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str 
 		return std::unexpected( idhan::ModuleError { "iconv WCHAR_T conversion failed" } );
 
 	return std::string { out_buffer.data(), out_buffer.size() - out_size };
+}
+
+EntryNameResult entryFilename( archive_entry* entry, std::expected< std::string, idhan::ModuleError >& out )
+{
+	// Ordered by how much the name has already been normalised for us. The locale-dependent accessor
+	// comes first because that is what produced the names already recorded in stored metadata, and
+	// changing which accessor answers would change the resulting string for archives that store names
+	// in a legacy codepage -- names the generator still has to match.
+	if ( const char* filename_raw = archive_entry_pathname( entry ); filename_raw != nullptr )
+	{
+		out = sanitizeEncoding( filename_raw );
+	}
+	else if ( const char* utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
+	{
+		out = sanitizeEncoding( utf8_filename_raw );
+	}
+	else if ( const wchar_t* w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
+	{
+		// Wide-only name: convert it rather than dropping the entry.
+		out = wideToUtf8( w_filename_raw );
+	}
+	else
+	{
+		// The charset is reported because this is nearly always a locale problem rather than a broken
+		// archive, and without it the next report is another round of guessing.
+		spdlog::warn(
+			"No file name for item in archive? Maybe encrypted but not flagged as such? (locale charset: {})",
+			nl_langinfo( CODESET ) );
+		return EntryNameResult::UNNAMED;
+	}
+
+	return out ? EntryNameResult::OK : EntryNameResult::FAILED;
 }

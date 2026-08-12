@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/12/25.
-//
 #include "PsdMetadata.hpp"
 
 #include <algorithm>
@@ -29,10 +26,13 @@ idhan::ModuleVersion PsdMetadata::version()
 
 std::expected< idhan::MetadataInfo, idhan::ModuleError > PsdMetadata::parseFile( idhan::ModuleCallData& data )
 {
-	const auto& [ data_view, mime, extra ] = data;
-	const auto* bytes { data_view.data() };
+	const auto contents { readWholeFile( data.file ) };
+	if ( !contents ) return std::unexpected( contents.error() );
 
-	const auto header { parsePSDHeader( bytes, data_view.size() ) };
+	const auto* bytes { contents->data() };
+	const auto length { contents->size() };
+
+	const auto header { parsePSDHeader( bytes, length ) };
 	if ( !header )
 	{
 		return std::unexpected( idhan::ModuleError { "Invalid PSD header" } );
@@ -44,7 +44,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > PsdMetadata::parseFile(
 	project_metadata.image_info.width = static_cast< int >( header->width );
 	project_metadata.image_info.height = static_cast< int >( header->height );
 	project_metadata.image_info.channels = static_cast< std::uint8_t >( header->channels );
-	project_metadata.layers = static_cast< std::uint8_t >( countPSDLayers( bytes, data_view.size() ) );
+	project_metadata.layers = static_cast< std::uint8_t >( countPSDLayers( bytes, length ) );
 
 	generic_metadata.m_simple_type = idhan::SimpleMimeType::IMAGE_PROJECT;
 	generic_metadata.m_metadata = project_metadata;

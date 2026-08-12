@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 10/27/25.
-//
 #pragma once
 #include <drogon/orm/DbClient.h>
 #include <drogon/utils/coroutine.h>

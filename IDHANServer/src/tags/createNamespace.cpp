@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/27/25.
-//
-
 #include <expected>
 
 #include "errors/ErrorInfo.hpp"

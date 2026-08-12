@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/8/25.
-//
-
 #include <QFuture>
 #include <QJsonArray>
 #include <QJsonObject>

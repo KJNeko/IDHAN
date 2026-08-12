@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/7/25.
-//
 #include "UrlServiceWorker.hpp"
 
 #include <moc_UrlServiceWorker.cpp>

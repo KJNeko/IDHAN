@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 2/20/25.
-//
-
 #include "IDHANClient.hpp"
 #include "IDHANTypes.hpp"
 #include "splitTag.hpp"

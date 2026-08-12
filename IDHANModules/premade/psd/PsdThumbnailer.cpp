@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/25/25.
-//
 #include "PsdThumbnailer.hpp"
 
 #include <vips/vips.h>
@@ -32,11 +29,11 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 	std::size_t width,
 	std::size_t height )
 {
-	return std::unexpected( idhan::ModuleError { "Testing error" } );
+	const auto contents { readWholeFile( data.file ) };
+	if ( !contents ) return std::unexpected( contents.error() );
 
-	const auto& [ data_view, mime, extra ] = data;
-	const auto* bytes { ( data_view.data() ) };
-	const auto length { data_view.size() };
+	const auto* bytes { contents->data() };
+	const auto length { contents->size() };
 
 	const auto header { parsePSDHeader( bytes, length ) };
 	if ( !header )

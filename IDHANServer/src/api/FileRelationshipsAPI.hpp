@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/5/25.
-//
 #pragma once
 #include "APIAuth.hpp"
 #include "drogon/HttpController.h"

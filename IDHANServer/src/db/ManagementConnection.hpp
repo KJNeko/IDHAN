@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/24/24.
-//
-
 #pragma once
 
 #pragma GCC diagnostic push
@@ -13,6 +9,7 @@
 
 namespace idhan
 {
+
 struct ConnectionArguments;
 
 //! This class is used for the inital setup, migrations, and management of the idhan database.

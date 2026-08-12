@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/11/25.
-//
-
 #include <algorithm>
 #include <array>
 #include <fstream>
@@ -24,11 +20,7 @@
 #include "trantor/utils/ConcurrentTaskQueue.h"
 #pragma GCC diagnostic pop
 
-
 namespace idhan::api
-{
-
-namespace
 {
 
 //! Size-and-format-keyed cache path: thumbnails/t[hash 0:2]/[hash].[size].webp
@@ -46,7 +38,6 @@ std::string thumbnailCacheControl()
 {
 	return std::format( "private, max-age={}", helpers::default_max_age.count() );
 }
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id )
 {
@@ -74,7 +65,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	const auto thumbnail_location { thumbnailPath( hex, size ) };
 
-	if ( !std::filesystem::exists( thumbnail_location ) || force_regenerate )
+	const bool cache_enabled { getThumbnailCachingEnabled() };
+
+	if ( !cache_enabled || !std::filesystem::exists( thumbnail_location ) || force_regenerate )
 	{
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 
@@ -85,47 +78,32 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
 
-		// FileMappedData data { record_path.value() };
-		auto io_uring_e { co_await filesystem::getIOForRecord( record_id, db ) };
-		if ( !io_uring_e ) co_return io_uring_e.error();
-		auto& io_uring { io_uring_e.value() };
+		auto input_e { co_await filesystem::openRecordInput( record_id, db ) };
+		if ( !input_e ) co_return input_e.error();
 
 		const std::size_t height { size };
 		const std::size_t width { size };
 
-		std::vector< std::byte > buffer {};
+		modules::RemoteCallData call_data { .input = *input_e, .mime_name = mime_name };
 
-		try
-		{
-			buffer = co_await io_uring.readAll();
-		}
-		catch ( const std::exception& e )
-		{
-			co_return createInternalError( "Failed to read file for record {}: {}", record_id, e.what() );
-		}
-
-		// buffer must outlive createThumbnailFile below -- file_view does not own its bytes. Both
-		// live in this same block, so the lifetime holds.
-		const idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( buffer.data() ), buffer.size() };
-		ModuleCallData call_data { .file_view = data_view, .mime_name = mime_name, .extra = {} };
-
-		// check if we have any metadata for this
 		const auto extra_metadata {
 			co_await db->execSqlCoro( "SELECT json FROM metadata WHERE record_id = $1", record_id )
 		};
-		if ( extra_metadata.size() > 0 )
+
+		if ( !extra_metadata.empty() )
 		{
 			call_data.extra = extra_metadata[ 0 ][ 0 ].as< Json::Value >();
 		}
 
-		const auto thumbnail_info { thumbnailer->createThumbnailFile( call_data, width, height ) };
+		//TODO: If not caching, Do not use the file endpoint
+		const auto thumbnail_info { co_await thumbnailer->createThumbnailFile( call_data, width, height ) };
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );
 
 		// Cache to disk only for sizes the operator has opted in; other sizes are still generated and
 		// served, just never written (keeps the cache from exploding across arbitrary requested sizes).
 		const bool size_is_cacheable { std::ranges::contains( getCacheableThumbnailSizes(), size ) };
-		const bool should_cache { thumbnail_info->cache_thumbnail && size_is_cacheable };
+		const bool should_cache { cache_enabled && thumbnail_info->cache_thumbnail && size_is_cacheable };
 
 		if ( should_cache )
 		{
@@ -138,7 +116,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		}
 		else
 		{
-			if ( !thumbnail_info->cache_thumbnail )
+			if ( !cache_enabled )
+				log::debug( "Skipping thumbnail cache: the on-disk cache is disabled" );
+			else if ( !thumbnail_info->cache_thumbnail )
 				log::debug( "Skipping thumbnail cache due to module returning NOCACHE flag" );
 			else
 				log::debug( "Skipping thumbnail cache: size {} is not in the cacheable set", size );

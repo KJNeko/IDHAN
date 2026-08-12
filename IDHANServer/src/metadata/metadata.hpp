@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/13/25.
-//
 #pragma once
 #include <expected>
 
@@ -12,10 +9,14 @@
 
 namespace idhan
 {
-class MetadataModuleI;
 class FileMappedData;
 struct MetadataInfo;
 } // namespace idhan
+
+namespace idhan::modules
+{
+class RemoteModule;
+}
 
 namespace idhan::metadata
 {
@@ -26,7 +27,7 @@ ExpectedTask< void > addFileSpecificInfo( Json::Value& root, RecordID record_id,
 
 // Parsing
 
-[[nodiscard]] drogon::Task< std::shared_ptr< MetadataModuleI > > findBestParser( std::string mime_name );
+[[nodiscard]] drogon::Task< std::shared_ptr< modules::RemoteModule > > findBestParser( std::string mime_name );
 
 //! Triggers the metadata parsing for a record and updates it
 ExpectedTask< void > tryParseRecordMetadata( RecordID record_id, DbClientPtr db );

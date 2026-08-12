@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/6/24.
-//
 #include "HyAPIAuth.hpp"
 
 #include "constants/header-names.hpp"

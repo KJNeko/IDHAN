@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/8/24.
-//
 #include "Config.hpp"
 
 #include <ranges>

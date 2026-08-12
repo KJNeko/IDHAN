@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 5/2/25.
-//
 #pragma once
 #include <QGraphicsView>
 #include <QWidget>

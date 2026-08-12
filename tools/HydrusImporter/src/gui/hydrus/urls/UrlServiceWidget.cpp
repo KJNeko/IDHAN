@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/7/25.
-//
 // You may need to build the project (run Qt uic code generator) to get "ui_UrlServiceWidget.h" resolved
 
 #include "UrlServiceWidget.hpp"

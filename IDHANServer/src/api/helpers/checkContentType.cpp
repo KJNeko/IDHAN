@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/2/24.
-//
-
 #include "checkContentType.hpp"
 
 namespace idhan::api::helpers

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/12/25.
-//
-
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/utils/coroutine.h"
@@ -18,7 +14,7 @@ std::filesystem::path getFileFolder( const SHA256& sha256 )
 	return folder_name;
 }
 
-ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, DbClientPtr db )
+ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, drogon::orm::DbClientPtr db )
 {
 	const auto result { co_await db->execSqlCoro(
 

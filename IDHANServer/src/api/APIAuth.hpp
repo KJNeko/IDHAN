@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/8/24.
-//
 #pragma once
 
 #include "drogon/HttpController.h"
@@ -69,7 +66,7 @@ class AuthEndpoint final : public drogon::HttpController< AuthEndpoint >
 
 	METHOD_LIST_BEGIN
 	ADD_METHOD_TO( AuthEndpoint::verifyAccessKey, "/hyapi/verify_access_key", drogon::Get );
-	ADD_METHOD_TO( AuthEndpoint::generateApiKey, "/generate_api_key", drogon::Post );
+	ADD_METHOD_TO( AuthEndpoint::generateApiKey, "/generate_api_key" );
 	ADD_METHOD_TO( AuthEndpoint::verifyKey, "/auth/verify", drogon::Get, IDHANAPIAuthName );
 	METHOD_LIST_END
 };

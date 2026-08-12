@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/26/25.
-//
-
 #include "SettingsDialog.hpp"
 
 #include <moc_SettingsDialog.cpp>

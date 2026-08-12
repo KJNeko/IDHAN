@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 2/23/26.
-//
 #pragma once
 #include <coroutine>
 #include <memory>

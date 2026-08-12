@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/12/25.
-//
-
 #include "FFMPEGMetadata.hpp"
 
 #include <cstring>
@@ -37,7 +33,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 	base_info.m_simple_type = idhan::SimpleMimeType::VIDEO;
 	idhan::MetadataInfoVideo video_metadata {};
 
-	OpaqueInfo opaque_info { .m_data = data.file_view, .m_cursor = 0 };
+	OpaqueInfo opaque_info { .m_file = &data.file, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
 	// std::array< std::byte, BUFFER_SIZE > buffer {};

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/5/25.
-//
-
 #include "IDHANTypes.hpp"
 #include "api/FileRelationshipsAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"

@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "PTRFileParser.hpp"
+#include "ptr/PTRFileParser.hpp"
 
 namespace idhan::hydrus::ptr
 {

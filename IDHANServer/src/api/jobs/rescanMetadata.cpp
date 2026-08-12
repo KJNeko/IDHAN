@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/12/25.
-//
-
 #include "IDHANTypes.hpp"
 #include "api/APIMaintenance.hpp"
 #include "jobs/JobContext.hpp"

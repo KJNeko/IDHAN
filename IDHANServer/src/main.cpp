@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #include <QCommandLineParser>
 // FUCKING QT IS RETARDED
 #undef signals
@@ -130,8 +126,9 @@ int main( int argc, char** argv )
 	use_stdout.setDefaultValue( "1" );
 	parser.addOption( use_stdout );
 
-	QCommandLineOption use_testmode { "testmode", "Forces the DB to use the `test` schema", "testmode" };
-	parser.addOption( use_testmode );
+	QCommandLineOption pg_schema { "pg_schema", "The PostgreSQL schema to use (default: 'public')", "pg_schema" };
+	pg_schema.setDefaultValue( "public" );
+	parser.addOption( pg_schema );
 
 	QCommandLineOption config_location { "config", "The location for the config file", "config_location" };
 	config_location.setDefaultValue( "./config.json" );
@@ -150,6 +147,11 @@ int main( int argc, char** argv )
 
 	applyCLISettings( "database", "hostname", parser, pg_host );
 
+	// The config key MUST match what ConnectionArguments reads ("database", "schema"). The pg_host
+	// flag above is a live example of what happens when they differ: it writes "database.hostname"
+	// while ConnectionArguments reads "database.host", so it does nothing.
+	applyCLISettings( "database", "schema", parser, pg_schema );
+
 	checkForceStart( parser, force_start );
 
 	idhan::ConnectionArguments arguments {};
@@ -162,9 +164,7 @@ int main( int argc, char** argv )
 
 	configureLoggingLevel( parser, log_level, arguments );
 
-	arguments.testmode |= parser.isSet( use_testmode );
-
-	if ( arguments.testmode ) spdlog::warn( "Using testmode" );
+	if ( arguments.schema != idhan::db::DEFAULT_SCHEMA ) spdlog::info( "Using database schema: {}", arguments.schema );
 
 	if ( parser.isSet( use_stdout ) && ( parser.value( use_stdout ).toInt() == 0 ) )
 	{

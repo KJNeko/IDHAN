@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 2/21/26.
-//
 #pragma once
 #include <atomic>
 #include <condition_variable>

@@ -49,6 +49,24 @@ option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 # purges on a decay timer instead and gives the pages back.
 option(IDHAN_USE_JEMALLOC "Link the server against jemalloc instead of the system allocator" OFF)
 
+# Containment that trades debuggability for confinement, so it defaults off in Debug and on
+# everywhere else. Two things sit behind it:
+#   - PR_SET_DUMPABLE(0) on the server, blocking same-uid ptrace. Without it a compromised module
+#     worker can attach to the server and take the database credentials, which makes the rest of the
+#     sandbox moot on any host with yama.ptrace_scope=0. Costs `gdb -p` against a running server.
+#   - RLIMIT_CORE = 0 on workers. A core from a worker contains the decoded media it was processing.
+#     Costs the core dump from a worker a malformed file just killed -- which is exactly what you
+#     want when debugging a codec crash, hence the same switch rather than unconditional.
+# An option() rather than build-type-driven so it can be turned off in a release build that is being
+# debugged, which is when it bites.
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(IDHAN_HARDEN_DEFAULT OFF)
+else ()
+	set(IDHAN_HARDEN_DEFAULT ON)
+endif ()
+
+option(IDHAN_HARDEN "Block same-uid ptrace of the server and disable worker core dumps" ${IDHAN_HARDEN_DEFAULT})
+
 # TEMPORARY (coroutine frame leak hunt): embeds a lifetime probe in drogon's promise types so live
 # coroutine frames can be listed via GET /coro/frames. This changes drogon::Task's promise_type
 # layout, so it is applied by patching a build-tree COPY of drogon's coroutine.h and setting the
@@ -88,9 +106,11 @@ if (BUILD_IDHAN_CLIENT)
 	add_subdirectory(IDHANClient)
 endif ()
 
+
 if (BUILD_HYDRUS_IMPORTER OR BUILD_IDHAN_TOOLS)
 	#HydrusImporter
 	include(sqlite3)
+	add_subdirectory(tools/HydrusImporter/ptr-core)
 	add_subdirectory(tools/HydrusImporter)
 endif ()
 

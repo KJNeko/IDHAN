@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/29/25.
-//
 #ifdef __linux__
 
 #include "filesystem/io/linux/IOUringLinux.hpp"
@@ -13,6 +10,7 @@
 #include <liburing.h>
 #include <malloc.h>
 #include <stdexcept>
+#include <utility>
 
 #include "drogon/HttpAppFramework.h"
 #include "filesystem/io/linux/ReadAwaiter.hpp"
@@ -33,10 +31,8 @@ FileIOUring::FileDescriptor::~FileDescriptor()
 	if ( m_fd > 0 ) close( m_fd );
 }
 
-FileIOUring::FileDescriptor::FileDescriptor( FileDescriptor&& other ) noexcept : m_fd( other.m_fd )
-{
-	other.m_fd = -1;
-}
+FileIOUring::FileDescriptor::FileDescriptor( FileDescriptor&& other ) noexcept : m_fd( std::exchange( other.m_fd, -1 ) )
+{}
 
 FileIOUring::FileDescriptor& FileIOUring::FileDescriptor::operator=( FileDescriptor&& other ) noexcept
 {

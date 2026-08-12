@@ -1,11 +1,8 @@
-//
-// Created by kj16609 on 11/13/25.
-//
-
 #include "FFMPEGThumbnailer.hpp"
 
 #include <vips/vips.h>
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -112,7 +109,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	std::size_t width,
 	std::size_t height )
 {
-	OpaqueInfo opaque_info { .m_data = data.file_view, .m_cursor = 0 };
+	OpaqueInfo opaque_info { .m_file = &data.file, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
 	// must be av_malloc'd: libavformat may free()/realloc() this buffer internally, and freeing

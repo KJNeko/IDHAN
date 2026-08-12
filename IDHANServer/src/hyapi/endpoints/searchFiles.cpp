@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/14/25.
-//
-
 #include "api/helpers/createBadRequest.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
@@ -124,19 +120,19 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	Json::Value out {};
 
 	const auto json_start = std::chrono::system_clock::now();
-	Json::Value file_ids {};
-	Json::Value hashes {};
-	Json::ArrayIndex i { 0 };
+	Json::Value file_ids { Json::arrayValue };
+	Json::Value hashes { Json::arrayValue };
 
-	file_ids.resize( static_cast< Json::Value::ArrayIndex >( result.size() ) );
-	hashes.resize( static_cast< Json::Value::ArrayIndex >( result.size() ) );
-
-	for ( const auto& row : result )
+	if ( return_file_ids )
 	{
-		if ( return_file_ids ) file_ids[ i ] = row[ "record_id" ].as< RecordID >();
-		if ( return_hashes ) hashes[ i ] = SHA256::fromPgCol( row[ "sha256" ] ).hex();
+		file_ids.resize( static_cast< Json::Value::ArrayIndex >( result.record_ids.size() ) );
+		for ( Json::ArrayIndex i = 0; i < result.record_ids.size(); ++i ) file_ids[ i ] = result.record_ids[ i ];
+	}
 
-		i += 1;
+	if ( return_hashes )
+	{
+		hashes.resize( static_cast< Json::Value::ArrayIndex >( result.hashes.size() ) );
+		for ( Json::ArrayIndex i = 0; i < result.hashes.size(); ++i ) hashes[ i ] = result.hashes[ i ].hex();
 	}
 
 	if ( return_file_ids ) out[ "file_ids" ] = std::move( file_ids );

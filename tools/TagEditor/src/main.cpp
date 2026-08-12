@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 5/2/25.
-//
-
 #include <QApplication>
 
 #include "ui/MainWindow.hpp"
