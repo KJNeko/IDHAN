@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include "api/helpers/helpers.hpp"
+#include "decodeHex.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "fgl/defines.hpp"
@@ -282,6 +283,74 @@ void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, const std::string
 	narrowRange( target, parseRangeTerm( tag ) );
 }
 
+SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
+{
+	constexpr std::string_view whitespace { " \t" };
+	constexpr std::size_t hex_length { SHA256::size() * 2 };
+
+	// Refused rather than ignored. A hash has no ordering to search by, and `!=` is an exclusion,
+	// which is a different shape of term than the positive set this builds.
+	if ( arguments.find_first_of( "<>!~" ) != std::string_view::npos || arguments.contains( "≠" )
+	     || arguments.contains( "≈" ) )
+		throw std::invalid_argument( format_ns::format( "A hash predicate only supports '=', got '{}'", arguments ) );
+
+	const auto equals { arguments.find( '=' ) };
+	if ( equals == std::string_view::npos )
+		throw std::invalid_argument( format_ns::format( "A hash predicate needs '= <hash>', got '{}'", arguments ) );
+
+	auto value { arguments.substr( equals + 1 ) };
+
+	// Trimmed at both ends so the split below counts hashes rather than the spaces around them.
+	if ( const auto first { value.find_first_not_of( whitespace ) }; first != std::string_view::npos )
+		value.remove_prefix( first );
+	else
+		value = {};
+
+	if ( const auto last { value.find_last_not_of( whitespace ) }; last != std::string_view::npos )
+		value.remove_suffix( value.size() - last - 1 );
+
+	if ( value.empty() ) throw std::invalid_argument( "A hash predicate named no hash" );
+
+	// Hydrus writes the algorithm as a trailing word (`system:hash = abcd... md5`). Naming it is not
+	// a malformed search, it is a search over something IDHAN does not store, so it gets its own
+	// message rather than the generic one about hash length.
+	if ( const auto separator { value.find_first_of( " \t," ) }; separator != std::string_view::npos )
+	{
+		const auto tail { value.substr( separator + 1 ) };
+
+		for ( const auto algorithm : { "md5", "sha1", "sha512" } )
+			if ( tail.contains( algorithm ) )
+				throw std::invalid_argument(
+					format_ns::format( "Only sha256 is stored, so a {} hash cannot be searched", algorithm ) );
+
+		// Several hashes read as OR, and every term this builds is intersected with the others, so
+		// accepting them would answer the opposite question. Refused until there is an OR to hold them.
+		throw std::invalid_argument( "Only one hash at a time is supported for now" );
+	}
+
+	if ( value.size() != hex_length )
+		throw std::invalid_argument(
+			format_ns::format( "A sha256 is {} hex characters, '{}' is {}", hex_length, value, value.size() ) );
+
+	// decodeHex throws std::invalid_argument on a non-hex character, which is the same thing the
+	// caller already turns into a 400, so there is nothing to translate here.
+	const auto bytes { decodeHex( std::string { value } ) };
+
+	return SHA256::fromBuffer( bytes );
+}
+
+void SearchBuilder::setHashSearch( const std::string_view arguments )
+{
+	auto hash { parseHashSearch( arguments ) };
+
+	// Two hashes cannot both be the hash of one record, so a second predicate would empty the search.
+	// That is a typo every time, and saying so beats returning nothing and letting them wonder.
+	if ( !std::holds_alternative< std::monostate >( m_hash_search ) )
+		throw std::invalid_argument( "Only one hash predicate is supported for now" );
+
+	m_hash_search = std::move( hash );
+}
+
 void SearchBuilder::parseFilesizeSearch( RangeSearchInfo& target, const std::string_view tag )
 {
 	auto term { parseRangeTerm( tag ) };
@@ -398,6 +467,7 @@ std::optional< std::string_view > SearchBuilder::impossiblePredicate() const
 	if ( m_width_search.impossible() ) return "width";
 	if ( m_height_search.impossible() ) return "height";
 	if ( m_archive_search.impossible() ) return "archive";
+	if ( m_record_search.impossible() ) return "record";
 	return std::nullopt;
 }
 
@@ -462,6 +532,28 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		add( {},
 		     renderBounds( "fi.size", m_filesize_search ),
 		     format_ns::format( "system:{}", renderBounds( "filesize", m_filesize_search ) ) );
+
+	// A subquery rather than the correlated EXISTS the archive predicates use, because the two drive
+	// from opposite ends. sha256 is UNIQUE, so this side resolves to at most one record_id through one
+	// index lookup, and writing it as IN lets the planner start there and probe file_info's primary
+	// key -- where EXISTS would invite a scan of file_info with a lookup per row.
+	//
+	// The hash is inlined rather than bound because a predicate is a SQL string with nowhere to carry
+	// parameters. It is safe to inline for the same reason it is cheap: hex() returns 64 characters
+	// from [0-9a-f], and the value it returns was built by decodeHex, which accepts nothing else.
+	if ( const auto* const hash { std::get_if< SHA256 >( &m_hash_search ) } )
+		add( {},
+		     format_ns::format(
+				 "fi.record_id IN (SELECT phr.record_id FROM records phr WHERE phr.sha256 = '\\x{}'::bytea)",
+				 hash->hex() ),
+		     format_ns::format( "system:sha256 = {}", hash->hex() ) );
+
+	// Also joinless, and the cheapest predicate there is: record_id is file_info's primary key, so an
+	// equality term is a single index lookup.
+	if ( m_record_search.m_active )
+		add( {},
+		     renderBounds( "fi.record_id", m_record_search ),
+		     format_ns::format( "system:{}", renderBounds( "record", m_record_search ) ) );
 
 	return predicates;
 }
@@ -1046,8 +1138,12 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	}
 	// system:hash = abcdef01 abcdef02 abcdef03 (this does sha256)
 	// system:hash = abcdef01 abcdef02 md5
+	//
+	// Hydrus's spelling, and it means sha256 there too when no algorithm is named. The list and the
+	// other algorithms are what IDHAN cannot answer; setHashSearch says which of the two it was.
 	if ( system_subtag.starts_with( "hash" ) )
 	{
+		setHashSearch( system_subtag.substr( 4 ) );
 		return true;
 	}
 	// system:modified date < 7 years 45 days 7h // system:modified date > 2011-06-04
@@ -1170,6 +1266,23 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 		if ( system_subtag.starts_with( "not in archive" ) )
 		{
 			m_in_archive_search = ArchiveSearchType::NoArchive;
+			continue;
+		}
+
+		// system:sha256 = abcdef01...
+		// IDHAN's own spelling, and the honest one: it names the algorithm actually stored.
+		if ( system_subtag.starts_with( "sha256" ) )
+		{
+			setHashSearch( system_subtag.substr( 6 ) );
+			continue;
+		}
+
+		// system:record = 1234 // system:record_id > 5000 // system:record id != 7
+		// One prefix covers all three spellings, since the range parser reads the number out of
+		// whatever follows.
+		if ( system_subtag.starts_with( "record" ) )
+		{
+			parseRangeSearch( m_record_search, system_subtag );
 			continue;
 		}
 
