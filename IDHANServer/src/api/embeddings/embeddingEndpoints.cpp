@@ -7,6 +7,7 @@
 #include "api/EmbeddingAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "embeddings/embeddings.hpp"
+#include "embeddings/queryTerms.hpp"
 #include "embeddings/searchEmbeddings.hpp"
 #include "jobs/JobContext.hpp"
 #include "modules/ModuleLoader.hpp"
@@ -138,46 +139,10 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 	if ( !terms_json.isArray() ) co_return createBadRequest( "Expected an array \"terms\"" );
 	if ( terms_json.empty() ) co_return createBadRequest( "A query needs at least one term" );
 
-	std::vector< embeddings::QueryTerm > terms {};
-	terms.reserve( terms_json.size() );
+	auto parsed_terms { embeddings::parseQueryTerms( terms_json ) };
+	if ( !parsed_terms ) co_return parsed_terms.error();
 
-	for ( const auto& entry : terms_json )
-	{
-		if ( !entry.isObject() ) co_return createBadRequest( "Every term must be an object" );
-		if ( !entry[ "type" ].isString() ) co_return createBadRequest( "Every term needs a string \"type\"" );
-
-		const auto type { entry[ "type" ].asString() };
-
-		embeddings::QueryTerm term {};
-
-		// Defaulted rather than required: an unweighted term is the common case, and 1.0 is where a
-		// freshly added term starts.
-		term.m_weight = entry[ "weight" ].isNumeric() ? static_cast< float >( entry[ "weight" ].asDouble() ) : 1.0f;
-
-		if ( type == "text" )
-		{
-			if ( !entry[ "text" ].isString() ) co_return createBadRequest( "A text term needs a string \"text\"" );
-
-			term.m_is_text = true;
-			term.m_text = entry[ "text" ].asString();
-
-			if ( term.m_text.empty() ) co_return createBadRequest( "A text term cannot be empty" );
-		}
-		else if ( type == "record" )
-		{
-			if ( !entry[ "record_id" ].isIntegral() )
-				co_return createBadRequest( "A record term needs an integral \"record_id\"" );
-
-			term.m_is_text = false;
-			term.m_record_id = static_cast< RecordID >( entry[ "record_id" ].asInt64() );
-		}
-		else
-		{
-			co_return createBadRequest( "Unknown term type \"{}\"; expected \"text\" or \"record\"", type );
-		}
-
-		terms.emplace_back( std::move( term ) );
-	}
+	auto terms { std::move( parsed_terms.value() ) };
 
 	auto db { drogon::app().getDbClient() };
 
