@@ -1,14 +1,17 @@
 # Tag System Migrations & Trigger Review
 
+> This system is hell, I'm not sorry if you are trying to understand this.
+
 This document is a deep-dive description of every trigger and function that drives IDHAN's tag
 resolution system: raw mappings → active (alias-resolved) mappings → parent propagation →
-counts. It traces each migration file in execution order, documents the *current* effective
-behaviour (later migrations frequently `CREATE OR REPLACE` a function defined earlier, or
-`DROP`/recreate a trigger outright), and walks through worked examples for the cases that
-matter operationally.
+counts. It documents the *current* effective behaviour and walks through worked examples for the
+cases that matter operationally.
 
-Migrations execute in ascending numeric-prefix order at server startup (see `IDHANMigration/src/`,
-CLAUDE.md). All line/file references below are to that directory.
+Migrations execute in ascending numeric-prefix order at server startup. Each database object lives
+in its own directory (`func_<name>/`, `table_<name>/`, `view_<name>/`), a trigger's `CREATE TRIGGER`
+binding lives with its function, and the `NNN` prefix is global across all directories. See
+`IDHANMigration/src/README.md` for the layout. All file references below are `directory/NNN-file.sql`
+relative to `IDHANMigration/src/`.
 
 ## 1. Schema map
 
@@ -29,14 +32,28 @@ tag_domains ─────┼─→ tag_mappings   (record_id, tag_id, tag_doma
                  ├─→ tag_siblings (older_id, younger_id, tag_domain_id)   -- see §5, read-only via the API
                  └─→ tag_counts   (tag_id, tag_domain_id, storage_count, display_count)
 
-active_tag_mappings_final (view) = active_tag_mappings ∪ active_tag_mappings_parents,
-                                    both branches alias-resolved.
+active_tag_mappings_final (view) = active_tag_mappings ∪ active_tag_mappings_parents (UNION ALL)
 ```
+
+The two view branches resolve aliases at *different times*, which is easy to misread:
+
+- The `active_tag_mappings` branch resolves at **read** time, `COALESCE(ideal_tag_id, tag_id)`.
+- The `active_tag_mappings_parents` branch selects `tag_id` verbatim, because that column is kept
+  alias-resolved at **write** time by `repair_parents_on_alias` (`func_repair_parents_on_alias/098-create.sql`).
+
+`view_active_tag_mappings_final/034-create.sql` originally resolved the parents branch through a
+`LEFT JOIN tag_aliases`; `099-rewrite.sql` dropped it once 098 closed the write path. That join was
+not just redundant, it defeated the index: putting the predicate on the output of a join meant
+`tag_id = <id>` could not be pushed down to `active_tag_mappings_parents (tag_id) INCLUDE (record_id)`
+(`table_active_tag_mappings_parents/043-index.sql`). Measured on a 3M-row parents table with 195k
+aliases, one lookup read 20338 buffers in 171 ms; without the COALESCE the same lookup is an
+index-only scan at 31 buffers and 0.449 ms. The branches are disjoint by construction, so `UNION ALL`
+needs no dedup.
 
 `tag_mappings`, `tag_aliases`, and `tag_parents` are `PARTITION BY LIST (tag_domain_id)`; a
 partition per domain is created automatically the moment a row is inserted into `tag_domains`
-(migration `80-func_createTagDomainPartitions.sql`). `active_tag_mappings`,
-`active_tag_mappings_parents`, and `tag_counts` are **not** partitioned — `tag_domain_id` is
+(`func_createtagdomainpartitions/031-create.sql`). `active_tag_mappings`,
+`active_tag_mappings_parents`, and `tag_counts` are **not** partitioned; `tag_domain_id` is
 just an indexed column there.
 
 ## 2. Concepts
@@ -62,49 +79,62 @@ just an indexed column there.
 
 ## 3. Trigger inventory (final, effective state)
 
-Functions marked "redefined in" keep their original trigger binding — Postgres binds a trigger
-to a function by OID, so `CREATE OR REPLACE FUNCTION` transparently upgrades every trigger that
-already points at it. Several migrations are hotfixes that *only* replace a function body without
-touching the `CREATE TRIGGER` statement.
+Postgres binds a trigger to its function by OID, so a later `CREATE OR REPLACE FUNCTION` upgrades
+every trigger already pointing at it without touching the `CREATE TRIGGER`. Where a function has
+more than one file below, the later file is such a replacement.
 
-| Table | Trigger | Timing/Level | Function | Defined in | Redefined in |
-|---|---|---|---|---|---|
-| `tag_domains` | `trg_create_tag_domain_partitions` | BEFORE INSERT, ROW | `createtagdomainpartitions()` | 80 | — |
-| `tag_mappings` | `trg_tag_mappings_after_insert` | AFTER INSERT, **STATEMENT** (`REFERENCING NEW TABLE new_rows`) | `func_tag_mappings_after_insert()` | 76 | — |
-| `file_info` | `trg_tag_mappings_after_active_insert` | AFTER INSERT, **STATEMENT** | `func_tag_mappings_after_active_insert()` | 76 | — |
-| `tag_aliases` | `tag_aliases_before_insert` | BEFORE INSERT, ROW | `tag_aliases_before_insert_trigger()` | 73 | **187** (adds explicit cycle raise) |
-| `tag_aliases` | `tag_aliases_after_insert` | AFTER INSERT, ROW | `tag_aliases_after_insert_trigger()` | 73 | — |
-| `tag_aliases` | `tag_aliases_after_delete` | AFTER DELETE, ROW | `tag_aliases_after_delete_trigger()` | 74 | — |
-| `tag_aliases` | `tag_aliases_after_update` | AFTER UPDATE, ROW | `tag_aliases_after_update_trigger()` | 75 | — |
-| `tag_aliases` | `trg_repair_tag_mappings_ideals_insert` | AFTER INSERT, ROW | `repair_tag_mappings_ideals_insert()` | 77 | — |
-| `tag_aliases` | `trg_repair_tag_mappings_ideals_update` | AFTER UPDATE, ROW | `repair_tag_mappings_ideals_update()` | 77 | — |
-| `tag_aliases` | `trg_repair_tag_mappings_ideals_delete` | AFTER DELETE, ROW | `repair_tag_mappings_ideals_delete()` | 77 | — |
-| `tag_parents` | `trg_tag_parents_before_insert` | BEFORE INSERT, ROW | `tag_parents_before_insert_trigger()` | 189 | — |
-| `tag_parents` | `trg_check_parent_cycle` | BEFORE INSERT, ROW | `check_parent_cycle()` | 105 | — |
-| `tag_parents` | `trg_insert_parent_mapping` | AFTER INSERT, ROW | `insert_parent_mapping()` | 105 | **174** (ideal-aware matching) |
-| `tag_parents` | `trg_delete_parent_mapping` | AFTER DELETE, ROW | `delete_parent_mapping()` | 105 | **174** (ideal-aware matching) |
-| `active_tag_mappings` | `trg_intercept_parent_mapping` | BEFORE INSERT, ROW | `intercept_parent_mapping()` | 105 | — |
-| `active_tag_mappings` | `trg_insert_parents_from_active_mappings` | AFTER INSERT, ROW | `insert_parents_from_active_mappings()` | 105 | **174**, **175** (fixed self-`excluded` bug), **189** (unified effective-tag matching, single branch) |
-| `active_tag_mappings` | `trg_delete_parents_from_active_mappings` | AFTER DELETE, ROW | `delete_parents_from_active_mappings()` | 105 | — |
-| `active_tag_mappings` | `trg_repropagate_parents_on_ideal_change` | AFTER UPDATE, ROW (`WHEN` guarded on effective-tag change) | `repropagate_parents_on_ideal_change()` | 190 | — |
-| `active_tag_mappings` | `accumulate_tag_count_trigger` | AFTER INSERT OR UPDATE OR DELETE, ROW | `accumulate_tag_count_storage()` | 93 | — |
-| `active_tag_mappings_parents` | `trg_atmp_internal_insert` | AFTER INSERT, ROW | `atmp_internal_on_insert()` | 91 | **170** (added `DISTINCT`) |
-| `active_tag_mappings_parents` | `trg_atmp_internal_delete` | AFTER DELETE, ROW | `atmp_internal_on_delete()` | 91 | — |
-| `active_tag_mappings_parents` | `trg_accumulate_tag_count_parents` | AFTER INSERT OR DELETE, ROW | `accumulate_tag_count_parents()` | 191 | — |
+Within one table and timing class, Postgres fires triggers in **name order**, and all row-level
+triggers fire before any statement-level one. On `tag_aliases` AFTER INSERT that means
+`tag_aliases_after_insert`, then `trg_repair_tag_mappings_ideals_insert`, then the statement-level
+`repair_parents_on_alias_insert`.
 
-### Dropped / superseded (no longer exist)
+| Table                         | Trigger                                   | Timing/Level                                                      | Function                                  | Defined in                                                |
+|-------------------------------|-------------------------------------------|-------------------------------------------------------------------|-------------------------------------------|-----------------------------------------------------------|
+| `tag_domains`                 | `trg_create_tag_domain_partitions`        | BEFORE INSERT, ROW                                                | `createtagdomainpartitions()`             | `func_createtagdomainpartitions/031-create.sql`           |
+| `tag_mappings`                | `trg_tag_mappings_after_insert`           | AFTER INSERT, **STATEMENT** (`REFERENCING NEW TABLE new_rows`)    | `func_tag_mappings_after_insert()`        | `func_tag_mappings_after_insert/026-create.sql`           |
+| `file_info`                   | `trg_tag_mappings_after_active_insert`    | AFTER INSERT, **STATEMENT** (`REFERENCING NEW TABLE new_rows`)    | `func_tag_mappings_after_active_insert()` | `func_tag_mappings_after_active_insert/027-create.sql`    |
+| `tag_aliases`                 | `tag_aliases_before_insert`               | BEFORE INSERT, ROW                                                | `tag_aliases_before_insert_trigger()`     | `func_tag_aliases_before_insert_trigger/023-create.sql`   |
+| `tag_aliases`                 | `tag_aliases_after_insert`                | AFTER INSERT, ROW                                                 | `tag_aliases_after_insert_trigger()`      | `func_tag_aliases_after_insert_trigger/022-create.sql`    |
+| `tag_aliases`                 | `tag_aliases_after_delete`                | AFTER DELETE, ROW                                                 | `tag_aliases_after_delete_trigger()`      | `func_tag_aliases_after_delete_trigger/024-create.sql`    |
+| `tag_aliases`                 | `tag_aliases_after_update`                | AFTER UPDATE, ROW                                                 | `tag_aliases_after_update_trigger()`      | `func_tag_aliases_after_update_trigger/025-create.sql`    |
+| `tag_aliases`                 | `trg_repair_tag_mappings_ideals_insert`   | AFTER INSERT, ROW                                                 | `repair_tag_mappings_ideals_insert()`     | `func_repair_tag_mappings_ideals_insert/028-create.sql`   |
+| `tag_aliases`                 | `trg_repair_tag_mappings_ideals_update`   | AFTER UPDATE, ROW                                                 | `repair_tag_mappings_ideals_update()`     | `func_repair_tag_mappings_ideals_update/029-create.sql`   |
+| `tag_aliases`                 | `trg_repair_tag_mappings_ideals_delete`   | AFTER DELETE, ROW                                                 | `repair_tag_mappings_ideals_delete()`     | `func_repair_tag_mappings_ideals_delete/030-create.sql`   |
+| `tag_aliases`                 | `repair_parents_on_alias_insert`          | AFTER INSERT, **STATEMENT** (`REFERENCING NEW TABLE new_aliases`) | `repair_parents_on_alias()`               | `func_repair_parents_on_alias/098-create.sql`             |
+| `tag_aliases`                 | `repair_parents_on_alias_update`          | AFTER UPDATE, **STATEMENT** (`REFERENCING NEW TABLE new_aliases`) | `repair_parents_on_alias()`               | `func_repair_parents_on_alias/098-create.sql`             |
+| `tag_parents`                 | `trg_tag_parents_before_insert`           | BEFORE INSERT, ROW                                                | `tag_parents_before_insert_trigger()`     | `func_tag_parents_before_insert_trigger/083-create.sql`   |
+| `tag_parents`                 | `trg_check_parent_cycle`                  | BEFORE INSERT, ROW                                                | `check_parent_cycle()`                    | `func_check_parent_cycle/044-create.sql`                  |
+| `tag_parents`                 | `trg_insert_parent_mapping`               | AFTER INSERT, ROW                                                 | `insert_parent_mapping()`                 | `func_insert_parent_mapping/045-create.sql`               |
+| `tag_parents`                 | `trg_delete_parent_mapping`               | AFTER DELETE, ROW                                                 | `delete_parent_mapping()`                 | `func_delete_parent_mapping/046-create.sql`               |
+| `active_tag_mappings`         | `trg_intercept_parent_mapping`            | BEFORE INSERT, ROW                                                | `intercept_parent_mapping()`              | `func_intercept_parent_mapping/049-create.sql`            |
+| `active_tag_mappings`         | `trg_insert_parents_from_active_mappings` | AFTER INSERT, ROW                                                 | `insert_parents_from_active_mappings()`   | `func_insert_parents_from_active_mappings/047-create.sql` |
+| `active_tag_mappings`         | `trg_delete_parents_from_active_mappings` | AFTER DELETE, ROW                                                 | `delete_parents_from_active_mappings()`   | `func_delete_parents_from_active_mappings/048-create.sql` |
+| `active_tag_mappings`         | `trg_repropagate_parents_on_ideal_change` | AFTER UPDATE, ROW (`WHEN` guarded on effective-tag change)        | `repropagate_parents_on_ideal_change()`   | `func_repropagate_parents_on_ideal_change/085-create.sql` |
+| `active_tag_mappings`         | `accumulate_tag_count_trigger`            | AFTER INSERT OR UPDATE OR DELETE, ROW                             | `accumulate_tag_count_storage()`          | `func_accumulate_tag_count_storage/038-create.sql`        |
+| `active_tag_mappings_parents` | `trg_atmp_internal_insert`                | AFTER INSERT, ROW                                                 | `atmp_internal_on_insert()`               | `func_atmp_internal_on_insert/039-create.sql`             |
+| `active_tag_mappings_parents` | `trg_atmp_internal_delete`                | AFTER DELETE, ROW                                                 | `atmp_internal_on_delete()`               | `func_atmp_internal_on_delete/040-create.sql`             |
+| `active_tag_mappings_parents` | `trg_accumulate_tag_count_parents`        | AFTER INSERT OR DELETE, ROW                                       | `accumulate_tag_count_parents()`          | `func_accumulate_tag_count_parents/086-create.sql`        |
 
-Migration `91-func_activeTagParents.sql` originally created a *different* set of triggers on
-`tag_parents` and `active_tag_mappings` (`trg_insert_active_tag_mapping_parent`,
-`trg_delete_active_tag_mapping_parent`, `trg_insert_active_tag_mappings_parents_from_mappings`,
-`trg_delete_active_tag_mappings_parents_from_mappings`, `trg_intercept_active_tag_mappings_parents`).
-Migration `105-active_tag_parents_triggers.sql` explicitly `DROP TRIGGER`s all five and replaces
-them with the ideal-aware, cycle-checked set listed above. The original functions from 91 are
-dead (no longer bound to any trigger) but not dropped from the catalog.
+The count helpers `add_count()` and `remove_count()` are not triggers; they are called by the two
+`accumulate_*` functions above. Both were rewritten to drop a `LOCK TABLE tag_counts IN EXCLUSIVE
+MODE` that serialised every writer process-wide for the duration of a transaction
+(`func_add_count/094-rewrite.sql`, `func_remove_count/095-rewrite.sql`). The `ON CONFLICT` target is
+already the primary key, so the lock bought nothing.
 
-`tag_text(...)` overloads and `concat_tag(...)` (migration 20) are plain `IMMUTABLE` functions
-backing the `GENERATED ALWAYS AS (tag_text(...)) STORED` column on `tags` — not triggers, listed
-here only because they're part of the tag pipeline.
+`tag_text(...)` overloads (`func_tag_text/008-create.sql`, `func_tag_text_by_id/051-create.sql`) and
+`concat_tag(...)` (`func_concat_tag/007-create.sql`) are plain `IMMUTABLE` functions backing the
+`GENERATED ALWAYS AS (tag_text(...)) STORED` column on `tags`. Not triggers, listed here only
+because they are part of the tag pipeline.
+
+### On migration history
+
+There are no `DROP TRIGGER` statements anywhere in the tree. Earlier revisions of this document
+described migration `105` dropping a superseded trigger set created by migration `91`, and listed a
+"redefined in" column citing hotfix migrations `170`/`174`/`175`/`187`/`189`. Those flat migration
+files no longer exist: the tree was reorganised into per-object directories and the hotfixes were
+folded into each function's `-create.sql`. The behaviour they introduced survives in the current
+bodies; the separate migrations recording it do not. Use `git log` on a function's directory for
+that history.
 
 ## 4. Worked examples
 
@@ -169,10 +199,21 @@ INSERT INTO tag_aliases (aliased_id=bad, alias_id=good, tag_domain_id=0)
 3. `tag_aliases_after_insert_trigger` (AFTER INSERT) propagates: updates any other
    `tag_aliases` rows whose `effective_tag_id = bad` (none yet), and any `tag_parents` rows
    where `parent_id = bad` or `child_id = bad` (none yet).
-4. `trg_repair_tag_mappings_ideals_insert` (77): `UPDATE active_tag_mappings SET ideal_tag_id =
-   good WHERE tag_id = bad` — repairs any records **already** tagged with `bad` so they now
-   display as `good`. This `UPDATE` is itself what `trg_repropagate_parents_on_ideal_change`
-   (190, see §4.5) reacts to, so parent-tag propagation stays in sync at the same time.
+4. `trg_repair_tag_mappings_ideals_insert` (028): `UPDATE active_tag_mappings SET ideal_tag_id =
+   new.effective_tag_id WHERE tag_id = bad AND tag_domain_id = ...`. This repairs any records
+   **already** tagged with `bad` so they now display as `good`. That `UPDATE` is itself what
+   `trg_repropagate_parents_on_ideal_change` (085, see §4.5) reacts to, so parent-tag propagation
+   stays in sync at the same time.
+5. `repair_parents_on_alias_insert` (098) runs last, once for the whole statement. If any row in
+   `active_tag_mappings_parents` was materialised under the raw id `bad`, it is rewritten to
+   `good`. This is a third cache of the tag id, distinct from the two above: 028 fixes
+   `active_tag_mappings.ideal_tag_id` and 022 fixes `tag_parents.ideal_parent_id`/`ideal_child_id`,
+   but neither touches a materialised parent row. The function short-circuits when no parent row
+   names the aliased tag, so the common case pays only one `EXISTS`. When it does fire it suspends
+   this table's own triggers via `set_config('session_replication_role', 'replica', true)`, because
+   `atmp_internal_on_delete` and `atmp_internal_on_insert` both key off values the rewrite is
+   deliberately changing, and neither applies: the same logical parent is being restored under its
+   ideal id, not retracted and re-granted. `origin_id` is deliberately left as the raw tag.
 
 ### 4.4 Chained aliases, insertion order matters for intermediate state (not final state)
 
@@ -197,14 +238,16 @@ Goal: `A → B → C` (A aliases to B, B aliases to C).
   `ideal_alias_id` currently `NULL`, so `COALESCE(...) = B`). `A`'s row becomes
   `(A,B,ideal_alias_id=C)`.
 - Same final state as Order 1. `trg_repair_tag_mappings_ideals_insert` also fires for the `B→C`
-  insert and repairs any `active_tag_mappings` rows with `tag_id=B` to `ideal_tag_id=C` — but
-  note it does **not** look at rows with `tag_id=A`, because the repair trigger only matches
+  insert and repairs any `active_tag_mappings` rows with `tag_id=B` to `ideal_tag_id=C`, but note
+  it does **not** look at rows with `tag_id=A`, because the repair trigger only matches
   `tag_id = new.aliased_id` (`B`), not the whole downstream chain. Records tagged with `A` get
-  fixed by the *cascaded* `UPDATE ... tag_aliases` from the propagation step above, which is
-  itself a real `UPDATE` on `A`'s row and therefore independently fires
-  `tag_aliases_after_update_trigger` (75) → which fires `trg_repair_tag_mappings_ideals_update`
-  (77) for `A`. So both orders fully repair pre-existing content, just via different trigger
-  paths (`_insert` repair vs. `_update` repair cascading from the chain propagation).
+  fixed by the *cascaded* `UPDATE ... tag_aliases` from the propagation step above. That is a real
+  `UPDATE` on `A`'s row, so it fires `tag_aliases`' AFTER UPDATE triggers, and
+  `trg_repair_tag_mappings_ideals_update` (029) is one of them; it matches `tag_id = old.aliased_id`
+  (`A`) and rewrites the mapping. Note these two are **sibling** triggers on the same table and
+  event, fired in name order by the same `UPDATE`; neither invokes the other. So both orders fully
+  repair pre-existing content, just via different trigger paths (`_insert` repair vs. `_update`
+  repair cascading from the chain propagation).
 
 ### 4.5 Aliasing a tag after content is already tagged repropagates parent tags
 
@@ -215,10 +258,10 @@ Setup: `parent(animal) -child- (dog)` exists in `tag_parents`. Record 3 is alrea
 INSERT INTO tag_aliases (aliased_id=shiba, alias_id=dog, tag_domain_id=0)
 ```
 
-- `trg_repair_tag_mappings_ideals_insert` (77) updates `active_tag_mappings`: record 3's row for
+- `trg_repair_tag_mappings_ideals_insert` (028) updates `active_tag_mappings`: record 3's row for
   `shiba` gets `ideal_tag_id = dog`. `active_tag_mappings_final` (the view) now shows record 3
   as tagged `dog` (via `COALESCE(ideal_tag_id, tag_id)`).
-- That `UPDATE` on `active_tag_mappings` fires `trg_repropagate_parents_on_ideal_change` (190),
+- That `UPDATE` on `active_tag_mappings` fires `trg_repropagate_parents_on_ideal_change` (085),
   since `COALESCE(ideal_tag_id, tag_id)` just changed from `shiba` to `dog`. Its insert branch
   looks up `tag_parents` for `COALESCE(ideal_child_id, child_id) = dog`, finds the `animal`
   relationship, and inserts `active_tag_mappings_parents(record=3, tag=animal, origin=dog)`.
@@ -227,7 +270,7 @@ INSERT INTO tag_aliases (aliased_id=shiba, alias_id=dog, tag_domain_id=0)
 - If `shiba` is later un-aliased (or re-aliased to something else), the delete branch of the
   same trigger removes the `animal` row again — unless another raw synonym on record 3 still
   independently resolves to `dog`, in which case it's left alone (see the multi-synonym note in
-  `IDHANMigration/src/190-active_tag_mappings_repropagate_on_alias_change.sql`).
+  `IDHANMigration/src/func_repropagate_parents_on_ideal_change/085-create.sql`).
 
 ### 4.6 Parent relationship created for an already-aliased tag
 
@@ -241,12 +284,12 @@ INSERT INTO tag_parents (parent_id=animal, child_id=shiba, tag_domain_id=0)   --
 ```
 
 - `trg_check_parent_cycle` walks raw `tag_parents` ancestors of `animal` — fine, no cycle.
-- `trg_tag_parents_before_insert` (189) resolves `ideal_child_id` from `tag_aliases` regardless
+- `trg_tag_parents_before_insert` (083) resolves `ideal_child_id` from `tag_aliases` regardless
   of which form was used: for the raw form, it looks up `aliased_id = shiba`, finds `dog`, and
   sets `new.ideal_child_id = dog`. For the ideal form, the lookup on `aliased_id = dog` finds
   nothing (`dog` isn't itself aliased further), so `ideal_child_id` stays `NULL` — which is fine,
   since `COALESCE(ideal_child_id, child_id)` already evaluates to `dog` either way.
-- `trg_insert_parent_mapping` (174) backfills existing content by matching effective tag to
+- `trg_insert_parent_mapping` (045) backfills existing content by matching effective tag to
   effective tag:
   ```sql
   FROM active_tag_mappings tm
@@ -255,7 +298,7 @@ INSERT INTO tag_parents (parent_id=animal, child_id=shiba, tag_domain_id=0)   --
   Both sides evaluate to `dog` regardless of which form the relationship was created with, so
   record 3 gets `animal` backfilled correctly either way. Net-new tagging events afterward go
   through the equivalent COALESCE-on-both-sides matching in `insert_parents_from_active_mappings`
-  (189), so a record freshly tagged with any synonym of `dog` — not just `dog` or `shiba`
+  (047), so a record freshly tagged with any synonym of `dog` — not just `dog` or `shiba`
   specifically — still picks up `animal`.
 
 ### 4.7 Multi-level parent chain, backfill and teardown
@@ -280,10 +323,13 @@ INSERT INTO tag_parents (parent_id=animal, child_id=bird, tag_domain_id=0)
 - `trg_insert_parent_mapping` step 1: finds active mappings with effective tag `bird` — none
   (`bird` was never directly applied to a record) — no direct insert.
 - Step 2 (ancestor ripple): finds `active_tag_mappings_parents` rows with `tag_id = bird`
-  (record 4's row from the previous step, `origin=sparrow`) → inserts
-  `(record=4, tag=animal, origin=sparrow, internal_count=1)`.
+  (record 4's row from the previous step) → inserts
+  `(record=4, tag=animal, origin=bird, internal_count=1)`. The `origin_id` written here is
+  `new.child_id` of the `tag_parents` row being inserted, which is `bird`, **not** the original
+  `sparrow` that seeded the chain. Each ripple step re-homes `origin_id` to its own immediate
+  child; that is what makes the teardown below terminate one level at a time.
 - Result: record 4 now shows `sparrow` (storage), `bird` (parent, `internal_count=0`,
-  origin=sparrow), `animal` (parent, `internal_count=1`, origin=sparrow).
+  origin=sparrow), `animal` (parent, `internal_count=1`, origin=bird).
 
 Teardown — untag `sparrow` from record 4 (`DELETE FROM tag_mappings WHERE record_id=4 AND
 tag_id=sparrow`):
@@ -295,13 +341,13 @@ tag_id=sparrow`):
    no alias) `AND NOT internal` → deletes `(4, bird, sparrow, internal_count=0)` since it's
    non-internal.
 3. That delete (of the `bird` row) fires `trg_atmp_internal_delete`: decrements
-   `internal_count` on rows with `origin_id = bird` — finds `(4, animal, sparrow,
-   internal_count=1)` → decrements to `0`, and since it now matches `internal_count = 0` it is
-   deleted in the same function call.
+   `internal_count` on rows with `origin_id = old.tag_id` (`bird`), finding
+   `(4, animal, origin=bird, internal_count=1)` → decrements to `0`, and since it now matches
+   `internal_count = 0` it is deleted in the same function call.
 4. `accumulate_tag_count_trigger` runs `remove_count` for the original `active_tag_mappings` row
    deleted in step 1, decrementing `sparrow`'s counts. Separately, `trg_accumulate_tag_count_parents`
-   (191) ran `remove_count(NULL, ...)` for each `active_tag_mappings_parents` row deleted in
-   steps 2–3, decrementing `bird` and `animal`'s `display_count` — see §4.10.
+   (086) ran `remove_count(NULL, ...)` for each `active_tag_mappings_parents` row deleted in
+   steps 2 and 3, decrementing `bird` and `animal`'s `display_count`; see §4.10.
 
 Final state: all four rows related to record 4's `sparrow` tagging are gone, cleanly, purely via
 cascading row-level triggers — no application code needs to know about the parent hierarchy
@@ -377,7 +423,7 @@ mappings point at this exact tag id" is tracked), and `tag_counts(dog).display_c
 `dog`'s own storage count. This storage/display split is intentional and mirrors Hydrus's
 sibling/alias count semantics.
 
-`trg_accumulate_tag_count_parents` (191) applies the same `add_count`/`remove_count` helpers to
+`trg_accumulate_tag_count_parents` (086) applies the same `add_count`/`remove_count` helpers to
 `active_tag_mappings_parents`, always with a `NULL` raw-tag argument (parent tags have no
 "storage" concept — nothing is ever directly applied to get one): `add_count(NULL, tag_id,
 domain)` only ever bumps `display_count`. So a tag that's only ever reached as an ancestor (never
@@ -390,7 +436,7 @@ record.
 
 ## 5. `tag_siblings` — present in the schema, write endpoints disabled
 
-`tag_siblings` (migration `165-tag_siblings.sql`) is a plain table: `(older_id, younger_id,
+`tag_siblings` (`table_tag_siblings/064-create.sql`) is a plain table: `(older_id, younger_id,
 tag_domain_id)`, no triggers, no `ideal_*`/`effective_*` columns, no `CHECK` beyond
 `older_id != younger_id`. `getTagRelationships.cpp` reads it normally — `GET` requests listing a
 tag's siblings work as expected.
@@ -408,12 +454,51 @@ migrations `166`–`173` added `ideal_older_id`/`ideal_younger_id`/`effective_*`
 `trg_tag_siblings_before_insert` alias-resolution trigger, an `aliased_siblings` view, a
 `silenced` boolean on `active_tag_mappings`, and silencing propagation logic. All of that was
 then **deleted** in commit `25da681d` ("...remove sibling-handling logic"), which is an ancestor
-of the current `HEAD`/`fix-bugs` branch — migrations `166`–`173` no longer exist on disk, but are
-recoverable via `git show 25da681d~1:IDHANMigration/src/166-tag_siblings_triggers.sql` etc. if
-sibling resolution is rebuilt in the future.
+of the current `HEAD`. Migrations `166`–`173` no longer exist on disk, but are recoverable via
+`git show 25da681d~1:IDHANMigration/src/166-tag_siblings_triggers.sql` and siblings, if sibling
+resolution is rebuilt in the future. Those numbers refer to the pre-reorganisation flat layout,
+which is what that commit's tree still has.
 
-## 6. Migration files covered
+## 6. Migration directories covered
 
-`10, 15, 20, 35, 70, 71, 72, 73, 74, 75, 76, 77, 80, 85, 90, 91, 92, 93, 94, 100, 105, 110, 115,
-165, 170, 174, 175, 187, 188, 189, 190, 191` (all under `IDHANMigration/src/`), plus the
-deleted-but-git-recoverable `166`–`173` referenced in §5.
+All under `IDHANMigration/src/`:
+
+| Directory                                   | Files                               |
+|---------------------------------------------|-------------------------------------|
+| `func_concat_tag/`                          | `007-create.sql`                    |
+| `func_tag_text/`                            | `008-create.sql`                    |
+| `func_tag_text_by_id/`                      | `051-create.sql`                    |
+| `func_tag_aliases_after_insert_trigger/`    | `022-create.sql`                    |
+| `func_tag_aliases_before_insert_trigger/`   | `023-create.sql`                    |
+| `func_tag_aliases_after_delete_trigger/`    | `024-create.sql`                    |
+| `func_tag_aliases_after_update_trigger/`    | `025-create.sql`                    |
+| `func_tag_mappings_after_insert/`           | `026-create.sql`                    |
+| `func_tag_mappings_after_active_insert/`    | `027-create.sql`                    |
+| `func_repair_tag_mappings_ideals_insert/`   | `028-create.sql`                    |
+| `func_repair_tag_mappings_ideals_update/`   | `029-create.sql`                    |
+| `func_repair_tag_mappings_ideals_delete/`   | `030-create.sql`                    |
+| `func_createtagdomainpartitions/`           | `031-create.sql`                    |
+| `func_add_count/`                           | `036-create.sql`, `094-rewrite.sql` |
+| `func_remove_count/`                        | `037-create.sql`, `095-rewrite.sql` |
+| `func_accumulate_tag_count_storage/`        | `038-create.sql`                    |
+| `func_atmp_internal_on_insert/`             | `039-create.sql`                    |
+| `func_atmp_internal_on_delete/`             | `040-create.sql`                    |
+| `func_check_parent_cycle/`                  | `044-create.sql`                    |
+| `func_insert_parent_mapping/`               | `045-create.sql`                    |
+| `func_delete_parent_mapping/`               | `046-create.sql`                    |
+| `func_insert_parents_from_active_mappings/` | `047-create.sql`                    |
+| `func_delete_parents_from_active_mappings/` | `048-create.sql`                    |
+| `func_intercept_parent_mapping/`            | `049-create.sql`                    |
+| `func_tag_parents_before_insert_trigger/`   | `083-create.sql`                    |
+| `func_repropagate_parents_on_ideal_change/` | `085-create.sql`                    |
+| `func_accumulate_tag_count_parents/`        | `086-create.sql`                    |
+| `func_repair_parents_on_alias/`             | `098-create.sql`                    |
+| `table_tag_mappings/`                       | `018-create.sql`                    |
+| `table_active_tag_mappings/`                | `019-create.sql`, `042-index.sql`   |
+| `table_tag_aliases/`                        | `020-create.sql`                    |
+| `table_tag_parents/`                        | `021-create.sql`                    |
+| `table_active_tag_mappings_parents/`        | `033-create.sql`, `043-index.sql`   |
+| `table_tag_siblings/`                       | `064-create.sql`                    |
+| `view_active_tag_mappings_final/`           | `034-create.sql`, `099-rewrite.sql` |
+
+Plus the deleted-but-git-recoverable flat migrations `166`–`173` referenced in §5.

@@ -42,28 +42,8 @@ wrong does not fail loudly — it fails as a specific image format mysteriously 
 That is its own piece of work, not a rider on an unrelated change.
 
 **Fixing it:** a follow-up spec. One acceptance criterion is already known: a worker must not be
-able to open `/proc/self/fdinfo/*`. §6.3 of
-`superpowers/specs/2026-08-02-module-sandbox-io-uring-design.md` closes the io_uring path leak at
-its source, but that guarantee should not rest on a single call site staying correct.
-
----
-
-## Per-call io_uring setup cost is unmeasured
-
-**Where:** `superpowers/specs/2026-08-02-module-sandbox-io-uring-design.md` §6.2
-
-The design creates a fresh restricted ring per module call, on the assumption that one
-`io_uring_setup`, two register calls and two mmaps are negligible against a call measured in
-milliseconds to seconds. That assumption has not been benchmarked.
-
-**Why it matters:** if it is wrong, the alternative is a per-worker ring with
-`IORING_REGISTER_FILES_UPDATE` left permitted so the slot can be repointed per call. That is
-materially weaker — the probes in
-`superpowers/specs/2026-08-02-module-sandbox-io-uring-probes/` show `FILES_UPDATE` is exactly the
-operation an attacker would use to repoint the slot at a descriptor of their choosing.
-
-**Fixing it:** measure during implementation, on a workload of many small thumbnails where the
-per-call overhead would show up worst. Decide with a number rather than discovering it later.
+able to open `/proc/self/fdinfo/*`. Closing that leak at its source is worth doing regardless, but
+the guarantee should not rest on a single call site staying correct.
 
 ---
 
@@ -82,7 +62,9 @@ was written.
 
 ## `IDHAN_HARDEN` trades away two debugging affordances
 
-**Where:** `IDHANServer/CMakeLists.txt`, `IDHANServer/src/ServerContext.cpp`
+**Where:** `CMakeLists.txt` (the `IDHAN_HARDEN` option), `IDHANServer/src/modules/ModuleLoader.cpp`
+(`applyHardening`, the process-wide `PR_SET_DUMPABLE(0)`), `IDHANServer/src/modules/WorkerProcess.cpp`
+(the per-fork `RLIMIT_CORE` clamp)
 
 With `IDHAN_HARDEN` on — the default outside Debug builds — `gdb -p` cannot attach to the server
 (`PR_SET_DUMPABLE(0)`) and a worker killed by a malformed file leaves no core dump
@@ -108,8 +90,7 @@ a partial mitigation only.
 
 **Why it is open:** hiding the path without copying requires a handle that is not a nameable object.
 Only an io_uring registered slot qualifies, and that approach was designed, prototyped and rejected
-for its cost -- see Appendix A of
-`docs/superpowers/specs/2026-08-02-module-sandbox-io-uring-design.md`.
+for its cost.
 
 **What closes it:** the follow-up sandbox spec, denying `/proc` via Landlock or a mount namespace.
 That work was already planned; this raises it from defence in depth to the thing this leak depends
