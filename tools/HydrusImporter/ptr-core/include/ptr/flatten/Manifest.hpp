@@ -24,11 +24,18 @@ struct ChunkEntry
 struct FlattenStats
 {
 	std::uint64_t events_scanned { 0 };
+	//! Operations actually written to chunks. With terminal deletes discarded this excludes them,
+	//! so the total always agrees with the chunks on disk and events_collapsed absorbs the rest.
 	std::uint64_t mappings_after_collapse { 0 };
 	std::uint64_t events_collapsed { 0 }; //!< events_scanned minus operations emitted
-	std::uint64_t terminal_deletes { 0 };
+	std::uint64_t terminal_deletes { 0 }; //!< chains whose last event was a delete, kept or not
+	std::uint64_t terminal_delete_records { 0 }; //!< records carrying at least one of them
 	std::uint64_t skipped_files { 0 }; //!< update files that failed to parse
 	std::uint64_t skipped_missing_definitions { 0 };
+	std::uint64_t defined_tags { 0 }; //!< tag ids the corpus defined
+	//! Tag ids written to a chunk or the relations file. defined_tags minus this is what was
+	//! disregarded as unused: defined by the PTR but never created in IDHAN.
+	std::uint64_t used_tags { 0 };
 };
 
 //! The index of a compacted directory. Its presence is what marks the directory as compacted,
@@ -40,6 +47,9 @@ struct CompactManifest
 	std::int32_t first_update_index { 0 };
 	std::int32_t last_update_index { 0 };
 	std::uint64_t max_records_per_chunk { 0 };
+	//! Whether the run dropped terminal deletes instead of writing them. Records in these chunks
+	//! then carry adds only, which the Import tab surfaces so a delete-free import is explainable.
+	bool discard_terminal_deletes { false };
 	std::vector< ChunkEntry > chunks {};
 	std::string relations_file {};
 	FlattenStats stats {};

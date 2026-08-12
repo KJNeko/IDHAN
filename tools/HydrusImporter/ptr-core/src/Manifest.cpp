@@ -14,6 +14,18 @@ namespace idhan::hydrus::ptr
 namespace
 {
 
+//! \throws std::runtime_error if \p key is absent. Every field this build writes is required on
+//!         read: there is no backwards compatibility, so a missing key means a manifest from an
+//!         older format, and defaulting it would silently misreport what the run actually did.
+const Json::Value& require( const Json::Value& json, const char* const key )
+{
+	if ( !json.isObject() || !json.isMember( key ) )
+		throw std::runtime_error(
+			std::format( "Manifest is missing \"{}\"; the directory must be re-flattened", key ) );
+
+	return json[ key ];
+}
+
 Json::Value statsToJson( const FlattenStats& stats )
 {
 	Json::Value json { Json::objectValue };
@@ -21,22 +33,27 @@ Json::Value statsToJson( const FlattenStats& stats )
 	json[ "mappings_after_collapse" ] = static_cast< Json::UInt64 >( stats.mappings_after_collapse );
 	json[ "events_collapsed" ] = static_cast< Json::UInt64 >( stats.events_collapsed );
 	json[ "terminal_deletes" ] = static_cast< Json::UInt64 >( stats.terminal_deletes );
+	json[ "terminal_delete_records" ] = static_cast< Json::UInt64 >( stats.terminal_delete_records );
 	json[ "skipped_files" ] = static_cast< Json::UInt64 >( stats.skipped_files );
 	json[ "skipped_missing_definitions" ] = static_cast< Json::UInt64 >( stats.skipped_missing_definitions );
+	json[ "defined_tags" ] = static_cast< Json::UInt64 >( stats.defined_tags );
+	json[ "used_tags" ] = static_cast< Json::UInt64 >( stats.used_tags );
 	return json;
 }
 
 FlattenStats statsFromJson( const Json::Value& json )
 {
 	FlattenStats stats {};
-	if ( !json.isObject() ) return stats;
 
-	stats.events_scanned = json.get( "events_scanned", Json::UInt64( 0 ) ).asUInt64();
-	stats.mappings_after_collapse = json.get( "mappings_after_collapse", Json::UInt64( 0 ) ).asUInt64();
-	stats.events_collapsed = json.get( "events_collapsed", Json::UInt64( 0 ) ).asUInt64();
-	stats.terminal_deletes = json.get( "terminal_deletes", Json::UInt64( 0 ) ).asUInt64();
-	stats.skipped_files = json.get( "skipped_files", Json::UInt64( 0 ) ).asUInt64();
-	stats.skipped_missing_definitions = json.get( "skipped_missing_definitions", Json::UInt64( 0 ) ).asUInt64();
+	stats.events_scanned = require( json, "events_scanned" ).asUInt64();
+	stats.mappings_after_collapse = require( json, "mappings_after_collapse" ).asUInt64();
+	stats.events_collapsed = require( json, "events_collapsed" ).asUInt64();
+	stats.terminal_deletes = require( json, "terminal_deletes" ).asUInt64();
+	stats.terminal_delete_records = require( json, "terminal_delete_records" ).asUInt64();
+	stats.skipped_files = require( json, "skipped_files" ).asUInt64();
+	stats.skipped_missing_definitions = require( json, "skipped_missing_definitions" ).asUInt64();
+	stats.defined_tags = require( json, "defined_tags" ).asUInt64();
+	stats.used_tags = require( json, "used_tags" ).asUInt64();
 	return stats;
 }
 
@@ -49,6 +66,7 @@ void writeManifest( const std::filesystem::path& dir, const CompactManifest& man
 	root[ "first_update_index" ] = manifest.first_update_index;
 	root[ "last_update_index" ] = manifest.last_update_index;
 	root[ "max_records_per_chunk" ] = static_cast< Json::UInt64 >( manifest.max_records_per_chunk );
+	root[ "discard_terminal_deletes" ] = manifest.discard_terminal_deletes;
 	root[ "relations_file" ] = manifest.relations_file;
 	root[ "stats" ] = statsToJson( manifest.stats );
 
@@ -91,12 +109,25 @@ CompactManifest readManifest( const std::filesystem::path& dir )
 		throw std::runtime_error( std::format( "Failed to parse manifest {}: {}", path.string(), errors ) );
 
 	CompactManifest manifest {};
-	manifest.format_version = root.get( "format_version", 0 ).asUInt();
-	manifest.first_update_index = root.get( "first_update_index", 0 ).asInt();
-	manifest.last_update_index = root.get( "last_update_index", 0 ).asInt();
-	manifest.max_records_per_chunk = root.get( "max_records_per_chunk", Json::UInt64( 0 ) ).asUInt64();
-	manifest.relations_file = root.get( "relations_file", "" ).asString();
-	manifest.stats = statsFromJson( root[ "stats" ] );
+	manifest.format_version = require( root, "format_version" ).asUInt();
+
+	// Checked before anything else is read. Every field below is required, so a version 1 manifest
+	// would otherwise fail on whichever new key happened to be looked up first -- a confusing way
+	// to say "this directory is too old".
+	if ( manifest.format_version != CHUNK_FORMAT_VERSION )
+		throw std::runtime_error(
+			std::format(
+				"Manifest at {} is format version {}, this build writes and reads {}. Re-flatten the corpus.",
+				path.string(),
+				manifest.format_version,
+				CHUNK_FORMAT_VERSION ) );
+
+	manifest.first_update_index = require( root, "first_update_index" ).asInt();
+	manifest.last_update_index = require( root, "last_update_index" ).asInt();
+	manifest.max_records_per_chunk = require( root, "max_records_per_chunk" ).asUInt64();
+	manifest.discard_terminal_deletes = require( root, "discard_terminal_deletes" ).asBool();
+	manifest.relations_file = require( root, "relations_file" ).asString();
+	manifest.stats = statsFromJson( require( root, "stats" ) );
 
 	const auto& chunks = root[ "chunks" ];
 	if ( chunks.isArray() )
@@ -115,23 +146,20 @@ CompactManifest readManifest( const std::filesystem::path& dir )
 
 bool isCompactedDirectory( const std::filesystem::path& dir )
 {
+	// A directory with no manifest is simply not compacted, which is the ordinary case and not
+	// worth a word. Separating that from a manifest that exists but will not load is what lets the
+	// second case be a warning: such a directory looks compacted and silently will not import.
+	std::error_code ec;
+	if ( !std::filesystem::exists( dir / MANIFEST_FILENAME, ec ) ) return false;
+
 	try
 	{
-		const auto manifest = readManifest( dir );
-		if ( manifest.format_version != CHUNK_FORMAT_VERSION )
-		{
-			spdlog::warn(
-				"Manifest at {} is format version {}, this build understands {}",
-				dir.string(),
-				manifest.format_version,
-				CHUNK_FORMAT_VERSION );
-			return false;
-		}
+		readManifest( dir );
 		return true;
 	}
 	catch ( const std::exception& e )
 	{
-		spdlog::debug( "{} is not a compacted directory: {}", dir.string(), e.what() );
+		spdlog::warn( "{} holds a manifest this build cannot use: {}", dir.string(), e.what() );
 		return false;
 	}
 }

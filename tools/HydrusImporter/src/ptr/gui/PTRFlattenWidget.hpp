@@ -5,6 +5,8 @@
 
 #include <memory>
 
+#include "ptr/flatten/FlattenLiveStats.hpp"
+
 namespace Ui
 {
 class PTRFlattenWidget;
@@ -45,13 +47,7 @@ class PTRFlattenWidget : public QWidget
 	void onCancel();
 	void onProgress( const QString& status );
 	void onSubProgress( int current, int total, const QString& status );
-	void onStatsUpdated( quint64 eventsScanned,
-	                     quint64 recordsFlattened,
-	                     quint64 chainsCollapsed,
-	                     quint64 terminalDeletes,
-	                     quint64 chunksWritten,
-	                     quint64 skippedFiles,
-	                     quint64 skippedMissingDefinitions );
+	void onStatsUpdated( const idhan::hydrus::ptr::FlattenLiveStats& stats );
 	void onFinished( bool success, const QString& message );
 
   private:

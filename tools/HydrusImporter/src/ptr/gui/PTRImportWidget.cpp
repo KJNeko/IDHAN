@@ -6,8 +6,13 @@
 #include <QStandardPaths>
 #include <QThreadPool>
 
+#include <spdlog/spdlog.h>
+
+#include <filesystem>
+
 #include "PTRHistoryModel.hpp"
 #include "ptr/PTRImportWorker.hpp"
+#include "ptr/flatten/Manifest.hpp"
 #include "ui_PTRImportWidget.h"
 
 PTRImportWidget::PTRImportWidget( QWidget* parent ) :
@@ -31,7 +36,13 @@ PTRImportWidget::PTRImportWidget( QWidget* parent ) :
 		ui->directoryPath,
 		&QLineEdit::textChanged,
 		this,
-		[ this ]( const QString& text ) { ui->importButton->setEnabled( !text.isEmpty() && !m_importing ); } );
+		[ this ]( const QString& text )
+		{
+			ui->importButton->setEnabled( !text.isEmpty() && !m_importing );
+			updateCorpusNote();
+		} );
+
+	updateCorpusNote();
 	connect( ui->importButton, &QPushButton::clicked, this, &PTRImportWidget::onImport );
 	connect( ui->cancelButton, &QPushButton::clicked, this, &PTRImportWidget::onCancel );
 }
@@ -50,6 +61,38 @@ PTRImportWidget::~PTRImportWidget()
 void PTRImportWidget::setDirectory( const QString& path )
 {
 	ui->directoryPath->setText( path );
+}
+
+void PTRImportWidget::updateCorpusNote()
+{
+	const auto path = std::filesystem::path( ui->directoryPath->text().toStdString() );
+
+	// A path that is not a compacted directory says nothing either way: it may be a raw corpus, or
+	// simply not exist yet while the user is still typing.
+	if ( !idhan::hydrus::ptr::isCompactedDirectory( path ) )
+	{
+		ui->corpusNoteLabel->setVisible( false );
+		return;
+	}
+
+	bool discarded { false };
+	try
+	{
+		discarded = idhan::hydrus::ptr::readManifest( path ).discard_terminal_deletes;
+	}
+	catch ( const std::exception& e )
+	{
+		// isCompactedDirectory just read the same file, so this is a race with something rewriting
+		// it. Not worth a dialog: the import will report it properly if it persists.
+		spdlog::debug( "Could not read the manifest at {} for the corpus note: {}", path.string(), e.what() );
+		ui->corpusNoteLabel->setVisible( false );
+		return;
+	}
+
+	ui->corpusNoteLabel->setVisible( discarded );
+	if ( discarded )
+		ui->corpusNoteLabel->setText(
+			"This corpus was flattened without tag removals, so importing it will only add tags." );
 }
 
 void PTRImportWidget::onSelectDirectory()

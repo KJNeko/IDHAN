@@ -99,6 +99,14 @@ class DefinitionReader
 	//! \return A view into the mmap, valid for this reader's lifetime, or nullopt if undefined.
 	std::optional< std::string_view > tag( std::uint32_t tag_id ) const;
 
+	//! One past the highest id tags.idx has a slot for. Sizes a TagUsageSet.
+	std::uint32_t tagIdCapacity() const noexcept;
+
+	//! How many tag ids the corpus actually defined. Counted once during construction by walking
+	//! tags.idx for non-zero lengths; the file is sparse, so the id ranges nothing ever defined are
+	//! holes that read as zeros without touching the disk.
+	std::uint64_t definedTagCount() const noexcept { return m_defined_tags; }
+
   private:
 
 	struct Mapping
@@ -110,9 +118,14 @@ class DefinitionReader
 	static Mapping mapFile( const std::filesystem::path& path );
 	static void unmapFile( Mapping& mapping );
 
+	//! \pre m_tag_index is mapped.
+	std::uint64_t countDefinedTags() const noexcept;
+
 	Mapping m_hashes {};
 	Mapping m_tag_index {};
 	Mapping m_tag_blob {};
+
+	std::uint64_t m_defined_tags { 0 };
 };
 
 } // namespace idhan::hydrus::ptr

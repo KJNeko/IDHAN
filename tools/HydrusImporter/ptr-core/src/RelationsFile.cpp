@@ -81,7 +81,8 @@ std::vector< CollapsedRelation > collapseRelations( std::vector< RelationEvent >
 RelationsFileStats writeRelationsFile( const std::filesystem::path& path,
                                        const std::vector< CollapsedRelation >& parents,
                                        const std::vector< CollapsedRelation >& siblings,
-                                       const TagLookup& lookup )
+	const TagLookup& lookup,
+	TagUsageSet* const usage )
 {
 	RelationsFileStats stats {};
 
@@ -109,6 +110,8 @@ RelationsFileStats writeRelationsFile( const std::filesystem::path& path,
 
 		id_to_index.emplace( tag_id, static_cast< std::uint32_t >( strings.size() ) );
 		strings.push_back( ChunkStringEntry { tag_id, std::string( *text ) } );
+
+		if ( usage != nullptr ) usage->mark( tag_id );
 	}
 
 	const auto encode = [ & ]( const std::vector< CollapsedRelation >& list, std::uint64_t& counter )

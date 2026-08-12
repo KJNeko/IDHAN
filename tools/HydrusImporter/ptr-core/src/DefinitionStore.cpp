@@ -160,8 +160,35 @@ void DefinitionReader::unmapFile( Mapping& mapping )
 DefinitionReader::DefinitionReader( const std::filesystem::path& dir ) :
   m_hashes( mapFile( dir / HASHES_FILENAME ) ),
   m_tag_index( mapFile( dir / TAG_INDEX_FILENAME ) ),
-  m_tag_blob( mapFile( dir / TAG_BLOB_FILENAME ) )
+  m_tag_blob( mapFile( dir / TAG_BLOB_FILENAME ) ),
+  m_defined_tags( countDefinedTags() )
 {}
+
+std::uint32_t DefinitionReader::tagIdCapacity() const noexcept
+{
+	const auto slots = m_tag_index.size / sizeof( TagIndexEntry );
+
+	// Only reachable with a tags.idx above 32 GB, which the 32-bit blob offset makes impossible in
+	// practice. Clamping rather than wrapping keeps a TagUsageSet sized from this merely incomplete
+	// instead of catastrophically undersized.
+	if ( slots > std::numeric_limits< std::uint32_t >::max() ) return std::numeric_limits< std::uint32_t >::max();
+	return static_cast< std::uint32_t >( slots );
+}
+
+std::uint64_t DefinitionReader::countDefinedTags() const noexcept
+{
+	const auto slots = m_tag_index.size / sizeof( TagIndexEntry );
+
+	std::uint64_t defined { 0 };
+	for ( std::uint64_t slot = 0; slot < slots; ++slot )
+	{
+		TagIndexEntry entry {};
+		std::memcpy( &entry, m_tag_index.data + slot * sizeof( TagIndexEntry ), sizeof( entry ) );
+		if ( entry.length != 0 ) ++defined;
+	}
+
+	return defined;
+}
 
 DefinitionReader::~DefinitionReader()
 {

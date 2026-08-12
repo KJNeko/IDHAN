@@ -11,13 +11,18 @@
 #include <vector>
 
 #include "ptr/flatten/DefinitionStore.hpp"
+#include "ptr/flatten/TagUsageSet.hpp"
 
 namespace idhan::hydrus::ptr
 {
 
 inline constexpr std::array< char, 8 > CHUNK_MAGIC { { 'I', 'D', 'H', 'A', 'N', 'P', 'T', 'C' } };
 inline constexpr std::array< char, 8 > RELATIONS_MAGIC { { 'I', 'D', 'H', 'A', 'N', 'P', 'T', 'R' } };
-inline constexpr std::uint32_t CHUNK_FORMAT_VERSION { 1 };
+//! Bumped to 2 when terminal-delete discarding and the tag accounting landed. Nothing reads a
+//! version 1 directory: readChunk and isCompactedDirectory both reject an unrecognised version, so
+//! an old compacted directory fails loudly rather than importing under assumptions that no longer
+//! hold. Re-flattening the corpus is the migration.
+inline constexpr std::uint32_t CHUNK_FORMAT_VERSION { 2 };
 
 #pragma pack( push, 1 )
 
@@ -80,7 +85,11 @@ class ChunkWriter
 	const std::filesystem::path& path() const noexcept { return m_path; }
 
 	//! Resolves, sorts, compresses and writes. Safe to call once; calling twice throws.
-	ChunkStats finish( const TagLookup& lookup );
+	//!
+	//! \param usage Marked with every tag id that reaches this chunk's string table, or null to
+	//!        track nothing. The string table is exactly the set of ids being written, so this
+	//!        costs one pass over a list already in hand.
+	ChunkStats finish( const TagLookup& lookup, TagUsageSet* usage = nullptr );
 
   private:
 
