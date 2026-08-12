@@ -55,9 +55,90 @@ export function buildCompareRows(
   return rows;
 }
 
-/** Strongest difference first, in either direction. Returns a new array. */
-export function sortRowsByDelta(rows: readonly CompareRow[]): CompareRow[] {
-  return [...rows].sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta));
+/**
+ * Rows keyed by the label of the term that produced them.
+ *
+ * Keying by label rather than by position is what lets one list carry both the terms and their
+ * numbers: a term added or removed since the last run shifts every later index, so an index-based
+ * lookup would quietly show one term's distance against another term's name.
+ */
+export function indexRowsByLabel(rows: readonly CompareRow[]): Map<string, CompareRow> {
+    return new Map(rows.map((row) => [row.label, row]));
+}
+
+export type CompareSortMode =
+    | 'entered'
+    | 'delta'
+    | 'toward-a'
+    | 'toward-b'
+    | 'closest-a'
+    | 'closest-b'
+    | 'label';
+
+/** The dropdown's contents, in the order they are offered. */
+export const COMPARE_SORT_MODES: ReadonlyArray<{ value: CompareSortMode; label: string }> = [
+    {value: 'delta', label: 'Strongest difference'},
+    {value: 'toward-a', label: 'Leans toward A'},
+    {value: 'toward-b', label: 'Leans toward B'},
+    {value: 'closest-a', label: 'Closest to A'},
+    {value: 'closest-b', label: 'Closest to B'},
+    {value: 'entered', label: 'As entered'},
+    {value: 'label', label: 'Alphabetical'},
+];
+
+/**
+ * How each mode ranks two rows. Returning a negative number puts `left` first.
+ *
+ * "Leans toward" and "closest to" are deliberately separate: a term can sit close to both images
+ * while leaning slightly to one, and can lean hard toward one while being far from both.
+ */
+const COMPARATORS: Record<
+    Exclude<CompareSortMode, 'entered' | 'label'>,
+    (left: CompareRow, right: CompareRow) => number
+> = {
+    delta: (left, right) => Math.abs(right.delta) - Math.abs(left.delta),
+    'toward-a': (left, right) => left.delta - right.delta,
+    'toward-b': (left, right) => right.delta - left.delta,
+    'closest-a': (left, right) => left.distanceA - right.distanceA,
+    'closest-b': (left, right) => left.distanceB - right.distanceB,
+};
+
+/**
+ * The order the term list renders in.
+ *
+ * Under every result-dependent mode, terms with no row yet — added since the last run — sort last in
+ * the order they were typed. Treating a missing result as a zero distance would file them among the
+ * terms that genuinely do not discriminate, which is a different and misleading claim.
+ *
+ * Alphabetical is exempt: it says nothing about results, so an unrun term belongs in its alphabetical
+ * place rather than exiled to the bottom.
+ */
+export function orderTerms(
+    terms: readonly CompareTerm[],
+    rowsByLabel: ReadonlyMap<string, CompareRow>,
+    mode: CompareSortMode,
+): CompareTerm[] {
+    if (mode === 'entered') return [...terms];
+
+    if (mode === 'label') {
+        return [...terms].sort((left, right) => compareTermLabel(left).localeCompare(compareTermLabel(right)));
+    }
+
+    const compare = COMPARATORS[mode];
+
+    const scored = terms.map((term, index) => ({term, index, row: rowsByLabel.get(compareTermLabel(term))}));
+
+    scored.sort((left, right) => {
+        // Ties and unrun-versus-unrun fall back to the typed order, so the list never reshuffles itself
+        // between renders.
+        if (!left.row || !right.row) {
+            if (!left.row && !right.row) return left.index - right.index;
+            return left.row ? -1 : 1;
+        }
+        return compare(left.row, right.row) || left.index - right.index;
+    });
+
+    return scored.map((entry) => entry.term);
 }
 
 /** The largest magnitude among the rows, floored so it is always safe to divide by. */

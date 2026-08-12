@@ -13,7 +13,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
 import { compareTermLabel, parseCompareTerm, type CompareTerm } from './embeddingTerms';
-import { barFraction, buildCompareRows, deltaScale, sortRowsByDelta, type CompareRow } from './compareRows';
+import {
+    barFraction,
+    buildCompareRows,
+    COMPARE_SORT_MODES,
+    deltaScale,
+    indexRowsByLabel,
+    orderTerms,
+    type CompareRow,
+    type CompareSortMode,
+} from './compareRows';
 
 interface EmbeddingModel {
   model_id: number;
@@ -35,13 +44,15 @@ type Config = {
   slotA: number | null;
   slotB: number | null;
   terms: CompareTerm[];
-  sortByDelta: boolean;
+    sortMode: CompareSortMode;
 };
 
-const DEFAULT_CONFIG: Config = { modelName: '', slotA: null, slotB: null, terms: [], sortByDelta: true };
+const DEFAULT_CONFIG: Config = {modelName: '', slotA: null, slotB: null, terms: [], sortMode: 'delta'};
 
 /** Matches MAX_COMPARE_TERMS on the server. Enforced here too so seeding can say what it dropped. */
 const MAX_TERMS = 64;
+
+const SORT_VALUES = new Set<string>(COMPARE_SORT_MODES.map((mode) => mode.value));
 
 function readConfig(raw: Partial<Config>): Config {
   return {
@@ -49,8 +60,22 @@ function readConfig(raw: Partial<Config>): Config {
     slotA: typeof raw.slotA === 'number' ? raw.slotA : null,
     slotB: typeof raw.slotB === 'number' ? raw.slotB : null,
     terms: Array.isArray(raw.terms) ? raw.terms : DEFAULT_CONFIG.terms,
-    sortByDelta: typeof raw.sortByDelta === 'boolean' ? raw.sortByDelta : DEFAULT_CONFIG.sortByDelta,
+      // Checked against the list rather than cast: a stored value from a build that offered a mode this
+      // one does not would otherwise reach orderTerms as an unknown key.
+      sortMode:
+          typeof raw.sortMode === 'string' && SORT_VALUES.has(raw.sortMode) ? raw.sortMode : DEFAULT_CONFIG.sortMode,
   };
+}
+
+/** v1 stored a `sortByDelta` boolean, which is the 'delta' and 'entered' modes under another name. */
+function migrateConfig(config: unknown, fromVersion: number): Config {
+    const raw = (config ?? {}) as Partial<Config> & { sortByDelta?: unknown };
+
+    if (fromVersion < 2 && raw.sortMode === undefined) {
+        return readConfig({...raw, sortMode: raw.sortByDelta === false ? 'entered' : 'delta'});
+    }
+
+    return readConfig(raw);
 }
 
 /** What a set of visible numbers was computed for, so a config edited since the run can be spotted. */
@@ -100,11 +125,13 @@ function SlotCard({
 
   return (
     <div className="cmp-slot">
+        {/* thumbnailUrl's default size, which other panels also request — so a record already shown in
+          the grid costs no second thumbnail here. */}
       <div className="cmp-slot-thumb">
         {recordId === null ? (
           <span className="muted">empty</span>
         ) : (
-          <img src={host.records.thumbnailUrl(recordId, 192)} alt={`record ${recordId}`} />
+            <img src={host.records.thumbnailUrl(recordId)} alt={`record ${recordId}`}/>
         )}
       </div>
 
@@ -324,12 +351,16 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
     }
   }, [host, config]);
 
-  const displayRows = useMemo(() => {
-    if (!results) return [];
-    return config.sortByDelta ? sortRowsByDelta(results.rows) : results.rows;
-  }, [results, config.sortByDelta]);
+    // Keyed by label, not by position: a term added or removed since the last run shifts every later
+    // index, and an index-based lookup would show one term's distance beside another term's name.
+    const rowsByLabel = useMemo(() => indexRowsByLabel(results?.rows ?? []), [results]);
 
-  const scale = useMemo(() => deltaScale(displayRows), [displayRows]);
+    const orderedTerms = useMemo(
+        () => orderTerms(config.terms, rowsByLabel, config.sortMode),
+        [config.terms, rowsByLabel, config.sortMode],
+    );
+
+    const scale = useMemo(() => deltaScale(results?.rows ?? []), [results]);
   const stale = results !== null && results.signature !== signatureOf(config);
 
   return (
@@ -418,77 +449,99 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
         </button>
       </div>
 
-      <div className="cmp-term-list">
+        <label className="cmp-sort">
+            <span>Sort</span>
+            <select value={config.sortMode} onChange={(e) => update({sortMode: e.target.value as CompareSortMode})}>
+                {COMPARE_SORT_MODES.map((mode) => (
+                    <option key={mode.value} value={mode.value}>
+                        {mode.label}
+                    </option>
+                ))}
+            </select>
+        </label>
+
+        {/* One list, not two. A term and its two distances are the same thing seen from either end, and
+          listing them separately made every term appear twice. The numeric columns and the bar simply
+          are not there until a comparison has produced them — there is nothing truthful to put in
+          them before that, and a column of placeholders is worse than no column. */}
+        <div className={`cmp-term-list${results ? ' has-results' : ''}`}>
         {config.terms.length === 0 ? (
           <p className="embed-note">
             No terms yet. Type a phrase, or a record id as <code>record:1234</code>.
           </p>
         ) : (
-          config.terms.map((term, index) => (
-            <div key={compareTermLabel(term)} className={`cmp-term${term.enabled ? '' : ' is-disabled'}`}>
-              <input
-                type="checkbox"
-                checked={term.enabled}
-                onChange={(e) =>
-                  update({
-                    terms: config.terms.map((t, i) => (i === index ? { ...t, enabled: e.target.checked } : t)),
-                  })
-                }
-                title="Include this term in the comparison"
-              />
-              <span className={`embed-term-label${term.kind === 'record' ? ' is-record' : ''}`}>
-                {compareTermLabel(term)}
-              </span>
-              <button
-                type="button"
-                className="embed-term-remove"
-                onClick={() => update({ terms: config.terms.filter((_, i) => i !== index) })}
-                title="Remove this term"
-              >
-                &times;
-              </button>
-            </div>
-          ))
+            orderedTerms.map((term) => {
+                const label = compareTermLabel(term);
+                const row = rowsByLabel.get(label);
+                const index = config.terms.indexOf(term);
+
+                return (
+                    <div key={label} className={`cmp-term${term.enabled ? '' : ' is-disabled'}`}>
+                        <input
+                            type="checkbox"
+                            checked={term.enabled}
+                            onChange={(e) =>
+                                update({
+                                    terms: config.terms.map((t, i) => (i === index ? {
+                                        ...t,
+                                        enabled: e.target.checked
+                                    } : t)),
+                                })
+                            }
+                            title="Include this term in the comparison"
+                        />
+
+                        <span className={`embed-term-label${term.kind === 'record' ? ' is-record' : ''}`} title={label}>
+                  {label}
+                </span>
+
+                        {results && (
+                            <>
+                                <span className="cmp-row-distance">{row ? row.distanceA.toFixed(3) : ''}</span>
+
+                                <div className="cmp-bar">
+                                    {row && (
+                                        <>
+                                            <div className="cmp-bar-half left">
+                                                {row.delta < 0 && (
+                                                    <div
+                                                        className="cmp-bar-fill toward-a"
+                                                        style={{width: `${barFraction(row.delta, scale) * 100}%`}}
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="cmp-bar-half right">
+                                                {row.delta > 0 && (
+                                                    <div
+                                                        className="cmp-bar-fill toward-b"
+                                                        style={{width: `${barFraction(row.delta, scale) * 100}%`}}
+                                                    />
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                <span className="cmp-row-distance">{row ? row.distanceB.toFixed(3) : ''}</span>
+
+                                <span className={`cmp-row-delta${row && row.delta < 0 ? ' toward-a' : ' toward-b'}`}>
+                      {row ? `${row.delta >= 0 ? '+' : ''}${row.delta.toFixed(3)}` : 'not run'}
+                    </span>
+                            </>
+                        )}
+
+                        <button
+                            type="button"
+                            className="embed-term-remove"
+                            onClick={() => update({terms: config.terms.filter((_, i) => i !== index)})}
+                            title="Remove this term"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                );
+            })
         )}
-      </div>
-
-      <label className="cmp-sort">
-        <input
-          type="checkbox"
-          checked={config.sortByDelta}
-          onChange={(e) => update({ sortByDelta: e.target.checked })}
-        />
-        <span>Sort by strongest difference</span>
-      </label>
-
-      {/* The table renders from the last response rather than from the current term list, so editing
-          terms after a run cannot relabel a number computed for something else. */}
-      <div className="cmp-rows">
-        {displayRows.map((row) => (
-          <div key={row.label} className="cmp-row">
-            <span className="cmp-row-label" title={row.label}>
-              {row.label}
-            </span>
-            <span className="cmp-row-distance">{row.distanceA.toFixed(3)}</span>
-            <div className="cmp-bar">
-              <div className="cmp-bar-half left">
-                {row.delta < 0 && (
-                  <div className="cmp-bar-fill toward-a" style={{ width: `${barFraction(row.delta, scale) * 100}%` }} />
-                )}
-              </div>
-              <div className="cmp-bar-half right">
-                {row.delta > 0 && (
-                  <div className="cmp-bar-fill toward-b" style={{ width: `${barFraction(row.delta, scale) * 100}%` }} />
-                )}
-              </div>
-            </div>
-            <span className="cmp-row-distance">{row.distanceB.toFixed(3)}</span>
-            <span className={`cmp-row-delta${row.delta < 0 ? ' toward-a' : ' toward-b'}`}>
-              {row.delta >= 0 ? '+' : ''}
-              {row.delta.toFixed(3)}
-            </span>
-          </div>
-        ))}
       </div>
 
       <div className="embed-footer">
@@ -516,5 +569,6 @@ export const embeddingComparePanel = {
   description: 'Two records side by side: how far each phrase sits from each image.',
   component: EmbeddingComparePanel,
   defaultConfig: DEFAULT_CONFIG,
-  configVersion: 1,
+    configVersion: 2,
+    migrateConfig,
 } as const;
