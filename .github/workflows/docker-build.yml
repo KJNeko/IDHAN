@@ -17,9 +17,6 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     if: github.server_url == 'https://git.futuregadgetlabs.net'
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout repository
