@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/14/25.
-//
 #pragma once
 
 #include <libavutil/error.h>

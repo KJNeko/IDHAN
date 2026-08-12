@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/6/26.
-//
 // Describes, per SortType, how to obtain the value a Set is ordered by: the joins the expression
 // needs, the expression itself, the C++ type it lands in, and whether a NULL value excludes the
 // record outright. This table is the only SQL generation left in the search path.

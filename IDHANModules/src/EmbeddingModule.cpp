@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/10/26.
-//
-
 #include "EmbeddingModule.hpp"
 
 namespace idhan

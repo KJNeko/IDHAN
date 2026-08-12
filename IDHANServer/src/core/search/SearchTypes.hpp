@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/7/24.
-//
 // Sort/display enums shared by SearchBuilder and the Set machinery it drives. Split out of
 // SearchBuilder.hpp so SortKey/Set can name SortType without including the builder that uses them.
 #pragma once

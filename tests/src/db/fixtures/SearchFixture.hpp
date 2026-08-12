@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/20/26.
-//
 #pragma once
 #include "MappingFixture.hpp"
 #include "core/search/SearchBuilder.hpp"

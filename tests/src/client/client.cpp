@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 4/3/25.
-//
-
 #include <QCoreApplication>
 
 #include <gtest/gtest.h>

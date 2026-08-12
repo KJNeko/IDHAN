@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/28/26.
-//
 #pragma once
 
 #include <array>
@@ -41,17 +38,14 @@ struct RunnerOptions
 };
 
 //! Hosts one module library and serves calls for it over the worker channel.
-/** The structure exists to solve one specific problem. An archive thumbnailer asks the host to
- *  generate a member, and the host resolves that back to the archive *generator* -- a different
- *  module in the same library, therefore this same process. If the runner were single-threaded it
- *  would be sitting inside createThumbnailRaw, unable to serve the nested request it is itself
- *  waiting on, and would deadlock.
+/** The threading solves one problem: an archive thumbnailer asks the host to generate a member,
+ *  which resolves back to the archive *generator* -- same library, therefore same process. A
+ *  single-threaded runner would be sitting inside createThumbnailRaw, unable to serve the nested
+ *  request it is itself waiting on, and would deadlock.
  *
- *  So: an IO thread that owns the socket and never runs module code, and a pool of worker threads
- *  that do. The nested call arrives while a pool thread is blocked, and runs on a different one.
- *
- *  This is also where ModuleBase::threadSafe() finally earns its keep -- modules that report false
- *  are serialised behind a per-module lock, everything else runs concurrently. */
+ *  So: an IO thread that owns the socket and never runs module code, plus a pool that does. This is
+ *  also where ModuleBase::threadSafe() earns its keep -- modules reporting false are serialised
+ *  behind a per-module lock, everything else runs concurrently. */
 class WorkerRunner
 {
 	//! A call waiting for, or occupying, a pool thread.
@@ -68,21 +62,19 @@ class WorkerRunner
 		std::uint32_t depth { 0 };
 		//! EMBED_TEXT only. The phrase to embed; that op carries no file at all.
 		std::string phrase {};
-		//! The input, already adopted. Built on the IO thread rather than here: a ring has to have its
-		//! descriptor registered and closed before any module code can run (see RingFile::adopt).
-		//! Null for EMBED_TEXT, which is the one op with no input to adopt.
+		//! The input, already adopted on the IO thread: a ring must have its descriptor registered and
+		//! closed before any module code runs (see RingFile::adopt). Null for EMBED_TEXT.
 		std::unique_ptr< ModuleFile > file {};
 	};
 
 	//! How a callback should describe the handle a module handed it.
-	/** Three cases, and which one applies decides whether anything is copied at all:
+	/** Which case applies decides whether anything is copied at all:
 	 *
-	 *    - the handle *is* this call's own input, so the host still holds the descriptor and only
-	 *      needs to be told which call to take it from (INPUT_REF). Nothing crosses the socket.
-	 *    - the handle is already a memfd we hold -- typically the result of a nested generate -- so
-	 *      its descriptor is forwarded directly.
-	 *    - anything else (a module's own buffer via ModuleFile::fromBytes) has to be copied into a
-	 *      memfd, because the bytes live in this process's heap and there is no other way out. */
+	 *    - the handle *is* this call's own input: the host still holds the descriptor and only needs
+	 *      telling which call to take it from (INPUT_REF). Nothing crosses the socket.
+	 *    - already a memfd we hold (typically a nested generate's result): forward the descriptor.
+	 *    - anything else (ModuleFile::fromBytes) must be copied into a memfd; the bytes live in this
+	 *      process's heap and there is no other way out. */
 	struct CallbackInput
 	{
 		Json::Value fields {}; //!< INPUT_REF, or INPUT_KIND plus the size.
@@ -111,14 +103,13 @@ class WorkerRunner
 	int m_socket { -1 };
 	ipc::FrameReader m_reader {};
 
-	//! Guards the outbound queue below. Frames come from the IO loop (heartbeats) and from every pool
-	//! thread (results, callbacks), and a frame must not be interleaved with another.
+	//! Guards the outbound queue. Frames come from the IO loop and from every pool thread, and one
+	//! must not be interleaved with another.
 	std::mutex m_write_mutex {};
 
 	//! Outbound frames, drained by the IO loop only. Queued rather than written directly because the
-	//! socket is non-blocking: a direct send would fail with EAGAIN the moment the buffer filled, and
-	//! a dropped RESULT parks the host's coroutine forever. Both ends now queue, so neither can wedge
-	//! the other by refusing to read.
+	//! socket is non-blocking: a direct send would EAGAIN once the buffer filled, and a dropped RESULT
+	//! parks the host's coroutine forever. Both ends queue, so neither can wedge the other.
 	ipc::FrameWriter m_writer {};
 
 	//! eventfd, so a pool thread queueing a result can interrupt the IO loop's poll instead of
@@ -140,9 +131,8 @@ class WorkerRunner
 	std::atomic< bool > m_stopping { false };
 	std::atomic< std::size_t > m_active_calls { 0 };
 
-	//! False until every module's startup() has returned.
-	/** Pool threads park on this rather than serving calls, because a module that has not started is
-	 *  not ready to be called. The IO loop deliberately does not wait for it -- see run(). */
+	//! False until every module's startup() has returned. Pool threads park on this rather than
+	//! serving calls; the IO loop deliberately does not wait for it -- see run().
 	std::atomic< bool > m_ready { false };
 
 	//! Declared last so it is destroyed first: the module instances hold the callbacks that capture
@@ -152,9 +142,8 @@ class WorkerRunner
 	//! Queues one frame. Never blocks and never fails on a full socket buffer.
 	[[nodiscard]] std::expected< void, std::string > send( const Json::Value& body, std::span< const int > fds = {} );
 
-	//! Writes everything queued, waiting for writability as needed.
-	/** Only for paths with no IO loop to drain them: --describe, which sends a manifest and exits, and
-	 *  the tail of run(), which should not discard a result that is already queued. */
+	//! Writes everything queued, waiting for writability as needed. Only for paths with no IO loop to
+	//! drain them: --describe, and the tail of run().
 	[[nodiscard]] std::expected< void, std::string > flush();
 
 	[[nodiscard]] ModuleCallbacks makeCallbacks();
@@ -165,19 +154,17 @@ class WorkerRunner
 
 	//! Turns a CALL's input fields and attached descriptor into the handle the module will read.
 	/** Runs on the IO thread, which is the security-relevant part for a ring: the descriptor must be
-	 *  registered and closed before the call reaches a pool thread, because only from that point on
-	 *  does attacker-controlled module code run and only until that point is the ring's fdinfo --
-	 *  which prints the registered file's path -- readable. */
+	 *  registered and closed before the call reaches a pool thread, since that is when module code
+	 *  starts running, and until then the ring's fdinfo prints the registered file's path. */
 	[[nodiscard]] std::expected< std::unique_ptr< ModuleFile >, std::string > adoptInput( ipc::Frame& frame );
 
 	void workerLoop( const std::stop_token& stop );
 	void runCall( QueuedCall call );
 
 	//! Runs the requested operation, with the module's own lock held if it needs one.
-	/** The result travels as a bare descriptor rather than a Blob because the worker never reads its
-	 *  own output back, and mapping a half-gigabyte generated file just to hand its descriptor
-	 *  onwards would put the whole thing back into this process's address space -- exactly what the
-	 *  sink exists to avoid. */
+	/** The result travels as a bare descriptor rather than a Blob: the worker never reads its own
+	 *  output back, and mapping a generated file just to forward its descriptor would put the whole
+	 *  thing back into this address space -- exactly what the sink exists to avoid. */
 	[[nodiscard]] std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > invoke(
 		const QueuedCall& call,
 		const std::shared_ptr< IDHANModule >& module );

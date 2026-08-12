@@ -16,11 +16,7 @@ namespace idhan::helpers
 
 {
 /**
- * @brief
- * @param sha256s
- * @param db
  * @note Hashes MUST be unique
- * @return
  */
 [[nodiscard]] drogon::Task< std::vector< RecordID > > massCreateRecord(
 	const std::vector< SHA256 >& sha256s,

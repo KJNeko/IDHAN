@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/17/26.
-//
 // POST /records/metadata — batch metadata for many records in one query. A grid scrolling tens of
 // thousands of results cannot call /records/{id}/info per tile; this returns the same "basic" shape
 // for a list of ids in a single set-based query.
@@ -16,11 +13,8 @@
 namespace idhan::api
 {
 
-namespace
-{
 //! Upper bound on ids per request. Bounds memory and query planning; the client windows its fetches.
 constexpr std::size_t max_record_ids { 1000 };
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchMetadataBatch( drogon::HttpRequestPtr request )
 {

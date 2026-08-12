@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/11/26.
-//
-
 #include "searchEmbeddings.hpp"
 
 #include <drogon/drogon.h>
@@ -17,9 +13,6 @@
 #include "queryVector.hpp"
 
 namespace idhan::embeddings
-{
-
-namespace
 {
 
 //! Parses pgvector's "[1,-0.5,...]" text output back into floats.
@@ -45,8 +38,6 @@ namespace
 
 	return values;
 }
-
-} // namespace
 
 ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 	std::shared_ptr< modules::RemoteModule > module,
@@ -110,10 +101,9 @@ ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 
 		// Named, not skipped, for the same reason.
 		if ( found == vectors.end() )
-			co_return std::unexpected(
-				createBadRequest(
-					"Record {} has no embedding for this model. Run a backfill first, or remove it from the query",
-					term.m_record_id ) );
+			co_return std::unexpected( createBadRequest(
+				"Record {} has no embedding for this model. Run a backfill first, or remove it from the query",
+				term.m_record_id ) );
 
 		resolved.emplace_back( WeightedVector { .m_vector = found->second, .m_weight = term.m_weight } );
 	}
@@ -140,9 +130,7 @@ ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 	const auto literal { toHalfvecLiteral( *query_vector ) };
 
 	const auto select { std::format(
-		"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}",
-		table,
-		limit ) };
+		"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}", table, limit ) };
 
 	// Logged as something that can be pasted into a database client and run unchanged, which means
 	// two departures from what is actually executed:
@@ -170,8 +158,8 @@ ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 
 	for ( const auto& row : rows )
 		hits.emplace_back(
-			SearchHit { .m_record_id = row[ "record_id" ].as< RecordID >(),
-			            .m_distance = row[ "distance" ].as< double >() } );
+			SearchHit {
+				.m_record_id = row[ "record_id" ].as< RecordID >(), .m_distance = row[ "distance" ].as< double >() } );
 
 	co_return hits;
 }

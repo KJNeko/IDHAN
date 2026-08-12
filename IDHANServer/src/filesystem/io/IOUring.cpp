@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/27/26.
-//
 // Platform-independent FileIOUring members. Everything here is written in terms of read() and
 // size(), both of which every backend provides, so it does not belong in linux/ or windows/.
 

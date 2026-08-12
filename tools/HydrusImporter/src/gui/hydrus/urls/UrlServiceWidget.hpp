@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/7/25.
-//
 #ifndef IDHAN_URLSERVICEWIDGET_HPP
 #define IDHAN_URLSERVICEWIDGET_HPP
 

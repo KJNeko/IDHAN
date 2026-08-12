@@ -1,13 +1,6 @@
-//
-// Created by kj16609 on 8/6/26.
-//
-
 #include "SortKey.hpp"
 
 namespace idhan::search
-{
-
-namespace
 {
 
 // Resolution is split across three mime-specific metadata tables; COALESCE picks whichever
@@ -50,7 +43,6 @@ constexpr std::string_view num_tags_join {
 	" FROM active_tag_mappings_final GROUP BY record_id) ntc USING (record_id)"
 };
 
-} // namespace
 
 SortKeySpec sortKeySpec( const SortType type )
 {

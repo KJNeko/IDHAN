@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/14/24.
-//
-
 #include "TagAPI.hpp"
 #include "logging/log.hpp"
 

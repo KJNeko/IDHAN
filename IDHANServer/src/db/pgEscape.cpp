@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/21/25.
-//
-
 #include <string>
 
 #include "fgl/defines.hpp"

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/28/26.
-//
-
 #include "WorkerProcess.hpp"
 
 #include <drogon/HttpAppFramework.h>
@@ -32,9 +28,6 @@
 namespace idhan::modules
 {
 
-namespace
-{
-
 //! The descriptor the runner is told to use. Chosen rather than inherited-as-is because dup2 onto a
 //! fixed number is the only part of the child setup that has to happen after fork and before exec.
 constexpr int CHILD_CHANNEL_FD { 3 };
@@ -61,7 +54,6 @@ void resumeOnLoop( std::coroutine_handle<> continuation, trantor::EventLoop* loo
 	loop->queueInLoop( [ continuation ]() mutable { continuation.resume(); } );
 }
 
-} // namespace
 
 WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callback ) :
   m_settings( std::move( settings ) ),

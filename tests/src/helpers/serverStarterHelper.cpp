@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/15/25.
-//
-
 #include "serverStarterHelper.hpp"
 
 #include <spdlog/spdlog.h>

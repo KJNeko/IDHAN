@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/1/25.
-//
 #ifdef __linux__
 
 #include "filesystem/io/linux/WriteAwaiter.hpp"

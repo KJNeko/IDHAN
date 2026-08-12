@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/13/25.
-//
 #include <drogon/drogon.h>
 #include <json/json.h>
 

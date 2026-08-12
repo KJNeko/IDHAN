@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/10/26.
-//
-
 #include <drogon/drogon.h>
 
 #include <mutex>
@@ -19,9 +15,6 @@
 namespace idhan::api
 {
 
-namespace
-{
-
 //! HNSW recall knob: how much of the graph a search walks. Higher is better recall and more time.
 /** pgvector caps hnsw.ef_search at 1000, and an HNSW scan returns at most ef_search rows -- so this
  *  is also the ceiling on how many results the index can serve at all. */
@@ -34,8 +27,6 @@ constexpr std::size_t DEFAULT_EF_SEARCH { 100 };
  *  simply not having more. Refusing the larger limit is the honest answer. */
 constexpr std::size_t MAX_SEARCH_LIMIT { MAX_EF_SEARCH };
 constexpr std::size_t DEFAULT_SEARCH_LIMIT { 200 };
-
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::listModels( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
@@ -218,9 +209,7 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 
 	// A record-only query never touches the module system at all: every vector it needs is already
 	// in the table. The module is resolved only when a phrase has to be embedded.
-	const auto has_text_term {
-		std::ranges::any_of( terms, []( const auto& term ) { return term.m_is_text; } )
-	};
+	const auto has_text_term { std::ranges::any_of( terms, []( const auto& term ) { return term.m_is_text; } ) };
 
 	std::shared_ptr< modules::RemoteModule > module {};
 
@@ -239,8 +228,9 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 
 	const auto started { std::chrono::steady_clock::now() };
 
-	const auto hits { co_await embeddings::searchEmbeddings(
-		module, model_id, dimensions, std::move( terms ), limit, ef_search, db ) };
+	const auto hits {
+		co_await embeddings::searchEmbeddings( module, model_id, dimensions, std::move( terms ), limit, ef_search, db )
+	};
 
 	if ( !hits ) co_return hits.error();
 
@@ -269,8 +259,9 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::deleteModel(
 {
 	auto db { drogon::app().getDbClient() };
 
-	const auto rows { co_await db->execSqlCoro(
-		"SELECT model_name FROM embedding_models WHERE model_id = $1", model_id ) };
+	const auto rows {
+		co_await db->execSqlCoro( "SELECT model_name FROM embedding_models WHERE model_id = $1", model_id )
+	};
 
 	if ( rows.empty() ) co_return createNotFound( "No embedding model with id {}", model_id );
 

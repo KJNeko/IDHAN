@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/17/26.
-//
 // The SPA history fallback and the Vite dev proxy both need to know which paths belong to the API,
 // but they read that list from different files in different languages. Drift between them is a
 // silent, dev-only bug: an endpoint 404s behind the dev proxy while working perfectly in

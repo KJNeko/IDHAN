@@ -1,6 +1,3 @@
-//
-// Created by claude on 10/15/25.
-//
 #pragma once
 
 #pragma GCC diagnostic push

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/27/26.
-//
-
 #include "coro/RunLoop.hpp"
 
 namespace idhan::coro

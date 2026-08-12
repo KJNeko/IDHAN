@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/27/26.
-//
 // Neutral coroutine task type. Deliberately has no drogon, trantor, or Qt dependency: the Monitor
 // and Worker processes (see docs/superpowers/specs/2026-07-26-worker-framework-design.md) link this
 // header and have no event loop of drogon's to speak of.

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/13/25.
-//
-
 #include "IDHANTypes.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "db/dbTypes.hpp"

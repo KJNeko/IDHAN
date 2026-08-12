@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/22/25.
-//
-
 #include <format>
 
 #include "api/SearchAPI.hpp"

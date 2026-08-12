@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/11/25.
-//
 #include "ModuleLoader.hpp"
 
 #include <sys/prctl.h>
@@ -23,9 +20,6 @@
 #include "mime/MimeDatabase.hpp"
 
 namespace idhan::modules
-{
-
-namespace
 {
 
 //! Size the host asks for when a module re-dispatches a thumbnail through the callbacks and does not
@@ -108,7 +102,6 @@ void publishEmbeddingModelPath()
 	log::info( "Embedding models will be searched for in {}", path );
 }
 
-} // namespace
 
 ModuleLoader::ModuleLoader()
 {
@@ -362,8 +355,6 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( c
 /** A free coroutine taking everything by value: parameters are copied into the coroutine frame,
  *  whereas a capturing lambda's closure is not, and IDHANTask/drogon::Task are lazy enough that the
  *  distinction is the difference between working code and a use-after-free. */
-namespace
-{
 
 //! What MimeDatabase::scan yields, so a resolved MIME and a scanned one can share a branch.
 using ExpectedMime = std::expected< std::string, drogon::HttpResponsePtr >;
@@ -542,7 +533,6 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	co_return;
 }
 
-} // namespace
 
 void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {

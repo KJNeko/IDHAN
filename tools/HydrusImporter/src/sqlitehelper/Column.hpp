@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 5/24/23.
-//
-
 #pragma once
 #ifndef ATLASGAMEMANAGER_COLUMN_HPP
 #define ATLASGAMEMANAGER_COLUMN_HPP

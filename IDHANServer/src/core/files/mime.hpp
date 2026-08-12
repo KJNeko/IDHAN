@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/15/24.
-//
 #pragma once
 #include <expected>
 #include <string>

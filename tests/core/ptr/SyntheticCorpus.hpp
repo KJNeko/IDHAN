@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/30/26.
-//
 // Builds real zlib-compressed .ptrupdate files so the scan stage is exercised through the same
 // parser the production path uses, rather than against a mocked-out reader.
 

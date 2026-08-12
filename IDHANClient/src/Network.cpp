@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/8/25.
-//
-
 #include "idhan/Network.hpp"
 
 #include <moc_Network.cpp>

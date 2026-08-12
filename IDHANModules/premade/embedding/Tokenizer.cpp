@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/11/26.
-//
-
 #include "Tokenizer.hpp"
 
 #include <json/reader.h>
@@ -91,7 +87,8 @@ std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 	if ( highest < 0 ) return std::unexpected( std::string { "tokenizer.json has an empty vocabulary" } );
 
 	tokenizer.m_tokens.resize( static_cast< std::size_t >( highest ) + 1 );
-	for ( const auto& [ token, id ] : tokenizer.m_vocab ) tokenizer.m_tokens[ static_cast< std::size_t >( id ) ] = token;
+	for ( const auto& [ token, id ] : tokenizer.m_vocab )
+		tokenizer.m_tokens[ static_cast< std::size_t >( id ) ] = token;
 
 	// Resolved once into a flat table. The fallback path is per byte of an unknown character, so
 	// formatting "<0x%02X>" and hashing it there would be the hot part of an already slow case.
@@ -183,7 +180,8 @@ std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 		// sequence axis dynamic, since the graph is the thing that will actually reject a mismatch.
 		if ( tokenizer.m_context_length == 0 )
 		{
-			if ( const auto& strategy { padding[ "strategy" ] }; strategy.isObject() && strategy[ "Fixed" ].isIntegral() )
+			if ( const auto& strategy { padding[ "strategy" ] };
+			     strategy.isObject() && strategy[ "Fixed" ].isIntegral() )
 				tokenizer.m_context_length = static_cast< std::size_t >( strategy[ "Fixed" ].asInt64() );
 		}
 	}
@@ -202,9 +200,8 @@ std::vector< std::int32_t > BpeTokenizer::applyMerges( const std::string_view no
 	// character it does not contain falls back to bytes.
 	for ( std::size_t offset = 0; offset < normalised.size(); )
 	{
-		const auto length {
-			std::min( sequenceLength( static_cast< unsigned char >( normalised[ offset ] ) ), normalised.size() - offset )
-		};
+		const auto length { std::min(
+			sequenceLength( static_cast< unsigned char >( normalised[ offset ] ) ), normalised.size() - offset ) };
 
 		const auto character { normalised.substr( offset, length ) };
 		offset += length;

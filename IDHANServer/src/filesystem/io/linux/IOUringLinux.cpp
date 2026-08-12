@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/29/25.
-//
 #ifdef __linux__
 
 #include "filesystem/io/linux/IOUringLinux.hpp"

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/11/25.
-//
-
 #include <algorithm>
 #include <array>
 #include <fstream>
@@ -27,9 +23,6 @@
 namespace idhan::api
 {
 
-namespace
-{
-
 //! Size-and-format-keyed cache path: thumbnails/t[hash 0:2]/[hash].[size].webp
 std::filesystem::path thumbnailPath( const std::string& hex, const std::size_t size )
 {
@@ -45,7 +38,6 @@ std::string thumbnailCacheControl()
 {
 	return std::format( "private, max-age={}", helpers::default_max_age.count() );
 }
-} // namespace
 
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id )
 {

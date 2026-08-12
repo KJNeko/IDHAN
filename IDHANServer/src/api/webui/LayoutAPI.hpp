@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/18/26.
-//
 #pragma once
 
 #include <drogon/HttpController.h>

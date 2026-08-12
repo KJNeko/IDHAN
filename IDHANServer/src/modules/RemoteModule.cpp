@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/28/26.
-//
-
 #include "RemoteModule.hpp"
 
 #include <algorithm>
@@ -11,9 +7,6 @@
 namespace idhan::modules
 {
 
-namespace
-{
-
 //! Copies a blob's bytes out into an owned buffer.
 [[nodiscard]] std::vector< std::byte > toVector( const ipc::Blob& blob )
 {
@@ -21,7 +14,6 @@ namespace
 	return std::vector< std::byte > { bytes.begin(), bytes.end() };
 }
 
-} // namespace
 
 RemoteModule::RemoteModule(
 	std::shared_ptr< WorkerPool > pool,

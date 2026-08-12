@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/27/26.
-//
 // Minimal coroutine run loop for processes with no trantor event loop -- the Monitor and the Worker
 // (docs/superpowers/specs/2026-07-26-worker-framework-design.md S3.2, S3.3), and tests that want to
 // exercise the io layer without standing up drogon.

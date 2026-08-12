@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/1/25.
-//
 #pragma once
 #ifdef __linux__
 

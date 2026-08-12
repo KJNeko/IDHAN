@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/12/25.
-//
-
 #include "FFMPEGMetadata.hpp"
 
 #include <cstring>

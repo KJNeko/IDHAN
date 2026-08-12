@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/10/26.
-//
-
 #include "OnnxEmbedder.hpp"
 
 #include <spdlog/spdlog.h>
@@ -281,8 +277,8 @@ std::expected< EmbeddingInfo, ModuleError > OnnxEmbedder::embedText( const std::
 	// the tower was advertised and then failed to come up. The recorded reason is the useful part.
 	if ( m_text_session == nullptr )
 		return std::unexpected(
-			ModuleError { m_text_failure.empty() ? std::string { "this model has no text encoder" } :
-			                                       m_text_failure } );
+			ModuleError {
+				m_text_failure.empty() ? std::string { "this model has no text encoder" } : m_text_failure } );
 
 	auto ids { m_tokenizer.encode( phrase ) };
 

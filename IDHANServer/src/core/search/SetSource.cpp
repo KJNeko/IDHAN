@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/6/26.
-//
-
 #include "SetSource.hpp"
 
 #include <chrono>
@@ -11,9 +7,6 @@
 #include "logging/log.hpp"
 
 namespace idhan::search
-{
-
-namespace
 {
 
 //! Renders \p ids as a typed array literal. The cast is explicit so an empty list renders as
@@ -219,7 +212,6 @@ std::string domainFilter( const FetchContext& ctx )
 	return " AND f.tag_domain_id = ANY($1)";
 }
 
-} // namespace
 
 Task< Set > fetchTag( FetchContext ctx, const TagID tag, std::string label )
 {

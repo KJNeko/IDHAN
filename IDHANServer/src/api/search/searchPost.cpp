@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/17/26.
-//
 // POST /search — the full search surface the WebUI uses. Unlike the legacy GET /search (tag ids
 // only, positive only, no pagination), this takes tag text with negation and system predicates,
 // a sort, and limit/offset, and reports how long the query took.

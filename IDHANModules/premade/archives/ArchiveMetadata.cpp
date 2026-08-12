@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/24/25.
-//
-
 #include "ArchiveMetadata.hpp"
 
 #include <json/value.h>

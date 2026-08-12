@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 8/18/25.
-//
-
 #include "MappingFixture.hpp"
 
 void MappingFixture::createMapping( TagID tag_id, const RecordID record_id )

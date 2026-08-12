@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/16/25.
-//
-
 #include "ScopedTimer.hpp"
 
 #include "Config.hpp"

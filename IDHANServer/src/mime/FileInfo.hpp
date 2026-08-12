@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 3/20/25.
-//
 #pragma once
 
 #include <chrono>

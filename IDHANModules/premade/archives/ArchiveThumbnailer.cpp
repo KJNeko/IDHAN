@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/25/25.
-//
 #include "ArchiveThumbnailer.hpp"
 
 #include <json/reader.h>

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/18/24.
-//
-
 #include <fstream>
 
 #include "api/ClusterAPI.hpp"
@@ -12,8 +8,6 @@
 namespace idhan::api
 {
 
-namespace
-{
 // Normalizes a path so that equivalent spellings ("/a/b/", "/a/b/.", "/a/b") compare equal
 std::filesystem::path normalizeClusterPath( std::filesystem::path path )
 {
@@ -22,7 +16,6 @@ std::filesystem::path normalizeClusterPath( std::filesystem::path path )
 	if ( !path.has_filename() ) path = path.parent_path();
 	return path;
 }
-} // namespace
 
 ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 {

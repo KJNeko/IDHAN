@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/28/26.
-//
 #ifdef __linux__
 
 #include <sys/mman.h>

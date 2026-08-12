@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/30/24.
-//
-
 #pragma once
 
 //! Packs a semantic version into a single int as (major << 16) | (minor << 8) | patch.
