@@ -101,7 +101,8 @@ TEST_F( FlattenCollapseTest, EmitsASurvivingAdd )
 	spill( { ev( 1, 7, 0, EventOp::Add ) } );
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	EXPECT_FALSE( result.cancelled );
 	EXPECT_EQ( result.stats.mappings_after_collapse, 1u );
@@ -118,7 +119,8 @@ TEST_F( FlattenCollapseTest, CollapsesAddDeleteAddToASingleAdd )
 	spill( { ev( 1, 7, 0, EventOp::Add ), ev( 1, 7, 1, EventOp::Delete ), ev( 1, 7, 2, EventOp::Add ) } );
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	EXPECT_EQ( result.stats.events_scanned, 3u );
 	EXPECT_EQ( result.stats.mappings_after_collapse, 1u );
@@ -139,7 +141,8 @@ TEST_F( FlattenCollapseTest, CollapsesAddDeleteAddDeleteToASingleDelete )
 	         ev( 1, 7, 3, EventOp::Delete ) } );
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	EXPECT_EQ( result.stats.terminal_deletes, 1u );
 
@@ -156,7 +159,8 @@ TEST_F( FlattenCollapseTest, GroupsEveryTagForOneRecordIntoOneEntry )
 	spill( { ev( 1, 1, 0, EventOp::Add ), ev( 1, 2, 5, EventOp::Add ), ev( 1, 3, 9, EventOp::Add ) } );
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	const auto records = readAll( result );
 	ASSERT_EQ( records.size(), 1u );
@@ -169,7 +173,8 @@ TEST_F( FlattenCollapseTest, SeparatesAddsAndDeletesOnOneRecord )
 	spill( { ev( 1, 1, 0, EventOp::Add ), ev( 1, 2, 0, EventOp::Add ), ev( 1, 2, 3, EventOp::Delete ) } );
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	const auto records = readAll( result );
 	ASSERT_EQ( records.size(), 1u );
@@ -196,7 +201,9 @@ TEST_F( FlattenCollapseTest, ChunkCapSplitsOutputAndSpansBuckets )
 	spill( events );
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, 8, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result =
+		collapseBuckets( m_work, m_out, definitions, usage, m_callbacks, { .max_records_per_chunk = 8 } );
 
 	std::uint64_t total { 0 };
 	for ( const auto& entry : result.chunks )
@@ -215,7 +222,8 @@ TEST_F( FlattenCollapseTest, TagWithNoDefinitionIsDroppedAndCounted )
 	spill( { ev( 1, 1, 0, EventOp::Add ), ev( 1, 999, 0, EventOp::Add ) } );
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	EXPECT_EQ( result.stats.skipped_missing_definitions, 1u );
 
@@ -231,7 +239,8 @@ TEST_F( FlattenCollapseTest, RecordWithNoHashDefinitionIsDropped )
 	spill( { ev( 1, 1, 0, EventOp::Add ) } );
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	EXPECT_TRUE( readAll( result ).empty() );
 
@@ -251,25 +260,12 @@ TEST_F( FlattenCollapseTest, StatsUpdatedReportsRunningTotals )
 	         ev( 2, 8, 2, EventOp::Add ),
 	         ev( 2, 8, 3, EventOp::Delete ) } );
 
-	struct Snapshot
-	{
-		std::uint64_t records_flattened;
-		std::uint64_t chains_collapsed;
-		std::uint64_t terminal_deletes;
-		std::uint64_t chunks_written;
-		std::uint64_t skipped_missing_definitions;
-	};
-	std::vector< Snapshot > seen;
-	m_callbacks.statsUpdated = [ &seen ]( const std::uint64_t records_flattened,
-	                                      const std::uint64_t chains_collapsed,
-	                                      const std::uint64_t terminal_deletes,
-	                                      const std::uint64_t chunks_written,
-	                                      const std::uint64_t skipped_missing_definitions )
-	{ seen.push_back( { records_flattened, chains_collapsed, terminal_deletes, chunks_written,
-		                skipped_missing_definitions } ); };
+	std::vector< CollapseProgressStats > seen;
+	m_callbacks.statsUpdated = [ &seen ]( const CollapseProgressStats& stats ) { seen.push_back( stats ); };
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	ASSERT_FALSE( seen.empty() );
 	// Two occupied buckets, plus one final call once the trailing open chunk is closed.
@@ -292,7 +288,8 @@ TEST_F( FlattenCollapseTest, StatsUpdatedReportsRunningTotals )
 TEST_F( FlattenCollapseTest, EmptyWorkDirectoryProducesNoChunks )
 {
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, MAX_RECORDS_PER_CHUNK, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result = collapseBuckets( m_work, m_out, definitions, usage, m_callbacks );
 
 	EXPECT_TRUE( result.chunks.empty() );
 	EXPECT_EQ( result.stats.events_scanned, 0u );
@@ -313,7 +310,9 @@ TEST_F( FlattenCollapseTest, StopsWhenCancelled )
 	m_callbacks.cancelled = [] { return true; };
 
 	const DefinitionReader definitions { m_work };
-	const auto result = collapseBuckets( m_work, m_out, definitions, 8, m_callbacks );
+	TagUsageSet usage { definitions.tagIdCapacity() };
+	const auto result =
+		collapseBuckets( m_work, m_out, definitions, usage, m_callbacks, { .max_records_per_chunk = 8 } );
 
 	EXPECT_TRUE( result.cancelled );
 }

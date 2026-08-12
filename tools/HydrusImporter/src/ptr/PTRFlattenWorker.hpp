@@ -8,6 +8,8 @@
 #include <atomic>
 #include <filesystem>
 
+#include "ptr/flatten/FlattenLiveStats.hpp"
+
 namespace idhan::hydrus::ptr
 {
 
@@ -21,7 +23,8 @@ class PTRFlattenWorker : public QObject, public QRunnable
 
 	PTRFlattenWorker( std::filesystem::path ptr_directory,
 	                  std::filesystem::path output_directory,
-	                  QObject* parent = nullptr );
+		bool discard_terminal_deletes,
+		QObject* parent = nullptr );
 
 	Q_DISABLE_COPY_MOVE( PTRFlattenWorker )
 	~PTRFlattenWorker() override;
@@ -34,20 +37,19 @@ class PTRFlattenWorker : public QObject, public QRunnable
 
 	void progress( const QString& status );
 	void subProgress( int current, int total, const QString& status );
-	//! Running counters, forwarded from FlattenLiveStats at the same cadence as subProgress.
-	void statsUpdated( quint64 eventsScanned,
-	                   quint64 recordsFlattened,
-	                   quint64 chainsCollapsed,
-	                   quint64 terminalDeletes,
-	                   quint64 chunksWritten,
-	                   quint64 skippedFiles,
-	                   quint64 skippedMissingDefinitions );
+	//! Running counters, forwarded whole at the same cadence as subProgress.
+	//!
+	//! Passed as the struct rather than as a parameter per counter: there are nine of them and
+	//! they were all the same type, so a transposed pair would have compiled and mislabelled the
+	//! panel for a whole run. Adding a counter now costs nothing at this boundary.
+	void statsUpdated( const idhan::hydrus::ptr::FlattenLiveStats& stats );
 	void finished( bool success, const QString& message );
 
   private:
 
 	std::filesystem::path m_ptr_directory;
 	std::filesystem::path m_output_directory;
+	bool m_discard_terminal_deletes;
 	std::atomic< bool > m_cancelled { false };
 };
 

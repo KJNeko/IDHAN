@@ -93,7 +93,10 @@ void PTRFlattenWidget::onFlatten()
 	ui->statusLabel->setText( "Starting..." );
 	resetStats();
 
-	m_worker = std::make_unique< idhan::hydrus::ptr::PTRFlattenWorker >( source.toStdString(), output.toStdString() );
+	// Read once, here: the run keeps whatever the checkbox said when it started, so toggling it
+	// mid-flatten cannot change what the chunks end up containing.
+	m_worker = std::make_unique< idhan::hydrus::ptr::PTRFlattenWorker >(
+		source.toStdString(), output.toStdString(), ui->discardTerminalDeletes->isChecked() );
 
 	connect( m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::progress, this, &PTRFlattenWidget::onProgress );
 	connect(
@@ -111,9 +114,14 @@ void PTRFlattenWidget::resetStats()
 	ui->recordsFlattenedValue->setText( "0" );
 	ui->chainsCollapsedValue->setText( "0" );
 	ui->terminalDeletesValue->setText( "0" );
+	ui->terminalDeleteRecordsValue->setText( "0" );
 	ui->chunksWrittenValue->setText( "0" );
 	ui->skippedFilesValue->setText( "0" );
 	ui->skippedMissingDefinitionsValue->setText( "0" );
+
+	// Not a count yet. The tag totals cannot be known until the relations file is written, so a
+	// zero here would read as "none were unused" for the whole run.
+	ui->unusedTagsValue->setText( "-" );
 }
 
 void PTRFlattenWidget::onCancel()
@@ -133,23 +141,31 @@ void PTRFlattenWidget::onSubProgress( const int current, const int total, const 
 	ui->progressBar->setValue( current );
 }
 
-void PTRFlattenWidget::onStatsUpdated( const quint64 eventsScanned,
-                                       const quint64 recordsFlattened,
-                                       const quint64 chainsCollapsed,
-                                       const quint64 terminalDeletes,
-                                       const quint64 chunksWritten,
-                                       const quint64 skippedFiles,
-                                       const quint64 skippedMissingDefinitions )
+void PTRFlattenWidget::onStatsUpdated( const idhan::hydrus::ptr::FlattenLiveStats& stats )
 {
 	const auto& locale = QLocale::system();
-	ui->eventsScannedValue->setText( locale.toString( static_cast< qulonglong >( eventsScanned ) ) );
-	ui->recordsFlattenedValue->setText( locale.toString( static_cast< qulonglong >( recordsFlattened ) ) );
-	ui->chainsCollapsedValue->setText( locale.toString( static_cast< qulonglong >( chainsCollapsed ) ) );
-	ui->terminalDeletesValue->setText( locale.toString( static_cast< qulonglong >( terminalDeletes ) ) );
-	ui->chunksWrittenValue->setText( locale.toString( static_cast< qulonglong >( chunksWritten ) ) );
-	ui->skippedFilesValue->setText( locale.toString( static_cast< qulonglong >( skippedFiles ) ) );
-	ui->skippedMissingDefinitionsValue->setText(
-		locale.toString( static_cast< qulonglong >( skippedMissingDefinitions ) ) );
+	const auto number = [ &locale ]( const std::uint64_t value )
+	{ return locale.toString( static_cast< qulonglong >( value ) ); };
+
+	ui->eventsScannedValue->setText( number( stats.events_scanned ) );
+	ui->recordsFlattenedValue->setText( number( stats.records_flattened ) );
+	ui->chainsCollapsedValue->setText( number( stats.chains_collapsed ) );
+	ui->terminalDeletesValue->setText( number( stats.terminal_deletes ) );
+	ui->terminalDeleteRecordsValue->setText( number( stats.terminal_delete_records ) );
+	ui->chunksWrittenValue->setText( number( stats.chunks_written ) );
+	ui->skippedFilesValue->setText( number( stats.skipped_files ) );
+	ui->skippedMissingDefinitionsValue->setText( number( stats.skipped_missing_definitions ) );
+
+	// The same number means opposite things depending on the checkbox, so the label has to say
+	// which. Driven from the run's own stats rather than the checkbox, which the user is free to
+	// toggle while a flatten is in flight.
+	ui->terminalDeletesLabel->setText(
+		stats.discard_terminal_deletes ? "Terminal deletes discarded:" : "Terminal deletes kept:" );
+
+	if ( stats.tags_counted )
+		ui->unusedTagsValue->setText( QString( "%1 of %2 defined" )
+		                                  .arg( number( stats.defined_tags - stats.used_tags ) )
+		                                  .arg( number( stats.defined_tags ) ) );
 }
 
 void PTRFlattenWidget::onFinished( const bool success, const QString& message )

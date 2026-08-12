@@ -51,10 +51,15 @@ struct RelationsFile
 
 //! Writes both relationship kinds into one file with a shared string table. A pair either of
 //! whose tags has no definition is dropped and counted; a half-resolved relationship is meaningless.
+//!
+//! \param usage Marked with every tag id that reaches the string table, or null to track nothing.
+//!        A tag surviving only as a parent or sibling endpoint is still created at import, so it
+//!        counts as used even though no chunk carries it.
 RelationsFileStats writeRelationsFile( const std::filesystem::path& path,
                                        const std::vector< CollapsedRelation >& parents,
                                        const std::vector< CollapsedRelation >& siblings,
-                                       const TagLookup& lookup );
+	const TagLookup& lookup,
+	TagUsageSet* usage = nullptr );
 
 //! \throws std::runtime_error on bad magic, unknown version, or truncation.
 RelationsFile readRelationsFile( const std::filesystem::path& path );

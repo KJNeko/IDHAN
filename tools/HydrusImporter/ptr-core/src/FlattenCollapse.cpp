@@ -43,13 +43,17 @@ struct BucketCollapseResult
 	std::uint64_t events_scanned { 0 };
 	std::uint64_t mappings_after_collapse { 0 };
 	std::uint64_t terminal_deletes { 0 };
+	std::uint64_t terminal_delete_records { 0 };
 };
 
 //! Reads, sorts, and walks one bucket's events into whole records. Touches only its arguments --
 //! safe to run concurrently for different buckets.
+//!
+//! \param discard_terminal_deletes Count terminal deletes but do not emit them. See CollapseOptions.
 BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
                                         const std::size_t bucket,
-                                        const DefinitionReader& definitions )
+	const DefinitionReader& definitions,
+	const bool discard_terminal_deletes )
 {
 	BucketCollapseResult out {};
 
@@ -82,6 +86,11 @@ BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
 		std::vector< std::uint32_t > adds;
 		std::vector< std::uint32_t > dels;
 
+		// Compared against the running total once the record's chains are walked. Keying off dels
+		// being non-empty would silently report zero affected records whenever discarding is on,
+		// which is exactly the case the number exists to describe.
+		const auto deletes_before = out.terminal_deletes;
+
 		std::size_t chain_start { record_start };
 		while ( chain_start < record_end )
 		{
@@ -96,17 +105,27 @@ BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
 				if ( collapsed->op == EventOp::Add )
 				{
 					adds.push_back( tag_id );
+					++out.mappings_after_collapse;
 				}
 				else
 				{
-					dels.push_back( tag_id );
 					++out.terminal_deletes;
+
+					// Counted above whether or not it is kept, so the reported total is what the
+					// corpus contained. mappings_after_collapse is only bumped when something is
+					// actually written, so it always agrees with the chunks on disk.
+					if ( !discard_terminal_deletes )
+					{
+						dels.push_back( tag_id );
+						++out.mappings_after_collapse;
+					}
 				}
-				++out.mappings_after_collapse;
 			}
 
 			chain_start = chain_end;
 		}
+
+		if ( out.terminal_deletes > deletes_before ) ++out.terminal_delete_records;
 
 		std::array< std::byte, SHA256_BYTES > sha_bytes {};
 		std::ranges::copy( *sha, sha_bytes.begin() );
@@ -133,10 +152,11 @@ class ChunkSink
 {
   public:
 
-	ChunkSink( std::filesystem::path out_dir, const std::size_t cap, const TagLookup& lookup ) :
+	ChunkSink( std::filesystem::path out_dir, const std::size_t cap, const TagLookup& lookup, TagUsageSet& usage ) :
 	  m_out_dir( std::move( out_dir ) ),
 	  m_cap( cap == 0 ? 1 : cap ),
-	  m_lookup( lookup )
+	  m_lookup( lookup ),
+	  m_usage( usage )
 	{}
 
 	ChunkSink( const ChunkSink& ) = delete;
@@ -212,7 +232,10 @@ class ChunkSink
 			writer.addRecord( record.sha256, std::move( record.adds ), std::move( record.dels ) );
 
 		const auto records = writer.recordCount();
-		const auto stats = writer.finish( m_lookup );
+
+		// Marked from inside finish(), with no lock held. TagUsageSet exists to make that safe:
+		// several workers seal at once, and one tag's text rides in hundreds of chunks.
+		const auto stats = writer.finish( m_lookup, &m_usage );
 
 		std::lock_guard< std::mutex > lock { m_mutex };
 		m_entries.push_back( ChunkEntry { std::move( batch.name ), records, stats.mappings } );
@@ -222,6 +245,7 @@ class ChunkSink
 	std::filesystem::path m_out_dir;
 	std::size_t m_cap;
 	const TagLookup& m_lookup;
+	TagUsageSet& m_usage;
 
 	mutable std::mutex m_mutex {};
 	std::vector< CollapsedRecord > m_pending {};
@@ -235,9 +259,9 @@ class ChunkSink
 CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
                                 const std::filesystem::path& out_dir,
                                 const DefinitionReader& definitions,
-                                const std::size_t max_records_per_chunk,
-                                const CollapseCallbacks& callbacks,
-                                const unsigned thread_count )
+	TagUsageSet& usage,
+	const CollapseCallbacks& callbacks,
+	const CollapseOptions options )
 {
 	CollapseResult result {};
 
@@ -245,7 +269,7 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 
 	const TagLookup lookup = [ &definitions ]( const std::uint32_t tag_id ) { return definitions.tag( tag_id ); };
 
-	ChunkSink sink { out_dir, max_records_per_chunk, lookup };
+	ChunkSink sink { out_dir, options.max_records_per_chunk, lookup, usage };
 
 	// Pure accumulation, bumped once per bucket, so an atomic costs nothing measurable here.
 	// records_flattened counts every record handed to the sink, independent of chunk boundaries --
@@ -254,6 +278,7 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 	std::atomic< std::uint64_t > events_scanned { 0 };
 	std::atomic< std::uint64_t > mappings_after_collapse { 0 };
 	std::atomic< std::uint64_t > terminal_deletes { 0 };
+	std::atomic< std::uint64_t > terminal_delete_records { 0 };
 	std::atomic< std::size_t > buckets_done { 0 };
 
 	// Guards the host callbacks and nothing else. Reading, sorting and chain-walking a bucket, and
@@ -267,7 +292,7 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 			if ( callbacks.cancelled && callbacks.cancelled() ) return false;
 		}
 
-		auto collapsed = collapseOneBucket( work_dir, bucket, definitions );
+		auto collapsed = collapseOneBucket( work_dir, bucket, definitions, options.discard_terminal_deletes );
 
 		// A bucket with events but zero surviving records (every record's hash undefined) still
 		// contributed events_scanned, so the gate is "had events", not "produced records" --
@@ -279,6 +304,7 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 			events_scanned.fetch_add( collapsed.events_scanned, std::memory_order_relaxed );
 			mappings_after_collapse.fetch_add( collapsed.mappings_after_collapse, std::memory_order_relaxed );
 			terminal_deletes.fetch_add( collapsed.terminal_deletes, std::memory_order_relaxed );
+			terminal_delete_records.fetch_add( collapsed.terminal_delete_records, std::memory_order_relaxed );
 			records_flattened.fetch_add( collapsed.records.size(), std::memory_order_relaxed );
 
 			sink.add( std::move( collapsed.records ) );
@@ -300,18 +326,20 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 			const auto [ chunks, missing ] = sink.totals();
 
 			callbacks.statsUpdated(
-				records_flattened.load( std::memory_order_relaxed ),
-				events_scanned.load( std::memory_order_relaxed )
-					- mappings_after_collapse.load( std::memory_order_relaxed ),
-				terminal_deletes.load( std::memory_order_relaxed ),
-				chunks,
-				missing );
+				CollapseProgressStats {
+					.records_flattened = records_flattened.load( std::memory_order_relaxed ),
+					.chains_collapsed = events_scanned.load( std::memory_order_relaxed )
+			                          - mappings_after_collapse.load( std::memory_order_relaxed ),
+					.terminal_deletes = terminal_deletes.load( std::memory_order_relaxed ),
+					.terminal_delete_records = terminal_delete_records.load( std::memory_order_relaxed ),
+					.chunks_written = chunks,
+					.skipped_missing_definitions = missing } );
 		}
 
 		return true;
 	};
 
-	result.cancelled = !parallelIndexed( BUCKET_COUNT, thread_count, body );
+	result.cancelled = !parallelIndexed( BUCKET_COUNT, options.thread_count, body );
 
 	sink.close();
 
@@ -326,23 +354,30 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 	result.stats.events_scanned = events_scanned.load( std::memory_order_relaxed );
 	result.stats.mappings_after_collapse = mappings_after_collapse.load( std::memory_order_relaxed );
 	result.stats.terminal_deletes = terminal_deletes.load( std::memory_order_relaxed );
+	result.stats.terminal_delete_records = terminal_delete_records.load( std::memory_order_relaxed );
 	result.stats.events_collapsed = result.stats.events_scanned - result.stats.mappings_after_collapse;
 
 	// close() above just sealed the last, part-filled chunk -- report it so the final live snapshot
 	// matches the manifest rather than permanently undercounting by one.
 	if ( callbacks.statsUpdated )
 		callbacks.statsUpdated(
-			records_flattened.load( std::memory_order_relaxed ),
-			result.stats.events_collapsed,
-			result.stats.terminal_deletes,
-			result.chunks.size(),
-			result.stats.skipped_missing_definitions );
+			CollapseProgressStats {
+				.records_flattened = records_flattened.load( std::memory_order_relaxed ),
+				.chains_collapsed = result.stats.events_collapsed,
+				.terminal_deletes = result.stats.terminal_deletes,
+				.terminal_delete_records = result.stats.terminal_delete_records,
+				.chunks_written = result.chunks.size(),
+				.skipped_missing_definitions = result.stats.skipped_missing_definitions } );
 
 	spdlog::info(
-		"Collapse complete: {} events scanned, {} mappings survived ({} collapsed away), {} chunks",
+		"Collapse complete: {} events scanned, {} mappings written ({} collapsed away), {} terminal deletes {} across "
+		"{} records, {} chunks",
 		result.stats.events_scanned,
 		result.stats.mappings_after_collapse,
 		result.stats.events_collapsed,
+		result.stats.terminal_deletes,
+		options.discard_terminal_deletes ? "discarded" : "kept",
+		result.stats.terminal_delete_records,
 		result.chunks.size() );
 
 	return result;

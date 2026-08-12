@@ -123,10 +123,7 @@ MetadataUpdate loadCorpusMetadata( const std::filesystem::path& dir )
 FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
                            const std::filesystem::path& out_dir,
                            const FlattenCallbacks& callbacks,
-                           const std::size_t max_records_per_chunk,
-                           const std::uint64_t required_free_bytes,
-                           const unsigned scan_thread_count,
-                           const unsigned collapse_thread_count )
+	const FlattenOptions options )
 {
 	FlattenOutcome outcome {};
 
@@ -142,13 +139,13 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 
 		// Fail before spending hours, not after filling the disk mid-spill.
 		const auto space = std::filesystem::space( out_dir );
-		if ( space.available < required_free_bytes )
+		if ( space.available < options.required_free_bytes )
 		{
 			outcome.message = std::format(
 				"Not enough free space at {}: {} GiB available, {} GiB required",
 				out_dir.string(),
 				space.available / ( 1024ULL * 1024 * 1024 ),
-				required_free_bytes / ( 1024ULL * 1024 * 1024 ) );
+				options.required_free_bytes / ( 1024ULL * 1024 * 1024 ) );
 			spdlog::error( "{}", outcome.message );
 			return outcome;
 		}
@@ -159,6 +156,7 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 		// Owned here and updated in place by both stages' callbacks below, so scan-stage fields
 		// stay put once collapse begins instead of resetting to zero.
 		FlattenLiveStats live {};
+		live.discard_terminal_deletes = options.discard_terminal_deletes;
 
 		announce( callbacks, "Scanning update files" );
 		ScanCallbacks scan_callbacks {};
@@ -172,7 +170,7 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 			if ( callbacks.statsUpdated ) callbacks.statsUpdated( live );
 		};
 
-		const auto scan = scanCorpus( ptr_dir, metadata, work_dir, scan_callbacks, scan_thread_count );
+		const auto scan = scanCorpus( ptr_dir, metadata, work_dir, scan_callbacks, options.scan_thread_count );
 
 		if ( scan.cancelled )
 		{
@@ -186,30 +184,42 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 
 		CollapseResult collapse {};
 		RelationsFileStats relation_stats {};
+		std::uint64_t defined_tags { 0 };
+		std::uint64_t used_tags { 0 };
 
 		{
 			// Scoped so the mmap is released before the work directory is removed.
 			const DefinitionReader definitions { work_dir };
 
+			// Sized from the definition store, so every id that could ever be written has a bit.
+			// Shared by the collapse and the relations write: a tag counts as used if either put
+			// it on disk, which is the same as saying the import will create it.
+			TagUsageSet usage { definitions.tagIdCapacity() };
+
 			CollapseCallbacks collapse_callbacks {};
 			collapse_callbacks.cancelled = callbacks.cancelled;
 			collapse_callbacks.progress = callbacks.progress;
-			collapse_callbacks.statsUpdated = [ &callbacks, &live ]( const std::uint64_t records_flattened,
-			                                                        const std::uint64_t chains_collapsed,
-			                                                        const std::uint64_t terminal_deletes,
-			                                                        const std::uint64_t chunks_written,
-			                                                        const std::uint64_t skipped_missing_definitions )
+			collapse_callbacks.statsUpdated = [ &callbacks, &live ]( const CollapseProgressStats& stats )
 			{
-				live.records_flattened = records_flattened;
-				live.chains_collapsed = chains_collapsed;
-				live.terminal_deletes = terminal_deletes;
-				live.chunks_written = chunks_written;
-				live.skipped_missing_definitions = skipped_missing_definitions;
+				live.records_flattened = stats.records_flattened;
+				live.chains_collapsed = stats.chains_collapsed;
+				live.terminal_deletes = stats.terminal_deletes;
+				live.terminal_delete_records = stats.terminal_delete_records;
+				live.chunks_written = stats.chunks_written;
+				live.skipped_missing_definitions = stats.skipped_missing_definitions;
 				if ( callbacks.statsUpdated ) callbacks.statsUpdated( live );
 			};
 
 			collapse = collapseBuckets(
-				work_dir, staging_dir, definitions, max_records_per_chunk, collapse_callbacks, collapse_thread_count );
+				work_dir,
+				staging_dir,
+				definitions,
+				usage,
+				collapse_callbacks,
+				CollapseOptions {
+					.max_records_per_chunk = options.max_records_per_chunk,
+					.discard_terminal_deletes = options.discard_terminal_deletes,
+					.thread_count = options.collapse_thread_count } );
 
 			if ( collapse.cancelled )
 			{
@@ -226,18 +236,38 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 
 			const TagLookup lookup = [ &definitions ]( const std::uint32_t tag_id )
 			{ return definitions.tag( tag_id ); };
-			relation_stats = writeRelationsFile( staging_dir / RELATIONS_FILENAME, parents, siblings, lookup );
+			relation_stats = writeRelationsFile( staging_dir / RELATIONS_FILENAME, parents, siblings, lookup, &usage );
+
+			// Only meaningful now: until the relations file is written, a tag that appears nowhere
+			// else might still be about to be used by a parent or sibling pair.
+			defined_tags = definitions.definedTagCount();
+			used_tags = usage.count();
 		}
 
 		outcome.manifest.format_version = CHUNK_FORMAT_VERSION;
 		outcome.manifest.first_update_index = scan.first_update_index;
 		outcome.manifest.last_update_index = scan.last_update_index;
-		outcome.manifest.max_records_per_chunk = max_records_per_chunk;
+		outcome.manifest.max_records_per_chunk = options.max_records_per_chunk;
+		outcome.manifest.discard_terminal_deletes = options.discard_terminal_deletes;
 		outcome.manifest.relations_file = RELATIONS_FILENAME;
 		outcome.manifest.chunks = collapse.chunks;
 		outcome.manifest.stats = collapse.stats;
 		outcome.manifest.stats.skipped_files = scan.skipped_files;
 		outcome.manifest.stats.skipped_missing_definitions += relation_stats.missing_definitions;
+		outcome.manifest.stats.defined_tags = defined_tags;
+		outcome.manifest.stats.used_tags = used_tags;
+
+		// The tag totals are the one thing no bucket could report, so the live panel has been
+		// showing them as pending. Push a final update carrying them before the run is announced
+		// done, or the number the user asked for never appears.
+		if ( callbacks.statsUpdated )
+		{
+			live.tags_counted = true;
+			live.defined_tags = defined_tags;
+			live.used_tags = used_tags;
+			live.skipped_missing_definitions = outcome.manifest.stats.skipped_missing_definitions;
+			callbacks.statsUpdated( live );
+		}
 
 		// Written last. Until this exists the directory is not a compacted directory.
 		announce( callbacks, "Writing manifest" );
@@ -248,10 +278,16 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 
 		outcome.success = true;
 		outcome.message = std::format(
-			"Flattened {} events into {} mappings across {} chunks",
+			"Flattened {} events into {} mappings across {} chunks. {} terminal deletes {} across {} records; "
+			"{} of {} defined tags were unused",
 			outcome.manifest.stats.events_scanned,
 			outcome.manifest.stats.mappings_after_collapse,
-			outcome.manifest.chunks.size() );
+			outcome.manifest.chunks.size(),
+			outcome.manifest.stats.terminal_deletes,
+			options.discard_terminal_deletes ? "discarded" : "kept",
+			outcome.manifest.stats.terminal_delete_records,
+			defined_tags - used_tags,
+			defined_tags );
 
 		spdlog::info( "{}", outcome.message );
 	}

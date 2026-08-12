@@ -13,13 +13,19 @@ namespace idhan::hydrus::ptr
 
 PTRFlattenWorker::PTRFlattenWorker( std::filesystem::path ptr_directory,
                                     std::filesystem::path output_directory,
-                                    QObject* parent ) :
+	const bool discard_terminal_deletes,
+	QObject* parent ) :
   QObject( parent ),
   QRunnable(),
   m_ptr_directory( std::move( ptr_directory ) ),
-  m_output_directory( std::move( output_directory ) )
+  m_output_directory( std::move( output_directory ) ),
+  m_discard_terminal_deletes( discard_terminal_deletes )
 {
 	setAutoDelete( false );
+
+	// statsUpdated crosses from the pool thread to the GUI thread as a queued connection, which
+	// copies the argument through the meta-type system rather than passing the reference along.
+	qRegisterMetaType< FlattenLiveStats >( "idhan::hydrus::ptr::FlattenLiveStats" );
 }
 
 PTRFlattenWorker::~PTRFlattenWorker() = default;
@@ -46,19 +52,13 @@ void PTRFlattenWorker::run()
 				.arg( QLocale::system().toString( static_cast< qlonglong >( total ) ) ) );
 	};
 
-	callbacks.statsUpdated = [ this ]( const FlattenLiveStats& stats )
-	{
-		emit statsUpdated(
-			stats.events_scanned,
-			stats.records_flattened,
-			stats.chains_collapsed,
-			stats.terminal_deletes,
-			stats.chunks_written,
-			stats.skipped_files,
-			stats.skipped_missing_definitions );
-	};
+	callbacks.statsUpdated = [ this ]( const FlattenLiveStats& stats ) { emit statsUpdated( stats ); };
 
-	const auto outcome = runFlatten( m_ptr_directory, m_output_directory, callbacks );
+	const auto outcome = runFlatten(
+		m_ptr_directory,
+		m_output_directory,
+		callbacks,
+		FlattenOptions { .discard_terminal_deletes = m_discard_terminal_deletes } );
 
 	if ( outcome.cancelled )
 	{

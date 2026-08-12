@@ -88,7 +88,7 @@ void ChunkWriter::addRecord( std::array< std::byte, SHA256_BYTES > sha256,
 	m_records.push_back( PendingRecord { sha256, std::move( add_tag_ids ), std::move( del_tag_ids ) } );
 }
 
-ChunkStats ChunkWriter::finish( const TagLookup& lookup )
+ChunkStats ChunkWriter::finish( const TagLookup& lookup, TagUsageSet* const usage )
 {
 	if ( m_finished )
 		throw std::runtime_error( std::format( "ChunkWriter::finish called twice for {}", m_path.string() ) );
@@ -120,6 +120,10 @@ ChunkStats ChunkWriter::finish( const TagLookup& lookup )
 
 		id_to_index.emplace( tag_id, static_cast< std::uint32_t >( strings.size() ) );
 		strings.push_back( ChunkStringEntry { tag_id, std::string( *text ) } );
+
+		// Marked here rather than after the write: an id that resolved is one this chunk carries,
+		// and the remap below can only ever drop ids that did not.
+		if ( usage != nullptr ) usage->mark( tag_id );
 	}
 
 	const auto remap = [ & ]( const std::vector< std::uint32_t >& ids )
