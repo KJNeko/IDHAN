@@ -4,14 +4,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <format>
+#include <system_error>
 
 using namespace idhan;
 
 namespace premade
-{
-
-namespace
 {
 
 //! Vectors are compared by inner product, so a norm that drifts is a silently wrong result. fp16
@@ -19,7 +18,6 @@ namespace
 //! rejecting correct data, and tight enough to catch an export that forgot to normalise at all.
 constexpr float NORM_TOLERANCE { 1e-3f };
 
-} // namespace
 
 OnnxEmbedder::OnnxEmbedder( ModuleCallbacks callbacks, ModelConfig config ) :
   EmbeddingModuleI( callbacks ),
@@ -27,6 +25,35 @@ OnnxEmbedder::OnnxEmbedder( ModuleCallbacks callbacks, ModelConfig config ) :
 {}
 
 OnnxEmbedder::~OnnxEmbedder() = default;
+
+std::size_t OnnxEmbedder::rssCeilingMb()
+{
+	constexpr std::size_t MIB { 1024 * 1024 };
+
+	// Headroom over the weights themselves: ORT's allocation arenas, the tokenizer's vocabulary, and
+	// one activation set per pool thread. Roughly fixed -- it follows the runtime and the pool, not
+	// the size of the model -- so it is added rather than scaled.
+	constexpr std::size_t OVERHEAD_MB { 512 };
+
+	std::size_t graph_bytes { 0 };
+
+	for ( const auto& path : { m_config.m_onnx_path, m_config.m_text_onnx_path } )
+	{
+		if ( path.empty() ) continue;
+
+		// Deliberately not an error. A path that cannot be sized here is one startup() is about to
+		// fail on anyway, and reporting a smaller ceiling is harmless when no session gets built.
+		std::error_code code {};
+		if ( const auto size { std::filesystem::file_size( path, code ) }; !code ) graph_bytes += size;
+	}
+
+	// Doubled because the ceiling has to cover session creation, not just the steady state. Building a
+	// session materialises the weights while the serialized graph it read them from is still mapped,
+	// so the peak is about twice what the module settles at -- and the host samples RSS on a timer,
+	// which will land inside that window sooner or later. A ceiling set to the steady state would
+	// retire the worker mid-warmup and never let it reach the state it was sized for.
+	return ( ( graph_bytes * 2 ) / MIB ) + OVERHEAD_MB;
+}
 
 void OnnxEmbedder::startup()
 {

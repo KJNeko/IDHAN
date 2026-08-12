@@ -16,9 +16,6 @@
 namespace idhan::hydrus::ptr
 {
 
-namespace
-{
-
 template < typename T >
 void appendPod( std::vector< std::byte >& out, const T& value )
 {
@@ -46,7 +43,6 @@ bool relationLess( const RelationEvent& x, const RelationEvent& y )
 	return x.op < y.op;
 }
 
-} // namespace
 
 std::vector< CollapsedRelation > collapseRelations( std::vector< RelationEvent > events )
 {

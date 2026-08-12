@@ -14,7 +14,7 @@ std::filesystem::path getFileFolder( const SHA256& sha256 )
 	return folder_name;
 }
 
-ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, DbClientPtr db )
+ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, drogon::orm::DbClientPtr db )
 {
 	const auto result { co_await db->execSqlCoro(
 

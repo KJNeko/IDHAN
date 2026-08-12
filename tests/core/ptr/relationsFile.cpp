@@ -9,9 +9,6 @@
 
 #include "ptr/flatten/RelationsFile.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 RelationEvent rel( const std::uint32_t a, const std::uint32_t b, const std::uint16_t index, const EventOp op )
@@ -19,7 +16,7 @@ RelationEvent rel( const std::uint32_t a, const std::uint32_t b, const std::uint
 	return RelationEvent { a, b, index, static_cast< std::uint8_t >( op ), 0 };
 }
 
-TagLookup lookupOver( const std::map< std::uint32_t, std::string >& table )
+static TagLookup lookupOver( const std::map< std::uint32_t, std::string >& table )
 {
 	return [ &table ]( const std::uint32_t tag_id ) -> std::optional< std::string_view >
 	{
@@ -168,4 +165,3 @@ TEST_F( RelationsFileTest, RejectsAChunkFileAsRelations )
 	EXPECT_THROW( ( void ) readRelationsFile( m_path ), std::runtime_error );
 }
 
-} // namespace

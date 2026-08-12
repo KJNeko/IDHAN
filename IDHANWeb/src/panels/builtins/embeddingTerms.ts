@@ -24,6 +24,9 @@ export interface RecordTerm {
 
 export type Term = TextTerm | RecordTerm;
 
+/** `record:1234` or `#1234` — a reference to a record already in the collection. */
+const RECORD_REF = /^(?:record:\s*|#)(\d+)$/i;
+
 /**
  * Parses `phrase:weight` shorthand into a term row.
  *
@@ -31,9 +34,14 @@ export type Term = TextTerm | RecordTerm;
  * contain colons of its own — `character:hatsune miku:0.8` is that phrase at weight 0.8, while
  * `rating:safe` is the whole phrase at the default weight. A leading `-` makes the term negative.
  *
+ * `record:1234` and `#1234` produce a reference term instead of a phrase, so the one input box
+ * covers both kinds. The record form is matched against the WHOLE string before the weight suffix
+ * is stripped: `record:1234` has to mean record 1234, not the phrase `record` at weight 1234.
+ * Stripping first and re-matching is what still allows `record:1234:0.5`.
+ *
  * Returns null for input with no phrase left in it.
  */
-export function parseTermInput(input: string): TextTerm | null {
+export function parseTermInput(input: string): Term | null {
   let rest = input.trim();
   if (!rest) return null;
 
@@ -43,6 +51,9 @@ export function parseTermInput(input: string): TextTerm | null {
     rest = rest.slice(1).trim();
     if (!rest) return null;
   }
+
+    const bare = rest.match(RECORD_REF);
+    if (bare) return {kind: 'record', recordId: Number(bare[1]), weight: 1, positive, enabled: true};
 
   let weight = 1;
   const lastColon = rest.lastIndexOf(':');
@@ -60,6 +71,9 @@ export function parseTermInput(input: string): TextTerm | null {
   }
 
   if (!rest) return null;
+
+    const weighted = rest.match(RECORD_REF);
+    if (weighted) return {kind: 'record', recordId: Number(weighted[1]), weight, positive, enabled: true};
 
   return { kind: 'text', text: rest, weight, positive, enabled: true };
 }

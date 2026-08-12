@@ -14,7 +14,6 @@ namespace idhan::modules
 	return std::vector< std::byte > { bytes.begin(), bytes.end() };
 }
 
-
 RemoteModule::RemoteModule(
 	std::shared_ptr< WorkerPool > pool,
 	const std::size_t module_index,
@@ -44,8 +43,8 @@ bool RemoteModule::canHandle( const std::string_view mime ) const
 Json::Value RemoteModule::baseBody( const ipc::CallOp op, const RemoteCallData& data ) const
 {
 	Json::Value body {};
-	body[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::CALL ) };
-	body[ ipc::field::OP ] = std::string { toString( op ) };
+	body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::CALL );
+	body[ ipc::field::OP ] = ipc::toWire( op );
 	body[ ipc::field::MODULE_INDEX ] = Json::UInt64 { m_module_index };
 	body[ ipc::field::MIME ] = data.mime_name;
 	body[ ipc::field::EXTRA ] = data.extra;
@@ -76,7 +75,7 @@ IDHANTask< std::expected< ThumbnailInfo, ModuleError > > RemoteModule::createThu
 {
 	if ( data.input == nullptr ) co_return std::unexpected( ModuleError { "no input supplied" } );
 
-	Json::Value body { baseBody( ipc::CallOp::THUMB_RAW, data ) };
+	Json::Value body { baseBody( ipc::CallOp::THUMB_RGBA, data ) };
 	body[ ipc::field::WIDTH ] = Json::UInt64 { width };
 	body[ ipc::field::HEIGHT ] = Json::UInt64 { height };
 
@@ -171,8 +170,8 @@ IDHANTask< std::expected< EmbeddingInfo, ModuleError > > RemoteModule::embedText
 	// baseBody is not reused: it stamps MIME, extra and depth, all of which describe a file this
 	// call does not have.
 	Json::Value body {};
-	body[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::CALL ) };
-	body[ ipc::field::OP ] = std::string { toString( ipc::CallOp::EMBED_TEXT ) };
+	body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::CALL );
+	body[ ipc::field::OP ] = ipc::toWire( ipc::CallOp::EMBED_TEXT );
 	body[ ipc::field::MODULE_INDEX ] = Json::UInt64 { m_module_index };
 	body[ ipc::field::PHRASE ] = std::move( phrase );
 

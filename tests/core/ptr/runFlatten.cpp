@@ -13,9 +13,6 @@
 #include "ptr/flatten/RelationsFile.hpp"
 #include "ptr/flatten/RunFlatten.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 using namespace idhan::hydrus::ptr::test;
 
@@ -371,4 +368,3 @@ TEST_F( RunFlattenTest, ReportsProgress )
 	EXPECT_GE( stages, 3 );
 }
 
-} // namespace

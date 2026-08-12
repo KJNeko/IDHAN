@@ -190,6 +190,24 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	const bool persistent { std::ranges::any_of(
 		entries, []( const auto& entry ) { return entry.residency == ModuleResidency::PERSISTENT; } ) };
 
+	// The ceiling is per process and the process hosts the whole library, so the largest declaration
+	// wins for the same reason the longest residency does. The configured limit is a floor, not a
+	// cap: a module raises the ceiling for its own worker, it never lowers one an operator set.
+	std::size_t declared_ceiling_mb { 0 };
+	for ( const auto& entry : entries ) declared_ceiling_mb = std::max( declared_ceiling_mb, entry.rss_ceiling_mb );
+
+	const auto configured_ceiling_mb { config::get< std::size_t >( "modules", "rss_limit_mb", 2048 ) };
+	const auto ceiling_mb { std::max( configured_ceiling_mb, declared_ceiling_mb ) };
+
+	if ( declared_ceiling_mb > configured_ceiling_mb )
+		log::info(
+			"Module library {} declares a resident set of {} MiB, above the configured {} MiB ceiling; its worker "
+			"is bounded at {} MiB",
+			path.string(),
+			declared_ceiling_mb,
+			configured_ceiling_mb,
+			ceiling_mb );
+
 	auto settings { settingsFor( path ) };
 	settings.expected_signature = ipc::manifestSignature( entries );
 
@@ -198,7 +216,7 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	auto pool { std::make_shared< WorkerPool >(
 		settings,
 		persistent ? ModuleResidency::PERSISTENT : ModuleResidency::SINGLE_RUN,
-		config::get< std::size_t >( "modules", "rss_limit_mb", 2048 ) * 1024,
+		ceiling_mb * 1024,
 		std::chrono::seconds { config::get< std::size_t >( "modules", "idle_timeout_sec", 300 ) },
 		[ this ]( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 		{ serviceCallback( std::move( worker ), std::move( frame ) ); } ) };
@@ -377,12 +395,12 @@ using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::st
 drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {
 	const std::uint64_t callback_id { frame.body[ ipc::field::CALLBACK_ID ].asUInt64() };
-	const auto kind { ipc::callbackKindFromString( frame.body[ ipc::field::KIND ].asString() ) };
+	const auto kind { ipc::fromWire< ipc::CallbackKind >( frame.body[ ipc::field::KIND ] ) };
 	const std::uint32_t depth { frame.body[ ipc::field::DEPTH ].asUInt() };
 	const auto file_name { frame.body[ ipc::field::FILE_NAME ].asString() };
 
 	Json::Value reply {};
-	reply[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::CALLBACK_RESULT ) };
+	reply[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::CALLBACK_RESULT );
 	reply[ ipc::field::CALLBACK_ID ] = Json::UInt64 { callback_id };
 	reply[ ipc::field::OK ] = false;
 	reply[ ipc::field::ERROR ] = "";

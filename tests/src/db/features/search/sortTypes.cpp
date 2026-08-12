@@ -8,9 +8,6 @@ using idhan::SearchBuilder;
 using idhan::SortOrder;
 using idhan::SortType;
 
-namespace
-{
-
 //! Position of \p id within \p ids, or npos if absent — used to assert relative ordering without
 //! depending on other rows that may share the same domain-agnostic query.
 std::size_t indexOf( const std::vector< RecordID >& ids, const RecordID id )
@@ -19,7 +16,6 @@ std::size_t indexOf( const std::vector< RecordID >& ids, const RecordID id )
 	return it == ids.end() ? std::string::npos : static_cast< std::size_t >( it - ids.begin() );
 }
 
-} // namespace
 
 TEST_F( SearchFixture, RecordTimeOrdersByCreationTimeAndDoesNotError )
 {

@@ -8,9 +8,6 @@
 
 #include "WorkerRunner.hpp"
 
-namespace
-{
-
 //! Sentinel meaning "no channel was supplied".
 /** With --describe this makes the manifest go to stdout, which is what lets a developer run
  *  `IDHANModuleRunner --library x.so --describe` and see what a library exports without having to
@@ -38,7 +35,6 @@ template < typename T >
 	return result.ec == std::errc {} && result.ptr == text.data() + text.size();
 }
 
-} // namespace
 
 int main( int argc, char** argv )
 {

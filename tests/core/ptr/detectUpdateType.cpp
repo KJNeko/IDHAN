@@ -5,9 +5,6 @@
 #include "ptr/PTRConstants.hpp"
 #include "ptr/PTRFileParser.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 //! A PTR update file's JSON root is [ serialisable_type, version, serialisable_info ].
@@ -40,4 +37,3 @@ TEST( PTRDetectUpdateType, UnknownTypeIsUnknown )
 	EXPECT_EQ( detectUpdateType( makeRoot( 9999 ) ), UpdateType::Unknown );
 }
 
-} // namespace

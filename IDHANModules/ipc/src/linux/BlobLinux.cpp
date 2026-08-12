@@ -18,14 +18,6 @@
 namespace idhan::ipc
 {
 
-namespace
-{
-
-//! Seals applied to every blob before it leaves this process.
-/** F_SEAL_WRITE is the one that matters: it makes the mapping the worker receives genuinely
- *  read-only, so a module cannot scribble over bytes the host is still using. The others close the
- *  ways a resize could invalidate a mapping out from under either side, and F_SEAL_SEAL stops the
- *  receiver relaxing any of it. */
 constexpr unsigned int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL };
 
 [[nodiscard]] std::string errnoMessage( const char* const what )
@@ -33,8 +25,6 @@ constexpr unsigned int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW |
 	return std::format( "{}: {}", what, std::strerror( errno ) );
 }
 
-//! Maps a sealed memfd read-only. A zero-length blob maps to nothing: mmap rejects a length of 0,
-//! and a null pointer with a zero size is exactly the empty view callers expect.
 [[nodiscard]] std::expected< void*, std::string > mapReadOnly( const int fd, const std::size_t size )
 {
 	if ( size == 0 ) return nullptr;
@@ -45,10 +35,6 @@ constexpr unsigned int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW |
 	return mapping;
 }
 
-//! Creates an anonymous, sealable, close-on-exec memory object sized to \p size.
-/** Close-on-exec matters here: the host forks and execs workers constantly, and a blob that stayed
- *  open across an unrelated exec would be both a leak and a way for one worker to see another's
- *  data. The descriptor is handed to the intended worker explicitly via SCM_RIGHTS instead. */
 [[nodiscard]] std::expected< UniqueFd, std::string > createMemfd( const std::size_t size )
 {
 	UniqueFd fd { ::memfd_create( "idhan-blob", MFD_CLOEXEC | MFD_ALLOW_SEALING ) };
@@ -67,11 +53,6 @@ constexpr unsigned int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW |
 	return {};
 }
 
-//! Copies \p size bytes from \p in to \p out entirely inside the kernel.
-/** copy_file_range is the fast path but is refused in enough situations to need fallbacks:
- *  cross-filesystem copies were rejected outright before Linux 5.3, and both it and sendfile can
- *  return short counts that have to be looped over rather than treated as errors. The final
- *  read/write loop always works and is only reached on kernels or mounts that block the others. */
 [[nodiscard]] std::expected< void, std::string > copyIntoBlob( const int in, const int out, const std::size_t size )
 {
 	std::size_t copied { 0 };
@@ -156,8 +137,6 @@ constexpr unsigned int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW |
 
 	return {};
 }
-
-} // namespace
 
 Blob::Blob( UniqueFd fd, void* const mapping, const std::size_t size ) :
   m_fd( std::move( fd ) ),

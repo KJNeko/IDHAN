@@ -8,9 +8,6 @@
 #include "coro/RunLoop.hpp"
 #include "coro/Task.hpp"
 
-namespace
-{
-
 idhan::coro::RunLoop* g_loop { nullptr };
 
 //! Suspends, hands its continuation to another thread, and is resumed through the RunLoop -- the
@@ -60,7 +57,6 @@ idhan::coro::Task<> voidTask( std::atomic< int >* counter )
 	co_return;
 }
 
-} // namespace
 
 TEST( CoroRunLoop, resumesATaskCompletedOnAnotherThread )
 {

@@ -10,9 +10,6 @@
 
 using namespace idhan;
 
-namespace
-{
-
 [[nodiscard]] std::vector< std::byte > pattern( const std::size_t size, const std::uint8_t salt = 0 )
 {
 	std::vector< std::byte > out( size );
@@ -32,7 +29,6 @@ namespace
 	return std::vector< std::byte > { bytes.begin(), bytes.end() };
 }
 
-} // namespace
 
 //! A reserved sink round-trips exactly what was written.
 TEST( MemfdSink, ReservedRoundTrip )
@@ -46,7 +42,7 @@ TEST( MemfdSink, ReservedRoundTrip )
 	ASSERT_TRUE( ( *sink )->write( expected ).has_value() );
 	EXPECT_EQ( ( *sink )->written(), expected.size() );
 
-	auto fd { ( *sink )->finish() };
+	auto fd { ( *sink )->seal() };
 	ASSERT_TRUE( fd.has_value() );
 
 	EXPECT_EQ( readBack( std::move( *fd ) ), expected );
@@ -63,7 +59,7 @@ TEST( MemfdSink, UnreservedRoundTrip )
 
 	ASSERT_TRUE( ( *sink )->write( expected ).has_value() );
 
-	auto fd { ( *sink )->finish() };
+	auto fd { ( *sink )->seal() };
 	ASSERT_TRUE( fd.has_value() );
 
 	EXPECT_EQ( readBack( std::move( *fd ) ), expected );
@@ -85,7 +81,7 @@ TEST( MemfdSink, ManyWritesAppendInOrder )
 		ASSERT_TRUE( ( *sink )->write( std::span { expected }.subspan( offset, count ) ).has_value() );
 	}
 
-	auto fd { ( *sink )->finish() };
+	auto fd { ( *sink )->seal() };
 	ASSERT_TRUE( fd.has_value() );
 
 	EXPECT_EQ( readBack( std::move( *fd ) ), expected );
@@ -103,7 +99,7 @@ TEST( MemfdSink, OverReservationIsTrimmed )
 	ASSERT_TRUE( ( *sink )->reserve( 100'000 ).has_value() );
 	ASSERT_TRUE( ( *sink )->write( expected ).has_value() );
 
-	auto fd { ( *sink )->finish() };
+	auto fd { ( *sink )->seal() };
 	ASSERT_TRUE( fd.has_value() );
 
 	const auto actual { readBack( std::move( *fd ) ) };
@@ -122,7 +118,7 @@ TEST( MemfdSink, UnderReservationStillGrows )
 	ASSERT_TRUE( ( *sink )->reserve( 1024 ).has_value() );
 	ASSERT_TRUE( ( *sink )->write( expected ).has_value() );
 
-	auto fd { ( *sink )->finish() };
+	auto fd { ( *sink )->seal() };
 	ASSERT_TRUE( fd.has_value() );
 
 	EXPECT_EQ( readBack( std::move( *fd ) ), expected );
@@ -134,7 +130,7 @@ TEST( MemfdSink, EmptyOutput )
 	auto sink { ipc::MemfdSink::create() };
 	ASSERT_TRUE( sink.has_value() );
 
-	auto fd { ( *sink )->finish() };
+	auto fd { ( *sink )->seal() };
 	ASSERT_TRUE( fd.has_value() );
 
 	EXPECT_TRUE( readBack( std::move( *fd ) ).empty() );
@@ -151,7 +147,7 @@ TEST( MemfdSink, FinishedOutputIsSealed )
 	ASSERT_TRUE( ( *sink )->reserve( expected.size() ).has_value() );
 	ASSERT_TRUE( ( *sink )->write( expected ).has_value() );
 
-	auto fd { ( *sink )->finish() };
+	auto fd { ( *sink )->seal() };
 	ASSERT_TRUE( fd.has_value() );
 
 	const auto seals { ::fcntl( fd->get(), F_GET_SEALS ) };

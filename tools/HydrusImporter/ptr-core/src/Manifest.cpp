@@ -11,9 +11,6 @@
 namespace idhan::hydrus::ptr
 {
 
-namespace
-{
-
 //! \throws std::runtime_error if \p key is absent. Every field this build writes is required on
 //!         read: there is no backwards compatibility, so a missing key means a manifest from an
 //!         older format, and defaulting it would silently misreport what the run actually did.
@@ -57,7 +54,6 @@ FlattenStats statsFromJson( const Json::Value& json )
 	return stats;
 }
 
-} // namespace
 
 void writeManifest( const std::filesystem::path& dir, const CompactManifest& manifest )
 {

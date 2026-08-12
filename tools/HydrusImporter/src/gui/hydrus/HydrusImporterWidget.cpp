@@ -17,9 +17,6 @@
 
 class TagServiceWorker;
 
-namespace
-{
-
 //! Result of opening a Hydrus database off the GUI thread. Holds a raw importer pointer (HydrusImporter is
 //! non-movable, so it can't be returned by value) that the GUI thread adopts into a unique_ptr.
 struct ParseResult
@@ -30,7 +27,6 @@ struct ParseResult
 	QString error {};
 };
 
-} // namespace
 
 HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent ), ui( new Ui::HydrusImporterWidget )
 {

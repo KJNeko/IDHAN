@@ -6,9 +6,6 @@
 
 #include "ptr/flatten/Manifest.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 class ManifestTest : public ::testing::Test
@@ -117,4 +114,3 @@ TEST_F( ManifestTest, RoundTripsWithNoChunks )
 	EXPECT_TRUE( isCompactedDirectory( m_dir ) );
 }
 
-} // namespace

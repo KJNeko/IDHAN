@@ -12,9 +12,6 @@
 namespace idhan::runner
 {
 
-namespace
-{
-
 //! Signature of the factory that getModulesFunc returns a pointer to.
 using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )( ModuleCallbacks );
 
@@ -24,7 +21,6 @@ using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )( Modu
 	return message != nullptr ? std::string { message } : std::string { "unknown dynamic loader error" };
 }
 
-} // namespace
 
 ModuleLibrary::ModuleLibrary(
 	void* const handle,
@@ -161,6 +157,7 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 				.version = module->version(),
 				.thread_safe = module->threadSafe(),
 				.residency = module->residency(),
+				.rss_ceiling_mb = module->rssCeilingMb(),
 				.mimes = handleableMimesOf( module ),
 				.model_name = std::move( model_name ),
 				.dimensions = dimensions,

@@ -14,9 +14,6 @@
 namespace idhan::hydrus::ptr
 {
 
-namespace
-{
-
 #pragma pack( push, 1 )
 
 //! One tags.idx slot. A zero length means the id was never defined.
@@ -60,7 +57,6 @@ std::optional< unsigned > hexNibble( const char c )
 	return std::nullopt;
 }
 
-} // namespace
 
 std::optional< std::array< std::byte, SHA256_BYTES > > decodeSha256Hex( const std::string_view hex )
 {

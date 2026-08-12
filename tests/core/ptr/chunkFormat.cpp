@@ -9,9 +9,6 @@
 
 #include "ptr/flatten/ChunkFormat.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 std::array< std::byte, SHA256_BYTES > sha( const unsigned char fill )
@@ -22,7 +19,7 @@ std::array< std::byte, SHA256_BYTES > sha( const unsigned char fill )
 }
 
 //! A lookup over a fixed table, so the writer can be tested with no DefinitionStore on disk.
-TagLookup lookupOver( const std::map< std::uint32_t, std::string >& table )
+static TagLookup lookupOver( const std::map< std::uint32_t, std::string >& table )
 {
 	return [ &table ]( const std::uint32_t tag_id ) -> std::optional< std::string_view >
 	{
@@ -211,4 +208,3 @@ TEST_F( ChunkFormatTest, RoundTripsManyRecords )
 	for ( const auto& record : chunk.records ) EXPECT_EQ( record.add_indices.size(), 2u );
 }
 
-} // namespace

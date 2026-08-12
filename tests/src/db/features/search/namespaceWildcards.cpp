@@ -6,15 +6,11 @@
 using idhan::NamespaceID;
 using idhan::SearchBuilder;
 
-namespace
-{
-
 bool contains( const std::vector< RecordID >& ids, const RecordID id )
 {
 	return std::ranges::find( ids, id ) != ids.end();
 }
 
-} // namespace
 
 //! Exercises the `namespace:*` wildcard, which resolves to the filter_namespace_N / filter_namespaces
 //! CTE chain in SearchBuilder::construct(). Those CTEs join positive_filter, so they only make sense

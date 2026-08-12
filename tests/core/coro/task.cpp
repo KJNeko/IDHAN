@@ -8,9 +8,6 @@
 
 #include "coro/Task.hpp"
 
-namespace
-{
-
 idhan::coro::Task< int > answer()
 {
 	co_return 42;
@@ -99,7 +96,6 @@ T syncRun( idhan::coro::Task< T > task )
 	return out;
 }
 
-} // namespace
 
 TEST( CoroTask, returnsValue )
 {

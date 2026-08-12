@@ -79,6 +79,13 @@ class OnnxEmbedder final : public idhan::EmbeddingModuleI
 	//! Loading a multi-gigabyte session per call would be absurd, so the worker stays resident.
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
+	//! Derived from the size of the graphs on disk, since that is what the sessions hold resident.
+	/** Without this the host's default ceiling -- sized for the media modules, where a gigabyte
+	 *  already means something has gone wrong -- retires this worker at its first quiescent moment
+	 *  after every call, and the next call reloads both towers. That is exactly the cost PERSISTENT
+	 *  is declared to avoid, so the ceiling has to know how big the model actually is. */
+	[[nodiscard]] std::size_t rssCeilingMb() override;
+
 	void startup() override;
 
 	void shutdown() override;

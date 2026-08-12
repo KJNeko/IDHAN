@@ -6,9 +6,6 @@
 
 #include "ptr/flatten/DefinitionStore.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 constexpr std::string_view HASH_A { "f69a2836e6ab4e089b9a6695c3d65d2da02f8d69737135e0cec45e173aaafdcd" };
@@ -172,4 +169,3 @@ TEST_F( DefinitionStoreTest, EmptyStoreReadsAsAllAbsent )
 	EXPECT_FALSE( reader.tag( 0 ).has_value() );
 }
 
-} // namespace

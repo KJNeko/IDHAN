@@ -25,9 +25,6 @@ unsigned defaultCollapseThreadCount()
 	return defaultWorkerCount();
 }
 
-namespace
-{
-
 //! One record surviving a bucket's collapse, on its way to the chunk sink.
 struct CollapsedRecord
 {
@@ -254,7 +251,6 @@ class ChunkSink
 	std::uint64_t m_missing_definitions { 0 };
 };
 
-} // namespace
 
 CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
                                 const std::filesystem::path& out_dir,

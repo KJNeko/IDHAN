@@ -12,9 +12,6 @@
 #include "ptr/flatten/DefinitionStore.hpp"
 #include "ptr/flatten/FlattenCollapse.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 using namespace idhan::hydrus::ptr::test;
 
@@ -313,4 +310,3 @@ TEST_F( FlattenCollapseTest, StopsWhenCancelled )
 	EXPECT_TRUE( result.cancelled );
 }
 
-} // namespace

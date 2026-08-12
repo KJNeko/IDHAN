@@ -12,9 +12,6 @@
 #include "ptr/flatten/DefinitionStore.hpp"
 #include "ptr/flatten/FlattenScan.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 using namespace idhan::hydrus::ptr::test;
 
@@ -260,4 +257,3 @@ TEST_F( FlattenScanTest, RejectsAnUpdateIndexBeyondTheSixteenBitRange )
 	EXPECT_THROW( ( void ) scanCorpus( m_corpus, metadata, m_work, m_callbacks ), std::runtime_error );
 }
 
-} // namespace

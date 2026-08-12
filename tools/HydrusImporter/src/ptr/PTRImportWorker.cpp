@@ -24,9 +24,6 @@
 #include "idhan/IDHANClient.hpp"
 #include "splitTag.hpp"
 
-namespace
-{
-
 //! Split [0,n) into [start,end) chunks of at most \p batch_size and invoke \p launch(start,end) for
 //! each, returning all the futures it produced. Nothing is awaited here — every batch is submitted
 //! before any is waited on, so they run concurrently (bounded only by QNetworkAccessManager).
@@ -88,7 +85,6 @@ void awaitBatches( std::vector< QFuture< void > >& futures, const char* const wh
 	}
 }
 
-} // namespace
 
 namespace idhan::hydrus::ptr
 {

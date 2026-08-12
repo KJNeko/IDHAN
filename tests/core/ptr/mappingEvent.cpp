@@ -5,9 +5,6 @@
 
 #include "ptr/flatten/MappingEvent.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 MappingEvent
@@ -66,4 +63,3 @@ TEST( PTRMappingEvent, DeleteSortsAfterAddInSameUpdateIndex )
 	EXPECT_EQ( events[ 1 ].op, static_cast< std::uint8_t >( EventOp::Delete ) );
 }
 
-} // namespace

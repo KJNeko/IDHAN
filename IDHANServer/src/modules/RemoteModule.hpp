@@ -17,15 +17,9 @@
 namespace idhan::modules
 {
 
+inline constexpr static std::uint32_t SERVER_ORIGINATED { 0 };
+
 //! The input to a remote module call. The out-of-process analogue of ModuleCallData.
-/** Carries a CallInput rather than a data_view: the bytes have to reach another process, and the
- *  only thing that can cross is a descriptor.
- *
- *  Shared rather than borrowed because the input outlives this struct in one specific case that
- *  matters. A module can hand its own input back through a callback, and the answer to that is to
- *  reuse the descriptor the server already holds instead of shipping the file again -- which means
- *  the worker registry has to keep the input alive for as long as the call is in flight, alongside
- *  whatever coroutine frame originally created it. */
 struct RemoteCallData
 {
 	std::shared_ptr< const CallInput > input {};
@@ -33,14 +27,10 @@ struct RemoteCallData
 	Json::Value extra {};
 
 	//! How many module-initiated hops led here. Zero for a call the server originated.
-	std::uint32_t depth { 0 };
+	std::uint32_t depth { SERVER_ORIGINATED };
 };
 
 //! One module, addressed across a process boundary.
-/** Deliberately not derived from MetadataModuleI/ThumbnailerModuleI/GeneratorModuleI. Those are the
- *  interfaces a module *implements*, and they now only exist inside a worker; this is the handle the
- *  server calls through. It is addressed by (pool, module index) -- never by name, which is neither
- *  unique nor stable across builds. */
 class RemoteModule
 {
 	std::shared_ptr< WorkerPool > m_pool;

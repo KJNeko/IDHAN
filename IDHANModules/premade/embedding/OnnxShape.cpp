@@ -12,9 +12,6 @@
 namespace premade
 {
 
-namespace
-{
-
 //! Protobuf wire types. Only these three appear on the path we walk.
 constexpr std::uint8_t WIRE_VARINT { 0 };
 constexpr std::uint8_t WIRE_64BIT { 1 };
@@ -308,7 +305,6 @@ class Mapping
 	[[nodiscard]] const std::byte* end() const { return m_data + m_size; }
 };
 
-} // namespace
 
 std::expected< GraphInterface, std::string > readGraphInterface( const std::filesystem::path& onnx_path )
 {

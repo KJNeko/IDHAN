@@ -53,15 +53,10 @@ struct ModuleVersion
 	std::size_t m_patch { 0 };
 };
 
-//! Non-owning view over raw bytes. Still used by the mime scanner and by Blob, which genuinely do
-//! hold whole buffers; it is no longer how a file reaches a module (see ModuleFile).
 using data_view = std::basic_string_view< std::uint8_t >;
 
-//! Input passed to a module for a single operation.
 struct ModuleCallData
 {
-	//! The file being operated on. Valid only for the call's duration -- a module must not retain
-	//! it, and reads through it after the call returns are undefined.
 	const ModuleFile& file;
 	std::string mime_name; //!< Canonical MIME type of the file, as resolved by the mime database.
 	Json::Value extra; //!< Optional caller-supplied parameters; contents are operation-specific.
@@ -76,25 +71,24 @@ struct ModuleCapability
 	bool has_generator { false }; //!< Some module can generate derived files from these bytes.
 };
 
-//! Host callbacks handed to every module at construction so it can re-dispatch work back through the
-//! module system — e.g. an archive thumbnailer asking the host to thumbnail a contained file. The
-//! host resolves the target module by MIME. These run synchronously and may re-enter the calling
-//! module (see ModuleBase::threadSafe).
+using ThumbnailFunc =
+	std::function< std::expected< ThumbnailInfo, ModuleError >( const ModuleFile&, Json::Value, std::string ) >;
+
+namespace module
+{
+using SHA256 = std::array< std::byte, ( 256 / 8 ) >;
+}
+
+using GenerateFunc = std::function< std::expected<
+	std::unique_ptr< ModuleFile >,
+	ModuleError >( const ModuleFile&, module::SHA256, Json::Value, std::string ) >;
+
+using ProbeFunc = std::function< std::expected< ModuleCapability, ModuleError >( const ModuleFile&, std::string ) >;
+
 struct FGL_EXPORT ModuleCallbacks
 {
-	using ThumbnailFunc =
-		std::function< std::expected< ThumbnailInfo, ModuleError >( const ModuleFile&, Json::Value, std::string ) >;
-	//! Returns a handle rather than bytes, so a generated file the host produced in shared memory
-	//! can be passed straight on to another callback without ever landing in this module's heap.
-	using GenerateFunc = std::function< std::expected<
-		std::unique_ptr< ModuleFile >,
-		ModuleError >( const ModuleFile&, std::array< std::byte, 256 / 8 >, Json::Value, std::string ) >;
-	using ProbeFunc = std::function< std::expected< ModuleCapability, ModuleError >( const ModuleFile&, std::string ) >;
-
-	ThumbnailFunc thumbnail; //!< Ask the host to thumbnail the given bytes (data, extra, file_name).
-	GenerateFunc generate; //!< Ask the host to generate a derived file matching the desired hash.
-	//! Ask the host what, if anything, can handle these bytes (data, file_name) — one round trip,
-	//! so a module can check before committing to a thumbnail or generate call it expects to fail.
+	ThumbnailFunc thumbnail;
+	GenerateFunc generate;
 	ProbeFunc probe;
 };
 
@@ -134,6 +128,23 @@ class FGL_EXPORT ModuleBase
 	//! How the host should run this module (see ModuleResidency). Default SINGLE_RUN: a module has
 	//! to justify keeping a process alive, and paying a fork per call is always correct if slow.
 	[[nodiscard]] virtual ModuleResidency residency() { return ModuleResidency::SINGLE_RUN; }
+
+	//! Resident size, in MiB, this module needs to hold steadily without being retired for it.
+	/** The host retires a persistent worker that goes over an RSS ceiling, which is what bounds a
+	 *  leak rather than merely isolating it. That ceiling is one global number sized for the media
+	 *  modules, where hundreds of megabytes already means something has gone wrong. A module whose
+	 *  normal working set is larger -- an inference module holding model weights resident -- would be
+	 *  reaped at its first quiescent moment and reload them on the next call, which is precisely the
+	 *  cost PERSISTENT exists to avoid.
+	 *
+	 *  Returning non-zero raises the ceiling for this module's worker to at least this much; the
+	 *  configured limit still applies where it is higher. This is a floor on the module's normal
+	 *  footprint, NOT a budget: report what the module holds when it is behaving, so that anything
+	 *  above it is still recognisable as a leak and still bounded.
+	 *
+	 *  Answered before startup(), like the rest of the manifest, so it must come from configuration
+	 *  or from what is on disk rather than from anything learned by loading. */
+	[[nodiscard]] virtual std::size_t rssCeilingMb() { return 0; }
 
 	//! Called once after the library's init(), before the first call reaches this module.
 	virtual void startup() {}
