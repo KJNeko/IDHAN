@@ -19,9 +19,6 @@
 namespace idhan::hydrus::ptr
 {
 
-namespace
-{
-
 void announce( const FlattenCallbacks& callbacks, const std::string_view text )
 {
 	spdlog::info( "Flatten: {}", text );
@@ -73,7 +70,6 @@ void publishStagedOutput( const std::filesystem::path& staging_dir,
 	}
 }
 
-} // namespace
 
 MetadataUpdate loadCorpusMetadata( const std::filesystem::path& dir )
 {

@@ -5,9 +5,6 @@
 
 #include "ptr/flatten/BucketSpill.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 //! Scratch directory removed on destruction, so a failing assertion cannot leak spill files.
@@ -100,4 +97,3 @@ TEST_F( BucketSpillTest, DestructorFlushesUnwrittenEvents )
 	EXPECT_EQ( readBucket( bucketPath( m_dir, bucketFor( 1 ) ) ).size(), 1u );
 }
 
-} // namespace

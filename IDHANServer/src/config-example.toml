@@ -56,6 +56,12 @@ path = "./log"
 
 # A persistent worker is retired once it exceeds this resident size, at its next moment with no call
 # in flight. This is what bounds a leak rather than merely isolating it.
+#
+# A module may declare a larger footprint of its own, and the larger of the two wins for that
+# library's worker. The embedding module does: it holds ONNX sessions resident whose size follows the
+# model on disk, which no number written here could anticipate. So this is a floor rather than a cap
+# -- raising it loosens every library's bound, but lowering it will not tighten one that a module has
+# declared for itself.
 #rss_limit_mb = 2048
 
 # A persistent worker with nothing to do for this long is retired.

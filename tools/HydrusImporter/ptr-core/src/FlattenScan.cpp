@@ -25,9 +25,6 @@ unsigned defaultScanThreadCount()
 	return defaultWorkerCount();
 }
 
-namespace
-{
-
 //! One update file to process: its hash (== filename) and the update it belongs to.
 struct ScanWorkItem
 {
@@ -74,7 +71,6 @@ std::uint64_t spillMappings( BucketWriter& buckets,
 	return written;
 }
 
-} // namespace
 
 ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
                        const MetadataUpdate& metadata,

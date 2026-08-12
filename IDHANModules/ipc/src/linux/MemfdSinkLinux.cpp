@@ -9,33 +9,21 @@
 #include <new>
 #include <unistd.h>
 
+#include "idhan/errnoMessage.hpp"
 #include "ipc/MemfdSink.hpp"
 
 namespace idhan::ipc
-{
-
-namespace
 {
 
 //! Seals applied once the output is complete. Identical in intent to Blob's: the host maps what
 //! comes back, and nothing should be able to change it afterwards.
 constexpr unsigned int SINK_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL };
 
-[[nodiscard]] std::string errnoMessage( const char* const what )
-{
-	return std::format( "{}: {}", what, std::strerror( errno ) );
-}
-
-} // namespace
-
 std::expected< std::unique_ptr< MemfdSink >, std::string > MemfdSink::create()
 {
 	std::unique_ptr< MemfdSink > sink { new ( std::nothrow ) MemfdSink {} };
 	if ( !sink ) return std::unexpected( "could not allocate a MemfdSink" );
 
-	// Close-on-exec for the same reason Blob uses it: workers are forked and exec'd constantly, and
-	// an output descriptor surviving an unrelated exec is both a leak and a way for one worker to
-	// see another's data.
 	sink->m_fd.reset( ::memfd_create( "idhan-sink", MFD_CLOEXEC | MFD_ALLOW_SEALING ) );
 	if ( !sink->m_fd ) return std::unexpected( errnoMessage( "memfd_create failed" ) );
 
@@ -86,7 +74,7 @@ std::expected< void, ModuleError > MemfdSink::write( const std::span< const std:
 	return {};
 }
 
-std::expected< UniqueFd, std::string > MemfdSink::finish()
+std::expected< UniqueFd, std::string > MemfdSink::seal()
 {
 	// Trim a reservation the module did not fill, so trailing zeroes are not mistaken for data.
 	if ( m_reserved != m_written && ::ftruncate( m_fd.get(), static_cast< off_t >( m_written ) ) != 0 )

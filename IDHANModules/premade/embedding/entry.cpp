@@ -10,9 +10,6 @@
 
 using namespace idhan;
 
-namespace
-{
-
 //! Where this library looks for models.
 /** Beside the module .so by default, so a model directory dropped next to the binary is found with
  *  no configuration. IDHAN_EMBEDDING_MODELS overrides it, which is how the worker is pointed at a
@@ -30,7 +27,6 @@ namespace
 	return self.parent_path() / "models";
 }
 
-} // namespace
 
 //! The module instances this library exports.
 /** Unlike the other premade libraries this vector is not a fixed list: it is one module per model

@@ -14,18 +14,11 @@
 #include <unistd.h>
 #include <utility>
 
+#include "idhan/errnoMessage.hpp"
 #include "ipc/Frame.hpp"
 
 namespace idhan::ipc
 {
-
-namespace
-{
-
-[[nodiscard]] std::string errnoMessage( const char* const what )
-{
-	return std::format( "{}: {}", what, std::strerror( errno ) );
-}
 
 //! Enough control-message space for MAX_FRAME_FDS descriptors.
 constexpr std::size_t CMSG_CAPACITY { CMSG_SPACE( sizeof( int ) * MAX_FRAME_FDS ) };
@@ -70,8 +63,6 @@ void collectFds( msghdr& message, std::vector< UniqueFd >& out )
 	return {};
 }
 
-} // namespace
-
 std::expected< std::pair< UniqueFd, UniqueFd >, std::string > createChannel()
 {
 	std::array< int, 2 > sockets { { -1, -1 } };
@@ -111,18 +102,14 @@ std::expected< void, std::string > sendFrame(
 		return std::unexpected(
 			std::format( "frame body of {} bytes exceeds the {} byte limit", payload.size(), MAX_FRAME_BODY ) );
 
-	const auto body_length { static_cast< std::uint32_t >( payload.size() ) };
-	const auto fd_count { static_cast< std::uint32_t >( fds.size() ) };
-
-	std::array< std::byte, 8 > header {};
-	std::memcpy( header.data(), &body_length, sizeof( body_length ) );
-	std::memcpy( header.data() + sizeof( body_length ), &fd_count, sizeof( fd_count ) );
+	Header header { .m_body_expected = static_cast< std::uint32_t >( payload.size() ),
+		            .m_fds_expected = static_cast< std::uint32_t >( fds.size() ) };
 
 	// The descriptors ride on the header, never the body. That is what lets the reader collect them
 	// with a single recvmsg before it knows how long the body is.
 	std::array< std::byte, CMSG_CAPACITY > control {};
 
-	iovec iov { .iov_base = header.data(), .iov_len = header.size() };
+	iovec iov { .iov_base = &header, .iov_len = sizeof( header ) };
 
 	msghdr message {};
 	message.msg_iov = &iov;
@@ -151,12 +138,14 @@ std::expected< void, std::string > sendFrame(
 
 	// A short header write is vanishingly unlikely at eight bytes, but if it happens the descriptors
 	// have already been handed over with the first byte -- the remainder is plain data.
-	if ( static_cast< std::size_t >( header_sent ) < header.size() )
+	if ( static_cast< std::size_t >( header_sent ) < sizeof( header ) )
 	{
-		const auto remainder {
-			std::span< const std::byte > { header }.subspan( static_cast< std::size_t >( header_sent ) )
+		const std::span< const std::byte > header_bytes {
+			reinterpret_cast< const std::byte* >( &header ), sizeof( header )
 		};
-		if ( auto result { sendAll( sock, remainder ) }; !result ) return result;
+		if ( auto result { sendAll( sock, header_bytes.subspan( static_cast< std::size_t >( header_sent ) ) ) };
+		     !result )
+			return result;
 	}
 
 	return sendAll(
@@ -189,13 +178,12 @@ std::expected< void, std::string > FrameWriter::enqueue( const Json::Value& body
 		pending.fds.emplace_back( std::move( copy ) );
 	}
 
-	const auto body_length { static_cast< std::uint32_t >( payload.size() ) };
-	const auto fd_count { static_cast< std::uint32_t >( fds.size() ) };
+	const Header header { .m_body_expected = static_cast< std::uint32_t >( payload.size() ),
+		                  .m_fds_expected = static_cast< std::uint32_t >( fds.size() ) };
 
-	pending.buffer.resize( 8 + payload.size() );
-	std::memcpy( pending.buffer.data(), &body_length, sizeof( body_length ) );
-	std::memcpy( pending.buffer.data() + sizeof( body_length ), &fd_count, sizeof( fd_count ) );
-	std::memcpy( pending.buffer.data() + 8, payload.data(), payload.size() );
+	pending.buffer.resize( sizeof( header ) + payload.size() );
+	std::memcpy( pending.buffer.data(), &header, sizeof( header ) );
+	std::memcpy( pending.buffer.data() + sizeof( header ), payload.data(), payload.size() );
 
 	m_queue.emplace_back( std::move( pending ) );
 
@@ -219,7 +207,7 @@ std::expected< bool, std::string > FrameWriter::drain( const int sock )
 			for ( const auto& fd : pending.fds ) raw.emplace_back( fd.get() );
 
 			std::array< std::byte, CMSG_CAPACITY > control {};
-			iovec iov { .iov_base = pending.buffer.data(), .iov_len = 8 };
+			iovec iov { .iov_base = pending.buffer.data(), .iov_len = sizeof( Header ) };
 
 			msghdr message {};
 			message.msg_iov = &iov;
@@ -275,13 +263,13 @@ std::expected< std::vector< Frame >, std::string > FrameReader::read( const int 
 
 		if ( !m_header_complete )
 		{
-			target = m_header.data() + m_header_filled;
+			target = reinterpret_cast< std::byte* >( &m_header ) + m_header_filled;
 			want = HEADER_SIZE - m_header_filled;
 		}
-		else if ( m_body_filled < m_body_expected )
+		else if ( m_body_filled < m_header.m_body_expected )
 		{
 			target = m_body.data() + m_body_filled;
-			want = m_body_expected - m_body_filled;
+			want = m_header.m_body_expected - m_body_filled;
 		}
 
 		if ( want > 0 )
@@ -325,31 +313,30 @@ std::expected< std::vector< Frame >, std::string > FrameReader::read( const int 
 		{
 			if ( m_header_filled < HEADER_SIZE ) continue;
 
-			std::memcpy( &m_body_expected, m_header.data(), sizeof( m_body_expected ) );
-			std::memcpy( &m_fds_expected, m_header.data() + sizeof( m_body_expected ), sizeof( m_fds_expected ) );
-
-			if ( m_body_expected > MAX_FRAME_BODY )
+			if ( m_header.m_body_expected > MAX_FRAME_BODY )
 				return std::unexpected(
 					std::format(
 						"peer announced a {} byte frame body, over the {} byte limit",
-						m_body_expected,
+						m_header.m_body_expected,
 						MAX_FRAME_BODY ) );
 
-			if ( m_fds_expected > MAX_FRAME_FDS )
+			if ( m_header.m_fds_expected > MAX_FRAME_FDS )
 				return std::unexpected(
 					std::format(
-						"peer announced {} descriptors, over the limit of {}", m_fds_expected, MAX_FRAME_FDS ) );
+						"peer announced {} descriptors, over the limit of {}",
+						m_header.m_fds_expected,
+						MAX_FRAME_FDS ) );
 
-			m_body.assign( m_body_expected, std::byte { 0 } );
+			m_body.assign( m_header.m_body_expected, std::byte { 0 } );
 			m_body_filled = 0;
 			m_header_complete = true;
 
 			// A body of zero bytes never happens (jsoncpp always writes at least "null"), but the
 			// loop must not depend on that to terminate.
-			if ( m_body_expected > 0 ) continue;
+			if ( m_header.m_body_expected > 0 ) continue;
 		}
 
-		if ( m_body_filled < m_body_expected ) continue;
+		if ( m_body_filled < m_header.m_body_expected ) continue;
 
 		Json::Value parsed {};
 		{
@@ -362,19 +349,19 @@ std::expected< std::vector< Frame >, std::string > FrameReader::read( const int 
 				return std::unexpected( std::format( "frame body was not valid JSON: {}", errors ) );
 		}
 
-		if ( m_pending_fds.size() != m_fds_expected )
+		if ( m_pending_fds.size() != m_header.m_fds_expected )
 			return std::unexpected(
-				std::format( "frame announced {} descriptors but {} arrived", m_fds_expected, m_pending_fds.size() ) );
+				std::format(
+					"frame announced {} descriptors but {} arrived", m_header.m_fds_expected, m_pending_fds.size() ) );
 
 		completed.emplace_back( Frame { .body = std::move( parsed ), .fds = std::move( m_pending_fds ) } );
 
 		m_pending_fds.clear();
+		m_header = {};
 		m_header_filled = 0;
 		m_header_complete = false;
 		m_body.clear();
 		m_body_filled = 0;
-		m_body_expected = 0;
-		m_fds_expected = 0;
 	}
 
 	return completed;

@@ -10,7 +10,10 @@ namespace idhan::modules
 
 std::expected< CallInput, std::string > CallInput::forPath( const std::filesystem::path& path )
 {
-	ipc::UniqueFd file { ::open( path.c_str(), O_RDONLY | O_CLOEXEC ) };
+	if ( !std::filesystem::is_regular_file( path ) )
+		return std::unexpected( std::format( "{} is not a regular file", path.string() ) );
+
+	ipc::UniqueFd file { ::open( path.c_str(), O_RDONLY | O_CLOEXEC /* prevents child inheritence */ ) };
 	if ( !file ) return std::unexpected( std::format( "could not open {}", path.string() ) );
 
 	struct stat info {};

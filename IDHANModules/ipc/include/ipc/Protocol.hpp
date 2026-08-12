@@ -4,14 +4,20 @@
 
 #include <cstdint>
 #include <expected>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "MetadataInfo.hpp"
 #include "ModuleBase.hpp"
 #include "ThumbnailInfo.hpp"
+
+// libvips defines IMAGE
+#undef IMAGE
 
 //! The wire protocol between the server and a module worker process.
 /** Bodies are JSON and bulk data is a blob descriptor, never inline. JSON costs more than a packed
@@ -50,6 +56,7 @@ inline constexpr auto MINOR { "minor" };
 inline constexpr auto PATCH { "patch" };
 inline constexpr auto THREAD_SAFE { "thread_safe" };
 inline constexpr auto RESIDENCY { "residency" };
+inline constexpr auto RSS_CEILING_MB { "rss_ceiling_mb" };
 inline constexpr auto MIMES { "mimes" };
 inline constexpr auto METADATA { "metadata" };
 inline constexpr auto THUMBNAIL { "thumbnail" };
@@ -90,7 +97,7 @@ enum class MessageType : std::uint8_t
 enum class CallOp : std::uint8_t
 {
 	METADATA, //!< MetadataModuleI::parseFile
-	THUMB_RAW, //!< ThumbnailerModuleI::createThumbnailRaw -- raw interleaved RGB
+	THUMB_RGBA, //!< ThumbnailerModuleI::createThumbnailRaw -- raw interleaved RGB
 	THUMB_FILE, //!< ThumbnailerModuleI::createThumbnailFile -- encoded image
 	GENERATE, //!< GeneratorModuleI::generate
 	EMBED, //!< EmbeddingModuleI::embed
@@ -105,15 +112,216 @@ enum class CallbackKind : std::uint8_t
 	GENERATE, //!< ModuleCallbacks::generate
 };
 
-[[nodiscard]] std::string_view toString( MessageType value ) noexcept;
-[[nodiscard]] std::string_view toString( CallOp value ) noexcept;
-[[nodiscard]] std::string_view toString( CallbackKind value ) noexcept;
-[[nodiscard]] std::string_view toString( ModuleResidency value ) noexcept;
+//! Wire tag for which alternative of MetadataInfo::m_metadata is populated.
+/** Its own enum rather than the variant's index on purpose: the index is a property of the
+ *  declaration order in MetadataInfo.hpp, so inserting an alternative there would silently
+ *  reinterpret every in-flight message. These values are fixed -- append only, never reorder. */
+enum class MetadataVariant : std::uint8_t
+{
+	NONE = 0,
+	IMAGE = 1,
+	VIDEO = 2,
+	IMAGE_PROJECT = 3,
+	ANIMATION = 4,
+	ARCHIVE = 5,
+};
 
-[[nodiscard]] std::optional< MessageType > messageTypeFromString( std::string_view value ) noexcept;
-[[nodiscard]] std::optional< CallOp > callOpFromString( std::string_view value ) noexcept;
-[[nodiscard]] std::optional< CallbackKind > callbackKindFromString( std::string_view value ) noexcept;
-[[nodiscard]] std::optional< ModuleResidency > residencyFromString( std::string_view value ) noexcept;
+//! Whether \p value is one of the enumerators declared above.
+/** Each of these is a switch with no default, so -Wswitch-enum turns adding an enumerator without
+ *  teaching the decoder about it into a build failure, rather than a value that arrives over a
+ *  socket and decodes to something the sender never meant. */
+//!@{
+[[nodiscard]] constexpr bool isDeclared( const MessageType value ) noexcept
+{
+	switch ( value )
+	{
+		case MessageType::CALL:
+		case MessageType::CALLBACK_RESULT:
+		case MessageType::RECLAIM:
+		case MessageType::SHUTDOWN:
+		case MessageType::MANIFEST:
+		case MessageType::HEARTBEAT:
+		case MessageType::RESULT:
+		case MessageType::CALLBACK:
+			return true;
+	}
+
+	return false;
+}
+
+[[nodiscard]] constexpr bool isDeclared( const CallOp value ) noexcept
+{
+	switch ( value )
+	{
+		case CallOp::METADATA:
+		case CallOp::THUMB_RGBA:
+		case CallOp::THUMB_FILE:
+		case CallOp::GENERATE:
+		case CallOp::EMBED:
+		case CallOp::EMBED_TEXT:
+			return true;
+	}
+
+	return false;
+}
+
+[[nodiscard]] constexpr bool isDeclared( const CallbackKind value ) noexcept
+{
+	switch ( value )
+	{
+		case CallbackKind::PROBE:
+		case CallbackKind::THUMBNAIL:
+		case CallbackKind::GENERATE:
+			return true;
+	}
+
+	return false;
+}
+
+[[nodiscard]] constexpr bool isDeclared( const MetadataVariant value ) noexcept
+{
+	switch ( value )
+	{
+		case MetadataVariant::NONE:
+		case MetadataVariant::IMAGE:
+		case MetadataVariant::VIDEO:
+		case MetadataVariant::IMAGE_PROJECT:
+		case MetadataVariant::ANIMATION:
+		case MetadataVariant::ARCHIVE:
+			return true;
+	}
+
+	return false;
+}
+
+[[nodiscard]] constexpr bool isDeclared( const ModuleResidency value ) noexcept
+{
+	switch ( value )
+	{
+		case ModuleResidency::SINGLE_RUN:
+		case ModuleResidency::PERSISTENT:
+			return true;
+	}
+
+	return false;
+}
+
+//!@}
+
+//! Names for logs and error messages. Display only -- never the wire encoding.
+//!@{
+[[nodiscard]] constexpr std::string_view toString( const MessageType value ) noexcept
+{
+	switch ( value )
+	{
+		case MessageType::CALL:
+			return "call";
+		case MessageType::CALLBACK_RESULT:
+			return "callback_result";
+		case MessageType::RECLAIM:
+			return "reclaim";
+		case MessageType::SHUTDOWN:
+			return "shutdown";
+		case MessageType::MANIFEST:
+			return "manifest";
+		case MessageType::HEARTBEAT:
+			return "heartbeat";
+		case MessageType::RESULT:
+			return "result";
+		case MessageType::CALLBACK:
+			return "callback";
+	}
+
+	return "unknown";
+}
+
+[[nodiscard]] constexpr std::string_view toString( const CallOp value ) noexcept
+{
+	switch ( value )
+	{
+		case CallOp::METADATA:
+			return "metadata";
+		case CallOp::THUMB_RGBA:
+			return "thumb_rgba";
+		case CallOp::THUMB_FILE:
+			return "thumb_file";
+		case CallOp::GENERATE:
+			return "generate";
+		case CallOp::EMBED:
+			return "embed";
+		case CallOp::EMBED_TEXT:
+			return "embed_text";
+	}
+
+	return "unknown";
+}
+
+[[nodiscard]] constexpr std::string_view toString( const CallbackKind value ) noexcept
+{
+	switch ( value )
+	{
+		case CallbackKind::PROBE:
+			return "probe";
+		case CallbackKind::THUMBNAIL:
+			return "thumbnail";
+		case CallbackKind::GENERATE:
+			return "generate";
+	}
+
+	return "unknown";
+}
+
+[[nodiscard]] constexpr std::string_view toString( const ModuleResidency value ) noexcept
+{
+	switch ( value )
+	{
+		case ModuleResidency::SINGLE_RUN:
+			return "single_run";
+		case ModuleResidency::PERSISTENT:
+			return "persistent";
+	}
+
+	return "unknown";
+}
+
+//!@}
+
+//! Renders a rejected enum field for a diagnostic without assuming it holds what it should.
+/** asString() throws on an object or an array, and every caller of this is already on the path where
+ *  a peer sent something unexpected -- the one place that must not turn a bad message into a throw. */
+[[nodiscard]] std::string describeWireValue( const Json::Value& json );
+
+//! Encodes a protocol enum for the wire: its underlying integer, never its name.
+/** A name on the wire buys nothing -- both ends are compiled from this header -- and costs a string
+ *  allocation per field plus a parse that can fail in ways the enum itself cannot. */
+template < typename EnumT >
+	requires std::is_enum_v< EnumT >
+[[nodiscard]] constexpr Json::UInt toWire( const EnumT value ) noexcept
+{
+	return static_cast< Json::UInt >( std::to_underlying( value ) );
+}
+
+//! Narrows a wire value back to \p EnumT, rejecting anything that is not a declared enumerator.
+/** Returns nullopt rather than an out-of-range enum for the same reason the worker checks
+ *  requiredFlag before downcasting: the value arrived over a socket, so a peer that is confused or
+ *  a version behind has to produce an error response, not an object in a state no switch handles. */
+template < typename EnumT >
+	requires std::is_enum_v< EnumT >
+[[nodiscard]] std::optional< EnumT > fromWire( const Json::Value& json ) noexcept
+{
+	using Underlying = std::underlying_type_t< EnumT >;
+
+	// isUInt64 rather than isIntegral: asUInt64 on a negative value trips a jsoncpp assert.
+	if ( !json.isUInt64() ) return std::nullopt;
+
+	const auto raw { json.asUInt64() };
+	if ( raw > static_cast< Json::UInt64 >( std::numeric_limits< Underlying >::max() ) ) return std::nullopt;
+
+	const auto value { static_cast< EnumT >( raw ) };
+	if ( !isDeclared( value ) ) return std::nullopt;
+
+	return value;
+}
 
 //! The interface flag a module must declare before \p op may be dispatched to it.
 /** The worker checks this before downcasting. A module_index that does not match the op is a host
@@ -125,7 +333,7 @@ enum class CallbackKind : std::uint8_t
 	{
 		case CallOp::METADATA:
 			return ModuleTypeFlags::METADATA;
-		case CallOp::THUMB_RAW:
+		case CallOp::THUMB_RGBA:
 			[[fallthrough]];
 		case CallOp::THUMB_FILE:
 			return ModuleTypeFlags::THUMBNAILER;
@@ -151,6 +359,10 @@ struct ManifestEntry
 	ModuleVersion version {};
 	bool thread_safe { false };
 	ModuleResidency residency { ModuleResidency::SINGLE_RUN };
+	//! ModuleBase::rssCeilingMb(): the resident size this module needs to hold without being retired
+	//! for it. Zero means it has no opinion and the configured ceiling stands. The host takes the
+	//! largest value any module in the library declares, since they share one worker process.
+	std::size_t rss_ceiling_mb { 0 };
 	std::vector< std::string > mimes {};
 	//! EMBEDDING modules only; empty otherwise. The routing key for embed calls -- unlike `name`,
 	//! this must be unique and stable, because it is also a database key.

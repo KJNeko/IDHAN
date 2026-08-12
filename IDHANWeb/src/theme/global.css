@@ -1165,6 +1165,247 @@ body {
     color: var(--error);
 }
 
+/* ---- Embedding Search ----
+   The panel scrolls as a whole (via .panel-body's overflow) rather than giving the term list its
+   own window. A nested scroller collapses to a couple of rows once the panel is short, which is
+   exactly when the terms are hardest to read; scrolling the lot keeps every row full height. The
+   footer is sticky so the Search button survives that. */
+.embed-search-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Nothing in the column shrinks: the panel has a fixed height, so a flex child left at the default
+   flex-shrink:1 would compress toward its min-content size — controls squashing and labels wrapping
+   — instead of overflowing into the scroll the panel already provides. */
+.embed-search-panel > * {
+    flex: 0 0 auto;
+}
+
+.embed-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.embed-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--muted);
+    min-width: 0;
+}
+
+.embed-field select,
+.embed-field input {
+    padding: 0.3rem 0.4rem;
+    border: 1px solid #2a2e37;
+    border-radius: 5px;
+    background: #1b1e24;
+    color: var(--fg);
+    font: inherit;
+}
+
+/* The model name is the variable-length part; the limit is three digits and never needs more. */
+.embed-field-model {
+    flex: 1 1 auto;
+}
+
+.embed-field-model select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.embed-field-limit {
+    flex: 0 0 auto;
+}
+
+.embed-field-limit input {
+    width: 5rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.embed-add-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.embed-add-row .search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.embed-term-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.embed-term-head .toolbar-button {
+    font-size: 0.9em;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.embed-term-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Fixed columns rather than content-sized: the signs and weights have to read down the list as
+   columns, which a label-width-driven layout would scatter. */
+.embed-term {
+    display: grid;
+    grid-template-columns: auto auto 4.25rem 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid transparent;
+    border-radius: 5px;
+}
+
+.embed-term:hover {
+    border-color: #2a2e37;
+    background: #1b1e24;
+}
+
+.embed-term.is-disabled .embed-term-label,
+.embed-term.is-disabled .embed-term-weight {
+    color: var(--muted);
+    text-decoration: line-through;
+}
+
+.embed-term.is-disabled .embed-term-sign {
+    color: var(--muted);
+}
+
+.embed-term-sign {
+    width: 1.5rem;
+    padding: 0.1rem 0;
+    border: 1px solid #2a2e37;
+    border-radius: 4px;
+    background: #23262d;
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.embed-term-sign.positive {
+    color: #63c07a;
+}
+
+.embed-term-sign.negative {
+    color: #ff9a9a;
+    background: #3a2326;
+    border-color: #7d2e34;
+}
+
+.embed-term-weight {
+    width: 100%;
+    padding: 0.15rem 0.3rem;
+    border: 1px solid #2a2e37;
+    border-radius: 4px;
+    background: #1b1e24;
+    color: var(--fg);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+}
+
+.embed-term-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A record reference is an id, not a phrase — the monospace says so without a second badge. */
+.embed-term-label.is-record {
+    font-family: ui-monospace, monospace;
+    font-size: 0.9em;
+    color: #9ec1ff;
+}
+
+.embed-term-remove {
+    padding: 0 0.3rem;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 1.1em;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.embed-term-remove:hover {
+    color: var(--error);
+}
+
+.embed-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9em;
+}
+
+.embed-note code {
+    font-family: ui-monospace, monospace;
+}
+
+/* Sticks to the bottom edge only while there is content below it to scroll; with a short term list
+   it sits in normal flow right under the rows. The negative margins bleed the background out over
+   .panel-body's padding, so rows scroll under an opaque bar rather than through a gap beside it. */
+.embed-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.25rem -1rem -0.75rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px solid #2a2e37;
+    background: var(--bg);
+}
+
+.embed-summary,
+.embed-error {
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.embed-summary {
+    font-variant-numeric: tabular-nums;
+}
+
+.embed-error {
+    color: var(--error);
+    font-size: 0.9em;
+}
+
+.embed-run {
+    margin-left: auto;
+    flex: 0 0 auto;
+    padding: 0.35rem 0.9rem;
+    border: none;
+    border-radius: 5px;
+    background: #3a63c0;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.embed-run:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 /* Shared small checkbox/radio label used across the P2 panels. */
 .log-check {
   display: inline-flex;

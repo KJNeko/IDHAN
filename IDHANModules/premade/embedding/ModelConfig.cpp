@@ -14,9 +14,6 @@
 namespace premade
 {
 
-namespace
-{
-
 //! Reads a 3-element float array (mean/std) out of \p json, leaving \p out alone when absent.
 void readTriple( const Json::Value& json, std::array< float, 3 >& out )
 {
@@ -120,7 +117,6 @@ constexpr std::array< std::string_view, 4 > EMBEDDING_OUTPUT_NAMES {
 	return back > 0 ? static_cast< std::size_t >( back ) : 0;
 }
 
-} // namespace
 
 std::expected< ModelConfig, std::string > readModelDirectory( const std::filesystem::path& directory )
 {

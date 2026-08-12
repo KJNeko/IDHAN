@@ -6,9 +6,6 @@
 #include "coro/Resumer.hpp"
 #include "fgl/defines.hpp"
 
-namespace
-{
-
 class RecordingResumer final : public idhan::coro::Resumer
 {
   public:
@@ -49,7 +46,6 @@ class ScopedProvider
 	FGL_DELETE_MOVE( ScopedProvider );
 };
 
-} // namespace
 
 TEST( CoroResumer, noProviderInstalledYieldsNull )
 {

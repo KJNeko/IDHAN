@@ -7,9 +7,6 @@
 
 #include "ptr/flatten/CollapseChain.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 //! Builds one key's chain from a compact spelling: 'A' add, 'D' delete. The nth character is
@@ -132,4 +129,3 @@ TEST( PTRCollapseChain, DeleteThenAddKeepsTheAddAtItsOwnIndex )
 	EXPECT_EQ( result->update_index, 2 );
 }
 
-} // namespace

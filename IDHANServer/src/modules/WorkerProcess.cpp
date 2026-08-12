@@ -290,7 +290,7 @@ void WorkerProcess::ioLoop( const std::stop_token& stop )
 
 void WorkerProcess::handleFrame( ipc::Frame&& frame )
 {
-	const auto type { ipc::messageTypeFromString( frame.body[ ipc::field::TYPE ].asString() ) };
+	const auto type { ipc::fromWire< ipc::MessageType >( frame.body[ ipc::field::TYPE ] ) };
 	if ( !type ) return;
 
 	switch ( *type )

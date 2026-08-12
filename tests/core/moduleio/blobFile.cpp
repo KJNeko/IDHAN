@@ -15,9 +15,6 @@
 
 using namespace idhan;
 
-namespace
-{
-
 //! A temporary file holding \p size deterministic bytes, removed when it goes out of scope.
 /** Deterministic rather than random so a failure names a byte the test can recompute, and so a
  *  reproduction does not depend on a seed being logged. */
@@ -79,7 +76,6 @@ class TempFile
 //! side of a page, and several pages.
 const std::vector< std::size_t > SIZES { 0, 1, 4095, 4096, 4097, 65536, 1024 * 1024 + 7 };
 
-} // namespace
 
 //! A whole-file read matches the file, at every size.
 TEST( BlobFile, ReadsWholeFile )

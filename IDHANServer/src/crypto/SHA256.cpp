@@ -9,6 +9,7 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "caching/recordCaches.hpp"
 #include "crypto/simpleHasher.hpp"
+#include "db/dbTypes.hpp"
 #include "decodeHex.hpp"
 #include "fgl/defines.hpp"
 #include "filesystem/io/IOUring.hpp"

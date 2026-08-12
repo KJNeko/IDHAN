@@ -6,9 +6,6 @@
 namespace idhan
 {
 
-namespace
-{
-
 //! A ModuleFile over memory somebody else owns.
 /** Backs ModuleFile::fromBytes. The host's real backends (a restricted io_uring, a mapped memfd)
  *  live in the ipc layer, which this header cannot reach -- ipc depends on the module ABI, not the
@@ -41,7 +38,6 @@ class MemoryFile final : public ModuleFile
 	}
 };
 
-} // namespace
 
 std::unique_ptr< ModuleFile > ModuleFile::fromBytes( const std::span< const std::byte > bytes )
 {

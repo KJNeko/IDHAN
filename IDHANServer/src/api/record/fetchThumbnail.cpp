@@ -84,9 +84,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		const std::size_t height { size };
 		const std::size_t width { size };
 
-		modules::RemoteCallData call_data { .input = *input_e, .mime_name = mime_name, .extra = {}, .depth = 0 };
+		modules::RemoteCallData call_data { .input = *input_e, .mime_name = mime_name };
 
-		// check if we have any metadata for this
 		const auto extra_metadata {
 			co_await db->execSqlCoro( "SELECT json FROM metadata WHERE record_id = $1", record_id )
 		};
@@ -96,6 +95,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 			call_data.extra = extra_metadata[ 0 ][ 0 ].as< Json::Value >();
 		}
 
+		//TODO: If not caching, Do not use the file endpoint
 		const auto thumbnail_info { co_await thumbnailer->createThumbnailFile( call_data, width, height ) };
 
 		if ( !thumbnail_info ) co_return createInternalError( "Thumbnailer had an error: {}", thumbnail_info.error() );

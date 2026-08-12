@@ -126,6 +126,7 @@ ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 	const auto transaction { co_await db->newTransactionCoro() };
 
 	co_await transaction->execSqlCoro( std::format( "SET LOCAL hnsw.ef_search = {}", ef_search ) );
+	co_await transaction->execSqlCoro( "SET LOCAL enable_indexscan = off" );
 
 	const auto literal { toHalfvecLiteral( *query_vector ) };
 

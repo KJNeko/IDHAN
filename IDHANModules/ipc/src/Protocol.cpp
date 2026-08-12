@@ -9,19 +9,14 @@
 namespace idhan::ipc
 {
 
-namespace
+std::string describeWireValue( const Json::Value& json )
 {
+	if ( json.isNull() ) return "absent";
+	if ( json.isUInt64() ) return std::to_string( json.asUInt64() );
+	if ( json.isInt64() ) return std::to_string( json.asInt64() );
 
-//! Wire tags for MetadataVariant's alternatives.
-/** Tagged by name rather than by the variant's index on purpose: the index is a property of the
- *  declaration order in MetadataInfo.hpp, and inserting an alternative there would silently
- *  reinterpret every stored and in-flight message. */
-constexpr auto VARIANT_NONE { "none" };
-constexpr auto VARIANT_IMAGE { "image" };
-constexpr auto VARIANT_VIDEO { "video" };
-constexpr auto VARIANT_IMAGE_PROJECT { "image_project" };
-constexpr auto VARIANT_ANIMATION { "animation" };
-constexpr auto VARIANT_ARCHIVE { "archive" };
+	return "a non-integral value";
+}
 
 [[nodiscard]] Json::Value imageToJson( const MetadataInfoImage& image )
 {
@@ -39,125 +34,6 @@ constexpr auto VARIANT_ARCHIVE { "archive" };
 		.height = json[ "height" ].asInt(),
 		.channels = static_cast< std::uint8_t >( json[ "channels" ].asUInt() )
 	};
-}
-
-} // namespace
-
-std::string_view toString( const MessageType value ) noexcept
-{
-	switch ( value )
-	{
-		case MessageType::CALL:
-			return "call";
-		case MessageType::CALLBACK_RESULT:
-			return "callback_result";
-		case MessageType::RECLAIM:
-			return "reclaim";
-		case MessageType::SHUTDOWN:
-			return "shutdown";
-		case MessageType::MANIFEST:
-			return "manifest";
-		case MessageType::HEARTBEAT:
-			return "heartbeat";
-		case MessageType::RESULT:
-			return "result";
-		case MessageType::CALLBACK:
-			return "callback";
-	}
-
-	return "unknown";
-}
-
-std::string_view toString( const CallOp value ) noexcept
-{
-	switch ( value )
-	{
-		case CallOp::METADATA:
-			return "metadata";
-		case CallOp::THUMB_RAW:
-			return "thumb_raw";
-		case CallOp::THUMB_FILE:
-			return "thumb_file";
-		case CallOp::GENERATE:
-			return "generate";
-		case CallOp::EMBED:
-			return "embed";
-		case CallOp::EMBED_TEXT:
-			return "embed_text";
-	}
-
-	return "unknown";
-}
-
-std::string_view toString( const CallbackKind value ) noexcept
-{
-	switch ( value )
-	{
-		case CallbackKind::PROBE:
-			return "probe";
-		case CallbackKind::THUMBNAIL:
-			return "thumbnail";
-		case CallbackKind::GENERATE:
-			return "generate";
-	}
-
-	return "unknown";
-}
-
-std::string_view toString( const ModuleResidency value ) noexcept
-{
-	switch ( value )
-	{
-		case ModuleResidency::SINGLE_RUN:
-			return "single_run";
-		case ModuleResidency::PERSISTENT:
-			return "persistent";
-	}
-
-	return "unknown";
-}
-
-std::optional< MessageType > messageTypeFromString( const std::string_view value ) noexcept
-{
-	if ( value == "call" ) return MessageType::CALL;
-	if ( value == "callback_result" ) return MessageType::CALLBACK_RESULT;
-	if ( value == "reclaim" ) return MessageType::RECLAIM;
-	if ( value == "shutdown" ) return MessageType::SHUTDOWN;
-	if ( value == "manifest" ) return MessageType::MANIFEST;
-	if ( value == "heartbeat" ) return MessageType::HEARTBEAT;
-	if ( value == "result" ) return MessageType::RESULT;
-	if ( value == "callback" ) return MessageType::CALLBACK;
-
-	return std::nullopt;
-}
-
-std::optional< CallOp > callOpFromString( const std::string_view value ) noexcept
-{
-	if ( value == "metadata" ) return CallOp::METADATA;
-	if ( value == "thumb_raw" ) return CallOp::THUMB_RAW;
-	if ( value == "thumb_file" ) return CallOp::THUMB_FILE;
-	if ( value == "generate" ) return CallOp::GENERATE;
-	if ( value == "embed" ) return CallOp::EMBED;
-	if ( value == "embed_text" ) return CallOp::EMBED_TEXT;
-
-	return std::nullopt;
-}
-
-std::optional< CallbackKind > callbackKindFromString( const std::string_view value ) noexcept
-{
-	if ( value == "probe" ) return CallbackKind::PROBE;
-	if ( value == "thumbnail" ) return CallbackKind::THUMBNAIL;
-	if ( value == "generate" ) return CallbackKind::GENERATE;
-
-	return std::nullopt;
-}
-
-std::optional< ModuleResidency > residencyFromString( const std::string_view value ) noexcept
-{
-	if ( value == "single_run" ) return ModuleResidency::SINGLE_RUN;
-	if ( value == "persistent" ) return ModuleResidency::PERSISTENT;
-
-	return std::nullopt;
 }
 
 Json::Value toJson( const ModuleVersion& version )
@@ -186,7 +62,8 @@ Json::Value toJson( const ManifestEntry& entry )
 	json[ field::TYPE ] = static_cast< Json::UInt >( entry.type );
 	json[ field::VERSION ] = toJson( entry.version );
 	json[ field::THREAD_SAFE ] = entry.thread_safe;
-	json[ field::RESIDENCY ] = std::string { toString( entry.residency ) };
+	json[ field::RESIDENCY ] = toWire( entry.residency );
+	json[ field::RSS_CEILING_MB ] = static_cast< Json::UInt64 >( entry.rss_ceiling_mb );
 
 	// arrayValue explicitly: a default-constructed Json::Value stays null until something is
 	// appended, so a module that handles no MIME types would serialise as null rather than [].
@@ -215,10 +92,11 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 	if ( !json[ field::TYPE ].isIntegral() )
 		return std::unexpected( std::string { "manifest entry has no integral type" } );
 
-	const auto residency { residencyFromString( json[ field::RESIDENCY ].asString() ) };
+	const auto residency { fromWire< ModuleResidency >( json[ field::RESIDENCY ] ) };
 	if ( !residency )
 		return std::unexpected(
-			std::format( "manifest entry has unknown residency '{}'", json[ field::RESIDENCY ].asString() ) );
+			std::format(
+				"manifest entry has an unknown residency: {}", describeWireValue( json[ field::RESIDENCY ] ) ) );
 
 	ManifestEntry entry {};
 	entry.index = static_cast< std::size_t >( json[ field::INDEX ].asUInt64() );
@@ -227,6 +105,16 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 	entry.version = moduleVersionFromJson( json[ field::VERSION ] );
 	entry.thread_safe = json[ field::THREAD_SAFE ].asBool();
 	entry.residency = *residency;
+
+	// Absent on manifests from a library built before modules could declare a ceiling. Zero is the
+	// safe default: the configured limit stands, which is the behaviour those libraries already had.
+	if ( json.isMember( field::RSS_CEILING_MB ) )
+	{
+		if ( !json[ field::RSS_CEILING_MB ].isIntegral() )
+			return std::unexpected( std::string { "manifest entry has a non-integral rss_ceiling_mb" } );
+
+		entry.rss_ceiling_mb = static_cast< std::size_t >( json[ field::RSS_CEILING_MB ].asUInt64() );
+	}
 
 	// Absent on manifests from a library built before EMBEDDING existed; default to the empty
 	// non-embedding values rather than rejecting the whole entry.
@@ -337,7 +225,7 @@ Json::Value toJson( const MetadataInfo& info )
 	json[ field::EXTRA ] = info.m_extra;
 
 	Json::Value value {};
-	std::string tag { VARIANT_NONE };
+	MetadataVariant tag { MetadataVariant::NONE };
 
 	std::visit(
 		[ &tag, &value ]( const auto& metadata )
@@ -346,12 +234,12 @@ Json::Value toJson( const MetadataInfo& info )
 
 			if constexpr ( std::is_same_v< T, MetadataInfoImage > )
 			{
-				tag = VARIANT_IMAGE;
+				tag = MetadataVariant::IMAGE;
 				value = imageToJson( metadata );
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoVideo > )
 			{
-				tag = VARIANT_VIDEO;
+				tag = MetadataVariant::VIDEO;
 				value[ "has_audio" ] = metadata.m_has_audio;
 				value[ "width" ] = metadata.m_width;
 				value[ "height" ] = metadata.m_height;
@@ -361,18 +249,18 @@ Json::Value toJson( const MetadataInfo& info )
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoImageProject > )
 			{
-				tag = VARIANT_IMAGE_PROJECT;
+				tag = MetadataVariant::IMAGE_PROJECT;
 				value[ "image" ] = imageToJson( metadata.image_info );
 				value[ "layers" ] = static_cast< Json::UInt >( metadata.layers );
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoAnimation > )
 			{
-				tag = VARIANT_ANIMATION;
+				tag = MetadataVariant::ANIMATION;
 				value = Json::Value { Json::objectValue };
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoArchive > )
 			{
-				tag = VARIANT_ARCHIVE;
+				tag = MetadataVariant::ARCHIVE;
 
 				Json::Value hashes { Json::arrayValue };
 				for ( const auto& hash : metadata.contained_hashes ) hashes.append( crypto::toHex( hash ) );
@@ -383,13 +271,13 @@ Json::Value toJson( const MetadataInfo& info )
 			}
 			else
 			{
-				tag = VARIANT_NONE;
+				tag = MetadataVariant::NONE;
 				value = Json::Value { Json::objectValue };
 			}
 		},
 		info.m_metadata );
 
-	json[ field::VARIANT ] = tag;
+	json[ field::VARIANT ] = toWire( tag );
 	json[ field::VALUE ] = value;
 
 	return json;
@@ -403,67 +291,66 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 	info.m_simple_type = static_cast< SimpleMimeType >( json[ field::SIMPLE_TYPE ].asUInt() );
 	info.m_extra = json[ field::EXTRA ];
 
-	if ( !json[ field::VARIANT ].isString() ) return std::unexpected( std::string { "metadata has no variant tag" } );
+	const auto decoded { fromWire< MetadataVariant >( json[ field::VARIANT ] ) };
+	if ( !decoded )
+		return std::unexpected(
+			std::format( "metadata has an unknown variant tag: {}", describeWireValue( json[ field::VARIANT ] ) ) );
 
-	const auto tag { json[ field::VARIANT ].asString() };
 	const auto& value { json[ field::VALUE ] };
 
-	if ( tag == VARIANT_NONE )
+	switch ( *decoded )
 	{
-		info.m_metadata = std::monostate {};
-	}
-	else if ( tag == VARIANT_IMAGE )
-	{
-		info.m_metadata = imageFromJson( value );
-	}
-	else if ( tag == VARIANT_VIDEO )
-	{
-		info.m_metadata = MetadataInfoVideo {
-			.m_has_audio = value[ "has_audio" ].asBool(),
-			.m_width = value[ "width" ].asInt(),
-			.m_height = value[ "height" ].asInt(),
-			.m_bitrate = value[ "bitrate" ].asInt(),
-			.m_duration = value[ "duration" ].asDouble(),
-			.m_fps = value[ "fps" ].asDouble()
-		};
-	}
-	else if ( tag == VARIANT_IMAGE_PROJECT )
-	{
-		info.m_metadata = MetadataInfoImageProject {
-			.image_info = imageFromJson( value[ "image" ] ),
-			.layers = static_cast< std::uint8_t >( value[ "layers" ].asUInt() )
-		};
-	}
-	else if ( tag == VARIANT_ANIMATION )
-	{
-		info.m_metadata = MetadataInfoAnimation {};
-	}
-	else if ( tag == VARIANT_ARCHIVE )
-	{
-		MetadataInfoArchive archive {};
+		case MetadataVariant::NONE:
+			info.m_metadata = std::monostate {};
+			break;
+		case MetadataVariant::IMAGE:
+			info.m_metadata = imageFromJson( value );
+			break;
+		case MetadataVariant::VIDEO:
+			info.m_metadata = MetadataInfoVideo {
+				.m_has_audio = value[ "has_audio" ].asBool(),
+				.m_width = value[ "width" ].asInt(),
+				.m_height = value[ "height" ].asInt(),
+				.m_bitrate = value[ "bitrate" ].asInt(),
+				.m_duration = value[ "duration" ].asDouble(),
+				.m_fps = value[ "fps" ].asDouble()
+			};
+			break;
+		case MetadataVariant::IMAGE_PROJECT:
+			info.m_metadata = MetadataInfoImageProject {
+				.image_info = imageFromJson( value[ "image" ] ),
+				.layers = static_cast< std::uint8_t >( value[ "layers" ].asUInt() )
+			};
+			break;
+		case MetadataVariant::ANIMATION:
+			info.m_metadata = MetadataInfoAnimation {};
+			break;
+		case MetadataVariant::ARCHIVE:
+			{
+				MetadataInfoArchive archive {};
 
-		const auto& hashes { value[ "contained_hashes" ] };
-		if ( !hashes.isArray() ) return std::unexpected( std::string { "archive metadata has no hash array" } );
+				const auto& hashes { value[ "contained_hashes" ] };
+				if ( !hashes.isArray() ) return std::unexpected( std::string { "archive metadata has no hash array" } );
 
-		for ( const auto& hash : hashes )
-		{
-			if ( !hash.isString() ) return std::unexpected( std::string { "archive metadata has a non-string hash" } );
+				for ( const auto& hash : hashes )
+				{
+					if ( !hash.isString() )
+						return std::unexpected( std::string { "archive metadata has a non-string hash" } );
 
-			const auto hex { hash.asString() };
-			if ( hex.size() != ( 256 / 8 ) * 2 )
-				return std::unexpected( std::format( "archive metadata hash '{}' is not a sha256 hex string", hex ) );
+					const auto hex { hash.asString() };
+					if ( hex.size() != ( 256 / 8 ) * 2 )
+						return std::unexpected(
+							std::format( "archive metadata hash '{}' is not a sha256 hex string", hex ) );
 
-			archive.contained_hashes.emplace_back( crypto::fromHex( hex ) );
-		}
+					archive.contained_hashes.emplace_back( crypto::fromHex( hex ) );
+				}
 
-		archive.m_size = static_cast< std::size_t >( value[ "size" ].asUInt64() );
-		archive.encrypted = value[ "encrypted" ].asBool();
+				archive.m_size = static_cast< std::size_t >( value[ "size" ].asUInt64() );
+				archive.encrypted = value[ "encrypted" ].asBool();
 
-		info.m_metadata = std::move( archive );
-	}
-	else
-	{
-		return std::unexpected( std::format( "metadata has unknown variant tag '{}'", tag ) );
+				info.m_metadata = std::move( archive );
+				break;
+			}
 	}
 
 	return info;

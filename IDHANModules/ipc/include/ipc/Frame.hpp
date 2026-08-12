@@ -2,7 +2,6 @@
 
 #include <json/value.h>
 
-#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -10,6 +9,7 @@
 #include <expected>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -43,17 +43,18 @@ struct Header
 	std::uint32_t m_fds_expected;
 };
 
+static_assert( std::is_trivially_copyable_v< Header >, "Header is copied in and out of the socket as raw bytes" );
+static_assert( sizeof( Header ) == 8, "Header must have no padding for the blob copy to be exact" );
+
 class FrameReader
 {
-	static constexpr std::size_t HEADER_SIZE { 8 };
+	static constexpr std::size_t HEADER_SIZE { sizeof( Header ) };
 
-	std::array< std::byte, HEADER_SIZE > m_header {};
+	Header m_header {};
 	std::size_t m_header_filled { 0 };
 
 	std::vector< std::byte > m_body {};
 	std::size_t m_body_filled { 0 };
-	std::uint32_t m_body_expected { 0 };
-	std::uint32_t m_fds_expected { 0 };
 	bool m_header_complete { false };
 
 	std::vector< UniqueFd > m_pending_fds {};

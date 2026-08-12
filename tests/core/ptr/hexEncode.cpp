@@ -8,9 +8,6 @@
 #include "ptr/flatten/DefinitionStore.hpp"
 #include "ptr/flatten/HexEncode.hpp"
 
-namespace
-{
-
 using namespace idhan::hydrus::ptr;
 
 TEST( PTRHexEncode, EncodesAllZeroes )
@@ -40,4 +37,3 @@ TEST( PTRHexEncode, EmptyInputEncodesEmpty )
 	EXPECT_TRUE( toHex( {} ).empty() );
 }
 
-} // namespace

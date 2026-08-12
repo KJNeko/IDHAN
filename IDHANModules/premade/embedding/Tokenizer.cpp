@@ -12,9 +12,6 @@
 namespace premade
 {
 
-namespace
-{
-
 //! What the normalizer replaces, and with what. Read from the file rather than assumed; these are the
 //! defaults used when it declares nothing.
 constexpr std::string_view SPACE { " " };
@@ -40,7 +37,6 @@ constexpr std::string_view META_SPACE { "▁" };
 	     | static_cast< std::uint32_t >( right );
 }
 
-} // namespace
 
 std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 	const std::filesystem::path& tokenizer_path,

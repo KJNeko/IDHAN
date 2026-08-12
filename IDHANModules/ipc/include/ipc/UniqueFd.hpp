@@ -10,10 +10,6 @@ namespace idhan::ipc
 {
 
 //! Owning wrapper around a file descriptor.
-/** Descriptors cross this codebase in places where a leak is not merely untidy: a worker that leaks
- *  the receiving end of its socket never sees EOF when the server dies, and a leaked blob descriptor
- *  pins the whole file's worth of memory for the process's lifetime. Everything that receives a
- *  descriptor takes it as a UniqueFd so the ownership question has one answer. */
 class UniqueFd
 {
 	int m_fd { -1 };

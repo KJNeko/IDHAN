@@ -26,20 +26,11 @@
 namespace idhan::runner
 {
 
-namespace
-{
-
-//! The call a pool thread is currently running.
-/** Callbacks are issued from deep inside module code, which has no idea it is running in a worker
- *  and cannot be asked to thread a call id through. The depth in particular has to survive the trip
- *  so the host can enforce a nesting bound across processes: a per-process counter stopped meaning
- *  anything once recursion started crossing process boundaries. */
 struct CallScope
 {
 	std::uint64_t call_id { 0 };
 	std::uint32_t depth { 0 };
-	//! This call's own input, so a callback can recognise a module handing it straight back and ask the
-	//! host to reuse the descriptor it already holds.
+
 	const ModuleFile* input { nullptr };
 };
 
@@ -50,12 +41,8 @@ thread_local CallScope t_scope {};
 	return std::vector< std::byte > { bytes.begin(), bytes.end() };
 }
 
-//! How much of a ModuleFile is moved per read when one has to be copied into a memfd.
-/** Only reached for handles whose bytes are already in this process (ModuleFile::fromBytes), so this
- *  bounds the transient buffer, not the total. */
 constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 
-//! Copies a handle's contents into a fresh sealed memfd.
 [[nodiscard]] std::expected< ipc::UniqueFd, std::string > copyToMemfd( const ModuleFile& file )
 {
 	auto sink { ipc::MemfdSink::create() };
@@ -83,13 +70,9 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 		offset += *count;
 	}
 
-	return ( *sink )->finish();
+	return ( *sink )->seal();
 }
 
-//! Size of a sealed payload descriptor, for logging only.
-/** fstat rather than lseek: the host mmaps this descriptor, and moving its offset to measure it
- *  would be a side effect paid on every call to serve a debug line. Returns 0 on anything odd -- a
- *  log line is never worth failing a completed call over. */
 [[nodiscard]] std::size_t payloadSize( const int fd )
 {
 	if ( fd < 0 ) return 0;
@@ -100,16 +83,13 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 	return static_cast< std::size_t >( info.st_size );
 }
 
-//! One phrase describing what a completed call produced, for the per-call debug line.
-/** Read out of the reply body rather than the module's return value, so the summary can only ever
- *  describe what the host is actually about to receive. */
 [[nodiscard]] std::string describeResult( const ipc::CallOp op, const Json::Value& body, const int payload_fd )
 {
 	switch ( op )
 	{
 		case ipc::CallOp::METADATA:
 			return std::format( "{} metadata fields", body[ ipc::field::METADATA ].size() );
-		case ipc::CallOp::THUMB_RAW:
+		case ipc::CallOp::THUMB_RGBA:
 			[[fallthrough]];
 		case ipc::CallOp::THUMB_FILE:
 			{
@@ -132,8 +112,6 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 
 	return "done";
 }
-
-} // namespace
 
 std::size_t residentSetKb()
 {
@@ -210,7 +188,7 @@ std::expected< void, std::string > WorkerRunner::load()
 Json::Value WorkerRunner::manifestJson() const
 {
 	Json::Value body {};
-	body[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::MANIFEST ) };
+	body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::MANIFEST );
 
 	// arrayValue explicitly: a library exporting nothing must serialise as [] rather than null.
 	Json::Value modules { Json::arrayValue };
@@ -369,12 +347,10 @@ std::expected< std::shared_ptr< WorkerRunner::PendingCallback >, std::string > W
 	}
 
 	Json::Value frame { body };
-	frame[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::CALLBACK ) };
-	frame[ ipc::field::KIND ] = std::string { toString( kind ) };
+	frame[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::CALLBACK );
+	frame[ ipc::field::KIND ] = ipc::toWire( kind );
 	frame[ ipc::field::CALLBACK_ID ] = static_cast< Json::UInt64 >( id );
 	frame[ ipc::field::CALL_ID ] = static_cast< Json::UInt64 >( t_scope.call_id );
-	// The host adds one and enforces its own ceiling; sending our own depth is what makes that
-	// possible across a process boundary.
 	frame[ ipc::field::DEPTH ] = static_cast< Json::UInt >( t_scope.depth );
 
 	const auto sent { send( frame, fds ) };
@@ -462,10 +438,6 @@ std::expected< std::unique_ptr< ModuleFile >, std::string > WorkerRunner::adoptI
 	auto blob { ipc::Blob::adopt( std::move( frame.fds.front() ) ) };
 	if ( !blob ) return std::unexpected( blob.error() );
 
-	// The mapping is all a module needs, and it outlives the descriptor it was made from. Dropping
-	// the descriptor here removes the /proc/self/fd entry naming the file -- partial, since
-	// /proc/self/maps still names it and only the sandbox closes that. Before the call reaches a
-	// pool thread, so no module code has run.
 	blob->closeDescriptor();
 
 	return std::make_unique< ipc::BlobFile >( std::move( *blob ) );
@@ -475,7 +447,6 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 {
 	QueuedCall call {};
 	call.call_id = frame.body[ ipc::field::CALL_ID ].asUInt64();
-	call.module_index = frame.body[ ipc::field::MODULE_INDEX ].asUInt64();
 	call.mime = frame.body[ ipc::field::MIME ].asString();
 	call.extra = frame.body[ ipc::field::EXTRA ];
 	call.width = frame.body[ ipc::field::WIDTH ].asUInt64();
@@ -483,12 +454,12 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 	call.phrase = frame.body[ ipc::field::PHRASE ].asString();
 	call.depth = frame.body[ ipc::field::DEPTH ].asUInt();
 
-	const auto op { ipc::callOpFromString( frame.body[ ipc::field::OP ].asString() ) };
+	const auto op { ipc::fromWire< ipc::CallOp >( frame.body[ ipc::field::OP ] ) };
 
 	const auto reject = [ this, &call ]( const std::string& reason )
 	{
 		Json::Value body {};
-		body[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::RESULT ) };
+		body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::RESULT );
 		body[ ipc::field::CALL_ID ] = static_cast< Json::UInt64 >( call.call_id );
 		body[ ipc::field::OK ] = false;
 		body[ ipc::field::ERROR ] = reason;
@@ -499,10 +470,24 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 
 	if ( !op )
 	{
-		reject( std::format( "unknown operation '{}'", frame.body[ ipc::field::OP ].asString() ) );
+		reject( std::format( "unknown operation: {}", ipc::describeWireValue( frame.body[ ipc::field::OP ] ) ) );
 		return;
 	}
 	call.op = *op;
+
+	// Checked rather than defaulted: jsoncpp yields null for a missing field and asUInt64() turns that
+	// into a perfectly valid-looking index 0. A host that forgets the routing key would then send every
+	// op to whichever module happens to sit at 0 -- a wrong-interface error if that module is the wrong
+	// kind, and silently the wrong module if it is not.
+	if ( !frame.body[ ipc::field::MODULE_INDEX ].isUInt64() )
+	{
+		reject(
+			std::format(
+				"call carries no module index: {}",
+				ipc::describeWireValue( frame.body[ ipc::field::MODULE_INDEX ] ) ) );
+		return;
+	}
+	call.module_index = frame.body[ ipc::field::MODULE_INDEX ].asUInt64();
 
 	if ( frame.body[ ipc::field::HASH ].isString() )
 	{
@@ -510,11 +495,6 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 		if ( hex.size() == ( 256 / 8 ) * 2 ) call.hash = crypto::fromHex( hex );
 	}
 
-	// Adopted here rather than on the pool thread, and that placement is the security property: a
-	// ring's descriptor must be registered and closed before any module code runs, because while it
-	// exists /proc/self/fdinfo prints the path of the file it was given.
-	//
-	// EMBED_TEXT is the one op with nothing to adopt, so demanding a descriptor would reject it.
 	if ( call.op != ipc::CallOp::EMBED_TEXT )
 	{
 		auto file { adoptInput( frame ) };
@@ -588,13 +568,13 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 				body[ ipc::field::METADATA ] = ipc::toJson( *result );
 				return std::pair { std::move( body ), ipc::UniqueFd {} };
 			}
-		case ipc::CallOp::THUMB_RAW:
+		case ipc::CallOp::THUMB_RGBA:
 			[[fallthrough]];
 		case ipc::CallOp::THUMB_FILE:
 			{
 				const auto thumbnailer { std::static_pointer_cast< ThumbnailerModuleI >( module ) };
 
-				auto result { call.op == ipc::CallOp::THUMB_RAW ?
+				auto result { call.op == ipc::CallOp::THUMB_RGBA ?
 					              thumbnailer->createThumbnailRaw( data, call.width, call.height ) :
 					              thumbnailer->createThumbnailFile( data, call.width, call.height ) };
 
@@ -611,7 +591,7 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 				if ( const auto written { ( *sink )->write( result->m_pixel_data ) }; !written )
 					return std::unexpected( written.error() );
 
-				auto pixels { ( *sink )->finish() };
+				auto pixels { ( *sink )->seal() };
 				if ( !pixels ) return std::unexpected( pixels.error() );
 
 				body[ ipc::field::THUMBNAIL ] = ipc::thumbnailHeaderToJson( *result );
@@ -629,7 +609,7 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 				};
 				if ( !result ) return std::unexpected( result.error() );
 
-				auto generated { ( *sink )->finish() };
+				auto generated { ( *sink )->seal() };
 				if ( !generated ) return std::unexpected( generated.error() );
 
 				return std::pair { std::move( body ), std::move( *generated ) };
@@ -675,7 +655,7 @@ void WorkerRunner::runCall( QueuedCall call )
 	t_scope = CallScope { .call_id = call.call_id, .depth = call.depth, .input = call.file.get() };
 
 	Json::Value body {};
-	body[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::RESULT ) };
+	body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::RESULT );
 	body[ ipc::field::CALL_ID ] = static_cast< Json::UInt64 >( call.call_id );
 
 	ipc::UniqueFd payload {};
@@ -804,7 +784,7 @@ void WorkerRunner::workerLoop( const std::stop_token& stop )
 void WorkerRunner::sendHeartbeat()
 {
 	Json::Value body {};
-	body[ ipc::field::TYPE ] = std::string { toString( ipc::MessageType::HEARTBEAT ) };
+	body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::HEARTBEAT );
 	body[ ipc::field::RSS_KB ] = Json::UInt64 { residentSetKb() };
 	body[ ipc::field::ACTIVE_CALLS ] = Json::UInt64 { m_active_calls.load() };
 
@@ -815,11 +795,12 @@ void WorkerRunner::sendHeartbeat()
 
 void WorkerRunner::handleFrame( ipc::Frame&& frame )
 {
-	const auto type { ipc::messageTypeFromString( frame.body[ ipc::field::TYPE ].asString() ) };
+	const auto type { ipc::fromWire< ipc::MessageType >( frame.body[ ipc::field::TYPE ] ) };
 
 	if ( !type )
 	{
-		spdlog::warn( "Worker received an unknown message '{}'", frame.body[ ipc::field::TYPE ].asString() );
+		spdlog::warn(
+			"Worker received an unknown message: {}", ipc::describeWireValue( frame.body[ ipc::field::TYPE ] ) );
 		return;
 	}
 

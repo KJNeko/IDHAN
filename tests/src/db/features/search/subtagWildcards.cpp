@@ -6,15 +6,11 @@
 using idhan::SearchBuilder;
 using idhan::TagID;
 
-namespace
-{
-
 bool contains( const std::vector< RecordID >& ids, const RecordID id )
 {
 	return std::ranges::find( ids, id ) != ids.end();
 }
 
-} // namespace
 
 //! Exercises subtag wildcards (`cat*girl`), which resolve to a set of tag ids at parse time and
 //! become one `filter_wildcard_N` CTE per wildcard in SearchBuilder::construct().

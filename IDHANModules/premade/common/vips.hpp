@@ -31,15 +31,6 @@ inline std::vector< std::string_view > vipsHandleable()
 	return ret;
 }
 
-//! Presents a ModuleFile to vips as a source it can read and seek.
-/** vips can load from a VipsSource instead of a memory buffer, which is what lets a thumbnail be
- *  produced without the whole image being resident: the loader pulls the bytes it needs, and for
- *  most formats that is a header plus one pass. The alternative -- vips_thumbnail_buffer -- requires
- *  the entire file up front, which for a 400 MB TIFF means 400 MB before any work starts.
- *
- *  The cursor is guarded because vips runs loaders on its own worker threads and there is no
- *  documented promise that a source is only touched from one of them. The lock is uncontended in the
- *  ordinary case and trivially cheap next to the I/O it protects. */
 class VipsModuleSource
 {
 	const idhan::ModuleFile* m_file { nullptr };

@@ -13,9 +13,6 @@
 namespace idhan::hydrus::ptr
 {
 
-namespace
-{
-
 template < typename T >
 void appendPod( std::vector< std::byte >& out, const T& value )
 {
@@ -75,7 +72,6 @@ std::vector< std::byte > inflateBuffer( const std::vector< std::byte >& input, c
 	return out;
 }
 
-} // namespace
 
 ChunkWriter::ChunkWriter( std::filesystem::path path ) : m_path( std::move( path ) ) {}
 

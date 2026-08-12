@@ -2,6 +2,7 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "caching/recordCaches.hpp"
 #include "crypto/SHA256.hpp"
+#include "db/dbTypes.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "drogon/orm/DbClient.h"
 #include "threading/ExpectedTask.hpp"

@@ -14,8 +14,7 @@
 
 #include "api/apiPrefixes.hpp"
 
-namespace
-{
+
 
 //! Extracts the quoted string literals from the API_PREFIXES array in IDHANWeb/src/api/prefixes.ts.
 std::set< std::string > readTypeScriptPrefixes()
@@ -54,7 +53,6 @@ std::set< std::string > cppPrefixes()
 	return prefixes;
 }
 
-} // namespace
 
 TEST( ApiPrefixes, TypeScriptAndCppListsAgree )
 {
