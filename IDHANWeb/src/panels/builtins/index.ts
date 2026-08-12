@@ -4,7 +4,7 @@
  * Registration is the same path third-party plugins use. The catalog now spans P0 (Search, Grid,
  * Viewer, Record Info, Tag Editor), P1 (Import, Job Monitor, Server Status, Notes, URLs), P2
  * (Log Viewer, Cluster Manager, Database Stats, Tag Domain Manager, Tag Relationships, Embeddings,
- * Embedding Search),
+ * Embedding Search, Embedding Compare),
  * and a Debug panel for developer diagnostics.
  */
 
@@ -27,6 +27,7 @@ import { tagDomainManagerPanel } from './TagDomainManagerPanel';
 import { tagRelationshipsPanel } from './TagRelationshipsPanel';
 import {embeddingsPanel} from './EmbeddingsPanel';
 import {embeddingSearchPanel} from './EmbeddingSearchPanel';
+import {embeddingComparePanel} from './EmbeddingComparePanel';
 import {debugPanel} from './DebugPanel';
 
 let registered = false;
@@ -50,6 +51,7 @@ export function registerBuiltinPanels(): void {
   registerPanel(tagRelationshipsPanel);
     registerPanel(embeddingsPanel);
   registerPanel(embeddingSearchPanel);
+  registerPanel(embeddingComparePanel);
   registerPanel(serverStatusPanel);
   registerPanel(selectionInspectorPanel);
     registerPanel(debugPanel);
