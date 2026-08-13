@@ -86,10 +86,11 @@ A cluster maps a `ClusterID` to an on-disk directory. Managed exclusively by
 | `size_limit`         | `BIGINT` NOT NULL DEFAULT 0      | byte cap                                |
 | `file_count`         | `INTEGER` NOT NULL DEFAULT 0     | files stored here                       |
 | `read_only`          | `BOOLEAN` NOT NULL DEFAULT TRUE  | read-only clusters accept no new files  |
-| `allowed_thumbnails` | `BOOLEAN` NOT NULL DEFAULT FALSE | may hold thumbnails                     |
-| `allowed_files`      | `BOOLEAN` NOT NULL DEFAULT TRUE  | may hold source files                   |
 | `cluster_name`       | `TEXT` UNIQUE                    | falls back to `folder_path` when NULL   |
 | `folder_path`        | `TEXT` NOT NULL UNIQUE           | on-disk directory                       |
+
+New clusters default to read-only; a cluster only accepts writes if it was created with an explicit
+`"readonly": false`. `allowed_thumbnails` and `allowed_files` were dropped in migration 194.
 
 ### `mime`
 
