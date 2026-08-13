@@ -63,6 +63,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: linux/amd64
           push: ${{ steps.ctx.outputs.push == 'true' }}
           tags: ${{ steps.ctx.outputs.image }}
           labels: |
