@@ -57,6 +57,9 @@ services:
       - "16609:16609"
     volumes:
       - idhan_media:/media
+      # Semantic search needs an embedding model, which is not shipped in the image.
+      # Mount one per subdirectory here. See docs/docker.md.
+      # - /path/to/siglip2-base-patch16-224:/usr/share/idhan/models/siglip2-base-patch16-224
     healthcheck:
       test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:16609/health" ]
       interval: 30s
