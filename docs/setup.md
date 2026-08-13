@@ -45,11 +45,16 @@ IDHAN — it will only index what is already there.
 allowing IDHAN to make any changes to your files. If you are pointing IDHAN at an existing collection (e.g. migrating
 from Hydrus or another tool), keep readonly enabled until you are confident the scan looks correct.
 
-To create a cluster, start the server and open the Swagger docs at `/api`. If this does not result in a valid webpage or
-has errors, see the troubleshooting guide.
+To create a cluster, start the server and open WebUI (`ip:port/`), If this is your first run you will need to also
+supply an API key, This can be gotten by accessing `ip:port/generate_api_key`, This can **ONLY** be used **ONCE**.
 
-Go to `clusters` and find `/clusters/add`, expand it and hit `try it out`. Change the `path` and `name` fields to
-match your setup. If the creation succeeds you will receive a response containing the assigned `cluster_id`.
+Start by adding the 'Cluster Manager' panel from the 'Add panel...' menu
+
+![addPanelExample.webp](images/addPanelExample.webp)
+
+Once you have added that you can then add in your path
+
+![ClusterMenu.webp](images/ClusterMenu.webp)
 
 ### Expected file structure
 
@@ -78,27 +83,35 @@ not match the expected name or is in the wrong subdirectory will be treated as m
 
 ## Scanning a cluster
 
-To scan a cluster use the `/clusters/{cluster_id}/scan` endpoint (POST). The scan indexes files present in the cluster
-directory without modifying anything while the cluster is readonly.
+To scan a cluster you can hit the 'Scan' menu which will show you the options for the scan. If you are coming from
+another program, or want IDHAN to simply 'eat' the files, Check 'Adopt Orphans', This will make IDHAN register the files
+and run them through the import process. Note that if you are doing this on an ALREADY EXISTING directory that IDHAN has
+managed for awhile, It is recomended to keep this off, As IDHAN will register invalid files that shouldn't be in the
+directory (such as files with corruption) without any form of warning or error.
 
-If you have reviewed the scan results and want IDHAN to actively manage the cluster (renaming or reorganising files),
-set `read_only` to `false` via the cluster update endpoint first — or pass `readonly=true` to the scan endpoint to
-force a non-destructive scan regardless of the cluster's stored setting.
+## Where did my imported files go?
 
-## Tagging/Getting files
+Currently there is no proper workflow system for imported files. That will be coming later. But for now you can view
+EVERY file by simply doing an empty search with no tags. You can then sort by imported time.
 
-There are too many things to list here for a simple getting started guide, Please see the swagger docs for the various
-tag endpoints. Note that files will NOT be returned in a search UNLESS they've been scanned in a cluster first. Even if
-tagged.
+## Swagger Docs
+
+If you are interested in using the API endpoints directly. There is a swagger docs built and available at the `/api`
+endpoint. If you don't know what this means then it's probably not for you.
 
 ## Getting hydrui/hyweb to work
-If you are not self hosting either, you'll need to setup either a proxy to provide https, or add in your own self-signed keys to IDHAN for it to function properly.
 
+> Note that you must give the path to the hydrus 3rd-party program as `<ip>:<port>/hyapi`.
+
+If you are not self hosting either, you'll need to setup either a proxy to provide https, or add in your own self-signed
+keys to IDHAN for it to function properly.
 
 ### Self-signed keys
 
-You can run `openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -nodes` in a directory that you're happy with for the keys to be in, and then provide IDHAN with the information to use the keys
+You can run `openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -nodes` in a directory that
+you're happy with for the keys to be in, and then provide IDHAN with the information to use the keys
 Set the following in one of your config files for IDHAN
+
 ```toml
 [host]
 use_tls = true
