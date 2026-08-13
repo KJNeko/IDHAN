@@ -6,7 +6,9 @@
 
 #include "api/EmbeddingAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "embeddings/compareEmbeddings.hpp"
 #include "embeddings/embeddings.hpp"
+#include "embeddings/queryTerms.hpp"
 #include "embeddings/searchEmbeddings.hpp"
 #include "jobs/JobContext.hpp"
 #include "modules/ModuleLoader.hpp"
@@ -27,6 +29,14 @@ constexpr std::size_t DEFAULT_EF_SEARCH { 100 };
  *  simply not having more. Refusing the larger limit is the honest answer. */
 constexpr std::size_t MAX_SEARCH_LIMIT { MAX_EF_SEARCH };
 constexpr std::size_t DEFAULT_SEARCH_LIMIT { 200 };
+
+//! Ceiling on terms in one compare request. Every text term is a separate call into the text tower,
+//! so an unbounded list is an unbounded number of model invocations.
+constexpr std::size_t MAX_COMPARE_TERMS { 64 };
+
+//! Ceiling on records in one compare request. The panel asks for two; the endpoint is not restricted
+//! to that, but it is not an excuse to score against the collection either.
+constexpr std::size_t MAX_COMPARE_RECORDS { 8 };
 
 drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::listModels( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
@@ -138,46 +148,10 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 	if ( !terms_json.isArray() ) co_return createBadRequest( "Expected an array \"terms\"" );
 	if ( terms_json.empty() ) co_return createBadRequest( "A query needs at least one term" );
 
-	std::vector< embeddings::QueryTerm > terms {};
-	terms.reserve( terms_json.size() );
+	auto parsed_terms { embeddings::parseQueryTerms( terms_json ) };
+	if ( !parsed_terms ) co_return parsed_terms.error();
 
-	for ( const auto& entry : terms_json )
-	{
-		if ( !entry.isObject() ) co_return createBadRequest( "Every term must be an object" );
-		if ( !entry[ "type" ].isString() ) co_return createBadRequest( "Every term needs a string \"type\"" );
-
-		const auto type { entry[ "type" ].asString() };
-
-		embeddings::QueryTerm term {};
-
-		// Defaulted rather than required: an unweighted term is the common case, and 1.0 is where a
-		// freshly added term starts.
-		term.m_weight = entry[ "weight" ].isNumeric() ? static_cast< float >( entry[ "weight" ].asDouble() ) : 1.0f;
-
-		if ( type == "text" )
-		{
-			if ( !entry[ "text" ].isString() ) co_return createBadRequest( "A text term needs a string \"text\"" );
-
-			term.m_is_text = true;
-			term.m_text = entry[ "text" ].asString();
-
-			if ( term.m_text.empty() ) co_return createBadRequest( "A text term cannot be empty" );
-		}
-		else if ( type == "record" )
-		{
-			if ( !entry[ "record_id" ].isIntegral() )
-				co_return createBadRequest( "A record term needs an integral \"record_id\"" );
-
-			term.m_is_text = false;
-			term.m_record_id = static_cast< RecordID >( entry[ "record_id" ].asInt64() );
-		}
-		else
-		{
-			co_return createBadRequest( "Unknown term type \"{}\"; expected \"text\" or \"record\"", type );
-		}
-
-		terms.emplace_back( std::move( term ) );
-	}
+	auto terms { std::move( parsed_terms.value() ) };
 
 	auto db { drogon::app().getDbClient() };
 
@@ -247,6 +221,110 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 	Json::Value response {};
 	response[ "record_ids" ] = std::move( record_ids );
 	response[ "distances" ] = std::move( distances );
+	response[ "query_ms" ] = static_cast< Json::UInt64 >(
+		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started ).count() );
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( response );
+}
+
+drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::compare( drogon::HttpRequestPtr request )
+{
+	const auto json { request->getJsonObject() };
+	if ( json == nullptr ) co_return createBadRequest( "Expected a JSON body" );
+
+	if ( !( *json )[ "model_name" ].isString() ) co_return createBadRequest( "Expected a string \"model_name\"" );
+
+	const auto model_name { ( *json )[ "model_name" ].asString() };
+
+	const auto& ids_json { ( *json )[ "record_ids" ] };
+	if ( !ids_json.isArray() ) co_return createBadRequest( "Expected an array \"record_ids\"" );
+	if ( ids_json.empty() ) co_return createBadRequest( "A comparison needs at least one record" );
+
+	if ( ids_json.size() > MAX_COMPARE_RECORDS )
+		co_return createBadRequest(
+			"At most {} records may be compared at once; {} were given", MAX_COMPARE_RECORDS, ids_json.size() );
+
+	std::vector< RecordID > record_ids {};
+	record_ids.reserve( ids_json.size() );
+
+	for ( const auto& entry : ids_json )
+	{
+		if ( !entry.isIntegral() ) co_return createBadRequest( "Every entry of \"record_ids\" must be an integer" );
+		record_ids.push_back( static_cast< RecordID >( entry.asInt64() ) );
+	}
+
+	// Absent means "just tell me how far apart these records are", which is a real question and not
+	// the same mistake an empty query would be in search.
+	const auto& terms_json { ( *json )[ "terms" ] };
+
+	std::vector< embeddings::QueryTerm > terms {};
+
+	if ( !terms_json.isNull() )
+	{
+		if ( terms_json.size() > MAX_COMPARE_TERMS )
+			co_return createBadRequest(
+				"At most {} terms may be compared at once; {} were given", MAX_COMPARE_TERMS, terms_json.size() );
+
+		auto parsed { embeddings::parseQueryTerms( terms_json ) };
+		if ( !parsed ) co_return parsed.error();
+
+		terms = std::move( parsed.value() );
+	}
+
+	auto db { drogon::app().getDbClient() };
+
+	const auto rows { co_await db->execSqlCoro(
+		"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+
+	if ( rows.empty() ) co_return createNotFound( "The model \"{}\" is not registered", model_name );
+
+	const auto model_id { rows[ 0 ][ "model_id" ].as< std::int32_t >() };
+	const auto dimensions { static_cast< std::size_t >( rows[ 0 ][ "model_dimensions" ].as< std::int32_t >() ) };
+
+	const auto has_text_term { std::ranges::any_of( terms, []( const auto& term ) { return term.m_is_text; } ) };
+
+	std::shared_ptr< modules::RemoteModule > module {};
+
+	if ( has_text_term )
+	{
+		module = modules::ModuleLoader::instance().getEmbedderFor( model_name );
+
+		if ( module == nullptr )
+			co_return createNotFound(
+				"No loaded module provides the model \"{}\", so text terms cannot be embedded", model_name );
+
+		if ( !module->supportsText() )
+			co_return createBadRequest(
+				"The model \"{}\" has no text encoder; use record references instead", model_name );
+	}
+
+	const auto started { std::chrono::steady_clock::now() };
+
+	const auto result {
+		co_await embeddings::compareEmbeddings( module, model_id, dimensions, std::move( terms ), record_ids, db )
+	};
+
+	if ( !result ) co_return result.error();
+
+	// arrayValue explicitly: an empty matrix must serialise as [] rather than null.
+	Json::Value ids { Json::arrayValue };
+	for ( const auto record_id : record_ids ) ids.append( record_id );
+
+	Json::Value distances { Json::arrayValue };
+
+	for ( const auto& row : result->m_distances )
+	{
+		Json::Value entry { Json::arrayValue };
+		for ( const auto distance : row ) entry.append( distance );
+		distances.append( std::move( entry ) );
+	}
+
+	Json::Value response {};
+	response[ "record_ids" ] = std::move( ids );
+	response[ "distances" ] = std::move( distances );
+
+	if ( result->m_pair_distance.has_value() ) response[ "pair_distance" ] = result->m_pair_distance.value();
+
 	response[ "query_ms" ] = static_cast< Json::UInt64 >(
 		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started ).count() );
 

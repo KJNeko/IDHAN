@@ -1259,6 +1259,18 @@ body {
     gap: 2px;
 }
 
+/* The term list absorbs the panel's spare height, so the slack a pinned footer would otherwise leave
+   sits inside the list rather than as a blank band above the Search button.
+ *
+ * Grow only -- deliberately no overflow of its own, which is what the note above .embed-search-panel
+ * argues against. When the terms outgrow the panel, .panel-body still scrolls the lot at full row
+ * height. Written as a child selector so it beats the `.embed-search-panel > *` rule on specificity
+ * rather than on source order. */
+.embed-search-panel > .embed-term-list {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 /* Fixed columns rather than content-sized: the signs and weights have to read down the list as
    columns, which a label-width-driven layout would scatter. */
 .embed-term {
@@ -1357,17 +1369,29 @@ body {
     font-family: ui-monospace, monospace;
 }
 
-/* Sticks to the bottom edge only while there is content below it to scroll; with a short term list
-   it sits in normal flow right under the rows. The negative margins bleed the background out over
-   .panel-body's padding, so rows scroll under an opaque bar rather than through a gap beside it. */
+/* Pinned to the bottom of the panel, by two mechanisms that cover different situations.
+ *
+ * margin-top:auto handles a panel with room to spare: sticky alone pins nothing when there is nothing
+ * to scroll, so a short term list left the bar floating under the last row with the rest of the panel
+ * empty beneath it. Every panel using this footer is a flex column, so the auto margin eats the slack.
+ *
+ * The sticky half handles the opposite case, and bottom is -0.75rem rather than 0 because a sticky
+ * box clamps to its container's PADDING edge. At bottom:0 it came to rest 0.75rem above the panel's
+ * bottom while scrolling -- the negative margin below cannot move it, since margins do not apply to
+ * the sticky clamp -- leaving a strip of panel background visible under the bar. Matching the clamp
+ * to the margin puts the bar on the true bottom edge in both states.
+ *
+ * The negative margins bleed the background out over .panel-body's padding, so rows scroll under an
+ * opaque bar rather than through a gap beside it. */
 .embed-footer {
     position: sticky;
-    bottom: 0;
+    bottom: -0.75rem;
     z-index: 1;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin: 0.25rem -1rem -0.75rem;
+    margin-top: auto;
     padding: 0.6rem 1rem;
     border-top: 1px solid #2a2e37;
     background: var(--bg);
@@ -2094,4 +2118,210 @@ body {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-variant-numeric: tabular-nums;
     text-align: right;
+}
+
+/* ---- embedding compare: two slots, and one diverging bar per term ---- */
+/* Padding and scrolling are left to .panel-body deliberately: .embed-footer pins itself with negative
+   margins measured against that padding, so overriding it here puts the footer bar out of line with
+   the panel edges. */
+.cmp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Nothing in the column shrinks, for the same reason the search panel says so: a flex child left at
+   the default flex-shrink:1 compresses toward min-content instead of overflowing into the scroll the
+   panel already provides. */
+.cmp-panel > * {
+    flex: 0 0 auto;
+}
+
+
+/* Shrink-wrapped columns, centred as a group. With 1fr side columns the slots kept their content at
+   the outer edges and handed every spare pixel to the middle, so widening the panel only grew the
+   gap between the left image and the A/B readout. */
+.cmp-slots {
+  display: grid;
+    grid-template-columns: auto auto auto;
+    justify-content: center;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.cmp-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+    max-width: 16rem;
+}
+
+/* The input carries a default intrinsic width of about 20 characters, which would stop an auto column
+   from shrinking on a narrow panel. */
+.cmp-slot-actions .search-input {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Sized by height, and hugging the image rather than boxed square. A square box letterboxes every
+   image that is not square, and a box that filled its column would only upscale a low-resolution
+   thumbnail -- both are dead space. Fixing the height instead keeps the two slots aligned whatever
+   shape the images are. */
+.cmp-slot-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+    height: 160px;
+    width: fit-content;
+    max-width: 100%;
+    /* Only load-bearing for the empty state, which has no image to give the box a width. */
+    min-width: 80px;
+  border: 1px solid #2a2e37;
+  border-radius: 4px;
+  background: #1b1e24;
+  overflow: hidden;
+}
+
+.cmp-slot-thumb img {
+  height: 100%;
+    width: auto;
+    max-width: 100%;
+  object-fit: contain;
+}
+
+.cmp-slot-id {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cmp-slot-clear {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.cmp-slot-clear:hover {
+  color: var(--error);
+}
+
+.cmp-slot-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Centred against the slots rather than pushed down by a magic offset, so it stays put whatever the
+   thumbnails do. */
+.cmp-slot-gap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+    align-self: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.cmp-pair-distance {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.1rem;
+}
+
+/* The one part of the column that grows, so it extends as far down as it has terms and the slack in a
+   tall panel belongs to the list rather than sitting as a blank band above the footer. Overrides the
+   `.cmp-panel > *` rule, which holds every other child at its natural height. */
+.cmp-term-list {
+  display: flex;
+    flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.15rem;
+    min-height: 0;
+  overflow-y: auto;
+}
+
+.cmp-term {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0.2rem;
+  border-radius: 3px;
+}
+
+/* The distance columns exist only once a comparison has produced them. Fixed widths rather than
+   content-sized so the numbers read down the list as columns. */
+.cmp-term-list.has-results .cmp-term {
+    grid-template-columns: auto minmax(6rem, 1fr) 4rem minmax(4rem, 2fr) 4rem 4.5rem auto;
+}
+
+.cmp-term:hover {
+  background: #1b1e24;
+}
+
+.cmp-term.is-disabled .embed-term-label {
+  opacity: 0.45;
+}
+
+.cmp-sort {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+}
+
+.cmp-sort select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cmp-row-distance,
+.cmp-row-delta {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.cmp-row-delta.toward-a {
+  color: #7bb1ff;
+}
+
+.cmp-row-delta.toward-b {
+  color: #ffb87b;
+}
+
+/* The bar encodes the delta, not the absolute distances: every text-to-image cosine distance sits in
+   a narrow band, so a true-scale bar would look identical on every row. */
+.cmp-bar {
+  display: flex;
+  height: 0.6rem;
+  border-left: 1px solid #2a2e37;
+  border-right: 1px solid #2a2e37;
+  background: #1b1e24;
+}
+
+.cmp-bar-half {
+  display: flex;
+  flex: 1 1 50%;
+  min-width: 0;
+}
+
+.cmp-bar-half.left {
+  justify-content: flex-end;
+  border-right: 1px solid #3a3f4a;
+}
+
+.cmp-bar-fill {
+  height: 100%;
+}
+
+.cmp-bar-fill.toward-a {
+  background: #7bb1ff;
+}
+
+.cmp-bar-fill.toward-b {
+  background: #ffb87b;
 }

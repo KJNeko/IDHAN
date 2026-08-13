@@ -1,5 +1,12 @@
 import {describe, expect, it} from 'vitest';
-import {parseTermInput, termsToRequest, termsToTokens, type Term} from './embeddingTerms';
+import {
+    compareTermLabel,
+    parseCompareTerm,
+    parseTermInput,
+    termsToRequest,
+    termsToTokens,
+    type Term,
+} from './embeddingTerms';
 
 describe('parseTermInput', () => {
     it('takes a bare phrase at the default weight', () => {
@@ -96,5 +103,45 @@ describe('termsToRequest', () => {
             {kind: 'text', text: 'catgirl', weight: 0.5, positive: true},
             {kind: 'record', recordId: 12, weight: 2, positive: false},
         ]);
+    });
+});
+
+describe('parseCompareTerm', () => {
+    it('takes a bare phrase', () => {
+        expect(parseCompareTerm('blonde hair')).toEqual({kind: 'text', text: 'blonde hair', enabled: true});
+    });
+
+    // The whole reason this is not parseTermInput: compare terms have no weights, so a trailing
+    // number is part of the phrase rather than a weight suffix.
+    it('keeps a trailing number in the phrase', () => {
+        expect(parseCompareTerm('sunset:2019')).toEqual({kind: 'text', text: 'sunset:2019', enabled: true});
+        expect(parseCompareTerm('catgirl:0.5')).toEqual({kind: 'text', text: 'catgirl:0.5', enabled: true});
+    });
+
+    it('keeps colons that are part of the phrase', () => {
+        expect(parseCompareTerm('rating:safe')).toEqual({kind: 'text', text: 'rating:safe', enabled: true});
+    });
+
+    // There is no negation here, so a dash is just a character. Stripping it would quietly change
+    // the phrase into one the user did not type.
+    it('treats a leading dash as text', () => {
+        expect(parseCompareTerm('-blurry')).toEqual({kind: 'text', text: '-blurry', enabled: true});
+    });
+
+    it('reads the record forms as references', () => {
+        expect(parseCompareTerm('record:1234')).toEqual({kind: 'record', recordId: 1234, enabled: true});
+        expect(parseCompareTerm('#1234')).toEqual({kind: 'record', recordId: 1234, enabled: true});
+    });
+
+    it('rejects empty input', () => {
+        expect(parseCompareTerm('')).toBeNull();
+        expect(parseCompareTerm('   ')).toBeNull();
+    });
+});
+
+describe('compareTermLabel', () => {
+    it('labels a phrase with itself and a reference with its id', () => {
+        expect(compareTermLabel({kind: 'text', text: 'night', enabled: true})).toBe('night');
+        expect(compareTermLabel({kind: 'record', recordId: 55, enabled: true})).toBe('record 55');
     });
 });
