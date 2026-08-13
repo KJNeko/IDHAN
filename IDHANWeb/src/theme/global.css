@@ -998,7 +998,25 @@ body {
   color: #63c07a;
 }
 
+.import-row.state-skipped .import-status {
+  color: var(--muted);
+}
+
 .import-row.state-error .import-status {
+  color: var(--error);
+}
+
+/* Server messages run long ("All clusters are read-only, ..."), so the reason gets the full row
+   width and wraps rather than sharing the head line with the filename. */
+.import-reason {
+  margin: 0;
+  font-size: 0.85em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+
+.import-row.state-error .import-reason {
   color: var(--error);
 }
 

@@ -11,17 +11,42 @@ import { RecordInfoView, type RecordInfo } from './RecordInfoView';
 
 const MAX_CONCURRENT = 3;
 
-type ItemState = 'pending' | 'uploading' | 'done' | 'error';
+/** Mirrors ImportStatus in IDHAN/include/codes/ImportCodes.hpp. */
+const ImportStatus = {
+  Success: 1,
+  Exists: 2,
+  Deleted: 3,
+  Failed: 4,
+} as const;
+
+type ItemState = 'pending' | 'uploading' | 'done' | 'skipped' | 'error';
 
 interface Item {
   id: number; // local list key
   name: string;
   size: number;
   state: ItemState;
+  /** Short text on the status line, e.g. "#412" or "already present". */
   detail?: string;
+  /** Full server message for a failure or skip, wrapped on its own line under the name. */
+  reason?: string;
   recordId?: RecordId;
   /** Metadata fetched after a successful import, shown inline (same view as the Record Info panel). */
   info?: RecordInfo;
+}
+
+/**
+ * The two response shapes overload `status`: a 2xx carries an ImportStatus, while the error helpers
+ * (createBadRequest and friends) put the HTTP code there alongside the message in `error`. Only read
+ * `status` as an ImportStatus when the response was ok.
+ */
+interface ImportResponse {
+  record_id?: number;
+  status?: number;
+  /** Set by the error helpers on any 4xx/5xx. */
+  error?: string;
+  /** Set on a 200 that still failed, currently only an unidentifiable mime. */
+  reason?: string;
 }
 
 /** Run `worker` over `items` with at most `limit` in flight at once. */
@@ -74,31 +99,50 @@ function ImportPanel({ host }: PanelProps) {
               headers: { 'Content-Type': file.type || 'application/octet-stream' },
               body: file,
             });
-            const data = (await res.json().catch(() => ({}))) as {
-              record_id?: number;
-              reason?: string;
-              status?: number;
-            };
+            const data = (await res.json().catch(() => ({}))) as ImportResponse;
+
             if (!res.ok) {
-              patch(item.id, { state: 'error', detail: data.reason ?? `HTTP ${res.status}` });
+              patch(item.id, { state: 'error', detail: 'failed', reason: data.error ?? `HTTP ${res.status}` });
               return;
             }
-            if (typeof data.record_id === 'number') {
-              imported.push(data.record_id);
-              patch(item.id, { state: 'done', detail: `#${data.record_id}`, recordId: data.record_id });
-              // Best-effort: a failure just leaves the row without the detail block.
-              try {
-                const infoRes = await host.http.fetch(`/records/${data.record_id}/info`);
-                if (infoRes.ok) patch(item.id, { info: (await infoRes.json()) as RecordInfo });
-              } catch {
-                /* ignore */
-              }
+
+            const recordId = typeof data.record_id === 'number' ? data.record_id : undefined;
+
+            if (data.status === ImportStatus.Failed) {
+              patch(item.id, { state: 'error', detail: 'failed', reason: data.reason ?? 'not imported' });
+              return;
+            }
+            if (recordId === undefined) {
+              patch(item.id, { state: 'error', detail: 'failed', reason: data.reason ?? data.error ?? 'not imported' });
+              return;
+            }
+
+            // Exists and Deleted both carry a record id but stored nothing, so neither is an import.
+            if (data.status === ImportStatus.Exists || data.status === ImportStatus.Deleted) {
+              patch(item.id, {
+                state: 'skipped',
+                detail: `#${recordId}`,
+                reason: data.status === ImportStatus.Exists ? 'already present' : 'previously deleted',
+                recordId,
+              });
             } else {
-              // e.g. unknown mime without force: the server returns a reason, not a record.
-              patch(item.id, { state: 'error', detail: data.reason ?? 'not imported' });
+              imported.push(recordId);
+              patch(item.id, { state: 'done', detail: `#${recordId}`, recordId });
+            }
+
+            // Best-effort: a failure just leaves the row without the detail block.
+            try {
+              const infoRes = await host.http.fetch(`/records/${recordId}/info`);
+              if (infoRes.ok) patch(item.id, { info: (await infoRes.json()) as RecordInfo });
+            } catch {
+              /* ignore */
             }
           } catch (error) {
-            patch(item.id, { state: 'error', detail: error instanceof Error ? error.message : String(error) });
+            patch(item.id, {
+              state: 'error',
+              detail: 'failed',
+              reason: error instanceof Error ? error.message : String(error),
+            });
           }
         },
       );
@@ -119,6 +163,7 @@ function ImportPanel({ host }: PanelProps) {
   }
 
   const done = items.filter((i) => i.state === 'done').length;
+  const skipped = items.filter((i) => i.state === 'skipped').length;
   const failed = items.filter((i) => i.state === 'error').length;
 
   return (
@@ -155,7 +200,8 @@ function ImportPanel({ host }: PanelProps) {
 
       {items.length > 0 && (
         <p className="muted">
-          {done} imported{failed > 0 ? `, ${failed} failed` : ''}
+          {done} imported{skipped > 0 ? `, ${skipped} skipped` : ''}
+          {failed > 0 ? `, ${failed} failed` : ''}
           {busy ? ' — working…' : ''}
         </p>
       )}
@@ -169,9 +215,12 @@ function ImportPanel({ host }: PanelProps) {
                   {item.name}
                 </span>
                 <span className="muted import-status">
-                  {item.state === 'done' ? item.detail : item.state === 'error' ? `✕ ${item.detail ?? ''}` : item.state}
+                  {item.state === 'error' ? `✕ ${item.detail ?? 'failed'}` : (item.detail ?? item.state)}
                 </span>
               </div>
+              {item.reason && (item.state === 'error' || item.state === 'skipped') && (
+                <p className="import-reason">{item.reason}</p>
+              )}
               {item.info && (
                 <div className="import-meta">
                   <div className="import-meta-info grow">
