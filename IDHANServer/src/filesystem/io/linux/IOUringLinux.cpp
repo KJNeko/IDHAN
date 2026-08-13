@@ -3,16 +3,19 @@
 #include "filesystem/io/linux/IOUringLinux.hpp"
 
 #include <sys/mman.h>
+#include <sys/stat.h>
 
 #include <cerrno>
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <liburing.h>
 #include <malloc.h>
 #include <stdexcept>
 #include <utility>
 
 #include "drogon/HttpAppFramework.h"
+#include "filesystem/io/linux/OpAwaiter.hpp"
 #include "filesystem/io/linux/ReadAwaiter.hpp"
 #include "filesystem/io/linux/WriteAwaiter.hpp"
 #include "logging/format_ns.hpp"
@@ -54,7 +57,7 @@ FileIOUring::FileDescriptor::operator int() const
 
 FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly ) :
   m_fd( open( path.c_str(), ( readonly ? O_RDONLY : ( O_RDWR | O_CREAT ) ), 0666 ) ),
-  m_size( std::filesystem::exists( path ) ? std::filesystem::file_size( path ) : 0 ),
+  m_size( std::filesystem::file_size( path ) ),
   m_path( path ),
   m_readonly( readonly )
 {
@@ -285,6 +288,9 @@ void ioThread( const std::stop_token& token, IOUringLinux* uring, std::shared_pt
 				case IOUringUserData::Type::WRITE:
 					user_data->write_awaiter->complete( cqe.res );
 					break;
+				case IOUringUserData::Type::OP:
+					user_data->op_awaiter->complete( cqe.res );
+					break;
 				default:
 					log::error( "IOUringLinux: unknown user_data type" );
 					break;
@@ -372,6 +378,16 @@ ReadAwaiter IOUringLinux::sendRead( const io_uring_sqe& sqe, std::shared_ptr< st
 	return ReadAwaiter { this, sqe, data };
 }
 
+OpAwaiter IOUringLinux::sendOp( const io_uring_sqe& sqe )
+{
+	return OpAwaiter { this, sqe };
+}
+
+bool IOUringLinux::opUnsupported( const int result )
+{
+	return result == -EINVAL || result == -EOPNOTSUPP || result == -ENOSYS;
+}
+
 drogon::Task< std::vector< std::byte > > IOUringLinux::read(
 	const NativeHandle handle,
 	const std::size_t offset,
@@ -419,11 +435,122 @@ drogon::Task< void > IOUringLinux::write(
 	if ( data.size() >= std::numeric_limits< __u32 >::max() )
 		throw std::runtime_error( "Write length exceeds io_uring u32 limit" );
 
-	io_uring_sqe sqe {};
-	std::memset( &sqe, 0, sizeof( sqe ) );
-	io_uring_prep_write( &sqe, static_cast< int >( handle ), data.data(), static_cast< __u32 >( data.size() ), offset );
+	std::size_t written { 0 };
+	while ( written < data.size() )
+	{
+		const auto remaining { data.size() - written };
 
-	co_await sendWrite( sqe );
+		io_uring_sqe sqe {};
+		std::memset( &sqe, 0, sizeof( sqe ) );
+		io_uring_prep_write(
+			&sqe,
+			static_cast< int >( handle ),
+			data.data() + written,
+			static_cast< __u32 >( remaining ),
+			offset + written );
+
+		// Throws on a negative completion; returns the count otherwise.
+		const auto bytes { co_await sendWrite( sqe ) };
+
+		if ( bytes == 0 )
+			throw std::runtime_error(
+				format_ns::format( "io_uring write made no progress after {} of {} bytes", written, data.size() ) );
+
+		written += bytes;
+	}
+}
+
+// ─── Path operations ──────────────────────────────────────────────────────────
+
+drogon::Task< int > IOUringLinux::removeFile( const std::filesystem::path path )
+{
+	if ( m_iouring_setup )
+	{
+		io_uring_sqe sqe {};
+		std::memset( &sqe, 0, sizeof( sqe ) );
+		io_uring_prep_unlinkat( &sqe, AT_FDCWD, path.c_str(), 0 );
+
+		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) ) co_return result;
+	}
+
+	co_return unlink( path.c_str() ) == 0 ? 0 : -errno;
+}
+
+drogon::Task< int > IOUringLinux::renameFile( const std::filesystem::path from, const std::filesystem::path to )
+{
+	if ( m_iouring_setup )
+	{
+		io_uring_sqe sqe {};
+		std::memset( &sqe, 0, sizeof( sqe ) );
+		io_uring_prep_renameat( &sqe, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), 0 );
+
+		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) ) co_return result;
+	}
+
+	co_return rename( from.c_str(), to.c_str() ) == 0 ? 0 : -errno;
+}
+
+drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path path )
+{
+	std::filesystem::path prefix {};
+
+	for ( const auto& component : path )
+	{
+		prefix /= component;
+
+		// A root component ("/") is yielded first and always exists; skipping the syscall for it
+		// avoids a guaranteed -EEXIST round trip.
+		if ( prefix == path.root_path() ) continue;
+
+		int result { 0 };
+
+		if ( m_iouring_setup )
+		{
+			io_uring_sqe sqe {};
+			std::memset( &sqe, 0, sizeof( sqe ) );
+			io_uring_prep_mkdirat( &sqe, AT_FDCWD, prefix.c_str(), 0777 );
+
+			result = co_await sendOp( sqe );
+
+			// fallback
+			if ( opUnsupported( result ) ) result = mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno;
+		}
+		else
+		{
+			result = mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno;
+		}
+
+		// Every component but the last is expected to exist already on the common path.
+		if ( result != 0 && result != -EEXIST ) co_return result;
+	}
+
+	co_return 0;
+}
+
+drogon::Task< std::expected< std::uint64_t, int > > IOUringLinux::fileSize( const std::filesystem::path path )
+{
+	// Lives in the coroutine frame: the kernel fills it in after this coroutine has suspended.
+	struct statx stx {};
+
+	std::memset( &stx, 0, sizeof( stx ) );
+
+	if ( m_iouring_setup )
+	{
+		io_uring_sqe sqe {};
+		std::memset( &sqe, 0, sizeof( sqe ) );
+		io_uring_prep_statx( &sqe, AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE, &stx );
+
+		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) )
+		{
+			if ( result < 0 ) co_return std::unexpected( result );
+			co_return static_cast< std::uint64_t >( stx.stx_size );
+		}
+	}
+
+	if ( statx( AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE, &stx ) != 0 )
+		co_return std::unexpected( -errno );
+
+	co_return static_cast< std::uint64_t >( stx.stx_size );
 }
 
 } // namespace idhan

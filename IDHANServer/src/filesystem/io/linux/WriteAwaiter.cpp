@@ -35,9 +35,11 @@ void WriteAwaiter::await_suspend( const std::coroutine_handle<> h )
 	m_uring->notifySubmit( 1 );
 }
 
-void WriteAwaiter::await_resume() const
+std::size_t WriteAwaiter::await_resume() const
 {
 	if ( m_exception ) std::rethrow_exception( m_exception );
+
+	return static_cast< std::size_t >( m_result );
 }
 
 WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
@@ -45,6 +47,10 @@ WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( u
 
 void WriteAwaiter::complete( const int result )
 {
+	// Only the integer is recorded here -- this runs on the io watcher thread. Whether the count is
+	// short is decided by the caller, on the thread the coroutine resumes on.
+	m_result = result;
+
 	if ( result < 0 )
 	{
 		// result is -errno from the io_uring completion, not the thread-local errno

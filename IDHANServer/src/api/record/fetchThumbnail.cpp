@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <cstring>
 #include <fstream>
 #include <vector>
 
@@ -39,6 +41,21 @@ std::string thumbnailCacheControl()
 	return std::format( "private, max-age={}", helpers::default_max_age.count() );
 }
 
+//! Whether the cache holds a usable thumbnail at this path.
+//!
+//! Existence alone is not enough. A zero-byte file here is a cache entry that will be served as an
+//! empty image on every subsequent request, so it is reported as a miss and regenerated instead.
+//! Caches written before thumbnails were published by rename can contain such files, which is why
+//! this heals rather than errors.
+//! Taken by value: the stat is submitted to the ring and the kernel reads the path after this
+//! coroutine has already suspended.
+drogon::Task< bool > hasCachedThumbnail( std::filesystem::path path )
+{
+	const auto size { co_await IOUring::getInstance().fileSize( path ) };
+
+	co_return size.has_value() && size.value() > 0;
+}
+
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	auto db { drogon::app().getDbClient() };
@@ -67,7 +84,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	const bool cache_enabled { getThumbnailCachingEnabled() };
 
-	if ( !cache_enabled || !std::filesystem::exists( thumbnail_location ) || force_regenerate )
+	// Ordered so the stat is skipped entirely when the answer is already known.
+	if ( !cache_enabled || force_regenerate || !co_await hasCachedThumbnail( thumbnail_location ) )
 	{
 		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
 
@@ -107,12 +125,73 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 		if ( should_cache )
 		{
-			std::filesystem::create_directories( thumbnail_location.parent_path() );
-			FileIOUring io_uring_write { thumbnail_location, FileIOUring::ReadWrite };
+			auto& io { IOUring::getInstance() };
 
-			log::debug( "Writing thumbnail to {}", thumbnail_location.string() );
+			if ( const auto mkdir_result { co_await io.createDirectories( thumbnail_location.parent_path() ) };
+			     mkdir_result != 0 )
+				co_return createInternalError(
+					"Failed to create thumbnail cache directory {}: {}",
+					thumbnail_location.parent_path().string(),
+					std::strerror( -mkdir_result ) );
 
-			co_await io_uring_write.write( thumbnail_info->m_pixel_data );
+			// Written to a sibling temp file and moved into place only once every byte is accounted
+			// for. The final path doubles as the cache key tested above, so it must never name a file
+			// that is empty, short, or still being written -- anything that lands there is served as a
+			// finished thumbnail from then on. The rename is atomic and the temp file is a sibling, so
+			// it stays on the same filesystem.
+			//
+			// The counter also keeps two concurrent requests for the same thumbnail off each other's
+			// temp file; previously they shared one descriptor to the final path and interleaved.
+			static std::atomic< std::uint64_t > temp_counter { 0 };
+			const auto temp_location {
+				thumbnail_location.parent_path() / std::format( "{}.{}.{}.tmp", hex, size, temp_counter.fetch_add( 1 ) )
+			};
+
+			log::debug( "Writing thumbnail to {} via {}", thumbnail_location.string(), temp_location.string() );
+
+			const auto& pixel_data { thumbnail_info->m_pixel_data };
+
+			std::string write_error {};
+
+			try
+			{
+				FileIOUring io_uring_write { temp_location, FileIOUring::ReadWrite };
+				co_await io_uring_write.write( pixel_data );
+			}
+			catch ( const std::exception& e )
+			{
+				write_error = e.what();
+			}
+
+			// Each step below is a separate statement rather than part of the try: co_await belongs
+			// outside a handler, and the write is the only step that reports failure by throwing.
+			if ( write_error.empty() )
+			{
+				// The write layer reported every byte as accepted; if the file on disk disagrees then
+				// something outside this handler touched it and publishing would cache that.
+				const auto written_size { co_await io.fileSize( temp_location ) };
+
+				if ( !written_size )
+					write_error =
+						std::format( "could not stat the written file: {}", std::strerror( -written_size.error() ) );
+				else if ( written_size.value() != pixel_data.size() )
+					write_error = std::format(
+						"wrote {} bytes but the file is {} bytes", pixel_data.size(), written_size.value() );
+			}
+
+			if ( write_error.empty() )
+			{
+				if ( const auto rename_result { co_await io.renameFile( temp_location, thumbnail_location ) };
+				     rename_result != 0 )
+					write_error = std::format( "could not publish the thumbnail: {}", std::strerror( -rename_result ) );
+			}
+
+			if ( !write_error.empty() )
+			{
+				co_await io.removeFile( temp_location );
+
+				co_return createInternalError( "Failed to write thumbnail for record {}: {}", record_id, write_error );
+			}
 		}
 		else
 		{
@@ -137,10 +216,14 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		}
 	}
 
-	if ( !std::filesystem::exists( thumbnail_location ) )
+	// Reached either by a cache hit or by a write that reported success, so a missing or empty file
+	// here means the cache entry was removed or replaced underneath this request.
+	if ( !co_await hasCachedThumbnail( thumbnail_location ) )
 	{
+		co_await IOUring::getInstance().removeFile( thumbnail_location );
+
 		co_return createInternalError(
-			"Thumbnail did not exist for record {}, Writing might have failed. See previous warnings/errors",
+			"Thumbnail {} is missing or empty after a successful write. See previous warnings/errors",
 			thumbnail_location.string() );
 	}
 
