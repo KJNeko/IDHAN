@@ -158,8 +158,11 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	Json::Value root {};
 
+	// Keyed on whether the file was on disk before this request, not on store_recorded: a row can
+	// carry a store time while the file is gone from the cluster, and storeFile is also allowed to
+	// succeed without writing when the record is held in a read-only cluster.
 	root[ "status" ] =
-		static_cast< Json::Value::UInt >( store_recorded ? ImportStatus::Exists : ImportStatus::Success );
+		static_cast< Json::Value::UInt >( store_confirmed ? ImportStatus::Exists : ImportStatus::Success );
 	root[ "record_id" ] = record_id;
 
 	root[ "record" ][ "id" ] = record_id;
