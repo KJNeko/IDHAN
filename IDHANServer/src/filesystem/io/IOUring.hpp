@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <filesystem>
 #include <vector>
 
@@ -11,7 +12,7 @@
 namespace idhan
 {
 
-//! Abstract async I/O backend. Platform implementations: linux/IOUringLinux, windows/IOUringW10, windows/IOUringW11.
+//! Abstract async I/O backend. The server is Linux-only; the sole implementation is linux/IOUringLinux.
 class IOUring
 {
   public:
@@ -25,6 +26,30 @@ class IOUring
 		std::size_t len ) = 0;
 
 	virtual drogon::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) = 0;
+
+	// ─── Path operations ──────────────────────────────────────────────────────
+	//
+	// The std::filesystem equivalents block the calling thread for the duration of the syscall, which
+	// on a request thread stalls every other request sharing that event loop. These submit the same
+	// work to the ring instead, so the coroutine suspends rather than the thread.
+	//
+	// Each returns 0 on success or a negative errno, mirroring the completion. Callers decide which
+	// errors matter, because there is no single right answer: removing a file that is already gone is
+	// usually fine, a failed rename never is. Paths are taken by value so they outlive the suspend --
+	// the submission holds a pointer into the string, and the kernel reads it after the caller has
+	// already suspended.
+
+	//! unlinkat(2). -ENOENT if the path was not there.
+	virtual drogon::Task< int > removeFile( std::filesystem::path path ) = 0;
+
+	//! renameat(2). Atomic, and requires both paths to be on the same filesystem.
+	virtual drogon::Task< int > renameFile( std::filesystem::path from, std::filesystem::path to ) = 0;
+
+	//! mkdirat(2) per missing component, like create_directories. -EEXIST is treated as success.
+	virtual drogon::Task< int > createDirectories( std::filesystem::path path ) = 0;
+
+	//! statx(2) for the size alone. The error is a negative errno.
+	virtual drogon::Task< std::expected< std::uint64_t, int > > fileSize( std::filesystem::path path ) = 0;
 
 	//! Associates a file handle with this backend. Required by IOCP; no-op for other backends.
 	virtual void associateHandle( [[maybe_unused]] NativeHandle handle ) {}
@@ -45,7 +70,6 @@ class IOUring
 //! File handle wrapper. Provides async read/write and mmap via the active IOUring backend.
 class [[nodiscard]] FileIOUring
 {
-#ifdef __linux__
 	struct FileDescriptor
 	{
 		int m_fd { -1 };
@@ -62,9 +86,6 @@ class [[nodiscard]] FileIOUring
 	};
 
 	FileDescriptor m_fd;
-#elif defined( _WIN32 )
-	void* m_handle { nullptr }; // HANDLE — void* avoids pulling <windows.h> into this header
-#endif
 
 	std::size_t m_size;
 	std::filesystem::path m_path;

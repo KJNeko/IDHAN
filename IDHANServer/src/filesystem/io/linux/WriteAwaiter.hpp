@@ -2,6 +2,7 @@
 #ifdef __linux__
 
 #include <coroutine>
+#include <cstddef>
 #include <exception>
 #include <liburing.h>
 
@@ -21,9 +22,14 @@ struct [[nodiscard]] WriteAwaiter
 {
 	static bool await_ready() noexcept;
 	void await_suspend( std::coroutine_handle<> h );
-	void await_resume() const;
+
+	//! Bytes actually accepted by this one op. Throws if the op failed. A write op has pwrite(2)
+	//! semantics and may accept fewer bytes than it was given, so the caller must loop on this
+	//! rather than assume the whole buffer landed.
+	[[nodiscard]] std::size_t await_resume() const;
 
 	std::exception_ptr m_exception { nullptr };
+	int m_result { 0 };
 	std::coroutine_handle<> m_cont {};
 	IOUringLinux* m_uring { nullptr };
 #pragma GCC diagnostic push

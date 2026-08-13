@@ -17,24 +17,29 @@ namespace idhan
 
 struct ReadAwaiter;
 struct WriteAwaiter;
+struct OpAwaiter;
 
 struct IOUringUserData
 {
 	enum class Type
 	{
 		READ,
-		WRITE
+		WRITE,
+		OP
 	} m_type;
 
 	union
 	{
 		ReadAwaiter* read_awaiter;
 		WriteAwaiter* write_awaiter;
+		OpAwaiter* op_awaiter;
 	};
 
 	IOUringUserData( ReadAwaiter* r ) : m_type( Type::READ ), read_awaiter( r ) {}
 
 	IOUringUserData( WriteAwaiter* w ) : m_type( Type::WRITE ), write_awaiter( w ) {}
+
+	IOUringUserData( OpAwaiter* o ) : m_type( Type::OP ), op_awaiter( o ) {}
 
 	~IOUringUserData() = default;
 };
@@ -117,10 +122,26 @@ class IOUringLinux final : public IOUring
 
 	WriteAwaiter sendWrite( const io_uring_sqe& sqe );
 	ReadAwaiter sendRead( const io_uring_sqe& sqe, std::shared_ptr< std::vector< std::byte > >& data );
+	OpAwaiter sendOp( const io_uring_sqe& sqe );
 
 	drogon::Task< std::vector< std::byte > > read( NativeHandle handle, std::size_t offset, std::size_t len ) override;
 
 	drogon::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) override;
+
+	drogon::Task< int > removeFile( std::filesystem::path path ) override;
+	drogon::Task< int > renameFile( std::filesystem::path from, std::filesystem::path to ) override;
+	drogon::Task< int > createDirectories( std::filesystem::path path ) override;
+	drogon::Task< std::expected< std::uint64_t, int > > fileSize( std::filesystem::path path ) override;
+
+  private:
+
+	//! Whether a completion means "this kernel does not implement the opcode" rather than "the
+	//! operation failed". unlinkat/renameat arrived in 5.11 and mkdirat in 5.15, so a server running
+	//! on an older kernel gets a hard error for an op that is otherwise fine; those fall back to the
+	//! blocking call rather than surfacing as an I/O failure.
+	static bool opUnsupported( int result );
+
+  public:
 
 	explicit IOUringLinux();
 	~IOUringLinux() override;
