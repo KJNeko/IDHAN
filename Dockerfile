@@ -33,9 +33,7 @@ RUN [ "${BUILDARCH}" = "${TARGETARCH}" ] || { \
 # universe carries drogon, spdlog, pqxx, tomlplusplus, etc.
 RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
+RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -141,9 +139,7 @@ RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.li
 #
 # The libav* libs rather than the ffmpeg metapackage: nothing shells out to the CLI, and ffmpeg
 # brings libavdevice/libavfilter/libsdl2 with it, hence Mesa and libllvm20.
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
+RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     libpq5 \
     libvips42t64 \
