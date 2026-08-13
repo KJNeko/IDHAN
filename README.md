@@ -1,7 +1,10 @@
 # IDHAN
 
-IDHAN is a media management and archival program written in C++ for people with large collections of media. It's
-designed in a way that is compatible with most booru models. Currently, the server is only built for running on Linux.
+IDHAN is a media management and archival program written in C++ for people with large collections of media. It uses the
+same style of tagging media files as most boorus do currently. The server is only built for running on Linux. The
+recommended setup is to use docker and use the webui or a 3rd-party client
+
+> AI use is allowed, But if you do not **HEAVILY REVIEW** the output, I will personally come and bust down your door.
 
 IDHAN functions as a server that clients on other computers can connect to in order to organize and retrieve archived
 and collected files.
@@ -52,8 +55,8 @@ Vectors live in PostgreSQL via pgvector, indexed with HNSW over cosine distance.
 ## Tags, domains, and URLs
 
 Tags are edited per **tag domain**, so tags you scraped from a downloader stay separate from the ones you applied
-yourself, and you choose which domains a search looks at. Aliases, siblings, and parents are resolved by the database
-itself. Inherited tags show up in the editor marked as such, rather than being silently copied onto the record.
+yourself, and you choose which domains a search looks at. The database itself resolves aliases, siblings, and parents.
+Inherited tags show up in the editor marked as such.
 
 Records also keep their known URLs, recording where a file came from.
 
@@ -61,7 +64,8 @@ Records also keep their known URLs, recording where a file came from.
 
 ## Notes
 
-Free-text notes attached to a record, for information that does not fit the tag model.
+Free-text notes attached to a record, for information that does not fit the tag model. Examples of this can be post
+descriptions.
 
 ![The notes panel](docs/images/notes.webp)
 

@@ -13,28 +13,6 @@ binding lives with its function, and the `NNN` prefix is global across all direc
 `IDHANMigration/src/README.md` for the layout. All file references below are `directory/NNN-file.sql`
 relative to `IDHANMigration/src/`.
 
-## 1. Schema map
-
-```
-tag_namespaces ─┐
-tag_subtags ────┼─→ tags (namespace_id, subtag_id, generated tag_text)
-                 │
-tag_domains ─────┼─→ tag_mappings   (record_id, tag_id, tag_domain_id)      -- raw, user-applied
-                 │        │  ON DELETE CASCADE
-                 │        ▼
-                 ├─→ active_tag_mappings (record_id, tag_id, ideal_tag_id, tag_domain_id)
-                 │        │  effective_tag_id = COALESCE(ideal_tag_id, tag_id)
-                 │        ▼
-                 ├─→ active_tag_mappings_parents (record_id, tag_id, origin_id, internal_count, tag_domain_id)
-                 │
-                 ├─→ tag_aliases  (aliased_id, alias_id, ideal_alias_id, tag_domain_id)
-                 ├─→ tag_parents  (parent_id, ideal_parent_id, child_id, ideal_child_id, tag_domain_id)
-                 ├─→ tag_siblings (older_id, younger_id, tag_domain_id)   -- see §5, read-only via the API
-                 └─→ tag_counts   (tag_id, tag_domain_id, storage_count, display_count)
-
-active_tag_mappings_final (view) = active_tag_mappings ∪ active_tag_mappings_parents (UNION ALL)
-```
-
 The two view branches resolve aliases at *different times*, which is easy to misread:
 
 - The `active_tag_mappings` branch resolves at **read** time, `COALESCE(ideal_tag_id, tag_id)`.
@@ -55,6 +33,10 @@ partition per domain is created automatically the moment a row is inserted into 
 (`func_createtagdomainpartitions/031-create.sql`). `active_tag_mappings`,
 `active_tag_mappings_parents`, and `tag_counts` are **not** partitioned; `tag_domain_id` is
 just an indexed column there.
+
+## 1. High level overview
+
+(pending writing)
 
 ## 2. Concepts
 
@@ -220,6 +202,7 @@ INSERT INTO tag_aliases (aliased_id=bad, alias_id=good, tag_domain_id=0)
 Goal: `A → B → C` (A aliases to B, B aliases to C).
 
 **Order 1: insert `B→C` first, then `A→B`.**
+
 - `B→C`: `ideal_alias_id(B row) = NULL` (nothing aliases `C` further). Row: `(B,C,NULL)`,
   `effective_tag_id=C`.
 - `A→B`: before-insert trigger looks up the row where `aliased_id = B` — finds `(B,C,NULL)`,
@@ -229,6 +212,7 @@ Goal: `A → B → C` (A aliases to B, B aliases to C).
   at read time, ever.
 
 **Order 2: insert `A→B` first, then `B→C`.**
+
 - `A→B`: before-insert looks up `aliased_id = B` — nothing yet. Row: `(A,B,ideal_alias_id=NULL)`,
   `effective_tag_id=B`.
 - `B→C`: before-insert looks up `aliased_id = C` — nothing. Row: `(B,C,NULL)`,
@@ -309,6 +293,7 @@ before either parent relationship existed.
 ```
 INSERT INTO tag_parents (parent_id=bird, child_id=sparrow, tag_domain_id=0)
 ```
+
 - `trg_insert_parent_mapping` step 1: finds record 4 tagged `sparrow`, inserts
   `active_tag_mappings_parents(record=4, tag=bird, origin=sparrow, internal_count=0)`.
 - Step 2 (ancestor ripple): looks for existing `active_tag_mappings_parents` rows with
@@ -320,6 +305,7 @@ INSERT INTO tag_parents (parent_id=bird, child_id=sparrow, tag_domain_id=0)
 ```
 INSERT INTO tag_parents (parent_id=animal, child_id=bird, tag_domain_id=0)
 ```
+
 - `trg_insert_parent_mapping` step 1: finds active mappings with effective tag `bird` — none
   (`bird` was never directly applied to a record) — no direct insert.
 - Step 2 (ancestor ripple): finds `active_tag_mappings_parents` rows with `tag_id = bird`
@@ -333,6 +319,7 @@ INSERT INTO tag_parents (parent_id=animal, child_id=bird, tag_domain_id=0)
 
 Teardown — untag `sparrow` from record 4 (`DELETE FROM tag_mappings WHERE record_id=4 AND
 tag_id=sparrow`):
+
 1. Native FK `ON DELETE CASCADE` on `active_tag_mappings` removes `(4, sparrow, ...)` — this is
    **not** an explicit app-level `DELETE FROM active_tag_mappings`; it's the FK from
    `active_tag_mappings.record_id,tag_id,tag_domain_id → tag_mappings(...)` doing it implicitly.
@@ -359,6 +346,7 @@ depth.
 INSERT INTO tag_aliases (aliased_id=A, alias_id=B, ...)   -- ok, A→B
 INSERT INTO tag_aliases (aliased_id=B, alias_id=A, ...)   -- attempt B→A
 ```
+
 `tag_aliases_before_insert_trigger` for the second insert resolves `ideal_alias_id` by looking
 up `aliased_id = A` (the target, `A`) — finds the first row, `effective_tag_id = B`. Compares
 `new.ideal_alias_id (B) = new.aliased_id (B)` → equal → `RAISE EXCEPTION 'Cycle detected:
@@ -396,6 +384,7 @@ INSERT INTO tag_parents (parent_id=mammal, child_id=dog, ...)
 INSERT INTO tag_parents (parent_id=canine, child_id=mammal, ...)
 INSERT INTO tag_parents (parent_id=dog, child_id=canine, ...)   -- would close the loop
 ```
+
 Unlike `tag_aliases`, `tag_parents` has no uniqueness constraint preventing multiple parents per
 child (a tag can have many parents, and many children), so cycles are structurally possible and
 must be caught procedurally. `trg_check_parent_cycle`'s recursive CTE walks *up* from
@@ -411,6 +400,7 @@ parent/child ids) would not be caught here.
 ### 4.10 `tag_counts` accounting
 
 `add_count(tag_id, ideal_tag_id, domain)`:
+
 - If `tag_id IS NOT NULL`: `tag_counts(tag_id).storage_count += 1` (upsert from 0).
 - Always: `tag_counts(COALESCE(ideal_tag_id, tag_id)).display_count += 1`.
 
