@@ -69,11 +69,6 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 	return p;
 }
 
-struct ScanData
-{
-	std::size_t m_file_size { 0 };
-};
-
 class ScanContext
 {
 	std::filesystem::path m_path;
@@ -116,7 +111,10 @@ class ScanContext
 	  m_cluster_path( std::move( cluster_path ) )
 	{}
 
-	ExpectedTask< ScanData > scan( std::filesystem::path bad_dir, DbClientPtr db );
+	//! The file's current location. The scan may have moved it within the cluster.
+	[[nodiscard]] const std::filesystem::path& path() const { return m_path; }
+
+	ExpectedTask< void > scan( std::filesystem::path bad_dir, DbClientPtr db );
 };
 
 /**
@@ -203,13 +201,18 @@ ExpectedTask< FolderScanTotals > scanFolder(
 			++processed_files;
 			log::trace( "Scan progress: {}/{}", processed_files.load(), total_files );
 
-			if ( scan_params.stop_on_fail ) return_unexpected_error( file_result );
-
-			if ( file_result )
+			// Counted whatever the scan did or skipped: a file it could not process still occupies
+			// the cluster. Files it quarantined into bad/ or deleted as duplicates are no longer at
+			// their path and drop out here.
+			std::error_code size_error {};
+			const auto final_size { std::filesystem::file_size( ctx.path(), size_error ) };
+			if ( !size_error )
 			{
-				totals.byte_size += file_result->m_file_size;
+				totals.byte_size += final_size;
 				++totals.file_count;
 			}
+
+			if ( scan_params.stop_on_fail ) return_unexpected_error( file_result );
 		}
 	}
 	catch ( const std::filesystem::filesystem_error& e )
@@ -867,11 +870,9 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	co_return {};
 }
 
-ExpectedTask< ScanData > ScanContext::scan( const std::filesystem::path bad_dir, drogon::orm::DbClientPtr db )
+ExpectedTask< void > ScanContext::scan( const std::filesystem::path bad_dir, drogon::orm::DbClientPtr db )
 {
 	log::info( "Scanning file: {} (size: {})", m_path.string(), m_size );
-
-	ScanData data {};
 
 	if ( m_size == 0 )
 	{
@@ -930,8 +931,6 @@ ExpectedTask< ScanData > ScanContext::scan( const std::filesystem::path bad_dir,
 		log::trace( "Step 5/6: Skipping extension check (no mime info) for record {}", m_record_id );
 	}
 
-	data.m_file_size = std::filesystem::file_size( m_path );
-
 	if ( ( m_params.scan_metadata || m_params.rescan_metadata ) && has_mime_info )
 	{
 		log::trace( "Step 6/6: Scanning metadata for record {} ({})", m_record_id, m_path.filename().string() );
@@ -950,6 +949,6 @@ ExpectedTask< ScanData > ScanContext::scan( const std::filesystem::path bad_dir,
 
 	log::trace( "Finished scanning file {} (Record {})", m_path.string(), m_record_id );
 
-	co_return data;
+	co_return {};
 }
 } // namespace idhan::api
