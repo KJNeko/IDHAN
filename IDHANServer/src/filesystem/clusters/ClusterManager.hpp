@@ -1,9 +1,5 @@
 #pragma once
 
-#include <QStorageInfo>
-// FUCKING QT IS RETARDED
-#undef signals
-
 #include <drogon/HttpAppFramework.h>
 #include <drogon/orm/DbClient.h>
 #include <drogon/utils/FunctionTraits.h>
@@ -81,8 +77,7 @@ class ClusterManager
 	struct ClusterInfo
 	{
 		ClusterID m_id;
-		QStorageInfo m_info;
-		QDir m_path;
+		std::filesystem::path m_path;
 
 		ClusterFlags m_flags;
 
