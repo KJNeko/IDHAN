@@ -1,9 +1,5 @@
 #include "ClusterManager.hpp"
 
-#include <QStorageInfo>
-// FUCKING QT IS RETARDED
-#undef signals
-
 #include <fstream>
 #include <optional>
 
@@ -17,25 +13,33 @@
 namespace idhan::filesystem
 {
 
-std::size_t getFilesystemCapacity( const QDir& path )
+//! Queried on each call rather than cached, so a cluster's free space does not go stale.
+//! An unreadable path reports zero instead of throwing.
+std::filesystem::space_info spaceInfo( const std::filesystem::path& path )
 {
-	const QStorageInfo info { path };
-	return static_cast< std::size_t >( info.bytesAvailable() );
+	std::error_code code {};
+	std::filesystem::space_info info { std::filesystem::space( path, code ) };
+	if ( code ) info = { 0, 0, 0 };
+	return info;
+}
+
+std::size_t getFilesystemCapacity( const std::filesystem::path& path )
+{
+	return static_cast< std::size_t >( spaceInfo( path ).available );
 }
 
 std::size_t ClusterManager::ClusterInfo::capacity() const
 {
-	return static_cast< std::size_t >( m_info.bytesTotal() );
+	return static_cast< std::size_t >( spaceInfo( m_path ).capacity );
 }
 
 std::size_t ClusterManager::ClusterInfo::free() const
 {
-	return static_cast< std::size_t >( m_info.bytesAvailable() );
+	return static_cast< std::size_t >( spaceInfo( m_path ).available );
 }
 
 ClusterManager::ClusterInfo::ClusterInfo( const std::filesystem::path& path, const ClusterID id ) :
   m_id( id ),
-  m_info( path ),
   m_path( path ),
   m_flags( ClusterFlags::STORES_DEFAULT ),
   m_max_capacity( std::numeric_limits< std::size_t >::max() )
@@ -43,8 +47,7 @@ ClusterManager::ClusterInfo::ClusterInfo( const std::filesystem::path& path, con
 
 ClusterManager::ClusterInfo::ClusterInfo( const drogon::orm::Row& row ) :
   m_id( row[ "cluster_id" ].as< ClusterID >() ),
-  m_info( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) ),
-  m_path( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) ),
+  m_path( row[ "folder_path" ].as< std::string >() ),
   m_flags( ClusterFlags::STORES_DEFAULT ),
   m_max_capacity( std::numeric_limits< std::size_t >::max() )
 {}
@@ -93,7 +96,7 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	// Append a `.` if there isn't one
 
 	// QFile file { m_path.filePath( createSubpath( sha256 ) + extension ) };
-	auto path { m_path.filesystemAbsolutePath() / createSubpath( sha256, type ) };
+	auto path { std::filesystem::absolute( m_path ) / createSubpath( sha256, type ) };
 
 	if ( extension.starts_with( '.' ) )
 		path.replace_extension( extension );
@@ -263,7 +266,7 @@ ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const Clus
 	if ( itter == m_clusters.end() )
 		co_return std::unexpected( createBadRequest( "Invalid cluster id {}", cluster_id ) );
 
-	co_return itter->second.m_path.filesystemAbsolutePath();
+	co_return std::filesystem::absolute( itter->second.m_path );
 }
 
 ClusterManager& ClusterManager::getInstance()

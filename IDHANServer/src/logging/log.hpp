@@ -11,7 +11,6 @@
 #include <string>
 
 #include "logging/format_ns.hpp"
-#include "qt_formatters/qstring.hpp"
 
 namespace idhan::log
 {
