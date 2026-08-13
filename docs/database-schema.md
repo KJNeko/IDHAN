@@ -27,43 +27,6 @@ This document is the structural reference; that one is the behavioural reference
   (tag_domain_id)`. Creating a row in `tag_domains` fires a trigger that creates the matching
   `*_domain_<id>` partition for each (see [Tag domains](#tag-domains)).
 
-## High-level map
-
-```
-                 ┌───────────────────────────── records (record_id, sha256, creation_time)
-                 │                                   │ 1:1
-                 │            file_clusters ◄──────── file_info ──────► mime
-                 │                                   │
-                 │        ┌── metadata               │ 1:1 metadata tables
-                 │        ├── image_metadata          (keyed by record_id)
-                 │        ├── video_metadata
-                 │        └── image_project_metadata
-   records ──────┤
-                 │        alternative_groups ─< alternative_group_members
-                 │        duplicate_pairs (worse → better)
-                 │        archives ─< archive_map,  archive_metadata (1:1)
-                 │        record_notes >─ notes ─< label_mappings >─ note_labels
-                 │        url_mappings >─ urls >─ url_domains
-                 │
-tag_namespaces ─┐│
-tag_subtags ────┼┼─► tags (namespace_id, subtag_id, generated tag_text)
-                ││
-tag_domains ────┼┴─► tag_mappings   (record_id, tag_id, tag_domain_id)          -- raw, partitioned
-                │        │ trigger
-                │        ▼
-                ├──► active_tag_mappings (record_id, tag_id, ideal_tag_id, ...)  -- alias-resolved
-                │        │ trigger
-                │        ▼
-                ├──► active_tag_mappings_parents (record_id, tag_id, origin_id, internal_count)
-                ├──► tag_aliases  (aliased_id, alias_id, ideal_alias_id)         -- partitioned
-                ├──► tag_parents  (parent_id/ideal, child_id/ideal)              -- partitioned
-                ├──► tag_siblings (older_id, younger_id)
-                └──► tag_counts   (tag_id, tag_domain_id, storage/display_count)
-
-active_tag_mappings_final  -- VIEW: union of active_tag_mappings + parents, fully alias-resolved
-
-auth_keys                           webui_layouts          idhan_info (migration bookkeeping)
-```
 
 ---
 
