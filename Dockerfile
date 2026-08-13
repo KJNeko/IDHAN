@@ -190,50 +190,7 @@ RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-${TARGETARCH}${TARGE
     cmake --build build --target IDHANServer -j$(nproc) && \
     cp /build/build/bin /build/bin -r
 
-# Stage 2: Fetch the embedding model
-# Already-converted ONNX, so this stage installs nothing but curl. It used to install torch and
-# open_clip, download a 1.5 GB PyTorch checkpoint and run an export -- roughly 2.5 GB of Python to
-# perform a conversion that upstream has already published. IDHAN loads ONNX and nothing else, and
-# never converts anything at runtime, so the graphs have to exist before the image is built.
-#
-# Pinned to BUILDPLATFORM for the same reason as webbuilder, and more expensively: ONNX graphs are
-# architecture-independent, so leaving this to fan out across the variants would download ~1.5 GB
-# from HuggingFace three times to land three identical directories.
-FROM --platform=$BUILDPLATFORM debian:stable-slim AS modelbuilder
-
-# The onnx-community conversion of google/siglip2-base-patch16-224.
-ARG EMBEDDING_REPO=onnx-community/siglip2-base-patch16-224-ONNX
-ARG EMBEDDING_MODEL=siglip2-base-patch16-224
-
-# Which precision to ship. "" is fp32; the repo also carries _fp16, _int8, _uint8, _q4, _q4f16 and
-# _bnb4 for every tower. fp32 is the default because inference here is CPU-only and onnxruntime's
-# CPU provider is happiest with it -- fp16 in particular is a GPU memory optimisation that a CPU has
-# to undo. _q4f16 cuts the pair from ~1.5 GB to ~0.5 GB if image size matters more than fidelity.
-ARG EMBEDDING_VARIANT=
-
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ca-certificates
-
-# File-by-file rather than `git clone`, for the same reason as before but more so: this repo carries
-# eight precision variants of each tower and clones to about 11.4 GB to land the ~1.5 GB actually
-# wanted. git-lfs has no way to fetch a subset.
-#
-# The layout mirrors the upstream repository exactly, because that is what the module expects to
-# find -- an operator who instead clones the repo by hand into the models directory gets a directory
-# that looks the same.
-WORKDIR /models
-RUN mkdir -p ${EMBEDDING_MODEL}/onnx && cd ${EMBEDDING_MODEL} && \
-    for file in config.json preprocessor_config.json tokenizer.json tokenizer_config.json special_tokens_map.json; do \
-        curl -fL --retry 3 --retry-delay 2 -o "$file" \
-            "https://huggingface.co/${EMBEDDING_REPO}/resolve/main/$file"; \
-    done && \
-    for tower in vision_model text_model; do \
-        curl -fL --retry 3 --retry-delay 2 -o "onnx/${tower}.onnx" \
-            "https://huggingface.co/${EMBEDDING_REPO}/resolve/main/onnx/${tower}${EMBEDDING_VARIANT}.onnx"; \
-    done
-
-# Stage 3: Runtime environment
+# Stage 2: Runtime environment
 FROM ubuntu:25.10
 
 # Install runtime dependencies and setup locale in one layer
@@ -274,9 +231,17 @@ COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
 COPY --from=builder /build/bin/mime/ /usr/share/idhan/mime
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
-# The model directory as upstream publishes it: onnx/ plus the tokenizer and preprocessor configs.
-# Nothing is derived or rewritten, so a directory an operator clones here by hand is identical.
-COPY --from=modelbuilder /models/ /usr/share/idhan/models
+# No embedding model is baked in. The directory is left empty and
+# IDHAN_EMBEDDINGS_MODEL_PATH still points at it, so mounting a model there is the only step:
+#
+#   volumes:
+#     - /path/to/siglip2-base-patch16-224:/usr/share/idhan/models/siglip2-base-patch16-224
+#
+# One subdirectory per model, in the layout onnx-community publishes (onnx/vision_model.onnx,
+# onnx/text_model.onnx, and the tokenizer/preprocessor json beside them). An absent or empty
+# directory is not an error: the server logs that no embedding model is available and everything
+# else carries on. See docs/docker.md.
+RUN mkdir -p /usr/share/idhan/models
 
 # Environment variables for database configuration
 ENV IDHAN_DATABASE_HOST=localhost \
