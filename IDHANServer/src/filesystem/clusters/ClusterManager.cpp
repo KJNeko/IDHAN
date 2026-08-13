@@ -8,6 +8,7 @@
 #include "core/record/getRecordSHA256.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
+#include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::filesystem
@@ -53,35 +54,14 @@ ClusterManager::ClusterInfo::ClusterInfo( const drogon::orm::Row& row ) :
   m_max_capacity( std::numeric_limits< std::size_t >::max() )
 {}
 
-std::string metaTypePathID( const FileMetaType type )
-{
-	switch ( type )
-	{
-		case THUMBNAIL:
-			return "t";
-			break;
-		default:
-			[[fallthrough]];
-			// case ARCHIVE:
-			// [[fallthrough]];
-			// case GENERATOR:
-			// [[fallthrough]];
-			// case GENERATED:
-			// [[fallthrough]];
-			// case VIRTUAL:
-			// return "f";
-		case NORMAL:
-			return "f";
-	}
-}
-
-std::filesystem::path createSubpath( const SHA256& sha256, const FileMetaType meta_type )
+//! Must stay in step with getFileFolder(), which resolves the same layout when reading a file back.
+std::filesystem::path createSubpath( const SHA256& sha256 )
 {
 	const std::string hex { sha256.hex() };
 
-	// (f/t)x{0,1}/{0-128}
+	// fx{0,1}/{0-128}
 
-	std::filesystem::path path { metaTypePathID( meta_type ) + hex.substr( 0, 2 ) };
+	std::filesystem::path path { "f" + hex.substr( 0, 2 ) };
 	path /= hex;
 
 	return path;
@@ -91,8 +71,7 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	const SHA256& sha256,
 	const std::byte* data,
 	const std::size_t length,
-	std::string_view extension,
-	const FileMetaType type ) const
+	std::string_view extension ) const
 {
 	// Last line of defence: findBestFolder already refuses to hand back a read-only cluster, but it
 	// is not the only way to reach a ClusterInfo, and the cluster can be flipped read-only between
@@ -103,7 +82,7 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	// Append a `.` if there isn't one
 
 	// QFile file { m_path.filePath( createSubpath( sha256 ) + extension ) };
-	auto path { std::filesystem::absolute( m_path ) / createSubpath( sha256, type ) };
+	auto path { std::filesystem::absolute( m_path ) / createSubpath( sha256 ) };
 
 	if ( extension.starts_with( '.' ) )
 		path.replace_extension( extension );
@@ -200,12 +179,33 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const RecordID record,
 	const std::byte* data,
 	const std::size_t length,
-	const DbClientPtr db,
-	const FileMetaType type )
+	const DbClientPtr db )
 {
 	const auto sha256_e { co_await getRecordSHA256( record, db ) };
 	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 	const auto& sha256 { sha256_e.value() };
+
+	// A record already held in a read-only cluster stays there. Storing it again cannot replace the
+	// original -- nothing may write to or delete from a read-only cluster -- so it would only add a
+	// second copy in a writable cluster and repoint file_info at it, orphaning the first. Report
+	// success without writing instead.
+	const auto current_cluster { co_await db->execSqlCoro(
+		"SELECT file_clusters.read_only FROM file_info "
+		"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
+		"WHERE file_info.record_id = $1",
+		record ) };
+
+	if ( !current_cluster.empty() && current_cluster[ 0 ][ "read_only" ].as< bool >() )
+	{
+		const auto exists { co_await checkFileExists( record, db ) };
+		return_unexpected_error( exists );
+
+		if ( exists.value() )
+		{
+			log::debug( "Record {} is already stored in a read-only cluster, not storing it again", record );
+			co_return {};
+		}
+	}
 
 	const auto& target_id { co_await findBestFolder( record, length, db ) };
 	return_unexpected_error( target_id );
@@ -226,7 +226,7 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const auto record_mime { co_await mime::getRecordMime( record, db ) };
 	return_unexpected_error( record_mime );
 
-	const auto result { target_cluster.storeFile( sha256, data, length, record_mime.value().extension, type ) };
+	const auto result { target_cluster.storeFile( sha256, data, length, record_mime.value().extension ) };
 
 	if ( !result ) co_return result;
 
@@ -261,25 +261,6 @@ drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
 		const auto cluster_id { cluster[ "cluster_id" ].as< ClusterID >() };
 		m_clusters.emplace( cluster_id, cluster );
 	}
-}
-
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeFile(
-	const RecordID record,
-	const std::byte* data,
-	const std::size_t length,
-	const DbClientPtr db )
-{
-	const auto result { co_await storeFile( record, data, length, db, FileMetaType::NORMAL ) };
-	co_return result;
-}
-
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeThumbnail(
-	const RecordID record,
-	const std::byte* data,
-	const std::size_t length,
-	const DbClientPtr db )
-{
-	co_return co_await storeFile( record, data, length, db, FileMetaType::THUMBNAIL );
 }
 
 ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const ClusterID cluster_id )
