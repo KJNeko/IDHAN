@@ -35,6 +35,49 @@ Json::Value createUnknownMimeResponse()
 	return root;
 }
 
+constexpr auto CLUSTER_TIMESTAMPS_QUERY {
+	"SELECT cluster_delete_time, cluster_store_time, "
+	"EXTRACT(EPOCH FROM cluster_delete_time)::BIGINT as cluster_delete_time_epoch, "
+	"EXTRACT(EPOCH FROM cluster_store_time)::BIGINT AS cluster_store_time_epoch "
+	"FROM file_info WHERE record_id = $1 LIMIT 1"
+};
+
+Json::Value createImportResponse( const RecordID record_id, const ImportStatus status, const drogon::orm::Row& ts_row )
+{
+	Json::Value root {};
+
+	root[ "status" ] = static_cast< Json::Value::UInt >( status );
+	root[ "record_id" ] = record_id;
+
+	root[ "record" ][ "id" ] = record_id;
+
+	// NULL timestamps must come through as json null, Field::as<T>() would silently
+	// turn them into "" and 0 (epoch 1970)
+	if ( ts_row[ "cluster_store_time" ].isNull() )
+	{
+		root[ "file" ][ "import_time_human" ] = Json::Value {};
+		root[ "file" ][ "import_time" ] = Json::Value {};
+	}
+	else
+	{
+		root[ "file" ][ "import_time_human" ] = ts_row[ "cluster_store_time" ].as< std::string >();
+		root[ "file" ][ "import_time" ] = ts_row[ "cluster_store_time_epoch" ].as< int64_t >();
+	}
+
+	if ( ts_row[ "cluster_delete_time" ].isNull() )
+	{
+		root[ "file" ][ "deleted_time_human" ] = Json::Value {};
+		root[ "file" ][ "deleted_time" ] = Json::Value {};
+	}
+	else
+	{
+		root[ "file" ][ "deleted_time_human" ] = ts_row[ "cluster_delete_time" ].as< std::string >();
+		root[ "file" ][ "deleted_time" ] = ts_row[ "cluster_delete_time_epoch" ].as< int64_t >();
+	}
+
+	return root;
+}
+
 drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::HttpRequestPtr request )
 {
 	FGL_ASSERT( request, "Request invalid" );
@@ -50,10 +93,37 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const SHA256 sha256 { SHA256::hash( data_ptr, data_length ) };
 
+	const bool force_import { request->getOptionalParameter< bool >( "force_import" ).value_or( false ) };
+
+	// Everything below this needs the mime, which means sniffing the body and then parsing metadata
+	// out of the stored file. A hash we already hold needs none of it, so answer from the hash alone.
+	if ( !force_import )
+	{
+		if ( const auto existing { co_await helpers::findRecord( sha256, db ) } )
+		{
+			const auto timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, *existing ) };
+
+			if ( !timestamps.empty() )
+			{
+				const auto& row { timestamps[ 0 ] };
+
+				if ( !row[ "cluster_delete_time" ].isNull() )
+					co_return drogon::HttpResponse::newHttpJsonResponse(
+						createDeletedResponse( *existing, row[ "cluster_delete_time_epoch" ].as< int64_t >() ) );
+
+				// Only bail when the bytes are actually still there; a record whose file went missing
+				// falls through so the normal path can store it again.
+				const auto filepath { co_await filesystem::getRecordPath( *existing, db ) };
+
+				if ( filepath && std::filesystem::exists( *filepath ) )
+					co_return drogon::HttpResponse::newHttpJsonResponse(
+						createImportResponse( *existing, ImportStatus::Exists, row ) );
+			}
+		}
+	}
+
 	//TODO: Add multipart for getting the file name
 	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
-
-	const bool force_import { request->getOptionalParameter< bool >( "force_import" ).value_or( false ) };
 
 	std::string mime_name {};
 
@@ -104,12 +174,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		*target_cluster );
 
 	// select deleted time and store time
-	const auto cluster_timestamps { co_await db->execSqlCoro(
-		"SELECT cluster_delete_time, cluster_store_time, "
-		"EXTRACT(EPOCH FROM cluster_delete_time)::BIGINT as cluster_delete_time_epoch, "
-		"EXTRACT(EPOCH FROM cluster_store_time)::BIGINT AS cluster_store_time_epoch "
-		"FROM file_info WHERE record_id = $1 LIMIT 1",
-		record_id ) };
+	const auto cluster_timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, record_id ) };
 
 	//! True if there is a delete recorded
 	const bool delete_recorded { !cluster_timestamps[ 0 ][ "cluster_delete_time" ].isNull() };
@@ -149,51 +214,13 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	}
 
 	// re-read the timestamps, a store that just happened updated cluster_store_time
-	const auto final_timestamps { co_await db->execSqlCoro(
-		"SELECT cluster_delete_time, cluster_store_time, "
-		"EXTRACT(EPOCH FROM cluster_delete_time)::BIGINT as cluster_delete_time_epoch, "
-		"EXTRACT(EPOCH FROM cluster_store_time)::BIGINT AS cluster_store_time_epoch "
-		"FROM file_info WHERE record_id = $1 LIMIT 1",
-		record_id ) };
-
-	Json::Value root {};
+	const auto final_timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, record_id ) };
 
 	// Keyed on whether the file was on disk before this request, not on store_recorded: a row can
 	// carry a store time while the file is gone from the cluster, and storeFile is also allowed to
 	// succeed without writing when the record is held in a read-only cluster.
-	root[ "status" ] =
-		static_cast< Json::Value::UInt >( store_confirmed ? ImportStatus::Exists : ImportStatus::Success );
-	root[ "record_id" ] = record_id;
-
-	root[ "record" ][ "id" ] = record_id;
-
-	const auto& ts_row { final_timestamps[ 0 ] };
-
-	// NULL timestamps must come through as json null, Field::as<T>() would silently
-	// turn them into "" and 0 (epoch 1970)
-	if ( ts_row[ "cluster_store_time" ].isNull() )
-	{
-		root[ "file" ][ "import_time_human" ] = Json::Value {};
-		root[ "file" ][ "import_time" ] = Json::Value {};
-	}
-	else
-	{
-		root[ "file" ][ "import_time_human" ] = ts_row[ "cluster_store_time" ].as< std::string >();
-		root[ "file" ][ "import_time" ] = ts_row[ "cluster_store_time_epoch" ].as< int64_t >();
-	}
-
-	if ( ts_row[ "cluster_delete_time" ].isNull() )
-	{
-		root[ "file" ][ "deleted_time_human" ] = Json::Value {};
-		root[ "file" ][ "deleted_time" ] = Json::Value {};
-	}
-	else
-	{
-		root[ "file" ][ "deleted_time_human" ] = ts_row[ "cluster_delete_time" ].as< std::string >();
-		root[ "file" ][ "deleted_time" ] = ts_row[ "cluster_delete_time_epoch" ].as< int64_t >();
-	}
-
-	const auto response { drogon::HttpResponse::newHttpJsonResponse( root ) };
+	const auto response { drogon::HttpResponse::newHttpJsonResponse( createImportResponse(
+		record_id, store_confirmed ? ImportStatus::Exists : ImportStatus::Success, final_timestamps[ 0 ] ) ) };
 
 	// a metadata failure should not fail the import, the file itself was stored fine
 	if ( const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) }; !parse_result )
