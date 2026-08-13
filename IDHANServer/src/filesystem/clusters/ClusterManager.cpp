@@ -49,6 +49,7 @@ ClusterManager::ClusterInfo::ClusterInfo( const drogon::orm::Row& row ) :
   m_id( row[ "cluster_id" ].as< ClusterID >() ),
   m_path( row[ "folder_path" ].as< std::string >() ),
   m_flags( ClusterFlags::STORES_DEFAULT ),
+  m_read_only( row[ "read_only" ].as< bool >() ),
   m_max_capacity( std::numeric_limits< std::size_t >::max() )
 {}
 
@@ -93,6 +94,12 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	std::string_view extension,
 	const FileMetaType type ) const
 {
+	// Last line of defence: findBestFolder already refuses to hand back a read-only cluster, but it
+	// is not the only way to reach a ClusterInfo, and the cluster can be flipped read-only between
+	// selection and here. Guarding the write itself means no caller can bypass the rule.
+	if ( m_read_only )
+		return std::unexpected( createInternalError( "Refusing to write into read-only cluster {}", m_id ) );
+
 	// Append a `.` if there isn't one
 
 	// QFile file { m_path.filePath( createSubpath( sha256 ) + extension ) };
@@ -131,42 +138,58 @@ drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManag
 	DbClientPtr db )
 {
 	const auto cluster_check { co_await db->execSqlCoro(
-		"SELECT cluster_id, cluster_delete_time FROM file_info WHERE record_id = $1 LIMIT 1", record_id ) };
+		"SELECT file_info.cluster_id, file_info.cluster_delete_time, file_clusters.read_only "
+		"FROM file_info LEFT JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
+		"WHERE file_info.record_id = $1 LIMIT 1",
+		record_id ) };
 
 	if ( !cluster_check.empty() )
 	{
-		const bool has_cluster { !cluster_check[ 0 ][ 0 ].isNull() };
-		const bool file_deleted { !cluster_check[ 0 ][ 1 ].isNull() };
+		const auto& row { cluster_check[ 0 ] };
 
-		if ( has_cluster && !file_deleted )
+		const bool has_cluster { !row[ "cluster_id" ].isNull() };
+		const bool file_deleted { !row[ "cluster_delete_time" ].isNull() };
+		// null when the record has no cluster at all, since the join then matches nothing
+		const bool writable { !row[ "read_only" ].isNull() && !row[ "read_only" ].as< bool >() };
+
+		if ( has_cluster && !file_deleted && writable )
 		{
 			// We might still have the file, So we'll return the cluster it should be in.
-			co_return cluster_check[ 0 ][ 0 ].as< ClusterID >();
+			co_return row[ "cluster_id" ].as< ClusterID >();
 		}
 	}
 
-	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
+	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters WHERE read_only = FALSE" ) };
 
 	if ( clusters.empty() )
-		co_return std::unexpected(
-			createBadRequest( "No clusters available, You must create one before importing files" ) );
-
-	const auto rankCluster = []( const drogon::orm::Row& row ) -> std::size_t
 	{
-		const auto& size_used { row[ "size_used" ].as< std::size_t >() };
-		const auto& size_total { row[ "size_limit" ].as< std::size_t >() };
+		const auto total { co_await db->execSqlCoro( "SELECT count(*) FROM file_clusters" ) };
+
+		if ( total[ 0 ][ 0 ].as< std::int64_t >() == 0 )
+			co_return std::unexpected(
+				createBadRequest( "No clusters available, You must create one before importing files" ) );
+
+		co_return std::unexpected(
+			createBadRequest( "All clusters are read-only, You must mark one as writable before importing files" ) );
+	}
+
+	const auto rankCluster = []( const drogon::orm::Row& row ) -> double
+	{
+		const auto size_used { row[ "size_used" ].as< std::int64_t >() };
+		const auto size_limit { row[ "size_limit" ].as< std::int64_t >() };
 		// TODO: Add free capacity to the ranking
-		const double ratio_used = static_cast< double >( size_used ) / static_cast< double >( size_total );
-		return static_cast< std::size_t >( ratio_used * 100 );
+		if ( size_limit <= 0 ) return 0.0;
+		return static_cast< double >( size_used ) / static_cast< double >( size_limit );
 	};
 
-	std::vector< std::pair< std::size_t, ClusterID > > cluster_scores {};
+	std::vector< std::pair< double, ClusterID > > cluster_scores {};
 
 	for ( const auto& row : clusters )
 	{
 		cluster_scores.emplace_back( rankCluster( row ), row[ "cluster_id" ].as< ClusterID >() );
 	}
 
+	// Sort by lowest score = better
 	std::ranges::sort(
 		cluster_scores, []( const auto& a, const auto& b ) noexcept -> bool { return a.first < b.first; } );
 

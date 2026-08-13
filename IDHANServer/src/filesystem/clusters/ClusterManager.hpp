@@ -81,6 +81,10 @@ class ClusterManager
 
 		ClusterFlags m_flags;
 
+		//! Mirrors file_clusters.read_only. Files may only be read out of a read-only cluster, never
+		//! written into it. Defaults to true so a cluster built without database state fails closed.
+		bool m_read_only { true };
+
 		[[nodiscard]] std::size_t capacity() const;
 
 		[[nodiscard]] std::size_t free() const;
@@ -92,6 +96,8 @@ class ClusterManager
 		//! Max size this folder can contain. 0 == unlimited
 		std::size_t m_max_capacity;
 
+		//! Writes \p data into this cluster, addressed by \p sha256.
+		//! \return An error response if the cluster is read-only, or if the write itself fails.
 		[[nodiscard]] std::expected< void, drogon::HttpResponsePtr > storeFile(
 			const SHA256& sha256,
 			const std::byte* data,

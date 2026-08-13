@@ -16,7 +16,7 @@ ClusterAPI::ResponseTask ClusterAPI::info( drogon::HttpRequestPtr request, const
 ExpectedTask< Json::Value > getInfo( ClusterID cluster_id, const DbClientPtr transaction )
 {
 	const auto cluster_info { co_await transaction->execSqlCoro(
-		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, allowed_thumbnails, allowed_files, "
+		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, "
 		"cluster_name, folder_path FROM file_clusters WHERE cluster_id = $1",
 		cluster_id ) };
 
