@@ -6,7 +6,6 @@ on:
       - opened
       - synchronize
       - reopened
-      - closed
     branches:
       - master
       - dev
@@ -23,10 +22,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.server_url == 'https://git.futuregadgetlabs.net' && github.event.action != 'closed'
-    permissions:
-      contents: read
-      packages: write
+    if: github.server_url == 'https://git.futuregadgetlabs.net'
 
     steps:
       - name: Checkout repository
@@ -99,8 +95,6 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     if: github.server_url == 'https://git.futuregadgetlabs.net' && github.event.action == 'closed'
-    permissions:
-      packages: write
 
     steps:
       - name: Delete PR image tags
