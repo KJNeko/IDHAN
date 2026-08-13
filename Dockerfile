@@ -1,7 +1,17 @@
+# syntax=docker/dockerfile:1.7
 # Multi-stage build for IDHANServer
+#
+# Built for three x86-64 microarchitecture levels -- linux/amd64, linux/amd64/v2 and
+# linux/amd64/v3 -- which land in one manifest list per tag. The only difference between
+# them is the -march the server is compiled with, derived from TARGETVARIANT below.
+#
 # Stage 1: Build environment
 # Stage 0: Build the React WebUI
-FROM node:22-slim AS webbuilder
+#
+# Pinned to BUILDPLATFORM: the output is a JavaScript bundle with no machine code in it,
+# so it is identical across the three variants. Without the pin this stage, and the pnpm
+# install in front of it, would run once per variant for three identical results.
+FROM --platform=$BUILDPLATFORM node:22-slim AS webbuilder
 # corepack activates the exact pnpm from package.json's "packageManager" field (pinned to 10.x, where
 # the onlyBuiltDependencies allow-list actually works). Disable the prompt so the fetch is non-interactive.
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -18,7 +28,25 @@ RUN pnpm exec vite build --outDir /web/dist
 # Stage 1: Build IDHANServer
 # 25.10 rather than an LTS: libonnxruntime-dev, which gates IDHANEmbedding, first appears in
 # questing. No Ubuntu release before it packages ONNX Runtime at all.
-FROM ubuntu:25.10 AS builder
+#
+# Pinned to BUILDPLATFORM. The three published variants differ only in the -march the compiler is
+# given, not in the architecture it targets, so this stage is a native compile in every case and
+# nothing here needs to run under the target's instruction set -- which also means the build host
+# does not have to support v3 to produce a v3 image. Pinning collapses the apt install, the libpqxx
+# build and the ~1 GB Qt fetch to a single set of layers shared by all three variants instead of
+# three identical copies keyed by platform. Only the final build step, which reads TARGETVARIANT,
+# has a distinct cache key per variant.
+FROM --platform=$BUILDPLATFORM ubuntu:25.10 AS builder
+
+# Guard on the BUILDPLATFORM pin above: it is only sound while the build host and the target share
+# an architecture. Building amd64 images on an arm64 host would need a cross toolchain that is not
+# installed here, and would otherwise produce arm64 binaries wearing an amd64 label.
+ARG BUILDARCH
+ARG TARGETARCH
+RUN [ "${BUILDARCH}" = "${TARGETARCH}" ] || { \
+        echo "IDHAN: cross-architecture builds are not supported (build=${BUILDARCH} target=${TARGETARCH})" >&2; \
+        exit 1; \
+    }
 
 # Enable universe repository (needed for drogon, spdlog, pqxx, tomlplusplus, etc.)
 RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
@@ -109,6 +137,13 @@ COPY .git /build/.git
 # Build IDHANServer with ccache mount
 ARG IDHAN_DISABLE_API_AUTH=OFF
 ARG CMAKE_BUILD_TYPE=Release
+
+# The microarchitecture level this image is being built for. Buildx sets TARGETVARIANT from the
+# requested --platform: empty for linux/amd64, "v2" for linux/amd64/v2, "v3" for linux/amd64/v3.
+# It is translated to an -march level below rather than passed through, since the two spellings do
+# not match.
+ARG TARGETVARIANT
+
 ENV CCACHE_DIR=/root/.ccache
 # safe.directory: the copied .git is root-owned like the build user, but declare it explicitly so
 # git never refuses with "dubious ownership" under a different build UID.
@@ -116,12 +151,32 @@ ENV CCACHE_DIR=/root/.ccache
 # built with the old -DFGL_GIT_*=unknown args left those overrides cached; reconfiguring without -D
 # does NOT clear them, so FGLGit would keep taking the stale-override path and skip git. -U removes
 # them each configure, forcing in-container `git describe` to win.
-RUN --mount=type=cache,target=/root/.ccache \
-    --mount=type=cache,target=/build/build \
+#
+# Both cache mounts are keyed by variant. The build directory is the one that matters: it persists
+# CMakeCache.txt, so a mount shared across variants would hand the v3 configure the v2 cache and
+# FGL_MARCH would survive the reconfigure -- the same stale-cache trap the -U above exists for,
+# except the symptom is a mislabelled binary rather than a missing version string. ccache is keyed
+# too because its entries are per-flag-set anyway; sharing one would only mix three working sets
+# into a single eviction pool.
+#
+# An unrecognised variant fails the build rather than falling back to baseline. The reason all three
+# of these exist is that the binary should match the platform the manifest advertises, and a silent
+# fallback would reintroduce exactly the mismatch being removed.
+RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-${TARGETARCH}${TARGETVARIANT} \
+    --mount=type=cache,target=/build/build,id=idhan-cmake-${TARGETARCH}${TARGETVARIANT} \
+    case "${TARGETVARIANT}" in \
+        ""|v1) FGL_MARCH=x86-64 ;; \
+        v2)    FGL_MARCH=x86-64-v2 ;; \
+        v3)    FGL_MARCH=x86-64-v3 ;; \
+        v4)    FGL_MARCH=x86-64-v4 ;; \
+        *)     echo "IDHAN: unsupported TARGETVARIANT '${TARGETVARIANT}'" >&2; exit 1 ;; \
+    esac && \
+    echo "IDHAN: building for ${TARGETARCH}/${TARGETVARIANT:-v1} with -march=${FGL_MARCH}" && \
     git config --global --add safe.directory /build && \
     cmake -S . -B build \
     -UFGL_GIT_BRANCH -UFGL_GIT_COMMIT -UFGL_GIT_TAG \
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
+    -DFGL_MARCH=${FGL_MARCH} \
     -DCMAKE_CXX_STANDARD=23 \
     -DBUILD_IDHAN_TESTS=OFF \
     -DBUILD_HYDRUS_IMPORTER=OFF \
@@ -140,7 +195,11 @@ RUN --mount=type=cache,target=/root/.ccache \
 # open_clip, download a 1.5 GB PyTorch checkpoint and run an export -- roughly 2.5 GB of Python to
 # perform a conversion that upstream has already published. IDHAN loads ONNX and nothing else, and
 # never converts anything at runtime, so the graphs have to exist before the image is built.
-FROM debian:stable-slim AS modelbuilder
+#
+# Pinned to BUILDPLATFORM for the same reason as webbuilder, and more expensively: ONNX graphs are
+# architecture-independent, so leaving this to fan out across the variants would download ~1.5 GB
+# from HuggingFace three times to land three identical directories.
+FROM --platform=$BUILDPLATFORM debian:stable-slim AS modelbuilder
 
 # The onnx-community conversion of google/siglip2-base-patch16-224.
 ARG EMBEDDING_REPO=onnx-community/siglip2-base-patch16-224-ONNX

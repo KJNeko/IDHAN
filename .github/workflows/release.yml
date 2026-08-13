@@ -17,27 +17,38 @@ jobs:
       contents: write
 
     steps:
-      - name: Download Linux artifact
+      # One tarball per x86-64 microarchitecture level. The plain x86_64 build runs anywhere; v2 and
+      # v3 are the same source compiled with -march=x86-64-v2 / -march=x86-64-v3 and will die with
+      # SIGILL on a CPU that does not implement the level, so they are published as separate
+      # downloads rather than as an upgrade to the default.
+      - name: Download Linux artifact (baseline x86-64)
         uses: dawidd6/action-download-artifact@v2
         with:
           run_id: ${{ github.event.workflow_run.id }}
           name: IDHANServer-linux-x86_64
-          path: release/linux
+          path: release/x86_64
 
-      - name: Download Windows artifact
+      - name: Download Linux artifact (x86-64-v2)
         uses: dawidd6/action-download-artifact@v2
         with:
-          workflow: build-windows.yml
-          commit: ${{ github.event.workflow_run.head_sha }}
-          name: IDHANServer-windows-x86_64
-          path: release/windows
-          workflow_conclusion: success
-          wait_timeout: 10
+          run_id: ${{ github.event.workflow_run.id }}
+          name: IDHANServer-linux-x86_64-v2
+          path: release/x86_64-v2
+
+      - name: Download Linux artifact (x86-64-v3)
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+          name: IDHANServer-linux-x86_64-v3
+          path: release/x86_64-v3
 
       - name: Compress artifacts
         run: |
-          cd release/linux && tar czf ../IDHANServer-linux-x86_64.tar.gz .
-          cd ../windows && zip -r ../IDHANServer-windows-x86_64.zip .
+          set -euo pipefail
+          cd release
+          for variant in x86_64 x86_64-v2 x86_64-v3; do
+            tar czf "IDHANServer-linux-$variant.tar.gz" -C "$variant" .
+          done
 
       - name: Create release
         uses: softprops/action-gh-release@v1
@@ -46,8 +57,21 @@ jobs:
           name: IDHAN ${{ github.event.workflow_run.head_branch }}
           draft: false
           prerelease: false
+          body: |
+            Three Linux x86-64 builds, identical apart from the microarchitecture level they were
+            compiled for. Pick the highest one your CPU supports.
+
+            | Download | Requires | Roughly |
+            |---|---|---|
+            | `IDHANServer-linux-x86_64.tar.gz` | baseline x86-64 | any 64-bit x86 |
+            | `IDHANServer-linux-x86_64-v2.tar.gz` | SSE4.2, POPCNT | Nehalem (2008) and later |
+            | `IDHANServer-linux-x86_64-v3.tar.gz` | AVX2, BMI1/2, FMA | Haswell (2013) and later |
+
+            Running a build your CPU does not support fails with SIGILL. Container images carry all
+            three levels in one manifest, so `docker pull` needs no equivalent choice.
           files: |
             release/IDHANServer-linux-x86_64.tar.gz
-            release/IDHANServer-windows-x86_64.zip
+            release/IDHANServer-linux-x86_64-v2.tar.gz
+            release/IDHANServer-linux-x86_64-v3.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

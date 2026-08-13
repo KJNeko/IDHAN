@@ -12,6 +12,7 @@ on:
 env:
   REGISTRY: git.futuregadgetlabs.net
   IMAGE_NAME: kj16609/idhan
+  PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3
 
 jobs:
   build-and-push:
@@ -57,11 +58,13 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: ${{ env.PLATFORMS }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}
           cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
+          provenance: false
 
       - name: Determine image tag for extraction
         id: img
@@ -76,19 +79,55 @@ jobs:
 
       - name: Extract Linux artifacts from image
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.img.outputs.tag }}"
-          docker pull "$IMAGE"
-          docker create --name extract "$IMAGE"
-          mkdir -p artifacts
-          docker cp extract:/usr/bin/IDHANServer      artifacts/IDHANServer
-          docker cp extract:/usr/share/idhan/modules  artifacts/modules
-          docker cp extract:/usr/share/idhan/mime     artifacts/mime
-          docker cp extract:/usr/share/idhan/static   artifacts/static
-          docker cp extract:/usr/share/idhan/config.toml artifacts/config.toml
-          docker rm extract
+          set -euo pipefail
+          REPO="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE="$REPO:${{ steps.img.outputs.tag }}"
 
-      - name: Upload Linux artifact
+          docker buildx imagetools inspect "$IMAGE" \
+            --format '{{range .Manifest.Manifests}}{{.Platform.Architecture}}/{{.Platform.Variant}} {{.Digest}}{{"\n"}}{{end}}' \
+            > manifests.txt
+          echo "Manifest entries for $IMAGE:"
+          cat manifests.txt
+
+          # "<platform key>:<artifact suffix>"; the baseline entry carries an empty variant.
+          for entry in "amd64/:x86_64" "amd64/v2:x86_64-v2" "amd64/v3:x86_64-v3"; do
+            key="${entry%%:*}"
+            suffix="${entry##*:}"
+
+            digest="$(awk -v k="$key" '$1 == k { print $2; exit }' manifests.txt)"
+            if [ -z "$digest" ]; then
+              echo "No manifest entry for platform '$key' in $IMAGE" >&2
+              exit 1
+            fi
+
+            echo "Extracting $key from $digest"
+            docker pull "$REPO@$digest"
+            docker create --name "extract-$suffix" "$REPO@$digest"
+
+            out="artifacts/$suffix"
+            mkdir -p "$out"
+            docker cp "extract-$suffix:/usr/bin/IDHANServer"          "$out/IDHANServer"
+            docker cp "extract-$suffix:/usr/share/idhan/modules"      "$out/modules"
+            docker cp "extract-$suffix:/usr/share/idhan/mime"         "$out/mime"
+            docker cp "extract-$suffix:/usr/share/idhan/static"       "$out/static"
+            docker cp "extract-$suffix:/usr/share/idhan/config.toml"  "$out/config.toml"
+            docker rm "extract-$suffix"
+          done
+
+      - name: Upload Linux artifact (baseline x86-64)
         uses: actions/upload-artifact@v3
         with:
           name: IDHANServer-linux-x86_64
-          path: artifacts/
+          path: artifacts/x86_64/
+
+      - name: Upload Linux artifact (x86-64-v2)
+        uses: actions/upload-artifact@v3
+        with:
+          name: IDHANServer-linux-x86_64-v2
+          path: artifacts/x86_64-v2/
+
+      - name: Upload Linux artifact (x86-64-v3)
+        uses: actions/upload-artifact@v3
+        with:
+          name: IDHANServer-linux-x86_64-v3
+          path: artifacts/x86_64-v3/
