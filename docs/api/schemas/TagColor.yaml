@@ -1,4 +1,4 @@
-description: "RBG Values are provided for ease of use."
+description: The RGB components are provided alongside the hex for convenience.
 type: object
 properties:
   hex:

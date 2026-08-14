@@ -1,10 +1,9 @@
 post:
   tags:
     - maintenance
-  summary: Purge all thumbnails
+  summary: Purges every thumbnail
   description: |
-    Deletes all thumbnail files from the thumbnails directory and removes any
-    resulting empty subdirectories. Returns counts of deleted and failed files.
+    Deletes all thumbnail files and prunes the empty directories left behind.
   responses:
     200:
       description: Purge result
@@ -34,7 +33,7 @@ post:
                 deleted_count: 0
                 message: "Thumbnails directory does not exist"
     500:
-      description: Unexpected error during purge
+      description: Internal server error
       content:
         application/json:
           schema:

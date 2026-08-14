@@ -21,4 +21,4 @@ allOf:
             example: "toujou koneko"
       items_count:
         type: integer
-        description: "Number of items with this tag"
+        description: Records carrying this tag.

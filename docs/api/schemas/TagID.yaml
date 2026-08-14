@@ -1,3 +1,2 @@
 type: integer
 minimum: 0
-description: A numeric value representing a tag component

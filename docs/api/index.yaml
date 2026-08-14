@@ -11,33 +11,31 @@ info:
 
 tags:
   - name: public
-    description: Publicly accessible endpoints that don't require authentication
+    description: Endpoints that need no API key
   - name: auth
     description: API key management
   - name: records
-    description: |
-      File record operations including creation, retrieval, tagging, and metadata management.
-      Records represent individual files tracked in IDHAN's system.
+    description: Files tracked by IDHAN. Creation, retrieval, tagging, and metadata.
   - name: notes
     description: Per-record text notes
   - name: urls
     description: Per-record URL associations
   - name: tags
-    description: Tag management — creation, search, info, and relationships
+    description: Tag creation, search, info, and relationships
   - name: tag domains
-    description: Tag domain management for organizing tags into logical groups
+    description: Grouping tags into separate domains
   - name: clusters
-    description: File cluster operations for managing on-disk storage locations
+    description: On-disk storage locations
   - name: search
-    description: Global search functionality across records
+    description: Record search
   - name: relationships
-    description: File relationship management (duplicates, alternatives)
+    description: Duplicates and alternatives between records
   - name: mime
-    description: MIME type detection and parser management
+    description: MIME detection and parser modules
   - name: jobs
-    description: Asynchronous background job dispatch and status polling
+    description: Background job dispatch and status polling
   - name: maintenance
-    description: Server maintenance operations (integrity checks, purges, rescans)
+    description: Integrity checks, purges, and rescans
   - name: database
     description: Database introspection and statistics
 

@@ -1,7 +1,7 @@
 delete:
   tags:
     - tag domains
-  summary: Deletes a given tag domain
+  summary: Deletes a tag domain
   parameters:
     - in: path
       name: tag_domain_id
@@ -10,7 +10,7 @@ delete:
         $ref: '../../../schemas/TagDomainID.yaml'
   responses:
     200:
-      description: Tag domain deleted successfully
+      description: Tag domain deleted
       content:
         application/json:
           schema:
@@ -19,4 +19,4 @@ delete:
               tag_domain_id:
                 $ref: '../../../schemas/TagDomainID.yaml'
     400:
-      description: Tag domain not found for the given id
+      description: Tag domain not found

@@ -2,11 +2,10 @@ post:
   tags:
     - jobs
     - maintenance
-  summary: Rescan metadata for all records
+  summary: Rescans metadata for every record
   description: |
-    Queues a metadata rescan for every record that has file info. Iterates all
-    records in `file_info` and re-runs the metadata parser for each. Returns an
-    empty JSON object when the scan is complete.
+    Re-runs the metadata parser for every record that has file info. Returns an
+    empty object once the scan finishes.
   responses:
     200:
       description: Rescan completed

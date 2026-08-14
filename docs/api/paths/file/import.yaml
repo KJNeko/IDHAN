@@ -1,13 +1,10 @@
 post:
   tags:
     - records
-  summary: Imports a given file.
+  summary: Imports a file
   description: |
-    Imports a file into IDHAN. The `status` field in the response discriminates the outcome:
-    - `1` — new file imported successfully
-    - `2` — file already exists in IDHAN
-    - `3` — file was previously deleted
-    - `4` — MIME type could not be determined (unknown mime)
+    Always 200 when the body is accepted. `status` carries the outcome:
+    1 imported, 2 already present, 3 previously deleted, 4 MIME unknown.
   requestBody:
     required: true
     content:
@@ -17,18 +14,16 @@ post:
           format: binary
   responses:
     '200':
-      description: Import processed (check `status` field for outcome)
+      description: Import processed
       content:
         application/json:
           schema:
             type: object
-            required: [status]
+            required: [ status ]
             properties:
               status:
                 type: integer
-                enum: [1, 2, 3, 4]
-                description: |
-                  1=imported, 2=already exists, 3=previously deleted, 4=unknown mime
+                enum: [ 1, 2, 3, 4 ]
               record_id:
                 type: integer
               record:
@@ -42,10 +37,10 @@ post:
                     type: string
                   deleted_time:
                     type: integer
-                    description: Only present when status=3
+                    description: Present only when `status` is 3.
                   deleted_time_human:
                     type: string
-                    description: Only present when status=3
+                    description: Present only when `status` is 3.
               file:
                 type: object
                 properties:
@@ -55,7 +50,7 @@ post:
                     type: string
               reason:
                 type: string
-                description: Only present when status=4 (e.g. "unknown mime")
+                description: Present only when `status` is 4.
           examples:
             imported:
               summary: New file imported (status=1)
@@ -101,4 +96,4 @@ post:
                 status: 4
                 reason: "unknown mime"
     '400':
-      description: Content-Type is not application/octet-stream
+      description: Content-Type is not `application/octet-stream`

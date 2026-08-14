@@ -1,7 +1,7 @@
 get:
   tags:
     - tags
-  summary: Returns information about a tag.
+  summary: Returns information about a tag
   parameters:
     - in: path
       name: tag_id
@@ -10,10 +10,10 @@ get:
         $ref: '../../schemas/TagID.yaml'
   responses:
     "200":
-      description: "Json object with tag info"
+      description: Tag info
       content:
         application/json:
           schema:
             $ref: '../../schemas/TagInfoExtended.yaml'
     "400":
-      description: "Tag not found — the tag_id does not exist or has not been committed yet"
+      description: Tag not found, or not yet committed

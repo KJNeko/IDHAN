@@ -3,9 +3,8 @@ post:
     - tags
   summary: Creates alias relationships between tags
   description: |
-    Marks `aliased_id` as an alias for `alias_id`. When a record has `aliased_id`, it is
-    transparently treated as `alias_id` in resolved tag views. A tag cannot alias itself.
-    Duplicate entries are silently ignored.
+    A record tagged `aliased_id` resolves to `alias_id` in resolved tag views.
+    A tag cannot alias itself. Duplicates are ignored.
   parameters:
     - name: tag_domain_id
       in: query
@@ -27,11 +26,11 @@ post:
               aliased_id:
                 allOf:
                   - $ref: '../../../../schemas/TagID.yaml'
-                description: The tag being aliased (the "old" tag)
+                description: The old tag.
               alias_id:
                 allOf:
                   - $ref: '../../../../schemas/TagID.yaml'
-                description: The canonical target tag
+                description: The canonical target.
         examples:
           create_alias:
             summary: Alias tag 10 to canonical tag 20
@@ -40,7 +39,7 @@ post:
                 alias_id: 20
   responses:
     200:
-      description: Aliases created successfully
+      description: Aliases created
       content:
         application/json:
           schema:

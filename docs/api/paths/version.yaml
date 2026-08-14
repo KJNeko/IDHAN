@@ -5,7 +5,7 @@ get:
   security: [ ]
   responses:
     "200":
-      description: Json object with info
+      description: Version info
       content:
         application/json:
           schema:

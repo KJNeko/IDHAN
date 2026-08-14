@@ -2,11 +2,10 @@ post:
   tags:
     - records
     - notes
-  summary: Add a note to a record
+  summary: Adds a note to a record
   description: |
-    Creates a new note with the provided text (or reuses an existing one with the same text)
-    and associates it with the given record. Returns the updated array of all notes for the
-    record after insertion.
+    Notes are deduplicated by text, so an existing note with identical text is
+    reused rather than created again. Returns the record's full note list.
   parameters:
     - $ref: '../../../parameters/record_id.yaml'
   requestBody:
@@ -21,14 +20,14 @@ post:
             value: "This image is from episode 3."
   responses:
     '200':
-      description: Updated list of notes for the record after insertion
+      description: The record's notes after insertion
       content:
         application/json:
           schema:
             type: array
             items:
               type: object
-              required: [note_id, text]
+              required: [ note_id, text ]
               properties:
                 note_id:
                   type: integer
@@ -42,6 +41,6 @@ post:
                 - note_id: 1
                   text: "This image is from episode 3."
     '400':
-      description: Content-Type was not text/plain, or record_id is invalid
+      description: Content-Type was not `text/plain`, or `record_id` is invalid
     '500':
-      description: Internal error while creating or mapping the note
+      description: Internal server error

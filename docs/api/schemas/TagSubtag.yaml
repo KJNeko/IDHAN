@@ -1,4 +1,4 @@
 type: string
-description: The second text component of a tag
+description: The half of a tag after the colon.
 example: 'toujou koneko'
 minLength: 0

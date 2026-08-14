@@ -1,4 +1,4 @@
-description: "Two strings that make up a tag"
+description: The two halves of a tag, each given as an ID or as text.
 type: object
 properties:
   namespace:

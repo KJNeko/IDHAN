@@ -1,10 +1,10 @@
 get:
   tags:
     - jobs
-  summary: Get status of a specific job
+  summary: Returns the status of a job
   description: |
-    Returns the current status of the given job. Once a completed job is polled,
-    it is eligible for cleanup and will be removed from the runtime.
+    Polling a completed job makes it eligible for cleanup, so it may be dropped
+    from the runtime afterwards.
   parameters:
     - name: job_id
       in: path
@@ -26,16 +26,16 @@ get:
                 type: string
               status:
                 type: string
-                enum: [running, completed, failed, not_found]
+                enum: [ running, completed, failed, not_found ]
               completed:
                 type: boolean
               start_time:
                 type: integer
-                description: Unix timestamp of job start
+                description: Unix timestamp.
               error:
                 type: string
-                description: Present only when status is "failed"
+                description: Present only when `status` is `failed`.
               response:
-                description: Present only when status is "completed"
+                description: Present only when `status` is `completed`.
     404:
       description: Job not found
