@@ -181,7 +181,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ) )
 	{
-		// convert hashes to their respective record_ids
 		if ( auto result = co_await convertQueryRecordIDs( request, db ); !result ) co_return result.error();
 	}
 
@@ -215,8 +214,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		std::string mime_name;
 		std::string extension;
 	};
-
-	// auto response { drogon::HttpResponse::newAsyncStreamResponse() };
 
 	std::vector< drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > > tasks {};
 

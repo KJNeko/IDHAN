@@ -49,7 +49,6 @@ drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInf
 		co_return std::unexpected( mime_string.error() );
 	}
 
-	// Get MIME ID from database
 	const auto mime_search {
 		co_await db->execSqlCoro( "SELECT mime_id FROM mime WHERE name = $1", mime_string.value() )
 	};
@@ -58,13 +57,11 @@ drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInf
 	{
 		info.mime_id = constants::INVALID_MIME_ID;
 		info.extension = io_uring->path().extension();
-		// ensure that it doesn't start with `.`
 		if ( info.extension.starts_with( '.' ) ) info.extension = info.extension.substr( 1 );
 	}
 	else
 	{
 		info.mime_id = mime_search[ 0 ][ 0 ].as< MimeID >();
-		// extension is not needed if the mime_id is present
 	}
 
 	info.store_time = std::chrono::system_clock::now();

@@ -25,11 +25,8 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 		if ( !json[ "tags" ].isArray() ) co_return createBadRequest( "'tags' must be an array of strings" );
 
 		std::vector< std::string > text_tags {};
-		// System tags `system:`
 		std::vector< std::string > system_tags {};
-		// Tags like `filename:*`
 		std::vector< std::string > wildcard_namespaces {};
-		// Tags that are like `cat*girl` (where 'catgirl' and 'cat girl' are both valid)
 		std::vector< std::string > wildcard_tags {};
 		for ( const auto& tag : json[ "tags" ] )
 		{
@@ -86,7 +83,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 		builder.addPositiveTags( tag_ids );
 	}
 
-	// --- tag domains -------------------------------------------------------------------------
 	std::vector< TagDomainID > tag_domains {};
 	if ( json.isMember( "tag_domains" ) )
 	{
@@ -99,13 +95,11 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 		}
 	}
 
-	// --- display mode ------------------------------------------------------------------------
 	if ( json.isMember( "display" ) && json[ "display" ].isString() && json[ "display" ].asString() == "storage" )
 		builder.setDisplay( HydrusDisplayType::STORED );
 	else
 		builder.setDisplay( HydrusDisplayType::DISPLAY );
 
-	// --- sort: default newest-first --------------------------------------------------------
 	SortType sort_type { SortType::IMPORT_TIME };
 	SortOrder sort_order { SortOrder::DESC };
 	if ( json.isMember( "sort" ) )
@@ -119,7 +113,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 	builder.setSortType( sort_type );
 	builder.setSortOrder( sort_order );
 
-	// --- limit / offset ----------------------------------------------------------------------
 	if ( json.isMember( "limit" ) )
 	{
 		if ( !json[ "limit" ].isIntegral() || json[ "limit" ].asInt64() < 0 )
@@ -133,7 +126,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 		builder.setOffset( static_cast< std::size_t >( json[ "offset" ].asInt64() ) );
 	}
 
-	// --- return columns ----------------------------------------------------------------------
 	bool return_ids { true };
 	bool return_hashes { false };
 	if ( json.isMember( "return" ) && json[ "return" ].isArray() )
@@ -148,7 +140,7 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 			else if ( s == "hashes" )
 				return_hashes = true;
 		}
-		if ( !return_ids && !return_hashes ) return_ids = true; // never return nothing
+		if ( !return_ids && !return_hashes ) return_ids = true;
 	}
 
 	auto db { drogon::app().getDbClient() };

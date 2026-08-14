@@ -59,8 +59,6 @@ std::filesystem::path createSubpath( const SHA256& sha256 )
 {
 	const std::string hex { sha256.hex() };
 
-	// fx{0,1}/{0-128}
-
 	std::filesystem::path path { "f" + hex.substr( 0, 2 ) };
 	path /= hex;
 
@@ -162,7 +160,6 @@ drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManag
 		cluster_scores.emplace_back( rankCluster( row ), row[ "cluster_id" ].as< ClusterID >() );
 	}
 
-	// Sort by lowest score = better
 	std::ranges::sort(
 		cluster_scores, []( const auto& a, const auto& b ) noexcept -> bool { return a.first < b.first; } );
 

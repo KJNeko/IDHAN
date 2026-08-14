@@ -109,7 +109,6 @@ class RecordAPI : public drogon::HttpController< RecordAPI >
 		IDHANAPIAuthName,
 		IDHANRecordValidatorName );
 
-	// tags
 	ADD_METHOD_TO( RecordAPI::addMultipleTags, "/records/tags/add", drogon::Post, IDHANAPIAuthName );
 	ADD_METHOD_TO( RecordAPI::removeMultipleTags, "/records/tags/remove", drogon::Post, IDHANAPIAuthName );
 

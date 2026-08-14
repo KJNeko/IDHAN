@@ -48,14 +48,12 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	}
 
 	{
-		// Test if the path we are wanting to add is already
 		const auto folder_search {
 			co_await transaction->execSqlCoro( "SELECT cluster_id, folder_path FROM file_clusters" )
 		};
 
 		for ( const auto& row : folder_search )
 		{
-			// each row will have cluster_id, folder_path
 			[[maybe_unused]] const auto cluster_id { row[ 0 ].as< ClusterID >() };
 			const auto cluster_path { row[ 1 ].as< std::string >() };
 
@@ -71,10 +69,8 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	log::debug( "Found no conflicting paths" );
 
-	// The path was not already in use. Now check if it's valid
 	if ( !std::filesystem::exists( target_path ) )
 	{
-		// Since we already have a check that we are not read only, we should try creating it
 		if ( !std::filesystem::create_directories( target_path ) )
 		{
 			transaction->rollback();
@@ -85,8 +81,6 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	if ( !readonly )
 	{
-		// We can make the directory or it already exists.
-		// Can we write into it?
 		if ( std::ofstream ofs( target_path / "write_test.txt" ); ofs )
 		{
 			constexpr std::string_view test_string { "IDHAN can write" };
@@ -101,7 +95,6 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 		log::debug( "Write test passed. Inserting new cluster into table" );
 
-		// delete the test
 		std::filesystem::remove( target_path / "write_test.txt" );
 	}
 
@@ -132,7 +125,6 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 		log::debug( "Setting cluster info" );
 
-		// Modify will return `{cluster_id}/list` if it succeeds.
 		const auto ret { co_await modifyT( request, cluster_id, transaction ) };
 
 		// TODO: Queue orphan check here.

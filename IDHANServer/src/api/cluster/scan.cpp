@@ -41,11 +41,10 @@ struct ScanParams
 	ScanParams() = default;
 };
 
-// Extracts boolean parameters safely
 static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 {
 	ScanParams p {};
-	p.read_only = true; // set to false when getting the cluster info only if it's not read only
+	p.read_only = true;
 	p.force_readonly = request->getOptionalParameter< bool >( "readonly" ).value_or( false );
 	p.verify_hash = request->getOptionalParameter< bool >( "verify_hash" ).value_or( false );
 
@@ -64,7 +63,6 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 
 	p.scan_metadata |= p.adopt_orphans; // orphans will need to be scanned for metadata
 	p.scan_mime |= p.scan_metadata; // mime is needed for metadata
-	// if read only then we need to recompute the hash because the file path can't be trusted anymore
 
 	return p;
 }
@@ -117,14 +115,6 @@ class ScanContext
 	ExpectedTask< void > scan( std::filesystem::path bad_dir, DbClientPtr db );
 };
 
-/**
- *
- * @param folder Folder to scan
- * @param scan_params Parameters for scanning
- * @param cluster_id Cluster ID this folder is in
- * @param cluster_path Path to the root of the cluster
- * @return Returns void if successful, an error if any files in the folder fail to scan, if scan_params.stop_on_fail is false then the scanFolder will complete successfully in all cases
- */
 static std::size_t countScanableFiles( const std::filesystem::path& directory )
 {
 	std::size_t count = 0;
@@ -187,7 +177,6 @@ ExpectedTask< FolderScanTotals > scanFolder(
 				continue;
 			}
 
-			// ignore thumbnails
 			if ( file_path.extension() == ".thumbnail" )
 			{
 				log::trace( "Skipping thumbnail file: {}", file_path.string() );
@@ -426,7 +415,6 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256() const
 			sha256_hex ) );
 	}
 
-	// Move the file to bad directory
 	try
 	{
 		std::filesystem::create_directories( m_bad_dir );
@@ -556,7 +544,6 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 	{
 		log::trace( "No file_info entry found for record {} (first scan or new adopt)", m_record_id );
 		co_return {};
-		// co_return co_await insertFileInfo( db );
 	}
 
 	if ( file_info[ 0 ][ "modified_time" ].isNull() )
@@ -565,7 +552,6 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		co_await updateFileModifiedTime( db );
 	}
 
-	// we found a cluster, check if it's the one we are about to add too
 	const auto found_cluster_id { file_info[ 0 ][ 0 ].as< ClusterID >() };
 	FGL_ASSERT( m_cluster_id != 0, "Cluster should not be zero" );
 	FGL_ASSERT( found_cluster_id != 0, "Cluster should not be zero" );
@@ -588,7 +574,6 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		if ( cleanup_result.value() ) co_return {};
 	}
 
-	// now check if the file is in the right path
 	const auto current_parent { m_path.parent_path() };
 	const auto expected_cluster_subfolder { filesystem::getFileFolder( m_sha256 ) };
 	const auto expected_parent_path { m_cluster_path / expected_cluster_subfolder };
@@ -651,7 +636,6 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
 	auto file_io { std::make_shared< FileIOUring >( m_path ) };
 
-	// skip checking if we have a mime if we are going to rescan it
 	if ( !m_params.rescan_mime && co_await hasMime( db ) )
 	{
 		log::trace( "Skipping metadata scan because it already had metadata and rescan_mime was set to false" );
@@ -723,7 +707,6 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 {
-	// No mime was found in the previous step
 	if ( m_mime_name.empty() )
 	{
 		co_return std::unexpected( createInternalError(
@@ -739,7 +722,6 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		};
 		if ( !current_metadata.empty() )
 		{
-			// we are not wanting to rescan metadata, so we abort silently.
 			log::trace(
 				"Skipping metadata scan for {} because it's already been parsed and rescan_metadata was false",
 				m_record_id );
@@ -749,7 +731,6 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	const std::shared_ptr< modules::RemoteModule > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
 
-	// No parser was found
 	if ( !metadata_parser )
 	{
 		log::trace( "No metadata parser found for mime {} (Record {})", m_mime_name, m_record_id );

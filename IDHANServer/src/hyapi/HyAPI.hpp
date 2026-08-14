@@ -32,7 +32,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > unsupported( drogon::HttpRequestPtr request );
 
-	// Access management (access)
 	drogon::Task< drogon::HttpResponsePtr > apiVersion( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > requestNewPermissions( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > sessionKey( drogon::HttpRequestPtr request );
@@ -41,10 +40,8 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	drogon::Task< drogon::HttpResponsePtr > getServices( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > clientInfo( drogon::HttpRequestPtr request );
 
-	// Importing and deleting files (import)
 	drogon::Task< drogon::HttpResponsePtr > addFile( drogon::HttpRequestPtr request );
 
-	// Searching and Fetching files (search)
 	drogon::Task< drogon::HttpResponsePtr > searchFiles( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > fileHashes( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > fileMetadata( drogon::HttpRequestPtr request );
@@ -68,7 +65,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 
 	METHOD_LIST_BEGIN
 
-	// Access management
 	ADD_METHOD_TO( HydrusAPI::apiVersion, "/hyapi/api_version", drogon::Get, RESPONSE_ENRICHER_NAME );
 	ADD_METHOD_TO(
 		HydrusAPI::requestNewPermissions,
@@ -107,7 +103,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		HYAPI_AUTH_FILTERS,
 		RESPONSE_ENRICHER_NAME );
 
-	// Importing and deleting files
 	ADD_METHOD_TO(
 		HydrusAPI::addFile,
 		"/hyapi/add_files/add_file",
@@ -115,7 +110,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		HYAPI_AUTH_FILTERS,
 		RESPONSE_ENRICHER_NAME );
 
-	// Searching and fetching files
 	ADD_METHOD_TO(
 		HydrusAPI::searchFiles,
 		"/hyapi/get_files/search_files",
@@ -146,16 +140,15 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		"/hyapi/get_files/file_path",
 		drogon::Get,
 		HYAPI_AUTH_FILTERS,
-		RESPONSE_ENRICHER_NAME ); // UNSUPPORTED
+		RESPONSE_ENRICHER_NAME );
 
 	ADD_METHOD_TO(
 		HydrusAPI::unsupported,
 		"/hyapi/add_urls/add_url",
 		drogon::Post,
 		HYAPI_AUTH_FILTERS,
-		RESPONSE_ENRICHER_NAME ); // UNSUPPORTED
+		RESPONSE_ENRICHER_NAME );
 
-	// file urls
 	ADD_METHOD_TO(
 		HydrusAPI::associateUrl,
 		"/hyapi/add_urls/associate_url",
@@ -174,7 +167,7 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		"/hyapi/get_files/thumbnail_path",
 		drogon::Get,
 		HYAPI_AUTH_FILTERS,
-		RESPONSE_ENRICHER_NAME ); // UNSUPPORTED
+		RESPONSE_ENRICHER_NAME );
 
 	ADD_METHOD_TO(
 		HydrusAPI::searchTags,

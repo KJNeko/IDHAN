@@ -75,7 +75,6 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 			{
 				const auto& archive_metadata { std::get< MetadataInfoArchive >( metadata.m_metadata ) };
 
-				// map the archive hashes to real records
 				std::vector< RecordID > records {};
 				for ( const auto& record_sha256 : archive_metadata.contained_hashes )
 				{
@@ -87,7 +86,6 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 					records.emplace_back( *contained_record_id );
 				}
 
-				// check if there is already metadata for an archive
 				const auto existing_metadata { co_await db->execSqlCoro(
 					"SELECT archive_id FROM archive_metadata WHERE record_id = $1", record_id ) };
 

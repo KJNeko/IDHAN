@@ -75,9 +75,7 @@ bool SHA256::operator<( const SHA256& other ) const
 	{
 		if ( other.m_data[ i ] < this->m_data[ i ] ) return true;
 		if ( other.m_data[ i ] > this->m_data[ i ] ) return false;
-		// equal compare next byte
 	}
-	// all bytes are equal
 	return false;
 }
 

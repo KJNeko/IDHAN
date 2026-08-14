@@ -90,7 +90,6 @@ MimeMatchBase::MimeMatchBase( const Json::Value& json )
 			throw std::runtime_error( "Expected data to be an array of objects" );
 		}
 
-		// Has children
 		m_children = parseDataJson( json[ "data" ] );
 	}
 }

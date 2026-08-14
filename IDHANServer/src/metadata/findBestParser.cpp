@@ -10,7 +10,6 @@ drogon::Task< std::shared_ptr< modules::RemoteModule > > findBestParser( const s
 
 	if ( parsers.empty() ) co_return {};
 
-	// return the first parser
 	co_return parsers[ 0 ];
 }
 

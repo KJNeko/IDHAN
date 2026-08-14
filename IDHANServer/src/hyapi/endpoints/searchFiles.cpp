@@ -24,7 +24,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	auto db { drogon::app().getDbClient() };
 
-	// Build the search
 	SearchBuilder builder {};
 
 	Json::Value tags_json {};

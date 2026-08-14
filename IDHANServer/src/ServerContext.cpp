@@ -346,8 +346,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	IOUring::init();
 
 	m_clusters = std::make_unique< filesystem::ClusterManager >();
-	// Register callback to initialize clusters after event loop starts
-
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
 
 	if ( getPurgeThumbnailsOnBoot() )
@@ -398,7 +396,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 					if ( key_count == 0 )
 					{
-						// no key, Create a starter one.
 						log::warn(
 							"No API keys found, One will be generated at first navigation to /generate_api_key" );
 					}

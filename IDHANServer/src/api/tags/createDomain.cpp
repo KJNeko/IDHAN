@@ -99,7 +99,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomains( [[maybe_unused]] 
 	const auto search { co_await db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains" ) };
 
 	Json::Value out_json {};
-	// Done to make the result an empty array instead of null in the case of no domains
 	out_json.resize( 0 );
 
 	for ( const auto& row : search )

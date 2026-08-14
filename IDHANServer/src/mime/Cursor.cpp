@@ -33,13 +33,10 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 {
 	if ( std::holds_alternative< std::shared_ptr< FileIOUring > >( m_io ) )
 	{
-		// buffer is for a range greater then the current pos. We need to go back
 		const bool is_low { pos < m_buffer_pos };
 
-		// buffer is not large enough. we need more data
 		const bool is_small { required_size > m_buffer.size() };
 
-		// access would not be in bounds: the requested range must end within the buffer
 		const auto is_oob { pos + required_size > m_buffer_pos + m_buffer.size() };
 
 		if ( is_low || is_small || is_oob )

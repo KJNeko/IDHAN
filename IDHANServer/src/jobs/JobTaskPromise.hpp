@@ -29,10 +29,8 @@ struct JobTaskPromise
 {
 	std::shared_ptr< JobTaskStatus > m_status;
 
-	// Add constructor
 	JobTaskPromise();
 
-	// Implement get_return_object
 	JobTask get_return_object();
 
 	std::suspend_always initial_suspend();
