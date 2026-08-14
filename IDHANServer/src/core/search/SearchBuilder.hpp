@@ -31,17 +31,8 @@ struct SearchResults
 	[[nodiscard]] std::size_t size() const noexcept { return record_ids.size(); }
 };
 
-/**
- * @brief Accumulates search criteria and answers them as a set algebra over record ids.
- *
- * Each term becomes one search::Set fetched by one indexed query (see SetSource.hpp). Those Sets are
- * intersected, unioned and subtracted in C++ rather than by a generated CTE chain. Sort keys travel
- * inside the Sets, so an ordinary search needs no query once the terms are in hand.
- *
- * Negation never constructs the universe: it rides as a flag rewritten through De Morgan at every
- * operation. Only a search made entirely of exclusions reaches the database again, as a
- * `!= ALL(...)` on the page query.
- */
+//! Search terms become Sets and are combined in C++; negation stays as an inverted-set flag until a
+//! page query has to materialize an all-exclusions search.
 class SearchBuilder
 {
 	using SearchOperation = std::uint8_t;
@@ -110,13 +101,7 @@ class SearchBuilder
 		std::size_t value { 0 };
 	};
 
-	/**
-	 * @brief The accumulated constraint on one numeric column.
-	 *
-	 * Every predicate naming the same column narrows the same pair of bounds, so `> 1KB` with `< 1MB`
-	 * is one range and one indexed scan rather than whichever was parsed last. Two bounds on the same
-	 * side keep the tighter one, so `< 1KB` with `< 1MB` is `< 1KB`.
-	 */
+	//! Accumulated constraint on one numeric column; repeated predicates keep tightening the bounds.
 	struct RangeSearchInfo
 	{
 		bool m_active { false };
@@ -142,21 +127,10 @@ class SearchBuilder
 	//! \throws std::invalid_argument if it holds no number.
 	static RangeTerm parseRangeTerm( std::string_view tag );
 
-	/**
-	 * @brief Reads the hash out of \p arguments, the part of a hash predicate following its keyword.
-	 *
-	 * Exactly one hash, and only `=`. A list would read as OR, which the search cannot express since
-	 * every term it holds is intersected, so accepting one would answer a different question than it
-	 * appears to ask.
-	 *
-	 * \throws std::invalid_argument if it names no hash, more than one, a malformed one, a comparison
-	 *         other than `=`, or an algorithm other than sha256, the only one stored.
-	 */
+	//! Accepts exactly one `sha256 = <hash>` predicate; hash OR-lists are not representable here.
 	static SHA256 parseHashSearch( std::string_view arguments );
 
-	//! parseHashSearch() plus the check that no earlier predicate already named a hash.
-	//! \throws std::invalid_argument on the second one, which would otherwise silently intersect to
-	//!         the empty set.
+	//! Rejects a second hash predicate, which would otherwise silently intersect to empty.
 	void setHashSearch( std::string_view arguments );
 
 	//! Narrows \p target by \p term, keeping whichever bound is tighter on each side.
@@ -199,12 +173,7 @@ class SearchBuilder
 
 	RangeSearchInfo m_filesize_search {};
 
-	/**
-	 * @brief `system:sha256 = <hex>`, in the hash's own binary form.
-	 *
-	 * Stored as the 32 bytes rather than the 64 hex characters typed: the column it compares against
-	 * is `bytea`.
-	 */
+	//! `system:sha256 = <hex>`, stored in bytea form.
 	std::variant< std::monostate, SHA256 > m_hash_search {};
 
 	//! `system:record = 1234`; nothing else addresses a single known record.
@@ -258,22 +227,12 @@ class SearchBuilder
 
 	SearchBuilder() = default;
 
-	/**
-	 * @brief Fetches every term and folds them into the search's answer.
-	 *
-	 * The returned Set is the whole result, in ascending composite order and not yet paged. It is
-	 * inverted when the search consists only of exclusions, in which case it denotes everything
-	 * @em except the ids it holds.
-	 */
+	//! Whole unpaged result; inverted only when the search consists entirely of exclusions.
 	[[nodiscard]] Task< search::Set > evaluate(
 		DbClientPtr db,
 		std::vector< TagDomainID > tag_domain_ids,
 		bool want_hashes );
 
-	//! Runs the search and returns the requested page.
-	//! \param tag_domain_ids Restricts mapping lookups; empty searches every domain.
-	//! \param return_ids Retained for call-site compatibility; ids are always produced.
-	//! \param return_hashes Populates SearchResults::hashes.
 	[[nodiscard]] Task< SearchResults > query(
 		DbClientPtr db,
 		std::vector< TagDomainID > tag_domain_ids,
@@ -301,17 +260,14 @@ class SearchBuilder
 
 	void addFileDomain( FileDomainID value );
 
-	//! Resolves tag strings to IDs, splits them into the positive/negative sets, and extracts any
-	//! `system:` predicates. \return an error response if a tag cannot be resolved.
+	//! Resolves tag strings to IDs, splits them into sets, and extracts `system:` predicates.
+	//! Errors if a tag cannot be resolved.
 	Task< std::optional< drogon::HttpResponsePtr > > setTags( const std::vector< std::string >& tags );
 
-	//! Resolves `namespace:*` wildcards to namespace IDs. \return an error response if a namespace
-	//! cannot be resolved, or if the wildcard is negated (not supported yet).
+	//! Errors if a namespace cannot be resolved, or if the wildcard is negated (not supported yet).
 	Task< std::optional< drogon::HttpResponsePtr > > setWildcardNamespaces( const std::vector< std::string >& vector );
 
-	//! Resolves subtag wildcards (`cat*girl`, `*:cat girl`, `cat girl*`) to the tags they match, each
-	//! as its own wildcard group. A leading `-` negates. \return an error response if a wildcard
-	//! matches no existing tag.
+	//! A wildcard that matches no existing tag is an error. A leading `-` negates.
 	Task< std::optional< drogon::HttpResponsePtr > > setWildcardTags( const std::vector< std::string >& vector );
 
 	//! Translates a user-facing wildcard into a SQL LIKE pattern for `tags.tag_text`: `*` becomes `%`,
@@ -330,7 +286,7 @@ class SearchBuilder
 	void addNegativeTags( std::vector< TagID > tag_ids );
 	//! Namespaces a record must carry at least one tag in (the `namespace:*` wildcard).
 	void addNamespaces( std::vector< NamespaceID > namespace_ids );
-	//! \return false if the predicate is unrecognised.
+	//! False if the predicate is unrecognised.
 	[[nodiscard]] bool setHydrusSystemTags( std::string_view system_subtag );
 	//! Parses IDHAN system predicates (width, height, filesize, limit, tag count, ...) from tag strings.
 	void setSystemTags( const std::vector< std::string >& vector );

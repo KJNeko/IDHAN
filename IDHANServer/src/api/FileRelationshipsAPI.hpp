@@ -5,7 +5,6 @@
 namespace idhan::api
 {
 
-//! Endpoints for file relationships: marking a better duplicate and adding alternatives.
 class FileRelationshipsAPI : public drogon::HttpController< FileRelationshipsAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > setBetterDuplicate( drogon::HttpRequestPtr request );

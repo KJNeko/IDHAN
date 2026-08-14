@@ -14,7 +14,6 @@ namespace idhan::embeddings
 //! Below this magnitude a summed query has no direction left to search along.
 constexpr float MIN_QUERY_MAGNITUDE { 1e-6f };
 
-//! One resolved term: a unit vector and the signed weight it contributes to the query.
 struct WeightedVector
 {
 	std::vector< float > m_vector {};
@@ -22,7 +21,6 @@ struct WeightedVector
 	float m_weight { 1.0f };
 };
 
-//! Formats a vector in pgvector's text input format.
 [[nodiscard]] inline std::string toHalfvecLiteral( const std::span< const float > values )
 {
 	std::string literal {};
@@ -39,7 +37,6 @@ struct WeightedVector
 	return literal;
 }
 
-//! Sums \p terms by their signed weights and normalises the result.
 [[nodiscard]] inline std::expected< std::vector< float >, std::string > assembleQueryVector(
 	const std::span< const WeightedVector > terms,
 	const std::size_t dimensions )

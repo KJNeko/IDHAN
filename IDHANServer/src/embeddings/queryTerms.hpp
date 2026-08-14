@@ -11,7 +11,6 @@
 namespace idhan::embeddings
 {
 
-//! One term of a query, before its vector has been resolved.
 struct QueryTerm
 {
 	bool m_is_text { false };
@@ -24,7 +23,6 @@ struct QueryTerm
 	float m_weight { 1.0f };
 };
 
-//! Parses the `terms` array shared by the search and compare endpoints.
 [[nodiscard]] ExpectedResponse< std::vector< QueryTerm > > parseQueryTerms( const Json::Value& terms_json );
 
 } // namespace idhan::embeddings

@@ -6,12 +6,8 @@
 namespace idhan
 {
 
-//! IDHAN's primary coroutine return type. Like drogon::Task it is lazy: initial_suspend is
-//! suspend_always, so the body does not run until the task is awaited.
-//! \warning Because of that laziness, never store a capturing-lambda coroutine to await later (e.g.
-//!          via drogon::when_all): the closure is destroyed before the body runs, leaving the captures
-//!          dangling. Use a captureless lambda and pass all state as parameters (copied into the frame).
-//! \tparam T The co_returned value type; a void specialisation is provided below.
+//! Lazy coroutine task. Do not store capturing-lambda coroutines to await later; the closure can die
+//! before the body runs.
 template < typename T = void >
 struct [[nodiscard]] IDHANTask
 {
@@ -85,7 +81,6 @@ struct [[nodiscard]] IDHANTask
 	handle_type coro_;
 };
 
-//! void specialisation of IDHANTask, for coroutines that co_return nothing.
 template <>
 struct [[nodiscard]] IDHANTask< void >
 {

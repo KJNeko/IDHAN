@@ -18,7 +18,6 @@ class RemoteModule;
 namespace idhan::embeddings
 {
 
-//! Every term scored against every record, plus how far the first two records sit from each other.
 struct CompareResult
 {
 	//! [term][record]: outer index follows the terms given, inner index follows the record ids given.
@@ -27,7 +26,6 @@ struct CompareResult
 	std::optional< double > m_pair_distance {};
 };
 
-//! Scores each term against each record independently.
 [[nodiscard]] ExpectedTask< CompareResult > compareEmbeddings(
 	std::shared_ptr< modules::RemoteModule > module,
 	std::int32_t model_id,

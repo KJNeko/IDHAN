@@ -8,14 +8,8 @@ struct JobTaskStatus;
 struct JobTask;
 struct JobTaskPromise;
 
-//! Final awaiter for a job coroutine.
-//!
-//! Completion is published from await_suspend rather than from final_suspend() itself. JobRuntime's
-//! cleanup thread destroys a job's handle as soon as it observes m_done, so the flag must not become
-//! visible while the frame is still running: final_suspend() returns to compiler-generated code that
-//! is still executing in the frame, whereas by the time await_suspend is called the coroutine is
-//! fully suspended and another thread may legally destroy it. Nothing here touches the frame after
-//! the store.
+//! Publishes completion only once the coroutine is fully suspended; cleanup may destroy the frame as
+//! soon as it observes m_done.
 struct JobFinalAwaiter
 {
 	[[nodiscard]] static bool await_ready() noexcept { return false; }

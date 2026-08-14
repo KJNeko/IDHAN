@@ -9,7 +9,6 @@
 namespace idhan::api
 {
 
-//! Endpoints for image embeddings: what models exist, filling in the vectors, and searching them.
 class EmbeddingAPI : public drogon::HttpController< EmbeddingAPI >
 {
 	using ResponseTask = drogon::Task< drogon::HttpResponsePtr >;

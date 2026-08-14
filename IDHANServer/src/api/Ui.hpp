@@ -4,7 +4,6 @@
 namespace idhan
 {
 
-//! Serves the WebUI entry point. Deep links are handled by the SPA fallback in ServerContext.
 class Ui : public drogon::HttpController< Ui >
 {
 	drogon::Task< drogon::HttpResponsePtr > index( drogon::HttpRequestPtr );

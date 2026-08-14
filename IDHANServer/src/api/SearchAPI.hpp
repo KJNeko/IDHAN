@@ -7,7 +7,6 @@
 namespace idhan::api
 {
 
-//! Endpoint for searching records by tag and system predicates (backed by SearchBuilder).
 class SearchAPI : public drogon::HttpController< SearchAPI >
 {
   public:

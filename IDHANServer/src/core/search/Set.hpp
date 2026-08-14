@@ -10,21 +10,8 @@
 namespace idhan::search
 {
 
-/**
- * @brief A sorted, duplicate-free set of records, ordered by the composite key (sort_key, record_id).
- *
- * The composite is what makes the algebra legal. The set operations need both operands ordered by
- * the same strict-weak comparator; the sort key alone is not a total order, but record_id is unique,
- * so the pair is. And the key is a property of the record rather than of the set, so two Sets
- * necessarily agree on the key of any record they share, so intersecting two size-ordered Sets
- * yields a size-ordered Set.
- *
- * A Set may be @em inverted, meaning it denotes the complement of the ids it holds. The universe is
- * never constructed: negation is carried as a flag and rewritten through De Morgan at every
- * operation, so `A & ~B` is a difference rather than a complement followed by an intersection. Only
- * a final result that is still inverted needs the universe at all, and that becomes a `!= ALL(...)`
- * clause on the query that materialises the page.
- */
+//! Sorted by (sort_key, record_id), so set algebra preserves result ordering. Inverted sets carry
+//! complement semantics without materialising the universe until page fetch.
 class Set
 {
 	//! Sorted by (key, record_id); unique.
@@ -58,7 +45,6 @@ class Set
 	     std::optional< std::vector< SHA256 > > hashes,
 	     bool inverted = false );
 
-	//! An empty, non-inverted Set whose key column holds the alternative \p type selects.
 	[[nodiscard]] static Set emptyOf( SortKeyType type );
 
 	[[nodiscard]] const std::vector< RecordID >& ids() const noexcept { return m_ids; }

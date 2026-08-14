@@ -25,20 +25,7 @@ std::string arrayLiteral( const std::vector< T >& ids )
 	return literal;
 }
 
-//! Assembles the one query shape every term fetch uses.
-//!
-//! \param from_clause  the driving relation, e.g. "active_tag_mappings_final f"
-//! \param driver_alias the alias supplying record_id
-//! \param joins_file_info false when the driving relation already *is* file_info
-//! \param extra_joins  a predicate's own joins, or empty
-//! \param where_core   the term's condition, or empty for "everything"
-//! \param order        direction for the ORDER BY. Term fetches always ask for ASC and let the
-//!                     finished Set be reversed; only fetchPage(), which pages in SQL, needs DESC.
-//! \param random_order emits `ORDER BY random()`. Only ever set by fetchPage(): a RANDOM term
-//!                     fetch must still come back in record_id order, because that is the order
-//!                     the algebra merges in; randomising a term would silently corrupt it.
-//! \param distinct_rows dedups in the database. Set for the mapping fetches, where one record can
-//!                     satisfy a term through many tags at once.
+//! Term fetches must be record_id ordered for set algebra; random ordering is only valid in fetchPage().
 std::string buildTermQuery(
 	const SortType sort_type,
 	const bool want_hashes,
@@ -156,8 +143,6 @@ Set readSet( const drogon::orm::Result& result, const SortKeyType key_type, cons
 	return Set { std::move( ids ), std::move( keys ), std::move( hashes ) };
 }
 
-//! Runs \p query, binding the domain array to $1 when the context filters domains, and reports
-//! what it returned to the context's stats sink.
 Task< Set > runFetch( FetchContext ctx, std::string query, std::string label )
 {
 	const auto key_type { sortKeySpec( ctx.sort_type ).type };

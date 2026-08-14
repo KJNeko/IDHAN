@@ -25,24 +25,18 @@
 namespace idhan::api
 {
 
-//! Size-and-format-keyed cache path: thumbnails/t[hash 0:2]/[hash].[size].webp
 std::filesystem::path thumbnailPath( const std::string& hex, const std::size_t size )
 {
 	return getThumbnailsPath() / std::format( "t{}", hex.substr( 0, 2 ) ) / std::format( "{}.{}.webp", hex, size );
 }
 
-//! Cache-Control for a served thumbnail. There is no revalidation: within max-age the browser reuses
-//! its copy with no request at all. The window is a fixed one year, neither immutable nor operator
-//! configurable. Invalidation is manual: after changing generation settings the operator regenerates
-//! or purges, and clients pick up the change once their cache entry ages out.
+//! Invalidation is manual: after changing generation settings the operator regenerates or purges.
 std::string thumbnailCacheControl()
 {
 	return std::format( "private, max-age={}", helpers::default_max_age.count() );
 }
 
-//! Whether the cache holds a usable thumbnail at this path. Existence alone is not enough: a
-//! zero-byte file would be served as an empty image on every request, so it counts as a miss and is
-//! regenerated. Taken by value, because the kernel reads the path after this coroutine has suspended.
+//! Zero-byte cache files count as misses. path is by value because the kernel reads it after suspension.
 drogon::Task< bool > hasCachedThumbnail( std::filesystem::path path )
 {
 	const auto size { co_await IOUring::getInstance().fileSize( path ) };

@@ -13,7 +13,6 @@ namespace idhan::api
 {
 ExpectedTask< Json::Value > getInfo( ClusterID cluster_id, DbClientPtr transaction );
 
-//! Endpoints for managing storage clusters: add, list, info, modify, remove and scan.
 class ClusterAPI : public drogon::HttpController< ClusterAPI >
 {
 	using ResponseTask = drogon::Task< drogon::HttpResponsePtr >;

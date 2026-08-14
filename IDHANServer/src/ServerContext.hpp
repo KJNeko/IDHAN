@@ -16,15 +16,11 @@ namespace idhan
 {
 class ManagementConnection;
 
-//! Adds IDHAN's CORS headers to \p response.
 void addCORSHeaders( const drogon::HttpResponsePtr& response );
 
-//! Owns the server's process-wide state (the PostgreSQL management connection, cluster manager,
-//! module loader and logger) and drives the main run loop.
 class ServerContext
 {
 	std::shared_ptr< spdlog::logger > m_logger;
-	//! Connection to postgresql to be used for management/setup
 	std::unique_ptr< ManagementConnection > m_postgresql_management;
 	ConnectionArguments args;
 	std::unique_ptr< filesystem::ClusterManager > m_clusters {};
