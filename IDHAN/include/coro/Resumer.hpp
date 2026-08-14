@@ -1,9 +1,3 @@
-// Decides where a completed asynchronous operation resumes the coroutine that was awaiting it.
-//
-// The io backend runs completions on its own watcher thread, but a coroutine generally must not
-// resume there: in the server it belongs to a trantor event loop, and in the Monitor and Worker it
-// belongs to that process's RunLoop. Awaiters therefore capture a Resumer on the thread that
-// suspends and hand the continuation to it from the watcher thread.
 #pragma once
 
 #include <coroutine>
@@ -31,8 +25,6 @@ class Resumer
 };
 
 //! Returns the Resumer that a coroutine suspending on the CALLING thread must be resumed through.
-//! Implementations are free to return a thread_local (the server does, one per event loop) or a
-//! single process-wide object (the Monitor and Worker do).
 using ResumerProvider = Resumer* (*)() noexcept;
 
 //! Installs the process-wide provider. Call once at startup, before any io is submitted. Passing

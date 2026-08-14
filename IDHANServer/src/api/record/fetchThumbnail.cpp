@@ -41,14 +41,10 @@ std::string thumbnailCacheControl()
 	return std::format( "private, max-age={}", helpers::default_max_age.count() );
 }
 
-//! Whether the cache holds a usable thumbnail at this path.
-//!
-//! Existence alone is not enough. A zero-byte file here is a cache entry that will be served as an
-//! empty image on every subsequent request, so it is reported as a miss and regenerated instead.
-//! Caches written before thumbnails were published by rename can contain such files, which is why
-//! this heals rather than errors.
-//! Taken by value: the stat is submitted to the ring and the kernel reads the path after this
-//! coroutine has already suspended.
+//! Whether the cache holds a usable thumbnail at this path. Existence alone is not enough. A zero-
+//! byte file here is a cache entry that will be served as an empty image on every subsequent
+//! request, so it is reported as a miss and regenerated instead. Taken by value: the stat is
+//! submitted to the ring and the kernel reads the path after this coroutine has already suspended.
 drogon::Task< bool > hasCachedThumbnail( std::filesystem::path path )
 {
 	const auto size { co_await IOUring::getInstance().fileSize( path ) };
@@ -134,14 +130,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 					thumbnail_location.parent_path().string(),
 					std::strerror( -mkdir_result ) );
 
-			// Written to a sibling temp file and moved into place only once every byte is accounted
-			// for. The final path doubles as the cache key tested above, so it must never name a file
-			// that is empty, short, or still being written -- anything that lands there is served as a
-			// finished thumbnail from then on. The rename is atomic and the temp file is a sibling, so
-			// it stays on the same filesystem.
-			//
-			// The counter also keeps two concurrent requests for the same thumbnail off each other's
-			// temp file; previously they shared one descriptor to the final path and interleaved.
 			static std::atomic< std::uint64_t > temp_counter { 0 };
 			const auto temp_location {
 				thumbnail_location.parent_path() / std::format( "{}.{}.{}.tmp", hex, size, temp_counter.fetch_add( 1 ) )
@@ -163,12 +151,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 				write_error = e.what();
 			}
 
-			// Each step below is a separate statement rather than part of the try: co_await belongs
-			// outside a handler, and the write is the only step that reports failure by throwing.
 			if ( write_error.empty() )
 			{
-				// The write layer reported every byte as accepted; if the file on disk disagrees then
-				// something outside this handler touched it and publishing would cache that.
 				const auto written_size { co_await io.fileSize( temp_location ) };
 
 				if ( !written_size )
@@ -216,8 +200,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		}
 	}
 
-	// Reached either by a cache hit or by a write that reported success, so a missing or empty file
-	// here means the cache entry was removed or replaced underneath this request.
 	if ( !co_await hasCachedThumbnail( thumbnail_location ) )
 	{
 		co_await IOUring::getInstance().removeFile( thumbnail_location );

@@ -214,9 +214,6 @@ TEST_F( FlattenScanTest, StopsWhenCancelled )
 
 TEST_F( FlattenScanTest, StatsUpdatedFiresOncePerFileWithRunningTotals )
 {
-	// Scan is multi-threaded, so completion order across files is not guaranteed -- only that
-	// there is one call per file, that the running totals never decrease, and that the last call
-	// matches the final result.
 	const auto defs = fakeHashHex( 1 );
 	const auto good = fakeHashHex( 2 );
 	const auto missing = fakeHashHex( 99 );

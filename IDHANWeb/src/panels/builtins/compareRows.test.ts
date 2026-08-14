@@ -46,8 +46,6 @@ describe('buildCompareRows', () => {
         expect(rows[1].delta).toBeGreaterThan(0);
     });
 
-    // The matrix comes from our own request, so a mismatch is a server bug. Rendering the rows that
-    // do line up beats throwing away a whole response or, worse, mislabelling a number.
     it('builds only the rows both sides have', () => {
         expect(buildCompareRows(TERMS, DISTANCES.slice(0, 2))).toHaveLength(2);
         expect(buildCompareRows(TERMS.slice(0, 1), DISTANCES)).toHaveLength(1);
@@ -63,8 +61,6 @@ describe('deltaScale', () => {
         expect(deltaScale(rowsOf([0.01, -0.2, 0.15]))).toBeCloseTo(0.2);
     });
 
-    // Every distance in a CLIP-style model lands in a narrow band, so identical deltas are a real
-    // case rather than a contrived one, and dividing by that scale must not produce NaN.
     it('never returns zero', () => {
         expect(deltaScale(rowsOf([0, 0, 0]))).toBeGreaterThan(0);
         expect(deltaScale([])).toBeGreaterThan(0);
@@ -121,8 +117,6 @@ describe('orderTerms', () => {
         expect(order('label')).toEqual(['blonde hair', 'night', 'record 55']);
     });
 
-    // A term added since the last run has no numbers yet. It must not sort as if its difference were
-    // zero, which would bury it among the terms that genuinely do not discriminate.
     it('puts terms with no result last, in their typed order', () => {
         const withFresh: CompareTerm[] = [
             {kind: 'text', text: 'fresh one', enabled: true},
@@ -135,8 +129,6 @@ describe('orderTerms', () => {
         }
     });
 
-    // Alphabetical says nothing about results, so an unrun term belongs in its alphabetical place
-    // rather than exiled to the bottom.
     it('does not exile unrun terms when sorting alphabetically', () => {
         const withFresh: CompareTerm[] = [...TERMS, {kind: 'text', text: 'aaa fresh', enabled: true}];
         expect(order('label', withFresh)[0]).toBe('aaa fresh');

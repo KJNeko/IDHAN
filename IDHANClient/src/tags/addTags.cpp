@@ -143,10 +143,6 @@ QFuture< void > IDHANClient::addTags(
 			format_ns::format( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() ) );
 	}
 
-	// Deduplicate tags across all sets into unique_tags, recording each tag's position so the sets
-	// can be rebuilt as indices. A hash map keyed on the (namespace, subtag) pair replaces what was
-	// an O(n^2) linear scan of unique_tags per tag, which dominated large batches.
-	// Combines the two string hashes with boost::hash_combine (as in the server's SHA256.hpp).
 	struct TagPairHash
 	{
 		std::size_t operator()( const std::pair< std::string, std::string >& pair ) const noexcept
@@ -166,8 +162,6 @@ QFuture< void > IDHANClient::addTags(
 		indicies.reserve( set.size() );
 		for ( const auto& tag : set )
 		{
-			// the mapped value is only consumed when a new entry is inserted, where it equals the
-			// index the tag takes once appended to unique_tags just below
 			const auto [ itter, inserted ] = tag_index.try_emplace( tag, unique_tags.size() );
 			if ( inserted ) unique_tags.emplace_back( tag );
 			indicies.emplace_back( itter->second );

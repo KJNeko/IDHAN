@@ -13,10 +13,6 @@ ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
 	const std::vector< std::string >& tags,
 	DbClientPtr db )
 {
-	// Resolve each tag by its (namespace, subtag) components joined against the UNIQUE btree
-	// indexes on tag_namespaces.namespace_text / tag_subtags.subtag_text, rather than matching the
-	// concatenated tags.tag_text (which is only backed by a GIN trgm index — imprecise and slow for
-	// exact equality). WITH ORDINALITY lets us map each result row back to its exact input string.
 	std::vector< std::string > namespaces {};
 	std::vector< std::string > subtags {};
 	namespaces.reserve( tags.size() );
@@ -38,8 +34,6 @@ ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
 
 	const auto tag_id_result { co_await db->execSqlCoro( query, std::move( namespaces ), std::move( subtags ) ) };
 
-	// no size pre-check here: an unknown tag must reach the loop below for a proper 404,
-	// and duplicated input tags legitimately return fewer distinct map entries than tags.size()
 	std::unordered_map< std::string, TagID > tag_ids_result {};
 
 	for ( const auto& row : tag_id_result )

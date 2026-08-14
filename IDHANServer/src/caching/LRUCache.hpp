@@ -5,18 +5,10 @@
 #include <type_traits>
 #include <unordered_map>
 
-// A byte-budgeted membership cache with exact LRU eviction: "have I seen this value recently?"
-//
-// The constructor argument is a *byte* budget, not an element count; the element capacity is that
-// budget divided by the per-entry footprint (see kBytesPerEntry).
-//
-// Recency is exact: both add() and a successful exists() promote the value. Not thread safe.
 template < typename T >
 	requires std::is_trivially_copyable_v< T >
 class ValidLRUCache
 {
-	// Per-entry memory model for libstdc++ + glibc malloc on a 64-bit target. Deliberate
-	// over-estimates so the cache stays under the byte budget rather than creeping over it.
 	static constexpr std::size_t kPtr { sizeof( void* ) };
 	static constexpr std::size_t kAllocOverhead { 16 }; // malloc header + alignment, per allocation
 
@@ -29,8 +21,6 @@ class ValidLRUCache
 
 	static constexpr std::size_t kBytesPerEntry { kListNode + kMapNode + kMapBucket };
 
-	// most-recently-used at the front. list iterators stay valid across splice(), so promoting a
-	// value never invalidates its map entry.
 	std::size_t max_entries;
 	std::list< T > order {};
 	std::unordered_map< T, typename std::list< T >::iterator > index {};
@@ -89,11 +79,6 @@ class ValidLRUCache
 	}
 };
 
-// ValidLRUCache, but storing a value alongside each key and handing it back on lookup. Not thread
-// safe.
-//
-// The byte model counts only the fixed node footprint. For keys/values that own heap memory (e.g.
-// std::string), the budget bounds the node count, not the total heap those nodes point at.
 template < typename TKey, typename T >
 class LRUCache
 {
@@ -111,8 +96,6 @@ class LRUCache
 
 	static constexpr std::size_t kBytesPerEntry { kListNode + kMapNode + kMapBucket };
 
-	// most-recently-used at the front. list iterators stay valid across splice(), so promoting a node
-	// never invalidates its map entry.
 	std::size_t max_entries { 0 };
 	std::list< Node > order {};
 	std::unordered_map< TKey, typename std::list< Node >::iterator > index {};

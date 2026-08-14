@@ -20,10 +20,6 @@
 #undef IMAGE
 
 //! The wire protocol between the server and a module worker process.
-/** Bodies are JSON and bulk data is a blob descriptor, never inline. JSON costs more than a packed
- *  binary encoding would, but every message here is a control message -- an operation name, a MIME,
- *  a few integers -- so the cost is noise next to the work it describes, and a protocol you can
- *  read in a log is worth a great deal when the thing you are debugging lives in another process. */
 namespace idhan::ipc
 {
 
@@ -113,9 +109,6 @@ enum class CallbackKind : std::uint8_t
 };
 
 //! Wire tag for which alternative of MetadataInfo::m_metadata is populated.
-/** Its own enum rather than the variant's index on purpose: the index is a property of the
- *  declaration order in MetadataInfo.hpp, so inserting an alternative there would silently
- *  reinterpret every in-flight message. These values are fixed -- append only, never reorder. */
 enum class MetadataVariant : std::uint8_t
 {
 	NONE = 0,
@@ -127,9 +120,6 @@ enum class MetadataVariant : std::uint8_t
 };
 
 //! Whether \p value is one of the enumerators declared above.
-/** Each of these is a switch with no default, so -Wswitch-enum turns adding an enumerator without
- *  teaching the decoder about it into a build failure, rather than a value that arrives over a
- *  socket and decodes to something the sender never meant. */
 //!@{
 [[nodiscard]] constexpr bool isDeclared( const MessageType value ) noexcept
 {
@@ -287,13 +277,9 @@ enum class MetadataVariant : std::uint8_t
 //!@}
 
 //! Renders a rejected enum field for a diagnostic without assuming it holds what it should.
-/** asString() throws on an object or an array, and every caller of this is already on the path where
- *  a peer sent something unexpected -- the one place that must not turn a bad message into a throw. */
 [[nodiscard]] std::string describeWireValue( const Json::Value& json );
 
 //! Encodes a protocol enum for the wire: its underlying integer, never its name.
-/** A name on the wire buys nothing -- both ends are compiled from this header -- and costs a string
- *  allocation per field plus a parse that can fail in ways the enum itself cannot. */
 template < typename EnumT >
 	requires std::is_enum_v< EnumT >
 [[nodiscard]] constexpr Json::UInt toWire( const EnumT value ) noexcept
@@ -302,9 +288,6 @@ template < typename EnumT >
 }
 
 //! Narrows a wire value back to \p EnumT, rejecting anything that is not a declared enumerator.
-/** Returns nullopt rather than an out-of-range enum for the same reason the worker checks
- *  requiredFlag before downcasting: the value arrived over a socket, so a peer that is confused or
- *  a version behind has to produce an error response, not an object in a state no switch handles. */
 template < typename EnumT >
 	requires std::is_enum_v< EnumT >
 [[nodiscard]] std::optional< EnumT > fromWire( const Json::Value& json ) noexcept
@@ -324,9 +307,6 @@ template < typename EnumT >
 }
 
 //! The interface flag a module must declare before \p op may be dispatched to it.
-/** The worker checks this before downcasting. A module_index that does not match the op is a host
- *  bug, but it arrives over a socket, and turning it into an error response rather than a bad
- *  static_pointer_cast is the difference between a failed request and a corrupted worker. */
 [[nodiscard]] constexpr ModuleType requiredFlag( const CallOp op ) noexcept
 {
 	switch ( op )
@@ -379,11 +359,6 @@ struct ManifestEntry
 [[nodiscard]] std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::Value& json );
 
 //! An order-sensitive description of a whole manifest, used to detect a library changing on disk.
-/** Module indexes only mean anything relative to the factory that produced them. If a library is
- *  rebuilt while the server is running -- routine during development -- an index registered against
- *  the old build can silently address a different module in the new one. Every worker resends its
- *  manifest at startup and the host compares this string; a mismatch fails the call loudly instead
- *  of quietly thumbnailing with the wrong module. */
 [[nodiscard]] std::string manifestSignature( const std::vector< ManifestEntry >& entries );
 
 [[nodiscard]] Json::Value toJson( const ModuleVersion& version );

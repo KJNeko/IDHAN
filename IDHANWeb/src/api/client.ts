@@ -124,8 +124,6 @@ export const api = {
     const params = new URLSearchParams({ tag: prefix });
     if (opts.domain !== undefined) params.set('tag_domain', String(opts.domain));
     if (opts.limit !== undefined) params.set('limit', String(opts.limit));
-    // The server emits {value, tag_text, tag_id, count, similarity}; normalise to the AutocompleteResult
-    // shape panels consume. `value`/`tag_text` are the same string; either is the tag text.
     const raw = await request<AutocompleteRow[]>(`/tags/autocomplete?${params.toString()}`, { signal });
     return raw.map((row) => ({
       tag_id: row.tag_id,

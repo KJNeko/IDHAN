@@ -8,9 +8,6 @@ namespace idhan::api
 
 ExpectedTask< NoteID > findOrCreateNote( DbClientPtr db, std::string text )
 {
-	// ON CONFLICT instead of catching the UNIQUE violation: the previous catch treated
-	// every DrogonDbException as the constraint firing, so an unrelated DB failure was
-	// misreported as "Failed to find existing note after insert conflict"
 	const auto note_creation { co_await db->execSqlCoro(
 		"INSERT INTO notes (note) VALUES ($1) ON CONFLICT (note) DO NOTHING RETURNING note_id", text ) };
 

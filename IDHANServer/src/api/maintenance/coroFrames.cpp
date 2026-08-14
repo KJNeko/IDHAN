@@ -28,8 +28,6 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::coroFrames( [[maybe_unus
 
 	response[ "live_count" ] = static_cast< Json::UInt64 >( frames.size() );
 
-	// arrayValue explicitly: a default-constructed Json::Value stays null until the first append, so
-	// an empty frame list would serialize as null rather than [].
 	Json::Value frames_json { Json::arrayValue };
 
 	for ( const auto& frame : frames )
@@ -45,8 +43,6 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::coroFrames( [[maybe_unus
 		frames_json.append( std::move( entry ) );
 	}
 
-	// Oldest first (snapshotCoroFrames sorts by serial): a frame near the top that never disappears
-	// across successive polls is the leak.
 	response[ "frames" ] = std::move( frames_json );
 #else
 	response[ "tracking" ] = false;

@@ -1,7 +1,3 @@
-// The SPA history fallback and the Vite dev proxy both need to know which paths belong to the API,
-// but they read that list from different files in different languages. Drift between them is a
-// silent, dev-only bug: an endpoint 404s behind the dev proxy while working perfectly in
-// production. These tests make the two files fail loudly instead.
 
 #include <gtest/gtest.h>
 
@@ -95,8 +91,6 @@ TEST( ApiPrefixes, MatchesOnSegmentBoundaries )
 	EXPECT_TRUE( idhan::api::isApiPath( "/records/1/info" ) );
 	EXPECT_TRUE( idhan::api::isApiPath( "/hyapi/get_files/file" ) );
 
-	// A SPA route that merely starts with the same characters must not be captured, or the client
-	// route would return a 404 instead of the app.
 	EXPECT_FALSE( idhan::api::isApiPath( "/searching" ) );
 	EXPECT_FALSE( idhan::api::isApiPath( "/tagsomething" ) );
 

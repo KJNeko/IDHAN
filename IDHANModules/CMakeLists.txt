@@ -19,32 +19,14 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
 		libavutil
 		libswscale)
 
-# The IPC layer, shared by the server and the module runner. Deliberately knows nothing about either
-# one: no drogon, no ModuleLoader, no premade module. It speaks the module ABI types (they are what
-# crosses the wire) and nothing else.
-#
-# Everything platform-specific lives under ipc/src/linux. Modules are Linux-only for now; a Windows
-# backend would add ipc/src/windows implementing the same Blob/Frame/UniqueFd headers (named pipe,
-# CreateFileMapping section, DuplicateHandle) without any caller changing.
 AddFGLLibrary(IDHANModuleIPC OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/ipc/src ${CMAKE_CURRENT_SOURCE_DIR}/ipc/include)
 target_link_libraries(IDHANModuleIPC PUBLIC IDHANModules IDHAN Jsoncpp_lib)
 
-# The worker process. One of these is spawned per module library; the server itself never dlopens a
-# module again, so a leak or a crash in one is contained to the process hosting it.
 AddFGLExecutable(IDHANModuleRunner ${CMAKE_CURRENT_SOURCE_DIR}/runner-src)
 target_link_libraries(IDHANModuleRunner PRIVATE IDHANModuleIPC IDHANModules IDHAN spdlog::spdlog ${CMAKE_DL_LIBS})
 
-# Headers shared by the premade libraries (the vips MIME map and the vips bring-up). Header-only on
-# purpose: the libraries are separate dlopen units, so sharing compiled code between them would only
-# duplicate it back into each .so.
 set(IDHAN_PREMADE_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/premade/common)
 
-# Each premade library is dlopened into its OWN worker process, so each one is a self-contained
-# MODULE exporting getModulesFunc/init/deinit and running its own VIPS_INIT. Splitting them is what
-# makes the isolation per-backend: a libvips leak cannot reach the FFmpeg worker.
-#
-# Every one of them links vips, even the FFmpeg one -- ThumbnailerModuleI::createThumbnailFile and
-# ThumbnailInfo(VipsImagePtr&&) live in the shared IDHANModules object library and encode through it.
 function(AddPremadeModule NAME SRC_DIR)
 	AddFGLModule(${NAME} ${SRC_DIR})
 
@@ -63,9 +45,6 @@ AddPremadeModule(IDHANFFmpeg ${CMAKE_CURRENT_SOURCE_DIR}/premade/ffmpeg)
 AddPremadeModule(IDHANPsd ${CMAKE_CURRENT_SOURCE_DIR}/premade/psd)
 AddPremadeModule(IDHANArchive ${CMAKE_CURRENT_SOURCE_DIR}/premade/archives)
 
-# Optional: the embedding backend needs onnxruntime, which is a heavy dependency and not something
-# every deployment wants. Absent, the library is simply not built and the server logs that no
-# embedding model is available -- exactly as it behaves when the models directory is empty.
 pkg_check_modules(ONNXRUNTIME IMPORTED_TARGET libonnxruntime)
 
 if (ONNXRUNTIME_FOUND)
@@ -76,8 +55,6 @@ else ()
 	message(STATUS "onnxruntime not found -- skipping IDHANEmbedding (image embeddings unavailable)")
 endif ()
 
-# Backend-specific dependencies. Keeping these off the shared helper is the point of the split:
-# only the FFmpeg worker links FFmpeg, only the archive worker links libarchive.
 target_link_libraries(IDHANFFmpeg PRIVATE PkgConfig::FFMPEG)
 target_link_libraries(IDHANArchive PRIVATE LibArchive::LibArchive chardet)
 

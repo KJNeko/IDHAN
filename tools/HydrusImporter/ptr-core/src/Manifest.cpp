@@ -107,9 +107,6 @@ CompactManifest readManifest( const std::filesystem::path& dir )
 	CompactManifest manifest {};
 	manifest.format_version = require( root, "format_version" ).asUInt();
 
-	// Checked before anything else is read. Every field below is required, so a version 1 manifest
-	// would otherwise fail on whichever new key happened to be looked up first -- a confusing way
-	// to say "this directory is too old".
 	if ( manifest.format_version != CHUNK_FORMAT_VERSION )
 		throw std::runtime_error(
 			std::format(
@@ -142,9 +139,6 @@ CompactManifest readManifest( const std::filesystem::path& dir )
 
 bool isCompactedDirectory( const std::filesystem::path& dir )
 {
-	// A directory with no manifest is simply not compacted, which is the ordinary case and not
-	// worth a word. Separating that from a manifest that exists but will not load is what lets the
-	// second case be a warning: such a directory looks compacted and silently will not import.
 	std::error_code ec;
 	if ( !std::filesystem::exists( dir / MANIFEST_FILENAME, ec ) ) return false;
 

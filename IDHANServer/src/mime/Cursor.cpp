@@ -60,8 +60,6 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 		FGL_ASSERT( m_buffer_pos <= pos, "Buffer was not expected at it's current pos" );
 		const std::size_t offset { pos - m_buffer_pos };
 
-		// only the bytes from pos onward are valid; reporting the full buffer size here
-		// would let callers read past the end of m_buffer
 		const std::size_t available { offset <= m_buffer.size() ? m_buffer.size() - offset : 0 };
 
 		co_return std::make_pair( m_buffer.data() + offset, available );
@@ -151,8 +149,6 @@ void Cursor::jumpTo( const std::int64_t pos )
 {
 	if ( pos < 0 )
 	{
-		// negative positions are relative to the end of the data (-1 = last byte);
-		// one further back than the data has is unsatisfiable, so park at EOF where matches fail
 		const auto from_end { static_cast< std::size_t >( -pos ) };
 		m_pos = from_end > size() ? size() : size() - from_end;
 	}

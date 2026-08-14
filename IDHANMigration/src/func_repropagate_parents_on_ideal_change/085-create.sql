@@ -1,9 +1,3 @@
--- Aliasing a tag after content is already tagged repairs active_tag_mappings.ideal_tag_id
--- (migration 77) but never repropagated active_tag_mappings_parents - there was no AFTER UPDATE
--- trigger on active_tag_mappings. Fires only when the effective tag actually changes.
---
--- The delete branch checks for another raw synonym on the same record still resolving to the
--- old effective tag before removing anything, since two synonyms can share one parent-tag row.
 
 CREATE OR REPLACE FUNCTION repropagate_parents_on_ideal_change()
     RETURNS TRIGGER AS
@@ -28,8 +22,6 @@ BEGIN
           AND origin_id = old_effective
           AND tag_domain_id = OLD.tag_domain_id
           AND NOT internal;
-        -- trg_atmp_internal_delete (migration 91/170) cascades this further up any ancestor
-        -- chain automatically.
     END IF;
 
     INSERT INTO active_tag_mappings_parents (record_id, tag_id, origin_id, tag_domain_id)

@@ -46,8 +46,6 @@ describe('parseTermInput', () => {
         expect(parseTermInput('catgirl:')).toMatchObject({kind: 'text', text: 'catgirl:', weight: 1});
     });
 
-    // The record forms are what the manual-id entry rides on; the whole-string match has to win over
-    // the weight suffix or `record:1234` would become the phrase `record` at weight 1234.
     it('reads record:<id> as a reference, not a weighted phrase', () => {
         expect(parseTermInput('record:1234')).toEqual({
             kind: 'record',
@@ -111,8 +109,6 @@ describe('parseCompareTerm', () => {
         expect(parseCompareTerm('blonde hair')).toEqual({kind: 'text', text: 'blonde hair', enabled: true});
     });
 
-    // The whole reason this is not parseTermInput: compare terms have no weights, so a trailing
-    // number is part of the phrase rather than a weight suffix.
     it('keeps a trailing number in the phrase', () => {
         expect(parseCompareTerm('sunset:2019')).toEqual({kind: 'text', text: 'sunset:2019', enabled: true});
         expect(parseCompareTerm('catgirl:0.5')).toEqual({kind: 'text', text: 'catgirl:0.5', enabled: true});
@@ -122,8 +118,6 @@ describe('parseCompareTerm', () => {
         expect(parseCompareTerm('rating:safe')).toEqual({kind: 'text', text: 'rating:safe', enabled: true});
     });
 
-    // There is no negation here, so a dash is just a character. Stripping it would quietly change
-    // the phrase into one the user did not type.
     it('treats a leading dash as text', () => {
         expect(parseCompareTerm('-blurry')).toEqual({kind: 'text', text: '-blurry', enabled: true});
     });

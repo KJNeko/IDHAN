@@ -23,8 +23,6 @@ PTRFlattenWorker::PTRFlattenWorker( std::filesystem::path ptr_directory,
 {
 	setAutoDelete( false );
 
-	// statsUpdated crosses from the pool thread to the GUI thread as a queued connection, which
-	// copies the argument through the meta-type system rather than passing the reference along.
 	qRegisterMetaType< FlattenLiveStats >( "idhan::hydrus::ptr::FlattenLiveStats" );
 }
 

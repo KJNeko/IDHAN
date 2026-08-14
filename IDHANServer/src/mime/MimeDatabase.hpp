@@ -93,9 +93,6 @@ class MimeDatabase
 
 	friend std::shared_ptr< MimeDatabase > getMimeDatabase();
 
-	// Copy-on-write: scans hold a snapshot of this pointer across their co_awaits, so a
-	// concurrent reloadMimeParsers() swapping in a new vector can never invalidate what
-	// an in-flight scan is iterating. The lock is only ever held for the pointer copy/swap.
 	std::shared_ptr< const std::vector< MimeIdentifier > > m_identifiers {
 		std::make_shared< std::vector< MimeIdentifier > >()
 	};

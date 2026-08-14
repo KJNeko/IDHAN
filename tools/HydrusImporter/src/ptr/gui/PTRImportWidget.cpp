@@ -67,8 +67,6 @@ void PTRImportWidget::updateCorpusNote()
 {
 	const auto path = std::filesystem::path( ui->directoryPath->text().toStdString() );
 
-	// A path that is not a compacted directory says nothing either way: it may be a raw corpus, or
-	// simply not exist yet while the user is still typing.
 	if ( !idhan::hydrus::ptr::isCompactedDirectory( path ) )
 	{
 		ui->corpusNoteLabel->setVisible( false );
@@ -82,8 +80,6 @@ void PTRImportWidget::updateCorpusNote()
 	}
 	catch ( const std::exception& e )
 	{
-		// isCompactedDirectory just read the same file, so this is a race with something rewriting
-		// it. Not worth a dialog: the import will report it properly if it persists.
 		spdlog::debug( "Could not read the manifest at {} for the corpus note: {}", path.string(), e.what() );
 		ui->corpusNoteLabel->setVisible( false );
 		return;
@@ -169,8 +165,6 @@ void PTRImportWidget::onUpdateCompleted( const idhan::hydrus::ptr::PTRHistoryEnt
 	m_history_model->addEntry( entry );
 	ui->historyView->scrollToBottom();
 
-	// Re-measuring column widths against every row is O(n) per insert, which gets expensive over a
-	// long PTR sync — so only do it every so often rather than on every single completed update.
 	constexpr int COLUMN_RESIZE_INTERVAL = 20;
 	if ( m_history_model->rowCount() % COLUMN_RESIZE_INTERVAL == 0 ) ui->historyView->resizeColumnsToContents();
 }

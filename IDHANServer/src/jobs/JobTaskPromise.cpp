@@ -23,9 +23,6 @@ std::suspend_always JobTaskPromise::initial_suspend()
 
 void JobFinalAwaiter::await_suspend( const std::coroutine_handle< JobTaskPromise > handle ) const noexcept
 {
-	// Take our own reference to the status before publishing: the instant m_done is visible the
-	// cleanup thread may erase the JobContext and destroy this frame, so the status must be reachable
-	// without touching the promise again, and nothing may read the frame after the store below.
 	const std::shared_ptr< JobTaskStatus > status { handle.promise().m_status };
 
 	status->m_completion_time = std::chrono::steady_clock::now();

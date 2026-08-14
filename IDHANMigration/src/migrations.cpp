@@ -37,8 +37,6 @@ void updateMigrations( pqxx::nontransaction& tx, const std::string_view schema )
 		}
 	}
 
-	// current_id > 0 means this schema has migrated before - an existing database, which some
-	// migrations can take a while to rebuild against.
 	if ( current_id > 0 )
 	{
 		spdlog::warn( "================================================================" );

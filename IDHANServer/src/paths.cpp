@@ -44,18 +44,12 @@ std::filesystem::path getExecutableDir()
 
 std::vector< std::filesystem::path > getModulePaths()
 {
-	// Relative to the binary before the working directory. A build tree keeps modules/ next to the
-	// server binary, and resolving against the CWD meant the server only found its own modules when
-	// launched from that directory -- silently finding nothing otherwise.
 	const std::array< std::filesystem::path, 3 > module_paths {
 		{ getExecutableDir() / "modules", "./modules", IDHAN_MODULES_PATH }
 	};
 
 	std::vector< std::filesystem::path > paths {};
 
-	// Canonical, because the search locations overlap: launched from the build tree's bin/, the
-	// executable's directory and the working directory are the same place. Registering a library
-	// twice would give it two sets of module indexes and two worker processes.
 	std::set< std::filesystem::path > seen {};
 
 	for ( const auto& search_path : module_paths )
@@ -102,9 +96,6 @@ std::filesystem::path getModuleRunnerPath()
 				return;
 			}
 
-			// Next to the server binary first, and resolved against the binary rather than the working
-			// directory: a build tree keeps the runner beside IDHANServer, and preferring it means a
-			// development build never picks up an installed copy built against a different module ABI.
 			const std::array< std::filesystem::path, 3 > candidates {
 				{ getExecutableDir() / "IDHANModuleRunner", "./IDHANModuleRunner", IDHAN_MODULE_RUNNER_PATH }
 			};
@@ -206,21 +197,12 @@ std::filesystem::path getPluginsPath()
 
 std::vector< std::size_t > getCacheableThumbnailSizes()
 {
-	// Read live (no call_once): an operator can edit cacheable_sizes while the server runs and have it
-	// take effect on the next thumbnail generation. The config layer re-reads the file per call; this is
-	// only reached on a cache miss, so the parse cost is dwarfed by the generation it gates.
 	return idhan::config::getArray< std::size_t >(
 		"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
 }
 
 bool getThumbnailCachingEnabled()
 {
-	// Read live for the same reason as the size list above: it only gates work that follows a cache
-	// miss, so re-reading costs nothing next to the generation it guards, and an operator debugging a
-	// thumbnailer can turn the cache off without restarting.
-	//
-	// Silent default: config::get would log "you might wanna set this value" on every miss for a key
-	// almost nobody needs to set, which is a warning per generated thumbnail.
 	return idhan::config::getSilentDefault< bool >( "thumbnails", "cache", true );
 }
 

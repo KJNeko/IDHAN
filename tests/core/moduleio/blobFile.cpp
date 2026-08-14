@@ -16,8 +16,6 @@
 using namespace idhan;
 
 //! A temporary file holding \p size deterministic bytes, removed when it goes out of scope.
-/** Deterministic rather than random so a failure names a byte the test can recompute, and so a
- *  reproduction does not depend on a seed being logged. */
 class TempFile
 {
 	std::filesystem::path m_path {};
@@ -96,8 +94,7 @@ TEST( BlobFile, ReadsWholeFile )
 	}
 }
 
-//! Reading in pieces at arbitrary offsets reassembles the file. This is what every converted module
-//! actually does -- none of them read the whole thing in one call.
+//! Reading in pieces at arbitrary offsets reassembles the file.
 TEST( BlobFile, ReadsRangesAtOffsets )
 {
 	const TempFile file { 65536 + 123 };
@@ -123,9 +120,6 @@ TEST( BlobFile, ReadsRangesAtOffsets )
 }
 
 //! Reading past the end yields 0 rather than an error.
-/** Load-bearing, not cosmetic: a demuxer probing beyond the end for a trailer is normal, and the
- *  FFmpeg and vips sources both treat a zero return as end-of-file. An error here would surface as
- *  an unreadable video rather than as anything resembling its cause. */
 TEST( BlobFile, ReadPastEndReturnsZero )
 {
 	const TempFile file { 4096 };
@@ -168,9 +162,6 @@ TEST( BlobFile, EmptyBufferReadsNothing )
 }
 
 //! Dropping the descriptor keeps the mapping usable.
-/** This is what the worker does to its call input, so that /proc/self/fd names nothing. If the
- *  mapping did not outlive the descriptor every module call would fail, so the test is really
- *  asserting that the mitigation is free. */
 TEST( BlobFile, SurvivesDescriptorClosure )
 {
 	const TempFile file { 8192 };
@@ -194,8 +185,6 @@ TEST( BlobFile, SurvivesDescriptorClosure )
 
 //! Nothing is copied: the mapping is of the file itself, so it tracks the page cache rather than a
 //! snapshot taken at open time.
-/** Also the closest this suite gets to asserting the memory property the whole design exists for.
- *  A memfd copy would return the old bytes here. */
 TEST( BlobFile, MapsTheFileRatherThanACopy )
 {
 	const TempFile file { 4096 };

@@ -7,9 +7,6 @@ namespace idhan
 {
 
 //! A ModuleFile over memory somebody else owns.
-/** Backs ModuleFile::fromBytes. The host's real backends (a restricted io_uring, a mapped memfd)
- *  live in the ipc layer, which this header cannot reach -- ipc depends on the module ABI, not the
- *  other way round. This one can live here because it depends on nothing at all. */
 class MemoryFile final : public ModuleFile
 {
 	std::span< const std::byte > m_bytes;
@@ -24,9 +21,6 @@ class MemoryFile final : public ModuleFile
 		const std::span< std::byte > out,
 		const std::size_t offset ) const override
 	{
-		// Past the end is not an error: a demuxer probing beyond the end of a file is ordinary
-		// behaviour, and every backend has to agree on that or modules would need a branch per
-		// backend.
 		if ( offset >= m_bytes.size() ) return 0;
 
 		const std::size_t available { m_bytes.size() - offset };

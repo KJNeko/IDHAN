@@ -19,8 +19,6 @@ std::size_t indexOf( const std::vector< RecordID >& ids, const RecordID id )
 
 TEST_F( SearchFixture, RecordTimeOrdersByCreationTimeAndDoesNotError )
 {
-	// this is also the regression test for the pre-existing "records.creation_time doesn't exist"
-	// bug: prior to the 194-records.sql migration this sort type errored unconditionally.
 	const auto r_old { createSearchableRecord( "record_time_old", 100, "image/jpeg", -300 ) };
 	const auto r_mid { createSearchableRecord( "record_time_mid", 100, "image/jpeg", -60 ) };
 	const auto r_new { createSearchableRecord( "record_time_new", 100, "image/jpeg", 0 ) };
@@ -36,8 +34,6 @@ TEST_F( SearchFixture, ModifiedTimeOrdersAndExcludesUnmodifiedRecords )
 	const auto r_old { createSearchableRecord( "modified_old", 100, "image/jpeg", -300 ) };
 	const auto r_new { createSearchableRecord( "modified_new", 100, "image/jpeg", 0 ) };
 
-	// createSearchableRecord always stamps modified_time; NULL it out here to model a record
-	// that's never actually been modified, which sorting by modified_time should exclude
 	const auto r_unmodified { createSearchableRecord( "modified_none" ) };
 	{
 		pqxx::work tx { *conn };
@@ -200,8 +196,6 @@ TEST_F( SearchFixture, RatioExcludesZeroHeightAndMissingResolution )
 	const auto r_tall { createSearchableRecord( "ratio_tall", 100, "image/jpeg" ) };
 	insertImageMetadata( r_tall, 9, 16 );
 
-	// a zero height must not crash the query via division by zero, and — per the exclusion
-	// policy — must not appear in the results either, since NULLIF turns its ratio into NULL
 	const auto r_zero_height { createSearchableRecord( "ratio_zero_height", 100, "image/jpeg" ) };
 	insertImageMetadata( r_zero_height, 16, 0 );
 
@@ -218,8 +212,6 @@ TEST_F( SearchFixture, NumPixelsHandlesLargeResolutionWithoutOverflowAndExcludes
 	const auto r_small { createSearchableRecord( "pixels_small", 100, "image/jpeg" ) };
 	insertImageMetadata( r_small, 10, 10 ); // 100
 
-	// 50000 * 50000 = 2.5e9, which overflows a 32-bit int (max ~2.147e9); the bigint cast must
-	// prevent this from wrapping negative and sorting first instead of last
 	const auto r_huge { createSearchableRecord( "pixels_huge", 100, "image/jpeg" ) };
 	insertImageMetadata( r_huge, 50000, 50000 );
 
@@ -237,16 +229,11 @@ TEST_F( SearchFixture, NumTagsCountsZeroDirectAndParentImpliedTagsAndNeverExclud
 	const auto tag_child { createTag( "num_tags:child" ) };
 	createParent( tag_parent, tag_child );
 
-	// zero tags is a real, sortable value here — unlike the other nullable sorts, this record
-	// must NOT be excluded
 	const auto r_zero { createSearchableRecord( "num_tags_zero" ) };
 
 	const auto r_one { createSearchableRecord( "num_tags_one" ) };
 	createMapping( tag_direct, r_one );
 
-	// tagging with the child implies the parent via active_tag_mappings_parents — a record with
-	// zero *direct* active_tag_mappings rows here still has one parent-implied tag, which the raw
-	// active_tag_mappings table alone would miss
 	const auto r_parent_implied { createSearchableRecord( "num_tags_parent_implied" ) };
 	createMapping( tag_child, r_parent_implied );
 

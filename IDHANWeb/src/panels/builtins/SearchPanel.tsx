@@ -76,16 +76,9 @@ function toTermRows(steps: SearchStep[]): TermRow[] {
     const rows: TermRow[] = [];
     let previous: number | null = null;
 
-    // Driven off the fold steps, since those are recorded in the order terms were applied. The fetches
-    // are recorded in completion order, which is arbitrary — reading the table in that order would
-    // imply a sequence the search never had.
     for (const fold of steps.filter((s) => s.kind === 'fold')) {
         const fetch = steps.find((s) => s.kind === 'fetch' && s.step === fold.step);
 
-        // On an inverted result the counted set is the exclusion, so it *grows* as terms are added and
-        // the subtraction runs the other way. A search is inverted for all of its folds or none of
-        // them — a positive term always establishes a non-inverted result — so this never mixes regimes
-        // mid-table.
         const removed =
             previous === null ? null : Math.max(0, fold.inverted ? fold.rows - previous : previous - fold.rows);
 
@@ -165,8 +158,6 @@ function SearchPanel({ host }: PanelProps) {
     const [showBreakdown, setShowBreakdown] = useState(initial.showBreakdown);
     const [steps, setSteps] = useState<SearchStep[] | null>(null);
 
-    // Read through a ref so runSearch does not have to re-create itself (and re-run the mount effect's
-    // dependency) every time the toggle flips.
     const breakdownRef = useRef(showBreakdown);
     breakdownRef.current = showBreakdown;
 
@@ -288,9 +279,6 @@ function SearchPanel({ host }: PanelProps) {
         breakdownRef.current = next;
         persist({showBreakdown: next});
 
-        // The server only returns the breakdown when asked, so switching it on has nothing to show until
-        // the next search. Re-run only if there is already a result on screen — turning it on before
-        // searching should not fire a query the user did not ask for.
         if (next && summary !== null) void runSearch(tags, sortBy, sortOrder);
         if (!next) setSteps(null);
     }

@@ -32,8 +32,6 @@ std::expected< std::shared_ptr< WorkerProcess >, std::string > WorkerPool::acqui
 
 	if ( const auto started { worker->start() }; !started ) return std::unexpected( started.error() );
 
-	// Only persistent libraries are remembered. A single-run worker is owned solely by the call it
-	// was spawned for and dies with it.
 	if ( m_residency == ModuleResidency::PERSISTENT ) m_worker = worker;
 
 	return worker;
@@ -51,9 +49,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerPool::dispatch(
 	Json::Value body,
 	std::shared_ptr< const CallInput > input )
 {
-	// Two attempts at most. A worker that dies mid-call takes an innocent request with it, so one
-	// retry in a fresh process is worth it -- but a module that rejects a file will reject it again,
-	// and a file that reliably crashes a module would otherwise retry forever.
 	for ( int attempt = 0; attempt < 2; ++attempt )
 	{
 		auto worker { acquire() };
@@ -109,8 +104,6 @@ void WorkerPool::maintain()
 
 		if ( m_worker == nullptr || !m_worker->alive() ) return;
 
-		// Only ever at a quiescent point. Retiring a worker mid-call would turn a memory policy into
-		// a failed request, which is exactly the sort of surprise this is supposed to prevent.
 		if ( m_worker->activeCalls() > 0 ) return;
 
 		if ( m_worker->rssKb() > m_rss_limit_kb )

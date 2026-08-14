@@ -48,10 +48,6 @@ const char* getCLIConfig( const std::string_view group, const std::string_view n
 std::string_view getUserConfigPath();
 
 //! Parses a boolean written as text, the way an env var or a CLI flag carries one.
-/** Environment and CLI values are strings, so a bool arrives as "true"/"false" -- and bool satisfies
- *  std::is_integral, so without this it would fall into the numeric branch and std::stoll would
- *  throw on the word. Accepts the spellings people actually write, case-insensitively; anything else
- *  is not a boolean and is reported as such rather than guessed at. */
 [[nodiscard]] inline std::optional< bool > parseBool( const std::string_view value )
 {
 	std::string lowered { value };
@@ -64,9 +60,6 @@ std::string_view getUserConfigPath();
 }
 
 //! Parses an integer written as text, without letting a malformed one abort the process.
-/** std::stoll throws, and a config read happens on paths with no handler above them -- a typo in one
- *  env var used to be a terminate() at startup. An unusable value is reported and treated as absent,
- *  so the next source down (config file, then the default) answers instead. */
 template < typename T >
 [[nodiscard]] std::optional< T > parseIntegral( const std::string_view value, const std::string_view source )
 {
@@ -98,8 +91,6 @@ template < typename T >
 		{
 			return std::string( value );
 		}
-		// Before the integral branch, not inside it: bool is an integral type, and "false" is not a
-		// number.
 		else if constexpr ( std::is_same_v< T, bool > )
 		{
 			if ( const auto parsed { parseBool( value ) } ) return *parsed;
@@ -184,9 +175,6 @@ template < typename T >
 		{
 			if ( const auto value = ( *table )[ name ] )
 			{
-				// Every branch checks the accessor before dereferencing it. toml++ returns null when
-				// the value in the file is not the type being asked for -- `use_tls = "true"` rather
-				// than `use_tls = true` -- and dereferencing that killed the process over a typo.
 				if constexpr ( std::is_same_v< T, std::string > )
 				{
 					if ( const auto* string_value = value.as_string() ) return **string_value;
@@ -195,8 +183,6 @@ template < typename T >
 				{
 					if ( const auto* bool_value = value.as_boolean() ) return **bool_value;
 
-					// Quoted in the file. Accepted rather than rejected: the intent is unambiguous,
-					// and it is the same spelling the env var and CLI paths take.
 					if ( const auto* string_value = value.as_string() )
 					{
 						if ( const auto parsed { parseBool( **string_value ) } ) return parsed;

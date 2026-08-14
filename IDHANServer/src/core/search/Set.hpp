@@ -1,8 +1,3 @@
-// A set of record ids carrying, in parallel, the value the search sorts by and (when the caller
-// asked for hashes) each record's sha256.
-//
-// Deliberately free of drogon, libpqxx and coroutines: the algebra is the part worth reasoning
-// about in isolation, and nothing here should need a database to exercise.
 #pragma once
 
 #include <cstddef>
@@ -78,15 +73,10 @@ class Set
 
 	[[nodiscard]] SortKeyType keyType() const noexcept { return columnType( m_keys ); }
 
-	// The algebra. `and`, `or`, `xor` and `not` are alternative operator tokens in C++ and cannot
-	// name a member, hence the operators plus spelled-out aliases.
-
 	[[nodiscard]] Set operator&( const Set& other ) const;
 	[[nodiscard]] Set operator|( const Set& other ) const;
 	[[nodiscard]] Set operator^( const Set& other ) const;
 	[[nodiscard]] Set operator~() const &;
-	//! Flipping an expiring Set only touches the flag, so a fold can negate a large negative term
-	//! without copying its columns.
 	[[nodiscard]] Set operator~() &&;
 
 	[[nodiscard]] Set intersect( const Set& other ) const { return *this & other; }

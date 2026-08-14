@@ -1,17 +1,3 @@
-// Neutral coroutine task type. Deliberately has no drogon, trantor, or Qt dependency: the Monitor
-// and Worker processes (see docs/superpowers/specs/2026-07-26-worker-framework-design.md) link this
-// header and have no event loop of drogon's to speak of.
-//
-// Semantics match drogon::Task and idhan::IDHANTask so it can be swapped in without touching call
-// sites: lazy (initial_suspend is suspend_always, so the body does not run until awaited), move-only,
-// and symmetric-transferring at both ends of a co_await.
-//
-// Task<T> and Task<void> share everything except the promise's value storage and the Awaiter's
-// return type. The shared coroutine-frame ownership (construct from handle, destroy on destruction,
-// move-only with destroy-before-take on move-assign) lives once in detail::TaskBase; the promise
-// types are hoisted out of the class bodies into detail::TaskPromise because a class cannot inherit
-// from something defined in terms of its own nested promise_type (promise_type would have to be
-// complete before the class is).
 #pragma once
 
 #include <cassert>
@@ -31,10 +17,7 @@ class Task;
 namespace detail
 {
 
-//! final_suspend awaiter. Symmetric-transfers straight into the awaiting coroutine rather than
-//! returning to the resumer, so an await chain costs one resume regardless of depth. The promise
-//! seeds m_continuation with noop_coroutine(), so a task that is started but never awaited by
-//! another coroutine simply stops here instead of transferring into a null handle.
+//! final_suspend awaiter.
 struct FinalAwaiter
 {
 	[[nodiscard]] bool await_ready() const noexcept { return false; }
@@ -146,8 +129,6 @@ template < typename T >
 class [[nodiscard]] Task : public detail::TaskBase< detail::TaskPromise< T > >
 {
 	using Base = detail::TaskBase< detail::TaskPromise< T > >;
-	// Base is a dependent base class, so unqualified lookup of m_coro from Awaiter and
-	// operator co_await below would not find it without this using-declaration.
 	using Base::m_coro;
 
   public:

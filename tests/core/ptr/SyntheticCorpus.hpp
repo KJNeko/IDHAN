@@ -1,5 +1,3 @@
-// Builds real zlib-compressed .ptrupdate files so the scan stage is exercised through the same
-// parser the production path uses, rather than against a mocked-out reader.
 
 #pragma once
 
@@ -178,12 +176,7 @@ inline Json::Value makeContent( const std::vector< MappingRow >& mappings_add,
 }
 
 //! A 64-character hex string derived from \p seed, usable as both a file name and a hash value.
-//!
 //! Injective over the whole 32-bit seed range: bytes 0-3 are the seed itself, little-endian.
-//! An earlier version used (seed + i) & 0xFF for every byte, which only distinguished seeds
-//! modulo 256 -- so fakeHashHex(257) collided with fakeHashHex(1) and a content file silently
-//! overwrote the definitions file it depended on.
-//!
 //! Byte 0 is the seed's low byte, so a test whose seeds are all below 256 can key a decoded
 //! hash back to its seed.
 inline std::string fakeHashHex( const unsigned seed )

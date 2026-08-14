@@ -40,8 +40,6 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 
 	if ( json[ "name" ].isString() )
 	{
-		// cluster_name is UNIQUE and the PG backend throws no typed unique-violation
-		// error, so pre-check the rename target instead of letting the UPDATE 500
 		const auto name_search { co_await transaction->execSqlCoro(
 			"SELECT cluster_id FROM file_clusters WHERE cluster_name = $1 AND cluster_id != $2",
 			json[ "name" ].asString(),

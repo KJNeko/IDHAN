@@ -10,10 +10,6 @@ file(READ ${MIGRATION_DIR}/check-template.cpp.unused CHECK_TEMPLATE_CONTENT)
 string(CONFIGURE "${CHECK_TEMPLATE_CONTENT}" CHECK_TEMPLATE_CONTENT)
 
 
-# Migrations now live in per-object subdirectories (e.g. table_file_info/013-create.sql).
-# Ordering is determined solely by the numeric prefix of the basename, GLOBALLY across all
-# subdirectories - the directory a file lives in must never affect run order. So we build a
-# sort key from the (zero-padded) number rather than sorting on the full path.
 set(KEYED_MIGRATIONS "")
 foreach (MIGRATION ${MIGRATIONS})
 	get_filename_component(FILENAME ${MIGRATION} NAME_WLE)
@@ -39,8 +35,6 @@ list(SORT KEYED_MIGRATIONS COMPARE STRING)
 set(_seen_numbers "")
 foreach (ENTRY ${KEYED_MIGRATIONS})
 	string(REGEX REPLACE "::.*$" "" _num "${ENTRY}")
-	# Use list(FIND) rather than the IN_LIST if() operator: this script runs in `cmake -P` mode
-	# where policy CMP0057 is unset, and IN_LIST is only recognised when that policy is NEW.
 	list(FIND _seen_numbers "${_num}" _dup_idx)
 	if (NOT _dup_idx EQUAL -1)
 		message(FATAL_ERROR "Duplicate migration number ${_num}")
@@ -53,9 +47,6 @@ foreach (ENTRY ${KEYED_MIGRATIONS})
 
 	get_filename_component(FILENAME ${MIGRATION} NAME_WLE)
 	string(REGEX MATCH "^[0-9]+" MIGRATION_ID ${FILENAME})
-	# Filenames are zero-padded (013, 096) for readable ordering, but that number is emitted
-	# verbatim as a C++ integer literal - and a leading zero makes it OCTAL (013 -> 11, 096 -> error).
-	# Strip leading zeros so the literal is decimal.
 	string(REGEX REPLACE "^0+" "" MIGRATION_ID "${MIGRATION_ID}")
 	if (MIGRATION_ID STREQUAL "")
 		set(MIGRATION_ID "0")
@@ -76,20 +67,10 @@ foreach (ENTRY ${KEYED_MIGRATIONS})
 
 	file(READ ${MIGRATION} FILE_CONTENT)
 
-	# Compact the query before embedding it: strip SQL line comments (-- to end of line), then
-	# collapse every run of whitespace (newlines, tabs, spaces) into a single space. SQL is
-	# whitespace-insensitive, so this preserves behaviour while removing the newlines and
-	# indentation that would otherwise bloat the generated literal. Comments MUST be stripped
-	# first: once the lines are joined, a surviving `--` would comment out the rest of the
-	# statement. ('.' matches newlines in CMake regex, hence the explicit [^\n] / [ \t\r\n]
-	# classes. No migration uses multi-line or multi-space string literals, so collapsing
-	# whitespace never alters literal data.)
 	string(REGEX REPLACE "--[^\n]*" "" FILE_CONTENT "${FILE_CONTENT}")
 	string(REGEX REPLACE "[ \t\r\n]+" " " FILE_CONTENT "${FILE_CONTENT}")
 	string(STRIP "${FILE_CONTENT}" FILE_CONTENT)
 
-	# The #embed branch (FGL_HAS_EMBED) pulls in raw file bytes, so point it at a compacted copy
-	# rather than the original source - keeping both branches byte-identical.
 	get_filename_component(OUT_DIR ${OUT} DIRECTORY)
 	set(COMPACTED_PATH "${OUT_DIR}/migrations_compacted/${MIGRATION_ID}.sql")
 	file(WRITE "${COMPACTED_PATH}" "${FILE_CONTENT}")

@@ -502,9 +502,6 @@ body {
     color: var(--fg);
 }
 
-/* Query breakdown: one row per term, in the order the search applied them. The table earns its
-   space by putting what a term cost (Matched, Time) next to what it did (Removed), which is the
-   only way to see a term that reads 800k rows to eliminate nothing. */
 .search-breakdown {
     overflow-x: auto;
 }
@@ -678,9 +675,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* min-height:0 lets this flex child shrink below content; overflow guards against any residual spill.
-     Flex centering (not grid) is deliberate: max-height:100% on the media then resolves against the
-     stage's definite height, whereas a grid's auto row track grows to a tall image and defeats it. */
   min-height: 0;
   overflow: hidden;
   padding: 0.5rem;
@@ -983,9 +977,6 @@ body {
   margin: 0;
 }
 
-/* Imported-record thumbnail, pinned to the right of the metadata. Fixed 128px square so rows stay
-   aligned; object-fit:contain keeps aspect ratio, and with no background the letterbox area is
-   transparent (the row shows through) rather than black bars. */
 .import-thumb {
   flex: 0 0 auto;
   width: 128px;
@@ -1006,8 +997,6 @@ body {
   color: var(--error);
 }
 
-/* Server messages run long ("All clusters are read-only, ..."), so the reason gets the full row
-   width and wraps rather than sharing the head line with the filename. */
 .import-reason {
   margin: 0;
   font-size: 0.85em;
@@ -1160,8 +1149,6 @@ body {
     color: var(--error);
 }
 
-/* The delete confirmation. Deliberately conspicuous: it is the only irreversible action in this
-   panel, and it destroys work that only another full backfill can replace. */
 .embed-confirm {
     display: flex;
     align-items: center;
@@ -1183,20 +1170,12 @@ body {
     color: var(--error);
 }
 
-/* ---- Embedding Search ----
-   The panel scrolls as a whole (via .panel-body's overflow) rather than giving the term list its
-   own window. A nested scroller collapses to a couple of rows once the panel is short, which is
-   exactly when the terms are hardest to read; scrolling the lot keeps every row full height. The
-   footer is sticky so the Search button survives that. */
 .embed-search-panel {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-/* Nothing in the column shrinks: the panel has a fixed height, so a flex child left at the default
-   flex-shrink:1 would compress toward its min-content size — controls squashing and labels wrapping
-   — instead of overflowing into the scroll the panel already provides. */
 .embed-search-panel > * {
     flex: 0 0 auto;
 }
@@ -1277,20 +1256,11 @@ body {
     gap: 2px;
 }
 
-/* The term list absorbs the panel's spare height, so the slack a pinned footer would otherwise leave
-   sits inside the list rather than as a blank band above the Search button.
- *
- * Grow only -- deliberately no overflow of its own, which is what the note above .embed-search-panel
- * argues against. When the terms outgrow the panel, .panel-body still scrolls the lot at full row
- * height. Written as a child selector so it beats the `.embed-search-panel > *` rule on specificity
- * rather than on source order. */
 .embed-search-panel > .embed-term-list {
     flex: 1 1 auto;
     min-height: 0;
 }
 
-/* Fixed columns rather than content-sized: the signs and weights have to read down the list as
-   columns, which a label-width-driven layout would scatter. */
 .embed-term {
     display: grid;
     grid-template-columns: auto auto 4.25rem 1fr auto;
@@ -1387,20 +1357,6 @@ body {
     font-family: ui-monospace, monospace;
 }
 
-/* Pinned to the bottom of the panel, by two mechanisms that cover different situations.
- *
- * margin-top:auto handles a panel with room to spare: sticky alone pins nothing when there is nothing
- * to scroll, so a short term list left the bar floating under the last row with the rest of the panel
- * empty beneath it. Every panel using this footer is a flex column, so the auto margin eats the slack.
- *
- * The sticky half handles the opposite case, and bottom is -0.75rem rather than 0 because a sticky
- * box clamps to its container's PADDING edge. At bottom:0 it came to rest 0.75rem above the panel's
- * bottom while scrolling -- the negative margin below cannot move it, since margins do not apply to
- * the sticky clamp -- leaving a strip of panel background visible under the bar. Matching the clamp
- * to the margin puts the bar on the true bottom edge in both states.
- *
- * The negative margins bleed the background out over .panel-body's padding, so rows scroll under an
- * opaque bar rather than through a gap beside it. */
 .embed-footer {
     position: sticky;
     bottom: -0.75rem;
@@ -1874,9 +1830,6 @@ body {
   color: var(--error);
 }
 
-/* Database Stats — flat technical readout: sharp corners, hairline rules, monospace on aligned
-   columns only. A deliberate departure from the app's soft 4-6px chrome, matching .log-body's
-   already-flat console identity for this and the other "technical" P2 panels. */
 .dbstats {
   display: flex;
   flex-direction: column;
@@ -2139,26 +2092,17 @@ body {
 }
 
 /* ---- embedding compare: two slots, and one diverging bar per term ---- */
-/* Padding and scrolling are left to .panel-body deliberately: .embed-footer pins itself with negative
-   margins measured against that padding, so overriding it here puts the footer bar out of line with
-   the panel edges. */
 .cmp-panel {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-/* Nothing in the column shrinks, for the same reason the search panel says so: a flex child left at
-   the default flex-shrink:1 compresses toward min-content instead of overflowing into the scroll the
-   panel already provides. */
 .cmp-panel > * {
     flex: 0 0 auto;
 }
 
 
-/* Shrink-wrapped columns, centred as a group. With 1fr side columns the slots kept their content at
-   the outer edges and handed every spare pixel to the middle, so widening the panel only grew the
-   gap between the left image and the A/B readout. */
 .cmp-slots {
   display: grid;
     grid-template-columns: auto auto auto;
@@ -2175,17 +2119,11 @@ body {
     max-width: 16rem;
 }
 
-/* The input carries a default intrinsic width of about 20 characters, which would stop an auto column
-   from shrinking on a narrow panel. */
 .cmp-slot-actions .search-input {
     width: 100%;
     min-width: 0;
 }
 
-/* Sized by height, and hugging the image rather than boxed square. A square box letterboxes every
-   image that is not square, and a box that filled its column would only upscale a low-resolution
-   thumbnail -- both are dead space. Fixing the height instead keeps the two slots aligned whatever
-   shape the images are. */
 .cmp-slot-thumb {
   display: flex;
   align-items: center;
@@ -2193,7 +2131,6 @@ body {
     height: 160px;
     width: fit-content;
     max-width: 100%;
-    /* Only load-bearing for the empty state, which has no image to give the box a width. */
     min-width: 80px;
   border: 1px solid #2a2e37;
   border-radius: 4px;
@@ -2234,8 +2171,6 @@ body {
   gap: 0.3rem;
 }
 
-/* Centred against the slots rather than pushed down by a magic offset, so it stays put whatever the
-   thumbnails do. */
 .cmp-slot-gap {
   display: flex;
   flex-direction: column;
@@ -2250,9 +2185,6 @@ body {
   font-size: 1.1rem;
 }
 
-/* The one part of the column that grows, so it extends as far down as it has terms and the slack in a
-   tall panel belongs to the list rather than sitting as a blank band above the footer. Overrides the
-   `.cmp-panel > *` rule, which holds every other child at its natural height. */
 .cmp-term-list {
   display: flex;
     flex: 1 1 auto;
@@ -2271,8 +2203,6 @@ body {
   border-radius: 3px;
 }
 
-/* The distance columns exist only once a comparison has produced them. Fixed widths rather than
-   content-sized so the numbers read down the list as columns. */
 .cmp-term-list.has-results .cmp-term {
     grid-template-columns: auto minmax(6rem, 1fr) 4rem minmax(4rem, 2fr) 4rem 4.5rem auto;
 }
@@ -2311,8 +2241,6 @@ body {
   color: #ffb87b;
 }
 
-/* The bar encodes the delta, not the absolute distances: every text-to-image cosine distance sits in
-   a narrow band, so a true-scale bar would look identical on every row. */
 .cmp-bar {
   display: flex;
   height: 0.6rem;

@@ -177,9 +177,6 @@ TEST_F( FlattenCollapseTest, SeparatesAddsAndDeletesOnOneRecord )
 
 TEST_F( FlattenCollapseTest, ChunkCapSplitsOutputAndSpansBuckets )
 {
-	// 40 records spread over many buckets with a cap of 8 must produce several chunks. If a chunk
-	// were confined to a single bucket the cap would never be reached and this would emit one
-	// chunk per occupied bucket instead.
 	constexpr std::uint32_t RECORDS { 40 };
 
 	std::vector< std::uint32_t > hash_ids;
@@ -237,15 +234,11 @@ TEST_F( FlattenCollapseTest, RecordWithNoHashDefinitionIsDropped )
 
 	EXPECT_TRUE( readAll( result ).empty() );
 
-	// The bucket's event was still scanned even though it produced no surviving record; a bucket
-	// whose every record lacks a hash definition must not make its events vanish from the count.
 	EXPECT_EQ( result.stats.events_scanned, 1u );
 }
 
 TEST_F( FlattenCollapseTest, StatsUpdatedReportsRunningTotals )
 {
-	// Two records on different hashes land in different buckets (hash_id % BUCKET_COUNT), so the
-	// callback should fire at least twice and its last call should match the final result.
 	define( { 1, 2 }, { { 7, "kept" }, { 8, "removed" } } );
 	spill( { ev( 1, 7, 0, EventOp::Add ),
 	         ev( 2, 8, 0, EventOp::Add ),

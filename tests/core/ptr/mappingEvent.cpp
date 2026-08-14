@@ -20,8 +20,6 @@ TEST( PTRMappingEvent, IsTwelveBytes )
 
 TEST( PTRMappingEvent, BucketIsStableForOneHash )
 {
-	// Every event for one hash_id must land in exactly one bucket -- this is the property the
-	// whole partitioning scheme rests on.
 	const auto bucket = bucketFor( 194'644'713u );
 	for ( std::uint32_t tag_id = 0; tag_id < 1000; ++tag_id ) EXPECT_EQ( bucketFor( 194'644'713u ), bucket );
 	EXPECT_LT( bucket, BUCKET_COUNT );

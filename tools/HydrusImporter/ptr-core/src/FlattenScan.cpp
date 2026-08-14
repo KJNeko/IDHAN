@@ -80,10 +80,6 @@ ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
 {
 	ScanResult result {};
 
-	// Sorted only to pin down the update index range reported in the manifest. It does not order
-	// the work: files are dispatched in this order but complete in whatever order the workers
-	// finish, and nothing in the scan reads back what another file wrote. The definition store is
-	// whole once the pool joins, which is the barrier the collapse stage actually depends on.
 	auto updates = metadata.updates;
 	std::ranges::sort( updates, []( const auto& a, const auto& b ) { return a.index < b.index; } );
 
@@ -118,15 +114,10 @@ ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
 	DefinitionWriter definitions { work_dir };
 	BucketWriter buckets { work_dir };
 
-	// Pure accumulation, never read for a decision, so an atomic is enough. They are bumped once
-	// per file rather than once per event, so the shared cache line is cold.
 	std::atomic< std::uint64_t > events_written { 0 };
 	std::atomic< std::uint64_t > skipped_files { 0 };
 	std::atomic< std::size_t > files_done { 0 };
 
-	// Guards the relation vectors and the host callbacks, and nothing else. Everything expensive --
-	// inflate, parse, hex decode, definition writes, bucket spilling -- runs outside it, because
-	// BucketWriter and DefinitionWriter do their own per-bucket and per-reservation locking.
 	std::mutex merge_mutex;
 
 	const auto body = [ & ]( const std::size_t index ) -> bool
@@ -155,8 +146,6 @@ ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
 			}
 		}
 
-		// Built here and merged under the lock below. The corpus holds roughly 186,000 relation
-		// events in total, so one file's share is nothing next to holding the lock while parsing.
 		std::vector< RelationEvent > parents;
 		std::vector< RelationEvent > siblings;
 
@@ -191,9 +180,6 @@ ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
 			appendRelations( siblings, content->tag_siblings_delete, item.update_index, EventOp::Delete );
 		}
 
-		// Every counter this file touches is already published, so whichever worker takes the lock
-		// last reports totals that include all of them -- which is what makes the final callback
-		// agree with the returned result.
 		const auto done = files_done.fetch_add( 1, std::memory_order_relaxed ) + 1;
 
 		std::lock_guard< std::mutex > lock { merge_mutex };

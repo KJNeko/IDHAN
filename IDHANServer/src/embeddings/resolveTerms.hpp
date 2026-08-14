@@ -19,9 +19,6 @@ namespace idhan::embeddings
 {
 
 //! Parses pgvector's "[1,-0.5,...]" text output back into floats.
-/** Read as text rather than through a binary halfvec accessor because libpqxx has no notion of the
- *  type, and ::text is a cast pgvector implements itself -- so this parses pgvector's own output
- *  format rather than guessing at its binary layout. */
 [[nodiscard]] std::vector< float > parseHalfvecLiteral( const std::string& literal );
 
 //! Resolves every term to a unit vector, in the order the terms were given.

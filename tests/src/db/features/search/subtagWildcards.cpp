@@ -94,8 +94,6 @@ TEST_F( SubtagWildcardFixture, StarBecomesPercent )
 
 TEST_F( SubtagWildcardFixture, LikeMetacharactersAreEscaped )
 {
-	// A tag may legitimately contain any of these. Left unescaped they would act as wildcards the
-	// user never typed -- `100%` would match every tag starting with `100`.
 	EXPECT_EQ( SearchBuilder::wildcardToLikePattern( "100%*" ), "100\\%%" );
 	EXPECT_EQ( SearchBuilder::wildcardToLikePattern( "a_b" ), "a\\_b" );
 	EXPECT_EQ( SearchBuilder::wildcardToLikePattern( "back\\slash" ), "back\\\\slash" );
@@ -107,8 +105,6 @@ TEST_F( SubtagWildcardFixture, CatStarGirlStaysUnnamespaced )
 {
 	createTagCorpus();
 
-	// anchored at both ends: nothing may precede `cat`, so the namespaced forms are out, and
-	// nothing may follow `girl`, so `cat girls` is out
 	EXPECT_EQ( matchedTags( "cat*girl" ), ( std::vector< std::string > { "cat girl", "catgirl" } ) );
 }
 
@@ -143,8 +139,6 @@ TEST_F( SubtagWildcardFixture, TrailingStarIsAPrefixSearch )
 {
 	createTagCorpus();
 
-	// `cat girls` matches here but not under `cat*girl` -- the difference is the anchor, not the
-	// plural
 	EXPECT_EQ( matchedTags( "cat girl*" ), ( std::vector< std::string > { "cat girl", "cat girls" } ) );
 }
 
@@ -232,8 +226,6 @@ TEST_F( SubtagWildcardFixture, NegativeWildcardSubtractsEveryMatch )
 	const auto keep { createSearchableRecord( "wc_negative_keep" ) };
 	createMapping( keep_tag, keep );
 
-	// dropped via `catgirl`, the other tag the wildcard resolved to -- so the whole match set is
-	// subtracted, not just the first id
 	const auto drop { createSearchableRecord( "wc_negative_drop" ) };
 	createMapping( keep_tag, drop );
 	createMapping( createTag( "catgirl" ), drop );
@@ -260,8 +252,6 @@ TEST_F( SubtagWildcardFixture, PositiveAndNegativeWildcardsGetDistinctCteNames )
 	builder.addPositiveWildcard( resolveWildcard( "cat*girl" ) );
 	builder.addNegativeWildcard( resolveWildcard( "series:*night" ) );
 
-	// both groups are numbered from one shared sequence; a collision would declare
-	// filter_wildcard_0 twice, which postgres rejects outright
 	const auto ids { runQuery( builder.construct( true, false, false ) ) };
 
 	EXPECT_TRUE( contains( ids, keep ) );
@@ -295,8 +285,6 @@ TEST_F( SubtagWildcardFixture, WildcardDisablesTheNoFilterFastPath )
 	SearchBuilder builder {};
 	builder.addPositiveWildcard( resolveWildcard( "cat*girl" ) );
 
-	// no tags and no system predicates, so without the wildcard guard construct() would take the
-	// fast path and return every record regardless of the wildcard
 	const auto sql { builder.construct( true, false, false ) };
 	ASSERT_TRUE( sql.starts_with( "WITH " ) );
 
@@ -311,8 +299,6 @@ TEST_F( SubtagWildcardFixture, EmptyMatchSetMatchesNothing )
 	const auto record { taggedRecord( "wc_empty", { "cat girl" } ) };
 
 	SearchBuilder builder {};
-	// setWildcardTags() 404s before an empty group can reach the builder; this pins the defensive
-	// reading for direct API use, where matching *everything* would silently widen the search
 	builder.addPositiveWildcard( {} );
 
 	const auto ids { runQuery( builder.construct( true, false, false ) ) };

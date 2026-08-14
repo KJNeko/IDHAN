@@ -16,8 +16,6 @@ drogon::Task< Json::Value > getSimilarTags(
 	const std::string real_search_value { is_negative ? search_value.substr( 1 ) : search_value };
 	const auto wrapped_search_value { format_ns::format( "%{}%", real_search_value ) };
 
-	// A serious tag editor shows many suggestions at once (Hydrus routinely 100+); the previous cap
-	// of 32 was too low. The trigram GIN index makes the cap cheap — it bounds the sort, not the scan.
 	constexpr std::size_t max_limit { 256 };
 
 	if ( limit > max_limit )

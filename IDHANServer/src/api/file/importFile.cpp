@@ -51,8 +51,6 @@ Json::Value createImportResponse( const RecordID record_id, const ImportStatus s
 
 	root[ "record" ][ "id" ] = record_id;
 
-	// NULL timestamps must come through as json null, Field::as<T>() would silently
-	// turn them into "" and 0 (epoch 1970)
 	if ( ts_row[ "cluster_store_time" ].isNull() )
 	{
 		root[ "file" ][ "import_time_human" ] = Json::Value {};
@@ -95,8 +93,6 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const bool force_import { request->getOptionalParameter< bool >( "force_import" ).value_or( false ) };
 
-	// Everything below this needs the mime, which means sniffing the body and then parsing metadata
-	// out of the stored file. A hash we already hold needs none of it, so answer from the hash alone.
 	if ( !force_import )
 	{
 		if ( const auto existing { co_await helpers::findRecord( sha256, db ) } )
@@ -111,8 +107,6 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 					co_return drogon::HttpResponse::newHttpJsonResponse(
 						createDeletedResponse( *existing, row[ "cluster_delete_time_epoch" ].as< int64_t >() ) );
 
-				// Only bail when the bytes are actually still there; a record whose file went missing
-				// falls through so the normal path can store it again.
 				const auto filepath { co_await filesystem::getRecordPath( *existing, db ) };
 
 				if ( filepath && std::filesystem::exists( *filepath ) )
@@ -157,9 +151,6 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	const auto record_id { record_id_e.value() };
 
-	// A file_info row must either name a cluster or carry a delete time (cluster_id_xor_delete_time),
-	// so the target cluster has to be chosen before the row can be created. The store time is only
-	// set once the bytes actually land in the cluster.
 	const auto target_cluster {
 		co_await filesystem::ClusterManager::getInstance().findBestFolder( record_id, data_length, db )
 	};
@@ -216,9 +207,6 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	// re-read the timestamps, a store that just happened updated cluster_store_time
 	const auto final_timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, record_id ) };
 
-	// Keyed on whether the file was on disk before this request, not on store_recorded: a row can
-	// carry a store time while the file is gone from the cluster, and storeFile is also allowed to
-	// succeed without writing when the record is held in a read-only cluster.
 	const auto response { drogon::HttpResponse::newHttpJsonResponse( createImportResponse(
 		record_id, store_confirmed ? ImportStatus::Exists : ImportStatus::Success, final_timestamps[ 0 ] ) ) };
 

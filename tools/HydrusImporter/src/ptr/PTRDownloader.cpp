@@ -137,8 +137,6 @@ void PTRDownloader::saveMetadata()
 	writer_builder[ "indentation" ] = "  ";
 	const auto json_str = Json::writeString( writer_builder, root );
 
-	// Write to a temp file then rename over the real one, so a PTRImportWorker polling this file
-	// concurrently never observes a partially-written/torn JSON document.
 	const auto meta_path = m_output_dir / "ptr_metadata.json";
 	const auto tmp_path = m_output_dir / "ptr_metadata.json.tmp";
 	{
@@ -680,8 +678,6 @@ void PTRDownloader::onUpdateReply( QNetworkReply* reply, QString hash_hex )
 
 							emit fileDownloaded( hash_hex, m_completed_downloads, m_total_downloads );
 
-							// If this was the last missing file for its update index, persist progress now
-							// so a concurrently-running PTRImportWorker can pick the index up immediately.
 							if ( const auto idx_it = m_hash_to_index.find( hash_hex.toStdString() );
 							     idx_it != m_hash_to_index.end() )
 							{

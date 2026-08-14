@@ -21,8 +21,6 @@ std::expected< void, idhan::ModuleError > ArchiveGenerator::generate(
 {
 	const auto& extra { data.extra };
 
-	// Declared before the handle so it outlives it: libarchive holds a pointer into the reader's
-	// chunk, and reverse-order destruction is what keeps that pointer valid for the handle's life.
 	ArchiveModuleReader reader { data.file };
 
 	std::unique_ptr< archive, void ( * )( archive* ) > a {
@@ -67,8 +65,6 @@ std::expected< void, idhan::ModuleError > ArchiveGenerator::generate(
 
 		if ( *filename == target_filename )
 		{
-			// Sized from the header where the format records it -- zip does -- so the sink allocates
-			// once instead of growing as the entry decompresses into it.
 			if ( archive_entry_size_is_set( entry ) )
 			{
 				const auto declared { archive_entry_size( entry ) };

@@ -45,8 +45,6 @@
 		throw std::runtime_error(
 			std::format( "IDHANServer executable does not exist. Searched {}", executable.string() ) );
 
-	// The schema reset belongs to the test suite, not the server. Done here so the server binary
-	// needs no flag that drops anything.
 	{
 		pqxx::connection conn { testConnectionString() };
 		resetTestSchema( conn );

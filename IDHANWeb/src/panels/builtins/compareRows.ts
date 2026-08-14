@@ -129,8 +129,6 @@ export function orderTerms(
     const scored = terms.map((term, index) => ({term, index, row: rowsByLabel.get(compareTermLabel(term))}));
 
     scored.sort((left, right) => {
-        // Ties and unrun-versus-unrun fall back to the typed order, so the list never reshuffles itself
-        // between renders.
         if (!left.row || !right.row) {
             if (!left.row && !right.row) return left.index - right.index;
             return left.row ? -1 : 1;

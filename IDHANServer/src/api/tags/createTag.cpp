@@ -79,8 +79,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagsFromRequest( const dro
 
 	const auto& json_array { *input_json };
 
-	// iterating a non-array root visits an object's values, and operator[] on
-	// a non-object value throws Json::LogicError, which would surface as a 500
 	if ( !json_array.isArray() ) co_return createBadRequest( "Invalid json object. Expected array as root item" );
 
 	auto db { drogon::app().getDbClient() };

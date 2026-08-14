@@ -55,8 +55,6 @@ drogon::Task< drogon::HttpResponsePtr > insertDuplicatePairs(
 		}
 		catch ( const std::exception& e )
 		{
-			// insert_duplicate_pair raises with these exact texts (migration 130); those are
-			// conflicts with existing relationships, anything else is a server fault
 			const std::string_view what { e.what() };
 			if ( what.find( "already inserted worse record" ) != std::string_view::npos
 			     || what.find( "would result in a cyclic chain" ) != std::string_view::npos )

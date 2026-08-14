@@ -1,6 +1,3 @@
-// Turns one search term into one Set. Every function here issues a single indexed query that
-// answers exactly one question -- which records satisfy this term, and what is their sort key --
-// and hands the answer to the algebra in Set.hpp. No term knows about any other term.
 #pragma once
 
 #include <memory>
@@ -41,22 +38,14 @@ struct PredicateSource
 	std::string joins {};
 	//! Boolean expression over file_info (aliased `fi`) and whatever `joins` brings in. Never empty.
 	std::string where {};
-	//! How the predicate reads back to whoever typed it, e.g. `system:width >= 500`. Lives next to
-	//! the SQL it describes so the two cannot drift; the fetch itself never reads it.
+	//! How the predicate reads back to whoever typed it, e.g. `system:width >= 500`.
 	std::string description {};
 };
-
-// Every fetch takes a \p label naming the term it stands for. The caller supplies it rather than
-// the fetch deriving one, because only the caller knows whether a term is narrowing the search or
-// being subtracted from it -- and that is the distinction worth reading in the log.
 
 //! Records carrying \p tag, following aliases and parents exactly as active_tag_mappings_final does.
 Task< Set > fetchTag( FetchContext ctx, TagID tag, std::string label );
 
 //! Records carrying at least one of \p tags -- the OR a resolved wildcard group stands for.
-//! The union happens in SQL rather than by folding one Set per tag with `|`, because a wildcard can
-//! resolve to thousands of tags and that would be thousands of round trips to compute something the
-//! database produces in one.
 Task< Set > fetchAnyTag( FetchContext ctx, std::vector< TagID > tags, std::string label );
 
 //! Records carrying at least one tag in \p tag_namespace -- the `namespace:*` wildcard.
@@ -81,8 +70,7 @@ Task< Set > fetchPage(
 	std::size_t offset,
 	std::optional< std::size_t > limit );
 
-//! The SQL fetchPage() would run. Exposed so the sort-type tests can pin the ordering a sort
-//! produces without standing up a drogon client.
+//! The SQL fetchPage() would run.
 [[nodiscard]] std::string buildPageQuery(
 	SortType sort_type,
 	bool want_hashes,

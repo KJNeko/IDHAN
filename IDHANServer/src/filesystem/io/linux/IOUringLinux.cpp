@@ -101,9 +101,6 @@ drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, co
 	co_await IOUring::getInstance().write( nativeHandle(), data, offset );
 }
 
-// Copy is deleted (FGL_DELETE_COPY); move is defaulted inline in the header (FGL_DEFAULT_MOVE) and relies on
-// FileDescriptor's move ops above to transfer the fd without double-closing.
-
 // ─── IOUring base: Linux dispatch ─────────────────────────────────────────────
 
 static IOUringLinux* g_linux_instance { nullptr };
@@ -129,9 +126,6 @@ int IOUringLinux::setupUring()
 	static constexpr std::size_t queue_depth { 64 };
 	static_assert( queue_depth <= 4096, "Queue depth must be less than 4096" );
 
-	// io_uring_setup returns the ring fd, or a negative errno on failure. On failure we log why and
-	// return the negative value; the caller detects it (uring_fd is signed) and falls back to
-	// synchronous pread/pwrite.
 	const int ret { io_uring_setup( queue_depth, &m_params ) };
 
 	if ( ret < 0 )
@@ -263,9 +257,6 @@ void ioThread( const std::stop_token& token, IOUringLinux* uring, std::shared_pt
 			const unsigned index { head & *uring->m_command_ring.mask };
 			const auto& cqe { uring->m_command_ring.cqes[ index ] };
 
-			// negative cqe.res still carries a valid user_data that must be dispatched (to
-			// resume the awaiting coroutine with an exception and free the allocation below) --
-			// it must not be `continue`d past
 			if ( cqe.res < 0 ) log::error( "io_uring completion error: {}", strerror( -cqe.res ) );
 
 			if ( cqe.user_data == 0 )
@@ -498,8 +489,6 @@ drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path
 	{
 		prefix /= component;
 
-		// A root component ("/") is yielded first and always exists; skipping the syscall for it
-		// avoids a guaranteed -EEXIST round trip.
 		if ( prefix == path.root_path() ) continue;
 
 		int result { 0 };

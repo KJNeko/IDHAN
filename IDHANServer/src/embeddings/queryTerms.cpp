@@ -22,8 +22,6 @@ ExpectedResponse< std::vector< QueryTerm > > parseQueryTerms( const Json::Value&
 
 		QueryTerm term {};
 
-		// Defaulted rather than required: an unweighted term is the common case, and 1.0 is where a
-		// freshly added term starts.
 		term.m_weight = entry[ "weight" ].isNumeric() ? static_cast< float >( entry[ "weight" ].asDouble() ) : 1.0f;
 
 		if ( type == "text" )

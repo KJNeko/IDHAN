@@ -96,8 +96,6 @@ void JobRuntime::cleanup()
 					if ( status->m_cleanup_requested ) return true;
 
 					const auto now = std::chrono::steady_clock::now();
-					// >= so that a zero retention period drops the job on this pass rather than
-					// keeping it alive whenever the clock has not visibly advanced
 					return ( now - status->m_completion_time ) >= job_retention_period;
 				} );
 		}
@@ -162,9 +160,6 @@ JobRuntime::~JobRuntime()
 	const auto begin_stop { Clock::now() };
 	const auto timeout { std::chrono::seconds( 10 ) };
 
-	// wait for dispatched jobs to actually finish, not just for the dispatch queue to drain --
-	// a job can be popped off m_queue and handed to the pool while still running, and hard-stop
-	// destroys m_pool right after this loop
 	while ( Clock::now() < begin_stop + timeout )
 	{
 		bool all_finished { false };
@@ -202,9 +197,6 @@ void JobContext::run()
 	log::debug( "Resuming job {}", m_id );
 	m_coro.m_handle.resume();
 
-	// no m_handle.done() check after resume(): once the job suspends on an awaitable it is
-	// resumed (and may finish) on another thread, so touching the handle here would race it.
-	// Completion is tracked through m_status->m_done instead.
 }
 
 idhan::JobID generateNewJobID()

@@ -23,9 +23,7 @@ idhan::coro::Resumer* provider() noexcept
 }
 
 //! Uninstalls the process-wide provider and clears g_resumer on scope exit, regardless of how the
-//! scope is left. Without this, a failed ASSERT_EQ returns from the test early and skips manual
-//! cleanup, leaving the process-wide provider pointing at a destroyed stack local for later tests in
-//! the same binary to read.
+//! scope is left.
 class ScopedProvider
 {
   public:
@@ -66,8 +64,6 @@ TEST( CoroResumer, resumeIsForwardedToTheResumer )
 	RecordingResumer resumer {};
 	ScopedProvider scope { resumer, &provider };
 
-	// Typed as coroutine_handle<> rather than noop_coroutine_handle so the EXPECT_EQ below compares
-	// like with like.
 	const std::coroutine_handle<> handle { std::noop_coroutine() };
 	idhan::coro::currentResumer()->resume( handle );
 

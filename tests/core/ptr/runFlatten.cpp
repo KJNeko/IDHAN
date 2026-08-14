@@ -92,8 +92,6 @@ class RunFlattenTest : public ::testing::Test
 
 TEST_F( RunFlattenTest, FlattensAChainAcrossUpdateFilesIntoOneAdd )
 {
-	// The motivating case end to end: tag 7 on record 100 is added, deleted, then re-added across
-	// three separate update files. The compacted output must show exactly one add.
 	const auto defs = fakeHashHex( 1 );
 	const auto add1 = fakeHashHex( 2 );
 	const auto del = fakeHashHex( 3 );
@@ -198,8 +196,6 @@ TEST_F( RunFlattenTest, WritesCollapsedRelations )
 
 TEST_F( RunFlattenTest, GroupsManyUpdatesIntoFarFewerChunks )
 {
-	// The grouping win: 60 update files touching 5 records must compact to a single chunk with
-	// each record appearing exactly once.
 	const auto defs = fakeHashHex( 1 );
 
 	std::vector< std::pair< std::uint32_t, std::string > > hash_defs;
@@ -254,9 +250,6 @@ TEST_F( RunFlattenTest, CancelledRunLeavesNoManifest )
 
 TEST_F( RunFlattenTest, OutputNestedInsideTheCorpusWorks )
 {
-	// The default layout puts the compacted output in a subdirectory of the PTR files directory.
-	// The scan resolves update files by exact name rather than globbing, so its own output sitting
-	// inside the scanned directory must not perturb it.
 	const auto defs = fakeHashHex( 1 );
 	const auto content = fakeHashHex( 2 );
 	const auto record_hex = fakeHashHex( 100 );
@@ -287,8 +280,6 @@ TEST_F( RunFlattenTest, OutputNestedInsideTheCorpusWorks )
 
 TEST_F( RunFlattenTest, RerunningOverAnExistingNestedOutputStillWorks )
 {
-	// Flattening twice into the same nested directory must not accumulate stale chunks or read
-	// the previous run's output as corpus input.
 	const auto defs = fakeHashHex( 1 );
 	const auto content = fakeHashHex( 2 );
 
@@ -335,8 +326,6 @@ TEST_F( RunFlattenTest, ReportsLiveStatsMergedAcrossStagesWithoutRegressing )
 
 	ASSERT_FALSE( seen.empty() );
 
-	// events_scanned and skipped_files are scan-owned: once scan finishes they must never change
-	// again, even while collapse-owned fields keep filling in.
 	const auto scan_final = std::ranges::find_if(
 		seen, []( const FlattenLiveStats& s ) { return s.records_flattened > 0 || s.chunks_written > 0; } );
 	ASSERT_NE( scan_final, seen.end() );

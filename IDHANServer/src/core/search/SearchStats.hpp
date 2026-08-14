@@ -1,9 +1,3 @@
-// Row-count accounting for one search: what each term's query returned, what the running result
-// looked like after each fold step, and what survived paging.
-//
-// The fold is the part worth seeing. A term that returns 800k rows and removes nothing from the
-// result is indistinguishable from one that does all the work, unless both numbers are recorded
-// next to each other.
 #pragma once
 
 #include <cstddef>
@@ -15,8 +9,7 @@
 namespace idhan::search
 {
 
-//! What a step was. Carried explicitly so consumers can pair a term's fetch with the fold step that
-//! folded it in, rather than recovering the relationship by parsing formatted labels.
+//! What a step was.
 enum class StepKind
 {
 	//! A term's query. `rows` is what the database returned.
@@ -38,8 +31,7 @@ struct SearchStep
 	//! merges whose cost is already implied by the row counts on either side of them.
 	std::int64_t micros { 0 };
 	//! When true the row count denotes a complement -- everything *except* these -- rather than a
-	//! membership list. Without this a pure-exclusion search reads as though it matched almost
-	//! nothing when it in fact matched almost everything.
+	//! membership list.
 	bool inverted { false };
 };
 

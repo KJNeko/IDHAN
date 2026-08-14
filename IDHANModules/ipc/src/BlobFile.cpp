@@ -11,8 +11,6 @@ std::expected< std::size_t, ModuleError > BlobFile::read( const std::span< std::
 {
 	const auto bytes { m_blob.bytes() };
 
-	// Past the end reads nothing rather than failing, matching RingFile. Modules must not need a
-	// branch per backend.
 	if ( out.empty() || offset >= bytes.size() ) return 0;
 
 	const std::size_t count { std::min( bytes.size() - offset, out.size() ) };

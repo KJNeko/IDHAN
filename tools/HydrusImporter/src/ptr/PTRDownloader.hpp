@@ -101,8 +101,6 @@ class PTRDownloader : public QObject
 	State m_state { State::Idle };
 	bool m_cancelled { false };
 
-	// Persisted into ptr_metadata.json's "state" field so a concurrently-running PTRImportWorker
-	// can tell whether a missing file is still coming or never will be.
 	QString m_persist_state { "running" };
 	QTimer m_heartbeat_timer;
 
@@ -117,8 +115,6 @@ class PTRDownloader : public QObject
 	int m_total_downloads { 0 };
 	int m_completed_downloads { 0 };
 
-	// hash -> update index, and remaining-missing-file count per update index, so we can detect
-	// the moment an entire update index finishes downloading and persist progress incrementally.
 	std::unordered_map< std::string, int > m_hash_to_index;
 	std::unordered_map< int, int > m_remaining_for_index;
 

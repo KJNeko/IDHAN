@@ -27,18 +27,6 @@ class IOUring
 
 	virtual drogon::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) = 0;
 
-	// ─── Path operations ──────────────────────────────────────────────────────
-	//
-	// The std::filesystem equivalents block the calling thread for the duration of the syscall, which
-	// on a request thread stalls every other request sharing that event loop. These submit the same
-	// work to the ring instead, so the coroutine suspends rather than the thread.
-	//
-	// Each returns 0 on success or a negative errno, mirroring the completion. Callers decide which
-	// errors matter, because there is no single right answer: removing a file that is already gone is
-	// usually fine, a failed rename never is. Paths are taken by value so they outlive the suspend --
-	// the submission holds a pointer into the string, and the kernel reads it after the caller has
-	// already suspended.
-
 	//! unlinkat(2). -ENOENT if the path was not there.
 	virtual drogon::Task< int > removeFile( std::filesystem::path path ) = 0;
 

@@ -1,5 +1,3 @@
--- Keeps file_clusters.size_used and file_count in step with the rows assigned to each cluster.
--- Statement level so a bulk import does one update per cluster rather than one per file.
 CREATE OR REPLACE FUNCTION func_file_info_cluster_usage()
     RETURNS TRIGGER AS
 $$

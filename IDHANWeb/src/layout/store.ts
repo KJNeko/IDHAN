@@ -304,8 +304,6 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
   pullLayoutFromServer: async (id) => {
     set({ serverBusy: true });
     try {
-      // Migrate the server copy on the way in — it may predate the current schema, and this also
-      // rejects a corrupt document instead of adopting it as the working layout.
       const doc = migrateLayout(await layoutApi.get(id));
       if (!doc) throw new Error('The server returned an unreadable layout document');
       set((s) => ({ doc, generation: s.generation + 1 }));

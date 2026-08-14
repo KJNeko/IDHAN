@@ -68,9 +68,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::sessionKey( [[maybe_unused]] 
 // /hyapi/access/verify_access_key
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::verifyAccessKey( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
-	// IDHAN does not model per-key permissions: any accepted key is treated as having full access.
-	// Report that the way the Hydrus API does for an all-powerful key - permits_everything with the
-	// complete basic_permissions set (Hydrus ClientAPI CLIENT_API_PERMISSION_* values 0..13).
 	Json::Value json;
 	json[ "name" ] = "IDHAN";
 	json[ "permits_everything" ] = true;

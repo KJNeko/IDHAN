@@ -10,10 +10,6 @@ namespace idhan::api
 {
 
 //! Endpoints for image embeddings: what models exist, filling in the vectors, and searching them.
-/** Search is standalone top-K over one model's vectors, ordered by cosine distance. Composing it
- *  with tag predicates is a follow-up rather than an omission: pre-filtering and post-filtering
- *  trade recall against speed in ways that depend on collection size and on how selective real
- *  queries turn out to be, and there is no data to choose between them on yet. */
 class EmbeddingAPI : public drogon::HttpController< EmbeddingAPI >
 {
 	using ResponseTask = drogon::Task< drogon::HttpResponsePtr >;

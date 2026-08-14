@@ -4,7 +4,6 @@
 namespace idhan::api
 {
 
-// See createSiblings.cpp.
 drogon::Task< drogon::HttpResponsePtr > TagAPI::removeTagSiblings(
 	[[maybe_unused]] const drogon::HttpRequestPtr request )
 {

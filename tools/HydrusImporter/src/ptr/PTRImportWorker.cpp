@@ -140,8 +140,6 @@ void PTRImportWorker::run()
 
 void PTRImportWorker::loadMetadata()
 {
-	// A compacted directory is marked by its manifest, which the flattener writes last. A partial
-	// or cancelled flatten therefore never looks importable.
 	if ( isCompactedDirectory( m_ptr_directory ) )
 	{
 		m_compacted = true;
@@ -200,8 +198,6 @@ PTRImportWorker::DownloadStatus PTRImportWorker::readDownloadStatus() const
 			std::string errors;
 			if ( Json::parseFromStream( builder, file, &root, &errors ) )
 			{
-				// Missing "state" means this file was written before/without this feature, or by a
-				// run that only ever wrote it once at the very end — either way, treat as done.
 				const auto state = root.get( "state", "done" ).asString();
 				const auto last_sync_time = root.get( "last_sync_time", Json::Int64( 0 ) ).asInt64();
 				const auto now = std::chrono::duration_cast< std::chrono::seconds >(
@@ -214,8 +210,6 @@ PTRImportWorker::DownloadStatus PTRImportWorker::readDownloadStatus() const
 		}
 	}
 
-	// No usable ptr_metadata.json yet — if the raw metadata.ptrupdate exists, the downloader has at
-	// least started and just hasn't finished its first update index; treat it as still running.
 	const auto meta_ptr_path = m_ptr_directory / "metadata.ptrupdate";
 	std::error_code ec;
 	const auto mtime = std::filesystem::last_write_time( meta_ptr_path, ec );
@@ -486,9 +480,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 			spdlog::warn( "Missing hash definition for hash_id={}, skipping", hid );
 			continue;
 		}
-		// A SHA-256 hex string is exactly 64 characters. Anything else is a malformed definition —
-		// skip it so it never reaches the createRecords batch (mappings referencing it are dropped
-		// downstream, since it won't be in hash_id_to_hex).
 		if ( it->second.size() != 64 )
 		{
 			spdlog::warn( "Invalid hash for hash_id={} ({} chars, expected 64), skipping", hid, it->second.size() );
@@ -518,8 +509,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 	if ( m_cancelled ) return stats;
 
-	// ---- Phase A: create records and tags. Both are independent, so every batch of both is
-	// submitted before either is awaited — records and tags are created concurrently. ----
 	std::unordered_map< std::string, RecordID > hex_to_record_id;
 	std::unordered_map< int, TagID > tag_id_to_idhan_id;
 	hex_to_record_id.reserve( hash_hexes.size() );
@@ -594,13 +583,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 	if ( m_cancelled ) return stats;
 
-	// ---- Phase B: apply every mapping/relationship change. Each depends only on Phase A, not on
-	// one another (adds and deletes within one update touch disjoint rows), so all of them are
-	// launched up front and awaited together as one concurrent pool of void futures. ----
-
-	// Build parallel (record_ids, tag_id_sets) from a hash_id -> tag_id_set map, resolving through
-	// the ids Phase A already produced. Using TagIDs here avoids the string-pair addTags overload,
-	// which would re-create every tag server-side (they already exist from Phase A).
 	const auto buildRecordTagSets = [ & ]( const auto& hash_to_tagids )
 	{
 		std::vector< RecordID > recs;
@@ -630,8 +612,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 		return std::pair { std::move( recs ), std::move( sets ) };
 	};
 
-	// Translate raw (tag_id, tag_id) pairs into IDHAN (TagID, TagID) pairs, applying \p order to the
-	// resolved ids to get the argument order each relationship endpoint expects.
 	const auto translatePairs = [ & ]( const auto& raw, auto order )
 	{
 		std::vector< std::pair< TagID, TagID > > out;
@@ -848,8 +828,6 @@ std::vector< TagID > PTRImportWorker::resolveChunkTags( const Chunk& chunk, cons
 
 	std::vector< TagID > resolved( chunk.strings.size(), TagID( 0 ) );
 
-	// Only the ids never seen before need creating. Across the corpus this makes each tag exactly
-	// one createTags row, even though hundreds of chunks carry its text.
 	std::vector< std::size_t > unseen;
 	std::vector< std::pair< std::string, std::string > > to_create;
 
@@ -947,8 +925,6 @@ ContentStats
 
 	if ( m_cancelled ) return stats;
 
-	// Build the two (records, tag sets) pairs. A record contributes to a list only if it has
-	// something in it, so empty sets never reach the API.
 	std::vector< RecordID > add_records;
 	std::vector< std::vector< TagID > > add_sets;
 	std::vector< RecordID > del_records;

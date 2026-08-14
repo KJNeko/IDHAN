@@ -69,8 +69,6 @@ def main() -> int:
 
     resize_mode = preprocess_cfg.get("resize_mode", "squash")
     if resize_mode != "squash":
-        # The module can only ask the host for a forced (squashing) resize. Exporting a model that
-        # wants a crop would produce a package that silently gets the wrong geometry at runtime.
         print(f"error: resize_mode '{resize_mode}' is not supported; only 'squash' is", file=sys.stderr)
         return 1
 
@@ -87,8 +85,6 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     onnx_path = out_dir / "model.onnx"
 
-    # Batch 2, not 1: exporting from a single-image example can bake a literal 1 into the graph, and
-    # a batch dimension frozen at 1 defeats the module's batching entirely.
     example = torch.randn(2, 3, image_size[1], image_size[0])
 
     print(f"exporting to {onnx_path}")

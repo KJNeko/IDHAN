@@ -139,9 +139,6 @@ IDHANTask< std::expected< EmbeddingInfo, ModuleError > > RemoteModule::embed( Re
 	const auto& values { outcome->body[ ipc::field::EMBEDDING ] };
 	if ( !values.isArray() ) co_return std::unexpected( ModuleError { "embed result carried no vector" } );
 
-	// The worker already checks the width against what the module declares. Checking it again here
-	// is not redundant: this side is what feeds a fixed-width halfvec column, and the two ends can
-	// disagree if a library is rebuilt underneath a running server.
 	if ( values.size() != m_dimensions )
 		co_return std::unexpected(
 			ModuleError { std::format(
@@ -167,16 +164,12 @@ IDHANTask< std::expected< EmbeddingInfo, ModuleError > > RemoteModule::embedText
 {
 	if ( !m_supports_text ) co_return std::unexpected( ModuleError { "this model has no text encoder" } );
 
-	// baseBody is not reused: it stamps MIME, extra and depth, all of which describe a file this
-	// call does not have.
 	Json::Value body {};
 	body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::CALL );
 	body[ ipc::field::OP ] = ipc::toWire( ipc::CallOp::EMBED_TEXT );
 	body[ ipc::field::MODULE_INDEX ] = Json::UInt64 { m_module_index };
 	body[ ipc::field::PHRASE ] = std::move( phrase );
 
-	// Null input: the one call with no file to send. WorkerProcess::call skips the descriptor, the
-	// size field, and the INPUT_REF registration for exactly this case.
 	auto outcome { co_await m_pool->dispatch( std::move( body ), nullptr ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
@@ -184,9 +177,6 @@ IDHANTask< std::expected< EmbeddingInfo, ModuleError > > RemoteModule::embedText
 	const auto& values { outcome->body[ ipc::field::EMBEDDING ] };
 	if ( !values.isArray() ) co_return std::unexpected( ModuleError { "embed_text result carried no vector" } );
 
-	// Checked again on this side for the same reason embed() does: this is the end that feeds a
-	// fixed-width halfvec column, and the two ends can disagree if a library is rebuilt underneath
-	// a running server.
 	if ( values.size() != m_dimensions )
 		co_return std::unexpected(
 			ModuleError { std::format(

@@ -24,8 +24,6 @@ namespace idhan::ipc
 constexpr std::size_t CMSG_CAPACITY { CMSG_SPACE( sizeof( int ) * MAX_FRAME_FDS ) };
 
 //! Pulls any SCM_RIGHTS descriptors out of a received message into \p out.
-/** Received descriptors are adopted immediately, before anything else can fail. A descriptor that
- *  arrives and is then dropped on an error path is a leak the peer cannot see or recover from. */
 void collectFds( msghdr& message, std::vector< UniqueFd >& out )
 {
 	for ( cmsghdr* header { CMSG_FIRSTHDR( &message ) }; header != nullptr; header = CMSG_NXTHDR( &message, header ) )
@@ -47,8 +45,6 @@ void collectFds( msghdr& message, std::vector< UniqueFd >& out )
 
 	while ( sent < data.size() )
 	{
-		// MSG_NOSIGNAL: writing to a worker that has already died must surface as EPIPE here, not
-		// as a SIGPIPE that takes down the server.
 		const ssize_t result { ::send( sock, data.data() + sent, data.size() - sent, MSG_NOSIGNAL ) };
 
 		if ( result < 0 )
@@ -105,8 +101,6 @@ std::expected< void, std::string > sendFrame(
 	Header header { .m_body_expected = static_cast< std::uint32_t >( payload.size() ),
 		            .m_fds_expected = static_cast< std::uint32_t >( fds.size() ) };
 
-	// The descriptors ride on the header, never the body. That is what lets the reader collect them
-	// with a single recvmsg before it knows how long the body is.
 	std::array< std::byte, CMSG_CAPACITY > control {};
 
 	iovec iov { .iov_base = &header, .iov_len = sizeof( header ) };
@@ -136,8 +130,6 @@ std::expected< void, std::string > sendFrame(
 		return std::unexpected( errnoMessage( "writing frame header failed" ) );
 	}
 
-	// A short header write is vanishingly unlikely at eight bytes, but if it happens the descriptors
-	// have already been handed over with the first byte -- the remainder is plain data.
 	if ( static_cast< std::size_t >( header_sent ) < sizeof( header ) )
 	{
 		const std::span< const std::byte > header_bytes {
@@ -169,8 +161,6 @@ std::expected< void, std::string > FrameWriter::enqueue( const Json::Value& body
 
 	Pending pending {};
 
-	// Duplicated rather than borrowed: the frame may sit in this queue after the Blob that owned the
-	// descriptor is long gone.
 	for ( const int fd : fds )
 	{
 		UniqueFd copy { ::fcntl( fd, F_DUPFD_CLOEXEC, 0 ) };
@@ -200,8 +190,6 @@ std::expected< bool, std::string > FrameWriter::drain( const int sock )
 
 		if ( pending.sent == 0 && !pending.fds.empty() )
 		{
-			// The descriptors ride on the header, so the first write of a frame is the only one that
-			// carries them.
 			std::vector< int > raw {};
 			raw.reserve( pending.fds.size() );
 			for ( const auto& fd : pending.fds ) raw.emplace_back( fd.get() );
@@ -240,8 +228,6 @@ std::expected< bool, std::string > FrameWriter::drain( const int sock )
 			return std::unexpected( errnoMessage( "writing frame failed" ) );
 		}
 
-		// Anything at all went out, so the ancillary data went with it; releasing the descriptors
-		// here is what stops them being sent a second time on the next pass.
 		if ( written > 0 ) pending.fds.clear();
 
 		pending.sent += static_cast< std::size_t >( written );
@@ -283,8 +269,6 @@ std::expected< std::vector< Frame >, std::string > FrameReader::read( const int 
 			message.msg_control = control.data();
 			message.msg_controllen = control.size();
 
-			// MSG_CMSG_CLOEXEC: a received blob descriptor must not survive into a process this one
-			// later execs.
 			const ssize_t received { ::recvmsg( sock, &message, MSG_CMSG_CLOEXEC ) };
 
 			if ( received < 0 )
@@ -331,8 +315,6 @@ std::expected< std::vector< Frame >, std::string > FrameReader::read( const int 
 			m_body_filled = 0;
 			m_header_complete = true;
 
-			// A body of zero bytes never happens (jsoncpp always writes at least "null"), but the
-			// loop must not depend on that to terminate.
 			if ( m_header.m_body_expected > 0 ) continue;
 		}
 

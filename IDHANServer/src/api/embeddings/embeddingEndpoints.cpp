@@ -18,32 +18,23 @@ namespace idhan::api
 {
 
 //! HNSW recall knob: how much of the graph a search walks. Higher is better recall and more time.
-/** pgvector caps hnsw.ef_search at 1000, and an HNSW scan returns at most ef_search rows -- so this
- *  is also the ceiling on how many results the index can serve at all. */
 constexpr std::size_t MAX_EF_SEARCH { 1000 };
 constexpr std::size_t DEFAULT_EF_SEARCH { 100 };
 
 //! Upper bound on results. A caller-chosen limit is an allocation of the caller's choosing.
-/** Matched to MAX_EF_SEARCH deliberately. Asking for more than the index can walk does not fail --
- *  it quietly returns fewer rows than requested, which is indistinguishable from the collection
- *  simply not having more. Refusing the larger limit is the honest answer. */
 constexpr std::size_t MAX_SEARCH_LIMIT { MAX_EF_SEARCH };
 constexpr std::size_t DEFAULT_SEARCH_LIMIT { 200 };
 
-//! Ceiling on terms in one compare request. Every text term is a separate call into the text tower,
-//! so an unbounded list is an unbounded number of model invocations.
+//! Ceiling on terms in one compare request.
 constexpr std::size_t MAX_COMPARE_TERMS { 64 };
 
-//! Ceiling on records in one compare request. The panel asks for two; the endpoint is not restricted
-//! to that, but it is not an excuse to score against the collection either.
+//! Ceiling on records in one compare request.
 constexpr std::size_t MAX_COMPARE_RECORDS { 8 };
 
 drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::listModels( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	auto db { drogon::app().getDbClient() };
 
-	// arrayValue explicitly: a default-constructed Json::Value is null until something is appended,
-	// so no registered models would serialise as null rather than [].
 	Json::Value models { Json::arrayValue };
 
 	const auto rows { co_await db->execSqlCoro(
@@ -56,23 +47,11 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::listModels( [[maybe_unused
 		model[ "model_name" ] = row[ "model_name" ].as< std::string >();
 		model[ "dimensions" ] = row[ "model_dimensions" ].as< std::int32_t >();
 
-		// A model can be registered in the database while no loaded library currently provides it --
-		// the module was removed, or its .so failed to load. Saying so beats letting a backfill be
-		// queued against a model nothing can serve.
 		const auto module { modules::ModuleLoader::instance().getEmbedderFor( model[ "model_name" ].asString() ) };
 		model[ "available" ] = module != nullptr;
 
-		// The search panel needs this to decide whether to enable its text input. Discovering it by
-		// submitting a query that comes back 400 is not an acceptable substitute.
 		model[ "supports_text" ] = module != nullptr && module->supportsText();
 
-		// reltuples, not count(*): this is shown so somebody can see what deleting a model would
-		// destroy, and an estimate answers that perfectly well. An exact count would seq-scan every
-		// model's table on every page load of the panel.
-		//
-		// -1 means the table has never been analysed, which for a freshly created one is the honest
-		// answer -- reported as unknown rather than rounded to zero, since "0 embeddings" would read
-		// as "nothing to lose".
 		const auto stats { co_await db->execSqlCoro(
 			"SELECT reltuples FROM pg_class WHERE oid = to_regclass($1)",
 			std::format( "embeddings_{}", model[ "model_id" ].asInt() ) ) };
@@ -94,8 +73,6 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::generate( drogon::HttpRequ
 	const auto json { request->getJsonObject() };
 	if ( json == nullptr ) co_return createBadRequest( "Expected a JSON body" );
 
-	// Checked before as*(): jsoncpp throws on the wrong type, which would surface as a 500 where a
-	// 400 belongs.
 	if ( !( *json )[ "model_name" ].isString() ) co_return createBadRequest( "Expected a string \"model_name\"" );
 
 	const auto model_name { ( *json )[ "model_name" ].asString() };
@@ -175,14 +152,8 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 			DEFAULT_EF_SEARCH
 	};
 
-	// Never below the limit. An HNSW scan visits ef_search candidates and can return no more than
-	// that, so ef_search < limit silently yields a short result set -- and a short set looks exactly
-	// like a collection that had nothing else to give. The default of 100 against the default limit
-	// of 200 would have done this on every unparameterised search.
 	const auto ef_search { std::max( requested_ef, limit ) };
 
-	// A record-only query never touches the module system at all: every vector it needs is already
-	// in the table. The module is resolved only when a phrase has to be embedded.
 	const auto has_text_term { std::ranges::any_of( terms, []( const auto& term ) { return term.m_is_text; } ) };
 
 	std::shared_ptr< modules::RemoteModule > module {};
@@ -253,8 +224,6 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::compare( drogon::HttpReque
 		record_ids.push_back( static_cast< RecordID >( entry.asInt64() ) );
 	}
 
-	// Absent means "just tell me how far apart these records are", which is a real question and not
-	// the same mistake an empty query would be in search.
 	const auto& terms_json { ( *json )[ "terms" ] };
 
 	std::vector< embeddings::QueryTerm > terms {};
@@ -345,18 +314,12 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::deleteModel(
 
 	const auto model_name { rows[ 0 ][ "model_name" ].as< std::string >() };
 
-	// Claimed rather than merely checked. A backfill starting between a check and the delete would
-	// spend the rest of its run writing rows into a table that no longer exists, one failed page at
-	// a time. Holding the claim makes the two mutually exclusive.
 	if ( !embeddings::tryBeginBackfill( model_id ) )
 		co_return createConflict(
 			"A backfill for \"{}\" is running. Wait for it to finish before deleting the model", model_name );
 
 	try
 	{
-		// The AFTER DELETE trigger drops embeddings_<model_id>. Doing it there rather than here means
-		// the table cannot outlive its row whatever removes it, and DDL being transactional means a
-		// failure takes the drop with it.
 		co_await db->execSqlCoro( "DELETE FROM embedding_models WHERE model_id = $1", model_id );
 	}
 	catch ( const std::exception& e )
@@ -367,8 +330,6 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::deleteModel(
 
 	embeddings::endBackfill( model_id );
 
-	// Deliberately loud. This destroys every vector computed for the model, which for a large
-	// collection is hours of work that only a fresh backfill can replace.
 	log::info( "Deleted embedding model '{}' (id {}) and every embedding it held", model_name, model_id );
 
 	Json::Value response {};

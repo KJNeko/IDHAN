@@ -117,8 +117,6 @@ ChunkStats ChunkWriter::finish( const TagLookup& lookup, TagUsageSet* const usag
 		id_to_index.emplace( tag_id, static_cast< std::uint32_t >( strings.size() ) );
 		strings.push_back( ChunkStringEntry { tag_id, std::string( *text ) } );
 
-		// Marked here rather than after the write: an id that resolved is one this chunk carries,
-		// and the remap below can only ever drop ids that did not.
 		if ( usage != nullptr ) usage->mark( tag_id );
 	}
 

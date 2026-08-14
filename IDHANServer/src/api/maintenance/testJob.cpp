@@ -97,9 +97,6 @@ Json::Value getJobStatusJson(
 		response[ "status" ] = "running";
 	}
 
-	// Surfaced regardless of completion: a long-running job (e.g. an embedding backfill) calls
-	// setJobResponse() repeatedly to publish progress, and a poller must see those updates before the
-	// job finishes, not just the final one.
 	if ( status->m_response )
 	{
 		auto resp = status->m_response.value();

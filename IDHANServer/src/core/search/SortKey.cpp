@@ -3,9 +3,6 @@
 namespace idhan::search
 {
 
-// Resolution is split across three mime-specific metadata tables; COALESCE picks whichever
-// applies to the record's mime type. No single index can produce this cross-table order, so
-// these four sort types always cost an explicit Sort -- see the note in table_file_info.
 constexpr std::string_view resolution_joins {
 	" LEFT JOIN image_metadata im USING (record_id)"
 	" LEFT JOIN video_metadata vm USING (record_id)"
@@ -21,16 +18,11 @@ constexpr std::string_view num_pixels_expr {
 	" * COALESCE(im.height, vm.height, ipm.height)::BIGINT)"
 };
 
-// NULLIF turns a zero height into a NULL ratio, so exclude_null drops those the same way it
-// drops records with no resolution data at all.
 constexpr std::string_view ratio_expr {
 	"(COALESCE(im.width, vm.width, ipm.width)::FLOAT"
 	" / NULLIF(COALESCE(im.height, vm.height, ipm.height), 0))"
 };
 
-// Timestamps become epoch microseconds rather than seconds: a whole-second key would collapse
-// distinct import times into ties, and ties are resolved by record_id, which is not the order
-// the caller asked for.
 constexpr std::string_view store_time_expr { "(EXTRACT(EPOCH FROM fi.cluster_store_time) * 1000000)::BIGINT" };
 constexpr std::string_view modified_time_expr { "(EXTRACT(EPOCH FROM fi.modified_time) * 1000000)::BIGINT" };
 constexpr std::string_view creation_time_expr { "(EXTRACT(EPOCH FROM rc.creation_time) * 1000000)::BIGINT" };
@@ -54,8 +46,6 @@ SortKeySpec sortKeySpec( const SortType type )
 		case SortType::IMPORT_TIME:
 			return { {}, store_time_expr, SortKeyType::Integer, false };
 		case SortType::MODIFIED_TIME:
-			// modified_time has no NOT NULL constraint -- it is unset until a record is actually
-			// modified, and a record that never was has nothing to sort by here.
 			return { {}, modified_time_expr, SortKeyType::Integer, true };
 		case SortType::MIME:
 			// the raw mime_id FK, not a semantic filetype-category ordering
@@ -65,8 +55,6 @@ SortKeySpec sortKeySpec( const SortType type )
 		case SortType::HASH:
 			return { records_join, "rc.sha256", SortKeyType::Hash, false };
 		case SortType::DURATION:
-			// INNER: a record with no video_metadata row is excluded from a duration-sorted search
-			// rather than sorted last -- this sort doubles as a filter, as it did before the rewrite.
 			return { video_join, "vm.duration", SortKeyType::Real, false };
 		case SortType::FRAMERATE:
 			return { video_join, "vm.framerate", SortKeyType::Real, false };

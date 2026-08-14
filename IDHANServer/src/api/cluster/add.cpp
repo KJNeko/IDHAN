@@ -114,9 +114,6 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 	try
 	{
-		// the PG backend throws no typed exception for unique violations (SqlError with
-		// sqlState() is MySQL/SQLite-only), so detect the conflict via the empty result
-		// instead. cluster_name and folder_path both carry UNIQUE constraints.
 		const auto insert_result { co_await transaction->execSqlCoro(
 			"INSERT INTO file_clusters ( cluster_name, folder_path ) VALUES ($1, $2) "
 			"ON CONFLICT DO NOTHING RETURNING cluster_id",

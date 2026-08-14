@@ -47,15 +47,11 @@ namespace idhan
 {
 
 //! Directory containing the running executable, resolved via /proc/self/exe.
-/** Everything that ships alongside the binary is looked up relative to this rather than to the
- *  working directory, so the server behaves the same however it was launched. */
 std::filesystem::path getExecutableDir();
 
 std::vector< std::filesystem::path > getModulePaths();
 
 //! Path to the IDHANModuleRunner executable, which hosts one module library per process.
-/** Looked for next to the server binary first, then on the install path, so a build tree and an
- *  installed package both work without configuration. Override with `[modules] runner_path`. */
 std::filesystem::path getModuleRunnerPath();
 
 std::vector< std::filesystem::path > getMimeParserPaths();
@@ -68,10 +64,6 @@ std::filesystem::path getThumbnailsPath();
 std::vector< std::size_t > getCacheableThumbnailSizes();
 
 //! Whether the on-disk thumbnail cache is used at all. Config: `[thumbnails] cache`, default true.
-/** Off means bypassed in both directions: nothing is read from the cache and nothing is written to
- *  it, so every request regenerates. Half-disabling it -- refusing to write but still serving what
- *  is already there -- would leave a stale thumbnail being served with no way to tell why, which is
- *  the opposite of what turning the cache off is for. Read live per call, like the size list. */
 bool getThumbnailCachingEnabled();
 
 //! Whether to empty the thumbnail cache directory during startup. Config: `[thumbnails] purge_on_boot`.

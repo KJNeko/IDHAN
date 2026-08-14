@@ -4,8 +4,6 @@
 namespace idhan::api
 {
 
-// Sibling resolution was removed in commit 25da681d without removing this endpoint; see
-// docs/tag-system-triggers.md §5. Disabled until resolution is re-implemented.
 drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagSiblings(
 	[[maybe_unused]] const drogon::HttpRequestPtr request )
 {

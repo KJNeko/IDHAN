@@ -142,8 +142,6 @@ TEST_F( NamespaceWildcardFixture, NamespaceWildcardDisablesTheNoFilterFastPath )
 	SearchBuilder builder {};
 	builder.addNamespaces( { getNamespaceID( "character" ) } );
 
-	// no tags and no system predicates, so without the m_namespace_ids guard construct() would take
-	// the fast path and return every record regardless of namespace
 	const auto sql { builder.construct( true, false, false ) };
 	ASSERT_TRUE( sql.starts_with( "WITH " ) );
 

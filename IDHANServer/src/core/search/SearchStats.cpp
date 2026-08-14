@@ -8,8 +8,6 @@
 namespace idhan::search
 {
 
-// The indent is derived from the kind, so a fold step reads as belonging to the fetch above it
-// without the label itself having to carry presentation.
 constexpr std::string_view fold_prefix { "    after " };
 constexpr std::string_view step_prefix { "  " };
 
@@ -18,9 +16,7 @@ constexpr std::string_view prefixFor( const StepKind kind )
 	return kind == StepKind::Fold ? fold_prefix : step_prefix;
 }
 
-//! Milliseconds, with the precision the magnitude deserves. An index-only tag lookup runs in well
-//! under a millisecond, so sub-ms values keep three decimals rather than collapsing to `0.0ms`
-//! and hiding the difference between a fast term and a free one.
+//! Milliseconds, with the precision the magnitude deserves.
 std::string formatMillis( const std::int64_t micros )
 {
 	const double ms { static_cast< double >( micros ) / 1000.0 };
@@ -53,9 +49,6 @@ std::string SearchStats::summary() const
 
 	if ( m_steps.empty() ) return "search: no steps recorded";
 
-	// Padded to prefix + label, not label alone: the fold prefix is eight characters longer, so
-	// padding on the label alone would push every fold's row count out of the column this exists to
-	// be read down.
 	std::size_t column { 0 };
 	for ( const auto& step : m_steps ) column = std::max( column, prefixFor( step.kind ).size() + step.label.size() );
 

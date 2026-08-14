@@ -20,8 +20,6 @@ ReadAwaiter::ReadAwaiter( IOUringLinux* uring, io_uring_sqe sqe, std::shared_ptr
 
 void ReadAwaiter::complete( const int result )
 {
-	// Only the integer is recorded here -- this runs on the io watcher thread. The buffer itself is
-	// resized in await_resume(), on the thread the coroutine resumes on.
 	m_result = result;
 
 	if ( result < 0 )
@@ -66,13 +64,8 @@ std::vector< std::byte > ReadAwaiter::await_resume()
 {
 	if ( m_exception ) std::rethrow_exception( m_exception );
 
-	// A read that came back short must shrink the buffer, or the untouched tail is handed to the
-	// caller as zero-filled file content. Shrinking a vector never reallocates, so the pointer the
-	// io thread wrote through stays valid.
 	if ( m_result >= 0 ) m_data->resize( static_cast< std::size_t >( m_result ) );
 
-	// The awaiter is single-use, so emptying the shared buffer here is fine, and it saves a full
-	// copy of every read in the server.
 	return std::move( *m_data );
 }
 

@@ -194,8 +194,6 @@ void HydrusImporterWidget::on_parseHydrusDB_pressed()
 
 	const std::filesystem::path path { ui->hydrusFolderPath->text().toStdString() };
 
-	// Open the database and read its metadata off the GUI thread so the window stays responsive.
-	// Widget construction has to happen back on the GUI thread, so it runs in the watcher below.
 	auto future { QtConcurrent::run(
 		[ path ]() -> ParseResult
 		{

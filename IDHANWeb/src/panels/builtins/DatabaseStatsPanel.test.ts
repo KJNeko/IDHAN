@@ -82,8 +82,6 @@ describe('buildDonutRing', () => {
     ];
     const ring = buildDonutRing(items, 5);
     expect(ring.segments.map((s) => s.label)).toEqual(['huge', 'big', 'mid', 'small', 'smaller']);
-    // Folded regardless of size — even though tiny_but_not_smallest (40) individually exceeds tiny (5),
-    // both fall past the top-5 cutoff and are folded together.
     expect(ring.otherCount).toBe(2);
     expect(ring.otherValue).toBe(45);
     expect(ring.total).toBe(1995);

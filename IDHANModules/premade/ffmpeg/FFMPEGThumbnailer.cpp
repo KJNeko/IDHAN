@@ -81,8 +81,6 @@ struct AVIOContextDeleter
 	{
 		if ( ctx )
 		{
-			// the buffer may have been freed and replaced by libavformat, so free ctx->buffer
-			// rather than the original allocation
 			av_free( ctx->buffer );
 			av_free( ctx );
 		}
@@ -112,8 +110,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	OpaqueInfo opaque_info { .m_file = &data.file, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
-	// must be av_malloc'd: libavformat may free()/realloc() this buffer internally, and freeing
-	// operator new[] memory through ffmpeg's allocator (or vice versa) is UB
 	auto* buffer_ptr { static_cast< std::byte* >( av_malloc( BUFFER_SIZE ) ) };
 
 	std::unique_ptr< AVIOContext, AVIOContextDeleter > avio_context( avio_alloc_context(
@@ -139,8 +135,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	format_context_raw->pb = avio_context.get();
 	format_context_raw->flags |= AVFMT_FLAG_CUSTOM_IO;
 
-	// avformat_open_input frees format_context_raw itself on failure; only take ownership once
-	// it succeeds, otherwise the unique_ptr below would double-free it
 	if ( avformat_open_input( &format_context_raw, "", nullptr, nullptr ) < 0 )
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to open file" ) );
@@ -315,7 +309,5 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		return std::unexpected( idhan::ModuleError( "Failed to resize frame image" ) );
 	idhan::VipsImagePtr resized { resized_raw };
 
-	// write_to_memory (in ThumbnailInfo) computes the pipeline here, while packed_data -- which
-	// vips_image_new_from_memory references without copying -- is still alive on the stack.
 	return idhan::ThumbnailInfo { std::move( resized ) };
 }

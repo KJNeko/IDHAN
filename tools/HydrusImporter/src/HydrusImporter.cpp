@@ -41,8 +41,6 @@ void HydrusImporter::openDatabase( const std::filesystem::path& db_path, sqlite3
 	const int rc { sqlite3_open_v2( db_path.c_str(), db, SQLITE_OPEN_READONLY, nullptr ) };
 	if ( rc != SQLITE_OK )
 	{
-		// sqlite3_open_v2 may still allocate a handle on failure; keep it so the error message is available,
-		// then close it before throwing so we don't leak.
 		const std::string message {
 			std::format( "Failed to open {}: {}", db_path.string(), *db ? sqlite3_errmsg( *db ) : "out of memory" )
 		};

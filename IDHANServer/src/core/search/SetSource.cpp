@@ -53,10 +53,6 @@ std::string buildTermQuery(
 {
 	const auto spec { sortKeySpec( sort_type ) };
 
-	// Every selected column is a function of record_id, so DISTINCT here is DISTINCT on the
-	// record -- and it is free, because the query is already sorted and the unique step costs
-	// less than sending the duplicates. Measured on `character:*`: 486,516 rows to 206,630, and
-	// 792ms to 769ms. Never combined with random_order, whose ORDER BY is not in the select list.
 	std::string query { distinct_rows ? "SELECT DISTINCT " : "SELECT " };
 	query.reserve( 512 );
 	query += driver_alias;
@@ -69,8 +65,6 @@ std::string buildTermQuery(
 		query += " AS sort_key";
 	}
 
-	// The sort key's own joins may already have brought records in (RECORD_TIME, HASH); joining
-	// it twice under the same alias is an error, so only add it when it is not already there.
 	const bool records_already_joined { spec.joins.find( "records rc" ) != std::string_view::npos };
 	const bool join_records_for_hashes { want_hashes && !records_already_joined };
 
@@ -79,15 +73,11 @@ std::string buildTermQuery(
 	query += " FROM ";
 	query += from_clause;
 
-	// USING rather than ON throughout: it merges record_id into a single output column, so the
-	// joins chain regardless of which relation is driving.
 	if ( joins_file_info ) query += " JOIN file_info fi USING (record_id)";
 	if ( join_records_for_hashes ) query += " JOIN records rc USING (record_id)";
 	query += spec.joins;
 	query += extra_joins;
 
-	// mime_id IS NOT NULL is unconditional and predates this rewrite: a record with no mime has
-	// no file behind it yet and has never been a search result.
 	query += " WHERE fi.mime_id IS NOT NULL";
 
 	if ( !where_core.empty() )
@@ -106,16 +96,10 @@ std::string buildTermQuery(
 
 	if ( random_order )
 	{
-		// Non-deterministic per execution: direction and the record_id tiebreak are both
-		// meaningless here, and offset paging is inherently unstable under it since each page
-		// re-randomises independently.
 		query += " ORDER BY random()";
 		return query;
 	}
 
-	// The record_id tiebreak follows the primary sort's direction rather than always ascending,
-	// so a single ascending (key, record_id) index serves both -- a forward scan for ASC, a
-	// backward scan for DESC -- instead of needing one index per direction.
 	const std::string_view direction { order == SortOrder::ASC ? "" : " DESC" };
 
 	query += " ORDER BY ";
@@ -214,9 +198,6 @@ std::string domainFilter( const FetchContext& ctx )
 
 Task< Set > fetchTag( FetchContext ctx, const TagID tag, std::string label )
 {
-	// One lookup against the view, rather than the three-branch UNION this replaced. That shape
-	// existed because the view's parents branch resolved aliases at read time and so could not use
-	// an index; that resolution moved to write time, and both branches are index-only now.
 	const auto where { format_ns::format( "f.tag_id = {}{}", tag, domainFilter( ctx ) ) };
 	auto query { buildTermQuery(
 		ctx.sort_type,
@@ -253,8 +234,6 @@ Task< Set > fetchAnyTag( FetchContext ctx, std::vector< TagID > tags, std::strin
 
 Task< Set > fetchNamespace( FetchContext ctx, const NamespaceID tag_namespace, std::string label )
 {
-	// tags is joined purely to reach namespace_id; the mapping ids in the view are already
-	// alias-resolved, so no second resolution step is needed here.
 	const auto where { format_ns::format( "t.namespace_id = {}{}", tag_namespace, domainFilter( ctx ) ) };
 	auto query { buildTermQuery(
 		ctx.sort_type,
@@ -266,8 +245,6 @@ Task< Set > fetchNamespace( FetchContext ctx, const NamespaceID tag_namespace, s
 		where,
 		SortOrder::ASC,
 		false,
-		// the highest-amplification fetch there is: a record with twelve `character:` tags is twelve
-		// rows without this
 		true ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
@@ -275,8 +252,6 @@ Task< Set > fetchNamespace( FetchContext ctx, const NamespaceID tag_namespace, s
 
 Task< Set > fetchPredicate( FetchContext ctx, PredicateSource predicate, std::string label )
 {
-	// Predicates drive from file_info directly: they never touch the mappings tables, so there is
-	// nothing to join them to and no domain to filter by.
 	ctx.tag_domains.clear();
 
 	auto query {

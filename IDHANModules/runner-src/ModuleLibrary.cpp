@@ -32,8 +32,6 @@ ModuleLibrary::ModuleLibrary(
 
 ModuleLibrary::~ModuleLibrary()
 {
-	// Order matters and is the reverse of construction: drop the instances (whose code lives in the
-	// mapped image), then let the library tear its own globals down, then unmap.
 	m_modules.clear();
 
 	if ( m_deinit != nullptr ) m_deinit();
@@ -72,10 +70,6 @@ std::expected< ModuleLibrary, std::string > ModuleLibrary::load(
 {
 	::dlerror();
 
-	// RTLD_NOW rather than the RTLD_LAZY the in-process loader used: a library with an unresolved
-	// symbol should fail here, during interrogation, where the server can skip it and say why --
-	// not halfway through a thumbnail request. RTLD_LOCAL keeps its symbols out of the global
-	// namespace even though nothing else shares this process.
 	void* const handle { ::dlopen( path.c_str(), RTLD_NOW | RTLD_LOCAL ) };
 	if ( handle == nullptr )
 		return std::unexpected( std::format( "dlopen of {} failed: {}", path.string(), dlError() ) );
@@ -127,8 +121,6 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 	{
 		const auto& module { m_modules[ index ] };
 
-		// An embedding module is routed by model name rather than by MIME, so its identity has to
-		// reach the host through the manifest -- there is nothing else in the entry that names it.
 		std::string model_name {};
 		std::uint32_t dimensions { 0 };
 		bool supports_text { false };
@@ -138,13 +130,6 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 			const auto embedder { std::static_pointer_cast< EmbeddingModuleI >( module ) };
 			model_name = std::string { embedder->modelName() };
 			dimensions = static_cast< std::uint32_t >( embedder->dimensions() );
-			// Asked BEFORE startup(): the worker announces its manifest and only then brings modules
-			// up (WorkerRunner::run), because --describe must enumerate models without paying session
-			// creation for each one. So this has to be answerable from what is on disk -- a text graph
-			// and a tokenizer beside it -- and cannot reflect anything learned by loading them.
-			//
-			// A text tower that turns out to be unloadable, or that fails its parity check, therefore
-			// still reports true here and refuses at call time with the reason instead.
 			supports_text = embedder->supportsText();
 		}
 
@@ -187,9 +172,6 @@ std::vector< std::string > handleableMimesOf( const std::shared_ptr< IDHANModule
 
 	const auto type { module->type() };
 
-	// Tested in order and not exclusively, so a module that one day implements two interfaces still
-	// reports something rather than nothing. It cannot report both today: handleableMimes() would be
-	// ambiguous across two bases, so no module can actually inherit from more than one interface.
 	if ( ( type & ModuleTypeFlags::METADATA ) != 0 )
 		declared = std::static_pointer_cast< MetadataModuleI >( module )->handleableMimes();
 	else if ( ( type & ModuleTypeFlags::THUMBNAILER ) != 0 )

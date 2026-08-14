@@ -30,13 +30,6 @@ ExpectedTask< std::filesystem::path > getRecordPath( RecordID record_id, DbClien
 ExpectedTask< FileIOUring > getIOForRecord( RecordID record_id, DbClientPtr db );
 
 //! Prepares a record's file as the input to a module call.
-/** Whether the bytes reach the worker through a restricted io_uring or a copy in anonymous memory is
- *  CallInput's decision, not the call site's -- which is why call sites ask for this rather than a
- *  blob.
- *
- *  The input must outlive any module call made with it. It is shared because the worker registry
- *  also holds it: a module can pass its own input back through a callback, and answering that by
- *  reference is what keeps a large file from being shipped twice. */
 ExpectedTask< std::shared_ptr< const modules::CallInput > > openRecordInput( RecordID record_id, DbClientPtr db );
 
 //! Empties the on-disk thumbnail cache (`[thumbnails] path`) and recreates the directory.

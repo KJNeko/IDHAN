@@ -1,6 +1,3 @@
--- active_tag_mappings_parents.tag_id stores the alias-resolved (ideal) parent, not the raw
--- parent_id from tag_parents, so searches and listActiveTags never expose un-aliased parent IDs.
--- The stored value is COALESCE(ideal_parent_id, parent_id).
 CREATE OR REPLACE FUNCTION insert_parent_mapping()
     RETURNS trigger
     LANGUAGE plpgsql

@@ -85,10 +85,6 @@ class RemoteModule
 		std::size_t height ) const;
 
 	//! Generates a derived file, returned as the memfd the worker wrote it into.
-	/** A blob rather than a vector because generator output is large by nature -- an extracted
-	 *  archive member, a decoded page -- and the worker already wrote it exactly once, into shared
-	 *  memory. Copying it into a vector here would put a second copy in the server's heap on the way
-	 *  to handing the descriptor straight back out again. */
 	[[nodiscard]] IDHANTask< std::expected< ipc::Blob, ModuleError > > generate(
 		RemoteCallData data,
 		std::array< std::byte, 256 / 8 > desired_hash ) const;
@@ -103,8 +99,6 @@ class RemoteModule
 	[[nodiscard]] IDHANTask< std::expected< EmbeddingInfo, ModuleError > > embed( RemoteCallData data ) const;
 
 	//! Whether this model has a text tower, as its manifest reported after startup.
-	/** Callers check this before building a query out of phrases, so a model that ships image-only
-	 *  is a refusal with a reason rather than a failed call. */
 	[[nodiscard]] bool supportsText() const { return m_supports_text; }
 
 	//! Embeds a phrase into the same space as embed(). Carries no file.

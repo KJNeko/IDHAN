@@ -62,9 +62,6 @@ class Binder
 		return *this;
 	}
 
-	//! Executes the query and stores the first row's single column into \p t.
-	//! \throws std::runtime_error if the query returns no rows.
-	// Feed into value directly
 	template < typename T >
 		requires( ( !is_optional< T > ) && (!is_tuple< T >))
 	void operator>>( T& t )
@@ -79,8 +76,6 @@ class Binder
 			throw std::runtime_error( std::format( "No rows returned for query \"{}\"", sqlite3_sql( stmt ) ) );
 	}
 
-	//! Executes the query and stores the first row's single column, or std::nullopt if there were none.
-	// Feed output into optional
 	template < typename T >
 		requires( !is_optional< T > && (!is_tuple< T >))
 	void operator>>( std::optional< T >& t )
@@ -95,8 +90,6 @@ class Binder
 			t = std::nullopt;
 	}
 
-	//! Executes the query and invokes \p func once per result row with the decoded columns as arguments.
-	// Call function using output
 	template < typename Function >
 		requires( ( !is_optional< Function > ) && (!is_tuple< Function >))
 	void operator>>( Function&& func )
@@ -114,9 +107,6 @@ class Binder
 		}
 	}
 
-	//! Executes the query and stores the first row's columns into \p tpl.
-	//! \throws std::runtime_error if the query returns no rows.
-	// Feed output into tuple
 	template < typename... Ts >
 		requires( !( is_optional< Ts > && ... ) ) && ( !( is_tuple< Ts > && ... ) )
 	void operator>>( std::tuple< Ts... >& tpl )

@@ -27,8 +27,6 @@ function seedDefaultLayout(add: (type: string, position?: PanelPosition) => stri
 
 export function Workspace() {
   const generation = useLayoutStore((s) => s.generation);
-  // A catalog bump (plugins finished loading) rebuilds components so newly-registered types render
-  // instead of showing as tombstones. Remounting is fine — the tree is persisted and restored on ready.
   const catalogVersion = useLayoutStore((s) => s.catalogVersion);
   const setApi = useLayoutStore((s) => s.setApi);
   const setEngineTree = useLayoutStore((s) => s.setEngineTree);

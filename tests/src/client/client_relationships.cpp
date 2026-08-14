@@ -248,8 +248,6 @@ TEST_F( ClientRelationshipTests, CyclicAliasRejected )
 	auto alias_2_future { client->createAliasRelationship( default_domain, tag_b, tag_a ) };
 	qtWaitFuture( alias_2_future );
 
-	// The API currently catches DrogonDbException and returns a bad request
-	// rather than throwing, so we just check that both futures complete
 	SUCCEED();
 }
 

@@ -24,16 +24,9 @@ namespace idhan::modules
 
 //! Size the host asks for when a module re-dispatches a thumbnail through the callbacks and does not
 //! ask for a specific one.
-/** ModuleCallbacks::thumbnail still has no size parameter, but it does carry an `extra` json object
- *  that already travels module -> host -> thumbnailer. A caller that wants a specific size puts
- *  `width`/`height` there; anything that does not (the archive thumbnailer, which just wants tiles
- *  to composite) keeps getting this. No ABI change was needed after all. */
 constexpr std::size_t CALLBACK_THUMBNAIL_SIZE { 128 };
 
 //! Upper bound on a caller-requested callback thumbnail edge.
-/** A module names the size it wants, and a module is exactly the thing this system assumes may be
- *  compromised by a crafted file. An unbounded value here would be an allocation of the module's
- *  choosing inside the thumbnailer. */
 constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 
 //! Reads a caller-requested thumbnail edge out of a callback's `extra`, clamped and defaulted.
@@ -61,11 +54,6 @@ constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 		config::get< std::size_t >( "modules", "liveness_grace_ms", 5000 )
 	};
 
-	// Read from the live logger rather than from config, so --log_level on the command line reaches
-	// the workers too. Their stderr is ours, so the effect of asking for debug is that module call
-	// detail appears in the same stream as everything else.
-	// Built from data/size: under SPDLOG_FMT_EXTERNAL this is an fmt::string_view, which does not
-	// convert to std::string_view.
 	const auto level_name { spdlog::level::to_string_view( spdlog::get_level() ) };
 	settings.log_level = std::string { level_name.data(), level_name.size() };
 
@@ -78,21 +66,12 @@ constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 }
 
 //! Publishes the configured embedding model directory into the environment workers inherit.
-/** The embedding module runs in a worker process and reads IDHAN_EMBEDDING_MODELS itself, because a
- *  module library has no access to the server's config. Workers are fork+exec'd and so inherit our
- *  environment: setting it here, once, before any worker exists is what makes the setting reachable
- *  from config.toml and the IDHAN_EMBEDDINGS_MODEL_PATH env var rather than only from a variable the
- *  operator had to know the module's internal name for.
- *
- *  Left unset, the module keeps its own default of a `models` directory beside the runner binary. */
 void publishEmbeddingModelPath()
 {
 	const auto path { config::get< std::string >( "embeddings", "model_path", std::string {} ) };
 
 	if ( path.empty() ) return;
 
-	// Overwrite: config has already folded in the environment, so an IDHAN_EMBEDDING_MODELS inherited
-	// from elsewhere must not outrank what the operator actually configured.
 	if ( ::setenv( "IDHAN_EMBEDDING_MODELS", path.c_str(), 1 ) != 0 )
 	{
 		log::error( "Could not set IDHAN_EMBEDDING_MODELS to {}: {}", path, std::strerror( errno ) );
@@ -108,8 +87,6 @@ ModuleLoader::ModuleLoader()
 	m_instance = this;
 
 	applyHardening();
-	// Before loadModules: the interrogation pass it runs forks the first workers, and a worker only
-	// ever sees the environment as it stood at fork.
 	publishEmbeddingModelPath();
 	loadModules();
 }
@@ -117,13 +94,6 @@ ModuleLoader::ModuleLoader()
 void ModuleLoader::applyHardening()
 {
 #ifdef IDHAN_HARDEN
-	// Blocks same-uid ptrace of this process. Module workers run as us, so without this a codec
-	// exploit inside one can attach to the server and read the database credentials out of its
-	// memory -- on any host with yama.ptrace_scope=0, which is the default on plenty of them. That
-	// would make the rest of the worker sandbox decorative.
-	//
-	// Applied here rather than at main() because this is the point where untrusted code first
-	// becomes reachable: nothing has forked a worker yet.
 	if ( ::prctl( PR_SET_DUMPABLE, 0, 0, 0, 0 ) < 0 )
 	{
 		log::warn(
@@ -131,9 +101,6 @@ void ModuleLoader::applyHardening()
 		return;
 	}
 
-	// Logged deliberately. A `gdb -p` that fails with "Operation not permitted" and no explanation
-	// is an hour lost for no reason, and the name of the switch that caused it belongs in the log
-	// rather than in someone's memory of the build system.
 	log::info( "Hardening active (IDHAN_HARDEN): server is not ptrace-able, worker core dumps disabled" );
 #endif
 }
@@ -149,8 +116,6 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	std::vector< ipc::ManifestEntry > entries {};
 
 	{
-		// A throwaway process whose only job is to say what the library exports. --describe skips the
-		// library's init(), so enumerating modules never pays VIPS_INIT.
 		auto settings { settingsFor( path ) };
 		settings.describe_only = true;
 
@@ -167,8 +132,6 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 
 		if ( !manifest )
 		{
-			// Deliberately not fatal. The previous in-process loader called std::abort() here, so a
-			// single unusable third-party .so stopped the server from starting at all.
 			log::warn( "Skipping module library {}: {}", path.string(), manifest.error() );
 			interrogator->terminate( "interrogation failed" );
 			return false;
@@ -184,14 +147,9 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 		return false;
 	}
 
-	// A library is persistent if any one of its modules asked to be: residency is declared per
-	// module, but the process hosts the whole library, so the longest-lived request wins.
 	const bool persistent { std::ranges::any_of(
 		entries, []( const auto& entry ) { return entry.residency == ModuleResidency::PERSISTENT; } ) };
 
-	// The ceiling is per process and the process hosts the whole library, so the largest declaration
-	// wins for the same reason the longest residency does. The configured limit is a floor, not a
-	// cap: a module raises the ceiling for its own worker, it never lowers one an operator set.
 	std::size_t declared_ceiling_mb { 0 };
 	for ( const auto& entry : entries ) declared_ceiling_mb = std::max( declared_ceiling_mb, entry.rss_ceiling_mb );
 
@@ -251,14 +209,10 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 				entry.dimensions,
 				entry.supports_text ) );
 
-		// Embedding modules route by model name, not by MIME -- they declare no MIMEs at all, since
-		// what they can handle is whatever some thumbnailer can decode, which only the server knows.
 		if ( ( entry.type & ModuleTypeFlags::EMBEDDING ) != 0 )
 		{
 			if ( const auto [ it, inserted ] { m_by_model_embedding.try_emplace( entry.model_name, slot ) }; !inserted )
 			{
-				// Two libraries claiming one model name would make dispatch depend on load order, and
-				// the loser's vectors would silently be written under the winner's model_id.
 				log::warn(
 					"Module '{}' from {} claims model '{}', which is already provided by module '{}'. Ignoring the "
 					"duplicate.",
@@ -369,9 +323,6 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( c
 }
 
 //! Does the work behind one CALLBACK frame.
-/** A free coroutine taking everything by value: parameters are copied into the coroutine frame,
- *  whereas a capturing lambda's closure is not, and IDHANTask/drogon::Task are lazy enough that the
- *  distinction is the difference between working code and a use-after-free. */
 
 //! What MimeDatabase::scan yields, so a resolved MIME and a scanned one can share a branch.
 using ExpectedMime = std::expected< std::string, drogon::HttpResponsePtr >;
@@ -409,9 +360,6 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	//! frame, but not before.
 	ipc::Blob produced {};
 
-	// Resolved before anything else touches the payload. A module that hands back the input of the
-	// call it is currently serving sends no descriptor at all -- the server still holds that call's
-	// input, so the archive does not travel a second time for every member thumbnailed out of it.
 	const InFlightInput referenced {
 		frame.body[ ipc::field::INPUT_REF ].isIntegral() ?
 			worker->inputForCall( frame.body[ ipc::field::INPUT_REF ].asUInt64() ) :
@@ -430,8 +378,6 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	}
 	else if ( depth + 1 > maxCallDepth() )
 	{
-		// Enforced in the host because the host is the only party that sees the whole chain: the
-		// recursion crosses process boundaries, so no per-process counter can bound it.
 		reply[ ipc::field::ERROR ] = std::format( "module call nesting exceeded the limit of {}", maxCallDepth() );
 	}
 	else if ( auto input { by_reference ? ExpectedInput { referenced.input } :
@@ -440,9 +386,6 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	{
 		reply[ ipc::field::ERROR ] = input.error();
 	}
-	// A referenced input keeps the MIME the server already resolved for the call it belongs to.
-	// Re-deriving it is not merely wasteful, it is impossible on the ring path: detection reads
-	// content, and the whole point of the ring is that the server never made a copy to read.
 	else if ( const auto detected {
 				  by_reference ? ExpectedMime { referenced.mime } :
 								 co_await getMimeDatabase()->scan( ( *input )->blob().view(), file_name ) };
@@ -534,8 +477,6 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 						break;
 					}
 
-					// Forwarded, not copied: this is the memfd the generator wrote into, and the module
-					// waiting on this answer will read it directly.
 					produced = std::move( *generated );
 					reply_fds.emplace_back( produced.fd() );
 					reply[ ipc::field::OK ] = true;
@@ -552,18 +493,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 
 void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {
-	// Handed to a drogon loop first. This is called on the worker's IO thread, and async_run starts an
-	// eager coroutine -- calling it here would run the callback body, a MIME scan and usually a call
-	// into another worker, on the thread that has to stay free to keep reading, because the module
-	// that raised this callback is blocked waiting for the answer to come back down that channel.
-	// Round-robined over the IO loops so an archive compositing a page of tiles does not queue every
-	// callback behind the last one; getIOLoop wraps the index itself.
 	static std::atomic< std::size_t > next_loop { 0 };
 
 	auto* const loop { drogon::app().getIOLoop( next_loop.fetch_add( 1 ) ) };
 
-	// Boxed because queueInLoop takes a std::function, which has to be copyable, and a frame owns its
-	// descriptors and is therefore move-only.
 	auto payload { std::make_shared< std::pair< std::shared_ptr< WorkerProcess >, ipc::Frame > >(
 		std::move( worker ), std::move( frame ) ) };
 

@@ -25,9 +25,6 @@ unsigned defaultCollapseThreadCount();
 inline constexpr std::size_t MAX_RECORDS_PER_CHUNK { 200'000 };
 
 //! Running collapse-stage counters, passed whole to the progress hook.
-//!
-//! A struct rather than six positional std::uint64_t parameters: every one has the same type, so a
-//! transposed pair at a call site would compile silently and misreport for the whole run.
 struct CollapseProgressStats
 {
 	std::uint64_t records_flattened { 0 };

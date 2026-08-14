@@ -46,8 +46,6 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 		VIPS_FORMAT_UCHAR ) };
 	if ( !rgb_image ) return std::unexpected( ModuleError { "Failed to wrap thumbnail pixels" } );
 
-	// vips_image_write_to_buffer hands back a plain g_malloc'd buffer (freed with g_object_unref); there is no
-	// VipsBlob reference count to get wrong, which is the reason this uses the C API not the C++ binding.
 	void* buffer { nullptr };
 	std::size_t size { 0 };
 	if ( vips_image_write_to_buffer( rgb_image, ".png", &buffer, &size, nullptr ) != 0 )

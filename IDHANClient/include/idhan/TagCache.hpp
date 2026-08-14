@@ -1,6 +1,3 @@
-//
-// Client-side tag resolution cache.
-//
 
 #pragma once
 
@@ -35,10 +32,6 @@ struct TagPairHash
 };
 
 //! Thread-safe, byte-budgeted LRU cache mapping a (namespace, subtag) tag to its server-side TagID.
-//!
-//! Tag text->ID is immutable in IDHAN (ids never change, tag text is never mutated), so entries are
-//! only ever removed to stay within the byte budget — never invalidated. All operations are batched
-//! so a whole createTags() request costs at most one lock acquisition per phase.
 class TagCache
 {
   public:
@@ -68,9 +61,6 @@ class TagCache
 		TagID id;
 	};
 
-	//! Estimated bytes a single entry occupies. The key strings live in both the LRU node and the
-	//! index key, so they are counted twice; the constant covers node bookkeeping, the id, and the
-	//! stored iterator. Approximate by design — the budget is a soft target.
 	[[nodiscard]] static std::size_t entryCost( const Key& key );
 
 	//! Move an existing node to the most-recently-used position. Caller holds m_mutex.
@@ -83,7 +73,6 @@ class TagCache
 	void evictToBudget();
 
 	mutable std::mutex m_mutex;
-	//! Front = most-recently-used, back = least-recently-used.
 	std::list< Entry > m_lru {};
 	std::unordered_map< Key, std::list< Entry >::iterator, TagPairHash > m_index {};
 	std::size_t m_bytes { 0 };

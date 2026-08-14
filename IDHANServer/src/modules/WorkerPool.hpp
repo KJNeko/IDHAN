@@ -11,14 +11,6 @@ namespace idhan::modules
 {
 
 //! Owns the worker process(es) for one module library and decides how long they live.
-/** Residency is the library's, derived from its modules: PERSISTENT if any of them asked for it.
- *  A persistent library keeps one worker alive across calls, because paying VIPS_INIT per thumbnail
- *  is not viable; a single-run library gets a fresh process per call and is therefore immune to
- *  anything its modules leak.
- *
- *  Even a persistent worker is retired eventually -- on an RSS ceiling or after sitting idle --
- *  because "the module leaks" was the problem this whole design exists to contain, and keeping a
- *  process alive forever would just relocate the leak rather than bound it. */
 class WorkerPool
 {
 	WorkerSettings m_settings;
@@ -54,8 +46,6 @@ class WorkerPool
 	[[nodiscard]] ModuleResidency residency() const { return m_residency; }
 
 	//! Runs one call, retrying once in a fresh process if the worker died mid-flight.
-	/** The input rather than a descriptor, because the retry needs to build its own: a ring is bound
-	 *  to the worker that adopted it and cannot be handed to the replacement. */
 	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > dispatch(
 		Json::Value body,
 		std::shared_ptr< const CallInput > input );

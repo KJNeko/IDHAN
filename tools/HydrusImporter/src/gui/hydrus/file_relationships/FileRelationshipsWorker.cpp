@@ -27,9 +27,6 @@ void FileRelationshipsWorker::preprocess()
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 
-		// Alternates link the king of each media in a group. Hydrus only treats a group with more than one
-		// member as a real alternate group (and the server rejects groups smaller than two), so count only
-		// the kings that belong to such groups.
 		client_tr << "SELECT COALESCE( SUM( member_count ), 0 ) FROM "
 					 "( SELECT COUNT(*) AS member_count FROM alternate_file_group_members "
 					 "JOIN duplicate_files USING (media_id) GROUP BY alternates_group_id ) grouped "
@@ -100,8 +97,6 @@ void FileRelationshipsWorker::process()
 			const auto hash_it { record_map.find( hy_hash_id ) };
 			const auto king_it { record_map.find( hy_king_id ) };
 
-			// A hash that failed to map (e.g. a malformed hash row) would otherwise throw and abort the whole
-			// import; skip the pair instead.
 			if ( hash_it == record_map.end() || king_it == record_map.end() ) continue;
 
 			idhan_pairs.emplace_back( hash_it->second, king_it->second );
@@ -143,8 +138,6 @@ void FileRelationshipsWorker::process()
 
 	using GroupID = std::uint32_t;
 
-	// Alternates link the king of each media in a group (duplicates within a media are handled above), so
-	// join duplicate_files (one king per media) rather than duplicate_file_members (every hash).
 	idhan::hydrus::Query< HashID, GroupID > alternative_files {
 		client_tr,
 		"SELECT king_hash_id, alternates_group_id FROM alternate_file_group_members JOIN duplicate_files USING (media_id)"
@@ -187,8 +180,6 @@ void FileRelationshipsWorker::process()
 		const auto dupes { std::ranges::unique( record_ids ) };
 		record_ids.erase( dupes.begin(), dupes.end() );
 
-		// The server rejects groups smaller than two, and single-member Hydrus groups aren't real
-		// alternates. Skip them so one lone member can't abort the whole batch.
 		if ( record_ids.size() < 2 ) continue;
 
 		try

@@ -61,8 +61,6 @@ BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
 
 	std::ranges::sort( events, eventLess );
 
-	// Equal hash_id values are contiguous after the sort, and inside a record so are equal tag_id
-	// values, so one linear walk yields whole records without any lookaside structure.
 	std::size_t record_start { 0 };
 	while ( record_start < events.size() )
 	{
@@ -83,9 +81,6 @@ BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
 		std::vector< std::uint32_t > adds;
 		std::vector< std::uint32_t > dels;
 
-		// Compared against the running total once the record's chains are walked. Keying off dels
-		// being non-empty would silently report zero affected records whenever discarding is on,
-		// which is exactly the case the number exists to describe.
 		const auto deletes_before = out.terminal_deletes;
 
 		std::size_t chain_start { record_start };
@@ -108,9 +103,6 @@ BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
 				{
 					++out.terminal_deletes;
 
-					// Counted above whether or not it is kept, so the reported total is what the
-					// corpus contained. mappings_after_collapse is only bumped when something is
-					// actually written, so it always agrees with the chunks on disk.
 					if ( !discard_terminal_deletes )
 					{
 						dels.push_back( tag_id );
@@ -230,8 +222,6 @@ class ChunkSink
 
 		const auto records = writer.recordCount();
 
-		// Marked from inside finish(), with no lock held. TagUsageSet exists to make that safe:
-		// several workers seal at once, and one tag's text rides in hundreds of chunks.
 		const auto stats = writer.finish( m_lookup, &m_usage );
 
 		std::lock_guard< std::mutex > lock { m_mutex };
@@ -267,9 +257,6 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 
 	ChunkSink sink { out_dir, options.max_records_per_chunk, lookup, usage };
 
-	// Pure accumulation, bumped once per bucket, so an atomic costs nothing measurable here.
-	// records_flattened counts every record handed to the sink, independent of chunk boundaries --
-	// what the live stats panel calls "records flattened".
 	std::atomic< std::uint64_t > records_flattened { 0 };
 	std::atomic< std::uint64_t > events_scanned { 0 };
 	std::atomic< std::uint64_t > mappings_after_collapse { 0 };
@@ -277,8 +264,6 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 	std::atomic< std::uint64_t > terminal_delete_records { 0 };
 	std::atomic< std::size_t > buckets_done { 0 };
 
-	// Guards the host callbacks and nothing else. Reading, sorting and chain-walking a bucket, and
-	// building and deflating a chunk, all happen outside it.
 	std::mutex callback_mutex;
 
 	const auto body = [ & ]( const std::size_t bucket ) -> bool
@@ -290,9 +275,6 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 
 		auto collapsed = collapseOneBucket( work_dir, bucket, definitions, options.discard_terminal_deletes );
 
-		// A bucket with events but zero surviving records (every record's hash undefined) still
-		// contributed events_scanned, so the gate is "had events", not "produced records" --
-		// otherwise those events would silently vanish from the live and final counters.
 		const bool had_events = collapsed.events_scanned > 0;
 
 		if ( had_events )
@@ -306,8 +288,6 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 			sink.add( std::move( collapsed.records ) );
 		}
 
-		// Buckets complete out of order, so progress has to count completions. Reporting the index
-		// of whichever bucket just finished would make the bar jump backwards.
 		const auto done = buckets_done.fetch_add( 1, std::memory_order_relaxed ) + 1;
 
 		std::lock_guard< std::mutex > lock { callback_mutex };
@@ -315,8 +295,6 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 		if ( callbacks.progress )
 			callbacks.progress( done, BUCKET_COUNT, std::format( "Collapsing bucket {}", bucket ) );
 
-		// The chunk total trails by the batch still being filled, and by whatever a peer worker is
-		// mid-way through sealing. The final callback below reports the settled values.
 		if ( had_events && callbacks.statsUpdated )
 		{
 			const auto [ chunks, missing ] = sink.totals();
@@ -342,9 +320,6 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 	result.stats.skipped_missing_definitions = sink.totals().second;
 	result.chunks = std::move( sink.entries() );
 
-	// Chunks are sealed concurrently, so they finish in no particular order. Sorting by name keeps
-	// the manifest listing stable and readable; which records a chunk holds still depends on the
-	// order buckets completed in.
 	std::ranges::sort( result.chunks, []( const auto& a, const auto& b ) { return a.file < b.file; } );
 
 	result.stats.events_scanned = events_scanned.load( std::memory_order_relaxed );
@@ -353,8 +328,6 @@ CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
 	result.stats.terminal_delete_records = terminal_delete_records.load( std::memory_order_relaxed );
 	result.stats.events_collapsed = result.stats.events_scanned - result.stats.mappings_after_collapse;
 
-	// close() above just sealed the last, part-filled chunk -- report it so the final live snapshot
-	// matches the manifest rather than permanently undercounting by one.
 	if ( callbacks.statsUpdated )
 		callbacks.statsUpdated(
 			CollapseProgressStats {

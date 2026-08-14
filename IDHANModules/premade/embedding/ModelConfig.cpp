@@ -26,8 +26,6 @@ void readTriple( const Json::Value& json, std::array< float, 3 >& out )
 }
 
 //! Parses a json file, returning an empty value when it is absent or malformed.
-/** Absence is not an error at any call site here -- every one of these files is optional, and a
- *  directory missing one falls back to what the graph declares. */
 [[nodiscard]] Json::Value readJsonFile( const std::filesystem::path& path )
 {
 	std::ifstream file { path };
@@ -51,9 +49,6 @@ void readTriple( const Json::Value& json, std::array< float, 3 >& out )
 }
 
 //! The precision variants upstream publishes, in the order they are preferred.
-/** An operator who fetched only one variant gets that one without having to rename it. fp32 first
- *  because inference here is CPU-only: fp16 is a GPU memory optimisation the CPU provider has to
- *  undo, and the quantized forms trade accuracy for size. */
 constexpr std::array< std::string_view, 7 > VARIANT_SUFFIXES {
 	{ "", "_fp16", "_q4f16", "_q4", "_int8", "_uint8", "_quantized" }
 };
@@ -63,8 +58,6 @@ constexpr std::array< std::string_view, 7 > VARIANT_SUFFIXES {
 {
 	for ( const auto suffix : VARIANT_SUFFIXES )
 	{
-		// The upstream layout keeps graphs in onnx/; the flat form is what a hand-prepared directory
-		// or an older IDHAN export looks like.
 		const std::array< std::filesystem::path, 2 > candidates {
 			{ directory / "onnx" / std::format( "{}{}.onnx", stem, suffix ),
 			  directory / std::format( "{}{}.onnx", stem, suffix ) }
@@ -80,17 +73,11 @@ constexpr std::array< std::string_view, 7 > VARIANT_SUFFIXES {
 }
 
 //! Names an embedding output goes by, most specific first.
-/** transformers exports declare `last_hidden_state` before `pooler_output`, and the first of those is
- *  a per-patch grid -- [batch, 196, 768] for a 224px ViT/16. Its trailing dimension is 768, the same
- *  as the real embedding's, so a loader that took output 0 and read `shape.back()` would find a
- *  plausible width and then embed patch grids. Selection is therefore by name, never by position. */
 constexpr std::array< std::string_view, 4 > EMBEDDING_OUTPUT_NAMES {
 	{ "pooler_output", "image_embeds", "text_embeds", "image_features" }
 };
 
 //! Picks the output that carries the embedding, and reports its width.
-/** Falls back to structure when no name matches: an embedding is rank 2 ([batch, width]) with a fixed
- *  trailing axis, which the per-token and per-patch outputs are not. */
 [[nodiscard]] const GraphTensorInfo* chooseEmbeddingOutput( const GraphInterface& interface )
 {
 	for ( const auto name : EMBEDDING_OUTPUT_NAMES )
@@ -121,8 +108,6 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 {
 	ModelConfig config {};
 
-	// The directory is the model. Deriving the name from a file's contents would mean a model whose
-	// database key changes when that file is edited.
 	config.m_model_name = directory.filename().string();
 
 	if ( config.m_model_name.empty() ) return std::unexpected( std::string { "model directory has no name" } );
@@ -135,8 +120,6 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 		return std::unexpected(
 			std::string { "no image tower here (looked for onnx/vision_model.onnx and model.onnx)" } );
 
-	// Read before anything can override it: this is the only source that cannot be stale, since it is
-	// the graph that will actually run.
 	const auto vision { readGraphInterface( config.m_onnx_path ) };
 	if ( !vision ) return std::unexpected( vision.error() );
 
@@ -144,18 +127,12 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 
 	const auto* const vision_output { chooseEmbeddingOutput( *vision ) };
 
-	// A graph with no rank-2 fixed-width output is one this module cannot use: without a width there
-	// is no halfvec column to create, and without knowing which tensor is the embedding there is
-	// nothing meaningful to store in it.
 	if ( vision_output == nullptr )
 		return std::unexpected( std::format( "{} declares no embedding output", config.m_onnx_path.string() ) );
 
 	config.m_output_name = vision_output->m_name;
 	config.m_dimensions = declaredWidth( vision_output );
 
-	// Geometry deliberately does NOT come from the graph. Upstream exports declare pixel_values as
-	// fully dynamic ([0,0,0,0]) so one graph serves every resolution, which means the only statement
-	// of the size this model was trained at is preprocessor_config.json.
 	if ( const auto preprocess { readJsonFile( directory / "preprocessor_config.json" ) }; preprocess.isObject() )
 	{
 		readTriple( preprocess[ "image_mean" ], config.m_preprocess.m_mean );
@@ -170,8 +147,6 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 		}
 	}
 
-	// SiglipImageProcessor resizes to exactly size.height x size.width with no aspect preservation,
-	// which is the forced resize the module already asks the host for.
 	config.m_preprocess.m_force_exact = true;
 
 	config.m_text_onnx_path = findTower( directory, "text_model" );
@@ -182,8 +157,6 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 
 		if ( !text )
 		{
-			// Degraded rather than fatal: an unreadable text tower costs text queries and nothing
-			// else, and image embedding is the more important half.
 			spdlog::warn(
 				"Model '{}' has a text tower that could not be read ({}); text queries will be refused",
 				config.m_model_name,
@@ -193,8 +166,6 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 		else if ( const auto text_width { declaredWidth( chooseEmbeddingOutput( *text ) ) };
 		          text_width != 0 && text_width != config.m_dimensions )
 		{
-			// Both towers must land in the same space, or comparing a phrase to an image is
-			// meaningless. Differing widths mean the two files do not belong together.
 			spdlog::warn(
 				"Model '{}' has a text tower of width {} but an image tower of width {}; refusing to use it",
 				config.m_model_name,
@@ -209,8 +180,6 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 			const auto* const text_output { chooseEmbeddingOutput( *text ) };
 			if ( text_output != nullptr ) config.m_text_output_name = text_output->m_name;
 
-			// [batch, sequence]. A fixed sequence length is authoritative; upstream leaves it
-			// dynamic, and zero tells the tokenizer to use tokenizer.json's padding strategy.
 			if ( const auto& shape { text->m_inputs.front().m_shape }; shape.size() == 2 && shape[ 1 ] > 0 )
 				config.m_context_length = static_cast< std::size_t >( shape[ 1 ] );
 
@@ -228,8 +197,6 @@ std::expected< ModelConfig, std::string > readModelDirectory( const std::filesys
 		}
 	}
 
-	// Last, so a deliberately written file outranks everything discovered. Only ever present because
-	// someone put it there.
 	if ( const auto overrides { readJsonFile( directory / "model.json" ) }; overrides.isObject() )
 	{
 		if ( overrides[ "model_name" ].isString() ) config.m_model_name = overrides[ "model_name" ].asString();
@@ -280,8 +247,6 @@ std::vector< ModelConfig > scanModels( const std::filesystem::path& models_root 
 		auto config { readModelDirectory( entry.path() ) };
 		if ( !config )
 		{
-			// Skipped, not fatal: one malformed model directory must not cost the worker every other
-			// model in the same library.
 			spdlog::warn( "Skipping embedding model at {}: {}", entry.path().string(), config.error() );
 			continue;
 		}

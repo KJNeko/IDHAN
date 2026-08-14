@@ -28,8 +28,6 @@ std::vector< std::string_view > ArchiveMetadata::handleableMimes()
 
 std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseFile( idhan::ModuleCallData& data )
 {
-	// Declared before the handle so it outlives it: libarchive holds a pointer into the reader's
-	// chunk, and reverse-order destruction is what keeps that pointer valid for the handle's life.
 	ArchiveModuleReader reader { data.file };
 
 	std::unique_ptr< archive, void ( * )( archive* ) > a {
@@ -53,9 +51,6 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	while ( ret == ARCHIVE_OK || ret == ARCHIVE_WARN )
 	{
-		// ARCHIVE_WARN is recoverable: the entry is still usable, so log and carry on rather than
-		// aborting the whole archive (the post-loop ret != ARCHIVE_EOF check would otherwise treat
-		// the warning as fatal).
 		if ( ret == ARCHIVE_WARN )
 		{
 			const char* warn { archive_error_string( a.get() ) };
@@ -88,9 +83,6 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 		spdlog::trace( "Cleaned path to {}", *filename );
 
-		// Only the digest and size are needed here, so stream the entry through an incremental hash
-		// rather than buffering the whole (decompressed) entry -- a large member or decompression bomb
-		// would otherwise inflate memory to the entry's uncompressed size.
 		const auto entry_hash_e { hashArchiveEntryData( a.get() ) };
 		if ( !entry_hash_e )
 		{

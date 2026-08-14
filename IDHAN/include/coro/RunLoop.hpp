@@ -1,6 +1,3 @@
-// Minimal coroutine run loop for processes with no trantor event loop -- the Monitor and the Worker
-// (docs/superpowers/specs/2026-07-26-worker-framework-design.md S3.2, S3.3), and tests that want to
-// exercise the io layer without standing up drogon.
 #pragma once
 
 #include <condition_variable>
@@ -56,8 +53,6 @@ class RunLoopResumer final : public Resumer
 
 	explicit RunLoopResumer( RunLoop& loop ) noexcept : m_loop( &loop ) {}
 
-	// Already implicitly deleted via Resumer's deleted copy/move, but -Weffc++ does not reason
-	// through the base class -- it just sees a pointer member with no copy/move declared here.
 	FGL_DELETE_COPY( RunLoopResumer );
 	FGL_DELETE_MOVE( RunLoopResumer );
 
@@ -80,8 +75,6 @@ struct DetachedTask
 
 		void return_void() const noexcept {}
 
-		// driveTask catches everything the task can throw, so reaching here means the driver itself
-		// failed; there is no caller left to propagate to.
 		void unhandled_exception() const { std::terminate(); }
 	};
 };
@@ -125,8 +118,6 @@ T runOnLoop( RunLoop& loop, Task< T > task )
 	std::optional< T > out {};
 	std::exception_ptr error {};
 
-	// The driver starts eagerly, so a task that never suspends is already finished (and has already
-	// called stop()) by the time run() is entered. run() handles that by draining and returning.
 	detail::driveTask< T >( std::move( task ), &out, &error, &loop );
 	loop.run();
 

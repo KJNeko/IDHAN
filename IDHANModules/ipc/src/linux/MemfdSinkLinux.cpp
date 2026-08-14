@@ -15,8 +15,7 @@
 namespace idhan::ipc
 {
 
-//! Seals applied once the output is complete. Identical in intent to Blob's: the host maps what
-//! comes back, and nothing should be able to change it afterwards.
+//! Seals applied once the output is complete.
 constexpr unsigned int SINK_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL };
 
 std::expected< std::unique_ptr< MemfdSink >, std::string > MemfdSink::create()
@@ -32,8 +31,6 @@ std::expected< std::unique_ptr< MemfdSink >, std::string > MemfdSink::create()
 
 std::expected< void, ModuleError > MemfdSink::reserve( const std::size_t bytes )
 {
-	// A reservation is a hint about the expected total, not a limit, so shrinking below what has
-	// already been written is simply ignored rather than treated as an error.
 	if ( bytes <= m_reserved ) return {};
 
 	if ( ::ftruncate( m_fd.get(), static_cast< off_t >( bytes ) ) != 0 )
@@ -62,8 +59,6 @@ std::expected< void, ModuleError > MemfdSink::write( const std::span< const std:
 
 		if ( result < 0 && errno == EINTR ) continue;
 
-		// A zero return with bytes still outstanding means no progress is being made; looping would
-		// spin forever.
 		return std::unexpected(
 			ModuleError { result == 0 ? std::string { "write to sink made no progress" } :
 		                                errnoMessage( "write to sink failed" ) } );

@@ -22,8 +22,6 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 	VipsModuleSource source { data.file };
 	if ( !source.valid() ) return std::unexpected( ModuleError { "Failed to open the file as a vips source" } );
 
-	// Nothing here needs pixels, only the header -- so the source is read lazily and a large image
-	// never lands in this process at all.
 	VipsImage* const image_ptr { vips_image_new_from_source( source.get(), "", nullptr ) };
 
 	if ( image_ptr == nullptr )

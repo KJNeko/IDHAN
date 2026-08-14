@@ -147,7 +147,5 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 		return std::unexpected( idhan::ModuleError { "Failed to resize PSD image" } );
 	idhan::VipsImagePtr resized { resized_raw };
 
-	// write_to_memory (in ThumbnailInfo) computes the pipeline here, while interleavedRGB -- which
-	// vips_image_new_from_memory references without copying -- is still alive on the stack.
 	return idhan::ThumbnailInfo { std::move( resized ) };
 }

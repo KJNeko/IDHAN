@@ -60,8 +60,6 @@ export function parseTermInput(input: string): Term | null {
 
   if (lastColon > 0) {
     const suffix = rest.slice(lastColon + 1).trim();
-    // Guarded against empty: Number('') is 0, which would silently eat a trailing colon and set the
-    // weight to zero — a term that contributes nothing, with nothing on screen to explain why.
     const parsed = suffix.length > 0 ? Number(suffix) : Number.NaN;
 
     if (Number.isFinite(parsed)) {

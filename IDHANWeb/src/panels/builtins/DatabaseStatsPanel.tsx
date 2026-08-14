@@ -82,9 +82,6 @@ function pct(value: number, total: number): number {
   return total > 0 ? (value / total) * 100 : 0;
 }
 
-// Validated dark-mode categorical order (see the `dataviz` skill) — checked against IDHAN's actual
-// panel surface (#16181d) for CVD separation and contrast. Assigned to segments in this fixed order
-// by rank; never cycled or re-assigned on refresh.
 const DONUT_PALETTE = ['#3987e5', '#008300', '#d55181', '#c98500', '#199e70', '#d95926'] as const;
 // The "Other" fold bucket is not a categorical slot — it reads as neutral/de-emphasized, not identity.
 const OTHER_COLOR = '#9aa0aa';
@@ -480,8 +477,6 @@ function DatabaseStatsPanel({ host }: PanelProps) {
   const diskFiles = clusters?.reduce((sum, c) => sum + c.file_count, 0) ?? 0;
   const avgFileSize = diskFiles > 0 ? diskUsed / diskFiles : 0;
 
-  // Outer ring: on-disk usage per cluster. `sub` carries the read-only flag and capacity limit, since
-  // that detail no longer has its own bar-list to live in.
   const clustersRing = clusters
     ? buildDonutRing(
         clusters.map((c) => {
@@ -494,8 +489,6 @@ function DatabaseStatsPanel({ host }: PanelProps) {
         5,
       )
     : null;
-  // Inner ring: on-disk bytes by mime type, summed from each cluster's own by_mime breakdown — always
-  // shown alongside the outer ring rather than gated behind selecting a cluster segment.
   const mimeBytesRing = clusters ? buildDonutRing(aggregateMimeBytes(clusters), 5) : null;
 
   return (
@@ -612,7 +605,6 @@ function StatRow({ label, value, sub }: { label: string; value: string; sub?: st
 }
 
 export const databaseStatsPanel = {
-  // Legacy slug retained so existing saved layouts keep resolving to this panel (see file header).
   type: 'sunburst-stats',
   title: 'Database Stats',
   description: 'Database counts, PostgreSQL storage by table, clusters, and content by type.',

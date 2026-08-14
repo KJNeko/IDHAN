@@ -58,9 +58,6 @@ idhan::coro::Task<> awaitVoid()
 	co_return;
 }
 
-// Drives a Task to completion from non-coroutine code. Only valid for a task that never suspends on
-// anything asynchronous -- every task in this file completes synchronously once started. Eager
-// (suspend_never at both ends), so the body runs on the calling thread and the frame self-destroys.
 struct SyncDriver
 {
 	struct promise_type

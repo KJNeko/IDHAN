@@ -1,6 +1,3 @@
-//
-// Client-side tag resolution cache.
-//
 
 #include "TagCache.hpp"
 

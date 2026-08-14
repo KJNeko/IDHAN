@@ -9,12 +9,6 @@
 #include <format>
 
 //! Shared libvips bring-up for the premade module libraries.
-/** Every premade library ends up touching vips -- the image modules obviously, but also the PSD and
- *  archive thumbnailers (compositing) and the FFmpeg one (ThumbnailerModuleI::createThumbnailFile
- *  encodes through vips). Each library is dlopened into its own worker process, so each one has to
- *  run VIPS_INIT itself; nothing else in that process will have done it.
- *
- *  Header-only and inline so the four libraries can share it without an extra CMake target. */
 namespace idhan::premade
 {
 
@@ -69,8 +63,6 @@ inline void vipsInit( const char* const name )
 
 	if ( vips_init( name ) != 0 )
 	{
-		// The host treats a worker that dies during init as "library failed to load" and skips it,
-		// so failing loudly here is better than limping on with a half-initialised vips.
 		spdlog::critical( "VIPS: vips_init failed: {}", vips_error_buffer() );
 		vips_error_clear();
 		return;

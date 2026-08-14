@@ -60,8 +60,6 @@ function readConfig(raw: Partial<Config>): Config {
     slotA: typeof raw.slotA === 'number' ? raw.slotA : null,
     slotB: typeof raw.slotB === 'number' ? raw.slotB : null,
     terms: Array.isArray(raw.terms) ? raw.terms : DEFAULT_CONFIG.terms,
-      // Checked against the list rather than cast: a stored value from a build that offered a mode this
-      // one does not would otherwise reach orderTerms as an unknown key.
       sortMode:
           typeof raw.sortMode === 'string' && SORT_VALUES.has(raw.sortMode) ? raw.sortMode : DEFAULT_CONFIG.sortMode,
   };
@@ -205,8 +203,6 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
 
         setModels(list);
 
-        // Pick a default only when nothing is chosen, so a saved layout keeps its model even if that
-        // model is momentarily unavailable.
         setConfigState((current) => {
           if (current.modelName) return current;
           const first = list.find((m) => m.available) ?? list[0];
@@ -254,8 +250,6 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
     const parsed = parseCompareTerm(draft);
     if (!parsed) return;
 
-    // Record references work on any model — their vectors are already stored — so only a phrase is
-    // refused here, and with the reason rather than a dead input box.
     if (parsed.kind === 'text' && !textEnabled) {
       setError('This model cannot embed text. Add a record reference instead, e.g. record:1234.');
       return;
@@ -330,8 +324,6 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
       const text = await res.text();
 
       if (!res.ok) {
-        // The server's messages name the offending record, model, or phrase, so they are worth
-        // showing verbatim rather than replacing with a generic failure.
         setError(text || `compare failed: ${res.status}`);
         return;
       }
@@ -351,8 +343,6 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
     }
   }, [host, config]);
 
-    // Keyed by label, not by position: a term added or removed since the last run shifts every later
-    // index, and an index-based lookup would show one term's distance beside another term's name.
     const rowsByLabel = useMemo(() => indexRowsByLabel(results?.rows ?? []), [results]);
 
     const orderedTerms = useMemo(

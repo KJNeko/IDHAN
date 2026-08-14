@@ -30,18 +30,6 @@ ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 	const auto query_vector { assembleQueryVector( resolved.value(), dimensions ) };
 	if ( !query_vector ) co_return std::unexpected( createBadRequest( "{}", query_vector.error() ) );
 
-	// An explicit transaction, for two reasons that are both correctness rather than tidiness.
-	//
-	// SET LOCAL outside a transaction block is discarded with a warning, so the recall setting simply
-	// would not apply -- the search would silently run at HNSW's default ef_search and nobody would
-	// see anything except a line in the server log.
-	//
-	// And db is a pool. Two statements issued through it are not promised the same connection, so
-	// even a session-level SET could be applied to one connection and the query run on another. A
-	// transaction is what pins both to one.
-	//
-	// LOCAL rather than session scope so the setting dies with the transaction instead of leaking
-	// onto whatever that pooled connection serves next.
 	const auto transaction { co_await db->newTransactionCoro() };
 
 	co_await transaction->execSqlCoro( std::format( "SET LOCAL hnsw.ef_search = {}", ef_search ) );
@@ -52,16 +40,6 @@ ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 	const auto select { std::format(
 		"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}", table, limit ) };
 
-	// Logged as something that can be pasted into a database client and run unchanged, which means
-	// two departures from what is actually executed:
-	//
-	// The vector is inlined rather than left as $1, because a statement with an unbound parameter
-	// cannot be run and nobody is going to reconstruct 768 floats by hand. Quoting it needs no
-	// escaping -- toHalfvecLiteral emits only digits, '.', '-', 'e', ',' and brackets, so there is no
-	// quote in it to break out of.
-	//
-	// The transaction is spelled out because SET LOCAL outside one is discarded: pasting the SELECT
-	// on its own would measure a plan the server never used.
 	log::debug(
 		"Embedding search on {}:\nBEGIN;\nSET LOCAL hnsw.ef_search = {};\nSELECT record_id, embedding <=> "
 		"'{}'::halfvec AS distance FROM {} ORDER BY distance LIMIT {};\nCOMMIT;",
