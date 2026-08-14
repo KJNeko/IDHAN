@@ -5,8 +5,6 @@
 #include "JobTaskPromise.hpp"
 #include "fgl/defines.hpp"
 
-//! Coroutine return type for a job body run by JobRuntime. Owns the coroutine handle and its shared
-//! JobTaskStatus (job id, stored result response, completion state). See queueJob().
 struct JobTask
 {
 	using promise_type = JobTaskPromise;

@@ -7,15 +7,10 @@
 namespace idhan::api
 {
 
-//! WebUI plugin discovery. Bundles live under `<static>/plugins/<dir>/` (see getPluginsPath) and are
-//! served by the ordinary static file router; this endpoint only publishes the index. Bundles are
-//! loaded client-side by dynamic import, so the server never runs plugin code. This is not the C++
-//! ModuleLoader path.
+//! Publishes the WebUI plugin index; bundles are static client-side imports, not C++ modules.
 class PluginAPI : public drogon::HttpController< PluginAPI >
 {
-	//! Returns the validated plugin index (an array of manifests with resolved bundle URLs). The scan
-	//! result is cached in memory; pass `?rescan=true` to force a fresh directory scan, mirroring
-	//! `/mime/reload`.
+	//! Cached unless `?rescan=true`.
 	static drogon::Task< drogon::HttpResponsePtr > listPlugins( drogon::HttpRequestPtr req );
 
   public:

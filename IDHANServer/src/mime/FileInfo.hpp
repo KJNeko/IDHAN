@@ -28,7 +28,6 @@ struct FileInfo
 	std::chrono::time_point< std::chrono::system_clock > modified_time;
 };
 
-//! Populates a FileInfo struct with information from the data
 [[nodiscard]] drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(
 	std::shared_ptr< FileIOUring > io_uring,
 	DbClientPtr db );

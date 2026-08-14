@@ -7,27 +7,19 @@
 namespace idhan::api
 {
 
-//! CRUD for WebUI named layouts pushed to the server (M5). Layouts live primarily in the browser;
-//! these endpoints are the optional server-side copy used to move a layout between browsers. Identity
-//! is the client-generated uuid, so a push (PUT) is an upsert. There is no ownership or user system.
+//! Optional server-side copy of browser-owned WebUI layouts; ids are client-generated UUIDs.
 class LayoutAPI : public drogon::HttpController< LayoutAPI >
 {
-	//! Lists stored layouts as metadata only (id, name, schema_ver, timestamps), never the documents,
-	//! which can be large. The client pulls a full document lazily with getLayout.
+	//! Metadata only; documents are fetched lazily.
 	static drogon::Task< drogon::HttpResponsePtr > listLayouts( drogon::HttpRequestPtr req );
 
-	//! Strict create from a full LayoutDocument body. 409 if the id already exists or the name collides
-	//! (case-insensitive) with a different layout.
 	static drogon::Task< drogon::HttpResponsePtr > createLayout( drogon::HttpRequestPtr req );
 
-	//! Returns the full stored LayoutDocument for @p id, or 404.
 	static drogon::Task< drogon::HttpResponsePtr > getLayout( drogon::HttpRequestPtr req, std::string id );
 
-	//! Push-to-server: upsert the document at @p id. 409 only if the name collides with a *different*
-	//! layout id.
+	//! Upsert; 409 only on name collision with a different layout id.
 	static drogon::Task< drogon::HttpResponsePtr > putLayout( drogon::HttpRequestPtr req, std::string id );
 
-	//! Deletes the layout at @p id. Returns { deleted: <bool> }.
 	static drogon::Task< drogon::HttpResponsePtr > deleteLayout( drogon::HttpRequestPtr req, std::string id );
 
   public:

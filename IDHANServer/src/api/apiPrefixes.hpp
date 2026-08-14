@@ -7,29 +7,14 @@
 namespace idhan::api
 {
 
-/**
- * @brief Root path prefixes owned by the API rather than the WebUI.
- *
- * The SPA history fallback (see ServerContext::setupSPAFallback) serves index.html for unmatched
- * paths so client-side routes survive a reload. These prefixes are excluded from that fallback: a
- * request to a mistyped API path must return a real 404 instead of a page of HTML.
- *
- * @warning This list is mirrored in IDHANWeb/src/api/prefixes.ts, which drives the Vite dev proxy.
- * Adding a route family here without adding it there means the endpoint 404s in dev but works in
- * production. tests/src/api/apiPrefixes.cpp asserts the two agree.
- */
+//! API-owned prefixes excluded from SPA fallback. Keep mirrored with IDHANWeb/src/api/prefixes.ts.
 constexpr std::array api_prefixes { std::to_array< std::string_view >(
 	{ "/api",    "/auth",      "/clusters", "/db",        "/embeddings",    "/file",    "/generate_api_key",
 	  "/health", "/heartbeat", "/hyapi",    "/integrity", "/jobs",          "/layouts", "/log",
 	  "/mime",   "/plugins",   "/purge",    "/records",   "/relationships", "/search",  "/tags",
 	  "/test",   "/version" } ) };
 
-/**
- * @brief True when @p path belongs to the API and must never fall back to the SPA.
- *
- * Matches on segment boundaries, so "/searching" is a SPA route while "/search" and "/search/foo"
- * are API paths.
- */
+//! Segment-boundary match: "/searching" is a SPA route, "/search/foo" is API.
 [[nodiscard]] inline bool isApiPath( const std::string_view path )
 {
 	return std::ranges::any_of(

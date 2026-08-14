@@ -9,7 +9,6 @@
 namespace idhan::search
 {
 
-//! What a step was.
 enum class StepKind
 {
 	//! A term's query. `rows` is what the database returned.
@@ -21,7 +20,6 @@ enum class StepKind
 	Page
 };
 
-//! What one step of a search produced.
 struct SearchStep
 {
 	std::string label {};
@@ -35,12 +33,7 @@ struct SearchStep
 	bool inverted { false };
 };
 
-/**
- * @brief Accumulates the per-step accounting for one search.
- *
- * Fetch steps are recorded from whichever database thread each fetch completes on, so appends are
- * locked. Everything after the fetches complete runs on the awaiting coroutine's thread alone.
- */
+//! Per-step search accounting; fetches can record concurrently.
 class SearchStats
 {
 	mutable std::mutex m_mutex {};

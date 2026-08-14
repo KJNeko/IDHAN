@@ -26,8 +26,6 @@
 
 namespace idhan::hyapi
 {
-//! Implements the Hydrus Network client API (the /hyapi/* endpoints) for compatibility with existing
-//! Hydrus clients.
 class HydrusAPI : public drogon::HttpController< HydrusAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > unsupported( drogon::HttpRequestPtr request );
@@ -199,10 +197,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	METHOD_LIST_END
 };
 
-/**
- * @brief Converts and extracts Hydrus' `file` input from json to record ids, Sets the record parameter `file_ids` to a
- * json array of the record ids
- */
 ExpectedTask< void > convertQueryRecordIDs( drogon::HttpRequestPtr& request, DbClientPtr db );
 
 drogon::Task< Json::Value > getServiceList( DbClientPtr db );

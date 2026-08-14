@@ -12,12 +12,10 @@
 namespace idhan
 {
 
-//! Abstract async I/O backend. The server is Linux-only; the sole implementation is linux/IOUringLinux.
 class IOUring
 {
   public:
 
-	//! Platform-agnostic file handle. Stores int (Linux fd) or HANDLE (Windows, pointer-sized).
 	using NativeHandle = std::uintptr_t;
 
 	virtual drogon::Task< std::vector< std::byte > > read(
@@ -27,7 +25,6 @@ class IOUring
 
 	virtual drogon::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) = 0;
 
-	//! unlinkat(2). -ENOENT if the path was not there.
 	virtual drogon::Task< int > removeFile( std::filesystem::path path ) = 0;
 
 	//! renameat(2). Atomic, and requires both paths to be on the same filesystem.
@@ -36,7 +33,7 @@ class IOUring
 	//! mkdirat(2) per missing component, like create_directories. -EEXIST is treated as success.
 	virtual drogon::Task< int > createDirectories( std::filesystem::path path ) = 0;
 
-	//! statx(2) for the size alone. The error is a negative errno.
+	//! The error is a negative errno.
 	virtual drogon::Task< std::expected< std::uint64_t, int > > fileSize( std::filesystem::path path ) = 0;
 
 	//! Associates a file handle with this backend. Required by IOCP; no-op for other backends.
@@ -48,14 +45,11 @@ class IOUring
 	FGL_DELETE_COPY( IOUring );
 	FGL_DELETE_MOVE( IOUring );
 
-	//! Returns the active backend. Must call init() before first use.
 	static IOUring& getInstance();
 
-	//! Selects and initialises the backend appropriate for the current platform/OS version.
 	static void init();
 };
 
-//! File handle wrapper. Provides async read/write and mmap via the active IOUring backend.
 class [[nodiscard]] FileIOUring
 {
 	struct FileDescriptor
@@ -65,7 +59,7 @@ class [[nodiscard]] FileIOUring
 
 		~FileDescriptor();
 
-		// Owns the fd; copying would double-close. Move transfers ownership and resets the source to -1.
+		// Owns the fd; copying would double-close.
 		FGL_DELETE_COPY( FileDescriptor );
 		FileDescriptor( FileDescriptor&& other ) noexcept;
 		FileDescriptor& operator=( FileDescriptor&& other ) noexcept;

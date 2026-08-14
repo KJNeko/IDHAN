@@ -58,8 +58,6 @@ class ClusterManager
 		//! Max size this folder can contain. 0 == unlimited
 		std::size_t m_max_capacity;
 
-		//! Writes \p data into this cluster, addressed by \p sha256.
-		//! \return An error response if the cluster is read-only, or if the write itself fails.
 		[[nodiscard]] std::expected< void, drogon::HttpResponsePtr > storeFile(
 			const SHA256& sha256,
 			const std::byte* data,
@@ -78,16 +76,13 @@ class ClusterManager
 
 	ClusterManager();
 
-	//! Reloads the cluster info from the database
 	drogon::Task< void > reloadClusters( DbClientPtr db );
 
-	//! Finds the best folder to add the file too.
 	[[nodiscard]] drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > findBestFolder(
 		RecordID record_id,
 		std::size_t file_size,
 		DbClientPtr db );
 
-	//! Stores the data located at `stream` for a given record id.
 	//! \note A no-op reporting success if the record already sits in a read-only cluster and the file
 	//! is present there: nothing may write to or delete from such a cluster, so re-storing would only
 	//! add a second copy elsewhere and orphan the original.
@@ -97,10 +92,8 @@ class ClusterManager
 		std::size_t length,
 		DbClientPtr db );
 
-	//! \return The on-disk directory path for \p cluster_id, or an error response if it is unknown.
 	[[nodiscard]] ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );
 
-	//! \return The process-wide ClusterManager singleton.
 	static ClusterManager& getInstance();
 };
 } // namespace idhan::filesystem

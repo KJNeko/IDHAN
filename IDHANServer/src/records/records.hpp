@@ -15,9 +15,7 @@ class SHA256;
 namespace idhan::helpers
 
 {
-/**
- * @note Hashes MUST be unique
- */
+//! Hashes must be unique.
 [[nodiscard]] drogon::Task< std::vector< RecordID > > massCreateRecord(
 	const std::vector< SHA256 >& sha256s,
 	DbClientPtr db );

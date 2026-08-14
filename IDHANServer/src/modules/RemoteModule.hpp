@@ -19,7 +19,6 @@ namespace idhan::modules
 
 inline constexpr static std::uint32_t SERVER_ORIGINATED { 0 };
 
-//! The input to a remote module call. The out-of-process analogue of ModuleCallData.
 struct RemoteCallData
 {
 	std::shared_ptr< const CallInput > input {};
@@ -30,7 +29,6 @@ struct RemoteCallData
 	std::uint32_t depth { SERVER_ORIGINATED };
 };
 
-//! One module, addressed across a process boundary.
 class RemoteModule
 {
 	std::shared_ptr< WorkerPool > m_pool;
@@ -44,7 +42,6 @@ class RemoteModule
 	std::uint32_t m_dimensions { 0 };
 	bool m_supports_text { false };
 
-	//! Builds the common part of a CALL body.
 	[[nodiscard]] Json::Value baseBody( ipc::CallOp op, const RemoteCallData& data ) const;
 
   public:
@@ -89,19 +86,14 @@ class RemoteModule
 		RemoteCallData data,
 		std::array< std::byte, 256 / 8 > desired_hash ) const;
 
-	//! The model this module wraps. Empty unless type() includes EMBEDDING.
 	[[nodiscard]] std::string_view modelName() const { return m_model_name; }
 
-	//! The width of the vectors this module produces. Zero unless type() includes EMBEDDING.
 	[[nodiscard]] std::uint32_t dimensions() const { return m_dimensions; }
 
-	//! Embeds one file into an L2-normalised vector of dimensions() floats.
 	[[nodiscard]] IDHANTask< std::expected< EmbeddingInfo, ModuleError > > embed( RemoteCallData data ) const;
 
-	//! Whether this model has a text tower, as its manifest reported after startup.
 	[[nodiscard]] bool supportsText() const { return m_supports_text; }
 
-	//! Embeds a phrase into the same space as embed(). Carries no file.
 	[[nodiscard]] IDHANTask< std::expected< EmbeddingInfo, ModuleError > > embedText( std::string phrase ) const;
 };
 

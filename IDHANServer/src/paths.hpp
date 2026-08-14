@@ -58,23 +58,15 @@ std::vector< std::filesystem::path > getMimeParserPaths();
 std::filesystem::path getStaticPath();
 std::filesystem::path getThumbnailsPath();
 
-//! Square thumbnail edge lengths (px) the server is permitted to write to its on-disk cache. Requests
-//! for other sizes are still generated and served, just never cached. Config: `[thumbnails] cacheable_sizes`.
-//! Read live per call so an operator can change it without restarting; only hit on a cache miss.
+//! Requests outside `[thumbnails] cacheable_sizes` are generated but not cached. Read live per miss.
 std::vector< std::size_t > getCacheableThumbnailSizes();
 
-//! Whether the on-disk thumbnail cache is used at all. Config: `[thumbnails] cache`, default true.
 bool getThumbnailCachingEnabled();
 
-//! Whether to empty the thumbnail cache directory during startup. Config: `[thumbnails] purge_on_boot`.
-/** Applies at startup only. Once the server is up, nothing purges the cache again on its own. */
+//! `[thumbnails] purge_on_boot` applies at startup only.
 bool getPurgeThumbnailsOnBoot();
 
-//! Directory scanned for WebUI plugin bundles. Each `<dir>/manifest.json` describes one plugin.
-//! Defaults to `<static>/plugins` so the existing static file router serves the bundles at `/plugins/...`
-//! with no extra routing. Configurable via `[plugins] path`; an override must still be reachable under
-//! the `/plugins` URL (i.e. live under the static root) for the browser to fetch the bundle. Cached
-//! after first resolution.
+//! `[plugins] path` must still be reachable under `/plugins/...` for the browser to fetch bundles.
 std::filesystem::path getPluginsPath();
 
 } // namespace idhan
