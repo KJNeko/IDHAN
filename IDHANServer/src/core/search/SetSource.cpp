@@ -36,7 +36,7 @@ std::string arrayLiteral( const std::vector< T >& ids )
 //!                     finished Set be reversed; only fetchPage(), which pages in SQL, needs DESC.
 //! \param random_order emits `ORDER BY random()`. Only ever set by fetchPage(): a RANDOM term
 //!                     fetch must still come back in record_id order, because that is the order
-//!                     the algebra merges in -- randomising a term would silently corrupt it.
+//!                     the algebra merges in; randomising a term would silently corrupt it.
 //! \param distinct_rows dedups in the database. Set for the mapping fetches, where one record can
 //!                     satisfy a term through many tags at once.
 std::string buildTermQuery(
@@ -116,9 +116,9 @@ std::string buildTermQuery(
 	return query;
 }
 
-//! Reads a fetch result into a Set. Rows arrive in composite order, so duplicates -- which
-//! active_tag_mappings_final can produce when a tag reaches a record both directly and through a
-//! parent -- are adjacent and drop out with a single comparison.
+//! Reads a fetch result into a Set. Rows arrive in composite order, so duplicates are adjacent and
+//! drop out with a single comparison. active_tag_mappings_final produces them when a tag reaches a
+//! record both directly and through a parent.
 Set readSet( const drogon::orm::Result& result, const SortKeyType key_type, const bool want_hashes )
 {
 	std::vector< RecordID > ids {};

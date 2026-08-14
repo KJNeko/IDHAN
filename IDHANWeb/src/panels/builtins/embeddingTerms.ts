@@ -1,9 +1,8 @@
 /**
  * The term model behind the Embedding Search panel, and the shorthand that produces it.
  *
- * Text terms are free text. They are NOT tags and never reach the tag tables — embedding search is a
- * separate system from tag search, so `rating:safe` typed here is a phrase handed to the model, not
- * a namespaced tag.
+ * Text terms are free text. They are not tags and never reach the tag tables, so `rating:safe` typed
+ * here is a phrase handed to the model rather than a namespaced tag.
  */
 
 export interface TextTerm {
@@ -24,14 +23,14 @@ export interface RecordTerm {
 
 export type Term = TextTerm | RecordTerm;
 
-/** `record:1234` or `#1234` — a reference to a record already in the collection. */
+/** `record:1234` or `#1234`, a reference to a record already in the collection. */
 const RECORD_REF = /^(?:record:\s*|#)(\d+)$/i;
 
 /**
  * Parses `phrase:weight` shorthand into a term row.
  *
  * The weight is taken only when what follows the FINAL colon parses as a number, so a phrase may
- * contain colons of its own — `character:hatsune miku:0.8` is that phrase at weight 0.8, while
+ * contain colons of its own: `character:hatsune miku:0.8` is that phrase at weight 0.8, while
  * `rating:safe` is the whole phrase at the default weight. A leading `-` makes the term negative.
  *
  * `record:1234` and `#1234` produce a reference term instead of a phrase, so the one input box

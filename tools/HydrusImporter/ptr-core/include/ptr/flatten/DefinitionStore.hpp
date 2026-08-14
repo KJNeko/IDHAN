@@ -31,12 +31,12 @@ std::optional< std::array< std::byte, SHA256_BYTES > > decodeSha256Hex( std::str
 //!
 //! writeHash and writeTag are thread-safe. Both address their output by id rather than appending,
 //! so concurrent writers cannot interleave: the only shared state is the tags.blob allocation
-//! cursor, and that is held just long enough to reserve a range -- the write itself happens outside
+//! cursor, and that is held just long enough to reserve a range. The write itself happens outside
 //! the lock.
 //!
 //! \note If two update files define one tag_id with different text, whichever index write lands
-//!       last wins, so which is kept is not deterministic across runs. PTR ids are stable, so in
-//!       practice the text is identical and the choice does not matter.
+//!       last wins, which is not deterministic across runs. PTR ids are stable, so in practice the
+//!       text is identical.
 //!
 //! \warning Construction TRUNCATES all three files, so only one writer may exist per directory
 //!          per run. Constructing a second one discards everything the first wrote. A scan builds

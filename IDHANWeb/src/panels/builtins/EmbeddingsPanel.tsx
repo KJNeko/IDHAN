@@ -1,5 +1,5 @@
 /**
- * Embeddings — lists registered embedding models (GET /embeddings/models) and drives a resumable
+ * Embeddings: lists registered embedding models (GET /embeddings/models) and drives a resumable
  * backfill per model (POST /embeddings/generate), polling GET /jobs/{job_id}/status for progress.
  * Generation only: no search over the vectors, per the design spec's scope cut.
  */
@@ -15,8 +15,7 @@ interface EmbeddingModel {
     available: boolean;
     /**
      * Roughly how many records this model has embedded, from pg_class.reltuples. Absent when the
-     * table has never been analysed — reported as unknown rather than zero, because "0 embeddings"
-     * would read as "nothing to lose" on the delete confirmation.
+     * table has never been analysed, so the UI reports unknown rather than a misleading zero.
      */
     embedding_estimate?: number;
 }
@@ -27,7 +26,7 @@ interface EmbeddingProgress {
     embedded: number;
     failed: number;
     skipped: number;
-    /** Present only for the "no module provides this model" early-exit — the job still "completes". */
+    /** Present only when no module provides the model. The job still completes. */
     error?: string;
 }
 

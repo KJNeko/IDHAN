@@ -1,10 +1,8 @@
 /**
- * Shared metadata cache + request coalescer behind host.records.getMetadata.
+ * Shared metadata cache and request coalescer behind host.records.getMetadata.
  *
  * Concurrent requests from different panels within a tick are merged into one batched POST, and
- * results are held in an LRU so a re-scroll over the same records issues no network at all. This is
- * the mechanism that lets getMetadata be the *only* metadata path without a 100k grid melting the
- * server — see host/types.ts RecordsApi.
+ * results are held in an LRU so a re-scroll over the same records issues no network at all.
  */
 
 import { api } from '../api/client';
@@ -15,7 +13,7 @@ type Meta = MetadataResponse['records'][number];
 
 /** Ids per POST; the server caps at 1000, so chunk larger fan-outs. */
 const MAX_BATCH = 1000;
-/** Cached metadata objects to retain. Metadata is light, so keep well more than the visible window. */
+/** Cached metadata objects to retain, kept well above the visible window. */
 const CACHE_LIMIT = 20_000;
 /** Remember server-confirmed missing ids to avoid re-requesting holes every scroll. */
 const MISSING_LIMIT = 20_000;
@@ -81,7 +79,7 @@ async function flush(batch: Batch): Promise<void> {
 const isDefaultInclude = (include?: string[]): boolean =>
   include === undefined || (include.length === 1 && include[0] === 'basic');
 
-/** Synchronously read an already-cached record, or undefined. Lets the grid paint instantly on re-scroll. */
+/** Synchronously reads an already-cached record, or undefined. */
 export function peekMetadata(id: RecordId): Meta | undefined {
   return cache.get(id);
 }

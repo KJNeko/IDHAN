@@ -23,12 +23,9 @@
 namespace idhan::api
 {
 
-//! Maintenance and administrative endpoints: metadata rescans, DB storage stats, MIME
-//! parse/thumbnail/reload/parser-listing, integrity checks, thumbnail purge, and job-status polling.
-class APIMaintenance : public drogon::HttpController< APIMaintenance >
+class APIMaintenance final : public drogon::HttpController< APIMaintenance >
 {
 	drogon::Task< drogon::HttpResponsePtr > rescanMetadata( drogon::HttpRequestPtr request );
-	// drogon::Task< drogon::HttpResponsePtr > postgresqlStorage( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > postgresqlStorageSunData( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > databaseStats( drogon::HttpRequestPtr request );
 
@@ -47,16 +44,11 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	drogon::Task< drogon::HttpResponsePtr > jobStatus( drogon::HttpRequestPtr request, idhan::JobID job_id );
 	drogon::Task< drogon::HttpResponsePtr > jobsStatus( drogon::HttpRequestPtr request );
 
-	// TEMPORARY (coroutine frame leak hunt): lists live coroutine frames. Only reports real data when
-	// the build was configured with -DIDHAN_TRACK_CORO_FRAMES=ON. Remove with the probe.
-	drogon::Task< drogon::HttpResponsePtr > coroFrames( drogon::HttpRequestPtr request );
-
   public:
 
 	METHOD_LIST_BEGIN
 
 	ADD_METHOD_TO( APIMaintenance::rescanMetadata, "/jobs/metadata/rescan", drogon::Post, IDHANAPIAuthName );
-	// ADD_METHOD_TO( IDHANMaintenanceAPI::postgresqlStorage, "/db/stats/chart", IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::postgresqlStorageSunData, "/db/stats/sunburst", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::databaseStats, "/db/stats", drogon::Get, IDHANAPIAuthName );
 
@@ -72,8 +64,6 @@ class APIMaintenance : public drogon::HttpController< APIMaintenance >
 	ADD_METHOD_TO( APIMaintenance::testJob, "/test", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::jobStatus, "/jobs/{job_id}/status", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::jobsStatus, "/jobs/status", drogon::Get, IDHANAPIAuthName );
-
-	ADD_METHOD_TO( APIMaintenance::coroFrames, "/coro/frames", drogon::Get, IDHANAPIAuthName );
 
 	METHOD_LIST_END
 };

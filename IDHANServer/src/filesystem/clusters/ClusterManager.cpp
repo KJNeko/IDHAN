@@ -76,9 +76,6 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	if ( m_read_only )
 		return std::unexpected( createInternalError( "Refusing to write into read-only cluster {}", m_id ) );
 
-	// Append a `.` if there isn't one
-
-	// QFile file { m_path.filePath( createSubpath( sha256 ) + extension ) };
 	auto path { std::filesystem::absolute( m_path ) / createSubpath( sha256 ) };
 
 	if ( extension.starts_with( '.' ) )

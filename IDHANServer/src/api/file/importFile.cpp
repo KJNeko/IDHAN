@@ -164,30 +164,22 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		data_length,
 		*target_cluster );
 
-	// select deleted time and store time
 	const auto cluster_timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, record_id ) };
 
-	//! True if there is a delete recorded
 	const bool delete_recorded { !cluster_timestamps[ 0 ][ "cluster_delete_time" ].isNull() };
-	//! True if there has been a store recorded
 	const bool store_recorded { !cluster_timestamps[ 0 ][ "cluster_store_time" ].isNull() };
-	// if the file is not deleted, it is stored, But if the overwrite flag is on. Store it anyway
-	// T (store time is not null) && F (overwrite flag is true) // Not stored
 
 	if ( delete_recorded && !force_import )
 	{
-		// file was deleted, we can simply return now.
 		co_return drogon::HttpResponse::newHttpJsonResponse( createDeletedResponse(
 			record_id, cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >() ) );
 	}
 
-	//! True if the file has been confirmed to be stored still
 	const auto filepath { co_await filesystem::getRecordPath( record_id, db ) };
 	const bool store_confirmed { filepath ? std::filesystem::exists( *filepath ) : false };
 
-	// If there is no delete recorded & no store recorded, store it
-	// If force import is true, then store it anyway
-	// if there is a store, but no delete request, and the file is not present. store it again
+	// Store when the record has never been stored or deleted, when a force import asks for it, or
+	// when a store was recorded but the file is no longer on disk.
 	const bool should_store {
 		( !delete_recorded && !store_recorded ) || force_import || ( !store_confirmed && store_recorded )
 	};

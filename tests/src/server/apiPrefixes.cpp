@@ -65,11 +65,11 @@ TEST( ApiPrefixes, TypeScriptAndCppListsAgree )
 
 	EXPECT_TRUE( only_in_cpp.empty() ) << "In apiPrefixes.hpp but missing from IDHANWeb/src/api/prefixes.ts: "
 									   << testing::PrintToString( only_in_cpp )
-									   << " — these endpoints will 404 behind the Vite dev proxy.";
+									   << ". These endpoints will 404 behind the Vite dev proxy.";
 
 	EXPECT_TRUE( only_in_ts.empty() ) << "In IDHANWeb/src/api/prefixes.ts but missing from apiPrefixes.hpp: "
 									  << testing::PrintToString( only_in_ts )
-									  << " — the SPA fallback will answer these with index.html instead of a 404.";
+									  << ". The SPA fallback will answer these with index.html instead of a 404.";
 }
 
 TEST( ApiPrefixes, PrefixesAreSortedAndWellFormed )

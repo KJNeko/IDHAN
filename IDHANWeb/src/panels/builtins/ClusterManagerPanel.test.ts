@@ -55,7 +55,7 @@ describe('sanitizeScanParams', () => {
   it('leaves params untouched on a writable cluster', () => {
     const input: ScanParams = { ...DEFAULT_SCAN_PARAMS, fix_extensions: true };
     const out = sanitizeScanParams(input, false);
-    expect(out).toBe(input); // same reference — no copy when nothing to void
+      expect(out).toBe(input); // same reference, no copy when nothing to void
     expect(out.fix_extensions).toBe(true);
   });
 });

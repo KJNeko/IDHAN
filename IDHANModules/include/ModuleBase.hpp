@@ -122,7 +122,7 @@ class FGL_EXPORT ModuleBase
 	virtual void startup() {}
 
 	//! Used for reclaiming resources. Called when the host is under memory pressure; drop caches
-	//! but stay usable — this is not a teardown.
+	//! but stay usable. This is not a teardown.
 	virtual void restart() {}
 
 	//! Called once before the worker process exits.

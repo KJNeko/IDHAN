@@ -15,7 +15,7 @@ bool contains( const std::vector< RecordID >& ids, const RecordID id )
 //! Exercises subtag wildcards (`cat*girl`), which resolve to a set of tag ids at parse time and
 //! become one `filter_wildcard_N` CTE per wildcard in SearchBuilder::construct().
 //!
-//! The pattern is matched against the whole `tags.tag_text`, namespace included -- there is no
+//! The pattern is matched against the whole `tags.tag_text`, namespace included. There is no
 //! separate namespace/subtag matching step. That one rule is what makes `cat*girl` stay
 //! unnamespaced while `*cat girl` reaches into every namespace, and it is what MatchSemantics
 //! below pins down.
@@ -38,7 +38,7 @@ class SubtagWildcardFixture : public SearchFixture
 			createTag( text );
 	}
 
-	//! Resolves \p wildcard exactly as setWildcardTags() does -- same translation, same query -- and
+	//! Resolves \p wildcard exactly as setWildcardTags() does, with the same translation and query, and
 	//! reads the matches back as tag text so the expectations stay legible.
 	std::vector< std::string > matchedTags( const std::string_view wildcard )
 	{

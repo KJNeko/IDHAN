@@ -1,12 +1,9 @@
 /**
- * Debug — a developer-diagnostics panel. The first tool here is the Sort Profiler: run a blank search
- * (no tags — the full ordered id set) once per sort type/direction, one after another, and time each
- * one. More diagnostic tools land here over time; this isn't meant to stay single-purpose.
+ * Debug: developer diagnostics. The Sort Profiler runs a blank search, so the full ordered id set,
+ * once per sort type and direction, one after another, and times each.
  *
- * Sort Profiler goes through `host.http.fetch` directly rather than `host.search.run`/`api.search`:
- * the shared client only ever returns the parsed SearchResponse, which hides exactly what we want to
- * see here — client-measured round-trip time and raw payload size, so a slow row can be attributed to
- * the SQL query itself vs. network/transfer.
+ * It goes through `host.http.fetch` rather than `host.search.run`, because the shared client returns
+ * only the parsed SearchResponse and hides the client-measured round-trip time and raw payload size.
  */
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
@@ -24,23 +21,23 @@ interface SortJob {
     order: SortOrder;
 }
 
-/** Every sort type x direction combo, in a fixed run order. Pure, exported for testing. */
+/** Every sort type by direction combination, in a fixed run order. */
 export function buildSortJobs(options: readonly { value: SortValue; label: string }[] = SORT_OPTIONS): SortJob[] {
     return options.flatMap((opt) => ORDERS.map((order) => ({value: opt.value, label: opt.label, order})));
 }
 
 export interface SortProfileRow extends SortJob {
-    /** Server-reported SearchResponse.query_ms — the actual sort query cost, the thing being profiled. */
+    /** Server-reported SearchResponse.query_ms, the sort query cost being profiled. */
     queryMs: number;
     /** Client wall time from just before fetch to just after response.text() resolves. */
     roundTripMs: number;
-    /** Decoded response body size in bytes — is a slow row slow because the payload is just huge? */
+    /** Decoded response body size in bytes, separating a slow query from a large payload. */
     bytes: number;
     count: number;
     truncated: boolean;
 }
 
-/** Rows sorted slowest-first by server query time. Pure, exported for testing. */
+/** Rows sorted slowest-first by server query time. */
 export function sortRowsBySlowest(rows: readonly SortProfileRow[]): SortProfileRow[] {
     return [...rows].sort((a, b) => b.queryMs - a.queryMs);
 }
@@ -174,7 +171,7 @@ function DebugPanel({host}: PanelProps) {
 export const debugPanel = {
     type: 'debug',
     title: 'Debug',
-    description: 'Developer diagnostics — currently: profile query cost per search sort type.',
+    description: 'Developer diagnostics: profile query cost per search sort type.',
     component: DebugPanel,
     singleton: true,
 } as const;

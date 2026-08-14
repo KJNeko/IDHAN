@@ -48,7 +48,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 	const auto [ uniq_beg, uniq_end ] = std::ranges::unique( domain_strings );
 	domain_strings.erase( uniq_beg, uniq_end );
 
-	// 1. Batch upsert all domains (copy — domain_strings needed again in step 2)
+	// 1. Batch upsert all domains. Copied, since domain_strings is needed again in step 2.
 	co_await db->execSqlCoro(
 		"INSERT INTO url_domains (url_domain) "
 		"SELECT DISTINCT unnest($1::text[]) "

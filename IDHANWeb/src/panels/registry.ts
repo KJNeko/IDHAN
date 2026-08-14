@@ -1,7 +1,6 @@
 /**
- * The panel catalog. Built-in panels register here at startup through the exact same call third-party
- * plugins will use in M6 — there is no privileged built-in path. An ESLint rule (added with the
- * plugin work) will forbid panels from importing app internals so this stays honest.
+ * The panel catalog. Built-in panels register here at startup through the same call third-party
+ * plugins use; there is no privileged built-in path.
  */
 
 import type { PanelDefinition } from '../host/types';

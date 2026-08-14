@@ -25,7 +25,7 @@ class OnnxEmbedder final : public idhan::EmbeddingModuleI
 	std::unique_ptr< Ort::MemoryInfo > m_memory_info {};
 
 	//! Built in startup() when the model ships a text tower. Null otherwise, and null when building
-	//! it failed -- in which case m_text_failure says why.
+	//! it failed, in which case m_text_failure says why.
 	std::unique_ptr< Ort::Session > m_text_session {};
 	BpeTokenizer m_tokenizer {};
 
@@ -61,7 +61,7 @@ class OnnxEmbedder final : public idhan::EmbeddingModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override { return idhan::ModuleVersion { 1, 0, 0 }; }
 
-	//! Loading a multi-gigabyte session per call would be absurd, so the worker stays resident.
+	//! Loading a multi-gigabyte session per call is impractical, so the worker stays resident.
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
 	//! Derived from the size of the graphs on disk, since that is what the sessions hold resident.

@@ -49,7 +49,7 @@ WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callba
   m_on_callback( std::move( on_callback ) )
 {}
 
-//! \warning Must not run on the worker's own IO thread -- the join below would be a self-join, and
+//! \warning Must not run on the worker's own IO thread. The join below would be a self-join, and
 //!          EDEADLK out of a destructor aborts the process. Nothing that could hold the last
 //!          reference is ever resumed on the IO thread; see resumptionLoop().
 WorkerProcess::~WorkerProcess()

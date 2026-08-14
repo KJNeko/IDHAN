@@ -12,8 +12,8 @@ namespace idhan::api
 constexpr std::size_t max_document_bytes { 1024 * 1024 };
 
 //! Cheap 8-4-4-4-12 hex-with-dashes check so a malformed id becomes a 400 rather than a 500 from the
-//! ::uuid cast. Not a strict RFC-4122 validator (doesn't check version/variant nibbles) — Postgres does
-//! the authoritative parse; this only rejects the obviously-wrong shape early.
+//! ::uuid cast. Not a strict RFC-4122 validator, since it does not check the version or variant
+//! nibbles. Postgres does the authoritative parse; this only rejects the obviously wrong shape early.
 bool isUuidShaped( const std::string_view id )
 {
 	if ( id.size() != 36 ) return false;

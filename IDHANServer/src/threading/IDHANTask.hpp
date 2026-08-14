@@ -6,7 +6,7 @@
 namespace idhan
 {
 
-//! IDHAN's primary coroutine return type. Like drogon::Task it is lazy — initial_suspend is
+//! IDHAN's primary coroutine return type. Like drogon::Task it is lazy: initial_suspend is
 //! suspend_always, so the body does not run until the task is awaited.
 //! \warning Because of that laziness, never store a capturing-lambda coroutine to await later (e.g.
 //!          via drogon::when_all): the closure is destroyed before the body runs, leaving the captures

@@ -130,9 +130,9 @@ BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
 //! Collects collapsed records from every worker and writes them out in chunks of \p cap.
 //!
 //! Shared by all workers and thread-safe. The lock covers only appending to the pending batch and
-//! recording a finished chunk; sealing a batch -- building its string table, serialising tens of
+//! recording a finished chunk; sealing a batch (building its string table, serialising tens of
 //! megabytes and deflating the lot, which is seconds of CPU and happens hundreds of times over a
-//! full corpus -- runs with the lock released, so several workers can be sealing at once.
+//! full corpus) runs with the lock released, so several workers can be sealing at once.
 //!
 //! Staging in one shared batch rather than one per worker is what keeps chunks full: per-worker
 //! batches would leave every worker holding a part-filled chunk at the end, and would multiply the

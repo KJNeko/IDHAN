@@ -16,17 +16,14 @@ class QNetworkReply;
 
 /**
  *
- * IDHAN logging functions should be used as a way to transmit logging information back to the server. There are the following levels
- * notify, info, warn, error, critical.
- * It is expected that upon a critical message, the application is about to die.
+ * Transmits logging information back to the server. Callbacks can be registered per level; see
+ * registerCallback.
  *
- * There are also functions to implement callbacks for certian error levels and notifications
- *
- * - notify: used to explicitly notify the user of an event.
- * - info: used to silently notify the user. This should ideally be used for some completion states where notify should be used for a final completion.
- * - warn: used to notify the user of a possible issue
- * - error: used to notify the user of an error
- * - critical: used to notify that your process is about to end, violently or willingly.
+ * - notify: explicitly notify the user of an event, such as a final completion.
+ * - info: silently notify the user, such as an intermediate completion state.
+ * - warn: a possible issue.
+ * - error: an error.
+ * - critical: the process is about to end, violently or willingly.
  */
 namespace idhan::logging
 {

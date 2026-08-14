@@ -12,13 +12,7 @@
 
 inline static std::atomic< idhan::JobID > job_id_counter { 1 };
 
-// TEMPORARY: job retention is disabled while the coroutine frame leak is being hunted. A completed
-// job stays suspended at its final suspend point, so its frame -- and every local alive across a
-// co_await, including file buffers and record vectors -- stays allocated until its JobContext is
-// erased. At zero a finished job is dropped by the first cleanup pass after it completes, which also
-// means /jobs/{id}/status stops finding it that quickly. Restore to std::chrono::hours( 1 ) to give
-// clients a window to collect results again.
-constexpr auto job_retention_period { std::chrono::steady_clock::duration::zero() };
+constexpr auto job_retention_period { std::chrono::hours( 1 ) };
 
 //! How often cleanup() sweeps finished jobs. Also the practical upper bound on how long a completed
 //! job's result remains fetchable while job_retention_period is zero.
@@ -46,7 +40,6 @@ std::shared_ptr< JobContext > JobRuntime::getNextJob()
 	return job;
 }
 
-// ... existing code ...
 void JobRuntime::runner()
 {
 	while ( !m_hard_stop.load( std::memory_order_acquire ) )
@@ -196,7 +189,6 @@ void JobContext::run()
 
 	log::debug( "Resuming job {}", m_id );
 	m_coro.m_handle.resume();
-
 }
 
 idhan::JobID generateNewJobID()

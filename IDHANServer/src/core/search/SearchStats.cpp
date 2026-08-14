@@ -16,7 +16,7 @@ constexpr std::string_view prefixFor( const StepKind kind )
 	return kind == StepKind::Fold ? fold_prefix : step_prefix;
 }
 
-//! Milliseconds, with the precision the magnitude deserves.
+//! Milliseconds, with fewer decimals as the magnitude grows.
 std::string formatMillis( const std::int64_t micros )
 {
 	const double ms { static_cast< double >( micros ) / 1000.0 };

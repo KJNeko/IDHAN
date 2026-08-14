@@ -47,7 +47,6 @@ static std::expected< SHA256, drogon::HttpResponsePtr > getAndValidateKey( const
 		return std::unexpected( createBadRequest( "Invalid key length for idhan_key. Expected 64 characters in hex" ) );
 	}
 
-	// got the key
 	auto sha256_key { SHA256::fromHex( key ) };
 
 	if ( !sha256_key ) return std::unexpected( sha256_key.error() );
@@ -76,7 +75,6 @@ drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpReq
 
 	if ( select_key.empty() )
 	{
-		// return permission denied
 		auto response { drogon::HttpResponse::newHttpResponse() };
 		log::warn( "Invalid API key given!" );
 		response->setStatusCode( drogon::k401Unauthorized );
@@ -152,7 +150,6 @@ drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::generateApiKey( [[maybe_un
 
 drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyKey( [[maybe_unused]] drogon::HttpRequestPtr req )
 {
-	// Reaching this handler means the auth filter already accepted the API key.
 	Json::Value out {};
 	out[ "authenticated" ] = true;
 	co_return drogon::HttpResponse::newHttpJsonResponse( out );

@@ -98,7 +98,6 @@ void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& re
 		"Unhandled exception got to drogon! In request: {} What: {}", request->getPath(), e.what() ) };
 
 	callback( response );
-	// drogon::defaultExceptionHandler( e, request, std::move( callback ) );
 }
 
 void printCoreLocation()
@@ -139,21 +138,18 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 		log::info( "In-memory log ring buffer disabled (logging.buffer_size=0); /log endpoint unavailable" );
 	}
 
-	// logs all trace messages to a specific file
 	auto& trace_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "trace.log", MiB * 2, 4, true ) ) };
 
 	trace_file_logger->set_pattern( std::string( server_format_str ) );
 	trace_file_logger->set_level( spdlog::level::trace );
 
-	// logs all info & errors to a specific file
 	auto& info_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "info.log", MiB * 2, 4, true ) ) };
 
 	info_file_logger->set_pattern( std::string( server_format_str ) );
 	info_file_logger->set_level( spdlog::level::info );
 
-	// logs all errors to a specific file
 	auto& error_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "error.log", MiB * 16, 4, true ) ) };
 
@@ -191,19 +187,18 @@ void setupTempPath()
 		config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
 	};
 
-	// create marker
+	// The marker names the PID of the instance that owns tmp_path.
 	constexpr std::string_view marker_file { "idhan.active" };
 	const auto marker_path { tmp_path / marker_file };
 
 	if ( std::filesystem::exists( tmp_path ) )
 	{
-		// it exists. can we find out marker?
 		if ( std::ifstream ifs( marker_path ); ifs )
 		{
 			__pid_t pid;
 			ifs >> pid;
 
-			// check if the PID still exists
+			// kill(pid, 0) succeeds only while that process still exists.
 			if ( 0 == kill( pid, 0 ) )
 			{
 				log::critical(
@@ -219,10 +214,7 @@ void setupTempPath()
 					marker_path.string(),
 					pid );
 			}
-			// if kill returns non-zero then the pid likely does not exist.
 		}
-
-		//no marker?
 	}
 
 	std::filesystem::create_directories( tmp_path );

@@ -47,7 +47,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 			width,
 			height ) };
 
-		// The C loader takes the raw buffer directly -- no VipsBlob to allocate and hand-free.
+		// The C loader takes the raw buffer directly, with no VipsBlob to allocate and hand-free.
 		VipsImage* svg_raw { nullptr };
 		if ( vips_svgload_buffer(
 				 const_cast< void* >( static_cast< const void* >( svg_data_sized.data() ) ),

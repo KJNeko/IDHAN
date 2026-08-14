@@ -14,11 +14,9 @@ struct JobTask
 
 	std::shared_ptr< JobTaskStatus > m_status;
 
-	// Add handle member
 	Handle m_handle {};
 
-	// Add constructors, destructor, and move operations
-	JobTask() = delete; // For completed tasks
+	JobTask() = delete;
 
 	JobTask( Handle h );
 

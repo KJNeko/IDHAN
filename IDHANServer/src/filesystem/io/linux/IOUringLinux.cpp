@@ -107,7 +107,7 @@ static IOUringLinux* g_linux_instance { nullptr };
 
 IOUring& IOUring::getInstance()
 {
-	if ( !g_linux_instance ) throw std::runtime_error( "IOUring not initialised — call IOUring::init() at startup" );
+	if ( !g_linux_instance ) throw std::runtime_error( "IOUring not initialised. Call IOUring::init() at startup" );
 	return *g_linux_instance;
 }
 

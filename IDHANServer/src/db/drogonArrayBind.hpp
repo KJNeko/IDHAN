@@ -5,7 +5,7 @@
 //! Serialises a C++ vector/set into PostgreSQL's binary array wire format so it can be bound as a
 //! single array parameter (e.g. `UNNEST($1::integer[])`). One overload per supported element type.
 //! The SqlBinder operator<< specialisations below let `binder << std::move(vec)` bind these directly.
-//! \note clangd may report this header as an unused include at call sites — it isn't; it supplies the
+//! \note clangd may report this header as an unused include at call sites. It isn't; it supplies the
 //!       template specialisations resolved implicitly at the execSqlCoro call site.
 std::vector< std::byte > createPgBinaryArray( std::vector< idhan::SHA256 >&& data );
 std::vector< std::byte > createPgBinaryArray( std::vector< std::string >&& strings );

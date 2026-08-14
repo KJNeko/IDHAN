@@ -1,5 +1,5 @@
 /**
- * Runtime shim for `react/jsx-runtime` — the automatic JSX runtime a built plugin's compiled output
+ * Runtime shim for `react/jsx-runtime`, the automatic JSX runtime a built plugin's compiled output
  * imports. Re-exports the host's instance so plugin JSX and host JSX share one React. See react.mjs.
  */
 const ns = globalThis.__IDHAN_RUNTIME__?.reactJsxRuntime;

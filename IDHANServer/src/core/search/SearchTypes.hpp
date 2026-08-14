@@ -15,7 +15,7 @@ enum class SortOrder
 };
 
 //! Column/metric results are ordered by. The HY_* aliases map Hydrus sort types onto the subset
-//! IDHAN currently implements (several collapse to DEFAULT until natively supported).
+//! IDHAN implements; several collapse to DEFAULT.
 enum class SortType
 {
 	FILESIZE,

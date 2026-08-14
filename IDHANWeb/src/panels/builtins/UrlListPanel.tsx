@@ -1,5 +1,5 @@
 /**
- * URLs — known source URLs for the focused record. Reads /records/{id}/urls (a bare string array) and
+ * URLs: known source URLs for the focused record. Reads /records/{id}/urls (a bare string array) and
  * edits via /urls/add and /urls/remove ({ urls: [...] }). Follows the selection like Record Info: the
  * most recently selected record is the subject.
  */

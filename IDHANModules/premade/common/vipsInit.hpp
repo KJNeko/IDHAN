@@ -41,8 +41,7 @@ inline void vipsLogHandler(
 		case G_LOG_LEVEL_INFO:
 			[[fallthrough]];
 		case G_LOG_LEVEL_MESSAGE:
-			// Very noisy
-			// spdlog::info( std::format( "VIPS: {}", message ) );
+			// Dropped: vips is far too noisy at these levels to be worth logging.
 			break;
 		case G_LOG_LEVEL_DEBUG:
 			spdlog::debug( std::format( "VIPS: {}", message ) );
@@ -54,7 +53,7 @@ inline void vipsLogHandler(
  *              crash report names the worker that produced it.
  *
  *  The vips operation cache is disabled outright: a worker's job is one file at a time, so the
- *  cache only grows RSS -- which is the metric the host uses to decide when to retire the worker. */
+ *  cache only grows RSS, which is the metric the host uses to decide when to retire the worker. */
 inline void vipsInit( const char* const name )
 {
 	constexpr auto VIPS_LOG_DOMAIN { "VIPS" };

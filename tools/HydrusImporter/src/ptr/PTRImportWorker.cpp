@@ -25,7 +25,7 @@
 #include "splitTag.hpp"
 
 //! Split [0,n) into [start,end) chunks of at most \p batch_size and invoke \p launch(start,end) for
-//! each, returning all the futures it produced. Nothing is awaited here — every batch is submitted
+//! each, returning all the futures it produced. Nothing is awaited here; every batch is submitted
 //! before any is waited on, so they run concurrently (bounded only by QNetworkAccessManager).
 template < typename Launch >
 auto launchBatches( const std::size_t n, const std::size_t batch_size, Launch&& launch )
@@ -490,7 +490,7 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	}
 
 	std::vector< std::pair< std::string, std::string > > tag_pairs;
-	std::vector< int > translated_tag_ids; // parallel to tag_pairs — same index → same position
+	std::vector< int > translated_tag_ids; // parallel to tag_pairs: same index, same position
 	tag_pairs.reserve( all_tag_ids.size() );
 	translated_tag_ids.reserve( all_tag_ids.size() );
 	for ( const auto& tid : all_tag_ids )

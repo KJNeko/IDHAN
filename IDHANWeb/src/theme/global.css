@@ -1325,7 +1325,7 @@ body {
     white-space: nowrap;
 }
 
-/* A record reference is an id, not a phrase — the monospace says so without a second badge. */
+/* A record reference is an id, not a phrase; the monospace says so without a second badge. */
 .embed-term-label.is-record {
     font-family: ui-monospace, monospace;
     font-size: 0.9em;
@@ -1912,7 +1912,7 @@ body {
   font-weight: 400;
 }
 
-/* Donut charts (Storage by table, Clusters) — hand-rolled SVG, no charting library. */
+/* Donut charts (Storage by table, Clusters): hand-rolled SVG, no charting library. */
 .dbstat-donut-panel {
   display: flex;
   align-items: flex-start;

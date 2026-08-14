@@ -1,13 +1,12 @@
 /**
  * Example IDHAN WebUI plugin.
  *
- * This is deliberately hand-written plain JS (no JSX, no build step) so it can be served and loaded
- * verbatim — it doubles as the smallest possible reference. A real plugin would typically be authored
- * in TSX and built (Vite lib mode / esbuild) with `react`, `react-dom`, `react/jsx-runtime` and
+ * Hand-written plain JS, with no JSX and no build step, so it can be served and loaded verbatim. A
+ * real plugin would be authored in TSX and built with `react`, `react-dom`, `react/jsx-runtime` and
  * `@idhan/host` marked external; the host's import map resolves those bare specifiers at runtime.
  *
- * `react` and `@idhan/host` below are bare specifiers resolved by the page's import map to the host's
- * own instances — so this shares the host's single React and registers into the host's catalog.
+ * `react` and `@idhan/host` below resolve through that import map to the host's own instances, so
+ * this shares the host's single React and registers into the host's catalog.
  */
 
 import { createElement as h, useState } from 'react';

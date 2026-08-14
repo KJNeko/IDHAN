@@ -88,7 +88,7 @@ class ScanContext
 	[[nodiscard]] ExpectedTask< SHA256 > checkSHA256() const;
 	[[nodiscard]] ExpectedTask< RecordID > checkRecord( DbClientPtr db );
 	//! Returns true if the duplicate file at m_path was deleted (record already stored correctly
-	//! in found_cluster_id) -- the caller must not touch m_path any further in that case.
+	//! in found_cluster_id). The caller must not touch m_path any further in that case.
 	[[nodiscard]] ExpectedTask< bool > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
 	[[nodiscard]] Task<> updateFileModifiedTime( DbClientPtr db );
 	[[nodiscard]] ExpectedTask< void > checkCluster( DbClientPtr db );

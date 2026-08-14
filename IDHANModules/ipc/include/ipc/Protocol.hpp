@@ -93,11 +93,11 @@ enum class MessageType : std::uint8_t
 enum class CallOp : std::uint8_t
 {
 	METADATA, //!< MetadataModuleI::parseFile
-	THUMB_RGBA, //!< ThumbnailerModuleI::createThumbnailRaw -- raw interleaved RGB
-	THUMB_FILE, //!< ThumbnailerModuleI::createThumbnailFile -- encoded image
+	THUMB_RGBA, //!< ThumbnailerModuleI::createThumbnailRaw, raw interleaved RGB
+	THUMB_FILE, //!< ThumbnailerModuleI::createThumbnailFile, encoded image
 	GENERATE, //!< GeneratorModuleI::generate
 	EMBED, //!< EmbeddingModuleI::embed
-	EMBED_TEXT, //!< EmbeddingModuleI::embedText -- the only op that carries no file
+	EMBED_TEXT, //!< EmbeddingModuleI::embedText, the only op that carries no file
 };
 
 //! What a module is asking the host for when it sends a CALLBACK.
@@ -198,7 +198,7 @@ enum class MetadataVariant : std::uint8_t
 
 //!@}
 
-//! Names for logs and error messages. Display only -- never the wire encoding.
+//! Names for logs and error messages. Display only, never the wire encoding.
 //!@{
 [[nodiscard]] constexpr std::string_view toString( const MessageType value ) noexcept
 {
@@ -344,14 +344,14 @@ struct ManifestEntry
 	//! largest value any module in the library declares, since they share one worker process.
 	std::size_t rss_ceiling_mb { 0 };
 	std::vector< std::string > mimes {};
-	//! EMBEDDING modules only; empty otherwise. The routing key for embed calls -- unlike `name`,
+	//! EMBEDDING modules only; empty otherwise. The routing key for embed calls. Unlike `name`,
 	//! this must be unique and stable, because it is also a database key.
 	std::string model_name {};
 	//! EMBEDDING modules only; zero otherwise. The width of the halfvec column built for this model.
 	std::uint32_t dimensions { 0 };
 	//! EMBEDDING modules only. Whether this model has a text tower, so the host can refuse text
 	//! queries up front instead of discovering it from a failed call. False is a normal
-	//! configuration -- an image-only export, or a text tower that failed its parity check.
+	//! configuration: an image-only export, or a text tower that failed its parity check.
 	bool supports_text { false };
 };
 

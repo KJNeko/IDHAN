@@ -1,7 +1,7 @@
 /**
- * Log Viewer — the server's in-memory ring buffer, via GET /log?level=<level>. The endpoint returns
- * the whole buffer as plain text filtered to the requested level (and above), so we replace the body
- * on each fetch rather than appending. Jobs and logs are process-local: a restart empties this.
+ * Log Viewer: the server's in-memory ring buffer, via GET /log?level=<level>. The endpoint returns
+ * the whole buffer as plain text filtered to the requested level and above, so the body is replaced
+ * on each fetch rather than appended. Logs are process-local, so a restart empties this.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

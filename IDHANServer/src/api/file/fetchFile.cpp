@@ -148,7 +148,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	{
 		// send the file as a download instead of letting the browser try to display it
 		const auto response { drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() ) };
-		// Same content-addressed bytes as the inline response — safe to cache immutably.
+		// Same content-addressed bytes as the inline response, so it is safe to cache immutably.
 		helpers::addFileCacheHeader( response );
 		co_return response;
 	}

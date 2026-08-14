@@ -118,7 +118,7 @@ TEST_F( MappingFixture, CountWithAliasedParentPropagation )
 	const auto record { createRecord( "count_alias_parent" ) };
 	createMapping( tag_a, record );
 
-	// tag_a is mapped directly — storage_count = 1
+	// tag_a is mapped directly, so storage_count = 1
 	ASSERT_EQ( getTagStorageCount( tag_a ), 1 );
 
 	// storage_count only tracks stored tags, not alias-resolved tags

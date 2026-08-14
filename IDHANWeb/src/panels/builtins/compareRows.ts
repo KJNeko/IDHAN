@@ -2,11 +2,11 @@
  * The arithmetic behind the Embedding Compare table, kept out of the component so it can be tested
  * without rendering anything.
  *
- * The panel encodes the *difference* between the two distances rather than the distances themselves.
+ * The panel encodes the difference between the two distances rather than the distances themselves.
  * With CLIP-style models the text and image towers occupy different regions of the space, so every
- * text-to-image cosine distance lands in a narrow band well away from zero — a bar drawn on the true
- * 0..2 scale would look identical on every row and say nothing. The absolute values are still shown
- * numerically on both sides of the bar, so nothing is hidden by this choice.
+ * text-to-image cosine distance lands in a narrow band well away from zero, and a bar drawn on the
+ * true 0..2 scale would look identical on every row. The absolute values are still shown numerically
+ * on both sides of the bar.
  */
 
 import { compareTermLabel, type CompareTerm } from './embeddingTerms';
@@ -25,10 +25,8 @@ export const MIN_DELTA_SCALE = 1e-6;
 /**
  * Zips the terms that were sent with the matrix that came back.
  *
- * Only indices present on both sides produce a row. The matrix comes from our own request, so a
- * mismatch means the server disagrees with us about what was asked — rendering the rows that do line
- * up is better than discarding a whole response, and far better than pairing a number with the wrong
- * label.
+ * Only indices present on both sides produce a row, so a length mismatch drops the extras rather
+ * than pairing a number with the wrong label.
  */
 export function buildCompareRows(
   terms: readonly CompareTerm[],
@@ -106,12 +104,9 @@ const COMPARATORS: Record<
 /**
  * The order the term list renders in.
  *
- * Under every result-dependent mode, terms with no row yet — added since the last run — sort last in
- * the order they were typed. Treating a missing result as a zero distance would file them among the
- * terms that genuinely do not discriminate, which is a different and misleading claim.
- *
- * Alphabetical is exempt: it says nothing about results, so an unrun term belongs in its alphabetical
- * place rather than exiled to the bottom.
+ * Under every result-dependent mode, terms with no row yet (added since the last run) sort last in
+ * the order they were typed, rather than being treated as a zero distance and filed among the terms
+ * that genuinely do not discriminate. Alphabetical is exempt, since it says nothing about results.
  */
 export function orderTerms(
     terms: readonly CompareTerm[],

@@ -74,7 +74,7 @@ constexpr unsigned int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW |
 				continue;
 			}
 
-			// A zero return means the source ended early -- the file shrank since we stat'd it.
+			// A zero return means the source ended early: the file shrank since we stat'd it.
 			if ( result == 0 ) return std::unexpected( "source file shrank while being copied into a blob" );
 
 			if ( errno != EXDEV && errno != EINVAL && errno != ENOSYS && errno != EOPNOTSUPP )

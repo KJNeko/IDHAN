@@ -21,9 +21,9 @@ namespace idhan::api
 std::optional< Json::Value > g_index {};
 std::mutex g_index_mutex {};
 
-//! Parse and validate one plugin's manifest.json. Returns the published index entry (manifest fields
-//! plus a resolved bundle URL) or nullopt if the manifest is missing/invalid — a bad plugin is skipped
-//! with a warning rather than failing the whole scan.
+//! Parses and validates one plugin's manifest.json. Returns the published index entry, meaning the
+//! manifest fields plus a resolved bundle URL, or nullopt if the manifest is missing or invalid. A
+//! bad plugin is skipped with a warning rather than failing the whole scan.
 std::optional< Json::Value > parseManifest( const std::filesystem::path& path, const std::string& dir )
 {
 	std::ifstream file { path, std::ios::binary };

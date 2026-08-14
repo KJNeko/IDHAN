@@ -12,7 +12,7 @@ namespace idhan::api
 //! is the client-generated uuid, so a push (PUT) is an upsert. There is no ownership or user system.
 class LayoutAPI : public drogon::HttpController< LayoutAPI >
 {
-	//! Lists stored layouts as metadata only (id, name, schema_ver, timestamps) — never the documents,
+	//! Lists stored layouts as metadata only (id, name, schema_ver, timestamps), never the documents,
 	//! which can be large. The client pulls a full document lazily with getLayout.
 	static drogon::Task< drogon::HttpResponsePtr > listLayouts( drogon::HttpRequestPtr req );
 

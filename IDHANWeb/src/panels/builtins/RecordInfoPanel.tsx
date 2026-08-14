@@ -1,5 +1,5 @@
 /**
- * Record Info — details for the focused record (the most recently selected). Uses /records/{id}/info,
+ * Record Info: details for the most recently selected record. Uses /records/{id}/info,
  * which carries the basic fields plus whatever file-specific metadata a module produced (dimensions,
  * duration, …). The presentation lives in the shared RecordInfoView so the Import panel can reuse it.
  */

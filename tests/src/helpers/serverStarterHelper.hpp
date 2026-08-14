@@ -1,4 +1,4 @@
-// When testing the server binary should be in the same folder as the test binary. As a result, We can start it outselves
+// The server binary sits beside the test binary, so the tests can start it themselves.
 #pragma once
 
 

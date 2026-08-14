@@ -10,7 +10,7 @@
 
 idhan::coro::RunLoop* g_loop { nullptr };
 
-//! Suspends, hands its continuation to another thread, and is resumed through the RunLoop -- the
+//! Suspends, hands its continuation to another thread, and is resumed through the RunLoop. The
 //! same shape the io awaiters have, without needing io_uring.
 struct OffThreadAwaiter
 {

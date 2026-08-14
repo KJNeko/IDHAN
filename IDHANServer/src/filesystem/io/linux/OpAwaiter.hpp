@@ -20,7 +20,7 @@ class IOUringLinux;
 //!
 //! Unlike ReadAwaiter/WriteAwaiter this never throws and never logs. Those two carry an error
 //! message specific to reading or writing file contents; a path op has no single right reaction to
-//! a negative result -- removing a file that is already gone is usually fine, an unsupported opcode
+//! a negative result. Removing a file that is already gone is usually fine, an unsupported opcode
 //! means fall back to the blocking call, and a failed rename is fatal. So the raw result is handed
 //! back and the caller decides.
 struct [[nodiscard]] OpAwaiter

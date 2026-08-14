@@ -1,11 +1,11 @@
 /**
- * The layout document — our envelope *wrapping* the engine's serialization, not equal to it.
+ * The layout document, an envelope wrapping the engine's serialization rather than equal to it.
  *
  * The dockview tree is opaque and stores only which panel instance sits where. Per-panel config lives
- * in our own `panels` map keyed by instance id, so config survives an engine swap and migrates
- * independently per panel type. Two version axes: `schema` (this envelope, migrated by a chain) and
- * each panel's `configVersion` (migrated by the panel definition). An unknown panel type is never
- * dropped — its config blob is preserved and rendered as a tombstone.
+ * in the `panels` map keyed by instance id, so it survives an engine swap and migrates independently
+ * per panel type. Two version axes: `schema` for this envelope, migrated by a chain, and each panel's
+ * `configVersion`, migrated by the panel definition. An unknown panel type is never dropped; its
+ * config blob is preserved and rendered as a tombstone.
  */
 
 import type { DockviewApi } from 'dockview-react';
@@ -27,7 +27,7 @@ export interface PanelState {
 
 export interface LayoutDocument {
   schema: typeof LAYOUT_SCHEMA_VERSION;
-  /** uuid — the stable identity. The name is user-facing and renameable; it is NOT identity. */
+    /** The stable identity. The name is user-facing and renameable, and is not identity. */
   id: string;
   name: string;
   engine: {
@@ -61,8 +61,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Validate and upgrade a persisted blob to the current schema. Returns null if it is not a recognisable
- * layout document (the caller then falls back to a default), so a corrupt entry can never crash boot.
+ * Validates and upgrades a persisted blob to the current schema. Returns null if it is not a
+ * recognisable layout document, leaving the caller to fall back to a default.
  */
 export function migrateLayout(raw: unknown): LayoutDocument | null {
   if (!isRecord(raw)) return null;
@@ -75,7 +75,7 @@ export function migrateLayout(raw: unknown): LayoutDocument | null {
 
   while (version < LAYOUT_SCHEMA_VERSION) {
     const migrate = migrations[version];
-    if (!migrate) return null; // no path forward — treat as unreadable rather than guess
+      if (!migrate) return null; // no path forward, so treat as unreadable rather than guess
     doc = migrate(doc);
     version += 1;
   }

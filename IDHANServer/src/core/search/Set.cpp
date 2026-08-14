@@ -10,8 +10,8 @@ namespace idhan::search
 {
 
 //! The composite (key, record_id) ordering every Set is held in. For a keyless column all keys
-//! compare equal, so the composite degenerates to record_id alone -- which is exactly the order
-//! a RANDOM-sorted fetch produces.
+//! compare equal, so the composite degenerates to record_id alone, which is exactly the order a
+//! RANDOM-sorted fetch produces.
 template < typename Column >
 bool compositeLess(
 	const Column& lhs_keys,

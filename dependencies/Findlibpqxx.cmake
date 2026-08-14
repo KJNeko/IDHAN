@@ -1,4 +1,3 @@
-# Try cmake config mode first (libpqxx 7.10+ built from source installs cmake config files)
 find_package(libpqxx 7 CONFIG QUIET)
 
 if(NOT libpqxx_FOUND)

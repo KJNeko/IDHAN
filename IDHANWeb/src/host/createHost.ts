@@ -33,9 +33,8 @@ function isTerminalStatus(status: unknown): boolean {
 }
 
 /**
- * Polls a job to completion, treating a 404 that follows a previously-observed non-terminal status as
- * completed-and-reaped rather than an error — the reap-on-first-terminal-poll trap, handled here so no
- * panel has to know about it.
+ * Polls a job to completion. A 404 following an already-observed non-terminal status means the job
+ * completed and was reaped, not that it failed.
  */
 function watchJob(jobId: number, onUpdate: (status: unknown) => void): JobHandle {
   let cancelled = false;

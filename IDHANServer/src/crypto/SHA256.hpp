@@ -22,8 +22,8 @@ class FileIOUring;
 namespace idhan
 {
 
-//! A 32-byte SHA-256 hash — IDHAN's content address for every record and stored file. Converts
-//! to/from hex and PostgreSQL bytea columns, and is hashable for use as a map/set key.
+//! A 32-byte SHA-256 hash, IDHAN's content address for every record and stored file. Converts to and
+//! from hex and PostgreSQL bytea columns, and is hashable for use as a map or set key.
 class SHA256
 {
 	std::array< std::byte, ( 256 / 8 ) > m_data {};
@@ -57,7 +57,7 @@ class SHA256
 	//! \return A copy of the raw 32 hash bytes.
 	std::array< std::byte, ( 256 / 8 ) > data() const;
 
-	//! Supplied so we can work with drogon until I figure out how the fuck to overload their operators.
+	//! Supplied for drogon interop, pending a proper operator overload.
 	std::vector< char > toVec() const;
 
 	bool operator==( const SHA256& other ) const;

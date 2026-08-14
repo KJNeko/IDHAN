@@ -6,7 +6,7 @@
 
 #include "ptr/PTRImportWorker.hpp"
 
-//! Table model backing the PTR import "History" view — one row per completed PTR update batch.
+//! Table model backing the PTR import "History" view, one row per completed PTR update batch.
 class PTRHistoryModel final : public QAbstractTableModel
 {
 	Q_OBJECT

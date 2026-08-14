@@ -1,10 +1,10 @@
 /**
  * Installs the shared singletons that plugin bundles resolve to through the page's import map.
  *
- * Plugins import bare `react` / `react-dom` / `react/jsx-runtime` / `@idhan/host`; the import map points
- * those at public shim modules (public/idhan-runtime/*.mjs) which read `window.__IDHAN_RUNTIME__`. This
- * is where that object is filled — with the *host's own* React instance, so a plugin never loads a
- * second copy (which would break hooks). Call once, before any plugin can load.
+ * Plugins import bare `react` / `react-dom` / `react/jsx-runtime` / `@idhan/host`; the import map
+ * points those at public shim modules (public/idhan-runtime/*.mjs) which read
+ * `window.__IDHAN_RUNTIME__`. This fills that object with the host's own React instance, so a plugin
+ * never loads a second copy and breaks hooks. Call once, before any plugin can load.
  */
 
 import * as React from 'react';
@@ -31,9 +31,8 @@ declare global {
 }
 
 /**
- * Plugin-facing panel registration. Unlike the registry's strict registerPanel (which throws on a
- * duplicate so a built-in collision is caught in dev), a plugin colliding with an existing type is a
- * runtime condition we tolerate: warn and skip rather than crash the whole load.
+ * Plugin-facing panel registration. Where the registry's registerPanel throws on a duplicate type, a
+ * colliding plugin is warned and skipped rather than crashing the load.
  */
 function registerPluginPanel(definition: PanelDefinition): void {
   try {

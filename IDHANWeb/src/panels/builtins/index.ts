@@ -1,11 +1,6 @@
 /**
  * Registers the built-in panel catalog. Import this once at startup for its side effects.
- *
- * Registration is the same path third-party plugins use. The catalog now spans P0 (Search, Grid,
- * Viewer, Record Info, Tag Editor), P1 (Import, Job Monitor, Server Status, Notes, URLs), P2
- * (Log Viewer, Cluster Manager, Database Stats, Tag Domain Manager, Tag Relationships, Embeddings,
- * Embedding Search, Embedding Compare),
- * and a Debug panel for developer diagnostics.
+ * Registration is the same path third-party plugins use.
  */
 
 import { registerPanel } from '../registry';

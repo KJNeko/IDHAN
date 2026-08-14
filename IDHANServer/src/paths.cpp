@@ -71,7 +71,7 @@ std::vector< std::filesystem::path > getModulePaths()
 
 	if ( paths.empty() )
 		log::error(
-			"No module libraries found. Searched {}/modules, ./modules and {} -- without them the server "
+			"No module libraries found. Searched {}/modules, ./modules and {}. Without them the server "
 			"has no metadata parsers or thumbnailers.",
 			getExecutableDir().string(),
 			IDHAN_MODULES_PATH );
@@ -208,7 +208,7 @@ bool getThumbnailCachingEnabled()
 
 bool getPurgeThumbnailsOnBoot()
 {
-	// Silent for the same reason -- an optional debugging toggle should not nag on every boot.
+	// Silent for the same reason: an optional debugging toggle should not nag on every boot.
 	return idhan::config::getSilentDefault< bool >( "thumbnails", "purge_on_boot", false );
 }
 
