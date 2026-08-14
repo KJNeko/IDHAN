@@ -61,7 +61,7 @@ ExpectedTask< void > addFileSpecificInfo( Json::Value& root, const RecordID reco
 		co_await db->execSqlCoro( "SELECT simple_mime_type, json FROM metadata WHERE record_id = $1", record_id )
 	};
 
-	if ( simple_mime_result.empty() ) // Could not find any mime info for this record, Try parsing for it.
+	if ( simple_mime_result.empty() )
 	{
 		const auto parsed_metadata { co_await tryParseRecordMetadata( record_id, db ) };
 

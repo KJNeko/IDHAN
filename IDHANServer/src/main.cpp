@@ -77,7 +77,6 @@ auto strToSpdlogLevel( const std::string& level )
 	if ( level == "warning" || level == "warn" ) return spdlog::level::warn;
 	if ( level == "error" ) return spdlog::level::err;
 	if ( level == "critical" ) return spdlog::level::critical;
-	// invalid level, throw
 	spdlog::critical( "Invalid log level, Expected one of: (trace, debug, info, (warning/warn), error, critical)" );
 	std::terminate();
 }
@@ -168,7 +167,6 @@ int main( int argc, char** argv )
 
 	if ( arguments.use_stdout ) spdlog::info( "Using stdout for logging" );
 
-	// Terminates if locale is bad
 	checkSystemLocale();
 
 	log::info( "Starting IDHAN v{}.{}.{}", IDHAN_MAJOR_VERSION, IDHAN_MINOR_VERSION, IDHAN_PATCH_VERSION );

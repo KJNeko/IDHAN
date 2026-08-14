@@ -24,8 +24,6 @@
 namespace idhan
 {
 
-// ─── FileDescriptor ───────────────────────────────────────────────────────────
-
 FileIOUring::FileDescriptor::FileDescriptor( const int fd ) : m_fd( fd )
 {}
 
@@ -52,8 +50,6 @@ FileIOUring::FileDescriptor::operator int() const
 {
 	return m_fd;
 }
-
-// ─── FileIOUring (Linux) ──────────────────────────────────────────────────────
 
 FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly ) :
   m_fd( open( path.c_str(), ( readonly ? O_RDONLY : ( O_RDWR | O_CREAT ) ), 0666 ) ),
@@ -101,8 +97,6 @@ drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, co
 	co_await IOUring::getInstance().write( nativeHandle(), data, offset );
 }
 
-// ─── IOUring base: Linux dispatch ─────────────────────────────────────────────
-
 static IOUringLinux* g_linux_instance { nullptr };
 
 IOUring& IOUring::getInstance()
@@ -115,8 +109,6 @@ void IOUring::init()
 {
 	g_linux_instance = new IOUringLinux();
 }
-
-// ─── IOUringLinux ─────────────────────────────────────────────────────────────
 
 int IOUringLinux::setupUring()
 {
@@ -386,7 +378,6 @@ drogon::Task< std::vector< std::byte > > IOUringLinux::read(
 {
 	if ( !m_iouring_setup )
 	{
-		// Synchronous fallback via pread when io_uring is unavailable
 		std::vector< std::byte > data {};
 		data.resize( len );
 		const auto bytes { pread( static_cast< int >( handle ), data.data(), len, static_cast< off_t >( offset ) ) };
@@ -415,7 +406,6 @@ drogon::Task< void > IOUringLinux::write(
 {
 	if ( !m_iouring_setup )
 	{
-		// Synchronous fallback via pwrite when io_uring is unavailable
 		const auto bytes {
 			pwrite( static_cast< int >( handle ), data.data(), data.size(), static_cast< off_t >( offset ) )
 		};
@@ -440,7 +430,6 @@ drogon::Task< void > IOUringLinux::write(
 			static_cast< __u32 >( remaining ),
 			offset + written );
 
-		// Throws on a negative completion; returns the count otherwise.
 		const auto bytes { co_await sendWrite( sqe ) };
 
 		if ( bytes == 0 )
@@ -450,8 +439,6 @@ drogon::Task< void > IOUringLinux::write(
 		written += bytes;
 	}
 }
-
-// ─── Path operations ──────────────────────────────────────────────────────────
 
 drogon::Task< int > IOUringLinux::removeFile( const std::filesystem::path path )
 {
@@ -501,7 +488,6 @@ drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path
 
 			result = co_await sendOp( sqe );
 
-			// fallback
 			if ( opUnsupported( result ) ) result = mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno;
 		}
 		else

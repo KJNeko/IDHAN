@@ -84,7 +84,6 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 
 	const auto db { drogon::app().getDbClient() };
 
-	// test if sha256 is a list or 1 item
 	const auto& sha256s { json[ "sha256" ] };
 	if ( sha256s.isArray() )
 	{
@@ -97,7 +96,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_array );
 	}
 
-	if ( sha256s.isString() ) // HEX string
+	if ( sha256s.isString() )
 	{
 		Json::Value json_out {};
 		const auto sha256 { SHA256::fromHex( sha256s.asString() ) };
@@ -113,23 +112,18 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );
 	}
 
-	// sha256 was missing, or neither an array nor a string
 	co_return createBadRequest( "Invalid json: 'sha256' must be a hex string or an array of hex strings" );
 }
 
 ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "createRecord" };
-	// Either an octet stream, which is a file to hash, or JSON.
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch-enum"
-	// Not every content type needs a case.
 	switch ( request->getContentType() )
 	{
 		case drogon::CT_APPLICATION_OCTET_STREAM:
 			co_return co_await createRecordFromOctet( request );
-		// A list of hashes, or a single hash.
 		case drogon::CT_APPLICATION_JSON:
 			co_return co_await createRecordFromJson( request );
 		default:

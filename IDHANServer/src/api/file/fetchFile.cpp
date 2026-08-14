@@ -20,7 +20,6 @@ drogon::Task< drogon::HttpResponsePtr > createHttpHeadForFile(
 {
 	auto response { drogon::HttpResponse::newHttpResponse() };
 
-	// add to response header that we support partial requests
 	response->addHeader( "Accept-Ranges", "bytes" );
 
 	response->addHeader( "Content-Length", std::to_string( file_size ) );
@@ -122,13 +121,11 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 	const std::size_t file_size { std::filesystem::file_size( *path_e ) };
 
-	// Check if this is a head request
 	if ( request->isHead() )
 	{
 		co_return co_await createHttpHeadForFile( db, file_size, record_id );
 	}
 
-	// Get the header for ranges if supplied
 	const auto& range_header { request->getHeader( "Range" ) };
 	std::size_t begin { 0 };
 	std::size_t end_pos { std::numeric_limits< std::size_t >::max() }; // max = open-ended (serve to EOF)
@@ -139,14 +136,13 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	constexpr auto full_range { "bytes=0-" };
 	const bool is_full_range { has_range_header && ( range_header == full_range ) };
 
-	if ( !is_full_range && has_range_header ) // needs to parse
+	if ( !is_full_range && has_range_header )
 	{
 		if ( auto value = parseRangeHeader( file_size, range_header, begin, end_pos ); value ) co_return *value;
 	}
 
 	if ( request->getOptionalParameter< bool >( "download" ).value_or( false ) )
 	{
-		// send the file as a download instead of letting the browser try to display it
 		const auto response { drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() ) };
 		// Same content-addressed bytes as the inline response, so it is safe to cache immutably.
 		helpers::addFileCacheHeader( response );
@@ -159,8 +155,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 	response->addHeader( "Accept-Ranges", "bytes" );
 
-	helpers::addFileCacheHeader(
-		response /* max_age is set to 1 year, Since this is likely to never be changed by IDHAN */ );
+	helpers::addFileCacheHeader( response );
 
 	co_return response;
 }

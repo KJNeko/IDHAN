@@ -21,11 +21,7 @@ class RemoteModule;
 namespace idhan::metadata
 {
 
-// DB
-
 ExpectedTask< void > addFileSpecificInfo( Json::Value& root, RecordID record_id, DbClientPtr db );
-
-// Parsing
 
 [[nodiscard]] drogon::Task< std::shared_ptr< modules::RemoteModule > > findBestParser( std::string mime_name );
 

@@ -29,7 +29,6 @@ static std::string getHeaderKeys( const drogon::HttpRequestPtr& req )
 
 static std::expected< SHA256, drogon::HttpResponsePtr > getAndValidateKey( const drogon::HttpRequestPtr& req )
 {
-	// check if there is a `idhan_key` parameter
 	const auto idhan_key_param { req->getOptionalParameter< std::string >( "idhan_key" ) };
 
 	const auto idhan_key_header { getHeaderKeys( req ) };
@@ -41,7 +40,6 @@ static std::expected< SHA256, drogon::HttpResponsePtr > getAndValidateKey( const
 
 	const auto key { idhan_key_param ? *idhan_key_param : idhan_key_header };
 
-	// the key should be 64 characters because it's in hex
 	if ( key.size() != 64 )
 	{
 		return std::unexpected( createBadRequest( "Invalid key length for idhan_key. Expected 64 characters in hex" ) );
@@ -82,7 +80,6 @@ drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpReq
 		co_return response;
 	}
 
-	// do nothing. filter passed
 	co_return nullptr;
 #endif
 }

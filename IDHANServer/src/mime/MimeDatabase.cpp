@@ -78,12 +78,11 @@ drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > MimeDataba
 	const auto first_result { positive_matches.at( 0 ) };
 
 	log::debug( "MimeDatabase::scan: selected mime: {}", first_result.first );
-	co_return first_result.first; // first field of the pair is the mime string
+	co_return first_result.first;
 }
 
 Json::Value MimeDatabase::dump() const
 {
-	// arrayValue so an empty parser list responds with [] rather than null
 	Json::Value json { Json::arrayValue };
 
 	std::vector< Json::Value > items {};
@@ -101,7 +100,6 @@ Json::Value MimeDatabase::dump() const
 		items.emplace_back( item );
 	}
 
-	// rank items by items["priority"]
 	std::ranges::sort(
 		items,
 		[]( const Json::Value& left, const Json::Value& right )

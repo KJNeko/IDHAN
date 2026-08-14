@@ -101,7 +101,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::autocomplete(
 		co_return createBadRequest( "Invalid tag display type" );
 	}
 
-	// pre-prep the search_value for searching in the database
 	const auto db { drogon::app().getDbClient() };
 
 	const std::size_t limit { request->getOptionalParameter< std::size_t >( "limit" ).value_or( 10 ) };

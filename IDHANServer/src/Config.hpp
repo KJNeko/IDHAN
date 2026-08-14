@@ -286,12 +286,8 @@ template < typename T >
 template < typename T >
 [[nodiscard]] std::optional< T > getValue( const std::string_view group, const std::string_view name )
 {
-	// TODO: Get arguments from CLI
-
-	// ENV
 	if ( auto result = tryGetEnv< T >( group, name ); result ) return *result;
 
-	// overriden config path
 	const auto user_config_path { getUserConfigPath() };
 	if ( user_config_path.empty() )
 	{
@@ -301,7 +297,6 @@ template < typename T >
 		}
 	}
 
-	// priority paths
 	for ( const auto& path : config_paths | std::views::reverse )
 	{
 		if ( auto result = getValueFromFile< T >( path, group, name ); result )

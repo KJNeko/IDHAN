@@ -27,7 +27,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordValidator::doFilter( const drogon:
 
 	auto& cache { caching::recordExistsCache() };
 
-	// known-present record: skip the DB round-trip entirely
 	if ( cache.contains( record_id ) ) co_return nullptr;
 
 	auto db { drogon::app().getDbClient() };
@@ -36,10 +35,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordValidator::doFilter( const drogon:
 
 	if ( search.empty() ) co_return createNotFound( "Record {} does not exist", record_id );
 
-	// confirmed to exist; remember it (records are append-only, so this never goes stale)
 	cache.insert( record_id );
 
-	// filter passed
 	co_return nullptr;
 }
 

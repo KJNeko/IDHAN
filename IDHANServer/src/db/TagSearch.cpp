@@ -147,9 +147,6 @@ ExpectedTask< void > TagSearch::addID( const TagID id )
 	const auto children_result { co_await addChildren( *idealized_id ) };
 	if ( !children_result ) co_return std::unexpected( children_result.error() );
 
-	// const auto siblings_result { co_await removeSiblings( *idealized_id ) };
-	// if ( !siblings_result ) co_return std::unexpected( siblings_result.error() );
-
 	co_return {};
 }
 

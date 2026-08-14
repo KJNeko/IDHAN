@@ -11,7 +11,6 @@
 constexpr auto OID_BYTEA { 17 };
 constexpr auto OID_TEXT { 25 };
 
-// Get PostgreSQL OID for the type
 template < typename T >
 consteval int32_t getTypeOid()
 {
@@ -136,17 +135,16 @@ std::vector< std::byte > createPgBinaryArray( std::vector< std::string >&& strin
 	std::memset( result.data(), 0xFF, result.size() );
 
 	auto* header = reinterpret_cast< Header* >( result.data() );
-	header->num_dimensions = htonl( 1 ); // dimension count
-	header->data_offset = htonl( 0 ); // any nulls?
-	header->element_type_oid = htonl( OID_TEXT ); // element type
-	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) ); // size of first dimension
-	header->lower_bound = htonl( 1 ); // offset of first dimension
+	header->num_dimensions = htonl( 1 );
+	header->data_offset = htonl( 0 );
+	header->element_type_oid = htonl( OID_TEXT );
+	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) );
+	header->lower_bound = htonl( 1 );
 
 	std::byte* ptr = result.data() + sizeof( Header );
 	for ( const auto& str : strings )
 	{
 		auto& element = *reinterpret_cast< Element* >( ptr );
-		// const auto filtered_string { idhan::api::helpers::pgEscape( str ) };
 		element.element_length = htonl( static_cast< std::uint32_t >( str.size() ) );
 		std::memcpy( ptr + sizeof( Element ), str.data(), str.size() );
 		ptr += sizeof( Element ) + str.size();
@@ -173,17 +171,16 @@ std::vector< std::byte > createPgBinaryArray( const std::vector< std::string >&&
 	std::memset( result.data(), 0xFF, result.size() );
 
 	auto* header = reinterpret_cast< Header* >( result.data() );
-	header->num_dimensions = htonl( 1 ); // dimension count
-	header->data_offset = htonl( 0 ); // any nulls?
-	header->element_type_oid = htonl( OID_TEXT ); // element type
-	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) ); // size of first dimension
-	header->lower_bound = htonl( 1 ); // offset of first dimension
+	header->num_dimensions = htonl( 1 );
+	header->data_offset = htonl( 0 );
+	header->element_type_oid = htonl( OID_TEXT );
+	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) );
+	header->lower_bound = htonl( 1 );
 
 	std::byte* ptr = result.data() + sizeof( Header );
 	for ( const auto& str : strings )
 	{
 		auto& element = *reinterpret_cast< Element* >( ptr );
-		// const auto filtered_string { idhan::api::helpers::pgEscape( str ) };
 		element.element_length = htonl( static_cast< std::uint32_t >( str.size() ) );
 		std::memcpy( ptr + sizeof( Element ), str.data(), str.size() );
 		ptr += sizeof( Element ) + str.size();
@@ -210,17 +207,16 @@ std::vector< std::byte > createPgBinaryArray( std::set< std::string >&& strings 
 	std::memset( result.data(), 0xFF, result.size() );
 
 	auto* header = reinterpret_cast< Header* >( result.data() );
-	header->num_dimensions = htonl( 1 ); // dimension count
-	header->data_offset = htonl( 0 ); // any nulls?
-	header->element_type_oid = htonl( OID_TEXT ); // element type
-	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) ); // size of first dimension
-	header->lower_bound = htonl( 1 ); // offset of first dimension
+	header->num_dimensions = htonl( 1 );
+	header->data_offset = htonl( 0 );
+	header->element_type_oid = htonl( OID_TEXT );
+	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) );
+	header->lower_bound = htonl( 1 );
 
 	std::byte* ptr = result.data() + sizeof( Header );
 	for ( const auto& str : strings )
 	{
 		auto& element = *reinterpret_cast< Element* >( ptr );
-		// const auto filtered_string { idhan::api::helpers::pgEscape( str ) };
 		element.element_length = htonl( static_cast< std::uint32_t >( str.size() ) );
 		std::memcpy( ptr + sizeof( Element ), str.data(), str.size() );
 		ptr += sizeof( Element ) + str.size();
@@ -247,17 +243,16 @@ std::vector< std::byte > createPgBinaryArray( const std::set< std::string >&& st
 	std::memset( result.data(), 0xFF, result.size() );
 
 	auto* header = reinterpret_cast< Header* >( result.data() );
-	header->num_dimensions = htonl( 1 ); // dimension count
-	header->data_offset = htonl( 0 ); // any nulls?
-	header->element_type_oid = htonl( OID_TEXT ); // element type
-	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) ); // size of first dimension
-	header->lower_bound = htonl( 1 ); // offset of first dimension
+	header->num_dimensions = htonl( 1 );
+	header->data_offset = htonl( 0 );
+	header->element_type_oid = htonl( OID_TEXT );
+	header->dimension_length = htonl( static_cast< uint32_t >( strings.size() ) );
+	header->lower_bound = htonl( 1 );
 
 	std::byte* ptr = result.data() + sizeof( Header );
 	for ( const auto& str : strings )
 	{
 		auto& element = *reinterpret_cast< Element* >( ptr );
-		// const auto filtered_string { idhan::api::helpers::pgEscape( str ) };
 		element.element_length = htonl( static_cast< std::uint32_t >( str.size() ) );
 		std::memcpy( ptr + sizeof( Element ), str.data(), str.size() );
 		ptr += sizeof( Element ) + str.size();
@@ -279,11 +274,11 @@ std::vector< std::byte > createPgBinaryArray( std::vector< idhan::SHA256 >&& dat
 	result.resize( sizeof( Header ) + ( sizeof( Element ) * data.size() ) );
 
 	auto* header = reinterpret_cast< Header* >( result.data() );
-	header->num_dimensions = htonl( 1 ); // dimension count
-	header->data_offset = htonl( 0 ); // any nulls?
-	header->element_type_oid = htonl( OID_BYTEA ); // element type
-	header->dimension_length = htonl( static_cast< uint32_t >( data.size() ) ); // size of first dimension
-	header->lower_bound = htonl( 1 ); // offset of first dimension
+	header->num_dimensions = htonl( 1 );
+	header->data_offset = htonl( 0 );
+	header->element_type_oid = htonl( OID_BYTEA );
+	header->dimension_length = htonl( static_cast< uint32_t >( data.size() ) );
+	header->lower_bound = htonl( 1 );
 
 	auto* elements = reinterpret_cast< Element* >( result.data() + sizeof( Header ) );
 	for ( std::size_t i = 0; i < data.size(); ++i )

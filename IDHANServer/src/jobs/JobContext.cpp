@@ -56,7 +56,6 @@ void JobRuntime::runner()
 
 		log::debug( "Acquired Job" );
 
-		// get loop
 		trantor::EventLoop* loop { nullptr };
 		do
 		{
@@ -84,7 +83,7 @@ void JobRuntime::cleanup()
 					if ( !job->done() ) return false;
 
 					const auto status = job->status();
-					if ( !status ) return true; // Should not happen
+					if ( !status ) return true;
 
 					if ( status->m_cleanup_requested ) return true;
 

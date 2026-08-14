@@ -122,7 +122,7 @@ SearchBuilder::RangeTerm SearchBuilder::parseRangeTerm( const std::string_view t
 	const bool is_greater_than { tag.contains( ">" ) };
 	const bool is_less_than { tag.contains( "<" ) };
 	const bool is_equal_to { tag.contains( "=" ) };
-	const bool is_not { tag.contains( "!" ) || tag.contains( "≠" ) }; // ew
+	const bool is_not { tag.contains( "!" ) || tag.contains( "≠" ) };
 	// Hydrus writes its own predicates with U+2248; `~` is the ASCII spelling.
 	const bool is_approximate { tag.contains( "~" ) || tag.contains( "≈" ) };
 

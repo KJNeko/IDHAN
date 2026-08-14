@@ -33,7 +33,6 @@ if (IDHAN_USE_JEMALLOC)
 	message(STATUS "IDHANServer: using jemalloc ${JEMALLOC_VERSION}")
 endif ()
 
-# Copy page info to the output directory
 file(GLOB_RECURSE PAGE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/static/*")
 set(PAGE_OUTPUTS "")
 
@@ -57,9 +56,6 @@ endforeach ()
 add_custom_target(IDHANPages DEPENDS ${PAGE_OUTPUTS})
 add_dependencies(IDHANServer IDHANPages)
 
-#add_dependencies(IDHANServer IDHANModules)
-
-# Copy mime identifiers to the output dir
 file(GLOB_RECURSE PARSER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/mime/parsers/*")
 set(PARSER_OUTPUTS "")
 
@@ -96,4 +92,3 @@ add_dependencies(IDHANServer IDHANConfig)
 
 add_dependencies(IDHANServer IDHANPremadeModules)
 add_dependencies(IDHANServer IDHANModuleRunner)
-
