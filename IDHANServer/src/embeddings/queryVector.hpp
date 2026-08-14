@@ -76,7 +76,7 @@ struct WeightedVector
 	if ( magnitude < MIN_QUERY_MAGNITUDE )
 		return std::unexpected(
 			std::string { "the terms cancel out, leaving no direction to search along; "
-			              "adjust the weights so the positives and negatives do not balance" } );
+		                  "adjust the weights so the positives and negatives do not balance" } );
 
 	for ( float& value : summed ) value /= magnitude;
 

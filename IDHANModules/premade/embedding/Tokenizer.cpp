@@ -37,7 +37,6 @@ constexpr std::string_view META_SPACE { "▁" };
 	     | static_cast< std::uint32_t >( right );
 }
 
-
 std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 	const std::filesystem::path& tokenizer_path,
 	const std::size_t context_length )

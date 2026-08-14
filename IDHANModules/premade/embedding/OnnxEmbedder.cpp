@@ -18,7 +18,6 @@ namespace premade
 //! rejecting correct data, and tight enough to catch an export that forgot to normalise at all.
 constexpr float NORM_TOLERANCE { 1e-3f };
 
-
 OnnxEmbedder::OnnxEmbedder( ModuleCallbacks callbacks, ModelConfig config ) :
   EmbeddingModuleI( callbacks ),
   m_config( std::move( config ) )

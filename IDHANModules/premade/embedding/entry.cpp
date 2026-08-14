@@ -27,7 +27,6 @@ using namespace idhan;
 	return self.parent_path() / "models";
 }
 
-
 //! The module instances this library exports.
 /** Unlike the other premade libraries this vector is not a fixed list: it is one module per model
  *  directory found on disk, so the library's module indices depend on what is installed.

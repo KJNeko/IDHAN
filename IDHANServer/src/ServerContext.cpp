@@ -19,10 +19,10 @@
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
+#include "embeddings/embeddings.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
-#include "embeddings/embeddings.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "spdlog/async.h"
 

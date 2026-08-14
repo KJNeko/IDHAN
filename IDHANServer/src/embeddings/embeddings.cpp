@@ -115,7 +115,6 @@ drogon::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
 	co_return std::pair { record_id, toVectorLiteral( result->m_vector ) };
 }
 
-
 IDHANTask< void > registerEmbeddingModels( DbClientPtr db )
 {
 	const auto models { modules::ModuleLoader::instance().embeddingModels() };

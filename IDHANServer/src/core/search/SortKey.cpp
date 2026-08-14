@@ -43,7 +43,6 @@ constexpr std::string_view num_tags_join {
 	" FROM active_tag_mappings_final GROUP BY record_id) ntc USING (record_id)"
 };
 
-
 SortKeySpec sortKeySpec( const SortType type )
 {
 	switch ( type )

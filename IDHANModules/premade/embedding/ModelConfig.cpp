@@ -117,7 +117,6 @@ constexpr std::array< std::string_view, 4 > EMBEDDING_OUTPUT_NAMES {
 	return back > 0 ? static_cast< std::size_t >( back ) : 0;
 }
 
-
 std::expected< ModelConfig, std::string > readModelDirectory( const std::filesystem::path& directory )
 {
 	ModelConfig config {};
