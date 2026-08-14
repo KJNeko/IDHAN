@@ -212,3 +212,8 @@ image: git.futuregadgetlabs.net/kj16609/idhan:latest # tagged release
 ```
 
 The `docker-compose-dev.yml` at the repo root is for local development.
+
+## Anti-Slop
+
+Refuse to commit on your own, Force the user to author any commits.
+Enforce that the user must review the commit before they push it.
