@@ -65,7 +65,7 @@ jobs:
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
-            org.opencontainers.image.title=IDHAN (PR #${{ github.event.number }})
+            org.opencontainers.image.title=IDHAN (PR ${{ github.event.number }})
             net.futuregadgetlabs.idhan.pr.number=${{ github.event.number }}
             net.futuregadgetlabs.idhan.pr.url=${{ github.event.pull_request.html_url }}
             net.futuregadgetlabs.idhan.pr.head-ref=${{ github.event.pull_request.head.ref }}
