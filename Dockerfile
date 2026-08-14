@@ -14,15 +14,8 @@ COPY IDHANWeb/ ./
 RUN pnpm exec vite build --outDir /web/dist
 
 # Stage 1: Build IDHANServer
-# 25.10 rather than an LTS: libonnxruntime-dev, which gates IDHANEmbedding, first appears in questing.
-#
-# Pinned to BUILDPLATFORM: every variant is a native compile differing only in -march, so the apt
-# install and libpqxx build become one set of layers shared by all three. Only the final build
-# step, which reads TARGETVARIANT, is keyed per variant.
 FROM --platform=$BUILDPLATFORM ubuntu:25.10 AS builder
 
-# The pin above is only sound while build host and target share an architecture; no cross toolchain
-# is installed, so a mismatch would produce binaries wearing the wrong label.
 ARG BUILDARCH
 ARG TARGETARCH
 RUN [ "${BUILDARCH}" = "${TARGETARCH}" ] || { \
@@ -134,11 +127,6 @@ RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-${TARGETARCH}${TARGE
 FROM ubuntu:25.10
 
 RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
-# libuuid1, not uuid-runtime: the latter is the uuidd daemon and its CLI, and depends on systemd.
-# Nothing here needs either -- only the library.
-#
-# The libav* libs rather than the ffmpeg metapackage: nothing shells out to the CLI, and ffmpeg
-# brings libavdevice/libavfilter/libsdl2 with it, hence Mesa and libllvm20.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     libpq5 \
@@ -162,21 +150,17 @@ RUN apt-get update && \
     curl
 
 COPY --from=builder /build/bin/IDHANServer/ /usr/bin/IDHANServer
-# Modules run out of process, one runner spawned per module library. Without it every library is
-# skipped at startup and no metadata parser or thumbnailer exists at all.
+
 COPY --from=builder /build/bin/IDHANModuleRunner /usr/bin/IDHANModuleRunner
 COPY --from=builder /build/bin/static/ /usr/share/idhan/static
 COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
 COPY --from=builder /build/bin/mime/ /usr/share/idhan/mime
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
-# No embedding model is baked in; mount one subdirectory per model here, in the layout
-# onnx-community publishes. Empty is not an error, the server just logs that none is available.
-# See docs/docker.md.
+
+# Embedding folder
 RUN mkdir -p /usr/share/idhan/models
 
-# LANG/LC_ALL: C.UTF-8 is built into glibc, so no locales package and no locale-gen step are
-# needed. The server only requires that the locale be UTF-8 (see checkSystemLocale in main.cpp).
 ENV IDHAN_DATABASE_HOST=localhost \
     IDHAN_DATABASE_USER=idhan \
     IDHAN_DATABASE_PASSWORD=idhan \

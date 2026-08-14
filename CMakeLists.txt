@@ -45,14 +45,6 @@ endif ()
 
 option(IDHAN_HARDEN "Block same-uid ptrace of the server and disable worker core dumps" ${IDHAN_HARDEN_DEFAULT})
 
-# TEMPORARY (coroutine frame leak hunt): embeds a lifetime probe in drogon's promise types so live
-# coroutine frames can be listed via GET /coro/frames. This changes drogon::Task's promise_type
-# layout, so it is applied by patching a build-tree COPY of drogon's coroutine.h and setting the
-# define PUBLIC on the drogon target -- see dependencies/Finddrogon.cmake. Never set the define on an
-# individual target that links drogon; that is an ODR violation.
-#
-# Driven purely by the build type: on in Debug, absent everywhere else. Deliberately NOT an option()
-# -- there is no flag to remember to set, and no cache entry that can go stale against the build type.
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set(IDHAN_TRACK_CORO_FRAMES ON)
 endif ()
