@@ -7,7 +7,7 @@ set(WEB_STAGING_DIR ${CMAKE_BINARY_DIR}/webui-dist)
 set(WEB_STATIC_DIR ${CMAKE_BINARY_DIR}/bin/static)
 
 if (NOT PNPM_EXECUTABLE)
-	message(WARNING "pnpm not found — skipping the WebUI build. "
+	message(WARNING "pnpm not found. Skipping the WebUI build. "
 			"The server will serve a placeholder page at '/'. "
 			"Install pnpm, or set -DBUILD_IDHAN_WEB=OFF to silence this.")
 
@@ -17,7 +17,7 @@ if (NOT PNPM_EXECUTABLE)
 			"<body style=\"font:14px/1.5 system-ui,sans-serif;padding:2rem\">\n"
 			"<h1>IDHAN</h1>\n"
 			"<p>The WebUI was not built: <code>pnpm</code> was not found at configure time.</p>\n"
-			"<p>The API is unaffected — see <a href=\"/api\">/api</a> for the documentation.</p>\n"
+			"<p>The API is unaffected. See <a href=\"/api\">/api</a> for the documentation.</p>\n"
 			"</body>\n</html>\n")
 
 	return()

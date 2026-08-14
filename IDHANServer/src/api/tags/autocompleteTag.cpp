@@ -75,7 +75,6 @@ drogon::Task< Json::Value > getSimilarTags(
 
 		const auto tag_text { row[ "tag_text" ].as< std::string >() };
 
-		tag[ "value" ] = tag_text;
 		tag[ "tag_text" ] = tag_text;
 
 		tag[ "similarity" ] = row[ "similarity" ].as< double >();

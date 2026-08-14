@@ -28,7 +28,7 @@ class Resumer
 using ResumerProvider = Resumer* (*)() noexcept;
 
 //! Installs the process-wide provider. Call once at startup, before any io is submitted. Passing
-//! nullptr uninstalls it, which is only useful in tests.
+//! nullptr uninstalls it.
 void setResumerProvider( ResumerProvider provider ) noexcept;
 
 //! Called by awaiters on the suspending thread. Returns nullptr when no provider is installed, or
