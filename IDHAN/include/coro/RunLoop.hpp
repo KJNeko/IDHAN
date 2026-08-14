@@ -15,14 +15,14 @@
 namespace idhan::coro
 {
 
-//! A queue of coroutine handles pumped by one thread. post() is callable from any thread; run()
-//! owns the thread it is called on until stop() is called and the queue has drained.
 class RunLoop
 {
 	std::mutex m_mtx {};
 	std::condition_variable m_cv {};
 	std::deque< std::coroutine_handle<> > m_queue {};
 	bool m_stopping { false };
+
+	//TODO: Fix lock contention (semaphore required)
 
   public:
 
@@ -35,12 +35,8 @@ class RunLoop
 	//! Thread-safe. Queues `handle` to be resumed on the thread inside run().
 	void post( std::coroutine_handle<> handle );
 
-	//! Pumps queued handles on the calling thread. Returns once stop() has been called AND the queue
-	//! is empty, so work queued before or during the stop is never dropped.
 	void run();
 
-	//! Thread-safe. Asks run() to return once the queue has drained. Calling this before run() is
-	//! entered is legal and makes run() a drain-and-return.
 	void stop();
 };
 
@@ -67,7 +63,7 @@ struct DetachedTask
 {
 	struct promise_type
 	{
-		DetachedTask get_return_object() const noexcept { return {}; }
+		[[nodiscard]] DetachedTask get_return_object() const noexcept { return {}; }
 
 		static std::suspend_never initial_suspend() noexcept { return {}; }
 
@@ -110,8 +106,6 @@ inline DetachedTask driveTask( Task< void > task, std::exception_ptr* error, Run
 
 } // namespace detail
 
-//! Runs `task` to completion, pumping `loop` on the calling thread until it finishes, and returns
-//! its value. Rethrows whatever the task threw.
 template < typename T >
 T runOnLoop( RunLoop& loop, Task< T > task )
 {

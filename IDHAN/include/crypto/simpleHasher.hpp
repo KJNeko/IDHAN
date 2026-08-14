@@ -14,11 +14,6 @@
 namespace idhan::crypto
 {
 
-//! Computes the SHA-256 digest of a byte buffer.
-//! \param data Pointer to the input bytes.
-//! \param size Number of bytes to hash.
-//! \return The 32-byte SHA-256 digest.
-//! \throws std::runtime_error if any OpenSSL EVP call fails.
 inline std::array< std::byte, 256 / 8 > hashData( const std::byte* data, const std::size_t size )
 {
 	const std::unique_ptr< EVP_MD_CTX, void ( * )( EVP_MD_CTX* ) > ctx {

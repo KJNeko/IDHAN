@@ -31,8 +31,6 @@ struct FinalAwaiter
 	void await_resume() const noexcept {}
 };
 
-//! Promise type for Task<T>. get_return_object() is declared here and defined out of line, after
-//! Task<T> is a complete type, since it returns Task<T> by value.
 template < typename T >
 struct TaskPromise
 {
@@ -53,12 +51,11 @@ struct TaskPromise
 	T&& result() &&
 	{
 		if ( m_exception ) std::rethrow_exception( m_exception );
-		assert( m_value.has_value() && "Task completed without a value and without an exception" );
+		FGL_ASSERT( m_value.has_value(), "Task completed without a value and without an exception" );
 		return std::move( *m_value );
 	}
 };
 
-//! void specialisation: no value slot, return_void instead of return_value, result() returns void.
 template <>
 struct TaskPromise< void >
 {
@@ -81,8 +78,6 @@ struct TaskPromise< void >
 	}
 };
 
-//! Owns the coroutine-frame handle. This is the one place the construct/destroy/move logic exists;
-//! Task<T> and Task<void> each only add the promise-specific Awaiter and operator co_await.
 template < typename Promise >
 class TaskBase
 {
@@ -168,7 +163,6 @@ class [[nodiscard]] Task : public detail::TaskBase< detail::TaskPromise< T > >
 	}
 };
 
-//! void specialisation, for coroutines that co_return nothing.
 template <>
 class [[nodiscard]] Task< void > : public detail::TaskBase< detail::TaskPromise< void > >
 {
