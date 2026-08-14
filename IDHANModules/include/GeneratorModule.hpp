@@ -30,9 +30,6 @@ class FGL_EXPORT GeneratorModuleI : public ModuleBase
 	//! \param out Where the derived file is written (see ModuleSink). Nothing is written when the
 	//!        module returns an error.
 	//! \return Nothing on success, or a ModuleError if the file could not be produced.
-	/** Writing through a sink rather than returning a buffer is what keeps a large output from
-	 *  existing twice. Reserve the size on \p out first where it is known -- an archive entry's
-	 *  header usually carries it -- so the destination is allocated once. */
 	[[nodiscard]] virtual std::expected< void, idhan::ModuleError > generate(
 		ModuleCallData& data,
 		std::array< std::byte, 256 / 8 > desired_hash,

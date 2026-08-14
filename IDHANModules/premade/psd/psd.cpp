@@ -67,10 +67,6 @@ std::optional< PSDHeader > parsePSDHeader( const std::uint8_t* data, const std::
 	const std::uint32_t height { readUint32BE( data + 14 ) };
 	const std::uint32_t width { readUint32BE( data + 18 ) };
 
-	// PSD (version 1) constrains each dimension to 1..30000 and the channel count to 1..56.
-	// Rejecting out-of-range headers stops a crafted file from driving a multi-gigabyte
-	// allocation (planeSize = width * height) downstream, and rules out the width/height == 0
-	// that would otherwise divide by zero in the aspect-ratio maths.
 	constexpr std::uint32_t max_dimension { 30000 };
 	constexpr std::uint16_t max_channels { 56 };
 	if ( width == 0 || height == 0 || width > max_dimension || height > max_dimension ) return std::nullopt;
@@ -136,10 +132,6 @@ std::vector< std::uint8_t > unpackRaster(
 	}
 	offset += scanlineCountsSize;
 
-	// Each row decompresses to width * bytesPerSample bytes (PackBits runs over the raw sample
-	// bytes, not whole pixels), so both the row stride and the plane buffer scale with
-	// bytesPerSample. Ignoring it truncated every 16/32-bit RLE PSD to a width-sized buffer and
-	// made the subsequent depth conversion reject the data.
 	const std::size_t rowBytes { static_cast< std::size_t >( width ) * bytesPerSample };
 	const std::size_t planeSize { static_cast< std::size_t >( width ) * height };
 	planarData.resize( planeSize * channels * bytesPerSample );

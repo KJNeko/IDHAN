@@ -96,8 +96,6 @@ std::expected< std::string, idhan::ModuleError > sanitizeEncoding( const char* s
 	if ( result == static_cast< std::size_t >( -1 ) )
 		return std::unexpected( idhan::ModuleError { "iconv conversion failed" } );
 
-	// use the byte count iconv actually wrote rather than strlen(): out_buffer isn't guaranteed
-	// to contain a null terminator if the conversion filled it exactly
 	std::string out_string { out_buffer.data(), out_buffer.size() - out_size };
 
 	return out_string;
@@ -107,9 +105,6 @@ std::expected< std::vector< std::byte >, idhan::ModuleError > readArchiveEntryDa
 {
 	std::vector< std::byte > data {};
 
-	// archive_read_data may return fewer bytes than requested (short read) and does not need the
-	// entry size to be known in advance, so grow the buffer as we go rather than trusting
-	// archive_entry_size() for a single allocate-and-read.
 	constexpr std::size_t chunk_size { 64 * 1024 };
 	std::array< std::byte, chunk_size > buffer {};
 
@@ -138,8 +133,6 @@ std::int64_t ArchiveModuleReader::onRead( archive* const a, void* const client_d
 
 	if ( !count )
 	{
-		// Stashed as well as set on the handle: archive_set_error copies the string, but keeping our
-		// own means the caller still has the real cause if libarchive overwrites it.
 		self->m_error = count.error();
 		archive_set_error( a, EIO, "%s", self->m_error.c_str() );
 		return -1;
@@ -194,9 +187,6 @@ std::expected< ArchiveEntryHash, idhan::ModuleError > hashArchiveEntryData( arch
 	if ( EVP_DigestInit_ex( ctx.get(), EVP_sha256(), nullptr ) != 1 )
 		return std::unexpected( idhan::ModuleError { "EVP_DigestInit_ex() failed" } );
 
-	// Fold each chunk into the digest as it is read; never hold more than one chunk, so peak memory
-	// stays O(chunk_size) no matter how large the entry decompresses to. archive_read_data may return
-	// short reads and does not need the entry size known in advance.
 	constexpr std::size_t chunk_size { 64 * 1024 };
 	std::array< std::byte, chunk_size > buffer {};
 
@@ -233,8 +223,6 @@ std::expected< ArchiveEntryHash, idhan::ModuleError > hashArchiveEntryData( arch
 
 std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str )
 {
-	// "WCHAR_T" is iconv's name for the platform's wchar_t encoding, so this is portable across
-	// Linux (UTF-32) and Windows (UTF-16) without hand-rolling the codec.
 	const auto iconv_cd { iconv_open( "UTF-8", "WCHAR_T" ) };
 	if ( iconv_cd == reinterpret_cast< iconv_t >( -1 ) )
 		return std::unexpected( idhan::ModuleError { "Failed to open iconv for WCHAR_T" } );
@@ -242,8 +230,6 @@ std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str 
 	const std::size_t in_bytes { std::wcslen( str ) * sizeof( wchar_t ) };
 	std::vector< char > in_buffer( in_bytes );
 	std::memcpy( in_buffer.data(), str, in_bytes );
-	// UTF-8 needs at most 4 bytes per code point; sizeof(wchar_t) >= 2 already covers that per
-	// input unit, so 2x plus slack is comfortably enough.
 	std::vector< char > out_buffer( in_bytes * 2 + 4 );
 
 	auto* in_buffer_ptr { in_buffer.data() };
@@ -263,10 +249,6 @@ std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str 
 
 EntryNameResult entryFilename( archive_entry* entry, std::expected< std::string, idhan::ModuleError >& out )
 {
-	// Ordered by how much the name has already been normalised for us. The locale-dependent accessor
-	// comes first because that is what produced the names already recorded in stored metadata, and
-	// changing which accessor answers would change the resulting string for archives that store names
-	// in a legacy codepage -- names the generator still has to match.
 	if ( const char* filename_raw = archive_entry_pathname( entry ); filename_raw != nullptr )
 	{
 		out = sanitizeEncoding( filename_raw );
@@ -282,8 +264,6 @@ EntryNameResult entryFilename( archive_entry* entry, std::expected< std::string,
 	}
 	else
 	{
-		// The charset is reported because this is nearly always a locale problem rather than a broken
-		// archive, and without it the next report is another round of guessing.
 		spdlog::warn(
 			"No file name for item in archive? Maybe encrypted but not flagged as such? (locale charset: {})",
 			nl_langinfo( CODESET ) );

@@ -46,8 +46,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 		const TagID parent_id { parent.as< TagID >() };
 		const TagID child_id { child.as< TagID >() };
 
-		// the check_parent_cycle trigger only walks existing rows, so a direct
-		// self-parent would pass it and create self-referential parent mappings
 		if ( parent_id == child_id )
 			co_return createBadRequest( "Cannot parent a tag to itself {} == {}", parent_id, child_id );
 
@@ -75,8 +73,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagParents( const drogon::
 		}
 		catch ( std::exception& e )
 		{
-			// the check_parent_cycle trigger raises with this exact text (migration 105);
-			// a rejected cycle is a conflict with existing relationships, not a server fault
 			if ( std::string_view( e.what() ).find( "Cycle detected" ) != std::string_view::npos )
 				co_return createConflict( "Error adding tag parents: {}", e.what() );
 			co_return createInternalError( "Error adding tag parents: {}", e.what() );

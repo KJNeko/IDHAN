@@ -57,8 +57,6 @@ std::vector< CollapsedRelation > collapseRelations( std::vector< RelationEvent >
 		while ( end < events.size() && events[ end ].a == events[ start ].a && events[ end ].b == events[ start ].b )
 			++end;
 
-		// Reuse the mapping rule verbatim by projecting each relation event onto a MappingEvent:
-		// the chain logic is about op ordering, not about what the ids mean.
 		std::vector< MappingEvent > chain;
 		chain.reserve( end - start );
 		for ( std::size_t i = start; i < end; ++i )

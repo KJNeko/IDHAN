@@ -34,16 +34,10 @@ export const DEFAULT_SCAN_PARAMS: ScanParams = {
   readonly: false,
 };
 
-// Hash-only preset. The server couples params as
-//   scan_metadata |= adopt_orphans; scan_mime |= scan_metadata;
-// so adopt_orphans MUST be cleared too, else mime + metadata come back on.
 export function fastScanPreset(params: ScanParams): ScanParams {
     return {...params, scan_mime: true, scan_metadata: false, adopt_orphans: true};
 }
 
-// Void out params that require write access when the scan will run read-only —
-// either the cluster itself is read-only or the user forced it. The server only
-// acts on fix_extensions when !read_only, so it's the one user param to clear.
 export function sanitizeScanParams(params: ScanParams, clusterReadonly: boolean): ScanParams {
   const readOnly = clusterReadonly || params.readonly;
   if (!readOnly) return params;

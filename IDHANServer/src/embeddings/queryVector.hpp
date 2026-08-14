@@ -12,14 +12,9 @@ namespace idhan::embeddings
 {
 
 //! Below this magnitude a summed query has no direction left to search along.
-/** Not merely a guard against exactly zero: terms that nearly cancel leave a vector whose direction
- *  is floating-point noise, and normalising it would amplify that noise into a confident-looking
- *  query pointing nowhere in particular. */
 constexpr float MIN_QUERY_MAGNITUDE { 1e-6f };
 
 //! One resolved term: a unit vector and the signed weight it contributes to the query.
-/** Where the vector came from -- a phrase through the text tower, or a record through a table
- *  lookup -- is deliberately not represented. By this point they are the same thing. */
 struct WeightedVector
 {
 	std::vector< float > m_vector {};
@@ -45,12 +40,6 @@ struct WeightedVector
 }
 
 //! Sums \p terms by their signed weights and normalises the result.
-/** The whole of the query model, and the same arithmetic as the LanceProject prototype's GUI.py.
- *
- *  Normalising does not change which records come back: cosine distance is scale-invariant in the
- *  query vector, so any positive multiple of this result ranks identically. It is done so the
- *  distances returned to the caller are interpretable on a fixed 0..2 scale -- not as a tuning
- *  knob, and it must never be exposed as one. */
 [[nodiscard]] inline std::expected< std::vector< float >, std::string > assembleQueryVector(
 	const std::span< const WeightedVector > terms,
 	const std::size_t dimensions )

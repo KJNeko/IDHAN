@@ -12,14 +12,6 @@ namespace psd
 {
 
 //! Reads a whole ModuleFile into memory.
-/** Every other premade backend streams; this one cannot. The PSD parser walks a contiguous pointer
- *  through the header, the colour table, the resource and layer-mask blocks and finally the raster,
- *  jumping backwards and forwards by lengths it reads as it goes, so there is no single pass to
- *  convert it into.
- *
- *  So the allocation is made here, deliberately in the module's own code rather than hidden behind a
- *  convenience on ModuleFile: this is the one backend whose peak memory is the file size, and that
- *  cost should be visible at the site that incurs it. */
 [[nodiscard]] std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile(
 	const idhan::ModuleFile& file );
 

@@ -50,8 +50,6 @@ drogon::Task<> addItemsToExistingGroupsMerge(
 {
 	const auto group_id { co_await createNewGroup( db ) };
 
-	// group_ids is bound again in the DELETE below; binding an rvalue hands the vector
-	// to the SqlBinder, so the first use must be a copy
 	co_await db->execSqlCoro(
 		"UPDATE alternative_group_members SET group_id = $1 WHERE group_id = ANY($2)",
 		group_id,
@@ -92,8 +90,6 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 	const auto validation { co_await helpers::validateRecordIds( record_ids, db ) };
 	if ( !validation ) co_return validation.error();
 
-	// record_ids is reused below; binding an rvalue hands the vector to the SqlBinder,
-	// so pass a copy here
 	const auto group_search { co_await db->execSqlCoro(
 		"SELECT DISTINCT group_id FROM alternative_group_members WHERE record_id = ANY($1)",
 		std::vector< RecordID >( record_ids ) ) };

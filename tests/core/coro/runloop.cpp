@@ -96,8 +96,6 @@ TEST( CoroRunLoop, resumerPostsToTheLoop )
 	idhan::coro::RunLoop loop {};
 	idhan::coro::RunLoopResumer resumer { loop };
 
-	// noop_coroutine is safe to resume and does nothing, so this only proves the handle made it
-	// through post() and back out of run().
 	resumer.resume( std::noop_coroutine() );
 	loop.stop();
 	loop.run();

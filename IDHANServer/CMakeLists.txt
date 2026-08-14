@@ -44,9 +44,6 @@ if (IDHAN_DISABLE_API_AUTH)
 	target_compile_definitions(IDHANServer PRIVATE IDHAN_DISABLE_API_AUTH)
 endif ()
 
-# jemalloc interposes malloc/free process-wide, so linking it here also covers libvips and everything
-# else the dlopen'd modules allocate through -- there is nothing to link into the modules themselves.
-# Requested explicitly, so a missing jemalloc is an error rather than a silent fall back to glibc.
 if (IDHAN_USE_JEMALLOC)
 	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(JEMALLOC REQUIRED IMPORTED_TARGET jemalloc)

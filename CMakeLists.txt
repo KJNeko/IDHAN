@@ -16,13 +16,8 @@ set(IDHAN_DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
 
 enable_testing()
 
-# Includes fgl_cmake_modules (defines AddFGLLibrary/AddFGLExecutable/AddFGLModule
-# and the fgl::flags target). This configures the FGL build helpers on include;
-# there is no separate PreSetup()/PostSetup() step.
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/libFGL)
 
-# Find-modules (Finddrogon.cmake, postgres.cmake, ...) and config packages live
-# under dependencies/.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dependencies")
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/dependencies")
 
@@ -40,25 +35,8 @@ option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
-# Links the server against jemalloc instead of using the system (glibc) allocator.
-#
-# Thumbnail generation allocates a full-resolution decode buffer per request -- tens of megabytes for
-# a large image. glibc's dynamic mmap threshold moves allocations that size out of mmap and into the
-# per-thread arenas after it has seen a few of them, and arena memory is never returned to the OS, so
-# RSS settles at roughly (threads that generated a thumbnail) x (largest decode buffer). jemalloc
-# purges on a decay timer instead and gives the pages back.
 option(IDHAN_USE_JEMALLOC "Link the server against jemalloc instead of the system allocator" OFF)
 
-# Containment that trades debuggability for confinement, so it defaults off in Debug and on
-# everywhere else. Two things sit behind it:
-#   - PR_SET_DUMPABLE(0) on the server, blocking same-uid ptrace. Without it a compromised module
-#     worker can attach to the server and take the database credentials, which makes the rest of the
-#     sandbox moot on any host with yama.ptrace_scope=0. Costs `gdb -p` against a running server.
-#   - RLIMIT_CORE = 0 on workers. A core from a worker contains the decoded media it was processing.
-#     Costs the core dump from a worker a malformed file just killed -- which is exactly what you
-#     want when debugging a codec crash, hence the same switch rather than unconditional.
-# An option() rather than build-type-driven so it can be turned off in a release build that is being
-# debugged, which is when it bites.
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set(IDHAN_HARDEN_DEFAULT OFF)
 else ()

@@ -4,9 +4,6 @@ import { API_PREFIXES, WS_PREFIXES } from './src/api/prefixes';
 
 const SERVER_TARGET = process.env.IDHAN_DEV_TARGET ?? 'http://dev.idhan:16609';
 
-// Proxy every API prefix to the running IDHANServer. The browser then only ever talks to the dev
-// server, so requests are same-origin exactly as they are in production and CORS never enters the
-// picture. `changeOrigin` stays false so the Origin header the server sees matches production.
 const proxy = Object.fromEntries(
   API_PREFIXES.map((prefix) => [
     prefix,

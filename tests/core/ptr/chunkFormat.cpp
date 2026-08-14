@@ -146,8 +146,6 @@ TEST_F( ChunkFormatTest, MissingDefinitionsAreDroppedAndCounted )
 
 TEST_F( ChunkFormatTest, RecordWithNoResolvableTagsIsStillWritten )
 {
-	// The record hash is real PTR data even when every tag on it is undefined; dropping the
-	// record would silently lose a file the corpus knows about.
 	const std::map< std::uint32_t, std::string > tags {};
 
 	{

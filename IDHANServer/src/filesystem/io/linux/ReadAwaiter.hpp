@@ -22,8 +22,6 @@ class IOUringLinux;
 struct [[nodiscard]] ReadAwaiter
 {
 	std::shared_ptr< std::vector< std::byte > > m_data {};
-	// Byte count from the io_uring completion, recorded by complete(). -1 means the awaiter never
-	// suspended (await_ready() true), in which case the buffer is left exactly as the caller sized it.
 	int m_result { -1 };
 	std::exception_ptr m_exception {};
 	std::coroutine_handle<> m_cont;

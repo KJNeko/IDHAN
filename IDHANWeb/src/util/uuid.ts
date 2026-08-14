@@ -17,8 +17,6 @@ export function uuid(): string {
   if (c && typeof c.getRandomValues === 'function') {
     c.getRandomValues(bytes);
   } else {
-    // Last-ditch: no Web Crypto at all. Not cryptographically strong, but layout ids only need to be
-    // collision-free, and this path should never run in a real browser.
     for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
   }
 

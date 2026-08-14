@@ -27,16 +27,11 @@ SearchResults toResults( const search::Set& set, const bool want_hashes )
 	return out;
 }
 
-// Coalesced across image and video metadata only, matching the pre-rewrite predicate. The `p`
-// prefix keeps these aliases clear of the sort key's, so a predicate and the sort can read the same
-// table without colliding.
 constexpr std::string_view predicate_resolution_joins {
 	" LEFT JOIN image_metadata pim USING (record_id)"
 	" LEFT JOIN video_metadata pvm USING (record_id)"
 };
 
-// Both take the ids as $1 and return them as `id`/`name`, so one reader serves either.
-// `tags.tag_text` is a stored generated column, so neither lookup builds anything.
 constexpr std::string_view tag_name_query {
 	"SELECT tag_id AS id, tag_text AS name FROM tags"
 	" WHERE tag_id = ANY($1)"
@@ -47,12 +42,7 @@ constexpr std::string_view namespace_name_query {
 
 using NameMap = std::unordered_map< TagID, std::string >;
 
-//! Looks up the display text for whichever of \p ids \p names does not already carry. Names exist
-//! only for step labels, so this is deliberately forgiving: nothing missing issues no query at all,
-//! and an id the lookup does not return simply keeps its number in the label.
-//!
-//! Taken by reference because this is always awaited where it is called; the lazy-coroutine hazard
-//! is storing one to await later, which nothing here does.
+//! Looks up the display text for whichever of \p ids \p names does not already carry.
 Task<> completeNames( DbClientPtr db, std::string query, const std::vector< TagID >& ids, NameMap& names )
 {
 	std::vector< TagID > missing {};
@@ -68,8 +58,7 @@ Task<> completeNames( DbClientPtr db, std::string query, const std::vector< TagI
 }
 
 //! How an id reads in a step label: its quoted text when the lookup found it, the bare number when
-//! it did not. Only a tag deleted mid-search does that, and it is not worth failing a search that
-//! already has its answer.
+//! it did not.
 std::string nameOf( const NameMap& names, const TagID id )
 {
 	const auto it { names.find( id ) };
@@ -118,18 +107,11 @@ struct ApproximateBand
 	std::size_t upper {};
 };
 
-//! Widens \p value by approximate_percent in both directions, saturating at the top. A band is a
-//! relaxation, so it must never come back narrower than the value it was built from -- which is
-//! what a wrapped upper bound would do.
+//! Widens \p value by approximate_percent in both directions, saturating at the top.
 ApproximateBand approximateBand( const std::size_t value )
 {
-	// floor(value * pct / 100), split so neither multiply can overflow. The obvious
-	// `value * pct / 100` would wrap on a number the user is free to type, and a wrapped band
-	// silently answers a different search.
 	const std::size_t delta { value / 100 * approximate_percent + ( value % 100 ) * approximate_percent / 100 };
 
-	// Every column these compare against is INTEGER or BIGINT, so the band tops out where BIGINT
-	// does; a larger literal is a postgres error rather than a search.
 	constexpr auto ceiling { static_cast< std::size_t >( std::numeric_limits< std::int64_t >::max() ) };
 
 	// delta <= 0.15 * value, so the lower bound can never underflow.
@@ -188,8 +170,6 @@ void SearchBuilder::narrowRange( RangeSearchInfo& target, const RangeTerm term )
 
 	if ( term.operation & SearchOperationFlags::Not )
 	{
-		// `!= 500` is two intervals and the bounds hold one, so it cannot narrow them -- it rides
-		// alongside and is AND-ed on when the predicate renders.
 		target.negated.push_back( term );
 		return;
 	}
@@ -197,16 +177,12 @@ void SearchBuilder::narrowRange( RangeSearchInfo& target, const RangeTerm term )
 	const bool is_greater_than { ( term.operation & SearchOperationFlags::GreaterThan ) != 0 };
 	const bool is_less_than { ( term.operation & SearchOperationFlags::LessThan ) != 0 };
 
-	// The tighter bound wins, which makes `< 1KB` with `< 1MB` mean `< 1KB` rather than whichever
-	// was typed second.
 	const auto raiseLower = [ &target ]( const std::size_t value )
 	{ target.lower = target.lower ? std::max( *target.lower, value ) : value; };
 
 	const auto lowerUpper = [ &target ]( const std::size_t value )
 	{ target.upper = target.upper ? std::min( *target.upper, value ) : value; };
 
-	// Each operator bounds the range by exactly what renderComparison would write for it alone: the
-	// meaning of `~>` cannot depend on whether one predicate names it or two do.
 	if ( term.operation & SearchOperationFlags::Approximate )
 	{
 		const auto [ lower, upper ] { approximateBand( term.value ) };
@@ -228,9 +204,6 @@ void SearchBuilder::narrowRange( RangeSearchInfo& target, const RangeTerm term )
 		( term.operation & SearchOperationFlags::Equal ) || !( is_greater_than || is_less_than )
 	};
 
-	// `>` before `<`, mirroring renderComparison's else-if: a tag naming both is nonsense either way,
-	// but the two have to agree on which nonsense, or a negated term would bound differently from the
-	// identical positive one.
 	if ( is_greater_than )
 	{
 		// Exclusive bounds are folded inward by one so both sides are inclusive and compose by max/min.
@@ -270,8 +243,6 @@ SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
 	constexpr std::string_view whitespace { " \t" };
 	constexpr std::size_t hex_length { SHA256::size() * 2 };
 
-	// Refused rather than ignored: a hash has no ordering to search by, and `!=` is an exclusion, a
-	// different shape of term than the positive set this builds.
 	if ( arguments.find_first_of( "<>!~" ) != std::string_view::npos || arguments.contains( "≠" )
 	     || arguments.contains( "≈" ) )
 		throw std::invalid_argument( format_ns::format( "A hash predicate only supports '=', got '{}'", arguments ) );
@@ -293,8 +264,6 @@ SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
 
 	if ( value.empty() ) throw std::invalid_argument( "A hash predicate named no hash" );
 
-	// Hydrus writes the algorithm as a trailing word (`system:hash = abcd... md5`). That is a search
-	// over something IDHAN does not store rather than a malformed one, so it gets its own message.
 	if ( const auto separator { value.find_first_of( " \t," ) }; separator != std::string_view::npos )
 	{
 		const auto tail { value.substr( separator + 1 ) };
@@ -304,8 +273,6 @@ SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
 				throw std::invalid_argument(
 					format_ns::format( "Only sha256 is stored, so a {} hash cannot be searched", algorithm ) );
 
-		// Several hashes read as OR, and every term this builds is intersected, so accepting them
-		// would answer the opposite question.
 		throw std::invalid_argument( "Only one hash at a time is supported for now" );
 	}
 
@@ -313,8 +280,6 @@ SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
 		throw std::invalid_argument(
 			format_ns::format( "A sha256 is {} hex characters, '{}' is {}", hex_length, value, value.size() ) );
 
-	// decodeHex throws std::invalid_argument on a non-hex character, which the caller already turns
-	// into a 400.
 	const auto bytes { decodeHex( std::string { value } ) };
 
 	return SHA256::fromBuffer( bytes );
@@ -324,8 +289,6 @@ void SearchBuilder::setHashSearch( const std::string_view arguments )
 {
 	auto hash { parseHashSearch( arguments ) };
 
-	// Two hashes cannot both be the hash of one record, so a second predicate would empty the search.
-	// That is a typo every time, and saying so beats silently returning nothing.
 	if ( !std::holds_alternative< std::monostate >( m_hash_search ) )
 		throw std::invalid_argument( "Only one hash predicate is supported for now" );
 
@@ -336,14 +299,9 @@ void SearchBuilder::parseFilesizeSearch( RangeSearchInfo& target, const std::str
 {
 	auto term { parseRangeTerm( tag ) };
 
-	// Whatever follows the number's last digit is the unit. Rescanning rather than having
-	// parseRangeTerm report where the number ended keeps an out-parameter out of the one path that
-	// has no units to care about.
 	const auto number_end { tag.find_last_of( "0123456789" ) };
 	const auto multiplier { byteUnitMultiplier( tag.substr( number_end + 1 ) ) };
 
-	// The comparison lands on a BIGINT column, so a value that cannot be one is unanswerable --
-	// and scaling into a wrapped number would answer some other search instead.
 	constexpr auto max_size { static_cast< std::uint64_t >( std::numeric_limits< std::int64_t >::max() ) };
 	if ( term.value > max_size / multiplier )
 		throw std::invalid_argument( format_ns::format( "Filesize out of range: {}", tag ) );
@@ -365,8 +323,6 @@ std::string SearchBuilder::renderComparison(
 
 	if ( operation & SearchOperationFlags::Approximate )
 	{
-		// Each operator tests against the band edge nearest what it asked for: `~>` from the bottom
-		// upwards, `~<` up to the top, and `~=` -- naming no direction -- both at once.
 		const auto [ lower, upper ] { approximateBand( value ) };
 
 		if ( is_greater_than && !is_less_than )
@@ -386,8 +342,6 @@ std::string SearchBuilder::renderComparison(
 		else if ( is_less_than )
 			comparison += '<';
 
-		// A predicate naming no comparison ("system:width 500") would otherwise render as `expr 500`,
-		// a syntax error rather than a search. Equality is the plausible reading.
 		if ( ( operation & SearchOperationFlags::Equal ) || !( is_greater_than || is_less_than ) ) comparison += '=';
 
 		comparison += ' ';
@@ -401,15 +355,10 @@ std::string SearchBuilder::renderComparison(
 
 std::string SearchBuilder::renderBounds( const std::string_view expression, const RangeSearchInfo& bounds )
 {
-	// Bounds that cross describe no value at all. evaluate() answers such a search without a query,
-	// so this is only reached by a caller rendering one directly -- but it has to be the empty set
-	// there too, not a range that silently reads backwards.
 	if ( bounds.impossible() ) return "FALSE";
 
 	std::vector< std::string > conjuncts {};
 
-	// BETWEEN rather than two comparisons: one range predicate is what drives a single scan of the
-	// (size, record_id) index rather than intersecting two.
 	if ( bounds.lower && bounds.upper && *bounds.lower == *bounds.upper )
 		conjuncts.push_back( format_ns::format( "{} = {}", expression, *bounds.lower ) );
 	else if ( bounds.lower && bounds.upper )
@@ -422,9 +371,6 @@ std::string SearchBuilder::renderBounds( const std::string_view expression, cons
 	for ( const auto& term : bounds.negated )
 		conjuncts.push_back( renderComparison( expression, term.operation, term.value ) );
 
-	// A predicate that bounded nothing (`system:width ~> 0`) still has to render as a condition,
-	// because a fetch's where is never empty. Not TRUE though: every other rendering here implicitly
-	// requires the record to have the column at all, and dropping that here would quietly widen it.
 	if ( conjuncts.empty() ) return format_ns::format( "{} IS NOT NULL", expression );
 
 	std::string rendered {};
@@ -451,11 +397,6 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 {
 	std::vector< search::PredicateSource > predicates {};
 
-	// EXISTS not a join: archive_map has a row per (archive, record), so a join duplicates a record
-	// in two archives and breaks the uniqueness the merge relies on.
-
-	// The description is how the predicate reads back to whoever typed it -- step labels show it
-	// rather than the SQL, which names aliases the searcher never wrote.
 	const auto add = [ &predicates ]( std::string joins, std::string where, std::string description )
 	{
 		predicates.push_back(
@@ -481,8 +422,6 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		     "NOT EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)",
 		     "system:not in archive" );
 
-	// One predicate per column no matter how many system tags named it: the bounds were merged as
-	// they were parsed, so `> 1KB` with `< 1MB` is a single BETWEEN and a single Set.
 	if ( m_archive_search.m_active )
 		add( {},
 		     format_ns::format(
@@ -500,19 +439,11 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		     renderBounds( "COALESCE(pim.height, pvm.height)", m_height_search ),
 		     format_ns::format( "system:{}", renderBounds( "height", m_height_search ) ) );
 
-	// No joins: size lives on file_info, and (size, record_id) is indexed, so a filesize term is an
-	// index-only scan already in the sort's tiebreak order.
 	if ( m_filesize_search.m_active )
 		add( {},
 		     renderBounds( "fi.size", m_filesize_search ),
 		     format_ns::format( "system:{}", renderBounds( "filesize", m_filesize_search ) ) );
 
-	// IN rather than the correlated EXISTS the archive predicates use: sha256 is UNIQUE, so this side
-	// resolves to at most one record_id, and IN lets the planner start there and probe file_info's
-	// primary key -- where EXISTS would invite a scan of file_info with a lookup per row.
-	//
-	// The hash is inlined because a predicate is a SQL string with nowhere to carry parameters. Safe
-	// because hex() returns 64 characters from [0-9a-f], built by decodeHex, which accepts no others.
 	if ( const auto* const hash { std::get_if< SHA256 >( &m_hash_search ) } )
 		add( {},
 		     format_ns::format(
@@ -520,8 +451,6 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 				 hash->hex() ),
 		     format_ns::format( "system:sha256 = {}", hash->hex() ) );
 
-	// The cheapest predicate there is: record_id is file_info's primary key, so an equality term is
-	// a single index lookup.
 	if ( m_record_search.m_active )
 		add( {},
 		     renderBounds( "fi.record_id", m_record_search ),
@@ -532,8 +461,6 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 
 std::optional< std::size_t > SearchBuilder::effectiveLimit() const
 {
-	// A limit is a cap, so the upper bound is the only side that means anything: `= 100` and `< 100`
-	// both bound it, and `> 100` asks for nothing coherent and leaves it unset.
 	if ( m_limit ) return m_limit;
 	if ( m_limit_search.m_active ) return m_limit_search.upper;
 	return std::nullopt;
@@ -548,8 +475,6 @@ Task< search::Set > SearchBuilder::evaluate(
 
 	const auto key_type { search::sortKeySpec( m_sort_type ).type };
 
-	// A search whose bounds cross has an answer, and the answer is nothing. None of the other terms
-	// need fetching either: intersecting whatever they matched with nothing is still nothing.
 	if ( const auto impossible { impossiblePredicate() } )
 	{
 		log::warn( "system:{} was bounded to a range nothing can satisfy; the search matches no records", *impossible );
@@ -557,9 +482,6 @@ Task< search::Set > SearchBuilder::evaluate(
 		co_return search::Set::emptyOf( key_type );
 	}
 
-	// Labels name what the search asked for -- `+tag:'character:reimu'`, not `+tag:6500`. A search
-	// whose terms arrived as text already has every name, so this costs nothing on the usual path;
-	// only ids handed straight to addPositiveTags() need a lookup before the fetches.
 	std::vector< TagID > tag_ids { m_positive_tags };
 	tag_ids.insert( tag_ids.end(), m_negative_tags.begin(), m_negative_tags.end() );
 
@@ -568,16 +490,9 @@ Task< search::Set > SearchBuilder::evaluate(
 
 	const search::FetchContext ctx { std::move( db ), m_sort_type, want_hashes, std::move( tag_domain_ids ), m_stats };
 
-	// Every term is an independent query, so they all go out together. The fetch functions take their
-	// arguments by value, which is what makes this safe to store and await later: a capturing
-	// lambda's closure would be destroyed before these lazy coroutines ever started running.
 	std::vector< Task< search::Set > > tasks {};
-	// Kept alongside so the fold can name the term it is folding in; only the fold knows what each
-	// fetch did to the running result.
 	std::vector< std::string > labels {};
 
-	// The task is built in its own statement before the label is moved. As a single call the two
-	// arguments would be unsequenced, so the move could run first and hand the fetch an empty label.
 	const auto queue = [ &tasks, &labels ]( Task< search::Set > task, std::string label )
 	{
 		tasks.emplace_back( std::move( task ) );
@@ -629,8 +544,6 @@ Task< search::Set > SearchBuilder::evaluate(
 		queue( std::move( task ), std::move( label ) );
 	}
 
-	// The awaiter owns the task vector, so awaiting a temporary would end its lifetime at the end of
-	// the full expression.
 	auto when_all_awaiter { drogon::when_all( std::move( tasks ) ) };
 	auto sets { co_await when_all_awaiter };
 
@@ -639,8 +552,6 @@ Task< search::Set > SearchBuilder::evaluate(
 
 	for ( std::size_t i = 0; i < positive_count; ++i )
 	{
-		// Not a ternary: one between a prvalue and an xvalue collapses to a prvalue, which would copy
-		// the first Set instead of moving it.
 		if ( narrowed )
 			result = result & sets[ i ];
 		else
@@ -651,9 +562,6 @@ Task< search::Set > SearchBuilder::evaluate(
 		m_stats->record( labels[ i ], result.size(), search::StepKind::Fold, 0, result.inverted() );
 	}
 
-	// With nothing to narrow it, the search starts from the universe -- an inverted empty Set. That
-	// costs no query: a result still inverted at the end goes to fetchPage(), which applies the
-	// exclusions and the window in one pass.
 	if ( !narrowed ) result = ~search::Set::emptyOf( key_type );
 
 	for ( std::size_t i = positive_count; i < sets.size(); ++i )
@@ -679,8 +587,6 @@ Task< SearchResults > SearchBuilder::query(
 
 	if ( set.inverted() )
 	{
-		// Nothing positive narrowed the search: a pure blacklist, or no terms at all. The database
-		// applies the exclusion, order and window in one pass, so the universe never exists in memory.
 		const search::FetchContext page_ctx { std::move( db ), m_sort_type, return_hashes, {}, m_stats };
 		const auto page { co_await search::fetchPage( page_ctx, set.ids(), m_order, offset, limit ) };
 
@@ -770,8 +676,6 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setTags( const s
 	std::vector< TagID > negative_ids {};
 	for ( const auto& tag_id : *negative_map | std::views::values ) negative_ids.emplace_back( tag_id );
 
-	// The text the search was written in, kept for the step labels; having it here spares evaluate()
-	// a lookup.
 	for ( const auto& [ text, tag_id ] : *positive_map ) m_tag_names.insert_or_assign( tag_id, text );
 	for ( const auto& [ text, tag_id ] : *negative_map ) m_tag_names.insert_or_assign( tag_id, text );
 
@@ -791,8 +695,6 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardNames
 	namespaces.reserve( vector.size() );
 	for ( const auto& tag : vector )
 	{
-		// The fold does not build an excluding filter shape yet, and without this guard the '-' is
-		// swallowed into the namespace name and surfaces as a confusing 404.
 		if ( tag.starts_with( "-" ) )
 			co_return createBadRequest( "Negated namespace wildcards are not supported yet: \'{}\'", tag );
 
@@ -803,8 +705,6 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardNames
 		namespaces.emplace_back( tag.substr( 0, namespace_end ) );
 	}
 
-	// Deduplicated so the count check below compares like with like: `character:*` twice is one
-	// namespace, not a missing one.
 	std::ranges::sort( namespaces );
 	{
 		const auto [ beg, end ] = std::ranges::unique( namespaces );
@@ -819,8 +719,6 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardNames
 		"SELECT namespace_id, namespace_text FROM tag_namespaces WHERE namespace_text = ANY($1)",
 		std::move( namespaces ) ) };
 
-	// A namespace nothing has been tagged with cannot match any record, and silently dropping it
-	// would widen the search to what the *other* predicates matched. Same contract as mapTags().
 	if ( namespace_search.size() != requested_count )
 		co_return createNotFound( "One or more namespaces in the search do not exist" );
 
@@ -851,9 +749,6 @@ std::string SearchBuilder::wildcardToLikePattern( const std::string_view wildcar
 				// the only character that keeps its LIKE meaning
 				pattern += '%';
 				break;
-			// LIKE's own metacharacters, escaped to match literally -- otherwise a tag like `100%`
-			// behaves as a wildcard the user never typed. Backslash is LIKE's default escape
-			// character, so no ESCAPE clause is needed at the call site.
 			case '%':
 			case '_':
 			case '\\':
@@ -875,10 +770,6 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardTags(
 	if ( vector.empty() ) co_return std::nullopt;
 	auto db { drogon::app().getDbClient() };
 
-	// Matched against the whole `tags.tag_text`, namespace included, rather than namespace and subtag
-	// separately. That one rule covers every form: `cat*girl` stays unnamespaced, `*cat girl` reaches
-	// into any namespace, `*:cat girl` demands one, `cat girl*` is a prefix search. It also rides the
-	// existing gin_trgm_ops index on tags.tag_text.
 	for ( const auto& tag : vector )
 	{
 		const bool negated { tag.starts_with( "-" ) };
@@ -890,9 +781,6 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardTags(
 
 		const auto matched { co_await db->execSqlCoro( std::string { wildcard_tag_query }, pattern ) };
 
-		// A wildcard matching no existing tag cannot match any record, and dropping it would widen
-		// the search to whatever the *other* predicates matched. Same contract as mapTags(). A
-		// negated wildcard is no different: it would subtract nothing, which widens just as silently.
 		if ( matched.empty() ) co_return createNotFound( "No tags match wildcard \'{}\'", wildcard );
 
 		std::vector< TagID > tag_ids {};
@@ -909,8 +797,7 @@ Task< std::optional< drogon::HttpResponsePtr > > SearchBuilder::setWildcardTags(
 	co_return std::nullopt;
 }
 
-//! Merges \p incoming into \p target, keeping the result sorted and duplicate-free. A duplicated tag
-//! would become a second identical term in the fold -- harmless to the answer, but a wasted query.
+//! Merges \p incoming into \p target, keeping the result sorted and duplicate-free.
 template < typename T >
 void mergeUnique( std::vector< T >& target, std::vector< T > incoming )
 {
@@ -949,9 +836,7 @@ void SearchBuilder::addNamespaces( std::vector< NamespaceID > namespace_ids )
 	mergeUnique( m_namespace_ids, std::move( namespace_ids ) );
 }
 
-//! Sorts and dedupes a wildcard's match set, then appends it as its own group. Not merged across
-//! wildcards: each pattern is a separate predicate, so `cat*` and `*girl` must stay two intersecting
-//! terms rather than collapsing into one OR'd set.
+//! Sorts and dedupes a wildcard's match set, then appends it as its own group.
 template < typename Group >
 void appendWildcardGroup( std::vector< Group >& groups, std::vector< TagID > tag_ids, std::string pattern )
 {
@@ -964,8 +849,6 @@ void appendWildcardGroup( std::vector< Group >& groups, std::vector< TagID > tag
 
 std::string SearchBuilder::wildcardLabel( const char sign, const WildcardGroup& group, const std::size_t index )
 {
-	// The tag count stays either way: a wildcard resolving to one tag and one resolving to forty
-	// thousand read the same and run very differently.
 	if ( group.pattern.empty() )
 		return format_ns::format( "{}wildcard[{}] ({} tags)", sign, index, group.tag_ids.size() );
 
@@ -1071,9 +954,6 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	{
 		return true;
 	}
-	// Hydrus's spelling; it means sha256 there too when no algorithm is named. The list form
-	// (`= abcdef01 abcdef02`) and the other algorithms are what IDHAN cannot answer, and
-	// setHashSearch says which of the two it was.
 	if ( system_subtag.starts_with( "hash" ) )
 	{
 		setHashSearch( system_subtag.substr( 4 ) );
@@ -1180,9 +1060,6 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 
 		if ( setHydrusSystemTags( system_subtag ) ) continue;
 
-		// IDHAN SPECIFIC
-		// The digit check keeps Hydrus's plain 'system:archive' out of the range parser; digitless
-		// variants fall through to the unsupported warning.
 		if ( system_subtag.starts_with( "archive" )
 		     && system_subtag.find_first_of( "0123456789" ) != std::string_view::npos )
 		{
@@ -1202,16 +1079,12 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 			continue;
 		}
 
-		// system:sha256 = abcdef01...
-		// IDHAN's own spelling, and the honest one: it names the algorithm actually stored.
 		if ( system_subtag.starts_with( "sha256" ) )
 		{
 			setHashSearch( system_subtag.substr( 6 ) );
 			continue;
 		}
 
-		// One prefix covers `record`, `record_id` and `record id`, since the range parser reads the
-		// number out of whatever follows.
 		if ( system_subtag.starts_with( "record" ) )
 		{
 			parseRangeSearch( m_record_search, system_subtag );

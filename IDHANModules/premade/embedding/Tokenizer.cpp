@@ -12,15 +12,11 @@
 namespace premade
 {
 
-//! What the normalizer replaces, and with what. Read from the file rather than assumed; these are the
-//! defaults used when it declares nothing.
+//! What the normalizer replaces, and with what.
 constexpr std::string_view SPACE { " " };
 constexpr std::string_view META_SPACE { "▁" };
 
 //! Length in bytes of the UTF-8 sequence beginning with \p lead.
-/** A malformed lead byte reports 1, so a corrupt phrase advances rather than looping forever. Its
- *  bytes then fail the vocabulary lookup and take the byte-fallback path, which is the right answer
- *  for input that is not valid UTF-8 anyway. */
 [[nodiscard]] std::size_t sequenceLength( const unsigned char lead )
 {
 	if ( ( lead & 0x80 ) == 0x00 ) return 1;
@@ -85,8 +81,6 @@ std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 	for ( const auto& [ token, id ] : tokenizer.m_vocab )
 		tokenizer.m_tokens[ static_cast< std::size_t >( id ) ] = token;
 
-	// Resolved once into a flat table. The fallback path is per byte of an unknown character, so
-	// formatting "<0x%02X>" and hashing it there would be the hot part of an already slow case.
 	tokenizer.m_byte_tokens.fill( -1 );
 	for ( std::size_t byte = 0; byte < 256; ++byte )
 	{
@@ -122,8 +116,6 @@ std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 		}
 		else if ( entry.isString() )
 		{
-			// Older exports write a merge as one space-separated string. Both forms appear in the
-			// wild and neither is wrong.
 			const auto text { entry.asString() };
 			const auto gap { text.find( ' ' ) };
 			if ( gap == std::string::npos ) continue;
@@ -139,8 +131,6 @@ std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 		const auto right_id { lookup( right ) };
 		const auto result_id { lookup( left + right ) };
 
-		// A rule naming a token the vocabulary does not have can never fire. Skipping keeps the
-		// table honest rather than storing an id of -1 that would later index nothing.
 		if ( left_id < 0 || right_id < 0 || result_id < 0 ) continue;
 
 		tokenizer.m_merges.emplace(
@@ -148,8 +138,6 @@ std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 			Merge { .m_rank = static_cast< std::int32_t >( index ), .m_result = result_id } );
 	}
 
-	// The post-processor is what appends the terminator. Read rather than assumed: a model with no
-	// terminator must not have one invented for it.
 	if ( const auto& post { json[ "post_processor" ] }; post.isObject() )
 	{
 		if ( const auto& specials { post[ "special_tokens" ] }; specials.isObject() )
@@ -171,8 +159,6 @@ std::expected< BpeTokenizer, std::string > BpeTokenizer::load(
 		if ( padding[ "pad_id" ].isIntegral() )
 			tokenizer.m_pad_id = static_cast< std::int32_t >( padding[ "pad_id" ].asInt64() );
 
-		// The file names the length the model expects. Preferred only when the graph left its
-		// sequence axis dynamic, since the graph is the thing that will actually reject a mismatch.
 		if ( tokenizer.m_context_length == 0 )
 		{
 			if ( const auto& strategy { padding[ "strategy" ] };
@@ -191,8 +177,6 @@ std::vector< std::int32_t > BpeTokenizer::applyMerges( const std::string_view no
 	std::vector< std::int32_t > ids {};
 	ids.reserve( normalised.size() );
 
-	// One symbol per character, not per byte: the vocabulary is keyed by characters, and only a
-	// character it does not contain falls back to bytes.
 	for ( std::size_t offset = 0; offset < normalised.size(); )
 	{
 		const auto length { std::min(
@@ -222,9 +206,6 @@ std::vector< std::int32_t > BpeTokenizer::applyMerges( const std::string_view no
 		}
 	}
 
-	// Repeatedly apply the lowest-ranked applicable merge. Quadratic in the number of symbols, which
-	// is bounded by a context length of a few dozen -- a smarter structure would cost more to
-	// maintain than it saves on inputs this short.
 	while ( ids.size() > 1 )
 	{
 		auto best_rank { std::numeric_limits< std::int32_t >::max() };
@@ -265,9 +246,6 @@ std::vector< std::int64_t > BpeTokenizer::encode( const std::string_view text ) 
 
 	auto ids { applyMerges( normalised ) };
 
-	// Room kept for the terminator, and the terminator kept rather than the tail of the phrase: the
-	// graph's input axis is fixed, so something has to go, and a sequence with no terminator is one
-	// the model never saw.
 	const auto reserved { m_eos_id >= 0 ? std::size_t { 1 } : std::size_t { 0 } };
 
 	if ( ids.size() + reserved > m_context_length ) ids.resize( m_context_length - reserved );

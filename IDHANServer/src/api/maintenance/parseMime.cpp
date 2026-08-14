@@ -8,8 +8,6 @@ namespace idhan::api
 
 drogon::Task< Json::Value > processMetadata( const std::string mime_str, const std::string_view request_data )
 {
-	// a default-constructed Json::Value is null until first append, so no matching
-	// modules would serialize metadata_modules as null instead of []
 	Json::Value response { Json::arrayValue };
 	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_str ) };
 
@@ -19,8 +17,6 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 
 	if ( !blob )
 	{
-		// This helper hands back a JSON array, not a response, so the failure is reported as an entry
-		// in that array rather than as an HTTP error.
 		Json::Value failure {};
 		failure[ "error" ] = std::format( "Could not stage the request body for a module: {}", blob.error() );
 		response.append( std::move( failure ) );

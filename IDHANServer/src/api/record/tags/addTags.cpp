@@ -102,8 +102,6 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > > getIDFromPair( c
 
 	if ( !tag_namespace_is_str && !tag_subtag_is_str )
 	{
-		// the no-op DO UPDATE makes RETURNING yield the existing tag_id on conflict,
-		// where DO NOTHING would return an empty result set
 		const auto result { co_await db->execSqlCoro(
 			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) "
 			"ON CONFLICT (namespace_id, subtag_id) DO UPDATE SET namespace_id = EXCLUDED.namespace_id "
@@ -137,8 +135,6 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 				tags.emplace_back( TagPair( item ) );
 			else if ( item.isIntegral() )
 			{
-				// isInt64 excludes values above int64 range, where asInt64 would throw.
-				// TagID is 32-bit; a larger value would silently wrap into a different tag
 				if ( !item.isInt64() || item.asInt64() <= 0 || item.asInt64() > std::numeric_limits< TagID >::max() )
 					co_return std::unexpected( createBadRequest( "Invalid tag id {}: out of range", item.asString() ) );
 
@@ -170,11 +166,6 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > g
 {
 	std::vector< TagID > ids( pairs.size(), INVALID_TAG_ID );
 
-	// The common case — pairs whose namespace and subtag are both strings — is resolved in one
-	// batched find-or-create call instead of a find-or-create round-trip per pair. Pairs that
-	// already carry a tag_id are filled directly; the rarer integer-component / mixed pairs still
-	// go through getIDFromPair (concurrently). Every result is written back to its original slot,
-	// so the output order matches the input.
 	std::vector< std::pair< std::string, std::string > > string_pairs {};
 	std::vector< std::size_t > string_indices {};
 	std::vector< std::size_t > other_indices {};
@@ -268,9 +259,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
 
-// Applies the same tag set to many records in a single statement (cross join of the two arrays),
-// instead of one INSERT per record. The per-record statement-level trigger on tag_mappings
-// (func_tag_mappings_after_insert) then fires once for the whole batch rather than once per record.
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecords(
 	std::vector< RecordID > record_ids,
 	std::vector< TagID > tag_ids,
@@ -299,9 +287,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecords(
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
 
-// Applies a distinct tag set per record in a single statement. record_ids and tag_sets must be
-// parallel (tag_sets[i] applies to record_ids[i]); the pairs are flattened client-side into two
-// parallel arrays and zipped back together via UNNEST(a, b) server-side.
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagSetsToRecords(
 	const std::vector< RecordID >& record_ids,
 	const std::vector< std::vector< TagID > >& tag_sets,
@@ -415,8 +400,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	const auto& records_json { json[ "records" ] };
 
-	// validate once here: the "sets" branch below reads these with asInt64(), which
-	// throws on non-integral values and would surface as a 500
 	std::vector< RecordID > record_ids {};
 	record_ids.reserve( records_json.size() );
 	for ( const auto& record_json : records_json )
@@ -465,8 +448,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		for ( const auto& set_json : sets_json )
 		{
-			// The coroutine only starts running at when_all, after this closure is destroyed —
-			// db must be a parameter (copied into the coroutine frame), not a capture.
 			auto task = []( DbClientPtr db_c, const Json::Value set_json_current ) -> Task
 			{
 				const auto tags { co_await getTagPairs( set_json_current ) };

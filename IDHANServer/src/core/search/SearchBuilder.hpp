@@ -52,8 +52,6 @@ class SearchBuilder
 		LessThan = 1 << 1, // <
 		Equal = 1 << 2, // =
 		Not = 1 << 3, // !, ≠
-		//! Its own bit rather than an alias of Equal: aliasing them made `system:filesize ~= 50KB` an
-		//! exact byte-for-byte match.
 		Approximate = 1 << 4, // ~, ≈
 
 		NotLessThan = Not | LessThan, // !<
@@ -205,14 +203,11 @@ class SearchBuilder
 	 * @brief `system:sha256 = <hex>`, in the hash's own binary form.
 	 *
 	 * Stored as the 32 bytes rather than the 64 hex characters typed: the column it compares against
-	 * is `bytea`. A variant rather than an optional because everything this will grow (md5, sha1) is
-	 * another kind of hash with its own width and column, so an optional would have to become a
-	 * variant the moment a second algorithm is stored.
+	 * is `bytea`.
 	 */
 	std::variant< std::monostate, SHA256 > m_hash_search {};
 
-	//! `system:record = 1234`; nothing else addresses a single known record. A range rather than an
-	//! equality so `system:record > 5000` falls out of the same code.
+	//! `system:record = 1234`; nothing else addresses a single known record.
 	RangeSearchInfo m_record_search {};
 
 	SortType m_sort_type { SortType::DEFAULT };
@@ -285,8 +280,7 @@ class SearchBuilder
 		bool return_ids = true,
 		bool return_hashes = false );
 
-	//! The SQL for the unfiltered browse case. Exposed so the sort-type tests can pin an ordering
-	//! without a drogon client.
+	//! The SQL for the unfiltered browse case.
 	[[nodiscard]] std::string browseQuery( bool return_hashes = false ) const;
 
 	//! Null before evaluate()/query() has run. Always written to the debug log; exposed here so an
@@ -325,8 +319,6 @@ class SearchBuilder
 	//! both ends, which is what makes `cat*girl` reject `cat girls`.
 	[[nodiscard]] static std::string wildcardToLikePattern( std::string_view wildcard );
 
-	//! Exposed so tests can pin the match set a pattern produces without standing up the
-	//! coroutine/HTTP path around setWildcardTags(). $1 is the LIKE pattern.
 	static constexpr std::string_view wildcard_tag_query { "SELECT tag_id FROM tags WHERE tag_text LIKE $1" };
 
 	//! A record must carry at least one of \p tag_ids. \p pattern names the term in step labels.

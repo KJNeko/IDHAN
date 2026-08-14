@@ -1,6 +1,3 @@
--- UNION ALL (not UNION DISTINCT): the two branches are disjoint by construction, so dedup is
--- wasted work. Parent rows are alias-resolved through tag_aliases so the view never surfaces an
--- un-aliased parent id.
 CREATE VIEW active_tag_mappings_final AS
 (
 SELECT record_id, COALESCE(ideal_tag_id, tag_id) AS tag_id, tag_domain_id

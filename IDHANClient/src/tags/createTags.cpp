@@ -38,8 +38,6 @@ QFuture< std::vector< TagID > > IDHANClient::createTags(
 
 	std::vector< TagID > resolved( tags.size(), INVALID_TAG_ID );
 
-	// Unique cache misses (first-seen order) to send to the server, plus, for each missing input
-	// position, which unique miss it maps to, so the response can be scattered back in order.
 	std::vector< std::pair< std::string, std::string > > miss_tags {};
 	std::unordered_map< std::pair< std::string, std::string >, std::size_t, TagPairHash > miss_index {};
 	std::vector< std::pair< std::size_t, std::size_t > > miss_positions {};

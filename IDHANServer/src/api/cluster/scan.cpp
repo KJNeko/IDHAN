@@ -201,9 +201,6 @@ ExpectedTask< FolderScanTotals > scanFolder(
 			++processed_files;
 			log::trace( "Scan progress: {}/{}", processed_files.load(), total_files );
 
-			// Counted whatever the scan did or skipped: a file it could not process still occupies
-			// the cluster. Files it quarantined into bad/ or deleted as duplicates are no longer at
-			// their path and drop out here.
 			std::error_code size_error {};
 			const auto final_size { std::filesystem::file_size( ctx.path(), size_error ) };
 			if ( !size_error )
@@ -762,14 +759,10 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	log::trace( "Found metadata parser for mime {} (Record {})", m_mime_name, m_record_id );
 
-	// The parser runs in a worker process, so a module that leaks, corrupts its heap or crashes
-	// outright takes that process with it and leaves this job -- and the server -- standing.
 	auto input_e { modules::CallInput::forPath( m_path ) };
 
 	if ( !input_e )
 	{
-		// This runs inside a job coroutine. An escaping exception takes down the whole job rather
-		// than failing the one record, so the failure has to be reported rather than thrown.
 		co_return std::unexpected(
 			createInternalError( "Failed to open file for record {}: {}", m_record_id, input_e.error() ) );
 	}

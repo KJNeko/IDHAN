@@ -8,9 +8,6 @@
 using namespace idhan;
 
 //! The module instances this library exports.
-/** Order is the library's ABI: the host addresses a module by its index in this vector, and a
- *  worker validates the order against the manifest it was registered with. Append only -- never
- *  reorder or remove an entry without accepting that running servers must re-interrogate. */
 std::vector< std::shared_ptr< IDHANModule > > getModules( ModuleCallbacks callbacks )
 {
 	return { std::make_shared< PsdMetadata >( callbacks ), std::make_shared< PsdThumbnailer >( callbacks ) };

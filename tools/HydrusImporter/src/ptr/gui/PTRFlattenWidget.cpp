@@ -26,8 +26,6 @@ PTRFlattenWidget::PTRFlattenWidget( QWidget* parent ) : QWidget( parent ), ui( n
 	connect( ui->flattenButton, &QPushButton::clicked, this, &PTRFlattenWidget::onFlatten );
 	connect( ui->cancelButton, &QPushButton::clicked, this, &PTRFlattenWidget::onCancel );
 
-	// The output follows the source until the user picks one themselves. textEdited rather than
-	// textChanged, so the programmatic updates below do not read as a manual override.
 	connect( ui->sourcePath, &QLineEdit::textEdited, this, &PTRFlattenWidget::onSourceEdited );
 	connect( ui->outputPath, &QLineEdit::textEdited, this, [ this ] { m_output_overridden = true; } );
 }
@@ -93,8 +91,6 @@ void PTRFlattenWidget::onFlatten()
 	ui->statusLabel->setText( "Starting..." );
 	resetStats();
 
-	// Read once, here: the run keeps whatever the checkbox said when it started, so toggling it
-	// mid-flatten cannot change what the chunks end up containing.
 	m_worker = std::make_unique< idhan::hydrus::ptr::PTRFlattenWorker >(
 		source.toStdString(), output.toStdString(), ui->discardTerminalDeletes->isChecked() );
 
@@ -119,8 +115,6 @@ void PTRFlattenWidget::resetStats()
 	ui->skippedFilesValue->setText( "0" );
 	ui->skippedMissingDefinitionsValue->setText( "0" );
 
-	// Not a count yet. The tag totals cannot be known until the relations file is written, so a
-	// zero here would read as "none were unused" for the whole run.
 	ui->unusedTagsValue->setText( "-" );
 }
 
@@ -156,9 +150,6 @@ void PTRFlattenWidget::onStatsUpdated( const idhan::hydrus::ptr::FlattenLiveStat
 	ui->skippedFilesValue->setText( number( stats.skipped_files ) );
 	ui->skippedMissingDefinitionsValue->setText( number( stats.skipped_missing_definitions ) );
 
-	// The same number means opposite things depending on the checkbox, so the label has to say
-	// which. Driven from the run's own stats rather than the checkbox, which the user is free to
-	// toggle while a flatten is in flight.
 	ui->terminalDeletesLabel->setText(
 		stats.discard_terminal_deletes ? "Terminal deletes discarded:" : "Terminal deletes kept:" );
 

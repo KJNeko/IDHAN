@@ -176,8 +176,6 @@ void MainWindow::on_actionImport_PTR_triggered()
 	connect( download_widget, &PTRDownloadWidget::directoryChanged, import_widget, &PTRImportWidget::setDirectory );
 	connect( download_widget, &PTRDownloadWidget::directoryChanged, flatten_widget, &PTRFlattenWidget::setDirectory );
 
-	// A finished flatten points the Import tab at the compacted output, so the normal path is
-	// Download, Flatten, Import without retyping a directory.
 	connect(
 		flatten_widget, &PTRFlattenWidget::outputDirectoryChanged, import_widget, &PTRImportWidget::setDirectory );
 

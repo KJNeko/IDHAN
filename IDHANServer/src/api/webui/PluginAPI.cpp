@@ -1,6 +1,3 @@
-// Plugin discovery for the WebUI. Scans <static>/plugins/<dir>/manifest.json, validates each, and
-// publishes an index with the bundle URL resolved. The bundles are served by the static file router
-// and executed in the browser — the server never loads plugin code itself.
 
 #include "PluginAPI.hpp"
 
@@ -63,8 +60,6 @@ std::optional< Json::Value > parseManifest( const std::filesystem::path& path, c
 		}
 	}
 
-	// The entry is a relative path inside the plugin dir; reject anything that could escape it or be
-	// interpreted as absolute so a manifest can't point the loader at an arbitrary URL.
 	const auto entry_file { manifest[ "entry" ].asString() };
 	if ( entry_file.empty() || entry_file.front() == '/' || entry_file.find( ".." ) != std::string::npos )
 	{

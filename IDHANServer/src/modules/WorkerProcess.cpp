@@ -15,9 +15,6 @@
 #include <fcntl.h>
 #include <format>
 #include <poll.h>
-// std::views::values in failAll(). Included explicitly rather than leaned on through <algorithm>:
-// libstdc++ 15 pulls <ranges> in that way and GCC 14 does not, so the transitive path builds here
-// and fails in the Ubuntu 24.04 container.
 #include <ranges>
 #include <signal.h>
 #include <span>
@@ -28,17 +25,10 @@
 namespace idhan::modules
 {
 
-//! The descriptor the runner is told to use. Chosen rather than inherited-as-is because dup2 onto a
-//! fixed number is the only part of the child setup that has to happen after fork and before exec.
+//! The descriptor the runner is told to use.
 constexpr int CHILD_CHANNEL_FD { 3 };
 
 //! Where a call's continuation should be resumed, given the thread that issued the call.
-/** Falls back to the main loop when the caller is not on one, rather than leaving it null: a null
- *  loop used to mean "resume inline", and inline means on the IO thread, which is the one place a
- *  continuation must never run. The resumed coroutine owns the shared_ptr to this worker, so the
- *  frame's destruction -- and with it ~WorkerProcess, which joins the IO thread -- would land on the
- *  IO thread itself. Joining yourself is EDEADLK, which is a throw out of a noexcept destructor and
- *  takes the whole server with it. */
 [[nodiscard]] trantor::EventLoop* resumptionLoop()
 {
 	auto* const current { trantor::EventLoop::getEventLoopOfCurrentThread() };
@@ -99,12 +89,8 @@ std::expected< void, std::string > WorkerProcess::start()
 	constexpr bool harden_workers { false };
 #endif
 
-	// Read before forking: touching m_settings in the child would be reading through `this` after a
-	// fork from a threaded parent, and every value the child needs is cheap to copy out here.
 	const int child_end { channel->second.get() };
 
-	// Our own pid, so the child can tell whether it is still ours. Compared by value rather than
-	// against 1, because in a container the server *is* pid 1 and every child would look orphaned.
 	const pid_t parent_pid { ::getpid() };
 
 	const pid_t pid { ::fork() };
@@ -112,13 +98,8 @@ std::expected< void, std::string > WorkerProcess::start()
 
 	if ( pid == 0 )
 	{
-		// Child. Only async-signal-safe work here: the parent has threads, so anything that could
-		// take a lock held by one of them at fork time would deadlock.
 		if ( child_end == CHILD_CHANNEL_FD )
 		{
-			// socketpair gave us exactly the number we wanted. dup2 onto the same descriptor is a
-			// no-op that does NOT clear FD_CLOEXEC, so the socket would vanish at exec and the runner
-			// would come up with nothing to talk to. Clear the flag by hand instead.
 			if ( ::fcntl( CHILD_CHANNEL_FD, F_SETFD, 0 ) < 0 ) ::_exit( 126 );
 		}
 		else if ( ::dup2( child_end, CHILD_CHANNEL_FD ) < 0 )
@@ -126,44 +107,18 @@ std::expected< void, std::string > WorkerProcess::start()
 			::_exit( 126 );
 		}
 
-		// Everything above the channel goes. The server has a database pool, cluster files and the
-		// other workers' sockets open, and none of them are reliably FD_CLOEXEC -- libpq's are not.
-		// Without this a compromised worker inherits a live connection to the database.
 		if ( ::close_range( CHILD_CHANNEL_FD + 1, ~0U, 0 ) < 0 ) ::_exit( 126 );
 
-		// Undo the server's PR_SET_DUMPABLE(0) (see ModuleLoader::applyHardening) for this child only.
-		// That flag is inherited across fork and still set at execve, and a non-dumpable image execs
-		// in the kernel's secure-exec mode -- where the dynamic linker stops honouring the
-		// $ORIGIN-relative RUNPATH that finds libIDHAN.so next to the runner. The worker then dies
-		// before main(), so it cannot report anything, and all the host sees is a closed channel.
-		//
-		// Costs nothing that was being bought: the point of the server being non-dumpable is that
-		// nothing can ptrace *the server*, and ptrace_may_access tests the target's flag, not the
-		// caller's. The server stays non-dumpable; worker cores are handled by RLIMIT_CORE below.
 		if ( ::prctl( PR_SET_DUMPABLE, 1, 0, 0, 0 ) < 0 ) ::_exit( 126 );
 
-		// No setuid or file-capability binary this process execs can gain privilege. Cheap on its
-		// own, and a prerequisite for the follow-up spec's seccomp filter, which cannot be installed
-		// unprivileged without it.
 		if ( ::prctl( PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0 ) < 0 ) ::_exit( 126 );
 
-		// Workers currently outlive a SIGKILLed server, which leaves orphaned processes holding
-		// mappings of cluster files.
 		if ( ::prctl( PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0 ) < 0 ) ::_exit( 126 );
 
-		// PDEATHSIG is delivered on the death of the forking *thread*, and it is armed after the
-		// fork -- so a parent that died in between would never signal us at all. Re-checking closes
-		// that window: a parent id that is no longer the one that forked us means we were reparented.
-		//
-		// Compared against the recorded pid, never against 1. Under Docker the server is pid 1, so
-		// `getppid() == 1` is true for every healthy worker -- that test exited each one before it
-		// could exec, and every module library was skipped as having died before announcing itself.
 		if ( ::getppid() != parent_pid ) ::_exit( 0 );
 
 		if ( harden_workers )
 		{
-			// A core from a worker contains the decoded media it was working on, written wherever
-			// the pattern points. Off by default outside Debug; see IDHAN_HARDEN.
 			const rlimit no_core { .rlim_cur = 0, .rlim_max = 0 };
 			if ( ::setrlimit( RLIMIT_CORE, &no_core ) < 0 ) ::_exit( 126 );
 		}
@@ -212,9 +167,6 @@ std::expected< void, std::string > WorkerProcess::start()
 
 	m_io = std::jthread( [ this ]( const std::stop_token& stop ) { ioLoop( stop ); } );
 
-	// An interrogator is an implementation detail of startup -- one per library, immediately followed
-	// by the Registered module lines that actually tell you what was found. Only a serving worker is
-	// worth an info line.
 	if ( m_settings.describe_only )
 		log::debug( "Interrogating module library {}", m_settings.library.string() );
 	else
@@ -250,9 +202,6 @@ void WorkerProcess::ioLoop( const std::stop_token& stop )
 
 		if ( m_reader.atEof() )
 		{
-			// An interrogator is *supposed* to end this way: --describe announces the manifest and
-			// exits, so its channel closing is the successful path, not a death. Anything else closing
-			// its channel has genuinely gone away mid-service.
 			const bool announced_and_done { m_settings.describe_only && manifestSeen() };
 
 			terminate(
@@ -324,9 +273,6 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 							m_settings.library.string() );
 				}
 
-				// Checked here rather than by blocking a caller until the manifest lands: dispatch sends
-				// its call the moment the worker is spawned, and a stale library fails those calls loudly
-				// instead of quietly running the wrong module.
 				if ( !mismatch.empty() ) terminate( mismatch );
 
 				return;
@@ -364,8 +310,6 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 			}
 		case ipc::MessageType::CALLBACK:
 			{
-				// Handled off this thread: servicing it needs the database and the module registry, and
-				// the IO thread must stay free to keep reading -- the worker is blocked on this answer.
 				if ( m_on_callback ) m_on_callback( shared_from_this(), std::move( frame ) );
 				return;
 			}
@@ -422,9 +366,6 @@ void WorkerProcess::checkLiveness()
 {
 	const auto now { std::chrono::steady_clock::now() };
 
-	// The only guard left, and it deliberately asks one question: does this process still exist? A
-	// worker answers heartbeats from its IO loop, which never runs module code, so a heartbeat keeps
-	// arriving however long the backlog is. Slowness is not a failure here -- only death is.
 	if ( now - m_last_heartbeat > m_settings.liveness_grace )
 		terminate(
 			std::format(
@@ -449,16 +390,6 @@ void WorkerProcess::terminate( const std::string& reason, const Termination kind
 		int status { 0 };
 		::waitpid( m_pid, &status, 0 );
 
-		// Reported, because every failure between fork and exec is a silent _exit and the worker's own
-		// logging cannot cover them -- it does not exist yet. This status is the only evidence of what
-		// happened, and discarding it left "worker closed the channel" as the whole diagnosis.
-		//
-		//   126     the child setup failed: close_range, PR_SET_NO_NEW_PRIVS, PR_SET_PDEATHSIG, or
-		//           the RLIMIT_CORE clamp
-		//   127     execl failed -- the runner path is wrong or not executable
-		//   0       the child decided it had been reparented, or exited cleanly
-		//   SIGKILL either this terminate(), or PR_SET_PDEATHSIG firing because the *thread* that
-		//           forked has since exited
 		if ( WIFEXITED( status ) && WEXITSTATUS( status ) != 0 )
 			log::warn(
 				"Module worker for {} exited with status {}", m_settings.library.string(), WEXITSTATUS( status ) );
@@ -555,30 +486,20 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 
 	auto outcome { std::make_shared< CallOutcome >() };
 
-	// A null input used to be rejected outright, because every op operated on a file. EMBED_TEXT
-	// does not: it carries a phrase and nothing else, so there is no descriptor to send, nothing to
-	// register for INPUT_REF reuse, and no size to declare.
 	std::vector< int > fds {};
 
 	if ( input != nullptr )
 	{
 		body[ ipc::field::FILE_SIZE ] = Json::UInt64 { input->size() };
 
-		// Borrowed for the length of the send; the input owns it and outlives the call, which is also
-		// what lets a nested call reuse the same descriptor through INPUT_REF.
 		fds.emplace_back( input->fd() );
 
-		// Registered for the whole call so a module handing its own input back through a callback can
-		// be answered with the descriptor we already hold, rather than the file being shipped a
-		// second time.
 		const std::lock_guard< std::mutex > guard { m_calls_mutex };
 		m_call_inputs.emplace(
 			call_id, InFlightInput { .input = std::move( input ), .mime = body[ ipc::field::MIME ].asString() } );
 	}
 
 	//! Registers the call, posts it, and parks the coroutine until the result comes back.
-	/** A local class so it can reach the worker's internals; it has the same access as the member
-	 *  function enclosing it. */
 	struct Suspender
 	{
 		WorkerProcess* worker;
@@ -603,8 +524,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 					return false;
 				}
 
-				// Never null: a call issued off a loop thread still has to be resumed on one, because
-				// the only other thread available is the callee's IO thread.
 				auto* const loop { resumptionLoop() };
 
 				worker->m_calls.emplace(
@@ -613,8 +532,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 				worker->m_last_activity = std::chrono::steady_clock::now();
 			}
 
-			// Posted only after the call is registered: the worker can answer on the IO thread
-			// before post() has even returned, and the result needs a pending entry to land in.
 			if ( const auto posted { worker->post( *body, *fds ) }; !posted )
 			{
 				CallOutcome failure {};

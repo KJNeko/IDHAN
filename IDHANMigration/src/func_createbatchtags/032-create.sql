@@ -1,8 +1,3 @@
--- Fix for migration 197: the ON CONFLICT (namespace_text) / (subtag_text) targets are ambiguous
--- because createbatchtags' RETURNS TABLE declares OUT columns of the same names, and an ON CONFLICT
--- target cannot be table-qualified. The OUT params are only ever populated positionally by
--- RETURN QUERY and never read by name, so #variable_conflict use_column safely resolves the
--- ambiguous references to the table columns. The function body is otherwise identical to 197.
 
 CREATE OR REPLACE FUNCTION createbatchtags(
     namespaces TEXT[],

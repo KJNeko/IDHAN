@@ -62,8 +62,6 @@ void publishStagedOutput( const std::filesystem::path& staging_dir,
 	}
 	catch ( ... )
 	{
-		// Put the output directory back the way it was found. A partial chunk set with no manifest
-		// is not importable, but it is still wasted disk and a puzzle for whoever looks next.
 		std::error_code ec;
 		for ( const auto& path : moved ) std::filesystem::remove( path, ec );
 		throw;
@@ -125,8 +123,6 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 
 	const auto work_dir = out_dir / WORK_SUBDIRECTORY;
 
-	// Chunks and the relations file are built in here and moved out only once the run has actually
-	// succeeded, so removing the work directory is all the cleanup any failure path needs.
 	const auto staging_dir = work_dir / OUTPUT_STAGING_SUBDIRECTORY;
 
 	try
@@ -149,8 +145,6 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 		announce( callbacks, "Loading metadata" );
 		const auto metadata = loadCorpusMetadata( ptr_dir );
 
-		// Owned here and updated in place by both stages' callbacks below, so scan-stage fields
-		// stay put once collapse begins instead of resetting to zero.
 		FlattenLiveStats live {};
 		live.discard_terminal_deletes = options.discard_terminal_deletes;
 
@@ -187,9 +181,6 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 			// Scoped so the mmap is released before the work directory is removed.
 			const DefinitionReader definitions { work_dir };
 
-			// Sized from the definition store, so every id that could ever be written has a bit.
-			// Shared by the collapse and the relations write: a tag counts as used if either put
-			// it on disk, which is the same as saying the import will create it.
 			TagUsageSet usage { definitions.tagIdCapacity() };
 
 			CollapseCallbacks collapse_callbacks {};
@@ -234,8 +225,6 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 			{ return definitions.tag( tag_id ); };
 			relation_stats = writeRelationsFile( staging_dir / RELATIONS_FILENAME, parents, siblings, lookup, &usage );
 
-			// Only meaningful now: until the relations file is written, a tag that appears nowhere
-			// else might still be about to be used by a parent or sibling pair.
 			defined_tags = definitions.definedTagCount();
 			used_tags = usage.count();
 		}
@@ -253,9 +242,6 @@ FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
 		outcome.manifest.stats.defined_tags = defined_tags;
 		outcome.manifest.stats.used_tags = used_tags;
 
-		// The tag totals are the one thing no bucket could report, so the live panel has been
-		// showing them as pending. Push a final update carrying them before the run is announced
-		// done, or the number the user asked for never appears.
 		if ( callbacks.statsUpdated )
 		{
 			live.tags_counted = true;

@@ -1,11 +1,3 @@
--- Fixes deadlocks reported during concurrent batch tag imports:
---   ERROR: deadlock detected ... while inserting index tuple in relation "tag_subtags"
--- Root cause: the SELECT DISTINCT feeding each INSERT ... ON CONFLICT DO NOTHING had no
--- defined row order. Two concurrent createbatchtags() calls with overlapping namespace/subtag
--- values could each acquire the target unique index's row locks in a different order, producing
--- a classic lock-ordering deadlock (A locks X then waits on Y; B locks Y then waits on X).
--- Adding ORDER BY makes every concurrent transaction acquire those locks in the same order,
--- which removes the circular-wait condition. The function body is otherwise identical to 032.
 
 CREATE OR REPLACE FUNCTION createbatchtags(
     namespaces TEXT[],

@@ -13,8 +13,6 @@ if (!ns) throw new Error('[idhan] React runtime not installed before a plugin im
 
 export default ns.default ?? ns;
 
-// Named exports are enumerated (an ES module cannot re-export * from a runtime object). A name absent
-// from this React build simply exports as undefined, which is harmless.
 export const {
   Children,
   Component,

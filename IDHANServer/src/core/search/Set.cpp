@@ -64,8 +64,6 @@ Set Set::merge( const Set& lhs, const Set& rhs, const MergeOp op, const bool inv
 	Set out {};
 	out.m_inverted = inverted;
 	out.m_keys = emptyColumnLike( lhs.m_keys );
-	// Both operands come from the same query and so agree on whether hashes were requested; the ||
-	// is defensive rather than meaningful.
 	if ( lhs.m_hashes || rhs.m_hashes ) out.m_hashes.emplace();
 
 	std::visit(
@@ -76,15 +74,10 @@ Set Set::merge( const Set& lhs, const Set& rhs, const MergeOp op, const bool inv
 
 			if constexpr ( !std::same_as< Left, Right > )
 			{
-				// A single search has one sort type throughout, so this is a programming error
-				// rather than bad input -- but silently producing a mis-ordered Set would surface
-				// much later as wrongly ordered results, so it is worth failing loudly.
 				throw std::logic_error( "SearchBuilder: combined two Sets built for different sort types" );
 			}
 			else
 			{
-				// unused when the alternative is monostate, where every reference to it sits in a
-				// discarded if-constexpr branch
 				[[maybe_unused]] auto& out_keys { std::get< Left >( out.m_keys ) };
 
 				const std::size_t reserve_hint {
@@ -234,8 +227,6 @@ void Set::slice( const std::size_t offset, const std::optional< std::size_t > li
 		return;
 	}
 
-	// computed as a remaining-count rather than offset + limit, which would overflow on a caller
-	// passing a limit near SIZE_MAX
 	const std::size_t remaining { m_ids.size() - offset };
 	const std::size_t kept { limit ? std::min( remaining, *limit ) : remaining };
 	const std::size_t end { offset + kept };

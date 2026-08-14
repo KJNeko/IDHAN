@@ -13,10 +13,6 @@ namespace idhan::runner
 {
 
 //! One dlopened module library and the module instances its factory produced.
-/** This is the only place in the runner that touches dlopen. The server no longer loads modules at
- *  all -- that is the entire point of the worker split -- so a library that crashes in a static
- *  initialiser, exports the wrong symbols, or corrupts its own heap takes down this process and
- *  nothing else. */
 class ModuleLibrary
 {
 	void* m_handle { nullptr };
@@ -67,8 +63,6 @@ class ModuleLibrary
 };
 
 //! The MIME types \p module declares, resolved through whichever interface it implements.
-/** handleableMimes() is declared on the three interfaces rather than on ModuleBase, so reaching it
- *  means downcasting by the module's own type flags. */
 [[nodiscard]] std::vector< std::string > handleableMimesOf( const std::shared_ptr< IDHANModule >& module );
 
 } // namespace idhan::runner

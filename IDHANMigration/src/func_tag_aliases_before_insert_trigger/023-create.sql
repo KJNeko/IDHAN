@@ -1,7 +1,3 @@
--- Resolves ideal_alias_id to the end of the alias chain, and rejects alias cycles with a
--- controlled message. The 'Cycle detected' prefix matches check_parent_cycle's convention and is
--- matched by the createTagAliases endpoint to return 409; the CHECK ( aliased_id != ideal_alias_id )
--- on tag_aliases remains as a backstop.
 CREATE OR REPLACE FUNCTION tag_aliases_before_insert_trigger()
     RETURNS TRIGGER
 AS
@@ -25,8 +21,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- This trigger is for ensuring the ideal_alias_id is the highest of the chain
--- So if A->B is inserted and B->C exists already, A->(B)C, aliased_id -> (alias_id)ideal_alias_id will be created virtually
 CREATE TRIGGER tag_aliases_before_insert
     BEFORE INSERT
     ON tag_aliases

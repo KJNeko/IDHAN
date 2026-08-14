@@ -36,11 +36,6 @@ void addCORSHeaders( const drogon::HttpResponsePtr& response )
 	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD" );
 	response->addHeader( "Access-Control-Max-Age", "86400" );
 
-	// The wildcard origin above is deliberately not credential-capable: the WebUI is same-origin in
-	// production and same-origin via the Vite dev proxy, so its session cookie never needs CORS.
-	// Sending credentials would require reflecting a specific origin, because `*` is a literal
-	// string rather than a wildcard in credentialed CORS.
-
 	// Isolates cross-origin window references. Unrelated to the WebUI; we open no cross-origin popups.
 	response->addHeader( "Cross-Origin-Opener-Policy", "same-origin" );
 }
@@ -75,10 +70,6 @@ void ServerContext::setupCORSSupport() const
 
 void ServerContext::setupSPAFallback() const
 {
-	// Drogon routes to controllers first, then to the static file router, which hands anything with
-	// an unknown or absent extension to this handler. That makes it the natural home for the SPA's
-	// history fallback: API routes have already matched by the time we get here, so serving
-	// index.html cannot mask a real API 404.
 	drogon::app().setDefaultHandler(
 		[]( const drogon::HttpRequestPtr& request, std::function< void( const drogon::HttpResponsePtr& ) >&& callback )
 		{
@@ -135,13 +126,6 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	std::vector< spdlog::sink_ptr > sinks {};
 
-	// In-memory ring buffer — captures every level for the /log endpoint. It retains a copy of every
-	// message it sees (at trace level) up to buffer_size entries, so a large budget can dominate RSS.
-	// A buffer_size of 0 disables it entirely; the /log endpoint then reports the sink as unavailable.
-	//
-	// Kept as a concrete-typed pointer (see log::setServerLogger) rather than rediscovered later via
-	// dynamic_pointer_cast on the logger's type-erased sinks, since that cast has been observed to fail
-	// across the module .so boundary on some platforms/spdlog builds. Null when disabled.
 	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_buffer {};
 	if ( ring_buffer_size > 0 )
 	{
@@ -301,8 +285,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	app.registerCustomExtensionMime( "mjs", "text/javascript" );
 	app.registerCustomExtensionMime( "webmanifest", "application/manifest+json" );
 
-	// Drogon 404s any extension absent from this list, so it must cover everything a WebUI build
-	// emits. `wasm` stays because WebUI plugins may ship it.
 	app.setFileTypes( { "html", "css",   "js",  "mjs",  "map", "json", "txt",  "xml", "webmanifest",
 	                    "svg",  "png",   "jpg", "jpeg", "gif", "webp", "avif", "ico", "bmp",
 	                    "woff", "woff2", "ttf", "otf",  "mp4", "webm", "wasm" } );
@@ -350,8 +332,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.connectOptions = {}
 	};
 
-	// Same derivation as the migration connection. These two drifted apart when each spelled the
-	// path out by hand, which left public-owned objects resolvable by migrations but not at runtime.
 	config.connectOptions.insert_or_assign( "search_path", arguments.searchPath() );
 
 	log::trace( "Database config prepared, adding DB client" );
@@ -371,8 +351,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();
 
-	// Must happen before anything can touch FileIOUring (e.g. ClusterManager reading/writing files);
-	// IOUring::getInstance() throws if init() was never called.
 	IOUring::init();
 
 	m_clusters = std::make_unique< filesystem::ClusterManager >();
@@ -380,9 +358,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
 
-	// Startup only, and before drogon starts listening: the cache is plain files with no database
-	// state behind it, so emptying it here cannot race a request writing into it, and a purge that
-	// fails is never a reason to refuse to start.
 	if ( getPurgeThumbnailsOnBoot() )
 	{
 		if ( const auto deleted { filesystem::clearThumbnailCache() } )
@@ -400,16 +375,10 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 					const auto db { drogon::app().getDbClient() };
 					co_await m_clusters->reloadClusters( db );
 					co_await mime::getMimeDatabase()->reloadMimeParsers();
-					// After the module loader has interrogated its libraries: this reads what they
-					// reported and creates each model's per-width table if it does not exist yet.
 					co_await embeddings::registerEmbeddingModels( db );
 					co_return;
 				}() );
 
-			// Persistent module workers are long-lived, and the whole reason they run out of process
-			// is that modules leak. Sweeping them on a timer is what turns "the leak is contained" into
-			// "the leak is bounded": a worker over its RSS ceiling, or idle, is retired at its next
-			// quiescent moment.
 			drogon::app().getLoop()->runEvery(
 				std::chrono::seconds { 30 },
 				[ this ]()

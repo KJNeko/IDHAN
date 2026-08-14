@@ -12,8 +12,6 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::purgeThumbnails(
 {
 	log::info( "Starting thumbnail purge from: {}", getThumbnailsPath().string() );
 
-	// Shared with the `[thumbnails] purge_on_boot` path in ServerContext, so an operator purging by
-	// hand and a server purging at startup cannot drift apart.
 	const auto deleted { filesystem::clearThumbnailCache() };
 
 	if ( !deleted )

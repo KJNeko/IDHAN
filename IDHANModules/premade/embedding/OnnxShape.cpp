@@ -18,8 +18,6 @@ constexpr std::uint8_t WIRE_64BIT { 1 };
 constexpr std::uint8_t WIRE_LENGTH { 2 };
 constexpr std::uint8_t WIRE_32BIT { 5 };
 
-// Field numbers from onnx.proto. Named rather than inlined because a bare `7` in this file would be
-// unreadable and, worse, unverifiable against the schema.
 constexpr std::uint64_t MODEL_GRAPH { 7 }; //!< ModelProto.graph
 constexpr std::uint64_t GRAPH_INPUT { 11 }; //!< GraphProto.input
 constexpr std::uint64_t GRAPH_OUTPUT { 12 }; //!< GraphProto.output
@@ -31,9 +29,6 @@ constexpr std::uint64_t SHAPE_DIM { 1 }; //!< TensorShapeProto.dim
 constexpr std::uint64_t DIM_VALUE { 1 }; //!< TensorShapeProto.Dimension.dim_value
 
 //! A cursor over a protobuf message body.
-/** Every read is bounds-checked and reports failure rather than throwing, because the input is a file
- *  from the internet: a truncated download must produce "this model is unreadable, skipping it" and
- *  not a crash inside a module worker. */
 class Reader
 {
 	const std::byte* m_cursor { nullptr };
@@ -62,8 +57,6 @@ class Reader
 			}
 
 			shift += 7;
-			// A varint longer than ten groups cannot fit in 64 bits. Refusing here stops a corrupt
-			// file from shifting past the width of the type.
 			if ( shift > 63 ) return false;
 		}
 
@@ -95,8 +88,6 @@ class Reader
 	}
 
 	//! Steps over a field whose contents are not wanted.
-	/** This is what makes the walk cheap: an initializer holding hundreds of megabytes of weights is
-	 *  skipped by advancing the cursor, so the mapping's pages are never touched. */
 	[[nodiscard]] bool skip( const std::uint8_t wire )
 	{
 		switch ( wire )
@@ -159,8 +150,6 @@ class Reader
 		Reader dim { nullptr, nullptr };
 		if ( !shape.readSubMessage( dim ) ) break;
 
-		// A Dimension carries either dim_value or dim_param; a symbolic axis has no dim_value, and
-		// its absence is exactly what "dynamic" means here. Left as zero.
 		std::int64_t value { 0 };
 
 		std::uint64_t dim_field { 0 };
@@ -339,8 +328,6 @@ std::expected< GraphInterface, std::string > readGraphInterface( const std::file
 
 			if ( !wanted || graph_wire != WIRE_LENGTH )
 			{
-				// Everything else, including every initializer, is stepped over without its bytes
-				// being read. This is where the cost of not creating a session is avoided.
 				if ( !graph.skip( graph_wire ) ) break;
 				continue;
 			}

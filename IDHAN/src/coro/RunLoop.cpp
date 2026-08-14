@@ -23,8 +23,6 @@ void RunLoop::run()
 			std::unique_lock lock { m_mtx };
 			m_cv.wait( lock, [ this ] { return m_stopping || !m_queue.empty(); } );
 
-			// Woken with nothing left to do means stop() has been called and the queue has drained.
-			// The queue is checked before the flag so a stop never discards already-queued work.
 			if ( m_queue.empty() ) return;
 
 			handle = m_queue.front();

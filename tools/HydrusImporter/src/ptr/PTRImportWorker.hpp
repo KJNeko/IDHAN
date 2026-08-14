@@ -68,13 +68,8 @@ class PTRImportWorker : public QObject, public QRunnable
 
   public:
 
-	// Rows per request. There is deliberately no cap on how many batches are in flight at once:
-	// requests are handed straight to QNetworkAccessManager, which throttles the real socket count
-	// per host, so we submit everything and let it pipeline.
 	static constexpr std::size_t BATCH_SIZE { 128 };
 
-	// How often to re-check for a not-yet-downloaded file, and how long to keep waiting on one
-	// with no progress from the downloader before giving up and treating it as a real gap.
 	static constexpr std::chrono::seconds FILE_WAIT_POLL_INTERVAL { 3 };
 	static constexpr std::chrono::seconds FILE_WAIT_STALL_TIMEOUT { 180 };
 
@@ -145,9 +140,7 @@ class PTRImportWorker : public QObject, public QRunnable
 	bool m_compacted { false };
 	CompactManifest m_manifest;
 
-	//! ptr_tag_id -> IDHAN TagID, 0 meaning not yet created. A flat array rather than a map: at
-	//! PTR's 47M tag ids this is 188 MB of TagIDs with no strings, and it is what lets each tag be
-	//! created exactly once even though every chunk carries its own copy of the text.
+	//! ptr_tag_id -> IDHAN TagID, 0 meaning not yet created.
 	std::vector< idhan::TagID > m_ptr_tag_to_idhan;
 
 	std::unordered_set< std::string > m_imported_chunks;

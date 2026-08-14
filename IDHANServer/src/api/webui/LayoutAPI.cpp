@@ -1,6 +1,3 @@
-// CRUD for WebUI named layouts. Layouts are primarily a browser (localStorage) concept; this is the
-// optional server-side copy a user pushes to move a layout between browsers. Identity is the
-// client-generated uuid, so PUT is an upsert. No ownership, no user system.
 
 #include "LayoutAPI.hpp"
 
@@ -12,8 +9,6 @@
 namespace idhan::api
 {
 
-//! A layout document can grow with panel count; setClientMaxBodySize is effectively unbounded, so we
-//! cap here instead. 1 MiB is far above any sane layout and keeps a hostile push from being a terabyte.
 constexpr std::size_t max_document_bytes { 1024 * 1024 };
 
 //! Cheap 8-4-4-4-12 hex-with-dashes check so a malformed id becomes a 400 rather than a 500 from the
@@ -35,8 +30,7 @@ bool isUuidShaped( const std::string_view id )
 	return true;
 }
 
-//! Serialize a parsed document back to compact JSON for the jsonb column. We re-emit rather than store
-//! the raw body so what lands in the DB is canonical (and already validated as an object).
+//! Serialize a parsed document back to compact JSON for the jsonb column.
 std::string toCompactJson( const Json::Value& value )
 {
 	Json::StreamWriterBuilder builder {};
@@ -108,8 +102,6 @@ drogon::Task< drogon::HttpResponsePtr > LayoutAPI::createLayout( drogon::HttpReq
 
 	auto db { drogon::app().getDbClient() };
 
-	// Pre-check for clean 409s rather than surfacing the PK / unique-index violation as a 500. A small
-	// TOCTOU race exists; on a self-hosted single-operator server it is not worth a locking dance.
 	const auto id_exists { co_await db->execSqlCoro( "SELECT 1 FROM webui_layouts WHERE layout_id = $1::uuid", id ) };
 	if ( !id_exists.empty() )
 		co_return createConflict( "A layout with id {} already exists; use PUT to update it", id );
@@ -158,8 +150,6 @@ drogon::Task< drogon::HttpResponsePtr > LayoutAPI::putLayout( drogon::HttpReques
 	if ( !parsed ) co_return parsed.error();
 	const Json::Value& json { *parsed };
 
-	// The URL id is authoritative for the row. A document whose own id disagrees would pull back under a
-	// different identity than it was pushed to, so reject the mismatch instead of silently reconciling.
 	if ( json[ "id" ].asString() != id )
 		co_return createBadRequest(
 			"Layout document 'id' ({}) does not match the URL id ({})", json[ "id" ].asString(), id );
@@ -168,8 +158,6 @@ drogon::Task< drogon::HttpResponsePtr > LayoutAPI::putLayout( drogon::HttpReques
 
 	auto db { drogon::app().getDbClient() };
 
-	// A name collision is only a conflict when it belongs to a *different* layout — re-pushing the same
-	// layout keeps its own name.
 	const auto name_taken { co_await db->execSqlCoro(
 		"SELECT 1 FROM webui_layouts WHERE lower(name) = lower($1) AND layout_id <> $2::uuid", name, id ) };
 	if ( !name_taken.empty() ) co_return createConflict( "A different layout named '{}' already exists", name );

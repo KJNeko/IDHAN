@@ -28,8 +28,6 @@ bool parallelIndexed( const std::size_t count,
 	std::atomic< std::size_t > next { 0 };
 	std::atomic< bool > stop { false };
 
-	// Only the first failure is kept: the rest are almost always the same disk or memory problem
-	// seen by another lane, and the first one is what the caller can act on.
 	std::mutex error_mutex;
 	std::exception_ptr error;
 

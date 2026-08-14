@@ -25,12 +25,6 @@ ExpectedTask< CompareResult > compareEmbeddings(
 {
 	const auto table { std::format( "embeddings_{}", model_id ) };
 
-	// Checked before anything else, and separately from the distance query below: with no terms the
-	// cross join produces no rows at all, so a missing record would otherwise be indistinguishable
-	// from an empty term list.
-	//
-	// record_ids survives being bound: the binder's overload takes a const rvalue reference and
-	// therefore copies rather than moves, which is what lets the same vector be bound again below.
 	const auto present_rows { co_await db->execSqlCoro(
 		std::format( "SELECT record_id FROM {} WHERE record_id = ANY($1)", table ),
 		std::forward< const std::vector< RecordID > >( record_ids ) ) };
@@ -49,8 +43,6 @@ ExpectedTask< CompareResult > compareEmbeddings(
 	auto resolved { co_await resolveTerms( std::move( module ), model_id, std::move( terms ), db ) };
 	return_unexpected_error( resolved );
 
-	// Where each record id lands in the response's inner arrays. Built before the query because the
-	// rows come back in whatever order the plan produced them.
 	std::unordered_map< RecordID, std::size_t > column {};
 	for ( std::size_t index = 0; index < record_ids.size(); ++index ) column.emplace( record_ids[ index ], index );
 
@@ -64,8 +56,6 @@ ExpectedTask< CompareResult > compareEmbeddings(
 
 		for ( const auto& term : resolved.value() )
 		{
-			// A term whose width does not match the table's would fail inside pgvector with a message
-			// about halfvec dimensions and nothing about which term caused it.
 			if ( term.m_vector.size() != dimensions )
 				co_return std::unexpected( createInternalError(
 					"A term resolved to {} values but the model has {}", term.m_vector.size(), dimensions ) );
@@ -73,9 +63,6 @@ ExpectedTask< CompareResult > compareEmbeddings(
 			literals.push_back( toHalfvecLiteral( term.m_vector ) );
 		}
 
-		// The term vectors travel as text[] and are cast per row rather than bound as halfvec[]:
-		// drogonArrayBind has no binder for pgvector's types, and the cast is exact for the literals
-		// toHalfvecLiteral emits.
 		const auto select { std::format(
 			"SELECT t.idx, e.record_id, e.embedding <=> t.vec::halfvec AS distance FROM {} e "
 			"CROSS JOIN UNNEST($2::text[]) WITH ORDINALITY AS t(vec, idx) WHERE e.record_id = ANY($1)",

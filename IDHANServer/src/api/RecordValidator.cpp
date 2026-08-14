@@ -12,8 +12,6 @@ namespace idhan::api
 
 drogon::Task< drogon::HttpResponsePtr > RecordValidator::doFilter( const drogon::HttpRequestPtr& req )
 {
-	// routing parameters are extracted before filters run; record_id is the first
-	// path parameter on every route this filter is attached to
 	const auto& params { req->getRoutingParameters() };
 
 	if ( params.empty() )

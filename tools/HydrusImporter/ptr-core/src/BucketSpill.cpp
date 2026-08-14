@@ -48,8 +48,6 @@ std::vector< MappingEvent > readBucket( const std::filesystem::path& path )
 BucketWriter::BucketWriter( std::filesystem::path dir, const std::size_t buffer_events ) :
   m_dir( std::move( dir ) ),
   m_buffer_events( buffer_events == 0 ? 1 : buffer_events ),
-  // std::mutex is neither copyable nor movable, so the count has to be given at construction;
-  // resize() would need to move the existing elements.
   m_mutexes( BUCKET_COUNT )
 {
 	std::filesystem::create_directories( m_dir );
@@ -109,8 +107,6 @@ void BucketWriter::flushBucket( const std::size_t bucket )
 	auto& buffer = m_buffers[ bucket ];
 	if ( buffer.empty() ) return;
 
-	// Opened lazily: a corpus never touches every bucket evenly, and 4096 simultaneously open
-	// descriptors is close enough to the default rlimit to be worth avoiding until needed.
 	if ( m_files[ bucket ] == nullptr )
 	{
 		const auto path = bucketPath( m_dir, bucket );
@@ -124,8 +120,6 @@ void BucketWriter::flushBucket( const std::size_t bucket )
 		throw std::runtime_error(
 			std::format( "Short write on bucket {}: {} of {} events", bucket, wrote, buffer.size() ) );
 
-	// The stream is buffered by libc too; flushing here keeps a reader that opens the file
-	// immediately after flush() from seeing a partial tail.
 	std::fflush( m_files[ bucket ].get() );
 
 	buffer.clear();

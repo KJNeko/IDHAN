@@ -30,14 +30,10 @@ enum ModuleTypeFlags : std::uint16_t
 using ModuleType = std::uint16_t;
 
 //! How the host runs a module, as reported by ModuleBase::residency().
-//!
-//! Modules run in a worker process, never in the server. Residency picks how long that process
-//! lives. The worker hosts one shared library, so a library is treated as PERSISTENT if *any*
-//! module it exports asks for it.
 enum class ModuleResidency : std::uint8_t
 {
-	//! A fresh process per call, killed the moment the call returns. Nothing a module leaks or
-	//! corrupts survives the call. The default: a module opts out of it, never into it.
+	//! A fresh process per call, killed the moment the call returns. The default: a module
+	//! opts out of it, never into it.
 	SINGLE_RUN,
 	//! A long-lived worker reused across calls. For modules whose one-time initialisation is too
 	//! expensive to pay per call (VIPS_INIT, codec registration). The host still retires the
@@ -108,15 +104,6 @@ class FGL_EXPORT ModuleBase
 
 	virtual ~ModuleBase() = default;
 
-	// Reports whether concurrent calls into this module are safe. Default is false (assume unsafe) so
-	// a module must explicitly opt in. This is the hook for a planned dispatch feature: modules that
-	// return false will be serialized — never run on more than one thread at once — so thread-hostile
-	// modules don't error. It is intentionally unused for now; do not remove it.
-	//
-	// A future serializer must key the lock per-module and use a recursive lock: the thumbnail/generate
-	// callbacks re-dispatch through ModuleLoader synchronously and can re-enter the SAME module on the
-	// SAME thread (e.g. nested archives). Any module that recurses into itself must therefore report
-	// true, as the premade Archive modules do, so they are never serialized.
 	[[nodiscard]] virtual bool threadSafe() { return false; }
 
 	//! The interfaces this module implements, as an OR of ModuleTypeFlags.
@@ -125,25 +112,10 @@ class FGL_EXPORT ModuleBase
 	//! The module's semantic version.
 	[[nodiscard]] virtual ModuleVersion version() = 0;
 
-	//! How the host should run this module (see ModuleResidency). Default SINGLE_RUN: a module has
-	//! to justify keeping a process alive, and paying a fork per call is always correct if slow.
+	//! How the host should run this module (see ModuleResidency).
 	[[nodiscard]] virtual ModuleResidency residency() { return ModuleResidency::SINGLE_RUN; }
 
 	//! Resident size, in MiB, this module needs to hold steadily without being retired for it.
-	/** The host retires a persistent worker that goes over an RSS ceiling, which is what bounds a
-	 *  leak rather than merely isolating it. That ceiling is one global number sized for the media
-	 *  modules, where hundreds of megabytes already means something has gone wrong. A module whose
-	 *  normal working set is larger -- an inference module holding model weights resident -- would be
-	 *  reaped at its first quiescent moment and reload them on the next call, which is precisely the
-	 *  cost PERSISTENT exists to avoid.
-	 *
-	 *  Returning non-zero raises the ceiling for this module's worker to at least this much; the
-	 *  configured limit still applies where it is higher. This is a floor on the module's normal
-	 *  footprint, NOT a budget: report what the module holds when it is behaving, so that anything
-	 *  above it is still recognisable as a leak and still bounded.
-	 *
-	 *  Answered before startup(), like the rest of the manifest, so it must come from configuration
-	 *  or from what is on disk rather than from anything learned by loading. */
 	[[nodiscard]] virtual std::size_t rssCeilingMb() { return 0; }
 
 	//! Called once after the library's init(), before the first call reaches this module.

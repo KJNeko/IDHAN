@@ -73,9 +73,6 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	const std::size_t length,
 	std::string_view extension ) const
 {
-	// Last line of defence: findBestFolder already refuses to hand back a read-only cluster, but it
-	// is not the only way to reach a ClusterInfo, and the cluster can be flipped read-only between
-	// selection and here. Guarding the write itself means no caller can bypass the rule.
 	if ( m_read_only )
 		return std::unexpected( createInternalError( "Refusing to write into read-only cluster {}", m_id ) );
 
@@ -185,10 +182,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 	const auto& sha256 { sha256_e.value() };
 
-	// A record already held in a read-only cluster stays there. Storing it again cannot replace the
-	// original -- nothing may write to or delete from a read-only cluster -- so it would only add a
-	// second copy in a writable cluster and repoint file_info at it, orphaning the first. Report
-	// success without writing instead.
 	const auto current_cluster { co_await db->execSqlCoro(
 		"SELECT file_clusters.read_only FROM file_info "
 		"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
@@ -210,8 +203,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const auto& target_id { co_await findBestFolder( record, length, db ) };
 	return_unexpected_error( target_id );
 
-	// copied out under lock rather than held by reference: a concurrent reloadClusters()
-	// could otherwise invalidate the reference while we're still using it below
 	std::optional< ClusterInfo > target_cluster_copy {};
 	{
 		std::lock_guard lock { m_mutex };
@@ -230,8 +221,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 
 	if ( !result ) co_return result;
 
-	// clear cluster_delete_time: the record is stored again, and cluster_id_xor_delete_time
-	// forbids a row having both a cluster and a delete time
 	constexpr auto query {
 		"UPDATE file_info SET cluster_store_time = now(), cluster_id = $2, cluster_delete_time = NULL WHERE record_id = $1"
 	};

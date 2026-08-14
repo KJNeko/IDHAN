@@ -1,6 +1,3 @@
--- Parent-only tags (never directly applied or aliased-to) never got a tag_counts row, since
--- accumulate_tag_count_trigger (migration 93) only watches active_tag_mappings. Mirrors that
--- trigger's exact add_count/remove_count semantics, applied to active_tag_mappings_parents.
 
 CREATE OR REPLACE FUNCTION accumulate_tag_count_parents()
     RETURNS TRIGGER AS

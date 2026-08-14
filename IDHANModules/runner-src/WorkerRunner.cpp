@@ -60,8 +60,6 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 		};
 		if ( !count ) return std::unexpected( count.error() );
 
-		// A short read before the declared size means the handle disagrees with itself; continuing
-		// would silently seal a truncated file that the host then treats as complete.
 		if ( *count == 0 ) return std::unexpected( std::format( "handle ended at {} of {} bytes", offset, total ) );
 
 		if ( const auto written { ( *sink )->write( std::span { buffer }.first( *count ) ) }; !written )
@@ -115,8 +113,6 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 
 std::size_t residentSetKb()
 {
-	// statm rather than status: two integers to parse instead of a keyed text format, and this runs
-	// on every heartbeat.
 	std::ifstream statm { "/proc/self/statm" };
 	if ( !statm.is_open() ) return 0;
 
@@ -202,8 +198,6 @@ std::expected< void, std::string > WorkerRunner::describe()
 {
 	if ( const auto queued { send( manifestJson() ) }; !queued ) return std::unexpected( queued.error() );
 
-	// Flushed rather than left to the IO loop: --describe sends this and exits, so nothing else would
-	// ever drain it.
 	return flush();
 }
 
@@ -211,9 +205,6 @@ std::expected< WorkerRunner::CallbackInput, std::string > WorkerRunner::describe
 {
 	CallbackInput input {};
 
-	// The module handed back the very file it was given, and the host still holds that descriptor, so
-	// naming the call is enough. This is the case that matters: it is what an archive thumbnailer does
-	// with a multi-gigabyte archive on every member it renders.
 	if ( &file == t_scope.input )
 	{
 		input.fields[ ipc::field::INPUT_REF ] = static_cast< Json::UInt64 >( t_scope.call_id );
@@ -222,11 +213,6 @@ std::expected< WorkerRunner::CallbackInput, std::string > WorkerRunner::describe
 
 	input.fields[ ipc::field::FILE_SIZE ] = Json::UInt64 { file.size() };
 
-	// Already a memfd we hold a descriptor for -- a nested generate's output, on its way into a nested
-	// thumbnail. Forward it rather than reading the bytes back out into a second one.
-	//
-	// A call's own input does not qualify: its descriptor was dropped once mapped, and it needs none,
-	// because passing it back is the INPUT_REF case handled above.
 	if ( const auto* existing { dynamic_cast< const ipc::BlobFile* >( &file ) };
 	     existing != nullptr && existing->fd() >= 0 )
 	{
@@ -247,10 +233,6 @@ ModuleCallbacks WorkerRunner::makeCallbacks()
 {
 	ModuleCallbacks callbacks {};
 
-	// Fills in the input fields of an outgoing callback frame and yields the descriptor to attach.
-	// Shared by all three: whether the payload can be referenced, forwarded, or must be copied is a
-	// property of the handle, not of the question asked about it. The result must outlive the
-	// dispatch -- it owns any memfd that was created.
 	const auto attach =
 		[ this ]( const ModuleFile& file, Json::Value& body ) -> std::expected< CallbackInput, ModuleError >
 	{
@@ -303,8 +285,6 @@ ModuleCallbacks WorkerRunner::makeCallbacks()
 		auto& answer { **pending };
 		if ( !answer.ok ) return std::unexpected( ModuleError { answer.error } );
 
-		// A handle over the memfd the host sent, so a caller chaining this into another callback
-		// forwards that same descriptor instead of materialising the bytes.
 		return std::make_unique< ipc::BlobFile >( std::move( answer.blob ) );
 	};
 
@@ -475,10 +455,6 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 	}
 	call.op = *op;
 
-	// Checked rather than defaulted: jsoncpp yields null for a missing field and asUInt64() turns that
-	// into a perfectly valid-looking index 0. A host that forgets the routing key would then send every
-	// op to whichever module happens to sit at 0 -- a wrong-interface error if that module is the wrong
-	// kind, and silently the wrong module if it is not.
 	if ( !frame.body[ ipc::field::MODULE_INDEX ].isUInt64() )
 	{
 		reject(
@@ -518,16 +494,12 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 	const QueuedCall& call,
 	const std::shared_ptr< IDHANModule >& module )
 {
-	// Serialise only what asks to be serialised. Everything premade reports true, so this lock is
-	// uncontended in practice -- but a module honest about being thread-hostile gets to be.
 	std::unique_lock< std::recursive_mutex > serialised {};
 	if ( !module->threadSafe() && call.module_index < m_module_locks.size() )
 		serialised = std::unique_lock< std::recursive_mutex > { *m_module_locks[ call.module_index ] };
 
 	Json::Value body {};
 
-	// Handled before ModuleCallData is built, because this op has no file and ModuleCallData holds
-	// a reference to one.
 	if ( call.op == ipc::CallOp::EMBED_TEXT )
 	{
 		const auto embedder { std::static_pointer_cast< EmbeddingModuleI >( module ) };
@@ -537,8 +509,6 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 		auto result { embedder->embedText( call.phrase ) };
 		if ( !result ) return std::unexpected( result.error() );
 
-		// Same boundary check the file path makes, and for the same reason: a vector of the wrong
-		// width would be written into a fixed-width halfvec column several hops later.
 		if ( result->m_vector.size() != embedder->dimensions() )
 			return std::unexpected(
 				std::format(
@@ -548,8 +518,6 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 					embedder->dimensions() ) );
 
 		Json::Value values { Json::arrayValue };
-		// Explicit widening: jsoncpp stores a double, and letting the float promote implicitly trips
-		// -Wdouble-promotion under this project's warning set.
 		for ( const float value : result->m_vector ) values.append( static_cast< double >( value ) );
 
 		body[ ipc::field::EMBEDDING ] = std::move( values );
@@ -580,8 +548,6 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 
 				if ( !result ) return std::unexpected( result.error() );
 
-				// Through a sink rather than Blob::fromBytes, which would also map the result into
-				// this process -- pointlessly, since a worker never reads back what it produced.
 				auto sink { ipc::MemfdSink::create() };
 				if ( !sink ) return std::unexpected( sink.error() );
 
@@ -599,8 +565,6 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 			}
 		case ipc::CallOp::GENERATE:
 			{
-				// The module writes straight into the memory that will carry the result back, so a
-				// large generated file exists once rather than in the module's heap and again here.
 				auto sink { ipc::MemfdSink::create() };
 				if ( !sink ) return std::unexpected( sink.error() );
 
@@ -621,8 +585,6 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 				auto result { embedder->embed( data ) };
 				if ( !result ) return std::unexpected( result.error() );
 
-				// A vector of the wrong width would be written into a fixed-width halfvec column, so
-				// it is caught at the boundary rather than several hops later in a bulk insert.
 				if ( result->m_vector.size() != embedder->dimensions() )
 					return std::unexpected(
 						ModuleError { std::format(
@@ -631,12 +593,7 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 							result->m_vector.size(),
 							embedder->dimensions() ) } );
 
-				// Inline JSON rather than a blob. Bulk data normally travels as a descriptor, but a
-				// 1152-dimension vector is ~4.6 KiB and a memfd per call costs more than the text. The
-				// destination column is fp16, so the round trip discards no precision it would have kept.
 				Json::Value values { Json::arrayValue };
-				// Explicit widening: jsoncpp stores a double, and letting the float promote
-				// implicitly trips -Wdouble-promotion under this project's warning set.
 				for ( const float value : result->m_vector ) values.append( static_cast< double >( value ) );
 
 				body[ ipc::field::EMBEDDING ] = std::move( values );
@@ -665,8 +622,6 @@ void WorkerRunner::runCall( QueuedCall call )
 
 	const auto started { std::chrono::steady_clock::now() };
 
-	// Emitted before the work, not merely alongside it: a call that never finishes produces this line
-	// and no completion, which is the only signal that distinguishes a wedged module from a slow one.
 	spdlog::trace(
 		"Call {} started: {} on '{}' ({}, {} bytes), depth {}",
 		call.call_id,
@@ -682,8 +637,6 @@ void WorkerRunner::runCall( QueuedCall call )
 	}
 	else if ( ( module->type() & requiredFlag( call.op ) ) == 0 )
 	{
-		// The index came over a socket. A mismatch is a host bug, but answering with an error beats
-		// a static_pointer_cast to an interface the object does not implement.
 		failure = std::format(
 			"module {} at index {} does not implement the interface required by operation '{}'",
 			module->name(),
@@ -707,8 +660,6 @@ void WorkerRunner::runCall( QueuedCall call )
 		}
 		catch ( const std::exception& e )
 		{
-			// A module throwing must fail its call, not unwind out of a pool thread and terminate
-			// the worker along with every other call in flight.
 			failure = std::format( "module threw: {}", e.what() );
 		}
 		catch ( ... )
@@ -727,8 +678,6 @@ void WorkerRunner::runCall( QueuedCall call )
 		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started ).count()
 	};
 
-	// One line per call: which module ran, on what, for how long, and what came out. Failures are
-	// logged here too -- the host sees the message but not the timing or which module produced it.
 	if ( failure.empty() )
 		spdlog::debug(
 			"Call {} finished: {} on '{}' ({}) in {}ms -- {}",
@@ -763,9 +712,6 @@ void WorkerRunner::workerLoop( const std::stop_token& stop )
 		{
 			std::unique_lock< std::mutex > guard { m_queue_mutex };
 
-			// m_ready as well as the queue: a call can arrive before startup() has returned, and dispatching
-			// it then would reach an uninitialised module. It waits instead, which is what the host's
-			// backlog model already expects of a busy worker.
 			m_queue_ready.wait(
 				guard, [ this, &stop ] { return stop.stop_requested() || ( m_ready.load() && !m_queue.empty() ); } );
 
@@ -788,8 +734,6 @@ void WorkerRunner::sendHeartbeat()
 	body[ ipc::field::RSS_KB ] = Json::UInt64 { residentSetKb() };
 	body[ ipc::field::ACTIVE_CALLS ] = Json::UInt64 { m_active_calls.load() };
 
-	// Queueing takes the write lock only long enough to append, so a busy worker no longer has to
-	// skip beats to avoid waiting behind a pool thread mid-write.
 	if ( const auto sent { send( body ) }; !sent ) spdlog::debug( "Worker heartbeat failed: {}", sent.error() );
 }
 
@@ -840,28 +784,16 @@ std::expected< void, std::string > WorkerRunner::run()
 
 	if ( const auto announced { describe() }; !announced ) return std::unexpected( announced.error() );
 
-	// Startup runs on its own thread, and this is load-bearing rather than tidy.
-	//
-	// It used to run inline before the loop below. Heartbeats are sent from that loop, so a module
-	// with a slow startup() sent none for its whole duration and the host killed it as unresponsive,
-	// then respawned and killed it again -- an unbootable worker rather than a slow one.
-	//
-	// It also restores the invariant this design claims: the IO thread never runs module code.
 	std::jthread starting {
 		[ this ]
 		{
 			m_library.startup();
 
-			// Set under the queue mutex, not merely atomically. A pool thread evaluates the wait predicate
-			// with that mutex held, so storing outside it leaves a window where the thread reads false, the
-			// store and notify land, and only then does it sleep -- missing the wakeup.
 			{
 				const std::lock_guard< std::mutex > guard { m_queue_mutex };
 				m_ready.store( true );
 			}
 
-			// Calls that arrived while modules were coming up are sitting in the queue with every
-			// pool thread parked on m_ready. Nothing else will wake them.
 			m_queue_ready.notify_all();
 		}
 	};
@@ -874,8 +806,6 @@ std::expected< void, std::string > WorkerRunner::run()
 
 	while ( true )
 	{
-		// Drained here and nowhere else. Pool threads only ever queue, so a result written while this
-		// loop was in poll() goes out on the next pass -- which the wakeup eventfd makes immediate.
 		bool want_write { false };
 		{
 			const std::lock_guard< std::mutex > guard { m_write_mutex };
@@ -943,23 +873,16 @@ std::expected< void, std::string > WorkerRunner::run()
 
 	m_stopping.store( true );
 
-	// Unblock anything parked on a callback before joining, or a pool thread waiting on an answer
-	// the host will never send would hold the join forever.
 	failAllCallbacks( "worker is shutting down" );
 
 	for ( auto& thread : m_pool ) thread.request_stop();
 	m_queue_ready.notify_all();
 	m_pool.clear();
 
-	// Waited out before shutting anything down: a module must not have shutdown() called while its
-	// startup() is still running, and startup() cannot be interrupted. Without this the jthread's
-	// destructor would join at the end of this function, after m_library.shutdown().
 	if ( starting.joinable() ) starting.join();
 
 	m_library.shutdown();
 
-	// A result finished just before the loop broke is still queued, and the host has a coroutine
-	// parked on it. Pointless once the channel is gone, so only attempted while it is still open.
 	if ( !m_reader.atEof() )
 	{
 		if ( const auto flushed { flush() }; !flushed )

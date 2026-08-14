@@ -144,8 +144,6 @@ export function EmbeddingSearchPanel({ host }: PanelProps) {
 
         setModels(list);
 
-        // Pick a default only when nothing is chosen, so a saved layout keeps its model even if that
-        // model is momentarily unavailable.
         setConfigState((current) => {
           if (current.modelName) return current;
           const first = list.find((m) => m.available) ?? list[0];
@@ -192,8 +190,6 @@ export function EmbeddingSearchPanel({ host }: PanelProps) {
     const parsed = parseTermInput(draft);
     if (!parsed) return;
 
-        // Record references work on any model — their vectors are already stored — so only a text
-        // phrase is refused here, and with the reason rather than a dead input box.
         if (parsed.kind === 'text' && !textEnabled) {
             setError('This model cannot embed text. Add a record reference instead, e.g. record:1234.');
             return;
@@ -240,8 +236,6 @@ export function EmbeddingSearchPanel({ host }: PanelProps) {
       const text = await res.text();
 
       if (!res.ok) {
-        // The server's messages name the offending record or model, so they are worth showing
-        // verbatim rather than replacing with a generic failure.
         setError(text || `search failed: ${res.status}`);
           setSummary(null);
         return;

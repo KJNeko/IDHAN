@@ -12,8 +12,6 @@
 namespace idhan::mime
 {
 
-// Parsing is fully synchronous (no co_await between include expansions), so a thread_local
-// stack of the files currently being expanded is enough to detect include cycles.
 thread_local std::vector< std::string > include_stack {};
 
 struct IncludeStackGuard

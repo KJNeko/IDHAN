@@ -29,29 +29,18 @@ struct ModuleDescriptor
 };
 
 //! Finds the modules the server can call and routes requests to them by MIME.
-/** The server no longer loads modules into itself. At startup every library in the modules directory
- *  is interrogated by running IDHANModuleRunner --describe against it, and what comes back is a
- *  manifest: what each module is, what it handles, and how long its process should live. Calls then
- *  travel to a worker process and the results come back over a socket.
- *
- *  A library that fails to load, exports the wrong symbols, or hangs is logged and skipped. The
- *  previous in-process loader called std::abort() on any dlopen failure, so a single broken
- *  third-party module took the whole server down at startup. */
 class ModuleLoader
 {
 	std::vector< std::shared_ptr< WorkerPool > > m_pools {};
 	std::vector< ModuleDescriptor > m_descriptors {};
 	std::vector< std::shared_ptr< RemoteModule > > m_modules {};
 
-	//! MIME to indexes into m_modules, one map per interface. Built once at load; the previous
-	//! implementation rescanned every module on every lookup.
+	//! MIME to indexes into m_modules, one map per interface.
 	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_metadata {};
 	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_thumbnailer {};
 	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_generator {};
 
-	//! Model name to a single index into m_modules. Not a vector like the MIME maps: two modules
-	//! offering the same model would make dispatch order-dependent, so the duplicate is refused at
-	//! registration rather than silently preferred here.
+	//! Model name to a single index into m_modules.
 	std::unordered_map< std::string, std::size_t > m_by_model_embedding {};
 
 	inline static ModuleLoader* m_instance;
@@ -67,8 +56,6 @@ class ModuleLoader
 	void serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame );
 
 	//! Applies the process-wide half of IDHAN_HARDEN, before the first worker can exist.
-	/** No-op when the option is off. The worker-side half (RLIMIT_CORE) is applied per fork in
-	 *  WorkerProcess::start, since it has to land after the fork and before the exec. */
 	static void applyHardening();
 
   public:
@@ -87,8 +74,7 @@ class ModuleLoader
 	//! Interrogates every library in the modules directory and registers what they export.
 	void loadModules();
 
-	//! Stops every worker. Wired into server shutdown -- the previous implementation declared this
-	//! and never called it, so modules were never torn down at all.
+	//! Stops every worker.
 	void unloadModules();
 
 	//! Retires workers that have outgrown their memory ceiling or gone idle.

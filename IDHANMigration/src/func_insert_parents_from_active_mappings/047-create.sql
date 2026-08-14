@@ -1,6 +1,3 @@
--- Matches effective-child to effective-parent (mirroring insert_parent_mapping), so a tag_parents
--- relationship defined via a synonym other than the one actually applied is still resolved. The
--- stored parent is the ideal (alias-resolved) parent.
 CREATE OR REPLACE FUNCTION insert_parents_from_active_mappings()
     RETURNS trigger
     LANGUAGE plpgsql

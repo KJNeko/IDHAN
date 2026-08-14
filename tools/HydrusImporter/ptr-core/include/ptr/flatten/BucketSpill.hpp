@@ -51,9 +51,7 @@ class BucketWriter
 	//! Writes out every buffer; call before reading any bucket back.
 	void flush();
 
-	//! Total events accepted, buffered or not. Counted per bucket under that bucket's lock rather
-	//! than in one shared atomic: a single counter touched once per event would put every worker
-	//! on the same cache line, and the corpus writes roughly 3.2 billion of them.
+	//! Total events accepted, buffered or not.
 	std::uint64_t written() const;
 
   private:

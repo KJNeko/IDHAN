@@ -47,8 +47,6 @@ ExpectedTask< Json::Value > getInfo( ClusterID cluster_id, const DbClientPtr tra
 	json[ "ratio_number" ] = cluster_info[ 0 ][ "ratio_number" ].as< std::size_t >();
 	json[ "path" ] = cluster_info[ 0 ][ "folder_path" ].as< std::string >();
 
-	// Mime breakdown of the files stored in this specific cluster; LEFT JOIN so the null-mime bucket
-	// (files not yet obtained) still appears.
 	const auto mime_rows { co_await transaction->execSqlCoro(
 		"SELECT m.name AS mime, COUNT(fi.record_id) AS cnt, COALESCE(SUM(fi.size), 0) AS bytes "
 		"FROM file_info fi "

@@ -41,8 +41,6 @@ ExpectedTask< std::vector< WeightedVector > > resolveTerms(
 {
 	const auto table { std::format( "embeddings_{}", model_id ) };
 
-	// Every record term in one query. Resolving them one at a time would be a round trip per
-	// reference image for data that is a single index scan.
 	std::vector< RecordID > wanted {};
 	for ( const auto& term : terms )
 	{
@@ -69,15 +67,10 @@ ExpectedTask< std::vector< WeightedVector > > resolveTerms(
 	{
 		if ( term.m_is_text )
 		{
-			// The caller guarantees a module whenever a text term is present, so this is a
-			// programming error rather than a user one.
 			if ( module == nullptr )
 				co_return std::unexpected(
 					createInternalError( "A text term reached the resolver with no module to embed it" ) );
 
-			// One call per phrase rather than one batched call: phrases are few, the text tower is
-			// small, and resolving them individually is what lets the error name the phrase that
-			// failed.
 			const auto embedded { co_await module->embedText( term.m_text ) };
 
 			if ( !embedded )

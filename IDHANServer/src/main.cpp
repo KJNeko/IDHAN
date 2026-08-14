@@ -145,9 +145,6 @@ int main( int argc, char** argv )
 
 	applyCLISettings( "database", "hostname", parser, pg_host );
 
-	// The config key MUST match what ConnectionArguments reads ("database", "schema"). The pg_host
-	// flag above is a live example of what happens when they differ: it writes "database.hostname"
-	// while ConnectionArguments reads "database.host", so it does nothing.
 	applyCLISettings( "database", "schema", parser, pg_schema );
 
 	checkForceStart( parser, force_start );

@@ -192,8 +192,6 @@ function EmbeddingsPanel({host}: PanelProps) {
             try {
                 const res = await host.http.fetch(`/embeddings/models/${model.model_id}`, {method: 'DELETE'});
                 if (!res.ok) {
-                    // The server's messages say which model and why — a running backfill reads very
-                    // differently from a missing one, and both are worth showing verbatim.
                     throw new Error((await res.text()) || `/embeddings/models → ${res.status}`);
                 }
                 host.ui.toast(`Deleted "${model.model_name}" and its embeddings.`, {kind: 'info'});

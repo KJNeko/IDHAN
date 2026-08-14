@@ -41,8 +41,6 @@ std::expected< CallInput, std::string > CallInput::forBlob( ipc::Blob blob )
 
 int CallInput::fd() const
 {
-	// Exactly one of the two is ever populated: a file input has no blob, and a staged input's
-	// descriptor belongs to the blob that owns the mapping the server reads.
 	return m_file ? m_file.get() : m_blob.fd();
 }
 

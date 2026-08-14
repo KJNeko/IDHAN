@@ -18,8 +18,7 @@ using BigInt = std::int64_t;
 
 using Int = Integer;
 
-//! Distinct semantic aliases for the various entity IDs. They are deliberately separate names (not
-//! one shared "Id" type) so a signature documents exactly which kind of ID it takes.
+//! Distinct semantic aliases for the various entity IDs.
 using RecordID = Integer;
 #define RECORD_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 

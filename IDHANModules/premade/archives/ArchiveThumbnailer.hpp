@@ -15,8 +15,6 @@ class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 
-	// re-entrancy is bounded by a thread_local depth guard and all state is per-call: safe to run
-	// concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
 	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;

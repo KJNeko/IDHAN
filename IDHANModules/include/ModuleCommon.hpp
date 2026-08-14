@@ -9,10 +9,6 @@
 #endif
 
 //! The handful of declarations every other module ABI header needs.
-/** This header exists to break a cycle rather than to group anything conceptually: ModuleBase needs
- *  ModuleFile (a call carries one) and ModuleFile needs ModuleError (it returns one), so the pieces
- *  both of them depend on cannot live in either. Nothing here should grow beyond that role -- if a
- *  declaration is only needed by one side, it belongs on that side. */
 namespace idhan
 {
 

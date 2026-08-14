@@ -106,8 +106,6 @@ TEST( PTRCollapseChain, RepeatedDeletesAreIdempotent )
 
 TEST( PTRCollapseChain, DeleteWinsWhenBothShareAnUpdateIndex )
 {
-	// PTR does put an add and a delete for one key in a single update file. eventLess orders the
-	// delete second, so the delete is what survives.
 	std::vector< MappingEvent > events {
 		MappingEvent { 7, 9, 5, static_cast< std::uint8_t >( EventOp::Delete ), 0 },
 		MappingEvent { 7, 9, 5, static_cast< std::uint8_t >( EventOp::Add ), 0 },

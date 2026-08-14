@@ -22,8 +22,6 @@ std::vector< T > parseArrayParameters( drogon::HttpRequestPtr request, const std
 		};
 		i = separator == std::string_view::npos ? query.size() : separator + 1;
 
-		// each parameter must be exactly `target=value`; a bare prefix test would also
-		// match `target` embedded in longer parameter names
 		if ( param.size() <= target.size() + 1 ) continue;
 		if ( !param.starts_with( target ) || param[ target.size() ] != '=' ) continue;
 

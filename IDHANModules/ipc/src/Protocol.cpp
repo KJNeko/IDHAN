@@ -65,14 +65,10 @@ Json::Value toJson( const ManifestEntry& entry )
 	json[ field::RESIDENCY ] = toWire( entry.residency );
 	json[ field::RSS_CEILING_MB ] = static_cast< Json::UInt64 >( entry.rss_ceiling_mb );
 
-	// arrayValue explicitly: a default-constructed Json::Value stays null until something is
-	// appended, so a module that handles no MIME types would serialise as null rather than [].
 	Json::Value mimes { Json::arrayValue };
 	for ( const auto& mime : entry.mimes ) mimes.append( mime );
 	json[ field::MIMES ] = mimes;
 
-	// Meaningful only for EMBEDDING modules, but always emitted so the reader never has to branch on
-	// the type flag to know whether the fields are present.
 	json[ field::MODEL_NAME ] = entry.model_name;
 	json[ field::DIMENSIONS ] = static_cast< Json::UInt >( entry.dimensions );
 	json[ field::SUPPORTS_TEXT ] = entry.supports_text;
@@ -106,8 +102,6 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 	entry.thread_safe = json[ field::THREAD_SAFE ].asBool();
 	entry.residency = *residency;
 
-	// Absent on manifests from a library built before modules could declare a ceiling. Zero is the
-	// safe default: the configured limit stands, which is the behaviour those libraries already had.
 	if ( json.isMember( field::RSS_CEILING_MB ) )
 	{
 		if ( !json[ field::RSS_CEILING_MB ].isIntegral() )
@@ -116,8 +110,6 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 		entry.rss_ceiling_mb = static_cast< std::size_t >( json[ field::RSS_CEILING_MB ].asUInt64() );
 	}
 
-	// Absent on manifests from a library built before EMBEDDING existed; default to the empty
-	// non-embedding values rather than rejecting the whole entry.
 	if ( json.isMember( field::MODEL_NAME ) )
 	{
 		if ( !json[ field::MODEL_NAME ].isString() )
@@ -134,9 +126,6 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 		entry.dimensions = static_cast< std::uint32_t >( json[ field::DIMENSIONS ].asUInt() );
 	}
 
-	// Absent on manifests from a library built before the text tower existed. Defaulting to false
-	// is the safe direction: the host refuses text queries rather than sending one to a module that
-	// cannot answer it.
 	if ( json.isMember( field::SUPPORTS_TEXT ) ) entry.supports_text = json[ field::SUPPORTS_TEXT ].asBool();
 
 	if ( ( entry.type & ModuleTypeFlags::EMBEDDING ) != 0 )
@@ -144,8 +133,6 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 		if ( entry.model_name.empty() )
 			return std::unexpected( std::string { "embedding module declared no model_name" } );
 
-		// A zero-width model would produce halfvec(0), which PostgreSQL rejects at table creation.
-		// Catching it here names the offending module instead of failing later inside a migration.
 		if ( entry.dimensions == 0 )
 			return std::unexpected( std::format( "embedding module '{}' declared zero dimensions", entry.model_name ) );
 	}
@@ -183,10 +170,6 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 			signature += ',';
 		}
 
-		// The model identity is part of the signature, not decoration. Without it, re-exporting a
-		// model at a different width and rebuilding the .so under a running server would leave the
-		// pool dispatching to an index whose vectors no longer fit the halfvec column they are
-		// written to -- a silent mismatch rather than a loud reload.
 		signature += std::format( "|{}|{}|{}", entry.model_name, entry.dimensions, entry.supports_text );
 
 		signature += '\n';

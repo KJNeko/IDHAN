@@ -24,8 +24,6 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 	const auto metadata_parser { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
 	if ( metadata_parser.empty() ) co_return createInternalError( "Was unable to find parser for {}", *mime_str );
 
-	// The bytes arrived in the request body rather than from a cluster, so they are copied into a
-	// blob here instead of being mapped from a file.
 	auto blob { ipc::Blob::fromBytes(
 		std::span< const std::byte > {
 			reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() } ) };

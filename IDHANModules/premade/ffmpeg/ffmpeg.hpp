@@ -19,10 +19,6 @@ namespace log = spdlog;
 }
 
 //! State backing a custom FFmpeg AVIO context: the file being demuxed and a read/seek cursor.
-/** Passed as the opaque pointer to readFunction/seekFunction, which is what lets FFmpeg demux
- *  something that is not a path it can open. It holds a handle rather than a buffer, so a video is
- *  never materialised to read its header: FFmpeg asks for the bytes it wants, when it wants them,
- *  and they land straight in the AVIOContext's own buffer. */
 struct OpaqueInfo
 {
 	const idhan::ModuleFile* m_file { nullptr }; //!< The file being read (not owned).
@@ -41,8 +37,6 @@ inline int readFunction( void* opaque, std::uint8_t* buffer, const int buffer_si
 	const auto size { static_cast< std::int64_t >( state.m_file->size() ) };
 	if ( state.m_cursor >= size ) return AVERROR_EOF;
 
-	// Read straight into FFmpeg's buffer. There is no staging copy here and there should not be one:
-	// this callback is the only place the file's bytes enter the process.
 	const auto count { state.m_file->read(
 		std::span< std::byte > { reinterpret_cast< std::byte* >( buffer ), static_cast< std::size_t >( buffer_size ) },
 		static_cast< std::size_t >( state.m_cursor ) ) };

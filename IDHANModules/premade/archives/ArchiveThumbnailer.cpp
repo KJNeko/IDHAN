@@ -12,18 +12,6 @@
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
-// Archive-in-archive recursion used to be bounded here, by a thread_local depth counter: the
-// thumbnail and generate callbacks re-dispatch by MIME and can come back round to this thumbnailer
-// for a nested archive.
-//
-// That counter no longer describes reality. Modules run in worker processes now, and a nested call
-// leaves this process entirely -- out to the host, which resolves it and dispatches it to whichever
-// worker handles that MIME, quite possibly a different one, and on a different thread if it does
-// come back here. A per-thread counter in one process cannot see any of that.
-//
-// The host carries the depth in the call itself and enforces the ceiling (config: modules
-// max_call_depth), because the host is the only party that sees the whole chain.
-
 std::vector< std::string_view > ArchiveThumbnailer::handleableMimes()
 {
 	return getHandleableMimesForArchives();
@@ -88,9 +76,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		!members.empty() ? members.size() - 1 : members.size()
 	}; // subtract the 'encrypted' member
 
-	// determine a grid; ceil(sqrt) so the canvas is large enough for every child. floor() left
-	// non-perfect-square counts with an undersized canvas (relying on insert's expand to paper
-	// over it) and collapsed 2-3 child archives to grid_size 1, discarding all but the first.
 	auto grid_size {
 		static_cast< std::size_t >( std::ceil( std::sqrt( static_cast< double >( child_thumbnails ) ) ) )
 	};
@@ -130,8 +115,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		if ( !generated_file )
 		{
-			// Skip this child rather than failing the whole archive thumbnail; only if every child
-			// fails do we surface an error (see the all_generate_failed check below).
 			spdlog::warn( "Archive thumbnailer: failed to generate '{}': {}", member, generated_file.error() );
 			last_error = generated_file.error();
 			flag_cache_thumbnail = false;
@@ -195,8 +178,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 	if ( all_generate_failed )
 	{
-		// last_error may be empty if no member was a valid hash (nothing to generate); never
-		// dereference a disengaged optional here.
 		return std::unexpected(
 			last_error.value_or( idhan::ModuleError { "No thumbnailable entries found in archive" } ) );
 	}

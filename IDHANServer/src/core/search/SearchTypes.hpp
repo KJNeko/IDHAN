@@ -1,5 +1,3 @@
-// Sort/display enums shared by SearchBuilder and the Set machinery it drives. Split out of
-// SearchBuilder.hpp so SortKey/Set can name SortType without including the builder that uses them.
 #pragma once
 
 #include "hydrus/ClientConstants_gen.hpp"
@@ -64,8 +62,6 @@ enum class SortType
 	HY_NUM_COLLECTION_FILES = DEFAULT,
 	// no per-file view-tracking subsystem exists yet
 	HY_LAST_VIEWED_TIME = DEFAULT,
-	// IDHAN's archive_map/archive_metadata are encrypted archive containers, unrelated to
-	// Hydrus's inbox/archive review-state concept, which IDHAN doesn't implement
 	HY_ARCHIVED_TIMESTAMP = DEFAULT,
 	HY_HASH = HASH,
 	// no pixel_hash column

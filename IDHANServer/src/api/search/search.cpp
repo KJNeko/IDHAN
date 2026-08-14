@@ -30,8 +30,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	builder.addPositiveTags( tag_ids );
 
-	// Sort params are optional; the default (filesize ascending) matches this endpoint's
-	// long-standing documented behavior, so omitting them changes nothing for existing callers.
 	const auto by { request->getOptionalParameter< std::string >( "by" ) };
 	const auto order { request->getOptionalParameter< std::string >( "order" ) };
 	if ( by ) builder.setSortType( parseSortType( *by ) );
@@ -39,8 +37,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	const auto result { co_await builder.query( db, tag_domain_ids ) };
 
-	// arrayValue explicitly: a default-constructed Json::Value is null until first append, so an
-	// empty result would otherwise serialise as `null` rather than `[]`.
 	Json::Value file_ids { Json::arrayValue };
 
 	for ( const auto id : result.record_ids ) file_ids.append( id );

@@ -90,9 +90,6 @@ export async function restore(): Promise<AuthedSession | null> {
       await api.auth.verifyKey(stored);
       return {key: stored};
   } catch (error) {
-      // A definite rejection clears the key. A transport failure (server down) leaves the key set — a
-      // reload once the server returns will authenticate — but still reports unauthenticated for now so
-      // the login screen shows rather than a spinner.
     if (error instanceof ApiError) clear();
     return null;
   }

@@ -38,21 +38,14 @@ struct WorkerSettings
 	std::chrono::milliseconds liveness_grace { 5000 };
 	bool describe_only { false }; //!< Startup interrogation: announce and exit.
 
-	//! spdlog level name the worker starts at. A worker is a separate process and does not inherit our
-	//! logger, so without this it sits at info and discards every debug line a module writes.
+	//! spdlog level name the worker starts at.
 	std::string log_level { "info" };
 
 	//! What this library's manifest must look like, from the interrogation at startup.
-	/** Checked when the worker announces itself. Module indexes only mean anything relative to the
-	 *  factory that produced them, so a .so rebuilt under a running server could have an index
-	 *  addressing a different module. Empty disables the check, which interrogation itself uses. */
 	std::string expected_signature {};
 };
 
 //! Why a worker is being torn down.
-/** Only a failure deserves a warning. Most terminations are routine -- interrogation, a single-run
- *  worker finishing, an idle or RSS retirement, shutdown -- and logging those at the same level as a
- *  crash made a healthy startup read like four libraries had died. */
 enum class Termination : std::uint8_t
 {
 	EXPECTED,
@@ -68,16 +61,10 @@ struct CallOutcome
 	ipc::Blob blob {};
 
 	//! True when the call failed because the worker died rather than because the module said no.
-	/** The pool retries these once in a fresh process; a module that simply cannot handle a file
-	 *  would fail identically on a second attempt, so only this kind is worth repeating. */
 	bool worker_died { false };
 };
 
 //! A call's input, held for as long as the call is in flight.
-/** The MIME travels with it because a callback referencing an input cannot re-derive one: detection
- *  reads content, and on the io_uring path the server holds no copy to read -- not making one is the
- *  entire point. It does not need to, since the server resolved that MIME before dispatching the
- *  call, so the answer is already known and exact rather than re-guessed. */
 struct InFlightInput
 {
 	std::shared_ptr< const CallInput > input {};
@@ -85,9 +72,6 @@ struct InFlightInput
 };
 
 //! One IDHANModuleRunner process and the channel to it.
-/** Owns a dedicated IO thread rather than sharing a drogon loop: it does the blocking parts and
- *  never runs anything long. Coroutines waiting on a result are resumed back on a drogon event loop,
- *  so handler code stays where it expects to be. */
 class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 {
   public:
@@ -99,10 +83,6 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
   private:
 
 	//! A call that has been sent and is waiting for its RESULT.
-	/** Deliberately unbounded in time. A worker serves calls \p pool_threads at a time, so a call can
-	 *  wait as long as the backlog ahead of it, and nothing distinguishes that from being wedged. The
-	 *  waiting coroutine costs a frame and holds no thread, so waiting is cheap and killing is not:
-	 *  the previous deadline took down the worker and every other call in flight on it. */
 	struct PendingCall
 	{
 		std::coroutine_handle<> continuation {};
@@ -125,8 +105,7 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	std::mutex m_calls_mutex {};
 	std::unordered_map< std::uint64_t, PendingCall > m_calls {};
 	//! The input of every in-flight call, so a module passing its own input back through a callback is
-	//! answered by reusing it. Shares m_calls_mutex: the two are written together, and a second lock
-	//! would only create an ordering to get wrong.
+	//! answered by reusing it.
 	std::unordered_map< std::uint64_t, InFlightInput > m_call_inputs {};
 	std::atomic< std::uint64_t > m_next_call_id { 1 };
 
@@ -192,9 +171,6 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	[[nodiscard]] std::expected< void, std::string > post( const Json::Value& body, std::span< const int > fds = {} );
 
 	//! Sends a call and suspends the calling coroutine until its result arrives.
-	/** Takes the input rather than a descriptor because the frame's input fields, and the ring behind
-	 *  them, can only be built once the call id exists -- and have to be rebuilt if this call is
-	 *  retried in a different process. */
 	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > call(
 		Json::Value body,
 		std::shared_ptr< const CallInput > input );

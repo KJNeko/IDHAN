@@ -98,8 +98,6 @@ bool DefinitionWriter::writeHash( const std::uint32_t hash_id, const std::string
 		return false;
 	}
 
-	// Nothing shared to guard: the offset comes from hash_id, so two threads writing different
-	// hashes cannot overlap, and two writing the same hash write the same 32 bytes.
 	writeAt( m_hashes_fd, decoded->data(), SHA256_BYTES, static_cast< std::uint64_t >( hash_id ) * SHA256_BYTES );
 	return true;
 }
@@ -108,8 +106,6 @@ void DefinitionWriter::writeTag( const std::uint32_t tag_id, const std::string_v
 {
 	if ( tag.empty() ) return;
 
-	// The lock covers reserving a blob range and nothing else. Copying the text into the file is
-	// the expensive half and needs no exclusion once the range belongs to this caller.
 	std::uint64_t offset { 0 };
 	{
 		std::lock_guard< std::mutex > lock { m_blob_mutex };
@@ -123,9 +119,6 @@ void DefinitionWriter::writeTag( const std::uint32_t tag_id, const std::string_v
 
 	writeAt( m_tag_blob_fd, tag.data(), tag.size(), offset );
 
-	// Written second so the index never points at bytes that are not there yet. Nothing reads the
-	// store until the scan's writers have joined, but the ordering costs nothing and keeps the
-	// files consistent if a run dies partway.
 	const TagIndexEntry entry { static_cast< std::uint32_t >( offset ), static_cast< std::uint32_t >( tag.size() ) };
 	writeAt( m_tag_index_fd, &entry, sizeof( entry ), static_cast< std::uint64_t >( tag_id ) * sizeof( entry ) );
 }
@@ -164,9 +157,6 @@ std::uint32_t DefinitionReader::tagIdCapacity() const noexcept
 {
 	const auto slots = m_tag_index.size / sizeof( TagIndexEntry );
 
-	// Only reachable with a tags.idx above 32 GB, which the 32-bit blob offset makes impossible in
-	// practice. Clamping rather than wrapping keeps a TagUsageSet sized from this merely incomplete
-	// instead of catastrophically undersized.
 	if ( slots > std::numeric_limits< std::uint32_t >::max() ) return std::numeric_limits< std::uint32_t >::max();
 	return static_cast< std::uint32_t >( slots );
 }
@@ -200,8 +190,6 @@ std::optional< std::span< const std::byte > > DefinitionReader::hash( const std:
 
 	const std::span< const std::byte > slot { m_hashes.data + offset, SHA256_BYTES };
 
-	// A sparse hole reads as zeros, which is how an undefined id is encoded. A real SHA-256 of
-	// all zeros is not something PTR will ever contain.
 	for ( const auto byte : slot )
 	{
 		if ( byte != std::byte { 0 } ) return slot;

@@ -12,9 +12,6 @@
 #include "ModuleFile.hpp"
 
 //! The MIME types the vips modules declare handleable.
-/** A set rather than the mime-to-loader map this used to be. Loading now goes through
- *  vips_image_new_from_source, which sniffs the format itself, so naming a specific buffer loader
- *  per MIME would only be a second opinion that could disagree with the first. */
 inline static const std::unordered_set< std::string > VIPS_MIMES {
 	"image/png", "image/jpeg", "image/webp", "image/gif", "image/heif", "image/svg+xml", "image/tiff"
 };
@@ -59,8 +56,7 @@ class VipsModuleSource
 		return static_cast< gint64 >( *count );
 	}
 
-	//! Serves a seek signal. Connecting one is what makes this a seekable source; without it vips
-	//! treats the input as a pipe and buffers the whole thing to disk, undoing the point.
+	//! Serves a seek signal.
 	static gint64 onSeek( VipsSourceCustom*, const gint64 offset, const int whence, void* const user )
 	{
 		auto* const self { static_cast< VipsModuleSource* >( user ) };
@@ -88,8 +84,6 @@ class VipsModuleSource
 
 		if ( target < 0 ) return -1;
 
-		// Seeking beyond the end is legal and the following read simply returns nothing, which is how
-		// a loader probing for a trailer discovers there is none.
 		self->m_position = static_cast< std::size_t >( target );
 
 		return target;

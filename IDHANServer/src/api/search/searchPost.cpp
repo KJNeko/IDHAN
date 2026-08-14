@@ -1,6 +1,3 @@
-// POST /search — the full search surface the WebUI uses. Unlike the legacy GET /search (tag ids
-// only, positive only, no pagination), this takes tag text with negation and system predicates,
-// a sort, and limit/offset, and reports how long the query took.
 
 #include <chrono>
 
@@ -38,11 +35,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 		{
 			if ( !tag.isString() ) co_return createBadRequest( "'tags' must be an array of strings" );
 			auto tag_text { tag.asString() };
-			// A bare `namespace:*` is the only form the namespace path can serve: it matches on
-			// namespace_id, so it has nowhere to put a pattern. Anything else carrying a `*` --
-			// `character:*girl`, `*:cat girl`, `cat*girl` -- is a tag wildcard matched against the
-			// full tag text. Testing `contains(":*")` here would capture `character:*girl` and
-			// search it as a plain `character:*`, silently dropping the `girl`.
 			const bool is_namespace_wildcard {
 				tag_text.ends_with( ":*" ) && tag_text.find( '*' ) == tag_text.size() - 1
 			};
@@ -159,9 +151,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 		if ( !return_ids && !return_hashes ) return_ids = true; // never return nothing
 	}
 
-	// --- run ---------------------------------------------------------------------------------
-	// A DB-level failure propagates to the server's exception handler as a 500; malformed input has
-	// already been rejected as 400 above.
 	auto db { drogon::app().getDbClient() };
 	const auto result { co_await builder.query( db, std::move( tag_domains ), return_ids, return_hashes ) };
 
@@ -183,8 +172,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 	const auto count { static_cast< std::int64_t >( result.size() ) };
 	out[ "count" ] = count;
 
-	// "truncated" flags that a limit was applied and fully consumed, so more may exist. It is a hint
-	// (count could equal the limit exactly by chance); the client re-queries with a higher offset.
 	const auto limit_param {
 		json.isMember( "limit" ) && json[ "limit" ].isIntegral() ?
 			std::optional< std::int64_t > { json[ "limit" ].asInt64() } :
@@ -197,9 +184,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::searchPost( drogon::HttpReque
 	};
 	out[ "query_ms" ] = static_cast< std::int64_t >( elapsed );
 
-	// Opt-in: the per-step row counts are always in the debug log, but returning them lets a client
-	// see which term actually narrowed the search without server log access. "rows" on an
-	// "inverted" step is the size of the *exclusion*, not of the result.
 	if ( json.isMember( "debug" ) && json[ "debug" ].isBool() && json[ "debug" ].asBool() && builder.stats() )
 	{
 		Json::Value steps { Json::arrayValue };

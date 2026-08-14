@@ -208,9 +208,6 @@ std::expected< Blob, std::string > Blob::fromBytes( const std::span< const std::
 	auto fd { createMemfd( bytes.size() ) };
 	if ( !fd ) return std::unexpected( fd.error() );
 
-	// Written with pwrite rather than through a mapping on purpose: F_SEAL_WRITE is refused while a
-	// writable mapping of the object exists, so filling it by mmap would mean unmapping before
-	// sealing and re-mapping after.
 	std::size_t written { 0 };
 	while ( written < bytes.size() )
 	{
@@ -245,9 +242,6 @@ std::expected< Blob, std::string > Blob::adopt( UniqueFd fd )
 
 	const auto size { static_cast< std::size_t >( info.st_size ) };
 
-	// Deliberately not verified against the expected seals. The receiver is the untrusted side of
-	// this boundary, not the sender: refusing an unsealed descriptor here would protect a worker
-	// from the host, which is backwards.
 	const auto mapping { mapReadOnly( fd.get(), size ) };
 	if ( !mapping ) return std::unexpected( mapping.error() );
 

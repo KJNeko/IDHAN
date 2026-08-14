@@ -90,8 +90,6 @@ std::string ConnectionArguments::format() const
 	str += format_ns::format( "user={} ", user );
 	if ( !password.empty() ) str += format_ns::format( "password={} ", password );
 	str += "options='-c search_path=" + searchPath();
-	// Verbosity is a logging concern and has nothing to do with which schema is in use; it only ever
-	// rode along on the old test-mode flag because both happened to be true at the same time.
 	if ( log_level <= spdlog::level::debug ) str += " -c client_min_messages=debug1";
 	str += "'";
 

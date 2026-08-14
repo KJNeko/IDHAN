@@ -77,9 +77,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeMultipleTags( drogon::H
 		{
 			if ( tag_sets[ i ].empty() ) continue;
 
-			// The coroutine only starts running at when_all, long after this loop iteration's
-			// closure is gone — everything must be passed as parameters (copied into the
-			// coroutine frame), never as captures.
 			auto task =
 				[]( DbClientPtr db_c,
 			        const RecordID record_id,
