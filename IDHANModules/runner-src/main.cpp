@@ -35,7 +35,6 @@ template < typename T >
 	return result.ec == std::errc {} && result.ptr == text.data() + text.size();
 }
 
-
 int main( int argc, char** argv )
 {
 	// Before the library is loaded, because module code converts text through the C locale and a fresh

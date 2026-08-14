@@ -305,7 +305,6 @@ class Mapping
 	[[nodiscard]] const std::byte* end() const { return m_data + m_size; }
 };
 
-
 std::expected< GraphInterface, std::string > readGraphInterface( const std::filesystem::path& onnx_path )
 {
 	Mapping mapping {};

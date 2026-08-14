@@ -54,7 +54,6 @@ void resumeOnLoop( std::coroutine_handle<> continuation, trantor::EventLoop* loo
 	loop->queueInLoop( [ continuation ]() mutable { continuation.resume(); } );
 }
 
-
 WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callback ) :
   m_settings( std::move( settings ) ),
   m_on_callback( std::move( on_callback ) )

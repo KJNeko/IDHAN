@@ -212,7 +212,6 @@ std::string domainFilter( const FetchContext& ctx )
 	return " AND f.tag_domain_id = ANY($1)";
 }
 
-
 Task< Set > fetchTag( FetchContext ctx, const TagID tag, std::string label )
 {
 	// One lookup against the view, rather than the three-branch UNION this replaced. That shape

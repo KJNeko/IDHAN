@@ -30,7 +30,6 @@ std::string formatMillis( const std::int64_t micros )
 	return format_ns::format( "{:.0f}ms", ms );
 }
 
-
 void SearchStats::record(
 	std::string label,
 	const std::size_t rows,

@@ -102,7 +102,6 @@ void publishEmbeddingModelPath()
 	log::info( "Embedding models will be searched for in {}", path );
 }
 
-
 ModuleLoader::ModuleLoader()
 {
 	FGL_ASSERT( m_instance == nullptr, "ModuleLoader is a singleton" );
@@ -550,7 +549,6 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 
 	co_return;
 }
-
 
 void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {

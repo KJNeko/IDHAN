@@ -21,7 +21,6 @@ using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )( Modu
 	return message != nullptr ? std::string { message } : std::string { "unknown dynamic loader error" };
 }
 
-
 ModuleLibrary::ModuleLibrary(
 	void* const handle,
 	void ( *const deinit )(),

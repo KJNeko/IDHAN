@@ -41,7 +41,6 @@ void applyPermutation( std::vector< T >& values, const std::vector< std::size_t 
 	values = std::move( permuted );
 }
 
-
 Set::Set(
 	std::vector< RecordID > ids,
 	SortKeyColumn keys,

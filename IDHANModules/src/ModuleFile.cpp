@@ -38,7 +38,6 @@ class MemoryFile final : public ModuleFile
 	}
 };
 
-
 std::unique_ptr< ModuleFile > ModuleFile::fromBytes( const std::span< const std::byte > bytes )
 {
 	return std::make_unique< MemoryFile >( bytes );
