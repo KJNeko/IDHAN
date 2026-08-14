@@ -11,7 +11,7 @@ enum ImportStatus : std::uint8_t
 	Success = 1, //!< File was newly imported.
 	Exists = 2, //!< File was already present; nothing was added.
 	Deleted = 3, //!< File matches a record previously marked deleted.
-	Failed = 4, //!< Import failed; see the accompanying ImportFailureCode.
+	Failed = 4, //!< Import failed; See `ImportFailureCode`
 };
 
 //! Reason an import returned ImportStatus::Failed.
