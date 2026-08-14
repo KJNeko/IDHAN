@@ -1,9 +1,7 @@
 /**
- * Credential lifecycle for the WebUI.
- *
- * Login is just "provide a key": the permanent API key is validated against the server and, if
- * accepted, stored and presented directly on every request. There is no session-key exchange — the
- * key the user pastes is the credential used from then on.
+ * Credential lifecycle for the WebUI. Login is just "provide a key": the permanent API key is
+ * validated against the server and, if accepted, stored and presented directly on every request.
+ * There is no session-key exchange.
  */
 
 import {ApiError, api, setKey} from '../api/client';

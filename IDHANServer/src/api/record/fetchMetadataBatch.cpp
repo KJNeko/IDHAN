@@ -1,6 +1,5 @@
-// POST /records/metadata — batch metadata for many records in one query. A grid scrolling tens of
-// thousands of results cannot call /records/{id}/info per tile; this returns the same "basic" shape
-// for a list of ids in a single set-based query.
+// POST /records/metadata: batch metadata for many records in one query. Returns the same "basic"
+// shape as /records/{id}/info, for a list of ids, in a single set-based query.
 
 #include <unordered_set>
 
@@ -36,9 +35,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchMetadataBatch( drogon::H
 		record_ids.emplace_back( static_cast< RecordID >( id.asInt64() ) );
 	}
 
-	// "include" is accepted for forward compatibility; only "basic" is implemented today. Tags/urls/
-	// notes are deliberately excluded from a batch fetch — on a large grid they would dwarf the
-	// payload — and file-specific metadata (dimensions, duration) remains per-record for now.
+	// "include" is accepted for forward compatibility; only "basic" is implemented. Tags, urls and
+	// notes are excluded from a batch fetch because on a large grid they would dwarf the payload.
+	// File-specific metadata (dimensions, duration) is still per-record.
 	if ( json.isMember( "include" ) && !json[ "include" ].isArray() )
 		co_return createBadRequest( "'include' must be an array of strings" );
 

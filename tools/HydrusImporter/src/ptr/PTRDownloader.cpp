@@ -730,10 +730,10 @@ MetadataUpdate PTRDownloader::parseMetadataBytes( const QByteArray& data )
 	else if ( root.isArray() && root.size() >= 3 && root[ 0 ].asInt() == HYDRUS_TYPE_DICTIONARY )
 	{
 		const auto& info = root[ 2 ];
-		// Wire format: [21, version, [key1, val1, key2, val2, ...]] — flat alternating key-value array
+		// Wire format: [21, version, [key1, val1, key2, val2, ...]], a flat alternating key-value array
 		if ( info.isArray() )
 		{
-			// Format: [[type_k, key], [type_v, val], ...] — pairs of typed entries
+			// Format: [[type_k, key], [type_v, val], ...], pairs of typed entries
 			bool found = false;
 			for ( const auto& entry : info )
 			{

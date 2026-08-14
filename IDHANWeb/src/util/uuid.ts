@@ -1,12 +1,9 @@
 /**
  * A v4 UUID that works outside secure contexts.
  *
- * `crypto.randomUUID()` is only defined in a secure context (HTTPS or localhost). A self-hosted IDHAN
- * reached over plain HTTP on a LAN/remote address is *not* secure, so `randomUUID` is undefined there
- * and calling it throws before the app even renders. `crypto.getRandomValues()`, by contrast, is
- * available in every context, so we fall back to building the UUID ourselves from it. (Web Crypto's
- * `subtle` is likewise secure-context-only, but nothing here uses it — session auth is a bearer token,
- * not a browser-side hash.)
+ * `crypto.randomUUID()` is defined only in a secure context (HTTPS or localhost), so on a self-hosted
+ * IDHAN reached over plain HTTP it is undefined and calling it throws before the app renders.
+ * `crypto.getRandomValues()` is available in every context, so the UUID is built from that instead.
  */
 
 export function uuid(): string {

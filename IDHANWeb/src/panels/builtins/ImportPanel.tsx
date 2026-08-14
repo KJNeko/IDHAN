@@ -1,7 +1,7 @@
 /**
- * Import — drag-and-drop (or pick) files to import into IDHAN. Each file is POSTed to /file/import as
- * *raw bytes* (the endpoint sniffs the mime from content; it is NOT multipart — that is the easy trap).
- * Uploads run through a small concurrency pool so a big drop doesn't open hundreds of sockets at once.
+ * Import: drag-and-drop or pick files to import into IDHAN. Each file is POSTed to /file/import as raw
+ * bytes, not as multipart; the endpoint sniffs the mime from the content. Uploads run through a small
+ * concurrency pool so a big drop does not open hundreds of sockets at once.
  * Successfully imported record ids are pushed into the shared selection so other panels can show them.
  */
 
@@ -31,7 +31,7 @@ interface Item {
   /** Full server message for a failure or skip, wrapped on its own line under the name. */
   reason?: string;
   recordId?: RecordId;
-  /** Metadata fetched after a successful import, shown inline (same view as the Record Info panel). */
+    /** Metadata fetched after a successful import, shown inline. */
   info?: RecordInfo;
 }
 
@@ -202,7 +202,7 @@ function ImportPanel({ host }: PanelProps) {
         <p className="muted">
           {done} imported{skipped > 0 ? `, ${skipped} skipped` : ''}
           {failed > 0 ? `, ${failed} failed` : ''}
-          {busy ? ' — working…' : ''}
+            {busy ? ' (working…)' : ''}
         </p>
       )}
 

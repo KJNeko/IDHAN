@@ -153,7 +153,7 @@ TEST_F( FlattenScanTest, UnparseableFileIsSkippedAndCounted )
 	const auto metadata = makeMetadata( { { 0, { defs, broken } } } );
 	const auto result = scanCorpus( m_corpus, metadata, m_work, m_callbacks );
 
-	// One bad file must not abort the run -- the rest of the corpus still scans.
+	// One bad file must not abort the run; the rest of the corpus still scans.
 	EXPECT_EQ( result.skipped_files, 1u );
 }
 

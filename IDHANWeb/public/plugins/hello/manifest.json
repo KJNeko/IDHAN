@@ -3,7 +3,7 @@
   "name": "Example: Hello",
   "version": "1.0.0",
   "hostApi": "^1.0.0",
-  "description": "A minimal example plugin — one panel that greets you and shows the host API working.",
+  "description": "A minimal example plugin: one panel that greets you and shows the host API working.",
   "entry": "index.js",
   "panels": [{ "type": "example.hello", "title": "Hello" }]
 }

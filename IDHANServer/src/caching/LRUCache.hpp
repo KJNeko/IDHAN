@@ -33,7 +33,7 @@ class ValidLRUCache
 		index.reserve( max_entries );
 	}
 
-	// Refreshes `key` to most-recently-used. A miss leaves the cache unchanged — use add() to insert.
+	// Refreshes `key` to most-recently-used. A miss leaves the cache unchanged; use add() to insert.
 	bool exists( const T key )
 	{
 		const auto it { index.find( key ) };

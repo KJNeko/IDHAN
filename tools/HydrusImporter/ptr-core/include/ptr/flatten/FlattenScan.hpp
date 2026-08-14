@@ -39,7 +39,7 @@ static_assert( sizeof( RelationEvent ) == 12 );
 //!
 //! \warning These are called from scanCorpus's worker threads, not from the calling thread. They
 //!          are serialised against each other, so they need no locking of their own and may share
-//!          mutable state -- but one slow callback stalls every worker, so keep them to bumping
+//!          mutable state. One slow callback stalls every worker, so keep them to bumping
 //!          counters or emitting a queued signal.
 struct ScanCallbacks
 {
@@ -72,8 +72,8 @@ struct ScanResult
 //! definition store and mapping events into its buckets.
 //!
 //! \p thread_count worker threads process update files concurrently; 0 (the default) picks
-//! defaultScanThreadCount(). A file is handled end to end -- inflate, parse, hex-decode, definition
-//! writes, bucket spilling -- with no lock held: the definition store addresses its output by id
+//! defaultScanThreadCount(). A file is handled end to end (inflate, parse, hex-decode, definition
+//! writes, bucket spilling) with no lock held: the definition store addresses its output by id
 //! and the bucket writer locks per bucket, so neither needs the caller to serialise it. Only
 //! merging the relation events and firing the callbacks is serialised, and that is a few
 //! microseconds per file.
@@ -86,7 +86,7 @@ struct ScanResult
 //!
 //! \throws std::runtime_error if an update index exceeds MAX_UPDATE_INDEX. Truncating it would
 //!         silently corrupt chain ordering, so this fails loudly instead.
-//! \throws Anything a worker threw -- a full disk, a short write -- rethrown here once the pool has
+//! \throws Anything a worker threw, such as a full disk or a short write, rethrown once the pool has
 //!         joined, so a failure mid-run is reportable rather than fatal to the process.
 ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
                        const MetadataUpdate& metadata,

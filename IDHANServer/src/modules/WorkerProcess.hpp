@@ -176,8 +176,8 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 		std::shared_ptr< const CallInput > input );
 
 	//! The input of an in-flight call, for resolving INPUT_REF on a callback.
-	/** \return An entry with a null input if the call already finished. A module cannot cause that --
-	 *          it is blocked inside that very call -- but a replayed frame could ask for it. */
+	/** \return An entry with a null input if the call already finished. A module cannot cause that,
+	 *          since it is blocked inside that very call, but a replayed frame could ask for it. */
 	[[nodiscard]] InFlightInput inputForCall( std::uint64_t call_id );
 
 	//! Allocates the next call id.

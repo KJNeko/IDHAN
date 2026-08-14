@@ -1,13 +1,9 @@
 /**
- * Embedding Compare — two images side by side, and how far a phrase sits from each.
+ * Embedding Compare: two images side by side, and how far a phrase sits from each.
  *
- * The question this answers is comparative, which the search endpoint cannot express: search ranks a
- * collection against one query, so asking whether "blonde hair" describes A or B better meant running
- * a search with a huge limit and hoping both records appeared within ef_search rows of the top.
- *
- * Terms here carry no weight and no sign. Each is scored on its own, and cosine distance is
- * scale-invariant in the query vector, so a weight could not move a number on this screen. That is
- * also why this is a separate panel rather than a second column on Embedding Search.
+ * Search ranks a collection against one query, so it cannot answer whether a phrase describes A or B
+ * better. Terms here carry no weight and no sign: each is scored on its own, and cosine distance is
+ * scale-invariant in the query vector, so a weight could not move a number on this screen.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -123,7 +119,7 @@ function SlotCard({
 
   return (
     <div className="cmp-slot">
-        {/* thumbnailUrl's default size, which other panels also request — so a record already shown in
+        {/* thumbnailUrl's default size, which other panels also request, so a record already shown in
           the grid costs no second thumbnail here. */}
       <div className="cmp-slot-thumb">
         {recordId === null ? (
@@ -450,10 +446,8 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
             </select>
         </label>
 
-        {/* One list, not two. A term and its two distances are the same thing seen from either end, and
-          listing them separately made every term appear twice. The numeric columns and the bar simply
-          are not there until a comparison has produced them — there is nothing truthful to put in
-          them before that, and a column of placeholders is worse than no column. */}
+        {/* One list, not two: a term and its two distances are the same thing seen from either end.
+          The numeric columns and the bar are absent until a comparison has produced them. */}
         <div className={`cmp-term-list${results ? ' has-results' : ''}`}>
         {config.terms.length === 0 ? (
           <p className="embed-note">

@@ -1,13 +1,11 @@
 /**
- * Loads third-party panel plugins.
+ * Loads third-party panel plugins: installs the shared runtime, fetches the server's plugin index,
+ * then dynamic-imports the bundle of every plugin whose declared host-API range is compatible. The
+ * bundle self-registers its panels through `@idhan/host`. A plugin that is incompatible or fails to
+ * import is warned and skipped.
  *
- * Flow: install the shared runtime → fetch the server's plugin index → for each plugin whose declared
- * host-API range is compatible, dynamic-import its bundle. The bundle self-registers its panels through
- * `@idhan/host` (the same registerPanel path the built-ins use). A plugin that is incompatible or fails
- * to import is warned and skipped — a bad plugin never blocks the app or the other plugins.
- *
- * The dynamic import below carries a `@vite-ignore` leading-comment so Vite/Rollup emits a native
- * dynamic import instead of trying to bundle the runtime-only, server-provided bundle URL.
+ * The dynamic import below carries a `@vite-ignore` leading comment so Vite emits a native dynamic
+ * import instead of trying to bundle the runtime-only, server-provided bundle URL.
  */
 
 import { plugins as pluginApi } from '../api/client';

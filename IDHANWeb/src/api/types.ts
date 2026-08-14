@@ -1,8 +1,6 @@
 /**
- * Wire types for the IDHAN REST API.
- *
- * These mirror the JSON the server actually emits (see IDHANServer/src/api). Keep them narrow — only
- * the fields the WebUI reads — rather than trying to model every column.
+ * Wire types for the IDHAN REST API. These mirror the JSON the server emits (see
+ * IDHANServer/src/api) and cover only the fields the WebUI reads, not every column.
  */
 
 export interface SemVer {
@@ -23,7 +21,7 @@ export interface VersionInfo {
   build: string;
 }
 
-/** Response of GET /auth/verify — reaching it at all means the API key was accepted. */
+/** Response of GET /auth/verify. Reaching it at all means the API key was accepted. */
 export interface KeyCheck {
   authenticated: boolean;
 }
@@ -111,7 +109,7 @@ export interface PluginManifest {
   panels?: PluginPanelInfo[];
 }
 
-/** One row from GET /layouts — server-stored layout metadata. The document itself is fetched lazily. */
+/** One row of server-stored layout metadata from GET /layouts. The document is fetched lazily. */
 export interface ServerLayoutMeta {
   id: string;
   name: string;
@@ -128,9 +126,9 @@ export interface TagDomain {
 }
 
 /**
- * One active tag on a record with its provenance (GET /records/{id}/tags/active/verbose). Note it
- * carries only tag *ids* — resolve them to text via GET /tags/{id}/info. `aliased_from`/`inherited_from`
- * are the ids this tag was derived from (via a sibling/alias, or a parent respectively).
+ * One active tag on a record with its provenance (GET /records/{id}/tags/active/verbose). Carries tag
+ * ids only; resolve them via GET /tags/{id}/info. `aliased_from` and `inherited_from` are the ids
+ * this tag was derived from, through a sibling/alias or a parent respectively.
  */
 export interface VerboseTag {
   tag_id: number;
@@ -149,10 +147,9 @@ export interface TagInfo {
 }
 
 /**
- * A tag's relationships within one domain (GET /tags/{domain_id}/{tag_id}/relationships). All ids;
- * resolve to text only for display. `parents`/`children` are the parent-tag and child-tag directions
- * of the parent relation; `aliases` are tags that alias *to* this one, `aliased` the tag(s) this one
- * aliases to.
+ * A tag's relationships within one domain (GET /tags/{domain_id}/{tag_id}/relationships), as ids.
+ * `parents` and `children` are the two directions of the parent relation. `aliases` are tags that
+ * alias to this one, `aliased` the tags this one aliases to.
  */
 export interface TagRelationships {
   parents: number[];
@@ -172,11 +169,9 @@ export interface MimeCount {
 }
 
 /**
- * Aggregate database counts (GET /db/stats). `mappings` is normally a fast reltuples estimate over the
- * partitioned tag_mappings table (exact COUNT would be a full scan); when the estimate is unavailable
- * (table not yet analysed) the server falls back to an exact count. `mappings_estimated` says which,
- * so the UI only shows a "≈" qualifier when it really is an estimate. Pairs with GET /db/stats/sunburst
- * (per-table storage) to back the Database Stats panel.
+ * Aggregate database counts (GET /db/stats). `mappings` is normally a reltuples estimate over the
+ * partitioned tag_mappings table, since an exact COUNT would be a full scan; the server falls back to
+ * an exact count if the table has not been analysed yet. `mappings_estimated` says which was used.
  */
 export interface DatabaseStats {
   records: number;

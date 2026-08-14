@@ -1,12 +1,10 @@
 /**
- * Search — the panel that drives everything downstream. The user builds a query out of tag chips
- * (text tags, `-negation`, and `system:` predicates typed verbatim), picks a sort, and runs it. The
- * ordered id set the server returns is published to `host.results`, which the grid and viewer page
- * against.
+ * Search: the panel that drives everything downstream. The user builds a query out of tag chips (text
+ * tags, `-negation`, and `system:` predicates typed verbatim), picks a sort, and runs it. The ordered
+ * id set the server returns is published to `host.results`, which the grid and viewer page against.
  *
- * Autocomplete is deliberately thin here: debounce + per-keystroke abort live in the hook below, while
- * the caching and prefix-extension reuse that make it feel instant live in the host (autocompleteCache),
- * so this panel only wires the UI. A 2-char minimum is enforced host-side.
+ * Only debounce and per-keystroke abort live here. Caching and prefix-extension reuse live in the
+ * host (autocompleteCache), which also enforces a 2-char minimum.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -60,7 +58,7 @@ type TermRow = {
     fetched: number;
     /** Rows this term took out of the running result. Null for the term that established it. */
     removed: number | null;
-    /** Rows still in the running result after this term — or, when `inverted`, rows excluded from it. */
+    /** Rows still in the running result after this term, or the rows excluded when `inverted`. */
     left: number;
     /** True when `left` counts exclusions rather than matches (a search made only of negations). */
     inverted: boolean;
@@ -97,9 +95,8 @@ function toTermRows(steps: SearchStep[]): TermRow[] {
 }
 
 /**
- * Always milliseconds, with the precision the magnitude deserves. An index-only tag lookup runs in
- * well under a millisecond, so sub-ms values keep three decimals rather than collapsing to `0.0 ms`
- * and hiding the difference between a fast term and a free one.
+ * Always milliseconds. Sub-ms values keep three decimals rather than collapsing to `0.0 ms`, since an
+ * index-only tag lookup runs well under a millisecond.
  */
 function formatMs(micros: number): string {
     if (micros <= 0) return '';
@@ -116,7 +113,7 @@ function queryToken(input: string): string | null {
   return trimmed.startsWith('-') ? trimmed.slice(1) : trimmed;
 }
 
-/** Debounced, per-keystroke-abortable autocomplete. Cache/prefix-reuse is host-side; this is just UI glue. */
+/** Debounced, per-keystroke-abortable autocomplete. Caching and prefix reuse are host-side. */
 function useAutocomplete(host: PanelProps['host'], input: string): AutocompleteResult[] {
   const [suggestions, setSuggestions] = useState<AutocompleteResult[]>([]);
 

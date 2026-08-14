@@ -1,5 +1,5 @@
 /**
- * Notes — free-text notes attached to the focused record. Reads /records/{id}/notes ([{note_id,text}]);
+ * Notes: free-text notes attached to the focused record. Reads /records/{id}/notes ([{note_id,text}]);
  * add posts text/plain to /add_note, remove deletes /remove_note/{note_id}. Both mutations return the
  * updated note list, so the panel adopts the response directly. Follows the selection like Record Info.
  */

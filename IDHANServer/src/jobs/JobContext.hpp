@@ -27,9 +27,9 @@ namespace Json
 class Value;
 }
 
-//! Runs JobTask coroutines on a dedicated trantor event-loop thread pool. Jobs are process-local
-//! (IDs are not persisted and reset on restart) and completed jobs are retained for one hour. Access
-//! the single instance via getJobRuntime(); enqueue work with queueJob().
+//! Runs JobTask coroutines on a dedicated trantor event-loop thread pool. Jobs are process-local:
+//! IDs are not persisted and reset on restart. Completed jobs are retained for job_retention_period
+//! (JobContext.cpp). Access the single instance via getJobRuntime(); enqueue work with queueJob().
 class JobRuntime
 {
 	std::unique_ptr< trantor::EventLoopThreadPool > m_pool {};

@@ -336,9 +336,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags(
 	const RecordID record_id )
 {
 	logging::ScopedTimer timer { "addTags" };
-	// the path will contain a record_id
-	// it will also contain a tag_domain_id as a extra parameter, if no parameter is specified, then it will instead use
-	// the 'default' domain
+	// The path carries a record_id, and a tag_domain_id may be given as a query parameter. Without
+	// one, the 'default' domain is used.
 
 	const auto json_ptr { request->getJsonObject() };
 	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );

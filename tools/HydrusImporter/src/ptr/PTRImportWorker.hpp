@@ -45,7 +45,7 @@ struct ContentStats
 	int aliases_removed = 0;
 };
 
-//! One row of PTR import history — the stats for a single completed PTR update batch.
+//! One row of PTR import history: the stats for a single completed PTR update batch.
 struct PTRHistoryEntry
 {
 	int update_index = 0;

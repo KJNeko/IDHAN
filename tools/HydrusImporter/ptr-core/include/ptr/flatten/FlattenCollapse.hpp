@@ -39,7 +39,7 @@ struct CollapseProgressStats
 //!
 //! \warning These are called from collapseBuckets's worker threads, not from the calling thread.
 //!          They are serialised against each other, so they need no locking of their own and may
-//!          share mutable state -- but one slow callback stalls every worker, so keep them to
+//!          share mutable state. One slow callback stalls every worker, so keep them to
 //!          bumping counters or emitting a queued signal.
 struct CollapseCallbacks
 {
@@ -69,10 +69,9 @@ struct CollapseOptions
 
 	//! Drop terminal deletes instead of writing them into chunks.
 	//!
-	//! A chain ending in a delete collapses to that delete alone, never to a paired add, so at
-	//! import it is a removeTags for a mapping this import never made. Against a database whose
-	//! tags came only from the PTR that is always a no-op, and dropping them costs nothing while
-	//! shrinking every chunk. They are still counted either way; only whether they are written
+	//! A chain ending in a delete collapses to that delete alone, never to a paired add, so at import
+	//! it is a removeTags for a mapping this import never made. That is a no-op against a database
+	//! whose tags came only from the PTR. They are counted either way; only whether they are written
 	//! changes.
 	bool discard_terminal_deletes { false };
 
@@ -82,16 +81,13 @@ struct CollapseOptions
 
 //! Collapses every bucket in \p work_dir into record-major chunks in \p out_dir.
 //!
-//! Each bucket is read whole, sorted, and scanned once: sorting makes every (hash_id, tag_id)
-//! chain contiguous and chronological, so collapsing is a local decision over a span. Because a
-//! bucket holds every event for each of its records, a record's output is final when its span ends.
+//! Each bucket is read whole, sorted, and scanned once: sorting makes every (hash_id, tag_id) chain
+//! contiguous and chronological, so collapsing is a local decision over a span. A bucket holds every
+//! event for each of its records, so a record's output is final when its span ends.
 //!
-//! options.thread_count worker threads read, sort, and walk chains for different buckets
-//! concurrently. Survivors go into one shared batch, but
-//! sealing a full batch -- building its string table and deflating tens of megabytes, seconds of
-//! CPU repeated hundreds of times over a corpus -- happens with no lock held, so several workers
-//! can be sealing at once and none of them blocks the others. All that is serialised is appending
-//! records and firing the callbacks.
+//! options.thread_count workers handle different buckets concurrently. Survivors go into one shared
+//! batch, but sealing a full batch happens with no lock held, so several workers can seal at once.
+//! Only appending records and firing the callbacks is serialised.
 //!
 //! Buckets do not complete in index order, so which chunk a given record lands in is not
 //! deterministic across runs. Every record's final tag set, and every total, is unaffected.
@@ -106,7 +102,7 @@ struct CollapseOptions
 //! \param usage Marked with every tag id that reaches a chunk, so the caller can tell which of the
 //!        corpus's definitions were never written anywhere.
 //!
-//! \throws Anything a worker threw -- a full disk, a truncated bucket, a zlib failure -- rethrown
+//! \throws Anything a worker threw, such as a full disk, a truncated bucket or a zlib failure, rethrown
 //!         here once the pool has joined, so a failure mid-run is reportable rather than fatal to
 //!         the process.
 CollapseResult collapseBuckets( const std::filesystem::path& work_dir,

@@ -1,17 +1,13 @@
 /**
  * Shared tag-autocomplete cache behind host.tags.autocomplete.
  *
- * Two things make typing feel instant, and both live here so every panel gets them free:
+ * Results are cached by `needle|domain|limit`. The server matches `tag_text LIKE '%needle%'`, so any
+ * tag containing `needle` also contains every substring of it: when a shorter query returned its
+ * complete match set (fewer than `limit` rows), a longer query is that same set filtered client-side,
+ * with no request at all.
  *
- *  - **Result cache** keyed by `needle|domain|limit`, so re-querying a prefix issues no network.
- *  - **Prefix-extension reuse.** The server matches `tag_text LIKE '%needle%'` (substring, verified in
- *    autocompleteTag.cpp). Any tag containing `needle` also contains every substring of `needle`, so if
- *    a shorter query returned its *complete* match set (fewer than `limit` rows), the longer query's
- *    matches are exactly that set filtered by substring containment — zero requests. "sam" complete ⇒
- *    "samu" is a client-side filter of it.
- *
- * A 2-char minimum is enforced here too: on a multi-million-tag DB a 1-char needle makes the server
- * compute similarity()+GROUP BY over a huge candidate set before LIMIT (see the plan's autocomplete note).
+ * A 2-char minimum is enforced here. On a multi-million-tag database a 1-char needle makes the server
+ * compute similarity() and GROUP BY over a huge candidate set before LIMIT.
  */
 
 import { api } from '../api/client';
@@ -20,7 +16,7 @@ import type { AutocompleteResult } from '../api/types';
 /** Below this the server-side candidate set is too large to be worth querying; the UI shows nothing. */
 const MIN_NEEDLE = 2;
 const DEFAULT_LIMIT = 100;
-/** Bound the cache; the user can type through a lot of prefixes in one session. FIFO is fine here. */
+/** Bounds the cache. FIFO eviction is fine here. */
 const CACHE_LIMIT = 500;
 
 interface CacheEntry {

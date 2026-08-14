@@ -8,7 +8,7 @@ using idhan::SearchBuilder;
 using idhan::SortOrder;
 using idhan::SortType;
 
-//! Position of \p id within \p ids, or npos if absent — used to assert relative ordering without
+//! Position of \p id within \p ids, or npos if absent. Used to assert relative ordering without
 //! depending on other rows that may share the same domain-agnostic query.
 std::size_t indexOf( const std::vector< RecordID >& ids, const RecordID id )
 {
@@ -111,7 +111,7 @@ TEST_F( SearchFixture, DurationOrdersAndExcludesNonVideoRecords )
 	const auto r_long { createSearchableRecord( "duration_long", 100, "video/mp4" ) };
 	insertVideoMetadata( r_long, /* duration */ 60.0, 30.0, 640, 480, 1000, false );
 
-	// no video_metadata row at all — NULL duration means "excluded", not "sorts last"
+	// no video_metadata row at all: NULL duration means "excluded", not "sorts last"
 	createSearchableRecord( "duration_none", 100, "image/jpeg" );
 
 	const auto ids_asc { sortedIds( SortType::DURATION, SortOrder::ASC ) };
@@ -164,7 +164,7 @@ TEST_F( SearchFixture, WidthOrdersAcrossAllThreeMetadataTablesAndExcludesRecords
 	const auto r_project { createSearchableRecord( "width_project", 100, "image/jpeg" ) };
 	insertImageProjectMetadata( r_project, 900, 900 );
 
-	// no resolution data anywhere — excluded, not sorted last
+	// no resolution data anywhere: excluded, not sorted last
 	createSearchableRecord( "width_none" );
 
 	const auto ids { sortedIds( SortType::WIDTH ) };

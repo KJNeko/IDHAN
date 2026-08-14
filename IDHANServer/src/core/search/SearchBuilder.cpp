@@ -66,11 +66,10 @@ std::string nameOf( const NameMap& names, const TagID id )
 	return format_ns::format( "\'{}\'", it->second );
 }
 
-//! Bytes per unit suffix. Binary multipliers, matching Hydrus -- `KB` there is 1024 bytes -- so a
+//! Bytes per unit suffix. Binary multipliers, matching Hydrus where `KB` is 1024 bytes, so a
 //! filesize search copied out of Hydrus selects the same files here. \p unit is the text trailing
-//! the number, whitespace and casing included; empty means bytes. \throws std::invalid_argument for
-//! anything else, which the endpoints turn into a 400, rather than silently reading it as bytes and
-//! answering a different question.
+//! the number, whitespace and casing included; empty means bytes.
+//! \throws std::invalid_argument for anything else, which the endpoints turn into a 400.
 std::uint64_t byteUnitMultiplier( const std::string_view unit )
 {
 	// "  MegaBytes" and "mb" have to land on the same key.

@@ -120,18 +120,16 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "createRecord" };
-	// the request here should be either an octet stream, or json. If it's an octet stream, then it will be a file we
-	// can hash.
+	// Either an octet stream, which is a file to hash, or JSON.
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch-enum"
-	// It's really not possible for us to have every single enum here.
+	// Not every content type needs a case.
 	switch ( request->getContentType() )
 	{
-		// Here we are expecting that the data being shoved into the request is actually a file.
 		case drogon::CT_APPLICATION_OCTET_STREAM:
 			co_return co_await createRecordFromOctet( request );
-		// In this case we have either a list of hashes, or a single hash
+		// A list of hashes, or a single hash.
 		case drogon::CT_APPLICATION_JSON:
 			co_return co_await createRecordFromJson( request );
 		default:

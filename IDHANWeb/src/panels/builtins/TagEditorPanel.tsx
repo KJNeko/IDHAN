@@ -1,11 +1,10 @@
 /**
- * Tag Editor — views the focused record's active tags with provenance (explicit vs. aliased-in vs.
- * inherited-from-a-parent, via /records/{id}/tags/active/verbose) and edits tags across the whole
- * selection. Viewing one record while editing many is the standard booru model; the header makes the
- * edit scope explicit.
+ * Tag Editor: views the focused record's active tags with provenance (explicit, aliased-in, or
+ * inherited from a parent, via /records/{id}/tags/active/verbose) and edits tags across the whole
+ * selection. The header makes that edit scope explicit.
  *
- * The verbose endpoint returns ids only, so text comes from the shared, coalesced tag-info cache
- * (host.tags.resolve). Only explicitly-applied tags can be removed — aliased/inherited tags are
+ * The verbose endpoint returns ids only, so text comes from the shared tag-info cache
+ * (host.tags.resolve). Only explicitly-applied tags can be removed; aliased and inherited tags are
  * computed, so they show as read-only with a badge.
  */
 

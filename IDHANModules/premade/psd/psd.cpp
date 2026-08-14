@@ -218,7 +218,7 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertCMYKtoIn
 		const std::uint8_t m { cmyk[ ( pixelCount * 1 ) + i ] };
 		const std::uint8_t y { cmyk[ ( pixelCount * 2 ) + i ] };
 		const std::uint8_t k { cmyk[ ( pixelCount * 3 ) + i ] };
-		// Obviously, this does not take ICC profiles into account, but hopefully it is a good enough first approximation.
+		// Naive conversion; ICC profiles are not taken into account.
 		rgb[ i * 3 + 0 ] = static_cast< std::uint8_t >( ( 255 - c ) * ( 255 - k ) / 255 );
 		rgb[ i * 3 + 1 ] = static_cast< std::uint8_t >( ( 255 - m ) * ( 255 - k ) / 255 );
 		rgb[ i * 3 + 2 ] = static_cast< std::uint8_t >( ( 255 - y ) * ( 255 - k ) / 255 );

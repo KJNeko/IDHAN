@@ -32,19 +32,17 @@ std::filesystem::path thumbnailPath( const std::string& hex, const std::size_t s
 }
 
 //! Cache-Control for a served thumbnail. There is no revalidation: within max-age the browser reuses
-//! its copy with no request at all. The window is a fixed one year (not immutable, and not operator
-//! configurable). Invalidation is manual — after changing generation settings the operator
-//! regenerates/purges, and clients pick up the change once their cache entry ages out (or they clear
-//! it).
+//! its copy with no request at all. The window is a fixed one year, neither immutable nor operator
+//! configurable. Invalidation is manual: after changing generation settings the operator regenerates
+//! or purges, and clients pick up the change once their cache entry ages out.
 std::string thumbnailCacheControl()
 {
 	return std::format( "private, max-age={}", helpers::default_max_age.count() );
 }
 
-//! Whether the cache holds a usable thumbnail at this path. Existence alone is not enough. A zero-
-//! byte file here is a cache entry that will be served as an empty image on every subsequent
-//! request, so it is reported as a miss and regenerated instead. Taken by value: the stat is
-//! submitted to the ring and the kernel reads the path after this coroutine has already suspended.
+//! Whether the cache holds a usable thumbnail at this path. Existence alone is not enough: a
+//! zero-byte file would be served as an empty image on every request, so it counts as a miss and is
+//! regenerated. Taken by value, because the kernel reads the path after this coroutine has suspended.
 drogon::Task< bool > hasCachedThumbnail( std::filesystem::path path )
 {
 	const auto size { co_await IOUring::getInstance().fileSize( path ) };

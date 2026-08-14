@@ -1,6 +1,6 @@
 /**
- * Server push/pull actions on the layout store (M5). The REST client is mocked — these tests cover the
- * store's orchestration (push then refresh, pull-and-migrate, busy-flag lifecycle), not the wire.
+ * Server push/pull actions on the layout store. The REST client is mocked, so these cover the store's
+ * orchestration (push then refresh, pull-and-migrate, busy-flag lifecycle), not the wire.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -40,7 +40,7 @@ beforeEach(() => {
   });
 });
 
-describe('layout store — server sync', () => {
+describe('layout store: server sync', () => {
   it('refreshServerLayouts populates serverLayouts', async () => {
     await useLayoutStore.getState().refreshServerLayouts();
     expect(mocks.list).toHaveBeenCalledOnce();

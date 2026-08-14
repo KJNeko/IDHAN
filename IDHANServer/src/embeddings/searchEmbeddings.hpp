@@ -29,7 +29,7 @@ struct SearchHit
  *  a lot of latency for what is one index scan.
  *
  *  \param module Only needed for text terms, and may be null when the query has none. The caller is
- *         responsible for having checked supportsText() -- a record-only query never touches the
+ *         responsible for having checked supportsText(). A record-only query never touches the
  *         module system at all. */
 [[nodiscard]] ExpectedTask< std::vector< SearchHit > > searchEmbeddings(
 	std::shared_ptr< modules::RemoteModule > module,

@@ -1,16 +1,10 @@
 /**
- * Database Stats — an at-a-glance view of the IDHAN database: aggregate counts, PostgreSQL storage
- * per table, on-disk clusters, and record counts by mime type.
+ * Database Stats: aggregate counts, PostgreSQL storage per table, on-disk clusters, and record
+ * counts by mime type. The storage and content charts cap at 5 segments plus a folded "Other";
+ * selecting a table adds an inner ring with only that table's heap/index split.
  *
- * Replaces the old two-ring Sunburst chart, whose outer ring exploded every table into one sliver
- * per index — lots of noise for little signal. Storage and content-by-type are now capped donut
- * charts (≤5 segments + a folded "Other") with a legend/table twin; storage adds a second, inner
- * ring for whichever table is currently selected, showing only that table's heap/index split —
- * never every table's indexes at once, which is what made the old sunburst noisy.
- *
- * The panel `type` is still the legacy `sunburst-stats` slug: it is an internal id embedded in saved
- * layout documents, so keeping it means every existing layout keeps rendering this panel instead of
- * tombstoning. Only the user-facing title/description changed.
+ * The panel `type` is the legacy `sunburst-stats` slug. It is embedded in saved layout documents,
+ * so changing it would tombstone every existing layout.
  */
 
 import { useCallback, useEffect, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
@@ -26,7 +20,6 @@ interface Cluster {
   readonly: boolean;
   file_count: number;
   size: { used: number; limit: number; available: number };
-  /** Mime breakdown of the files stored in this specific cluster. */
   by_mime: MimeCount[];
 }
 
@@ -47,10 +40,8 @@ export interface StorageBreakdown {
   grand: number;
 }
 
-/**
- * Turn the raw storage tree into a sorted breakdown, folding tables below `minFraction` of the grand
- * total into `minor`. Pure and exported so the folding is unit-testable.
- */
+/** Turns the raw storage tree into a sorted breakdown, folding tables below `minFraction` of the
+ * grand total into `minor`. */
 export function buildStorageBreakdown(root: StorageNode | null, minFraction = 0.01): StorageBreakdown {
   const empty: StorageBreakdown = { major: [], minor: [], grand: 0 };
   if (!root?.children) return empty;
@@ -83,14 +74,14 @@ function pct(value: number, total: number): number {
 }
 
 const DONUT_PALETTE = ['#3987e5', '#008300', '#d55181', '#c98500', '#199e70', '#d95926'] as const;
-// The "Other" fold bucket is not a categorical slot — it reads as neutral/de-emphasized, not identity.
+// Neutral, so the fold bucket does not read as a category of its own.
 const OTHER_COLOR = '#9aa0aa';
 
 export interface DonutSegment {
   label: string;
   value: number;
   color: string;
-  /** Optional secondary line shown under the label in DonutLegend (e.g. capacity, a status flag). */
+    /** Secondary line shown under the label in DonutLegend, such as capacity or a status flag. */
   sub?: string;
 }
 
@@ -98,18 +89,15 @@ export interface DonutRing {
   segments: DonutSegment[];
   otherValue: number;
   otherCount: number;
-  /** The individual items folded into "Other", sorted descending — what the legend expands to show. */
+    /** Items folded into "Other", largest first. The legend expands to show them. */
   otherItems: DonutSegment[];
   total: number;
 }
 
 /**
- * Rank the given items by value, keep the top `maxSegments` with a fixed-order palette color each,
- * and fold everything past that into a single "Other" bucket — regardless of how large an individual
- * folded item is. This bounds segment count (unlike a percentage threshold), which is what keeps a
- * donut chart readable. The folded items themselves are kept (as `otherItems`, all sharing the neutral
- * "Other" color) so a legend can offer them up on request rather than losing them entirely. Pure and
- * exported so the capping/folding is unit-testable.
+ * Ranks items by value, keeps the top `maxSegments` with a palette color each, and folds the rest
+ * into one "Other" bucket regardless of how large an individual folded item is. The folded items are
+ * kept in `otherItems` so the legend can expand them.
  */
 export function buildDonutRing(items: { name: string; value: number; sub?: string }[], maxSegments = 5): DonutRing {
   const sorted = items.filter((i) => i.value > 0).sort((a, b) => b.value - a.value);
@@ -122,10 +110,7 @@ export function buildDonutRing(items: { name: string; value: number; sub?: strin
   return { segments, otherValue, otherCount: rest.length, otherItems, total };
 }
 
-/**
- * Sums each mime's bytes across every cluster's own `by_mime` breakdown, folding the null-mime bucket
- * into one "unknown" label. Pure and exported so the aggregation is unit-testable.
- */
+/** Sums each mime's bytes across every cluster's `by_mime`, folding the null mime into "unknown". */
 export function aggregateMimeBytes(clusters: { by_mime: MimeCount[] }[]): { name: string; value: number }[] {
   const totals = new Map<string, number>();
   for (const c of clusters) {
@@ -168,12 +153,7 @@ interface HoverInfo {
   total: number;
 }
 
-/**
- * A donut chart: an outer ring, and optionally an inner ring (e.g. the drill-down detail for
- * whichever outer segment is selected). Hand-rolled SVG — concentric stroked circles via
- * stroke-dasharray/stroke-dashoffset — rather than a charting library, consistent with why the old
- * d3-based sunburst.html was dropped rather than kept.
- */
+/** A donut chart: an outer ring, plus an optional inner ring detailing the selected outer segment. */
 function Donut({
   outer,
   inner,
@@ -237,8 +217,7 @@ function Donut({
   );
 }
 
-/** One row of a DonutLegend: swatch + label(+sub) + formatted value + share. Shared by top-N segment
- * rows, the "Other" row, and its expanded sub-rows so the three only differ in the props they pass. */
+/** One row of a DonutLegend: swatch, label (plus sub), formatted value, share. */
 function LegendRow({
   color,
   label,
@@ -297,10 +276,8 @@ function LegendRow({
   );
 }
 
-/** The legend for a donut ring: swatch + label + formatted value + share, doubling as the table-view
- * twin (every value stays readable without hovering the chart). The folded "Other" row is itself
- * expandable — clicking it reveals the individual items that got folded in, since a user comparing
- * clusters or content types may specifically want to know what "Other" is hiding. */
+/** The legend for a donut ring, doubling as the table view so every value is readable without
+ * hovering the chart. Clicking the folded "Other" row reveals the items inside it. */
 function DonutLegend({
   ring,
   format,
@@ -372,7 +349,7 @@ function DonutLegend({
 function readoutText(hover: HoverInfo | null, format: (n: number) => string, fallback: string): string {
   if (!hover) return fallback;
   const share = hover.total > 0 ? ` (${pct(hover.value, hover.total).toFixed(1)}%)` : '';
-  return `${hover.label} — ${format(hover.value)}${share}`;
+    return `${hover.label}: ${format(hover.value)}${share}`;
 }
 
 /** A collapsible section with a caret header and an optional right-aligned summary. */
@@ -542,7 +519,7 @@ function DatabaseStatsPanel({ host }: PanelProps) {
                 {readoutText(
                   storageHover,
                   formatBytes,
-                  selectedTableObj ? `${selectedTableObj.name} selected — click its segment again to close.` : 'Click a segment for its heap / index breakdown.',
+                    selectedTableObj ? `${selectedTableObj.name} selected. Click its segment again to close.` : 'Click a segment for its heap and index breakdown.',
                 )}
               </p>
               <DonutLegend ring={storageRing} format={formatBytes} selectedLabel={selectedTable} onSelect={selectTable} onHover={setStorageHover} />

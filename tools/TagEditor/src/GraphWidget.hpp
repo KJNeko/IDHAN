@@ -23,8 +23,6 @@ class GraphWidget final : public QGraphicsView
 	QBasicTimer timer;
 
   public slots:
-	// void zoomIn();
-	// void zoomOut();
 
   public:
 

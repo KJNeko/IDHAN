@@ -39,14 +39,6 @@ struct RowGenerator
 		std::optional< TupleStore > m_tuple { std::nullopt };
 		std::exception_ptr m_exception { nullptr };
 
-#ifdef IDHAN_TRACK_CORO_FRAMES
-		// TEMPORARY (coroutine frame leak hunt): RowGenerator is the only coroutine in this tool, and
-		// this is a separate process from the server, so these frames are NOT visible through the
-		// server's GET /coro/frames -- read them by calling idhan::profiling::snapshotCoroFrames()
-		// from within the importer.
-		::idhan::profiling::CoroFrameProbe m_frame_probe { typeid( RowGenerator ).name() };
-#endif
-
 		RowGenerator get_return_object() { return { handle_type::from_promise( *this ) }; }
 
 		// Initial should never suspend so we can setup the sqlite3 stuff

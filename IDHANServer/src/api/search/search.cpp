@@ -24,8 +24,6 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	const auto tag_domain_ids { parseArrayParameters< TagDomainID >( request, "tag_domains" ) };
 
-	// const bool use_stored { request->getOptionalParameter< bool >( "use_stored" ).value_or( false ) };
-
 	SearchBuilder builder {};
 
 	builder.addPositiveTags( tag_ids );

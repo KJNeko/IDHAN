@@ -16,7 +16,7 @@ namespace idhan::hydrus::ptr
 std::filesystem::path bucketPath( const std::filesystem::path& dir, std::size_t bucket );
 
 //! Reads a whole bucket into memory. A bucket is sized to be comfortably RAM-resident.
-//! A file that does not exist reads as empty -- a bucket no event routed to is legitimate.
+//! A file that does not exist reads as empty, since a bucket no event routed to is legitimate.
 std::vector< MappingEvent > readBucket( const std::filesystem::path& path );
 
 //! Fans MappingEvents out to BUCKET_COUNT append-only files, buffering each separately.
@@ -26,7 +26,7 @@ std::vector< MappingEvent > readBucket( const std::filesystem::path& path );
 //! 256 MB in total. Lower it if that is too much.
 //!
 //! write() is thread-safe. Each bucket carries its own lock, so two writers only ever contend when
-//! their events land in the same one of BUCKET_COUNT buckets -- and the mid-stream file write a
+//! their events land in the same one of BUCKET_COUNT buckets, and the mid-stream file write a
 //! full buffer triggers blocks only the other writers to that same bucket. flush(), written() and
 //! the destructor are safe to call concurrently with each other but not with write(): call them
 //! once the writers are done.
@@ -43,7 +43,7 @@ class BucketWriter
 	BucketWriter( BucketWriter&& ) = delete;
 	BucketWriter& operator=( BucketWriter&& ) = delete;
 
-	//! Flushes every buffer. Errors are logged, not thrown -- a destructor must not throw.
+	//! Flushes every buffer. Errors are logged, not thrown, since a destructor must not throw.
 	~BucketWriter();
 
 	void write( const MappingEvent& event );

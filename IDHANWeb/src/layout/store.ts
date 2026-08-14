@@ -1,12 +1,11 @@
 /**
- * Layout state. Split of authority:
- *  - dockview owns *structure* (which panels exist and where) — serialized into engine.tree on change.
- *  - this store owns *config* (per-instance settings) plus persistence and the named-layout catalog.
+ * Layout state. dockview owns structure (which panels exist and where), serialized into engine.tree
+ * on change; this store owns config (per-instance settings) plus persistence and the named-layout
+ * catalog.
  *
- * The working document is auto-saved to localStorage. Named layouts are snapshots the user saves and
- * can reload. A layout can also be pushed to / pulled from the server (M5) to move it between
- * browsers; localStorage stays the source of truth. Identity is the document uuid — the name is
- * renameable.
+ * The working document is auto-saved to localStorage, which stays the source of truth. Named layouts
+ * are snapshots the user saves and can reload, and can be pushed to or pulled from the server to move
+ * them between browsers. Identity is the document uuid; the name is renameable.
  */
 
 import { create } from 'zustand';
@@ -60,7 +59,7 @@ function persistWorking(doc: LayoutDocument): void {
   try {
     localStorage.setItem(WORKING_KEY, JSON.stringify(doc));
   } catch {
-    // storage full/disabled — the in-memory doc still works this session
+      // storage full or disabled; the in-memory doc still works this session
   }
 }
 
@@ -217,7 +216,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
         ? { position: { referencePanel, direction: position.direction } }
         : {}),
     });
-    // dockview fires a layout change → setEngineTree persists the new tree.
+      // dockview fires a layout change, and setEngineTree persists the new tree.
     return instanceId;
   },
 

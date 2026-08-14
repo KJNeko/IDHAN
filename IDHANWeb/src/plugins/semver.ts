@@ -1,11 +1,10 @@
 /**
- * A deliberately tiny semver range check — just enough for plugin manifests to declare which host API
- * they target (`"hostApi": "^1.2.0"`). We avoid pulling a full semver dependency for this one use.
+ * A tiny semver range check, just enough for plugin manifests to declare which host API they target
+ * (`"hostApi": "^1.2.0"`), without pulling in a full semver dependency.
  *
- * Supported ranges: an exact version ("1.2.3"), a wildcard ("*" / "x"), or a caret ("^1.2.3"). A caret
- * allows anything from the given version up to (but not including) the next major — the standard npm
- * meaning, with the pre-1.0 tightening (^0.2.3 is locked to 0.2.x). Anything we don't recognise is
- * treated as incompatible, so an unexpected range fails closed rather than loading a mismatched plugin.
+ * Supported ranges: an exact version ("1.2.3"), a wildcard ("*" / "x"), or a caret ("^1.2.3"). A
+ * caret allows up to but not including the next major, with the usual pre-1.0 tightening (^0.2.3 is
+ * locked to 0.2.x). An unrecognised range is treated as incompatible.
  */
 
 interface Parsed {
@@ -32,7 +31,7 @@ export function satisfiesHostApi(version: string, range: string): boolean {
     const want = parse(trimmed.slice(1));
     if (!want) return false;
     if (host.major !== want.major) return false;
-    // Pre-1.0, caret locks the minor too (^0.2.x ⊃ 0.2.*, not 0.3.*).
+      // Pre-1.0, caret locks the minor too: ^0.2.x allows 0.2.*, not 0.3.*.
     if (want.major === 0 && host.minor !== want.minor) return false;
     return atLeast(host, want);
   }

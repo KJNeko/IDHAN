@@ -95,9 +95,9 @@ class IDHANClient
 	IDHANClient() = delete;
 
 	/**
-	* @brief Upon construction the class will attempt to get the version info from the IDHAN server target.
-	* @note Qt must be initalized before construction of this class. Either a QGuiApplication or an QApplication instance
-	* @param client_name Name of the client that shows up in the server logs for network logs and in the logging statements
+	* @brief Queries the target server's version info on construction.
+	* @note Qt must be initialised first, via a QGuiApplication or QApplication instance.
+	* @param client_name Name this client appears under in the server logs.
 	*/
 	IDHANClient(
 		const QString& client_name,

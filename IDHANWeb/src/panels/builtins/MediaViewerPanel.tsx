@@ -1,11 +1,11 @@
 /**
- * Media Viewer — shows the currently active record full-size. "Active" is whatever the grid last
- * activated (double-click / Open, via the bus) or, failing that, the most recently selected record.
- * Images render as <img>, video/audio through native players (the browser's range machinery handles
- * seeking — see the server's Accept-Ranges fix), everything else offers a download link.
+ * Media Viewer: shows the currently active record full-size. "Active" is whatever the grid last
+ * activated through the bus, or failing that the most recently selected record. Images render as
+ * <img> and video/audio through native players, which seek using the server's range support.
+ * Everything else offers a download link.
  *
- * Neighbours (±1 in the ordered result set) are prefetched on change so paging feels instant, and the
- * viewer can page through the result set itself with the arrow buttons / keys.
+ * The immediate neighbours in the ordered result set are prefetched on change, and the arrow buttons
+ * and keys page through that set.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -43,7 +43,7 @@ function MediaViewerPanel({ host }: PanelProps) {
     if (ids.length > 0) setActiveId(ids[ids.length - 1]!);
   }), [host]);
 
-  // Resolve the active record's kind (image vs video vs …) from the shared metadata cache.
+    // Resolve the active record's kind from the shared metadata cache.
   useEffect(() => {
     if (activeId === null) {
       setMeta(null);

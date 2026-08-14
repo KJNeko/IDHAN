@@ -16,8 +16,8 @@ namespace idhan::search
  * The composite is what makes the algebra legal. The set operations need both operands ordered by
  * the same strict-weak comparator; the sort key alone is not a total order, but record_id is unique,
  * so the pair is. And the key is a property of the record rather than of the set, so two Sets
- * necessarily agree on the key of any record they share -- intersecting two size-ordered Sets
- * therefore yields a size-ordered Set.
+ * necessarily agree on the key of any record they share, so intersecting two size-ordered Sets
+ * yields a size-ordered Set.
  *
  * A Set may be @em inverted, meaning it denotes the complement of the ids it holds. The universe is
  * never constructed: negation is carried as a flag and rewritten through De Morgan at every
@@ -88,7 +88,7 @@ class Set
 	[[nodiscard]] Set negate() const { return ~*this; }
 
 	//! Flips into descending composite order. Applied once, after the algebra, when the search asks
-	//! for DESC -- the fetches always produce ascending order.
+	//! for DESC, since the fetches always produce ascending order.
 	void reverse();
 
 	//! Permutes into a random order. Only meaningful for SortType::RANDOM, which carries no key.

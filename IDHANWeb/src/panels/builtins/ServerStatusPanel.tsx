@@ -1,6 +1,6 @@
 /**
- * Server Status — the panel that absorbs the old static index.html. Reads /version through the host's
- * fetch escape hatch (dogfooding the same surface plugins get) rather than importing the API client.
+ * Server Status: reads /version through the host's fetch escape hatch rather than importing the API
+ * client, dogfooding the same surface plugins get.
  */
 
 import { useEffect, useState } from 'react';

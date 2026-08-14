@@ -39,7 +39,7 @@ class CallInput
 	//! Prepares a record's file on disk as a call input. Opens it; does not read it.
 	[[nodiscard]] static std::expected< CallInput, std::string > forPath( const std::filesystem::path& path );
 
-	//! Prepares bytes the server already holds -- a callback payload, a request body.
+	//! Prepares bytes the server already holds, such as a callback payload or a request body.
 	[[nodiscard]] static std::expected< CallInput, std::string > forBlob( ipc::Blob blob );
 
 	//! The descriptor to attach to a CALL frame. Borrowed; ownership stays here.

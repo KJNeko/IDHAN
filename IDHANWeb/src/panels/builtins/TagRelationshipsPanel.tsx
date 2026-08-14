@@ -1,5 +1,5 @@
 /**
- * Tag Relationships — edit one tag's relationships.
+ * Tag Relationships: edit one tag's relationships.
  *
  * Search a subject tag, then edit its aliases, parents, and children within the selected domain. The
  * relationship endpoints return ids (GET /tags/{domain}/{tag}/relationships); ids are resolved to
@@ -206,7 +206,7 @@ function TagRelationshipsPanel({ host }: PanelProps) {
 
   return (
     <div className="panel-body tag-relationships">
-      <p className="rel-instant-notice">Changes apply instantly — there is no save step.</p>
+        <p className="rel-instant-notice">Changes apply instantly; there is no save step.</p>
       <div className="rel-row">
         <label className="tag-domain">
           Domain

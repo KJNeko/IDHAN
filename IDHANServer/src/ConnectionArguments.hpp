@@ -35,7 +35,7 @@ struct ConnectionArguments
 	spdlog::level::level_enum log_level { spdlog::level::info };
 
 	//! \return The search_path both the migration and the runtime connection must use. Derived, never
-	//!         spelled out at a call site -- see idhan::db::makeSearchPath.
+	//!         spelled out at a call site. See idhan::db::makeSearchPath.
 	[[nodiscard]] std::string searchPath() const { return db::makeSearchPath( schema ); }
 
 	//! \return A libpq connection string built from these arguments.

@@ -680,7 +680,7 @@ void WorkerRunner::runCall( QueuedCall call )
 
 	if ( failure.empty() )
 		spdlog::debug(
-			"Call {} finished: {} on '{}' ({}) in {}ms -- {}",
+			"Call {} finished: {} on '{}' ({}) in {}ms: {}",
 			call.call_id,
 			toString( call.op ),
 			module != nullptr ? module->name() : std::string_view { "<none>" },
@@ -689,7 +689,7 @@ void WorkerRunner::runCall( QueuedCall call )
 			describeResult( call.op, body, payload.get() ) );
 	else
 		spdlog::debug(
-			"Call {} failed: {} on '{}' ({}) after {}ms -- {}",
+			"Call {} failed: {} on '{}' ({}) after {}ms: {}",
 			call.call_id,
 			toString( call.op ),
 			module != nullptr ? module->name() : std::string_view { "<none>" },

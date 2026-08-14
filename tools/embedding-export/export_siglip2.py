@@ -27,7 +27,7 @@ class ImageEncoder(torch.nn.Module):
     """encode_image plus the L2 normalisation, so the graph emits unit vectors directly.
 
     Folding the normalisation in means no consumer can forget it. The module still checks the norm
-    of what comes back, but that check exists to catch a bad export -- not to do the work.
+    of what comes back, but that check exists to catch a bad export, not to do the work.
     """
 
     def __init__(self, model):

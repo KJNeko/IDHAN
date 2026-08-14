@@ -30,7 +30,7 @@ struct SearchStep
 	//! Wall time of the fetch, in microseconds. Zero for fold and slice steps, which are in-memory
 	//! merges whose cost is already implied by the row counts on either side of them.
 	std::int64_t micros { 0 };
-	//! When true the row count denotes a complement -- everything *except* these -- rather than a
+	//! When true the row count denotes a complement, everything except these, rather than a
 	//! membership list.
 	bool inverted { false };
 };

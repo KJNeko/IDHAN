@@ -150,7 +150,7 @@ class SearchBuilder
 	 * appears to ask.
 	 *
 	 * \throws std::invalid_argument if it names no hash, more than one, a malformed one, a comparison
-	 *         other than `=`, or an algorithm other than sha256 -- the only one stored.
+	 *         other than `=`, or an algorithm other than sha256, the only one stored.
 	 */
 	static SHA256 parseHashSearch( std::string_view arguments );
 
@@ -229,7 +229,7 @@ class SearchBuilder
 	std::unordered_map< NamespaceID, std::string > m_namespace_names {};
 
 	//! One subtag wildcard (`cat*girl`) and every tag it resolved to. Within a group the tags are
-	//! OR'd; across groups they combine like plain tags -- positives INTERSECT, negatives UNION.
+	//! OR'd; across groups they combine like plain tags: positives INTERSECT, negatives UNION.
 	struct WildcardGroup
 	{
 		std::vector< TagID > tag_ids {};

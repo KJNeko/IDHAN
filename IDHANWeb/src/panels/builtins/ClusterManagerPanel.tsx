@@ -1,7 +1,7 @@
 /**
- * Cluster Manager — the on-disk storage clusters files live in (GET /clusters/list). Supports the full
- * lifecycle: add a path, toggle read-only, rename, cap size, rescan, and remove. The modify call is a
- * PATCH (the CORS allow-list had to gain PATCH for this to be reachable cross-origin).
+ * Cluster Manager: the on-disk storage clusters files live in (GET /clusters/list). Covers the full
+ * lifecycle: add a path, toggle read-only, rename, cap size, rescan, and remove. Modify is a PATCH,
+ * so the CORS allow-list must permit PATCH for this to be reachable cross-origin.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -44,7 +44,7 @@ export function sanitizeScanParams(params: ScanParams, clusterReadonly: boolean)
     return {...params, fix_extensions: false, remove_missing_files: false};
 }
 
-// Encode as ?scan_mime=true&... — Drogon's fromString<bool> reads "true"/"false".
+// Encode as ?scan_mime=true&... since Drogon's fromString<bool> reads "true"/"false".
 export function buildScanQuery(params: ScanParams): string {
   const qs = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -175,7 +175,7 @@ function ClusterManagerPanel({ host }: PanelProps) {
     }
   }
 
-  // One-click hash-only scan — no modal.
+    // One-click hash-only scan, no modal.
   function fastScan(c: Cluster) {
     setScanTarget(null);
     void runScan(c, fastScanPreset(DEFAULT_SCAN_PARAMS));
@@ -330,7 +330,7 @@ function ClusterManagerPanel({ host }: PanelProps) {
                     type="button"
                     className="toolbar-button"
                     disabled={busy}
-                    title="Hash only — skips mime and metadata"
+                    title="Hash only, skips mime and metadata"
                     onClick={() => fastScan(c)}
                   >
                     Fast scan
@@ -350,13 +350,13 @@ function ClusterManagerPanel({ host }: PanelProps) {
           <div className="scan-modal" onClick={(e) => e.stopPropagation()}>
             <div className="scan-modal-title">Scan cluster “{scanTarget.name}”</div>
             {scanTarget.readonly && (
-              <div className="muted">This cluster is read-only — file-modifying options are disabled.</div>
+                <div className="muted">This cluster is read-only, so file-modifying options are disabled.</div>
             )}
             <button
               type="button"
               className="toolbar-button scan-modal-preset"
               disabled={busy}
-              title="Hash only — skips mime and metadata"
+              title="Hash only, skips mime and metadata"
               onClick={() => {
                 if (scanTarget) fastScan(scanTarget);
               }}

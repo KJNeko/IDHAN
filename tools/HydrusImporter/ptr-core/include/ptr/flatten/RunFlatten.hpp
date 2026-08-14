@@ -15,7 +15,7 @@ namespace idhan::hydrus::ptr
 {
 
 //! Scratch subdirectory of the output directory. Holds the buckets and the definition store, and
-//! is removed once the chunks are written -- chunks carry their own strings, so nothing in here
+//! is removed once the chunks are written. Chunks carry their own strings, so nothing in here
 //! is needed at import time.
 inline constexpr const char* WORK_SUBDIRECTORY { "work" };
 
@@ -25,11 +25,11 @@ inline constexpr const char* WORK_SUBDIRECTORY { "work" };
 inline constexpr const char* OUTPUT_STAGING_SUBDIRECTORY { "output" };
 
 //! Conventional output location: a subdirectory of the PTR files directory, so a corpus and its
-//! compacted form travel together rather than as unrelated sibling folders.
+//! compacted form travel together.
 //!
-//! Nesting the output inside the source is safe. The scan resolves update files by exact name
-//! from the metadata rather than globbing the directory, so it never sees the output, and the
-//! Import tab keys on compact_manifest.json, which exists only in the subdirectory.
+//! Nesting the output inside the source is safe: the scan resolves update files by exact name from
+//! the metadata rather than globbing, and the Import tab keys on compact_manifest.json, which exists
+//! only in the subdirectory.
 inline constexpr const char* COMPACT_SUBDIRECTORY { "compact" };
 
 //! Free space required before a flatten will start. The full corpus spills roughly 38 GB of
@@ -64,7 +64,7 @@ struct FlattenOutcome
 MetadataUpdate loadCorpusMetadata( const std::filesystem::path& dir );
 
 //! How a flatten run should behave. Defaults are production's, so a caller overrides only what it
-//! actually cares about -- which for everything but discard_terminal_deletes means the tests.
+//! actually cares about, which for everything but discard_terminal_deletes means the tests.
 struct FlattenOptions
 {
 	std::size_t max_records_per_chunk { MAX_RECORDS_PER_CHUNK };

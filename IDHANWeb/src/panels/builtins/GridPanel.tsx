@@ -1,13 +1,10 @@
 /**
- * Thumbnail Grid — the workhorse view. It is backed directly by the shared result set's Int32Array
- * (host.results), so a 100k set costs ~400 KB and index math is pure arithmetic. Rows are virtualized
- * with @tanstack/react-virtual, keeping the DOM to the visible window plus a little overscan regardless
- * of set size; discrete tile sizes {128,256,512} give fixed rows so there is no measurement pass.
+ * Thumbnail Grid: the workhorse view, backed directly by the shared result set's Int32Array
+ * (host.results), so a 100k set costs around 400 KB. Rows are virtualized with
+ * @tanstack/react-virtual, keeping the DOM to the visible window plus a little overscan regardless of
+ * set size; discrete tile sizes {128,256,512} give fixed rows, so there is no measurement pass.
  *
- * Thumbnails are plain <img> with lazy/async decode — windowing already bounds how many load at once.
- * The velocity gate and concurrency cap the plan describes are M7 perf hardening; measure first.
- *
- * Selection is driven here (click / ctrl-toggle / shift-range) and pushed to host.selection so the
+ * Selection is driven here (click, ctrl-toggle, shift-range) and pushed to host.selection so the
  * viewer, record info, and tag editor follow along. Double-click activates a record on the bus.
  */
 
@@ -23,7 +20,7 @@ const OVERSCAN_ROWS = 2;
 type Config = { tileSize: number };
 const DEFAULT_CONFIG: Config = { tileSize: 256 };
 
-/** Bus topic the grid emits on double-click / Enter; the viewer focuses the activated record. */
+/** Bus topic the grid emits on double-click or Enter; the viewer focuses the activated record. */
 export const RECORD_ACTIVATE_TOPIC = 'record:activate';
 
 function readTileSize(raw: Partial<Config>): number {
@@ -31,7 +28,7 @@ function readTileSize(raw: Partial<Config>): number {
   return typeof size === 'number' && Number.isFinite(size) && size > 0 ? Math.round(size) : DEFAULT_CONFIG.tileSize;
 }
 
-/** Track the scroll container's content width so we can pack a whole number of fixed-width tiles per row. */
+/** Tracks the scroll container's content width, to pack a whole number of fixed-width tiles per row. */
 function useColumns(ref: React.RefObject<HTMLDivElement | null>, tile: number): number {
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {

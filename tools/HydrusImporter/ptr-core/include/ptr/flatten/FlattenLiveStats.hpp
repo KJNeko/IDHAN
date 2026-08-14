@@ -26,7 +26,7 @@ struct FlattenLiveStats
 	bool discard_terminal_deletes { false };
 
 	//! Tag definition accounting. Unlike every other counter these cannot be known until the
-	//! relations file has been written -- a tag is only unused once nothing more can use it -- so
+	//! relations file has been written, since a tag is only unused once nothing more can use it, so
 	//! they stay zero for the whole run and land in the final update. tags_counted says which it
 	//! is, so a host can show "pending" rather than a misleading zero.
 	bool tags_counted { false };

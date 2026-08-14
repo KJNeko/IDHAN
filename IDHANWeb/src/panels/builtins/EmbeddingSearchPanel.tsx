@@ -1,5 +1,5 @@
 /**
- * Embedding Search — searches by meaning rather than by tag.
+ * Embedding Search: searches by meaning rather than by tag.
  *
  * A query is a signed weighted sum of unit vectors: text phrases through the model's text tower, and
  * reference records through their stored embeddings. Positive terms pull the query toward them,
@@ -9,7 +9,7 @@
  * Reference images are records already in the collection, never uploads: their vectors are already
  * in the table, so a reference costs a lookup rather than a model call. They come either from the
  * current selection or from an id typed into the same box as the phrases (`record:1234`), so a
- * record that is not on screen — one named by a log line or another panel — is still reachable.
+ * record that is not on screen is still reachable.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -54,10 +54,8 @@ function readConfig(raw: Partial<Config>): Config {
 }
 
 /**
- * One term row: its sign, weight, and label, with the controls that edit them in place.
- *
- * The columns are fixed rather than content-sized so the signs and weights read down the list as
- * columns; a label-width-driven layout would scatter them.
+ * One term row: its sign, weight, and label, with the controls that edit them in place. The columns
+ * are fixed rather than content-sized so signs and weights line up down the list.
  */
 function TermRow({
   term,

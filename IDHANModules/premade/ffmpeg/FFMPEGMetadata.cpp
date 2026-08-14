@@ -36,8 +36,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 	OpaqueInfo opaque_info { .m_file = &data.file, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
-	// std::array< std::byte, BUFFER_SIZE > buffer {};
-	// std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
+	// av_malloc, not new: avio takes ownership and frees it with av_free.
 	unsigned char* buffer_ptr { static_cast< unsigned char* >( av_malloc( BUFFER_SIZE ) ) };
 
 	const std::shared_ptr< AVIOContext > avio_context(

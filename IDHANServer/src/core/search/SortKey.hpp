@@ -21,8 +21,8 @@ enum class SortKeyType
 	Hash
 };
 
-//! The sort key for a whole Set, stored as one column rather than one variant per element -- a
-//! per-element variant would spend tag and padding bytes on every record.
+//! The sort key for a whole Set, stored as one column rather than one variant per element, which
+//! would spend tag and padding bytes on every record.
 using SortKeyColumn =
 	std::variant< std::monostate, std::vector< std::int64_t >, std::vector< double >, std::vector< SHA256 > >;
 
@@ -35,8 +35,8 @@ struct SortKeySpec
 	//! SQL producing the key. Empty for RANDOM, which has no key.
 	std::string_view expression;
 	SortKeyType type;
-	//! When true a NULL key excludes the record, matching the pre-rewrite behaviour where a record
-	//! with no resolution data was dropped from a width-sorted search rather than sorted last.
+	//! When true a NULL key excludes the record rather than sorting it last, so a record with no
+	//! resolution data drops out of a width-sorted search.
 	bool exclude_null;
 };
 

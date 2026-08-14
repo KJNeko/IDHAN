@@ -14,7 +14,7 @@ bool contains( const std::vector< RecordID >& ids, const RecordID id )
 
 //! Exercises the `namespace:*` wildcard, which resolves to the filter_namespace_N / filter_namespaces
 //! CTE chain in SearchBuilder::construct(). Those CTEs join positive_filter, so they only make sense
-//! emitted after it — a mis-ordered WITH clause fails outright, which every test here would catch.
+//! emitted after it. A mis-ordered WITH clause fails outright, which every test here would catch.
 class NamespaceWildcardFixture : public SearchFixture
 {
   protected:

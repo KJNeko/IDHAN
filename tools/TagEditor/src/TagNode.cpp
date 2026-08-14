@@ -171,8 +171,6 @@ void TagNode::calculateForces()
 	auto yvel { force_direction.y() };
 
 	// Limit maximum velocity
-	// if ( qAbs( xvel ) < 0.01 ) xvel = 0;
-	// if ( qAbs( yvel ) < 0.01 ) yvel = 0;
 
 	new_pos = pos() + QPointF( xvel, yvel );
 }

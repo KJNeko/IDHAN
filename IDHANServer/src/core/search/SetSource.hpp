@@ -45,10 +45,10 @@ struct PredicateSource
 //! Records carrying \p tag, following aliases and parents exactly as active_tag_mappings_final does.
 Task< Set > fetchTag( FetchContext ctx, TagID tag, std::string label );
 
-//! Records carrying at least one of \p tags -- the OR a resolved wildcard group stands for.
+//! Records carrying at least one of \p tags, the OR a resolved wildcard group stands for.
 Task< Set > fetchAnyTag( FetchContext ctx, std::vector< TagID > tags, std::string label );
 
-//! Records carrying at least one tag in \p tag_namespace -- the `namespace:*` wildcard.
+//! Records carrying at least one tag in \p tag_namespace, the `namespace:*` wildcard.
 Task< Set > fetchNamespace( FetchContext ctx, NamespaceID tag_namespace, std::string label );
 
 //! Records satisfying \p predicate.

@@ -1,7 +1,7 @@
 /**
- * Job Monitor — a live view of the server's in-memory jobs. Polls GET /jobs/status (no body → all jobs;
- * cleanup defaults to false, so polling never reaps a job). Jobs are process-local and reset on server
- * restart, so this reflects the current process only — it is not a durable history.
+ * Job Monitor: a live view of the server's in-memory jobs. Polls GET /jobs/status with no body for
+ * every job; cleanup defaults to false, so polling never reaps one. Jobs are process-local and reset
+ * on server restart, so this is not a durable history.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

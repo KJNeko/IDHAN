@@ -1,6 +1,6 @@
 /**
- * Runtime shim for `react-dom`. A panel rarely needs this (the host owns the render root), but portals
- * (`createPortal`) and a few utilities live here. Re-exports the host's instance. See react.mjs.
+ * Runtime shim for `react-dom`. A panel rarely needs this, since the host owns the render root, but
+ * `createPortal` and a few utilities live here. Re-exports the host's instance. See react.mjs.
  */
 const ns = globalThis.__IDHAN_RUNTIME__?.reactDom;
 if (!ns) throw new Error('[idhan] react-dom not installed before a plugin imported it');

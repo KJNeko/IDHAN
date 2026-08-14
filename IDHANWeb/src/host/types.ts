@@ -1,12 +1,7 @@
 /**
- * @idhan/host — the surface a panel talks to instead of reaching into app internals.
- *
- * Built-in panels consume exactly this, the same as third-party plugins will (M6). Because every
- * panel shares the JS realm, this is a convention boundary, not a security boundary — it exists so
- * panels don't couple to app internals, not to sandbox them.
- *
- * For M3 the types are the frozen-ish contract; a few methods (jobs.watch) are intentionally minimal
- * and will harden as real panels exercise them in M4.
+ * The surface a panel talks to instead of reaching into app internals. Built-in panels consume
+ * exactly this, the same as third-party plugins. Every panel shares the JS realm, so this is a
+ * convention boundary and not a sandbox.
  */
 
 import type { ComponentType } from 'react';
@@ -46,10 +41,9 @@ export interface BusApi {
 }
 
 /**
- * An ordered, immutable set of record ids produced by a search. This is what backs the grid — kept
- * separate from `selection` (which is the user's chosen subset). Ids are an `Int32Array` so a 100k
- * result set costs ~400 KB rather than a boxed `number[]`, and index math against it is pure
- * arithmetic (see the grid's virtualization).
+ * An ordered, immutable set of record ids produced by a search. Backs the grid, and is separate from
+ * `selection`, which is the user's chosen subset. Ids are an `Int32Array` so a 100k result set costs
+ * around 400 KB rather than a boxed `number[]`.
  */
 export interface SearchResultSet {
   readonly ids: Int32Array;
@@ -100,8 +94,7 @@ export interface SearchApi {
 export interface RecordsApi {
   /**
    * The one metadata path. The host coalesces concurrent requests across panels into batched calls
-   * behind a shared LRU, so panels must not fetch metadata directly — that is what keeps a 100k grid
-   * from melting to the first naive panel.
+   * behind a shared LRU, so panels must not fetch metadata directly.
    */
   getMetadata(ids: readonly RecordId[], include?: string[]): Promise<MetadataResponse>;
   /** URL for a square thumbnail at any positive edge length (px). Defaults to 256. */
@@ -117,7 +110,8 @@ export interface TagsApi {
   ): Promise<AutocompleteResult[]>;
   /** List the tag service domains a record's tags can live in. */
   listDomains(signal?: AbortSignal): Promise<TagDomain[]>;
-  /** Active tags on a record with provenance. Carries ids only — pair with resolve() for text. */
+
+    /** Active tags on a record with provenance. Carries ids only; pair with resolve() for text. */
   activeVerbose(recordId: RecordId, signal?: AbortSignal): Promise<VerboseTag[]>;
   /** Resolve tag ids to "namespace:subtag" text, cached and coalesced across panels. */
   resolve(tagIds: readonly number[]): Promise<Map<number, string>>;
@@ -153,8 +147,8 @@ export interface JobHandle {
 
 export interface JobsApi {
   /**
-   * Watch a job to completion. Encapsulates the reap-on-first-terminal-poll trap in one place: a 404
-   * after a non-terminal status was previously seen is treated as completed-and-reaped, not failure.
+   * Watches a job to completion. A 404 after a non-terminal status was already seen means the job
+   * completed and was reaped, not that it failed.
    */
   watch(jobId: number, onUpdate: (status: unknown) => void): JobHandle;
 }
@@ -174,7 +168,7 @@ export interface HostApi {
   ui: UiApi;
   jobs: JobsApi;
   stats: StatsApi;
-  /** Escape hatch: authenticated fetch against the API. Trusted only; a hard wall just gets bypassed. */
+    /** Escape hatch: authenticated fetch against the API. */
   http: { fetch(input: string, init?: RequestInit): Promise<Response> };
 }
 
@@ -183,7 +177,7 @@ export interface PanelProps {
   host: HostApi;
 }
 
-/** A panel type in the catalog (built-in now; third-party plugin later). */
+/** A panel type in the catalog. */
 export interface PanelDefinition<TConfig = Record<string, unknown>> {
   type: string;
   title: string;

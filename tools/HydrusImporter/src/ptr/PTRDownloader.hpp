@@ -118,7 +118,7 @@ class PTRDownloader : public QObject
 	std::unordered_map< std::string, int > m_hash_to_index;
 	std::unordered_map< int, int > m_remaining_for_index;
 
-	// Rate limiting — 5s fixed delay between downloads
+	// Rate limiting: 5s fixed delay between downloads
 };
 
 } // namespace idhan::hydrus::ptr

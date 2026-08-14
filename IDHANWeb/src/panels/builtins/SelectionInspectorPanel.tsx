@@ -1,7 +1,7 @@
 /**
- * Selection Inspector — a small panel that exercises the cross-panel selection bus and per-instance
- * settings. It reflects the shared record selection, lets you clear it, and remembers (in its own
- * persisted config) whether to list the ids. In M4 the grid drives this selection for real.
+ * Selection Inspector: a small panel exercising the cross-panel selection bus and per-instance
+ * settings. Reflects the shared record selection, lets you clear it, and remembers in its own
+ * persisted config whether to list the ids.
  */
 
 import { useEffect, useState } from 'react';

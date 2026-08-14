@@ -91,7 +91,7 @@ TEST_F( ServerTagFixture, TerminalResolvesToZero )
 
 	createAlias( tag_a, tag_b );
 
-	// tag_b is the terminal — it should have no alias entry
+	// tag_b is the terminal, so it should have no alias entry
 	ASSERT_EQ( getIdealAliasId( tag_b ), 0 );
 
 	// tag_a resolves to tag_b
@@ -148,7 +148,7 @@ TEST_F( ServerTagFixture, InsertionAutoResolvesChain )
 	// First create B→C
 	createAlias( tag_b, tag_c );
 
-	// Now create A→B — A should auto-resolve to C
+	// Now create A to B; A should auto-resolve to C
 	createAlias( tag_a, tag_b );
 
 	// A's effective_tag_id should be C directly

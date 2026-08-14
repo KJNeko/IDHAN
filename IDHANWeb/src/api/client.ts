@@ -1,11 +1,11 @@
 /**
  * Typed IDHAN REST client.
  *
- * The permanent API key is presented on every authenticated call via the `X-API-Key` header — see
+ * The permanent API key is presented on every authenticated call via the `X-API-Key` header; see
  * src/auth/session.ts for how the credential is obtained and stored.
  *
- * This is the raw client. The coalescing/caching host API (batched metadata, thumbnail LRU) is a
- * later layer (M3) built on top of these methods, not baked in here.
+ * This is the raw client. The coalescing and caching host API (batched metadata, thumbnail LRU) is a
+ * layer built on top of these methods, not baked in here.
  */
 
 import type { LayoutDocument } from '../layout/document';
@@ -175,7 +175,7 @@ export const tags = {
 
   /**
    * Remove tag ids from records. The remove endpoint is per-record (a "set" per record), so the same
-   * ids are removed from each. Removal is by id only — resolve text to an id first.
+   * ids are removed from each. Removal is by id only, so resolve text to an id first.
    */
   removeFromRecords(recordIds: number[], tagIds: number[], tagDomainId: number, signal?: AbortSignal): Promise<void> {
     return request<void>(`/records/tags/remove?tag_domain_id=${tagDomainId}`, {

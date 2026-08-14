@@ -1,7 +1,6 @@
 /**
- * Presentational record-info list, shared by the Record Info panel and the Import panel (which shows
- * the metadata of a just-imported record). Pure: it takes an already-fetched info object and renders
- * it — no host access, no fetching — so any panel can reuse it without coupling.
+ * Presentational record-info list, shared by the Record Info and Import panels. Takes an
+ * already-fetched info object and renders it, with no host access and no fetching of its own.
  */
 
 import type { ReactNode } from 'react';
