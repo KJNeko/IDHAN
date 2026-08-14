@@ -1,13 +1,12 @@
 post:
-  summary: Parse file MIME type and metadata
+  tags:
+    - mime
+  summary: Detects a file's MIME type and parses its metadata
   description: |
-    Upload a file to detect its MIME type and run all registered metadata parser modules against it.
+    Runs every metadata parser module that matches the detected type.
 
-    Two content types are accepted:
-    - `application/octet-stream` — raw file bytes in the request body.
-    - `multipart/form-data` — exactly one file part; the filename is forwarded to the MIME scanner as a hint.
-
-    The `success` field in the 200 response distinguishes a successful parse from a detection failure.
+    Send raw bytes as `application/octet-stream`, or `multipart/form-data` with
+    exactly one file part, whose filename is passed to the scanner as a hint.
   requestBody:
     required: true
     content:
@@ -15,7 +14,6 @@ post:
         schema:
           type: string
           format: binary
-          description: Raw file bytes.
       multipart/form-data:
         schema:
           type: object
@@ -25,17 +23,17 @@ post:
             file:
               type: string
               format: binary
-              description: The file to parse. Exactly one file part must be provided.
+              description: Exactly one file part.
   responses:
     '200':
-      description: |
-        MIME scan attempted. Always check the `success` field — a false value means the MIME type
-        could not be determined (or no data was provided) and the response will contain `error` instead of `mime`.
+      description: >
+        Scan attempted. A `success` of false means the type could not be
+        determined, and `error` replaces `mime`.
       content:
         application/json:
           schema:
             oneOf:
-              - description: MIME type detected successfully.
+              - description: Type detected.
                 type: object
                 required:
                   - success
@@ -44,13 +42,13 @@ post:
                 properties:
                   success:
                     type: boolean
-                    enum: [true]
+                    enum: [ true ]
                   mime:
                     type: string
-                    description: Detected MIME type string (e.g. `image/png`).
+                    example: image/png
                   metadata_modules:
                     type: array
-                    description: Results from each metadata parser module that matched the MIME type.
+                    description: One entry per module that matched the type.
                     items:
                       type: object
                       required:
@@ -59,32 +57,30 @@ post:
                       properties:
                         name:
                           type: string
-                          description: Name of the metadata module.
                         count:
                           type: integer
-                          description: Number of contained entries (archive files only).
+                          description: Contained entries. Archives only.
                         uncompressed_size:
                           type: integer
-                          description: Total uncompressed size in bytes (archive files only).
+                          description: Bytes uncompressed. Archives only.
                         extra:
                           type: object
-                          description: Additional module-specific metadata fields.
-              - description: MIME detection failed or no data was provided.
+                          description: Module-specific fields.
+              - description: Detection failed, or no data was sent.
                 type: object
                 required:
                   - error
                 properties:
                   success:
                     type: boolean
-                    enum: [false]
+                    enum: [ false ]
                   error:
                     type: string
-                    description: Human-readable reason for the failure.
     '400':
-      description: |
-        Invalid request. Returned when:
-        - The `Content-Type` is neither `application/octet-stream` nor `multipart/form-data`.
-        - A multipart request contains anything other than exactly one file part.
+      description: >
+        Content-Type is neither `application/octet-stream` nor
+        `multipart/form-data`, or a multipart request did not carry exactly one
+        file part
       content:
         application/json:
           schema:

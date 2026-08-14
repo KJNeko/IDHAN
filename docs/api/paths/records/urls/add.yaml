@@ -32,7 +32,7 @@ post:
                 - "https://other.com/img.png"
   responses:
     200:
-      description: URLs added successfully
+      description: URLs added
       content:
         application/json:
           schema:
@@ -42,4 +42,4 @@ post:
                 type: integer
                 example: 200
     400:
-      description: Missing or invalid request body
+      description: Missing or invalid body

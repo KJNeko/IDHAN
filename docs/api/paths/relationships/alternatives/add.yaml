@@ -3,9 +3,8 @@ post:
     - relationships
   summary: Adds records to an alternative group
   description: |
-    Groups records together as alternatives of each other (e.g. different crops or versions
-    of the same image). If the records span multiple existing alternative groups, those groups
-    are merged. If some records are already in a group, the others are added to it.
+    Groups records as alternatives of each other, for example different crops
+    of one image. Any groups the records already belong to are merged.
   requestBody:
     required: true
     content:
@@ -24,12 +23,12 @@ post:
               - 3
   responses:
     200:
-      description: Records added to alternative group
+      description: Records grouped
       content:
         application/json:
           schema:
             type: object
     400:
-      description: Invalid request body — JSON body is required and must be an array of record IDs
+      description: Invalid request body
     500:
-      description: Database error while creating or merging alternative groups
+      description: Internal server error

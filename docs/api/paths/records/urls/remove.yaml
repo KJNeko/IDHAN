@@ -31,6 +31,6 @@ post:
                 - "https://example.com/image.jpg"
   responses:
     200:
-      description: URLs removed successfully
+      description: URLs removed
     400:
-      description: Missing or invalid request body
+      description: Missing or invalid body

@@ -2,13 +2,10 @@ get:
   tags:
     - tags
     - search
-  summary: Returns a list of tags that best match a given partial input.
+  summary: Autocompletes tags from a partial input
   description: >
-    Searches for tags whose text matches the given `tag` input using PostgreSQL
-    similarity scoring. Results are ordered by exact match first, then by a
-    combined score of similarity and display count, then by similarity alone.
-    The `limit` is capped at a hard maximum of 32 regardless of the value
-    supplied.
+    Similarity search over tag text. Ordered by exact match, then by similarity
+    weighted by use count, then by similarity alone.
   parameters:
     - in: query
       name: tag
@@ -16,7 +13,7 @@ get:
         type: string
         default: ""
       required: true
-      description: Partial text of a tag to search. A leading `-` is treated as a negation prefix and stripped before matching.
+      description: Partial tag text. A leading `-` is stripped if present.
     - in: query
       name: limit
       schema:
@@ -24,17 +21,14 @@ get:
         default: 10
         maximum: 32
       required: false
-      description: Maximum number of results to return. Values above 32 are silently clamped to 32.
+      description: Clamped to 32 if a larger value is given.
     - in: query
       name: include_unused
       schema:
         type: boolean
         default: true
       required: false
-      description: >
-        When `true` (default), tags with a display count of zero are included in
-        results. When `false`, only tags that have been applied to at least one
-        record are returned.
+      description: When false, only tags applied to at least one record are returned.
     - in: query
       name: tag_display_type
       schema:
@@ -45,16 +39,11 @@ get:
         default: storage
       required: false
       description: >
-        Controls which count perspective is used for scoring. `storage` (default)
-        uses the raw storage count; `display` uses the display count after tag
-        relationship resolution. An invalid value results in a 400 response.
-
+        Which use count feeds the score. `storage` is the raw count, `display`
+        is the count after relationship resolution.
   responses:
     "200":
-      description: >
-        An array of tag match objects ordered from greatest similarity to least.
-        Each object contains both a `value`/`tag_text` field (the full tag
-        string) and scoring metadata.
+      description: Matches, best first
       content:
         application/json:
           schema:
@@ -64,24 +53,19 @@ get:
               properties:
                 tag_id:
                   type: integer
-                  description: Unique identifier for the tag.
                   example: 42
-                value:
-                  type: string
-                  description: Full tag text (same as `tag_text`). Provided for UI convenience.
-                  example: "species:catgirl"
                 tag_text:
                   type: string
-                  description: Full tag text in `namespace:subtag` form (or just the subtag when the namespace is empty).
+                  description: Full tag text, or just the subtag if the namespace is empty.
                   example: "species:catgirl"
                 similarity:
                   type: number
                   format: double
-                  description: PostgreSQL `similarity()` score between the search input and this tag (0.0–1.0).
+                  description: PostgreSQL `similarity()` score, 0.0 to 1.0.
                   example: 0.8
                 count:
                   type: integer
-                  description: Display count — number of records this tag is applied to.
+                  description: Records this tag is applied to.
                   example: 17
               required:
                 - tag_id
@@ -104,9 +88,7 @@ get:
                   similarity: 0.36
                   count: 45
     "400":
-      description: >
-        Returned when `tag_display_type` is supplied but is not one of the
-        accepted values (`storage` or `display`).
+      description: Invalid `tag_display_type`
       content:
         application/json:
           schema:

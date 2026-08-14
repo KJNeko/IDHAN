@@ -1,20 +1,20 @@
 post:
   tags:
     - records
-  summary: Triggers metadata parsing for a record and returns the updated record info
+  summary: Parses and stores a record's metadata
   description: |
-    Parses file metadata (EXIF, video streams, etc.) for the given record and stores the
-    results. Returns the same response as `GET /records/{record_id}/info` after the parse.
+    Parses file metadata (EXIF, video streams, and so on) and stores it, then
+    returns the same body as `GET /records/{record_id}/info`.
   parameters:
     - $ref: '../../parameters/record_id.yaml'
   responses:
     200:
-      description: Record info after metadata scan
+      description: Record info after the scan
       content:
         application/json:
           schema:
             $ref: '../../schemas/RecordInfo.yaml'
     400:
-      description: Record not found or metadata parse failed
+      description: Record not found, or the parse failed
     500:
       description: Internal server error

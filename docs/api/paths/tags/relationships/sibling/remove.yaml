@@ -32,7 +32,7 @@ post:
                 younger_id: 51
   responses:
     200:
-      description: Sibling relationships removed successfully
+      description: Relationships removed
     400:
       description: Invalid request body
     500:

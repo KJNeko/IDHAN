@@ -1,13 +1,11 @@
 post:
   tags:
     - tags
-  summary: Create tags and return their IDs
+  summary: Creates tags and returns their IDs
   description: >
-    Accepts an array of namespace/subtag pairs and creates any tags that do not
-    already exist. Returns an array of tag IDs in the same order as the input.
-    If a tag already exists its existing ID is returned unchanged.
+    Creates any tag that does not already exist. Returns IDs in input order;
+    an existing tag returns the ID it already had.
   requestBody:
-    description: Array of namespace/subtag string pairs
     required: true
     content:
       application/json:
@@ -21,9 +19,7 @@ post:
             properties:
               namespace:
                 type: string
-                description: >
-                  The namespace component of the tag. Use an empty string for
-                  tags with no namespace (e.g. a plain "catgirl" tag).
+                description: Empty string for a tag with no namespace.
                 example: "character"
               subtag:
                 type: string
@@ -36,7 +32,6 @@ post:
                 subtag: "toujou koneko"
           noNamespace:
             summary: Tag with no namespace
-            description: Use an empty string for the namespace when the tag has no prefix.
             value:
               - namespace: ""
                 subtag: "catgirl"
@@ -47,10 +42,9 @@ post:
                 subtag: "toujou koneko"
               - namespace: "series"
                 subtag: "Highschool DxD"
-
   responses:
     "200":
-      description: Array of tag IDs in the same order as the request
+      description: Tag IDs, in input order
       content:
         application/json:
           schema:
@@ -68,9 +62,7 @@ post:
                 - tag_id: 42
                 - tag_id: 7
     "400":
-      description: >
-        Bad request. Returned when the request body is missing, the array is
-        empty, or any element has a namespace or subtag that is not a string.
+      description: Missing body, empty array, or a non-string namespace or subtag
       content:
         application/json:
           schema:
@@ -78,22 +70,5 @@ post:
             properties:
               error:
                 type: string
-          examples:
-            noBody:
-              summary: No JSON body provided
-              value:
-                error: "No json data"
-            emptyArray:
-              summary: Empty array
-              value:
-                error: "No tags to create"
-            invalidNamespace:
-              summary: Namespace is not a string
-              value:
-                error: "Invalid namespace: Expected string"
-            invalidSubtag:
-              summary: Subtag is not a string
-              value:
-                error: "Invalid subtag: Expected string"
     "500":
-      description: Internal server error while inserting tags into the database.
+      description: Internal server error

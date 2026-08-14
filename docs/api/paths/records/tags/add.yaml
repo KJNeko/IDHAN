@@ -2,8 +2,11 @@ post:
   tags:
     - tags
     - records
-  summary: Adds a tag, or tags to a given record.
-  description: Please note that this function is considered unoptimized when using anything but tag ids. The alternative input types are for ease of use, but which prevent aggressive optimization. If you are mass adding tags, please consider using /tags/create before using this endpoint
+  summary: Adds tags to a record
+  description: >
+    Tag IDs are the fast path. String and object inputs have to be resolved (and
+    created if missing) on every request, so for bulk work create the tags with
+    `POST /tags/create` first and pass the IDs.
   parameters:
     - name: record_id
       in: path
@@ -43,12 +46,10 @@ post:
                 subtag: "toujou koneko"
               - namespace: 1
                 subtag: 1
-
-
   responses:
     200:
-      description: All tags added successfully
+      description: Tags added
     400:
-      description: One or more ids were invalid, tag_domain_id missing/invalid, or request body malformed
+      description: Invalid tag ID, `tag_domain_id`, or body
     500:
-      description: Internal error while resolving or inserting tags (e.g. failed DB insert)
+      description: Internal server error

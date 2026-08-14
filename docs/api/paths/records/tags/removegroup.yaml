@@ -2,10 +2,9 @@ post:
   tags:
     - tags
     - records
-  summary: Removes tag sets from multiple records in bulk
+  summary: Removes tags from multiple records
   description: |
-    Removes per-record tag sets from multiple records in one request.
-    `records` and `sets` must be the same length — `sets[i]` is removed from `records[i]`.
+    Both arrays must be the same length.
   parameters:
     - name: tag_domain_id
       in: query
@@ -26,26 +25,25 @@ post:
               type: array
               items:
                 $ref: '../../../schemas/RecordID.yaml'
-              description: Record IDs to remove tags from
             sets:
               type: array
               items:
                 type: array
                 items:
                   $ref: '../../../schemas/TagID.yaml'
-              description: Per-record arrays of tag IDs to remove (must match records length)
+              description: One set of tag IDs per record, in order.
         examples:
           bulk_remove:
             summary: Remove different tags from each record
             value:
-              records: [1, 2, 3]
+              records: [ 1, 2, 3 ]
               sets:
-                - [101, 102]
-                - [103]
-                - [104, 105]
+                - [ 101, 102 ]
+                - [ 103 ]
+                - [ 104, 105 ]
   responses:
     200:
-      description: Tags removed successfully
+      description: Tags removed
       content:
         application/json:
           schema:
@@ -55,6 +53,6 @@ post:
                 type: integer
                 example: 200
     400:
-      description: Invalid request — missing arrays, length mismatch, or non-integer values
+      description: Invalid request
     500:
       description: Internal server error

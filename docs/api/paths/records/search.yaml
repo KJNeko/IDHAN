@@ -1,7 +1,7 @@
 get:
   tags:
     - records
-  summary: Searches for a given file using hashes.
+  summary: Looks up a record by hash
   parameters:
     - name: sha256
       in: query
@@ -10,7 +10,7 @@ get:
         $ref: '../../schemas/SHA256.yaml'
   responses:
     200:
-      description: Successfully found records
+      description: Lookup result
       content:
         application/json:
           schema:
@@ -20,13 +20,8 @@ get:
             properties:
               found:
                 type: boolean
-                description: Whether a record with the given hash exists.
               record_id:
                 type: integer
-                description: >
-                  The ID of the matching record. Only present when `found` is
-                  `true`.
+                description: Present only when `found` is true.
     400:
-      description: >
-        Bad request. Returned when the `sha256` parameter is missing, is not
-        exactly 64 hex characters, or contains invalid hex digits.
+      description: Missing or malformed `sha256`

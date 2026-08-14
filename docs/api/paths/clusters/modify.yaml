@@ -1,7 +1,7 @@
 patch:
   tags:
     - clusters
-  summary: Modifies a given cluster.
+  summary: Modifies a cluster
   requestBody:
     required: true
     content:
@@ -16,12 +16,12 @@ patch:
         type: integer
   responses:
     200:
-      description: Cluster was successfully modified. Returns the updated cluster info.
+      description: The updated cluster
       content:
         application/json:
           schema:
             $ref: '../../schemas/ClusterInfo.yaml'
     404:
-      description: Cluster id was invalid or not found.
+      description: Cluster not found
     500:
-      description: Internal server error. Returned when the request body is missing or not valid JSON.
+      description: Missing or invalid JSON body

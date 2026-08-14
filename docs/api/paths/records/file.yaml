@@ -1,20 +1,14 @@
 get:
   tags:
     - records
-  summary: Returns the file if it is present in the filesystem cluster.
+  summary: Returns the record's file
   description: |
-    Fetches the raw file associated with a record. The `Content-Type` header is set
-    dynamically from the MIME type stored in the database; if no MIME info has been
-    recorded yet, `application/octet-stream` is used as a fallback.
+    `Content-Type` is the record's stored MIME type, or `application/octet-stream`
+    if none has been recorded yet.
 
-    Supports HTTP range requests via the `Range` header (`bytes=start-end`). A full
-    `bytes=0-` range header is treated as a plain full-file request.
+    Range requests use `bytes=start-end`. A `bytes=0-` range is served as a full file.
 
-    Pass `?download=true` to force a `Content-Disposition: attachment` download
-    instead of letting the browser attempt inline display.
-
-    This operation is available at both `/records/{record_id}/file` and
-    `/records/{record_id}` (the latter is a convenience alias registered in the router).
+    Also registered at `/records/{record_id}`.
   parameters:
     - $ref: '../../parameters/record_id.yaml'
     - in: query
@@ -24,30 +18,24 @@ get:
         type: boolean
         default: false
       description: >
-        When true, the file is served with a Content-Disposition attachment header
-        so browsers download rather than display it inline.
+        Serve with `Content-Disposition: attachment` instead of inline.
     - in: header
       name: Range
       required: false
       schema:
         type: string
         example: 'bytes=0-1023'
-      description: >
-        Standard HTTP byte-range header for requesting a slice of the file.
-        Only the `bytes=start-end` syntax is supported. Omit to receive the
-        full file.
+      description: Only `bytes=start-end` is supported. Omit for the full file.
   responses:
     '200':
       description: Full file content
       headers:
         Content-Type:
-          description: >
-            MIME type looked up from the database for this record, or
-            `application/octet-stream` if not yet determined.
+          description: Stored MIME type, or `application/octet-stream` if unknown.
           schema:
             type: string
         Cache-Control:
-          description: Long-lived cache directive (approximately one year).
+          description: Roughly one year.
           schema:
             type: string
       content:
@@ -56,15 +44,15 @@ get:
             type: string
             format: binary
     '206':
-      description: Partial file content (response to a valid Range request)
+      description: Partial file content
       headers:
         Content-Range:
-          description: Byte range returned relative to the total file size.
+          description: Bytes returned, against the total file size.
           schema:
             type: string
             example: 'bytes 0-1023/204800'
         Accept-Ranges:
-          description: Always `bytes`; indicates range requests are supported.
+          description: Always `bytes`.
           schema:
             type: string
       content:
@@ -73,7 +61,7 @@ get:
             type: string
             format: binary
     '400':
-      description: Bad request — the Range header is malformed or specifies an invalid range
+      description: Bad request
       content:
         application/json:
           schema:
@@ -82,10 +70,7 @@ get:
               error:
                 type: string
     '500':
-      description: >
-        Internal server error — the record exists in the database but the file
-        could not be found at its expected on-disk location, which may indicate
-        data corruption or a filesystem issue.
+      description: Internal server error
       content:
         application/json:
           schema:
@@ -97,38 +82,30 @@ get:
 head:
   tags:
     - records
-  summary: Returns file metadata without body (size, MIME type, range support).
+  summary: Returns the file's headers without a body
   description: |
-    Identical to GET but returns only headers and no response body. Useful for
-    checking file size and MIME type before deciding whether to download.
-
-    Response headers always include:
-    - `Accept-Ranges: bytes` — indicates partial content is supported
-    - `Content-Length` — exact byte size of the file
-    - `Content-Type` — MIME type from the database, or `application/octet-stream`
+    Same as GET, minus the body. Always sets `Accept-Ranges`, `Content-Length`,
+    and `Content-Type`.
   parameters:
     - $ref: '../../parameters/record_id.yaml'
   responses:
     '200':
-      description: File metadata headers (no body)
+      description: File headers, no body
       headers:
         Accept-Ranges:
           description: Always `bytes`.
           schema:
             type: string
         Content-Length:
-          description: Size of the file in bytes.
+          description: File size in bytes.
           schema:
             type: integer
         Content-Type:
-          description: >
-            MIME type from the database for this record, or
-            `application/octet-stream` if not yet recorded.
+          description: Stored MIME type, or `application/octet-stream` if unknown.
           schema:
             type: string
     '500':
-      description: >
-        Internal server error — record exists but file is missing on disk.
+      description: Internal server error
       content:
         application/json:
           schema:

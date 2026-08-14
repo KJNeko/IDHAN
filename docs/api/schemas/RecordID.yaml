@@ -1,3 +1,2 @@
 type: integer
-min: 0
-max: std::uint64_t max
+minimum: 0

@@ -1,10 +1,10 @@
 get:
   tags:
     - tag domains
-  summary: Returns a list of all tag domains
+  summary: Returns all tag domains
   responses:
     "200":
-      description: Array of all tag domains; returns an empty array when no domains exist
+      description: All tag domains, or an empty array
       content:
         application/json:
           schema:
@@ -12,4 +12,4 @@ get:
             items:
               $ref: '../../../schemas/TagDomainInfo.yaml'
     "500":
-      description: Internal error fetching info for a domain that was found in the initial query
+      description: Internal server error

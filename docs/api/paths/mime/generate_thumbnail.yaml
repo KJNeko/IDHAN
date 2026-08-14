@@ -1,8 +1,7 @@
 post:
   tags:
     - mime
-  summary: Generate thumbnail of given file
-  description: Upload a file to generate its thumbnail
+  summary: Generates a thumbnail for an uploaded file
   requestBody:
     required: true
     content:
@@ -12,13 +11,13 @@ post:
           format: binary
   responses:
     '200':
-      description: Successfully generated thumbnail
+      description: Thumbnail image
       content:
         image/png:
           schema:
             type: string
             format: binary
     '400':
-      description: Request body is missing or content type is not application/octet-stream
+      description: Missing body, or Content-Type is not `application/octet-stream`
     '500':
-      description: Internal error (no parser or thumbnailer available for the detected MIME type, or processing failed)
+      description: No parser or thumbnailer for the detected MIME type, or generation failed
