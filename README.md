@@ -6,7 +6,7 @@ recommended setup is to use docker and use the webui or a 3rd-party client
 
 > AI use is allowed, But if you do not **HEAVILY REVIEW** the output, I will personally come and bust down your door.
 
-IDHAN can be given plugins and modules to expand it's knowledge of files, It can be given new formats to
+IDHAN can be given modules to expand it's knowledge of files, It can be given new formats to
 understand via mime parsing files, and eventually will be able to use more advanced parsing methods using
 python scripts.
 
