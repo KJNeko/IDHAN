@@ -42,6 +42,10 @@ I dunno, Works well enough on this piece of shit (Wyse 5070). Postgresql was the
 
 ![pieceofshit.png](docs/images/pieceofshit.png)
 
+In all seriousness, Performance on a Pentium Silver J5005 @ 1.50Ghz was fairly usable when it was generating thumbnails
+and importing files. Memory at worst is dependent on the files themselves and if you are using any embedding models for
+semantic searching.
+
 # Getting started
 
 ## Docker
