@@ -48,22 +48,10 @@ semantic searching.
 
 # Getting started
 
-## Docker
-
-For detailed docker instructions, please refer to the [Docker Guide](docs/docker.md).
-
-## How to build
-
-For detailed build instructions, please refer to our [Build Guide](docs/build.md).
-
-## How to configure
-
-For configuration options, check out our [Configuration Guide](docs/config.md).
-
-## First run
-
-[Getting started](docs/setup.md) covers the config values you need, creating and scanning your first cluster, and TLS
-setup.
+- [Docker Guide](docs/docker.md)
+- [Building from source](docs/build.md)
+- [Configuration options](docs/config.md)
+- [Quickstart guide](docs/setup.md) featuring config, TLS, and scanning your first cluster
 
 # Server docs
 
