@@ -6,8 +6,8 @@ recommended setup is to use docker and use the webui or a 3rd-party client
 
 > AI use is allowed, But if you do not **HEAVILY REVIEW** the output, I will personally come and bust down your door.
 
-IDHAN can be given modules to expand it's knowledge of files, It can be given new formats to
-understand via mime parsing files, and eventually will be able to use more advanced parsing methods using
+IDHAN can be given modules to expand it's knowledge of files and eventually will be able to use more advanced parsing
+methods using
 python scripts.
 
 Master: ![Master Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master)
