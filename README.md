@@ -1,17 +1,10 @@
 # IDHAN
 
 IDHAN is a media management and archival server program written in C++ for people with large collections of media. It
-uses the
-same style of tagging media files as most boorus do currently. The server is only built for running on Linux. The
+uses the same style of tagging media files as sites like gelbooru and danbooru. The
 recommended setup is to use docker and use the webui or a 3rd-party client
 
 > AI use is allowed, But if you do not **HEAVILY REVIEW** the output, I will personally come and bust down your door.
-
-IDHAN functions as a server that clients can connect to in order to organize and retrieve archived
-and collected files.
-It functions using a REST API hosted by the server. A React WebUI is also served by the server (seen in images below)
-that allows you to interface with the server without a 3rd-party program. There is also a 'fake' Hydrus API that other
-hydrus 3rd-party programs can use, Such as HyWeb and Hydrui.
 
 IDHAN can be given plugins and modules to expand it's knowledge of files, It can be given new formats to
 understand via mime parsing files, and eventually will be able to use more advanced parsing methods using
@@ -33,7 +26,8 @@ Dev: ![Dev Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflo
 - Example WebClient
 - Hydrus DB import tool
 - Notes for for post descriptions
-- Plugin based file thumbnailers
+- Module based file thumbnailers
+- HydrusAPI support
 
 # Pending features
 
