@@ -33,8 +33,7 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionImport_File"/>
-       <addaction name="actionImport_Hydrus"/>
+    <addaction name="actionImport_Hydrus"/>
        <addaction name="actionImport_PTR"/>
        <addaction name="separator"/>
        <addaction name="actionOptions"/>
@@ -42,11 +41,6 @@
    <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionImport_File">
-   <property name="text">
-    <string>Import File...</string>
-   </property>
-  </action>
   <action name="actionImport_Hydrus">
    <property name="text">
     <string>Import Hydrus...</string>
@@ -65,8 +59,4 @@
  </widget>
  <resources/>
  <connections/>
- <slots>
-  <slot>addHydrusImporter()</slot>
-  <slot>addFileImporter()</slot>
- </slots>
 </ui>

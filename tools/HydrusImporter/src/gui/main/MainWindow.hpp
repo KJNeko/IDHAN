@@ -24,7 +24,7 @@ class MainWindow;
 QT_END_NAMESPACE
 
 //! The importer's top-level window. Owns the IDHANClient connection and a heartbeat timer, and hosts
-//! the file / Hydrus / PTR import actions and the record-tag widget.
+//! the Hydrus, PTR, tag management and record-tag tabs.
 class MainWindow final : public QMainWindow
 {
 	Q_OBJECT
@@ -46,11 +46,13 @@ class MainWindow final : public QMainWindow
 	void openSettings();
 	void checkHeartbeat();
 	// Import Widgets
-	void on_actionImport_File_triggered();
 	void on_actionImport_Hydrus_triggered();
 	void on_actionImport_PTR_triggered();
 
   private:
+
+	void buildTabs();
+	QWidget* createPTRWidget();
 
 	void onDetachRecordTag();
 	void onReattachRecordTag( int result );
@@ -58,6 +60,8 @@ class MainWindow final : public QMainWindow
 	Ui::MainWindow* ui;
 	RecordTagWidget* m_recordTagWidget { nullptr };
 	QDialog* m_recordTagDialog { nullptr };
+	int m_hydrusTabIndex { -1 };
+	int m_ptrTabIndex { -1 };
 	int m_recordTagTabIndex { -1 };
 };
 

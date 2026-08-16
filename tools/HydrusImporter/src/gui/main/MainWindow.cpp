@@ -13,7 +13,6 @@
 #include "SettingsDialog.hpp"
 #include "gui/hydrus/HydrusImporterWidget.hpp"
 #include "gui/hydrus/tag_management/TagManagementWidget.hpp"
-#include "gui/hydrus/tag_service/TagServiceWidget.hpp"
 #include "gui/recordtag/RecordTagWidget.hpp"
 #include "ptr/gui/PTRDownloadWidget.hpp"
 #include "ptr/gui/PTRFlattenWidget.hpp"
@@ -68,21 +67,39 @@ MainWindow::MainWindow( QWidget* parent ) : QMainWindow( parent ), ui( new Ui::M
 		checkHeartbeat();
 	}
 
-#if IMPORTER_TESTS
-	on_actionImport_Hydrus_triggered();
-#endif
+	buildTabs();
+}
+
+void MainWindow::buildTabs()
+{
+	m_hydrusTabIndex = ui->importTabs->addTab( new HydrusImporterWidget( this ), "Hydrus Importer" );
+	m_ptrTabIndex = ui->importTabs->addTab( createPTRWidget(), "PTR Importer" );
 
 	ui->importTabs->addTab( new TagManagementWidget( this ), "Tag Management" );
-	ui->importTabs->setCurrentIndex( ui->importTabs->count() - 1 );
 
-	// Record Tag Editor tab
 	m_recordTagWidget = new RecordTagWidget( this );
 	m_recordTagTabIndex = ui->importTabs->addTab( m_recordTagWidget, "Record Tag Editor" );
 	connect( m_recordTagWidget, &RecordTagWidget::detachRequested, this, &MainWindow::onDetachRecordTag );
 
-	// PTR Importer tab (sub-tabs: Download + Import)
-	connect( ui->actionImport_PTR, &QAction::triggered, this, &MainWindow::on_actionImport_PTR_triggered );
-	on_actionImport_PTR_triggered();
+	ui->importTabs->setCurrentIndex( m_hydrusTabIndex );
+}
+
+QWidget* MainWindow::createPTRWidget()
+{
+	auto* ptr_tabs = new QTabWidget( this );
+	auto* download_widget = new PTRDownloadWidget( ptr_tabs );
+	auto* flatten_widget = new PTRFlattenWidget( ptr_tabs );
+	auto* import_widget = new PTRImportWidget( ptr_tabs );
+	ptr_tabs->addTab( download_widget, "Download" );
+	ptr_tabs->addTab( flatten_widget, "Flatten" );
+	ptr_tabs->addTab( import_widget, "Import" );
+
+	connect( download_widget, &PTRDownloadWidget::directoryChanged, import_widget, &PTRImportWidget::setDirectory );
+	connect( download_widget, &PTRDownloadWidget::directoryChanged, flatten_widget, &PTRFlattenWidget::setDirectory );
+
+	connect( flatten_widget, &PTRFlattenWidget::outputDirectoryChanged, import_widget, &PTRImportWidget::setDirectory );
+
+	return ptr_tabs;
 }
 
 MainWindow::~MainWindow()
@@ -155,32 +172,14 @@ void MainWindow::checkHeartbeat()
 	connect( watcher, &QFutureWatcher< VersionInfo >::finished, handleFuture );
 }
 
-void MainWindow::on_actionImport_File_triggered()
-{}
-
 void MainWindow::on_actionImport_Hydrus_triggered()
 {
-	ui->importTabs->addTab( new HydrusImporterWidget( this ), "Hydrus Importer" );
+	ui->importTabs->setCurrentIndex( m_hydrusTabIndex );
 }
 
 void MainWindow::on_actionImport_PTR_triggered()
 {
-	auto* ptr_tabs = new QTabWidget( this );
-	auto* download_widget = new PTRDownloadWidget( ptr_tabs );
-	auto* flatten_widget = new PTRFlattenWidget( ptr_tabs );
-	auto* import_widget = new PTRImportWidget( ptr_tabs );
-	ptr_tabs->addTab( download_widget, "Download" );
-	ptr_tabs->addTab( flatten_widget, "Flatten" );
-	ptr_tabs->addTab( import_widget, "Import" );
-
-	connect( download_widget, &PTRDownloadWidget::directoryChanged, import_widget, &PTRImportWidget::setDirectory );
-	connect( download_widget, &PTRDownloadWidget::directoryChanged, flatten_widget, &PTRFlattenWidget::setDirectory );
-
-	connect(
-		flatten_widget, &PTRFlattenWidget::outputDirectoryChanged, import_widget, &PTRImportWidget::setDirectory );
-
-	ui->importTabs->addTab( ptr_tabs, "PTR Importer" );
-	ui->importTabs->setCurrentIndex( ui->importTabs->count() - 1 );
+	ui->importTabs->setCurrentIndex( m_ptrTabIndex );
 }
 
 void MainWindow::onDetachRecordTag()
@@ -188,6 +187,7 @@ void MainWindow::onDetachRecordTag()
 	if ( m_recordTagDialog != nullptr ) return;
 
 	// Remove widget from tab
+	m_recordTagTabIndex = ui->importTabs->indexOf( m_recordTagWidget );
 	ui->importTabs->removeTab( m_recordTagTabIndex );
 
 	// Create dialog and add widget
@@ -217,6 +217,6 @@ void MainWindow::onReattachRecordTag( [[maybe_unused]] int result )
 	m_recordTagDialog = nullptr;
 
 	// Add widget back to tab
-	m_recordTagTabIndex = ui->importTabs->addTab( m_recordTagWidget, "Record Tag Editor" );
+	m_recordTagTabIndex = ui->importTabs->insertTab( m_recordTagTabIndex, m_recordTagWidget, "Record Tag Editor" );
 	ui->importTabs->setCurrentIndex( m_recordTagTabIndex );
 }
