@@ -888,6 +888,9 @@ ContentStats
 	const auto resolved = resolveChunkTags( chunk, progress_prefix );
 	if ( m_cancelled ) return stats;
 
+	// The string table is already the chunk's distinct tag set.
+	stats.tags_created = static_cast< int >( chunk.strings.size() );
+
 	std::vector< std::string > hashes;
 	hashes.reserve( chunk.records.size() );
 	for ( const auto& record : chunk.records ) hashes.push_back( toHex( record.sha256 ) );
