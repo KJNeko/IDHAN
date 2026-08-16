@@ -6,6 +6,7 @@ on:
       - opened
       - synchronize
       - reopened
+      - closed
     branches:
       - master
       - dev
@@ -22,7 +23,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.server_url == 'https://git.futuregadgetlabs.net'
+    if: startsWith(github.server_url, 'https://git.futuregadgetlabs.net') && github.event.action != 'closed'
 
     steps:
       - name: Checkout repository
@@ -63,7 +64,7 @@ jobs:
           push: ${{ steps.ctx.outputs.push == 'true' }}
           tags: ${{ steps.ctx.outputs.image }}
           labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.source=https://git.futuregadgetlabs.net/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
             org.opencontainers.image.title=IDHAN (PR ${{ github.event.number }})
             net.futuregadgetlabs.idhan.pr.number=${{ github.event.number }}
@@ -94,7 +95,7 @@ jobs:
   # Needs a REGISTRY_TOKEN with package delete scope; failures are not fatal.
   cleanup:
     runs-on: ubuntu-latest
-    if: github.server_url == 'https://git.futuregadgetlabs.net' && github.event.action == 'closed'
+    if: startsWith(github.server_url, 'https://git.futuregadgetlabs.net') && github.event.action == 'closed'
 
     steps:
       - name: Delete PR image tags
@@ -106,5 +107,5 @@ jobs:
             echo "Deleting $PACKAGE:$VERSION"
             curl -sS -o /dev/null -w '%{http_code}\n' -X DELETE \
               -H "Authorization: token ${{ secrets.REGISTRY_TOKEN }}" \
-              "${{ github.server_url }}/api/v1/packages/$OWNER/container/$PACKAGE/$VERSION"
+              "https://git.futuregadgetlabs.net/api/v1/packages/$OWNER/container/$PACKAGE/$VERSION"
           done

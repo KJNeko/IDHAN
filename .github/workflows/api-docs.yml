@@ -10,7 +10,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.server_url == 'https://git.futuregadgetlabs.net'
+    if: startsWith(github.server_url, 'https://git.futuregadgetlabs.net')
 
     steps:
       - name: Checkout

@@ -17,7 +17,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    if: github.server_url == 'https://git.futuregadgetlabs.net'
+    if: startsWith(github.server_url, 'https://git.futuregadgetlabs.net')
 
     steps:
       - name: Checkout repository
