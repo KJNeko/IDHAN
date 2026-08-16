@@ -13,12 +13,8 @@ namespace idhan
 {
 
 [[nodiscard]] drogon::Task< std::optional< NamespaceID > > findNamespace( std::string, drogon::orm::DbClientPtr db );
-[[nodiscard]] drogon::Task< std::optional< SubtagID > > findSubtag( std::string, drogon::orm::DbClientPtr db );
 
 [[nodiscard]] drogon::Task< std::expected< NamespaceID, IDHANError > > createNamespace(
-	std::string,
-	drogon::orm::DbClientPtr db );
-[[nodiscard]] drogon::Task< std::expected< SubtagID, IDHANError > > createSubtag(
 	std::string,
 	drogon::orm::DbClientPtr db );
 

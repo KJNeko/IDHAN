@@ -1,0 +1,1 @@
+DROP FUNCTION display_tag_text(INTEGER, INTEGER);

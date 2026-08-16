@@ -275,14 +275,12 @@ class IDHANClient
 
 		struct SubtagInfo
 		{
-			SubtagID m_id;
 			std::string m_text;
 		} m_subtag;
 
 		std::string toStdString() const
 		{
 			FGL_ASSERT( m_namespace.m_id != 0, "Namespace ID invalid" );
-			FGL_ASSERT( m_subtag.m_id != 0, "Subtag ID invalid" );
 
 			if ( m_namespace.m_text.empty() ) return m_subtag.m_text;
 			return format_ns::format( "{}:{}", m_namespace.m_text, m_subtag.m_text );
