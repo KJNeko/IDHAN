@@ -22,8 +22,8 @@ class UrlServiceWorker : public QObject, public QRunnable
 
   signals:
 	void finished();
-	void processedMaxUrls( std::size_t counter );
-	void processedUrls( std::size_t counter );
+	void processedMaxUrls( std::size_t counter, std::size_t unique_counter );
+	void processedUrls( std::size_t counter, std::size_t unique_counter );
 	void statusMessage( const QString& message );
 	void errorOccurred( const QString& message );
 
@@ -39,6 +39,5 @@ class UrlServiceWorker : public QObject, public QRunnable
 
 	void flushUrls(
 		std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > >& current_urls,
-		idhan::IDHANClient& client,
-		std::size_t url_counter );
+		idhan::IDHANClient& client );
 };
