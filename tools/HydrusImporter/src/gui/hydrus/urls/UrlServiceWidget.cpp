@@ -43,16 +43,22 @@ void UrlServiceWidget::statusMessage( const QString& msg )
 	ui->statusLabel->setText( msg );
 }
 
-void UrlServiceWidget::processedMaxUrls( const std::size_t count )
+void UrlServiceWidget::processedMaxUrls( const std::size_t count, const std::size_t unique_count )
 {
-	ui->urlCount->setText( QString( "URL mappings: %L1" ).arg( count ) );
+	ui->urlCount->setText( QString( "URL mappings: %L1\nUnique URLs: %L2" ).arg( count ).arg( unique_count ) );
 	// Percentage-based so counts beyond INT_MAX can't overflow the bar.
 	ui->progressBar->setMaximum( 100 );
 	m_max_urls = count;
+	m_max_unique_urls = unique_count;
 }
 
-void UrlServiceWidget::processedUrls( const std::size_t count )
+void UrlServiceWidget::processedUrls( const std::size_t count, const std::size_t unique_count )
 {
-	ui->urlCount->setText( QString( "URL mappings: %L1 (%L2 processed)" ).arg( m_max_urls ).arg( count ) );
+	ui->urlCount->setText(
+		QString( "URL mappings: %L1 (%L2 processed)\nUnique URLs: %L3 (%L4 processed)" )
+			.arg( m_max_urls )
+			.arg( count )
+			.arg( m_max_unique_urls )
+			.arg( unique_count ) );
 	ui->progressBar->setValue( m_max_urls == 0 ? 0 : static_cast< int >( ( count * 100 ) / m_max_urls ) );
 }
