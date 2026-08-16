@@ -13,6 +13,8 @@ python scripts.
 Master: ![Master Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master)
 Dev: ![Dev Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=dev)
 
+[Discord](https://discord.gg/YMYXS884cP)
+
 # Features
 
 - Media file imports
@@ -36,6 +38,29 @@ Dev: ![Dev Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflo
 - Python script based metadata parsing
 - Tag Sibling relationships (Directional Exclusive OR)
 
+# Comparing to Hydrus
+
+If you don't know what Hydrus is, Just skip this section
+
+### Why should I use this over Hydrus?
+
+If your library is small, You likely don't want to use IDHAN. Alternatively, if you are unhappy with the performance of
+Hydrus, You
+might want to try IDHAN. It's still recommended to use Hydrus currently for downloaders.
+
+### Features that Hydrus lacks
+
+- Semantic searching
+- User modules for Metadata/Thumbnail/Mime processing
+- A Server/Client seperation
+
+### Features Hydrus has over IDHAN
+
+- Downloaders.
+- A way better UX.
+- More tested and stable.
+- Lack of needing to manage a DB
+
 # Performance
 
 I dunno, Works well enough on this piece of shit (Wyse 5070). Postgresql was the main bottleneck.
@@ -49,9 +74,10 @@ semantic searching.
 # Getting started
 
 - [Docker Guide](docs/docker.md)
-- [Building from source](docs/build.md)
+- [Building from source](docs/build.md) (Not recommended currently)
 - [Configuration options](docs/config.md)
 - [Quickstart guide](docs/setup.md) featuring config, TLS, and scanning your first cluster
+- [Migrating from Hydrus](docs/migrating-from-hydrus.md)
 
 # Server docs
 
