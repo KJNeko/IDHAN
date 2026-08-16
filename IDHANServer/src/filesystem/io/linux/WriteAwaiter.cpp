@@ -52,9 +52,15 @@ void WriteAwaiter::complete( const int result )
 	if ( result < 0 )
 	{
 		// result is -errno from the io_uring completion, not the thread-local errno
-		log::error( "Failed to write file: {}", strerror( -result ) );
-		m_exception = std::make_exception_ptr(
-			std::runtime_error( std::string( "Failed to write file: " ) + strerror( -result ) ) );
+		const auto message { format_ns::format(
+			"Failed to write file: {} (fd {}, offset {}, {} bytes)",
+			strerror( -result ),
+			m_sqe.fd,
+			m_sqe.off,
+			m_sqe.len ) };
+
+		log::error( message );
+		m_exception = std::make_exception_ptr( std::runtime_error( message ) );
 	}
 
 	if ( m_cont ) m_event_loop->queueInLoop( m_cont );

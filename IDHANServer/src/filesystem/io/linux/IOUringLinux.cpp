@@ -12,6 +12,7 @@
 #include <liburing.h>
 #include <malloc.h>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 #include "drogon/HttpAppFramework.h"
@@ -249,8 +250,6 @@ void ioThread( const std::stop_token& token, IOUringLinux* uring, std::shared_pt
 			const unsigned index { head & *uring->m_command_ring.mask };
 			const auto& cqe { uring->m_command_ring.cqes[ index ] };
 
-			if ( cqe.res < 0 ) log::error( "io_uring completion error: {}", strerror( -cqe.res ) );
-
 			if ( cqe.user_data == 0 )
 			{
 				if ( token.stop_requested() ) return;
@@ -371,6 +370,13 @@ bool IOUringLinux::opUnsupported( const int result )
 	return result == -EINVAL || result == -EOPNOTSUPP || result == -ENOSYS;
 }
 
+//! Returns result unchanged so it can wrap a co_return.
+static int traceOp( const int result, const std::string_view op, const std::string_view target )
+{
+	if ( result < 0 ) log::trace( "{} {} failed: {}", op, target, strerror( -result ) );
+	return result;
+}
+
 drogon::Task< std::vector< std::byte > > IOUringLinux::read(
 	const NativeHandle handle,
 	const std::size_t offset,
@@ -442,34 +448,54 @@ drogon::Task< void > IOUringLinux::write(
 
 drogon::Task< int > IOUringLinux::removeFile( const std::filesystem::path path )
 {
+	log::trace( "unlink {}", path.native() );
+
 	if ( m_iouring_setup )
 	{
 		io_uring_sqe sqe {};
 		std::memset( &sqe, 0, sizeof( sqe ) );
 		io_uring_prep_unlinkat( &sqe, AT_FDCWD, path.c_str(), 0 );
 
-		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) ) co_return result;
+		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) )
+			co_return traceOp( result, "unlinkat", path.native() );
+
+		log::trace( "unlinkat unsupported, falling back to unlink for {}", path.native() );
 	}
 
-	co_return unlink( path.c_str() ) == 0 ? 0 : -errno;
+	co_return traceOp( unlink( path.c_str() ) == 0 ? 0 : -errno, "unlink", path.native() );
 }
 
 drogon::Task< int > IOUringLinux::renameFile( const std::filesystem::path from, const std::filesystem::path to )
 {
+	log::trace( "rename {} -> {}", from.native(), to.native() );
+
 	if ( m_iouring_setup )
 	{
 		io_uring_sqe sqe {};
 		std::memset( &sqe, 0, sizeof( sqe ) );
 		io_uring_prep_renameat( &sqe, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), 0 );
 
-		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) ) co_return result;
+		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) )
+		{
+			if ( result < 0 )
+				log::trace( "renameat {} -> {} failed: {}", from.native(), to.native(), strerror( -result ) );
+			co_return result;
+		}
+
+		log::trace( "renameat unsupported, falling back to rename for {}", from.native() );
 	}
 
-	co_return rename( from.c_str(), to.c_str() ) == 0 ? 0 : -errno;
+	const int result { rename( from.c_str(), to.c_str() ) == 0 ? 0 : -errno };
+
+	if ( result < 0 ) log::trace( "rename {} -> {} failed: {}", from.native(), to.native(), strerror( -result ) );
+
+	co_return result;
 }
 
 drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path path )
 {
+	log::trace( "create directories {}", path.native() );
+
 	std::filesystem::path prefix {};
 
 	for ( const auto& component : path )
@@ -486,17 +512,25 @@ drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path
 			std::memset( &sqe, 0, sizeof( sqe ) );
 			io_uring_prep_mkdirat( &sqe, AT_FDCWD, prefix.c_str(), 0777 );
 
-			result = co_await sendOp( sqe );
+			result = traceOp( co_await sendOp( sqe ), "mkdirat", prefix.native() );
 
-			if ( opUnsupported( result ) ) result = mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno;
+			if ( opUnsupported( result ) )
+			{
+				log::trace( "mkdirat unsupported, falling back to mkdir for {}", prefix.native() );
+				result = traceOp( mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno, "mkdir", prefix.native() );
+			}
 		}
 		else
 		{
-			result = mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno;
+			result = traceOp( mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno, "mkdir", prefix.native() );
 		}
 
 		// Every component but the last is expected to exist already on the common path.
-		if ( result != 0 && result != -EEXIST ) co_return result;
+		if ( result != 0 && result != -EEXIST )
+		{
+			log::trace( "create directories {} aborted at {}", path.native(), prefix.native() );
+			co_return result;
+		}
 	}
 
 	co_return 0;
@@ -504,6 +538,8 @@ drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path
 
 drogon::Task< std::expected< std::uint64_t, int > > IOUringLinux::fileSize( const std::filesystem::path path )
 {
+	log::trace( "stat {}", path.native() );
+
 	// Lives in the coroutine frame: the kernel fills it in after this coroutine has suspended.
 	struct statx stx {};
 
@@ -517,13 +553,15 @@ drogon::Task< std::expected< std::uint64_t, int > > IOUringLinux::fileSize( cons
 
 		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) )
 		{
-			if ( result < 0 ) co_return std::unexpected( result );
+			if ( result < 0 ) co_return std::unexpected( traceOp( result, "statx", path.native() ) );
 			co_return static_cast< std::uint64_t >( stx.stx_size );
 		}
+
+		log::trace( "statx unsupported, falling back to blocking statx for {}", path.native() );
 	}
 
 	if ( statx( AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE, &stx ) != 0 )
-		co_return std::unexpected( -errno );
+		co_return std::unexpected( traceOp( -errno, "statx", path.native() ) );
 
 	co_return static_cast< std::uint64_t >( stx.stx_size );
 }

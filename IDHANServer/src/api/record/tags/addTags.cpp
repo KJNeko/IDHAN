@@ -19,7 +19,7 @@ struct TagPair
 {
 	std::optional< TagID > tag_id;
 	std::variant< NamespaceID, std::string > tag_namespace;
-	std::variant< SubtagID, std::string > tag_subtag;
+	std::string tag_subtag;
 
 	TagPair( std::string n_tag, std::string n_subtag ) :
 	  tag_id( std::nullopt ),
@@ -55,12 +55,10 @@ struct TagPair
 			else
 				throw std::invalid_argument( "Invalid tag namespace: Namespace was neither numeric nor string" );
 
-			if ( j_subtag.isIntegral() )
-				tag_subtag = j_subtag.as< SubtagID >();
-			else if ( j_subtag.isString() )
+			if ( j_subtag.isString() )
 				tag_subtag = j_subtag.asString();
 			else
-				throw std::invalid_argument( "Invalid tag subtag: Subtag was neither numeric nor string" );
+				throw std::invalid_argument( "Invalid tag subtag: Subtag was not a string" );
 		}
 		catch ( ... )
 		{
@@ -78,46 +76,35 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > > getIDFromPair( c
 
 	if ( tag_id ) co_return tag_id.value();
 
-	const auto tag_namespace_is_str { std::holds_alternative< std::string >( tag_namespace ) };
-	const auto tag_subtag_is_str { std::holds_alternative< std::string >( tag_subtag ) };
-
-	if ( tag_namespace_is_str && tag_subtag_is_str )
+	if ( std::holds_alternative< std::string >( tag_namespace ) )
 	{
 		const auto result { co_await db->execSqlCoro(
-			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE "
-			"namespace_text = $1 AND subtag_text = $2",
+			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) WHERE "
+			"namespace_text = CASEFOLD(NORMALIZE($1, NFC)) "
+			"AND tags.subtag_text = NORMALIZE(CASEFOLD(NORMALIZE($2, NFC)), NFC)",
 			std::get< std::string >( tag_namespace ),
-			std::get< std::string >( tag_subtag ) ) };
+			tag_subtag ) };
 
 		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
 
-		const auto create_status {
-			co_await createTag( std::get< std::string >( tag_namespace ), std::get< std::string >( tag_subtag ), db )
-		};
+		const auto create_status { co_await createTag( std::get< std::string >( tag_namespace ), tag_subtag, db ) };
 
 		if ( create_status ) co_return *create_status;
 
 		co_return std::unexpected( create_status.error()->genResponse() );
 	}
 
-	if ( !tag_namespace_is_str && !tag_subtag_is_str )
-	{
-		const auto result { co_await db->execSqlCoro(
-			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) "
-			"ON CONFLICT (namespace_id, subtag_id) DO UPDATE SET namespace_id = EXCLUDED.namespace_id "
-			"RETURNING tag_id",
-			std::get< NamespaceID >( tag_namespace ),
-			std::get< SubtagID >( tag_subtag ) ) };
+	const auto result { co_await db->execSqlCoro(
+		"INSERT INTO tags (namespace_id, subtag_text) VALUES ($1, $2) "
+		"ON CONFLICT (namespace_id, subtag_text) DO UPDATE SET subtag_text = EXCLUDED.subtag_text "
+		"RETURNING tag_id",
+		std::get< NamespaceID >( tag_namespace ),
+		tag_subtag ) };
 
-		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
-		co_return std::unexpected( createInternalError(
-			R"(Failed to insert tag '{}':'{}')",
-			std::get< NamespaceID >( tag_namespace ),
-			std::get< SubtagID >( tag_subtag ) ) );
-	}
+	if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
 
-	co_return std::unexpected(
-		createInternalError( "Failed to get ID from pair, Namespace and Subtag must both be String or Integers" ) );
+	co_return std::unexpected( createInternalError(
+		R"(Failed to insert tag '{}':'{}')", std::get< NamespaceID >( tag_namespace ), tag_subtag ) );
 }
 
 drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > > getTagPairs( const Json::Value& json )
@@ -178,13 +165,10 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > g
 		{
 			ids[ i ] = *pair.tag_id;
 		}
-		else if (
-			std::holds_alternative< std::string >( pair.tag_namespace )
-			&& std::holds_alternative< std::string >( pair.tag_subtag ) )
+		else if ( std::holds_alternative< std::string >( pair.tag_namespace ) )
 		{
 			string_indices.emplace_back( i );
-			string_pairs.emplace_back(
-				std::get< std::string >( pair.tag_namespace ), std::get< std::string >( pair.tag_subtag ) );
+			string_pairs.emplace_back( std::get< std::string >( pair.tag_namespace ), pair.tag_subtag );
 		}
 		else
 		{

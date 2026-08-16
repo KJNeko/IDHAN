@@ -28,8 +28,7 @@ ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
 		"SELECT tags.tag_id AS tag_id, input.ord AS ord "
 		"FROM UNNEST($1::TEXT[], $2::TEXT[]) WITH ORDINALITY AS input(namespace_text, subtag_text, ord) "
 		"JOIN tag_namespaces ON tag_namespaces.namespace_text = input.namespace_text "
-		"JOIN tag_subtags ON tag_subtags.subtag_text = input.subtag_text "
-		"JOIN tags ON tags.namespace_id = tag_namespaces.namespace_id AND tags.subtag_id = tag_subtags.subtag_id"
+		"JOIN tags ON tags.namespace_id = tag_namespaces.namespace_id AND tags.subtag_text = input.subtag_text"
 	};
 
 	const auto tag_id_result { co_await db->execSqlCoro( query, std::move( namespaces ), std::move( subtags ) ) };

@@ -27,14 +27,14 @@ drogon::Task< Json::Value > getSimilarTags(
 	const auto only_used_query { R"(
 		SELECT	tag_text												AS tag_text,
 				tag_id													AS tag_id,
-				similarity(tag_text, $2)								AS similarity,
-				tag_text = $2											AS exact,
-				similarity(tag_text, $2) * max(tc.display_count)		AS score,
+				similarity(tag_text, CASEFOLD(normalize($2, NFC)))		AS similarity,
+				tag_text = CASEFOLD(normalize($2, NFC))					AS exact,
+				similarity(tag_text, CASEFOLD(normalize($2, NFC))) * max(tc.display_count)		AS score,
 				max(tc.display_count)									AS display_count,
 				max(tc.storage_count)									AS storage_count
 		FROM tags
 		         LEFT JOIN tag_counts tc USING (tag_id)
-		WHERE tag_text LIKE $1 AND COALESCE(tc.display_count, 0) > 0
+		WHERE tag_text LIKE CASEFOLD(normalize($1, NFC)) AND COALESCE(tc.display_count, 0) > 0
 		GROUP BY tags.tag_id
 		ORDER BY exact DESC, score DESC, similarity DESC
 		limit $3
@@ -43,14 +43,14 @@ drogon::Task< Json::Value > getSimilarTags(
 	const auto all_query { R"(
 		SELECT	tag_text												AS tag_text,
 				tag_id													AS tag_id,
-				similarity(tag_text, $2)								AS similarity,
-				tag_text = $2											AS exact,
-				similarity(tag_text, $2) * max(tc.display_count)		AS score,
+				similarity(tag_text, CASEFOLD(normalize($2, NFC)))		AS similarity,
+				tag_text = CASEFOLD(normalize($2, NFC))					AS exact,
+				similarity(tag_text, CASEFOLD(normalize($2, NFC))) * max(tc.display_count)		AS score,
 				max(tc.display_count)									AS display_count,
 				max(tc.storage_count)									AS storage_count
 		FROM tags
 		         LEFT JOIN tag_counts tc USING (tag_id)
-		WHERE tag_text LIKE $1
+		WHERE tag_text LIKE CASEFOLD(normalize($1, NFC))
 		GROUP BY tags.tag_id
 		-- score is NULL for unused tags; plain DESC is NULLS FIRST and would rank them above every used tag
 		ORDER BY exact DESC, score DESC NULLS LAST, similarity DESC

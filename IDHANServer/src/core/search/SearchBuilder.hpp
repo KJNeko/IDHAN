@@ -275,7 +275,9 @@ class SearchBuilder
 	//! both ends, which is what makes `cat*girl` reject `cat girls`.
 	[[nodiscard]] static std::string wildcardToLikePattern( std::string_view wildcard );
 
-	static constexpr std::string_view wildcard_tag_query { "SELECT tag_id FROM tags WHERE tag_text LIKE $1" };
+	static constexpr std::string_view wildcard_tag_query {
+		"SELECT tag_id FROM tags WHERE tag_text LIKE CASEFOLD(normalize($1, NFC))"
+	};
 
 	//! A record must carry at least one of \p tag_ids. \p pattern names the term in step labels.
 	void addPositiveWildcard( std::vector< TagID > tag_ids, std::string pattern = {} );
