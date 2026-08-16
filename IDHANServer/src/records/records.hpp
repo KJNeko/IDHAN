@@ -15,17 +15,15 @@ class SHA256;
 namespace idhan::helpers
 
 {
-/**
- * @brief
- * @param sha256s
- * @param db
- * @note Hashes MUST be unique
- * @return
- */
-drogon::Task< std::vector< RecordID > > massCreateRecord( const std::vector< SHA256 >& sha256s, DbClientPtr db );
+//! Hashes must be unique.
+[[nodiscard]] drogon::Task< std::vector< RecordID > > massCreateRecord(
+	const std::vector< SHA256 >& sha256s,
+	DbClientPtr db );
 
-drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > > createRecord( const SHA256& sha256, DbClientPtr db );
+[[nodiscard]] drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > > createRecord(
+	const SHA256& sha256,
+	DbClientPtr db );
 
-drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, DbClientPtr db );
+[[nodiscard]] drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, DbClientPtr db );
 
 } // namespace idhan::helpers

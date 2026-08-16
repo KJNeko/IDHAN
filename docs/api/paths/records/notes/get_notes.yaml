@@ -2,22 +2,19 @@ get:
   tags:
     - records
     - notes
-  summary: Get all notes for a record
-  description: |
-    Returns an array of note objects for all notes attached to the given record.
-    Each object contains the note's ID and text.
+  summary: Returns a record's notes
   parameters:
     - $ref: '../../../parameters/record_id.yaml'
   responses:
     '200':
-      description: Array of note objects
+      description: The record's notes
       content:
         application/json:
           schema:
             type: array
             items:
               type: object
-              required: [note_id, text]
+              required: [ note_id, text ]
               properties:
                 note_id:
                   type: integer
@@ -34,8 +31,8 @@ get:
                   text: "Original source unknown."
             no_notes:
               summary: Record with no notes
-              value: []
+              value: [ ]
     '400':
-      description: Invalid record_id
+      description: Invalid `record_id`
     '500':
-      description: Internal error while fetching notes
+      description: Internal server error

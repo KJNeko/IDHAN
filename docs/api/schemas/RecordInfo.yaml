@@ -1,4 +1,8 @@
 type: object
+description: >
+  Only `record_id` and `hashes` are always present. Everything else appears
+  once the record's MIME type has been parsed, and then only for the MIME
+  categories noted on each field.
 required:
   - record_id
   - hashes
@@ -15,59 +19,49 @@ properties:
   size:
     type: integer
     format: int64
-    description: File size in bytes (present only if MIME has been parsed)
+    description: Bytes.
   mime:
     type: string
-    description: MIME type string (present only if MIME has been parsed)
     example: "image/jpeg"
   extension:
     type: string
-    description: Best file extension (present only if MIME has been parsed)
+    description: Best extension for the type.
     example: "jpg"
   extra:
     type: object
-    description: >
-      Freeform JSON metadata blob stored in the `metadata.json` column.
-      Present for all records whose MIME type has been parsed.
+    description: Freeform metadata from the `metadata.json` column.
     additionalProperties: true
   width:
     type: integer
     format: int32
-    description: >
-      Width in pixels. Present for image, video, and image-project MIME categories.
+    description: Pixels. Images, videos, and image projects.
     example: 1920
   height:
     type: integer
     format: int32
-    description: >
-      Height in pixels. Present for image, video, and image-project MIME categories.
+    description: Pixels. Images, videos, and image projects.
     example: 1080
   channels:
     type: integer
     format: int32
-    description: >
-      Number of colour channels. Present for image and image-project MIME categories.
+    description: Colour channels. Images and image projects.
     example: 3
   duration:
     type: number
     format: double
-    description: >
-      Duration in seconds. Present for video MIME category.
+    description: Seconds. Videos.
     example: 120.5
   bitrate:
     type: integer
     format: int32
-    description: >
-      Bitrate in bits per second. Present for video MIME category.
+    description: Bits per second. Videos.
     example: 4000000
   has_audio:
     type: boolean
-    description: >
-      Whether the video contains an audio track. Present for video MIME category.
+    description: Videos.
     example: true
   layers:
     type: integer
     format: int32
-    description: >
-      Number of layers. Present for image-project MIME category (e.g. PSD files).
+    description: Image projects, such as PSD.
     example: 5

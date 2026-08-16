@@ -5,6 +5,7 @@
 
 namespace idhan::types
 {
+
 using SmallInt = std::int16_t;
 #define SMALLINT_PG_TYPE_NAME "SMALLINT"
 

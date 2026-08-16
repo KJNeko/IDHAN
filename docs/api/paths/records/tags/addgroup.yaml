@@ -4,8 +4,8 @@ post:
     - records
   summary: Adds tags to multiple records
   description: |
-    Bulk operation to add tags or tag sets to multiple records. For single record operations, use /records/{record_id}/tags/add.
-    If neither `tags` nor `sets` is provided, the request succeeds with 200 but no changes are made.
+    Use `/records/{record_id}/tags/add` for a single record.
+    With neither `tags` nor `sets` given, the request is a 200 no-op.
   parameters:
     - name: tag_domain_id
       in: query
@@ -30,14 +30,14 @@ post:
               type: array
               items:
                 $ref: '../../../schemas/TagInput.yaml'
-              description: Tags to add to all specified records
+              description: Added to every record in `records`.
             sets:
               type: array
               items:
                 type: array
                 items:
                   $ref: '../../../schemas/TagInput.yaml'
-              description: Individual tag sets for each record (must match records array length)
+              description: One set per record, in order. Must match `records` in length.
         examples:
           bulk_tags:
             summary: Add same tags to multiple records
@@ -57,8 +57,8 @@ post:
                 - [ { namespace: 9, subtag: 2 } ]
   responses:
     200:
-      description: Tags added successfully to all records
+      description: Tags added
     400:
-      description: Invalid request data (malformed JSON, invalid records array, mismatched sets/records count, unknown tag_domain_id)
+      description: Malformed body, bad `records`, `sets` length mismatch, or unknown `tag_domain_id`
     500:
-      description: Internal server error (database failure while inserting tag mappings)
+      description: Internal server error

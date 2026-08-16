@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 2/27/26.
-//
-
 #include "JobTask.hpp"
 
 #include "JobTaskPromise.hpp"

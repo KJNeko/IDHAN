@@ -1,0 +1,37 @@
+#pragma once
+
+#include <drogon/HttpController.h>
+#include <drogon/utils/coroutine.h>
+
+#include "APIAuth.hpp"
+#include "IDHANTypes.hpp"
+
+namespace idhan::api
+{
+
+class EmbeddingAPI : public drogon::HttpController< EmbeddingAPI >
+{
+	using ResponseTask = drogon::Task< drogon::HttpResponsePtr >;
+
+	ResponseTask listModels( drogon::HttpRequestPtr request );
+
+	ResponseTask generate( drogon::HttpRequestPtr request );
+
+	ResponseTask search( drogon::HttpRequestPtr request );
+
+	ResponseTask compare( drogon::HttpRequestPtr request );
+
+	ResponseTask deleteModel( drogon::HttpRequestPtr request, std::int32_t model_id );
+
+  public:
+
+	METHOD_LIST_BEGIN
+	ADD_METHOD_TO( EmbeddingAPI::listModels, "/embeddings/models", drogon::Get, IDHANAPIAuthName );
+	ADD_METHOD_TO( EmbeddingAPI::generate, "/embeddings/generate", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( EmbeddingAPI::search, "/embeddings/search", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( EmbeddingAPI::compare, "/embeddings/compare", drogon::Post, IDHANAPIAuthName );
+	ADD_METHOD_TO( EmbeddingAPI::deleteModel, "/embeddings/models/{1}", drogon::Delete, IDHANAPIAuthName );
+	METHOD_LIST_END
+};
+
+} // namespace idhan::api

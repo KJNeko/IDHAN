@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 5/2/25.
-//
 // You may need to build the project (run Qt uic code generator) to get "ui_MainWindow.h" resolved
 
 #include "MainWindow.hpp"
@@ -19,6 +16,7 @@
 #include "gui/hydrus/tag_service/TagServiceWidget.hpp"
 #include "gui/recordtag/RecordTagWidget.hpp"
 #include "ptr/gui/PTRDownloadWidget.hpp"
+#include "ptr/gui/PTRFlattenWidget.hpp"
 #include "ptr/gui/PTRImportWidget.hpp"
 #include "ui_MainWindow.h"
 
@@ -169,11 +167,17 @@ void MainWindow::on_actionImport_PTR_triggered()
 {
 	auto* ptr_tabs = new QTabWidget( this );
 	auto* download_widget = new PTRDownloadWidget( ptr_tabs );
+	auto* flatten_widget = new PTRFlattenWidget( ptr_tabs );
 	auto* import_widget = new PTRImportWidget( ptr_tabs );
 	ptr_tabs->addTab( download_widget, "Download" );
+	ptr_tabs->addTab( flatten_widget, "Flatten" );
 	ptr_tabs->addTab( import_widget, "Import" );
 
 	connect( download_widget, &PTRDownloadWidget::directoryChanged, import_widget, &PTRImportWidget::setDirectory );
+	connect( download_widget, &PTRDownloadWidget::directoryChanged, flatten_widget, &PTRFlattenWidget::setDirectory );
+
+	connect(
+		flatten_widget, &PTRFlattenWidget::outputDirectoryChanged, import_widget, &PTRImportWidget::setDirectory );
 
 	ui->importTabs->addTab( ptr_tabs, "PTR Importer" );
 	ui->importTabs->setCurrentIndex( ui->importTabs->count() - 1 );

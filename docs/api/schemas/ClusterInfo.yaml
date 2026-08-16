@@ -6,9 +6,7 @@ properties:
   readonly:
     type: boolean
     default: true
-    description: >
-      When true IDHAN will not add, move, or rename files in this cluster.
-      Omitting this field defaults to true.
+    description: IDHAN will not add, move, or rename files in this cluster.
   name:
     type: string
   path:
@@ -22,29 +20,24 @@ properties:
         readOnly: true
       limit:
         type: integer
-        description: >
-          Maximum bytes this cluster may hold. 0 means unlimited.
+        description: Byte ceiling. 0 means unlimited.
         default: 0
       available:
         type: integer
         readOnly: true
   file_count:
-    description: Number of files in the cluster
     type: integer
     readOnly: true
   ratio:
     description: >
-      Relative weight used when IDHAN picks a cluster for new files.
-      The effective probability is this cluster's ratio divided by the sum of
-      all cluster ratios. Only used on write (response field is ratio_number).
+      Weight used when picking a cluster for new files: this cluster's ratio
+      over the sum of all ratios. Reads return it as `ratio_number`.
     type: integer
     example: 1
     default: 1
     writeOnly: true
   ratio_number:
-    description: >
-      Stored ratio weight (read-only; use the ratio field when creating or
-      modifying a cluster).
+    description: The stored `ratio`.
     type: integer
     readOnly: true
 required:

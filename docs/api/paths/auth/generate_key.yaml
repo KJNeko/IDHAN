@@ -3,15 +3,13 @@ post:
     - public
   summary: Generates the initial API key
   description: |
-    Creates the first API key for the server. This endpoint is only active when no API keys
-    exist yet — subsequent calls return an empty response. Use the returned key as the value
-    for the `IDHAN-Api-Key` request header on all authenticated endpoints.
-  security: []
+    Only works while the server has no keys; later calls return an empty body.
+    Send the returned key as the `IDHAN-Api-Key` header on authenticated
+    endpoints.
+  security: [ ]
   responses:
     200:
-      description: |
-        First call: returns a JSON body containing the generated key.
-        Subsequent calls (key already exists): returns an empty body.
+      description: The generated key, or an empty body if one already exists
       content:
         application/json:
           schema:
@@ -19,5 +17,5 @@ post:
             properties:
               key:
                 type: string
-                description: SHA-256 hex-encoded API key (only present on first call)
+                description: SHA-256 hex. Present only on the first call.
                 example: "a3f0c1d2e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1"

@@ -1,12 +1,8 @@
-//
-// Created by kj16609 on 7/24/25.
-//
-
-#include "records/records.hpp"
-#include "urls/urls.hpp"
 #include "HyAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "hyapi/helpers.hpp"
+#include "records/records.hpp"
+#include "urls/urls.hpp"
 
 namespace idhan::hyapi
 {
@@ -17,15 +13,10 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getAdvance
 {
 	Json::Value root {};
 
-	// const auto url_id { co_await idhan::helpers::findOrCreateUrl( url_str, db ) };
-	// if ( !url_id ) co_return url_id.error();
-	// const auto url_id_e { url_id.value() };
-
 	root[ "request_url" ] = url_str;
 	root[ "normalized_url" ] = url_str;
 	root[ "url_type" ] = 5; // Unknown URL
 	root[ "url_type_string" ] = "unknown";
-	// root["match_name"] =
 	root[ "can_parse" ] = false;
 
 	co_return root;
@@ -43,7 +34,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( const drogon::H
 	if ( !records_e ) co_return records_e.error();
 	const auto& records { records_e.value() };
 
-	// change url_to_add to urls_to_add to simplify handling
 	if ( json.isMember( "url_to_add" ) )
 	{
 		json[ "urls_to_add" ] = Json::Value( Json::arrayValue );

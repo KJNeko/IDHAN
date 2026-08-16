@@ -4,9 +4,8 @@ get:
     - database
   summary: PostgreSQL storage sunburst data
   description: |
-    Returns a hierarchical JSON tree suitable for rendering as a sunburst chart.
-    The root contains all public tables as children, each with their on-disk size
-    and a list of their indexes with individual sizes.
+    A tree shaped for a sunburst chart. The root's children are the public
+    tables with their on-disk size; each table's children are its indexes.
   responses:
     200:
       description: Sunburst tree of table and index sizes
@@ -25,10 +24,10 @@ get:
                   properties:
                     name:
                       type: string
-                      description: Table name
+                      description: Table name.
                     value:
                       type: integer
-                      description: Table size in bytes
+                      description: Table size in bytes.
                     children:
                       type: array
                       items:
@@ -36,7 +35,7 @@ get:
                         properties:
                           name:
                             type: string
-                            description: Index name
+                            description: Index name.
                           value:
                             type: integer
-                            description: Index size in bytes
+                            description: Index size in bytes.

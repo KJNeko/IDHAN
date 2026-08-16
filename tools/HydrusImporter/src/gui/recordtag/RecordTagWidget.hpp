@@ -12,6 +12,7 @@
 
 #include <idhan/IDHANClient.hpp>
 
+//! Item delegate that renders a record's active tags within RecordTagWidget.
 class ActiveTagDelegate final : public QStyledItemDelegate
 {
   public:
@@ -31,6 +32,7 @@ class ActiveTagDelegate final : public QStyledItemDelegate
 	void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
 };
 
+//! Qt widget that displays a record and its tags, for spot-checking imported data.
 class RecordTagWidget final : public QWidget
 {
 	Q_OBJECT

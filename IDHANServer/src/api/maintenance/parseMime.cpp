@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/21/25.
-//
-
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "mime/MimeDatabase.hpp"
@@ -12,17 +8,48 @@ namespace idhan::api
 
 drogon::Task< Json::Value > processMetadata( const std::string mime_str, const std::string_view request_data )
 {
-	Json::Value response {};
+	Json::Value response { Json::arrayValue };
 	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_str ) };
-	idhan::data_view data_view { reinterpret_cast< const std::uint8_t* >( request_data.data() ), request_data.size() };
+
+	auto blob { ipc::Blob::fromBytes(
+		std::span< const std::byte > {
+			reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() } ) };
+
+	if ( !blob )
+	{
+		Json::Value failure {};
+		failure[ "error" ] = std::format( "Could not stage the request body for a module: {}", blob.error() );
+		response.append( std::move( failure ) );
+		co_return response;
+	}
+
+	auto input_e { modules::CallInput::forBlob( std::move( blob.value() ) ) };
+
+	if ( !input_e )
+	{
+		Json::Value failure {};
+		failure[ "error" ] = std::format( "Could not stage the request body for a module: {}", input_e.error() );
+		response.append( std::move( failure ) );
+		co_return response;
+	}
+
+	const auto input { std::make_shared< const modules::CallInput >( std::move( *input_e ) ) };
+
 	for ( const auto& metadata_module : metadata_modules )
 	{
 		Json::Value metadata_obj {};
 		metadata_obj[ "name" ] = std::string( metadata_module->name() );
 
-		ModuleCallData data { .file_view = data_view, .mime_name = mime_str, .extra = {} };
+		const modules::RemoteCallData data { .input = input, .mime_name = mime_str, .extra = {}, .depth = 0 };
 
-		auto metadata_info { metadata_module->parseFile( data ) };
+		auto metadata_info { co_await metadata_module->parseFile( data ) };
+
+		if ( !metadata_info )
+		{
+			metadata_obj[ "error" ] = metadata_info.error();
+			response.append( std::move( metadata_obj ) );
+			continue;
+		}
 
 		const auto metadata { metadata_info->m_metadata };
 
@@ -111,9 +138,7 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 	response[ "success" ] = true;
 	response[ "mime" ] = mime_str.value();
 
-	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
-
-	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, request_data );
+	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, file_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
@@ -136,7 +161,10 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpR
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::reloadMime( drogon::HttpRequestPtr request )
 {
-	co_await mime::getMimeDatabase()->reloadMimeParsers();
+	const auto reload_result { co_await mime::getMimeDatabase()->reloadMimeParsers() };
+
+	// a swallowed reload failure would report the stale parser list as a success
+	if ( !reload_result ) co_return reload_result.error();
 
 	co_return co_await listParsers( request );
 }

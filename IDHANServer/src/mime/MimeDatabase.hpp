@@ -1,114 +1,64 @@
-//
-// Created by kj16609 on 12/18/24.
-//
 #pragma once
-#include <condition_variable>
 #include <expected>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 
-#include "filesystem/io/IOUring.hpp"
 #include "MimeIdentifier.hpp"
 #include "MimeInfo.hpp"
 #include "ModuleBase.hpp"
+#include "filesystem/io/IOUring.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan::mime
 {
 class Cursor;
 
-/**
-
-
-@page MimeParser Mime Parser
-
-@subsection MimeParserFile idhanmime file
-the following section identifies how the mime parser json file should be laid out.
-
-the current fields are:
-- `mime` is a string that identifies the mime, an example of this is `image/jpeg` for a jpg image.
-- `extensions` is an array of extensions the file could possibly possess, this is not used in the detection but is for
-the user to select one of the extensions to store the files as, the default is the 0th item. If this list is empty the
-extension `.bin` is used instead
-- `data` is an array of json objects. The format for this objects is listed in the next section
-- `fast` a boolean value that informs the parser that if it passes it should consider the file found, default true
-
-@subsubsection MimeParserFileData data
-- `type`: the only required field is a `type` field that signifies the type of operation taking place.
-- `id`: this is used for other components of the parser.
-
-List of types:
-- search
-
-@subsubsection MimeSearch search
-optional fields:
-- `offset`: either an integer value, or a string of an id for a compatible data search. Negative values signify a offset
-from the end of the data (-1 indicates 1 byte backwards from the size N)
-- `strict`: signifies if the offset is a starting point, or the exact point. default true if not present
-
-required fields:
-- `hex`: a hex representation of the data. In order to signify wildcard data, this can also be an array of integer
-values, with any value beyond the 0-255 range being a wildcard, such as -1
-
-@subsubsection MimeOverride override
-Same requirements as @refitem MimeSearch but with an extra field
-- `override`: The mime type to override to if this search passes.
-
-An example file
-```json
-{
-
-  "mime": "image/jpeg",
-  "extensions": [
-	"jpg"
-  ],
-  "data": [
-	{
-	  "type": "search",
-	  "offset": 0,
-	  "hex": "89504E0D0A1A0A"
-	}
-  ]
-}
-```
+/** @page MimeParser Mime Parser
+ *
+ * `.idhanmime` files define `mime`, `extensions`, `priority`, `require_extension`, and a matcher
+ * `data` array. Supported matchers are `search` (hex pattern, optional offset/limit) and `include`
+ * (runs another parser's matchers). Child matchers continue from the parent match position; circular
+ * includes are rejected.
  */
 
-//! This mime type is used for unknown mime types
 constexpr auto INVALID_MIME_NAME { "unknown/unknown" };
 
+//! MIME parser database; scans hold a copy-on-write snapshot across co_awaits.
 class MimeDatabase
 {
 	MimeDatabase();
 
 	friend std::shared_ptr< MimeDatabase > getMimeDatabase();
 
-	std::vector< MimeIdentifier > m_identifiers {};
+	std::shared_ptr< const std::vector< MimeIdentifier > > m_identifiers {
+		std::make_shared< std::vector< MimeIdentifier > >()
+	};
+	mutable std::mutex m_identifiers_mutex {};
 
-	std::condition_variable update_condition {};
-	std::mutex mutex {};
-	std::atomic< bool > updating_flag {};
-	std::atomic< int > active_counter {};
+	[[nodiscard]] std::shared_ptr< const std::vector< MimeIdentifier > > identifiers() const;
 
 	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( Cursor cursor );
 
   public:
 
-	Json::Value dump() const;
+	[[nodiscard]] Json::Value dump() const;
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan(
-		std::string_view data,
-		std::string file_name );
+	[[nodiscard]] ExpectedTask< std::string > scan( std::string_view data, std::string file_name );
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( data_view data, std::string file_name );
+	[[nodiscard]] ExpectedTask< std::string > scan( data_view data, std::string file_name );
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scan( FileIOUring file_io );
+	[[nodiscard]] ExpectedTask< std::string > scan( std::shared_ptr< FileIOUring > file_io );
 
-	drogon::Task< std::expected< std::string, drogon::HttpResponsePtr > > scanFile( const std::filesystem::path& path );
+	[[nodiscard]] ExpectedTask< std::string > scanFile( const std::filesystem::path& path );
 
-	//! Reloads all the 3rd party mime parsers
-	drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();
+	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > reloadMimeParsers();
 };
 
-std::shared_ptr< MimeDatabase > getMimeDatabase();
-drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr( std::string str, DbClientPtr db );
+[[nodiscard]] std::shared_ptr< MimeDatabase > getMimeDatabase();
+
+[[nodiscard]] drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr(
+	std::string str,
+	DbClientPtr db );
 
 } // namespace idhan::mime

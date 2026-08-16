@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 5/3/25.
-//
-
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -30,7 +26,6 @@ QFuture< TagInfo > IDHANClient::getTagInfo( const TagID tag_id )
 		results.m_namespace.m_id = object[ "namespace" ][ "id" ].toInt();
 		results.m_namespace.m_text = object[ "namespace" ][ "text" ].toString().toStdString();
 
-		results.m_subtag.m_id = object[ "subtag" ][ "id" ].toInt();
 		results.m_subtag.m_text = object[ "subtag" ][ "text" ].toString().toStdString();
 
 		results.item_count = object[ "item_count" ].toInt();

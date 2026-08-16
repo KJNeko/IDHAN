@@ -1,17 +1,17 @@
 delete:
   tags:
     - clusters
-  summary: Deletes a filesystem cluster. The cluster MUST be empty before deletion.
+  summary: Deletes a cluster
+  description: The cluster must be empty first.
   parameters:
     - name: cluster_id
       in: path
       required: true
       schema:
         type: integer
-      description: The ID of the cluster to remove.
   responses:
     200:
-      description: The cluster was successfully removed.
+      description: Cluster removed
       content:
         application/json:
           schema:
@@ -21,7 +21,7 @@ delete:
                 type: integer
                 example: 200
     404:
-      description: No cluster with the given cluster_id exists.
+      description: Cluster not found
       content:
         application/json:
           schema:
@@ -31,7 +31,7 @@ delete:
                 type: integer
                 example: 404
     409:
-      description: The cluster cannot be deleted because it still contains files that have not been migrated.
+      description: Cluster still holds files
       content:
         application/json:
           schema:

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/20/25.
-//
-
 #include "SHA256.hpp"
 
 #include <openssl/evp.h>
@@ -11,7 +7,9 @@
 #include <fstream>
 
 #include "api/helpers/createBadRequest.hpp"
+#include "caching/recordCaches.hpp"
 #include "crypto/simpleHasher.hpp"
+#include "db/dbTypes.hpp"
 #include "decodeHex.hpp"
 #include "fgl/defines.hpp"
 #include "filesystem/io/IOUring.hpp"
@@ -46,6 +44,41 @@ SHA256::SHA256( const drogon::orm::Field& field )
 	std::memcpy( m_data.data(), data.data(), data.size() );
 }
 
+std::array< std::byte, ( 256 / 8 ) > SHA256::data() const
+{
+	return m_data;
+}
+
+std::vector< char > SHA256::toVec() const
+{
+	std::vector< char > data {};
+	data.resize( m_data.size() );
+	std::memcpy( data.data(), m_data.data(), m_data.size() );
+	return data;
+}
+
+bool SHA256::operator==( const SHA256& other ) const
+{
+	for ( std::size_t i = 0; i < other.m_data.size(); ++i )
+	{
+		if ( m_data[ i ] != other.m_data[ i ] )
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool SHA256::operator<( const SHA256& other ) const
+{
+	for ( std::size_t i = 0; i < other.m_data.size(); ++i )
+	{
+		if ( other.m_data[ i ] < this->m_data[ i ] ) return true;
+		if ( other.m_data[ i ] > this->m_data[ i ] ) return false;
+	}
+	return false;
+}
+
 std::string SHA256::hex() const
 {
 	std::string str {};
@@ -58,8 +91,6 @@ std::expected< SHA256, drogon::HttpResponsePtr > SHA256::fromHex( const std::str
 {
 	try
 	{
-		// 0xFF = 0b11111111
-		// FGL_ASSERT( str.size() == ( 256 / 8 * 2 ), "Hex string must be exactly 64 characters log" );
 		if ( str.size() != ( 256 / 8 * 2 ) )
 			return std::unexpected(
 				createBadRequest( "Hex string must be exactly 64 characters long, Was {}", str.size() ) );
@@ -101,11 +132,18 @@ SHA256 SHA256::fromPgCol( const drogon::orm::Field& field )
 
 drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > SHA256::fromDB( RecordID record_id, DbClientPtr db )
 {
+	auto& cache { caching::recordSha256Cache() };
+	if ( const auto cached { cache.get( record_id ) } ) co_return *cached;
+
 	const auto result { co_await db->execSqlCoro( "SELECT sha256 FROM records WHERE record_id = $1", record_id ) };
 
-	if ( result.empty() ) co_return std::unexpected( createBadRequest( "Record not found" ) );
+	if ( result.empty() ) co_return std::unexpected( createNotFound( "Record not found" ) );
 
-	co_return SHA256::fromPgCol( result[ 0 ][ 0 ] );
+	const auto sha256 { SHA256::fromPgCol( result[ 0 ][ 0 ] ) };
+
+	cache.put( record_id, sha256 );
+
+	co_return sha256;
 }
 
 SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
@@ -113,7 +151,7 @@ SHA256 SHA256::hash( const std::byte* data, const std::size_t size )
 	return SHA256::fromBuffer( crypto::hashData( data, size ) );
 }
 
-drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
+drogon::Task< SHA256 > SHA256::hashCoro( std::shared_ptr< FileIOUring > io_uring )
 {
 	constexpr auto block_size { 1024 * 1024 };
 
@@ -125,9 +163,9 @@ drogon::Task< SHA256 > SHA256::hashCoro( FileIOUring io_uring )
 	if ( EVP_DigestInit_ex( ctx.get(), EVP_sha256(), nullptr ) != 1 )
 		throw std::runtime_error( "EVP_DigestInit_ex() failed" );
 
-	for ( std::size_t i = 0; i < io_uring.size(); i += block_size )
+	for ( std::size_t i = 0; i < io_uring->size(); i += block_size )
 	{
-		const auto data { co_await io_uring.read( i, block_size ) };
+		const auto data { co_await io_uring->read( i, block_size ) };
 
 		if ( EVP_DigestUpdate( ctx.get(), data.data(), data.size() ) != 1 )
 			throw std::runtime_error( "EVP_DigestUpdate() failed" );

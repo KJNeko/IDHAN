@@ -1,10 +1,6 @@
-//
-// Created by kj16609 on 11/14/25.
-//
-
-#include "crypto/SHA256.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "core/search/SearchBuilder.hpp"
+#include "crypto/SHA256.hpp"
 #include "hyapi/HyAPI.hpp"
 #include "logging/ScopedTimer.hpp"
 
@@ -28,7 +24,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	auto db { drogon::app().getDbClient() };
 
-	// Build the search
 	SearchBuilder builder {};
 
 	Json::Value tags_json {};
@@ -47,12 +42,16 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		}
 	}
 
+	if ( !tags_json.isArray() ) co_return createBadRequest( "tags must be an array of strings" );
+
 	std::vector< std::string > search_tags {};
 	search_tags.reserve( tags_json.size() );
 	std::vector< std::string > system_tags {};
 
 	for ( const auto& tag : tags_json )
 	{
+		// asString() throws on non-string values
+		if ( !tag.isString() ) co_return createBadRequest( "tags must be an array of strings" );
 		const auto tag_text { tag.asString() };
 		if ( tag_text.starts_with( "system:" ) )
 		{
@@ -63,8 +62,18 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 		search_tags.emplace_back( tag_text );
 	}
 
-	const auto search_result { co_await builder.setTags( search_tags ) };
-	builder.setSystemTags( system_tags );
+	const auto search_result_error { co_await builder.setTags( search_tags ) };
+	// an unchecked failure here would leave the builder with no tags and search everything
+	if ( !search_result_error ) co_return *search_result_error;
+
+	try
+	{
+		builder.setSystemTags( system_tags );
+	}
+	catch ( const std::invalid_argument& e )
+	{
+		co_return createBadRequest( "Invalid system tag: {}", e.what() );
+	}
 
 	// TODO: file domains. For now we'll assume all files
 
@@ -100,7 +109,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	log::info( "Setup took {}ms", diff );
 
 	auto query_start = std::chrono::system_clock::now();
-	const auto result { co_await builder.query( db, {} ) };
+	const auto result { co_await builder.query( db, {}, return_file_ids, return_hashes ) };
 	auto query_end = std::chrono::system_clock::now();
 	const auto query_diff {
 		std::chrono::duration_cast< std::chrono::milliseconds >( query_end - query_start ).count()
@@ -110,19 +119,19 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	Json::Value out {};
 
 	const auto json_start = std::chrono::system_clock::now();
-	Json::Value file_ids {};
-	Json::Value hashes {};
-	Json::ArrayIndex i { 0 };
+	Json::Value file_ids { Json::arrayValue };
+	Json::Value hashes { Json::arrayValue };
 
-	file_ids.resize( static_cast< Json::Value::ArrayIndex >( result.size() ) );
-	hashes.resize( static_cast< Json::Value::ArrayIndex >( result.size() ) );
-
-	for ( const auto& row : result )
+	if ( return_file_ids )
 	{
-		if ( return_file_ids ) file_ids[ i ] = row[ "record_id" ].as< RecordID >();
-		if ( return_hashes ) hashes[ i ] = SHA256::fromPgCol( row[ "sha256" ] ).hex();
+		file_ids.resize( static_cast< Json::Value::ArrayIndex >( result.record_ids.size() ) );
+		for ( Json::ArrayIndex i = 0; i < result.record_ids.size(); ++i ) file_ids[ i ] = result.record_ids[ i ];
+	}
 
-		i += 1;
+	if ( return_hashes )
+	{
+		hashes.resize( static_cast< Json::Value::ArrayIndex >( result.hashes.size() ) );
+		for ( Json::ArrayIndex i = 0; i < result.hashes.size(); ++i ) hashes[ i ] = result.hashes[ i ].hex();
 	}
 
 	if ( return_file_ids ) out[ "file_ids" ] = std::move( file_ids );

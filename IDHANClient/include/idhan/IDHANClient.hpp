@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #pragma once
 
 #include <QCommandLineParser>
@@ -12,6 +8,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <queue>
 #include <string>
 
@@ -27,7 +24,9 @@ class logger;
 namespace idhan
 {
 class SHA256;
+class TagCache;
 
+//! Server build and API version information, as returned by IDHANClient::queryVersion().
 struct VersionInfo
 {
 	struct ServerVersion
@@ -51,11 +50,17 @@ struct VersionInfo
 	QString commit;
 };
 
+//! Registers IDHAN's standard command-line options (server host, port, API key, TLS, ...) on \p parser.
 void addIDHANOptions( QCommandLineParser& parser );
 
+//! Callback invoked with the completed network reply on success.
 using IDHANResponseHandler = std::function< void( QNetworkReply* ) >;
+//! Callback invoked when a request fails, with the reply, the Qt error, and any server message.
 using IDHANErrorHandler = std::function< void( QNetworkReply*, QNetworkReply::NetworkError, std::string server_msg ) >;
 
+//! Typed C++/Qt wrapper over the IDHAN REST API. Each method issues one HTTP request and returns a
+//! QFuture that resolves to the parsed result (or reports an error). Construct one with the server
+//! host/port/key (Qt must be initialised first); a process-wide instance is reachable via instance().
 class IDHANClient
 {
 	std::shared_ptr< spdlog::logger > m_logger { nullptr };
@@ -70,6 +75,9 @@ class IDHANClient
 
 	QString m_key {};
 
+	//! Caches resolved (namespace, subtag) -> TagID so repeated tags skip the server round-trip.
+	std::unique_ptr< TagCache > m_tag_cache;
+
   public:
 
 	[[nodiscard]] std::shared_ptr< spdlog::logger > getLogger() const { return m_logger; }
@@ -82,18 +90,14 @@ class IDHANClient
 
 	void addKeyHeader( QNetworkRequest& request );
 
-	Q_DISABLE_COPY_MOVE( IDHANClient );
+	Q_DISABLE_COPY_MOVE( IDHANClient )
 
 	IDHANClient() = delete;
 
 	/**
-	* @brief Upon construction the class will attempt to get the version info from the IDHAN server target.
-	* @note Qt must be initalized before construction of this class. Either a QGuiApplication or an QApplication instance
-	* @param client_name Name of the client that shows up in the server logs for network logs and in the logging statements
-	* @param hostname
-	* @param port
-	* @param key
-	* @param use_tls
+	* @brief Queries the target server's version info on construction.
+	* @note Qt must be initialised first, via a QGuiApplication or QApplication instance.
+	* @param client_name Name this client appears under in the server logs.
 	*/
 	IDHANClient(
 		const QString& client_name,
@@ -107,40 +111,55 @@ class IDHANClient
 	//! Returns a future that resolves to true if the server responds with valid version info.
 	[[nodiscard]] QFuture< bool > validConnection() const;
 
+	//! Sets the API key sent with subsequent requests.
 	void setAPIKey( const QString& key );
 
+	//! Points the client at a (possibly different) server and key, reconnecting.
 	void openConnection( const QString& hostname, qint16 port, QString key, bool use_tls = false );
 
 	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::array< std::byte, 32 > >& hashes );
 
 	/**
-	 * @brief
 	 * @param hashes Hex representations of hashes
-	 * @param network
-	 * @return
 	 */
 	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::string >& hashes );
 
+	//! \return The record ID for the given hex SHA-256, or std::nullopt if no such record exists.
 	QFuture< std::optional< RecordID > > getRecordID( const std::string& sha256 );
 
+	//! \return The ID of a random record with active mappings.
 	QFuture< RecordID > getRandomActiveRecord();
 
+	//! \return The server's build and API version information.
 	QFuture< VersionInfo > queryVersion();
 
+	//! Sets the byte budget of the client-side tag resolution cache, evicting immediately if the
+	//! cache is now over the new budget. Defaults to TAG_CACHE_DEFAULT_BUDGET_BYTES (1 GiB).
+	void setTagCacheBudget( std::size_t bytes );
+
+	//! Creates the given tags (creating any that don't exist) and returns their IDs, order-preserved.
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::string >& tags );
+	//! \copydoc createTags(const std::vector<std::string>&)
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::pair< std::string, std::string > >& tags );
 
+	//! Creates a single "namespace:subtag" tag and returns its ID.
 	QFuture< TagID > createTag( const std::string&& namespace_text, const std::string&& subtag_text );
 
+	//! \copydoc createTag(const std::string&&,const std::string&&)
 	QFuture< TagID > createTag( const std::string& tag_text );
 
+	//! \return The raw (stored) tag IDs applied to \p record_id in \p tag_domain_id.
 	QFuture< std::vector< TagID > > getRecordTags( RecordID record_id, TagDomainID tag_domain_id );
+	//! \return The active (alias/sibling/parent-resolved) tag IDs for \p record_id in \p tag_domain_id.
 	QFuture< std::vector< TagID > > getActiveRecordTags( RecordID record_id, TagDomainID tag_domain_id );
 
+	//! Resolves tag IDs to their "namespace:subtag" text, order-preserved.
 	QFuture< std::vector< std::string > > getTagText( std::vector< TagID >& tag_ids );
 
+	//! \copydoc getTagText(std::vector<TagID>&)
 	QFuture< std::string > getTagText( TagID tag_id );
 
+	//! \return Tag suggestions (id + text) matching the autocomplete \p text.
 	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag( const QString& text );
 
 	QFuture< void > addTags(
@@ -171,18 +190,11 @@ class IDHANClient
 	QFuture< void > setDuplicates( RecordID worse_duplicate, RecordID better_duplicate );
 
 	/**
-	 *
 	 * @param pairs Pairs of ids in a (worse_id, better_id) format
-	 * @return
 	 */
 	QFuture< void > setDuplicates( const std::vector< std::pair< RecordID, RecordID > >& pairs );
 
-	/**
-	 * @brief Creates a parent/child relationship between two tags
-	 * @param parent_id
-	 * @param child_id
-	 * @return
-	 */
+	//! Creates a parent/child relationship between two tags
 	QFuture< void > createParentRelationship( TagDomainID tag_domian_id, TagID parent_id, TagID child_id );
 	QFuture< void > createParentRelationship(
 		TagDomainID tag_domian_id,
@@ -190,12 +202,8 @@ class IDHANClient
 
 	/**
 	 * @brief Creates a new alias for a given tag.
-	 * @param aliased_id
-	 * @param alias_id
-	 * @param tag_domain_id
 	 * @throws AliasLoopException Throws an exception if a loop is detected
 	 * @throws InvalidTagID
-	 * @return
 	 */
 	QFuture< void > createAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
 
@@ -203,13 +211,7 @@ class IDHANClient
 		TagDomainID tag_domain_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
-	/**
-	 * @brief Creates a new sibling relationship between two tags.
-	 * @param tag_domain_id
-	 * @param older_id
-	 * @param younger_id
-	 * @return
-	 */
+	//! Creates a new sibling relationship between two tags.
 	QFuture< void > createSiblingRelationship( TagDomainID tag_domain_id, TagID older_id, TagID younger_id );
 
 	QFuture< void > createSiblingRelationship(
@@ -233,18 +235,13 @@ class IDHANClient
 
 	/**
 	 * @brief Creates a new tag domain, Throws if the domain exists
-	 * @param name
-	 * @param network
 	 * @throws DomainExists
-	 * @return
 	 */
 	QFuture< TagDomainID > createTagDomain( const std::string& name );
 
 	/**
 	 * @brief Searches for an existing tag domain. Throws if it does not exist
-	 * @param name
 	 * @throws DomainDoesNotExist
-	 * @return
 	 */
 	QFuture< std::optional< TagDomainID > > getTagDomain( std::string_view name );
 
@@ -278,14 +275,12 @@ class IDHANClient
 
 		struct SubtagInfo
 		{
-			SubtagID m_id;
 			std::string m_text;
 		} m_subtag;
 
 		std::string toStdString() const
 		{
 			FGL_ASSERT( m_namespace.m_id != 0, "Namespace ID invalid" );
-			FGL_ASSERT( m_subtag.m_id != 0, "Subtag ID invalid" );
 
 			if ( m_namespace.m_text.empty() ) return m_subtag.m_text;
 			return format_ns::format( "{}:{}", m_namespace.m_text, m_subtag.m_text );
@@ -304,10 +299,7 @@ class IDHANClient
 		std::string m_name;
 	};
 
-	/**
-	 * @brief Returns a list of all tag domain ids
-	 * @return
-	 */
+	//! Returns a list of all tag domain ids
 	QFuture< std::vector< TagDomainInfo > > getTagDomains();
 
 	QFuture< void > createFileCluster(

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/28/25.
-//
 // You may need to build the project (run Qt uic code generator) to get "ui_HydrusImporter.h" resolved
 
 #include "HydrusImporterWidget.hpp"
@@ -9,6 +6,8 @@
 
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFutureWatcher>
+#include <QtConcurrent>
 
 #include "HydrusImporter.hpp"
 #include "file_relationships/FileRelationshipsWidget.hpp"
@@ -18,14 +17,22 @@
 
 class TagServiceWorker;
 
-HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) :
-  QWidget( parent ),
-  m_threads(),
-  ui( new Ui::HydrusImporterWidget )
+//! Result of opening a Hydrus database off the GUI thread. Holds a raw importer pointer (HydrusImporter is
+//! non-movable, so it can't be returned by value) that the GUI thread adopts into a unique_ptr.
+struct ParseResult
+{
+	idhan::hydrus::HydrusImporter* importer { nullptr };
+	std::vector< idhan::hydrus::ServiceInfo > services {};
+	bool has_ptr { false };
+	QString error {};
+};
+
+
+HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent ), ui( new Ui::HydrusImporterWidget )
 {
 	ui->setupUi( this );
 
-	ui->cbProcessPTR->setChecked( true );
+	ui->cbProcessPTR->setChecked( false );
 
 	ui->hyFolderStatusLabel->setText( "Invalid" );
 	ui->hyFolderStatusLabel->setStyleSheet( "QLabel { color: red; }" );
@@ -42,15 +49,12 @@ HydrusImporterWidget::~HydrusImporterWidget()
 	delete ui;
 }
 
-void HydrusImporterWidget::parseTagServices()
+void HydrusImporterWidget::parseTagServices( const std::vector< idhan::hydrus::ServiceInfo >& services )
 {
-	auto service_infos { m_importer->getTagServices() };
-
-	for ( const auto& service : service_infos )
+	for ( const auto& service : services )
 	{
 		if ( service.name == "public tag repository" && !ui->cbProcessPTR->isChecked() )
 		{
-			// idhan::logging::info( "Skipping PTR because cbProcessPTR is not checked" );
 			continue;
 		}
 
@@ -59,7 +63,6 @@ void HydrusImporterWidget::parseTagServices()
 		widget->setName( service.name );
 		widget->setInfo( service );
 
-		// ui->tagServicesLayout->addWidget( widget );
 		addServiceWidget( widget );
 
 		connect(
@@ -185,29 +188,65 @@ void HydrusImporterWidget::on_selectHydrusPath_clicked()
 
 void HydrusImporterWidget::on_parseHydrusDB_pressed()
 {
-	ui->parseStatusLabel->setText( "Processing... This might take awhile. (Up to 2 minutes if you have the PTR)" );
-
-	if ( QThread::isMainThread() )
-	{
-		QApplication::processEvents();
-	}
-
-	m_importer = std::make_unique< idhan::hydrus::HydrusImporter >( ui->hydrusFolderPath->text().toStdString() );
-
-	const bool has_ptr { m_importer->hasPTR() };
-
-	m_total_preprocess = 0;
-	m_completed_preprocess = 0;
-
-	parseTagServices();
-	parseFileRelationships();
-	parseUrls();
-
-	updatePreprocessProgress();
+	ui->parseStatusLabel->setText( "Opening Hydrus database..." );
 	ui->importButton->setEnabled( false );
 	ui->parseHydrusDB->setEnabled( false );
 
-	emit triggerPreImport();
+	const std::filesystem::path path { ui->hydrusFolderPath->text().toStdString() };
+
+	auto future { QtConcurrent::run(
+		[ path ]() -> ParseResult
+		{
+			ParseResult result {};
+			try
+			{
+				auto importer { std::make_unique< idhan::hydrus::HydrusImporter >( path ) };
+				result.services = importer->getTagServices();
+				result.has_ptr = importer->hasPTR();
+				result.importer = importer.release();
+			}
+			catch ( const std::exception& e )
+			{
+				result.error = QString::fromStdString( e.what() );
+			}
+			return result;
+		} ) };
+
+	auto* watcher { new QFutureWatcher< ParseResult >( this ) };
+	connect(
+		watcher,
+		&QFutureWatcher< ParseResult >::finished,
+		this,
+		[ this, watcher ]()
+		{
+			watcher->deleteLater();
+			ParseResult result { watcher->result() };
+
+			if ( !result.error.isEmpty() )
+			{
+				ui->parseStatusLabel->setText( QString( "Failed to open Hydrus database: %1" ).arg( result.error ) );
+				ui->parseHydrusDB->setEnabled( true );
+				return;
+			}
+
+			m_importer.reset( result.importer );
+			m_has_ptr = result.has_ptr;
+
+			m_total_preprocess = 0;
+			m_completed_preprocess = 0;
+
+			parseTagServices( result.services );
+			parseFileRelationships();
+			parseUrls();
+
+			// TODO: file-storage copy is intentionally not wired in yet. When implemented, invoke
+			// m_importer->copyFileStorage() here so the Hydrus file clusters are registered with IDHAN.
+
+			updatePreprocessProgress();
+
+			emit triggerPreImport();
+		} );
+	watcher->setFuture( future );
 }
 
 void HydrusImporterWidget::onPreprocessingComplete()
@@ -224,7 +263,7 @@ void HydrusImporterWidget::onPreprocessingComplete()
 
 void HydrusImporterWidget::updatePreprocessProgress()
 {
-	const bool has_ptr { m_importer ? m_importer->hasPTR() : false };
+	const bool has_ptr { m_has_ptr };
 
 	if ( m_total_preprocess == 0 )
 	{

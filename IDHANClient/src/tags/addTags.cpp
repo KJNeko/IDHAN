@@ -1,10 +1,8 @@
-//
-// Created by kj16609 on 3/11/25.
-//
-
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+
+#include <unordered_map>
 
 #include "IDHANClient.hpp"
 #include "logging/logger.hpp"
@@ -138,8 +136,6 @@ QFuture< void > IDHANClient::addTags(
 	std::vector< std::pair< std::string, std::string > > unique_tags {};
 	std::vector< std::vector< std::size_t > > tag_set_indicies {};
 
-	std::size_t counter { 0 };
-
 	if ( record_ids.size() != tag_sets.size() )
 	{
 		logging::warn( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() );
@@ -147,28 +143,31 @@ QFuture< void > IDHANClient::addTags(
 			format_ns::format( "Record vs Tag set mismatch! {} vs {}", record_ids.size(), tag_sets.size() ) );
 	}
 
+	struct TagPairHash
+	{
+		std::size_t operator()( const std::pair< std::string, std::string >& pair ) const noexcept
+		{
+			std::size_t seed { 0 };
+			seed ^= std::hash< std::string > {}( pair.first ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+			seed ^= std::hash< std::string > {}( pair.second ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+			return seed;
+		}
+	};
+
+	std::unordered_map< std::pair< std::string, std::string >, std::size_t, TagPairHash > tag_index {};
+
 	for ( const auto& set : tag_sets )
 	{
 		std::vector< std::size_t > indicies {};
+		indicies.reserve( set.size() );
 		for ( const auto& tag : set )
 		{
-			if ( const auto itter = std::ranges::find_if(
-					 unique_tags,
-					 [ &tag ]( const std::pair< std::string, std::string >& pair ) noexcept -> bool
-					 { return pair.first == tag.first && pair.second == tag.second; } );
-			     itter != unique_tags.end() )
-			{
-				indicies.emplace_back( std::distance( unique_tags.begin(), itter ) );
-				continue;
-			}
-			// not found. insert
-			unique_tags.emplace_back( tag );
-			indicies.emplace_back( unique_tags.size() - 1 );
+			const auto [ itter, inserted ] = tag_index.try_emplace( tag, unique_tags.size() );
+			if ( inserted ) unique_tags.emplace_back( tag );
+			indicies.emplace_back( itter->second );
 		}
 
-		tag_set_indicies.emplace_back( indicies );
-
-		counter += set.size();
+		tag_set_indicies.emplace_back( std::move( indicies ) );
 	}
 
 	struct State
@@ -180,10 +179,7 @@ QFuture< void > IDHANClient::addTags(
 	};
 
 	auto state { std::make_shared< State >( State {
-		std::move( record_ids ),
-		tag_domain_id,
-		std::move( tag_set_indicies ),
-		unique_tags.size() } ) };
+		std::move( record_ids ), tag_domain_id, std::move( tag_set_indicies ), unique_tags.size() } ) };
 
 	auto* self { this };
 

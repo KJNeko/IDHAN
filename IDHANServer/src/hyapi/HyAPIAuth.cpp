@@ -1,14 +1,11 @@
-//
-// Created by kj16609 on 11/6/24.
-//
 #include "HyAPIAuth.hpp"
 
 #include "constants/header-names.hpp"
 
 namespace idhan::hyapi
 {
-HyAPIAuth::HyAPIAuth()
-{}
+
+HyAPIAuth::HyAPIAuth() = default;
 
 drogon::Task< drogon::HttpResponsePtr > HyAPIAuth::doFilter( const drogon::HttpRequestPtr& req )
 {
@@ -24,12 +21,11 @@ drogon::Task< drogon::HttpResponsePtr > HyAPIAuth::doFilter( const drogon::HttpR
 		Json::Value root;
 		root[ "error" ] = "No access key or session key provided!";
 		root[ "exception_type" ] = "MissingCredentialsException";
-		root[ "status_code" ] = 401;
+		root[ "status_code" ] = drogon::k401Unauthorized;
 
 		co_return drogon::HttpResponse::newHttpJsonResponse( root );
 	}
 
-	// add the key from the expected hydrus key header to our own header
 	req->addHeader( "IDHAN-API-Key", key );
 
 	co_return nullptr;

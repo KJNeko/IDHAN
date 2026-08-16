@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/13/25.
-//
-
 #include "HyAPIHashConversion.hpp"
 
 #include <drogon/HttpRequest.h>
@@ -9,9 +5,9 @@
 #include <drogon/drogon.h>
 #include <json/json.h>
 
-#include "crypto/SHA256.hpp"
 #include "IDHANTypes.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "records/records.hpp"
 

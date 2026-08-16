@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/1/25.
-//
 #ifdef __linux__
 
 #include "filesystem/io/linux/WriteAwaiter.hpp"
@@ -38,20 +35,32 @@ void WriteAwaiter::await_suspend( const std::coroutine_handle<> h )
 	m_uring->notifySubmit( 1 );
 }
 
-void WriteAwaiter::await_resume() const
+std::size_t WriteAwaiter::await_resume() const
 {
 	if ( m_exception ) std::rethrow_exception( m_exception );
+
+	return static_cast< std::size_t >( m_result );
 }
 
-WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe ) {}
+WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
+{}
 
 void WriteAwaiter::complete( const int result )
 {
+	m_result = result;
+
 	if ( result < 0 )
 	{
-		log::error( "Failed to write file: {}", strerror( errno ) );
-		m_exception =
-			std::make_exception_ptr( std::runtime_error( std::string( "Failed to write file: " ) + strerror( errno ) ) );
+		// result is -errno from the io_uring completion, not the thread-local errno
+		const auto message { format_ns::format(
+			"Failed to write file: {} (fd {}, offset {}, {} bytes)",
+			strerror( -result ),
+			m_sqe.fd,
+			m_sqe.off,
+			m_sqe.len ) };
+
+		log::error( message );
+		m_exception = std::make_exception_ptr( std::runtime_error( message ) );
 	}
 
 	if ( m_cont ) m_event_loop->queueInLoop( m_cont );

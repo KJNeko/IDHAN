@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/30/25.
-//
-
 #include "IDHANTypes.hpp"
 #include "crypto/SHA256.hpp"
 #include "drogon/HttpAppFramework.h"
@@ -22,10 +18,8 @@ ExpectedTask< std::filesystem::path > getTheoreticalFilePath(
 	std::filesystem::path path { *cluster_path_e };
 
 	const auto hash_hex { sha256.hex() };
-	// folder name is f00 to fff
 	const auto folder_name { format_ns::format( "f{}", hash_hex.substr( 0, 2 ) ) };
 
-	// kill starting `.`
 	if ( extension.starts_with( "." ) ) extension = extension.substr( 1 );
 
 	const auto file_name { extension.empty() ? hash_hex : format_ns::format( "{}.{}", hash_hex, extension ) };

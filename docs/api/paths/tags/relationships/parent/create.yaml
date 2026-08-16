@@ -1,7 +1,7 @@
 post:
   tags:
     - tags
-  description: Creates a parent/child relationship between two tags
+  summary: Creates parent/child relationships between tags
   parameters:
     - name: tag_domain_id
       in: query
@@ -23,13 +23,8 @@ post:
                 $ref: '../../../../schemas/TagID.yaml'
   responses:
     200:
-      description: All parent/child relationships created successfully
+      description: Relationships created
     400:
-      description: |
-        Bad request. Possible causes:
-        - Missing or invalid `tag_domain_id` query parameter
-        - Request body is not valid JSON
-        - JSON root is not an array
-        - A `parent_id` or `child_id` value is not an integer
+      description: Missing or invalid `tag_domain_id`, body is not a JSON array, or a non-integer ID
     500:
-      description: Internal server error while inserting into the database
+      description: Internal server error

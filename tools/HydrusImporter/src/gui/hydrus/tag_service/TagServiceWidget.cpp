@@ -1,11 +1,6 @@
-//
-// Created by kj16609 on 6/28/25.
-//
 #include "TagServiceWidget.hpp"
 
 #include <QWidget>
-
-#include <iostream>
 
 #include "TagServiceWorker.hpp"
 #include "ui_TagServiceWidget.h"
@@ -45,6 +40,12 @@ TagServiceWidget::TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWi
 		m_worker, &TagServiceWorker::processedMaxAliases, this, &TagServiceWidget::setMaxAliases, Qt::AutoConnection );
 	connect(
 		m_worker, &TagServiceWorker::finished, this, &TagServiceWidget::preprocessingFinished, Qt::AutoConnection );
+	connect(
+		m_worker,
+		&TagServiceWorker::errorOccurred,
+		this,
+		[ this ]( const QString& message ) { ui->statusLabel->setText( QString( "Error: %1" ).arg( message ) ); },
+		Qt::AutoConnection );
 }
 
 TagServiceWidget::~TagServiceWidget()
@@ -121,9 +122,6 @@ void TagServiceWidget::updateTime()
 		return;
 	}
 
-	// const bool over_limit { to_process > std::numeric_limits< int >::max() };
-	// const std::size_t multip { over_limit ? 16 : 1 };
-
 	const auto time_elapsed {
 		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::high_resolution_clock::now() - m_start )
 			.count()
@@ -159,8 +157,6 @@ void TagServiceWidget::updateTime()
 			.arg( hours, 2, 10, QChar( '0' ) )
 			.arg( minutes, 2, 10, QChar( '0' ) )
 			.arg( seconds, 2, 10, QChar( '0' ) )
-			// .arg( total_processed, 2, 10, QChar( '0' ) )
-			// .arg( to_process, 2, 10, QChar( '0' ) )
 			.arg( static_cast< int >( current_rate ) )
 			.arg( static_cast< int >( avg_rate ) )
 
@@ -172,15 +168,9 @@ void TagServiceWidget::updateProcessed()
 	const auto to_process { m_info.num_mappings + m_info.num_parents + m_info.num_aliases };
 	const auto total_processed { mappings_processed + parents_processed + aliases_processed };
 
-	const auto over_limit { to_process > std::numeric_limits< int >::max() };
-	const auto multip { over_limit ? 1024 : 1 };
-
-	if ( total_processed == 0 )
-		ui->progressBar->setValue( -1 );
-	else
-		ui->progressBar->setValue( static_cast< int >( total_processed / multip ) );
-
-	ui->progressBar->setMaximum( static_cast< int >( to_process / multip ) );
+	// Report progress as a 0-100 percentage so PTR-scale counts (which exceed INT_MAX) can't overflow the bar.
+	ui->progressBar->setMaximum( 100 );
+	ui->progressBar->setValue( to_process == 0 ? 0 : static_cast< int >( ( total_processed * 100 ) / to_process ) );
 }
 
 void TagServiceWidget::processedMappings( std::size_t count, std::size_t record_count )

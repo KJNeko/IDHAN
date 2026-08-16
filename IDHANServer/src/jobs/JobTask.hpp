@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 2/23/26.
-//
 #pragma once
 #include <coroutine>
 #include <memory>
@@ -15,11 +12,9 @@ struct JobTask
 
 	std::shared_ptr< JobTaskStatus > m_status;
 
-	// Add handle member
 	Handle m_handle {};
 
-	// Add constructors, destructor, and move operations
-	JobTask() = delete; // For completed tasks
+	JobTask() = delete;
 
 	JobTask( Handle h );
 

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/6/24.
-//
 #pragma once
 #include "HyAPIAuth.hpp"
 #include "HyAPIResponseEnricher.hpp"
@@ -33,18 +30,16 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > unsupported( drogon::HttpRequestPtr request );
 
-	// Access management (access)
 	drogon::Task< drogon::HttpResponsePtr > apiVersion( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > requestNewPermissions( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > sessionKey( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > verifyAccessKey( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > getService( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > getServices( drogon::HttpRequestPtr request );
+	drogon::Task< drogon::HttpResponsePtr > clientInfo( drogon::HttpRequestPtr request );
 
-	// Importing and deleting files (import)
 	drogon::Task< drogon::HttpResponsePtr > addFile( drogon::HttpRequestPtr request );
 
-	// Searching and Fetching files (search)
 	drogon::Task< drogon::HttpResponsePtr > searchFiles( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > fileHashes( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > fileMetadata( drogon::HttpRequestPtr request );
@@ -68,7 +63,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 
 	METHOD_LIST_BEGIN
 
-	// Access management
 	ADD_METHOD_TO( HydrusAPI::apiVersion, "/hyapi/api_version", drogon::Get, RESPONSE_ENRICHER_NAME );
 	ADD_METHOD_TO(
 		HydrusAPI::requestNewPermissions,
@@ -100,8 +94,13 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		drogon::Get,
 		HYAPI_AUTH_FILTERS,
 		RESPONSE_ENRICHER_NAME );
+	ADD_METHOD_TO(
+		HydrusAPI::clientInfo,
+		"/hyapi/client_info",
+		drogon::Get,
+		HYAPI_AUTH_FILTERS,
+		RESPONSE_ENRICHER_NAME );
 
-	// Importing and deleting files
 	ADD_METHOD_TO(
 		HydrusAPI::addFile,
 		"/hyapi/add_files/add_file",
@@ -109,7 +108,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		HYAPI_AUTH_FILTERS,
 		RESPONSE_ENRICHER_NAME );
 
-	// Searching and fetching files
 	ADD_METHOD_TO(
 		HydrusAPI::searchFiles,
 		"/hyapi/get_files/search_files",
@@ -140,16 +138,15 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		"/hyapi/get_files/file_path",
 		drogon::Get,
 		HYAPI_AUTH_FILTERS,
-		RESPONSE_ENRICHER_NAME ); // UNSUPPORTED
+		RESPONSE_ENRICHER_NAME );
 
 	ADD_METHOD_TO(
 		HydrusAPI::unsupported,
 		"/hyapi/add_urls/add_url",
 		drogon::Post,
 		HYAPI_AUTH_FILTERS,
-		RESPONSE_ENRICHER_NAME ); // UNSUPPORTED
+		RESPONSE_ENRICHER_NAME );
 
-	// file urls
 	ADD_METHOD_TO(
 		HydrusAPI::associateUrl,
 		"/hyapi/add_urls/associate_url",
@@ -168,7 +165,7 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 		"/hyapi/get_files/thumbnail_path",
 		drogon::Get,
 		HYAPI_AUTH_FILTERS,
-		RESPONSE_ENRICHER_NAME ); // UNSUPPORTED
+		RESPONSE_ENRICHER_NAME );
 
 	ADD_METHOD_TO(
 		HydrusAPI::searchTags,
@@ -200,14 +197,6 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 	METHOD_LIST_END
 };
 
-/**
- * @brief Converts and extracts Hydrus' `file` input from json to record ids, Sets the record parameter `file_ids` to a
- * json array of the record ids
- * @param request
- * @param hashes
- * @param db
- * @return
- */
 ExpectedTask< void > convertQueryRecordIDs( drogon::HttpRequestPtr& request, DbClientPtr db );
 
 drogon::Task< Json::Value > getServiceList( DbClientPtr db );

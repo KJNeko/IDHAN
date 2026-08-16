@@ -14,7 +14,83 @@
 #tmp_path = /tmp/idhan
 
 [logging]
-# Loggin level: trace, debug, info, warn, error, critical
+# Logging level: trace, debug, info, warn, error, critical
 level = "info"
 # Logging output location
 path = "./log"
+
+[thumbnails]
+# Where generated thumbnails are cached on disk
+#path = "./thumbnails"
+# Whether the on-disk cache is used at all. Off bypasses it in both directions, so every request
+# regenerates through the thumbnailer. Read live, so it can be flipped without restarting.
+#cache = true
+# Empty the cache directory during startup. Applies at startup only; nothing purges the cache again
+# while the server runs. Safe at any time, since a purged thumbnail is regenerated on next request.
+#purge_on_boot = false
+# Square thumbnail edge lengths (px) the server may write to the on-disk cache. Any other requested
+# size is still generated and served, just never cached. Read live, so no restart is needed.
+#cacheable_sizes = [128, 256, 512]
+
+[modules]
+# Media modules (libvips, FFmpeg, libarchive, PSD) never run inside the server. Each module library
+# is hosted by its own IDHANModuleRunner process, so a module that leaks or crashes takes only that
+# process with it. Whether a library gets a long-lived worker or a fresh process per call comes from
+# the modules themselves and is not configurable here.
+
+# Path to IDHANModuleRunner. Found automatically next to the server binary, then on the install
+# path; set this only if it lives somewhere else.
+#runner_path = "/usr/bin/IDHANModuleRunner"
+
+# Worker threads inside each worker process. More than one is required, not merely faster: an
+# archive thumbnailer asks the host to thumbnail each member, and that nested call comes back into
+# the same process, so it has to be served on a different thread than the one waiting for it.
+#pool_threads = 4
+
+# A persistent worker is retired once it exceeds this resident size, at its next moment with no call
+# in flight.
+#
+# This is a floor, not a cap. A module may declare a larger footprint of its own, and the larger of
+# the two wins for that library's worker. Raising this loosens every library's bound; lowering it
+# will not tighten one a module declared for itself.
+#rss_limit_mb = 2048
+
+# A persistent worker with nothing to do for this long is retired.
+#idle_timeout_sec = 300
+
+# Workers report in on this interval, carrying their resident size. Missing them for longer than the
+# grace period gets the worker killed.
+#
+# This is the only thing that will kill a call, and it asks only whether the process still exists. A
+# worker answers heartbeats from its IO loop, which never runs module code, so beats keep arriving
+# however deep its backlog is. There is deliberately no per-call deadline: a call queued behind a
+# hundred others is indistinguishable from a wedged one.
+#heartbeat_interval_ms = 1000
+#liveness_grace_ms = 5000
+
+# How deeply module calls may nest (an archive inside an archive inside an archive). Enforced by the
+# server, which is the only party that sees the whole chain, since the recursion crosses process
+# boundaries.
+#max_call_depth = 4
+
+# How long to wait for a library to describe what it exports at startup. A library that hangs here
+# is skipped with a warning; it does not stop the server from starting.
+#describe_timeout_sec = 10
+
+[embeddings]
+# Directory scanned for image embedding models. Each subdirectory holding both a model.onnx and a
+# model.json is registered as one model, named by its model.json; anything else is ignored with a
+# warning naming what was wrong. A directory that does not exist is not an error.
+#
+# Defaults to a "models" directory beside IDHANModuleRunner, which suits a build tree but rarely a
+# deployment. Set it explicitly wherever the runner is installed to a bin directory you do not own.
+#
+# The models themselves are exported offline; see tools/embedding-export/export_siglip2.py. Nothing
+# in the server converts a checkpoint, so a directory of PyTorch weights registers nothing.
+#model_path = "/usr/share/idhan/models"
+
+[plugins]
+# Directory scanned for WebUI plugin bundles. Each subdirectory with a manifest.json is one plugin.
+# Defaults to "<static>/plugins" so the static file server serves the bundles at /plugins/... with no
+# extra configuration. An override must still live under the static root to be reachable.
+#path = "./static/plugins"

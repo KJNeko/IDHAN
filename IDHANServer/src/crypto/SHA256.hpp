@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/18/25.
-//
-
 #pragma once
 
 #include <drogon/HttpResponse.h>
@@ -17,7 +13,6 @@
 #include <vector>
 
 #include "IDHANTypes.hpp"
-#include "db/dbTypes.hpp"
 
 namespace idhan
 {
@@ -27,6 +22,7 @@ class FileIOUring;
 namespace idhan
 {
 
+//! IDHAN's 32-byte content address for records and stored files.
 class SHA256
 {
 	std::array< std::byte, ( 256 / 8 ) > m_data {};
@@ -56,49 +52,33 @@ class SHA256
 
 	static constexpr std::size_t size() { return ( 256 / 8 ); }
 
-	std::array< std::byte, ( 256 / 8 ) > data() const { return m_data; }
+	std::array< std::byte, ( 256 / 8 ) > data() const;
 
-	//! Supplied so we can work with drogon until I figure out how the fuck to overload their operators.
-	inline std::vector< char > toVec() const
-	{
-		std::vector< char > data {};
-		data.resize( m_data.size() );
-		std::memcpy( data.data(), m_data.data(), m_data.size() );
-		return data;
-	}
+	//! Supplied for drogon interop, pending a proper operator overload.
+	std::vector< char > toVec() const;
 
-	bool operator==( const SHA256& other ) const
-	{
-		return std::memcmp( m_data.data(), other.m_data.data(), m_data.size() ) == 0;
-	}
+	bool operator==( const SHA256& other ) const;
 
-	bool operator<( const SHA256& other ) const
-	{
-		for ( std::size_t i = 0; i < m_data.size(); ++i )
-		{
-			const auto& a = m_data[ i ];
-			const auto& b = other.m_data[ i ];
-			if ( a < b ) return true;
-		}
-		return false;
-	}
+	//! Lexicographic unsigned byte ordering; a valid strict weak ordering for use as a map/set key.
+	bool operator<( const SHA256& other ) const;
 
-	std::string hex() const;
+	[[nodiscard]] std::string hex() const;
 
-	//! Turns a HEX string into a SHA256 object. Str must be exactly (256 / 8) * 2, 64 characters long
-	static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
-	//! Takes the byte representation of a hash from a buffer.
-	static SHA256 fromBuffer( const std::vector< std::byte >& data );
-	static SHA256 fromBuffer( const std::array< std::byte, 256 / 8 >& data );
-	static SHA256 fromPgCol( const drogon::orm::Field& field );
-	static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
+	[[nodiscard]] static std::expected< SHA256, drogon::HttpResponsePtr > fromHex( const std::string& str );
+	[[nodiscard]] static SHA256 fromBuffer( const std::vector< std::byte >& data );
+	[[nodiscard]] static SHA256 fromBuffer( const std::array< std::byte, 256 / 8 >& data );
+	[[nodiscard]] static SHA256 fromPgCol( const drogon::orm::Field& field );
+	[[nodiscard]] static drogon::Task< std::expected< SHA256, drogon::HttpResponsePtr > > fromDB(
 		RecordID record_id,
-		DbClientPtr db );
+		drogon::orm::DbClientPtr db );
 
-	static SHA256 hash( const std::byte* data, std::size_t size );
-	static drogon::Task< SHA256 > hashCoro( FileIOUring uring );
+	[[nodiscard]] static SHA256 hash( const std::byte* data, std::size_t size );
+	[[nodiscard]] static drogon::Task< SHA256 > hashCoro( std::shared_ptr< FileIOUring > io_uring );
 
-	static SHA256 hash( const std::vector< std::byte >& data ) { return hash( data.data(), data.size() ); }
+	[[nodiscard]] static SHA256 hash( const std::vector< std::byte >& data )
+	{
+		return hash( data.data(), data.size() );
+	}
 };
 
 } // namespace idhan

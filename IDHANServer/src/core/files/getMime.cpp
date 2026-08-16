@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/19/24.
-//
-
 #include <expected>
 
 #include "api/helpers/createBadRequest.hpp"
@@ -17,7 +13,7 @@ drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromRe
 {
 	const auto result { db->execSqlSync( "SELECT mime_id FROM file_info WHERE record_id = $1", id ) };
 
-	if ( result.empty() ) co_return std::unexpected( createBadRequest( "Invalid file info" ) );
+	if ( result.empty() ) co_return std::unexpected( createNotFound( "No file info for record {}", id ) );
 
 	co_return result[ 0 ][ 0 ].as< MimeID >();
 }
@@ -26,7 +22,8 @@ drogon::Task< std::expected< FileMimeInfo, drogon::HttpResponsePtr > > getMime( 
 {
 	const auto mime_search { db->execSqlSync( "SELECT name, best_extension FROM mime WHERE mime_id = $1", mime_id ) };
 
-	if ( mime_search.empty() ) co_return std::unexpected( createBadRequest( "Invalid mime id" ) );
+	if ( mime_search.empty() )
+		co_return std::unexpected( createInternalError( "mime_id {} not found in mime table", mime_id ) );
 
 	FileMimeInfo info {};
 	info.m_id = mime_id;

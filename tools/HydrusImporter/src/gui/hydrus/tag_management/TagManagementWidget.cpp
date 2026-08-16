@@ -1,6 +1,8 @@
 #include "TagManagementWidget.hpp"
 
 #include <QFutureWatcher>
+#include <QLabel>
+#include <QShowEvent>
 
 #include <idhan/IDHANClient.hpp>
 
@@ -18,7 +20,6 @@ TagManagementWidget::TagManagementWidget( QWidget* parent ) :
 		&QFutureWatcher< std::vector< std::pair< idhan::TagID, std::string > > >::finished,
 		this,
 		&TagManagementWidget::on_autocompleteFinished );
-	loadDomains();
 }
 
 TagManagementWidget::~TagManagementWidget()
@@ -26,19 +27,50 @@ TagManagementWidget::~TagManagementWidget()
 	delete ui;
 }
 
+void TagManagementWidget::showEvent( QShowEvent* event )
+{
+	QWidget::showEvent( event );
+	if ( !m_domainsLoaded ) loadDomains();
+}
+
 void TagManagementWidget::loadDomains()
 {
-	auto future = idhan::IDHANClient::instance().getTagDomains();
-	auto watcher = new QFutureWatcher< std::vector< idhan::TagDomainInfo > >( this );
+	if ( m_domainWatcher != nullptr ) return;
+
+	m_domainWatcher = new QFutureWatcher< std::vector< idhan::TagDomainInfo > >( this );
 	connect(
-		watcher,
+		m_domainWatcher,
 		&QFutureWatcher< std::vector< idhan::TagDomainInfo > >::finished,
 		this,
-		[ this, watcher ]()
+		[ this ]()
 		{
-			m_domains = watcher->result();
-			ui->domainTabs->clear();
-			m_domainWidgets.clear();
+			auto* watcher = m_domainWatcher;
+			m_domainWatcher = nullptr;
+			watcher->deleteLater();
+
+			std::vector< idhan::TagDomainInfo > domains {};
+
+			try
+			{
+				domains = watcher->result();
+			}
+			catch ( std::exception& e )
+			{
+				idhan::logging::error( "Failed to load tag domains: {}", e.what() );
+				showDomainLoadFailure();
+				return;
+			}
+			catch ( ... )
+			{
+				idhan::logging::error( "Failed to load tag domains" );
+				showDomainLoadFailure();
+				return;
+			}
+
+			m_domains = std::move( domains );
+			m_domainsLoaded = true;
+
+			clearDomainTabs();
 			for ( const auto& domain : m_domains )
 			{
 				auto domainWidget = new TagDomainRelationshipWidget( domain.m_id, this );
@@ -47,9 +79,36 @@ void TagManagementWidget::loadDomains()
 					QString( "%1 (%2)" ).arg( QString::fromStdString( domain.m_name ) ).arg( domain.m_id ) );
 				m_domainWidgets.push_back( domainWidget );
 			}
-			watcher->deleteLater();
+
+			if ( m_selectedTagID != 0 )
+			{
+				for ( auto* widget : m_domainWidgets ) widget->setTag( m_selectedTagID );
+			}
 		} );
-	watcher->setFuture( future );
+
+	m_domainWatcher->setFuture( idhan::IDHANClient::instance().getTagDomains() );
+}
+
+void TagManagementWidget::clearDomainTabs()
+{
+	while ( ui->domainTabs->count() > 0 )
+	{
+		auto* page = ui->domainTabs->widget( 0 );
+		ui->domainTabs->removeTab( 0 );
+		page->deleteLater();
+	}
+
+	m_domainWidgets.clear();
+}
+
+void TagManagementWidget::showDomainLoadFailure()
+{
+	clearDomainTabs();
+
+	auto* label = new QLabel( "Could not reach the server. Switch away and back to this tab to retry.", this );
+	label->setAlignment( Qt::AlignCenter );
+	label->setWordWrap( true );
+	ui->domainTabs->addTab( label, "Unavailable" );
 }
 
 void TagManagementWidget::on_tagSearchEdit_textChanged( const QString& text )
@@ -71,8 +130,26 @@ void TagManagementWidget::on_tagSearchEdit_textChanged( const QString& text )
 
 void TagManagementWidget::on_autocompleteFinished()
 {
+	if ( m_autocompleteWatcher->isCanceled() ) return;
+
+	std::vector< std::pair< idhan::TagID, std::string > > results {};
+
+	try
+	{
+		results = m_autocompleteWatcher->result();
+	}
+	catch ( std::exception& e )
+	{
+		idhan::logging::error( "Tag autocomplete failed: {}", e.what() );
+		return;
+	}
+	catch ( ... )
+	{
+		idhan::logging::error( "Tag autocomplete failed" );
+		return;
+	}
+
 	ui->autocompleteList->clear();
-	const auto results = m_autocompleteWatcher->result();
 	if ( results.empty() )
 	{
 		auto item = new QListWidgetItem( "No tags found", ui->autocompleteList );

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 9/11/24.
-//
-
 #include "HydrusImporter.hpp"
 
 #include <QtConcurrentRun>
@@ -16,10 +12,7 @@ namespace idhan::hydrus
 
 constexpr std::string_view LOCK_FILE_NAME { "client_running" };
 
-HydrusImporter::HydrusImporter( const std::filesystem::path& path ) :
-  m_path( path ),
-  final_future(),
-  m_process_ptr_mappings( false )
+HydrusImporter::HydrusImporter( const std::filesystem::path& path ) : m_path( path )
 {
 	if ( !std::filesystem::exists( path ) ) throw std::runtime_error( "Failed to open path to hydrus db" );
 
@@ -38,9 +31,23 @@ HydrusImporter::HydrusImporter( const std::filesystem::path& path ) :
 	if ( std::filesystem::exists( path / LOCK_FILE_NAME ) )
 		throw std::runtime_error( "Client detected as running. Aborting" );
 
-	sqlite3_open_v2( master_path.c_str(), &master_db, SQLITE_OPEN_READONLY, nullptr );
-	sqlite3_open_v2( client_path.c_str(), &client_db, SQLITE_OPEN_READONLY, nullptr );
-	sqlite3_open_v2( mappings_path.c_str(), &mappings_db, SQLITE_OPEN_READONLY, nullptr );
+	openDatabase( master_path, &master_db );
+	openDatabase( client_path, &client_db );
+	openDatabase( mappings_path, &mappings_db );
+}
+
+void HydrusImporter::openDatabase( const std::filesystem::path& db_path, sqlite3** db )
+{
+	const int rc { sqlite3_open_v2( db_path.c_str(), db, SQLITE_OPEN_READONLY, nullptr ) };
+	if ( rc != SQLITE_OK )
+	{
+		const std::string message {
+			std::format( "Failed to open {}: {}", db_path.string(), *db ? sqlite3_errmsg( *db ) : "out of memory" )
+		};
+		sqlite3_close_v2( *db );
+		*db = nullptr;
+		throw std::runtime_error( message );
+	}
 }
 
 HydrusImporter::~HydrusImporter()
@@ -55,7 +62,8 @@ std::unordered_map< HashID, RecordID > HydrusImporter::mapHydrusRecords( std::ve
 	if ( hash_ids.empty() ) return {};
 
 	std::ranges::sort( hash_ids );
-	std::ranges::unique( hash_ids );
+	const auto duplicates { std::ranges::unique( hash_ids ) };
+	hash_ids.erase( duplicates.begin(), duplicates.end() );
 
 	std::unordered_map< std::uint32_t, std::string > hashes_map {};
 	hashes_map.reserve( hash_ids.size() );
@@ -117,32 +125,6 @@ std::unordered_map< HashID, RecordID > HydrusImporter::mapHydrusRecords( std::ve
 	}
 
 	return record_id_map;
-}
-
-RecordID HydrusImporter::getRecordIDFromHyID( const HashID hash_id )
-{
-	idhan::hydrus::TransactionBaseCoro client_tr { client_db };
-	idhan::hydrus::Query< std::string_view > query {
-		client_tr, "SELECT hex(hash) FROM hashes WHERE hash_id = $1", hash_id
-	};
-
-	auto& client { IDHANClient::instance() };
-
-	std::vector< std::string > hashes {};
-
-	for ( const auto& [ hash ] : query )
-	{
-		hashes.emplace_back( hash );
-	}
-
-	auto future { client.getRecordID( hashes.front() ) };
-
-	future.waitForFinished();
-
-	const auto result { future.result<>() };
-	if ( !result ) throw std::runtime_error( "Failed to get record from client" );
-
-	return result.value();
 }
 
 bool HydrusImporter::hasPTR() const

@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PTRFlattenWidget</class>
+ <widget class="QWidget" name="PTRFlattenWidget">
+  <property name="windowTitle">
+   <string>Flatten</string>
+  </property>
+  <layout class="QVBoxLayout" name="rootLayout">
+   <item>
+    <layout class="QHBoxLayout" name="sourceLayout">
+     <item>
+      <widget class="QLabel" name="sourceLabel">
+       <property name="text">
+        <string>PTR files:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="sourcePath"/>
+     </item>
+     <item>
+      <widget class="QToolButton" name="selectSource">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="outputLayout">
+     <item>
+      <widget class="QLabel" name="outputLabel">
+       <property name="text">
+        <string>Output:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="outputPath"/>
+     </item>
+     <item>
+      <widget class="QToolButton" name="selectOutput">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+       <widget class="QCheckBox" name="discardTerminalDeletes">
+           <property name="text">
+               <string>Discard terminal deletes</string>
+           </property>
+           <property name="toolTip">
+               <string>Drop tag removals instead of writing them into chunks.
+
+                   A terminal delete is a tag whose history ended in a removal. It collapses to that removal alone,
+                   never to a paired add, so at import it removes a mapping this import never made. If the tags in your
+                   database came only from the PTR, every one of them is a no-op, and discarding them makes the chunks
+                   smaller and the import faster.
+
+                   Leave this off if you are layering the PTR onto records that already have tags from elsewhere, such
+                   as a Hydrus import: there the removals are meaningful.
+               </string>
+           </property>
+       </widget>
+   </item>
+      <item>
+    <widget class="QLabel" name="statusLabel">
+     <property name="text">
+      <string>Idle</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="statsGroup">
+     <property name="title">
+      <string>Progress</string>
+     </property>
+     <layout class="QFormLayout" name="statsForm">
+      <item row="0" column="0">
+       <widget class="QLabel" name="eventsScannedLabel">
+        <property name="text">
+         <string>Events scanned:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="eventsScannedValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="recordsFlattenedLabel">
+        <property name="text">
+         <string>Records flattened:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="recordsFlattenedValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="chainsCollapsedLabel">
+        <property name="text">
+         <string>Chains collapsed:</string>
+        </property>
+           <property name="toolTip">
+               <string>Mapping events discarded because a later event for the same record and tag superseded them.
+
+                   The PTR records every add and removal ever made. Only the outcome of each history is worth importing,
+                   and this is how much of it that leaves behind.
+               </string>
+           </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="chainsCollapsedValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="terminalDeletesLabel">
+        <property name="text">
+         <string>Terminal deletes kept:</string>
+        </property>
+           <property name="toolTip">
+               <string>Tag removals whose history ended in a delete, replayed at import as removeTags.
+
+                   They collapse to the removal alone, never to a paired add, so they have no effect on records whose
+                   tags came only from this PTR import.
+               </string>
+           </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="terminalDeletesValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+          <widget class="QLabel" name="terminalDeleteRecordsLabel">
+              <property name="text">
+                  <string>Records affected:</string>
+              </property>
+              <property name="toolTip">
+                  <string>Records carrying at least one of those removals.</string>
+              </property>
+          </widget>
+      </item>
+         <item row="4" column="1">
+             <widget class="QLabel" name="terminalDeleteRecordsValue">
+                 <property name="text">
+                     <string>0</string>
+                 </property>
+             </widget>
+         </item>
+         <item row="5" column="0">
+       <widget class="QLabel" name="chunksWrittenLabel">
+        <property name="text">
+         <string>Chunks written:</string>
+        </property>
+       </widget>
+      </item>
+         <item row="5" column="1">
+       <widget class="QLabel" name="chunksWrittenValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+         <item row="6" column="0">
+       <widget class="QLabel" name="skippedFilesLabel">
+        <property name="text">
+         <string>Files skipped:</string>
+        </property>
+       </widget>
+      </item>
+         <item row="6" column="1">
+       <widget class="QLabel" name="skippedFilesValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+         <item row="7" column="0">
+       <widget class="QLabel" name="skippedMissingDefinitionsLabel">
+        <property name="text">
+         <string>Missing tag definitions skipped:</string>
+        </property>
+           <property name="toolTip">
+               <string>Tags referenced by a mapping or relation that the corpus never defined, so there is no text to
+                   create them with.
+
+                   Distinct from tags disregarded as unused below: those were defined, but nothing ended up using them.
+               </string>
+           </property>
+       </widget>
+      </item>
+         <item row="7" column="1">
+       <widget class="QLabel" name="skippedMissingDefinitionsValue">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+         </item>
+         <item row="8" column="0">
+             <widget class="QLabel" name="unusedTagsLabel">
+                 <property name="text">
+                     <string>Tags disregarded (unused):</string>
+                 </property>
+                 <property name="toolTip">
+                     <string>Tags the PTR defined but that were never written to a chunk or a relation, and so are never
+                         created in IDHAN.
+
+                         Every one of their mappings was superseded, addressed a record with no hash definition, or
+                         survived only as a discarded removal.
+
+                         Only known once the relations file has been written, so this stays pending until the run
+                         finishes.
+                     </string>
+                 </property>
+             </widget>
+         </item>
+         <item row="8" column="1">
+             <widget class="QLabel" name="unusedTagsValue">
+                 <property name="text">
+                     <string>-</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="buttonLayout">
+     <item>
+      <widget class="QPushButton" name="flattenButton">
+       <property name="text">
+        <string>Flatten</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="cancelButton">
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

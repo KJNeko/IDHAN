@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/1/25.
-//
-
 #include "MetadataModule.hpp"
 
 #include <algorithm>

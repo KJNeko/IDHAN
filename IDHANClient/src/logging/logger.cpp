@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/6/25.
-//
-
 #include "idhan/logging/logger.hpp"
 
 #include <QJsonObject>

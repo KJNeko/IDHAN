@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/12/25.
-//
-
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -34,15 +30,13 @@ QFuture< std::vector< ActiveTagVerboseInfo > > IDHANClient::getActiveRecordTagsV
 			const auto obj = value.toObject();
 
 			ActiveTagVerboseInfo info {};
-			info.tag_id = static_cast< TagID >( obj[ "tag_id" ].toInt() );
+			info.tag_id = obj[ "tag_id" ].toInt();
 			info.tag_domain_id = static_cast< TagDomainID >( obj[ "tag_domain_id" ].toInt() );
 			info.is_explicit = obj[ "explicit" ].toBool();
 
-			for ( const auto& id : obj[ "aliased_from" ].toArray() )
-				info.aliased_from.push_back( static_cast< TagID >( id.toInt() ) );
+			for ( const auto& id : obj[ "aliased_from" ].toArray() ) info.aliased_from.push_back( id.toInt() );
 
-			for ( const auto& id : obj[ "inherited_from" ].toArray() )
-				info.inherited_from.push_back( static_cast< TagID >( id.toInt() ) );
+			for ( const auto& id : obj[ "inherited_from" ].toArray() ) info.inherited_from.push_back( id.toInt() );
 
 			results.push_back( std::move( info ) );
 		}

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/11/25.
-//
-
 #include "api/RecordAPI.hpp"
 
 namespace idhan::api
@@ -16,7 +12,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::listActiveTags(
 	const auto result { co_await db->execSqlCoro(
 		"SELECT DISTINCT tag_id, tag_domain_id FROM active_tag_mappings_final WHERE record_id = $1", record_id ) };
 
-	Json::Value json {};
+	Json::Value json { Json::arrayValue };
 
 	std::unordered_map< TagDomainID, std::vector< TagID > > domain_map {};
 

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 2/20/25.
-//
-
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -77,7 +73,6 @@ QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 		[ guard_ptr = guard ]( const TagDomainID tag_domain_id ) noexcept -> TagDomainID { return tag_domain_id; } ) };
 
 	return unlock_future;
-	// return promise->future();
 }
 
 QFuture< std::optional< TagDomainID > > IDHANClient::getTagDomain( const std::string_view name )

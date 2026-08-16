@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/1/25.
-//
 #ifdef __linux__
 
 #include "filesystem/io/linux/ReadAwaiter.hpp"
@@ -14,10 +11,7 @@
 namespace idhan
 {
 
-ReadAwaiter::ReadAwaiter(
-	IOUringLinux* uring,
-	io_uring_sqe sqe,
-	std::shared_ptr< std::vector< std::byte > >& data ) :
+ReadAwaiter::ReadAwaiter( IOUringLinux* uring, io_uring_sqe sqe, std::shared_ptr< std::vector< std::byte > >& data ) :
   m_data( data ),
   m_cont(),
   m_uring( uring ),
@@ -26,11 +20,20 @@ ReadAwaiter::ReadAwaiter(
 
 void ReadAwaiter::complete( const int result )
 {
+	m_result = result;
+
 	if ( result < 0 )
 	{
-		log::error( "Failed to read file: {}", strerror( errno ) );
-		m_exception =
-			std::make_exception_ptr( std::runtime_error( std::string( "Failed to read file: " ) + strerror( errno ) ) );
+		// result is -errno from the io_uring completion, not the thread-local errno
+		const auto message { format_ns::format(
+			"Failed to read file: {} (fd {}, offset {}, {} bytes)",
+			strerror( -result ),
+			m_sqe.fd,
+			m_sqe.off,
+			m_sqe.len ) };
+
+		log::error( message );
+		m_exception = std::make_exception_ptr( std::runtime_error( message ) );
 	}
 
 	if ( !m_cont ) log::critical( "ReadAwaiter had no coroutine to resume" );
@@ -63,10 +66,13 @@ void ReadAwaiter::await_suspend( const std::coroutine_handle<> h )
 	m_uring->notifySubmit( 1 );
 }
 
-std::vector< std::byte > ReadAwaiter::await_resume() const
+std::vector< std::byte > ReadAwaiter::await_resume()
 {
 	if ( m_exception ) std::rethrow_exception( m_exception );
-	return *m_data;
+
+	if ( m_result >= 0 ) m_data->resize( static_cast< std::size_t >( m_result ) );
+
+	return std::move( *m_data );
 }
 
 ReadAwaiter::~ReadAwaiter() = default;

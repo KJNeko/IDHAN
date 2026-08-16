@@ -1,6 +1,4 @@
-//
-// Created by kj16609 on 3/26/26.
-//
+#include "logging/log.hpp"
 
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/ringbuffer_sink.h>
@@ -30,29 +28,20 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 {
 	// /log?since=<unix_timestamp>&level=<level>
 
-	auto logger { spdlog::get( "default" ) };
+	auto logger { log::getServerLogger() };
+
+	if ( !logger ) co_return createInternalError( "Could not get default spdlog logger" );
+
 	logger->flush();
 
 	const auto level_str { request->getOptionalParameter< std::string >( "level" ) };
 	const auto req_level { parseLevelString( level_str.value_or( "info" ) ) };
-	const auto since_ms { request->getOptionalParameter< std::uint64_t >( "since" ) };
+	// unix timestamp in seconds, matching the granularity compared below
+	const auto since_seconds { request->getOptionalParameter< std::uint64_t >( "since" ) };
 
-	// Locate the ringbuffer sink in the logger
-	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_sink;
-	for ( auto& s : logger->sinks() )
-	{
-		ring_sink = std::dynamic_pointer_cast< spdlog::sinks::ringbuffer_sink_mt >( s );
-		if ( ring_sink ) break;
-	}
+	auto ring_sink { log::getServerRingBufferSink() };
 
-	if ( !ring_sink )
-	{
-		auto response { drogon::HttpResponse::newHttpResponse() };
-		response->setBody( "Ring buffer sink not available\n" );
-		response->setStatusCode( drogon::HttpStatusCode::k500InternalServerError );
-		response->setContentTypeCode( drogon::CT_TEXT_PLAIN );
-		co_return response;
-	}
+	if ( !ring_sink ) co_return createInternalError( "Could not find Ring buffer sink in logger" );
 
 	constexpr std::string_view server_fmt { "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v" };
 	spdlog::pattern_formatter formatter { std::string( server_fmt ) };
@@ -66,12 +55,12 @@ drogon::Task< drogon::HttpResponsePtr > InfoAPI::log( drogon::HttpRequestPtr req
 	{
 		if ( entry.level < req_level ) continue;
 
-		if ( since_ms.has_value() )
+		if ( since_seconds.has_value() )
 		{
-			const auto entry_ms {
+			const auto entry_seconds {
 				std::chrono::duration_cast< std::chrono::seconds >( entry.time.time_since_epoch() ).count()
 			};
-			if ( static_cast< std::uint64_t >( entry_ms ) < *since_ms ) continue;
+			if ( static_cast< std::uint64_t >( entry_seconds ) < *since_seconds ) continue;
 		}
 
 		spdlog::memory_buf_t buf;

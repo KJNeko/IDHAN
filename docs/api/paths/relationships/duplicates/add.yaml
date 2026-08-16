@@ -3,9 +3,8 @@ post:
     - relationships
   summary: Marks one record as a better-quality duplicate of another
   description: |
-    Establishes a directional duplicate relationship: `better_id` is the preferred record,
-    `worse_id` is the lower-quality duplicate. Accepts either a single object or an array
-    for batch operations.
+    Directional: `better_id` is the record to keep, `worse_id` the duplicate.
+    Takes a single object or an array of them.
   requestBody:
     required: true
     content:
@@ -18,13 +17,9 @@ post:
                 - better_id
               properties:
                 worse_id:
-                  allOf:
-                    - $ref: '../../../schemas/RecordID.yaml'
-                  description: The lower-quality duplicate record
+                  $ref: '../../../schemas/RecordID.yaml'
                 better_id:
-                  allOf:
-                    - $ref: '../../../schemas/RecordID.yaml'
-                  description: The preferred higher-quality record
+                  $ref: '../../../schemas/RecordID.yaml'
             - type: array
               items:
                 type: object
@@ -51,7 +46,7 @@ post:
                 better_id: 12
   responses:
     200:
-      description: Duplicate relationship(s) recorded
+      description: Relationships recorded
       content:
         application/json:
           schema:

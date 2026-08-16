@@ -6,19 +6,18 @@ on:
       - master
       - dev
     tags:
-      - '*'
+      - 'v*.*.0'
+  workflow_dispatch:
 
 env:
   REGISTRY: git.futuregadgetlabs.net
   IMAGE_NAME: kj16609/idhan
+  PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     if: github.server_url == 'https://git.futuregadgetlabs.net'
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout repository
@@ -59,38 +58,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          platforms: ${{ env.PLATFORMS }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}
           cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
-
-      - name: Determine image tag for extraction
-        id: img
-        run: |
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
-          elif [ "$GITHUB_REF_NAME" = "master" ]; then
-            echo "tag=latest" >> $GITHUB_OUTPUT
-          else
-            echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Extract Linux artifacts from image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.img.outputs.tag }}"
-          docker pull "$IMAGE"
-          docker create --name extract "$IMAGE"
-          mkdir -p artifacts
-          docker cp extract:/usr/bin/IDHANServer      artifacts/IDHANServer
-          docker cp extract:/usr/share/idhan/modules  artifacts/modules
-          docker cp extract:/usr/share/idhan/mime     artifacts/mime
-          docker cp extract:/usr/share/idhan/static   artifacts/static
-          docker cp extract:/usr/share/idhan/config.toml artifacts/config.toml
-          docker rm extract
-
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: IDHANServer-linux-x86_64
-          path: artifacts/

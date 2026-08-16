@@ -4,13 +4,15 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Network Concurrent Widgets)
 find_package(ZLIB REQUIRED)
 AddFGLExecutable(HydrusImporter ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(HydrusImporter PUBLIC Qt6::Core Qt6::Concurrent Qt6::Network IDHANClient sqlite3 spdlog::spdlog Qt6::Widgets ZLIB::ZLIB)
+target_link_libraries(HydrusImporter PUBLIC Qt6::Core Qt6::Concurrent Qt6::Network IDHANClient sqlite3 spdlog::spdlog Qt6::Widgets ZLIB::ZLIB PTRCore)
 
 file(GLOB_RECURSE UI_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/**.ui)
 
 target_sources(HydrusImporter PRIVATE ${UI_FILES})
 
 target_compile_options(HydrusImporter PRIVATE "-Wno-mismatched-tags")
+
+target_compile_definitions(HydrusImporter PRIVATE $<$<CONFIG:Debug>:IDHAN_TRACK_CORO_FRAMES>)
 
 if (DEFINED IMPORTER_TESTS AND IMPORTER_TESTS EQUAL 1)
 	target_compile_definitions(HydrusImporter PUBLIC IMPORTER_TESTS=1)

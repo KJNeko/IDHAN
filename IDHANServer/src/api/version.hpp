@@ -1,11 +1,8 @@
-//
-// Created by kj16609 on 11/8/25.
-//
 #pragma once
 
 #include "idhan/versions.hpp"
 
-#define IDHAN_API_MAJOR 0
+#define IDHAN_API_MAJOR 1
 #define IDHAN_API_MINOR 0
 #define IDHAN_API_PATCH 0
 

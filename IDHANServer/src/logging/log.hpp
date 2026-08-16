@@ -1,22 +1,31 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #pragma once
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Weffc++"
+#include <spdlog/sinks/ringbuffer_sink.h>
 #include <spdlog/spdlog.h>
 #pragma GCC diagnostic pop
 
+#include <memory>
 #include <string>
 
 #include "logging/format_ns.hpp"
-#include "qt_formatters/qstring.hpp"
 
 namespace idhan::log
 {
+
+//! The logger IDHAN created and the ring buffer sink attached to it, as direct typed pointers set
+//! once at startup by ServerContext::createLogger(). Endpoints reaching into these (/log) must use
+//! these accessors rather than spdlog::get(), spdlog::default_logger() or dynamic_pointer_cast.
+//! Modules are dlopen'd with RTLD_GLOBAL and link spdlog themselves, which on some builds duplicates
+//! the RTTI for ringbuffer_sink_mt: the cast then returns null and the registry lookup returns a null
+//! or unrelated logger.
+[[nodiscard]] std::shared_ptr< spdlog::logger > getServerLogger();
+[[nodiscard]] std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > getServerRingBufferSink();
+void setServerLogger(
+	std::shared_ptr< spdlog::logger > logger,
+	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_buffer_sink );
 
 #ifndef IDHAN_DISABLE_TRACE_LOGGING
 template < typename... Ts >

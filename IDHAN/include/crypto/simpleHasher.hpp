@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/24/25.
-//
 #pragma once
 
 #include <openssl/evp.h>
@@ -44,6 +41,9 @@ inline std::array< std::byte, 256 / 8 > hashData( const std::byte* data, const s
 	return out_data;
 }
 
+//! Parses a 64-character hex string into a 32-byte SHA-256 value.
+//! \throws std::runtime_error if the decoded length is not exactly 32 bytes.
+//! \throws std::invalid_argument if \p string is not valid hex (via decodeHex).
 inline std::array< std::byte, 256 / 8 > fromHex( const std::string& string )
 {
 	std::array< std::byte, 256 / 8 > hash {};
@@ -53,6 +53,7 @@ inline std::array< std::byte, 256 / 8 > fromHex( const std::string& string )
 	return hash;
 }
 
+//! Formats a 32-byte SHA-256 value as a lowercase 64-character hex string.
 inline std::string toHex( const std::array< std::byte, 256 / 8 >& data )
 {
 	std::string str {};

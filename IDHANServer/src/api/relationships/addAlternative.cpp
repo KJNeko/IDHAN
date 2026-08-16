@@ -1,10 +1,7 @@
-//
-// Created by kj16609 on 11/5/25.
-//
-
 #include "IDHANTypes.hpp"
 #include "api/FileRelationshipsAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "api/helpers/helpers.hpp"
 #include "db/drogonArrayBind.hpp"
 
 namespace idhan::api
@@ -27,7 +24,7 @@ drogon::Task<> addItemsToNewGroup( std::vector< RecordID > record_ids, DbClientP
 	const auto group_id { co_await createNewGroup( db ) };
 	co_await db->execSqlCoro(
 		"INSERT INTO alternative_group_members (group_id, record_id) VALUES ($1, UNNEST($2::" RECORD_PG_TYPE_NAME
-		"[]))",
+		"[])) ON CONFLICT (group_id, record_id) DO NOTHING",
 		group_id,
 		std::move( record_ids ) );
 }
@@ -56,17 +53,15 @@ drogon::Task<> addItemsToExistingGroupsMerge(
 	co_await db->execSqlCoro(
 		"UPDATE alternative_group_members SET group_id = $1 WHERE group_id = ANY($2)",
 		group_id,
-		std::forward< std::vector< GroupID > >( group_ids ) );
+		std::vector< GroupID >( group_ids ) );
 
 	co_await db->execSqlCoro(
 		"INSERT INTO alternative_group_members (group_id, record_id) VALUES ($1, UNNEST($2::" RECORD_PG_TYPE_NAME
 		"[])) ON CONFLICT (group_id, record_id) DO NOTHING",
 		group_id,
-		std::forward< std::vector< RecordID > >( record_ids ) );
+		std::move( record_ids ) );
 
-	co_await db->execSqlCoro(
-		"DELETE FROM alternative_groups WHERE group_id = ANY($1)",
-		std::forward< std::vector< GroupID > >( group_ids ) );
+	co_await db->execSqlCoro( "DELETE FROM alternative_groups WHERE group_id = ANY($1)", std::move( group_ids ) );
 }
 
 drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( drogon::HttpRequestPtr request )
@@ -80,16 +75,24 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 
 	if ( !json.isArray() ) co_return createBadRequest( "Expected json array of integers" );
 
+	if ( json.size() < 2 ) co_return createBadRequest( "Expected at least 2 record ids to form an alternative group" );
+
 	std::vector< RecordID > record_ids {};
 
 	for ( const auto& id : json )
 	{
+		if ( !id.isUInt() ) co_return createBadRequest( "Expected json array of unsigned integers" );
+
 		record_ids.emplace_back( id.as< RecordID >() );
 	}
 
+	// unknown records would otherwise surface as FK-violation 500s in the member inserts
+	const auto validation { co_await helpers::validateRecordIds( record_ids, db ) };
+	if ( !validation ) co_return validation.error();
+
 	const auto group_search { co_await db->execSqlCoro(
 		"SELECT DISTINCT group_id FROM alternative_group_members WHERE record_id = ANY($1)",
-		std::forward< std::vector< RecordID > >( record_ids ) ) };
+		std::vector< RecordID >( record_ids ) ) };
 
 	std::vector< GroupID > group_ids {};
 
@@ -99,7 +102,8 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 	}
 
 	std::ranges::sort( group_ids );
-	std::ranges::unique( group_ids );
+	const auto duplicates { std::ranges::unique( group_ids ) };
+	group_ids.erase( duplicates.begin(), duplicates.end() );
 
 	const bool no_existing_groups { group_ids.empty() };
 	const bool existing_groups { not no_existing_groups };

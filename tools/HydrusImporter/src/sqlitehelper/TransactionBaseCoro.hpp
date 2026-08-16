@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 7/12/25.
-//
 #pragma once
 
 #include <fgl/defines.hpp>
@@ -9,12 +6,14 @@
 namespace idhan::hydrus
 {
 
+//! Minimal non-owning handle to a sqlite3 connection, passed by value into the Query/coroutine helpers.
 class TransactionBaseCoro
 {
 	sqlite3* m_db;
 
   public:
 
+	//! \return The underlying sqlite3 connection (asserts it is non-null).
 	sqlite3* db()
 	{
 		FGL_ASSERT( m_db != nullptr, "Database pointer was null in TransactionBaseCoro" );

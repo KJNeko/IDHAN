@@ -1,16 +1,13 @@
-//
-// Created by kj16609 on 7/24/25.
-//
-
 #include "helpers.hpp"
 
-#include "crypto/SHA256.hpp"
-#include "records/records.hpp"
 #include "IDHANTypes.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/SHA256.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "drogon/HttpResponse.h"
 #include "drogon/orm/DbClient.h"
+#include "logging/format_ns.hpp"
+#include "records/records.hpp"
 
 namespace idhan::hyapi::helpers
 {
@@ -44,10 +41,8 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 
 	if ( !json.isObject() ) co_return std::unexpected( createInternalError( "Invalid JSON, Expected to be a object" ) );
 
-	// check for `hash`
 	if ( json.isMember( "hash" ) )
 	{
-		// Only one item is sent
 		const auto hash { json[ "hash" ].asString() };
 		const auto sha256 { SHA256::fromHex( hash ) };
 		if ( !sha256 ) co_return std::unexpected( sha256.error() );
@@ -89,7 +84,6 @@ drogon::Task< std::expected< std::vector< RecordID >, drogon::HttpResponsePtr > 
 {
 	if ( auto opt = request->getOptionalParameter< std::string >( "hashes" ) )
 	{
-		// Json array of hashes
 		Json::Reader reader {};
 		Json::Value hashes {};
 		reader.parse( opt.value(), hashes );
@@ -143,7 +137,6 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > extractRec
 
 std::string extractHttpResponseErrorMessage( const drogon::HttpResponsePtr response )
 {
-	// The response should contain a json body that has an `error` text string in it
 	if ( response->contentType() != drogon::CT_APPLICATION_JSON )
 		throw std::invalid_argument( "Unable to extract IDHANHTTP error: Content-Type" );
 
@@ -157,6 +150,12 @@ std::string extractHttpResponseErrorMessage( const drogon::HttpResponsePtr respo
 		throw std::invalid_argument( "Unable to extract IDHANHTTP error: Missing error field" );
 
 	return json[ "error" ].asString();
+}
+
+std::string withLeadingDot( const std::string_view extension )
+{
+	if ( extension.empty() || extension.starts_with( '.' ) ) return std::string( extension );
+	return format_ns::format( ".{}", extension );
 }
 
 } // namespace idhan::hyapi::helpers

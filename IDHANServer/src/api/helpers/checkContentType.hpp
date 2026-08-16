@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/2/24.
-//
 #pragma once
 #include <vector>
 
@@ -14,4 +11,4 @@ void checkContentType(
 	const ResponseFunction& callback,
 	const std::vector< drogon::ContentType >& expected );
 
-} // namespace idhan
+} // namespace idhan::api::helpers

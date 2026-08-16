@@ -1,9 +1,3 @@
-//
-// Created by kj16609 on 11/17/24.
-//
-
-#include <drogon/orm/Exception.h>
-
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -14,35 +8,17 @@ namespace idhan::api
 
 ExpectedTask< NoteID > findOrCreateNote( DbClientPtr db, std::string text )
 {
-	NoteID note_id {};
-	bool insert_conflicted { false };
+	const auto note_creation { co_await db->execSqlCoro(
+		"INSERT INTO notes (note) VALUES ($1) ON CONFLICT (note) DO NOTHING RETURNING note_id", text ) };
 
-	try
-	{
-		const auto note_creation {
-			co_await db->execSqlCoro( "INSERT INTO notes (note) VALUES ($1) RETURNING note_id", text )
-		};
-		if ( note_creation.empty() )
-			co_return std::unexpected( createInternalError( "Failed to create new note text" ) );
-		note_id = note_creation[ 0 ][ 0 ].as< NoteID >();
-	}
-	catch ( const drogon::orm::DrogonDbException& )
-	{
-		insert_conflicted = true;
-	}
+	if ( !note_creation.empty() ) co_return note_creation[ 0 ][ 0 ].as< NoteID >();
 
-	if ( insert_conflicted )
-	{
-		// UNIQUE constraint on notes.note fired — co_await is forbidden inside catch, so we re-query here
-		const auto existing {
-			co_await db->execSqlCoro( "SELECT note_id FROM notes WHERE note = $1", text )
-		};
-		if ( existing.empty() )
-			co_return std::unexpected( createInternalError( "Failed to find existing note after insert conflict" ) );
-		note_id = existing[ 0 ][ 0 ].as< NoteID >();
-	}
+	// conflict: the note text already exists
+	const auto existing { co_await db->execSqlCoro( "SELECT note_id FROM notes WHERE note = $1", text ) };
 
-	co_return note_id;
+	if ( !existing.empty() ) co_return existing[ 0 ][ 0 ].as< NoteID >();
+
+	co_return std::unexpected( createInternalError( "Failed to create or find note" ) );
 }
 
 ExpectedTask< Json::Value > getRecordNotes( DbClientPtr db, RecordID record_id )
@@ -56,7 +32,7 @@ ExpectedTask< Json::Value > getRecordNotes( DbClientPtr db, RecordID record_id )
 	{
 		Json::Value obj {};
 		obj[ "note_id" ] = note[ "note_id" ].as< NoteID >();
-		obj[ "text" ]    = note[ "note" ].as< std::string >();
+		obj[ "text" ] = note[ "note" ].as< std::string >();
 		json.append( obj );
 	}
 

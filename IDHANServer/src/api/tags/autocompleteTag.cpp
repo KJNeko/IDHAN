@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 4/17/25.
-//
-
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 
@@ -20,24 +16,25 @@ drogon::Task< Json::Value > getSimilarTags(
 	const std::string real_search_value { is_negative ? search_value.substr( 1 ) : search_value };
 	const auto wrapped_search_value { format_ns::format( "%{}%", real_search_value ) };
 
-	constexpr std::size_t max_limit { 32 };
+	constexpr std::size_t max_limit { 256 };
 
 	if ( limit > max_limit )
 	{
-		log::warn( "Tag search came in with absurdly high limit (was {}, clamped to {})", limit, max_limit );
+		// Not a warning: a UI legitimately requests large pages. Only truly extreme values matter.
+		log::debug( "Tag search limit {} exceeds the cap; clamped to {}", limit, max_limit );
 	}
 
 	const auto only_used_query { R"(
 		SELECT	tag_text												AS tag_text,
 				tag_id													AS tag_id,
-				similarity(tag_text, $2)								AS similarity,
-				tag_text = $2											AS exact,
-				similarity(tag_text, $2) * max(tc.display_count)		AS score,
+				similarity(tag_text, CASEFOLD(normalize($2, NFC)))		AS similarity,
+				tag_text = CASEFOLD(normalize($2, NFC))					AS exact,
+				similarity(tag_text, CASEFOLD(normalize($2, NFC))) * max(tc.display_count)		AS score,
 				max(tc.display_count)									AS display_count,
 				max(tc.storage_count)									AS storage_count
 		FROM tags
 		         LEFT JOIN tag_counts tc USING (tag_id)
-		WHERE tag_text LIKE $1 AND COALESCE(tc.display_count, 0) > 0
+		WHERE tag_text LIKE CASEFOLD(normalize($1, NFC)) AND COALESCE(tc.display_count, 0) > 0
 		GROUP BY tags.tag_id
 		ORDER BY exact DESC, score DESC, similarity DESC
 		limit $3
@@ -46,16 +43,17 @@ drogon::Task< Json::Value > getSimilarTags(
 	const auto all_query { R"(
 		SELECT	tag_text												AS tag_text,
 				tag_id													AS tag_id,
-				similarity(tag_text, $2)								AS similarity,
-				tag_text = $2											AS exact,
-				similarity(tag_text, $2) * max(tc.display_count)		AS score,
+				similarity(tag_text, CASEFOLD(normalize($2, NFC)))		AS similarity,
+				tag_text = CASEFOLD(normalize($2, NFC))					AS exact,
+				similarity(tag_text, CASEFOLD(normalize($2, NFC))) * max(tc.display_count)		AS score,
 				max(tc.display_count)									AS display_count,
 				max(tc.storage_count)									AS storage_count
 		FROM tags
 		         LEFT JOIN tag_counts tc USING (tag_id)
-		WHERE tag_text LIKE $1
+		WHERE tag_text LIKE CASEFOLD(normalize($1, NFC))
 		GROUP BY tags.tag_id
-		ORDER BY exact DESC, score DESC, similarity DESC
+		-- score is NULL for unused tags; plain DESC is NULLS FIRST and would rank them above every used tag
+		ORDER BY exact DESC, score DESC NULLS LAST, similarity DESC
 		limit $3
 		)" };
 
@@ -77,7 +75,6 @@ drogon::Task< Json::Value > getSimilarTags(
 
 		const auto tag_text { row[ "tag_text" ].as< std::string >() };
 
-		tag[ "value" ] = tag_text;
 		tag[ "tag_text" ] = tag_text;
 
 		tag[ "similarity" ] = row[ "similarity" ].as< double >();
@@ -104,7 +101,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::autocomplete(
 		co_return createBadRequest( "Invalid tag display type" );
 	}
 
-	// pre-prep the search_value for searching in the database
 	const auto db { drogon::app().getDbClient() };
 
 	const std::size_t limit { request->getOptionalParameter< std::size_t >( "limit" ).value_or( 10 ) };

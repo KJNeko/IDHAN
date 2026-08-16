@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/7/25.
-//
 #include "UrlServiceWorker.hpp"
 
 #include <moc_UrlServiceWorker.cpp>
@@ -31,21 +28,26 @@ void UrlServiceWorker::preprocess()
 		idhan::hydrus::TransactionBaseCoro client_tr { m_importer->client_db };
 
 		std::size_t url_counter { 0 };
+		std::size_t unique_url_counter { 0 };
 
 		// Use COUNT for more efficient counting
-		idhan::hydrus::Query< std::size_t > count_query { client_tr, "SELECT COUNT(*) FROM url_map" };
+		idhan::hydrus::Query< std::size_t, std::size_t > count_query {
+			client_tr, "SELECT COUNT(*), COUNT(DISTINCT url_id) FROM url_map"
+		};
 
-		for ( const auto& [ count ] : count_query )
+		for ( const auto& [ count, unique_count ] : count_query )
 		{
 			url_counter = count;
+			unique_url_counter = unique_count;
 			break;
 		}
 
-		emit processedMaxUrls( url_counter );
+		emit processedMaxUrls( url_counter, unique_url_counter );
 	}
 	catch ( const std::exception& e )
 	{
-		emit statusMessage( QString( "Error during preprocessing: %1" ).arg( e.what() ) );
+		idhan::logging::error( "Error during URL preprocessing: {}", e.what() );
+		emit errorOccurred( QString( "Error during preprocessing: %1" ).arg( e.what() ) );
 	}
 
 	emit finished();
@@ -141,63 +143,78 @@ void UrlServiceWorker::process()
 			}
 
 			// Flush this chunk to server
-			if ( !current_urls.empty() )
-			{
-				total_records_processed += records_processed;
-				flushUrls( current_urls, client, total_records_processed );
-			}
+			total_records_processed += records_processed;
+			if ( !current_urls.empty() ) flushUrls( current_urls, client );
+
+			emit processedUrls( total_records_processed, chunk_end );
 		}
 
 		emit statusMessage( "Finished!" );
 	}
 	catch ( const std::exception& e )
 	{
-		emit statusMessage( QString( "Error during processing: %1" ).arg( e.what() ) );
+		idhan::logging::error( "Error during URL processing: {}", e.what() );
+		emit errorOccurred( QString( "Error during processing: %1" ).arg( e.what() ) );
 	}
 }
 
 void UrlServiceWorker::flushUrls(
 	std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > >& current_urls,
-	idhan::IDHANClient& client,
-	std::size_t url_counter )
+	idhan::IDHANClient& client )
 {
 	if ( current_urls.empty() ) return;
 
-	std::vector< idhan::hydrus::HashID > hashes;
-	hashes.reserve( current_urls.size() );
+	// Only map hashes we haven't already resolved on a previous chunk.
+	std::vector< idhan::hydrus::HashID > uncached;
+	uncached.reserve( current_urls.size() );
 
 	for ( const auto& hash_id : current_urls | std::views::keys )
 	{
-		hashes.emplace_back( hash_id );
+		if ( !m_record_cache.contains( hash_id ) ) uncached.emplace_back( hash_id );
 	}
 
-	const auto mapped_ids { m_importer->mapHydrusRecords( hashes ) };
+	if ( !uncached.empty() )
+	{
+		const auto mapped_ids { m_importer->mapHydrusRecords( uncached ) };
+		for ( const auto& [ hy_hash_id, idhan_id ] : mapped_ids )
+			m_record_cache.insert_or_assign( hy_hash_id, idhan_id );
+	}
 
-	// Count actual unique URLs using a set
+	// Only hashes that resolved to a record are sent, so count those and nothing else.
+	std::size_t mapping_count { 0 };
+	std::size_t record_count { 0 };
 	std::unordered_set< std::string > unique_urls;
 	for ( const auto& [ hash_id, urls ] : current_urls )
 	{
+		if ( !m_record_cache.contains( hash_id ) ) continue;
+
+		++record_count;
+		mapping_count += urls.size();
 		for ( const auto& url : urls )
 		{
 			unique_urls.insert( url );
 		}
 	}
 
-	emit statusMessage( QString( "Adding %1 URLs to %2 records" ).arg( unique_urls.size() ).arg( mapped_ids.size() ) );
+	emit statusMessage( QString( "Adding %L1 mappings (%L2 URLs) to %L3 records" )
+	                        .arg( mapping_count )
+	                        .arg( unique_urls.size() )
+	                        .arg( record_count ) );
 
 	// Use QFutureSynchronizer for proper parallel processing
 	QFutureSynchronizer< void > synchronizer;
 
-	for ( const auto& [ hash_id, idhan_id ] : mapped_ids )
+	for ( auto& [ hash_id, urls ] : current_urls )
 	{
-		auto urls { std::move( current_urls[ hash_id ] ) };
-		synchronizer.addFuture( client.addUrls( idhan_id, std::move( urls ) ) );
+		const auto itter { m_record_cache.find( hash_id ) };
+		if ( itter == m_record_cache.end() ) continue; // hash could not be mapped to a record
+
+		synchronizer.addFuture( client.addUrls( itter->second, std::move( urls ) ) );
 	}
 
 	synchronizer.waitForFinished();
 
 	current_urls.clear();
-	emit processedUrls( url_counter );
 }
 
 void UrlServiceWorker::run()

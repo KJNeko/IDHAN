@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 2/20/25.
-//
-
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "drogon/HttpResponse.h"
@@ -39,6 +35,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpReq
 	}
 
 	const auto& json { *json_obj };
+
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
 
 	const auto& name { json[ "name" ] };
 
@@ -100,7 +99,6 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomains( [[maybe_unused]] 
 	const auto search { co_await db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains" ) };
 
 	Json::Value out_json {};
-	// Done to make the result an empty array instead of null in the case of no domains
 	out_json.resize( 0 );
 
 	for ( const auto& row : search )
@@ -131,7 +129,7 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomainInfo(
 
 	if ( search.empty() )
 	{
-		co_return createBadRequest( "Domain id {} does not exists", tag_domain_id );
+		co_return createNotFound( "Domain id {} does not exist", tag_domain_id );
 	}
 
 	const auto info { co_await getTagDomainInfoJson( tag_domain_id, db ) };
@@ -149,11 +147,10 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::deleteTagDomain(
 	const TagDomainID tag_domain_id )
 {
 	auto db { drogon::app().getDbClient() };
-	const auto search {
-		co_await db->execSqlCoro( "DELETE FROM tag_domains WHERE tag_domain_id = $1 RETURNING tag_domain_id", tag_domain_id )
-	};
+	const auto search { co_await db->execSqlCoro(
+		"DELETE FROM tag_domains WHERE tag_domain_id = $1 RETURNING tag_domain_id", tag_domain_id ) };
 
-	if ( search.empty() ) co_return createBadRequest( "Failed to find tag domain by id {}", tag_domain_id );
+	if ( search.empty() ) co_return createNotFound( "Failed to find tag domain by id {}", tag_domain_id );
 
 	Json::Value out_json {};
 

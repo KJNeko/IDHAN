@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/18/24.
-//
-
 #include "api/ClusterAPI.hpp"
 
 namespace idhan::api
@@ -12,7 +8,7 @@ ClusterAPI::ResponseTask ClusterAPI::list( [[maybe_unused]] drogon::HttpRequestP
 	auto db { drogon::app().getDbClient() };
 	const auto result { co_await db->execSqlCoro( "SELECT cluster_id FROM file_clusters" ) };
 
-	Json::Value root {};
+	Json::Value root { Json::arrayValue };
 
 	for ( Json::ArrayIndex i = 0; i < result.size(); ++i )
 	{

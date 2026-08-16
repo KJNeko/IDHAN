@@ -1,9 +1,8 @@
-//
-// Created by kj16609 on 3/11/25.
-//
+#include <limits>
 
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
+#include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "db/drogonArrayBind.hpp"
@@ -20,7 +19,7 @@ struct TagPair
 {
 	std::optional< TagID > tag_id;
 	std::variant< NamespaceID, std::string > tag_namespace;
-	std::variant< SubtagID, std::string > tag_subtag;
+	std::string tag_subtag;
 
 	TagPair( std::string n_tag, std::string n_subtag ) :
 	  tag_id( std::nullopt ),
@@ -49,19 +48,17 @@ struct TagPair
 			{
 				tag_namespace = j_namespace.as< NamespaceID >();
 			}
-			else if ( j_subtag.isString() )
+			else if ( j_namespace.isString() )
 			{
 				tag_namespace = j_namespace.asString();
 			}
 			else
-				throw std::invalid_argument( "Invalid tag namespace" );
+				throw std::invalid_argument( "Invalid tag namespace: Namespace was neither numeric nor string" );
 
-			if ( j_subtag.isIntegral() )
-				tag_subtag = j_subtag.as< SubtagID >();
-			else if ( j_subtag.isString() )
+			if ( j_subtag.isString() )
 				tag_subtag = j_subtag.asString();
 			else
-				throw std::invalid_argument( "Invalid tag subtag: Subtag was neither numeric nor string" );
+				throw std::invalid_argument( "Invalid tag subtag: Subtag was not a string" );
 		}
 		catch ( ... )
 		{
@@ -79,44 +76,35 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > > getIDFromPair( c
 
 	if ( tag_id ) co_return tag_id.value();
 
-	const auto tag_namespace_is_str { std::holds_alternative< std::string >( tag_namespace ) };
-	const auto tag_subtag_is_str { std::holds_alternative< std::string >( tag_subtag ) };
-
-	if ( tag_namespace_is_str && tag_subtag_is_str )
+	if ( std::holds_alternative< std::string >( tag_namespace ) )
 	{
 		const auto result { co_await db->execSqlCoro(
-			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) JOIN tag_subtags USING (subtag_id) WHERE "
-			"namespace_text = $1 AND subtag_text = $2",
+			"SELECT tag_id FROM tags JOIN tag_namespaces USING (namespace_id) WHERE "
+			"namespace_text = CASEFOLD(NORMALIZE($1, NFC)) "
+			"AND tags.subtag_text = NORMALIZE(CASEFOLD(NORMALIZE($2, NFC)), NFC)",
 			std::get< std::string >( tag_namespace ),
-			std::get< std::string >( tag_subtag ) ) };
+			tag_subtag ) };
 
 		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
 
-		const auto create_status {
-			co_await createTag( std::get< std::string >( tag_namespace ), std::get< std::string >( tag_subtag ), db )
-		};
+		const auto create_status { co_await createTag( std::get< std::string >( tag_namespace ), tag_subtag, db ) };
 
 		if ( create_status ) co_return *create_status;
 
 		co_return std::unexpected( create_status.error()->genResponse() );
 	}
 
-	if ( !tag_namespace_is_str && !tag_subtag_is_str )
-	{
-		const auto result { co_await db->execSqlCoro(
-			"INSERT INTO tags (namespace_id, subtag_id) VALUES ($1, $2) RETURNING tag_id",
-			std::get< NamespaceID >( tag_namespace ),
-			std::get< SubtagID >( tag_subtag ) ) };
+	const auto result { co_await db->execSqlCoro(
+		"INSERT INTO tags (namespace_id, subtag_text) VALUES ($1, $2) "
+		"ON CONFLICT (namespace_id, subtag_text) DO UPDATE SET subtag_text = EXCLUDED.subtag_text "
+		"RETURNING tag_id",
+		std::get< NamespaceID >( tag_namespace ),
+		tag_subtag ) };
 
-		if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
-		co_return std::unexpected( createInternalError(
-			R"(Failed to insert tag '{}':'{}')",
-			std::get< NamespaceID >( tag_namespace ),
-			std::get< SubtagID >( tag_subtag ) ) );
-	}
+	if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
 
-	co_return std::unexpected(
-		createInternalError( "Failed to get ID from pair, Namespace and Subtag must both be String or Integers" ) );
+	co_return std::unexpected( createInternalError(
+		R"(Failed to insert tag '{}':'{}')", std::get< NamespaceID >( tag_namespace ), tag_subtag ) );
 }
 
 drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > > getTagPairs( const Json::Value& json )
@@ -132,8 +120,13 @@ drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > >
 		{
 			if ( item.isObject() )
 				tags.emplace_back( TagPair( item ) );
-			else if ( item.isUInt64() )
-				tags.emplace_back< TagPair >( static_cast< TagID >( item.asUInt64() ) );
+			else if ( item.isIntegral() )
+			{
+				if ( !item.isInt64() || item.asInt64() <= 0 || item.asInt64() > std::numeric_limits< TagID >::max() )
+					co_return std::unexpected( createBadRequest( "Invalid tag id {}: out of range", item.asString() ) );
+
+				tags.emplace_back< TagPair >( static_cast< TagID >( item.asInt64() ) );
+			}
 			else if ( item.isString() )
 				tags.emplace_back( TagPair::fromSplit( item.asString() ) );
 			else
@@ -158,33 +151,62 @@ drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > g
 	const std::vector< TagPair >& pairs,
 	DbClientPtr db )
 {
-	std::vector< TagID > ids {};
-	ids.reserve( pairs.size() );
+	std::vector< TagID > ids( pairs.size(), INVALID_TAG_ID );
+
+	std::vector< std::pair< std::string, std::string > > string_pairs {};
+	std::vector< std::size_t > string_indices {};
+	std::vector< std::size_t > other_indices {};
+
+	for ( std::size_t i = 0; i < pairs.size(); ++i )
+	{
+		const auto& pair { pairs[ i ] };
+
+		if ( pair.tag_id )
+		{
+			ids[ i ] = *pair.tag_id;
+		}
+		else if ( std::holds_alternative< std::string >( pair.tag_namespace ) )
+		{
+			string_indices.emplace_back( i );
+			string_pairs.emplace_back( std::get< std::string >( pair.tag_namespace ), pair.tag_subtag );
+		}
+		else
+		{
+			other_indices.emplace_back( i );
+		}
+	}
 
 	try
 	{
-		using Task = drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >;
-		std::vector< Task > tasks {};
-
-		for ( const auto& pair : pairs )
+		if ( !string_pairs.empty() )
 		{
-			tasks.emplace_back( getIDFromPair( pair, db ) );
+			const auto batch_ids { co_await createTagsFromPairs( string_pairs, db ) };
+			if ( !batch_ids ) co_return std::unexpected( batch_ids.error() );
+
+			for ( std::size_t k = 0; k < string_indices.size(); ++k )
+				ids[ string_indices[ k ] ] = batch_ids.value()[ k ];
 		}
 
-		const auto finished_tasks { co_await drogon::when_all( std::move( tasks ) ) };
-
-		for ( const std::expected< TagID, drogon::HttpResponsePtr >& result : finished_tasks )
+		if ( !other_indices.empty() )
 		{
-			// const auto result { co_await getIDFromPair( pair, db ) };
-			if ( !result ) co_return std::unexpected( result.error() );
-			ids.emplace_back( result.value() );
+			using Task = drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > >;
+			std::vector< Task > tasks {};
+			tasks.reserve( other_indices.size() );
+			for ( const auto index : other_indices ) tasks.emplace_back( getIDFromPair( pairs[ index ], db ) );
 
-			if ( result.value() <= 0 )
+			const auto finished_tasks { co_await drogon::when_all( std::move( tasks ) ) };
+
+			for ( std::size_t k = 0; k < other_indices.size(); ++k )
 			{
-				co_return std::unexpected(
-					createBadRequest( "Tag ID was not valid. Must be tag_id > 0; Was {}", result.value() ) );
+				const auto& result { finished_tasks[ k ] };
+				if ( !result ) co_return std::unexpected( result.error() );
+				ids[ other_indices[ k ] ] = result.value();
 			}
 		}
+
+		for ( const auto& id : ids )
+			if ( id <= 0 )
+				co_return std::unexpected( createBadRequest( "Tag ID was not valid. Must be tag_id > 0; Was {}", id ) );
 	}
 	catch ( std::exception& e )
 	{
@@ -221,14 +243,85 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecord(
 	co_return std::expected< void, drogon::HttpResponsePtr > {};
 }
 
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagsToRecords(
+	std::vector< RecordID > record_ids,
+	std::vector< TagID > tag_ids,
+	const TagDomainID tag_domain_id,
+	DbClientPtr db )
+{
+	if ( record_ids.empty() || tag_ids.empty() ) co_return std::expected< void, drogon::HttpResponsePtr > {};
+
+	try
+	{
+		co_await db->execSqlCoro(
+			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
+			"SELECT r, t, $3 "
+			"FROM UNNEST($1::INTEGER[]) AS r "
+			"CROSS JOIN UNNEST($2::" TAG_PG_TYPE_NAME "[]) AS t "
+			"ON CONFLICT DO NOTHING",
+			std::move( record_ids ),
+			std::move( tag_ids ),
+			tag_domain_id );
+	}
+	catch ( std::exception& e )
+	{
+		co_return std::unexpected( createInternalError( "Error adding tags: {}", e.what() ) );
+	}
+
+	co_return std::expected< void, drogon::HttpResponsePtr > {};
+}
+
+drogon::Task< std::expected< void, drogon::HttpResponsePtr > > addTagSetsToRecords(
+	const std::vector< RecordID >& record_ids,
+	const std::vector< std::vector< TagID > >& tag_sets,
+	const TagDomainID tag_domain_id,
+	DbClientPtr db )
+{
+	FGL_ASSERT( record_ids.size() == tag_sets.size(), "record_ids and tag_sets must be the same size" );
+
+	std::size_t total { 0 };
+	for ( const auto& set : tag_sets ) total += set.size();
+
+	std::vector< RecordID > flat_record_ids {};
+	std::vector< TagID > flat_tag_ids {};
+	flat_record_ids.reserve( total );
+	flat_tag_ids.reserve( total );
+
+	for ( std::size_t i = 0; i < record_ids.size(); ++i )
+		for ( const auto tag_id : tag_sets[ i ] )
+		{
+			flat_record_ids.push_back( record_ids[ i ] );
+			flat_tag_ids.push_back( tag_id );
+		}
+
+	if ( flat_record_ids.empty() ) co_return std::expected< void, drogon::HttpResponsePtr > {};
+
+	try
+	{
+		co_await db->execSqlCoro(
+			"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
+			"SELECT pairs.record_id, pairs.tag_id, $3 "
+			"FROM UNNEST($1::INTEGER[], $2::" TAG_PG_TYPE_NAME "[]) AS pairs(record_id, tag_id) "
+			"ON CONFLICT DO NOTHING",
+			std::move( flat_record_ids ),
+			std::move( flat_tag_ids ),
+			tag_domain_id );
+	}
+	catch ( std::exception& e )
+	{
+		co_return std::unexpected( createInternalError( "Error adding tags: {}", e.what() ) );
+	}
+
+	co_return std::expected< void, drogon::HttpResponsePtr > {};
+}
+
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::addTags(
 	const drogon::HttpRequestPtr request,
 	const RecordID record_id )
 {
 	logging::ScopedTimer timer { "addTags" };
-	// the path will contain a record_id
-	// it will also contain a tag_domain_id as a extra parameter, if no parameter is specified, then it will instead use
-	// the 'default' domain
+	// The path carries a record_id, and a tag_domain_id may be given as a query parameter. Without
+	// one, the 'default' domain is used.
 
 	const auto json_ptr { request->getJsonObject() };
 	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );
@@ -268,6 +361,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	const auto& json { *json_ptr };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	if ( !json[ "records" ].isArray() )
 		co_return createBadRequest( "Invalid json: Array of ids called 'records' must be present." );
 
@@ -287,7 +383,18 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 	const auto& records_json { json[ "records" ] };
 
-	std::vector< drogon::Task< std::expected< void, drogon::HttpResponsePtr > > > add_results {};
+	std::vector< RecordID > record_ids {};
+	record_ids.reserve( records_json.size() );
+	for ( const auto& record_json : records_json )
+	{
+		if ( !record_json.isIntegral() )
+			co_return createBadRequest( "Invalid json item in records list: Expected integral" );
+		record_ids.push_back( static_cast< RecordID >( record_json.asInt64() ) );
+	}
+
+	// unknown records would otherwise surface as FK-violation 500s in the mapping inserts
+	const auto record_validation { co_await helpers::validateRecordIds( record_ids, db ) };
+	if ( !record_validation ) co_return record_validation.error();
 
 	// This list of tags is applied to all records. If it's null then there is no tags to apply from it.
 	if ( const auto& tags_json = json[ "tags" ]; tags_json.isArray() )
@@ -300,14 +407,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		if ( !tag_pair_ids ) co_return tag_pair_ids.error();
 
-		for ( const auto& record_json : records_json )
-		{
-			if ( !record_json.isIntegral() )
-				co_return createBadRequest( "Invalid json item in records list: Expected integral" );
+		const auto result { co_await addTagsToRecords( record_ids, tag_pair_ids.value(), tag_domain_id.value(), db ) };
 
-			add_results.emplace_back( addTagsToRecord(
-				static_cast< RecordID >( record_json.asInt64() ), tag_pair_ids.value(), tag_domain_id.value(), db ) );
-		}
+		if ( !result ) co_return result.error();
 	}
 	else if ( !tags_json.isNull() )
 	{
@@ -329,51 +431,43 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 
 		for ( const auto& set_json : sets_json )
 		{
-			auto task = [ db ]( const Json::Value set_json_current ) -> Task
+			auto task = []( DbClientPtr db_c, const Json::Value set_json_current ) -> Task
 			{
 				const auto tags { co_await getTagPairs( set_json_current ) };
 
 				if ( !tags ) co_return std::unexpected( tags.error() );
 
-				const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db ) };
+				const auto tag_ids_e { co_await getIDsFromPairs( tags.value(), db_c ) };
 
 				if ( !tag_ids_e ) co_return std::unexpected( tag_ids_e.error() );
 
 				co_return *tag_ids_e;
 			};
 
-			sets_processing_tasks.emplace_back( task( set_json ) );
+			sets_processing_tasks.emplace_back( task( db, set_json ) );
 		}
 
 		auto sets { co_await drogon::when_all( std::move( sets_processing_tasks ) ) };
+
+		std::vector< std::vector< TagID > > tag_sets {};
+		tag_sets.reserve( sets_json.size() );
 
 		for ( Json::ArrayIndex i = 0; i < sets_json.size(); ++i )
 		{
 			const auto& tag_ids_e { sets[ i ] };
 
-			auto tag_ids { tag_ids_e.value() };
+			if ( !tag_ids_e ) co_return tag_ids_e.error();
 
-			const auto record_json { records_json[ i ] };
-
-			add_results.emplace_back( addTagsToRecord(
-				static_cast< RecordID >( record_json.asInt64() ), std::move( tag_ids ), tag_domain_id.value(), db ) );
-
-			// if ( !result ) co_return result.error();
+			tag_sets.emplace_back( tag_ids_e.value() );
 		}
+
+		const auto result { co_await addTagSetsToRecords( record_ids, tag_sets, tag_domain_id.value(), db ) };
+
+		if ( !result ) co_return result.error();
 	}
 	else if ( !sets_json.isNull() )
 	{
 		co_return createBadRequest( "Invalid json: Sets must be array or null (not present)" );
-	}
-
-	const auto await_result { co_await drogon::when_all( std::move( add_results ) ) };
-
-	for ( const auto& result : await_result )
-	{
-		if ( !result )
-		{
-			co_return result.error();
-		}
 	}
 
 	co_return drogon::HttpResponse::newHttpResponse();

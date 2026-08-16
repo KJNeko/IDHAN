@@ -1,20 +1,25 @@
-//
-// Created by kj16609 on 11/12/25.
-//
 #pragma once
 #include "MetadataModule.hpp"
 
+//! Metadata parser for video/audio containers via FFmpeg (dimensions, duration, bitrate, fps, audio).
 class FFMPEGMetadata final : public idhan::MetadataModuleI
 {
   public:
 
 	FFMPEGMetadata( idhan::ModuleCallbacks callbacks ) : MetadataModuleI( callbacks ) {}
 
-	std::string_view name() override;
+	[[nodiscard]] std::string_view name() override;
 
-	idhan::ModuleVersion version() override;
+	[[nodiscard]] idhan::ModuleVersion version() override;
 
-	std::vector< std::string_view > handleableMimes() override;
+	// each call owns its AVFormatContext/codec contexts, no shared state: safe to run concurrently
+	[[nodiscard]] bool threadSafe() override { return true; }
 
-	std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data ) override;
+	// shares a worker with FFMPEGThumbnailer, whose vips init is what makes the process worth keeping
+	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
+
+	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
+
+	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data )
+		override;
 };

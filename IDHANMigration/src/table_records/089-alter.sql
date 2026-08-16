@@ -1,0 +1,2 @@
+ALTER TABLE records
+    ADD COLUMN creation_time TIMESTAMP NOT NULL DEFAULT now();

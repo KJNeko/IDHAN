@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/11/25.
-//
-
 #include "api/RecordAPI.hpp"
 
 namespace idhan::api
@@ -17,7 +13,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::listTags(
 		co_await db->execSqlCoro( "SELECT tag_domain_id, tag_id FROM tag_mappings WHERE record_id = $1", record_id )
 	};
 
-	Json::Value json {};
+	Json::Value json { Json::arrayValue };
 
 	std::unordered_map< TagDomainID, std::vector< TagID > > domain_map {};
 

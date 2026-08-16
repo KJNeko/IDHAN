@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 8/1/25.
-//
 #pragma once
 #ifdef __linux__
 
@@ -25,6 +22,7 @@ class IOUringLinux;
 struct [[nodiscard]] ReadAwaiter
 {
 	std::shared_ptr< std::vector< std::byte > > m_data {};
+	int m_result { -1 };
 	std::exception_ptr m_exception {};
 	std::coroutine_handle<> m_cont;
 	IOUringLinux* m_uring { nullptr };
@@ -43,7 +41,7 @@ struct [[nodiscard]] ReadAwaiter
 
 	[[nodiscard]] bool await_ready() const noexcept;
 	void await_suspend( std::coroutine_handle<> h );
-	std::vector< std::byte > await_resume() const;
+	[[nodiscard]] std::vector< std::byte > await_resume();
 
 	~ReadAwaiter();
 };

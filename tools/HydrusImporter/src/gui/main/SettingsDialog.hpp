@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/26/25.
-//
 #pragma once
 
 #include <QDialog>
@@ -11,6 +8,7 @@ namespace Ui
 class SettingsDialog;
 }
 
+//! Dialog for editing the importer's server-connection and application settings.
 class SettingsDialog final : public QDialog
 {
 	Q_OBJECT
