@@ -9,8 +9,6 @@
 #include <tuple>
 #include <typeinfo>
 
-#include <idhan/CoroFrameProbe.hpp>
-
 #include "TransactionBaseCoro.hpp"
 #include "binders.hpp"
 #include "extractors.hpp"
