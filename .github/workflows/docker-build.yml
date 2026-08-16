@@ -17,7 +17,6 @@ env:
 jobs:
   build-and-push:
     runs-on: self-hosted
-    if: startsWith(github.server_url, 'https://git.futuregadgetlabs.net')
 
     steps:
       - name: Checkout repository

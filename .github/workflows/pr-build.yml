@@ -23,7 +23,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: startsWith(github.server_url, 'https://git.futuregadgetlabs.net') && github.event.action != 'closed'
+    if: github.event.action != 'closed'
 
     steps:
       - name: Checkout repository
