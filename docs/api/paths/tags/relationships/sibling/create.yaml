@@ -3,11 +3,9 @@ post:
     - tags
   summary: Creates sibling (exclusive tag) relationships
   description: |
-    Marks two tags as mutually exclusive siblings. When both are present on a record,
-    `older_id` is shown and `younger_id` is hidden. A tag cannot be its own sibling.
-    Duplicate entries are silently ignored.
-
-    If a child tag is the younger sibling and should be hidden, its parents are also hidden.
+    Marks two tags as mutually exclusive. When a record has both, `older_id` is
+    shown and `younger_id` is hidden, along with the younger tag's parents.
+    A tag cannot be its own sibling. Duplicates are ignored.
   parameters:
     - name: tag_domain_id
       in: query
@@ -29,11 +27,11 @@ post:
               older_id:
                 allOf:
                   - $ref: '../../../../schemas/TagID.yaml'
-                description: The dominant sibling (shown when both are present)
+                description: The shown tag.
               younger_id:
                 allOf:
                   - $ref: '../../../../schemas/TagID.yaml'
-                description: The hidden sibling (suppressed when both are present)
+                description: The hidden tag.
         examples:
           rating_siblings:
             summary: Make rating:safe and rating:explicit exclusive
@@ -42,7 +40,7 @@ post:
                 younger_id: 51
   responses:
     200:
-      description: Sibling relationships created successfully
+      description: Relationships created
     400:
       description: Invalid request body
     500:

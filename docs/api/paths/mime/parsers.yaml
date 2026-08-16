@@ -1,10 +1,10 @@
 get:
   tags:
     - mime
-  summary: List loaded MIME parsers
+  summary: Lists loaded MIME parsers
   description: |
-    Returns a dump of the current MIME database showing all loaded parser modules
-    and the MIME types they handle.
+    Dumps the current MIME database: the loaded parser modules and the types
+    each one handles.
   responses:
     200:
       description: MIME database dump

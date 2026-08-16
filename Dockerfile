@@ -1,26 +1,43 @@
-# Multi-stage build for IDHANServer
-# Stage 1: Build environment
-FROM ubuntu:24.04 AS builder
+# syntax=docker/dockerfile:1.7
 
-# Enable universe repository (needed for drogon, spdlog, pqxx, tomlplusplus, etc.)
+# Stage 0: WebUI
+FROM --platform=$BUILDPLATFORM node:22-slim AS webbuilder
+
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+WORKDIR /web
+
+COPY IDHANWeb/package.json IDHANWeb/pnpm-lock.yaml IDHANWeb/pnpm-workspace.yaml ./
+RUN --mount=type=cache,target=/pnpm-store \
+    pnpm config set store-dir /pnpm-store && pnpm install --frozen-lockfile
+COPY IDHANWeb/ ./
+RUN pnpm exec vite build --outDir /web/dist
+
+# Stage 1: Build IDHANServer
+FROM --platform=$BUILDPLATFORM ubuntu:25.10 AS builder
+
+ARG BUILDARCH
+ARG TARGETARCH
+RUN [ "${BUILDARCH}" = "${TARGETARCH}" ] || { \
+        echo "IDHAN: cross-architecture builds are not supported (build=${BUILDARCH} target=${TARGETARCH})" >&2; \
+        exit 1; \
+    }
+
+# universe carries drogon, spdlog, pqxx, tomlplusplus, etc.
 RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
 
-# Use build mounts for apt cache to speed up re-builds
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
+RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     git \
+    ca-certificates \
     pkg-config \
     gcc-14 \
     g++-14 \
     ccache \
     libpq-dev \
     liburing-dev \
-    qt6-base-dev \
-    qt6-multimedia-dev \
     libvips-dev \
     libavcodec-dev \
     libavcodec-extra \
@@ -35,15 +52,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     uuid-dev \
     libbrotli-dev \
     libssl-dev \
-    python3 \
-    python3-pip
+    libonnxruntime-dev \
+    python3
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
 
-# Build libpqxx from source: Ubuntu 24.04 ships 7.8.1 compiled without C++23
-# std::source_location support, causing undefined symbol errors at link time.
+# built manually to get std::source_location to work
 RUN git clone --depth 1 --branch 7.10.1 https://github.com/jtv/libpqxx.git /tmp/libpqxx && \
     cmake -S /tmp/libpqxx -B /tmp/libpqxx-build \
         -DCMAKE_CXX_STANDARD=23 \
@@ -56,124 +72,111 @@ RUN git clone --depth 1 --branch 7.10.1 https://github.com/jtv/libpqxx.git /tmp/
     cmake --install /tmp/libpqxx-build && \
     rm -rf /tmp/libpqxx /tmp/libpqxx-build
 
-RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk
-
-RUN cd /opt/emsdk && \
-    ./emsdk install 4.0.7 && \
-    ./emsdk activate 4.0.7
-
-ENV EMSDK=/opt/emsdk
-ENV PATH="/opt/emsdk:/opt/emsdk/upstream/emscripten:${PATH}"
-
-RUN pip3 install aqtinstall --break-system-packages
-
-RUN aqt install-qt linux desktop 6.11.1 linux_gcc_64 --outputdir /opt/qt6
-RUN aqt install-qt all_os wasm 6.11.1 wasm_singlethread -m qtcharts --autodesktop --outputdir /opt/qt6
-
-ENV QT_WASM=/opt/qt6/6.11.1/wasm_singlethread
-ENV QT_HOST_PATH=/opt/qt6/6.11.1/gcc_64
-ENV EM_CACHE=/root/.cache/emscripten
-
 WORKDIR /build
 
-# Copy dependencies first (rarely changes)
 COPY 3rd-party/hydrus /build/3rd-party/hydrus
 COPY dependencies /build/dependencies
 
-# Copy CMakeLists.txt
 COPY CMakeLists.txt /build/CMakeLists.txt
 
-# Copy core libraries
 COPY IDHAN /build/IDHAN
 COPY IDHANModules /build/IDHANModules
 COPY IDHANMigration /build/IDHANMigration
-
-# Copy server (most frequently changed source)
 COPY IDHANServer /build/IDHANServer
 
-# Copy WebUI
-COPY IDHANWebUI /build/IDHANWebUI
-
-# Copy docs and remaining
 COPY docs /build/docs
 
-# Build IDHANServer with ccache mount
+COPY .git /build/.git
+
 ARG IDHAN_DISABLE_API_AUTH=OFF
 ARG CMAKE_BUILD_TYPE=Release
+
+ARG TARGETVARIANT
+
 ENV CCACHE_DIR=/root/.ccache
-RUN --mount=type=cache,target=/root/.ccache \
-    --mount=type=cache,target=/build/build \
-    --mount=type=cache,target=/root/.cache/emscripten \
+RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-${TARGETARCH}${TARGETVARIANT} \
+    --mount=type=cache,target=/build/build,id=idhan-cmake-${TARGETARCH}${TARGETVARIANT} \
+    case "${TARGETVARIANT}" in \
+        ""|v1) FGL_MARCH=x86-64 ;; \
+        v2)    FGL_MARCH=x86-64-v2 ;; \
+        v3)    FGL_MARCH=x86-64-v3 ;; \
+        v4)    FGL_MARCH=x86-64-v4 ;; \
+        *)     echo "IDHAN: unsupported TARGETVARIANT '${TARGETVARIANT}'" >&2; exit 1 ;; \
+    esac && \
+    echo "IDHAN: building for ${TARGETARCH}/${TARGETVARIANT:-v1} with -march=${FGL_MARCH}" && \
+    git config --global --add safe.directory /build && \
     cmake -S . -B build \
+    -UFGL_GIT_BRANCH -UFGL_GIT_COMMIT -UFGL_GIT_TAG \
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
+    -DFGL_MARCH=${FGL_MARCH} \
     -DCMAKE_CXX_STANDARD=23 \
     -DBUILD_IDHAN_TESTS=OFF \
     -DBUILD_HYDRUS_IMPORTER=OFF \
     -DBUILD_IDHAN_DOCS=ON \
-    -DBUILD_IDHAN_WEBUI=ON \
+    -DBUILD_IDHAN_WEB=OFF \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
     -DTRANTOR_USE_TLS=none \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    -DIDHAN_WASM_TOOLCHAIN_FILE=/opt/qt6/6.11.1/wasm_singlethread/lib/cmake/Qt6/qt.toolchain.cmake && \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
     cmake --build build --target IDHANServer -j$(nproc) && \
-    cp /build/build/bin /build/bin -r
+    cp /build/build/bin /build/bin -r && \
+    find /build/bin -name '*.debug' -delete
 
 # Stage 2: Runtime environment
-FROM ubuntu:24.04
+FROM ubuntu:25.10
 
-# Install runtime dependencies and setup locale in one layer
 RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
+RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    libqt6core6 \
-    libqt6multimedia6 \
     libpq5 \
-    libvips42 \
+    libvips42t64 \
     liburing2 \
-    libjsoncpp25 \
-    uuid-runtime \
+    libjsoncpp26 \
+    libuuid1 \
     zlib1g \
-    libssl3 \
+    libssl3t64 \
     libc-ares2 \
-    libfmt9 \
-    libspdlog1.12 \
-    libarchive13 \
+    libfmt10 \
+    libspdlog1.15 \
+    libarchive13t64 \
     libtomlplusplus3t64 \
-    ffmpeg \
-    curl \
-    locales && \
-    locale-gen en_US.UTF-8 && \
-    update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+    libonnxruntime1.21 \
+    libavcodec-extra61 \
+    libavformat61 \
+    libavutil59 \
+    libswscale8 \
+    libswresample5 \
+    curl
 
-# Copy built artifacts from builder stage
 COPY --from=builder /build/bin/IDHANServer/ /usr/bin/IDHANServer
+
+COPY --from=builder /build/bin/IDHANModuleRunner /usr/bin/IDHANModuleRunner
 COPY --from=builder /build/bin/static/ /usr/share/idhan/static
+COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
 COPY --from=builder /build/bin/mime/ /usr/share/idhan/mime
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
 
-# Environment variables for database configuration
+# Embedding folder
+RUN mkdir -p /usr/share/idhan/models
+
 ENV IDHAN_DATABASE_HOST=localhost \
     IDHAN_DATABASE_USER=idhan \
     IDHAN_DATABASE_PASSWORD=idhan \
     IDHAN_DATABASE_DATABASE=idhan-db \
     IDHAN_THUMBNAILS_PATH=/thumbnails \
+    IDHAN_EMBEDDINGS_MODEL_PATH=/usr/share/idhan/models \
     IDHAN_HOST_IPV4_LISTEN=0.0.0.0 \
     IDHAN_HOST_IPV6_LISTEN=:: \
-    LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
 
-RUN chmod +x /usr/bin/IDHANServer
+RUN chmod +x /usr/bin/IDHANServer /usr/bin/IDHANModuleRunner
 
-# Expose default port
 EXPOSE 16609
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD curl --fail --silent http://localhost:16609/health || exit 1
 
-# Default entrypoint
 ENTRYPOINT ["/usr/bin/IDHANServer", "--force_start=true"]

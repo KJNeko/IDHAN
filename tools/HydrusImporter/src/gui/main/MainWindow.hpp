@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 5/2/25.
-//
 #ifndef MAINWINDOW_HPP
 #define MAINWINDOW_HPP
 
@@ -26,6 +23,8 @@ class MainWindow;
 
 QT_END_NAMESPACE
 
+//! The importer's top-level window. Owns the IDHANClient connection and a heartbeat timer, and hosts
+//! the file / Hydrus / PTR import actions and the record-tag widget.
 class MainWindow final : public QMainWindow
 {
 	Q_OBJECT

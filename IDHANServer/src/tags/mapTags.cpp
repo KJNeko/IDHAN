@@ -1,13 +1,10 @@
-//
-// Created by kj16609 on 11/11/25.
-//
-
-#include "threading/ExpectedTask.hpp"
 #include "IDHANTypes.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "db/dbTypes.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "drogon/utils/coroutine.h"
+#include "splitTag.hpp"
+#include "threading/ExpectedTask.hpp"
 
 namespace idhan
 {
@@ -16,25 +13,38 @@ ExpectedTask< std::unordered_map< std::string, TagID > > mapTags(
 	const std::vector< std::string >& tags,
 	DbClientPtr db )
 {
-	constexpr auto query { "SELECT tag_id, tag_text FROM tags WHERE tag_text = ANY($1::TEXT[])" };
+	std::vector< std::string > namespaces {};
+	std::vector< std::string > subtags {};
+	namespaces.reserve( tags.size() );
+	subtags.reserve( tags.size() );
+	for ( const auto& tag : tags )
+	{
+		auto [ tag_namespace, tag_subtag ] = splitTag( tag );
+		namespaces.emplace_back( std::move( tag_namespace ) );
+		subtags.emplace_back( std::move( tag_subtag ) );
+	}
 
-	const auto tag_id_result {
-		co_await db->execSqlCoro( query, std::forward< const std::vector< std::string > >( tags ) )
+	constexpr auto query {
+		"SELECT tags.tag_id AS tag_id, input.ord AS ord "
+		"FROM UNNEST($1::TEXT[], $2::TEXT[]) WITH ORDINALITY AS input(namespace_text, subtag_text, ord) "
+		"JOIN tag_namespaces ON tag_namespaces.namespace_text = input.namespace_text "
+		"JOIN tags ON tags.namespace_id = tag_namespaces.namespace_id AND tags.subtag_text = input.subtag_text"
 	};
 
-	if ( tag_id_result.size() != tags.size() )
-		co_return std::unexpected( createInternalError( "Failed to get all search tags ids. Maybe unknown tag?" ) );
+	const auto tag_id_result { co_await db->execSqlCoro( query, std::move( namespaces ), std::move( subtags ) ) };
 
 	std::unordered_map< std::string, TagID > tag_ids_result {};
 
 	for ( const auto& row : tag_id_result )
 	{
-		tag_ids_result.emplace( row[ "tag_text" ].as< std::string >(), row[ "tag_id" ].as< TagID >() );
+		// ORDINALITY is 1-based; map the row back to the exact input tag string it resolved from
+		const auto ord { row[ "ord" ].as< std::size_t >() };
+		tag_ids_result.emplace( tags[ ord - 1 ], row[ "tag_id" ].as< TagID >() );
 	}
 
 	for ( const auto& tag : tags )
 		if ( !tag_ids_result.contains( tag ) ) [[unlikely]]
-			co_return std::unexpected( createBadRequest( "Was unable to get ID for tag {}, Tag does not exist", tag ) );
+			co_return std::unexpected( createNotFound( "Was unable to get ID for tag {}, Tag does not exist", tag ) );
 
 	co_return tag_ids_result;
 }

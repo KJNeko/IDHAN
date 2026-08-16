@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 10/21/25.
-//
 #pragma once
 #include "mime/MimeMatchBase.hpp"
 

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/5/25.
-//
 #pragma once
 #include <QWidget>
 
@@ -11,6 +8,7 @@ namespace Ui
 class FileRelationshipsWidget;
 }
 
+//! Qt widget presenting the Hydrus file-relationships import and its progress (driven by FileRelationshipsWorker).
 class FileRelationshipsWidget : public QWidget
 {
 	Q_OBJECT
@@ -28,7 +26,7 @@ class FileRelationshipsWidget : public QWidget
 
   public:
 
-	Q_DISABLE_COPY_MOVE( FileRelationshipsWidget );
+	Q_DISABLE_COPY_MOVE( FileRelationshipsWidget )
 
 	explicit FileRelationshipsWidget( idhan::hydrus::HydrusImporter* importer, QWidget* parent = nullptr );
 

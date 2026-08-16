@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/24/25.
-//
-
 #include "ArchiveMetadata.hpp"
 
 #include <json/value.h>
@@ -32,6 +28,8 @@ std::vector< std::string_view > ArchiveMetadata::handleableMimes()
 
 std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseFile( idhan::ModuleCallData& data )
 {
+	ArchiveModuleReader reader { data.file };
+
 	std::unique_ptr< archive, void ( * )( archive* ) > a {
 		archive_read_new(), []( archive* ptr ) { archive_read_free( ptr ); }
 	};
@@ -40,11 +38,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 	archive_read_support_filter_all( a.get() );
 	archive_read_set_option( a.get(), "zip", "compact-utf8", "on" );
 
-	if ( const int r = archive_read_open_memory( a.get(), data.file_view.data(), data.file_view.size() ); r != 0 )
-	{
-		const char* err { archive_error_string( a.get() ) };
-		return std::unexpected( idhan::ModuleError { err ? err : "archive_read_open_memory failed" } );
-	}
+	if ( const auto opened { reader.open( a.get() ) }; !opened ) return std::unexpected( opened.error() );
 
 	idhan::MetadataInfo metadata {};
 	idhan::MetadataInfoArchive archive_metadata {};
@@ -55,8 +49,14 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 	auto ret { archive_read_next_header( a.get(), &entry ) };
 
-	while ( ret == ARCHIVE_OK )
+	while ( ret == ARCHIVE_OK || ret == ARCHIVE_WARN )
 	{
+		if ( ret == ARCHIVE_WARN )
+		{
+			const char* warn { archive_error_string( a.get() ) };
+			spdlog::warn( "Archive warning while reading entry: {}", warn ? warn : "unknown" );
+		}
+
 		if ( archive_entry_filetype( entry ) != AE_IFREG ) // skip anything that isn't a file
 		{
 			ret = archive_read_next_header( a.get(), &entry );
@@ -71,46 +71,25 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 			continue;
 		}
 
-		const char* filename_raw { nullptr };
+		std::expected< std::string, idhan::ModuleError > filename {};
 
-		if ( filename_raw = archive_entry_pathname( entry ); filename_raw == nullptr )
+		if ( entryFilename( entry, filename ) == EntryNameResult::UNNAMED )
 		{
-			if ( const auto utf8_filename_raw = archive_entry_pathname_utf8( entry ); utf8_filename_raw != nullptr )
-			{
-				filename_raw = utf8_filename_raw;
-			}
-			else if ( const auto w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
-			{
-				spdlog::warn( "No file name for item in archive? It was W! Tell the dev" );
-				ret = archive_read_next_header( a.get(), &entry );
-				continue;
-			}
-			else
-			{
-				spdlog::warn( "No file name for item in archive? Maybe encrypted?" );
-				ret = archive_read_next_header( a.get(), &entry );
-				continue;
-			}
+			ret = archive_read_next_header( a.get(), &entry );
+			continue;
 		}
 
-		const auto filename { sanitizeEncoding( filename_raw ) };
 		if ( !filename ) return std::unexpected( filename.error() );
 
 		spdlog::trace( "Cleaned path to {}", *filename );
 
-		const auto file_size { static_cast< std::size_t >( archive_entry_size( entry ) ) };
-
-		std::vector< std::byte > file_data {};
-		file_data.resize( file_size );
-
-		if ( archive_read_data( a.get(), file_data.data(), file_size ) < 0 )
+		const auto entry_hash_e { hashArchiveEntryData( a.get() ) };
+		if ( !entry_hash_e )
 		{
 			spdlog::error( "Unable to read archive data" );
-			const char* err { archive_error_string( a.get() ) };
-			return std::unexpected( idhan::ModuleError { err ? err : "archive_read_data failed" } );
+			return std::unexpected( entry_hash_e.error() );
 		}
-
-		const auto file_hash { idhan::crypto::hashData( file_data.data(), file_data.size() ) };
+		const auto& [ file_hash, file_size ] { *entry_hash_e };
 
 		archive_metadata.contained_hashes.emplace_back( file_hash );
 		archive_metadata.m_size += file_size;

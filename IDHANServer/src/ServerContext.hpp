@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #pragma once
 
 #pragma GCC diagnostic push
@@ -25,7 +21,6 @@ void addCORSHeaders( const drogon::HttpResponsePtr& response );
 class ServerContext
 {
 	std::shared_ptr< spdlog::logger > m_logger;
-	//! Connection to postgresql to be used for management/setup
 	std::unique_ptr< ManagementConnection > m_postgresql_management;
 	ConnectionArguments args;
 	std::unique_ptr< filesystem::ClusterManager > m_clusters {};
@@ -38,6 +33,9 @@ class ServerContext
 	ServerContext( const ConnectionArguments& arguments );
 
 	void setupCORSSupport() const;
+
+	//! Serves the WebUI's index.html for unmatched non-API navigations so client-side routes survive a reload.
+	void setupSPAFallback() const;
 	static std::shared_ptr< spdlog::logger > createLogger( const ConnectionArguments& arguments );
 	void run();
 

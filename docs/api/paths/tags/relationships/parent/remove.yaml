@@ -32,7 +32,7 @@ post:
                 child_id: 20
   responses:
     200:
-      description: Parent relationships removed successfully
+      description: Relationships removed
     400:
       description: Invalid request body
     500:

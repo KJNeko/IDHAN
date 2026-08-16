@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include <cstdint>
+#include <cstddef>
 #include <string_view>
 
 namespace pqxx
@@ -14,14 +14,12 @@ class nontransaction;
 namespace idhan::db
 {
 
-bool tableExists( pqxx::nontransaction& tx, std::string_view name, std::string_view schema );
-
-//! Returns the table version.
-std::uint16_t getTableVersion( pqxx::nontransaction& tx, std::string_view name );
+[[nodiscard]] bool tableExists( pqxx::nontransaction& tx, std::string_view name, std::string_view schema );
 
 void addTableToInfo(
 	pqxx::nontransaction& tx,
 	std::string_view name,
+	std::string_view operation,
 	std::string_view creation_query,
 	std::size_t migration_id );
 

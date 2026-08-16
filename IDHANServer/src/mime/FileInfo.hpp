@@ -1,10 +1,8 @@
-//
-// Created by kj16609 on 3/20/25.
-//
 #pragma once
 
 #include <chrono>
 #include <expected>
+#include <memory>
 
 #include "IDHANTypes.hpp"
 #include "api/APIAuth.hpp"
@@ -30,9 +28,8 @@ struct FileInfo
 	std::chrono::time_point< std::chrono::system_clock > modified_time;
 };
 
-//! Populates a FileInfo struct with information from the data
-drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(
-	FileIOUring io_uring,
+[[nodiscard]] drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(
+	std::shared_ptr< FileIOUring > io_uring,
 	DbClientPtr db );
 
 drogon::Task<> setFileInfo( RecordID record_id, FileInfo info, DbClientPtr db );

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 10/21/25.
-//
 #include "MimeIdentifier.hpp"
 
 #include <json/reader.h>
@@ -78,7 +75,7 @@ drogon::Task< bool > MimeIdentifier::test( const Cursor cursor ) const
 
 MimeIdentifier::MimeIdentifier( const Json::Value& json )
 {
-	if ( !json.isMember( "mime" ) )
+	if ( !json.isMember( "mime" ) || !json[ "mime" ].isString() )
 	{
 		throw std::runtime_error( "Missing mime field" );
 	}
@@ -92,14 +89,19 @@ MimeIdentifier::MimeIdentifier( const Json::Value& json )
 
 	for ( const auto& extension : json[ "extensions" ] )
 	{
-		if ( !extension.isString() ) throw std::runtime_error( "Missing extensions array" );
+		if ( !extension.isString() ) throw std::runtime_error( "extensions array entries must be strings" );
 		m_extensions.emplace_back( extension.asString() );
 	}
 
 	if ( !m_extensions.empty() ) m_best_extension = m_extensions.at( 0 );
 
 	if ( json.isMember( "priority" ) )
-		m_priority = static_cast< std::size_t >( json[ "priority" ].asInt() );
+	{
+		// MimeScore is unsigned, so a negative value would wrap into a top-priority score
+		if ( !json[ "priority" ].isIntegral() || json[ "priority" ].asInt() < 0 )
+			throw std::runtime_error( "priority must be a non-negative integer" );
+		m_priority = static_cast< MimeScore >( json[ "priority" ].asInt() );
+	}
 	else
 		m_priority = 25;
 

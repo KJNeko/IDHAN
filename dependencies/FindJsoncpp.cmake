@@ -1,16 +1,3 @@
-# Find jsoncpp
-#
-# Find the jsoncpp includes and library
-#
-# if you nee to add a custom library search path, do it via via
-# CMAKE_PREFIX_PATH
-#
-# This module defines JSONCPP_INCLUDE_DIRS, where to find header, etc.
-# JSONCPP_LIBRARIES, the libraries needed to use jsoncpp. JSONCPP_FOUND, If
-# false, do not try to use jsoncpp. 
-# Jsoncpp_lib - The imported target library.
-
-# only look in default directories
 find_path(JSONCPP_INCLUDE_DIRS
           NAMES json/json.h
           DOC "jsoncpp include dir"
@@ -18,20 +5,6 @@ find_path(JSONCPP_INCLUDE_DIRS
 
 find_library(JSONCPP_LIBRARIES NAMES jsoncpp DOC "jsoncpp library")
 
-# debug library on windows same naming convention as in qt (appending debug
-# library with d) boost is using the same "hack" as us with "optimized" and
-# "debug" if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-# find_library(JSONCPP_LIBRARIES_DEBUG NAMES jsoncppd DOC "jsoncpp debug
-# library") if("${JSONCPP_LIBRARIES_DEBUG}" STREQUAL "JSONCPP_LIBRARIES_DEBUG-
-# NOTFOUND") set(JSONCPP_LIBRARIES_DEBUG ${JSONCPP_LIBRARIES}) endif()
-
-# set(JSONCPP_LIBRARIES optimized ${JSONCPP_LIBRARIES} debug
-# ${JSONCPP_LIBRARIES_DEBUG})
-
-# endif()
-
-# handle the QUIETLY and REQUIRED arguments and set JSONCPP_FOUND to TRUE if all
-# listed variables are TRUE, hide their existence from configuration view
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Jsoncpp
                                   DEFAULT_MSG

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/11/25.
-//
-
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
@@ -35,8 +31,10 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRe
 
 	if ( json.size() == 0 ) log::warn( "createAlias: Json array size was zero, Possible mistake?" );
 
-	std::vector< drogon::orm::internal::SqlAwaiter > awaiters {};
-	awaiters.reserve( json.size() );
+	std::vector< std::pair< TagID, TagID > > pairs {};
+	pairs.reserve( json.size() );
+	std::vector< TagID > referenced_tags {};
+	referenced_tags.reserve( static_cast< std::size_t >( json.size() ) * 2 );
 
 	for ( const auto& item : json )
 	{
@@ -52,35 +50,37 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagAliases( drogon::HttpRe
 		if ( aliased_id == alias_id )
 			co_return createBadRequest( "Cannot alias a tag to itself {} == {}", aliased_id, alias_id );
 
-		awaiters.emplace_back( db->execSqlCoro(
-			"INSERT INTO tag_aliases (tag_domain_id, aliased_id, alias_id) VALUES "
-			"($1, $2, $3) ON CONFLICT(tag_domain_id, aliased_id) DO NOTHING",
-			tag_domain_id.value(),
-			aliased_id,
-			alias_id ) );
+		pairs.emplace_back( aliased_id, alias_id );
+		referenced_tags.emplace_back( aliased_id );
+		referenced_tags.emplace_back( alias_id );
 	}
 
-	Json::Value out_json {};
+	// unknown IDs would otherwise surface as FK-violation 500s
+	const auto validation {
+		co_await helpers::validateRelationshipIds( tag_domain_id.value(), std::move( referenced_tags ), db )
+	};
+	if ( !validation ) co_return validation.error();
 
-	for ( auto& awaiter : awaiters )
+	for ( const auto& [ aliased_id, alias_id ] : pairs )
 	{
 		try
 		{
-			co_await awaiter;
+			co_await db->execSqlCoro(
+				"INSERT INTO tag_aliases (tag_domain_id, aliased_id, alias_id) VALUES "
+				"($1, $2, $3) ON CONFLICT(tag_domain_id, aliased_id) DO NOTHING RETURNING alias_id",
+				tag_domain_id.value(),
+				aliased_id,
+				alias_id );
 		}
-		catch ( drogon::orm::DrogonDbException& e )
+		catch ( std::exception& e )
 		{
-			log::error( "Failed to create alias: {}", e.base().what() );
-
-			Json::Value value {};
-
-			out_json.append( e.base().what() );
-
-			co_return createBadRequest( "Failed to create alias: {}", e.base().what() );
+			if ( std::string_view( e.what() ).find( "Cycle detected" ) != std::string_view::npos )
+				co_return createConflict( "Error adding tag aliases: {}", e.what() );
+			co_return createInternalError( "Failed to create alias: {}", e.what() );
 		}
 	}
 
-	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
+	co_return drogon::HttpResponse::newHttpResponse();
 }
 
 } // namespace idhan::api

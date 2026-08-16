@@ -1,8 +1,6 @@
-//
-// Created by kj16609 on 10/21/25.
-//
-
 #include "Cursor.hpp"
+
+#include <tuple>
 
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
@@ -13,10 +11,10 @@ namespace idhan::mime
 IDHANTask<> CursorData::requestData( const std::size_t offset, const std::size_t required_size ) const
 {
 	log::trace( "Requesting data at offset {} with size {}", offset, required_size );
-	if ( std::holds_alternative< FileIOUring >( m_io ) )
+	if ( std::holds_alternative< std::shared_ptr< FileIOUring > >( m_io ) )
 	{
-		auto& uring = std::get< FileIOUring >( m_io );
-		m_buffer = co_await uring.read( offset, std::max( required_size, min_request_size ) );
+		const auto& uring = std::get< std::shared_ptr< FileIOUring > >( m_io );
+		m_buffer = co_await uring->read( offset, std::max( required_size, min_request_size ) );
 		m_buffer_pos = offset;
 		co_return;
 	}
@@ -33,24 +31,13 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 	const std::size_t pos,
 	const std::size_t required_size ) const
 {
-	if ( std::holds_alternative< FileIOUring >( m_io ) )
+	if ( std::holds_alternative< std::shared_ptr< FileIOUring > >( m_io ) )
 	{
-		// buffer is for a range greater then the current pos. We need to go back
 		const bool is_low { pos < m_buffer_pos };
 
-		// buffer is not large enough. we need more data
 		const bool is_small { required_size > m_buffer.size() };
 
-		// access would not be in bounds
-		const auto buffer_start { m_buffer_pos };
-		const auto buffer_size { m_buffer.size() };
-		const auto pos_start { pos };
-		const auto pos_size { required_size };
-
-		// check that buffer and pos overlap
-		const auto is_oob {
-			pos_start > buffer_start + buffer_size || pos_start + pos_size > buffer_start + buffer_size
-		};
+		const auto is_oob { pos + required_size > m_buffer_pos + m_buffer.size() };
 
 		if ( is_low || is_small || is_oob )
 		{
@@ -70,14 +57,17 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 		FGL_ASSERT( m_buffer_pos <= pos, "Buffer was not expected at it's current pos" );
 		const std::size_t offset { pos - m_buffer_pos };
 
-		co_return std::make_pair( m_buffer.data() + offset, m_buffer.size() );
+		const std::size_t available { offset <= m_buffer.size() ? m_buffer.size() - offset : 0 };
+
+		co_return std::make_pair( m_buffer.data() + offset, available );
 	}
 	if ( std::holds_alternative< std::string_view >( m_io ) )
 	{
 		const auto& string_view { std::get< std::string_view >( m_io ) };
 		const auto* data_ptr { reinterpret_cast< const std::byte* >( string_view.data() ) };
 		const std::size_t length { string_view.size() };
-		if ( pos + required_size >= length || length < pos ) co_return std::make_pair( nullptr, 0 );
+		// pos + required_size == length is a valid exact fit ending on the last byte
+		if ( pos + required_size > length || length < pos ) co_return std::make_pair( nullptr, 0 );
 		const auto leftover_size { length - pos };
 		m_buffer_pos = pos;
 		co_return std::make_pair( data_ptr + pos, std::min( required_size, leftover_size ) );
@@ -88,14 +78,16 @@ IDHANTask< std::pair< const std::byte*, size_t > > CursorData::checkData(
 
 std::size_t CursorData::size() const
 {
-	if ( std::holds_alternative< FileIOUring >( m_io ) ) return std::get< FileIOUring >( m_io ).size();
+	if ( std::holds_alternative< std::shared_ptr< FileIOUring > >( m_io ) )
+		return std::get< std::shared_ptr< FileIOUring > >( m_io )->size();
 	if ( std::holds_alternative< std::string_view >( m_io ) ) return std::get< std::string_view >( m_io ).size();
 	throw std::runtime_error( "Unable to get size of data. No implemented reader for variant" );
 }
 
-Cursor::Cursor( FileIOUring uring ) :
+Cursor::Cursor( std::shared_ptr< FileIOUring > uring ) :
+  m_io( uring ),
   m_data( std::make_shared< CursorData >( uring ) ),
-  m_extension( uring.path().extension().string() )
+  m_extension( uring->path().extension().string() )
 {}
 
 Cursor::Cursor( std::string_view view, const std::string& file_name ) :
@@ -145,15 +137,22 @@ drogon::Task< bool > Cursor::tryMatchInc( const std::string_view match )
 	if ( is_match )
 	{
 		log::trace( "Cursor::tryMatchInc: advance by {} to pos {}", match.size(), m_pos + match.size() );
-		inc( match.size() );
+		std::ignore = inc( match.size() );
 	}
 	co_return is_match;
 }
 
 void Cursor::jumpTo( const std::int64_t pos )
 {
-	if ( pos < 0 ) m_pos = size() - static_cast< std::size_t >( std::abs( pos ) );
-	m_pos = static_cast< std::size_t >( pos );
+	if ( pos < 0 )
+	{
+		const auto from_end { static_cast< std::size_t >( -pos ) };
+		m_pos = from_end > size() ? size() : size() - from_end;
+	}
+	else
+	{
+		m_pos = static_cast< std::size_t >( pos );
+	}
 }
 
 bool Cursor::inc( const std::size_t i )

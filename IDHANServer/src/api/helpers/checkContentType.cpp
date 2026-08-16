@@ -1,12 +1,7 @@
-//
-// Created by kj16609 on 11/2/24.
-//
-
 #include "checkContentType.hpp"
 
 namespace idhan::api::helpers
 {
-//! Responds with that the content type is unsupported or unknown
 void checkContentType(
 	const drogon::HttpRequestPtr& request,
 	const ResponseFunction& callback,
@@ -18,7 +13,7 @@ void checkContentType(
 	Json::Value json {};
 	auto& error_data = json[ "error" ];
 
-	error_data[ "code" ] = 415; // Unsupported Media Type
+	error_data[ "code" ] = drogon::k415UnsupportedMediaType;
 	error_data[ "message" ] = "Content-Type did not match expected content";
 
 	callback( drogon::HttpResponse::newHttpJsonResponse( json ) );

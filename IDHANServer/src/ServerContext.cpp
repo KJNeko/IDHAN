@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 7/23/24.
-//
-
 #include "ServerContext.hpp"
 
 #include <spdlog/async_logger.h>
@@ -17,11 +13,15 @@
 
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
+#include "api/apiPrefixes.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
+#include "embeddings/embeddings.hpp"
+#include "filesystem/filesystem.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "spdlog/async.h"
@@ -33,25 +33,19 @@ void addCORSHeaders( const drogon::HttpResponsePtr& response )
 {
 	response->addHeader( "Access-Control-Allow-Headers", "*" );
 	response->addHeader( "Access-Control-Allow-Origin", "*" );
-	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD" );
+	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD" );
 	response->addHeader( "Access-Control-Max-Age", "86400" );
 
-	// Required by Qt WASM (wasm_multithread) for SharedArrayBuffer support
+	// Isolates cross-origin window references. Unrelated to the WebUI; we open no cross-origin popups.
 	response->addHeader( "Cross-Origin-Opener-Policy", "same-origin" );
-	response->addHeader( "Cross-Origin-Embedder-Policy", "require-corp" );
 }
 
 void ServerContext::setupCORSSupport() const
 {
 	drogon::app().registerPreRoutingAdvice(
-		[ this ](
-			const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
+		[]( const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
 		{
-			if ( args.testmode )
-				log::info( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
-			else
-				log::debug( "Handling query: {}:{}", request->getMethodString(), request->getPath() );
-
+			log::info( "Routing for {}", request->path() );
 			if ( request->method() == drogon::Options )
 			{
 				const auto response { drogon::HttpResponse::newHttpResponse() };
@@ -67,13 +61,31 @@ void ServerContext::setupCORSSupport() const
 		} );
 
 	drogon::app().registerPostHandlingAdvice(
-		[ this ]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
+		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
 		{
-			if ( args.testmode )
-				log::info( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
-			else
-				log::debug( "Finished Handling query: {}:{}", request->getMethodString(), request->getPath() );
+			log::info( "Finished handling {}", request->path() );
 			addCORSHeaders( response );
+		} );
+}
+
+void ServerContext::setupSPAFallback() const
+{
+	drogon::app().setDefaultHandler(
+		[]( const drogon::HttpRequestPtr& request, std::function< void( const drogon::HttpResponsePtr& ) >&& callback )
+		{
+			const auto index_path { getStaticPath() / "index.html" };
+
+			const bool is_navigation { request->method() == drogon::Get || request->method() == drogon::Head };
+			const bool wants_html { request->getHeader( "Accept" ).find( "text/html" ) != std::string::npos };
+
+			if ( is_navigation && wants_html && !api::isApiPath( request->path() )
+		         && std::filesystem::exists( index_path ) )
+			{
+				callback( drogon::HttpResponse::newFileResponse( index_path.string() ) );
+				return;
+			}
+
+			callback( drogon::HttpResponse::newNotFoundResponse( request ) );
 		} );
 }
 
@@ -86,7 +98,6 @@ void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& re
 		"Unhandled exception got to drogon! In request: {} What: {}", request->getPath(), e.what() ) };
 
 	callback( response );
-	// drogon::defaultExceptionHandler( e, request, std::move( callback ) );
 }
 
 void printCoreLocation()
@@ -110,32 +121,35 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	const std::filesystem::path log_path { config::getLogPath() };
 
-	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 1000000 ) };
+	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 0 ) };
 
 	std::vector< spdlog::sink_ptr > sinks {};
 
-	// In-memory ring buffer — captures every level for the /log endpoint
-	auto& ring_buffer {
-		sinks.emplace_back( std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size ) )
-	};
-	ring_buffer->set_pattern( std::string( server_format_str ) );
-	ring_buffer->set_level( spdlog::level::trace );
+	std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > ring_buffer {};
+	if ( ring_buffer_size > 0 )
+	{
+		ring_buffer = std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size );
+		sinks.emplace_back( ring_buffer );
+		ring_buffer->set_pattern( std::string( server_format_str ) );
+		ring_buffer->set_level( spdlog::level::trace );
+	}
+	else
+	{
+		log::info( "In-memory log ring buffer disabled (logging.buffer_size=0); /log endpoint unavailable" );
+	}
 
-	// logs all trace messages to a specific file
 	auto& trace_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "trace.log", MiB * 2, 4, true ) ) };
 
 	trace_file_logger->set_pattern( std::string( server_format_str ) );
 	trace_file_logger->set_level( spdlog::level::trace );
 
-	// logs all info & errors to a specific file
 	auto& info_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "info.log", MiB * 2, 4, true ) ) };
 
 	info_file_logger->set_pattern( std::string( server_format_str ) );
 	info_file_logger->set_level( spdlog::level::info );
 
-	// logs all errors to a specific file
 	auto& error_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "error.log", MiB * 16, 4, true ) ) };
 
@@ -155,6 +169,7 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	spdlog::set_default_logger( logger );
 	trantor::Logger::enableSpdLog( logger );
+	log::setServerLogger( logger, ring_buffer );
 
 	logger->flush_on( spdlog::level::warn );
 	spdlog::flush_every( std::chrono::seconds( 5 ) );
@@ -172,19 +187,18 @@ void setupTempPath()
 		config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
 	};
 
-	// create marker
+	// The marker names the PID of the instance that owns tmp_path.
 	constexpr std::string_view marker_file { "idhan.active" };
 	const auto marker_path { tmp_path / marker_file };
 
 	if ( std::filesystem::exists( tmp_path ) )
 	{
-		// it exists. can we find out marker?
 		if ( std::ifstream ifs( marker_path ); ifs )
 		{
 			__pid_t pid;
 			ifs >> pid;
 
-			// check if the PID still exists
+			// kill(pid, 0) succeeds only while that process still exists.
 			if ( 0 == kill( pid, 0 ) )
 			{
 				log::critical(
@@ -200,10 +214,7 @@ void setupTempPath()
 					marker_path.string(),
 					pid );
 			}
-			// if kill returns non-zero then the pid likely does not exist.
 		}
-
-		//no marker?
 	}
 
 	std::filesystem::create_directories( tmp_path );
@@ -263,13 +274,18 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::trace( "Temp path setup completed" );
 
 	app.registerCustomExtensionMime( "wasm", "application/wasm" );
+	app.registerCustomExtensionMime( "mjs", "text/javascript" );
+	app.registerCustomExtensionMime( "webmanifest", "application/manifest+json" );
 
-	app.setFileTypes( { "html", "wasm", "svg", "js", "png", "jpg" } );
+	app.setFileTypes( { "html", "css",   "js",  "mjs",  "map", "json", "txt",  "xml", "webmanifest",
+	                    "svg",  "png",   "jpg", "jpeg", "gif", "webp", "avif", "ico", "bmp",
+	                    "woff", "woff2", "ttf", "otf",  "mp4", "webm", "wasm" } );
 
 	const bool use_tls { config::get< bool >( "host", "use_tls", false ) };
 
 	const auto ipv4_listener { config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" ) };
 	const auto ipv6_listener { config::get< std::string >( "host", "ipv6_listen", "::1" ) };
+	const auto listen_port { config::get< std::uint16_t >( "server", "port", IDHAN_DEFAULT_PORT ) };
 
 	const auto server_cert_path {
 		config::get< std::string, config::no_warn_on_default >( "host", "server_cert_path", "./server.crt" )
@@ -283,14 +299,14 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	if ( !ipv4_listener.empty() )
 	{
-		log::trace( "Adding IPv4 listener on {}:{}", ipv4_listener, IDHAN_DEFAULT_PORT );
-		app.addListener( ipv4_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+		log::trace( "Adding IPv4 listener on {}:{}", ipv4_listener, listen_port );
+		app.addListener( ipv4_listener, listen_port, use_tls, server_cert_path, server_key_path );
 	}
 
 	if ( !ipv6_listener.empty() )
 	{
-		log::trace( "Adding IPv6 listener on {}:{}", ipv6_listener, IDHAN_DEFAULT_PORT );
-		app.addListener( ipv6_listener, IDHAN_DEFAULT_PORT, use_tls, server_cert_path, server_key_path );
+		log::trace( "Adding IPv6 listener on {}:{}", ipv6_listener, listen_port );
+		app.addListener( ipv6_listener, listen_port, use_tls, server_cert_path, server_key_path );
 	}
 
 	drogon::orm::PostgresConfig config {
@@ -299,7 +315,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.databaseName = arguments.dbname,
 		.username = arguments.user,
 		.password = arguments.password,
-		.connectionNumber = std::min( io_threads, std::size_t( 16 ) ),
+		.connectionNumber = io_threads,
 		.name = "default",
 		.isFast = false,
 		.characterSet = "UTF-8",
@@ -308,10 +324,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 		.connectOptions = {}
 	};
 
-	if ( arguments.testmode )
-	{
-		config.connectOptions.insert_or_assign( "search_path", "test" );
-	}
+	config.connectOptions.insert_or_assign( "search_path", arguments.searchPath() );
 
 	log::trace( "Database config prepared, adding DB client" );
 	log::info(
@@ -325,17 +338,26 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	log::trace( "Setting up CORS support" );
 	setupCORSSupport();
+	setupSPAFallback();
 	log::trace( "CORS support configured" );
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();
 
-	m_clusters = std::make_unique< filesystem::ClusterManager >();
-	// Register callback to initialize clusters after event loop starts
+	IOUring::init();
 
+	m_clusters = std::make_unique< filesystem::ClusterManager >();
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
 
+	if ( getPurgeThumbnailsOnBoot() )
+	{
+		if ( const auto deleted { filesystem::clearThumbnailCache() } )
+			log::info( "Purged {} cached thumbnails on boot", *deleted );
+		else
+			log::warn( "Could not purge the thumbnail cache on boot: {}", deleted.error() );
+	}
+
 	drogon::app().registerBeginningAdvice(
-		[ this ]()
+		[ this, listen_port ]()
 		{
 			drogon::sync_wait(
 				[ this ]() -> drogon::Task< void >
@@ -343,12 +365,20 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 					const auto db { drogon::app().getDbClient() };
 					co_await m_clusters->reloadClusters( db );
 					co_await mime::getMimeDatabase()->reloadMimeParsers();
+					co_await embeddings::registerEmbeddingModels( db );
 					co_return;
 				}() );
 
+			drogon::app().getLoop()->runEvery(
+				std::chrono::seconds { 30 },
+				[ this ]()
+				{
+					if ( m_module_loader != nullptr ) m_module_loader->maintainWorkers();
+				} );
+
 			log::info( "IDHAN initialization finished" );
-			log::info( "Server available at http://localhost:{}", IDHAN_DEFAULT_PORT );
-			log::info( "Swagger docs available at http://localhost:{}/api", IDHAN_DEFAULT_PORT );
+			log::info( "Server available at http://localhost:{}", listen_port );
+			log::info( "Swagger docs available at http://localhost:{}/api", listen_port );
 		} );
 
 	drogon::app().registerBeginningAdvice(
@@ -366,7 +396,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 					if ( key_count == 0 )
 					{
-						// no key, Create a starter one.
 						log::warn(
 							"No API keys found, One will be generated at first navigation to /generate_api_key" );
 					}

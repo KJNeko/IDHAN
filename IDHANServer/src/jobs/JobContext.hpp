@@ -1,9 +1,7 @@
-//
-// Created by kj16609 on 2/21/26.
-//
 #pragma once
 #include <atomic>
 #include <condition_variable>
+#include <coroutine>
 #include <functional>
 #include <memory>
 #include <queue>
@@ -12,8 +10,6 @@
 #include <string_view>
 #include <thread>
 #include <unordered_map>
-
-#include <coroutine>
 
 #include "IDHANTypes.hpp"
 #include "JobTask.hpp"
@@ -29,11 +25,12 @@ class JobContext;
 namespace Json
 {
 class Value;
-};
+}
 
+//! Dedicated job runtime; job IDs and retained results are process-local.
 class JobRuntime
 {
-	std::unique_ptr< trantor::EventLoopThreadPool > m_pool{};
+	std::unique_ptr< trantor::EventLoopThreadPool > m_pool {};
 	std::mutex m_queue_mtx {};
 	std::condition_variable m_cv;
 	using JobPtr = std::shared_ptr< JobContext >;
@@ -56,9 +53,9 @@ class JobRuntime
 
 	void enqueue( const std::shared_ptr< JobContext >& ctx );
 
-	std::shared_ptr< JobContext > getJob( idhan::JobID id );
+	[[nodiscard]] std::shared_ptr< JobContext > getJob( idhan::JobID id );
 
-	std::vector< std::shared_ptr< JobContext > > getAllJobs();
+	[[nodiscard]] std::vector< std::shared_ptr< JobContext > > getAllJobs();
 
 	JobRuntime();
 	~JobRuntime();
@@ -81,10 +78,10 @@ class JobContext
 
 	[[nodiscard]] std::shared_ptr< JobTaskStatus > status() const { return m_coro.m_status; }
 
-	bool run();
+	void run();
 };
 
-idhan::JobID generateNewJobID();
+[[nodiscard]] idhan::JobID generateNewJobID();
 
 struct JobIDWaitable
 {
@@ -103,7 +100,7 @@ struct JobIDWaitable
 	[[nodiscard]] idhan::JobID await_resume() const noexcept { return m_id; }
 };
 
-inline JobIDWaitable getJobID()
+[[nodiscard]] inline JobIDWaitable getJobID()
 {
 	return {};
 }
@@ -115,7 +112,7 @@ struct SetJobResponseWaitable
 	explicit SetJobResponseWaitable( drogon::HttpResponsePtr response ) : m_response( std::move( response ) ) {}
 
 	explicit SetJobResponseWaitable( const Json::Value& response ) :
-		m_response( drogon::HttpResponse::newHttpJsonResponse( response ) )
+	  m_response( drogon::HttpResponse::newHttpJsonResponse( response ) )
 	{}
 
 	static bool await_ready() noexcept { return false; }
@@ -143,7 +140,7 @@ inline SetJobResponseWaitable setJobResponse( const Json::Value& response )
 
 JobRuntime& getJobRuntime();
 
-std::shared_ptr< JobContext > queueJob(
+[[nodiscard]] std::shared_ptr< JobContext > queueJob(
 	JobTask task,
 	std::string_view name = "",
 	std::source_location loc = std::source_location::current() );

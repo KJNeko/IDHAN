@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/2/24.
-//
-
 #pragma once
 #include <cstdint>
 #include <functional>
@@ -20,23 +16,22 @@ class QNetworkReply;
 
 /**
  *
- * IDHAN logging functions should be used as a way to transmit logging information back to the server. There are the following levels
- * notify, info, warn, error, critical.
- * It is expected that upon a critical message, the application is about to die.
+ * Transmits logging information back to the server. Callbacks can be registered per level; see
+ * registerCallback.
  *
- * There are also functions to implement callbacks for certian error levels and notifications
- *
- * - notify: used to explicitly notify the user of an event.
- * - info: used to silently notify the user. This should ideally be used for some completion states where notify should be used for a final completion.
- * - warn: used to notify the user of a possible issue
- * - error: used to notify the user of an error
- * - critical: used to notify that your process is about to end, violently or willingly.
+ * - notify: explicitly notify the user of an event, such as a final completion.
+ * - info: silently notify the user, such as an intermediate completion state.
+ * - warn: a possible issue.
+ * - error: an error.
+ * - critical: the process is about to end, violently or willingly.
  */
 namespace idhan::logging
 {
 
+//! \return The client's shared spdlog logger (created on first use).
 std::shared_ptr< spdlog::logger > getLogger();
 
+//! Logs at "notify" level (see the namespace description for level semantics).
 template < typename... Ts >
 void notify( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
@@ -93,11 +88,10 @@ void critical( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 	logger->critical( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
-/**
- * @brief Logs the network error response to the local log only.
- */
+//! Logs the network error response to the local log only.
 void logResponse( QNetworkReply* reply );
 
+//! Bitmask of log levels a callback subscribes to (see registerCallback).
 enum CallbackLevel : uint8_t
 {
 	Notify = 1 << 0,
@@ -108,6 +102,7 @@ enum CallbackLevel : uint8_t
 	All = Notify | Info | Warn | Error | Critical
 };
 
+//! Callback signature receiving the log level and the formatted message.
 using CallbackFunction = std::function< void( CallbackLevel level, std::string_view message ) >;
 
 //! Registers a callback. The level will act as a mask for specific events

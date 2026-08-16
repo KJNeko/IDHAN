@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/29/25.
-//
 #pragma once
 
 #include "HydrusImporter.hpp"
@@ -10,6 +7,8 @@ namespace idhan::hydrus
 class TransactionBaseCoro;
 }
 
+//! QRunnable that imports a single Hydrus tag service into IDHAN: its tag-to-file mappings and its
+//! sibling/parent relationships. Reports progress and errors through the signals below.
 class TagServiceWorker final : public QObject, public QRunnable
 {
 	Q_OBJECT
@@ -17,7 +16,6 @@ class TagServiceWorker final : public QObject, public QRunnable
 	idhan::hydrus::ServiceInfo m_service;
 	idhan::hydrus::HydrusImporter* m_importer;
 	bool m_preprocessed { false };
-	bool m_processing { false };
 	idhan::TagDomainID tag_domain_id { 0 };
 
   public:
@@ -46,6 +44,7 @@ class TagServiceWorker final : public QObject, public QRunnable
 
   private:
 
+	//! A single (hash, tag) pair read from a Hydrus mappings table.
 	struct MappingPair
 	{
 		int hash_id;

@@ -1,12 +1,8 @@
-//
-// Created by kj16609 on 7/24/25.
-//
-
-#include "urls/urls.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "db/drogonArrayBind.hpp"
+#include "urls/urls.hpp"
 
 namespace idhan::api
 {
@@ -19,6 +15,10 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 	if ( !json_object ) co_return createBadRequest( "Json object malformed or null" );
 
 	const auto& json { *json_object };
+
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	const auto& urls { json[ "urls" ] };
 	if ( !urls.isArray() ) co_return createBadRequest( "No urls array in json" );
 
@@ -29,19 +29,26 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addUrls( drogon::HttpRequestP
 		co_return drogon::HttpResponse::newHttpJsonResponse( result );
 	}
 
-	std::vector< std::string > url_strings;
-	std::vector< std::string > domain_strings;
+	std::vector< std::string > url_strings {};
+	std::vector< std::string > domain_strings {};
 	url_strings.reserve( urls.size() );
 	domain_strings.reserve( urls.size() );
 
 	for ( const auto& url : urls )
 	{
+		if ( !url.isString() ) co_return createBadRequest( "Invalid item in urls array: Expected string" );
+
 		auto url_str { url.asString() };
 		domain_strings.push_back( helpers::extractDomain( url_str ) );
 		url_strings.push_back( std::move( url_str ) );
 	}
 
-	// 1. Batch upsert all domains (copy — domain_strings needed again in step 2)
+	// Deduplicate domain_strings to avoid redundant DB operations
+	std::ranges::sort( domain_strings );
+	const auto [ uniq_beg, uniq_end ] = std::ranges::unique( domain_strings );
+	domain_strings.erase( uniq_beg, uniq_end );
+
+	// 1. Batch upsert all domains. Copied, since domain_strings is needed again in step 2.
 	co_await db->execSqlCoro(
 		"INSERT INTO url_domains (url_domain) "
 		"SELECT DISTINCT unnest($1::text[]) "

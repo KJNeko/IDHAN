@@ -1,8 +1,6 @@
-//
-// Created by kj16609 on 2/21/26.
-//
 #include "JobContext.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -13,6 +11,12 @@
 #include "trantor/net/EventLoopThreadPool.h"
 
 inline static std::atomic< idhan::JobID > job_id_counter { 1 };
+
+constexpr auto job_retention_period { std::chrono::hours( 1 ) };
+
+//! How often cleanup() sweeps finished jobs. Also the practical upper bound on how long a completed
+//! job's result remains fetchable while job_retention_period is zero.
+constexpr auto job_cleanup_interval { std::chrono::seconds( 10 ) };
 
 using namespace idhan;
 
@@ -27,26 +31,31 @@ std::shared_ptr< JobContext > JobRuntime::getNextJob()
 		        || m_soft_stop.load( std::memory_order_acquire );
 		} );
 
-	if ( m_queue.empty() ) return nullptr;
+	std::shared_ptr< JobContext > job { nullptr };
 
-	auto job { m_queue.front() };
+	if ( m_queue.empty() ) return job;
+
+	job = m_queue.front();
 	m_queue.pop();
 	return job;
 }
 
-// ... existing code ...
 void JobRuntime::runner()
 {
 	while ( !m_hard_stop.load( std::memory_order_acquire ) )
 	{
-		if ( m_soft_stop.load( std::memory_order_acquire ) && m_queue.empty() ) break;
+		if ( m_soft_stop.load( std::memory_order_acquire ) )
+		{
+			// the queue must not be inspected without the mutex; enqueue() mutates it concurrently
+			std::lock_guard lock { m_queue_mtx };
+			if ( m_queue.empty() ) break;
+		}
 
 		const auto job { getNextJob() };
 		if ( !job ) continue;
 
 		log::debug( "Acquired Job" );
 
-		// get loop
 		trantor::EventLoop* loop { nullptr };
 		do
 		{
@@ -74,16 +83,15 @@ void JobRuntime::cleanup()
 					if ( !job->done() ) return false;
 
 					const auto status = job->status();
-					if ( !status ) return true; // Should not happen
+					if ( !status ) return true;
 
 					if ( status->m_cleanup_requested ) return true;
 
 					const auto now = std::chrono::steady_clock::now();
-					const auto retention_period = std::chrono::hours( 1 );
-					return ( now - status->m_completion_time ) > retention_period;
+					return ( now - status->m_completion_time ) >= job_retention_period;
 				} );
 		}
-		std::this_thread::sleep_for( std::chrono::seconds( 10 ) );
+		std::this_thread::sleep_for( job_cleanup_interval );
 	}
 }
 
@@ -146,10 +154,14 @@ JobRuntime::~JobRuntime()
 
 	while ( Clock::now() < begin_stop + timeout )
 	{
+		bool all_finished { false };
 		{
 			std::lock_guard lock { m_queue_mtx };
-			if ( m_queue.empty() ) break;
+			all_finished =
+				m_queue.empty()
+				&& std::ranges::all_of( m_jobs | std::views::values, []( const auto& job ) { return job->done(); } );
 		}
+		if ( all_finished ) break;
 		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 	}
 
@@ -165,19 +177,17 @@ bool JobContext::done() const
 	return m_coro.m_status && m_coro.m_status->m_done;
 }
 
-bool JobContext::run()
+void JobContext::run()
 {
-	if ( m_coro.m_handle.done() ) return true;
+	if ( m_coro.m_handle.done() ) return;
 
-	if ( m_coro.m_status && m_coro.m_status->m_start_time == std::chrono::steady_clock::time_point {} )
+	if ( m_coro.m_status && m_coro.m_status->m_start_time.load() == std::chrono::steady_clock::time_point {} )
 	{
 		m_coro.m_status->m_start_time = std::chrono::steady_clock::now();
 	}
 
 	log::debug( "Resuming job {}", m_id );
 	m_coro.m_handle.resume();
-
-	return m_coro.m_handle.done();
 }
 
 idhan::JobID generateNewJobID()

@@ -16,8 +16,8 @@
 #include <fstream>
 #include <stdexcept>
 
-#include "PTRConstants.hpp"
-#include "PTRFileParser.hpp"
+#include "ptr/PTRConstants.hpp"
+#include "ptr/PTRFileParser.hpp"
 
 namespace idhan::hydrus::ptr
 {
@@ -33,7 +33,24 @@ PTRDownloader::PTRDownloader(
   m_host( std::move( host ) ),
   m_port( port ),
   m_access_key( std::move( access_key ) )
-{}
+{
+	m_heartbeat_timer.setInterval( HEARTBEAT_INTERVAL_MS );
+	connect(
+		&m_heartbeat_timer,
+		&QTimer::timeout,
+		this,
+		[ this ]()
+		{
+			try
+			{
+				saveMetadata();
+			}
+			catch ( const std::exception& e )
+			{
+				spdlog::warn( "Heartbeat metadata save failed: {}", e.what() );
+			}
+		} );
+}
 
 PTRDownloader::~PTRDownloader() = default;
 
@@ -70,25 +87,7 @@ void PTRDownloader::loadMetadata()
 	}
 
 	m_last_update_index = root.get( "last_update_index", -1 ).asInt();
-	m_metadata.next_update_due = root.get( "next_update_due", 0 ).asInt64();
-
-	const auto& updates_arr = root[ "updates" ];
-	if ( updates_arr.isArray() )
-	{
-		for ( const auto& u : updates_arr )
-		{
-			MetadataUpdateEntry entry;
-			entry.index = u[ "index" ].asInt();
-			const auto& hashes = u[ "hashes" ];
-			if ( hashes.isArray() )
-			{
-				for ( const auto& h : hashes ) entry.hashes.push_back( h.asString() );
-			}
-			entry.begin = u[ "begin" ].asInt64();
-			entry.end = u[ "end" ].asInt64();
-			m_metadata.updates.push_back( std::move( entry ) );
-		}
-	}
+	m_metadata = parseMetadataCacheJson( root );
 
 	const auto& dl_hashes = root[ "downloaded_hashes" ];
 	if ( dl_hashes.isArray() )
@@ -107,11 +106,12 @@ void PTRDownloader::saveMetadata()
 {
 	Json::Value root;
 	root[ "schema_version" ] = 1;
-	root[ "last_sync_time" ] = static_cast< Json::Int64 >(
+	root[ "last_sync_time" ] =
 		std::chrono::duration_cast< std::chrono::seconds >( std::chrono::system_clock::now().time_since_epoch() )
-			.count() );
+			.count();
 	root[ "last_update_index" ] = m_last_update_index;
 	root[ "next_update_due" ] = static_cast< Json::Int64 >( m_metadata.next_update_due );
+	root[ "state" ] = m_persist_state.toStdString();
 
 	Json::Value updates_arr( Json::arrayValue );
 	for ( const auto& u : m_metadata.updates )
@@ -138,9 +138,16 @@ void PTRDownloader::saveMetadata()
 	const auto json_str = Json::writeString( writer_builder, root );
 
 	const auto meta_path = m_output_dir / "ptr_metadata.json";
-	std::ofstream file( meta_path );
-	if ( !file ) throw std::runtime_error( "Failed to write ptr_metadata.json" );
-	file << json_str;
+	const auto tmp_path = m_output_dir / "ptr_metadata.json.tmp";
+	{
+		std::ofstream file( tmp_path, std::ios::binary | std::ios::trunc );
+		if ( !file ) throw std::runtime_error( "Failed to write ptr_metadata.json.tmp" );
+		file << json_str;
+	}
+
+	std::error_code ec;
+	std::filesystem::rename( tmp_path, meta_path, ec );
+	if ( ec ) throw std::runtime_error( "Failed to finalize ptr_metadata.json: " + ec.message() );
 }
 
 void PTRDownloader::startSync()
@@ -151,6 +158,7 @@ void PTRDownloader::startSync()
 		return;
 	}
 	m_cancelled = false;
+	m_persist_state = "running";
 
 	spdlog::info( "Starting PTR sync to directory: {}", m_output_dir.string() );
 
@@ -226,6 +234,8 @@ bool PTRDownloader::loadCachedMetadata()
 void PTRDownloader::buildDownloadQueue()
 {
 	m_pending_downloads.clear();
+	m_hash_to_index.clear();
+	m_remaining_for_index.clear();
 
 	if ( !m_metadata.updates.empty() )
 	{
@@ -260,6 +270,8 @@ void PTRDownloader::buildDownloadQueue()
 
 		for ( const auto& h : u.hashes )
 		{
+			m_hash_to_index[ h ] = u.index;
+
 			const auto file_path = m_output_dir / ( h + ".ptrupdate" );
 
 			if ( std::filesystem::exists( file_path ) )
@@ -283,6 +295,15 @@ void PTRDownloader::buildDownloadQueue()
 			if ( m_cancelled )
 			{
 				m_state = State::Idle;
+				m_persist_state = "cancelled";
+				try
+				{
+					saveMetadata();
+				}
+				catch ( const std::exception& e )
+				{
+					spdlog::warn( "Failed to persist cancelled state: {}", e.what() );
+				}
 				emit finished( false, "Cancelled" );
 				return;
 			}
@@ -296,6 +317,7 @@ void PTRDownloader::buildDownloadQueue()
 				files_present,
 				u.hashes.size(),
 				files_missing );
+			m_remaining_for_index[ u.index ] = files_missing;
 		}
 		else
 		{
@@ -318,12 +340,14 @@ void PTRDownloader::buildDownloadQueue()
 	{
 		spdlog::info( "No pending downloads, metadata is up to date" );
 		m_state = State::Done;
+		m_persist_state = "done";
 		saveMetadata();
 		emit finished( true, "Already up to date. No new files." );
 		return;
 	}
 
 	emit metadataReceived( static_cast< int >( m_metadata.updates.size() ), m_total_downloads );
+	m_heartbeat_timer.start();
 	downloadNextUpdate();
 }
 
@@ -477,6 +501,16 @@ void PTRDownloader::downloadNextUpdate()
 	{
 		spdlog::warn( "Download cancelled during update fetch" );
 		m_state = State::Idle;
+		m_heartbeat_timer.stop();
+		m_persist_state = "cancelled";
+		try
+		{
+			saveMetadata();
+		}
+		catch ( const std::exception& e )
+		{
+			spdlog::warn( "Failed to persist cancelled state: {}", e.what() );
+		}
 		emit finished( false, "Cancelled" );
 		return;
 	}
@@ -485,6 +519,8 @@ void PTRDownloader::downloadNextUpdate()
 	{
 		spdlog::info( "All {} updates downloaded successfully", m_completed_downloads );
 		m_state = State::Done;
+		m_heartbeat_timer.stop();
+		m_persist_state = "done";
 		saveMetadata();
 		emit finished( true, QString( "Downloaded %1 files." ).arg( QLocale::system().toString( m_completed_downloads ) ) );
 		return;
@@ -641,6 +677,23 @@ void PTRDownloader::onUpdateReply( QNetworkReply* reply, QString hash_hex )
 								data.size() );
 
 							emit fileDownloaded( hash_hex, m_completed_downloads, m_total_downloads );
+
+							if ( const auto idx_it = m_hash_to_index.find( hash_hex.toStdString() );
+							     idx_it != m_hash_to_index.end() )
+							{
+								if ( const auto rem_it = m_remaining_for_index.find( idx_it->second );
+								     rem_it != m_remaining_for_index.end() && --rem_it->second <= 0 )
+								{
+									try
+									{
+										saveMetadata();
+									}
+									catch ( const std::exception& e )
+									{
+										spdlog::warn( "Failed to persist index completion: {}", e.what() );
+									}
+								}
+							}
 						}
 					}
 				}
@@ -677,10 +730,10 @@ MetadataUpdate PTRDownloader::parseMetadataBytes( const QByteArray& data )
 	else if ( root.isArray() && root.size() >= 3 && root[ 0 ].asInt() == HYDRUS_TYPE_DICTIONARY )
 	{
 		const auto& info = root[ 2 ];
-		// Wire format: [21, version, [key1, val1, key2, val2, ...]] — flat alternating key-value array
+		// Wire format: [21, version, [key1, val1, key2, val2, ...]], a flat alternating key-value array
 		if ( info.isArray() )
 		{
-			// Format: [[type_k, key], [type_v, val], ...] — pairs of typed entries
+			// Format: [[type_k, key], [type_v, val], ...], pairs of typed entries
 			bool found = false;
 			for ( const auto& entry : info )
 			{

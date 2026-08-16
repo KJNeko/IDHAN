@@ -1,18 +1,41 @@
-//
-// Created by kj16609 on 11/25/25.
-//
-
 #include "psd.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <format>
 #include <memory>
+#include <span>
 
 namespace psd
 {
+
+std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile( const idhan::ModuleFile& file )
+{
+	std::vector< std::uint8_t > buffer( file.size() );
+
+	std::size_t filled { 0 };
+	while ( filled < buffer.size() )
+	{
+		const auto count { file.read(
+			std::span< std::byte > { reinterpret_cast< std::byte* >( buffer.data() ) + filled, buffer.size() - filled },
+			filled ) };
+
+		if ( !count ) return std::unexpected( count.error() );
+
+		// The file ended before it said it would. Carrying on would parse zeroes as PSD structure.
+		if ( *count == 0 )
+			return std::unexpected(
+				idhan::ModuleError { std::format( "PSD ended at {} of {} bytes", filled, buffer.size() ) } );
+
+		filled += *count;
+	}
+
+	return buffer;
+}
 
 std::uint16_t readUint16BE( const std::uint8_t* data )
 {
@@ -27,8 +50,8 @@ std::uint32_t readUint32BE( const std::uint8_t* data )
 
 float readFloat32BE( const std::uint8_t* data )
 {
-	std::uint32_t bits { readUint32BE( data ) };
-	return *reinterpret_cast< float* >( &bits );
+	const std::uint32_t bits { readUint32BE( data ) };
+	return std::bit_cast< float >( bits );
 }
 
 std::optional< PSDHeader > parsePSDHeader( const std::uint8_t* data, const std::size_t length )
@@ -40,10 +63,19 @@ std::optional< PSDHeader > parsePSDHeader( const std::uint8_t* data, const std::
 	const std::uint16_t version { readUint16BE( data + 4 ) };
 	if ( version != 1 ) return std::nullopt; // TODO: support v2 "large" format
 
+	const std::uint16_t channels { readUint16BE( data + 12 ) };
+	const std::uint32_t height { readUint32BE( data + 14 ) };
+	const std::uint32_t width { readUint32BE( data + 18 ) };
+
+	constexpr std::uint32_t max_dimension { 30000 };
+	constexpr std::uint16_t max_channels { 56 };
+	if ( width == 0 || height == 0 || width > max_dimension || height > max_dimension ) return std::nullopt;
+	if ( channels == 0 || channels > max_channels ) return std::nullopt;
+
 	return { {
-		.channels = readUint16BE( data + 12 ),
-		.height = readUint32BE( data + 14 ),
-		.width = readUint32BE( data + 18 ),
+		.channels = channels,
+		.height = height,
+		.width = width,
 		.depth = readUint16BE( data + 22 ),
 		.colorMode = readUint16BE( data + 24 ),
 	} };
@@ -83,12 +115,14 @@ std::vector< std::uint8_t > unpackRaster(
 	const std::size_t dataLength,
 	const std::uint32_t width,
 	const std::uint32_t height,
-	const std::uint16_t channels )
+	const std::uint16_t channels,
+	const std::size_t bytesPerSample )
 {
 	const std::size_t scanlineCountsSize { height * channels * 2 };
+	std::vector< std::uint8_t > planarData {};
 	if ( offset + scanlineCountsSize > dataLength )
 	{
-		return {};
+		return planarData;
 	}
 
 	std::vector< std::uint16_t > scanlineLengths( height * channels );
@@ -98,8 +132,9 @@ std::vector< std::uint8_t > unpackRaster(
 	}
 	offset += scanlineCountsSize;
 
+	const std::size_t rowBytes { static_cast< std::size_t >( width ) * bytesPerSample };
 	const std::size_t planeSize { static_cast< std::size_t >( width ) * height };
-	std::vector< std::uint8_t > planarData( planeSize * channels );
+	planarData.resize( planeSize * channels * bytesPerSample );
 
 	std::size_t outputOffset { 0 };
 	for ( const std::uint16_t scanlineLength : scanlineLengths )
@@ -108,13 +143,13 @@ std::vector< std::uint8_t > unpackRaster(
 
 		if ( offset + compressedLength > dataLength )
 		{
-			return {};
+			return planarData;
 		}
 
-		unpackScanline( buffer + offset, compressedLength, planarData.data() + outputOffset, width );
+		unpackScanline( buffer + offset, compressedLength, planarData.data() + outputOffset, rowBytes );
 
 		offset += compressedLength;
-		outputOffset += width;
+		outputOffset += rowBytes;
 	}
 
 	return planarData;
@@ -122,11 +157,14 @@ std::vector< std::uint8_t > unpackRaster(
 
 std::vector< std::uint8_t > convert16to8bit( const std::vector< std::uint8_t >& buffer, const std::size_t pixelCount )
 {
+	std::vector< std::uint8_t > result {};
 	if ( buffer.size() < pixelCount * 2 )
 	{
-		return {};
+		return result;
 	}
-	std::vector< std::uint8_t > result( pixelCount );
+
+	result.resize( pixelCount );
+
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 		result[ i ] = static_cast< std::uint8_t >( readUint16BE( &buffer[ i * 2 ] ) >> 8 );
 	return result;
@@ -134,11 +172,14 @@ std::vector< std::uint8_t > convert16to8bit( const std::vector< std::uint8_t >& 
 
 std::vector< std::uint8_t > convert32to8bit( const std::vector< std::uint8_t >& buffer, const std::size_t pixelCount )
 {
+	std::vector< std::uint8_t > result {};
 	if ( buffer.size() < pixelCount * 4 )
 	{
-		return {};
+		return result;
 	}
-	std::vector< std::uint8_t > result( pixelCount );
+
+	result.resize( pixelCount );
+
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 		result[ i ] =
 			static_cast< std::uint8_t >( std::clamp( readFloat32BE( &buffer[ i * 4 ] ), 0.0f, 1.0f ) * 255.0f );
@@ -167,6 +208,9 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertCMYKtoIn
 	const std::basic_string_view< std::uint8_t > cmyk,
 	const std::size_t pixelCount )
 {
+	// need four planes (C, M, Y, K) of pixelCount bytes each; division form avoids overflow
+	if ( pixelCount > cmyk.size() / 4 ) return std::unexpected( idhan::ModuleError { "CMYK plane data too small" } );
+
 	std::vector< std::uint8_t > rgb( pixelCount * 3 );
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 	{
@@ -174,7 +218,7 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertCMYKtoIn
 		const std::uint8_t m { cmyk[ ( pixelCount * 1 ) + i ] };
 		const std::uint8_t y { cmyk[ ( pixelCount * 2 ) + i ] };
 		const std::uint8_t k { cmyk[ ( pixelCount * 3 ) + i ] };
-		// Obviously, this does not take ICC profiles into account, but hopefully it is a good enough first approximation.
+		// Naive conversion; ICC profiles are not taken into account.
 		rgb[ i * 3 + 0 ] = static_cast< std::uint8_t >( ( 255 - c ) * ( 255 - k ) / 255 );
 		rgb[ i * 3 + 1 ] = static_cast< std::uint8_t >( ( 255 - m ) * ( 255 - k ) / 255 );
 		rgb[ i * 3 + 2 ] = static_cast< std::uint8_t >( ( 255 - y ) * ( 255 - k ) / 255 );
@@ -186,6 +230,8 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertGrayscal
 	const std::basic_string_view< std::uint8_t > gray,
 	const std::size_t pixelCount )
 {
+	if ( gray.size() < pixelCount ) return std::unexpected( idhan::ModuleError { "Grayscale plane data too small" } );
+
 	std::vector< std::uint8_t > rgb( pixelCount * 3 );
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 	{
@@ -206,13 +252,14 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertIndexedT
 	{
 		return std::unexpected( idhan::ModuleError { "Short color table" } );
 	}
+	if ( indexed.size() < pixelCount ) return std::unexpected( idhan::ModuleError { "Indexed plane data too small" } );
 	std::vector< std::uint8_t > rgb( pixelCount * 3 );
 	for ( std::size_t i = 0; i < pixelCount; ++i )
 	{
 		const std::uint8_t value { indexed[ i ] };
-		rgb[ i * 3 + 0 ] = colorTable[ value + 0x000 ];
-		rgb[ i * 3 + 1 ] = colorTable[ value + 0x100 ];
-		rgb[ i * 3 + 2 ] = colorTable[ value + 0x200 ];
+		rgb[ i * 3 + 0 ] = colorTable[ static_cast< std::size_t >( value ) + 0x000 ];
+		rgb[ i * 3 + 1 ] = colorTable[ static_cast< std::size_t >( value ) + 0x100 ];
+		rgb[ i * 3 + 2 ] = colorTable[ static_cast< std::size_t >( value ) + 0x200 ];
 	}
 	return rgb;
 }
@@ -222,6 +269,10 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertPlanarRG
 	const std::size_t pixelCount,
 	const std::uint16_t channels )
 {
+	const std::size_t planes { std::min< std::size_t >( channels, 3 ) };
+	if ( planes != 0 && planarData.size() / planes < pixelCount )
+		return std::unexpected( idhan::ModuleError { "Planar RGB plane data too small" } );
+
 	std::vector< std::uint8_t > interleaved( pixelCount * 3 );
 	for ( std::size_t c = 0; c < std::min< std::size_t >( channels, 3 ); ++c )
 	{
@@ -309,8 +360,8 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 		offset += 2;
 
 		// Skip channel info
-		if ( offset + channelCount * 6 > length ) return realLayerCount;
-		offset += channelCount * 6;
+		if ( offset + static_cast< std::size_t >( channelCount ) * 6 > length ) return realLayerCount;
+		offset += static_cast< std::size_t >( channelCount ) * 6;
 
 		// Skip signature, blend mode, opacity, clipping, flags, filler
 		if ( offset + 12 > length ) return realLayerCount;

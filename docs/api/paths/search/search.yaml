@@ -3,25 +3,15 @@ get:
     - search
   summary: Searches for records using tag IDs
   description: >
-    Returns an array of record IDs whose active tag mappings satisfy the
-    supplied positive tag filter. If no tag IDs are given, all records that
-    have a file stored are returned.
-
-
-    Results are always sorted by file size ascending (sort controls are not
-    yet exposed). The response is always a plain array of record IDs
-    (hash return is not yet exposed).
-
-
-    Note: domain filtering is accepted via `tag_domains` but is not yet
-    implemented — the search always spans all tag domains.
+    Returns record IDs whose active tag mappings satisfy the positive tag
+    filter. With no tag IDs given, every record that has a file stored is
+    returned. Defaults to file size ascending.
   parameters:
     - name: tag_ids
       in: query
       description: >
         Positive tag IDs to intersect. Repeat the parameter for multiple values
-        (`?tag_ids=1&tag_ids=2`). The singular alias `tag_id` is also accepted
-        and used as a fallback when `tag_ids` is absent.
+        (`?tag_ids=1&tag_ids=2`).
       required: false
       schema:
         type: array
@@ -30,8 +20,8 @@ get:
     - name: tag_id
       in: query
       description: >
-        Singular alias for `tag_ids`. Only consulted when `tag_ids` is not
-        present in the query string.
+        Singular alias for `tag_ids`, honouring only the first tag. Preferred
+        over `tag_ids` when both are given.
       required: false
       schema:
         type: array
@@ -39,18 +29,30 @@ get:
           type: integer
     - name: tag_domains
       in: query
-      description: >
-        Tag domain IDs to restrict the search to. Accepted but not yet
-        implemented — domain filtering is currently a no-op and all tag domains
-        are always searched.
+      description: Restricts the search to these tag domains.
       required: false
       schema:
         type: array
         items:
           type: integer
+    - name: by
+      in: query
+      description: >
+        Sort key. See the `sort.by` enum on `POST /search`. Defaults to
+        `filesize`.
+      required: false
+      schema:
+        type: string
+    - name: order
+      in: query
+      description: Defaults to `asc`.
+      required: false
+      schema:
+        type: string
+        enum: [ asc, desc ]
   responses:
     200:
-      description: Successfully found records (empty array when nothing matches)
+      description: Matching record IDs, empty when nothing matches
       content:
         application/json:
           schema:
@@ -58,5 +60,120 @@ get:
             items:
               type: integer
               description: record_id
+    401:
+      description: Missing or invalid API key
+
+post:
+  tags:
+    - search
+  summary: Full-featured record search
+  description: >
+    Search endpoint with negations, and system predicates.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            tags:
+              type: array
+              items:
+                type: string
+              description: >
+                Tag text. A leading `-` negates the tag if present. A `system:`
+                prefix is parsed as a system predicate (width, height, filesize,
+                limit, tag count, duration, has audio, archive status, and so
+                on) rather than a literal tag. Mutually exclusive with
+                `tag_ids`.
+            tag_ids:
+              type: array
+              items:
+                type: integer
+              description: Positive tag IDs, skipping text resolution.
+            tag_domains:
+              type: array
+              items:
+                type: integer
+              description: Restricts the search to these tag domains.
+            display:
+              type: string
+              enum: [ display, storage ]
+              description: >
+                `display` (default) resolves aliases, siblings and parents.
+                `storage` searches raw applied mappings only.
+            sort:
+              type: object
+              properties:
+                by:
+                  type: string
+                  enum:
+                    - filesize
+                    - import_time
+                    - record_time
+                    - modified_time
+                    - mime
+                    - hash
+                    - random
+                    - duration
+                    - framerate
+                    - has_audio
+                    - width
+                    - height
+                    - ratio
+                    - num_pixels
+                    - num_tags
+                  description: >
+                    `size` aliases `filesize` and `creation_time` aliases
+                    `record_time`. Sorting by a field a record lacks drops that
+                    record from the results rather than sorting it last: this
+                    covers `modified_time` (unset until a record is modified),
+                    `duration`, `framerate`, `has_audio`, `width`, `height`,
+                    `ratio` and `num_pixels`. `num_tags` never drops anything,
+                    since zero is a real count. `random` ignores `order` and
+                    reshuffles on every call, so paging it is not stable.
+                order:
+                  type: string
+                  enum: [ asc, desc ]
+              description: Defaults to import time, descending.
+            limit:
+              type: integer
+              minimum: 0
+            offset:
+              type: integer
+              minimum: 0
+            return:
+              type: array
+              items:
+                type: string
+                enum: [ ids, hashes ]
+              description: Defaults to `["ids"]`.
+  responses:
+    200:
+      description: Search results
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_ids:
+                type: array
+                items:
+                  type: integer
+              hashes:
+                type: array
+                items:
+                  type: string
+              count:
+                type: integer
+              truncated:
+                type: boolean
+                description: >
+                  A limit was applied and fully consumed, so more results may
+                  exist.
+              query_ms:
+                type: integer
+    400:
+      description: Malformed request body
     401:
       description: Missing or invalid API key

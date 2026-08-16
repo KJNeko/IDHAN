@@ -1,15 +1,11 @@
-//
-// Created by kj16609 on 11/17/24.
-//
-
-#include "crypto/SHA256.hpp"
-#include "records/records.hpp"
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
+#include "records/records.hpp"
 
 namespace idhan::api
 {
@@ -79,14 +75,15 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 {
 	logging::ScopedTimer timer { "createRecordFromJson" };
 	const auto json_ptr { req->getJsonObject() };
-	if ( json_ptr == nullptr ) // Data was invalid?
-		throw std::invalid_argument( "json_ptr is null" );
+	if ( json_ptr == nullptr ) co_return createBadRequest( "Json object malformed or null" );
 
 	const Json::Value& json { *json_ptr };
 
+	// operator[] on a non-object root throws Json::LogicError, which would surface as a 500
+	if ( !json.isObject() ) co_return createBadRequest( "Invalid json object. Expected object as root item" );
+
 	const auto db { drogon::app().getDbClient() };
 
-	// test if sha256 is a list or 1 item
 	const auto& sha256s { json[ "sha256" ] };
 	if ( sha256s.isArray() )
 	{
@@ -99,7 +96,7 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_array );
 	}
 
-	if ( sha256s.isString() ) // HEX string
+	if ( sha256s.isString() )
 	{
 		Json::Value json_out {};
 		const auto sha256 { SHA256::fromHex( sha256s.asString() ) };
@@ -115,24 +112,18 @@ ResponseTask createRecordFromJson( const drogon::HttpRequestPtr req )
 		co_return drogon::HttpResponse::newHttpJsonResponse( json_out );
 	}
 
-	FGL_UNREACHABLE();
+	co_return createBadRequest( "Invalid json: 'sha256' must be a hex string or an array of hex strings" );
 }
 
 ResponseTask RecordAPI::createRecord( const drogon::HttpRequestPtr request )
 {
 	logging::ScopedTimer timer { "createRecord" };
-	// the request here should be either an octet stream, or json. If it's an octet stream, then it will be a file we
-	// can hash.
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wswitch-enum"
-	// It's really not possible for us to have every single enum here.
 	switch ( request->getContentType() )
 	{
-		// Here we are expecting that the data being shoved into the request is actually a file.
 		case drogon::CT_APPLICATION_OCTET_STREAM:
 			co_return co_await createRecordFromOctet( request );
-		// In this case we have either a list of hashes, or a single hash
 		case drogon::CT_APPLICATION_JSON:
 			co_return co_await createRecordFromJson( request );
 		default:

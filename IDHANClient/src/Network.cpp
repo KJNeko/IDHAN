@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/8/25.
-//
-
 #include "idhan/Network.hpp"
 
 #include <moc_Network.cpp>
@@ -16,7 +12,6 @@ namespace idhan
 
 QNetworkReply* Network::sendDataI( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body )
 {
-	// request.setTransferTimeout( std::chrono::milliseconds( 30 * 1000 ) );
 	switch ( method )
 	{
 		case HttpMethod::GET:

@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 2/20/25.
-//
 #pragma once
 
 #include <cstdint>
@@ -11,6 +8,8 @@
 namespace idhan
 {
 
+//! Decodes a single hexadecimal digit ('0'-'9', 'a'-'f', 'A'-'F') to its 0-15 value.
+//! \throws std::invalid_argument if the character is not a hex digit.
 constexpr std::uint8_t decodeHexCharacter( const char h )
 {
 	switch ( h )
@@ -66,6 +65,8 @@ constexpr std::uint8_t decodeHexCharacter( const char h )
 	std::unreachable();
 }
 
+//! Decodes a pair of hex digits into one byte, with \p left as the high nibble and \p right the low.
+//! \throws std::invalid_argument if either character is not a hex digit.
 constexpr std::uint8_t decodeHexCharacters( const char left, const char right )
 {
 	const std::uint8_t left_char { static_cast< std::uint8_t >( decodeHexCharacter( left ) << 4 ) };
@@ -81,9 +82,16 @@ static_assert( 0x21 == decodeHexCharacters( '2', '1' ) );
 static_assert( 0x00 == decodeHexCharacters( '0', '0' ) );
 static_assert( 0x61 == decodeHexCharacters( '6', '1' ) );
 
+//! Decodes a hex string into its raw bytes (two characters per byte).
+//! \param str Hex string; must have an even length.
+//! \return The decoded bytes (\p str.size() / 2 of them).
+//! \throws std::invalid_argument if the length is odd or any character is not a hex digit.
 inline std::vector< std::byte > decodeHex( const std::string& str )
 try
 {
+	// an odd-length string would read past the final character and write one byte past the vector
+	if ( str.size() % 2 != 0 ) throw std::invalid_argument( "Hex string must have an even number of characters" );
+
 	std::vector< std::byte > result {};
 	result.resize( str.size() / 2 );
 

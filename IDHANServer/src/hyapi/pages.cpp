@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/15/25.
-//
-
 #include "HyAPI.hpp"
 #include "hydrus/ClientConstants_gen.hpp"
 #include "hydrus/ClientGUIPagesCore_gen.hpp"
@@ -13,7 +9,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getPages( [[maybe_unused]] dr
 {
 	Json::Value json {};
 
-	// Dumy page to get hydrui to stop eating shit
 	json[ "pages" ] = Json::Value( Json::objectValue );
 
 	Json::Value fake_page {};

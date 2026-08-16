@@ -1,7 +1,7 @@
 get:
   tags:
     - tag domains
-  summary: Gets information relating to a domain
+  summary: Returns information about a tag domain
   parameters:
     - in: path
       name: tag_domain_id
@@ -10,10 +10,10 @@ get:
         $ref: '../../../schemas/TagDomainID.yaml'
   responses:
     '200':
-      description: Json object with domain info
+      description: Domain info
       content:
         application/json:
           schema:
             $ref: '../../../schemas/TagDomainInfo.yaml'
     '400':
-      description: No tag domain found with the given ID
+      description: Tag domain not found

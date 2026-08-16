@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/14/25.
-//
-
 #include "Heartbeat.hpp"
 
 #include "logging/log.hpp"
@@ -31,10 +27,9 @@ void Heartbeat::handleNewConnection(
 	auto ctx = std::make_shared< HeartbeatContext >();
 	wsConnPtr->setContext( ctx );
 
-	auto task = [ wsConnPtr ]()
+	auto task = [ weak_conn = std::weak_ptr( wsConnPtr ) ]()
 	{
-		if ( wsConnPtr->connected() )
-			sendStatusJson( wsConnPtr );
+		if ( const auto conn = weak_conn.lock(); conn && conn->connected() ) sendStatusJson( conn );
 	};
 
 	ctx->timer_id = drogon::app().getLoop()->runEvery( 10.0, task );
@@ -51,8 +46,7 @@ void Heartbeat::handleConnectionClosed( const drogon::WebSocketConnectionPtr& ws
 {
 	log::info( "WS closed" );
 	auto ctx = wsConnPtr->getContext< HeartbeatContext >();
-	if ( ctx && ctx->timer_id != trantor::InvalidTimerId )
-		drogon::app().getLoop()->invalidateTimer( ctx->timer_id );
+	if ( ctx && ctx->timer_id != trantor::InvalidTimerId ) drogon::app().getLoop()->invalidateTimer( ctx->timer_id );
 }
 
 } // namespace idhan::api

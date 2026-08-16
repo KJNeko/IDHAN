@@ -1,7 +1,10 @@
 post:
   tags:
     - records
-  summary: Creates a new file record, You can only supply a SHA256. If you are wishing to import a file, see (TODO)
+  summary: Creates records from SHA-256 hashes
+  description: |
+    Creates one record per hash. This registers hashes only; to upload file data
+    use `POST /file/import`.
   requestBody:
     required: true
     content:
@@ -28,7 +31,7 @@ post:
               sha256: [ '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29', '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29' ]
   responses:
     200:
-      description: Records created successfully
+      description: Records created. An array in, an array out.
       content:
         application/json:
           schema:
@@ -52,6 +55,6 @@ post:
               summary: Array of hashes
               value: [ 1234, 5678 ]
     400:
-      description: Bad request (invalid content type, invalid SHA256 hex string, or malformed JSON array)
+      description: Invalid content type, SHA-256, or JSON
     500:
-      description: Internal server error (record insert failed after retries)
+      description: Internal server error

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/8/24.
-//
-
 #include "api/version.hpp"
 
 #include <paths.hpp>

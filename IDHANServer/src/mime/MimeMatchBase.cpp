@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 10/21/25.
-//
-
 #include "MimeMatchBase.hpp"
 
 #include "Cursor.hpp"
@@ -94,7 +90,6 @@ MimeMatchBase::MimeMatchBase( const Json::Value& json )
 			throw std::runtime_error( "Expected data to be an array of objects" );
 		}
 
-		// Has children
 		m_children = parseDataJson( json[ "data" ] );
 	}
 }

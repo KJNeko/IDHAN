@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/14/24.
-//
-
 #include "TagAPI.hpp"
 #include "logging/log.hpp"
 
@@ -13,7 +9,9 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::search(
 {
 	const auto db { drogon::app().getDbClient() };
 
-	const auto result { co_await db->execSqlCoro( "SELECT tag_id FROM tags WHERE tag_text = $1", tag_text ) };
+	const auto result {
+		co_await db->execSqlCoro( "SELECT tag_id FROM tags WHERE tag_text = CASEFOLD(normalize($1, NFC))", tag_text )
+	};
 
 	Json::Value json {};
 

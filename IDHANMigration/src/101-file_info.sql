@@ -1,1 +1,0 @@
-DROP INDEX file_info_record_id_idx; -- Not needed because file_info_pkey exists

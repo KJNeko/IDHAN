@@ -1,11 +1,8 @@
-//
-// Created by kj16609 on 3/22/25.
-//
-
 #include <format>
 
 #include "api/SearchAPI.hpp"
 #include "api/helpers/getArrayParameters.hpp"
+#include "api/search/parseSortType.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "db/TagSearch.hpp"
 #include "logging/log.hpp"
@@ -27,27 +24,20 @@ drogon::Task< drogon::HttpResponsePtr > SearchAPI::search( drogon::HttpRequestPt
 
 	const auto tag_domain_ids { parseArrayParameters< TagDomainID >( request, "tag_domains" ) };
 
-	// const bool use_stored { request->getOptionalParameter< bool >( "use_stored" ).value_or( false ) };
-
 	SearchBuilder builder {};
 
-	builder.setPositiveTags( tag_ids );
+	builder.addPositiveTags( tag_ids );
+
+	const auto by { request->getOptionalParameter< std::string >( "by" ) };
+	const auto order { request->getOptionalParameter< std::string >( "order" ) };
+	if ( by ) builder.setSortType( parseSortType( *by ) );
+	if ( order ) builder.setSortOrder( *order == "desc" ? SortOrder::DESC : SortOrder::ASC );
 
 	const auto result { co_await builder.query( db, tag_domain_ids ) };
 
-	if ( result.empty() )
-	{
-		Json::Value root { Json::arrayValue };
-		co_return drogon::HttpResponse::newHttpJsonResponse( root );
-	}
+	Json::Value file_ids { Json::arrayValue };
 
-	Json::Value file_ids {};
-
-	for ( const auto& row : result )
-	{
-		const auto id { row[ 0 ].as< std::size_t >() };
-		file_ids.append( id );
-	}
+	for ( const auto id : result.record_ids ) file_ids.append( id );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( file_ids );
 }

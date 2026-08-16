@@ -1,18 +1,16 @@
 get:
   tags:
     - jobs
-  summary: Get status of multiple or all jobs
+  summary: Returns the status of many jobs
   description: |
-    Returns status for all running jobs, or a specific subset if `job_ids` is
-    provided in the request body. Pass `?cleanup=true` to remove completed jobs
-    after they are returned.
+    All running jobs, or only those named by `job_ids` in the body.
   parameters:
     - name: cleanup
       in: query
       required: false
       schema:
         type: boolean
-      description: If true, completed jobs are removed after being returned
+      description: Drop completed jobs after returning them.
   requestBody:
     required: false
     content:
@@ -25,15 +23,15 @@ get:
               items:
                 type: integer
                 format: int64
-          description: If omitted, all jobs are returned
+          description: Omit for every job.
         examples:
           specific_jobs:
             summary: Query specific jobs
             value:
-              job_ids: [1, 2, 3]
+              job_ids: [ 1, 2, 3 ]
   responses:
     200:
-      description: List of job statuses
+      description: Job statuses
       content:
         application/json:
           schema:

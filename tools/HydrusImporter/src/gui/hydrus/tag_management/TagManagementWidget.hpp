@@ -13,6 +13,7 @@ namespace Ui
 class TagManagementWidget;
 }
 
+//! Qt widget for reviewing tag domains and their relationships around a Hydrus import.
 class TagManagementWidget : public QWidget
 {
 	Q_OBJECT
@@ -21,6 +22,10 @@ class TagManagementWidget : public QWidget
 
 	explicit TagManagementWidget( QWidget* parent = nullptr );
 	~TagManagementWidget() override;
+
+  protected:
+
+	void showEvent( QShowEvent* event ) override;
 
   private slots:
 	void on_tagSearchEdit_textChanged( const QString& text );
@@ -31,10 +36,14 @@ class TagManagementWidget : public QWidget
   private:
 
 	void loadDomains();
+	void clearDomainTabs();
+	void showDomainLoadFailure();
 
 	Ui::TagManagementWidget* ui;
 	idhan::TagID m_selectedTagID { 0 };
 	std::vector< idhan::TagDomainInfo > m_domains;
+	bool m_domainsLoaded { false };
+	QFutureWatcher< std::vector< idhan::TagDomainInfo > >* m_domainWatcher { nullptr };
 	QFutureWatcher< std::vector< std::pair< idhan::TagID, std::string > > >* m_autocompleteWatcher { nullptr };
 	std::vector< TagDomainRelationshipWidget* > m_domainWidgets;
 };

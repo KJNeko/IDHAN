@@ -1,10 +1,10 @@
-//
-// Created by kj16609 on 11/18/24.
-//
 #pragma once
 
 #include <algorithm>
+#include <expected>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "APIAuth.hpp"
 #include "IDHANTypes.hpp"
@@ -87,9 +87,15 @@ class TagAPI : public drogon::HttpController< TagAPI >
 	METHOD_LIST_END
 };
 
-drogon::Task< Json::Value > getSimilarTags(
+[[nodiscard]] drogon::Task< Json::Value > getSimilarTags(
 	std::string search_value,
 	DbClientPtr db,
 	std::size_t limit = 10,
 	bool include_unused = true );
+
+//! Find-or-create tags for a batch of (namespace, subtag) text pairs in a single DB round-trip,
+//! returning their ids in the same order as the input.
+[[nodiscard]] drogon::Task< std::expected< std::vector< TagID >, drogon::HttpResponsePtr > > createTagsFromPairs(
+	const std::vector< std::pair< std::string, std::string > >& tag_pairs,
+	DbClientPtr db );
 } // namespace idhan::api

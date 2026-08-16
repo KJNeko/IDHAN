@@ -2,46 +2,66 @@ AddFGLLibrary(IDHANModules OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURREN
 
 find_package(PkgConfig REQUIRED)
 
-# ImageVipsMetadata & ImageVipsThumbnailer
 #pkg_check_modules(VIPS REQUIRED vips)
 pkg_check_modules(VIPS REQUIRED vips-cpp)
+find_package(Jsoncpp REQUIRED)
 
-target_link_libraries(IDHANModules PUBLIC IDHAN ${VIPS_LIBRARIES})
-target_include_directories(IDHANModules PUBLIC ${VIPS_INCLUDE_DIRS})
-
-include(ExternalProject)
+target_link_libraries(IDHANModules PUBLIC IDHAN ${VIPS_LIBRARIES} Jsoncpp_lib)
+# SYSTEM: libvips headers should not be checked against our strict warning set.
+target_include_directories(IDHANModules SYSTEM PUBLIC ${VIPS_INCLUDE_DIRS})
 
 find_package(LibArchive REQUIRED)
+find_package(Chardet REQUIRED)
 
-# VideoMetadata & VideoThumbnailer
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
 		libavcodec
 		libavformat
 		libavutil
 		libswscale)
 
-AddFGLModule(IDHANPremadeModules ${CMAKE_CURRENT_SOURCE_DIR}/premade)
-target_link_libraries(IDHANPremadeModules PUBLIC IDHANModules IDHAN spdlog::spdlog)
-target_link_libraries(IDHANPremadeModules PRIVATE LibArchive::LibArchive)
+AddFGLLibrary(IDHANModuleIPC OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/ipc/src ${CMAKE_CURRENT_SOURCE_DIR}/ipc/include)
+target_link_libraries(IDHANModuleIPC PUBLIC IDHANModules IDHAN Jsoncpp_lib)
 
-# Vips
-target_link_libraries(IDHANPremadeModules PUBLIC ${VIPS_LIBRARIES})
-target_include_directories(IDHANPremadeModules PRIVATE ${VIPS_INCLUDE_DIRS})
-#target_link_libraries(IDHANPremadeModules PRIVATE PkgConfig::VIPS)
+AddFGLExecutable(IDHANModuleRunner ${CMAKE_CURRENT_SOURCE_DIR}/runner-src)
+target_link_libraries(IDHANModuleRunner PRIVATE IDHANModuleIPC IDHANModules IDHAN spdlog::spdlog ${CMAKE_DL_LIBS})
 
-target_link_libraries(IDHANPremadeModules PRIVATE chardet)
+set(IDHAN_PREMADE_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/premade/common)
 
-find_package(Jsoncpp REQUIRED)
+function(AddPremadeModule NAME SRC_DIR)
+	AddFGLModule(${NAME} ${SRC_DIR})
 
-target_link_libraries(IDHANModules PUBLIC Jsoncpp_lib)
+	target_link_libraries(${NAME} PUBLIC IDHANModules IDHAN spdlog::spdlog ${VIPS_LIBRARIES})
+	target_include_directories(${NAME} SYSTEM PRIVATE ${VIPS_INCLUDE_DIRS})
+	target_include_directories(${NAME} PRIVATE ${IDHAN_PREMADE_COMMON_DIR})
 
-# Video (FFMPEG)
-target_link_libraries(IDHANPremadeModules PRIVATE PkgConfig::FFMPEG)
+	set_target_properties(${NAME} PROPERTIES
+			RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/modules"
+			LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/modules"
+			ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/modules")
+endfunction()
 
-find_package(Chardet REQUIRED)
+AddPremadeModule(IDHANVips ${CMAKE_CURRENT_SOURCE_DIR}/premade/vips)
+AddPremadeModule(IDHANFFmpeg ${CMAKE_CURRENT_SOURCE_DIR}/premade/ffmpeg)
+AddPremadeModule(IDHANPsd ${CMAKE_CURRENT_SOURCE_DIR}/premade/psd)
+AddPremadeModule(IDHANArchive ${CMAKE_CURRENT_SOURCE_DIR}/premade/archives)
 
+pkg_check_modules(ONNXRUNTIME IMPORTED_TARGET libonnxruntime)
 
-set_target_properties(IDHANPremadeModules PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/modules"
-		LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/modules"
-		ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/modules")
+if (ONNXRUNTIME_FOUND)
+	AddPremadeModule(IDHANEmbedding ${CMAKE_CURRENT_SOURCE_DIR}/premade/embedding)
+	target_link_libraries(IDHANEmbedding PRIVATE PkgConfig::ONNXRUNTIME)
+	message(STATUS "onnxruntime ${ONNXRUNTIME_VERSION} found, building IDHANEmbedding")
+else ()
+	message(STATUS "onnxruntime not found, skipping IDHANEmbedding (image embeddings unavailable)")
+endif ()
+
+target_link_libraries(IDHANFFmpeg PRIVATE PkgConfig::FFMPEG)
+target_link_libraries(IDHANArchive PRIVATE LibArchive::LibArchive chardet)
+
+# Convenience target so consumers can depend on "all premade modules" without naming each one.
+add_custom_target(IDHANPremadeModules)
+add_dependencies(IDHANPremadeModules IDHANVips IDHANFFmpeg IDHANPsd IDHANArchive)
+
+if (ONNXRUNTIME_FOUND)
+	add_dependencies(IDHANPremadeModules IDHANEmbedding)
+endif ()

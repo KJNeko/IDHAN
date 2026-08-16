@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/5/25.
-//
 #include "FileRelationshipsWidget.hpp"
 
 #include <moc_FileRelationshipsWidget.cpp>
@@ -36,6 +33,7 @@ FileRelationshipsWidget::FileRelationshipsWidget( idhan::hydrus::HydrusImporter*
 		&FileRelationshipsWidget::processedAlternatives );
 
 	connect( m_worker, &FileRelationshipsWorker::statusMessage, this, &FileRelationshipsWidget::statusMessage );
+	connect( m_worker, &FileRelationshipsWorker::errorOccurred, this, &FileRelationshipsWidget::statusMessage );
 	connect( m_worker, &FileRelationshipsWorker::finished, this, &FileRelationshipsWidget::preprocessingComplete );
 }
 
@@ -56,12 +54,12 @@ void FileRelationshipsWidget::updateText()
 		ui->duplicatesCount->setText( QString( "Duplicate pairs: %L1" ).arg( duplicates_total ) );
 	}
 
-	ui->progressBar->setMaximum( alternatives_total + duplicates_total );
+	const auto total { alternatives_total + duplicates_total };
+	const auto processed { alternatives_processed + duplicates_processed };
 
-	if ( alternatives_processed + duplicates_processed == 0 )
-		ui->progressBar->setValue( -1 );
-	else
-		ui->progressBar->setValue( alternatives_processed + duplicates_processed );
+	// Report progress as a 0-100 percentage so large counts can't overflow the int-based bar.
+	ui->progressBar->setMaximum( 100 );
+	ui->progressBar->setValue( total == 0 ? 0 : static_cast< int >( ( processed * 100 ) / total ) );
 }
 
 void FileRelationshipsWidget::startImport()

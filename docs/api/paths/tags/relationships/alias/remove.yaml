@@ -32,8 +32,8 @@ post:
                 alias_id: 20
   responses:
     200:
-      description: Aliases removed successfully
+      description: Aliases removed
     400:
-      description: Missing or invalid tag_domain_id query parameter, missing or non-array request body, or non-integer aliased_id/alias_id field
+      description: Missing or invalid `tag_domain_id`, body is not an array, or a non-integer ID
     500:
       description: Internal server error

@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/12/25.
-//
-
 #include "FFMPEGMetadata.hpp"
 
 #include <cstring>
@@ -37,20 +33,34 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 	base_info.m_simple_type = idhan::SimpleMimeType::VIDEO;
 	idhan::MetadataInfoVideo video_metadata {};
 
-	OpaqueInfo opaque_info { .m_data = data.file_view, .m_cursor = 0 };
+	OpaqueInfo opaque_info { .m_file = &data.file, .m_cursor = 0 };
 
 	constexpr auto BUFFER_SIZE { 4096 };
-	// std::array< std::byte, BUFFER_SIZE > buffer {};
-	// std::byte* buffer_ptr { new std::byte[ BUFFER_SIZE ] };
+	// av_malloc, not new: avio takes ownership and frees it with av_free.
 	unsigned char* buffer_ptr { static_cast< unsigned char* >( av_malloc( BUFFER_SIZE ) ) };
 
 	const std::shared_ptr< AVIOContext > avio_context(
 		avio_alloc_context( buffer_ptr, BUFFER_SIZE, 0, &opaque_info, &readFunction, nullptr, seekFunction ),
-		&av_free );
+		[]( AVIOContext* ctx )
+		{
+			if ( ctx )
+			{
+				av_free( ctx->buffer );
+				av_free( ctx );
+			}
+		} );
 
-	const auto format_context_p =
-		std::shared_ptr< AVFormatContext >( avformat_alloc_context(), &avformat_free_context );
-	auto format_context { format_context_p.get() };
+	if ( !avio_context )
+	{
+		av_free( buffer_ptr );
+		return std::unexpected( idhan::ModuleError( "Failed to allocate AVIO context" ) );
+	}
+
+	AVFormatContext* format_context { avformat_alloc_context() };
+	if ( !format_context )
+	{
+		return std::unexpected( idhan::ModuleError( "Failed to allocate format context" ) );
+	}
 
 	format_context->pb = avio_context.get();
 	format_context->flags |= AVFMT_FLAG_CUSTOM_IO;
@@ -59,6 +69,10 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to open file" ) );
 	}
+
+	const auto format_context_p = std::shared_ptr< AVFormatContext >(
+		format_context, []( AVFormatContext* ctx ) { avformat_close_input( &ctx ); } );
+	format_context = format_context_p.get();
 
 	if ( avformat_find_stream_info( format_context, nullptr ) < 0 )
 	{

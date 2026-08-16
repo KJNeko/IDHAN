@@ -14,7 +14,7 @@
 
 namespace idhan::db
 {
-std::size_t doMigration( pqxx::nontransaction& tx, std::size_t migration_id );
+[[nodiscard]] std::size_t doMigration( pqxx::nontransaction& tx, std::size_t migration_id );
 void updateMigrations( pqxx::nontransaction& tx, std::string_view schema );
 
 } // namespace idhan::db

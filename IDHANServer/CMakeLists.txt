@@ -4,8 +4,6 @@ AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_sources(IDHANServer PRIVATE ${MIGRATION_SOURCE})
 
-# Gui is needed for QImage for whatever reason
-find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(spdlog REQUIRED)
 find_package(drogon REQUIRED)
 find_package(OpenSSL REQUIRED COMPONENTS Crypto)
@@ -14,17 +12,26 @@ target_link_libraries(IDHANServer PUBLIC spdlog::spdlog drogon)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	target_link_libraries(IDHANServer PRIVATE uring)
 endif ()
-target_link_libraries(IDHANServer PRIVATE libpqxx::pqxx Qt6::Core tomlplusplus::tomlplusplus)
+target_link_libraries(IDHANServer PRIVATE libpqxx::pqxx tomlplusplus::tomlplusplus)
 target_link_libraries(IDHANServer PRIVATE IDHAN)
-target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANMigration)
+target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANModuleIPC IDHANMigration)
 target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
+
+if (IDHAN_HARDEN)
+	target_compile_definitions(IDHANServer PRIVATE IDHAN_HARDEN)
+endif ()
 
 if (IDHAN_DISABLE_API_AUTH)
 	target_compile_definitions(IDHANServer PRIVATE IDHAN_DISABLE_API_AUTH)
 endif ()
 
-# Copy page info to the output directory
+if (IDHAN_USE_JEMALLOC)
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(JEMALLOC REQUIRED IMPORTED_TARGET jemalloc)
+	target_link_libraries(IDHANServer PRIVATE PkgConfig::JEMALLOC)
+	message(STATUS "IDHANServer: using jemalloc ${JEMALLOC_VERSION}")
+endif ()
 
 file(GLOB_RECURSE PAGE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/static/*")
 set(PAGE_OUTPUTS "")
@@ -49,9 +56,6 @@ endforeach ()
 add_custom_target(IDHANPages DEPENDS ${PAGE_OUTPUTS})
 add_dependencies(IDHANServer IDHANPages)
 
-#add_dependencies(IDHANServer IDHANModules)
-
-# Copy mime identifiers to the output dir
 file(GLOB_RECURSE PARSER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/mime/parsers/*")
 set(PARSER_OUTPUTS "")
 
@@ -87,4 +91,4 @@ add_custom_target(IDHANConfig DEPENDS ${CONFIG_OUTPUT})
 add_dependencies(IDHANServer IDHANConfig)
 
 add_dependencies(IDHANServer IDHANPremadeModules)
-
+add_dependencies(IDHANServer IDHANModuleRunner)

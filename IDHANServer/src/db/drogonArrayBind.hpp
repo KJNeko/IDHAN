@@ -1,10 +1,12 @@
-//
-// Created by kj16609 on 8/2/25.
-//
 #pragma once
 #include "IDHANTypes.hpp"
 #include "crypto/SHA256.hpp"
 
+//! Serialises a C++ vector/set into PostgreSQL's binary array wire format so it can be bound as a
+//! single array parameter (e.g. `UNNEST($1::integer[])`). One overload per supported element type.
+//! The SqlBinder operator<< specialisations below let `binder << std::move(vec)` bind these directly.
+//! \note clangd may report this header as an unused include at call sites. It isn't; it supplies the
+//!       template specialisations resolved implicitly at the execSqlCoro call site.
 std::vector< std::byte > createPgBinaryArray( std::vector< idhan::SHA256 >&& data );
 std::vector< std::byte > createPgBinaryArray( std::vector< std::string >&& strings );
 std::vector< std::byte > createPgBinaryArray( std::set< std::string >&& strings );

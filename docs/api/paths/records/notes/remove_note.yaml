@@ -2,23 +2,22 @@ delete:
   tags:
     - records
     - notes
-  summary: Remove a note from a record
+  summary: Removes a note from a record
   description: |
-    Removes the association between the given note and record. Returns the updated
-    array of all remaining notes for the record.
+    Unlinks the note from the record. Returns the record's remaining notes.
   parameters:
     - $ref: '../../../parameters/record_id.yaml'
     - $ref: '../../../parameters/note_id.yaml'
   responses:
     '200':
-      description: Updated list of notes after removal
+      description: The record's notes after removal
       content:
         application/json:
           schema:
             type: array
             items:
               type: object
-              required: [note_id, text]
+              required: [ note_id, text ]
               properties:
                 note_id:
                   type: integer
@@ -33,8 +32,8 @@ delete:
                   text: "Original source unknown."
             empty:
               summary: No notes remaining
-              value: []
+              value: [ ]
     '400':
-      description: Invalid record_id or note_id
+      description: Invalid `record_id` or `note_id`
     '500':
-      description: Internal error while removing the note mapping
+      description: Internal server error

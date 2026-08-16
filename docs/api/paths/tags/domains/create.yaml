@@ -1,9 +1,8 @@
 post:
   tags:
     - tag domains
-  summary: Creates a new tag domain used for grouping relationships
+  summary: Creates a tag domain
   requestBody:
-    description: Json object
     required: true
     content:
       application/json:
@@ -17,19 +16,18 @@ post:
               example: "my domain"
   responses:
     "200":
-      description: Domain was created; returns the new domain info
+      description: The new domain
       content:
         application/json:
           schema:
             $ref: '../../../schemas/TagDomainInfo.yaml'
     "400":
-      description: Request body is missing, not valid JSON, or the `name` field is absent or not a string
+      description: Missing body, invalid JSON, or `name` absent or not a string
     "409":
-      description: A domain with that name already exists; returns the existing domain info
+      description: Name already taken. The existing domain is returned.
       content:
         application/json:
           schema:
             $ref: '../../../schemas/TagDomainInfo.yaml'
     "500":
-      description: Internal error fetching or storing domain info after a successful DB operation
-
+      description: Internal server error

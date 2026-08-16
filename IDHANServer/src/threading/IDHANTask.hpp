@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 10/29/25.
-//
 #pragma once
 #include <drogon/utils/coroutine.h>
 
@@ -9,6 +6,8 @@
 namespace idhan
 {
 
+//! Lazy coroutine task. Do not store capturing-lambda coroutines to await later; the closure can die
+//! before the body runs.
 template < typename T = void >
 struct [[nodiscard]] IDHANTask
 {

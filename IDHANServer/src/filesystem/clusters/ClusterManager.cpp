@@ -1,44 +1,46 @@
-//
-// Created by kj16609 on 8/10/24.
-//
-
 #include "ClusterManager.hpp"
 
-#include <QStorageInfo>
-// FUCKING QT IS RETARDED
-#undef signals
-
 #include <fstream>
+#include <optional>
 
 #include "api/helpers/createBadRequest.hpp"
 #include "core/files/mime.hpp"
 #include "core/record/getRecordSHA256.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/defines.hpp"
+#include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::filesystem
 {
 
-std::size_t getFilesystemCapacity( const QDir& path )
+//! Queried on each call rather than cached, so a cluster's free space does not go stale.
+//! An unreadable path reports zero instead of throwing.
+std::filesystem::space_info spaceInfo( const std::filesystem::path& path )
 {
-	const QStorageInfo info { path };
-	return static_cast< std::size_t >( info.bytesAvailable() );
+	std::error_code code {};
+	std::filesystem::space_info info { std::filesystem::space( path, code ) };
+	if ( code ) info = { 0, 0, 0 };
+	return info;
+}
+
+std::size_t getFilesystemCapacity( const std::filesystem::path& path )
+{
+	return static_cast< std::size_t >( spaceInfo( path ).available );
 }
 
 std::size_t ClusterManager::ClusterInfo::capacity() const
 {
-	return static_cast< std::size_t >( m_info.bytesTotal() );
+	return static_cast< std::size_t >( spaceInfo( m_path ).capacity );
 }
 
 std::size_t ClusterManager::ClusterInfo::free() const
 {
-	return static_cast< std::size_t >( m_info.bytesAvailable() );
+	return static_cast< std::size_t >( spaceInfo( m_path ).available );
 }
 
 ClusterManager::ClusterInfo::ClusterInfo( const std::filesystem::path& path, const ClusterID id ) :
   m_id( id ),
-  m_info( path ),
   m_path( path ),
   m_flags( ClusterFlags::STORES_DEFAULT ),
   m_max_capacity( std::numeric_limits< std::size_t >::max() )
@@ -46,41 +48,18 @@ ClusterManager::ClusterInfo::ClusterInfo( const std::filesystem::path& path, con
 
 ClusterManager::ClusterInfo::ClusterInfo( const drogon::orm::Row& row ) :
   m_id( row[ "cluster_id" ].as< ClusterID >() ),
-  m_info( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) ),
-  m_path( QString::fromStdString( row[ "folder_path" ].as< std::string >() ) ),
+  m_path( row[ "folder_path" ].as< std::string >() ),
   m_flags( ClusterFlags::STORES_DEFAULT ),
+  m_read_only( row[ "read_only" ].as< bool >() ),
   m_max_capacity( std::numeric_limits< std::size_t >::max() )
 {}
 
-std::string metaTypePathID( const FileMetaType type )
-{
-	switch ( type )
-	{
-		case THUMBNAIL:
-			return "t";
-			break;
-		default:
-			[[fallthrough]];
-			// case ARCHIVE:
-			// [[fallthrough]];
-			// case GENERATOR:
-			// [[fallthrough]];
-			// case GENERATED:
-			// [[fallthrough]];
-			// case VIRTUAL:
-			// return "f";
-		case NORMAL:
-			return "f";
-	}
-}
-
-std::filesystem::path createSubpath( const SHA256& sha256, const FileMetaType meta_type )
+//! Must stay in step with getFileFolder(), which resolves the same layout when reading a file back.
+std::filesystem::path createSubpath( const SHA256& sha256 )
 {
 	const std::string hex { sha256.hex() };
 
-	// (f/t)x{0,1}/{0-128}
-
-	std::filesystem::path path { metaTypePathID( meta_type ) + hex.substr( 0, 2 ) };
+	std::filesystem::path path { "f" + hex.substr( 0, 2 ) };
 	path /= hex;
 
 	return path;
@@ -90,13 +69,12 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	const SHA256& sha256,
 	const std::byte* data,
 	const std::size_t length,
-	std::string_view extension,
-	const FileMetaType type ) const
+	std::string_view extension ) const
 {
-	// Append a `.` if there isn't one
+	if ( m_read_only )
+		return std::unexpected( createInternalError( "Refusing to write into read-only cluster {}", m_id ) );
 
-	// QFile file { m_path.filePath( createSubpath( sha256 ) + extension ) };
-	auto path { m_path.filesystemAbsolutePath() / createSubpath( sha256, type ) };
+	auto path { std::filesystem::absolute( m_path ) / createSubpath( sha256 ) };
 
 	if ( extension.starts_with( '.' ) )
 		path.replace_extension( extension );
@@ -131,33 +109,51 @@ drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManag
 	DbClientPtr db )
 {
 	const auto cluster_check { co_await db->execSqlCoro(
-		"SELECT cluster_id, cluster_delete_time FROM file_info WHERE record_id = $1 LIMIT 1", record_id ) };
+		"SELECT file_info.cluster_id, file_info.cluster_delete_time, file_clusters.read_only "
+		"FROM file_info LEFT JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
+		"WHERE file_info.record_id = $1 LIMIT 1",
+		record_id ) };
 
-	const bool seen_before { cluster_check[ 0 ][ 0 ].isNull() };
-	const bool file_deleted { cluster_check[ 0 ][ 1 ].isNull() };
-
-	if ( seen_before && !file_deleted )
+	if ( !cluster_check.empty() )
 	{
-		// We might still have the file, So we'll return the cluster it should be in.
-		co_return cluster_check[ 0 ][ 0 ].as< ClusterID >();
+		const auto& row { cluster_check[ 0 ] };
+
+		const bool has_cluster { !row[ "cluster_id" ].isNull() };
+		const bool file_deleted { !row[ "cluster_delete_time" ].isNull() };
+		// null when the record has no cluster at all, since the join then matches nothing
+		const bool writable { !row[ "read_only" ].isNull() && !row[ "read_only" ].as< bool >() };
+
+		if ( has_cluster && !file_deleted && writable )
+		{
+			// We might still have the file, So we'll return the cluster it should be in.
+			co_return row[ "cluster_id" ].as< ClusterID >();
+		}
 	}
 
-	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
+	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters WHERE read_only = FALSE" ) };
 
 	if ( clusters.empty() )
-		co_return std::unexpected(
-			createBadRequest( "No clusters available, You must create one before importing files" ) );
-
-	const auto rankCluster = []( const drogon::orm::Row& row ) -> std::size_t
 	{
-		const auto& size_used { row[ "size_used" ].as< std::size_t >() };
-		const auto& size_total { row[ "size_limit" ].as< std::size_t >() };
+		const auto total { co_await db->execSqlCoro( "SELECT count(*) FROM file_clusters" ) };
+
+		if ( total[ 0 ][ 0 ].as< std::int64_t >() == 0 )
+			co_return std::unexpected(
+				createBadRequest( "No clusters available, You must create one before importing files" ) );
+
+		co_return std::unexpected(
+			createBadRequest( "All clusters are read-only, You must mark one as writable before importing files" ) );
+	}
+
+	const auto rankCluster = []( const drogon::orm::Row& row ) -> double
+	{
+		const auto size_used { row[ "size_used" ].as< std::int64_t >() };
+		const auto size_limit { row[ "size_limit" ].as< std::int64_t >() };
 		// TODO: Add free capacity to the ranking
-		const double ratio_used = static_cast< double >( size_used ) / static_cast< double >( size_total );
-		return static_cast< std::size_t >( ratio_used * 100 );
+		if ( size_limit <= 0 ) return 0.0;
+		return static_cast< double >( size_used ) / static_cast< double >( size_limit );
 	};
 
-	std::vector< std::pair< std::size_t, ClusterID > > cluster_scores {};
+	std::vector< std::pair< double, ClusterID > > cluster_scores {};
 
 	for ( const auto& row : clusters )
 	{
@@ -174,30 +170,54 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 	const RecordID record,
 	const std::byte* data,
 	const std::size_t length,
-	const DbClientPtr db,
-	const FileMetaType type )
+	const DbClientPtr db )
 {
-	std::lock_guard lock { m_mutex };
 	const auto sha256_e { co_await getRecordSHA256( record, db ) };
 	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
 	const auto& sha256 { sha256_e.value() };
 
+	const auto current_cluster { co_await db->execSqlCoro(
+		"SELECT file_clusters.read_only FROM file_info "
+		"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
+		"WHERE file_info.record_id = $1",
+		record ) };
+
+	if ( !current_cluster.empty() && current_cluster[ 0 ][ "read_only" ].as< bool >() )
+	{
+		const auto exists { co_await checkFileExists( record, db ) };
+		return_unexpected_error( exists );
+
+		if ( exists.value() )
+		{
+			log::debug( "Record {} is already stored in a read-only cluster, not storing it again", record );
+			co_return {};
+		}
+	}
+
 	const auto& target_id { co_await findBestFolder( record, length, db ) };
 	return_unexpected_error( target_id );
 
-	if ( !m_clusters.contains( *target_id ) )
-		co_return std::unexpected( createInternalError( "Failed to find cluster with id {}", *target_id ) );
-
-	const auto& target_cluster { m_clusters.at( *target_id ) };
+	std::optional< ClusterInfo > target_cluster_copy {};
+	{
+		std::lock_guard lock { m_mutex };
+		const auto itter { m_clusters.find( *target_id ) };
+		if ( itter == m_clusters.end() )
+			co_return std::unexpected( createInternalError( "Failed to find cluster with id {}", *target_id ) );
+		target_cluster_copy = itter->second;
+	}
+	const auto& target_cluster { *target_cluster_copy };
 
 	log::debug( "Storing file for record {} in cluster {}", record, *target_id );
 	const auto record_mime { co_await mime::getRecordMime( record, db ) };
+	return_unexpected_error( record_mime );
 
-	const auto result { target_cluster.storeFile( sha256, data, length, record_mime.value().extension, type ) };
+	const auto result { target_cluster.storeFile( sha256, data, length, record_mime.value().extension ) };
 
 	if ( !result ) co_return result;
 
-	constexpr auto query { "UPDATE file_info SET cluster_store_time = now(), cluster_id = $2 WHERE record_id = $1" };
+	constexpr auto query {
+		"UPDATE file_info SET cluster_store_time = now(), cluster_id = $2, cluster_delete_time = NULL WHERE record_id = $1"
+	};
 
 	co_await db->execSqlCoro( query, record, target_cluster.m_id );
 
@@ -213,10 +233,10 @@ ClusterManager::ClusterManager()
 drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
 {
 	log::info( "Reloading clusters" );
+	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
+
 	std::lock_guard lock { m_mutex };
 	m_clusters.clear();
-
-	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
 
 	for ( const auto& cluster : clusters )
 	{
@@ -226,25 +246,6 @@ drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
 	}
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeFile(
-	const RecordID record,
-	const std::byte* data,
-	const std::size_t length,
-	const DbClientPtr db )
-{
-	const auto result { co_await storeFile( record, data, length, db, FileMetaType::NORMAL ) };
-	co_return result;
-}
-
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeThumbnail(
-	const RecordID record,
-	const std::byte* data,
-	const std::size_t length,
-	const DbClientPtr db )
-{
-	co_return co_await storeFile( record, data, length, db, FileMetaType::THUMBNAIL );
-}
-
 ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const ClusterID cluster_id )
 {
 	std::lock_guard lock { m_mutex };
@@ -252,7 +253,7 @@ ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const Clus
 	if ( itter == m_clusters.end() )
 		co_return std::unexpected( createBadRequest( "Invalid cluster id {}", cluster_id ) );
 
-	co_return itter->second.m_path.filesystemAbsolutePath();
+	co_return std::filesystem::absolute( itter->second.m_path );
 }
 
 ClusterManager& ClusterManager::getInstance()

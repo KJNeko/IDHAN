@@ -1,7 +1,7 @@
 type: object
 properties:
   string:
-    description: "Simple string for easy display"
+    description: Display form.
     type: string
     example: "1.2.3"
   major:

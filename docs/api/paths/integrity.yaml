@@ -1,11 +1,10 @@
 get:
   tags:
     - maintenance
-  summary: Run integrity check
+  summary: Runs an integrity check
   description: |
-    Returns information about the server's static file paths and lists all files
-    found under the static directory tree. Useful for diagnosing missing or
-    unexpected files on disk.
+    Reports the server's static file paths and every file under the static
+    directory tree.
   responses:
     200:
       description: Integrity check results
@@ -16,12 +15,12 @@ get:
             properties:
               static:
                 type: string
-                description: Path to the static directory
+                description: Path to the static directory.
               static_exists:
                 type: string
-                enum: ["true", "false"]
+                enum: [ "true", "false" ]
               files:
                 type: array
                 items:
                   type: string
-                description: All regular files found under the static parent directory
+                description: Regular files under the static parent directory.

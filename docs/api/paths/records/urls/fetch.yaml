@@ -2,7 +2,7 @@ get:
   tags:
     - records
     - urls
-  summary: Returns the list of URLs associated with a record
+  summary: Returns a record's URLs
   parameters:
     - name: record_id
       in: path

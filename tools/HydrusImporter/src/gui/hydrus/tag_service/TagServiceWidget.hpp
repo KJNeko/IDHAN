@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/28/25.
-//
 #pragma once
 
 #include <QWidget>
@@ -17,6 +14,7 @@ namespace Ui
 class TagServiceWidget;
 }
 
+//! Qt widget presenting a single Hydrus tag service and its import progress (driven by TagServiceWorker).
 class TagServiceWidget : public QWidget
 {
 	Q_OBJECT

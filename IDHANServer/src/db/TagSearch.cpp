@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 5/7/25.
-//
 #include "TagSearch.hpp"
 
 #include <expected>
@@ -20,7 +17,7 @@ ExpectedTask< TagID > TagSearch::idealize( const TagID id )
 	const auto result { co_await m_db->execSqlCoro(
 		"SELECT alias_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2", id, m_domain ) };
 
-	if ( id_check.empty() ) co_return std::unexpected( createBadRequest( "Invalid tag ID: {}", id ) );
+	if ( id_check.empty() ) co_return std::unexpected( createNotFound( "Tag not found: {}", id ) );
 
 	if ( result.empty() ) co_return id;
 
@@ -62,7 +59,8 @@ ExpectedTask< void > TagSearch::addChildren( TagID tag_id )
 	while ( !queue.empty() );
 
 	std::ranges::sort( m_ids );
-	std::ranges::unique( m_ids );
+	const auto duplicates { std::ranges::unique( m_ids ) };
+	m_ids.erase( duplicates.begin(), duplicates.end() );
 
 	co_return {};
 }
@@ -127,7 +125,7 @@ ExpectedTask< void > TagSearch::removeSiblings()
 		const auto remove_ret {
 			std::ranges::remove_if( m_ids, [ &id ]( const auto& i ) noexcept -> bool { return i == id; } )
 		};
-		to_remove.erase( remove_ret.begin(), remove_ret.end() );
+		m_ids.erase( remove_ret.begin(), remove_ret.end() );
 	}
 
 	co_return {};
@@ -148,9 +146,6 @@ ExpectedTask< void > TagSearch::addID( const TagID id )
 
 	const auto children_result { co_await addChildren( *idealized_id ) };
 	if ( !children_result ) co_return std::unexpected( children_result.error() );
-
-	// const auto siblings_result { co_await removeSiblings( *idealized_id ) };
-	// if ( !siblings_result ) co_return std::unexpected( siblings_result.error() );
 
 	co_return {};
 }

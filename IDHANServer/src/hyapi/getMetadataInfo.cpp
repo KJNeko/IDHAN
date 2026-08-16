@@ -1,9 +1,3 @@
-//
-// Created by kj16609 on 7/23/25.
-//
-
-#include "crypto/SHA256.hpp"
-#include "records/records.hpp"
 #include "HyAPI.hpp"
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
@@ -11,11 +5,14 @@
 #include "api/record/urls/urls.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
+#include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
+#include "helpers.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "metadata/metadata.hpp"
+#include "records/records.hpp"
 
 namespace idhan::hyapi
 {
@@ -39,7 +36,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getFileInf
 	{
 		data[ "size" ] = file_info[ 0 ][ "size" ].as< std::size_t >();
 		data[ "mime" ] = file_info[ 0 ][ "mime_name" ].as< std::string >();
-		data[ "ext" ] = file_info[ 0 ][ "extension" ].as< std::string >();
+		data[ "ext" ] = helpers::withLeadingDot( file_info[ 0 ][ "extension" ].as< std::string >() );
 	}
 
 	co_return data;
@@ -97,7 +94,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 
 	data[ "size" ] = size;
 	data[ "mime" ] = std::string( mime_name );
-	data[ "ext" ] = std::string( extension );
+	data[ "ext" ] = helpers::withLeadingDot( extension );
 
 	data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = cluster_store_time_timestamp;
 
@@ -184,7 +181,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ) )
 	{
-		// convert hashes to their respective record_ids
 		if ( auto result = co_await convertQueryRecordIDs( request, db ); !result ) co_return result.error();
 	}
 
@@ -218,8 +214,6 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		std::string mime_name;
 		std::string extension;
 	};
-
-	// auto response { drogon::HttpResponse::newAsyncStreamResponse() };
 
 	std::vector< drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > > tasks {};
 

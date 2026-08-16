@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 10/21/25.
-//
 #pragma once
 #include <json/value.h>
 
@@ -20,12 +17,11 @@ constexpr std::size_t min_request_size { 32 * 1024 };
 
 class CursorData
 {
-	std::variant< FileIOUring, std::string_view > m_io;
+	std::variant< std::shared_ptr< FileIOUring >, std::string_view > m_io;
 
 	mutable std::size_t m_buffer_pos { 0 };
 	mutable std::vector< std::byte > m_buffer {};
 
-	//! Populates the buffer with data from the offset and at least required_size
 	IDHANTask<> requestData( std::size_t offset, std::size_t required_size ) const;
 
 	IDHANTask< std::pair< const std::byte*, size_t > > checkData( std::size_t pos, std::size_t required_size ) const;
@@ -38,13 +34,14 @@ class CursorData
 
 	FGL_DELETE_ALL_RO5( CursorData );
 
-	CursorData( FileIOUring uring ) : m_io { uring } {}
+	CursorData( std::shared_ptr< FileIOUring > uring ) : m_io { std::move( uring ) } {}
 
 	CursorData( std::string_view data ) noexcept : m_io { data } {}
 };
 
 class Cursor
 {
+	std::shared_ptr< FileIOUring > m_io;
 	std::shared_ptr< CursorData > m_data {};
 	std::size_t m_pos { 0 };
 	std::string m_extension { "" };
@@ -54,7 +51,7 @@ class Cursor
   public:
 
 	Cursor() = delete;
-	Cursor( FileIOUring uring );
+	Cursor( std::shared_ptr< FileIOUring > uring );
 	Cursor( std::string_view view, const std::string& file_name );
 
 	FGL_DEFAULT_COPY( Cursor );
@@ -63,22 +60,19 @@ class Cursor
 	std::size_t size() const;
 	drogon::Task< std::string_view > data( std::size_t size ) const;
 
-	//! Tries to match `match` with current cursor position.
-	drogon::Task< bool > tryMatch( std::string_view match ) const;
+	[[nodiscard]] drogon::Task< bool > tryMatch( std::string_view match ) const;
 
-	//! Tries to match `match` with the current cursor position, if matched then the cursor will jump forward by
-	//! match.size()
-	drogon::Task< bool > tryMatchInc( std::string_view match );
+	[[nodiscard]] drogon::Task< bool > tryMatchInc( std::string_view match );
 
-	std::string_view fileExtension() const { return m_extension; }
+	[[nodiscard]] std::string_view fileExtension() const { return m_extension; }
 
 	void jumpTo( std::int64_t pos );
 
-	bool inc( std::size_t i = 1 );
+	[[nodiscard]] bool inc( std::size_t i = 1 );
 
 	void dec( std::size_t i = 1 );
 
-	std::size_t pos() const;
+	[[nodiscard]] std::size_t pos() const;
 };
 
 } // namespace idhan::mime

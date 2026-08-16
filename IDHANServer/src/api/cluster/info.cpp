@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 11/18/24.
-//
-
 #include <expected>
 
 #include "api/ClusterAPI.hpp"
@@ -20,7 +16,7 @@ ClusterAPI::ResponseTask ClusterAPI::info( drogon::HttpRequestPtr request, const
 ExpectedTask< Json::Value > getInfo( ClusterID cluster_id, const DbClientPtr transaction )
 {
 	const auto cluster_info { co_await transaction->execSqlCoro(
-		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, allowed_thumbnails, allowed_files, "
+		"SELECT cluster_id, ratio_number, size_used, size_limit, file_count, read_only, "
 		"cluster_name, folder_path FROM file_clusters WHERE cluster_id = $1",
 		cluster_id ) };
 
@@ -50,6 +46,29 @@ ExpectedTask< Json::Value > getInfo( ClusterID cluster_id, const DbClientPtr tra
 	json[ "file_count" ] = cluster_info[ 0 ][ "file_count" ].as< std::size_t >();
 	json[ "ratio_number" ] = cluster_info[ 0 ][ "ratio_number" ].as< std::size_t >();
 	json[ "path" ] = cluster_info[ 0 ][ "folder_path" ].as< std::string >();
+
+	const auto mime_rows { co_await transaction->execSqlCoro(
+		"SELECT m.name AS mime, COUNT(fi.record_id) AS cnt, COALESCE(SUM(fi.size), 0) AS bytes "
+		"FROM file_info fi "
+		"LEFT JOIN mime m ON fi.mime_id = m.mime_id "
+		"WHERE fi.cluster_id = $1 "
+		"GROUP BY m.name "
+		"ORDER BY bytes DESC",
+		cluster_id ) };
+
+	Json::Value by_mime { Json::arrayValue };
+	for ( const auto& row : mime_rows )
+	{
+		Json::Value entry {};
+		if ( row[ "mime" ].isNull() )
+			entry[ "mime" ] = Json::Value::null;
+		else
+			entry[ "mime" ] = row[ "mime" ].as< std::string >();
+		entry[ "count" ] = row[ "cnt" ].as< int64_t >();
+		entry[ "bytes" ] = row[ "bytes" ].as< int64_t >();
+		by_mime.append( entry );
+	}
+	json[ "by_mime" ] = by_mime;
 
 	// TODO: Type
 

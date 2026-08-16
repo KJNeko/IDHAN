@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 2/27/26.
-//
-
 #include "JobTaskPromise.hpp"
 
 #include <drogon/HttpResponse.h>
@@ -25,10 +21,18 @@ std::suspend_always JobTaskPromise::initial_suspend()
 	return {};
 }
 
-std::suspend_always JobTaskPromise::final_suspend() noexcept
+void JobFinalAwaiter::await_suspend( const std::coroutine_handle< JobTaskPromise > handle ) const noexcept
 {
-	m_status->m_completion_time = std::chrono::steady_clock::now();
-	m_status->m_done = true;
+	const std::shared_ptr< JobTaskStatus > status { handle.promise().m_status };
+
+	status->m_completion_time = std::chrono::steady_clock::now();
+
+	// Release: pairs with the cleanup thread's load of m_done, so it sees m_completion_time written.
+	status->m_done.store( true, std::memory_order_release );
+}
+
+JobFinalAwaiter JobTaskPromise::final_suspend() noexcept
+{
 	return {};
 }
 

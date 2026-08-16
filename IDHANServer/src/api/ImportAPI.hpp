@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 6/11/25.
-//
 #pragma once
 
 #include <drogon/HttpController.h>
@@ -10,6 +7,7 @@
 namespace idhan::api
 {
 
+//! Endpoint for importing files into IDHAN.
 class ImportAPI final : public drogon::HttpController< ImportAPI >
 {
 	drogon::Task< drogon::HttpResponsePtr > importFile( drogon::HttpRequestPtr request );

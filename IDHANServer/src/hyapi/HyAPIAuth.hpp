@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/6/24.
-//
 #pragma once
 
 #include <drogon/HttpFilter.h>
@@ -9,7 +6,7 @@
 namespace idhan::hyapi
 {
 
-class HyAPIAuth : public drogon::HttpCoroFilter< HyAPIAuth >
+class HyAPIAuth final : public drogon::HttpCoroFilter< HyAPIAuth >
 {
   public:
 

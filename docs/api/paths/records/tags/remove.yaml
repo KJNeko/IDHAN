@@ -2,7 +2,7 @@ post:
   tags:
     - tags
     - records
-  summary: Removes tags from a given record
+  summary: Removes tags from a record
   parameters:
     - name: record_id
       in: path
@@ -31,8 +31,8 @@ post:
               - 103
   responses:
     200:
-      description: Tags removed successfully
+      description: Tags removed
     400:
-      description: Invalid request body or missing tag_domain_id
+      description: Invalid body, or missing `tag_domain_id`
     500:
-      description: Internal server error (database operation failed)
+      description: Internal server error

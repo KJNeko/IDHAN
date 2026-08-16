@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 6/23/23.
-//
-
 #pragma once
 
 #include <fgl/defines.hpp>
@@ -17,6 +13,9 @@
 namespace idhan::hydrus
 {
 
+//! Fluent SQLite statement wrapper for the Hydrus import: bind parameters with operator<<, then
+//! execute and consume results with operator>> (into a value, a std::optional, a tuple, or a per-row
+//! callback). \note Unrelated to the server's Drogon SqlBinder; this operates directly on sqlite3.
 class Binder
 {
 	sqlite3* ptr;
@@ -33,6 +32,8 @@ class Binder
 
 	[[nodiscard]] Binder( sqlite3* ptr, std::string_view sql );
 
+	//! Binds \p t as the next positional parameter. \throws std::runtime_error if too many parameters
+	//! are supplied or the SQLite bind fails.
 	template < typename T >
 	Binder& operator<<( T&& t )
 	{
@@ -61,7 +62,6 @@ class Binder
 		return *this;
 	}
 
-	// Feed into value directly
 	template < typename T >
 		requires( ( !is_optional< T > ) && (!is_tuple< T >))
 	void operator>>( T& t )
@@ -76,7 +76,6 @@ class Binder
 			throw std::runtime_error( std::format( "No rows returned for query \"{}\"", sqlite3_sql( stmt ) ) );
 	}
 
-	// Feed output into optional
 	template < typename T >
 		requires( !is_optional< T > && (!is_tuple< T >))
 	void operator>>( std::optional< T >& t )
@@ -91,7 +90,6 @@ class Binder
 			t = std::nullopt;
 	}
 
-	// Call function using output
 	template < typename Function >
 		requires( ( !is_optional< Function > ) && (!is_tuple< Function >))
 	void operator>>( Function&& func )
@@ -109,7 +107,6 @@ class Binder
 		}
 	}
 
-	// Feed output into tuple
 	template < typename... Ts >
 		requires( !( is_optional< Ts > && ... ) ) && ( !( is_tuple< Ts > && ... ) )
 	void operator>>( std::tuple< Ts... >& tpl )

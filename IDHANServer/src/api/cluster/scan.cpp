@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 3/20/25.
-//
-
 #include <utility>
 
 #include "Config.hpp"
@@ -21,6 +17,7 @@
 #include "metadata/metadata.hpp"
 #include "mime/FileInfo.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "modules/RemoteModule.hpp"
 #include "threading/ExpectedTask.hpp"
 #include "trantor/net/EventLoopThread.h"
 #include "trantor/net/EventLoopThreadPool.h"
@@ -44,11 +41,10 @@ struct ScanParams
 	ScanParams() = default;
 };
 
-// Extracts boolean parameters safely
 static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 {
 	ScanParams p {};
-	p.read_only = true; // set to false when getting the cluster info only if it's not read only
+	p.read_only = true;
 	p.force_readonly = request->getOptionalParameter< bool >( "readonly" ).value_or( false );
 	p.verify_hash = request->getOptionalParameter< bool >( "verify_hash" ).value_or( false );
 
@@ -58,7 +54,7 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 	p.rescan_mime = request->getOptionalParameter< bool >( "rescan_mime" ).value_or( false );
 
 	p.scan_metadata = request->getOptionalParameter< bool >( "scan_metadata" ).value_or( true );
-	p.rescan_metadata = request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( true );
+	p.rescan_metadata = request->getOptionalParameter< bool >( "rescan_metadata" ).value_or( false );
 
 	p.stop_on_fail = request->getOptionalParameter< bool >( "stop_on_fail" ).value_or( false );
 
@@ -67,7 +63,6 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 
 	p.scan_metadata |= p.adopt_orphans; // orphans will need to be scanned for metadata
 	p.scan_mime |= p.scan_metadata; // mime is needed for metadata
-	// if read only then we need to recompute the hash because the file path can't be trusted anymore
 
 	return p;
 }
@@ -90,7 +85,9 @@ class ScanContext
 
 	[[nodiscard]] ExpectedTask< SHA256 > checkSHA256() const;
 	[[nodiscard]] ExpectedTask< RecordID > checkRecord( DbClientPtr db );
-	[[nodiscard]] ExpectedTask< void > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
+	//! Returns true if the duplicate file at m_path was deleted (record already stored correctly
+	//! in found_cluster_id). The caller must not touch m_path any further in that case.
+	[[nodiscard]] ExpectedTask< bool > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
 	[[nodiscard]] Task<> updateFileModifiedTime( DbClientPtr db );
 	[[nodiscard]] ExpectedTask< void > checkCluster( DbClientPtr db );
 	[[nodiscard]] Task< bool > hasMime( DbClientPtr db );
@@ -112,17 +109,12 @@ class ScanContext
 	  m_cluster_path( std::move( cluster_path ) )
 	{}
 
+	//! The file's current location. The scan may have moved it within the cluster.
+	[[nodiscard]] const std::filesystem::path& path() const { return m_path; }
+
 	ExpectedTask< void > scan( std::filesystem::path bad_dir, DbClientPtr db );
 };
 
-/**
- *
- * @param folder Folder to scan
- * @param scan_params Parameters for scanning
- * @param cluster_id Cluster ID this folder is in
- * @param cluster_path Path to the root of the cluster
- * @return Returns void if successful, an error if any files in the folder fail to scan, if scan_params.stop_on_fail is false then the scanFolder will complete successfully in all cases
- */
 static std::size_t countScanableFiles( const std::filesystem::path& directory )
 {
 	std::size_t count = 0;
@@ -146,7 +138,13 @@ static std::size_t countScanableFiles( const std::filesystem::path& directory )
 	return count;
 }
 
-ExpectedTask< void > scanFolder(
+struct FolderScanTotals
+{
+	std::size_t byte_size { 0 };
+	std::size_t file_count { 0 };
+};
+
+ExpectedTask< FolderScanTotals > scanFolder(
 	const std::filesystem::path folder,
 	const ScanParams& scan_params,
 	const ClusterID cluster_id,
@@ -157,6 +155,7 @@ ExpectedTask< void > scanFolder(
 	const std::filesystem::path bad_dir { cluster_path / "bad" };
 	auto db { drogon::app().getDbClient() };
 
+	FolderScanTotals totals {};
 	try
 	{
 		for ( const auto& file : std::filesystem::directory_iterator( folder ) )
@@ -178,7 +177,6 @@ ExpectedTask< void > scanFolder(
 				continue;
 			}
 
-			// ignore thumbnails
 			if ( file_path.extension() == ".thumbnail" )
 			{
 				log::trace( "Skipping thumbnail file: {}", file_path.string() );
@@ -187,10 +185,18 @@ ExpectedTask< void > scanFolder(
 
 			ScanContext ctx { file_path, cluster_id, cluster_path, scan_params };
 
-			const std::expected< void, drogon::HttpResponsePtr > file_result { co_await ctx.scan( bad_dir, db ) };
+			const auto file_result { co_await ctx.scan( bad_dir, db ) };
 
 			++processed_files;
 			log::trace( "Scan progress: {}/{}", processed_files.load(), total_files );
+
+			std::error_code size_error {};
+			const auto final_size { std::filesystem::file_size( ctx.path(), size_error ) };
+			if ( !size_error )
+			{
+				totals.byte_size += final_size;
+				++totals.file_count;
+			}
 
 			if ( scan_params.stop_on_fail ) return_unexpected_error( file_result );
 		}
@@ -201,7 +207,7 @@ ExpectedTask< void > scanFolder(
 		co_return std::unexpected( createInternalError( "Failed to scan folder {}: {}", folder.string(), e.what() ) );
 	}
 
-	co_return {};
+	co_return totals;
 }
 
 ExpectedTask< void > scanCluster(
@@ -233,6 +239,8 @@ ExpectedTask< void > scanCluster(
 	log::debug( "Estimated files to scan: {}", total_files );
 
 	std::atomic< std::size_t > processed_files { 0 };
+	std::size_t cluster_byte_size_total { 0 };
+	std::size_t cluster_file_count_total { 0 };
 
 	try
 	{
@@ -260,6 +268,11 @@ ExpectedTask< void > scanCluster(
 				log::warn( "Folder {} scan failed in cluster {}", folder.path().string(), cluster_id );
 				if ( scan_params.stop_on_fail ) return_unexpected_error( folder_result );
 			}
+			else
+			{
+				cluster_byte_size_total += folder_result->byte_size;
+				cluster_file_count_total += folder_result->file_count;
+			}
 		}
 	}
 	catch ( const std::filesystem::filesystem_error& e )
@@ -268,6 +281,13 @@ ExpectedTask< void > scanCluster(
 		co_return std::unexpected(
 			createInternalError( "Cannot list cluster directory {}: {}", cluster_path.string(), e.what() ) );
 	}
+
+	const auto db { drogon::app().getDbClient() };
+	co_await db->execSqlCoro(
+		"UPDATE file_clusters SET size_used = $1, file_count = $2 WHERE cluster_id = $3",
+		cluster_byte_size_total,
+		static_cast< std::int32_t >( cluster_file_count_total ),
+		cluster_id );
 
 	log::info( "Completed scan of cluster {}", cluster_id );
 	co_return {};
@@ -328,7 +348,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 
 	if ( result.empty() )
 	{
-		co_return createBadRequest( "Cluster not found" );
+		co_return createNotFound( "Cluster not found" );
 	}
 
 	scan_params.read_only = scan_params.force_readonly || result[ 0 ][ "read_only" ].as< bool >();
@@ -340,7 +360,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 	};
 
 	Json::Value response;
-	response[ "job_id" ] = static_cast< Json::UInt64 >( job_ctx->id() );
+	response[ "job_id" ] = job_ctx->id();
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
@@ -348,7 +368,7 @@ ResponseTask ClusterAPI::scan( const drogon::HttpRequestPtr request, const Clust
 ExpectedTask< SHA256 > ScanContext::checkSHA256() const
 {
 	const auto file_stem { m_path.stem().string() };
-	const FileIOUring uring { m_path };
+	std::shared_ptr< FileIOUring > uring { std::make_shared< FileIOUring >( m_path ) };
 
 	auto sha256_e { m_params.verify_hash ? co_await SHA256::hashCoro( uring ) : SHA256::fromHex( file_stem ) };
 
@@ -395,7 +415,6 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256() const
 			sha256_hex ) );
 	}
 
-	// Move the file to bad directory
 	try
 	{
 		std::filesystem::create_directories( m_bad_dir );
@@ -461,14 +480,14 @@ ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 	co_return found_record_id;
 }
 
-ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_cluster_id, drogon::orm::DbClientPtr db )
+ExpectedTask< bool > ScanContext::cleanupDoubleClusters( const ClusterID found_cluster_id, drogon::orm::DbClientPtr db )
 {
 	log::trace(
 		"cleanupDoubleClusters: record_id={}, found_cluster_id={}, current_cluster_id={}",
 		m_record_id,
 		found_cluster_id,
 		m_cluster_id );
-	if ( found_cluster_id == 0 ) co_return {};
+	if ( found_cluster_id == 0 ) co_return false;
 
 	if ( co_await filesystem::checkFileExists( m_record_id, db ) )
 	{
@@ -487,9 +506,10 @@ ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 				found_cluster_id );
 
 			std::filesystem::remove( m_path );
+			co_return true;
 		}
 
-		co_return {};
+		co_return false;
 	}
 
 	log::warn(
@@ -500,7 +520,7 @@ ExpectedTask< void > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 
 	co_await db->execSqlCoro( "UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", m_cluster_id, m_record_id );
 
-	co_return {};
+	co_return false;
 }
 
 Task<> ScanContext::updateFileModifiedTime( DbClientPtr db )
@@ -524,7 +544,6 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 	{
 		log::trace( "No file_info entry found for record {} (first scan or new adopt)", m_record_id );
 		co_return {};
-		// co_return co_await insertFileInfo( db );
 	}
 
 	if ( file_info[ 0 ][ "modified_time" ].isNull() )
@@ -533,7 +552,6 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		co_await updateFileModifiedTime( db );
 	}
 
-	// we found a cluster, check if it's the one we are about to add too
 	const auto found_cluster_id { file_info[ 0 ][ 0 ].as< ClusterID >() };
 	FGL_ASSERT( m_cluster_id != 0, "Cluster should not be zero" );
 	FGL_ASSERT( found_cluster_id != 0, "Cluster should not be zero" );
@@ -551,9 +569,11 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		// if found. Otherwise the record's cluster is set to the current cluster
 		const auto cleanup_result { co_await cleanupDoubleClusters( found_cluster_id, db ) };
 		return_unexpected_error( cleanup_result );
+
+		// m_path was deleted as a duplicate; nothing left at this path to path-check or move
+		if ( cleanup_result.value() ) co_return {};
 	}
 
-	// now check if the file is in the right path
 	const auto current_parent { m_path.parent_path() };
 	const auto expected_cluster_subfolder { filesystem::getFileFolder( m_sha256 ) };
 	const auto expected_parent_path { m_cluster_path / expected_cluster_subfolder };
@@ -614,9 +634,8 @@ Task< bool > ScanContext::hasMime( DbClientPtr db )
 ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 {
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
-	const FileIOUring file_io { m_path };
+	auto file_io { std::make_shared< FileIOUring >( m_path ) };
 
-	// skip checking if we have a mime if we are going to rescan it
 	if ( !m_params.rescan_mime && co_await hasMime( db ) )
 	{
 		log::trace( "Skipping metadata scan because it already had metadata and rescan_mime was set to false" );
@@ -625,7 +644,8 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 	log::trace( "Starting mime scan for {} (Record {})", m_path.filename().string(), m_record_id );
 	const auto mime_string_e { co_await mime::getMimeDatabase()->scan( file_io ) };
-	log::trace( "Mime scan completed for {} (Record {}), result: {}",
+	log::trace(
+		"Mime scan completed for {} (Record {}), result: {}",
 		m_path.filename().string(),
 		m_record_id,
 		mime_string_e.has_value() ? mime_string_e.value() : "nullopt" );
@@ -687,7 +707,6 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 {
-	// No mime was found in the previous step
 	if ( m_mime_name.empty() )
 	{
 		co_return std::unexpected( createInternalError(
@@ -703,7 +722,6 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		};
 		if ( !current_metadata.empty() )
 		{
-			// we are not wanting to rescan metadata, so we abort silently.
 			log::trace(
 				"Skipping metadata scan for {} because it's already been parsed and rescan_metadata was false",
 				m_record_id );
@@ -711,9 +729,8 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		}
 	}
 
-	const std::shared_ptr< MetadataModuleI > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
+	const std::shared_ptr< modules::RemoteModule > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
 
-	// No parser was found
 	if ( !metadata_parser )
 	{
 		log::trace( "No metadata parser found for mime {} (Record {})", m_mime_name, m_record_id );
@@ -723,15 +740,21 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	log::trace( "Found metadata parser for mime {} (Record {})", m_mime_name, m_record_id );
 
-	//TODO: In order to protect the main process from poorly written modules, Either fork or launch a new process to actually run the parser
+	auto input_e { modules::CallInput::forPath( m_path ) };
 
-	FileIOUring file_io { m_path, FileIOUring::ReadOnly };
+	if ( !input_e )
+	{
+		co_return std::unexpected(
+			createInternalError( "Failed to open file for record {}: {}", m_record_id, input_e.error() ) );
+	}
 
-	const auto [ file_data, file_size ] { file_io.mmapReadOnly() };
-
-	const idhan::data_view data_view { static_cast< const std::uint8_t* >( file_data ), file_size };
-	idhan::ModuleCallData call_data { .file_view = data_view, .mime_name = m_mime_name, .extra = {} };
-	const auto metadata_e { metadata_parser->parseFile( call_data ) };
+	const modules::RemoteCallData call_data {
+		.input = std::make_shared< const modules::CallInput >( std::move( *input_e ) ),
+		.mime_name = m_mime_name,
+		.extra = {},
+		.depth = 0
+	};
+	const auto metadata_e { co_await metadata_parser->parseFile( call_data ) };
 
 	if ( metadata_e )
 	{
