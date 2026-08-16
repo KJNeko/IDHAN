@@ -6,6 +6,7 @@ services:
       POSTGRES_USER: idhan
       POSTGRES_PASSWORD: idhan
       POSTGRES_DB: idhan-db
+      POSTGRES_INITDB_ARGS: "--locale=C.UTF-8"
     volumes:
       - idhan_pg18:/var/lib/postgresql
     ports:
