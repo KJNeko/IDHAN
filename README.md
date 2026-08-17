@@ -15,6 +15,23 @@ Dev: ![Dev Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflo
 
 [Discord](https://discord.gg/YMYXS884cP)
 
+# Screenshots
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/search.webp" alt="1"><br>1</td>
+<td width="50%"><img src="docs/images/embedding.webp" alt="2"><br>2</td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/urls_tags.webp" alt="3"><br>3</td>
+<td width="50%"><img src="docs/images/notes.webp" alt="4"><br>4</td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/imports.webp" alt="5"><br>5</td>
+<td width="50%"><img src="docs/images/db_stats.webp" alt="6"><br>6</td>
+</tr>
+</table>
+
 # Features
 
 - Media file imports
