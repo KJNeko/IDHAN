@@ -207,6 +207,91 @@ SCENARIO_METHOD( MigratedSchema, "Parent resolution of tag mappings", "[db][tags
 			}
 		}
 	}
+
+	GIVEN( "two characters under one series, itself under a copyright" )
+	{
+		const auto domain { insertDomain( tx, "characters" ) };
+		const auto record { insertRecord( tx, 1 ) };
+		const auto ahri { insertTag( tx, "character", "ahri" ) };
+		const auto kindred { insertTag( tx, "character", "kindred" ) };
+		const auto league { insertTag( tx, "series", "league of legends" ) };
+		const auto riot { insertTag( tx, "copyright", "riot games" ) };
+
+		insertParent( tx, domain, league, ahri );
+		insertParent( tx, domain, league, kindred );
+		insertParent( tx, domain, riot, league );
+
+		insertMapping( tx, record, ahri, domain );
+		insertMapping( tx, record, kindred, domain );
+
+		WHEN( "both characters are on the record" )
+		{
+			THEN( "it carries both of them, the series, and the copyright" )
+			{
+				CHECK( finalTags( tx, record, domain ) == sorted( { ahri, kindred, league, riot } ) );
+			}
+
+			THEN( "the copyright is counted once per character holding the series up" )
+			{
+				CHECK( internalCount( tx, record, riot, league, domain ) == 2 );
+			}
+		}
+
+		WHEN( "one character is removed" )
+		{
+			removeMapping( tx, record, ahri, domain );
+
+			THEN( "the other character keeps the series and the copyright standing" )
+			{
+				CHECK( finalTags( tx, record, domain ) == sorted( { kindred, league, riot } ) );
+				CHECK(
+					parentRows( tx, record, domain )
+					== std::vector { ParentRow { league, kindred, 0 }, ParentRow { riot, league, 1 } } );
+			}
+
+			AND_WHEN( "the other character is removed as well" )
+			{
+				removeMapping( tx, record, kindred, domain );
+
+				THEN( "nothing is left holding the series or the copyright up" )
+				{
+					CHECK( finalTags( tx, record, domain ).empty() );
+					CHECK( parentRows( tx, record, domain ).empty() );
+				}
+			}
+		}
+
+		WHEN( "the copyright is also applied to the record in its own right" )
+		{
+			insertMapping( tx, record, riot, domain );
+
+			AND_WHEN( "one character is removed" )
+			{
+				removeMapping( tx, record, ahri, domain );
+
+				THEN( "the record still carries everything the other character holds up" )
+				{
+					CHECK( finalTags( tx, record, domain ) == sorted( { kindred, league, riot } ) );
+				}
+			}
+
+			AND_WHEN( "every character is removed" )
+			{
+				removeMapping( tx, record, ahri, domain );
+				removeMapping( tx, record, kindred, domain );
+
+				THEN( "the copyright stays, since the record holds it and not just its children" )
+				{
+					CHECK( finalTags( tx, record, domain ) == std::vector { riot } );
+				}
+
+				THEN( "the series goes, since only the characters were holding it up" )
+				{
+					CHECK( parentRows( tx, record, domain ).empty() );
+				}
+			}
+		}
+	}
 }
 
 } // namespace idhan::test
