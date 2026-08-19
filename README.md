@@ -15,6 +15,11 @@ Dev: ![Dev Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflo
 
 [Discord](https://discord.gg/YMYXS884cP)
 
+There is a backup of this repo laocated at my own forgejo instance that can be
+found [here](https://git.futuregadgetlabs.net/KJ16609/IDHAN).
+
+Issues should be brought up [here](https://github.com/KJNeko/IDHAN/issues)
+
 # Screenshots
 
 <table>
