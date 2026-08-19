@@ -104,9 +104,6 @@ semantic searching.
 The server listens on port **16609** by default. Interactive API docs (Swagger UI) are available at `/api` when the
 server is running.
 
-A hosted version of the API docs is available at [idhan.futuregadgetlabs.net](https://idhan.futuregadgetlabs.net). (Once
-I get this working that is)
-
 Additional documentation:
 
 - [Database schema](docs/database-schema.md)
