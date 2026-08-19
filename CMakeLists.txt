@@ -93,6 +93,5 @@ if (BUILD_IDHAN_WEB)
 endif ()
 
 if (BUILD_IDHAN_TESTS)
-	#IDHANTests
 	add_subdirectory(tests)
 endif ()
