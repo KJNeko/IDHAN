@@ -51,7 +51,7 @@ enum class FileState
 	FileValid
 };
 
-ExpectedTask< FileState > validateFile( RecordID record_id );
+ExpectedTask< FileState > validateFile( RecordID record_id, drogon::orm::DbClientPtr db );
 
 [[nodiscard]] std::int64_t getLastWriteTime( const std::filesystem::path& path );
 
