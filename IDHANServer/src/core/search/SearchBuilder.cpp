@@ -474,6 +474,15 @@ Task< search::Set > SearchBuilder::evaluate(
 
 	const auto key_type { search::sortKeySpec( m_sort_type ).type };
 
+	log::debug(
+		"Search evaluate: {} positive tags, {} negative tags, {} wildcards, {} namespaces, {} domains, {}",
+		m_positive_tags.size(),
+		m_negative_tags.size(),
+		m_positive_wildcards.size() + m_negative_wildcards.size(),
+		m_namespace_ids.size(),
+		tag_domain_ids.empty() ? std::string( "all" ) : std::to_string( tag_domain_ids.size() ),
+		search::describeSortKey( m_sort_type ) );
+
 	if ( const auto impossible { impossiblePredicate() } )
 	{
 		log::warn( "system:{} was bounded to a range nothing can satisfy; the search matches no records", *impossible );
@@ -632,6 +641,7 @@ void SearchBuilder::setSortOrder( const SortOrder value )
 void SearchBuilder::setLimit( const std::optional< std::size_t > value )
 {
 	m_limit = value;
+	log::debug( "Set search limit to {}", value.value_or( -1 ) );
 }
 
 void SearchBuilder::setOffset( const std::optional< std::size_t > value )
@@ -822,17 +832,23 @@ void mergeUnique( std::vector< T >& target, std::vector< T > incoming )
 
 void SearchBuilder::addPositiveTags( std::vector< TagID > tag_ids )
 {
+	const auto added { tag_ids.size() };
 	mergeUnique( m_positive_tags, std::move( tag_ids ) );
+	log::debug( "Added {} positive tags, {} total", added, m_positive_tags.size() );
 }
 
 void SearchBuilder::addNegativeTags( std::vector< TagID > tag_ids )
 {
+	const auto added { tag_ids.size() };
 	mergeUnique( m_negative_tags, std::move( tag_ids ) );
+	log::debug( "Added {} negative tags, {} total", added, m_negative_tags.size() );
 }
 
 void SearchBuilder::addNamespaces( std::vector< NamespaceID > namespace_ids )
 {
+	const auto added { namespace_ids.size() };
 	mergeUnique( m_namespace_ids, std::move( namespace_ids ) );
+	log::debug( "Added {} wildcard namespaces, {} total", added, m_namespace_ids.size() );
 }
 
 //! Sorts and dedupes a wildcard's match set, then appends it as its own group.

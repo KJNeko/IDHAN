@@ -1,5 +1,7 @@
 #include "SortKey.hpp"
 
+#include "logging/format_ns.hpp"
+
 namespace idhan::search
 {
 
@@ -28,7 +30,7 @@ constexpr std::string_view modified_time_expr { "(EXTRACT(EPOCH FROM fi.modified
 constexpr std::string_view creation_time_expr { "(EXTRACT(EPOCH FROM rc.creation_time) * 1000000)::BIGINT" };
 
 constexpr std::string_view records_join { " JOIN records rc USING (record_id)" };
-constexpr std::string_view video_join { " JOIN video_metadata vm USING (record_id)" };
+constexpr std::string_view video_join { " LEFT JOIN video_metadata vm USING (record_id)" };
 
 constexpr std::string_view num_tags_join {
 	" LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
@@ -55,11 +57,13 @@ SortKeySpec sortKeySpec( const SortType type )
 		case SortType::HASH:
 			return { records_join, "rc.sha256", SortKeyType::Hash, false };
 		case SortType::DURATION:
-			return { video_join, "vm.duration", SortKeyType::Real, false };
+			// a record with no video metadata has no duration, which orders as zero rather than dropping out
+			return { video_join, "COALESCE(vm.duration, 0)", SortKeyType::Real, false };
 		case SortType::FRAMERATE:
-			return { video_join, "vm.framerate", SortKeyType::Real, false };
+			return { video_join, "COALESCE(vm.framerate, 0)", SortKeyType::Real, false };
 		case SortType::HAS_AUDIO:
-			return { video_join, "vm.has_audio::INT", SortKeyType::Integer, false };
+			// silent records and records with no video metadata both rank below records with audio
+			return { video_join, "COALESCE(vm.has_audio::INT, 0)", SortKeyType::Integer, false };
 		case SortType::WIDTH:
 			return { resolution_joins, width_expr, SortKeyType::Integer, true };
 		case SortType::HEIGHT:
@@ -74,6 +78,57 @@ SortKeySpec sortKeySpec( const SortType type )
 		case SortType::RANDOM:
 			return { {}, {}, SortKeyType::None, false };
 	}
+}
+
+std::string_view sortTypeName( const SortType type )
+{
+	switch ( type )
+	{
+		default:
+			[[fallthrough]];
+		case SortType::FILESIZE:
+			return "filesize";
+		case SortType::IMPORT_TIME:
+			return "import time";
+		case SortType::MODIFIED_TIME:
+			return "modified time";
+		case SortType::MIME:
+			return "mime";
+		case SortType::RECORD_TIME:
+			return "record time";
+		case SortType::HASH:
+			return "hash";
+		case SortType::DURATION:
+			return "duration";
+		case SortType::FRAMERATE:
+			return "framerate";
+		case SortType::HAS_AUDIO:
+			return "has audio";
+		case SortType::WIDTH:
+			return "width";
+		case SortType::HEIGHT:
+			return "height";
+		case SortType::NUM_PIXELS:
+			return "num pixels";
+		case SortType::RATIO:
+			return "ratio";
+		case SortType::NUM_TAGS:
+			return "num tags";
+		case SortType::RANDOM:
+			return "random";
+	}
+}
+
+std::string describeSortKey( const SortType type )
+{
+	const auto spec { sortKeySpec( type ) };
+
+	return format_ns::format(
+		"sort '{}' key={} joins={} excludes_null_keys={}",
+		sortTypeName( type ),
+		spec.expression.empty() ? "<none>" : spec.expression,
+		spec.joins.empty() ? "<none>" : spec.joins,
+		spec.exclude_null );
 }
 
 SortKeyColumn emptyColumn( const SortKeyType type )

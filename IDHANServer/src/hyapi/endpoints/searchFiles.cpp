@@ -81,13 +81,28 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	// include_current_tags and include_pending_tags are both things that are not needed for IDHAN so we just skip this.
 
+	for ( const auto* const ignored :
+	      { "tag_service_key", "tag_service_name", "file_service_key", "file_service_name", "file_domain" } )
+	{
+		if ( const auto value = request->getOptionalParameter< std::string >( ignored ) )
+			log::warn( "hyapi search ignores {}={}; every domain is searched", ignored, value.value() );
+	}
+
 	const auto file_sort_type { static_cast< HydrusSortType >(
 		request->getOptionalParameter< std::uint64_t >( "file_sort_type" ).value_or( HydrusSortType::DEFAULT ) ) };
 
 	const auto file_sort_asc { request->getOptionalParameter< bool >( "file_sort_asc" ).value_or( true ) };
 
-	builder.setSortType( hyToIDHANSortType( file_sort_type ) );
+	const auto sort_type { hyToIDHANSortType( file_sort_type ) };
+
+	builder.setSortType( sort_type );
 	builder.setSortOrder( file_sort_asc ? SortOrder::ASC : SortOrder::DESC );
+
+	log::debug(
+		"hyapi search: hydrus sort {} -> {}, {}",
+		static_cast< std::uint64_t >( file_sort_type ),
+		search::sortTypeName( sort_type ),
+		search::describeSortKey( sort_type ) );
 
 	const auto return_file_ids { request->getOptionalParameter< bool >( "return_file_ids" ).value_or( true ) };
 	const auto return_hashes { request->getOptionalParameter< bool >( "return_hashes" ).value_or( false ) };
@@ -103,6 +118,15 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	{
 		builder.setDisplay( HydrusDisplayType::DISPLAY );
 	}
+
+	log::debug(
+		"hyapi search: {} tags, {} system tags, display={}, asc={}, return_ids={}, return_hashes={}",
+		search_tags.size(),
+		system_tags.size(),
+		tag_display_type,
+		file_sort_asc,
+		return_file_ids,
+		return_hashes );
 
 	auto end = std::chrono::system_clock::now();
 	const auto diff { std::chrono::duration_cast< std::chrono::milliseconds >( end - start ).count() };
