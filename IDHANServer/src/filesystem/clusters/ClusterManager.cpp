@@ -184,14 +184,19 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::s
 
 	if ( !current_cluster.empty() && current_cluster[ 0 ][ "read_only" ].as< bool >() )
 	{
-		const auto exists { co_await checkFileExists( record, db ) };
-		return_unexpected_error( exists );
+		const auto state { co_await validateFile( record, db ) };
+		return_unexpected_error( state );
 
-		if ( exists.value() )
+		if ( state.value() == FileState::FileValid )
 		{
 			log::debug( "Record {} is already stored in a read-only cluster, not storing it again", record );
 			co_return {};
 		}
+
+		log::warn(
+			"Record {} is stored in a read-only cluster but the file there is {}. Storing it again elsewhere",
+			record,
+			state.value() == FileState::FileNotFound ? "missing" : "corrupt" );
 	}
 
 	const auto& target_id { co_await findBestFolder( record, length, db ) };
