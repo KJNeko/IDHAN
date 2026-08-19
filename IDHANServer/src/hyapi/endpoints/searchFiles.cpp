@@ -64,7 +64,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 
 	const auto search_result_error { co_await builder.setTags( search_tags ) };
 	// an unchecked failure here would leave the builder with no tags and search everything
-	if ( !search_result_error ) co_return *search_result_error;
+	return_optional_error( search_result_error );
 
 	try
 	{
@@ -114,7 +114,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchFiles( drogon::HttpRequ
 	const auto query_diff {
 		std::chrono::duration_cast< std::chrono::milliseconds >( query_end - query_start ).count()
 	};
-	log::info( "Query took {}ms", query_diff );
+	log::info( "Query took {}ms and returned {} records", query_diff, result.record_ids.size() );
 
 	Json::Value out {};
 
