@@ -19,6 +19,15 @@ static std::pair< int, int > counts( pqxx::transaction_base& tx, const int tag_i
 	return { result[ 0 ][ 0 ].as< int >(), result[ 0 ][ 1 ].as< int >() };
 }
 
+//! The row's physical version. An update rewrites it even when every value stays the same, so an unchanged
+//! ctid is proof that nothing wrote to the row.
+static std::string countsVersion( pqxx::transaction_base& tx, const int tag_id, const int tag_domain_id )
+{
+	return tx.query_value< std::string >(
+		"SELECT ctid::text FROM tag_counts WHERE tag_id = $1 AND tag_domain_id = $2",
+		pqxx::params { tag_id, tag_domain_id } );
+}
+
 SCENARIO_METHOD( MigratedSchema, "Tag counts", "[db][tags][counts]" )
 {
 	pqxx::work tx { connection() };
@@ -66,6 +75,19 @@ SCENARIO_METHOD( MigratedSchema, "Tag counts", "[db][tags][counts]" )
 
 				CHECK( counts( tx, vi, domain ).second == 0 );
 				CHECK( counts( tx, violet, domain ).second == 1 );
+			}
+		}
+
+		WHEN( "a mapping is written without changing what it resolves to" )
+		{
+			const auto before { countsVersion( tx, ahri, domain ) };
+
+			tx.exec( "UPDATE active_tag_mappings SET ideal_tag_id = ideal_tag_id" );
+
+			THEN( "the counts are left alone rather than decremented and incremented again" )
+			{
+				CHECK( countsVersion( tx, ahri, domain ) == before );
+				CHECK( counts( tx, ahri, domain ) == std::pair { 1, 1 } );
 			}
 		}
 
