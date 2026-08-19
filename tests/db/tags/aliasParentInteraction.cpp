@@ -153,9 +153,9 @@ SCENARIO_METHOD( MigratedSchema, "Aliases and parents resolving together", "[db]
 				"INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id) VALUES ($1, $3, $4), ($2, $3, $4)",
 				pqxx::params { nintendo, nintendo_ead, nintendo_co, domain } );
 
-			THEN( "the two rows collapse onto one, carrying the sum of what they held" )
+			THEN( "the two rows collapse onto one, still counting the one origin holding them up" )
 			{
-				CHECK( internalCount( tx, record, nintendo_co, metroid, domain ) == 2 );
+				CHECK( internalCount( tx, record, nintendo_co, metroid, domain ) == 1 );
 				CHECK( internalCount( tx, record, nintendo, metroid, domain ) == std::nullopt );
 				CHECK( internalCount( tx, record, nintendo_ead, metroid, domain ) == std::nullopt );
 			}
