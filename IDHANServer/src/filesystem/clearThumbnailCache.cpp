@@ -28,18 +28,23 @@ std::expected< std::size_t, std::string > clearThumbnailCache()
 	}
 
 	std::size_t files { 0 };
-	std::error_code count_error {};
-	for ( const auto& entry : std::filesystem::recursive_directory_iterator( path, count_error ) )
+	for ( const auto& subfolder : std::filesystem::directory_iterator( path, error ) )
 	{
-		std::error_code entry_error {};
-		if ( entry.is_regular_file( entry_error ) ) ++files;
+		if ( !subfolder.is_directory() ) continue;
+		const auto subfolder_name { subfolder.path().filename().string() };
+		const auto starts_with_expected { subfolder_name.starts_with( 't' ) };
+		const auto is_correct_len { subfolder_name.size() == 3 /* 'f00' */ };
+
+		if ( !starts_with_expected || !is_correct_len )
+		{
+			log::warn( "Thumbnail directory had unknown folder {}, Ignoring it", subfolder_name );
+			continue;
+		}
+
+		std::filesystem::remove_all( subfolder, error );
+		if ( error ) return std::unexpected( std::format( "{}: {}", subfolder.path().string(), error.message() ) );
+		std::filesystem::create_directories( subfolder );
 	}
-
-	std::filesystem::remove_all( path, error );
-	if ( error ) return std::unexpected( std::format( "{}: {}", path.string(), error.message() ) );
-
-	std::filesystem::create_directories( path, error );
-	if ( error ) return std::unexpected( std::format( "{}: {}", path.string(), error.message() ) );
 
 	return files;
 }
