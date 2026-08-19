@@ -199,6 +199,4 @@ class HydrusAPI : public drogon::HttpController< HydrusAPI >
 
 ExpectedTask< void > convertQueryRecordIDs( drogon::HttpRequestPtr& request, DbClientPtr db );
 
-drogon::Task< Json::Value > getServiceList( DbClientPtr db );
-
 } // namespace idhan::hyapi

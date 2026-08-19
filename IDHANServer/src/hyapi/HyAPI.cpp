@@ -20,6 +20,7 @@
 #include "logging/ScopedTimer.hpp"
 #include "logging/log.hpp"
 #include "records/records.hpp"
+#include "services/Services.hpp"
 
 namespace idhan::hyapi
 {
@@ -75,55 +76,58 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::verifyAccessKey( [[maybe_unus
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }
 
-drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getService( [[maybe_unused]] drogon::HttpRequestPtr request )
+drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getService( drogon::HttpRequestPtr request )
 {
-	idhan::fixme();
-	FGL_UNIMPLEMENTED();
-}
+	const auto service_key { request->getOptionalParameter< std::string >( "service_key" ) };
+	const auto service_name { request->getOptionalParameter< std::string >( "service_name" ) };
 
-drogon::Task< Json::Value > getServiceList( DbClientPtr db )
-{
-	const auto local_tags_result { co_await db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains" ) };
+	if ( !service_key && !service_name ) co_return createBadRequest( "Must provide a service_key or service_name" );
 
-	Json::Value services {};
+	const auto db { drogon::app().getDbClient() };
+	const auto services { co_await listServices( db ) };
 
-	for ( auto& row : local_tags_result )
+	std::optional< ServiceInfo > found {};
+
+	if ( service_key )
 	{
-		Json::Value info {};
-		info[ "name" ] = row[ "domain_name" ].as< std::string >();
-		info[ "type" ] = hydrus::gen_constants::LOCAL_TAG;
-		info[ "type_pretty" ] = "local tag service";
+		found = findServiceByKey( services, service_key.value() );
 
-		const auto service_key {
-			format_ns::format( "{}-{}", hydrus::gen_constants::LOCAL_TAG, row[ "tag_domain_id" ].as< TagDomainID >() )
-		};
+		if ( !found ) co_return createNotFound( "Did not find a service with key \"{}\"", service_key.value() );
+	}
+	else
+	{
+		found = findServiceByName( services, service_name.value() );
 
-		info[ "service_key" ] = service_key;
-
-		services[ service_key ] = std::move( info );
+		if ( !found ) co_return createNotFound( "Did not find a service with name \"{}\"", service_name.value() );
 	}
 
-	co_return services;
+	Json::Value root {};
+	root[ "service" ] = servicesList( std::span( &found.value(), 1 ) )[ 0 ];
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
 
 drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getServices( [[maybe_unused]] drogon::HttpRequestPtr request )
 {
 	const auto db { drogon::app().getDbClient() };
+	const auto services { co_await listServices( db ) };
 
 	Json::Value root {};
 
-	// Deprecated in v531
-	root[ "tag_repositories" ] = Json::Value( Json::arrayValue );
-	root[ "local_files" ] = Json::Value( Json::arrayValue );
-	root[ "local_updates" ] = Json::Value( Json::arrayValue );
-	root[ "file_repositories" ] = Json::Value( Json::arrayValue );
-	root[ "all_local_media" ] = Json::Value( Json::arrayValue );
-	root[ "all_local_media" ] = Json::Value( Json::arrayValue );
-	root[ "all_known_files" ] = Json::Value( Json::arrayValue );
-	root[ "all_known_tags" ] = Json::Value( Json::arrayValue );
-	root[ "trash" ] = Json::Value( Json::arrayValue );
+	// Deprecated in v531, but still populated for clients that have not moved to services_v2
+	root[ "local_tags" ] = servicesOfType( services, hydrus::gen_constants::LOCAL_TAG );
+	root[ "tag_repositories" ] = servicesOfType( services, hydrus::gen_constants::TAG_REPOSITORY );
+	root[ "local_files" ] = servicesOfType( services, hydrus::gen_constants::LOCAL_FILE_DOMAIN );
+	root[ "local_updates" ] = servicesOfType( services, hydrus::gen_constants::LOCAL_FILE_UPDATE_DOMAIN );
+	root[ "file_repositories" ] = servicesOfType( services, hydrus::gen_constants::FILE_REPOSITORY );
+	root[ "all_local_files" ] = servicesOfType( services, hydrus::gen_constants::HYDRUS_LOCAL_FILE_STORAGE );
+	root[ "all_local_media" ] = servicesOfType( services, hydrus::gen_constants::COMBINED_LOCAL_FILE_DOMAINS );
+	root[ "all_known_files" ] = servicesOfType( services, hydrus::gen_constants::COMBINED_FILE );
+	root[ "all_known_tags" ] = servicesOfType( services, hydrus::gen_constants::COMBINED_TAG );
+	root[ "trash" ] = servicesOfType( services, hydrus::gen_constants::LOCAL_FILE_TRASH_DOMAIN );
 
-	root[ "services" ] = co_await getServiceList( db );
+	root[ "services" ] = servicesDict( services );
+	root[ "services_v2" ] = servicesList( services );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
@@ -301,10 +305,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getClientOptions( [[maybe_unu
 	Json::Reader reader;
 	reader.parse( RAW_JSON, root );
 
-	root[ "services" ] = Json::Value( Json::objectValue );
-
 	auto db { drogon::app().getDbClient() };
-	root[ "services" ] = co_await getServiceList( db );
+	root[ "services" ] = servicesDict( co_await listServices( db ) );
 
 	root[ "version" ] = HYDRUS_MIMICED_API_VERSION;
 	root[ "hydrus_version" ] = HYDRUS_MIMICED_VERSION;

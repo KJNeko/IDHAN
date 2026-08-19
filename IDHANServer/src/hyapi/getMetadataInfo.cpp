@@ -10,6 +10,7 @@
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
 #include "helpers.hpp"
+#include "hyapi/services/Services.hpp"
 #include "logging/ScopedTimer.hpp"
 #include "metadata/metadata.hpp"
 #include "records/records.hpp"
@@ -96,7 +97,15 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	data[ "mime" ] = std::string( mime_name );
 	data[ "ext" ] = helpers::withLeadingDot( extension );
 
-	data[ "file_services" ][ "current" ][ "0" ][ "time_imported" ] = cluster_store_time_timestamp;
+	data[ "file_services" ][ "current" ] = Json::Value( Json::objectValue );
+	data[ "file_services" ][ "deleted" ] = Json::Value( Json::objectValue );
+
+	if ( !row[ "cluster_id" ].isNull() )
+	{
+		const auto cluster_key { fileClusterServiceKey( row[ "cluster_id" ].as< ClusterID >() ) };
+
+		data[ "file_services" ][ "current" ][ cluster_key ][ "time_imported" ] = cluster_store_time_timestamp;
+	}
 
 	const auto url_json_e { co_await fetchUrlsStrings( record_id, db ) };
 	if ( !url_json_e ) co_return std::unexpected( url_json_e.error() );
@@ -136,8 +145,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 		const auto& tag_id { storage_tag[ "tag_id" ] };
 		const auto& tag_text { storage_tag[ "tag_text" ] };
 
-		const auto service_key { format_ns::format(
-			"{}-{}", hydrus::gen_constants::LOCAL_TAG, tag_domain_id.drogon::orm::Field::as< TagDomainID >() ) };
+		const auto service_key { tagDomainServiceKey( tag_domain_id.drogon::orm::Field::as< TagDomainID >() ) };
 
 		data[ "tags" ][ service_key ][ "storage_tags" ][ "0" ].Json::Value::append( tag_text.as< std::string >() );
 	}
@@ -154,8 +162,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 		const auto& tag_id { display_tag[ "tag_id" ] };
 		const auto& tag_text { display_tag[ "tag_text" ] };
 
-		const auto service_key { format_ns::format(
-			"{}-{}", hydrus::gen_constants::LOCAL_TAG, tag_domain_id.drogon::orm::Field::as< TagDomainID >() ) };
+		const auto service_key { tagDomainServiceKey( tag_domain_id.drogon::orm::Field::as< TagDomainID >() ) };
 
 		data[ "tags" ][ service_key ][ "display_tags" ][ "0" ].Json::Value::append( tag_text.as< std::string >() );
 	}
@@ -198,11 +205,12 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 	Json::Value metadata_json {};
 
-	const auto services { co_await getServiceList( db ) };
+	const auto services { servicesList( co_await listServices( db ) ) };
 
 	const auto hash_result { co_await db->execSqlCoro(
 		"SELECT record_id, sha256, coalesce(size, 0), coalesce(mime.name, '') as mime_name, coalesce(coalesce(extension, "
-		"best_extension), '') as extension, cluster_store_time FROM records LEFT JOIN file_info USING (record_id) LEFT "
+		"best_extension), '') as extension, cluster_store_time, cluster_id FROM records LEFT JOIN file_info USING "
+		"(record_id) LEFT "
 		"JOIN mime USING (mime_id) WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME "[])",
 		std::move( record_ids ) ) };
 
