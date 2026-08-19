@@ -489,7 +489,19 @@ ExpectedTask< bool > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 		m_cluster_id );
 	if ( found_cluster_id == 0 ) co_return false;
 
-	if ( co_await filesystem::checkFileExists( m_record_id, db ) )
+	const auto found_state { co_await filesystem::validateFile( m_record_id, db ) };
+	return_unexpected_error( found_state );
+
+	if ( *found_state == filesystem::FileState::FileInvalidHash )
+	{
+		log::warn(
+			"Record {} file in cluster {} does not match it's hash. Keeping the copy in cluster {} instead",
+			m_record_id,
+			found_cluster_id,
+			m_cluster_id );
+	}
+
+	if ( *found_state == filesystem::FileState::FileValid )
 	{
 		log::warn(
 			"Found identical file for record {} in both cluster {} and {}.",
@@ -512,11 +524,14 @@ ExpectedTask< bool > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 		co_return false;
 	}
 
-	log::warn(
-		"File {} was missing from it's expected cluster of {}. Setting the record as being stored in cluster {} instead",
-		m_record_id,
-		found_cluster_id,
-		m_cluster_id );
+	if ( *found_state == filesystem::FileState::FileNotFound )
+	{
+		log::warn(
+			"File {} was missing from it's expected cluster of {}. Setting the record as being stored in cluster {} instead",
+			m_record_id,
+			found_cluster_id,
+			m_cluster_id );
+	}
 
 	co_await db->execSqlCoro( "UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", m_cluster_id, m_record_id );
 
