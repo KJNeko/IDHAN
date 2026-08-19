@@ -153,17 +153,22 @@ Task< Set > runFetch( FetchContext ctx, std::string query, std::string label )
 
 	// The two branches differ only in whether the domain array is bound.
 	Set set {};
+	std::size_t rows { 0 };
 
 	if ( ctx.tag_domains.empty() )
 	{
 		const auto result { co_await ctx.db->execSqlCoro( query ) };
+		rows = result.size();
 		set = readSet( result, key_type, ctx.want_hashes );
 	}
 	else
 	{
 		const auto result { co_await ctx.db->execSqlCoro( query, std::move( ctx.tag_domains ) ) };
+		rows = result.size();
 		set = readSet( result, key_type, ctx.want_hashes );
 	}
+
+	log::debug( "Search fetch {}: {} rows -> {} records", label, rows, set.size() );
 
 	const auto elapsed {
 		std::chrono::duration_cast< std::chrono::microseconds >( std::chrono::steady_clock::now() - started ).count()
