@@ -1,6 +1,7 @@
 #include <array>
 #include <charconv>
 #include <cstdlib>
+#include <malloc.h>
 
 #include "CommandLine.hpp"
 #include "ConnectionArguments.hpp"
@@ -134,6 +135,10 @@ void checkSystemLocale()
 
 int main( int argc, char** argv )
 {
+	mallopt( M_ARENA_MAX, 2 );
+	mallopt( M_MMAP_THRESHOLD, 1024 * 1024 * 128 );
+	mallopt( M_MMAP_MAX, 0 );
+
 	using namespace idhan;
 
 	cli::Parser parser {

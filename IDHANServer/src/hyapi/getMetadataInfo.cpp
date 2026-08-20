@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "HyAPI.hpp"
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
@@ -17,6 +19,37 @@
 
 namespace idhan::hyapi
 {
+//! The keys every record's metadata object is built from.
+//!
+//! Inserting through a Json::StaticString stores the pointer instead of copying the key, which is one allocation
+//! saved per key per record. Only inserts are worth spelling this way; a read already looks up without copying.
+//! Every one of these must outlive the values built with it, which a literal does.
+static const Json::StaticString KEY_FILE_ID { "file_id" };
+static const Json::StaticString KEY_HASH { "hash" };
+static const Json::StaticString KEY_SIZE { "size" };
+static const Json::StaticString KEY_MIME { "mime" };
+static const Json::StaticString KEY_EXT { "ext" };
+static const Json::StaticString KEY_FILE_SERVICES { "file_services" };
+static const Json::StaticString KEY_CURRENT { "current" };
+static const Json::StaticString KEY_DELETED { "deleted" };
+static const Json::StaticString KEY_TIME_IMPORTED { "time_imported" };
+static const Json::StaticString KEY_KNOWN_URLS { "known_urls" };
+static const Json::StaticString KEY_DETAILED_KNOWN_URLS { "detailed_known_urls" };
+static const Json::StaticString KEY_REQUEST_URL { "request_url" };
+static const Json::StaticString KEY_NORMALISED_URL { "normalised_url" };
+static const Json::StaticString KEY_URL_TYPE { "url_type" };
+static const Json::StaticString KEY_URL_TYPE_STRING { "url_type_string" };
+static const Json::StaticString KEY_CAN_PARSE { "can_parse" };
+static const Json::StaticString KEY_TAGS { "tags" };
+static const Json::StaticString KEY_STORAGE_TAGS { "storage_tags" };
+static const Json::StaticString KEY_DISPLAY_TAGS { "display_tags" };
+static const Json::StaticString KEY_NAME { "name" };
+static const Json::StaticString KEY_TYPE_PRETTY { "type_pretty" };
+static const Json::StaticString KEY_TYPE { "type" };
+static const Json::StaticString KEY_FILETYPE_ENUM { "filetype_enum" };
+static const Json::StaticString KEY_METADATA { "metadata" };
+static const Json::StaticString KEY_SERVICES { "services" };
+
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getFileInfo(
 	DbClientPtr db,
 	const RecordID record_id,
@@ -29,15 +62,15 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getFileInf
 
 	if ( file_info.empty() )
 	{
-		data[ "size" ] = 0;
-		data[ "mime" ] = "";
-		data[ "ext" ] = "";
+		data[ KEY_SIZE ] = 0;
+		data[ KEY_MIME ] = "";
+		data[ KEY_EXT ] = "";
 	}
 	else
 	{
-		data[ "size" ] = file_info[ 0 ][ "size" ].as< std::size_t >();
-		data[ "mime" ] = file_info[ 0 ][ "mime_name" ].as< std::string >();
-		data[ "ext" ] = helpers::withLeadingDot( file_info[ 0 ][ "extension" ].as< std::string >() );
+		data[ KEY_SIZE ] = file_info[ 0 ][ "size" ].as< std::size_t >();
+		data[ KEY_MIME ] = file_info[ 0 ][ "mime_name" ].as< std::string >();
+		data[ KEY_EXT ] = helpers::withLeadingDot( file_info[ 0 ][ "extension" ].as< std::string >() );
 	}
 
 	co_return data;
@@ -67,11 +100,42 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	}
 
 	const auto mime_name { metadata[ 0 ][ "mime_name" ].as< std::string >() };
-	data[ "filetype_enum" ] = hydrus::hy_constants::mimeToHyType( mime_name );
+	data[ KEY_FILETYPE_ENUM ] = hydrus::hy_constants::mimeToHyType( mime_name );
 
 	co_await metadata::addFileSpecificInfo( data, record_id, db );
 
 	co_return data;
+}
+
+//! Records whose metadata is gathered concurrently within one file_metadata request.
+//!
+//! Every record in flight holds its own JSON tree and the results of the four queries behind it, so this is what
+//! bounds the memory one request costs. A client asking for tens of thousands of ids pays for this many at a time
+//! instead of all of them at once.
+static constexpr std::size_t METADATA_BATCH_SIZE { 1 };
+
+static void appendTagsByDomain( Json::Value& tags, const Json::StaticString which, const drogon::orm::Result& rows )
+{
+	static const Json::StaticString FIRST_INDEX { "0" };
+
+	TagDomainID current_domain {};
+	Json::Value* target { nullptr };
+
+	for ( const auto& row : rows )
+	{
+		const auto tag_domain_id { row[ "tag_domain_id" ].as< TagDomainID >() };
+
+		if ( target == nullptr || tag_domain_id != current_domain )
+		{
+			current_domain = tag_domain_id;
+			target = &tags[ cachedTagDomainServiceKey( tag_domain_id ) ][ which ][ FIRST_INDEX ];
+		}
+
+		const auto& tag_text { row[ "tag_text" ] };
+		const auto* const begin { tag_text.c_str() };
+
+		target->append( Json::Value( begin, begin + tag_text.length() ) );
+	}
 }
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadataFromRow(
@@ -90,41 +154,44 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 
 	Json::Value data {};
 
-	data[ "file_id" ] = record_id;
-	data[ "hash" ] = sha256.hex();
+	data[ KEY_FILE_ID ] = record_id;
+	data[ KEY_HASH ] = sha256.hex();
 
-	data[ "size" ] = size;
-	data[ "mime" ] = std::string( mime_name );
-	data[ "ext" ] = helpers::withLeadingDot( extension );
+	data[ KEY_SIZE ] = size;
+	data[ KEY_MIME ] = std::string( mime_name );
+	data[ KEY_EXT ] = helpers::withLeadingDot( extension );
 
-	data[ "file_services" ][ "current" ] = Json::Value( Json::objectValue );
-	data[ "file_services" ][ "deleted" ] = Json::Value( Json::objectValue );
+	data[ KEY_FILE_SERVICES ][ KEY_CURRENT ] = Json::Value( Json::objectValue );
+	data[ KEY_FILE_SERVICES ][ KEY_DELETED ] = Json::Value( Json::objectValue );
 
 	if ( !row[ "cluster_id" ].isNull() )
 	{
 		const auto cluster_key { fileClusterServiceKey( row[ "cluster_id" ].as< ClusterID >() ) };
 
-		data[ "file_services" ][ "current" ][ cluster_key ][ "time_imported" ] = cluster_store_time_timestamp;
+		data[ KEY_FILE_SERVICES ][ KEY_CURRENT ][ cluster_key ][ KEY_TIME_IMPORTED ] = cluster_store_time_timestamp;
 	}
 
 	const auto url_json_e { co_await fetchUrlsStrings( record_id, db ) };
 	if ( !url_json_e ) co_return std::unexpected( url_json_e.error() );
 
-	data[ "known_urls" ] = Json::Value( Json::arrayValue );
-	data[ "detailed_known_urls" ] = Json::Value( Json::arrayValue );
+	data[ KEY_KNOWN_URLS ] = Json::Value( Json::arrayValue );
+	data[ KEY_DETAILED_KNOWN_URLS ] = Json::Value( Json::arrayValue );
+
+	Json::Value& known_urls { data[ KEY_KNOWN_URLS ] };
+	Json::Value& detailed_known_urls { data[ KEY_DETAILED_KNOWN_URLS ] };
 
 	for ( const auto& url_str : url_json_e.value() )
 	{
-		data[ "known_urls" ].append( url_str );
+		known_urls.append( url_str );
 
 		Json::Value advanced_url_info {};
-		advanced_url_info[ "request_url" ] = url_str;
-		advanced_url_info[ "normalised_url" ] = url_str;
-		advanced_url_info[ "url_type" ] = 5; // Unknown URL
-		advanced_url_info[ "url_type_string" ] = "unknown";
-		advanced_url_info[ "can_parse" ] = false;
+		advanced_url_info[ KEY_REQUEST_URL ] = url_str;
+		advanced_url_info[ KEY_NORMALISED_URL ] = url_str;
+		advanced_url_info[ KEY_URL_TYPE ] = 5; // Unknown URL
+		advanced_url_info[ KEY_URL_TYPE_STRING ] = "unknown";
+		advanced_url_info[ KEY_CAN_PARSE ] = false;
 
-		data[ "detailed_known_urls" ].append( advanced_url_info );
+		detailed_known_urls.append( std::move( advanced_url_info ) );
 	}
 
 	{
@@ -137,18 +204,11 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags WHERE record_id = $1",
 		record_id ) };
 
-	data[ "tags" ] = Json::Value( Json::objectValue );
+	data[ KEY_TAGS ] = Json::Value( Json::objectValue );
+	Json::Value& tags { data[ KEY_TAGS ] };
 
-	for ( const auto& storage_tag : co_await storage_tags )
-	{
-		const auto& tag_domain_id { storage_tag[ "tag_domain_id" ] };
-		const auto& tag_id { storage_tag[ "tag_id" ] };
-		const auto& tag_text { storage_tag[ "tag_text" ] };
-
-		const auto service_key { tagDomainServiceKey( tag_domain_id.drogon::orm::Field::as< TagDomainID >() ) };
-
-		data[ "tags" ][ service_key ][ "storage_tags" ][ "0" ].Json::Value::append( tag_text.as< std::string >() );
-	}
+	const auto storage_rows { co_await storage_tags };
+	appendTagsByDomain( tags, KEY_STORAGE_TAGS, storage_rows );
 
 	auto display_tags { db->execSqlCoro(
 		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings NATURAL JOIN tags WHERE record_id = $1"
@@ -156,26 +216,20 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 		"SELECT tag_domain_id, tag_id, tag_text FROM active_tag_mappings_parents NATURAL JOIN tags WHERE "
 		"record_id = $1",
 		record_id ) };
-	for ( const auto& display_tag : co_await display_tags )
-	{
-		const auto& tag_domain_id { display_tag[ "tag_domain_id" ] };
-		const auto& tag_id { display_tag[ "tag_id" ] };
-		const auto& tag_text { display_tag[ "tag_text" ] };
-
-		const auto service_key { tagDomainServiceKey( tag_domain_id.drogon::orm::Field::as< TagDomainID >() ) };
-
-		data[ "tags" ][ service_key ][ "display_tags" ][ "0" ].Json::Value::append( tag_text.as< std::string >() );
-	}
+	const auto display_rows { co_await display_tags };
+	appendTagsByDomain( tags, KEY_DISPLAY_TAGS, display_rows );
 
 	for ( const auto& service : services )
 	{
 		const auto service_key { service[ "service_key" ].asString() };
 
-		if ( !data[ "tags" ].isMember( service_key ) ) continue;
+		if ( !tags.isMember( service_key ) ) continue;
 
-		data[ "tags" ][ service_key ][ "name" ] = service[ "name" ];
-		data[ "tags" ][ service_key ][ "type_pretty" ] = service[ "type_pretty" ];
-		data[ "tags" ][ service_key ][ "type" ] = service[ "type" ];
+		Json::Value& service_tags { tags[ service_key ] };
+
+		service_tags[ KEY_NAME ] = service[ "name" ];
+		service_tags[ KEY_TYPE_PRETTY ] = service[ "type_pretty" ];
+		service_tags[ KEY_TYPE ] = service[ "type" ];
 	}
 
 	co_return data;
@@ -223,27 +277,47 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		std::string extension;
 	};
 
-	std::vector< drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > > tasks {};
-
-	for ( const auto& row : hash_result )
-	{
-		tasks.emplace_back( getMetadataFromRow( db, services, row ) );
-	}
-
 	Json::Value out {};
-	out[ "metadata" ] = std::move( metadata_json );
+	out[ KEY_METADATA ] = std::move( metadata_json );
 
-	auto when_all_awaiter { drogon::when_all( std::move( tasks ) ) };
-	auto values { co_await when_all_awaiter };
+	Json::Value& metadata_out { out[ KEY_METADATA ] };
 
-	for ( const auto& json_value : values )
+	const std::size_t row_count { hash_result.size() };
+
+	for ( std::size_t offset { 0 }; offset < row_count; offset += METADATA_BATCH_SIZE )
 	{
-		if ( !json_value ) co_return json_value.error();
+		const auto batch_end { std::min( offset + METADATA_BATCH_SIZE, row_count ) };
 
-		out[ "metadata" ].append( *json_value );
+		if constexpr ( METADATA_BATCH_SIZE == 1 )
+		{
+			auto result { co_await getMetadataFromRow( db, services, hash_result[ offset ] ) };
+			if ( !result ) co_return result.error();
+
+			metadata_out.append( std::move( *result ) );
+		}
+		else
+		{
+			std::vector< drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > > tasks {};
+			tasks.reserve( batch_end - offset );
+
+			for ( std::size_t index { offset }; index < batch_end; ++index )
+			{
+				tasks.emplace_back( getMetadataFromRow( db, services, hash_result[ index ] ) );
+			}
+
+			auto when_all_awaiter { drogon::when_all( std::move( tasks ) ) };
+			auto values { co_await when_all_awaiter };
+
+			for ( auto& json_value : values )
+			{
+				if ( !json_value ) co_return json_value.error();
+
+				metadata_out.append( std::move( *json_value ) );
+			}
+		}
 	}
 
-	out[ "services" ] = services;
+	out[ KEY_SERVICES ] = services;
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( std::move( out ) );
 }
