@@ -48,6 +48,10 @@ Json::Value servicesOfType( std::span< const ServiceInfo > services, std::size_t
 //! \return The service key for the tag domain \p tag_domain_id.
 [[nodiscard]] std::string tagDomainServiceKey( TagDomainID tag_domain_id );
 
+//! \return The same key as \ref tagDomainServiceKey, held for the process lifetime so repeated lookups of one
+//!         domain encode it once. The reference stays valid once returned.
+[[nodiscard]] const std::string& cachedTagDomainServiceKey( TagDomainID tag_domain_id );
+
 //! \return The service key for the file cluster \p cluster_id.
 [[nodiscard]] std::string fileClusterServiceKey( ClusterID cluster_id );
 

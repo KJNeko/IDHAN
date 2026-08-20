@@ -2,6 +2,9 @@
 
 #include <array>
 #include <charconv>
+#include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
 
 #include "hyapi/constants/ServiceTypes.hpp"
 #include "logging/format_ns.hpp"
@@ -50,6 +53,20 @@ std::string encodeServiceKey( const std::string_view identifier )
 std::string tagDomainServiceKey( const TagDomainID tag_domain_id )
 {
 	return encodeServiceKey( format_ns::format( "{}{}", TAG_DOMAIN_PREFIX, tag_domain_id ) );
+}
+
+const std::string& cachedTagDomainServiceKey( const TagDomainID tag_domain_id )
+{
+	static std::shared_mutex mutex {};
+	static std::unordered_map< TagDomainID, std::string > keys {};
+
+	{
+		const std::shared_lock< std::shared_mutex > read_lock { mutex };
+		if ( const auto it { keys.find( tag_domain_id ) }; it != keys.end() ) return it->second;
+	}
+
+	const std::unique_lock< std::shared_mutex > write_lock { mutex };
+	return keys.try_emplace( tag_domain_id, tagDomainServiceKey( tag_domain_id ) ).first->second;
 }
 
 std::string fileClusterServiceKey( const ClusterID cluster_id )
