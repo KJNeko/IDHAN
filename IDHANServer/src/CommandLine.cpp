@@ -49,9 +49,10 @@ void Parser::printUsage() const
 	{
 		std::string name { "  --" };
 		name += option.name;
-		name += " <";
+		// An optional value is shown in brackets, the way the flag may actually be written.
+		name += option.implicit_value.empty() ? " <" : " [<";
 		name += option.value_name;
-		name += '>';
+		name += option.implicit_value.empty() ? ">" : ">]";
 
 		printOptionLine( name, option.description );
 		if ( !option.default_value.empty() ) std::cout << " [default: " << option.default_value << ']';
@@ -111,7 +112,16 @@ void Parser::process( const int argc, char** argv )
 			continue;
 		}
 
-		if ( i + 1 >= argc )
+		// Only a following non-option token can be this option's value; `--flag --other` is two options.
+		const bool value_follows { i + 1 < argc && stripDashes( argv[ i + 1 ] ).empty() };
+
+		if ( !option->implicit_value.empty() && !value_follows )
+		{
+			m_values[ std::string { name } ] = std::string { option->implicit_value };
+			continue;
+		}
+
+		if ( !value_follows )
 		{
 			std::cerr << "Missing value after '--" << name << "'.\n\n";
 			printUsage();

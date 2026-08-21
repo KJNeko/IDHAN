@@ -8,13 +8,17 @@
 # Launch options
 
 - `-h` `--help`: Print help
-- `--testmode`: Forces the PostgreSQL schema to `test` instead of `public` (used for automated tests)
-- `--use_stdout`: Enable logging to stdout (enabled by default; pass `--use_stdout 0` to disable)
+- `-v` `--version`: Print the version and exit
+- `--use_stdout [on/off]`: Enable logging to stdout (enabled by default; pass `--use_stdout 0` to disable)
 - `--log_level <LEVEL>`: Set the log level (`trace`, `debug`, `info`, `warning`, `error`, `critical`)
 - `--config <PATH>`: Use this config file exclusively. IDHAN will not load configs from other locations.
 - `--pg_user <USER>`: PostgreSQL user (overrides the config file)
 - `--pg_host <HOST>`: PostgreSQL hostname (overrides the config file)
-- `--force_start`: Force IDHAN to start even if it detects a previous instance may still be running
+- `--pg_schema <SCHEMA>`: PostgreSQL schema to use (overrides the config file, default `public`)
+- `--force_start [on/off]`: Force IDHAN to start even if it detects a previous instance may still be running
+
+Every option also accepts `--name=value`. The two flag-style options (`--use_stdout`, `--force_start`) may be
+written bare, in which case they read as on.
 
 # Config order
 
@@ -24,7 +28,7 @@ All config options can also be set via environment variables using the format `I
 
 ## Linux
 
-1. CLI flags (`--pg_user`, `--pg_host`)
+1. CLI flags (`--pg_user`, `--pg_host`, `--pg_schema`, `--log_level`, `--use_stdout`)
 2. Environment variables (`IDHAN_<GROUP>_<NAME>`)
 3. `./config.toml`
 4. `~/.config/idhan/config.toml`
