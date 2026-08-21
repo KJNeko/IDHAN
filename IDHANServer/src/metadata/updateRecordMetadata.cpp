@@ -17,14 +17,23 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 {
 	const auto simple_type { metadata.m_simple_type };
 
-	co_await db->execSqlCoro(
-		"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2) "
-		"ON CONFLICT (record_id) DO UPDATE SET simple_mime_type = $2",
-		record_id,
-		std::to_underlying( simple_type ) );
-
-	const Json::Value& json { metadata.m_extra };
-	co_await db->execSqlCoro( "UPDATE metadata SET json = $2 WHERE record_id = $1", record_id, json.toStyledString() );
+	if ( metadata.m_extra.isNull() )
+	{
+		co_await db->execSqlCoro(
+			"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2) "
+			"ON CONFLICT (record_id) DO UPDATE SET simple_mime_type = $2",
+			record_id,
+			std::to_underlying( simple_type ) );
+	}
+	else
+	{
+		co_await db->execSqlCoro(
+			"INSERT INTO metadata (record_id, simple_mime_type, json) VALUES ($1, $2, $3) "
+			"ON CONFLICT (record_id) DO UPDATE SET simple_mime_type = $2, json = $3",
+			record_id,
+			std::to_underlying( simple_type ),
+			metadata.m_extra.toStyledString() );
+	}
 
 	switch ( simple_type )
 	{
@@ -91,7 +100,7 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 
 				std::uint32_t archive_id { 0 };
 
-				if ( existing_metadata.size() > 0 )
+				if ( !existing_metadata.empty() )
 				{
 					archive_id = existing_metadata[ 0 ][ 0 ].as< std::uint32_t >();
 				}
