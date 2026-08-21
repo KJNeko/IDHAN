@@ -252,7 +252,9 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	log::trace( "printCoreLocation completed" );
 
 	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", 0 ) };
-	if ( config_threads == 0 ) config_threads = std::thread::hardware_concurrency();
+	if ( config_threads == 0 )
+		config_threads =
+			std::max( std::thread::hardware_concurrency(), 4u ); // use up to 4 threads if no threads are configured.
 	std::size_t hardware_count { std::max( config_threads, 2ul ) };
 	std::size_t io_threads { hardware_count };
 
