@@ -13,6 +13,7 @@ import type {
   AutocompleteResult,
   MetadataRequest,
   MetadataResponse,
+    MimeMap,
   PluginManifest,
   SearchRequest,
   SearchResponse,
@@ -132,6 +133,11 @@ export const api = {
       similarity: row.similarity,
     }));
   },
+
+    /** Every mime id the server knows, mapped to its name (GET /mime). */
+    listMimes(signal?: AbortSignal): Promise<MimeMap> {
+        return request<MimeMap>('/mime', {signal});
+    },
 };
 
 /** Raw wire row from GET /tags/autocomplete, before normalisation to AutocompleteResult. */
