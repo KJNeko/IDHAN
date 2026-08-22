@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <array>
+#include <ranges>
 
 #include "HyAPI.hpp"
 #include "IDHANTypes.hpp"
@@ -49,6 +51,7 @@ static const Json::StaticString KEY_TYPE { "type" };
 static const Json::StaticString KEY_FILETYPE_ENUM { "filetype_enum" };
 static const Json::StaticString KEY_METADATA { "metadata" };
 static const Json::StaticString KEY_SERVICES { "services" };
+static const Json::StaticString KEY_SERVICES_V2 { "services_v2" };
 
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getFileInfo(
 	DbClientPtr db,
@@ -102,7 +105,25 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	const auto mime_name { metadata[ 0 ][ "mime_name" ].as< std::string >() };
 	data[ KEY_FILETYPE_ENUM ] = hydrus::hy_constants::mimeToHyType( mime_name );
 
-	co_await metadata::addFileSpecificInfo( data, record_id, db );
+	// The collector's base fields duplicate what this response already spells in Hydrus' own naming,
+	// so only its file specific keys are merged in.
+	static const std::array< std::string_view, 6 > base_keys {
+		{ "record_id", "hashes", "size", "mime", "extension", "parsed" }
+	};
+
+	const auto batch { co_await metadata::collectRecordInfo( { record_id }, db ) };
+
+	if ( !batch.records.empty() )
+	{
+		const Json::Value& info { batch.records[ 0 ] };
+
+		for ( const auto& key : info.getMemberNames() )
+		{
+			if ( std::ranges::find( base_keys, key ) != base_keys.end() ) continue;
+
+			data[ key ] = info[ key ];
+		}
+	}
 
 	co_return data;
 }
@@ -259,7 +280,10 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 	Json::Value metadata_json {};
 
-	const auto services { servicesList( co_await listServices( db ) ) };
+	// Hydrus reports these twice: 'services' keyed by service key, and 'services_v2' as an array with
+	// the key inside each entry. The per-record decoration below wants the array form.
+	const auto service_infos { co_await listServices( db ) };
+	const auto services { servicesList( service_infos ) };
 
 	const auto hash_result { co_await db->execSqlCoro(
 		"SELECT record_id, sha256, coalesce(size, 0), coalesce(mime.name, '') as mime_name, coalesce(coalesce(extension, "
@@ -317,7 +341,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 		}
 	}
 
-	out[ KEY_SERVICES ] = services;
+	out[ KEY_SERVICES ] = servicesDict( service_infos );
+	out[ KEY_SERVICES_V2 ] = services;
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( std::move( out ) );
 }

@@ -69,13 +69,62 @@ export interface SearchResponse {
 
 export interface MetadataRequest {
   record_ids: number[];
-  /** Defaults to ["basic"] server-side; tags are excluded unless asked for. */
-  include?: string[];
 }
 
-/** Loosely typed: the metadata payload shape depends on `include`. Panels narrow it themselves. */
+/**
+ * One record's metadata, identical in shape to GET /records/{id}/info.
+ *
+ * Only `record_id` and `hashes` are always present. A record with no file stops there; an unparsed
+ * one adds `parsed: false`; everything past `simple_type` depends on which category the file is.
+ */
+export interface RecordMetadata {
+    record_id: number;
+    hashes: { sha256: string };
+
+    /** Absent when the record has no file at all. */
+    size?: number;
+    mime?: string;
+    extension?: string;
+
+    /** False when no module has produced metadata for this record yet. */
+    parsed?: boolean;
+    simple_type?: SimpleType;
+    /** Free-form extra fields the parsing module chose to surface. */
+    extra?: Record<string, unknown> | null;
+
+    /** image, video, animation, image_project. */
+    width?: number;
+    height?: number;
+    /** image, image_project, audio. */
+    channels?: number;
+    /** image_project. */
+    layers?: number;
+
+    /** video, animation, audio. */
+    duration?: number;
+    /** video, audio. */
+    bitrate?: number;
+    /** video. */
+    framerate?: number;
+    has_audio?: boolean;
+    /** audio. */
+    sample_rate?: number;
+    /** animation. */
+    frame_count?: number;
+    loops?: boolean;
+
+    /** archive. */
+    archive_id?: number;
+    encrypted?: boolean;
+    file_count?: number;
+
+    [key: string]: unknown;
+}
+
+export type SimpleType = 'none' | 'image' | 'video' | 'animation' | 'audio' | 'archive' | 'image_project';
+
 export interface MetadataResponse {
-  records: Array<Record<string, unknown> & { record_id: number }>;
+    records: RecordMetadata[];
   missing: number[];
 }
 

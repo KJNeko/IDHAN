@@ -117,6 +117,7 @@ enum class MetadataVariant : std::uint8_t
 	IMAGE_PROJECT = 3,
 	ANIMATION = 4,
 	ARCHIVE = 5,
+	AUDIO = 6,
 };
 
 //! Whether \p value is one of the enumerators declared above.
@@ -178,6 +179,7 @@ enum class MetadataVariant : std::uint8_t
 		case MetadataVariant::IMAGE_PROJECT:
 		case MetadataVariant::ANIMATION:
 		case MetadataVariant::ARCHIVE:
+		case MetadataVariant::AUDIO:
 			return true;
 	}
 
