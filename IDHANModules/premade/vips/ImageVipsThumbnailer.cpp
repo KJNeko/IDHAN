@@ -9,7 +9,7 @@
 
 using namespace idhan;
 
-std::vector< std::string_view > ImageVipsThumbnailer::handleableMimes()
+std::vector< idhan::MimeID > ImageVipsThumbnailer::handleableMimes()
 {
 	return vipsHandleable();
 }
@@ -20,7 +20,7 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 	std::size_t height )
 {
 	// Only attempt formats we declare handleable (handleableMimes() is derived from this same set).
-	if ( !VIPS_MIMES.contains( data.mime_name ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
+	if ( !VIPS_MIMES.contains( data.mime_id ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
 
 	VipsModuleSource source { data.file };
 	if ( !source.valid() ) return std::unexpected( ModuleError { "Failed to open the file as a vips source" } );

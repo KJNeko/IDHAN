@@ -1,5 +1,7 @@
 #include "ModuleLoader.hpp"
 
+#include "MimeIDs.hpp"
+
 #include <sys/prctl.h>
 
 #include <algorithm>
@@ -223,12 +225,13 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 			}
 		}
 
-		for ( const auto& mime : entry.mimes )
+		for ( const auto mime_id : entry.mimes )
 		{
-			if ( ( entry.type & ModuleTypeFlags::METADATA ) != 0 ) m_by_mime_metadata[ mime ].emplace_back( slot );
+			if ( ( entry.type & ModuleTypeFlags::METADATA ) != 0 ) m_by_mime_metadata[ mime_id ].emplace_back( slot );
 			if ( ( entry.type & ModuleTypeFlags::THUMBNAILER ) != 0 )
-				m_by_mime_thumbnailer[ mime ].emplace_back( slot );
-			if ( ( entry.type & ModuleTypeFlags::GENERATOR ) != 0 ) m_by_mime_generator[ mime ].emplace_back( slot );
+				m_by_mime_thumbnailer[ mime_id ].emplace_back( slot );
+			if ( ( entry.type & ModuleTypeFlags::GENERATOR ) != 0 ) m_by_mime_generator[ mime_id ].emplace_back( slot );
+			if ( ( entry.type & ModuleTypeFlags::MIME_PARSE ) != 0 ) m_by_mime_parser[ mime_id ].emplace_back( slot );
 		}
 
 		log::info(
@@ -263,6 +266,7 @@ void ModuleLoader::unloadModules()
 	m_by_mime_metadata.clear();
 	m_by_mime_thumbnailer.clear();
 	m_by_mime_generator.clear();
+	m_by_mime_parser.clear();
 	m_modules.clear();
 	m_descriptors.clear();
 	m_pools.clear();
@@ -274,12 +278,12 @@ void ModuleLoader::maintainWorkers()
 }
 
 std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::lookup(
-	const std::unordered_map< std::string, std::vector< std::size_t > >& index,
-	const std::string_view mime ) const
+	const std::unordered_map< MimeID, std::vector< std::size_t > >& index,
+	const MimeID mime_id ) const
 {
 	std::vector< std::shared_ptr< RemoteModule > > modules {};
 
-	const auto found { index.find( std::string { mime } ) };
+	const auto found { index.find( mime_id ) };
 	if ( found == index.end() ) return modules;
 
 	modules.reserve( found->second.size() );
@@ -288,14 +292,14 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::lookup(
 	return modules;
 }
 
-std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getThumbnailerFor( const std::string_view mime ) const
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getThumbnailerFor( const MimeID mime_id ) const
 {
-	return lookup( m_by_mime_thumbnailer, mime );
+	return lookup( m_by_mime_thumbnailer, mime_id );
 }
 
-std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getParserFor( const std::string_view mime ) const
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getParserFor( const MimeID mime_id ) const
 {
-	return lookup( m_by_mime_metadata, mime );
+	return lookup( m_by_mime_metadata, mime_id );
 }
 
 std::shared_ptr< RemoteModule > ModuleLoader::getEmbedderFor( const std::string_view model_name ) const
@@ -317,15 +321,20 @@ std::vector< std::pair< std::string, std::uint32_t > > ModuleLoader::embeddingMo
 	return models;
 }
 
-std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( const std::string_view mime ) const
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( const MimeID mime_id ) const
 {
-	return lookup( m_by_mime_generator, mime );
+	return lookup( m_by_mime_generator, mime_id );
+}
+
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getMimeParserFor( const MimeID mime_id ) const
+{
+	return lookup( m_by_mime_parser, mime_id );
 }
 
 //! Does the work behind one CALLBACK frame.
 
 //! What MimeDatabase::scan yields, so a resolved MIME and a scanned one can share a branch.
-using ExpectedMime = std::expected< std::string, drogon::HttpResponsePtr >;
+using ExpectedMime = std::expected< MimeID, drogon::HttpResponsePtr >;
 
 //! A resolved callback input, or why one could not be made.
 using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::string >;
@@ -386,10 +395,13 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	{
 		reply[ ipc::field::ERROR ] = input.error();
 	}
-	else if ( const auto detected {
-				  by_reference ? ExpectedMime { referenced.mime } :
-								 co_await getMimeDatabase()->scan( ( *input )->blob().view(), file_name ) };
-	          !detected )
+	else if (
+		const auto detected {
+			by_reference ?
+				ExpectedMime { referenced.mime_id } :
+				( co_await getMimeDatabase()->scan( ( *input )->blob().view(), file_name ) )
+					.transform( []( const std::string& name ) { return mime_ids::canonicalIDForName( name ); } ) };
+		!detected )
 	{
 		reply[ ipc::field::ERROR ] = "could not determine the mime type of the callback payload";
 	}
@@ -398,7 +410,7 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 		auto& loader { ModuleLoader::instance() };
 
 		RemoteCallData data {
-			.input = *input, .mime_name = *detected, .extra = frame.body[ ipc::field::EXTRA ], .depth = depth + 1
+			.input = *input, .mime_id = *detected, .extra = frame.body[ ipc::field::EXTRA ], .depth = depth + 1
 		};
 
 		switch ( *kind )
@@ -406,7 +418,7 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 			case ipc::CallbackKind::PROBE:
 				{
 					ModuleCapability capability {};
-					capability.mime = *detected;
+					capability.mime_id = *detected;
 					capability.has_metadata = !loader.getParserFor( *detected ).empty();
 					capability.has_thumbnailer = !loader.getThumbnailerFor( *detected ).empty();
 					capability.has_generator = !loader.getGeneratorsFor( *detected ).empty();

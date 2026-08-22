@@ -496,7 +496,9 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 
 		const std::lock_guard< std::mutex > guard { m_calls_mutex };
 		m_call_inputs.emplace(
-			call_id, InFlightInput { .input = std::move( input ), .mime = body[ ipc::field::MIME ].asString() } );
+			call_id,
+			InFlightInput { .input = std::move( input ),
+		                    .mime_id = static_cast< MimeID >( body[ ipc::field::MIME_ID ].asInt() ) } );
 	}
 
 	//! Registers the call, posts it, and parks the coroutine until the result comes back.

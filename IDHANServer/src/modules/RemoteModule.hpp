@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "CallInput.hpp"
+#include "MimeIDs.hpp"
 #include "EmbeddingModule.hpp"
 #include "MetadataInfo.hpp"
 #include "ThumbnailInfo.hpp"
@@ -22,7 +23,7 @@ inline constexpr static std::uint32_t SERVER_ORIGINATED { 0 };
 struct RemoteCallData
 {
 	std::shared_ptr< const CallInput > input {};
-	std::string mime_name {};
+	MimeID mime_id { mime_ids::INVALID };
 	Json::Value extra {};
 
 	//! How many module-initiated hops led here. Zero for a call the server originated.
@@ -36,7 +37,7 @@ class RemoteModule
 	std::string m_name {};
 	ModuleType m_type { 0 };
 	ModuleVersion m_version {};
-	std::vector< std::string > m_mimes {};
+	std::vector< MimeID > m_mimes {};
 	//! EMBEDDING modules only. Empty/zero for every other kind.
 	std::string m_model_name {};
 	std::uint32_t m_dimensions { 0 };
@@ -52,7 +53,7 @@ class RemoteModule
 		std::string name,
 		ModuleType type,
 		ModuleVersion version,
-		std::vector< std::string > mimes,
+		std::vector< MimeID > mimes,
 		std::string model_name = {},
 		std::uint32_t dimensions = 0,
 		bool supports_text = false );
@@ -63,9 +64,9 @@ class RemoteModule
 
 	[[nodiscard]] ModuleVersion version() const { return m_version; }
 
-	[[nodiscard]] const std::vector< std::string >& handleableMimes() const { return m_mimes; }
+	[[nodiscard]] const std::vector< MimeID >& handleableMimes() const { return m_mimes; }
 
-	[[nodiscard]] bool canHandle( std::string_view mime ) const;
+	[[nodiscard]] bool canHandle( MimeID mime_id ) const;
 
 	[[nodiscard]] IDHANTask< std::expected< MetadataInfo, ModuleError > > parseFile( RemoteCallData data ) const;
 
@@ -80,6 +81,9 @@ class RemoteModule
 		RemoteCallData data,
 		std::size_t width,
 		std::size_t height ) const;
+
+	//! Narrows an already resolved base mime to a refined mime id (see MimeIDs.hpp).
+	[[nodiscard]] IDHANTask< std::expected< MimeID, ModuleError > > parseMime( RemoteCallData data ) const;
 
 	//! Generates a derived file, returned as the memfd the worker wrote it into.
 	[[nodiscard]] IDHANTask< std::expected< ipc::Blob, ModuleError > > generate(

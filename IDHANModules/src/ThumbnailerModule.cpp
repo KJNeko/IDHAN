@@ -32,10 +32,13 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 	const std::size_t width,
 	const std::size_t height )
 {
-	const auto thumbnail { createThumbnailRaw( data, width, height ) };
+	auto thumbnail { createThumbnailRaw( data, width, height ) };
 	if ( !thumbnail ) return std::unexpected( thumbnail.error() );
 
-	const auto& [ thumbnail_rgb, thumbnail_width, thumbnail_height, cache_thumbnail ] = *thumbnail;
+	// An animation arrives already encoded; there are no loose pixels to wrap and nothing to re-encode.
+	if ( thumbnail->m_format == ThumbnailFormat::ANIMATED ) return thumbnail;
+
+	const auto& [ thumbnail_rgb, thumbnail_width, thumbnail_height, cache_thumbnail, format ] = *thumbnail;
 
 	VipsImage* rgb_image { vips_image_new_from_memory_copy(
 		thumbnail_rgb.data(),
@@ -48,7 +51,7 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 
 	void* buffer { nullptr };
 	std::size_t size { 0 };
-	if ( vips_image_write_to_buffer( rgb_image, ".png", &buffer, &size, nullptr ) != 0 )
+	if ( vips_image_write_to_buffer( rgb_image, ".webp", &buffer, &size, nullptr ) != 0 )
 	{
 		g_object_unref( rgb_image );
 		return std::unexpected( ModuleError { "Failed to encode thumbnail to WEBP" } );
@@ -67,11 +70,9 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 	return info;
 }
 
-bool ThumbnailerModuleI::canHandle( const std::string_view mime )
+bool ThumbnailerModuleI::canHandle( const MimeID mime_id )
 {
-	return std::ranges::any_of(
-		handleableMimes(),
-		[ &mime ]( const std::string_view handleable_mime ) noexcept -> bool { return mime == handleable_mime; } );
+	return std::ranges::contains( handleableMimes(), mime_id );
 }
 
 ModuleType ThumbnailerModuleI::type()

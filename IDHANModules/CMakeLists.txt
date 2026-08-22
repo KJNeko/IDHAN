@@ -44,6 +44,7 @@ AddPremadeModule(IDHANVips ${CMAKE_CURRENT_SOURCE_DIR}/premade/vips)
 AddPremadeModule(IDHANFFmpeg ${CMAKE_CURRENT_SOURCE_DIR}/premade/ffmpeg)
 AddPremadeModule(IDHANPsd ${CMAKE_CURRENT_SOURCE_DIR}/premade/psd)
 AddPremadeModule(IDHANArchive ${CMAKE_CURRENT_SOURCE_DIR}/premade/archives)
+AddPremadeModule(IDHANUgoira ${CMAKE_CURRENT_SOURCE_DIR}/premade/ugoira)
 
 pkg_check_modules(ONNXRUNTIME IMPORTED_TARGET libonnxruntime)
 
@@ -60,7 +61,7 @@ target_link_libraries(IDHANArchive PRIVATE LibArchive::LibArchive chardet)
 
 # Convenience target so consumers can depend on "all premade modules" without naming each one.
 add_custom_target(IDHANPremadeModules)
-add_dependencies(IDHANPremadeModules IDHANVips IDHANFFmpeg IDHANPsd IDHANArchive)
+add_dependencies(IDHANPremadeModules IDHANVips IDHANFFmpeg IDHANPsd IDHANArchive IDHANUgoira)
 
 if (ONNXRUNTIME_FOUND)
 	add_dependencies(IDHANPremadeModules IDHANEmbedding)

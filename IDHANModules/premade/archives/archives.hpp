@@ -8,23 +8,37 @@
 #include <string_view>
 #include <vector>
 
+#include "MimeIDs.hpp"
 #include "ModuleBase.hpp"
 #include "ModuleSink.hpp"
 
 struct archive; // libarchive opaque type
 struct archive_entry; // libarchive opaque type
 
-//! Canonical MIME types the archive modules handle.
-const static std::vector< std::string_view > archive_handleable_mimes {
-	"application/zip",
-	"application/vnd.comicbook+zip"
+//! The mime ids the archive modules handle. A Pixiv Ugoira is a zip, so it is thumbnailed and
+//! parsed by the same modules as any other.
+const static std::vector< idhan::MimeID > archive_handleable_mimes {
+	idhan::mime_ids::APPLICATION_ZIP,
+	idhan::mime_ids::COMICBOOK_ZIP,
+	idhan::mime_ids::PIXIV_UGOIRA
 };
 
-//! \return The MIME types the archive modules handle (see archive_handleable_mimes).
-[[nodiscard]] inline std::vector< std::string_view > getHandleableMimesForArchives()
+//! \return The mime ids the archive modules handle (see archive_handleable_mimes).
+[[nodiscard]] inline std::vector< idhan::MimeID > getHandleableMimesForArchives()
 {
 	return archive_handleable_mimes;
 }
+
+//! The mime ids the archive thumbnailer renders. PIXIV_UGOIRA is absent: IDHANUgoira owns it, and
+//! every getThumbnailerFor call site takes the first match, so two claimants would race on load order.
+[[nodiscard]] inline std::vector< idhan::MimeID > getThumbnailableMimesForArchives()
+{
+	return { idhan::mime_ids::APPLICATION_ZIP, idhan::mime_ids::COMICBOOK_ZIP };
+}
+
+//! Orders two member paths the way a reader expects: byte-wise, except that runs of digits compare
+//! by value, so page2 precedes page10.
+[[nodiscard]] bool naturalLess( std::string_view lhs, std::string_view rhs );
 
 //! Feeds a ModuleFile to libarchive without materialising it.
 class ArchiveModuleReader

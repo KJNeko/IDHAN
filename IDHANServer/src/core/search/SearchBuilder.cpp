@@ -237,9 +237,160 @@ void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, const std::string
 	narrowRange( target, parseRangeTerm( tag ) );
 }
 
-SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
+//! Trims ASCII whitespace from both ends of \p text.
+static std::string_view trimmed( std::string_view text )
 {
 	constexpr std::string_view whitespace { " \t" };
+
+	if ( const auto first { text.find_first_not_of( whitespace ) }; first != std::string_view::npos )
+		text.remove_prefix( first );
+	else
+		return {};
+
+	if ( const auto last { text.find_last_not_of( whitespace ) }; last != std::string_view::npos )
+		text.remove_suffix( text.size() - last - 1 );
+
+	return text;
+}
+
+void SearchBuilder::validateMimeName( const std::string_view name )
+{
+	// RFC 6838 restricted-name characters plus the '/' between type and subtype. A quote cannot
+	// appear here, which is what makes the bare literal in renderMimeTerm() safe.
+	constexpr std::string_view allowed { "abcdefghijklmnopqrstuvwxyz0123456789!#$&^_.+-/" };
+	constexpr std::size_t max_length { 255 };
+
+	if ( name.size() > max_length )
+		throw std::invalid_argument( format_ns::format( "Mime name is longer than {} characters", max_length ) );
+
+	if ( name.find_first_not_of( allowed ) != std::string_view::npos )
+		throw std::invalid_argument( format_ns::format( "Not a mime name: \'{}\'", name ) );
+}
+
+void SearchBuilder::parseMimeSearch( const std::string_view arguments, const bool by_id )
+{
+	const std::string_view field { by_id ? "mime_id" : "mime" };
+
+	const auto equals { arguments.find( '=' ) };
+	if ( equals == std::string_view::npos )
+		throw std::invalid_argument(
+			format_ns::format( "A {} predicate needs \'= <value>\', got \'{}\'", field, arguments ) );
+
+	// Only the text before the '=' is an operator. '!' is a legal mime-name character, so scanning
+	// the whole term for it would read `foo!bar` as a negation.
+	const auto operation { arguments.substr( 0, equals ) };
+
+	if ( operation.find_first_of( "<>~" ) != std::string_view::npos || operation.contains( "≈" ) )
+		throw std::invalid_argument(
+			format_ns::format( "A {} predicate supports \'=\' and \'!=\' only, got \'{}\'", field, arguments ) );
+
+	MimeTerm term { .negated = operation.contains( '!' ) || operation.contains( "≠" ) };
+
+	auto remaining { arguments.substr( equals + 1 ) };
+	while ( true )
+	{
+		const auto comma { remaining.find( ',' ) };
+		const auto value { trimmed( remaining.substr( 0, comma ) ) };
+
+		if ( !value.empty() )
+		{
+			if ( by_id )
+			{
+				// stoll signals an overflow with out_of_range, which the endpoint does not catch.
+				long long id { 0 };
+				std::size_t consumed { 0 };
+
+				try
+				{
+					id = std::stoll( std::string { value }, &consumed );
+				}
+				catch ( const std::exception& )
+				{
+					throw std::invalid_argument( format_ns::format( "Not a mime id: \'{}\'", value ) );
+				}
+
+				if ( consumed != value.size() || id < 0 || id > std::numeric_limits< MimeID >::max() )
+					throw std::invalid_argument( format_ns::format( "Not a mime id: \'{}\'", value ) );
+
+				term.ids.push_back( static_cast< MimeID >( id ) );
+			}
+			else
+			{
+				std::string name {};
+				name.reserve( value.size() );
+				for ( const char c : value )
+					name += static_cast< char >( std::tolower( static_cast< unsigned char >( c ) ) );
+
+				validateMimeName( name );
+				term.names.push_back( std::move( name ) );
+			}
+		}
+
+		if ( comma == std::string_view::npos ) break;
+		remaining = remaining.substr( comma + 1 );
+	}
+
+	if ( term.names.empty() && term.ids.empty() )
+		throw std::invalid_argument( format_ns::format( "A {} predicate named no value", field ) );
+
+	m_mime_terms.push_back( std::move( term ) );
+}
+
+std::string SearchBuilder::renderMimeTerm( const MimeTerm& term )
+{
+	std::string rendered {};
+
+	if ( !term.names.empty() )
+	{
+		std::string names {};
+		for ( const auto& name : term.names )
+		{
+			if ( !names.empty() ) names += ',';
+			names += format_ns::format( "\'{}\'", name );
+		}
+
+		rendered =
+			format_ns::format( "fi.mime_id IN (SELECT pmn.mime_id FROM mime pmn WHERE pmn.name IN ({}))", names );
+	}
+
+	if ( !term.ids.empty() )
+	{
+		std::string ids {};
+		for ( const auto id : term.ids )
+		{
+			if ( !ids.empty() ) ids += ',';
+			ids += std::to_string( id );
+		}
+
+		const auto by_id { format_ns::format( "fi.mime_id IN ({})", ids ) };
+		rendered = rendered.empty() ? by_id : format_ns::format( "{} OR {}", rendered, by_id );
+	}
+
+	return term.negated ? format_ns::format( "NOT ({})", rendered ) : rendered;
+}
+
+std::string SearchBuilder::describeMimeTerm( const MimeTerm& term )
+{
+	std::string values {};
+
+	for ( const auto& name : term.names )
+	{
+		if ( !values.empty() ) values += ", ";
+		values += name;
+	}
+
+	for ( const auto id : term.ids )
+	{
+		if ( !values.empty() ) values += ", ";
+		values += std::to_string( id );
+	}
+
+	return format_ns::format(
+		"system:{} {} {}", term.names.empty() ? "mime_id" : "mime", term.negated ? "!=" : "=", values );
+}
+
+SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
+{
 	constexpr std::size_t hex_length { SHA256::size() * 2 };
 
 	if ( arguments.find_first_of( "<>!~" ) != std::string_view::npos || arguments.contains( "≠" )
@@ -250,16 +401,8 @@ SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
 	if ( equals == std::string_view::npos )
 		throw std::invalid_argument( format_ns::format( "A hash predicate needs '= <hash>', got '{}'", arguments ) );
 
-	auto value { arguments.substr( equals + 1 ) };
-
 	// Trimmed at both ends so the split below counts hashes rather than the spaces around them.
-	if ( const auto first { value.find_first_not_of( whitespace ) }; first != std::string_view::npos )
-		value.remove_prefix( first );
-	else
-		value = {};
-
-	if ( const auto last { value.find_last_not_of( whitespace ) }; last != std::string_view::npos )
-		value.remove_suffix( value.size() - last - 1 );
+	const auto value { trimmed( arguments.substr( equals + 1 ) ) };
 
 	if ( value.empty() ) throw std::invalid_argument( "A hash predicate named no hash" );
 
@@ -421,6 +564,16 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		     "NOT EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)",
 		     "system:not in archive" );
 
+	if ( m_is_archive_search == IsArchiveSearchType::IsArchive )
+		add( {},
+		     "EXISTS (SELECT 1 FROM archive_metadata pamd WHERE pamd.record_id = fi.record_id)",
+		     "system:is archive" );
+
+	if ( m_is_archive_search == IsArchiveSearchType::NotArchive )
+		add( {},
+		     "NOT EXISTS (SELECT 1 FROM archive_metadata pamd WHERE pamd.record_id = fi.record_id)",
+		     "system:is not archive" );
+
 	if ( m_archive_search.m_active )
 		add( {},
 		     format_ns::format(
@@ -454,6 +607,8 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		add( {},
 		     renderBounds( "fi.record_id", m_record_search ),
 		     format_ns::format( "system:{}", renderBounds( "record", m_record_search ) ) );
+
+	for ( const auto& term : m_mime_terms ) add( {}, renderMimeTerm( term ), describeMimeTerm( term ) );
 
 	return predicates;
 }
@@ -1082,6 +1237,18 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 			continue;
 		}
 
+		if ( system_subtag == "is archive" )
+		{
+			m_is_archive_search = IsArchiveSearchType::IsArchive;
+			continue;
+		}
+
+		if ( ( system_subtag == "is not archive" ) || ( system_subtag == "not archive" ) )
+		{
+			m_is_archive_search = IsArchiveSearchType::NotArchive;
+			continue;
+		}
+
 		if ( system_subtag.starts_with( "in archive" ) )
 		{
 			m_in_archive_search = ArchiveSearchType::InArchive;
@@ -1091,6 +1258,18 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 		if ( system_subtag.starts_with( "not in archive" ) )
 		{
 			m_in_archive_search = ArchiveSearchType::NoArchive;
+			continue;
+		}
+
+		if ( system_subtag.starts_with( "mime_id" ) )
+		{
+			parseMimeSearch( system_subtag.substr( 7 ), true );
+			continue;
+		}
+
+		if ( system_subtag.starts_with( "mime" ) )
+		{
+			parseMimeSearch( system_subtag.substr( 4 ), false );
 			continue;
 		}
 

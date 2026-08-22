@@ -24,6 +24,7 @@
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "mime/registerMimeTypes.hpp"
 #include "spdlog/async.h"
 
 namespace idhan
@@ -366,6 +367,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				{
 					const auto db { drogon::app().getDbClient() };
 					co_await m_clusters->reloadClusters( db );
+					co_await mime::registerMimeTypes( db );
 					co_await mime::getMimeDatabase()->reloadMimeParsers();
 					co_await embeddings::registerEmbeddingModels( db );
 					co_return;

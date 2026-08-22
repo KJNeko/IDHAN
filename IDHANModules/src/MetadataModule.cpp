@@ -9,12 +9,9 @@ namespace idhan
 
 MetadataModuleI::~MetadataModuleI() = default;
 
-bool MetadataModuleI::canHandle( const std::string_view mime )
+bool MetadataModuleI::canHandle( const MimeID mime_id )
 {
-	const auto handleable_mimes { handleableMimes() };
-	return std::ranges::any_of(
-		handleable_mimes,
-		[ &mime ]( const std::string_view handleable_mime ) noexcept -> bool { return mime == handleable_mime; } );
+	return std::ranges::contains( handleableMimes(), mime_id );
 }
 
 ModuleType MetadataModuleI::type()

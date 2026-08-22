@@ -1,6 +1,7 @@
 #include "RemoteModule.hpp"
 
 #include <algorithm>
+#include <format>
 
 #include "crypto/simpleHasher.hpp"
 
@@ -20,7 +21,7 @@ RemoteModule::RemoteModule(
 	std::string name,
 	const ModuleType type,
 	const ModuleVersion version,
-	std::vector< std::string > mimes,
+	std::vector< MimeID > mimes,
 	std::string model_name,
 	const std::uint32_t dimensions,
 	const bool supports_text ) :
@@ -35,9 +36,9 @@ RemoteModule::RemoteModule(
   m_supports_text( supports_text )
 {}
 
-bool RemoteModule::canHandle( const std::string_view mime ) const
+bool RemoteModule::canHandle( const MimeID mime_id ) const
 {
-	return std::ranges::contains( m_mimes, mime );
+	return std::ranges::contains( m_mimes, mime_id );
 }
 
 Json::Value RemoteModule::baseBody( const ipc::CallOp op, const RemoteCallData& data ) const
@@ -46,7 +47,7 @@ Json::Value RemoteModule::baseBody( const ipc::CallOp op, const RemoteCallData& 
 	body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::CALL );
 	body[ ipc::field::OP ] = ipc::toWire( op );
 	body[ ipc::field::MODULE_INDEX ] = Json::UInt64 { m_module_index };
-	body[ ipc::field::MIME ] = data.mime_name;
+	body[ ipc::field::MIME_ID ] = static_cast< Json::Int >( data.mime_id );
 	body[ ipc::field::EXTRA ] = data.extra;
 	body[ ipc::field::DEPTH ] = static_cast< Json::UInt >( data.depth );
 	return body;
@@ -108,6 +109,25 @@ IDHANTask< std::expected< ThumbnailInfo, ModuleError > > RemoteModule::createThu
 	if ( !thumbnail ) co_return std::unexpected( ModuleError { thumbnail.error() } );
 
 	co_return std::move( *thumbnail );
+}
+
+IDHANTask< std::expected< MimeID, ModuleError > > RemoteModule::parseMime( RemoteCallData data ) const
+{
+	if ( data.input == nullptr ) co_return std::unexpected( ModuleError { "no input supplied" } );
+
+	Json::Value body { baseBody( ipc::CallOp::MIME_PARSE, data ) };
+
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
+
+	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
+
+	const auto& mime_id { outcome->body[ ipc::field::MIME_ID ] };
+
+	if ( !mime_id.isIntegral() )
+		co_return std::unexpected(
+			ModuleError { std::format( "mime parser answered with {}", ipc::describeWireValue( mime_id ) ) } );
+
+	co_return static_cast< MimeID >( mime_id.asInt() );
 }
 
 IDHANTask< std::expected< ipc::Blob, ModuleError > > RemoteModule::generate(

@@ -1,5 +1,7 @@
 #include "PsdThumbnailer.hpp"
 
+#include "MimeIDs.hpp"
+
 #include <vips/vips.h>
 
 #include <string>
@@ -7,9 +9,9 @@
 #include "psd.hpp"
 #include "vips.hpp"
 
-std::vector< std::string_view > PsdThumbnailer::handleableMimes()
+std::vector< idhan::MimeID > PsdThumbnailer::handleableMimes()
 {
-	return { "application/psd" };
+	return { idhan::mime_ids::APPLICATION_PSD };
 }
 
 std::string_view PsdThumbnailer::name()

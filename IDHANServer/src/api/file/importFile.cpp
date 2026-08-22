@@ -1,3 +1,6 @@
+#include <memory>
+#include <span>
+
 #include "api/ImportAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "codes/ImportCodes.hpp"
@@ -8,6 +11,7 @@
 #include "logging/log.hpp"
 #include "metadata/metadata.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "mime/refineMime.hpp"
 #include "records/records.hpp"
 
 namespace idhan::api
@@ -145,6 +149,22 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 	if ( !mime_id ) co_return mime_id.error();
 
+	MimeID refined_mime_id { *mime_id };
+
+	if ( !is_octet )
+	{
+		if ( auto blob { ipc::Blob::fromBytes( std::span< const std::byte > { data_ptr, data_length } ) } )
+		{
+			if ( auto input { modules::CallInput::forBlob( std::move( *blob ) ) } )
+				refined_mime_id = co_await mime::refineMimeID(
+					*mime_id, std::make_shared< const modules::CallInput >( std::move( *input ) ) );
+			else
+				log::warn( "Could not stage the import body to refine its mime: {}", input.error() );
+		}
+		else
+			log::warn( "Could not stage the import body to refine its mime: {}", blob.error() );
+	}
+
 	const auto record_id_e { co_await helpers::createRecord( sha256, db ) };
 
 	if ( !record_id_e ) co_return record_id_e.error();
@@ -160,7 +180,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	co_await db->execSqlCoro(
 		"INSERT INTO file_info (record_id, mime_id, size, cluster_id, modified_time) VALUES ($1, $2, $3, $4, now()) ON CONFLICT DO NOTHING",
 		record_id,
-		*mime_id,
+		refined_mime_id,
 		data_length,
 		*target_cluster );
 

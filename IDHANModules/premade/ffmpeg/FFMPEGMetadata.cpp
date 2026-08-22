@@ -22,7 +22,7 @@ idhan::ModuleVersion FFMPEGMetadata::version()
 	return { .m_major = 1, .m_minor = 0, .m_patch = 0 };
 }
 
-std::vector< std::string_view > FFMPEGMetadata::handleableMimes()
+std::vector< idhan::MimeID > FFMPEGMetadata::handleableMimes()
 {
 	return ffmpeg_handleable_mimes;
 }

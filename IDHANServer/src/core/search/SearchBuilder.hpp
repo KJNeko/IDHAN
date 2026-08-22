@@ -94,6 +94,15 @@ class SearchBuilder
 		NoArchive
 	} m_in_archive_search { ArchiveSearchType::DontCare };
 
+	//! Whether the record is itself an archive, which archive_metadata records. Independent of
+	//! ArchiveSearchType above: an archive can also sit inside another archive.
+	enum class IsArchiveSearchType
+	{
+		DontCare = 0,
+		IsArchive,
+		NotArchive
+	} m_is_archive_search { IsArchiveSearchType::DontCare };
+
 	//! One comparison as parsed, before folding into a range: `> 1KB` is (GreaterThan, 1024).
 	struct RangeTerm
 	{
@@ -126,6 +135,32 @@ class SearchBuilder
 	//! Reads the operators and the number out of \p tag.
 	//! \throws std::invalid_argument if it holds no number.
 	static RangeTerm parseRangeTerm( std::string_view tag );
+
+	//! One `system:mime` or `system:mime_id` term. Values inside a term are alternatives; separate
+	//! terms intersect, so `mime = image/png` alongside `mime = image/jpeg` matches nothing.
+	struct MimeTerm
+	{
+		//! Matched against mime.name, which is not unique: every id carrying the name qualifies, so
+		//! `application/zip` also takes the Ugoira that reports it.
+		std::vector< std::string > names {};
+		std::vector< MimeID > ids {};
+		bool negated { false };
+	};
+
+	//! Rejects anything outside the character set a mime name may use. The name reaches SQL as a bare
+	//! literal, so this is what keeps a quote out of it.
+	//! \throws std::invalid_argument
+	static void validateMimeName( std::string_view name );
+
+	//! Parses the arguments of `mime = a, b` / `mime_id != 3004`. \p by_id reads the values as ids
+	//! rather than names. \throws std::invalid_argument
+	void parseMimeSearch( std::string_view arguments, bool by_id );
+
+	//! `fi.mime_id IN (...)` over \p term's names, ids, or both, inverted when it is negated.
+	static std::string renderMimeTerm( const MimeTerm& term );
+
+	//! How \p term reads back in a step label, e.g. `system:mime = application/zip`.
+	static std::string describeMimeTerm( const MimeTerm& term );
 
 	//! Accepts exactly one `sha256 = <hash>` predicate; hash OR-lists are not representable here.
 	static SHA256 parseHashSearch( std::string_view arguments );
@@ -175,6 +210,9 @@ class SearchBuilder
 
 	//! `system:sha256 = <hex>`, stored in bytea form.
 	std::variant< std::monostate, SHA256 > m_hash_search {};
+
+	//! One entry per `system:mime`/`system:mime_id` term, each rendered as its own predicate.
+	std::vector< MimeTerm > m_mime_terms {};
 
 	//! `system:record = 1234`; nothing else addresses a single known record.
 	RangeSearchInfo m_record_search {};

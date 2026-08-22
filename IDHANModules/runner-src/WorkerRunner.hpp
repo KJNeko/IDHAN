@@ -43,7 +43,7 @@ class WorkerRunner
 		std::uint64_t call_id { 0 };
 		std::size_t module_index { 0 };
 		ipc::CallOp op { ipc::CallOp::METADATA };
-		std::string mime {};
+		MimeID mime_id { 0 };
 		Json::Value extra {};
 		std::size_t width { 0 };
 		std::size_t height { 0 };

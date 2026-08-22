@@ -17,6 +17,8 @@
 #include "metadata/metadata.hpp"
 #include "mime/FileInfo.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "MimeIDs.hpp"
+#include "mime/refineMime.hpp"
 #include "modules/RemoteModule.hpp"
 #include "threading/ExpectedTask.hpp"
 #include "trantor/net/EventLoopThread.h"
@@ -74,6 +76,7 @@ class ScanContext
 
 	ScanParams m_params {};
 	std::string m_mime_name {};
+	MimeID m_mime_id { mime_ids::INVALID };
 	SHA256 m_sha256 {};
 	std::filesystem::path m_bad_dir {};
 
@@ -637,7 +640,8 @@ Task< bool > ScanContext::hasMime( DbClientPtr db )
 
 	if ( !current_mime.empty() && !current_mime[ 0 ][ "mime_id" ].isNull() )
 	{
-		m_mime_name = current_mime[ 0 ][ 1 ].as< std::string >();
+		m_mime_id = current_mime[ 0 ][ "mime_id" ].as< MimeID >();
+		m_mime_name = current_mime[ 0 ][ "name" ].as< std::string >();
 		log::trace( "Found that record {} has mime {}", m_record_id, m_mime_name );
 		co_return true;
 	}
@@ -701,20 +705,23 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 	log::trace( "Resolved mime '{}' to mime_id={} for record {}", *mime_string_e, *mime_id_e, m_record_id );
 
-	log::trace( "Upserting file_info for record {} with mime_id={}", m_record_id, *mime_id_e );
+	m_mime_id = co_await refineMimeIDForPath( *mime_id_e, m_path );
+	const auto refined_mime_id { m_mime_id };
+
+	log::trace( "Upserting file_info for record {} with mime_id={}", m_record_id, refined_mime_id );
 	co_await db->execSqlCoro(
 		"INSERT INTO file_info (record_id, size, mime_id, modified_time, cluster_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3",
 		m_record_id,
 		m_size,
-		*mime_id_e,
+		refined_mime_id,
 		mtime,
 		m_cluster_id );
 
 	{
-		const auto mime_info { co_await db->execSqlCoro( "SELECT 1 FROM mime WHERE mime_id = $1", *mime_id_e ) };
+		const auto mime_info { co_await db->execSqlCoro( "SELECT 1 FROM mime WHERE mime_id = $1", refined_mime_id ) };
 		if ( mime_info.empty() )
 			co_return std::unexpected(
-				createInternalError( "When selecting mime id {} the DB returned zero rows", *mime_id_e ) );
+				createInternalError( "When selecting mime id {} the DB returned zero rows", refined_mime_id ) );
 	}
 
 	co_return {};
@@ -722,7 +729,7 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 {
-	if ( m_mime_name.empty() )
+	if ( m_mime_id == mime_ids::INVALID )
 	{
 		co_return std::unexpected( createInternalError(
 			"Unable to determine metadata parser for {} (Record {}): No mime found",
@@ -744,16 +751,16 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		}
 	}
 
-	const std::shared_ptr< modules::RemoteModule > metadata_parser { co_await metadata::findBestParser( m_mime_name ) };
+	const std::shared_ptr< modules::RemoteModule > metadata_parser { co_await metadata::findBestParser( m_mime_id ) };
 
 	if ( !metadata_parser )
 	{
-		log::trace( "No metadata parser found for mime {} (Record {})", m_mime_name, m_record_id );
+		log::trace( "No metadata parser found for mime {} (Record {})", m_mime_id, m_record_id );
 		co_return std::unexpected( createInternalError(
-			"Unable to determine metadata parser for {}: No metadata parser for {}", m_record_id, m_mime_name ) );
+			"Unable to determine metadata parser for {}: No metadata parser for mime id {}", m_record_id, m_mime_id ) );
 	}
 
-	log::trace( "Found metadata parser for mime {} (Record {})", m_mime_name, m_record_id );
+	log::trace( "Found metadata parser for mime {} (Record {})", m_mime_id, m_record_id );
 
 	auto input_e { modules::CallInput::forPath( m_path ) };
 
@@ -765,7 +772,7 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 
 	const modules::RemoteCallData call_data {
 		.input = std::make_shared< const modules::CallInput >( std::move( *input_e ) ),
-		.mime_name = m_mime_name,
+		.mime_id = m_mime_id,
 		.extra = {},
 		.depth = 0
 	};
@@ -795,9 +802,8 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	auto getExtensionFromMimeName = [ & ]() -> drogon::Task< std::string >
 	{
 		log::trace( "Looking up extension from mime name '{}'", m_mime_name );
-		const auto result {
-			co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE name = $1", m_mime_name )
-		};
+		const auto result { co_await db->execSqlCoro(
+			"SELECT best_extension FROM mime WHERE name = $1 ORDER BY mime_id LIMIT 1", m_mime_name ) };
 
 		if ( result.empty() ) co_return std::string {};
 		co_return result[ 0 ][ 0 ].as< std::string >();

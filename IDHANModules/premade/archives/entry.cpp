@@ -3,6 +3,7 @@
 
 #include "ArchiveGenerator.hpp"
 #include "ArchiveMetadata.hpp"
+#include "ArchiveMimeParser.hpp"
 #include "ArchiveThumbnailer.hpp"
 #include "vipsInit.hpp"
 
@@ -13,7 +14,8 @@ std::vector< std::shared_ptr< IDHANModule > > getModules( ModuleCallbacks callba
 {
 	return { std::make_shared< ArchiveMetadata >( callbacks ),
 		     std::make_shared< ArchiveGenerator >( callbacks ),
-		     std::make_shared< ArchiveThumbnailer >( callbacks ) };
+		     std::make_shared< ArchiveThumbnailer >( callbacks ),
+		     std::make_shared< ArchiveMimeParser >( callbacks ) };
 }
 
 extern "C" {

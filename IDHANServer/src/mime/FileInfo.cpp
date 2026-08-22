@@ -49,9 +49,8 @@ drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInf
 		co_return std::unexpected( mime_string.error() );
 	}
 
-	const auto mime_search {
-		co_await db->execSqlCoro( "SELECT mime_id FROM mime WHERE name = $1", mime_string.value() )
-	};
+	const auto mime_search { co_await db->execSqlCoro(
+		"SELECT mime_id FROM mime WHERE name = $1 ORDER BY mime_id LIMIT 1", mime_string.value() ) };
 
 	if ( mime_search.empty() )
 	{

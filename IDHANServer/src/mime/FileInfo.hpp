@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "IDHANTypes.hpp"
+#include "MimeIDs.hpp"
 #include "api/APIAuth.hpp"
 #include "db/dbTypes.hpp"
 #include "drogon/drogon.h"
@@ -16,7 +17,7 @@ class FileMappedData;
 
 namespace constants
 {
-constexpr MimeID INVALID_MIME_ID { 0 };
+constexpr MimeID INVALID_MIME_ID { mime_ids::INVALID };
 }
 
 struct FileInfo

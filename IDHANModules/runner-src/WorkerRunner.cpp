@@ -18,6 +18,7 @@
 #include "EmbeddingModule.hpp"
 #include "GeneratorModule.hpp"
 #include "MetadataModule.hpp"
+#include "MimeModule.hpp"
 #include "ThumbnailerModule.hpp"
 #include "crypto/simpleHasher.hpp"
 #include "ipc/BlobFile.hpp"
@@ -106,6 +107,8 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 			[[fallthrough]];
 		case ipc::CallOp::EMBED_TEXT:
 			return std::format( "{}-dimension vector", body[ ipc::field::EMBEDDING ].size() );
+		case ipc::CallOp::MIME_PARSE:
+			return std::format( "mime id {}", body[ ipc::field::MIME_ID ].asInt() );
 	}
 
 	return "done";
@@ -427,7 +430,7 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 {
 	QueuedCall call {};
 	call.call_id = frame.body[ ipc::field::CALL_ID ].asUInt64();
-	call.mime = frame.body[ ipc::field::MIME ].asString();
+	call.mime_id = static_cast< MimeID >( frame.body[ ipc::field::MIME_ID ].asInt() );
 	call.extra = frame.body[ ipc::field::EXTRA ];
 	call.width = frame.body[ ipc::field::WIDTH ].asUInt64();
 	call.height = frame.body[ ipc::field::HEIGHT ].asUInt64();
@@ -524,7 +527,7 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 		return std::pair { std::move( body ), ipc::UniqueFd {} };
 	}
 
-	ModuleCallData data { .file = *call.file, .mime_name = call.mime, .extra = call.extra };
+	ModuleCallData data { .file = *call.file, .mime_id = call.mime_id, .extra = call.extra };
 
 	switch ( call.op )
 	{
@@ -599,6 +602,14 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 				body[ ipc::field::EMBEDDING ] = std::move( values );
 				return std::pair { std::move( body ), ipc::UniqueFd {} };
 			}
+		case ipc::CallOp::MIME_PARSE:
+			{
+				const auto result { std::static_pointer_cast< MimeModuleI >( module )->parseMime( data ) };
+				if ( !result ) return std::unexpected( result.error() );
+
+				body[ ipc::field::MIME_ID ] = static_cast< Json::Int >( *result );
+				return std::pair { std::move( body ), ipc::UniqueFd {} };
+			}
 		case ipc::CallOp::EMBED_TEXT:
 			// Returned above, before ModuleCallData was built. Listed only so -Wswitch-enum passes.
 			break;
@@ -627,7 +638,7 @@ void WorkerRunner::runCall( QueuedCall call )
 		call.call_id,
 		toString( call.op ),
 		module != nullptr ? module->name() : std::string_view { "<none>" },
-		call.mime,
+		call.mime_id,
 		call.file != nullptr ? call.file->size() : 0,
 		call.depth );
 
@@ -684,7 +695,7 @@ void WorkerRunner::runCall( QueuedCall call )
 			call.call_id,
 			toString( call.op ),
 			module != nullptr ? module->name() : std::string_view { "<none>" },
-			call.mime,
+			call.mime_id,
 			elapsed_ms,
 			describeResult( call.op, body, payload.get() ) );
 	else
@@ -693,7 +704,7 @@ void WorkerRunner::runCall( QueuedCall call )
 			call.call_id,
 			toString( call.op ),
 			module != nullptr ? module->name() : std::string_view { "<none>" },
-			call.mime,
+			call.mime_id,
 			elapsed_ms,
 			failure );
 

@@ -20,8 +20,8 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 
 	~ThumbnailerModuleI() override;
 
-	//! The canonical MIME types this thumbnailer can render.
-	[[nodiscard]] virtual std::vector< std::string_view > handleableMimes() = 0;
+	//! The mime ids this thumbnailer can render.
+	[[nodiscard]] virtual std::vector< MimeID > handleableMimes() = 0;
 
 	//! Renders a thumbnail as raw interleaved RGB pixels.
 	//! \param data The source file and its MIME (see ModuleCallData).
@@ -39,8 +39,8 @@ class FGL_EXPORT ThumbnailerModuleI : public ModuleBase
 		std::size_t width,
 		std::size_t height );
 
-	//! \return true if \p mime is one of handleableMimes().
-	[[nodiscard]] bool canHandle( std::string_view mime );
+	//! \return true if \p mime_id is one of handleableMimes().
+	[[nodiscard]] bool canHandle( MimeID mime_id );
 
 	//! \return ModuleTypeFlags::THUMBNAILER.
 	ModuleType type() override;

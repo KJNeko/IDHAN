@@ -32,7 +32,7 @@ inline constexpr auto CALLBACK_ID { "cb_id" };
 inline constexpr auto MODULE_INDEX { "module_index" };
 inline constexpr auto OP { "op" };
 inline constexpr auto KIND { "kind" };
-inline constexpr auto MIME { "mime" };
+inline constexpr auto MIME_ID { "mime_id" };
 inline constexpr auto EXTRA { "extra" };
 inline constexpr auto WIDTH { "width" };
 inline constexpr auto HEIGHT { "height" };
@@ -71,6 +71,7 @@ inline constexpr auto MODEL_NAME { "model_name" };
 inline constexpr auto DIMENSIONS { "dimensions" };
 inline constexpr auto PHRASE { "phrase" };
 inline constexpr auto SUPPORTS_TEXT { "supports_text" };
+inline constexpr auto FORMAT { "format" };
 } // namespace field
 
 //! Every message the protocol carries.
@@ -98,6 +99,7 @@ enum class CallOp : std::uint8_t
 	GENERATE, //!< GeneratorModuleI::generate
 	EMBED, //!< EmbeddingModuleI::embed
 	EMBED_TEXT, //!< EmbeddingModuleI::embedText, the only op that carries no file
+	MIME_PARSE, //!< MimeModuleI::parseMime
 };
 
 //! What a module is asking the host for when it sends a CALLBACK.
@@ -150,6 +152,7 @@ enum class MetadataVariant : std::uint8_t
 		case CallOp::GENERATE:
 		case CallOp::EMBED:
 		case CallOp::EMBED_TEXT:
+		case CallOp::MIME_PARSE:
 			return true;
 	}
 
@@ -243,6 +246,8 @@ enum class MetadataVariant : std::uint8_t
 			return "embed";
 		case CallOp::EMBED_TEXT:
 			return "embed_text";
+		case CallOp::MIME_PARSE:
+			return "mime_parse";
 	}
 
 	return "unknown";
@@ -325,6 +330,8 @@ template < typename EnumT >
 			[[fallthrough]];
 		case CallOp::EMBED_TEXT:
 			return ModuleTypeFlags::EMBEDDING;
+		case CallOp::MIME_PARSE:
+			return ModuleTypeFlags::MIME_PARSE;
 	}
 
 	return 0;
@@ -345,7 +352,7 @@ struct ManifestEntry
 	//! for it. Zero means it has no opinion and the configured ceiling stands. The host takes the
 	//! largest value any module in the library declares, since they share one worker process.
 	std::size_t rss_ceiling_mb { 0 };
-	std::vector< std::string > mimes {};
+	std::vector< MimeID > mimes {};
 	//! EMBEDDING modules only; empty otherwise. The routing key for embed calls. Unlike `name`,
 	//! this must be unique and stable, because it is also a database key.
 	std::string model_name {};

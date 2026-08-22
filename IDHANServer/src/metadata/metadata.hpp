@@ -36,7 +36,7 @@ struct RecordInfoBatch
 //! its basic fields. Parsing is never triggered; callers that want it call tryParseRecordMetadata first.
 [[nodiscard]] drogon::Task< RecordInfoBatch > collectRecordInfo( std::vector< RecordID > record_ids, DbClientPtr db );
 
-[[nodiscard]] drogon::Task< std::shared_ptr< modules::RemoteModule > > findBestParser( std::string mime_name );
+[[nodiscard]] drogon::Task< std::shared_ptr< modules::RemoteModule > > findBestParser( MimeID mime_id );
 
 ExpectedTask< void > tryParseRecordMetadata( RecordID record_id, DbClientPtr db );
 
