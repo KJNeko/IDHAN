@@ -77,7 +77,7 @@ export function createHost(instanceId: PanelInstanceId, settings: SettingsBindin
       run: (request, signal) => api.search(request, signal),
     },
     records: {
-      getMetadata: (ids, include) => getMetadata(ids, include),
+        getMetadata: (ids) => getMetadata(ids),
       thumbnailUrl: (id, size) => buildThumbnailUrl(id, size),
       fileUrl: (id, opts) => buildFileUrl(id, opts),
     },

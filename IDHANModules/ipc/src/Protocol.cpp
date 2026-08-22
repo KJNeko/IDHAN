@@ -239,7 +239,11 @@ Json::Value toJson( const MetadataInfo& info )
 			else if constexpr ( std::is_same_v< T, MetadataInfoAnimation > )
 			{
 				tag = MetadataVariant::ANIMATION;
-				value = Json::Value { Json::objectValue };
+				value[ "width" ] = metadata.width;
+				value[ "height" ] = metadata.height;
+				value[ "frame_count" ] = metadata.frame_count;
+				value[ "duration" ] = metadata.duration;
+				value[ "loops" ] = metadata.loops;
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoArchive > )
 			{
@@ -251,6 +255,14 @@ Json::Value toJson( const MetadataInfo& info )
 				value[ "contained_hashes" ] = hashes;
 				value[ "size" ] = static_cast< Json::UInt64 >( metadata.m_size );
 				value[ "encrypted" ] = metadata.encrypted;
+			}
+			else if constexpr ( std::is_same_v< T, MetadataInfoAudio > )
+			{
+				tag = MetadataVariant::AUDIO;
+				value[ "duration" ] = metadata.m_duration;
+				value[ "bitrate" ] = metadata.m_bitrate;
+				value[ "channels" ] = static_cast< Json::UInt >( metadata.m_channels );
+				value[ "sample_rate" ] = metadata.m_sample_rate;
 			}
 			else
 			{
@@ -306,7 +318,21 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 			};
 			break;
 		case MetadataVariant::ANIMATION:
-			info.m_metadata = MetadataInfoAnimation {};
+			info.m_metadata = MetadataInfoAnimation {
+				.width = value[ "width" ].asInt(),
+				.height = value[ "height" ].asInt(),
+				.frame_count = value[ "frame_count" ].asInt(),
+				.duration = value[ "duration" ].asDouble(),
+				.loops = value[ "loops" ].asBool()
+			};
+			break;
+		case MetadataVariant::AUDIO:
+			info.m_metadata = MetadataInfoAudio {
+				.m_duration = value[ "duration" ].asDouble(),
+				.m_bitrate = value[ "bitrate" ].asInt(),
+				.m_channels = static_cast< std::uint8_t >( value[ "channels" ].asUInt() ),
+				.m_sample_rate = value[ "sample_rate" ].asInt()
+			};
 			break;
 		case MetadataVariant::ARCHIVE:
 			{

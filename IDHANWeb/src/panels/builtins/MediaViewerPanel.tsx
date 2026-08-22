@@ -9,16 +9,32 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type {RecordMetadata} from '../../api/types';
 import type { PanelProps, RecordId, SearchResultSet } from '../../host/types';
 import { RECORD_ACTIVATE_TOPIC } from './GridPanel';
 
-interface Basic {
-  mime?: string;
-  extension?: string;
-  size?: number;
-}
+/**
+ * The server's own category is authoritative where it has one; the mime prefix is the fallback for
+ * records nothing has parsed yet. Animations render in an <img>, which is what the browser wants for
+ * gif/apng/webp, and an image project has no inline preview.
+ */
+function kindOf(meta: RecordMetadata | null): 'image' | 'video' | 'audio' | 'other' {
+    switch (meta?.simple_type) {
+        case 'image':
+        case 'animation':
+            return 'image';
+        case 'video':
+            return 'video';
+        case 'audio':
+            return 'audio';
+        case 'archive':
+        case 'image_project':
+            return 'other';
+        default:
+            break;
+    }
 
-function kindOf(mime: string | undefined): 'image' | 'video' | 'audio' | 'other' {
+    const mime = meta?.mime;
   if (!mime) return 'other';
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
@@ -32,7 +48,7 @@ function MediaViewerPanel({ host }: PanelProps) {
     const sel = host.selection.get();
     return sel.length > 0 ? sel[sel.length - 1]! : null;
   });
-  const [meta, setMeta] = useState<Basic | null>(null);
+    const [meta, setMeta] = useState<RecordMetadata | null>(null);
   const prefetched = useRef(new Set<string>());
 
   useEffect(() => host.results.subscribe(setResults), [host]);
@@ -54,11 +70,10 @@ function MediaViewerPanel({ host }: PanelProps) {
       .getMetadata([activeId])
       .then((res) => {
         if (cancelled) return;
-        const record = res.records[0] as (Basic & { record_id: RecordId }) | undefined;
-        setMeta(record ?? {});
+          setMeta(res.records[0] ?? null);
       })
       .catch(() => {
-        if (!cancelled) setMeta({});
+          if (!cancelled) setMeta(null);
       });
     return () => {
       cancelled = true;
@@ -85,8 +100,7 @@ function MediaViewerPanel({ host }: PanelProps) {
       if (neighbour < 0 || neighbour >= ids.length) continue;
       const id = ids[neighbour]!;
       void host.records.getMetadata([id]).then((res) => {
-        const record = res.records[0] as Basic | undefined;
-        if (kindOf(record?.mime) !== 'image') return;
+          if (kindOf(res.records[0] ?? null) !== 'image') return;
         const url = host.records.fileUrl(id);
         if (prefetched.current.has(url)) return;
         prefetched.current.add(url);
@@ -114,7 +128,7 @@ function MediaViewerPanel({ host }: PanelProps) {
     );
   }
 
-  const kind = kindOf(meta?.mime);
+    const kind = kindOf(meta);
   const fileUrl = host.records.fileUrl(activeId);
 
   return (

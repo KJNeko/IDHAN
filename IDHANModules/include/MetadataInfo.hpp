@@ -17,9 +17,24 @@ struct MetadataInfoImage
 	std::uint8_t channels { 0 }; //!< Number of colour/alpha channels.
 };
 
-//! Metadata for an animation. Currently carries no fields beyond its type tag.
+//! Metadata for an animation.
 struct MetadataInfoAnimation
-{};
+{
+	int width { 0 };
+	int height { 0 };
+	int frame_count { 0 };
+	double duration { 0.0 }; //!< Total playback duration in seconds.
+	bool loops { false };
+};
+
+//! Metadata for an audio-only file.
+struct MetadataInfoAudio
+{
+	double m_duration { 0.0 }; //!< Duration in seconds.
+	int m_bitrate { 0 }; //!< Overall bitrate in bits per second.
+	std::uint8_t m_channels { 0 };
+	int m_sample_rate { 0 }; //!< Samples per second.
+};
 
 //! Metadata for a layered image project (PSD, XCF, etc.).
 struct MetadataInfoImageProject
@@ -56,7 +71,8 @@ using MetadataVariant = std::variant<
 	MetadataInfoVideo,
 	MetadataInfoImageProject,
 	MetadataInfoAnimation,
-	MetadataInfoArchive >;
+	MetadataInfoArchive,
+	MetadataInfoAudio >;
 
 //! Result of MetadataModuleI::parseFile: the typed metadata plus a coarse category and extra JSON.
 struct MetadataInfo

@@ -18,7 +18,7 @@ import type {
 } from '../api/types';
 
 /** Bumped on breaking changes to the surface below; plugin manifests will declare a compatible range. */
-export const HOST_API_VERSION = '1.0.0';
+export const HOST_API_VERSION = '1.1.0';
 
 export type RecordId = number;
 
@@ -96,7 +96,7 @@ export interface RecordsApi {
    * The one metadata path. The host coalesces concurrent requests across panels into batched calls
    * behind a shared LRU, so panels must not fetch metadata directly.
    */
-  getMetadata(ids: readonly RecordId[], include?: string[]): Promise<MetadataResponse>;
+  getMetadata(ids: readonly RecordId[]): Promise<MetadataResponse>;
   /** URL for a square thumbnail at any positive edge length (px). Defaults to 256. */
   thumbnailUrl(id: RecordId, size?: number): string;
   fileUrl(id: RecordId, opts?: { download?: boolean }): string;

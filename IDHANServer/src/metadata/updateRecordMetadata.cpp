@@ -131,11 +131,34 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 				break;
 			}
 		case SimpleMimeType::ANIMATION:
-			FGL_UNIMPLEMENTED();
-			break;
+			{
+				const auto& animation_metadata { std::get< MetadataInfoAnimation >( metadata.m_metadata ) };
+				co_await db->execSqlCoro(
+					"INSERT INTO animation_metadata (record_id, width, height, frame_count, duration, loops) VALUES ($1, $2, $3, $4, $5, $6) "
+					"ON CONFLICT (record_id) DO UPDATE SET width = $2, height = $3, frame_count = $4, duration = $5, loops = $6",
+					record_id,
+					animation_metadata.width,
+					animation_metadata.height,
+					animation_metadata.frame_count,
+					animation_metadata.duration,
+					animation_metadata.loops );
+
+				break;
+			}
 		case SimpleMimeType::AUDIO:
-			FGL_UNIMPLEMENTED();
-			break;
+			{
+				const auto& audio_metadata { std::get< MetadataInfoAudio >( metadata.m_metadata ) };
+				co_await db->execSqlCoro(
+					"INSERT INTO audio_metadata (record_id, duration, bitrate, channels, sample_rate) VALUES ($1, $2, $3, $4, $5) "
+					"ON CONFLICT (record_id) DO UPDATE SET duration = $2, bitrate = $3, channels = $4, sample_rate = $5",
+					record_id,
+					audio_metadata.m_duration,
+					audio_metadata.m_bitrate,
+					static_cast< SmallInt >( audio_metadata.m_channels ),
+					audio_metadata.m_sample_rate );
+
+				break;
+			}
 		case SimpleMimeType::NONE:
 			break;
 		default:
