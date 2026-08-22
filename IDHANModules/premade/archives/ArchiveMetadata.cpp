@@ -21,7 +21,7 @@ idhan::ModuleVersion ArchiveMetadata::version()
 	return { .m_major = 1, .m_minor = 0, .m_patch = 0 };
 }
 
-std::vector< std::string_view > ArchiveMetadata::handleableMimes()
+std::vector< idhan::MimeID > ArchiveMetadata::handleableMimes()
 {
 	return getHandleableMimesForArchives();
 }

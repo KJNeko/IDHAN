@@ -97,7 +97,7 @@ idhan::ModuleVersion FFMPEGThumbnailer::version()
 	return idhan::ModuleVersion { .m_major = 0, .m_minor = 1, .m_patch = 0 };
 }
 
-std::vector< std::string_view > FFMPEGThumbnailer::handleableMimes()
+std::vector< idhan::MimeID > FFMPEGThumbnailer::handleableMimes()
 {
 	return ffmpeg_handleable_mimes;
 }

@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 
+#include "IDHANTypes.hpp"
 #include "ModuleCommon.hpp"
 #include "ModuleFile.hpp"
 #include "ThumbnailInfo.hpp"
@@ -24,6 +25,7 @@ enum ModuleTypeFlags : std::uint16_t
 	THUMBNAILER = 1 << 1, //!< Implements ThumbnailerModuleI::createThumbnail.
 	GENERATOR = 1 << 2, //!< Implements GeneratorModuleI::generate.
 	EMBEDDING = 1 << 3, //!< Implements EmbeddingModuleI::embed.
+	MIME_PARSE = 1 << 4, //! Implements MimeModuleI::parseMime
 };
 
 //! Bitwise-OR of ModuleTypeFlags values; the concrete return type of ModuleBase::type().
@@ -54,14 +56,16 @@ using data_view = std::basic_string_view< std::uint8_t >;
 struct ModuleCallData
 {
 	const ModuleFile& file;
-	std::string mime_name; //!< Canonical MIME type of the file, as resolved by the mime database.
+	//! The file's type, one of the constants in MimeIDs.hpp. Mime strings never reach a module:
+	//! the pre-scan resolves one to an id before anything is dispatched.
+	MimeID mime_id { 0 };
 	Json::Value extra; //!< Optional caller-supplied parameters; contents are operation-specific.
 };
 
 //! What the module system can do with a given blob, as answered by ModuleCallbacks::probe.
 struct ModuleCapability
 {
-	std::string mime; //!< The MIME the host resolved the bytes to.
+	MimeID mime_id { 0 }; //!< The mime id the host resolved the bytes to.
 	bool has_metadata { false }; //!< Some module can parse metadata from these bytes.
 	bool has_thumbnailer { false }; //!< Some module can thumbnail these bytes.
 	bool has_generator { false }; //!< Some module can generate derived files from these bytes.

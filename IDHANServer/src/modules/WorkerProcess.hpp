@@ -62,7 +62,7 @@ struct CallOutcome
 struct InFlightInput
 {
 	std::shared_ptr< const CallInput > input {};
-	std::string mime {};
+	MimeID mime_id { 0 };
 };
 
 class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >

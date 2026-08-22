@@ -10,14 +10,14 @@
 
 using namespace idhan;
 
-std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
+std::vector< idhan::MimeID > ImageVipsMetadata::handleableMimes()
 {
 	return vipsHandleable();
 }
 
 std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleCallData& data )
 {
-	if ( !VIPS_MIMES.contains( data.mime_name ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
+	if ( !VIPS_MIMES.contains( data.mime_id ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
 
 	VipsModuleSource source { data.file };
 	if ( !source.valid() ) return std::unexpected( ModuleError { "Failed to open the file as a vips source" } );

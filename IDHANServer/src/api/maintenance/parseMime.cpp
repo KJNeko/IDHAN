@@ -1,15 +1,17 @@
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "MimeIDs.hpp"
 #include "mime/MimeDatabase.hpp"
+#include "mime/refineMime.hpp"
 #include "modules/ModuleLoader.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< Json::Value > processMetadata( const std::string mime_str, const std::string_view request_data )
+drogon::Task< Json::Value > processMetadata( const MimeID mime_id, const std::string_view request_data )
 {
 	Json::Value response { Json::arrayValue };
-	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_str ) };
+	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_id ) };
 
 	auto blob { ipc::Blob::fromBytes(
 		std::span< const std::byte > {
@@ -40,7 +42,7 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 		Json::Value metadata_obj {};
 		metadata_obj[ "name" ] = std::string( metadata_module->name() );
 
-		const modules::RemoteCallData data { .input = input, .mime_name = mime_str, .extra = {}, .depth = 0 };
+		const modules::RemoteCallData data { .input = input, .mime_id = mime_id, .extra = {}, .depth = 0 };
 
 		auto metadata_info { co_await metadata_module->parseFile( data ) };
 
@@ -68,6 +70,37 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 	co_return response;
 }
 
+//! Resolves \p mime_str to the id stored for a file of that type, refinement included.
+drogon::Task< void > describeMimeID(
+	Json::Value& response,
+	MimeID& mime_id,
+	const std::string mime_str,
+	const std::string_view data )
+{
+	const auto db { drogon::app().getDbClient() };
+
+	const auto base_id { co_await mime::getMimeIDFromStr( mime_str, db ) };
+
+	if ( !base_id ) co_return;
+
+	response[ "generic_mime_id" ] = *base_id;
+	response[ "mime_id" ] = *base_id;
+	mime_id = *base_id;
+
+	auto blob { ipc::Blob::fromBytes(
+		std::span< const std::byte > { reinterpret_cast< const std::byte* >( data.data() ), data.size() } ) };
+
+	if ( !blob ) co_return;
+
+	auto input { modules::CallInput::forBlob( std::move( *blob ) ) };
+
+	if ( !input ) co_return;
+
+	mime_id =
+		co_await mime::refineMimeID( *base_id, std::make_shared< const modules::CallInput >( std::move( *input ) ) );
+	response[ "mime_id" ] = mime_id;
+}
+
 drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr request )
 {
 	const auto request_data { request->getBody() };
@@ -93,7 +126,10 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr r
 	response[ "success" ] = true;
 	response[ "mime" ] = mime_str.value();
 
-	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, request_data );
+	MimeID mime_id { mime_ids::INVALID };
+	co_await describeMimeID( response, mime_id, *mime_str, request_data );
+
+	response[ "metadata_modules" ] = co_await processMetadata( mime_id, request_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
@@ -138,7 +174,10 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 	response[ "success" ] = true;
 	response[ "mime" ] = mime_str.value();
 
-	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, file_data );
+	MimeID mime_id { mime_ids::INVALID };
+	co_await describeMimeID( response, mime_id, *mime_str, file_data );
+
+	response[ "metadata_modules" ] = co_await processMetadata( mime_id, file_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }

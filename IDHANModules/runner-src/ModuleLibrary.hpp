@@ -63,6 +63,6 @@ class ModuleLibrary
 };
 
 //! The MIME types \p module declares, resolved through whichever interface it implements.
-[[nodiscard]] std::vector< std::string > handleableMimesOf( const std::shared_ptr< IDHANModule >& module );
+[[nodiscard]] std::vector< MimeID > handleableMimesOf( const std::shared_ptr< IDHANModule >& module );
 
 } // namespace idhan::runner

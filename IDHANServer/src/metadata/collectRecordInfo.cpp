@@ -33,6 +33,7 @@ static const Json::StaticString KEY_SAMPLE_RATE { "sample_rate" };
 static const Json::StaticString KEY_FRAME_COUNT { "frame_count" };
 static const Json::StaticString KEY_LOOPS { "loops" };
 static const Json::StaticString KEY_ARCHIVE_ID { "archive_id" };
+static const Json::StaticString KEY_ARCHIVE_IDS { "archive_ids" };
 static const Json::StaticString KEY_ENCRYPTED { "encrypted" };
 static const Json::StaticString KEY_FILE_COUNT { "file_count" };
 
@@ -80,6 +81,9 @@ static void addBaseFields( Json::Value& entry, const drogon::orm::Row& row, cons
 {
 	entry[ KEY_RECORD_ID ] = record_id;
 	entry[ KEY_HASHES ][ KEY_SHA256 ] = SHA256::fromPgCol( row[ "sha256" ] ).hex();
+	// A default-constructed Json::Value stays null until something is appended, so a record that is
+	// in no archive would serialize as null rather than an empty array.
+	entry[ KEY_ARCHIVE_IDS ] = Json::Value { Json::arrayValue };
 
 	if ( !row[ "mime_id" ].isNull() )
 	{
@@ -164,6 +168,32 @@ static drogon::Task< void > applyTypeRows(
 		if ( itter == index.end() ) continue;
 
 		apply( entries[ itter->second ], row );
+	}
+}
+
+//! Appends the archives each record is a member of. This cannot go through applyTypeRows: that helper
+//! assumes one row per record, whereas a record may sit in several archives or none, and membership
+//! is not tied to a record's own simple mime type.
+static drogon::Task< void > applyArchiveMembership(
+	DbClientPtr db,
+	std::vector< RecordID > record_ids,
+	const EntryIndex& index,
+	std::vector< Json::Value >& entries )
+{
+	if ( record_ids.empty() ) co_return;
+
+	const auto rows { co_await db->execSqlCoro(
+		"SELECT record_id, archive_id FROM archive_map "
+		"WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME "[]) "
+		"ORDER BY record_id, archive_id",
+		std::move( record_ids ) ) };
+
+	for ( const auto& row : rows )
+	{
+		const auto itter { index.find( row[ "record_id" ].as< RecordID >() ) };
+		if ( itter == index.end() ) continue;
+
+		entries[ itter->second ][ KEY_ARCHIVE_IDS ].append( row[ "archive_id" ].as< ArchiveID >() );
 	}
 }
 
@@ -300,6 +330,8 @@ drogon::Task< RecordInfoBatch > collectRecordInfo( std::vector< RecordID > recor
 			entry[ KEY_ENCRYPTED ] = row[ "encrypted" ].as< bool >();
 			entry[ KEY_FILE_COUNT ] = row[ "file_count" ].as< std::size_t >();
 		} );
+
+	co_await applyArchiveMembership( db, std::move( record_ids ), index, entries );
 
 	for ( auto& entry : entries ) batch.records.append( std::move( entry ) );
 

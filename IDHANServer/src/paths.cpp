@@ -1,5 +1,6 @@
 #include "paths.hpp"
 
+#include <algorithm>
 #include <set>
 
 #include "Config.hpp"
@@ -127,13 +128,23 @@ std::vector< std::filesystem::path > getMimeParserPaths()
 {
 	std::vector< std::filesystem::path > paths {};
 
-	constexpr std::array< std::string_view, 2 > parser_paths { { "./mime", IDHAN_MIME_PATH } };
+	const std::array< std::filesystem::path, 3 > parser_paths {
+		{ getExecutableDir() / "mime", "./mime", IDHAN_MIME_PATH }
+	};
+
+	std::vector< std::filesystem::path > searched {};
 
 	for ( const auto& search_path : parser_paths )
 	{
-		if ( !std::filesystem::exists( search_path ) ) continue;
-		log::info( "Searching for mime parsers at {}", search_path );
-		for ( const auto& file : std::filesystem::recursive_directory_iterator( search_path ) )
+		std::error_code error {};
+		const auto resolved { std::filesystem::canonical( search_path, error ) };
+
+		if ( error ) continue;
+		if ( std::ranges::contains( searched, resolved ) ) continue;
+		searched.emplace_back( resolved );
+
+		log::info( "Searching for mime parsers at {}", resolved.string() );
+		for ( const auto& file : std::filesystem::recursive_directory_iterator( resolved ) )
 		{
 			if ( !file.is_regular_file() ) continue;
 			if ( file.path().extension() == ".idhanmime" ) paths.emplace_back( file.path() );

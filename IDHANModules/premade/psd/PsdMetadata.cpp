@@ -1,5 +1,7 @@
 #include "PsdMetadata.hpp"
 
+#include "MimeIDs.hpp"
+
 #include <algorithm>
 #include <cstring>
 #include <memory>
@@ -9,9 +11,9 @@
 
 using namespace psd;
 
-std::vector< std::string_view > PsdMetadata::handleableMimes()
+std::vector< idhan::MimeID > PsdMetadata::handleableMimes()
 {
-	return { "application/psd" };
+	return { idhan::mime_ids::APPLICATION_PSD };
 }
 
 std::string_view PsdMetadata::name()

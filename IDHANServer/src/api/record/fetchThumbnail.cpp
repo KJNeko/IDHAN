@@ -49,7 +49,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 	auto db { drogon::app().getDbClient() };
 
 	const auto record_info { co_await db->execSqlCoro(
-		"SELECT mime.name as mime_name, cluster_id FROM file_info JOIN "
+		"SELECT file_info.mime_id as mime_id, cluster_id FROM file_info JOIN "
 		"mime ON mime.mime_id = file_info.mime_id WHERE record_id = $1",
 		record_id ) };
 
@@ -61,7 +61,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 
 	const std::size_t size { request->getOptionalParameter< std::size_t >( "size" ).value_or( 256 ) };
 
-	const auto mime_name { record_info[ 0 ][ "mime_name" ].as< std::string >() };
+	const auto mime_id { record_info[ 0 ][ "mime_id" ].as< MimeID >() };
 	[[maybe_unused]] const auto cluster_id { record_info[ 0 ][ "cluster_id" ].as< ClusterID >() };
 
 	const auto sha256_e { co_await SHA256::fromDB( record_id, db ) };
@@ -75,11 +75,11 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 	// Ordered so the stat is skipped entirely when the answer is already known.
 	if ( !cache_enabled || force_regenerate || !co_await hasCachedThumbnail( thumbnail_location ) )
 	{
-		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_name ) };
+		auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_id ) };
 
 		if ( thumbnailers.empty() )
 		{
-			co_return createBadRequest( "No thumbnailer for mime type {} provided by modules", mime_name );
+			co_return createBadRequest( "No thumbnailer for mime id {} provided by modules", mime_id );
 		}
 
 		auto& thumbnailer { thumbnailers[ 0 ] };
@@ -90,7 +90,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		const std::size_t height { size };
 		const std::size_t width { size };
 
-		modules::RemoteCallData call_data { .input = *input_e, .mime_name = mime_name };
+		modules::RemoteCallData call_data { .input = *input_e, .mime_id = mime_id };
 
 		const auto extra_metadata {
 			co_await db->execSqlCoro( "SELECT json FROM metadata WHERE record_id = $1", record_id )

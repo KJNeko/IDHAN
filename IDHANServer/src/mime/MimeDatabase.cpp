@@ -140,9 +140,6 @@ ExpectedTask< std::string > MimeDatabase::scanFile( const std::filesystem::path&
 
 drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::reloadMimeParsers()
 {
-	auto db { drogon::app().getDbClient() };
-
-	// built fully before being swapped in, so in-flight scans keep their old snapshot
 	auto new_identifiers { std::make_shared< std::vector< MimeIdentifier > >() };
 	const std::vector< std::filesystem::path > paths { getMimeParserPaths() };
 	log::trace( "reloadMimeParsers: found {} parser paths", paths.size() );
@@ -156,11 +153,6 @@ drogon::Task< std::expected< void, drogon::HttpResponsePtr > > MimeDatabase::rel
 
 			std::string mime { identifier.mime() };
 			log::debug( "reloadMimeParsers: loaded parser for mime type '{}' from {}", mime, path.filename().string() );
-
-			co_await db->execSqlCoro(
-				"INSERT INTO mime(name, best_extension) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING",
-				mime,
-				identifier.getBestExtension() );
 		}
 		catch ( std::exception& e )
 		{
@@ -187,7 +179,9 @@ std::shared_ptr< MimeDatabase > getMimeDatabase()
 
 drogon::Task< std::expected< MimeID, drogon::HttpResponsePtr > > getMimeIDFromStr( std::string str, DbClientPtr db )
 {
-	const auto search_result { co_await db->execSqlCoro( "SELECT mime_id FROM mime WHERE name = $1", str ) };
+	const auto search_result {
+		co_await db->execSqlCoro( "SELECT mime_id FROM mime WHERE name = $1 ORDER BY mime_id LIMIT 1", str )
+	};
 
 	if ( !search_result.empty() )
 	{

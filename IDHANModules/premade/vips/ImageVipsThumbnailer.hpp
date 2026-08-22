@@ -10,7 +10,7 @@ class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 
 	ImageVipsThumbnailer( idhan::ModuleCallbacks callbacks ) : ThumbnailerModuleI( callbacks ) {}
 
-	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
+	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;
 
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
 		idhan::ModuleCallData& data,

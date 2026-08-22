@@ -7,6 +7,7 @@
 #include "EmbeddingModule.hpp"
 #include "GeneratorModule.hpp"
 #include "MetadataModule.hpp"
+#include "MimeModule.hpp"
 #include "ThumbnailerModule.hpp"
 
 namespace idhan::runner
@@ -166,24 +167,20 @@ void ModuleLibrary::shutdown()
 	for ( const auto& module : m_modules ) module->shutdown();
 }
 
-std::vector< std::string > handleableMimesOf( const std::shared_ptr< IDHANModule >& module )
+std::vector< MimeID > handleableMimesOf( const std::shared_ptr< IDHANModule >& module )
 {
-	std::vector< std::string_view > declared {};
-
 	const auto type { module->type() };
 
 	if ( ( type & ModuleTypeFlags::METADATA ) != 0 )
-		declared = std::static_pointer_cast< MetadataModuleI >( module )->handleableMimes();
-	else if ( ( type & ModuleTypeFlags::THUMBNAILER ) != 0 )
-		declared = std::static_pointer_cast< ThumbnailerModuleI >( module )->handleableMimes();
-	else if ( ( type & ModuleTypeFlags::GENERATOR ) != 0 )
-		declared = std::static_pointer_cast< GeneratorModuleI >( module )->handleableMimes();
+		return std::static_pointer_cast< MetadataModuleI >( module )->handleableMimes();
+	if ( ( type & ModuleTypeFlags::THUMBNAILER ) != 0 )
+		return std::static_pointer_cast< ThumbnailerModuleI >( module )->handleableMimes();
+	if ( ( type & ModuleTypeFlags::GENERATOR ) != 0 )
+		return std::static_pointer_cast< GeneratorModuleI >( module )->handleableMimes();
+	if ( ( type & ModuleTypeFlags::MIME_PARSE ) != 0 )
+		return std::static_pointer_cast< MimeModuleI >( module )->handleableMimes();
 
-	std::vector< std::string > mimes {};
-	mimes.reserve( declared.size() );
-	for ( const auto mime : declared ) mimes.emplace_back( mime );
-
-	return mimes;
+	return {};
 }
 
 } // namespace idhan::runner

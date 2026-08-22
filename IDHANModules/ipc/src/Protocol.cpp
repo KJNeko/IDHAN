@@ -66,7 +66,7 @@ Json::Value toJson( const ManifestEntry& entry )
 	json[ field::RSS_CEILING_MB ] = static_cast< Json::UInt64 >( entry.rss_ceiling_mb );
 
 	Json::Value mimes { Json::arrayValue };
-	for ( const auto& mime : entry.mimes ) mimes.append( mime );
+	for ( const auto mime_id : entry.mimes ) mimes.append( static_cast< Json::Int >( mime_id ) );
 	json[ field::MIMES ] = mimes;
 
 	json[ field::MODEL_NAME ] = entry.model_name;
@@ -142,8 +142,10 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 
 	for ( const auto& mime : mimes )
 	{
-		if ( !mime.isString() ) return std::unexpected( std::string { "manifest entry has a non-string mime" } );
-		entry.mimes.emplace_back( mime.asString() );
+		if ( !mime.isIntegral() )
+			return std::unexpected(
+				std::format( "manifest entry has a non-numeric mime id: {}", describeWireValue( mime ) ) );
+		entry.mimes.emplace_back( static_cast< MimeID >( mime.asInt() ) );
 	}
 
 	return entry;
@@ -164,9 +166,9 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 			entry.version.m_minor,
 			entry.version.m_patch );
 
-		for ( const auto& mime : entry.mimes )
+		for ( const auto mime_id : entry.mimes )
 		{
-			signature += mime;
+			signature += std::to_string( mime_id );
 			signature += ',';
 		}
 
@@ -181,7 +183,7 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 Json::Value toJson( const ModuleCapability& capability )
 {
 	Json::Value json {};
-	json[ field::MIME ] = capability.mime;
+	json[ field::MIME_ID ] = static_cast< Json::Int >( capability.mime_id );
 	json[ field::HAS_METADATA ] = capability.has_metadata;
 	json[ field::HAS_THUMBNAILER ] = capability.has_thumbnailer;
 	json[ field::HAS_GENERATOR ] = capability.has_generator;
@@ -191,10 +193,10 @@ Json::Value toJson( const ModuleCapability& capability )
 std::expected< ModuleCapability, std::string > capabilityFromJson( const Json::Value& json )
 {
 	if ( !json.isObject() ) return std::unexpected( std::string { "capability was not an object" } );
-	if ( !json[ field::MIME ].isString() ) return std::unexpected( std::string { "capability has no mime" } );
+	if ( !json[ field::MIME_ID ].isIntegral() ) return std::unexpected( std::string { "capability has no mime id" } );
 
 	return ModuleCapability {
-		.mime = json[ field::MIME ].asString(),
+		.mime_id = static_cast< MimeID >( json[ field::MIME_ID ].asInt() ),
 		.has_metadata = json[ field::HAS_METADATA ].asBool(),
 		.has_thumbnailer = json[ field::HAS_THUMBNAILER ].asBool(),
 		.has_generator = json[ field::HAS_GENERATOR ].asBool()
@@ -371,6 +373,7 @@ Json::Value thumbnailHeaderToJson( const ThumbnailInfo& info )
 	json[ field::WIDTH ] = static_cast< Json::UInt64 >( info.width );
 	json[ field::HEIGHT ] = static_cast< Json::UInt64 >( info.height );
 	json[ field::CACHE_THUMBNAIL ] = info.cache_thumbnail;
+	json[ field::FORMAT ] = static_cast< Json::UInt >( static_cast< std::uint8_t >( info.m_format ) );
 	return json;
 }
 
@@ -384,6 +387,16 @@ std::expected< ThumbnailInfo, std::string > thumbnailFromJson(
 	info.width = static_cast< std::size_t >( json[ field::WIDTH ].asUInt64() );
 	info.height = static_cast< std::size_t >( json[ field::HEIGHT ].asUInt64() );
 	info.cache_thumbnail = json[ field::CACHE_THUMBNAIL ].asBool();
+
+	// An older worker sends no format field; RGB is what every module produced before ANIMATED existed.
+	if ( const auto& format { json[ field::FORMAT ] }; format.isIntegral() )
+	{
+		const auto raw { format.asUInt() };
+		if ( raw > static_cast< std::uint8_t >( ThumbnailFormat::ANIMATED ) )
+			return std::unexpected( std::format( "thumbnail header carried unknown format {}", raw ) );
+
+		info.m_format = static_cast< ThumbnailFormat >( raw );
+	}
 	info.m_pixel_data = std::move( pixels );
 
 	return info;

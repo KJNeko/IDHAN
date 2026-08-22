@@ -9,7 +9,7 @@
 #include "crypto/simpleHasher.hpp"
 #include "spdlog/spdlog.h"
 
-std::vector< std::string_view > ArchiveGenerator::handleableMimes()
+std::vector< idhan::MimeID > ArchiveGenerator::handleableMimes()
 {
 	return getHandleableMimesForArchives();
 }

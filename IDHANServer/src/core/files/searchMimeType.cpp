@@ -6,7 +6,9 @@ namespace idhan::mime
 
 std::optional< MimeID > searchMimeType( const std::string& name, DbClientPtr db )
 {
-	const auto search_result { db->execSqlSync( "SELECT mime_id FROM mime WHERE name = $1", name ) };
+	const auto search_result {
+		db->execSqlSync( "SELECT mime_id FROM mime WHERE name = $1 ORDER BY mime_id LIMIT 1", name )
+	};
 
 	if ( search_result.size() > 0 )
 	{

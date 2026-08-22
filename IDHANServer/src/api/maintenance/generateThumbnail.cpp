@@ -1,5 +1,6 @@
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "MimeIDs.hpp"
 #include "mime/MimeDatabase.hpp"
 #include "modules/ModuleLoader.hpp"
 
@@ -21,7 +22,9 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	if ( !mime_str ) co_return createBadRequest( "Failed to detect mime type" );
 
-	const auto metadata_parser { modules::ModuleLoader::instance().getParserFor( *mime_str ) };
+	const auto mime_id { mime_ids::canonicalIDForName( *mime_str ) };
+
+	const auto metadata_parser { modules::ModuleLoader::instance().getParserFor( mime_id ) };
 	if ( metadata_parser.empty() ) co_return createInternalError( "Was unable to find parser for {}", *mime_str );
 
 	auto blob { ipc::Blob::fromBytes(
@@ -37,7 +40,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	const auto input { std::make_shared< const modules::CallInput >( std::move( *input_e ) ) };
 
-	modules::RemoteCallData call_data { .input = input, .mime_name = *mime_str, .extra = {}, .depth = 0 };
+	modules::RemoteCallData call_data { .input = input, .mime_id = mime_id, .extra = {}, .depth = 0 };
 	const auto metadata_json { co_await metadata_parser[ 0 ]->parseFile( call_data ) };
 
 	if ( !metadata_json )
@@ -46,7 +49,7 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	call_data.extra = metadata_json->m_extra;
 
-	auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( *mime_str ) };
+	auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_id ) };
 
 	if ( thumbnailers.empty() ) co_return createNotFound( "No thumbnailer available for mime type {}", *mime_str );
 
