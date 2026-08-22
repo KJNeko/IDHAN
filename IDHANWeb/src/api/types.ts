@@ -209,6 +209,13 @@ export interface TagRelationships {
   aliased: number[];
 }
 
+/**
+ * GET /mime: every mime id in the table mapped to the name it reports, keyed by the id as a string.
+ * Many-to-one, so it cannot be inverted: a Pixiv Ugoira (5002) reports "application/zip" just as
+ * APPLICATION_ZIP (5000) does.
+ */
+export type MimeMap = Record<string, string>;
+
 /** One row of a mime breakdown (count + total bytes). `mime` is null for files not yet obtained. */
 export interface MimeCount {
   mime: string | null;

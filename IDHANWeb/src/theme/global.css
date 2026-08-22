@@ -432,6 +432,16 @@ body {
   font-size: 0.85em;
 }
 
+.suggestion.system .suggestion-text {
+    color: #8fbedd;
+}
+
+.suggestion-hint {
+    color: var(--muted);
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
 .search-controls {
   display: flex;
   align-items: center;
