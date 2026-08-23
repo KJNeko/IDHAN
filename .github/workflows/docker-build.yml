@@ -10,14 +10,16 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: git.futuregadgetlabs.net
-  IMAGE_NAME: kj16609/idhan
+  REGISTRY: ghcr.io
+  IMAGE_NAME: kjneko/idhan
   PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3
 
 jobs:
   build-and-push:
-    runs-on: self-hosted
-    if: startsWith(github.server_url, 'https://git.futuregadgetlabs.net')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
@@ -31,9 +33,9 @@ jobs:
       - name: Log in to Container Registry
         uses: docker/login-action@v3
         with:
-          registry: git.futuregadgetlabs.net
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels)
         id: meta
@@ -59,7 +61,7 @@ jobs:
         with:
           context: .
           platforms: ${{ env.PLATFORMS }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}

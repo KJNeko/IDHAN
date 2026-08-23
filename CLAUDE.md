@@ -207,8 +207,8 @@ Useful CLI flags: `--testmode` (test DB schema), `--use_stdout` (log to stdout),
 
 ```yaml
 # Quick reference — see docs/docker.md for full compose example
-image: git.futuregadgetlabs.net/kj16609/idhan:dev   # bleeding edge
-image: git.futuregadgetlabs.net/kj16609/idhan:latest # tagged release
+image: ghcr.io/kjneko/idhan:dev   # bleeding edge
+image: ghcr.io/kjneko/idhan:latest # tagged release
 ```
 
 The `docker-compose-dev.yml` at the repo root is for local development.

@@ -3,7 +3,7 @@
 Replace `BUILD_TYPE` with `Release` or `Debug` depending on your requirements. Use `System` when building on the machine you will run the server on.
 
 ```bash
-git clone https://git.futuregadgetlabs.net/kj16609/IDHAN.git --recursive
+git clone https://github.com/KJNeko/IDHAN.git --recursive
 cmake -DCMAKE_BUILD_TYPE=System -B build
 cmake --build build -j$(nproc) --target IDHANServer
 ```
