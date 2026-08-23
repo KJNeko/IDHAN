@@ -29,7 +29,7 @@ ExpectedTask< std::vector< RecordUrl > > fetchUrlsDetailed( const RecordID recor
 {
 	const auto url_maps { co_await db->execSqlCoro(
 		"SELECT url, url_domain FROM url_mappings JOIN urls USING (url_id) JOIN url_domains USING (url_domain_id) "
-		"WHERE record_id = $1",
+		"WHERE record_id = $1 ORDER BY url",
 		record_id ) };
 
 	std::vector< RecordUrl > urls {};

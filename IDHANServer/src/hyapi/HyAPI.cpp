@@ -240,6 +240,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( drogon::HttpReques
 {
 	const auto file_id { request->getOptionalParameter< RecordID >( "file_id" ) };
 	const auto hash { request->getOptionalParameter< std::string >( "hash" ) };
+	if ( !file_id && !hash ) co_return createBadRequest( "No hash or file_id specified" );
 
 	RecordID record_id { file_id.value_or( 0 ) };
 
@@ -247,6 +248,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::thumbnail( drogon::HttpReques
 	{
 		const auto db { drogon::app().getDbClient() };
 		const auto sha256 { SHA256::fromHex( hash.value() ) };
+		if ( !sha256 ) co_return sha256.error();
 
 		if ( const auto record_id_e { co_await idhan::helpers::findRecord( *sha256, db ) } )
 			record_id = record_id_e.value();
@@ -270,6 +272,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 	if ( search_value.empty() )
 	{
 		Json::Value root;
+		root[ "autocomplete_text" ][ "search_text" ] = search_value;
+		root[ "autocomplete_text" ][ "inclusive" ] = true;
 		root[ "tags" ] = Json::Value( Json::arrayValue );
 		co_return drogon::HttpResponse::newHttpJsonResponse( root );
 	}
@@ -287,7 +291,18 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::searchTags( drogon::HttpReque
 	const auto result { co_await api::getSimilarTags( search_value, db ) };
 
 	Json::Value root;
-	root[ "tags" ] = result;
+	root[ "autocomplete_text" ][ "search_text" ] = search_value;
+	root[ "autocomplete_text" ][ "inclusive" ] = !search_value.starts_with( '-' );
+	root[ "tags" ] = Json::Value( Json::arrayValue );
+
+	Json::Value& tags { root[ "tags" ] };
+	for ( const auto& tag : result )
+	{
+		Json::Value match { Json::objectValue };
+		match[ "value" ] = tag[ "tag_text" ];
+		match[ "count" ] = tag[ "count" ];
+		tags.append( std::move( match ) );
+	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( root );
 }
