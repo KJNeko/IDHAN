@@ -44,6 +44,7 @@ RUN apt-get update && \
     libavfilter-dev \
     libavutil-dev \
     libjsoncpp-dev \
+    libjemalloc-dev \
     libfmt-dev \
     libspdlog-dev \
     libarchive-dev \
@@ -133,6 +134,7 @@ RUN apt-get update && \
     libvips42t64 \
     liburing2 \
     libjsoncpp26 \
+    libjemalloc2 \
     libuuid1 \
     zlib1g \
     libssl3t64 \
