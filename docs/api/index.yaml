@@ -173,10 +173,6 @@ paths:
     $ref: './paths/mime/parse.yaml'
   /mime/generate_thumbnail:
     $ref: './paths/mime/generate_thumbnail.yaml'
-  /mime/reload:
-    $ref: './paths/mime/reload.yaml'
-  /mime/parsers:
-    $ref: './paths/mime/parsers.yaml'
 
   # ── Jobs ───────────────────────────────────────────────────────────────────
   /jobs/metadata/rescan:

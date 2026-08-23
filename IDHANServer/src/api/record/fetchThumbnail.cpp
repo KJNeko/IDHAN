@@ -13,6 +13,7 @@
 #include "drogon/utils/coroutine.h"
 #include "filesystem/io/IOUring.hpp"
 #include "logging/ScopedTimer.hpp"
+#include "metadata/metadata.hpp"
 #include "modules/ModuleLoader.hpp"
 
 #pragma GCC diagnostic push
@@ -93,12 +94,19 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchThumbnail( drogon::HttpR
 		modules::RemoteCallData call_data { .input = *input_e, .mime_id = mime_id };
 
 		const auto extra_metadata {
-			co_await db->execSqlCoro( "SELECT json FROM metadata WHERE record_id = $1", record_id )
+			co_await db->execSqlCoro( "SELECT simple_mime_type, json FROM metadata WHERE record_id = $1", record_id )
 		};
 
 		if ( !extra_metadata.empty() )
 		{
-			call_data.extra = extra_metadata[ 0 ][ 0 ].as< Json::Value >();
+			call_data.extra = extra_metadata[ 0 ][ "json" ].as< Json::Value >();
+
+			const auto simple_type {
+				static_cast< SimpleMimeType >( extra_metadata[ 0 ][ "simple_mime_type" ].as< std::uint16_t >() )
+			};
+
+			if ( simple_type == SimpleMimeType::ARCHIVE )
+				co_await metadata::applyArchiveEntries( call_data.extra, record_id, db );
 		}
 
 		//TODO: If not caching, Do not use the file endpoint

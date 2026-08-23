@@ -57,7 +57,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 			spdlog::warn( "Archive warning while reading entry: {}", warn ? warn : "unknown" );
 		}
 
-		if ( archive_entry_filetype( entry ) != AE_IFREG ) // skip anything that isn't a file
+		if ( archive_entry_filetype( entry ) != AE_IFREG )
 		{
 			ret = archive_read_next_header( a.get(), &entry );
 			continue;
@@ -91,9 +91,8 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 		}
 		const auto& [ file_hash, file_size ] { *entry_hash_e };
 
-		archive_metadata.contained_hashes.emplace_back( file_hash );
+		archive_metadata.contained_records.emplace_back( file_hash, *filename );
 		archive_metadata.m_size += file_size;
-		json[ idhan::crypto::toHex( file_hash ) ] = *filename;
 		spdlog::trace( "Got hash {}", idhan::crypto::toHex( file_hash ) );
 
 		ret = archive_read_next_header( a.get(), &entry );

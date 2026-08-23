@@ -39,6 +39,25 @@ std::expected< CallInput, std::string > CallInput::forBlob( ipc::Blob blob )
 	return input;
 }
 
+std::expected< CallInput, std::string > CallInput::forBytes( const std::span< const std::byte > bytes )
+{
+	auto blob { ipc::Blob::fromBytes( bytes ) };
+
+	if ( !blob ) return std::unexpected( std::move( blob.error() ) );
+
+	return forBlob( std::move( *blob ) );
+}
+
+std::expected< std::shared_ptr< const CallInput >, std::string > CallInput::sharedForBytes(
+	const std::span< const std::byte > bytes )
+{
+	auto input { forBytes( bytes ) };
+
+	if ( !input ) return std::unexpected( std::move( input.error() ) );
+
+	return std::make_shared< const CallInput >( std::move( *input ) );
+}
+
 int CallInput::fd() const
 {
 	return m_file ? m_file.get() : m_blob.fd();

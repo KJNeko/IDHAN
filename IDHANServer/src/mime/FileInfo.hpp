@@ -29,9 +29,7 @@ struct FileInfo
 	std::chrono::time_point< std::chrono::system_clock > modified_time;
 };
 
-[[nodiscard]] drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(
-	std::shared_ptr< FileIOUring > io_uring,
-	DbClientPtr db );
+[[nodiscard]] drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileIOUring > io_uring );
 
 drogon::Task<> setFileInfo( RecordID record_id, FileInfo info, DbClientPtr db );
 

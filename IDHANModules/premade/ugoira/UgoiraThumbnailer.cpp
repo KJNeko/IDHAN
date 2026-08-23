@@ -3,18 +3,22 @@
 #include <json/value.h>
 #include <vips/vips.h>
 
+#include <algorithm>
 #include <filesystem>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "AnimationManifest.hpp"
 #include "MimeIDs.hpp"
+#include "imageExtensions.hpp"
 #include "crypto/simpleHasher.hpp"
 #include "logging/format_ns.hpp"
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
-//! The manifest naming the frame order, always present: ArchiveMimeParser only refines a zip to
-//! PIXIV_UGOIRA when it finds this.
+// ArchiveMimeParser also refines a manifest-less zip whose root is a numbered image sequence, so
+// this is the preferred source of frame order, not a guaranteed one.
 static constexpr std::string_view MANIFEST_NAME { "animation.json" };
 
 //! Maps each member path in the archive metadata json to its SHA-256, which is how the generate
@@ -36,8 +40,27 @@ static std::unordered_map< std::string, std::string > memberHashesByPath( const 
 	return by_path;
 }
 
-//! Reads a whole ModuleFile into a buffer. Only the manifest goes through this; frames are decoded
-//! straight off a VipsModuleSource.
+// Frame order for a Ugoira with no manifest: its image members by name, which for the numbered
+// sequence ArchiveMimeParser matched is the playback order. Hydrus sorts the same way and shows each
+// frame for UGOIRA_DEFAULT_FRAME_DURATION_MS, having no delay to read either.
+static std::vector< UgoiraFrame > framesFromMembers( const std::unordered_map< std::string, std::string >& by_path )
+{
+	std::vector< std::string > paths {};
+
+	for ( const auto& [ path, hash ] : by_path )
+		if ( idhan::premade::hasFrameExtension( path ) ) paths.emplace_back( path );
+
+	std::ranges::sort( paths );
+
+	std::vector< UgoiraFrame > frames {};
+	frames.reserve( paths.size() );
+
+	for ( auto& path : paths ) frames.emplace_back( std::move( path ), UGOIRA_DEFAULT_FRAME_DELAY_MS );
+
+	return frames;
+}
+
+//! Only the manifest goes through this; frames are decoded straight off a VipsModuleSource.
 static std::expected< std::vector< std::byte >, idhan::ModuleError > readWhole( const idhan::ModuleFile& file )
 {
 	std::vector< std::byte > bytes {};
@@ -86,24 +109,42 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > UgoiraThumbnailer::cre
 		}
 	}
 
-	if ( manifest_hash.empty() ) return std::unexpected( idhan::ModuleError { "Ugoira carries no animation.json" } );
+	std::vector< UgoiraFrame > frames {};
 
-	const auto manifest_file { this->m_callbacks.generate(
-		data.file, idhan::crypto::fromHex( manifest_hash ), extra, std::string { MANIFEST_NAME } ) };
-	if ( !manifest_file ) return std::unexpected( manifest_file.error() );
+	if ( manifest_hash.empty() )
+	{
+		frames = framesFromMembers( by_path );
 
-	const auto manifest_bytes { readWhole( **manifest_file ) };
-	if ( !manifest_bytes ) return std::unexpected( manifest_bytes.error() );
+		if ( frames.empty() )
+			return std::unexpected(
+				idhan::ModuleError { "Ugoira carries neither an animation.json nor any image member" } );
 
-	const auto frames { parseAnimationManifest( *manifest_bytes ) };
-	if ( !frames ) return std::unexpected( frames.error() );
+		spdlog::debug(
+			"Ugoira carries no animation.json, showing its {} members at {}ms each",
+			frames.size(),
+			UGOIRA_DEFAULT_FRAME_DELAY_MS );
+	}
+	else
+	{
+		const auto manifest_file { this->m_callbacks.generate(
+			data.file, idhan::crypto::fromHex( manifest_hash ), extra, std::string { MANIFEST_NAME } ) };
+		if ( !manifest_file ) return std::unexpected( manifest_file.error() );
+
+		const auto manifest_bytes { readWhole( **manifest_file ) };
+		if ( !manifest_bytes ) return std::unexpected( manifest_bytes.error() );
+
+		auto parsed { parseAnimationManifest( *manifest_bytes ) };
+		if ( !parsed ) return std::unexpected( parsed.error() );
+
+		frames = std::move( *parsed );
+	}
 
 	std::vector< idhan::VipsImagePtr > pages {};
 	std::vector< int > delays {};
-	pages.reserve( frames->size() );
-	delays.reserve( frames->size() );
+	pages.reserve( frames.size() );
+	delays.reserve( frames.size() );
 
-	for ( const auto& frame : *frames )
+	for ( const auto& frame : frames )
 	{
 		const auto found { by_path.find( frame.m_file ) };
 		if ( found == by_path.end() )

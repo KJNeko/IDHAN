@@ -3,6 +3,7 @@
 
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "filesystem/clusters/ClusterManager.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "metadata.hpp"
@@ -71,12 +72,12 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 					"INSERT INTO video_metadata (record_id, width, height, bitrate, duration, framerate, has_audio) VALUES ($1, $2, $3, $4, $5, $6, $7) "
 					"ON CONFLICT (record_id) DO UPDATE SET width = $2, height = $3, bitrate = $4, duration = $5, framerate = $6, has_audio = $7",
 					record_id,
-					video_metadata.m_width,
-					video_metadata.m_height,
-					video_metadata.m_bitrate,
-					video_metadata.m_duration,
-					video_metadata.m_fps,
-					video_metadata.m_has_audio );
+					video_metadata.width,
+					video_metadata.height,
+					video_metadata.bitrate_bps,
+					video_metadata.duration_s,
+					video_metadata.fps,
+					video_metadata.has_audio );
 
 				break;
 			}
@@ -85,7 +86,11 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 				const auto& archive_metadata { std::get< MetadataInfoArchive >( metadata.m_metadata ) };
 
 				std::vector< RecordID > records {};
-				for ( const auto& record_sha256 : archive_metadata.contained_hashes )
+				std::vector< std::string > paths {};
+				records.reserve( archive_metadata.contained_records.size() );
+				paths.reserve( archive_metadata.contained_records.size() );
+
+				for ( const auto& [ record_sha256, path ] : archive_metadata.contained_records )
 				{
 					const SHA256 sha256 { SHA256::fromBuffer( record_sha256 ) };
 
@@ -93,6 +98,7 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 					return_unexpected_error( contained_record_id );
 
 					records.emplace_back( *contained_record_id );
+					paths.emplace_back( path );
 				}
 
 				const auto existing_metadata { co_await db->execSqlCoro(
@@ -114,12 +120,22 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 					archive_id = inserted_archive_id[ 0 ][ 0 ].as< std::uint32_t >();
 				}
 
-				for ( const auto stored_record_id : records )
+				// The parse is authoritative for the whole archive, so entries it no longer lists go.
+				co_await db->execSqlCoro(
+					"DELETE FROM archive_map WHERE archive_id = $1 AND path <> ALL($2::text[])",
+					archive_id,
+					std::vector< std::string > { paths } );
+
+				if ( !records.empty() )
 				{
 					co_await db->execSqlCoro(
-						"INSERT INTO archive_map (archive_id, record_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+						"INSERT INTO archive_map (archive_id, record_id, path) "
+						"SELECT $1, entry.record_id, entry.path "
+						"FROM UNNEST($2::" RECORD_PG_TYPE_NAME "[], $3::text[]) AS entry(record_id, path) "
+						"ON CONFLICT (archive_id, path) DO UPDATE SET record_id = EXCLUDED.record_id",
 						archive_id,
-						stored_record_id );
+						std::move( records ),
+						std::move( paths ) );
 				}
 
 				co_await db->execSqlCoro(
@@ -140,7 +156,7 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 					animation_metadata.width,
 					animation_metadata.height,
 					animation_metadata.frame_count,
-					animation_metadata.duration,
+					animation_metadata.duration_s,
 					animation_metadata.loops );
 
 				break;
@@ -152,10 +168,10 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 					"INSERT INTO audio_metadata (record_id, duration, bitrate, channels, sample_rate) VALUES ($1, $2, $3, $4, $5) "
 					"ON CONFLICT (record_id) DO UPDATE SET duration = $2, bitrate = $3, channels = $4, sample_rate = $5",
 					record_id,
-					audio_metadata.m_duration,
-					audio_metadata.m_bitrate,
-					static_cast< SmallInt >( audio_metadata.m_channels ),
-					audio_metadata.m_sample_rate );
+					audio_metadata.duration_s,
+					audio_metadata.bitrate_bps,
+					static_cast< SmallInt >( audio_metadata.channels ),
+					audio_metadata.sample_rate );
 
 				break;
 			}

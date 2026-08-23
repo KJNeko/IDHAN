@@ -10,9 +10,6 @@
 #define IDHAN_STATIC_PATH "/usr/share/idhan/static"
 #endif
 
-#ifndef IDHAN_MIME_PATH
-#define IDHAN_MIME_PATH "/usr/share/idhan/mime"
-#endif
 
 #ifndef IDHAN_MODULES_PATH
 #define IDHAN_MODULES_PATH "/usr/share/idhan/modules"
@@ -27,9 +24,6 @@
 #define IDHAN_STATIC_PATH "C:\\ProgramData\\IDHAN\\static"
 #endif
 
-#ifndef IDHAN_MIME_PATH
-#define IDHAN_MIME_PATH "C:\\ProgramData\\IDHAN\\mime"
-#endif
 
 #ifndef IDHAN_MODULES_PATH
 #define IDHAN_MODULES_PATH "C:\\ProgramData\\IDHAN\\modules"
@@ -46,15 +40,12 @@
 namespace idhan
 {
 
-//! Directory containing the running executable, resolved via /proc/self/exe.
 std::filesystem::path getExecutableDir();
 
 std::vector< std::filesystem::path > getModulePaths();
 
-//! Path to the IDHANModuleRunner executable, which hosts one module library per process.
 std::filesystem::path getModuleRunnerPath();
 
-std::vector< std::filesystem::path > getMimeParserPaths();
 std::filesystem::path getStaticPath();
 std::filesystem::path getThumbnailsPath();
 

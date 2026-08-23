@@ -2,7 +2,7 @@
 
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "mime/prescan.hpp"
 
 namespace idhan
 {
@@ -36,23 +36,14 @@ drogon::Task<> setFileInfo( const RecordID record_id, const FileInfo info, const
 		extension_opt );
 }
 
-drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInfo(
-	std::shared_ptr< FileIOUring > io_uring,
-	const DbClientPtr db )
+drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileIOUring > io_uring )
 {
 	FileInfo info {};
 	info.size = io_uring->size();
-	const auto mime_string { co_await mime::getMimeDatabase()->scan( io_uring ) };
 
-	if ( !mime_string )
-	{
-		co_return std::unexpected( mime_string.error() );
-	}
+	const auto mime_id { co_await mime::prescanMime( mime::MimeReader { io_uring } ) };
 
-	const auto mime_search { co_await db->execSqlCoro(
-		"SELECT mime_id FROM mime WHERE name = $1 ORDER BY mime_id LIMIT 1", mime_string.value() ) };
-
-	if ( mime_search.empty() )
+	if ( mime_id == mime_ids::UNKNOWN )
 	{
 		info.mime_id = constants::INVALID_MIME_ID;
 		info.extension = io_uring->path().extension();
@@ -60,7 +51,7 @@ drogon::Task< std::expected< FileInfo, drogon::HttpResponsePtr > > gatherFileInf
 	}
 	else
 	{
-		info.mime_id = mime_search[ 0 ][ 0 ].as< MimeID >();
+		info.mime_id = mime_id;
 	}
 
 	info.store_time = std::chrono::system_clock::now();
