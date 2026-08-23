@@ -375,16 +375,25 @@ void WorkerRunner::handleCallbackResult( ipc::Frame&& frame )
 	}
 
 	ipc::Blob blob {};
+	std::string blob_error {};
 	if ( !frame.fds.empty() )
 	{
-		auto adopted { ipc::Blob::adopt( std::move( frame.fds.front() ) ) };
-		if ( adopted ) blob = std::move( *adopted );
+		auto adopted { ipc::Blob::adoptSealed( std::move( frame.fds.front() ) ) };
+		if ( adopted )
+			blob = std::move( *adopted );
+		else
+			blob_error = adopted.error();
 	}
 
 	{
 		const std::lock_guard< std::mutex > guard { pending->mutex };
 		pending->ok = frame.body[ ipc::field::OK ].asBool();
 		pending->error = frame.body[ ipc::field::ERROR ].asString();
+		if ( !blob_error.empty() && pending->ok )
+		{
+			pending->ok = false;
+			pending->error = std::move( blob_error );
+		}
 		pending->body = std::move( frame.body );
 		pending->blob = std::move( blob );
 		pending->answered = true;

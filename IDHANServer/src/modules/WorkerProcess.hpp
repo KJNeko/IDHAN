@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <coroutine>
 #include <cstdint>
 #include <deque>
@@ -109,6 +110,7 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	std::vector< ipc::ManifestEntry > m_manifest {};
 	std::string m_signature {};
 	bool m_manifest_seen { false };
+	std::condition_variable m_manifest_ready {};
 
 	std::atomic< std::size_t > m_rss_kb { 0 };
 	std::atomic< std::size_t > m_active_calls { 0 };
@@ -152,6 +154,10 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 
 	//! Blocks until the worker announces its manifest, or the timeout expires. Startup only.
 	[[nodiscard]] std::expected< std::vector< ipc::ManifestEntry >, std::string > awaitManifest(
+		std::chrono::milliseconds timeout );
+
+	//! Waits for a startup manifest without blocking the event loop that dispatched the call.
+	[[nodiscard]] IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > awaitManifestAsync(
 		std::chrono::milliseconds timeout );
 
 	[[nodiscard]] std::expected< void, std::string > post( const Json::Value& body, std::span< const int > fds = {} );

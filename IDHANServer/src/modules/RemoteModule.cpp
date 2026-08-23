@@ -59,7 +59,7 @@ IDHANTask< std::expected< MetadataInfo, ModuleError > > RemoteModule::parseFile(
 
 	Json::Value body { baseBody( ipc::CallOp::METADATA, data ) };
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input, data.depth != SERVER_ORIGINATED ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
 
@@ -80,9 +80,10 @@ IDHANTask< std::expected< ThumbnailInfo, ModuleError > > RemoteModule::createThu
 	body[ ipc::field::WIDTH ] = Json::UInt64 { width };
 	body[ ipc::field::HEIGHT ] = Json::UInt64 { height };
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input, data.depth != SERVER_ORIGINATED ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
+	if ( !outcome->blob.valid() ) co_return std::unexpected( ModuleError { "thumbnail result carried no payload" } );
 
 	auto thumbnail { ipc::thumbnailFromJson( outcome->body[ ipc::field::THUMBNAIL ], toVector( outcome->blob ) ) };
 	if ( !thumbnail ) co_return std::unexpected( ModuleError { thumbnail.error() } );
@@ -101,9 +102,10 @@ IDHANTask< std::expected< ThumbnailInfo, ModuleError > > RemoteModule::createThu
 	body[ ipc::field::WIDTH ] = Json::UInt64 { width };
 	body[ ipc::field::HEIGHT ] = Json::UInt64 { height };
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input, data.depth != SERVER_ORIGINATED ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
+	if ( !outcome->blob.valid() ) co_return std::unexpected( ModuleError { "thumbnail result carried no payload" } );
 
 	auto thumbnail { ipc::thumbnailFromJson( outcome->body[ ipc::field::THUMBNAIL ], toVector( outcome->blob ) ) };
 	if ( !thumbnail ) co_return std::unexpected( ModuleError { thumbnail.error() } );
@@ -117,7 +119,7 @@ IDHANTask< std::expected< MimeID, ModuleError > > RemoteModule::parseMime( Remot
 
 	Json::Value body { baseBody( ipc::CallOp::MIME_PARSE, data ) };
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input, data.depth != SERVER_ORIGINATED ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
 
@@ -139,9 +141,10 @@ IDHANTask< std::expected< ipc::Blob, ModuleError > > RemoteModule::generate(
 	Json::Value body { baseBody( ipc::CallOp::GENERATE, data ) };
 	body[ ipc::field::HASH ] = crypto::toHex( desired_hash );
 
-	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input ) };
+	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input, data.depth != SERVER_ORIGINATED ) };
 
 	if ( !outcome->ok ) co_return std::unexpected( ModuleError { outcome->error } );
+	if ( !outcome->blob.valid() ) co_return std::unexpected( ModuleError { "generate result carried no payload" } );
 
 	co_return std::move( outcome->blob );
 }

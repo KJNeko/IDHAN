@@ -24,8 +24,9 @@ class WorkerPool
 	std::shared_ptr< WorkerProcess > m_worker {};
 	bool m_shutting_down { false };
 
-	//! Returns a live worker, spawning one if needed. Never waits for the manifest.
-	[[nodiscard]] std::expected< std::shared_ptr< WorkerProcess >, std::string > acquire();
+	//! Returns a live worker, spawning one if needed. A callback dispatch is isolated from the
+	//! persistent worker: its caller may be blocked waiting for that callback to finish.
+	[[nodiscard]] std::expected< std::shared_ptr< WorkerProcess >, std::string > acquire( bool isolated = false );
 
   public:
 
@@ -48,7 +49,8 @@ class WorkerPool
 	//! Runs one call, retrying once in a fresh process if the worker died mid-flight.
 	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > dispatch(
 		Json::Value body,
-		std::shared_ptr< const CallInput > input );
+		std::shared_ptr< const CallInput > input,
+		bool isolated = false );
 
 	//! Spawns the persistent worker ahead of the first request. No-op for single-run libraries.
 	void prewarm();
