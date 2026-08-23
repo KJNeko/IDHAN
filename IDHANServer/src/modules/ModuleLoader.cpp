@@ -1,7 +1,5 @@
 #include "ModuleLoader.hpp"
 
-#include "MimeIDs.hpp"
-
 #include <sys/prctl.h>
 
 #include <algorithm>
@@ -15,6 +13,7 @@
 #include <string>
 
 #include "Config.hpp"
+#include "MimeIDs.hpp"
 #include "crypto/simpleHasher.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "fgl/defines.hpp"
@@ -334,7 +333,7 @@ using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::st
 //! Wraps a descriptor a module sent with its callback as an input for the nested call.
 [[nodiscard]] ExpectedInput makeCallbackInput( ipc::UniqueFd fd )
 {
-	auto blob { ipc::Blob::adopt( std::move( fd ) ) };
+	auto blob { ipc::Blob::adoptSealed( std::move( fd ) ) };
 	if ( !blob ) return std::unexpected( blob.error() );
 
 	auto input { CallInput::forBlob( std::move( *blob ) ) };
@@ -371,6 +370,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	if ( !kind )
 	{
 		reply[ ipc::field::ERROR ] = "unknown callback kind";
+	}
+	else if ( *kind == ipc::CallbackKind::GENERATE && !frame.body[ ipc::field::HASH ].isString() )
+	{
+		reply[ ipc::field::ERROR ] = "generate callback did not carry a sha256 hash string";
 	}
 	else if ( !by_reference && frame.fds.empty() )
 	{

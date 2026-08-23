@@ -284,6 +284,12 @@ std::expected< std::vector< Frame >, std::string > FrameReader::read( const int 
 				m_eof = true;
 				break;
 			}
+			if ( ( message.msg_flags & MSG_CTRUNC ) != 0 )
+			{
+				std::vector< UniqueFd > truncated_fds {};
+				collectFds( message, truncated_fds );
+				return std::unexpected( std::string { "peer sent truncated ancillary descriptor data" } );
+			}
 
 			collectFds( message, m_pending_fds );
 

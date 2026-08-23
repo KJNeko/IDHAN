@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <expected>
 #include <filesystem>
+#include <limits>
 #include <span>
 #include <string>
 
@@ -11,6 +12,8 @@
 
 namespace idhan::ipc
 {
+
+inline constexpr std::size_t MAX_IPC_BLOB_BYTES { 512u * 1024u * 1024u };
 
 class Blob
 {
@@ -38,6 +41,11 @@ class Blob
 	[[nodiscard]] static std::expected< Blob, std::string > fromBytes( std::span< const std::byte > bytes );
 
 	[[nodiscard]] static std::expected< Blob, std::string > adopt( UniqueFd fd );
+
+	//! Adopts a worker-produced immutable memfd, rejecting mutable or oversized descriptors.
+	[[nodiscard]] static std::expected< Blob, std::string > adoptSealed(
+		UniqueFd fd,
+		std::size_t maximum_size = MAX_IPC_BLOB_BYTES );
 
 	[[nodiscard]] data_view view() const
 	{
