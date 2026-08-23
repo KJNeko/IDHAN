@@ -85,6 +85,16 @@ services:
       - /media:/media
     restart: unless-stopped
 
+  hyshare:
+    profiles: [ "hyshare" ]
+    image: ghcr.io/floogulinc/hyshare:latest
+    env_file: .env
+    environment:
+      HYSHARE_PORT: 3000
+      HYSHARE_HYDRUS_API_URL: http://idhan-server:16609/hyapi
+    ports:
+      - "3000:3000"
+
 volumes:
   idhan_pg18:
   idhan_thumbnails:

@@ -69,6 +69,12 @@ const std::string& cachedTagDomainServiceKey( const TagDomainID tag_domain_id )
 	return keys.try_emplace( tag_domain_id, tagDomainServiceKey( tag_domain_id ) ).first->second;
 }
 
+const std::string& combinedTagServiceKey()
+{
+	static const std::string key { encodeServiceKey( "all known tags" ) };
+	return key;
+}
+
 std::string fileClusterServiceKey( const ClusterID cluster_id )
 {
 	return encodeServiceKey( format_ns::format( "{}{}", FILE_CLUSTER_PREFIX, cluster_id ) );

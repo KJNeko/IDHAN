@@ -1,12 +1,14 @@
 #include <algorithm>
 #include <array>
 #include <ranges>
+#include <unordered_set>
 
 #include "HyAPI.hpp"
 #include "IDHANTypes.hpp"
 #include "api/TagAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/record/urls/urls.hpp"
+#include "constants/UrlTypes.hpp"
 #include "constants/hydrus_version.hpp"
 #include "core/search/SearchBuilder.hpp"
 #include "crypto/SHA256.hpp"
@@ -41,6 +43,7 @@ static const Json::StaticString KEY_REQUEST_URL { "request_url" };
 static const Json::StaticString KEY_NORMALISED_URL { "normalised_url" };
 static const Json::StaticString KEY_URL_TYPE { "url_type" };
 static const Json::StaticString KEY_URL_TYPE_STRING { "url_type_string" };
+static const Json::StaticString KEY_MATCH_NAME { "match_name" };
 static const Json::StaticString KEY_CAN_PARSE { "can_parse" };
 static const Json::StaticString KEY_TAGS { "tags" };
 static const Json::StaticString KEY_STORAGE_TAGS { "storage_tags" };
@@ -135,12 +138,24 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 //! instead of all of them at once.
 static constexpr std::size_t METADATA_BATCH_SIZE { 1 };
 
-static void appendTagsByDomain( Json::Value& tags, const Json::StaticString which, const drogon::orm::Result& rows )
+//! \return The status-zero tag array of \p which for \p service_key, creating it when absent.
+static Json::Value& tagArrayFor( Json::Value& tags, const std::string& service_key, const Json::StaticString which )
 {
 	static const Json::StaticString FIRST_INDEX { "0" };
 
+	Json::Value& target { tags[ service_key ][ which ][ FIRST_INDEX ] };
+	if ( !target.isArray() ) target = Json::Value( Json::arrayValue );
+
+	return target;
+}
+
+static void appendTagsByDomain( Json::Value& tags, const Json::StaticString which, const drogon::orm::Result& rows )
+{
 	TagDomainID current_domain {};
 	Json::Value* target { nullptr };
+
+	Json::Value& combined { tagArrayFor( tags, combinedTagServiceKey(), which ) };
+	std::unordered_set< std::string_view > combined_seen {};
 
 	for ( const auto& row : rows )
 	{
@@ -149,13 +164,16 @@ static void appendTagsByDomain( Json::Value& tags, const Json::StaticString whic
 		if ( target == nullptr || tag_domain_id != current_domain )
 		{
 			current_domain = tag_domain_id;
-			target = &tags[ cachedTagDomainServiceKey( tag_domain_id ) ][ which ][ FIRST_INDEX ];
+			target = &tagArrayFor( tags, cachedTagDomainServiceKey( tag_domain_id ), which );
 		}
 
 		const auto& tag_text { row[ "tag_text" ] };
 		const auto* const begin { tag_text.c_str() };
 
-		target->append( Json::Value( begin, begin + tag_text.length() ) );
+		Json::Value value { begin, begin + tag_text.length() };
+		target->append( value );
+
+		if ( combined_seen.emplace( begin, tag_text.length() ).second ) combined.append( std::move( value ) );
 	}
 }
 
@@ -182,6 +200,11 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	data[ KEY_MIME ] = std::string( mime_name );
 	data[ KEY_EXT ] = helpers::withLeadingDot( extension );
 
+	data[ "notes" ] = Json::Value( Json::objectValue );
+	data[ "is_deleted" ] = false;
+	data[ "is_local" ] = true;
+	data[ "is_trashed" ] = false;
+
 	data[ KEY_FILE_SERVICES ][ KEY_CURRENT ] = Json::Value( Json::objectValue );
 	data[ KEY_FILE_SERVICES ][ KEY_DELETED ] = Json::Value( Json::objectValue );
 
@@ -192,8 +215,8 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 		data[ KEY_FILE_SERVICES ][ KEY_CURRENT ][ cluster_key ][ KEY_TIME_IMPORTED ] = cluster_store_time_timestamp;
 	}
 
-	const auto url_json_e { co_await fetchUrlsStrings( record_id, db ) };
-	if ( !url_json_e ) co_return std::unexpected( url_json_e.error() );
+	const auto record_urls { co_await fetchUrlsDetailed( record_id, db ) };
+	if ( !record_urls ) co_return std::unexpected( record_urls.error() );
 
 	data[ KEY_KNOWN_URLS ] = Json::Value( Json::arrayValue );
 	data[ KEY_DETAILED_KNOWN_URLS ] = Json::Value( Json::arrayValue );
@@ -201,15 +224,15 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	Json::Value& known_urls { data[ KEY_KNOWN_URLS ] };
 	Json::Value& detailed_known_urls { data[ KEY_DETAILED_KNOWN_URLS ] };
 
-	for ( const auto& url_str : url_json_e.value() )
+	for ( const auto& [ url_str, domain ] : record_urls.value() )
 	{
 		known_urls.append( url_str );
 
-		Json::Value advanced_url_info {};
+		Json::Value advanced_url_info { Json::objectValue };
 		advanced_url_info[ KEY_REQUEST_URL ] = url_str;
 		advanced_url_info[ KEY_NORMALISED_URL ] = url_str;
-		advanced_url_info[ KEY_URL_TYPE ] = 5; // Unknown URL
-		advanced_url_info[ KEY_URL_TYPE_STRING ] = "unknown";
+		advanced_url_info[ KEY_URL_TYPE ] = static_cast< Json::UInt64 >( hydrus::gen_constants::URL_TYPE_UNKNOWN );
+		advanced_url_info[ KEY_MATCH_NAME ] = domain;
 		advanced_url_info[ KEY_CAN_PARSE ] = false;
 
 		detailed_known_urls.append( std::move( advanced_url_info ) );
@@ -239,6 +262,12 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 		record_id ) };
 	const auto display_rows { co_await display_tags };
 	appendTagsByDomain( tags, KEY_DISPLAY_TAGS, display_rows );
+
+	for ( const auto& service_key : tags.getMemberNames() )
+	{
+		tagArrayFor( tags, service_key, KEY_STORAGE_TAGS );
+		tagArrayFor( tags, service_key, KEY_DISPLAY_TAGS );
+	}
 
 	for ( const auto& service : services )
 	{
