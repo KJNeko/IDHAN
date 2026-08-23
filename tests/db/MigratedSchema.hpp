@@ -8,13 +8,14 @@
 #include <pqxx/pqxx>
 #pragma GCC diagnostic pop
 
+#include <catch2/catch_test_macros.hpp>
+
 #include <cctype>
 #include <string>
 #include <string_view>
 
-#include <catch2/catch_test_macros.hpp>
-
 #include "CurrentTestName.hpp"
+#include "MimeIDs.hpp"
 #include "TestConnection.hpp"
 #include "db/searchPath.hpp"
 #include "migrations.hpp"
@@ -46,6 +47,16 @@ class MigratedSchema
 	pqxx::connection m_connection { connectionString() };
 	std::string m_schema { schemaNameFor( currentTestName() ) };
 
+	static void seedMimeTable( pqxx::transaction_base& tx )
+	{
+		for ( const auto id : mime_ids::ALL_MIME_IDS )
+			tx.exec(
+				"INSERT INTO mime (mime_id, name, best_extension) VALUES ($1, $2, $3)",
+				pqxx::params { id,
+			                   std::string { mime_ids::mime_names.at( id ) },
+			                   std::string { mime_ids::mime_extensions.at( id ) } } );
+	}
+
   protected:
 
 	pqxx::connection& connection() { return m_connection; }
@@ -64,6 +75,7 @@ class MigratedSchema
 		tx.exec( "SET search_path = " + db::makeSearchPath( m_schema ) );
 
 		db::updateMigrations( tx, m_schema );
+		seedMimeTable( tx );
 	}
 
 	MigratedSchema( const MigratedSchema& ) = delete;

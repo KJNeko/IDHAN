@@ -87,8 +87,7 @@ SCENARIO( "Well known mime ids", "[mime][ids]" )
 
 			THEN( "a type carrying its own name resolves to itself" )
 			{
-				REQUIRE(
-					mime_ids::canonicalIDForName( "application/vnd.comicbook+zip" ) == mime_ids::COMICBOOK_ZIP );
+				REQUIRE( mime_ids::canonicalIDForName( "application/x-clip-studio" ) == mime_ids::APPLICATION_CLIP );
 			}
 
 			THEN( "a name no id carries resolves to nothing" )
