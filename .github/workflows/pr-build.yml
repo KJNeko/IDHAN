@@ -12,8 +12,8 @@ on:
       - dev
 
 env:
-  REGISTRY: git.futuregadgetlabs.net
-  IMAGE_NAME: kj16609/idhan
+  REGISTRY: ghcr.io
+  IMAGE_NAME: kjneko/idhan
 
 # Only one build per PR at a time; a new push supersedes the running build.
 concurrency:
@@ -24,6 +24,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     if: github.event.action != 'closed'
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
@@ -41,6 +44,12 @@ jobs:
           echo "cache=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG-buildcache" >> $GITHUB_OUTPUT
           if [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
             echo "push=true" >> $GITHUB_OUTPUT
+            {
+              echo "cache_from<<EOF"
+              echo "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG-buildcache"
+              echo "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-buildcache"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
           else
             echo "push=false" >> $GITHUB_OUTPUT
           fi
@@ -53,8 +62,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build PR image
         uses: docker/build-push-action@v5
@@ -64,17 +73,16 @@ jobs:
           push: ${{ steps.ctx.outputs.push == 'true' }}
           tags: ${{ steps.ctx.outputs.image }}
           labels: |
-            org.opencontainers.image.source=https://git.futuregadgetlabs.net/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
             org.opencontainers.image.title=IDHAN (PR ${{ github.event.number }})
-            net.futuregadgetlabs.idhan.pr.number=${{ github.event.number }}
-            net.futuregadgetlabs.idhan.pr.url=${{ github.event.pull_request.html_url }}
-            net.futuregadgetlabs.idhan.pr.head-ref=${{ github.event.pull_request.head.ref }}
-            net.futuregadgetlabs.idhan.pr.base-ref=${{ github.event.pull_request.base.ref }}
-          # Seed from the PR's own cache first, then fall back to the dev branch cache.
-          cache-from: |
-            type=registry,ref=${{ steps.ctx.outputs.cache }}
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-buildcache
+            io.github.kjneko.idhan.pr.number=${{ github.event.number }}
+            io.github.kjneko.idhan.pr.url=${{ github.event.pull_request.html_url }}
+            io.github.kjneko.idhan.pr.head-ref=${{ github.event.pull_request.head.ref }}
+            io.github.kjneko.idhan.pr.base-ref=${{ github.event.pull_request.base.ref }}
+          # Internal PRs seed from their cache first, then the dev branch cache.
+          # Forks have no registry credentials, so build without importing private cache layers.
+          cache-from: ${{ steps.ctx.outputs.cache_from }}
           cache-to: ${{ steps.ctx.outputs.push == 'true' && format('type=registry,ref={0},mode=max', steps.ctx.outputs.cache) || '' }}
 
       - name: Summarise PR image
@@ -92,20 +100,24 @@ jobs:
           } >> $GITHUB_STEP_SUMMARY
 
   # Best effort: drop the per-PR image and its build cache once the PR is closed.
-  # Needs a REGISTRY_TOKEN with package delete scope; failures are not fatal.
   cleanup:
     runs-on: ubuntu-latest
-    if: startsWith(github.server_url, 'https://git.futuregadgetlabs.net') && github.event.action == 'closed'
+    if: github.event.action == 'closed'
+    permissions:
+      packages: write
 
     steps:
-      - name: Delete PR image tags
+      - name: Delete PR image tags and caches
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          OWNER="${{ github.repository_owner }}"
           PACKAGE="idhan"
           for VERSION in "idhan-pr-${{ github.event.number }}" "idhan-pr-${{ github.event.number }}-buildcache"; do
-            echo "Deleting $PACKAGE:$VERSION"
-            curl -sS -o /dev/null -w '%{http_code}\n' -X DELETE \
-              -H "Authorization: token ${{ secrets.REGISTRY_TOKEN }}" \
-              "https://git.futuregadgetlabs.net/api/v1/packages/$OWNER/container/$PACKAGE/$VERSION"
+            gh api --paginate "/user/packages/container/$PACKAGE/versions?per_page=100" \
+              --jq ".[] | select(.metadata.container.tags | index(\"$VERSION\")) | .id" |
+              while read -r VERSION_ID; do
+                echo "Deleting $PACKAGE:$VERSION (version $VERSION_ID)"
+                gh api --method DELETE "/user/packages/container/$PACKAGE/versions/$VERSION_ID"
+              done
           done

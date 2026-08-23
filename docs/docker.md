@@ -1,6 +1,6 @@
 # Docker image
 
-Images are available at `git.futuregadgetlabs.net/kj16609/idhan`:
+Images are available at `ghcr.io/kjneko/idhan`:
 
 - `latest`: built from the `master` branch
 - `dev`: bleeding edge, built from the `dev` branch
@@ -97,7 +97,7 @@ services:
     restart: unless-stopped
 
   idhan_server:
-    image: git.futuregadgetlabs.net/kj16609/idhan:latest
+    image: ghcr.io/kjneko/idhan:latest
     container_name: idhan-server
     environment:
       IDHAN_DATABASE_HOST: idhan-postgres
