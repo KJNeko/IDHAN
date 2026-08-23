@@ -157,7 +157,6 @@ COPY --from=builder /build/bin/IDHANModuleRunner /usr/bin/IDHANModuleRunner
 COPY --from=builder /build/bin/static/ /usr/share/idhan/static
 COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
-COPY --from=builder /build/bin/mime/ /usr/share/idhan/mime
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
 
 # Embedding folder
