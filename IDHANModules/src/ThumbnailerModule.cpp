@@ -35,8 +35,8 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 	auto thumbnail { createThumbnailRaw( data, width, height ) };
 	if ( !thumbnail ) return std::unexpected( thumbnail.error() );
 
-	// An animation arrives already encoded; there are no loose pixels to wrap and nothing to re-encode.
-	if ( thumbnail->m_format == ThumbnailFormat::ANIMATED ) return thumbnail;
+	// Anything that is not raw RGB arrives already encoded; there are no loose pixels to wrap.
+	if ( thumbnail->m_format != ThumbnailFormat::RGB ) return thumbnail;
 
 	const auto& [ thumbnail_rgb, thumbnail_width, thumbnail_height, cache_thumbnail, format ] = *thumbnail;
 
@@ -63,9 +63,10 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 
 	ThumbnailInfo info {};
 	info.m_pixel_data = std::move( output );
-	info.width = width;
-	info.height = height;
+	info.width = thumbnail_width;
+	info.height = thumbnail_height;
 	info.cache_thumbnail = cache_thumbnail;
+	info.m_format = ThumbnailFormat::ENCODED;
 
 	return info;
 }

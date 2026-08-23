@@ -29,9 +29,10 @@ enum class ThumbnailFormat : std::uint8_t
 {
 	RGB, //!< Raw interleaved RGB, width * height * 3 bytes.
 	ANIMATED, //!< A complete encoded animation; width and height describe one frame.
+	ENCODED, //!< A complete encoded still image; width and height describe it.
 };
 
-//! A generated thumbnail. m_format says whether m_pixel_data is raw RGB pixels or an encoded animation.
+//! A generated thumbnail. m_format says whether m_pixel_data is raw RGB pixels or an encoded image.
 struct ThumbnailInfo
 {
 	std::vector< std::byte > m_pixel_data {}; //!< The thumbnail bytes; interpretation depends on m_format.

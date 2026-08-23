@@ -457,11 +457,11 @@ std::expected< ThumbnailInfo, std::string > thumbnailFromJson(
 	if ( const auto& format { json[ field::FORMAT ] }; !format.isNull() )
 	{
 		if ( !format.isUInt() ) return std::unexpected( std::string { "thumbnail header has an invalid format" } );
-		const auto raw { format.asUInt() };
-		if ( raw > static_cast< std::uint8_t >( ThumbnailFormat::ANIMATED ) )
-			return std::unexpected( std::format( "thumbnail header carried unknown format {}", raw ) );
+		const auto raw_format { format.asUInt() };
+		if ( raw_format > static_cast< std::uint8_t >( ThumbnailFormat::ENCODED ) )
+			return std::unexpected( std::format( "thumbnail header carried unknown format {}", raw_format ) );
 
-		info.m_format = static_cast< ThumbnailFormat >( raw );
+		info.m_format = static_cast< ThumbnailFormat >( raw_format );
 	}
 
 	if ( info.m_format == ThumbnailFormat::RGB )
