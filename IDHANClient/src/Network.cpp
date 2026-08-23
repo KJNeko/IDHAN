@@ -36,12 +36,13 @@ Network::Network( QObject* parent ) : QObject( parent ), m_network( this )
 
 QNetworkReply* Network::send( const HttpMethod method, const QNetworkRequest& request, const QByteArray& body )
 {
-	if ( QThread::isMainThread() ) [[unlikely]]
+	if ( QThread::currentThread() == thread() ) [[unlikely]]
 	{
 		return this->sendDataI( method, request, body );
 	}
 
 	auto promise { std::make_shared< QPromise< QNetworkReply* > >() };
+	promise->start();
 	auto future { promise->future() };
 	emit sendData( method, request, body, std::move( promise ) );
 
@@ -66,6 +67,7 @@ void Network::doSendData(
 	catch ( ... )
 	{
 		promise->setException( std::current_exception() );
+		promise->finish();
 	}
 }
 

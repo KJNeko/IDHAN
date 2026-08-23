@@ -6,7 +6,12 @@
 namespace idhan
 {
 
-TagCache::TagCache( const std::size_t byte_budget ) : m_budget( byte_budget )
+TagCache::TagCache( const std::size_t byte_budget ) :
+  m_mutex {},
+  m_lru {},
+  m_index {},
+  m_bytes { 0 },
+  m_budget( byte_budget )
 {}
 
 std::size_t TagCache::entryCost( const Key& key )
@@ -80,6 +85,14 @@ void TagCache::setBudget( const std::size_t byte_budget )
 	evictToBudget();
 }
 
+void TagCache::clear()
+{
+	const std::lock_guard< std::mutex > lock { m_mutex };
+	m_lru.clear();
+	m_index.clear();
+	m_bytes = 0;
+}
+
 std::size_t TagCache::byteUsage() const
 {
 	const std::lock_guard< std::mutex > lock { m_mutex };
@@ -90,6 +103,45 @@ std::size_t TagCache::count() const
 {
 	const std::lock_guard< std::mutex > lock { m_mutex };
 	return m_index.size();
+}
+
+std::optional< std::string > TagTextCache::get( const TagID tag_id )
+{
+	const std::lock_guard< std::mutex > lock { m_mutex };
+	const auto it { m_tags.find( tag_id ) };
+	if ( it == m_tags.end() ) return std::nullopt;
+
+	it->second.hit_count += 1;
+	return it->second.text;
+}
+
+void TagTextCache::put( const TagID tag_id, std::string text )
+{
+	const std::lock_guard< std::mutex > lock { m_mutex };
+	evictLeastUsed();
+	m_tags.insert_or_assign( tag_id, CacheItem { 1, std::move( text ) } );
+}
+
+void TagTextCache::clear()
+{
+	const std::lock_guard< std::mutex > lock { m_mutex };
+	m_tags.clear();
+}
+
+void TagTextCache::evictLeastUsed()
+{
+	if ( m_tags.size() < 1024 * 64 ) return;
+
+	std::vector< std::pair< TagID, std::size_t > > sorted_tags;
+	sorted_tags.reserve( m_tags.size() );
+	for ( const auto& [ id, item ] : m_tags ) sorted_tags.emplace_back( id, item.hit_count );
+
+	std::ranges::partial_sort(
+		sorted_tags,
+		sorted_tags.begin() + 512,
+		[]( const auto& a, const auto& b ) noexcept -> bool { return a.second < b.second; } );
+
+	for ( std::size_t i = 0; i < 512; ++i ) m_tags.erase( sorted_tags[ i ].first );
 }
 
 } // namespace idhan
