@@ -56,27 +56,6 @@ endforeach ()
 add_custom_target(IDHANPages DEPENDS ${PAGE_OUTPUTS})
 add_dependencies(IDHANServer IDHANPages)
 
-file(GLOB_RECURSE PARSER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/mime/parsers/*")
-set(PARSER_OUTPUTS "")
-
-foreach (PARSER ${PARSER_FILES})
-	file(RELATIVE_PATH REL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/mime/parsers ${PARSER})
-
-	set(OUT_PATH ${CMAKE_BINARY_DIR}/bin/mime/${REL_PATH})
-
-	add_custom_command(
-			OUTPUT ${OUT_PATH}
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PARSER} ${OUT_PATH}
-			DEPENDS ${PARSER}
-			COMMENT "Copying ${PARSER} to ${OUT_PATH}"
-	)
-
-	list(APPEND PARSER_OUTPUTS ${OUT_PATH})
-endforeach ()
-
-add_custom_target(IDHANMimeParsers DEPENDS ${PARSER_OUTPUTS})
-add_dependencies(IDHANServer IDHANMimeParsers)
-
 set(CONFIG_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/config-example.toml")
 set(CONFIG_OUTPUT "${CMAKE_BINARY_DIR}/bin/config.toml")
 

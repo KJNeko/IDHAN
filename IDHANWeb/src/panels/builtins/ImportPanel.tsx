@@ -86,7 +86,13 @@ function ImportPanel({ host }: PanelProps) {
       setBusy(true);
 
       const imported: RecordId[] = [];
-      const query = forceImport ? '?force_import=true' : '';
+
+        // the name is what tells the server a zip is a comic book zip; nothing in the bytes does
+        const queryFor = (file: File) => {
+            const params = new URLSearchParams({filename: file.name});
+            if (forceImport) params.set('force_import', 'true');
+            return `?${params.toString()}`;
+        };
 
       await pool(
         files.map((file, i) => ({ file, item: queued[i]! })),
@@ -94,7 +100,7 @@ function ImportPanel({ host }: PanelProps) {
         async ({ file, item }) => {
           patch(item.id, { state: 'uploading' });
           try {
-            const res = await host.http.fetch(`/file/import${query}`, {
+              const res = await host.http.fetch(`/file/import${queryFor(file)}`, {
               method: 'POST',
               headers: { 'Content-Type': file.type || 'application/octet-stream' },
               body: file,

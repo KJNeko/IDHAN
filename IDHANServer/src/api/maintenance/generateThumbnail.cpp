@@ -1,7 +1,8 @@
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "MimeIDs.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "metadata/metadata.hpp"
+#include "mime/prescan.hpp"
 #include "modules/ModuleLoader.hpp"
 
 namespace idhan::api
@@ -17,41 +18,36 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::createThumbnail( drogon:
 
 	if ( request_data.empty() ) co_return createBadRequest( "No data provided in POST request" );
 
-	//TODO: Create handle for multipart to get filenames
-	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
+	const auto mime_id { co_await mime::prescanMime( mime::MimeReader { request_data } ) };
 
-	if ( !mime_str ) co_return createBadRequest( "Failed to detect mime type" );
-
-	const auto mime_id { mime_ids::canonicalIDForName( *mime_str ) };
+	if ( mime_id == mime_ids::UNKNOWN ) co_return createBadRequest( "Failed to detect mime type" );
 
 	const auto metadata_parser { modules::ModuleLoader::instance().getParserFor( mime_id ) };
-	if ( metadata_parser.empty() ) co_return createInternalError( "Was unable to find parser for {}", *mime_str );
+	if ( metadata_parser.empty() ) co_return createInternalError( "Was unable to find parser for mime id {}", mime_id );
 
-	auto blob { ipc::Blob::fromBytes(
-		std::span< const std::byte > {
-			reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() } ) };
-
-	if ( !blob ) co_return createInternalError( "Could not stage the request body for a module: {}", blob.error() );
-
-	auto input_e { modules::CallInput::forBlob( std::move( *blob ) ) };
+	const auto input_e { modules::CallInput::sharedForBytes(
+		{ reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() } ) };
 
 	if ( !input_e )
 		co_return createInternalError( "Could not stage the request body for a module: {}", input_e.error() );
 
-	const auto input { std::make_shared< const modules::CallInput >( std::move( *input_e ) ) };
+	const auto input { *input_e };
 
 	modules::RemoteCallData call_data { .input = input, .mime_id = mime_id, .extra = {}, .depth = 0 };
 	const auto metadata_json { co_await metadata_parser[ 0 ]->parseFile( call_data ) };
 
 	if ( !metadata_json )
 		co_return createInternalError(
-			"Unable to parse metadata for mime {} Reason: {}", *mime_str, metadata_json.error() );
+			"Unable to parse metadata for mime id {} Reason: {}", mime_id, metadata_json.error() );
 
 	call_data.extra = metadata_json->m_extra;
 
+	if ( const auto* archive { std::get_if< MetadataInfoArchive >( &metadata_json->m_metadata ) } )
+		metadata::applyArchiveEntries( call_data.extra, *archive );
+
 	auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_id ) };
 
-	if ( thumbnailers.empty() ) co_return createNotFound( "No thumbnailer available for mime type {}", *mime_str );
+	if ( thumbnailers.empty() ) co_return createNotFound( "No thumbnailer available for mime id {}", mime_id );
 
 	const auto thumbnail_data { co_await thumbnailers.at( 0 )->createThumbnailFile( call_data, 128, 128 ) };
 

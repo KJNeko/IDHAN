@@ -44,7 +44,8 @@ constexpr MimeID AUDIO_BLOCK { 4000 };
 constexpr MimeID ARCHIVE_BLOCK { 5000 };
 constexpr MimeID APPLICATION_ZIP { 5000 };
 constexpr MimeID COMICBOOK_ZIP { 5001 };
-//! A zip carrying an animation.json manifest. Reports "application/zip".
+//! A zip carrying an animation.json manifest, or holding nothing but a numbered image sequence at
+//! its root. Reports "application/zip".
 constexpr MimeID PIXIV_UGOIRA { 5002 };
 
 constexpr MimeID IMAGE_PROJECT_BLOCK { 6000 };
@@ -90,7 +91,7 @@ inline const std::unordered_map< MimeID, std::string_view > mime_names {
 	{ ANIMATION_GIF, "image/gif" },
 	{ ANIMATION_APNG, "image/apng" },
 	{ APPLICATION_ZIP, "application/zip" },
-	{ COMICBOOK_ZIP, "application/vnd.comicbook+zip" },
+	{ COMICBOOK_ZIP, "application/zip" },
 	{ PIXIV_UGOIRA, "application/zip" },
 	{ APPLICATION_PSD, "application/psd" },
 	{ APPLICATION_CLIP, "application/x-clip-studio" },

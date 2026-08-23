@@ -94,3 +94,20 @@ path = "./log"
 # Defaults to "<static>/plugins" so the static file server serves the bundles at /plugins/... with no
 # extra configuration. An override must still live under the static root to be reachable.
 #path = "./static/plugins"
+
+[cluster]
+# How many files a cluster scan works on at once. Each file in flight is one hash, mime probe and
+# metadata parse, so the scan spends most of its time waiting on disk, postgres and module workers;
+# raising this fills that wait rather than adding CPU work. Bounded by the database connection pool
+# (server.io_threads) and the module worker pool (modules.pool_threads). Overridable per scan with
+# the "concurrency" query parameter. Clamped to 1..64.
+#scan_concurrency = 4
+
+[parser.cbz]
+# A comic book zip is a zip, so no signature scan can tell one from the other. With this on, a file
+# whose name ends in .cbz is recorded as a comic book zip instead of a plain zip. The extension wins
+# over content-based refinement, so a .cbz of numbered pages is never mistaken for a Pixiv Ugoira.
+#
+# The name only reaches the server when the importer sends one: /file/import takes it as the
+# "filename" query parameter, and a cluster scan reads it from the file on disk.
+#guess_with_extension = true

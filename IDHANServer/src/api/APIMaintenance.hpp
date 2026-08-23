@@ -35,8 +35,6 @@ class APIMaintenance final : public drogon::HttpController< APIMaintenance >
 
 	drogon::Task< drogon::HttpResponsePtr > parseMime( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > createThumbnail( drogon::HttpRequestPtr request );
-	drogon::Task< drogon::HttpResponsePtr > reloadMime( drogon::HttpRequestPtr request );
-	drogon::Task< drogon::HttpResponsePtr > listParsers( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > listMimes( drogon::HttpRequestPtr request );
 
 	drogon::Task< drogon::HttpResponsePtr > purgeThumbnails( drogon::HttpRequestPtr request );
@@ -55,8 +53,6 @@ class APIMaintenance final : public drogon::HttpController< APIMaintenance >
 
 	ADD_METHOD_TO( APIMaintenance::parseMime, "/mime/parse", drogon::Post, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::createThumbnail, "/mime/generate_thumbnail", drogon::Post, IDHANAPIAuthName );
-	ADD_METHOD_TO( APIMaintenance::reloadMime, "/mime/reload", drogon::Post, IDHANAPIAuthName );
-	ADD_METHOD_TO( APIMaintenance::listParsers, "/mime/parsers", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::listMimes, "/mime", drogon::Get, IDHANAPIAuthName );
 
 	ADD_METHOD_TO( APIMaintenance::integrityCheck, "/integrity", drogon::Get, IDHANAPIAuthName );

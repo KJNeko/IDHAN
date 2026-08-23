@@ -10,7 +10,8 @@
 #include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 #include "metadata/metadata.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "mime/guessExtension.hpp"
+#include "mime/prescan.hpp"
 #include "mime/refineMime.hpp"
 #include "records/records.hpp"
 
@@ -120,49 +121,26 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		}
 	}
 
-	//TODO: Add multipart for getting the file name
-	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
+	const auto scanned_mime_id { co_await mime::prescanMime( mime::MimeReader { request_data } ) };
 
-	std::string mime_name {};
+	const auto filename { request->getOptionalParameter< std::string >( "filename" ).value_or( "" ) };
 
-	if ( mime_str )
-		mime_name = mime_str.value();
-	else if ( force_import )
-		// the file could not be identified, force imports store it under the unknown mime
-		mime_name = INVALID_MIME_NAME;
-	else
-	{
-		// If the mime type is not known, Then simply skip it.
+	const auto mime_id { mime::guessMimeFromExtension( scanned_mime_id, filename ) };
+
+	const bool is_unknown { mime_id == mime_ids::UNKNOWN };
+
+	// force imports store an unidentified file under the unknown mime; everything else is skipped
+	if ( is_unknown && !force_import )
 		co_return drogon::HttpResponse::newHttpJsonResponse( createUnknownMimeResponse() );
-	}
 
-	const bool is_octet { mime_name == INVALID_MIME_NAME };
+	MimeID refined_mime_id { mime_id };
 
-	if ( is_octet && !force_import )
+	if ( !is_unknown )
 	{
-		co_return createBadRequest(
-			"Mime type not known by IDHAN. Either set the force import flag in the parameters, "
-			"or teach IDHAN how to detect the mime for this file" );
-	}
-
-	const auto mime_id { co_await mime::getMimeIDFromStr( mime_name, db ) };
-
-	if ( !mime_id ) co_return mime_id.error();
-
-	MimeID refined_mime_id { *mime_id };
-
-	if ( !is_octet )
-	{
-		if ( auto blob { ipc::Blob::fromBytes( std::span< const std::byte > { data_ptr, data_length } ) } )
-		{
-			if ( auto input { modules::CallInput::forBlob( std::move( *blob ) ) } )
-				refined_mime_id = co_await mime::refineMimeID(
-					*mime_id, std::make_shared< const modules::CallInput >( std::move( *input ) ) );
-			else
-				log::warn( "Could not stage the import body to refine its mime: {}", input.error() );
-		}
+		if ( auto input { modules::CallInput::sharedForBytes( { data_ptr, data_length } ) } )
+			refined_mime_id = co_await mime::refineMimeID( mime_id, std::move( *input ) );
 		else
-			log::warn( "Could not stage the import body to refine its mime: {}", blob.error() );
+			log::warn( "Could not stage the import body to refine its mime: {}", input.error() );
 	}
 
 	const auto record_id_e { co_await helpers::createRecord( sha256, db ) };

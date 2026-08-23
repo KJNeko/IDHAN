@@ -19,7 +19,7 @@
 #include "drogon/HttpAppFramework.h"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "mime/prescan.hpp"
 
 namespace idhan::modules
 {
@@ -28,7 +28,6 @@ namespace idhan::modules
 //! ask for a specific one.
 constexpr std::size_t CALLBACK_THUMBNAIL_SIZE { 128 };
 
-//! Upper bound on a caller-requested callback thumbnail edge.
 constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 
 //! Reads a caller-requested thumbnail edge out of a callback's `extra`, clamped and defaulted.
@@ -67,7 +66,6 @@ constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 	return static_cast< std::uint32_t >( config::get< std::size_t >( "modules", "max_call_depth", 4 ) );
 }
 
-//! Publishes the configured embedding model directory into the environment workers inherit.
 void publishEmbeddingModelPath()
 {
 	const auto path { config::get< std::string >( "embeddings", "model_path", std::string {} ) };
@@ -331,12 +329,6 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getMimeParserFor( c
 	return lookup( m_by_mime_parser, mime_id );
 }
 
-//! Does the work behind one CALLBACK frame.
-
-//! What MimeDatabase::scan yields, so a resolved MIME and a scanned one can share a branch.
-using ExpectedMime = std::expected< MimeID, drogon::HttpResponsePtr >;
-
-//! A resolved callback input, or why one could not be made.
 using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::string >;
 
 //! Wraps a descriptor a module sent with its callback as an input for the nested call.
@@ -356,7 +348,6 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	const std::uint64_t callback_id { frame.body[ ipc::field::CALLBACK_ID ].asUInt64() };
 	const auto kind { ipc::fromWire< ipc::CallbackKind >( frame.body[ ipc::field::KIND ] ) };
 	const std::uint32_t depth { frame.body[ ipc::field::DEPTH ].asUInt() };
-	const auto file_name { frame.body[ ipc::field::FILE_NAME ].asString() };
 
 	Json::Value reply {};
 	reply[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::CALLBACK_RESULT );
@@ -395,13 +386,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	{
 		reply[ ipc::field::ERROR ] = input.error();
 	}
-	else if (
-		const auto detected {
-			by_reference ?
-				ExpectedMime { referenced.mime_id } :
-				( co_await getMimeDatabase()->scan( ( *input )->blob().view(), file_name ) )
-					.transform( []( const std::string& name ) { return mime_ids::canonicalIDForName( name ); } ) };
-		!detected )
+	else if ( const auto detected {
+				  by_reference ? referenced.mime_id :
+								 co_await mime::prescanMime( mime::MimeReader { ( *input )->blob().view() } ) };
+	          detected == mime_ids::UNKNOWN )
 	{
 		reply[ ipc::field::ERROR ] = "could not determine the mime type of the callback payload";
 	}
@@ -410,7 +398,7 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 		auto& loader { ModuleLoader::instance() };
 
 		RemoteCallData data {
-			.input = *input, .mime_id = *detected, .extra = frame.body[ ipc::field::EXTRA ], .depth = depth + 1
+			.input = *input, .mime_id = detected, .extra = frame.body[ ipc::field::EXTRA ], .depth = depth + 1
 		};
 
 		switch ( *kind )
@@ -418,10 +406,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 			case ipc::CallbackKind::PROBE:
 				{
 					ModuleCapability capability {};
-					capability.mime_id = *detected;
-					capability.has_metadata = !loader.getParserFor( *detected ).empty();
-					capability.has_thumbnailer = !loader.getThumbnailerFor( *detected ).empty();
-					capability.has_generator = !loader.getGeneratorsFor( *detected ).empty();
+					capability.mime_id = detected;
+					capability.has_metadata = !loader.getParserFor( detected ).empty();
+					capability.has_thumbnailer = !loader.getThumbnailerFor( detected ).empty();
+					capability.has_generator = !loader.getGeneratorsFor( detected ).empty();
 
 					reply[ ipc::field::CAPABILITY ] = ipc::toJson( capability );
 					reply[ ipc::field::OK ] = true;
@@ -429,10 +417,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 				}
 			case ipc::CallbackKind::THUMBNAIL:
 				{
-					const auto thumbnailers { loader.getThumbnailerFor( *detected ) };
+					const auto thumbnailers { loader.getThumbnailerFor( detected ) };
 					if ( thumbnailers.empty() )
 					{
-						reply[ ipc::field::ERROR ] = std::format( "no thumbnailer for mime type {}", *detected );
+						reply[ ipc::field::ERROR ] = std::format( "no thumbnailer for mime type {}", detected );
 						break;
 					}
 
@@ -465,10 +453,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 				}
 			case ipc::CallbackKind::GENERATE:
 				{
-					const auto generators { loader.getGeneratorsFor( *detected ) };
+					const auto generators { loader.getGeneratorsFor( detected ) };
 					if ( generators.empty() )
 					{
-						reply[ ipc::field::ERROR ] = std::format( "no generator for mime type {}", *detected );
+						reply[ ipc::field::ERROR ] = std::format( "no generator for mime type {}", detected );
 						break;
 					}
 

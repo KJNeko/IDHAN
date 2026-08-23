@@ -1,4 +1,9 @@
+#include <algorithm>
+#include <atomic>
+#include <mutex>
+#include <optional>
 #include <utility>
+#include <vector>
 
 #include "Config.hpp"
 #include "MetadataModule.hpp"
@@ -16,7 +21,8 @@
 #include "logging/log.hpp"
 #include "metadata/metadata.hpp"
 #include "mime/FileInfo.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "mime/guessExtension.hpp"
+#include "mime/prescan.hpp"
 #include "MimeIDs.hpp"
 #include "mime/refineMime.hpp"
 #include "modules/RemoteModule.hpp"
@@ -39,6 +45,8 @@ struct ScanParams
 	bool fix_extensions { false };
 	bool force_readonly { false };
 	bool verify_hash { false };
+
+	std::size_t concurrency { 4 };
 
 	ScanParams() = default;
 };
@@ -63,8 +71,17 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 	p.remove_missing_files = request->getOptionalParameter< bool >( "remove_missing_files" ).value_or( false );
 	p.fix_extensions = request->getOptionalParameter< bool >( "fix_extensions" ).value_or( false );
 
-	p.scan_metadata |= p.adopt_orphans; // orphans will need to be scanned for metadata
-	p.scan_mime |= p.scan_metadata; // mime is needed for metadata
+	p.scan_metadata |= p.adopt_orphans;
+	p.scan_mime |= p.scan_metadata;
+
+	constexpr std::size_t max_concurrency { 64 };
+	const auto configured_concurrency {
+		config::getSilentDefault< std::size_t >( "cluster", "scan_concurrency", std::size_t { 4 } )
+	};
+	p.concurrency = std::clamp(
+		request->getOptionalParameter< std::size_t >( "concurrency" ).value_or( configured_concurrency ),
+		std::size_t { 1 },
+		max_concurrency );
 
 	return p;
 }
@@ -75,7 +92,6 @@ class ScanContext
 	std::size_t m_size;
 
 	ScanParams m_params {};
-	std::string m_mime_name {};
 	MimeID m_mime_id { mime_ids::INVALID };
 	SHA256 m_sha256 {};
 	std::filesystem::path m_bad_dir {};
@@ -102,17 +118,18 @@ class ScanContext
 
 	ScanContext(
 		const std::filesystem::path& file_path,
+		const std::size_t file_size,
 		const ClusterID cluster_id,
 		std::filesystem::path cluster_path,
 		const ScanParams& params ) :
 	  m_path( file_path ),
-	  m_size( std::filesystem::file_size( file_path ) ),
+	  m_size( file_size ),
 	  m_params( params ),
 	  m_cluster_id( cluster_id ),
 	  m_cluster_path( std::move( cluster_path ) )
 	{}
 
-	//! The file's current location. The scan may have moved it within the cluster.
+	//! The scan may have moved the file within the cluster.
 	[[nodiscard]] const std::filesystem::path& path() const { return m_path; }
 
 	ExpectedTask< void > scan( std::filesystem::path bad_dir, DbClientPtr db );
@@ -147,67 +164,141 @@ struct FolderScanTotals
 	std::size_t file_count { 0 };
 };
 
-ExpectedTask< FolderScanTotals > scanFolder(
-	const std::filesystem::path folder,
-	const ScanParams& scan_params,
-	const ClusterID cluster_id,
-	const std::filesystem::path cluster_path,
-	const std::size_t total_files,
-	std::atomic< std::size_t >& processed_files )
+//! Hands single files out to the scan workers, walking one folder at a time.
+class ScanWorkQueue
 {
-	const std::filesystem::path bad_dir { cluster_path / "bad" };
+	std::vector< std::filesystem::path > m_folders;
+	std::size_t m_folder_index { 0 };
+	std::optional< std::filesystem::directory_iterator > m_iterator {};
+	std::mutex m_mutex {};
+	std::atomic< bool > m_stopped { false };
+
+  public:
+
+	explicit ScanWorkQueue( std::vector< std::filesystem::path > folders ) : m_folders( std::move( folders ) ) {}
+
+	void stop() { m_stopped.store( true, std::memory_order_release ); }
+
+	[[nodiscard]] std::optional< std::filesystem::path > next();
+};
+
+std::optional< std::filesystem::path > ScanWorkQueue::next()
+{
+	if ( m_stopped.load( std::memory_order_acquire ) ) return std::nullopt;
+
+	const std::lock_guard lock { m_mutex };
+
+	while ( true )
+	{
+		if ( !m_iterator )
+		{
+			if ( m_folder_index >= m_folders.size() ) return std::nullopt;
+
+			const auto& folder { m_folders[ m_folder_index++ ] };
+
+			std::error_code open_error {};
+			std::filesystem::directory_iterator iterator { folder, open_error };
+
+			if ( open_error )
+			{
+				log::warn( "Cannot read directory {}: {}", folder.string(), open_error.message() );
+				continue;
+			}
+
+			log::info( "Scanning folder {}", folder.string() );
+			m_iterator = std::move( iterator );
+		}
+
+		auto& iterator { *m_iterator };
+
+		if ( iterator == std::filesystem::directory_iterator {} )
+		{
+			m_iterator.reset();
+			continue;
+		}
+
+		const auto entry { *iterator };
+
+		std::error_code advance_error {};
+		iterator.increment( advance_error );
+		if ( advance_error )
+		{
+			log::warn( "Stopping directory walk early: {}", advance_error.message() );
+			m_iterator.reset();
+		}
+
+		const auto& file_path { entry.path() };
+
+		std::error_code type_error {};
+		if ( !entry.is_regular_file( type_error ) || type_error )
+		{
+			if ( entry.is_symlink() )
+			{
+				log::warn( "Broken symlink detected (target inaccessible): {}", file_path.string() );
+			}
+			else
+			{
+				log::warn( "Skipping non-regular file: {}", file_path.string() );
+			}
+			continue;
+		}
+
+		if ( file_path.extension() == ".thumbnail" )
+		{
+			log::trace( "Skipping thumbnail file: {}", file_path.string() );
+			continue;
+		}
+
+		return file_path;
+	}
+}
+
+//! Held in a vector until when_all starts it, so all state has to arrive as a parameter.
+ExpectedTask< FolderScanTotals > scanWorker(
+	ScanWorkQueue* queue,
+	const ScanParams* scan_params,
+	const ClusterID cluster_id,
+	const std::filesystem::path* cluster_path,
+	const std::size_t total_files,
+	std::atomic< std::size_t >* processed_files )
+{
+	const std::filesystem::path bad_dir { *cluster_path / "bad" };
 	auto db { drogon::app().getDbClient() };
 
 	FolderScanTotals totals {};
-	try
+
+	while ( const auto file_path = queue->next() )
 	{
-		for ( const auto& file : std::filesystem::directory_iterator( folder ) )
+		std::error_code size_error {};
+		const auto initial_size { std::filesystem::file_size( *file_path, size_error ) };
+
+		if ( size_error )
 		{
-			const auto& entry { file };
-
-			const auto& file_path { entry.path() };
-
-			if ( !entry.is_regular_file() )
-			{
-				if ( entry.is_symlink() )
-				{
-					log::warn( "Broken symlink detected (target inaccessible): {}", file_path.string() );
-				}
-				else
-				{
-					log::warn( "Skipping non-regular file: {}", file_path.string() );
-				}
-				continue;
-			}
-
-			if ( file_path.extension() == ".thumbnail" )
-			{
-				log::trace( "Skipping thumbnail file: {}", file_path.string() );
-				continue;
-			}
-
-			ScanContext ctx { file_path, cluster_id, cluster_path, scan_params };
-
-			const auto file_result { co_await ctx.scan( bad_dir, db ) };
-
-			++processed_files;
-			log::trace( "Scan progress: {}/{}", processed_files.load(), total_files );
-
-			std::error_code size_error {};
-			const auto final_size { std::filesystem::file_size( ctx.path(), size_error ) };
-			if ( !size_error )
-			{
-				totals.byte_size += final_size;
-				++totals.file_count;
-			}
-
-			if ( scan_params.stop_on_fail ) return_unexpected_error( file_result );
+			log::warn( "Cannot stat file {}: {}", file_path->string(), size_error.message() );
+			processed_files->fetch_add( 1, std::memory_order_relaxed );
+			continue;
 		}
-	}
-	catch ( const std::filesystem::filesystem_error& e )
-	{
-		log::warn( "Cannot read directory {}: {}", folder.string(), e.what() );
-		co_return std::unexpected( createInternalError( "Failed to scan folder {}: {}", folder.string(), e.what() ) );
+
+		ScanContext ctx { *file_path, initial_size, cluster_id, *cluster_path, *scan_params };
+
+		const auto file_result { co_await ctx.scan( bad_dir, db ) };
+
+		const auto processed { processed_files->fetch_add( 1, std::memory_order_relaxed ) + 1 };
+		log::trace( "Scan progress: {}/{}", processed, total_files );
+
+		std::error_code final_size_error {};
+		const auto final_size { std::filesystem::file_size( ctx.path(), final_size_error ) };
+		if ( !final_size_error )
+		{
+			totals.byte_size += final_size;
+			++totals.file_count;
+		}
+
+		if ( scan_params->stop_on_fail && !file_result )
+		{
+			queue->stop();
+			co_return std::unexpected( file_result.error() );
+		}
 	}
 
 	co_return totals;
@@ -222,29 +313,8 @@ ExpectedTask< void > scanCluster(
 
 	const auto bad_dir { cluster_path / "bad" };
 
+	std::vector< std::filesystem::path > folders {};
 	std::size_t total_files { 0 };
-	try
-	{
-		for ( const auto& folder : std::filesystem::directory_iterator( cluster_path ) )
-		{
-			if ( !folder.is_directory() ) continue;
-			if ( folder.path() == bad_dir ) continue;
-			total_files += countScanableFiles( folder.path() );
-		}
-	}
-	catch ( const std::filesystem::filesystem_error& e )
-	{
-		log::warn( "Cannot enumerate directories in cluster path {}: {}", cluster_path.string(), e.what() );
-		co_return std::unexpected(
-			createInternalError( "Cannot list cluster directory {}: {}", cluster_path.string(), e.what() ) );
-	}
-
-	log::debug( "Estimated files to scan: {}", total_files );
-
-	std::atomic< std::size_t > processed_files { 0 };
-	std::size_t cluster_byte_size_total { 0 };
-	std::size_t cluster_file_count_total { 0 };
-
 	try
 	{
 		for ( const auto& folder : std::filesystem::directory_iterator( cluster_path ) )
@@ -261,21 +331,8 @@ ExpectedTask< void > scanCluster(
 				continue;
 			}
 
-			log::info( "Scanning folder {} in cluster {}", folder.path().string(), cluster_id );
-
-			const auto folder_result { co_await scanFolder(
-				folder.path(), scan_params, cluster_id, cluster_path, total_files, processed_files ) };
-
-			if ( !folder_result )
-			{
-				log::warn( "Folder {} scan failed in cluster {}", folder.path().string(), cluster_id );
-				if ( scan_params.stop_on_fail ) return_unexpected_error( folder_result );
-			}
-			else
-			{
-				cluster_byte_size_total += folder_result->byte_size;
-				cluster_file_count_total += folder_result->file_count;
-			}
+			folders.emplace_back( folder.path() );
+			total_files += countScanableFiles( folder.path() );
 		}
 	}
 	catch ( const std::filesystem::filesystem_error& e )
@@ -283,6 +340,44 @@ ExpectedTask< void > scanCluster(
 		log::warn( "Cannot enumerate directories in cluster path {}: {}", cluster_path.string(), e.what() );
 		co_return std::unexpected(
 			createInternalError( "Cannot list cluster directory {}: {}", cluster_path.string(), e.what() ) );
+	}
+
+	log::debug( "Estimated files to scan: {}", total_files );
+
+	std::atomic< std::size_t > processed_files { 0 };
+	ScanWorkQueue queue { std::move( folders ) };
+
+	const auto worker_count { std::min( scan_params.concurrency, std::max( total_files, std::size_t { 1 } ) ) };
+	log::info( "Scanning cluster {} with {} workers", cluster_id, worker_count );
+
+	std::vector< ExpectedTask< FolderScanTotals > > workers {};
+	workers.reserve( worker_count );
+	for ( std::size_t i = 0; i < worker_count; ++i )
+		workers.emplace_back(
+			scanWorker( &queue, &scan_params, cluster_id, &cluster_path, total_files, &processed_files ) );
+
+	const auto worker_results { co_await drogon::when_all( std::move( workers ) ) };
+
+	std::size_t cluster_byte_size_total { 0 };
+	std::size_t cluster_file_count_total { 0 };
+	drogon::HttpResponsePtr worker_error {};
+
+	for ( const auto& worker_result : worker_results )
+	{
+		if ( !worker_result )
+		{
+			if ( !worker_error ) worker_error = worker_result.error();
+			continue;
+		}
+
+		cluster_byte_size_total += worker_result->byte_size;
+		cluster_file_count_total += worker_result->file_count;
+	}
+
+	if ( worker_error )
+	{
+		log::warn( "Scan of cluster {} stopped early on a file failure", cluster_id );
+		co_return std::unexpected( worker_error );
 	}
 
 	const auto db { drogon::app().getDbClient() };
@@ -302,7 +397,7 @@ JobTask scanJob( const ClusterID cluster_id, const std::filesystem::path cluster
 
 	log::trace(
 		"Scan params: read_only={}, scan_mime={}, rescan_mime={}, scan_metadata={}, rescan_metadata={}, "
-		"stop_on_fail={}, adopt_orphans={}, fix_extensions={}, verify_hash={}",
+		"stop_on_fail={}, adopt_orphans={}, fix_extensions={}, verify_hash={}, concurrency={}",
 		scan_params.read_only,
 		scan_params.scan_mime,
 		scan_params.rescan_mime,
@@ -311,7 +406,8 @@ JobTask scanJob( const ClusterID cluster_id, const std::filesystem::path cluster
 		scan_params.stop_on_fail,
 		scan_params.adopt_orphans,
 		scan_params.fix_extensions,
-		scan_params.verify_hash );
+		scan_params.verify_hash,
+		scan_params.concurrency );
 
 	drogon::HttpResponsePtr error_response;
 
@@ -583,8 +679,6 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 
 	if ( !clusters_match )
 	{
-		// handle the double count, which will check if the found cluster contains the file and delete it from this one
-		// if found. Otherwise the record's cluster is set to the current cluster
 		const auto cleanup_result { co_await cleanupDoubleClusters( found_cluster_id, db ) };
 		return_unexpected_error( cleanup_result );
 
@@ -635,14 +729,12 @@ Task< bool > ScanContext::hasMime( DbClientPtr db )
 {
 	log::trace( "Checking if record {} has a mime", m_record_id );
 	const auto current_mime { co_await db->execSqlCoro(
-		"SELECT mime_id, name FROM file_info JOIN mime USING (mime_id) WHERE record_id = $1 AND mime_id IS NOT NULL",
-		m_record_id ) };
+		"SELECT mime_id FROM file_info WHERE record_id = $1 AND mime_id IS NOT NULL", m_record_id ) };
 
 	if ( !current_mime.empty() && !current_mime[ 0 ][ "mime_id" ].isNull() )
 	{
 		m_mime_id = current_mime[ 0 ][ "mime_id" ].as< MimeID >();
-		m_mime_name = current_mime[ 0 ][ "name" ].as< std::string >();
-		log::trace( "Found that record {} has mime {}", m_record_id, m_mime_name );
+		log::trace( "Found that record {} has mime id {}", m_record_id, m_mime_id );
 		co_return true;
 	}
 
@@ -662,17 +754,18 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 	}
 
 	log::trace( "Starting mime scan for {} (Record {})", m_path.filename().string(), m_record_id );
-	const auto mime_string_e { co_await mime::getMimeDatabase()->scan( file_io ) };
+	const auto scanned_mime_id { co_await mime::prescanMime( mime::MimeReader { std::move( file_io ) } ) };
+	const auto generic_mime_id { mime::guessMimeFromExtension( scanned_mime_id, m_path.filename().string() ) };
 	log::trace(
 		"Mime scan completed for {} (Record {}), result: {}",
 		m_path.filename().string(),
 		m_record_id,
-		mime_string_e.has_value() ? mime_string_e.value() : "nullopt" );
+		generic_mime_id );
 
 	const auto mtime { filesystem::getLastWriteTime( m_path ) };
 	log::trace( "File mtime retrieved for {} (Record {}): {}", m_path.filename().string(), m_record_id, mtime );
 
-	if ( !mime_string_e )
+	if ( generic_mime_id == mime_ids::UNKNOWN )
 	{
 		std::string extension_str { m_path.extension().string() };
 
@@ -696,16 +789,10 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 		co_return {};
 	}
 
-	log::trace( "Detected mime {} for file {} (Record {})", *mime_string_e, m_path.filename().string(), m_record_id );
-	m_mime_name = *mime_string_e;
+	log::trace(
+		"Detected mime id {} for file {} (Record {})", generic_mime_id, m_path.filename().string(), m_record_id );
 
-	const auto mime_id_e { co_await getMimeIDFromStr( *mime_string_e, db ) };
-
-	return_unexpected_error( mime_id_e );
-
-	log::trace( "Resolved mime '{}' to mime_id={} for record {}", *mime_string_e, *mime_id_e, m_record_id );
-
-	m_mime_id = co_await refineMimeIDForPath( *mime_id_e, m_path );
+	m_mime_id = co_await mime::refineMimeIDForPath( generic_mime_id, m_path );
 	const auto refined_mime_id { m_mime_id };
 
 	log::trace( "Upserting file_info for record {} with mime_id={}", m_record_id, refined_mime_id );
@@ -799,11 +886,12 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 {
 	log::trace( "Starting extension check for Record {} ({})", m_record_id, m_path.filename().string() );
 
-	auto getExtensionFromMimeName = [ & ]() -> drogon::Task< std::string >
+	auto getExtensionFromMimeID = [ & ]() -> drogon::Task< std::string >
 	{
-		log::trace( "Looking up extension from mime name '{}'", m_mime_name );
-		const auto result { co_await db->execSqlCoro(
-			"SELECT best_extension FROM mime WHERE name = $1 ORDER BY mime_id LIMIT 1", m_mime_name ) };
+		log::trace( "Looking up extension from mime id {}", m_mime_id );
+		const auto result {
+			co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE mime_id = $1", m_mime_id )
+		};
 
 		if ( result.empty() ) co_return std::string {};
 		co_return result[ 0 ][ 0 ].as< std::string >();
@@ -821,7 +909,7 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	};
 
 	const auto expected_extension {
-		m_mime_name.empty() ? co_await getExtensionFromRecord() : co_await getExtensionFromMimeName()
+		m_mime_id == mime_ids::INVALID ? co_await getExtensionFromRecord() : co_await getExtensionFromMimeID()
 	};
 
 	log::trace( "Expected extension for Record {}: '{}'", m_record_id, expected_extension );

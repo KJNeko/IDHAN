@@ -173,7 +173,8 @@ static drogon::Task< void > applyTypeRows(
 
 //! Appends the archives each record is a member of. This cannot go through applyTypeRows: that helper
 //! assumes one row per record, whereas a record may sit in several archives or none, and membership
-//! is not tied to a record's own simple mime type.
+//! is not tied to a record's own simple mime type. A record sitting at several paths in one archive
+//! still names that archive once.
 static drogon::Task< void > applyArchiveMembership(
 	DbClientPtr db,
 	std::vector< RecordID > record_ids,
@@ -183,7 +184,7 @@ static drogon::Task< void > applyArchiveMembership(
 	if ( record_ids.empty() ) co_return;
 
 	const auto rows { co_await db->execSqlCoro(
-		"SELECT record_id, archive_id FROM archive_map "
+		"SELECT DISTINCT record_id, archive_id FROM archive_map "
 		"WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME "[]) "
 		"ORDER BY record_id, archive_id",
 		std::move( record_ids ) ) };

@@ -124,38 +124,6 @@ std::filesystem::path getModuleRunnerPath()
 	return runner_path;
 }
 
-std::vector< std::filesystem::path > getMimeParserPaths()
-{
-	std::vector< std::filesystem::path > paths {};
-
-	const std::array< std::filesystem::path, 3 > parser_paths {
-		{ getExecutableDir() / "mime", "./mime", IDHAN_MIME_PATH }
-	};
-
-	std::vector< std::filesystem::path > searched {};
-
-	for ( const auto& search_path : parser_paths )
-	{
-		std::error_code error {};
-		const auto resolved { std::filesystem::canonical( search_path, error ) };
-
-		if ( error ) continue;
-		if ( std::ranges::contains( searched, resolved ) ) continue;
-		searched.emplace_back( resolved );
-
-		log::info( "Searching for mime parsers at {}", resolved.string() );
-		for ( const auto& file : std::filesystem::recursive_directory_iterator( resolved ) )
-		{
-			if ( !file.is_regular_file() ) continue;
-			if ( file.path().extension() == ".idhanmime" ) paths.emplace_back( file.path() );
-		}
-	}
-
-	log::debug( "Found {} mime parsers", paths.size() );
-
-	return paths;
-}
-
 std::filesystem::path getStaticPath()
 {
 	static std::filesystem::path static_path {};

@@ -225,12 +225,12 @@ Json::Value toJson( const MetadataInfo& info )
 			else if constexpr ( std::is_same_v< T, MetadataInfoVideo > )
 			{
 				tag = MetadataVariant::VIDEO;
-				value[ "has_audio" ] = metadata.m_has_audio;
-				value[ "width" ] = metadata.m_width;
-				value[ "height" ] = metadata.m_height;
-				value[ "bitrate" ] = metadata.m_bitrate;
-				value[ "duration" ] = metadata.m_duration;
-				value[ "fps" ] = metadata.m_fps;
+				value[ "has_audio" ] = metadata.has_audio;
+				value[ "width" ] = metadata.width;
+				value[ "height" ] = metadata.height;
+				value[ "bitrate" ] = metadata.bitrate_bps;
+				value[ "duration" ] = metadata.duration_s;
+				value[ "fps" ] = metadata.fps;
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoImageProject > )
 			{
@@ -244,27 +244,33 @@ Json::Value toJson( const MetadataInfo& info )
 				value[ "width" ] = metadata.width;
 				value[ "height" ] = metadata.height;
 				value[ "frame_count" ] = metadata.frame_count;
-				value[ "duration" ] = metadata.duration;
+				value[ "duration" ] = metadata.duration_s;
 				value[ "loops" ] = metadata.loops;
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoArchive > )
 			{
 				tag = MetadataVariant::ARCHIVE;
 
-				Json::Value hashes { Json::arrayValue };
-				for ( const auto& hash : metadata.contained_hashes ) hashes.append( crypto::toHex( hash ) );
+				Json::Value records { Json::arrayValue };
+				for ( const auto& contained : metadata.contained_records )
+				{
+					Json::Value entry { Json::objectValue };
+					entry[ "hash" ] = crypto::toHex( contained.hash );
+					entry[ "path" ] = contained.path;
+					records.append( std::move( entry ) );
+				}
 
-				value[ "contained_hashes" ] = hashes;
+				value[ "contained_records" ] = records;
 				value[ "size" ] = static_cast< Json::UInt64 >( metadata.m_size );
 				value[ "encrypted" ] = metadata.encrypted;
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoAudio > )
 			{
 				tag = MetadataVariant::AUDIO;
-				value[ "duration" ] = metadata.m_duration;
-				value[ "bitrate" ] = metadata.m_bitrate;
-				value[ "channels" ] = static_cast< Json::UInt >( metadata.m_channels );
-				value[ "sample_rate" ] = metadata.m_sample_rate;
+				value[ "duration" ] = metadata.duration_s;
+				value[ "bitrate" ] = metadata.bitrate_bps;
+				value[ "channels" ] = static_cast< Json::UInt >( metadata.channels );
+				value[ "sample_rate" ] = metadata.sample_rate;
 			}
 			else
 			{
@@ -305,12 +311,12 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 			break;
 		case MetadataVariant::VIDEO:
 			info.m_metadata = MetadataInfoVideo {
-				.m_has_audio = value[ "has_audio" ].asBool(),
-				.m_width = value[ "width" ].asInt(),
-				.m_height = value[ "height" ].asInt(),
-				.m_bitrate = value[ "bitrate" ].asInt(),
-				.m_duration = value[ "duration" ].asDouble(),
-				.m_fps = value[ "fps" ].asDouble()
+				.has_audio = value[ "has_audio" ].asBool(),
+				.width = value[ "width" ].asInt(),
+				.height = value[ "height" ].asInt(),
+				.bitrate_bps = value[ "bitrate" ].asInt(),
+				.duration_s = value[ "duration" ].asDouble(),
+				.fps = value[ "fps" ].asDouble()
 			};
 			break;
 		case MetadataVariant::IMAGE_PROJECT:
@@ -324,36 +330,44 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 				.width = value[ "width" ].asInt(),
 				.height = value[ "height" ].asInt(),
 				.frame_count = value[ "frame_count" ].asInt(),
-				.duration = value[ "duration" ].asDouble(),
+				.duration_s = value[ "duration" ].asDouble(),
 				.loops = value[ "loops" ].asBool()
 			};
 			break;
 		case MetadataVariant::AUDIO:
 			info.m_metadata = MetadataInfoAudio {
-				.m_duration = value[ "duration" ].asDouble(),
-				.m_bitrate = value[ "bitrate" ].asInt(),
-				.m_channels = static_cast< std::uint8_t >( value[ "channels" ].asUInt() ),
-				.m_sample_rate = value[ "sample_rate" ].asInt()
+				.duration_s = value[ "duration" ].asDouble(),
+				.bitrate_bps = value[ "bitrate" ].asInt(),
+				.channels = static_cast< std::uint8_t >( value[ "channels" ].asUInt() ),
+				.sample_rate = value[ "sample_rate" ].asInt()
 			};
 			break;
 		case MetadataVariant::ARCHIVE:
 			{
 				MetadataInfoArchive archive {};
 
-				const auto& hashes { value[ "contained_hashes" ] };
-				if ( !hashes.isArray() ) return std::unexpected( std::string { "archive metadata has no hash array" } );
+				const auto& records { value[ "contained_records" ] };
+				if ( !records.isArray() )
+					return std::unexpected( std::string { "archive metadata has no record array" } );
 
-				for ( const auto& hash : hashes )
+				for ( const auto& contained : records )
 				{
-					if ( !hash.isString() )
-						return std::unexpected( std::string { "archive metadata has a non-string hash" } );
+					if ( !contained.isObject() )
+						return std::unexpected( std::string { "archive metadata has a non-object entry" } );
 
-					const auto hex { hash.asString() };
+					if ( !contained[ "hash" ].isString() )
+						return std::unexpected( std::string { "archive metadata entry has a non-string hash" } );
+
+					const auto hex { contained[ "hash" ].asString() };
 					if ( hex.size() != ( 256 / 8 ) * 2 )
 						return std::unexpected(
 							std::format( "archive metadata hash '{}' is not a sha256 hex string", hex ) );
 
-					archive.contained_hashes.emplace_back( crypto::fromHex( hex ) );
+					if ( !contained[ "path" ].isString() )
+						return std::unexpected(
+							std::format( "archive metadata entry '{}' has a non-string path", hex ) );
+
+					archive.contained_records.emplace_back( crypto::fromHex( hex ), contained[ "path" ].asString() );
 				}
 
 				archive.m_size = static_cast< std::size_t >( value[ "size" ].asUInt64() );

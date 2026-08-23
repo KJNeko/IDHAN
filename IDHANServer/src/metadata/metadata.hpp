@@ -12,6 +12,7 @@ namespace idhan
 {
 class FileMappedData;
 struct MetadataInfo;
+struct MetadataInfoArchive;
 } // namespace idhan
 
 namespace idhan::modules
@@ -22,7 +23,6 @@ class RemoteModule;
 namespace idhan::metadata
 {
 
-//! The result of one info fetch: an array of record objects plus the ids that had no record.
 struct RecordInfoBatch
 {
 	Json::Value records { Json::arrayValue };
@@ -45,5 +45,12 @@ ExpectedTask< MetadataInfo > parseMetadata( RecordID record_id, DbClientPtr db )
 ExpectedTask< void > updateRecordMetadata( RecordID record_id, DbClientPtr db, MetadataInfo metadata );
 
 [[nodiscard]] drogon::Task< MetadataInfo > getMetadata( RecordID record_id, DbClientPtr db );
+
+//! Adds the members an archive thumbnailer or generator reads out of its call's extra json: the
+//! encrypted flag, plus one sha256-hex to entry path member per contained file.
+void applyArchiveEntries( Json::Value& extra, const MetadataInfoArchive& archive );
+
+//! Overload sourcing the entries from archive_map. Adds nothing when the record is not an archive.
+drogon::Task< void > applyArchiveEntries( Json::Value& extra, RecordID record_id, DbClientPtr db );
 
 } // namespace idhan::metadata

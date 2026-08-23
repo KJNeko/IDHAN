@@ -23,8 +23,7 @@
 #include "filesystem/filesystem.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
-#include "mime/MimeDatabase.hpp"
-#include "mime/registerMimeTypes.hpp"
+#include "mime/syncMimeTable.hpp"
 #include "spdlog/async.h"
 
 namespace idhan
@@ -254,8 +253,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", 0 ) };
 	if ( config_threads == 0 )
-		config_threads =
-			std::max( std::thread::hardware_concurrency(), 4u ); // use up to 4 threads if no threads are configured.
+		config_threads = std::max( std::thread::hardware_concurrency(), 4u );
 	std::size_t hardware_count { std::max( config_threads, 2ul ) };
 	std::size_t io_threads { hardware_count };
 
@@ -367,8 +365,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				{
 					const auto db { drogon::app().getDbClient() };
 					co_await m_clusters->reloadClusters( db );
-					co_await mime::registerMimeTypes( db );
-					co_await mime::getMimeDatabase()->reloadMimeParsers();
+					co_await mime::syncMimeTable( db );
 					co_await embeddings::registerEmbeddingModels( db );
 					co_return;
 				}() );
