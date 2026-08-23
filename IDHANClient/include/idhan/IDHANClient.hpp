@@ -25,6 +25,7 @@ namespace idhan
 {
 class SHA256;
 class TagCache;
+class TagTextCache;
 
 //! Server build and API version information, as returned by IDHANClient::queryVersion().
 struct VersionInfo
@@ -64,8 +65,6 @@ using IDHANErrorHandler = std::function< void( QNetworkReply*, QNetworkReply::Ne
 class IDHANClient
 {
 	std::shared_ptr< spdlog::logger > m_logger { nullptr };
-	std::size_t connection_attempts { 0 };
-
 	inline static IDHANClient* m_instance { nullptr };
 	QUrl m_url_template {};
 
@@ -77,6 +76,7 @@ class IDHANClient
 
 	//! Caches resolved (namespace, subtag) -> TagID so repeated tags skip the server round-trip.
 	std::unique_ptr< TagCache > m_tag_cache;
+	std::unique_ptr< TagTextCache > m_tag_text_cache;
 
   public:
 
@@ -109,7 +109,7 @@ class IDHANClient
 	~IDHANClient();
 
 	//! Returns a future that resolves to true if the server responds with valid version info.
-	[[nodiscard]] QFuture< bool > validConnection() const;
+	[[nodiscard]] QFuture< bool > validConnection();
 
 	//! Sets the API key sent with subsequent requests.
 	void setAPIKey( const QString& key );
@@ -143,9 +143,9 @@ class IDHANClient
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::pair< std::string, std::string > >& tags );
 
 	//! Creates a single "namespace:subtag" tag and returns its ID.
-	QFuture< TagID > createTag( const std::string&& namespace_text, const std::string&& subtag_text );
+	QFuture< TagID > createTag( const std::string& namespace_text, const std::string& subtag_text );
 
-	//! \copydoc createTag(const std::string&&,const std::string&&)
+	//! \copydoc createTag(const std::string&,const std::string&)
 	QFuture< TagID > createTag( const std::string& tag_text );
 
 	//! \return The raw (stored) tag IDs applied to \p record_id in \p tag_domain_id.
@@ -154,9 +154,9 @@ class IDHANClient
 	QFuture< std::vector< TagID > > getActiveRecordTags( RecordID record_id, TagDomainID tag_domain_id );
 
 	//! Resolves tag IDs to their "namespace:subtag" text, order-preserved.
-	QFuture< std::vector< std::string > > getTagText( std::vector< TagID >& tag_ids );
+	QFuture< std::vector< std::string > > getTagText( const std::vector< TagID >& tag_ids );
 
-	//! \copydoc getTagText(std::vector<TagID>&)
+	//! \copydoc getTagText(const std::vector<TagID>&)
 	QFuture< std::string > getTagText( TagID tag_id );
 
 	//! \return Tag suggestions (id + text) matching the autocomplete \p text.

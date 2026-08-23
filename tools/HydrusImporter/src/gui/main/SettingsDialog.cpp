@@ -11,8 +11,12 @@ SettingsDialog::SettingsDialog( QWidget* parent ) : QDialog( parent ), ui( new U
 {
 	ui->setupUi( this );
 
+	loadSettings();
+
 	ui->applySettings->setEnabled( false );
 	ui->saveSettings->setEnabled( false );
+
+	connect( ui->leKey, &QLineEdit::textChanged, this, &SettingsDialog::wakeButtons );
 }
 
 SettingsDialog::~SettingsDialog()
@@ -71,13 +75,21 @@ void SettingsDialog::loadSettings()
 {
 	ui->leHostname->setText( settings.value( "hostname", "localhost" ).toString() );
 	ui->lePort->setText( settings.value( "port", "16609" ).toString() );
+	ui->leKey->setText( settings.value( "key" ).toString() );
 }
 
-void SettingsDialog::on_saveSettings_pressed()
+void SettingsDialog::saveSettings()
 {
 	settings.setValue( "hostname", ui->leHostname->text() );
 	settings.setValue( "port", ui->lePort->text().toInt() );
 	settings.setValue( "key", ui->leKey->text() );
+	settings.setValue( "first_launch", false );
+	settings.sync();
+}
+
+void SettingsDialog::on_saveSettings_pressed()
+{
+	saveSettings();
 }
 
 void SettingsDialog::on_cancelSettings_pressed()
@@ -87,10 +99,8 @@ void SettingsDialog::on_cancelSettings_pressed()
 
 void SettingsDialog::on_applySettings_pressed()
 {
-	settings.setValue( "hostname", ui->leHostname->text() );
-	settings.setValue( "port", ui->lePort->text().toInt() );
-	settings.setValue( "key", ui->leKey->text() );
-	this->close();
+	saveSettings();
+	accept();
 }
 
 void SettingsDialog::wakeButtons()

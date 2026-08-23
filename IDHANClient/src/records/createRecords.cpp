@@ -2,6 +2,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include <cstddef>
+
 #include "IDHANClient.hpp"
 #include "fgl/defines.hpp"
 #include "logging/logger.hpp"
@@ -62,8 +64,9 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords(
 		hex_string.reserve( 64 );
 		for ( const auto& byte : hash )
 		{
-			const auto high { static_cast< uint8_t >( byte ) >> 4 };
-			const auto low { static_cast< uint8_t >( byte ) & 0x0F };
+			const auto value { std::to_integer< uint8_t >( byte ) };
+			const auto high { static_cast< uint8_t >( value >> 4 ) };
+			const auto low { static_cast< uint8_t >( value & 0x0F ) };
 			hex_string += nibbleToHex( high );
 			hex_string += nibbleToHex( low );
 		}
@@ -106,11 +109,13 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 		if ( !response->isFinished() ) throw std::runtime_error( "failed to read response" );
 
 		const QJsonDocument doc { QJsonDocument::fromJson( data ) };
+		// Brace initialization would wrap the response array as one array element.
+		const QJsonArray rows = doc.array();
 
 		std::vector< RecordID > record_ids {};
-		record_ids.reserve( doc.array().size() );
+		record_ids.reserve( static_cast< std::size_t >( rows.size() ) );
 
-		for ( const auto& row : doc.array() )
+		for ( const auto& row : rows )
 		{
 			const auto record_id { row.toInteger() };
 			record_ids.emplace_back( record_id );
@@ -125,7 +130,10 @@ QFuture< std::vector< RecordID > > IDHANClient::createRecords( const std::vector
 
 			logging::error( log_msg );
 
-			promise->setException( std::make_exception_ptr( log_msg ) );
+			promise->setException( std::make_exception_ptr( std::runtime_error { log_msg } ) );
+			promise->finish();
+			response->deleteLater();
+			return;
 		}
 
 		promise->addResult( record_ids );

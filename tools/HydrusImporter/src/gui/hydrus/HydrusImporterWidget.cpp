@@ -7,6 +7,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFutureWatcher>
+#include <QStandardPaths>
 #include <QtConcurrent>
 
 #include "HydrusImporter.hpp"
@@ -37,9 +38,17 @@ HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent 
 	ui->hyFolderStatusLabel->setText( "Invalid" );
 	ui->hyFolderStatusLabel->setStyleSheet( "QLabel { color: red; }" );
 
-#ifdef IMPORTER_TESTS
-	ui->hydrusFolderPath->setText( "/home/kj16609/.local/share/hydrus/db/" );
+	ui->hydrusFolderPath->setText( settings.value( "hydrus_folder_path" ).toString() );
 
+	if ( ui->hydrusFolderPath->text().isEmpty() )
+	{
+#ifdef Q_OS_LINUX
+		const auto data_directory { QStandardPaths::writableLocation( QStandardPaths::GenericDataLocation ) };
+		ui->hydrusFolderPath->setText( data_directory + "/hydrus/db" );
+#endif
+	}
+
+#ifdef IMPORTER_TESTS
 	on_parseHydrusDB_pressed();
 #endif
 }
@@ -138,8 +147,11 @@ void HydrusImporterWidget::parseUrls()
 	addServiceWidget( widget );
 }
 
-void HydrusImporterWidget::on_hydrusFolderPath_textChanged( [[maybe_unused]] const QString& path )
+void HydrusImporterWidget::on_hydrusFolderPath_textChanged( const QString& path )
 {
+	settings.setValue( "hydrus_folder_path", path );
+	settings.sync();
+
 	testHydrusPath();
 }
 

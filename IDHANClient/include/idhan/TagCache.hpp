@@ -50,6 +50,9 @@ class TagCache
 	//! Change the byte budget, evicting immediately if the cache is now over it.
 	void setBudget( std::size_t byte_budget );
 
+	//! Remove all cached entries. Used when the client switches to a different server.
+	void clear();
+
 	[[nodiscard]] std::size_t byteUsage() const;
 	[[nodiscard]] std::size_t count() const;
 
@@ -77,6 +80,32 @@ class TagCache
 	std::unordered_map< Key, std::list< Entry >::iterator, TagPairHash > m_index {};
 	std::size_t m_bytes { 0 };
 	std::size_t m_budget;
+};
+
+//! Thread-safe cache for resolved tag text. It is kept separate from TagCache because text is
+//! looked up by TagID rather than by namespace/subtag.
+class TagTextCache
+{
+  public:
+
+	TagTextCache() : m_mutex {}, m_tags {} {}
+
+	[[nodiscard]] std::optional< std::string > get( TagID tag_id );
+	void put( TagID tag_id, std::string text );
+	void clear();
+
+  private:
+
+	struct CacheItem
+	{
+		std::size_t hit_count;
+		std::string text;
+	};
+
+	void evictLeastUsed();
+
+	std::mutex m_mutex;
+	std::unordered_map< TagID, CacheItem > m_tags;
 };
 
 } // namespace idhan
