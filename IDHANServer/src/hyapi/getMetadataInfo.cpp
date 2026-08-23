@@ -39,12 +39,12 @@ static const Json::StaticString KEY_DELETED { "deleted" };
 static const Json::StaticString KEY_TIME_IMPORTED { "time_imported" };
 static const Json::StaticString KEY_KNOWN_URLS { "known_urls" };
 static const Json::StaticString KEY_DETAILED_KNOWN_URLS { "detailed_known_urls" };
-static const Json::StaticString KEY_REQUEST_URL { "request_url" };
 static const Json::StaticString KEY_NORMALISED_URL { "normalised_url" };
 static const Json::StaticString KEY_URL_TYPE { "url_type" };
 static const Json::StaticString KEY_URL_TYPE_STRING { "url_type_string" };
 static const Json::StaticString KEY_MATCH_NAME { "match_name" };
 static const Json::StaticString KEY_CAN_PARSE { "can_parse" };
+static const Json::StaticString KEY_CANNOT_PARSE_REASON { "cannot_parse_reason" };
 static const Json::StaticString KEY_TAGS { "tags" };
 static const Json::StaticString KEY_STORAGE_TAGS { "storage_tags" };
 static const Json::StaticString KEY_DISPLAY_TAGS { "display_tags" };
@@ -180,7 +180,8 @@ static void appendTagsByDomain( Json::Value& tags, const Json::StaticString whic
 drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadataFromRow(
 	DbClientPtr db,
 	const Json::Value services,
-	const drogon::orm::Row row )
+	const drogon::orm::Row row,
+	const bool detailed_url_information )
 {
 	const auto& record_id { row[ 0 ].as< RecordID >() };
 	const auto sha256 { SHA256::fromPgCol( row[ 1 ] ) };
@@ -219,24 +220,30 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	if ( !record_urls ) co_return std::unexpected( record_urls.error() );
 
 	data[ KEY_KNOWN_URLS ] = Json::Value( Json::arrayValue );
-	data[ KEY_DETAILED_KNOWN_URLS ] = Json::Value( Json::arrayValue );
 
 	Json::Value& known_urls { data[ KEY_KNOWN_URLS ] };
-	Json::Value& detailed_known_urls { data[ KEY_DETAILED_KNOWN_URLS ] };
+	Json::Value detailed_known_urls { Json::arrayValue };
 
-	for ( const auto& [ url_str, domain ] : record_urls.value() )
+	for ( const auto& record_url : record_urls.value() )
 	{
+		const std::string& url_str { record_url.url };
 		known_urls.append( url_str );
 
+		if ( !detailed_url_information ) continue;
+
+		const std::string url_type_string { urlTypeString( hydrus::gen_constants::URL_TYPE_UNKNOWN ) };
 		Json::Value advanced_url_info { Json::objectValue };
-		advanced_url_info[ KEY_REQUEST_URL ] = url_str;
 		advanced_url_info[ KEY_NORMALISED_URL ] = url_str;
 		advanced_url_info[ KEY_URL_TYPE ] = static_cast< Json::UInt64 >( hydrus::gen_constants::URL_TYPE_UNKNOWN );
-		advanced_url_info[ KEY_MATCH_NAME ] = domain;
+		advanced_url_info[ KEY_URL_TYPE_STRING ] = url_type_string;
+		advanced_url_info[ KEY_MATCH_NAME ] = url_type_string;
 		advanced_url_info[ KEY_CAN_PARSE ] = false;
+		advanced_url_info[ KEY_CANNOT_PARSE_REASON ] = "unknown url class";
 
 		detailed_known_urls.append( std::move( advanced_url_info ) );
 	}
+
+	if ( detailed_url_information ) data[ KEY_DETAILED_KNOWN_URLS ] = std::move( detailed_known_urls );
 
 	{
 		logging::ScopedTimer metadata_timer { "metadata", std::chrono::milliseconds( 5 ) };
@@ -289,6 +296,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 {
 	logging::ScopedTimer timer { "fileMetadata", std::chrono::milliseconds( 250 ) };
 	auto db { drogon::app().getDbClient() };
+	const bool detailed_url_information {
+		request->getOptionalParameter< bool >( "detailed_url_information" ).value_or( false )
+	};
 
 	if ( auto hashes_opt = request->getOptionalParameter< std::string >( "hashes" ) )
 	{
@@ -343,7 +353,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 		if constexpr ( METADATA_BATCH_SIZE == 1 )
 		{
-			auto result { co_await getMetadataFromRow( db, services, hash_result[ offset ] ) };
+			auto result {
+				co_await getMetadataFromRow( db, services, hash_result[ offset ], detailed_url_information )
+			};
 			if ( !result ) co_return result.error();
 
 			metadata_out.append( std::move( *result ) );
@@ -355,7 +367,8 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::fileMetadata( drogon::HttpReq
 
 			for ( std::size_t index { offset }; index < batch_end; ++index )
 			{
-				tasks.emplace_back( getMetadataFromRow( db, services, hash_result[ index ] ) );
+				tasks.emplace_back(
+					getMetadataFromRow( db, services, hash_result[ index ], detailed_url_information ) );
 			}
 
 			auto when_all_awaiter { drogon::when_all( std::move( tasks ) ) };
