@@ -186,6 +186,29 @@ ApiResponse ApiClient::getWithKey( const std::string& path, const std::string& k
 	return send( drogon::Get, path, {}, nullptr, key );
 }
 
+ApiResponse ApiClient::postOctets( const std::string& path, const std::string_view body )
+{
+	const auto request { drogon::HttpRequest::newHttpRequest() };
+
+	request->setMethod( drogon::Post );
+	request->setPath( path );
+	request->setContentTypeCode( drogon::CT_APPLICATION_OCTET_STREAM );
+	request->setBody( std::string { body } );
+
+	if ( !m_key.empty() ) request->addHeader( "X-API-Key", m_key );
+
+	const auto [ result, response ] { m_client->sendRequest( request, 60.0 ) };
+
+	if ( result != drogon::ReqResult::Ok || response == nullptr )
+		throw std::runtime_error( std::format( "Request to {} failed: {}", path, drogon::to_string_view( result ) ) );
+
+	ApiResponse out { .status = response->statusCode(), .json = {}, .body = std::string( response->body() ) };
+
+	if ( const auto json { response->getJsonObject() }; json != nullptr ) out.json = *json;
+
+	return out;
+}
+
 TagDomainID ApiClient::createDomain( const std::string& name )
 {
 	const auto response { post( "/tags/domain/create", domainBody( name ) ) };

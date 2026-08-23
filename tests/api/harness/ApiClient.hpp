@@ -57,6 +57,8 @@ class ApiClient
 
 	[[nodiscard]] ApiResponse getWithKey( const std::string& path, const std::string& key );
 
+	[[nodiscard]] ApiResponse postOctets( const std::string& path, std::string_view body );
+
 	[[nodiscard]] TagDomainID createDomain( const std::string& name );
 	[[nodiscard]] std::vector< TagID > createTags( const TagPairs& pairs );
 	[[nodiscard]] TagID createTag( const std::string& namespace_text, const std::string& subtag_text );
@@ -101,7 +103,6 @@ class ApiClient
 //! The 32 byte hash a record is addressed by, filled from a seed so each record gets a distinct one.
 [[nodiscard]] std::string hashFor( int seed );
 
-//! The domain a create or info response names.
 [[nodiscard]] TagDomainID domainOf( const ApiResponse& response );
 
 } // namespace idhan::test
