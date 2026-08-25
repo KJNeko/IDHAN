@@ -6,6 +6,12 @@ enable_testing()
 include(CTest)
 include(Catch)
 
+AddFGLExecutable(IDHANModuleTests ${CMAKE_CURRENT_SOURCE_DIR}/modules)
+target_link_libraries(IDHANModuleTests PUBLIC Catch2::Catch2WithMain IDHANModuleIPC IDHANModules IDHAN)
+target_compile_definitions(IDHANModuleTests PRIVATE IDHAN_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+add_dependencies(IDHANModuleTests IDHANVips)
+add_test(NAME IDHANModuleTests COMMAND IDHANModuleTests)
+
 AddFGLExecutable(IDHANDBTests ${CMAKE_CURRENT_SOURCE_DIR}/db)
 target_link_libraries(IDHANDBTests PUBLIC Catch2::Catch2WithMain libpqxx::pqxx IDHANMigration IDHAN)
 target_include_directories(IDHANDBTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/db)

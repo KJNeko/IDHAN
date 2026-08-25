@@ -1,0 +1,86 @@
+get:
+  tags:
+    - relationships
+  summary: Next duplicate pair awaiting a decision
+  description: |
+    Returns the closest pair of records that are perceptually similar and hold no
+    relationship yet, nearest first. Backs the "next unresolved" button in the file
+    relationships UI: every decision available there takes the pair out of this
+    queue, so calling it repeatedly walks forward.
+
+    Reads `undecided_hamming_distance`, which already drops pairs that are
+    alternatives of each other or that resolve onto the same duplicate. Pairs marked
+    coincidental lookalikes are dropped here instead, so `include_unrelated` can put
+    them back.
+  parameters:
+    - name: distance
+      in: query
+      required: false
+      description: >
+        Largest perceptual-hash distance to consider, in differing bits. Defaults to
+        8, which is also the furthest apart any stored pair can be.
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 8
+        default: 8
+    - name: include_unrelated
+      in: query
+      required: false
+      description: Consider pairs already marked coincidental lookalikes.
+      schema:
+        type: boolean
+        default: false
+  responses:
+    200:
+      description: The next pair, or none left within the distance
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - distance
+              - include_unrelated
+              - pair
+            properties:
+              distance:
+                type: integer
+                description: The maximum distance that was searched, echoed back.
+              include_unrelated:
+                type: boolean
+              pair:
+                nullable: true
+                description: Null once every pair within the distance has been ruled on.
+                type: object
+                required:
+                  - record_id_a
+                  - record_id_b
+                  - distance
+                properties:
+                  record_id_a:
+                    $ref: '../../../schemas/RecordID.yaml'
+                  record_id_b:
+                    $ref: '../../../schemas/RecordID.yaml'
+                  distance:
+                    type: integer
+                    description: Differing bits between the two perceptual hashes.
+          examples:
+            pending:
+              summary: A pair to rule on
+              value:
+                distance: 8
+                include_unrelated: false
+                pair:
+                  record_id_a: 12
+                  record_id_b: 40
+                  distance: 2
+            exhausted:
+              summary: Nothing left within the distance
+              value:
+                distance: 8
+                include_unrelated: false
+                pair: null
+    400:
+      description: distance was not an unsigned integer, or was greater than 8
+    500:
+      description: Internal server error

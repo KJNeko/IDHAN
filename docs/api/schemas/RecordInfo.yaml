@@ -46,6 +46,28 @@ properties:
     format: int32
     description: Colour channels. Images and image projects.
     example: 3
+  has_exif:
+    type: boolean
+    description: >
+      Images. The file carries an EXIF block. Absent when the image was parsed
+      before embedded metadata was looked for, which is not the same as false.
+    example: true
+  has_gps:
+    type: boolean
+    description: Images. The EXIF block carries a GPS position.
+    example: false
+  has_xmp:
+    type: boolean
+    description: Images. The file carries an XMP packet.
+    example: false
+  has_iptc:
+    type: boolean
+    description: Images. The file carries an IPTC block.
+    example: false
+  has_icc_profile:
+    type: boolean
+    description: Images. The file carries an embedded ICC colour profile.
+    example: true
   duration:
     type: number
     format: double

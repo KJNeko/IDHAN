@@ -389,6 +389,83 @@ std::string SearchBuilder::describeMimeTerm( const MimeTerm& term )
 		"system:{} {} {}", term.names.empty() ? "mime_id" : "mime", term.negated ? "!=" : "=", values );
 }
 
+SearchBuilder::NearbyTerm SearchBuilder::parseNearbySearch( const std::string_view arguments )
+{
+	// phash is a bit(64), so no distance beyond this can exclude anything
+	constexpr std::size_t max_distance { 64 };
+	constexpr std::string_view distance_keyword { "distance" };
+	constexpr std::string_view digits { "0123456789" };
+
+	const auto readNumber = [ &arguments ]( std::string_view& text, const std::string_view what ) -> std::size_t
+	{
+		const auto end { text.find_first_not_of( digits ) };
+		const auto number { text.substr( 0, end ) };
+
+		if ( number.empty() )
+			throw std::invalid_argument(
+				format_ns::format( "A nearby predicate needs a {}, got \'{}\'", what, arguments ) );
+
+		text = trimmed( end == std::string_view::npos ? std::string_view {} : text.substr( end ) );
+
+		try
+		{
+			return std::stoull( std::string { number } );
+		}
+		catch ( const std::exception& )
+		{
+			throw std::invalid_argument( format_ns::format( "Nearby {} is out of range: \'{}\'", what, number ) );
+		}
+	};
+
+	auto remaining { trimmed( arguments ) };
+
+	if ( remaining.starts_with( '=' ) ) remaining = trimmed( remaining.substr( 1 ) );
+
+	const auto record_id { readNumber( remaining, "record id" ) };
+
+	if ( record_id == 0 || record_id > static_cast< std::size_t >( std::numeric_limits< RecordID >::max() ) )
+		throw std::invalid_argument( format_ns::format( "Not a record id: \'{}\'", record_id ) );
+
+	NearbyTerm term { .record_id = static_cast< RecordID >( record_id ) };
+
+	if ( remaining.empty() ) return term;
+
+	if ( !remaining.starts_with( distance_keyword ) )
+		throw std::invalid_argument(
+			format_ns::format( "A nearby predicate reads \'<record id> distance <bits>\', got \'{}\'", arguments ) );
+
+	remaining = trimmed( remaining.substr( distance_keyword.size() ) );
+	if ( remaining.starts_with( '=' ) ) remaining = trimmed( remaining.substr( 1 ) );
+
+	term.distance = readNumber( remaining, "distance" );
+
+	if ( !remaining.empty() )
+		throw std::invalid_argument( format_ns::format( "Trailing text in a nearby predicate: \'{}\'", remaining ) );
+
+	if ( term.distance > max_distance )
+		throw std::invalid_argument(
+			format_ns::format( "A nearby distance is at most {} bits, got {}", max_distance, term.distance ) );
+
+	return term;
+}
+
+std::string SearchBuilder::renderNearbyTerm( const NearbyTerm& term )
+{
+	// both values were parsed as numbers, so neither can carry anything out of the literal
+	return format_ns::format(
+		"EXISTS (SELECT 1 FROM image_metadata pnc, image_metadata pnp"
+		" WHERE pnc.record_id = fi.record_id AND pnp.record_id = {}"
+		" AND pnc.phash IS NOT NULL AND pnp.phash IS NOT NULL"
+		" AND bit_count(pnc.phash # pnp.phash) <= {})",
+		term.record_id,
+		term.distance );
+}
+
+std::string SearchBuilder::describeNearbyTerm( const NearbyTerm& term )
+{
+	return format_ns::format( "system:nearby {} distance {}", term.record_id, term.distance );
+}
+
 SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
 {
 	constexpr std::size_t hex_length { SHA256::size() * 2 };
@@ -556,6 +633,28 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		     "NOT EXISTS (SELECT 1 FROM video_metadata pvmd WHERE pvmd.record_id = fi.record_id)",
 		     "system:no duration" );
 
+	// A NULL flag is an image parsed before embedded metadata was looked for. "has" wants a true and
+	// "no" wants an explicit false, so neither term claims those images either way.
+	const auto addEmbedded =
+		[ &add ]( const EmbeddedSearchType search, const std::string_view condition, const std::string_view name )
+	{
+		if ( search == EmbeddedSearchType::DontCare ) return;
+
+		const bool has { search == EmbeddedSearchType::Has };
+		const auto test {
+			has ? format_ns::format( "({})", condition ) : format_ns::format( "({}) IS FALSE", condition )
+		};
+
+		add( {},
+		     format_ns::format(
+				 "EXISTS (SELECT 1 FROM image_metadata pimd WHERE pimd.record_id = fi.record_id AND {})", test ),
+		     format_ns::format( "system:{} {}", has ? "has" : "no", name ) );
+	};
+
+	addEmbedded( m_exif_search, "pimd.has_exif", "exif" );
+	addEmbedded( m_icc_profile_search, "pimd.has_icc_profile", "icc profile" );
+	addEmbedded( m_embedded_metadata_search, "pimd.has_exif OR pimd.has_xmp OR pimd.has_iptc", "embedded metadata" );
+
 	if ( m_in_archive_search == ArchiveSearchType::InArchive )
 		add( {}, "EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)", "system:in archive" );
 
@@ -607,6 +706,8 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		add( {},
 		     renderBounds( "fi.record_id", m_record_search ),
 		     format_ns::format( "system:{}", renderBounds( "record", m_record_search ) ) );
+
+	for ( const auto& term : m_nearby_terms ) add( {}, renderNearbyTerm( term ), describeNearbyTerm( term ) );
 
 	for ( const auto& term : m_mime_terms ) add( {}, renderMimeTerm( term ), describeMimeTerm( term ) );
 
@@ -1068,18 +1169,34 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	}
 	if ( system_subtag == "has exif" )
 	{
-		m_exif_search = ExitSearchType::HasExif;
+		m_exif_search = EmbeddedSearchType::Has;
 		return true;
 	}
 	if ( system_subtag == "no exif" )
 	{
-		m_exif_search = ExitSearchType::NoExif;
+		m_exif_search = EmbeddedSearchType::No;
 		return true;
 	}
-	// system:has embedded metadata
-	// system:no embedded metadata
-	// system:has icc profile
-	// system:no icc profile
+	if ( system_subtag == "has embedded metadata" )
+	{
+		m_embedded_metadata_search = EmbeddedSearchType::Has;
+		return true;
+	}
+	if ( system_subtag == "no embedded metadata" )
+	{
+		m_embedded_metadata_search = EmbeddedSearchType::No;
+		return true;
+	}
+	if ( system_subtag == "has icc profile" )
+	{
+		m_icc_profile_search = EmbeddedSearchType::Has;
+		return true;
+	}
+	if ( system_subtag == "no icc profile" )
+	{
+		m_icc_profile_search = EmbeddedSearchType::No;
+		return true;
+	}
 	if ( system_subtag == "has tags" )
 	{
 		m_has_tags_search = TagCountSearchType::HasTags;
@@ -1119,11 +1236,6 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 		parseRangeSearch( m_limit_search, system_subtag );
 		return true;
 	}
-	// system:filetype = image/jpg, image/png, apng
-	if ( system_subtag.starts_with( "filetype" ) )
-	{
-		return true;
-	}
 	if ( system_subtag.starts_with( "hash" ) )
 	{
 		setHashSearch( system_subtag.substr( 4 ) );
@@ -1131,20 +1243,12 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	}
 	// system:modified date < 7 years 45 days 7h // system:modified date > 2011-06-04
 	// system:date modified > 7 years 2 months // system:date modified < 0 years 1 month 1 day 1 hour
-	if ( system_subtag.starts_with( "modified date" ) || system_subtag.starts_with( "date modified" ) )
-	{
-		return true;
-	}
 	// system:last viewed time < 7 years 45 days 7h
 	// system:last view time < 7 years 45 days 7h
 	// system:import time < 7 years 45 days 7h
 	// system:time imported < 7 years 45 days 7h // system:time imported > 2011-06-04
 	// system:time imported > 7 years 2 months // system:time imported < 0 years 1 month 1 day 1 hour
 	// system:time imported ~= 2011-1-3 // system:time imported ~= 1996-05-2
-	if ( system_subtag.starts_with( "time imported" ) )
-	{
-		return true;
-	}
 	// system:duration < 5 seconds
 	// system:duration ~= 600 msecs
 	// system:duration > 3 milliseconds
@@ -1157,25 +1261,9 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	// system:num file relationships < 3 alternates
 	// system:num file relationships > 3 false positives
 	// system:ratio is wider than 16:9
-	if ( system_subtag.starts_with( "ratio wider than" ) )
-	{
-		return true;
-	}
 	// system:ratio is 16:9
-	if ( system_subtag.starts_with( "ratio is" ) )
-	{
-		return true;
-	}
 	// system:ratio taller than 1:1
-	if ( system_subtag.starts_with( "ratio taller than" ) )
-	{
-		return true;
-	}
 	// system:num pixels > 50 px // system:num pixels < 1 megapixels // system:num pixels ~= 5 kilopixel
-	if ( system_subtag.starts_with( "num pixels" ) )
-	{
-		return true;
-	}
 	// system:views in media ~= 10
 	// system:views in preview < 10
 	// system:views > 0
@@ -1184,15 +1272,7 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	// system:has url matching regex index\.php
 	// system:does not have a url matching regex index\.php
 	// system:has url https://somebooru.org/posts/123456
-	if ( system_subtag.starts_with( "has url" ) )
-	{
-		return true;
-	}
 	// system:does not have url https://somebooru.org/posts/123456
-	if ( system_subtag.starts_with( "does not have url" ) )
-	{
-		return true;
-	}
 	// system:has domain safebooru.com
 	// system:does not have domain safebooru.com
 	// system:has a url with class safebooru file page
@@ -1279,13 +1359,19 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 			continue;
 		}
 
+		if ( system_subtag.starts_with( "nearby" ) )
+		{
+			m_nearby_terms.push_back( parseNearbySearch( system_subtag.substr( 6 ) ) );
+			continue;
+		}
+
 		if ( system_subtag.starts_with( "record" ) )
 		{
 			parseRangeSearch( m_record_search, system_subtag );
 			continue;
 		}
 
-		log::warn( "Unsupported system tag: \'{}\'", system_subtag );
+		throw std::invalid_argument( format_ns::format( "Unsupported system tag: \'{}\'", system_subtag ) );
 	}
 }
 

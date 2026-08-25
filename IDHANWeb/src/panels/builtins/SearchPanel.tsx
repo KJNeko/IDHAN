@@ -22,6 +22,7 @@ import {
     type SystemPredicate,
 } from './systemPredicates';
 import {loadMimes, peekMimes, type MimeCatalogue} from '../../host/mimeCatalogue';
+import {addTerm, removeTerm, replaceTerm} from './searchTerms';
 
 /** Matches the sort keys POST /search understands (parseSortType.hpp). */
 export const SORT_OPTIONS = [
@@ -198,6 +199,9 @@ function SearchPanel({ host }: PanelProps) {
   const [input, setInput] = useState('');
   const [highlight, setHighlight] = useState(-1);
   const [running, setRunning] = useState(false);
+    /** The chip loaded into the input for rewriting, by its text; null when the input adds a new one. */
+    const [editing, setEditing] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
   const [summary, setSummary] = useState<string | null>(null);
     const [showBreakdown, setShowBreakdown] = useState(initial.showBreakdown);
     const [steps, setSteps] = useState<SearchStep[] | null>(null);
@@ -265,14 +269,28 @@ function SearchPanel({ host }: PanelProps) {
     persist({ tags: next });
   }
 
+    /** Commits the input: a new chip, or the rewrite of the one being edited. */
   function addTag(tag: string) {
-    const trimmed = tag.trim();
-    if (trimmed.length === 0 || tags.includes(trimmed)) {
-      setInput('');
-      setHighlight(-1);
-      return;
+        const target = editing;
+
+        setInput('');
+        setHighlight(-1);
+        setEditing(null);
+
+        commitTags(target === null ? addTerm(tags, tag) : replaceTerm(tags, target, tag));
     }
-    commitTags([...tags, trimmed]);
+
+    /** Loads a chip back into the input; committing rewrites it in place. */
+    function startEdit(tag: string) {
+        setEditing(tag);
+        setInput(tag);
+        setHighlight(-1);
+        inputRef.current?.focus();
+    }
+
+    /** Leaves the chip as it was. */
+    function cancelEdit() {
+        setEditing(null);
     setInput('');
     setHighlight(-1);
   }
@@ -297,7 +315,8 @@ function SearchPanel({ host }: PanelProps) {
   }
 
   function removeTag(tag: string) {
-    commitTags(tags.filter((t) => t !== tag));
+      if (tag === editing) cancelEdit();
+      commitTags(removeTerm(tags, tag));
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -320,19 +339,21 @@ function SearchPanel({ host }: PanelProps) {
           acceptSuggestion(suggestions[highlight]);
         } else if (input.trim().length > 0) {
           addTag(input);
+        } else if (editing !== null) {
+            // an edit emptied down to nothing is a cancel; removing a term is what the chip's x is for
+            cancelEdit();
         } else {
           void runSearch(tags, sortBy, sortOrder);
         }
         break;
       case 'Backspace':
-        if (input.length === 0 && tags.length > 0) {
+          if (input.length === 0 && editing === null && tags.length > 0) {
           event.preventDefault();
           removeTag(tags[tags.length - 1]!);
         }
         break;
       case 'Escape':
-        setInput('');
-        setHighlight(-1);
+          cancelEdit();
         break;
     }
   }
@@ -361,23 +382,34 @@ function SearchPanel({ host }: PanelProps) {
     <div className="panel-body search-panel">
       <div className="search-chips">
         {tags.map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            className={`chip${tag.startsWith('-') ? ' negated' : ''}${tag.startsWith('system:') ? ' system' : ''}`}
-            onClick={() => removeTag(tag)}
-            title="Remove"
-          >
-            {tag} <span className="chip-x">×</span>
-          </button>
+            <span
+                key={tag}
+                className={`chip${tag.startsWith('-') ? ' negated' : ''}${tag.startsWith('system:') ? ' system' : ''}${tag === editing ? ' editing' : ''}`}
+            >
+            <button type="button" className="chip-text" onClick={() => startEdit(tag)} title="Edit">
+              {tag}
+            </button>
+            <button
+                type="button"
+                className="chip-x"
+                onClick={() => removeTag(tag)}
+                title="Remove"
+                aria-label={`Remove ${tag}`}
+            >
+              ×
+            </button>
+          </span>
         ))}
       </div>
 
       <div className="search-input-wrap">
         <input
-          className="search-input"
+            ref={inputRef}
+            className={`search-input${editing === null ? '' : ' editing'}`}
           value={input}
-          placeholder="Add a tag, -negation, or system: predicate…"
+            placeholder={
+                editing === null ? 'Add a tag, -negation, or system: predicate…' : 'Enter to apply, Esc to cancel'
+            }
           onChange={(e) => {
             setInput(e.target.value);
             setHighlight(-1);

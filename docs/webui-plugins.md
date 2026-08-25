@@ -42,7 +42,7 @@ dev and production — no per-build import-map generation needed.
 }
 ```
 
-The current host API version is `1.0.0`. If `hostApi` is not satisfied, the plugin is refused with a
+The current host API version is `1.3.0`. If `hostApi` is not satisfied, the plugin is refused with a
 console warning rather than loaded against a mismatched surface.
 
 ## Writing a panel

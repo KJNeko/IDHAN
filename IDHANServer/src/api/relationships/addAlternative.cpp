@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "IDHANTypes.hpp"
 #include "api/FileRelationshipsAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
@@ -6,63 +8,6 @@
 
 namespace idhan::api
 {
-
-using GroupID = idhan::Integer;
-
-drogon::Task< GroupID > createNewGroup( DbClientPtr db )
-{
-	const auto group_result {
-		co_await db->execSqlCoro( "INSERT INTO alternative_groups DEFAULT VALUES RETURNING group_id" )
-	};
-
-	const auto group_id { group_result[ 0 ][ 0 ].as< GroupID >() };
-	co_return group_id;
-}
-
-drogon::Task<> addItemsToNewGroup( std::vector< RecordID > record_ids, DbClientPtr db )
-{
-	const auto group_id { co_await createNewGroup( db ) };
-	co_await db->execSqlCoro(
-		"INSERT INTO alternative_group_members (group_id, record_id) VALUES ($1, UNNEST($2::" RECORD_PG_TYPE_NAME
-		"[])) ON CONFLICT (group_id, record_id) DO NOTHING",
-		group_id,
-		std::move( record_ids ) );
-}
-
-drogon::Task<> addItemsToExistingGroup(
-	std::vector< RecordID > record_ids,
-	const std::vector< GroupID > group_ids,
-	drogon::orm::DbClientPtr db )
-{
-	const auto group_id { group_ids[ 0 ] };
-
-	co_await db->execSqlCoro(
-		"INSERT INTO alternative_group_members (group_id, record_id) VALUES ($1, UNNEST($2::" RECORD_PG_TYPE_NAME
-		"[])) ON CONFLICT (group_id, record_id) DO NOTHING",
-		group_id,
-		std::move( record_ids ) );
-}
-
-drogon::Task<> addItemsToExistingGroupsMerge(
-	std::vector< RecordID > record_ids,
-	std::vector< GroupID > group_ids,
-	drogon::orm::DbClientPtr db )
-{
-	const auto group_id { co_await createNewGroup( db ) };
-
-	co_await db->execSqlCoro(
-		"UPDATE alternative_group_members SET group_id = $1 WHERE group_id = ANY($2)",
-		group_id,
-		std::vector< GroupID >( group_ids ) );
-
-	co_await db->execSqlCoro(
-		"INSERT INTO alternative_group_members (group_id, record_id) VALUES ($1, UNNEST($2::" RECORD_PG_TYPE_NAME
-		"[])) ON CONFLICT (group_id, record_id) DO NOTHING",
-		group_id,
-		std::move( record_ids ) );
-
-	co_await db->execSqlCoro( "DELETE FROM alternative_groups WHERE group_id = ANY($1)", std::move( group_ids ) );
-}
 
 drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( drogon::HttpRequestPtr request )
 {
@@ -75,7 +20,7 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 
 	if ( !json.isArray() ) co_return createBadRequest( "Expected json array of integers" );
 
-	if ( json.size() < 2 ) co_return createBadRequest( "Expected at least 2 record ids to form an alternative group" );
+	if ( json.size() < 2 ) co_return createBadRequest( "Expected at least 2 record ids to pair as alternatives" );
 
 	std::vector< RecordID > record_ids {};
 
@@ -86,41 +31,34 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::addAlternative( dr
 		record_ids.emplace_back( id.as< RecordID >() );
 	}
 
-	// unknown records would otherwise surface as FK-violation 500s in the member inserts
+	std::ranges::sort( record_ids );
+	const auto repeated { std::ranges::unique( record_ids ) };
+	record_ids.erase( repeated.begin(), repeated.end() );
+
+	if ( record_ids.size() < 2 ) co_return createBadRequest( "Expected at least 2 distinct record ids" );
+
+	// unknown records would otherwise surface as FK-violation 500s in the insert
 	const auto validation { co_await helpers::validateRecordIds( record_ids, db ) };
 	if ( !validation ) co_return validation.error();
 
-	const auto group_search { co_await db->execSqlCoro(
-		"SELECT DISTINCT group_id FROM alternative_group_members WHERE record_id = ANY($1)",
-		std::vector< RecordID >( record_ids ) ) };
+	// Every listed record is an alternative of every other, written out pair by pair: the mapping is
+	// direct, so nothing here reaches records paired with these elsewhere.
+	std::vector< RecordID > lesser {};
+	std::vector< RecordID > greater {};
 
-	std::vector< GroupID > group_ids {};
+	for ( std::size_t i = 0; i < record_ids.size(); ++i )
+		for ( std::size_t j = i + 1; j < record_ids.size(); ++j )
+		{
+			lesser.emplace_back( record_ids[ i ] );
+			greater.emplace_back( record_ids[ j ] );
+		}
 
-	for ( const auto& id : group_search )
-	{
-		group_ids.emplace_back( id[ 0 ].as< GroupID >() );
-	}
-
-	std::ranges::sort( group_ids );
-	const auto duplicates { std::ranges::unique( group_ids ) };
-	group_ids.erase( duplicates.begin(), duplicates.end() );
-
-	const bool no_existing_groups { group_ids.empty() };
-	const bool existing_groups { not no_existing_groups };
-	const bool multiple_groups { not no_existing_groups && group_ids.size() > 1 };
-
-	if ( no_existing_groups )
-	{
-		co_await addItemsToNewGroup( record_ids, db );
-	}
-	else if ( existing_groups && !multiple_groups )
-	{
-		co_await addItemsToExistingGroup( record_ids, group_ids, db );
-	}
-	else if ( multiple_groups )
-	{
-		co_await addItemsToExistingGroupsMerge( record_ids, group_ids, db );
-	}
+	co_await db->execSqlCoro(
+		"INSERT INTO alternative_records (lesser_record_id, greater_record_id) "
+		"SELECT * FROM UNNEST($1::" RECORD_PG_TYPE_NAME "[], $2::" RECORD_PG_TYPE_NAME "[]) "
+		"ON CONFLICT DO NOTHING",
+		std::move( lesser ),
+		std::move( greater ) );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( {} );
 }

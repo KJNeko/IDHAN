@@ -97,6 +97,17 @@ export interface RecordMetadata {
     height?: number;
     /** image, image_project, audio. */
     channels?: number;
+    /** Lowercase 64-bit perceptual hash for static raster images. */
+    phash?: string;
+    /**
+     * image. Embedded metadata blocks the file carries. Absent, rather than false, on an image
+     * parsed before they were looked for.
+     */
+    has_exif?: boolean;
+    has_gps?: boolean;
+    has_xmp?: boolean;
+    has_iptc?: boolean;
+    has_icc_profile?: boolean;
     /** image_project. */
     layers?: number;
 
@@ -126,6 +137,65 @@ export type SimpleType = 'none' | 'image' | 'video' | 'animation' | 'audio' | 'a
 export interface MetadataResponse {
     records: RecordMetadata[];
   missing: number[];
+}
+
+/** Duplicate and alternative neighbours of one record (GET /relationships/{record_id}). */
+export interface FileRelationships {
+    inferior: number[];
+    superior: number[];
+    /** Records directly paired with this one as alternatives, record-id-ordered. */
+    alternatives: number[];
+}
+
+/** What POST /relationships/clear actually removed between two records. */
+export interface ClearedRelationship {
+    /** A direct better/worse pair existed in either direction and was deleted. */
+    duplicate_removed: boolean;
+    /** The two were paired as alternatives, and that pair was deleted. */
+    alternative_removed: boolean;
+}
+
+/** A close pair no one has ruled on yet (GET /relationships/duplicates/undecided). */
+export interface UndecidedPair {
+    record_id_a: number;
+    record_id_b: number;
+    /** Differing bits between the two perceptual hashes. */
+    distance: number;
+}
+
+/** The next pair awaiting a duplicate decision, or none left within the distance. */
+export interface UndecidedDuplicate {
+    /** The maximum distance that was searched, echoed back. */
+    distance: number;
+    /** Pairs already marked coincidental lookalikes were eligible. */
+    include_unrelated: boolean;
+    /** Null once every pair within the distance has been ruled on. */
+    pair: UndecidedPair | null;
+}
+
+/** One record within a perceptual-hash distance of the probe. */
+export interface SimilarRecord {
+    record_id: number;
+    /** Differing bits between this record's perceptual hash and the probe's; 0 is a pixel-identical match. */
+    distance: number;
+    /** This pair was marked a coincidental lookalike, so it only appears when include_unrelated is set. */
+    unrelated: boolean;
+}
+
+/** Perceptual-hash neighbourhood of one record (GET /relationships/{record_id}/similar). */
+export interface SimilarRecords {
+    record_id: number;
+    /** The distance that was searched, echoed back. */
+    distance: number;
+    limit: number;
+    /** Records marked unrelated to the probe were kept in the results. */
+    include_unrelated: boolean;
+    /** Records already related to the probe were kept in the results. */
+    include_related: boolean;
+    /** The limit cut the results short, so more records may sit within the distance. */
+    truncated: boolean;
+    /** Nearest first, then by record id. Never contains the probe itself. */
+    results: SimilarRecord[];
 }
 
 export interface AutocompleteResult {
@@ -243,4 +313,12 @@ export interface StorageNode {
   name: string;
   value: number;
   children?: StorageNode[];
+}
+
+/** What a job-dispatching endpoint answers with; poll `/jobs/{job_id}/status` from there. */
+export interface JobDispatch {
+    job_id: number;
+    status: string;
+    /** Records the job was scoped to, when the endpoint takes a record list. */
+    record_count?: number;
 }

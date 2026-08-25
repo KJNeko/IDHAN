@@ -13,14 +13,24 @@
 namespace idhan::api
 {
 
+//! Names the response after the record's hash. Without it a browser saves whatever the URL's last
+//! segment was, which is "file" for every record in the collection.
+static void addFileName( const drogon::HttpResponsePtr& response, const std::filesystem::path& path )
+{
+	response->addHeader( "Content-Disposition", std::format( "inline; filename=\"{}\"", path.filename().string() ) );
+}
+
 drogon::Task< drogon::HttpResponsePtr > createHttpHeadForFile(
 	const drogon::orm::DbClientPtr db,
 	const std::size_t file_size,
-	const RecordID record_id )
+	const RecordID record_id,
+	const std::filesystem::path& path )
 {
 	auto response { drogon::HttpResponse::newHttpResponse() };
 
 	response->addHeader( "Accept-Ranges", "bytes" );
+
+	addFileName( response, path );
 
 	response->addHeader( "Content-Length", std::to_string( file_size ) );
 
@@ -123,7 +133,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 	if ( request->isHead() )
 	{
-		co_return co_await createHttpHeadForFile( db, file_size, record_id );
+		co_return co_await createHttpHeadForFile( db, file_size, record_id, *path_e );
 	}
 
 	const auto& range_header { request->getHeader( "Range" ) };
@@ -154,6 +164,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	auto response { drogon::HttpResponse::newFileResponse( path_e->string(), begin, length ) };
 
 	response->addHeader( "Accept-Ranges", "bytes" );
+
+	addFileName( response, *path_e );
 
 	helpers::addFileCacheHeader( response );
 

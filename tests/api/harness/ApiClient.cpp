@@ -138,7 +138,12 @@ ApiResponse ApiClient::send(
 	if ( result != drogon::ReqResult::Ok || response == nullptr )
 		throw std::runtime_error( std::format( "Request to {} failed: {}", path, drogon::to_string_view( result ) ) );
 
-	ApiResponse out { .status = response->statusCode(), .json = {}, .body = std::string( response->body() ) };
+	ApiResponse out {
+		.status = response->statusCode(),
+		.json = {},
+		.body = std::string( response->body() ),
+		.headers = response->headers()
+	};
 
 	if ( const auto json { response->getJsonObject() }; json != nullptr ) out.json = *json;
 
@@ -202,7 +207,12 @@ ApiResponse ApiClient::postOctets( const std::string& path, const std::string_vi
 	if ( result != drogon::ReqResult::Ok || response == nullptr )
 		throw std::runtime_error( std::format( "Request to {} failed: {}", path, drogon::to_string_view( result ) ) );
 
-	ApiResponse out { .status = response->statusCode(), .json = {}, .body = std::string( response->body() ) };
+	ApiResponse out {
+		.status = response->statusCode(),
+		.json = {},
+		.body = std::string( response->body() ),
+		.headers = response->headers()
+	};
 
 	if ( const auto json { response->getJsonObject() }; json != nullptr ) out.json = *json;
 

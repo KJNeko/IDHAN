@@ -40,6 +40,10 @@ export const SYSTEM_PREDICATES: readonly SystemPredicate[] = [
     {text: 'system:no audio', kind: 'flag', hint: ''},
     {text: 'system:has exif', kind: 'flag', hint: ''},
     {text: 'system:no exif', kind: 'flag', hint: ''},
+    {text: 'system:has embedded metadata', kind: 'flag', hint: 'exif, xmp or iptc'},
+    {text: 'system:no embedded metadata', kind: 'flag', hint: ''},
+    {text: 'system:has icc profile', kind: 'flag', hint: ''},
+    {text: 'system:no icc profile', kind: 'flag', hint: ''},
     {text: 'system:is archive', kind: 'flag', hint: 'the file is an archive'},
     {text: 'system:is not archive', kind: 'flag', hint: '', aliases: ['not archive']},
     {text: 'system:in archive', kind: 'flag', hint: 'the file sits inside an archive'},
@@ -49,6 +53,7 @@ export const SYSTEM_PREDICATES: readonly SystemPredicate[] = [
     {text: 'system:mime_id', kind: 'argument', hint: '= 5002'},
     {text: 'system:sha256', kind: 'argument', hint: '= 64 hex characters', aliases: ['hash']},
     {text: 'system:record', kind: 'argument', hint: '> 1000 (record id)'},
+    {text: 'system:nearby', kind: 'argument', hint: '1234 distance 8 (perceptual hash)'},
     {text: 'system:limit', kind: 'argument', hint: '= 1000'},
 ];
 

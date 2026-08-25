@@ -1,10 +1,11 @@
 post:
   tags:
     - relationships
-  summary: Adds records to an alternative group
+  summary: Pairs records as alternatives
   description: |
-    Groups records as alternatives of each other, for example different crops
-    of one image. Any groups the records already belong to are merged.
+    Marks records as alternatives of each other, for example different crops of
+    one image. Every listed record is paired with every other one; the pairing is
+    direct, so it never reaches records already paired with these elsewhere.
   requestBody:
     required: true
     content:
@@ -16,14 +17,14 @@ post:
           minItems: 2
         examples:
           group:
-            summary: Group three records as alternatives
+            summary: Pair three records as alternatives
             value:
               - 1
               - 2
               - 3
   responses:
     200:
-      description: Records grouped
+      description: Records paired
       content:
         application/json:
           schema:

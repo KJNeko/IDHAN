@@ -51,7 +51,8 @@ class MigratedSchema
 	{
 		for ( const auto id : mime_ids::ALL_MIME_IDS )
 			tx.exec(
-				"INSERT INTO mime (mime_id, name, best_extension) VALUES ($1, $2, $3)",
+				"INSERT INTO mime (mime_id, name, best_extension) VALUES ($1, $2, $3) "
+				"ON CONFLICT (mime_id) DO NOTHING",
 				pqxx::params { id,
 			                   std::string { mime_ids::mime_names.at( id ) },
 			                   std::string { mime_ids::mime_extensions.at( id ) } } );

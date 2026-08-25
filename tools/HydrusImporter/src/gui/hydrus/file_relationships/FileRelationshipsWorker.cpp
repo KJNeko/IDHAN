@@ -161,7 +161,7 @@ void FileRelationshipsWorker::process()
 
 	flushHashIDs();
 
-	emit statusMessage( "Setting alternatives for groups" );
+	emit statusMessage( "Pairing alternatives" );
 
 	std::size_t alternative_count { 0 };
 
@@ -175,7 +175,7 @@ void FileRelationshipsWorker::process()
 			if ( itter != record_map.end() ) record_ids.emplace_back( itter->second );
 		}
 
-		// A record may be shared between kings in the group; de-duplicate before forming the group.
+		// A record may be shared between kings in the group; de-duplicate before pairing them up.
 		std::ranges::sort( record_ids );
 		const auto dupes { std::ranges::unique( record_ids ) };
 		record_ids.erase( dupes.begin(), dupes.end() );
@@ -184,7 +184,7 @@ void FileRelationshipsWorker::process()
 
 		try
 		{
-			auto future = client.setAlternativeGroups( record_ids );
+			auto future = client.setAlternatives( record_ids );
 			future.waitForFinished();
 
 			alternative_count += record_ids.size();
@@ -192,7 +192,7 @@ void FileRelationshipsWorker::process()
 		}
 		catch ( const std::exception& e )
 		{
-			idhan::logging::error( "Failed to set alternative group of {} records: {}", record_ids.size(), e.what() );
+			idhan::logging::error( "Failed to set alternatives of {} records: {}", record_ids.size(), e.what() );
 		}
 	}
 

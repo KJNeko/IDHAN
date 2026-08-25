@@ -185,7 +185,7 @@ class IDHANClient
 		std::vector< std::vector< TagID > >&& tag_sets );
 
 	// File relationships
-	QFuture< void > setAlternativeGroups( std::vector< RecordID >& record_ids );
+	QFuture< void > setAlternatives( std::vector< RecordID >& record_ids );
 
 	QFuture< void > setDuplicates( RecordID worse_duplicate, RecordID better_duplicate );
 

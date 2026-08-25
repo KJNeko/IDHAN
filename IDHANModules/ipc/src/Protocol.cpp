@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <format>
+#include <optional>
 #include <type_traits>
 #include <variant>
 
@@ -19,22 +20,88 @@ std::string describeWireValue( const Json::Value& json )
 	return "a non-integral value";
 }
 
-[[nodiscard]] Json::Value imageToJson( const MetadataInfoImage& image )
+[[nodiscard]] std::string phashToHex( const PerceptualHash& phash )
+{
+	constexpr char HEX[] { "0123456789abcdef" };
+	std::string value( phash.size() * 2, '0' );
+	for ( std::size_t i = 0; i < phash.size(); ++i )
+	{
+		const auto byte { static_cast< std::uint8_t >( phash[ i ] ) };
+		value[ i * 2 ] = HEX[ byte >> 4 ];
+		value[ i * 2 + 1 ] = HEX[ byte & 0x0f ];
+	}
+	return value;
+}
+
+[[nodiscard]] std::optional< std::uint8_t > hexDigit( const char value )
+{
+	if ( value >= '0' && value <= '9' ) return static_cast< std::uint8_t >( value - '0' );
+	if ( value >= 'a' && value <= 'f' ) return static_cast< std::uint8_t >( value - 'a' + 10 );
+	if ( value >= 'A' && value <= 'F' ) return static_cast< std::uint8_t >( value - 'A' + 10 );
+	return std::nullopt;
+}
+
+[[nodiscard]] Json::Value embeddedToJson( const EmbeddedMetadata& embedded )
+{
+	Json::Value json {};
+	json[ "exif" ] = embedded.exif;
+	json[ "gps" ] = embedded.gps;
+	json[ "xmp" ] = embedded.xmp;
+	json[ "iptc" ] = embedded.iptc;
+	json[ "icc_profile" ] = embedded.icc_profile;
+	return json;
+}
+
+[[nodiscard]] EmbeddedMetadata embeddedFromJson( const Json::Value& json )
+{
+	return EmbeddedMetadata {
+		.exif = json[ "exif" ].asBool(),
+		.gps = json[ "gps" ].asBool(),
+		.xmp = json[ "xmp" ].asBool(),
+		.iptc = json[ "iptc" ].asBool(),
+		.icc_profile = json[ "icc_profile" ].asBool()
+	};
+}
+
+[[nodiscard]] Json::Value imageToJson( const MetadataInfoImage& image, const bool include_phash )
 {
 	Json::Value json {};
 	json[ "width" ] = image.width;
 	json[ "height" ] = image.height;
 	json[ "channels" ] = static_cast< Json::UInt >( image.channels );
+	json[ "embedded" ] = embeddedToJson( image.embedded );
+	if ( include_phash && image.phash ) json[ "phash" ] = phashToHex( *image.phash );
 	return json;
 }
 
-[[nodiscard]] MetadataInfoImage imageFromJson( const Json::Value& json )
+[[nodiscard]] std::expected< MetadataInfoImage, std::string > imageFromJson(
+	const Json::Value& json,
+	const bool include_phash )
 {
-	return MetadataInfoImage {
+	MetadataInfoImage image {
 		.width = json[ "width" ].asInt(),
 		.height = json[ "height" ].asInt(),
-		.channels = static_cast< std::uint8_t >( json[ "channels" ].asUInt() )
+		.channels = static_cast< std::uint8_t >( json[ "channels" ].asUInt() ),
+		.phash = std::nullopt,
+		.embedded = embeddedFromJson( json[ "embedded" ] )
 	};
+
+	if ( !include_phash || !json.isMember( "phash" ) ) return image;
+	if ( !json[ "phash" ].isString() ) return std::unexpected( "image metadata has a non-string phash" );
+
+	const auto value { json[ "phash" ].asString() };
+	if ( value.size() != 16 ) return std::unexpected( "image metadata phash is not 16 hex characters" );
+
+	PerceptualHash phash {};
+	for ( std::size_t i = 0; i < phash.size(); ++i )
+	{
+		const auto high { hexDigit( value[ i * 2 ] ) };
+		const auto low { hexDigit( value[ i * 2 + 1 ] ) };
+		if ( !high || !low ) return std::unexpected( "image metadata phash contains a non-hex character" );
+		phash[ i ] = static_cast< std::byte >( ( *high << 4 ) | *low );
+	}
+	image.phash = phash;
+	return image;
 }
 
 Json::Value toJson( const ModuleVersion& version )
@@ -247,7 +314,7 @@ Json::Value toJson( const MetadataInfo& info )
 			if constexpr ( std::is_same_v< T, MetadataInfoImage > )
 			{
 				tag = MetadataVariant::IMAGE;
-				value = imageToJson( metadata );
+				value = imageToJson( metadata, true );
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoVideo > )
 			{
@@ -262,7 +329,7 @@ Json::Value toJson( const MetadataInfo& info )
 			else if constexpr ( std::is_same_v< T, MetadataInfoImageProject > )
 			{
 				tag = MetadataVariant::IMAGE_PROJECT;
-				value[ "image" ] = imageToJson( metadata.image_info );
+				value[ "image" ] = imageToJson( metadata.image_info, false );
 				value[ "layers" ] = static_cast< Json::UInt >( metadata.layers );
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoAnimation > )
@@ -336,8 +403,12 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 				info.m_metadata = std::monostate {};
 				break;
 			case MetadataVariant::IMAGE:
-				info.m_metadata = imageFromJson( value );
-				break;
+				{
+					auto image { imageFromJson( value, true ) };
+					if ( !image ) return std::unexpected( image.error() );
+					info.m_metadata = std::move( *image );
+					break;
+				}
 			case MetadataVariant::VIDEO:
 				info.m_metadata = MetadataInfoVideo {
 					.has_audio = value[ "has_audio" ].asBool(),
@@ -349,11 +420,15 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 				};
 				break;
 			case MetadataVariant::IMAGE_PROJECT:
-				info.m_metadata = MetadataInfoImageProject {
-					.image_info = imageFromJson( value[ "image" ] ),
-					.layers = static_cast< std::uint8_t >( value[ "layers" ].asUInt() )
-				};
-				break;
+				{
+					auto image { imageFromJson( value[ "image" ], false ) };
+					if ( !image ) return std::unexpected( image.error() );
+					info.m_metadata = MetadataInfoImageProject {
+						.image_info = std::move( *image ),
+						.layers = static_cast< std::uint8_t >( value[ "layers" ].asUInt() )
+					};
+					break;
+				}
 			case MetadataVariant::ANIMATION:
 				info.m_metadata = MetadataInfoAnimation {
 					.width = value[ "width" ].asInt(),

@@ -45,6 +45,21 @@ body {
   letter-spacing: 0.03em;
 }
 
+.toolbar-notice {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 0.2rem 0.5rem;
+    overflow: hidden;
+    color: #f0c674;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: #2e2716;
+    border: 1px solid #6b5626;
+    border-radius: 4px;
+}
+
 .toolbar-name {
   padding: 0.3rem 0.5rem;
   border: 1px solid #2a2e37;
@@ -55,7 +70,6 @@ body {
   min-width: 8rem;
 }
 
-.toolbar-add,
 .toolbar-button {
   padding: 0.35rem 0.6rem;
   border: 1px solid #2a2e37;
@@ -97,6 +111,120 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.panel-picker-dropdown {
+    width: min(30rem, calc(100vw - 1.2rem));
+    max-height: min(42rem, calc(100vh - 4rem));
+    padding: 0;
+    overflow: hidden;
+}
+
+.panel-picker-head {
+    display: flex;
+    flex-direction: column;
+    padding: 0.8rem 0.9rem 0.55rem;
+}
+
+.panel-picker-head strong {
+    font-size: 0.95rem;
+}
+
+.panel-picker-head span {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.panel-picker-search {
+    margin: 0 0.75rem 0.65rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #3a3f49;
+    border-radius: 5px;
+    outline: none;
+    background: #17191e;
+    color: var(--fg);
+    font: inherit;
+}
+
+.panel-picker-search:focus {
+    border-color: #587ed9;
+    box-shadow: 0 0 0 2px rgb(88 126 217 / 0.2);
+}
+
+.panel-picker-list {
+    min-height: 4rem;
+    padding: 0.1rem 0.4rem 0.5rem;
+    overflow-y: auto;
+}
+
+.panel-picker-group h2 {
+    margin: 0;
+    padding: 0.6rem 0.5rem 0.25rem;
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.panel-picker-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.48rem 0.55rem;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.panel-picker-item:hover,
+.panel-picker-item:focus-visible {
+    outline: none;
+    background: #30343d;
+}
+
+.panel-picker-item-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.panel-picker-item-copy strong {
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.panel-picker-item-copy > span {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.panel-picker-open {
+    flex: 0 0 auto;
+    padding: 0.1rem 0.38rem;
+    border: 1px solid #46526b;
+    border-radius: 999px;
+    color: #aebee0;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    text-transform: uppercase;
+}
+
+.panel-picker-empty {
+    margin: 0;
+    padding: 1.25rem 0.75rem;
+    color: var(--muted);
+    text-align: center;
 }
 
 .dropdown-item {
@@ -349,11 +477,6 @@ body {
   color: var(--fg);
   font: inherit;
   font-size: 0.85em;
-  cursor: pointer;
-}
-
-.chip:hover {
-  border-color: var(--error);
 }
 
 .chip.negated {
@@ -366,8 +489,30 @@ body {
   border-color: #2e5a7d;
 }
 
+.chip.editing {
+    border-color: #4a80ff;
+}
+
+.chip-text,
+.chip-x {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.chip-text:hover {
+    text-decoration: underline;
+}
+
 .chip-x {
   color: var(--muted);
+}
+
+.chip-x:hover {
+    color: var(--error);
 }
 
 .search-input-wrap {
@@ -384,7 +529,8 @@ body {
   font: inherit;
 }
 
-.search-input:focus {
+.search-input:focus,
+.search-input.editing {
   outline: none;
   border-color: #4a80ff;
 }
@@ -614,7 +760,6 @@ body {
 .grid-tile {
   padding: 0;
   border: 2px solid transparent;
-  border-radius: 4px;
   background: #0f1013;
   overflow: hidden;
   cursor: pointer;
@@ -665,6 +810,12 @@ body {
 
 .context-menu button:hover {
   background: #2f333c;
+}
+
+.context-menu-break {
+    margin-top: 0.25rem;
+    padding-top: 0.25rem;
+    border-top: 1px solid #2a2e37;
 }
 
 /* ---- Media viewer panel ---- */
@@ -740,6 +891,607 @@ body {
 
 .viewer-pos {
   font-variant-numeric: tabular-nums;
+}
+
+/* ---- File relationships panel ---- */
+.file-relationships-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(20rem, 1fr));
+    height: 100%;
+    min-width: 40rem;
+    min-height: 0;
+    overflow: auto;
+    background: #0b0c0f;
+}
+
+.file-relationships-empty {
+    display: grid;
+    place-items: center;
+    gap: 0.6rem;
+    text-align: center;
+}
+
+.file-relationships-panel h2 {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.file-relationship-primary {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.65rem;
+    min-width: 0;
+    min-height: 0;
+    padding: 1rem;
+    overflow: hidden;
+    border-right: 1px solid #2a2e37;
+    background: radial-gradient(circle at center, rgb(74 128 255 / 0.1), transparent 65%);
+}
+
+.file-relationships-panel.is-comparing {
+    grid-template-columns: minmax(28rem, 2fr) minmax(16rem, 1fr);
+}
+
+.file-relationships-panel.is-comparing .file-relationship-primary {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.file-relationship-compare {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    min-height: 0;
+}
+
+.file-relationship-compare-side {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.4rem;
+    min-width: 0;
+    min-height: 0;
+}
+
+.file-relationship-flip {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: 0;
+}
+
+.file-relationship-flip-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) minmax(0, 11rem);
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* the info columns fold away first: the images are what the call is made on */
+@media (width <= 60rem) {
+    .file-relationship-flip-stage {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .file-relationship-flip-stage .file-relationship-side-info {
+        display: none;
+    }
+}
+
+.file-relationship-side-info {
+    min-width: 0;
+    min-height: 0;
+    padding: 0.5rem;
+    overflow-y: auto;
+    font-size: 0.72rem;
+    background: #14171d;
+    border: 1px solid #262b34;
+    border-radius: 6px;
+}
+
+.file-relationship-side-info.is-shown {
+    border-color: #4a80ff;
+}
+
+/* under an image the info is a footer, not a column: the picture keeps the room */
+.file-relationship-compare-side .file-relationship-side-info {
+    max-height: 12rem;
+}
+
+.file-relationship-side-info h3 {
+    margin: 0 0 0.35rem;
+    overflow: hidden;
+    color: var(--fg);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* one green for both: an exact match and an embedded block are each a point in a copy's favour */
+.file-relationship-side-match,
+.file-relationship-side-embedded {
+    margin: 0 0 0.4rem;
+    padding: 0.15rem 0.35rem;
+    color: #7fd08a;
+    font-size: 0.66rem;
+    font-weight: 600;
+    background: rgb(127 208 138 / 0.12);
+    border: 1px solid rgb(127 208 138 / 0.4);
+    border-radius: 4px;
+}
+
+.file-relationship-side-detail {
+    margin: 0 0 0.4rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+}
+
+.file-relationship-side-info dl {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0;
+}
+
+.file-relationship-side-info dt {
+    color: var(--muted);
+    font-size: 0.64rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.file-relationship-side-info dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.file-relationship-side-info .is-greater dd {
+    color: #7fd08a;
+    font-weight: 600;
+}
+
+.file-relationship-flip-frame {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #07080a;
+    border: 1px solid #2a2e37;
+    border-radius: 6px;
+    cursor: ns-resize;
+}
+
+.file-relationship-flip-frame.is-zoomed {
+    cursor: grab;
+}
+
+.file-relationship-flip-frame.is-zoomed:active {
+    cursor: grabbing;
+}
+
+.file-relationship-flip-zoom {
+    position: absolute;
+    inset: 0;
+    transform-origin: center center;
+    will-change: transform;
+}
+
+.file-relationship-flip-zoom.is-magnified img {
+    image-rendering: pixelated;
+}
+
+.file-relationship-flip-level {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    padding: 0.1rem 0.35rem;
+    color: var(--fg);
+    font-size: 0.68rem;
+    font-weight: 600;
+    background: rgb(0 0 0 / 0.6);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.file-relationship-flip-frame:focus-visible {
+    outline: 2px solid #4a80ff;
+    outline-offset: 2px;
+}
+
+.file-relationship-flip-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: 100%;
+    max-height: 100%;
+    visibility: hidden;
+    object-fit: contain;
+    transform: translate(-50%, -50%);
+}
+
+.file-relationship-flip-image.is-shown {
+    visibility: visible;
+}
+
+.file-relationship-flip-bar {
+    display: flex;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.file-relationship-flip-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.28rem 0.5rem;
+    overflow: hidden;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: #1d222b;
+    border: 1px solid #303641;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.file-relationship-flip-tab.is-shown {
+    color: var(--fg);
+    background: #262d38;
+    border-color: #4a80ff;
+}
+
+.file-relationship-diff {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: 0;
+}
+
+.file-relationship-diff-frame {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #07080a;
+    border: 1px solid #2a2e37;
+    border-radius: 6px;
+}
+
+.file-relationship-diff-frame canvas {
+    max-width: 100%;
+    max-height: 100%;
+    visibility: hidden;
+    object-fit: contain;
+}
+
+.file-relationship-diff-frame canvas.is-ready {
+    visibility: visible;
+}
+
+.file-relationship-diff-note {
+    margin: 0;
+    font-size: 0.68rem;
+    line-height: 1.4;
+}
+
+.file-relationship-action {
+    padding: 0.28rem 0.5rem;
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: #1d222b;
+    border: 1px solid #303641;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.file-relationship-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.file-relationship-actions .file-relationship-action {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-relationship-actions .file-relationship-action.is-primary {
+    flex: 2 1 auto;
+}
+
+.file-relationship-action:hover:not(:disabled) {
+    background: #262d38;
+    border-color: #526079;
+}
+
+.file-relationship-action:disabled {
+    color: var(--muted);
+    cursor: default;
+    opacity: 0.55;
+}
+
+.file-relationship-action.is-danger:hover:not(:disabled) {
+    color: #ffb4b0;
+    background: #2e1d1d;
+    border-color: #f85149;
+}
+
+.file-relationship-close {
+    padding: 0.15rem 0.5rem;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid #2a2e37;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.file-relationship-close:hover {
+    color: var(--fg);
+    border-color: #526079;
+}
+
+.file-relationship-groups {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+    background: #13151a;
+}
+
+.file-relationship-group {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.5rem;
+    min-height: 0;
+    padding: 0.7rem 0.8rem;
+    overflow: hidden;
+    border-bottom: 1px solid #2a2e37;
+}
+
+.file-relationship-group:last-child {
+    border-bottom: none;
+}
+
+.file-relationship-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.file-relationship-group-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.3rem 0.7rem;
+    min-width: 0;
+}
+
+.file-relationship-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.file-relationship-toggle input {
+    margin: 0;
+    accent-color: #4a80ff;
+    cursor: pointer;
+}
+
+.file-relationship-toggle:hover {
+    color: var(--fg);
+}
+
+.file-relationship-distance-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.file-relationship-distance-picker select {
+    padding: 0.15rem 0.3rem;
+    color: var(--fg);
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    background: #0b0c0f;
+    border: 1px solid #2a2e37;
+    border-radius: 0.25rem;
+}
+
+.file-relationship-detail {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+}
+
+.file-relationship-group-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 0.65rem;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+    padding: 0.1rem 0.15rem 0.25rem;
+}
+
+.file-relationship-group-list .file-relationship-card {
+    align-self: start;
+    width: 100%;
+}
+
+.file-relationship-card {
+    display: grid;
+    grid-template-rows: auto auto;
+    width: min(100%, 11rem);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #303641;
+    background: #171a20;
+    color: var(--fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgb(0 0 0 / 0.25);
+}
+
+.file-relationship-card:hover {
+    border-color: #526079;
+    transform: translateY(-1px);
+}
+
+.file-relationship-card:focus-visible {
+    outline: 2px solid #6f9bff;
+    outline-offset: 2px;
+}
+
+.file-relationship-card.is-active {
+    border-color: #4a80ff;
+    box-shadow: inset 0 0 0 1px rgb(74 128 255 / 0.55);
+}
+
+.file-relationship-card.is-selected {
+    grid-template-rows: minmax(0, 1fr) auto;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
+}
+
+.file-relationship-preview {
+    position: relative;
+    display: grid;
+    width: 100%;
+    aspect-ratio: 1;
+    place-items: center;
+    overflow: hidden;
+    background: #0c0e12;
+}
+
+.file-relationship-card.is-relation-superior .file-relationship-preview {
+    background: #1b4d28;
+}
+
+.file-relationship-card.is-relation-inferior .file-relationship-preview {
+    background: #5c1f1c;
+}
+
+.file-relationship-card.is-relation-alternative .file-relationship-preview {
+    background: #1f3a7a;
+}
+
+.file-relationship-card.is-relation-unrelated .file-relationship-preview {
+    background: #3a3320;
+}
+
+/* B is told apart from A by its lighter ground, so the relation colour steps aside there */
+.file-relationship-compare-side.is-b .file-relationship-preview {
+    background: #2f343d;
+}
+
+.file-relationship-card.is-selected .file-relationship-preview {
+    height: 100%;
+    min-height: 0;
+    aspect-ratio: auto;
+}
+
+.file-relationship-preview img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center center;
+}
+
+.file-relationship-blur {
+    position: absolute;
+    inset: -1rem;
+    background: radial-gradient(circle at 30% 35%, #65718b 0 16%, transparent 45%),
+    radial-gradient(circle at 70% 65%, #3f5871 0 20%, transparent 50%),
+    linear-gradient(135deg, #272d38, #161a22);
+    filter: blur(14px);
+    opacity: 0.8;
+}
+
+.file-relationship-unavailable {
+    position: relative;
+    padding: 0.25rem 0.45rem;
+    border-radius: 4px;
+    background: rgb(10 12 16 / 0.72);
+    color: #d4d8df;
+    font-size: 0.75rem;
+}
+
+.file-relationship-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0.35rem 0.5rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.file-relationship-meta strong {
+    overflow: hidden;
+    color: var(--fg);
+    text-overflow: ellipsis;
+}
+
+.file-relationship-meta > span {
+    flex: 0 0 auto;
+}
+
+.file-relationship-none {
+    grid-column: 1 / -1;
+    align-self: center;
+    justify-self: center;
+    margin: 0;
+    text-align: center;
 }
 
 /* ---- Record info panel ---- */
@@ -992,7 +1744,6 @@ body {
   width: 128px;
   height: 128px;
   object-fit: contain;
-  border-radius: 4px;
 }
 
 .import-row.state-done .import-status {
@@ -2143,7 +2894,6 @@ body {
     max-width: 100%;
     min-width: 80px;
   border: 1px solid #2a2e37;
-  border-radius: 4px;
   background: #1b1e24;
   overflow: hidden;
 }

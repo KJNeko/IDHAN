@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {RecordMetadata} from '../../api/types';
 import type { PanelProps, RecordId, SearchResultSet } from '../../host/types';
-import { RECORD_ACTIVATE_TOPIC } from './GridPanel';
+import {RECORD_ACTIVATE_TOPIC, useRecordMenu} from './recordActions';
 
 /**
  * The server's own category is authoritative where it has one; the mime prefix is the fallback for
@@ -110,6 +110,8 @@ function MediaViewerPanel({ host }: PanelProps) {
     }
   }, [host, activeIndex, ids]);
 
+    const {openRecordMenu, recordMenu} = useRecordMenu(host);
+
   function onKeyDown(event: React.KeyboardEvent) {
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
@@ -134,7 +136,16 @@ function MediaViewerPanel({ host }: PanelProps) {
   return (
     <div className="viewer-panel" tabIndex={0} onKeyDown={onKeyDown}>
       <div className="viewer-stage">
-        {kind === 'image' && <img className="viewer-media" src={fileUrl} alt={`#${activeId}`} draggable={false} />}
+          {/* Only the image takes the record menu; video and audio keep the browser's own controls menu. */}
+          {kind === 'image' && (
+              <img
+                  className="viewer-media"
+                  src={fileUrl}
+                  alt={`#${activeId}`}
+                  draggable={false}
+                  onContextMenu={(event) => openRecordMenu(event, [activeId])}
+              />
+          )}
         {kind === 'video' && <video className="viewer-media" src={fileUrl} controls autoPlay={false} />}
         {kind === 'audio' && <audio className="viewer-audio" src={fileUrl} controls />}
         {kind === 'other' && (
@@ -163,6 +174,7 @@ function MediaViewerPanel({ host }: PanelProps) {
           →
         </button>
       </div>
+        {recordMenu}
     </div>
   );
 }

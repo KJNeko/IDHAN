@@ -8,7 +8,7 @@
 namespace idhan
 {
 
-QFuture< void > IDHANClient::setAlternativeGroups( std::vector< RecordID >& record_ids )
+QFuture< void > IDHANClient::setAlternatives( std::vector< RecordID >& record_ids )
 {
 	if ( record_ids.empty() ) return QtFuture::makeReadyVoidFuture();
 

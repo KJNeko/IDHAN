@@ -8,6 +8,10 @@ import type { ComponentType } from 'react';
 import type {
   AutocompleteResult,
   DatabaseStats,
+    ClearedRelationship,
+    FileRelationships,
+    SimilarRecords,
+    UndecidedDuplicate,
   MetadataResponse,
   SearchRequest,
   SearchResponse,
@@ -18,7 +22,7 @@ import type {
 } from '../api/types';
 
 /** Bumped on breaking changes to the surface below; plugin manifests will declare a compatible range. */
-export const HOST_API_VERSION = '1.1.0';
+export const HOST_API_VERSION = '1.3.0';
 
 export type RecordId = number;
 
@@ -97,6 +101,50 @@ export interface RecordsApi {
    * behind a shared LRU, so panels must not fetch metadata directly.
    */
   getMetadata(ids: readonly RecordId[]): Promise<MetadataResponse>;
+
+    /** Better/worse duplicates and alternatives directly related to one record. */
+    relationships(id: RecordId, signal?: AbortSignal): Promise<FileRelationships>;
+
+    /**
+     * Records whose perceptual hash is within `distance` differing bits of this one's. Throws
+     * ApiError(404) when the record has no perceptual hash to compare against.
+     */
+    similar(
+        id: RecordId,
+        opts?: { distance?: number; limit?: number; includeUnrelated?: boolean; includeRelated?: boolean },
+        signal?: AbortSignal,
+    ): Promise<SimilarRecords>;
+
+    /**
+     * The closest pair still awaiting a duplicate decision. `pair` is null once every pair within
+     * `distance` has been ruled on. Pairs marked unrelated are skipped unless `includeUnrelated`.
+     */
+    nextUndecidedDuplicate(
+        opts?: { distance?: number; includeUnrelated?: boolean },
+        signal?: AbortSignal,
+    ): Promise<UndecidedDuplicate>;
+
+    /** Marks one record as the better copy of another. Throws ApiError(409) on a cycle or a repeat. */
+    setBetterDuplicate(worseId: RecordId, betterId: RecordId, signal?: AbortSignal): Promise<void>;
+
+    /** Pairs every listed record with every other as alternatives. */
+    addAlternatives(ids: readonly RecordId[], signal?: AbortSignal): Promise<void>;
+
+    /** Marks two records as coincidental lookalikes, keeping the pair out of distance searches. */
+    setUnrelated(idA: RecordId, idB: RecordId, signal?: AbortSignal): Promise<void>;
+
+    /**
+     * Drops whichever direct pair the two hold: duplicate, alternative or unrelated. Reports what it
+     * actually removed; an indirect relationship leaves each flag false.
+     */
+    clearRelationship(idA: RecordId, idB: RecordId, signal?: AbortSignal): Promise<ClearedRelationship>;
+
+    /**
+     * Reparses these records' metadata server-side, settling when the job does rather than when it is
+     * queued. Cached metadata for the ids is dropped, so the next getMetadata reads the new values.
+     * Rejects if the job reports a failure.
+     */
+    regenerateMetadata(ids: readonly RecordId[], signal?: AbortSignal): Promise<void>;
   /** URL for a square thumbnail at any positive edge length (px). Defaults to 256. */
   thumbnailUrl(id: RecordId, size?: number): string;
   fileUrl(id: RecordId, opts?: { download?: boolean }): string;

@@ -22,6 +22,7 @@
 #include "embeddings/embeddings.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/io/IOUring.hpp"
+#include "hamming/hamming.hpp"
 #include "logging/log.hpp"
 #include "mime/syncMimeTable.hpp"
 #include "spdlog/async.h"
@@ -376,6 +377,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				{
 					if ( m_module_loader != nullptr ) m_module_loader->maintainWorkers();
 				} );
+
+			hamming::startQueueSweeper();
 
 			log::info( "IDHAN initialization finished" );
 			log::info( "Server available at http://localhost:{}", listen_port );
