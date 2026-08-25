@@ -11,6 +11,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PanelProps, RecordId, SearchResultSet } from '../../host/types';
+import {RECORD_ACTIVATE_TOPIC, useRecordMenu} from './recordActions';
+import type {RecordAction} from './recordActions';
 
 // Convenience presets offered in the size dropdown; the server accepts any positive edge length.
 const TILE_SIZES: readonly number[] = [128, 256, 512];
@@ -19,9 +21,6 @@ const OVERSCAN_ROWS = 2;
 
 type Config = { tileSize: number };
 const DEFAULT_CONFIG: Config = { tileSize: 256 };
-
-/** Bus topic the grid emits on double-click or Enter; the viewer focuses the activated record. */
-export const RECORD_ACTIVATE_TOPIC = 'record:activate';
 
 function readTileSize(raw: Partial<Config>): number {
   const size = raw.tileSize;
@@ -45,17 +44,10 @@ function useColumns(ref: React.RefObject<HTMLDivElement | null>, tile: number): 
   return Math.max(1, Math.floor((width + GAP) / (tile + GAP)));
 }
 
-interface ContextMenuState {
-  x: number;
-  y: number;
-  ids: RecordId[];
-}
-
 function GridPanel({ host }: PanelProps) {
   const [tileSize, setTileSize] = useState<number>(() => readTileSize(host.settings.get() as Partial<Config>));
   const [results, setResults] = useState<SearchResultSet>(() => host.results.get());
   const [selected, setSelected] = useState<ReadonlySet<RecordId>>(() => new Set(host.selection.get()));
-  const [menu, setMenu] = useState<ContextMenuState | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const anchorIndex = useRef<number | null>(null);
@@ -82,6 +74,26 @@ function GridPanel({ host }: PanelProps) {
     },
     [host],
   );
+
+    /** Entries that only mean anything in a grid; everything record-scoped lives in RECORD_ACTIONS. */
+    const gridActions: RecordAction[] = [
+        {
+            key: 'select-all',
+            group: 'grid',
+            label: () => 'Select all',
+            available: () => ids.length > 0,
+            run: () => applySelection(new Set(ids)),
+        },
+        {
+            key: 'clear-selection',
+            group: 'grid',
+            label: () => 'Clear selection',
+            available: () => selected.size > 0,
+            run: () => applySelection(new Set()),
+        },
+    ];
+
+    const {openRecordMenu, recordMenu} = useRecordMenu(host, gridActions);
 
   function changeTileSize(size: number) {
     setTileSize(size);
@@ -116,7 +128,6 @@ function GridPanel({ host }: PanelProps) {
   }
 
   function onTileContextMenu(event: React.MouseEvent, index: number) {
-    event.preventDefault();
     const id = ids[index]!;
     // Right-clicking outside the current selection targets just that record.
     const targetIds = selected.has(id) ? [...selected] : [id];
@@ -124,20 +135,8 @@ function GridPanel({ host }: PanelProps) {
       anchorIndex.current = index;
       applySelection(new Set([id]));
     }
-    setMenu({ x: event.clientX, y: event.clientY, ids: targetIds });
+      openRecordMenu(event, targetIds, id);
   }
-
-  // Close the context menu on any outside interaction.
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => setMenu(null);
-    window.addEventListener('click', close);
-    window.addEventListener('scroll', close, true);
-    return () => {
-      window.removeEventListener('click', close);
-      window.removeEventListener('scroll', close, true);
-    };
-  }, [menu]);
 
   const virtualRows = virtualizer.getVirtualItems();
 
@@ -212,33 +211,7 @@ function GridPanel({ host }: PanelProps) {
         )}
       </div>
 
-      {menu && (
-        <ul className="context-menu" style={{ top: menu.y, left: menu.x }} onClick={(e) => e.stopPropagation()}>
-          <li>
-            <button type="button" onClick={() => { host.bus.emit(RECORD_ACTIVATE_TOPIC, menu.ids[0]); setMenu(null); }}>
-              Open
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              onClick={() => { void navigator.clipboard?.writeText(menu.ids.join(', ')); setMenu(null); }}
-            >
-              Copy id{menu.ids.length === 1 ? '' : 's'}
-            </button>
-          </li>
-          <li>
-            <button type="button" onClick={() => { applySelection(new Set(ids)); setMenu(null); }}>
-              Select all
-            </button>
-          </li>
-          <li>
-            <button type="button" onClick={() => { applySelection(new Set()); setMenu(null); }}>
-              Clear selection
-            </button>
-          </li>
-        </ul>
-      )}
+        {recordMenu}
     </div>
   );
 }

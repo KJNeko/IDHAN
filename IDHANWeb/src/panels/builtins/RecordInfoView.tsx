@@ -17,7 +17,7 @@ export function formatBytes(bytes: number): string {
     value /= 1024;
     unit++;
   }
-  return `${value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`;
+    return `${value.toFixed(2)} ${units[unit]}`;
 }
 
 export function formatDuration(seconds: number): string {
@@ -62,6 +62,11 @@ const KNOWN = new Set([
     'width',
     'height',
     'channels',
+    'has_exif',
+    'has_gps',
+    'has_xmp',
+    'has_iptc',
+    'has_icc_profile',
     'layers',
     'duration',
     'bitrate',
@@ -74,6 +79,15 @@ const KNOWN = new Set([
     'encrypted',
     'file_count',
 ]);
+
+/** Embedded metadata blocks, in the order they are listed on the record. */
+export const EMBEDDED_BLOCKS = [
+    {key: 'has_exif', label: 'EXIF'},
+    {key: 'has_gps', label: 'GPS'},
+    {key: 'has_xmp', label: 'XMP'},
+    {key: 'has_iptc', label: 'IPTC'},
+    {key: 'has_icc_profile', label: 'ICC profile'},
+] as const;
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -102,6 +116,9 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
     const archiveId = num(info.archive_id);
     const fileCount = num(info.file_count);
     const hasAudio = bool(info.has_audio);
+    const embedded = EMBEDDED_BLOCKS.filter(({key}) => info[key] === true).map(({label}) => label);
+    // Every block is reported together, so one known flag means the image was parsed for all of them.
+    const embeddedKnown = EMBEDDED_BLOCKS.some(({key}) => typeof info[key] === 'boolean');
     const loops = bool(info.loops);
     const encrypted = bool(info.encrypted);
 
@@ -135,6 +152,11 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
             </Row>
         )}
         {channels !== undefined && <Row label="Channels">{channels}</Row>}
+        {embeddedKnown && (
+            <Row label="Embedded">
+                {embedded.length > 0 ? embedded.join(', ') : <span className="muted">None</span>}
+            </Row>
+        )}
         {layers !== undefined && <Row label="Layers">{layers}</Row>}
 
         {duration !== undefined && (

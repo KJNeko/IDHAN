@@ -16,6 +16,14 @@ inline static const std::unordered_set< idhan::MimeID > VIPS_MIMES {
 	idhan::mime_ids::IMAGE_TIFF
 };
 
+inline static const std::unordered_set< idhan::MimeID > VIPS_STATIC_IMAGE_MIMES {
+	idhan::mime_ids::IMAGE_PNG,
+	idhan::mime_ids::IMAGE_JPEG,
+	idhan::mime_ids::IMAGE_WEBP,
+	idhan::mime_ids::IMAGE_AVIF,
+	idhan::mime_ids::IMAGE_TIFF
+};
+
 inline std::vector< idhan::MimeID > vipsHandleable()
 {
 	return { VIPS_MIMES.begin(), VIPS_MIMES.end() };

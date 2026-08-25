@@ -4,19 +4,33 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "IDHANTypes.hpp"
+#include "PerceptualHash.hpp"
 
 namespace idhan
 {
+
+//! Metadata blocks a file carries alongside its pixels.
+struct EmbeddedMetadata
+{
+	bool exif { false };
+	bool gps { false }; //!< An EXIF GPS directory, so the file names where it was taken.
+	bool xmp { false };
+	bool iptc { false };
+	bool icc_profile { false };
+};
 
 struct MetadataInfoImage
 {
 	int width { 0 };
 	int height { 0 };
 	std::uint8_t channels { 0 };
+	std::optional< PerceptualHash > phash {};
+	EmbeddedMetadata embedded {};
 };
 
 struct MetadataInfoAnimation

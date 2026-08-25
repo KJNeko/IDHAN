@@ -9,6 +9,7 @@ import { selectionInspectorPanel } from './SelectionInspectorPanel';
 import { searchPanel } from './SearchPanel';
 import { gridPanel } from './GridPanel';
 import { mediaViewerPanel } from './MediaViewerPanel';
+import {fileRelationshipsPanel} from './FileRelationshipsPanel';
 import { recordInfoPanel } from './RecordInfoPanel';
 import { tagEditorPanel } from './TagEditorPanel';
 import { urlListPanel } from './UrlListPanel';
@@ -33,6 +34,7 @@ export function registerBuiltinPanels(): void {
   registerPanel(searchPanel);
   registerPanel(gridPanel);
   registerPanel(mediaViewerPanel);
+    registerPanel(fileRelationshipsPanel);
   registerPanel(recordInfoPanel);
   registerPanel(tagEditorPanel);
   registerPanel(urlListPanel);

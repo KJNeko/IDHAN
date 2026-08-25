@@ -1,6 +1,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "PerceptualHash.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "logging/log.hpp"
@@ -24,6 +25,12 @@ static const Json::StaticString KEY_EXTRA { "extra" };
 static const Json::StaticString KEY_WIDTH { "width" };
 static const Json::StaticString KEY_HEIGHT { "height" };
 static const Json::StaticString KEY_CHANNELS { "channels" };
+static const Json::StaticString KEY_PHASH { "phash" };
+static const Json::StaticString KEY_HAS_EXIF { "has_exif" };
+static const Json::StaticString KEY_HAS_GPS { "has_gps" };
+static const Json::StaticString KEY_HAS_XMP { "has_xmp" };
+static const Json::StaticString KEY_HAS_IPTC { "has_iptc" };
+static const Json::StaticString KEY_HAS_ICC_PROFILE { "has_icc_profile" };
 static const Json::StaticString KEY_LAYERS { "layers" };
 static const Json::StaticString KEY_DURATION { "duration" };
 static const Json::StaticString KEY_BITRATE { "bitrate" };
@@ -38,6 +45,8 @@ static const Json::StaticString KEY_ENCRYPTED { "encrypted" };
 static const Json::StaticString KEY_FILE_COUNT { "file_count" };
 
 //!@}
+
+constexpr std::size_t PHASH_BITS { std::tuple_size_v< PerceptualHash > * 8 };
 
 static std::string_view simpleTypeName( const SimpleMimeType type )
 {
@@ -141,6 +150,16 @@ static void addMetadataFields(
 	}
 }
 
+static void addEmbeddedFlag(
+	Json::Value& entry,
+	const drogon::orm::Row& row,
+	const char* const column,
+	const Json::StaticString& key )
+{
+	if ( row[ column ].isNull() ) return;
+	entry[ key ] = row[ column ].as< bool >();
+}
+
 //! Fills one field of a record's entry from a row of its type table.
 using ApplyRow = void ( * )( Json::Value& entry, const drogon::orm::Row& row );
 
@@ -240,7 +259,8 @@ drogon::Task< RecordInfoBatch > collectRecordInfo( std::vector< RecordID > recor
 
 	co_await applyTypeRows(
 		db,
-		"SELECT record_id, width, height, channels FROM image_metadata "
+		"SELECT record_id, width, height, channels, phash, has_exif, has_gps, has_xmp, has_iptc, has_icc_profile "
+		"FROM image_metadata "
 		"WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME "[])",
 		std::move( groups.image ),
 		index,
@@ -250,6 +270,34 @@ drogon::Task< RecordInfoBatch > collectRecordInfo( std::vector< RecordID > recor
 			entry[ KEY_WIDTH ] = row[ "width" ].as< std::uint32_t >();
 			entry[ KEY_HEIGHT ] = row[ "height" ].as< std::uint32_t >();
 			entry[ KEY_CHANNELS ] = row[ "channels" ].as< std::uint32_t >();
+
+			// A NULL flag is an image parsed before embedded metadata was looked for, which is not the
+			// same as one known to carry none, so it is left off the entry entirely.
+			addEmbeddedFlag( entry, row, "has_exif", KEY_HAS_EXIF );
+			addEmbeddedFlag( entry, row, "has_gps", KEY_HAS_GPS );
+			addEmbeddedFlag( entry, row, "has_xmp", KEY_HAS_XMP );
+			addEmbeddedFlag( entry, row, "has_iptc", KEY_HAS_IPTC );
+			addEmbeddedFlag( entry, row, "has_icc_profile", KEY_HAS_ICC_PROFILE );
+
+			if ( row[ "phash" ].isNull() ) return;
+
+			const auto phash { row[ "phash" ].as< std::string >() };
+			if ( phash.size() != PHASH_BITS )
+			{
+				log::warn( "Ignoring image metadata pHash with invalid bit length {}", phash.size() );
+				return;
+			}
+
+			constexpr char HEX[] { "0123456789abcdef" };
+			std::string hex( PHASH_BITS / 4, '0' );
+			for ( std::size_t i = 0; i < hex.size(); ++i )
+			{
+				std::uint8_t nibble { 0 };
+				for ( std::size_t bit = 0; bit < 4; ++bit )
+					nibble = static_cast< std::uint8_t >( ( nibble << 1 ) | ( phash[ ( i * 4 ) + bit ] == '1' ) );
+				hex[ i ] = HEX[ nibble ];
+			}
+			entry[ KEY_PHASH ] = std::move( hex );
 		} );
 
 	co_await applyTypeRows(

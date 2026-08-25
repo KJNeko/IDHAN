@@ -119,11 +119,20 @@ KEY in migration 173). Which table a record populates depends on its media type.
 
 **`image_metadata`**
 
-| Column            | Type                     | Notes |
-|-------------------|--------------------------|-------|
-| `record_id`       | `INTEGER` PK → `records` |       |
-| `width`, `height` | `INTEGER` NOT NULL       |       |
-| `channels`        | `SMALLINT` NOT NULL      |       |
+| Column                                                          | Type                     | Notes                                                                |
+|-----------------------------------------------------------------|--------------------------|----------------------------------------------------------------------|
+| `record_id`                                                     | `INTEGER` PK → `records` |                                                                      |
+| `width`, `height`                                               | `INTEGER` NOT NULL       |                                                                      |
+| `channels`                                                      | `SMALLINT` NOT NULL      |                                                                      |
+| `phash`                                                         | `bit(64)`                | perceptual hash; NULL until one is made                              |
+| `has_exif`, `has_gps`, `has_xmp`, `has_iptc`, `has_icc_profile` | `BOOLEAN`                | embedded metadata blocks; NULL until parsed for them (migration 326) |
+
+Partial index `image_metadata_phash_idx` on `phash WHERE phash IS NOT NULL` (migrations 310-311).
+
+`has_gps` is a GPS directory inside the EXIF block, so it is only ever true alongside `has_exif`.
+`system:has exif`, `system:has icc profile` and `system:has embedded metadata` (EXIF, XMP or IPTC)
+read these columns; their `no ...` forms require an explicit false, so an image not yet parsed for
+embedded metadata matches neither.
 
 **`video_metadata`**
 
@@ -168,17 +177,48 @@ An archive record (e.g. a zip) groups member records.
   record's own info. `archive_id → archives`, `password_bytes bytea` (nullable), `encrypted BOOLEAN
   DEFAULT FALSE`.
 
+### Perceptual distance
+
+- **`hamming_distance`** — `(left_id → records, right_id → records, distance SMALLINT)` (migration
+  316), PK on the pair with `CHECK (left_id < right_id)` and `CHECK (distance <= 8)`: pairs further
+  apart than eight bits are not stored at all. Index on `distance` (migration 325) so a
+  `WHERE distance = N` sweep does not seq scan the table.
+- **`hamming_distance_queue`** — `record_id INTEGER PK → records` (migration 317): records whose
+  distances have not been computed yet. `queue_hamming_distance()` (migration 319) fills it from
+  triggers on `image_metadata` that fire when a row is inserted with a `phash` or an existing NULL
+  `phash` is replaced by a real one; migration 318 seeded it with whatever was already hashed. The
+  server drains it on a ten second timer, claiming a fixed batch per sweep
+  (`IDHANServer/src/hamming/`).
+
 ### Alternatives and duplicates
 
-- **`alternative_groups`** — `group_id SERIAL PK`.
-- **`alternative_group_members`** — `(group_id → alternative_groups, record_id → records)`.
-  `record_id` is globally UNIQUE (a record belongs to at most one alternatives group);
-  `UNIQUE (group_id, record_id)`; index on `group_id`.
+- **`alternative_records`** — `(lesser_record_id → records, greater_record_id → records)` (migration
+  313), PK on the pair with `CHECK (lesser < greater)` so the same pair cannot arrive twice in
+  either order; index on `greater_record_id`. Alternatives are a direct mapping: a record is an
+  alternative of exactly the records it was paired with, never of whatever those were paired with in
+  turn. The transitive `alternative_groups`/`alternative_group_members` tables this replaced were
+  dropped in migrations 314-315, along with their contents, because group membership made a record
+  an alternative of its own duplicate.
 - **`duplicate_pairs`** — directed "worse → better" duplicate relationships.
   `worse_record_id` is UNIQUE (a record is the worse side of at most one pair);
   `CHECK (worse != better)`; index on `better_record_id`. The `insert_duplicate_pair(worse,
   better)` function (migration 130) enforces no re-insertion, no immediate cycle, and re-points any
   chain that previously ended at `worse` to `better`.
+- **`flattened_duplicates`** — view over `duplicate_pairs` (migration 323): `(record_id, root_id)`,
+  every record in a chain paired with the best record its chain ends at. The walk is recursive
+  because `insert_duplicate_pair` only re-points the pairs that ended at the record it was handed,
+  so a chain can stay deeper than one hop. It uses `UNION` rather than `UNION ALL`, so a cyclic
+  chain terminates instead of spinning; records inside one reach no root and are absent from the
+  view entirely.
+- **`undecided_hamming_distance`** — view over `hamming_distance` (migration 324) exposing
+  `left_id, right_id, distance` for the pairs no one has ruled on yet, so a caller filters with
+  `WHERE distance = N`. A pair drops out when it is in `alternative_records`, or when both sides
+  flatten onto the same duplicate via `flattened_duplicates`, which catches two records that share a
+  best record without ever having been paired directly. `unrelated_records` is **not** consulted, so
+  dismissed lookalikes still appear; `GET /relationships/duplicates/undecided` filters those out
+  itself rather than the view doing it. Referencing `flattened_duplicates` on both sides evaluates its
+  recursion twice, once per side; both are linear in `duplicate_pairs` and independent of how large
+  `hamming_distance` is.
 
 ---
 

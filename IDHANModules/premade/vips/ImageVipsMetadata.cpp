@@ -3,8 +3,11 @@
 #include <vips/vips.h>
 
 #include <cstring>
+#include <string>
 #include <unordered_map>
 
+#include "EmbeddedMetadata.hpp"
+#include "PerceptualHash.hpp"
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
@@ -34,11 +37,24 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 	VipsImagePtr image { image_ptr };
 
 	MetadataInfo info {};
-	info.m_metadata = MetadataInfoImage {
+	MetadataInfoImage image_info {
 		.width = vips_image_get_width( image.get() ),
 		.height = vips_image_get_height( image.get() ),
 		.channels = static_cast< std::uint8_t >( vips_image_get_bands( image.get() ) )
 	};
+
+	image_info.embedded = detectEmbeddedMetadata( image.get() );
+
+	if ( VIPS_STATIC_IMAGE_MIMES.contains( data.mime_id ) )
+	{
+		auto phash { generatePerceptualHash( image.get() ) };
+		if ( phash )
+			image_info.phash = std::move( *phash );
+		else
+			spdlog::warn( "Failed to generate perceptual hash: {}", phash.error() );
+	}
+
+	info.m_metadata = std::move( image_info );
 
 	info.m_simple_type = idhan::SimpleMimeType::IMAGE_TYPE;
 

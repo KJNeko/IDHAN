@@ -76,6 +76,17 @@ async function flush(batch: Batch): Promise<void> {
   batch.resolve();
 }
 
+/**
+ * Drops cached entries so the next getMetadata refetches them. Callers that change a record's
+ * metadata server-side (a reparse, say) use this; nothing else invalidates.
+ */
+export function forgetMetadata(ids: readonly RecordId[]): void {
+    for (const id of ids) {
+        cache.delete(id);
+        missingIds.delete(id);
+    }
+}
+
 /** Synchronously reads an already-cached record, or undefined. */
 export function peekMetadata(id: RecordId): Meta | undefined {
   return cache.get(id);

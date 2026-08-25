@@ -165,6 +165,8 @@ paths:
   # ── File relationships ─────────────────────────────────────────────────────
   /relationships/duplicates/add:
     $ref: './paths/relationships/duplicates/add.yaml'
+  /relationships/duplicates/undecided:
+    $ref: './paths/relationships/duplicates/undecided.yaml'
   /relationships/alternatives/add:
     $ref: './paths/relationships/alternatives/add.yaml'
 

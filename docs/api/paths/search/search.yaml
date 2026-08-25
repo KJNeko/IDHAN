@@ -83,9 +83,12 @@ post:
               description: >
                 Tag text. A leading `-` negates the tag if present. A `system:`
                 prefix is parsed as a system predicate (width, height, filesize,
-                limit, tag count, duration, has audio, archive status, and so
-                on) rather than a literal tag. Mutually exclusive with
-                `tag_ids`.
+                limit, tag count, duration, has audio, archive status,
+                embedded metadata (`has exif`, `has icc profile`,
+                `has embedded metadata`),
+                `nearby <record id> distance <bits>` for perceptual-hash
+                proximity, and so on) rather than a literal tag. Mutually
+                exclusive with `tag_ids`.
             tag_ids:
               type: array
               items:

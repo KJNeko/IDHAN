@@ -14,6 +14,19 @@
 namespace idhan::metadata
 {
 
+static std::string phashToBitLiteral( const PerceptualHash& phash )
+{
+	constexpr char HEX[] { "0123456789abcdef" };
+	std::string literal( 1 + ( phash.size() * 2 ), 'x' );
+	for ( std::size_t i = 0; i < phash.size(); ++i )
+	{
+		const auto byte { static_cast< std::uint8_t >( phash[ i ] ) };
+		literal[ 1 + ( i * 2 ) ] = HEX[ byte >> 4 ];
+		literal[ 2 + ( i * 2 ) ] = HEX[ byte & 0x0f ];
+	}
+	return literal;
+}
+
 ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr db, MetadataInfo metadata )
 {
 	const auto simple_type { metadata.m_simple_type };
@@ -55,13 +68,26 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 		case SimpleMimeType::IMAGE_TYPE:
 			{
 				const auto& image_metadata { std::get< MetadataInfoImage >( metadata.m_metadata ) };
+				std::optional< std::string > phash {};
+				if ( image_metadata.phash ) phash = phashToBitLiteral( *image_metadata.phash );
+
+				const auto& embedded { image_metadata.embedded };
+
 				co_await db->execSqlCoro(
-					"INSERT INTO image_metadata (record_id, width, height, channels) VALUES ($1, $2, $3, $4) "
-					"ON CONFLICT (record_id) DO UPDATE SET width = $2, height = $3, channels = $4",
+					"INSERT INTO image_metadata (record_id, width, height, channels, phash, has_exif, has_gps, has_xmp, has_iptc, has_icc_profile) "
+					"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) "
+					"ON CONFLICT (record_id) DO UPDATE SET width = $2, height = $3, channels = $4, phash = $5, "
+					"has_exif = $6, has_gps = $7, has_xmp = $8, has_iptc = $9, has_icc_profile = $10",
 					record_id,
 					image_metadata.width,
 					image_metadata.height,
-					static_cast< std::uint16_t >( image_metadata.channels ) );
+					static_cast< std::uint16_t >( image_metadata.channels ),
+					std::move( phash ),
+					embedded.exif,
+					embedded.gps,
+					embedded.xmp,
+					embedded.iptc,
+					embedded.icc_profile );
 
 				break;
 			}

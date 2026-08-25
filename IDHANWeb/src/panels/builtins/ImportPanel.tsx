@@ -8,6 +8,7 @@
 import { useCallback, useRef, useState, type DragEvent } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
 import { RecordInfoView, type RecordInfo } from './RecordInfoView';
+import {useRecordMenu} from './recordActions';
 
 const MAX_CONCURRENT = 3;
 
@@ -68,6 +69,8 @@ function ImportPanel({ host }: PanelProps) {
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
+
+    const {openRecordMenu, recordMenu} = useRecordMenu(host);
 
   const patch = useCallback((id: number, changes: Partial<Item>) => {
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...changes } : item)));
@@ -240,6 +243,7 @@ function ImportPanel({ host }: PanelProps) {
                       loading="lazy"
                       decoding="async"
                       draggable={false}
+                      onContextMenu={(event) => openRecordMenu(event, [item.recordId!])}
                     />
                   )}
                 </div>
@@ -248,6 +252,7 @@ function ImportPanel({ host }: PanelProps) {
           ))}
         </ul>
       )}
+        {recordMenu}
     </div>
   );
 }

@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -24,6 +25,15 @@ struct ApiResponse
 	drogon::HttpStatusCode status;
 	Json::Value json;
 	std::string body;
+	//! Header names as drogon reports them, which is lowercased.
+	std::unordered_map< std::string, std::string > headers {};
+
+	//! The named header, or an empty string when the response did not carry it.
+	[[nodiscard]] std::string header( const std::string& name ) const
+	{
+		const auto itter { headers.find( name ) };
+		return itter == headers.end() ? std::string {} : itter->second;
+	}
 };
 
 //! Speaks to one running server. Every request carries the API key unless it was sent through one of the

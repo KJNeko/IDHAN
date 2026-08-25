@@ -71,12 +71,17 @@ class SearchBuilder
 		NoAudio
 	} m_audio_search { AudioSearchType::DontCare };
 
-	enum class ExitSearchType
+	enum class EmbeddedSearchType
 	{
 		DontCare = 0,
-		HasExif,
-		NoExif
-	} m_exif_search { ExitSearchType::DontCare };
+		Has,
+		No
+	};
+
+	//! `system:has exif`, and the same shape for the other embedded metadata blocks.
+	EmbeddedSearchType m_exif_search { EmbeddedSearchType::DontCare };
+	EmbeddedSearchType m_icc_profile_search { EmbeddedSearchType::DontCare };
+	EmbeddedSearchType m_embedded_metadata_search { EmbeddedSearchType::DontCare };
 
 	enum class TagCountSearchType
 	{
@@ -162,6 +167,25 @@ class SearchBuilder
 	//! How \p term reads back in a step label, e.g. `system:mime = application/zip`.
 	static std::string describeMimeTerm( const MimeTerm& term );
 
+	//! One `system:nearby` term: every record whose perceptual hash sits within `distance` bits of
+	//! `record_id`'s. The probe record satisfies its own term; a probe carrying no hash satisfies
+	//! nothing, since the distance to an absent hash is undefined.
+	struct NearbyTerm
+	{
+		RecordID record_id { 0 };
+		std::size_t distance { 0 };
+	};
+
+	//! Parses the arguments of `nearby <record_id> distance <distance>`. The distance clause is
+	//! optional and defaults to 0, an exact perceptual-hash match. \throws std::invalid_argument
+	static NearbyTerm parseNearbySearch( std::string_view arguments );
+
+	//! The Hamming distance between \p term's probe hash and each candidate's, as SQL.
+	static std::string renderNearbyTerm( const NearbyTerm& term );
+
+	//! How \p term reads back in a step label, e.g. `system:nearby 1234 distance 8`.
+	static std::string describeNearbyTerm( const NearbyTerm& term );
+
 	//! Accepts exactly one `sha256 = <hash>` predicate; hash OR-lists are not representable here.
 	static SHA256 parseHashSearch( std::string_view arguments );
 
@@ -213,6 +237,9 @@ class SearchBuilder
 
 	//! One entry per `system:mime`/`system:mime_id` term, each rendered as its own predicate.
 	std::vector< MimeTerm > m_mime_terms {};
+
+	//! One entry per `system:nearby` term; separate terms intersect.
+	std::vector< NearbyTerm > m_nearby_terms {};
 
 	//! `system:record = 1234`; nothing else addresses a single known record.
 	RangeSearchInfo m_record_search {};
