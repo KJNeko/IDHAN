@@ -1081,10 +1081,6 @@ body {
     will-change: transform;
 }
 
-.file-relationship-flip-zoom.is-magnified img {
-    image-rendering: pixelated;
-}
-
 .file-relationship-flip-level {
     position: absolute;
     top: 0.4rem;
@@ -1110,6 +1106,7 @@ body {
     max-width: 100%;
     max-height: 100%;
     visibility: hidden;
+    image-rendering: pixelated;
     object-fit: contain;
     transform: translate(-50%, -50%);
 }
@@ -1122,6 +1119,27 @@ body {
     display: flex;
     gap: 0.4rem;
     min-width: 0;
+}
+
+.file-relationship-flip-match {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.3rem;
+    align-items: center;
+    padding: 0.28rem 0.5rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: #1d222b;
+    border: 1px solid #303641;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.file-relationship-flip-match:has(input:checked) {
+    color: var(--fg);
+    border-color: #4a80ff;
 }
 
 .file-relationship-flip-tab {
@@ -1210,8 +1228,16 @@ body {
     text-overflow: ellipsis;
 }
 
+.file-relationship-actions .file-relationship-action.is-better {
+    flex: 1 1 calc(50% - 0.2rem);
+}
+
 .file-relationship-actions .file-relationship-action.is-primary {
-    flex: 2 1 auto;
+    flex: 1 1 calc(50% - 0.4rem);
+}
+
+.file-relationship-actions .file-relationship-action.is-quarter {
+    flex: 1 1 calc(25% - 0.2rem);
 }
 
 .file-relationship-action:hover:not(:disabled) {

@@ -45,6 +45,15 @@ const DISTANCE_OPTIONS = [
 
 const DEFAULT_DISTANCE = 4;
 
+/** Pairs kept behind the Back button. */
+const HISTORY_LIMIT = 32;
+
+/** A pair that has been on screen, in A/B order. */
+interface ComparedPair {
+    a: RecordId;
+    b: RecordId;
+}
+
 type CompareView = 'side-by-side' | 'flip' | 'diff';
 
 const COMPARE_VIEWS = [
@@ -186,6 +195,9 @@ function frameFor(aBounds: Bounds | null, bBounds: Bounds | null): Bounds | null
     };
 }
 
+/** Both sides filling the frame, so the smaller copy is drawn at the larger one's size. */
+const MATCHED_SHARE = {width: '100%', height: '100%'} as const;
+
 function shareOf(frame: Bounds | null, bounds: Bounds | null): { width: string; height: string } | undefined {
     if (!frame || !bounds) return undefined;
     return {
@@ -305,9 +317,7 @@ function CompareInfo({which, id, metadata, other, detail, pixelDuplicate, active
 
 /** One wheel notch, and the range the frame will hold. */
 const ZOOM_STEP = 1.25;
-const ZOOM_MAX = 16;
-/** Past this, interpolation smooths away the encoding detail the zoom is there to show. */
-const ZOOM_PIXELATED = 2;
+const ZOOM_MAX = 256;
 
 /** A shared view onto both files: pan in frame pixels from the centre, then scale. */
 interface Zoom {
@@ -329,8 +339,15 @@ function clampPan(zoom: Zoom, width: number, height: number): Zoom {
     };
 }
 
-const scaledBy = (zoom: Zoom, factor: number): number =>
-    Math.min(ZOOM_MAX, Math.max(1, zoom.scale * factor));
+/**
+ * Whole factors only, so a magnified pixel stays a square block. The step is multiplicative, and a
+ * notch that would round back to where it started moves by one instead.
+ */
+function scaledBy(zoom: Zoom, factor: number): number {
+    const stepped = Math.round(zoom.scale * factor);
+    const moved = stepped === zoom.scale ? zoom.scale + (factor > 1 ? 1 : -1) : stepped;
+    return Math.min(ZOOM_MAX, Math.max(1, moved));
+}
 
 /** Re-anchors the pan so whatever sits under (x, y) stays there as the scale changes. */
 function zoomTo(current: Zoom, scale: number, x: number, y: number, width: number, height: number): Zoom {
@@ -351,8 +368,12 @@ interface FlipCompareProps extends CompareProps {
     /** How B already relates to A, when it does. */
     bDetail?: string;
     pixelDuplicate: boolean;
+    /** Blow the smaller copy up to the larger one's size instead of showing the size gap. */
+    matchScale: boolean;
 
     onSide(side: 'a' | 'b'): void;
+
+    onMatchScale(matched: boolean): void;
 
     onMenu(event: ReactMouseEvent, id: RecordId): void;
 }
@@ -365,8 +386,10 @@ interface FlipCompareProps extends CompareProps {
  * same region of the same magnification, which is how a re-encode gives itself away.
  */
 function FlipCompare(
-    {host, a, b, aBounds, bBounds, side, onSide, aMetadata, bMetadata, bDetail, pixelDuplicate, onMenu}:
-    FlipCompareProps,
+    {
+        host, a, b, aBounds, bBounds, side, onSide, aMetadata, bMetadata, bDetail, pixelDuplicate, matchScale,
+        onMatchScale, onMenu,
+    }: FlipCompareProps,
 ) {
     const frameRef = useRef<HTMLDivElement>(null);
     const frame = frameFor(aBounds, bBounds);
@@ -473,26 +496,26 @@ function FlipCompare(
                     onContextMenu={(event) => onMenu(event, side === 'a' ? a : b)}
                 >
                     <div
-                        className={`file-relationship-flip-zoom${zoom.scale >= ZOOM_PIXELATED ? ' is-magnified' : ''}`}
+                        className="file-relationship-flip-zoom"
                         style={{transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`}}
                     >
                         <img
                             className={`file-relationship-flip-image${side === 'a' ? ' is-shown' : ''}`}
-                            style={shareOf(frame, aBounds)}
+                            style={matchScale ? MATCHED_SHARE : shareOf(frame, aBounds)}
                             src={host.records.fileUrl(a)}
                             alt=""
                             draggable={false}
                         />
                         <img
                             className={`file-relationship-flip-image${side === 'b' ? ' is-shown' : ''}`}
-                            style={shareOf(frame, bBounds)}
+                            style={matchScale ? MATCHED_SHARE : shareOf(frame, bBounds)}
                             src={host.records.fileUrl(b)}
                             alt=""
                             draggable={false}
                         />
                     </div>
                     {zoom.scale > 1 && (
-                        <span className="file-relationship-flip-level">{zoom.scale.toFixed(1)}x</span>
+                        <span className="file-relationship-flip-level">{zoom.scale}x</span>
                     )}
                 </div>
                 <CompareInfo
@@ -522,6 +545,14 @@ function FlipCompare(
                         </button>
                     );
                 })}
+                <label className="file-relationship-flip-match">
+                    <input
+                        type="checkbox"
+                        checked={matchScale}
+                        onChange={(event) => onMatchScale(event.target.checked)}
+                    />
+                    <span>Match scale</span>
+                </label>
             </div>
         </div>
     );
@@ -744,10 +775,12 @@ function FileRelationshipsPanel({host}: PanelProps) {
     const [filterUnrelated, setFilterUnrelated] = useState(true);
     const [similar, setSimilar] = useState<SimilarState>({status: 'idle'});
     const [compared, setCompared] = useState<RecordId | null>(null);
-    const [compareView, setCompareView] = useState<CompareView>('side-by-side');
+    const [compareView, setCompareView] = useState<CompareView>('flip');
     const [flipSide, setFlipSide] = useState<'a' | 'b'>('a');
+    const [matchScale, setMatchScale] = useState(true);
     const [pending, setPending] = useState(false);
     const [reloadToken, setReloadToken] = useState(0);
+    const [history, setHistory] = useState<ComparedPair[]>([]);
 
     useEffect(
         () =>
@@ -844,13 +877,17 @@ function FileRelationshipsPanel({host}: PanelProps) {
         setCompared((current) => (current === id ? null : id));
     }
 
-    /** The work reports its own outcome, since clearing cannot know what it removed until it runs. */
-    function runAction(work: () => Promise<string>) {
+    /**
+     * The work reports its own outcome, since clearing cannot know what it removed until it runs.
+     * Ruling on a pair takes it out of the undecided queue, so `advance` walks straight to the next one.
+     */
+    function runAction(work: () => Promise<string>, advance: boolean = false) {
         setPending(true);
         work()
             .then((done) => {
                 host.ui.toast(done, {kind: 'success'});
                 setReloadToken((token) => token + 1);
+                return advance ? advanceToNext() : undefined;
             })
             .catch((error: unknown) => {
                 host.ui.toast(message(error), {kind: 'error'});
@@ -858,27 +895,37 @@ function FileRelationshipsPanel({host}: PanelProps) {
             .finally(() => setPending(false));
     }
 
-    /**
-     * Loads the closest pair nobody has ruled on and pins it as A against B. Every action in this
-     * panel takes the pair out of that queue, so the button walks forward on its own.
-     */
+    /** Loads the closest pair nobody has ruled on and pins it as A against B. */
+    function advanceToNext(): Promise<void> {
+        return host.records.nextUndecidedDuplicate({distance}).then((next) => {
+            if (next.pair === null) {
+                host.ui.toast(`Nothing left to rule on within ${bitsLabel(distance)}`, {kind: 'info'});
+                return;
+            }
+            if (focused !== null && compared !== null)
+                setHistory((past) => [...past, {a: focused, b: compared}].slice(-HISTORY_LIMIT));
+            setFocused(next.pair.record_id_a);
+            setCompared(next.pair.record_id_b);
+            setFlipSide('a');
+        });
+    }
+
     function loadNextUndecided() {
         setPending(true);
-        host.records
-            .nextUndecidedDuplicate({distance})
-            .then((next) => {
-                if (next.pair === null) {
-                    host.ui.toast(`Nothing left to rule on within ${bitsLabel(distance)}`, {kind: 'info'});
-                    return;
-                }
-                setFocused(next.pair.record_id_a);
-                setCompared(next.pair.record_id_b);
-                setFlipSide('a');
-            })
+        advanceToNext()
             .catch((error: unknown) => {
                 host.ui.toast(message(error), {kind: 'error'});
             })
             .finally(() => setPending(false));
+    }
+
+    function goBack() {
+        const previous = history[history.length - 1];
+        if (previous === undefined) return;
+        setHistory((past) => past.slice(0, -1));
+        setFocused(previous.a);
+        setCompared(previous.b);
+        setFlipSide('a');
     }
 
     function metadataFor(id: RecordId): RecordMetadata | undefined {
@@ -945,6 +992,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
     const comparing = compared !== null;
     const comparedRelation = compared === null ? undefined : relationTo(compared);
     const comparable = sameResolution(aBounds, bBounds);
+    const previousPair = history[history.length - 1];
 
     return (
         <div className={`file-relationships-panel${comparing ? ' is-comparing' : ''}`}>
@@ -973,6 +1021,19 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 </select>
                             </label>
                         )}
+                        <button
+                            type="button"
+                            className="file-relationship-action"
+                            disabled={pending || previousPair === undefined}
+                            title={
+                                previousPair === undefined
+                                    ? 'No earlier pair to go back to'
+                                    : `Go back to records ${previousPair.a} and ${previousPair.b}`
+                            }
+                            onClick={goBack}
+                        >
+                            Back
+                        </button>
                         <button
                             type="button"
                             className="file-relationship-action"
@@ -1069,6 +1130,8 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 bBounds={bBounds}
                                 side={flipSide}
                                 onSide={setFlipSide}
+                                matchScale={matchScale}
+                                onMatchScale={setMatchScale}
                                 aMetadata={aMetadata}
                                 bMetadata={bMetadata}
                                 bDetail={comparedRelation}
@@ -1089,28 +1152,28 @@ function FileRelationshipsPanel({host}: PanelProps) {
                         <div className="file-relationship-actions">
                             <button
                                 type="button"
-                                className="file-relationship-action"
+                                className="file-relationship-action is-better"
                                 disabled={pending || comparedRelation === 'inferior'}
                                 title={`Mark record ${focused} as the superior copy of record ${compared}`}
                                 onClick={() =>
                                     runAction(async () => {
                                         await host.records.setBetterDuplicate(compared, focused);
                                         return `Record #${focused} is now superior to #${compared}`;
-                                    })
+                                    }, true)
                                 }
                             >
                                 A #{focused} Better
                             </button>
                             <button
                                 type="button"
-                                className="file-relationship-action"
+                                className="file-relationship-action is-better"
                                 disabled={pending || comparedRelation === 'superior'}
                                 title={`Mark record ${compared} as the superior copy of record ${focused}`}
                                 onClick={() =>
                                     runAction(async () => {
                                         await host.records.setBetterDuplicate(focused, compared);
                                         return `Record #${compared} is now superior to #${focused}`;
-                                    })
+                                    }, true)
                                 }
                             >
                                 B #{compared} Better
@@ -1124,28 +1187,28 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                     runAction(async () => {
                                         await host.records.addAlternatives([focused, compared]);
                                         return `Records #${focused} and #${compared} are now alternatives`;
-                                    })
+                                    }, true)
                                 }
                             >
                                 Set Alternatives
                             </button>
                             <button
                                 type="button"
-                                className="file-relationship-action"
+                                className="file-relationship-action is-quarter"
                                 disabled={pending || comparedRelation === 'unrelated'}
                                 title={`Mark records ${focused} and ${compared} as coincidental lookalikes`}
                                 onClick={() =>
                                     runAction(async () => {
                                         await host.records.setUnrelated(focused, compared);
                                         return `#${focused} and #${compared} are now marked unrelated`;
-                                    })
+                                    }, true)
                                 }
                             >
                                 Set Unrelated
                             </button>
                             <button
                                 type="button"
-                                className="file-relationship-action is-danger"
+                                className="file-relationship-action is-danger is-quarter"
                                 disabled={pending}
                                 title={`Drop the relationship between records ${focused} and ${compared}`}
                                 onClick={() =>
