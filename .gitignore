@@ -29,6 +29,12 @@ read.lock
 *.vsp
 *.vspx
 
+# Random garbage
+.air/
+.cache/
+.claude/
+.junie/
+
 /docs/out
 
 /IDHAN/include/hydrus
