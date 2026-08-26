@@ -39,7 +39,6 @@ class APIMaintenance final : public drogon::HttpController< APIMaintenance >
 
 	drogon::Task< drogon::HttpResponsePtr > purgeThumbnails( drogon::HttpRequestPtr request );
 
-	drogon::Task< drogon::HttpResponsePtr > testJob( drogon::HttpRequestPtr request );
 	drogon::Task< drogon::HttpResponsePtr > jobStatus( drogon::HttpRequestPtr request, idhan::JobID job_id );
 	drogon::Task< drogon::HttpResponsePtr > jobsStatus( drogon::HttpRequestPtr request );
 
@@ -59,7 +58,6 @@ class APIMaintenance final : public drogon::HttpController< APIMaintenance >
 
 	ADD_METHOD_TO( APIMaintenance::purgeThumbnails, "/purge/thumbnails", drogon::Post, IDHANAPIAuthName );
 
-	ADD_METHOD_TO( APIMaintenance::testJob, "/test", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::jobStatus, "/jobs/{job_id}/status", drogon::Get, IDHANAPIAuthName );
 	ADD_METHOD_TO( APIMaintenance::jobsStatus, "/jobs/status", drogon::Get, IDHANAPIAuthName );
 
