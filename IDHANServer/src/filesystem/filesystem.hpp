@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "IDHANTypes.hpp"
 #include "db/dbTypes.hpp"
@@ -24,6 +25,10 @@ namespace idhan::filesystem
 {
 
 [[nodiscard]] std::filesystem::path getFileFolder( const SHA256& sha256 );
+
+//! Canonical path below a cluster root for a stored record.
+//! `extension` may be empty or may include its leading dot.
+[[nodiscard]] std::filesystem::path getClusterRelativePath( const SHA256& sha256, std::string_view extension );
 
 ExpectedTask< std::filesystem::path > getRecordPath( RecordID record_id, DbClientPtr db );
 

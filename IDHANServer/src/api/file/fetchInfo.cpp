@@ -20,7 +20,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 	// the caller gets the file specific fields rather than parsed:false.
 	if ( batch.records[ 0 ][ "parsed" ].isBool() && !batch.records[ 0 ][ "parsed" ].asBool() )
 	{
-		const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) };
+		const auto parse_result { co_await metadata::parseAndUpdateRecordMetadata( record_id, db ) };
 		if ( !parse_result ) co_return parse_result.error();
 
 		batch = co_await metadata::collectRecordInfo( { record_id }, db );
@@ -34,7 +34,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchInfo(
 drogon::Task< drogon::HttpResponsePtr > RecordAPI::parseFile( drogon::HttpRequestPtr request, RecordID record_id )
 {
 	const auto db { drogon::app().getDbClient() };
-	const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) };
+	const auto parse_result { co_await metadata::parseAndUpdateRecordMetadata( record_id, db ) };
 	if ( !parse_result ) co_return parse_result.error();
 
 	co_return co_await fetchInfo( request, record_id );

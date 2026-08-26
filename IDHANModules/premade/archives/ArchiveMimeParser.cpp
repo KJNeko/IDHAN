@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <archive.h>
 #include <archive_entry.h>
+#include <cctype>
 #include <charconv>
 #include <cstdint>
 #include <memory>
@@ -24,6 +25,30 @@ static bool isUgoiraManifest( const std::string_view path )
 	const auto separator { path.find_last_of( "/\\" ) };
 
 	return ( separator == std::string_view::npos ? path : path.substr( separator + 1 ) ) == UGOIRA_MANIFEST;
+}
+
+static bool hasExtension( const std::string_view filename, const std::string_view extension )
+{
+	if ( filename.size() <= extension.size() ) return false;
+	if ( filename[ filename.size() - extension.size() - 1 ] != '.' ) return false;
+
+	return std::ranges::equal(
+		filename.substr( filename.size() - extension.size() ),
+		extension,
+		[]( const char lhs, const char rhs ) { return std::tolower( static_cast< unsigned char >( lhs ) ) == rhs; } );
+}
+
+static bool isComicBookZip( const idhan::ModuleCallData& data )
+{
+	if ( !data.extra.isObject() ) return false;
+
+	const auto& guess_with_extension { data.extra[ "guess_with_extension" ] };
+	if ( guess_with_extension.isBool() && !guess_with_extension.asBool() ) return false;
+
+	const auto& filename { data.extra[ "filename" ] };
+	if ( !filename.isString() ) return false;
+
+	return hasExtension( filename.asString(), "cbz" );
 }
 
 class UgoiraFrameTest
@@ -142,6 +167,12 @@ std::vector< idhan::MimeID > ArchiveMimeParser::handleableMimes()
 
 std::expected< idhan::MimeID, idhan::ModuleError > ArchiveMimeParser::parseMime( idhan::ModuleCallData& data )
 {
+	if ( isComicBookZip( data ) )
+	{
+		spdlog::debug( "Archive filename identifies a comic book zip" );
+		return idhan::mime_ids::COMICBOOK_ZIP;
+	}
+
 	ArchiveModuleReader reader { data.file };
 
 	std::unique_ptr< archive, void ( * )( archive* ) > a {
@@ -171,7 +202,7 @@ std::expected< idhan::MimeID, idhan::ModuleError > ArchiveMimeParser::parseMime(
 
 			if ( path != nullptr && isUgoiraManifest( path ) )
 			{
-				spdlog::debug( "Archive carries {}, refining it to a Pixiv Ugoira", UGOIRA_MANIFEST );
+				spdlog::debug( "Archive carries {}, specializing it to a Pixiv Ugoira", UGOIRA_MANIFEST );
 				return idhan::mime_ids::PIXIV_UGOIRA;
 			}
 		}
@@ -187,7 +218,7 @@ std::expected< idhan::MimeID, idhan::ModuleError > ArchiveMimeParser::parseMime(
 
 	if ( frame_test.passes() )
 	{
-		spdlog::debug( "Archive is a numbered image sequence at its root, refining it to a Pixiv Ugoira" );
+		spdlog::debug( "Archive is a numbered image sequence at its root, specializing it to a Pixiv Ugoira" );
 		return idhan::mime_ids::PIXIV_UGOIRA;
 	}
 

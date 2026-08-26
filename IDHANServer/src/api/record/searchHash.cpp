@@ -1,6 +1,7 @@
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "crypto/SHA256.hpp"
+#include "records/records.hpp"
 
 namespace idhan::api
 {
@@ -22,18 +23,18 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::searchHash( [[maybe_unused]] 
 
 	const auto db { drogon::app().getDbClient() };
 
-	const auto result { co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", hash.toVec() ) };
+	const auto record_id { co_await helpers::findRecord( hash, db ) };
 
 	Json::Value json {};
 
-	if ( result.empty() )
+	if ( !record_id )
 	{
 		json[ "found" ] = false;
 		co_return drogon::HttpResponse::newHttpJsonResponse( json );
 	}
 
 	json[ "found" ] = true;
-	json[ "record_id" ] = result[ 0 ][ 0 ].as< RecordID >();
+	json[ "record_id" ] = *record_id;
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }
 

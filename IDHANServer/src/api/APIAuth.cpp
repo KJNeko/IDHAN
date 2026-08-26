@@ -4,6 +4,7 @@
 #include <mutex>
 #include <string_view>
 
+#include "auth/authKeys.hpp"
 #include "crypto/SHA256.hpp"
 #include "helpers/createBadRequest.hpp"
 
@@ -67,11 +68,9 @@ drogon::Task< drogon::HttpResponsePtr > APIAuth::doFilter( const drogon::HttpReq
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto select_key {
-		co_await db->execSqlCoro( "SELECT key_id FROM auth_keys WHERE key_hash = $1 LIMIT 1", sha256_key.toVec() )
-	};
+	const bool key_exists { co_await auth::keyExists( sha256_key, db ) };
 
-	if ( select_key.empty() )
+	if ( !key_exists )
 	{
 		auto response { drogon::HttpResponse::newHttpResponse() };
 		log::warn( "Invalid API key given!" );
@@ -101,13 +100,11 @@ drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::verifyAccessKey( drogon::H
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto select_key {
-		co_await db->execSqlCoro( "SELECT key_id FROM auth_keys WHERE key_hash = $1", sha256_key.toVec() )
-	};
+	const bool key_exists { co_await auth::keyExists( sha256_key, db ) };
 
 	Json::Value out_json {};
 
-	if ( select_key.empty() )
+	if ( !key_exists )
 	{
 		out_json[ "success" ] = false;
 		out_json[ "message" ] = "Invalid API Key";
@@ -126,9 +123,9 @@ drogon::Task< drogon::HttpResponsePtr > AuthEndpoint::generateApiKey( [[maybe_un
 {
 	auto db { drogon::app().getDbClient() };
 
-	const auto key_count_search { co_await db->execSqlCoro( "SELECT count(*) FROM auth_keys" ) };
+	const auto key_count { co_await auth::keyCount( db ) };
 
-	if ( !key_count_search.empty() && key_count_search[ 0 ][ 0 ].as< int64_t >() > 0 )
+	if ( key_count > 0 )
 	{
 		co_return createConflict( "An API key already exists. Use the existing key to manage keys." );
 	}

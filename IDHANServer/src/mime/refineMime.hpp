@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <string_view>
 
 #include "IDHANTypes.hpp"
 #include "modules/CallInput.hpp"
@@ -10,12 +11,13 @@
 namespace idhan::mime
 {
 
-//! Expands \p generic_id using whichever modules refine it. An expanded id reports the same mime
-//! string as the generic one, so only the id changes.
-//! \return The expanded id, or \p generic_id when nothing expands it.
-[[nodiscard]] IDHANTask< MimeID > refineMimeID( MimeID generic_id, std::shared_ptr< const modules::CallInput > input );
+//! Specializes \p base_id using modules that can distinguish variants sharing one MIME string.
+//! \return The specialized id, or \p base_id when nothing specializes it.
+[[nodiscard]] IDHANTask< MimeID > specializeMimeID(
+	MimeID base_id,
+	std::shared_ptr< const modules::CallInput > input,
+	std::string_view filename = {} );
 
-//! refineMimeID against a file on disk. Returns \p generic_id if the file cannot be opened.
-[[nodiscard]] IDHANTask< MimeID > refineMimeIDForPath( MimeID generic_id, std::filesystem::path path );
+[[nodiscard]] IDHANTask< MimeID > specializeMimeIDForPath( MimeID base_id, std::filesystem::path path );
 
 } // namespace idhan::mime

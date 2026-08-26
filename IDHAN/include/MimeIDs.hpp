@@ -55,6 +55,13 @@ constexpr MimeID APPLICATION_CLIP { 6001 };
 //! The first id the mime table's sequence may hand out, above every reserved block.
 constexpr MimeID FIRST_UNRESERVED { 10000 };
 
+[[nodiscard]] constexpr SimpleMimeType simpleType( const MimeID mime_id )
+{
+	if ( mime_id < IMAGE_BLOCK || mime_id >= FIRST_UNRESERVED ) return SimpleMimeType::NONE;
+
+	return static_cast< SimpleMimeType >( mime_id / 1000 );
+}
+
 //! Every declared mime id. INVALID is excluded: it names the absence of a mime.
 inline constexpr std::array< MimeID, 17 > ALL_MIME_IDS {
 	{ UNKNOWN,

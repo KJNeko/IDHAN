@@ -218,13 +218,11 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::file( const drogon::HttpReque
 
 		if ( !sha256 ) co_return sha256.error();
 
-		const auto record_result {
-			co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", sha256->toVec() )
-		};
+		const auto record_id { co_await idhan::helpers::findRecord( *sha256, db ) };
 
-		if ( record_result.empty() ) co_return createNotFound( "No record with hash {} found", hash.value() );
+		if ( !record_id ) co_return createNotFound( "No record with hash {} found", hash.value() );
 
-		file_id = record_result[ 0 ][ "record_id" ].as< RecordID >();
+		file_id = *record_id;
 	}
 
 	if ( !file_id && !hash ) co_return createBadRequest( "No hash of file_id specified" );

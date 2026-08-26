@@ -28,7 +28,6 @@ struct ParseResult
 	QString error {};
 };
 
-
 HydrusImporterWidget::HydrusImporterWidget( QWidget* parent ) : QWidget( parent ), ui( new Ui::HydrusImporterWidget )
 {
 	ui->setupUi( this );
@@ -250,9 +249,6 @@ void HydrusImporterWidget::on_parseHydrusDB_pressed()
 			parseTagServices( result.services );
 			parseFileRelationships();
 			parseUrls();
-
-			// TODO: file-storage copy is intentionally not wired in yet. When implemented, invoke
-			// m_importer->copyFileStorage() here so the Hydrus file clusters are registered with IDHAN.
 
 			updatePreprocessProgress();
 

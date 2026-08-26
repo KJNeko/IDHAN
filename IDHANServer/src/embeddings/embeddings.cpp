@@ -17,6 +17,19 @@
 namespace idhan::embeddings
 {
 
+IDHANTask< std::optional< EmbeddingModelInfo > > findEmbeddingModel( const std::string_view model_name, DbClientPtr db )
+{
+	const auto rows { co_await db->execSqlCoro(
+		"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+
+	if ( rows.empty() ) co_return std::nullopt;
+
+	co_return EmbeddingModelInfo {
+		.id = rows[ 0 ][ "model_id" ].as< std::int32_t >(),
+		.dimensions = rows[ 0 ][ "model_dimensions" ].as< std::int32_t >()
+	};
+}
+
 //! model_ids with a backfill currently running.
 std::mutex g_running_mutex {};
 std::unordered_set< std::int32_t > g_running {};
@@ -118,10 +131,9 @@ IDHANTask< void > registerEmbeddingModels( DbClientPtr db )
 	{
 		try
 		{
-			const auto existing { co_await db->execSqlCoro(
-				"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+			const auto existing { co_await findEmbeddingModel( model_name, db ) };
 
-			if ( existing.empty() )
+			if ( !existing )
 			{
 				const auto inserted { co_await db->execSqlCoro(
 					"INSERT INTO embedding_models (model_name, model_dimensions) VALUES ($1, $2) RETURNING model_id",
@@ -137,8 +149,7 @@ IDHANTask< void > registerEmbeddingModels( DbClientPtr db )
 				continue;
 			}
 
-			if ( const auto stored { existing[ 0 ][ "model_dimensions" ].as< std::int32_t >() };
-			     stored != static_cast< std::int32_t >( dimensions ) )
+			if ( const auto stored { existing->dimensions }; stored != static_cast< std::int32_t >( dimensions ) )
 			{
 				log::error(
 					"Embedding model '{}' is registered with {} dimensions but the loaded module produces {}. "

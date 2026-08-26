@@ -70,7 +70,7 @@ SCENARIO( "Well known mime ids", "[mime][ids]" )
 			}
 		}
 
-		WHEN( "a refined type is compared to the generic one" )
+		WHEN( "a specialized type is compared to its base type" )
 		{
 			THEN( "a ugoira reports the same string as a plain zip" )
 			{

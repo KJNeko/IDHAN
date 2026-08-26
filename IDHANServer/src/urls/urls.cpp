@@ -25,12 +25,32 @@ std::string extractDomain( const std::string& url )
 	return domain;
 }
 
+drogon::Task< std::optional< UrlID > > findUrl( const std::string& url, DbClientPtr db )
+{
+	const auto rows { co_await db->execSqlCoro( "SELECT url_id FROM urls WHERE url = $1", url ) };
+
+	if ( rows.empty() ) co_return std::nullopt;
+
+	co_return rows[ 0 ][ 0 ].as< UrlID >();
+}
+
+drogon::Task< std::optional< UrlDomainID > > findUrlDomain( const std::string& domain, DbClientPtr db )
+{
+	const auto rows {
+		co_await db->execSqlCoro( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", domain )
+	};
+
+	if ( rows.empty() ) co_return std::nullopt;
+
+	co_return rows[ 0 ][ 0 ].as< UrlDomainID >();
+}
+
 ExpectedTask< UrlDomainID > findOrCreateUrl( const std::string url, DbClientPtr db )
 {
-	const auto search_result { co_await db->execSqlCoro( "SELECT url_id FROM urls WHERE url = $1", url ) };
+	const auto existing { co_await findUrl( url, db ) };
 
-	if ( !search_result.empty() ) [[unlikely]]
-		co_return search_result[ 0 ][ 0 ].as< UrlID >();
+	if ( existing ) [[unlikely]]
+		co_return *existing;
 
 	const auto url_domain_id { co_await helpers::findOrCreateUrlDomain( url, db ) };
 	return_unexpected_error( url_domain_id );
@@ -43,10 +63,10 @@ ExpectedTask< UrlDomainID > findOrCreateUrl( const std::string url, DbClientPtr 
 	if ( !insert.empty() ) [[likely]]
 		co_return insert[ 0 ][ 0 ].as< UrlID >();
 
-	const auto second_search { co_await db->execSqlCoro( "SELECT url_id FROM urls WHERE url = $1", url ) };
+	const auto created_by_other_request { co_await findUrl( url, db ) };
 
-	if ( !second_search.empty() ) [[likely]]
-		co_return second_search[ 0 ][ 0 ].as< UrlID >();
+	if ( created_by_other_request ) [[likely]]
+		co_return *created_by_other_request;
 
 	co_return std::unexpected( createInternalError( "Was unable to create or find url {}", url ) );
 }
@@ -55,12 +75,10 @@ ExpectedTask< UrlDomainID > findOrCreateUrlDomain( const std::string url, DbClie
 {
 	const std::string domain { extractDomain( url ) };
 
-	const auto search_result {
-		co_await db->execSqlCoro( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", domain )
-	};
+	const auto existing { co_await findUrlDomain( domain, db ) };
 
-	if ( !search_result.empty() ) [[unlikely]]
-		co_return search_result[ 0 ][ 0 ].as< UrlDomainID >();
+	if ( existing ) [[unlikely]]
+		co_return *existing;
 
 	const auto insert { co_await db->execSqlCoro(
 		"INSERT INTO url_domains (url_domain) VALUES ($1) ON CONFLICT DO NOTHING RETURNING url_domain_id", domain ) };
@@ -68,12 +86,10 @@ ExpectedTask< UrlDomainID > findOrCreateUrlDomain( const std::string url, DbClie
 	if ( !insert.empty() ) [[likely]]
 		co_return insert[ 0 ][ 0 ].as< UrlDomainID >();
 
-	const auto second_search_result {
-		co_await db->execSqlCoro( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", domain )
-	};
+	const auto created_by_other_request { co_await findUrlDomain( domain, db ) };
 
-	if ( !second_search_result.empty() ) [[likely]]
-		co_return second_search_result[ 0 ][ 0 ].as< UrlDomainID >();
+	if ( created_by_other_request ) [[likely]]
+		co_return *created_by_other_request;
 
 	co_return std::unexpected( createInternalError( "Failed to create URL domain" ) );
 }

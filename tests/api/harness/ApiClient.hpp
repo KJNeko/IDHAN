@@ -67,7 +67,10 @@ class ApiClient
 
 	[[nodiscard]] ApiResponse getWithKey( const std::string& path, const std::string& key );
 
-	[[nodiscard]] ApiResponse postOctets( const std::string& path, std::string_view body );
+	[[nodiscard]] ApiResponse postOctets(
+		const std::string& path,
+		std::string_view body,
+		const QueryParams& query = {} );
 
 	[[nodiscard]] TagDomainID createDomain( const std::string& name );
 	[[nodiscard]] std::vector< TagID > createTags( const TagPairs& pairs );
