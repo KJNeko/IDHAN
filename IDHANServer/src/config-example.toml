@@ -5,7 +5,6 @@
 #password = "your_password_here"
 #database = "idhan-db"
 
-
 [server]
 #host = "0.0.0.0"
 #port = 16609
@@ -14,100 +13,53 @@
 #tmp_path = /tmp/idhan
 
 [logging]
-# Logging level: trace, debug, info, warn, error, critical
+# Level: trace, debug, info, warn, error, or critical.
 level = "info"
-# Logging output location
+# Output directory.
 path = "./log"
 
 [thumbnails]
-# Where generated thumbnails are cached on disk
+# Generated thumbnail cache directory.
 #path = "./thumbnails"
-# Whether the on-disk cache is used at all. Off bypasses it in both directions, so every request
-# regenerates through the thumbnailer. Read live, so it can be flipped without restarting.
+# Enables the on-disk cache; read live without a restart.
 #cache = true
-# Empty the cache directory during startup. Applies at startup only; nothing purges the cache again
-# while the server runs. Safe at any time, since a purged thumbnail is regenerated on next request.
+# Purges cached thumbnails at startup only; missing thumbnails regenerate on request.
 #purge_on_boot = false
-# Square thumbnail edge lengths (px) the server may write to the on-disk cache. Any other requested
-# size is still generated and served, just never cached. Read live, so no restart is needed.
+# Cacheable square edge lengths in pixels; other sizes are served but not cached. Read live.
 #cacheable_sizes = [128, 256, 512]
 
 [modules]
-# Media modules (libvips, FFmpeg, libarchive, PSD) never run inside the server. Each module library
-# is hosted by its own IDHANModuleRunner process, so a module that leaks or crashes takes only that
-# process with it. Whether a library gets a long-lived worker or a fresh process per call comes from
-# the modules themselves and is not configurable here.
-
-# Path to IDHANModuleRunner. Found automatically next to the server binary, then on the install
-# path; set this only if it lives somewhere else.
+# IDHANModuleRunner path; auto-discovered beside the server, then on the install path.
 #runner_path = "/usr/bin/IDHANModuleRunner"
 
-# Worker threads inside each worker process. More than one is required, not merely faster: an
-# archive thumbnailer asks the host to thumbnail each member, and that nested call comes back into
-# the same process, so it has to be served on a different thread than the one waiting for it.
+# Threads per worker process; nested module calls require more than one.
 #pool_threads = 4
 
-# A persistent worker is retired once it exceeds this resident size, at its next moment with no call
-# in flight.
-#
-# This is a floor, not a cap. A module may declare a larger footprint of its own, and the larger of
-# the two wins for that library's worker. Raising this loosens every library's bound; lowering it
-# will not tighten one a module declared for itself.
+# Worker RSS limit in MiB, checked when idle. This is a floor; larger module limits take precedence.
 #rss_limit_mb = 2048
 
-# A persistent worker with nothing to do for this long is retired.
+# Idle time in seconds before a persistent worker is retired.
 #idle_timeout_sec = 300
 
-# Workers report in on this interval, carrying their resident size. Missing them for longer than the
-# grace period gets the worker killed.
-#
-# This is the only thing that will kill a call, and it asks only whether the process still exists. A
-# worker answers heartbeats from its IO loop, which never runs module code, so beats keep arriving
-# however deep its backlog is. There is deliberately no per-call deadline: a call queued behind a
-# hundred others is indistinguishable from a wedged one.
+# Heartbeat interval and missed-heartbeat grace period in milliseconds; grace controls liveness.
 #heartbeat_interval_ms = 1000
 #liveness_grace_ms = 5000
 
-# How deeply module calls may nest (an archive inside an archive inside an archive). Enforced by the
-# server, which is the only party that sees the whole chain, since the recursion crosses process
-# boundaries.
+# Maximum nested module-call depth, counted in calls.
 #max_call_depth = 4
 
-# How long to wait for a library to describe what it exports at startup. A library that hangs here
-# is skipped with a warning; it does not stop the server from starting.
+# Seconds to wait at startup for a library description; timed-out libraries are skipped.
 #describe_timeout_sec = 10
 
 [embeddings]
-# Directory scanned for image embedding models. Each subdirectory holding both a model.onnx and a
-# model.json is registered as one model, named by its model.json; anything else is ignored with a
-# warning naming what was wrong. A directory that does not exist is not an error.
-#
-# Defaults to a "models" directory beside IDHANModuleRunner, which suits a build tree but rarely a
-# deployment. Set it explicitly wherever the runner is installed to a bin directory you do not own.
-#
-# The models themselves are exported offline; see tools/embedding-export/export_siglip2.py. Nothing
-# in the server converts a checkpoint, so a directory of PyTorch weights registers nothing.
+# Model directory; each model subdirectory needs model.onnx and model.json.
+# Defaults beside IDHANModuleRunner; set this to override that location.
 #model_path = "/usr/share/idhan/models"
 
 [plugins]
-# Directory scanned for WebUI plugin bundles. Each subdirectory with a manifest.json is one plugin.
-# Defaults to "<static>/plugins" so the static file server serves the bundles at /plugins/... with no
-# extra configuration. An override must still live under the static root to be reachable.
+# WebUI plugin directory; each plugin needs manifest.json. Overrides must remain under the static root.
 #path = "./static/plugins"
 
 [cluster]
-# How many files a cluster scan works on at once. Each file in flight is one hash, mime probe and
-# metadata parse, so the scan spends most of its time waiting on disk, postgres and module workers;
-# raising this fills that wait rather than adding CPU work. Bounded by the database connection pool
-# (server.io_threads) and the module worker pool (modules.pool_threads). Overridable per scan with
-# the "concurrency" query parameter. Clamped to 1..64.
+# Concurrent files per cluster scan; overridable per request by "concurrency" and clamped to 1..64.
 #scan_concurrency = 4
-
-[parser.cbz]
-# A comic book zip is a zip, so no signature scan can tell one from the other. With this on, a file
-# whose name ends in .cbz is recorded as a comic book zip instead of a plain zip. The extension wins
-# over content-based refinement, so a .cbz of numbered pages is never mistaken for a Pixiv Ugoira.
-#
-# The name only reaches the server when the importer sends one: /file/import takes it as the
-# "filename" query parameter, and a cluster scan reads it from the file on disk.
-#guess_with_extension = true
