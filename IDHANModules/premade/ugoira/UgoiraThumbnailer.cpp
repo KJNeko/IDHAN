@@ -17,7 +17,7 @@
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
-// ArchiveMimeParser also refines a manifest-less zip whose root is a numbered image sequence, so
+// ArchiveMimeParser also specializes a manifest-less zip whose root is a numbered image sequence, so
 // this is the preferred source of frame order, not a guaranteed one.
 static constexpr std::string_view MANIFEST_NAME { "animation.json" };
 

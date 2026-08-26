@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -11,6 +12,16 @@
 
 namespace idhan::embeddings
 {
+
+struct EmbeddingModelInfo
+{
+	std::int32_t id;
+	std::int32_t dimensions;
+};
+
+[[nodiscard]] IDHANTask< std::optional< EmbeddingModelInfo > > findEmbeddingModel(
+	std::string_view model_name,
+	DbClientPtr db );
 
 IDHANTask< void > registerEmbeddingModels( DbClientPtr db );
 

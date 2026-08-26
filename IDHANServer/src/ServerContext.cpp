@@ -16,6 +16,7 @@
 #include "api/apiPrefixes.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "auth/authKeys.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
@@ -392,11 +393,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				[]() -> drogon::Task< void >
 				{
 					const auto db { drogon::app().getDbClient() };
-					const auto key_count_search { co_await db->execSqlCoro( "SELECT count(*) FROM auth_keys" ) };
-
-					const auto key_count {
-						key_count_search.empty() ? 0 : key_count_search[ 0 ][ 0 ].as< std::size_t >()
-					};
+					const auto key_count { co_await auth::keyCount( db ) };
 
 					if ( key_count == 0 )
 					{

@@ -80,11 +80,21 @@ binary when practical:
   conditions.
 - Separate consecutive guard branches with two blank lines after an early
   `return`, so each validation step remains visually distinct.
+- Do not add `//!` comments that merely restate self-explanatory names or code.
+  Reserve documentation comments for non-obvious contracts, behavior, invariants,
+  constraints, or rationale.
 
 ## Database and storage
 
 - Add migrations only as the next sequentially numbered SQL file in
   `IDHANMigration/src/`; they run in ascending order at server startup.
+- Prefer typed domain helpers for reusable queries, including ordinary CRUD,
+  existence checks, and stable lookups even when they currently have only one
+  caller. Search for an existing helper before writing SQL at a call site.
+- Keep SQL inline only when it is genuinely one-off or specialized, such as a
+  report, endpoint-specific aggregate, transaction-local statement, or dynamic
+  search query. Helpers should decode rows into domain types without absorbing
+  caller-specific HTTP responses or transaction policy.
 - Tag aliases, siblings, and parents are resolved by PostgreSQL triggers and
   views. Do not reimplement that resolution in application code.
 - Use `db/drogonArrayBind.hpp` for PostgreSQL array bindings; its apparently

@@ -25,7 +25,7 @@ JobTask rescanMetadataJobTask( std::vector< RecordID > record_ids )
 	std::size_t failed { 0 };
 	for ( const auto record_id : record_ids )
 	{
-		const auto parsed { co_await metadata::tryParseRecordMetadata( record_id, db ) };
+		const auto parsed { co_await metadata::parseAndUpdateRecordMetadata( record_id, db ) };
 		if ( parsed )
 			++count;
 		else

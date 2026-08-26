@@ -2,7 +2,7 @@
 
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
-#include "mime/prescan.hpp"
+#include "mime/identifyMime.hpp"
 
 namespace idhan
 {
@@ -41,7 +41,7 @@ drogon::Task< FileInfo > gatherFileInfo( std::shared_ptr< FileIOUring > io_uring
 	FileInfo info {};
 	info.size = io_uring->size();
 
-	const auto mime_id { co_await mime::prescanMime( mime::MimeReader { io_uring } ) };
+	const auto mime_id { co_await mime::identifyMimeForPath( io_uring->path() ) };
 
 	if ( mime_id == mime_ids::UNKNOWN )
 	{

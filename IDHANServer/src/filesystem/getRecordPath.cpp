@@ -14,6 +14,16 @@ std::filesystem::path getFileFolder( const SHA256& sha256 )
 	return folder_name;
 }
 
+std::filesystem::path getClusterRelativePath( const SHA256& sha256, std::string_view extension )
+{
+	if ( extension.starts_with( '.' ) ) extension.remove_prefix( 1 );
+
+	const auto hex { sha256.hex() };
+	const auto filename { extension.empty() ? hex : std::format( "{}.{}", hex, extension ) };
+
+	return getFileFolder( sha256 ) / filename;
+}
+
 ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, drogon::orm::DbClientPtr db )
 {
 	const auto result { co_await db->execSqlCoro(
@@ -33,15 +43,7 @@ ExpectedTask< std::filesystem::path > getRecordPath( const RecordID record_id, d
 	const SHA256 sha256 { SHA256::fromPgCol( result[ 0 ][ 1 ] ) };
 	const std::string mime_extension { result[ 0 ][ 2 ].as< std::string >() };
 
-	const auto hex { sha256.hex() };
-
-	const auto filename {
-		mime_extension.empty() ? std::format( "{}", hex ) : std::format( "{}.{}", hex, mime_extension )
-	};
-
-	const auto folder_name { getFileFolder( sha256 ) };
-
-	const auto file_location { folder_path / folder_name / filename };
+	const auto file_location { folder_path / getClusterRelativePath( sha256, mime_extension ) };
 
 	co_return file_location;
 }

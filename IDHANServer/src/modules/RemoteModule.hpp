@@ -82,7 +82,7 @@ class RemoteModule
 		std::size_t width,
 		std::size_t height ) const;
 
-	//! Narrows an already resolved base mime to a refined mime id (see MimeIDs.hpp).
+	//! Distinguishes an internal MIME variant that shares its base type's MIME string (see MimeIDs.hpp).
 	[[nodiscard]] IDHANTask< std::expected< MimeID, ModuleError > > parseMime( RemoteCallData data ) const;
 
 	//! Generates a derived file, returned as the memfd the worker wrote it into.

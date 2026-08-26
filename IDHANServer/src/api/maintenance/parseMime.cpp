@@ -1,9 +1,7 @@
+#include "MimeIDs.hpp"
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "MimeIDs.hpp"
-#include "mime/guessExtension.hpp"
-#include "mime/prescan.hpp"
-#include "mime/refineMime.hpp"
+#include "mime/identifyMime.hpp"
 #include "modules/ModuleLoader.hpp"
 
 namespace idhan::api
@@ -60,27 +58,6 @@ drogon::Task< Json::Value > processMetadata( const MimeID mime_id, const std::st
 	co_return response;
 }
 
-//! Refines \p generic_id against whichever modules handle it, recording both ids on \p response.
-drogon::Task< void > describeMimeID(
-	Json::Value& response,
-	MimeID& mime_id,
-	const MimeID generic_id,
-	const std::string_view data )
-{
-	response[ "generic_mime_id" ] = generic_id;
-	response[ "mime_id" ] = generic_id;
-	mime_id = generic_id;
-
-	auto input {
-		modules::CallInput::sharedForBytes( { reinterpret_cast< const std::byte* >( data.data() ), data.size() } )
-	};
-
-	if ( !input ) co_return;
-
-	mime_id = co_await mime::refineMimeID( generic_id, std::move( *input ) );
-	response[ "mime_id" ] = mime_id;
-}
-
 drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr request )
 {
 	const auto request_data { request->getBody() };
@@ -92,14 +69,13 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr r
 		co_return drogon::HttpResponse::newHttpJsonResponse( error );
 	}
 
-	const auto scanned_id { co_await mime::prescanMime( mime::MimeReader { request_data } ) };
-
-	const auto generic_id { mime::guessMimeFromExtension(
-		scanned_id, request->getOptionalParameter< std::string >( "filename" ).value_or( "" ) ) };
+	const auto filename { request->getOptionalParameter< std::string >( "filename" ).value_or( "" ) };
+	const auto mime_id { co_await mime::identifyMime(
+		{ reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() }, filename ) };
 
 	Json::Value response;
 
-	if ( generic_id == mime_ids::UNKNOWN )
+	if ( mime_id == mime_ids::UNKNOWN )
 	{
 		response[ "success" ] = false;
 		response[ "error" ] = "Failed to parse mime type";
@@ -107,10 +83,9 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr r
 	}
 
 	response[ "success" ] = true;
-	response[ "mime" ] = std::string { mime_ids::mime_names.at( generic_id ) };
-
-	MimeID mime_id { mime_ids::INVALID };
-	co_await describeMimeID( response, mime_id, generic_id, request_data );
+	response[ "mime" ] = std::string { mime_ids::mime_names.at( mime_id ) };
+	response[ "mime_id" ] = mime_id;
+	response[ "generic_mime_id" ] = std::to_underlying( mime_ids::simpleType( mime_id ) );
 
 	response[ "metadata_modules" ] = co_await processMetadata( mime_id, request_data );
 
@@ -142,13 +117,12 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 
 	const std::string_view file_data { data, size };
 
-	const auto scanned_id { co_await mime::prescanMime( mime::MimeReader { file_data } ) };
-
-	const auto generic_id { mime::guessMimeFromExtension( scanned_id, file.getFileName() ) };
+	const auto mime_id { co_await mime::identifyMime(
+		{ reinterpret_cast< const std::byte* >( file_data.data() ), file_data.size() }, file.getFileName() ) };
 
 	Json::Value response;
 
-	if ( generic_id == mime_ids::UNKNOWN )
+	if ( mime_id == mime_ids::UNKNOWN )
 	{
 		response[ "success" ] = false;
 		response[ "error" ] = "Failed to parse mime type";
@@ -156,10 +130,9 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 	}
 
 	response[ "success" ] = true;
-	response[ "mime" ] = std::string { mime_ids::mime_names.at( generic_id ) };
-
-	MimeID mime_id { mime_ids::INVALID };
-	co_await describeMimeID( response, mime_id, generic_id, file_data );
+	response[ "mime" ] = std::string { mime_ids::mime_names.at( mime_id ) };
+	response[ "mime_id" ] = mime_id;
+	response[ "generic_mime_id" ] = std::to_underlying( mime_ids::simpleType( mime_id ) );
 
 	response[ "metadata_modules" ] = co_await processMetadata( mime_id, file_data );
 

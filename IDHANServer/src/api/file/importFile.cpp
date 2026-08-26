@@ -1,6 +1,7 @@
 #include <memory>
 #include <span>
 
+#include "MimeIDs.hpp"
 #include "api/ImportAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "codes/ImportCodes.hpp"
@@ -10,9 +11,7 @@
 #include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 #include "metadata/metadata.hpp"
-#include "mime/guessExtension.hpp"
-#include "mime/prescan.hpp"
-#include "mime/refineMime.hpp"
+#include "mime/identifyMime.hpp"
 #include "records/records.hpp"
 
 namespace idhan::api
@@ -121,27 +120,16 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		}
 	}
 
-	const auto scanned_mime_id { co_await mime::prescanMime( mime::MimeReader { request_data } ) };
-
 	const auto filename { request->getOptionalParameter< std::string >( "filename" ).value_or( "" ) };
-
-	const auto mime_id { mime::guessMimeFromExtension( scanned_mime_id, filename ) };
+	const auto mime_id {
+		co_await mime::identifyMime( std::span< const std::byte > { data_ptr, data_length }, filename )
+	};
 
 	const bool is_unknown { mime_id == mime_ids::UNKNOWN };
 
 	// force imports store an unidentified file under the unknown mime; everything else is skipped
 	if ( is_unknown && !force_import )
 		co_return drogon::HttpResponse::newHttpJsonResponse( createUnknownMimeResponse() );
-
-	MimeID refined_mime_id { mime_id };
-
-	if ( !is_unknown )
-	{
-		if ( auto input { modules::CallInput::sharedForBytes( { data_ptr, data_length } ) } )
-			refined_mime_id = co_await mime::refineMimeID( mime_id, std::move( *input ) );
-		else
-			log::warn( "Could not stage the import body to refine its mime: {}", input.error() );
-	}
 
 	const auto record_id_e { co_await helpers::createRecord( sha256, db ) };
 
@@ -158,7 +146,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	co_await db->execSqlCoro(
 		"INSERT INTO file_info (record_id, mime_id, size, cluster_id, modified_time) VALUES ($1, $2, $3, $4, now()) ON CONFLICT DO NOTHING",
 		record_id,
-		refined_mime_id,
+		mime_id,
 		data_length,
 		*target_cluster );
 
@@ -201,7 +189,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		record_id, store_confirmed ? ImportStatus::Exists : ImportStatus::Success, final_timestamps[ 0 ] ) ) };
 
 	// a metadata failure should not fail the import, the file itself was stored fine
-	if ( const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) }; !parse_result )
+	if ( const auto parse_result { co_await metadata::parseAndUpdateRecordMetadata( record_id, db ) }; !parse_result )
 		log::warn( "importFile: failed to parse metadata for record {}", record_id );
 
 	co_return response;

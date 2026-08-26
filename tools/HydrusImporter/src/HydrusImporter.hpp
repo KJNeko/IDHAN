@@ -45,10 +45,6 @@ class HydrusImporter
 	FGL_DELETE_COPY( HydrusImporter );
 	FGL_DELETE_MOVE( HydrusImporter );
 
-	//! Copies the Hydrus file storage into IDHAN's clusters.
-	//! TODO: intentional stub, not yet wired into the import flow (see on_parseHydrusDB_pressed).
-	void copyFileStorage();
-
 	HydrusImporter() = delete;
 	HydrusImporter( const std::filesystem::path& path );
 	~HydrusImporter();

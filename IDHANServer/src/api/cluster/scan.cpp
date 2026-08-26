@@ -6,11 +6,12 @@
 #include <vector>
 
 #include "Config.hpp"
-#include "MetadataModule.hpp"
+#include "MimeIDs.hpp"
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "core/files/mime.hpp"
 #include "crypto/SHA256.hpp"
 #include "fgl/size.hpp"
 #include "filesystem/filesystem.hpp"
@@ -20,12 +21,9 @@
 #include "jobs/JobContext.hpp"
 #include "logging/log.hpp"
 #include "metadata/metadata.hpp"
-#include "mime/FileInfo.hpp"
-#include "mime/guessExtension.hpp"
-#include "mime/prescan.hpp"
-#include "MimeIDs.hpp"
-#include "mime/refineMime.hpp"
-#include "modules/RemoteModule.hpp"
+#include "mime/identifyMime.hpp"
+#include "modules/CallInput.hpp"
+#include "records/records.hpp"
 #include "threading/ExpectedTask.hpp"
 #include "trantor/net/EventLoopThread.h"
 #include "trantor/net/EventLoopThreadPool.h"
@@ -540,11 +538,9 @@ ExpectedTask< SHA256 > ScanContext::checkSHA256() const
 
 ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 {
-	const auto search_result {
-		co_await db->execSqlCoro( "SELECT record_id FROM records WHERE sha256 = $1", m_sha256.toVec() )
-	};
+	const auto existing { co_await idhan::helpers::findRecord( m_sha256, db ) };
 
-	if ( search_result.empty() && m_params.adopt_orphans )
+	if ( !existing && m_params.adopt_orphans )
 	{
 		log::trace( "Hashing file at {} because it's never been seen before to verify the filename", m_path.string() );
 		m_params.verify_hash = true;
@@ -552,20 +548,14 @@ ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 		return_unexpected_error( verified_hash_result );
 		m_sha256 = *verified_hash_result;
 
-		const auto insert_result {
-			co_await db->execSqlCoro( "INSERT INTO records (sha256) VALUES ($1) RETURNING record_id", m_sha256.toVec() )
-		};
+		const auto new_record_id { co_await idhan::helpers::createRecord( m_sha256, db ) };
+		return_unexpected_error( new_record_id );
 
-		if ( insert_result.empty() )
-		{
-			co_return std::unexpected( createInternalError( "Failed to create a record for hash {}", m_sha256.hex() ) );
-		}
-
-		const auto new_record_id { insert_result[ 0 ][ 0 ].as< RecordID >() };
-		log::debug( "Created new record {} for orphan file {}", new_record_id, m_path.string() );
-		co_return new_record_id;
+		log::debug( "Created new record {} for orphan file {}", *new_record_id, m_path.string() );
+		co_return *new_record_id;
 	}
-	else if ( search_result.empty() )
+
+	if ( !existing )
 	{
 		log::trace( "No existing record found for {} and adopt_orphans is false", m_path.string() );
 		co_return std::unexpected( createInternalError(
@@ -574,7 +564,7 @@ ExpectedTask< RecordID > ScanContext::checkRecord( drogon::orm::DbClientPtr db )
 			m_path.string() ) );
 	}
 
-	const auto found_record_id { search_result[ 0 ][ 0 ].as< RecordID >() };
+	const auto found_record_id { *existing };
 	log::trace( "Found existing record {} for file {}", found_record_id, m_path.string() );
 	co_return found_record_id;
 }
@@ -728,12 +718,11 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 Task< bool > ScanContext::hasMime( DbClientPtr db )
 {
 	log::trace( "Checking if record {} has a mime", m_record_id );
-	const auto current_mime { co_await db->execSqlCoro(
-		"SELECT mime_id FROM file_info WHERE record_id = $1 AND mime_id IS NOT NULL", m_record_id ) };
+	const auto current_mime { co_await mime::lookupRecordMimeID( m_record_id, db ) };
 
-	if ( !current_mime.empty() && !current_mime[ 0 ][ "mime_id" ].isNull() )
+	if ( current_mime.mime_id )
 	{
-		m_mime_id = current_mime[ 0 ][ "mime_id" ].as< MimeID >();
+		m_mime_id = *current_mime.mime_id;
 		log::trace( "Found that record {} has mime id {}", m_record_id, m_mime_id );
 		co_return true;
 	}
@@ -745,8 +734,6 @@ Task< bool > ScanContext::hasMime( DbClientPtr db )
 ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 {
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
-	auto file_io { std::make_shared< FileIOUring >( m_path ) };
-
 	if ( !m_params.rescan_mime && co_await hasMime( db ) )
 	{
 		log::trace( "Skipping metadata scan because it already had metadata and rescan_mime was set to false" );
@@ -754,18 +741,16 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 	}
 
 	log::trace( "Starting mime scan for {} (Record {})", m_path.filename().string(), m_record_id );
-	const auto scanned_mime_id { co_await mime::prescanMime( mime::MimeReader { std::move( file_io ) } ) };
-	const auto generic_mime_id { mime::guessMimeFromExtension( scanned_mime_id, m_path.filename().string() ) };
+	const auto mime_id { co_await mime::identifyMimeForPath( m_path ) };
 	log::trace(
 		"Mime scan completed for {} (Record {}), result: {}",
 		m_path.filename().string(),
-		m_record_id,
-		generic_mime_id );
+		m_record_id, mime_id );
 
 	const auto mtime { filesystem::getLastWriteTime( m_path ) };
 	log::trace( "File mtime retrieved for {} (Record {}): {}", m_path.filename().string(), m_record_id, mtime );
 
-	if ( generic_mime_id == mime_ids::UNKNOWN )
+	if ( mime_id == mime_ids::UNKNOWN )
 	{
 		std::string extension_str { m_path.extension().string() };
 
@@ -789,26 +774,27 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 		co_return {};
 	}
 
-	log::trace(
-		"Detected mime id {} for file {} (Record {})", generic_mime_id, m_path.filename().string(), m_record_id );
+	log::trace( "Detected mime id {} for file {} (Record {})", mime_id, m_path.filename().string(), m_record_id );
 
-	m_mime_id = co_await mime::refineMimeIDForPath( generic_mime_id, m_path );
-	const auto refined_mime_id { m_mime_id };
+	m_mime_id = mime_id;
+	const auto specialized_mime_id { m_mime_id };
 
-	log::trace( "Upserting file_info for record {} with mime_id={}", m_record_id, refined_mime_id );
+	log::trace( "Upserting file_info for record {} with mime_id={}", m_record_id, specialized_mime_id );
 	co_await db->execSqlCoro(
 		"INSERT INTO file_info (record_id, size, mime_id, modified_time, cluster_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3",
 		m_record_id,
 		m_size,
-		refined_mime_id,
+		specialized_mime_id,
 		mtime,
 		m_cluster_id );
 
 	{
-		const auto mime_info { co_await db->execSqlCoro( "SELECT 1 FROM mime WHERE mime_id = $1", refined_mime_id ) };
+		const auto mime_info {
+			co_await db->execSqlCoro( "SELECT 1 FROM mime WHERE mime_id = $1", specialized_mime_id )
+		};
 		if ( mime_info.empty() )
 			co_return std::unexpected(
-				createInternalError( "When selecting mime id {} the DB returned zero rows", refined_mime_id ) );
+				createInternalError( "When selecting mime id {} the DB returned zero rows", specialized_mime_id ) );
 	}
 
 	co_return {};
@@ -838,48 +824,13 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		}
 	}
 
-	const std::shared_ptr< modules::RemoteModule > metadata_parser { co_await metadata::findBestParser( m_mime_id ) };
-
-	if ( !metadata_parser )
-	{
-		log::trace( "No metadata parser found for mime {} (Record {})", m_mime_id, m_record_id );
-		co_return std::unexpected( createInternalError(
-			"Unable to determine metadata parser for {}: No metadata parser for mime id {}", m_record_id, m_mime_id ) );
-	}
-
-	log::trace( "Found metadata parser for mime {} (Record {})", m_mime_id, m_record_id );
-
-	auto input_e { modules::CallInput::forPath( m_path ) };
-
-	if ( !input_e )
-	{
+	auto input { modules::CallInput::forPath( m_path ) };
+	if ( !input )
 		co_return std::unexpected(
-			createInternalError( "Failed to open file for record {}: {}", m_record_id, input_e.error() ) );
-	}
+			createInternalError( "Failed to open file for record {}: {}", m_record_id, input.error() ) );
 
-	const modules::RemoteCallData call_data {
-		.input = std::make_shared< const modules::CallInput >( std::move( *input_e ) ),
-		.mime_id = m_mime_id,
-		.extra = {},
-		.depth = 0
-	};
-	const auto metadata_e { co_await metadata_parser->parseFile( call_data ) };
-
-	if ( metadata_e )
-	{
-		log::trace( "Updating metadata for record {}", m_record_id );
-		co_await metadata::updateRecordMetadata( m_record_id, db, *metadata_e );
-		log::trace( "Metadata updated for record {}", m_record_id );
-	}
-	else
-	{
-		const ModuleError module_error { metadata_e.error() };
-		log::warn( "Metadata parser failed for record {}: {}", m_record_id, module_error );
-		co_return std::unexpected(
-			createInternalError( "Could not parse record {} using metadata parser: {}", m_record_id, module_error ) );
-	}
-
-	co_return {};
+	co_return co_await metadata::parseAndUpdateRecordMetadata(
+		m_record_id, m_mime_id, std::make_shared< const modules::CallInput >( std::move( *input ) ), db );
 }
 
 ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
@@ -889,12 +840,10 @@ ExpectedTask< void > ScanContext::checkExtension( DbClientPtr db )
 	auto getExtensionFromMimeID = [ & ]() -> drogon::Task< std::string >
 	{
 		log::trace( "Looking up extension from mime id {}", m_mime_id );
-		const auto result {
-			co_await db->execSqlCoro( "SELECT best_extension FROM mime WHERE mime_id = $1", m_mime_id )
-		};
+		const auto mime_info { co_await mime::findMime( m_mime_id, db ) };
 
-		if ( result.empty() ) co_return std::string {};
-		co_return result[ 0 ][ 0 ].as< std::string >();
+		if ( !mime_info ) co_return std::string {};
+		co_return mime_info->extension;
 	};
 
 	auto getExtensionFromRecord = [ & ]() -> drogon::Task< std::string >

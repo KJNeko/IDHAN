@@ -191,7 +191,7 @@ ApiResponse ApiClient::getWithKey( const std::string& path, const std::string& k
 	return send( drogon::Get, path, {}, nullptr, key );
 }
 
-ApiResponse ApiClient::postOctets( const std::string& path, const std::string_view body )
+ApiResponse ApiClient::postOctets( const std::string& path, const std::string_view body, const QueryParams& query )
 {
 	const auto request { drogon::HttpRequest::newHttpRequest() };
 
@@ -199,6 +199,7 @@ ApiResponse ApiClient::postOctets( const std::string& path, const std::string_vi
 	request->setPath( path );
 	request->setContentTypeCode( drogon::CT_APPLICATION_OCTET_STREAM );
 	request->setBody( std::string { body } );
+	for ( const auto& [ name, value ] : query ) request->setQueryParameter( name, value );
 
 	if ( !m_key.empty() ) request->addHeader( "X-API-Key", m_key );
 

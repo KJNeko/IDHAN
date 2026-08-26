@@ -94,7 +94,7 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getMetadat
 	if ( metadata.empty() )
 	{
 		log::warn( "Metadata missing for record {} Attempting to acquire metadata", record_id );
-		const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) };
+		const auto parse_result { co_await metadata::parseAndUpdateRecordMetadata( record_id, db ) };
 		if ( !parse_result ) co_return std::unexpected( parse_result.error() );
 
 		metadata = co_await db->execSqlCoro(

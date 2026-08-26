@@ -1,7 +1,7 @@
 #pragma once
 #include "MimeModule.hpp"
 
-//! Refines a zip container into a specific archive mime id.
+//! Specializes a zip container into a specific archive mime id.
 class ArchiveMimeParser : public idhan::MimeModuleI
 {
   public:

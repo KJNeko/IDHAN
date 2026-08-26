@@ -1,5 +1,6 @@
 #pragma once
 #include <expected>
+#include <memory>
 #include <vector>
 
 #include "IDHANTypes.hpp"
@@ -17,8 +18,9 @@ struct MetadataInfoArchive;
 
 namespace idhan::modules
 {
+class CallInput;
 class RemoteModule;
-}
+} // namespace idhan::modules
 
 namespace idhan::metadata
 {
@@ -33,14 +35,25 @@ struct RecordInfoBatch
 //!
 //! Nothing here fails: an unknown id lands in \c missing, a record with no file stops at its hash, an
 //! unparsed record is marked \c parsed:false, and a simple mime type with no table of its own keeps
-//! its basic fields. Parsing is never triggered; callers that want it call tryParseRecordMetadata first.
+//! its basic fields. Parsing is never triggered; callers that want it call parseAndUpdateRecordMetadata first.
 [[nodiscard]] drogon::Task< RecordInfoBatch > collectRecordInfo( std::vector< RecordID > record_ids, DbClientPtr db );
 
 [[nodiscard]] drogon::Task< std::shared_ptr< modules::RemoteModule > > findBestParser( MimeID mime_id );
 
-ExpectedTask< void > tryParseRecordMetadata( RecordID record_id, DbClientPtr db );
+ExpectedTask< void > parseAndUpdateRecordMetadata( RecordID record_id, DbClientPtr db );
+
+ExpectedTask< void > parseAndUpdateRecordMetadata(
+	RecordID record_id,
+	MimeID mime_id,
+	std::shared_ptr< const modules::CallInput > input,
+	DbClientPtr db );
 
 ExpectedTask< MetadataInfo > parseMetadata( RecordID record_id, DbClientPtr db );
+
+ExpectedTask< MetadataInfo > parseMetadata(
+	RecordID record_id,
+	MimeID mime_id,
+	std::shared_ptr< const modules::CallInput > input );
 
 ExpectedTask< void > updateRecordMetadata( RecordID record_id, DbClientPtr db, MetadataInfo metadata );
 
