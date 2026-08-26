@@ -2,7 +2,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include "IDHANClient.hpp"
-#include "TagCache.hpp"
 #include "logging/logger.hpp"
 
 namespace idhan
@@ -33,17 +32,7 @@ QFuture< std::vector< std::string > > IDHANClient::getTagText( const std::vector
 
 QFuture< std::string > IDHANClient::getTagText( const TagID tag_id )
 {
-	TagTextCache& cache { *m_tag_text_cache };
-	const auto cached_text { cache.get( tag_id ) };
-	if ( cached_text ) return QtFuture::makeReadyValueFuture( *cached_text );
-
-	return getTagInfo( tag_id ).then(
-		[ &cache ]( const TagInfo& info ) -> std::string
-		{
-			auto full_text = info.toStdString();
-			cache.put( info.m_id, full_text );
-			return full_text;
-		} );
+	return getTagInfo( tag_id ).then( []( const TagInfo& info ) { return info.toStdString(); } );
 }
 
 QFuture< std::vector< std::pair< TagID, std::string > > > IDHANClient::autocompleteTag( const QString& text )

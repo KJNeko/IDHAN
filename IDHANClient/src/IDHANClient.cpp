@@ -8,7 +8,6 @@
 
 #include <qtconcurrentrun.h>
 
-#include "idhan/TagCache.hpp"
 #include "logging/logger.hpp"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
@@ -104,9 +103,7 @@ IDHANClient::IDHANClient(
 	const QString& key,
 	const bool use_tls ) :
   m_logger( spdlog::stdout_color_mt( client_name.toStdString() ) ),
-  network( nullptr ),
-  m_tag_cache( std::make_unique< TagCache >() ),
-  m_tag_text_cache( std::make_unique< TagTextCache >() )
+  network( nullptr )
 {
 	if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
 
@@ -126,11 +123,6 @@ IDHANClient::IDHANClient(
 	logging::info( "Info logging enabled" );
 
 	openConnection( hostname, port, key, use_tls );
-}
-
-void IDHANClient::setTagCacheBudget( const std::size_t bytes )
-{
-	m_tag_cache->setBudget( bytes );
 }
 
 void IDHANClient::sendClientGet(
@@ -349,9 +341,6 @@ void IDHANClient::setAPIKey( const QString& key )
 void IDHANClient::openConnection( const QString& hostname, const qint16 port, const QString key, const bool use_tls )
 {
 	if ( hostname.isEmpty() ) throw std::runtime_error( "hostname must not be empty" );
-
-	m_tag_cache->clear();
-	m_tag_text_cache->clear();
 
 	m_url_template.setHost( hostname );
 	m_url_template.setPort( port );

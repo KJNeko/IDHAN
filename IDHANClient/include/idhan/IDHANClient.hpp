@@ -24,8 +24,6 @@ class logger;
 namespace idhan
 {
 class SHA256;
-class TagCache;
-class TagTextCache;
 
 //! Server build and API version information, as returned by IDHANClient::queryVersion().
 struct VersionInfo
@@ -73,10 +71,6 @@ class IDHANClient
 	using UrlVariant = std::variant< QString, QUrl >;
 
 	QString m_key {};
-
-	//! Caches resolved (namespace, subtag) -> TagID so repeated tags skip the server round-trip.
-	std::unique_ptr< TagCache > m_tag_cache;
-	std::unique_ptr< TagTextCache > m_tag_text_cache;
 
   public:
 
@@ -132,10 +126,6 @@ class IDHANClient
 
 	//! \return The server's build and API version information.
 	QFuture< VersionInfo > queryVersion();
-
-	//! Sets the byte budget of the client-side tag resolution cache, evicting immediately if the
-	//! cache is now over the new budget. Defaults to TAG_CACHE_DEFAULT_BUDGET_BYTES (1 GiB).
-	void setTagCacheBudget( std::size_t bytes );
 
 	//! Creates the given tags (creating any that don't exist) and returns their IDs, order-preserved.
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::string >& tags );
