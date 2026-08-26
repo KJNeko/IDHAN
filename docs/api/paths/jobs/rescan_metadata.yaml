@@ -21,7 +21,7 @@ post:
               type: array
               minItems: 1
               items:
-                type: integer
+                $ref: '../../schemas/RecordID.yaml'
               description: Records to rescan. Omit to rescan everything.
   responses:
     200:

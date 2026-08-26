@@ -86,9 +86,11 @@ post:
                 limit, tag count, duration, has audio, archive status,
                 embedded metadata (`has exif`, `has icc profile`,
                 `has embedded metadata`),
-                `nearby <record id> distance <bits>` for perceptual-hash
-                proximity, and so on) rather than a literal tag. Mutually
-                exclusive with `tag_ids`.
+                `nearby <record id> [distance <bits>]` for perceptual-hash
+                proximity, and so on) rather than a literal tag. The nearby
+                distance is optional, defaults to 0 (an exact perceptual-hash
+                match), and accepts values from 0 through 64 differing bits.
+                Mutually exclusive with `tag_ids`.
             tag_ids:
               type: array
               items:
