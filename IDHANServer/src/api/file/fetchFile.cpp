@@ -120,15 +120,6 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 	const auto path_e { co_await filesystem::getRecordPath( record_id, db ) };
 	if ( !path_e ) co_return path_e.error();
 
-	if ( !std::filesystem::exists( *path_e ) )
-	{
-		log::warn( "Expected file at location {} for record {} but no file was found", path_e->string(), record_id );
-		co_return createInternalError(
-			"File not found at expected location. Record ID: {}, Path: {}. This may indicate data corruption or file system issues.",
-			record_id,
-			path_e->string() );
-	}
-
 	const std::size_t file_size { std::filesystem::file_size( *path_e ) };
 
 	if ( request->isHead() )

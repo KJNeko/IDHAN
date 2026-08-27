@@ -14,12 +14,6 @@ ExpectedTask< FileIOUring > getIOForRecord( const RecordID record_id, DbClientPt
 	const auto path { co_await filesystem::getRecordPath( record_id, db ) };
 	return_unexpected_error( path );
 
-	if ( !std::filesystem::exists( *path ) )
-	{
-		co_return std::unexpected(
-			createInternalError( "Record {} does not exist at the expected path \'{}\'.", record_id, path->string() ) );
-	}
-
 	FileIOUring uring { *path };
 	co_return std::move( uring );
 }
@@ -28,12 +22,6 @@ ExpectedTask< std::shared_ptr< const modules::CallInput > > openRecordInput( con
 {
 	const auto path { co_await filesystem::getRecordPath( record_id, db ) };
 	return_unexpected_error( path );
-
-	if ( !std::filesystem::exists( *path ) )
-	{
-		co_return std::unexpected(
-			createInternalError( "Record {} does not exist at the expected path \'{}\'.", record_id, path->string() ) );
-	}
 
 	auto input { modules::CallInput::forPath( *path ) };
 

@@ -30,7 +30,19 @@ namespace idhan::filesystem
 //! `extension` may be empty or may include its leading dot.
 [[nodiscard]] std::filesystem::path getClusterRelativePath( const SHA256& sha256, std::string_view extension );
 
+//! Canonical path recorded for a record, without requiring a file to exist there.
+ExpectedTask< std::filesystem::path > getUncheckedRecordPath( RecordID record_id, DbClientPtr db );
+
+ExpectedTask< std::filesystem::path > getTheoreticalFilePath(
+	ClusterID cluster_id,
+	SHA256 sha256,
+	std::string extension );
+
+//! Canonical path for a stored record, guaranteed to be a regular file when returned.
 ExpectedTask< std::filesystem::path > getRecordPath( RecordID record_id, DbClientPtr db );
+
+//! Central reporting point for an expected stored file that is absent.
+Task<> reportMissingFile( RecordID record_id, const std::filesystem::path& expected_path, DbClientPtr db );
 
 ExpectedTask< FileIOUring > getIOForRecord( RecordID record_id, DbClientPtr db );
 
@@ -40,11 +52,6 @@ ExpectedTask< std::shared_ptr< const modules::CallInput > > openRecordInput( Rec
 [[nodiscard]] std::expected< std::size_t, std::string > clearThumbnailCache();
 
 ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );
-
-ExpectedTask< std::filesystem::path > getTheoreticalFilePath(
-	ClusterID cluster_id,
-	SHA256 sha256,
-	std::string extension );
 
 ExpectedTask< bool > checkFileExists( RecordID record_id, drogon::orm::DbClientPtr db );
 

@@ -376,7 +376,7 @@ function ClusterManagerPanel({ host }: PanelProps) {
             <div className="scan-modal-advanced">
               <span className="muted">Advanced</span>
               <div className="scan-modal-grid">
-                  {!scanTarget.readonly && scanCheck('remove_missing_files', 'Remove missing files')}
+                  {!scanTarget.readonly && scanCheck('remove_missing_files', 'Track missing files')}
                 {!scanTarget.readonly && scanCheck('readonly', 'Force read-only')}
               </div>
             </div>

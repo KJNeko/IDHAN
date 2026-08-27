@@ -113,7 +113,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 				const auto filepath { co_await filesystem::getRecordPath( *existing, db ) };
 
-				if ( filepath && std::filesystem::exists( *filepath ) )
+				if ( filepath )
 					co_return drogon::HttpResponse::newHttpJsonResponse(
 						createImportResponse( *existing, ImportStatus::Exists, row ) );
 			}
@@ -161,7 +161,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 			record_id, cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >() ) );
 	}
 
-	const auto filepath { co_await filesystem::getRecordPath( record_id, db ) };
+	const auto filepath { co_await filesystem::getUncheckedRecordPath( record_id, db ) };
 	const bool store_confirmed { filepath ? std::filesystem::exists( *filepath ) : false };
 
 	// Store when the record has never been stored or deleted, when a force import asks for it, or
