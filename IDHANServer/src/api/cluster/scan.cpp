@@ -39,7 +39,7 @@ struct ScanParams
 	bool rescan_metadata { false };
 	bool stop_on_fail { false };
 	bool adopt_orphans { false };
-	bool remove_missing_files { false };
+	bool track_missing_files { false };
 	bool fix_extensions { false };
 	bool force_readonly { false };
 	bool verify_hash { false };
@@ -66,7 +66,7 @@ static ScanParams extractScanParams( const drogon::HttpRequestPtr& request )
 
 	p.stop_on_fail = request->getOptionalParameter< bool >( "stop_on_fail" ).value_or( false );
 
-	p.remove_missing_files = request->getOptionalParameter< bool >( "remove_missing_files" ).value_or( false );
+	p.track_missing_files = request->getOptionalParameter< bool >( "remove_missing_files" ).value_or( false );
 	p.fix_extensions = request->getOptionalParameter< bool >( "fix_extensions" ).value_or( false );
 
 	p.scan_metadata |= p.adopt_orphans;
@@ -161,6 +161,90 @@ struct FolderScanTotals
 	std::size_t byte_size { 0 };
 	std::size_t file_count { 0 };
 };
+
+//! Checks every database-assigned file before directory enumeration can hand anything to a worker.
+static ExpectedTask< void > preflightExpectedFiles(
+	const ClusterID cluster_id,
+	const std::filesystem::path& cluster_path,
+	const ScanParams& scan_params,
+	DbClientPtr db )
+{
+	if ( !scan_params.track_missing_files ) co_return {};
+
+	std::error_code root_error {};
+	const auto root_status { std::filesystem::status( cluster_path, root_error ) };
+
+	if ( root_error )
+	{
+		co_return std::unexpected( createInternalError(
+			"Cannot access cluster {} root {}: {}", cluster_id, cluster_path.string(), root_error.message() ) );
+	}
+
+	if ( !std::filesystem::is_directory( root_status ) )
+	{
+		co_return std::unexpected(
+			createInternalError( "Cluster {} root is not a directory: {}", cluster_id, cluster_path.string() ) );
+	}
+
+	const auto rows { co_await db->execSqlCoro(
+		R"(SELECT fi.record_id, r.sha256, COALESCE(fi.extension, m.best_extension, '') AS extension
+		     FROM file_info fi
+		     JOIN records r USING (record_id)
+		     LEFT JOIN mime m USING (mime_id)
+		    WHERE fi.cluster_id = $1
+		    ORDER BY fi.record_id)",
+		cluster_id ) };
+
+	for ( const auto& row : rows )
+	{
+		const auto record_id { row[ "record_id" ].as< RecordID >() };
+		const auto sha256 { SHA256::fromPgCol( row[ "sha256" ] ) };
+		const auto extension { row[ "extension" ].as< std::string >() };
+		const auto relative_path { filesystem::getClusterRelativePath( sha256, extension ).lexically_normal() };
+
+		if ( relative_path.empty() || relative_path.is_absolute() || *relative_path.begin() == ".." )
+		{
+			co_return std::unexpected( createInternalError(
+				"Unsafe expected path for cluster {} record {}: {}", cluster_id, record_id, relative_path.string() ) );
+		}
+
+		const auto expected_path { cluster_path / relative_path };
+
+		std::error_code status_error {};
+		auto path_status { std::filesystem::status( expected_path, status_error ) };
+
+		if ( status_error == std::errc::no_such_file_or_directory )
+		{
+			status_error.clear();
+			path_status = std::filesystem::file_status { std::filesystem::file_type::not_found };
+		}
+
+		if ( status_error )
+		{
+			co_return std::unexpected( createInternalError(
+				"Cannot inspect expected path for cluster {} record {} at {}: {}",
+				cluster_id,
+				record_id,
+				expected_path.string(),
+				status_error.message() ) );
+		}
+
+		if ( std::filesystem::is_regular_file( path_status ) ) continue;
+
+		co_await filesystem::reportMissingFile( record_id, expected_path, db );
+
+		if ( scan_params.stop_on_fail )
+		{
+			co_return std::unexpected( createInternalError(
+				"Expected file for cluster {} record {} is missing at {}",
+				cluster_id,
+				record_id,
+				expected_path.string() ) );
+		}
+	}
+
+	co_return {};
+}
 
 //! Hands single files out to the scan workers, walking one folder at a time.
 class ScanWorkQueue
@@ -309,6 +393,10 @@ ExpectedTask< void > scanCluster(
 {
 	log::info( "Starting scan of cluster {} at path {}", cluster_id, cluster_path.string() );
 
+	const auto db { drogon::app().getDbClient() };
+	const auto preflight_result { co_await preflightExpectedFiles( cluster_id, cluster_path, scan_params, db ) };
+	return_unexpected_error( preflight_result );
+
 	const auto bad_dir { cluster_path / "bad" };
 
 	std::vector< std::filesystem::path > folders {};
@@ -378,7 +466,6 @@ ExpectedTask< void > scanCluster(
 		co_return std::unexpected( worker_error );
 	}
 
-	const auto db { drogon::app().getDbClient() };
 	co_await db->execSqlCoro(
 		"UPDATE file_clusters SET size_used = $1, file_count = $2 WHERE cluster_id = $3",
 		cluster_byte_size_total,
@@ -395,7 +482,7 @@ JobTask scanJob( const ClusterID cluster_id, const std::filesystem::path cluster
 
 	log::trace(
 		"Scan params: read_only={}, scan_mime={}, rescan_mime={}, scan_metadata={}, rescan_metadata={}, "
-		"stop_on_fail={}, adopt_orphans={}, fix_extensions={}, verify_hash={}, concurrency={}",
+		"stop_on_fail={}, adopt_orphans={}, track_missing_files={}, fix_extensions={}, verify_hash={}, concurrency={}",
 		scan_params.read_only,
 		scan_params.scan_mime,
 		scan_params.rescan_mime,
@@ -403,6 +490,7 @@ JobTask scanJob( const ClusterID cluster_id, const std::filesystem::path cluster
 		scan_params.rescan_metadata,
 		scan_params.stop_on_fail,
 		scan_params.adopt_orphans,
+		scan_params.track_missing_files,
 		scan_params.fix_extensions,
 		scan_params.verify_hash,
 		scan_params.concurrency );
