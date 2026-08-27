@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ffmpeg.hpp"
+#include "renderThreads.hpp"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -192,6 +193,10 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to copy codec params" ) );
 	}
+
+	// Left at the codec default (one pool per core) this multiplies by the worker's pool size.
+	if ( const auto threads { idhan::premade::renderThreads() }; threads > 0 )
+		codec_context->thread_count = static_cast< int >( threads );
 
 	if ( avcodec_open2( codec_context.get(), codec, nullptr ) < 0 )
 	{

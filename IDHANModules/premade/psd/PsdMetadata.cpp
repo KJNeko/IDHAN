@@ -28,7 +28,7 @@ idhan::ModuleVersion PsdMetadata::version()
 
 std::expected< idhan::MetadataInfo, idhan::ModuleError > PsdMetadata::parseFile( idhan::ModuleCallData& data )
 {
-	const auto contents { readWholeFile( data.file ) };
+	const auto contents { openWholeFile( data.file ) };
 	if ( !contents ) return std::unexpected( contents.error() );
 
 	const auto* bytes { contents->data() };

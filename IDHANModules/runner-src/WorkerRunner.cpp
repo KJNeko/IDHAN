@@ -735,7 +735,9 @@ void WorkerRunner::workerLoop( const std::stop_token& stop )
 			m_queue_ready.wait(
 				guard, [ this, &stop ] { return stop.stop_requested() || ( m_ready.load() && !m_queue.empty() ); } );
 
-			if ( m_queue.empty() ) continue;
+			// A stop can wake this before startup() finished; running a call then would reach a module
+			// that has not been brought up.
+			if ( !m_ready.load() || m_queue.empty() ) continue;
 
 			call = std::move( m_queue.front() );
 			m_queue.pop_front();

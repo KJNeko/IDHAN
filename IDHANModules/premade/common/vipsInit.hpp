@@ -8,6 +8,8 @@
 
 #include <format>
 
+#include "renderThreads.hpp"
+
 //! Shared libvips bring-up for the premade module libraries.
 namespace idhan::premade
 {
@@ -67,9 +69,14 @@ inline void vipsInit( const char* const name )
 		return;
 	}
 
-	vips_leak_set( TRUE );
 	vips_cache_set_max( 0 );
 	vips_cache_set_max_mem( 0 );
+
+	// vips sizes its pool per operation, so without this a worker running N calls at once asks for
+	// N * nproc threads.
+	if ( const auto threads { renderThreads() }; threads > 0 ) vips_concurrency_set( static_cast< int >( threads ) );
+
+	spdlog::debug( "VIPS: {} threads per operation", vips_concurrency_get() );
 }
 
 //! Tears libvips down. Called from a library's deinit().

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -11,9 +13,31 @@
 namespace psd
 {
 
-//! Reads a whole ModuleFile into memory.
-[[nodiscard]] std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile(
-	const idhan::ModuleFile& file );
+//! A whole PSD as one contiguous view, however it had to be obtained.
+/** Parsing a PSD is random access over the entire file, so it needs the bytes contiguous. When the
+ *  input already carries a mapping this borrows it; only when it does not is the file allocated and
+ *  copied. Do not outlive the ModuleFile it was opened from. */
+class FileContents
+{
+	//! Filled only on the copying path. Empty whenever m_borrowed has the bytes.
+	std::vector< std::uint8_t > m_owned {};
+	std::span< const std::uint8_t > m_borrowed {};
+
+  public:
+
+	FileContents() = default;
+
+	explicit FileContents( const std::span< const std::uint8_t > borrowed ) : m_borrowed( borrowed ) {}
+
+	explicit FileContents( std::vector< std::uint8_t > owned ) : m_owned( std::move( owned ) ) {}
+
+	[[nodiscard]] const std::uint8_t* data() const { return m_borrowed.empty() ? m_owned.data() : m_borrowed.data(); }
+
+	[[nodiscard]] std::size_t size() const { return m_borrowed.empty() ? m_owned.size() : m_borrowed.size(); }
+};
+
+//! Presents \p file as one contiguous view, copying it only if it does not already have one.
+[[nodiscard]] std::expected< FileContents, idhan::ModuleError > openWholeFile( const idhan::ModuleFile& file );
 
 //! Reads a big-endian uint16 from \p data (PSD files are big-endian). Reads 2 bytes.
 [[nodiscard]] std::uint16_t readUint16BE( const std::uint8_t* data );

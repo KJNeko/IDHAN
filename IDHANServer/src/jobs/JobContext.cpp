@@ -126,9 +126,17 @@ std::vector< std::shared_ptr< JobContext > > JobRuntime::getAllJobs()
 
 JobRuntime::JobRuntime() : m_pool( nullptr ), m_queue_mtx(), m_cv(), m_queue(), m_runner_thread(), m_cleanup_thread()
 {
+	const auto hardware { std::max( std::thread::hardware_concurrency(), 1u ) };
+
 	// 25% of the hardware threads are for jobs, with a min of 2
-	const auto job_thread_count { idhan::config::getSilentDefault< std::size_t >(
-		"server", "job_threads", std::max( std::thread::hardware_concurrency() / 4ul, 2ul ) ) };
+	auto job_thread_count { idhan::config::getSilentDefault< std::size_t >(
+		"server", "job_threads", std::max< std::size_t >( hardware / 4, 2 ) ) };
+
+	// Zero asks for the whole machine, as it does everywhere else. Taken literally it would build a
+	// pool with no loops in it, and getNextLoop() hands back nullptr.
+	if ( job_thread_count == 0 ) job_thread_count = hardware;
+
+	job_thread_count = std::max< std::size_t >( job_thread_count, 2 );
 
 	m_pool = std::make_unique< trantor::EventLoopThreadPool >( job_thread_count );
 	m_pool->start();

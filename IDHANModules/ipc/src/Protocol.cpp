@@ -130,6 +130,7 @@ Json::Value toJson( const ManifestEntry& entry )
 	json[ field::TYPE ] = static_cast< Json::UInt >( entry.type );
 	json[ field::VERSION ] = toJson( entry.version );
 	json[ field::THREAD_SAFE ] = entry.thread_safe;
+	json[ field::SINGLE_THREADED ] = entry.single_threaded;
 	json[ field::RESIDENCY ] = toWire( entry.residency );
 	json[ field::RSS_CEILING_MB ] = static_cast< Json::UInt64 >( entry.rss_ceiling_mb );
 
@@ -176,6 +177,14 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 	entry.version = moduleVersionFromJson( json[ field::VERSION ] );
 	entry.thread_safe = json[ field::THREAD_SAFE ].asBool();
 	entry.residency = *residency;
+
+	if ( json.isMember( field::SINGLE_THREADED ) )
+	{
+		if ( !json[ field::SINGLE_THREADED ].isBool() )
+			return std::unexpected( std::string { "manifest entry has a non-boolean single_threaded flag" } );
+
+		entry.single_threaded = json[ field::SINGLE_THREADED ].asBool();
+	}
 
 	constexpr ModuleType known_module_flags {
 		ModuleTypeFlags::METADATA | ModuleTypeFlags::THUMBNAILER | ModuleTypeFlags::GENERATOR
@@ -260,8 +269,9 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 		}
 
 		signature += std::format(
-			"|{}|{}|{}|{}|{}|{}",
+			"|{}|{}|{}|{}|{}|{}|{}",
 			entry.thread_safe,
+			entry.single_threaded,
 			toWire( entry.residency ),
 			entry.rss_ceiling_mb,
 			entry.model_name,

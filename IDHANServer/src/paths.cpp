@@ -174,15 +174,33 @@ std::filesystem::path getPluginsPath()
 	return plugins_path;
 }
 
-std::vector< std::size_t > getCacheableThumbnailSizes()
+//! Cached: every thumbnail cache miss asks, and each config read re-parses the config file.
+const std::vector< std::size_t >& getCacheableThumbnailSizes()
 {
-	return idhan::config::getArray< std::size_t >(
-		"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
+	static std::vector< std::size_t > sizes {};
+	static std::once_flag sizes_once {};
+
+	std::call_once(
+		sizes_once,
+		[]()
+		{
+			sizes = idhan::config::getArray< std::size_t >(
+				"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
+		} );
+
+	return sizes;
 }
 
+//! \copydoc getCacheableThumbnailSizes
 bool getThumbnailCachingEnabled()
 {
-	return idhan::config::getSilentDefault< bool >( "thumbnails", "cache", true );
+	static bool enabled { true };
+	static std::once_flag enabled_once {};
+
+	std::call_once(
+		enabled_once, []() { enabled = idhan::config::getSilentDefault< bool >( "thumbnails", "cache", true ); } );
+
+	return enabled;
 }
 
 bool getPurgeThumbnailsOnBoot()
