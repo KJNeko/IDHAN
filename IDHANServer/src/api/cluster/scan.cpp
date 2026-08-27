@@ -728,14 +728,21 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 {
 	log::trace( "Verifying that record {} is in the correct cluster", m_record_id );
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
-	const auto file_info {
-		co_await db->execSqlCoro( "SELECT cluster_id, modified_time FROM file_info WHERE record_id = $1", m_record_id )
-	};
+	const auto file_info { co_await db->execSqlCoro(
+		"SELECT cluster_id, modified_time, cluster_store_time FROM file_info WHERE record_id = $1", m_record_id ) };
 
 	if ( file_info.empty() )
 	{
 		log::trace( "No file_info entry found for record {} (first scan or new adopt)", m_record_id );
 		co_return {};
+	}
+
+	if ( file_info[ 0 ][ "cluster_store_time" ].isNull() )
+	{
+		log::trace( "cluster_store_time is null for record {}, updating", m_record_id );
+		co_await db->execSqlCoro(
+			"UPDATE file_info SET cluster_store_time = now() WHERE record_id = $1 AND cluster_store_time IS NULL",
+			m_record_id );
 	}
 
 	if ( file_info[ 0 ][ "modified_time" ].isNull() )
@@ -852,7 +859,7 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 		log::trace( "Inserting file_info for {} with extension override and NULL mime_id", m_record_id );
 		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, size, extension, modified_time, cluster_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL",
+			"INSERT INTO file_info (record_id, size, extension, modified_time, cluster_id, cluster_store_time) VALUES ($1, $2, $3, $4, $5, now()) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL, cluster_store_time = COALESCE(file_info.cluster_store_time, now())",
 			m_record_id,
 			m_size,
 			extension_str,
@@ -869,7 +876,7 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 	log::trace( "Upserting file_info for record {} with mime_id={}", m_record_id, specialized_mime_id );
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, size, mime_id, modified_time, cluster_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3",
+		"INSERT INTO file_info (record_id, size, mime_id, modified_time, cluster_id, cluster_store_time) VALUES ($1, $2, $3, $4, $5, now()) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3, cluster_store_time = COALESCE(file_info.cluster_store_time, now())",
 		m_record_id,
 		m_size,
 		specialized_mime_id,
