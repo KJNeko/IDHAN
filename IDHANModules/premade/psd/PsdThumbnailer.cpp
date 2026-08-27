@@ -31,7 +31,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > PsdThumbnailer::create
 	std::size_t width,
 	std::size_t height )
 {
-	const auto contents { readWholeFile( data.file ) };
+	const auto contents { openWholeFile( data.file ) };
 	if ( !contents ) return std::unexpected( contents.error() );
 
 	const auto* bytes { contents->data() };

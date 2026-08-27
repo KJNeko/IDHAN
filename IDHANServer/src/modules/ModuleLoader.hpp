@@ -20,6 +20,7 @@ struct ModuleDescriptor
 	ModuleType type { 0 };
 	ModuleVersion version {};
 	bool thread_safe { false };
+	bool single_threaded { true };
 	ModuleResidency residency { ModuleResidency::SINGLE_RUN };
 	std::vector< MimeID > mimes {};
 	std::string model_name {};

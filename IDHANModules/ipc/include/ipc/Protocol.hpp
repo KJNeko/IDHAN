@@ -51,6 +51,7 @@ inline constexpr auto MAJOR { "major" };
 inline constexpr auto MINOR { "minor" };
 inline constexpr auto PATCH { "patch" };
 inline constexpr auto THREAD_SAFE { "thread_safe" };
+inline constexpr auto SINGLE_THREADED { "single_threaded" };
 inline constexpr auto RESIDENCY { "residency" };
 inline constexpr auto RSS_CEILING_MB { "rss_ceiling_mb" };
 inline constexpr auto MIMES { "mimes" };
@@ -347,6 +348,10 @@ struct ManifestEntry
 	ModuleType type { 0 };
 	ModuleVersion version {};
 	bool thread_safe { false };
+	//! ModuleBase::singleThreaded(): the module runs one call on one thread and cannot spend a render
+	//! budget inside it. The host folds that budget into concurrency instead, but only when every
+	//! module in the library says so, since they share one worker process.
+	bool single_threaded { true };
 	ModuleResidency residency { ModuleResidency::SINGLE_RUN };
 	//! ModuleBase::rssCeilingMb(): the resident size this module needs to hold without being retired
 	//! for it. Zero means it has no opinion and the configured ceiling stands. The host takes the

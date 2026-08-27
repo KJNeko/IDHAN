@@ -17,6 +17,8 @@ class MemoryFile final : public ModuleFile
 
 	[[nodiscard]] std::size_t size() const override { return m_bytes.size(); }
 
+	[[nodiscard]] std::span< const std::byte > mapped() const override { return m_bytes; }
+
 	[[nodiscard]] std::expected< std::size_t, ModuleError > read(
 		const std::span< std::byte > out,
 		const std::size_t offset ) const override

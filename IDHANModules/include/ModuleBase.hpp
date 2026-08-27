@@ -110,6 +110,13 @@ class FGL_EXPORT ModuleBase
 
 	[[nodiscard]] virtual bool threadSafe() { return false; }
 
+	//! Whether one call to this module runs entirely on the thread that dispatched it.
+	/** True by default: a module that parallelises inside a call opts out of this, never into it.
+	 *  While it holds, there is nothing for a render budget to be spent on, so the host spends it on
+	 *  running more calls at once instead and the worker's thread count comes out the same. Only a
+	 *  library whose modules all agree is treated that way, since they share one process. */
+	[[nodiscard]] virtual bool singleThreaded() { return true; }
+
 	//! The interfaces this module implements, as an OR of ModuleTypeFlags.
 	[[nodiscard]] virtual ModuleType type() = 0;
 

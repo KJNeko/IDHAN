@@ -50,7 +50,7 @@ std::filesystem::path getStaticPath();
 std::filesystem::path getThumbnailsPath();
 
 //! Requests outside `[thumbnails] cacheable_sizes` are generated but not cached. Read live per miss.
-std::vector< std::size_t > getCacheableThumbnailSizes();
+const std::vector< std::size_t >& getCacheableThumbnailSizes();
 
 bool getThumbnailCachingEnabled();
 

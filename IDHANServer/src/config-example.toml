@@ -2,38 +2,63 @@
 #host = "localhost"
 #port = 5432
 #user = "idhan"
-#password = "your_password_here"
+#password = "idhan"
 #database = "idhan-db"
+# PostgreSQL schema the server puts on its search path.
+#schema = "public"
 
 [server]
-#host = "0.0.0.0"
 #port = 16609
-#threads = 4
+# HTTP event loop threads. Zero means every thread this machine has.
+#io_threads = 4
+#job_threads = 4
 #use_stdout = true
-#tmp_path = /tmp/idhan
+# Staging directory, Keep this on fast storage or in RAM.
+#temp_path = "/tmp/idhan"
+
+[host]
+# Set either to "" to disable that listener. Both use [server] port.
+#ipv4_listen = "127.0.0.1"
+#ipv6_listen = "::1"
+#use_tls = false
+# Required when use_tls is true.
+#server_cert_path = "./server.crt"
+#server_key_path = "./server.key"
 
 [logging]
 # Level: trace, debug, info, warn, error, or critical.
 level = "info"
 # Output directory.
 path = "./log"
+# Entries held in memory for the /log endpoint. Zero disables the endpoint.
+#buffer_size = 0
+# Logs a warning when a request outruns its performance threshold.
+#enable_perf_warnings = false
 
 [thumbnails]
 # Generated thumbnail cache directory.
 #path = "./thumbnails"
-# Enables the on-disk cache; read live without a restart.
+# Enables the on-disk cache. Read once at startup.
 #cache = true
 # Purges cached thumbnails at startup only; missing thumbnails regenerate on request.
 #purge_on_boot = false
-# Cacheable square edge lengths in pixels; other sizes are served but not cached. Read live.
+# Cacheable square edge lengths in pixels; other sizes are served but not cached. Read once at startup.
 #cacheable_sizes = [128, 256, 512]
 
 [modules]
 # IDHANModuleRunner path; auto-discovered beside the server, then on the install path.
 #runner_path = "/usr/bin/IDHANModuleRunner"
 
-# Threads per worker process; nested module calls require more than one.
-#pool_threads = 4
+# Unlike the server, module workers are rationed: left unset, pool_threads * render_threads comes to
+# a quarter of this machine's threads. Setting either one explicitly overrides that. Zero on either
+# means every thread this machine has.
+
+# Calls one worker process runs at once; nested module calls require more than one.
+pool_threads = 4
+
+# Number of threads each runner is allowed (Total count is pool_threads * render_threads)
+# If a module is marked as singlethreaded, it will instead turn these into pools, So you'll have pool_threads * render_thread pools instead.
+render_threads = 2
 
 # Worker RSS limit in MiB, checked when idle. This is a floor; larger module limits take precedence.
 #rss_limit_mb = 2048
@@ -51,6 +76,18 @@ path = "./log"
 # Seconds to wait at startup for a library description; timed-out libraries are skipped.
 #describe_timeout_sec = 10
 
+# Per-library overrides. The table name is the module file stem, and any of pool_threads,
+# render_threads, rss_limit_mb, idle_timeout_sec, heartbeat_interval_ms and liveness_grace_ms
+# may be set. Anything left out falls back to the [modules] value above.
+# Libraries: IDHANVips, IDHANFFmpeg, IDHANPsd, IDHANArchive, IDHANUgoira, IDHANEmbedding.
+#[modules.IDHANVips]
+#pool_threads = 8
+#render_threads = 2
+
+#[modules.IDHANFFmpeg]
+#pool_threads = 2
+#render_threads = 8
+
 [embeddings]
 # Model directory; each model subdirectory needs model.onnx and model.json.
 # Defaults beside IDHANModuleRunner; set this to override that location.
@@ -63,3 +100,7 @@ path = "./log"
 [cluster]
 # Concurrent files per cluster scan; overridable per request by "concurrency" and clamped to 1..64.
 #scan_concurrency = 4
+
+[parser.cbz]
+# Falls back to the .cbz extension when the archive's contents are inconclusive.
+#guess_with_extension = true

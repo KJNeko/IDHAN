@@ -77,6 +77,7 @@ std::expected< void, std::string > WorkerProcess::start()
 	if ( !wakeup ) return std::unexpected( std::format( "eventfd failed: {}", std::strerror( errno ) ) );
 
 	const auto pool_threads { std::to_string( m_settings.pool_threads ) };
+	const auto render_threads { std::to_string( m_settings.render_threads ) };
 	const auto heartbeat { std::to_string( m_settings.heartbeat_interval.count() ) };
 	const auto library { m_settings.library.string() };
 	const auto runner { m_settings.runner.string() };
@@ -145,6 +146,8 @@ std::expected< void, std::string > WorkerProcess::start()
 				child_fd.c_str(),
 				"--pool-threads",
 				pool_threads.c_str(),
+				"--render-threads",
+				render_threads.c_str(),
 				"--heartbeat-ms",
 				heartbeat.c_str(),
 				"--log-level",
@@ -310,7 +313,15 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 							m_settings.library.string() );
 				}
 
-				if ( !mismatch.empty() ) terminate( mismatch );
+				// terminate() settles the waiters itself, and does it against a worker already marked
+				// dead so nothing resumes and then dispatches onto stale module indexes.
+				if ( !mismatch.empty() )
+				{
+					terminate( mismatch );
+					return;
+				}
+
+				settleManifestWaiters();
 				m_manifest_ready.notify_all();
 
 				return;
@@ -446,6 +457,10 @@ void WorkerProcess::checkLiveness()
 void WorkerProcess::terminate( const std::string& reason, const Termination kind )
 {
 	if ( !m_alive.exchange( false ) ) return;
+
+	// Ordered so the notify comes after m_manifest_mutex has been taken and released: a waiter that
+	// read m_alive before it was cleared is holding that mutex, so it cannot miss the wake-up.
+	settleManifestWaiters();
 	m_manifest_ready.notify_all();
 
 	if ( kind == Termination::FAILURE )
@@ -513,39 +528,79 @@ std::expected< std::vector< ipc::ManifestEntry >, std::string > WorkerProcess::a
 			"worker for {} did not announce itself within {}ms", m_settings.library.string(), timeout.count() ) );
 }
 
+void WorkerProcess::settleManifestWaiters()
+{
+	std::vector< std::function< void() > > waiters {};
+	{
+		const std::lock_guard< std::mutex > guard { m_manifest_mutex };
+		waiters = std::move( m_manifest_waiters );
+		m_manifest_waiters.clear();
+	}
+
+	for ( const auto& waiter : waiters ) waiter();
+}
+
+bool WorkerProcess::addManifestWaiter( std::function< void() > waiter )
+{
+	const std::lock_guard< std::mutex > guard { m_manifest_mutex };
+
+	if ( m_manifest_seen || !m_alive.load() ) return false;
+
+	m_manifest_waiters.emplace_back( std::move( waiter ) );
+	return true;
+}
+
 IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > WorkerProcess::awaitManifestAsync(
 	const std::chrono::milliseconds timeout )
 {
 	using Manifest = std::expected< std::vector< ipc::ManifestEntry >, std::string >;
 
+	//! Parks on the IO thread's arrival notification plus a timer, whichever lands first.
 	struct Awaiter
 	{
 		std::shared_ptr< WorkerProcess > worker;
 		std::chrono::milliseconds timeout;
-		std::shared_ptr< Manifest > result;
 		trantor::EventLoop* loop;
 
-		[[nodiscard]] bool await_ready() const noexcept { return false; }
+		[[nodiscard]] bool await_ready() const noexcept { return worker->manifestSeen(); }
 
 		void await_suspend( const std::coroutine_handle<> continuation ) const
 		{
-			std::thread {
-				[ worker = worker, timeout = timeout, result = result, loop = loop, continuation ]
-				{
-					*result = worker->awaitManifest( timeout );
-					resumeOnLoop( continuation, loop );
-				}
-			}.detach();
+			// Both the notification and the timer fire; the flag decides which one owns the resume.
+			auto resumed { std::make_shared< std::atomic_flag >() };
+
+			auto resume = [ resumed, loop = loop, continuation ]
+			{
+				if ( resumed->test_and_set() ) return;
+				resumeOnLoop( continuation, loop );
+			};
+
+			if ( !worker->addManifestWaiter( resume ) )
+			{
+				resume();
+				return;
+			}
+
+			loop->runAfter( std::chrono::duration< double > { timeout }.count(), resume );
 		}
 
-		[[nodiscard]] Manifest await_resume() const { return std::move( *result ); }
+		[[nodiscard]] Manifest await_resume() const
+		{
+			if ( worker->manifestSeen() ) return worker->manifest();
+
+			if ( !worker->alive() )
+				return std::unexpected(
+					std::format( "worker for {} died before announcing itself", worker->m_settings.library.string() ) );
+
+			return std::unexpected(
+				std::format(
+					"worker for {} did not announce itself within {}ms",
+					worker->m_settings.library.string(),
+					timeout.count() ) );
+		}
 	};
 
-	auto result { std::make_shared< Manifest >( std::unexpected( std::string { "manifest wait did not run" } ) ) };
-	auto* const loop { resumptionLoop() };
-	co_return co_await Awaiter {
-		.worker = shared_from_this(), .timeout = timeout, .result = std::move( result ), .loop = loop
-	};
+	co_return co_await Awaiter { .worker = shared_from_this(), .timeout = timeout, .loop = resumptionLoop() };
 }
 
 std::expected< void, std::string > WorkerProcess::post( const Json::Value& body, const std::span< const int > fds )

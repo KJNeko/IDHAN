@@ -141,6 +141,7 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 				.type = module->type(),
 				.version = module->version(),
 				.thread_safe = module->threadSafe(),
+				.single_threaded = module->singleThreaded(),
 				.residency = module->residency(),
 				.rss_ceiling_mb = module->rssCeilingMb(),
 				.mimes = handleableMimesOf( module ),

@@ -253,13 +253,18 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	printCoreLocation();
 	log::trace( "printCoreLocation completed" );
 
-	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", 0 ) };
-	if ( config_threads == 0 )
-		config_threads = std::max( std::thread::hardware_concurrency(), 4u );
-	std::size_t hardware_count { std::max( config_threads, 2ul ) };
-	std::size_t io_threads { hardware_count };
+	// A configured zero asks for the whole machine. The server is not rationed the way the module
+	// workers are; four is simply where it starts.
+	constexpr std::size_t DEFAULT_IO_THREADS { 4 };
 
-	log::trace( "IO threads calculated: {}", io_threads );
+	std::size_t io_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", DEFAULT_IO_THREADS ) };
+
+	if ( io_threads == 0 )
+		io_threads = std::max( std::size_t { 1 }, static_cast< std::size_t >( std::thread::hardware_concurrency() ) );
+
+	// Below two, work that hops between loops has nowhere to hop to.
+	io_threads = std::max( io_threads, std::size_t { 2 } );
+
 	log::info( "IO Threads: {}", io_threads );
 
 	log::trace( "Configuring drogon app" );
@@ -424,7 +429,9 @@ void ServerContext::run()
 
 ServerContext::~ServerContext()
 {
-	const auto upload_path { config::getSilentDefault< std::string >( "temp", "path", "/tmp/idhan" ) };
+	// The same key setupTempPath() created it under. Reading a different one deleted /tmp/idhan and
+	// left the configured directory behind, marker file and all, which aborts the next boot.
+	const auto upload_path { config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" ) };
 	std::filesystem::remove_all( upload_path );
 }
 

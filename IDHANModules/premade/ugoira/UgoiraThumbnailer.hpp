@@ -18,6 +18,9 @@ class UgoiraThumbnailer : public idhan::ThumbnailerModuleI
 	// no shared state; every call owns its own vips objects
 	[[nodiscard]] bool threadSafe() override { return true; }
 
+	// every frame is decoded, scaled and joined through vips
+	[[nodiscard]] bool singleThreaded() override { return false; }
+
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
 	[[nodiscard]] std::size_t rssCeilingMb() override { return 512; }
