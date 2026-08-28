@@ -277,12 +277,40 @@ interface CompareInfoProps {
     active: boolean;
 }
 
+interface AgeMarker {
+    kind: 'older' | 'newer';
+    timestamp: string;
+}
+
+/** Exact UTC text for the server's Unix-microsecond timestamp. */
+function formatModifiedTime(timestamp: number): string {
+    const milliseconds = Math.trunc(timestamp / 1000);
+    const microseconds = Math.trunc(timestamp % 1_000_000);
+    const date = new Date(milliseconds);
+
+    return `${date.toISOString().slice(0, 19)}.${microseconds.toString().padStart(6, '0')} UTC`;
+}
+
+function ageMarker(metadata: RecordMetadata | undefined, other: RecordMetadata | undefined): AgeMarker | null {
+    if (metadata?.modified_time === undefined || other?.modified_time === undefined) return null;
+    if (metadata.modified_time === other.modified_time) return null;
+
+    return {
+        kind: metadata.modified_time < other.modified_time ? 'older' : 'newer',
+        timestamp: formatModifiedTime(metadata.modified_time),
+    };
+}
+
 /** The side-by-side facts a duplicate call is actually made on, embedded blocks first. */
 function CompareInfo({which, id, metadata, other, detail, pixelDuplicate, active}: CompareInfoProps) {
     const rows = infoRows(metadata, other);
     const embedded = embeddedBlocks(metadata);
-    // Losing the only copy of an EXIF or GPS block is the one mistake this view exists to prevent.
-    const onlySide = embedded.some((block) => !embeddedBlocks(other).includes(block));
+    const missingEmbedded = EMBEDDED_BLOCKS
+        .filter(({key}) => metadata?.[key] === false && other?.[key] === true)
+        .map(({label}) => label);
+    const age = ageMarker(metadata, other);
+    // Only an explicit false proves that the other side would lose the block; absent means unknown.
+    const onlySide = EMBEDDED_BLOCKS.some(({key}) => metadata?.[key] === true && other?.[key] === false);
 
     return (
         <div className={`file-relationship-side-info is-${which}${active ? ' is-shown' : ''}`}>
@@ -290,12 +318,23 @@ function CompareInfo({which, id, metadata, other, detail, pixelDuplicate, active
                 {which.toUpperCase()} · #{id}
             </h3>
             {pixelDuplicate && <p className="file-relationship-side-match">Pixel-for-pixel duplicate</p>}
+            {age && (
+                <p className={`file-relationship-side-age is-${age.kind}`}>
+                    <strong>{age.kind === 'older' ? 'Older' : 'Newer'}</strong>
+                    <time>{age.timestamp}</time>
+                </p>
+            )}
             {embedded.length > 0 && (
                 <p
-                    className={`file-relationship-side-embedded${onlySide ? ' is-only' : ''}`}
+                    className={`file-relationship-side-embedded is-norm${onlySide ? ' is-only' : ''}`}
                     title={onlySide ? 'The other copy does not carry all of these' : undefined}
                 >
                     Contains {embedded.join(', ')}
+                </p>
+            )}
+            {missingEmbedded.length > 0 && (
+                <p className="file-relationship-side-embedded is-anti">
+                    Does NOT contain {missingEmbedded.join(', ')}
                 </p>
             )}
             {detail && <p className="file-relationship-side-detail">{detail}</p>}
