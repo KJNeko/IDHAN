@@ -14,6 +14,14 @@ namespace idhan::helpers
 {
 constexpr UrlID INVALID_URL_ID { 0 };
 
+enum UrlType
+{
+	File,
+	Post,
+	Gallery,
+	Unknown
+};
+
 // Extracts the bare hostname from a URL string (strips protocol, path, port).
 [[nodiscard]] std::string extractDomain( const std::string& url );
 
