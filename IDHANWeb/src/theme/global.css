@@ -1026,6 +1026,45 @@ body {
     border-radius: 4px;
 }
 
+.file-relationship-side-embedded.is-anti {
+    color: #e17b7b;
+    background: rgb(225 123 123 / 0.1);
+    border-color: rgb(225 123 123 / 0.4);
+}
+
+.file-relationship-side-age {
+    display: grid;
+    gap: 0.1rem;
+    margin: 0 0 0.4rem;
+    padding: 0.2rem 0.35rem;
+    font-size: 0.64rem;
+    border: 1px solid;
+    border-radius: 4px;
+}
+
+.file-relationship-side-age strong {
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.file-relationship-side-age time {
+    color: var(--fg);
+    overflow-wrap: anywhere;
+}
+
+.file-relationship-side-age.is-older {
+    color: #7fd08a;
+    background: rgb(127 208 138 / 0.12);
+    border-color: rgb(127 208 138 / 0.4);
+}
+
+.file-relationship-side-age.is-newer {
+    color: #72a7ff;
+    background: rgb(114 167 255 / 0.1);
+    border-color: rgb(114 167 255 / 0.4);
+}
+
 .file-relationship-side-detail {
     margin: 0 0 0.4rem;
     color: var(--muted);

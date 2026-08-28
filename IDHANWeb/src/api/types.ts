@@ -85,6 +85,8 @@ export interface RecordMetadata {
     size?: number;
     mime?: string;
     extension?: string;
+    /** File modification time as Unix microseconds. */
+    modified_time?: number;
 
     /** False when no module has produced metadata for this record yet. */
     parsed?: boolean;
