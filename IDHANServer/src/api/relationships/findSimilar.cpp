@@ -66,13 +66,15 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::findSimilar(
 		probe,
 		record_id,
 		static_cast< Integer >( *distance ),
-		static_cast< Integer >( *limit ),
+		*limit + 1,
 		include_unrelated,
 		include_related ) };
 
+	const bool truncated { matches.size() > *limit };
 	Json::Value results { Json::arrayValue };
-	for ( const auto& row : matches )
+	for ( std::size_t index = 0; index < std::min< std::size_t >( matches.size(), *limit ); ++index )
 	{
+		const auto& row { matches[ index ] };
 		Json::Value match {};
 		match[ "record_id" ] = row[ "record_id" ].as< RecordID >();
 		match[ "distance" ] = row[ "distance" ].as< Integer >();
@@ -86,7 +88,7 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::findSimilar(
 	json[ "limit" ] = *limit;
 	json[ "include_unrelated" ] = include_unrelated;
 	json[ "include_related" ] = include_related;
-	json[ "truncated" ] = results.size() >= *limit;
+	json[ "truncated" ] = truncated;
 	json[ "results" ] = std::move( results );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );

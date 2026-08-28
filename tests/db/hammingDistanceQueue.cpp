@@ -63,7 +63,7 @@ SCENARIO_METHOD( HammingQueueSchema, "Gaining a perceptual hash queues a record 
 			CHECK_FALSE( queued( db(), unhashed ) );
 		}
 
-		WHEN( "a hash is written over the null, then replaced by a different one" )
+		WHEN( "a hash is written over the null, then replaced or cleared" )
 		{
 			drain( db() );
 
@@ -91,10 +91,23 @@ SCENARIO_METHOD( HammingQueueSchema, "Gaining a perceptual hash queues a record 
 				tx.commit();
 			}
 
-			THEN( "neither a replaced hash nor an unrelated column change queues anything" )
+			THEN( "the replaced hash is re-queued but an unrelated column change is ignored" )
 			{
-				CHECK_FALSE( queued( db(), unhashed ) );
+				CHECK( queued( db(), unhashed ) );
 				CHECK_FALSE( queued( db(), hashed ) );
+			}
+
+			drain( db() );
+
+			{
+				pqxx::work tx { db() };
+				tx.exec( "UPDATE image_metadata SET phash = NULL WHERE record_id = $1", pqxx::params { unhashed } );
+				tx.commit();
+			}
+
+			THEN( "clearing the hash is also queued so its old distances can be removed" )
+			{
+				CHECK( queued( db(), unhashed ) );
 			}
 		}
 	}

@@ -1,4 +1,7 @@
+#include <chrono>
 #include <format>
+#include <stdexcept>
+#include <thread>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -9,6 +12,22 @@ namespace idhan::test
 {
 namespace
 {
+
+Json::Value awaitJob( ApiClient& api, const JobID job_id )
+{
+	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds( 10 ) };
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		const auto response { api.get( std::format( "/jobs/{}/status", job_id ) ) };
+		if ( response.status != drogon::k200OK )
+			throw std::runtime_error( std::format( "Could not read metadata job status: {}", response.body ) );
+
+		if ( response.json[ "completed" ].asBool() ) return response.json;
+		std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+	}
+
+	throw std::runtime_error( std::format( "Metadata job {} timed out", job_id ) );
+}
 
 void seedImageMetadata( pqxx::connection& connection, const RecordID record_id, const bool with_phash )
 {
@@ -32,6 +51,28 @@ void seedImageMetadata( pqxx::connection& connection, const RecordID record_id, 
 }
 
 } // namespace
+
+SCENARIO_METHOD(
+	ServerFixture,
+	"Metadata rescan jobs fail when a requested record cannot be parsed",
+	"[api][metadata][jobs]" )
+{
+	const auto record_id { api().createRecord( 405 ) };
+	Json::Value body;
+	body[ "record_ids" ] = Json::Value { Json::arrayValue };
+	body[ "record_ids" ].append( record_id );
+
+	const auto dispatched { api().post( "/jobs/metadata/rescan", body ) };
+	REQUIRE( dispatched.status == drogon::k200OK );
+	REQUIRE( dispatched.json[ "job_id" ].isIntegral() );
+
+	const auto status { awaitJob( api(), dispatched.json[ "job_id" ].as< JobID >() ) };
+	CHECK( status[ "status" ].asString() == "failed" );
+	CHECK( status[ "error" ].asString().find( "1 of 1" ) != std::string::npos );
+	REQUIRE( status[ "response" ][ "failed_count" ].asUInt64() == 1 );
+	REQUIRE( status[ "response" ][ "failures" ].size() == 1 );
+	CHECK( status[ "response" ][ "failures" ][ 0 ][ "record_id" ].as< RecordID >() == record_id );
+}
 
 SCENARIO_METHOD( ServerFixture, "Image metadata APIs expose only present perceptual hashes", "[api][metadata][phash]" )
 {

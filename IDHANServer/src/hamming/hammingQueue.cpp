@@ -1,7 +1,9 @@
 #include <drogon/drogon.h>
 
 #include <atomic>
+#include <vector>
 
+#include "db/drogonArrayBind.hpp"
 #include "hamming.hpp"
 #include "logging/log.hpp"
 
@@ -12,15 +14,29 @@ static std::atomic< bool > sweep_running { false };
 
 drogon::Task< void > processQueueBatch( DbClientPtr db )
 {
-	const auto result { co_await db->execSqlCoro(
-		"WITH claimed AS ("
-		"  DELETE FROM hamming_distance_queue WHERE record_id IN ("
-		"    SELECT record_id FROM hamming_distance_queue ORDER BY record_id"
-		"    LIMIT $1::integer FOR UPDATE SKIP LOCKED)"
-		"  RETURNING record_id"
-		"), probes AS ("
-		"  SELECT image_metadata.record_id, image_metadata.phash FROM image_metadata"
-		"  JOIN claimed USING (record_id) WHERE image_metadata.phash IS NOT NULL"
+	const auto transaction { co_await db->newTransactionCoro() };
+	const auto claimed_rows { co_await transaction->execSqlCoro(
+		"DELETE FROM hamming_distance_queue WHERE record_id IN ("
+		"  SELECT record_id FROM hamming_distance_queue ORDER BY record_id"
+		"  LIMIT $1::integer FOR UPDATE SKIP LOCKED)"
+		"RETURNING record_id",
+		QUEUE_BATCH_SIZE ) };
+
+	if ( claimed_rows.empty() ) co_return;
+
+	std::vector< RecordID > claimed {};
+	claimed.reserve( claimed_rows.size() );
+	for ( const auto& row : claimed_rows ) claimed.emplace_back( row[ "record_id" ].as< RecordID >() );
+	const auto claimed_count { claimed.size() };
+
+	co_await transaction->execSqlCoro(
+		"DELETE FROM hamming_distance WHERE left_id = ANY($1) OR right_id = ANY($1)",
+		std::vector< RecordID > { claimed } );
+
+	const auto result { co_await transaction->execSqlCoro(
+		"WITH probes AS ("
+		"  SELECT record_id, phash FROM image_metadata"
+		"  WHERE record_id = ANY($1) AND phash IS NOT NULL"
 		"), pairs AS ("
 		"  SELECT DISTINCT ON (left_id, right_id) left_id, right_id, distance FROM ("
 		"    SELECT LEAST(probes.record_id, other.record_id) AS left_id,"
@@ -35,19 +51,16 @@ drogon::Task< void > processQueueBatch( DbClientPtr db )
 		"  SELECT left_id, right_id, distance FROM pairs"
 		"  ON CONFLICT (left_id, right_id) DO UPDATE SET distance = excluded.distance"
 		"  RETURNING 1"
-		") SELECT (SELECT count(*) FROM claimed) AS claimed, (SELECT count(*) FROM stored) AS stored,"
-		"  (SELECT count(*) FROM hamming_distance_queue) - (SELECT count(*) FROM claimed) AS remaining",
-		QUEUE_BATCH_SIZE,
+		") SELECT (SELECT count(*) FROM stored) AS stored,"
+		"  (SELECT count(*) FROM hamming_distance_queue) AS remaining",
+		std::move( claimed ),
 		MAX_DISTANCE ) };
 
 	if ( result.empty() ) co_return;
 
-	const auto claimed { result[ 0 ][ "claimed" ].as< std::int64_t >() };
-	if ( claimed == 0 ) co_return;
-
 	log::debug(
 		"Computed hamming distances for {} record(s), storing {} pair(s), {} record(s) left to process",
-		claimed,
+		claimed_count,
 		result[ 0 ][ "stored" ].as< std::int64_t >(),
 		result[ 0 ][ "remaining" ].as< std::int64_t >() );
 

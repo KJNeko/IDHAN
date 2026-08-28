@@ -60,6 +60,15 @@ static bool queueDrained( pqxx::connection& connection )
 	return tx.query_value< bool >( "SELECT NOT EXISTS (SELECT 1 FROM hamming_distance_queue)" );
 }
 
+static Distances awaitQueueDrain( pqxx::connection& connection )
+{
+	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds( 40 ) };
+	while ( !queueDrained( connection ) && std::chrono::steady_clock::now() < deadline )
+		std::this_thread::sleep_for( std::chrono::milliseconds( 250 ) );
+
+	return storedDistances( connection );
+}
+
 SCENARIO_METHOD( ServerFixture, "The server stores hamming distances for newly hashed records", "[api][phash]" )
 {
 	GIVEN( "records whose perceptual hashes sit at known distances apart" )
@@ -100,6 +109,42 @@ SCENARIO_METHOD( ServerFixture, "The server stores hamming distances for newly h
 			THEN( "the queue is drained" )
 			{
 				CHECK( queueDrained( db() ) );
+			}
+
+			AND_WHEN( "a previously near hash changes beyond the stored distance" )
+			{
+				{
+					pqxx::work tx { db() };
+					tx.exec(
+						"UPDATE image_metadata SET phash = 'xf0f0f0f0f0f0f0f0' WHERE record_id = $1",
+						pqxx::params { one_bit } );
+					tx.commit();
+				}
+
+				const auto recomputed { awaitQueueDrain( db() ) };
+
+				THEN( "every obsolete pair touching it is removed" )
+				{
+					REQUIRE( recomputed.size() == 1 );
+					CHECK( recomputed.at( { std::min( base, eight_bits ), std::max( base, eight_bits ) } ) == 8 );
+				}
+
+				AND_WHEN( "that hash is cleared" )
+				{
+					{
+						pqxx::work tx { db() };
+						tx.exec(
+							"UPDATE image_metadata SET phash = NULL WHERE record_id = $1", pqxx::params { one_bit } );
+						tx.commit();
+					}
+
+					const auto after_clear { awaitQueueDrain( db() ) };
+
+					THEN( "no stale pair for the unhashed record remains" )
+					{
+						CHECK( after_clear == recomputed );
+					}
+				}
 			}
 		}
 	}
