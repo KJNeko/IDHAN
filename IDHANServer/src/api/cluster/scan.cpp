@@ -105,7 +105,6 @@ class ScanContext
 	//! Returns true if the duplicate file at m_path was deleted (record already stored correctly
 	//! in found_cluster_id). The caller must not touch m_path any further in that case.
 	[[nodiscard]] ExpectedTask< bool > cleanupDoubleClusters( ClusterID found_cluster_id, DbClientPtr db );
-	[[nodiscard]] Task<> updateFileModifiedTime( DbClientPtr db );
 	[[nodiscard]] ExpectedTask< void > checkCluster( DbClientPtr db );
 	[[nodiscard]] Task< bool > hasMime( DbClientPtr db );
 	[[nodiscard]] ExpectedTask< void > scanMime( DbClientPtr db );
@@ -715,21 +714,6 @@ ExpectedTask< bool > ScanContext::cleanupDoubleClusters( const ClusterID found_c
 	co_return false;
 }
 
-Task<> ScanContext::updateFileModifiedTime( DbClientPtr db )
-{
-	const auto modified_time { filesystem::getLastWriteTime( m_path ) };
-	const auto modified_time_us {
-		std::chrono::duration_cast< std::chrono::microseconds >( modified_time.time_since_epoch() ).count()
-	};
-
-	log::trace( "mtime is {}", format_ns::format( "{:%F %T}", modified_time ) );
-
-	co_await db->execSqlCoro(
-		"UPDATE file_info SET modified_time = TIMESTAMP 'epoch' + $1::bigint * INTERVAL '1 microsecond' WHERE record_id = $2",
-		modified_time_us,
-		m_record_id );
-}
-
 ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 {
 	log::trace( "Verifying that record {} is in the correct cluster", m_record_id );
@@ -754,7 +738,7 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 	if ( file_info[ 0 ][ "modified_time" ].isNull() )
 	{
 		log::trace( "modified_time is null for record {}, updating", m_record_id );
-		co_await updateFileModifiedTime( db );
+		co_await filesystem::updateRecordModifiedTime( m_record_id, m_path, db );
 	}
 
 	const auto found_cluster_id { file_info[ 0 ][ 0 ].as< ClusterID >() };
@@ -932,7 +916,7 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		}
 	}
 
-	co_await updateFileModifiedTime( db );
+	co_await filesystem::updateRecordModifiedTime( m_record_id, m_path, db );
 
 	auto input { modules::CallInput::forPath( m_path ) };
 	if ( !input )

@@ -19,6 +19,7 @@ static const Json::StaticString KEY_SHA256 { "sha256" };
 static const Json::StaticString KEY_SIZE { "size" };
 static const Json::StaticString KEY_MIME { "mime" };
 static const Json::StaticString KEY_EXTENSION { "extension" };
+static const Json::StaticString KEY_MODIFIED_TIME { "modified_time" };
 static const Json::StaticString KEY_PARSED { "parsed" };
 static const Json::StaticString KEY_SIMPLE_TYPE { "simple_type" };
 static const Json::StaticString KEY_EXTRA { "extra" };
@@ -99,6 +100,8 @@ static void addBaseFields( Json::Value& entry, const drogon::orm::Row& row, cons
 		entry[ KEY_SIZE ] = row[ "size" ].as< std::size_t >();
 		entry[ KEY_MIME ] = row[ "name" ].as< std::string >();
 		entry[ KEY_EXTENSION ] = row[ "best_extension" ].as< std::string >();
+		if ( !row[ "modified_time" ].isNull() )
+			entry[ KEY_MODIFIED_TIME ] = row[ "modified_time" ].as< std::int64_t >();
 	}
 }
 
@@ -225,6 +228,7 @@ drogon::Task< RecordInfoBatch > collectRecordInfo( std::vector< RecordID > recor
 
 	const auto base { co_await db->execSqlCoro(
 		"SELECT r.record_id, r.sha256, fi.size, fi.mime_id, m.name, m.best_extension, "
+		"(EXTRACT(EPOCH FROM fi.modified_time) * 1000000)::BIGINT AS modified_time, "
 		"md.simple_mime_type, md.json "
 		"FROM records r "
 		"LEFT JOIN file_info fi ON fi.record_id = r.record_id "
