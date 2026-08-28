@@ -46,7 +46,7 @@ const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
 
 } // namespace
 
-TEST_CASE( "Hydrus perceptual hash golden image", "[phash][modules]" )
+TEST_CASE( "Average hash golden image", "[phash][modules]" )
 {
 	REQUIRE( VIPS_STATUS == 0 );
 	VipsImagePtr image { vips_image_new_from_file( IDHAN_SOURCE_DIR "/3rd-party/hydrus/static/hydrus.png", nullptr ) };
@@ -55,7 +55,7 @@ TEST_CASE( "Hydrus perceptual hash golden image", "[phash][modules]" )
 	const auto generated { generatePerceptualHash( image.get() ) };
 	REQUIRE( generated );
 	REQUIRE( *generated );
-	CHECK( hex( **generated ) == "b44dc7b24dcb381c" );
+	CHECK( hex( **generated ) == "fee7c3c3c3c3e766" );
 }
 
 TEST_CASE( "Perceptual hash accepts supported pixel layouts and filters blanks", "[phash][modules]" )
@@ -74,7 +74,7 @@ TEST_CASE( "Perceptual hash accepts supported pixel layouts and filters blanks",
 	}
 }
 
-TEST_CASE( "Perceptual hash matches Hydrus when enlarging a small image", "[phash][modules]" )
+TEST_CASE( "Average hash enlarges a small image", "[phash][modules]" )
 {
 	REQUIRE( VIPS_STATUS == 0 );
 	std::vector< std::uint8_t > pixels( 8 * 8 * 3 );
@@ -92,10 +92,10 @@ TEST_CASE( "Perceptual hash matches Hydrus when enlarging a small image", "[phas
 	const auto generated { generatePerceptualHash( image.get() ) };
 	REQUIRE( generated );
 	REQUIRE( *generated );
-	CHECK( hex( **generated ) == "8d2b156e9b11ee91" );
+	CHECK( hex( **generated ) == "01030f7ffff1020e" );
 }
 
-TEST_CASE( "Perceptual hash matches Hydrus alpha compositing", "[phash][modules]" )
+TEST_CASE( "Average hash composites alpha onto white", "[phash][modules]" )
 {
 	REQUIRE( VIPS_STATUS == 0 );
 	constexpr int WIDTH { 300 };
@@ -116,7 +116,23 @@ TEST_CASE( "Perceptual hash matches Hydrus alpha compositing", "[phash][modules]
 	const auto generated { generatePerceptualHash( image.get() ) };
 	REQUIRE( generated );
 	REQUIRE( *generated );
-	CHECK( hex( **generated ) == "b51d256f201d2de5" );
+	CHECK( hex( **generated ) == "af7ff7affaf77bd6" );
+}
+
+TEST_CASE( "Perceptual hash bounds materialization for extreme dimensions", "[phash][modules][memory]" )
+{
+	REQUIRE( VIPS_STATUS == 0 );
+	VipsImage* image_raw { nullptr };
+	REQUIRE( vips_black( &image_raw, 20'000, 20'000, "bands", 4, nullptr ) == 0 );
+	VipsImagePtr image { image_raw };
+
+	const auto highwater_before { vips_tracked_get_mem_highwater() };
+	const auto generated { generatePerceptualHash( image.get() ) };
+	const auto highwater_after { vips_tracked_get_mem_highwater() };
+
+	REQUIRE( generated );
+	CHECK_FALSE( *generated );
+	CHECK( highwater_after <= highwater_before + 256 * 1024 * 1024 );
 }
 
 TEST_CASE( "Perceptual hash MIME eligibility is static-image only", "[phash][modules]" )

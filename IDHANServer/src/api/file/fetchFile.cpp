@@ -15,9 +15,27 @@ namespace idhan::api
 
 //! Names the response after the record's hash. Without it a browser saves whatever the URL's last
 //! segment was, which is "file" for every record in the collection.
-static void addFileName( const drogon::HttpResponsePtr& response, const std::filesystem::path& path )
+static std::string safeFileName( const std::filesystem::path& path )
 {
-	response->addHeader( "Content-Disposition", std::format( "inline; filename=\"{}\"", path.filename().string() ) );
+	std::string filename { path.filename().string() };
+	for ( char& character : filename )
+	{
+		const auto byte { static_cast< unsigned char >( character ) };
+		const bool alphanumeric {
+			( byte >= 'a' && byte <= 'z' ) || ( byte >= 'A' && byte <= 'Z' ) || ( byte >= '0' && byte <= '9' )
+		};
+		if ( !alphanumeric && character != '.' && character != '-' && character != '_' ) character = '_';
+	}
+	return filename;
+}
+
+static void addFileName(
+	const drogon::HttpResponsePtr& response,
+	const std::filesystem::path& path,
+	const std::string_view disposition = "inline" )
+{
+	response->addHeader(
+		"Content-Disposition", std::format( "{}; filename=\"{}\"", disposition, safeFileName( path ) ) );
 }
 
 drogon::Task< drogon::HttpResponsePtr > createHttpHeadForFile(
@@ -144,7 +162,8 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchFile( drogon::HttpReques
 
 	if ( request->getOptionalParameter< bool >( "download" ).value_or( false ) )
 	{
-		const auto response { drogon::HttpResponse::newFileResponse( path_e->string(), path_e->filename().string() ) };
+		const auto response { drogon::HttpResponse::newFileResponse( path_e->string() ) };
+		addFileName( response, *path_e, "attachment" );
 		// Same content-addressed bytes as the inline response, so it is safe to cache immutably.
 		helpers::addFileCacheHeader( response );
 		co_return response;

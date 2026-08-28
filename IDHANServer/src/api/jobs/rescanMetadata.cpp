@@ -1,4 +1,8 @@
 #include "IDHANTypes.hpp"
+
+#include <format>
+#include <stdexcept>
+
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
@@ -22,22 +26,34 @@ JobTask rescanMetadataJobTask( std::vector< RecordID > record_ids )
 	}
 
 	std::size_t count { 0 };
-	std::size_t failed { 0 };
+	Json::Value failures { Json::arrayValue };
 	for ( const auto record_id : record_ids )
 	{
 		const auto parsed { co_await metadata::parseAndUpdateRecordMetadata( record_id, db ) };
 		if ( parsed )
+		{
 			++count;
-		else
-			++failed;
+			continue;
+		}
+
+		Json::Value failure;
+		failure[ "record_id" ] = record_id;
+		failure[ "error" ] = std::string { parsed.error()->getBody() };
+		failures.append( std::move( failure ) );
 	}
 
+	const auto failed { failures.size() };
 	log::info( "Finished scanning metadata for {} records ({} failed)", count, failed );
 
 	Json::Value result;
 	result[ "scanned_count" ] = static_cast< Json::UInt64 >( count );
 	result[ "failed_count" ] = static_cast< Json::UInt64 >( failed );
+	result[ "failures" ] = std::move( failures );
 	co_await setJobResponse( result );
+
+	if ( failed != 0 )
+		throw std::runtime_error(
+			std::format( "Metadata parsing failed for {} of {} record(s)", failed, count + failed ) );
 }
 
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::rescanMetadata( drogon::HttpRequestPtr request )

@@ -23,5 +23,7 @@ CREATE TRIGGER trg_queue_hamming_distance_update
     AFTER UPDATE OF phash
     ON image_metadata
     FOR EACH ROW
-    WHEN (old.phash IS NULL AND new.phash IS NOT NULL)
+    -- Record bytes are immutable, so a correctly generated perceptual hash should never change.
+    -- Still queue every actual change so repairs and parser changes cannot leave stale distances.
+    WHEN (old.phash IS DISTINCT FROM new.phash)
 EXECUTE FUNCTION queue_hamming_distance();

@@ -47,9 +47,8 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 
 	if ( VIPS_STATIC_IMAGE_MIMES.contains( data.mime_id ) )
 	{
-		auto phash { generatePerceptualHash( image.get() ) };
-		if ( phash )
-			image_info.phash = std::move( *phash );
+		if ( auto phash { generatePerceptualHash( image.get() ) } )
+			image_info.phash = *phash;
 		else
 			spdlog::warn( "Failed to generate perceptual hash: {}", phash.error() );
 	}

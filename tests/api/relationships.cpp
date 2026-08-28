@@ -269,6 +269,18 @@ SCENARIO_METHOD( ServerFixture, "Similar records are found by perceptual hash di
 			}
 		}
 
+		WHEN( "the number of matches is exactly the limit" )
+		{
+			const auto response { similar( probe, "?distance=1&limit=1" ) };
+
+			THEN( "the complete result is not reported as truncated" )
+			{
+				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.json[ "results" ].size() == 1 );
+				CHECK_FALSE( response.json[ "truncated" ].asBool() );
+			}
+		}
+
 		WHEN( "the request cannot be answered" )
 		{
 			THEN( "each failure is reported distinctly" )
