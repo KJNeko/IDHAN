@@ -68,4 +68,8 @@ ExpectedTask< FileState > validateFile( RecordID record_id, drogon::orm::DbClien
 
 [[nodiscard]] std::chrono::system_clock::time_point getLastWriteTime( const std::filesystem::path& path );
 
+Task<> updateRecordModifiedTime( RecordID record_id, const std::filesystem::path& path, DbClientPtr db );
+
+ExpectedTask< void > updateRecordModifiedTime( RecordID record_id, DbClientPtr db );
+
 } // namespace idhan::filesystem
