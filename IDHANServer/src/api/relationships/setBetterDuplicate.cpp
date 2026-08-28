@@ -55,12 +55,6 @@ drogon::Task< drogon::HttpResponsePtr > insertDuplicatePairs(
 		}
 		catch ( const std::exception& e )
 		{
-			const std::string_view what { e.what() };
-			if ( what.find( "already inserted worse record" ) != std::string_view::npos
-			     || what.find( "would result in a cyclic chain" ) != std::string_view::npos )
-				co_return createConflict(
-					"Failed to set record {} as a worse duplicate of {}: {}", worse_id, better_id, e.what() );
-
 			co_return createInternalError(
 				"Failed to set record {} as a worse duplicate of {}: {}", worse_id, better_id, e.what() );
 		}

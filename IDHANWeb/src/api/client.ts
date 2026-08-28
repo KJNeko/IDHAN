@@ -138,7 +138,7 @@ export const api = {
         return request<FileRelationships>(`/relationships/${recordId}`, {signal});
     },
 
-    /** Marks `betterId` as the superior copy of `worseId` (POST /relationships/duplicates/add). */
+    /** Makes `betterId` king of the duplicate group containing both records. */
     setBetterDuplicate(worseId: number, betterId: number, signal?: AbortSignal): Promise<void> {
         return request<void>('/relationships/duplicates/add', {
             method: 'POST',
