@@ -82,15 +82,13 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::generate( drogon::HttpRequ
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto rows { co_await db->execSqlCoro(
-		"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+	const auto model { co_await embeddings::findEmbeddingModel( model_name, db ) };
 
-	if ( rows.empty() ) co_return createNotFound( "The model \"{}\" is not registered in the database", model_name );
+	if ( !model ) co_return createNotFound( "The model \"{}\" is not registered in the database", model_name );
 
-	const auto model_id { rows[ 0 ][ "model_id" ].as< std::int32_t >() };
+	const auto model_id { model->id };
 
-	if ( const auto stored { rows[ 0 ][ "model_dimensions" ].as< std::int32_t >() };
-	     stored != static_cast< std::int32_t >( module->dimensions() ) )
+	if ( const auto stored { model->dimensions }; stored != static_cast< std::int32_t >( module->dimensions() ) )
 		co_return createConflict(
 			"Model \"{}\" is registered with {} dimensions but the loaded module produces {}",
 			model_name,
@@ -132,13 +130,12 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::search( drogon::HttpReques
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto rows { co_await db->execSqlCoro(
-		"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+	const auto model { co_await embeddings::findEmbeddingModel( model_name, db ) };
 
-	if ( rows.empty() ) co_return createNotFound( "The model \"{}\" is not registered", model_name );
+	if ( !model ) co_return createNotFound( "The model \"{}\" is not registered", model_name );
 
-	const auto model_id { rows[ 0 ][ "model_id" ].as< std::int32_t >() };
-	const auto dimensions { static_cast< std::size_t >( rows[ 0 ][ "model_dimensions" ].as< std::int32_t >() ) };
+	const auto model_id { model->id };
+	const auto dimensions { static_cast< std::size_t >( model->dimensions ) };
 
 	const auto limit {
 		( *json )[ "limit" ].isIntegral() && ( *json )[ "limit" ].asInt64() > 0 ?
@@ -242,13 +239,12 @@ drogon::Task< drogon::HttpResponsePtr > EmbeddingAPI::compare( drogon::HttpReque
 
 	auto db { drogon::app().getDbClient() };
 
-	const auto rows { co_await db->execSqlCoro(
-		"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+	const auto model { co_await embeddings::findEmbeddingModel( model_name, db ) };
 
-	if ( rows.empty() ) co_return createNotFound( "The model \"{}\" is not registered", model_name );
+	if ( !model ) co_return createNotFound( "The model \"{}\" is not registered", model_name );
 
-	const auto model_id { rows[ 0 ][ "model_id" ].as< std::int32_t >() };
-	const auto dimensions { static_cast< std::size_t >( rows[ 0 ][ "model_dimensions" ].as< std::int32_t >() ) };
+	const auto model_id { model->id };
+	const auto dimensions { static_cast< std::size_t >( model->dimensions ) };
 
 	const auto has_text_term { std::ranges::any_of( terms, []( const auto& term ) { return term.m_is_text; } ) };
 

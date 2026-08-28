@@ -45,14 +45,17 @@ drogon::Task< MetadataInfo > getMetadata( [[maybe_unused]] const RecordID record
 				// metadata_info_archive.m_size = archive_metadata_info[0][""];
 
 				const auto archive_metadata_groups { co_await db->execSqlCoro(
-					"SELECT sha256 FROM archive_map JOIN records USING (record_id) WHERE archive_id = $1",
+					"SELECT sha256, path FROM archive_map JOIN records USING (record_id) WHERE archive_id = $1",
 					archive_metadata_info[ 0 ][ "archive_id" ].as< ArchiveID >() ) };
 
 				for ( const auto& row : archive_metadata_groups )
 				{
 					const SHA256 sha256 { SHA256::fromPgCol( row[ "sha256" ] ) };
-					metadata_info_archive.contained_hashes.emplace_back( sha256.data() );
+					metadata_info_archive.contained_records.emplace_back(
+						sha256.data(), row[ "path" ].as< std::string >() );
 				}
+
+				metadata.m_metadata = std::move( metadata_info_archive );
 				break;
 			}
 		case SimpleMimeType::IMAGE_PROJECT:

@@ -10,13 +10,10 @@ IDHAN can be given modules to expand it's knowledge of files and eventually will
 methods using
 python scripts.
 
-Master: ![Master Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master)
-Dev: ![Dev Build](https://git.futuregadgetlabs.net/kj16609/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=dev)
+Master: ![Master Build](https://github.com/KJNeko/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master)
+Dev: ![Dev Build](https://github.com/KJNeko/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=dev)
 
 [Discord](https://discord.gg/YMYXS884cP)
-
-There is a backup of this repo laocated at my own forgejo instance that can be
-found [here](https://git.futuregadgetlabs.net/KJ16609/IDHAN).
 
 Issues should be brought up [here](https://github.com/KJNeko/IDHAN/issues)
 

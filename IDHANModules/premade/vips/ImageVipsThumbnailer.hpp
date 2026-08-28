@@ -10,7 +10,7 @@ class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 
 	ImageVipsThumbnailer( idhan::ModuleCallbacks callbacks ) : ThumbnailerModuleI( callbacks ) {}
 
-	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
+	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;
 
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
 		idhan::ModuleCallData& data,
@@ -23,6 +23,9 @@ class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 
 	// no shared mutable state: each call builds its own vips image, safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
+
+	// vips_thumbnail_source evaluates on the vips threadpool
+	[[nodiscard]] bool singleThreaded() override { return false; }
 
 	// VIPS_INIT builds the operation and type registries; far too expensive to pay per call
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }

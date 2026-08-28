@@ -12,9 +12,9 @@
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
-std::vector< std::string_view > ArchiveThumbnailer::handleableMimes()
+std::vector< idhan::MimeID > ArchiveThumbnailer::handleableMimes()
 {
-	return getHandleableMimesForArchives();
+	return getThumbnailableMimesForArchives();
 }
 
 std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::createThumbnailRaw(
@@ -31,7 +31,20 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		return std::unexpected( idhan::ModuleError { "Expected an extra json for archive thumbnailer" } );
 	}
 
+	// jsoncpp hands these back sorted, but the keys are SHA-256 digests, so that order is meaningless
+	// to a reader. Order by the member path instead.
 	auto members { extra.getMemberNames() };
+
+	std::ranges::sort(
+		members,
+		[ &extra ]( const std::string& lhs, const std::string& rhs )
+		{
+			const auto& left { extra[ lhs ] };
+			const auto& right { extra[ rhs ] };
+			if ( !left.isString() || !right.isString() ) return lhs < rhs;
+
+			return naturalLess( left.asString(), right.asString() );
+		} );
 
 	if ( !extra.isMember( "encrypted" ) )
 	{
@@ -134,13 +147,24 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		}
 
 		// if the grid size is 1 just return the image
-		if ( grid_size == 1 ) return thumbnail_rgb;
+		if ( grid_size == 1 )
+		{
+			spdlog::info( "Skipping grid processing, Only 1 item found. Should this really be a archive?" );
+			return thumbnail_rgb;
+		}
 
 		// figure out where in the grid we should put this thumbnail
 		const auto x { counter % grid_size };
 		const auto y { counter / grid_size };
 		counter += 1;
-		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail ] = *thumbnail_rgb;
+		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail, child_format ] = *thumbnail_rgb;
+
+		if ( child_format != idhan::ThumbnailFormat::RGB )
+		{
+			spdlog::warn( "Archive thumbnailer: member \'{}\' returned a non-RGB thumbnail, skipping it", member );
+			flag_cache_thumbnail = false;
+			continue;
+		}
 
 		if ( !cache_thumbnail ) flag_cache_thumbnail = false;
 
@@ -153,8 +177,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 			VIPS_FORMAT_UCHAR ) };
 		if ( !thumb_raw ) return std::unexpected( idhan::ModuleError { "Failed to wrap child thumbnail pixels" } );
 		idhan::VipsImagePtr thumb { thumb_raw };
-
-		//TODO: Center image
 
 		const int generated_width { vips_image_get_width( thumb.get() ) };
 		const int offset_width { ( thumb_width - generated_width ) / 2 };

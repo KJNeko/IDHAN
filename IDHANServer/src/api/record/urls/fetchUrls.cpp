@@ -25,19 +25,34 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchUrls(
 namespace helpers
 {
 
-ExpectedTask< std::vector< std::string > > fetchUrlsStrings( const RecordID record_id, DbClientPtr db )
+ExpectedTask< std::vector< RecordUrl > > fetchUrlsDetailed( const RecordID record_id, DbClientPtr db )
 {
 	const auto url_maps { co_await db->execSqlCoro(
-		"SELECT url_id, url FROM url_mappings JOIN urls USING (url_id)  WHERE record_id = $1", record_id ) };
+		"SELECT url, url_domain FROM url_mappings JOIN urls USING (url_id) JOIN url_domains USING (url_domain_id) "
+		"WHERE record_id = $1 ORDER BY url",
+		record_id ) };
 
-	std::vector< std::string > urls {};
+	std::vector< RecordUrl > urls {};
 	urls.reserve( url_maps.size() );
 
 	for ( const auto& row : url_maps )
 	{
-		const auto url { row[ "url" ].as< std::string >() };
-		urls.emplace_back( url );
+		urls.emplace_back( row[ "url" ].as< std::string >(), row[ "url_domain" ].as< std::string >() );
 	}
+
+	co_return urls;
+}
+
+ExpectedTask< std::vector< std::string > > fetchUrlsStrings( const RecordID record_id, DbClientPtr db )
+{
+	const auto detailed { co_await fetchUrlsDetailed( record_id, db ) };
+
+	if ( !detailed ) co_return std::unexpected( detailed.error() );
+
+	std::vector< std::string > urls {};
+	urls.reserve( detailed.value().size() );
+
+	for ( const auto& entry : detailed.value() ) urls.emplace_back( entry.url );
 
 	co_return urls;
 }

@@ -13,7 +13,8 @@
 namespace psd
 {
 
-std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile( const idhan::ModuleFile& file )
+//! The fallback behind openWholeFile: allocate the file and copy it in through read().
+static std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile( const idhan::ModuleFile& file )
 {
 	std::vector< std::uint8_t > buffer( file.size() );
 
@@ -35,6 +36,18 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile( 
 	}
 
 	return buffer;
+}
+
+std::expected< FileContents, idhan::ModuleError > openWholeFile( const idhan::ModuleFile& file )
+{
+	if ( const auto view { file.mapped() }; !view.empty() )
+		return FileContents { std::span< const std::uint8_t > {
+			reinterpret_cast< const std::uint8_t* >( view.data() ), view.size() } };
+
+	auto owned { readWholeFile( file ) };
+	if ( !owned ) return std::unexpected( owned.error() );
+
+	return FileContents { std::move( *owned ) };
 }
 
 std::uint16_t readUint16BE( const std::uint8_t* data )

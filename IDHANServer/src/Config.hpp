@@ -2,6 +2,7 @@
 
 #include <toml++/toml.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <functional>
 #include <ranges>
@@ -47,7 +48,6 @@ const char* getCLIConfig( const std::string_view group, const std::string_view n
 
 std::string_view getUserConfigPath();
 
-//! Parses a boolean written as text, the way an env var or a CLI flag carries one.
 [[nodiscard]] inline std::optional< bool > parseBool( const std::string_view value )
 {
 	std::string lowered { value };
@@ -79,6 +79,7 @@ template < typename T >
 {
 	auto upper_group { std::string( group ) };
 	std::transform( upper_group.begin(), upper_group.end(), upper_group.begin(), ::toupper );
+	std::replace( upper_group.begin(), upper_group.end(), '.', '_' );
 	auto upper_name { std::string( name ) };
 	std::transform( upper_name.begin(), upper_name.end(), upper_name.begin(), ::toupper );
 
@@ -171,7 +172,7 @@ template < typename T >
 	try
 	{
 		auto config = toml::parse_file( p.string() );
-		if ( auto* table = config[ group ].as_table() )
+		if ( auto* table = config.at_path( group ).as_table() )
 		{
 			if ( const auto value = ( *table )[ name ] )
 			{
@@ -229,7 +230,7 @@ template < typename T >
 	try
 	{
 		auto config = toml::parse_file( p.string() );
-		if ( auto* table = config[ group ].as_table() )
+		if ( auto* table = config.at_path( group ).as_table() )
 		{
 			auto* arr = ( *table )[ name ].as_array();
 			if ( !arr ) return std::nullopt;
@@ -265,6 +266,11 @@ template < typename T >
 template < typename T >
 [[nodiscard]] std::optional< std::vector< T > > getArray( const std::string_view group, const std::string_view name )
 {
+	if ( const auto user_config_path { getUserConfigPath() }; !user_config_path.empty() )
+	{
+		return getArrayFromFile< T >( user_config_path, group, name );
+	}
+
 	for ( const auto& path : config_paths | std::views::reverse )
 	{
 		if ( auto result = getArrayFromFile< T >( path, group, name ); result ) return result;
@@ -286,15 +292,14 @@ template < typename T >
 template < typename T >
 [[nodiscard]] std::optional< T > getValue( const std::string_view group, const std::string_view name )
 {
+	if ( auto result = tryGetCLI< T >( group, name ); result ) return *result;
+
 	if ( auto result = tryGetEnv< T >( group, name ); result ) return *result;
 
-	const auto user_config_path { getUserConfigPath() };
-	if ( user_config_path.empty() )
+	// --config replaces the file search outright: when one was named, no other file is consulted.
+	if ( const auto user_config_path { getUserConfigPath() }; !user_config_path.empty() )
 	{
-		if ( auto result = getValueFromFile< T >( user_config_path, group, name ); result )
-		{
-			return *result;
-		}
+		return getValueFromFile< T >( user_config_path, group, name );
 	}
 
 	for ( const auto& path : config_paths | std::views::reverse )

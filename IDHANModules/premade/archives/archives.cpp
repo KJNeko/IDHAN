@@ -14,6 +14,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 
 #include "ModuleBase.hpp"
 #include "spdlog/spdlog.h"
@@ -271,4 +272,58 @@ EntryNameResult entryFilename( archive_entry* entry, std::expected< std::string,
 	}
 
 	return out ? EntryNameResult::OK : EntryNameResult::FAILED;
+}
+
+static std::size_t digitRunLength( const std::string_view text, const std::size_t start )
+{
+	std::size_t end { start };
+	while ( end < text.size() && text[ end ] >= '0' && text[ end ] <= '9' ) ++end;
+	return end - start;
+}
+
+//! The digits of the run at [start, start + length), minus leading zeros. Never empty: an all-zero
+//! run keeps one digit.
+static std::string_view significantDigits(
+	const std::string_view text,
+	const std::size_t start,
+	const std::size_t length )
+{
+	std::size_t first { start };
+	const std::size_t end { start + length };
+	while ( first + 1 < end && text[ first ] == '0' ) ++first;
+
+	return text.substr( first, end - first );
+}
+
+bool naturalLess( const std::string_view lhs, const std::string_view rhs )
+{
+	std::size_t i { 0 };
+	std::size_t j { 0 };
+
+	while ( i < lhs.size() && j < rhs.size() )
+	{
+		const auto left_digits { digitRunLength( lhs, i ) };
+		const auto right_digits { digitRunLength( rhs, j ) };
+
+		if ( left_digits == 0 || right_digits == 0 )
+		{
+			if ( lhs[ i ] != rhs[ j ] )
+				return static_cast< unsigned char >( lhs[ i ] ) < static_cast< unsigned char >( rhs[ j ] );
+
+			++i;
+			++j;
+			continue;
+		}
+
+		const auto left_value { significantDigits( lhs, i, left_digits ) };
+		const auto right_value { significantDigits( rhs, j, right_digits ) };
+
+		if ( left_value.size() != right_value.size() ) return left_value.size() < right_value.size();
+		if ( left_value != right_value ) return left_value < right_value;
+
+		i += left_digits;
+		j += right_digits;
+	}
+
+	return ( lhs.size() - i ) < ( rhs.size() - j );
 }

@@ -1,13 +1,10 @@
-// POST /records/metadata: batch metadata for many records in one query. Returns the same "basic"
-// shape as /records/{id}/info, for a list of ids, in a single set-based query.
-
-#include <unordered_set>
+// POST /records/metadata: the same info object as /records/{id}/info, for a list of ids, built by
+// the shared collector in one query per metadata table.
 
 #include "IDHANTypes.hpp"
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "crypto/SHA256.hpp"
-#include "db/drogonArrayBind.hpp"
+#include "metadata/metadata.hpp"
 
 namespace idhan::api
 {
@@ -35,60 +32,15 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::fetchMetadataBatch( drogon::H
 		record_ids.emplace_back( static_cast< RecordID >( id.asInt64() ) );
 	}
 
-	// "include" is accepted for forward compatibility; only "basic" is implemented. Tags, urls and
-	// notes are excluded from a batch fetch because on a large grid they would dwarf the payload.
-	// File-specific metadata (dimensions, duration) is still per-record.
-	if ( json.isMember( "include" ) && !json[ "include" ].isArray() )
-		co_return createBadRequest( "'include' must be an array of strings" );
+	auto batch { co_await metadata::collectRecordInfo( std::move( record_ids ), drogon::app().getDbClient() ) };
 
-	// Init as arrays so empty results serialise as [] rather than null.
-	Json::Value records { Json::arrayValue };
 	Json::Value missing { Json::arrayValue };
-
-	if ( !record_ids.empty() )
-	{
-		const auto db { drogon::app().getDbClient() };
-
-		// One query for the whole batch. LEFT JOINs so a record with no file_info still comes back
-		// (with a null mime) rather than vanishing.
-		const auto result { co_await db->execSqlCoro(
-			"SELECT r.record_id, r.sha256, fi.size, fi.mime_id, m.name, m.best_extension "
-			"FROM records r "
-			"LEFT JOIN file_info fi ON fi.record_id = r.record_id "
-			"LEFT JOIN mime m ON m.mime_id = fi.mime_id "
-			"WHERE r.record_id = ANY($1::INTEGER[])",
-			std::forward< const std::vector< RecordID > >( record_ids ) ) };
-
-		std::unordered_set< RecordID > found {};
-		found.reserve( result.size() );
-
-		for ( const auto& row : result )
-		{
-			const auto record_id { row[ "record_id" ].as< RecordID >() };
-			found.insert( record_id );
-
-			Json::Value entry {};
-			entry[ "record_id" ] = record_id;
-			entry[ "hashes" ][ "sha256" ] = SHA256::fromPgCol( row[ "sha256" ] ).hex();
-
-			if ( !row[ "mime_id" ].isNull() )
-			{
-				entry[ "size" ] = row[ "size" ].as< std::size_t >();
-				entry[ "mime" ] = row[ "name" ].as< std::string >();
-				entry[ "extension" ] = row[ "best_extension" ].as< std::string >();
-			}
-
-			records.append( std::move( entry ) );
-		}
-
-		for ( const auto record_id : record_ids )
-			if ( !found.contains( record_id ) ) missing.append( record_id );
-	}
+	for ( const auto record_id : batch.missing ) missing.append( record_id );
 
 	Json::Value out {};
-	out[ "records" ] = std::move( records );
+	out[ "records" ] = std::move( batch.records );
 	out[ "missing" ] = std::move( missing );
-	co_return drogon::HttpResponse::newHttpJsonResponse( out );
+	co_return drogon::HttpResponse::newHttpJsonResponse( std::move( out ) );
 }
 
 } // namespace idhan::api

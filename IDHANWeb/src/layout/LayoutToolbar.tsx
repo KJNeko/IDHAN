@@ -4,10 +4,38 @@
  * push/pull); localStorage remains the source of truth and the server copy is opt-in.
  */
 
-import { type ChangeEvent, type SyntheticEvent, useMemo } from 'react';
+import {type ChangeEvent, type SyntheticEvent, useMemo, useRef, useState} from 'react';
 import { ApiError } from '../api/client';
+import type {PanelDefinition} from '../host/types';
 import { listPanels } from '../panels/registry';
 import { useLayoutStore } from './store';
+
+const PANEL_GROUPS = [
+    {title: 'Browse', types: ['search', 'grid', 'media-viewer']},
+    {title: 'Record details', types: ['record-info', 'file-relationships', 'tag-editor', 'url-list', 'notes']},
+    {title: 'Tags', types: ['tag-domain-manager', 'tag-relationships']},
+    {title: 'Import & jobs', types: ['import', 'job-monitor']},
+    {title: 'Embeddings', types: ['embedding-search', 'embedding-compare', 'embeddings']},
+    {title: 'Administration', types: ['cluster-manager', 'sunburst-stats', 'log-viewer', 'server-status']},
+    {title: 'Developer', types: ['selection-inspector', 'debug']},
+] as const;
+
+function groupPanels(panels: PanelDefinition[]): Array<{ title: string; panels: PanelDefinition[] }> {
+    const byType = new Map(panels.map((panel) => [panel.type, panel]));
+    const groups: Array<{ title: string; panels: PanelDefinition[] }> = PANEL_GROUPS.map((group) => ({
+        title: group.title,
+        panels: group.types.flatMap((type) => {
+            const panel = byType.get(type);
+            if (!panel) return [];
+            byType.delete(type);
+            return [panel];
+        }),
+    })).filter((group) => group.panels.length > 0);
+
+    const extensions = [...byType.values()].sort((left, right) => left.title.localeCompare(right.title));
+    if (extensions.length > 0) groups.push({title: 'Extensions', panels: extensions});
+    return groups;
+}
 
 /** Runs a store server-action and surfaces any failure without leaving the promise unhandled. */
 function run(promise: Promise<unknown>): void {
@@ -30,16 +58,37 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
   const serverBusy = useLayoutStore((s) => s.serverBusy);
   const activeId = useLayoutStore((s) => s.doc.id);
   const catalogVersion = useLayoutStore((s) => s.catalogVersion);
+    const placedPanels = useLayoutStore((s) => s.doc.panels);
+    const [panelQuery, setPanelQuery] = useState('');
+    const panelMenu = useRef<HTMLDetailsElement>(null);
+    const panelSearch = useRef<HTMLInputElement>(null);
 
   const store = useLayoutStore.getState();
 
   // Re-read the registry when the catalog changes (a plugin registered new panel types).
   const panels = useMemo(() => listPanels(), [catalogVersion]);
+    const openPanelTypes = useMemo(() => new Set(Object.values(placedPanels).map((panel) => panel.type)), [placedPanels]);
+    const panelGroups = useMemo(() => {
+        const query = panelQuery.trim().toLocaleLowerCase();
+        const filtered = query
+            ? panels.filter((panel) =>
+                [panel.title, panel.description ?? '', panel.type].some((value) =>
+                    value.toLocaleLowerCase().includes(query),
+                ),
+            )
+            : panels;
+        return groupPanels(filtered);
+    }, [panelQuery, panels]);
 
-  function onAddPanel(event: ChangeEvent<HTMLSelectElement>) {
-    const type = event.target.value;
-    if (type) store.addPanel(type);
-    event.target.value = '';
+    function onAddPanel(type: string) {
+        store.addPanel(type);
+        setPanelQuery('');
+        if (panelMenu.current) panelMenu.current.open = false;
+    }
+
+    function onPanelMenuToggle(event: SyntheticEvent<HTMLDetailsElement>) {
+        if (event.currentTarget.open) window.requestAnimationFrame(() => panelSearch.current?.focus());
+        else setPanelQuery('');
   }
 
   function onNewLayout() {
@@ -87,6 +136,10 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
     <header className="toolbar">
       <span className="toolbar-brand">IDHAN</span>
 
+        <span className="toolbar-notice" role="note" title="Development UI, Not for real usage. Vibecoded slop">
+        Development UI, Not for real usage. Vibecoded slop
+      </span>
+
       <input
         className="toolbar-name"
         value={name}
@@ -94,14 +147,49 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
         aria-label="Layout name"
       />
 
-      <select className="toolbar-add" value="" onChange={onAddPanel} aria-label="Add panel">
-        <option value="">Add panel…</option>
-        {panels.map((panel) => (
-          <option key={panel.type} value={panel.type}>
-            {panel.title}
-          </option>
-        ))}
-      </select>
+        <details className="toolbar-menu panel-picker" ref={panelMenu} onToggle={onPanelMenuToggle}>
+            <summary className="toolbar-button">Add panel <span aria-hidden="true">▾</span></summary>
+            <div className="toolbar-dropdown panel-picker-dropdown">
+                <div className="panel-picker-head">
+                    <strong>Add a panel</strong>
+                    <span>Choose a tool for this layout</span>
+                </div>
+                <input
+                    ref={panelSearch}
+                    className="panel-picker-search"
+                    type="search"
+                    value={panelQuery}
+                    onChange={(event) => setPanelQuery(event.target.value)}
+                    placeholder="Search panels…"
+                    aria-label="Search panels"
+                />
+                <div className="panel-picker-list">
+                    {panelGroups.map((group) => (
+                        <section className="panel-picker-group" key={group.title}>
+                            <h2>{group.title}</h2>
+                            {group.panels.map((panel) => {
+                                const alreadyOpen = panel.singleton && openPanelTypes.has(panel.type);
+                                return (
+                                    <button
+                                        type="button"
+                                        className="panel-picker-item"
+                                        key={panel.type}
+                                        onClick={() => onAddPanel(panel.type)}
+                                    >
+                      <span className="panel-picker-item-copy">
+                        <strong>{panel.title}</strong>
+                        <span>{panel.description ?? 'Add this panel to the current layout.'}</span>
+                      </span>
+                                        {alreadyOpen && <span className="panel-picker-open">Open</span>}
+                                    </button>
+                                );
+                            })}
+                        </section>
+                    ))}
+                    {panelGroups.length === 0 && <p className="panel-picker-empty">No panels match “{panelQuery}”.</p>}
+                </div>
+            </div>
+        </details>
 
       <button type="button" className="toolbar-button" onClick={() => store.toggleEditMode()}>
         {editMode ? 'Done' : 'Edit'}

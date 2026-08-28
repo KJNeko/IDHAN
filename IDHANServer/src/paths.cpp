@@ -1,5 +1,6 @@
 #include "paths.hpp"
 
+#include <algorithm>
 #include <set>
 
 #include "Config.hpp"
@@ -123,28 +124,6 @@ std::filesystem::path getModuleRunnerPath()
 	return runner_path;
 }
 
-std::vector< std::filesystem::path > getMimeParserPaths()
-{
-	std::vector< std::filesystem::path > paths {};
-
-	constexpr std::array< std::string_view, 2 > parser_paths { { "./mime", IDHAN_MIME_PATH } };
-
-	for ( const auto& search_path : parser_paths )
-	{
-		if ( !std::filesystem::exists( search_path ) ) continue;
-		log::info( "Searching for mime parsers at {}", search_path );
-		for ( const auto& file : std::filesystem::recursive_directory_iterator( search_path ) )
-		{
-			if ( !file.is_regular_file() ) continue;
-			if ( file.path().extension() == ".idhanmime" ) paths.emplace_back( file.path() );
-		}
-	}
-
-	log::debug( "Found {} mime parsers", paths.size() );
-
-	return paths;
-}
-
 std::filesystem::path getStaticPath()
 {
 	static std::filesystem::path static_path {};
@@ -195,15 +174,33 @@ std::filesystem::path getPluginsPath()
 	return plugins_path;
 }
 
-std::vector< std::size_t > getCacheableThumbnailSizes()
+//! Cached: every thumbnail cache miss asks, and each config read re-parses the config file.
+const std::vector< std::size_t >& getCacheableThumbnailSizes()
 {
-	return idhan::config::getArray< std::size_t >(
-		"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
+	static std::vector< std::size_t > sizes {};
+	static std::once_flag sizes_once {};
+
+	std::call_once(
+		sizes_once,
+		[]()
+		{
+			sizes = idhan::config::getArray< std::size_t >(
+				"thumbnails", "cacheable_sizes", std::vector< std::size_t > { 128, 256, 512 } );
+		} );
+
+	return sizes;
 }
 
+//! \copydoc getCacheableThumbnailSizes
 bool getThumbnailCachingEnabled()
 {
-	return idhan::config::getSilentDefault< bool >( "thumbnails", "cache", true );
+	static bool enabled { true };
+	static std::once_flag enabled_once {};
+
+	std::call_once(
+		enabled_once, []() { enabled = idhan::config::getSilentDefault< bool >( "thumbnails", "cache", true ); } );
+
+	return enabled;
 }
 
 bool getPurgeThumbnailsOnBoot()

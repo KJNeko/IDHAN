@@ -7,11 +7,9 @@ namespace idhan
 
 GeneratorModuleI::~GeneratorModuleI() = default;
 
-bool GeneratorModuleI::canHandle( const std::string_view mime )
+bool GeneratorModuleI::canHandle( const MimeID mime_id )
 {
-	return std::ranges::any_of(
-		handleableMimes(),
-		[ &mime ]( const std::string_view handleable_mime ) noexcept -> bool { return mime == handleable_mime; } );
+	return std::ranges::contains( handleableMimes(), mime_id );
 }
 
 ModuleType GeneratorModuleI::type()

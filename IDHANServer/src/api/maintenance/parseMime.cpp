@@ -1,29 +1,19 @@
+#include "MimeIDs.hpp"
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "mime/identifyMime.hpp"
 #include "modules/ModuleLoader.hpp"
 
 namespace idhan::api
 {
 
-drogon::Task< Json::Value > processMetadata( const std::string mime_str, const std::string_view request_data )
+drogon::Task< Json::Value > processMetadata( const MimeID mime_id, const std::string_view request_data )
 {
 	Json::Value response { Json::arrayValue };
-	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_str ) };
+	auto metadata_modules { modules::ModuleLoader::instance().getParserFor( mime_id ) };
 
-	auto blob { ipc::Blob::fromBytes(
-		std::span< const std::byte > {
-			reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() } ) };
-
-	if ( !blob )
-	{
-		Json::Value failure {};
-		failure[ "error" ] = std::format( "Could not stage the request body for a module: {}", blob.error() );
-		response.append( std::move( failure ) );
-		co_return response;
-	}
-
-	auto input_e { modules::CallInput::forBlob( std::move( blob.value() ) ) };
+	const auto input_e { modules::CallInput::sharedForBytes(
+		{ reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() } ) };
 
 	if ( !input_e )
 	{
@@ -33,14 +23,14 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 		co_return response;
 	}
 
-	const auto input { std::make_shared< const modules::CallInput >( std::move( *input_e ) ) };
+	const auto input { *input_e };
 
 	for ( const auto& metadata_module : metadata_modules )
 	{
 		Json::Value metadata_obj {};
 		metadata_obj[ "name" ] = std::string( metadata_module->name() );
 
-		const modules::RemoteCallData data { .input = input, .mime_name = mime_str, .extra = {}, .depth = 0 };
+		const modules::RemoteCallData data { .input = input, .mime_id = mime_id, .extra = {}, .depth = 0 };
 
 		auto metadata_info { co_await metadata_module->parseFile( data ) };
 
@@ -56,7 +46,7 @@ drogon::Task< Json::Value > processMetadata( const std::string mime_str, const s
 		if ( std::holds_alternative< MetadataInfoArchive >( metadata ) )
 		{
 			const auto& info { std::get< MetadataInfoArchive >( metadata ) };
-			metadata_obj[ "count" ] = info.contained_hashes.size();
+			metadata_obj[ "count" ] = info.contained_records.size();
 			metadata_obj[ "uncompressed_size" ] = info.m_size;
 		}
 
@@ -79,11 +69,13 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr r
 		co_return drogon::HttpResponse::newHttpJsonResponse( error );
 	}
 
-	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
+	const auto filename { request->getOptionalParameter< std::string >( "filename" ).value_or( "" ) };
+	const auto mime_id { co_await mime::identifyMime(
+		{ reinterpret_cast< const std::byte* >( request_data.data() ), request_data.size() }, filename ) };
 
 	Json::Value response;
 
-	if ( !mime_str )
+	if ( mime_id == mime_ids::UNKNOWN )
 	{
 		response[ "success" ] = false;
 		response[ "error" ] = "Failed to parse mime type";
@@ -91,9 +83,11 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeOctet( drogon::HttpRequestPtr r
 	}
 
 	response[ "success" ] = true;
-	response[ "mime" ] = mime_str.value();
+	response[ "mime" ] = std::string { mime_ids::mime_names.at( mime_id ) };
+	response[ "mime_id" ] = mime_id;
+	response[ "generic_mime_id" ] = std::to_underlying( mime_ids::simpleType( mime_id ) );
 
-	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, request_data );
+	response[ "metadata_modules" ] = co_await processMetadata( mime_id, request_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
@@ -117,18 +111,18 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 	if ( files.size() != 1 ) co_return createBadRequest( "Only 1 file must be provided in the multipart" );
 
 	const auto file { files.at( 0 ) };
-	const auto file_name { file.getFileName() };
 
 	const auto data { file.fileData() };
 	const auto size { file.fileLength() };
 
 	const std::string_view file_data { data, size };
 
-	const auto mime_str { co_await mime::getMimeDatabase()->scan( file_data, file_name ) };
+	const auto mime_id { co_await mime::identifyMime(
+		{ reinterpret_cast< const std::byte* >( file_data.data() ), file_data.size() }, file.getFileName() ) };
 
 	Json::Value response;
 
-	if ( !mime_str )
+	if ( mime_id == mime_ids::UNKNOWN )
 	{
 		response[ "success" ] = false;
 		response[ "error" ] = "Failed to parse mime type";
@@ -136,9 +130,11 @@ drogon::Task< drogon::HttpResponsePtr > parseMimeMultiform( drogon::HttpRequestP
 	}
 
 	response[ "success" ] = true;
-	response[ "mime" ] = mime_str.value();
+	response[ "mime" ] = std::string { mime_ids::mime_names.at( mime_id ) };
+	response[ "mime_id" ] = mime_id;
+	response[ "generic_mime_id" ] = std::to_underlying( mime_ids::simpleType( mime_id ) );
 
-	response[ "metadata_modules" ] = co_await processMetadata( *mime_str, file_data );
+	response[ "metadata_modules" ] = co_await processMetadata( mime_id, file_data );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( response );
 }
@@ -157,23 +153,6 @@ drogon::Task< drogon::HttpResponsePtr > APIMaintenance::parseMime( drogon::HttpR
 	co_return createBadRequest(
 		"Content type must be application/octet-stream or multipart/form-data was {}",
 		static_cast< int >( request->contentType() ) );
-}
-
-drogon::Task< drogon::HttpResponsePtr > APIMaintenance::reloadMime( drogon::HttpRequestPtr request )
-{
-	const auto reload_result { co_await mime::getMimeDatabase()->reloadMimeParsers() };
-
-	// a swallowed reload failure would report the stale parser list as a success
-	if ( !reload_result ) co_return reload_result.error();
-
-	co_return co_await listParsers( request );
-}
-
-drogon::Task< drogon::HttpResponsePtr > APIMaintenance::listParsers( [[maybe_unused]] drogon::HttpRequestPtr request )
-{
-	const auto mime_db { idhan::mime::getMimeDatabase() };
-
-	co_return drogon::HttpResponse::newHttpJsonResponse( mime_db->dump() );
 }
 
 } // namespace idhan::api

@@ -33,6 +33,8 @@ struct RunnerOptions
 	int socket_fd { -1 };
 	bool describe_only { false };
 	std::size_t pool_threads { 4 };
+	//! Threads a module may use inside one call. Zero leaves each library at its own default.
+	std::size_t render_threads { 0 };
 	std::chrono::milliseconds heartbeat_interval { 1000 };
 };
 
@@ -43,7 +45,7 @@ class WorkerRunner
 		std::uint64_t call_id { 0 };
 		std::size_t module_index { 0 };
 		ipc::CallOp op { ipc::CallOp::METADATA };
-		std::string mime {};
+		MimeID mime_id { 0 };
 		Json::Value extra {};
 		std::size_t width { 0 };
 		std::size_t height { 0 };

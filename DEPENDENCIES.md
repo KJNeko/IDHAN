@@ -14,19 +14,20 @@
 
 ## System packages (Ubuntu 24.04 / `apt`)
 
-| Dependency | Package | Purpose |
-|---|---|---|
-| fmt | `libfmt-dev` / `libfmt9` | String formatting (pulled in transitively by spdlog) |
-| spdlog | `libspdlog-dev` / `libspdlog1.12` | Structured logging throughout the server and modules |
-| libpqxx | `libpqxx-dev` / `libpqxx-7.8t64` | C++ PostgreSQL client used for all direct DB access |
-| libarchive | `libarchive-dev` / `libarchive13` | Archive extraction in IDHANPremadeModules |
-| tomlplusplus | `libtomlplusplus-dev` / `libtomlplusplus3t64` | Config file parsing |
-| jsoncpp | `libjsoncpp-dev` / `libjsoncpp25` | JSON serialisation (also a drogon dependency) |
-| libpq | `libpq-dev` / `libpq5` | PostgreSQL C client library (used by drogon async DB and libpqxx) |
-| liburing | `liburing-dev` / `liburing2` | io_uring async I/O for file storage layer (Linux only) |
-| Qt6 | `qt6-base-dev`, `qt6-multimedia-dev` | IDHANClient shared library and HydrusImporter GUI |
-| libvips | `libvips-dev` / `libvips42` | Image processing in the vips thumbnailer module |
-| FFmpeg | `libavcodec-dev`, `libavfilter-dev`, `libavutil-dev` | Video/audio metadata and thumbnailing module |
-| OpenSSL | `libssl-dev` / `libssl3` | TLS and SHA-256 hashing |
-| SQLite3 | `libsqlite3-dev` | HydrusImporter reads Hydrus SQLite databases |
-| zlib | `zlib1g-dev` / `zlib1g` | Compression support |
+| Dependency   | Package                                              | Purpose                                                                  |
+|--------------|------------------------------------------------------|--------------------------------------------------------------------------|
+| fmt          | `libfmt-dev` / `libfmt9`                             | String formatting (pulled in transitively by spdlog)                     |
+| spdlog       | `libspdlog-dev` / `libspdlog1.12`                    | Structured logging throughout the server and modules                     |
+| libpqxx      | `libpqxx-dev` / `libpqxx-7.8t64`                     | C++ PostgreSQL client used for all direct DB access                      |
+| libarchive   | `libarchive-dev` / `libarchive13`                    | Archive extraction in IDHANPremadeModules                                |
+| tomlplusplus | `libtomlplusplus-dev` / `libtomlplusplus3t64`        | Config file parsing                                                      |
+| jsoncpp      | `libjsoncpp-dev` / `libjsoncpp25`                    | JSON serialisation (also a drogon dependency)                            |
+| libpq        | `libpq-dev` / `libpq5`                               | PostgreSQL C client library (used by drogon async DB and libpqxx)        |
+| liburing     | `liburing-dev` / `liburing2`                         | io_uring async I/O for file storage layer (Linux only)                   |
+| jemalloc     | `libjemalloc-dev` / `libjemalloc2`                   | Allocator the server links against (`IDHAN_USE_JEMALLOC`, ON by default) |
+| Qt6          | `qt6-base-dev`, `qt6-multimedia-dev`                 | IDHANClient shared library and HydrusImporter GUI                        |
+| libvips      | `libvips-dev` / `libvips42`                          | Image processing in the vips thumbnailer module                          |
+| FFmpeg       | `libavcodec-dev`, `libavfilter-dev`, `libavutil-dev` | Video/audio metadata and thumbnailing module                             |
+| OpenSSL      | `libssl-dev` / `libssl3`                             | TLS and SHA-256 hashing                                                  |
+| SQLite3      | `libsqlite3-dev`                                     | HydrusImporter reads Hydrus SQLite databases                             |
+| zlib         | `zlib1g-dev` / `zlib1g`                              | Compression support                                                      |

@@ -113,18 +113,6 @@ Json::Value getJobStatusJson(
 	return response;
 }
 
-drogon::Task< drogon::HttpResponsePtr > APIMaintenance::testJob( [[maybe_unused]] drogon::HttpRequestPtr request )
-{
-	auto job_ctx { queueJob( testJobTask(), "testJobTask" ) };
-	log::debug( "Job created" );
-
-	Json::Value response;
-	response[ "job_id" ] = job_ctx->id();
-	response[ "status" ] = "dispatched";
-
-	co_return drogon::HttpResponse::newHttpJsonResponse( response );
-}
-
 drogon::Task< drogon::HttpResponsePtr > APIMaintenance::jobStatus(
 	[[maybe_unused]] drogon::HttpRequestPtr request,
 	idhan::JobID job_id )

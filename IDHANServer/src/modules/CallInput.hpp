@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <expected>
 #include <filesystem>
+#include <memory>
+#include <span>
 #include <string>
 
 #include "ipc/Blob.hpp"
@@ -13,7 +15,6 @@
 namespace idhan::modules
 {
 
-//! The server's side of a module call's input: the bytes, and how to put them in front of a worker.
 class CallInput
 {
 	//! The descriptor the worker will map. A record's O_RDONLY file, or the memfd below.
@@ -39,6 +40,12 @@ class CallInput
 	[[nodiscard]] static std::expected< CallInput, std::string > forPath( const std::filesystem::path& path );
 
 	[[nodiscard]] static std::expected< CallInput, std::string > forBlob( ipc::Blob blob );
+
+	//! Stages \p bytes into anonymous memory and wraps the result.
+	[[nodiscard]] static std::expected< CallInput, std::string > forBytes( std::span< const std::byte > bytes );
+
+	[[nodiscard]] static std::expected< std::shared_ptr< const CallInput >, std::string > sharedForBytes(
+		std::span< const std::byte > bytes );
 
 	//! The descriptor to attach to a CALL frame. Borrowed; ownership stays here.
 	[[nodiscard]] int fd() const;

@@ -14,6 +14,8 @@ struct Option
 	std::string_view description;
 	std::string_view value_name;
 	std::string_view default_value {};
+	//! Non-empty makes the value optional: `--name` alone reads as this, `--name <value>` still wins.
+	std::string_view implicit_value {};
 };
 
 //! Minimal QCommandLineParser stand-in; accepts both `--name value` and `--name=value`.

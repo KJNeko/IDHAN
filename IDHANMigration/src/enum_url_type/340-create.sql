@@ -1,0 +1,1 @@
+CREATE TYPE UrlType AS ENUM ('file', 'post', 'gallery', 'unknown');

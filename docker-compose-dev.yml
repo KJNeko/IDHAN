@@ -46,11 +46,11 @@ services:
       - -c
       - random_page_cost=1.0 # assumes SSD/NVMe; set back to 4 for spinning disks
       - -c
-      - max_worker_processes=6 # Set to 75% to 90% of available cores for best performance.
+      - max_worker_processes=12 # Set to 75% to 90% of available cores for best performance.
       - -c
-      - max_parallel_workers_per_gather=2 # (Default) Raise only if you have actually observed a requirement for it
+      - max_parallel_workers_per_gather=4 # (Default) Raise only if you have actually observed a requirement for it
       - -c
-      - max_parallel_workers=6 # Dependent on above values
+      - max_parallel_workers=12 # Dependent on above values
 
   idhan-server:
     build:
@@ -84,6 +84,16 @@ services:
     volumes:
       - /media:/media
     restart: unless-stopped
+
+  hyshare:
+    profiles: [ "hyshare" ]
+    image: ghcr.io/floogulinc/hyshare:latest
+    env_file: .env
+    environment:
+      HYSHARE_PORT: 3000
+      HYSHARE_HYDRUS_API_URL: http://idhan-server:16609/hyapi
+    ports:
+      - "3000:3000"
 
 volumes:
   idhan_pg18:

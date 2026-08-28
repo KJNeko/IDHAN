@@ -239,6 +239,10 @@ std::expected< Blob, std::string > Blob::adopt( UniqueFd fd )
 
 	struct stat info {};
 	if ( ::fstat( fd.get(), &info ) != 0 ) return std::unexpected( errnoMessage( "stat of received blob" ) );
+	if ( !S_ISREG( info.st_mode ) ) return std::unexpected( "received blob descriptor is not a regular file" );
+	if ( info.st_size < 0 ) return std::unexpected( "received blob descriptor has a negative size" );
+	if ( static_cast< std::uintmax_t >( info.st_size ) > std::numeric_limits< std::size_t >::max() )
+		return std::unexpected( "received blob descriptor is too large for this process" );
 
 	const auto size { static_cast< std::size_t >( info.st_size ) };
 
@@ -246,6 +250,24 @@ std::expected< Blob, std::string > Blob::adopt( UniqueFd fd )
 	if ( !mapping ) return std::unexpected( mapping.error() );
 
 	return Blob { std::move( fd ), *mapping, size };
+}
+
+std::expected< Blob, std::string > Blob::adoptSealed( UniqueFd fd, const std::size_t maximum_size )
+{
+	if ( !fd ) return std::unexpected( std::string { "cannot adopt an invalid descriptor as a blob" } );
+
+	const int seals { ::fcntl( fd.get(), F_GET_SEALS ) };
+	if ( seals < 0 ) return std::unexpected( errnoMessage( "received blob is not a sealable memfd" ) );
+	if ( ( seals & BLOB_SEALS ) != BLOB_SEALS ) return std::unexpected( "received blob is not fully sealed" );
+
+	struct stat info {};
+	if ( ::fstat( fd.get(), &info ) != 0 ) return std::unexpected( errnoMessage( "stat of received blob" ) );
+	if ( !S_ISREG( info.st_mode ) || info.st_size < 0 )
+		return std::unexpected( "received blob descriptor is not a regular file" );
+	if ( static_cast< std::uintmax_t >( info.st_size ) > maximum_size )
+		return std::unexpected( std::format( "received blob exceeds the {} byte limit", maximum_size ) );
+
+	return adopt( std::move( fd ) );
 }
 
 } // namespace idhan::ipc

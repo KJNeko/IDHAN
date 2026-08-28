@@ -20,19 +20,20 @@ WorkerPool::WorkerPool(
   m_idle_timeout( idle_timeout )
 {}
 
-std::expected< std::shared_ptr< WorkerProcess >, std::string > WorkerPool::acquire()
+std::expected< std::shared_ptr< WorkerProcess >, std::string > WorkerPool::acquire( const bool isolated )
 {
 	const std::lock_guard< std::mutex > guard { m_mutex };
 
 	if ( m_shutting_down ) return std::unexpected( std::string { "module system is shutting down" } );
 
-	if ( m_residency == ModuleResidency::PERSISTENT && m_worker != nullptr && m_worker->alive() ) return m_worker;
+	if ( !isolated && m_residency == ModuleResidency::PERSISTENT && m_worker != nullptr && m_worker->alive() )
+		return m_worker;
 
 	auto worker { std::make_shared< WorkerProcess >( m_settings, m_on_callback ) };
 
 	if ( const auto started { worker->start() }; !started ) return std::unexpected( started.error() );
 
-	if ( m_residency == ModuleResidency::PERSISTENT ) m_worker = worker;
+	if ( !isolated && m_residency == ModuleResidency::PERSISTENT ) m_worker = worker;
 
 	return worker;
 }
@@ -47,11 +48,12 @@ void WorkerPool::prewarm()
 
 IDHANTask< std::shared_ptr< CallOutcome > > WorkerPool::dispatch(
 	Json::Value body,
-	std::shared_ptr< const CallInput > input )
+	std::shared_ptr< const CallInput > input,
+	const bool isolated )
 {
 	for ( int attempt = 0; attempt < 2; ++attempt )
 	{
-		auto worker { acquire() };
+		auto worker { acquire( isolated ) };
 
 		if ( !worker )
 		{
@@ -62,10 +64,24 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerPool::dispatch(
 			co_return outcome;
 		}
 
+		auto manifest { co_await ( *worker )->awaitManifestAsync( m_settings.liveness_grace ) };
+		if ( !manifest )
+		{
+			( *worker )->terminate( "worker did not provide a valid startup manifest" );
+
+			if ( attempt == 0 ) continue;
+
+			auto outcome { std::make_shared< CallOutcome >() };
+			outcome->ok = false;
+			outcome->error = manifest.error();
+			outcome->worker_died = true;
+			co_return outcome;
+		}
+
 		auto outcome { co_await ( *worker )->call( body, input ) };
 
-		if ( m_residency == ModuleResidency::SINGLE_RUN )
-			( *worker )->terminate( "single-run worker finished its call", Termination::EXPECTED );
+		const bool single_use { isolated || m_residency == ModuleResidency::SINGLE_RUN };
+		if ( single_use ) ( *worker )->terminate( "single-run worker finished its call", Termination::EXPECTED );
 
 		if ( outcome->ok || !outcome->worker_died ) co_return outcome;
 

@@ -1,15 +1,28 @@
 /**
  * Search: the panel that drives everything downstream. The user builds a query out of tag chips (text
- * tags, `-negation`, and `system:` predicates typed verbatim), picks a sort, and runs it. The ordered
+ * tags, `-negation`, and `system:` predicates), picks a sort, and runs it. The ordered
  * id set the server returns is published to `host.results`, which the grid and viewer page against.
  *
  * Only debounce and per-keystroke abort live here. Caching and prefix-extension reuse live in the
- * host (autocompleteCache), which also enforces a 2-char minimum.
+ * host (autocompleteCache), which also enforces a 2-char minimum. `system:` predicates never reach
+ * the server: they are a fixed catalogue matched locally (systemPredicates) and listed above the
+ * tag matches. The one exception is the value of a `system:mime` term, which comes from the mime
+ * table (host/mimeCatalogue) and is fetched once per session.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type { PanelProps } from '../../host/types';
 import type {AutocompleteResult, SearchStep, SortOrder} from '../../api/types';
+import {
+    matchMimes,
+    matchSystemPredicates,
+    mimeArgument,
+    systemCompletion,
+    type MimeSuggestion,
+    type SystemPredicate,
+} from './systemPredicates';
+import {loadMimes, peekMimes, type MimeCatalogue} from '../../host/mimeCatalogue';
+import {addTerm, removeTerm, replaceTerm} from './searchTerms';
 
 /** Matches the sort keys POST /search understands (parseSortType.hpp). */
 export const SORT_OPTIONS = [
@@ -113,6 +126,41 @@ function queryToken(input: string): string | null {
   return trimmed.startsWith('-') ? trimmed.slice(1) : trimmed;
 }
 
+/** One row of the dropdown: a matched tag, a `system:` predicate name, or a mime for its value. */
+type Suggestion =
+    | { kind: 'tag'; tag: AutocompleteResult }
+    | { kind: 'system'; predicate: SystemPredicate }
+    | { kind: 'mime'; mime: MimeSuggestion };
+
+function suggestionKey(suggestion: Suggestion): string {
+    switch (suggestion.kind) {
+        case 'tag':
+            return `t${suggestion.tag.tag_id}`;
+        case 'system':
+            return `s${suggestion.predicate.text}`;
+        case 'mime':
+            return `m${suggestion.mime.text}`;
+    }
+}
+
+/** Loads the mime table the first time a `system:mime` value is typed, then holds it for the session. */
+function useMimeCatalogue(active: boolean): MimeCatalogue {
+    const [catalogue, setCatalogue] = useState<MimeCatalogue>(peekMimes);
+
+    useEffect(() => {
+        if (!active || catalogue.entries.length > 0) return;
+        let live = true;
+        void loadMimes().then((loaded) => {
+            if (live) setCatalogue(loaded);
+        });
+        return () => {
+            live = false;
+        };
+    }, [active, catalogue]);
+
+    return catalogue;
+}
+
 /** Debounced, per-keystroke-abortable autocomplete. Caching and prefix reuse are host-side. */
 function useAutocomplete(host: PanelProps['host'], input: string): AutocompleteResult[] {
   const [suggestions, setSuggestions] = useState<AutocompleteResult[]>([]);
@@ -151,6 +199,9 @@ function SearchPanel({ host }: PanelProps) {
   const [input, setInput] = useState('');
   const [highlight, setHighlight] = useState(-1);
   const [running, setRunning] = useState(false);
+    /** The chip loaded into the input for rewriting, by its text; null when the input adds a new one. */
+    const [editing, setEditing] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
   const [summary, setSummary] = useState<string | null>(null);
     const [showBreakdown, setShowBreakdown] = useState(initial.showBreakdown);
     const [steps, setSteps] = useState<SearchStep[] | null>(null);
@@ -158,7 +209,19 @@ function SearchPanel({ host }: PanelProps) {
     const breakdownRef = useRef(showBreakdown);
     breakdownRef.current = showBreakdown;
 
-  const suggestions = useAutocomplete(host, input);
+    const tagSuggestions = useAutocomplete(host, input);
+    const systemSuggestions = useMemo(() => matchSystemPredicates(input), [input]);
+    const mimeArg = useMemo(() => mimeArgument(input), [input]);
+    const mimes = useMimeCatalogue(mimeArg !== null);
+    const mimeSuggestions = useMemo(() => (mimeArg ? matchMimes(mimeArg, mimes) : []), [mimeArg, mimes]);
+    const suggestions = useMemo<Suggestion[]>(
+        () => [
+            ...mimeSuggestions.map((mime) => ({kind: 'mime' as const, mime})),
+            ...systemSuggestions.map((predicate) => ({kind: 'system' as const, predicate})),
+            ...tagSuggestions.map((tag) => ({kind: 'tag' as const, tag})),
+        ],
+        [mimeSuggestions, systemSuggestions, tagSuggestions],
+    );
   const negated = input.trim().startsWith('-');
 
   const persist = useCallback(
@@ -206,24 +269,54 @@ function SearchPanel({ host }: PanelProps) {
     persist({ tags: next });
   }
 
+    /** Commits the input: a new chip, or the rewrite of the one being edited. */
   function addTag(tag: string) {
-    const trimmed = tag.trim();
-    if (trimmed.length === 0 || tags.includes(trimmed)) {
-      setInput('');
-      setHighlight(-1);
-      return;
+        const target = editing;
+
+        setInput('');
+        setHighlight(-1);
+        setEditing(null);
+
+        commitTags(target === null ? addTerm(tags, tag) : replaceTerm(tags, target, tag));
     }
-    commitTags([...tags, trimmed]);
+
+    /** Loads a chip back into the input; committing rewrites it in place. */
+    function startEdit(tag: string) {
+        setEditing(tag);
+        setInput(tag);
+        setHighlight(-1);
+        inputRef.current?.focus();
+    }
+
+    /** Leaves the chip as it was. */
+    function cancelEdit() {
+        setEditing(null);
     setInput('');
     setHighlight(-1);
   }
 
-  function acceptSuggestion(result: AutocompleteResult) {
-    addTag(negated ? `-${result.text}` : result.text);
+    function acceptSuggestion(suggestion: Suggestion) {
+        if (suggestion.kind === 'tag') {
+            addTag(negated ? `-${suggestion.tag.text}` : suggestion.tag.text);
+            return;
+        }
+        if (suggestion.kind === 'mime') {
+            addTag(suggestion.mime.text);
+            return;
+        }
+        if (suggestion.predicate.kind === 'flag') {
+            addTag(suggestion.predicate.text);
+            return;
+        }
+        // An argument predicate is rejected by the server until a value follows it, so complete the
+        // name and leave the caret in the box.
+        setInput(systemCompletion(suggestion.predicate));
+        setHighlight(-1);
   }
 
   function removeTag(tag: string) {
-    commitTags(tags.filter((t) => t !== tag));
+      if (tag === editing) cancelEdit();
+      commitTags(removeTerm(tags, tag));
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -246,19 +339,21 @@ function SearchPanel({ host }: PanelProps) {
           acceptSuggestion(suggestions[highlight]);
         } else if (input.trim().length > 0) {
           addTag(input);
+        } else if (editing !== null) {
+            // an edit emptied down to nothing is a cancel; removing a term is what the chip's x is for
+            cancelEdit();
         } else {
           void runSearch(tags, sortBy, sortOrder);
         }
         break;
       case 'Backspace':
-        if (input.length === 0 && tags.length > 0) {
+          if (input.length === 0 && editing === null && tags.length > 0) {
           event.preventDefault();
           removeTag(tags[tags.length - 1]!);
         }
         break;
       case 'Escape':
-        setInput('');
-        setHighlight(-1);
+          cancelEdit();
         break;
     }
   }
@@ -287,23 +382,34 @@ function SearchPanel({ host }: PanelProps) {
     <div className="panel-body search-panel">
       <div className="search-chips">
         {tags.map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            className={`chip${tag.startsWith('-') ? ' negated' : ''}${tag.startsWith('system:') ? ' system' : ''}`}
-            onClick={() => removeTag(tag)}
-            title="Remove"
-          >
-            {tag} <span className="chip-x">×</span>
-          </button>
+            <span
+                key={tag}
+                className={`chip${tag.startsWith('-') ? ' negated' : ''}${tag.startsWith('system:') ? ' system' : ''}${tag === editing ? ' editing' : ''}`}
+            >
+            <button type="button" className="chip-text" onClick={() => startEdit(tag)} title="Edit">
+              {tag}
+            </button>
+            <button
+                type="button"
+                className="chip-x"
+                onClick={() => removeTag(tag)}
+                title="Remove"
+                aria-label={`Remove ${tag}`}
+            >
+              ×
+            </button>
+          </span>
         ))}
       </div>
 
       <div className="search-input-wrap">
         <input
-          className="search-input"
+            ref={inputRef}
+            className={`search-input${editing === null ? '' : ' editing'}`}
           value={input}
-          placeholder="Add a tag, -negation, or system: predicate…"
+            placeholder={
+                editing === null ? 'Add a tag, -negation, or system: predicate…' : 'Enter to apply, Esc to cancel'
+            }
           onChange={(e) => {
             setInput(e.target.value);
             setHighlight(-1);
@@ -315,21 +421,39 @@ function SearchPanel({ host }: PanelProps) {
         {suggestions.length > 0 && (
           <ul className="search-suggestions">
             {suggestions.map((s, i) => (
-              <li key={s.tag_id}>
+                <li key={suggestionKey(s)}>
                 <button
                   type="button"
-                  className={`suggestion${i === highlight ? ' active' : ''}`}
+                  className={`suggestion${i === highlight ? ' active' : ''}${s.kind === 'tag' ? '' : ' system'}`}
                   onMouseEnter={() => setHighlight(i)}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     acceptSuggestion(s);
                   }}
                 >
-                  <span className="suggestion-text">
-                    {negated ? '-' : ''}
-                    {s.text}
-                  </span>
-                  {s.count !== undefined && <span className="suggestion-count">{s.count.toLocaleString()}</span>}
+                    {s.kind === 'mime' && (
+                        <>
+                            <span className="suggestion-text">{s.mime.value}</span>
+                            {s.mime.hint && <span className="suggestion-hint">{s.mime.hint}</span>}
+                        </>
+                    )}
+                    {s.kind === 'system' && (
+                        <>
+                            <span className="suggestion-text">{s.predicate.text}</span>
+                            {s.predicate.hint && <span className="suggestion-hint">{s.predicate.hint}</span>}
+                        </>
+                    )}
+                    {s.kind === 'tag' && (
+                        <>
+                      <span className="suggestion-text">
+                        {negated ? '-' : ''}
+                          {s.tag.text}
+                      </span>
+                            {s.tag.count !== undefined && (
+                                <span className="suggestion-count">{s.tag.count.toLocaleString()}</span>
+                            )}
+                        </>
+                    )}
                 </button>
               </li>
             ))}

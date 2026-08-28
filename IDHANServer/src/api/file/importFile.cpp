@@ -1,3 +1,7 @@
+#include <memory>
+#include <span>
+
+#include "MimeIDs.hpp"
 #include "api/ImportAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "codes/ImportCodes.hpp"
@@ -7,7 +11,7 @@
 #include "filesystem/filesystem.hpp"
 #include "logging/log.hpp"
 #include "metadata/metadata.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "mime/identifyMime.hpp"
 #include "records/records.hpp"
 
 namespace idhan::api
@@ -109,41 +113,23 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 
 				const auto filepath { co_await filesystem::getRecordPath( *existing, db ) };
 
-				if ( filepath && std::filesystem::exists( *filepath ) )
+				if ( filepath )
 					co_return drogon::HttpResponse::newHttpJsonResponse(
 						createImportResponse( *existing, ImportStatus::Exists, row ) );
 			}
 		}
 	}
 
-	//TODO: Add multipart for getting the file name
-	const auto mime_str { co_await mime::getMimeDatabase()->scan( request_data, "" ) };
+	const auto filename { request->getOptionalParameter< std::string >( "filename" ).value_or( "" ) };
+	const auto mime_id {
+		co_await mime::identifyMime( std::span< const std::byte > { data_ptr, data_length }, filename )
+	};
 
-	std::string mime_name {};
+	const bool is_unknown { mime_id == mime_ids::UNKNOWN };
 
-	if ( mime_str )
-		mime_name = mime_str.value();
-	else if ( force_import )
-		// the file could not be identified, force imports store it under the unknown mime
-		mime_name = INVALID_MIME_NAME;
-	else
-	{
-		// If the mime type is not known, Then simply skip it.
+	// force imports store an unidentified file under the unknown mime; everything else is skipped
+	if ( is_unknown && !force_import )
 		co_return drogon::HttpResponse::newHttpJsonResponse( createUnknownMimeResponse() );
-	}
-
-	const bool is_octet { mime_name == INVALID_MIME_NAME };
-
-	if ( is_octet && !force_import )
-	{
-		co_return createBadRequest(
-			"Mime type not known by IDHAN. Either set the force import flag in the parameters, "
-			"or teach IDHAN how to detect the mime for this file" );
-	}
-
-	const auto mime_id { co_await mime::getMimeIDFromStr( mime_name, db ) };
-
-	if ( !mime_id ) co_return mime_id.error();
 
 	const auto record_id_e { co_await helpers::createRecord( sha256, db ) };
 
@@ -160,7 +146,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	co_await db->execSqlCoro(
 		"INSERT INTO file_info (record_id, mime_id, size, cluster_id, modified_time) VALUES ($1, $2, $3, $4, now()) ON CONFLICT DO NOTHING",
 		record_id,
-		*mime_id,
+		mime_id,
 		data_length,
 		*target_cluster );
 
@@ -175,7 +161,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 			record_id, cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >() ) );
 	}
 
-	const auto filepath { co_await filesystem::getRecordPath( record_id, db ) };
+	const auto filepath { co_await filesystem::getUncheckedRecordPath( record_id, db ) };
 	const bool store_confirmed { filepath ? std::filesystem::exists( *filepath ) : false };
 
 	// Store when the record has never been stored or deleted, when a force import asks for it, or
@@ -203,7 +189,7 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 		record_id, store_confirmed ? ImportStatus::Exists : ImportStatus::Success, final_timestamps[ 0 ] ) ) };
 
 	// a metadata failure should not fail the import, the file itself was stored fine
-	if ( const auto parse_result { co_await metadata::tryParseRecordMetadata( record_id, db ) }; !parse_result )
+	if ( const auto parse_result { co_await metadata::parseAndUpdateRecordMetadata( record_id, db ) }; !parse_result )
 		log::warn( "importFile: failed to parse metadata for record {}", record_id );
 
 	co_return response;

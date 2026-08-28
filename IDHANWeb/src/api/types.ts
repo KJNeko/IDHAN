@@ -69,14 +69,135 @@ export interface SearchResponse {
 
 export interface MetadataRequest {
   record_ids: number[];
-  /** Defaults to ["basic"] server-side; tags are excluded unless asked for. */
-  include?: string[];
 }
 
-/** Loosely typed: the metadata payload shape depends on `include`. Panels narrow it themselves. */
+/**
+ * One record's metadata, identical in shape to GET /records/{id}/info.
+ *
+ * Only `record_id` and `hashes` are always present. A record with no file stops there; an unparsed
+ * one adds `parsed: false`; everything past `simple_type` depends on which category the file is.
+ */
+export interface RecordMetadata {
+    record_id: number;
+    hashes: { sha256: string };
+
+    /** Absent when the record has no file at all. */
+    size?: number;
+    mime?: string;
+    extension?: string;
+    /** File modification time as Unix microseconds. */
+    modified_time?: number;
+
+    /** False when no module has produced metadata for this record yet. */
+    parsed?: boolean;
+    simple_type?: SimpleType;
+    /** Free-form extra fields the parsing module chose to surface. */
+    extra?: Record<string, unknown> | null;
+
+    /** image, video, animation, image_project. */
+    width?: number;
+    height?: number;
+    /** image, image_project, audio. */
+    channels?: number;
+    /** Lowercase 64-bit perceptual hash for static raster images. */
+    phash?: string;
+    /**
+     * image. Embedded metadata blocks the file carries. Absent, rather than false, on an image
+     * parsed before they were looked for.
+     */
+    has_exif?: boolean;
+    has_gps?: boolean;
+    has_xmp?: boolean;
+    has_iptc?: boolean;
+    has_icc_profile?: boolean;
+    /** image_project. */
+    layers?: number;
+
+    /** video, animation, audio. */
+    duration?: number;
+    /** video, audio. */
+    bitrate?: number;
+    /** video. */
+    framerate?: number;
+    has_audio?: boolean;
+    /** audio. */
+    sample_rate?: number;
+    /** animation. */
+    frame_count?: number;
+    loops?: boolean;
+
+    /** archive. */
+    archive_id?: number;
+    encrypted?: boolean;
+    file_count?: number;
+
+    [key: string]: unknown;
+}
+
+export type SimpleType = 'none' | 'image' | 'video' | 'animation' | 'audio' | 'archive' | 'image_project';
+
 export interface MetadataResponse {
-  records: Array<Record<string, unknown> & { record_id: number }>;
+    records: RecordMetadata[];
   missing: number[];
+}
+
+/** Duplicate and alternative neighbours of one record (GET /relationships/{record_id}). */
+export interface FileRelationships {
+    inferior: number[];
+    superior: number[];
+    /** Records directly paired with this one as alternatives, record-id-ordered. */
+    alternatives: number[];
+}
+
+/** What POST /relationships/clear actually removed between two records. */
+export interface ClearedRelationship {
+    /** A direct better/worse pair existed in either direction and was deleted. */
+    duplicate_removed: boolean;
+    /** The two were paired as alternatives, and that pair was deleted. */
+    alternative_removed: boolean;
+}
+
+/** A close pair no one has ruled on yet (GET /relationships/duplicates/undecided). */
+export interface UndecidedPair {
+    record_id_a: number;
+    record_id_b: number;
+    /** Differing bits between the two perceptual hashes. */
+    distance: number;
+}
+
+/** The next pair awaiting a duplicate decision, or none left within the distance. */
+export interface UndecidedDuplicate {
+    /** The maximum distance that was searched, echoed back. */
+    distance: number;
+    /** Pairs already marked coincidental lookalikes were eligible. */
+    include_unrelated: boolean;
+    /** Null once every pair within the distance has been ruled on. */
+    pair: UndecidedPair | null;
+}
+
+/** One record within a perceptual-hash distance of the probe. */
+export interface SimilarRecord {
+    record_id: number;
+    /** Differing bits between this record's perceptual hash and the probe's; 0 is a pixel-identical match. */
+    distance: number;
+    /** This pair was marked a coincidental lookalike, so it only appears when include_unrelated is set. */
+    unrelated: boolean;
+}
+
+/** Perceptual-hash neighbourhood of one record (GET /relationships/{record_id}/similar). */
+export interface SimilarRecords {
+    record_id: number;
+    /** The distance that was searched, echoed back. */
+    distance: number;
+    limit: number;
+    /** Records marked unrelated to the probe were kept in the results. */
+    include_unrelated: boolean;
+    /** Records already related to the probe were kept in the results. */
+    include_related: boolean;
+    /** The limit cut the results short, so more records may sit within the distance. */
+    truncated: boolean;
+    /** Nearest first, then by record id. Never contains the probe itself. */
+    results: SimilarRecord[];
 }
 
 export interface AutocompleteResult {
@@ -160,6 +281,13 @@ export interface TagRelationships {
   aliased: number[];
 }
 
+/**
+ * GET /mime: every mime id in the table mapped to the name it reports, keyed by the id as a string.
+ * Many-to-one, so it cannot be inverted: a Pixiv Ugoira (5002) reports "application/zip" just as
+ * APPLICATION_ZIP (5000) does.
+ */
+export type MimeMap = Record<string, string>;
+
 /** One row of a mime breakdown (count + total bytes). `mime` is null for files not yet obtained. */
 export interface MimeCount {
   mime: string | null;
@@ -187,4 +315,12 @@ export interface StorageNode {
   name: string;
   value: number;
   children?: StorageNode[];
+}
+
+/** What a job-dispatching endpoint answers with; poll `/jobs/{job_id}/status` from there. */
+export interface JobDispatch {
+    job_id: number;
+    status: string;
+    /** Records the job was scoped to, when the endpoint takes a record list. */
+    record_count?: number;
 }

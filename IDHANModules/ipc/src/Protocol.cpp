@@ -1,6 +1,8 @@
 #include "ipc/Protocol.hpp"
 
+#include <exception>
 #include <format>
+#include <optional>
 #include <type_traits>
 #include <variant>
 
@@ -18,22 +20,88 @@ std::string describeWireValue( const Json::Value& json )
 	return "a non-integral value";
 }
 
-[[nodiscard]] Json::Value imageToJson( const MetadataInfoImage& image )
+[[nodiscard]] std::string phashToHex( const PerceptualHash& phash )
+{
+	constexpr char HEX[] { "0123456789abcdef" };
+	std::string value( phash.size() * 2, '0' );
+	for ( std::size_t i = 0; i < phash.size(); ++i )
+	{
+		const auto byte { static_cast< std::uint8_t >( phash[ i ] ) };
+		value[ i * 2 ] = HEX[ byte >> 4 ];
+		value[ i * 2 + 1 ] = HEX[ byte & 0x0f ];
+	}
+	return value;
+}
+
+[[nodiscard]] std::optional< std::uint8_t > hexDigit( const char value )
+{
+	if ( value >= '0' && value <= '9' ) return static_cast< std::uint8_t >( value - '0' );
+	if ( value >= 'a' && value <= 'f' ) return static_cast< std::uint8_t >( value - 'a' + 10 );
+	if ( value >= 'A' && value <= 'F' ) return static_cast< std::uint8_t >( value - 'A' + 10 );
+	return std::nullopt;
+}
+
+[[nodiscard]] Json::Value embeddedToJson( const EmbeddedMetadata& embedded )
+{
+	Json::Value json {};
+	json[ "exif" ] = embedded.exif;
+	json[ "gps" ] = embedded.gps;
+	json[ "xmp" ] = embedded.xmp;
+	json[ "iptc" ] = embedded.iptc;
+	json[ "icc_profile" ] = embedded.icc_profile;
+	return json;
+}
+
+[[nodiscard]] EmbeddedMetadata embeddedFromJson( const Json::Value& json )
+{
+	return EmbeddedMetadata {
+		.exif = json[ "exif" ].asBool(),
+		.gps = json[ "gps" ].asBool(),
+		.xmp = json[ "xmp" ].asBool(),
+		.iptc = json[ "iptc" ].asBool(),
+		.icc_profile = json[ "icc_profile" ].asBool()
+	};
+}
+
+[[nodiscard]] Json::Value imageToJson( const MetadataInfoImage& image, const bool include_phash )
 {
 	Json::Value json {};
 	json[ "width" ] = image.width;
 	json[ "height" ] = image.height;
 	json[ "channels" ] = static_cast< Json::UInt >( image.channels );
+	json[ "embedded" ] = embeddedToJson( image.embedded );
+	if ( include_phash && image.phash ) json[ "phash" ] = phashToHex( *image.phash );
 	return json;
 }
 
-[[nodiscard]] MetadataInfoImage imageFromJson( const Json::Value& json )
+[[nodiscard]] std::expected< MetadataInfoImage, std::string > imageFromJson(
+	const Json::Value& json,
+	const bool include_phash )
 {
-	return MetadataInfoImage {
+	MetadataInfoImage image {
 		.width = json[ "width" ].asInt(),
 		.height = json[ "height" ].asInt(),
-		.channels = static_cast< std::uint8_t >( json[ "channels" ].asUInt() )
+		.channels = static_cast< std::uint8_t >( json[ "channels" ].asUInt() ),
+		.phash = std::nullopt,
+		.embedded = embeddedFromJson( json[ "embedded" ] )
 	};
+
+	if ( !include_phash || !json.isMember( "phash" ) ) return image;
+	if ( !json[ "phash" ].isString() ) return std::unexpected( "image metadata has a non-string phash" );
+
+	const auto value { json[ "phash" ].asString() };
+	if ( value.size() != 16 ) return std::unexpected( "image metadata phash is not 16 hex characters" );
+
+	PerceptualHash phash {};
+	for ( std::size_t i = 0; i < phash.size(); ++i )
+	{
+		const auto high { hexDigit( value[ i * 2 ] ) };
+		const auto low { hexDigit( value[ i * 2 + 1 ] ) };
+		if ( !high || !low ) return std::unexpected( "image metadata phash contains a non-hex character" );
+		phash[ i ] = static_cast< std::byte >( ( *high << 4 ) | *low );
+	}
+	image.phash = phash;
+	return image;
 }
 
 Json::Value toJson( const ModuleVersion& version )
@@ -62,11 +130,12 @@ Json::Value toJson( const ManifestEntry& entry )
 	json[ field::TYPE ] = static_cast< Json::UInt >( entry.type );
 	json[ field::VERSION ] = toJson( entry.version );
 	json[ field::THREAD_SAFE ] = entry.thread_safe;
+	json[ field::SINGLE_THREADED ] = entry.single_threaded;
 	json[ field::RESIDENCY ] = toWire( entry.residency );
 	json[ field::RSS_CEILING_MB ] = static_cast< Json::UInt64 >( entry.rss_ceiling_mb );
 
 	Json::Value mimes { Json::arrayValue };
-	for ( const auto& mime : entry.mimes ) mimes.append( mime );
+	for ( const auto mime_id : entry.mimes ) mimes.append( static_cast< Json::Int >( mime_id ) );
 	json[ field::MIMES ] = mimes;
 
 	json[ field::MODEL_NAME ] = entry.model_name;
@@ -80,13 +149,20 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 {
 	if ( !json.isObject() ) return std::unexpected( std::string { "manifest entry was not an object" } );
 
-	if ( !json[ field::INDEX ].isIntegral() )
-		return std::unexpected( std::string { "manifest entry has no integral index" } );
+	if ( !json[ field::INDEX ].isUInt64() )
+		return std::unexpected( std::string { "manifest entry has no unsigned index" } );
 
 	if ( !json[ field::NAME ].isString() ) return std::unexpected( std::string { "manifest entry has no name" } );
 
-	if ( !json[ field::TYPE ].isIntegral() )
-		return std::unexpected( std::string { "manifest entry has no integral type" } );
+	if ( !json[ field::TYPE ].isUInt() )
+		return std::unexpected( std::string { "manifest entry has no unsigned type" } );
+
+	if ( !json[ field::VERSION ].isObject() || !json[ field::VERSION ][ field::MAJOR ].isUInt64()
+	     || !json[ field::VERSION ][ field::MINOR ].isUInt64() || !json[ field::VERSION ][ field::PATCH ].isUInt64() )
+		return std::unexpected( std::string { "manifest entry has an invalid version" } );
+
+	if ( !json[ field::THREAD_SAFE ].isBool() )
+		return std::unexpected( std::string { "manifest entry has no boolean thread_safe flag" } );
 
 	const auto residency { fromWire< ModuleResidency >( json[ field::RESIDENCY ] ) };
 	if ( !residency )
@@ -102,9 +178,24 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 	entry.thread_safe = json[ field::THREAD_SAFE ].asBool();
 	entry.residency = *residency;
 
+	if ( json.isMember( field::SINGLE_THREADED ) )
+	{
+		if ( !json[ field::SINGLE_THREADED ].isBool() )
+			return std::unexpected( std::string { "manifest entry has a non-boolean single_threaded flag" } );
+
+		entry.single_threaded = json[ field::SINGLE_THREADED ].asBool();
+	}
+
+	constexpr ModuleType known_module_flags {
+		ModuleTypeFlags::METADATA | ModuleTypeFlags::THUMBNAILER | ModuleTypeFlags::GENERATOR
+		| ModuleTypeFlags::EMBEDDING | ModuleTypeFlags::MIME_PARSE
+	};
+	if ( entry.type == 0 || ( entry.type & ~known_module_flags ) != 0 )
+		return std::unexpected( std::format( "manifest entry has unsupported module flags {}", entry.type ) );
+
 	if ( json.isMember( field::RSS_CEILING_MB ) )
 	{
-		if ( !json[ field::RSS_CEILING_MB ].isIntegral() )
+		if ( !json[ field::RSS_CEILING_MB ].isUInt64() )
 			return std::unexpected( std::string { "manifest entry has a non-integral rss_ceiling_mb" } );
 
 		entry.rss_ceiling_mb = static_cast< std::size_t >( json[ field::RSS_CEILING_MB ].asUInt64() );
@@ -120,13 +211,18 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 
 	if ( json.isMember( field::DIMENSIONS ) )
 	{
-		if ( !json[ field::DIMENSIONS ].isIntegral() )
+		if ( !json[ field::DIMENSIONS ].isUInt() )
 			return std::unexpected( std::string { "manifest entry has a non-integral dimensions" } );
 
 		entry.dimensions = static_cast< std::uint32_t >( json[ field::DIMENSIONS ].asUInt() );
 	}
 
-	if ( json.isMember( field::SUPPORTS_TEXT ) ) entry.supports_text = json[ field::SUPPORTS_TEXT ].asBool();
+	if ( json.isMember( field::SUPPORTS_TEXT ) )
+	{
+		if ( !json[ field::SUPPORTS_TEXT ].isBool() )
+			return std::unexpected( std::string { "manifest entry has a non-boolean supports_text" } );
+		entry.supports_text = json[ field::SUPPORTS_TEXT ].asBool();
+	}
 
 	if ( ( entry.type & ModuleTypeFlags::EMBEDDING ) != 0 )
 	{
@@ -142,8 +238,10 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 
 	for ( const auto& mime : mimes )
 	{
-		if ( !mime.isString() ) return std::unexpected( std::string { "manifest entry has a non-string mime" } );
-		entry.mimes.emplace_back( mime.asString() );
+		if ( !mime.isInt() )
+			return std::unexpected(
+				std::format( "manifest entry has a non-numeric mime id: {}", describeWireValue( mime ) ) );
+		entry.mimes.emplace_back( static_cast< MimeID >( mime.asInt() ) );
 	}
 
 	return entry;
@@ -164,13 +262,21 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 			entry.version.m_minor,
 			entry.version.m_patch );
 
-		for ( const auto& mime : entry.mimes )
+		for ( const auto mime_id : entry.mimes )
 		{
-			signature += mime;
+			signature += std::to_string( mime_id );
 			signature += ',';
 		}
 
-		signature += std::format( "|{}|{}|{}", entry.model_name, entry.dimensions, entry.supports_text );
+		signature += std::format(
+			"|{}|{}|{}|{}|{}|{}|{}",
+			entry.thread_safe,
+			entry.single_threaded,
+			toWire( entry.residency ),
+			entry.rss_ceiling_mb,
+			entry.model_name,
+			entry.dimensions,
+			entry.supports_text );
 
 		signature += '\n';
 	}
@@ -181,7 +287,7 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 Json::Value toJson( const ModuleCapability& capability )
 {
 	Json::Value json {};
-	json[ field::MIME ] = capability.mime;
+	json[ field::MIME_ID ] = static_cast< Json::Int >( capability.mime_id );
 	json[ field::HAS_METADATA ] = capability.has_metadata;
 	json[ field::HAS_THUMBNAILER ] = capability.has_thumbnailer;
 	json[ field::HAS_GENERATOR ] = capability.has_generator;
@@ -191,10 +297,10 @@ Json::Value toJson( const ModuleCapability& capability )
 std::expected< ModuleCapability, std::string > capabilityFromJson( const Json::Value& json )
 {
 	if ( !json.isObject() ) return std::unexpected( std::string { "capability was not an object" } );
-	if ( !json[ field::MIME ].isString() ) return std::unexpected( std::string { "capability has no mime" } );
+	if ( !json[ field::MIME_ID ].isIntegral() ) return std::unexpected( std::string { "capability has no mime id" } );
 
 	return ModuleCapability {
-		.mime = json[ field::MIME ].asString(),
+		.mime_id = static_cast< MimeID >( json[ field::MIME_ID ].asInt() ),
 		.has_metadata = json[ field::HAS_METADATA ].asBool(),
 		.has_thumbnailer = json[ field::HAS_THUMBNAILER ].asBool(),
 		.has_generator = json[ field::HAS_GENERATOR ].asBool()
@@ -218,39 +324,57 @@ Json::Value toJson( const MetadataInfo& info )
 			if constexpr ( std::is_same_v< T, MetadataInfoImage > )
 			{
 				tag = MetadataVariant::IMAGE;
-				value = imageToJson( metadata );
+				value = imageToJson( metadata, true );
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoVideo > )
 			{
 				tag = MetadataVariant::VIDEO;
-				value[ "has_audio" ] = metadata.m_has_audio;
-				value[ "width" ] = metadata.m_width;
-				value[ "height" ] = metadata.m_height;
-				value[ "bitrate" ] = metadata.m_bitrate;
-				value[ "duration" ] = metadata.m_duration;
-				value[ "fps" ] = metadata.m_fps;
+				value[ "has_audio" ] = metadata.has_audio;
+				value[ "width" ] = metadata.width;
+				value[ "height" ] = metadata.height;
+				value[ "bitrate" ] = metadata.bitrate_bps;
+				value[ "duration" ] = metadata.duration_s;
+				value[ "fps" ] = metadata.fps;
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoImageProject > )
 			{
 				tag = MetadataVariant::IMAGE_PROJECT;
-				value[ "image" ] = imageToJson( metadata.image_info );
+				value[ "image" ] = imageToJson( metadata.image_info, false );
 				value[ "layers" ] = static_cast< Json::UInt >( metadata.layers );
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoAnimation > )
 			{
 				tag = MetadataVariant::ANIMATION;
-				value = Json::Value { Json::objectValue };
+				value[ "width" ] = metadata.width;
+				value[ "height" ] = metadata.height;
+				value[ "frame_count" ] = metadata.frame_count;
+				value[ "duration" ] = metadata.duration_s;
+				value[ "loops" ] = metadata.loops;
 			}
 			else if constexpr ( std::is_same_v< T, MetadataInfoArchive > )
 			{
 				tag = MetadataVariant::ARCHIVE;
 
-				Json::Value hashes { Json::arrayValue };
-				for ( const auto& hash : metadata.contained_hashes ) hashes.append( crypto::toHex( hash ) );
+				Json::Value records { Json::arrayValue };
+				for ( const auto& contained : metadata.contained_records )
+				{
+					Json::Value entry { Json::objectValue };
+					entry[ "hash" ] = crypto::toHex( contained.hash );
+					entry[ "path" ] = contained.path;
+					records.append( std::move( entry ) );
+				}
 
-				value[ "contained_hashes" ] = hashes;
+				value[ "contained_records" ] = records;
 				value[ "size" ] = static_cast< Json::UInt64 >( metadata.m_size );
 				value[ "encrypted" ] = metadata.encrypted;
+			}
+			else if constexpr ( std::is_same_v< T, MetadataInfoAudio > )
+			{
+				tag = MetadataVariant::AUDIO;
+				value[ "duration" ] = metadata.duration_s;
+				value[ "bitrate" ] = metadata.bitrate_bps;
+				value[ "channels" ] = static_cast< Json::UInt >( metadata.channels );
+				value[ "sample_rate" ] = metadata.sample_rate;
 			}
 			else
 			{
@@ -268,75 +392,113 @@ Json::Value toJson( const MetadataInfo& info )
 
 std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Value& json )
 {
-	if ( !json.isObject() ) return std::unexpected( std::string { "metadata was not an object" } );
-
-	MetadataInfo info {};
-	info.m_simple_type = static_cast< SimpleMimeType >( json[ field::SIMPLE_TYPE ].asUInt() );
-	info.m_extra = json[ field::EXTRA ];
-
-	const auto decoded { fromWire< MetadataVariant >( json[ field::VARIANT ] ) };
-	if ( !decoded )
-		return std::unexpected(
-			std::format( "metadata has an unknown variant tag: {}", describeWireValue( json[ field::VARIANT ] ) ) );
-
-	const auto& value { json[ field::VALUE ] };
-
-	switch ( *decoded )
+	try
 	{
-		case MetadataVariant::NONE:
-			info.m_metadata = std::monostate {};
-			break;
-		case MetadataVariant::IMAGE:
-			info.m_metadata = imageFromJson( value );
-			break;
-		case MetadataVariant::VIDEO:
-			info.m_metadata = MetadataInfoVideo {
-				.m_has_audio = value[ "has_audio" ].asBool(),
-				.m_width = value[ "width" ].asInt(),
-				.m_height = value[ "height" ].asInt(),
-				.m_bitrate = value[ "bitrate" ].asInt(),
-				.m_duration = value[ "duration" ].asDouble(),
-				.m_fps = value[ "fps" ].asDouble()
-			};
-			break;
-		case MetadataVariant::IMAGE_PROJECT:
-			info.m_metadata = MetadataInfoImageProject {
-				.image_info = imageFromJson( value[ "image" ] ),
-				.layers = static_cast< std::uint8_t >( value[ "layers" ].asUInt() )
-			};
-			break;
-		case MetadataVariant::ANIMATION:
-			info.m_metadata = MetadataInfoAnimation {};
-			break;
-		case MetadataVariant::ARCHIVE:
-			{
-				MetadataInfoArchive archive {};
+		if ( !json.isObject() ) return std::unexpected( std::string { "metadata was not an object" } );
 
-				const auto& hashes { value[ "contained_hashes" ] };
-				if ( !hashes.isArray() ) return std::unexpected( std::string { "archive metadata has no hash array" } );
+		MetadataInfo info {};
+		info.m_simple_type = static_cast< SimpleMimeType >( json[ field::SIMPLE_TYPE ].asUInt() );
+		info.m_extra = json[ field::EXTRA ];
 
-				for ( const auto& hash : hashes )
-				{
-					if ( !hash.isString() )
-						return std::unexpected( std::string { "archive metadata has a non-string hash" } );
+		const auto decoded { fromWire< MetadataVariant >( json[ field::VARIANT ] ) };
+		if ( !decoded )
+			return std::unexpected(
+				std::format( "metadata has an unknown variant tag: {}", describeWireValue( json[ field::VARIANT ] ) ) );
 
-					const auto hex { hash.asString() };
-					if ( hex.size() != ( 256 / 8 ) * 2 )
-						return std::unexpected(
-							std::format( "archive metadata hash '{}' is not a sha256 hex string", hex ) );
+		const auto& value { json[ field::VALUE ] };
 
-					archive.contained_hashes.emplace_back( crypto::fromHex( hex ) );
-				}
-
-				archive.m_size = static_cast< std::size_t >( value[ "size" ].asUInt64() );
-				archive.encrypted = value[ "encrypted" ].asBool();
-
-				info.m_metadata = std::move( archive );
+		switch ( *decoded )
+		{
+			case MetadataVariant::NONE:
+				info.m_metadata = std::monostate {};
 				break;
-			}
-	}
+			case MetadataVariant::IMAGE:
+				{
+					auto image { imageFromJson( value, true ) };
+					if ( !image ) return std::unexpected( image.error() );
+					info.m_metadata = std::move( *image );
+					break;
+				}
+			case MetadataVariant::VIDEO:
+				info.m_metadata = MetadataInfoVideo {
+					.has_audio = value[ "has_audio" ].asBool(),
+					.width = value[ "width" ].asInt(),
+					.height = value[ "height" ].asInt(),
+					.bitrate_bps = value[ "bitrate" ].asInt(),
+					.duration_s = value[ "duration" ].asDouble(),
+					.fps = value[ "fps" ].asDouble()
+				};
+				break;
+			case MetadataVariant::IMAGE_PROJECT:
+				{
+					auto image { imageFromJson( value[ "image" ], false ) };
+					if ( !image ) return std::unexpected( image.error() );
+					info.m_metadata = MetadataInfoImageProject {
+						.image_info = std::move( *image ),
+						.layers = static_cast< std::uint8_t >( value[ "layers" ].asUInt() )
+					};
+					break;
+				}
+			case MetadataVariant::ANIMATION:
+				info.m_metadata = MetadataInfoAnimation {
+					.width = value[ "width" ].asInt(),
+					.height = value[ "height" ].asInt(),
+					.frame_count = value[ "frame_count" ].asInt(),
+					.duration_s = value[ "duration" ].asDouble(),
+					.loops = value[ "loops" ].asBool()
+				};
+				break;
+			case MetadataVariant::AUDIO:
+				info.m_metadata = MetadataInfoAudio {
+					.duration_s = value[ "duration" ].asDouble(),
+					.bitrate_bps = value[ "bitrate" ].asInt(),
+					.channels = static_cast< std::uint8_t >( value[ "channels" ].asUInt() ),
+					.sample_rate = value[ "sample_rate" ].asInt()
+				};
+				break;
+			case MetadataVariant::ARCHIVE:
+				{
+					MetadataInfoArchive archive {};
 
-	return info;
+					const auto& records { value[ "contained_records" ] };
+					if ( !records.isArray() )
+						return std::unexpected( std::string { "archive metadata has no record array" } );
+
+					for ( const auto& contained : records )
+					{
+						if ( !contained.isObject() )
+							return std::unexpected( std::string { "archive metadata has a non-object entry" } );
+
+						if ( !contained[ "hash" ].isString() )
+							return std::unexpected( std::string { "archive metadata entry has a non-string hash" } );
+
+						const auto hex { contained[ "hash" ].asString() };
+						if ( hex.size() != ( 256 / 8 ) * 2 )
+							return std::unexpected(
+								std::format( "archive metadata hash '{}' is not a sha256 hex string", hex ) );
+
+						if ( !contained[ "path" ].isString() )
+							return std::unexpected(
+								std::format( "archive metadata entry '{}' has a non-string path", hex ) );
+
+						archive.contained_records.emplace_back(
+							crypto::fromHex( hex ), contained[ "path" ].asString() );
+					}
+
+					archive.m_size = static_cast< std::size_t >( value[ "size" ].asUInt64() );
+					archive.encrypted = value[ "encrypted" ].asBool();
+
+					info.m_metadata = std::move( archive );
+					break;
+				}
+		}
+
+		return info;
+	}
+	catch ( const std::exception& error )
+	{
+		return std::unexpected( std::format( "metadata has invalid field types: {}", error.what() ) );
+	}
 }
 
 Json::Value thumbnailHeaderToJson( const ThumbnailInfo& info )
@@ -345,6 +507,7 @@ Json::Value thumbnailHeaderToJson( const ThumbnailInfo& info )
 	json[ field::WIDTH ] = static_cast< Json::UInt64 >( info.width );
 	json[ field::HEIGHT ] = static_cast< Json::UInt64 >( info.height );
 	json[ field::CACHE_THUMBNAIL ] = info.cache_thumbnail;
+	json[ field::FORMAT ] = static_cast< Json::UInt >( static_cast< std::uint8_t >( info.m_format ) );
 	return json;
 }
 
@@ -353,11 +516,51 @@ std::expected< ThumbnailInfo, std::string > thumbnailFromJson(
 	std::vector< std::byte > pixels )
 {
 	if ( !json.isObject() ) return std::unexpected( std::string { "thumbnail header was not an object" } );
+	if ( !json[ field::WIDTH ].isUInt64() )
+		return std::unexpected( std::string { "thumbnail header has no unsigned width" } );
+	if ( !json[ field::HEIGHT ].isUInt64() )
+		return std::unexpected( std::string { "thumbnail header has no unsigned height" } );
+	if ( !json[ field::CACHE_THUMBNAIL ].isBool() )
+		return std::unexpected( std::string { "thumbnail header has no boolean cache flag" } );
+
+	const auto width { json[ field::WIDTH ].asUInt64() };
+	if ( width == 0 ) return std::unexpected( std::string { "thumbnail header has a zero width" } );
+	if ( width > std::numeric_limits< std::size_t >::max() )
+		return std::unexpected( std::string { "thumbnail header width is too large" } );
+
+	const auto height { json[ field::HEIGHT ].asUInt64() };
+	if ( height == 0 ) return std::unexpected( std::string { "thumbnail header has a zero height" } );
+	if ( height > std::numeric_limits< std::size_t >::max() )
+		return std::unexpected( std::string { "thumbnail header height is too large" } );
 
 	ThumbnailInfo info {};
-	info.width = static_cast< std::size_t >( json[ field::WIDTH ].asUInt64() );
-	info.height = static_cast< std::size_t >( json[ field::HEIGHT ].asUInt64() );
+	info.width = static_cast< std::size_t >( width );
+	info.height = static_cast< std::size_t >( height );
 	info.cache_thumbnail = json[ field::CACHE_THUMBNAIL ].asBool();
+
+	// An older worker sends no format field; RGB is what every module produced before ANIMATED existed.
+	if ( const auto& format { json[ field::FORMAT ] }; !format.isNull() )
+	{
+		if ( !format.isUInt() ) return std::unexpected( std::string { "thumbnail header has an invalid format" } );
+		const auto raw_format { format.asUInt() };
+		if ( raw_format > static_cast< std::uint8_t >( ThumbnailFormat::ENCODED ) )
+			return std::unexpected( std::format( "thumbnail header carried unknown format {}", raw_format ) );
+
+		info.m_format = static_cast< ThumbnailFormat >( raw_format );
+	}
+
+	if ( info.m_format == ThumbnailFormat::RGB )
+	{
+		if ( info.width > std::numeric_limits< std::size_t >::max() / info.height / 3 )
+			return std::unexpected( std::string { "thumbnail dimensions overflow the RGB byte count" } );
+		const auto expected { info.width * info.height * 3 };
+		if ( pixels.size() != expected )
+			return std::unexpected( std::format( "RGB thumbnail has {} bytes; expected {}", pixels.size(), expected ) );
+	}
+	else if ( pixels.empty() )
+	{
+		return std::unexpected( std::string { "animated thumbnail has no payload" } );
+	}
 	info.m_pixel_data = std::move( pixels );
 
 	return info;

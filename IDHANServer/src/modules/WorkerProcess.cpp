@@ -77,6 +77,7 @@ std::expected< void, std::string > WorkerProcess::start()
 	if ( !wakeup ) return std::unexpected( std::format( "eventfd failed: {}", std::strerror( errno ) ) );
 
 	const auto pool_threads { std::to_string( m_settings.pool_threads ) };
+	const auto render_threads { std::to_string( m_settings.render_threads ) };
 	const auto heartbeat { std::to_string( m_settings.heartbeat_interval.count() ) };
 	const auto library { m_settings.library.string() };
 	const auto runner { m_settings.runner.string() };
@@ -145,6 +146,8 @@ std::expected< void, std::string > WorkerProcess::start()
 				child_fd.c_str(),
 				"--pool-threads",
 				pool_threads.c_str(),
+				"--render-threads",
+				render_threads.c_str(),
 				"--heartbeat-ms",
 				heartbeat.c_str(),
 				"--log-level",
@@ -158,8 +161,15 @@ std::expected< void, std::string > WorkerProcess::start()
 	m_socket = std::move( channel->first );
 	m_wakeup = std::move( wakeup );
 
-	if ( const auto configured { ipc::setNonBlocking( m_socket.get() ) }; !configured )
+	auto configured { ipc::setNonBlocking( m_socket.get() ) };
+	if ( !configured )
+	{
+		::kill( m_pid, SIGKILL );
+		[[maybe_unused]] int status { 0 };
+		[[maybe_unused]] const auto reaped { ::waitpid( m_pid, &status, 0 ) };
+		m_pid = -1;
 		return std::unexpected( configured.error() );
+	}
 
 	m_alive.store( true );
 	m_last_heartbeat = std::chrono::steady_clock::now();
@@ -198,7 +208,11 @@ void WorkerProcess::ioLoop( const std::stop_token& stop )
 			return;
 		}
 
-		for ( auto& frame : *frames ) handleFrame( std::move( frame ) );
+		for ( auto& frame : *frames )
+		{
+			handleFrame( std::move( frame ) );
+			if ( !m_alive.load() ) return;
+		}
 
 		if ( m_reader.atEof() )
 		{
@@ -238,24 +252,45 @@ void WorkerProcess::ioLoop( const std::stop_token& stop )
 
 void WorkerProcess::handleFrame( ipc::Frame&& frame )
 {
+	const auto reject = [ this ]( std::string_view reason )
+	{ terminate( std::format( "worker for {} sent an invalid message: {}", m_settings.library.string(), reason ) ); };
+
+	if ( !frame.body.isObject() )
+	{
+		reject( "frame body was not an object" );
+		return;
+	}
+
 	const auto type { ipc::fromWire< ipc::MessageType >( frame.body[ ipc::field::TYPE ] ) };
-	if ( !type ) return;
+	if ( !type )
+	{
+		reject( "unknown message type" );
+		return;
+	}
 
 	switch ( *type )
 	{
 		case ipc::MessageType::MANIFEST:
 			{
+				if ( !frame.body[ ipc::field::MODULES ].isArray() )
+				{
+					reject( "manifest has no module array" );
+					return;
+				}
+
 				std::vector< ipc::ManifestEntry > entries {};
 				for ( const auto& entry : frame.body[ ipc::field::MODULES ] )
 				{
 					auto parsed { ipc::manifestEntryFromJson( entry ) };
 					if ( !parsed )
 					{
-						log::warn(
-							"Worker for {} sent an unparseable manifest: {}",
-							m_settings.library.string(),
-							parsed.error() );
-						continue;
+						reject( std::format( "unparseable manifest entry: {}", parsed.error() ) );
+						return;
+					}
+					if ( parsed->index != entries.size() )
+					{
+						reject( "manifest module indexes are not contiguous and in factory order" );
+						return;
 					}
 					entries.emplace_back( std::move( *parsed ) );
 				}
@@ -263,6 +298,11 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 				std::string mismatch {};
 				{
 					const std::lock_guard< std::mutex > guard { m_manifest_mutex };
+					if ( m_manifest_seen )
+					{
+						reject( "sent more than one manifest" );
+						return;
+					}
 					m_manifest = std::move( entries );
 					m_signature = ipc::manifestSignature( m_manifest );
 					m_manifest_seen = true;
@@ -273,12 +313,27 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 							m_settings.library.string() );
 				}
 
-				if ( !mismatch.empty() ) terminate( mismatch );
+				// terminate() settles the waiters itself, and does it against a worker already marked
+				// dead so nothing resumes and then dispatches onto stale module indexes.
+				if ( !mismatch.empty() )
+				{
+					terminate( mismatch );
+					return;
+				}
+
+				settleManifestWaiters();
+				m_manifest_ready.notify_all();
 
 				return;
 			}
 		case ipc::MessageType::HEARTBEAT:
 			{
+				if ( !frame.fds.empty() || !frame.body[ ipc::field::RSS_KB ].isUInt64()
+				     || !frame.body[ ipc::field::ACTIVE_CALLS ].isUInt64() )
+				{
+					reject( "heartbeat has invalid fields or descriptors" );
+					return;
+				}
 				m_rss_kb.store( frame.body[ ipc::field::RSS_KB ].asUInt64() );
 				m_active_calls.store( frame.body[ ipc::field::ACTIVE_CALLS ].asUInt64() );
 				m_last_heartbeat = std::chrono::steady_clock::now();
@@ -286,6 +341,22 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 			}
 		case ipc::MessageType::RESULT:
 			{
+				if ( !frame.body[ ipc::field::CALL_ID ].isUInt64() || !frame.body[ ipc::field::OK ].isBool()
+				     || ( frame.body.isMember( ipc::field::ERROR ) && !frame.body[ ipc::field::ERROR ].isString() ) )
+				{
+					reject( "result has invalid fields" );
+					return;
+				}
+				if ( !frame.body[ ipc::field::OK ].asBool() && !frame.body[ ipc::field::ERROR ].isString() )
+				{
+					reject( "failed result has no error string" );
+					return;
+				}
+				if ( frame.fds.size() > 1 )
+				{
+					reject( "result has more than one descriptor" );
+					return;
+				}
 				const std::uint64_t call_id { frame.body[ ipc::field::CALL_ID ].asUInt64() };
 
 				CallOutcome outcome {};
@@ -295,7 +366,7 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 
 				if ( !frame.fds.empty() )
 				{
-					auto adopted { ipc::Blob::adopt( std::move( frame.fds.front() ) ) };
+					auto adopted { ipc::Blob::adoptSealed( std::move( frame.fds.front() ) ) };
 					if ( adopted )
 						outcome.blob = std::move( *adopted );
 					else if ( outcome.ok )
@@ -310,6 +381,15 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 			}
 		case ipc::MessageType::CALLBACK:
 			{
+				const auto kind { ipc::fromWire< ipc::CallbackKind >( frame.body[ ipc::field::KIND ] ) };
+				const auto& input_ref { frame.body[ ipc::field::INPUT_REF ] };
+				if ( !frame.body[ ipc::field::CALLBACK_ID ].isUInt64() || !kind
+				     || !frame.body[ ipc::field::DEPTH ].isUInt() || ( !input_ref.isNull() && !input_ref.isUInt64() )
+				     || ( input_ref.isUInt64() ? !frame.fds.empty() : frame.fds.size() != 1 ) )
+				{
+					reject( "callback has invalid fields or descriptors" );
+					return;
+				}
 				if ( m_on_callback ) m_on_callback( shared_from_this(), std::move( frame ) );
 				return;
 			}
@@ -378,6 +458,11 @@ void WorkerProcess::terminate( const std::string& reason, const Termination kind
 {
 	if ( !m_alive.exchange( false ) ) return;
 
+	// Ordered so the notify comes after m_manifest_mutex has been taken and released: a waiter that
+	// read m_alive before it was cleared is holding that mutex, so it cannot miss the wake-up.
+	settleManifestWaiters();
+	m_manifest_ready.notify_all();
+
 	if ( kind == Termination::FAILURE )
 		log::warn( "Terminating module worker for {}: {}", m_settings.library.string(), reason );
 	else
@@ -429,25 +514,93 @@ bool WorkerProcess::manifestSeen()
 std::expected< std::vector< ipc::ManifestEntry >, std::string > WorkerProcess::awaitManifest(
 	const std::chrono::milliseconds timeout )
 {
-	const auto deadline { std::chrono::steady_clock::now() + timeout };
+	std::unique_lock< std::mutex > guard { m_manifest_mutex };
+	const auto ready { [ this ] { return m_manifest_seen || !m_alive.load(); } };
+	m_manifest_ready.wait_for( guard, timeout, ready );
 
-	while ( std::chrono::steady_clock::now() < deadline )
-	{
-		{
-			const std::lock_guard< std::mutex > guard { m_manifest_mutex };
-			if ( m_manifest_seen ) return m_manifest;
-		}
-
-		if ( !m_alive.load() )
-			return std::unexpected(
-				std::format( "worker for {} died before announcing itself", m_settings.library.string() ) );
-
-		std::this_thread::sleep_for( std::chrono::milliseconds { 5 } );
-	}
+	if ( m_manifest_seen ) return m_manifest;
+	if ( !m_alive.load() )
+		return std::unexpected(
+			std::format( "worker for {} died before announcing itself", m_settings.library.string() ) );
 
 	return std::unexpected(
 		std::format(
 			"worker for {} did not announce itself within {}ms", m_settings.library.string(), timeout.count() ) );
+}
+
+void WorkerProcess::settleManifestWaiters()
+{
+	std::vector< std::function< void() > > waiters {};
+	{
+		const std::lock_guard< std::mutex > guard { m_manifest_mutex };
+		waiters = std::move( m_manifest_waiters );
+		m_manifest_waiters.clear();
+	}
+
+	for ( const auto& waiter : waiters ) waiter();
+}
+
+bool WorkerProcess::addManifestWaiter( std::function< void() > waiter )
+{
+	const std::lock_guard< std::mutex > guard { m_manifest_mutex };
+
+	if ( m_manifest_seen || !m_alive.load() ) return false;
+
+	m_manifest_waiters.emplace_back( std::move( waiter ) );
+	return true;
+}
+
+IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > WorkerProcess::awaitManifestAsync(
+	const std::chrono::milliseconds timeout )
+{
+	using Manifest = std::expected< std::vector< ipc::ManifestEntry >, std::string >;
+
+	//! Parks on the IO thread's arrival notification plus a timer, whichever lands first.
+	struct Awaiter
+	{
+		std::shared_ptr< WorkerProcess > worker;
+		std::chrono::milliseconds timeout;
+		trantor::EventLoop* loop;
+
+		[[nodiscard]] bool await_ready() const noexcept { return worker->manifestSeen(); }
+
+		void await_suspend( const std::coroutine_handle<> continuation ) const
+		{
+			// Both the notification and the timer fire; the flag decides which one owns the resume.
+			auto resumed { std::make_shared< std::atomic_flag >() };
+
+			auto resume = [ resumed, loop = loop, continuation ]
+			{
+				if ( resumed->test_and_set() ) return;
+				resumeOnLoop( continuation, loop );
+			};
+
+			if ( !worker->addManifestWaiter( resume ) )
+			{
+				resume();
+				return;
+			}
+
+			loop->runAfter( std::chrono::duration< double > { timeout }.count(), resume );
+		}
+
+		[[nodiscard]] Manifest await_resume() const
+		{
+			if ( worker->manifestSeen() ) return worker->manifest();
+
+			if ( !worker->alive() )
+				return std::unexpected(
+					std::format( "worker for {} died before announcing itself", worker->m_settings.library.string() ) );
+
+			return std::unexpected(
+				std::format(
+					"worker for {} did not announce itself within {}ms",
+					worker->m_settings.library.string(),
+					timeout.count() ) );
+		}
+	};
+
+	co_return co_await Awaiter { .worker = shared_from_this(), .timeout = timeout, .loop = resumptionLoop() };
 }
 
 std::expected< void, std::string > WorkerProcess::post( const Json::Value& body, const std::span< const int > fds )
@@ -496,7 +649,9 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 
 		const std::lock_guard< std::mutex > guard { m_calls_mutex };
 		m_call_inputs.emplace(
-			call_id, InFlightInput { .input = std::move( input ), .mime = body[ ipc::field::MIME ].asString() } );
+			call_id,
+			InFlightInput { .input = std::move( input ),
+		                    .mime_id = static_cast< MimeID >( body[ ipc::field::MIME_ID ].asInt() ) } );
 	}
 
 	//! Registers the call, posts it, and parks the coroutine until the result comes back.

@@ -6,11 +6,11 @@
 
 import { api, getKey, stats as statsApi, tags as tagApi } from '../api/client';
 import { thumbnailUrl as buildThumbnailUrl, fileUrl as buildFileUrl } from '../api/client';
-import { getMetadata } from './metadataCache';
+import {forgetMetadata, getMetadata} from './metadataCache';
 import { autocomplete } from './autocompleteCache';
 import { resolveTags } from './tagInfoCache';
 import { globalServices } from './globalServices';
-import type { HostApi, JobHandle, PanelInstanceId, SettingsApi } from './types';
+import type {HostApi, JobHandle, PanelInstanceId, RecordId, SettingsApi} from './types';
 import { HOST_API_VERSION } from './types';
 
 /** A panel-instance settings object, backed by the layout store. */
@@ -69,6 +69,26 @@ function watchJob(jobId: number, onUpdate: (status: unknown) => void): JobHandle
   };
 }
 
+/**
+ * Reparses metadata server-side, settling when the job does rather than when it is queued: the
+ * cached copies are only worth dropping once the new ones exist.
+ */
+async function regenerateMetadata(ids: readonly RecordId[], signal?: AbortSignal): Promise<void> {
+    const dispatched = await api.rescanMetadata([...ids], signal);
+    const final = await new Promise<unknown>((resolve) => {
+        watchJob(dispatched.job_id, (status) => {
+            if (isTerminalStatus(status)) resolve(status);
+        });
+    });
+    forgetMetadata(ids);
+
+    const state = (final as { status?: unknown }).status;
+    if (state === 'failed' || state === 'error') {
+        const reason = (final as { error?: unknown }).error;
+        throw new Error(typeof reason === 'string' ? reason : 'Metadata regeneration failed');
+    }
+}
+
 export function createHost(instanceId: PanelInstanceId, settings: SettingsBinding): HostApi {
   return {
     version: HOST_API_VERSION,
@@ -77,7 +97,15 @@ export function createHost(instanceId: PanelInstanceId, settings: SettingsBindin
       run: (request, signal) => api.search(request, signal),
     },
     records: {
-      getMetadata: (ids, include) => getMetadata(ids, include),
+        getMetadata: (ids) => getMetadata(ids),
+        relationships: (id, signal) => api.recordRelationships(id, signal),
+        similar: (id, opts, signal) => api.recordsSimilar(id, opts, signal),
+        nextUndecidedDuplicate: (opts, signal) => api.nextUndecidedDuplicate(opts, signal),
+        setBetterDuplicate: (worseId, betterId, signal) => api.setBetterDuplicate(worseId, betterId, signal),
+        addAlternatives: (ids, signal) => api.addAlternatives([...ids], signal),
+        setUnrelated: (idA, idB, signal) => api.setUnrelated(idA, idB, signal),
+        clearRelationship: (idA, idB, signal) => api.clearRelationship(idA, idB, signal),
+        regenerateMetadata: (ids, signal) => regenerateMetadata(ids, signal),
       thumbnailUrl: (id, size) => buildThumbnailUrl(id, size),
       fileUrl: (id, opts) => buildFileUrl(id, opts),
     },

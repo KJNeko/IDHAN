@@ -54,17 +54,6 @@ ClusterManager::ClusterInfo::ClusterInfo( const drogon::orm::Row& row ) :
   m_max_capacity( std::numeric_limits< std::size_t >::max() )
 {}
 
-//! Must stay in step with getFileFolder(), which resolves the same layout when reading a file back.
-std::filesystem::path createSubpath( const SHA256& sha256 )
-{
-	const std::string hex { sha256.hex() };
-
-	std::filesystem::path path { "f" + hex.substr( 0, 2 ) };
-	path /= hex;
-
-	return path;
-}
-
 std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::storeFile(
 	const SHA256& sha256,
 	const std::byte* data,
@@ -74,16 +63,7 @@ std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::stor
 	if ( m_read_only )
 		return std::unexpected( createInternalError( "Refusing to write into read-only cluster {}", m_id ) );
 
-	auto path { std::filesystem::absolute( m_path ) / createSubpath( sha256 ) };
-
-	if ( extension.starts_with( '.' ) )
-		path.replace_extension( extension );
-	else
-	{
-		std::string ext { "." };
-		ext += extension;
-		path.replace_extension( ext );
-	}
+	const auto path { std::filesystem::absolute( m_path ) / getClusterRelativePath( sha256, extension ) };
 
 	if ( !std::filesystem::exists( path.parent_path() ) ) std::filesystem::create_directories( path.parent_path() );
 

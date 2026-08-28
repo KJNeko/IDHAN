@@ -2,11 +2,13 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <coroutine>
 #include <cstdint>
 #include <deque>
 #include <expected>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -33,6 +35,8 @@ struct WorkerSettings
 	std::filesystem::path runner {};
 	std::filesystem::path library {};
 	std::size_t pool_threads { 4 };
+	//! Threads a module may use inside one call (libvips, codec pools). Zero lets the runner derive it.
+	std::size_t render_threads { 0 };
 	std::chrono::milliseconds heartbeat_interval { 1000 };
 	std::chrono::milliseconds liveness_grace { 5000 };
 	bool describe_only { false }; //!< Startup interrogation: announce and exit.
@@ -62,7 +66,7 @@ struct CallOutcome
 struct InFlightInput
 {
 	std::shared_ptr< const CallInput > input {};
-	std::string mime {};
+	MimeID mime_id { 0 };
 };
 
 class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
@@ -109,6 +113,9 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	std::vector< ipc::ManifestEntry > m_manifest {};
 	std::string m_signature {};
 	bool m_manifest_seen { false };
+	std::condition_variable m_manifest_ready {};
+	//! Continuations parked on the manifest. Run once, by whichever of arrival or death comes first.
+	std::vector< std::function< void() > > m_manifest_waiters {};
 
 	std::atomic< std::size_t > m_rss_kb { 0 };
 	std::atomic< std::size_t > m_active_calls { 0 };
@@ -120,6 +127,12 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	void finish( std::uint64_t call_id, CallOutcome outcome );
 	void failAll( const std::string& reason, bool died );
 	void checkLiveness();
+
+	//! Wakes everything parked on the manifest, whether it arrived or the worker died first.
+	void settleManifestWaiters();
+
+	//! \return false when the manifest has already settled, in which case \p waiter was not stored.
+	[[nodiscard]] bool addManifestWaiter( std::function< void() > waiter );
 
   public:
 
@@ -152,6 +165,10 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 
 	//! Blocks until the worker announces its manifest, or the timeout expires. Startup only.
 	[[nodiscard]] std::expected< std::vector< ipc::ManifestEntry >, std::string > awaitManifest(
+		std::chrono::milliseconds timeout );
+
+	//! Waits for a startup manifest without blocking the event loop that dispatched the call.
+	[[nodiscard]] IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > awaitManifestAsync(
 		std::chrono::milliseconds timeout );
 
 	[[nodiscard]] std::expected< void, std::string > post( const Json::Value& body, std::span< const int > fds = {} );
