@@ -16,14 +16,16 @@
 #include "api/apiPrefixes.hpp"
 #include "api/helpers/ResponseCallback.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "auth/authKeys.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "embeddings/embeddings.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/io/IOUring.hpp"
+#include "hamming/hamming.hpp"
 #include "logging/log.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "mime/syncMimeTable.hpp"
 #include "spdlog/async.h"
 
 namespace idhan
@@ -251,12 +253,18 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	printCoreLocation();
 	log::trace( "printCoreLocation completed" );
 
-	std::size_t config_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", 0 ) };
-	if ( config_threads == 0 ) config_threads = std::thread::hardware_concurrency();
-	std::size_t hardware_count { std::max( config_threads, 2ul ) };
-	std::size_t io_threads { hardware_count };
+	// A configured zero asks for the whole machine. The server is not rationed the way the module
+	// workers are; four is simply where it starts.
+	constexpr std::size_t DEFAULT_IO_THREADS { 4 };
 
-	log::trace( "IO threads calculated: {}", io_threads );
+	std::size_t io_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", DEFAULT_IO_THREADS ) };
+
+	if ( io_threads == 0 )
+		io_threads = std::max( std::size_t { 1 }, static_cast< std::size_t >( std::thread::hardware_concurrency() ) );
+
+	// Below two, work that hops between loops has nowhere to hop to.
+	io_threads = std::max( io_threads, std::size_t { 2 } );
+
 	log::info( "IO Threads: {}", io_threads );
 
 	log::trace( "Configuring drogon app" );
@@ -364,7 +372,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				{
 					const auto db { drogon::app().getDbClient() };
 					co_await m_clusters->reloadClusters( db );
-					co_await mime::getMimeDatabase()->reloadMimeParsers();
+					co_await mime::syncMimeTable( db );
 					co_await embeddings::registerEmbeddingModels( db );
 					co_return;
 				}() );
@@ -375,6 +383,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				{
 					if ( m_module_loader != nullptr ) m_module_loader->maintainWorkers();
 				} );
+
+			hamming::startQueueSweeper();
 
 			log::info( "IDHAN initialization finished" );
 			log::info( "Server available at http://localhost:{}", listen_port );
@@ -388,11 +398,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				[]() -> drogon::Task< void >
 				{
 					const auto db { drogon::app().getDbClient() };
-					const auto key_count_search { co_await db->execSqlCoro( "SELECT count(*) FROM auth_keys" ) };
-
-					const auto key_count {
-						key_count_search.empty() ? 0 : key_count_search[ 0 ][ 0 ].as< std::size_t >()
-					};
+					const auto key_count { co_await auth::keyCount( db ) };
 
 					if ( key_count == 0 )
 					{
@@ -423,7 +429,9 @@ void ServerContext::run()
 
 ServerContext::~ServerContext()
 {
-	const auto upload_path { config::getSilentDefault< std::string >( "temp", "path", "/tmp/idhan" ) };
+	// The same key setupTempPath() created it under. Reading a different one deleted /tmp/idhan and
+	// left the configured directory behind, marker file and all, which aborts the next boot.
+	const auto upload_path { config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" ) };
 	std::filesystem::remove_all( upload_path );
 }
 

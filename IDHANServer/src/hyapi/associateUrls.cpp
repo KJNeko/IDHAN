@@ -1,5 +1,6 @@
 #include "HyAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "constants/UrlTypes.hpp"
 #include "hyapi/helpers.hpp"
 #include "records/records.hpp"
 #include "urls/urls.hpp"
@@ -14,10 +15,12 @@ drogon::Task< std::expected< Json::Value, drogon::HttpResponsePtr > > getAdvance
 	Json::Value root {};
 
 	root[ "request_url" ] = url_str;
-	root[ "normalized_url" ] = url_str;
+	root[ "normalised_url" ] = url_str;
 	root[ "url_type" ] = 5; // Unknown URL
-	root[ "url_type_string" ] = "unknown";
+	root[ "url_type_string" ] = std::string( urlTypeString( hydrus::gen_constants::URL_TYPE_UNKNOWN ) );
+	root[ "match_name" ] = "unknown url";
 	root[ "can_parse" ] = false;
+	root[ "cannot_parse_reason" ] = "unknown url class";
 
 	co_return root;
 }
@@ -45,6 +48,9 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::associateUrl( const drogon::H
 		json[ "urls_to_delete" ] = Json::Value( Json::arrayValue );
 		json[ "urls_to_delete" ].append( json[ "url_to_delete" ].asString() );
 	}
+
+	if ( !json.isMember( "urls_to_add" ) && !json.isMember( "urls_to_delete" ) )
+		co_return createBadRequest( "Did not find any URLs to add or delete" );
 
 	if ( json.isMember( "urls_to_add" ) )
 	{
@@ -98,6 +104,7 @@ drogon::Task< drogon::HttpResponsePtr > HydrusAPI::getUrlInfo( const drogon::Htt
 	const auto url_parameter { request->getOptionalParameter< std::string >( "url" ) };
 	if ( !url_parameter ) co_return createBadRequest( "Must provide url parameter" );
 	const auto url_str { url_parameter.value() };
+	if ( url_str.empty() ) co_return createBadRequest( "Given URL was empty" );
 
 	auto db { drogon::app().getDbClient() };
 	const auto url_info_e { co_await getAdvancedUrlInfo( url_str, db ) };

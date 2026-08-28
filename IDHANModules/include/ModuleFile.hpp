@@ -29,6 +29,8 @@ class FGL_EXPORT ModuleFile
 		std::span< std::byte > out,
 		std::size_t offset ) const = 0;
 
+	[[nodiscard]] virtual std::span< const std::byte > mapped() const { return {}; }
+
 	[[nodiscard]] static std::unique_ptr< ModuleFile > fromBytes( std::span< const std::byte > bytes );
 };
 

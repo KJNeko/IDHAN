@@ -33,5 +33,7 @@ class SettingsDialog final : public QDialog
 
   private:
 
+	void saveSettings();
+
 	Ui::SettingsDialog* ui;
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MimeIDs.hpp"
 #include <libavutil/error.h>
 #include <spdlog/spdlog.h>
 
@@ -98,6 +99,10 @@ inline std::int64_t seekFunction( void* opaque, std::int64_t offset, int whence 
 	return state.m_cursor;
 }
 
-//! The canonical MIME types the FFmpeg thumbnailer/metadata modules advertise support for.
-inline static std::vector< std::string_view >
-	ffmpeg_handleable_mimes { "video/mp4", "video/webm", "video/mpeg", "video/quicktime" };
+//! The mime ids the FFmpeg thumbnailer/metadata modules advertise support for.
+inline static std::vector< idhan::MimeID > ffmpeg_handleable_mimes {
+	idhan::mime_ids::VIDEO_MP4,
+	idhan::mime_ids::VIDEO_WEBM,
+	idhan::mime_ids::VIDEO_MPEG,
+	idhan::mime_ids::VIDEO_QUICKTIME
+};

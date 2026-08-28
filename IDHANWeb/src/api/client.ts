@@ -13,9 +13,15 @@ import type {
   AutocompleteResult,
   MetadataRequest,
   MetadataResponse,
+    FileRelationships,
+    JobDispatch,
+    MimeMap,
   PluginManifest,
+    ClearedRelationship,
   SearchRequest,
   SearchResponse,
+    SimilarRecords,
+    UndecidedDuplicate,
   ServerLayoutMeta,
     KeyCheck,
   DatabaseStats,
@@ -116,6 +122,87 @@ export const api = {
     return request<MetadataResponse>('/records/metadata', { method: 'POST', body, signal });
   },
 
+    /**
+     * Dispatches a metadata reparse over `recordIds`, or over every record when none are given
+     * (POST /jobs/metadata/rescan). Returns as soon as the job is queued.
+     */
+    rescanMetadata(recordIds?: readonly number[], signal?: AbortSignal): Promise<JobDispatch> {
+        return request<JobDispatch>('/jobs/metadata/rescan', {
+            method: 'POST',
+            body: recordIds ? {record_ids: [...recordIds]} : {},
+            signal,
+        });
+    },
+
+    recordRelationships(recordId: number, signal?: AbortSignal): Promise<FileRelationships> {
+        return request<FileRelationships>(`/relationships/${recordId}`, {signal});
+    },
+
+    /** Makes `betterId` king of the duplicate group containing both records. */
+    setBetterDuplicate(worseId: number, betterId: number, signal?: AbortSignal): Promise<void> {
+        return request<void>('/relationships/duplicates/add', {
+            method: 'POST',
+            body: {worse_id: worseId, better_id: betterId},
+            signal,
+        });
+    },
+
+    /** Pairs every listed record with every other as alternatives. */
+    addAlternatives(recordIds: readonly number[], signal?: AbortSignal): Promise<void> {
+        return request<void>('/relationships/alternatives/add', {method: 'POST', body: [...recordIds], signal});
+    },
+
+    /** Marks two records as coincidental lookalikes (POST /relationships/unrelated/add). */
+    setUnrelated(recordIdA: number, recordIdB: number, signal?: AbortSignal): Promise<void> {
+        return request<void>('/relationships/unrelated/add', {
+            method: 'POST',
+            body: {record_id_a: recordIdA, record_id_b: recordIdB},
+            signal,
+        });
+    },
+
+    /**
+     * Drops whichever direct pair the two records hold: duplicate, alternative or unrelated
+     * (POST /relationships/clear).
+     */
+    clearRelationship(recordIdA: number, recordIdB: number, signal?: AbortSignal): Promise<ClearedRelationship> {
+        return request<ClearedRelationship>('/relationships/clear', {
+            method: 'POST',
+            body: {record_id_a: recordIdA, record_id_b: recordIdB},
+            signal,
+        });
+    },
+
+    /**
+     * The closest pair still awaiting a duplicate decision, nearest first
+     * (GET /relationships/duplicates/undecided).
+     */
+    nextUndecidedDuplicate(
+        opts: { distance?: number; includeUnrelated?: boolean } = {},
+        signal?: AbortSignal,
+    ): Promise<UndecidedDuplicate> {
+        const params = new URLSearchParams();
+        if (opts.distance !== undefined) params.set('distance', String(opts.distance));
+        if (opts.includeUnrelated !== undefined) params.set('include_unrelated', String(opts.includeUnrelated));
+        const query = params.toString();
+        return request<UndecidedDuplicate>(`/relationships/duplicates/undecided${query ? `?${query}` : ''}`, {signal});
+    },
+
+    /** Records whose perceptual hash is within `distance` differing bits of one record's. */
+    recordsSimilar(
+        recordId: number,
+        opts: { distance?: number; limit?: number; includeUnrelated?: boolean; includeRelated?: boolean } = {},
+        signal?: AbortSignal,
+    ): Promise<SimilarRecords> {
+        const params = new URLSearchParams();
+        if (opts.distance !== undefined) params.set('distance', String(opts.distance));
+        if (opts.limit !== undefined) params.set('limit', String(opts.limit));
+        if (opts.includeUnrelated !== undefined) params.set('include_unrelated', String(opts.includeUnrelated));
+        if (opts.includeRelated !== undefined) params.set('include_related', String(opts.includeRelated));
+        const query = params.toString();
+        return request<SimilarRecords>(`/relationships/${recordId}/similar${query ? `?${query}` : ''}`, {signal});
+    },
+
   async autocompleteTags(
     prefix: string,
     opts: { domain?: number; limit?: number } = {},
@@ -132,6 +219,11 @@ export const api = {
       similarity: row.similarity,
     }));
   },
+
+    /** Every mime id the server knows, mapped to its name (GET /mime). */
+    listMimes(signal?: AbortSignal): Promise<MimeMap> {
+        return request<MimeMap>('/mime', {signal});
+    },
 };
 
 /** Raw wire row from GET /tags/autocomplete, before normalisation to AutocompleteResult. */

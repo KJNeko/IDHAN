@@ -32,9 +32,14 @@ constexpr std::string_view creation_time_expr { "(EXTRACT(EPOCH FROM rc.creation
 constexpr std::string_view records_join { " JOIN records rc USING (record_id)" };
 constexpr std::string_view video_join { " LEFT JOIN video_metadata vm USING (record_id)" };
 
+//! Spells out what active_tag_mappings_final holds instead of reading the view. The view splits on
+//! ideal_tag_id so that point lookups match the partial indexes; that split costs the record_id
+//! ordering the primary key gives this full scan, turning it into a seq scan plus a 14M row sort.
 constexpr std::string_view num_tags_join {
-	" LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
-	" FROM active_tag_mappings_final GROUP BY record_id) ntc USING (record_id)"
+	" LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count FROM ("
+	" SELECT record_id, COALESCE(ideal_tag_id, tag_id) AS tag_id FROM active_tag_mappings"
+	" UNION ALL SELECT record_id, tag_id FROM active_tag_mappings_parents"
+	" ) atm GROUP BY record_id) ntc USING (record_id)"
 };
 
 SortKeySpec sortKeySpec( const SortType type )

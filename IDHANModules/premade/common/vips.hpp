@@ -4,28 +4,29 @@
 #include <cstddef>
 #include <mutex>
 #include <span>
-#include <string>
-#include <string_view>
 #include <unordered_set>
 #include <vector>
 
+#include "MimeIDs.hpp"
 #include "ModuleFile.hpp"
 
-//! The MIME types the vips modules declare handleable.
-inline static const std::unordered_set< std::string > VIPS_MIMES {
-	"image/png", "image/jpeg", "image/webp", "image/gif", "image/heif", "image/svg+xml", "image/tiff"
+inline static const std::unordered_set< idhan::MimeID > VIPS_MIMES {
+	idhan::mime_ids::IMAGE_PNG,  idhan::mime_ids::IMAGE_JPEG,    idhan::mime_ids::IMAGE_WEBP,
+	idhan::mime_ids::IMAGE_AVIF, idhan::mime_ids::ANIMATION_GIF, idhan::mime_ids::ANIMATION_APNG,
+	idhan::mime_ids::IMAGE_TIFF
 };
 
-inline std::vector< std::string_view > vipsHandleable()
+inline static const std::unordered_set< idhan::MimeID > VIPS_STATIC_IMAGE_MIMES {
+	idhan::mime_ids::IMAGE_PNG,
+	idhan::mime_ids::IMAGE_JPEG,
+	idhan::mime_ids::IMAGE_WEBP,
+	idhan::mime_ids::IMAGE_AVIF,
+	idhan::mime_ids::IMAGE_TIFF
+};
+
+inline std::vector< idhan::MimeID > vipsHandleable()
 {
-	std::vector< std::string_view > ret {};
-
-	for ( const auto& mime : VIPS_MIMES )
-	{
-		ret.emplace_back( mime );
-	}
-
-	return ret;
+	return { VIPS_MIMES.begin(), VIPS_MIMES.end() };
 }
 
 class VipsModuleSource

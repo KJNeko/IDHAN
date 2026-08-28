@@ -8,6 +8,7 @@
 import { useCallback, useRef, useState, type DragEvent } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
 import { RecordInfoView, type RecordInfo } from './RecordInfoView';
+import {useRecordMenu} from './recordActions';
 
 const MAX_CONCURRENT = 3;
 
@@ -69,6 +70,8 @@ function ImportPanel({ host }: PanelProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
 
+    const {openRecordMenu, recordMenu} = useRecordMenu(host);
+
   const patch = useCallback((id: number, changes: Partial<Item>) => {
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...changes } : item)));
   }, []);
@@ -86,7 +89,13 @@ function ImportPanel({ host }: PanelProps) {
       setBusy(true);
 
       const imported: RecordId[] = [];
-      const query = forceImport ? '?force_import=true' : '';
+
+        // the name is what tells the server a zip is a comic book zip; nothing in the bytes does
+        const queryFor = (file: File) => {
+            const params = new URLSearchParams({filename: file.name});
+            if (forceImport) params.set('force_import', 'true');
+            return `?${params.toString()}`;
+        };
 
       await pool(
         files.map((file, i) => ({ file, item: queued[i]! })),
@@ -94,7 +103,7 @@ function ImportPanel({ host }: PanelProps) {
         async ({ file, item }) => {
           patch(item.id, { state: 'uploading' });
           try {
-            const res = await host.http.fetch(`/file/import${query}`, {
+              const res = await host.http.fetch(`/file/import${queryFor(file)}`, {
               method: 'POST',
               headers: { 'Content-Type': file.type || 'application/octet-stream' },
               body: file,
@@ -234,6 +243,7 @@ function ImportPanel({ host }: PanelProps) {
                       loading="lazy"
                       decoding="async"
                       draggable={false}
+                      onContextMenu={(event) => openRecordMenu(event, [item.recordId!])}
                     />
                   )}
                 </div>
@@ -242,6 +252,7 @@ function ImportPanel({ host }: PanelProps) {
           ))}
         </ul>
       )}
+        {recordMenu}
     </div>
   );
 }

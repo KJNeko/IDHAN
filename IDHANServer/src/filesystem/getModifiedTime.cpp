@@ -5,12 +5,11 @@
 namespace idhan::filesystem
 {
 
-std::int64_t getLastWriteTime( const std::filesystem::path& path )
+std::chrono::system_clock::time_point getLastWriteTime( const std::filesystem::path& path )
 {
 	const auto file_mtime_local { std::filesystem::last_write_time( path ) };
-	const auto file_mtime_unix { std::chrono::clock_cast< std::chrono::system_clock >( file_mtime_local ) };
 
-	return std::chrono::duration_cast< std::chrono::microseconds >( file_mtime_unix.time_since_epoch() ).count();
+	return std::chrono::clock_cast< std::chrono::system_clock >( file_mtime_local );
 }
 
 } // namespace idhan::filesystem

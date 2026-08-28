@@ -4,6 +4,7 @@
 #include "api/helpers/helpers.hpp"
 #include "db/drogonArrayBind.hpp"
 #include "drogon/HttpAppFramework.h"
+#include "tags/tags.hpp"
 
 namespace idhan::api::helpers
 {
@@ -13,12 +14,9 @@ ExpectedTask< void > validateRelationshipIds(
 	std::vector< TagID > tag_ids,
 	DbClientPtr db )
 {
-	const auto domain_result {
-		co_await db->execSqlCoro( "SELECT 1 FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id )
-	};
+	const auto domain { co_await findTagDomain( tag_domain_id, db ) };
 
-	if ( domain_result.empty() )
-		co_return std::unexpected( createNotFound( "Tag domain {} does not exist", tag_domain_id ) );
+	if ( !domain ) co_return std::unexpected( createNotFound( "Tag domain {} does not exist", tag_domain_id ) );
 
 	std::ranges::sort( tag_ids );
 	const auto duplicates { std::ranges::unique( tag_ids ) };

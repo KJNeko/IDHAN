@@ -30,7 +30,9 @@ never modifies files.
 
 ## Metadata Rescan
 
-Dispatched by `POST /jobs/metadata/rescan`. Re-runs metadata extraction over records.
+Dispatched by `POST /jobs/metadata/rescan`. Re-runs metadata extraction over records. The body may
+carry `record_ids` to scope the job to those records; without it every record with file info is
+rescanned. The stored result reports `scanned_count` and `failed_count`.
 
 ## Test Job
 

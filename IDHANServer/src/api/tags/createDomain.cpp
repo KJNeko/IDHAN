@@ -4,25 +4,28 @@
 #include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
+#include "tags/tags.hpp"
 
 namespace idhan::api
 {
+
+static Json::Value tagDomainInfoJson( const TagDomainInfo& domain )
+{
+	Json::Value json {};
+	json[ "tag_domain_id" ] = static_cast< Json::UInt64 >( domain.id );
+	json[ "domain_name" ] = domain.name;
+	return json;
+}
 
 drogon::Task< std::optional< Json::Value > > getTagDomainInfoJson(
 	const TagDomainID tag_domain_id,
 	const DbClientPtr db )
 {
-	const auto search { co_await db->execSqlCoro(
-		"SELECT tag_domain_id, domain_name FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id ) };
+	const auto domain { co_await findTagDomain( tag_domain_id, db ) };
 
-	if ( search.empty() ) co_return std::nullopt;
+	if ( !domain ) co_return std::nullopt;
 
-	Json::Value out_json {};
-
-	out_json[ "tag_domain_id" ] = static_cast< Json::UInt64 >( search[ 0 ][ 0 ].as< TagDomainID >() );
-	out_json[ "domain_name" ] = search[ 0 ][ 1 ].as< std::string >();
-
-	co_return out_json;
+	co_return tagDomainInfoJson( *domain );
 }
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpRequestPtr request )
@@ -45,26 +48,16 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::createTagDomain( drogon::HttpReq
 
 	if ( name.isString() )
 	{
-		const auto search {
-			co_await db->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE domain_name = $1", name.asString() )
-		};
+		const auto existing { co_await findTagDomain( name.asString(), db ) };
 
-		if ( !search.empty() ) [[unlikely]]
+		if ( existing ) [[unlikely]]
 		{
-			const auto tag_domain_id { search[ 0 ][ 0 ].as< TagDomainID >() };
+			log::debug( "Found existing tag domain with name '{}'", name.asString() );
 
-			if ( std::optional< Json::Value > out_json { co_await getTagDomainInfoJson( tag_domain_id, db ) };
-			     out_json.has_value() )
-			{
-				log::debug( "Found existing tag domain with name '{}'", name.asString() );
+			auto response { drogon::HttpResponse::newHttpJsonResponse( tagDomainInfoJson( *existing ) ) };
+			response->setStatusCode( drogon::k409Conflict );
 
-				auto response { drogon::HttpResponse::newHttpJsonResponse( out_json.value() ) };
-				response->setStatusCode( drogon::k409Conflict );
-
-				co_return response;
-			}
-
-			co_return createInternalError( "Error getting tag domain info for domain {}", tag_domain_id );
+			co_return response;
 		}
 
 		const auto create { co_await db->execSqlCoro(
@@ -96,22 +89,14 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomains( [[maybe_unused]] 
 {
 	auto db { drogon::app().getDbClient() };
 
-	const auto search { co_await db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains" ) };
+	const auto domains { co_await listTagDomains( db ) };
 
 	Json::Value out_json {};
 	out_json.resize( 0 );
 
-	for ( const auto& row : search )
+	for ( const auto& domain : domains )
 	{
-		const auto info { co_await getTagDomainInfoJson( row[ 0 ].as< TagDomainID >(), db ) };
-
-		if ( !info )
-		{
-			co_return createInternalError(
-				"Failed to get info for tag domain {} despite it existing", row[ 0 ].as< std::string >() );
-		}
-
-		out_json.append( *info );
+		out_json.append( tagDomainInfoJson( domain ) );
 	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( out_json );
@@ -123,23 +108,18 @@ drogon::Task< drogon::HttpResponsePtr > TagAPI::getTagDomainInfo(
 {
 	auto db { drogon::app().getDbClient() };
 
-	const auto search {
-		co_await db->execSqlCoro( "SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id )
-	};
+	const auto domain { co_await findTagDomain( tag_domain_id, db ) };
 
-	if ( search.empty() )
+	if ( !domain )
 	{
 		co_return createNotFound( "Domain id {} does not exist", tag_domain_id );
 	}
 
-	const auto info { co_await getTagDomainInfoJson( tag_domain_id, db ) };
+	Json::Value info {};
+	info[ "tag_domain_id" ] = static_cast< Json::UInt64 >( domain->id );
+	info[ "domain_name" ] = domain->name;
 
-	if ( !info )
-	{
-		co_return createInternalError( "Failed to get info for tag domain {} despite it existing", tag_domain_id );
-	}
-
-	co_return drogon::HttpResponse::newHttpJsonResponse( *info );
+	co_return drogon::HttpResponse::newHttpJsonResponse( info );
 }
 
 drogon::Task< drogon::HttpResponsePtr > TagAPI::deleteTagDomain(

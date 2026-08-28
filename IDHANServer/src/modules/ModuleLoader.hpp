@@ -20,8 +20,9 @@ struct ModuleDescriptor
 	ModuleType type { 0 };
 	ModuleVersion version {};
 	bool thread_safe { false };
+	bool single_threaded { true };
 	ModuleResidency residency { ModuleResidency::SINGLE_RUN };
-	std::vector< std::string > mimes {};
+	std::vector< MimeID > mimes {};
 	std::string model_name {};
 	std::uint32_t dimensions { 0 };
 };
@@ -32,17 +33,18 @@ class ModuleLoader
 	std::vector< ModuleDescriptor > m_descriptors {};
 	std::vector< std::shared_ptr< RemoteModule > > m_modules {};
 
-	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_metadata {};
-	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_thumbnailer {};
-	std::unordered_map< std::string, std::vector< std::size_t > > m_by_mime_generator {};
+	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_metadata {};
+	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_thumbnailer {};
+	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_generator {};
+	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_parser {};
 
 	std::unordered_map< std::string, std::size_t > m_by_model_embedding {};
 
 	inline static ModuleLoader* m_instance;
 
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > lookup(
-		const std::unordered_map< std::string, std::vector< std::size_t > >& index,
-		std::string_view mime ) const;
+		const std::unordered_map< MimeID, std::vector< std::size_t > >& index,
+		MimeID mime_id ) const;
 
 	//! Registers everything one library exports. Returns false if the library was unusable.
 	bool registerLibrary( const std::filesystem::path& path );
@@ -72,9 +74,10 @@ class ModuleLoader
 	//! Retires workers that have outgrown their memory ceiling or gone idle.
 	void maintainWorkers();
 
-	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getThumbnailerFor( std::string_view mime ) const;
-	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getParserFor( std::string_view mime ) const;
-	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getGeneratorsFor( std::string_view mime ) const;
+	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getThumbnailerFor( MimeID mime_id ) const;
+	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getParserFor( MimeID mime_id ) const;
+	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getGeneratorsFor( MimeID mime_id ) const;
+	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getMimeParserFor( MimeID mime_id ) const;
 
 	[[nodiscard]] std::shared_ptr< RemoteModule > getEmbedderFor( std::string_view model_name ) const;
 

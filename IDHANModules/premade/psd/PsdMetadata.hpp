@@ -11,7 +11,7 @@ class PsdMetadata final : public idhan::MetadataModuleI
 
 	PsdMetadata( idhan::ModuleCallbacks callbacks ) : MetadataModuleI( callbacks ) {}
 
-	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
+	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;
 
 	[[nodiscard]] std::string_view name() override;
 

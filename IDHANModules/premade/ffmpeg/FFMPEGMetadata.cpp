@@ -22,7 +22,7 @@ idhan::ModuleVersion FFMPEGMetadata::version()
 	return { .m_major = 1, .m_minor = 0, .m_patch = 0 };
 }
 
-std::vector< std::string_view > FFMPEGMetadata::handleableMimes()
+std::vector< idhan::MimeID > FFMPEGMetadata::handleableMimes()
 {
 	return ffmpeg_handleable_mimes;
 }
@@ -90,34 +90,30 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 		if ( codecpar->codec_type == AVMEDIA_TYPE_VIDEO && !has_video )
 		{
 			has_video = true;
-			video_metadata.m_width = codecpar->width;
-			video_metadata.m_height = codecpar->height;
+			video_metadata.width = codecpar->width;
+			video_metadata.height = codecpar->height;
 
-			// Calculate bitrate (prefer codec bitrate, fall back to container bitrate)
 			if ( codecpar->bit_rate > 0 )
 			{
-				video_metadata.m_bitrate = codecpar->bit_rate;
+				video_metadata.bitrate_bps = codecpar->bit_rate;
 			}
 			else if ( format_context->bit_rate > 0 )
 			{
-				// Fall back to container bitrate if no stream-specific bitrate
-				video_metadata.m_bitrate = format_context->bit_rate;
+				video_metadata.bitrate_bps = format_context->bit_rate;
 			}
 
-			// Get duration (in seconds)
 			if ( stream->duration != AV_NOPTS_VALUE )
 			{
-				video_metadata.m_duration = static_cast< double >( stream->duration ) * av_q2d( stream->time_base );
+				video_metadata.duration_s = static_cast< double >( stream->duration ) * av_q2d( stream->time_base );
 			}
 			else if ( format_context->duration != AV_NOPTS_VALUE )
 			{
-				video_metadata.m_duration = static_cast< double >( format_context->duration ) / AV_TIME_BASE;
+				video_metadata.duration_s = static_cast< double >( format_context->duration ) / AV_TIME_BASE;
 			}
 
-			// Get frame rate
 			if ( stream->avg_frame_rate.den > 0 )
 			{
-				video_metadata.m_fps = av_q2d( stream->avg_frame_rate );
+				video_metadata.fps = av_q2d( stream->avg_frame_rate );
 			}
 		}
 		else if ( codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
@@ -126,7 +122,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 		}
 	}
 
-	video_metadata.m_has_audio = has_audio;
+	video_metadata.has_audio = has_audio;
 
 	base_info.m_metadata = video_metadata;
 

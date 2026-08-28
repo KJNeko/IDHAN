@@ -1,0 +1,13 @@
+type: object
+required:
+  - scanned_count
+  - failed_count
+properties:
+  scanned_count:
+    type: integer
+    minimum: 0
+    description: Records whose metadata was parsed successfully.
+  failed_count:
+    type: integer
+    minimum: 0
+    description: Records whose metadata could not be parsed.

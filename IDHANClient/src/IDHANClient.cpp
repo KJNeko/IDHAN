@@ -8,7 +8,6 @@
 
 #include <qtconcurrentrun.h>
 
-#include "idhan/TagCache.hpp"
 #include "logging/logger.hpp"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
@@ -39,14 +38,14 @@ VersionInfo handleVersionInfo( QNetworkReply* reply )
 	VersionInfo info {};
 
 	info.api.str = api_version[ "string" ].toString().toStdString();
-	info.api.major = api_version[ "major" ].toInt();
-	info.api.minor = api_version[ "minor" ].toInt();
-	info.api.patch = api_version[ "patch" ].toInt();
+	info.api.major = static_cast< std::size_t >( api_version[ "major" ].toInteger() );
+	info.api.minor = static_cast< std::size_t >( api_version[ "minor" ].toInteger() );
+	info.api.patch = static_cast< std::size_t >( api_version[ "patch" ].toInteger() );
 
 	info.server.str = server_version[ "string" ].toString().toStdString();
-	info.server.major = server_version[ "major" ].toInt();
-	info.server.minor = server_version[ "minor" ].toInt();
-	info.server.patch = server_version[ "patch" ].toInt();
+	info.server.major = static_cast< std::size_t >( server_version[ "major" ].toInteger() );
+	info.server.minor = static_cast< std::size_t >( server_version[ "minor" ].toInteger() );
+	info.server.patch = static_cast< std::size_t >( server_version[ "patch" ].toInteger() );
 
 	info.branch = json[ "branch" ].toString();
 	info.commit = json[ "commit" ].toString();
@@ -54,8 +53,6 @@ VersionInfo handleVersionInfo( QNetworkReply* reply )
 
 	return info;
 }
-
-std::uint8_t attempts { 0 };
 
 QFuture< VersionInfo > IDHANClient::queryVersion()
 {
@@ -67,6 +64,7 @@ QFuture< VersionInfo > IDHANClient::queryVersion()
 	request.setUrl( url );
 
 	auto promise { std::make_shared< QPromise< VersionInfo > >() };
+	promise->start();
 
 	auto handleResponse = [ promise ]( QNetworkReply* reply )
 	{
@@ -105,10 +103,14 @@ IDHANClient::IDHANClient(
 	const QString& key,
 	const bool use_tls ) :
   m_logger( spdlog::stdout_color_mt( client_name.toStdString() ) ),
-  network( nullptr ),
-  m_tag_cache( std::make_unique< TagCache >() )
+  network( nullptr )
 {
 	if ( m_instance != nullptr ) throw std::runtime_error( "Only one IDHANClient instance should be created" );
+
+	if ( QCoreApplication::instance() == nullptr )
+		throw std::runtime_error(
+			"IDHANClient expects a Qt instance. Please use QGuiApplication of QApplication before constructing IDHANClient" );
+
 	m_instance = this;
 
 #ifndef NDEBUG
@@ -120,16 +122,7 @@ IDHANClient::IDHANClient(
 	logging::debug( "Debug logging enabled" );
 	logging::info( "Info logging enabled" );
 
-	if ( QCoreApplication::instance() == nullptr )
-		throw std::runtime_error(
-			"IDHANClient expects a Qt instance. Please use QGuiApplication of QApplication before constructing IDHANClient" );
-
 	openConnection( hostname, port, key, use_tls );
-}
-
-void IDHANClient::setTagCacheBudget( const std::size_t bytes )
-{
-	m_tag_cache->setBudget( bytes );
 }
 
 void IDHANClient::sendClientGet(
@@ -221,7 +214,7 @@ void IDHANClient::sendClientJson(
 
 		if ( error == QNetworkReply::ConnectionRefusedError )
 		{
-			QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error, "Connection refused" ) );
+			errorHandler( response, error, "Connection refused" );
 			return;
 		}
 
@@ -240,14 +233,13 @@ void IDHANClient::sendClientJson(
 					const auto error_msg { response_object[ "error" ].toString().toStdString() };
 					// logging::error( object[ "error" ].toString().toStdString() );
 
-					QThreadPool::globalInstance()->start( std::bind( errorHandler, response, error, error_msg ) );
+					errorHandler( response, error, error_msg );
 					return;
 				}
 			}
 		}
 
-		QThreadPool::globalInstance()->start(
-			std::bind( errorHandler, response, error, response->errorString().toStdString() ) );
+		errorHandler( response, error, response->errorString().toStdString() );
 	};
 
 	auto responseSlot = [ responseHandler, response, submit_time, errorSlot ]()
@@ -270,7 +262,7 @@ void IDHANClient::sendClientJson(
 			return;
 		}
 
-		QThreadPool::globalInstance()->start( std::bind( responseHandler, response ) );
+		responseHandler( response );
 	};
 
 	const auto error_connection { QObject::connect( response, &QNetworkReply::errorOccurred, errorSlot ) };
@@ -334,9 +326,9 @@ IDHANClient::~IDHANClient()
 	m_instance = nullptr;
 }
 
-QFuture< bool > IDHANClient::validConnection() const
+QFuture< bool > IDHANClient::validConnection()
 {
-	return idhan::IDHANClient::m_instance->queryVersion()
+	return queryVersion()
 	    .then( []( const VersionInfo& ) -> bool { return true; } )
 	    .onFailed( []( const std::exception& ) { return false; } );
 }

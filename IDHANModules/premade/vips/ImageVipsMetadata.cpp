@@ -3,21 +3,24 @@
 #include <vips/vips.h>
 
 #include <cstring>
+#include <string>
 #include <unordered_map>
 
+#include "EmbeddedMetadata.hpp"
+#include "PerceptualHash.hpp"
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
 using namespace idhan;
 
-std::vector< std::string_view > ImageVipsMetadata::handleableMimes()
+std::vector< idhan::MimeID > ImageVipsMetadata::handleableMimes()
 {
 	return vipsHandleable();
 }
 
 std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleCallData& data )
 {
-	if ( !VIPS_MIMES.contains( data.mime_name ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
+	if ( !VIPS_MIMES.contains( data.mime_id ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
 
 	VipsModuleSource source { data.file };
 	if ( !source.valid() ) return std::unexpected( ModuleError { "Failed to open the file as a vips source" } );
@@ -34,11 +37,23 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 	VipsImagePtr image { image_ptr };
 
 	MetadataInfo info {};
-	info.m_metadata = MetadataInfoImage {
+	MetadataInfoImage image_info {
 		.width = vips_image_get_width( image.get() ),
 		.height = vips_image_get_height( image.get() ),
 		.channels = static_cast< std::uint8_t >( vips_image_get_bands( image.get() ) )
 	};
+
+	image_info.embedded = detectEmbeddedMetadata( image.get() );
+
+	if ( VIPS_STATIC_IMAGE_MIMES.contains( data.mime_id ) )
+	{
+		if ( auto phash { generatePerceptualHash( image.get() ) } )
+			image_info.phash = *phash;
+		else
+			spdlog::warn( "Failed to generate perceptual hash: {}", phash.error() );
+	}
+
+	info.m_metadata = std::move( image_info );
 
 	info.m_simple_type = idhan::SimpleMimeType::IMAGE_TYPE;
 

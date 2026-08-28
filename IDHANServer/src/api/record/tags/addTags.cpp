@@ -94,17 +94,11 @@ drogon::Task< std::expected< TagID, drogon::HttpResponsePtr > > getIDFromPair( c
 		co_return std::unexpected( create_status.error()->genResponse() );
 	}
 
-	const auto result { co_await db->execSqlCoro(
-		"INSERT INTO tags (namespace_id, subtag_text) VALUES ($1, $2) "
-		"ON CONFLICT (namespace_id, subtag_text) DO UPDATE SET subtag_text = EXCLUDED.subtag_text "
-		"RETURNING tag_id",
-		std::get< NamespaceID >( tag_namespace ),
-		tag_subtag ) };
+	const auto create_status { co_await createTag( std::get< NamespaceID >( tag_namespace ), tag_subtag, db ) };
 
-	if ( !result.empty() ) co_return result[ 0 ][ 0 ].as< TagID >();
+	if ( create_status ) co_return *create_status;
 
-	co_return std::unexpected( createInternalError(
-		R"(Failed to insert tag '{}':'{}')", std::get< NamespaceID >( tag_namespace ), tag_subtag ) );
+	co_return std::unexpected( create_status.error()->genResponse() );
 }
 
 drogon::Task< std::expected< std::vector< TagPair >, drogon::HttpResponsePtr > > getTagPairs( const Json::Value& json )
@@ -375,10 +369,9 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::addMultipleTags( drogon::Http
 		co_return createBadRequest(
 			"Invalid domain ID given: Expected tag_domain_id > 0; Got {}", tag_domain_id.value() );
 
-	const auto domain_search { co_await db->execSqlCoro(
-		"SELECT tag_domain_id FROM tag_domains WHERE tag_domain_id = $1", tag_domain_id.value() ) };
+	const auto domain { co_await findTagDomain( *tag_domain_id, db ) };
 
-	if ( domain_search.empty() )
+	if ( !domain )
 		co_return createBadRequest( "Invalid domain ID given: Got no IDs (searched for {})", tag_domain_id.value() );
 
 	const auto& records_json { json[ "records" ] };

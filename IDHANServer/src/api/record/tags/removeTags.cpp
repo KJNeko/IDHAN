@@ -2,6 +2,7 @@
 #include "api/RecordAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
+#include "tags/tags.hpp"
 
 namespace idhan::api
 {
@@ -36,12 +37,7 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeTags(
 
 	try
 	{
-		co_await db->execSqlCoro(
-			"DELETE FROM tag_mappings WHERE record_id = $1 AND tag_id IN (SELECT UNNEST($2::" TAG_PG_TYPE_NAME
-			"[])) AND tag_domain_id = $3",
-			record_id,
-			std::move( tag_ids ),
-			tag_domain_id.value() );
+		co_await removeTagMappings( record_id, std::move( tag_ids ), *tag_domain_id, db );
 	}
 	catch ( std::exception& e )
 	{

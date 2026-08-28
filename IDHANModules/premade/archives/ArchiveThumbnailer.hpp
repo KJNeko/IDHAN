@@ -17,7 +17,10 @@ class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] bool threadSafe() override { return true; }
 
-	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
+	// the member grid is composited and encoded through vips
+	[[nodiscard]] bool singleThreaded() override { return false; }
+
+	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;
 
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
 		idhan::ModuleCallData& data,

@@ -76,20 +76,23 @@ async function flush(batch: Batch): Promise<void> {
   batch.resolve();
 }
 
-const isDefaultInclude = (include?: string[]): boolean =>
-  include === undefined || (include.length === 1 && include[0] === 'basic');
+/**
+ * Drops cached entries so the next getMetadata refetches them. Callers that change a record's
+ * metadata server-side (a reparse, say) use this; nothing else invalidates.
+ */
+export function forgetMetadata(ids: readonly RecordId[]): void {
+    for (const id of ids) {
+        cache.delete(id);
+        missingIds.delete(id);
+    }
+}
 
 /** Synchronously reads an already-cached record, or undefined. */
 export function peekMetadata(id: RecordId): Meta | undefined {
   return cache.get(id);
 }
 
-export async function getMetadata(ids: readonly RecordId[], include?: string[]): Promise<MetadataResponse> {
-  // A non-default include has a different shape, so it bypasses the shared cache and coalescer.
-  if (!isDefaultInclude(include)) {
-    return api.recordsMetadata({ record_ids: [...ids], include });
-  }
-
+export async function getMetadata(ids: readonly RecordId[]): Promise<MetadataResponse> {
   const toFetch = ids.filter((id) => !cache.has(id) && !missingIds.has(id));
   if (toFetch.length > 0) {
     const batch = openBatch();

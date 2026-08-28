@@ -17,6 +17,19 @@
 namespace idhan::embeddings
 {
 
+IDHANTask< std::optional< EmbeddingModelInfo > > findEmbeddingModel( const std::string_view model_name, DbClientPtr db )
+{
+	const auto rows { co_await db->execSqlCoro(
+		"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+
+	if ( rows.empty() ) co_return std::nullopt;
+
+	co_return EmbeddingModelInfo {
+		.id = rows[ 0 ][ "model_id" ].as< std::int32_t >(),
+		.dimensions = rows[ 0 ][ "model_dimensions" ].as< std::int32_t >()
+	};
+}
+
 //! model_ids with a backfill currently running.
 std::mutex g_running_mutex {};
 std::unordered_set< std::int32_t > g_running {};
@@ -55,7 +68,7 @@ constexpr std::size_t IN_FLIGHT { 32 };
 struct Candidate
 {
 	RecordID m_record_id { 0 };
-	std::string m_mime {};
+	MimeID m_mime_id { 0 };
 };
 
 //! Formats a vector as the text pgvector parses into a halfvec.
@@ -79,7 +92,7 @@ struct Candidate
 drogon::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
 	std::shared_ptr< modules::RemoteModule > module,
 	RecordID record_id,
-	std::string mime,
+	MimeID mime_id,
 	DbClientPtr db )
 {
 	auto input { co_await filesystem::openRecordInput( record_id, db ) };
@@ -90,7 +103,7 @@ drogon::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
 		co_return std::nullopt;
 	}
 
-	modules::RemoteCallData call { .input = *input, .mime_name = std::move( mime ), .extra = {}, .depth = 0 };
+	modules::RemoteCallData call { .input = *input, .mime_id = mime_id, .extra = {}, .depth = 0 };
 
 	const auto result { co_await module->embed( std::move( call ) ) };
 
@@ -118,10 +131,9 @@ IDHANTask< void > registerEmbeddingModels( DbClientPtr db )
 	{
 		try
 		{
-			const auto existing { co_await db->execSqlCoro(
-				"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
+			const auto existing { co_await findEmbeddingModel( model_name, db ) };
 
-			if ( existing.empty() )
+			if ( !existing )
 			{
 				const auto inserted { co_await db->execSqlCoro(
 					"INSERT INTO embedding_models (model_name, model_dimensions) VALUES ($1, $2) RETURNING model_id",
@@ -137,8 +149,7 @@ IDHANTask< void > registerEmbeddingModels( DbClientPtr db )
 				continue;
 			}
 
-			if ( const auto stored { existing[ 0 ][ "model_dimensions" ].as< std::int32_t >() };
-			     stored != static_cast< std::int32_t >( dimensions ) )
+			if ( const auto stored { existing->dimensions }; stored != static_cast< std::int32_t >( dimensions ) )
 			{
 				log::error(
 					"Embedding model '{}' is registered with {} dimensions but the loaded module produces {}. "
@@ -192,7 +203,7 @@ JobTask backfillJob( const std::int32_t model_id, std::string model_name )
 	RecordID cursor { 0 };
 
 	const auto sweep { std::format(
-		"SELECT fi.record_id as record_id, m.name as mime_name "
+		"SELECT fi.record_id as record_id, fi.mime_id as mime_id "
 		"FROM file_info fi "
 		"JOIN mime m USING (mime_id) "
 		"WHERE fi.cluster_id IS NOT NULL "
@@ -225,15 +236,15 @@ JobTask backfillJob( const std::int32_t model_id, std::string model_name )
 			const auto record_id { row[ "record_id" ].as< RecordID >() };
 			cursor = std::max( cursor, record_id );
 
-			auto mime { row[ "mime_name" ].as< std::string >() };
+			const auto mime_id { row[ "mime_id" ].as< MimeID >() };
 
-			if ( modules::ModuleLoader::instance().getThumbnailerFor( mime ).empty() )
+			if ( modules::ModuleLoader::instance().getThumbnailerFor( mime_id ).empty() )
 			{
 				++skipped;
 				continue;
 			}
 
-			candidates.emplace_back( Candidate { .m_record_id = record_id, .m_mime = std::move( mime ) } );
+			candidates.emplace_back( Candidate { .m_record_id = record_id, .m_mime_id = mime_id } );
 		}
 
 		for ( std::size_t start = 0; start < candidates.size(); start += IN_FLIGHT )
@@ -245,7 +256,7 @@ JobTask backfillJob( const std::int32_t model_id, std::string model_name )
 
 			for ( std::size_t index = start; index < stop; ++index )
 				tasks.emplace_back(
-					embedOne( module, candidates[ index ].m_record_id, candidates[ index ].m_mime, db ) );
+					embedOne( module, candidates[ index ].m_record_id, candidates[ index ].m_mime_id, db ) );
 
 			auto results { co_await drogon::when_all( std::move( tasks ) ) };
 

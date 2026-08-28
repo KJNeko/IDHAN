@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
 import { compareTermLabel, parseCompareTerm, type CompareTerm } from './embeddingTerms';
+import {useRecordMenu} from './recordActions';
 import {
     barFraction,
     buildCompareRows,
@@ -97,6 +98,7 @@ function SlotCard({
   onChange: (id: number | null) => void;
 }) {
   const [draft, setDraft] = useState('');
+    const {openRecordMenu, recordMenu} = useRecordMenu(host);
 
   const commitDraft = () => {
     const parsed = parseCompareTerm(draft);
@@ -121,13 +123,17 @@ function SlotCard({
     <div className="cmp-slot">
         {/* thumbnailUrl's default size, which other panels also request, so a record already shown in
           the grid costs no second thumbnail here. */}
-      <div className="cmp-slot-thumb">
+        <div
+            className="cmp-slot-thumb"
+            onContextMenu={(event) => recordId !== null && openRecordMenu(event, [recordId])}
+        >
         {recordId === null ? (
           <span className="muted">empty</span>
         ) : (
             <img src={host.records.thumbnailUrl(recordId)} alt={`record ${recordId}`}/>
         )}
       </div>
+        {recordMenu}
 
       <div className="cmp-slot-id">
         <strong>{side}</strong>

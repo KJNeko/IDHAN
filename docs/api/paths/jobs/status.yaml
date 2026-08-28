@@ -36,6 +36,25 @@ get:
                 type: string
                 description: Present only when `status` is `failed`.
               response:
-                description: Present only when `status` is `completed`.
+                description: >
+                  Operation-specific result, present when a job supplies one.
+                  Metadata rescan jobs return `RescanMetadataResult`.
+                anyOf:
+                  - $ref: '../../schemas/RescanMetadataResult.yaml'
+                  - type: object
+                    additionalProperties: true
+                  - type: string
+          examples:
+            rescan_metadata_completed:
+              summary: Completed metadata rescan
+              value:
+                job_id: 123
+                job_name: rescanMetadata
+                status: completed
+                completed: true
+                start_time: 1787756400
+                response:
+                  scanned_count: 42
+                  failed_count: 1
     404:
       description: Job not found

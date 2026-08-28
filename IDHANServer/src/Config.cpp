@@ -12,12 +12,17 @@ inline static std::unordered_map< std::pair< std::string, std::string >, std::st
 
 void addCLIConfig( const std::string_view group, const std::string_view name, const std::string_view value )
 {
-	CLI_CONFIG.emplace( std::pair< std::string, std::string >( group, name ), value );
+	// The parser lets a repeated option win, so registering one twice has to overwrite.
+	CLI_CONFIG.insert_or_assign( std::pair< std::string, std::string >( group, name ), std::string { value } );
 }
 
 const char* getCLIConfig( const std::string_view group, const std::string_view name )
 {
-	return CLI_CONFIG.at( std::pair< std::string, std::string >( group, name ) ).c_str();
+	const auto itter { CLI_CONFIG.find( std::pair< std::string, std::string >( group, name ) ) };
+
+	if ( itter == CLI_CONFIG.end() ) return nullptr;
+
+	return itter->second.c_str();
 }
 
 std::string_view getUserConfigPath()

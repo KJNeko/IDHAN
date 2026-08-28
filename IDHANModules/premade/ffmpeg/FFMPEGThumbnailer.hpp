@@ -18,10 +18,13 @@ class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 	// each call owns its AVFormatContext/codec contexts, no shared state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
+	// the decoder runs its own thread pool, sized from the render budget
+	[[nodiscard]] bool singleThreaded() override { return false; }
+
 	// createThumbnailFile encodes through vips, so this worker pays VIPS_INIT as well as codec setup
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
-	[[nodiscard]] std::vector< std::string_view > handleableMimes() override;
+	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;
 
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
 		idhan::ModuleCallData& data,

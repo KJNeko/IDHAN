@@ -18,6 +18,7 @@
 #include "EmbeddingModule.hpp"
 #include "GeneratorModule.hpp"
 #include "MetadataModule.hpp"
+#include "MimeModule.hpp"
 #include "ThumbnailerModule.hpp"
 #include "crypto/simpleHasher.hpp"
 #include "ipc/BlobFile.hpp"
@@ -106,6 +107,8 @@ constexpr std::size_t COPY_CHUNK { 256u * 1024u };
 			[[fallthrough]];
 		case ipc::CallOp::EMBED_TEXT:
 			return std::format( "{}-dimension vector", body[ ipc::field::EMBEDDING ].size() );
+		case ipc::CallOp::MIME_PARSE:
+			return std::format( "mime id {}", body[ ipc::field::MIME_ID ].asInt() );
 	}
 
 	return "done";
@@ -372,16 +375,25 @@ void WorkerRunner::handleCallbackResult( ipc::Frame&& frame )
 	}
 
 	ipc::Blob blob {};
+	std::string blob_error {};
 	if ( !frame.fds.empty() )
 	{
-		auto adopted { ipc::Blob::adopt( std::move( frame.fds.front() ) ) };
-		if ( adopted ) blob = std::move( *adopted );
+		auto adopted { ipc::Blob::adoptSealed( std::move( frame.fds.front() ) ) };
+		if ( adopted )
+			blob = std::move( *adopted );
+		else
+			blob_error = adopted.error();
 	}
 
 	{
 		const std::lock_guard< std::mutex > guard { pending->mutex };
 		pending->ok = frame.body[ ipc::field::OK ].asBool();
 		pending->error = frame.body[ ipc::field::ERROR ].asString();
+		if ( !blob_error.empty() && pending->ok )
+		{
+			pending->ok = false;
+			pending->error = std::move( blob_error );
+		}
 		pending->body = std::move( frame.body );
 		pending->blob = std::move( blob );
 		pending->answered = true;
@@ -427,7 +439,7 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 {
 	QueuedCall call {};
 	call.call_id = frame.body[ ipc::field::CALL_ID ].asUInt64();
-	call.mime = frame.body[ ipc::field::MIME ].asString();
+	call.mime_id = static_cast< MimeID >( frame.body[ ipc::field::MIME_ID ].asInt() );
 	call.extra = frame.body[ ipc::field::EXTRA ];
 	call.width = frame.body[ ipc::field::WIDTH ].asUInt64();
 	call.height = frame.body[ ipc::field::HEIGHT ].asUInt64();
@@ -524,7 +536,7 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 		return std::pair { std::move( body ), ipc::UniqueFd {} };
 	}
 
-	ModuleCallData data { .file = *call.file, .mime_name = call.mime, .extra = call.extra };
+	ModuleCallData data { .file = *call.file, .mime_id = call.mime_id, .extra = call.extra };
 
 	switch ( call.op )
 	{
@@ -599,6 +611,14 @@ std::expected< std::pair< Json::Value, ipc::UniqueFd >, std::string > WorkerRunn
 				body[ ipc::field::EMBEDDING ] = std::move( values );
 				return std::pair { std::move( body ), ipc::UniqueFd {} };
 			}
+		case ipc::CallOp::MIME_PARSE:
+			{
+				const auto result { std::static_pointer_cast< MimeModuleI >( module )->parseMime( data ) };
+				if ( !result ) return std::unexpected( result.error() );
+
+				body[ ipc::field::MIME_ID ] = static_cast< Json::Int >( *result );
+				return std::pair { std::move( body ), ipc::UniqueFd {} };
+			}
 		case ipc::CallOp::EMBED_TEXT:
 			// Returned above, before ModuleCallData was built. Listed only so -Wswitch-enum passes.
 			break;
@@ -627,7 +647,7 @@ void WorkerRunner::runCall( QueuedCall call )
 		call.call_id,
 		toString( call.op ),
 		module != nullptr ? module->name() : std::string_view { "<none>" },
-		call.mime,
+		call.mime_id,
 		call.file != nullptr ? call.file->size() : 0,
 		call.depth );
 
@@ -684,7 +704,7 @@ void WorkerRunner::runCall( QueuedCall call )
 			call.call_id,
 			toString( call.op ),
 			module != nullptr ? module->name() : std::string_view { "<none>" },
-			call.mime,
+			call.mime_id,
 			elapsed_ms,
 			describeResult( call.op, body, payload.get() ) );
 	else
@@ -693,7 +713,7 @@ void WorkerRunner::runCall( QueuedCall call )
 			call.call_id,
 			toString( call.op ),
 			module != nullptr ? module->name() : std::string_view { "<none>" },
-			call.mime,
+			call.mime_id,
 			elapsed_ms,
 			failure );
 
@@ -715,7 +735,9 @@ void WorkerRunner::workerLoop( const std::stop_token& stop )
 			m_queue_ready.wait(
 				guard, [ this, &stop ] { return stop.stop_requested() || ( m_ready.load() && !m_queue.empty() ); } );
 
-			if ( m_queue.empty() ) continue;
+			// A stop can wake this before startup() finished; running a call then would reach a module
+			// that has not been brought up.
+			if ( !m_ready.load() || m_queue.empty() ) continue;
 
 			call = std::move( m_queue.front() );
 			m_queue.pop_front();

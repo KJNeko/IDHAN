@@ -44,6 +44,7 @@ RUN apt-get update && \
     libavfilter-dev \
     libavutil-dev \
     libjsoncpp-dev \
+    libjemalloc-dev \
     libfmt-dev \
     libspdlog-dev \
     libarchive-dev \
@@ -133,6 +134,7 @@ RUN apt-get update && \
     libvips42t64 \
     liburing2 \
     libjsoncpp26 \
+    libjemalloc2 \
     libuuid1 \
     zlib1g \
     libssl3t64 \
@@ -155,7 +157,6 @@ COPY --from=builder /build/bin/IDHANModuleRunner /usr/bin/IDHANModuleRunner
 COPY --from=builder /build/bin/static/ /usr/share/idhan/static
 COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
-COPY --from=builder /build/bin/mime/ /usr/share/idhan/mime
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
 
 # Embedding folder

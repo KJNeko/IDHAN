@@ -128,6 +128,16 @@ void MainWindow::openSettings()
 			this->setDisabled( false );
 			dialog->deleteLater();
 
+			if ( qgetenv( "IDHAN_URL" ).isEmpty() )
+			{
+				auto& client { idhan::IDHANClient::instance() };
+				client.openConnection(
+					settings.value( "hostname", "localhost" ).toString(),
+					static_cast< qint16 >( settings.value( "port", idhan::IDHAN_DEFAULT_PORT ).toInt() ),
+					settings.value( "key" ).toString(),
+					settings.value( "use_tls", false ).toBool() );
+			}
+
 			heartbeat_timer.start( 10000 );
 
 			checkHeartbeat();

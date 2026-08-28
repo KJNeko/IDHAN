@@ -237,9 +237,237 @@ void SearchBuilder::parseRangeSearch( RangeSearchInfo& target, const std::string
 	narrowRange( target, parseRangeTerm( tag ) );
 }
 
-SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
+//! Trims ASCII whitespace from both ends of \p text.
+static std::string_view trimmed( std::string_view text )
 {
 	constexpr std::string_view whitespace { " \t" };
+
+	if ( const auto first { text.find_first_not_of( whitespace ) }; first != std::string_view::npos )
+		text.remove_prefix( first );
+	else
+		return {};
+
+	if ( const auto last { text.find_last_not_of( whitespace ) }; last != std::string_view::npos )
+		text.remove_suffix( text.size() - last - 1 );
+
+	return text;
+}
+
+void SearchBuilder::validateMimeName( const std::string_view name )
+{
+	// RFC 6838 restricted-name characters plus the '/' between type and subtype. A quote cannot
+	// appear here, which is what makes the bare literal in renderMimeTerm() safe.
+	constexpr std::string_view allowed { "abcdefghijklmnopqrstuvwxyz0123456789!#$&^_.+-/" };
+	constexpr std::size_t max_length { 255 };
+
+	if ( name.size() > max_length )
+		throw std::invalid_argument( format_ns::format( "Mime name is longer than {} characters", max_length ) );
+
+	if ( name.find_first_not_of( allowed ) != std::string_view::npos )
+		throw std::invalid_argument( format_ns::format( "Not a mime name: \'{}\'", name ) );
+}
+
+void SearchBuilder::parseMimeSearch( const std::string_view arguments, const bool by_id )
+{
+	const std::string_view field { by_id ? "mime_id" : "mime" };
+
+	const auto equals { arguments.find( '=' ) };
+	if ( equals == std::string_view::npos )
+		throw std::invalid_argument(
+			format_ns::format( "A {} predicate needs \'= <value>\', got \'{}\'", field, arguments ) );
+
+	// Only the text before the '=' is an operator. '!' is a legal mime-name character, so scanning
+	// the whole term for it would read `foo!bar` as a negation.
+	const auto operation { arguments.substr( 0, equals ) };
+
+	if ( operation.find_first_of( "<>~" ) != std::string_view::npos || operation.contains( "≈" ) )
+		throw std::invalid_argument(
+			format_ns::format( "A {} predicate supports \'=\' and \'!=\' only, got \'{}\'", field, arguments ) );
+
+	MimeTerm term { .negated = operation.contains( '!' ) || operation.contains( "≠" ) };
+
+	auto remaining { arguments.substr( equals + 1 ) };
+	while ( true )
+	{
+		const auto comma { remaining.find( ',' ) };
+		const auto value { trimmed( remaining.substr( 0, comma ) ) };
+
+		if ( !value.empty() )
+		{
+			if ( by_id )
+			{
+				// stoll signals an overflow with out_of_range, which the endpoint does not catch.
+				long long id { 0 };
+				std::size_t consumed { 0 };
+
+				try
+				{
+					id = std::stoll( std::string { value }, &consumed );
+				}
+				catch ( const std::exception& )
+				{
+					throw std::invalid_argument( format_ns::format( "Not a mime id: \'{}\'", value ) );
+				}
+
+				if ( consumed != value.size() || id < 0 || id > std::numeric_limits< MimeID >::max() )
+					throw std::invalid_argument( format_ns::format( "Not a mime id: \'{}\'", value ) );
+
+				term.ids.push_back( static_cast< MimeID >( id ) );
+			}
+			else
+			{
+				std::string name {};
+				name.reserve( value.size() );
+				for ( const char c : value )
+					name += static_cast< char >( std::tolower( static_cast< unsigned char >( c ) ) );
+
+				validateMimeName( name );
+				term.names.push_back( std::move( name ) );
+			}
+		}
+
+		if ( comma == std::string_view::npos ) break;
+		remaining = remaining.substr( comma + 1 );
+	}
+
+	if ( term.names.empty() && term.ids.empty() )
+		throw std::invalid_argument( format_ns::format( "A {} predicate named no value", field ) );
+
+	m_mime_terms.push_back( std::move( term ) );
+}
+
+std::string SearchBuilder::renderMimeTerm( const MimeTerm& term )
+{
+	std::string rendered {};
+
+	if ( !term.names.empty() )
+	{
+		std::string names {};
+		for ( const auto& name : term.names )
+		{
+			if ( !names.empty() ) names += ',';
+			names += format_ns::format( "\'{}\'", name );
+		}
+
+		rendered =
+			format_ns::format( "fi.mime_id IN (SELECT pmn.mime_id FROM mime pmn WHERE pmn.name IN ({}))", names );
+	}
+
+	if ( !term.ids.empty() )
+	{
+		std::string ids {};
+		for ( const auto id : term.ids )
+		{
+			if ( !ids.empty() ) ids += ',';
+			ids += std::to_string( id );
+		}
+
+		const auto by_id { format_ns::format( "fi.mime_id IN ({})", ids ) };
+		rendered = rendered.empty() ? by_id : format_ns::format( "{} OR {}", rendered, by_id );
+	}
+
+	return term.negated ? format_ns::format( "NOT ({})", rendered ) : rendered;
+}
+
+std::string SearchBuilder::describeMimeTerm( const MimeTerm& term )
+{
+	std::string values {};
+
+	for ( const auto& name : term.names )
+	{
+		if ( !values.empty() ) values += ", ";
+		values += name;
+	}
+
+	for ( const auto id : term.ids )
+	{
+		if ( !values.empty() ) values += ", ";
+		values += std::to_string( id );
+	}
+
+	return format_ns::format(
+		"system:{} {} {}", term.names.empty() ? "mime_id" : "mime", term.negated ? "!=" : "=", values );
+}
+
+SearchBuilder::NearbyTerm SearchBuilder::parseNearbySearch( const std::string_view arguments )
+{
+	// phash is a bit(64), so no distance beyond this can exclude anything
+	constexpr std::size_t max_distance { 64 };
+	constexpr std::string_view distance_keyword { "distance" };
+	constexpr std::string_view digits { "0123456789" };
+
+	const auto readNumber = [ &arguments ]( std::string_view& text, const std::string_view what ) -> std::size_t
+	{
+		const auto end { text.find_first_not_of( digits ) };
+		const auto number { text.substr( 0, end ) };
+
+		if ( number.empty() )
+			throw std::invalid_argument(
+				format_ns::format( "A nearby predicate needs a {}, got \'{}\'", what, arguments ) );
+
+		text = trimmed( end == std::string_view::npos ? std::string_view {} : text.substr( end ) );
+
+		try
+		{
+			return std::stoull( std::string { number } );
+		}
+		catch ( const std::exception& )
+		{
+			throw std::invalid_argument( format_ns::format( "Nearby {} is out of range: \'{}\'", what, number ) );
+		}
+	};
+
+	auto remaining { trimmed( arguments ) };
+
+	if ( remaining.starts_with( '=' ) ) remaining = trimmed( remaining.substr( 1 ) );
+
+	const auto record_id { readNumber( remaining, "record id" ) };
+
+	if ( record_id == 0 || record_id > static_cast< std::size_t >( std::numeric_limits< RecordID >::max() ) )
+		throw std::invalid_argument( format_ns::format( "Not a record id: \'{}\'", record_id ) );
+
+	NearbyTerm term { .record_id = static_cast< RecordID >( record_id ) };
+
+	if ( remaining.empty() ) return term;
+
+	if ( !remaining.starts_with( distance_keyword ) )
+		throw std::invalid_argument(
+			format_ns::format( "A nearby predicate reads \'<record id> distance <bits>\', got \'{}\'", arguments ) );
+
+	remaining = trimmed( remaining.substr( distance_keyword.size() ) );
+	if ( remaining.starts_with( '=' ) ) remaining = trimmed( remaining.substr( 1 ) );
+
+	term.distance = readNumber( remaining, "distance" );
+
+	if ( !remaining.empty() )
+		throw std::invalid_argument( format_ns::format( "Trailing text in a nearby predicate: \'{}\'", remaining ) );
+
+	if ( term.distance > max_distance )
+		throw std::invalid_argument(
+			format_ns::format( "A nearby distance is at most {} bits, got {}", max_distance, term.distance ) );
+
+	return term;
+}
+
+std::string SearchBuilder::renderNearbyTerm( const NearbyTerm& term )
+{
+	// both values were parsed as numbers, so neither can carry anything out of the literal
+	return format_ns::format(
+		"EXISTS (SELECT 1 FROM image_metadata pnc, image_metadata pnp"
+		" WHERE pnc.record_id = fi.record_id AND pnp.record_id = {}"
+		" AND pnc.phash IS NOT NULL AND pnp.phash IS NOT NULL"
+		" AND bit_count(pnc.phash # pnp.phash) <= {})",
+		term.record_id,
+		term.distance );
+}
+
+std::string SearchBuilder::describeNearbyTerm( const NearbyTerm& term )
+{
+	return format_ns::format( "system:nearby {} distance {}", term.record_id, term.distance );
+}
+
+SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
+{
 	constexpr std::size_t hex_length { SHA256::size() * 2 };
 
 	if ( arguments.find_first_of( "<>!~" ) != std::string_view::npos || arguments.contains( "≠" )
@@ -250,16 +478,8 @@ SHA256 SearchBuilder::parseHashSearch( const std::string_view arguments )
 	if ( equals == std::string_view::npos )
 		throw std::invalid_argument( format_ns::format( "A hash predicate needs '= <hash>', got '{}'", arguments ) );
 
-	auto value { arguments.substr( equals + 1 ) };
-
 	// Trimmed at both ends so the split below counts hashes rather than the spaces around them.
-	if ( const auto first { value.find_first_not_of( whitespace ) }; first != std::string_view::npos )
-		value.remove_prefix( first );
-	else
-		value = {};
-
-	if ( const auto last { value.find_last_not_of( whitespace ) }; last != std::string_view::npos )
-		value.remove_suffix( value.size() - last - 1 );
+	const auto value { trimmed( arguments.substr( equals + 1 ) ) };
 
 	if ( value.empty() ) throw std::invalid_argument( "A hash predicate named no hash" );
 
@@ -413,6 +633,28 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		     "NOT EXISTS (SELECT 1 FROM video_metadata pvmd WHERE pvmd.record_id = fi.record_id)",
 		     "system:no duration" );
 
+	// A NULL flag is an image parsed before embedded metadata was looked for. "has" wants a true and
+	// "no" wants an explicit false, so neither term claims those images either way.
+	const auto addEmbedded =
+		[ &add ]( const EmbeddedSearchType search, const std::string_view condition, const std::string_view name )
+	{
+		if ( search == EmbeddedSearchType::DontCare ) return;
+
+		const bool has { search == EmbeddedSearchType::Has };
+		const auto test {
+			has ? format_ns::format( "({})", condition ) : format_ns::format( "({}) IS FALSE", condition )
+		};
+
+		add( {},
+		     format_ns::format(
+				 "EXISTS (SELECT 1 FROM image_metadata pimd WHERE pimd.record_id = fi.record_id AND {})", test ),
+		     format_ns::format( "system:{} {}", has ? "has" : "no", name ) );
+	};
+
+	addEmbedded( m_exif_search, "pimd.has_exif", "exif" );
+	addEmbedded( m_icc_profile_search, "pimd.has_icc_profile", "icc profile" );
+	addEmbedded( m_embedded_metadata_search, "pimd.has_exif OR pimd.has_xmp OR pimd.has_iptc", "embedded metadata" );
+
 	if ( m_in_archive_search == ArchiveSearchType::InArchive )
 		add( {}, "EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)", "system:in archive" );
 
@@ -420,6 +662,16 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		add( {},
 		     "NOT EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)",
 		     "system:not in archive" );
+
+	if ( m_is_archive_search == IsArchiveSearchType::IsArchive )
+		add( {},
+		     "EXISTS (SELECT 1 FROM archive_metadata pamd WHERE pamd.record_id = fi.record_id)",
+		     "system:is archive" );
+
+	if ( m_is_archive_search == IsArchiveSearchType::NotArchive )
+		add( {},
+		     "NOT EXISTS (SELECT 1 FROM archive_metadata pamd WHERE pamd.record_id = fi.record_id)",
+		     "system:is not archive" );
 
 	if ( m_archive_search.m_active )
 		add( {},
@@ -454,6 +706,10 @@ std::vector< search::PredicateSource > SearchBuilder::buildPredicates() const
 		add( {},
 		     renderBounds( "fi.record_id", m_record_search ),
 		     format_ns::format( "system:{}", renderBounds( "record", m_record_search ) ) );
+
+	for ( const auto& term : m_nearby_terms ) add( {}, renderNearbyTerm( term ), describeNearbyTerm( term ) );
+
+	for ( const auto& term : m_mime_terms ) add( {}, renderMimeTerm( term ), describeMimeTerm( term ) );
 
 	return predicates;
 }
@@ -913,18 +1169,34 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	}
 	if ( system_subtag == "has exif" )
 	{
-		m_exif_search = ExitSearchType::HasExif;
+		m_exif_search = EmbeddedSearchType::Has;
 		return true;
 	}
 	if ( system_subtag == "no exif" )
 	{
-		m_exif_search = ExitSearchType::NoExif;
+		m_exif_search = EmbeddedSearchType::No;
 		return true;
 	}
-	// system:has embedded metadata
-	// system:no embedded metadata
-	// system:has icc profile
-	// system:no icc profile
+	if ( system_subtag == "has embedded metadata" )
+	{
+		m_embedded_metadata_search = EmbeddedSearchType::Has;
+		return true;
+	}
+	if ( system_subtag == "no embedded metadata" )
+	{
+		m_embedded_metadata_search = EmbeddedSearchType::No;
+		return true;
+	}
+	if ( system_subtag == "has icc profile" )
+	{
+		m_icc_profile_search = EmbeddedSearchType::Has;
+		return true;
+	}
+	if ( system_subtag == "no icc profile" )
+	{
+		m_icc_profile_search = EmbeddedSearchType::No;
+		return true;
+	}
 	if ( system_subtag == "has tags" )
 	{
 		m_has_tags_search = TagCountSearchType::HasTags;
@@ -964,11 +1236,6 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 		parseRangeSearch( m_limit_search, system_subtag );
 		return true;
 	}
-	// system:filetype = image/jpg, image/png, apng
-	if ( system_subtag.starts_with( "filetype" ) )
-	{
-		return true;
-	}
 	if ( system_subtag.starts_with( "hash" ) )
 	{
 		setHashSearch( system_subtag.substr( 4 ) );
@@ -976,20 +1243,12 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	}
 	// system:modified date < 7 years 45 days 7h // system:modified date > 2011-06-04
 	// system:date modified > 7 years 2 months // system:date modified < 0 years 1 month 1 day 1 hour
-	if ( system_subtag.starts_with( "modified date" ) || system_subtag.starts_with( "date modified" ) )
-	{
-		return true;
-	}
 	// system:last viewed time < 7 years 45 days 7h
 	// system:last view time < 7 years 45 days 7h
 	// system:import time < 7 years 45 days 7h
 	// system:time imported < 7 years 45 days 7h // system:time imported > 2011-06-04
 	// system:time imported > 7 years 2 months // system:time imported < 0 years 1 month 1 day 1 hour
 	// system:time imported ~= 2011-1-3 // system:time imported ~= 1996-05-2
-	if ( system_subtag.starts_with( "time imported" ) )
-	{
-		return true;
-	}
 	// system:duration < 5 seconds
 	// system:duration ~= 600 msecs
 	// system:duration > 3 milliseconds
@@ -1002,25 +1261,9 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	// system:num file relationships < 3 alternates
 	// system:num file relationships > 3 false positives
 	// system:ratio is wider than 16:9
-	if ( system_subtag.starts_with( "ratio wider than" ) )
-	{
-		return true;
-	}
 	// system:ratio is 16:9
-	if ( system_subtag.starts_with( "ratio is" ) )
-	{
-		return true;
-	}
 	// system:ratio taller than 1:1
-	if ( system_subtag.starts_with( "ratio taller than" ) )
-	{
-		return true;
-	}
 	// system:num pixels > 50 px // system:num pixels < 1 megapixels // system:num pixels ~= 5 kilopixel
-	if ( system_subtag.starts_with( "num pixels" ) )
-	{
-		return true;
-	}
 	// system:views in media ~= 10
 	// system:views in preview < 10
 	// system:views > 0
@@ -1029,15 +1272,7 @@ bool SearchBuilder::setHydrusSystemTags( const std::string_view system_subtag )
 	// system:has url matching regex index\.php
 	// system:does not have a url matching regex index\.php
 	// system:has url https://somebooru.org/posts/123456
-	if ( system_subtag.starts_with( "has url" ) )
-	{
-		return true;
-	}
 	// system:does not have url https://somebooru.org/posts/123456
-	if ( system_subtag.starts_with( "does not have url" ) )
-	{
-		return true;
-	}
 	// system:has domain safebooru.com
 	// system:does not have domain safebooru.com
 	// system:has a url with class safebooru file page
@@ -1082,6 +1317,18 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 			continue;
 		}
 
+		if ( system_subtag == "is archive" )
+		{
+			m_is_archive_search = IsArchiveSearchType::IsArchive;
+			continue;
+		}
+
+		if ( ( system_subtag == "is not archive" ) || ( system_subtag == "not archive" ) )
+		{
+			m_is_archive_search = IsArchiveSearchType::NotArchive;
+			continue;
+		}
+
 		if ( system_subtag.starts_with( "in archive" ) )
 		{
 			m_in_archive_search = ArchiveSearchType::InArchive;
@@ -1094,9 +1341,27 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 			continue;
 		}
 
+		if ( system_subtag.starts_with( "mime_id" ) )
+		{
+			parseMimeSearch( system_subtag.substr( 7 ), true );
+			continue;
+		}
+
+		if ( system_subtag.starts_with( "mime" ) )
+		{
+			parseMimeSearch( system_subtag.substr( 4 ), false );
+			continue;
+		}
+
 		if ( system_subtag.starts_with( "sha256" ) )
 		{
 			setHashSearch( system_subtag.substr( 6 ) );
+			continue;
+		}
+
+		if ( system_subtag.starts_with( "nearby" ) )
+		{
+			m_nearby_terms.push_back( parseNearbySearch( system_subtag.substr( 6 ) ) );
 			continue;
 		}
 
@@ -1106,7 +1371,7 @@ void SearchBuilder::setSystemTags( const std::vector< std::string >& vector )
 			continue;
 		}
 
-		log::warn( "Unsupported system tag: \'{}\'", system_subtag );
+		throw std::invalid_argument( format_ns::format( "Unsupported system tag: \'{}\'", system_subtag ) );
 	}
 }
 

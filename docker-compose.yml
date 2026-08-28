@@ -44,7 +44,7 @@ services:
       - max_parallel_workers=6 # Dependent on above values
 
   idhan-server:
-    image: git.futuregadgetlabs.net/kj16609/idhan:latest
+    image: ghcr.io/kjneko/idhan:latest
     container_name: idhan-server
     environment:
       IDHAN_DATABASE_HOST: idhan-postgres

@@ -3,6 +3,7 @@
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"
 #include "logging/ScopedTimer.hpp"
+#include "tags/tags.hpp"
 
 namespace idhan::api
 {
@@ -83,16 +84,11 @@ drogon::Task< drogon::HttpResponsePtr > RecordAPI::removeMultipleTags( drogon::H
 			        std::vector< TagID > tag_ids,
 			        const TagDomainID domain_id ) -> Task
 			{
-				co_await db_c->execSqlCoro(
-					"DELETE FROM tag_mappings WHERE record_id = $1 AND tag_id IN (SELECT UNNEST($2::" TAG_PG_TYPE_NAME
-					"[])) AND tag_domain_id = $3",
-					record_id,
-					std::move( tag_ids ),
-					domain_id );
+				co_await removeTagMappings( record_id, std::move( tag_ids ), domain_id, db_c );
 				co_return nullptr;
 			};
 
-			tasks.emplace_back( task( db, record_ids[ i ], std::move( tag_sets[ i ] ), tag_domain_id.value() ) );
+			tasks.emplace_back( task( db, record_ids[ i ], std::move( tag_sets[ i ] ), *tag_domain_id ) );
 		}
 
 		co_await drogon::when_all( std::move( tasks ) );

@@ -3,6 +3,7 @@
 #include <charconv>
 #include <clocale>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <string_view>
 
@@ -20,6 +21,7 @@ void usage()
 		"  --socket-fd <n>        Inherited worker channel descriptor\n"
 		"  --describe             Report the library's manifest and exit\n"
 		"  --pool-threads <n>     Worker threads (default 4)\n"
+		"  --render-threads <n>   Threads one module call may use internally (default: library default)\n"
 		"  --heartbeat-ms <n>     Heartbeat interval in ms (default 1000)\n"
 		"  --log-level <name>     trace, debug, info, warn, error, critical, off (default info)\n",
 		stderr );
@@ -83,6 +85,14 @@ int main( int argc, char** argv )
 				return 2;
 			}
 		}
+		else if ( argument == "--render-threads" )
+		{
+			if ( !next() || !parseNumber( value, options.render_threads ) || options.render_threads == 0 )
+			{
+				usage();
+				return 2;
+			}
+		}
 		else if ( argument == "--log-level" )
 		{
 			if ( !next() )
@@ -120,6 +130,17 @@ int main( int argc, char** argv )
 	{
 		std::fputs( "--socket-fd is required unless --describe is given\n", stderr );
 		return 2;
+	}
+
+	// Set before the library is loaded: init() is where a backend sizes its thread pool, and libvips
+	// reads VIPS_CONCURRENCY inside vips_init(). Still single-threaded here, so setenv is safe.
+	if ( options.render_threads > 0 )
+	{
+		const auto threads { std::to_string( options.render_threads ) };
+
+		if ( ::setenv( "IDHAN_RENDER_THREADS", threads.c_str(), 1 ) != 0
+		     || ::setenv( "VIPS_CONCURRENCY", threads.c_str(), 1 ) != 0 )
+			std::fputs( "Could not publish the render thread count; modules will use their own default\n", stderr );
 	}
 
 	spdlog::set_pattern( "[module-worker] [%^%l%$] %v" );

@@ -35,7 +35,8 @@ option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 
-option(IDHAN_USE_JEMALLOC "Link the server against jemalloc instead of the system allocator" OFF)
+# This is not recommended to turn off. Only turn it off if you really know what you are doing
+option(IDHAN_USE_JEMALLOC "Link the server against jemalloc instead of the system allocator" ON)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set(IDHAN_HARDEN_DEFAULT OFF)

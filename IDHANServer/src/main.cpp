@@ -1,5 +1,4 @@
 #include <array>
-#include <charconv>
 #include <cstdlib>
 #include <malloc.h>
 
@@ -22,28 +21,19 @@ static constexpr Option pg_user { "pg_user", "The user to connect to the databas
 
 static constexpr Option pg_host { "pg_host", "The host to connect to the database with", "pg_host", "localhost" };
 
-static constexpr Option use_stdout { "use_stdout", "Use stdout for logging", "use_stdout", "1" };
+static constexpr Option use_stdout { "use_stdout", "Use stdout for logging", "on/off", "true", "true" };
 
 static constexpr Option pg_schema { "pg_schema", "The PostgreSQL schema to use", "pg_schema", "public" };
 
 static constexpr Option
-	config_location { "config", "The location for the config file", "config_location", "./config.json" };
+	config_location { "config", "The location for the config file", "config_location", "./config.toml" };
 
 static constexpr Option
-	force_start { "force_start", "Forces IDHAN to start even if it thinks it shouldn't", "force_start", "false" };
+	force_start { "force_start", "Forces IDHAN to start even if it thinks it shouldn't", "on/off", "false", "true" };
 
 static constexpr auto options {
 	std::to_array< Option >( { log_level, pg_user, pg_host, use_stdout, pg_schema, config_location, force_start } )
 };
-
-//! Mirrors QString::toInt(): a value that is not an integer reads as 0.
-static int toInt( const std::string& value )
-{
-	int result { 0 };
-	const auto [ ptr, ec ] { std::from_chars( value.data(), value.data() + value.size(), result ) };
-	if ( ec != std::errc {} || ptr != value.data() + value.size() ) return 0;
-	return result;
-}
 
 void applyCLISettings(
 	const std::string_view group,
@@ -60,7 +50,7 @@ void applyCLISettings(
 
 void checkForceStart( const idhan::cli::Parser& parser, const idhan::cli::Option& option )
 {
-	if ( parser.isSet( option ) && parser.value( option ) == "true" )
+	if ( parser.isSet( option ) && idhan::config::parseBool( parser.value( option ) ).value_or( false ) )
 	{
 		const std::filesystem::path tmp_path {
 			idhan::config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
@@ -82,26 +72,15 @@ auto strToSpdlogLevel( const std::string& level )
 	std::terminate();
 }
 
-void configureLoggingLevel(
-	const idhan::cli::Parser& parser,
-	const idhan::cli::Option& option,
-	idhan::ConnectionArguments& arguments )
+spdlog::level::level_enum configureLoggingLevel()
 {
-	if ( !parser.isSet( option ) )
-	{
-		const auto level { idhan::config::get< std::string >( "logging", "level", "info" ) };
-		spdlog::info( "Logging level: {}", level );
-		arguments.log_level = strToSpdlogLevel( level );
+	const auto level { idhan::config::get< std::string >( "logging", "level", "info" ) };
+	spdlog::info( "Logging level: {}", level );
 
-		spdlog::set_level( arguments.log_level );
-	}
-	else
-	{
-		const auto level { parser.value( option ) };
-		spdlog::info( "Logging level: {}", level );
-		spdlog::set_level( strToSpdlogLevel( level ) );
-		arguments.log_level = strToSpdlogLevel( level );
-	}
+	const auto parsed { strToSpdlogLevel( level ) };
+	spdlog::set_level( parsed );
+
+	return parsed;
 }
 
 void checkSystemLocale()
@@ -147,28 +126,30 @@ int main( int argc, char** argv )
 
 	parser.process( argc, argv );
 
-	applyCLISettings( "database", "hostname", parser, pg_host );
-
-	applyCLISettings( "database", "schema", parser, pg_schema );
-
-	checkForceStart( parser, force_start );
-
-	idhan::ConnectionArguments arguments {};
-
 	if ( parser.isSet( config_location ) )
 	{
 		const std::filesystem::path location { parser.value( config_location ) };
 		idhan::config::setLocation( location );
 	}
 
-	configureLoggingLevel( parser, log_level, arguments );
+	applyCLISettings( "logging", "level", parser, log_level );
+
+	applyCLISettings( "database", "host", parser, pg_host );
+
+	applyCLISettings( "database", "user", parser, pg_user );
+
+	applyCLISettings( "database", "schema", parser, pg_schema );
+
+	applyCLISettings( "server", "use_stdout", parser, use_stdout );
+
+	const auto level { configureLoggingLevel() };
+
+	checkForceStart( parser, force_start );
+
+	idhan::ConnectionArguments arguments {};
+	arguments.log_level = level;
 
 	if ( arguments.schema != idhan::db::DEFAULT_SCHEMA ) spdlog::info( "Using database schema: {}", arguments.schema );
-
-	if ( parser.isSet( use_stdout ) && ( toInt( parser.value( use_stdout ) ) == 0 ) )
-	{
-		arguments.use_stdout = false;
-	}
 
 	if ( arguments.use_stdout ) spdlog::info( "Using stdout for logging" );
 

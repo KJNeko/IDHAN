@@ -9,15 +9,19 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
+#include <mutex>
+#include <optional>
 #include <paths.hpp>
 #include <string>
+#include <thread>
 
 #include "Config.hpp"
+#include "MimeIDs.hpp"
 #include "crypto/simpleHasher.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
-#include "mime/MimeDatabase.hpp"
+#include "mime/prescan.hpp"
 
 namespace idhan::modules
 {
@@ -26,7 +30,6 @@ namespace idhan::modules
 //! ask for a specific one.
 constexpr std::size_t CALLBACK_THUMBNAIL_SIZE { 128 };
 
-//! Upper bound on a caller-requested callback thumbnail edge.
 constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 
 //! Reads a caller-requested thumbnail edge out of a callback's `extra`, clamped and defaulted.
@@ -40,18 +43,70 @@ constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 	return std::min( static_cast< std::size_t >( requested ), MAX_CALLBACK_THUMBNAIL_SIZE );
 }
 
+//! Calls one worker runs at once when the operator has not named a number.
+constexpr std::size_t DEFAULT_POOL_THREADS { 4 };
+
+//! Share of the machine the module system takes when the operator has not named a number.
+/** The server itself is deliberately unrestricted; the modules are the part that has to be kept from
+ *  taking the machine over, since libvips and the codec pools will each happily spin up one pool per
+ *  core per call. */
+constexpr std::size_t MODULE_THREAD_PERCENT { 25 };
+
+//! Never zero, so it is safe to divide by.
+[[nodiscard]] std::size_t hardwareThreads()
+{
+	return std::max( std::size_t { 1 }, static_cast< std::size_t >( std::thread::hardware_concurrency() ) );
+}
+
+//! Reads a worker setting, letting `[modules.<library>]` override the `[modules]` default.
+/** \param library The library's file stem, e.g. IDHANVips. */
+template < typename T >
+[[nodiscard]] std::optional< T > moduleSetting( const std::string& library, const std::string_view name )
+{
+	if ( auto specific { config::get< T >( std::format( "modules.{}", library ), name ) } ) return specific;
+
+	return config::get< T >( "modules", name );
+}
+
+//! \copydoc moduleSetting
+template < typename T >
+[[nodiscard]] T moduleSetting( const std::string& library, const std::string_view name, const T fallback )
+{
+	return moduleSetting< T >( library, name ).value_or( fallback );
+}
+
+//! A configured thread count, in which zero asks for every thread the machine has.
+/** \return Nothing when the operator did not set it, leaving the caller to derive a default. */
+[[nodiscard]] std::optional< std::size_t > threadSetting( const std::string& library, const std::string_view name )
+{
+	const auto configured { moduleSetting< std::size_t >( library, name ) };
+	if ( !configured ) return std::nullopt;
+
+	return *configured == 0 ? hardwareThreads() : *configured;
+}
+
 [[nodiscard]] WorkerSettings settingsFor( const std::filesystem::path& library )
 {
 	WorkerSettings settings {};
 
+	const auto name { library.stem().string() };
+
 	settings.library = library;
 	settings.runner = getModuleRunnerPath();
-	settings.pool_threads = config::get< std::size_t >( "modules", "pool_threads", 4 );
+	settings.pool_threads = threadSetting( name, "pool_threads" ).value_or( DEFAULT_POOL_THREADS );
+
+	// Unset, the render budget is whatever is left of the library's share once the pool has been
+	// divided out, so pool_threads * render_threads lands on that share rather than on the machine.
+	const auto budget { std::max( std::size_t { 1 }, ( hardwareThreads() * MODULE_THREAD_PERCENT ) / 100 ) };
+
+	settings.render_threads = threadSetting( name, "render_threads" )
+	                              .value_or( std::max( std::size_t { 1 }, budget / settings.pool_threads ) );
+
 	settings.heartbeat_interval = std::chrono::milliseconds {
-		config::get< std::size_t >( "modules", "heartbeat_interval_ms", 1000 )
+		moduleSetting< std::size_t >( name, "heartbeat_interval_ms", 1000 )
 	};
 	settings.liveness_grace = std::chrono::milliseconds {
-		config::get< std::size_t >( "modules", "liveness_grace_ms", 5000 )
+		moduleSetting< std::size_t >( name, "liveness_grace_ms", 5000 )
 	};
 
 	const auto level_name { spdlog::level::to_string_view( spdlog::get_level() ) };
@@ -60,12 +115,20 @@ constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 	return settings;
 }
 
+//! Cached: a callback resolves this, and config::get parses the config file on every read.
 [[nodiscard]] std::uint32_t maxCallDepth()
 {
-	return static_cast< std::uint32_t >( config::get< std::size_t >( "modules", "max_call_depth", 4 ) );
+	static std::uint32_t depth { 0 };
+	static std::once_flag depth_once {};
+
+	std::call_once(
+		depth_once,
+		[]()
+		{ depth = static_cast< std::uint32_t >( config::get< std::size_t >( "modules", "max_call_depth", 4 ) ); } );
+
+	return depth;
 }
 
-//! Publishes the configured embedding model directory into the environment workers inherit.
 void publishEmbeddingModelPath()
 {
 	const auto path { config::get< std::string >( "embeddings", "model_path", std::string {} ) };
@@ -153,7 +216,9 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	std::size_t declared_ceiling_mb { 0 };
 	for ( const auto& entry : entries ) declared_ceiling_mb = std::max( declared_ceiling_mb, entry.rss_ceiling_mb );
 
-	const auto configured_ceiling_mb { config::get< std::size_t >( "modules", "rss_limit_mb", 2048 ) };
+	const auto library_name { path.stem().string() };
+
+	const auto configured_ceiling_mb { moduleSetting< std::size_t >( library_name, "rss_limit_mb", 2048 ) };
 	const auto ceiling_mb { std::max( configured_ceiling_mb, declared_ceiling_mb ) };
 
 	if ( declared_ceiling_mb > configured_ceiling_mb )
@@ -168,13 +233,34 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	auto settings { settingsFor( path ) };
 	settings.expected_signature = ipc::manifestSignature( entries );
 
+	// A worker's budget is pool_threads * render_threads either way. When nothing in the library can
+	// use a render thread inside a call, that budget buys concurrency instead of going unspent.
+	// all_of, not any_of: the modules share one process, so one that does parallelise would end up
+	// with both the multiplied pool and its own render threads.
+	const bool folds_render_threads {
+		std::ranges::all_of( entries, []( const auto& entry ) { return entry.single_threaded; } )
+	};
+
+	if ( folds_render_threads && settings.render_threads > 1 )
+	{
+		settings.pool_threads *= settings.render_threads;
+		settings.render_threads = 1;
+	}
+
+	log::info(
+		"Module library {} runs {} concurrent call(s), each allowed {} render thread(s){}",
+		path.filename().string(),
+		settings.pool_threads,
+		settings.render_threads,
+		folds_render_threads ? " (single-threaded: the render budget went to the pool)" : "" );
+
 	const auto library_index { m_pools.size() };
 
 	auto pool { std::make_shared< WorkerPool >(
 		settings,
 		persistent ? ModuleResidency::PERSISTENT : ModuleResidency::SINGLE_RUN,
 		ceiling_mb * 1024,
-		std::chrono::seconds { config::get< std::size_t >( "modules", "idle_timeout_sec", 300 ) },
+		std::chrono::seconds { moduleSetting< std::size_t >( library_name, "idle_timeout_sec", 300 ) },
 		[ this ]( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 		{ serviceCallback( std::move( worker ), std::move( frame ) ); } ) };
 
@@ -190,6 +276,7 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 				.type = entry.type,
 				.version = entry.version,
 				.thread_safe = entry.thread_safe,
+				.single_threaded = entry.single_threaded,
 				.residency = entry.residency,
 				.mimes = entry.mimes,
 				.model_name = entry.model_name,
@@ -223,12 +310,13 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 			}
 		}
 
-		for ( const auto& mime : entry.mimes )
+		for ( const auto mime_id : entry.mimes )
 		{
-			if ( ( entry.type & ModuleTypeFlags::METADATA ) != 0 ) m_by_mime_metadata[ mime ].emplace_back( slot );
+			if ( ( entry.type & ModuleTypeFlags::METADATA ) != 0 ) m_by_mime_metadata[ mime_id ].emplace_back( slot );
 			if ( ( entry.type & ModuleTypeFlags::THUMBNAILER ) != 0 )
-				m_by_mime_thumbnailer[ mime ].emplace_back( slot );
-			if ( ( entry.type & ModuleTypeFlags::GENERATOR ) != 0 ) m_by_mime_generator[ mime ].emplace_back( slot );
+				m_by_mime_thumbnailer[ mime_id ].emplace_back( slot );
+			if ( ( entry.type & ModuleTypeFlags::GENERATOR ) != 0 ) m_by_mime_generator[ mime_id ].emplace_back( slot );
+			if ( ( entry.type & ModuleTypeFlags::MIME_PARSE ) != 0 ) m_by_mime_parser[ mime_id ].emplace_back( slot );
 		}
 
 		log::info(
@@ -263,6 +351,7 @@ void ModuleLoader::unloadModules()
 	m_by_mime_metadata.clear();
 	m_by_mime_thumbnailer.clear();
 	m_by_mime_generator.clear();
+	m_by_mime_parser.clear();
 	m_modules.clear();
 	m_descriptors.clear();
 	m_pools.clear();
@@ -274,12 +363,12 @@ void ModuleLoader::maintainWorkers()
 }
 
 std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::lookup(
-	const std::unordered_map< std::string, std::vector< std::size_t > >& index,
-	const std::string_view mime ) const
+	const std::unordered_map< MimeID, std::vector< std::size_t > >& index,
+	const MimeID mime_id ) const
 {
 	std::vector< std::shared_ptr< RemoteModule > > modules {};
 
-	const auto found { index.find( std::string { mime } ) };
+	const auto found { index.find( mime_id ) };
 	if ( found == index.end() ) return modules;
 
 	modules.reserve( found->second.size() );
@@ -288,14 +377,14 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::lookup(
 	return modules;
 }
 
-std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getThumbnailerFor( const std::string_view mime ) const
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getThumbnailerFor( const MimeID mime_id ) const
 {
-	return lookup( m_by_mime_thumbnailer, mime );
+	return lookup( m_by_mime_thumbnailer, mime_id );
 }
 
-std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getParserFor( const std::string_view mime ) const
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getParserFor( const MimeID mime_id ) const
 {
-	return lookup( m_by_mime_metadata, mime );
+	return lookup( m_by_mime_metadata, mime_id );
 }
 
 std::shared_ptr< RemoteModule > ModuleLoader::getEmbedderFor( const std::string_view model_name ) const
@@ -317,23 +406,22 @@ std::vector< std::pair< std::string, std::uint32_t > > ModuleLoader::embeddingMo
 	return models;
 }
 
-std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( const std::string_view mime ) const
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getGeneratorsFor( const MimeID mime_id ) const
 {
-	return lookup( m_by_mime_generator, mime );
+	return lookup( m_by_mime_generator, mime_id );
 }
 
-//! Does the work behind one CALLBACK frame.
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getMimeParserFor( const MimeID mime_id ) const
+{
+	return lookup( m_by_mime_parser, mime_id );
+}
 
-//! What MimeDatabase::scan yields, so a resolved MIME and a scanned one can share a branch.
-using ExpectedMime = std::expected< std::string, drogon::HttpResponsePtr >;
-
-//! A resolved callback input, or why one could not be made.
 using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::string >;
 
 //! Wraps a descriptor a module sent with its callback as an input for the nested call.
 [[nodiscard]] ExpectedInput makeCallbackInput( ipc::UniqueFd fd )
 {
-	auto blob { ipc::Blob::adopt( std::move( fd ) ) };
+	auto blob { ipc::Blob::adoptSealed( std::move( fd ) ) };
 	if ( !blob ) return std::unexpected( blob.error() );
 
 	auto input { CallInput::forBlob( std::move( *blob ) ) };
@@ -347,7 +435,6 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	const std::uint64_t callback_id { frame.body[ ipc::field::CALLBACK_ID ].asUInt64() };
 	const auto kind { ipc::fromWire< ipc::CallbackKind >( frame.body[ ipc::field::KIND ] ) };
 	const std::uint32_t depth { frame.body[ ipc::field::DEPTH ].asUInt() };
-	const auto file_name { frame.body[ ipc::field::FILE_NAME ].asString() };
 
 	Json::Value reply {};
 	reply[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::CALLBACK_RESULT );
@@ -372,6 +459,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 	{
 		reply[ ipc::field::ERROR ] = "unknown callback kind";
 	}
+	else if ( *kind == ipc::CallbackKind::GENERATE && !frame.body[ ipc::field::HASH ].isString() )
+	{
+		reply[ ipc::field::ERROR ] = "generate callback did not carry a sha256 hash string";
+	}
 	else if ( !by_reference && frame.fds.empty() )
 	{
 		reply[ ipc::field::ERROR ] = "callback arrived without its payload";
@@ -387,9 +478,9 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 		reply[ ipc::field::ERROR ] = input.error();
 	}
 	else if ( const auto detected {
-				  by_reference ? ExpectedMime { referenced.mime } :
-								 co_await getMimeDatabase()->scan( ( *input )->blob().view(), file_name ) };
-	          !detected )
+				  by_reference ? referenced.mime_id :
+								 co_await mime::prescanMime( mime::MimeReader { ( *input )->blob().view() } ) };
+	          detected == mime_ids::UNKNOWN )
 	{
 		reply[ ipc::field::ERROR ] = "could not determine the mime type of the callback payload";
 	}
@@ -398,7 +489,7 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 		auto& loader { ModuleLoader::instance() };
 
 		RemoteCallData data {
-			.input = *input, .mime_name = *detected, .extra = frame.body[ ipc::field::EXTRA ], .depth = depth + 1
+			.input = *input, .mime_id = detected, .extra = frame.body[ ipc::field::EXTRA ], .depth = depth + 1
 		};
 
 		switch ( *kind )
@@ -406,10 +497,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 			case ipc::CallbackKind::PROBE:
 				{
 					ModuleCapability capability {};
-					capability.mime = *detected;
-					capability.has_metadata = !loader.getParserFor( *detected ).empty();
-					capability.has_thumbnailer = !loader.getThumbnailerFor( *detected ).empty();
-					capability.has_generator = !loader.getGeneratorsFor( *detected ).empty();
+					capability.mime_id = detected;
+					capability.has_metadata = !loader.getParserFor( detected ).empty();
+					capability.has_thumbnailer = !loader.getThumbnailerFor( detected ).empty();
+					capability.has_generator = !loader.getGeneratorsFor( detected ).empty();
 
 					reply[ ipc::field::CAPABILITY ] = ipc::toJson( capability );
 					reply[ ipc::field::OK ] = true;
@@ -417,10 +508,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 				}
 			case ipc::CallbackKind::THUMBNAIL:
 				{
-					const auto thumbnailers { loader.getThumbnailerFor( *detected ) };
+					const auto thumbnailers { loader.getThumbnailerFor( detected ) };
 					if ( thumbnailers.empty() )
 					{
-						reply[ ipc::field::ERROR ] = std::format( "no thumbnailer for mime type {}", *detected );
+						reply[ ipc::field::ERROR ] = std::format( "no thumbnailer for mime type {}", detected );
 						break;
 					}
 
@@ -453,10 +544,10 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 				}
 			case ipc::CallbackKind::GENERATE:
 				{
-					const auto generators { loader.getGeneratorsFor( *detected ) };
+					const auto generators { loader.getGeneratorsFor( detected ) };
 					if ( generators.empty() )
 					{
-						reply[ ipc::field::ERROR ] = std::format( "no generator for mime type {}", *detected );
+						reply[ ipc::field::ERROR ] = std::format( "no generator for mime type {}", detected );
 						break;
 					}
 
