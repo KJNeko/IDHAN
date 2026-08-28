@@ -45,10 +45,7 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::clearRelationship(
 	const auto validation { co_await helpers::validateRecordIds( { record_id_a, record_id_b }, db ) };
 	if ( !validation ) co_return validation.error();
 
-	const auto duplicate { co_await db->execSqlCoro(
-		"DELETE FROM duplicate_pairs WHERE (worse_record_id = $1 AND better_record_id = $2) "
-		"OR (worse_record_id = $2 AND better_record_id = $1)",
-		record_id_a,
+	const auto duplicate { co_await db->execSqlCoro( "SELECT remove_duplicate_pair($1, $2) AS removed", record_id_a,
 		record_id_b ) };
 
 	const auto unrelated { co_await db->execSqlCoro(
@@ -64,7 +61,7 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::clearRelationship(
 		record_id_b ) };
 
 	Json::Value response {};
-	response[ "duplicate_removed" ] = duplicate.affectedRows() > 0;
+	response[ "duplicate_removed" ] = duplicate[ 0 ][ "removed" ].as< bool >();
 	response[ "alternative_removed" ] = alternative.affectedRows() > 0;
 	response[ "unrelated_removed" ] = unrelated.affectedRows() > 0;
 

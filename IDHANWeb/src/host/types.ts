@@ -124,7 +124,7 @@ export interface RecordsApi {
         signal?: AbortSignal,
     ): Promise<UndecidedDuplicate>;
 
-    /** Marks one record as the better copy of another. Throws ApiError(409) on a cycle or a repeat. */
+    /** Makes `betterId` king of the duplicate group containing both records. */
     setBetterDuplicate(worseId: RecordId, betterId: RecordId, signal?: AbortSignal): Promise<void>;
 
     /** Pairs every listed record with every other as alternatives. */

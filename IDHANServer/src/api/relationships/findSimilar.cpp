@@ -38,21 +38,14 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::findSimilar(
 	// the bit column arrives as its text representation, and goes back the same way
 	const auto probe { probe_result[ 0 ][ 0 ].as< std::string >() };
 
-	// the duplicate closure is walked once for the probe, not per candidate row
+	// Resolve the probe's flat duplicate group once, not per candidate row.
 	const auto matches { co_await db->execSqlCoro(
-		"WITH RECURSIVE inferior(record_id) AS ("
-		"  SELECT worse_record_id FROM duplicate_pairs WHERE better_record_id = $2"
-		"  UNION"
-		"  SELECT pair.worse_record_id FROM duplicate_pairs pair"
-		"  JOIN inferior ON pair.better_record_id = inferior.record_id"
-		"), superior(record_id) AS ("
-		"  SELECT better_record_id FROM duplicate_pairs WHERE worse_record_id = $2"
-		"  UNION"
-		"  SELECT pair.better_record_id FROM duplicate_pairs pair"
-		"  JOIN superior ON pair.worse_record_id = superior.record_id"
+		"WITH duplicate_group(record_id) AS ("
+		"  SELECT member.record_id FROM flattened_duplicates probe"
+		"  JOIN flattened_duplicates member USING (root_id)"
+		"  WHERE probe.record_id = $2 AND member.record_id != $2"
 		"), related(record_id) AS ("
-		"  SELECT record_id FROM inferior"
-		"  UNION SELECT record_id FROM superior"
+		"  SELECT record_id FROM duplicate_group"
 		"  UNION SELECT greater_record_id FROM alternative_records WHERE lesser_record_id = $2"
 		"  UNION SELECT lesser_record_id FROM alternative_records WHERE greater_record_id = $2"
 		") "

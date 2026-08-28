@@ -15,9 +15,9 @@ static Json::Value duplicateBody( const RecordID worse, const RecordID better )
 	return json;
 }
 
-SCENARIO_METHOD( ServerFixture, "File relationships can be read", "[api][relationships]" )
+SCENARIO_METHOD( ServerFixture, "Flat duplicate groups can be read", "[api][relationships]" )
 {
-	GIVEN( "a duplicate hierarchy and an alternative" )
+	GIVEN( "a duplicate king with three lesser records and an alternative" )
 	{
 		const auto records { api().createRecords( { 1, 2, 3, 4, 5 } ) };
 		const auto superior { records[ 0 ] };
@@ -33,7 +33,7 @@ SCENARIO_METHOD( ServerFixture, "File relationships can be read", "[api][relatio
 			api().post( "/relationships/duplicates/add", duplicateBody( second_inferior, superior ) ).status
 			== drogon::k200OK );
 		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( deep_inferior, first_inferior ) ).status
+			api().post( "/relationships/duplicates/add", duplicateBody( deep_inferior, superior ) ).status
 			== drogon::k200OK );
 
 		Json::Value alternatives { Json::arrayValue };
@@ -67,24 +67,117 @@ SCENARIO_METHOD( ServerFixture, "File relationships can be read", "[api][relatio
 			THEN( "its superior is returned" )
 			{
 				REQUIRE( response.status == drogon::k200OK );
-				REQUIRE( response.json[ "inferior" ].size() == 1 );
-				CHECK( response.json[ "inferior" ][ 0 ].asInt() == deep_inferior );
+				CHECK( response.json[ "inferior" ].empty() );
 				REQUIRE( response.json[ "superior" ].size() == 1 );
 				CHECK( response.json[ "superior" ][ 0 ].asInt() == superior );
 				CHECK( response.json[ "alternatives" ].empty() );
 			}
 		}
 
-		WHEN( "a deeply inferior file's relationships are requested" )
+		WHEN( "another lesser file's relationships are requested" )
 		{
 			const auto response { api().get( "/relationships/" + std::to_string( deep_inferior ) ) };
 
-			THEN( "all of its superiors are returned" )
+			THEN( "only its king is returned" )
 			{
 				REQUIRE( response.status == drogon::k200OK );
-				REQUIRE( response.json[ "superior" ].size() == 2 );
-				CHECK( response.json[ "superior" ][ 0 ].asInt() == std::min( superior, first_inferior ) );
-				CHECK( response.json[ "superior" ][ 1 ].asInt() == std::max( superior, first_inferior ) );
+				REQUIRE( response.json[ "superior" ].size() == 1 );
+				CHECK( response.json[ "superior" ][ 0 ].asInt() == superior );
+				CHECK( response.json[ "inferior" ].empty() );
+			}
+		}
+	}
+}
+
+SCENARIO_METHOD( ServerFixture, "Duplicate groups keep one explicit king", "[api][relationships]" )
+{
+	GIVEN( "two flat duplicate groups" )
+	{
+		const auto records { api().createRecords( { 61, 62, 63, 64 } ) };
+		const auto first_king { records[ 0 ] };
+		const auto first_lesser { records[ 1 ] };
+		const auto second_king { records[ 2 ] };
+		const auto second_lesser { records[ 3 ] };
+
+		REQUIRE(
+			api().post( "/relationships/duplicates/add", duplicateBody( first_lesser, first_king ) ).status
+			== drogon::k200OK );
+		REQUIRE(
+			api().post( "/relationships/duplicates/add", duplicateBody( second_lesser, second_king ) ).status
+			== drogon::k200OK );
+
+		WHEN( "a lesser member is promoted" )
+		{
+			Integer original_duplicate_id {};
+			{
+				pqxx::nontransaction tx { db() };
+				original_duplicate_id = tx.query_value< Integer >(
+					"SELECT duplicate_id FROM duplicate_groups WHERE king_id = $1", pqxx::params { first_king } );
+			}
+
+			const auto response {
+				api().post( "/relationships/duplicates/add", duplicateBody( first_king, first_lesser ) )
+			};
+
+			THEN( "it becomes the only king and every other member points directly to it" )
+			{
+				REQUIRE( response.status == drogon::k200OK );
+
+				const auto king { api().get( "/relationships/" + std::to_string( first_lesser ) ) };
+				REQUIRE( king.status == drogon::k200OK );
+				REQUIRE( king.json[ "inferior" ].size() == 1 );
+				CHECK( king.json[ "inferior" ][ 0 ].asInt() == first_king );
+				CHECK( king.json[ "superior" ].empty() );
+
+				pqxx::nontransaction tx { db() };
+				CHECK(
+					tx.query_value< Integer >(
+						"SELECT duplicate_id FROM duplicate_groups WHERE king_id = $1", pqxx::params { first_lesser } )
+					== original_duplicate_id );
+			}
+		}
+
+		WHEN( "the groups are joined under a member of the second group" )
+		{
+			Integer second_duplicate_id {};
+			{
+				pqxx::nontransaction tx { db() };
+				second_duplicate_id = tx.query_value< Integer >(
+					"SELECT duplicate_id FROM duplicate_groups WHERE king_id = $1", pqxx::params { second_king } );
+			}
+
+			const auto response {
+				api().post( "/relationships/duplicates/add", duplicateBody( first_king, second_lesser ) )
+			};
+
+			THEN( "that member is king and the merged group has no chain or cycle" )
+			{
+				REQUIRE( response.status == drogon::k200OK );
+
+				const auto king { api().get( "/relationships/" + std::to_string( second_lesser ) ) };
+				REQUIRE( king.status == drogon::k200OK );
+				CHECK( king.json[ "inferior" ].size() == 3 );
+				CHECK( king.json[ "superior" ].empty() );
+
+				for ( const auto id : { first_king, first_lesser, second_king } )
+				{
+					const auto lesser { api().get( "/relationships/" + std::to_string( id ) ) };
+					REQUIRE( lesser.status == drogon::k200OK );
+					REQUIRE( lesser.json[ "superior" ].size() == 1 );
+					CHECK( lesser.json[ "superior" ][ 0 ].asInt() == second_lesser );
+					CHECK( lesser.json[ "inferior" ].empty() );
+				}
+
+				pqxx::nontransaction tx { db() };
+				CHECK(
+					tx.query_value< Integer >(
+						"SELECT duplicate_id FROM duplicate_groups WHERE king_id = $1", pqxx::params { second_lesser } )
+					== second_duplicate_id );
+				CHECK( tx.query_value< Integer >( "SELECT count(*) FROM duplicate_groups" ) == 1 );
+				CHECK( tx.query_value< Integer >( "SELECT count(*) FROM duplicate_group_inferiors" ) == 3 );
+				CHECK_FALSE( tx.query_value< bool >(
+					"SELECT EXISTS (SELECT 1 FROM duplicate_groups duplicate_group "
+					"JOIN duplicate_group_inferiors inferior ON inferior.inferior_id = duplicate_group.king_id)" ) );
 			}
 		}
 	}
@@ -233,6 +326,10 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 				REQUIRE( after.status == drogon::k200OK );
 				CHECK( after.json[ "inferior" ].empty() );
 				CHECK( after.json[ "superior" ].empty() );
+
+				pqxx::nontransaction tx { db() };
+				CHECK_FALSE( tx.query_value< bool >(
+					"SELECT EXISTS (SELECT 1 FROM duplicate_groups WHERE king_id = $1)", pqxx::params { superior } ) );
 			}
 		}
 
@@ -519,14 +616,14 @@ SCENARIO_METHOD( ServerFixture, "Decided pairs drop out of distance searches", "
 			}
 		}
 
-		WHEN( "a duplicate sits further down the chain" )
+		WHEN( "a duplicate joins the group through a lesser member" )
 		{
 			const auto deep { api().createRecords( { 45 } )[ 0 ] };
 			seedPerceptualHash( db(), deep, "b44dc7b24dcb3819" );
 			REQUIRE(
 				api().post( "/relationships/duplicates/add", duplicateBody( deep, worse ) ).status == drogon::k200OK );
 
-			THEN( "it is filtered too, since the closure is walked in full" )
+			THEN( "it is filtered too, since the whole flat group is known" )
 			{
 				const auto response { similar( "?distance=4" ) };
 				REQUIRE( response.status == drogon::k200OK );
