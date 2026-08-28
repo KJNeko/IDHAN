@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <expected>
 #include <filesystem>
 #include <memory>
@@ -65,6 +66,6 @@ enum class FileState
 
 ExpectedTask< FileState > validateFile( RecordID record_id, drogon::orm::DbClientPtr db );
 
-[[nodiscard]] std::int64_t getLastWriteTime( const std::filesystem::path& path );
+[[nodiscard]] std::chrono::system_clock::time_point getLastWriteTime( const std::filesystem::path& path );
 
 } // namespace idhan::filesystem
