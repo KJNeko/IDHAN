@@ -1,5 +1,9 @@
 #include <algorithm>
+#include <array>
+#include <barrier>
+#include <exception>
 #include <numeric>
+#include <thread>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -23,6 +27,13 @@ static int recordCount( pqxx::connection& connection )
 {
 	pqxx::nontransaction tx { connection };
 	return tx.query_value< int >( "SELECT count(*) FROM records" );
+}
+
+static Json::Value singleHashBody( const int seed )
+{
+	Json::Value body {};
+	body[ "sha256" ] = hashFor( seed );
+	return body;
 }
 
 SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
@@ -153,8 +164,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 		WHEN( "a single hash is posted as a string" )
 		{
-			Json::Value body {};
-			body[ "sha256" ] = hashFor( 7 );
+			const auto body { singleHashBody( 7 ) };
 
 			const auto created { api().post( "/records/create", body ) };
 
@@ -176,6 +186,51 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 					CHECK( again[ 0 ] == created.json[ "record_id" ].asInt() );
 					CHECK( recordCount( db() ) == 1 );
 				}
+			}
+		}
+
+		WHEN( "two clients create the same previously absent hash concurrently" )
+		{
+			constexpr int repeats { 8 };
+
+			for ( int iteration { 0 }; iteration < repeats; ++iteration )
+			{
+				const auto seed { 1000 + iteration };
+				const auto body { singleHashBody( seed ) };
+				ApiClient first { serverPort() };
+				ApiClient second { serverPort() };
+				std::array< ApiResponse, 2 > responses {};
+				std::array< std::exception_ptr, 2 > errors {};
+				std::barrier launch { 2 };
+
+				auto create = [ & ]( const std::size_t index, ApiClient& client )
+				{
+					try
+					{
+						launch.arrive_and_wait();
+						responses[ index ] = client.postWithKey( "/records/create", body, api().key() );
+					}
+					catch ( ... )
+					{
+						errors[ index ] = std::current_exception();
+					}
+				};
+
+				std::thread first_request { create, 0, std::ref( first ) };
+				std::thread second_request { create, 1, std::ref( second ) };
+				first_request.join();
+				second_request.join();
+
+				INFO( "iteration " << iteration );
+				REQUIRE( errors[ 0 ] == nullptr );
+				REQUIRE( errors[ 1 ] == nullptr );
+				REQUIRE( responses[ 0 ].status == drogon::k200OK );
+				REQUIRE( responses[ 1 ].status == drogon::k200OK );
+				REQUIRE( responses[ 0 ].json[ "record_id" ].isIntegral() );
+				REQUIRE( responses[ 1 ].json[ "record_id" ].isIntegral() );
+				CHECK( responses[ 0 ].json[ "record_id" ].asInt() == responses[ 1 ].json[ "record_id" ].asInt() );
+				CHECK( recordFor( api(), seed ) == responses[ 0 ].json[ "record_id" ].asInt() );
+				CHECK( recordCount( db() ) == iteration + 1 );
 			}
 		}
 

@@ -25,6 +25,13 @@ import type {
   ServerLayoutMeta,
     KeyCheck,
   DatabaseStats,
+    DownloadSessionInfo,
+    DownloadSessionRecords,
+    DownloadSessionUrlFlat,
+    DownloadSessionUrlNode,
+    DownloaderDebug,
+    DownloaderSecrets,
+    RateLimitLane,
   StorageNode,
   TagDomain,
   TagInfo,
@@ -88,9 +95,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const parsed: unknown = text ? safeParse(text) : undefined;
 
   if (!response.ok) {
-    throw new ApiError(response.status, `${options.method ?? 'GET'} ${path} → ${response.status}`, parsed);
+      throw new ApiError(response.status, errorMessage(parsed) ?? `${options.method ?? 'GET'} ${path} → ${response.status}`, parsed);
   }
   return parsed as T;
+}
+
+function errorMessage(parsed: unknown): string | null {
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const detail = (parsed as { error?: unknown }).error;
+    return typeof detail === 'string' && detail.length > 0 ? detail : null;
 }
 
 function safeParse(text: string): unknown {
@@ -113,6 +126,70 @@ export const api = {
           return request<KeyCheck>('/auth/verify', {key, signal});
     },
   },
+
+    downloader: {
+        /** Event cursors are per session; omitted sessions return retained history. */
+        debug(cursors: ReadonlyMap<number, number> = new Map(), signal?: AbortSignal): Promise<DownloaderDebug> {
+            const since = [...cursors].map(([id, sequence]) => `${id}:${sequence}`).join(',');
+            const query = since === '' ? '' : `?since=${encodeURIComponent(since)}`;
+            return request<DownloaderDebug>(`/downloader/debug${query}`, {signal});
+        },
+        secrets(signal?: AbortSignal): Promise<DownloaderSecrets> {
+            return request<DownloaderSecrets>('/downloader/secrets', {signal});
+        },
+        setSecrets(secrets: DownloaderSecrets, signal?: AbortSignal): Promise<DownloaderSecrets> {
+            return request<DownloaderSecrets>('/downloader/secrets', {method: 'POST', body: secrets, signal});
+        },
+    },
+
+    downloadSessions: {
+        list(signal?: AbortSignal): Promise<DownloadSessionInfo[]> {
+            return request<DownloadSessionInfo[]>('/download_sessions', {signal});
+        },
+        create(name: string, signal?: AbortSignal): Promise<DownloadSessionInfo> {
+            return request<DownloadSessionInfo>('/download_sessions', {method: 'POST', body: {name}, signal});
+        },
+        submitUrl(sessionId: number, url: string, signal?: AbortSignal): Promise<{
+            id: number;
+            url: string;
+            state: string
+        }> {
+            return request<{ id: number; url: string; state: string }>(`/download_sessions/${sessionId}/urls`, {
+                method: 'POST',
+                body: {url},
+                signal,
+            });
+        },
+        submitUrlSession(url: string, name?: string, signal?: AbortSignal): Promise<{
+            session: DownloadSessionInfo;
+            url: DownloadSessionUrlNode;
+        }> {
+            return request('/download_sessions/urls', {
+                method: 'POST',
+                body: name === undefined ? {url} : {url, name},
+                signal,
+            });
+        },
+        urls(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionUrlNode[]> {
+            return request<DownloadSessionUrlNode[]>(`/download_sessions/${sessionId}/urls`, {signal});
+        },
+        urlsFlat(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionUrlFlat[]> {
+            return request<DownloadSessionUrlFlat[]>(`/download_sessions/${sessionId}/urls?flatten=true`, {signal});
+        },
+        /** Rejects with 409 while the URL is running. */
+        retryUrl(sessionId: number, urlId: number, signal?: AbortSignal): Promise<DownloadSessionUrlNode> {
+            return request<DownloadSessionUrlNode>(`/download_sessions/${sessionId}/urls/${urlId}/retry`, {
+                method: 'POST',
+                signal,
+            });
+        },
+        records(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionRecords> {
+            return request<DownloadSessionRecords>(`/download_sessions/${sessionId}/records`, {signal});
+        },
+        destroy(sessionId: number, signal?: AbortSignal): Promise<{ deleted: boolean }> {
+            return request<{ deleted: boolean }>(`/download_sessions/${sessionId}`, {method: 'DELETE', signal});
+        },
+    },
 
   search(body: SearchRequest, signal?: AbortSignal): Promise<SearchResponse> {
     return request<SearchResponse>('/search', { method: 'POST', body, signal });
@@ -333,6 +410,148 @@ export const layouts = {
  * URL for an <img> or <video> whose element cannot set request headers. The credential therefore
  * rides in the `idhan_key` query parameter, which the server accepts alongside the header.
  */
+/** Watches coalesced session-tree updates. Returns a close function. */
+export function watchDownloadSessions(handlers: {
+    onSession: (session: DownloadSessionInfo, urls: DownloadSessionUrlNode[]) => void;
+    onRemoved?: (sessionId: number) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void;
+}): () => void {
+    let socket: WebSocket | null = null;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let closed = false;
+    let backoff = 1000;
+
+    const connect = () => {
+        if (closed) return;
+        const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const params = new URLSearchParams();
+        if (currentKey) params.set('idhan_key', currentKey);
+        socket = new WebSocket(`${scheme}://${window.location.host}/download_sessions/events?${params.toString()}`);
+
+        socket.onopen = () => {
+            backoff = 1000;
+            handlers.onOpen?.();
+        };
+
+        socket.onmessage = (event) => {
+            let message: unknown;
+            try {
+                message = JSON.parse(event.data as string);
+            } catch {
+                return;
+            }
+            if (typeof message !== 'object' || message === null) return;
+            const payload = message as {
+                type?: string;
+                session?: DownloadSessionInfo;
+                urls?: DownloadSessionUrlNode[];
+                session_id?: number;
+            };
+            if (payload.type === 'session' && payload.session && payload.urls) {
+                handlers.onSession(payload.session, payload.urls);
+            } else if (payload.type === 'session_removed' && typeof payload.session_id === 'number') {
+                handlers.onRemoved?.(payload.session_id);
+            }
+        };
+
+        socket.onclose = () => {
+            if (closed) return;
+            retry = setTimeout(connect, backoff);
+            backoff = Math.min(backoff * 2, 15000);
+        };
+
+        socket.onerror = () => {
+            handlers.onError?.('Lost the download session connection; retrying.');
+        };
+    };
+
+    connect();
+
+    return () => {
+        closed = true;
+        if (retry !== undefined) clearTimeout(retry);
+        socket?.close();
+    };
+}
+
+export function isRateLimitLane(value: unknown): value is RateLimitLane {
+    if (typeof value !== 'object' || value === null) return false;
+    const lane = value as Record<string, unknown>;
+    const requests = lane.requests;
+    const seconds = lane.seconds;
+    const effectiveInterval = lane.effective_interval_ms;
+    const remaining = lane.remaining_ms;
+    const consecutive = lane.consecutive_limits;
+    return typeof lane.scheduling_key === 'string'
+        && typeof lane.throttled === 'boolean'
+        && typeof lane.active === 'boolean'
+        && [requests, seconds, effectiveInterval, remaining, consecutive]
+            .every((field) => typeof field === 'number' && Number.isFinite(field) && field >= 0)
+        && typeof requests === 'number'
+        && typeof seconds === 'number'
+        && (lane.throttled ? requests > 0 && seconds > 0 : requests === 0 && seconds === 0);
+}
+
+export function watchRateLimits(handlers: {
+    onSnapshot: (limits: RateLimitLane[]) => void;
+    onUpdate: (limit: RateLimitLane) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void;
+}): () => void {
+    let socket: WebSocket | null = null;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let closed = false;
+    let backoff = 1000;
+
+    const connect = () => {
+        if (closed) return;
+        const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const params = new URLSearchParams();
+        if (currentKey) params.set('idhan_key', currentKey);
+        socket = new WebSocket(`${scheme}://${window.location.host}/rate_limits/events?${params.toString()}`);
+
+        socket.onopen = () => {
+            backoff = 1000;
+            handlers.onOpen?.();
+        };
+
+        socket.onmessage = (event) => {
+            let message: unknown;
+            try {
+                message = JSON.parse(event.data as string);
+            } catch {
+                return;
+            }
+            if (typeof message !== 'object' || message === null) return;
+            const payload = message as { type?: unknown; limits?: unknown; limit?: unknown };
+            if (payload.type === 'rate_limits' && Array.isArray(payload.limits) && payload.limits.every(isRateLimitLane)) {
+                handlers.onSnapshot(payload.limits);
+            } else if (payload.type === 'rate_limit' && isRateLimitLane(payload.limit)) {
+                handlers.onUpdate(payload.limit);
+            }
+        };
+
+        socket.onclose = () => {
+            if (closed) return;
+            retry = setTimeout(connect, backoff);
+            backoff = Math.min(backoff * 2, 15000);
+        };
+
+        socket.onerror = () => {
+            handlers.onError?.('Lost the rate-limit connection; retrying.');
+        };
+    };
+
+    connect();
+
+    return () => {
+        closed = true;
+        if (retry !== undefined) clearTimeout(retry);
+        socket?.close();
+    };
+}
+
 export function thumbnailUrl(recordId: number, size = 256): string {
   // The server generates a square thumbnail at any requested edge length; clamp to a positive integer.
   const edge = Math.max(1, Math.round(size));

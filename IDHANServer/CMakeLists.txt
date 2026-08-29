@@ -13,10 +13,15 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	target_link_libraries(IDHANServer PRIVATE uring)
 endif ()
 target_link_libraries(IDHANServer PRIVATE libpqxx::pqxx tomlplusplus::tomlplusplus)
-target_link_libraries(IDHANServer PRIVATE IDHAN)
+target_link_libraries(IDHANServer PRIVATE IDHAN IDHANDownloader)
 target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANModuleIPC IDHANMigration)
 target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
+target_compile_definitions(
+		IDHANServer
+		PRIVATE IDHAN_DOWNLOADER_DEFAULT_PARSER_DIRECTORY="${IDHAN_DOWNLOADER_PARSER_DIR}")
+
+add_dependencies(IDHANServer IDHANDownloaderAssets)
 
 if (IDHAN_HARDEN)
 	target_compile_definitions(IDHANServer PRIVATE IDHAN_HARDEN)

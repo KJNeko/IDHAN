@@ -12,6 +12,8 @@ export const API_PREFIXES = [
   '/auth',
   '/clusters',
   '/db',
+    '/download_sessions',
+    '/downloader',
     '/embeddings',
   '/file',
   '/generate_api_key',
@@ -25,6 +27,7 @@ export const API_PREFIXES = [
   '/mime',
   '/plugins',
   '/purge',
+    '/rate_limits',
   '/records',
   '/relationships',
   '/search',
@@ -33,5 +36,5 @@ export const API_PREFIXES = [
   '/version',
 ] as const;
 
-/** The only prefix served over WebSocket rather than HTTP. */
-export const WS_PREFIXES: readonly string[] = ['/heartbeat'];
+/** Prefixes that also carry WebSocket traffic, which the dev proxy has to upgrade. */
+export const WS_PREFIXES: readonly string[] = ['/heartbeat', '/download_sessions', '/rate_limits'];

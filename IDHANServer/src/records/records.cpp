@@ -52,24 +52,21 @@ drogon::Task< std::expected< RecordID, drogon::HttpResponsePtr > > createRecord(
 	if ( result ) [[likely]]
 		co_return result.value();
 
-	std::size_t tries { 0 };
+	constexpr std::size_t max_tries { 16 };
 
-	do
+	for ( std::size_t tries { 0 }; tries < max_tries; ++tries )
 	{
-		tries += 1;
-		if ( tries > 16 )
-			co_return std::unexpected( createInternalError( "Failed to insert record {}", sha256.hex() ) );
-
 		const auto insert { co_await db->execSqlCoro(
 			"INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING RETURNING record_id", sha256.toVec() ) };
 
-		if ( insert.empty() ) continue;
+		if ( !insert.empty() ) co_return insert[ 0 ][ 0 ].as< RecordID >();
 
-		co_return insert[ 0 ][ 0 ].as< RecordID >();
+		const auto existing { co_await findRecord( sha256, db ) };
+
+		if ( existing ) co_return *existing;
 	}
-	while ( tries < 16 );
 
-	co_return std::unexpected( createBadRequest( "Failed to create record" ) );
+	co_return std::unexpected( createInternalError( "Failed to insert record {}", sha256.hex() ) );
 }
 
 drogon::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, DbClientPtr db )

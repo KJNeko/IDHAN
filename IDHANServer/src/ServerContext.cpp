@@ -19,6 +19,7 @@
 #include "auth/authKeys.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
+#include "downloader/DownloadSessionManager.hpp"
 #include "drogon/HttpAppFramework.h"
 #include "embeddings/embeddings.hpp"
 #include "filesystem/filesystem.hpp"
@@ -47,7 +48,7 @@ void ServerContext::setupCORSSupport() const
 	drogon::app().registerPreRoutingAdvice(
 		[]( const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
 		{
-			log::info( "Routing for {}", request->path() );
+			log::trace( "Routing for {}", request->path() );
 			if ( request->method() == drogon::Options )
 			{
 				const auto response { drogon::HttpResponse::newHttpResponse() };
@@ -65,7 +66,7 @@ void ServerContext::setupCORSSupport() const
 	drogon::app().registerPostHandlingAdvice(
 		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
 		{
-			log::info( "Finished handling {}", request->path() );
+			log::trace( "Finished handling {}", request->path() );
 			addCORSHeaders( response );
 		} );
 }
@@ -374,6 +375,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 					co_await m_clusters->reloadClusters( db );
 					co_await mime::syncMimeTable( db );
 					co_await embeddings::registerEmbeddingModels( db );
+					co_await downloader::downloadSessionManager().restore( db );
 					co_return;
 				}() );
 
@@ -429,6 +431,7 @@ void ServerContext::run()
 
 ServerContext::~ServerContext()
 {
+	downloader::downloadSessionManager().shutdown();
 	// The same key setupTempPath() created it under. Reading a different one deleted /tmp/idhan and
 	// left the configured directory behind, marker file and all, which aborts the next boot.
 	const auto upload_path { config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" ) };

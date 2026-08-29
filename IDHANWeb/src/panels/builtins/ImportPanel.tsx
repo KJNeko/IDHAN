@@ -5,7 +5,9 @@
  * Successfully imported record ids are pushed into the shared selection so other panels can show them.
  */
 
-import { useCallback, useRef, useState, type DragEvent } from 'react';
+import {useCallback, useEffect, useRef, useState, type DragEvent} from 'react';
+import {api} from '../../api/client';
+import type {DownloadSessionInfo, DownloadSessionUrlNode} from '../../api/types';
 import type { PanelProps, RecordId } from '../../host/types';
 import { RecordInfoView, type RecordInfo } from './RecordInfoView';
 import {useRecordMenu} from './recordActions';
@@ -62,7 +64,22 @@ async function pool<T>(items: T[], limit: number, worker: (item: T, index: numbe
   await Promise.all(runners);
 }
 
+export function parseNewlineUrlList(value: string): string[] {
+    return value
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+}
+
 function ImportPanel({ host }: PanelProps) {
+    const [sessions, setSessions] = useState<DownloadSessionInfo[]>([]);
+    const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+    const [newSessionName, setNewSessionName] = useState('');
+    const [downloadUrl, setDownloadUrl] = useState('');
+    const [urlJobs, setUrlJobs] = useState<DownloadSessionUrlNode[]>([]);
+    const [pollGeneration, setPollGeneration] = useState(0);
+    const [sessionBusy, setSessionBusy] = useState(false);
+    const [sessionError, setSessionError] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [forceImport, setForceImport] = useState(false);
@@ -71,6 +88,179 @@ function ImportPanel({ host }: PanelProps) {
   const nextId = useRef(0);
 
     const {openRecordMenu, recordMenu} = useRecordMenu(host);
+
+    const loadSessionRecords = useCallback(async (session: DownloadSessionInfo) => {
+        const data = await api.downloadSessions.records(session.id);
+        host.results.set({
+            ids: new Int32Array(data.record_ids),
+            queryMs: 0,
+            query: [`download session: ${session.name}`],
+        });
+        host.selection.set([]);
+    }, [host]);
+
+    const refreshSessions = useCallback(async () => {
+        const listed = await api.downloadSessions.list();
+        setSessions(listed);
+        setActiveSessionId((current) => current !== null && listed.some((session) => session.id === current) ? current : (listed[0]?.id ?? null));
+    }, []);
+
+    useEffect(() => {
+        void refreshSessions().catch((error) => {
+            setSessionError(error instanceof Error ? error.message : String(error));
+        });
+    }, [refreshSessions]);
+
+    const activeSession = sessions.find((session) => session.id === activeSessionId) ?? null;
+
+    useEffect(() => {
+        if (!activeSession) {
+            setUrlJobs([]);
+            return;
+        }
+
+        const controller = new AbortController();
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        let completed = new Set<number>();
+
+        const poll = async () => {
+            try {
+                const jobs = await api.downloadSessions.urls(activeSession.id, controller.signal);
+                if (controller.signal.aborted) return;
+
+                setUrlJobs(jobs);
+                const nextCompleted = new Set(jobs.filter((job) => job.state === 'completed').map((job) => job.id));
+                const gainedCompletion = [...nextCompleted].some((id) => !completed.has(id));
+                completed = nextCompleted;
+
+                if (gainedCompletion) await loadSessionRecords(activeSession);
+                if (jobs.some((job) => job.state === 'pending' || job.state === 'processing')) {
+                    timeout = setTimeout(() => void poll(), 1500);
+                }
+            } catch (error) {
+                if (!controller.signal.aborted) setSessionError(error instanceof Error ? error.message : String(error));
+            }
+        };
+
+        void poll();
+        return () => {
+            controller.abort();
+            if (timeout !== undefined) clearTimeout(timeout);
+        };
+    }, [activeSession?.id, activeSession?.name, loadSessionRecords, pollGeneration]);
+
+    const chooseSession = useCallback(async (id: number) => {
+        const session = sessions.find((entry) => entry.id === id);
+        if (!session) return;
+        setActiveSessionId(id);
+        setSessionError(null);
+        try {
+            await loadSessionRecords(session);
+        } catch (error) {
+            setSessionError(error instanceof Error ? error.message : String(error));
+        }
+    }, [loadSessionRecords, sessions]);
+
+    const createSession = useCallback(async () => {
+        const name = newSessionName.trim();
+        if (!name) return;
+        setSessionBusy(true);
+        setSessionError(null);
+        try {
+            const created = await api.downloadSessions.create(name);
+            setSessions((previous) => [created, ...previous]);
+            setActiveSessionId(created.id);
+            setNewSessionName('');
+            await loadSessionRecords(created);
+        } catch (error) {
+            setSessionError(error instanceof Error ? error.message : String(error));
+        } finally {
+            setSessionBusy(false);
+        }
+    }, [loadSessionRecords, newSessionName]);
+
+    const queueUrl = useCallback(async () => {
+        if (!activeSession) return;
+
+        const urls = parseNewlineUrlList(downloadUrl);
+        if (urls.length === 0) return;
+
+        setSessionBusy(true);
+        setSessionError(null);
+        const failedUrls: string[] = [];
+        const errors: string[] = [];
+        try {
+            for (const url of urls) {
+                try {
+                    const queued = await api.downloadSessions.submitUrl(activeSession.id, url);
+                    setUrlJobs((previous) => [{
+                        id: queued.id,
+                        parent_id: null,
+                        url: queued.url,
+                        state: 'pending',
+                        created_at: Math.floor(Date.now() / 1000),
+                        finished_at: null,
+                        error: null,
+                        note: null,
+                        record_id: null,
+                        children: [],
+                    }, ...previous]);
+                } catch (error) {
+                    failedUrls.push(url);
+                    errors.push(`${url}: ${error instanceof Error ? error.message : String(error)}`);
+                }
+            }
+
+            setPollGeneration((value) => value + 1);
+            try {
+                await refreshSessions();
+                await loadSessionRecords(activeSession);
+            } catch (error) {
+                errors.push(`Unable to refresh the download session: ${error instanceof Error ? error.message : String(error)}`);
+            }
+
+            if (failedUrls.length > 0) {
+                setDownloadUrl(failedUrls.join('\n'));
+                setSessionError(`Failed to queue ${failedUrls.length} URL${failedUrls.length === 1 ? '' : 's'}: ${errors.join('; ')}`);
+                return;
+            }
+
+            setDownloadUrl('');
+            host.ui.toast(`Queued ${urls.length} URL${urls.length === 1 ? '' : 's'} in ${activeSession.name}`, {kind: 'success'});
+            if (errors.length > 0) setSessionError(errors.join('; '));
+        } finally {
+            setSessionBusy(false);
+        }
+    }, [activeSession, downloadUrl, host, loadSessionRecords, refreshSessions]);
+
+    const retryUrl = useCallback(async (jobId: number) => {
+        if (!activeSession) return;
+        setSessionError(null);
+        try {
+            const retried = await api.downloadSessions.retryUrl(activeSession.id, jobId);
+            setUrlJobs((previous) => previous.map((job) => (job.id === jobId ? retried : job)));
+            setPollGeneration((value) => value + 1);
+        } catch (error) {
+            setSessionError(error instanceof Error ? error.message : String(error));
+        }
+    }, [activeSession]);
+
+    const destroySession = useCallback(async () => {
+        if (!activeSession) return;
+        setSessionBusy(true);
+        setSessionError(null);
+        try {
+            await api.downloadSessions.destroy(activeSession.id);
+            setSessions((previous) => previous.filter((session) => session.id !== activeSession.id));
+            setActiveSessionId(null);
+            host.results.set({ids: new Int32Array(), queryMs: 0, query: []});
+            host.selection.set([]);
+        } catch (error) {
+            setSessionError(error instanceof Error ? error.message : String(error));
+        } finally {
+            setSessionBusy(false);
+        }
+    }, [activeSession, host]);
 
   const patch = useCallback((id: number, changes: Partial<Item>) => {
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...changes } : item)));
@@ -177,6 +367,74 @@ function ImportPanel({ host }: PanelProps) {
 
   return (
     <div className="panel-body import-panel">
+        <section className="download-session-panel">
+            <h3>URL download session</h3>
+            <div className="download-session-row">
+                <select
+                    value={activeSessionId ?? ''}
+                    disabled={sessionBusy || sessions.length === 0}
+                    onChange={(event) => void chooseSession(Number(event.target.value))}
+                >
+                    {sessions.length === 0 && <option value="">No download sessions</option>}
+                    {sessions.map((session) => <option key={session.id} value={session.id}>{session.name}</option>)}
+                </select>
+                <button type="button" disabled={!activeSession || sessionBusy}
+                        onClick={() => void destroySession()}>Delete
+                </button>
+            </div>
+            <div className="download-session-row">
+                <input
+                    value={newSessionName}
+                    onChange={(event) => setNewSessionName(event.target.value)}
+                    placeholder="New session name"
+                    disabled={sessionBusy}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') void createSession();
+                    }}
+                />
+                <button type="button" disabled={sessionBusy || !newSessionName.trim()}
+                        onClick={() => void createSession()}>New session
+                </button>
+            </div>
+            <div className="download-session-row">
+				<textarea
+                    value={downloadUrl}
+                    onChange={(event) => setDownloadUrl(event.target.value)}
+                    placeholder="Paste one URL per line"
+                    disabled={sessionBusy || !activeSession}
+                />
+                <button type="button"
+                        disabled={sessionBusy || !activeSession || parseNewlineUrlList(downloadUrl).length === 0}
+                        onClick={() => void queueUrl()}>Queue URL(s)
+                </button>
+            </div>
+            <p className="muted">Paste one URL per line. Selecting a session loads its imported files into the image
+                grid.</p>
+            {urlJobs.length > 0 && (
+                <ul className="download-session-jobs" aria-label="URL download queue">
+                    {urlJobs.map((job) => (
+                        <li key={job.id} className={`state-${job.state}`}>
+                            <div className="download-session-job-head">
+                                <span className="grow" title={job.url}>{job.url}</span>
+                                <span className="download-session-job-state">{job.state}</span>
+                                {(job.state === 'completed' || job.state === 'failed') && (
+                                    <button
+                                        type="button"
+                                        className="download-session-job-retry"
+                                        title="Queue this URL again"
+                                        onClick={() => void retryUrl(job.id)}
+                                    >
+                                        Retry
+                                    </button>
+                                )}
+                            </div>
+                            {job.error && <p className="download-session-job-error">{job.error}</p>}
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {sessionError && <p className="error">{sessionError}</p>}
+        </section>
       <div
         className={`import-drop${dragOver ? ' is-over' : ''}`}
         onDragOver={(e) => {

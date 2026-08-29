@@ -741,6 +741,14 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 		co_await filesystem::updateRecordModifiedTime( m_record_id, m_path, db );
 	}
 
+	if ( file_info[ 0 ][ 0 ].isNull() )
+	{
+		// Adopt unassigned files found inside this cluster.
+		co_await db->execSqlCoro(
+			"UPDATE file_info SET cluster_id = $1 WHERE record_id = $2", m_cluster_id, m_record_id );
+		co_return {};
+	}
+
 	const auto found_cluster_id { file_info[ 0 ][ 0 ].as< ClusterID >() };
 	FGL_ASSERT( m_cluster_id != 0, "Cluster should not be zero" );
 	FGL_ASSERT( found_cluster_id != 0, "Cluster should not be zero" );
@@ -828,9 +836,7 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 	log::trace( "Starting mime scan for {} (Record {})", m_path.filename().string(), m_record_id );
 	const auto mime_id { co_await mime::identifyMimeForPath( m_path ) };
 	log::trace(
-		"Mime scan completed for {} (Record {}), result: {}",
-		m_path.filename().string(),
-		m_record_id, mime_id );
+		"Mime scan completed for {} (Record {}), result: {}", m_path.filename().string(), m_record_id, mime_id );
 
 	const auto modified_time { filesystem::getLastWriteTime( m_path ) };
 	const auto modified_time_us {

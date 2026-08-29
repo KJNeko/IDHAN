@@ -34,6 +34,21 @@ option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
 
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
+option(BUILD_IDHAN_DOWNLOADER_TESTER "Builds the downloader script testing program" ON)
+option(BUILD_IDHAN_DOWNLOADER_SPECS "Generates the downloader API clients from IDHANDownloader/specs" ON)
+
+function(idhan_require_option DEPENDENT DEPENDENCY)
+	if (${DEPENDENT} AND NOT ${DEPENDENCY})
+		get_property(DEPENDENCY_HELP CACHE ${DEPENDENCY} PROPERTY HELPSTRING)
+		message(STATUS "${DEPENDENT} requires ${DEPENDENCY}; enabling ${DEPENDENCY}")
+		set(${DEPENDENCY} ON CACHE BOOL "${DEPENDENCY_HELP}" FORCE)
+	endif ()
+endfunction()
+
+idhan_require_option(BUILD_IDHAN_TESTS BUILD_IDHAN_SERVER)
+idhan_require_option(BUILD_IDHAN_DOCS BUILD_IDHAN_SERVER)
+idhan_require_option(BUILD_HYDRUS_IMPORTER BUILD_IDHAN_CLIENT)
+idhan_require_option(BUILD_IDHAN_TOOLS BUILD_IDHAN_CLIENT)
 
 # This is not recommended to turn off. Only turn it off if you really know what you are doing
 option(IDHAN_USE_JEMALLOC "Link the server against jemalloc instead of the system allocator" ON)
@@ -50,10 +65,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set(IDHAN_TRACK_CORO_FRAMES ON)
 endif ()
 
-if (BUILD_HYDRUS_IMPORTER EQUAL 1)
-	set(BUILD_IDHAN_CLIENT ON)
-endif ()
-
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set(IDHAN_ENABLE_TRACE OFF)
 endif ()
@@ -68,6 +79,7 @@ find_package(spdlog REQUIRED)
 find_package(Jsoncpp REQUIRED)
 
 add_subdirectory(IDHAN)
+add_subdirectory(IDHANDownloader)
 if (BUILD_IDHAN_SERVER)
 	add_subdirectory(IDHANMigration)
 	add_subdirectory(IDHANModules)

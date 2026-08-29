@@ -1747,6 +1747,346 @@ body {
 }
 
 /* Import */
+.download-session-panel {
+    display: grid;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid #2a2e37;
+}
+
+.download-session-panel h3 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.download-session-row {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.download-session-row input,
+.download-session-row select,
+.download-session-row textarea {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.download-session-row textarea {
+    height: 4.5rem;
+    resize: vertical;
+}
+
+.download-session-jobs {
+    display: grid;
+    gap: 0.3rem;
+    max-height: 11rem;
+    margin: 0.2rem 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.download-session-jobs > li {
+    padding: 0.35rem 0.45rem;
+    border: 1px solid #2a2e37;
+    border-radius: 4px;
+    background: #1b1e24;
+    font-size: 0.78rem;
+}
+
+.download-session-job-head {
+    display: flex;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.download-session-job-head > .grow {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.download-session-job-state {
+    flex: 0 0 auto;
+    color: var(--muted);
+    text-transform: capitalize;
+}
+
+.download-session-jobs > .state-completed .download-session-job-state {
+    color: var(--success, #70c997);
+}
+
+.download-session-jobs > .state-failed {
+    border-color: color-mix(in srgb, var(--error) 55%, #2a2e37);
+}
+
+.download-session-jobs > .state-failed .download-session-job-state,
+.download-session-job-error {
+    color: var(--error);
+}
+
+.download-session-job-error {
+    margin: 0.3rem 0 0;
+    overflow-wrap: anywhere;
+}
+
+.download-session-job-retry,
+.download-tree-retry {
+    flex: 0 0 auto;
+    padding: 0 0.35rem;
+    border: 1px solid #2a2e37;
+    border-radius: 3px;
+    background: #22262e;
+    color: var(--text);
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+
+.download-session-job-retry:hover,
+.download-tree-retry:hover {
+    border-color: #3a4150;
+}
+
+.downloads-panel {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 0.45rem;
+    padding: 0.5rem;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/** The queue and toolbar stay put; only the session list scrolls. */
+.download-tree-scroll {
+    display: grid;
+    gap: 0.45rem;
+    align-content: start;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.download-tree-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.download-tree-toolbar label {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+}
+
+.download-tree-live {
+    color: var(--success, #70c997);
+}
+
+.download-tree-tally.state-failed {
+    color: var(--error);
+}
+
+.download-tree-tally.state-completed {
+    color: var(--success, #70c997);
+}
+
+.download-tree-tally.state-pending-children {
+    color: var(--warning, #d8a657);
+}
+
+.download-tree-session {
+    border: 1px solid #2a2e37;
+    border-radius: 4px;
+    background: #1b1e24;
+}
+
+.download-tree-session-head {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.35rem 0.45rem;
+    border-bottom: 1px solid #2a2e37;
+    font-size: 0.78rem;
+}
+
+.download-tree-session-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.download-tree-session.is-selected {
+    border-color: var(--accent, #79b8ff);
+}
+
+.download-tree {
+    margin: 0;
+    padding: 0.2rem 0;
+    list-style: none;
+    font-size: 0.76rem;
+}
+
+.download-tree-row {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    padding-right: 0.45rem;
+    min-width: 0;
+}
+
+.download-tree-row.is-selected {
+    background: #232833;
+}
+
+.download-tree-twisty {
+    flex: 0 0 auto;
+    width: 1rem;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.download-tree-twisty:disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.download-tree-url {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.download-tree-url.is-selected {
+    color: var(--accent, #79b8ff);
+}
+
+.download-tree-record {
+    flex: 0 0 auto;
+    color: var(--success, #70c997);
+}
+
+.download-tree-state {
+    flex: 0 0 auto;
+    color: var(--muted);
+    text-transform: capitalize;
+}
+
+.download-tree-row.state-failed .download-tree-state {
+    color: var(--error);
+}
+
+.download-tree-row.state-completed .download-tree-state {
+    color: var(--success, #70c997);
+}
+
+.download-tree-row.state-pending-children .download-tree-state {
+    color: var(--warning, #d8a657);
+}
+
+.download-tree-detail {
+    padding-right: 0.45rem;
+    font-size: 0.72rem;
+    overflow-wrap: anywhere;
+}
+
+.download-tree-error {
+    color: var(--error);
+    margin: 0;
+    max-height: 16rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: inherit;
+    font-size: inherit;
+    user-select: text;
+}
+
+.download-tree-import {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.35rem 0.45rem 0.5rem;
+    align-items: flex-start;
+}
+
+.download-tree-thumb {
+    flex: 0 0 auto;
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    border: 1px solid #2a2e37;
+    border-radius: 3px;
+    background: #14161b;
+    cursor: pointer;
+}
+
+.download-tree-import-info {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.download-tree-import-info > .download-tree-record {
+    border: 0;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+    font-size: 0.76rem;
+}
+
+.download-tree-flat {
+    padding: 0.35rem 0.45rem;
+    border-bottom: 1px solid #23262d;
+}
+
+.download-tree-flat p {
+    margin: 0.15rem 0;
+    font-size: 0.72rem;
+}
+
+.download-tree-flat-urls {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.download-tree-flat-urls > li {
+    display: flex;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: 0.1rem 0 0.1rem 0.75rem;
+}
+
+.download-tree-flat-urls > li > .grow {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.download-tree-flat-urls > .state-failed .download-tree-state {
+    color: var(--error);
+}
+
 .import-drop {
   border: 1px dashed #3a3f4a;
   border-radius: 6px;
@@ -2314,6 +2654,89 @@ body {
 }
 .domain-id {
   font-variant-numeric: tabular-nums;
+}
+
+/* Downloader Secrets */
+.downloader-secrets {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.secret-toolbar,
+.secret-add-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.secret-toolbar p,
+.secret-hint,
+.secret-add h3,
+.secret-add .error {
+    margin: 0;
+}
+
+.secret-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.secret-row {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.8fr) minmax(12rem, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.secret-key {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.secret-value {
+    min-width: 10rem;
+}
+
+.secret-reveal {
+    min-width: 4rem;
+}
+
+.secret-add {
+    border-top: 1px solid #2a2e37;
+    padding-top: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.secret-add h3 {
+    font-size: 0.95rem;
+}
+
+.secret-new-key {
+    flex: 1 1 15rem;
+}
+
+.secret-add-row .secret-value {
+    flex: 1 1 12rem;
+}
+
+.secret-hint {
+    font-size: 0.8rem;
+}
+
+@media (max-width: 700px) {
+    .secret-row {
+        grid-template-columns: 1fr auto;
+    }
+
+    .secret-key {
+        grid-column: 1 / -1;
+    }
 }
 
 /* Cluster Manager */
@@ -2917,6 +3340,61 @@ body {
     text-align: right;
 }
 
+.debug-rate-table {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-bottom: 1rem;
+    font-size: 0.85em;
+}
+
+.debug-rate-row {
+    display: grid;
+    grid-template-columns: minmax(8rem, 2fr) minmax(8rem, 1.4fr) minmax(8rem, 1.4fr) 4.5rem 5.5rem;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.25rem 0.3rem;
+}
+
+.debug-rate-row:not(.debug-rate-head):hover {
+    background: #1b1e24;
+}
+
+.debug-rate-head {
+    font-size: 0.72em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #2a2e37;
+    padding-bottom: 0.4rem;
+}
+
+.debug-rate-lane {
+    overflow-wrap: anywhere;
+}
+
+.debug-rate-active {
+    color: #e3b341;
+}
+
+.debug-rate-inactive {
+    color: var(--muted);
+}
+
+@media (max-width: 34rem) {
+    .debug-rate-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .debug-rate-row > :nth-child(2), .debug-rate-row > :nth-child(3), .debug-rate-row > :nth-child(4) {
+        grid-column: 1;
+    }
+
+    .debug-rate-row > :nth-child(5) {
+        grid-column: 2;
+        grid-row: 2 / span 3;
+    }
+}
+
 /* ---- embedding compare: two slots, and one diverging bar per term ---- */
 .cmp-panel {
   display: flex;
@@ -3095,4 +3573,270 @@ body {
 
 .cmp-bar-fill.toward-b {
   background: #ffb87b;
+}
+
+/* ---- Debug panel: Download Sessions ---- */
+.debug-session {
+    border: 1px solid #2a2e37;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.debug-session-head {
+    display: grid;
+    grid-template-columns: 1rem minmax(6rem, auto) auto minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.debug-session-head:hover {
+    background: #1b1e24;
+}
+
+.debug-session-caret {
+    color: var(--muted);
+}
+
+.debug-session-name {
+    font-weight: 600;
+}
+
+.debug-session-url {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85em;
+}
+
+.debug-session-state {
+    font-size: 0.72em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    border: 1px solid currentcolor;
+}
+
+.debug-state-running {
+    color: #3fb950;
+}
+
+.debug-state-idle {
+    color: var(--muted);
+}
+
+.debug-state-closing {
+    color: #e3b341;
+}
+
+.debug-state-cancelled {
+    color: #f85149;
+}
+
+.debug-session-body {
+    padding: 0 0.5rem 0.5rem;
+    font-size: 0.85em;
+}
+
+.debug-session-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    padding: 0.3rem 0;
+}
+
+.debug-session-stats b {
+    margin-left: 0.35rem;
+}
+
+.debug-counter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+    gap: 0.15rem 0.75rem;
+    padding: 0.4rem 0;
+    border-top: 1px solid #2a2e37;
+}
+
+.debug-counter {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.debug-subsection {
+    margin: 0.7rem 0 0.3rem;
+    font-size: 0.72em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Fixed layout is what lets a URL cell ellipsize instead of widening the table. */
+.debug-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.debug-table th {
+    padding: 0.2rem 0.3rem;
+    text-align: left;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted, #8b929e);
+    border-bottom: 1px solid #2a2e36;
+    white-space: nowrap;
+}
+
+.debug-table td {
+    padding: 0.15rem 0.3rem;
+    vertical-align: baseline;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.debug-table tbody tr:hover {
+    background: #1b1e24;
+}
+
+.debug-table .debug-col-num, .debug-table td.debug-num {
+    text-align: right;
+}
+
+.debug-work-table th:nth-child(1), .debug-work-table td:nth-child(1) {
+    width: 3.5rem;
+}
+
+.debug-work-table th:nth-child(2), .debug-work-table td:nth-child(2) {
+    width: 7rem;
+}
+
+.debug-work-table th:nth-child(4), .debug-work-table td:nth-child(4) {
+    width: 6.5rem;
+}
+
+.debug-work-table th:nth-child(5), .debug-work-table td:nth-child(5) {
+    width: 3.5rem;
+}
+
+.debug-work-table th:nth-child(6), .debug-work-table td:nth-child(6) {
+    width: 4.5rem;
+}
+
+.debug-pending-table th:nth-child(1), .debug-pending-table td:nth-child(1) {
+    width: 3.5rem;
+}
+
+.debug-pending-table th:nth-child(2), .debug-pending-table td:nth-child(2) {
+    width: 10rem;
+}
+
+.debug-pending-table th:nth-child(4), .debug-pending-table td:nth-child(4) {
+    width: 5rem;
+}
+
+.debug-pending-table th:nth-child(5), .debug-pending-table td:nth-child(5) {
+    width: 4.5rem;
+}
+
+.debug-lane-table th:nth-child(2), .debug-lane-table td:nth-child(2) {
+    width: 6rem;
+}
+
+.debug-lane-table th:nth-child(3), .debug-lane-table td:nth-child(3) {
+    width: 4.5rem;
+}
+
+.debug-lane-table th:nth-child(4), .debug-lane-table td:nth-child(4) {
+    width: 4.5rem;
+}
+
+.debug-lane-table th:nth-child(5), .debug-lane-table td:nth-child(5) {
+    width: 4rem;
+}
+
+.debug-lane-table th:nth-child(6), .debug-lane-table td:nth-child(6) {
+    width: 5rem;
+}
+
+.debug-lane-backoff {
+    color: #e0a33c;
+}
+
+.debug-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.debug-event-log {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
+.debug-event {
+    display: grid;
+    grid-template-columns: 7rem 6.5rem 3.5rem minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.1rem 0.3rem;
+    font-size: 0.95em;
+}
+
+.debug-event-kind {
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.debug-event-good {
+    color: #3fb950;
+}
+
+.debug-event-bad {
+    color: #f85149;
+}
+
+.debug-event-neutral {
+    color: inherit;
+}
+
+.debug-event-muted {
+    color: var(--muted);
+}
+
+@media (max-width: 40rem) {
+    /* Each table keeps its identifier, the number worth watching, and the clock. */
+    .debug-work-table :is(th, td):nth-child(2),
+    .debug-work-table :is(th, td):nth-child(4),
+    .debug-work-table :is(th, td):nth-child(5),
+    .debug-pending-table :is(th, td):nth-child(2),
+    .debug-pending-table :is(th, td):nth-child(4),
+    .debug-lane-table :is(th, td):nth-child(2),
+    .debug-lane-table :is(th, td):nth-child(4),
+    .debug-lane-table :is(th, td):nth-child(5) {
+        display: none;
+    }
+
+    .debug-event {
+        grid-template-columns: 6rem minmax(0, 1fr);
+    }
+
+    .debug-event > :nth-child(2), .debug-event > :nth-child(3) {
+        display: none;
+    }
 }

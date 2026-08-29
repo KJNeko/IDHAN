@@ -106,5 +106,6 @@ Additional documentation:
 - [Database schema](docs/database-schema.md)
 - [Tag system triggers](docs/tag-system-triggers.md)
 - [Job system](docs/jobs.md)
+- [Downloader architecture](docs/downloader.md)
 - [WebUI plugins](docs/webui-plugins.md)
 - [Known issues](docs/known-issues.md)
