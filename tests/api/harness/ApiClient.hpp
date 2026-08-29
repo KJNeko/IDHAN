@@ -66,6 +66,7 @@ class ApiClient
 	[[nodiscard]] ApiResponse del( const std::string& path, const QueryParams& query = {} );
 
 	[[nodiscard]] ApiResponse getWithKey( const std::string& path, const std::string& key );
+	[[nodiscard]] ApiResponse postWithKey( const std::string& path, const Json::Value& body, const std::string& key );
 
 	[[nodiscard]] ApiResponse postOctets(
 		const std::string& path,

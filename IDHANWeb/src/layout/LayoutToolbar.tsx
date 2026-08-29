@@ -16,7 +16,10 @@ const PANEL_GROUPS = [
     {title: 'Tags', types: ['tag-domain-manager', 'tag-relationships']},
     {title: 'Import & jobs', types: ['import', 'job-monitor']},
     {title: 'Embeddings', types: ['embedding-search', 'embedding-compare', 'embeddings']},
-    {title: 'Administration', types: ['cluster-manager', 'sunburst-stats', 'log-viewer', 'server-status']},
+    {
+        title: 'Administration',
+        types: ['cluster-manager', 'downloader-secrets', 'sunburst-stats', 'log-viewer', 'server-status']
+    },
     {title: 'Developer', types: ['selection-inspector', 'debug']},
 ] as const;
 

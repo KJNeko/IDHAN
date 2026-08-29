@@ -9,7 +9,7 @@ Task<> reportMissingFile( const RecordID record_id, const std::filesystem::path&
 	// Missing-file side effects live here so notification delivery can be added without changing detectors.
 	log::warn( "Expected file is missing: record={}, path={}", record_id, expected_path.string() );
 	co_await db->execSqlCoro(
-		"INSERT INTO missing_files (record_id) VALUES ($1) ON CONFLICT (record_id) DO NOTHING", record_id );
+		"UPDATE file_info SET cluster_id = NULL WHERE record_id = $1 AND cluster_delete_time IS NULL", record_id );
 }
 
 } // namespace idhan::filesystem

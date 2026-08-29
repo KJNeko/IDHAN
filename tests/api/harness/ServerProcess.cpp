@@ -133,6 +133,10 @@ ServerProcess::ServerProcess( std::string schema ) :
 		// the pool is one postgres connection per io thread, and the default fills the server's shared limit
 		std::format( "IDHAN_SERVER_IO_THREADS={}", envOr( "IDHAN_TEST_SERVER_IO_THREADS", "4" ) ),
 		std::format( "IDHAN_SERVER_TEMP_PATH={}", m_temp_path.string() ),
+		std::format( "IDHAN_DOWNLOADER_PARSER_DIRECTORY={}/tests/api/downloader-testdata", IDHAN_SOURCE_DIR ),
+		std::format(
+			"IDHAN_DOWNLOADER_URL_CLASSES={}/tests/api/downloader-testdata/url-classes.json", IDHAN_SOURCE_DIR ),
+		std::format( "IDHAN_DOWNLOADER_WORKER_COUNT={}", "2" ),
 		// the default is ./log, which would be the directory the tests were started from
 		std::format( "IDHAN_LOGGING_PATH={}", ( m_temp_path / "log" ).string() ),
 		std::format( "IDHAN_HOST_IPV4_LISTEN={}", "127.0.0.1" ),

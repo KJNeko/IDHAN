@@ -7,6 +7,7 @@
 #include <functional>
 #include <ranges>
 #include <string>
+#include <unordered_map>
 #include <variant>
 
 #include "logging/log.hpp"
@@ -287,6 +288,58 @@ template < typename T >
 {
 	if ( auto result = getArray< T >( group, name ); result ) return std::move( *result );
 	return default_value;
+}
+
+//! Every boolean key in a group, for tables whose keys are not known ahead of time (parser flags).
+//! Keys may be quoted, so `"gelbooru.followSource" = true` is one key, not a nested path.
+[[nodiscard]] inline std::unordered_map< std::string, bool > getBoolTableFromFile(
+	const std::string_view path,
+	const std::string_view group )
+{
+	std::unordered_map< std::string, bool > output {};
+	const std::filesystem::path p { expand_home( path ) };
+
+	if ( !std::filesystem::exists( p ) ) return output;
+
+	try
+	{
+		auto config = toml::parse_file( p.string() );
+		auto* table = config.at_path( group ).as_table();
+
+		if ( table == nullptr ) return output;
+
+		for ( const auto& [ key, value ] : *table )
+		{
+			if ( const auto* boolean = value.as_boolean() )
+			{
+				output.insert_or_assign( std::string { key.str() }, **boolean );
+				continue;
+			}
+
+			if ( const auto* text = value.as_string() )
+				if ( const auto parsed { parseBool( **text ) } )
+					output.insert_or_assign( std::string { key.str() }, *parsed );
+		}
+	}
+	catch ( const toml::parse_error& err )
+	{
+		log::warn( "Failed to parse config file: {}", err.what() );
+	}
+
+	return output;
+}
+
+[[nodiscard]] inline std::unordered_map< std::string, bool > getBoolTable( const std::string_view group )
+{
+	if ( const auto user_config_path { getUserConfigPath() }; !user_config_path.empty() )
+		return getBoolTableFromFile( user_config_path, group );
+
+	std::unordered_map< std::string, bool > output {};
+
+	for ( const auto& path : config_paths )
+		for ( auto& [ key, value ] : getBoolTableFromFile( path, group ) ) output.insert_or_assign( key, value );
+
+	return output;
 }
 
 template < typename T >

@@ -1,18 +1,10 @@
-#include <memory>
 #include <span>
 
-#include "MimeIDs.hpp"
 #include "api/ImportAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "codes/ImportCodes.hpp"
-#include "crypto/SHA256.hpp"
-#include "db/drogonArrayBind.hpp"
-#include "filesystem/clusters/ClusterManager.hpp"
-#include "filesystem/filesystem.hpp"
-#include "logging/log.hpp"
-#include "metadata/metadata.hpp"
-#include "mime/identifyMime.hpp"
-#include "records/records.hpp"
+#include "fgl/defines.hpp"
+#include "import/ImportFile.hpp"
 
 namespace idhan::api
 {
@@ -89,110 +81,22 @@ drogon::Task< drogon::HttpResponsePtr > ImportAPI::importFile( const drogon::Htt
 	if ( request_data.empty() ) co_return createBadRequest( "No file data supplied in the request body" );
 
 	auto db { drogon::app().getDbClient() };
-
-	const std::byte* data_ptr { reinterpret_cast< const std::byte* >( request_data.data() ) };
-	const auto data_length { request_data.size() };
-
-	const SHA256 sha256 { SHA256::hash( data_ptr, data_length ) };
-
 	const bool force_import { request->getOptionalParameter< bool >( "force_import" ).value_or( false ) };
-
-	if ( !force_import )
-	{
-		if ( const auto existing { co_await helpers::findRecord( sha256, db ) } )
-		{
-			const auto timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, *existing ) };
-
-			if ( !timestamps.empty() )
-			{
-				const auto& row { timestamps[ 0 ] };
-
-				if ( !row[ "cluster_delete_time" ].isNull() )
-					co_return drogon::HttpResponse::newHttpJsonResponse(
-						createDeletedResponse( *existing, row[ "cluster_delete_time_epoch" ].as< int64_t >() ) );
-
-				const auto filepath { co_await filesystem::getRecordPath( *existing, db ) };
-
-				if ( filepath )
-					co_return drogon::HttpResponse::newHttpJsonResponse(
-						createImportResponse( *existing, ImportStatus::Exists, row ) );
-			}
-		}
-	}
-
 	const auto filename { request->getOptionalParameter< std::string >( "filename" ).value_or( "" ) };
-	const auto mime_id {
-		co_await mime::identifyMime( std::span< const std::byte > { data_ptr, data_length }, filename )
-	};
+	const auto* data { reinterpret_cast< const std::byte* >( request_data.data() ) };
+	const auto imported { co_await imports::importFile(
+		std::span< const std::byte > { data, request_data.size() }, filename, force_import, db ) };
 
-	const bool is_unknown { mime_id == mime_ids::UNKNOWN };
-
-	// force imports store an unidentified file under the unknown mime; everything else is skipped
-	if ( is_unknown && !force_import )
+	if ( !imported ) co_return imported.error();
+	if ( imported->status == ImportStatus::Failed )
 		co_return drogon::HttpResponse::newHttpJsonResponse( createUnknownMimeResponse() );
+	if ( imported->status == ImportStatus::Deleted )
+		co_return drogon::HttpResponse::newHttpJsonResponse(
+			createDeletedResponse( imported->record_id, imported->deleted_at ) );
 
-	const auto record_id_e { co_await helpers::createRecord( sha256, db ) };
-
-	if ( !record_id_e ) co_return record_id_e.error();
-
-	const auto record_id { record_id_e.value() };
-
-	const auto target_cluster {
-		co_await filesystem::ClusterManager::getInstance().findBestFolder( record_id, data_length, db )
-	};
-
-	if ( !target_cluster ) co_return target_cluster.error();
-
-	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, mime_id, size, cluster_id, modified_time) VALUES ($1, $2, $3, $4, now()) ON CONFLICT DO NOTHING",
-		record_id,
-		mime_id,
-		data_length,
-		*target_cluster );
-
-	const auto cluster_timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, record_id ) };
-
-	const bool delete_recorded { !cluster_timestamps[ 0 ][ "cluster_delete_time" ].isNull() };
-	const bool store_recorded { !cluster_timestamps[ 0 ][ "cluster_store_time" ].isNull() };
-
-	if ( delete_recorded && !force_import )
-	{
-		co_return drogon::HttpResponse::newHttpJsonResponse( createDeletedResponse(
-			record_id, cluster_timestamps[ 0 ][ "cluster_delete_time_epoch" ].as< int64_t >() ) );
-	}
-
-	const auto filepath { co_await filesystem::getUncheckedRecordPath( record_id, db ) };
-	const bool store_confirmed { filepath ? std::filesystem::exists( *filepath ) : false };
-
-	// Store when the record has never been stored or deleted, when a force import asks for it, or
-	// when a store was recorded but the file is no longer on disk.
-	const bool should_store {
-		( !delete_recorded && !store_recorded ) || force_import || ( !store_confirmed && store_recorded )
-	};
-
-	if ( should_store )
-	{
-		const auto store_result {
-			co_await filesystem::ClusterManager::getInstance().storeFile( record_id, data_ptr, data_length, db )
-		};
-
-		if ( !store_result )
-		{
-			co_return store_result.error();
-		}
-	}
-
-	// re-read the timestamps, a store that just happened updated cluster_store_time
-	const auto final_timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, record_id ) };
-
-	const auto response { drogon::HttpResponse::newHttpJsonResponse( createImportResponse(
-		record_id, store_confirmed ? ImportStatus::Exists : ImportStatus::Success, final_timestamps[ 0 ] ) ) };
-
-	// a metadata failure should not fail the import, the file itself was stored fine
-	if ( const auto parse_result { co_await metadata::parseAndUpdateRecordMetadata( record_id, db ) }; !parse_result )
-		log::warn( "importFile: failed to parse metadata for record {}", record_id );
-
-	co_return response;
+	const auto timestamps { co_await db->execSqlCoro( CLUSTER_TIMESTAMPS_QUERY, imported->record_id ) };
+	co_return drogon::HttpResponse::newHttpJsonResponse(
+		createImportResponse( imported->record_id, imported->status, timestamps[ 0 ] ) );
 }
 
 } // namespace idhan::api

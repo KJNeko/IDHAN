@@ -101,6 +101,63 @@ render_threads = 2
 # Concurrent files per cluster scan; overridable per request by "concurrency" and clamped to 1..64.
 #scan_concurrency = 4
 
+[downloader]
+# Directory containing parser JavaScript modules. The packaged server uses its bundled parsers.
+#parser_directory = "/usr/share/idhan/downloader"
+# URL-class routing file. Defaults to url-classes.json in parser_directory.
+#url_classes = "/usr/share/idhan/downloader/url-classes.json"
+# URL classes without requestRate are limited to one request every five seconds.
+# Set requestRate to false for an explicitly unthrottled class or host.
+# Wire version offered to sites: "1.1", "2", or "3". HTTP/3 is preferred and falls back when unavailable.
+#http_version = "3"
+
+# Threads driving the HTTP lanes. 0 takes max(2, hardware threads / 2).
+#io_threads = 0
+# How long a lane keeps its connections open after the last request was queued for its host.
+# Keeping them open is what lets HTTP/2 and HTTP/3 multiplex the next batch over one connection.
+#lane_keep_alive_seconds = 30
+# A request that fails stops its whole lane for this long before anything else is dispatched to the
+# host. Failures arriving during the pause join it rather than extending it. Repeated failures past
+# the pause widen it exponentially. 0 keeps only that widening.
+#lane_error_backoff_seconds = 30
+# A busy unthrottled lane spreads across this many connections so one fast host is not capped by a
+# single IO thread. Rate limited lanes always stay at one.
+#max_shards_per_lane = 4
+# In-flight HTTP requests per download session before the session stops starting new scripts.
+#session_inflight_requests = 64
+# Memory budget for one script worker's runtime, covering every script in flight on that worker.
+# The whole downloader is bounded by script_threads times this, not by the number of sessions.
+#worker_memory_limit = 268435456
+# Stack ceiling for one script worker's runtime.
+#worker_stack_limit = 1048576
+# Threads that execute parser JavaScript, shared by every session. Each owns one script runtime,
+# and a work item stays on the thread whose runtime holds its realm. A script awaiting a request
+# leaves its thread free, so this bounds concurrent JavaScript, not concurrent downloads.
+#script_threads = 4
+# Bounds one uninterrupted run of JavaScript. A script waiting on a request is not running, so a
+# slow site never trips this.
+#script_burst_timeout_ms = 5000
+# Ceiling on a response body idhan.request materialises in memory. Imports stream and ignore it.
+#max_response_bytes = 33554432
+# Sent with every downloader request. Empty uses the built-in "Mozilla/5.0 (compatible; IDHAN Client)",
+# which mirrors the form Hydrus ships because that is what boorus are already configured to accept.
+#user_agent = ""
+# Existing tag domain used for parser-supplied tags.
+#tag_domain = "default"
+# Secrets exposed through idhan.secret() live in the downloader_secrets table, not in this file.
+# Set them by POSTing an object of string values to /downloader/secrets and read them back with
+# GET /downloader/secrets. The shipped gelbooru parser needs two, both from the site's account
+# options page:
+#   {"gelbooru.apiKey": "...", "gelbooru.userID": "..."}
+# Gelbooru accepts these only as query parameters, so they appear in downloader request logs and in
+# the debug panel's pending request URLs. Keep that in mind when sharing either.
+
+# Overrides for the flags a parser declares in its manifest. Keys are flag names, so they must be
+# quoted. Anything left out keeps the parser's own default.
+#[downloader.flags]
+# Submit a gelbooru post's source URL back to the pipeline. On by default.
+#"gelbooru.followSource" = true
+
 [parser.cbz]
 # Falls back to the .cbz extension when the archive's contents are inconclusive.
 #guess_with_extension = true

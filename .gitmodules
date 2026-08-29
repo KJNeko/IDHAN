@@ -19,3 +19,12 @@
 [submodule "dependencies/drogon"]
 	path = dependencies/drogon
 	url = https://github.com/drogonframework/drogon.git
+[submodule "dependencies/quickjs"]
+	path = dependencies/quickjs
+	url = https://github.com/bellard/quickjs.git
+[submodule "dependencies/ada"]
+	path = dependencies/ada
+	url = https://github.com/ada-url/ada.git
+[submodule "dependencies/lexbor"]
+	path = dependencies/lexbor
+	url = https://github.com/lexbor/lexbor.git

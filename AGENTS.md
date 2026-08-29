@@ -80,6 +80,8 @@ binary when practical:
   conditions.
 - Separate consecutive guard branches with two blank lines after an early
   `return`, so each validation step remains visually distinct.
+- Place an adjacent comment on every regular expression describing the value
+  it matches. For URL-related expressions, include a concrete valid URL.
 - Do not add `//!` comments that merely restate self-explanatory names or code.
   Reserve documentation comments for non-obvious contracts, behavior, invariants,
   constraints, or rationale.

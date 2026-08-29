@@ -1,6 +1,7 @@
 #include "urls.hpp"
 
 #include "api/helpers/createBadRequest.hpp"
+#include "db/drogonArrayBind.hpp"
 
 namespace idhan::helpers
 {
@@ -102,6 +103,34 @@ ExpectedTask< UrlDomainID > findOrCreateUrlDomain( const std::string url, DbClie
 		co_return *created_by_other_request;
 
 	co_return std::unexpected( createInternalError( "Failed to create URL domain" ) );
+}
+
+ExpectedTask< void > associateUrls( const RecordID record_id, std::vector< std::string > urls, DbClientPtr db )
+{
+	if ( urls.empty() ) co_return {};
+
+	std::vector< std::string > domains {};
+	domains.reserve( urls.size() );
+	for ( const auto& url : urls ) domains.emplace_back( extractDomain( url ) );
+
+	co_await db->execSqlCoro(
+		"INSERT INTO url_domains (url_domain) SELECT DISTINCT unnest($1::text[]) "
+		"ON CONFLICT (url_domain) DO NOTHING",
+		std::vector< std::string >( domains ) );
+	co_await db->execSqlCoro(
+		"INSERT INTO urls (url, url_domain_id) "
+		"SELECT pairs.url, ud.url_domain_id "
+		"FROM unnest($1::text[], $2::text[]) AS pairs(url, domain) "
+		"JOIN url_domains ud ON ud.url_domain = pairs.domain "
+		"ON CONFLICT (url) DO NOTHING",
+		std::vector< std::string >( urls ),
+		std::move( domains ) );
+	co_await db->execSqlCoro(
+		"INSERT INTO url_mappings (url_id, record_id) "
+		"SELECT url_id, $2 FROM urls WHERE url = ANY($1::text[]) ON CONFLICT DO NOTHING",
+		std::move( urls ),
+		record_id );
+	co_return {};
 }
 
 } // namespace idhan::helpers

@@ -47,6 +47,12 @@ struct TagDomainInfo
 	const std::vector< std::string >& tags,
 	DbClientPtr db );
 
+[[nodiscard]] ExpectedTask< void > associateTags(
+	RecordID record_id,
+	const std::vector< std::string >& tags,
+	std::string_view tag_domain,
+	DbClientPtr db );
+
 [[nodiscard]] IDHANTask< void > removeTagMappings(
 	RecordID record_id,
 	std::vector< TagID > tag_ids,

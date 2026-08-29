@@ -32,4 +32,6 @@ enum UrlType
 ExpectedTask< UrlID > findOrCreateUrl( std::string url, DbClientPtr db );
 
 ExpectedTask< UrlDomainID > findOrCreateUrlDomain( std::string url, DbClientPtr db );
+
+ExpectedTask< void > associateUrls( RecordID record_id, std::vector< std::string > urls, DbClientPtr db );
 } // namespace idhan::helpers

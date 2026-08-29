@@ -456,7 +456,7 @@ std::string SearchBuilder::renderNearbyTerm( const NearbyTerm& term )
 		"EXISTS (SELECT 1 FROM image_metadata pnc, image_metadata pnp"
 		" WHERE pnc.record_id = fi.record_id AND pnp.record_id = {}"
 		" AND pnc.phash IS NOT NULL AND pnp.phash IS NOT NULL"
-		" AND bit_count(pnc.phash # pnp.phash) <= {})",
+		" AND (pnc.phash <~> pnp.phash) <= {})",
 		term.record_id,
 		term.distance );
 }

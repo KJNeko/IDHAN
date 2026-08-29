@@ -9,9 +9,24 @@ namespace idhan::api
 
 //! API-owned prefixes excluded from SPA fallback. Keep mirrored with IDHANWeb/src/api/prefixes.ts.
 constexpr std::array api_prefixes { std::to_array< std::string_view >(
-	{ "/api",    "/auth",      "/clusters", "/db",        "/embeddings",    "/file",    "/generate_api_key",
+	{ "/api",
+	  "/auth",
+	  "/clusters",
+	  "/db",
+	  "/download_sessions",
+	  "/downloader",
+	  "/embeddings",
+	  "/file",
+	  "/generate_api_key",
 	  "/health", "/heartbeat", "/hyapi",    "/integrity", "/jobs",          "/layouts", "/log",
-	  "/mime",   "/plugins",   "/purge",    "/records",   "/relationships", "/search",  "/tags",
+	  "/mime",
+	  "/plugins",
+	  "/purge",
+	  "/rate_limits",
+	  "/records",
+	  "/relationships",
+	  "/search",
+	  "/tags",
 	  "/test",   "/version" } ) };
 
 //! Segment-boundary match: "/searching" is a SPA route, "/search/foo" is API.

@@ -15,6 +15,7 @@ import { tagEditorPanel } from './TagEditorPanel';
 import { urlListPanel } from './UrlListPanel';
 import { notesPanel } from './NotesPanel';
 import { importPanel } from './ImportPanel';
+import {downloadsPanel} from './DownloadsPanel';
 import { jobMonitorPanel } from './JobMonitorPanel';
 import { logViewerPanel } from './LogViewerPanel';
 import { clusterManagerPanel } from './ClusterManagerPanel';
@@ -25,6 +26,7 @@ import {embeddingsPanel} from './EmbeddingsPanel';
 import {embeddingSearchPanel} from './EmbeddingSearchPanel';
 import {embeddingComparePanel} from './EmbeddingComparePanel';
 import {debugPanel} from './DebugPanel';
+import {downloaderSecretsPanel} from './DownloaderSecretsPanel';
 
 let registered = false;
 
@@ -40,9 +42,11 @@ export function registerBuiltinPanels(): void {
   registerPanel(urlListPanel);
   registerPanel(notesPanel);
   registerPanel(importPanel);
+    registerPanel(downloadsPanel);
   registerPanel(jobMonitorPanel);
   registerPanel(logViewerPanel);
   registerPanel(clusterManagerPanel);
+    registerPanel(downloaderSecretsPanel);
   registerPanel(databaseStatsPanel);
   registerPanel(tagDomainManagerPanel);
   registerPanel(tagRelationshipsPanel);

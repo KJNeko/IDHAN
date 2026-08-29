@@ -2,6 +2,7 @@
 
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "db/commitTransaction.hpp"
 #include "filesystem/clusters/ClusterManager.hpp"
 #include "logging/log.hpp"
 
@@ -105,6 +106,8 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 	}
 	const std::string cluster_name { request_json[ "name" ].asString() };
 
+	drogon::HttpResponsePtr response {};
+
 	try
 	{
 		const auto insert_result { co_await transaction->execSqlCoro(
@@ -125,12 +128,7 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 		log::debug( "Setting cluster info" );
 
-		const auto ret { co_await modifyT( request, cluster_id, transaction ) };
-
-		// TODO: Queue orphan check here.
-		co_await filesystem::ClusterManager::getInstance().reloadClusters( transaction );
-
-		co_return ret;
+		response = co_await modifyT( request, cluster_id, transaction );
 	}
 	catch ( std::exception& e )
 	{
@@ -138,6 +136,20 @@ ClusterAPI::ResponseTask ClusterAPI::add( drogon::HttpRequestPtr request )
 
 		co_return createInternalError( "Failed to insert cluster into table: {}", e.what() );
 	}
+
+	if ( response == nullptr || response->statusCode() >= drogon::k400BadRequest )
+	{
+		transaction->rollback();
+		co_return response;
+	}
+
+	if ( !co_await commitTransaction( std::move( transaction ) ) )
+		co_return createInternalError( "Failed to commit creation of cluster {}", target_path.string() );
+
+	// TODO: Queue orphan check here.
+	co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
+
+	co_return response;
 }
 
 } // namespace idhan::api

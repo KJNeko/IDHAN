@@ -1,0 +1,152 @@
+{
+  "urlClasses": [
+    {
+      "name": "e621",
+      "script": "e621.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 1,
+        "shareSubdomains": true
+      },
+      "hosts": [
+        "e621.net"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "path": "/posts"
+        },
+        {
+          "export": "post",
+          "pathPrefix": "/posts/"
+        }
+      ]
+    },
+    {
+      "name": "gelbooru",
+      "script": "gelbooru.js",
+      "requestRate": {
+        "requests": 10,
+        "seconds": 1,
+        "shareSubdomains": true
+      },
+      "hosts": [
+        "gelbooru.com",
+        {
+          "host": "img4.gelbooru.com",
+          "requestRate": {
+            "requests": 2,
+            "seconds": 1
+          },
+          "retry": [
+            {
+              "code": 404,
+              "count": 3
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "query": {
+            "page": "post",
+            "s": "list"
+          }
+        },
+        {
+          "export": "post",
+          "query": {
+            "page": "post",
+            "s": "view"
+          }
+        }
+      ]
+    },
+    {
+      "name": "hyshare",
+      "script": "hyshare.js",
+      "hosts": [
+        {
+          "host": "hyshare.internal",
+          "requestRate": false
+        }
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "pathPrefix": "/gallery/"
+        },
+        {
+          "export": "post",
+          "pathPrefix": "/view/"
+        }
+      ]
+    },
+    {
+      "name": "pawchive",
+      "script": "pawchive.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 1
+      },
+      "hosts": [
+        "pawchive.pw",
+        "kemono.cr",
+        "kemono.su"
+      ],
+      "routes": [
+        {
+          "export": "route",
+          "pathPrefix": "/"
+        }
+      ]
+    },
+    {
+      "name": "pixiv",
+      "script": "pixiv.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 2
+      },
+      "hosts": [
+        "www.pixiv.net"
+      ],
+      "routes": [
+        {
+          "export": "post",
+          "pathPrefix": "/artworks/"
+        },
+        {
+          "export": "post",
+          "pathPrefix": "/en/artworks/"
+        },
+        {
+          "export": "user",
+          "pathPrefix": "/users/"
+        },
+        {
+          "export": "user",
+          "pathPrefix": "/en/users/"
+        }
+      ]
+    },
+    {
+      "name": "pixiv-image",
+      "script": "pixiv.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 2
+      },
+      "hosts": [
+        "i.pximg.net"
+      ],
+      "routes": [
+        {
+          "export": "image",
+          "pathPrefix": "/img-original/"
+        }
+      ]
+    }
+  ]
+}

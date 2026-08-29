@@ -231,6 +231,19 @@ drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
 	}
 }
 
+drogon::Task< bool > ClusterManager::removeCluster( const ClusterID cluster_id, const DbClientPtr transaction )
+{
+	const auto cluster { co_await transaction->execSqlCoro(
+		"SELECT cluster_id FROM file_clusters WHERE cluster_id = $1 FOR UPDATE", cluster_id ) };
+
+	if ( cluster.empty() ) co_return false;
+
+	co_await transaction->execSqlCoro( "UPDATE file_info SET cluster_id = NULL WHERE cluster_id = $1", cluster_id );
+	co_await transaction->execSqlCoro( "DELETE FROM file_clusters WHERE cluster_id = $1", cluster_id );
+
+	co_return true;
+}
+
 ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const ClusterID cluster_id )
 {
 	std::lock_guard lock { m_mutex };

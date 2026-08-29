@@ -72,11 +72,11 @@ static void storeFile(
 	pqxx::connection& connection,
 	const RecordID record_id,
 	const std::string& hex,
-	const std::filesystem::path& cluster,
+	TemporaryCluster& cluster,
 	const std::string& contents,
 	const std::string& extension = "png" )
 {
-	const auto folder { cluster / std::format( "f{}", hex.substr( 0, 2 ) ) };
+	const auto folder { cluster.path() / std::format( "f{}", hex.substr( 0, 2 ) ) };
 	std::filesystem::create_directories( folder );
 
 	{
@@ -85,14 +85,15 @@ static void storeFile(
 	}
 
 	pqxx::work tx { connection };
-	const auto cluster_id { tx.query_value< int >(
+	const auto cluster_id { tx.query_value< ClusterID >(
 		"INSERT INTO file_clusters (folder_path) VALUES ($1) RETURNING cluster_id",
-		pqxx::params { cluster.string() } ) };
+		pqxx::params { cluster.path().string() } ) };
 	tx.exec(
 		"INSERT INTO file_info (record_id, size, mime_id, extension, cluster_id, cluster_store_time) "
 		"VALUES ($1, $2, $3, $4, $5, now())",
 		pqxx::params { record_id, contents.size(), mime_ids::IMAGE_PNG, extension, cluster_id } );
 	tx.commit();
+	cluster.setID( cluster_id );
 }
 
 SCENARIO_METHOD( ServerFixture, "Fetched file names cannot inject response headers", "[api][file][security]" )
@@ -101,8 +102,9 @@ SCENARIO_METHOD( ServerFixture, "Fetched file names cannot inject response heade
 	const auto hex { hashOf( db(), record_id ) };
 	const std::string contents { "header safety" };
 	const std::string extension { "bad\"\r\nX-Injected: yes" };
-	const auto cluster { std::filesystem::temp_directory_path() / std::format( "idhan-file-test-{}", record_id ) };
-	std::filesystem::remove_all( cluster );
+	TemporaryCluster cluster {
+		db(), std::filesystem::temp_directory_path() / std::format( "idhan-header-safety-test-{}", record_id )
+	};
 	storeFile( db(), record_id, hex, cluster, contents, extension );
 
 	const auto inline_response { api().get( std::format( "/records/{}/file", record_id ) ) };
@@ -116,8 +118,6 @@ SCENARIO_METHOD( ServerFixture, "Fetched file names cannot inject response heade
 		== std::format( "attachment; filename=\"{}.bad___X-Injected__yes\"", hex ) );
 	CHECK( inline_response.header( "x-injected" ).empty() );
 	CHECK( download_response.header( "x-injected" ).empty() );
-
-	std::filesystem::remove_all( cluster );
 }
 
 static void waitForClusterScan( ApiClient& api, const ClusterID cluster_id )
@@ -162,8 +162,9 @@ SCENARIO_METHOD( ServerFixture, "A fetched file is named after its hash", "[api]
 	const auto hex { hashOf( db(), record_id ) };
 	const std::string contents { "not really a png, but the bytes do not matter here" };
 
-	const auto cluster { std::filesystem::temp_directory_path() / std::format( "idhan-file-test-{}", record_id ) };
-	std::filesystem::remove_all( cluster );
+	TemporaryCluster cluster {
+		db(), std::filesystem::temp_directory_path() / std::format( "idhan-file-test-{}", record_id )
+	};
 	storeFile( db(), record_id, hex, cluster, contents );
 
 	const auto response { api().get( std::format( "/records/{}/file", record_id ) ) };
@@ -172,8 +173,6 @@ SCENARIO_METHOD( ServerFixture, "A fetched file is named after its hash", "[api]
 	CHECK( response.body == contents );
 	// Without this a browser saves every record in the collection as "file", after the URL's last segment.
 	CHECK( response.header( "content-disposition" ) == std::format( "inline; filename=\"{}.png\"", hex ) );
-
-	std::filesystem::remove_all( cluster );
 }
 
 SCENARIO_METHOD( ServerFixture, "A cluster scan records first detection time", "[api][cluster][scan]" )

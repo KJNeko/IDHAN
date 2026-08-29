@@ -34,6 +34,8 @@ class TestServer
 
 	pqxx::connection& connection() { return m_connection; }
 
+	[[nodiscard]] std::uint16_t port() const { return m_server.port(); }
+
 	//! Returns the schema to the state a freshly migrated one is in: no tags, no domains beyond the default.
 	void wipe();
 };
@@ -48,6 +50,8 @@ class ServerFixture
 	ApiClient& api() const { return testServer().client(); }
 
 	pqxx::connection& db() const { return testServer().connection(); }
+
+	[[nodiscard]] std::uint16_t serverPort() const { return testServer().port(); }
 
 	//! True when the endpoints are answering without an API key because auth was compiled out.
 	[[nodiscard]] bool authDisabled() const;
