@@ -97,7 +97,7 @@ function postUrl(id) {
 function detailsUrl(id) {
     const url = new URL("https://www.pixiv.net/touch/ajax/illust/details");
     url.searchParams.set("illust_id", id);
-    return url.href;
+    return url;
 }
 
 function artistUrl(id) {
@@ -108,8 +108,8 @@ function artistProfileUrl(id) {
     return `https://www.pixiv.net/ajax/user/${id}/profile/all`;
 }
 
-function filenameFromUrl(value) {
-    const pathname = new URL(value).pathname;
+function filenameFromUrl(url) {
+    const pathname = url.pathname;
     return pathname.slice(pathname.lastIndexOf("/") + 1);
 }
 
@@ -122,7 +122,7 @@ function pageUrl(originalUrl, page) {
     }
 
     url.pathname = `${url.pathname.slice(0, match.index)}_p${page}${match[1]}`;
-    return url.href;
+    return url;
 }
 
 function postTags(details) {
@@ -169,7 +169,7 @@ export async function post(input, idhan) {
     const id = artworkId(input.url);
     const sourceUrl = postUrl(id);
     const response = await idhan.request({
-        url: detailsUrl(id),
+        url: detailsUrl(id).href,
         referer: sourceUrl,
         responseType: "text",
     });
@@ -203,13 +203,13 @@ export async function post(input, idhan) {
         const fileUrl = pageUrl(originalUrl, page);
         idhan.import({
             request: {
-                url: fileUrl,
+                url: fileUrl.href,
                 referer: sourceUrl,
             },
             filename: filenameFromUrl(fileUrl),
             urls: [
                 {url: sourceUrl, type: "post"},
-                {url: fileUrl, type: "file"},
+                {url: fileUrl.href, type: "file"},
             ],
             discoveredUrls: [],
             tags,

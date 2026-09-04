@@ -58,19 +58,19 @@ function galleryDataUrl(value) {
     url.pathname = `/gallery/${encodeURIComponent(gallery)}/data.json`;
     url.search = "";
     url.hash = "";
-    return url.href;
+    return url;
 }
 
 function postUrl(base, hash) {
-    return new URL(`/view/${hash}`, base).href;
+    return new URL(`/view/${hash}`, base);
 }
 
 function postDataUrl(base, hash) {
-    return new URL(`/view/${hash}/data.json`, base).href;
+    return new URL(`/view/${hash}/data.json`, base);
 }
 
 function fileUrl(base, hash) {
-    return new URL(`/file/${hash}`, base).href;
+    return new URL(`/file/${hash}`, base);
 }
 
 function requireHash(value) {
@@ -90,26 +90,26 @@ function discoveredUrls(knownUrls) {
 }
 
 function wellKnownUrl(url) {
-    return new URL(".well-known/hyshare", url).href;
+    return new URL(".well-known/hyshare", url);
 }
 
 export async function gallery(input, idhan) {
     const response = await idhan.request({
-        url: galleryDataUrl(input.url),
+        url: galleryDataUrl(input.url).href,
         responseType: "text",
     });
     const gallery = parseJsonResponse(galleryResponseSchema, response, "HyShare gallery API");
 
     for (const hash of gallery.hashes) {
         idhan.follow({
-            url: postUrl(response.url, hash),
+            url: postUrl(response.url, hash).href,
         });
     }
 }
 
 export async function checkWellKnown(input, idhan) {
     const response = await idhan.request({
-        url: wellKnownUrl(input.url),
+        url: wellKnownUrl(input.url).href,
         responseType: "text",
     });
     parseJsonResponse(wellKnownResponseSchema, response, "HyShare well-known endpoint");
@@ -118,7 +118,7 @@ export async function checkWellKnown(input, idhan) {
 export async function post(input, idhan) {
     const expectedHash = requireHash(routeValue(input.url, "view"));
     const response = await idhan.request({
-        url: postDataUrl(input.url, expectedHash),
+        url: postDataUrl(input.url, expectedHash).href,
         responseType: "text",
     });
     const post = parseJsonResponse(postResponseSchema, response, "HyShare post API");
@@ -129,12 +129,12 @@ export async function post(input, idhan) {
 
     idhan.import({
         request: {
-            url: downloadUrl,
+            url: downloadUrl.href,
         },
         filename: `${hash}${post.ext}`,
         urls: [
-            {url: sourceUrl, type: "post"},
-            {url: downloadUrl, type: "file"},
+            {url: sourceUrl.href, type: "post"},
+            {url: downloadUrl.href, type: "file"},
         ],
         discoveredUrls: discoveredUrls(post.detailed_known_urls),
         tags: postTags(post.tag_services_to_tags),

@@ -40,7 +40,7 @@ export function configure(server) {
 }
 
 function absoluteUrl(value, base) {
-    return new URL(value, base).href;
+    return new URL(value, base);
 }
 
 // Matches a decimal post ID such as 12345.
@@ -62,11 +62,11 @@ function postUrl(id) {
     url.searchParams.set("s", "view");
     url.searchParams.set("id", id);
 
-    return url.href;
+    return url;
 }
 
-function filenameFromUrl(value) {
-    const pathname = new URL(value).pathname;
+function filenameFromUrl(url) {
+    const pathname = url.pathname;
 
     return pathname.slice(pathname.lastIndexOf("/") + 1);
 }
@@ -147,7 +147,7 @@ function apiUrl(base, credentials, section, parameters) {
     url.searchParams.set("api_key", credentials.apiKey);
     url.searchParams.set("user_id", credentials.userID);
 
-    return url.href;
+    return url;
 }
 
 function redactApiUrl(value) {
@@ -157,13 +157,13 @@ function redactApiUrl(value) {
         if (url.searchParams.has(name)) url.searchParams.set(name, "<redacted>");
     }
 
-    return url.href;
+    return url;
 }
 
 // Bad credentials may return an empty 200, so retain the raw response for diagnostics.
 async function requestApi(idhan, url, schema, description) {
     const response = await idhan.request({
-        url,
+        url: url.href,
         responseType: "text",
         sensitiveQuery: ["api_key", "user_id"],
     });
@@ -240,13 +240,13 @@ function importPost(idhan, input, entry, types) {
 
     idhan.import({
         request: {
-            url: fileUrl,
-            referer: sourceUrl,
+            url: fileUrl.href,
+            referer: sourceUrl.href,
         },
         filename: filenameFromUrl(fileUrl),
         urls: [
-            {url: sourceUrl, type: "post"},
-            {url: fileUrl, type: "file"},
+            {url: sourceUrl.href, type: "post"},
+            {url: fileUrl.href, type: "file"},
         ],
         discoveredUrls,
         tags: namespacedTags(tagNames(entry), types),
