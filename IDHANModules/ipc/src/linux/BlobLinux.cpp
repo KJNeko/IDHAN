@@ -29,7 +29,7 @@ constexpr unsigned int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW |
 {
 	if ( size == 0 ) return nullptr;
 
-	void* const mapping { ::mmap( nullptr, size, PROT_READ, MAP_SHARED, fd, 0 ) };
+	void* const mapping { ::mmap( nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0 ) };
 	if ( mapping == MAP_FAILED ) return std::unexpected( errnoMessage( "mmap of blob failed" ) );
 
 	return mapping;
