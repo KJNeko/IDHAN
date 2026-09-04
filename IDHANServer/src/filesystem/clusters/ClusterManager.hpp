@@ -78,6 +78,9 @@ class ClusterManager
 
 	drogon::Task< void > reloadClusters( DbClientPtr db );
 
+	//! Requires a transaction so record detachment and removal are atomic.
+	[[nodiscard]] drogon::Task< bool > removeCluster( ClusterID cluster_id, DbClientPtr transaction );
+
 	[[nodiscard]] drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > findBestFolder(
 		RecordID record_id,
 		std::size_t file_size,

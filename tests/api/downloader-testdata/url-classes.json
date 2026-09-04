@@ -1,0 +1,25 @@
+{
+  "urlClasses": [
+    {
+      "name": "api-fixture",
+      "script": "fixture.js",
+      "hosts": [
+        "127.0.0.1"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "path": "/gallery"
+        },
+        {
+          "export": "post",
+          "path": "/post"
+        },
+        {
+          "export": "failure",
+          "path": "/failure"
+        }
+      ]
+    }
+  ]
+}

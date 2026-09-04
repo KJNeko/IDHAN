@@ -1,0 +1,17 @@
+{
+  "urlClasses": [
+    {
+      "name": "executor-fixture",
+      "script": "executor-fixture.js",
+      "hosts": [
+        "executor.example"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "path": "/gallery"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "urlClasses": [
+    {
+      "name": "test-auth",
+      "script": "auth.js",
+      "hosts": [
+        "httpbin.org"
+      ],
+      "routes": [
+        {
+          "export": "test",
+          "path": "/auth-test"
+        }
+      ]
+    },
+    {
+      "name": "test-cookies",
+      "script": "cookies.js",
+      "hosts": [
+        "httpbin.org"
+      ],
+      "routes": [
+        {
+          "export": "test",
+          "path": "/cookie-test"
+        }
+      ]
+    },
+    {
+      "name": "test-fetch",
+      "script": "fetch.js",
+      "requestRate": {
+        "requests": 4,
+        "seconds": 1
+      },
+      "hosts": [
+        "httpbin.org"
+      ],
+      "routes": [
+        {
+          "export": "test",
+          "path": "/fetch-test"
+        }
+      ]
+    },
+    {
+      "name": "test-referer",
+      "script": "referer.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 1
+      },
+      "hosts": [
+        "httpbin.org"
+      ],
+      "routes": [
+        {
+          "export": "post",
+          "pathPrefix": "/anything/referer"
+        }
+      ]
+    },
+    {
+      "name": "test-request-rate",
+      "script": "request-rate.js",
+      "hosts": [
+        "httpbin.org"
+      ],
+      "routes": [
+        {
+          "export": "test",
+          "path": "/get",
+          "query": {
+            "fixture": "request-rate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "test-flags",
+      "script": "flags.js",
+      "hosts": [
+        "flags.example"
+      ],
+      "routes": [
+        {
+          "export": "test"
+        }
+      ]
+    },
+    {
+      "name": "test-follow",
+      "script": "follow.js",
+      "hosts": [
+        "follow.example"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "path": "/gallery"
+        },
+        {
+          "export": "post",
+          "pathPrefix": "/gallery/"
+        }
+      ]
+    },
+    {
+      "name": "test-follow-imported",
+      "script": "follow-imported.js",
+      "hosts": [
+        "imported.example"
+      ],
+      "routes": [
+        {
+          "export": "post"
+        }
+      ]
+    },
+    {
+      "name": "test-follow-loop",
+      "script": "follow-loop.js",
+      "hosts": [
+        "loop.example"
+      ],
+      "routes": [
+        {
+          "export": "post"
+        }
+      ]
+    },
+    {
+      "name": "test-html",
+      "script": "html.js",
+      "hosts": [
+        "html.example"
+      ],
+      "routes": [
+        {
+          "export": "test"
+        }
+      ]
+    },
+    {
+      "name": "test-manifest-routing",
+      "script": "manifest-routing.js",
+      "hosts": [
+        "example.com"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "pathPrefix": "/items",
+          "query": {
+            "view": "gallery"
+          }
+        },
+        {
+          "export": "post",
+          "pathPrefix": "/items",
+          "query": {
+            "view": "post"
+          }
+        }
+      ]
+    },
+    {
+      "name": "test-request-rate-policy",
+      "script": "request-rate-policy.js",
+      "requestRate": {
+        "requests": 2,
+        "seconds": 8,
+        "shareSubdomains": true
+      },
+      "hosts": [
+        "rate-policy.example"
+      ],
+      "routes": [
+        {
+          "export": "test"
+        }
+      ]
+    },
+    {
+      "name": "test-unmatched-follow",
+      "script": "unmatched-follow.js",
+      "hosts": [
+        "unmatched.example"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "path": "/gallery"
+        }
+      ]
+    },
+    {
+      "name": "test-url",
+      "script": "url.js",
+      "hosts": [
+        "url.example"
+      ],
+      "routes": [
+        {
+          "export": "test"
+        }
+      ]
+    },
+    {
+      "name": "test-threading",
+      "script": "threading.js",
+      "hosts": [
+        "thread-parent.example",
+        "thread-child.example"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "path": "/gallery"
+        },
+        {
+          "export": "post",
+          "path": "/post"
+        }
+      ]
+    }
+  ]
+}

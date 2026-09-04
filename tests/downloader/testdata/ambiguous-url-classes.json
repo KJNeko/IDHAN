@@ -1,0 +1,30 @@
+{
+  "urlClasses": [
+    {
+      "name": "first",
+      "script": "first.js",
+      "hosts": [
+        "example.com"
+      ],
+      "routes": [
+        {
+          "export": "post",
+          "pathPrefix": "/posts/"
+        }
+      ]
+    },
+    {
+      "name": "second",
+      "script": "second.js",
+      "hosts": [
+        "example.com"
+      ],
+      "routes": [
+        {
+          "export": "post",
+          "pathPrefix": "/posts/"
+        }
+      ]
+    }
+  ]
+}

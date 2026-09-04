@@ -48,3 +48,6 @@ publish.sh
 push-nas.sh
 
 /dev/http-client.private.env.json
+
+# Local downloader parser credentials
+/IDHANDownloader/premade/secrets.json

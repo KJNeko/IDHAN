@@ -141,9 +141,9 @@ ApiResponse ApiClient::send(
 	ApiResponse out {
 		.status = response->statusCode(),
 		.json = {},
-		.body = std::string( response->body() ),
-		.headers = response->headers()
+		.body = std::string( response->body() ), .headers = {}
 	};
+	for ( const auto& [ name, value ] : response->headers() ) out.headers.emplace( name, value );
 
 	if ( const auto json { response->getJsonObject() }; json != nullptr ) out.json = *json;
 
@@ -191,6 +191,11 @@ ApiResponse ApiClient::getWithKey( const std::string& path, const std::string& k
 	return send( drogon::Get, path, {}, nullptr, key );
 }
 
+ApiResponse ApiClient::postWithKey( const std::string& path, const Json::Value& body, const std::string& key )
+{
+	return send( drogon::Post, path, {}, &body, key );
+}
+
 ApiResponse ApiClient::postOctets( const std::string& path, const std::string_view body, const QueryParams& query )
 {
 	const auto request { drogon::HttpRequest::newHttpRequest() };
@@ -211,9 +216,9 @@ ApiResponse ApiClient::postOctets( const std::string& path, const std::string_vi
 	ApiResponse out {
 		.status = response->statusCode(),
 		.json = {},
-		.body = std::string( response->body() ),
-		.headers = response->headers()
+		.body = std::string( response->body() ), .headers = {}
 	};
+	for ( const auto& [ name, value ] : response->headers() ) out.headers.emplace( name, value );
 
 	if ( const auto json { response->getJsonObject() }; json != nullptr ) out.json = *json;
 

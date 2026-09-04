@@ -38,6 +38,8 @@ tags:
     description: Integrity checks, purges, and rescans
   - name: database
     description: Database introspection and statistics
+  - name: downloader
+    description: Downloader configuration and runtime state
 
 security:
   - KeyAuth: []
@@ -193,6 +195,10 @@ paths:
   # ── Database stats ─────────────────────────────────────────────────────────
   /db/stats/sunburst:
     $ref: './paths/db/stats/sunburst.yaml'
+
+  # ── Downloader ────────────────────────────────────────────────────────────
+  /downloader/secrets:
+    $ref: './paths/downloader/secrets.yaml'
 
 components:
   schemas:

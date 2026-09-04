@@ -26,8 +26,9 @@ constexpr std::string_view ratio_expr {
 };
 
 constexpr std::string_view store_time_expr { "(EXTRACT(EPOCH FROM fi.cluster_store_time) * 1000000)::BIGINT" };
-constexpr std::string_view modified_time_expr { "(EXTRACT(EPOCH FROM fi.modified_time) * 1000000)::BIGINT" };
-constexpr std::string_view creation_time_expr { "(EXTRACT(EPOCH FROM rc.creation_time) * 1000000)::BIGINT" };
+constexpr std::string_view file_mtime_expr { "(EXTRACT(EPOCH FROM fi.file_mtime) * 1000000)::BIGINT" };
+constexpr std::string_view file_ctime_expr { "(EXTRACT(EPOCH FROM fi.file_ctime) * 1000000)::BIGINT" };
+constexpr std::string_view record_creation_time_expr { "(EXTRACT(EPOCH FROM rc.creation_time) * 1000000)::BIGINT" };
 
 constexpr std::string_view records_join { " JOIN records rc USING (record_id)" };
 constexpr std::string_view video_join { " LEFT JOIN video_metadata vm USING (record_id)" };
@@ -52,13 +53,15 @@ SortKeySpec sortKeySpec( const SortType type )
 			return { {}, "fi.size", SortKeyType::Integer, false };
 		case SortType::IMPORT_TIME:
 			return { {}, store_time_expr, SortKeyType::Integer, false };
-		case SortType::MODIFIED_TIME:
-			return { {}, modified_time_expr, SortKeyType::Integer, true };
+		case SortType::FILE_MODIFIED_TIME:
+			return { {}, file_mtime_expr, SortKeyType::Integer, true };
+		case SortType::FILE_CREATED_TIME:
+			return { {}, file_ctime_expr, SortKeyType::Integer, true };
 		case SortType::MIME:
 			// the raw mime_id FK, not a semantic filetype-category ordering
 			return { {}, "fi.mime_id", SortKeyType::Integer, false };
-		case SortType::RECORD_TIME:
-			return { records_join, creation_time_expr, SortKeyType::Integer, false };
+		case SortType::RECORD_CREATION_TIME:
+			return { records_join, record_creation_time_expr, SortKeyType::Integer, false };
 		case SortType::HASH:
 			return { records_join, "rc.sha256", SortKeyType::Hash, false };
 		case SortType::DURATION:
@@ -95,12 +98,14 @@ std::string_view sortTypeName( const SortType type )
 			return "filesize";
 		case SortType::IMPORT_TIME:
 			return "import time";
-		case SortType::MODIFIED_TIME:
-			return "modified time";
+		case SortType::FILE_MODIFIED_TIME:
+			return "file modified time";
+		case SortType::FILE_CREATED_TIME:
+			return "file created time";
 		case SortType::MIME:
 			return "mime";
-		case SortType::RECORD_TIME:
-			return "record time";
+		case SortType::RECORD_CREATION_TIME:
+			return "record creation time";
 		case SortType::HASH:
 			return "hash";
 		case SortType::DURATION:

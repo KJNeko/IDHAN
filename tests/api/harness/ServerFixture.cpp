@@ -59,7 +59,7 @@ void TestServer::wipe()
 {
 	pqxx::nontransaction tx { m_connection };
 	tx.exec(
-		"TRUNCATE tags, tag_namespaces, tag_domains, records, file_info, urls, url_domains "
+		"TRUNCATE download_sessions, tags, tag_namespaces, tag_domains, records, file_info, urls, url_domains "
 		"RESTART IDENTITY CASCADE" );
 	tx.exec( "INSERT INTO tag_domains (domain_name) VALUES ('default')" );
 }

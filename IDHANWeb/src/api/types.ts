@@ -85,8 +85,10 @@ export interface RecordMetadata {
     size?: number;
     mime?: string;
     extension?: string;
-    /** File modification time as Unix microseconds. */
-    modified_time?: number;
+    /** The file's own last-write time as Unix microseconds. */
+    file_mtime?: number;
+    /** The file's own birth time as Unix microseconds. Absent when the filesystem records none. */
+    file_ctime?: number;
 
     /** False when no module has produced metadata for this record yet. */
     parsed?: boolean;
@@ -238,6 +240,203 @@ export interface ServerLayoutMeta {
   /** Unix seconds. */
   created_at: number;
   updated_at: number;
+}
+
+export interface DownloadSessionInfo {
+    id: number;
+    name: string;
+    created_at: number;
+    last_used_at: number;
+    /** Requests logged by this session that did not answer 200. */
+    error_count: number;
+}
+
+export type DownloadSessionUrlState = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+
+export interface DownloadSessionUrlJob {
+    id: number;
+    /** Null on an inserted URL; set on every URL the parser discovered from one. */
+    parent_id: number | null;
+    url: string;
+    state: DownloadSessionUrlState;
+    created_at: number;
+    finished_at: number | null;
+    error: string | null;
+    /** Why a URL was skipped. "Already in the database" means this session first encountered an
+     * existing record; "Already imported earlier in this session" means it was already associated
+     * with this session. */
+    note: string | null;
+    record_id: number | null;
+}
+
+export interface DownloadSessionUrlNode extends DownloadSessionUrlJob {
+    children: DownloadSessionUrlNode[];
+}
+
+export interface DownloadSessionUrlFlat extends DownloadSessionUrlJob {
+    urls: DownloadSessionUrlJob[];
+    record_ids: number[];
+}
+
+export interface DownloadSessionRecords {
+    record_ids: number[];
+}
+
+/** One settled transfer that did not answer 200. */
+export interface DownloadSessionError {
+    id: number;
+    /** The URL row the request belonged to, or null once that row was retried away. */
+    url_id: number | null;
+    url: string;
+    /** Null when the transfer never produced a response. */
+    status: number | null;
+    lane: string;
+    message: string | null;
+    occurred_at: number;
+}
+
+export interface DownloadSessionErrorTally {
+    status: number | null;
+    count: number;
+}
+
+export interface DownloadSessionErrorLog {
+    /** Every status the session has logged, filter or no filter, so the filter chips stay put. */
+    statuses: DownloadSessionErrorTally[];
+    errors: DownloadSessionError[];
+}
+
+export type DebugWorkPhase = 'queued' | 'module' | 'parser' | 'transferring';
+
+export type DebugSessionState = 'running' | 'idle' | 'closing' | 'cancelled';
+
+export type DebugEventKind =
+    | 'started'
+    | 'completed'
+    | 'failed'
+    | 'request'
+    | 'request_failed'
+    | 'imported'
+    | 'import_failed'
+    | 'followed'
+    | 'finished';
+
+export interface DebugWorkItem {
+    work_id: number;
+    parent_work_id: number | null;
+    url_id: number | null;
+    url: string;
+    url_class: string;
+    parser: string;
+    phase: DebugWorkPhase;
+    outstanding: number;
+    age_ms: number;
+}
+
+export interface DebugPendingRequest {
+    work_id: number;
+    url_id: number | null;
+    url: string;
+    lane: string;
+    import: boolean;
+    age_ms: number;
+}
+
+export interface DebugSessionCounters {
+    work_started: number;
+    work_completed: number;
+    work_failed: number;
+    requests: number;
+    request_bytes: number;
+    requests_failed: number;
+    imported: number;
+    import_bytes: number;
+    import_failed: number;
+    follows_queued: number;
+    follows_filtered: number;
+    follows_already_queued: number;
+    follows_already_explored: number;
+    follows_already_imported: number;
+}
+
+export interface DebugSessionEvent {
+    /** Monotonic per session and never reused; the cursor for the next poll. */
+    sequence: number;
+    at: number;
+    kind: DebugEventKind;
+    work_id: number;
+    url_id: number | null;
+    url: string;
+    /** Lane key, content type, follow status, or error text, depending on the kind. */
+    detail: string;
+    status: number | null;
+    bytes: number;
+    record_id: number | null;
+}
+
+export interface DebugSession {
+    id: number;
+    name: string | null;
+    root_url: string;
+    state: DebugSessionState;
+    closed: boolean;
+    cancelled: boolean;
+    idle: boolean;
+    queued: number;
+    running: number;
+    in_flight: number;
+    in_flight_limit: number;
+    outstanding: number;
+    counters: DebugSessionCounters;
+    work: DebugWorkItem[];
+    requests: DebugPendingRequest[];
+    events: DebugSessionEvent[];
+    event_sequence: number;
+    /** Events evicted from the server ring before this reader reached them. */
+    events_dropped: number;
+}
+
+export interface DebugLane {
+    scheduling_key: string;
+    group: string;
+    throttled: boolean;
+    effective_interval_ms: number;
+    remaining_ms: number;
+    consecutive_limits: number;
+    backed_off: boolean;
+    in_flight: number;
+    queued: number;
+    shards: number;
+    bytes_per_second: number;
+    active: boolean;
+}
+
+export interface DownloaderDebug {
+    sessions: DebugSession[];
+    lanes: DebugLane[];
+}
+
+export type DownloaderSecrets = Record<string, string>;
+
+export interface RateLimitLane {
+    scheduling_key: string;
+    throttled: boolean;
+    requests: number;
+    seconds: number;
+    effective_interval_ms: number;
+    remaining_ms: number;
+    consecutive_limits: number;
+    active: boolean;
+}
+
+export interface RateLimitsMessage {
+    type: 'rate_limits';
+    limits: RateLimitLane[];
+}
+
+export interface RateLimitMessage {
+    type: 'rate_limit';
+    limit: RateLimitLane;
 }
 
 /** A tag service domain (GET /tags/domain/list). */

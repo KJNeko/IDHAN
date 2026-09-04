@@ -1,5 +1,7 @@
 #include "api/ClusterAPI.hpp"
 #include "api/helpers/createBadRequest.hpp"
+#include "db/commitTransaction.hpp"
+#include "filesystem/clusters/ClusterManager.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::api
@@ -83,8 +85,24 @@ ClusterAPI::ResponseTask ClusterAPI::modifyT(
 ClusterAPI::ResponseTask ClusterAPI::modify( drogon::HttpRequestPtr request, const ClusterID cluster_id )
 {
 	const auto db { drogon::app().getDbClient() };
-	const auto transaction { co_await db->newTransactionCoro() };
-	co_return co_await modifyT( request, cluster_id, transaction );
+	auto transaction { co_await db->newTransactionCoro() };
+
+	auto response { co_await modifyT( request, cluster_id, transaction ) };
+
+	const bool failed { response == nullptr || response->statusCode() >= drogon::k400BadRequest };
+
+	if ( failed )
+	{
+		transaction->rollback();
+		co_return response;
+	}
+
+	if ( !co_await commitTransaction( std::move( transaction ) ) )
+		co_return createInternalError( "Failed to commit modification of cluster {}", cluster_id );
+
+	co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
+
+	co_return response;
 }
 
 } // namespace idhan::api

@@ -53,8 +53,12 @@ RUN apt-get update && \
     uuid-dev \
     libbrotli-dev \
     libssl-dev \
+    libcurl4-openssl-dev \
     libonnxruntime-dev \
-    python3
+    python3 \
+    nodejs \
+    npm \
+    default-jre-headless
 
 # Set C++23 capable compiler as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -81,6 +85,7 @@ COPY dependencies /build/dependencies
 COPY CMakeLists.txt /build/CMakeLists.txt
 
 COPY IDHAN /build/IDHAN
+COPY IDHANDownloader /build/IDHANDownloader
 COPY IDHANModules /build/IDHANModules
 COPY IDHANMigration /build/IDHANMigration
 COPY IDHANServer /build/IDHANServer
@@ -95,8 +100,10 @@ ARG CMAKE_BUILD_TYPE=Release
 ARG TARGETVARIANT
 
 ENV CCACHE_DIR=/root/.ccache
+# The npm cache also holds the openapi-generator jar that npx fetches for the downloader specs.
 RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-${TARGETARCH}${TARGETVARIANT} \
     --mount=type=cache,target=/build/build,id=idhan-cmake-${TARGETARCH}${TARGETVARIANT} \
+    --mount=type=cache,target=/root/.npm,id=idhan-npm-${TARGETARCH}${TARGETVARIANT} \
     case "${TARGETVARIANT}" in \
         ""|v1) FGL_MARCH=x86-64 ;; \
         v2)    FGL_MARCH=x86-64-v2 ;; \
@@ -130,6 +137,7 @@ FROM ubuntu:25.10
 RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
     libpq5 \
     libvips42t64 \
     liburing2 \
@@ -138,6 +146,7 @@ RUN apt-get update && \
     libuuid1 \
     zlib1g \
     libssl3t64 \
+    libcurl4t64 \
     libc-ares2 \
     libfmt10 \
     libspdlog1.15 \
@@ -158,6 +167,7 @@ COPY --from=builder /build/bin/static/ /usr/share/idhan/static
 COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
+COPY --from=builder /build/bin/downloader/ /usr/share/idhan/downloader
 
 # Embedding folder
 RUN mkdir -p /usr/share/idhan/models
@@ -168,6 +178,7 @@ ENV IDHAN_DATABASE_HOST=localhost \
     IDHAN_DATABASE_DATABASE=idhan-db \
     IDHAN_THUMBNAILS_PATH=/thumbnails \
     IDHAN_EMBEDDINGS_MODEL_PATH=/usr/share/idhan/models \
+    IDHAN_DOWNLOADER_PARSER_DIRECTORY=/usr/share/idhan/downloader \
     IDHAN_HOST_IPV4_LISTEN=0.0.0.0 \
     IDHAN_HOST_IPV6_LISTEN=:: \
     LANG=C.UTF-8 \
