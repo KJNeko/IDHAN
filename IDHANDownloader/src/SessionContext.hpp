@@ -112,6 +112,7 @@ class SessionContext::Impl final : public ScriptSession
 	void settleImport( Pending& pending );
 	void rejectPending( Pending& pending, const std::string& error );
 	void reportImportFailure( WorkID work, const std::string& url, const std::string& error );
+	void reportRequestFailure( const RequestFailure& failure );
 	[[nodiscard]] std::expected< TransferRequest, std::string > buildRequest(
 		const Json::Value& options,
 		std::string& response_type );

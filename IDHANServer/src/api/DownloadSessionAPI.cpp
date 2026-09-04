@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "api/helpers/createBadRequest.hpp"
+#include "db/drogonArrayBind.hpp"
 #include "downloader/DownloadSessionEvents.hpp"
 #include "downloader/DownloadSessionManager.hpp"
 #include "downloader/sessionTree.hpp"
@@ -31,6 +32,7 @@ Json::Value sessionJson( const drogon::orm::Row& row )
 	json[ "name" ] = row[ "name" ].as< std::string >();
 	json[ "created_at" ] = row[ "created_at" ].as< std::int64_t >();
 	json[ "last_used_at" ] = row[ "last_used_at" ].as< std::int64_t >();
+	json[ "error_count" ] = row[ "error_count" ].as< std::int64_t >();
 	return json;
 }
 
@@ -53,6 +55,34 @@ Json::Value urlJobJson( const drogon::orm::Row& row )
 	return json;
 }
 
+//! Accepts a comma separated list of status codes, where "none" asks for the requests that never
+//! got a response. An empty parameter asks for every status.
+static bool parseStatusFilter( const std::string_view text, std::vector< Int >& output, bool& without_status )
+{
+	for ( std::size_t start { 0 }; start < text.size(); )
+	{
+		const auto separator { text.find( ',', start ) };
+		const auto field { text.substr( start, separator - start ) };
+		start = separator == std::string_view::npos ? text.size() : separator + 1;
+
+		if ( field == "none" )
+		{
+			without_status = true;
+			continue;
+		}
+
+		Int status {};
+		const auto result { std::from_chars( field.data(), field.data() + field.size(), status ) };
+
+		if ( result.ec != std::errc {} || result.ptr != field.data() + field.size() || status < 100 || status > 599 )
+			return false;
+
+		output.emplace_back( status );
+	}
+
+	return true;
+}
+
 static bool booleanParameter( const drogon::HttpRequestPtr& request, const std::string& name )
 {
 	const auto value { request->getParameter( name ) };
@@ -72,7 +102,9 @@ drogon::Task< drogon::HttpResponsePtr > DownloadSessionAPI::list( [[maybe_unused
 	const auto rows { co_await db->execSqlCoro(
 		"SELECT download_session_id, name, "
 		"extract(epoch FROM created_at)::bigint AS created_at, "
-		"extract(epoch FROM last_used_at)::bigint AS last_used_at "
+		"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
+		"(SELECT count(*) FROM download_session_errors "
+		"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count "
 		"FROM download_sessions ORDER BY last_used_at DESC, download_session_id DESC" ) };
 
 	Json::Value output { Json::arrayValue };
@@ -103,7 +135,7 @@ drogon::Task< drogon::HttpResponsePtr > DownloadSessionAPI::create( const drogon
 		"INSERT INTO download_sessions (name) VALUES ($1) "
 		"RETURNING download_session_id, name, "
 		"extract(epoch FROM created_at)::bigint AS created_at, "
-		"extract(epoch FROM last_used_at)::bigint AS last_used_at",
+		"extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count",
 		name ) };
 
 	auto response { drogon::HttpResponse::newHttpJsonResponse( sessionJson( created[ 0 ] ) ) };
@@ -125,7 +157,9 @@ drogon::Task< drogon::HttpResponsePtr > DownloadSessionAPI::get(
 	const auto rows { co_await db->execSqlCoro(
 		"SELECT download_session_id, name, "
 		"extract(epoch FROM created_at)::bigint AS created_at, "
-		"extract(epoch FROM last_used_at)::bigint AS last_used_at "
+		"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
+		"(SELECT count(*) FROM download_session_errors "
+		"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count "
 		"FROM download_sessions WHERE download_session_id = $1",
 		id ) };
 
@@ -245,7 +279,7 @@ drogon::Task< drogon::HttpResponsePtr > DownloadSessionAPI::submitUrlSession( co
 		"INSERT INTO download_sessions (name) VALUES ($1) "
 		"RETURNING download_session_id, name, "
 		"extract(epoch FROM created_at)::bigint AS created_at, "
-		"extract(epoch FROM last_used_at)::bigint AS last_used_at",
+		"extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count",
 		name ) };
 
 	const auto session_id { created[ 0 ][ "download_session_id" ].as< DownloadSessionID >() };
@@ -372,6 +406,74 @@ drogon::Task< drogon::HttpResponsePtr > DownloadSessionAPI::records(
 	Json::Value output {};
 	output[ "record_ids" ] = Json::Value { Json::arrayValue };
 	for ( const auto& row : rows ) output[ "record_ids" ].append( row[ "record_id" ].as< RecordID >() );
+
+	co_return drogon::HttpResponse::newHttpJsonResponse( output );
+}
+
+drogon::Task< drogon::HttpResponsePtr > DownloadSessionAPI::errors(
+	const drogon::HttpRequestPtr request,
+	std::string session_id )
+{
+	DownloadSessionID id {};
+
+	if ( !parseId( session_id, id ) ) co_return createBadRequest( "Download session id must be a positive integer" );
+
+	std::vector< Int > statuses {};
+	bool without_status { false };
+
+	if ( !parseStatusFilter( request->getParameter( "status" ), statuses, without_status ) )
+		co_return createBadRequest( "The status filter must be a comma separated list of status codes or 'none'" );
+
+	const bool unfiltered { statuses.empty() && !without_status };
+
+	const auto db { drogon::app().getDbClient() };
+	if ( !( co_await touchSession( db, id ) ) ) co_return createNotFound( "No download session with id {}", id );
+
+	const auto counts { co_await db->execSqlCoro(
+		"SELECT status, count(*)::bigint AS count FROM download_session_errors "
+		"WHERE download_session_id = $1 GROUP BY status ORDER BY status",
+		id ) };
+
+	const auto rows { co_await db->execSqlCoro(
+		"SELECT download_session_error_id, download_session_url_id, url, status, lane, message, "
+		"extract(epoch FROM occurred_at)::bigint AS occurred_at "
+		"FROM download_session_errors "
+		"WHERE download_session_id = $1 "
+		"AND ($2 OR status = ANY($3::integer[]) OR ($4 AND status IS NULL)) "
+		"ORDER BY download_session_error_id DESC LIMIT 1000",
+		id,
+		unfiltered,
+		std::move( statuses ),
+		without_status ) };
+
+	Json::Value output {};
+	output[ "statuses" ] = Json::Value { Json::arrayValue };
+
+	for ( const auto& row : counts )
+	{
+		Json::Value tally {};
+		tally[ "status" ] = row[ "status" ].isNull() ? Json::Value {} : Json::Value { row[ "status" ].as< Int >() };
+		tally[ "count" ] = row[ "count" ].as< std::int64_t >();
+		output[ "statuses" ].append( tally );
+	}
+
+	output[ "errors" ] = Json::Value { Json::arrayValue };
+
+	for ( const auto& row : rows )
+	{
+		Json::Value error {};
+		error[ "id" ] = row[ "download_session_error_id" ].as< std::int64_t >();
+		error[ "url_id" ] = row[ "download_session_url_id" ].isNull() ?
+		                        Json::Value {} :
+		                        Json::Value { row[ "download_session_url_id" ].as< DownloadSessionUrlID >() };
+		error[ "url" ] = row[ "url" ].as< std::string >();
+		error[ "status" ] = row[ "status" ].isNull() ? Json::Value {} : Json::Value { row[ "status" ].as< Int >() };
+		error[ "lane" ] = row[ "lane" ].as< std::string >();
+		error[ "message" ] =
+			row[ "message" ].isNull() ? Json::Value {} : Json::Value { row[ "message" ].as< std::string >() };
+		error[ "occurred_at" ] = row[ "occurred_at" ].as< std::int64_t >();
+		output[ "errors" ].append( error );
+	}
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( output );
 }

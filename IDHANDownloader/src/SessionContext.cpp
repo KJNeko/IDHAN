@@ -897,6 +897,19 @@ void SessionContext::Impl::reportImportFailure( const WorkID work, const std::st
 		m_options.observer->onImportFailed( WorkInfo { .id = work, .url = url }, url, error );
 }
 
+void SessionContext::Impl::reportRequestFailure( const RequestFailure& failure )
+{
+	spdlog::warn(
+		"downloader session: work {} request to {} answered {}: {}",
+		failure.work,
+		failure.url,
+		failure.status.has_value() ? std::to_string( *failure.status ) : "no response",
+		failure.message );
+	m_diagnostics.recordRequestFailed( failure );
+
+	if ( m_options.observer != nullptr ) m_options.observer->onRequestFailed( failure );
+}
+
 void SessionContext::Impl::settleRequest( Pending& pending )
 {
 	JSContext* context { pending.promise.context };
@@ -907,6 +920,13 @@ void SessionContext::Impl::settleRequest( Pending& pending )
 
 	if ( !result )
 	{
+		reportRequestFailure(
+			RequestFailure {
+				.work = pending.work,
+				.url = pending.url,
+				.lane = pending.lane,
+				.status = std::nullopt,
+				.message = result.error().message } );
 		rejectPending( pending, format_ns::format( "{}: {}", pending.url, result.error().message ) );
 		return;
 	}
@@ -923,6 +943,15 @@ void SessionContext::Impl::settleRequest( Pending& pending )
 	m_diagnostics.recordRequest( request_info );
 
 	if ( m_options.observer != nullptr ) m_options.observer->onRequest( request_info );
+
+	if ( response.status != 200 )
+		reportRequestFailure(
+			RequestFailure {
+				.work = pending.work,
+				.url = request_info.url,
+				.lane = pending.lane,
+				.status = response.status,
+				.message = describeBody( response.body, response.bytes ) } );
 
 	JSValue body { JS_UNDEFINED };
 
@@ -975,12 +1004,28 @@ void SessionContext::Impl::settleImport( Pending& pending )
 
 	if ( !result )
 	{
+		reportRequestFailure(
+			RequestFailure {
+				.work = pending.work,
+				.url = pending.url,
+				.lane = pending.lane,
+				.status = std::nullopt,
+				.message = result.error().message } );
 		reportImportFailure(
 			pending.work, pending.url, format_ns::format( "{}: {}", pending.url, result.error().message ) );
 		return;
 	}
 
 	TransferResponse& response { *result };
+
+	if ( response.status != 200 )
+		reportRequestFailure(
+			RequestFailure {
+				.work = pending.work,
+				.url = detail::redactUrlQuery( response.url, pending.sensitive_query ),
+				.lane = pending.lane,
+				.status = response.status,
+				.message = describeBody( response.body, response.bytes ) } );
 
 	if ( !response.import.has_value() )
 	{

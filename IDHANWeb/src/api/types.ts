@@ -245,6 +245,8 @@ export interface DownloadSessionInfo {
     name: string;
     created_at: number;
     last_used_at: number;
+    /** Requests logged by this session that did not answer 200. */
+    error_count: number;
 }
 
 export type DownloadSessionUrlState = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
@@ -278,6 +280,30 @@ export interface DownloadSessionRecords {
     record_ids: number[];
 }
 
+/** One settled transfer that did not answer 200. */
+export interface DownloadSessionError {
+    id: number;
+    /** The URL row the request belonged to, or null once that row was retried away. */
+    url_id: number | null;
+    url: string;
+    /** Null when the transfer never produced a response. */
+    status: number | null;
+    lane: string;
+    message: string | null;
+    occurred_at: number;
+}
+
+export interface DownloadSessionErrorTally {
+    status: number | null;
+    count: number;
+}
+
+export interface DownloadSessionErrorLog {
+    /** Every status the session has logged, filter or no filter, so the filter chips stay put. */
+    statuses: DownloadSessionErrorTally[];
+    errors: DownloadSessionError[];
+}
+
 export type DebugWorkPhase = 'queued' | 'module' | 'parser' | 'transferring';
 
 export type DebugSessionState = 'running' | 'idle' | 'closing' | 'cancelled';
@@ -287,6 +313,7 @@ export type DebugEventKind =
     | 'completed'
     | 'failed'
     | 'request'
+    | 'request_failed'
     | 'imported'
     | 'import_failed'
     | 'followed'
@@ -319,6 +346,7 @@ export interface DebugSessionCounters {
     work_failed: number;
     requests: number;
     request_bytes: number;
+    requests_failed: number;
     imported: number;
     import_bytes: number;
     import_failed: number;
@@ -339,7 +367,7 @@ export interface DebugSessionEvent {
     url: string;
     /** Lane key, content type, follow status, or error text, depending on the kind. */
     detail: string;
-    status: number;
+    status: number | null;
     bytes: number;
     record_id: number | null;
 }

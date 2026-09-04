@@ -1,6 +1,8 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {api, watchDownloadSessions} from '../../api/client';
 import type {
+    DownloadSessionError,
+    DownloadSessionErrorLog,
     DownloadSessionInfo,
     DownloadSessionUrlFlat,
     DownloadSessionUrlJob,
@@ -75,6 +77,20 @@ function countStates(node: DownloadSessionUrlNode, into: Map<string, number>): M
     return into;
 }
 
+/** A request that never got a response has no status to show. */
+export function statusLabel(status: number | null): string {
+    return status === null ? 'no response' : String(status);
+}
+
+export type StatusFilter = readonly (number | null)[];
+
+export function toggleStatus(selected: StatusFilter, status: number | null): (number | null)[] {
+    const next = selected.filter((entry) => entry !== status);
+
+    if (next.length === selected.length) next.push(status);
+    return next.sort((a, b) => (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER));
+}
+
 function shortUrl(url: string): string {
     try {
         const parsed = new URL(url);
@@ -89,6 +105,70 @@ export function parseNewlineUrlList(value: string): string[] {
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter((line) => line.length > 0);
+}
+
+interface ErrorLogProps {
+    count: number;
+    log: DownloadSessionErrorLog | undefined;
+    selected: StatusFilter;
+    open: boolean;
+    onToggle: () => void;
+    onToggleStatus: (status: number | null) => void;
+    onClearStatuses: () => void;
+}
+
+function ErrorLog({count, log, selected, open, onToggle, onToggleStatus, onClearStatuses}: ErrorLogProps) {
+    return (
+        <div className="download-error-log">
+            <button
+                type="button"
+                className={`download-error-toggle${count > 0 ? ' has-errors' : ''}`}
+                disabled={count === 0}
+                onClick={onToggle}
+            >
+                {open ? '▾' : '▸'} Errors ({count})
+            </button>
+            {open && log !== undefined && (
+                <>
+                    <div className="download-error-filters">
+                        <button
+                            type="button"
+                            className={selected.length === 0 ? 'is-active' : ''}
+                            onClick={onClearStatuses}
+                        >
+                            All
+                        </button>
+                        {log.statuses.map((tally) => (
+                            <button
+                                key={statusLabel(tally.status)}
+                                type="button"
+                                className={selected.includes(tally.status) ? 'is-active' : ''}
+                                onClick={() => onToggleStatus(tally.status)}
+                            >
+                                {statusLabel(tally.status)} ({tally.count})
+                            </button>
+                        ))}
+                    </div>
+                    {log.errors.length === 0 ? (
+                        <p className="muted">Nothing logged for this filter.</p>
+                    ) : (
+                        <ul className="download-error-list">
+                            {log.errors.map((entry: DownloadSessionError) => (
+                                <li key={entry.id}>
+                                    <span className="download-error-status">{statusLabel(entry.status)}</span>
+                                    <span className="grow" title={entry.url}>{shortUrl(entry.url)}</span>
+                                    <span className="muted">
+                                        {new Date(entry.occurred_at * 1000).toLocaleTimeString()}
+                                    </span>
+                                    {entry.message && <pre className="download-error-message">{entry.message}</pre>}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </>
+            )}
+        </div>
+    );
 }
 
 interface TreeRowProps {
@@ -213,6 +293,9 @@ function DownloadsPanel({host}: PanelProps) {
     const [sessions, setSessions] = useState<DownloadSessionInfo[]>([]);
     const [trees, setTrees] = useState<Record<number, DownloadSessionUrlNode[]>>({});
     const [flat, setFlat] = useState<Record<number, DownloadSessionUrlFlat[]>>({});
+    const [errorLogs, setErrorLogs] = useState<Record<number, DownloadSessionErrorLog>>({});
+    const [errorFilters, setErrorFilters] = useState<Record<number, StatusFilter>>({});
+    const [openErrors, setOpenErrors] = useState<Set<number>>(new Set());
     const [expanded, setExpanded] = useState<Set<number>>(new Set());
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
@@ -302,6 +385,43 @@ function DownloadsPanel({host}: PanelProps) {
             cancelled = true;
         };
     }, [flatten, sessions, trees]);
+
+    useEffect(() => {
+        if (openErrors.size === 0) return;
+        let cancelled = false;
+
+        const load = async () => {
+            const next: Record<number, DownloadSessionErrorLog> = {};
+            for (const sessionId of openErrors) {
+                next[sessionId] = await api.downloadSessions.errors(sessionId, errorFilters[sessionId] ?? []);
+            }
+            if (!cancelled) setErrorLogs((previous) => ({...previous, ...next}));
+        };
+
+        void load().catch((caught) => {
+            if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [openErrors, errorFilters, trees]);
+
+    const toggleErrors = useCallback((sessionId: number) => {
+        setOpenErrors((previous) => {
+            const next = new Set(previous);
+            if (!next.delete(sessionId)) next.add(sessionId);
+            return next;
+        });
+    }, []);
+
+    const toggleErrorStatus = useCallback((sessionId: number, status: number | null) => {
+        setErrorFilters((previous) => ({...previous, [sessionId]: toggleStatus(previous[sessionId] ?? [], status)}));
+    }, []);
+
+    const clearErrorStatuses = useCallback((sessionId: number) => {
+        setErrorFilters((previous) => ({...previous, [sessionId]: []}));
+    }, []);
 
     const queue = useCallback(async () => {
         const urls = parseNewlineUrlList(draft);
@@ -485,6 +605,15 @@ function DownloadsPanel({host}: PanelProps) {
                             </button>
                             <button type="button" onClick={() => void destroy(session)}>Delete</button>
                         </header>
+                        <ErrorLog
+                            count={session.error_count}
+                            log={errorLogs[session.id]}
+                            selected={errorFilters[session.id] ?? []}
+                            open={openErrors.has(session.id)}
+                            onToggle={() => toggleErrors(session.id)}
+                            onToggleStatus={(status) => toggleErrorStatus(session.id, status)}
+                            onClearStatuses={() => clearErrorStatuses(session.id)}
+                        />
                         {flatten ? (
                             <ul className="download-tree">
                                 {(flat[session.id] ?? []).map((entry) => (

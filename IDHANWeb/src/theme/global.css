@@ -1931,6 +1931,87 @@ body {
     border-color: var(--accent, #79b8ff);
 }
 
+.download-error-log {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0 0.45rem 0.35rem;
+    font-size: 0.72rem;
+}
+
+.download-error-toggle {
+    justify-self: start;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+}
+
+.download-error-toggle:disabled {
+    cursor: default;
+}
+
+.download-error-toggle.has-errors {
+    color: var(--error);
+}
+
+.download-error-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.download-error-filters button {
+    padding: 0.1rem 0.4rem;
+    border: 1px solid #2a2e37;
+    border-radius: 0.6rem;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+}
+
+.download-error-filters button.is-active {
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.download-error-list {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
+.download-error-list > li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: baseline;
+    overflow-wrap: anywhere;
+}
+
+.download-error-status {
+    flex: 0 0 auto;
+    color: var(--error);
+    font-variant-numeric: tabular-nums;
+}
+
+.download-error-message {
+    flex: 1 1 100%;
+    margin: 0;
+    color: var(--muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: inherit;
+    font-size: inherit;
+    user-select: text;
+}
+
 .download-tree {
     margin: 0;
     padding: 0.2rem 0;

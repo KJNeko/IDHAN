@@ -41,6 +41,7 @@ class SessionDiagnostics
 	void recordCompleted( const WorkInfo& info );
 	void recordFailed( const WorkInfo& info, const std::string& error );
 	void recordRequest( const RequestInfo& info );
+	void recordRequestFailed( const RequestFailure& info );
 	void recordImported( const ImportInfo& info );
 	void recordImportFailed( WorkID work, const std::string& url, const std::string& error );
 	void recordFollowed( const WorkInfo& info, FollowStatus status );

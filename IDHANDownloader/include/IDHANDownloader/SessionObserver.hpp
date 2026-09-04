@@ -43,6 +43,16 @@ struct RequestInfo
 	std::size_t bytes {};
 };
 
+struct RequestFailure
+{
+	WorkID work {};
+	std::string url {};
+	std::string lane {};
+	//! Unset when the transfer never produced a response.
+	std::optional< std::int32_t > status {};
+	std::string message {};
+};
+
 struct ImportInfo
 {
 	WorkID work {};
@@ -68,6 +78,8 @@ class SessionObserver
 	virtual void onFailed( const WorkInfo&, const std::string& ) {}
 
 	virtual void onRequest( const RequestInfo& ) {}
+
+	virtual void onRequestFailed( const RequestFailure& ) {}
 
 	virtual void onImported( const ImportInfo& ) {}
 
