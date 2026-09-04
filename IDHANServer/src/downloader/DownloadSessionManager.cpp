@@ -388,6 +388,31 @@ void DownloadSessionManager::markRow(
 	DownloadSessionEventHub::instance().notify( session_id );
 }
 
+void DownloadSessionManager::addError(
+	const DownloadSessionID session_id,
+	const DownloadSessionUrlID row_id,
+	const std::string& url,
+	const std::string& lane,
+	const std::optional< std::int32_t > status,
+	std::string message )
+{
+	drogon::sync_wait(
+		[ session_id, row_id, &url, &lane, status, message = std::move( message ) ]() -> drogon::Task< void >
+		{
+			co_await drogon::app().getDbClient()->execSqlCoro(
+				"INSERT INTO download_session_errors "
+				"(download_session_id, download_session_url_id, url, lane, status, message) VALUES "
+				"($1, NULLIF($2, 0::bigint), $3, $4, $5, NULLIF($6, ''))",
+				session_id,
+				row_id,
+				url,
+				lane,
+				status,
+				message );
+		}() );
+	DownloadSessionEventHub::instance().notify( session_id );
+}
+
 SessionRowObserver::SessionRowObserver( DownloadSessionManager& manager, const DownloadSessionID session_id ) :
   m_manager( manager ),
   m_session_id( session_id )
@@ -436,6 +461,12 @@ void SessionRowObserver::onFailed( const WorkInfo& info, const std::string& erro
 
 	if ( const auto row { rowFor( info.id ) }; row != 0 )
 		DownloadSessionManager::markRow( m_session_id, row, "failed", error );
+}
+
+void SessionRowObserver::onRequestFailed( const RequestFailure& failure )
+{
+	DownloadSessionManager::addError(
+		m_session_id, rowFor( failure.work ), failure.url, failure.lane, failure.status, failure.message );
 }
 
 void SessionRowObserver::onImported( const ImportInfo& info )

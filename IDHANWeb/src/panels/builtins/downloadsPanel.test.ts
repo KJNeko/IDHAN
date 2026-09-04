@@ -12,7 +12,9 @@ import {
     parseNewlineUrlList,
     sessionRecords,
     stateLabel,
+    statusLabel,
     subtreeRecords,
+    toggleStatus,
 } from './DownloadsPanel';
 
 function node(
@@ -133,5 +135,25 @@ describe('display state', () => {
     it('labels the derived state as words, leaving stored states untouched', () => {
         expect(stateLabel('pending-children')).toBe('pending children');
         expect(stateLabel('completed')).toBe('completed');
+    });
+});
+
+describe('error log status filter', () => {
+    it('names a status by its code and a missing one as no response', () => {
+        expect(statusLabel(404)).toBe('404');
+        expect(statusLabel(null)).toBe('no response');
+    });
+
+    it('adds an unselected status and keeps the selection sorted', () => {
+        expect(toggleStatus([500, 404], 403)).toEqual([403, 404, 500]);
+    });
+
+    it('removes a status that was already selected', () => {
+        expect(toggleStatus([403, 404, 500], 404)).toEqual([403, 500]);
+    });
+
+    it('sorts the responseless requests after every code and toggles them like any other', () => {
+        expect(toggleStatus([404], null)).toEqual([404, null]);
+        expect(toggleStatus([404, null], null)).toEqual([404]);
     });
 });

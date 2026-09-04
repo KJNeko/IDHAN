@@ -242,6 +242,8 @@ export function describeEvent(event: DebugSessionEvent): string {
     switch (event.kind) {
         case 'request':
             return `${event.status} ${formatBytes(event.bytes)} ${event.detail} ${event.url}`.trim();
+        case 'request_failed':
+            return `${event.status ?? 'no response'} ${event.url} ${event.detail}`.trim();
         case 'imported':
             return `record ${event.record_id ?? '?'} ${formatBytes(event.bytes)} ${event.detail} ${event.url}`.trim();
         case 'followed':
@@ -261,6 +263,7 @@ const EVENT_TONE: Record<DebugEventKind, string> = {
     completed: 'debug-event-good',
     failed: 'debug-event-bad',
     request: 'debug-event-neutral',
+    request_failed: 'debug-event-bad',
     imported: 'debug-event-good',
     import_failed: 'debug-event-bad',
     followed: 'debug-event-muted',
@@ -272,6 +275,7 @@ const COUNTER_ROWS: readonly (readonly [label: string, key: keyof DebugSession['
     ['Completed', 'work_completed'],
     ['Failed', 'work_failed'],
     ['Requests', 'requests'],
+    ['Request errors', 'requests_failed'],
     ['Downloaded', 'request_bytes', true],
     ['Imported', 'imported'],
     ['Import bytes', 'import_bytes', true],

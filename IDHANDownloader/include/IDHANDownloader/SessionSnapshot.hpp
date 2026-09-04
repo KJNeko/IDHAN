@@ -50,6 +50,7 @@ struct SessionCounters
 	std::uint64_t work_failed {};
 	std::uint64_t requests {};
 	std::uint64_t request_bytes {};
+	std::uint64_t requests_failed {};
 	std::uint64_t imported {};
 	std::uint64_t import_bytes {};
 	std::uint64_t import_failed {};
@@ -66,6 +67,7 @@ enum class SessionEventKind : std::uint8_t
 	COMPLETED,
 	FAILED,
 	REQUEST,
+	REQUEST_FAILED,
 	IMPORTED,
 	IMPORT_FAILED,
 	FOLLOWED,
@@ -81,7 +83,8 @@ struct SessionEvent
 	std::string url {};
 	//! Meaning depends on kind.
 	std::string detail {};
-	std::int32_t status {};
+	//! Unset for every kind that carries no response.
+	std::optional< std::int32_t > status {};
 	std::size_t bytes {};
 	RecordID record_id {};
 };

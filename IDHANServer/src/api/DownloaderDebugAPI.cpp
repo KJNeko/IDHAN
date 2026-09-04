@@ -52,6 +52,7 @@ static Json::Value countersJson( const SessionCounters& counters )
 	json[ "work_failed" ] = Json::UInt64 { counters.work_failed };
 	json[ "requests" ] = Json::UInt64 { counters.requests };
 	json[ "request_bytes" ] = Json::UInt64 { counters.request_bytes };
+	json[ "requests_failed" ] = Json::UInt64 { counters.requests_failed };
 	json[ "imported" ] = Json::UInt64 { counters.imported };
 	json[ "import_bytes" ] = Json::UInt64 { counters.import_bytes };
 	json[ "import_failed" ] = Json::UInt64 { counters.import_failed };
@@ -110,7 +111,7 @@ static Json::Value eventJson(
 	json[ "url_id" ] = rowOrNull( rows, event.work );
 	json[ "url" ] = event.url;
 	json[ "detail" ] = event.detail;
-	json[ "status" ] = event.status;
+	json[ "status" ] = event.status.has_value() ? Json::Value { *event.status } : Json::Value {};
 	json[ "bytes" ] = Json::UInt64 { event.bytes };
 	json[ "record_id" ] = event.record_id == 0 ? Json::Value {} : Json::Value { event.record_id };
 	return json;

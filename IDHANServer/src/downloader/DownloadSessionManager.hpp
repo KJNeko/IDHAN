@@ -42,6 +42,7 @@ class SessionRowObserver final : public SessionObserver
 	void onStarted( const WorkInfo& info ) override;
 	void onCompleted( const WorkInfo& info ) override;
 	void onFailed( const WorkInfo& info, const std::string& error ) override;
+	void onRequestFailed( const RequestFailure& failure ) override;
 	void onImported( const ImportInfo& info ) override;
 	void onImportFailed( const WorkInfo& info, const std::string& url, const std::string& error ) override;
 	void onFollowed( const WorkInfo& info, FollowStatus status ) override;
@@ -117,6 +118,13 @@ class DownloadSessionManager final
 		DownloadSessionUrlID row_id,
 		std::string_view state,
 		std::string error );
+	static void addError(
+		DownloadSessionID session_id,
+		DownloadSessionUrlID row_id,
+		const std::string& url,
+		const std::string& lane,
+		std::optional< std::int32_t > status,
+		std::string message );
 };
 
 DownloadSessionManager& downloadSessionManager();

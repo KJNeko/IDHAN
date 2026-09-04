@@ -161,7 +161,9 @@ drogon::Task< Json::Value > sessionSummary( drogon::orm::DbClientPtr db, const D
 	const auto rows { co_await db->execSqlCoro(
 		"SELECT download_session_id, name, "
 		"extract(epoch FROM created_at)::bigint AS created_at, "
-		"extract(epoch FROM last_used_at)::bigint AS last_used_at "
+		"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
+		"(SELECT count(*) FROM download_session_errors "
+		"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count "
 		"FROM download_sessions WHERE download_session_id = $1",
 		session_id ) };
 
@@ -172,6 +174,7 @@ drogon::Task< Json::Value > sessionSummary( drogon::orm::DbClientPtr db, const D
 	json[ "name" ] = rows[ 0 ][ "name" ].as< std::string >();
 	json[ "created_at" ] = rows[ 0 ][ "created_at" ].as< std::int64_t >();
 	json[ "last_used_at" ] = rows[ 0 ][ "last_used_at" ].as< std::int64_t >();
+	json[ "error_count" ] = rows[ 0 ][ "error_count" ].as< std::int64_t >();
 	co_return json;
 }
 

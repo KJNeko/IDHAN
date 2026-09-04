@@ -34,6 +34,8 @@ std::string_view toString( const SessionEventKind kind )
 			return "failed";
 		case SessionEventKind::REQUEST:
 			return "request";
+		case SessionEventKind::REQUEST_FAILED:
+			return "request_failed";
 		case SessionEventKind::IMPORTED:
 			return "imported";
 		case SessionEventKind::IMPORT_FAILED:
@@ -109,6 +111,19 @@ void SessionDiagnostics::recordRequest( const RequestInfo& info )
 			.detail = info.lane,
 			.status = info.status,
 			.bytes = info.bytes } );
+}
+
+void SessionDiagnostics::recordRequestFailed( const RequestFailure& info )
+{
+	const std::scoped_lock lock { m_mutex };
+	++m_counters.requests_failed;
+	append(
+		SessionEvent {
+			.kind = SessionEventKind::REQUEST_FAILED,
+			.work = info.work,
+			.url = info.url,
+			.detail = info.message,
+			.status = info.status } );
 }
 
 void SessionDiagnostics::recordImported( const ImportInfo& info )

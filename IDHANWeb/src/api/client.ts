@@ -25,6 +25,7 @@ import type {
   ServerLayoutMeta,
     KeyCheck,
   DatabaseStats,
+    DownloadSessionErrorLog,
     DownloadSessionInfo,
     DownloadSessionRecords,
     DownloadSessionUrlFlat,
@@ -185,6 +186,16 @@ export const api = {
         },
         records(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionRecords> {
             return request<DownloadSessionRecords>(`/download_sessions/${sessionId}/records`, {signal});
+        },
+        /** An empty `statuses` asks for every logged status; a null entry asks for the requests that never answered. */
+        errors(
+            sessionId: number,
+            statuses: readonly (number | null)[] = [],
+            signal?: AbortSignal,
+        ): Promise<DownloadSessionErrorLog> {
+            const wanted = statuses.map((status) => (status === null ? 'none' : String(status)));
+            const filter = wanted.length === 0 ? '' : `?status=${wanted.join(',')}`;
+            return request<DownloadSessionErrorLog>(`/download_sessions/${sessionId}/errors${filter}`, {signal});
         },
         destroy(sessionId: number, signal?: AbortSignal): Promise<{ deleted: boolean }> {
             return request<{ deleted: boolean }>(`/download_sessions/${sessionId}`, {method: 'DELETE', signal});

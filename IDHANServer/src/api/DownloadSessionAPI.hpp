@@ -20,6 +20,7 @@ class DownloadSessionAPI final : public drogon::HttpController< DownloadSessionA
 		std::string session_id,
 		std::string url_id );
 	static drogon::Task< drogon::HttpResponsePtr > records( drogon::HttpRequestPtr request, std::string session_id );
+	static drogon::Task< drogon::HttpResponsePtr > errors( drogon::HttpRequestPtr request, std::string session_id );
 
   public:
 
@@ -43,6 +44,11 @@ class DownloadSessionAPI final : public drogon::HttpController< DownloadSessionA
 	ADD_METHOD_TO(
 		DownloadSessionAPI::records,
 		"/download_sessions/{session_id}/records",
+		drogon::Get,
+		IDHANAPIAuthName );
+	ADD_METHOD_TO(
+		DownloadSessionAPI::errors,
+		"/download_sessions/{session_id}/errors",
 		drogon::Get,
 		IDHANAPIAuthName );
 	METHOD_LIST_END
