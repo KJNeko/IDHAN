@@ -48,6 +48,142 @@ submit URL
   → completion returns to the worker owning the realm and settles its promise
 ```
 
+## End-to-end pipeline
+
+The diagram below follows a download from the WebUI through parser execution and the shared HTTP
+transport. The blue path returns a buffered response to JavaScript; the green path streams a file
+into IDHAN's normal import machinery without putting its body in the QuickJS heap. Dashed arrows
+show configuration, persistence, and reporting rather than ownership of the active operation.
+
+```mermaid
+flowchart TB
+    UI["WebUI / API client"]
+
+    subgraph server["IDHAN Server"]
+        API["DownloadSessionAPI<br/>create or select a session; submit root URL"]
+        ROOT[("download_sessions<br/>download_session_urls")]
+        MANAGER["DownloadSessionManager<br/>create or reuse in-memory SessionContext"]
+        OBSERVER["SessionRowObserver<br/>map WorkID and parent to session rows"]
+        EVENTS["Session and lane WebSocket event hubs"]
+    end
+
+    subgraph context["Downloader library: shared context plus per-session execution"]
+        ROUTE{"Exactly one URL<br/>class route matches?"}
+        REJECT["Root URL: reject submission<br/>Followed URL: report filtered"]
+        QUEUE["Shared ScriptRunner queue"]
+
+        subgraph scripts["Script worker pool"]
+            REALM["Worker creates a QuickJS realm<br/>from cached module bytecode"]
+            PARSER["Call routed parser export<br/>with URL, flags, and idhan bindings"]
+            ACTION{"Parser action"}
+            FOLLOW["idhan.follow<br/>deduplicate, check imported, and route child URL"]
+            REQUEST["idhan.request / fetch<br/>register promise and pending operation"]
+            IMPORT["idhan.import<br/>open host ImportSink and return immediately"]
+            SETTLE["Owning worker converts response<br/>and settles the JavaScript promise"]
+            DONE["Export settled and all of its<br/>buffered requests settled: release realm"]
+        end
+
+        TRANSFER["Build transfer<br/>method, headers, body, options, and cookies"]
+
+        subgraph transport["Shared host-aware transport"]
+            SELECT["LanePool<br/>resolve hostname or configured group"]
+            POLICY["LanePolicy<br/>rate slots, concurrency, and backoff"]
+            LANE["Lane<br/>queue and dispatch when policy permits"]
+            SHARD["Least-busy LaneShard<br/>curl multi-handle on one IO thread"]
+            REMOTE["Remote HTTP server"]
+            HOP{"Hop result"}
+            REDIRECT["Resolve Location, update cookies,<br/>strip cross-origin authorization,<br/>and select the destination lane"]
+            BUFFER["Buffer final response body<br/>up to max_response_bytes"]
+            SINK["Stream final response body<br/>to the temporary-file ImportSink"]
+        end
+    end
+
+    subgraph import_path["Normal IDHAN import path"]
+        FINISH["ImportSink.finish<br/>map temporary file and call importFile"]
+        RECORD["Hash, detect MIME, create or find record,<br/>store file, extract metadata, associate URLs<br/>and tags, and link the session"]
+        STORAGE[("Filesystem clusters")]
+        DATABASE[("PostgreSQL records, URLs,<br/>tags, session links, errors")]
+    end
+
+    subgraph shared_inputs["Shared inputs loaded at downloader startup"]
+        CLASSES["url-classes.json<br/>routes and lane settings"]
+        MODULES["Parser modules and generated packages<br/>compiled by BytecodeCache on first use"]
+        COOKIES[("Persistent cookies")]
+        SECRETS[("Downloader secrets")]
+    end
+
+    UI -->|"POST session URL"| API
+    API -->|"insert pending root row"| ROOT
+    API -->|"submit"| MANAGER
+    API -.->|"201 Created; processing continues"| UI
+    MANAGER --> ROUTE
+    ROUTE -->|"no or ambiguous"| REJECT
+    REJECT -.->|"root: delete pending row and return error"| API
+    REJECT -.->|"follow: skipped child"| OBSERVER
+    ROUTE -->|"match"| QUEUE
+    QUEUE --> REALM
+    REALM --> PARSER
+    PARSER --> ACTION
+
+    ACTION -->|"follow"| FOLLOW
+    FOLLOW -->|"new child URL"| ROUTE
+    FOLLOW -.->|"already seen/imported"| OBSERVER
+    ROUTE -.->|"queued child"| OBSERVER
+
+    ACTION -->|"buffered request"| REQUEST
+    REQUEST --> TRANSFER
+    ACTION -->|"streaming import"| IMPORT
+    IMPORT --> TRANSFER
+    ACTION -->|"return / throw"| DONE
+
+    TRANSFER --> SELECT
+    SELECT --> POLICY
+    POLICY --> LANE
+    LANE --> SHARD
+    SHARD -->|"one HTTP hop"| REMOTE
+    REMOTE --> HOP
+    HOP -->|"429: pause lane and retry exchange"| SELECT
+    HOP -.->|"failure or status >= 400 except 404: update backoff"| POLICY
+    HOP -->|"redirect"| REDIRECT
+    REDIRECT --> SELECT
+    HOP -->|"final buffered response"| BUFFER
+    BUFFER --> SETTLE
+    SETTLE --> PARSER
+    HOP -->|"final import response"| SINK
+    SINK --> FINISH
+    FINISH --> RECORD
+    RECORD --> STORAGE
+    RECORD --> DATABASE
+
+    DONE -.->|"started, completed, or failed"| OBSERVER
+    FINISH -.->|"imported or failed"| OBSERVER
+    HOP -.->|"request result / error"| OBSERVER
+    POLICY -.->|"lane snapshot / backoff"| EVENTS
+    OBSERVER -->|"persist tree state and diagnostics"| DATABASE
+    OBSERVER --> EVENTS
+    EVENTS -.->|"live status"| UI
+    ROOT -.->|"tree/status reads"| API
+
+    CLASSES -.->|"routing"| ROUTE
+    CLASSES -.->|"lane policy"| SELECT
+    MODULES -.->|"bytecode"| REALM
+    COOKIES -.->|"shared jar plus session overlay"| TRANSFER
+    SECRETS -.->|"idhan.secret"| PARSER
+
+    classDef buffered fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef streaming fill:#dcfce7,stroke:#16a34a,color:#052e16
+    classDef persistence fill:#f3f4f6,stroke:#6b7280,color:#111827
+    class REQUEST,BUFFER,SETTLE buffered
+    class IMPORT,SINK,FINISH,RECORD,STORAGE streaming
+    class ROOT,DATABASE,COOKIES,SECRETS persistence
+```
+
+Every redirect is a new hop through lane selection, so a cross-host redirect adopts the destination
+host's cookies and rate policy. Buffered request completions return to the worker that owns the
+realm; streaming imports never re-enter JavaScript and can outlive the parser work item that started
+them. The session becomes idle only after both script work and all transfers, including imports,
+have finished.
+
 ## Terminology
 
 The names below refer to different scopes. In particular, a session is not a lane, a lane is not a
