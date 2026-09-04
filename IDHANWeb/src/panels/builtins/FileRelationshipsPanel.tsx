@@ -283,7 +283,7 @@ interface AgeMarker {
 }
 
 /** Exact UTC text for the server's Unix-microsecond timestamp. */
-function formatModifiedTime(timestamp: number): string {
+function formatFileTime(timestamp: number): string {
     const milliseconds = Math.trunc(timestamp / 1000);
     const microseconds = Math.trunc(timestamp % 1_000_000);
     const date = new Date(milliseconds);
@@ -292,12 +292,12 @@ function formatModifiedTime(timestamp: number): string {
 }
 
 function ageMarker(metadata: RecordMetadata | undefined, other: RecordMetadata | undefined): AgeMarker | null {
-    if (metadata?.modified_time === undefined || other?.modified_time === undefined) return null;
-    if (metadata.modified_time === other.modified_time) return null;
+    if (metadata?.file_mtime === undefined || other?.file_mtime === undefined) return null;
+    if (metadata.file_mtime === other.file_mtime) return null;
 
     return {
-        kind: metadata.modified_time < other.modified_time ? 'older' : 'newer',
-        timestamp: formatModifiedTime(metadata.modified_time),
+        kind: metadata.file_mtime < other.file_mtime ? 'older' : 'newer',
+        timestamp: formatFileTime(metadata.file_mtime),
     };
 }
 

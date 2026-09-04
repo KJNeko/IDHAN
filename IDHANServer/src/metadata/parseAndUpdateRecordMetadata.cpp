@@ -25,8 +25,8 @@ ExpectedTask< void > parseAndUpdateRecordMetadata( const RecordID record_id, DbC
 	const auto updated { co_await updateRecordMetadata( record_id, db, metadata.value() ) };
 	return_unexpected_error( updated );
 
-	const auto modified_time_updated { co_await filesystem::updateRecordModifiedTime( record_id, db ) };
-	return_unexpected_error( modified_time_updated );
+	const auto file_times_updated { co_await filesystem::updateRecordFileTimes( record_id, db ) };
+	return_unexpected_error( file_times_updated );
 
 	co_return {};
 }

@@ -12,8 +12,12 @@ namespace idhan::api
 inline SortType parseSortType( const std::string& by )
 {
 	if ( by == "filesize" || by == "size" ) return SortType::FILESIZE;
-	if ( by == "record_time" || by == "creation_time" ) return SortType::RECORD_TIME;
-	if ( by == "modified_time" ) return SortType::MODIFIED_TIME;
+	// "creation_time" and "modified_time" predate the file/record split and are kept for old clients.
+	if ( by == "record_creation_time" || by == "record_time" || by == "creation_time" )
+		return SortType::RECORD_CREATION_TIME;
+	if ( by == "file_modified_time" || by == "file_mtime" || by == "modified_time" )
+		return SortType::FILE_MODIFIED_TIME;
+	if ( by == "file_created_time" || by == "file_ctime" ) return SortType::FILE_CREATED_TIME;
 	if ( by == "mime" || by == "filetype" ) return SortType::MIME;
 	if ( by == "hash" ) return SortType::HASH;
 	if ( by == "random" ) return SortType::RANDOM;
