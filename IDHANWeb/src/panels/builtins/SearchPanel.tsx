@@ -27,9 +27,10 @@ import {addTerm, removeTerm, replaceTerm} from './searchTerms';
 /** Matches the sort keys POST /search understands (parseSortType.hpp). */
 export const SORT_OPTIONS = [
   { value: 'import_time', label: 'Import time' },
-  { value: 'creation_time', label: 'Record creation time' },
+    {value: 'record_creation_time', label: 'Record creation time'},
   { value: 'size', label: 'File size' },
-  { value: 'modified_time', label: 'File modified time' },
+    {value: 'file_modified_time', label: 'File modified time'},
+    {value: 'file_created_time', label: 'File created time'},
   { value: 'mime', label: 'Filetype' },
   { value: 'hash', label: 'Hash' },
   { value: 'random', label: 'Random' },

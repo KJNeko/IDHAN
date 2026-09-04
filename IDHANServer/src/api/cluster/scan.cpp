@@ -719,7 +719,8 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 	log::trace( "Verifying that record {} is in the correct cluster", m_record_id );
 	FGL_ASSERT( m_record_id != INVALID_RECORD, "Invalid record" );
 	const auto file_info { co_await db->execSqlCoro(
-		"SELECT cluster_id, modified_time, cluster_store_time FROM file_info WHERE record_id = $1", m_record_id ) };
+		"SELECT cluster_id, file_mtime, file_ctime, cluster_store_time FROM file_info WHERE record_id = $1",
+		m_record_id ) };
 
 	if ( file_info.empty() )
 	{
@@ -735,10 +736,10 @@ ExpectedTask< void > ScanContext::checkCluster( drogon::orm::DbClientPtr db )
 			m_record_id );
 	}
 
-	if ( file_info[ 0 ][ "modified_time" ].isNull() )
+	if ( file_info[ 0 ][ "file_mtime" ].isNull() || file_info[ 0 ][ "file_ctime" ].isNull() )
 	{
-		log::trace( "modified_time is null for record {}, updating", m_record_id );
-		co_await filesystem::updateRecordModifiedTime( m_record_id, m_path, db );
+		log::trace( "file times are missing for record {}, updating", m_record_id );
+		co_await filesystem::updateRecordFileTimes( m_record_id, m_path, db );
 	}
 
 	if ( file_info[ 0 ][ 0 ].isNull() )
@@ -838,15 +839,18 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 	log::trace(
 		"Mime scan completed for {} (Record {}), result: {}", m_path.filename().string(), m_record_id, mime_id );
 
-	const auto modified_time { filesystem::getLastWriteTime( m_path ) };
-	const auto modified_time_us {
-		std::chrono::duration_cast< std::chrono::microseconds >( modified_time.time_since_epoch() ).count()
-	};
+	const auto file_times { filesystem::getFileTimes( m_path ) };
+	if ( !file_times )
+		co_return std::unexpected(
+			createInternalError( "Failed to stat {} while scanning Record {}", m_path.string(), m_record_id ) );
+
+	const std::int64_t file_mtime_us { filesystem::toMicroseconds( file_times->mtime ) };
+	const std::optional< std::int64_t > file_ctime_us { filesystem::toMicroseconds( file_times->btime ) };
 	log::trace(
 		"File mtime retrieved for {} (Record {}): {}",
 		m_path.filename().string(),
 		m_record_id,
-		format_ns::format( "{:%F %T}", modified_time ) );
+		format_ns::format( "{:%F %T}", file_times->mtime ) );
 
 	if ( mime_id == mime_ids::UNKNOWN )
 	{
@@ -862,11 +866,12 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 		log::trace( "Inserting file_info for {} with extension override and NULL mime_id", m_record_id );
 		co_await db->execSqlCoro(
-			"INSERT INTO file_info (record_id, size, extension, modified_time, cluster_id, cluster_store_time) VALUES ($1, $2, $3, TIMESTAMP 'epoch' + $4::bigint * INTERVAL '1 microsecond', $5, now()) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL, modified_time = EXCLUDED.modified_time, cluster_store_time = COALESCE(file_info.cluster_store_time, now())",
+			"INSERT INTO file_info (record_id, size, extension, file_mtime, file_ctime, cluster_id, cluster_store_time) VALUES ($1, $2, $3, TIMESTAMP 'epoch' + $4::bigint * INTERVAL '1 microsecond', TIMESTAMP 'epoch' + $5::bigint * INTERVAL '1 microsecond', $6, now()) ON CONFLICT (record_id) DO UPDATE SET extension = $3, mime_id = NULL, file_mtime = EXCLUDED.file_mtime, file_ctime = EXCLUDED.file_ctime, cluster_store_time = COALESCE(file_info.cluster_store_time, now())",
 			m_record_id,
 			m_size,
 			extension_str,
-			modified_time_us,
+			file_mtime_us,
+			file_ctime_us,
 			m_cluster_id );
 
 		co_return {};
@@ -879,11 +884,12 @@ ExpectedTask< void > ScanContext::scanMime( DbClientPtr db )
 
 	log::trace( "Upserting file_info for record {} with mime_id={}", m_record_id, specialized_mime_id );
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, size, mime_id, modified_time, cluster_id, cluster_store_time) VALUES ($1, $2, $3, TIMESTAMP 'epoch' + $4::bigint * INTERVAL '1 microsecond', $5, now()) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3, modified_time = EXCLUDED.modified_time, cluster_store_time = COALESCE(file_info.cluster_store_time, now())",
+		"INSERT INTO file_info (record_id, size, mime_id, file_mtime, file_ctime, cluster_id, cluster_store_time) VALUES ($1, $2, $3, TIMESTAMP 'epoch' + $4::bigint * INTERVAL '1 microsecond', TIMESTAMP 'epoch' + $5::bigint * INTERVAL '1 microsecond', $6, now()) ON CONFLICT (record_id) DO UPDATE SET mime_id = $3, file_mtime = EXCLUDED.file_mtime, file_ctime = EXCLUDED.file_ctime, cluster_store_time = COALESCE(file_info.cluster_store_time, now())",
 		m_record_id,
 		m_size,
 		specialized_mime_id,
-		modified_time_us,
+		file_mtime_us,
+		file_ctime_us,
 		m_cluster_id );
 
 	{
@@ -922,7 +928,7 @@ ExpectedTask< void > ScanContext::scanMetadata( DbClientPtr db )
 		}
 	}
 
-	co_await filesystem::updateRecordModifiedTime( m_record_id, m_path, db );
+	co_await filesystem::updateRecordFileTimes( m_record_id, m_path, db );
 
 	auto input { modules::CallInput::forPath( m_path ) };
 	if ( !input )

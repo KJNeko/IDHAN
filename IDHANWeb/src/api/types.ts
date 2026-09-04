@@ -85,8 +85,10 @@ export interface RecordMetadata {
     size?: number;
     mime?: string;
     extension?: string;
-    /** File modification time as Unix microseconds. */
-    modified_time?: number;
+    /** The file's own last-write time as Unix microseconds. */
+    file_mtime?: number;
+    /** The file's own birth time as Unix microseconds. Absent when the filesystem records none. */
+    file_ctime?: number;
 
     /** False when no module has produced metadata for this record yet. */
     parsed?: boolean;

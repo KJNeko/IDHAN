@@ -3,6 +3,7 @@
 #include <expected>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -66,10 +67,23 @@ enum class FileState
 
 ExpectedTask< FileState > validateFile( RecordID record_id, drogon::orm::DbClientPtr db );
 
-[[nodiscard]] std::chrono::system_clock::time_point getLastWriteTime( const std::filesystem::path& path );
+//! The file's own timestamps, as distinct from the record's creation_time.
+struct FileTimes
+{
+	std::chrono::system_clock::time_point mtime;
+	//! Birth time. Absent on filesystems that do not record one.
+	std::optional< std::chrono::system_clock::time_point > btime;
+};
 
-Task<> updateRecordModifiedTime( RecordID record_id, const std::filesystem::path& path, DbClientPtr db );
+[[nodiscard]] std::optional< FileTimes > getFileTimes( const std::filesystem::path& path );
 
-ExpectedTask< void > updateRecordModifiedTime( RecordID record_id, DbClientPtr db );
+[[nodiscard]] std::int64_t toMicroseconds( std::chrono::system_clock::time_point time_point );
+
+[[nodiscard]] std::optional< std::int64_t > toMicroseconds(
+	std::optional< std::chrono::system_clock::time_point > time_point );
+
+Task<> updateRecordFileTimes( RecordID record_id, const std::filesystem::path& path, DbClientPtr db );
+
+ExpectedTask< void > updateRecordFileTimes( RecordID record_id, DbClientPtr db );
 
 } // namespace idhan::filesystem

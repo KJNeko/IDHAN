@@ -64,7 +64,7 @@ ExpectedTask< ImportFileResult > importFile(
 	return_unexpected_error( target_cluster );
 
 	co_await db->execSqlCoro(
-		"INSERT INTO file_info (record_id, mime_id, size, cluster_id, modified_time) "
+		"INSERT INTO file_info (record_id, mime_id, size, cluster_id, file_mtime) "
 		"VALUES ($1, $2, $3, $4, now()) ON CONFLICT DO NOTHING",
 		*record_id,
 		mime_id,
