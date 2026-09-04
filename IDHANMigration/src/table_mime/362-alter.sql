@@ -1,0 +1,2 @@
+ALTER TABLE mime
+    ALTER COLUMN mime_id TYPE SMALLINT;
