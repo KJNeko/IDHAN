@@ -11,12 +11,33 @@
  */
 
 import {useEffect, useRef, useState} from 'react';
-import type {MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent} from 'react';
+import type {
+    Dispatch,
+    MouseEvent as ReactMouseEvent,
+    PointerEvent as ReactPointerEvent,
+    ReactNode,
+    SetStateAction,
+} from 'react';
 import type {FileRelationships, RecordMetadata, SimilarRecord} from '../../api/types';
 import type {PanelProps, RecordId} from '../../host/types';
 import {EMBEDDED_BLOCKS, formatBytes, formatDuration} from './RecordInfoView';
 import {useRecordMenu} from './recordActions';
+import {
+    classifyDifference,
+    type DiffSurvey,
+    type MarkBox,
+    markBoxes,
+    pixelsIdentical,
+    NOTABLE_DELTA,
+    paintOverview,
+    paintRegion,
+    regionAt,
+    regionWindow,
+    surveyDifference,
+} from './imageDifference';
+import {createLookaheadQueue} from './lookaheadQueue';
 import {lastRelationshipsFocus, RELATIONSHIPS_FOCUS_TOPIC} from './relationshipsFocus';
+import {compareQuality, encodingLabel, type QualityReason, type QualityVerdict} from './recordQuality';
 
 type State =
     | { status: 'idle' }
@@ -48,13 +69,20 @@ const DEFAULT_DISTANCE = 4;
 /** Pairs kept behind the Back button. */
 const HISTORY_LIMIT = 32;
 
+const TILE_THUMBNAIL = 256;
+
+const LOOKAHEAD_PAIRS = 2;
+
+/** Retain the current pair, lookahead pairs, and previous pair. */
+const CACHE_LIMIT = (LOOKAHEAD_PAIRS + 2) * 2;
+
 /** A pair that has been on screen, in A/B order. */
 interface ComparedPair {
     a: RecordId;
     b: RecordId;
 }
 
-type CompareView = 'side-by-side' | 'flip' | 'diff';
+type CompareView = CompareLayout | 'diff';
 
 const COMPARE_VIEWS = [
     {value: 'side-by-side', label: 'Side by side'},
@@ -62,19 +90,36 @@ const COMPARE_VIEWS = [
     {value: 'diff', label: 'Difference'},
 ] as const;
 
-/** Longest edge the difference view resamples to before comparing pixels. */
-const DIFF_MAX_EDGE = 1024;
-/** Difference views are mostly near-black without it; 4 makes a re-encode visible. */
-const DIFF_GAIN = 4;
-
-/**
- * Rows of pixels read at a time when checking two files for an exact match. Both images are compared
- * a strip at a time so a pair of 8000px photographs costs a few MB of canvas rather than 500.
- */
-const PIXEL_STRIP_ROWS = 128;
-
 /** How a record already relates to the selected one, if at all. */
 type Relation = 'superior' | 'inferior' | 'alternative' | 'unrelated';
+
+/** Invert the stored relation when quality ordering swaps A and B. */
+function flipRelation(relation: Relation | undefined): Relation | undefined {
+    if (relation === 'superior') return 'inferior';
+    if (relation === 'inferior') return 'superior';
+    return relation;
+}
+
+interface Sides {
+    a: RecordId;
+    b: RecordId;
+}
+
+/** Use event.code so keypad bindings are independent of Num Lock. */
+type Keypad = 'a' | 'b' | 'a-better' | 'b-better' | 'alternative' | 'unrelated' | 'diff' | 'layout';
+
+const KEYPAD: Record<string, Keypad> = {
+    Numpad1: 'diff',
+    Numpad2: 'unrelated',
+    Numpad3: 'layout',
+    Numpad4: 'a',
+    Numpad5: 'alternative',
+    Numpad6: 'b',
+    Numpad7: 'a-better',
+    Numpad9: 'b-better',
+};
+
+const TYPED_INTO = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 
 interface Bounds {
     width: number;
@@ -124,6 +169,7 @@ interface FileCardProps {
     detail?: string;
     /** An existing relationship to the selected record, marked by the preview's background colour. */
     relation?: Relation;
+    thumbnail?: boolean;
 
     onSelect(id: RecordId): void;
 
@@ -138,6 +184,7 @@ function FileCard({
                       active = false,
                       detail,
                       relation,
+                      thumbnail = false,
                       onSelect,
                       onMenu,
                   }: FileCardProps) {
@@ -156,7 +203,12 @@ function FileCard({
         >
       <span className="file-relationship-preview">
         {present ? (
-            <img src={host.records.fileUrl(id)} alt="" draggable={false}/>
+            <img
+                key={id}
+                src={thumbnail ? host.records.thumbnailUrl(id, TILE_THUMBNAIL) : host.records.fileUrl(id)}
+                alt=""
+                draggable={false}
+            />
         ) : (
             <span className="file-relationship-blur" aria-hidden="true"/>
         )}
@@ -275,6 +327,11 @@ interface CompareInfoProps {
     /** The two decode to the same pixels. Shown on both sides, since it is a fact about the pair. */
     pixelDuplicate: boolean;
     active: boolean;
+    /** Reasons favoring this side; empty for the losing side or a tie. */
+    advantages?: QualityReason[];
+    best?: boolean;
+    /** File size resolved a zero aggregate quality score. */
+    tiebreak?: boolean;
 }
 
 interface AgeMarker {
@@ -301,10 +358,22 @@ function ageMarker(metadata: RecordMetadata | undefined, other: RecordMetadata |
     };
 }
 
+/** Show only criteria favoring each side. */
+function advantagesOf(verdict: QualityVerdict, which: 'a' | 'b'): QualityReason[] {
+    return verdict.reasons.filter((reason) => (which === 'a' ? reason.points > 0 : reason.points < 0));
+}
+
 /** The side-by-side facts a duplicate call is actually made on, embedded blocks first. */
-function CompareInfo({which, id, metadata, other, detail, pixelDuplicate, active}: CompareInfoProps) {
+function CompareInfo(
+    {which, id, metadata, other, detail, pixelDuplicate, active, advantages = [], best = false, tiebreak = false}:
+        CompareInfoProps,
+) {
     const rows = infoRows(metadata, other);
     const embedded = embeddedBlocks(metadata);
+    const encoding = encodingLabel(metadata);
+    const comment = metadata?.comment?.trim() ?? '';
+    // An absent comment field is unknown; only an explicit empty string establishes absence.
+    const strippedComment = comment === '' && metadata?.comment === '' && (other?.comment?.trim() ?? '') !== '';
     const missingEmbedded = EMBEDDED_BLOCKS
         .filter(({key}) => metadata?.[key] === false && other?.[key] === true)
         .map(({label}) => label);
@@ -316,7 +385,35 @@ function CompareInfo({which, id, metadata, other, detail, pixelDuplicate, active
         <div className={`file-relationship-side-info is-${which}${active ? ' is-shown' : ''}`}>
             <h3>
                 {which.toUpperCase()} · #{id}
+                {best && (
+                    <span
+                        className={`file-relationship-side-best${tiebreak ? ' is-tiebreak' : ''}`}
+                        title={tiebreak ? 'The same picture either way, and this is the smaller file' : undefined}
+                    >
+                        {tiebreak ? 'Smaller' : 'Best'}
+                    </span>
+                )}
             </h3>
+            {encoding && (
+                <p className={`file-relationship-side-encoding is-${metadata?.lossless ? 'lossless' : 'lossy'}`}>
+                    {encoding}
+                </p>
+            )}
+            {comment !== '' && (
+                <p className="file-relationship-side-comment" title={comment}>
+                    {comment}
+                </p>
+            )}
+            {strippedComment && (
+                <p className="file-relationship-side-embedded is-anti">Encoder comment stripped</p>
+            )}
+            {advantages.length > 0 && (
+                <ul className="file-relationship-side-advantages">
+                    {advantages.map((reason) => (
+                        <li key={reason.label}>{reason.label}</li>
+                    ))}
+                </ul>
+            )}
             {pixelDuplicate && <p className="file-relationship-side-match">Pixel-for-pixel duplicate</p>}
             {age && (
                 <p className={`file-relationship-side-age is-${age.kind}`}>
@@ -397,46 +494,60 @@ function zoomTo(current: Zoom, scale: number, x: number, y: number, width: numbe
     return clampPan({scale, x: x - (x - current.x) * ratio, y: y - (y - current.y) * ratio}, width, height);
 }
 
+type MarkState =
+    | { status: 'off' }
+    | { status: 'scanning' }
+    | { status: 'ready'; survey: DiffSurvey }
+    | { status: 'error'; message: string };
+
+/** Divide by zoom to keep the outline width constant on screen. */
+const MARK_BORDER = 1.5;
+
+function marksOver(marks: MarkState, frame: Bounds | null, image: Bounds | null): MarkBox[] {
+    if (marks.status !== 'ready' || !frame || !image) return [];
+    return markBoxes(marks.survey.regions, frame, image);
+}
+
 /** Ctrl, cmd and alt all zoom; a bare wheel keeps flipping. */
 const zooming = (event: WheelEvent): boolean => event.ctrlKey || event.metaKey || event.altKey;
 
-interface FlipCompareProps extends CompareProps {
-    side: 'a' | 'b';
-    aMetadata?: RecordMetadata;
-    bMetadata?: RecordMetadata;
-    /** How B already relates to A, when it does. */
-    bDetail?: string;
-    pixelDuplicate: boolean;
-    /** Blow the smaller copy up to the larger one's size instead of showing the size gap. */
-    matchScale: boolean;
+interface CompareFrameProps {
+    children: ReactNode;
+    /** Shared transform synchronizes both frames. */
+    zoom: Zoom;
+    setZoom: Dispatch<SetStateAction<Zoom>>;
+    label: string;
+    active: boolean;
+    /** Hide without unmounting while the replacement pair loads. */
+    blank: boolean;
+    marks: MarkState;
+    /** Source image dimensions used for region coordinates. */
+    markBounds: Bounds | null;
 
     onSide(side: 'a' | 'b'): void;
 
-    onMatchScale(matched: boolean): void;
-
-    onMenu(event: ReactMouseEvent, id: RecordId): void;
+    onMenu(event: ReactMouseEvent): void;
 }
 
-/**
- * Scrolling swaps which of the two is on top. Both stay mounted so the swap never waits on a decode,
- * which is the whole point of flipping rather than looking side by side.
- *
- * Scrolling with a modifier held zooms instead, and the zoom is shared: flipping at 8x stays on the
- * same region of the same magnification, which is how a re-encode gives itself away.
- */
-function FlipCompare(
-    {
-        host, a, b, aBounds, bBounds, side, onSide, aMetadata, bMetadata, bDetail, pixelDuplicate, matchScale,
-        onMatchScale, onMenu,
-    }: FlipCompareProps,
+function CompareFrame(
+    {children, zoom, setZoom, label, active, blank, marks, markBounds, onSide, onMenu}: CompareFrameProps,
 ) {
     const frameRef = useRef<HTMLDivElement>(null);
-    const frame = frameFor(aBounds, bBounds);
-    // One transform drives both images, so flipping stays on the same region of the same magnification.
-    const [zoom, setZoom] = useState<Zoom>(NO_ZOOM);
     const panFrom = useRef<{ x: number; y: number } | null>(null);
+    // Region placement requires the rendered frame dimensions.
+    const [frameSize, setFrameSize] = useState<Bounds | null>(null);
 
-    useEffect(() => setZoom(NO_ZOOM), [a, b]);
+    useEffect(() => {
+        const node = frameRef.current;
+        if (!node) return;
+
+        const measure = () => setFrameSize({width: node.clientWidth, height: node.clientHeight});
+        const observer = new ResizeObserver(measure);
+        observer.observe(node);
+        measure();
+
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         const node = frameRef.current;
@@ -469,7 +580,7 @@ function FlipCompare(
 
         node.addEventListener('wheel', onWheel, {passive: false});
         return () => node.removeEventListener('wheel', onWheel);
-    }, [onSide]);
+    }, [onSide, setZoom]);
 
     /** Zoom from the keyboard, anchored on the middle of the frame. */
     function zoomFromCentre(factor: number) {
@@ -499,6 +610,122 @@ function FlipCompare(
             event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
+    const boxes = blank ? [] : marksOver(marks, frameSize, markBounds);
+
+    return (
+        <div
+            ref={frameRef}
+            className={
+                'file-relationship-flip-frame'
+                + (zoom.scale > 1 ? ' is-zoomed' : '')
+                + (active ? ' is-active' : '')
+            }
+            tabIndex={0}
+            role="group"
+            aria-label={label}
+            onKeyDown={(event) => {
+                if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') onSide('a');
+                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') onSide('b');
+                if (event.key === '+' || event.key === '=') zoomFromCentre(ZOOM_STEP);
+                if (event.key === '-') zoomFromCentre(1 / ZOOM_STEP);
+                if (event.key === '0') setZoom(NO_ZOOM);
+            }}
+            onPointerDown={startPan}
+            onPointerMove={pan}
+            onPointerUp={endPan}
+            onPointerCancel={endPan}
+            onDoubleClick={() => setZoom(NO_ZOOM)}
+            onContextMenu={onMenu}
+        >
+            <div
+                className="file-relationship-flip-zoom"
+                style={{transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`}}
+            >
+                {children}
+                {boxes.map((box, index) => (
+                    <span
+                        key={index}
+                        className="file-relationship-flip-mark"
+                        style={{
+                            left: `${box.left}px`,
+                            top: `${box.top}px`,
+                            width: `${box.width}px`,
+                            height: `${box.height}px`,
+                            borderWidth: `${MARK_BORDER / zoom.scale}px`,
+                        }}
+                    />
+                ))}
+            </div>
+            {blank && <span className="file-relationship-flip-wait muted">Loading…</span>}
+            {!blank && zoom.scale > 1 && (
+                <span className="file-relationship-flip-level">{zoom.scale}x</span>
+            )}
+        </div>
+    );
+}
+
+type CompareLayout = 'flip' | 'side-by-side';
+
+interface PairCompareProps extends CompareProps {
+    layout: CompareLayout;
+    side: 'a' | 'b';
+    diffKey: boolean;
+    blank: boolean;
+    marks: MarkState;
+    aMetadata?: RecordMetadata;
+    bMetadata?: RecordMetadata;
+    /** How B already relates to A, when it does. */
+    bDetail?: string;
+    /** Verdict is relative to A, the preferred side. */
+    verdict: QualityVerdict;
+    pixelDuplicate: boolean;
+    /** Blow the smaller copy up to the larger one's size instead of showing the size gap. */
+    matchScale: boolean;
+
+    onSide(side: 'a' | 'b'): void;
+
+    onMatchScale(matched: boolean): void;
+
+    onMenu(event: ReactMouseEvent, id: RecordId): void;
+}
+
+/**
+ * Keep both images mounted to avoid decoding during swaps. Both layouts share zoom and scale
+ * matching.
+ */
+function PairCompare(
+    {
+        host, a, b, aBounds, bBounds, layout, side, onSide, aMetadata, bMetadata, bDetail, verdict, pixelDuplicate,
+        matchScale, diffKey, blank, marks, onMatchScale, onMenu,
+    }: PairCompareProps,
+) {
+    const frame = frameFor(aBounds, bBounds);
+    const split = layout === 'side-by-side';
+    const [zoom, setZoom] = useState<Zoom>(NO_ZOOM);
+
+    useEffect(() => setZoom(NO_ZOOM), [a, b]);
+
+    const keyHelp =
+        'Hold ctrl while scrolling to zoom both, plus and minus to zoom from the keyboard, '
+        + '0 or a double click to reset. On the keypad, 4 and 6 pick a side, 7 and 9 call that '
+        + 'side better, 5 pairs them as alternatives, 2 marks them unrelated, 3 switches layout '
+        + 'and 1 shows the difference.';
+
+    function image(which: 'a' | 'b') {
+        const id = which === 'a' ? a : b;
+        const bounds = which === 'a' ? aBounds : bBounds;
+        const shown = !blank && (split || side === which);
+        return (
+            <img
+                className={`file-relationship-flip-image${shown ? ' is-shown' : ''}`}
+                style={matchScale ? MATCHED_SHARE : shareOf(frame, bounds)}
+                src={host.records.fileUrl(id)}
+                alt=""
+                draggable={false}
+            />
+        );
+    }
+
     return (
         <div className="file-relationship-flip">
             <div className="file-relationship-flip-stage">
@@ -509,52 +736,45 @@ function FlipCompare(
                     other={bMetadata}
                     pixelDuplicate={pixelDuplicate}
                     active={side === 'a'}
+                    advantages={advantagesOf(verdict, 'a')}
+                    best={verdict.score > 0}
+                    tiebreak={verdict.tiebreak}
                 />
-                <div
-                    ref={frameRef}
-                    className={`file-relationship-flip-frame${zoom.scale > 1 ? ' is-zoomed' : ''}`}
-                    tabIndex={0}
-                    role="group"
-                    aria-label={
-                        `Flip between record ${a} and record ${b}. Scroll, or use the arrow keys. `
-                        + 'Hold ctrl while scrolling to zoom both, plus and minus to zoom from the keyboard, '
-                        + '0 or a double click to reset.'
-                    }
-                    onKeyDown={(event) => {
-                        if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') onSide('a');
-                        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') onSide('b');
-                        if (event.key === '+' || event.key === '=') zoomFromCentre(ZOOM_STEP);
-                        if (event.key === '-') zoomFromCentre(1 / ZOOM_STEP);
-                        if (event.key === '0') setZoom(NO_ZOOM);
-                    }}
-                    onPointerDown={startPan}
-                    onPointerMove={pan}
-                    onPointerUp={endPan}
-                    onPointerCancel={endPan}
-                    onDoubleClick={() => setZoom(NO_ZOOM)}
-                    onContextMenu={(event) => onMenu(event, side === 'a' ? a : b)}
-                >
-                    <div
-                        className="file-relationship-flip-zoom"
-                        style={{transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`}}
-                    >
-                        <img
-                            className={`file-relationship-flip-image${side === 'a' ? ' is-shown' : ''}`}
-                            style={matchScale ? MATCHED_SHARE : shareOf(frame, aBounds)}
-                            src={host.records.fileUrl(a)}
-                            alt=""
-                            draggable={false}
-                        />
-                        <img
-                            className={`file-relationship-flip-image${side === 'b' ? ' is-shown' : ''}`}
-                            style={matchScale ? MATCHED_SHARE : shareOf(frame, bBounds)}
-                            src={host.records.fileUrl(b)}
-                            alt=""
-                            draggable={false}
-                        />
-                    </div>
-                    {zoom.scale > 1 && (
-                        <span className="file-relationship-flip-level">{zoom.scale}x</span>
+                <div className={`file-relationship-flip-frames${split ? ' is-split' : ''}`}>
+                    {split ? (
+                        (['a', 'b'] as const).map((which) => (
+                            <CompareFrame
+                                key={which}
+                                zoom={zoom}
+                                setZoom={setZoom}
+                                label={
+                                    `Record ${which === 'a' ? a : b}, side ${which.toUpperCase()}. ${keyHelp}`
+                                }
+                                active={side === which}
+                                blank={blank}
+                                marks={marks}
+                                markBounds={which === 'a' ? aBounds : bBounds}
+                                onSide={onSide}
+                                onMenu={(event) => onMenu(event, which === 'a' ? a : b)}
+                            >
+                                {image(which)}
+                            </CompareFrame>
+                        ))
+                    ) : (
+                        <CompareFrame
+                            zoom={zoom}
+                            setZoom={setZoom}
+                            label={`Flip between record ${a} and record ${b}. Scroll, or use the arrow keys. ${keyHelp}`}
+                            active={false}
+                            blank={blank}
+                            marks={marks}
+                            markBounds={aBounds}
+                            onSide={onSide}
+                            onMenu={(event) => onMenu(event, side === 'a' ? a : b)}
+                        >
+                            {image('a')}
+                            {image('b')}
+                        </CompareFrame>
                     )}
                 </div>
                 <CompareInfo
@@ -565,6 +785,7 @@ function FlipCompare(
                     detail={bDetail}
                     pixelDuplicate={pixelDuplicate}
                     active={side === 'b'}
+                    advantages={advantagesOf(verdict, 'b')}
                 />
             </div>
             <div className="file-relationship-flip-bar">
@@ -592,7 +813,24 @@ function FlipCompare(
                     />
                     <span>Match scale</span>
                 </label>
+                {marks.status === 'scanning' && (
+                    <span className="file-relationship-flip-marking muted">Reading every pixel…</span>
+                )}
+                {marks.status === 'error' && (
+                    <span className="file-relationship-flip-marking error">{marks.message}</span>
+                )}
+                {marks.status === 'ready' && (
+                    <span className="file-relationship-flip-marking muted">
+                        {marks.survey.regions.length === 0
+                            ? 'Nothing visibly different'
+                            : `${marks.survey.regions.length} boxed${marks.survey.dropped > 0 ? ` (+${marks.survey.dropped})` : ''}`}
+                    </span>
+                )}
             </div>
+            <p className="file-relationship-flip-keys muted">
+                Keypad: 4/6 side · 7/9 better · 5 alternatives · 2 unrelated · 3 layout
+                {diffKey && ' · 1 difference'}
+            </p>
         </div>
     );
 }
@@ -604,108 +842,6 @@ function loadImage(source: string): Promise<HTMLImageElement> {
         image.onerror = () => reject(new Error('The file could not be loaded as an image'));
         image.src = source;
     });
-}
-
-function drawDifference(canvas: HTMLCanvasElement, a: HTMLImageElement, b: HTMLImageElement): void {
-    const wide = Math.max(a.naturalWidth, b.naturalWidth);
-    const tall = Math.max(a.naturalHeight, b.naturalHeight);
-    const scale = Math.min(1, DIFF_MAX_EDGE / Math.max(wide, tall));
-    const width = Math.max(1, Math.round(wide * scale));
-    const height = Math.max(1, Math.round(tall * scale));
-
-    // both are stretched to fill the same grid: a resolution difference would otherwise offset every
-    // pixel and swamp the content difference this view exists to show
-    function sample(image: HTMLImageElement): ImageData {
-        const offscreen = document.createElement('canvas');
-        offscreen.width = width;
-        offscreen.height = height;
-        const context = offscreen.getContext('2d', {willReadFrequently: true});
-        if (!context) throw new Error('This browser did not provide a 2D canvas');
-        context.drawImage(image, 0, 0, width, height);
-        return context.getImageData(0, 0, width, height);
-    }
-
-    const left = sample(a);
-    const right = sample(b);
-    const output = new ImageData(width, height);
-
-    for (let index = 0; index < output.data.length; index += 4) {
-        const delta = Math.max(
-            Math.abs(left.data[index]! - right.data[index]!),
-            Math.abs(left.data[index + 1]! - right.data[index + 1]!),
-            Math.abs(left.data[index + 2]! - right.data[index + 2]!),
-        );
-        const lit = Math.min(255, delta * DIFF_GAIN);
-        output.data[index] = lit;
-        output.data[index + 1] = lit;
-        output.data[index + 2] = lit;
-        output.data[index + 3] = 255;
-    }
-
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('This browser did not provide a 2D canvas');
-    context.putImageData(output, 0, 0);
-}
-
-/** A canvas one strip tall, reused for every strip of one image. */
-function stripContext(width: number): CanvasRenderingContext2D {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = PIXEL_STRIP_ROWS;
-    const context = canvas.getContext('2d', {willReadFrequently: true});
-    if (!context) throw new Error('This browser did not provide a 2D canvas');
-    return context;
-}
-
-function readStrip(
-    context: CanvasRenderingContext2D,
-    image: HTMLImageElement,
-    top: number,
-    rows: number,
-    width: number,
-): Uint8ClampedArray {
-    context.clearRect(0, 0, width, rows);
-    context.drawImage(image, 0, top, width, rows, 0, 0, width, rows);
-    return context.getImageData(0, 0, width, rows).data;
-}
-
-/**
- * Whether the two decode to the same pixels, alpha included: a re-encode that changed nothing but
- * the container. Runs a strip at a time, yielding between strips so a large pair does not freeze the
- * panel, and stops at the first byte that differs.
- */
-async function pixelsIdentical(
-    a: HTMLImageElement,
-    b: HTMLImageElement,
-    cancelled: () => boolean,
-): Promise<boolean> {
-    const width = a.naturalWidth;
-    const height = a.naturalHeight;
-    if (width === 0 || height === 0) throw new Error('The file could not be measured as an image');
-    if (width !== b.naturalWidth || height !== b.naturalHeight) return false;
-
-    const left = stripContext(width);
-    const right = stripContext(width);
-
-    for (let top = 0; top < height; top += PIXEL_STRIP_ROWS) {
-        if (cancelled()) return false;
-
-        const rows = Math.min(PIXEL_STRIP_ROWS, height - top);
-        const leftData = readStrip(left, a, top, rows, width);
-        const rightData = readStrip(right, b, top, rows, width);
-
-        for (let index = 0; index < rows * width * 4; index++) {
-            if (leftData[index] !== rightData[index]) return false;
-        }
-
-        await new Promise((resolve) => {
-            setTimeout(resolve, 0);
-        });
-    }
-
-    return true;
 }
 
 type PixelState =
@@ -759,24 +895,66 @@ function usePixelComparison(
     return state;
 }
 
-type DiffState = { status: 'loading' } | { status: 'ready' } | { status: 'error'; message: string };
+type DiffState =
+    | { status: 'loading'; progress: number }
+    | { status: 'ready'; survey: DiffSurvey }
+    | { status: 'error'; message: string };
 
-/** Experimental: black where the two agree, bright where they do not. */
+function percent(share: number): string {
+    return `${(share * 100).toFixed(share > 0.9999 ? 4 : 2)}%`;
+}
+
+function verdictOf(survey: DiffSurvey): string {
+    const verdict = classifyDifference(survey);
+    switch (verdict.kind) {
+        case 'identical':
+            return 'Every pixel matches, alpha included.';
+        case 'noise':
+            return `${verdict.changed.toLocaleString()} pixels differ, none of them by more than `
+                + `${NOTABLE_DELTA} of 255: the same image re-encoded.`;
+        case 'near-identical':
+            return `${percent(verdict.share)} of pixels match, with ${verdict.regions} `
+                + `${verdict.regions === 1 ? 'region' : 'regions'} changed.`;
+        case 'different':
+            return `${percent(verdict.share)} of pixels match, spread across the frame rather than `
+                + 'gathered into a few edits.';
+    }
+}
+
+function regionLabel(survey: DiffSurvey, index: number): string {
+    const region = survey.regions[index]!;
+    return `${region.width} x ${region.height} at ${region.x}, ${region.y} · `
+        + `${region.pixels.toLocaleString()} px`;
+}
+
+/** Display an overview and 1:1 crops ordered by notable-pixel count. */
 function DiffCompare({host, a, b}: CompareProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [state, setState] = useState<DiffState>({status: 'loading'});
+    const images = useRef<[HTMLImageElement, HTMLImageElement] | null>(null);
+    const [state, setState] = useState<DiffState>({status: 'loading', progress: 0});
+    /** Null selects the overview; an index selects a region at 1:1. */
+    const [region, setRegion] = useState<number | null>(null);
 
     useEffect(() => {
         let cancelled = false;
-        setState({status: 'loading'});
+        images.current = null;
+        setRegion(null);
+        setState({status: 'loading', progress: 0});
 
         Promise.all([loadImage(host.records.fileUrl(a)), loadImage(host.records.fileUrl(b))])
-            .then(([imageA, imageB]) => {
+            .then(async ([imageA, imageB]) => {
+                images.current = [imageA, imageB];
+                const survey = await surveyDifference(
+                    imageA,
+                    imageB,
+                    () => cancelled,
+                    (done) => {
+                        if (!cancelled) setState({status: 'loading', progress: done});
+                    },
+                );
                 if (cancelled) return;
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                drawDifference(canvas, imageA, imageB);
-                setState({status: 'ready'});
+                setState({status: 'ready', survey});
+                setRegion(survey.regions.length > 0 ? 0 : null);
             })
             .catch((error: unknown) => {
                 if (!cancelled) setState({status: 'error', message: message(error)});
@@ -787,16 +965,104 @@ function DiffCompare({host, a, b}: CompareProps) {
         };
     }, [host, a, b]);
 
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const pair = images.current;
+        if (state.status !== 'ready' || !canvas || !pair) return;
+
+        const chosen = region === null ? undefined : state.survey.regions[region];
+
+        try {
+            if (chosen === undefined) paintOverview(canvas, state.survey, null);
+            else paintRegion(canvas, pair[0], pair[1], regionWindow(chosen, state.survey.width, state.survey.height));
+        } catch (error: unknown) {
+            setState({status: 'error', message: message(error)});
+        }
+    }, [state, region]);
+
+    const survey = state.status === 'ready' ? state.survey : null;
+    const found = survey?.regions.length ?? 0;
+
+    function pickRegion(event: ReactMouseEvent<HTMLCanvasElement>) {
+        if (survey === null || region !== null || found === 0) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        setRegion(regionAt(
+            survey,
+            ((event.clientX - rect.left) / rect.width) * survey.width,
+            ((event.clientY - rect.top) / rect.height) * survey.height,
+        ));
+    }
+
+    function step(by: number) {
+        if (found === 0) return;
+        setRegion((current) => ((current ?? 0) + by + found) % found);
+    }
+
     return (
         <div className="file-relationship-diff">
+            <div className="file-relationship-diff-bar">
+                <button
+                    type="button"
+                    className="file-relationship-action"
+                    disabled={survey === null || region === null}
+                    title="Show the whole image again"
+                    onClick={() => setRegion(null)}
+                >
+                    Whole image
+                </button>
+                <button
+                    type="button"
+                    className="file-relationship-action"
+                    disabled={found === 0}
+                    title="Previous region, largest first"
+                    onClick={() => step(-1)}
+                >
+                    Previous
+                </button>
+                <span className="file-relationship-diff-where">
+                    {survey === null
+                        ? 'Comparing…'
+                        : found === 0
+                            ? 'No region to zoom to'
+                            : region === null
+                                ? `${found} ${found === 1 ? 'region' : 'regions'}, largest first`
+                                : `Region ${region + 1} of ${found}${survey.dropped > 0 ? ` (+${survey.dropped})` : ''} · ${regionLabel(survey, region)}`}
+                </span>
+                <button
+                    type="button"
+                    className="file-relationship-action"
+                    disabled={found === 0}
+                    title="Next region, largest first"
+                    onClick={() => step(1)}
+                >
+                    Next
+                </button>
+            </div>
             <div className="file-relationship-diff-frame">
-                <canvas ref={canvasRef} className={state.status === 'ready' ? 'is-ready' : ''}/>
-                {state.status === 'loading' && <p className="file-relationship-none muted">Comparing…</p>}
+                <canvas
+                    ref={canvasRef}
+                    className={`${state.status === 'ready' ? 'is-ready' : ''}${region === null ? ' is-map' : ' is-zoomed'}`}
+                    onClick={pickRegion}
+                />
+                {state.status === 'loading' && (
+                    <p className="file-relationship-none muted">
+                        Comparing every pixel… {Math.round(state.progress * 100)}%
+                    </p>
+                )}
                 {state.status === 'error' && <p className="file-relationship-none error">{state.message}</p>}
             </div>
             <p className="file-relationship-diff-note muted">
-                Both resampled to {DIFF_MAX_EDGE}px at most, so this shows where the two differ rather than
-                how sharp either one is.
+                {survey === null ? (
+                    'Read at full resolution: nothing is scaled down before it is compared.'
+                ) : (
+                    <>
+                        {verdictOf(survey)} Compared at {survey.width} x {survey.height}
+                        {region === null
+                            ? '; the map takes the largest difference in each block, so one changed pixel still shows. Click it to zoom.'
+                            : ', and this region is drawn one output pixel per real pixel.'}
+                        {' '}Keypad 3, 4 or 6 goes back to the images.
+                    </>
+                )}
             </p>
         </div>
     );
@@ -820,6 +1086,14 @@ function FileRelationshipsPanel({host}: PanelProps) {
     const [pending, setPending] = useState(false);
     const [reloadToken, setReloadToken] = useState(0);
     const [history, setHistory] = useState<ComparedPair[]>([]);
+    const [loadedPair, setLoadedPair] = useState<ComparedPair | null>(null);
+    const [markDifferences, setMarkDifferences] = useState(false);
+    const [marks, setMarks] = useState<MarkState>({status: 'off'});
+    const rootRef = useRef<HTMLDivElement>(null);
+    const decoded = useRef<Map<RecordId, HTMLImageElement>>(new Map());
+    const facts = useRef<Map<RecordId, RecordMetadata>>(new Map());
+    const [queue] = useState(() => createLookaheadQueue<ComparedPair>());
+    const shown = useRef<ComparedPair | null>(null);
 
     useEffect(
         () =>
@@ -916,14 +1190,21 @@ function FileRelationshipsPanel({host}: PanelProps) {
         setCompared((current) => (current === id ? null : id));
     }
 
+    /** Move focus to the panel before disabling controls to preserve keypad handling. */
+    function holdFocus() {
+        rootRef.current?.focus();
+    }
+
     /**
-     * The work reports its own outcome, since clearing cannot know what it removed until it runs.
-     * Ruling on a pair takes it out of the undecided queue, so `advance` walks straight to the next one.
+     * The action returns its outcome because clearing resolves the relationship at execution
+     * time. Hide images and disable rulings until the next pair is ready.
      */
     function runAction(work: () => Promise<string>, advance: boolean = false) {
+        holdFocus();
         setPending(true);
         work()
             .then((done) => {
+                queue.invalidate();
                 host.ui.toast(done, {kind: 'success'});
                 setReloadToken((token) => token + 1);
                 return advance ? advanceToNext() : undefined;
@@ -934,22 +1215,72 @@ function FileRelationshipsPanel({host}: PanelProps) {
             .finally(() => setPending(false));
     }
 
-    /** Loads the closest pair nobody has ruled on and pins it as A against B. */
+    function show(pair: ComparedPair) {
+        if (focused !== null && compared !== null)
+            setHistory((past) => [...past, {a: focused, b: compared}].slice(-HISTORY_LIMIT));
+        setFocused(pair.a);
+        setCompared(pair.b);
+        setFlipSide('a');
+    }
+
+    /** Skip the displayed pair explicitly because failed rulings leave it in the queue. */
+    function takeQueued(): ComparedPair | undefined {
+        for (let next = queue.take(); next !== undefined; next = queue.take()) {
+            if (!isShown(next)) return next;
+        }
+        return undefined;
+    }
+
+    /**
+     * Compare IDs without ordering: queue pairs use ascending IDs, while similar results may be
+     * reversed.
+     */
+    function isShown(pair: ComparedPair): boolean {
+        const current = shown.current;
+        if (current === null) return false;
+        return (pair.a === current.a && pair.b === current.b) || (pair.a === current.b && pair.b === current.a);
+    }
+
     function advanceToNext(): Promise<void> {
-        return host.records.nextUndecidedDuplicate({distance}).then((next) => {
-            if (next.pair === null) {
+        const held = takeQueued();
+        if (held !== undefined) {
+            show(held);
+            return Promise.resolve();
+        }
+
+        return lookAhead().then(() => {
+            const next = takeQueued();
+            if (next === undefined) {
                 host.ui.toast(`Nothing left to rule on within ${bitsLabel(distance)}`, {kind: 'info'});
                 return;
             }
-            if (focused !== null && compared !== null)
-                setHistory((past) => [...past, {a: focused, b: compared}].slice(-HISTORY_LIMIT));
-            setFocused(next.pair.record_id_a);
-            setCompared(next.pair.record_id_b);
-            setFlipSide('a');
+            show(next);
         });
     }
 
+    function ruleBetter(better: RecordId, worse: RecordId) {
+        runAction(async () => {
+            await host.records.setBetterDuplicate(worse, better);
+            return `Record #${better} is now superior to #${worse}`;
+        }, true);
+    }
+
+    function ruleAlternatives(a: RecordId, b: RecordId) {
+        runAction(async () => {
+            await host.records.addAlternatives([a, b]);
+            return `Records #${a} and #${b} are now alternatives`;
+        }, true);
+    }
+
+    function ruleUnrelated(a: RecordId, b: RecordId) {
+        runAction(async () => {
+            await host.records.setUnrelated(a, b);
+            return `#${a} and #${b} are now marked unrelated`;
+        }, true);
+    }
+
     function loadNextUndecided() {
+        holdFocus();
         setPending(true);
         advanceToNext()
             .catch((error: unknown) => {
@@ -961,6 +1292,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
     function goBack() {
         const previous = history[history.length - 1];
         if (previous === undefined) return;
+        holdFocus();
         setHistory((past) => past.slice(0, -1));
         setFocused(previous.a);
         setCompared(previous.b);
@@ -969,14 +1301,230 @@ function FileRelationshipsPanel({host}: PanelProps) {
 
     function metadataFor(id: RecordId): RecordMetadata | undefined {
         const known = state.status === 'ok' ? state.metadata.get(id) : undefined;
-        return known ?? (similar.status === 'ok' ? similar.metadata.get(id) : undefined);
+        const lane = known ?? (similar.status === 'ok' ? similar.metadata.get(id) : undefined);
+        return lane ?? facts.current.get(id);
     }
 
-    const aMetadata = focused === null ? undefined : metadataFor(focused);
-    const bMetadata = compared === null ? undefined : metadataFor(compared);
+    /** Fetch missing queue metadata before computing quality order. */
+    function readMetadata(ids: RecordId[]): Promise<void> {
+        const missing = ids.filter((id) => !facts.current.has(id));
+        if (missing.length === 0) return Promise.resolve();
+
+        return host.records
+            .getMetadata(missing)
+            .then((response) => {
+                for (const record of response.records) facts.current.set(record.record_id, record);
+            })
+            .catch(() => undefined);
+    }
+
+    const focusedMetadata = focused === null ? undefined : metadataFor(focused);
+    const comparedMetadata = compared === null ? undefined : metadataFor(compared);
+
+    /**
+     * Order comparisons with the preferred copy as A. Keep similarity results anchored to the
+     * selected record.
+     */
+    const swapped = compareQuality(focusedMetadata, comparedMetadata).score < 0;
+    const sides: Sides | null = focused === null || compared === null
+        ? null
+        : swapped
+            ? {a: compared, b: focused}
+            : {a: focused, b: compared};
+    const aMetadata = swapped ? comparedMetadata : focusedMetadata;
+    const bMetadata = swapped ? focusedMetadata : comparedMetadata;
+    const verdict = compareQuality(aMetadata, bMetadata);
+
     const aBounds = boundsOf(aMetadata);
     const bBounds = boundsOf(bMetadata);
-    const pixels = usePixelComparison(host, focused, compared, aBounds, bBounds);
+    const pixels = usePixelComparison(host, sides?.a ?? null, sides?.b ?? null, aBounds, bBounds);
+    const comparable = sameResolution(aBounds, bBounds);
+
+    const pairShown = compared === null
+        || (loadedPair !== null && loadedPair.a === focused && loadedPair.b === compared);
+    /**
+     * Use one busy flag to hide images and disable rulings until decoding completes. Keep
+     * images mounted for recovery after failed actions.
+     */
+    const busy = pending || !pairShown;
+
+    /**
+     * Retain decoded HTMLImageElements in the cache. Resolve decode failures so they cannot
+     * block queue advancement.
+     */
+    function decode(id: RecordId): Promise<HTMLImageElement | undefined> {
+        const held = decoded.current.get(id);
+        if (held !== undefined) {
+            // Refresh insertion order to evict older pairs first.
+            decoded.current.delete(id);
+            decoded.current.set(id, held);
+            return Promise.resolve(held);
+        }
+
+        return loadImage(host.records.fileUrl(id)).then(
+            (image) => {
+                decoded.current.set(id, image);
+                for (const oldest of decoded.current.keys()) {
+                    if (decoded.current.size <= CACHE_LIMIT) break;
+                    decoded.current.delete(oldest);
+                }
+                return image;
+            },
+            () => undefined,
+        );
+    }
+
+    /** Run the full-resolution region scan only when overlays are enabled. */
+    useEffect(() => {
+        if (!markDifferences || !comparable || focused === null || compared === null || !pairShown) {
+            setMarks({status: 'off'});
+            return;
+        }
+
+        let cancelled = false;
+        setMarks({status: 'scanning'});
+
+        Promise.all([decode(focused), decode(compared)])
+            .then(async ([imageA, imageB]) => {
+                if (imageA === undefined || imageB === undefined)
+                    throw new Error('One of the two could not be read as an image');
+                const survey = await surveyDifference(imageA, imageB, () => cancelled);
+                if (!cancelled) setMarks({status: 'ready', survey});
+            })
+            .catch((error: unknown) => {
+                if (!cancelled) setMarks({status: 'error', message: message(error)});
+            });
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [markDifferences, comparable, focused, compared, pairShown, host]);
+
+    /**
+     * Wait for both metadata and decoded images before revealing the pair, so labels and
+     * quality order match the displayed files.
+     */
+    useEffect(() => {
+        if (focused === null || compared === null) return;
+
+        const pair = {a: focused, b: compared};
+        let cancelled = false;
+
+        void Promise.all([decode(pair.a), decode(pair.b), readMetadata([pair.a, pair.b])]).then(() => {
+            if (!cancelled) setLoadedPair(pair);
+        });
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [focused, compared, host]);
+
+    /**
+     * Prefetch metadata and decode lookahead pairs. Share requests within a queue generation
+     * across navigation; successful rulings invalidate them because inherited rulings may
+     * remove other candidates.
+     */
+    function lookAhead(): Promise<void> {
+        return queue.fill(async () => {
+            const response = await host.records.nextUndecidedDuplicate({distance, limit: LOOKAHEAD_PAIRS + 1});
+            const ahead = (response.pairs ?? [])
+                .map((pair) => ({a: pair.record_id_a, b: pair.record_id_b}))
+                .filter((pair) => !isShown(pair))
+                .slice(0, LOOKAHEAD_PAIRS);
+            await readMetadata(ahead.flatMap((pair) => [pair.a, pair.b]));
+
+            for (const pair of ahead) {
+                await decode(pair.a);
+                await decode(pair.b);
+            }
+            return ahead;
+        });
+    }
+
+    /** A changed query or host must not reuse candidates from an earlier request. */
+    useEffect(() => {
+        queue.invalidate();
+        return () => queue.invalidate();
+    }, [distance, host, queue]);
+
+    /** Read the current pair when lookahead resolves to exclude it after intervening navigation. */
+    useEffect(() => {
+        shown.current = focused === null || compared === null ? null : {a: focused, b: compared};
+    }, [focused, compared]);
+
+    /** Refill after each ruling because inherited relationships may invalidate queued pairs. */
+    useEffect(() => {
+        if (focused === null || compared === null || !pairShown) return;
+        void lookAhead().catch(() => undefined);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [focused, compared, pairShown, distance, reloadToken, host]);
+
+    /**
+     * Scope keypad handling to the focused panel. Keys 3, 4, and 6 return from the difference
+     * view to comparison.
+     */
+    useEffect(() => {
+        if (sides === null || busy) return;
+
+        const a: RecordId = sides.a;
+        const b: RecordId = sides.b;
+
+        function onKey(event: KeyboardEvent) {
+            if (event.ctrlKey || event.altKey || event.metaKey) return;
+
+            const root = rootRef.current;
+            const target = event.target;
+            if (!root || !(target instanceof HTMLElement) || !root.contains(target)) return;
+            if (TYPED_INTO.has(target.tagName) || target.isContentEditable) return;
+
+            const action = KEYPAD[event.code];
+            if (action === undefined) return;
+            if (action === 'diff' && !comparable) return;
+
+            // Capture before the frame handles Num Lock-off arrow keys.
+            event.preventDefault();
+            event.stopPropagation();
+
+            switch (action) {
+                case 'a':
+                case 'b':
+                    setFlipSide(action);
+                    if (compareView === 'diff') {
+                        setCompareView('flip');
+                        // Restore panel focus before unmounting the difference canvas.
+                        root.focus();
+                    }
+                    return;
+                case 'a-better':
+                    ruleBetter(a, b);
+                    return;
+                case 'b-better':
+                    ruleBetter(b, a);
+                    return;
+                case 'alternative':
+                    ruleAlternatives(a, b);
+                    return;
+                case 'unrelated':
+                    ruleUnrelated(a, b);
+                    return;
+                case 'diff':
+                    setCompareView('diff');
+                    root.focus();
+                    return;
+                case 'layout':
+                    setCompareView(compareView === 'flip' ? 'side-by-side' : 'flip');
+                    // Restore panel focus before unmounting the difference canvas.
+                    root.focus();
+                    return;
+            }
+        }
+
+        window.addEventListener('keydown', onKey, true);
+        return () => window.removeEventListener('keydown', onKey, true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [compareView, sides?.a, sides?.b, busy, comparable, host, distance]);
 
     if (focused === null) {
         return (
@@ -988,7 +1536,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                 <button
                     type="button"
                     className="file-relationship-action"
-                    disabled={pending}
+                    disabled={busy}
                     title={`Jump to the closest pair within ${bitsLabel(distance)} that nobody has ruled on`}
                     onClick={loadNextUndecided}
                 >
@@ -1022,19 +1570,18 @@ function FileRelationshipsPanel({host}: PanelProps) {
         return relation ?? distanceText;
     }
 
-    function similarDistance(id: RecordId): number | undefined {
-        if (similar.status !== 'ok') return undefined;
-        return similar.records.find((record) => record.record_id === id)?.distance;
-    }
-
     const onCardMenu = (event: ReactMouseEvent, id: RecordId) => openRecordMenu(event, [id]);
-    const comparing = compared !== null;
+    const comparing = sides !== null;
     const comparedRelation = compared === null ? undefined : relationTo(compared);
-    const comparable = sameResolution(aBounds, bBounds);
+    const sideBRelation = swapped ? flipRelation(comparedRelation) : comparedRelation;
     const previousPair = history[history.length - 1];
 
     return (
-        <div className={`file-relationships-panel${comparing ? ' is-comparing' : ''}`}>
+        <div
+            ref={rootRef}
+            tabIndex={-1}
+            className={`file-relationships-panel${comparing ? ' is-comparing' : ''}`}
+        >
             <section className="file-relationship-primary" aria-labelledby={`selected-${host.instanceId}`}>
                 <div className="file-relationship-group-head">
                     <h2 id={`selected-${host.instanceId}`}>{comparing ? 'Comparison' : 'Primary'}</h2>
@@ -1060,10 +1607,28 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 </select>
                             </label>
                         )}
+                        {comparing && compareView !== 'diff' && (
+                            <label
+                                className="file-relationship-toggle"
+                                title={
+                                    comparable
+                                        ? 'Box every area where the two differ, read at full resolution'
+                                        : 'The two are different resolutions, so their pixels do not line up'
+                                }
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={markDifferences}
+                                    disabled={!comparable}
+                                    onChange={(event) => setMarkDifferences(event.target.checked)}
+                                />
+                                <span>Mark differences</span>
+                            </label>
+                        )}
                         <button
                             type="button"
                             className="file-relationship-action"
-                            disabled={pending || previousPair === undefined}
+                            disabled={busy || previousPair === undefined}
                             title={
                                 previousPair === undefined
                                     ? 'No earlier pair to go back to'
@@ -1076,22 +1641,38 @@ function FileRelationshipsPanel({host}: PanelProps) {
                         <button
                             type="button"
                             className="file-relationship-action"
-                            disabled={pending}
+                            disabled={busy}
                             title={`Jump to the closest pair within ${bitsLabel(distance)} that nobody has ruled on`}
                             onClick={loadNextUndecided}
                         >
                             Next Unresolved
                         </button>
-                        {comparing && (
+                        {sides !== null && (
                             <>
                                 <button
                                     type="button"
                                     className="file-relationship-action"
+                                    disabled={busy}
+                                    title={`Reparse records ${sides.a} and ${sides.b} and reload both sides`}
+                                    onClick={() =>
+                                        runAction(async () => {
+                                            await host.records.regenerateMetadata([sides.a, sides.b]);
+                                            facts.current.delete(sides.a);
+                                            facts.current.delete(sides.b);
+                                            return `Regenerated metadata for #${sides.a} and #${sides.b}`;
+                                        })
+                                    }
+                                >
+                                    Regenerate Metadata
+                                </button>
+                                <button
+                                    type="button"
+                                    className="file-relationship-action"
                                     disabled={aMetadata?.size === undefined || bMetadata?.size === undefined}
-                                    title={`Download both record ${focused} and record ${compared}`}
+                                    title={`Download both record ${sides.a} and record ${sides.b}`}
                                     onClick={() => {
-                                        downloadRecord(host, focused);
-                                        downloadRecord(host, compared);
+                                        downloadRecord(host, sides.a);
+                                        downloadRecord(host, sides.b);
                                     }}
                                 >
                                     Download Both
@@ -1104,7 +1685,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                         )}
                     </div>
                 </div>
-                {compared === null ? (
+                {sides === null ? (
                     <FileCard
                         host={host}
                         id={focused}
@@ -1116,55 +1697,12 @@ function FileRelationshipsPanel({host}: PanelProps) {
                     />
                 ) : (
                     <>
-                        {compareView === 'side-by-side' && (
-                            <div className="file-relationship-compare">
-                                <div className="file-relationship-compare-side is-a">
-                                    <FileCard
-                                        host={host}
-                                        id={focused}
-                                        metadata={aMetadata}
-                                        selected
-                                        onSelect={() => {
-                                        }}
-                                        onMenu={onCardMenu}
-                                    />
-                                    <CompareInfo
-                                        which="a"
-                                        id={focused}
-                                        metadata={aMetadata}
-                                        other={bMetadata}
-                                        detail="primary"
-                                        pixelDuplicate={pixels.status === 'identical'}
-                                        active={false}
-                                    />
-                                </div>
-                                <div className="file-relationship-compare-side is-b">
-                                    <FileCard
-                                        host={host}
-                                        id={compared}
-                                        metadata={bMetadata}
-                                        selected
-                                        relation={comparedRelation}
-                                        onSelect={() => setCompared(null)}
-                                        onMenu={onCardMenu}
-                                    />
-                                    <CompareInfo
-                                        which="b"
-                                        id={compared}
-                                        metadata={bMetadata}
-                                        other={aMetadata}
-                                        detail={describe(compared, similarDistance(compared)) ?? 'no known relationship'}
-                                        pixelDuplicate={pixels.status === 'identical'}
-                                        active={false}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                        {compareView === 'flip' && (
-                            <FlipCompare
+                        {compareView !== 'diff' && (
+                            <PairCompare
                                 host={host}
-                                a={focused}
-                                b={compared}
+                                layout={compareView}
+                                a={sides.a}
+                                b={sides.b}
                                 aBounds={aBounds}
                                 bBounds={bBounds}
                                 side={flipSide}
@@ -1173,14 +1711,18 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 onMatchScale={setMatchScale}
                                 aMetadata={aMetadata}
                                 bMetadata={bMetadata}
-                                bDetail={comparedRelation}
+                                bDetail={sideBRelation}
+                                verdict={verdict}
                                 pixelDuplicate={pixels.status === 'identical'}
+                                diffKey={comparable}
+                                blank={busy}
+                                marks={marks}
                                 onMenu={onCardMenu}
                             />
                         )}
                         {compareView === 'diff'
                             && (comparable ? (
-                                <DiffCompare host={host} a={focused} b={compared} aBounds={aBounds} bBounds={bBounds}/>
+                                <DiffCompare host={host} a={sides.a} b={sides.b} aBounds={aBounds} bBounds={bBounds}/>
                             ) : (
                                 <p className="file-relationship-none muted">
                                     These two are different resolutions, so there is no pixel difference to show.
@@ -1192,70 +1734,50 @@ function FileRelationshipsPanel({host}: PanelProps) {
                             <button
                                 type="button"
                                 className="file-relationship-action is-better"
-                                disabled={pending || comparedRelation === 'inferior'}
-                                title={`Mark record ${focused} as the superior copy of record ${compared}`}
-                                onClick={() =>
-                                    runAction(async () => {
-                                        await host.records.setBetterDuplicate(compared, focused);
-                                        return `Record #${focused} is now superior to #${compared}`;
-                                    }, true)
-                                }
+                                disabled={busy || sideBRelation === 'inferior'}
+                                title={`Mark record ${sides.a} as the superior copy of record ${sides.b} (keypad 7)`}
+                                onClick={() => ruleBetter(sides.a, sides.b)}
                             >
-                                A #{focused} Better
+                                A #{sides.a} Better
                             </button>
                             <button
                                 type="button"
                                 className="file-relationship-action is-better"
-                                disabled={pending || comparedRelation === 'superior'}
-                                title={`Mark record ${compared} as the superior copy of record ${focused}`}
-                                onClick={() =>
-                                    runAction(async () => {
-                                        await host.records.setBetterDuplicate(focused, compared);
-                                        return `Record #${compared} is now superior to #${focused}`;
-                                    }, true)
-                                }
+                                disabled={busy || sideBRelation === 'superior'}
+                                title={`Mark record ${sides.b} as the superior copy of record ${sides.a} (keypad 9)`}
+                                onClick={() => ruleBetter(sides.b, sides.a)}
                             >
-                                B #{compared} Better
+                                B #{sides.b} Better
                             </button>
                             <button
                                 type="button"
                                 className="file-relationship-action is-primary"
-                                disabled={pending || comparedRelation === 'alternative'}
-                                title={`Pair records ${focused} and ${compared} as alternatives`}
-                                onClick={() =>
-                                    runAction(async () => {
-                                        await host.records.addAlternatives([focused, compared]);
-                                        return `Records #${focused} and #${compared} are now alternatives`;
-                                    }, true)
-                                }
+                                disabled={busy || sideBRelation === 'alternative'}
+                                title={`Pair records ${sides.a} and ${sides.b} as alternatives (keypad 5)`}
+                                onClick={() => ruleAlternatives(sides.a, sides.b)}
                             >
                                 Set Alternatives
                             </button>
                             <button
                                 type="button"
                                 className="file-relationship-action is-quarter"
-                                disabled={pending || comparedRelation === 'unrelated'}
-                                title={`Mark records ${focused} and ${compared} as coincidental lookalikes`}
-                                onClick={() =>
-                                    runAction(async () => {
-                                        await host.records.setUnrelated(focused, compared);
-                                        return `#${focused} and #${compared} are now marked unrelated`;
-                                    }, true)
-                                }
+                                disabled={busy || sideBRelation === 'unrelated'}
+                                title={`Mark records ${sides.a} and ${sides.b} as coincidental lookalikes (keypad 2)`}
+                                onClick={() => ruleUnrelated(sides.a, sides.b)}
                             >
                                 Set Unrelated
                             </button>
                             <button
                                 type="button"
                                 className="file-relationship-action is-danger is-quarter"
-                                disabled={pending}
-                                title={`Drop the relationship between records ${focused} and ${compared}`}
+                                disabled={busy}
+                                title={`Drop the relationship between records ${sides.a} and ${sides.b}`}
                                 onClick={() =>
                                     runAction(async () => {
-                                        const cleared = await host.records.clearRelationship(focused, compared);
+                                        const cleared = await host.records.clearRelationship(sides.a, sides.b);
                                         if (cleared.duplicate_removed || cleared.alternative_removed)
-                                            return `Cleared the relationship between #${focused} and #${compared}`;
-                                        return `#${focused} and #${compared} have no direct relationship to clear`;
+                                            return `Cleared the relationship between #${sides.a} and #${sides.b}`;
+                                        return `#${sides.a} and #${sides.b} have no direct relationship to clear`;
                                     })
                                 }
                             >
@@ -1324,6 +1846,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                         detail={describe(record.record_id, record.distance)}
                                         relation={relationTo(record.record_id)}
                                         active={record.record_id === compared}
+                                        thumbnail
                                         onSelect={compareWith}
                                         onMenu={onCardMenu}
                                     />

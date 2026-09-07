@@ -1,11 +1,6 @@
 /**
- * Thumbnail Grid: the workhorse view, backed directly by the shared result set's Int32Array
- * (host.results), so a 100k set costs around 400 KB. Rows are virtualized with
- * @tanstack/react-virtual, keeping the DOM to the visible window plus a little overscan regardless of
- * set size; discrete tile sizes {128,256,512} give fixed rows, so there is no measurement pass.
- *
- * Selection is driven here (click, ctrl-toggle, shift-range) and pushed to host.selection so the
- * viewer, record info, and tag editor follow along. Double-click activates a record on the bus.
+ * Virtualized thumbnail grid backed by host.results. Selection updates host.selection;
+ * activation uses the bus. Prefetch visible rows before neighboring viewports.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -18,6 +13,40 @@ import type {RecordAction} from './recordActions';
 const TILE_SIZES: readonly number[] = [128, 256, 512];
 const GAP = 6;
 const OVERSCAN_ROWS = 2;
+// Bound thumbnail prefetch concurrency to reserve capacity for visible tiles.
+const MAX_INFLIGHT_PREFETCH = 6;
+const PREFETCH_MEMORY = 4096;
+
+/** Replace pending prefetches on each submission; preserve requests already in progress. */
+function createPrefetchQueue() {
+  const requested = new Set<string>();
+  let queue: string[] = [];
+  let inflight = 0;
+
+  const pump = () => {
+    while (inflight < MAX_INFLIGHT_PREFETCH && queue.length > 0) {
+      const url = queue.shift()!;
+      if (requested.has(url)) continue;
+      if (requested.size >= PREFETCH_MEMORY) requested.clear();
+      requested.add(url);
+      inflight += 1;
+      const img = new Image();
+      const finish = () => {
+        inflight -= 1;
+        pump();
+      };
+      img.onload = finish;
+      img.onerror = finish;
+      img.decoding = 'async';
+      img.src = url;
+    }
+  };
+
+  return (urls: readonly string[]) => {
+    queue = urls.filter((url) => !requested.has(url));
+    pump();
+  };
+}
 
 type Config = { tileSize: number };
 const DEFAULT_CONFIG: Config = { tileSize: 256 };
@@ -51,6 +80,7 @@ function GridPanel({ host }: PanelProps) {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const anchorIndex = useRef<number | null>(null);
+  const [prefetch] = useState(createPrefetchQueue);
 
   useEffect(() => host.results.subscribe(setResults), [host]);
   useEffect(() => host.selection.subscribe((ids) => setSelected(new Set(ids))), [host]);
@@ -139,6 +169,34 @@ function GridPanel({ host }: PanelProps) {
   }
 
   const virtualRows = virtualizer.getVirtualItems();
+  const firstRow = virtualRows[0]?.index ?? -1;
+  const lastRow = virtualRows[virtualRows.length - 1]?.index ?? -1;
+
+  // Warm the rendered rows first, then walk outwards a viewport in each direction.
+  useEffect(() => {
+    if (firstRow < 0) return;
+    const viewportRows = Math.max(1, Math.ceil((scrollRef.current?.clientHeight ?? 0) / rowHeight));
+    const top = Math.max(0, firstRow - viewportRows);
+    const bottom = Math.min(rowCount - 1, lastRow + viewportRows);
+
+    const rows: number[] = [];
+    for (let row = firstRow; row <= lastRow; row++) rows.push(row);
+    for (let offset = 1; ; offset++) {
+      const below = lastRow + offset;
+      const above = firstRow - offset;
+      if (below > bottom && above < top) break;
+      if (below <= bottom) rows.push(below);
+      if (above >= top) rows.push(above);
+    }
+
+    const urls: string[] = [];
+    for (const row of rows) {
+      const start = row * columns;
+      const end = Math.min(start + columns, ids.length);
+      for (let i = start; i < end; i++) urls.push(host.records.thumbnailUrl(ids[i]!, tileSize));
+    }
+    prefetch(urls);
+  }, [host, prefetch, ids, tileSize, columns, rowCount, rowHeight, firstRow, lastRow]);
 
   return (
     <div className="grid-panel">

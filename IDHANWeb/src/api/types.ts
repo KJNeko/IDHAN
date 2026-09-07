@@ -112,6 +112,16 @@ export interface RecordMetadata {
     has_xmp?: boolean;
     has_iptc?: boolean;
     has_icc_profile?: boolean;
+    /** image. Absent when encoding information is unavailable or has not been parsed. */
+    lossless?: boolean;
+    /** image. IJG 1-100 quality estimated from the quantization tables. JPEG only. */
+    quality?: number;
+    /** image. '4:4:4', '4:2:2', '4:4:0', '4:2:0' or 'greyscale'. JPEG only. */
+    chroma_subsampling?: string;
+    /** image. JPEG progressive-scan flag; absent when unavailable. */
+    progressive?: boolean;
+    /** image. Sanitized JPEG COM text. Empty if no text was retained; absent if not parsed. */
+    comment?: string;
     /** image_project. */
     layers?: number;
 
@@ -145,9 +155,11 @@ export interface MetadataResponse {
 
 /** Duplicate and alternative neighbours of one record (GET /relationships/{record_id}). */
 export interface FileRelationships {
+    /** Immediate inferior links, ordered by record ID. */
     inferior: number[];
+    /** The immediate superior, or an empty array at a chain's root. */
     superior: number[];
-    /** Records directly paired with this one as alternatives, record-id-ordered. */
+    /** Alternative chain roots inherited through this record's root, ordered by record ID. */
     alternatives: number[];
 }
 
@@ -171,10 +183,10 @@ export interface UndecidedPair {
 export interface UndecidedDuplicate {
     /** The maximum distance that was searched, echoed back. */
     distance: number;
-    /** Pairs already marked coincidental lookalikes were eligible. */
-    include_unrelated: boolean;
     /** Null once every pair within the distance has been ruled on. */
     pair: UndecidedPair | null;
+    /** Includes `pair`, followed by queued pairs in response order, up to `limit`. */
+    pairs: UndecidedPair[];
 }
 
 /** One record within a perceptual-hash distance of the probe. */

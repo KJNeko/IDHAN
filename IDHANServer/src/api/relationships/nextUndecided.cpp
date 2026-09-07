@@ -5,6 +5,8 @@ namespace idhan::api
 {
 
 constexpr std::uint16_t MAX_UNDECIDED_DISTANCE { 8 };
+constexpr std::uint16_t DEFAULT_LIMIT { 1 };
+constexpr std::uint16_t MAX_LIMIT { 32 };
 
 drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::nextUndecided( const drogon::HttpRequestPtr request )
 {
@@ -15,38 +17,38 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::nextUndecided( con
 		MAX_UNDECIDED_DISTANCE ) };
 	if ( !distance ) co_return distance.error();
 
-	const bool include_unrelated { request->getOptionalParameter< bool >( "include_unrelated" ).value_or( false ) };
+	const auto limit { helpers::parseBoundedParameter(
+		request->getOptionalParameter< std::string >( "limit" ), "limit", DEFAULT_LIMIT, MAX_LIMIT ) };
+	if ( !limit ) co_return limit.error();
 
 	const auto db { drogon::app().getDbClient() };
 
-	// undecided_hamming_distance and unrelated_records both store the lower id first, so the pair
-	// matches column for column
-	const auto pair { co_await db->execSqlCoro(
-		"SELECT left_id, right_id, distance FROM undecided_hamming_distance undecided "
+	// Rulings delete distances. Group candidates by left_id for primary-key access, then order
+	// each group by distance.
+	const auto found { co_await db->execSqlCoro(
+		"SELECT left_id, right_id, distance FROM hamming_distance "
 		"WHERE distance <= $1::integer "
-		"AND ($2::boolean OR NOT EXISTS ("
-		"  SELECT 1 FROM unrelated_records unrelated "
-		"  WHERE unrelated.lesser_record_id = undecided.left_id "
-		"    AND unrelated.greater_record_id = undecided.right_id)) "
-		"ORDER BY distance, left_id, right_id LIMIT 1",
+		"ORDER BY left_id, distance, right_id LIMIT $2::integer",
 		static_cast< Integer >( *distance ),
-		include_unrelated ) };
+		static_cast< Integer >( *limit ) ) };
 
 	Json::Value json {};
 	json[ "distance" ] = *distance;
-	json[ "include_unrelated" ] = include_unrelated;
 
-	if ( pair.empty() )
+	Json::Value pairs { Json::arrayValue };
+
+	for ( const auto& row : found )
 	{
-		json[ "pair" ] = Json::nullValue;
-		co_return drogon::HttpResponse::newHttpJsonResponse( json );
+		Json::Value pair {};
+		pair[ "record_id_a" ] = row[ "left_id" ].as< RecordID >();
+		pair[ "record_id_b" ] = row[ "right_id" ].as< RecordID >();
+		pair[ "distance" ] = row[ "distance" ].as< Integer >();
+		pairs.append( std::move( pair ) );
 	}
 
-	Json::Value found {};
-	found[ "record_id_a" ] = pair[ 0 ][ "left_id" ].as< RecordID >();
-	found[ "record_id_b" ] = pair[ 0 ][ "right_id" ].as< RecordID >();
-	found[ "distance" ] = pair[ 0 ][ "distance" ].as< Integer >();
-	json[ "pair" ] = std::move( found );
+	// Retain the single-pair response field for existing clients.
+	json[ "pair" ] = pairs.empty() ? Json::nullValue : pairs[ 0 ];
+	json[ "pairs" ] = std::move( pairs );
 
 	co_return drogon::HttpResponse::newHttpJsonResponse( json );
 }

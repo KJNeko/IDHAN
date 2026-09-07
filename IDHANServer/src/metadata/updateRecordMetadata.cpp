@@ -7,6 +7,7 @@
 #include "filesystem/clusters/ClusterManager.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "metadata.hpp"
+#include "phash.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "records/records.hpp"
 #include "threading/ExpectedTask.hpp"
@@ -25,6 +26,14 @@ static std::string phashToBitLiteral( const PerceptualHash& phash )
 		literal[ 2 + ( i * 2 ) ] = HEX[ byte & 0x0f ];
 	}
 	return literal;
+}
+
+drogon::Task< void > updateMissingPhash( const RecordID record_id, DbClientPtr db, PerceptualHash phash )
+{
+	co_await db->execSqlCoro(
+		"UPDATE image_metadata SET phash = $2 WHERE record_id = $1 AND phash IS NULL",
+		record_id,
+		phashToBitLiteral( phash ) );
 }
 
 ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr db, MetadataInfo metadata )
@@ -72,12 +81,28 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 				if ( image_metadata.phash ) phash = phashToBitLiteral( *image_metadata.phash );
 
 				const auto& embedded { image_metadata.embedded };
+				const auto& encoding { image_metadata.encoding };
+
+				std::optional< bool > lossless {};
+				std::optional< SmallInt > quality {};
+				std::optional< SmallInt > subsampling {};
+				std::optional< bool > progressive {};
+
+				if ( encoding )
+				{
+					lossless = encoding->lossless;
+					subsampling = static_cast< SmallInt >( std::to_underlying( encoding->subsampling ) );
+					progressive = encoding->progressive;
+					if ( encoding->quality ) quality = static_cast< SmallInt >( *encoding->quality );
+				}
 
 				co_await db->execSqlCoro(
-					"INSERT INTO image_metadata (record_id, width, height, channels, phash, has_exif, has_gps, has_xmp, has_iptc, has_icc_profile) "
-					"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) "
+					"INSERT INTO image_metadata (record_id, width, height, channels, phash, has_exif, has_gps, has_xmp, has_iptc, has_icc_profile, "
+					"lossless, quality, subsampling, progressive, comment) "
+					"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) "
 					"ON CONFLICT (record_id) DO UPDATE SET width = $2, height = $3, channels = $4, phash = $5, "
-					"has_exif = $6, has_gps = $7, has_xmp = $8, has_iptc = $9, has_icc_profile = $10",
+					"has_exif = $6, has_gps = $7, has_xmp = $8, has_iptc = $9, has_icc_profile = $10, "
+					"lossless = $11, quality = $12, subsampling = $13, progressive = $14, comment = $15",
 					record_id,
 					image_metadata.width,
 					image_metadata.height,
@@ -87,7 +112,12 @@ ExpectedTask< void > updateRecordMetadata( const RecordID record_id, DbClientPtr
 					embedded.gps,
 					embedded.xmp,
 					embedded.iptc,
-					embedded.icc_profile );
+					embedded.icc_profile,
+					lossless,
+					quality,
+					subsampling,
+					progressive,
+					image_metadata.comment );
 
 				break;
 			}

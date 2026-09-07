@@ -14,18 +14,18 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::getRelationships(
 	if ( !validation ) co_return validation.error();
 
 	auto inferior_result { db->execSqlCoro(
-		"SELECT inferior.inferior_id FROM duplicate_groups duplicate_group "
-		"JOIN duplicate_group_inferiors inferior USING (duplicate_id) "
-		"WHERE duplicate_group.king_id = $1 ORDER BY inferior.inferior_id",
+		"SELECT worse_record_id FROM duplicate_pairs "
+		"WHERE better_record_id = $1 ORDER BY worse_record_id",
 		record_id ) };
-	auto superior_result { db->execSqlCoro(
-		"SELECT duplicate_group.king_id FROM duplicate_group_inferiors inferior "
-		"JOIN duplicate_groups duplicate_group USING (duplicate_id) WHERE inferior.inferior_id = $1",
-		record_id ) };
+	auto superior_result {
+		db->execSqlCoro( "SELECT better_record_id FROM duplicate_pairs WHERE worse_record_id = $1", record_id )
+	};
+	// Resolve inherited alternatives through the record's king.
 	auto alternative_result { db->execSqlCoro(
-		"SELECT greater_record_id AS record_id FROM alternative_records WHERE lesser_record_id = $1"
+		"SELECT greater_record_id AS record_id FROM alternative_records"
+		"  WHERE lesser_record_id = duplicate_king($1)"
 		"  UNION"
-		"  SELECT lesser_record_id FROM alternative_records WHERE greater_record_id = $1"
+		"  SELECT lesser_record_id FROM alternative_records WHERE greater_record_id = duplicate_king($1)"
 		" ORDER BY record_id",
 		record_id ) };
 

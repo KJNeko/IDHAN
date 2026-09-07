@@ -26,6 +26,7 @@
 #include "filesystem/io/IOUring.hpp"
 #include "hamming/hamming.hpp"
 #include "logging/log.hpp"
+#include "metadata/phash.hpp"
 #include "mime/syncMimeTable.hpp"
 #include "spdlog/async.h"
 
@@ -124,7 +125,7 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	const std::filesystem::path log_path { config::getLogPath() };
 
-	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 0 ) };
+	const std::size_t ring_buffer_size { config::getSilentDefault< std::size_t >( "logging", "buffer_size", 1000000 ) };
 
 	std::vector< spdlog::sink_ptr > sinks {};
 
@@ -387,6 +388,7 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 				} );
 
 			hamming::startQueueSweeper();
+			metadata::startPhashSweeper();
 
 			log::info( "IDHAN initialization finished" );
 			log::info( "Server available at http://localhost:{}", listen_port );

@@ -68,6 +68,43 @@ properties:
     type: boolean
     description: Images. The file carries an embedded ICC colour profile.
     example: true
+  lossless:
+    type: boolean
+    description: >
+      Images. The encoding threw no pixel data away. Absent when the format
+      records nothing that would answer it, such as TIFF or AVIF, and when the
+      image was parsed before encoding settings were looked for.
+    example: false
+  quality:
+    type: integer
+    format: int32
+    minimum: 1
+    maximum: 100
+    description: >
+      Images. The IJG 1-100 quality whose scaled standard quantization tables sit
+      closest to the ones the file carries. JPEG only, and an estimate: an encoder
+      that does not derive its tables from the IJG ones reports the nearest match
+      rather than the number it was given.
+    example: 85
+  chroma_subsampling:
+    type: string
+    enum: [ "4:4:4", "4:2:2", "4:4:0", "4:2:0", greyscale ]
+    description: Images. How the chroma planes were sampled against luma. JPEG only.
+    example: "4:2:0"
+  progressive:
+    type: boolean
+    description: Images. The scan is progressive rather than baseline. JPEG only.
+    example: false
+  comment:
+    type: string
+    maxLength: 255
+    description: >
+      Images. The text of a JPEG COM segment, which is usually the encoder
+      naming itself. Sanitized to printable UTF-8 and capped. An empty string
+      means the file was read for one and carries none; the field is absent
+      entirely for a format that was never read for one, which is everything but
+      JPEG.
+    example: Paint Tool -SAI- JPEG Encoder v1.00
   duration:
     type: number
     format: double
