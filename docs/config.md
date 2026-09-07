@@ -99,7 +99,7 @@ The following example covers the most common options. Commented-out lines show t
 # Log output directory
 #path = "./log"
 # Entries held in memory for the /log endpoint; 0 disables the endpoint
-#buffer_size = 0
+#buffer_size = 1000000
 # Warn when a request exceeds the performance threshold
 #enable_perf_warnings = false
 

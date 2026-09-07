@@ -5,6 +5,11 @@ post:
   description: |
     Directional: `better_id` is the record to keep, `worse_id` the duplicate.
     Takes a single object or an array of them.
+    Stores an immediate inferior-to-superior link. If B is inferior to A, marking C
+    inferior to B preserves C → B → A. Clearing B → A leaves C → B intact.
+    Replacing a record's superior moves its descendants with it. If the chosen
+    superior is one of its descendants, that superior first takes its former place
+    in the chain, preventing a cycle. Roots are derived through a recursive view.
   requestBody:
     required: true
     content:

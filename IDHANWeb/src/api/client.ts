@@ -262,16 +262,16 @@ export const api = {
     },
 
     /**
-     * The closest pair still awaiting a duplicate decision, nearest first
-     * (GET /relationships/duplicates/undecided).
+     * Return undecided pairs ordered by record ID, then distance. `limit` controls lookahead
+     * size.
      */
     nextUndecidedDuplicate(
-        opts: { distance?: number; includeUnrelated?: boolean } = {},
+        opts: { distance?: number; limit?: number } = {},
         signal?: AbortSignal,
     ): Promise<UndecidedDuplicate> {
         const params = new URLSearchParams();
         if (opts.distance !== undefined) params.set('distance', String(opts.distance));
-        if (opts.includeUnrelated !== undefined) params.set('include_unrelated', String(opts.includeUnrelated));
+        if (opts.limit !== undefined) params.set('limit', String(opts.limit));
         const query = params.toString();
         return request<UndecidedDuplicate>(`/relationships/duplicates/undecided${query ? `?${query}` : ''}`, {signal});
     },

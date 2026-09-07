@@ -67,6 +67,11 @@ const KNOWN = new Set([
     'has_xmp',
     'has_iptc',
     'has_icc_profile',
+    'lossless',
+    'quality',
+    'chroma_subsampling',
+    'progressive',
+    'comment',
     'layers',
     'duration',
     'bitrate',
@@ -116,6 +121,9 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
     const archiveId = num(info.archive_id);
     const fileCount = num(info.file_count);
     const hasAudio = bool(info.has_audio);
+    const lossless = bool(info.lossless);
+    const quality = num(info.quality);
+    const progressive = bool(info.progressive);
     const embedded = EMBEDDED_BLOCKS.filter(({key}) => info[key] === true).map(({label}) => label);
     // Every block is reported together, so one known flag means the image was parsed for all of them.
     const embeddedKnown = EMBEDDED_BLOCKS.some(({key}) => typeof info[key] === 'boolean');
@@ -152,6 +160,13 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
             </Row>
         )}
         {channels !== undefined && <Row label="Channels">{channels}</Row>}
+        {lossless !== undefined && <Row label="Encoding">{lossless ? 'Lossless' : 'Lossy'}</Row>}
+        {quality !== undefined && <Row label="Quality">q{quality}</Row>}
+        {typeof info.chroma_subsampling === 'string' && (
+            <Row label="Subsampling">{info.chroma_subsampling}</Row>
+        )}
+        {progressive !== undefined && <Row label="Scan">{progressive ? 'Progressive' : 'Baseline'}</Row>}
+        {typeof info.comment === 'string' && info.comment !== '' && <Row label="Comment">{info.comment}</Row>}
         {embeddedKnown && (
             <Row label="Embedded">
                 {embedded.length > 0 ? embedded.join(', ') : <span className="muted">None</span>}

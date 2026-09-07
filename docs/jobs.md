@@ -38,6 +38,24 @@ rescanned. The stored result reports `scanned_count` and `failed_count`.
 
 Dispatched by `GET /test`. A trivial job (runs a `SELECT 1`) used to exercise the job machinery.
 
+# Periodic maintenance
+
+The missing-image-phash and hamming-distance sweeps have separate execution gates. The timers
+attempt to enter each gate once per second; a call while that sweep is running returns immediately.
+Each run snapshots its pending record IDs and processes the entire list in consecutive batches,
+without waiting for another timer tick. The gate remains held across all batches and is released
+on completion or an exception. These gates are per server process.
+
+Generation batches attempt up to eight images with a NULL phash, a cluster ID, and no delete
+timestamp. Eligibility is checked again before each batch. The sweep uses the module metadata
+parser and writes only the phash, provided it is still NULL; database triggers queue the resulting
+distance calculations. Failed parses and blank hashes are attempted once per run, then retried
+on a later run so they cannot block the rest of the list.
+
+Distance batches claim up to 32 records from the run's queue snapshot, keeping each batch in its
+own transaction. Both sweeps report progress at info level after batches. Work added after a
+snapshot is picked up by a later run. These timer sweeps are not tracked by the job endpoints.
+
 # Job status
 
 The status endpoints return a JSON object per job. `status` is one of:

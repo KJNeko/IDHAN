@@ -1,6 +1,8 @@
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
+#include "MetadataInfo.hpp"
 #include "PerceptualHash.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/drogonArrayBind.hpp"
@@ -33,6 +35,11 @@ static const Json::StaticString KEY_HAS_GPS { "has_gps" };
 static const Json::StaticString KEY_HAS_XMP { "has_xmp" };
 static const Json::StaticString KEY_HAS_IPTC { "has_iptc" };
 static const Json::StaticString KEY_HAS_ICC_PROFILE { "has_icc_profile" };
+static const Json::StaticString KEY_LOSSLESS { "lossless" };
+static const Json::StaticString KEY_QUALITY { "quality" };
+static const Json::StaticString KEY_CHROMA_SUBSAMPLING { "chroma_subsampling" };
+static const Json::StaticString KEY_PROGRESSIVE { "progressive" };
+static const Json::StaticString KEY_COMMENT { "comment" };
 static const Json::StaticString KEY_LAYERS { "layers" };
 static const Json::StaticString KEY_DURATION { "duration" };
 static const Json::StaticString KEY_BITRATE { "bitrate" };
@@ -49,6 +56,28 @@ static const Json::StaticString KEY_FILE_COUNT { "file_count" };
 //!@}
 
 constexpr std::size_t PHASH_BITS { std::tuple_size_v< PerceptualHash > * 8 };
+
+//! Return empty for unknown subsampling values, which are omitted from JSON.
+static std::string_view subsamplingName( const ChromaSubsampling subsampling )
+{
+	switch ( subsampling )
+	{
+		case ChromaSubsampling::GREYSCALE:
+			return "greyscale";
+		case ChromaSubsampling::NONE:
+			return "4:4:4";
+		case ChromaSubsampling::HORIZONTAL:
+			return "4:2:2";
+		case ChromaSubsampling::VERTICAL:
+			return "4:4:0";
+		case ChromaSubsampling::BOTH:
+			return "4:2:0";
+		case ChromaSubsampling::UNKNOWN:
+			[[fallthrough]];
+		default:
+			return "";
+	}
+}
 
 static std::string_view simpleTypeName( const SimpleMimeType type )
 {
@@ -154,7 +183,7 @@ static void addMetadataFields(
 	}
 }
 
-static void addEmbeddedFlag(
+static void addNullableFlag(
 	Json::Value& entry,
 	const drogon::orm::Row& row,
 	const char* const column,
@@ -265,7 +294,8 @@ drogon::Task< RecordInfoBatch > collectRecordInfo( std::vector< RecordID > recor
 
 	co_await applyTypeRows(
 		db,
-		"SELECT record_id, width, height, channels, phash, has_exif, has_gps, has_xmp, has_iptc, has_icc_profile "
+		"SELECT record_id, width, height, channels, phash, has_exif, has_gps, has_xmp, has_iptc, has_icc_profile, "
+		"lossless, quality, subsampling, progressive, comment "
 		"FROM image_metadata "
 		"WHERE record_id = ANY($1::" RECORD_PG_TYPE_NAME "[])",
 		std::move( groups.image ),
@@ -279,11 +309,27 @@ drogon::Task< RecordInfoBatch > collectRecordInfo( std::vector< RecordID > recor
 
 			// A NULL flag is an image parsed before embedded metadata was looked for, which is not the
 			// same as one known to carry none, so it is left off the entry entirely.
-			addEmbeddedFlag( entry, row, "has_exif", KEY_HAS_EXIF );
-			addEmbeddedFlag( entry, row, "has_gps", KEY_HAS_GPS );
-			addEmbeddedFlag( entry, row, "has_xmp", KEY_HAS_XMP );
-			addEmbeddedFlag( entry, row, "has_iptc", KEY_HAS_IPTC );
-			addEmbeddedFlag( entry, row, "has_icc_profile", KEY_HAS_ICC_PROFILE );
+			addNullableFlag( entry, row, "has_exif", KEY_HAS_EXIF );
+			addNullableFlag( entry, row, "has_gps", KEY_HAS_GPS );
+			addNullableFlag( entry, row, "has_xmp", KEY_HAS_XMP );
+			addNullableFlag( entry, row, "has_iptc", KEY_HAS_IPTC );
+			addNullableFlag( entry, row, "has_icc_profile", KEY_HAS_ICC_PROFILE );
+
+			// Omit unknown encoding fields, including records parsed before these columns existed.
+			addNullableFlag( entry, row, "lossless", KEY_LOSSLESS );
+			addNullableFlag( entry, row, "progressive", KEY_PROGRESSIVE );
+			if ( !row[ "quality" ].isNull() ) entry[ KEY_QUALITY ] = row[ "quality" ].as< std::uint32_t >();
+
+			// Preserve empty comments as known absence; NULL means unknown.
+			if ( !row[ "comment" ].isNull() ) entry[ KEY_COMMENT ] = row[ "comment" ].as< std::string >();
+
+			if ( !row[ "subsampling" ].isNull() )
+			{
+				const auto name {
+					subsamplingName( static_cast< ChromaSubsampling >( row[ "subsampling" ].as< std::int16_t >() ) )
+				};
+				if ( !name.empty() ) entry[ KEY_CHROMA_SUBSAMPLING ] = std::string { name };
+			}
 
 			if ( row[ "phash" ].isNull() ) return;
 

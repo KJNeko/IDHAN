@@ -6,6 +6,7 @@ import { Workspace } from '../layout/Workspace';
 import { useLayoutStore } from '../layout/store';
 import { loadPlugins } from '../plugins/loader';
 import { ToastHost } from '../host/ToastHost';
+import { StaleBuildNotice } from './StaleBuildNotice';
 
 /**
  * Authenticated shell: the customizable panel workspace. The old /version status page now lives as
@@ -25,6 +26,7 @@ function AppShell() {
       <LayoutToolbar onSignOut={() => void logout()} />
       <Workspace />
       <ToastHost />
+      <StaleBuildNotice />
     </div>
   );
 }

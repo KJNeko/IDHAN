@@ -46,6 +46,7 @@ IDHANServer/src/db/pre-dev.sql
 .env
 publish.sh
 push-nas.sh
+run-dev-remote.sh
 
 /dev/http-client.private.env.json
 

@@ -38,28 +38,28 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::findSimilar(
 	// the bit column arrives as its text representation, and goes back the same way
 	const auto probe { probe_result[ 0 ][ 0 ].as< std::string >() };
 
-	// Resolve the probe's flat duplicate group once, not per candidate row.
+	// Resolve the probe's chain and every directly alternative chain once, not per candidate row.
 	const auto matches { co_await db->execSqlCoro(
-		"WITH duplicate_group(record_id) AS ("
-		"  SELECT member.record_id FROM flattened_duplicates probe"
-		"  JOIN flattened_duplicates member USING (root_id)"
-		"  WHERE probe.record_id = $2 AND member.record_id != $2"
-		"), related(record_id) AS ("
-		"  SELECT record_id FROM duplicate_group"
-		"  UNION SELECT greater_record_id FROM alternative_records WHERE lesser_record_id = $2"
-		"  UNION SELECT lesser_record_id FROM alternative_records WHERE greater_record_id = $2"
+		"WITH probe_root AS (SELECT duplicate_king($2) AS root_id), related(record_id) AS ("
+		"  SELECT duplicate_group_members(root_id) FROM probe_root"
+		"  UNION SELECT member.record_id FROM probe_root"
+		"  JOIN alternative_records alternative"
+		"    ON alternative.lesser_record_id = root_id OR alternative.greater_record_id = root_id"
+		"  CROSS JOIN LATERAL duplicate_group_members("
+		"    CASE WHEN alternative.lesser_record_id = root_id THEN alternative.greater_record_id"
+		"         ELSE alternative.lesser_record_id END) AS member(record_id)"
 		") "
 		"SELECT record_id, (phash <~> $1)::integer AS distance, "
 		"EXISTS ("
 		"  SELECT 1 FROM unrelated_records marked "
-		"  WHERE (marked.lesser_record_id = $2 AND marked.greater_record_id = image_metadata.record_id) "
-		"     OR (marked.greater_record_id = $2 AND marked.lesser_record_id = image_metadata.record_id)) AS unrelated "
+		"  WHERE marked.lesser_record_id = LEAST(duplicate_king($2), duplicate_king(image_metadata.record_id)) "
+		"    AND marked.greater_record_id = GREATEST(duplicate_king($2), duplicate_king(image_metadata.record_id))) AS unrelated "
 		"FROM image_metadata "
 		"WHERE phash IS NOT NULL AND record_id != $2 AND (phash <~> $1)::integer <= $3::integer "
 		"AND ($5::boolean OR NOT EXISTS ("
 		"  SELECT 1 FROM unrelated_records unrelated "
-		"  WHERE (unrelated.lesser_record_id = $2 AND unrelated.greater_record_id = image_metadata.record_id) "
-		"     OR (unrelated.greater_record_id = $2 AND unrelated.lesser_record_id = image_metadata.record_id))) "
+		"  WHERE unrelated.lesser_record_id = LEAST(duplicate_king($2), duplicate_king(image_metadata.record_id)) "
+		"    AND unrelated.greater_record_id = GREATEST(duplicate_king($2), duplicate_king(image_metadata.record_id)))) "
 		"AND ($6::boolean OR NOT EXISTS ("
 		"  SELECT 1 FROM related WHERE related.record_id = image_metadata.record_id)) "
 		"ORDER BY distance, record_id LIMIT $4::integer",

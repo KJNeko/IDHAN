@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "EmbeddedMetadata.hpp"
+#include "EncodingQuality.hpp"
 #include "PerceptualHash.hpp"
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
@@ -44,6 +45,9 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 	};
 
 	image_info.embedded = detectEmbeddedMetadata( image.get() );
+	auto header { readFileEncoding( data.file, data.mime_id ) };
+	image_info.encoding = header.quality;
+	image_info.comment = std::move( header.comment );
 
 	if ( VIPS_STATIC_IMAGE_MIMES.contains( data.mime_id ) )
 	{

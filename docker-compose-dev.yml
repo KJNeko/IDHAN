@@ -67,7 +67,7 @@ services:
       IDHAN_DATABASE_DATABASE: idhan-db
       IDHAN_THUMBNAILS_PATH: /media/thumbnails
       IDHAN_THUMBNAILS_CACHE: true
-      IDHAN_THUMBNAILS_PURGE_ON_BOOT: true
+      IDHAN_THUMBNAILS_PURGE_ON_BOOT: false
     ports:
       - "16609:16609"
     security_opt:

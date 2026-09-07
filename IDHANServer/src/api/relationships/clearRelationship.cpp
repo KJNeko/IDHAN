@@ -45,18 +45,25 @@ drogon::Task< drogon::HttpResponsePtr > FileRelationshipsAPI::clearRelationship(
 	const auto validation { co_await helpers::validateRecordIds( { record_id_a, record_id_b }, db ) };
 	if ( !validation ) co_return validation.error();
 
-	const auto duplicate { co_await db->execSqlCoro( "SELECT remove_duplicate_pair($1, $2) AS removed", record_id_a,
-		record_id_b ) };
+	const auto transaction { co_await db->newTransactionCoro() };
+	co_await transaction->execSqlCoro( "SELECT pg_advisory_xact_lock(16609, 1)" );
 
-	const auto unrelated { co_await db->execSqlCoro(
-		"DELETE FROM unrelated_records WHERE lesser_record_id = LEAST($1::integer, $2::integer) "
-		"AND greater_record_id = GREATEST($1::integer, $2::integer)",
+	const auto duplicate {
+		co_await transaction->execSqlCoro( "SELECT remove_duplicate_pair($1, $2) AS removed", record_id_a, record_id_b )
+	};
+
+	// Rulings belong to kings; clearing through an inferior affects the whole group.
+	const auto unrelated { co_await transaction->execSqlCoro(
+		"DELETE FROM unrelated_records "
+		"WHERE lesser_record_id = LEAST(duplicate_king($1), duplicate_king($2)) "
+		"AND greater_record_id = GREATEST(duplicate_king($1), duplicate_king($2))",
 		record_id_a,
 		record_id_b ) };
 
-	const auto alternative { co_await db->execSqlCoro(
-		"DELETE FROM alternative_records WHERE lesser_record_id = LEAST($1::integer, $2::integer) "
-		"AND greater_record_id = GREATEST($1::integer, $2::integer)",
+	const auto alternative { co_await transaction->execSqlCoro(
+		"DELETE FROM alternative_records "
+		"WHERE lesser_record_id = LEAST(duplicate_king($1), duplicate_king($2)) "
+		"AND greater_record_id = GREATEST(duplicate_king($1), duplicate_king($2))",
 		record_id_a,
 		record_id_b ) };
 
