@@ -8,6 +8,7 @@ import { serverStatusPanel } from './ServerStatusPanel';
 import { selectionInspectorPanel } from './SelectionInspectorPanel';
 import { searchPanel } from './SearchPanel';
 import { gridPanel } from './GridPanel';
+import {compactGridPanel} from './CompactGridPanel';
 import { mediaViewerPanel } from './MediaViewerPanel';
 import {fileRelationshipsPanel} from './FileRelationshipsPanel';
 import { recordInfoPanel } from './RecordInfoPanel';
@@ -35,6 +36,7 @@ export function registerBuiltinPanels(): void {
   registered = true;
   registerPanel(searchPanel);
   registerPanel(gridPanel);
+    registerPanel(compactGridPanel);
   registerPanel(mediaViewerPanel);
     registerPanel(fileRelationshipsPanel);
   registerPanel(recordInfoPanel);
