@@ -10,6 +10,7 @@
 
 #include "js/QuickJSBinding.hpp"
 #include "js/ScriptExecution.hpp"
+#include "js/ScriptSession.hpp"
 #include "js/bindings/FetchBindings.hpp"
 #include "js/bindings/HtmlBindings.hpp"
 #include "js/bindings/UrlBindings.hpp"

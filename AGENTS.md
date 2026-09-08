@@ -2,7 +2,7 @@
 
 ## Project overview
 
-IDHAN is a C++23 media-management and archival server with a booru-compatible
+IDHAN is a C++26 media-management and archival server with a booru-compatible
 tagging model and Hydrus Network compatibility. It uses CMake, PostgreSQL,
 Drogon, libpqxx, Qt6 (client/importer), and a React WebUI.
 
@@ -60,6 +60,9 @@ binary when practical:
 ```
 
 ## C++ and API conventions
+
+- Keep one class per header unless additional classes are tightly integrated or
+  used only by that class.
 
 - Use the distinct ID aliases in `IDHAN/include/IDHANTypes.hpp`, not raw
   integer types. Use `SHA256` for record hashes.

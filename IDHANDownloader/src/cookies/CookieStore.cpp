@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <ranges>
 
+#include "HostCallback.hpp"
 #include "URLUtils.hpp"
 #include "http/HttpMessage.hpp"
 
@@ -161,7 +162,7 @@ void CookieStore::set( Cookie cookie )
 		upsert( m_cookies, std::move( cookie ) );
 	}
 
-	if ( m_persistence != nullptr ) m_persistence->upsert( persisted );
+	if ( m_persistence != nullptr ) (void)hostCallback( [ & ] { m_persistence->upsert( persisted ); } );
 }
 
 void CookieStore::erase( const std::string_view name, const std::string_view domain, const std::string_view path )
@@ -171,7 +172,7 @@ void CookieStore::erase( const std::string_view name, const std::string_view dom
 		remove( m_cookies, name, domain, path );
 	}
 
-	if ( m_persistence != nullptr ) m_persistence->erase( name, domain, path );
+	if ( m_persistence != nullptr ) (void)hostCallback( [ & ] { m_persistence->erase( name, domain, path ); } );
 }
 
 void CookieStore::appendMatching(

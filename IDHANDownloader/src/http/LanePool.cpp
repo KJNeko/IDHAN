@@ -8,6 +8,7 @@
 #include <chrono>
 #include <utility>
 
+#include "HostCallback.hpp"
 #include "URLUtils.hpp"
 #include "cookies/CookieStore.hpp"
 #include "http/UserAgent.hpp"
@@ -177,14 +178,14 @@ void LanePool::publish( const std::string& key )
 		if ( const auto lane { m_lanes.find( key ) }; lane != m_lanes.end() ) lane->second->fill( snapshot );
 	}
 
-	m_config.observer->onLaneChanged( snapshot );
+	(void)hostCallback( [ & ] { m_config.observer->onLaneChanged( snapshot ); } );
 }
 
 void LanePool::dispatch( const std::shared_ptr< Exchange >& exchange )
 {
 	if ( exchange->cancellation && exchange->cancellation->load() )
 	{
-		if ( exchange->sink ) exchange->sink->abort();
+		if ( exchange->sink ) (void)hostCallback( [ & ] { exchange->sink->abort(); } );
 
 		exchange->callback(
 			std::unexpected(
@@ -196,7 +197,7 @@ void LanePool::dispatch( const std::shared_ptr< Exchange >& exchange )
 
 	if ( !parsed || ( parsed->get_protocol() != "http:" && parsed->get_protocol() != "https:" ) )
 	{
-		if ( exchange->sink ) exchange->sink->abort();
+		if ( exchange->sink ) (void)hostCallback( [ & ] { exchange->sink->abort(); } );
 
 		exchange->callback(
 			std::unexpected(
@@ -211,7 +212,7 @@ void LanePool::dispatch( const std::shared_ptr< Exchange >& exchange )
 
 	if ( !lane )
 	{
-		if ( exchange->sink ) exchange->sink->abort();
+		if ( exchange->sink ) (void)hostCallback( [ & ] { exchange->sink->abort(); } );
 
 		exchange->callback(
 			std::unexpected(
@@ -340,7 +341,7 @@ void LanePool::complete( const std::shared_ptr< Exchange >& exchange, const std:
 
 	if ( !follow || !next )
 	{
-		if ( exchange->sink ) exchange->sink->abort();
+		if ( exchange->sink ) (void)hostCallback( [ & ] { exchange->sink->abort(); } );
 
 		response.hops = std::move( exchange->hops );
 		exchange->callback( std::move( result ) );

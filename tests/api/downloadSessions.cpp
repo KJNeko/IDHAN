@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -30,6 +31,7 @@ class DownloadSessionHttpFixture
 	std::jthread m_worker {};
 	mutable std::mutex m_cookie_mutex {};
 	std::string m_cookie_header {};
+	std::atomic_bool m_hold_files {};
 
 	void captureCookieHeader( const std::string_view request )
 	{
@@ -97,6 +99,8 @@ class DownloadSessionHttpFixture
 					path = text.substr( first_space + 1, second_space - first_space - 1 );
 			}
 
+			while ( path == "/file.gif" && m_hold_files.load() ) std::this_thread::sleep_for( 5ms );
+
 			const std::string body { responseBody( path ) };
 			const std::string response { std::format(
 				"HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -142,12 +146,15 @@ class DownloadSessionHttpFixture
 
 	~DownloadSessionHttpFixture()
 	{
+		m_hold_files.store( false );
 		if ( m_socket >= 0 )
 		{
 			::shutdown( m_socket, SHUT_RDWR );
 			::close( m_socket );
 		}
 	}
+
+	void holdFiles( const bool hold ) { m_hold_files.store( hold ); }
 
 	[[nodiscard]] std::string url( const std::string_view path ) const
 	{
@@ -325,6 +332,57 @@ SCENARIO_METHOD(
 	const auto jobs { api().get( std::format( "/download_sessions/{}/urls", session_id ) ) };
 	REQUIRE( jobs.status == drogon::k200OK );
 	CHECK( jobs.json.size() == 2 );
+}
+
+SCENARIO_METHOD(
+	ServerFixture,
+	"Pending imports survive a server restart after the parser completes",
+	"[api][download-sessions][recovery]" )
+{
+	const bool crash { GENERATE( false, true ) };
+	DownloadSessionHttpFixture fixture {};
+	fixture.holdFiles( true );
+	ImportCluster cluster { db(), std::filesystem::temp_directory_path() / "idhan-download-recovery-cluster" };
+	cluster.registerWith( api() );
+
+	Json::Value body {};
+	body[ "name" ] = "restart recovery";
+	const auto created { api().post( "/download_sessions", body ) };
+	REQUIRE( created.status == drogon::k201Created );
+	const auto session_id { created.json[ "id" ].as< DownloadSessionID >() };
+	body = Json::Value {};
+	body[ "url" ] = fixture.url( "/gallery" );
+	const auto queued { api().post( std::format( "/download_sessions/{}/urls", session_id ), body ) };
+	REQUIRE( queued.status == drogon::k201Created );
+	const auto root { queued.json[ "id" ].as< DownloadSessionUrlID >() };
+
+	bool persisted {};
+	const auto deadline { std::chrono::steady_clock::now() + wait_deadline };
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		pqxx::read_transaction tx { db() };
+		persisted = tx.query_value< bool >(
+			"SELECT count(*) = 2 FROM download_session_urls child "
+			"JOIN download_session_urls parent ON parent.download_session_url_id = child.parent_url_id "
+			"WHERE child.download_session_id = $1 AND child.state = 'pending' "
+			"AND parent.state = 'completed' AND child.url = $2",
+			pqxx::params { session_id, fixture.url( "/file.gif" ) } );
+		if ( persisted ) break;
+		std::this_thread::sleep_for( 25ms );
+	}
+	REQUIRE( persisted );
+
+	testServer().restart( crash );
+	fixture.holdFiles( false );
+	const auto restored { waitForFlattenedRoot( api(), session_id, root ) };
+	CHECK( restored[ "record_ids" ].size() == 1 );
+	pqxx::read_transaction tx { db() };
+	CHECK(
+		tx.query_value< int >(
+			"SELECT count(*) FROM download_session_urls WHERE download_session_id = $1 "
+			"AND state IN ('pending', 'processing')",
+			pqxx::params { session_id } )
+		== 0 );
 }
 
 } // namespace idhan::test

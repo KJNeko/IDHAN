@@ -1,13 +1,10 @@
 #pragma once
 
-#include <json/value.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <quickjs.h>
 #include <string>
-#include <string_view>
 
 #include "IDHANDownloader/SessionObserver.hpp"
 #include "scripts/ScriptRegistry.hpp"
@@ -15,16 +12,6 @@
 namespace idhan::downloader
 {
 class ScriptSession;
-
-struct PendingPromise
-{
-	JSContext* context {};
-	JSValue resolve { JS_UNDEFINED };
-	JSValue reject { JS_UNDEFINED };
-
-	void settle( bool ok, JSValue value );
-	void discard();
-};
 
 enum class ScriptStage : std::uint8_t
 {
@@ -51,18 +38,6 @@ struct ScriptExecution
 	bool settled {};
 	bool failed {};
 	std::string error {};
-};
-
-class ScriptSession
-{
-  public:
-
-	virtual ~ScriptSession() = default;
-
-	virtual FollowResult follow( ScriptExecution& execution, std::string url ) = 0;
-	virtual std::optional< std::string > secret( std::string_view name ) = 0;
-	virtual void startRequest( ScriptExecution& execution, Json::Value options, PendingPromise promise ) = 0;
-	virtual void startImport( ScriptExecution& execution, Json::Value options ) = 0;
 };
 
 [[nodiscard]] inline ScriptExecution* executionFor( JSContext* context )

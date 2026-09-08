@@ -10,7 +10,8 @@
 #include <unordered_map>
 
 #include "http/CurlHandles.hpp"
-#include "http/IoPool.hpp"
+#include "http/IoSource.hpp"
+#include "http/IoThread.hpp"
 #include "http/Transfer.hpp"
 
 namespace idhan::downloader
@@ -41,6 +42,8 @@ class LaneShard final : public IoSource
 	std::weak_ptr< Lane > m_lane;
 	IoThread& m_thread;
 	CurlMultiPtr m_multi {};
+	// Includes transfers posted to the IO thread but not started yet.
+	std::atomic_size_t m_assigned {};
 	std::unordered_map< CURL*, std::unique_ptr< Active > > m_active {};
 
 	void finish( CURL* easy, CURLcode code );
@@ -63,7 +66,9 @@ class LaneShard final : public IoSource
 
 	[[nodiscard]] IoThread& thread() const { return m_thread; }
 
-	[[nodiscard]] std::size_t inFlight() const { return m_active.size(); }
+	[[nodiscard]] std::size_t inFlight() const { return m_assigned.load( std::memory_order_relaxed ); }
+
+	void reserve() { m_assigned.fetch_add( 1, std::memory_order_relaxed ); }
 
 	void start( TransferRequest request, TransferCallback callback );
 	void cancel( const std::shared_ptr< std::atomic_bool >& cancellation );

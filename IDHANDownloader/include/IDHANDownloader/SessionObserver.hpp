@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <expected>
 #include <optional>
 #include <string>
 
@@ -55,6 +56,7 @@ struct RequestFailure
 
 struct ImportInfo
 {
+	// Matches onImportQueued; it is the import identity, not the parser identity.
 	WorkID work {};
 	std::string url {};
 	RecordID record_id {};
@@ -80,6 +82,10 @@ class SessionObserver
 	virtual void onRequest( const RequestInfo& ) {}
 
 	virtual void onRequestFailed( const RequestFailure& ) {}
+
+	// Runs before opening the sink or dispatching HTTP. The import has its own work ID.
+	// Returning an error prevents dispatch; parent identifies the parser that requested it.
+	virtual std::expected< void, std::string > onImportQueued( const WorkInfo& ) { return {}; }
 
 	virtual void onImported( const ImportInfo& ) {}
 

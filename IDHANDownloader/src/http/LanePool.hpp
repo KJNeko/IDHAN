@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "IDHANDownloader/LaneObserver.hpp"
 #include "http/IoPool.hpp"
 #include "http/Lane.hpp"
 #include "http/LanePolicy.hpp"

@@ -7,54 +7,17 @@
 #include <string_view>
 #include <vector>
 
+#include "Cookie.hpp"
+#include "CookieOverlay.hpp"
 #include "IDHANDownloader/CookiePersistence.hpp"
 
 namespace idhan::downloader
 {
 class HttpHeaders;
 
-struct Cookie
-{
-	std::string name {};
-	std::string value {};
-	std::string domain {};
-	std::string path { "/" };
-	bool secure {};
-	bool host_only {};
-	std::optional< std::chrono::system_clock::time_point > expires { std::nullopt };
-
-	[[nodiscard]] bool sameIdentity( const Cookie& other ) const
-	{
-		return name == other.name && domain == other.domain && path == other.path;
-	}
-};
-
 [[nodiscard]] bool cookieDomainMatches( std::string_view host, std::string_view domain, bool host_only );
 [[nodiscard]] bool cookiePathMatches( std::string_view request_path, std::string_view cookie_path );
 [[nodiscard]] std::string defaultCookiePath( std::string_view request_path );
-
-class CookieOverlay
-{
-	mutable std::mutex m_mutex {};
-	std::vector< Cookie > m_cookies {};
-
-  public:
-
-	CookieOverlay() = default;
-	CookieOverlay( const CookieOverlay& ) = delete;
-	CookieOverlay& operator=( const CookieOverlay& ) = delete;
-
-	void set( Cookie cookie );
-	void erase( std::string_view name, std::string_view domain, std::string_view path );
-	void appendMatching(
-		std::string_view host,
-		std::string_view path,
-		bool secure,
-		std::chrono::system_clock::time_point now,
-		std::vector< Cookie >& out ) const;
-
-	[[nodiscard]] std::vector< Cookie > cookies() const;
-};
 
 class CookieStore
 {
