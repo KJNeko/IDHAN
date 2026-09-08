@@ -8,7 +8,7 @@
  * Actions are async and report their own outcome by toast; the menu closes the moment one is picked.
  */
 
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import type {RecordMetadata} from '../../api/types';
 import type {HostApi, RecordId} from '../../host/types';
@@ -75,6 +75,23 @@ export function describeRecord(record: RecordMetadata): string {
     return lines.join('\n');
 }
 
+function copyMetadataAction(key: string, label: string, value: (record: RecordMetadata) => unknown): RecordAction {
+    return {
+        key,
+        group: 'copy',
+        label: () => label,
+        run: async (ctx) => {
+            const records = await metadataFor(ctx);
+            const values = records.map(value).filter((item) => item !== undefined && item !== null && item !== '');
+            if (values.length === 0) {
+                ctx.host.ui.toast(`No ${label.toLowerCase()} available to copy`, {kind: 'info'});
+                return;
+            }
+            await copyText(ctx.host, values.map(String).join('\n'), label.toLowerCase());
+        },
+    };
+}
+
 /**
  * Every operation that applies to a record wherever it is shown. Panels do not filter this list, so
  * an entry that only makes sense for one record guards itself through `available`.
@@ -83,9 +100,11 @@ export const RECORD_ACTIONS: RecordAction[] = [
     {
         key: 'open',
         group: 'view',
-        label: () => 'Open',
+        label: () => 'Open File',
         available: ({ids}) => ids.length === 1,
-        run: ({host, target}) => host.bus.emit(RECORD_ACTIVATE_TOPIC, target),
+        run: ({host, target}) => {
+            window.open(host.records.fileUrl(target), '_blank', 'noopener,noreferrer');
+        },
     },
     {
         key: 'send-to-relationships',
@@ -130,6 +149,27 @@ export const RECORD_ACTIONS: RecordAction[] = [
         run: ({host, ids}) =>
             copyText(host, ids.map((id) => shareableFileUrl(host, id)).join('\n'), `file link${plural(ids)}`),
     },
+    copyMetadataAction('copy-mime', 'MIME type', (record) => record.mime),
+    copyMetadataAction('copy-extension', 'File extension', (record) => record.extension),
+    copyMetadataAction('copy-size', 'Size in bytes', (record) => record.size),
+    copyMetadataAction('copy-dimensions', 'Dimensions', (record) =>
+        record.width !== undefined && record.height !== undefined ? `${record.width}x${record.height}` : undefined),
+    copyMetadataAction('copy-duration', 'Duration', (record) =>
+        record.duration !== undefined ? formatDuration(record.duration) : undefined),
+    copyMetadataAction('copy-phash', 'Perceptual hash', (record) => record.phash),
+    {
+        key: 'copy-json',
+        group: 'copy',
+        label: () => 'Full metadata (JSON)',
+        run: async (ctx) => {
+            const records = await metadataFor(ctx);
+            if (records.length === 0) {
+                ctx.host.ui.toast('No metadata to copy', {kind: 'error'});
+                return;
+            }
+            await copyText(ctx.host, JSON.stringify(ctx.ids.length === 1 ? records[0] : records, null, 2), 'metadata');
+        },
+    },
     {
         key: 'copy-details',
         group: 'copy',
@@ -165,6 +205,60 @@ export interface RecordMenu {
     closeRecordMenu(): void;
 }
 
+function CopySubmenu({children}: { children: ReactNode }) {
+    const [open, setOpen] = useState(false);
+    const [position, setPosition] = useState({top: 0, left: 0});
+    const trigger = useRef<HTMLButtonElement>(null);
+    const submenu = useRef<HTMLUListElement>(null);
+
+    useLayoutEffect(() => {
+        if (!open || !trigger.current || !submenu.current) return;
+        const row = trigger.current.getBoundingClientRect();
+        const parent = trigger.current.closest('.context-menu')!.getBoundingClientRect();
+        const bounds = submenu.current.getBoundingClientRect();
+        const fitsRight = parent.right + bounds.width <= window.innerWidth - 8;
+        // Overlap the parent padding so the pointer can enter without crossing a gap.
+        const left = fitsRight ? parent.right - 6 : parent.left - bounds.width + 6;
+        setPosition({
+            left: Math.max(8, Math.min(left, window.innerWidth - bounds.width - 8)),
+            top: Math.max(8, Math.min(row.top, window.innerHeight - bounds.height - 8)),
+        });
+    }, [open]);
+
+    return (
+        <li className="context-menu-break"
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+            onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+            }}
+            onKeyDown={(event) => {
+                if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    setOpen(true);
+                    requestAnimationFrame(() => submenu.current?.querySelector('button')?.focus());
+                }
+                if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    trigger.current?.focus();
+                    setOpen(false);
+                }
+            }}>
+            <button ref={trigger} type="button" className="context-menu-copy-trigger"
+                    aria-expanded={open}
+                    onFocus={() => setOpen(true)} onClick={() => setOpen(true)}>
+                Copy <span aria-hidden="true">▸</span>
+            </button>
+            {open && (
+                <ul ref={submenu} className="context-menu context-menu-copy" aria-label="Copy"
+                    style={position}>
+                    {children}
+                </ul>
+            )}
+        </li>
+    );
+}
+
 /** `extras` are appended after the shared actions, for entries that only mean anything in one panel. */
 export function useRecordMenu(host: HostApi, extras: readonly RecordAction[] = []): RecordMenu {
     const [menu, setMenu] = useState<MenuState | null>(null);
@@ -181,7 +275,10 @@ export function useRecordMenu(host: HostApi, extras: readonly RecordAction[] = [
     // Close on any outside interaction, the same way a native menu does.
     useEffect(() => {
         if (!menu) return;
-        const close = () => setMenu(null);
+        const close = (event: Event) => {
+            if (event.target instanceof Element && event.target.closest('.context-menu')) return;
+            setMenu(null);
+        };
         const onKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape') setMenu(null);
         };
@@ -200,27 +297,44 @@ export function useRecordMenu(host: HostApi, extras: readonly RecordAction[] = [
     const ctx: RecordActionContext = {host, ids: menu.ids, target: menu.target};
     const entries = [...RECORD_ACTIONS, ...extras].filter((action) => action.available?.(ctx) ?? true);
 
+    function actionButton(action: RecordAction) {
+        return (
+            <button
+                type="button"
+                onClick={() => {
+                    setMenu(null);
+                    try {
+                        void Promise.resolve(action.run(ctx)).catch((error: unknown) => {
+                            host.ui.toast(error instanceof Error ? error.message : String(error), {kind: 'error'});
+                        });
+                    } catch (error) {
+                        host.ui.toast(error instanceof Error ? error.message : String(error), {kind: 'error'});
+                    }
+                }}
+            >
+                {action.label(ctx)}
+            </button>
+        );
+    }
+
+    const copyEntries = entries.filter((action) => action.group === 'copy');
+    const topEntries = entries.filter((action) => action.group !== 'copy');
+    const top = Math.max(8, Math.min(menu.y, window.innerHeight - 240));
+    const left = Math.max(8, Math.min(menu.x, window.innerWidth - 280));
     const recordMenu = (
-        <ul className="context-menu" style={{top: menu.y, left: menu.x}} onClick={(event) => event.stopPropagation()}>
-            {entries.map((action, index) => (
-                <li
-                    key={action.key}
-                    className={index > 0 && entries[index - 1]!.group !== action.group ? 'context-menu-break' : undefined}
-                >
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setMenu(null);
-                            // A rejected action still has to say so: nothing else is watching this promise.
-                            void Promise.resolve(action.run(ctx)).catch((error: unknown) => {
-                                host.ui.toast(error instanceof Error ? error.message : String(error), {kind: 'error'});
-                            });
-                        }}
-                    >
-                        {action.label(ctx)}
-                    </button>
+        <ul className="context-menu" style={{top, left, maxHeight: window.innerHeight - top - 8}}
+            onClick={(event) => event.stopPropagation()} onScroll={(event) => event.stopPropagation()}>
+            {topEntries.map((action, index) => (
+                <li key={action.key}
+                    className={index > 0 && topEntries[index - 1]!.group !== action.group ? 'context-menu-break' : undefined}>
+                    {actionButton(action)}
                 </li>
             ))}
+            {copyEntries.length > 0 && (
+                <CopySubmenu>
+                    {copyEntries.map((action) => <li key={action.key}>{actionButton(action)}</li>)}
+                </CopySubmenu>
+            )}
         </ul>
     );
 

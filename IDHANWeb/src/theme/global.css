@@ -4102,3 +4102,29 @@ body {
         display: none;
     }
 }
+
+.context-menu {
+    max-width: calc(100vw - 16px);
+    overflow-y: auto;
+}
+
+.context-menu button:focus-visible {
+    background: #2f333c;
+}
+
+.context-menu-copy {
+    width: 240px;
+    box-sizing: border-box;
+    max-height: calc(100vh - 16px);
+}
+
+.context-menu-copy-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.context-menu-copy-trigger[aria-expanded="true"] {
+    background: #2f333c;
+}
