@@ -1,6 +1,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+
 #include "IDHANClient.hpp"
 #include "logging/logger.hpp"
 

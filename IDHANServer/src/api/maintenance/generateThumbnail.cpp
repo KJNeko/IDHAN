@@ -1,6 +1,6 @@
+#include "MimeIDs.hpp"
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
-#include "MimeIDs.hpp"
 #include "metadata/metadata.hpp"
 #include "mime/prescan.hpp"
 #include "modules/ModuleLoader.hpp"

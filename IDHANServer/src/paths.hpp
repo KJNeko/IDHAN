@@ -10,7 +10,6 @@
 #define IDHAN_STATIC_PATH "/usr/share/idhan/static"
 #endif
 
-
 #ifndef IDHAN_MODULES_PATH
 #define IDHAN_MODULES_PATH "/usr/share/idhan/modules"
 #endif
@@ -23,7 +22,6 @@
 #ifndef IDHAN_STATIC_PATH
 #define IDHAN_STATIC_PATH "C:\\ProgramData\\IDHAN\\static"
 #endif
-
 
 #ifndef IDHAN_MODULES_PATH
 #define IDHAN_MODULES_PATH "C:\\ProgramData\\IDHAN\\modules"

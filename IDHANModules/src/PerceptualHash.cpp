@@ -32,9 +32,16 @@ static constexpr int LUMA_B { 3735 };
 static constexpr int LINEAR_COEF_BITS { 11 };
 static constexpr int LINEAR_COEF_SCALE { 1 << LINEAR_COEF_BITS };
 
-static constexpr PerceptualHash BLANK_HASH { { std::byte { 0x80 }, std::byte { 0x00 }, std::byte { 0x00 },
-	                                           std::byte { 0x00 }, std::byte { 0x00 }, std::byte { 0x00 },
-	                                           std::byte { 0x00 }, std::byte { 0x00 } } };
+static constexpr PerceptualHash BLANK_HASH {
+	{ std::byte { 0x80 },
+	  std::byte { 0x00 },
+	  std::byte { 0x00 },
+	  std::byte { 0x00 },
+	  std::byte { 0x00 },
+	  std::byte { 0x00 },
+	  std::byte { 0x00 },
+	  std::byte { 0x00 } }
+};
 static constexpr std::uint8_t BLANK_MAX_DISTANCE { 4 };
 
 //! Hydrus translucency threshold for alpha-channel detection.
@@ -101,13 +108,11 @@ static std::vector< AreaWeight > areaWeights( const int ssize, const int dsize, 
 		if ( sx1 - fsx1 > 1e-3 )
 			tab.push_back( { dx * cn, ( sx1 - 1 ) * cn, static_cast< float >( ( sx1 - fsx1 ) / cell ) } );
 
-		for ( int sx = sx1; sx < sx2; ++sx )
-			tab.push_back( { dx * cn, sx * cn, static_cast< float >( 1.0 / cell ) } );
+		for ( int sx = sx1; sx < sx2; ++sx ) tab.push_back( { dx * cn, sx * cn, static_cast< float >( 1.0 / cell ) } );
 
 		if ( fsx2 - sx2 > 1e-3 )
-			tab.push_back( { dx * cn,
-			                 sx2 * cn,
-			                 static_cast< float >( std::min( std::min( fsx2 - sx2, 1.0 ), cell ) / cell ) } );
+			tab.push_back(
+				{ dx * cn, sx2 * cn, static_cast< float >( std::min( std::min( fsx2 - sx2, 1.0 ), cell ) / cell ) } );
 	}
 	return tab;
 }
@@ -226,8 +231,9 @@ class AreaResizer
 
 		if ( m_grows )
 		{
-			m_kept.resize( static_cast< std::size_t >( src_width ) * static_cast< std::size_t >( src_height )
-				           * static_cast< std::size_t >( channels ) );
+			m_kept.resize(
+				static_cast< std::size_t >( src_width ) * static_cast< std::size_t >( src_height )
+				* static_cast< std::size_t >( channels ) );
 			return;
 		}
 
@@ -263,7 +269,9 @@ class AreaResizer
 
 			for ( ; m_ytab_index < m_ytab.size() && m_ytab[ m_ytab_index ].si == m_row; ++m_ytab_index )
 			{
-				auto* const sums { m_sums.data() + ( static_cast< std::size_t >( m_ytab[ m_ytab_index ].di ) * stride ) };
+				auto* const sums {
+					m_sums.data() + ( static_cast< std::size_t >( m_ytab[ m_ytab_index ].di ) * stride )
+				};
 				const float beta { m_ytab[ m_ytab_index ].alpha };
 				for ( std::size_t i = 0; i < stride; ++i ) sums[ i ] += m_buffer[ i ] * beta;
 			}
@@ -327,7 +335,8 @@ static double cosineSum( const std::span< const double > data, const int k )
 
 	double total { 0.0 };
 	for ( std::size_t i = 0; i < half; ++i )
-		total += next[ i ] * std::cos( std::numbers::pi * static_cast< double >( ( 2 * i ) + 1 ) * k / ( 2.0 * count ) );
+		total += next[ i ]
+		       * std::cos( std::numbers::pi * static_cast< double >( ( 2 * i ) + 1 ) * k / ( 2.0 * count ) );
 	return total;
 }
 
