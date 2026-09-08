@@ -14,9 +14,9 @@ namespace idhan
 
 //! Annex K.1, the standard luminance table, in natural order.
 constexpr QuantizationTable STANDARD_LUMA {
-	{ 16, 11, 10, 16, 24,  40,  51,  61,  12, 12, 14, 19, 26,  58,  60,  55,  14, 13, 16, 24, 40, 57,
-	  69, 56, 14, 17, 22,  29,  51,  87,  80, 62, 18, 22, 37,  56,  68,  109, 103, 77, 24, 35, 55, 64,
-	  81, 104, 113, 92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98, 112, 100, 103, 99 }
+	{ 16, 11,  10,  16, 24, 40, 51, 61, 12,  12,  14,  19,  26, 58, 60, 55,  14,  13,  16,  24, 40, 57,
+	  69, 56,  14,  17, 22, 29, 51, 87, 80,  62,  18,  22,  37, 56, 68, 109, 103, 77,  24,  35, 55, 64,
+	  81, 104, 113, 92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98,  112, 100, 103, 99 }
 };
 
 //! Annex K.2, the standard chrominance table, in natural order.
@@ -55,7 +55,8 @@ static std::optional< std::vector< std::byte > > readAt(
 static std::uint16_t bigEndian16( const std::span< const std::byte > bytes, const std::size_t offset )
 {
 	return static_cast< std::uint16_t >(
-		( static_cast< std::uint16_t >( bytes[ offset ] ) << 8 ) | static_cast< std::uint16_t >( bytes[ offset + 1 ] ) );
+		( static_cast< std::uint16_t >( bytes[ offset ] ) << 8 )
+		| static_cast< std::uint16_t >( bytes[ offset + 1 ] ) );
 }
 
 //! libjpeg's jpeg_quality_scaling: the percentage every standard table entry is scaled by.
@@ -84,7 +85,8 @@ std::uint8_t estimateJpegQuality( const QuantizationTable& luma, const std::opti
 		for ( std::size_t position = 0; position < luma.size(); ++position )
 		{
 			const auto natural { ZIGZAG[ position ] };
-			error += std::abs( static_cast< long >( luma[ position ] ) - scaleEntry( STANDARD_LUMA[ natural ], scale ) );
+			error +=
+				std::abs( static_cast< long >( luma[ position ] ) - scaleEntry( STANDARD_LUMA[ natural ], scale ) );
 			if ( chroma )
 				error += std::abs(
 					static_cast< long >( ( *chroma )[ position ] ) - scaleEntry( STANDARD_CHROMA[ natural ], scale ) );
@@ -121,9 +123,8 @@ static void readQuantizationTables( const std::span< const std::byte > payload, 
 		QuantizationTable table {};
 		for ( std::size_t entry = 0; entry < table.size(); ++entry )
 		{
-			table[ entry ] = precision == 0
-			                   ? static_cast< std::uint16_t >( payload[ position + entry ] )
-			                   : bigEndian16( payload, position + ( entry * 2 ) );
+			table[ entry ] = precision == 0 ? static_cast< std::uint16_t >( payload[ position + entry ] ) :
+			                                  bigEndian16( payload, position + ( entry * 2 ) );
 		}
 
 		tables[ id ] = table;
@@ -146,9 +147,7 @@ static ChromaSubsampling readSubsampling( const std::span< const std::byte > fra
 	if ( frame.size() < FIRST_COMPONENT_OFFSET + ( COMPONENT_BYTES * components ) ) return ChromaSubsampling::UNKNOWN;
 
 	const auto sampling = [ frame ]( const std::size_t component )
-	{
-		return static_cast< std::uint8_t >( frame[ FIRST_COMPONENT_OFFSET + ( COMPONENT_BYTES * component ) + 1 ] );
-	};
+	{ return static_cast< std::uint8_t >( frame[ FIRST_COMPONENT_OFFSET + ( COMPONENT_BYTES * component ) + 1 ] ); };
 
 	const std::uint8_t luma { sampling( 0 ) };
 	const std::uint8_t chroma { sampling( 1 ) };

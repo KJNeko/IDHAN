@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "CallInput.hpp"
-#include "MimeIDs.hpp"
 #include "EmbeddingModule.hpp"
 #include "MetadataInfo.hpp"
+#include "MimeIDs.hpp"
 #include "ThumbnailInfo.hpp"
 #include "WorkerPool.hpp"
 #include "ipc/Blob.hpp"

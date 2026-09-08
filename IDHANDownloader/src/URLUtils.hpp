@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ada.h>
-
 #include <algorithm>
 #include <cctype>
 #include <string>

@@ -1,8 +1,7 @@
-#include "IDHANTypes.hpp"
-
 #include <format>
 #include <stdexcept>
 
+#include "IDHANTypes.hpp"
 #include "api/APIMaintenance.hpp"
 #include "api/helpers/createBadRequest.hpp"
 #include "api/helpers/helpers.hpp"

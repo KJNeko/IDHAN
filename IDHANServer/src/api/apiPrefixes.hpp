@@ -18,7 +18,13 @@ constexpr std::array api_prefixes { std::to_array< std::string_view >(
 	  "/embeddings",
 	  "/file",
 	  "/generate_api_key",
-	  "/health", "/heartbeat", "/hyapi",    "/integrity", "/jobs",          "/layouts", "/log",
+	  "/health",
+	  "/heartbeat",
+	  "/hyapi",
+	  "/integrity",
+	  "/jobs",
+	  "/layouts",
+	  "/log",
 	  "/mime",
 	  "/plugins",
 	  "/purge",
@@ -27,7 +33,8 @@ constexpr std::array api_prefixes { std::to_array< std::string_view >(
 	  "/relationships",
 	  "/search",
 	  "/tags",
-	  "/test",   "/version" } ) };
+	  "/test",
+	  "/version" } ) };
 
 //! Segment-boundary match: "/searching" is a SPA route, "/search/foo" is API.
 [[nodiscard]] inline bool isApiPath( const std::string_view path )

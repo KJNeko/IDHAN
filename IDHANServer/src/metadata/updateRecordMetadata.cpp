@@ -7,8 +7,8 @@
 #include "filesystem/clusters/ClusterManager.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "metadata.hpp"
-#include "phash.hpp"
 #include "modules/ModuleLoader.hpp"
+#include "phash.hpp"
 #include "records/records.hpp"
 #include "threading/ExpectedTask.hpp"
 

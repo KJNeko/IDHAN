@@ -1,6 +1,5 @@
-#include "tags.hpp"
-
 #include "db/drogonArrayBind.hpp"
+#include "tags.hpp"
 
 namespace idhan
 {

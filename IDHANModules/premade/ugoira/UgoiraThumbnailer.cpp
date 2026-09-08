@@ -11,8 +11,8 @@
 
 #include "AnimationManifest.hpp"
 #include "MimeIDs.hpp"
-#include "imageExtensions.hpp"
 #include "crypto/simpleHasher.hpp"
+#include "imageExtensions.hpp"
 #include "logging/format_ns.hpp"
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
