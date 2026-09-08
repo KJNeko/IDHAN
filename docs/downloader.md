@@ -465,7 +465,8 @@ not consume the buffered-response limit.
 
 Redirect response bodies are discarded, and the still-unused sink is handed to the next hop. After
 the final body, the shard passes its size, content type, filename, and final URL to `finish()`. A
-failure calls `abort()` so partial output can be discarded.
+failure calls `abort()` so partial output can be discarded. Host adapter exceptions are converted
+to failures; observer exceptions are logged without unwinding a worker thread.
 
 The server adapter implements a sink with a temporary file. On finish it passes those bytes through
 IDHAN's normal file import, associates parser-supplied URLs and tags, and links the record to the
@@ -528,8 +529,8 @@ These operations have different meanings:
   session still exists and can accept another submission.
 - `wait()` blocks for idle while the session remains open. Once close is requested, it may return
   before the runner has finished draining that session's resident work.
-- `cancel()` drops queued work that has not started and filters future follows. Already-running
-  scripts and in-flight operations continue toward settlement; the call does not block.
+- `cancel()` drops queued work that has not started, filters future follows, and cancels active
+  transfers. Already-running scripts continue toward settlement; the call does not block.
 - `close()` rejects future submissions and drops the session's queued work; resident scripts finish.
 - `DownloaderContext::shutdown()` requests closure of known sessions, then stops the script runner
   before retiring lanes and stopping the IO pool. It is idempotent. The embedding contract requires
@@ -544,6 +545,9 @@ the runner still holds work that will call into it.
 
 - a `SessionRowObserver` maps `WorkID` values and parent relationships to
   `download_session_urls` rows;
+- imports reserve a unique work ID and persist a pending child row through `onImportQueued` before
+  opening a sink or dispatching HTTP; completion updates that row, so restart recovery also sees
+  transfers that outlive their parser;
 - imports stream to temporary files and then use the standard record import path;
 - persistent cookies use the `downloader_cookies` table;
 - secrets are read from the `downloader_secrets` table;
@@ -586,5 +590,9 @@ The full server-side options and defaults are in
 - Durable rate policy: [LanePolicy.cpp](../IDHANDownloader/src/http/LanePolicy.cpp)
 - Redirect orchestration: [LanePool.cpp](../IDHANDownloader/src/http/LanePool.cpp)
 - curl transfer execution: [LaneShard.cpp](../IDHANDownloader/src/http/LaneShard.cpp)
-- epoll transport threads: [IoPool.cpp](../IDHANDownloader/src/http/IoPool.cpp)
-- Server adapter: [DownloadSessionManager.cpp](../IDHANServer/src/downloader/DownloadSessionManager.cpp)
+- epoll transport threads: [IoThread.cpp](../IDHANDownloader/src/http/IoThread.cpp)
+- IO pool and curl initialization: [IoPool.cpp](../IDHANDownloader/src/http/IoPool.cpp)
+- Server session lifecycle: [DownloadSessionManager.cpp](../IDHANServer/src/downloader/DownloadSessionManager.cpp)
+- Session persistence observer: [SessionRowObserver.hpp](../IDHANServer/src/downloader/SessionRowObserver.hpp)
+- Import adapter: [DownloadImports.hpp](../IDHANServer/src/downloader/DownloadImports.hpp)
+- Secrets adapter: [DatabaseSecrets.hpp](../IDHANServer/src/downloader/DatabaseSecrets.hpp)

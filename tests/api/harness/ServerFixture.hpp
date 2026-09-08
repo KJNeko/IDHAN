@@ -38,6 +38,12 @@ class TestServer
 
 	//! Returns the schema to the state a freshly migrated one is in: no tags, no domains beyond the default.
 	void wipe();
+
+	void restart( bool crash )
+	{
+		m_server.restart( crash );
+		m_client.authenticate();
+	}
 };
 
 [[nodiscard]] TestServer& testServer();

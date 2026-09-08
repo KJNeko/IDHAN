@@ -5,8 +5,10 @@
 #include <algorithm>
 #include <utility>
 
+#include "HostCallback.hpp"
 #include "URLUtils.hpp"
 #include "http/HttpMessage.hpp"
+#include "js/JSValueHandle.hpp"
 #include "js/ScriptContext.hpp"
 #include "js/bindings/IdhanBindings.hpp"
 #include "logging/format_ns.hpp"
@@ -201,7 +203,7 @@ void SessionContext::Impl::reportDrainedIfIdle()
 	m_drained.notify_all();
 	m_diagnostics.recordFinished();
 
-	if ( m_options.observer != nullptr ) m_options.observer->onFinished();
+	if ( m_options.observer != nullptr ) (void)hostCallback( [ & ] { m_options.observer->onFinished(); } );
 }
 
 void SessionContext::Impl::retireQueued( const WorkID id )
@@ -318,7 +320,8 @@ std::unique_ptr< ScriptExecution > SessionContext::Impl::beginWork(
 		spdlog::warn( "downloader session: work {} could not start: {}", work.id, error );
 		m_diagnostics.recordFailed( info, error );
 
-		if ( m_options.observer != nullptr ) m_options.observer->onFailed( info, error );
+		if ( m_options.observer != nullptr )
+			(void)hostCallback( [ & ] { m_options.observer->onFailed( info, error ); } );
 
 		retire( work.id );
 	};
@@ -357,7 +360,7 @@ std::unique_ptr< ScriptExecution > SessionContext::Impl::beginWork(
 
 	m_diagnostics.recordStarted( info );
 
-	if ( m_options.observer != nullptr ) m_options.observer->onStarted( info );
+	if ( m_options.observer != nullptr ) (void)hostCallback( [ & ] { m_options.observer->onStarted( info ); } );
 
 	auto evaluated { scripts.evaluate( *execution, execution->route.script ) };
 
@@ -441,11 +444,12 @@ void SessionContext::Impl::callParser( ScriptContext& scripts, ScriptExecution& 
 
 	loadManifestCookies( execution );
 
-	JSValue parser { JS_GetPropertyStr( context, execution.module_namespace, execution.route.export_name.c_str() ) };
+	JSValueHandle parser {
+		context, JS_GetPropertyStr( context, execution.module_namespace, execution.route.export_name.c_str() )
+	};
 
-	if ( !JS_IsFunction( context, parser ) )
+	if ( !JS_IsFunction( context, parser.get() ) )
 	{
-		JS_FreeValue( context, parser );
 		failWork(
 			execution,
 			format_ns::format(
@@ -453,22 +457,17 @@ void SessionContext::Impl::callParser( ScriptContext& scripts, ScriptExecution& 
 		return;
 	}
 
-	JSValue input { JS_NewObject( context ) };
-	JS_SetPropertyStr( context, input, "url", JS_NewString( context, execution.parser_url.c_str() ) );
-	JS_SetPropertyStr( context, input, "flags", buildFlags( execution ) );
+	JSValueHandle input { context, JS_NewObject( context ) };
+	JS_SetPropertyStr( context, input.get(), "url", JS_NewString( context, execution.parser_url.c_str() ) );
+	JS_SetPropertyStr( context, input.get(), "flags", buildFlags( execution ) );
 
-	JSValue global { JS_GetGlobalObject( context ) };
-	JSValue idhan { JS_GetPropertyStr( context, global, "idhan" ) };
-	JSValue arguments[] { input, idhan };
+	JSValueHandle global { context, JS_GetGlobalObject( context ) };
+	JSValueHandle idhan { context, JS_GetPropertyStr( context, global.get(), "idhan" ) };
+	JSValue arguments[] { input.get(), idhan.get() };
 
 	scripts.enterBurst();
-	JSValue result { JS_Call( context, parser, JS_UNDEFINED, 2, arguments ) };
+	JSValue result { JS_Call( context, parser.get(), JS_UNDEFINED, 2, arguments ) };
 	scripts.leaveBurst();
-
-	JS_FreeValue( context, idhan );
-	JS_FreeValue( context, global );
-	JS_FreeValue( context, input );
-	JS_FreeValue( context, parser );
 
 	if ( JS_IsException( result ) )
 	{
@@ -489,7 +488,8 @@ void SessionContext::Impl::finishWork( ScriptExecution& execution )
 
 	m_diagnostics.recordCompleted( infoFor( execution ) );
 
-	if ( m_options.observer != nullptr ) m_options.observer->onCompleted( infoFor( execution ) );
+	if ( m_options.observer != nullptr )
+		(void)hostCallback( [ & ] { m_options.observer->onCompleted( infoFor( execution ) ); } );
 }
 
 void SessionContext::Impl::failWork( ScriptExecution& execution, std::string error )
@@ -513,7 +513,8 @@ void SessionContext::Impl::failWork( ScriptExecution& execution, std::string err
 	const std::string reported { format_ns::format( "{}:\n{}", identity, execution.error ) };
 	m_diagnostics.recordFailed( infoFor( execution ), reported );
 
-	if ( m_options.observer != nullptr ) m_options.observer->onFailed( infoFor( execution ), reported );
+	if ( m_options.observer != nullptr )
+		(void)hostCallback( [ & ] { m_options.observer->onFailed( infoFor( execution ), reported ); } );
 }
 
 void SessionContext::Impl::releaseWork( ScriptContext& scripts, ScriptExecution& execution )
@@ -561,7 +562,8 @@ FollowResult SessionContext::Impl::follow( ScriptExecution& execution, std::stri
 	{
 		m_diagnostics.recordFollowed( target, status );
 
-		if ( m_options.observer != nullptr ) m_options.observer->onFollowed( target, status );
+		if ( m_options.observer != nullptr )
+			(void)hostCallback( [ & ] { m_options.observer->onFollowed( target, status ); } );
 	};
 
 	if ( m_cancelled.load() || m_closed.load() )
@@ -586,7 +588,10 @@ FollowResult SessionContext::Impl::follow( ScriptExecution& execution, std::stri
 
 	if ( m_options.observer != nullptr )
 	{
-		if ( const auto record { m_options.observer->alreadyImported( url ) }; record.has_value() )
+		const auto lookup { hostCallback( [ & ] { return m_options.observer->alreadyImported( url ); } ) };
+		const auto record { lookup ? *lookup : std::nullopt };
+
+		if ( record.has_value() )
 		{
 			{
 				const std::scoped_lock lock { m_mutex };
@@ -632,7 +637,8 @@ FollowResult SessionContext::Impl::follow( ScriptExecution& execution, std::stri
 		const std::string error { "The download session closed before followed work could be queued" };
 		m_diagnostics.recordFailed( target, error );
 
-		if ( m_options.observer != nullptr ) m_options.observer->onFailed( target, error );
+		if ( m_options.observer != nullptr )
+			(void)hostCallback( [ & ] { m_options.observer->onFailed( target, error ); } );
 
 		return FollowResult { .status = FollowStatus::FILTERED };
 	}
@@ -644,12 +650,13 @@ std::optional< std::string > SessionContext::Impl::secret( const std::string_vie
 {
 	if ( m_environment.secrets == nullptr ) return std::nullopt;
 
-	return m_environment.secrets->secret( name );
+	const auto result { hostCallback( [ & ] { return m_environment.secrets->secret( name ); } ) };
+	return result ? *result : std::nullopt;
 }
 
 std::uint64_t SessionContext::Impl::track( ScriptExecution& execution, Pending pending )
 {
-	pending.work = execution.work_id;
+	if ( !pending.import ) pending.work = execution.work_id;
 	pending.worker = execution.worker;
 	pending.started_at = std::chrono::steady_clock::now();
 
@@ -817,37 +824,55 @@ void SessionContext::Impl::startRequest( ScriptExecution& execution, Json::Value
 
 void SessionContext::Impl::startImport( ScriptExecution& execution, Json::Value options )
 {
+	const WorkID import_id { m_next_work.fetch_add( 1 ) };
 	std::string response_type {};
 	auto request { buildRequest( options[ "request" ], response_type ) };
 
 	if ( !request )
 	{
-		reportImportFailure( execution.work_id, options[ "request" ][ "url" ].asString(), request.error() );
+		reportImportFailure(
+			import_id,
+			options[ "request" ][ "url" ].isString() ? options[ "request" ][ "url" ].asString() : std::string {},
+			request.error(),
+			execution.work_id );
 		return;
 	}
 
 	if ( m_environment.imports == nullptr )
 	{
-		reportImportFailure( execution.work_id, request->url, "This downloader host cannot import files" );
+		reportImportFailure( import_id, request->url, "This downloader host cannot import files", execution.work_id );
 		return;
+	}
+
+	const WorkInfo info { .id = import_id, .parent = execution.work_id, .url = request->url };
+
+	if ( m_options.observer != nullptr )
+	{
+		const auto queued { hostOperation( [ & ] { return m_options.observer->onImportQueued( info ); } ) };
+
+		if ( !queued )
+		{
+			reportImportFailure( import_id, request->url, queued.error(), execution.work_id );
+			return;
+		}
 	}
 
 	Json::Value import_options { options };
 	import_options.removeMember( "request" );
 
 	ImportRequest import {
-		.work = execution.work_id,
+		.work = import_id,
 		.url = request->url,
 		.source_url = execution.parser_url,
 		.options = import_options,
 		.host_tag = m_options.host_tag
 	};
 
-	auto sink { m_environment.imports->open( import ) };
+	auto sink { hostOperation( [ & ] { return m_environment.imports->open( import ); } ) };
 
 	if ( !sink )
 	{
-		reportImportFailure( execution.work_id, request->url, sink.error() );
+		reportImportFailure( import_id, request->url, sink.error(), execution.work_id );
 		return;
 	}
 
@@ -859,7 +884,8 @@ void SessionContext::Impl::startImport( ScriptExecution& execution, Json::Value 
 
 	const std::uint64_t id { track(
 		execution,
-		Pending { .url = url,
+		Pending { .work = import_id,
+		          .url = url,
 		          .lane = m_environment.lanes->laneKeyForUrl( url ),
 		          .import_options = std::move( import_options ),
 		          .import = true } ) };
@@ -888,13 +914,21 @@ void SessionContext::Impl::rejectPending( Pending& pending, const std::string& e
 	pending.promise.settle( false, value );
 }
 
-void SessionContext::Impl::reportImportFailure( const WorkID work, const std::string& url, const std::string& error )
+void SessionContext::Impl::reportImportFailure(
+	const WorkID work,
+	const std::string& url,
+	const std::string& error,
+	const std::optional< WorkID > parent )
 {
 	spdlog::warn( "downloader session: work {} import of {} failed: {}", work, url, error );
 	m_diagnostics.recordImportFailed( work, url, error );
 
 	if ( m_options.observer != nullptr )
-		m_options.observer->onImportFailed( WorkInfo { .id = work, .url = url }, url, error );
+		(void)hostCallback(
+			[ & ]
+			{
+				m_options.observer->onImportFailed( WorkInfo { .id = work, .parent = parent, .url = url }, url, error );
+			} );
 }
 
 void SessionContext::Impl::reportRequestFailure( const RequestFailure& failure )
@@ -907,7 +941,8 @@ void SessionContext::Impl::reportRequestFailure( const RequestFailure& failure )
 		failure.message );
 	m_diagnostics.recordRequestFailed( failure );
 
-	if ( m_options.observer != nullptr ) m_options.observer->onRequestFailed( failure );
+	if ( m_options.observer != nullptr )
+		(void)hostCallback( [ & ] { m_options.observer->onRequestFailed( failure ); } );
 }
 
 void SessionContext::Impl::settleRequest( Pending& pending )
@@ -942,7 +977,7 @@ void SessionContext::Impl::settleRequest( Pending& pending )
 	};
 	m_diagnostics.recordRequest( request_info );
 
-	if ( m_options.observer != nullptr ) m_options.observer->onRequest( request_info );
+	if ( m_options.observer != nullptr ) (void)hostCallback( [ & ] { m_options.observer->onRequest( request_info ); } );
 
 	if ( response.status != 200 )
 		reportRequestFailure(
@@ -1049,7 +1084,7 @@ void SessionContext::Impl::settleImport( Pending& pending )
 	};
 	m_diagnostics.recordImported( import_info );
 
-	if ( m_options.observer != nullptr ) m_options.observer->onImported( import_info );
+	if ( m_options.observer != nullptr ) (void)hostCallback( [ & ] { m_options.observer->onImported( import_info ); } );
 }
 
 std::expected< TransferRequest, std::string > SessionContext::Impl::buildRequest(

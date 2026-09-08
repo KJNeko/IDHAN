@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "IDHANDownloader/DownloaderContext.hpp"
+#include "IDHANDownloader/HttpVersion.hpp"
 #include "IDHANDownloader/ImportSink.hpp"
 #include "http/HttpMessage.hpp"
 
@@ -77,7 +77,7 @@ struct TransferResponse
 };
 
 using TransferResult = std::expected< TransferResponse, TransferError >;
-using TransferCallback = std::function< void( TransferResult ) >;
+using TransferCallback = std::move_only_function< void( TransferResult ) >;
 
 struct TransferRequest
 {

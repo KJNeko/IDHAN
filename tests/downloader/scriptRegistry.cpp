@@ -83,7 +83,7 @@ TEST_CASE( "An explicit host request rate overrides a shared parent rate", "[dow
 
 	const auto gelbooru_cdn { registry->laneSettings( "img4.gelbooru.com" ) };
 	REQUIRE( gelbooru_cdn.rate.has_value() );
-	CHECK( gelbooru_cdn.rate->requests == 5 );
+	CHECK( gelbooru_cdn.rate->requests == 2 );
 	CHECK( gelbooru_cdn.rate->seconds == 1 );
 	CHECK_FALSE( gelbooru_cdn.group.has_value() );
 

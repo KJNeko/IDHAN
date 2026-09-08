@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#include "HostCallback.hpp"
 #include "http/IoPool.hpp"
 #include "http/LanePolicy.hpp"
 #include "http/LaneShard.hpp"
@@ -29,7 +30,7 @@ void Lane::submit( TransferRequest request, TransferCallback callback )
 
 		if ( m_stopped )
 		{
-			if ( request.sink ) request.sink->abort();
+			if ( request.sink ) (void)hostCallback( [ & ] { request.sink->abort(); } );
 
 			callback(
 				std::unexpected(
@@ -69,7 +70,7 @@ void Lane::cancel( const std::shared_ptr< std::atomic_bool >& cancellation )
 
 	for ( Pending& pending : cancelled )
 	{
-		if ( pending.request.sink ) pending.request.sink->abort();
+		if ( pending.request.sink ) (void)hostCallback( [ & ] { pending.request.sink->abort(); } );
 
 		pending.callback(
 			std::unexpected(
@@ -186,6 +187,7 @@ void Lane::pump( const std::shared_ptr< Lane >& lane )
 		Pending pending { std::move( self.m_queue.front() ) };
 		self.m_queue.pop_front();
 		++self.m_in_flight;
+		shard->reserve();
 
 		shard->thread().post( [ shard, moved = std::move( pending ) ]() mutable
 		                      { shard->start( std::move( moved.request ), std::move( moved.callback ) ); } );
@@ -227,7 +229,7 @@ void Lane::shutdown()
 
 	for ( Pending& pending : queued )
 	{
-		if ( pending.request.sink ) pending.request.sink->abort();
+		if ( pending.request.sink ) (void)hostCallback( [ & ] { pending.request.sink->abort(); } );
 
 		pending.callback(
 			std::unexpected(

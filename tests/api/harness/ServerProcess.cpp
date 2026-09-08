@@ -118,7 +118,12 @@ ServerProcess::ServerProcess( std::string schema ) :
 {
 	std::filesystem::remove_all( m_temp_path );
 	std::filesystem::create_directories( m_temp_path );
+	start();
+}
 
+void ServerProcess::start()
+{
+	std::filesystem::create_directories( m_temp_path );
 	const auto executable { serverExecutable() };
 	const PostgresSettings postgres {};
 
@@ -177,6 +182,21 @@ ServerProcess::ServerProcess( std::string schema ) :
 	if ( m_pid < 0 ) throw std::runtime_error( "Could not fork a server process" );
 
 	waitUntilReady();
+}
+
+void ServerProcess::restart( const bool crash )
+{
+	if ( crash && m_pid > 0 )
+	{
+		::kill( m_pid, SIGKILL );
+		int status {};
+		::waitpid( m_pid, &status, 0 );
+		m_pid = -1;
+	}
+	else
+		stop();
+
+	start();
 }
 
 std::string ServerProcess::logTail() const

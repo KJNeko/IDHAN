@@ -8,7 +8,9 @@
 #include <cstring>
 #include <utility>
 
+#include "HostCallback.hpp"
 #include "URLUtils.hpp"
+#include "http/IoPool.hpp"
 #include "http/Lane.hpp"
 #include "http/UserAgent.hpp"
 #include "logging/format_ns.hpp"
@@ -113,9 +115,10 @@ void LaneShard::shutdown()
 		auto node { m_active.extract( m_active.begin() ) };
 		Active& active { *node.mapped() };
 
-		if ( active.request.sink ) active.request.sink->abort();
+		if ( active.request.sink ) (void)hostCallback( [ & ] { active.request.sink->abort(); } );
 
 		release( active );
+		m_assigned.fetch_sub( 1, std::memory_order_relaxed );
 
 		if ( active.callback )
 			active.callback(
@@ -138,9 +141,11 @@ std::size_t LaneShard::writeCallback( char* data, const std::size_t size, const 
 
 	if ( active->request.sink )
 	{
-		const auto written {
-			active->request.sink->write( std::span { reinterpret_cast< const std::byte* >( data ), total } )
-		};
+		const auto written { hostOperation(
+			[ & ]
+			{
+				return active->request.sink->write( std::span { reinterpret_cast< const std::byte* >( data ), total } );
+			} ) };
 
 		if ( !written )
 		{
@@ -214,11 +219,12 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 {
 	if ( request.cancellation && request.cancellation->load() )
 	{
-		if ( request.sink ) request.sink->abort();
+		if ( request.sink ) (void)hostCallback( [ & ] { request.sink->abort(); } );
 
 		callback(
 			std::unexpected(
 				TransferError { .code = TransferErrorCode::CANCELLED, .message = "Transfer cancelled" } ) );
+		m_assigned.fetch_sub( 1, std::memory_order_relaxed );
 		if ( const auto lane { m_lane.lock() } ) lane->onTransferFinished();
 		return;
 	}
@@ -231,11 +237,12 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 
 	if ( active->easy == nullptr )
 	{
-		if ( active->request.sink ) active->request.sink->abort();
+		if ( active->request.sink ) (void)hostCallback( [ & ] { active->request.sink->abort(); } );
 
 		active->callback(
 			std::unexpected(
 				TransferError { .code = TransferErrorCode::TRANSPORT, .message = "curl_easy_init failed" } ) );
+		m_assigned.fetch_sub( 1, std::memory_order_relaxed );
 		if ( const auto lane { m_lane.lock() } ) lane->onTransferFinished();
 
 		return;
@@ -301,12 +308,13 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 
 	if ( const CURLMcode code { curl_multi_add_handle( m_multi.get(), easy ) }; code != CURLM_OK )
 	{
-		if ( active->request.sink ) active->request.sink->abort();
+		if ( active->request.sink ) (void)hostCallback( [ & ] { active->request.sink->abort(); } );
 
 		active->callback(
 			std::unexpected(
 				TransferError { .code = TransferErrorCode::TRANSPORT, .message = curl_multi_strerror( code ) } ) );
 
+		m_assigned.fetch_sub( 1, std::memory_order_relaxed );
 		if ( const auto lane { m_lane.lock() } ) lane->onTransferFinished();
 
 		return;
@@ -387,7 +395,7 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 
 	if ( !active.sink_error.empty() )
 	{
-		if ( active.request.sink ) active.request.sink->abort();
+		if ( active.request.sink ) (void)hostCallback( [ & ] { active.request.sink->abort(); } );
 
 		result = std::unexpected( TransferError { .code = TransferErrorCode::SINK, .message = active.sink_error } );
 	}
@@ -403,7 +411,7 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 	}
 	else if ( code != CURLE_OK )
 	{
-		if ( active.request.sink ) active.request.sink->abort();
+		if ( active.request.sink ) (void)hostCallback( [ & ] { active.request.sink->abort(); } );
 
 		const bool cancelled { active.request.cancellation && active.request.cancellation->load() };
 		result = std::unexpected(
@@ -442,7 +450,9 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 				.final_url = active.response.url,
 			};
 
-			auto finished { active.request.sink->finish( active.response.import_metadata ) };
+			auto finished {
+				hostOperation( [ & ] { return active.request.sink->finish( active.response.import_metadata ); } )
+			};
 
 			if ( finished )
 			{
@@ -451,6 +461,7 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 			}
 			else
 			{
+				(void)hostCallback( [ & ] { active.request.sink->abort(); } );
 				result = std::unexpected(
 					TransferError { .code = TransferErrorCode::SINK, .message = std::move( finished.error() ) } );
 			}
@@ -463,6 +474,7 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 
 	if ( active.callback ) active.callback( std::move( result ) );
 
+	m_assigned.fetch_sub( 1, std::memory_order_relaxed );
 	if ( const auto lane { m_lane.lock() } ) lane->onTransferFinished();
 }
 
@@ -479,7 +491,7 @@ void LaneShard::cancel( const std::shared_ptr< std::atomic_bool >& cancellation 
 		auto node { m_active.extract( entry++ ) };
 		Active& active { *node.mapped() };
 
-		if ( active.request.sink ) active.request.sink->abort();
+		if ( active.request.sink ) (void)hostCallback( [ & ] { active.request.sink->abort(); } );
 
 		release( active );
 
@@ -488,6 +500,7 @@ void LaneShard::cancel( const std::shared_ptr< std::atomic_bool >& cancellation 
 				std::unexpected(
 					TransferError { .code = TransferErrorCode::CANCELLED, .message = "Transfer cancelled" } ) );
 
+		m_assigned.fetch_sub( 1, std::memory_order_relaxed );
 		if ( const auto lane { m_lane.lock() } ) lane->onTransferFinished();
 	}
 }

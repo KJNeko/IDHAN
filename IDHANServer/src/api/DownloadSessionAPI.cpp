@@ -11,7 +11,7 @@
 
 #include "api/helpers/createBadRequest.hpp"
 #include "db/drogonArrayBind.hpp"
-#include "downloader/DownloadSessionEvents.hpp"
+#include "downloader/DownloadSessionEventHub.hpp"
 #include "downloader/DownloadSessionManager.hpp"
 #include "downloader/sessionTree.hpp"
 

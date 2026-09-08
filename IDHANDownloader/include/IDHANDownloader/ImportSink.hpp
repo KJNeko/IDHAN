@@ -16,6 +16,7 @@ namespace idhan::downloader
 
 struct ImportRequest
 {
+	// Identity reserved by onImportQueued, distinct from the parent parser work.
 	WorkID work {};
 	std::string url {};
 	std::string source_url {};
@@ -48,15 +49,6 @@ class ImportSink
 	virtual std::expected< ImportResult, std::string > finish( const ImportMetadata& metadata ) = 0;
 	//! Discards partial output after failure.
 	virtual void abort() = 0;
-};
-
-class ImportSinkFactory
-{
-  public:
-
-	virtual ~ImportSinkFactory() = default;
-
-	virtual std::expected< std::unique_ptr< ImportSink >, std::string > open( const ImportRequest& request ) = 0;
 };
 
 } // namespace idhan::downloader

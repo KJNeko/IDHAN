@@ -21,6 +21,7 @@
 #include "http/Transfer.hpp"
 #include "js/ScriptExecution.hpp"
 #include "js/ScriptRunner.hpp"
+#include "js/ScriptSession.hpp"
 #include "scripts/ScriptRegistry.hpp"
 
 namespace idhan::downloader
@@ -111,7 +112,11 @@ class SessionContext::Impl final : public ScriptSession
 	void settleRequest( Pending& pending );
 	void settleImport( Pending& pending );
 	void rejectPending( Pending& pending, const std::string& error );
-	void reportImportFailure( WorkID work, const std::string& url, const std::string& error );
+	void reportImportFailure(
+		WorkID work,
+		const std::string& url,
+		const std::string& error,
+		std::optional< WorkID > parent = std::nullopt );
 	void reportRequestFailure( const RequestFailure& failure );
 	[[nodiscard]] std::expected< TransferRequest, std::string > buildRequest(
 		const Json::Value& options,
