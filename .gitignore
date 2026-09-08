@@ -1,20 +1,16 @@
-# dot hidden
-.*
-.*/
-
-# explicit
-*.ignore
+# JavaScript dependencies
+node_modules/
 
 # Build dirs
 /build/
 /cmake-build-*/
 
-# Build helpers
-build.bat
-
 # IDE specific
 #	# clion
 /venv/
+.idea/
+.run/
+/.clangd
 #	# Visual Studio
 /out/build/x64-Debug
 /CMakeFiles
@@ -34,6 +30,8 @@ read.lock
 .cache/
 .claude/
 .junie/
+.agents/
+.codex/
 
 /docs/out
 
@@ -44,11 +42,10 @@ IDHANServer/src/db/dev.sql
 IDHANServer/src/db/pre-dev.sql
 
 .env
+.env.*
 publish.sh
 push-nas.sh
 run-dev-remote.sh
-
-/dev/http-client.private.env.json
 
 # Local downloader parser credentials
 /IDHANDownloader/premade/secrets.json
