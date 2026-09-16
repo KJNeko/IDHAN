@@ -61,6 +61,20 @@ binary when practical:
 
 ## C++ and API conventions
 
+- Use the underlying library's types and APIs directly where they fit. Avoid
+  duplicating their representations just to convert back at the boundary;
+  wrappers should add necessary application behavior or ownership only.
+
+- Prefer named functions or member functions for substantial or reusable logic.
+  Use lambdas sparingly for short, local callbacks; move long or nested callback
+  bodies into named helpers. Keep captures minimal and ownership explicit.
+
+- Prefer returning owned values over output parameters or reference returns.
+  Use `std::optional<T>` when a result may be absent and `std::expected<T, E>`
+  when failure details matter. Return a struct or tuple for multiple results.
+  Keep reference returns only for intentional borrowed access with clear lifetime
+  requirements; preserve signatures required by external interfaces.
+
 - Keep one class per header unless additional classes are tightly integrated or
   used only by that class.
 

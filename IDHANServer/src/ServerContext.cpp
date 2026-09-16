@@ -1,108 +1,69 @@
 #include "ServerContext.hpp"
 
+#include <folly/coro/Task.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <spdlog/async_logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/ringbuffer_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include <condition_variable>
+#include <csignal>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
 #include <paths.hpp>
 #include <ranges>
 
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
-#include "api/apiPrefixes.hpp"
-#include "api/helpers/ResponseCallback.hpp"
-#include "api/helpers/createBadRequest.hpp"
 #include "auth/authKeys.hpp"
 #include "crypto/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
+#include "downloader/DownloadSessionEventHub.hpp"
 #include "downloader/DownloadSessionManager.hpp"
-#include "drogon/HttpAppFramework.h"
+#include "downloader/RateLimitEventHub.hpp"
 #include "embeddings/embeddings.hpp"
-#include "filesystem/filesystem.hpp"
+#include "filesystem/ThumbnailCache.hpp"
 #include "filesystem/io/IOUring.hpp"
-#include "hamming/hamming.hpp"
+#include "httpapi/apiAuth.hpp"
+#include "httpapi/clusters.hpp"
+#include "httpapi/downloadSessions.hpp"
+#include "httpapi/downloaderDebug.hpp"
+#include "httpapi/downloaderSecrets.hpp"
+#include "httpapi/embeddings.hpp"
+#include "httpapi/fileMetadata.hpp"
+#include "httpapi/generateApiKey.hpp"
+#include "httpapi/health.hpp"
+#include "httpapi/heartbeat.hpp"
+#include "httpapi/hydrus.hpp"
+#include "httpapi/importFile.hpp"
+#include "httpapi/info.hpp"
+#include "httpapi/jobs.hpp"
+#include "httpapi/layouts.hpp"
+#include "httpapi/maintenance.hpp"
+#include "httpapi/plugins.hpp"
+#include "httpapi/rateLimit.hpp"
+#include "httpapi/recordFile.hpp"
+#include "httpapi/records.hpp"
+#include "httpapi/relationships.hpp"
+#include "httpapi/search.hpp"
+#include "httpapi/tags.hpp"
+#include "httpapi/thumbnail.hpp"
+#include "httpapi/ui.hpp"
+#include "httpapi/version.hpp"
+#include "idhan/db/DBConfig.hpp"
+#include "idhan/db/DBContext.hpp"
+#include "idhan/http/HTTPConfig.hpp"
+#include "idhan/http/HTTPServer.hpp"
+#include "idhan/http/RouteRegistry.hpp"
 #include "logging/log.hpp"
-#include "metadata/phash.hpp"
-#include "mime/syncMimeTable.hpp"
 #include "spdlog/async.h"
 
 namespace idhan
 {
-
-void addCORSHeaders( const drogon::HttpResponsePtr& response )
-{
-	response->addHeader( "Access-Control-Allow-Headers", "*" );
-	response->addHeader( "Access-Control-Allow-Origin", "*" );
-	response->addHeader( "Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD" );
-	response->addHeader( "Access-Control-Max-Age", "86400" );
-
-	// Isolates cross-origin window references. Unrelated to the WebUI; we open no cross-origin popups.
-	response->addHeader( "Cross-Origin-Opener-Policy", "same-origin" );
-}
-
-void ServerContext::setupCORSSupport() const
-{
-	drogon::app().registerPreRoutingAdvice(
-		[]( const drogon::HttpRequestPtr& request, drogon::FilterCallback&& stop, drogon::FilterChainCallback&& pass )
-		{
-			log::trace( "Routing for {}", request->path() );
-			if ( request->method() == drogon::Options )
-			{
-				const auto response { drogon::HttpResponse::newHttpResponse() };
-
-				addCORSHeaders( response );
-
-				stop( response );
-
-				return;
-			}
-
-			pass();
-		} );
-
-	drogon::app().registerPostHandlingAdvice(
-		[]( [[maybe_unused]] const drogon::HttpRequestPtr& request, const drogon::HttpResponsePtr& response )
-		{
-			log::trace( "Finished handling {}", request->path() );
-			addCORSHeaders( response );
-		} );
-}
-
-void ServerContext::setupSPAFallback() const
-{
-	drogon::app().setDefaultHandler(
-		[]( const drogon::HttpRequestPtr& request, std::function< void( const drogon::HttpResponsePtr& ) >&& callback )
-		{
-			const auto index_path { getStaticPath() / "index.html" };
-
-			const bool is_navigation { request->method() == drogon::Get || request->method() == drogon::Head };
-			const bool wants_html { request->getHeader( "Accept" ).find( "text/html" ) != std::string::npos };
-
-			if ( is_navigation && wants_html && !api::isApiPath( request->path() )
-		         && std::filesystem::exists( index_path ) )
-			{
-				callback( drogon::HttpResponse::newFileResponse( index_path.string() ) );
-				return;
-			}
-
-			callback( drogon::HttpResponse::newNotFoundResponse( request ) );
-		} );
-}
-
-void exceptionHandler( const std::exception& e, const drogon::HttpRequestPtr& request, ResponseFunction&& callback )
-{
-	log::error( "Unhandled exception got to drogon! In request: {} What: {}", request->getQuery(), e.what() );
-	spdlog::dump_backtrace();
-
-	auto response { idhan::createInternalError(
-		"Unhandled exception got to drogon! In request: {} What: {}", request->getPath(), e.what() ) };
-
-	callback( response );
-}
 
 void printCoreLocation()
 {
@@ -172,7 +133,6 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	logger->set_level( spdlog::level::trace );
 
 	spdlog::set_default_logger( logger );
-	trantor::Logger::enableSpdLog( logger );
 	log::setServerLogger( logger, ring_buffer );
 
 	logger->flush_on( spdlog::level::warn );
@@ -233,8 +193,159 @@ void setupTempPath()
 		std::abort();
 	}
 
-	auto& app = drogon::app();
-	app.setUploadPath( tmp_path );
+}
+
+//! URLs a shutdown left unfinished are only recorded in the database, since jobs themselves live in
+//! memory and their ids reset on restart. The submits run here rather than inside a database
+//! coroutine on purpose: submit() reaches downloader host callbacks that block on their own
+//! queries, and those resume on the database executor's single thread, so submitting from that
+//! thread deadlocks startup.
+static void resumeDownloads( db::DBContext& db, const folly::Executor::KeepAlive<>& db_executor )
+{
+	auto& downloads { downloader::downloadSessionManager() };
+	auto pending { folly::coro::co_withExecutor( db_executor, downloads.resumable( db ) ).start().get() };
+
+	if ( pending.empty() ) return;
+
+	log::info( "Resuming {} interrupted download(s)", pending.size() );
+
+	for ( auto& root : pending )
+	{
+		auto scheduled { downloads.submit( root.job_id, root.session_id, std::move( root.url ) ) };
+		if ( scheduled ) continue;
+
+		folly::coro::co_withExecutor(
+			db_executor, downloads.markUnresumable( root.job_id, std::move( scheduled.error() ), db ) )
+			.start()
+			.get();
+	}
+}
+
+void ServerContext::startReplacementStack()
+{
+	log::trace( "Starting replacement HTTP/DB stack (prep only, no routes yet)" );
+
+	db::DBConfig db_config { db::DBConfig::defaults() };
+	db_config.host = args.hostname;
+	db_config.port = args.port;
+	db_config.database = args.dbname;
+	db_config.user = args.user;
+	db_config.password = args.password;
+	db_config.schema = args.schema;
+	db_config.validate();
+
+	// IDHANDb gets one dedicated thread of its own, isolated from everything else.
+	m_db_executor = std::make_shared< folly::CPUThreadPoolExecutor >(
+		1, std::make_shared< folly::NamedThreadFactory >( "idhan-db" ) );
+
+	m_db_context = std::make_unique< db::DBContext >( db_config, folly::getKeepAliveToken( m_db_executor.get() ) );
+
+	const auto db_executor { folly::getKeepAliveToken( m_db_executor.get() ) };
+
+	// Runs on IDHANDb's own thread rather than being driven inline on this one (which blockingWait
+	// would do); this thread only blocks waiting on the future's result.
+	folly::coro::co_withExecutor( db_executor, m_db_context->start() ).start().get();
+
+	log::info( "Replacement DB stack connected to {}:{}", db_config.host, db_config.port );
+
+	folly::coro::co_withExecutor(
+		db_executor,
+		[ this ]() -> runtime::Task<>
+		{
+			co_await m_clusters->reloadClusters( *m_db_context );
+			co_await embeddings::registerEmbeddingModels( *m_db_context );
+
+			const auto key_count { co_await auth::keyCount( *m_db_context ) };
+			if ( key_count == 0 )
+				log::warn( "No API keys found, One will be generated at first navigation to /generate_api_key" );
+		}() )
+		.start()
+		.get();
+
+	resumeDownloads( *m_db_context, db_executor );
+
+	m_module_maintenance_thread = std::jthread(
+		[ this ]( const std::stop_token stop_token )
+		{
+			std::mutex mutex;
+			std::condition_variable_any cv;
+			std::unique_lock lock { mutex };
+
+			while ( !stop_token.stop_requested() )
+			{
+				cv.wait_for(
+					lock,
+					stop_token,
+					std::chrono::seconds { 30 },
+					[ &stop_token ] { return stop_token.stop_requested(); } );
+
+				if ( stop_token.stop_requested() ) break;
+
+				if ( m_module_loader != nullptr ) m_module_loader->maintainWorkers();
+			}
+		} );
+
+	http::HTTPConfig http_config { http::HTTPConfig::defaults() };
+	http_config.ipv4_listen = config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" );
+	http_config.ipv6_listen = config::get< std::string >( "host", "ipv6_listen", "::1" );
+	http_config.port = config::get< std::uint16_t >( "server", "port", IDHAN_DEFAULT_PORT );
+	http_config.tls = config::get< bool >( "host", "use_tls", false );
+	http_config.self_sign_tls = config::get< bool >( "host", "self_sign_tls", false );
+	http_config.certificate =
+		config::get< std::string, config::no_warn_on_default >( "host", "server_cert_path", "./server.crt" );
+	http_config.private_key =
+		config::get< std::string, config::no_warn_on_default >( "host", "server_key_path", "./server.key" );
+
+	http::RouteRegistry routes {};
+	m_heartbeat = std::make_unique< httpapi::HeartbeatService >();
+	routes.add( m_heartbeat->route() );
+	routes.add( httpapi::versionRoute() );
+	routes.add( httpapi::healthRoute() );
+	routes.add( httpapi::generateApiKeyRoute( *m_db_context ) );
+	routes.add( httpapi::importFileRoute( *m_db_context ) );
+	routes.add( httpapi::verifyRoute( *m_db_context ) );
+	routes.add( httpapi::recordFileRoute( *m_db_context, "/records/{record_id}/file" ) );
+	routes.add( httpapi::recordFileRoute( *m_db_context, "/records/{record_id}" ) );
+	routes.add( httpapi::recordInfoRoute( *m_db_context, "/records/{record_id}/info" ) );
+	routes.add( httpapi::recordInfoRoute( *m_db_context, "/records/{record_id}/metadata" ) );
+	routes.add( httpapi::recordMetadataBatchRoute( *m_db_context ) );
+	routes.add( httpapi::recordMetadataScanRoute( *m_db_context ) );
+	routes.add( httpapi::thumbnailRoute( *m_db_context ) );
+	routes.add( httpapi::searchRoute( *m_db_context ) );
+	routes.add( httpapi::searchPostRoute( *m_db_context ) );
+	routes.add( httpapi::rateLimitListRoute( *m_db_context ) );
+	routes.add( httpapi::rateLimitResetRoute( *m_db_context ) );
+	routes.add( httpapi::rateLimitEventsRoute( *m_db_context ) );
+	routes.add( httpapi::apiDocsIndexRoute() );
+	routes.add( httpapi::logRoute( *m_db_context ) );
+	routes.add( httpapi::pluginsRoute( *m_db_context ) );
+	routes.add( httpapi::downloaderDebugRoute( *m_db_context ) );
+	routes.add( httpapi::downloaderSecretsListRoute( *m_db_context ) );
+	routes.add( httpapi::downloaderSecretsSetRoute( *m_db_context ) );
+	for ( auto& route : httpapi::layoutRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	routes.add( httpapi::indexRoute( "/" ) );
+	routes.add( httpapi::indexRoute( "/status" ) );
+	// useStaleBuild() fetches this to compare the served entry module against the running one.
+	routes.add( httpapi::indexRoute( "/index.html" ) );
+	routes.add( httpapi::assetsRoute() );
+	routes.add( httpapi::apiDocsFilesRoute() );
+	routes.add( httpapi::pluginFilesRoute() );
+	for ( auto& route : httpapi::tagRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	for ( auto& route : httpapi::relationshipRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	for ( auto& route : httpapi::embeddingRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	for ( auto& route : httpapi::recordRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	for ( auto& route : httpapi::maintenanceRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	for ( auto& route : httpapi::jobRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	for ( auto& route : httpapi::clusterRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	for ( auto& route : httpapi::downloadSessionRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	for ( auto& route : httpapi::hydrusRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	routes.seal();
+
+	m_http_server = std::make_unique< http::HTTPServer >( http_config, std::move( routes ) );
+	m_http_server->start();
+
+	log::info( "IDHAN initialization finished" );
+	log::info( "Server available at http://localhost:{}", m_http_server->port() );
 }
 
 ServerContext::ServerContext( const ConnectionArguments& arguments ) :
@@ -255,105 +366,14 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	printCoreLocation();
 	log::trace( "printCoreLocation completed" );
 
-	// A configured zero asks for the whole machine. The server is not rationed the way the module
-	// workers are; four is simply where it starts.
-	constexpr std::size_t DEFAULT_IO_THREADS { 4 };
-
-	std::size_t io_threads { config::getSilentDefault< std::size_t >( "server", "io_threads", DEFAULT_IO_THREADS ) };
-
-	if ( io_threads == 0 )
-		io_threads = std::max( std::size_t { 1 }, static_cast< std::size_t >( std::thread::hardware_concurrency() ) );
-
-	// Below two, work that hops between loops has nowhere to hop to.
-	io_threads = std::max( io_threads, std::size_t { 2 } );
-
-	log::info( "IO Threads: {}", io_threads );
-
-	log::trace( "Configuring drogon app" );
-	auto& app = drogon::app();
-
-	app.setLogLevel( trantor::Logger::kInfo );
-	app.setThreadNum( io_threads );
-	app.setClientMaxBodySize( std::numeric_limits< std::uint64_t >::max() );
-	app.setDocumentRoot( getStaticPath() );
-	app.setExceptionHandler( exceptionHandler );
-	app.setLogPath( std::string( config::getLogPath() ), "", 1024 * 1024 * 4, 8, true );
-
 	log::trace( "Setting up temp path" );
 	setupTempPath();
 	log::trace( "Temp path setup completed" );
 
-	app.registerCustomExtensionMime( "wasm", "application/wasm" );
-	app.registerCustomExtensionMime( "mjs", "text/javascript" );
-	app.registerCustomExtensionMime( "webmanifest", "application/manifest+json" );
-
-	app.setFileTypes( { "html", "css",   "js",  "mjs",  "map", "json", "txt",  "xml", "webmanifest",
-	                    "svg",  "png",   "jpg", "jpeg", "gif", "webp", "avif", "ico", "bmp",
-	                    "woff", "woff2", "ttf", "otf",  "mp4", "webm", "wasm" } );
-
-	const bool use_tls { config::get< bool >( "host", "use_tls", false ) };
-
-	const auto ipv4_listener { config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" ) };
-	const auto ipv6_listener { config::get< std::string >( "host", "ipv6_listen", "::1" ) };
-	const auto listen_port { config::get< std::uint16_t >( "server", "port", IDHAN_DEFAULT_PORT ) };
-
-	const auto server_cert_path {
-		config::get< std::string, config::no_warn_on_default >( "host", "server_cert_path", "./server.crt" )
-	};
-
-	const auto server_key_path {
-		config::get< std::string, config::no_warn_on_default >( "host", "server_key_path", "./server.key" )
-	};
-
-	log::trace( "use_tls: {}", use_tls );
-
-	if ( !ipv4_listener.empty() )
-	{
-		log::trace( "Adding IPv4 listener on {}:{}", ipv4_listener, listen_port );
-		app.addListener( ipv4_listener, listen_port, use_tls, server_cert_path, server_key_path );
-	}
-
-	if ( !ipv6_listener.empty() )
-	{
-		log::trace( "Adding IPv6 listener on {}:{}", ipv6_listener, listen_port );
-		app.addListener( ipv6_listener, listen_port, use_tls, server_cert_path, server_key_path );
-	}
-
-	drogon::orm::PostgresConfig config {
-		.host = arguments.hostname,
-		.port = arguments.port,
-		.databaseName = arguments.dbname,
-		.username = arguments.user,
-		.password = arguments.password,
-		.connectionNumber = io_threads,
-		.name = "default",
-		.isFast = false,
-		.characterSet = "UTF-8",
-		.timeout = 60.0,
-		.autoBatch = false,
-		.connectOptions = {}
-	};
-
-	config.connectOptions.insert_or_assign( "search_path", arguments.searchPath() );
-
-	log::trace( "Database config prepared, adding DB client" );
-	log::info(
-		"Connecting to database {} at {}:{} with user {}",
-		config.databaseName,
-		config.host,
-		config.port,
-		config.username );
-
-	drogon::app().addDbClient( config );
-
-	log::trace( "Setting up CORS support" );
-	setupCORSSupport();
-	setupSPAFallback();
-	log::trace( "CORS support configured" );
+	IOUring::init();
+	log::trace( "IOUring engine initialised" );
 
 	m_module_loader = std::make_unique< modules::ModuleLoader >();
-
-	IOUring::init();
 
 	m_clusters = std::make_unique< filesystem::ClusterManager >();
 	log::info( "Thumbnails location: {}", getThumbnailsPath().string() );
@@ -366,73 +386,35 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 			log::warn( "Could not purge the thumbnail cache on boot: {}", deleted.error() );
 	}
 
-	drogon::app().registerBeginningAdvice(
-		[ this, listen_port ]()
-		{
-			drogon::sync_wait(
-				[ this ]() -> drogon::Task< void >
-				{
-					const auto db { drogon::app().getDbClient() };
-					co_await m_clusters->reloadClusters( db );
-					co_await mime::syncMimeTable( db );
-					co_await embeddings::registerEmbeddingModels( db );
-					co_await downloader::downloadSessionManager().restore( db );
-					co_return;
-				}() );
-
-			drogon::app().getLoop()->runEvery(
-				std::chrono::seconds { 30 },
-				[ this ]()
-				{
-					if ( m_module_loader != nullptr ) m_module_loader->maintainWorkers();
-				} );
-
-			hamming::startQueueSweeper();
-			metadata::startPhashSweeper();
-
-			log::info( "IDHAN initialization finished" );
-			log::info( "Server available at http://localhost:{}", listen_port );
-			log::info( "Swagger docs available at http://localhost:{}/api", listen_port );
-		} );
-
-	drogon::app().registerBeginningAdvice(
-		[]()
-		{
-			drogon::sync_wait(
-				[]() -> drogon::Task< void >
-				{
-					const auto db { drogon::app().getDbClient() };
-					const auto key_count { co_await auth::keyCount( db ) };
-
-					if ( key_count == 0 )
-					{
-						log::warn(
-							"No API keys found, One will be generated at first navigation to /generate_api_key" );
-					}
-
-					co_return;
-				}() );
-		} );
-}
-
-void trantorHook( const char* msg, const std::uint64_t len )
-{
-	log::info( "Hook: {}", std::string_view( msg, len ) );
+	startReplacementStack();
 }
 
 void ServerContext::run()
 {
 	log::info( "Starting runtime" );
 
-	trantor::Logger::setOutputFunction( trantorHook, []() noexcept {} );
+	// The HTTP server runs independently; this keeps the main thread alive until asked to stop.
+	sigset_t signal_set {};
+	sigemptyset( &signal_set );
+	sigaddset( &signal_set, SIGINT );
+	sigaddset( &signal_set, SIGTERM );
+	pthread_sigmask( SIG_BLOCK, &signal_set, nullptr );
 
-	drogon::app().run();
+	int received_signal {};
+	sigwait( &signal_set, &received_signal );
+
+	log::info( "Received signal {}, shutting down", received_signal );
 
 	log::info( "Exiting runtime" );
 }
 
 ServerContext::~ServerContext()
 {
+	if ( m_heartbeat != nullptr ) m_heartbeat->shutdown();
+	if ( m_http_server != nullptr ) m_http_server->stop();
+	downloader::DownloadSessionEventHub::instance().shutdown();
+	downloader::RateLimitEventHub::instance().shutdown();
+
 	downloader::downloadSessionManager().shutdown();
 	// The same key setupTempPath() created it under. Reading a different one deleted /tmp/idhan and
 	// left the configured directory behind, marker file and all, which aborts the next boot.

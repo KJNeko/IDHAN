@@ -28,3 +28,9 @@
 [submodule "dependencies/lexbor"]
 	path = dependencies/lexbor
 	url = https://github.com/lexbor/lexbor.git
+[submodule "dependencies/proxygen"]
+	path = dependencies/proxygen
+	url = https://github.com/facebook/proxygen
+[submodule "dependencies/simdjson"]
+	path = dependencies/simdjson
+	url = https://github.com/simdjson/simdjson.git

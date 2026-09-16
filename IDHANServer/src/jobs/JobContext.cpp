@@ -1,5 +1,7 @@
 #include "JobContext.hpp"
 
+#include <folly/executors/thread_factory/NamedThreadFactory.h>
+
 #include <algorithm>
 #include <chrono>
 #include <mutex>
@@ -8,7 +10,6 @@
 #include "Config.hpp"
 #include "JobTaskStatus.hpp"
 #include "logging/log.hpp"
-#include "trantor/net/EventLoopThreadPool.h"
 
 inline static std::atomic< idhan::JobID > job_id_counter { 1 };
 
@@ -56,14 +57,7 @@ void JobRuntime::runner()
 
 		log::debug( "Acquired Job" );
 
-		trantor::EventLoop* loop { nullptr };
-		do
-		{
-			loop = m_pool->getNextLoop();
-		}
-		while ( !loop );
-
-		loop->queueInLoop( [ job ]() { job->run(); } );
+		m_pool->add( [ job ]() { job->run(); } );
 
 		log::debug( "Job dispatched to thread" );
 	}
@@ -105,6 +99,11 @@ void JobRuntime::enqueue( const std::shared_ptr< JobContext >& ctx )
 	m_cv.notify_one();
 }
 
+folly::Executor::KeepAlive<> JobRuntime::executor() const
+{
+	return folly::getKeepAliveToken( m_pool.get() );
+}
+
 std::shared_ptr< JobContext > JobRuntime::getJob( idhan::JobID id )
 {
 	std::lock_guard lock { m_queue_mtx };
@@ -138,8 +137,8 @@ JobRuntime::JobRuntime() : m_pool( nullptr ), m_queue_mtx(), m_cv(), m_queue(), 
 
 	job_thread_count = std::max< std::size_t >( job_thread_count, 2 );
 
-	m_pool = std::make_unique< trantor::EventLoopThreadPool >( job_thread_count );
-	m_pool->start();
+	m_pool = std::make_unique< folly::CPUThreadPoolExecutor >(
+		job_thread_count, std::make_shared< folly::NamedThreadFactory >( "idhan-job" ) );
 
 	m_runner_thread = std::jthread( [ this ]() { runner(); } );
 	m_cleanup_thread = std::jthread( [ this ]() { cleanup(); } );

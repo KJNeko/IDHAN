@@ -16,12 +16,10 @@
 
 namespace idhan::test
 {
-namespace
-{
 
-const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
+static const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
 
-[[nodiscard]] std::string hex( const PerceptualHash& hash )
+[[nodiscard]] static std::string hex( const PerceptualHash& hash )
 {
 	constexpr char HEX[] { "0123456789abcdef" };
 	std::string result( hash.size() * 2, '0' );
@@ -34,7 +32,7 @@ const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
 	return result;
 }
 
-[[nodiscard]] VipsImagePtr memoryImage(
+[[nodiscard]] static VipsImagePtr memoryImage(
 	std::vector< std::uint8_t >& pixels,
 	const int width,
 	const int height,
@@ -43,8 +41,6 @@ const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
 	return VipsImagePtr { vips_image_new_from_memory(
 		pixels.data(), pixels.size(), width, height, bands, VIPS_FORMAT_UCHAR ) };
 }
-
-} // namespace
 
 //! The expected hash is what Hydrus itself produces for this file.
 TEST_CASE( "Perceptual hash matches Hydrus on a golden image", "[phash][modules]" )

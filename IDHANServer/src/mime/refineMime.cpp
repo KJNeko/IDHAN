@@ -22,7 +22,7 @@ static bool specializes( const MimeID specialized, const MimeID base_id )
 	return specialized_name->second == base_name->second;
 }
 
-IDHANTask< MimeID > specializeMimeID(
+runtime::Task< MimeID > specializeMimeID(
 	const MimeID base_id,
 	std::shared_ptr< const modules::CallInput > input,
 	const std::string_view filename )
@@ -72,7 +72,7 @@ IDHANTask< MimeID > specializeMimeID(
 	co_return base_id;
 }
 
-IDHANTask< MimeID > specializeMimeIDForPath( const MimeID base_id, std::filesystem::path path )
+runtime::Task< MimeID > specializeMimeIDForPath( const MimeID base_id, std::filesystem::path path )
 {
 	if ( modules::ModuleLoader::instance().getMimeParserFor( base_id ).empty() ) co_return base_id;
 

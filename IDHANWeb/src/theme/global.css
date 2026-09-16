@@ -1768,6 +1768,11 @@ body {
   word-break: break-word;
 }
 
+/* A record can carry several source URLs, so each gets its own line rather than running together. */
+.info-source {
+    display: block;
+}
+
 /* ---- Tag editor panel ---- */
 .tag-editor {
   display: flex;

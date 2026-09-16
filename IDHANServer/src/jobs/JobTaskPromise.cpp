@@ -1,7 +1,5 @@
 #include "JobTaskPromise.hpp"
 
-#include <drogon/HttpResponse.h>
-
 #include <chrono>
 #include <exception>
 

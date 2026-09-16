@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <optional>
 
-#include "filesystem.hpp"
+#include "PathHelpers.hpp"
 
 namespace idhan::filesystem
 {

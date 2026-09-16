@@ -2,8 +2,6 @@
 
 #include <IDHANDownloader/DownloaderContext.hpp>
 #include <IDHANDownloader/SessionSnapshot.hpp>
-#include <drogon/drogon.h>
-
 #include <atomic>
 #include <expected>
 #include <memory>
@@ -14,6 +12,12 @@
 
 #include "CookiePersistence.hpp"
 #include "IDHANTypes.hpp"
+#include "idhan/runtime/Task.hpp"
+
+namespace idhan::db
+{
+class DBContext;
+}
 
 namespace idhan::downloader
 {
@@ -49,7 +53,28 @@ class DownloadSessionManager final
 	DownloadSessionManager& operator=( const DownloadSessionManager& ) = delete;
 	~DownloadSessionManager();
 
-	drogon::Task< void > restore( const drogon::orm::DbClientPtr& db );
+	// Row persistence (addRow/markRow/addError, and SessionRowObserver::onImported) reaches the
+	// database through this rather than a threaded-through parameter, since the downloader's
+	// SessionObserver callback interface has no room for one.
+	[[nodiscard]] static db::DBContext& dbContext();
+
+	struct ResumableRoot
+	{
+		DownloadSessionUrlID job_id {};
+		DownloadSessionID session_id {};
+		std::string url {};
+	};
+
+	//! Resets URLs a shutdown left unfinished and reports the roots to resubmit. Submitting is left
+	//! to the caller, which must not be on the database executor: submit() reaches downloader host
+	//! callbacks that block on their own queries, and those resume on that executor's single thread.
+	[[nodiscard]] runtime::Task< std::vector< ResumableRoot > > resumable( db::DBContext& db );
+
+	//! Records a root that could not be handed back to the downloader.
+	[[nodiscard]] runtime::Task< void > markUnresumable(
+		DownloadSessionUrlID job_id,
+		std::string error,
+		db::DBContext& db );
 	[[nodiscard]] std::expected< void, std::string > submit(
 		DownloadSessionUrlID job_id,
 		DownloadSessionID session_id,
@@ -59,9 +84,9 @@ class DownloadSessionManager final
 
 	[[nodiscard]] std::expected< void, std::string > resetBackoff( std::string_view lane_key );
 	[[nodiscard]] std::vector< LaneSnapshot > laneSnapshots();
-	[[nodiscard]] drogon::Task< std::expected< std::unordered_map< std::string, std::string >, std::string > >
+	[[nodiscard]] runtime::Task< std::expected< std::unordered_map< std::string, std::string >, std::string > >
 		secrets();
-	[[nodiscard]] drogon::Task< std::expected< void, std::string > > setSecrets(
+	[[nodiscard]] runtime::Task< std::expected< void, std::string > > setSecrets(
 		std::unordered_map< std::string, std::string > values );
 
 	struct SessionDebugInfo

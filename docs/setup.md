@@ -108,6 +108,19 @@ keys to IDHAN for it to function properly.
 
 ### Self-signed keys
 
+For local use, IDHAN can create and retain a self-signed certificate automatically. Enable TLS and set
+`self_sign_tls = true`; on first startup, IDHAN writes the configured certificate and key paths if **both** are
+absent. It never overwrites either file. The generated certificate covers `localhost`, `127.0.0.1`, and `::1` and
+must still be trusted by the browser or client.
+
+```toml
+[host]
+use_tls = true
+self_sign_tls = true
+```
+
+Alternatively, create the certificate yourself:
+
 You can run `openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -nodes` in a directory that
 you're happy with for the keys to be in, and then provide IDHAN with the information to use the keys
 Set the following in one of your config files for IDHAN

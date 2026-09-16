@@ -167,6 +167,15 @@ SCENARIO_METHOD( ServerFixture, "A fetched file is named after its hash", "[api]
 	};
 	storeFile( db(), record_id, hex, cluster, contents );
 
+	SECTION( "Extension without a leading dot" )
+	{}
+	SECTION( "Extension with a leading dot" )
+	{
+		pqxx::work tx { db() };
+		tx.exec( "UPDATE file_info SET extension = '.png' WHERE record_id = $1", pqxx::params { record_id } );
+		tx.commit();
+	}
+
 	const auto response { api().get( std::format( "/records/{}/file", record_id ) ) };
 
 	CHECK( response.status == drogon::k200OK );

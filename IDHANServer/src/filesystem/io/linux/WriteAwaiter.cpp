@@ -4,9 +4,10 @@
 
 #include <liburing.h>
 
+#include <folly/Executor.h>
+
 #include "filesystem/io/linux/IOUringLinux.hpp"
 #include "logging/log.hpp"
-#include "trantor/net/EventLoop.h"
 
 namespace idhan
 {
@@ -18,7 +19,6 @@ bool WriteAwaiter::await_ready() noexcept
 
 void WriteAwaiter::await_suspend( const std::coroutine_handle<> h )
 {
-	m_event_loop = trantor::EventLoop::getEventLoopOfCurrentThread();
 	m_cont = h;
 
 	std::lock_guard lock { m_uring->mtx };
@@ -42,7 +42,10 @@ std::size_t WriteAwaiter::await_resume() const
 	return static_cast< std::size_t >( m_result );
 }
 
-WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
+WriteAwaiter::WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe, folly::Executor* executor ) :
+  m_uring( uring ),
+  m_sqe( sqe ),
+  m_executor( executor )
 {}
 
 void WriteAwaiter::complete( const int result )
@@ -63,7 +66,7 @@ void WriteAwaiter::complete( const int result )
 		m_exception = std::make_exception_ptr( std::runtime_error( message ) );
 	}
 
-	if ( m_cont ) m_event_loop->queueInLoop( m_cont );
+	if ( m_cont ) m_executor->add( [ cont = m_cont ] { cont.resume(); } );
 }
 
 WriteAwaiter::~WriteAwaiter() = default;

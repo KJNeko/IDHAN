@@ -23,11 +23,9 @@
 
 #include "logging/format_ns.hpp"
 
-namespace
-{
 using namespace idhan::downloader;
 
-void printUsage()
+static void printUsage()
 {
 	std::cout
 		<< "Usage:\n"
@@ -60,7 +58,7 @@ struct Options
 	bool verbose {};
 };
 
-std::string sha256Hex( const std::span< const std::byte > data )
+static std::string sha256Hex( const std::span< const std::byte > data )
 {
 	std::array< unsigned char, SHA256_DIGEST_LENGTH > digest {};
 	::SHA256( reinterpret_cast< const unsigned char* >( data.data() ), data.size(), digest.data() );
@@ -303,7 +301,7 @@ class TreeObserver final : public SessionObserver
 	}
 };
 
-void printTree( const TreeObserver& observer, const WorkID id, const std::string& prefix, const bool last )
+static void printTree( const TreeObserver& observer, const WorkID id, const std::string& prefix, const bool last )
 {
 	const auto found { observer.nodes.find( id ) };
 
@@ -322,7 +320,7 @@ void printTree( const TreeObserver& observer, const WorkID id, const std::string
 		printTree( observer, node.children[ index ], child_prefix, index + 1 == node.children.size() );
 }
 
-std::optional< Options > parse( const int argc, char* argv[] )
+static std::optional< Options > parse( const int argc, char* argv[] )
 {
 	Options options {};
 
@@ -445,8 +443,6 @@ std::optional< Options > parse( const int argc, char* argv[] )
 
 	return options;
 }
-
-} // namespace
 
 int main( const int argc, char* argv[] )
 {

@@ -1,14 +1,15 @@
 #pragma once
 
+#include <folly/Function.h>
+#include <folly/io/async/AsyncTimeout.h>
+#include <folly/io/async/EventBase.h>
+#include <folly/io/async/EventHandler.h>
+
 #include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
-#include <functional>
-#include <map>
 #include <memory>
-#include <mutex>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -20,62 +21,46 @@ namespace idhan::downloader
 
 class IoThread
 {
-	enum class EventKind : std::uint8_t
+	struct SourceState;
+
+	struct SocketHandler : folly::EventHandler
 	{
-		WAKEUP,
-		DEADLINE,
-		TIMER,
-		SOCKET,
+		SocketHandler( folly::EventBase* base, curl_socket_t socket, SourceState& owner );
+
+		void handlerReady( std::uint16_t events ) noexcept override;
+
+		curl_socket_t socket;
+		SourceState& owner;
 	};
 
-	struct EventTag
+	struct SourceState : folly::AsyncTimeout
 	{
-		EventKind kind {};
-		bool detached {};
-	};
+		SourceState( folly::EventBase* base, IoThread& thread, IoSource& source );
 
-	struct Registration : EventTag
-	{
-		IoThread* thread {};
-		IoSource* source {};
-		int timer_fd { -1 };
-	};
+		void timeoutExpired() noexcept override;
 
-	struct SocketEvent : EventTag
-	{
-		Registration* registration {};
-		curl_socket_t socket {};
+		IoThread& thread;
+		IoSource& source;
+		std::unordered_map< curl_socket_t, std::unique_ptr< SocketHandler > > sockets {};
 	};
 
   public:
 
-	using Task = std::move_only_function< void() >;
+	using Task = folly::Function< void() >;
 
   private:
 
-	int m_epoll_fd { -1 };
-	int m_wakeup_fd { -1 };
-	int m_deadline_fd { -1 };
-	std::unique_ptr< EventTag > m_wakeup_tag {};
-	std::unique_ptr< EventTag > m_deadline_tag {};
-	std::multimap< std::chrono::steady_clock::time_point, Task > m_timers {};
-	std::unordered_map< IoSource*, std::unique_ptr< Registration > > m_sources {};
-	std::vector< std::unique_ptr< SocketEvent > > m_sockets {};
-	std::vector< std::unique_ptr< SocketEvent > > m_retired_sockets {};
-	std::vector< std::unique_ptr< Registration > > m_retired_sources {};
+	folly::EventBase m_event_base {};
+	std::unordered_map< IoSource*, std::unique_ptr< SourceState > > m_sources {};
+	std::vector< std::unique_ptr< SocketHandler > > m_retired_sockets {};
+	bool m_cleanup_scheduled { false };
 	std::atomic_size_t m_load {};
-	std::atomic_bool m_running { true };
-	std::mutex m_tasks_mutex {};
-	std::deque< Task > m_tasks {};
 	std::atomic< std::thread::id > m_thread_id {};
 	std::jthread m_thread {};
 
 	void run();
-	void drainTasks();
-	void runDueTimers();
-	void armDeadline();
-	void act( IoSource& source, curl_socket_t socket, int events );
-	void retireSocketsOf( const Registration& registration );
+	void act( SourceState& state, curl_socket_t socket, int events );
+	void scheduleCleanup();
 
 	static int socketCallback( CURL* easy, curl_socket_t socket, int what, void* user, void* socket_user );
 	static int timerCallback( CURLM* multi, long timeout_ms, void* user );
@@ -93,7 +78,7 @@ class IoThread
 	void attach( IoSource& source );
 	void detach( IoSource& source );
 
-	[[nodiscard]] bool onThread() const { return std::this_thread::get_id() == m_thread_id.load(); }
+	[[nodiscard]] bool onThread() const { return m_event_base.isInEventBaseThread(); }
 
 	[[nodiscard]] std::size_t load() const { return m_load.load( std::memory_order_relaxed ); }
 

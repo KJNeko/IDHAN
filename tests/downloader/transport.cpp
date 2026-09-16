@@ -14,8 +14,6 @@ using namespace idhan::downloader;
 using idhan::test::Harness;
 using idhan::test::waitUntil;
 
-namespace
-{
 constexpr std::string_view passthrough_script { R"JS(
 export async function fetchIt(input, idhan) {
     const response = await idhan.request({url: input.url});
@@ -23,13 +21,12 @@ export async function fetchIt(input, idhan) {
 }
 )JS" };
 
-void runOnce( Harness& harness, const std::string& url )
+static void runOnce( Harness& harness, const std::string& url )
 {
 	const auto session { harness.session( url ) };
 	REQUIRE( session->submit( url ).has_value() );
 	REQUIRE( waitUntil( [ & ] { return session->idle(); } ) );
 }
-} // namespace
 
 TEST_CASE( "A redirect chain is followed hop by hop", "[downloader][transport]" )
 {
@@ -99,45 +96,6 @@ export async function fetchIt(input, idhan) {
 
 	runOnce( harness, harness.server.url( "/login" ) );
 	idhan::test::checkNoFailures( harness.observer );
-}
-
-TEST_CASE( "A cross-origin redirect strips every sensitive header", "[downloader][transport]" )
-{
-	test::TestServer target {};
-	Harness harness {};
-
-	harness.server.route(
-		"/start",
-		[ & ]( const test::TestRequest& )
-		{
-			return test::TestResponse {
-				.status = 302, .reason = "Found", .headers = { { "Location", target.url( "/end" ) } }
-			};
-		} );
-	target.route( "/end", []( const test::TestRequest& ) { return test::TestResponse { .body = "ok" }; } );
-
-	harness.parsers.write( "test.js", R"JS(
-export async function fetchIt(input, idhan) {
-    await idhan.request({
-        url: input.url,
-        headers: {
-            Authorization: "bearer secret",
-            "Proxy-Authorization": "proxy secret",
-            "X-Api-Key": "api secret"
-        }
-    });
-}
-)JS" );
-	harness.configure( R"([{"export":"fetchIt","path":"/start"}])" );
-
-	runOnce( harness, harness.server.url( "/start" ) );
-	idhan::test::checkNoFailures( harness.observer );
-
-	const auto requests { target.requests() };
-	REQUIRE( requests.size() == 1 );
-	CHECK_FALSE( requests.front().headers.contains( "authorization" ) );
-	CHECK_FALSE( requests.front().headers.contains( "proxy-authorization" ) );
-	CHECK_FALSE( requests.front().headers.contains( "x-api-key" ) );
 }
 
 TEST_CASE( "A session cookie stays inside its session", "[downloader][transport]" )

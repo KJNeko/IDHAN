@@ -75,9 +75,11 @@ The following example covers the most common options. Commented-out lines show t
 #ipv6_listen = "::1"
 # Enable TLS
 #use_tls = false
-# Paths to TLS certificate and key (required when use_tls = true)
+# Paths to TLS certificate and key (required when use_tls = true unless self_sign_tls = true)
 #server_cert_path = "./server.crt"
 #server_key_path = "./server.key"
+# Generate a persistent localhost certificate when both paths are absent.
+#self_sign_tls = true
 
 [thumbnails]
 #path = "./thumbnails"

@@ -1,5 +1,7 @@
 #include "SessionRowObserver.hpp"
 
+#include <folly/coro/BlockingWait.h>
+
 #include <stdexcept>
 
 #include "DownloadSessionEventHub.hpp"
@@ -88,7 +90,7 @@ void SessionRowObserver::onImported( const ImportInfo& info )
 	const RecordID record { info.record_id };
 
 	const auto result {
-		drogon::sync_wait( rows::completeImport( row, record, info.note, drogon::app().getDbClient() ) )
+		folly::coro::blockingWait( rows::completeImport( row, record, info.note, DownloadSessionManager::dbContext() ) )
 	};
 	if ( !result ) throw std::runtime_error( result.error() );
 

@@ -53,6 +53,8 @@ const SIMPLE_TYPE_LABELS: Record<string, string> = {
 const KNOWN = new Set([
     'record_id',
     'hashes',
+    'tags',
+    'urls',
     'size',
     'mime',
     'extension',
@@ -140,6 +142,17 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
       !KNOWN.has(key) && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'),
   );
 
+    // Grouped so a record tagged in several domains reads as one row per domain rather than one
+    // undifferentiated list.
+    const tagDomains = new Map<string, string[]>();
+    for (const tag of info.tags ?? []) {
+        const texts = tagDomains.get(tag.domain);
+        if (texts) texts.push(tag.text);
+        else tagDomains.set(tag.domain, [tag.text]);
+    }
+
+    const urls = info.urls ?? [];
+
   return (
     <dl className="info-list">
       <Row label="Record">#{info.record_id}</Row>
@@ -195,6 +208,22 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
           <span className="mono">{sha256}</span>
         </Row>
       )}
+
+        {[...tagDomains].map(([domain, texts]) => (
+            <Row key={`tags:${domain}`} label={tagDomains.size === 1 ? 'Tags' : `Tags (${domain})`}>
+                {texts.join(', ')}
+            </Row>
+        ))}
+
+        {urls.length > 0 && (
+            <Row label={urls.length === 1 ? 'Source' : 'Sources'}>
+                {urls.map((url) => (
+                    <a key={url} className="info-source" href={url} target="_blank" rel="noreferrer noopener">
+                        {url}
+                    </a>
+                ))}
+            </Row>
+        )}
         {info.parsed === false && (
             <Row label="Metadata">
                 <span className="muted">Not yet parsed</span>

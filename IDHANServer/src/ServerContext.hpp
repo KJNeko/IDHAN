@@ -7,16 +7,35 @@
 
 #include <filesystem>
 #include <memory>
+#include <thread>
 
 #include "ConnectionArguments.hpp"
 #include "filesystem/clusters/ClusterManager.hpp"
 #include "modules/ModuleLoader.hpp"
 
+namespace folly
+{
+class CPUThreadPoolExecutor;
+}
+
+namespace idhan::db
+{
+class DBContext;
+}
+
+namespace idhan::http
+{
+class HTTPServer;
+}
+
+namespace idhan::httpapi
+{
+class HeartbeatService;
+}
+
 namespace idhan
 {
 class ManagementConnection;
-
-void addCORSHeaders( const drogon::HttpResponsePtr& response );
 
 class ServerContext
 {
@@ -26,16 +45,23 @@ class ServerContext
 	std::unique_ptr< filesystem::ClusterManager > m_clusters {};
 	std::unique_ptr< modules::ModuleLoader > m_module_loader {};
 
+	std::shared_ptr< folly::CPUThreadPoolExecutor > m_db_executor {};
+	std::unique_ptr< db::DBContext > m_db_context {};
+
+	std::unique_ptr< httpapi::HeartbeatService > m_heartbeat {};
+
+	std::unique_ptr< http::HTTPServer > m_http_server {};
+
+	std::jthread m_module_maintenance_thread;
+
+	void startReplacementStack();
+
   public:
 
 	ServerContext() = delete;
 
 	ServerContext( const ConnectionArguments& arguments );
 
-	void setupCORSSupport() const;
-
-	//! Serves the WebUI's index.html for unmatched non-API navigations so client-side routes survive a reload.
-	void setupSPAFallback() const;
 	static std::shared_ptr< spdlog::logger > createLogger( const ConnectionArguments& arguments );
 	void run();
 

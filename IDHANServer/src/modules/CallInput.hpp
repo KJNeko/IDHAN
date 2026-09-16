@@ -39,6 +39,8 @@ class CallInput
 
 	[[nodiscard]] static std::expected< CallInput, std::string > forPath( const std::filesystem::path& path );
 
+	[[nodiscard]] static std::expected< CallInput, std::string > forFd( ipc::UniqueFd fd );
+
 	[[nodiscard]] static std::expected< CallInput, std::string > forBlob( ipc::Blob blob );
 
 	//! Stages \p bytes into anonymous memory and wraps the result.

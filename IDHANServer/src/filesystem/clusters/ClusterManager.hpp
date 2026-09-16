@@ -1,20 +1,18 @@
 #pragma once
 
-#include <drogon/HttpAppFramework.h>
-#include <drogon/orm/DbClient.h>
-#include <drogon/utils/FunctionTraits.h>
-
-#include <expected>
 #include <filesystem>
-#include <future>
 
 #include "IDHANTypes.hpp"
-#include "db/dbTypes.hpp"
-#include "threading/ExpectedTask.hpp"
+#include "idhan/runtime/Task.hpp"
 
 namespace idhan
 {
 class SHA256;
+}
+
+namespace idhan::db
+{
+class DBContext;
 }
 
 namespace idhan::filesystem
@@ -53,18 +51,8 @@ class ClusterManager
 
 		ClusterInfo( const std::filesystem::path& path, ClusterID id );
 
-		ClusterInfo( const drogon::orm::Row& row );
-
 		//! Max size this folder can contain. 0 == unlimited
 		std::size_t m_max_capacity;
-
-		[[nodiscard]] std::expected< void, drogon::HttpResponsePtr > storeFile(
-			const SHA256& sha256,
-			const std::byte* data,
-			std::size_t length,
-			std::string_view extension ) const;
-
-		[[nodiscard]] bool hasFile( const SHA256& sha256 ) const;
 	};
 
 	std::mutex m_mutex {};
@@ -76,26 +64,7 @@ class ClusterManager
 
 	ClusterManager();
 
-	drogon::Task< void > reloadClusters( DbClientPtr db );
-
-	//! Requires a transaction so record detachment and removal are atomic.
-	[[nodiscard]] drogon::Task< bool > removeCluster( ClusterID cluster_id, DbClientPtr transaction );
-
-	[[nodiscard]] drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > findBestFolder(
-		RecordID record_id,
-		std::size_t file_size,
-		DbClientPtr db );
-
-	//! \note A no-op reporting success if the record already sits in a read-only cluster and the file
-	//! is present there: nothing may write to or delete from such a cluster, so re-storing would only
-	//! add a second copy elsewhere and orphan the original.
-	[[nodiscard]] drogon::Task< std::expected< void, drogon::HttpResponsePtr > > storeFile(
-		RecordID record,
-		const std::byte* data,
-		std::size_t length,
-		DbClientPtr db );
-
-	[[nodiscard]] ExpectedTask< std::filesystem::path > getClusterPath( ClusterID cluster_id );
+	runtime::Task< void > reloadClusters( db::DBContext& db );
 
 	static ClusterManager& getInstance();
 };

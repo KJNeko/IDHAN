@@ -1,16 +1,12 @@
 #pragma once
 
 #include <IDHANDownloader/LaneObserver.hpp>
-#include <drogon/WebSocketConnection.h>
+
+#include "idhan/http/SSEEventHub.hpp"
 
 #include <chrono>
-#include <memory>
 #include <mutex>
 #include <unordered_map>
-#include <unordered_set>
-#include <vector>
-
-#include "IDHANTypes.hpp"
 
 namespace idhan::downloader
 {
@@ -25,16 +21,13 @@ class RateLimitEventHub final : public LaneObserver
 
 	std::mutex m_mutex {};
 	std::unordered_map< std::string, StoredSnapshot > m_limits {};
-	std::unordered_map< const drogon::WebSocketConnection*, std::weak_ptr< drogon::WebSocketConnection > >
-		m_subscribers {};
-
-	void broadcast( const LaneSnapshot& snapshot );
+	http::SSEEventHub m_events {};
 
   public:
 
 	static RateLimitEventHub& instance();
-	void subscribe( const drogon::WebSocketConnectionPtr& connection );
-	void unsubscribe( const drogon::WebSocketConnectionPtr& connection );
+	[[nodiscard]] http::SSESubscription subscribe();
+	void shutdown();
 
 	void onLaneChanged( const LaneSnapshot& snapshot ) override;
 };

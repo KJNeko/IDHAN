@@ -1,4 +1,6 @@
 #pragma once
+#include <folly/executors/CPUThreadPoolExecutor.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <coroutine>
@@ -14,10 +16,7 @@
 #include "IDHANTypes.hpp"
 #include "JobTask.hpp"
 #include "JobTaskStatus.hpp"
-#include "drogon/HttpAppFramework.h"
-#include "drogon/utils/coroutine.h"
 #include "fgl/defines.hpp"
-#include "trantor/net/EventLoopThreadPool.h"
 
 class JobSignaler;
 class JobContext;
@@ -27,10 +26,9 @@ namespace Json
 class Value;
 }
 
-//! Dedicated job runtime; job IDs and retained results are process-local.
 class JobRuntime
 {
-	std::unique_ptr< trantor::EventLoopThreadPool > m_pool {};
+	std::unique_ptr< folly::CPUThreadPoolExecutor > m_pool {};
 	std::mutex m_queue_mtx {};
 	std::condition_variable m_cv;
 	using JobPtr = std::shared_ptr< JobContext >;
@@ -52,6 +50,8 @@ class JobRuntime
   public:
 
 	void enqueue( const std::shared_ptr< JobContext >& ctx );
+
+	[[nodiscard]] folly::Executor::KeepAlive<> executor() const;
 
 	[[nodiscard]] std::shared_ptr< JobContext > getJob( idhan::JobID id );
 
@@ -107,13 +107,9 @@ struct JobIDWaitable
 
 struct SetJobResponseWaitable
 {
-	drogon::HttpResponsePtr m_response;
+	Json::Value m_response;
 
-	explicit SetJobResponseWaitable( drogon::HttpResponsePtr response ) : m_response( std::move( response ) ) {}
-
-	explicit SetJobResponseWaitable( const Json::Value& response ) :
-	  m_response( drogon::HttpResponse::newHttpJsonResponse( response ) )
-	{}
+	explicit SetJobResponseWaitable( Json::Value response ) : m_response( std::move( response ) ) {}
 
 	static bool await_ready() noexcept { return false; }
 
@@ -128,14 +124,9 @@ struct SetJobResponseWaitable
 	void await_resume() const noexcept {}
 };
 
-inline SetJobResponseWaitable setJobResponse( drogon::HttpResponsePtr response )
+inline SetJobResponseWaitable setJobResponse( Json::Value response )
 {
 	return SetJobResponseWaitable { std::move( response ) };
-}
-
-inline SetJobResponseWaitable setJobResponse( const Json::Value& response )
-{
-	return SetJobResponseWaitable { response };
 }
 
 JobRuntime& getJobRuntime();

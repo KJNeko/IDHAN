@@ -46,7 +46,8 @@ AddFGLLibrary(
 
 target_link_libraries(
 		IDHANDownloader
-		PUBLIC IDHANQuickJS ada::ada Jsoncpp_lib
+		PUBLIC IDHANQuickJS ada::ada Jsoncpp_lib Folly::folly_executors_cpu_thread_pool_executor
+		Folly::folly_io_async_async_base
 		PRIVATE IDHAN lexbor_static spdlog::spdlog CURL::libcurl)
 target_include_directories(IDHANDownloader SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/dependencies/ada/include)
 
@@ -160,7 +161,7 @@ if (BUILD_IDHAN_DOWNLOADER_TESTER)
 	AddFGLExecutable(IDHANDownloaderScriptTester ${CMAKE_CURRENT_SOURCE_DIR}/tester)
 	target_link_libraries(
 			IDHANDownloaderScriptTester
-			PRIVATE IDHAN IDHANDownloader Drogon::Drogon OpenSSL::Crypto spdlog::spdlog CURL::libcurl)
+			PRIVATE IDHAN IDHANDownloader OpenSSL::Crypto spdlog::spdlog CURL::libcurl)
 	target_include_directories(IDHANDownloaderScriptTester SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/dependencies/ada/include)
 	add_dependencies(IDHANDownloaderScriptTester IDHANDownloaderAssets)
 endif ()

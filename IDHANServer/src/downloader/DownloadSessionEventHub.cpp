@@ -1,14 +1,9 @@
 #include "DownloadSessionEventHub.hpp"
 
-#include <json/json.h>
-
 #include "logging/log.hpp"
-#include "sessionTree.hpp"
 
 namespace idhan::downloader
 {
-
-constexpr double coalesce_delay_seconds { 0.2 };
 
 DownloadSessionEventHub& DownloadSessionEventHub::instance()
 {
@@ -16,153 +11,46 @@ DownloadSessionEventHub& DownloadSessionEventHub::instance()
 	return hub;
 }
 
-void DownloadSessionEventHub::subscribe(
-	const drogon::WebSocketConnectionPtr& connection,
+http::SSESubscription DownloadSessionEventHub::subscribe(
 	std::vector< DownloadSessionID > sessions,
-	const bool all )
+	const std::vector< DownloadSessionID >& existing )
 {
+	std::vector< std::string > entities {};
+	entities.reserve( sessions.size() );
+	for ( const auto session_id : sessions ) entities.emplace_back( std::to_string( session_id ) );
+
+	std::string ids {};
+	for ( const auto session_id : existing )
 	{
-		std::lock_guard lock { m_mutex };
-		auto& subscription { m_subscribers[ connection.get() ] };
-		subscription.connection = connection;
-		subscription.all = all;
-		subscription.sessions.clear();
-		for ( const auto session_id : sessions ) subscription.sessions.emplace( session_id );
+		if ( !ids.empty() ) ids += ',';
+		ids += std::to_string( session_id );
 	}
 
-	if ( all )
-		sendAllSessions( connection );
-	else
-		for ( const auto session_id : sessions ) sendSession( connection, session_id );
-}
+	std::vector< http::ValidatedJson > snapshots {};
+	if ( auto json { http::ValidatedJson::parse( std::format( "{{\"sessions\":[{}]}}", ids ) ) } )
+		snapshots.emplace_back( std::move( *json ) );
 
-void DownloadSessionEventHub::unsubscribe( const drogon::WebSocketConnectionPtr& connection )
-{
-	std::lock_guard lock { m_mutex };
-	m_subscribers.erase( connection.get() );
+	return m_events.subscribe( std::move( entities ), std::move( snapshots ), false );
 }
 
 void DownloadSessionEventHub::notify( const DownloadSessionID session_id )
 {
-	{
-		std::lock_guard lock { m_mutex };
-		if ( m_subscribers.empty() ) return;
-		m_dirty.emplace( session_id );
-		if ( m_flush_scheduled ) return;
-		m_flush_scheduled = true;
-	}
-
-	drogon::app().getLoop()->runAfter( coalesce_delay_seconds, [ this ] { flush(); } );
-}
-
-void DownloadSessionEventHub::flush()
-{
-	std::unordered_set< DownloadSessionID > dirty {};
-	{
-		std::lock_guard lock { m_mutex };
-		m_flush_scheduled = false;
-		dirty.swap( m_dirty );
-	}
-
-	for ( const auto session_id : dirty )
-	{
-		std::vector< drogon::WebSocketConnectionPtr > targets {};
-		{
-			std::lock_guard lock { m_mutex };
-			for ( auto& [ key, subscription ] : m_subscribers )
-			{
-				(void)key;
-				if ( !subscription.all && !subscription.sessions.contains( session_id ) ) continue;
-				if ( const auto connection { subscription.connection.lock() }; connection && connection->connected() )
-					targets.emplace_back( connection );
-			}
-		}
-
-		if ( targets.empty() ) continue;
-
-		drogon::async_run(
-			[ session_id, targets = std::move( targets ) ]() -> drogon::Task< void >
-			{
-				const auto db { drogon::app().getDbClient() };
-				const auto session { co_await sessionSummary( db, session_id ) };
-
-				Json::Value message {};
-
-				if ( session.isNull() )
-				{
-					message[ "type" ] = "session_removed";
-					message[ "session_id" ] = session_id;
-				}
-				else
-				{
-					message[ "type" ] = "session";
-					message[ "session" ] = session;
-					message[ "urls" ] = co_await sessionUrlTree( db, session_id, false );
-				}
-
-				for ( const auto& connection : targets )
-					if ( connection->connected() ) connection->sendJson( message );
-			} );
-	}
+	auto json { http::ValidatedJson::parse( std::format( "{{\"id\":{}}}", session_id ) ) };
+	if ( !json ) return;
+	m_events.publish( std::to_string( session_id ), std::move( *json ) );
 }
 
 void DownloadSessionEventHub::notifyRemoved( const DownloadSessionID session_id )
 {
-	notify( session_id );
+	auto json { http::ValidatedJson::parse( std::format( "{{\"id\":{},\"removed\":true}}", session_id ) ) };
+	if ( !json ) return;
+	m_events.remove( std::to_string( session_id ) );
+	m_events.publish( std::to_string( session_id ), std::move( *json ) );
 }
 
-void DownloadSessionEventHub::sendSession(
-	const drogon::WebSocketConnectionPtr& connection,
-	const DownloadSessionID session_id )
+void DownloadSessionEventHub::shutdown()
 {
-	drogon::async_run(
-		[ connection, session_id ]() -> drogon::Task< void >
-		{
-			const auto db { drogon::app().getDbClient() };
-			const auto session { co_await sessionSummary( db, session_id ) };
-			if ( session.isNull() || !connection->connected() ) co_return;
-
-			Json::Value message {};
-			message[ "type" ] = "session";
-			message[ "session" ] = session;
-			message[ "urls" ] = co_await sessionUrlTree( db, session_id, false );
-			if ( connection->connected() ) connection->sendJson( message );
-		} );
-}
-
-void DownloadSessionEventHub::sendAllSessions( const drogon::WebSocketConnectionPtr& connection )
-{
-	drogon::async_run(
-		[ connection ]() -> drogon::Task< void >
-		{
-			const auto db { drogon::app().getDbClient() };
-			const auto rows { co_await db->execSqlCoro(
-				"SELECT download_session_id FROM download_sessions "
-				"ORDER BY last_used_at DESC, download_session_id DESC" ) };
-
-			Json::Value ids { Json::arrayValue };
-			for ( const auto& row : rows ) ids.append( row[ "download_session_id" ].as< DownloadSessionID >() );
-
-			Json::Value opening {};
-			opening[ "type" ] = "sessions";
-			opening[ "session_ids" ] = ids;
-			if ( !connection->connected() ) co_return;
-			connection->sendJson( opening );
-
-			for ( const auto& row : rows )
-			{
-				if ( !connection->connected() ) co_return;
-				const auto session_id { row[ "download_session_id" ].as< DownloadSessionID >() };
-				const auto session { co_await sessionSummary( db, session_id ) };
-				if ( session.isNull() ) continue;
-
-				Json::Value message {};
-				message[ "type" ] = "session";
-				message[ "session" ] = session;
-				message[ "urls" ] = co_await sessionUrlTree( db, session_id, false );
-				if ( connection->connected() ) connection->sendJson( message );
-			}
-		} );
+	m_events.shutdown();
 }
 
 } // namespace idhan::downloader

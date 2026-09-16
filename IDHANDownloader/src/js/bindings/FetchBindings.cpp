@@ -4,8 +4,6 @@
 
 namespace idhan::downloader
 {
-namespace
-{
 constexpr std::string_view fetch_bootstrap { R"IDHAN_FETCH(
 (function (global) {
     "use strict";
@@ -394,7 +392,6 @@ constexpr std::string_view fetch_bootstrap { R"IDHAN_FETCH(
     });
 })(globalThis);
 )IDHAN_FETCH" };
-} // namespace
 
 std::expected< void, std::string > installFetchBindings( JSContext* context )
 {
