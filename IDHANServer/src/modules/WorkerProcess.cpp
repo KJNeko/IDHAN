@@ -1,11 +1,9 @@
 #include "WorkerProcess.hpp"
 
-#include <drogon/HttpAppFramework.h>
 #include <sys/eventfd.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
-#include <trantor/net/EventLoop.h>
 
 #include <algorithm>
 #include <array>
@@ -28,20 +26,10 @@ namespace idhan::modules
 //! The descriptor the runner is told to use.
 constexpr int CHILD_CHANNEL_FD { 3 };
 
-//! Where a call's continuation should be resumed, given the thread that issued the call.
-[[nodiscard]] trantor::EventLoop* resumptionLoop()
-{
-	auto* const current { trantor::EventLoop::getEventLoopOfCurrentThread() };
-	return current != nullptr ? current : drogon::app().getLoop();
-}
-
-//! Resumes a parked call, always on an event loop and never on the calling thread's stack.
-void resumeOnLoop( std::coroutine_handle<> continuation, trantor::EventLoop* loop )
+void resumeContinuation( std::coroutine_handle<> continuation )
 {
 	if ( !continuation ) return;
-	if ( loop == nullptr ) loop = drogon::app().getLoop();
-
-	loop->queueInLoop( [ continuation ]() mutable { continuation.resume(); } );
+	continuation.resume();
 }
 
 WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callback ) :
@@ -420,7 +408,7 @@ void WorkerProcess::finish( const std::uint64_t call_id, CallOutcome outcome )
 
 	*pending.outcome = std::move( outcome );
 
-	resumeOnLoop( pending.continuation, pending.loop );
+	resumeContinuation( pending.continuation );
 }
 
 void WorkerProcess::failAll( const std::string& reason, const bool died )
@@ -438,7 +426,7 @@ void WorkerProcess::failAll( const std::string& reason, const bool died )
 		call.outcome->error = reason;
 		call.outcome->worker_died = died;
 
-		resumeOnLoop( call.continuation, call.loop );
+		resumeContinuation( call.continuation );
 	}
 }
 
@@ -560,7 +548,6 @@ IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > Wor
 	{
 		std::shared_ptr< WorkerProcess > worker;
 		std::chrono::milliseconds timeout;
-		trantor::EventLoop* loop;
 
 		[[nodiscard]] bool await_ready() const noexcept { return worker->manifestSeen(); }
 
@@ -569,10 +556,10 @@ IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > Wor
 			// Both the notification and the timer fire; the flag decides which one owns the resume.
 			auto resumed { std::make_shared< std::atomic_flag >() };
 
-			auto resume = [ resumed, loop = loop, continuation ]
+			auto resume = [ resumed, continuation ]
 			{
 				if ( resumed->test_and_set() ) return;
-				resumeOnLoop( continuation, loop );
+				resumeContinuation( continuation );
 			};
 
 			if ( !worker->addManifestWaiter( resume ) )
@@ -581,7 +568,13 @@ IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > Wor
 				return;
 			}
 
-			loop->runAfter( std::chrono::duration< double > { timeout }.count(), resume );
+			std::thread(
+				[ timeout = timeout, resume = std::move( resume ) ]() mutable
+				{
+					std::this_thread::sleep_for( timeout );
+					resume();
+				} )
+				.detach();
 		}
 
 		[[nodiscard]] Manifest await_resume() const
@@ -600,7 +593,7 @@ IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > Wor
 		}
 	};
 
-	co_return co_await Awaiter { .worker = shared_from_this(), .timeout = timeout, .loop = resumptionLoop() };
+	co_return co_await Awaiter { .worker = shared_from_this(), .timeout = timeout };
 }
 
 std::expected< void, std::string > WorkerProcess::post( const Json::Value& body, const std::span< const int > fds )
@@ -679,10 +672,7 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 					return false;
 				}
 
-				auto* const loop { resumptionLoop() };
-
-				worker->m_calls.emplace(
-					call_id, PendingCall { .continuation = handle, .loop = loop, .outcome = outcome } );
+				worker->m_calls.emplace( call_id, PendingCall { .continuation = handle, .outcome = outcome } );
 
 				worker->m_last_activity = std::chrono::steady_clock::now();
 			}

@@ -147,6 +147,9 @@ export const api = {
         list(signal?: AbortSignal): Promise<DownloadSessionInfo[]> {
             return request<DownloadSessionInfo[]>('/download_sessions', {signal});
         },
+        get(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionInfo> {
+            return request<DownloadSessionInfo>(`/download_sessions/${sessionId}`, {signal});
+        },
         create(name: string, signal?: AbortSignal): Promise<DownloadSessionInfo> {
             return request<DownloadSessionInfo>('/download_sessions', {method: 'POST', body: {name}, signal});
         },
@@ -428,62 +431,41 @@ export function watchDownloadSessions(handlers: {
     onError?: (message: string) => void;
     onOpen?: () => void;
 }): () => void {
-    let socket: WebSocket | null = null;
-    let retry: ReturnType<typeof setTimeout> | undefined;
-    let closed = false;
-    let backoff = 1000;
+    const refresh = async (sessionId: number) => {
+        try {
+            const [session, urls] = await Promise.all([api.downloadSessions.get(sessionId), api.downloadSessions.urls(sessionId)]);
+            handlers.onSession(session, urls);
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 404) handlers.onRemoved?.(sessionId);
+            else handlers.onError?.('Unable to refresh a download session.');
+        }
+    };
 
-    const connect = () => {
-        if (closed) return;
-        const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const params = new URLSearchParams();
-        if (currentKey) params.set('idhan_key', currentKey);
-        socket = new WebSocket(`${scheme}://${window.location.host}/download_sessions/events?${params.toString()}`);
+    return sharedWatchSSE('/download_sessions/events', {
+        onOpen: handlers.onOpen,
+        onError: handlers.onError,
+        onEvent: (name, data) => {
+            if (name === 'shutdown') return;
 
-        socket.onopen = () => {
-            backoff = 1000;
-            handlers.onOpen?.();
-        };
+            const payload = safeParse(data);
+            if (typeof payload !== 'object' || payload === null) return;
 
-        socket.onmessage = (event) => {
-            let message: unknown;
-            try {
-                message = JSON.parse(event.data as string);
-            } catch {
+            // The server opens every subscription with the sessions that already exist, so a reload
+            // shows downloads already in progress rather than waiting for one of them to change.
+            if (name === 'snapshot') {
+                const sessions = (payload as { sessions?: unknown }).sessions;
+                if (!Array.isArray(sessions)) return;
+                void Promise.all(sessions.filter((id): id is number => typeof id === 'number').map(refresh));
                 return;
             }
-            if (typeof message !== 'object' || message === null) return;
-            const payload = message as {
-                type?: string;
-                session?: DownloadSessionInfo;
-                urls?: DownloadSessionUrlNode[];
-                session_id?: number;
-            };
-            if (payload.type === 'session' && payload.session && payload.urls) {
-                handlers.onSession(payload.session, payload.urls);
-            } else if (payload.type === 'session_removed' && typeof payload.session_id === 'number') {
-                handlers.onRemoved?.(payload.session_id);
-            }
-        };
 
-        socket.onclose = () => {
-            if (closed) return;
-            retry = setTimeout(connect, backoff);
-            backoff = Math.min(backoff * 2, 15000);
-        };
-
-        socket.onerror = () => {
-            handlers.onError?.('Lost the download session connection; retrying.');
-        };
-    };
-
-    connect();
-
-    return () => {
-        closed = true;
-        if (retry !== undefined) clearTimeout(retry);
-        socket?.close();
-    };
+            if (name !== 'update') return;
+            const event = payload as { id?: unknown; removed?: unknown };
+            if (typeof event.id !== 'number') return;
+            if (event.removed === true) handlers.onRemoved?.(event.id);
+            else void refresh(event.id);
+        },
+    });
 }
 
 export function isRateLimitLane(value: unknown): value is RateLimitLane {
@@ -504,63 +486,197 @@ export function isRateLimitLane(value: unknown): value is RateLimitLane {
         && (lane.throttled ? requests > 0 && seconds > 0 : requests === 0 && seconds === 0);
 }
 
+type SSEHandlers = {
+    /** `timestamp` is seconds since the epoch, stamped by the server when the event was generated. */
+    onEvent: (name: string, data: string, timestamp: number | null) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void;
+};
+
+type SharedStream = {
+    handlers: Set<SSEHandlers>;
+    close: () => void;
+    opened: boolean;
+    /** Replayed to late subscribers, which joined too late to receive the stream's own snapshot. */
+    lastSnapshot: Parameters<SSEHandlers['onEvent']> | null;
+};
+
+const sharedStreams = new Map<string, SharedStream>();
+
+/**
+ * One connection per path, fanned out to every subscriber. Two panels of the same kind must not
+ * open two streams: the browser caps concurrent connections, and the second stream only duplicates
+ * work the first is already doing.
+ */
+function sharedWatchSSE(path: string, handlers: SSEHandlers): () => void {
+    const existing = sharedStreams.get(path);
+    const stream: SharedStream = existing ?? {
+        handlers: new Set(),
+        close: () => {
+        },
+        opened: false,
+        lastSnapshot: null,
+    };
+
+    if (!existing) {
+        sharedStreams.set(path, stream);
+        stream.close = watchSSE(path, {
+            onOpen: () => {
+                stream.opened = true;
+                // A reconnect re-sends its own snapshot, so the cached one is stale from here.
+                stream.lastSnapshot = null;
+                for (const handler of [...stream.handlers]) handler.onOpen?.();
+            },
+            onError: (message) => {
+                stream.opened = false;
+                for (const handler of [...stream.handlers]) handler.onError?.(message);
+            },
+            onEvent: (name, data, timestamp) => {
+                if (name === 'snapshot') stream.lastSnapshot = [name, data, timestamp];
+                for (const handler of [...stream.handlers]) handler.onEvent(name, data, timestamp);
+            },
+        });
+    }
+
+    stream.handlers.add(handlers);
+
+    // Catch up a subscriber that joined an already-running stream, so it starts from the same
+    // state as the subscriber that opened it rather than waiting for the next event.
+    if (stream.opened || stream.lastSnapshot) {
+        queueMicrotask(() => {
+            if (!stream.handlers.has(handlers)) return;
+            if (stream.opened) handlers.onOpen?.();
+            if (stream.lastSnapshot) handlers.onEvent(...stream.lastSnapshot);
+        });
+    }
+
+    return () => {
+        stream.handlers.delete(handlers);
+        if (stream.handlers.size > 0) return;
+
+        stream.close();
+        if (sharedStreams.get(path) === stream) sharedStreams.delete(path);
+    };
+}
+
+function watchSSE(path: string, handlers: SSEHandlers): () => void {
+    let controller: AbortController | null = null;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let closed = false;
+    let backoff = 1000;
+
+    const scheduleReconnect = () => {
+        if (closed) return;
+        retry = setTimeout(connect, backoff);
+        backoff = Math.min(backoff * 2, 15000);
+    };
+
+    const connect = async () => {
+        if (closed) return;
+
+        controller = new AbortController();
+        const headers = new Headers({Accept: 'text/event-stream'});
+        if (currentKey) headers.set(KEY_HEADER, currentKey);
+
+        try {
+            const response = await fetch(path, {headers, signal: controller.signal});
+            if (!response.ok || response.body === null) {
+                const body = await response.text();
+                handlers.onError?.(errorMessage(safeParse(body)) ?? `SSE connection failed: ${response.status}`);
+                if (response.status === 401 || response.status === 403) {
+                    closed = true;
+                    return;
+                }
+                scheduleReconnect();
+                return;
+            }
+
+            backoff = 1000;
+            handlers.onOpen?.();
+
+            const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+            let buffered = '';
+            let eventName = 'message';
+            let data: string[] = [];
+            let timestamp: number | null = null;
+
+            const dispatch = () => {
+                if (data.length > 0) handlers.onEvent(eventName, data.join('\n'), timestamp);
+                eventName = 'message';
+                data = [];
+                timestamp = null;
+            };
+
+            const consumeLine = (line: string) => {
+                if (line === '') {
+                    dispatch();
+                    return;
+                }
+                if (line.startsWith(':')) return;
+
+                const separator = line.indexOf(':');
+                const field = separator === -1 ? line : line.slice(0, separator);
+                const value = separator === -1 ? '' : line.slice(separator + 1).replace(/^ /, '');
+                if (field === 'event') eventName = value;
+                if (field === 'data') data.push(value);
+                if (field === 'timestamp') {
+                    const parsed = Number(value);
+                    timestamp = Number.isFinite(parsed) ? parsed : null;
+                }
+            };
+
+            while (!closed) {
+                const next = await reader.read();
+                if (next.done) break;
+
+                buffered += next.value.replace(/\r/g, '');
+                let newline = buffered.indexOf('\n');
+                while (newline !== -1) {
+                    consumeLine(buffered.slice(0, newline));
+                    buffered = buffered.slice(newline + 1);
+                    newline = buffered.indexOf('\n');
+                }
+            }
+        } catch (error) {
+            if (!closed && !(error instanceof DOMException && error.name === 'AbortError')) {
+                handlers.onError?.('Lost the event stream; retrying.');
+            }
+        }
+
+        scheduleReconnect();
+    };
+
+    void connect();
+
+    return () => {
+        closed = true;
+        if (retry !== undefined) clearTimeout(retry);
+        controller?.abort();
+    };
+}
+
 export function watchRateLimits(handlers: {
     onSnapshot: (limits: RateLimitLane[]) => void;
     onUpdate: (limit: RateLimitLane) => void;
     onError?: (message: string) => void;
     onOpen?: () => void;
 }): () => void {
-    let socket: WebSocket | null = null;
-    let retry: ReturnType<typeof setTimeout> | undefined;
-    let closed = false;
-    let backoff = 1000;
+    return sharedWatchSSE('/rate_limits/events', {
+        onOpen: handlers.onOpen,
+        onError: handlers.onError,
+        onEvent: (name, data) => {
+            if (name === 'shutdown') return;
 
-    const connect = () => {
-        if (closed) return;
-        const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const params = new URLSearchParams();
-        if (currentKey) params.set('idhan_key', currentKey);
-        socket = new WebSocket(`${scheme}://${window.location.host}/rate_limits/events?${params.toString()}`);
-
-        socket.onopen = () => {
-            backoff = 1000;
-            handlers.onOpen?.();
-        };
-
-        socket.onmessage = (event) => {
-            let message: unknown;
-            try {
-                message = JSON.parse(event.data as string);
-            } catch {
+            const payload = safeParse(data);
+            if (name === 'snapshot' && typeof payload === 'object' && payload !== null) {
+                const limits = (payload as { limits?: unknown }).limits;
+                if (Array.isArray(limits) && limits.every(isRateLimitLane)) handlers.onSnapshot(limits);
                 return;
             }
-            if (typeof message !== 'object' || message === null) return;
-            const payload = message as { type?: unknown; limits?: unknown; limit?: unknown };
-            if (payload.type === 'rate_limits' && Array.isArray(payload.limits) && payload.limits.every(isRateLimitLane)) {
-                handlers.onSnapshot(payload.limits);
-            } else if (payload.type === 'rate_limit' && isRateLimitLane(payload.limit)) {
-                handlers.onUpdate(payload.limit);
-            }
-        };
 
-        socket.onclose = () => {
-            if (closed) return;
-            retry = setTimeout(connect, backoff);
-            backoff = Math.min(backoff * 2, 15000);
-        };
-
-        socket.onerror = () => {
-            handlers.onError?.('Lost the rate-limit connection; retrying.');
-        };
-    };
-
-    connect();
-
-    return () => {
-        closed = true;
-        if (retry !== undefined) clearTimeout(retry);
-        socket?.close();
-    };
+            if (name === 'update' && isRateLimitLane(payload)) handlers.onUpdate(payload);
+        },
+    });
 }
 
 export function thumbnailUrl(recordId: number, size = 256): string {

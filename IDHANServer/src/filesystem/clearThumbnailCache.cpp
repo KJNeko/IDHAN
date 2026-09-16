@@ -5,9 +5,7 @@
 #include <string_view>
 #include <system_error>
 
-#include "IDHANTypes.hpp"
-#include "db/dbTypes.hpp"
-#include "filesystem.hpp"
+#include "ThumbnailCache.hpp"
 #include "logging/log.hpp"
 #include "paths.hpp"
 

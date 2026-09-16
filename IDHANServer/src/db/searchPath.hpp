@@ -9,8 +9,8 @@ namespace idhan::db
 //! The schema IDHAN occupies unless configured otherwise.
 constexpr std::string_view DEFAULT_SCHEMA { "public" };
 
-//! Builds the search_path that BOTH the migration connection (libpqxx) and the runtime connection
-//! (drogon) must use.
+//! Builds the search_path that both the migration connection (libpqxx) and the runtime connection
+//! (db::DBContext) must use.
 [[nodiscard]] inline std::string makeSearchPath( const std::string_view schema )
 {
 	std::string result { DEFAULT_SCHEMA };

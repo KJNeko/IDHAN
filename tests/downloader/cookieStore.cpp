@@ -149,8 +149,6 @@ TEST_CASE( "An expired cookie is never sent", "[downloader][cookies]" )
 	CHECK_FALSE( headers.contains( "cookie" ) );
 }
 
-namespace
-{
 class RecordingPersistence final : public CookiePersistence
 {
   public:
@@ -170,7 +168,6 @@ class RecordingPersistence final : public CookiePersistence
 
 	void pruneExpired() override { ++prunes; }
 };
-} // namespace
 
 TEST_CASE( "The store writes through to its persistence and loads back from it", "[downloader][cookies]" )
 {

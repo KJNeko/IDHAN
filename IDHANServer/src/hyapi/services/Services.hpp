@@ -1,5 +1,7 @@
 #pragma once
 
+#include <json/value.h>
+
 #include <cstddef>
 #include <optional>
 #include <span>
@@ -8,7 +10,12 @@
 #include <vector>
 
 #include "IDHANTypes.hpp"
-#include "db/dbTypes.hpp"
+#include "idhan/runtime/Task.hpp"
+
+namespace idhan::db
+{
+class DBContext;
+}
 
 namespace idhan::hyapi
 {
@@ -31,7 +38,7 @@ struct ServiceRef
 };
 
 //! Every service IDHAN reports, ordered as Hydrus orders them.
-drogon::Task< std::vector< ServiceInfo > > listServices( DbClientPtr db );
+runtime::Task< std::vector< ServiceInfo > > listServices( db::DBContext& db );
 
 //! Hydrus' `services` object: service key to info, with the key itself omitted from the value.
 Json::Value servicesDict( std::span< const ServiceInfo > services );

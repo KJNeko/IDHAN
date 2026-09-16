@@ -10,10 +10,8 @@
 
 namespace idhan::test
 {
-namespace
-{
 
-Json::Value awaitJob( ApiClient& api, const JobID job_id )
+static Json::Value awaitJob( ApiClient& api, const JobID job_id )
 {
 	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds( 10 ) };
 	while ( std::chrono::steady_clock::now() < deadline )
@@ -29,7 +27,7 @@ Json::Value awaitJob( ApiClient& api, const JobID job_id )
 	throw std::runtime_error( std::format( "Metadata job {} timed out", job_id ) );
 }
 
-void seedImageMetadata( pqxx::connection& connection, const RecordID record_id, const bool with_phash )
+static void seedImageMetadata( pqxx::connection& connection, const RecordID record_id, const bool with_phash )
 {
 	pqxx::work tx { connection };
 	tx.exec(
@@ -49,8 +47,6 @@ void seedImageMetadata( pqxx::connection& connection, const RecordID record_id, 
 			pqxx::params { record_id } );
 	tx.commit();
 }
-
-} // namespace
 
 SCENARIO_METHOD(
 	ServerFixture,

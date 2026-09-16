@@ -11,8 +11,8 @@ constexpr std::string_view resolution_joins {
 	" LEFT JOIN image_project_metadata ipm USING (record_id)"
 };
 
-constexpr std::string_view width_expr { "COALESCE(im.width, vm.width, ipm.width)" };
-constexpr std::string_view height_expr { "COALESCE(im.height, vm.height, ipm.height)" };
+constexpr std::string_view width_expr { "COALESCE(im.width, vm.width, ipm.width)::BIGINT" };
+constexpr std::string_view height_expr { "COALESCE(im.height, vm.height, ipm.height)::BIGINT" };
 
 // bigint casts prevent int*int overflow on large images (50000x50000 exceeds INT32_MAX).
 constexpr std::string_view num_pixels_expr {
@@ -59,7 +59,7 @@ SortKeySpec sortKeySpec( const SortType type )
 			return { {}, file_ctime_expr, SortKeyType::Integer, true };
 		case SortType::MIME:
 			// the raw mime_id FK, not a semantic filetype-category ordering
-			return { {}, "fi.mime_id", SortKeyType::Integer, false };
+			return { {}, "fi.mime_id::BIGINT", SortKeyType::Integer, false };
 		case SortType::RECORD_CREATION_TIME:
 			return { records_join, record_creation_time_expr, SortKeyType::Integer, false };
 		case SortType::HASH:
@@ -71,7 +71,7 @@ SortKeySpec sortKeySpec( const SortType type )
 			return { video_join, "COALESCE(vm.framerate, 0)", SortKeyType::Real, false };
 		case SortType::HAS_AUDIO:
 			// silent records and records with no video metadata both rank below records with audio
-			return { video_join, "COALESCE(vm.has_audio::INT, 0)", SortKeyType::Integer, false };
+			return { video_join, "COALESCE(vm.has_audio::INT, 0)::BIGINT", SortKeyType::Integer, false };
 		case SortType::WIDTH:
 			return { resolution_joins, width_expr, SortKeyType::Integer, true };
 		case SortType::HEIGHT:

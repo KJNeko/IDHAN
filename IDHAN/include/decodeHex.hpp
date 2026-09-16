@@ -82,11 +82,7 @@ static_assert( 0x21 == decodeHexCharacters( '2', '1' ) );
 static_assert( 0x00 == decodeHexCharacters( '0', '0' ) );
 static_assert( 0x61 == decodeHexCharacters( '6', '1' ) );
 
-//! Decodes a hex string into its raw bytes (two characters per byte).
-//! \param str Hex string; must have an even length.
-//! \return The decoded bytes (\p str.size() / 2 of them).
-//! \throws std::invalid_argument if the length is odd or any character is not a hex digit.
-inline std::vector< std::byte > decodeHex( const std::string& str )
+inline std::vector< std::byte > decodeHex( const std::string_view str )
 try
 {
 	// an odd-length string would read past the final character and write one byte past the vector
@@ -107,7 +103,13 @@ try
 }
 catch ( std::exception& e )
 {
-	throw std::invalid_argument( "Invalid argument when parsing '" + str + "': " + std::string( e.what() ) );
+	throw std::invalid_argument( std::format( "Invalid argument when parsing \'{}\': {}", str, e.what() ) );
+}
+
+inline std::vector< std::byte > decodeHex( const std::string& str )
+{
+	std::string_view view { str };
+	return decodeHex( view );
 }
 
 static_assert( decodeHexCharacter( 'F' ) == 0xF );

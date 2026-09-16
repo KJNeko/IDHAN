@@ -4,8 +4,6 @@
 
 namespace idhan::test
 {
-namespace
-{
 class RestoreDownloaderSecretsTable
 {
 	pqxx::connection& m_db;
@@ -27,7 +25,6 @@ class RestoreDownloaderSecretsTable
 		}
 	}
 };
-} // namespace
 
 SCENARIO_METHOD( ServerFixture, "Downloader secrets can be set and fetched through the API", "[api][downloader]" )
 {

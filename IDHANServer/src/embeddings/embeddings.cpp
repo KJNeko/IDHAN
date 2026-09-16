@@ -1,34 +1,23 @@
 #include "embeddings.hpp"
 
-#include <drogon/drogon.h>
+#include <folly/coro/Collect.h>
 
+#include <filesystem>
 #include <format>
 #include <mutex>
 #include <unordered_set>
 #include <vector>
 
-#include "db/drogonArrayBind.hpp"
-#include "filesystem/filesystem.hpp"
+#include "idhan/SHA256.hpp"
+#include "idhan/db/DBContext.hpp"
 #include "jobs/JobContext.hpp"
 #include "logging/log.hpp"
+#include "modules/CallInput.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "modules/RemoteModule.hpp"
 
 namespace idhan::embeddings
 {
-
-IDHANTask< std::optional< EmbeddingModelInfo > > findEmbeddingModel( const std::string_view model_name, DbClientPtr db )
-{
-	const auto rows { co_await db->execSqlCoro(
-		"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", model_name ) };
-
-	if ( rows.empty() ) co_return std::nullopt;
-
-	co_return EmbeddingModelInfo {
-		.id = rows[ 0 ][ "model_id" ].as< std::int32_t >(),
-		.dimensions = rows[ 0 ][ "model_dimensions" ].as< std::int32_t >()
-	};
-}
 
 //! model_ids with a backfill currently running.
 std::mutex g_running_mutex {};
@@ -88,14 +77,54 @@ struct Candidate
 	return literal;
 }
 
+//! Resolves record_id's stored file into a CallInput. nullopt if it has none.
+static runtime::Task< std::optional< modules::CallInput > > openRecordInput(
+	const RecordID record_id,
+	db::DBContext& db )
+{
+	db::DBBindings bindings {};
+	bindings.bind( record_id );
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT records.sha256, file_clusters.folder_path, "
+				"COALESCE(file_info.extension, mime.best_extension, '') "
+				"FROM records JOIN file_info USING (record_id) "
+				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
+				"LEFT JOIN mime ON mime.mime_id = file_info.mime_id "
+				"WHERE records.record_id = $1",
+				std::move( bindings ) )
+			.rows< std::span< const std::byte >, std::string, std::string >()
+	};
+
+	if ( rows.empty() ) co_return std::nullopt;
+
+	const auto& [ sha256_bytes, folder_path, extension ] { rows.row( 0 ) };
+	const SHA256 sha256 { SHA256::fromBuffer( std::vector< std::byte > { sha256_bytes.begin(), sha256_bytes.end() } ) };
+	const auto hex { sha256.hex() };
+	const auto file_name { extension.empty() ? hex : std::format( "{}.{}", hex, extension ) };
+	const auto record_path {
+		std::filesystem::path { folder_path } / std::format( "f{}", hex.substr( 0, 2 ) ) / file_name
+	};
+
+	auto input_e { modules::CallInput::forPath( record_path ) };
+	if ( !input_e )
+	{
+		log::warn( "Embedding: could not open record {} for reading: {}", record_id, input_e.error() );
+		co_return std::nullopt;
+	}
+
+	co_return std::move( *input_e );
+}
+
 //! Embeds one record. Captureless by requirement, not by style.
-drogon::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
+runtime::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
 	std::shared_ptr< modules::RemoteModule > module,
 	RecordID record_id,
 	MimeID mime_id,
-	DbClientPtr db )
+	db::DBContext& db )
 {
-	auto input { co_await filesystem::openRecordInput( record_id, db ) };
+	auto input { co_await openRecordInput( record_id, db ) };
 
 	if ( !input )
 	{
@@ -103,7 +132,9 @@ drogon::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
 		co_return std::nullopt;
 	}
 
-	modules::RemoteCallData call { .input = *input, .mime_id = mime_id, .extra = {}, .depth = 0 };
+	modules::RemoteCallData call {
+		.input = std::make_shared< const modules::CallInput >( std::move( *input ) ), .mime_id = mime_id, .extra = {}
+	};
 
 	const auto result { co_await module->embed( std::move( call ) ) };
 
@@ -117,7 +148,27 @@ drogon::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
 	co_return std::pair { record_id, toVectorLiteral( result->m_vector ) };
 }
 
-IDHANTask< void > registerEmbeddingModels( DbClientPtr db )
+runtime::Task< std::optional< EmbeddingModelInfo > > findEmbeddingModel(
+	const std::string_view model_name,
+	db::DBContext& db )
+{
+	db::DBBindings bindings {};
+	bindings.bind( std::string { model_name } );
+
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", std::move( bindings ) )
+			.rows< std::int32_t, std::int32_t >()
+	};
+
+	if ( rows.empty() ) co_return std::nullopt;
+
+	const auto [ id, dimensions ] { rows.row( 0 ) };
+	co_return EmbeddingModelInfo { .id = id, .dimensions = dimensions };
+}
+
+runtime::Task< void > registerEmbeddingModels( db::DBContext& db )
 {
 	const auto models { modules::ModuleLoader::instance().embeddingModels() };
 
@@ -135,16 +186,23 @@ IDHANTask< void > registerEmbeddingModels( DbClientPtr db )
 
 			if ( !existing )
 			{
-				const auto inserted { co_await db->execSqlCoro(
-					"INSERT INTO embedding_models (model_name, model_dimensions) VALUES ($1, $2) RETURNING model_id",
-					model_name,
-					static_cast< std::int32_t >( dimensions ) ) };
+				db::DBBindings bindings {};
+				bindings.bind( model_name );
+				bindings.bind( static_cast< std::int32_t >( dimensions ) );
+
+				const auto inserted {
+					co_await db
+						.query(
+							"INSERT INTO embedding_models (model_name, model_dimensions) VALUES ($1, $2) RETURNING model_id",
+							std::move( bindings ) )
+						.rows< std::int32_t >()
+				};
 
 				log::info(
 					"Registered embedding model '{}' ({} dims) as model_id {}",
 					model_name,
 					dimensions,
-					inserted[ 0 ][ "model_id" ].as< std::int32_t >() );
+					std::get< 0 >( inserted.row( 0 ) ) );
 
 				continue;
 			}
@@ -179,11 +237,9 @@ void endBackfill( const std::int32_t model_id )
 	g_running.erase( model_id );
 }
 
-JobTask backfillJob( const std::int32_t model_id, std::string model_name )
+JobTask backfillJob( const std::int32_t model_id, std::string model_name, db::DBContext& db )
 {
 	const RunningGuard guard { model_id };
-
-	auto db { drogon::app().getDbClient() };
 
 	const auto module { modules::ModuleLoader::instance().getEmbedderFor( model_name ) };
 
@@ -220,23 +276,25 @@ JobTask backfillJob( const std::int32_t model_id, std::string model_name )
 		"ON CONFLICT (record_id) DO UPDATE SET embedding = EXCLUDED.embedding",
 		table ) };
 
+	const auto executor { getJobRuntime().executor() };
+
 	std::vector< RecordID > record_ids {};
 	std::vector< std::string > vectors {};
 
 	while ( true )
 	{
-		const auto page { co_await db->execSqlCoro( sweep, cursor ) };
+		db::DBBindings sweep_bindings {};
+		sweep_bindings.bind( cursor );
+		const auto page { co_await folly::coro::co_withExecutor(
+			executor, db.query( sweep, std::move( sweep_bindings ) ).rows< RecordID, MimeID >() ) };
 		if ( page.empty() ) break;
 
 		std::vector< Candidate > candidates {};
 		candidates.reserve( page.size() );
 
-		for ( const auto& row : page )
+		for ( const auto& [ record_id, mime_id ] : page )
 		{
-			const auto record_id { row[ "record_id" ].as< RecordID >() };
 			cursor = std::max( cursor, record_id );
-
-			const auto mime_id { row[ "mime_id" ].as< MimeID >() };
 
 			if ( modules::ModuleLoader::instance().getThumbnailerFor( mime_id ).empty() )
 			{
@@ -251,14 +309,16 @@ JobTask backfillJob( const std::int32_t model_id, std::string model_name )
 		{
 			const auto stop { std::min( start + IN_FLIGHT, candidates.size() ) };
 
-			std::vector< drogon::Task< std::optional< std::pair< RecordID, std::string > > > > tasks {};
+			std::vector< runtime::Task< std::optional< std::pair< RecordID, std::string > > > > tasks {};
 			tasks.reserve( stop - start );
 
 			for ( std::size_t index = start; index < stop; ++index )
 				tasks.emplace_back(
 					embedOne( module, candidates[ index ].m_record_id, candidates[ index ].m_mime_id, db ) );
 
-			auto results { co_await drogon::when_all( std::move( tasks ) ) };
+			auto results {
+				co_await folly::coro::co_withExecutor( executor, folly::coro::collectAllRange( std::move( tasks ) ) )
+			};
 
 			for ( auto& result : results )
 			{
@@ -275,10 +335,11 @@ JobTask backfillJob( const std::int32_t model_id, std::string model_name )
 			if ( record_ids.size() >= INSERT_CHUNK )
 			{
 				const auto written { record_ids.size() };
-				co_await db->execSqlCoro(
-					insert,
-					std::forward< const std::vector< RecordID > >( record_ids ),
-					std::forward< const std::vector< std::string > >( vectors ) );
+				db::DBBindings insert_bindings {};
+				insert_bindings.bind( record_ids );
+				insert_bindings.bind( vectors );
+				co_await folly::coro::co_withExecutor(
+					executor, db.query( insert, std::move( insert_bindings ) ).result() );
 				embedded += written;
 				record_ids.clear();
 				vectors.clear();
@@ -296,10 +357,10 @@ JobTask backfillJob( const std::int32_t model_id, std::string model_name )
 	if ( !record_ids.empty() )
 	{
 		const auto written { record_ids.size() };
-		co_await db->execSqlCoro(
-			insert,
-			std::forward< const std::vector< RecordID > >( record_ids ),
-			std::forward< const std::vector< std::string > >( vectors ) );
+		db::DBBindings insert_bindings {};
+		insert_bindings.bind( record_ids );
+		insert_bindings.bind( vectors );
+		co_await folly::coro::co_withExecutor( executor, db.query( insert, std::move( insert_bindings ) ).result() );
 		embedded += written;
 		record_ids.clear();
 		vectors.clear();

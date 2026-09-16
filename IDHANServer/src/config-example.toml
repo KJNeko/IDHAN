@@ -21,9 +21,12 @@
 #ipv4_listen = "127.0.0.1"
 #ipv6_listen = "::1"
 #use_tls = false
-# Required when use_tls is true.
+# Required when use_tls is true unless self_sign_tls is enabled.
 #server_cert_path = "./server.crt"
 #server_key_path = "./server.key"
+# Generate a persistent localhost certificate when both paths are absent. Browsers
+# will still require you to trust this certificate before treating it as secure.
+#self_sign_tls = true
 
 [logging]
 # Level: trace, debug, info, warn, error, or critical.

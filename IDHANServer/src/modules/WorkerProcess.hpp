@@ -22,11 +22,6 @@
 #include "ipc/Protocol.hpp"
 #include "threading/IDHANTask.hpp"
 
-namespace trantor
-{
-class EventLoop;
-}
-
 namespace idhan::modules
 {
 
@@ -82,7 +77,6 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	struct PendingCall
 	{
 		std::coroutine_handle<> continuation {};
-		trantor::EventLoop* loop { nullptr };
 		std::shared_ptr< CallOutcome > outcome {};
 	};
 

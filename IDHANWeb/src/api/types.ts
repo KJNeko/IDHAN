@@ -77,9 +77,21 @@ export interface MetadataRequest {
  * Only `record_id` and `hashes` are always present. A record with no file stops there; an unparsed
  * one adds `parsed: false`; everything past `simple_type` depends on which category the file is.
  */
+export interface RecordTag {
+    /** Tag domain the mapping belongs to. */
+    domain: string;
+    /** Full `namespace:subtag` text. */
+    text: string;
+}
+
 export interface RecordMetadata {
     record_id: number;
     hashes: { sha256: string };
+
+    /** Applied tags, with aliases, siblings and parents already resolved. Absent on older servers. */
+    tags?: RecordTag[];
+    /** Source URLs associated with the record, e.g. by the downloader. Absent on older servers. */
+    urls?: string[];
 
     /** Absent when the record has no file at all. */
     size?: number;

@@ -1,5 +1,7 @@
 #include "prescan.hpp"
 
+#include <fcntl.h>
+
 #include "MimeIDs.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "logging/log.hpp"
@@ -8,7 +10,7 @@
 namespace idhan::mime
 {
 
-static IDHANTask< bool > testRule( const Rule& rule, const MimeReader& reader, std::size_t& cursor )
+static runtime::Task< bool > testRule( const Rule& rule, const MimeReader& reader, std::size_t& cursor )
 {
 	if ( rule.offset != SCAN )
 	{
@@ -38,7 +40,7 @@ static IDHANTask< bool > testRule( const Rule& rule, const MimeReader& reader, s
 	co_return false;
 }
 
-static IDHANTask< bool > testSignature( const Signature& signature, const MimeReader& reader )
+static runtime::Task< bool > testSignature( const Signature& signature, const MimeReader& reader )
 {
 	std::size_t cursor { 0 };
 
@@ -50,7 +52,7 @@ static IDHANTask< bool > testSignature( const Signature& signature, const MimeRe
 	co_return true;
 }
 
-IDHANTask< MimeID > prescanMime( MimeReader reader )
+runtime::Task< MimeID > prescanMime( MimeReader reader )
 {
 	for ( const auto& signature : signatures() )
 	{
@@ -64,9 +66,17 @@ IDHANTask< MimeID > prescanMime( MimeReader reader )
 	co_return mime_ids::UNKNOWN;
 }
 
-IDHANTask< MimeID > prescanMimeForPath( std::filesystem::path path )
+runtime::Task< MimeID > prescanMimeForPath( std::filesystem::path path )
 {
 	co_return co_await prescanMime( MimeReader { std::make_shared< FileIOUring >( path ) } );
+}
+
+runtime::Task< MimeID > prescanMimeForFd( const int fd, const std::size_t size )
+{
+	const auto duplicate { ::fcntl( fd, F_DUPFD_CLOEXEC, 0 ) };
+	if ( duplicate < 0 ) co_return mime_ids::UNKNOWN;
+
+	co_return co_await prescanMime( MimeReader { std::make_shared< FileIOUring >( duplicate, size ) } );
 }
 
 } // namespace idhan::mime

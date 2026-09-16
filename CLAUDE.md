@@ -84,54 +84,80 @@ Tag relationships (aliases, siblings, parents) live in their own tables and are 
 
 ### Database
 
-PostgreSQL accessed via libpqxx (direct) and Drogon's ORM/async client (`drogon::orm::DbClientPtr`, aliased as `idhan::DbClientPtr`). API handlers use Drogon coroutines (`drogon::Task<>`, `IDHANTask<>`).
+PostgreSQL is accessed directly over libpq (no ORM) through `idhan::db::DBContext` (
+`IDHANDb/include/idhan/db/DBContext.hpp`). `ServerContext` owns the single `DBContext` for the process and passes it by
+reference into route-registration functions. Query results are decoded into typed tuples via codecs, not into a generic
+row/field type.
+
+```cpp
+db::DBBindings bindings {};
+bindings.bind( record_id );
+const auto rows { co_await db.query( "SELECT sha256, size FROM records WHERE record_id = $1", std::move( bindings ) )
+                       .rows< std::span< const std::byte >, std::int64_t >() };
+```
+
+A query with no rows to decode ends in `.result()` instead of `.rows<...>()`. `DBBindings::bind()` also accepts
+`std::vector<T>` directly for array parameters (e.g. `UNNEST($1::integer[])`).
 
 **Schema migrations** live in `IDHANMigration/src/` as `N-tablename.sql`. Files are executed in ascending numeric order at server startup. When adding a migration, name it `(N+1)-tablename.sql`.
 
-`db/drogonArrayBind.hpp` provides helpers for binding C++ vectors as PostgreSQL array parameters (e.g. `UNNEST($1::integer[])`). clangd flags this include as unused — it isn't; it supplies template specializations resolved implicitly at the `execSqlCoro` call site. Don't remove it.
-
 ### API handler pattern
 
-All handlers are Drogon `HttpController` subclasses in `namespace idhan::api`. Routes are registered inside `METHOD_LIST_BEGIN` / `METHOD_LIST_END` using `ADD_METHOD_TO`. The last argument to `ADD_METHOD_TO` must be `IDHANAPIAuthName` to attach the auth middleware filter. Handler methods return `drogon::Task<drogon::HttpResponsePtr>`.
+Handlers are free functions returning `http::HTTPTask<http::Response>` (an alias for `runtime::Task<http::Response>`,
+itself `folly::coro::Task`). Each route family exposes one or more `fooRoute(db::DBContext&)` functions returning an
+`http::RouteDefinition`; `ServerContext::startReplacementStack()` collects these into a `http::RouteRegistry` and hands
+it to `http::HTTPServer`.
 
 ```cpp
-class FooAPI : public drogon::HttpController<FooAPI>
+static http::HTTPTask< http::Response > doThing( db::DBContext& db, http::RequestContext context )
 {
-    drogon::Task<drogon::HttpResponsePtr> doThing(drogon::HttpRequestPtr request, RecordID id);
-  public:
-    METHOD_LIST_BEGIN
-    ADD_METHOD_TO(FooAPI::doThing, "/foo/{id}", drogon::Get, IDHANAPIAuthName);
-    METHOD_LIST_END
-};
-```
+    const auto id_e { context.parameters().require< RecordID >( "id" ) };
+    if ( !id_e ) co_return http::Response::error( 400, id_e.error().message );
 
-Response helpers (all log a warning and return the right status code) are in `api/helpers/createBadRequest.hpp`:
-- `createBadRequest(...)` → 400
-- `createNotFound(...)` → 404
-- `createInternalError(...)` → 500
-- `createConflict(...)` → 409
+    // ... co_await db.query(...) ...
 
-All helpers accept `std::format`-style format strings.
+    co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+}
 
-Handler JSON conventions: check `isString()`/`isArray()`/`isIntegral()` before calling `as*()` — jsoncpp's `asString()` throws on the wrong type, which surfaces as a 500 where a `createBadRequest` 400 belongs. Initialize array responses with `Json::Value json { Json::arrayValue }`; a default-constructed `Json::Value` is null until first append, so empty results serialize as `null` instead of `[]`.
-
-### Coroutine types and error propagation
-
-`IDHANTask<T>` (`threading/IDHANTask.hpp`) is the primary coroutine type. `ResponseTask` and `Request` aliases are defined in `api/helpers/ResponseCallback.hpp`.
-
-For handlers that call helpers which can fail, use `ExpectedTask<T>` = `IDHANTask<std::expected<T, drogon::HttpResponsePtr>>` and the `return_unexpected_error(var)` macro, which co_returns the error response if `var` holds an unexpected:
-
-```cpp
-ExpectedTask<RecordID> helper(DbClientPtr db);
-
-ResponseTask myHandler(Request req) {
-    const auto result = co_await helper(db);
-    return_unexpected_error(result);  // propagates 4xx/5xx if failed
-    co_return okResponse(result.value());
+http::RouteDefinition doThingRoute( db::DBContext& db )
+{
+    return http::RouteDefinition {
+        http::RouteMetadata { proxygen::HTTPMethod::GET, "/foo/{id}", { "id" }, { apiAuthValidation( db ) } },
+        [ &db ]( http::RequestContext context ) { return doThing( db, std::move( context ) ); }
+    };
 }
 ```
 
-**Lazy-coroutine pitfall**: `drogon::Task` has a suspended `initial_suspend`, so a coroutine stored in a vector for `drogon::when_all` only starts running after the loop that created it has finished. Never use a capturing lambda as such a coroutine — the closure is destroyed at the end of the loop iteration and the body reads dead captures (use-after-free). Use a captureless lambda and pass all state as parameters; parameters are copied into the coroutine frame, captures are not.
+`apiAuthValidation(db)` (`httpapi/apiAuth.hpp`) is the auth check, attached via `RouteMetadata`'s validations list
+rather than a middleware/filter class. Bad input returns `http::Response::error(400, message)` inline; there is no
+shared `createBadRequest`-style helper family in the replacement stack.
+
+Handler JSON is built with simdjson (`simdjson::builder::string_builder` for output, `simdjson::dom::parser` or
+`http::ValidatedJson` for input), not jsoncpp — check field types with simdjson's own error codes before dereferencing.
+`Json::Value` (jsoncpp) still appears in a few places that predate or sit outside the HTTP layer (e.g. job results,
+Hydrus response shaping); prefer simdjson for anything new in `httpapi/`.
+
+### Coroutine types and executors
+
+`runtime::Task<T>` (`IDHAN/include/idhan/runtime/Task.hpp`) is `folly::coro::Task<T>` and is the primary coroutine type
+across the replacement stack (`http::HTTPTask<T>` is the same type). A bare `folly::coro::Task` cannot be `co_await`ed
+directly except from inside another `folly::coro::Task` — its promise's `await_transform` is what supplies the executor.
+Awaiting one from a hand-rolled coroutine type (e.g. `JobTask`, the job-runtime coroutine) needs an explicit
+`co_await folly::coro::co_withExecutor( executor, someTask() )`; grab the executor via
+`co_await folly::coro::co_current_executor` inside a `runtime::Task`, or from whatever owns the calling context
+otherwise (e.g. `JobRuntime::executor()`).
+
+`IDHANTask<T>` (`threading/IDHANTask.hpp`) is a separate, older lazy coroutine type with no executor concept at all —
+`co_await`ing it just resumes it synchronously inline. It has its own `operator co_await()`, so it can be awaited from a
+`runtime::Task` freely (folly's executor-propagation wraps it like any other awaitable), but it must never itself
+`co_await` a `runtime::Task` — there's no synchronous bridge back. `modules::RemoteModule`'s methods (`embed`,
+`parseMime`, `createThumbnailFile`, ...) are `IDHANTask`-based for this reason.
+
+**Lazy-coroutine pitfall**: `folly::coro::Task` (like the old `drogon::Task` before it) has a suspended
+`initial_suspend`, so a coroutine stored in a vector for `folly::coro::collectAllRange` only starts running once
+collected. Never use a capturing lambda as such a coroutine — the closure is destroyed at the end of the loop iteration
+and the body reads dead captures (use-after-free). Use a captureless lambda/free function and pass all state as
+parameters; parameters are copied into the coroutine frame, captures are not.
 
 ### File storage (clusters)
 
@@ -187,11 +213,18 @@ Long-running work is broken into `JobTask` coroutines (`IDHANServer/src/jobs/`) 
 
 ### Search
 
-`SearchBuilder` (`IDHANServer/src/core/search/`) builds PostgreSQL queries dynamically. It accumulates positive/negative tag IDs, system predicates (size, dimensions, duration, etc.), sort options, and required JOINs, then emits a single SQL string. `$1` is always bound to an array of `tag_domain_ids`. Call `construct()` to get the SQL, or `query()` to execute it directly.
+`SearchQuery` (`IDHANServer/src/httpapi/search/SearchQuery.{cpp,hpp}`) builds and evaluates searches against
+`db::DBContext`. It accumulates positive/negative tag IDs, wildcard/system predicates, sort options, and display type;
+per-term fetches (`httpapi/search/SearchFetch.{cpp,hpp}`) hit the DB concurrently via `folly::coro::collectAllRange` and
+are combined with `core/search/Set`'s set algebra (`core/search/{Set,SortKey,SearchStats,SearchTypes}` are the
+surviving, DB-library-agnostic pieces of the old `core/search/`). Call `query()` to run a search end to end.
 
 ### Hydrus compatibility
 
-Constants (sort orders, page types, serialisable IDs) are auto-generated at CMake configure time by scanning Python files in `3rd-party/hydrus/`. Generated headers land in `IDHAN/include/hydrus/*_gen.hpp`. Do not hand-edit them. The `hyapi/` subdirectory in the server implements the Hydrus client API protocol.
+Constants (sort orders, page types, serialisable IDs) are auto-generated at CMake configure time by scanning Python
+files in `3rd-party/hydrus/`. Generated headers land in `IDHAN/include/hydrus/*_gen.hpp`. Do not hand-edit them.
+`httpapi/hydrus.{cpp,hpp}` implements the Hydrus client API protocol; `hyapi/constants/` and `hyapi/services/` still
+hold shared constants and service-key helpers it depends on.
 
 ## Configuration
 

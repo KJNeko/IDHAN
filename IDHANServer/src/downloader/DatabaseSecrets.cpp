@@ -1,10 +1,11 @@
 #include "DatabaseSecrets.hpp"
 
-#include <drogon/drogon.h>
+#include <folly/coro/BlockingWait.h>
 
 #include <vector>
 
-#include "db/drogonArrayBind.hpp"
+#include "DownloadSessionManager.hpp"
+#include "idhan/db/DBContext.hpp"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
 
@@ -17,14 +18,15 @@ std::optional< std::string > DatabaseSecrets::secret( const std::string_view nam
 
 	try
 	{
-		drogon::sync_wait(
-			[ key = std::string { name }, &value ]() -> drogon::Task< void >
-			{
-				const auto rows { co_await drogon::app().getDbClient()->execSqlCoro(
-					"SELECT value FROM downloader_secrets WHERE name = $1", key ) };
+		db::DBBindings bindings {};
+		bindings.bind( std::string { name } );
 
-				if ( rows.size() > 0 ) value = rows[ 0 ][ "value" ].as< std::string >();
-			}() );
+		auto rows { folly::coro::blockingWait(
+			DownloadSessionManager::dbContext()
+				.query( "SELECT value FROM downloader_secrets WHERE name = $1", std::move( bindings ) )
+				.rows< std::string >() ) };
+
+		if ( !rows.empty() ) value = std::get< 0 >( rows.row( 0 ) );
 	}
 	catch ( const std::exception& e )
 	{
@@ -35,7 +37,7 @@ std::optional< std::string > DatabaseSecrets::secret( const std::string_view nam
 	return value;
 }
 
-drogon::Task< std::expected< std::unordered_map< std::string, std::string >, std::string > > DatabaseSecrets::values()
+runtime::Task< std::expected< std::unordered_map< std::string, std::string >, std::string > > DatabaseSecrets::values()
 	const
 {
 	std::unordered_map< std::string, std::string > values {};
@@ -43,11 +45,12 @@ drogon::Task< std::expected< std::unordered_map< std::string, std::string >, std
 	try
 	{
 		const auto rows {
-			co_await drogon::app().getDbClient()->execSqlCoro( "SELECT name, value FROM downloader_secrets" )
+			co_await DownloadSessionManager::dbContext()
+				.query( "SELECT name, value FROM downloader_secrets" )
+				.rows< std::string, std::string >()
 		};
 
-		for ( const auto& row : rows )
-			values.emplace( row[ "name" ].as< std::string >(), row[ "value" ].as< std::string >() );
+		for ( auto [ name, value ] : rows ) values.emplace( std::move( name ), std::move( value ) );
 	}
 	catch ( const std::exception& e )
 	{
@@ -57,27 +60,29 @@ drogon::Task< std::expected< std::unordered_map< std::string, std::string >, std
 	co_return values;
 }
 
-drogon::Task< std::expected< void, std::string > > DatabaseSecrets::set(
+runtime::Task< std::expected< void, std::string > > DatabaseSecrets::set(
 	std::unordered_map< std::string, std::string > values )
 {
-	std::vector< std::string > names {};
-	std::vector< std::string > secrets {};
-	names.reserve( values.size() );
-	secrets.reserve( values.size() );
-
-	for ( auto& [ name, value ] : values )
-	{
-		names.emplace_back( name );
-		secrets.emplace_back( std::move( value ) );
-	}
-
 	try
 	{
-		co_await drogon::app().getDbClient()->execSqlCoro(
+		std::vector< std::string > names {};
+		std::vector< std::string > secrets {};
+		names.reserve( values.size() );
+		secrets.reserve( values.size() );
+
+		for ( auto& [ name, value ] : values )
+		{
+			names.emplace_back( std::move( name ) );
+			secrets.emplace_back( std::move( value ) );
+		}
+
+		db::DBBindings bindings {};
+		bindings.bind( names );
+		bindings.bind( secrets );
+		co_await DownloadSessionManager::dbContext().query(
 			"INSERT INTO downloader_secrets (name, value) SELECT * FROM UNNEST($1::text[], $2::text[]) "
 			"ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value",
-			std::move( names ),
-			std::move( secrets ) );
+			std::move( bindings ) );
 	}
 	catch ( const std::exception& e )
 	{

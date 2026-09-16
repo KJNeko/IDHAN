@@ -1,5 +1,7 @@
 #include "DownloadSessionManager.hpp"
 
+#include <folly/coro/BlockingWait.h>
+
 #include <algorithm>
 #include <filesystem>
 #include <stdexcept>
@@ -11,12 +13,18 @@
 #include "DownloadSessionEventHub.hpp"
 #include "RateLimitEventHub.hpp"
 #include "SessionRowObserver.hpp"
+#include "idhan/db/DBContext.hpp"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
 #include "sessionRows.hpp"
 
 namespace idhan::downloader
 {
+
+db::DBContext& DownloadSessionManager::dbContext()
+{
+	return db::DBContext::instance();
+}
 
 DownloadSessionUrlID DownloadSessionManager::addRow(
 	const DownloadSessionID session_id,
@@ -25,9 +33,8 @@ DownloadSessionUrlID DownloadSessionManager::addRow(
 	const std::string_view state,
 	std::string message )
 {
-	auto result { drogon::sync_wait(
-		rows::insert(
-			session_id, parent_row, url, std::string { state }, std::move( message ), drogon::app().getDbClient() ) ) };
+	auto result { folly::coro::blockingWait(
+		rows::insert( session_id, parent_row, url, std::string { state }, std::move( message ), dbContext() ) ) };
 	if ( !result ) throw std::runtime_error( result.error() );
 
 	DownloadSessionEventHub::instance().notify( session_id );
@@ -40,8 +47,9 @@ void DownloadSessionManager::markRow(
 	const std::string_view state,
 	std::string error )
 {
-	auto result { drogon::sync_wait(
-		rows::mark( row_id, std::string { state }, std::move( error ), drogon::app().getDbClient() ) ) };
+	auto result {
+		folly::coro::blockingWait( rows::mark( row_id, std::string { state }, std::move( error ), dbContext() ) )
+	};
 	if ( !result ) throw std::runtime_error( result.error() );
 
 	DownloadSessionEventHub::instance().notify( session_id );
@@ -55,8 +63,8 @@ void DownloadSessionManager::addError(
 	const std::optional< std::int32_t > status,
 	std::string message )
 {
-	auto result { drogon::sync_wait(
-		rows::addError( session_id, row_id, url, lane, status, std::move( message ), drogon::app().getDbClient() ) ) };
+	auto result { folly::coro::blockingWait(
+		rows::addError( session_id, row_id, url, lane, status, std::move( message ), dbContext() ) ) };
 	if ( !result ) throw std::runtime_error( result.error() );
 
 	DownloadSessionEventHub::instance().notify( session_id );
@@ -197,49 +205,58 @@ std::expected< void, std::string > DownloadSessionManager::submit(
 	return {};
 }
 
-drogon::Task< void > DownloadSessionManager::restore( const drogon::orm::DbClientPtr& db )
+runtime::Task< std::vector< DownloadSessionManager::ResumableRoot > > DownloadSessionManager::resumable(
+	db::DBContext& db )
 {
-	if ( const auto initialized { initialize() }; !initialized )
+	const auto roots {
+		co_await db
+			.query(
+				"WITH RECURSIVE unfinished AS ("
+				"    SELECT download_session_url_id, parent_url_id FROM download_session_urls"
+				"     WHERE state IN ('pending', 'processing')"
+				"  UNION ALL"
+				"    SELECT parent.download_session_url_id, parent.parent_url_id"
+				"      FROM download_session_urls parent"
+				"      JOIN unfinished child ON parent.download_session_url_id = child.parent_url_id"
+				") "
+				"SELECT DISTINCT root.download_session_url_id, root.download_session_id, root.url "
+				"FROM download_session_urls root "
+				"JOIN unfinished ON unfinished.download_session_url_id = root.download_session_url_id "
+				"WHERE root.parent_url_id IS NULL ORDER BY root.download_session_url_id" )
+			.rows< DownloadSessionUrlID, DownloadSessionID, std::string >()
+	};
+
+	std::vector< ResumableRoot > pending {};
+	pending.reserve( roots.size() );
+
+	for ( auto [ job_id, session_id, url ] : roots )
 	{
-		log::error( "Unable to initialize downloader: {}", initialized.error() );
-		co_return;
-	}
-
-	const auto roots { co_await db->execSqlCoro(
-		"WITH RECURSIVE unfinished AS ("
-		"    SELECT download_session_url_id, parent_url_id FROM download_session_urls"
-		"     WHERE state IN ('pending', 'processing')"
-		"  UNION ALL"
-		"    SELECT parent.download_session_url_id, parent.parent_url_id"
-		"      FROM download_session_urls parent"
-		"      JOIN unfinished child ON parent.download_session_url_id = child.parent_url_id"
-		") "
-		"SELECT DISTINCT root.download_session_url_id, root.download_session_id, root.url "
-		"FROM download_session_urls root "
-		"JOIN unfinished ON unfinished.download_session_url_id = root.download_session_url_id "
-		"WHERE root.parent_url_id IS NULL ORDER BY root.download_session_url_id" ) };
-
-	for ( const auto& row : roots )
-	{
-		const auto job_id { row[ "download_session_url_id" ].as< DownloadSessionUrlID >() };
-
-		co_await db->execSqlCoro( "DELETE FROM download_session_urls WHERE parent_url_id = $1", job_id );
-		co_await db->execSqlCoro(
+		db::DBBindings job_binding {};
+		job_binding.bind( job_id );
+		co_await db.query( "DELETE FROM download_session_urls WHERE parent_url_id = $1", job_binding );
+		co_await db.query(
 			"UPDATE download_session_urls SET state = 'pending', finished_at = NULL, error = NULL "
 			"WHERE download_session_url_id = $1",
-			job_id );
+			std::move( job_binding ) );
 
-		const auto scheduled {
-			submit( job_id, row[ "download_session_id" ].as< DownloadSessionID >(), row[ "url" ].as< std::string >() )
-		};
-
-		if ( !scheduled )
-			co_await db->execSqlCoro(
-				"UPDATE download_session_urls SET state = 'failed', finished_at = now(), error = $2 "
-				"WHERE download_session_url_id = $1",
-				job_id,
-				scheduled.error() );
+		pending.emplace_back( ResumableRoot { job_id, session_id, std::move( url ) } );
 	}
+
+	co_return pending;
+}
+
+runtime::Task< void > DownloadSessionManager::markUnresumable(
+	const DownloadSessionUrlID job_id,
+	std::string error,
+	db::DBContext& db )
+{
+	db::DBBindings bindings {};
+	bindings.bind( job_id );
+	bindings.bind( std::move( error ) );
+	co_await db.query(
+		"UPDATE download_session_urls SET state = 'failed', finished_at = now(), error = $2 "
+		"WHERE download_session_url_id = $1",
+		std::move( bindings ) );
 }
 
 void DownloadSessionManager::destroy( const DownloadSessionID session_id )
@@ -320,7 +337,7 @@ std::vector< LaneSnapshot > DownloadSessionManager::laneSnapshots()
 	return m_downloader == nullptr ? std::vector< LaneSnapshot > {} : m_downloader->laneSnapshots();
 }
 
-drogon::Task< std::expected< std::unordered_map< std::string, std::string >, std::string > > DownloadSessionManager::
+runtime::Task< std::expected< std::unordered_map< std::string, std::string >, std::string > > DownloadSessionManager::
 	secrets()
 {
 	const auto initialized { initialize() };
@@ -341,7 +358,7 @@ drogon::Task< std::expected< std::unordered_map< std::string, std::string >, std
 	co_return co_await secrets->values();
 }
 
-drogon::Task< std::expected< void, std::string > > DownloadSessionManager::setSecrets(
+runtime::Task< std::expected< void, std::string > > DownloadSessionManager::setSecrets(
 	std::unordered_map< std::string, std::string > values )
 {
 	const auto initialized { initialize() };
