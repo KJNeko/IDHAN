@@ -2,11 +2,11 @@
 
 #include <folly/coro/Collect.h>
 #include <folly/io/IOBuf.h>
+#include <json/json.h>
 
 #include <charconv>
 #include <chrono>
 #include <cstdint>
-#include <json/json.h>
 #include <simdjson.h>
 #include <string>
 #include <vector>
@@ -261,11 +261,12 @@ std::vector< http::RouteDefinition > jobRoutes( db::DBContext& db )
 {
 	std::vector< http::RouteDefinition > routes {};
 
-	const auto add = [ &routes, &db ](
-		                 const proxygen::HTTPMethod method,
-		                 std::string path,
-		                 std::vector< http::PathParameter > path_parameters,
-		                 http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
+	const auto add =
+		[ &routes, &db ](
+			const proxygen::HTTPMethod method,
+			std::string path,
+			std::vector< http::PathParameter > path_parameters,
+			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
 	{
 		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 		{ co_return co_await handler( db, std::move( context ) ); };

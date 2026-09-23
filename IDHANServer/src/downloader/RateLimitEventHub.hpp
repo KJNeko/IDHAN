@@ -2,11 +2,11 @@
 
 #include <IDHANDownloader/LaneObserver.hpp>
 
-#include "idhan/http/SSEEventHub.hpp"
-
 #include <chrono>
 #include <mutex>
 #include <unordered_map>
+
+#include "idhan/http/SSEEventHub.hpp"
 
 namespace idhan::downloader
 {

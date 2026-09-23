@@ -26,7 +26,6 @@ class DownloadSessionEventHub
 
 	void notify( DownloadSessionID session_id );
 	void notifyRemoved( DownloadSessionID session_id );
-
 };
 
 } // namespace idhan::downloader

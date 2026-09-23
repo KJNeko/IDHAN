@@ -1,14 +1,14 @@
 #include "info.hpp"
 
-#include <fcntl.h>
+#include <folly/io/IOBuf.h>
+#include <spdlog/pattern_formatter.h>
+#include <spdlog/sinks/ringbuffer_sink.h>
 #include <sys/stat.h>
 
 #include <chrono>
 #include <cstdint>
-#include <folly/io/IOBuf.h>
+#include <fcntl.h>
 #include <format>
-#include <spdlog/pattern_formatter.h>
-#include <spdlog/sinks/ringbuffer_sink.h>
 #include <string>
 #include <string_view>
 
@@ -114,4 +114,4 @@ http::RouteDefinition logRoute( db::DBContext& db )
 	};
 }
 
-}
+} // namespace idhan::httpapi

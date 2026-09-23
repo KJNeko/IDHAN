@@ -135,8 +135,7 @@ HTTPTask< Response > FileResponse::create( const RequestContext& context, folly:
 	if ( !metadata.filename.empty() )
 		response_headers.set(
 			"Content-Disposition",
-			std::format(
-				"{}; filename=\"{}\"", metadata.attachment ? "attachment" : "inline", metadata.filename ) );
+			std::format( "{}; filename=\"{}\"", metadata.attachment ? "attachment" : "inline", metadata.filename ) );
 
 	const auto setStatus = [ &response ]( const std::uint16_t status )
 	{

@@ -6,10 +6,10 @@
 #include <stdexcept>
 #include <utility>
 
+#include "IDHANDB.hpp"
 #include "idhan/db/DBOperation.hpp"
 #include "idhan/db/DBReactor.hpp"
 #include "idhan/db/DBTransaction.hpp"
-#include "IDHANDB.hpp"
 
 namespace idhan::db
 {

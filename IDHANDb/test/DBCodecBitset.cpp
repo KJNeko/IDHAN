@@ -1,8 +1,8 @@
-#include <bitset>
-
 #include <catch2/catch_test_macros.hpp>
 #include <folly/coro/BlockingWait.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+
+#include <bitset>
 
 #include "idhan/db/DBContext.hpp"
 

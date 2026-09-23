@@ -16,9 +16,7 @@ std::expected< std::string, http::Response > readValidatedJsonBody( http::Reques
 	if ( !std::holds_alternative< std::unique_ptr< folly::IOBuf > >( body ) )
 		return std::unexpected(
 			http::Response::error(
-				413,
-				std::format(
-					"JSON request bodies are limited to {} bytes", idhan::http::json_body_limit ) ) );
+				413, std::format( "JSON request bodies are limited to {} bytes", idhan::http::json_body_limit ) ) );
 
 	const auto text { std::get< std::unique_ptr< folly::IOBuf > >( body )->to< std::string >() };
 

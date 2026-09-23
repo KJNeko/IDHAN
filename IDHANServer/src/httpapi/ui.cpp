@@ -1,9 +1,9 @@
 #include "ui.hpp"
 
-#include <fcntl.h>
 #include <sys/stat.h>
 
 #include <chrono>
+#include <fcntl.h>
 #include <filesystem>
 #include <format>
 #include <ranges>
@@ -20,10 +20,8 @@ static std::expected< void, http::ParseError > validateAssetFilename( const std:
 	if ( filename.empty() || filename == "." || filename == ".." )
 		return std::unexpected( http::ParseError { "filename", "must name an asset file" } );
 
-
 	if ( filename.find_first_of( std::string_view { "\0/\\", 3 } ) != std::string_view::npos )
 		return std::unexpected( http::ParseError { "filename", "must not contain path separators" } );
-
 
 	return {};
 }
@@ -48,22 +46,18 @@ static http::HTTPTask< http::Response > asset( http::RequestContext context )
 	const auto filename { context.parameters().scalar< std::string >( "filename" ) };
 	if ( !filename ) co_return http::Response::error( 400, "Invalid asset filename" );
 
-
 	const auto directory { folly::File::makeFile( ( getStaticPath() / "assets" ).c_str(), O_RDONLY | O_DIRECTORY ) };
 	if ( !directory ) co_return http::Response::error( 404, "Asset not found" );
-
 
 	const auto descriptor {
 		::openat( directory->fd(), filename->c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC )
 	};
 	if ( descriptor < 0 ) co_return http::Response::error( 404, "Asset not found" );
 
-
 	folly::File file { descriptor, true };
 	struct stat status {};
 	if ( ::fstat( file.fd(), &status ) != 0 || !S_ISREG( status.st_mode ) )
 		co_return http::Response::error( 404, "Asset not found" );
-
 
 	http::FileMetadata metadata {
 		.size = static_cast< std::uint64_t >( status.st_size ),
@@ -94,9 +88,7 @@ static std::expected< void, http::ParseError > validateSubtreePath( const std::s
 	return {};
 }
 
-static http::HTTPTask< http::Response > serveSubtree(
-	const std::filesystem::path& root,
-	http::RequestContext& context )
+static http::HTTPTask< http::Response > serveSubtree( const std::filesystem::path& root, http::RequestContext& context )
 {
 	const auto relative { context.parameters().scalar< std::string >( "path" ) };
 	if ( !relative ) co_return http::Response::error( 400, "Invalid path" );
@@ -119,8 +111,9 @@ static http::HTTPTask< http::Response > serveSubtree(
 		filename = segment;
 	}
 
-	const auto descriptor { ::openat(
-		directory->fd(), filename.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC ) };
+	const auto descriptor {
+		::openat( directory->fd(), filename.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC )
+	};
 	if ( descriptor < 0 ) co_return http::Response::error( 404, "Not found" );
 
 	folly::File file { descriptor, true };
@@ -186,8 +179,7 @@ http::RouteDefinition assetsRoute()
 http::RouteDefinition apiDocsFilesRoute()
 {
 	return http::RouteDefinition {
-		http::RouteMetadata {
-			proxygen::HTTPMethod::GET, "/api/{*path}", { { "path", validateSubtreePath } }, {} },
+		http::RouteMetadata { proxygen::HTTPMethod::GET, "/api/{*path}", { { "path", validateSubtreePath } }, {} },
 		apiDocsFile
 	};
 }
@@ -195,16 +187,16 @@ http::RouteDefinition apiDocsFilesRoute()
 http::RouteDefinition pluginFilesRoute()
 {
 	return http::RouteDefinition {
-		http::RouteMetadata {
-			proxygen::HTTPMethod::GET, "/plugins/{*path}", { { "path", validateSubtreePath } }, {} },
+		http::RouteMetadata { proxygen::HTTPMethod::GET, "/plugins/{*path}", { { "path", validateSubtreePath } }, {} },
 		pluginFile
 	};
 }
 
 http::RouteDefinition indexRoute( std::string path )
 {
-	return http::RouteDefinition { http::RouteMetadata { proxygen::HTTPMethod::GET, std::move( path ), {}, {} },
-		                            index };
+	return http::RouteDefinition {
+		http::RouteMetadata { proxygen::HTTPMethod::GET, std::move( path ), {}, {} }, index
+	};
 }
 
-}
+} // namespace idhan::httpapi

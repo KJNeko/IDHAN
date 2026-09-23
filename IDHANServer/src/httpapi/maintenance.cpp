@@ -1,11 +1,11 @@
 #include "maintenance.hpp"
 
 #include <folly/io/IOBuf.h>
+#include <json/writer.h>
 
 #include <cstdint>
 #include <filesystem>
 #include <format>
-#include <json/writer.h>
 #include <simdjson.h>
 #include <span>
 #include <utility>
@@ -17,12 +17,12 @@
 #include "apiAuth.hpp"
 #include "filesystem/ThumbnailCache.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/http/TemporaryUpload.hpp"
+#include "ipc/UniqueFd.hpp"
 #include "logging/log.hpp"
 #include "metadata/ArchiveEntries.hpp"
 #include "mime/identifyMime.hpp"
 #include "mime/prescan.hpp"
-#include "idhan/http/TemporaryUpload.hpp"
-#include "ipc/UniqueFd.hpp"
 #include "modules/CallInput.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "modules/RemoteModule.hpp"
@@ -31,7 +31,9 @@
 namespace idhan::httpapi
 {
 
-[[nodiscard]] static http::Response jsonResponse( simdjson::builder::string_builder& builder, const std::uint16_t status = 200 )
+[[nodiscard]] static http::Response jsonResponse(
+	simdjson::builder::string_builder& builder,
+	const std::uint16_t status = 200 )
 {
 	auto json { builder.view() };
 	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
@@ -61,17 +63,20 @@ struct SunburstTable
 
 static http::HTTPTask< http::Response > sunburst( db::DBContext& db, [[maybe_unused]] http::RequestContext context )
 {
-	const auto rows { co_await db.query(
-		                  "SELECT t.table_name, "
-		                  "       pg_relation_size(quote_ident(t.table_name)::text) AS table_size, "
-		                  "       i.indexname AS index_name, "
-		                  "       pg_relation_size(i.indexname::regclass) AS index_size "
-		                  "FROM information_schema.tables t "
-		                  "LEFT JOIN pg_indexes i "
-		                  "       ON i.tablename = t.table_name AND i.schemaname = current_schema() "
-		                  "WHERE t.table_schema = current_schema() AND t.table_type = 'BASE TABLE' "
-		                  "ORDER BY t.table_name" )
-		                  .rows< std::string, std::int64_t, std::optional< std::string >, std::optional< std::int64_t > >() };
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT t.table_name, "
+				"       pg_relation_size(quote_ident(t.table_name)::text) AS table_size, "
+				"       i.indexname AS index_name, "
+				"       pg_relation_size(i.indexname::regclass) AS index_size "
+				"FROM information_schema.tables t "
+				"LEFT JOIN pg_indexes i "
+				"       ON i.tablename = t.table_name AND i.schemaname = current_schema() "
+				"WHERE t.table_schema = current_schema() AND t.table_type = 'BASE TABLE' "
+				"ORDER BY t.table_name" )
+			.rows< std::string, std::int64_t, std::optional< std::string >, std::optional< std::int64_t > >()
+	};
 
 	std::vector< SunburstTable > tables {};
 	for ( const auto& [ table_name, table_size, index_name, index_size ] : rows )
@@ -128,17 +133,22 @@ static http::HTTPTask< http::Response > sunburst( db::DBContext& db, [[maybe_unu
 	co_return jsonResponse( builder );
 }
 
-static http::HTTPTask< http::Response > databaseStats( db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > databaseStats(
+	db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
-	const auto counts { co_await db.query(
-		                    "SELECT (SELECT COUNT(*) FROM records)       AS records, "
-		                    "       (SELECT COUNT(*) FROM tags)          AS tags, "
-		                    "       (SELECT COUNT(*) FROM file_clusters) AS clusters, "
-		                    "       (SELECT COALESCE(SUM(GREATEST(c.reltuples, 0)), 0)::bigint "
-		                    "          FROM pg_inherits i "
-		                    "          JOIN pg_class c ON c.oid = i.inhrelid "
-		                    "         WHERE i.inhparent = to_regclass(current_schema() || '.tag_mappings')) AS mappings_est" )
-		                    .rows< std::int64_t, std::int64_t, std::int64_t, std::int64_t >() };
+	const auto counts {
+		co_await db
+			.query(
+				"SELECT (SELECT COUNT(*) FROM records)       AS records, "
+				"       (SELECT COUNT(*) FROM tags)          AS tags, "
+				"       (SELECT COUNT(*) FROM file_clusters) AS clusters, "
+				"       (SELECT COALESCE(SUM(GREATEST(c.reltuples, 0)), 0)::bigint "
+				"          FROM pg_inherits i "
+				"          JOIN pg_class c ON c.oid = i.inhrelid "
+				"         WHERE i.inhparent = to_regclass(current_schema() || '.tag_mappings')) AS mappings_est" )
+			.rows< std::int64_t, std::int64_t, std::int64_t, std::int64_t >()
+	};
 
 	const auto& [ records, tags, clusters, mappings_est ] { counts.row( 0 ) };
 
@@ -242,7 +252,9 @@ static http::HTTPTask< http::Response > purgeThumbnails(
 
 static http::HTTPTask< http::Response > listMimes( db::DBContext& db, [[maybe_unused]] http::RequestContext context )
 {
-	const auto rows { co_await db.query( "SELECT mime_id, name FROM mime ORDER BY mime_id" ).rows< MimeID, std::string >() };
+	const auto rows {
+		co_await db.query( "SELECT mime_id, name FROM mime ORDER BY mime_id" ).rows< MimeID, std::string >()
+	};
 
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -382,11 +394,14 @@ static http::HTTPTask< http::Response > parseMime( [[maybe_unused]] db::DBContex
 	co_return jsonResponse( builder );
 }
 
-static http::HTTPTask< http::Response > createThumbnail( [[maybe_unused]] db::DBContext& db, http::RequestContext context )
+static http::HTTPTask< http::Response > createThumbnail(
+	[[maybe_unused]] db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto content_type { context.message().getHeaders().getSingleOrEmpty( std::string { "Content-Type" } ) };
 	if ( content_type != "application/octet-stream" )
-		co_return http::Response::error( 400, std::format( "Content type must be octet-stream, was {}", content_type ) );
+		co_return http::Response::error(
+			400, std::format( "Content type must be octet-stream, was {}", content_type ) );
 
 	auto body { std::move( context ).takeBody() };
 
@@ -446,30 +461,32 @@ static http::HTTPTask< http::Response > createThumbnail( [[maybe_unused]] db::DB
 	if ( thumbnailers.empty() )
 		co_return http::Response::error( 404, std::format( "No thumbnailer available for mime id {}", mime_id ) );
 
-	const auto thumbnail_data { co_await thumbnailers.front()->createThumbnailFile( std::move( call_data ), 128, 128 ) };
+	const auto thumbnail_data {
+		co_await thumbnailers.front()->createThumbnailFile( std::move( call_data ), 128, 128 )
+	};
 	if ( !thumbnail_data ) co_return http::Response::error( 500, thumbnail_data.error() );
 
 	const auto& thumb_info { *thumbnail_data };
 	co_return http::Response::bytes(
-		200,
-		folly::IOBuf::copyBuffer( thumb_info.m_pixel_data.data(), thumb_info.m_pixel_data.size() ),
-		"image/webp" );
+		200, folly::IOBuf::copyBuffer( thumb_info.m_pixel_data.data(), thumb_info.m_pixel_data.size() ), "image/webp" );
 }
 
 std::vector< http::RouteDefinition > maintenanceRoutes( db::DBContext& db )
 {
 	std::vector< http::RouteDefinition > routes {};
 
-	const auto add = [ &routes, &db ](
-		                  const proxygen::HTTPMethod method,
-		                  std::string path,
-		                  http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
+	const auto add =
+		[ &routes, &db ](
+			const proxygen::HTTPMethod method,
+			std::string path,
+			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
 	{
 		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 		{ co_return co_await handler( db, std::move( context ) ); };
 
-		routes.push_back( http::RouteDefinition {
-			http::RouteMetadata { method, std::move( path ), {}, { apiAuthValidation( db ) } }, std::move( bound ) } );
+		routes.push_back(
+			http::RouteDefinition { http::RouteMetadata { method, std::move( path ), {}, { apiAuthValidation( db ) } },
+		                            std::move( bound ) } );
 	};
 
 	add( proxygen::HTTPMethod::GET, "/db/stats/sunburst", sunburst );
@@ -483,4 +500,4 @@ std::vector< http::RouteDefinition > maintenanceRoutes( db::DBContext& db )
 	return routes;
 }
 
-}
+} // namespace idhan::httpapi

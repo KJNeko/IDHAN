@@ -1,5 +1,6 @@
 #include "ModuleLoader.hpp"
 
+#include <folly/executors/GlobalExecutor.h>
 #include <sys/prctl.h>
 
 #include <algorithm>
@@ -14,8 +15,6 @@
 #include <paths.hpp>
 #include <string>
 #include <thread>
-
-#include <folly/executors/GlobalExecutor.h>
 
 #include "Config.hpp"
 #include "MimeIDs.hpp"

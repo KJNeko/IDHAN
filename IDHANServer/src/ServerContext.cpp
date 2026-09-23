@@ -192,7 +192,6 @@ void setupTempPath()
 		log::critical( "IDHAN could not create it's running marker at {}", marker_path.string() );
 		std::abort();
 	}
-
 }
 
 //! URLs a shutdown left unfinished are only recorded in the database, since jobs themselves live in

@@ -1,5 +1,4 @@
 #include <catch2/catch_test_macros.hpp>
-
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
@@ -16,7 +15,8 @@ class TemporaryDirectory
 {
 	std::filesystem::path m_path;
 
-public:
+  public:
+
 	explicit TemporaryDirectory( std::filesystem::path path ) : m_path( std::move( path ) )
 	{
 		std::filesystem::create_directory( m_path );
@@ -35,7 +35,8 @@ public:
 TEST_CASE( "Self-signed TLS credentials form a usable persistent pair", "[http][tls]" )
 {
 	const auto unique_name {
-		"idhan-self-signed-" + std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() ) };
+		"idhan-self-signed-" + std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() )
+	};
 	TemporaryDirectory directory { std::filesystem::temp_directory_path() / unique_name };
 
 	idhan::http::HTTPConfig config { idhan::http::HTTPConfig::defaults() };

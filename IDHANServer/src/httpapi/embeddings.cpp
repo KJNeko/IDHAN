@@ -18,8 +18,8 @@
 #include <vector>
 
 #include "apiAuth.hpp"
-#include "embeddings/embeddings.hpp"
 #include "embeddings/QueryTerm.hpp"
+#include "embeddings/embeddings.hpp"
 #include "embeddings/queryVector.hpp"
 #include "embeddings/resolveTerms.hpp"
 #include "idhan/db/DBContext.hpp"
@@ -39,7 +39,9 @@ constexpr std::size_t default_search_limit { 200 };
 constexpr std::size_t max_compare_terms { 64 };
 constexpr std::size_t max_compare_records { 8 };
 
-[[nodiscard]] static http::Response jsonResponse( simdjson::builder::string_builder& builder, const std::uint16_t status = 200 )
+[[nodiscard]] static http::Response jsonResponse(
+	simdjson::builder::string_builder& builder,
+	const std::uint16_t status = 200 )
 {
 	auto json { builder.view() };
 	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
@@ -47,7 +49,8 @@ constexpr std::size_t max_compare_records { 8 };
 	return http::Response::json( status, folly::IOBuf::copyBuffer( *json ) );
 }
 
-[[nodiscard]] static std::expected< embeddings::QueryTerm, http::Response > parseQueryTerm( const simdjson::dom::element entry )
+[[nodiscard]] static std::expected< embeddings::QueryTerm, http::Response > parseQueryTerm(
+	const simdjson::dom::element entry )
 {
 	if ( !entry.is_object() ) return std::unexpected( http::Response::error( 400, "Every term must be an object" ) );
 
@@ -84,7 +87,8 @@ constexpr std::size_t max_compare_records { 8 };
 	else
 	{
 		return std::unexpected(
-			http::Response::error( 400, std::format( "Unknown term type \"{}\"; expected \"text\" or \"record\"", type ) ) );
+			http::Response::error(
+				400, std::format( "Unknown term type \"{}\"; expected \"text\" or \"record\"", type ) ) );
 	}
 
 	return term;
@@ -97,7 +101,8 @@ constexpr std::size_t max_compare_records { 8 };
 
 	simdjson::dom::array array {};
 	if ( terms_json.get_array().get( array ) != simdjson::SUCCESS )
-		return std::unexpected( http::Response::error( 500, "Unexpected: array conversion failed after is_array() check" ) );
+		return std::unexpected(
+			http::Response::error( 500, "Unexpected: array conversion failed after is_array() check" ) );
 
 	std::vector< embeddings::QueryTerm > terms {};
 	terms.reserve( array.size() );
@@ -131,13 +136,14 @@ constexpr std::size_t max_compare_records { 8 };
 	{
 		db::DBBindings bindings {};
 		bindings.bind( wanted );
-		const auto rows { co_await db
-			                   .query(
-									std::format(
-										"SELECT record_id, embedding::text AS embedding FROM {} WHERE record_id = ANY($1)",
-										table ),
-									std::move( bindings ) )
-			                   .rows< RecordID, std::string >() };
+		const auto rows {
+			co_await db
+				.query(
+					std::format(
+						"SELECT record_id, embedding::text AS embedding FROM {} WHERE record_id = ANY($1)", table ),
+					std::move( bindings ) )
+				.rows< RecordID, std::string >()
+		};
 
 		for ( const auto& [ record_id, embedding_text ] : rows )
 			vectors.emplace( record_id, embeddings::parseHalfvecLiteral( embedding_text ) );
@@ -157,8 +163,9 @@ constexpr std::size_t max_compare_records { 8 };
 			const auto embedded { co_await module->embedText( term.m_text ) };
 
 			if ( !embedded )
-				co_return std::unexpected( http::Response::error(
-					400, std::format( "Could not embed \"{}\": {}", term.m_text, embedded.error() ) ) );
+				co_return std::unexpected(
+					http::Response::error(
+						400, std::format( "Could not embed \"{}\": {}", term.m_text, embedded.error() ) ) );
 
 			resolved.emplace_back(
 				embeddings::WeightedVector { .m_vector = embedded->m_vector, .m_weight = term.m_weight } );
@@ -167,11 +174,12 @@ constexpr std::size_t max_compare_records { 8 };
 
 		const auto found { vectors.find( term.m_record_id ) };
 		if ( found == vectors.end() )
-			co_return std::unexpected( http::Response::error(
-				404,
-				std::format(
-					"Record {} has no embedding for this model. Run a backfill first, or remove it from the query",
-					term.m_record_id ) ) );
+			co_return std::unexpected(
+				http::Response::error(
+					404,
+					std::format(
+						"Record {} has no embedding for this model. Run a backfill first, or remove it from the query",
+						term.m_record_id ) ) );
 
 		resolved.emplace_back( embeddings::WeightedVector { .m_vector = found->second, .m_weight = term.m_weight } );
 	}
@@ -181,9 +189,10 @@ constexpr std::size_t max_compare_records { 8 };
 
 static http::HTTPTask< http::Response > listModels( db::DBContext& db, [[maybe_unused]] http::RequestContext context )
 {
-	const auto rows { co_await db.query(
-		                  "SELECT model_id, model_name, model_dimensions FROM embedding_models ORDER BY model_id" )
-		                  .rows< std::int32_t, std::string, std::int32_t >() };
+	const auto rows {
+		co_await db.query( "SELECT model_id, model_name, model_dimensions FROM embedding_models ORDER BY model_id" )
+			.rows< std::int32_t, std::string, std::int32_t >()
+	};
 
 	simdjson::builder::string_builder builder;
 	builder.start_array();
@@ -208,9 +217,10 @@ static http::HTTPTask< http::Response > listModels( db::DBContext& db, [[maybe_u
 
 		db::DBBindings bindings {};
 		bindings.bind( std::format( "embeddings_{}", model_id ) );
-		const auto stats { co_await db.query( "SELECT reltuples FROM pg_class WHERE oid = to_regclass($1)",
-			                                    std::move( bindings ) )
-			                    .rows< std::optional< float > >() };
+		const auto stats {
+			co_await db.query( "SELECT reltuples FROM pg_class WHERE oid = to_regclass($1)", std::move( bindings ) )
+				.rows< std::optional< float > >()
+		};
 
 		if ( !stats.empty() )
 		{
@@ -236,11 +246,13 @@ static http::HTTPTask< http::Response > deleteModel( db::DBContext& db, http::Re
 
 	db::DBBindings find_bindings {};
 	find_bindings.bind( model_id );
-	const auto rows { co_await db.query(
-		                  "SELECT model_name FROM embedding_models WHERE model_id = $1", std::move( find_bindings ) )
-		                  .rows< std::string >() };
+	const auto rows {
+		co_await db.query( "SELECT model_name FROM embedding_models WHERE model_id = $1", std::move( find_bindings ) )
+			.rows< std::string >()
+	};
 
-	if ( rows.empty() ) co_return http::Response::error( 404, std::format( "No embedding model with id {}", model_id ) );
+	if ( rows.empty() )
+		co_return http::Response::error( 404, std::format( "No embedding model with id {}", model_id ) );
 
 	const auto model_name { std::get< 0 >( rows.row( 0 ) ) };
 
@@ -259,8 +271,7 @@ static http::HTTPTask< http::Response > deleteModel( db::DBContext& db, http::Re
 	catch ( const std::exception& e )
 	{
 		embeddings::endBackfill( model_id );
-		co_return http::Response::error(
-			500, std::format( "Could not delete \"{}\": {}", model_name, e.what() ) );
+		co_return http::Response::error( 500, std::format( "Could not delete \"{}\": {}", model_name, e.what() ) );
 	}
 
 	embeddings::endBackfill( model_id );
@@ -303,7 +314,8 @@ static http::HTTPTask< http::Response > generateEmbeddings( db::DBContext& db, h
 	const std::string model_name { model_name_sv };
 
 	const auto module { modules::ModuleLoader::instance().getEmbedderFor( model_name ) };
-	if ( !module ) co_return http::Response::error( 404, std::format( "No loaded module provides the model \"{}\"", model_name ) );
+	if ( !module )
+		co_return http::Response::error( 404, std::format( "No loaded module provides the model \"{}\"", model_name ) );
 
 	const auto model { co_await embeddings::findEmbeddingModel( model_name, db ) };
 	if ( !model )
@@ -373,15 +385,18 @@ static http::HTTPTask< http::Response > searchEmbeddings( db::DBContext& db, htt
 	if ( terms.empty() ) co_return http::Response::error( 400, "A query needs at least one term" );
 
 	const auto model { co_await embeddings::findEmbeddingModel( model_name, db ) };
-	if ( !model ) co_return http::Response::error( 404, std::format( "The model \"{}\" is not registered", model_name ) );
+	if ( !model )
+		co_return http::Response::error( 404, std::format( "The model \"{}\" is not registered", model_name ) );
 
 	const auto model_id { model->id };
 	const auto dimensions { static_cast< std::size_t >( model->dimensions ) };
 
 	std::int64_t limit_value {};
-	const std::size_t limit { root[ "limit" ].get_int64().get( limit_value ) == simdjson::SUCCESS && limit_value > 0 ?
-		                           std::min( static_cast< std::size_t >( limit_value ), max_search_limit ) :
-		                           default_search_limit };
+	const std::size_t limit {
+		root[ "limit" ].get_int64().get( limit_value ) == simdjson::SUCCESS && limit_value > 0 ?
+			std::min( static_cast< std::size_t >( limit_value ), max_search_limit ) :
+			default_search_limit
+	};
 
 	std::int64_t ef_value {};
 	const std::size_t requested_ef {
@@ -429,14 +444,16 @@ static http::HTTPTask< http::Response > searchEmbeddings( db::DBContext& db, htt
 
 	db::DBBindings bindings {};
 	bindings.bind( literal );
-	const auto rows { co_await transaction
-		                   .query(
-								std::format(
-									"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}",
-									table,
-									limit ),
-								std::move( bindings ) )
-		                   .rows< RecordID, double >() };
+	const auto rows {
+		co_await transaction
+			.query(
+				std::format(
+					"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}",
+					table,
+					limit ),
+				std::move( bindings ) )
+			.rows< RecordID, double >()
+	};
 
 	co_await transaction.commit();
 
@@ -539,7 +556,9 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 			co_return http::Response::error(
 				400,
 				std::format(
-					"At most {} terms may be compared at once; {} were given", max_compare_terms, terms_array.size() ) );
+					"At most {} terms may be compared at once; {} were given",
+					max_compare_terms,
+					terms_array.size() ) );
 
 		auto parsed { parseQueryTerms( terms_json ) };
 		if ( !parsed ) co_return std::move( parsed.error() );
@@ -547,7 +566,8 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 	}
 
 	const auto model { co_await embeddings::findEmbeddingModel( model_name, db ) };
-	if ( !model ) co_return http::Response::error( 404, std::format( "The model \"{}\" is not registered", model_name ) );
+	if ( !model )
+		co_return http::Response::error( 404, std::format( "The model \"{}\" is not registered", model_name ) );
 
 	const auto model_id { model->id };
 	const auto dimensions { static_cast< std::size_t >( model->dimensions ) };
@@ -577,11 +597,13 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 
 	db::DBBindings present_bindings {};
 	present_bindings.bind( record_ids );
-	const auto present_rows { co_await db
-		                           .query(
-										std::format( "SELECT record_id FROM {} WHERE record_id = ANY($1)", table ),
-										std::move( present_bindings ) )
-		                           .rows< RecordID >() };
+	const auto present_rows {
+		co_await db
+			.query(
+				std::format( "SELECT record_id FROM {} WHERE record_id = ANY($1)", table ),
+				std::move( present_bindings ) )
+			.rows< RecordID >()
+	};
 
 	std::unordered_set< RecordID > present {};
 	for ( const auto& [ record_id ] : present_rows ) present.insert( record_id );
@@ -615,7 +637,8 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 			if ( term.m_vector.size() != dimensions )
 				co_return http::Response::error(
 					500,
-					std::format( "A term resolved to {} values but the model has {}", term.m_vector.size(), dimensions ) );
+					std::format(
+						"A term resolved to {} values but the model has {}", term.m_vector.size(), dimensions ) );
 
 			literals.push_back( embeddings::toHalfvecLiteral( term.m_vector ) );
 		}
@@ -623,14 +646,16 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 		db::DBBindings compare_bindings {};
 		compare_bindings.bind( record_ids );
 		compare_bindings.bind( literals );
-		const auto rows { co_await db
-			                   .query(
-									std::format(
-										"SELECT t.idx, e.record_id, e.embedding <=> t.vec::halfvec AS distance FROM {} e "
-										"CROSS JOIN UNNEST($2::text[]) WITH ORDINALITY AS t(vec, idx) WHERE e.record_id = ANY($1)",
-										table ),
-									std::move( compare_bindings ) )
-			                   .rows< std::int64_t, RecordID, double >() };
+		const auto rows {
+			co_await db
+				.query(
+					std::format(
+						"SELECT t.idx, e.record_id, e.embedding <=> t.vec::halfvec AS distance FROM {} e "
+						"CROSS JOIN UNNEST($2::text[]) WITH ORDINALITY AS t(vec, idx) WHERE e.record_id = ANY($1)",
+						table ),
+					std::move( compare_bindings ) )
+				.rows< std::int64_t, RecordID, double >()
+		};
 
 		for ( const auto& [ term_index_raw, record_id, distance ] : rows )
 		{
@@ -648,15 +673,17 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 		db::DBBindings pair_bindings {};
 		pair_bindings.bind( record_ids[ 0 ] );
 		pair_bindings.bind( record_ids[ 1 ] );
-		const auto pair_rows { co_await db
-			                       .query(
-										std::format(
-											"SELECT a.embedding <=> b.embedding AS distance FROM {} a, {} b "
-											"WHERE a.record_id = $1 AND b.record_id = $2",
-											table,
-											table ),
-										std::move( pair_bindings ) )
-			                       .rows< double >() };
+		const auto pair_rows {
+			co_await db
+				.query(
+					std::format(
+						"SELECT a.embedding <=> b.embedding AS distance FROM {} a, {} b "
+						"WHERE a.record_id = $1 AND b.record_id = $2",
+						table,
+						table ),
+					std::move( pair_bindings ) )
+				.rows< double >()
+		};
 
 		if ( !pair_rows.empty() ) pair_distance = std::get< 0 >( pair_rows.row( 0 ) );
 	}
@@ -718,9 +745,10 @@ std::vector< http::RouteDefinition > embeddingRoutes( db::DBContext& db )
 
 	auto list_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 	{ co_return co_await listModels( db, std::move( context ) ); };
-	routes.push_back( http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/embeddings/models", {}, { apiAuthValidation( db ) } },
-		std::move( list_handler ) } );
+	routes.push_back(
+		http::RouteDefinition {
+			http::RouteMetadata { proxygen::HTTPMethod::GET, "/embeddings/models", {}, { apiAuthValidation( db ) } },
+			std::move( list_handler ) } );
 
 	auto delete_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 	{ co_return co_await deleteModel( db, std::move( context ) ); };
@@ -737,33 +765,37 @@ std::vector< http::RouteDefinition > embeddingRoutes( db::DBContext& db )
 		}
 	};
 
-	routes.push_back( http::RouteDefinition {
-		http::RouteMetadata {
-			proxygen::HTTPMethod::DELETE,
-			"/embeddings/models/{model_id}",
-			{ std::move( model_id_parameter ) },
-			{ apiAuthValidation( db ) } },
-		std::move( delete_handler ) } );
+	routes.push_back(
+		http::RouteDefinition {
+			http::RouteMetadata {
+				proxygen::HTTPMethod::DELETE,
+				"/embeddings/models/{model_id}",
+				{ std::move( model_id_parameter ) },
+				{ apiAuthValidation( db ) } },
+			std::move( delete_handler ) } );
 
 	auto generate_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 	{ co_return co_await generateEmbeddings( db, std::move( context ) ); };
-	routes.push_back( http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/generate", {}, { apiAuthValidation( db ) } },
-		std::move( generate_handler ) } );
+	routes.push_back(
+		http::RouteDefinition {
+			http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/generate", {}, { apiAuthValidation( db ) } },
+			std::move( generate_handler ) } );
 
 	auto search_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 	{ co_return co_await searchEmbeddings( db, std::move( context ) ); };
-	routes.push_back( http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/search", {}, { apiAuthValidation( db ) } },
-		std::move( search_handler ) } );
+	routes.push_back(
+		http::RouteDefinition {
+			http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/search", {}, { apiAuthValidation( db ) } },
+			std::move( search_handler ) } );
 
 	auto compare_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 	{ co_return co_await compareEmbeddings( db, std::move( context ) ); };
-	routes.push_back( http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/compare", {}, { apiAuthValidation( db ) } },
-		std::move( compare_handler ) } );
+	routes.push_back(
+		http::RouteDefinition {
+			http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/compare", {}, { apiAuthValidation( db ) } },
+			std::move( compare_handler ) } );
 
 	return routes;
 }
 
-}
+} // namespace idhan::httpapi
