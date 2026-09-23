@@ -1,5 +1,3 @@
-#include "idhan/http/HTTPConfig.hpp"
-
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
@@ -11,18 +9,21 @@
 #include <stdexcept>
 #include <string>
 
+#include "idhan/http/HTTPConfig.hpp"
+
 namespace idhan::http
 {
 namespace
 {
-template< typename T, void ( *Free )( T* ) >
+template < typename T, void ( *Free )( T* ) >
 using OpenSSLPointer = std::unique_ptr< T, decltype( Free ) >;
 
 [[nodiscard]] bool credentialExists( const std::filesystem::path& path )
 {
 	std::error_code error;
 	const bool result { std::filesystem::exists( path, error ) };
-	if ( error ) throw std::runtime_error( "Unable to inspect TLS credential path '" + path.string() + "': " + error.message() );
+	if ( error )
+		throw std::runtime_error( "Unable to inspect TLS credential path '" + path.string() + "': " + error.message() );
 
 	return result;
 }
@@ -52,10 +53,12 @@ void ensureSelfSignedCertificate( const HTTPConfig& config )
 	if ( certificate_exists && key_exists ) return;
 
 	if ( certificate_exists || key_exists )
-		throw std::runtime_error( "Refusing to replace an incomplete TLS credential pair; provide the missing file or remove both files" );
+		throw std::runtime_error(
+			"Refusing to replace an incomplete TLS credential pair; provide the missing file or remove both files" );
 
-	OpenSSLPointer< EVP_PKEY_CTX, EVP_PKEY_CTX_free > key_context { EVP_PKEY_CTX_new_id( EVP_PKEY_RSA, nullptr ),
-		EVP_PKEY_CTX_free };
+	OpenSSLPointer< EVP_PKEY_CTX, EVP_PKEY_CTX_free > key_context {
+		EVP_PKEY_CTX_new_id( EVP_PKEY_RSA, nullptr ), EVP_PKEY_CTX_free
+	};
 	if ( !key_context ) throw std::runtime_error( "Unable to create self-signed TLS certificate key context" );
 
 	require( EVP_PKEY_keygen_init( key_context.get() ) == 1, "initialize key generation" );
@@ -70,13 +73,16 @@ void ensureSelfSignedCertificate( const HTTPConfig& config )
 	require( X509_set_version( certificate.get(), 2 ) == 1, "set certificate version" );
 	require( ASN1_INTEGER_set( X509_get_serialNumber( certificate.get() ), 1 ) == 1, "set certificate serial number" );
 	require( X509_gmtime_adj( X509_getm_notBefore( certificate.get() ), 0 ) != nullptr, "set certificate start time" );
-	require( X509_gmtime_adj( X509_getm_notAfter( certificate.get() ), 365L * 24L * 60L * 60L ) != nullptr,
+	require(
+		X509_gmtime_adj( X509_getm_notAfter( certificate.get() ), 365L * 24L * 60L * 60L ) != nullptr,
 		"set certificate expiration" );
 	require( X509_set_pubkey( certificate.get(), key.get() ) == 1, "set certificate public key" );
 
 	X509_NAME* subject { X509_get_subject_name( certificate.get() ) };
-	require( X509_NAME_add_entry_by_txt( subject, "CN", MBSTRING_ASC,
-			 reinterpret_cast< const unsigned char* >( "localhost" ), -1, -1, 0 ) == 1,
+	require(
+		X509_NAME_add_entry_by_txt(
+			subject, "CN", MBSTRING_ASC, reinterpret_cast< const unsigned char* >( "localhost" ), -1, -1, 0 )
+			== 1,
 		"set certificate subject" );
 	require( X509_set_issuer_name( certificate.get(), subject ) == 1, "set certificate issuer" );
 	addExtension( certificate.get(), NID_basic_constraints, "critical,CA:FALSE" );
@@ -88,7 +94,8 @@ void ensureSelfSignedCertificate( const HTTPConfig& config )
 	BIO* raw_key_file { BIO_new_file( config.private_key.c_str(), "w" ) };
 	if ( raw_key_file == nullptr ) throw std::runtime_error( "Unable to write self-signed TLS private key" );
 	std::unique_ptr< BIO, decltype( &BIO_free_all ) > key_file { raw_key_file, BIO_free_all };
-	require( PEM_write_bio_PrivateKey( key_file.get(), key.get(), nullptr, nullptr, 0, nullptr, nullptr ) == 1,
+	require(
+		PEM_write_bio_PrivateKey( key_file.get(), key.get(), nullptr, nullptr, 0, nullptr, nullptr ) == 1,
 		"write private key" );
 	key_file.reset();
 

@@ -1,9 +1,8 @@
 #include "version.hpp"
 
-#include <simdjson.h>
-
 #include <folly/io/IOBuf.h>
 
+#include <simdjson.h>
 #include <stdexcept>
 
 #include "apiVersion.hpp"
@@ -20,9 +19,7 @@ namespace idhan::httpapi
 	version_str += "-tainted";
 #endif
 
-	const auto api_version_str {
-		format_ns::format( "{}.{}.{}", IDHAN_API_MAJOR, IDHAN_API_MINOR, IDHAN_API_PATCH )
-	};
+	const auto api_version_str { format_ns::format( "{}.{}.{}", IDHAN_API_MAJOR, IDHAN_API_MINOR, IDHAN_API_PATCH ) };
 
 	simdjson::builder::string_builder builder;
 	builder.start_object();

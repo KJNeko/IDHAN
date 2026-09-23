@@ -182,8 +182,10 @@ RouteMatch RouteRegistry::match( const proxygen::HTTPMethod method, const std::s
 
 			if ( !isCatchAll( pattern ) )
 			{
-				if ( !parameter.validate( actual ) ) parameters_valid = false;
-				else parameters.append( parameter.name, actual );
+				if ( !parameter.validate( actual ) )
+					parameters_valid = false;
+				else
+					parameters.append( parameter.name, actual );
 				continue;
 			}
 
@@ -194,8 +196,10 @@ RouteMatch RouteRegistry::match( const proxygen::HTTPMethod method, const std::s
 				rest += requested_segments->at( rest_index );
 			}
 
-			if ( !parameter.validate( rest ) ) parameters_valid = false;
-			else parameters.append( parameter.name, rest );
+			if ( !parameter.validate( rest ) )
+				parameters_valid = false;
+			else
+				parameters.append( parameter.name, rest );
 		}
 		if ( !path_matches ) continue;
 

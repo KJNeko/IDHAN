@@ -1,6 +1,6 @@
-#include "resolveTerms.hpp"
-
 #include <cstdlib>
+
+#include "resolveTerms.hpp"
 
 namespace idhan::embeddings
 {

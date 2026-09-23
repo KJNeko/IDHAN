@@ -1,9 +1,8 @@
 #include "generateApiKey.hpp"
 
-#include <simdjson.h>
-
 #include <folly/io/IOBuf.h>
 
+#include <simdjson.h>
 #include <span>
 #include <stdexcept>
 #include <vector>

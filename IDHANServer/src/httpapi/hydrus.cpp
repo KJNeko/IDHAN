@@ -1,6 +1,7 @@
 #include "hydrus.hpp"
 
 #include <folly/io/IOBuf.h>
+#include <json/json.h>
 
 #include <array>
 #include <chrono>
@@ -8,7 +9,6 @@
 #include <cstdint>
 #include <expected>
 #include <format>
-#include <json/json.h>
 #include <optional>
 #include <random>
 #include <simdjson.h>
@@ -74,8 +74,7 @@ namespace idhan::httpapi
 		if ( key.empty() ) key = message.getHeaders().getSingleOrEmpty( std::string { HY_ACCESS_KEY_HEADER_NAME } );
 
 		if ( key.empty() )
-			co_return hyAuthError(
-				401, "No access key or session key provided!", "MissingCredentialsException" );
+			co_return hyAuthError( 401, "No access key or session key provided!", "MissingCredentialsException" );
 
 		const auto rejection { co_await verifyApiKey( key, db ) };
 		if ( rejection )
@@ -86,7 +85,9 @@ namespace idhan::httpapi
 	};
 }
 
-[[nodiscard]] static http::Response hyResponse( simdjson::builder::string_builder& builder, const std::uint16_t status = 200 )
+[[nodiscard]] static http::Response hyResponse(
+	simdjson::builder::string_builder& builder,
+	const std::uint16_t status = 200 )
 {
 	builder.append_comma();
 	builder.append_key_value( "version", HYDRUS_MIMICED_API_VERSION );
@@ -120,7 +121,9 @@ namespace idhan::httpapi
 	return http::Response::error( 501, std::format( "IDHAN Hydrus API does not yet implement {}", what ) );
 }
 
-static http::HTTPTask< http::Response > apiVersion( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > apiVersion(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -130,7 +133,9 @@ static http::HTTPTask< http::Response > apiVersion( [[maybe_unused]] db::DBConte
 	co_return hyResponse( builder );
 }
 
-static http::HTTPTask< http::Response > verifyAccessKey( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > verifyAccessKey(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -159,7 +164,8 @@ static http::HTTPTask< http::Response > getService( db::DBContext& db, http::Req
 	const auto service_name_e { context.parameters().optional< std::string >( "service_name" ) };
 	if ( !service_name_e ) co_return http::Response::error( 400, service_name_e.error().message );
 
-	if ( !*service_key_e && !*service_name_e ) co_return http::Response::error( 400, "Must provide a service_key or service_name" );
+	if ( !*service_key_e && !*service_name_e )
+		co_return http::Response::error( 400, "Must provide a service_key or service_name" );
 
 	const auto services { co_await hyapi::listServices( db ) };
 
@@ -168,12 +174,16 @@ static http::HTTPTask< http::Response > getService( db::DBContext& db, http::Req
 	if ( *service_key_e )
 	{
 		found = hyapi::findServiceByKey( services, **service_key_e );
-		if ( !found ) co_return http::Response::error( 404, std::format( "Did not find a service with key \"{}\"", **service_key_e ) );
+		if ( !found )
+			co_return http::Response::error(
+				404, std::format( "Did not find a service with key \"{}\"", **service_key_e ) );
 	}
 	else
 	{
 		found = hyapi::findServiceByName( services, **service_name_e );
-		if ( !found ) co_return http::Response::error( 404, std::format( "Did not find a service with name \"{}\"", **service_name_e ) );
+		if ( !found )
+			co_return http::Response::error(
+				404, std::format( "Did not find a service with name \"{}\"", **service_name_e ) );
 	}
 
 	Json::Value root {};
@@ -238,7 +248,9 @@ struct BootInfo
 	return info;
 }
 
-static http::HTTPTask< http::Response > clientInfo( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > clientInfo(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	const auto& boot_info { getBootInfo() };
 
@@ -252,7 +264,9 @@ static http::HTTPTask< http::Response > clientInfo( [[maybe_unused]] db::DBConte
 	co_return hyResponse( builder );
 }
 
-static http::HTTPTask< http::Response > getPopups( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > getPopups(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -263,7 +277,9 @@ static http::HTTPTask< http::Response > getPopups( [[maybe_unused]] db::DBContex
 	co_return hyResponse( builder );
 }
 
-static http::HTTPTask< http::Response > getPages( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > getPages(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -277,7 +293,8 @@ static http::HTTPTask< http::Response > getPages( [[maybe_unused]] db::DBContext
 	builder.append_comma();
 	builder.append_key_value( "page_state", static_cast< std::uint64_t >( hydrus::gen_constants::PAGE_STATE_NORMAL ) );
 	builder.append_comma();
-	builder.append_key_value( "page_type", static_cast< std::uint64_t >( hydrus::gen_constants::PAGE_TYPE_PAGE_OF_PAGES ) );
+	builder.append_key_value(
+		"page_type", static_cast< std::uint64_t >( hydrus::gen_constants::PAGE_TYPE_PAGE_OF_PAGES ) );
 	builder.append_comma();
 	builder.append_key_value( "is_media_page", false );
 	builder.append_comma();
@@ -287,7 +304,9 @@ static http::HTTPTask< http::Response > getPages( [[maybe_unused]] db::DBContext
 	co_return hyResponse( builder );
 }
 
-static http::HTTPTask< http::Response > getClientOptions( db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > getClientOptions(
+	db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	static constexpr std::string_view raw_json {
 		R"({"old_options": {}, "options": {}, "services": {}, "version": 79, "hydrus_version": 617})"
@@ -336,7 +355,8 @@ static http::HTTPTask< http::Response > searchTags( [[maybe_unused]] db::DBConte
 	const auto display_type_e { context.parameters().optional< std::string >( "tag_display_type" ) };
 	if ( !display_type_e ) co_return http::Response::error( 400, display_type_e.error().message );
 	const auto display_type { display_type_e->value_or( "storage" ) };
-	if ( display_type != "storage" && display_type != "display" ) co_return http::Response::error( 400, "Invalid tag display type" );
+	if ( display_type != "storage" && display_type != "display" )
+		co_return http::Response::error( 400, "Invalid tag display type" );
 
 	const auto results { co_await getSimilarTags( db, search_value, 10, true ) };
 
@@ -431,7 +451,9 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 
 	const auto file_sort_type_e { context.parameters().optional< std::uint64_t >( "file_sort_type" ) };
 	if ( !file_sort_type_e ) co_return http::Response::error( 400, file_sort_type_e.error().message );
-	const auto file_sort_type { static_cast< HydrusSortType >( file_sort_type_e->value_or( HydrusSortType::DEFAULT ) ) };
+	const auto file_sort_type {
+		static_cast< HydrusSortType >( file_sort_type_e->value_or( HydrusSortType::DEFAULT ) )
+	};
 
 	const auto file_sort_asc_e { context.parameters().optional< bool >( "file_sort_asc" ) };
 	if ( !file_sort_asc_e ) co_return http::Response::error( 400, file_sort_asc_e.error().message );
@@ -509,9 +531,8 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	co_return hyResponse( builder );
 }
 
-[[nodiscard]] static http::HTTPTask< std::expected< std::vector< RecordID >, http::Response > > extractRecordIDsFromFilesJson(
-	db::DBContext& db,
-	const simdjson::dom::element json )
+[[nodiscard]] static http::HTTPTask< std::expected< std::vector< RecordID >, http::Response > >
+	extractRecordIDsFromFilesJson( db::DBContext& db, const simdjson::dom::element json )
 {
 	if ( !json.is_object() )
 		co_return std::unexpected( http::Response::error( 400, "Invalid JSON, Expected to be a object" ) );
@@ -566,8 +587,9 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 		co_return records;
 	}
 
-	co_return std::unexpected( http::Response::error(
-		400, "Unable to extract record ids: None of the expected hydrus `files` json members were identified" ) );
+	co_return std::unexpected(
+		http::Response::error(
+			400, "Unable to extract record ids: None of the expected hydrus `files` json members were identified" ) );
 }
 
 [[nodiscard]] static http::HTTPTask< std::expected< UrlID, http::Response > > findOrCreateHydrusUrl(
@@ -576,7 +598,9 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 {
 	db::DBBindings find_bindings {};
 	find_bindings.bind( url );
-	const auto existing { co_await db.query( "SELECT url_id FROM urls WHERE url = $1", std::move( find_bindings ) ).rows< UrlID >() };
+	const auto existing {
+		co_await db.query( "SELECT url_id FROM urls WHERE url = $1", std::move( find_bindings ) ).rows< UrlID >()
+	};
 	if ( !existing.empty() ) co_return std::get< 0 >( existing.row( 0 ) );
 
 	const auto domain { helpers::extractDomain( url ) };
@@ -584,36 +608,45 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	db::DBBindings domain_bindings {};
 	domain_bindings.bind( domain );
 	co_await db
-		.query( "INSERT INTO url_domains (url_domain) VALUES ($1) ON CONFLICT (url_domain) DO NOTHING", std::move( domain_bindings ) )
+		.query(
+			"INSERT INTO url_domains (url_domain) VALUES ($1) ON CONFLICT (url_domain) DO NOTHING",
+			std::move( domain_bindings ) )
 		.result();
 
 	db::DBBindings domain_lookup_bindings {};
 	domain_lookup_bindings.bind( domain );
 	const auto domain_rows {
-		co_await db.query( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", std::move( domain_lookup_bindings ) )
+		co_await db
+			.query( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", std::move( domain_lookup_bindings ) )
 			.rows< UrlDomainID >()
 	};
 	if ( domain_rows.empty() )
-		co_return std::unexpected( http::Response::error( 500, std::format( "Failed to create URL domain for {}", url ) ) );
+		co_return std::unexpected(
+			http::Response::error( 500, std::format( "Failed to create URL domain for {}", url ) ) );
 
 	const auto url_domain_id { std::get< 0 >( domain_rows.row( 0 ) ) };
 
 	db::DBBindings insert_bindings {};
 	insert_bindings.bind( url );
 	insert_bindings.bind( url_domain_id );
-	const auto inserted { co_await db
-		                       .query(
-									"INSERT INTO urls (url, url_domain_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING url_id",
-									std::move( insert_bindings ) )
-		                       .rows< UrlID >() };
+	const auto inserted {
+		co_await db
+			.query(
+				"INSERT INTO urls (url, url_domain_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING url_id",
+				std::move( insert_bindings ) )
+			.rows< UrlID >()
+	};
 	if ( !inserted.empty() ) co_return std::get< 0 >( inserted.row( 0 ) );
 
 	db::DBBindings retry_bindings {};
 	retry_bindings.bind( url );
-	const auto retry { co_await db.query( "SELECT url_id FROM urls WHERE url = $1", std::move( retry_bindings ) ).rows< UrlID >() };
+	const auto retry {
+		co_await db.query( "SELECT url_id FROM urls WHERE url = $1", std::move( retry_bindings ) ).rows< UrlID >()
+	};
 	if ( !retry.empty() ) co_return std::get< 0 >( retry.row( 0 ) );
 
-	co_return std::unexpected( http::Response::error( 500, std::format( "Was unable to create or find url {}", url ) ) );
+	co_return std::unexpected(
+		http::Response::error( 500, std::format( "Was unable to create or find url {}", url ) ) );
 }
 
 static http::HTTPTask< http::Response > associateUrl( db::DBContext& db, http::RequestContext context )
@@ -643,7 +676,8 @@ static http::HTTPTask< http::Response > associateUrl( db::DBContext& db, http::R
 	if ( root[ "url_to_add" ].get( single_add ) == simdjson::SUCCESS ) urls_to_add.emplace_back( single_add );
 
 	std::string_view single_delete {};
-	if ( root[ "url_to_delete" ].get( single_delete ) == simdjson::SUCCESS ) urls_to_delete.emplace_back( single_delete );
+	if ( root[ "url_to_delete" ].get( single_delete ) == simdjson::SUCCESS )
+		urls_to_delete.emplace_back( single_delete );
 
 	simdjson::dom::array add_array {};
 	if ( root[ "urls_to_add" ].get( add_array ) == simdjson::SUCCESS )
@@ -683,7 +717,9 @@ static http::HTTPTask< http::Response > associateUrl( db::DBContext& db, http::R
 			bindings.bind( record_id );
 			bindings.bind( *url_id_e );
 			co_await db
-				.query( "INSERT INTO url_mappings (record_id, url_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", std::move( bindings ) )
+				.query(
+					"INSERT INTO url_mappings (record_id, url_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+					std::move( bindings ) )
 				.result();
 		}
 	}
@@ -698,7 +734,8 @@ static http::HTTPTask< http::Response > associateUrl( db::DBContext& db, http::R
 			db::DBBindings bindings {};
 			bindings.bind( record_id );
 			bindings.bind( *url_id_e );
-			co_await db.query( "DELETE FROM url_mappings WHERE record_id = $1 AND url_id = $2", std::move( bindings ) ).result();
+			co_await db.query( "DELETE FROM url_mappings WHERE record_id = $1 AND url_id = $2", std::move( bindings ) )
+				.result();
 		}
 	}
 
@@ -721,7 +758,8 @@ static http::HTTPTask< http::Response > getUrlInfo( [[maybe_unused]] db::DBConte
 	builder.append_comma();
 	builder.append_key_value( "url_type", static_cast< std::uint64_t >( hydrus::gen_constants::URL_TYPE_UNKNOWN ) );
 	builder.append_comma();
-	builder.append_key_value( "url_type_string", std::string { hyapi::urlTypeString( hydrus::gen_constants::URL_TYPE_UNKNOWN ) } );
+	builder.append_key_value(
+		"url_type_string", std::string { hyapi::urlTypeString( hydrus::gen_constants::URL_TYPE_UNKNOWN ) } );
 	builder.append_comma();
 	builder.append_key_value( "match_name", "unknown url" );
 	builder.append_comma();
@@ -747,7 +785,9 @@ static http::HTTPTask< http::Response > getUrlInfo( [[maybe_unused]] db::DBConte
 		if ( !sha256 ) co_return std::unexpected( http::Response::error( 400, "Invalid hash" ) );
 
 		const auto record_id { co_await findRecord( *sha256, db ) };
-		if ( !record_id ) co_return std::unexpected( http::Response::error( 404, std::format( "No record with hash {} found", **hash_e ) ) );
+		if ( !record_id )
+			co_return std::unexpected(
+				http::Response::error( 404, std::format( "No record with hash {} found", **hash_e ) ) );
 
 		co_return *record_id;
 	}
@@ -773,27 +813,37 @@ static http::HTTPTask< http::Response > thumbnail( db::DBContext& db, http::Requ
 	co_return co_await recordThumbnailResponse( db, context, *record_id_e );
 }
 
-static http::HTTPTask< http::Response > unsupported( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > unsupported(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	co_return hyUnsupportedResponse();
 }
 
-static http::HTTPTask< http::Response > requestNewPermissions( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > requestNewPermissions(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	co_return hyNotImplementedResponse( "request_new_permissions" );
 }
 
-static http::HTTPTask< http::Response > sessionKey( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > sessionKey(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	co_return hyNotImplementedResponse( "session_key" );
 }
 
-static http::HTTPTask< http::Response > addFile( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > addFile(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	co_return hyNotImplementedResponse( "add_files/add_file" );
 }
 
-static http::HTTPTask< http::Response > fileHashes( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+static http::HTTPTask< http::Response > fileHashes(
+	[[maybe_unused]] db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	co_return hyNotImplementedResponse( "get_files/file_hashes" );
 }
@@ -802,11 +852,12 @@ std::vector< http::RouteDefinition > hydrusRoutes( db::DBContext& db )
 {
 	std::vector< http::RouteDefinition > routes {};
 
-	const auto add = [ &routes, &db ](
-		                  const proxygen::HTTPMethod method,
-		                  std::string path,
-		                  const bool needs_auth,
-		                  http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
+	const auto add =
+		[ &routes, &db ](
+			const proxygen::HTTPMethod method,
+			std::string path,
+			const bool needs_auth,
+			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
 	{
 		std::vector< http::RequestValidation > before_body {};
 		if ( needs_auth ) before_body.push_back( hyAuthValidation( db ) );
@@ -814,8 +865,9 @@ std::vector< http::RouteDefinition > hydrusRoutes( db::DBContext& db )
 		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 		{ co_return co_await handler( db, std::move( context ) ); };
 
-		routes.push_back( http::RouteDefinition {
-			http::RouteMetadata { method, std::move( path ), {}, std::move( before_body ) }, std::move( bound ) } );
+		routes.push_back(
+			http::RouteDefinition {
+				http::RouteMetadata { method, std::move( path ), {}, std::move( before_body ) }, std::move( bound ) } );
 	};
 
 	add( proxygen::HTTPMethod::GET, "/hyapi/api_version", false, apiVersion );
@@ -848,4 +900,4 @@ std::vector< http::RouteDefinition > hydrusRoutes( db::DBContext& db )
 	return routes;
 }
 
-}
+} // namespace idhan::httpapi

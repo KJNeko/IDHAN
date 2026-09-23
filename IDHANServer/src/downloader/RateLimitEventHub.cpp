@@ -1,9 +1,8 @@
 #include "RateLimitEventHub.hpp"
 
-#include <simdjson.h>
-
 #include <algorithm>
 #include <chrono>
+#include <simdjson.h>
 
 #include "logging/log.hpp"
 

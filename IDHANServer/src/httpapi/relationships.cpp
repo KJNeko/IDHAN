@@ -1,7 +1,5 @@
 #include "relationships.hpp"
 
-#include <libpq-fe.h>
-
 #include <folly/io/IOBuf.h>
 
 #include <algorithm>
@@ -9,6 +7,7 @@
 #include <cstdlib>
 #include <exception>
 #include <format>
+#include <libpq-fe.h>
 #include <simdjson.h>
 
 #include "apiAuth.hpp"
@@ -38,14 +37,15 @@ static void appendRecordIdArray(
 	builder.end_array();
 }
 
-[[nodiscard]] static http::Response jsonResponse( simdjson::builder::string_builder& builder, const std::uint16_t status = 200 )
+[[nodiscard]] static http::Response jsonResponse(
+	simdjson::builder::string_builder& builder,
+	const std::uint16_t status = 200 )
 {
 	auto json { builder.view() };
 	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
 
 	return http::Response::json( status, folly::IOBuf::copyBuffer( *json ) );
 }
-
 
 static http::HTTPTask< http::Response > getRelationships( db::DBContext& db, http::RequestContext context )
 {
@@ -55,29 +55,35 @@ static http::HTTPTask< http::Response > getRelationships( db::DBContext& db, htt
 
 	db::DBBindings a {};
 	a.bind( record_id );
-	const auto inferior { co_await db.query(
-		                      "SELECT worse_record_id FROM duplicate_pairs WHERE better_record_id = $1 "
-		                      "ORDER BY worse_record_id",
-		                      std::move( a ) )
-		                      .rows< RecordID >() };
+	const auto inferior {
+		co_await db
+			.query(
+				"SELECT worse_record_id FROM duplicate_pairs WHERE better_record_id = $1 "
+				"ORDER BY worse_record_id",
+				std::move( a ) )
+			.rows< RecordID >()
+	};
 
 	db::DBBindings b {};
 	b.bind( record_id );
-	const auto superior { co_await db.query(
-		                      "SELECT better_record_id FROM duplicate_pairs WHERE worse_record_id = $1",
-		                      std::move( b ) )
-		                      .rows< RecordID >() };
+	const auto superior {
+		co_await db.query( "SELECT better_record_id FROM duplicate_pairs WHERE worse_record_id = $1", std::move( b ) )
+			.rows< RecordID >()
+	};
 
 	db::DBBindings c {};
 	c.bind( record_id );
-	const auto alternatives { co_await db.query(
-		                          "SELECT greater_record_id AS record_id FROM alternative_records"
-		                          "  WHERE lesser_record_id = duplicate_king($1)"
-		                          "  UNION"
-		                          "  SELECT lesser_record_id FROM alternative_records WHERE greater_record_id = duplicate_king($1)"
-		                          " ORDER BY record_id",
-		                          std::move( c ) )
-		                          .rows< RecordID >() };
+	const auto alternatives {
+		co_await db
+			.query(
+				"SELECT greater_record_id AS record_id FROM alternative_records"
+				"  WHERE lesser_record_id = duplicate_king($1)"
+				"  UNION"
+				"  SELECT lesser_record_id FROM alternative_records WHERE greater_record_id = duplicate_king($1)"
+				" ORDER BY record_id",
+				std::move( c ) )
+			.rows< RecordID >()
+	};
 
 	std::vector< RecordID > inferior_ids {}, superior_ids {}, alternative_ids {};
 	for ( const auto& [ id ] : inferior ) inferior_ids.push_back( id );
@@ -95,7 +101,6 @@ static http::HTTPTask< http::Response > getRelationships( db::DBContext& db, htt
 
 	co_return jsonResponse( builder );
 }
-
 
 constexpr std::uint16_t max_distance { 64 };
 constexpr std::uint16_t default_similar_limit { 128 };
@@ -122,17 +127,21 @@ static http::HTTPTask< http::Response > findSimilar( db::DBContext& db, http::Re
 
 	const auto include_unrelated_param { context.parameters().optional< std::string >( "include_unrelated" ) };
 	if ( !include_unrelated_param ) co_return http::Response::error( 400, include_unrelated_param.error().message );
-	const bool include_unrelated { include_unrelated_param->value_or( "false" ) == "true"
-		                            || include_unrelated_param->value_or( "false" ) == "1" };
+	const bool include_unrelated {
+		include_unrelated_param->value_or( "false" ) == "true" || include_unrelated_param->value_or( "false" ) == "1"
+	};
 
 	const auto include_related_param { context.parameters().optional< std::string >( "include_related" ) };
 	if ( !include_related_param ) co_return http::Response::error( 400, include_related_param.error().message );
-	const bool include_related { include_related_param->value_or( "false" ) == "true"
-		                          || include_related_param->value_or( "false" ) == "1" };
+	const bool include_related {
+		include_related_param->value_or( "false" ) == "true" || include_related_param->value_or( "false" ) == "1"
+	};
 
 	db::DBBindings probe_bindings {};
 	probe_bindings.bind( record_id );
-	const auto probe_rows { co_await db.query(
+	const auto probe_rows {
+		co_await db
+			.query(
 				"SELECT phash FROM image_metadata WHERE record_id = $1 AND phash IS NOT NULL",
 				std::move( probe_bindings ) )
 			.rows< std::bitset< 64 > >()
@@ -152,32 +161,35 @@ static http::HTTPTask< http::Response > findSimilar( db::DBContext& db, http::Re
 	bindings.bind( include_unrelated );
 	bindings.bind( include_related );
 
-	const auto matches { co_await db.query(
-		                     "WITH probe_root AS (SELECT duplicate_king($2) AS root_id), related(record_id) AS ("
-		                     "  SELECT duplicate_group_members(root_id) FROM probe_root"
-		                     "  UNION SELECT member.record_id FROM probe_root"
-		                     "  JOIN alternative_records alternative"
-		                     "    ON alternative.lesser_record_id = root_id OR alternative.greater_record_id = root_id"
-		                     "  CROSS JOIN LATERAL duplicate_group_members("
-		                     "    CASE WHEN alternative.lesser_record_id = root_id THEN alternative.greater_record_id"
-		                     "         ELSE alternative.lesser_record_id END) AS member(record_id)"
-		                     ") "
-		                     "SELECT record_id, (phash <~> $1)::integer AS distance, "
-		                     "EXISTS ("
-		                     "  SELECT 1 FROM unrelated_records marked "
-		                     "  WHERE marked.lesser_record_id = LEAST(duplicate_king($2), duplicate_king(image_metadata.record_id)) "
-		                     "    AND marked.greater_record_id = GREATEST(duplicate_king($2), duplicate_king(image_metadata.record_id))) AS unrelated "
-		                     "FROM image_metadata "
-		                     "WHERE phash IS NOT NULL AND record_id != $2 AND (phash <~> $1)::integer <= $3::integer "
-		                     "AND ($5::boolean OR NOT EXISTS ("
-		                     "  SELECT 1 FROM unrelated_records unrelated "
-		                     "  WHERE unrelated.lesser_record_id = LEAST(duplicate_king($2), duplicate_king(image_metadata.record_id)) "
-		                     "    AND unrelated.greater_record_id = GREATEST(duplicate_king($2), duplicate_king(image_metadata.record_id)))) "
-		                     "AND ($6::boolean OR NOT EXISTS ("
-		                     "  SELECT 1 FROM related WHERE related.record_id = image_metadata.record_id)) "
-		                     "ORDER BY distance, record_id LIMIT $4::integer",
-		                     std::move( bindings ) )
-		                     .rows< RecordID, std::int32_t, bool >() };
+	const auto matches {
+		co_await db
+			.query(
+				"WITH probe_root AS (SELECT duplicate_king($2) AS root_id), related(record_id) AS ("
+				"  SELECT duplicate_group_members(root_id) FROM probe_root"
+				"  UNION SELECT member.record_id FROM probe_root"
+				"  JOIN alternative_records alternative"
+				"    ON alternative.lesser_record_id = root_id OR alternative.greater_record_id = root_id"
+				"  CROSS JOIN LATERAL duplicate_group_members("
+				"    CASE WHEN alternative.lesser_record_id = root_id THEN alternative.greater_record_id"
+				"         ELSE alternative.lesser_record_id END) AS member(record_id)"
+				") "
+				"SELECT record_id, (phash <~> $1)::integer AS distance, "
+				"EXISTS ("
+				"  SELECT 1 FROM unrelated_records marked "
+				"  WHERE marked.lesser_record_id = LEAST(duplicate_king($2), duplicate_king(image_metadata.record_id)) "
+				"    AND marked.greater_record_id = GREATEST(duplicate_king($2), duplicate_king(image_metadata.record_id))) AS unrelated "
+				"FROM image_metadata "
+				"WHERE phash IS NOT NULL AND record_id != $2 AND (phash <~> $1)::integer <= $3::integer "
+				"AND ($5::boolean OR NOT EXISTS ("
+				"  SELECT 1 FROM unrelated_records unrelated "
+				"  WHERE unrelated.lesser_record_id = LEAST(duplicate_king($2), duplicate_king(image_metadata.record_id)) "
+				"    AND unrelated.greater_record_id = GREATEST(duplicate_king($2), duplicate_king(image_metadata.record_id)))) "
+				"AND ($6::boolean OR NOT EXISTS ("
+				"  SELECT 1 FROM related WHERE related.record_id = image_metadata.record_id)) "
+				"ORDER BY distance, record_id LIMIT $4::integer",
+				std::move( bindings ) )
+			.rows< RecordID, std::int32_t, bool >()
+	};
 
 	const bool truncated { matches.size() > limit };
 
@@ -217,7 +229,6 @@ static http::HTTPTask< http::Response > findSimilar( db::DBContext& db, http::Re
 	co_return jsonResponse( builder );
 }
 
-
 constexpr std::uint16_t max_undecided_distance { 8 };
 constexpr std::uint16_t default_undecided_limit { 1 };
 constexpr std::uint16_t max_undecided_limit { 32 };
@@ -243,12 +254,15 @@ static http::HTTPTask< http::Response > nextUndecided( db::DBContext& db, http::
 	bindings.bind( static_cast< std::int32_t >( distance ) );
 	bindings.bind( static_cast< std::int32_t >( limit ) );
 
-	const auto found { co_await db.query(
-		                   "SELECT left_id, right_id, distance FROM hamming_distance "
-		                   "WHERE distance <= $1::integer "
-		                   "ORDER BY left_id, distance, right_id LIMIT $2::integer",
-		                   std::move( bindings ) )
-		                   .rows< RecordID, RecordID, std::int32_t >() };
+	const auto found {
+		co_await db
+			.query(
+				"SELECT left_id, right_id, distance FROM hamming_distance "
+				"WHERE distance <= $1::integer "
+				"ORDER BY left_id, distance, right_id LIMIT $2::integer",
+				std::move( bindings ) )
+			.rows< RecordID, RecordID, std::int32_t >()
+	};
 
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -292,7 +306,6 @@ static http::HTTPTask< http::Response > nextUndecided( db::DBContext& db, http::
 	co_return jsonResponse( builder );
 }
 
-
 [[nodiscard]] static std::expected< std::pair< RecordID, RecordID >, http::Response > parsePairFromObject(
 	const simdjson::dom::element object,
 	const std::string_view a_key,
@@ -305,10 +318,12 @@ static http::HTTPTask< http::Response > nextUndecided( db::DBContext& db, http::
 	std::int64_t a {}, b {};
 	if ( object[ a_key ].get( a ) != simdjson::SUCCESS || a < 0 )
 		return std::unexpected(
-			http::Response::error( 400, std::format( "Expected `{}` and `{}` to be unsigned integers", a_key, b_key ) ) );
+			http::Response::error(
+				400, std::format( "Expected `{}` and `{}` to be unsigned integers", a_key, b_key ) ) );
 	if ( object[ b_key ].get( b ) != simdjson::SUCCESS || b < 0 )
 		return std::unexpected(
-			http::Response::error( 400, std::format( "Expected `{}` and `{}` to be unsigned integers", a_key, b_key ) ) );
+			http::Response::error(
+				400, std::format( "Expected `{}` and `{}` to be unsigned integers", a_key, b_key ) ) );
 
 	const auto a_id { static_cast< RecordID >( a ) };
 	const auto b_id { static_cast< RecordID >( b ) };
@@ -384,13 +399,13 @@ static http::HTTPTask< http::Response > setBetterDuplicate( db::DBContext& db, h
 		{
 			co_return http::Response::error(
 				500,
-				std::format( "Failed to set record {} as a worse duplicate of {}: {}", worse_id, better_id, e.what() ) );
+				std::format(
+					"Failed to set record {} as a worse duplicate of {}: {}", worse_id, better_id, e.what() ) );
 		}
 	}
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
 }
-
 
 static http::HTTPTask< http::Response > addAlternative( db::DBContext& db, http::RequestContext context )
 {
@@ -442,16 +457,16 @@ static http::HTTPTask< http::Response > addAlternative( db::DBContext& db, http:
 	bindings.bind( lesser );
 	bindings.bind( greater );
 
-	co_await db.query(
-		           "INSERT INTO alternative_records (lesser_record_id, greater_record_id) "
-		           "SELECT * FROM UNNEST($1, $2) "
-		           "ON CONFLICT DO NOTHING",
-		           std::move( bindings ) )
+	co_await db
+		.query(
+			"INSERT INTO alternative_records (lesser_record_id, greater_record_id) "
+			"SELECT * FROM UNNEST($1, $2) "
+			"ON CONFLICT DO NOTHING",
+			std::move( bindings ) )
 		.result();
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
 }
-
 
 static http::HTTPTask< http::Response > clearRelationship( db::DBContext& db, http::RequestContext context )
 {
@@ -532,7 +547,6 @@ static http::HTTPTask< http::Response > clearRelationship( db::DBContext& db, ht
 	co_return jsonResponse( builder );
 }
 
-
 static http::HTTPTask< http::Response > setUnrelated( db::DBContext& db, http::RequestContext context )
 {
 	auto body_e { readValidatedJsonBody( context ) };
@@ -561,10 +575,11 @@ static http::HTTPTask< http::Response > setUnrelated( db::DBContext& db, http::R
 	bindings.bind( lesser );
 	bindings.bind( greater );
 
-	co_await db.query(
-		           "INSERT INTO unrelated_records (lesser_record_id, greater_record_id) VALUES ($1, $2) "
-		           "ON CONFLICT DO NOTHING",
-		           std::move( bindings ) )
+	co_await db
+		.query(
+			"INSERT INTO unrelated_records (lesser_record_id, greater_record_id) VALUES ($1, $2) "
+			"ON CONFLICT DO NOTHING",
+			std::move( bindings ) )
 		.result();
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
@@ -574,35 +589,36 @@ std::vector< http::RouteDefinition > relationshipRoutes( db::DBContext& db )
 {
 	std::vector< http::RouteDefinition > routes {};
 
-	const auto add = [ &routes, &db ](
-		                  const proxygen::HTTPMethod method,
-		                  std::string path,
-		                  std::vector< http::PathParameter > path_parameters,
-		                  std::vector< http::RequestValidation > before_body,
-		                  http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
+	const auto add =
+		[ &routes, &db ](
+			const proxygen::HTTPMethod method,
+			std::string path,
+			std::vector< http::PathParameter > path_parameters,
+			std::vector< http::RequestValidation > before_body,
+			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
 	{
 		before_body.insert( before_body.begin(), apiAuthValidation( db ) );
 
 		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 		{ co_return co_await handler( db, std::move( context ) ); };
 
-		routes.push_back( http::RouteDefinition {
-			http::RouteMetadata { method, std::move( path ), std::move( path_parameters ), std::move( before_body ) },
-			std::move( bound ) } );
+		routes.push_back(
+			http::RouteDefinition {
+				http::RouteMetadata {
+					method, std::move( path ), std::move( path_parameters ), std::move( before_body ) },
+				std::move( bound ) } );
 	};
 
-	add(
-		proxygen::HTTPMethod::GET,
-		"/relationships/{record_id}",
-		{ recordIdPathParameter() },
-		{ recordExistsValidation( db ) },
-		getRelationships );
-	add(
-		proxygen::HTTPMethod::GET,
-		"/relationships/{record_id}/similar",
-		{ recordIdPathParameter() },
-		{ recordExistsValidation( db ) },
-		findSimilar );
+	add( proxygen::HTTPMethod::GET,
+	     "/relationships/{record_id}",
+	     { recordIdPathParameter() },
+	     { recordExistsValidation( db ) },
+	     getRelationships );
+	add( proxygen::HTTPMethod::GET,
+	     "/relationships/{record_id}/similar",
+	     { recordIdPathParameter() },
+	     { recordExistsValidation( db ) },
+	     findSimilar );
 	add( proxygen::HTTPMethod::GET, "/relationships/duplicates/undecided", {}, {}, nextUndecided );
 	add( proxygen::HTTPMethod::POST, "/relationships/duplicates/add", {}, {}, setBetterDuplicate );
 	add( proxygen::HTTPMethod::POST, "/relationships/alternatives/add", {}, {}, addAlternative );
@@ -612,4 +628,4 @@ std::vector< http::RouteDefinition > relationshipRoutes( db::DBContext& db )
 	return routes;
 }
 
-}
+} // namespace idhan::httpapi

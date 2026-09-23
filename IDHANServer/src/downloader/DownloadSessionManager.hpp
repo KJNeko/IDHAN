@@ -2,6 +2,7 @@
 
 #include <IDHANDownloader/DownloaderContext.hpp>
 #include <IDHANDownloader/SessionSnapshot.hpp>
+
 #include <atomic>
 #include <expected>
 #include <memory>

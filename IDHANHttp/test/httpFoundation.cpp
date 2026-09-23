@@ -242,8 +242,9 @@ TEST_CASE( "Registration rejects paths whose parameters do not line up", "[http]
 {
 	auto parameter = []( std::string name )
 	{
-		return PathParameter { std::move( name ),
-			                   []( std::string_view ) -> std::expected< void, ParseError > { return {}; } };
+		return PathParameter {
+			std::move( name ), []( std::string_view ) -> std::expected< void, ParseError > { return {}; }
+		};
 	};
 
 	auto route = []( std::string path, std::vector< PathParameter > parameters )
@@ -338,8 +339,9 @@ TEST_CASE( "Cross-origin requests preflight and carry their headers", "[http][in
 	unknown.url = idhan::test::localUrl( server.port(), "/no-such-route" );
 	REQUIRE( idhan::test::send( unknown ).status == 404 );
 
-	const auto allowed { idhan::test::post(
-		idhan::test::localUrl( server.port(), "/echo" ), "body", "application/x-idhan-test" ) };
+	const auto allowed {
+		idhan::test::post( idhan::test::localUrl( server.port(), "/echo" ), "body", "application/x-idhan-test" )
+	};
 	REQUIRE( allowed.header( "Access-Control-Allow-Origin" ) == "*" );
 
 	const auto rejected { idhan::test::get( idhan::test::localUrl( server.port(), "/echo" ) ) };

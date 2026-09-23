@@ -1,7 +1,5 @@
 #include "downloadSessions.hpp"
 
-#include <libpq-fe.h>
-
 #include <folly/io/IOBuf.h>
 
 #include <algorithm>
@@ -9,6 +7,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <format>
+#include <libpq-fe.h>
 #include <optional>
 #include <simdjson.h>
 #include <string>
@@ -54,14 +53,15 @@ constexpr std::size_t max_url_length { 8192 };
 			DownloadSessionUrlID id {};
 			const auto result { std::from_chars( value.data(), value.data() + value.size(), id ) };
 			if ( result.ec != std::errc {} || result.ptr != value.data() + value.size() || id <= 0 )
-				return std::unexpected(
-					http::ParseError { "url_id", "must be a positive download session url id" } );
+				return std::unexpected( http::ParseError { "url_id", "must be a positive download session url id" } );
 			return {};
 		}
 	};
 }
 
-[[nodiscard]] static http::Response jsonResponse( simdjson::builder::string_builder& builder, const std::uint16_t status = 200 )
+[[nodiscard]] static http::Response jsonResponse(
+	simdjson::builder::string_builder& builder,
+	const std::uint16_t status = 200 )
 {
 	auto json { builder.view() };
 	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
@@ -73,10 +73,13 @@ static http::HTTPTask< bool > touchSession( db::DBContext& db, const DownloadSes
 {
 	db::DBBindings bindings {};
 	bindings.bind( session_id );
-	const auto result { co_await db.query(
-		                     "UPDATE download_sessions SET last_used_at = now() WHERE download_session_id = $1",
-		                     std::move( bindings ) )
-		                     .result() };
+	const auto result {
+		co_await db
+			.query(
+				"UPDATE download_sessions SET last_used_at = now() WHERE download_session_id = $1",
+				std::move( bindings ) )
+			.result()
+	};
 	co_return std::atoll( PQcmdTuples( result.get() ) ) > 0;
 }
 
@@ -280,18 +283,20 @@ static http::HTTPTask< std::string > freeSessionName( db::DBContext& db, const s
 		const std::string candidate { suffix == 1 ? base : std::format( "{} ({})", base, suffix ) };
 		db::DBBindings bindings {};
 		bindings.bind( candidate );
-		const auto taken { co_await db
-			                    .query(
-										"SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)",
-										std::move( bindings ) )
-			                    .rows< std::int32_t >() };
+		const auto taken {
+			co_await db.query( "SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)", std::move( bindings ) )
+				.rows< std::int32_t >()
+		};
 		if ( taken.empty() ) co_return candidate;
 	}
 
 	co_return std::format( "{} ({})", base, std::chrono::system_clock::now().time_since_epoch().count() );
 }
 
-[[nodiscard]] static bool parseStatusFilter( const std::string_view text, std::vector< Int >& output, bool& without_status )
+[[nodiscard]] static bool parseStatusFilter(
+	const std::string_view text,
+	std::vector< Int >& output,
+	bool& without_status )
 {
 	for ( std::size_t start { 0 }; start < text.size(); )
 	{
@@ -319,15 +324,17 @@ static http::HTTPTask< std::string > freeSessionName( db::DBContext& db, const s
 
 static http::HTTPTask< http::Response > listSessions( db::DBContext& db, [[maybe_unused]] http::RequestContext context )
 {
-	const auto rows { co_await db
-		                   .query(
-								"SELECT download_session_id, name, "
-								"extract(epoch FROM created_at)::bigint AS created_at, "
-								"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
-								"(SELECT count(*) FROM download_session_errors "
-								"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count "
-								"FROM download_sessions ORDER BY last_used_at DESC, download_session_id DESC" )
-		                   .rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >() };
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT download_session_id, name, "
+				"extract(epoch FROM created_at)::bigint AS created_at, "
+				"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
+				"(SELECT count(*) FROM download_session_errors "
+				"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count "
+				"FROM download_sessions ORDER BY last_used_at DESC, download_session_id DESC" )
+			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >()
+	};
 
 	simdjson::builder::string_builder builder;
 	builder.start_array();
@@ -358,25 +365,27 @@ static http::HTTPTask< http::Response > createSession( db::DBContext& db, http::
 
 	db::DBBindings existing_bindings {};
 	existing_bindings.bind( name );
-	const auto existing { co_await db
-		                       .query(
-									"SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)",
-									std::move( existing_bindings ) )
-		                       .rows< std::int32_t >() };
+	const auto existing {
+		co_await db
+			.query( "SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)", std::move( existing_bindings ) )
+			.rows< std::int32_t >()
+	};
 
 	if ( !existing.empty() )
 		co_return http::Response::error( 409, std::format( "A download session named '{}' already exists", name ) );
 
 	db::DBBindings insert_bindings {};
 	insert_bindings.bind( name );
-	const auto created { co_await db
-		                      .query(
-								  "INSERT INTO download_sessions (name) VALUES ($1) "
-								  "RETURNING download_session_id, name, "
-								  "extract(epoch FROM created_at)::bigint AS created_at, "
-								  "extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count",
-								  std::move( insert_bindings ) )
-		                      .rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >() };
+	const auto created {
+		co_await db
+			.query(
+				"INSERT INTO download_sessions (name) VALUES ($1) "
+				"RETURNING download_session_id, name, "
+				"extract(epoch FROM created_at)::bigint AS created_at, "
+				"extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count",
+				std::move( insert_bindings ) )
+			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >()
+	};
 
 	const auto& [ id, created_name, created_at, last_used_at, error_count ] { created.row( 0 ) };
 
@@ -399,16 +408,18 @@ static http::HTTPTask< http::Response > getSession( db::DBContext& db, http::Req
 
 	db::DBBindings bindings {};
 	bindings.bind( session_id );
-	const auto rows { co_await db
-		                   .query(
-								"SELECT download_session_id, name, "
-								"extract(epoch FROM created_at)::bigint AS created_at, "
-								"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
-								"(SELECT count(*) FROM download_session_errors "
-								"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count "
-								"FROM download_sessions WHERE download_session_id = $1",
-								std::move( bindings ) )
-		                   .rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >() };
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT download_session_id, name, "
+				"extract(epoch FROM created_at)::bigint AS created_at, "
+				"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
+				"(SELECT count(*) FROM download_session_errors "
+				"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count "
+				"FROM download_sessions WHERE download_session_id = $1",
+				std::move( bindings ) )
+			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >()
+	};
 
 	const auto& [ id, name, created_at, last_used_at, error_count ] { rows.row( 0 ) };
 
@@ -433,9 +444,10 @@ static http::HTTPTask< http::Response > destroySession( db::DBContext& db, http:
 
 	db::DBBindings bindings {};
 	bindings.bind( session_id );
-	const auto deleted { co_await db
-		                     .query( "DELETE FROM download_sessions WHERE download_session_id = $1", std::move( bindings ) )
-		                     .result() };
+	const auto deleted {
+		co_await db.query( "DELETE FROM download_sessions WHERE download_session_id = $1", std::move( bindings ) )
+			.result()
+	};
 
 	if ( std::atoll( PQcmdTuples( deleted.get() ) ) == 0 )
 		co_return http::Response::error( 404, std::format( "No download session with id {}", session_id ) );
@@ -464,12 +476,14 @@ static http::HTTPTask< http::Response > submitUrl( db::DBContext& db, http::Requ
 	db::DBBindings insert_bindings {};
 	insert_bindings.bind( session_id );
 	insert_bindings.bind( url );
-	const auto inserted { co_await db
-		                       .query(
-									"INSERT INTO download_session_urls (download_session_id, url) VALUES ($1, $2) "
-									"RETURNING download_session_url_id, state",
-									std::move( insert_bindings ) )
-		                       .rows< DownloadSessionUrlID, std::string >() };
+	const auto inserted {
+		co_await db
+			.query(
+				"INSERT INTO download_session_urls (download_session_id, url) VALUES ($1, $2) "
+				"RETURNING download_session_url_id, state",
+				std::move( insert_bindings ) )
+			.rows< DownloadSessionUrlID, std::string >()
+	};
 
 	const auto& [ job_id, state ] { inserted.row( 0 ) };
 
@@ -480,7 +494,8 @@ static http::HTTPTask< http::Response > submitUrl( db::DBContext& db, http::Requ
 		db::DBBindings delete_bindings {};
 		delete_bindings.bind( job_id );
 		co_await db
-			.query( "DELETE FROM download_session_urls WHERE download_session_url_id = $1", std::move( delete_bindings ) )
+			.query(
+				"DELETE FROM download_session_urls WHERE download_session_url_id = $1", std::move( delete_bindings ) )
 			.result();
 		co_return http::Response::error( 400, std::format( "Unable to schedule URL: {}", scheduled.error() ) );
 	}
@@ -518,48 +533,52 @@ static http::HTTPTask< http::Response > submitUrlSession( db::DBContext& db, htt
 
 	db::DBBindings existing_bindings {};
 	existing_bindings.bind( name );
-	const auto existing { co_await db
-		                       .query(
-									"SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)",
-									std::move( existing_bindings ) )
-		                       .rows< std::int32_t >() };
+	const auto existing {
+		co_await db
+			.query( "SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)", std::move( existing_bindings ) )
+			.rows< std::int32_t >()
+	};
 
 	if ( !existing.empty() )
 		co_return http::Response::error( 409, std::format( "A download session named '{}' already exists", name ) );
 
 	db::DBBindings insert_bindings {};
 	insert_bindings.bind( name );
-	const auto created { co_await db
-		                      .query(
-								  "INSERT INTO download_sessions (name) VALUES ($1) "
-								  "RETURNING download_session_id, name, "
-								  "extract(epoch FROM created_at)::bigint AS created_at, "
-								  "extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count",
-								  std::move( insert_bindings ) )
-		                      .rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >() };
+	const auto created {
+		co_await db
+			.query(
+				"INSERT INTO download_sessions (name) VALUES ($1) "
+				"RETURNING download_session_id, name, "
+				"extract(epoch FROM created_at)::bigint AS created_at, "
+				"extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count",
+				std::move( insert_bindings ) )
+			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >()
+	};
 
 	const auto& [ session_id, created_name, created_at, last_used_at, error_count ] { created.row( 0 ) };
 
 	db::DBBindings url_bindings {};
 	url_bindings.bind( session_id );
 	url_bindings.bind( url );
-	const auto inserted { co_await db
-		                       .query(
-									"INSERT INTO download_session_urls (download_session_id, url) VALUES ($1, $2) "
-									"RETURNING download_session_url_id, parent_url_id, url, state, error, note, record_id, "
-									"extract(epoch FROM created_at)::bigint AS created_at, "
-									"extract(epoch FROM finished_at)::bigint AS finished_at",
-									std::move( url_bindings ) )
-		                       .rows<
-										DownloadSessionUrlID,
-										std::optional< DownloadSessionUrlID >,
-										std::string,
-										std::string,
-										std::optional< std::string >,
-										std::optional< std::string >,
-										std::optional< RecordID >,
-										std::int64_t,
-										std::optional< std::int64_t > >() };
+	const auto inserted {
+		co_await db
+			.query(
+				"INSERT INTO download_session_urls (download_session_id, url) VALUES ($1, $2) "
+				"RETURNING download_session_url_id, parent_url_id, url, state, error, note, record_id, "
+				"extract(epoch FROM created_at)::bigint AS created_at, "
+				"extract(epoch FROM finished_at)::bigint AS finished_at",
+				std::move( url_bindings ) )
+			.rows<
+				DownloadSessionUrlID,
+				std::optional< DownloadSessionUrlID >,
+				std::string,
+				std::string,
+				std::optional< std::string >,
+				std::optional< std::string >,
+				std::optional< RecordID >,
+				std::int64_t,
+				std::optional< std::int64_t > >()
+	};
 
 	const auto& [ job_id, parent_id, inserted_url, state, error, note, record_id, url_created_at, finished_at ] {
 		inserted.row( 0 )
@@ -622,30 +641,32 @@ static http::HTTPTask< http::Response > listUrls( db::DBContext& db, http::Reque
 
 	db::DBBindings bindings {};
 	bindings.bind( session_id );
-	const auto rows { co_await db
-		                   .query(
-								"SELECT download_session_url_id, parent_url_id, url, state, error, note, "
-								"download_session_urls.record_id, "
-								"(extract(epoch FROM download_session_records.imported_at) * 1000000)::bigint AS imported_at, "
-								"extract(epoch FROM created_at)::bigint AS created_at, "
-								"extract(epoch FROM finished_at)::bigint AS finished_at "
-								"FROM download_session_urls "
-								"LEFT JOIN download_session_records ON download_session_records.download_session_id = $1 "
-								"AND download_session_records.record_id = download_session_urls.record_id "
-								"WHERE download_session_urls.download_session_id = $1 "
-								"ORDER BY download_session_urls.download_session_url_id",
-								std::move( bindings ) )
-		                   .rows<
-									DownloadSessionUrlID,
-									std::optional< DownloadSessionUrlID >,
-									std::string,
-									std::string,
-									std::optional< std::string >,
-									std::optional< std::string >,
-									std::optional< RecordID >,
-									std::optional< std::int64_t >,
-									std::int64_t,
-									std::optional< std::int64_t > >() };
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT download_session_url_id, parent_url_id, url, state, error, note, "
+				"download_session_urls.record_id, "
+				"(extract(epoch FROM download_session_records.imported_at) * 1000000)::bigint AS imported_at, "
+				"extract(epoch FROM created_at)::bigint AS created_at, "
+				"extract(epoch FROM finished_at)::bigint AS finished_at "
+				"FROM download_session_urls "
+				"LEFT JOIN download_session_records ON download_session_records.download_session_id = $1 "
+				"AND download_session_records.record_id = download_session_urls.record_id "
+				"WHERE download_session_urls.download_session_id = $1 "
+				"ORDER BY download_session_urls.download_session_url_id",
+				std::move( bindings ) )
+			.rows<
+				DownloadSessionUrlID,
+				std::optional< DownloadSessionUrlID >,
+				std::string,
+				std::string,
+				std::optional< std::string >,
+				std::optional< std::string >,
+				std::optional< RecordID >,
+				std::optional< std::int64_t >,
+				std::int64_t,
+				std::optional< std::int64_t > >()
+	};
 
 	UrlNodes nodes {};
 	UrlChildren children {};
@@ -750,12 +771,14 @@ static http::HTTPTask< http::Response > retryUrl( db::DBContext& db, http::Reque
 	db::DBBindings existing_bindings {};
 	existing_bindings.bind( job_id );
 	existing_bindings.bind( session_id );
-	const auto existing { co_await db
-		                       .query(
-									"SELECT url, state FROM download_session_urls "
-									"WHERE download_session_url_id = $1 AND download_session_id = $2",
-									std::move( existing_bindings ) )
-		                       .rows< std::string, std::string >() };
+	const auto existing {
+		co_await db
+			.query(
+				"SELECT url, state FROM download_session_urls "
+				"WHERE download_session_url_id = $1 AND download_session_id = $2",
+				std::move( existing_bindings ) )
+			.rows< std::string, std::string >()
+	};
 
 	if ( existing.empty() )
 		co_return http::Response::error(
@@ -769,29 +792,32 @@ static http::HTTPTask< http::Response > retryUrl( db::DBContext& db, http::Reque
 
 	db::DBBindings clear_children_bindings {};
 	clear_children_bindings.bind( job_id );
-	co_await db.query( "DELETE FROM download_session_urls WHERE parent_url_id = $1", std::move( clear_children_bindings ) )
+	co_await db
+		.query( "DELETE FROM download_session_urls WHERE parent_url_id = $1", std::move( clear_children_bindings ) )
 		.result();
 
 	db::DBBindings reset_bindings {};
 	reset_bindings.bind( job_id );
-	const auto reset { co_await db
-		                    .query(
-								"UPDATE download_session_urls SET state = 'pending', finished_at = NULL, error = NULL "
-								"WHERE download_session_url_id = $1 AND state IN ('completed', 'failed') "
-								"RETURNING download_session_url_id, parent_url_id, url, state, error, note, record_id, "
-								"extract(epoch FROM created_at)::bigint AS created_at, "
-								"extract(epoch FROM finished_at)::bigint AS finished_at",
-								std::move( reset_bindings ) )
-		                    .rows<
-									DownloadSessionUrlID,
-									std::optional< DownloadSessionUrlID >,
-									std::string,
-									std::string,
-									std::optional< std::string >,
-									std::optional< std::string >,
-									std::optional< RecordID >,
-									std::int64_t,
-									std::optional< std::int64_t > >() };
+	const auto reset {
+		co_await db
+			.query(
+				"UPDATE download_session_urls SET state = 'pending', finished_at = NULL, error = NULL "
+				"WHERE download_session_url_id = $1 AND state IN ('completed', 'failed') "
+				"RETURNING download_session_url_id, parent_url_id, url, state, error, note, record_id, "
+				"extract(epoch FROM created_at)::bigint AS created_at, "
+				"extract(epoch FROM finished_at)::bigint AS finished_at",
+				std::move( reset_bindings ) )
+			.rows<
+				DownloadSessionUrlID,
+				std::optional< DownloadSessionUrlID >,
+				std::string,
+				std::string,
+				std::optional< std::string >,
+				std::optional< std::string >,
+				std::optional< RecordID >,
+				std::int64_t,
+				std::optional< std::int64_t > >()
+	};
 
 	if ( reset.empty() )
 		co_return http::Response::error( 409, std::format( "URL {} was restarted by another request", job_id ) );
@@ -846,12 +872,14 @@ static http::HTTPTask< http::Response > listRecords( db::DBContext& db, http::Re
 
 	db::DBBindings bindings {};
 	bindings.bind( session_id );
-	const auto rows { co_await db
-		                   .query(
-								"SELECT record_id FROM download_session_records "
-								"WHERE download_session_id = $1 ORDER BY imported_at DESC, record_id DESC",
-								std::move( bindings ) )
-		                   .rows< RecordID >() };
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT record_id FROM download_session_records "
+				"WHERE download_session_id = $1 ORDER BY imported_at DESC, record_id DESC",
+				std::move( bindings ) )
+			.rows< RecordID >()
+	};
 
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -893,35 +921,39 @@ static http::HTTPTask< http::Response > listErrors( db::DBContext& db, http::Req
 
 	db::DBBindings count_bindings {};
 	count_bindings.bind( session_id );
-	const auto counts { co_await db
-		                     .query(
-								 "SELECT status, count(*)::bigint AS count FROM download_session_errors "
-								 "WHERE download_session_id = $1 GROUP BY status ORDER BY status",
-								 std::move( count_bindings ) )
-		                     .rows< std::optional< Int >, std::int64_t >() };
+	const auto counts {
+		co_await db
+			.query(
+				"SELECT status, count(*)::bigint AS count FROM download_session_errors "
+				"WHERE download_session_id = $1 GROUP BY status ORDER BY status",
+				std::move( count_bindings ) )
+			.rows< std::optional< Int >, std::int64_t >()
+	};
 
 	db::DBBindings row_bindings {};
 	row_bindings.bind( session_id );
 	row_bindings.bind( unfiltered );
 	row_bindings.bind( statuses );
 	row_bindings.bind( without_status );
-	const auto rows { co_await db
-		                   .query(
-								"SELECT download_session_error_id, download_session_url_id, url, status, lane, message, "
-								"extract(epoch FROM occurred_at)::bigint AS occurred_at "
-								"FROM download_session_errors "
-								"WHERE download_session_id = $1 "
-								"AND ($2 OR status = ANY($3::integer[]) OR ($4 AND status IS NULL)) "
-								"ORDER BY download_session_error_id DESC LIMIT 1000",
-								std::move( row_bindings ) )
-		                   .rows<
-									std::int64_t,
-									std::optional< DownloadSessionUrlID >,
-									std::string,
-									std::optional< Int >,
-									std::string,
-									std::optional< std::string >,
-									std::int64_t >() };
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT download_session_error_id, download_session_url_id, url, status, lane, message, "
+				"extract(epoch FROM occurred_at)::bigint AS occurred_at "
+				"FROM download_session_errors "
+				"WHERE download_session_id = $1 "
+				"AND ($2 OR status = ANY($3::integer[]) OR ($4 AND status IS NULL)) "
+				"ORDER BY download_session_error_id DESC LIMIT 1000",
+				std::move( row_bindings ) )
+			.rows<
+				std::int64_t,
+				std::optional< DownloadSessionUrlID >,
+				std::string,
+				std::optional< Int >,
+				std::string,
+				std::optional< std::string >,
+				std::int64_t >()
+	};
 
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -1022,72 +1054,74 @@ std::vector< http::RouteDefinition > downloadSessionRoutes( db::DBContext& db )
 {
 	std::vector< http::RouteDefinition > routes {};
 
-	const auto add = [ &routes, &db ](
-		                  const proxygen::HTTPMethod method,
-		                  std::string path,
-		                  std::vector< http::PathParameter > path_parameters,
-		                  http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
+	const auto add =
+		[ &routes, &db ](
+			const proxygen::HTTPMethod method,
+			std::string path,
+			std::vector< http::PathParameter > path_parameters,
+			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
 	{
 		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 		{ co_return co_await handler( db, std::move( context ) ); };
 
-		routes.push_back( http::RouteDefinition {
-			http::RouteMetadata { method, std::move( path ), std::move( path_parameters ), { apiAuthValidation( db ) } },
-			std::move( bound ) } );
+		routes.push_back(
+			http::RouteDefinition {
+				http::RouteMetadata {
+					method, std::move( path ), std::move( path_parameters ), { apiAuthValidation( db ) } },
+				std::move( bound ) } );
 	};
 
 	add( proxygen::HTTPMethod::GET, "/download_sessions", {}, listSessions );
-	routes.push_back( http::RouteDefinition {
-		http::RouteMetadata {
-			proxygen::HTTPMethod::GET, "/download_sessions/events", {}, { apiAuthValidation( db ) } },
+	routes.push_back(
+		http::RouteDefinition {
+			http::RouteMetadata {
+				proxygen::HTTPMethod::GET, "/download_sessions/events", {}, { apiAuthValidation( db ) } },
 			[ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 			{
-			auto session_ids_e { context.parameters().vector< DownloadSessionID >( "session_id" ) };
-			if ( !session_ids_e ) co_return http::Response::error( 400, session_ids_e.error().message );
+				auto session_ids_e { context.parameters().vector< DownloadSessionID >( "session_id" ) };
+				if ( !session_ids_e ) co_return http::Response::error( 400, session_ids_e.error().message );
 
-			const auto existing { co_await existingSessionIds( db, *session_ids_e ) };
+				const auto existing { co_await existingSessionIds( db, *session_ids_e ) };
 
-			http::Response response {};
-			response.body = proxygen::coro::HTTPSourceHolder { new http::SSEBodySource {
-				std::move( response.message ),
-				downloader::DownloadSessionEventHub::instance().subscribe( std::move( *session_ids_e ), existing ) } };
-			co_return response;
-		} } );
+				http::Response response {};
+				response.body = proxygen::coro::HTTPSourceHolder { new http::SSEBodySource {
+					std::move( response.message ),
+					downloader::DownloadSessionEventHub::instance().subscribe(
+						std::move( *session_ids_e ), existing ) } };
+				co_return response;
+			} } );
 	add( proxygen::HTTPMethod::POST, "/download_sessions", {}, createSession );
-	add( proxygen::HTTPMethod::GET, "/download_sessions/{session_id}", { downloadSessionIdPathParameter() }, getSession );
-	add(
-		proxygen::HTTPMethod::DELETE,
-		"/download_sessions/{session_id}",
-		{ downloadSessionIdPathParameter() },
-		destroySession );
+	add( proxygen::HTTPMethod::GET,
+	     "/download_sessions/{session_id}",
+	     { downloadSessionIdPathParameter() },
+	     getSession );
+	add( proxygen::HTTPMethod::DELETE,
+	     "/download_sessions/{session_id}",
+	     { downloadSessionIdPathParameter() },
+	     destroySession );
 	add( proxygen::HTTPMethod::POST, "/download_sessions/urls", {}, submitUrlSession );
-	add(
-		proxygen::HTTPMethod::POST,
-		"/download_sessions/{session_id}/urls",
-		{ downloadSessionIdPathParameter() },
-		submitUrl );
-	add(
-		proxygen::HTTPMethod::GET,
-		"/download_sessions/{session_id}/urls",
-		{ downloadSessionIdPathParameter() },
-		listUrls );
-	add(
-		proxygen::HTTPMethod::POST,
-		"/download_sessions/{session_id}/urls/{url_id}/retry",
-		{ downloadSessionIdPathParameter(), downloadSessionUrlIdPathParameter() },
-		retryUrl );
-	add(
-		proxygen::HTTPMethod::GET,
-		"/download_sessions/{session_id}/records",
-		{ downloadSessionIdPathParameter() },
-		listRecords );
-	add(
-		proxygen::HTTPMethod::GET,
-		"/download_sessions/{session_id}/errors",
-		{ downloadSessionIdPathParameter() },
-		listErrors );
+	add( proxygen::HTTPMethod::POST,
+	     "/download_sessions/{session_id}/urls",
+	     { downloadSessionIdPathParameter() },
+	     submitUrl );
+	add( proxygen::HTTPMethod::GET,
+	     "/download_sessions/{session_id}/urls",
+	     { downloadSessionIdPathParameter() },
+	     listUrls );
+	add( proxygen::HTTPMethod::POST,
+	     "/download_sessions/{session_id}/urls/{url_id}/retry",
+	     { downloadSessionIdPathParameter(), downloadSessionUrlIdPathParameter() },
+	     retryUrl );
+	add( proxygen::HTTPMethod::GET,
+	     "/download_sessions/{session_id}/records",
+	     { downloadSessionIdPathParameter() },
+	     listRecords );
+	add( proxygen::HTTPMethod::GET,
+	     "/download_sessions/{session_id}/errors",
+	     { downloadSessionIdPathParameter() },
+	     listErrors );
 
 	return routes;
 }
 
-}
+} // namespace idhan::httpapi
