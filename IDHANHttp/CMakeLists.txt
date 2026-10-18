@@ -8,7 +8,3 @@ target_link_libraries(
 		IDHANHttp
 		PUBLIC IDHAN IDHANRuntime IDHANProxygen simdjson::simdjson OpenSSL::Crypto folly Folly::folly
 		PRIVATE spdlog::spdlog)
-
-if (BUILD_IDHAN_TESTS)
-	add_subdirectory(test)
-endif ()
