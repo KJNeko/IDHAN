@@ -58,8 +58,8 @@ static http::HTTPTask< http::Response > getRelationships( db::DBContext& db, htt
 	const auto inferior {
 		co_await db
 			.query(
-				"SELECT worse_record_id FROM duplicate_pairs WHERE better_record_id = $1 "
-				"ORDER BY worse_record_id",
+				"SELECT record_id FROM duplicate_members WHERE king_id = $1 AND record_id <> king_id "
+				"ORDER BY record_id",
 				std::move( a ) )
 			.rows< RecordID >()
 	};
@@ -67,7 +67,9 @@ static http::HTTPTask< http::Response > getRelationships( db::DBContext& db, htt
 	db::DBBindings b {};
 	b.bind( record_id );
 	const auto superior {
-		co_await db.query( "SELECT better_record_id FROM duplicate_pairs WHERE worse_record_id = $1", std::move( b ) )
+		co_await db
+			.query(
+				"SELECT king_id FROM duplicate_members WHERE record_id = $1 AND record_id <> king_id", std::move( b ) )
 			.rows< RecordID >()
 	};
 
@@ -251,8 +253,8 @@ static http::HTTPTask< http::Response > nextUndecided( db::DBContext& db, http::
 	const auto limit { *limit_e };
 
 	db::DBBindings bindings {};
-	bindings.bind( static_cast< std::int32_t >( distance ) );
-	bindings.bind( static_cast< std::int32_t >( limit ) );
+	bindings.bind( static_cast< Integer >( distance ) );
+	bindings.bind( static_cast< Integer >( limit ) );
 
 	const auto found {
 		co_await db
@@ -261,7 +263,7 @@ static http::HTTPTask< http::Response > nextUndecided( db::DBContext& db, http::
 				"WHERE distance <= $1::integer "
 				"ORDER BY left_id, distance, right_id LIMIT $2::integer",
 				std::move( bindings ) )
-			.rows< RecordID, RecordID, std::int32_t >()
+			.rows< RecordID, RecordID, SmallInt >()
 	};
 
 	simdjson::builder::string_builder builder;
@@ -386,22 +388,29 @@ static http::HTTPTask< http::Response > setBetterDuplicate( db::DBContext& db, h
 	auto validation { co_await validateRecordIds( std::move( referenced ), db ) };
 	if ( !validation ) co_return std::move( validation.error() );
 
+	if ( pairs.empty() ) co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
+
+	std::vector< RecordID > worse_ids {};
+	std::vector< RecordID > better_ids {};
+	worse_ids.reserve( pairs.size() );
+	better_ids.reserve( pairs.size() );
 	for ( const auto& [ worse_id, better_id ] : pairs )
 	{
-		try
-		{
-			db::DBBindings bindings {};
-			bindings.bind( worse_id );
-			bindings.bind( better_id );
-			co_await db.query( "SELECT insert_duplicate_pair($1, $2)", std::move( bindings ) ).result();
-		}
-		catch ( const std::exception& e )
-		{
-			co_return http::Response::error(
-				500,
-				std::format(
-					"Failed to set record {} as a worse duplicate of {}: {}", worse_id, better_id, e.what() ) );
-		}
+		worse_ids.push_back( worse_id );
+		better_ids.push_back( better_id );
+	}
+
+	try
+	{
+		db::DBBindings bindings {};
+		bindings.bind( std::move( worse_ids ) );
+		bindings.bind( std::move( better_ids ) );
+		co_await db.query( "SELECT insert_duplicate_pair($1::INTEGER[], $2::INTEGER[])", std::move( bindings ) )
+			.result();
+	}
+	catch ( const std::exception& e )
+	{
+		co_return http::Response::error( 500, std::format( "Failed to set duplicate relationships: {}", e.what() ) );
 	}
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
