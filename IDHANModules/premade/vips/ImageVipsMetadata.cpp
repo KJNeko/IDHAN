@@ -33,8 +33,6 @@ std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleC
 		return std::unexpected( ModuleError { "Failed to load image" } );
 	}
 
-	spdlog::debug( "Decoded image" );
-
 	VipsImagePtr image { image_ptr };
 
 	MetadataInfo info {};
