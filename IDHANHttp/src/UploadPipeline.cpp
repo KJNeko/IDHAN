@@ -2,10 +2,11 @@
 
 #include <folly/FileUtil.h>
 
-#include <array>
 #include <cerrno>
+#include <cstddef>
 #include <fcntl.h>
 #include <limits>
+#include <span>
 #include <system_error>
 #include <unistd.h>
 
@@ -49,7 +50,8 @@ void UploadPipeline::write( const folly::IOBuf& chunk )
 		if ( static_cast< std::size_t >( written ) != bytes.size() )
 			throw std::runtime_error( "Short temporary upload write" );
 
-		m_digest.hash_update( bytes );
+		m_digest.update(
+			std::span< const std::byte > { reinterpret_cast< const std::byte* >( bytes.data() ), bytes.size() } );
 		m_size += bytes.size();
 	}
 }
@@ -69,7 +71,6 @@ runtime::Task<> UploadPipeline::append( std::unique_ptr< folly::IOBuf > chunk )
 	if ( !m_file )
 	{
 		m_file = createUploadFile( m_temp_path );
-		m_digest.hash_init( EVP_sha256() );
 		auto buffered { m_buffer.move() };
 		if ( buffered ) write( *buffered );
 	}
@@ -89,10 +90,7 @@ runtime::Task< RequestBody > UploadPipeline::finish()
 		co_return RequestBody { std::move( buffered ) };
 	}
 
-	std::array< std::byte, SHA256::size() > digest {};
-	m_digest.hash_final(
-		folly::MutableByteRange { reinterpret_cast< unsigned char* >( digest.data() ), digest.size() } );
 	// This file contains the complete raw body; an original filename is not inferred from headers.
-	co_return RequestBody { TemporaryUpload { std::move( m_file ), m_size, SHA256::fromBuffer( digest ), {} } };
+	co_return RequestBody { TemporaryUpload { std::move( m_file ), m_size, m_digest.finish(), {} } };
 }
 } // namespace idhan::http
