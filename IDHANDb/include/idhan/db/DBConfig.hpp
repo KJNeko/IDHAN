@@ -17,14 +17,14 @@ struct DBConfig
 	std::size_t connections { 8 };
 	std::size_t transaction_connections { 2 };
 	std::size_t worker_threads { 0 };
-	// Zero disables server-side timing; queues and leases have no deadline.
 	std::chrono::milliseconds statement_timeout { 60000 };
 	std::size_t diagnostic_value_bytes { 4096 };
-	std::chrono::milliseconds slow_query_threshold { 5000 };
+	std::chrono::milliseconds slow_query_threshold { 1000 };
 	bool log_secrets { false };
 	void validate() const;
 	[[nodiscard]] static DBConfig defaults();
 };
+
 enum class ResultFormat : int
 {
 	text = 0,
@@ -40,4 +40,5 @@ struct QueryOptions
 
 inline constexpr std::size_t row_prefetch { 256 };
 inline constexpr std::size_t pump_operation_budget { 64 };
+
 } // namespace idhan::db

@@ -104,6 +104,7 @@ class DBTask
 	template < typename... Ts >
 	[[nodiscard]] runtime::Task< std::optional< std::tuple< Ts... > > > nextRow();
 	void abandon() noexcept;
+	[[nodiscard]] std::string querySql() const;
 
 	DBTask() = delete;
 	DBTask( const DBTask& ) = delete;
@@ -289,7 +290,8 @@ namespace idhan::db
 template < typename... Ts >
 runtime::Task< DBRows< Ts... > > DBTask::rows()
 {
+	const auto sql { querySql() };
 	auto raw { co_await *this };
-	co_return DBRows< Ts... >( std::move( raw ) );
+	co_return DBRows< Ts... >( std::move( raw ), sql );
 }
 } // namespace idhan::db

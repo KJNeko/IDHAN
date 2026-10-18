@@ -2,11 +2,13 @@
 #include <folly/Executor.h>
 
 #include <coroutine>
+#include <chrono>
 #include <cstdint>
 #include <exception>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 
 #include "DBBindings.hpp"
@@ -39,6 +41,9 @@ class DBOperation : public std::enable_shared_from_this< DBOperation >
 	std::coroutine_handle<> m_continuation {};
 	DBResult m_result {};
 	std::exception_ptr m_error;
+	std::optional< std::chrono::steady_clock::time_point > m_sent_at;
+	std::optional< std::chrono::steady_clock::time_point > m_first_result_at;
+	std::optional< std::chrono::steady_clock::time_point > m_completed_at;
 	bool m_consumer_cancelled { false };
 	friend class DBConnection;
 	friend class DBTask;
@@ -58,6 +63,8 @@ class DBOperation : public std::enable_shared_from_this< DBOperation >
 	[[nodiscard]] const DBBindings& bindings() const noexcept;
 	[[nodiscard]] const QueryOptions& options() const noexcept;
 	[[nodiscard]] const std::string& sql() const noexcept;
+	[[nodiscard]] std::optional< std::chrono::milliseconds > firstResultLatency() const;
+	[[nodiscard]] std::optional< std::chrono::milliseconds > completionLatency() const;
 
   public:
 

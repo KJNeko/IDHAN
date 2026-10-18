@@ -77,6 +77,8 @@ class DBConnection : public std::enable_shared_from_this< DBConnection >
 	void retireHead();
 
 	void postDrainedIfIdle();
+	void logFirstResult( const DBOperation& ) const;
+	void logCompletion( const DBOperation& ) const;
 
 	[[nodiscard]] bool hasWork() const;
 

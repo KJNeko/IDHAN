@@ -44,10 +44,18 @@ class DBDecodeError final : public std::runtime_error
 {
   public:
 
+	const std::string message;
 	const std::size_t column;
 	const Oid expected_oid;
 	const Oid actual_oid;
-	DBDecodeError( std::string message, std::size_t column, Oid expected, Oid actual );
+	DBDecodeError(
+		const std::string& message,
+		std::size_t column,
+		Oid expected,
+		Oid actual,
+		const std::string& column_name = {},
+		const std::string& sql = {},
+		std::optional< std::size_t > row = {} );
 };
 
 class DBOperationCancelled final : public std::runtime_error

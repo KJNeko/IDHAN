@@ -1,9 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include <folly/coro/BlockingWait.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <spdlog/sinks/ostream_sink.h>
+#include <spdlog/spdlog.h>
 
+#include <chrono>
 #include <cstdlib>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 
 #include "IDHANDB.hpp"
@@ -80,6 +84,57 @@ TEST_CASE( "Test basic management connection", "[postgres][management]" )
 	CHECK( std::get< 0 >( columns.row( 1 ) ) == "label" );
 
 	folly::coro::blockingWait( makeTask( "DROP TABLE management_connection_test" ) );
+
+	connection.reset();
+	reactor.stop();
+}
+
+TEST_CASE( "Slow database queries log first and final result times", "[postgres][management][slow-query]" )
+{
+	using namespace std::chrono_literals;
+	CHECK( DBConfig {}.slow_query_threshold == 1000ms );
+
+	std::ostringstream output;
+	auto sink { std::make_shared< spdlog::sinks::ostream_sink_mt >( output ) };
+	auto logger { std::make_shared< spdlog::logger >( "slow-query-test", sink ) };
+	logger->set_level( spdlog::level::debug );
+	auto previous_logger { spdlog::default_logger() };
+
+	struct RestoreLogger
+	{
+		std::shared_ptr< spdlog::logger > previous;
+
+		~RestoreLogger() { spdlog::set_default_logger( std::move( previous ) ); }
+	} restore { std::move( previous_logger ) };
+
+	spdlog::set_default_logger( logger );
+
+	DBReactor reactor { 1 };
+	reactor.start();
+	folly::CPUThreadPoolExecutor application { 1 };
+	const auto config { testConfig() };
+	auto connection = std::make_shared< DBConnection >( 1, ConnectionRole::management, config, reactor );
+	folly::coro::blockingWait( connection->connect() );
+
+	auto operation = std::make_shared< DBOperation >(
+		"SELECT pg_sleep(1.15)", DBBindings {}, QueryOptions {}, folly::getKeepAliveToken( &application ) );
+	operation->setStarter( [ connection ]( std::shared_ptr< DBOperation > queued )
+	                       { connection->enqueue( std::move( queued ) ); } );
+	folly::coro::blockingWait( DBTask { std::move( operation ) }.result() );
+	auto fast_operation = std::make_shared< DBOperation >(
+		"SELECT 1", DBBindings {}, QueryOptions {}, folly::getKeepAliveToken( &application ) );
+	fast_operation->setStarter( [ connection ]( std::shared_ptr< DBOperation > queued )
+	                            { connection->enqueue( std::move( queued ) ); } );
+	folly::coro::blockingWait( DBTask { std::move( fast_operation ) }.result() );
+	folly::coro::blockingWait( connection->drain() );
+
+	const auto logged { output.str() };
+	CHECK( logged.find( "[warning] PostgreSQL query first result:" ) != std::string::npos );
+	CHECK( logged.find( "[warning] PostgreSQL query complete: first result" ) != std::string::npos );
+	CHECK( logged.find( "SELECT pg_sleep(1.15)" ) != std::string::npos );
+	CHECK( logged.find( "[debug] PostgreSQL query first result:" ) != std::string::npos );
+	CHECK( logged.find( "[debug] PostgreSQL query complete: first result" ) != std::string::npos );
+	CHECK( logged.find( "SELECT 1" ) != std::string::npos );
 
 	connection.reset();
 	reactor.stop();
