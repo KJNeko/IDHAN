@@ -118,7 +118,7 @@ struct RawFetch
 
 [[nodiscard]] static SHA256 sha256FromBytes( const std::span< const std::byte > bytes )
 {
-	return SHA256::fromBuffer( std::vector< std::byte > { bytes.begin(), bytes.end() } );
+	return SHA256::fromBuffer( bytes );
 }
 
 template < typename Key >

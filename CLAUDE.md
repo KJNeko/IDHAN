@@ -72,7 +72,9 @@ tools/HydrusImporter/ — Qt6 GUI for one-time import from a Hydrus database (SQ
 
 ### Key types (`IDHAN/include/IDHANTypes.hpp`)
 
-All integer IDs are distinct type aliases (`RecordID`, `TagID`, `TagDomainID`, `ClusterID`, etc.) over `int32_t`/`int16_t`/`int64_t`. Always use these aliases rather than raw integers. `SHA256` is a custom type from `crypto/SHA256.hpp` used for all record hashes.
+All integer IDs are distinct type aliases (`RecordID`, `TagID`, `TagDomainID`, `ClusterID`, etc.) over `int32_t`/
+`int16_t`/`int64_t`. Always use these aliases rather than raw integers. `SHA256` is a custom type from
+`idhan/SHA256.hpp` used for all record hashes.
 
 ### Tag model
 

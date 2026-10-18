@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-#include "crypto/SHA256.hpp"
+#include "idhan/SHA256.hpp"
 #include "idhan/runtime/Task.hpp"
 
 namespace idhan::db

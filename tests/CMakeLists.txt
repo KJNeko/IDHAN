@@ -5,6 +5,10 @@ enable_testing()
 include(CTest)
 include(Catch)
 
+AddFGLExecutable(IDHANSharedTests ${CMAKE_CURRENT_SOURCE_DIR}/shared)
+target_link_libraries(IDHANSharedTests PRIVATE Catch2::Catch2WithMain IDHAN)
+catch_discover_tests(IDHANSharedTests)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	AddFGLExecutable(IDHANFilesystemTests ${CMAKE_CURRENT_SOURCE_DIR}/filesystem)
 	target_sources(IDHANFilesystemTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/renameNoReplace.cpp)

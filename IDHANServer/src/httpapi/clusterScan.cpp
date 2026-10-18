@@ -124,7 +124,7 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 
 	for ( const auto& [ record_id, hash_bytes, extension ] : rows )
 	{
-		const SHA256 hash { SHA256::fromBuffer( std::vector< std::byte > { hash_bytes.begin(), hash_bytes.end() } ) };
+		const SHA256 hash { SHA256::fromBuffer( hash_bytes ) };
 		const auto path { root / filesystem::getClusterRelativePath( hash, extension ) };
 		std::error_code error {};
 		const auto status { std::filesystem::status( path, error ) };

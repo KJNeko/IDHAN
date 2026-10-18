@@ -131,7 +131,7 @@ std::expected< ImportResult, std::string > DownloadImports::Sink::finish( const 
 
 	auto outcome { folly::coro::blockingWait( runImport(
 		data,
-		SHA256::hash( data.data(), data.size() ),
+		SHA256::hash( data ),
 		filename,
 		description,
 		collectUrls( m_options, m_url ),

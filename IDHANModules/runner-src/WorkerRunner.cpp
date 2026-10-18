@@ -20,7 +20,7 @@
 #include "MetadataModule.hpp"
 #include "MimeModule.hpp"
 #include "ThumbnailerModule.hpp"
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
 #include "ipc/BlobFile.hpp"
 #include "ipc/MemfdSink.hpp"
 
@@ -275,7 +275,7 @@ ModuleCallbacks WorkerRunner::makeCallbacks()
 			std::string file_name ) -> std::expected< std::unique_ptr< ModuleFile >, ModuleError >
 	{
 		Json::Value body {};
-		body[ ipc::field::HASH ] = crypto::toHex( hash );
+		body[ ipc::field::HASH ] = idhan::SHA256::fromBuffer( hash ).hex();
 		body[ ipc::field::EXTRA ] = std::move( extra );
 		body[ ipc::field::FILE_NAME ] = std::move( file_name );
 
@@ -480,7 +480,17 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 	if ( frame.body[ ipc::field::HASH ].isString() )
 	{
 		const auto hex { frame.body[ ipc::field::HASH ].asString() };
-		if ( hex.size() == ( 256 / 8 ) * 2 ) call.hash = crypto::fromHex( hex );
+		if ( hex.size() == SHA256::size() * 2 )
+		{
+			const auto hash { SHA256::fromHex( hex ) };
+			if ( !hash )
+			{
+				reject( hash.error() );
+				return;
+			}
+
+			call.hash = hash->data();
+		}
 	}
 
 	if ( call.op != ipc::CallOp::EMBED_TEXT )

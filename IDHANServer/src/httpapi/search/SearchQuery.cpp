@@ -8,7 +8,6 @@
 #include <limits>
 #include <ranges>
 
-#include "decodeHex.hpp"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
 #include "splitTag.hpp"
@@ -485,9 +484,10 @@ SHA256 SearchQuery::parseHashSearch( const std::string_view arguments )
 		throw std::invalid_argument(
 			format_ns::format( "A sha256 is {} hex characters, '{}' is {}", hex_length, value, value.size() ) );
 
-	const auto bytes { decodeHex( std::string { value } ) };
+	const auto hash { SHA256::fromHex( value ) };
+	if ( !hash ) throw std::invalid_argument( hash.error() );
 
-	return SHA256::fromBuffer( bytes );
+	return *hash;
 }
 
 void SearchQuery::setHashSearch( const std::string_view arguments )

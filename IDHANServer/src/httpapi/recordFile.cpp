@@ -65,7 +65,7 @@ http::HTTPTask< http::Response > recordFileResponse(
 
 	const auto& [ folder_path, sha256_bytes, extension, mime_name ] { rows.row( 0 ) };
 
-	const SHA256 sha256 { SHA256::fromBuffer( std::vector< std::byte > { sha256_bytes.begin(), sha256_bytes.end() } ) };
+	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
 	const auto relative_path { filesystem::getClusterRelativePath( sha256, extension ) };
 	const auto filename { relative_path.filename().string() };

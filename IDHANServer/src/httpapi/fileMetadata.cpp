@@ -279,7 +279,7 @@ http::HTTPTask< std::expected< std::filesystem::path, http::Response > > recordF
 
 	const auto& [ folder_path, sha256_bytes, extension ] { rows.row( 0 ) };
 
-	const SHA256 sha256 { SHA256::fromBuffer( std::vector< std::byte > { sha256_bytes.begin(), sha256_bytes.end() } ) };
+	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const std::filesystem::path file_location {
 		std::filesystem::path { folder_path } / filesystem::getClusterRelativePath( sha256, extension )
 	};
@@ -483,9 +483,7 @@ static http::HTTPTask< void > updateRecordFileTimesForScan(
 
 				for ( const auto& [ record_sha256, path ] : archive_metadata.contained_records )
 				{
-					const SHA256 sha256 {
-						SHA256::fromBuffer( std::vector< std::byte > { record_sha256.begin(), record_sha256.end() } )
-					};
+					const SHA256 sha256 { SHA256::fromBuffer( record_sha256 ) };
 
 					auto contained_record_id { co_await createRecord( sha256, db ) };
 					if ( !contained_record_id ) co_return std::unexpected( std::move( contained_record_id.error() ) );

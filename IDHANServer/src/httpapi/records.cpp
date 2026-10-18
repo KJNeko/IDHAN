@@ -10,7 +10,6 @@
 #include <unordered_set>
 
 #include "apiAuth.hpp"
-#include "decodeHex.hpp"
 #include "helpers.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
@@ -48,14 +47,11 @@ namespace idhan::httpapi
 			http::Response::error(
 				400, std::format( "A sha256 is {} hex characters, got {}", hex_length, text.size() ) ) );
 
-	try
-	{
-		return SHA256::fromBuffer( decodeHex( std::string { text } ) );
-	}
-	catch ( const std::exception& e )
-	{
-		return std::unexpected( http::Response::error( 400, std::format( "Invalid sha256: {}", e.what() ) ) );
-	}
+	const auto hash { SHA256::fromHex( text ) };
+	if ( !hash )
+		return std::unexpected( http::Response::error( 400, std::format( "Invalid sha256: {}", hash.error() ) ) );
+
+	return *hash;
 }
 
 template < typename Database >
@@ -147,8 +143,7 @@ static runtime::Task< std::vector< RecordID > > massCreateRecord(
 
 	std::unordered_map< SHA256, RecordID > record_id_map {};
 	for ( const auto& [ record_id, sha256_bytes ] : rows )
-		record_id_map.emplace(
-			SHA256::fromBuffer( std::vector< std::byte > { sha256_bytes.begin(), sha256_bytes.end() } ), record_id );
+		record_id_map.emplace( SHA256::fromBuffer( sha256_bytes ), record_id );
 
 	std::vector< RecordID > record_ids {};
 	record_ids.reserve( sha256s.size() );
