@@ -14,6 +14,7 @@
 #include "helpers.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/db/DBTransaction.hpp"
 #include "jsonBody.hpp"
 #include "logging/log.hpp"
 #include "recordValidator.hpp"
@@ -57,22 +58,24 @@ namespace idhan::httpapi
 	}
 }
 
-runtime::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, db::DBContext& db )
+template < typename Database >
+static runtime::Task< std::optional< RecordID > > findRecordWith( const SHA256& sha256, Database& db )
 {
 	db::DBBindings bindings {};
 	bindings.bind( std::vector< std::byte > { sha256.data().begin(), sha256.data().end() } );
 
-	const auto rows {
-		co_await db.query( "SELECT record_id FROM records WHERE sha256 = $1", std::move( bindings ) ).rows< RecordID >()
-	};
+	const auto rows { co_await db.query( "SELECT record_id FROM records WHERE sha256 = $1", std::move( bindings ) )
+		                  .template rows< RecordID >() };
 
 	if ( rows.empty() ) co_return std::nullopt;
 	co_return std::get< 0 >( rows.row( 0 ) );
 }
 
-runtime::Task< std::expected< RecordID, http::Response > > createRecord( const SHA256& sha256, db::DBContext& db )
+template < typename Database >
+static runtime::Task< std::expected< RecordID, http::Response > > createRecordWith( const SHA256& sha256, Database& db )
 {
-	if ( const auto existing { co_await findRecord( sha256, db ) }; existing ) co_return *existing;
+	const auto existing { co_await findRecordWith( sha256, db ) };
+	if ( existing ) co_return *existing;
 
 	constexpr std::size_t max_tries { 16 };
 
@@ -86,16 +89,34 @@ runtime::Task< std::expected< RecordID, http::Response > > createRecord( const S
 				.query(
 					"INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING RETURNING record_id",
 					std::move( bindings ) )
-				.rows< RecordID >()
+				.template rows< RecordID >()
 		};
 
 		if ( !rows.empty() ) co_return std::get< 0 >( rows.row( 0 ) );
 
-		if ( const auto existing { co_await findRecord( sha256, db ) }; existing ) co_return *existing;
+		const auto found { co_await findRecordWith( sha256, db ) };
+		if ( found ) co_return *found;
 	}
 
 	co_return std::unexpected(
 		http::Response::error( 500, std::format( "Failed to insert record {}", sha256.hex() ) ) );
+}
+
+runtime::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, db::DBContext& db )
+{
+	co_return co_await findRecordWith( sha256, db );
+}
+
+runtime::Task< std::expected< RecordID, http::Response > > createRecord( const SHA256& sha256, db::DBContext& db )
+{
+	co_return co_await createRecordWith( sha256, db );
+}
+
+runtime::Task< std::expected< RecordID, http::Response > > createRecord(
+	const SHA256& sha256,
+	db::DBTransaction& transaction )
+{
+	co_return co_await createRecordWith( sha256, transaction );
 }
 
 static runtime::Task< std::vector< RecordID > > massCreateRecord(
