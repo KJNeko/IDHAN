@@ -1,5 +1,7 @@
 #include "WorkerProcess.hpp"
 
+#include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <sys/eventfd.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
@@ -29,7 +31,13 @@ constexpr int CHILD_CHANNEL_FD { 3 };
 void resumeContinuation( std::coroutine_handle<> continuation )
 {
 	if ( !continuation ) return;
-	continuation.resume();
+
+	// A continuation can release the last worker owner. Run it off the IO thread so
+	// destruction can join that thread before freeing the state ioLoop still uses.
+	static folly::CPUThreadPoolExecutor executor {
+		2, std::make_shared< folly::NamedThreadFactory >( "module-resume" )
+	};
+	executor.add( [ continuation ] { continuation.resume(); } );
 }
 
 WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callback ) :
@@ -39,7 +47,7 @@ WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callba
 
 //! \warning Must not run on the worker's own IO thread. The join below would be a self-join, and
 //!          EDEADLK out of a destructor aborts the process. Nothing that could hold the last
-//!          reference is ever resumed on the IO thread; see resumptionLoop().
+//!          reference is ever resumed on the IO thread; see resumeContinuation().
 WorkerProcess::~WorkerProcess()
 {
 	terminate( "worker owner destroyed", Termination::EXPECTED );
@@ -553,6 +561,9 @@ IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > Wor
 
 		void await_suspend( const std::coroutine_handle<> continuation ) const
 		{
+			// Publishing the continuation lets another thread destroy this awaiter.
+			const auto owner { worker };
+			const auto delay { timeout };
 			// Both the notification and the timer fire; the flag decides which one owns the resume.
 			auto resumed { std::make_shared< std::atomic_flag >() };
 
@@ -562,14 +573,14 @@ IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > Wor
 				resumeContinuation( continuation );
 			};
 
-			if ( !worker->addManifestWaiter( resume ) )
+			if ( !owner->addManifestWaiter( resume ) )
 			{
 				resume();
 				return;
 			}
 
 			std::thread(
-				[ timeout = timeout, resume = std::move( resume ) ]() mutable
+				[ timeout = delay, resume = std::move( resume ) ]() mutable
 				{
 					std::this_thread::sleep_for( timeout );
 					resume();
@@ -660,8 +671,13 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 
 		bool await_suspend( std::coroutine_handle<> handle ) const
 		{
+			const auto owner { worker->shared_from_this() };
+			const auto id { call_id };
+			// Completion can destroy the awaiter as soon as the call is registered.
+			const auto request { *body };
+			const auto descriptors { *fds };
 			{
-				const std::lock_guard< std::mutex > guard { worker->m_calls_mutex };
+				const std::lock_guard< std::mutex > guard { owner->m_calls_mutex };
 
 				if ( !worker->m_alive.load() )
 				{
@@ -677,13 +693,14 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 				worker->m_last_activity = std::chrono::steady_clock::now();
 			}
 
-			if ( const auto posted { worker->post( *body, *fds ) }; !posted )
+			const auto posted { owner->post( request, descriptors ) };
+			if ( !posted )
 			{
 				CallOutcome failure {};
 				failure.ok = false;
 				failure.error = posted.error();
 				failure.worker_died = true;
-				worker->finish( call_id, std::move( failure ) );
+				owner->finish( id, std::move( failure ) );
 			}
 
 			return true;
