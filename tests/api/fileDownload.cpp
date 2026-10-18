@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -120,10 +121,12 @@ SCENARIO_METHOD( ServerFixture, "Fetched file names cannot inject response heade
 	CHECK( download_response.header( "x-injected" ).empty() );
 }
 
-static void waitForClusterScan( ApiClient& api, const ClusterID cluster_id )
+static Json::Value waitForClusterScan(
+	ApiClient& api,
+	const ClusterID cluster_id,
+	QueryParams query = { { "scan_mime", "false" }, { "scan_metadata", "false" } } )
 {
-	const auto start_response { api.postWithoutBody(
-		std::format( "/clusters/{}/scan", cluster_id ), { { "scan_mime", "false" }, { "scan_metadata", "false" } } ) };
+	const auto start_response { api.postWithoutBody( std::format( "/clusters/{}/scan", cluster_id ), query ) };
 
 	if ( start_response.status != drogon::k200OK || !start_response.json[ "job_id" ].isIntegral() )
 		throw std::runtime_error( std::format( "Could not start cluster scan: {}", start_response.body ) );
@@ -144,16 +147,167 @@ static void waitForClusterScan( ApiClient& api, const ClusterID cluster_id )
 					std::format( "Cluster scan failed: {}", status_response.json[ "error" ].asString() ) );
 
 			const auto& response { status_response.json[ "response" ] };
-			if ( !response.isString() || response.asString() != "completed" )
+			if ( !response.isObject() || !response[ "failed_count" ].isIntegral() )
 				throw std::runtime_error( std::format( "Cluster scan failed: {}", status_response.body ) );
 
-			return;
+			return response;
 		}
 
 		std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
 	}
 
 	throw std::runtime_error( std::format( "Cluster scan job {} timed out", job_id ) );
+}
+
+SCENARIO_METHOD( ServerFixture, "Cluster scan usage follows registered files", "[api][cluster][scan][usage]" )
+{
+	const auto record_id { api().createRecord( 506 ) };
+	const auto hex { hashOf( db(), record_id ) };
+	const std::string contents { "registered file bytes" };
+	TemporaryCluster cluster {
+		db(), std::filesystem::temp_directory_path() / std::format( "idhan-cluster-usage-test-{}", record_id )
+	};
+	storeFile( db(), record_id, hex, cluster, contents );
+	const auto file_path { cluster.path() / std::format( "f{}/{}.png", hex.substr( 0, 2 ), hex ) };
+	ClusterID cluster_id {};
+	{
+		pqxx::work tx { db() };
+		cluster_id = tx.query_value< ClusterID >(
+			"SELECT cluster_id FROM file_info WHERE record_id = $1", pqxx::params { record_id } );
+	}
+
+	std::uint64_t expected_count { 1 };
+	std::uint64_t expected_size { contents.size() };
+	std::uint64_t scanned_count { 1 };
+	std::uint64_t scanned_bytes { contents.size() };
+	std::uint64_t failed_count {};
+	QueryParams query { { "scan_mime", "false" }, { "scan_metadata", "false" } };
+
+	SECTION( "Rejected files only contribute to scan statistics" )
+	{
+		const std::string rejected { "unregistered bytes" };
+		std::ofstream file { file_path.parent_path() / "invalid-filename.png", std::ios::binary };
+		file << rejected;
+		file.close();
+		REQUIRE( file.good() );
+		scanned_count = 2;
+		scanned_bytes += rejected.size();
+		failed_count = 1;
+	}
+
+	SECTION( "Registering a discovered file increments usage once" )
+	{
+		pqxx::work tx { db() };
+		tx.exec( "DELETE FROM file_info WHERE record_id = $1", pqxx::params { record_id } );
+		tx.commit();
+	}
+
+	SECTION( "Updating a registered size uses the trigger delta" )
+	{
+		pqxx::work tx { db() };
+		tx.exec( "UPDATE file_info SET size = 1 WHERE record_id = $1", pqxx::params { record_id } );
+		tx.commit();
+	}
+
+	SECTION( "Detaching a missing file decrements usage once" )
+	{
+		REQUIRE( std::filesystem::remove( file_path ) );
+		query.emplace_back( "remove_missing_files", "true" );
+		expected_count = 0;
+		expected_size = 0;
+		scanned_count = 0;
+		scanned_bytes = 0;
+		failed_count = 1;
+	}
+
+	const auto result { waitForClusterScan( api(), cluster_id, query ) };
+	CHECK( result[ "scanned_count" ].asUInt64() == scanned_count );
+	CHECK( result[ "scanned_bytes" ].asUInt64() == scanned_bytes );
+	CHECK( result[ "failed_count" ].asUInt64() == failed_count );
+
+	// Repeating the scan must not double-count registrations or missing-file detachment.
+	waitForClusterScan( api(), cluster_id, query );
+	pqxx::work tx { db() };
+	const auto usage {
+		tx.exec( "SELECT file_count, size_used FROM file_clusters WHERE cluster_id = $1", pqxx::params { cluster_id } )
+	};
+	REQUIRE( usage.size() == 1 );
+	CHECK( usage[ 0 ][ "file_count" ].as< std::uint64_t >() == expected_count );
+	CHECK( usage[ 0 ][ "size_used" ].as< std::uint64_t >() == expected_size );
+}
+
+SCENARIO_METHOD(
+	ServerFixture,
+	"Failed archive metadata writes roll back and can be retried",
+	"[api][metadata][archive][transaction]" )
+{
+	// A stored ZIP containing member.txt with the contents "transaction-contained".
+	constexpr char zip[] {
+		"\x50\x4b\x03\x04\x14\x00\x00\x00\x00\x00\x00\x00\x21\x50\xac\x97\xed\x82\x15\x00"
+		"\x00\x00\x15\x00\x00\x00\x0a\x00\x00\x00\x6d\x65\x6d\x62\x65\x72\x2e\x74\x78\x74"
+		"\x74\x72\x61\x6e\x73\x61\x63\x74\x69\x6f\x6e\x2d\x63\x6f\x6e\x74\x61\x69\x6e\x65"
+		"\x64\x50\x4b\x01\x02\x14\x03\x14\x00\x00\x00\x00\x00\x00\x00\x21\x50\xac\x97\xed"
+		"\x82\x15\x00\x00\x00\x15\x00\x00\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+		"\x00\x80\x01\x00\x00\x00\x00\x6d\x65\x6d\x62\x65\x72\x2e\x74\x78\x74\x50\x4b\x05"
+		"\x06\x00\x00\x00\x00\x01\x00\x01\x00\x38\x00\x00\x00\x3d\x00\x00\x00\x00\x00"
+	};
+	const auto record_id { api().createRecord( 507 ) };
+	const auto hex { hashOf( db(), record_id ) };
+	TemporaryCluster cluster {
+		db(), std::filesystem::temp_directory_path() / std::format( "idhan-metadata-rollback-test-{}", record_id )
+	};
+	storeFile( db(), record_id, hex, cluster, std::string { zip, sizeof( zip ) - 1 }, "zip" );
+	std::int64_t initial_records {};
+	std::int64_t initial_archives {};
+	std::int64_t initial_mappings {};
+	{
+		pqxx::work tx { db() };
+		tx.exec(
+			"UPDATE file_info SET mime_id = $2 WHERE record_id = $1",
+			pqxx::params { record_id, mime_ids::APPLICATION_ZIP } );
+		initial_records = tx.query_value< std::int64_t >( "SELECT count(*) FROM records" );
+		initial_archives = tx.query_value< std::int64_t >( "SELECT count(*) FROM archives" );
+		initial_mappings = tx.query_value< std::int64_t >( "SELECT count(*) FROM archive_map" );
+		tx.exec(
+			"CREATE FUNCTION reject_test_archive_metadata() RETURNS trigger LANGUAGE plpgsql AS $$ "
+			"BEGIN RAISE EXCEPTION 'injected archive metadata failure'; END $$" );
+		tx.exec(
+			"CREATE TRIGGER reject_test_archive_metadata BEFORE INSERT ON archive_metadata "
+			"FOR EACH ROW EXECUTE FUNCTION reject_test_archive_metadata()" );
+		tx.commit();
+	}
+
+	const auto failed { api().postWithoutBody( std::format( "/records/{}/metadata/scan", record_id ) ) };
+	CHECK( failed.status == drogon::k500InternalServerError );
+	{
+		pqxx::work tx { db() };
+		CHECK_FALSE( tx.query_value< bool >(
+			"SELECT EXISTS (SELECT 1 FROM metadata WHERE record_id = $1)", pqxx::params { record_id } ) );
+		CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM records" ) == initial_records );
+		CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM archives" ) == initial_archives );
+		CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM archive_map" ) == initial_mappings );
+		CHECK( tx.query_value< bool >(
+			"SELECT file_mtime IS NULL FROM file_info WHERE record_id = $1", pqxx::params { record_id } ) );
+		tx.exec( "DROP TRIGGER reject_test_archive_metadata ON archive_metadata" );
+		tx.exec( "DROP FUNCTION reject_test_archive_metadata()" );
+		tx.commit();
+	}
+
+	const auto retried { api().postWithoutBody( std::format( "/records/{}/metadata/scan", record_id ) ) };
+	REQUIRE( retried.status == drogon::k200OK );
+	pqxx::work tx { db() };
+	CHECK( tx.query_value< bool >(
+		"SELECT EXISTS (SELECT 1 FROM metadata WHERE record_id = $1)", pqxx::params { record_id } ) );
+	CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM records" ) == initial_records + 1 );
+	CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM archives" ) == initial_archives + 1 );
+	CHECK(
+		tx.query_value< std::int64_t >(
+			"SELECT count(*) FROM archive_map JOIN archive_metadata USING (archive_id) "
+			"WHERE archive_metadata.record_id = $1 AND path = 'member.txt'",
+			pqxx::params { record_id } )
+		== 1 );
+	CHECK( tx.query_value< bool >(
+		"SELECT file_mtime IS NOT NULL FROM file_info WHERE record_id = $1", pqxx::params { record_id } ) );
 }
 
 SCENARIO_METHOD( ServerFixture, "A fetched file is named after its hash", "[api][file]" )

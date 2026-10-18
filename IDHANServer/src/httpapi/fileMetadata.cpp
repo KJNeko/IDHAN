@@ -23,6 +23,7 @@
 #include "filesystem/PathHelpers.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/db/DBTransaction.hpp"
 #include "modules/CallInput.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "modules/RemoteModule.hpp"
@@ -323,7 +324,7 @@ http::HTTPTask< std::expected< std::filesystem::path, http::Response > > recordF
 }
 
 static http::HTTPTask< void > updateRecordFileTimesForScan(
-	db::DBContext& db,
+	db::DBTransaction& db,
 	const RecordID record_id,
 	const std::filesystem::path& path )
 {
@@ -346,7 +347,7 @@ static http::HTTPTask< void > updateRecordFileTimesForScan(
 }
 
 [[nodiscard]] static http::HTTPTask< std::expected< void, http::Response > > writeRecordMetadata(
-	db::DBContext& db,
+	db::DBTransaction& db,
 	const RecordID record_id,
 	const MetadataInfo& metadata )
 {
@@ -652,10 +653,17 @@ http::HTTPTask< std::expected< void, http::Response > > parseAndStoreRecordMetad
 			http::Response::error(
 				500, std::format( "Module failed to parse data for record {}: {}", record_id, metadata_e.error() ) ) );
 
-	auto written { co_await writeRecordMetadata( db, record_id, *metadata_e ) };
-	if ( !written ) co_return std::unexpected( std::move( written.error() ) );
+	// Parsing runs outside the transaction; all writes for its result share one connection and commit.
+	auto transaction { co_await db.transaction() };
+	auto written { co_await writeRecordMetadata( transaction, record_id, *metadata_e ) };
+	if ( !written )
+	{
+		co_await transaction.rollback();
+		co_return std::unexpected( std::move( written.error() ) );
+	}
 
-	co_await updateRecordFileTimesForScan( db, record_id, *path_e );
+	co_await updateRecordFileTimesForScan( transaction, record_id, *path_e );
+	co_await transaction.commit();
 
 	co_return {};
 }

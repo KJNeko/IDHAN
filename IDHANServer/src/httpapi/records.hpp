@@ -16,6 +16,7 @@ class SHA256;
 namespace idhan::db
 {
 class DBContext;
+class DBTransaction;
 }
 
 namespace idhan::httpapi
@@ -26,6 +27,10 @@ namespace idhan::httpapi
 [[nodiscard]] runtime::Task< std::expected< RecordID, http::Response > > createRecord(
 	const SHA256& sha256,
 	db::DBContext& db );
+
+[[nodiscard]] runtime::Task< std::expected< RecordID, http::Response > > createRecord(
+	const SHA256& sha256,
+	db::DBTransaction& transaction );
 
 [[nodiscard]] runtime::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, db::DBContext& db );
 

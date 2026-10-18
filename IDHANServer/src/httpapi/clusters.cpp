@@ -19,9 +19,11 @@
 #include "Config.hpp"
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
+#include "clusterScan.hpp"
 #include "filesystem/clusters/ClusterManager.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "jsonBody.hpp"
+#include "jobs/JobContext.hpp"
 
 namespace idhan::httpapi
 {
@@ -511,14 +513,13 @@ static http::HTTPTask< http::Response > deleteCluster( db::DBContext& db, http::
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
 }
 
-#if 0
-static http::HTTPTask< http::Response > scanClusterLegacy( db::DBContext& db, http::RequestContext context )
+static http::HTTPTask< http::Response > scanCluster( db::DBContext& db, http::RequestContext context )
 {
 	const auto cluster_id_e { context.parameters().scalar< ClusterID >( "cluster_id" ) };
 	if ( !cluster_id_e ) co_return http::Response::error( 400, cluster_id_e.error().message );
 	const auto cluster_id { *cluster_id_e };
 
-	api::ScanParams scan_params {};
+	ClusterScanParams scan_params {};
 
 	const auto force_readonly_e { context.parameters().optional< bool >( "readonly" ) };
 	if ( !force_readonly_e ) co_return http::Response::error( 400, force_readonly_e.error().message );
@@ -589,7 +590,8 @@ static http::HTTPTask< http::Response > scanClusterLegacy( db::DBContext& db, ht
 	const std::filesystem::path cluster_path { folder_path };
 
 	const auto job_ctx { queueJob(
-		api::scanJob( cluster_id, cluster_path, scan_params ), std::format( "Scanning cluster {}", cluster_id ) ) };
+		scanClusterJob( cluster_id, cluster_path, scan_params, db ),
+		std::format( "Scanning cluster {}", cluster_id ) ) };
 
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -600,12 +602,6 @@ static http::HTTPTask< http::Response > scanClusterLegacy( db::DBContext& db, ht
 	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
-}
-#endif
-
-static http::HTTPTask< http::Response > scanCluster( db::DBContext&, http::RequestContext )
-{
-	co_return http::Response::error( 501, "Cluster scanning is being migrated" );
 }
 
 std::vector< http::RouteDefinition > clusterRoutes( db::DBContext& db )
