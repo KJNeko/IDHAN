@@ -90,7 +90,7 @@ SCENARIO_METHOD( ServerFixture, "Direct duplicate relationships can be read", "[
 	}
 }
 
-SCENARIO_METHOD( ServerFixture, "Duplicate chains preserve immediate comparisons", "[api][relationships]" )
+SCENARIO_METHOD( ServerFixture, "Duplicate relationships retain only the current king", "[api][relationships]" )
 {
 	const auto records { api().createRecords( { 61, 62, 63, 64 } ) };
 	const auto a { records[ 0 ] };
@@ -98,20 +98,30 @@ SCENARIO_METHOD( ServerFixture, "Duplicate chains preserve immediate comparisons
 	const auto c { records[ 2 ] };
 	const auto d { records[ 3 ] };
 
-	REQUIRE( api().post( "/relationships/duplicates/add", duplicateBody( b, a ) ).status == drogon::k200OK );
-	REQUIRE( api().post( "/relationships/duplicates/add", duplicateBody( c, b ) ).status == drogon::k200OK );
-	REQUIRE( api().post( "/relationships/duplicates/add", duplicateBody( d, c ) ).status == drogon::k200OK );
+	Json::Value comparisons { Json::arrayValue };
+	comparisons.append( duplicateBody( b, a ) );
+	comparisons.append( duplicateBody( c, b ) );
+	comparisons.append( duplicateBody( d, c ) );
+	REQUIRE( api().post( "/relationships/duplicates/add", comparisons ).status == drogon::k200OK );
 
 	const auto middle { api().get( "/relationships/" + std::to_string( b ) ) };
 	REQUIRE( middle.status == drogon::k200OK );
 	REQUIRE( middle.json[ "superior" ].size() == 1 );
 	CHECK( middle.json[ "superior" ][ 0 ].asInt() == a );
-	REQUIRE( middle.json[ "inferior" ].size() == 1 );
-	CHECK( middle.json[ "inferior" ][ 0 ].asInt() == c );
+	CHECK( middle.json[ "inferior" ].empty() );
+
+	const auto king { api().get( "/relationships/" + std::to_string( a ) ) };
+	REQUIRE( king.status == drogon::k200OK );
+	CHECK( king.json[ "inferior" ].size() == 3 );
 
 	Json::Value clear {};
 	clear[ "record_id_a" ] = b;
 	clear[ "record_id_b" ] = c;
+	const auto peers { api().post( "/relationships/clear", clear ) };
+	REQUIRE( peers.status == drogon::k200OK );
+	CHECK_FALSE( peers.json[ "duplicate_removed" ].asBool() );
+
+	clear[ "record_id_a" ] = a;
 	const auto removed { api().post( "/relationships/clear", clear ) };
 	REQUIRE( removed.status == drogon::k200OK );
 	CHECK( removed.json[ "duplicate_removed" ].asBool() );
@@ -119,17 +129,14 @@ SCENARIO_METHOD( ServerFixture, "Duplicate chains preserve immediate comparisons
 	const auto detached { api().get( "/relationships/" + std::to_string( c ) ) };
 	REQUIRE( detached.status == drogon::k200OK );
 	CHECK( detached.json[ "superior" ].empty() );
-	REQUIRE( detached.json[ "inferior" ].size() == 1 );
-	CHECK( detached.json[ "inferior" ][ 0 ].asInt() == d );
+	CHECK( detached.json[ "inferior" ].empty() );
 
 	pqxx::nontransaction tx { db() };
 	CHECK(
-		tx.query_value< RecordID >(
-			"SELECT root_id FROM flattened_duplicates WHERE record_id = $1", pqxx::params { d } )
-		== c );
+		tx.query_value< RecordID >( "SELECT king_id FROM duplicate_members WHERE record_id = $1", pqxx::params { d } )
+		== a );
 	CHECK(
-		tx.query_value< RecordID >(
-			"SELECT root_id FROM flattened_duplicates WHERE record_id = $1", pqxx::params { b } )
+		tx.query_value< RecordID >( "SELECT king_id FROM duplicate_members WHERE record_id = $1", pqxx::params { b } )
 		== a );
 }
 
@@ -291,7 +298,7 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 
 				pqxx::nontransaction tx { db() };
 				CHECK_FALSE( tx.query_value< bool >(
-					"SELECT EXISTS (SELECT 1 FROM duplicate_pairs WHERE better_record_id = $1 OR worse_record_id = $1)",
+					"SELECT EXISTS (SELECT 1 FROM duplicate_members WHERE king_id = $1 AND record_id <> king_id)",
 					pqxx::params { superior } ) );
 			}
 		}
@@ -370,7 +377,7 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 	}
 }
 
-SCENARIO_METHOD( ServerFixture, "Alternative rulings are inherited through duplicate chains", "[api][relationships]" )
+SCENARIO_METHOD( ServerFixture, "Alternative rulings are inherited through duplicate groups", "[api][relationships]" )
 {
 	GIVEN( "a duplicate pair whose halves are each an alternative of the same third record" )
 	{
@@ -422,7 +429,7 @@ SCENARIO_METHOD( ServerFixture, "Alternative rulings are inherited through dupli
 		{
 			const auto response { api().get( "/relationships/" + std::to_string( shared ) ) };
 
-			THEN( "it names the other chain root once" )
+			THEN( "it names the other group king once" )
 			{
 				REQUIRE( response.status == drogon::k200OK );
 				REQUIRE( response.json[ "alternatives" ].size() == 1 );
@@ -434,7 +441,7 @@ SCENARIO_METHOD( ServerFixture, "Alternative rulings are inherited through dupli
 		{
 			REQUIRE( api().post( "/relationships/clear", pairBody( inferior, shared ) ).status == drogon::k200OK );
 
-			THEN( "the inherited ruling is cleared for the whole chain" )
+			THEN( "the inherited ruling is cleared for the whole group" )
 			{
 				const auto worse { api().get( "/relationships/" + std::to_string( inferior ) ) };
 				REQUIRE( worse.status == drogon::k200OK );
@@ -577,7 +584,7 @@ SCENARIO_METHOD( ServerFixture, "Decided pairs drop out of distance searches", "
 			}
 		}
 
-		WHEN( "similarity is requested from an inferior of either alternative chain" )
+		WHEN( "similarity is requested from an inferior of either alternative group" )
 		{
 			const auto alternative_inferior { api().createRecords( { 46 } )[ 0 ] };
 			seedPerceptualHash( db(), alternative_inferior, "b44dc7b24dcb381e" );

@@ -9,7 +9,7 @@
 namespace idhan::test
 {
 
-class DuplicateChainSchema : public MigratedSchema
+class DuplicateMembershipSchema : public MigratedSchema
 {
   public:
 
@@ -19,8 +19,8 @@ class DuplicateChainSchema : public MigratedSchema
 };
 
 TEST_CASE_METHOD(
-	DuplicateChainSchema,
-	"Duplicate chains preserve order and requeue inherited rulings",
+	DuplicateMembershipSchema,
+	"Duplicate memberships stay flat and requeue inherited rulings",
 	"[db][relationships]" )
 {
 	pqxx::work tx { db() };
@@ -34,7 +34,7 @@ TEST_CASE_METHOD(
 }
 
 TEST_CASE_METHOD(
-	DuplicateChainSchema,
+	DuplicateMembershipSchema,
 	"Hash reset preserves relationships and waits for regenerated metadata",
 	"[db][relationships][phash]" )
 {
@@ -57,14 +57,14 @@ TEST_CASE_METHOD(
 	CHECK( tx.query_value< Integer >( "SELECT count(*) FROM image_metadata WHERE phash IS NOT NULL" ) == 0 );
 	CHECK( tx.query_value< Integer >( "SELECT count(*) FROM hamming_distance" ) == 0 );
 	CHECK( tx.query_value< Integer >( "SELECT count(*) FROM hamming_distance_queue" ) == 0 );
-	CHECK( tx.query_value< Integer >( "SELECT count(*) FROM duplicate_pairs" ) == 1 );
+	CHECK( tx.query_value< RecordID >( "SELECT duplicate_king($1)", pqxx::params { b } ) == a );
 
 	tx.exec( "UPDATE image_metadata SET phash = 'xb44dc7b24dcb381c' WHERE record_id = $1", pqxx::params { a } );
 	CHECK( tx.query_value< RecordID >( "SELECT record_id FROM hamming_distance_queue" ) == a );
 }
 
 TEST_CASE_METHOD(
-	DuplicateChainSchema,
+	DuplicateMembershipSchema,
 	"Relationship writes wait for an in-flight distance sweep",
 	"[db][relationships]" )
 {
