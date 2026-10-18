@@ -157,7 +157,7 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 	if ( rows.empty() ) co_return http::Response::error( 404, "Record has no file information" );
 
 	const auto& [ mime_id, sha256_bytes, folder_path, extension, metadata_document ] { rows.row( 0 ) };
-	const SHA256 sha256 { SHA256::fromBuffer( std::vector< std::byte > { sha256_bytes.begin(), sha256_bytes.end() } ) };
+	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
 	const auto path { thumbnailPath( hex, size ) };
 	const bool regenerate { regenerate_e->value_or( false ) };

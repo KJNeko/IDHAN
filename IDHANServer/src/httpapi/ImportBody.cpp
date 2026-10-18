@@ -23,7 +23,7 @@ std::expected< ImportBody, std::string > ImportBody::create( http::RequestBody b
 		result.m_buffer = std::move( std::get< std::unique_ptr< folly::IOBuf > >( body ) );
 		result.m_buffer->coalesce();
 		const auto data { result.bytes() };
-		result.m_hash = SHA256::hash( data.data(), data.size() );
+		result.m_hash = SHA256::hash( data );
 		return result;
 	}
 

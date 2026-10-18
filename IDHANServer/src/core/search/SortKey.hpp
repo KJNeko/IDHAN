@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "SearchTypes.hpp"
-#include "crypto/SHA256.hpp"
+#include "idhan/SHA256.hpp"
 
 namespace idhan::search
 {

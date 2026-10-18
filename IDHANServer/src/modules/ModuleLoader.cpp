@@ -18,7 +18,7 @@
 
 #include "Config.hpp"
 #include "MimeIDs.hpp"
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
 #include "fgl/defines.hpp"
 #include "idhan/runtime/Task.hpp"
 #include "logging/log.hpp"
@@ -559,9 +559,14 @@ runtime::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc:
 						break;
 					}
 
-					auto generated {
-						co_await generators.front()->generate( std::move( data ), crypto::fromHex( hex ) )
-					};
+					const auto hash { SHA256::fromHex( hex ) };
+					if ( !hash )
+					{
+						reply[ ipc::field::ERROR ] = hash.error();
+						break;
+					}
+
+					auto generated { co_await generators.front()->generate( std::move( data ), hash->data() ) };
 
 					if ( !generated )
 					{

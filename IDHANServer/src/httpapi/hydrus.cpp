@@ -542,7 +542,7 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	std::string_view hash {};
 	if ( json[ "hash" ].get( hash ) == simdjson::SUCCESS )
 	{
-		const auto sha256 { SHA256::fromHex( std::string { hash } ) };
+		const auto sha256 { SHA256::fromHex( hash ) };
 		if ( !sha256 ) co_return std::unexpected( http::Response::error( 400, "Invalid SHA256" ) );
 		const auto record_id { co_await findRecord( *sha256, db ) };
 		if ( !record_id ) co_return std::unexpected( http::Response::error( 400, "Invalid SHA256" ) );
@@ -558,7 +558,7 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 			std::string_view entry_hash {};
 			if ( entry.get_string().get( entry_hash ) != simdjson::SUCCESS )
 				co_return std::unexpected( http::Response::error( 400, "Invalid SHA256" ) );
-			const auto sha256 { SHA256::fromHex( std::string { entry_hash } ) };
+			const auto sha256 { SHA256::fromHex( entry_hash ) };
 			if ( !sha256 ) co_return std::unexpected( http::Response::error( 400, "Invalid SHA256" ) );
 			const auto record_id { co_await findRecord( *sha256, db ) };
 			if ( !record_id ) co_return std::unexpected( http::Response::error( 400, "Invalid SHA256" ) );

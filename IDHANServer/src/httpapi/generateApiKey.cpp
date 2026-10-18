@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "crypto/SHA256.hpp"
+#include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
 
 namespace idhan::httpapi
@@ -28,7 +28,7 @@ http::RouteDefinition generateApiKeyRoute( db::DBContext& db )
 			co_return http::Response::error( 404, "An API key already exists. Use the existing key to manage keys." );
 
 		const auto key_bytes { std::get< 0 >( rows.row( 0 ) ) };
-		const SHA256 key { SHA256::fromBuffer( std::vector< std::byte > { key_bytes.begin(), key_bytes.end() } ) };
+		const SHA256 key { SHA256::fromBuffer( key_bytes ) };
 
 		simdjson::builder::string_builder builder;
 		builder.start_object();

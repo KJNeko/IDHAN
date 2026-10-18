@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <variant>
 
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
 
 namespace idhan::ipc
 {
@@ -396,7 +396,7 @@ Json::Value toJson( const MetadataInfo& info )
 				for ( const auto& contained : metadata.contained_records )
 				{
 					Json::Value entry { Json::objectValue };
-					entry[ "hash" ] = crypto::toHex( contained.hash );
+					entry[ "hash" ] = idhan::SHA256::fromBuffer( contained.hash ).hex();
 					entry[ "path" ] = contained.path;
 					records.append( std::move( entry ) );
 				}
@@ -518,8 +518,10 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 							return std::unexpected(
 								std::format( "archive metadata entry '{}' has a non-string path", hex ) );
 
-						archive.contained_records.emplace_back(
-							crypto::fromHex( hex ), contained[ "path" ].asString() );
+						const auto hash { SHA256::fromHex( hex ) };
+						if ( !hash ) return std::unexpected( hash.error() );
+
+						archive.contained_records.emplace_back( hash->data(), contained[ "path" ].asString() );
 					}
 
 					archive.m_size = static_cast< std::size_t >( value[ "size" ].asUInt64() );

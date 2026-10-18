@@ -4,16 +4,12 @@
 #include <proxygen/lib/http/HTTPMessage.h>
 
 #include <array>
-#include <cstddef>
 #include <mutex>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include "auth/authKeys.hpp"
-#include "decodeHex.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "logging/log.hpp"
@@ -48,17 +44,10 @@ http::HTTPTask< std::optional< KeyRejection > > verifyApiKey( const std::string_
 	if ( key.size() != 64 )
 		co_return KeyRejection { 400, "Invalid key length for idhan_key. Expected 64 characters in hex" };
 
-	std::vector< std::byte > bytes {};
-	try
-	{
-		bytes = decodeHex( std::string { key } );
-	}
-	catch ( const std::invalid_argument& )
-	{
-		co_return KeyRejection { 400, "idhan_key must be hexadecimal" };
-	}
+	const auto hash { SHA256::fromHex( key ) };
+	if ( !hash ) co_return KeyRejection { 400, "idhan_key must be hexadecimal" };
 
-	if ( !co_await auth::keyExists( SHA256::fromBuffer( bytes ), db ) )
+	if ( !co_await auth::keyExists( *hash, db ) )
 	{
 		log::warn( "Invalid API key given!" );
 		co_return KeyRejection { 401, "Invalid API Key" };

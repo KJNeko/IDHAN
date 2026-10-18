@@ -5,8 +5,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <functional>
+#include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace idhan
@@ -55,9 +58,9 @@ class SHA256
 	}
 
 	//! \return The parsed hash, or an error message if \p str is not exactly 64 hex characters.
-	[[nodiscard]] static std::expected< SHA256, std::string > fromHex( const std::string& );
+	[[nodiscard]] static std::expected< SHA256, std::string > fromHex( std::string_view );
 
-	[[nodiscard]] static SHA256 fromBuffer( const std::vector< std::byte >& data )
+	[[nodiscard]] static SHA256 fromBuffer( std::span< const std::byte > data )
 	{
 		if ( data.size() != size() ) throw std::runtime_error( "SHA256 requires exactly 32 bytes" );
 
@@ -66,9 +69,7 @@ class SHA256
 		return SHA256 { bytes };
 	}
 
-	[[nodiscard]] static SHA256 fromBuffer( const std::array< std::byte, 256 / 8 >& data ) { return SHA256 { data }; }
-
-	[[nodiscard]] static SHA256 hash( const std::byte*, std::size_t );
+	[[nodiscard]] static SHA256 hash( std::span< const std::byte > );
 };
 } // namespace idhan
 

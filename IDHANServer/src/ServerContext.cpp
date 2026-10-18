@@ -20,7 +20,7 @@
 #include "ConnectionArguments.hpp"
 #include "NET_CONSTANTS.hpp"
 #include "auth/authKeys.hpp"
-#include "crypto/SHA256.hpp"
+#include "idhan/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "downloader/DownloadSessionEventHub.hpp"
 #include "downloader/DownloadSessionManager.hpp"

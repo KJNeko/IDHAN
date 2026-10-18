@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <span>
 #include <sstream>
 #include <string_view>
 #include <system_error>
@@ -44,7 +45,7 @@ namespace idhan::imports
 	if ( rows.empty() ) co_return std::nullopt;
 
 	const auto& [ folder_path, sha256_bytes, extension ] { rows.row( 0 ) };
-	const SHA256 sha256 { SHA256::fromBuffer( std::vector< std::byte > { sha256_bytes.begin(), sha256_bytes.end() } ) };
+	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 
 	co_return std::filesystem::path { folder_path } / filesystem::getClusterRelativePath( sha256, extension );
 }
@@ -64,7 +65,7 @@ namespace idhan::imports
 	buffer << stream.rdbuf();
 	const auto contents { buffer.str() };
 
-	const auto actual { SHA256::hash( reinterpret_cast< const std::byte* >( contents.data() ), contents.size() ) };
+	const auto actual { SHA256::hash( std::as_bytes( std::span { contents.data(), contents.size() } ) ) };
 	co_return actual == expected_sha256;
 }
 

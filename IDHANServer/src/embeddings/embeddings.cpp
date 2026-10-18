@@ -100,7 +100,7 @@ static runtime::Task< std::optional< modules::CallInput > > openRecordInput(
 	if ( rows.empty() ) co_return std::nullopt;
 
 	const auto& [ sha256_bytes, folder_path, extension ] { rows.row( 0 ) };
-	const SHA256 sha256 { SHA256::fromBuffer( std::vector< std::byte > { sha256_bytes.begin(), sha256_bytes.end() } ) };
+	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
 	const auto file_name { extension.empty() ? hex : std::format( "{}.{}", hex, extension ) };
 	const auto record_path {

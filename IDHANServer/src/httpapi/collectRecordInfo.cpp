@@ -25,7 +25,7 @@ struct TypeGroups
 
 [[nodiscard]] static std::string sha256Hex( const std::span< const std::byte > bytes )
 {
-	return SHA256::fromBuffer( std::vector< std::byte > { bytes.begin(), bytes.end() } ).hex();
+	return SHA256::fromBuffer( bytes ).hex();
 }
 
 [[nodiscard]] static std::string_view subsamplingName( const std::int16_t subsampling )

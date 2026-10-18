@@ -11,7 +11,7 @@
 
 #include "AnimationManifest.hpp"
 #include "MimeIDs.hpp"
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
 #include "imageExtensions.hpp"
 #include "logging/format_ns.hpp"
 #include "spdlog/spdlog.h"
@@ -126,8 +126,11 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > UgoiraThumbnailer::cre
 	}
 	else
 	{
-		const auto manifest_file { this->m_callbacks.generate(
-			data.file, idhan::crypto::fromHex( manifest_hash ), extra, std::string { MANIFEST_NAME } ) };
+		const auto hash { idhan::SHA256::fromHex( manifest_hash ) };
+		if ( !hash ) return std::unexpected( idhan::ModuleError { hash.error() } );
+
+		const auto manifest_file { this->m_callbacks.generate( data.file, hash->data(), extra, std::string { MANIFEST_NAME } )
+		};
 		if ( !manifest_file ) return std::unexpected( manifest_file.error() );
 
 		const auto manifest_bytes { readWhole( **manifest_file ) };
@@ -155,9 +158,10 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > UgoiraThumbnailer::cre
 
 		const auto frame_name { std::filesystem::path { frame.m_file }.filename().string() };
 
-		auto frame_file {
-			this->m_callbacks.generate( data.file, idhan::crypto::fromHex( found->second ), extra, frame_name )
-		};
+		const auto hash { idhan::SHA256::fromHex( found->second ) };
+		if ( !hash ) return std::unexpected( idhan::ModuleError { hash.error() } );
+
+		auto frame_file { this->m_callbacks.generate( data.file, hash->data(), extra, frame_name ) };
 		if ( !frame_file )
 		{
 			spdlog::warn( "Ugoira frame \'{}\' could not be extracted: {}", frame.m_file, frame_file.error() );

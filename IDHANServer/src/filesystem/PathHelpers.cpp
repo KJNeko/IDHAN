@@ -2,7 +2,7 @@
 
 #include <format>
 
-#include "crypto/SHA256.hpp"
+#include "idhan/SHA256.hpp"
 
 namespace idhan::filesystem
 {
