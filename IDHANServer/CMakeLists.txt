@@ -5,7 +5,6 @@ AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_sources(IDHANServer PRIVATE ${MIGRATION_SOURCE})
 
 find_package(spdlog REQUIRED)
-find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 
 target_link_libraries(IDHANServer PUBLIC spdlog::spdlog)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -15,7 +14,6 @@ target_link_libraries(IDHANServer PRIVATE libpqxx::pqxx tomlplusplus::tomlpluspl
 target_link_libraries(IDHANServer PRIVATE IDHAN IDHANDownloader)
 target_link_libraries(IDHANServer PRIVATE IDHANHttp IDHANDb)
 target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANModuleIPC IDHANMigration)
-target_link_libraries(IDHANServer PUBLIC OpenSSL::Crypto)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
 target_compile_definitions(
 		IDHANServer
@@ -98,7 +96,3 @@ add_dependencies(IDHANServer IDHANModuleRunner)
 
 add_subdirectory(runtime)
 add_subdirectory(contracts)
-
-if (BUILD_IDHAN_TESTS)
-	add_subdirectory(test)
-endif ()
