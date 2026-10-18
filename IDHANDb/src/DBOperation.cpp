@@ -93,6 +93,7 @@ bool DBOperation::send( PGconn* connection, const bool pipeline )
 	std::lock_guard lock( m_mutex );
 	if ( m_phase != OperationPhase::queued ) throw std::logic_error( "Sent database operation was not queued" );
 	m_phase = OperationPhase::sent;
+	m_sent_at = std::chrono::steady_clock::now();
 	return true;
 }
 
@@ -103,6 +104,7 @@ void DBOperation::acceptResult( DBResult result )
 		throw std::logic_error( "Result does not belong to a sent database operation" );
 	if ( m_result ) throw std::logic_error( "Database operation returned more than one primary result" );
 	m_result = std::move( result );
+	m_first_result_at = std::chrono::steady_clock::now();
 	m_phase = OperationPhase::synchronizing;
 }
 
@@ -113,6 +115,7 @@ void DBOperation::acceptFailure( std::exception_ptr error )
 	if ( m_phase != OperationPhase::sent && m_phase != OperationPhase::synchronizing )
 		throw std::logic_error( "Error does not belong to a sent database operation" );
 	m_error = std::move( error );
+	m_first_result_at = std::chrono::steady_clock::now();
 	m_phase = OperationPhase::synchronizing;
 }
 
@@ -124,6 +127,7 @@ void DBOperation::complete()
 		if ( m_phase != OperationPhase::sent && m_phase != OperationPhase::synchronizing )
 			throw std::logic_error( "Completed database operation was not sent" );
 		m_phase = OperationPhase::completed;
+		m_completed_at = std::chrono::steady_clock::now();
 		continuation = std::exchange( m_continuation, {} );
 	}
 	resumeOnApplicationExecutor( m_application_executor, continuation );
@@ -193,6 +197,20 @@ const QueryOptions& DBOperation::options() const noexcept
 const std::string& DBOperation::sql() const noexcept
 {
 	return m_sql;
+}
+
+std::optional< std::chrono::milliseconds > DBOperation::firstResultLatency() const
+{
+	std::lock_guard lock( m_mutex );
+	if ( !m_sent_at || !m_first_result_at ) return std::nullopt;
+	return std::chrono::duration_cast< std::chrono::milliseconds >( *m_first_result_at - *m_sent_at );
+}
+
+std::optional< std::chrono::milliseconds > DBOperation::completionLatency() const
+{
+	std::lock_guard lock( m_mutex );
+	if ( !m_sent_at || !m_completed_at ) return std::nullopt;
+	return std::chrono::duration_cast< std::chrono::milliseconds >( *m_completed_at - *m_sent_at );
 }
 
 void DBOperation::abandon() noexcept

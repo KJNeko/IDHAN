@@ -3,7 +3,10 @@
 #include <iterator>
 #include <libpq-fe.h>
 #include <memory>
+#include <string>
 #include <tuple>
+
+#include "DBError.hpp"
 
 namespace idhan::db
 {
@@ -18,10 +21,12 @@ template < typename... Ts >
 class DBRows
 {
 	DBResult m_result;
+	std::string m_sql;
+	[[nodiscard]] DBDecodeError contextualError( const DBDecodeError&, std::optional< std::size_t > row = {} ) const;
 
   public:
 
-	explicit DBRows( DBResult );
+	explicit DBRows( DBResult, std::string sql = {} );
 	DBRows( DBRows&& ) noexcept;
 	DBRows& operator=( DBRows&& ) noexcept;
 	DBRows( const DBRows& ) = delete;

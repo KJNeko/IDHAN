@@ -1,6 +1,7 @@
 #include "idhan/db/DBConnection.hpp"
 
 #include <folly/coro/Baton.h>
+#include <spdlog/spdlog.h>
 
 #include <array>
 #include <atomic>
@@ -90,6 +91,38 @@ void DBConnection::postDrainedIfIdle()
 {
 	std::lock_guard lock { queue_mutex };
 	if ( queued.empty() && inflight.empty() ) drained.post();
+}
+
+void DBConnection::logFirstResult( const DBOperation& operation ) const
+{
+	const auto latency { operation.firstResultLatency() };
+	if ( !latency ) return;
+
+	const auto level { *latency >= config.slow_query_threshold ? spdlog::level::warn : spdlog::level::debug };
+	spdlog::log(
+		level,
+		"PostgreSQL query first result: {} ms (connection {}, query {}): {}",
+		latency->count(),
+		id,
+		operation.id(),
+		operation.sql() );
+}
+
+void DBConnection::logCompletion( const DBOperation& operation ) const
+{
+	const auto latency { operation.completionLatency() };
+	if ( !latency ) return;
+
+	const auto first_result { operation.firstResultLatency() };
+	const auto level { *latency >= config.slow_query_threshold ? spdlog::level::warn : spdlog::level::debug };
+	spdlog::log(
+		level,
+		"PostgreSQL query complete: first result {} ms, final result {} ms (connection {}, query {}): {}",
+		first_result ? std::to_string( first_result->count() ) : "n/a",
+		latency->count(),
+		id,
+		operation.id(),
+		operation.sql() );
 }
 
 bool DBConnection::hasWork() const
@@ -208,6 +241,7 @@ void DBConnection::pumpConnected()
 				if ( !use_pipeline && head )
 				{
 					head->complete();
+					logCompletion( *head );
 					retireHead();
 				}
 				break;
@@ -226,6 +260,7 @@ void DBConnection::pumpConnected()
 			{
 				PQclear( raw );
 				head->complete();
+				logCompletion( *head );
 				retireHead();
 				continue;
 			}
@@ -233,12 +268,14 @@ void DBConnection::pumpConnected()
 			if ( status == PGRES_TUPLES_OK || status == PGRES_COMMAND_OK )
 			{
 				head->acceptResult( DBResult { raw } );
+				logFirstResult( *head );
 				continue;
 			}
 
 			const auto error { queryError( raw, head->id() ) };
 			PQclear( raw );
 			head->acceptFailure( error );
+			logFirstResult( *head );
 		}
 	}
 

@@ -58,6 +58,11 @@ runtime::Task< DBResult > DBTask::result()
 	co_return co_await *this;
 }
 
+std::string DBTask::querySql() const
+{
+	return m_operation ? m_operation->sql() : std::string {};
+}
+
 void DBTask::abandon() noexcept
 {
 	if ( m_operation ) m_operation->abandon();
