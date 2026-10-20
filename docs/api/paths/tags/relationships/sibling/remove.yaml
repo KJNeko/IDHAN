@@ -1,39 +1,33 @@
 post:
   tags:
     - tags
-  summary: Removes sibling (exclusive tag) relationships
-  parameters:
-    - name: tag_domain_id
-      in: query
-      required: true
-      schema:
-        $ref: '../../../../schemas/TagDomainID.yaml'
-  requestBody:
-    required: true
-    content:
-      application/json:
-        schema:
-          type: array
-          items:
-            type: object
-            required:
-              - older_id
-              - younger_id
-            properties:
-              older_id:
-                $ref: '../../../../schemas/TagID.yaml'
-              younger_id:
-                $ref: '../../../../schemas/TagID.yaml'
-        examples:
-          remove_sibling:
-            summary: Remove sibling relationship
-            value:
-              - older_id: 50
-                younger_id: 51
+  summary: Sibling relationship remove stub
+  description: |-
+    Intentionally stubbed out pending a full rewrite and redesign of the sibling
+    system. After successful authentication, returns 501 without processing
+    sibling relationships. The request body is ignored.
   responses:
-    200:
-      description: Relationships removed
-    400:
-      description: Invalid request body
-    500:
+    '501':
+      description: Intentional stub pending a full sibling-system rewrite and redesign.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '400':
+      description: Missing or malformed API key or query parameters.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

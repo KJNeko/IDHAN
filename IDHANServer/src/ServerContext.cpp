@@ -1,4 +1,6 @@
 #include "ServerContext.hpp"
+#include "maintenance/HashMaintenance.hpp"
+#include "config/consumeFlag.hpp"
 
 #include <folly/coro/Task.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
@@ -59,6 +61,7 @@
 #include "idhan/http/HTTPConfig.hpp"
 #include "idhan/http/HTTPServer.hpp"
 #include "idhan/http/RouteRegistry.hpp"
+#include "httpapi/parameterDeclarations.hpp"
 #include "logging/log.hpp"
 #include "spdlog/async.h"
 
@@ -247,11 +250,14 @@ void ServerContext::startReplacementStack()
 
 	log::info( "Replacement DB stack connected to {}:{}", db_config.host, db_config.port );
 
+	const auto marker_recovery { config::consumeFlag( "cluster", "recreate_missing_markers" ) };
+	if ( !marker_recovery ) throw std::runtime_error( marker_recovery.error() );
+
 	folly::coro::co_withExecutor(
 		db_executor,
-		[ this ]() -> runtime::Task<>
+		[ this, recreate_markers = *marker_recovery ]() -> runtime::Task<>
 		{
-			co_await m_clusters->reloadClusters( *m_db_context );
+			co_await m_clusters->reloadClusters( *m_db_context, recreate_markers );
 			co_await embeddings::registerEmbeddingModels( *m_db_context );
 
 			const auto key_count { co_await auth::keyCount( *m_db_context ) };
@@ -262,6 +268,7 @@ void ServerContext::startReplacementStack()
 		.get();
 
 	resumeDownloads( *m_db_context, db_executor );
+	m_hash_maintenance = std::make_unique< maintenance::HashMaintenance >( *m_db_context, db_executor );
 
 	m_module_maintenance_thread = std::jthread(
 		[ this ]( const std::stop_token stop_token )
@@ -297,47 +304,62 @@ void ServerContext::startReplacementStack()
 
 	http::RouteRegistry routes {};
 	m_heartbeat = std::make_unique< httpapi::HeartbeatService >();
-	routes.add( m_heartbeat->route() );
-	routes.add( httpapi::versionRoute() );
-	routes.add( httpapi::healthRoute() );
-	routes.add( httpapi::generateApiKeyRoute( *m_db_context ) );
-	routes.add( httpapi::importFileRoute( *m_db_context ) );
-	routes.add( httpapi::verifyRoute( *m_db_context ) );
-	routes.add( httpapi::recordFileRoute( *m_db_context, "/records/{record_id}/file" ) );
-	routes.add( httpapi::recordFileRoute( *m_db_context, "/records/{record_id}" ) );
-	routes.add( httpapi::recordInfoRoute( *m_db_context, "/records/{record_id}/info" ) );
-	routes.add( httpapi::recordInfoRoute( *m_db_context, "/records/{record_id}/metadata" ) );
-	routes.add( httpapi::recordMetadataBatchRoute( *m_db_context ) );
-	routes.add( httpapi::recordMetadataScanRoute( *m_db_context ) );
-	routes.add( httpapi::thumbnailRoute( *m_db_context ) );
-	routes.add( httpapi::searchRoute( *m_db_context ) );
-	routes.add( httpapi::searchPostRoute( *m_db_context ) );
-	routes.add( httpapi::rateLimitListRoute( *m_db_context ) );
-	routes.add( httpapi::rateLimitResetRoute( *m_db_context ) );
-	routes.add( httpapi::rateLimitEventsRoute( *m_db_context ) );
-	routes.add( httpapi::apiDocsIndexRoute() );
-	routes.add( httpapi::logRoute( *m_db_context ) );
-	routes.add( httpapi::pluginsRoute( *m_db_context ) );
-	routes.add( httpapi::downloaderDebugRoute( *m_db_context ) );
-	routes.add( httpapi::downloaderSecretsListRoute( *m_db_context ) );
-	routes.add( httpapi::downloaderSecretsSetRoute( *m_db_context ) );
-	for ( auto& route : httpapi::layoutRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	routes.add( httpapi::indexRoute( "/" ) );
-	routes.add( httpapi::indexRoute( "/status" ) );
+	routes.add( httpapi::declareEndpointParameters( m_heartbeat->route() ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::versionRoute() ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::healthRoute() ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::generateApiKeyRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::importFileRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::verifyRoute( *m_db_context ) ) );
+	routes.add(
+		httpapi::declareEndpointParameters( httpapi::recordFileRoute( *m_db_context, "/records/{record_id}/file" ) ) );
+	routes.add(
+		httpapi::declareEndpointParameters( httpapi::recordFileRoute( *m_db_context, "/records/{record_id}" ) ) );
+	routes.add(
+		httpapi::declareEndpointParameters( httpapi::recordInfoRoute( *m_db_context, "/records/{record_id}/info" ) ) );
+	routes.add(
+		httpapi::declareEndpointParameters(
+			httpapi::recordInfoRoute( *m_db_context, "/records/{record_id}/metadata" ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::recordMetadataBatchRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::recordMetadataScanRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::thumbnailRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::searchRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::searchPostRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::rateLimitListRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::rateLimitResetRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::rateLimitEventsRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::apiDocsIndexRoute() ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::logRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::pluginsRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderDebugRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderSecretsListRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderSecretsSetRoute( *m_db_context ) ) );
+	for ( auto& route : httpapi::layoutRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::indexRoute( "/" ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::indexRoute( "/status" ) ) );
 	// useStaleBuild() fetches this to compare the served entry module against the running one.
-	routes.add( httpapi::indexRoute( "/index.html" ) );
-	routes.add( httpapi::assetsRoute() );
-	routes.add( httpapi::apiDocsFilesRoute() );
-	routes.add( httpapi::pluginFilesRoute() );
-	for ( auto& route : httpapi::tagRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	for ( auto& route : httpapi::relationshipRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	for ( auto& route : httpapi::embeddingRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	for ( auto& route : httpapi::recordRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	for ( auto& route : httpapi::maintenanceRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	for ( auto& route : httpapi::jobRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	for ( auto& route : httpapi::clusterRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	for ( auto& route : httpapi::downloadSessionRoutes( *m_db_context ) ) routes.add( std::move( route ) );
-	for ( auto& route : httpapi::hydrusRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::indexRoute( "/index.html" ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::assetsRoute() ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::apiDocsFilesRoute() ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::pluginFilesRoute() ) );
+	for ( auto& route : httpapi::tagRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	for ( auto& route : httpapi::relationshipRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	for ( auto& route : httpapi::embeddingRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	for ( auto& route : httpapi::recordRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	for ( auto& route : httpapi::maintenanceRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	for ( auto& route : httpapi::jobRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	for ( auto& route : httpapi::clusterRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	for ( auto& route : httpapi::downloadSessionRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	for ( auto& route : httpapi::hydrusRoutes( *m_db_context ) )
+		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
 	routes.seal();
 
 	m_http_server = std::make_unique< http::HTTPServer >( http_config, std::move( routes ) );
@@ -379,7 +401,8 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 
 	if ( getPurgeThumbnailsOnBoot() )
 	{
-		if ( const auto deleted { filesystem::clearThumbnailCache() } )
+		const auto deleted { filesystem::clearThumbnailCache( getThumbnailsPath() ) };
+		if ( deleted )
 			log::info( "Purged {} cached thumbnails on boot", *deleted );
 		else
 			log::warn( "Could not purge the thumbnail cache on boot: {}", deleted.error() );
@@ -411,6 +434,7 @@ ServerContext::~ServerContext()
 {
 	if ( m_heartbeat != nullptr ) m_heartbeat->shutdown();
 	if ( m_http_server != nullptr ) m_http_server->stop();
+	m_hash_maintenance.reset();
 	downloader::DownloadSessionEventHub::instance().shutdown();
 	downloader::RateLimitEventHub::instance().shutdown();
 

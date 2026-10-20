@@ -33,7 +33,6 @@ inline constexpr std::size_t compression_threshold = 1024;
 inline constexpr std::size_t file_chunk_bytes = 256 * 1024;
 inline constexpr std::size_t request_memory_limit = 8 * 1024 * 1024;
 
-inline constexpr std::size_t json_body_limit = request_memory_limit;
 inline constexpr std::size_t json_chunk_bytes = 256 * 1024;
 inline constexpr std::size_t json_queue_chunks = 2;
 inline constexpr std::size_t json_initial_capacity = 256 * 1024;

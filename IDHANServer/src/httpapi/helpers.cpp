@@ -11,6 +11,10 @@ runtime::Task< std::expected< void, http::Response > > validateRecordIds(
 	std::vector< RecordID > record_ids,
 	db::DBContext& db )
 {
+	for ( const auto record_id : record_ids )
+		if ( record_id <= 0 )
+			co_return std::unexpected( http::Response::error( 400, "Record IDs must be positive integers" ) );
+
 	std::ranges::sort( record_ids );
 	const auto duplicates { std::ranges::unique( record_ids ) };
 	record_ids.erase( duplicates.begin(), duplicates.end() );

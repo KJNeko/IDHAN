@@ -24,6 +24,7 @@
 #include "MimeIDs.hpp"
 #include "fileMetadata.hpp"
 #include "filesystem/PathHelpers.hpp"
+#include "filesystem/clusters/clusterIdentity.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "filesystem/renameNoReplace.hpp"
 #include "idhan/SHA256.hpp"
@@ -106,8 +107,12 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 	const ClusterID cluster_id,
 	const std::filesystem::path& root,
 	const ClusterScanParams& params,
+	const filesystem::ClusterAccess& access,
 	ScanTotals& totals )
 {
+	const auto valid { access.verify() };
+	if ( !valid ) co_return std::unexpected( valid.error() );
+
 	if ( !params.track_missing_files ) co_return false;
 
 	db::DBBindings bindings {};
@@ -133,6 +138,9 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 			co_return std::unexpected( std::format( "Cannot inspect {}: {}", path.string(), error.message() ) );
 		if ( std::filesystem::is_regular_file( status ) ) continue;
 
+		const auto still_valid { access.verify() };
+		if ( !still_valid ) co_return std::unexpected( still_valid.error() );
+
 		db::DBBindings missing_bindings {};
 		missing_bindings.bind( record_id );
 		missing_bindings.bind( cluster_id );
@@ -155,8 +163,12 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 	const std::filesystem::path& root,
 	std::filesystem::path path,
 	const std::uint64_t size,
-	const ClusterScanParams& params )
+	const ClusterScanParams& params,
+	const filesystem::ClusterAccess& access )
 {
+	const auto valid { access.verify() };
+	if ( !valid ) co_return std::unexpected( valid.error() );
+
 	if ( size == 0 ) co_return std::unexpected( std::format( "Empty file: {}", path.string() ) );
 	if ( size > static_cast< std::uint64_t >( std::numeric_limits< std::int64_t >::max() ) )
 		co_return std::unexpected( std::format( "File is too large for the database: {}", path.string() ) );
@@ -209,8 +221,11 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 		mime_id = existing_mime;
 		if ( assigned_cluster && *assigned_cluster != cluster_id && assigned_root )
 		{
-			const auto assigned_path { std::filesystem::path { *assigned_root }
-				                       / filesystem::getClusterRelativePath( hash, assigned_extension ) };
+			auto assigned_access { co_await filesystem::openCluster( db, *assigned_cluster ) };
+			if ( !assigned_access ) co_return std::unexpected( assigned_access.error() );
+			const auto assigned_path {
+				assigned_access->root() / filesystem::getClusterRelativePath( hash, assigned_extension )
+			};
 			std::error_code assigned_error {};
 			const auto assigned_status { std::filesystem::status( assigned_path, assigned_error ) };
 			if ( assigned_error == std::errc::no_such_file_or_directory ) assigned_error.clear();
@@ -224,6 +239,9 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 					std::format( "Record {} is already stored in cluster {}", *record_id, *assigned_cluster ) );
 		}
 	}
+
+	const auto still_valid { access.verify() };
+	if ( !still_valid ) co_return std::unexpected( still_valid.error() );
 
 	const auto expected_path { root / filesystem::getClusterRelativePath( hash, fileExtension( path ) ) };
 	if ( path != expected_path )
@@ -254,6 +272,9 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 			const auto best { std::get< 0 >( extensions.row( 0 ) ) };
 			if ( best && !best->empty() && *best != fileExtension( path ) )
 			{
+				const auto valid_before_rename { access.verify() };
+				if ( !valid_before_rename ) co_return std::unexpected( valid_before_rename.error() );
+
 				const auto renamed { root / filesystem::getClusterRelativePath( hash, *best ) };
 				auto moved { moveWithoutReplacing( path, renamed ) };
 				if ( !moved ) co_return std::unexpected( std::move( moved.error() ) );
@@ -261,6 +282,9 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 			}
 		}
 	}
+
+	const auto valid_before_update { access.verify() };
+	if ( !valid_before_update ) co_return std::unexpected( valid_before_update.error() );
 
 	const auto extension { fileExtension( path ) };
 	const auto times { filesystem::getFileTimes( path ) };
@@ -322,11 +346,12 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 	const std::filesystem::path& root,
 	std::filesystem::path path,
 	const std::uint64_t size,
-	const ClusterScanParams& params )
+	const ClusterScanParams& params,
+	const filesystem::ClusterAccess& access )
 {
 	try
 	{
-		auto result { co_await scanFile( db, cluster_id, root, path, size, params ) };
+		auto result { co_await scanFile( db, cluster_id, root, path, size, params, access ) };
 		co_return ScanOutcome { std::move( path ), size, std::move( result ) };
 	}
 	catch ( const std::exception& error )
@@ -360,7 +385,8 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 	db::DBContext& db,
 	const ClusterID cluster_id,
 	const std::filesystem::path& root,
-	const ClusterScanParams& params )
+	const ClusterScanParams& params,
+	const filesystem::ClusterAccess& access )
 {
 	ScanTotals totals {};
 	std::error_code error {};
@@ -374,11 +400,11 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 		co_return totals;
 	}
 
-	auto preflight { co_await preflightMissingFiles( db, cluster_id, root, params, totals ) };
+	auto preflight { co_await preflightMissingFiles( db, cluster_id, root, params, access, totals ) };
 	if ( !preflight )
 	{
 		recordFailure( totals, root, preflight.error() );
-		if ( params.stop_on_fail ) co_return totals;
+		co_return totals;
 	}
 	else if ( *preflight )
 		co_return totals;
@@ -387,6 +413,13 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 	pending.reserve( params.concurrency );
 	for ( std::filesystem::directory_iterator folders { root, error }, end; folders != end; folders.increment( error ) )
 	{
+		const auto valid { access.verify() };
+		if ( !valid )
+		{
+			recordFailure( totals, root, valid.error() );
+			break;
+		}
+
 		if ( error ) break;
 		const auto& folder { *folders };
 		if ( folder.path().filename() == "bad" || !folder.is_directory( error ) || folder.is_symlink( error ) )
@@ -417,7 +450,7 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 				continue;
 			}
 
-			pending.push_back( scanOne( db, cluster_id, root, entry.path(), size, params ) );
+			pending.push_back( scanOne( db, cluster_id, root, entry.path(), size, params, access ) );
 			if ( pending.size() >= params.concurrency )
 			{
 				const bool stopped { co_await flushScanBatch( pending, totals, params.stop_on_fail ) };
@@ -441,6 +474,22 @@ void recordFailure( ScanTotals& totals, const std::filesystem::path& path, const
 	co_return totals;
 }
 
+static runtime::Task< ScanTotals > scanVerifiedCluster(
+	db::DBContext& db,
+	const ClusterID cluster_id,
+	const std::filesystem::path& configured_path,
+	const ClusterScanParams& params )
+{
+	auto access { co_await filesystem::openCluster( db, cluster_id ) };
+	if ( !access )
+	{
+		ScanTotals totals {};
+		recordFailure( totals, configured_path, access.error() );
+		co_return totals;
+	}
+	co_return co_await scanCluster( db, cluster_id, access->root(), params, *access );
+}
+
 JobTask scanClusterJob(
 	const ClusterID cluster_id,
 	std::filesystem::path cluster_path,
@@ -449,7 +498,7 @@ JobTask scanClusterJob(
 {
 	const auto executor { getJobRuntime().executor() };
 	const auto totals {
-		co_await folly::coro::co_withExecutor( executor, scanCluster( db, cluster_id, cluster_path, params ) )
+		co_await folly::coro::co_withExecutor( executor, scanVerifiedCluster( db, cluster_id, cluster_path, params ) )
 	};
 
 	Json::Value result;

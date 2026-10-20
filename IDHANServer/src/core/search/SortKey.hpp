@@ -31,11 +31,11 @@ struct SortKeySpec
 	bool exclude_null;
 };
 
-[[nodiscard]] SortKeySpec sortKeySpec( SortType type );
+[[nodiscard]] SortKeySpec sortKeySpec( SortType type, HydrusDisplayType display = HydrusDisplayType::DEFAULT );
 
 [[nodiscard]] std::string_view sortTypeName( SortType type );
 
-[[nodiscard]] std::string describeSortKey( SortType type );
+[[nodiscard]] std::string describeSortKey( SortType type, HydrusDisplayType display = HydrusDisplayType::DEFAULT );
 
 [[nodiscard]] SortKeyColumn emptyColumn( SortKeyType type );
 

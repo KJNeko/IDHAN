@@ -7,6 +7,7 @@
 import type { ComponentType } from 'react';
 import type {
   AutocompleteResult,
+    AutocompleteOptions,
   DatabaseStats,
     ClearedRelationship,
     FileRelationships,
@@ -153,7 +154,7 @@ export interface RecordsApi {
 export interface TagsApi {
   autocomplete(
     prefix: string,
-    opts?: { domain?: number; limit?: number },
+    opts?: AutocompleteOptions,
     signal?: AbortSignal,
   ): Promise<AutocompleteResult[]>;
   /** List the tag service domains a record's tags can live in. */

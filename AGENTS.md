@@ -4,12 +4,12 @@
 
 IDHAN is a C++26 media-management and archival server with a booru-compatible
 tagging model and Hydrus Network compatibility. It uses CMake, PostgreSQL,
-Drogon, libpqxx, Qt6 (client/importer), and a React WebUI.
+Proxygen/Folly, libpq and libpqxx, Qt6 (client/importer), and a React WebUI.
 
 ## Repository layout
 
 - `IDHAN/`: shared types, utilities, and generated Hydrus constants.
-- `IDHANServer/`: Drogon HTTP server, API handlers, database logic, jobs, and
+- `IDHANServer/`: Proxygen/Folly HTTP server, API handlers, database logic, jobs, and
   filesystem clusters.
 - `IDHANModules/`: module interfaces and isolated module runners/backends.
 - `IDHANMigration/`: numbered PostgreSQL schema migrations.
@@ -61,6 +61,9 @@ binary when practical:
 
 ## C++ and API conventions
 
+- Do not use anonymous namespaces. Place helpers in the appropriate named
+  project namespace and assume names within our namespaces do not collide.
+
 - Use the underlying library's types and APIs directly where they fit. Avoid
   duplicating their representations just to convert back at the boundary;
   wrappers should add necessary application behavior or ownership only.
@@ -80,16 +83,16 @@ binary when practical:
 
 - Use the distinct ID aliases in `IDHAN/include/IDHANTypes.hpp`, not raw
   integer types. Use `SHA256` for record hashes.
-- API controllers are `drogon::HttpController` classes in `namespace idhan::api`.
-  Register routes with `ADD_METHOD_TO` and include `IDHANAPIAuthName` as the
-  final argument.
+- Native API routes live in `namespace idhan::httpapi`. Register
+  `http::RouteDefinition` values with route metadata and `apiAuthValidation(db)`
+  for authenticated endpoints.
 - Validate JSON types with `isString()`, `isArray()`, and `isIntegral()` before
   `as*()` calls. Use `Json::Value json { Json::arrayValue }` for array responses.
 - Return API errors through the helpers in `api/helpers/createBadRequest.hpp`.
 - For fallible coroutine helpers, prefer `ExpectedTask<T>` and propagate errors
   with `return_unexpected_error(...)`.
-- Do not use capturing lambdas for lazy `drogon::Task` coroutines passed to
-  `drogon::when_all`; use a captureless lambda with explicit parameters.
+- Do not use capturing lambdas for lazy `runtime::Task` coroutines collected by
+  Folly; use a captureless lambda with explicit parameters.
 - Declare local variables as close as possible to their first use.
 - Prefer a separate declaration and `if` statement over an `if` initializer;
   do not chain setup and branching in one condition.
@@ -116,8 +119,8 @@ binary when practical:
   caller-specific HTTP responses or transaction policy.
 - Tag aliases, siblings, and parents are resolved by PostgreSQL triggers and
   views. Do not reimplement that resolution in application code.
-- Use `db/drogonArrayBind.hpp` for PostgreSQL array bindings; its apparently
-  unused include supplies required template specializations.
+- Use `db::DBBindings` for runtime PostgreSQL parameters, including typed arrays;
+  let the database layer encode values instead of building array literals.
 - Access stored files through `filesystem::ClusterManager` and
   `filesystem::openRecordInput`; do not construct cluster paths directly.
 

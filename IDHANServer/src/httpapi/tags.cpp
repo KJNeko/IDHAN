@@ -2,12 +2,15 @@
 
 #include <folly/io/IOBuf.h>
 
+#include <algorithm>
 #include <format>
 #include <simdjson.h>
 
 #include "apiAuth.hpp"
+#include "db/tagDomainCounts.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "jsonBody.hpp"
+#include "idValidation.hpp"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
 #include "tagHelpers.hpp"
@@ -15,23 +18,30 @@
 namespace idhan::httpapi
 {
 
-static http::HTTPTask< http::Response > getTagInfo( db::DBContext& db, const TagID tag_id )
+static http::HTTPTask< std::expected< std::vector< TagDomainID >, http::Response > > tagCountDomains(
+	db::DBContext& db,
+	const http::RequestParameters& parameters,
+	bool accept_singular = false );
+
+static http::HTTPTask< http::Response > getTagInfo(
+	db::DBContext& db,
+	const TagID tag_id,
+	std::vector< TagDomainID > domains )
 {
+	if ( tag_id <= 0 ) co_return http::Response::error( 400, "tag_id must be positive" );
+
 	db::DBBindings bindings {};
 	bindings.bind( tag_id );
 
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT t.namespace_id, tn.namespace_text, t.subtag_text, "
-				"COALESCE(SUM(tc.storage_count), 0)::BIGINT AS storage_count "
+				"SELECT t.namespace_id, tn.namespace_text, t.subtag_text "
 				"FROM tags t "
 				"JOIN tag_namespaces tn ON tn.namespace_id = t.namespace_id "
-				"LEFT JOIN tag_counts tc ON tc.tag_id = t.tag_id "
-				"WHERE t.tag_id = $1 "
-				"GROUP BY t.namespace_id, tn.namespace_text, t.subtag_text",
+				"WHERE t.tag_id = $1",
 				std::move( bindings ) )
-			.rows< NamespaceID, std::string, std::string, std::int64_t >()
+			.rows< NamespaceID, std::string, std::string >()
 	};
 
 	if ( rows.empty() )
@@ -41,7 +51,16 @@ static http::HTTPTask< http::Response > getTagInfo( db::DBContext& db, const Tag
 				"TagID {} was not found. Either you tried to request it before it was committed, or it does not exist",
 				tag_id ) );
 
-	const auto& [ namespace_id, namespace_text, subtag_text, storage_count ] { rows.row( 0 ) };
+	const auto& [ namespace_id, namespace_text, subtag_text ] { rows.row( 0 ) };
+
+	const auto counts { co_await db::tagDomainCounts( db, tag_id, std::move( domains ) ) };
+	std::int64_t storage_count {};
+	std::int64_t display_count {};
+	for ( const auto& count : counts )
+	{
+		storage_count = std::max( storage_count, count.storage_count );
+		display_count = std::max( display_count, count.display_count );
+	}
 
 	simdjson::builder::string_builder builder;
 	builder.start_object();
@@ -61,7 +80,27 @@ static http::HTTPTask< http::Response > getTagInfo( db::DBContext& db, const Tag
 	builder.append_key_value( "text", subtag_text );
 	builder.end_object();
 	builder.append_comma();
-	builder.append_key_value( "items_count", storage_count );
+	builder.append_key_value( "storage_count", storage_count );
+	builder.append_comma();
+	builder.append_key_value( "display_count", display_count );
+	builder.append_comma();
+	builder.escape_and_append_with_quotes( "domain_counts" );
+	builder.append_colon();
+	builder.start_array();
+	bool first { true };
+	for ( const auto& count : counts )
+	{
+		if ( !first ) builder.append_comma();
+		first = false;
+		builder.start_object();
+		builder.append_key_value( "tag_domain_id", count.domain_id );
+		builder.append_comma();
+		builder.append_key_value( "storage_count", count.storage_count );
+		builder.append_comma();
+		builder.append_key_value( "display_count", count.display_count );
+		builder.end_object();
+	}
+	builder.end_array();
 	builder.end_object();
 
 	auto json { builder.view() };
@@ -75,7 +114,10 @@ static http::HTTPTask< http::Response > getTagInfoFromPath( db::DBContext& db, h
 	const auto tag_id_e { context.parameters().scalar< TagID >( "tag_id" ) };
 	if ( !tag_id_e ) co_return http::Response::error( 400, tag_id_e.error().message );
 
-	co_return co_await getTagInfo( db, *tag_id_e );
+	auto domains { co_await tagCountDomains( db, context.parameters() ) };
+	if ( !domains ) co_return std::move( domains.error() );
+
+	co_return co_await getTagInfo( db, *tag_id_e, std::move( *domains ) );
 }
 
 static http::HTTPTask< http::Response > getTagInfoFromQuery( db::DBContext& db, http::RequestContext context )
@@ -92,7 +134,10 @@ static http::HTTPTask< http::Response > getTagInfoFromQuery( db::DBContext& db, 
 
 	if ( !*tag_id_e ) co_return http::Response::error( 400, "tag_id or tag_ids query parameter is required" );
 
-	co_return co_await getTagInfo( db, **tag_id_e );
+	auto domains { co_await tagCountDomains( db, context.parameters() ) };
+	if ( !domains ) co_return std::move( domains.error() );
+
+	co_return co_await getTagInfo( db, **tag_id_e, std::move( *domains ) );
 }
 
 static http::HTTPTask< std::vector< TagID > > relationshipQuery(
@@ -212,7 +257,9 @@ http::HTTPTask< std::vector< SimilarTag > > getSimilarTags(
 	db::DBContext& db,
 	std::string search_value,
 	const std::size_t limit,
-	const bool include_unused )
+	const bool include_unused,
+	const HydrusDisplayType display,
+	std::vector< TagDomainID > domains )
 {
 	constexpr std::size_t max_limit { 256 };
 
@@ -220,67 +267,82 @@ http::HTTPTask< std::vector< SimilarTag > > getSimilarTags(
 	const std::string real_search_value { is_negative ? search_value.substr( 1 ) : search_value };
 	const auto wrapped_search_value { format_ns::format( "%{}%", real_search_value ) };
 
-	constexpr std::string_view only_used_query { R"(
-		SELECT	tag_text												AS tag_text,
-				tag_id													AS tag_id,
-				similarity(tag_text, CASEFOLD(normalize($2, NFC)))::FLOAT8	AS similarity,
-				tag_text = CASEFOLD(normalize($2, NFC))					AS exact,
-				similarity(tag_text, CASEFOLD(normalize($2, NFC))) * max(tc.display_count)		AS score,
-				max(tc.display_count)::BIGINT							AS display_count,
-				max(tc.storage_count)::BIGINT							AS storage_count
-		FROM tags
-		         LEFT JOIN tag_counts tc USING (tag_id)
-		WHERE tag_text LIKE CASEFOLD(normalize($1, NFC)) AND COALESCE(tc.display_count, 0) > 0
-		GROUP BY tags.tag_id
-		ORDER BY exact DESC, score DESC, similarity DESC
-		limit $3
-		)" };
-
-	constexpr std::string_view all_query { R"(
-		SELECT	tag_text												AS tag_text,
-				tag_id													AS tag_id,
-				similarity(tag_text, CASEFOLD(normalize($2, NFC)))::FLOAT8	AS similarity,
-				tag_text = CASEFOLD(normalize($2, NFC))					AS exact,
-				similarity(tag_text, CASEFOLD(normalize($2, NFC))) * max(tc.display_count)		AS score,
-				max(tc.display_count)::BIGINT							AS display_count,
-				max(tc.storage_count)::BIGINT							AS storage_count
-		FROM tags
-		         LEFT JOIN tag_counts tc USING (tag_id)
-		WHERE tag_text LIKE CASEFOLD(normalize($1, NFC))
-		GROUP BY tags.tag_id
-		-- score is NULL for unused tags; plain DESC is NULLS FIRST and would rank them above every used tag
-		ORDER BY exact DESC, score DESC NULLS LAST, similarity DESC
-		limit $3
-		)" };
+	constexpr std::string_view query { R"(
+		WITH matches AS (
+			SELECT tags.tag_text, tags.tag_id,
+				COALESCE(MAX(CASE WHEN $5 THEN tc.storage_count ELSE tc.display_count END), 0)::BIGINT AS use_count
+			FROM tags
+			LEFT JOIN tag_counts tc ON tc.tag_id = tags.tag_id
+				AND (cardinality($4::SMALLINT[]) = 0 OR tc.tag_domain_id = ANY($4::SMALLINT[]))
+			WHERE tag_text LIKE CASEFOLD(normalize($1, NFC))
+			GROUP BY tags.tag_id
+		)
+		SELECT tag_text, tag_id,
+			similarity(tag_text, CASEFOLD(normalize($2, NFC)))::FLOAT8 AS similarity,
+			use_count
+		FROM matches
+		WHERE $6 OR use_count > 0
+		ORDER BY (tag_text = CASEFOLD(normalize($2, NFC))) DESC,
+			(similarity(tag_text, CASEFOLD(normalize($2, NFC))) * use_count) DESC,
+			similarity DESC, tag_id ASC
+		LIMIT $3
+	)" };
 
 	db::DBBindings bindings {};
 	bindings.bind( wrapped_search_value );
 	bindings.bind( real_search_value );
 	bindings.bind( static_cast< std::int64_t >( std::min( limit, max_limit ) ) );
+	bindings.bind( domains );
+	bindings.bind( display == HydrusDisplayType::STORED );
+	bindings.bind( include_unused );
 
-	const auto rows {
-		co_await db.query( std::string { include_unused ? all_query : only_used_query }, std::move( bindings ) )
-			.rows<
-				std::string,
-				TagID,
-				double,
-				bool,
-				std::optional< double >,
-				std::optional< std::int64_t >,
-				std::optional< std::int64_t > >()
-	};
+	const auto rows { co_await db.query( std::string { query }, std::move( bindings ) )
+		                  .rows< std::string, TagID, double, std::int64_t >() };
 
 	std::vector< SimilarTag > out {};
 	out.reserve( rows.size() );
-	for ( const auto& [ tag_text, tag_id, similarity, exact, score, display_count, storage_count ] : rows )
-	{
-		(void)exact;
-		(void)score;
-		(void)storage_count;
-		out.push_back( SimilarTag { tag_text, similarity, tag_id, display_count.value_or( 0 ) } );
-	}
+	for ( const auto& [ tag_text, tag_id, similarity, count ] : rows )
+		out.push_back( SimilarTag { tag_text, similarity, tag_id, count } );
 
 	co_return out;
+}
+
+static http::HTTPTask< std::expected< std::vector< TagDomainID >, http::Response > > tagCountDomains(
+	db::DBContext& db,
+	const http::RequestParameters& parameters,
+	const bool accept_singular )
+{
+	auto domains { parameters.vector< TagDomainID >( "tag_domains" ) };
+	if ( !domains ) co_return std::unexpected( http::Response::error( 400, domains.error().message ) );
+
+	if ( accept_singular )
+	{
+		if ( domains->empty() )
+		{
+			auto legacy_domain { parameters.optional< TagDomainID >( "tag_domain" ) };
+			if ( !legacy_domain )
+				co_return std::unexpected( http::Response::error( 400, legacy_domain.error().message ) );
+
+			if ( *legacy_domain ) domains->push_back( **legacy_domain );
+		}
+	}
+
+	std::ranges::sort( *domains );
+	const auto duplicates { std::ranges::unique( *domains ) };
+	domains->erase( duplicates.begin(), duplicates.end() );
+
+	for ( const auto domain_id : *domains )
+	{
+		if ( domain_id <= 0 )
+			co_return std::unexpected( http::Response::error( 400, "tag_domains must contain positive IDs" ) );
+
+		const auto domain { co_await findTagDomain( domain_id, db ) };
+		if ( !domain )
+			co_return std::unexpected(
+				http::Response::error( 404, std::format( "Tag domain {} does not exist", domain_id ) ) );
+	}
+
+	co_return std::move( *domains );
 }
 
 static http::HTTPTask< http::Response > autocomplete( db::DBContext& db, http::RequestContext context )
@@ -291,19 +353,24 @@ static http::HTTPTask< http::Response > autocomplete( db::DBContext& db, http::R
 	const auto display_type_e { context.parameters().optional< std::string >( "tag_display_type" ) };
 	if ( !display_type_e ) co_return http::Response::error( 400, display_type_e.error().message );
 
-	const auto display_type { display_type_e->value_or( "storage" ) };
+	const auto display_type { display_type_e->value_or( "display" ) };
 	if ( display_type != "storage" && display_type != "display" )
 		co_return http::Response::error( 400, "Invalid tag display type" );
 
 	const auto limit_e { context.parameters().optional< std::size_t >( "limit" ) };
 	if ( !limit_e ) co_return http::Response::error( 400, limit_e.error().message );
 
-	const auto include_unused_e { context.parameters().optional< std::string >( "include_unused" ) };
+	const auto include_unused_e { context.parameters().optional< bool >( "include_unused" ) };
 	if ( !include_unused_e ) co_return http::Response::error( 400, include_unused_e.error().message );
 
-	const bool include_unused { *include_unused_e != "false" && *include_unused_e != "0" };
+	const bool include_unused { include_unused_e->value_or( true ) };
 
-	const auto results { co_await getSimilarTags( db, *tag_text_e, limit_e->value_or( 10 ), include_unused ) };
+	auto domains { co_await tagCountDomains( db, context.parameters(), true ) };
+	if ( !domains ) co_return std::move( domains.error() );
+
+	const auto display { display_type == "storage" ? HydrusDisplayType::STORED : HydrusDisplayType::DISPLAY };
+	const auto results { co_await getSimilarTags(
+		db, *tag_text_e, limit_e->value_or( 10 ), include_unused, display, std::move( *domains ) ) };
 
 	simdjson::builder::string_builder builder;
 	builder.start_array();
@@ -559,8 +626,14 @@ static http::HTTPTask< http::Response > createRelationshipPairs(
 		if ( item[ b_key ].get( b ) != simdjson::SUCCESS )
 			co_return http::Response::error( 400, std::format( "Invalid {} item: Must be in TagID form", b_key ) );
 
-		const auto a_id { static_cast< TagID >( a ) };
-		const auto b_id { static_cast< TagID >( b ) };
+		auto a_id_e { positiveId< TagID >( a, a_key ) };
+		if ( !a_id_e ) co_return std::move( a_id_e.error() );
+
+		auto b_id_e { positiveId< TagID >( b, b_key ) };
+		if ( !b_id_e ) co_return std::move( b_id_e.error() );
+
+		const auto a_id { *a_id_e };
+		const auto b_id { *b_id_e };
 		if ( a_id == b_id )
 			co_return http::Response::error(
 				400, std::format( "Cannot {} a tag to itself {} == {}", action, a_id, b_id ) );
@@ -628,12 +701,18 @@ static http::HTTPTask< http::Response > removeRelationshipPairs(
 		if ( item[ b_key ].get( b ) != simdjson::SUCCESS )
 			co_return http::Response::error( 400, std::format( "Invalid {} item: Must be in TagID form", b_key ) );
 
+		auto a_id { positiveId< TagID >( a, a_key ) };
+		if ( !a_id ) co_return std::move( a_id.error() );
+
+		auto b_id { positiveId< TagID >( b, b_key ) };
+		if ( !b_id ) co_return std::move( b_id.error() );
+
 		try
 		{
 			db::DBBindings bindings {};
 			bindings.bind( tag_domain_id );
-			bindings.bind( static_cast< TagID >( a ) );
-			bindings.bind( static_cast< TagID >( b ) );
+			bindings.bind( *a_id );
+			bindings.bind( *b_id );
 			co_await db.query( delete_sql, std::move( bindings ) ).result();
 		}
 		catch ( const std::exception& e )

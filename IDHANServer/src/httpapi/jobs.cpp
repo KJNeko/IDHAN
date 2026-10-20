@@ -18,6 +18,7 @@
 #include "jobs/JobContext.hpp"
 #include "jobs/JobTask.hpp"
 #include "jsonBody.hpp"
+#include "idValidation.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::httpapi
@@ -235,10 +236,10 @@ static http::HTTPTask< http::Response > rescanMetadata( db::DBContext& db, http:
 				record_ids.reserve( records_array.size() );
 				for ( const simdjson::dom::element item : records_array )
 				{
-					std::int64_t id {};
-					if ( item.get_int64().get( id ) != simdjson::SUCCESS )
-						co_return http::Response::error( 400, "Invalid item in records list: Expected integral" );
-					record_ids.push_back( static_cast< RecordID >( id ) );
+					auto id { parsePositiveId< RecordID >( item, "record_id" ) };
+					if ( !id ) co_return std::move( id.error() );
+
+					record_ids.push_back( *id );
 				}
 			}
 		}

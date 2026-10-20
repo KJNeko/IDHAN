@@ -219,7 +219,7 @@ class ImportCluster
 
 		const auto added { api.post( "/clusters/add", body ) };
 		INFO( added.body );
-		REQUIRE( added.status == drogon::k200OK );
+		REQUIRE( added.status == 201 );
 	}
 };
 
@@ -230,8 +230,7 @@ Json::Value waitForDownloadJob( ApiClient& api, const DownloadSessionID session_
 	while ( std::chrono::steady_clock::now() < deadline )
 	{
 		const auto listed { api.get( std::format( "/download_sessions/{}/urls", session_id ) ) };
-		if ( listed.status != drogon::k200OK )
-			throw std::runtime_error( "Could not list download jobs: " + listed.body );
+		if ( listed.status != 200 ) throw std::runtime_error( "Could not list download jobs: " + listed.body );
 
 		for ( const auto& job : listed.json )
 		{
@@ -254,7 +253,7 @@ Json::Value waitForFlattenedRoot(
 	while ( std::chrono::steady_clock::now() < deadline )
 	{
 		const auto listed { api.get( std::format( "/download_sessions/{}/urls?flatten=true", session_id ) ) };
-		if ( listed.status != drogon::k200OK )
+		if ( listed.status != 200 )
 			throw std::runtime_error( "Could not list flattened download jobs: " + listed.body );
 
 		for ( const auto& job : listed.json )
@@ -282,13 +281,13 @@ SCENARIO_METHOD(
 	Json::Value create_body {};
 	create_body[ "name" ] = "fixture downloads";
 	const auto created { api().post( "/download_sessions", create_body ) };
-	REQUIRE( created.status == drogon::k201Created );
+	REQUIRE( created.status == 201 );
 	const auto session_id { created.json[ "id" ].as< DownloadSessionID >() };
 
 	Json::Value url_body {};
 	url_body[ "url" ] = fixture.url( "/gallery" );
 	const auto first { api().post( std::format( "/download_sessions/{}/urls", session_id ), url_body ) };
-	REQUIRE( first.status == drogon::k201Created );
+	REQUIRE( first.status == 201 );
 	CHECK( first.json[ "state" ].asString() == "pending" );
 
 	const auto first_job { waitForDownloadJob(
@@ -314,13 +313,13 @@ SCENARIO_METHOD(
 	CHECK( session_duplicates == 1 );
 
 	const auto records { api().get( std::format( "/download_sessions/{}/records", session_id ) ) };
-	REQUIRE( records.status == drogon::k200OK );
+	REQUIRE( records.status == 200 );
 	REQUIRE( records.json[ "record_ids" ].isArray() );
 	CHECK( records.json[ "record_ids" ].size() == 1 );
 
 	url_body[ "url" ] = fixture.url( "/failure" );
 	const auto failing { api().post( std::format( "/download_sessions/{}/urls", session_id ), url_body ) };
-	REQUIRE( failing.status == drogon::k201Created );
+	REQUIRE( failing.status == 201 );
 	const auto failed_job { waitForDownloadJob(
 		api(), session_id, failing.json[ "id" ].as< DownloadSessionUrlID >() ) };
 	CHECK( failed_job[ "state" ].asString() == "failed" );
@@ -328,9 +327,9 @@ SCENARIO_METHOD(
 
 	url_body[ "url" ] = fixture.url( "/unmatched" );
 	const auto unmatched { api().post( std::format( "/download_sessions/{}/urls", session_id ), url_body ) };
-	CHECK( unmatched.status == drogon::k400BadRequest );
+	CHECK( unmatched.status == 400 );
 	const auto jobs { api().get( std::format( "/download_sessions/{}/urls", session_id ) ) };
-	REQUIRE( jobs.status == drogon::k200OK );
+	REQUIRE( jobs.status == 200 );
 	CHECK( jobs.json.size() == 2 );
 }
 
@@ -348,12 +347,12 @@ SCENARIO_METHOD(
 	Json::Value body {};
 	body[ "name" ] = "restart recovery";
 	const auto created { api().post( "/download_sessions", body ) };
-	REQUIRE( created.status == drogon::k201Created );
+	REQUIRE( created.status == 201 );
 	const auto session_id { created.json[ "id" ].as< DownloadSessionID >() };
 	body = Json::Value {};
 	body[ "url" ] = fixture.url( "/gallery" );
 	const auto queued { api().post( std::format( "/download_sessions/{}/urls", session_id ), body ) };
-	REQUIRE( queued.status == drogon::k201Created );
+	REQUIRE( queued.status == 201 );
 	const auto root { queued.json[ "id" ].as< DownloadSessionUrlID >() };
 
 	bool persisted {};

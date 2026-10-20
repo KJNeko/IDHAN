@@ -64,7 +64,7 @@ class ClusterManager
 
 	ClusterManager();
 
-	runtime::Task< void > reloadClusters( db::DBContext& db );
+	runtime::Task< void > reloadClusters( db::DBContext& db, bool recreate_missing_markers = false );
 
 	static ClusterManager& getInstance();
 };

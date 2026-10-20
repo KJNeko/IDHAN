@@ -33,7 +33,7 @@ SCENARIO_METHOD( ServerFixture, "Downloader secrets can be set and fetched throu
 	secrets[ "example.userID" ] = "42";
 
 	const auto created { api().post( "/downloader/secrets", secrets ) };
-	REQUIRE( created.status == drogon::k200OK );
+	REQUIRE( created.status == 200 );
 	REQUIRE( created.json.isObject() );
 	CHECK( created.json[ "example.apiKey" ].asString() == "first" );
 	CHECK( created.json[ "example.userID" ].asString() == "42" );
@@ -42,12 +42,12 @@ SCENARIO_METHOD( ServerFixture, "Downloader secrets can be set and fetched throu
 	Json::Value update {};
 	update[ "example.apiKey" ] = "second";
 	const auto updated { api().post( "/downloader/secrets", update ) };
-	REQUIRE( updated.status == drogon::k200OK );
+	REQUIRE( updated.status == 200 );
 	CHECK( updated.json[ "example.apiKey" ].asString() == "second" );
 	CHECK( updated.json[ "example.userID" ].asString() == "42" );
 
 	const auto fetched { api().get( "/downloader/secrets" ) };
-	REQUIRE( fetched.status == drogon::k200OK );
+	REQUIRE( fetched.status == 200 );
 	CHECK( fetched.json[ "example.apiKey" ].asString() == "second" );
 	CHECK( fetched.json[ "example.userID" ].asString() == "42" );
 	CHECK( fetched.header( "cache-control" ) == "no-store" );
@@ -59,7 +59,7 @@ SCENARIO_METHOD( ServerFixture, "Downloader secrets reject non-string values", "
 	secrets[ "example.apiKey" ] = 123;
 
 	const auto response { api().post( "/downloader/secrets", secrets ) };
-	CHECK( response.status == drogon::k400BadRequest );
+	CHECK( response.status == 400 );
 }
 
 SCENARIO_METHOD( ServerFixture, "Downloader secret database failures are server errors", "[api][downloader]" )
@@ -72,12 +72,12 @@ SCENARIO_METHOD( ServerFixture, "Downloader secret database failures are server 
 	RestoreDownloaderSecretsTable restore { db() };
 
 	const auto fetched { api().get( "/downloader/secrets" ) };
-	CHECK( fetched.status == drogon::k500InternalServerError );
+	CHECK( fetched.status == 500 );
 
 	Json::Value secrets {};
 	secrets[ "example.apiKey" ] = "value";
 	const auto updated { api().post( "/downloader/secrets", secrets ) };
-	CHECK( updated.status == drogon::k500InternalServerError );
+	CHECK( updated.status == 500 );
 }
 
 } // namespace idhan::test

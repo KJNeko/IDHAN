@@ -2,15 +2,15 @@ post:
   tags:
     - tags
   summary: Creates tags and returns their IDs
-  description: >
-    Creates any tag that does not already exist. Returns IDs in input order;
-    an existing tag returns the ID it already had.
+  description: Creates any tag that does not already exist. Returns IDs in input order; an existing tag
+    returns the ID it already had.
   requestBody:
     required: true
     content:
       application/json:
         schema:
           type: array
+          minItems: 1
           items:
             type: object
             required:
@@ -20,37 +20,39 @@ post:
               namespace:
                 type: string
                 description: Empty string for a tag with no namespace.
-                example: "character"
+                examples:
+                  - character
               subtag:
                 type: string
-                example: "toujou koneko"
+                examples:
+                  - toujou koneko
         examples:
           single:
             summary: Single tag (as a one-element array)
             value:
-              - namespace: "character"
-                subtag: "toujou koneko"
+              - namespace: character
+                subtag: toujou koneko
           noNamespace:
             summary: Tag with no namespace
             value:
-              - namespace: ""
-                subtag: "catgirl"
+              - namespace: ''
+                subtag: catgirl
           multiple:
             summary: Multiple tags
             value:
-              - namespace: "character"
-                subtag: "toujou koneko"
-              - namespace: "series"
-                subtag: "Highschool DxD"
+              - namespace: character
+                subtag: toujou koneko
+              - namespace: series
+                subtag: Highschool DxD
   responses:
-    "200":
+    '200':
       description: Tag IDs, in input order
       content:
         application/json:
           schema:
             type: array
             items:
-              $ref: '../../schemas/TagInfo.yaml'
+              $ref: ../../schemas/TagInfo.yaml
           examples:
             single:
               summary: Response for a one-element input array
@@ -61,14 +63,21 @@ post:
               value:
                 - tag_id: 42
                 - tag_id: 7
-    "400":
+    '400':
       description: Missing body, empty array, or a non-string namespace or subtag
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
-    "500":
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

@@ -1,0 +1,35 @@
+get:
+  tags:
+    - public
+  summary: Subscribes to heartbeat keepalives
+  responses:
+    '200':
+      description: Server-sent event stream. Comment lines are heartbeat keepalives.
+      content:
+        text/event-stream:
+          itemSchema:
+            type: object
+            description: Parsed SSE fields; data contains the event payload as text.
+            properties:
+              event:
+                type: string
+              data:
+                type: string
+              id:
+                type: string
+              retry:
+                type: integer
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+  description: An SSE connection receiving periodic heartbeat comments, approximately every ten seconds.
+  security: [ ]

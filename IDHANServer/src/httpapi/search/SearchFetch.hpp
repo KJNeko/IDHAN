@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "IDHANTypes.hpp"
@@ -21,6 +22,7 @@ struct FetchContext
 	bool want_hashes { false };
 	std::vector< TagDomainID > tag_domains {};
 	std::shared_ptr< idhan::search::SearchStats > stats {};
+	HydrusDisplayType display { HydrusDisplayType::DEFAULT };
 };
 
 struct PredicateSource
@@ -29,6 +31,8 @@ struct PredicateSource
 	std::string where {};
 	std::string description {};
 };
+
+[[nodiscard]] std::string_view tagMappingTable( HydrusDisplayType display );
 
 runtime::Task< idhan::search::Set > fetchTag( FetchContext ctx, TagID tag, std::string label );
 
@@ -51,6 +55,7 @@ runtime::Task< idhan::search::Set > fetchPage(
 	bool has_exclusions,
 	SortOrder order,
 	std::size_t offset,
-	std::optional< std::size_t > limit );
+	std::optional< std::size_t > limit,
+	HydrusDisplayType display = HydrusDisplayType::DEFAULT );
 
 } // namespace idhan::httpapi::searchfetch

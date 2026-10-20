@@ -143,14 +143,14 @@ static runtime::Task<> fetchBaseMetadata(
 		RecordInfoEntry entry {};
 		entry.record_id = record_id;
 		entry.sha256_hex = sha256Hex( sha256_bytes );
+		entry.size = size;
+		entry.file_mtime = file_mtime;
+		entry.file_ctime = file_ctime;
 
 		if ( mime_id )
 		{
-			entry.size = size;
 			entry.mime = mime_name;
 			entry.extension = best_extension;
-			entry.file_mtime = file_mtime;
-			entry.file_ctime = file_ctime;
 
 			if ( simple_mime_type )
 			{

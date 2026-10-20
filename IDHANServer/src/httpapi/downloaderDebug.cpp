@@ -6,6 +6,7 @@
 #include <charconv>
 #include <chrono>
 #include <cstdint>
+#include <format>
 #include <simdjson.h>
 #include <string>
 #include <string_view>
@@ -259,13 +260,24 @@ static void appendLane( simdjson::builder::string_builder& builder, const downlo
 
 static http::HTTPTask< http::Response > debug( db::DBContext& db, http::RequestContext context )
 {
+	const auto event_cursors_e { context.parameters().optional< std::string >( "event_cursors" ) };
+	if ( !event_cursors_e ) co_return http::Response::error( 400, event_cursors_e.error().message );
+
 	const auto since_e { context.parameters().optional< std::string >( "since" ) };
 	if ( !since_e ) co_return http::Response::error( 400, since_e.error().message );
 
+	if ( event_cursors_e->has_value() && since_e->has_value() )
+		co_return http::Response::error( 400, "Supply only one of 'event_cursors' and the deprecated 'since' alias" );
+
+	const auto cursor_text { event_cursors_e->has_value() ? *event_cursors_e : *since_e };
+	const auto parameter_name { event_cursors_e->has_value() ? "event_cursors" : "since" };
 	std::unordered_map< DownloadSessionID, std::uint64_t > cursors {};
-	if ( !parseCursors( since_e->value_or( "" ), cursors ) )
+	if ( !parseCursors( cursor_text.value_or( "" ), cursors ) )
 		co_return http::Response::error(
-			400, "The 'since' cursor must be a comma separated list of <session_id>:<sequence>" );
+			400,
+			std::format(
+				"The '{}' parameter must be a comma separated list of <session_id>:<event_sequence>",
+				parameter_name ) );
 
 	auto infos { downloader::downloadSessionManager().debugSnapshots( cursors ) };
 

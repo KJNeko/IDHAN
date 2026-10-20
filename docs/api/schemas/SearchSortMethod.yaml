@@ -1,0 +1,37 @@
+type: string
+enum:
+  - filesize
+  - size
+  - import_time
+  - record_creation_time
+  - record_time
+  - creation_time
+  - file_modified_time
+  - file_mtime
+  - modified_time
+  - file_created_time
+  - file_ctime
+  - mime
+  - filetype
+  - hash
+  - random
+  - duration
+  - framerate
+  - has_audio
+  - width
+  - height
+  - ratio
+  - num_pixels
+  - num_tags
+description: >-
+  Case-sensitive sorting method. Unknown names, including an empty string, return 400.
+  `size` aliases `filesize`. `record_time` and `creation_time` alias `record_creation_time`,
+  the time the record was created. `file_mtime` and `modified_time` alias `file_modified_time`,
+  the filesystem file modification time. `file_ctime` aliases `file_created_time`,
+  the filesystem birth time. `filetype` aliases `mime`, which sorts by the stored MIME ID.
+  `import_time` sorts by cluster storage time.
+  Duration uses video, audio, or animation metadata, in that precedence order, and excludes
+  records with no duration; a measured zero duration is retained. Framerate and has_audio
+  use video metadata with a zero or false fallback for missing metadata, retaining those records.
+  Missing file timestamps, width, height, ratio, or num_pixels exclude the record.
+  num_tags retains zero counts. Random ignores order and reshuffles on every call, so paging it is not stable.

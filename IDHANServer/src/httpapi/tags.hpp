@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "IDHANTypes.hpp"
+#include "core/search/SearchTypes.hpp"
 #include "idhan/http/RouteSpec.hpp"
 
 namespace idhan::db
@@ -30,6 +31,8 @@ struct SimilarTag
 	db::DBContext& db,
 	std::string search_value,
 	std::size_t limit,
-	bool include_unused );
+	bool include_unused,
+	HydrusDisplayType display = HydrusDisplayType::DISPLAY,
+	std::vector< TagDomainID > domains = {} );
 
 } // namespace idhan::httpapi

@@ -3,11 +3,10 @@ get:
     - maintenance
     - database
   summary: PostgreSQL storage sunburst data
-  description: |
-    A tree shaped for a sunburst chart. The root's children are the public
-    tables with their on-disk size; each table's children are its indexes.
+  description: A tree for a sunburst chart. The root contains tables in the configured database schema
+    with their storage sizes; table children describe index sizes.
   responses:
-    200:
+    '200':
       description: Sunburst tree of table and index sizes
       content:
         application/json:
@@ -16,7 +15,8 @@ get:
             properties:
               name:
                 type: string
-                example: root
+                examples:
+                  - root
               children:
                 type: array
                 items:
@@ -39,3 +39,21 @@ get:
                           value:
                             type: integer
                             description: Index size in bytes.
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

@@ -3,6 +3,7 @@
 #include <folly/io/IOBuf.h>
 
 #include <chrono>
+#include <format>
 #include <simdjson.h>
 #include <string>
 #include <vector>
@@ -10,6 +11,7 @@
 #include "apiAuth.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "jsonBody.hpp"
+#include "idValidation.hpp"
 #include "logging/log.hpp"
 #include "search/SearchQuery.hpp"
 #include "search/parseSortType.hpp"
@@ -33,6 +35,12 @@ namespace idhan::httpapi
 	auto tag_domain_ids_e { context.parameters().vector< TagDomainID >( "tag_domains" ) };
 	if ( !tag_domain_ids_e ) co_return http::Response::error( 400, tag_domain_ids_e.error().message );
 
+	for ( const auto tag_id : tag_ids )
+		if ( tag_id <= 0 ) co_return http::Response::error( 400, "tag_ids must be positive" );
+
+	for ( const auto domain_id : *tag_domain_ids_e )
+		if ( domain_id <= 0 ) co_return http::Response::error( 400, "tag_domains must be positive" );
+
 	auto by_e { context.parameters().optional< std::string >( "by" ) };
 	if ( !by_e ) co_return http::Response::error( 400, by_e.error().message );
 	auto order_e { context.parameters().optional< std::string >( "order" ) };
@@ -41,7 +49,13 @@ namespace idhan::httpapi
 	SearchQuery query {};
 	query.addPositiveTags( tag_ids );
 
-	if ( *by_e ) query.setSortType( parseSortType( **by_e ) );
+	if ( *by_e )
+	{
+		const auto sort_type { parseSortType( **by_e ) };
+		if ( !sort_type ) co_return http::Response::error( 400, std::format( "Unknown sorting method '{}'", **by_e ) );
+
+		query.setSortType( *sort_type );
+	}
 	if ( *order_e ) query.setSortOrder( **order_e == "desc" ? SortOrder::DESC : SortOrder::ASC );
 
 	const auto result { co_await query.query( db, std::move( *tag_domain_ids_e ) ) };
@@ -149,10 +163,10 @@ struct SplitTags
 				std::vector< TagID > tag_ids {};
 				for ( simdjson::dom::element id_element : tag_ids_array )
 				{
-					std::int64_t id {};
-					if ( id_element.get_int64().get( id ) != simdjson::SUCCESS )
-						co_return http::Response::error( 400, "'tag_ids' must be an array of integers" );
-					tag_ids.emplace_back( static_cast< TagID >( id ) );
+					auto id { parsePositiveId< TagID >( id_element, "tag_id" ) };
+					if ( !id ) co_return std::move( id.error() );
+
+					tag_ids.emplace_back( *id );
 				}
 				query.addPositiveTags( tag_ids );
 			}
@@ -168,10 +182,10 @@ struct SplitTags
 
 			for ( simdjson::dom::element id_element : tag_domains_array )
 			{
-				std::int64_t id {};
-				if ( id_element.get_int64().get( id ) != simdjson::SUCCESS )
-					co_return http::Response::error( 400, "'tag_domains' must be an array of integers" );
-				tag_domains.emplace_back( static_cast< TagDomainID >( id ) );
+				auto id { parsePositiveId< TagDomainID >( id_element, "tag_domain_id" ) };
+				if ( !id ) co_return std::move( id.error() );
+
+				tag_domains.emplace_back( *id );
 			}
 		}
 
@@ -190,7 +204,17 @@ struct SplitTags
 			if ( sort_ec != simdjson::SUCCESS ) co_return http::Response::error( 400, "'sort' must be an object" );
 
 			std::string_view by {};
-			if ( sort_object[ "by" ].get( by ) == simdjson::SUCCESS ) sort_type = parseSortType( std::string { by } );
+			const auto by_ec { sort_object[ "by" ].get( by ) };
+			if ( by_ec != simdjson::NO_SUCH_FIELD )
+			{
+				if ( by_ec != simdjson::SUCCESS ) co_return http::Response::error( 400, "'sort.by' must be a string" );
+
+				const auto parsed_sort { parseSortType( by ) };
+				if ( !parsed_sort )
+					co_return http::Response::error( 400, std::format( "Unknown sorting method '{}'", by ) );
+
+				sort_type = *parsed_sort;
+			}
 
 			std::string_view order {};
 			if ( sort_object[ "order" ].get( order ) == simdjson::SUCCESS )

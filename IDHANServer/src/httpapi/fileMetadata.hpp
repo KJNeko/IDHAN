@@ -5,6 +5,7 @@
 #include <string>
 
 #include "IDHANTypes.hpp"
+#include "filesystem/VerifiedRecordPath.hpp"
 #include "idhan/http/RouteSpec.hpp"
 
 namespace idhan::db
@@ -25,7 +26,7 @@ namespace idhan::httpapi
 	db::DBContext& db,
 	RecordID record_id );
 
-[[nodiscard]] http::HTTPTask< std::expected< std::filesystem::path, http::Response > > recordFilePathForScan(
+[[nodiscard]] http::HTTPTask< std::expected< filesystem::VerifiedRecordPath, http::Response > > recordFilePathForScan(
 	db::DBContext& db,
 	RecordID record_id );
 

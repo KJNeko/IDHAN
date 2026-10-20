@@ -21,10 +21,15 @@ std::expected< RequestParameters, ParseError > RequestParameters::parseQuery( co
 {
 	RequestParameters parameters {};
 	std::size_t start {};
-	while ( start <= query.size() )
+	while ( start < query.size() )
 	{
 		const auto end { query.find( '&', start ) };
 		const auto field { query.substr( start, end == std::string_view::npos ? query.size() - start : end - start ) };
+		if ( field.empty() )
+		{
+			start = end + 1;
+			continue;
+		}
 		const auto separator { field.find( '=' ) };
 		auto name { decode( field.substr( 0, separator ) ) };
 		if ( !name ) return std::unexpected( std::move( name.error() ) );

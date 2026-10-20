@@ -42,9 +42,10 @@ static std::string buildTermQuery(
 	const std::string_view where_core,
 	const SortOrder order = SortOrder::ASC,
 	const bool random_order = false,
-	const bool distinct_rows = false )
+	const bool distinct_rows = false,
+	const HydrusDisplayType display = HydrusDisplayType::DEFAULT )
 {
-	const auto spec { sortKeySpec( sort_type ) };
+	const auto spec { sortKeySpec( sort_type, display ) };
 
 	std::string query { distinct_rows ? "SELECT DISTINCT " : "SELECT " };
 	query.reserve( 512 );
@@ -270,20 +271,26 @@ static std::string domainFilter( const FetchContext& ctx )
 	return " AND f.tag_domain_id = ANY($1)";
 }
 
+std::string_view tagMappingTable( const HydrusDisplayType display )
+{
+	return display == HydrusDisplayType::STORED ? "tag_mappings" : "active_tag_mappings_final";
+}
+
 runtime::Task< Set > fetchTag( FetchContext ctx, const TagID tag, std::string label )
 {
 	const auto where { format_ns::format( "f.tag_id = {}{}", tag, domainFilter( ctx ) ) };
 	auto query { buildTermQuery(
 		ctx.sort_type,
 		ctx.want_hashes,
-		"active_tag_mappings_final f",
+		format_ns::format( "{} f", tagMappingTable( ctx.display ) ),
 		"f",
 		true,
 		{},
 		where,
 		SortOrder::ASC,
 		false,
-		true ) };
+		true,
+		ctx.display ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
 }
@@ -294,14 +301,15 @@ runtime::Task< Set > fetchAnyTag( FetchContext ctx, std::vector< TagID > tags, s
 	auto query { buildTermQuery(
 		ctx.sort_type,
 		ctx.want_hashes,
-		"active_tag_mappings_final f",
+		format_ns::format( "{} f", tagMappingTable( ctx.display ) ),
 		"f",
 		true,
 		{},
 		where,
 		SortOrder::ASC,
 		false,
-		true ) };
+		true,
+		ctx.display ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
 }
@@ -312,14 +320,15 @@ runtime::Task< Set > fetchNamespace( FetchContext ctx, const NamespaceID tag_nam
 	auto query { buildTermQuery(
 		ctx.sort_type,
 		ctx.want_hashes,
-		"active_tag_mappings_final f",
+		format_ns::format( "{} f", tagMappingTable( ctx.display ) ),
 		"f",
 		true,
 		" JOIN tags t USING (tag_id)",
 		where,
 		SortOrder::ASC,
 		false,
-		true ) };
+		true,
+		ctx.display ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
 }
@@ -328,9 +337,18 @@ runtime::Task< Set > fetchPredicate( FetchContext ctx, PredicateSource predicate
 {
 	ctx.tag_domains.clear();
 
-	auto query {
-		buildTermQuery( ctx.sort_type, ctx.want_hashes, "file_info fi", "fi", false, predicate.joins, predicate.where )
-	};
+	auto query { buildTermQuery(
+		ctx.sort_type,
+		ctx.want_hashes,
+		"file_info fi",
+		"fi",
+		false,
+		predicate.joins,
+		predicate.where,
+		SortOrder::ASC,
+		false,
+		false,
+		ctx.display ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
 }
@@ -341,7 +359,8 @@ std::string buildPageQuery(
 	const bool has_exclusions,
 	const SortOrder order,
 	const std::size_t offset,
-	const std::optional< std::size_t > limit )
+	const std::optional< std::size_t > limit,
+	const HydrusDisplayType display )
 {
 	auto query { buildTermQuery(
 		sort_type,
@@ -352,7 +371,9 @@ std::string buildPageQuery(
 		{},
 		has_exclusions ? "fi.record_id != ALL($1)" : "",
 		order,
-		sort_type == SortType::RANDOM ) };
+		sort_type == SortType::RANDOM,
+		false,
+		display ) };
 
 	if ( limit ) query += " LIMIT " + std::to_string( *limit );
 	if ( offset > 0 ) query += " OFFSET " + std::to_string( offset );
@@ -369,7 +390,9 @@ runtime::Task< Set > fetchPage(
 {
 	const auto key_type { sortKeySpec( ctx.sort_type ).type };
 	const auto exclusion_count { excluded.size() };
-	const auto query { buildPageQuery( ctx.sort_type, ctx.want_hashes, !excluded.empty(), order, offset, limit ) };
+	const auto query {
+		buildPageQuery( ctx.sort_type, ctx.want_hashes, !excluded.empty(), order, offset, limit, ctx.display )
+	};
 
 	log::debug( "Search page: {}", query );
 

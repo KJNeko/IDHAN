@@ -1,0 +1,66 @@
+type: object
+description: >-
+  Job envelope with state-dependent fields and an optional arbitrary JSON result.
+  Known jobs always include job_name, location, and completed. start_time is
+  omitted until execution begins. The serializer's not_found placeholder has
+  only job_id and status; the single-job HTTP endpoint returns 404 for unknown IDs.
+properties:
+  job_id:
+    type: integer
+    format: int64
+    minimum: 0
+  job_name:
+    type: string
+  location:
+    type: string
+    description: Source location of the queued job.
+  status:
+    type: string
+    enum:
+      - running
+      - completed
+      - failed
+      - not_found
+  completed:
+    type: boolean
+  start_time:
+    type: integer
+    format: int64
+    description: Approximate Unix epoch seconds when execution began; omitted before the job starts.
+  error:
+    type: string
+    description: Present for failed jobs; the message can be empty.
+  response:
+    description: >-
+      Optional operation-specific result accepting any JSON value, including
+      null, scalars, arrays, and objects. Presence does not by itself mean the job
+      is complete. Known producer contracts are documented separately as
+      ClusterScanResult and RescanMetadataResult; this generic envelope does not
+      validate a result against either shape or select a type from job_name.
+required:
+  - job_id
+  - status
+allOf:
+  - if:
+      properties:
+        status:
+          enum:
+            - running
+            - completed
+            - failed
+      required:
+        - status
+    then:
+      required:
+        - job_name
+        - location
+        - completed
+  - if:
+      properties:
+        status:
+          const: failed
+      required:
+        - status
+    then:
+      required:
+        - error

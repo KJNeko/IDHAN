@@ -11,6 +11,7 @@
 import type { LayoutDocument } from '../layout/document';
 import type {
   AutocompleteResult,
+    AutocompleteOptions,
   MetadataRequest,
   MetadataResponse,
     FileRelationships,
@@ -129,10 +130,10 @@ export const api = {
   },
 
     downloader: {
-        /** Event cursors are per session; omitted sessions return retained history. */
-        debug(cursors: ReadonlyMap<number, number> = new Map(), signal?: AbortSignal): Promise<DownloaderDebug> {
-            const since = [...cursors].map(([id, sequence]) => `${id}:${sequence}`).join(',');
-            const query = since === '' ? '' : `?since=${encodeURIComponent(since)}`;
+        /** Maps session IDs to last-seen event sequences; omitted sessions return retained history. */
+        debug(eventCursors: ReadonlyMap<number, number> = new Map(), signal?: AbortSignal): Promise<DownloaderDebug> {
+            const cursorText = [...eventCursors].map(([id, sequence]) => `${id}:${sequence}`).join(',');
+            const query = cursorText === '' ? '' : `?event_cursors=${encodeURIComponent(cursorText)}`;
             return request<DownloaderDebug>(`/downloader/debug${query}`, {signal});
         },
         secrets(signal?: AbortSignal): Promise<DownloaderSecrets> {
@@ -296,11 +297,14 @@ export const api = {
 
   async autocompleteTags(
     prefix: string,
-    opts: { domain?: number; limit?: number } = {},
+    opts: AutocompleteOptions = {},
     signal?: AbortSignal,
   ): Promise<AutocompleteResult[]> {
     const params = new URLSearchParams({ tag: prefix });
-    if (opts.domain !== undefined) params.set('tag_domain', String(opts.domain));
+      const domains = opts.domains ?? (opts.domain !== undefined ? [opts.domain] : []);
+      for (const domain of domains) params.append('tag_domains', String(domain));
+      params.set('tag_display_type', opts.display ?? 'display');
+      params.set('include_unused', String(opts.includeUnused ?? true));
     if (opts.limit !== undefined) params.set('limit', String(opts.limit));
     const raw = await request<AutocompleteRow[]>(`/tags/autocomplete?${params.toString()}`, { signal });
     return raw.map((row) => ({
@@ -331,8 +335,11 @@ export const tags = {
     return request<TagDomain[]>('/tags/domain/list', { signal });
   },
 
-  info(tagId: number, signal?: AbortSignal): Promise<TagInfo> {
-    return request<TagInfo>(`/tags/${tagId}/info`, { signal });
+    info(tagId: number, options: { domains?: readonly number[]; signal?: AbortSignal } = {}): Promise<TagInfo> {
+        const params = new URLSearchParams();
+        for (const domain of options.domains ?? []) params.append('tag_domains', String(domain));
+        const query = params.toString();
+        return request<TagInfo>(`/tags/${tagId}/info${query ? `?${query}` : ''}`, {signal: options.signal});
   },
 
   /** A tag's parent/child/alias/sibling relationships in one domain, as ids (GET .../relationships). */

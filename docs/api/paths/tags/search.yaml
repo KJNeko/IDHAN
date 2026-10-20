@@ -2,8 +2,7 @@ get:
   tags:
     - tags
   summary: Looks up a tag ID by exact tag text
-  description: >
-    Exact match only. Always returns 200; `found` says whether the tag exists.
+  description: Exact match only. Always returns 200; `found` says whether the tag exists.
   parameters:
     - in: query
       name: tag
@@ -12,7 +11,7 @@ get:
       schema:
         type: string
   responses:
-    200:
+    '200':
       description: Lookup result
       content:
         application/json:
@@ -26,3 +25,21 @@ get:
               tag_id:
                 type: integer
                 description: Present only when `found` is true.
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

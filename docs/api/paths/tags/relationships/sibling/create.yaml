@@ -1,47 +1,33 @@
 post:
   tags:
     - tags
-  summary: Creates sibling (exclusive tag) relationships
-  description: |
-    Marks two tags as mutually exclusive. When a record has both, `older_id` is
-    shown and `younger_id` is hidden, along with the younger tag's parents.
-    A tag cannot be its own sibling. Duplicates are ignored.
-  parameters:
-    - name: tag_domain_id
-      in: query
-      required: true
-      schema:
-        $ref: '../../../../schemas/TagDomainID.yaml'
-  requestBody:
-    required: true
-    content:
-      application/json:
-        schema:
-          type: array
-          items:
-            type: object
-            required:
-              - older_id
-              - younger_id
-            properties:
-              older_id:
-                allOf:
-                  - $ref: '../../../../schemas/TagID.yaml'
-                description: The shown tag.
-              younger_id:
-                allOf:
-                  - $ref: '../../../../schemas/TagID.yaml'
-                description: The hidden tag.
-        examples:
-          rating_siblings:
-            summary: Make rating:safe and rating:explicit exclusive
-            value:
-              - older_id: 50
-                younger_id: 51
+  summary: Sibling relationship create stub
+  description: |-
+    Intentionally stubbed out pending a full rewrite and redesign of the sibling
+    system. After successful authentication, returns 501 without processing
+    sibling relationships. The request body is ignored.
   responses:
-    200:
-      description: Relationships created
-    400:
-      description: Invalid request body
-    500:
+    '501':
+      description: Intentional stub pending a full sibling-system rewrite and redesign.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '400':
+      description: Missing or malformed API key or query parameters.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

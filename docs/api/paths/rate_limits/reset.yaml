@@ -1,0 +1,42 @@
+post:
+  tags:
+    - downloader
+  summary: Resets lane backoff
+  responses:
+    '200':
+      description: Resets lane backoff
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reset:
+                type: string
+            required:
+              - reset
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: lane
+      in: query
+      required: false
+      schema:
+        type: string
+        default: ''
+      description: Lane key; omit or use an empty string to reset all lanes.

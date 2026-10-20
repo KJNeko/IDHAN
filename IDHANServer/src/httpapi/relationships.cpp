@@ -14,6 +14,7 @@
 #include "helpers.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "jsonBody.hpp"
+#include "idValidation.hpp"
 #include "recordValidator.hpp"
 
 namespace idhan::httpapi
@@ -327,8 +328,14 @@ static http::HTTPTask< http::Response > nextUndecided( db::DBContext& db, http::
 			http::Response::error(
 				400, std::format( "Expected `{}` and `{}` to be unsigned integers", a_key, b_key ) ) );
 
-	const auto a_id { static_cast< RecordID >( a ) };
-	const auto b_id { static_cast< RecordID >( b ) };
+	auto a_id_e { positiveId< RecordID >( a, a_key ) };
+	if ( !a_id_e ) return std::unexpected( std::move( a_id_e.error() ) );
+
+	auto b_id_e { positiveId< RecordID >( b, b_key ) };
+	if ( !b_id_e ) return std::unexpected( std::move( b_id_e.error() ) );
+
+	const auto a_id { *a_id_e };
+	const auto b_id { *b_id_e };
 	if ( a_id == b_id )
 		return std::unexpected(
 			http::Response::error( 400, std::format( "`{}` and `{}` cannot be the same record", a_key, b_key ) ) );
@@ -439,10 +446,10 @@ static http::HTTPTask< http::Response > addAlternative( db::DBContext& db, http:
 	std::vector< RecordID > record_ids {};
 	for ( const simdjson::dom::element item : array )
 	{
-		std::int64_t id {};
-		if ( item.get_int64().get( id ) != simdjson::SUCCESS || id < 0 )
-			co_return http::Response::error( 400, "Expected json array of unsigned integers" );
-		record_ids.push_back( static_cast< RecordID >( id ) );
+		auto id { parsePositiveId< RecordID >( item, "record_id" ) };
+		if ( !id ) co_return std::move( id.error() );
+
+		record_ids.push_back( *id );
 	}
 
 	std::ranges::sort( record_ids );

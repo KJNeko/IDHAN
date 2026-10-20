@@ -2,9 +2,8 @@ delete:
   tags:
     - clusters
   summary: Deletes a cluster
-  description: >-
-    Removes the cluster registration and marks records assigned to it as no longer stored. Files and
-    directories under the cluster path are left untouched.
+  description: Removes the cluster registration and marks records assigned to it as no longer stored.
+    Files and directories under the cluster path are left untouched.
   parameters:
     - name: cluster_id
       in: path
@@ -12,23 +11,34 @@ delete:
       schema:
         type: integer
   responses:
-    200:
-      description: Cluster removed
+    '200':
+      description: Cluster registration removed; files remain on disk.
       content:
         application/json:
           schema:
             type: object
-            properties:
-              code:
-                type: integer
-                example: 200
-    404:
+            additionalProperties: false
+    '404':
       description: Cluster not found
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              code:
-                type: integer
-                example: 404
+            type: string
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

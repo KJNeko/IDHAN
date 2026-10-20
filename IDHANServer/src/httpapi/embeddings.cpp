@@ -25,6 +25,7 @@
 #include "idhan/db/DBContext.hpp"
 #include "jobs/JobContext.hpp"
 #include "jsonBody.hpp"
+#include "idValidation.hpp"
 #include "logging/log.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "modules/RemoteModule.hpp"
@@ -82,7 +83,10 @@ constexpr std::size_t max_compare_records { 8 };
 			return std::unexpected( http::Response::error( 400, "A record term needs an integral \"record_id\"" ) );
 
 		term.m_is_text = false;
-		term.m_record_id = static_cast< RecordID >( record_id );
+		auto id { positiveId< RecordID >( record_id, "record_id" ) };
+		if ( !id ) return std::unexpected( std::move( id.error() ) );
+
+		term.m_record_id = *id;
 	}
 	else
 	{
@@ -537,10 +541,10 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 
 	for ( const simdjson::dom::element entry : ids_array )
 	{
-		std::int64_t id {};
-		if ( entry.get_int64().get( id ) != simdjson::SUCCESS )
-			co_return http::Response::error( 400, "Every entry of \"record_ids\" must be an integer" );
-		record_ids.push_back( static_cast< RecordID >( id ) );
+		auto id { parsePositiveId< RecordID >( entry, "record_id" ) };
+		if ( !id ) co_return std::move( id.error() );
+
+		record_ids.push_back( *id );
 	}
 
 	std::vector< embeddings::QueryTerm > terms {};

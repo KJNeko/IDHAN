@@ -2,19 +2,18 @@ get:
   tags:
     - tags
   summary: Returns a tag's relationships
-  description: |
-    Parents, children, siblings, and aliases for the tag, within the given domain.
+  description: Parents, children, siblings, and aliases for the tag, within the given domain.
   parameters:
     - name: domain_id
       in: path
       required: true
       schema:
-        $ref: '../../../schemas/TagDomainID.yaml'
+        $ref: ../../../schemas/TagDomainID.yaml
     - name: tag_id
       in: path
       required: true
       schema:
-        $ref: '../../../schemas/TagID.yaml'
+        $ref: ../../../schemas/TagID.yaml
   responses:
     '200':
       description: The tag's relationships
@@ -22,43 +21,52 @@ get:
         application/json:
           schema:
             type: object
-            required: [ parents, children, older_siblings, younger_siblings, aliases, aliased ]
+            required:
+              - parents
+              - children
+              - older_siblings
+              - younger_siblings
+              - aliases
+              - aliased
             properties:
               parents:
                 type: array
                 items:
-                  $ref: '../../../schemas/TagID.yaml'
+                  $ref: ../../../schemas/TagID.yaml
               children:
                 type: array
                 items:
-                  $ref: '../../../schemas/TagID.yaml'
+                  $ref: ../../../schemas/TagID.yaml
               older_siblings:
                 type: array
                 items:
-                  $ref: '../../../schemas/TagID.yaml'
+                  $ref: ../../../schemas/TagID.yaml
               younger_siblings:
                 type: array
                 items:
-                  $ref: '../../../schemas/TagID.yaml'
+                  $ref: ../../../schemas/TagID.yaml
               aliases:
                 type: array
                 items:
-                  $ref: '../../../schemas/TagID.yaml'
-                description: Tags that alias to this one.
+                  $ref: ../../../schemas/TagID.yaml
+                description: Direct alias targets this tag resolves toward in this domain.
               aliased:
                 type: array
                 items:
-                  $ref: '../../../schemas/TagID.yaml'
-                description: Tags this one aliases to.
+                  $ref: ../../../schemas/TagID.yaml
+                description: Tags with a direct alias relationship resolving toward this tag in this domain.
           examples:
             with_relationships:
-              summary: Tag with a parent and an alias
+              summary: Relationships for tag 10 with parent 5 and alias target 20
+              description: An alias created with aliased_id 10 and alias_id 20 appears in tag 10's aliases.
               value:
-                parents: [ 5 ]
+                parents:
+                  - 5
                 children: [ ]
                 older_siblings: [ ]
                 younger_siblings: [ ]
-                aliases: [ 12 ]
+                aliases:
+                  - 20
                 aliased: [ ]
             no_relationships:
               summary: Tag with no relationships
@@ -69,3 +77,21 @@ get:
                 younger_siblings: [ ]
                 aliases: [ ]
                 aliased: [ ]
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

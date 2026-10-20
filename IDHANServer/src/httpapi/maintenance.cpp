@@ -229,7 +229,7 @@ static http::HTTPTask< http::Response > purgeThumbnails(
 {
 	log::info( "Starting thumbnail purge from: {}", getThumbnailsPath().string() );
 
-	const auto deleted { filesystem::clearThumbnailCache() };
+	const auto deleted { filesystem::clearThumbnailCache( getThumbnailsPath() ) };
 	if ( !deleted )
 	{
 		log::error( "Error purging thumbnails: {}", deleted.error() );

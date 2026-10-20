@@ -12,6 +12,9 @@ This document is the structural reference; that one is the behavioural reference
 
 ## Conventions
 
+- **Application namespace.** New installations use `idhan`; existing installations
+  retain their explicit schema setting. Extensions are resolved through `public`.
+  See [Database initialization](database-initialization.md) for setup and compatibility.
 - **Migrations** live in `IDHANMigration/src/` as `N-name.sql` and execute in ascending numeric
   order at server startup. The `idhan_info` table records how far each table has been migrated.
 - **ID types.** Every surrogate key is a distinct C++ type alias over an integer (`RecordID`,
@@ -78,19 +81,26 @@ Indexes (migration 195, supporting sort types): `(size, record_id)`,
 A cluster maps a `ClusterID` to an on-disk directory. Managed exclusively by
 `filesystem::ClusterManager`. See CLAUDE.md § File storage.
 
-| Column               | Type                             | Notes                                   |
-|----------------------|----------------------------------|-----------------------------------------|
-| `cluster_id`         | `SMALLSERIAL` PK                 | `ClusterID`                             |
-| `ratio_number`       | `SMALLINT` NOT NULL DEFAULT 1    | fill ratio weight (ratio / total ratio) |
-| `size_used`          | `BIGINT` NOT NULL DEFAULT 0      | bytes currently used                    |
-| `size_limit`         | `BIGINT` NOT NULL DEFAULT 0      | byte cap                                |
-| `file_count`         | `INTEGER` NOT NULL DEFAULT 0     | files stored here                       |
-| `read_only`          | `BOOLEAN` NOT NULL DEFAULT TRUE  | read-only clusters accept no new files  |
-| `cluster_name`       | `TEXT` UNIQUE                    | falls back to `folder_path` when NULL   |
-| `folder_path`        | `TEXT` NOT NULL UNIQUE           | on-disk directory                       |
+| Column         | Type                            | Notes                                        |
+|----------------|---------------------------------|----------------------------------------------|
+| `cluster_id`   | `SMALLSERIAL` PK                | `ClusterID`                                  |
+| `ratio_number` | `SMALLINT` NOT NULL DEFAULT 1   | fill ratio weight (ratio / total ratio)      |
+| `size_used`    | `BIGINT` NOT NULL DEFAULT 0     | bytes currently used                         |
+| `size_limit`   | `BIGINT` NOT NULL DEFAULT 0     | byte cap                                     |
+| `file_count`   | `INTEGER` NOT NULL DEFAULT 0    | files stored here                            |
+| `cluster_uuid` | `UUID` NOT NULL UNIQUE          | persistent storage identity; migration 416   |
+| `read_only`    | `BOOLEAN` NOT NULL DEFAULT TRUE | read-only clusters accept no new media files |
+| `cluster_name` | `TEXT` UNIQUE                   | falls back to `folder_path` when NULL        |
+| `folder_path`  | `TEXT` NOT NULL UNIQUE          | on-disk directory                            |
 
 New clusters default to read-only; a cluster only accepts writes if it was created with an explicit
 `"readonly": false`. `allowed_thumbnails` and `allowed_files` were dropped in migration 194.
+
+The root `.idhan-cluster.json` must match `cluster_uuid` before media access. New
+registrations initialize missing markers, including for logically read-only roots.
+Startup rejects missing or conflicting identities; explicit, self-resetting TOML
+acknowledgement permits recreating missing roots/markers with their existing UUIDs.
+See [cluster identity and recovery](cluster-identity-proposal.md).
 
 ### `mime`
 
@@ -185,10 +195,12 @@ An archive record (e.g. a zip) groups member records.
   `WHERE distance = N` sweep does not seq scan the table.
 - **`hamming_distance_queue`** — `record_id INTEGER PK → records` (migration 317): records whose
   distances have not been computed yet. `queue_hamming_distance()` (migration 319) fills it from
-  triggers on `image_metadata` that fire when a row is inserted with a `phash` or an existing NULL
-  `phash` is replaced by a real one; migration 318 seeded it with whatever was already hashed. The
-  server drains it on a ten second timer, claiming a fixed batch per sweep
-  (`IDHANServer/src/hamming/`).
+  triggers on `image_metadata` that fire when a row is inserted with a `phash` or its `phash`
+  actually changes, including replacement and clearing. Migration 318 seeded it with whatever
+  was already hashed. The server drains bounded 32-record batches at startup and in periodic
+  sweeps, with a one-second wait between sweeps. Queue claims and pair rebuilding share a
+  transaction and the relationship advisory lock (`IDHANServer/src/hamming/`). See
+  [Periodic maintenance](jobs.md#periodic-maintenance) for backfill, retry, and shutdown behavior.
 
 ### Alternatives and duplicates
 

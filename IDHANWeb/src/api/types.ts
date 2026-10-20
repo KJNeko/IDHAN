@@ -226,9 +226,20 @@ export interface SimilarRecords {
     results: SimilarRecord[];
 }
 
+export interface AutocompleteOptions {
+    /** Single-domain convenience; domains takes precedence when supplied. */
+    domain?: number;
+    /** Empty or omitted selects all domains. Counts use the largest selected domain count. */
+    domains?: readonly number[];
+    display?: 'display' | 'storage';
+    includeUnused?: boolean;
+    limit?: number;
+}
+
 export interface AutocompleteResult {
   tag_id: number;
   text: string;
+    /** Largest estimated usage count across the selected domains in the requested mode. */
   count?: number;
   /** Trigram similarity to the query, server-ranked. Present for server results, absent for cache reuse. */
   similarity?: number;
@@ -482,12 +493,20 @@ export interface VerboseTag {
   inherited_from: number[];
 }
 
+export interface TagDomainCounts {
+    tag_domain_id: number;
+    storage_count: number;
+    display_count: number;
+}
+
 /** A single tag's namespace/subtag decomposition (GET /tags/{id}/info). */
 export interface TagInfo {
   tag_id: number;
   namespace: { id: number; text: string };
-  subtag: { id: number; text: string };
-  items_count: number;
+    subtag: { text: string };
+    storage_count: number;
+    display_count: number;
+    domain_counts: TagDomainCounts[];
 }
 
 /**

@@ -17,6 +17,7 @@ class IDHANServerContext;
 
 namespace idhan::http
 {
+struct ParameterRules;
 // An empty body is represented by an empty IOBuf, never a null pointer.
 using RequestBody = std::variant< std::unique_ptr< folly::IOBuf >, TemporaryUpload >;
 
@@ -29,6 +30,7 @@ class RequestContext
 	RequestBody m_body;
 	runtime::WorkRegistration m_work;
 	bool m_transport_open { true };
+	const ParameterRules* m_parameter_rules {};
 
   public:
 
@@ -58,6 +60,9 @@ class RequestContext
 	[[nodiscard]] RequestID id() const noexcept;
 	[[nodiscard]] const proxygen::HTTPMessage& message() const noexcept;
 	[[nodiscard]] const RequestParameters& parameters() const noexcept;
+	// Rules are borrowed from the sealed route registry, which outlives the request.
+	void setParameterRules( const ParameterRules* rules ) noexcept;
+	[[nodiscard]] const ParameterRules* parameterRules() const noexcept;
 	[[nodiscard]] const RequestBody& body() const noexcept;
 	void setBody( RequestBody body );
 	[[nodiscard]] RequestBody takeBody() &&;

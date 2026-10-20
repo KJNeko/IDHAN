@@ -15,6 +15,7 @@
 #include "idhan/db/DBContext.hpp"
 #include "idhan/db/DBTransaction.hpp"
 #include "jsonBody.hpp"
+#include "idValidation.hpp"
 #include "logging/log.hpp"
 #include "recordValidator.hpp"
 #include "splitTag.hpp"
@@ -178,7 +179,12 @@ struct TagPair
 		pair.tag_subtag = subtag;
 
 		if ( item[ "namespace" ].get( namespace_int ) == simdjson::SUCCESS )
-			pair.tag_namespace = static_cast< NamespaceID >( namespace_int );
+		{
+			auto id { positiveId< NamespaceID >( namespace_int, "namespace" ) };
+			if ( !id ) return std::unexpected( std::move( id.error() ) );
+
+			pair.tag_namespace = *id;
+		}
 		else if ( item[ "namespace" ].get( namespace_string ) == simdjson::SUCCESS )
 			pair.tag_namespace = std::string { namespace_string };
 		else
@@ -479,13 +485,10 @@ static http::HTTPTask< http::Response > addNote( db::DBContext& db, http::Reques
 	if ( !content_type.empty() && !content_type.starts_with( "text/plain" ) )
 		co_return http::Response::error( 400, "Content type must be text/plain" );
 
-	auto body { std::move( context ).takeBody() };
-	if ( !std::holds_alternative< std::unique_ptr< folly::IOBuf > >( body ) )
-		co_return http::Response::error( 400, "Request body is too large" );
+	auto text { readRequestBody( context ) };
+	if ( !text ) co_return std::move( text.error() );
 
-	const auto text { std::get< std::unique_ptr< folly::IOBuf > >( body )->to< std::string >() };
-
-	auto note_id { co_await findOrCreateNote( text, db ) };
+	auto note_id { co_await findOrCreateNote( *text, db ) };
 	if ( !note_id ) co_return std::move( note_id.error() );
 
 	db::DBBindings bindings {};
@@ -885,10 +888,10 @@ static http::HTTPTask< http::Response > removeTags( db::DBContext& db, http::Req
 	tag_ids.reserve( array.size() );
 	for ( const simdjson::dom::element item : array )
 	{
-		std::int64_t id {};
-		if ( item.get_int64().get( id ) != simdjson::SUCCESS )
-			co_return http::Response::error( 400, "Invalid tag_id in array: Must be integral" );
-		tag_ids.push_back( static_cast< TagID >( id ) );
+		auto id { parsePositiveId< TagID >( item, "tag_id" ) };
+		if ( !id ) co_return std::move( id.error() );
+
+		tag_ids.push_back( *id );
 	}
 
 	if ( tag_ids.empty() ) co_return emptyJsonResponse();
@@ -938,9 +941,7 @@ static http::HTTPTask< http::Response > addMultipleTags( db::DBContext& db, http
 		co_return http::Response::error( 400, e.what() );
 	}
 
-	if ( tag_domain_id <= 0 )
-		co_return http::Response::error(
-			400, std::format( "Invalid domain ID given: Expected tag_domain_id > 0; Got {}", tag_domain_id ) );
+	if ( records_array.size() == 0 ) co_return http::Response::error( 400, "records must not be empty" );
 
 	if ( const auto domain { co_await findTagDomain( tag_domain_id, db ) }; !domain )
 		co_return http::Response::error(
@@ -950,10 +951,10 @@ static http::HTTPTask< http::Response > addMultipleTags( db::DBContext& db, http
 	record_ids.reserve( records_array.size() );
 	for ( const simdjson::dom::element item : records_array )
 	{
-		std::int64_t id {};
-		if ( item.get_int64().get( id ) != simdjson::SUCCESS )
-			co_return http::Response::error( 400, "Invalid json item in records list: Expected integral" );
-		record_ids.push_back( static_cast< RecordID >( id ) );
+		auto id { parsePositiveId< RecordID >( item, "record_id" ) };
+		if ( !id ) co_return std::move( id.error() );
+
+		record_ids.push_back( *id );
 	}
 
 	auto record_validation { co_await validateRecordIds( record_ids, db ) };
@@ -1039,6 +1040,8 @@ static http::HTTPTask< http::Response > removeMultipleTags( db::DBContext& db, h
 		co_return http::Response::error( 400, e.what() );
 	}
 
+	if ( records_array.size() == 0 ) co_return http::Response::error( 400, "records must not be empty" );
+
 	if ( sets_array.size() != records_array.size() )
 		co_return http::Response::error(
 			400,
@@ -1051,10 +1054,10 @@ static http::HTTPTask< http::Response > removeMultipleTags( db::DBContext& db, h
 	record_ids.reserve( records_array.size() );
 	for ( const simdjson::dom::element item : records_array )
 	{
-		std::int64_t id {};
-		if ( item.get_int64().get( id ) != simdjson::SUCCESS )
-			co_return http::Response::error( 400, "Invalid json item in records list: Expected integral" );
-		record_ids.push_back( static_cast< RecordID >( id ) );
+		auto id { parsePositiveId< RecordID >( item, "record_id" ) };
+		if ( !id ) co_return std::move( id.error() );
+
+		record_ids.push_back( *id );
 	}
 
 	std::vector< std::vector< TagID > > tag_sets {};
@@ -1069,10 +1072,10 @@ static http::HTTPTask< http::Response > removeMultipleTags( db::DBContext& db, h
 		tag_ids.reserve( set_array.size() );
 		for ( const simdjson::dom::element item : set_array )
 		{
-			std::int64_t id {};
-			if ( item.get_int64().get( id ) != simdjson::SUCCESS )
-				co_return http::Response::error( 400, "Invalid tag_id in set: Must be integral" );
-			tag_ids.push_back( static_cast< TagID >( id ) );
+			auto id { parsePositiveId< TagID >( item, "tag_id" ) };
+			if ( !id ) co_return std::move( id.error() );
+
+			tag_ids.push_back( *id );
 		}
 		tag_sets.push_back( std::move( tag_ids ) );
 	}

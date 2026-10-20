@@ -1,7 +1,7 @@
 /**
  * Shared tag-autocomplete cache behind host.tags.autocomplete.
  *
- * Results are cached by `needle|domain|limit`. The server matches `tag_text LIKE '%needle%'`, so any
+ * Results are cached by needle, domain set, display mode, used-only choice, and limit. The server matches `tag_text LIKE '%needle%'`, so any
  * tag containing `needle` also contains every substring of it: when a shorter query returned its
  * complete match set (fewer than `limit` rows), a longer query is that same set filtered client-side,
  * with no request at all.
@@ -11,7 +11,7 @@
  */
 
 import { api } from '../api/client';
-import type { AutocompleteResult } from '../api/types';
+import type {AutocompleteOptions, AutocompleteResult} from '../api/types';
 
 /** Below this the server-side candidate set is too large to be worth querying; the UI shows nothing. */
 const MIN_NEEDLE = 2;
@@ -27,8 +27,15 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-const cacheKey = (needle: string, domain: number | undefined, limit: number): string =>
-  `${domain ?? ''}|${limit}|${needle}`;
+interface CacheScope {
+    domains: number[];
+    display: 'display' | 'storage';
+    includeUnused: boolean;
+    limit: number;
+}
+
+const cacheKey = (needle: string, scope: CacheScope): string =>
+    JSON.stringify([scope.domains, scope.display, scope.includeUnused, scope.limit, needle]);
 
 function store(key: string, entry: CacheEntry): void {
   cache.set(key, entry);
@@ -39,9 +46,9 @@ function store(key: string, entry: CacheEntry): void {
 }
 
 /** A shorter, complete cached query whose result set is a superset of `needle`'s (substring semantics). */
-function reusableSuperset(needle: string, domain: number | undefined, limit: number): CacheEntry | undefined {
+function reusableSuperset(needle: string, scope: CacheScope): CacheEntry | undefined {
   for (let len = needle.length - 1; len >= MIN_NEEDLE; len--) {
-    const entry = cache.get(cacheKey(needle.slice(0, len), domain, limit));
+      const entry = cache.get(cacheKey(needle.slice(0, len), scope));
     if (entry?.complete) return entry;
   }
   return undefined;
@@ -49,28 +56,33 @@ function reusableSuperset(needle: string, domain: number | undefined, limit: num
 
 export async function autocomplete(
   prefix: string,
-  opts?: { domain?: number; limit?: number },
+  opts?: AutocompleteOptions,
   signal?: AbortSignal,
 ): Promise<AutocompleteResult[]> {
   const needle = prefix.trim().toLowerCase();
   if (needle.length < MIN_NEEDLE) return [];
 
-  const limit = opts?.limit ?? DEFAULT_LIMIT;
-  const domain = opts?.domain;
-  const key = cacheKey(needle, domain, limit);
+    const requestedDomains = opts?.domains ?? (opts?.domain !== undefined ? [opts.domain] : []);
+    const scope: CacheScope = {
+        domains: [...new Set(requestedDomains)].sort((a, b) => a - b),
+        display: opts?.display ?? 'display',
+        includeUnused: opts?.includeUnused ?? true,
+        limit: opts?.limit ?? DEFAULT_LIMIT,
+    };
+    const key = cacheKey(needle, scope);
 
   const exact = cache.get(key);
   if (exact) return exact.results;
 
-  const superset = reusableSuperset(needle, domain, limit);
+    const superset = reusableSuperset(needle, scope);
   if (superset) {
     const filtered = superset.results.filter((r) => r.text.toLowerCase().includes(needle));
     store(key, { results: filtered, complete: true });
     return filtered;
   }
 
-  const results = await api.autocompleteTags(needle, { domain, limit }, signal);
-  store(key, { results, complete: results.length < limit });
+    const results = await api.autocompleteTags(needle, scope, signal);
+    store(key, {results, complete: results.length < scope.limit});
   return results;
 }
 

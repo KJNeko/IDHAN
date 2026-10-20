@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "idhan/SHA256.hpp"
+#include "filesystem/clusters/clusterIdentity.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "jobs/JobContext.hpp"
 #include "logging/log.hpp"
@@ -87,25 +88,30 @@ static runtime::Task< std::optional< modules::CallInput > > openRecordInput(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT records.sha256, file_clusters.folder_path, "
+				"SELECT records.sha256, file_info.cluster_id, "
 				"COALESCE(file_info.extension, mime.best_extension, '') "
 				"FROM records JOIN file_info USING (record_id) "
 				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
 				"LEFT JOIN mime ON mime.mime_id = file_info.mime_id "
 				"WHERE records.record_id = $1",
 				std::move( bindings ) )
-			.rows< std::span< const std::byte >, std::string, std::string >()
+			.rows< std::span< const std::byte >, ClusterID, std::string >()
 	};
 
 	if ( rows.empty() ) co_return std::nullopt;
 
-	const auto& [ sha256_bytes, folder_path, extension ] { rows.row( 0 ) };
+	const auto& [ sha256_bytes, cluster_id, extension ] { rows.row( 0 ) };
+	auto cluster { co_await filesystem::openCluster( db, cluster_id ) };
+	if ( !cluster )
+	{
+		log::warn( "Embedding: cluster verification failed for record {}: {}", record_id, cluster.error() );
+		co_return std::nullopt;
+	}
+
 	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
 	const auto file_name { extension.empty() ? hex : std::format( "{}.{}", hex, extension ) };
-	const auto record_path {
-		std::filesystem::path { folder_path } / std::format( "f{}", hex.substr( 0, 2 ) ) / file_name
-	};
+	const auto record_path { cluster->root() / std::format( "f{}", hex.substr( 0, 2 ) ) / file_name };
 
 	auto input_e { modules::CallInput::forPath( record_path ) };
 	if ( !input_e )

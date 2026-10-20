@@ -23,6 +23,11 @@ namespace idhan::db
 class DBContext;
 }
 
+namespace idhan::maintenance
+{
+class HashMaintenance;
+}
+
 namespace idhan::http
 {
 class HTTPServer;
@@ -48,11 +53,12 @@ class ServerContext
 	std::shared_ptr< folly::CPUThreadPoolExecutor > m_db_executor {};
 	std::unique_ptr< db::DBContext > m_db_context {};
 
+	// Keep module health checks alive while hash workers drain, including failed startup.
+	std::jthread m_module_maintenance_thread {};
+	std::unique_ptr< maintenance::HashMaintenance > m_hash_maintenance {};
 	std::unique_ptr< httpapi::HeartbeatService > m_heartbeat {};
 
 	std::unique_ptr< http::HTTPServer > m_http_server {};
-
-	std::jthread m_module_maintenance_thread;
 
 	void startReplacementStack();
 

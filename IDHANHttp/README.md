@@ -35,6 +35,11 @@ in `HTTPConfig::temp_path`. The complete body, including the buffered prefix, is
 preserved. Empty bodies use an empty IOBuf. Content-Length is not trusted to choose
 storage, and chunked uploads follow the same rule.
 
+The 8 MiB threshold selects storage; it is not a request-size limit. Native JSON
+and note handlers also read spilled bodies. They impose no application-level byte
+cap, although parsing and storage remain subject to available resources and
+library representation limits.
+
 Inspect `context.body()` or move ownership with `std::move(context).takeBody()`.
 JSON, multipart, and Content-Encoding interpretation belong to the handler.
 File creation and positional writes run on an owned worker executor, with each
@@ -57,8 +62,8 @@ cmake --build build/debug --target IDHANHttpTests
 The test starts on an ephemeral port and sends requests through `CurlHelper`.
 
 The Proxygen layer provides lazy coroutine routes for metadata and regular files. It
-has no Drogon or database API dependency. Existing IDHANServer controllers remain
-on Drogon until their application logic is migrated.
+has no database API dependency. Native IDHANServer routes use this layer; API
+tests use libcurl independently of the server runtime.
 
 ```cpp
 http.addRoute("/metadata", [](const proxygen::HTTPMessage& request, const folly::IOBuf*) -> idhan::coro::Task<idhan::http::RouteResponse> {
@@ -76,8 +81,8 @@ are available on the request and do not participate in matching. GET also handle
 HEAD unless an explicit HEAD handler exists. Different methods can share a path;
 unsupported paths or methods return 404. `removeRoute(path)` removes all methods.
 Handlers receive a borrowed IOBuf chain (possibly null), not necessarily one
-contiguous buffer. Metadata request bodies are limited to 8 MiB; larger requests
-return 413 after receipt. This is not a large-upload API.
+contiguous buffer. Request body buffering and spill behavior are described above;
+the in-memory threshold is not a metadata request-size limit.
 
 For a file, return `RouteResponse::fromFile(std::move(file), mime_type)` with an
 owning `folly::File`. Obtain that descriptor through the storage layer; do not map

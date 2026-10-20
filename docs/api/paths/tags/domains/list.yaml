@@ -3,13 +3,29 @@ get:
     - tag domains
   summary: Returns all tag domains
   responses:
-    "200":
+    '200':
       description: All tag domains, or an empty array
       content:
         application/json:
           schema:
             type: array
             items:
-              $ref: '../../../schemas/TagDomainInfo.yaml'
-    "500":
+              $ref: ../../../schemas/TagDomainInfo.yaml
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

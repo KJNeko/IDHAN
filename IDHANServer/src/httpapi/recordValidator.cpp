@@ -50,6 +50,7 @@ http::RequestValidation recordExistsValidation( db::DBContext& db )
 			co_return http::Response::error( 500, "recordExistsValidation attached to a route without record_id" );
 
 		const auto record_id { *record_id_e };
+		if ( record_id <= 0 ) co_return http::Response::error( 400, "record_id must be positive" );
 
 		auto& cache { caching::recordExistsCache() };
 		if ( cache.contains( record_id ) ) co_return std::nullopt;

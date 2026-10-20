@@ -1,0 +1,18 @@
+name: tag_domains
+in: query
+required: false
+style: form
+explode: true
+description: >-
+  Domains whose storage and display counts are returned. Repeat the parameter
+  for multiple domains, for example ?tag_domains=1&tag_domains=2. Omit it to
+  include every existing domain. Duplicates are ignored. Malformed, zero,
+  negative, or overflowing IDs return 400; a nonexistent domain returns 404.
+  A supplied empty value is invalid. Each selected domain appears once in
+  ascending ID order, including zero counts for unused domains. Top-level
+  storage_count and display_count each use the maximum over this selection,
+  rather than a sum or a distinct-record union count.
+schema:
+  type: array
+  items:
+    $ref: ../schemas/TagDomainID.yaml

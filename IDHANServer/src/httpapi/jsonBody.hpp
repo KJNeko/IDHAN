@@ -9,6 +9,8 @@
 namespace idhan::httpapi
 {
 
+[[nodiscard]] std::expected< std::string, http::Response > readRequestBody( http::RequestContext& context );
+
 [[nodiscard]] std::expected< std::string, http::Response > readValidatedJsonBody( http::RequestContext& context );
 
 }
