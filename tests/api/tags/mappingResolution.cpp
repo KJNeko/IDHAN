@@ -54,7 +54,7 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "a tag with no relationships is added" )
 		{
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
 
 			THEN( "a search for it finds the record" )
 			{
@@ -64,7 +64,7 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 			AND_WHEN( "the tag is removed again" )
 			{
-				REQUIRE( api().removeTags( domain, { record }, { samus } ).status == drogon::k200OK );
+				REQUIRE( api().removeTags( domain, { record }, { samus } ).status == 200 );
 
 				THEN( "the search no longer finds it" )
 				{
@@ -76,8 +76,8 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "a parent is declared and the child is then added" )
 		{
-			REQUIRE( api().createParents( domain, { { metroid, samus } } ).status == drogon::k200OK );
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
+			REQUIRE( api().createParents( domain, { { metroid, samus } } ).status == 200 );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
 
 			THEN( "a search for the parent finds the record" )
 			{
@@ -88,8 +88,8 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "a tag is added and a parent is declared over it afterwards" )
 		{
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
-			REQUIRE( api().createParents( domain, { { metroid, samus } } ).status == drogon::k200OK );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
+			REQUIRE( api().createParents( domain, { { metroid, samus } } ).status == 200 );
 
 			THEN( "a search for the parent finds the record" )
 			{
@@ -100,8 +100,8 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "an alias is created and the aliased tag is then added" )
 		{
-			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == drogon::k200OK );
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
+			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == 200 );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
 
 			THEN( "a search for the alias target finds the record" )
 			{
@@ -117,8 +117,8 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "a tag is added and aliased onward afterwards" )
 		{
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
-			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == drogon::k200OK );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
+			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == 200 );
 
 			THEN( "a search for the alias target finds the record" )
 			{

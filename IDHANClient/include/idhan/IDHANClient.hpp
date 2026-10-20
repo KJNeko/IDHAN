@@ -151,6 +151,12 @@ class IDHANClient
 
 	//! \return Tag suggestions (id + text) matching the autocomplete \p text.
 	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag( const QString& text );
+	// An empty domain set selects all domains. Counts are estimated maxima in the selected mode.
+	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag(
+		const QString& text,
+		const std::vector< TagDomainID >& domains,
+		const QString& display_type = QStringLiteral( "display" ),
+		bool include_unused = true );
 
 	QFuture< void > addTags(
 		RecordID record_id,
@@ -278,10 +284,19 @@ class IDHANClient
 
 		QString toQString() const { return QString::fromStdString( toStdString() ); }
 
-		std::size_t item_count { 0 };
+		struct DomainCounts
+		{
+			TagDomainID tag_domain_id;
+			std::int64_t storage_count;
+			std::int64_t display_count;
+		};
+
+		std::int64_t storage_count {};
+		std::int64_t display_count {};
+		std::vector< DomainCounts > domain_counts;
 	};
 
-	QFuture< TagInfo > getTagInfo( TagID tag_id );
+	QFuture< TagInfo > getTagInfo( TagID tag_id, const std::vector< TagDomainID >& domains = {} );
 
 	struct TagDomainInfo
 	{

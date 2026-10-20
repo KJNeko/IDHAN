@@ -1,15 +1,15 @@
 #pragma once
 
-#include <string>
+#include <optional>
+#include <string_view>
 
 #include "core/search/SearchTypes.hpp"
 
 namespace idhan::httpapi
 {
 
-//! Maps a "sort.by" string (POST /search JSON, GET /search query param) onto a SortType.
-//! Unknown values fall back to import time.
-inline SortType parseSortType( const std::string& by )
+// Omitted sort keys are handled by callers; an unrecognized supplied name has no default.
+[[nodiscard]] inline std::optional< SortType > parseSortType( const std::string_view by )
 {
 	if ( by == "filesize" || by == "size" ) return SortType::FILESIZE;
 	// "creation_time" and "modified_time" predate the file/record split and are kept for old clients.
@@ -19,6 +19,7 @@ inline SortType parseSortType( const std::string& by )
 		return SortType::FILE_MODIFIED_TIME;
 	if ( by == "file_created_time" || by == "file_ctime" ) return SortType::FILE_CREATED_TIME;
 	if ( by == "mime" || by == "filetype" ) return SortType::MIME;
+	if ( by == "import_time" ) return SortType::IMPORT_TIME;
 	if ( by == "hash" ) return SortType::HASH;
 	if ( by == "random" ) return SortType::RANDOM;
 	if ( by == "duration" ) return SortType::DURATION;
@@ -29,8 +30,7 @@ inline SortType parseSortType( const std::string& by )
 	if ( by == "ratio" ) return SortType::RATIO;
 	if ( by == "num_pixels" ) return SortType::NUM_PIXELS;
 	if ( by == "num_tags" ) return SortType::NUM_TAGS;
-	// "import_time" and anything unrecognised
-	return SortType::IMPORT_TIME;
+	return std::nullopt;
 }
 
 } // namespace idhan::httpapi

@@ -30,7 +30,7 @@ SCENARIO_METHOD( ServerFixture, "Tag search", "[api][tags][search]" )
 
 			THEN( "the tag is found" )
 			{
-				REQUIRE( found.status == drogon::k200OK );
+				REQUIRE( found.status == 200 );
 				CHECK( found.json[ "found" ].asBool() );
 				CHECK( found.json[ "tag_id" ].asInt() == samus );
 			}
@@ -42,7 +42,7 @@ SCENARIO_METHOD( ServerFixture, "Tag search", "[api][tags][search]" )
 
 			THEN( "the tag is found" )
 			{
-				REQUIRE( found.status == drogon::k200OK );
+				REQUIRE( found.status == 200 );
 				CHECK( found.json[ "found" ].asBool() );
 				CHECK( found.json[ "tag_id" ].asInt() == samus );
 			}
@@ -54,7 +54,7 @@ SCENARIO_METHOD( ServerFixture, "Tag search", "[api][tags][search]" )
 
 			THEN( "nothing is found, and no id is offered" )
 			{
-				REQUIRE( found.status == drogon::k200OK );
+				REQUIRE( found.status == 200 );
 				CHECK_FALSE( found.json[ "found" ].asBool() );
 				CHECK_FALSE( found.json.isMember( "tag_id" ) );
 			}
@@ -73,7 +73,7 @@ SCENARIO_METHOD( ServerFixture, "Tag search", "[api][tags][search]" )
 
 			THEN( "the tag is found" )
 			{
-				REQUIRE( found.status == drogon::k200OK );
+				REQUIRE( found.status == 200 );
 				CHECK( found.json[ "found" ].asBool() );
 				CHECK( found.json[ "tag_id" ].asInt() == amelie );
 			}

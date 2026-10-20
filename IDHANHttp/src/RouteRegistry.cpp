@@ -269,6 +269,7 @@ HTTPTask< Response > RouteRegistry::dispatch( RouteMatch match, RequestContext c
 	if ( match.status != RouteMatch::Status::found || !match.route_id ) co_return Response::error( 404, "Not found" );
 
 	const auto& route { m_routes[ *match.route_id ] };
+	context.setParameterRules( route.metadata.parameters ? &*route.metadata.parameters : nullptr );
 	const auto request_path { context.message().getPathAsStringPiece() };
 	spdlog::debug(
 		"Routing {} {} -> {}",
@@ -293,11 +294,26 @@ HTTPTask< std::optional< Response > > RouteRegistry::validateRequest(
 	const proxygen::HTTPMessage& message,
 	const RequestParameters& parameters ) const
 {
-	for ( const auto& validate : m_routes.at( match.route_id.value() ).metadata.before_body )
+	const auto& metadata { m_routes.at( match.route_id.value() ).metadata };
+	for ( const auto& validate : metadata.before_body )
 	{
 		auto rejection { co_await validate( message, parameters ) };
 		if ( rejection ) co_return std::move( rejection );
 	}
+	if ( metadata.parameters )
+	{
+		auto allowed { metadata.parameters->query };
+		for ( const auto& parameter : metadata.path_parameters ) allowed.push_back( parameter.name );
+		const auto unknown { unknownQueryParameters( parameters, allowed ) };
+		auto rejection { handleUnknownParameters(
+			unknown,
+			"query",
+			message.getMethod().value_or( metadata.method ),
+			metadata.path,
+			metadata.parameters->unknown ) };
+		if ( rejection ) co_return Response::error( 400, std::move( *rejection ) );
+	}
 	co_return std::nullopt;
 }
+
 } // namespace idhan::http

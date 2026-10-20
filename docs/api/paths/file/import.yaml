@@ -3,97 +3,219 @@ post:
     - records
   summary: Imports a file
   description: |
-    Always 200 when the body is accepted. `status` carries the outcome:
-    1 imported, 2 already present, 3 previously deleted, 4 MIME unknown.
+    Accepts raw file bytes. `application/octet-stream` is the recommended HTTP
+    Content-Type, but the server does not require that header or reject another
+    value. It identifies the file's MIME from the bytes and optional `filename`
+    hint; the HTTP Content-Type does not select or override the detected MIME.
+
+    HTTP 200 reports the import outcome in `status`: imported (1), already present
+    (2), previously deleted (3), or unknown MIME (4). Statuses 3 and 4 are import
+    outcomes, not HTTP errors. Other failures return a plain-text HTTP error.
+    Metadata parsing failure does not undo an otherwise successful import.
+
+    With the default `force_import=false`, a previously deleted hash returns
+    status 3 without restoring its file. A normally stored duplicate can return
+    status 2 before MIME detection. Otherwise, an unknown MIME returns status 4
+    without proceeding to storage.
+
+    `force_import=true` bypasses those early duplicate/deletion checks, allows
+    unknown MIME, and proceeds through the import/storage path even for an
+    existing hash. For example, a deleted hash can be imported again and an
+    unrecognized file can be stored; successful forced processing returns status
+    1. It reuses an existing record for the same SHA-256 when one exists. It does
+    not promise a new record ID, unconditional overwriting, or relocation of an
+    existing file. Existing storage and read-only cluster rules still apply.
+
+    Forced imports still require valid authentication, valid query parameters,
+    nonempty data, hashing, and successful database/storage operations. Force is
+    not a general validation or storage-error bypass. Cluster identity must be
+    verified even for stored duplicates and forced imports; an unverifiable
+    assigned cluster returns 503 instead of silently storing the record elsewhere.
   requestBody:
     required: true
+    description: >-
+      Raw file bytes, not JSON or multipart form data. Prefer
+      application/octet-stream. A missing or different Content-Type header does
+      not itself cause rejection; the same raw-byte handling applies.
     content:
       application/octet-stream:
-        schema:
-          type: string
-          format: binary
+        schema: { }
+      '*/*':
+        schema: { }
   responses:
+    '503':
+      description: An existing record has an unverifiable assigned cluster, or no configured writable cluster could be verified. force_import does not bypass identity checks.
+      content:
+        text/plain:
+          schema:
+            type: string
     '200':
-      description: Import processed
+      description: >-
+        Import outcome. Inspect status even when HTTP succeeds: 1 means imported
+        (including successful forced processing), 2 means already present,
+        3 means suppressed because previously deleted, and 4 means unknown MIME.
       content:
         application/json:
           schema:
-            type: object
-            required: [ status ]
-            properties:
-              status:
-                type: integer
-                enum: [ 1, 2, 3, 4 ]
-              record_id:
-                type: integer
-              record:
-                type: object
+            oneOf:
+              - type: object
                 properties:
-                  id:
+                  status:
                     type: integer
-                  creation_time:
-                    type: integer
-                  creation_time_human:
-                    type: string
-                  deleted_time:
-                    type: integer
-                    description: Present only when `status` is 3.
-                  deleted_time_human:
-                    type: string
-                    description: Present only when `status` is 3.
-              file:
-                type: object
+                    enum:
+                      - 1
+                      - 2
+                  record_id:
+                    $ref: ../../schemas/RecordID.yaml
+                  record:
+                    type: object
+                    properties:
+                      id:
+                        $ref: ../../schemas/RecordID.yaml
+                    required:
+                      - id
+                  file:
+                    type: object
+                    properties:
+                      import_time_human:
+                        type:
+                          - string
+                          - 'null'
+                      import_time:
+                        type:
+                          - integer
+                          - 'null'
+                        format: int64
+                      deleted_time_human:
+                        type:
+                          - string
+                          - 'null'
+                      deleted_time:
+                        type:
+                          - integer
+                          - 'null'
+                        format: int64
+                    required:
+                      - import_time_human
+                      - import_time
+                      - deleted_time_human
+                      - deleted_time
+                required:
+                  - status
+                  - record_id
+                  - record
+                  - file
+              - type: object
                 properties:
-                  import_time:
+                  status:
                     type: integer
-                  import_time_human:
+                    const: 3
+                  record_id:
+                    $ref: ../../schemas/RecordID.yaml
+                  cluster_delete_time:
+                    type:
+                      - integer
+                      - 'null'
+                    format: int64
+                required:
+                  - status
+                  - record_id
+                  - cluster_delete_time
+              - type: object
+                properties:
+                  status:
+                    type: integer
+                    const: 4
+                  reason:
                     type: string
-              reason:
-                type: string
-                description: Present only when `status` is 4.
+                    const: unknown mime
+                  reason_id:
+                    type: integer
+                required:
+                  - status
+                  - reason
+                  - reason_id
           examples:
-            imported:
-              summary: New file imported (status=1)
-              value:
-                status: 1
-                record_id: 43
-                record:
-                  id: 43
-                  creation_time: 1749642039
-                  creation_time_human: "2025-06-11 11:40:38.572907"
-                file:
-                  import_time: 1749642232
-                  import_time_human: "2025-06-11 11:43:51.627481"
-            already_exists:
-              summary: File already exists (status=2)
+            alreadyPresent:
+              summary: A normal duplicate returns the existing record without importing again.
               value:
                 status: 2
-                record_id: 43
+                record_id: 42
                 record:
-                  id: 43
-                  creation_time: 1749642039
-                  creation_time_human: "2025-06-11 11:40:38.572907"
+                  id: 42
                 file:
-                  import_time: 1749642232
-                  import_time_human: "2025-06-11 11:43:51.627481"
-            previously_deleted:
-              summary: File was previously deleted (status=3)
+                  import_time_human: '2026-10-19 22:40:00+00'
+                  import_time: 1792449600
+                  deleted_time_human: null
+                  deleted_time: null
+            previouslyDeleted:
+              summary: Without force, a previously deleted hash is not restored.
               value:
                 status: 3
-                record_id: 43
-                record:
-                  id: 43
-                  creation_time: 1749642039
-                  creation_time_human: "2025-06-11 11:40:38.572907"
-                  deleted_time: 1749642300
-                  deleted_time_human: "2025-06-11 11:45:00.000000"
-                file:
-                  import_time: 1749642232
-                  import_time_human: "2025-06-11 11:43:51.627481"
-            unknown_mime:
-              summary: MIME type unknown (status=4)
+                record_id: 42
+                cluster_delete_time: 1792450000
+            unknownMime:
+              summary: Without force, an unrecognized MIME is an HTTP 200 outcome with status 4.
               value:
                 status: 4
-                reason: "unknown mime"
+                reason: unknown mime
+                reason_id: 1
+            forcedImport:
+              summary: A successful forced import, including a restored hash or unknown-MIME file.
+              value:
+                status: 1
+                record_id: 42
+                record:
+                  id: 42
+                file:
+                  import_time_human: '2026-10-20 00:00:00+00'
+                  import_time: 1792454400
+                  deleted_time_human: null
+                  deleted_time: null
     '400':
-      description: Content-Type is not `application/octet-stream`
+      description: >-
+        Empty file data, malformed or repeated scalar query parameters, missing
+        or malformed credentials, or no eligible writable cluster for the import.
+        The body is a plain-text error message. A missing or different HTTP
+        Content-Type header does not itself cause this response. Unknown MIME
+        without force is reported as HTTP 200 with status 4 instead.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: force_import
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+      description: >-
+        Bypass early duplicate/deletion suppression and permit unknown MIME,
+        proceeding through the import/storage path for the supplied bytes.
+        For example, force_import=true can restore a previously deleted hash or
+        import an unknown-MIME file; successful forced processing returns status
+        1. Existing record identity and storage rules still apply. This does not
+        bypass authentication, empty-body checks, or database/storage failures.
+    - name: filename
+      in: query
+      required: false
+      schema:
+        type: string
+      description: >-
+        Optional filename hint for MIME detection, for example image.png. This
+        is not a destination path and does not override authentication or storage
+        rules. MIME detection uses the supplied bytes and this hint, not the HTTP
+        Content-Type header.

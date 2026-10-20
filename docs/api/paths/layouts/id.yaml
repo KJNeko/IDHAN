@@ -1,0 +1,139 @@
+get:
+  tags:
+    - layouts
+  summary: Fetches a complete layout document
+  responses:
+    '200':
+      description: Fetches a complete layout document
+      content:
+        application/json:
+          schema:
+            $ref: ../../schemas/LayoutDocument.yaml
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+put:
+  tags:
+    - layouts
+  summary: Creates or replaces a layout document
+  responses:
+    '200':
+      description: Creates or replaces a layout document
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+            required:
+              - id
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '409':
+      description: The request conflicts with existing state.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../../schemas/LayoutDocument.yaml
+  description: Upserts the document. Its id must match the path; names are unique ignoring case. No application-level request body size limit is imposed; processing remains subject to available resources.
+delete:
+  tags:
+    - layouts
+  summary: Deletes a saved layout
+  responses:
+    '200':
+      description: Deletes a saved layout
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              deleted:
+                type: boolean
+            required:
+              - deleted
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  description: Returns deleted=false if the ID was not present.

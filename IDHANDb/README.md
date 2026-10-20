@@ -2,7 +2,7 @@
 
 `IDHANPQContext` is a direct libpq pool using the same `folly::coro::Task`
 and `folly::EventBase` facilities as Proxygen's coroutine HTTP handlers.
-It does not link Drogon, Trantor, or libpqxx.
+It uses libpq directly and has no HTTP-layer or libpqxx dependency.
 
 Initialize Folly once in `main()` with `folly::Init`. Construct a context with
 an EventBase that will keep running until all submitted tasks finish:

@@ -16,8 +16,6 @@
 namespace idhan::httpapi
 {
 
-constexpr std::size_t max_document_bytes { 1024 * 1024 };
-
 [[nodiscard]] static bool isUuidShaped( const std::string_view id )
 {
 	if ( id.size() != 36 ) return false;
@@ -133,11 +131,6 @@ static http::HTTPTask< http::Response > createLayout( db::DBContext& db, http::R
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
 
-	if ( body_e->size() > max_document_bytes )
-		co_return http::Response::error(
-			400,
-			std::format( "Layout document is too large ({} bytes, limit {})", body_e->size(), max_document_bytes ) );
-
 	auto parsed_e { parseDocumentBody( *body_e ) };
 	if ( !parsed_e ) co_return std::move( parsed_e.error() );
 	const auto& parsed { *parsed_e };
@@ -209,11 +202,6 @@ static http::HTTPTask< http::Response > putLayout( db::DBContext& db, http::Requ
 
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
-
-	if ( body_e->size() > max_document_bytes )
-		co_return http::Response::error(
-			400,
-			std::format( "Layout document is too large ({} bytes, limit {})", body_e->size(), max_document_bytes ) );
 
 	auto parsed_e { parseDocumentBody( *body_e ) };
 	if ( !parsed_e ) co_return std::move( parsed_e.error() );

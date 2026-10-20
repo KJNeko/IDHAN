@@ -1,3 +1,4 @@
 type: string
 description: The half of a tag before the colon.
-example: 'character'
+examples:
+  - character

@@ -2,7 +2,7 @@ get:
   tags:
     - relationships
   summary: Next duplicate pair awaiting a decision
-  description: |
+  description: |-
     Returns pairs of records that are perceptually similar and hold no relationship yet,
     walked one record at a time and closest first within each, so a run of calls works
     through everything one file could be. Backs the "next unresolved" button in the UI:
@@ -16,9 +16,8 @@ get:
     - name: distance
       in: query
       required: false
-      description: >
-        Largest perceptual-hash distance to consider, in differing bits. Defaults to
-        8, which is also the furthest apart any stored pair can be.
+      description: Largest perceptual-hash distance to consider, in differing bits. Defaults to 8, which
+        is also the furthest apart any stored pair can be.
       schema:
         type: integer
         minimum: 0
@@ -27,17 +26,15 @@ get:
     - name: limit
       in: query
       required: false
-      description: >
-        How many pairs to return, in the order they come up. The default of 1 answers
-        "what do I rule on next"; a client that reads the images ahead of the user asks
-        for more.
+      description: How many pairs to return, in the order they come up. The default of 1 answers "what
+        do I rule on next"; a client that reads the images ahead of the user asks for more.
       schema:
         type: integer
         minimum: 0
         maximum: 32
         default: 1
   responses:
-    200:
+    '200':
       description: The next pair, or none left within the distance
       content:
         application/json:
@@ -52,27 +49,26 @@ get:
                 type: integer
                 description: The maximum distance that was searched, echoed back.
               pair:
-                nullable: true
-                description: >
-                  The head of `pairs`, repeated for callers ruling one pair at a time.
-                  Null once every pair within the distance has been ruled on.
-                type: object
+                description: The head of `pairs`, repeated for callers ruling one pair at a time. Null
+                  once every pair within the distance has been ruled on.
+                type:
+                  - object
+                  - 'null'
                 required:
                   - record_id_a
                   - record_id_b
                   - distance
                 properties:
                   record_id_a:
-                    $ref: '../../../schemas/RecordID.yaml'
+                    $ref: ../../../schemas/RecordID.yaml
                   record_id_b:
-                    $ref: '../../../schemas/RecordID.yaml'
+                    $ref: ../../../schemas/RecordID.yaml
                   distance:
                     type: integer
                     description: Differing bits between the two perceptual hashes.
               pairs:
                 type: array
-                description: >
-                  At most `limit` pairs, ordered by the lower record id and then by distance.
+                description: At most `limit` pairs, ordered by the lower record id and then by distance.
                   Empty once none are left.
                 items:
                   type: object
@@ -82,9 +78,9 @@ get:
                     - distance
                   properties:
                     record_id_a:
-                      $ref: '../../../schemas/RecordID.yaml'
+                      $ref: ../../../schemas/RecordID.yaml
                     record_id_b:
-                      $ref: '../../../schemas/RecordID.yaml'
+                      $ref: ../../../schemas/RecordID.yaml
                     distance:
                       type: integer
                       description: Differing bits between the two perceptual hashes.
@@ -107,9 +103,22 @@ get:
                 distance: 8
                 pair: null
                 pairs: []
-    400:
-      description: >
-        distance was not an unsigned integer, or was greater than 8; or limit was not an
-        unsigned integer, or was greater than 32
-    500:
+    '400':
+      description: distance was not an unsigned integer, or was greater than 8; or limit was not an unsigned
+        integer, or was greater than 32
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

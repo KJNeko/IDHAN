@@ -8,7 +8,7 @@ post:
       in: path
       required: true
       schema:
-        $ref: '../../../schemas/RecordID.yaml'
+        $ref: ../../../schemas/RecordID.yaml
   requestBody:
     required: true
     content:
@@ -28,9 +28,31 @@ post:
             summary: Remove source URLs
             value:
               urls:
-                - "https://example.com/image.jpg"
+                - https://example.com/image.jpg
   responses:
-    200:
-      description: URLs removed
-    400:
+    '200':
+      description: URLs unlinked. Empty response body (Content-Type application/json).
+    '400':
       description: Missing or invalid body
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

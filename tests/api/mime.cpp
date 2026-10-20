@@ -16,7 +16,7 @@ SCENARIO_METHOD( ServerFixture, "MIME parsing uses the shared identification pip
 
 		THEN( "the specialized type is reported" )
 		{
-			REQUIRE( response.status == drogon::k200OK );
+			REQUIRE( response.status == 200 );
 			CHECK( response.json[ "success" ].asBool() );
 			CHECK( static_cast< MimeID >( response.json[ "mime_id" ].asInt() ) == mime_ids::IMAGE_PNG );
 			CHECK(
@@ -31,7 +31,7 @@ SCENARIO_METHOD( ServerFixture, "MIME parsing uses the shared identification pip
 
 		THEN( "the extension does not override the signature" )
 		{
-			REQUIRE( response.status == drogon::k200OK );
+			REQUIRE( response.status == 200 );
 			CHECK( static_cast< MimeID >( response.json[ "mime_id" ].asInt() ) == mime_ids::IMAGE_PNG );
 		}
 	}
@@ -43,7 +43,7 @@ SCENARIO_METHOD( ServerFixture, "MIME parsing uses the shared identification pip
 
 		THEN( "the archive module specializes it to CBZ" )
 		{
-			REQUIRE( response.status == drogon::k200OK );
+			REQUIRE( response.status == 200 );
 			CHECK( static_cast< MimeID >( response.json[ "mime_id" ].asInt() ) == mime_ids::COMICBOOK_ZIP );
 			CHECK(
 				response.json[ "generic_mime_id" ].asUInt()
@@ -58,7 +58,7 @@ SCENARIO_METHOD( ServerFixture, "MIME parsing uses the shared identification pip
 
 		THEN( "the signature remains a plain ZIP" )
 		{
-			REQUIRE( response.status == drogon::k200OK );
+			REQUIRE( response.status == 200 );
 			CHECK( static_cast< MimeID >( response.json[ "mime_id" ].asInt() ) == mime_ids::APPLICATION_ZIP );
 		}
 	}

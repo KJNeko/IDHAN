@@ -96,6 +96,13 @@ runtime::Task< std::expected< void, http::Response > > validateRelationshipIds(
 	std::vector< TagID > tag_ids,
 	db::DBContext& db )
 {
+	if ( tag_domain_id <= 0 )
+		co_return std::unexpected( http::Response::error( 400, "tag_domain_id must be positive" ) );
+
+	for ( const auto tag_id : tag_ids )
+		if ( tag_id <= 0 )
+			co_return std::unexpected( http::Response::error( 400, "Tag IDs must be positive integers" ) );
+
 	const auto domain { co_await findTagDomain( tag_domain_id, db ) };
 	if ( !domain )
 		co_return std::unexpected(

@@ -2,33 +2,17 @@ post:
   tags:
     - mime
   summary: Detects a file's MIME type and parses its metadata
-  description: |
-    Runs every metadata parser module that matches the detected type.
-
-    Send raw bytes as `application/octet-stream`, or `multipart/form-data` with
-    exactly one file part, whose filename is passed to the scanner as a hint.
+  description: Detects MIME and invokes matching metadata modules. Send raw bytes with Content-Type application/octet-stream.
+    Module failures appear within metadata_modules while detection can still succeed.
   requestBody:
     required: true
     content:
       application/octet-stream:
-        schema:
-          type: string
-          format: binary
-      multipart/form-data:
-        schema:
-          type: object
-          required:
-            - file
-          properties:
-            file:
-              type: string
-              format: binary
-              description: Exactly one file part.
+        schema: { }
   responses:
     '200':
-      description: >
-        Scan attempted. A `success` of false means the type could not be
-        determined, and `error` replaces `mime`.
+      description: Scan attempted. A `success` of false means the type could not be determined, and `error`
+        replaces `mime`.
       content:
         application/json:
           schema:
@@ -42,49 +26,71 @@ post:
                 properties:
                   success:
                     type: boolean
-                    enum: [ true ]
+                    enum:
+                      - true
                   mime:
                     type: string
-                    example: image/png
+                    examples:
+                      - image/png
                   metadata_modules:
                     type: array
                     description: One entry per module that matched the type.
                     items:
                       type: object
-                      required:
-                        - name
-                        - extra
+                      description: A successful module has name and extra. A failed module has name and
+                        error; staging errors may contain only error.
                       properties:
                         name:
                           type: string
+                        error:
+                          type: string
                         count:
                           type: integer
-                          description: Contained entries. Archives only.
+                          format: int64
+                          minimum: 0
                         uncompressed_size:
                           type: integer
-                          description: Bytes uncompressed. Archives only.
-                        extra:
-                          type: object
-                          description: Module-specific fields.
+                          format: int64
+                          minimum: 0
+                        extra: { }
+                  mime_id:
+                    type: integer
+                  generic_mime_id:
+                    type: integer
               - description: Detection failed, or no data was sent.
                 type: object
                 required:
+                  - success
                   - error
                 properties:
                   success:
                     type: boolean
-                    enum: [ false ]
+                    enum:
+                      - false
                   error:
                     type: string
     '400':
-      description: >
-        Content-Type is neither `application/octet-stream` nor
-        `multipart/form-data`, or a multipart request did not carry exactly one
-        file part
+      description: Content-Type is not application/octet-stream, or the body is empty.
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: filename
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Optional filename hint for raw uploads.

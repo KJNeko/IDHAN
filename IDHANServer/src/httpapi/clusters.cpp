@@ -1,6 +1,9 @@
 #include "clusters.hpp"
 
 #include <folly/io/IOBuf.h>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <fcntl.h>
 
 #include <algorithm>
 #include <charconv>
@@ -20,18 +23,21 @@
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
 #include "clusterScan.hpp"
+#include "db/findClusterByName.hpp"
 #include "filesystem/clusters/ClusterManager.hpp"
+#include "filesystem/clusters/ClusterMarker.hpp"
+#include "filesystem/clusters/clusterIdentity.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/db/DBError.hpp"
 #include "jsonBody.hpp"
 #include "jobs/JobContext.hpp"
 
 namespace idhan::httpapi
 {
 
-constexpr std::string_view write_test_filename { "write_test.txt" };
-
 [[nodiscard]] static std::filesystem::path normalizeClusterPath( std::filesystem::path path )
 {
+	path = std::filesystem::absolute( path );
 	path = path.lexically_normal();
 	if ( !path.has_filename() ) path = path.parent_path();
 	return path;
@@ -122,27 +128,29 @@ struct ClusterFields
 
 	if ( fields.name )
 	{
-		db::DBBindings existing_bindings {};
-		existing_bindings.bind( *fields.name );
-		existing_bindings.bind( cluster_id );
-		const auto existing {
-			co_await transaction
-				.query(
-					"SELECT cluster_id FROM file_clusters WHERE cluster_name = $1 AND cluster_id != $2",
-					std::move( existing_bindings ) )
-				.rows< ClusterID >()
-		};
-
-		if ( !existing.empty() )
+		const auto existing { co_await db::findClusterByName( transaction, *fields.name ) };
+		if ( existing && *existing != cluster_id )
 			co_return http::Response::error(
 				409, std::format( "A cluster with the name {} already exists", *fields.name ) );
 
 		db::DBBindings update_bindings {};
 		update_bindings.bind( *fields.name );
 		update_bindings.bind( cluster_id );
-		co_await transaction
-			.query( "UPDATE file_clusters SET cluster_name = $1 WHERE cluster_id = $2", std::move( update_bindings ) )
-			.result();
+		try
+		{
+			co_await transaction
+				.query(
+					"UPDATE file_clusters SET cluster_name = $1 WHERE cluster_id = $2", std::move( update_bindings ) )
+				.result();
+		}
+		catch ( const db::DBConstraintError& error )
+		{
+			const auto& diagnostics { error.diagnostics() };
+			if ( diagnostics.sqlstate != "23505" ) throw;
+			if ( diagnostics.constraint != "file_clusters_cluster_name_key" ) throw;
+			co_return http::Response::error(
+				409, std::format( "A cluster with the name {} already exists", *fields.name ) );
+		}
 	}
 
 	if ( fields.ratio )
@@ -325,22 +333,19 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 	if ( !fields.path || fields.path->empty() )
 		co_return http::Response::error( 400, "Cluster path must be specified as a non-empty string" );
 
-	std::filesystem::path target_path { *fields.path };
-	if ( target_path.is_relative() ) target_path = std::filesystem::absolute( target_path );
-	target_path = normalizeClusterPath( target_path );
-
-	const bool readonly { fields.readonly.value_or( true ) };
-
-	if ( readonly && !std::filesystem::exists( target_path ) )
-		co_return http::Response::error(
-			400,
-			std::format(
-				"Path {} does not exist, but was requested as read only. This seems wrong", target_path.string() ) );
 
 	if ( !fields.name || fields.name->empty() )
 		co_return http::Response::error( 400, "Cluster name must be specified" );
 
+	const auto target_path { normalizeClusterPath( *fields.path ) };
 	auto transaction { co_await db.transaction() };
+	const auto existing_name { co_await db::findClusterByName( transaction, *fields.name ) };
+	if ( existing_name )
+	{
+		co_await transaction.rollback();
+		co_return http::Response::error(
+			409, std::format( "A cluster with the name {} already exists", *fields.name ) );
+	}
 
 	const auto folder_search {
 		co_await transaction.query( "SELECT folder_path FROM file_clusters" ).rows< std::string >()
@@ -348,12 +353,24 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 
 	for ( const auto& [ cluster_path ] : folder_search )
 	{
-		if ( target_path == normalizeClusterPath( cluster_path ) )
+		std::error_code equivalent_error {};
+		const bool same_directory { std::filesystem::equivalent( target_path, cluster_path, equivalent_error ) };
+		if ( target_path == normalizeClusterPath( cluster_path ) || same_directory )
 		{
 			co_await transaction.rollback();
 			co_return http::Response::error(
 				409, std::format( "Path {} already exists in the cluster list", target_path.string() ) );
 		}
+	}
+
+	const bool readonly { fields.readonly.value_or( true ) };
+	if ( readonly && !std::filesystem::exists( target_path ) )
+	{
+		co_await transaction.rollback();
+		co_return http::Response::error(
+			400,
+			std::format(
+				"Path {} does not exist, but was requested as read only. This seems wrong", target_path.string() ) );
 	}
 
 	if ( !std::filesystem::exists( target_path ) )
@@ -367,31 +384,20 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 		}
 	}
 
-	if ( !readonly )
-	{
-		const auto test_path { target_path / write_test_filename };
-		if ( std::ofstream stream( test_path ); stream )
-		{
-			constexpr std::string_view test_string { "IDHAN can write" };
-			stream.write( test_string.data(), static_cast< std::streamsize >( test_string.size() ) );
-		}
-		else
-		{
-			co_await transaction.rollback();
-			co_return http::Response::error(
-				500, std::format( "Failed to write to file {} as write test for cluster", test_path.string() ) );
-		}
-
-		std::filesystem::remove( test_path );
-	}
+	auto root { folly::File::makeFile( target_path.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC ) };
+	if ( !root ) co_return http::Response::error( 500, "Could not open cluster directory for initialization" );
+	auto marker { filesystem::initializeClusterMarker( root->fd(), boost::uuids::random_generator {}() ) };
+	if ( !marker ) co_return http::Response::error( 409, marker.error() );
+	const auto cluster_uuid { boost::uuids::to_string( marker->uuid ) };
 
 	db::DBBindings insert_bindings {};
 	insert_bindings.bind( *fields.name );
 	insert_bindings.bind( target_path.string() );
+	insert_bindings.bind( cluster_uuid );
 	const auto insert_result {
 		co_await transaction
 			.query(
-				"INSERT INTO file_clusters (cluster_name, folder_path) VALUES ($1, $2) "
+				"INSERT INTO file_clusters (cluster_name, folder_path, cluster_uuid) VALUES ($1, $2, $3::uuid) "
 				"ON CONFLICT DO NOTHING RETURNING cluster_id",
 				std::move( insert_bindings ) )
 			.rows< ClusterID >()
@@ -402,7 +408,10 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 		co_await transaction.rollback();
 		co_return http::Response::error(
 			409,
-			std::format( "A cluster with the name {} or path {} already exists", *fields.name, target_path.string() ) );
+			std::format(
+				"A cluster with the name {}, path {}, or marker identity already exists",
+				*fields.name,
+				target_path.string() ) );
 	}
 
 	const auto cluster_id { std::get< 0 >( insert_result.row( 0 ) ) };
@@ -454,6 +463,9 @@ static http::HTTPTask< http::Response > modifyCluster( db::DBContext& db, http::
 		co_await transaction.rollback();
 		co_return http::Response::error( 404, std::format( "Cluster {} does not exist", cluster_id ) );
 	}
+
+	auto verified { co_await filesystem::openCluster( db, cluster_id ) };
+	if ( !verified ) co_return http::Response::error( 503, verified.error() );
 
 	auto modification_error { co_await applyClusterFields( transaction, cluster_id, fields ) };
 	if ( modification_error )
@@ -588,6 +600,9 @@ static http::HTTPTask< http::Response > scanCluster( db::DBContext& db, http::Re
 	scan_params.read_only = scan_params.force_readonly || read_only;
 
 	const std::filesystem::path cluster_path { folder_path };
+
+	auto verified { co_await filesystem::openCluster( db, cluster_id ) };
+	if ( !verified ) co_return http::Response::error( 503, verified.error() );
 
 	const auto job_ctx { queueJob(
 		scanClusterJob( cluster_id, cluster_path, scan_params, db ),

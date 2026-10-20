@@ -32,6 +32,11 @@ constexpr std::string_view record_creation_time_expr { "(EXTRACT(EPOCH FROM rc.c
 
 constexpr std::string_view records_join { " JOIN records rc USING (record_id)" };
 constexpr std::string_view video_join { " LEFT JOIN video_metadata vm USING (record_id)" };
+constexpr std::string_view duration_joins {
+	" LEFT JOIN video_metadata vm USING (record_id)"
+	" LEFT JOIN audio_metadata am USING (record_id)"
+	" LEFT JOIN animation_metadata anm USING (record_id)"
+};
 
 //! Spells out what active_tag_mappings_final holds instead of reading the view. The view splits on
 //! ideal_tag_id so that point lookups match the partial indexes; that split costs the record_id
@@ -43,7 +48,12 @@ constexpr std::string_view num_tags_join {
 	" ) atm GROUP BY record_id) ntc USING (record_id)"
 };
 
-SortKeySpec sortKeySpec( const SortType type )
+constexpr std::string_view stored_num_tags_join {
+	" LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
+	" FROM tag_mappings GROUP BY record_id) ntc USING (record_id)"
+};
+
+SortKeySpec sortKeySpec( const SortType type, const HydrusDisplayType display )
 {
 	switch ( type )
 	{
@@ -65,8 +75,7 @@ SortKeySpec sortKeySpec( const SortType type )
 		case SortType::HASH:
 			return { records_join, "rc.sha256", SortKeyType::Hash, false };
 		case SortType::DURATION:
-			// a record with no video metadata has no duration, which orders as zero rather than dropping out
-			return { video_join, "COALESCE(vm.duration, 0)", SortKeyType::Real, false };
+			return { duration_joins, "COALESCE(vm.duration, am.duration, anm.duration)", SortKeyType::Real, true };
 		case SortType::FRAMERATE:
 			return { video_join, "COALESCE(vm.framerate, 0)", SortKeyType::Real, false };
 		case SortType::HAS_AUDIO:
@@ -82,7 +91,10 @@ SortKeySpec sortKeySpec( const SortType type )
 			return { resolution_joins, ratio_expr, SortKeyType::Real, true };
 		case SortType::NUM_TAGS:
 			// zero tags is a real answer, not missing data, so this one is never excluded
-			return { num_tags_join, "COALESCE(ntc.tag_count, 0)", SortKeyType::Integer, false };
+			return { display == HydrusDisplayType::STORED ? stored_num_tags_join : num_tags_join,
+				     "COALESCE(ntc.tag_count, 0)",
+				     SortKeyType::Integer,
+				     false };
 		case SortType::RANDOM:
 			return { {}, {}, SortKeyType::None, false };
 	}
@@ -129,9 +141,9 @@ std::string_view sortTypeName( const SortType type )
 	}
 }
 
-std::string describeSortKey( const SortType type )
+std::string describeSortKey( const SortType type, const HydrusDisplayType display )
 {
-	const auto spec { sortKeySpec( type ) };
+	const auto spec { sortKeySpec( type, display ) };
 
 	return format_ns::format(
 		"sort '{}' key={} joins={} excludes_null_keys={}",

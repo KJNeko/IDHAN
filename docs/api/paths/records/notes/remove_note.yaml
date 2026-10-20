@@ -3,11 +3,10 @@ delete:
     - records
     - notes
   summary: Removes a note from a record
-  description: |
-    Unlinks the note from the record. Returns the record's remaining notes.
+  description: Unlinks the note from the record. Returns the record's remaining notes.
   parameters:
-    - $ref: '../../../parameters/record_id.yaml'
-    - $ref: '../../../parameters/note_id.yaml'
+    - $ref: ../../../parameters/record_id.yaml
+    - $ref: ../../../parameters/note_id.yaml
   responses:
     '200':
       description: The record's notes after removal
@@ -17,7 +16,9 @@ delete:
             type: array
             items:
               type: object
-              required: [ note_id, text ]
+              required:
+                - note_id
+                - text
               properties:
                 note_id:
                   type: integer
@@ -29,11 +30,31 @@ delete:
               summary: Notes after removing one
               value:
                 - note_id: 2
-                  text: "Original source unknown."
+                  text: Original source unknown.
             empty:
               summary: No notes remaining
               value: [ ]
     '400':
       description: Invalid `record_id` or `note_id`
+      content:
+        text/plain:
+          schema:
+            type: string
     '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

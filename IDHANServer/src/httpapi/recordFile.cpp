@@ -13,6 +13,7 @@
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
 #include "filesystem/PathHelpers.hpp"
+#include "filesystem/clusters/clusterIdentity.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/http/FileResponse.hpp"
@@ -49,7 +50,7 @@ http::HTTPTask< http::Response > recordFileResponse(
 	auto rows {
 		co_await db
 			.query(
-				"SELECT folder_path, sha256, "
+				"SELECT file_clusters.cluster_id, folder_path, sha256, "
 				"COALESCE(file_info.extension, mime.best_extension, '') AS extension, mime.name AS mime_name "
 				"FROM records "
 				"JOIN file_info ON records.record_id = file_info.record_id "
@@ -57,19 +58,22 @@ http::HTTPTask< http::Response > recordFileResponse(
 				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
 				"WHERE records.record_id = $1",
 				std::move( bindings ) )
-			.rows< std::string, std::span< const std::byte >, std::string, std::optional< std::string > >()
+			.rows< ClusterID, std::string, std::span< const std::byte >, std::string, std::optional< std::string > >()
 	};
 
 	if ( rows.empty() )
 		co_return http::Response::error( 404, std::format( "Record {} is not stored in any cluster", record_id ) );
 
-	const auto& [ folder_path, sha256_bytes, extension, mime_name ] { rows.row( 0 ) };
+	const auto& [ cluster_id, folder_path, sha256_bytes, extension, mime_name ] { rows.row( 0 ) };
+
+	auto cluster { co_await filesystem::openCluster( db, cluster_id ) };
+	if ( !cluster ) co_return http::Response::error( 503, cluster.error() );
 
 	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
 	const auto relative_path { filesystem::getClusterRelativePath( sha256, extension ) };
 	const auto filename { relative_path.filename().string() };
-	const auto file_path { std::filesystem::path { folder_path } / relative_path };
+	const auto file_path { cluster->root() / relative_path };
 
 	auto file_e { folly::File::makeFile( file_path.c_str(), O_RDONLY ) };
 	if ( !file_e )

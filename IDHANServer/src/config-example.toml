@@ -4,8 +4,10 @@
 #user = "idhan"
 #password = "idhan"
 #database = "idhan-db"
-# PostgreSQL schema the server puts on its search path.
-#schema = "public"
+# Application schema; created automatically. Extensions are resolved through public.
+# Required extensions must already be installed by the database administrator.
+# Existing installations in public must explicitly retain schema = "public".
+#schema = "idhan"
 
 [server]
 #port = 16609
@@ -101,6 +103,10 @@ render_threads = 2
 #path = "./static/plugins"
 
 [cluster]
+# Acknowledge missing marker/root recovery at next startup; automatically reset to false first.
+# Check that the intended storage is mounted. Existing conflicting markers are never replaced.
+# Requires a writable TOML file and directory; true environment/CLI overrides are rejected.
+#recreate_missing_markers = false
 # Concurrent files per cluster scan; overridable per request by "concurrency" and clamped to 1..64.
 #scan_concurrency = 4
 

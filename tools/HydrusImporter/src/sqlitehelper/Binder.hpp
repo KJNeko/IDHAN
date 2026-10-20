@@ -15,7 +15,7 @@ namespace idhan::hydrus
 
 //! Fluent SQLite statement wrapper for the Hydrus import: bind parameters with operator<<, then
 //! execute and consume results with operator>> (into a value, a std::optional, a tuple, or a per-row
-//! callback). \note Unrelated to the server's Drogon SqlBinder; this operates directly on sqlite3.
+//! callback). This operates directly on sqlite3.
 class Binder
 {
 	sqlite3* ptr;

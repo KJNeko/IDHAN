@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+#include "SearchPath.hpp"
+
 namespace idhan::db
 {
 struct DBConfig
@@ -13,7 +15,7 @@ struct DBConfig
 	std::string database { "idhan-db" };
 	std::string user { "idhan" };
 	std::string password { "idhan" };
-	std::string schema { "public" };
+	std::string schema { DEFAULT_SCHEMA };
 	std::size_t connections { 8 };
 	std::size_t transaction_connections { 2 };
 	std::size_t worker_threads { 0 };

@@ -25,7 +25,8 @@ static constexpr Option pg_host { "pg_host", "The host to connect to the databas
 
 static constexpr Option use_stdout { "use_stdout", "Use stdout for logging", "on/off", "true", "true" };
 
-static constexpr Option pg_schema { "pg_schema", "The PostgreSQL schema to use", "pg_schema", "public" };
+static constexpr Option
+	pg_schema { "pg_schema", "The PostgreSQL schema to use", "pg_schema", idhan::db::DEFAULT_SCHEMA };
 
 static constexpr Option
 	config_location { "config", "The location for the config file", "config_location", "./config.toml" };

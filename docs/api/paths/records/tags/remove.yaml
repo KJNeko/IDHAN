@@ -8,12 +8,12 @@ post:
       in: path
       required: true
       schema:
-        $ref: '../../../schemas/RecordID.yaml'
+        $ref: ../../../schemas/RecordID.yaml
     - name: tag_domain_id
       in: query
       required: true
       schema:
-        $ref: '../../../schemas/TagDomainID.yaml'
+        $ref: ../../../schemas/TagDomainID.yaml
   requestBody:
     required: true
     content:
@@ -21,7 +21,7 @@ post:
         schema:
           type: array
           items:
-            $ref: '../../../schemas/TagID.yaml'
+            $ref: ../../../schemas/TagID.yaml
         examples:
           tag_ids:
             summary: Array of tag IDs to remove
@@ -30,9 +30,37 @@ post:
               - 102
               - 103
   responses:
-    200:
-      description: Tags removed
-    400:
+    '200':
+      description: Tags removed; an empty input may return {}.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: integer
+                const: 200
+    '400':
       description: Invalid body, or missing `tag_domain_id`
-    500:
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

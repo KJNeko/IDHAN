@@ -34,7 +34,7 @@ SCENARIO_METHOD( ServerFixture, "Removing a cluster leaves its files on disk", "
 
 	const auto response { api().del( std::format( "/clusters/{}/remove", cluster_id ) ) };
 
-	REQUIRE( response.status == drogon::k200OK );
+	REQUIRE( response.status == 200 );
 	CHECK( std::filesystem::exists( sentinel_path ) );
 
 	pqxx::work verify { db() };
@@ -48,7 +48,7 @@ SCENARIO_METHOD( ServerFixture, "Removing a cluster leaves its files on disk", "
 	verify.commit();
 
 	const auto missing_response { api().del( std::format( "/clusters/{}/remove", cluster_id ) ) };
-	CHECK( missing_response.status == drogon::k404NotFound );
+	CHECK( missing_response.status == 404 );
 
 	std::filesystem::remove_all( cluster_path );
 }

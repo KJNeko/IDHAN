@@ -21,6 +21,7 @@
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
 #include "filesystem/PathHelpers.hpp"
+#include "filesystem/clusters/clusterIdentity.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBBindings.hpp"
 #include "idhan/db/DBContext.hpp"
@@ -145,18 +146,18 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT file_info.mime_id, records.sha256, file_clusters.folder_path, "
+				"SELECT file_info.mime_id, records.sha256, file_clusters.folder_path, file_clusters.cluster_id, "
 				"COALESCE(file_info.extension, mime.best_extension, ''), COALESCE(metadata.json::text, '{}') "
 				"FROM records JOIN file_info USING (record_id) "
 				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
 				"LEFT JOIN mime ON mime.mime_id = file_info.mime_id "
 				"LEFT JOIN metadata USING (record_id) WHERE records.record_id = $1",
 				std::move( bindings ) )
-			.rows< MimeID, std::span< const std::byte >, std::string, std::string, std::string >()
+			.rows< MimeID, std::span< const std::byte >, std::string, ClusterID, std::string, std::string >()
 	};
 	if ( rows.empty() ) co_return http::Response::error( 404, "Record has no file information" );
 
-	const auto& [ mime_id, sha256_bytes, folder_path, extension, metadata_document ] { rows.row( 0 ) };
+	const auto& [ mime_id, sha256_bytes, folder_path, cluster_id, extension, metadata_document ] { rows.row( 0 ) };
 	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
 	const auto path { thumbnailPath( hex, size ) };
@@ -167,9 +168,10 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 	if ( thumbnailers.empty() )
 		co_return http::Response::error( 400, "No thumbnailer is available for this file type" );
 
-	const auto record_path {
-		std::filesystem::path { folder_path } / filesystem::getClusterRelativePath( sha256, extension )
-	};
+	auto cluster { co_await filesystem::openCluster( db, cluster_id ) };
+	if ( !cluster ) co_return http::Response::error( 503, cluster.error() );
+
+	const auto record_path { cluster->root() / filesystem::getClusterRelativePath( sha256, extension ) };
 	auto input_e { modules::CallInput::forPath( record_path ) };
 	if ( !input_e )
 		co_return http::Response::error( 500, std::format( "Record file could not be opened: {}", input_e.error() ) );

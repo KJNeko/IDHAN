@@ -1,3 +1,4 @@
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -7,7 +8,7 @@
 namespace idhan
 {
 
-QFuture< TagInfo > IDHANClient::getTagInfo( const TagID tag_id )
+QFuture< TagInfo > IDHANClient::getTagInfo( const TagID tag_id, const std::vector< TagDomainID >& domains )
 {
 	const auto promise { std::make_shared< QPromise< TagInfo > >() };
 	promise->start();
@@ -28,7 +29,16 @@ QFuture< TagInfo > IDHANClient::getTagInfo( const TagID tag_id )
 
 		results.m_subtag.m_text = object[ "subtag" ][ "text" ].toString().toStdString();
 
-		results.item_count = object[ "item_count" ].toInt();
+		results.storage_count = object[ "storage_count" ].toInteger();
+		results.display_count = object[ "display_count" ].toInteger();
+		for ( const auto& value : object[ "domain_counts" ].toArray() )
+		{
+			const auto row { value.toObject() };
+			results.domain_counts.push_back(
+				{ static_cast< TagDomainID >( row[ "tag_domain_id" ].toInt() ),
+			      row[ "storage_count" ].toInteger(),
+			      row[ "display_count" ].toInteger() } );
+		}
 
 		promise->addResult( std::move( results ) );
 		promise->finish();
@@ -48,6 +58,9 @@ QFuture< TagInfo > IDHANClient::getTagInfo( const TagID tag_id )
 
 	QUrl url {};
 	url.setPath( QString( "/tags/%1/info" ).arg( tag_id ) );
+	QUrlQuery query;
+	for ( const auto domain : domains ) query.addQueryItem( "tag_domains", QString::number( domain ) );
+	url.setQuery( query );
 
 	sendClientGet( url, handleResponse, handleError );
 

@@ -19,4 +19,5 @@ file(GLOB_RECURSE CPP_SOURCES CONFIGURE_DEPENDS
 
 add_library(IDHANMigration STATIC ${MIGRATION_SOURCE} ${CPP_SOURCES})
 target_include_directories(IDHANMigration PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(IDHANMigration PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../IDHANDb/include)
 target_link_libraries(IDHANMigration PRIVATE libpqxx::pqxx spdlog::spdlog)

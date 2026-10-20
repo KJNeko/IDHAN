@@ -84,7 +84,7 @@ ServerFixture::~ServerFixture()
 
 bool ServerFixture::authDisabled() const
 {
-	return api().getWithKey( "/auth/verify", {} ).status == drogon::k200OK;
+	return api().getWithKey( "/auth/verify", {} ).status == 200;
 }
 
 bool partitionExists( pqxx::connection& connection, const std::string_view prefix, const TagDomainID tag_domain_id )

@@ -3,7 +3,7 @@
 
 namespace idhan::runtime
 {
-// Kept separate from the legacy Drogon IDHANTask until its call sites migrate.
+// Kept separate from the executor-independent IDHANTask until its call sites migrate.
 template < typename T = void >
 using Task = folly::coro::Task< T >;
 } // namespace idhan::runtime

@@ -57,7 +57,18 @@ class TemporaryCluster
 
 	[[nodiscard]] const std::filesystem::path& path() const { return m_path; }
 
-	void setID( const ClusterID cluster_id ) { m_cluster_id = cluster_id; }
+	ClusterID registerWith( ApiClient& api )
+	{
+		std::filesystem::create_directories( m_path );
+		Json::Value body;
+		body[ "name" ] = m_path.filename().string();
+		body[ "path" ] = m_path.string();
+		body[ "readonly" ] = true;
+		const auto response { api.post( "/clusters/add", body ) };
+		if ( response.status != 201 ) throw std::runtime_error( "Cannot register temporary cluster: " + response.body );
+		m_cluster_id = static_cast< ClusterID >( response.json[ "cluster_id" ].asInt() );
+		return m_cluster_id;
+	}
 };
 
 static std::string hashOf( pqxx::connection& connection, const RecordID record_id )
@@ -70,6 +81,7 @@ static std::string hashOf( pqxx::connection& connection, const RecordID record_i
 //! Writes \p contents where the server expects the record's file to be, and registers the cluster
 //! holding it. The layout is the one getRecordPath builds: <cluster>/f<first two hex>/<hex>.<ext>.
 static void storeFile(
+	ApiClient& api,
 	pqxx::connection& connection,
 	const RecordID record_id,
 	const std::string& hex,
@@ -85,16 +97,13 @@ static void storeFile(
 		file << contents;
 	}
 
+	const auto cluster_id { cluster.registerWith( api ) };
 	pqxx::work tx { connection };
-	const auto cluster_id { tx.query_value< ClusterID >(
-		"INSERT INTO file_clusters (folder_path) VALUES ($1) RETURNING cluster_id",
-		pqxx::params { cluster.path().string() } ) };
 	tx.exec(
 		"INSERT INTO file_info (record_id, size, mime_id, extension, cluster_id, cluster_store_time) "
 		"VALUES ($1, $2, $3, $4, $5, now())",
 		pqxx::params { record_id, contents.size(), mime_ids::IMAGE_PNG, extension, cluster_id } );
 	tx.commit();
-	cluster.setID( cluster_id );
 }
 
 SCENARIO_METHOD( ServerFixture, "Fetched file names cannot inject response headers", "[api][file][security]" )
@@ -106,7 +115,7 @@ SCENARIO_METHOD( ServerFixture, "Fetched file names cannot inject response heade
 	TemporaryCluster cluster {
 		db(), std::filesystem::temp_directory_path() / std::format( "idhan-header-safety-test-{}", record_id )
 	};
-	storeFile( db(), record_id, hex, cluster, contents, extension );
+	storeFile( api(), db(), record_id, hex, cluster, contents, extension );
 
 	const auto inline_response { api().get( std::format( "/records/{}/file", record_id ) ) };
 	const auto download_response { api().get( std::format( "/records/{}/file?download=true", record_id ) ) };
@@ -128,7 +137,7 @@ static Json::Value waitForClusterScan(
 {
 	const auto start_response { api.postWithoutBody( std::format( "/clusters/{}/scan", cluster_id ), query ) };
 
-	if ( start_response.status != drogon::k200OK || !start_response.json[ "job_id" ].isIntegral() )
+	if ( start_response.status != 200 || !start_response.json[ "job_id" ].isIntegral() )
 		throw std::runtime_error( std::format( "Could not start cluster scan: {}", start_response.body ) );
 
 	const auto job_id { start_response.json[ "job_id" ].asUInt64() };
@@ -137,7 +146,7 @@ static Json::Value waitForClusterScan(
 	while ( std::chrono::steady_clock::now() < deadline )
 	{
 		const auto status_response { api.get( std::format( "/jobs/{}/status", job_id ) ) };
-		if ( status_response.status != drogon::k200OK )
+		if ( status_response.status != 200 )
 			throw std::runtime_error( std::format( "Could not read cluster scan status: {}", status_response.body ) );
 
 		if ( status_response.json[ "completed" ].asBool() )
@@ -167,7 +176,7 @@ SCENARIO_METHOD( ServerFixture, "Cluster scan usage follows registered files", "
 	TemporaryCluster cluster {
 		db(), std::filesystem::temp_directory_path() / std::format( "idhan-cluster-usage-test-{}", record_id )
 	};
-	storeFile( db(), record_id, hex, cluster, contents );
+	storeFile( api(), db(), record_id, hex, cluster, contents );
 	const auto file_path { cluster.path() / std::format( "f{}/{}.png", hex.substr( 0, 2 ), hex ) };
 	ClusterID cluster_id {};
 	{
@@ -256,7 +265,7 @@ SCENARIO_METHOD(
 	TemporaryCluster cluster {
 		db(), std::filesystem::temp_directory_path() / std::format( "idhan-metadata-rollback-test-{}", record_id )
 	};
-	storeFile( db(), record_id, hex, cluster, std::string { zip, sizeof( zip ) - 1 }, "zip" );
+	storeFile( api(), db(), record_id, hex, cluster, std::string { zip, sizeof( zip ) - 1 }, "zip" );
 	std::int64_t initial_records {};
 	std::int64_t initial_archives {};
 	std::int64_t initial_mappings {};
@@ -278,7 +287,7 @@ SCENARIO_METHOD(
 	}
 
 	const auto failed { api().postWithoutBody( std::format( "/records/{}/metadata/scan", record_id ) ) };
-	CHECK( failed.status == drogon::k500InternalServerError );
+	CHECK( failed.status == 500 );
 	{
 		pqxx::work tx { db() };
 		CHECK_FALSE( tx.query_value< bool >(
@@ -294,7 +303,7 @@ SCENARIO_METHOD(
 	}
 
 	const auto retried { api().postWithoutBody( std::format( "/records/{}/metadata/scan", record_id ) ) };
-	REQUIRE( retried.status == drogon::k200OK );
+	REQUIRE( retried.status == 200 );
 	pqxx::work tx { db() };
 	CHECK( tx.query_value< bool >(
 		"SELECT EXISTS (SELECT 1 FROM metadata WHERE record_id = $1)", pqxx::params { record_id } ) );
@@ -319,7 +328,7 @@ SCENARIO_METHOD( ServerFixture, "A fetched file is named after its hash", "[api]
 	TemporaryCluster cluster {
 		db(), std::filesystem::temp_directory_path() / std::format( "idhan-file-test-{}", record_id )
 	};
-	storeFile( db(), record_id, hex, cluster, contents );
+	storeFile( api(), db(), record_id, hex, cluster, contents );
 
 	SECTION( "Extension without a leading dot" )
 	{}
@@ -332,7 +341,7 @@ SCENARIO_METHOD( ServerFixture, "A fetched file is named after its hash", "[api]
 
 	const auto response { api().get( std::format( "/records/{}/file", record_id ) ) };
 
-	CHECK( response.status == drogon::k200OK );
+	CHECK( response.status == 200 );
 	CHECK( response.body == contents );
 	// Without this a browser saves every record in the collection as "file", after the URL's last segment.
 	CHECK( response.header( "content-disposition" ) == std::format( "inline; filename=\"{}.png\"", hex ) );
@@ -354,14 +363,10 @@ SCENARIO_METHOD( ServerFixture, "A cluster scan records first detection time", "
 		file << contents;
 	}
 
-	ClusterID cluster_id {};
+	const auto cluster_id { cluster.registerWith( api() ) };
 	std::string before_scan {};
 	{
 		pqxx::work tx { db() };
-		cluster_id = tx.query_value< ClusterID >(
-			"INSERT INTO file_clusters (folder_path) VALUES ($1) RETURNING cluster_id",
-			pqxx::params { cluster.path().string() } );
-		cluster.setID( cluster_id );
 		tx.exec(
 			"INSERT INTO file_info (record_id, size, mime_id, cluster_id, cluster_store_time) "
 			"VALUES ($1, $2, $3, $4, NULL)",

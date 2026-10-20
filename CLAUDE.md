@@ -61,7 +61,7 @@ Test fixtures live in `tests/src/db/fixtures/`. Server integration tests use `SE
 
 ```
 IDHAN/           — shared library: types, utilities, Hydrus constants (generated from Python)
-IDHANServer/     — Drogon HTTP server; all API handlers, DB logic, job system
+IDHANServer/     — Proxygen/Folly HTTP server; all API handlers, DB logic, job system
 IDHANClient/     — Qt6 shared library: typed C++ wrappers over the REST API
 IDHANModules/    — plugin interface + premade modules (libvips, FFmpeg, libarchive)
 IDHANMigration/  — PostgreSQL schema via numbered SQL files; run by the server on startup
@@ -155,7 +155,7 @@ otherwise (e.g. `JobRuntime::executor()`).
 `co_await` a `runtime::Task` — there's no synchronous bridge back. `modules::RemoteModule`'s methods (`embed`,
 `parseMime`, `createThumbnailFile`, ...) are `IDHANTask`-based for this reason.
 
-**Lazy-coroutine pitfall**: `folly::coro::Task` (like the old `drogon::Task` before it) has a suspended
+**Lazy-coroutine pitfall**: `folly::coro::Task` has a suspended
 `initial_suspend`, so a coroutine stored in a vector for `folly::coro::collectAllRange` only starts running once
 collected. Never use a capturing lambda as such a coroutine — the closure is destroyed at the end of the loop iteration
 and the body reads dead captures (use-after-free). Use a captureless lambda/free function and pass all state as
@@ -211,7 +211,13 @@ Platform-specific IPC lives in `IDHANModules/ipc/src/linux/` behind neutral head
 
 ### Job system
 
-Long-running work is broken into `JobTask` coroutines (`IDHANServer/src/jobs/`) run by the in-memory `JobRuntime` singleton on a dedicated trantor event-loop thread pool (25% of hardware threads, min 2; `server.job_threads` config). Jobs are deliberately **not** persisted to the DB: IDs are process-local and reset on restart. `queueJob(task, name)` enqueues and returns a `JobContext`; endpoints respond immediately with the `job_id` and clients poll `/jobs/{job_id}/status` (or `/jobs/status` for a batch). Inside a job coroutine, `co_await getJobID()` yields the job's ID and `co_await setJobResponse(json_or_response)` stores the result exposed by the status endpoints. Completed jobs are retained for one hour, or until a status query requests cleanup.
+Long-running work is broken into `JobTask` coroutines (`IDHANServer/src/jobs/`) run by the in-memory `JobRuntime`
+singleton on a dedicated Folly CPU executor thread pool (25% of hardware threads, min 2; `server.job_threads` config).
+Jobs are deliberately **not** persisted to the DB: IDs are process-local and reset on restart. `queueJob(task, name)`
+enqueues and returns a `JobContext`; endpoints respond immediately with the `job_id` and clients poll
+`/jobs/{job_id}/status` (or `/jobs/status` for a batch). Inside a job coroutine, `co_await getJobID()` yields the job's
+ID and `co_await setJobResponse(json_or_response)` stores the result exposed by the status endpoints. Completed jobs are
+retained for one hour, or until a status query requests cleanup.
 
 ### Search
 

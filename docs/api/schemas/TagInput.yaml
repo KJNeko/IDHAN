@@ -1,5 +1,8 @@
+description: A complete tag ID, a tag string such as character:alice, or an object with a namespace
+  and a string subtag. Numeric namespace IDs are distinct from complete tag IDs.
 oneOf:
-  - $ref: 'TagID.yaml'
+  - $ref: TagID.yaml
   - type: string
-    example: "character:toujou koneko"
-  - $ref: 'TagSet.yaml'
+    examples:
+      - character:toujou koneko
+  - $ref: TagSet.yaml

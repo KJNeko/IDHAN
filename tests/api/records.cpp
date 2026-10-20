@@ -17,7 +17,7 @@ static RecordID recordFor( ApiClient& api, const int seed )
 {
 	const auto response { api.get( "/records/search", { { "sha256", hashFor( seed ) } } ) };
 
-	if ( response.status != drogon::k200OK ) return -1;
+	if ( response.status != 200 ) return -1;
 	if ( !response.json[ "found" ].asBool() ) return -1;
 
 	return response.json[ "record_id" ].asInt();
@@ -170,7 +170,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the record id comes back on its own" )
 			{
-				REQUIRE( created.status == drogon::k200OK );
+				REQUIRE( created.status == 200 );
 				REQUIRE( created.json[ "record_id" ].isIntegral() );
 				CHECK( created.json[ "record_id" ].asInt() == recordFor( api(), 7 ) );
 				CHECK( recordCount( db() ) == 1 );
@@ -224,8 +224,8 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 				INFO( "iteration " << iteration );
 				REQUIRE( errors[ 0 ] == nullptr );
 				REQUIRE( errors[ 1 ] == nullptr );
-				REQUIRE( responses[ 0 ].status == drogon::k200OK );
-				REQUIRE( responses[ 1 ].status == drogon::k200OK );
+				REQUIRE( responses[ 0 ].status == 200 );
+				REQUIRE( responses[ 1 ].status == 200 );
 				REQUIRE( responses[ 0 ].json[ "record_id" ].isIntegral() );
 				REQUIRE( responses[ 1 ].json[ "record_id" ].isIntegral() );
 				CHECK( responses[ 0 ].json[ "record_id" ].asInt() == responses[ 1 ].json[ "record_id" ].asInt() );
@@ -244,7 +244,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( api().post( "/records/create", body ).status == drogon::k400BadRequest );
+				CHECK( api().post( "/records/create", body ).status == 400 );
 			}
 		}
 
@@ -258,7 +258,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( api().post( "/records/create", body ).status == drogon::k400BadRequest );
+				CHECK( api().post( "/records/create", body ).status == 400 );
 			}
 		}
 
@@ -275,7 +275,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the request is rejected, and neither entry is created" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 				CHECK( recordCount( db() ) == 0 );
 			}
 		}
@@ -284,7 +284,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 		{
 			THEN( "the request is rejected" )
 			{
-				CHECK( api().post( "/records/create", domainBody( "characters" ) ).status == drogon::k400BadRequest );
+				CHECK( api().post( "/records/create", domainBody( "characters" ) ).status == 400 );
 			}
 		}
 
@@ -295,7 +295,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( api().post( "/records/create", body ).status == drogon::k400BadRequest );
+				CHECK( api().post( "/records/create", body ).status == 400 );
 			}
 		}
 	}

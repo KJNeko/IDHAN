@@ -1,4 +1,5 @@
 #include "fileMetadata.hpp"
+#include "filesystem/clusters/clusterIdentity.hpp"
 
 #include <folly/io/IOBuf.h>
 
@@ -20,6 +21,8 @@
 #include "MetadataInfo.hpp"
 #include "apiAuth.hpp"
 #include "collectRecordInfo.hpp"
+#include "idValidation.hpp"
+#include "jsonBody.hpp"
 #include "filesystem/PathHelpers.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
@@ -170,17 +173,11 @@ static http::HTTPTask< http::Response > fetchRecordInfo( db::DBContext& db, http
 
 static http::HTTPTask< http::Response > fetchRecordMetadataBatch( db::DBContext& db, http::RequestContext context )
 {
-	auto body { std::move( context ).takeBody() };
-	if ( !std::holds_alternative< std::unique_ptr< folly::IOBuf > >( body ) )
-		co_return http::Response::error( 400, "Request body is too large" );
-
-	const auto text { std::get< std::unique_ptr< folly::IOBuf > >( body )->to< std::string >() };
-
-	const auto validated { http::ValidatedJson::parse( text ) };
-	if ( !validated ) co_return http::Response::error( 400, validated.error().message );
+	auto body { readValidatedJsonBody( context ) };
+	if ( !body ) co_return std::move( body.error() );
 
 	simdjson::dom::parser parser;
-	const auto body_text { validated->text() };
+	const std::string_view body_text { *body };
 	simdjson::dom::element root {};
 	try
 	{
@@ -205,10 +202,10 @@ static http::HTTPTask< http::Response > fetchRecordMetadataBatch( db::DBContext&
 	record_ids.reserve( record_ids_array.size() );
 	for ( const simdjson::dom::element id_element : record_ids_array )
 	{
-		std::int64_t id {};
-		if ( id_element.get_int64().get( id ) != simdjson::SUCCESS )
-			co_return http::Response::error( 400, "'record_ids' must be an array of integers" );
-		record_ids.emplace_back( static_cast< RecordID >( id ) );
+		auto id { parsePositiveId< RecordID >( id_element, "record_id" ) };
+		if ( !id ) co_return std::move( id.error() );
+
+		record_ids.emplace_back( *id );
 	}
 
 	auto batch { co_await metadata::collectRecordInfo( std::move( record_ids ), db ) };
@@ -254,7 +251,7 @@ static http::HTTPTask< http::Response > fetchRecordMetadataBatch( db::DBContext&
 	return std::bitset< 64 > { value };
 }
 
-http::HTTPTask< std::expected< std::filesystem::path, http::Response > > recordFilePathForScan(
+http::HTTPTask< std::expected< filesystem::VerifiedRecordPath, http::Response > > recordFilePathForScan(
 	db::DBContext& db,
 	const RecordID record_id )
 {
@@ -263,25 +260,28 @@ http::HTTPTask< std::expected< std::filesystem::path, http::Response > > recordF
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT folder_path, sha256, COALESCE(extension, best_extension, '') AS extension "
+				"SELECT file_clusters.cluster_id, folder_path, sha256, COALESCE(extension, best_extension, '') AS extension "
 				"FROM records "
 				"JOIN file_info ON records.record_id = file_info.record_id "
 				"LEFT JOIN mime ON file_info.mime_id = mime.mime_id "
 				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
 				"WHERE records.record_id = $1",
 				std::move( bindings ) )
-			.rows< std::string, std::span< const std::byte >, std::string >()
+			.rows< ClusterID, std::string, std::span< const std::byte >, std::string >()
 	};
 
 	if ( rows.empty() )
 		co_return std::unexpected(
 			http::Response::error( 404, std::format( "Record {} is not stored in any cluster", record_id ) ) );
 
-	const auto& [ folder_path, sha256_bytes, extension ] { rows.row( 0 ) };
+	const auto& [ cluster_id, folder_path, sha256_bytes, extension ] { rows.row( 0 ) };
+
+	auto cluster { co_await filesystem::openCluster( db, cluster_id ) };
+	if ( !cluster ) co_return std::unexpected( http::Response::error( 503, cluster.error() ) );
 
 	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const std::filesystem::path file_location {
-		std::filesystem::path { folder_path } / filesystem::getClusterRelativePath( sha256, extension )
+		cluster->root() / filesystem::getClusterRelativePath( sha256, extension )
 	};
 
 	std::error_code status_error {};
@@ -320,7 +320,9 @@ http::HTTPTask< std::expected< std::filesystem::path, http::Response > > recordF
 				std::format(
 					"Expected path for record {} is not a regular file: '{}'.", record_id, file_location.string() ) ) );
 
-	co_return file_location;
+	co_return filesystem::VerifiedRecordPath {
+		std::move( *cluster ), filesystem::getClusterRelativePath( sha256, extension )
+	};
 }
 
 static http::HTTPTask< void > updateRecordFileTimesForScan(
@@ -635,7 +637,7 @@ http::HTTPTask< std::expected< void, http::Response > > parseAndStoreRecordMetad
 	auto path_e { co_await recordFilePathForScan( db, record_id ) };
 	if ( !path_e ) co_return std::unexpected( std::move( path_e.error() ) );
 
-	auto input_e { modules::CallInput::forPath( *path_e ) };
+	auto input_e { modules::CallInput::forPath( path_e->path() ) };
 	if ( !input_e )
 		co_return std::unexpected(
 			http::Response::error(
@@ -651,6 +653,9 @@ http::HTTPTask< std::expected< void, http::Response > > parseAndStoreRecordMetad
 			http::Response::error(
 				500, std::format( "Module failed to parse data for record {}: {}", record_id, metadata_e.error() ) ) );
 
+	const auto valid_after_parse { path_e->verify() };
+	if ( !valid_after_parse ) co_return std::unexpected( http::Response::error( 503, valid_after_parse.error() ) );
+
 	// Parsing runs outside the transaction; all writes for its result share one connection and commit.
 	auto transaction { co_await db.transaction() };
 	auto written { co_await writeRecordMetadata( transaction, record_id, *metadata_e ) };
@@ -660,7 +665,14 @@ http::HTTPTask< std::expected< void, http::Response > > parseAndStoreRecordMetad
 		co_return std::unexpected( std::move( written.error() ) );
 	}
 
-	co_await updateRecordFileTimesForScan( transaction, record_id, *path_e );
+	const auto valid_before_commit { path_e->verify() };
+	if ( !valid_before_commit )
+	{
+		co_await transaction.rollback();
+		co_return std::unexpected( http::Response::error( 503, valid_before_commit.error() ) );
+	}
+
+	co_await updateRecordFileTimesForScan( transaction, record_id, path_e->path() );
 	co_await transaction.commit();
 
 	co_return {};

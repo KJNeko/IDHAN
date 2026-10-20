@@ -2,31 +2,40 @@ type: object
 properties:
   branch:
     type: string
-    example: "master"
+    examples:
+      - master
   build:
     type: string
-    example: "Debug"
+    examples:
+      - Debug
   commit:
     type: string
-    example: "5f9617d"
+    examples:
+      - 5f9617d
   idhan_server_version:
-    $ref: './Version.yaml'
+    $ref: ./Version.yaml
   idhan_api_version:
-    $ref: './Version.yaml'
-  hydrus_api_version:
-    type: integer
-    example: 80
-  hydrus_version:
-    type: integer
-    example: 617
+    $ref: ./Version.yaml
   tag:
     type: string
-    example: "v1.0"
+    examples:
+      - v1.0
   unsynced:
     type: integer
     description: 1 if built from a dirty working tree, 0 otherwise.
-    example: 0
+    examples:
+      - 0
   build_on:
     type: string
     description: Compile date and time.
-    example: "Jun 25 2026, 12:34:56"
+    examples:
+      - Jun 25 2026, 12:34:56
+required:
+  - branch
+  - build
+  - commit
+  - idhan_server_version
+  - idhan_api_version
+  - tag
+  - unsynced
+  - build_on

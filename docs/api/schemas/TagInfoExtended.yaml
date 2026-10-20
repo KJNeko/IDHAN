@@ -1,24 +1,61 @@
 type: object
 allOf:
-  - $ref: 'TagInfo.yaml'
+  - $ref: TagInfo.yaml
   - type: object
+    required:
+      - namespace
+      - subtag
+      - storage_count
+      - display_count
+      - domain_counts
     properties:
       namespace:
         type: object
+        required:
+          - id
+          - text
         properties:
           id:
             type: integer
           text:
             type: string
-            example: "character"
+            examples:
+              - character
       subtag:
         type: object
+        required:
+          - text
         properties:
-          id:
-            type: integer
           text:
             type: string
-            example: "toujou koneko"
-      items_count:
+            examples:
+              - toujou koneko
+      storage_count:
         type: integer
-        description: Records carrying this tag.
+        format: int64
+        description: Maximum storage count over the selected domains, or all domains when omitted. This is an estimate, not a distinct-record union count.
+      display_count:
+        type: integer
+        format: int64
+        description: Maximum display count over the selected domains, computed independently of storage_count. The maxima may come from different domains.
+      domain_counts:
+        type: array
+        description: One entry per selected existing domain, sorted by domain ID. Includes unused domains with zero counts. Omitted domain selection includes all existing domains.
+        items:
+          $ref: TagDomainCounts.yaml
+examples:
+  - tag_id: 42
+    namespace:
+      id: 1
+      text: character
+    subtag:
+      text: samus aran
+    storage_count: 7
+    display_count: 10
+    domain_counts:
+      - tag_domain_id: 1
+        storage_count: 4
+        display_count: 10
+      - tag_domain_id: 2
+        storage_count: 7
+        display_count: 8

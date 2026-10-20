@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "RequestContext.hpp"
+#include "ParameterRules.hpp"
 #include "Response.hpp"
 
 namespace idhan::http
@@ -29,6 +30,7 @@ struct RouteMetadata
 	std::string path;
 	std::vector< PathParameter > path_parameters;
 	std::vector< RequestValidation > before_body;
+	std::optional< ParameterRules > parameters {};
 };
 
 template < typename Request >

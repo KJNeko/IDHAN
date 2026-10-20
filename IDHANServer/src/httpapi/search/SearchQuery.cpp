@@ -595,6 +595,7 @@ std::optional< std::string_view > SearchQuery::impossiblePredicate() const
 	if ( m_height_search.impossible() ) return "height";
 	if ( m_archive_search.impossible() ) return "archive";
 	if ( m_record_search.impossible() ) return "record";
+	if ( m_tag_count_search.impossible() ) return "number of tags";
 	return std::nullopt;
 }
 
@@ -612,6 +613,27 @@ std::vector< searchfetch::PredicateSource > SearchQuery::buildPredicates() const
 		" LEFT JOIN image_metadata pim USING (record_id)"
 		" LEFT JOIN video_metadata pvm USING (record_id)"
 	};
+
+	if ( m_has_tags_search != TagCountSearchType::DontCare )
+	{
+		const auto exists { m_has_tags_search == TagCountSearchType::HasTags ? "EXISTS" : "NOT EXISTS" };
+		add( {},
+		     format_ns::format(
+				 "{} (SELECT 1 FROM {} ptm WHERE ptm.record_id = fi.record_id)",
+				 exists,
+				 searchfetch::tagMappingTable( m_display_mode ) ),
+		     m_has_tags_search == TagCountSearchType::HasTags ? "system:has tags" : "system:no tags" );
+	}
+
+	if ( m_tag_count_search.m_active )
+	{
+		const auto count_expression { format_ns::format(
+			"(SELECT COUNT(DISTINCT ptm.tag_id) FROM {} ptm WHERE ptm.record_id = fi.record_id)",
+			searchfetch::tagMappingTable( m_display_mode ) ) };
+		add( {},
+		     renderBounds( count_expression, m_tag_count_search ),
+		     format_ns::format( "system:{}", renderBounds( "number of tags", m_tag_count_search ) ) );
+	}
 
 	if ( m_duration_search == DurationSearchType::HasDuration )
 		add( {},
@@ -1196,7 +1218,7 @@ runtime::Task< idhan::search::Set > SearchQuery::evaluate(
 		m_positive_wildcards.size() + m_negative_wildcards.size(),
 		m_namespace_ids.size(),
 		tag_domain_ids.empty() ? std::string( "all" ) : std::to_string( tag_domain_ids.size() ),
-		idhan::search::describeSortKey( m_sort_type ) );
+		idhan::search::describeSortKey( m_sort_type, m_display_mode ) );
 
 	if ( const auto impossible { impossiblePredicate() } )
 	{
@@ -1211,7 +1233,9 @@ runtime::Task< idhan::search::Set > SearchQuery::evaluate(
 	co_await completeNames( db, std::string { tag_name_query }, tag_ids, m_tag_names );
 	co_await completeNames( db, std::string { namespace_name_query }, m_namespace_ids, m_namespace_names );
 
-	const searchfetch::FetchContext ctx { db, m_sort_type, want_hashes, std::move( tag_domain_ids ), m_stats };
+	const searchfetch::FetchContext ctx {
+		db, m_sort_type, want_hashes, std::move( tag_domain_ids ), m_stats, m_display_mode
+	};
 
 	std::vector< runtime::Task< idhan::search::Set > > tasks {};
 	std::vector< std::string > labels {};
@@ -1306,7 +1330,7 @@ runtime::Task< SearchResults > SearchQuery::query(
 
 	if ( set.inverted() )
 	{
-		const searchfetch::FetchContext page_ctx { db, m_sort_type, return_hashes, {}, m_stats };
+		const searchfetch::FetchContext page_ctx { db, m_sort_type, return_hashes, {}, m_stats, m_display_mode };
 		const auto page { co_await searchfetch::fetchPage( page_ctx, set.ids(), m_order, offset, limit ) };
 
 		log::debug( "{}", m_stats->summary() );

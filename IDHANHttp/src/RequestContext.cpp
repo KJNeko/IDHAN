@@ -71,6 +71,16 @@ const RequestParameters& RequestContext::parameters() const noexcept
 	return m_parameters;
 }
 
+void RequestContext::setParameterRules( const ParameterRules* rules ) noexcept
+{
+	m_parameter_rules = rules;
+}
+
+const ParameterRules* RequestContext::parameterRules() const noexcept
+{
+	return m_parameter_rules;
+}
+
 const RequestBody& RequestContext::body() const noexcept
 {
 	return m_body;

@@ -13,6 +13,8 @@
 
 #include "MimeIDs.hpp"
 #include "filesystem/PathHelpers.hpp"
+#include "filesystem/VerifiedRecordPath.hpp"
+#include "filesystem/clusters/clusterIdentity.hpp"
 #include "httpapi/fileMetadata.hpp"
 #include "httpapi/records.hpp"
 #include "idhan/SHA256.hpp"
@@ -23,42 +25,50 @@
 namespace idhan::imports
 {
 
-[[nodiscard]] static runtime::Task< std::optional< std::filesystem::path > > uncheckedRecordFilePath(
-	db::DBContext& db,
-	const RecordID record_id )
+[[nodiscard]] static runtime::Task< std::expected< std::optional< filesystem::VerifiedRecordPath >, ImportError > >
+	uncheckedRecordFilePath( db::DBContext& db, const RecordID record_id )
 {
 	db::DBBindings bindings {};
 	bindings.bind( record_id );
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT folder_path, sha256, COALESCE(extension, best_extension, '') AS extension "
+				"SELECT file_clusters.cluster_id, folder_path, sha256, COALESCE(extension, best_extension, '') AS extension "
 				"FROM records "
 				"JOIN file_info ON records.record_id = file_info.record_id "
 				"LEFT JOIN mime ON file_info.mime_id = mime.mime_id "
 				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
 				"WHERE records.record_id = $1",
 				std::move( bindings ) )
-			.rows< std::string, std::span< const std::byte >, std::string >()
+			.rows< ClusterID, std::string, std::span< const std::byte >, std::string >()
 	};
 
-	if ( rows.empty() ) co_return std::nullopt;
+	if ( rows.empty() ) co_return std::optional< filesystem::VerifiedRecordPath > {};
 
-	const auto& [ folder_path, sha256_bytes, extension ] { rows.row( 0 ) };
+	const auto& [ cluster_id, folder_path, sha256_bytes, extension ] { rows.row( 0 ) };
 	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 
-	co_return std::filesystem::path { folder_path } / filesystem::getClusterRelativePath( sha256, extension );
+	auto cluster { co_await filesystem::openCluster( db, cluster_id ) };
+	if ( !cluster ) co_return std::unexpected( ImportError { 503, cluster.error() } );
+	co_return std::optional< filesystem::VerifiedRecordPath > {
+		std::in_place, std::move( *cluster ), filesystem::getClusterRelativePath( sha256, extension )
+	};
 }
 
-[[nodiscard]] static runtime::Task< bool > storedFileIsValid(
+[[nodiscard]] static runtime::Task< std::expected< bool, ImportError > > storedFileIsValid(
 	db::DBContext& db,
 	const RecordID record_id,
 	const SHA256& expected_sha256 )
 {
 	auto path_e { co_await httpapi::recordFilePathForScan( db, record_id ) };
-	if ( !path_e ) co_return false;
+	if ( !path_e )
+	{
+		if ( path_e.error().message.getStatusCode() == 503 )
+			co_return std::unexpected( ImportError { 503, "Assigned cluster identity could not be verified" } );
+		co_return false;
+	}
 
-	std::ifstream stream( *path_e, std::ios::binary );
+	std::ifstream stream( path_e->path(), std::ios::binary );
 	if ( !stream ) co_return false;
 
 	std::ostringstream buffer;
@@ -89,7 +99,12 @@ namespace idhan::imports
 	if ( !current.empty() )
 	{
 		const auto& [ cluster_id, delete_time_null, read_only ] { current.row( 0 ) };
-		if ( cluster_id && delete_time_null && read_only && !*read_only ) co_return *cluster_id;
+		if ( cluster_id && delete_time_null && read_only && !*read_only )
+		{
+			auto cluster { co_await filesystem::openCluster( db, *cluster_id ) };
+			if ( !cluster ) co_return std::unexpected( ImportError { 503, cluster.error() } );
+			co_return *cluster_id;
+		}
 	}
 
 	const auto clusters {
@@ -120,33 +135,19 @@ namespace idhan::imports
 
 	for ( const auto& [ cluster_id, size_used, size_limit ] : clusters )
 	{
+		const auto access { co_await filesystem::openCluster( db, cluster_id ) };
+		if ( !access ) continue;
 		const double score {
 			size_limit <= 0 ? 0.0 : static_cast< double >( size_used ) / static_cast< double >( size_limit )
 		};
 		candidates.push_back( ClusterCandidate { cluster_id, score } );
 	}
 
+	if ( candidates.empty() )
+		co_return std::unexpected( ImportError { 503, "No writable cluster has a verified identity" } );
+
 	const auto best { std::ranges::min_element( candidates, {}, &ClusterCandidate::score ) };
 	co_return best->id;
-}
-
-[[nodiscard]] static runtime::Task< std::expected< std::pair< std::filesystem::path, bool >, ImportError > >
-	clusterPathAndReadonly( db::DBContext& db, const ClusterID cluster_id )
-{
-	db::DBBindings bindings {};
-	bindings.bind( cluster_id );
-	const auto rows {
-		co_await db
-			.query( "SELECT folder_path, read_only FROM file_clusters WHERE cluster_id = $1", std::move( bindings ) )
-			.rows< std::string, bool >()
-	};
-
-	if ( rows.empty() )
-		co_return std::unexpected(
-			ImportError { 500, std::format( "Failed to find cluster with id {}", cluster_id ) } );
-
-	const auto& [ folder_path, read_only ] { rows.row( 0 ) };
-	co_return std::pair< std::filesystem::path, bool > { std::filesystem::path { folder_path }, read_only };
 }
 
 [[nodiscard]] static runtime::Task< std::expected< std::string, ImportError > > recordBestExtension(
@@ -221,7 +222,9 @@ namespace idhan::imports
 
 	if ( !current.empty() && std::get< 0 >( current.row( 0 ) ) )
 	{
-		if ( co_await storedFileIsValid( db, record_id, sha256 ) ) co_return {};
+		auto valid { co_await storedFileIsValid( db, record_id, sha256 ) };
+		if ( !valid ) co_return std::unexpected( std::move( valid.error() ) );
+		if ( *valid ) co_return {};
 
 		log::warn(
 			"Record {} is stored in a read-only cluster but the file there is missing or corrupt. Storing it "
@@ -232,14 +235,16 @@ namespace idhan::imports
 	auto target_id_e { co_await findBestFolderForImport( db, record_id ) };
 	if ( !target_id_e ) co_return std::unexpected( std::move( target_id_e.error() ) );
 
-	auto cluster_e { co_await clusterPathAndReadonly( db, *target_id_e ) };
-	if ( !cluster_e ) co_return std::unexpected( std::move( cluster_e.error() ) );
-	const auto& [ cluster_path, read_only ] { *cluster_e };
+	auto cluster_e { co_await filesystem::openCluster( db, *target_id_e ) };
+	if ( !cluster_e ) co_return std::unexpected( ImportError { 503, cluster_e.error() } );
 
 	auto extension_e { co_await recordBestExtension( db, record_id ) };
 	if ( !extension_e ) co_return std::unexpected( std::move( extension_e.error() ) );
 
-	auto written { writeFileToCluster( cluster_path, read_only, sha256, data, *extension_e ) };
+	const auto valid_before_write { cluster_e->verify() };
+	if ( !valid_before_write ) co_return std::unexpected( ImportError { 503, valid_before_write.error() } );
+
+	auto written { writeFileToCluster( cluster_e->root(), cluster_e->readonly(), sha256, data, *extension_e ) };
 	if ( !written ) co_return std::unexpected( std::move( written.error() ) );
 
 	db::DBBindings update_bindings {};
@@ -264,12 +269,19 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 {
 	if ( data.empty() ) co_return std::unexpected( ImportError { 400, "No file data supplied" } );
 
+	const auto existing_record { co_await httpapi::findRecord( sha256, db ) };
+	if ( existing_record )
+	{
+		auto assigned { co_await filesystem::openRecordCluster( db, *existing_record ) };
+		if ( !assigned ) co_return std::unexpected( ImportError { 503, assigned.error() } );
+	}
+
 	if ( !force_import )
 	{
-		if ( const auto existing { co_await httpapi::findRecord( sha256, db ) } )
+		if ( existing_record )
 		{
 			db::DBBindings ts_bindings {};
-			ts_bindings.bind( *existing );
+			ts_bindings.bind( *existing_record );
 			const auto timestamps {
 				co_await db
 					.query(
@@ -285,10 +297,14 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 				const auto& [ delete_time_null, delete_epoch ] { timestamps.row( 0 ) };
 
 				if ( !delete_time_null )
-					co_return ImportOutcome { .status = Deleted, .record_id = *existing, .deleted_time = delete_epoch };
+					co_return ImportOutcome {
+						.status = Deleted, .record_id = *existing_record, .deleted_time = delete_epoch
+					};
 
-				if ( const auto path_e { co_await httpapi::recordFilePathForScan( db, *existing ) }; path_e )
-					co_return ImportOutcome { .status = Exists, .record_id = *existing };
+				auto path_e { co_await httpapi::recordFilePathForScan( db, *existing_record ) };
+				if ( path_e ) co_return ImportOutcome { .status = Exists, .record_id = *existing_record };
+				if ( path_e.error().message.getStatusCode() == 503 )
+					co_return std::unexpected( ImportError { 503, "Assigned cluster identity could not be verified" } );
 			}
 		}
 	}
@@ -339,7 +355,8 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 		co_return ImportOutcome { .status = Deleted, .record_id = record_id, .deleted_time = delete_epoch };
 
 	auto theoretical_path { co_await uncheckedRecordFilePath( db, record_id ) };
-	const bool store_confirmed { theoretical_path && std::filesystem::exists( *theoretical_path ) };
+	if ( !theoretical_path ) co_return std::unexpected( std::move( theoretical_path.error() ) );
+	const bool store_confirmed { *theoretical_path && std::filesystem::exists( ( **theoretical_path ).path() ) };
 	const bool should_store {
 		( !delete_recorded && !store_recorded ) || force_import || ( !store_confirmed && store_recorded )
 	};

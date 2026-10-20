@@ -3,21 +3,20 @@ post:
     - tags
     - records
   summary: Adds tags to a record
-  description: >
-    Tag IDs are the fast path. String and object inputs have to be resolved (and
-    created if missing) on every request, so for bulk work create the tags with
-    `POST /tags/create` first and pass the IDs.
+  description: Tag IDs are the fast path. String and object inputs have to be resolved (and created if
+    missing) on every request, so for bulk work create the tags with `POST /tags/create` first and pass
+    the IDs.
   parameters:
     - name: record_id
       in: path
       required: true
       schema:
-        $ref: '../../../schemas/RecordID.yaml'
+        $ref: ../../../schemas/RecordID.yaml
     - name: tag_domain_id
       in: query
       required: true
       schema:
-        $ref: '../../../schemas/TagDomainID.yaml'
+        $ref: ../../../schemas/TagDomainID.yaml
   requestBody:
     required: true
     content:
@@ -25,7 +24,7 @@ post:
         schema:
           type: array
           items:
-            $ref: '../../../schemas/TagInput.yaml'
+            $ref: ../../../schemas/TagInput.yaml
         examples:
           IDs:
             summary: An array of multiple tag ids
@@ -36,20 +35,48 @@ post:
           Strings:
             summary: An array of strings
             value:
-              - "character:toujou koneko"
-              - "catgirl"
-              - "series:highschool dxd"
+              - character:toujou koneko
+              - catgirl
+              - series:highschool dxd
           Tag objects:
             summary: An array of tag objects
+            description: Numeric namespaces are existing namespace IDs; subtags are always literal strings.
             value:
-              - namespace: "character"
-                subtag: "toujou koneko"
+              - namespace: character
+                subtag: toujou koneko
               - namespace: 1
-                subtag: 1
+                subtag: catgirl
+              - namespace: ''
+                subtag: '5'
   responses:
-    200:
-      description: Tags added
-    400:
+    '200':
+      description: Tags added.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+    '400':
       description: Invalid tag ID, `tag_domain_id`, or body
-    500:
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

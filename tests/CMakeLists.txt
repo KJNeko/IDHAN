@@ -1,4 +1,5 @@
 find_package(Catch2 3 REQUIRED)
+find_package(CURL REQUIRED)
 
 enable_testing()
 
@@ -12,6 +13,7 @@ catch_discover_tests(IDHANSharedTests)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	AddFGLExecutable(IDHANFilesystemTests ${CMAKE_CURRENT_SOURCE_DIR}/filesystem)
 	target_sources(IDHANFilesystemTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/renameNoReplace.cpp)
+	target_sources(IDHANFilesystemTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/clearThumbnailCache.cpp)
 	target_include_directories(IDHANFilesystemTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src)
 	target_link_libraries(IDHANFilesystemTests PRIVATE Catch2::Catch2WithMain)
 	catch_discover_tests(IDHANFilesystemTests)
@@ -46,13 +48,44 @@ catch_discover_tests(IDHANDownloaderTests)
 AddFGLExecutable(IDHANDBTests ${CMAKE_CURRENT_SOURCE_DIR}/db)
 target_compile_definitions(IDHANDBTests PRIVATE IDHAN_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_link_libraries(IDHANDBTests PUBLIC Catch2::Catch2WithMain libpqxx::pqxx IDHANMigration IDHAN)
-target_include_directories(IDHANDBTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/db)
+target_include_directories(IDHANDBTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src ${CMAKE_SOURCE_DIR}/IDHANDb/include ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/db)
 catch_discover_tests(IDHANDBTests)
 
+AddFGLExecutable(IDHANHashMaintenanceTests ${CMAKE_CURRENT_SOURCE_DIR}/hashMaintenance)
+target_sources(IDHANHashMaintenanceTests PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/db/CurrentTestName.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/db/hashMaintenance.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/hamming/hammingQueue.cpp)
+target_include_directories(IDHANHashMaintenanceTests PRIVATE
+		${CMAKE_SOURCE_DIR}/IDHANServer/src ${CMAKE_SOURCE_DIR}/IDHANModules/include
+		${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/db)
+target_link_libraries(IDHANHashMaintenanceTests PRIVATE Catch2::Catch2WithMain libpqxx::pqxx
+		IDHANMigration IDHANDb IDHAN spdlog::spdlog
+		Folly::folly_executors_cpu_thread_pool_executor)
+catch_discover_tests(IDHANHashMaintenanceTests)
+
 AddFGLExecutable(IDHANAPITests ${CMAKE_CURRENT_SOURCE_DIR}/api)
-target_link_libraries(IDHANAPITests PUBLIC Catch2::Catch2WithMain libpqxx::pqxx drogon IDHAN)
-target_include_directories(IDHANAPITests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/api/harness)
+target_link_libraries(IDHANAPITests PUBLIC Catch2::Catch2WithMain libpqxx::pqxx CURL::libcurl IDHAN)
+target_include_directories(IDHANAPITests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src ${CMAKE_SOURCE_DIR}/IDHANDb/include ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/api/harness)
 target_compile_definitions(IDHANAPITests PRIVATE IDHAN_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 # the ugoira scenario refines a mime out of process, so the archive module has to sit beside the server
 add_dependencies(IDHANAPITests IDHANServer IDHANModuleRunner IDHANArchive)
 catch_discover_tests(IDHANAPITests)
+
+AddFGLExecutable(IDHANParameterTests ${CMAKE_CURRENT_SOURCE_DIR}/parameters)
+target_sources(IDHANParameterTests PRIVATE
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/httpapi/jsonBody.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/httpapi/parameterDeclarations.cpp)
+target_include_directories(IDHANParameterTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src)
+target_link_libraries(IDHANParameterTests PRIVATE Catch2::Catch2WithMain IDHANHttp Folly::folly spdlog::spdlog)
+catch_discover_tests(IDHANParameterTests)
+
+AddFGLExecutable(IDHANClusterMarkerTests ${CMAKE_CURRENT_SOURCE_DIR}/clusterMarkers)
+target_sources(IDHANClusterMarkerTests PRIVATE
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/clusters/ClusterMarker.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/clusters/ClusterAccess.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/config/consumeFlag.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/Config.cpp)
+target_include_directories(IDHANClusterMarkerTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src)
+target_link_libraries(IDHANClusterMarkerTests PRIVATE Catch2::Catch2WithMain IDHANHttp spdlog::spdlog tomlplusplus::tomlplusplus)
+catch_discover_tests(IDHANClusterMarkerTests)

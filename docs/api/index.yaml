@@ -1,14 +1,14 @@
-openapi: 3.0.0
+openapi: 3.2.1
 servers:
   - url: /
-
 info:
-  description: Standard API for IDHAN
-  version: "0.1.0"
+  description: Native IDHAN API. Errors use text/plain.
+    Authenticate with a raw hexadecimal API key; Authorization does not use a Bearer prefix. Unless overridden
+    below, requests require a key. GET routes also accept HEAD with the response body omitted.
+  version: 0.1.0
   title: IDHAN API
   contact:
     url: https://github.com/KJNeko/IDHAN
-
 tags:
   - name: public
     description: Endpoints that need no API key
@@ -40,180 +40,286 @@ tags:
     description: Database introspection and statistics
   - name: downloader
     description: Downloader configuration and runtime state
-
+  - name: layouts
+    description: Saved WebUI layouts
+  - name: embeddings
+    description: Embedding model management and similarity search
 security:
   - KeyAuth: []
-
+  - QueryKeyAuth: [ ]
+  - AuthorizationKeyAuth: [ ]
+  - XKeyAuth: [ ]
 paths:
-
-  # ── Public / info ──────────────────────────────────────────────────────────
   /version:
-    $ref: './paths/version.yaml'
-
-  # ── Auth ───────────────────────────────────────────────────────────────────
+    $ref: ./paths/version.yaml
   /generate_api_key:
-    $ref: './paths/auth/generate_key.yaml'
-
-  # ── Records ────────────────────────────────────────────────────────────────
+    $ref: ./paths/auth/generate_key.yaml
   /records/create:
-    $ref: './paths/records/create.yaml'
+    $ref: ./paths/records/create.yaml
   /records/random:
-    $ref: './paths/records/random.yaml'
+    $ref: ./paths/records/random.yaml
   /records/search:
-    $ref: './paths/records/search.yaml'
+    $ref: ./paths/records/search.yaml
   /records/{record_id}:
-    $ref: './paths/records/file.yaml'
+    $ref: ./paths/records/file.yaml
   /records/{record_id}/file:
-    $ref: './paths/records/file.yaml'
+    $ref: ./paths/records/file.yaml
   /records/{record_id}/info:
-    $ref: './paths/records/info.yaml'
+    $ref: ./paths/records/info.yaml
   /records/{record_id}/metadata:
-    $ref: './paths/records/info.yaml'
+    $ref: ./paths/records/info.yaml
   /records/{record_id}/metadata/scan:
-    $ref: './paths/records/metadatascan.yaml'
+    $ref: ./paths/records/metadatascan.yaml
   /records/{record_id}/thumbnail:
-    $ref: './paths/records/thumbnail.yaml'
-
-  # ── Record tags ────────────────────────────────────────────────────────────
+    $ref: ./paths/records/thumbnail.yaml
   /records/tags/add:
-    $ref: './paths/records/tags/addgroup.yaml'
+    $ref: ./paths/records/tags/addgroup.yaml
   /records/tags/remove:
-    $ref: './paths/records/tags/removegroup.yaml'
+    $ref: ./paths/records/tags/removegroup.yaml
   /records/{record_id}/tags:
-    $ref: './paths/records/tags/info.yaml'
+    $ref: ./paths/records/tags/info.yaml
   /records/{record_id}/tags/add:
-    $ref: './paths/records/tags/add.yaml'
+    $ref: ./paths/records/tags/add.yaml
   /records/{record_id}/tags/remove:
-    $ref: './paths/records/tags/remove.yaml'
+    $ref: ./paths/records/tags/remove.yaml
   /records/{record_id}/tags/active:
-    $ref: './paths/records/tags/active.yaml'
+    $ref: ./paths/records/tags/active.yaml
   /records/{record_id}/tags/active/verbose:
-    $ref: './paths/records/tags/activeverbose.yaml'
-
-  # ── Record notes ───────────────────────────────────────────────────────────
+    $ref: ./paths/records/tags/activeverbose.yaml
   /records/{record_id}/notes:
-    $ref: './paths/records/notes/get_notes.yaml'
+    $ref: ./paths/records/notes/get_notes.yaml
   /records/{record_id}/add_note:
-    $ref: './paths/records/notes/add_note.yaml'
+    $ref: ./paths/records/notes/add_note.yaml
   /records/{record_id}/remove_note/{note_id}:
-    $ref: './paths/records/notes/remove_note.yaml'
-
-  # ── Record URLs ────────────────────────────────────────────────────────────
+    $ref: ./paths/records/notes/remove_note.yaml
   /records/{record_id}/urls:
-    $ref: './paths/records/urls/fetch.yaml'
+    $ref: ./paths/records/urls/fetch.yaml
   /records/{record_id}/urls/add:
-    $ref: './paths/records/urls/add.yaml'
+    $ref: ./paths/records/urls/add.yaml
   /records/{record_id}/urls/remove:
-    $ref: './paths/records/urls/remove.yaml'
-
-  # ── Tags ───────────────────────────────────────────────────────────────────
+    $ref: ./paths/records/urls/remove.yaml
   /tags/create:
-    $ref: './paths/tags/create.yaml'
+    $ref: ./paths/tags/create.yaml
   /tags/search:
-    $ref: './paths/tags/search.yaml'
+    $ref: ./paths/tags/search.yaml
   /tags/autocomplete:
-    $ref: './paths/tags/autocomplete.yaml'
+    $ref: ./paths/tags/autocomplete.yaml
   /tags/{tag_id}/info:
-    $ref: './paths/tags/info.yaml'
-
-  # ── Tag domains ────────────────────────────────────────────────────────────
+    $ref: ./paths/tags/info.yaml
   /tags/domain/create:
-    $ref: './paths/tags/domains/create.yaml'
+    $ref: ./paths/tags/domains/create.yaml
   /tags/domain/list:
-    $ref: './paths/tags/domains/list.yaml'
+    $ref: ./paths/tags/domains/list.yaml
   /tags/domain/{tag_domain_id}/info:
-    $ref: './paths/tags/domains/info.yaml'
+    $ref: ./paths/tags/domains/info.yaml
   /tags/domain/{tag_domain_id}/delete:
-    $ref: './paths/tags/domains/delete.yaml'
-
-  # ── Tag relationships ──────────────────────────────────────────────────────
+    $ref: ./paths/tags/domains/delete.yaml
   /tags/{domain_id}/{tag_id}/relationships:
-    $ref: './paths/tags/relationships/get.yaml'
+    $ref: ./paths/tags/relationships/get.yaml
   /tags/parents/create:
-    $ref: './paths/tags/relationships/parent/create.yaml'
+    $ref: ./paths/tags/relationships/parent/create.yaml
   /tags/parents/remove:
-    $ref: './paths/tags/relationships/parent/remove.yaml'
+    $ref: ./paths/tags/relationships/parent/remove.yaml
   /tags/alias/create:
-    $ref: './paths/tags/relationships/alias/create.yaml'
+    $ref: ./paths/tags/relationships/alias/create.yaml
   /tags/alias/remove:
-    $ref: './paths/tags/relationships/alias/remove.yaml'
+    $ref: ./paths/tags/relationships/alias/remove.yaml
   /tags/siblings/create:
-    $ref: './paths/tags/relationships/sibling/create.yaml'
+    $ref: ./paths/tags/relationships/sibling/create.yaml
   /tags/siblings/remove:
-    $ref: './paths/tags/relationships/sibling/remove.yaml'
-
-  # ── Clusters ───────────────────────────────────────────────────────────────
+    $ref: ./paths/tags/relationships/sibling/remove.yaml
   /clusters/add:
-    $ref: './paths/clusters/add.yaml'
+    $ref: ./paths/clusters/add.yaml
   /clusters/list:
-    $ref: './paths/clusters/list.yaml'
+    $ref: ./paths/clusters/list.yaml
   /clusters/{cluster_id}/info:
-    $ref: './paths/clusters/info.yaml'
+    $ref: ./paths/clusters/info.yaml
   /clusters/{cluster_id}/modify:
-    $ref: './paths/clusters/modify.yaml'
+    $ref: ./paths/clusters/modify.yaml
   /clusters/{cluster_id}/remove:
-    $ref: './paths/clusters/remove.yaml'
+    $ref: ./paths/clusters/remove.yaml
   /clusters/{cluster_id}/scan:
-    $ref: './paths/clusters/scan.yaml'
-
-  # ── Search ─────────────────────────────────────────────────────────────────
+    $ref: ./paths/clusters/scan.yaml
   /search:
-    $ref: './paths/search/search.yaml'
-
-  # ── File import ────────────────────────────────────────────────────────────
+    $ref: ./paths/search/search.yaml
   /file/import:
-    $ref: './paths/file/import.yaml'
-
-  # ── File relationships ─────────────────────────────────────────────────────
+    $ref: ./paths/file/import.yaml
   /relationships/duplicates/add:
-    $ref: './paths/relationships/duplicates/add.yaml'
+    $ref: ./paths/relationships/duplicates/add.yaml
   /relationships/duplicates/undecided:
-    $ref: './paths/relationships/duplicates/undecided.yaml'
+    $ref: ./paths/relationships/duplicates/undecided.yaml
   /relationships/alternatives/add:
-    $ref: './paths/relationships/alternatives/add.yaml'
-
-  # ── MIME ───────────────────────────────────────────────────────────────────
+    $ref: ./paths/relationships/alternatives/add.yaml
   /mime/parse:
-    $ref: './paths/mime/parse.yaml'
+    $ref: ./paths/mime/parse.yaml
   /mime/generate_thumbnail:
-    $ref: './paths/mime/generate_thumbnail.yaml'
-
-  # ── Jobs ───────────────────────────────────────────────────────────────────
+    $ref: ./paths/mime/generate_thumbnail.yaml
   /jobs/metadata/rescan:
-    $ref: './paths/jobs/rescan_metadata.yaml'
+    $ref: ./paths/jobs/rescan_metadata.yaml
   /jobs/{job_id}/status:
-    $ref: './paths/jobs/status.yaml'
+    $ref: ./paths/jobs/status.yaml
   /jobs/status:
-    $ref: './paths/jobs/status_all.yaml'
-
-  # ── Maintenance ────────────────────────────────────────────────────────────
+    $ref: ./paths/jobs/status_all.yaml
   /integrity:
-    $ref: './paths/integrity.yaml'
+    $ref: ./paths/integrity.yaml
   /purge/thumbnails:
-    $ref: './paths/purge/thumbnails.yaml'
-
-  # ── Database stats ─────────────────────────────────────────────────────────
+    $ref: ./paths/purge/thumbnails.yaml
   /db/stats/sunburst:
-    $ref: './paths/db/stats/sunburst.yaml'
-
-  # ── Downloader ────────────────────────────────────────────────────────────
+    $ref: ./paths/db/stats/sunburst.yaml
   /downloader/secrets:
-    $ref: './paths/downloader/secrets.yaml'
-
+    $ref: ./paths/downloader/secrets.yaml
+  /health:
+    $ref: ./paths/health.yaml
+  /auth/verify:
+    $ref: ./paths/auth/verify.yaml
+  /heartbeat:
+    $ref: ./paths/heartbeat.yaml
+  /records/metadata:
+    $ref: ./paths/records/metadata.yaml
+  /db/stats:
+    $ref: ./paths/db/stats.yaml
+  /mime:
+    $ref: ./paths/mime.yaml
+  /tags/info:
+    $ref: ./paths/tags/info_query.yaml
+  /relationships/{record_id}:
+    $ref: ./paths/relationships/record_id.yaml
+  /relationships/{record_id}/similar:
+    $ref: ./paths/relationships/record_id/similar.yaml
+  /relationships/clear:
+    $ref: ./paths/relationships/clear.yaml
+  /relationships/unrelated/add:
+    $ref: ./paths/relationships/unrelated/add.yaml
+  /layouts:
+    $ref: ./paths/layouts.yaml
+  /layouts/{id}:
+    $ref: ./paths/layouts/id.yaml
+  /embeddings/models:
+    $ref: ./paths/embeddings/models.yaml
+  /embeddings/models/{model_id}:
+    $ref: ./paths/embeddings/models/model_id.yaml
+  /embeddings/generate:
+    $ref: ./paths/embeddings/generate.yaml
+  /embeddings/search:
+    $ref: ./paths/embeddings/search.yaml
+  /embeddings/compare:
+    $ref: ./paths/embeddings/compare.yaml
+  /download_sessions:
+    $ref: ./paths/download_sessions.yaml
+  /download_sessions/{session_id}:
+    $ref: ./paths/download_sessions/session_id.yaml
+  /download_sessions/{session_id}/urls:
+    $ref: ./paths/download_sessions/session_id/urls.yaml
+  /download_sessions/urls:
+    $ref: ./paths/download_sessions/urls.yaml
+  /download_sessions/{session_id}/urls/{url_id}/retry:
+    $ref: ./paths/download_sessions/session_id/urls/url_id/retry.yaml
+  /download_sessions/{session_id}/records:
+    $ref: ./paths/download_sessions/session_id/records.yaml
+  /download_sessions/{session_id}/errors:
+    $ref: ./paths/download_sessions/session_id/errors.yaml
+  /download_sessions/events:
+    $ref: ./paths/download_sessions/events.yaml
+  /rate_limits:
+    $ref: ./paths/rate_limits.yaml
+  /rate_limits/reset:
+    $ref: ./paths/rate_limits/reset.yaml
+  /rate_limits/events:
+    $ref: ./paths/rate_limits/events.yaml
+  /downloader/debug:
+    $ref: ./paths/downloader/debug.yaml
+  /plugins:
+    $ref: ./paths/plugins.yaml
+  /log:
+    $ref: ./paths/log.yaml
 components:
   schemas:
     TagInfo:
-      $ref: './schemas/TagInfo.yaml'
+      $ref: ./schemas/TagInfo.yaml
+    TagDomainCounts:
+      $ref: ./schemas/TagDomainCounts.yaml
     Version:
-      $ref: './schemas/Version.yaml'
+      $ref: ./schemas/Version.yaml
     VersionInfo:
-      $ref: './schemas/VersionInfo.yaml'
+      $ref: ./schemas/VersionInfo.yaml
     TagColor:
-      $ref: './schemas/TagColor.yaml'
+      $ref: ./schemas/TagColor.yaml
     TagSet:
-      $ref: './schemas/TagSet.yaml'
+      $ref: ./schemas/TagSet.yaml
     TagInput:
-      $ref: './schemas/TagInput.yaml'
+      $ref: ./schemas/TagInput.yaml
+    RescanMetadataResult:
+      $ref: ./schemas/RescanMetadataResult.yaml
+    NoteID:
+      $ref: ./schemas/NoteID.yaml
+    TagNamespace:
+      $ref: ./schemas/TagNamespace.yaml
+    ClusterUpdate:
+      $ref: ./schemas/ClusterUpdate.yaml
+    TagDomainInfo:
+      $ref: ./schemas/TagDomainInfo.yaml
+    JobQueued:
+      $ref: ./schemas/JobQueued.yaml
+    SHA256:
+      $ref: ./schemas/SHA256.yaml
+    TagComponent:
+      $ref: ./schemas/TagComponent.yaml
+    TagString:
+      $ref: ./schemas/TagString.yaml
+    ClusterCreate:
+      $ref: ./schemas/ClusterCreate.yaml
+    RecordInfo:
+      $ref: ./schemas/RecordInfo.yaml
+    RecordID:
+      $ref: ./schemas/RecordID.yaml
+    TagID:
+      $ref: ./schemas/TagID.yaml
+    TagDomainID:
+      $ref: ./schemas/TagDomainID.yaml
+    ClusterInfo:
+      $ref: ./schemas/ClusterInfo.yaml
+    JobStatus:
+      $ref: ./schemas/JobStatus.yaml
+    TagSubtag:
+      $ref: ./schemas/TagSubtag.yaml
+    ClusterScanResult:
+      $ref: ./schemas/ClusterScanResult.yaml
+    TagInfoExtended:
+      $ref: ./schemas/TagInfoExtended.yaml
+    DownloadUrl:
+      $ref: ./schemas/DownloadUrl.yaml
+    DownloadUrlNode:
+      $ref: ./schemas/DownloadUrlNode.yaml
+    DownloadUrlFlat:
+      $ref: ./schemas/DownloadUrlFlat.yaml
+    DownloadSession:
+      $ref: ./schemas/DownloadSession.yaml
+    EmbeddingTerm:
+      $ref: ./schemas/EmbeddingTerm.yaml
+    SearchSortMethod:
+      $ref: ./schemas/SearchSortMethod.yaml
+    LayoutDocument:
+      $ref: ./schemas/LayoutDocument.yaml
+    DownloadSessionEvent:
+      $ref: ./schemas/DownloadSessionEvent.yaml
+    RateLimitEvent:
+      $ref: ./schemas/RateLimitEvent.yaml
+    SSEShutdownEvent:
+      $ref: ./schemas/SSEShutdownEvent.yaml
   securitySchemes:
     KeyAuth:
-      $ref: './securitySchemes/KeyAuth.yaml'
+      $ref: ./securitySchemes/KeyAuth.yaml
+    QueryKeyAuth:
+      type: apiKey
+      in: query
+      name: idhan_key
+    AuthorizationKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Raw 64-character hexadecimal key, without a Bearer prefix.
+    XKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+jsonSchemaDialect: https://spec.openapis.org/oas/3.2/dialect/2026-02-26

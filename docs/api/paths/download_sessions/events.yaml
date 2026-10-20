@@ -1,0 +1,105 @@
+get:
+  tags:
+    - downloader
+  summary: Subscribes to session change notifications
+  responses:
+    '200':
+      description: Named SSE state notifications with JSON data, heartbeat comments, and an empty shutdown
+        event.
+      content:
+        text/event-stream:
+          itemSchema:
+            $ref: ../../schemas/DownloadSessionEvent.yaml
+          examples:
+            stream:
+              summary: Illustrative wire frames, each terminated by a blank line
+              serializedValue: |+
+                retry: 3000
+
+                event: snapshot
+                timestamp: 1792440000
+                data: {"sessions":[12,15]}
+
+                event: update
+                timestamp: 1792440001
+                data: {"id":12}
+
+                event: update
+                timestamp: 1792440002
+                data: {"id":15,"removed":true}
+
+                : keepalive
+
+                event: shutdown
+                timestamp: 1792440010
+                data:
+
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: session_id
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
+          type: integer
+          format: int64
+      description: Repeat to select sessions, for example session_id=12&session_id=15; omit for all sessions.
+        The filter applies to the snapshot and later updates.
+      style: form
+      explode: true
+  description: |
+    Subscribes to download-session state notifications.
+
+    `snapshot` data is `{"sessions":[12,15]}`: IDs of existing sessions matching the
+    optional filter, ordered by last use descending and then ID descending. It can
+    be empty. Fetch `/download_sessions/{session_id}` for each session's details.
+    `update` data `{"id":12}` invalidates that session; refetch its details and any
+    URL/record lists the UI needs. `{"id":12,"removed":true}` tells the client to
+    remove that session locally. These notifications do not contain full sessions.
+    An empty `update` can precede the JSON removal during deletion; skip JSON
+    parsing for that notification and refresh the session list if needed.
+
+    Repeat `session_id` to restrict both the opening IDs and later updates. An
+    unknown ID is absent from the opening snapshot rather than causing 404. With
+    no filter, later notifications also include sessions created after opening.
+
+    Both streams begin with `retry: 3000` (a reconnect delay of 3000 milliseconds).
+    They send named `snapshot`, `update`, and `shutdown` events. Subscribe with
+    `addEventListener` for those names; `onmessage` does not receive them. Snapshot
+    and nonempty update `data` values are JSON text. Shutdown has an empty `data`
+    string and ends the stream; do not JSON-decode empty data. Comments such as
+    `: keepalive` keep idle connections open without dispatching an event. The
+    server checks idle subscriptions for heartbeats approximately every 10 seconds;
+    this is not a delivery-time guarantee.
+
+    Every application frame includes a custom `timestamp` line containing integer
+    Unix epoch seconds captured when the event is queued. Standard SSE parsers,
+    including browser EventSource, ignore that field; it is not in event.data and
+    is not exposed as a MessageEvent property. The item schema describes parsed
+    SSE events, not every line of the wire format. Retry-only blocks and comments
+    do not dispatch application events.
+
+    Pending updates for the same entity may coalesce. There are no SSE `id` fields
+    or replay cursor, and `Last-Event-ID` does not resume missed updates. On each
+    reconnect, use the new opening snapshot to rebuild local state. Snapshots and
+    updates are not an atomic transaction, so refetch when state is uncertain.
+    Disconnecting releases the subscription. Clients may reconnect automatically
+    after shutdown or a dropped connection; call EventSource.close() to stop.
