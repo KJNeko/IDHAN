@@ -1,11 +1,10 @@
 #include "PsdThumbnailer.hpp"
 
-#include "MimeIDs.hpp"
-
 #include <vips/vips.h>
 
 #include <string>
 
+#include "MimeIDs.hpp"
 #include "psd.hpp"
 #include "vips.hpp"
 

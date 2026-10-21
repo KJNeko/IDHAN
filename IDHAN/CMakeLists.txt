@@ -1,6 +1,9 @@
 
 AddFGLLibrary(IDHAN OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+# Replacement runtime does not depend on the legacy IDHAN objects.
+add_subdirectory(runtime)
+
 set(HYDRUS_CONSTANTS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus_constants_gen.hpp)
 set(HYDRUS_CLIENT_CONSTANTS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus_client_constants_gen.hpp)
 set(HYDRUS_SERIALISABLE_CONSTANTS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus_serialisable_constants_gen.hpp)
@@ -65,4 +68,6 @@ endforeach ()
 
 target_sources(IDHAN PUBLIC ${GENERATED_HEADERS})
 
-target_link_libraries(IDHAN PUBLIC libFGL Jsoncpp_lib)
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+
+target_link_libraries(IDHAN PUBLIC libFGL Jsoncpp_lib OpenSSL::Crypto)

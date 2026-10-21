@@ -1,96 +1,43 @@
-#include <drogon/drogon.h>
+#include <algorithm>
 
-#include <atomic>
-#include <vector>
-
-#include "db/drogonArrayBind.hpp"
+#include "db/hashMaintenance.hpp"
 #include "hamming.hpp"
+#include "idhan/db/DBContext.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::hamming
 {
-
-static std::atomic< bool > sweep_running { false };
-
-drogon::Task< void > processQueueBatch( DbClientPtr db )
+runtime::Task< std::optional< RecordID > > processQueueBatch(
+	db::DBContext& db,
+	const RecordID through,
+	const std::optional< RecordID > after )
 {
-	const auto transaction { co_await db->newTransactionCoro() };
-	const auto claimed_rows { co_await transaction->execSqlCoro(
-		"DELETE FROM hamming_distance_queue WHERE record_id IN ("
-		"  SELECT record_id FROM hamming_distance_queue ORDER BY record_id"
-		"  LIMIT $1::integer FOR UPDATE SKIP LOCKED)"
-		"RETURNING record_id",
-		QUEUE_BATCH_SIZE ) };
+	auto transaction { co_await db.transaction() };
+	// Must precede queue/pair row locks, matching all relationship mutation paths.
+	co_await transaction.query( "SELECT pg_advisory_xact_lock(16609, 1)" ).result();
+	const auto claimed { co_await db::claimHammingBatch( transaction, after, through, queueBatchSize ) };
+	if ( claimed.empty() )
+	{
+		co_await transaction.commit();
+		co_return std::nullopt;
+	}
 
-	if ( claimed_rows.empty() ) co_return;
-
-	std::vector< RecordID > claimed {};
-	claimed.reserve( claimed_rows.size() );
-	for ( const auto& row : claimed_rows ) claimed.emplace_back( row[ "record_id" ].as< RecordID >() );
-	const auto claimed_count { claimed.size() };
-
-	co_await transaction->execSqlCoro(
-		"DELETE FROM hamming_distance WHERE left_id = ANY($1) OR right_id = ANY($1)",
-		std::vector< RecordID > { claimed } );
-
-	const auto result { co_await transaction->execSqlCoro(
-		"WITH probes AS ("
-		"  SELECT record_id, phash FROM image_metadata"
-		"  WHERE record_id = ANY($1) AND phash IS NOT NULL"
-		"), pairs AS ("
-		"  SELECT DISTINCT ON (left_id, right_id) left_id, right_id, distance FROM ("
-		"    SELECT LEAST(probes.record_id, other.record_id) AS left_id,"
-		"           GREATEST(probes.record_id, other.record_id) AS right_id,"
-		"           bit_count(probes.phash # other.phash)::smallint AS distance"
-		"    FROM probes JOIN image_metadata other"
-		"      ON other.phash IS NOT NULL AND other.record_id <> probes.record_id"
-		"    WHERE bit_count(probes.phash # other.phash) <= $2::integer) computed"
-		"  ORDER BY left_id, right_id"
-		"), stored AS ("
-		"  INSERT INTO hamming_distance (left_id, right_id, distance)"
-		"  SELECT left_id, right_id, distance FROM pairs"
-		"  ON CONFLICT (left_id, right_id) DO UPDATE SET distance = excluded.distance"
-		"  RETURNING 1"
-		") SELECT (SELECT count(*) FROM stored) AS stored,"
-		"  (SELECT count(*) FROM hamming_distance_queue) AS remaining",
-		std::move( claimed ),
-		MAX_DISTANCE ) };
-
-	if ( result.empty() ) co_return;
-
-	log::debug(
-		"Computed hamming distances for {} record(s), storing {} pair(s), {} record(s) left to process",
-		claimed_count,
-		result[ 0 ][ "stored" ].as< std::int64_t >(),
-		result[ 0 ][ "remaining" ].as< std::int64_t >() );
-
-	co_return;
+	const auto stored { co_await db::rebuildHammingPairs( transaction, claimed ) };
+	co_await transaction.commit();
+	log::info( "Computed hamming distances for {} records, storing {} pairs", claimed.size(), stored );
+	co_return std::ranges::max( claimed );
 }
 
-void startQueueSweeper()
+runtime::Task<> runQueueSweep( db::DBContext& db, const std::stop_token stop )
 {
-	drogon::app().getLoop()->runEvery(
-		QUEUE_INTERVAL,
-		[]()
-		{
-			if ( sweep_running.exchange( true ) ) return;
+	const auto through { co_await db::queuedHammingHighWater( db ) };
+	if ( !through ) co_return;
 
-			drogon::async_run(
-				[]() -> drogon::Task< void >
-				{
-					try
-					{
-						co_await processQueueBatch( drogon::app().getDbClient() );
-					}
-					catch ( const std::exception& e )
-					{
-						log::warn( "Hamming distance sweep failed: {}", e.what() );
-					}
-
-					sweep_running.store( false );
-					co_return;
-				} );
-		} );
+	std::optional< RecordID > after;
+	while ( !stop.stop_requested() )
+	{
+		after = co_await processQueueBatch( db, *through, after );
+		if ( !after ) co_return;
+	}
 }
-
 } // namespace idhan::hamming

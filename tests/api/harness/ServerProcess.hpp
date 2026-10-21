@@ -18,6 +18,7 @@ class ServerProcess
 	std::uint16_t m_port;
 	pid_t m_pid { -1 };
 
+	void start();
 	void waitUntilReady() const;
 
 	//! The end of the server's own log, for when it never came up.
@@ -34,6 +35,7 @@ class ServerProcess
 
 	//! Ends the server and waits for it to go. Doing this twice is harmless.
 	void stop();
+	void restart( bool crash );
 
 	[[nodiscard]] std::uint16_t port() const { return m_port; }
 

@@ -19,7 +19,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the request succeeds" )
 			{
-				CHECK( created.status == drogon::k200OK );
+				CHECK( created.status == 200 );
 			}
 
 			THEN( "the parent row exists in that domain" )
@@ -39,7 +39,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 				THEN( "the request succeeds and nothing is duplicated" )
 				{
-					CHECK( again.status == drogon::k200OK );
+					CHECK( again.status == 200 );
 
 					pqxx::nontransaction tx { db() };
 					CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_parents" ) == 1 );
@@ -52,7 +52,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 				THEN( "the cycle is refused" )
 				{
-					CHECK( created_cycle.status == drogon::k409Conflict );
+					CHECK( created_cycle.status == 409 );
 				}
 			}
 
@@ -62,7 +62,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 				THEN( "the row goes" )
 				{
-					CHECK( removed.status == drogon::k200OK );
+					CHECK( removed.status == 200 );
 
 					pqxx::nontransaction tx { db() };
 					CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_parents" ) == 0 );
@@ -76,7 +76,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the request still succeeds" )
 			{
-				CHECK( removed.status == drogon::k200OK );
+				CHECK( removed.status == 200 );
 			}
 		}
 
@@ -86,7 +86,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -96,7 +96,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the tag is not found" )
 			{
-				CHECK( created.status == drogon::k404NotFound );
+				CHECK( created.status == 404 );
 			}
 		}
 
@@ -106,7 +106,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the domain is not found" )
 			{
-				CHECK( created.status == drogon::k404NotFound );
+				CHECK( created.status == 404 );
 			}
 		}
 
@@ -116,7 +116,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -126,7 +126,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -139,7 +139,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -158,7 +158,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 	}

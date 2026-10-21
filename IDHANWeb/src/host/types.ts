@@ -7,6 +7,7 @@
 import type { ComponentType } from 'react';
 import type {
   AutocompleteResult,
+    AutocompleteOptions,
   DatabaseStats,
     ClearedRelationship,
     FileRelationships,
@@ -116,15 +117,15 @@ export interface RecordsApi {
     ): Promise<SimilarRecords>;
 
     /**
-     * The closest pair still awaiting a duplicate decision. `pair` is null once every pair within
-     * `distance` has been ruled on. Pairs marked unrelated are skipped unless `includeUnrelated`.
+     * Return undecided pairs ordered by record ID, then distance. `pair` is null when none
+     * match; `limit` controls lookahead size.
      */
     nextUndecidedDuplicate(
-        opts?: { distance?: number; includeUnrelated?: boolean },
+        opts?: { distance?: number; limit?: number },
         signal?: AbortSignal,
     ): Promise<UndecidedDuplicate>;
 
-    /** Makes `betterId` king of the duplicate group containing both records. */
+    /** Links `worseId` to `betterId`, preserving the superior’s existing ancestors. */
     setBetterDuplicate(worseId: RecordId, betterId: RecordId, signal?: AbortSignal): Promise<void>;
 
     /** Pairs every listed record with every other as alternatives. */
@@ -153,7 +154,7 @@ export interface RecordsApi {
 export interface TagsApi {
   autocomplete(
     prefix: string,
-    opts?: { domain?: number; limit?: number },
+    opts?: AutocompleteOptions,
     signal?: AbortSignal,
   ): Promise<AutocompleteResult[]>;
   /** List the tag service domains a record's tags can live in. */

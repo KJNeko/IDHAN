@@ -43,8 +43,7 @@ static RecordIDs nearby( ApiClient& api, const std::string& predicate )
 
 	const auto response { api.post( "/search", body ) };
 
-	if ( response.status != drogon::k200OK )
-		throw std::runtime_error( std::format( "Search failed: {}", response.body ) );
+	if ( response.status != 200 ) throw std::runtime_error( std::format( "Search failed: {}", response.body ) );
 
 	RecordIDs ids {};
 	for ( const auto& id : response.json[ "record_ids" ] ) ids.emplace_back( id.asInt() );
@@ -138,6 +137,31 @@ SCENARIO_METHOD( ServerFixture, "system:nearby searches by perceptual hash dista
 	}
 }
 
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Similarity queries resolve public operators after server reconnection",
+	"[api][search][phash][schema]" )
+{
+	const auto records { api().createRecords( { 31, 32, 33 } ) };
+	seedHashedImage( db(), records[ 0 ], "b44dc7b24dcb381c" );
+	seedHashedImage( db(), records[ 1 ], "b44dc7b24dcb381d" );
+	seedHashedImage( db(), records[ 2 ], {} );
+
+	for ( int attempt = 0; attempt < 2; ++attempt )
+	{
+		if ( attempt != 0 ) testServer().restart( false );
+		CHECK(
+			nearby( api(), std::format( "system:nearby {} distance 1", records[ 0 ] ) )
+			== sortedIds( { records[ 0 ], records[ 1 ] } ) );
+		const auto response { api().get( std::format( "/relationships/{}/similar?distance=1", records[ 0 ] ) ) };
+		REQUIRE( response.status == 200 );
+		REQUIRE( response.json[ "results" ].size() == 1 );
+		CHECK( response.json[ "results" ][ 0 ][ "record_id" ].asInt() == records[ 1 ] );
+		CHECK( response.json[ "results" ][ 0 ][ "distance" ].asInt() == 1 );
+		CHECK( api().get( std::format( "/relationships/{}/similar", records[ 2 ] ) ).status == 404 );
+	}
+}
+
 SCENARIO_METHOD( ServerFixture, "system:nearby rejects malformed predicates", "[api][search][phash]" )
 {
 	const auto rejected {
@@ -151,13 +175,13 @@ SCENARIO_METHOD( ServerFixture, "system:nearby rejects malformed predicates", "[
 		}
 	};
 
-	CHECK( rejected( "system:nearby" ) == drogon::k400BadRequest );
-	CHECK( rejected( "system:nearby abc" ) == drogon::k400BadRequest );
-	CHECK( rejected( "system:nearby 0" ) == drogon::k400BadRequest );
-	CHECK( rejected( "system:nearby 12 distance" ) == drogon::k400BadRequest );
-	CHECK( rejected( "system:nearby 12 distance 65" ) == drogon::k400BadRequest );
-	CHECK( rejected( "system:nearby 12 within 4" ) == drogon::k400BadRequest );
-	CHECK( rejected( "system:nearby 12 distance 4 more" ) == drogon::k400BadRequest );
+	CHECK( rejected( "system:nearby" ) == 400 );
+	CHECK( rejected( "system:nearby abc" ) == 400 );
+	CHECK( rejected( "system:nearby 0" ) == 400 );
+	CHECK( rejected( "system:nearby 12 distance" ) == 400 );
+	CHECK( rejected( "system:nearby 12 distance 65" ) == 400 );
+	CHECK( rejected( "system:nearby 12 within 4" ) == 400 );
+	CHECK( rejected( "system:nearby 12 distance 4 more" ) == 400 );
 }
 
 } // namespace idhan::test

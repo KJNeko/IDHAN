@@ -12,6 +12,11 @@
 #include "fgl/defines.hpp"
 #include "filesystem/io/IOUring.hpp"
 
+namespace folly
+{
+class Executor;
+}
+
 namespace idhan
 {
 
@@ -120,18 +125,21 @@ class IOUringLinux final : public IOUring
 
 	void notifySubmit( unsigned int count ) const;
 
-	WriteAwaiter sendWrite( const io_uring_sqe& sqe );
-	ReadAwaiter sendRead( const io_uring_sqe& sqe, std::shared_ptr< std::vector< std::byte > >& data );
-	OpAwaiter sendOp( const io_uring_sqe& sqe );
+	WriteAwaiter sendWrite( const io_uring_sqe& sqe, folly::Executor* executor );
+	ReadAwaiter sendRead(
+		const io_uring_sqe& sqe,
+		std::shared_ptr< std::vector< std::byte > >& data,
+		folly::Executor* executor );
+	OpAwaiter sendOp( const io_uring_sqe& sqe, folly::Executor* executor );
 
-	drogon::Task< std::vector< std::byte > > read( NativeHandle handle, std::size_t offset, std::size_t len ) override;
+	runtime::Task< std::vector< std::byte > > read( NativeHandle handle, std::size_t offset, std::size_t len ) override;
 
-	drogon::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) override;
+	runtime::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) override;
 
-	drogon::Task< int > removeFile( std::filesystem::path path ) override;
-	drogon::Task< int > renameFile( std::filesystem::path from, std::filesystem::path to ) override;
-	drogon::Task< int > createDirectories( std::filesystem::path path ) override;
-	drogon::Task< std::expected< std::uint64_t, int > > fileSize( std::filesystem::path path ) override;
+	runtime::Task< int > removeFile( std::filesystem::path path ) override;
+	runtime::Task< int > renameFile( std::filesystem::path from, std::filesystem::path to ) override;
+	runtime::Task< int > createDirectories( std::filesystem::path path ) override;
+	runtime::Task< std::expected< std::uint64_t, int > > fileSize( std::filesystem::path path ) override;
 
   private:
 

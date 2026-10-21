@@ -1,15 +1,13 @@
-post:
+get:
   tags:
     - public
   summary: Generates the initial API key
-  description: |
-    Only works while the server has no keys; later calls return an empty body.
-    Send the returned key as the `IDHAN-Api-Key` header on authenticated
-    endpoints.
+  description: Creates the initial API key only while no key exists. Later calls return 404. Send the
+    returned key in an API-key header or idhan_key query parameter.
   security: [ ]
   responses:
-    200:
-      description: The generated key, or an empty body if one already exists
+    '200':
+      description: The newly generated key.
       content:
         application/json:
           schema:
@@ -18,4 +16,19 @@ post:
               key:
                 type: string
                 description: SHA-256 hex. Present only on the first call.
-                example: "a3f0c1d2e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1"
+                examples:
+                  - a3f0c1d2e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1
+            required:
+              - key
+    '404':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

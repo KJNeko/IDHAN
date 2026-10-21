@@ -2,31 +2,25 @@ get:
   tags:
     - search
   summary: Searches for records using tag IDs
-  description: >
-    Returns record IDs whose active tag mappings satisfy the positive tag
-    filter. With no tag IDs given, every record that has a file stored is
-    returned. Defaults to file size ascending.
+  description: Returns record IDs matching the positive tag filter. tag_ids takes precedence; if empty
+    or absent, tag_id is used. Both accept repeated integral values. Defaults to file size ascending.
   parameters:
     - name: tag_ids
       in: query
-      description: >
-        Positive tag IDs to intersect. Repeat the parameter for multiple values
-        (`?tag_ids=1&tag_ids=2`).
+      description: Positive tag IDs to intersect. Repeat the parameter for multiple values (`?tag_ids=1&tag_ids=2`).
       required: false
       schema:
         type: array
         items:
-          type: integer
+          $ref: ../../schemas/TagID.yaml
     - name: tag_id
       in: query
-      description: >
-        Singular alias for `tag_ids`, honouring only the first tag. Preferred
-        over `tag_ids` when both are given.
+      description: Repeated-value alias used when tag_ids is empty or absent.
       required: false
       schema:
         type: array
         items:
-          type: integer
+          $ref: ../../schemas/TagID.yaml
     - name: tag_domains
       in: query
       description: Restricts the search to these tag domains.
@@ -34,24 +28,25 @@ get:
       schema:
         type: array
         items:
-          type: integer
+          $ref: ../../schemas/TagDomainID.yaml
     - name: by
       in: query
-      description: >
-        Sort key. See the `sort.by` enum on `POST /search`. Defaults to
-        `filesize`.
+      description: Sort key. Defaults to `filesize` when omitted; unknown names return 400.
       required: false
       schema:
-        type: string
+        $ref: ../../schemas/SearchSortMethod.yaml
+        default: filesize
     - name: order
       in: query
       description: Defaults to `asc`.
       required: false
       schema:
         type: string
-        enum: [ asc, desc ]
+        enum:
+          - asc
+          - desc
   responses:
-    200:
+    '200':
       description: Matching record IDs, empty when nothing matches
       content:
         application/json:
@@ -60,15 +55,29 @@ get:
             items:
               type: integer
               description: record_id
-    401:
-      description: Missing or invalid API key
-
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '400':
+      description: Invalid parameters, including an unknown sorting method. The body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
 post:
   tags:
     - search
   summary: Full-featured record search
-  description: >
-    Search endpoint with negations, and system predicates.
+  description: Search endpoint with negations, and system predicates.
   requestBody:
     required: true
     content:
@@ -80,105 +89,150 @@ post:
               type: array
               items:
                 type: string
-              description: >
-                Tag text. A leading `-` negates the tag if present. A `system:`
-                prefix is parsed as a system predicate (width, height, filesize,
-                limit, tag count, duration, has audio, archive status,
-                embedded metadata (`has exif`, `has icc profile`,
-                `has embedded metadata`),
-                `nearby <record id> [distance <bits>]` for perceptual-hash
-                proximity, and so on) rather than a literal tag. The nearby
-                distance is optional, defaults to 0 (an exact perceptual-hash
+              description: Tag text. A leading `-` negates the tag if present. A `system:` prefix is parsed
+                as a system predicate (width, height, filesize, limit, tag count, duration, has audio,
+                archive status, embedded metadata (`has exif`, `has icc profile`, `has embedded metadata`),
+                `nearby <record id> [distance <bits>]` for perceptual-hash proximity, and so on) rather
+                than a literal tag. The nearby distance is optional, defaults to 0 (an exact perceptual-hash
                 match), and accepts values from 0 through 64 differing bits.
-                Mutually exclusive with `tag_ids`.
+                Literal tags support a leading minus, for example `-character:name`. Namespace wildcards such
+                as `character:*` and tag wildcards such as `character:na*` are supported. Tag wildcards
+                support negation (`-character:na*`); negated namespace wildcards (`-character:*`) currently return 400.
+                A star matches any sequence of characters; percent, underscore, and backslash are literal.
+                Unknown text tags, namespaces, and unmatched wildcard expansions return 404.
+                When this property is present, `tag_ids` is ignored, even when `tags` is empty.
             tag_ids:
               type: array
               items:
-                type: integer
-              description: Positive tag IDs, skipping text resolution.
+                $ref: ../../schemas/TagID.yaml
+              description: Positive tag IDs, skipping text resolution. Ignored when tags is present.
             tag_domains:
               type: array
               items:
-                type: integer
+                $ref: ../../schemas/TagDomainID.yaml
               description: Restricts the search to these tag domains.
             display:
               type: string
-              enum: [ display, storage ]
-              description: >
-                `display` (default) resolves aliases, siblings and parents.
-                `storage` searches raw applied mappings only.
+              enum:
+                - display
+                - storage
+              description: '`display` (default) resolves aliases and parents. Sibling resolution is stubbed out pending a rewrite. `storage` searches
+                raw applied mappings only.'
             sort:
               type: object
               properties:
                 by:
-                  type: string
-                  enum:
-                    - filesize
-                    - import_time
-                    - record_time
-                    - modified_time
-                    - mime
-                    - hash
-                    - random
-                    - duration
-                    - framerate
-                    - has_audio
-                    - width
-                    - height
-                    - ratio
-                    - num_pixels
-                    - num_tags
-                  description: >
-                    `size` aliases `filesize` and `creation_time` aliases
-                    `record_time`. Sorting by a field a record lacks drops that
-                    record from the results rather than sorting it last: this
-                    covers `modified_time` (unset until a record is modified),
-                    `duration`, `framerate`, `has_audio`, `width`, `height`,
-                    `ratio` and `num_pixels`. `num_tags` never drops anything,
-                    since zero is a real count. `random` ignores `order` and
-                    reshuffles on every call, so paging it is not stable.
+                  $ref: ../../schemas/SearchSortMethod.yaml
+                  default: import_time
                 order:
                   type: string
-                  enum: [ asc, desc ]
-              description: Defaults to import time, descending.
+                  enum:
+                    - asc
+                    - desc
+              description: Defaults to import time, descending. An omitted `by` keeps import-time sorting;
+                an unknown or non-string `by` returns 400.
             limit:
               type: integer
               minimum: 0
             offset:
               type: integer
               minimum: 0
+            debug:
+              type: boolean
+              default: false
+              description: Include available execution-step diagnostics in stats. Labels, step counts, and timings may vary.
             return:
               type: array
               items:
                 type: string
-                enum: [ ids, hashes ]
+                enum:
+                  - ids
+                  - hashes
               description: Defaults to `["ids"]`.
   responses:
-    200:
+    '404':
+      description: A text tag, namespace, or wildcard expansion could not be resolved. A known tag with no matching records instead produces a successful empty result.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '200':
       description: Search results
       content:
         application/json:
           schema:
             type: object
+            required:
+              - count
+              - truncated
+              - query_ms
+            anyOf:
+              - required:
+                  - record_ids
+              - required:
+                  - hashes
             properties:
               record_ids:
                 type: array
+                description: Included when IDs are requested, including the default IDs-only response. May be empty.
                 items:
                   type: integer
               hashes:
                 type: array
+                description: Included when hashes are requested. May be returned alongside record_ids, and may be empty.
                 items:
                   type: string
               count:
                 type: integer
               truncated:
                 type: boolean
-                description: >
-                  A limit was applied and fully consumed, so more results may
-                  exist.
+                description: A limit was applied and fully consumed, so more results may exist.
               query_ms:
                 type: integer
-    400:
-      description: Malformed request body
-    401:
-      description: Missing or invalid API key
+              stats:
+                type: array
+                description: Included when debug is true and execution diagnostics are available. Row counts describe individual execution steps.
+                items:
+                  type: object
+                  required:
+                    - step
+                    - rows
+                    - inverted
+                    - kind
+                  properties:
+                    step:
+                      type: string
+                    rows:
+                      type: integer
+                      format: int64
+                    inverted:
+                      type: boolean
+                    kind:
+                      type: string
+                      enum:
+                        - fetch
+                        - fold
+                        - page
+                    micros:
+                      type: integer
+                      format: int64
+                      minimum: 1
+                      description: Elapsed microseconds; omitted when no positive timing was recorded.
+    '400':
+      description: Malformed request body, unknown sorting method, or non-string sort.by.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

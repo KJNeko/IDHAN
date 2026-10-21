@@ -1,6 +1,6 @@
 #pragma once
 
-#include <drogon/HttpResponse.h>
+#include <json/value.h>
 
 #include <atomic>
 #include <chrono>
@@ -12,7 +12,7 @@
 
 struct JobTaskStatus
 {
-	std::optional< drogon::HttpResponsePtr > m_response {};
+	std::optional< Json::Value > m_response {};
 	std::atomic< bool > m_done { false };
 	std::atomic< bool > m_failed { false };
 	std::string m_error_message {};

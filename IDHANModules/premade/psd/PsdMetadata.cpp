@@ -1,11 +1,10 @@
 #include "PsdMetadata.hpp"
 
-#include "MimeIDs.hpp"
-
 #include <algorithm>
 #include <cstring>
 #include <memory>
 
+#include "MimeIDs.hpp"
 #include "ModuleBase.hpp"
 #include "psd.hpp"
 

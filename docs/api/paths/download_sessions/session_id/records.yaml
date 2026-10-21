@@ -1,0 +1,51 @@
+get:
+  tags:
+    - downloader
+  summary: Lists records imported by a session
+  responses:
+    '200':
+      description: Lists records imported by a session
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_ids:
+                type: array
+                items:
+                  $ref: ../../../schemas/RecordID.yaml
+            required:
+              - record_ids
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: session_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+  description: Ordered by import time descending, then record ID descending.

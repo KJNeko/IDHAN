@@ -1,5 +1,6 @@
 #include "ModuleLoader.hpp"
 
+#include <folly/executors/GlobalExecutor.h>
 #include <sys/prctl.h>
 
 #include <algorithm>
@@ -17,9 +18,9 @@
 
 #include "Config.hpp"
 #include "MimeIDs.hpp"
-#include "crypto/simpleHasher.hpp"
-#include "drogon/HttpAppFramework.h"
+#include "idhan/SHA256.hpp"
 #include "fgl/defines.hpp"
+#include "idhan/runtime/Task.hpp"
 #include "logging/log.hpp"
 #include "mime/prescan.hpp"
 
@@ -430,7 +431,7 @@ using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::st
 	return std::make_shared< const CallInput >( std::move( *input ) );
 }
 
-drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
+runtime::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {
 	const std::uint64_t callback_id { frame.body[ ipc::field::CALLBACK_ID ].asUInt64() };
 	const auto kind { ipc::fromWire< ipc::CallbackKind >( frame.body[ ipc::field::KIND ] ) };
@@ -558,9 +559,14 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 						break;
 					}
 
-					auto generated {
-						co_await generators.front()->generate( std::move( data ), crypto::fromHex( hex ) )
-					};
+					const auto hash { SHA256::fromHex( hex ) };
+					if ( !hash )
+					{
+						reply[ ipc::field::ERROR ] = hash.error();
+						break;
+					}
+
+					auto generated { co_await generators.front()->generate( std::move( data ), hash->data() ) };
 
 					if ( !generated )
 					{
@@ -584,21 +590,9 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 
 void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {
-	static std::atomic< std::size_t > next_loop { 0 };
-
-	auto* const loop { drogon::app().getIOLoop( next_loop.fetch_add( 1 ) ) };
-
-	auto payload { std::make_shared< std::pair< std::shared_ptr< WorkerProcess >, ipc::Frame > >(
-		std::move( worker ), std::move( frame ) ) };
-
-	auto body = [ payload ]() mutable
-	{
-		drogon::async_run(
-			[ payload ]() mutable -> drogon::Task< void >
-			{ co_await runCallback( std::move( payload->first ), std::move( payload->second ) ); } );
-	};
-
-	( loop != nullptr ? loop : drogon::app().getLoop() )->queueInLoop( std::move( body ) );
+	folly::coro::co_withExecutor(
+		folly::getGlobalCPUExecutor(), runCallback( std::move( worker ), std::move( frame ) ) )
+		.start();
 }
 
 } // namespace idhan::modules

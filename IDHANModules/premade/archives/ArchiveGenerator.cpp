@@ -6,7 +6,8 @@
 
 #include "MetadataModule.hpp"
 #include "archives.hpp"
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
+#include "logging/format_ns.hpp"
 #include "spdlog/spdlog.h"
 
 std::vector< idhan::MimeID > ArchiveGenerator::handleableMimes()
@@ -32,7 +33,7 @@ std::expected< void, idhan::ModuleError > ArchiveGenerator::generate(
 
 	if ( const auto opened { reader.open( a.get() ) }; !opened ) return std::unexpected( opened.error() );
 
-	const auto target_hex { idhan::crypto::toHex( desired_hash ) };
+	const auto target_hex { idhan::SHA256::fromBuffer( desired_hash ).hex() };
 	if ( !extra.isMember( target_hex ) )
 		return std::unexpected( idhan::ModuleError { "Unable to generate file from desired hash" } );
 

@@ -1,26 +1,26 @@
 #pragma once
 
-#include <chrono>
-#include <cstdint>
+#include <cstddef>
+#include <optional>
+#include <stop_token>
 
-#include "db/dbTypes.hpp"
-#include "drogon/utils/coroutine.h"
+#include "IDHANTypes.hpp"
+#include "idhan/runtime/Task.hpp"
+
+namespace idhan::db
+{
+class DBContext;
+}
 
 namespace idhan::hamming
 {
-
-//! Queue rows claimed by a single sweep.
-constexpr std::int32_t QUEUE_BATCH_SIZE { 32 };
-
-//! Pairs further apart than this are discarded. Mirrored by hamming_distance's CHECK.
-constexpr std::int32_t MAX_DISTANCE { 8 };
-
-constexpr std::chrono::seconds QUEUE_INTERVAL { 1 };
-
-//! Claims up to QUEUE_BATCH_SIZE queued records and stores their distances to every other hashed record.
-drogon::Task< void > processQueueBatch( DbClientPtr db );
-
-//! Registers the recurring sweep on the app's main loop.
-void startQueueSweeper();
-
+inline constexpr std::size_t queueBatchSize { 32 };
+// One atomic batch. Returns the highest claimed ID, or empty when no work was
+// available in the requested range. Concurrent requeues remain pending.
+[[nodiscard]] runtime::Task< std::optional< RecordID > > processQueueBatch(
+	db::DBContext& db,
+	RecordID through,
+	std::optional< RecordID > after = {} );
+// Drains the bounded startup/timer snapshot, checking for shutdown between batches.
+[[nodiscard]] runtime::Task<> runQueueSweep( db::DBContext& db, std::stop_token stop = {} );
 } // namespace idhan::hamming

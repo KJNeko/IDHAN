@@ -2,4 +2,6 @@ type: string
 description: Hex-encoded SHA-256.
 maxLength: 64
 minLength: 64
-example: 869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29
+pattern: ^[0-9a-fA-F]{64}$
+examples:
+  - 869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29

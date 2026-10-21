@@ -2,9 +2,15 @@ post:
   tags:
     - relationships
   summary: Marks one record as a better-quality duplicate of another
-  description: |
+  description: |-
     Directional: `better_id` is the record to keep, `worse_id` the duplicate.
     Takes a single object or an array of them.
+    Stores only the current king of each record. If B belongs to A, marking C
+    inferior to B assigns C directly to A. Moving a king transfers its entire
+    group to the destination king; moving a subordinate transfers only that record.
+    Selecting a better member for the current king promotes that member for the
+    whole group. Intermediate comparisons are discarded.
+    Array entries are applied in order as one atomic batch.
   requestBody:
     required: true
     content:
@@ -17,9 +23,9 @@ post:
                 - better_id
               properties:
                 worse_id:
-                  $ref: '../../../schemas/RecordID.yaml'
+                  $ref: ../../../schemas/RecordID.yaml
                 better_id:
-                  $ref: '../../../schemas/RecordID.yaml'
+                  $ref: ../../../schemas/RecordID.yaml
             - type: array
               items:
                 type: object
@@ -28,9 +34,9 @@ post:
                   - better_id
                 properties:
                   worse_id:
-                    $ref: '../../../schemas/RecordID.yaml'
+                    $ref: ../../../schemas/RecordID.yaml
                   better_id:
-                    $ref: '../../../schemas/RecordID.yaml'
+                    $ref: ../../../schemas/RecordID.yaml
         examples:
           single:
             summary: Single duplicate pair
@@ -45,11 +51,33 @@ post:
               - worse_id: 7
                 better_id: 12
   responses:
-    200:
+    '404':
+      description: A referenced record does not exist.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '200':
       description: Relationships recorded
       content:
         application/json:
           schema:
             type: object
-    400:
+    '400':
       description: Invalid request body
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

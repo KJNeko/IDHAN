@@ -11,6 +11,7 @@
 import type { LayoutDocument } from '../layout/document';
 import type {
   AutocompleteResult,
+    AutocompleteOptions,
   MetadataRequest,
   MetadataResponse,
     FileRelationships,
@@ -25,6 +26,14 @@ import type {
   ServerLayoutMeta,
     KeyCheck,
   DatabaseStats,
+    DownloadSessionErrorLog,
+    DownloadSessionInfo,
+    DownloadSessionRecords,
+    DownloadSessionUrlFlat,
+    DownloadSessionUrlNode,
+    DownloaderDebug,
+    DownloaderSecrets,
+    RateLimitLane,
   StorageNode,
   TagDomain,
   TagInfo,
@@ -88,9 +97,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const parsed: unknown = text ? safeParse(text) : undefined;
 
   if (!response.ok) {
-    throw new ApiError(response.status, `${options.method ?? 'GET'} ${path} → ${response.status}`, parsed);
+      throw new ApiError(response.status, errorMessage(parsed) ?? `${options.method ?? 'GET'} ${path} → ${response.status}`, parsed);
   }
   return parsed as T;
+}
+
+function errorMessage(parsed: unknown): string | null {
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const detail = (parsed as { error?: unknown }).error;
+    return typeof detail === 'string' && detail.length > 0 ? detail : null;
 }
 
 function safeParse(text: string): unknown {
@@ -113,6 +128,83 @@ export const api = {
           return request<KeyCheck>('/auth/verify', {key, signal});
     },
   },
+
+    downloader: {
+        /** Maps session IDs to last-seen event sequences; omitted sessions return retained history. */
+        debug(eventCursors: ReadonlyMap<number, number> = new Map(), signal?: AbortSignal): Promise<DownloaderDebug> {
+            const cursorText = [...eventCursors].map(([id, sequence]) => `${id}:${sequence}`).join(',');
+            const query = cursorText === '' ? '' : `?event_cursors=${encodeURIComponent(cursorText)}`;
+            return request<DownloaderDebug>(`/downloader/debug${query}`, {signal});
+        },
+        secrets(signal?: AbortSignal): Promise<DownloaderSecrets> {
+            return request<DownloaderSecrets>('/downloader/secrets', {signal});
+        },
+        setSecrets(secrets: DownloaderSecrets, signal?: AbortSignal): Promise<DownloaderSecrets> {
+            return request<DownloaderSecrets>('/downloader/secrets', {method: 'POST', body: secrets, signal});
+        },
+    },
+
+    downloadSessions: {
+        list(signal?: AbortSignal): Promise<DownloadSessionInfo[]> {
+            return request<DownloadSessionInfo[]>('/download_sessions', {signal});
+        },
+        get(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionInfo> {
+            return request<DownloadSessionInfo>(`/download_sessions/${sessionId}`, {signal});
+        },
+        create(name: string, signal?: AbortSignal): Promise<DownloadSessionInfo> {
+            return request<DownloadSessionInfo>('/download_sessions', {method: 'POST', body: {name}, signal});
+        },
+        submitUrl(sessionId: number, url: string, signal?: AbortSignal): Promise<{
+            id: number;
+            url: string;
+            state: string
+        }> {
+            return request<{ id: number; url: string; state: string }>(`/download_sessions/${sessionId}/urls`, {
+                method: 'POST',
+                body: {url},
+                signal,
+            });
+        },
+        submitUrlSession(url: string, name?: string, signal?: AbortSignal): Promise<{
+            session: DownloadSessionInfo;
+            url: DownloadSessionUrlNode;
+        }> {
+            return request('/download_sessions/urls', {
+                method: 'POST',
+                body: name === undefined ? {url} : {url, name},
+                signal,
+            });
+        },
+        urls(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionUrlNode[]> {
+            return request<DownloadSessionUrlNode[]>(`/download_sessions/${sessionId}/urls`, {signal});
+        },
+        urlsFlat(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionUrlFlat[]> {
+            return request<DownloadSessionUrlFlat[]>(`/download_sessions/${sessionId}/urls?flatten=true`, {signal});
+        },
+        /** Rejects with 409 while the URL is running. */
+        retryUrl(sessionId: number, urlId: number, signal?: AbortSignal): Promise<DownloadSessionUrlNode> {
+            return request<DownloadSessionUrlNode>(`/download_sessions/${sessionId}/urls/${urlId}/retry`, {
+                method: 'POST',
+                signal,
+            });
+        },
+        records(sessionId: number, signal?: AbortSignal): Promise<DownloadSessionRecords> {
+            return request<DownloadSessionRecords>(`/download_sessions/${sessionId}/records`, {signal});
+        },
+        /** An empty `statuses` asks for every logged status; a null entry asks for the requests that never answered. */
+        errors(
+            sessionId: number,
+            statuses: readonly (number | null)[] = [],
+            signal?: AbortSignal,
+        ): Promise<DownloadSessionErrorLog> {
+            const wanted = statuses.map((status) => (status === null ? 'none' : String(status)));
+            const filter = wanted.length === 0 ? '' : `?status=${wanted.join(',')}`;
+            return request<DownloadSessionErrorLog>(`/download_sessions/${sessionId}/errors${filter}`, {signal});
+        },
+        destroy(sessionId: number, signal?: AbortSignal): Promise<{ deleted: boolean }> {
+            return request<{ deleted: boolean }>(`/download_sessions/${sessionId}`, {method: 'DELETE', signal});
+        },
+    },
 
   search(body: SearchRequest, signal?: AbortSignal): Promise<SearchResponse> {
     return request<SearchResponse>('/search', { method: 'POST', body, signal });
@@ -174,16 +266,16 @@ export const api = {
     },
 
     /**
-     * The closest pair still awaiting a duplicate decision, nearest first
-     * (GET /relationships/duplicates/undecided).
+     * Return undecided pairs ordered by record ID, then distance. `limit` controls lookahead
+     * size.
      */
     nextUndecidedDuplicate(
-        opts: { distance?: number; includeUnrelated?: boolean } = {},
+        opts: { distance?: number; limit?: number } = {},
         signal?: AbortSignal,
     ): Promise<UndecidedDuplicate> {
         const params = new URLSearchParams();
         if (opts.distance !== undefined) params.set('distance', String(opts.distance));
-        if (opts.includeUnrelated !== undefined) params.set('include_unrelated', String(opts.includeUnrelated));
+        if (opts.limit !== undefined) params.set('limit', String(opts.limit));
         const query = params.toString();
         return request<UndecidedDuplicate>(`/relationships/duplicates/undecided${query ? `?${query}` : ''}`, {signal});
     },
@@ -205,11 +297,14 @@ export const api = {
 
   async autocompleteTags(
     prefix: string,
-    opts: { domain?: number; limit?: number } = {},
+    opts: AutocompleteOptions = {},
     signal?: AbortSignal,
   ): Promise<AutocompleteResult[]> {
     const params = new URLSearchParams({ tag: prefix });
-    if (opts.domain !== undefined) params.set('tag_domain', String(opts.domain));
+      const domains = opts.domains ?? (opts.domain !== undefined ? [opts.domain] : []);
+      for (const domain of domains) params.append('tag_domains', String(domain));
+      params.set('tag_display_type', opts.display ?? 'display');
+      params.set('include_unused', String(opts.includeUnused ?? true));
     if (opts.limit !== undefined) params.set('limit', String(opts.limit));
     const raw = await request<AutocompleteRow[]>(`/tags/autocomplete?${params.toString()}`, { signal });
     return raw.map((row) => ({
@@ -240,8 +335,11 @@ export const tags = {
     return request<TagDomain[]>('/tags/domain/list', { signal });
   },
 
-  info(tagId: number, signal?: AbortSignal): Promise<TagInfo> {
-    return request<TagInfo>(`/tags/${tagId}/info`, { signal });
+    info(tagId: number, options: { domains?: readonly number[]; signal?: AbortSignal } = {}): Promise<TagInfo> {
+        const params = new URLSearchParams();
+        for (const domain of options.domains ?? []) params.append('tag_domains', String(domain));
+        const query = params.toString();
+        return request<TagInfo>(`/tags/${tagId}/info${query ? `?${query}` : ''}`, {signal: options.signal});
   },
 
   /** A tag's parent/child/alias/sibling relationships in one domain, as ids (GET .../relationships). */
@@ -333,6 +431,261 @@ export const layouts = {
  * URL for an <img> or <video> whose element cannot set request headers. The credential therefore
  * rides in the `idhan_key` query parameter, which the server accepts alongside the header.
  */
+/** Watches coalesced session-tree updates. Returns a close function. */
+export function watchDownloadSessions(handlers: {
+    onSession: (session: DownloadSessionInfo, urls: DownloadSessionUrlNode[]) => void;
+    onRemoved?: (sessionId: number) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void;
+}): () => void {
+    const refresh = async (sessionId: number) => {
+        try {
+            const [session, urls] = await Promise.all([api.downloadSessions.get(sessionId), api.downloadSessions.urls(sessionId)]);
+            handlers.onSession(session, urls);
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 404) handlers.onRemoved?.(sessionId);
+            else handlers.onError?.('Unable to refresh a download session.');
+        }
+    };
+
+    return sharedWatchSSE('/download_sessions/events', {
+        onOpen: handlers.onOpen,
+        onError: handlers.onError,
+        onEvent: (name, data) => {
+            if (name === 'shutdown') return;
+
+            const payload = safeParse(data);
+            if (typeof payload !== 'object' || payload === null) return;
+
+            // The server opens every subscription with the sessions that already exist, so a reload
+            // shows downloads already in progress rather than waiting for one of them to change.
+            if (name === 'snapshot') {
+                const sessions = (payload as { sessions?: unknown }).sessions;
+                if (!Array.isArray(sessions)) return;
+                void Promise.all(sessions.filter((id): id is number => typeof id === 'number').map(refresh));
+                return;
+            }
+
+            if (name !== 'update') return;
+            const event = payload as { id?: unknown; removed?: unknown };
+            if (typeof event.id !== 'number') return;
+            if (event.removed === true) handlers.onRemoved?.(event.id);
+            else void refresh(event.id);
+        },
+    });
+}
+
+export function isRateLimitLane(value: unknown): value is RateLimitLane {
+    if (typeof value !== 'object' || value === null) return false;
+    const lane = value as Record<string, unknown>;
+    const requests = lane.requests;
+    const seconds = lane.seconds;
+    const effectiveInterval = lane.effective_interval_ms;
+    const remaining = lane.remaining_ms;
+    const consecutive = lane.consecutive_limits;
+    return typeof lane.scheduling_key === 'string'
+        && typeof lane.throttled === 'boolean'
+        && typeof lane.active === 'boolean'
+        && [requests, seconds, effectiveInterval, remaining, consecutive]
+            .every((field) => typeof field === 'number' && Number.isFinite(field) && field >= 0)
+        && typeof requests === 'number'
+        && typeof seconds === 'number'
+        && (lane.throttled ? requests > 0 && seconds > 0 : requests === 0 && seconds === 0);
+}
+
+type SSEHandlers = {
+    /** `timestamp` is seconds since the epoch, stamped by the server when the event was generated. */
+    onEvent: (name: string, data: string, timestamp: number | null) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void;
+};
+
+type SharedStream = {
+    handlers: Set<SSEHandlers>;
+    close: () => void;
+    opened: boolean;
+    /** Replayed to late subscribers, which joined too late to receive the stream's own snapshot. */
+    lastSnapshot: Parameters<SSEHandlers['onEvent']> | null;
+};
+
+const sharedStreams = new Map<string, SharedStream>();
+
+/**
+ * One connection per path, fanned out to every subscriber. Two panels of the same kind must not
+ * open two streams: the browser caps concurrent connections, and the second stream only duplicates
+ * work the first is already doing.
+ */
+function sharedWatchSSE(path: string, handlers: SSEHandlers): () => void {
+    const existing = sharedStreams.get(path);
+    const stream: SharedStream = existing ?? {
+        handlers: new Set(),
+        close: () => {
+        },
+        opened: false,
+        lastSnapshot: null,
+    };
+
+    if (!existing) {
+        sharedStreams.set(path, stream);
+        stream.close = watchSSE(path, {
+            onOpen: () => {
+                stream.opened = true;
+                // A reconnect re-sends its own snapshot, so the cached one is stale from here.
+                stream.lastSnapshot = null;
+                for (const handler of [...stream.handlers]) handler.onOpen?.();
+            },
+            onError: (message) => {
+                stream.opened = false;
+                for (const handler of [...stream.handlers]) handler.onError?.(message);
+            },
+            onEvent: (name, data, timestamp) => {
+                if (name === 'snapshot') stream.lastSnapshot = [name, data, timestamp];
+                for (const handler of [...stream.handlers]) handler.onEvent(name, data, timestamp);
+            },
+        });
+    }
+
+    stream.handlers.add(handlers);
+
+    // Catch up a subscriber that joined an already-running stream, so it starts from the same
+    // state as the subscriber that opened it rather than waiting for the next event.
+    if (stream.opened || stream.lastSnapshot) {
+        queueMicrotask(() => {
+            if (!stream.handlers.has(handlers)) return;
+            if (stream.opened) handlers.onOpen?.();
+            if (stream.lastSnapshot) handlers.onEvent(...stream.lastSnapshot);
+        });
+    }
+
+    return () => {
+        stream.handlers.delete(handlers);
+        if (stream.handlers.size > 0) return;
+
+        stream.close();
+        if (sharedStreams.get(path) === stream) sharedStreams.delete(path);
+    };
+}
+
+function watchSSE(path: string, handlers: SSEHandlers): () => void {
+    let controller: AbortController | null = null;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let closed = false;
+    let backoff = 1000;
+
+    const scheduleReconnect = () => {
+        if (closed) return;
+        retry = setTimeout(connect, backoff);
+        backoff = Math.min(backoff * 2, 15000);
+    };
+
+    const connect = async () => {
+        if (closed) return;
+
+        controller = new AbortController();
+        const headers = new Headers({Accept: 'text/event-stream'});
+        if (currentKey) headers.set(KEY_HEADER, currentKey);
+
+        try {
+            const response = await fetch(path, {headers, signal: controller.signal});
+            if (!response.ok || response.body === null) {
+                const body = await response.text();
+                handlers.onError?.(errorMessage(safeParse(body)) ?? `SSE connection failed: ${response.status}`);
+                if (response.status === 401 || response.status === 403) {
+                    closed = true;
+                    return;
+                }
+                scheduleReconnect();
+                return;
+            }
+
+            backoff = 1000;
+            handlers.onOpen?.();
+
+            const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+            let buffered = '';
+            let eventName = 'message';
+            let data: string[] = [];
+            let timestamp: number | null = null;
+
+            const dispatch = () => {
+                if (data.length > 0) handlers.onEvent(eventName, data.join('\n'), timestamp);
+                eventName = 'message';
+                data = [];
+                timestamp = null;
+            };
+
+            const consumeLine = (line: string) => {
+                if (line === '') {
+                    dispatch();
+                    return;
+                }
+                if (line.startsWith(':')) return;
+
+                const separator = line.indexOf(':');
+                const field = separator === -1 ? line : line.slice(0, separator);
+                const value = separator === -1 ? '' : line.slice(separator + 1).replace(/^ /, '');
+                if (field === 'event') eventName = value;
+                if (field === 'data') data.push(value);
+                if (field === 'timestamp') {
+                    const parsed = Number(value);
+                    timestamp = Number.isFinite(parsed) ? parsed : null;
+                }
+            };
+
+            while (!closed) {
+                const next = await reader.read();
+                if (next.done) break;
+
+                buffered += next.value.replace(/\r/g, '');
+                let newline = buffered.indexOf('\n');
+                while (newline !== -1) {
+                    consumeLine(buffered.slice(0, newline));
+                    buffered = buffered.slice(newline + 1);
+                    newline = buffered.indexOf('\n');
+                }
+            }
+        } catch (error) {
+            if (!closed && !(error instanceof DOMException && error.name === 'AbortError')) {
+                handlers.onError?.('Lost the event stream; retrying.');
+            }
+        }
+
+        scheduleReconnect();
+    };
+
+    void connect();
+
+    return () => {
+        closed = true;
+        if (retry !== undefined) clearTimeout(retry);
+        controller?.abort();
+    };
+}
+
+export function watchRateLimits(handlers: {
+    onSnapshot: (limits: RateLimitLane[]) => void;
+    onUpdate: (limit: RateLimitLane) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void;
+}): () => void {
+    return sharedWatchSSE('/rate_limits/events', {
+        onOpen: handlers.onOpen,
+        onError: handlers.onError,
+        onEvent: (name, data) => {
+            if (name === 'shutdown') return;
+
+            const payload = safeParse(data);
+            if (name === 'snapshot' && typeof payload === 'object' && payload !== null) {
+                const limits = (payload as { limits?: unknown }).limits;
+                if (Array.isArray(limits) && limits.every(isRateLimitLane)) handlers.onSnapshot(limits);
+                return;
+            }
+
+            if (name === 'update' && isRateLimitLane(payload)) handlers.onUpdate(payload);
+        },
+    });
+}
+
 export function thumbnailUrl(recordId: number, size = 256): string {
   // The server generates a square thumbnail at any requested edge length; clamp to a positive integer.
   const edge = Math.max(1, Math.round(size));

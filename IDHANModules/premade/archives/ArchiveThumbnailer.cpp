@@ -8,7 +8,8 @@
 #include <filesystem>
 
 #include "archives.hpp"
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
+#include "logging/format_ns.hpp"
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
@@ -118,12 +119,14 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		}
 
 		// member should be a hex string of a sha256
-		const auto hash { idhan::crypto::fromHex( member ) };
+		const auto hash { idhan::SHA256::fromHex( member ) };
+		if ( !hash ) return std::unexpected( idhan::ModuleError { hash.error() } );
+
 		const auto file_path_str { extra[ member ].asString() };
 		const std::filesystem::path path { file_path_str };
 
 		const auto generated_file {
-			this->m_callbacks.generate( data.file, hash, data.extra, path.filename().string() )
+			this->m_callbacks.generate( data.file, hash->data(), data.extra, path.filename().string() )
 		};
 
 		if ( !generated_file )

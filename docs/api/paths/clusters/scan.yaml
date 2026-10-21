@@ -1,11 +1,16 @@
-get:
+post:
   tags:
     - clusters
   summary: Scans a cluster for files
-  description: >
-    Enqueues a scan job and returns its ID immediately. The scan verifies
-    hashes, resolves cluster assignments, optionally detects MIME types and
-    extracts metadata, and can adopt orphaned files.
+  description: Enqueues a background scan and returns its job ID. Only regular, non-symlink files immediately
+    inside non-symlink subdirectories are examined; the bad directory and .thumbnail files are skipped.
+    Files must have SHA-256 filenames. Writable scans may repair hash directories and extensions. Read-only
+    scans still update the database. Concurrent assignments use last-write-wins. Per-file failures are
+    returned in the job result and do not make the job itself fail. Cluster identity
+    is verified before scheduling and during the scan. Identity failure stops
+    missing-file preflight without detaching records. The root identity marker
+    is not media and is not scanned.
+    When the job publishes a result, its response follows ClusterScanResult.
   parameters:
     - name: cluster_id
       in: path
@@ -15,25 +20,23 @@ get:
     - name: verify_hash
       in: query
       required: false
-      description: >
-        Hash each file to confirm it matches its filename. If false, the
-        filename is trusted as the hash.
+      description: Hash each file to confirm it matches its filename. If false, the filename is trusted
+        as the hash.
       schema:
         type: boolean
         default: false
     - name: readonly
       in: query
       required: false
-      description: >
-        Treat the cluster as read-only whatever its stored flag says. Nothing is
-        moved or renamed.
+      description: Prevent moves and renames regardless of the stored cluster flag. Database updates still
+        occur.
       schema:
         type: boolean
         default: false
     - name: scan_mime
       in: query
       required: false
-      description: Detect MIME for files not scanned before.
+      description: Detect MIME when no MIME is stored. Also enabled by scan_metadata or adopt_orphans.
       schema:
         type: boolean
         default: true
@@ -47,84 +50,98 @@ get:
     - name: scan_metadata
       in: query
       required: false
-      description: Parse metadata for files not parsed before.
+      description: Parse metadata when no metadata row exists. Also enabled by adopt_orphans; enables
+        scan_mime.
       schema:
         type: boolean
         default: true
     - name: rescan_metadata
       in: query
       required: false
-      description: Parse metadata again for every file.
+      description: Parse metadata again when a MIME is available. Does not itself enable MIME detection.
       schema:
         type: boolean
-        default: true
+        default: false
     - name: stop_on_fail
       in: query
       required: false
-      description: Stop at the first failure instead of continuing past it.
+      description: Stop after the first batch containing a failure, or immediately on a missing-file preflight
+        failure.
       schema:
         type: boolean
         default: false
     - name: adopt_orphans
       in: query
       required: false
-      description: >
-        Create records for files on disk that have none. Forces `verify_hash`
-        and `scan_mime` on.
+      description: Create records for correctly hash-named files without records. New orphan contents
+        are always hashed and checked. Enables scan_metadata and scan_mime, but does not enable verify_hash
+        for files with existing records.
       schema:
         type: boolean
         default: false
     - name: remove_missing_files
       in: query
       required: false
-      description: >
-        Track unexpectedly absent expected files in `missing_files`. The marker
-        is cleared the next time the file is stored.
+      description: Before enumeration, detach unexpectedly absent expected files by setting file_info.cluster_id
+        to null when no deletion marker is set. Such records appear in the missing_files view. This updates
+        the database even for read-only scans.
       schema:
         type: boolean
         default: false
     - name: fix_extensions
       in: query
       required: false
-      description: >
-        Rename files whose extension does not match their detected MIME type.
-        Ignored if the cluster is read-only.
+      description: Rename files whose extension does not match their detected MIME type. Ignored if the
+        cluster is read-only.
       schema:
         type: boolean
         default: false
+    - name: concurrency
+      in: query
+      required: false
+      description: Files processed per batch. Positive and zero values are clamped to 1 through 64; negative
+        values are rejected. Defaults to cluster.scan_concurrency (4 if unset).
+      schema:
+        type: integer
+        minimum: 0
+        default: 4
   responses:
-    200:
-      description: Job enqueued
+    '503':
+      description: Cluster identity could not be verified; no scan was scheduled.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '200':
+      description: Job enqueued. Poll `/jobs/{job_id}/status` for `response.scanned_count`, `response.failed_count`,
+        and up to 1000 entries in `response.failures`.
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              job_id:
-                type: integer
-                format: uint64
-            required:
-              - job_id
+            $ref: ../../schemas/JobQueued.yaml
           example:
             job_id: 42
-    400:
+    '404':
       description: Cluster not found
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
-    500:
-      description: >
-        A file failed the scan: hash mismatch on a read-only cluster, zero-size
-        file, an orphan with `adopt_orphans` off, a MIME or metadata parse
-        failure, or an unreadable folder.
+            type: string
+    '400':
+      description: Request rejected; the body is a plain-text error message.
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

@@ -2,7 +2,7 @@ post:
   tags:
     - records
   summary: Creates records from SHA-256 hashes
-  description: |
+  description: |-
     Creates one record per hash. This registers hashes only; to upload file data
     use `POST /file/import`.
   requestBody:
@@ -16,21 +16,23 @@ post:
           properties:
             sha256:
               oneOf:
-                - $ref: '../../schemas/SHA256.yaml'
+                - $ref: ../../schemas/SHA256.yaml
                 - type: array
                   items:
-                    $ref: '../../schemas/SHA256.yaml'
+                    $ref: ../../schemas/SHA256.yaml
         examples:
           single:
             summary: Single hash
             value:
-              sha256: '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29'
+              sha256: 869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29
           array:
             summary: Array of hashes
             value:
-              sha256: [ '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29', '869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29' ]
+              sha256:
+                - 869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29
+                - 869cc28dd25de48206a5ab275b14aef421691897269bd82483c1671ba5644d29
   responses:
-    200:
+    '200':
       description: Records created. An array in, an array out.
       content:
         application/json:
@@ -40,12 +42,14 @@ post:
                 properties:
                   record_id:
                     type: integer
-                example:
-                  record_id: 1234
+                examples:
+                  - record_id: 1234
               - type: array
                 items:
                   type: integer
-                example: [ 1234, 5678 ]
+                examples:
+                  - - 1234
+                    - 5678
           examples:
             single:
               summary: Single hash
@@ -53,8 +57,24 @@ post:
                 record_id: 1234
             array:
               summary: Array of hashes
-              value: [ 1234, 5678 ]
-    400:
+              value:
+                - 1234
+                - 5678
+    '400':
       description: Invalid content type, SHA-256, or JSON
-    500:
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

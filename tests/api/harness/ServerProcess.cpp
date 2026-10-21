@@ -118,7 +118,12 @@ ServerProcess::ServerProcess( std::string schema ) :
 {
 	std::filesystem::remove_all( m_temp_path );
 	std::filesystem::create_directories( m_temp_path );
+	start();
+}
 
+void ServerProcess::start()
+{
+	std::filesystem::create_directories( m_temp_path );
 	const auto executable { serverExecutable() };
 	const PostgresSettings postgres {};
 
@@ -133,6 +138,10 @@ ServerProcess::ServerProcess( std::string schema ) :
 		// the pool is one postgres connection per io thread, and the default fills the server's shared limit
 		std::format( "IDHAN_SERVER_IO_THREADS={}", envOr( "IDHAN_TEST_SERVER_IO_THREADS", "4" ) ),
 		std::format( "IDHAN_SERVER_TEMP_PATH={}", m_temp_path.string() ),
+		std::format( "IDHAN_DOWNLOADER_PARSER_DIRECTORY={}/tests/api/downloader-testdata", IDHAN_SOURCE_DIR ),
+		std::format(
+			"IDHAN_DOWNLOADER_URL_CLASSES={}/tests/api/downloader-testdata/url-classes.json", IDHAN_SOURCE_DIR ),
+		std::format( "IDHAN_DOWNLOADER_WORKER_COUNT={}", "2" ),
 		// the default is ./log, which would be the directory the tests were started from
 		std::format( "IDHAN_LOGGING_PATH={}", ( m_temp_path / "log" ).string() ),
 		std::format( "IDHAN_HOST_IPV4_LISTEN={}", "127.0.0.1" ),
@@ -173,6 +182,21 @@ ServerProcess::ServerProcess( std::string schema ) :
 	if ( m_pid < 0 ) throw std::runtime_error( "Could not fork a server process" );
 
 	waitUntilReady();
+}
+
+void ServerProcess::restart( const bool crash )
+{
+	if ( crash && m_pid > 0 )
+	{
+		::kill( m_pid, SIGKILL );
+		int status {};
+		::waitpid( m_pid, &status, 0 );
+		m_pid = -1;
+	}
+	else
+		stop();
+
+	start();
 }
 
 std::string ServerProcess::logTail() const

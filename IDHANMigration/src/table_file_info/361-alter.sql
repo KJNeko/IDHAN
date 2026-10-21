@@ -1,0 +1,2 @@
+ALTER TABLE file_info
+    ALTER COLUMN mime_id TYPE SMALLINT;

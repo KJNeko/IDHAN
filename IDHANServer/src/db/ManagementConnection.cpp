@@ -1,6 +1,7 @@
 #include "ManagementConnection.hpp"
 
 #include "ConnectionArguments.hpp"
+#include "initialize.hpp"
 #include "logging/log.hpp"
 #include "management.hpp"
 #include "migrations.hpp"
@@ -63,16 +64,18 @@ ManagementConnection::ManagementConnection( const ConnectionArguments& arguments
 {
 	log::info( "Postgres management connection made: {}", arguments.format() );
 
-	pqxx::nontransaction tx { connection };
-
 	log::info( "Interrogating postgres version" );
-	const auto version { tx.exec( "SELECT version()" ) };
-	const auto version_string { version[ 0 ][ 0 ].as< std::string >() };
-	log::info( "Postgres version: {}", version_string );
+	{
+		pqxx::work tx { connection };
+		const auto version { tx.exec( "SELECT version()" ) };
+		const auto version_string { version[ 0 ][ 0 ].as< std::string >() };
+		log::info( "Postgres version: {}", version_string );
+		checkPgVersion( version_string );
+		db::initializeDatabase( tx, arguments.schema );
+		tx.commit();
+	}
 
-	checkPgVersion( version_string );
-
-	tx.exec( "CREATE SCHEMA IF NOT EXISTS " + tx.quote_name( arguments.schema ) );
+	pqxx::nontransaction tx { connection };
 	db::updateMigrations( tx, arguments.schema );
 
 	log::info( "Database loading finished" );
@@ -90,9 +93,7 @@ std::string ConnectionArguments::format() const
 	str += format_ns::format( "dbname={} ", dbname );
 	str += format_ns::format( "user={} ", user );
 	if ( !password.empty() ) str += format_ns::format( "password={} ", password );
-	str += "options='-c search_path=" + searchPath();
-	if ( log_level <= spdlog::level::debug ) str += " -c client_min_messages=debug1";
-	str += "'";
+	if ( log_level <= spdlog::level::debug ) str += "options='-c client_min_messages=debug1'";
 
 	log::debug( "Connecting using: {}", str );
 

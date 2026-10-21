@@ -1,0 +1,58 @@
+post:
+  tags:
+    - records
+  summary: Fetches metadata for a batch of records
+  responses:
+    '200':
+      description: Fetches metadata for a batch of records
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              records:
+                type: array
+                items:
+                  $ref: ../../schemas/RecordInfo.yaml
+              missing:
+                type: array
+                items:
+                  $ref: ../../schemas/RecordID.yaml
+            required:
+              - records
+              - missing
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            record_ids:
+              type: array
+              items:
+                $ref: ../../schemas/RecordID.yaml
+              maxItems: 1000
+          required:
+            - record_ids
+  description: Returns found records and missing IDs separately. Known file size and filesystem timestamps
+    are returned even when MIME is unknown. Other file and parsed metadata fields follow RecordInfo;
+    unknown optional fields are omitted.

@@ -1,0 +1,39 @@
+type: object
+description: Scan counts include rejected files. Failed count can also include missing records and enumeration
+  errors. These are not database usage counters.
+properties:
+  cluster_id:
+    type: integer
+    format: int32
+    minimum: 1
+  scanned_count:
+    type: integer
+    format: int64
+    minimum: 0
+  scanned_bytes:
+    type: integer
+    format: int64
+    minimum: 0
+  failed_count:
+    type: integer
+    format: int64
+    minimum: 0
+  failures:
+    type: array
+    items:
+      type: object
+      properties:
+        path:
+          type: string
+        error:
+          type: string
+      required:
+        - path
+        - error
+    maxItems: 1000
+required:
+  - cluster_id
+  - scanned_count
+  - scanned_bytes
+  - failed_count
+  - failures

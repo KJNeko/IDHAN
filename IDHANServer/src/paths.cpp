@@ -142,6 +142,16 @@ std::filesystem::path getStaticPath()
 	return static_path;
 }
 
+std::filesystem::path getApiDocsPath()
+{
+	static std::filesystem::path api_docs_path {};
+	static std::once_flag api_docs_path_once {};
+
+	std::call_once( api_docs_path_once, []() { api_docs_path = getStaticPath() / "api"; } );
+
+	return api_docs_path;
+}
+
 std::filesystem::path getThumbnailsPath()
 {
 	static std::filesystem::path thumbnails_path {};
