@@ -15,6 +15,7 @@
 - `--pg_user <USER>`: PostgreSQL user (overrides the config file)
 - `--pg_host <HOST>`: PostgreSQL hostname (overrides the config file)
 - `--pg_schema <SCHEMA>`: PostgreSQL application schema to use (overrides the config file, default `idhan`)
+- `--pg_extension_schema <SCHEMA>`: PostgreSQL extension schema (overrides the config file, default `public`)
 - `--force_start [on/off]`: Force IDHAN to start even if it detects a previous instance may still be running
 
 Every option also accepts `--name=value`. The two flag-style options (`--use_stdout`, `--force_start`) may be
@@ -47,10 +48,13 @@ All config options can also be set via environment variables using the format `I
 # Config options (`config.toml`)
 
 New installations create application objects in `idhan` and resolve extension
-objects through `public`. Existing installations in `public` must explicitly set
-`database.schema = "public"` or `IDHAN_DATABASE_SCHEMA=public`; startup does not
-move existing data. See [Database initialization](database-initialization.md) for
-administrator-provisioned extensions and existing-installation behavior.
+objects through `database.extension_schema` (default `public`). The environment
+override is `IDHAN_DATABASE_EXTENSION_SCHEMA`; `--pg_extension_schema` takes
+precedence. Startup rejects any database containing
+`public.idhan_info`. Existing installations must be migrated manually into the
+configured application schema, or use a new database. See
+[Database initialization](database-initialization.md) for extension requirements
+and existing-installation behavior.
 
 The following example covers the most common options. Commented-out lines show the default values.
 
@@ -61,8 +65,9 @@ The following example covers the most common options. Commented-out lines show t
 #user = "idhan"
 #password = "idhan"
 #database = "idhan-db"
-# Application schema; public is also searched for extension objects
+# Application and extension schemas; both are created when missing and permitted
 #schema = "idhan"
+#extension_schema = "public"
 
 [server]
 # TCP port the HTTP server listens on

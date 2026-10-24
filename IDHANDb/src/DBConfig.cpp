@@ -9,6 +9,8 @@ void DBConfig::validate() const
 	if ( host.empty() || database.empty() || user.empty() || schema.empty() )
 		throw std::invalid_argument( "PostgreSQL host, database, user, and schema must not be empty" );
 
+	(void)makeSearchPath( schema, extension_schema );
+
 	if ( port == 0 ) throw std::invalid_argument( "PostgreSQL port must be nonzero" );
 
 	if ( connections == 0 || transaction_connections == 0 )

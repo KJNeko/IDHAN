@@ -4,10 +4,12 @@
 #user = "idhan"
 #password = "idhan"
 #database = "idhan-db"
-# Application schema; created automatically. Extensions are resolved through public.
-# Required extensions must already be installed by the database administrator.
-# Existing installations in public must explicitly retain schema = "public".
+# Application schema; created automatically.
+# Missing extensions are created in extension_schema when permitted; otherwise ask the database administrator.
+# Startup rejects public.idhan_info; migrate public installations manually first.
 #schema = "idhan"
+# Extension namespace; created when missing and permitted. Existing extensions are not moved.
+#extension_schema = "public"
 
 [server]
 #port = 16609

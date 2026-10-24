@@ -1097,10 +1097,12 @@ The broader run passed seven of eight cases; the focused set excluding perceptua
 
 **Implemented solution and rationale**
 
-New installations use `idhan` for application objects, while pgvector remains in `public`. The shared builder in
+New installations use `idhan` for application objects and `database.extension_schema` (default `public`) for extensions.
+The shared builder in
 `IDHANDb/include/idhan/db/SearchPath.hpp` supplies both migration and runtime connections with the configured
-application schema followed by `public`. It quotes the configured name as one identifier, preserving spaces, commas, and
-embedded quotes; `public` is included once when explicitly selected. Runtime configuration retains bound `set_config`
+application schema followed by the configured extension schema. Both names are quoted as individual identifiers,
+preserving spaces, commas, and embedded quotes; matching schema names appear once. Runtime configuration retains bound
+`set_config`
 values. Migration startup applies the same setting through a bound value instead of interpolating a schema into libpq
 connection options. Application objects therefore resolve first and extension operators/types remain visible on every
 newly established connection. This also covers embedding queries using `halfvec` and `<=>`, rather than repairing only
@@ -1110,19 +1112,33 @@ Database bootstrap runs transactionally before numbered migrations, including wh
 current. The database is always treated as shared: startup performs no IDHAN-only ownership inventory and permits
 unrelated schemas and tables. It checks the four dependencies already required by the migration history (`pgcrypto`,
 `pg_trgm`, `pg_stat_statements`, and `vector`) through PostgreSQL's extension catalog. All missing extensions are
-reported together with administrator installation commands, before application-schema creation or migration changes. No
-extensions are installed, moved, or updated. Vector remains required in `public`; the other extensions may remain in
-`public` or the configured application schema for compatibility with existing installations. Unsupported extension
+installed in the configured extension schema when the database role has permission; a missing namespace is created
+when permitted. The setting supports `IDHAN_DATABASE_EXTENSION_SCHEMA` and `--pg_extension_schema` overrides. Each
+attempt uses a savepoint; failures are
+collected with PostgreSQL reasons and administrator installation commands. If any dependency fails, bootstrap rolls
+back all extensions created in that attempt before application-schema creation or migration changes. Existing
+extensions are never moved or updated. Vector must be in the configured extension schema; the other extensions may
+remain in
+that schema or the configured application schema for compatibility with existing installations. Unsupported extension
 namespaces produce administrator instructions. The historical `CREATE EXTENSION IF NOT EXISTS` migration statements
-become no-ops after this prerequisite check; a full startup test confirms that the application role needs no
-extension-installation privileges.
+become no-ops after this prerequisite check. A restricted application role still needs no extension-installation
+privileges when an administrator has provisioned all dependencies in advance.
 
-Existing objects are never relocated. Explicit `public` and custom-schema settings remain supported. If
-`public.idhan_info` exists while the new default has no history, startup stops before creating an apparently empty
-second installation and explains how to retain `database.schema=public`. An automatic relocation would also have to
-preserve functions, partitions, sequences, embedding tables, dependencies, and extension membership; that remains a
-separate migration rather than an implicit consequence of changing the default. Configuration documentation and the
-example configuration describe the new default and compatibility setting.
+Existing objects are never relocated automatically. Startup rejects `public.idhan_info` regardless of the
+configured schema or whether the destination already contains migration history. Existing public installations must
+be migrated manually, preserving application objects and history together, or users must configure a new database.
+Custom application-schema settings remain supported when public migration history is absent. The proposed startup
+relocation flags and implementation were removed. Configuration documentation and the example configuration explain
+the manual migration requirement.
+
+The revised rejection tests cover default, public, and custom settings with and without destination history, checking
+that startup preserves source data, extensions, and the connection search path and does not create a destination schema.
+The guard runs before extension creation, so a legacy installation receives the manual migration error even when
+required extensions are missing. Tests cover automatic installation and repair when files are available, repeat
+initialization, permission-denied aggregation with a usable parent transaction, missing extension files, and complete
+rollback after partial installation. The local fixture lacks pgvector, so cases requiring all four extension binaries
+skip explicitly. Current focused verification passes 114 assertions in eight cases, with eight cases skipped for missing
+pgvector files; the earlier broader verification below predates these bootstrap changes.
 
 Verification: 62 database assertions in nine cases cover defaults, repeat initialization with preinstalled extensions,
 an entirely missing extension set, each individually missing dependency, preservation of extension

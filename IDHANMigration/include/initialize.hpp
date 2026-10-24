@@ -2,16 +2,21 @@
 
 #include <string_view>
 
+#include "idhan/db/SearchPath.hpp"
+
 namespace pqxx
 {
-class transaction_base;
+class dbtransaction;
 }
 
 namespace idhan::db
 {
 
-// Check administrator-provisioned extensions and create the application schema in a
-// transaction before migrations. Unrelated schemas and existing objects are left alone.
-void initializeDatabase( pqxx::transaction_base& tx, std::string_view schema );
+// Create missing extensions in the configured namespace and initialize the application schema.
+// Failure rolls back bootstrap changes; existing objects and extensions are left alone.
+void initializeDatabase(
+	pqxx::dbtransaction& tx,
+	std::string_view schema,
+	std::string_view extension_schema = EXTENSION_SCHEMA );
 
 } // namespace idhan::db
