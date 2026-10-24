@@ -234,6 +234,7 @@ void ServerContext::startReplacementStack()
 	db_config.user = args.user;
 	db_config.password = args.password;
 	db_config.schema = args.schema;
+	db_config.extension_schema = args.extension_schema;
 	db_config.validate();
 
 	// IDHANDb gets one dedicated thread of its own, isolated from everything else.

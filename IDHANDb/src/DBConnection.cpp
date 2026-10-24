@@ -340,7 +340,7 @@ void DBConnection::pumpHandshake( const ConnectionState state )
 
 			const auto timeout =
 				std::to_string( role == ConnectionRole::management ? 0 : config.statement_timeout.count() );
-			const auto search_path { makeSearchPath( config.schema ) };
+			const auto search_path { makeSearchPath( config.schema, config.extension_schema ) };
 			const std::array< const char*, 2 > values { timeout.c_str(), search_path.c_str() };
 			constexpr std::array< int, 2 > lengths { 0, 0 };
 			constexpr std::array< int, 2 > formats { 0, 0 };

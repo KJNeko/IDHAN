@@ -28,15 +28,21 @@ static constexpr Option use_stdout { "use_stdout", "Use stdout for logging", "on
 static constexpr Option
 	pg_schema { "pg_schema", "The PostgreSQL schema to use", "pg_schema", idhan::db::DEFAULT_SCHEMA };
 
+static constexpr Option pg_extension_schema {
+	"pg_extension_schema",
+	"The PostgreSQL schema for required extensions",
+	"schema",
+	idhan::db::EXTENSION_SCHEMA
+};
+
 static constexpr Option
 	config_location { "config", "The location for the config file", "config_location", "./config.toml" };
 
 static constexpr Option
 	force_start { "force_start", "Forces IDHAN to start even if it thinks it shouldn't", "on/off", "false", "true" };
 
-static constexpr auto options {
-	std::to_array< Option >( { log_level, pg_user, pg_host, use_stdout, pg_schema, config_location, force_start } )
-};
+static constexpr auto options { std::to_array< Option >(
+	{ log_level, pg_user, pg_host, use_stdout, pg_schema, pg_extension_schema, config_location, force_start } ) };
 
 void applyCLISettings(
 	const std::string_view group,
@@ -146,6 +152,8 @@ int main( int argc, char** argv )
 	applyCLISettings( "database", "user", parser, pg_user );
 
 	applyCLISettings( "database", "schema", parser, pg_schema );
+
+	applyCLISettings( "database", "extension_schema", parser, pg_extension_schema );
 
 	applyCLISettings( "server", "use_stdout", parser, use_stdout );
 

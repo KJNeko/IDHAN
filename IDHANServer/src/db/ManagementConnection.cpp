@@ -71,7 +71,7 @@ ManagementConnection::ManagementConnection( const ConnectionArguments& arguments
 		const auto version_string { version[ 0 ][ 0 ].as< std::string >() };
 		log::info( "Postgres version: {}", version_string );
 		checkPgVersion( version_string );
-		db::initializeDatabase( tx, arguments.schema );
+		db::initializeDatabase( tx, arguments.schema, arguments.extension_schema );
 		tx.commit();
 	}
 

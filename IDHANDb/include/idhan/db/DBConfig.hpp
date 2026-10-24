@@ -16,6 +16,7 @@ struct DBConfig
 	std::string user { "idhan" };
 	std::string password { "idhan" };
 	std::string schema { DEFAULT_SCHEMA };
+	std::string extension_schema { EXTENSION_SCHEMA };
 	std::size_t connections { 8 };
 	std::size_t transaction_connections { 2 };
 	std::size_t worker_threads { 0 };

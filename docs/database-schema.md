@@ -12,9 +12,11 @@ This document is the structural reference; that one is the behavioural reference
 
 ## Conventions
 
-- **Application namespace.** New installations use `idhan`; existing installations
-  retain their explicit schema setting. Extensions are resolved through `public`.
-  See [Database initialization](database-initialization.md) for setup and compatibility.
+- **Application namespace.** New installations use `idhan`; custom application
+  schemas remain configurable. Startup rejects `public.idhan_info`, requiring manual
+  migration of public installations. Extensions use `database.extension_schema`,
+  which defaults to `public`.
+  See [Database initialization](database-initialization.md) for setup and migration requirements.
 - **Migrations** live in `IDHANMigration/src/` as `N-name.sql` and execute in ascending numeric
   order at server startup. The `idhan_info` table records how far each table has been migrated.
 - **ID types.** Every surrogate key is a distinct C++ type alias over an integer (`RecordID`,
