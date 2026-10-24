@@ -1,5 +1,6 @@
 #include "ServerContext.hpp"
 #include "maintenance/HashMaintenance.hpp"
+#include "maintenance/ModuleMaintenance.hpp"
 #include "config/consumeFlag.hpp"
 
 #include <folly/coro/Task.h>
@@ -11,11 +12,10 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#include <condition_variable>
+#include <chrono>
 #include <csignal>
 #include <filesystem>
 #include <fstream>
-#include <mutex>
 #include <paths.hpp>
 #include <ranges>
 
@@ -269,28 +269,8 @@ void ServerContext::startReplacementStack()
 		.get();
 
 	resumeDownloads( *m_db_context, db_executor );
+	m_module_maintenance = std::make_unique< maintenance::ModuleMaintenance >( *m_module_loader );
 	m_hash_maintenance = std::make_unique< maintenance::HashMaintenance >( *m_db_context, db_executor );
-
-	m_module_maintenance_thread = std::jthread(
-		[ this ]( const std::stop_token stop_token )
-		{
-			std::mutex mutex;
-			std::condition_variable_any cv;
-			std::unique_lock lock { mutex };
-
-			while ( !stop_token.stop_requested() )
-			{
-				cv.wait_for(
-					lock,
-					stop_token,
-					std::chrono::seconds { 30 },
-					[ &stop_token ] { return stop_token.stop_requested(); } );
-
-				if ( stop_token.stop_requested() ) break;
-
-				if ( m_module_loader != nullptr ) m_module_loader->maintainWorkers();
-			}
-		} );
 
 	http::HTTPConfig http_config { http::HTTPConfig::defaults() };
 	http_config.ipv4_listen = config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" );
@@ -436,6 +416,7 @@ ServerContext::~ServerContext()
 	if ( m_heartbeat != nullptr ) m_heartbeat->shutdown();
 	if ( m_http_server != nullptr ) m_http_server->stop();
 	m_hash_maintenance.reset();
+	m_module_maintenance.reset();
 	downloader::DownloadSessionEventHub::instance().shutdown();
 	downloader::RateLimitEventHub::instance().shutdown();
 

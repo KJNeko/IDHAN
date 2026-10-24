@@ -1,7 +1,7 @@
 type: object
 description: >-
   Job envelope with state-dependent fields and an optional arbitrary JSON result.
-  Known jobs always include job_name, location, and completed. start_time is
+  Known jobs always include job_name, location, completed, and continuous. start_time is
   omitted until execution begins. The serializer's not_found placeholder has
   only job_id and status; the single-job HTTP endpoint returns 404 for unknown IDs.
 properties:
@@ -23,10 +23,20 @@ properties:
       - not_found
   completed:
     type: boolean
+  continuous:
+    type: boolean
+    description: >-
+      True for ongoing maintenance that repeats until shutdown. False for finite
+      work such as a cluster scan. Independent of current execution status;
+      a continuous job can be waiting, stopped, completed, or failed.
   start_time:
     type: integer
     format: int64
     description: Approximate Unix epoch seconds when execution began; omitted before the job starts.
+  end_time:
+    type: integer
+    format: int64
+    description: Approximate Unix epoch seconds when the job finished; present only on completed or failed jobs.
   error:
     type: string
     description: Present for failed jobs; the message can be empty.
@@ -37,6 +47,12 @@ properties:
       is complete. Known producer contracts are documented separately as
       ClusterScanResult and RescanMetadataResult; this generic envelope does not
       validate a result against either shape or select a type from job_name.
+  progress:
+    description: >-
+      Optional operation-specific live progress snapshot. Cluster scans publish
+      ClusterScanProgress; automatically started services publish BackgroundJobProgress.
+      Progress is separate from the final response. Snapshots
+      remain available until the job is cleaned up; they are not persisted.
 required:
   - job_id
   - status
@@ -55,6 +71,7 @@ allOf:
         - job_name
         - location
         - completed
+        - continuous
   - if:
       properties:
         status:

@@ -284,6 +284,10 @@ components:
       $ref: ./schemas/TagSubtag.yaml
     ClusterScanResult:
       $ref: ./schemas/ClusterScanResult.yaml
+    ClusterScanProgress:
+      $ref: ./schemas/ClusterScanProgress.yaml
+    BackgroundJobProgress:
+      $ref: ./schemas/BackgroundJobProgress.yaml
     TagInfoExtended:
       $ref: ./schemas/TagInfoExtended.yaml
     DownloadUrl:

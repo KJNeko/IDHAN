@@ -91,9 +91,8 @@ static runtime::Task< std::optional< modules::CallInput > > openRecordInput(
 				"SELECT records.sha256, file_info.cluster_id, "
 				"COALESCE(file_info.extension, mime.best_extension, '') "
 				"FROM records JOIN file_info USING (record_id) "
-				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
 				"LEFT JOIN mime ON mime.mime_id = file_info.mime_id "
-				"WHERE records.record_id = $1",
+				"WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
 				std::move( bindings ) )
 			.rows< std::span< const std::byte >, ClusterID, std::string >()
 	};

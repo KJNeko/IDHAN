@@ -45,7 +45,7 @@ import type {
 /** Header the credential rides in. The server also honours Authorization/IDHAN-API-Key and the rest. */
 const KEY_HEADER = 'X-API-Key';
 
-/** Non-2xx responses throw this, carrying the status and any parsed JSON body for callers to inspect. */
+/** Non-2xx responses throw this, carrying the status and decoded JSON or plain-text body. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -93,16 +93,22 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   const response = await fetch(path, { method: options.method ?? 'GET', headers, body, signal: options.signal });
 
+    if (!response.ok) throw await readApiError(response, `${options.method ?? 'GET'} ${path}`);
+
   const text = await response.text();
   const parsed: unknown = text ? safeParse(text) : undefined;
-
-  if (!response.ok) {
-      throw new ApiError(response.status, errorMessage(parsed) ?? `${options.method ?? 'GET'} ${path} → ${response.status}`, parsed);
-  }
   return parsed as T;
 }
 
+/** Also used by panels making requests through the authenticated host fetch API. Consumes the response body. */
+export async function readApiError(response: Response, request: string): Promise<ApiError> {
+    const text = await response.text();
+    const parsed: unknown = text ? safeParse(text) : undefined;
+    return new ApiError(response.status, errorMessage(parsed) ?? `${request} → ${response.status}`, parsed);
+}
+
 function errorMessage(parsed: unknown): string | null {
+    if (typeof parsed === 'string') return parsed.trim() || null;
     if (typeof parsed !== 'object' || parsed === null) return null;
     const detail = (parsed as { error?: unknown }).error;
     return typeof detail === 'string' && detail.length > 0 ? detail : null;

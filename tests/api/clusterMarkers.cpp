@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <span>
+#include <sstream>
 #include <thread>
 
 #include "MimeIDs.hpp"
@@ -76,7 +77,7 @@ class ClusterMarkerFixture : public ServerFixture
 		file << document;
 	}
 
-	Json::Value scan( const QueryParams& query = {} ) const
+	Json::Value scanStatus( const QueryParams& query = {} ) const
 	{
 		const auto queued { api().postWithoutBody( std::format( "/clusters/{}/scan", cluster_id ), query ) };
 		REQUIRE( queued.status == 200 );
@@ -89,13 +90,15 @@ class ClusterMarkerFixture : public ServerFixture
 			if ( status.json[ "completed" ].asBool() )
 			{
 				REQUIRE( status.json[ "status" ].asString() == "completed" );
-				return status.json[ "response" ];
+				return status.json;
 			}
 			std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
 		}
 		FAIL( "Cluster scan did not finish" );
 		return {};
 	}
+
+	Json::Value scan( const QueryParams& query = {} ) const { return scanStatus( query )[ "response" ]; }
 
 	std::filesystem::path orphan( const std::string& bytes, const bool canonical ) const
 	{
@@ -209,21 +212,174 @@ TEST_CASE_METHOD(
 		file << "malformed filename";
 	}
 
-	const auto stopped { scan(
+	const auto status { scanStatus(
 		{ { "stop_on_fail", "true" },
 		  { "concurrency", "3" },
 		  { "adopt_orphans", "true" },
 		  { "verify_hash", "true" } } ) };
+	const auto stopped { status[ "response" ] };
 	const auto attempted { stopped[ "scanned_count" ].asUInt64() };
 	CHECK( attempted >= 1 );
 	CHECK( attempted <= 3 );
 	CHECK( stopped[ "failed_count" ].asUInt64() == attempted );
 	CHECK( stopped[ "failures" ].size() == attempted );
 	CHECK( stopped[ "failures" ][ 0 ][ "error" ].asString().starts_with( "Invalid hash in filename:" ) );
+	const auto progress { status[ "progress" ] };
+	CHECK( progress[ "phase" ].asString() == "stopped" );
+	CHECK( progress[ "total_files" ].asUInt64() == 12 );
+	CHECK( progress[ "processed_files" ].asUInt64() == attempted );
+	CHECK( progress[ "remaining_files" ].asUInt64() == 12 - attempted );
+	CHECK( progress[ "failed_count" ].asUInt64() == attempted );
+	CHECK( progress[ "tasks" ].empty() );
 
 	const auto complete { scan( { { "stop_on_fail", "false" }, { "concurrency", "3" } } ) };
 	CHECK( complete[ "scanned_count" ].asUInt64() == 12 );
 	CHECK( complete[ "failed_count" ].asUInt64() == 12 );
+}
+
+TEST_CASE_METHOD(
+	ClusterMarkerFixture,
+	"Cluster scans publish bounded live subtasks and retain final progress",
+	"[api][cluster-scan][scan-progress]" )
+{
+	create();
+	for ( int index {}; index < 3; ++index )
+	{
+		const auto path { orphan( std::format( "progress file {}", index ), true ) };
+		pqxx::work transaction { db() };
+		transaction.exec(
+			"INSERT INTO records (sha256) VALUES (decode($1, 'hex'))", pqxx::params { path.stem().string() } );
+		transaction.commit();
+	}
+
+	// Hold record lookups so live progress is observable without timing assumptions about hashing or modules.
+	pqxx::work blocked { db() };
+	blocked.exec( "LOCK TABLE records IN ACCESS EXCLUSIVE MODE" );
+	const auto queued { api().postWithoutBody(
+		std::format( "/clusters/{}/scan", cluster_id ),
+		{ { "concurrency", "2" }, { "scan_mime", "false" }, { "scan_metadata", "false" } } ) };
+	REQUIRE( queued.status == 200 );
+	const auto job_id { queued.json[ "job_id" ].as< JobID >() };
+	const auto route { std::format( "/jobs/{}/status", job_id ) };
+	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds( 15 ) };
+	Json::Value running;
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		const auto status { api().get( route ) };
+		REQUIRE( status.status == 200 );
+		running = status.json;
+		if ( running[ "progress" ][ "active_files" ].asUInt64() == 2 ) break;
+
+		std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+	}
+	REQUIRE( running[ "progress" ][ "active_files" ].asUInt64() == 2 );
+	CHECK_FALSE( running[ "completed" ].asBool() );
+	REQUIRE( running[ "continuous" ].isBool() );
+	CHECK_FALSE( running[ "continuous" ].asBool() );
+	const auto progress { running[ "progress" ] };
+	CHECK( progress[ "kind" ].asString() == "cluster_scan" );
+	CHECK( progress[ "phase" ].asString() == "scanning_files" );
+	CHECK( progress[ "total_files" ].asUInt64() == 3 );
+	CHECK( progress[ "remaining_files" ].asUInt64() == 3 );
+	CHECK( progress[ "processed_files" ].asUInt64() == 0 );
+	REQUIRE( progress[ "tasks" ].size() == 2 );
+	for ( const auto& task : progress[ "tasks" ] )
+	{
+		CHECK( task[ "stage" ].asString() == "checking_record" );
+		CHECK( std::filesystem::is_regular_file( root / task[ "path" ].asString() ) );
+	}
+	const auto listed { api().get( "/jobs/status" ) };
+	REQUIRE( listed.status == 200 );
+	bool found { false };
+	for ( const auto& job : listed.json[ "jobs" ] )
+	{
+		if ( job[ "job_id" ].as< JobID >() != job_id ) continue;
+
+		CHECK( job[ "progress" ] == progress );
+		found = true;
+	}
+	CHECK( found );
+	blocked.commit();
+
+	Json::Value finished;
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		finished = api().get( route ).json;
+		if ( finished[ "completed" ].asBool() ) break;
+
+		std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+	}
+	REQUIRE( finished[ "completed" ].asBool() );
+	CHECK_FALSE( finished[ "continuous" ].asBool() );
+	CHECK( finished[ "progress" ][ "phase" ].asString() == "completed" );
+	CHECK( finished[ "progress" ][ "processed_files" ].asUInt64() == 3 );
+	CHECK( finished[ "progress" ][ "remaining_files" ].asUInt64() == 0 );
+	CHECK( finished[ "progress" ][ "tasks" ].empty() );
+	CHECK( finished[ "response" ][ "failed_count" ].asUInt64() == 0 );
+}
+
+TEST_CASE_METHOD(
+	ClusterMarkerFixture,
+	"Cluster scans report metadata storage while database writes are blocked",
+	"[api][cluster-scan][scan-progress]" )
+{
+	create();
+	std::ifstream source { IDHAN_SOURCE_DIR "/IDHANServer/src/static/Titorv2.png", std::ios::binary };
+	REQUIRE( source.is_open() );
+	std::ostringstream bytes;
+	bytes << source.rdbuf();
+	const auto imported { api().postOctets( "/file/import", bytes.str(), { { "force_import", "true" } } ) };
+	REQUIRE( imported.status == 200 );
+
+	// Permit reads while blocking image metadata writes, leaving the parser free to finish.
+	pqxx::work blocked { db() };
+	blocked.exec( "LOCK TABLE image_metadata IN SHARE MODE" );
+	const auto queued { api().postWithoutBody(
+		std::format( "/clusters/{}/scan", cluster_id ), { { "rescan_metadata", "true" }, { "scan_mime", "false" } } ) };
+	REQUIRE( queued.status == 200 );
+	const auto route { std::format( "/jobs/{}/status", queued.json[ "job_id" ].as< JobID >() ) };
+	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 15 } };
+	Json::Value status;
+	bool storing {};
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		const auto response { api().get( route ) };
+		REQUIRE( response.status == 200 );
+		status = response.json;
+		for ( const auto& task : status[ "progress" ][ "tasks" ] )
+			if ( task[ "stage" ].asString() == "storing_metadata" ) storing = true;
+		if ( storing || status[ "completed" ].asBool() ) break;
+
+		std::this_thread::sleep_for( std::chrono::milliseconds { 20 } );
+	}
+	REQUIRE( storing );
+	CHECK_FALSE( status[ "completed" ].asBool() );
+	blocked.commit();
+
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		status = api().get( route ).json;
+		if ( status[ "completed" ].asBool() ) break;
+
+		std::this_thread::sleep_for( std::chrono::milliseconds { 20 } );
+	}
+	REQUIRE( status[ "completed" ].asBool() );
+	CHECK( status[ "status" ].asString() == "completed" );
+	CHECK( status[ "response" ][ "scanned_count" ].asUInt64() == 1 );
+	CHECK( status[ "response" ][ "failed_count" ].asUInt64() == 0 );
+}
+
+TEST_CASE_METHOD(
+	ClusterMarkerFixture,
+	"Empty cluster scans publish a completed zero-file total",
+	"[api][cluster-scan][scan-progress]" )
+{
+	create();
+	const auto status { scanStatus() };
+	CHECK( status[ "progress" ][ "phase" ].asString() == "completed" );
+	CHECK( status[ "progress" ][ "total_files" ].asUInt64() == 0 );
+	CHECK( status[ "progress" ][ "remaining_files" ].asUInt64() == 0 );
+	CHECK( status[ "response" ][ "scanned_count" ].asUInt64() == 0 );
 }
 
 TEST_CASE_METHOD(
@@ -377,7 +533,10 @@ TEST_CASE_METHOD(
 			pqxx::params { cluster_id } );
 		transaction.commit();
 	}
-	const auto result { scan( { { "remove_missing_files", "true" } } ) };
+	const auto status { scanStatus( { { "remove_missing_files", "true" } } ) };
+	const auto result { status[ "response" ] };
+	CHECK( status[ "progress" ][ "checked_records" ].asUInt64() == 1025 );
+	CHECK( status[ "progress" ][ "failed_count" ].asUInt64() == 1025 );
 	CHECK( result[ "scanned_count" ].asUInt64() == 0 );
 	CHECK( result[ "failed_count" ].asUInt64() == 1025 );
 	CHECK( result[ "failures" ].size() == 1000 );

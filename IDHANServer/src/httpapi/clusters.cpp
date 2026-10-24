@@ -1,14 +1,14 @@
 #include "clusters.hpp"
 
-#include <folly/io/IOBuf.h>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <fcntl.h>
+#include <folly/io/IOBuf.h>
 
 #include <algorithm>
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
+#include <fcntl.h>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -26,11 +26,12 @@
 #include "db/findClusterByName.hpp"
 #include "filesystem/clusters/ClusterManager.hpp"
 #include "filesystem/clusters/ClusterMarker.hpp"
+#include "filesystem/clusters/ClusterWrite.hpp"
 #include "filesystem/clusters/clusterIdentity.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/db/DBError.hpp"
-#include "jsonBody.hpp"
 #include "jobs/JobContext.hpp"
+#include "jsonBody.hpp"
 
 namespace idhan::httpapi
 {
@@ -193,22 +194,23 @@ struct ClusterFields
 
 static http::HTTPTask< std::optional< std::string > > clusterInfoJson( const ClusterID cluster_id, db::DBContext& db )
 {
+	const auto configuration { filesystem::ClusterManager::getInstance().find( cluster_id ) };
+	if ( !configuration ) co_return std::nullopt;
 	db::DBBindings bindings {};
 	bindings.bind( cluster_id );
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT ratio_number, size_used, size_limit, file_count::BIGINT, read_only, cluster_name, folder_path "
-				"FROM file_clusters WHERE cluster_id = $1",
-				std::move( bindings ) )
-			.rows< std::int16_t, std::int64_t, std::int64_t, std::int64_t, bool, std::string, std::string >()
+				"SELECT size_used, file_count::bigint FROM file_clusters WHERE cluster_id = $1", std::move( bindings ) )
+			.rows< std::int64_t, std::int64_t >()
 	};
-
 	if ( rows.empty() ) co_return std::nullopt;
-
-	const auto& [ ratio_number, size_used, size_limit, file_count, read_only, cluster_name, folder_path ] {
-		rows.row( 0 )
-	};
+	const auto& [ size_used, file_count ] { rows.row( 0 ) };
+	const auto ratio_number { configuration->ratio };
+	const auto size_limit { configuration->size_limit };
+	const auto read_only { configuration->read_only };
+	const auto folder_path { configuration->path.string() };
+	const auto cluster_name { configuration->name.value_or( folder_path ) };
 
 	db::DBBindings mime_bindings {};
 	mime_bindings.bind( cluster_id );
@@ -297,15 +299,15 @@ static http::HTTPTask< http::Response > clusterInfo( db::DBContext& db, http::Re
 
 static http::HTTPTask< http::Response > listClusters( db::DBContext& db, [[maybe_unused]] http::RequestContext context )
 {
-	const auto rows { co_await db.query( "SELECT cluster_id FROM file_clusters" ).rows< ClusterID >() };
+	const auto clusters { filesystem::ClusterManager::getInstance().list() };
 
 	simdjson::builder::string_builder builder;
 	builder.start_array();
 
 	bool first { true };
-	for ( const auto& [ cluster_id ] : rows )
+	for ( const auto& cluster : clusters )
 	{
-		const auto info { co_await clusterInfoJson( cluster_id, db ) };
+		const auto info { co_await clusterInfoJson( cluster.id, db ) };
 		if ( !info ) continue;
 
 		if ( !first ) builder.append_comma();
@@ -338,11 +340,12 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 		co_return http::Response::error( 400, "Cluster name must be specified" );
 
 	const auto target_path { normalizeClusterPath( *fields.path ) };
-	auto transaction { co_await db.transaction() };
+	auto mutation { co_await filesystem::ClusterManager::getInstance().beginWrite( db ) };
+	auto& transaction { mutation.transaction() };
 	const auto existing_name { co_await db::findClusterByName( transaction, *fields.name ) };
 	if ( existing_name )
 	{
-		co_await transaction.rollback();
+		co_await mutation.rollback();
 		co_return http::Response::error(
 			409, std::format( "A cluster with the name {} already exists", *fields.name ) );
 	}
@@ -357,7 +360,7 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 		const bool same_directory { std::filesystem::equivalent( target_path, cluster_path, equivalent_error ) };
 		if ( target_path == normalizeClusterPath( cluster_path ) || same_directory )
 		{
-			co_await transaction.rollback();
+			co_await mutation.rollback();
 			co_return http::Response::error(
 				409, std::format( "Path {} already exists in the cluster list", target_path.string() ) );
 		}
@@ -366,7 +369,7 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 	const bool readonly { fields.readonly.value_or( true ) };
 	if ( readonly && !std::filesystem::exists( target_path ) )
 	{
-		co_await transaction.rollback();
+		co_await mutation.rollback();
 		co_return http::Response::error(
 			400,
 			std::format(
@@ -378,7 +381,7 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 		std::error_code error_code {};
 		if ( !std::filesystem::create_directories( target_path, error_code ) )
 		{
-			co_await transaction.rollback();
+			co_await mutation.rollback();
 			co_return http::Response::error(
 				500, std::format( "Was unable to create directory {}", target_path.string() ) );
 		}
@@ -405,7 +408,7 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 
 	if ( insert_result.empty() )
 	{
-		co_await transaction.rollback();
+		co_await mutation.rollback();
 		co_return http::Response::error(
 			409,
 			std::format(
@@ -419,13 +422,11 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 	auto modification_error { co_await applyClusterFields( transaction, cluster_id, fields ) };
 	if ( modification_error )
 	{
-		co_await transaction.rollback();
+		co_await mutation.rollback();
 		co_return std::move( *modification_error );
 	}
 
-	co_await transaction.commit();
-
-	co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
+	co_await mutation.commit();
 
 	const auto info { co_await clusterInfoJson( cluster_id, db ) };
 	if ( !info )
@@ -448,7 +449,8 @@ static http::HTTPTask< http::Response > modifyCluster( db::DBContext& db, http::
 	if ( !fields_e ) co_return std::move( fields_e.error() );
 	const auto& fields { *fields_e };
 
-	auto transaction { co_await db.transaction() };
+	auto mutation { co_await filesystem::ClusterManager::getInstance().beginWrite( db ) };
+	auto& transaction { mutation.transaction() };
 
 	db::DBBindings exists_bindings {};
 	exists_bindings.bind( cluster_id );
@@ -460,7 +462,7 @@ static http::HTTPTask< http::Response > modifyCluster( db::DBContext& db, http::
 
 	if ( cluster_info.empty() )
 	{
-		co_await transaction.rollback();
+		co_await mutation.rollback();
 		co_return http::Response::error( 404, std::format( "Cluster {} does not exist", cluster_id ) );
 	}
 
@@ -470,13 +472,11 @@ static http::HTTPTask< http::Response > modifyCluster( db::DBContext& db, http::
 	auto modification_error { co_await applyClusterFields( transaction, cluster_id, fields ) };
 	if ( modification_error )
 	{
-		co_await transaction.rollback();
+		co_await mutation.rollback();
 		co_return std::move( *modification_error );
 	}
 
-	co_await transaction.commit();
-
-	co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
+	co_await mutation.commit();
 
 	const auto info { co_await clusterInfoJson( cluster_id, db ) };
 	if ( !info ) co_return http::Response::error( 404, std::format( "Cluster {} does not exist", cluster_id ) );
@@ -490,7 +490,8 @@ static http::HTTPTask< http::Response > deleteCluster( db::DBContext& db, http::
 	if ( !cluster_id_e ) co_return http::Response::error( 400, cluster_id_e.error().message );
 	const auto cluster_id { *cluster_id_e };
 
-	auto transaction { co_await db.transaction() };
+	auto mutation { co_await filesystem::ClusterManager::getInstance().beginWrite( db ) };
+	auto& transaction { mutation.transaction() };
 
 	db::DBBindings lock_bindings {};
 	lock_bindings.bind( cluster_id );
@@ -503,7 +504,7 @@ static http::HTTPTask< http::Response > deleteCluster( db::DBContext& db, http::
 
 	if ( locked.empty() )
 	{
-		co_await transaction.rollback();
+		co_await mutation.rollback();
 		co_return http::Response::error( 404, std::format( "Cluster {} does not exist", cluster_id ) );
 	}
 
@@ -518,9 +519,7 @@ static http::HTTPTask< http::Response > deleteCluster( db::DBContext& db, http::
 	co_await transaction.query( "DELETE FROM file_clusters WHERE cluster_id = $1", std::move( delete_bindings ) )
 		.result();
 
-	co_await transaction.commit();
-
-	co_await filesystem::ClusterManager::getInstance().reloadClusters( db );
+	co_await mutation.commit();
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
 }
@@ -586,20 +585,10 @@ static http::HTTPTask< http::Response > scanCluster( db::DBContext& db, http::Re
 	scan_params.concurrency =
 		std::clamp( concurrency_e->value_or( configured_concurrency ), std::size_t { 1 }, max_concurrency );
 
-	db::DBBindings bindings {};
-	bindings.bind( cluster_id );
-	const auto rows { co_await db
-		                  .query(
-								"SELECT folder_path, read_only FROM file_clusters WHERE cluster_id = $1",
-								std::move( bindings ) )
-		                  .rows< std::string, bool >() };
-
-	if ( rows.empty() ) co_return http::Response::error( 404, "Cluster not found" );
-
-	const auto& [ folder_path, read_only ] { rows.row( 0 ) };
-	scan_params.read_only = scan_params.force_readonly || read_only;
-
-	const std::filesystem::path cluster_path { folder_path };
+	const auto info { filesystem::ClusterManager::getInstance().find( cluster_id ) };
+	if ( !info ) co_return http::Response::error( 404, "Cluster not found" );
+	scan_params.read_only = scan_params.force_readonly || info->read_only;
+	const auto cluster_path { info->path };
 
 	auto verified { co_await filesystem::openCluster( db, cluster_id ) };
 	if ( !verified ) co_return http::Response::error( 503, verified.error() );

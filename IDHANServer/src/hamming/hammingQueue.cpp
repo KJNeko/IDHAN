@@ -7,7 +7,7 @@
 
 namespace idhan::hamming
 {
-runtime::Task< std::optional< RecordID > > processQueueBatch(
+runtime::Task< std::optional< QueueBatchResult > > processQueueBatch(
 	db::DBContext& db,
 	const RecordID through,
 	const std::optional< RecordID > after )
@@ -25,19 +25,24 @@ runtime::Task< std::optional< RecordID > > processQueueBatch(
 	const auto stored { co_await db::rebuildHammingPairs( transaction, claimed ) };
 	co_await transaction.commit();
 	log::info( "Computed hamming distances for {} records, storing {} pairs", claimed.size(), stored );
-	co_return std::ranges::max( claimed );
+	co_return QueueBatchResult { std::ranges::max( claimed ), claimed.size() };
 }
 
-runtime::Task<> runQueueSweep( db::DBContext& db, const std::stop_token stop )
+runtime::Task< std::uint64_t > runQueueSweep( db::DBContext& db, const std::stop_token stop )
 {
 	const auto through { co_await db::queuedHammingHighWater( db ) };
-	if ( !through ) co_return;
+	if ( !through ) co_return 0;
 
 	std::optional< RecordID > after;
+	std::uint64_t processed {};
 	while ( !stop.stop_requested() )
 	{
-		after = co_await processQueueBatch( db, *through, after );
-		if ( !after ) co_return;
+		const auto batch { co_await processQueueBatch( db, *through, after ) };
+		if ( !batch ) break;
+
+		after = batch->last_record_id;
+		processed += batch->processed_records;
 	}
+	co_return processed;
 }
 } // namespace idhan::hamming

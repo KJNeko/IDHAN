@@ -65,27 +65,26 @@ void JobRuntime::runner()
 
 void JobRuntime::cleanup()
 {
+	std::unique_lock lock { m_queue_mtx };
 	while ( !m_hard_stop.load( std::memory_order_acquire ) )
 	{
-		{
-			std::lock_guard lock { m_queue_mtx };
-			std::erase_if(
-				m_jobs,
-				[]( const auto& item )
-				{
-					const auto& job = item.second;
-					if ( !job->done() ) return false;
+		std::erase_if(
+			m_jobs,
+			[]( const auto& item )
+			{
+				const auto& job = item.second;
+				if ( !job->done() ) return false;
 
-					const auto status = job->status();
-					if ( !status ) return true;
+				const auto status = job->status();
+				if ( !status ) return true;
 
-					if ( status->m_cleanup_requested ) return true;
+				if ( status->m_cleanup_requested ) return true;
 
-					const auto now = std::chrono::steady_clock::now();
-					return ( now - status->m_completion_time ) >= job_retention_period;
-				} );
-		}
-		std::this_thread::sleep_for( job_cleanup_interval );
+				const auto now = std::chrono::steady_clock::now();
+				return ( now - status->m_completion_time ) >= job_retention_period;
+			} );
+		m_cleanup_cv.wait_for(
+			lock, job_cleanup_interval, [ this ] { return m_hard_stop.load( std::memory_order_acquire ); } );
 	}
 }
 
@@ -174,6 +173,7 @@ JobRuntime::~JobRuntime()
 
 	m_hard_stop.store( true, std::memory_order_release );
 	m_cv.notify_all();
+	m_cleanup_cv.notify_all();
 }
 
 JobContext::JobContext( JobTask&& coro, const idhan::JobID id ) noexcept : m_coro( std::move( coro ) ), m_id( id )
@@ -208,13 +208,18 @@ JobRuntime& getJobRuntime()
 	return job_runtime;
 }
 
-std::shared_ptr< JobContext > queueJob( JobTask task, const std::string_view name, const std::source_location loc )
+std::shared_ptr< JobContext > queueJob(
+	JobTask task,
+	const std::string_view name,
+	const std::source_location loc,
+	const bool continuous )
 {
 	const auto job_id { generateNewJobID() };
 
 	if ( task.m_status )
 	{
 		task.m_status->m_id = job_id;
+		task.m_status->m_continuous = continuous;
 		task.m_status->m_function_name = name;
 		task.m_status->m_location = loc;
 	}

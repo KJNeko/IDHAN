@@ -16,6 +16,7 @@
 #include "MimeIDs.hpp"
 #include "apiAuth.hpp"
 #include "filesystem/ThumbnailCache.hpp"
+#include "filesystem/clusters/ClusterManager.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/http/TemporaryUpload.hpp"
 #include "ipc/UniqueFd.hpp"
@@ -142,15 +143,16 @@ static http::HTTPTask< http::Response > databaseStats(
 			.query(
 				"SELECT (SELECT COUNT(*) FROM records)       AS records, "
 				"       (SELECT COUNT(*) FROM tags)          AS tags, "
-				"       (SELECT COUNT(*) FROM file_clusters) AS clusters, "
+
 				"       (SELECT COALESCE(SUM(GREATEST(c.reltuples, 0)), 0)::bigint "
 				"          FROM pg_inherits i "
 				"          JOIN pg_class c ON c.oid = i.inhrelid "
 				"         WHERE i.inhparent = to_regclass(current_schema() || '.tag_mappings')) AS mappings_est" )
-			.rows< std::int64_t, std::int64_t, std::int64_t, std::int64_t >()
+			.rows< std::int64_t, std::int64_t, std::int64_t >()
 	};
 
-	const auto& [ records, tags, clusters, mappings_est ] { counts.row( 0 ) };
+	const auto& [ records, tags, mappings_est ] { counts.row( 0 ) };
+	const auto clusters { filesystem::ClusterManager::getInstance().list().size() };
 
 	std::int64_t mappings { mappings_est };
 	bool mappings_estimated { true };

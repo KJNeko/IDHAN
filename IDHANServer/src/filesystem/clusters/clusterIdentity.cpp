@@ -6,27 +6,20 @@
 #include <fcntl.h>
 #include <format>
 
+#include "ClusterManager.hpp"
 #include "ClusterMarker.hpp"
 #include "idhan/db/DBContext.hpp"
 
 namespace idhan::filesystem
 {
 
-runtime::Task< std::expected< ClusterAccess, std::string > > openCluster( db::DBContext& db, const ClusterID id )
+runtime::Task< std::expected< ClusterAccess, std::string > > openCluster(
+	[[maybe_unused]] db::DBContext& db,
+	const ClusterID id )
 {
-	db::DBBindings bindings {};
-	bindings.bind( id );
-	const auto rows {
-		co_await db
-			.query(
-				"SELECT folder_path, cluster_uuid::text, read_only FROM file_clusters WHERE cluster_id = $1",
-				std::move( bindings ) )
-			.rows< std::string, std::string, bool >()
-	};
-	if ( rows.empty() ) co_return std::unexpected( "Cluster does not exist" );
-
-	const auto [ path, uuid_text, readonly ] { rows.row( 0 ) };
-	co_return ClusterAccess::open( path, boost::uuids::string_generator {}( uuid_text ), readonly );
+	const auto info { ClusterManager::getInstance().find( id ) };
+	if ( !info ) co_return std::unexpected( "Cluster does not exist" );
+	co_return ClusterAccess::open( info->path, info->uuid, info->read_only );
 }
 
 runtime::Task< std::expected< std::optional< ClusterAccess >, std::string > > openRecordCluster(

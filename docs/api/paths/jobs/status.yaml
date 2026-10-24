@@ -8,6 +8,8 @@ get:
     The optional response accepts any JSON value. Known cluster-scan and metadata-rescan
     producer contracts are documented separately as ClusterScanResult and RescanMetadataResult;
     job_name is descriptive text and does not discriminate the result type.
+    The continuous flag identifies ongoing maintenance independently of its current
+    activity; such jobs remain running while waiting between passes.
   parameters:
     - name: job_id
       in: path

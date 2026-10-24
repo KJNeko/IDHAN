@@ -123,17 +123,19 @@ void DBPool::submit( std::shared_ptr< DBOperation > operation )
 			throw std::logic_error( "Database pool is not accepting operations" );
 
 		std::size_t minimum { std::numeric_limits< std::size_t >::max() };
-		for ( const auto& connection : m_normal ) minimum = std::min( minimum, connection->stats().unfinished );
-
+		std::size_t chosen { m_next_tie % m_normal.size() };
 		for ( std::size_t offset = 0; offset < m_normal.size(); ++offset )
 		{
 			const auto index { ( m_next_tie + offset ) % m_normal.size() };
-			if ( m_normal[ index ]->stats().unfinished != minimum ) continue;
+			const auto unfinished { m_normal[ index ]->stats().unfinished };
+			if ( unfinished >= minimum ) continue;
 
-			selected = m_normal[ index ];
-			m_next_tie = ( index + 1 ) % m_normal.size();
-			break;
+			minimum = unfinished;
+			chosen = index;
 		}
+
+		selected = m_normal[ chosen ];
+		m_next_tie = ( chosen + 1 ) % m_normal.size();
 	}
 	selected->enqueue( std::move( operation ) );
 }

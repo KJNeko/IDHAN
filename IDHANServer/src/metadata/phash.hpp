@@ -9,9 +9,17 @@ namespace idhan::db
 class DBContext;
 }
 
+namespace idhan::jobs
+{
+class BackgroundJob;
+}
+
 namespace idhan::metadata
 {
 // Visits a bounded snapshot in batches of eight. Failed or blank images remain
 // eligible for future passes, without starving later IDs in this pass.
-[[nodiscard]] runtime::Task<> runPhashSweep( db::DBContext& db, std::stop_token stop = {} );
+[[nodiscard]] runtime::Task<> runPhashSweep(
+	db::DBContext& db,
+	std::stop_token stop = {},
+	jobs::BackgroundJob* progress = nullptr );
 } // namespace idhan::metadata

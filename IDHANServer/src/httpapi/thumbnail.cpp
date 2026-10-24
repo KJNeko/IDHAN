@@ -146,18 +146,17 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT file_info.mime_id, records.sha256, file_clusters.folder_path, file_clusters.cluster_id, "
+				"SELECT file_info.mime_id, records.sha256, file_info.cluster_id, "
 				"COALESCE(file_info.extension, mime.best_extension, ''), COALESCE(metadata.json::text, '{}') "
 				"FROM records JOIN file_info USING (record_id) "
-				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
 				"LEFT JOIN mime ON mime.mime_id = file_info.mime_id "
-				"LEFT JOIN metadata USING (record_id) WHERE records.record_id = $1",
+				"LEFT JOIN metadata USING (record_id) WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
 				std::move( bindings ) )
-			.rows< MimeID, std::span< const std::byte >, std::string, ClusterID, std::string, std::string >()
+			.rows< MimeID, std::span< const std::byte >, ClusterID, std::string, std::string >()
 	};
 	if ( rows.empty() ) co_return http::Response::error( 404, "Record has no file information" );
 
-	const auto& [ mime_id, sha256_bytes, folder_path, cluster_id, extension, metadata_document ] { rows.row( 0 ) };
+	const auto& [ mime_id, sha256_bytes, cluster_id, extension, metadata_document ] { rows.row( 0 ) };
 	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
 	const auto path { thumbnailPath( hex, size ) };

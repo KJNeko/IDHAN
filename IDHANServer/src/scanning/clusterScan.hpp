@@ -16,6 +16,8 @@ class DBContext;
 
 namespace idhan::scanning
 {
+class ScanProgress;
+
 struct ScanFailure
 {
 	std::filesystem::path path;
@@ -34,5 +36,6 @@ struct ScanTotals
 	db::DBContext& db,
 	ClusterID cluster_id,
 	std::filesystem::path configured_path,
-	ScanOptions options );
+	ScanOptions options,
+	ScanProgress& progress );
 } // namespace idhan::scanning

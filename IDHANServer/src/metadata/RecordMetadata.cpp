@@ -292,11 +292,9 @@ static runtime::Task< void > updateRecordFileTimesForScan(
 	co_return {};
 }
 
-runtime::Task< std::expected< void, MetadataError > > parseAndStoreRecordMetadata(
-	db::DBContext& db,
+runtime::Task< std::expected< MetadataInfo, MetadataError > > parseRecordMetadata(
 	const RecordID record_id,
 	const MimeID mime_id,
-	const filesystem::ClusterAccess& cluster,
 	std::filesystem::path path )
 {
 	const auto parsers { modules::ModuleLoader::instance().getParserFor( mime_id ) };
@@ -313,18 +311,28 @@ runtime::Task< std::expected< void, MetadataError > > parseAndStoreRecordMetadat
 	const auto input { std::make_shared< const modules::CallInput >( std::move( *input_e ) ) };
 
 	const modules::RemoteCallData call_data { .input = input, .mime_id = mime_id, .extra = {}, .depth = 0 };
-	const auto metadata_e { co_await parser->parseFile( call_data ) };
+	auto metadata_e { co_await parser->parseFile( call_data ) };
 
 	if ( !metadata_e )
 		co_return std::unexpected( MetadataError(
 			500, std::format( "Module failed to parse data for record {}: {}", record_id, metadata_e.error() ) ) );
 
+	co_return std::move( *metadata_e );
+}
+
+runtime::Task< std::expected< void, MetadataError > > storeRecordMetadata(
+	db::DBContext& db,
+	const RecordID record_id,
+	const filesystem::ClusterAccess& cluster,
+	std::filesystem::path path,
+	const MetadataInfo& metadata )
+{
 	const auto valid_after_parse { cluster.verify() };
 	if ( !valid_after_parse ) co_return std::unexpected( MetadataError( 503, valid_after_parse.error() ) );
 
 	// Parsing runs outside the transaction; all writes for its result share one connection and commit.
 	auto transaction { co_await db.transaction() };
-	auto written { co_await writeRecordMetadata( transaction, record_id, *metadata_e ) };
+	auto written { co_await writeRecordMetadata( transaction, record_id, metadata ) };
 	if ( !written )
 	{
 		co_await transaction.rollback();
@@ -342,5 +350,18 @@ runtime::Task< std::expected< void, MetadataError > > parseAndStoreRecordMetadat
 	co_await transaction.commit();
 
 	co_return {};
+}
+
+runtime::Task< std::expected< void, MetadataError > > parseAndStoreRecordMetadata(
+	db::DBContext& db,
+	const RecordID record_id,
+	const MimeID mime_id,
+	const filesystem::ClusterAccess& cluster,
+	std::filesystem::path path )
+{
+	const auto parsed { co_await parseRecordMetadata( record_id, mime_id, path ) };
+	if ( !parsed ) co_return std::unexpected( parsed.error() );
+
+	co_return co_await storeRecordMetadata( db, record_id, cluster, std::move( path ), *parsed );
 }
 } // namespace idhan::metadata

@@ -45,8 +45,11 @@ class DownloadSessionHttpFixture
 			{
 				const std::string_view name { line.substr( 0, separator ) };
 				if ( name.size() == 6
-				     && std::ranges::equal( name, std::string_view { "cookie" }, []( const char left, const char right )
-				                              { return std::tolower( static_cast< unsigned char >( left ) ) == right; } ) )
+				     && std::ranges::equal(
+						 name,
+						 std::string_view { "cookie" },
+						 []( const char left, const char right )
+						 { return std::tolower( static_cast< unsigned char >( left ) ) == right; } ) )
 				{
 					std::string_view value { line.substr( separator + 1 ) };
 					while ( !value.empty() && value.front() == ' ' ) value.remove_prefix( 1 );
@@ -66,10 +69,9 @@ class DownloadSessionHttpFixture
 		if ( path == "/file.gif" )
 		{
 			constexpr std::array< unsigned char, 43 > gif { {
-				0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80,
-				0xff, 0x00, 0xc0, 0xc0, 0xc0, 0x00, 0x00, 0x00, 0x21, 0xf9, 0x04,
-				0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01,
-				0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b,
+				0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0xff, 0x00, 0xc0, 0xc0,
+				0xc0, 0x00, 0x00, 0x00, 0x21, 0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00,
+				0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b,
 			} };
 			return {
 				reinterpret_cast< const char* >( gif.data() ),
@@ -114,6 +116,7 @@ class DownloadSessionHttpFixture
 	}
 
   public:
+
 	DownloadSessionHttpFixture()
 	{
 		m_socket = ::socket( AF_INET, SOCK_STREAM, 0 );
@@ -173,6 +176,8 @@ constexpr auto wait_deadline { 60s };
 class ImportCluster
 {
 	pqxx::connection& m_connection;
+	ApiClient* m_api {};
+	ClusterID m_cluster_id {};
 	std::filesystem::path m_path;
 
   public:
@@ -199,8 +204,8 @@ class ImportCluster
 				"DELETE FROM file_info WHERE cluster_id IN "
 				"(SELECT cluster_id FROM file_clusters WHERE folder_path = $1)",
 				pqxx::params { m_path.string() } );
-			tx.exec( "DELETE FROM file_clusters WHERE folder_path = $1", pqxx::params { m_path.string() } );
 			tx.commit();
+			if ( m_api ) CHECK( m_api->del( std::format( "/clusters/{}/remove", m_cluster_id ) ).status == 200 );
 		}
 		catch ( const std::exception& e )
 		{
@@ -208,8 +213,9 @@ class ImportCluster
 		}
 	}
 
-	void registerWith( ApiClient& api ) const
+	void registerWith( ApiClient& api )
 	{
+		m_api = &api;
 		std::filesystem::create_directories( m_path );
 
 		Json::Value body {};
@@ -220,6 +226,7 @@ class ImportCluster
 		const auto added { api.post( "/clusters/add", body ) };
 		INFO( added.body );
 		REQUIRE( added.status == 201 );
+		m_cluster_id = static_cast< ClusterID >( added.json[ "cluster_id" ].asInt() );
 	}
 };
 
@@ -290,14 +297,12 @@ SCENARIO_METHOD(
 	REQUIRE( first.status == 201 );
 	CHECK( first.json[ "state" ].asString() == "pending" );
 
-	const auto first_job { waitForDownloadJob(
-		api(), session_id, first.json[ "id" ].as< DownloadSessionUrlID >() ) };
+	const auto first_job { waitForDownloadJob( api(), session_id, first.json[ "id" ].as< DownloadSessionUrlID >() ) };
 	CHECK( first_job[ "state" ].asString() == "completed" );
 	CHECK_FALSE( first_job[ "finished_at" ].isNull() );
 	CHECK( first_job[ "error" ].isNull() );
 	CHECK( fixture.cookieHeader().contains( "fringeBenefits=yup" ) );
-	const auto flattened { waitForFlattenedRoot(
-		api(), session_id, first.json[ "id" ].as< DownloadSessionUrlID >() ) };
+	const auto flattened { waitForFlattenedRoot( api(), session_id, first.json[ "id" ].as< DownloadSessionUrlID >() ) };
 	REQUIRE( flattened[ "urls" ].isArray() );
 	REQUIRE( flattened[ "record_ids" ].isArray() );
 	CHECK( flattened[ "record_ids" ].size() == 1 );
@@ -320,14 +325,22 @@ SCENARIO_METHOD(
 	url_body[ "url" ] = fixture.url( "/failure" );
 	const auto failing { api().post( std::format( "/download_sessions/{}/urls", session_id ), url_body ) };
 	REQUIRE( failing.status == 201 );
-	const auto failed_job { waitForDownloadJob(
-		api(), session_id, failing.json[ "id" ].as< DownloadSessionUrlID >() ) };
+	const auto failed_job {
+		waitForDownloadJob( api(), session_id, failing.json[ "id" ].as< DownloadSessionUrlID >() )
+	};
 	CHECK( failed_job[ "state" ].asString() == "failed" );
 	CHECK( failed_job[ "error" ].asString().contains( "deterministic parser failure" ) );
 
 	url_body[ "url" ] = fixture.url( "/unmatched" );
 	const auto unmatched { api().post( std::format( "/download_sessions/{}/urls", session_id ), url_body ) };
 	CHECK( unmatched.status == 400 );
+	const auto rejection {
+		std::format( "Unable to schedule URL: No URL class accepts URL: {}", fixture.url( "/unmatched" ) )
+	};
+	CHECK( unmatched.body == rejection );
+	const auto unmatched_session { api().post( "/download_sessions/urls", url_body ) };
+	CHECK( unmatched_session.status == 400 );
+	CHECK( unmatched_session.body == rejection );
 	const auto jobs { api().get( std::format( "/download_sessions/{}/urls", session_id ) ) };
 	REQUIRE( jobs.status == 200 );
 	CHECK( jobs.json.size() == 2 );

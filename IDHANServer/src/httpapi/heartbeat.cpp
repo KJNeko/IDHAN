@@ -32,8 +32,6 @@ HeartbeatService::HeartbeatService() :
 HeartbeatService::~HeartbeatService()
 {
 	shutdown();
-	m_timer.request_stop();
-	m_timer_wakeup.notify_all();
 }
 
 http::RouteDefinition HeartbeatService::route()
@@ -52,6 +50,9 @@ http::RouteDefinition HeartbeatService::route()
 
 void HeartbeatService::shutdown()
 {
+	m_timer.request_stop();
+	m_timer_wakeup.notify_all();
+	if ( m_timer.joinable() ) m_timer.join();
 	m_events.shutdown();
 }
 
