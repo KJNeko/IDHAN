@@ -1,4 +1,3 @@
-#include <catch2/catch_test_macros.hpp>
 #include <folly/coro/BlockingWait.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <spdlog/sinks/ostream_sink.h>
@@ -14,6 +13,9 @@
 #include "idhan/db/DBConnection.hpp"
 #include "idhan/db/DBOperation.hpp"
 #include "idhan/db/DBReactor.hpp"
+
+// Folly includes glog's CHECK; install Catch's assertion macros after those headers.
+#include <catch2/catch_test_macros.hpp>
 
 using namespace idhan::db;
 
@@ -117,15 +119,20 @@ TEST_CASE( "Slow database queries log first and final result times", "[postgres]
 	folly::coro::blockingWait( connection->connect() );
 
 	auto operation = std::make_shared< DBOperation >(
-		"SELECT pg_sleep(1.15)", DBBindings {}, QueryOptions {}, folly::getKeepAliveToken( &application ) );
+		" \r\nSELECT\n\tpg_sleep(1.15)\n", DBBindings {}, QueryOptions {}, folly::getKeepAliveToken( &application ) );
 	operation->setStarter( [ connection ]( std::shared_ptr< DBOperation > queued )
 	                       { connection->enqueue( std::move( queued ) ); } );
 	folly::coro::blockingWait( DBTask { std::move( operation ) }.result() );
 	auto fast_operation = std::make_shared< DBOperation >(
-		"SELECT 1", DBBindings {}, QueryOptions {}, folly::getKeepAliveToken( &application ) );
+		"-- keep this comment on its own line\r\n\tSELECT\n    1\n",
+		DBBindings {},
+		QueryOptions {},
+		folly::getKeepAliveToken( &application ) );
 	fast_operation->setStarter( [ connection ]( std::shared_ptr< DBOperation > queued )
 	                            { connection->enqueue( std::move( queued ) ); } );
-	folly::coro::blockingWait( DBTask { std::move( fast_operation ) }.result() );
+	const auto rows { folly::coro::blockingWait( DBTask { std::move( fast_operation ) }.rows< std::int32_t >() ) };
+	REQUIRE( rows.size() == 1 );
+	CHECK( std::get< 0 >( rows.row( 0 ) ) == 1 );
 	folly::coro::blockingWait( connection->drain() );
 
 	const auto logged { output.str() };
@@ -135,6 +142,17 @@ TEST_CASE( "Slow database queries log first and final result times", "[postgres]
 	CHECK( logged.find( "[debug] PostgreSQL query first result:" ) != std::string::npos );
 	CHECK( logged.find( "[debug] PostgreSQL query complete: first result" ) != std::string::npos );
 	CHECK( logged.find( "SELECT 1" ) != std::string::npos );
+	CHECK( logged.find( "-- keep this comment on its own line SELECT 1" ) != std::string::npos );
+	CHECK( logged.find_first_of( "\r\t" ) == std::string::npos );
+	std::istringstream lines { logged };
+	std::string line;
+	std::size_t line_count {};
+	while ( std::getline( lines, line ) )
+	{
+		CHECK( line.find( "PostgreSQL query " ) != std::string::npos );
+		++line_count;
+	}
+	CHECK( line_count == 4 );
 
 	connection.reset();
 	reactor.stop();

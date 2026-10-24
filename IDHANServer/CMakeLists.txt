@@ -2,6 +2,10 @@ project(IDHANServer LANGUAGES CXX C)
 
 AddFGLExecutable(IDHANServer ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+file(GLOB_RECURSE SERVER_SQL_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.sql")
+set_source_files_properties(${SERVER_SQL_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
+target_sources(IDHANServer PRIVATE ${SERVER_SQL_FILES})
+
 target_sources(IDHANServer PRIVATE ${MIGRATION_SOURCE})
 
 find_package(spdlog REQUIRED)

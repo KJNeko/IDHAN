@@ -65,6 +65,7 @@ target_link_libraries(IDHANHashMaintenanceTests PRIVATE Catch2::Catch2WithMain l
 catch_discover_tests(IDHANHashMaintenanceTests)
 
 AddFGLExecutable(IDHANAPITests ${CMAKE_CURRENT_SOURCE_DIR}/api)
+target_sources(IDHANAPITests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/PathHelpers.cpp)
 target_link_libraries(IDHANAPITests PUBLIC Catch2::Catch2WithMain libpqxx::pqxx CURL::libcurl IDHAN)
 target_include_directories(IDHANAPITests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src ${CMAKE_SOURCE_DIR}/IDHANDb/include ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/api/harness)
 target_compile_definitions(IDHANAPITests PRIVATE IDHAN_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

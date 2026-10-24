@@ -3,6 +3,8 @@
 #include <format>
 #include <utility>
 
+#include "idhan/db/formatSqlForLog.hpp"
+
 namespace idhan::db
 {
 DBQueryError::DBQueryError( DBDiagnostics diagnostics ) :
@@ -37,7 +39,7 @@ static std::string formatDecodeError(
 	if ( !column_name.empty() ) output += std::format( " ({})", column_name );
 	output += std::format( " (zero-based), expected OID {}, actual OID {}", expected, actual );
 	if ( row ) output += std::format( "; row {} (zero-based)", *row );
-	if ( !sql.empty() ) output += std::format( "; SQL: {}", sql );
+	if ( !sql.empty() ) output += std::format( "; SQL: {}", formatSqlForLog( sql ) );
 	return output;
 }
 

@@ -65,8 +65,8 @@ post:
     - name: stop_on_fail
       in: query
       required: false
-      description: Stop after the first batch containing a failure, or immediately on a missing-file preflight
-        failure.
+      description: Stop scheduling new files after the first observed failure. Files already scheduled
+        finish and are included in the result. Missing-file preflight stops at its first failure.
       schema:
         type: boolean
         default: false
@@ -99,7 +99,7 @@ post:
     - name: concurrency
       in: query
       required: false
-      description: Files processed per batch. Positive and zero values are clamped to 1 through 64; negative
+      description: Maximum files processed concurrently. Positive and zero values are clamped to 1 through 64; negative
         values are rejected. Defaults to cluster.scan_concurrency (4 if unset).
       schema:
         type: integer
