@@ -1,7 +1,8 @@
 # Background service jobs
 
-Clients can discover automatically started services through `GET /jobs/status`
-and poll individual jobs through `GET /jobs/{job_id}/status`. Each service owns
+Clients subscribe to `GET /jobs/events` for an initial jobs snapshot and pushed
+status/progress updates. `GET /jobs/status` and `GET /jobs/{job_id}/status` remain
+available for explicit reads. Each service owns
 a job with `progress.kind = "background_service"`; recurring maintenance has `continuous = true`, while startup
 perceptual hash backfill has `continuous = false`. Its progress
 follows `BackgroundJobProgress` in the API specification. The Job Monitor renders
@@ -62,3 +63,11 @@ maintenance is still alive; all finish before their dependencies are destroyed.
 The job runtime's retention timer wakes immediately during shutdown. Internal I/O,
 module IPC, logging, and executor threads remain implementation details of their
 owning services rather than separate user jobs.
+
+Job SSE updates include complete status objects, progress snapshots, and available
+responses. Changes are coalesced over 100 milliseconds on a dedicated publisher;
+file workers only signal changed IDs. Idle jobs do not publish periodic updates.
+The publisher reads progress outside its notification lock. Cleanup emits a job
+removal, and reconnecting rebuilds the client cache from the opening snapshot.
+The WebUI shares one jobs connection between the Job Monitor, metadata regeneration,
+and embedding backfills; elapsed-time clocks advance locally without network requests.

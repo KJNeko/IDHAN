@@ -8,7 +8,7 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {PanelProps} from '../../host/types';
-import {api, watchRateLimits} from '../../api/client';
+import {watchDownloaderDebug, watchRateLimits} from '../../api/client';
 import type {
     DebugEventKind,
     DebugLane,
@@ -160,7 +160,7 @@ export function emptyEventBuffer(): SessionEventBuffer {
     return {events: [], cursor: 0, dropped: 0};
 }
 
-/** Deduplicates overlapping polls by sequence before enforcing the buffer limit. */
+/** Deduplicates overlapping events by sequence before enforcing the buffer limit. */
 export function appendEvents(
     buffer: SessionEventBuffer,
     incoming: readonly DebugSessionEvent[],
@@ -200,7 +200,7 @@ export function cursorsFrom(buffers: ReadonlyMap<number, SessionEventBuffer>): M
     return cursors;
 }
 
-/** Advances server-reported ages locally between polls. */
+/** Advances server-reported ages locally between stream updates. */
 export function projectedAge(ageMs: number, receivedAt: number, now = performance.now()): number {
     return ageMs + Math.max(0, now - receivedAt);
 }
@@ -474,7 +474,7 @@ function Lanes({lanes, receivedAt, now}: { lanes: readonly DebugLane[]; received
     );
 }
 
-function DownloadSessions({host}: PanelProps) {
+function DownloadSessions(_props: PanelProps) {
     const [lanes, setLanes] = useState<DebugLane[]>([]);
     const [sessions, setSessions] = useState<DebugSession[]>([]);
     const [receivedAt, setReceivedAt] = useState(() => performance.now());
@@ -487,36 +487,16 @@ function DownloadSessions({host}: PanelProps) {
         return () => window.clearInterval(timer);
     }, []);
 
-    useEffect(() => {
-        const controller = new AbortController();
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        let stopped = false;
-
-        const poll = async () => {
-            try {
-                const debug = await api.downloader.debug(cursorsFrom(buffers.current), controller.signal);
-                if (stopped) return;
-                buffers.current = mergeEventBuffers(buffers.current, debug.sessions);
-                setSessions(debug.sessions);
-                setLanes(debug.lanes);
-                setReceivedAt(performance.now());
-                setError(null);
-            } catch (caught) {
-                if (stopped || isAbort(caught)) return;
-                setError(caught instanceof Error ? caught.message : String(caught));
-            } finally {
-                if (!stopped) timer = setTimeout(() => void poll(), 1000);
-            }
-        };
-
-        void poll();
-
-        return () => {
-            stopped = true;
-            controller.abort();
-            if (timer !== undefined) clearTimeout(timer);
-        };
-    }, [host]);
+    useEffect(() => watchDownloaderDebug({
+        onState: (debug, reset) => {
+            buffers.current = mergeEventBuffers(reset ? new Map() : buffers.current, debug.sessions);
+            setSessions(debug.sessions);
+            setLanes(debug.lanes);
+            setReceivedAt(performance.now());
+            setError(null);
+        },
+        onError: setError,
+    }), []);
 
     if (error !== null) return <p className="debug-tool muted">Could not read downloader state: {error}</p>;
 

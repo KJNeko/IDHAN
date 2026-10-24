@@ -1,5 +1,6 @@
 #include "downloaderDebug.hpp"
 
+#include <folly/coro/Sleep.h>
 #include <folly/io/IOBuf.h>
 
 #include <algorithm>
@@ -7,6 +8,7 @@
 #include <chrono>
 #include <cstdint>
 #include <format>
+#include <memory>
 #include <simdjson.h>
 #include <string>
 #include <string_view>
@@ -15,8 +17,10 @@
 
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
+#include "downloader/DebugEvents.hpp"
 #include "downloader/DownloadSessionManager.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/http/SSEBodySource.hpp"
 
 namespace idhan::httpapi
 {
@@ -258,27 +262,16 @@ static void appendLane( simdjson::builder::string_builder& builder, const downlo
 	return true;
 }
 
-static http::HTTPTask< http::Response > debug( db::DBContext& db, http::RequestContext context )
+struct DownloaderDebugSnapshot
 {
-	const auto event_cursors_e { context.parameters().optional< std::string >( "event_cursors" ) };
-	if ( !event_cursors_e ) co_return http::Response::error( 400, event_cursors_e.error().message );
+	http::ValidatedJson data;
+	std::unordered_map< DownloadSessionID, std::uint64_t > cursors;
+};
 
-	const auto since_e { context.parameters().optional< std::string >( "since" ) };
-	if ( !since_e ) co_return http::Response::error( 400, since_e.error().message );
-
-	if ( event_cursors_e->has_value() && since_e->has_value() )
-		co_return http::Response::error( 400, "Supply only one of 'event_cursors' and the deprecated 'since' alias" );
-
-	const auto cursor_text { event_cursors_e->has_value() ? *event_cursors_e : *since_e };
-	const auto parameter_name { event_cursors_e->has_value() ? "event_cursors" : "since" };
-	std::unordered_map< DownloadSessionID, std::uint64_t > cursors {};
-	if ( !parseCursors( cursor_text.value_or( "" ), cursors ) )
-		co_return http::Response::error(
-			400,
-			std::format(
-				"The '{}' parameter must be a comma separated list of <session_id>:<event_sequence>",
-				parameter_name ) );
-
+static runtime::Task< DownloaderDebugSnapshot > debugSnapshot(
+	db::DBContext& db,
+	const std::unordered_map< DownloadSessionID, std::uint64_t >& cursors )
+{
 	auto infos { downloader::downloadSessionManager().debugSnapshots( cursors ) };
 
 	std::vector< DownloadSessionID > ids {};
@@ -419,7 +412,64 @@ static http::HTTPTask< http::Response > debug( db::DBContext& db, http::RequestC
 	auto json { builder.view() };
 	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
 
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	std::unordered_map< DownloadSessionID, std::uint64_t > next_cursors;
+	for ( const auto& info : infos ) next_cursors.emplace( info.id, info.snapshot.event_sequence );
+	co_return DownloaderDebugSnapshot {
+		http::ValidatedJson::parse( std::string { *json } ).value(), std::move( next_cursors )
+	};
+}
+
+static http::HTTPTask< http::Response > debug( db::DBContext& db, http::RequestContext context )
+{
+	const auto event_cursors_e { context.parameters().optional< std::string >( "event_cursors" ) };
+	if ( !event_cursors_e ) co_return http::Response::error( 400, event_cursors_e.error().message );
+
+	const auto since_e { context.parameters().optional< std::string >( "since" ) };
+	if ( !since_e ) co_return http::Response::error( 400, since_e.error().message );
+
+	if ( event_cursors_e->has_value() && since_e->has_value() )
+		co_return http::Response::error( 400, "Supply only one of 'event_cursors' and the deprecated 'since' alias" );
+
+	const auto cursor_text { event_cursors_e->has_value() ? *event_cursors_e : *since_e };
+	const auto parameter_name { event_cursors_e->has_value() ? "event_cursors" : "since" };
+	std::unordered_map< DownloadSessionID, std::uint64_t > cursors {};
+	if ( !parseCursors( cursor_text.value_or( "" ), cursors ) )
+		co_return http::Response::error(
+			400,
+			std::format(
+				"The '{}' parameter must be a comma separated list of <session_id>:<event_sequence>",
+				parameter_name ) );
+
+	const auto snapshot { co_await debugSnapshot( db, cursors ) };
+	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( snapshot.data.text() ) );
+}
+
+static runtime::Task< http::ValidatedJson > renderDebug(
+	db::DBContext& db,
+	std::shared_ptr< std::unordered_map< DownloadSessionID, std::uint64_t > > cursors )
+{
+	// Batch concurrent session and lane transitions before reading their latest state.
+	co_await folly::coro::sleep( std::chrono::milliseconds { 100 } );
+	auto snapshot { co_await debugSnapshot( db, *cursors ) };
+	*cursors = std::move( snapshot.cursors );
+	co_return std::move( snapshot.data );
+}
+
+http::RouteDefinition downloaderDebugEventsRoute( db::DBContext& db )
+{
+	return http::RouteDefinition {
+		http::RouteMetadata { proxygen::HTTPMethod::GET, "/downloader/debug/events", {}, { apiAuthValidation( db ) } },
+		[ &db ]( [[maybe_unused]] http::RequestContext context ) -> http::HTTPTask< http::Response >
+		{
+			auto cursors { std::make_shared< std::unordered_map< DownloadSessionID, std::uint64_t > >() };
+			http::Response response {};
+			response.body = proxygen::coro::HTTPSourceHolder { new http::SSEBodySource {
+				std::move( response.message ),
+				downloader::debugEvents().subscribe( {}, { http::ValidatedJson::parse( "{}" ).value() }, false ),
+				[ &db, cursors ] { return renderDebug( db, cursors ); } } };
+			co_return response;
+		}
+	};
 }
 
 http::RouteDefinition downloaderDebugRoute( db::DBContext& db )

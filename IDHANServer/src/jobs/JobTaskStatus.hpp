@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -20,6 +21,7 @@ struct JobTaskStatus
 	mutable std::mutex m_snapshot_mutex {};
 	std::optional< Json::Value > m_response {};
 	std::shared_ptr< const JobProgress > m_progress {};
+	std::function< void() > m_on_change {};
 
   public:
 
@@ -40,6 +42,9 @@ struct JobTaskStatus
 	std::source_location m_location { std::source_location::current() };
 
 	JobTaskStatus() noexcept = default;
+	void setChangeCallback( std::function< void() > callback );
+	void notifyChanged() const;
+	[[nodiscard]] Json::Value snapshot() const;
 	void setResponse( Json::Value response );
 	[[nodiscard]] std::optional< Json::Value > responseSnapshot() const;
 	void setProgress( std::shared_ptr< const JobProgress > progress );

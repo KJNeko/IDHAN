@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "DownloadSessionEventHub.hpp"
+#include "DebugEvents.hpp"
 #include "DownloadSessionManager.hpp"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
@@ -41,6 +42,21 @@ std::unordered_map< WorkID, DownloadSessionUrlID > SessionRowObserver::rows() co
 {
 	const std::scoped_lock lock { m_mutex };
 	return m_rows;
+}
+
+void SessionRowObserver::onDiagnosticsChanged()
+{
+	notifyDebugChanged();
+}
+
+void SessionRowObserver::onRequest( [[maybe_unused]] const RequestInfo& info )
+{
+	notifyDebugChanged();
+}
+
+void SessionRowObserver::onFinished()
+{
+	notifyDebugChanged();
 }
 
 void SessionRowObserver::onStarted( const WorkInfo& info )

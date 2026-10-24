@@ -1,4 +1,5 @@
 #include "RateLimitEventHub.hpp"
+#include "DebugEvents.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -147,6 +148,7 @@ void RateLimitEventHub::onLaneChanged( const LaneSnapshot& snapshot )
 
 	auto event { serialize( snapshot ) };
 	if ( event ) m_events.publish( snapshot.key, std::move( *event ) );
+	notifyDebugChanged();
 }
 
 void RateLimitEventHub::shutdown()

@@ -10,24 +10,28 @@ void ScanProgress::setPhase( std::string phase )
 	std::lock_guard lock { m_mutex };
 	m_phase = std::move( phase );
 	if ( m_phase == "failed" ) m_tasks.clear();
+	changed();
 }
 
 void ScanProgress::checkedRecord()
 {
 	std::lock_guard lock { m_mutex };
 	++m_checked_records;
+	changed();
 }
 
 void ScanProgress::countedFile()
 {
 	std::lock_guard lock { m_mutex };
 	++m_counted_files;
+	changed();
 }
 
 void ScanProgress::finishCounting( const bool complete )
 {
 	std::lock_guard lock { m_mutex };
 	if ( complete ) m_total_files = m_counted_files;
+	changed();
 }
 
 std::uint64_t ScanProgress::beginFile( const std::filesystem::path& path )
@@ -37,6 +41,7 @@ std::uint64_t ScanProgress::beginFile( const std::filesystem::path& path )
 	m_tasks.emplace( task_id, FileTask { path.string() } );
 	// Directory contents can change after counting. Never report fewer files than have been admitted.
 	if ( m_total_files ) m_total_files = std::max( *m_total_files, m_scheduled_files );
+	changed();
 	return task_id;
 }
 
@@ -44,6 +49,7 @@ void ScanProgress::setStage( const std::uint64_t task_id, std::string stage )
 {
 	std::lock_guard lock { m_mutex };
 	m_tasks.at( task_id ).stage = std::move( stage );
+	changed();
 }
 
 void ScanProgress::finishFile( const std::uint64_t task_id, const std::uint64_t bytes )
@@ -52,6 +58,7 @@ void ScanProgress::finishFile( const std::uint64_t task_id, const std::uint64_t 
 	m_tasks.erase( task_id );
 	++m_processed_files;
 	m_processed_bytes += bytes;
+	changed();
 }
 
 void ScanProgress::recordFailure( const std::filesystem::path& path, const std::string& message )
@@ -59,6 +66,7 @@ void ScanProgress::recordFailure( const std::filesystem::path& path, const std::
 	std::lock_guard lock { m_mutex };
 	++m_failed_count;
 	m_last_failure = ScanFailure { path, message };
+	changed();
 }
 
 void ScanProgress::finishScan( const bool stopped )
@@ -67,6 +75,7 @@ void ScanProgress::finishScan( const bool stopped )
 	m_phase = stopped ? "stopped" : "completed";
 	// After traversal finishes the processed count is authoritative, including files added or removed mid-scan.
 	if ( !stopped ) m_total_files = m_processed_files;
+	changed();
 }
 
 Json::Value ScanProgress::snapshot() const

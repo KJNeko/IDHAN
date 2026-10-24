@@ -257,6 +257,7 @@ void SessionContext::Impl::publishDiagnostics()
 	std::ranges::sort(
 		state.work, []( const WorkSnapshot& left, const WorkSnapshot& right ) { return left.id < right.id; } );
 	m_diagnostics.publish( std::move( state ) );
+	if ( m_options.observer != nullptr ) (void)hostCallback( [ this ] { m_options.observer->onDiagnosticsChanged(); } );
 }
 
 SessionSnapshot SessionContext::Impl::snapshot( const std::uint64_t since ) const

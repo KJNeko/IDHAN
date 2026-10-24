@@ -16,6 +16,7 @@
 #include "IDHANTypes.hpp"
 #include "JobTask.hpp"
 #include "JobTaskStatus.hpp"
+#include "JobEventHub.hpp"
 #include "fgl/defines.hpp"
 
 class JobSignaler;
@@ -28,6 +29,7 @@ class Value;
 
 class JobRuntime
 {
+	std::shared_ptr< idhan::jobs::JobEventHub > m_events { std::make_shared< idhan::jobs::JobEventHub >() };
 	std::unique_ptr< folly::CPUThreadPoolExecutor > m_pool {};
 	std::mutex m_queue_mtx {};
 	std::condition_variable m_cv;
@@ -51,6 +53,10 @@ class JobRuntime
   public:
 
 	void enqueue( const std::shared_ptr< JobContext >& ctx );
+
+	[[nodiscard]] idhan::http::SSESubscription subscribe() { return m_events->subscribe(); }
+
+	void shutdownEvents() { m_events->shutdown(); }
 
 	[[nodiscard]] folly::Executor::KeepAlive<> executor() const;
 

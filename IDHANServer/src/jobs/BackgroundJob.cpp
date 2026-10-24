@@ -15,6 +15,8 @@ class BackgroundJob::Progress final : public JobProgress
 {
   public:
 
+	using JobProgress::changed;
+
 	explicit Progress( std::string service_name ) : service( std::move( service_name ) ) {}
 
 	mutable std::mutex mutex {};
@@ -76,6 +78,7 @@ void BackgroundJob::activity( std::string phase, std::string message )
 	m_progress->phase = std::move( phase );
 	m_progress->message = std::move( message );
 	m_progress->updated_at = std::chrono::system_clock::now();
+	m_progress->changed();
 }
 
 void BackgroundJob::processed( const std::uint64_t count )
@@ -85,6 +88,7 @@ void BackgroundJob::processed( const std::uint64_t count )
 
 	m_progress->processed_units += count;
 	m_progress->updated_at = std::chrono::system_clock::now();
+	m_progress->changed();
 }
 
 void BackgroundJob::recordFailure( std::string message )
@@ -95,6 +99,7 @@ void BackgroundJob::recordFailure( std::string message )
 	++m_progress->failed_count;
 	m_progress->last_error = std::move( message );
 	m_progress->updated_at = std::chrono::system_clock::now();
+	m_progress->changed();
 }
 
 void BackgroundJob::finish( std::optional< std::string > error )
@@ -108,6 +113,7 @@ void BackgroundJob::finish( std::optional< std::string > error )
 		m_progress->phase = m_progress->terminal_error ? "failed" : "stopped";
 		m_progress->message = m_progress->terminal_error.value_or( "Service stopped" );
 		m_progress->updated_at = std::chrono::system_clock::now();
+		m_progress->changed();
 	}
 	// Posting can resume and finish the job inline. Never hold the snapshot mutex here.
 	m_progress->completion.post();

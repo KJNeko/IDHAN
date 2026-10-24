@@ -27,6 +27,7 @@ void JobFinalAwaiter::await_suspend( const std::coroutine_handle< JobTaskPromise
 
 	// Release: pairs with the cleanup thread's load of m_done, so it sees m_completion_time written.
 	status->m_done.store( true, std::memory_order_release );
+	status->notifyChanged();
 }
 
 JobFinalAwaiter JobTaskPromise::final_suspend() noexcept

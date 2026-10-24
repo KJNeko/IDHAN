@@ -80,18 +80,17 @@ TEST_CASE_METHOD(
 		CHECK_FALSE( after_cleanup.at( service )[ "completed" ].asBool() );
 	}
 
-	const auto updated_at { jobs.at( "hamming_distance" )[ "progress" ][ "updated_at" ].asInt64() };
 	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 5 } };
-	bool advanced {};
+	Json::Value idle;
 	while ( std::chrono::steady_clock::now() < deadline )
 	{
-		const auto current { backgroundJobs( api() ).at( "hamming_distance" ) };
-		advanced = current[ "progress" ][ "updated_at" ].asInt64() > updated_at;
-		if ( advanced ) break;
+		idle = backgroundJobs( api() ).at( "hamming_distance" )[ "progress" ];
+		if ( idle[ "phase" ].asString() == "waiting" ) break;
 
 		std::this_thread::sleep_for( std::chrono::milliseconds { 20 } );
 	}
-	CHECK( advanced );
+	CHECK( idle[ "phase" ].asString() == "waiting" );
+	CHECK( idle[ "message" ].asString().contains( "300 seconds" ) );
 }
 
 class BackfillCluster

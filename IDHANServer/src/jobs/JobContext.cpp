@@ -70,7 +70,7 @@ void JobRuntime::cleanup()
 	{
 		std::erase_if(
 			m_jobs,
-			[]( const auto& item )
+			[ this ]( const auto& item )
 			{
 				const auto& job = item.second;
 				if ( !job->done() ) return false;
@@ -78,10 +78,12 @@ void JobRuntime::cleanup()
 				const auto status = job->status();
 				if ( !status ) return true;
 
-				if ( status->m_cleanup_requested ) return true;
-
 				const auto now = std::chrono::steady_clock::now();
-				return ( now - status->m_completion_time ) >= job_retention_period;
+				const bool remove {
+					status->m_cleanup_requested || now - status->m_completion_time >= job_retention_period
+				};
+				if ( remove ) m_events->remove( item.first );
+				return remove;
 			} );
 		m_cleanup_cv.wait_for(
 			lock, job_cleanup_interval, [ this ] { return m_hard_stop.load( std::memory_order_acquire ); } );
@@ -90,6 +92,7 @@ void JobRuntime::cleanup()
 
 void JobRuntime::enqueue( const std::shared_ptr< JobContext >& ctx )
 {
+	m_events->add( ctx->status() );
 	{
 		std::lock_guard< std::mutex > lock { m_queue_mtx };
 		m_queue.push( ctx );
@@ -191,6 +194,7 @@ void JobContext::run()
 	if ( m_coro.m_status && m_coro.m_status->m_start_time.load() == std::chrono::steady_clock::time_point {} )
 	{
 		m_coro.m_status->m_start_time = std::chrono::steady_clock::now();
+		m_coro.m_status->notifyChanged();
 	}
 
 	log::debug( "Resuming job {}", m_id );

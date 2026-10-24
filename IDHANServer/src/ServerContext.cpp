@@ -1,4 +1,5 @@
 #include "ServerContext.hpp"
+#include "jobs/JobContext.hpp"
 #include "maintenance/HashMaintenance.hpp"
 #include "maintenance/ModuleMaintenance.hpp"
 #include "config/consumeFlag.hpp"
@@ -25,6 +26,7 @@
 #include "idhan/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "downloader/DownloadSessionEventHub.hpp"
+#include "downloader/DebugEvents.hpp"
 #include "downloader/DownloadSessionManager.hpp"
 #include "downloader/RateLimitEventHub.hpp"
 #include "embeddings/embeddings.hpp"
@@ -312,6 +314,7 @@ void ServerContext::startReplacementStack()
 	routes.add( httpapi::declareEndpointParameters( httpapi::logRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::pluginsRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderDebugRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderDebugEventsRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderSecretsListRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderSecretsSetRoute( *m_db_context ) ) );
 	for ( auto& route : httpapi::layoutRoutes( *m_db_context ) )
@@ -414,6 +417,8 @@ void ServerContext::run()
 ServerContext::~ServerContext()
 {
 	if ( m_heartbeat != nullptr ) m_heartbeat->shutdown();
+	getJobRuntime().shutdownEvents();
+	downloader::debugEvents().shutdown();
 	if ( m_http_server != nullptr ) m_http_server->stop();
 	m_hash_maintenance.reset();
 	m_module_maintenance.reset();
