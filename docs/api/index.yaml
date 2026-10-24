@@ -158,6 +158,8 @@ paths:
     $ref: ./paths/jobs/rescan_metadata.yaml
   /jobs/{job_id}/status:
     $ref: ./paths/jobs/status.yaml
+  /jobs/events:
+    $ref: ./paths/jobs/events.yaml
   /jobs/status:
     $ref: ./paths/jobs/status_all.yaml
   /integrity:
@@ -226,6 +228,8 @@ paths:
     $ref: ./paths/rate_limits/reset.yaml
   /rate_limits/events:
     $ref: ./paths/rate_limits/events.yaml
+  /downloader/debug/events:
+    $ref: ./paths/downloader/debug_events.yaml
   /downloader/debug:
     $ref: ./paths/downloader/debug.yaml
   /plugins:

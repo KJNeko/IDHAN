@@ -82,7 +82,7 @@ class SSEEventHub
 		std::vector< ValidatedJson > initial_snapshots = {},
 		bool include_stored_snapshots = true );
 	void publish( std::string entity, ValidatedJson snapshot );
-	void remove( std::string entity );
+	void remove( std::string entity, std::optional< ValidatedJson > removal = {} );
 	void heartbeat();
 	//! Keeps every hub's streams alive, not just the one the caller happens to hold. An SSE stream
 	//! that sends nothing is closed by the session's idle timeout, and the client then has to

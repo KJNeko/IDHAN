@@ -1,4 +1,5 @@
 #include "DownloadSessionEventHub.hpp"
+#include "DebugEvents.hpp"
 
 #include "logging/log.hpp"
 
@@ -35,6 +36,7 @@ http::SSESubscription DownloadSessionEventHub::subscribe(
 
 void DownloadSessionEventHub::notify( const DownloadSessionID session_id )
 {
+	notifyDebugChanged();
 	auto json { http::ValidatedJson::parse( std::format( "{{\"id\":{}}}", session_id ) ) };
 	if ( !json ) return;
 	m_events.publish( std::to_string( session_id ), std::move( *json ) );
@@ -42,6 +44,7 @@ void DownloadSessionEventHub::notify( const DownloadSessionID session_id )
 
 void DownloadSessionEventHub::notifyRemoved( const DownloadSessionID session_id )
 {
+	notifyDebugChanged();
 	auto json { http::ValidatedJson::parse( std::format( "{{\"id\":{},\"removed\":true}}", session_id ) ) };
 	if ( !json ) return;
 	m_events.remove( std::to_string( session_id ) );

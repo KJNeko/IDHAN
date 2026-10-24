@@ -25,7 +25,11 @@ std::string encodeSSEFrame( const std::string_view event, const std::int64_t tim
 	return encodeSSEFrame( name, event.timestamp, event.data ? event.data->text() : "" );
 }
 
-SSEBodySource::SSEBodySource( proxygen::HTTPMessage message, SSESubscription subscription ) :
+SSEBodySource::SSEBodySource(
+	proxygen::HTTPMessage message,
+	SSESubscription subscription,
+	std::function< runtime::Task< ValidatedJson >() > render ) :
+  m_render( std::move( render ) ),
   m_message( std::move( message ) ),
   m_subscription( std::move( subscription ) )
 {
@@ -67,7 +71,7 @@ folly::coro::Task< proxygen::coro::HTTPBodyEvent > SSEBodySource::readBodyEvent(
 		payload = "retry: 3000\n\n";
 	}
 
-	const auto event { co_await m_subscription.next() };
+	auto event { co_await m_subscription.next() };
 	if ( !event )
 	{
 		m_finished = true;
@@ -76,6 +80,8 @@ folly::coro::Task< proxygen::coro::HTTPBodyEvent > SSEBodySource::readBodyEvent(
 		co_return eom;
 	}
 
+	if ( m_render && ( event->kind == SSEEvent::Kind::snapshot || event->kind == SSEEvent::Kind::update ) )
+		event->data = co_await m_render();
 	payload += encodeEvent( *event );
 
 	const bool eom { event->kind == SSEEvent::Kind::shutdown };

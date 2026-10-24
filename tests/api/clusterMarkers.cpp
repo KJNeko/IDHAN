@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "MimeIDs.hpp"
+#include "JobEventStream.hpp"
 #include "ServerFixture.hpp"
 #include "filesystem/PathHelpers.hpp"
 #include "idhan/SHA256.hpp"
@@ -334,6 +335,8 @@ TEST_CASE_METHOD(
 	// Permit reads while blocking image metadata writes, leaving the parser free to finish.
 	pqxx::work blocked { db() };
 	blocked.exec( "LOCK TABLE image_metadata IN SHARE MODE" );
+	JobEventStream events { serverPort(), api().key() };
+	REQUIRE( events.waitFor( "snapshot" )[ "jobs" ].isArray() );
 	const auto queued { api().postWithoutBody(
 		std::format( "/clusters/{}/scan", cluster_id ), { { "rescan_metadata", "true" }, { "scan_mime", "false" } } ) };
 	REQUIRE( queued.status == 200 );
@@ -354,6 +357,9 @@ TEST_CASE_METHOD(
 	}
 	REQUIRE( storing );
 	CHECK_FALSE( status[ "completed" ].asBool() );
+	const auto streamed { events.waitFor( "update", queued.json[ "job_id" ].as< JobID >(), "storing_metadata" ) };
+	REQUIRE_FALSE( streamed.isNull() );
+	CHECK_FALSE( streamed[ "completed" ].asBool() );
 	blocked.commit();
 
 	while ( std::chrono::steady_clock::now() < deadline )

@@ -18,6 +18,7 @@
 #include <thread>
 #include <unistd.h>
 
+#include "JobEventStream.hpp"
 #include "ServerFixture.hpp"
 
 namespace idhan::test
@@ -274,6 +275,57 @@ Json::Value waitForFlattenedRoot(
 		std::this_thread::sleep_for( 25ms );
 	}
 	throw std::runtime_error( "Timed out waiting for imported child URLs" );
+}
+
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Downloader debug SSE pushes runtime state and session removal without REST polling",
+	"[api][download-sessions][debug-events]" )
+{
+	DownloadSessionHttpFixture fixture;
+	JobEventStream events { serverPort(), api().key(), "/downloader/debug/events" };
+	const auto initial { events.waitFor( "snapshot" ) };
+	REQUIRE( initial[ "sessions" ].isArray() );
+	REQUIRE( initial[ "lanes" ].isArray() );
+
+	Json::Value body;
+	body[ "name" ] = "streamed diagnostics";
+	const auto created { api().post( "/download_sessions", body ) };
+	REQUIRE( created.status == 201 );
+	const auto id { created.json[ "id" ].as< DownloadSessionID >() };
+	body = Json::Value {};
+	body[ "url" ] = fixture.url( "/failure" );
+	REQUIRE( api().post( std::format( "/download_sessions/{}/urls", id ), body ).status == 201 );
+
+	bool failed {};
+	bool saw_failure_event {};
+	for ( int attempt {}; attempt < 5 && !failed; ++attempt )
+	{
+		const auto update { events.waitFor( "update" ) };
+		REQUIRE( update[ "sessions" ].isArray() );
+		for ( const auto& session : update[ "sessions" ] )
+		{
+			if ( session[ "id" ].as< DownloadSessionID >() != id ) continue;
+
+			CHECK( session[ "name" ].asString() == "streamed diagnostics" );
+			failed = session[ "counters" ][ "work_failed" ].asUInt64() > 0;
+			for ( const auto& event : session[ "events" ] )
+				if ( event[ "kind" ].asString() == "failed" ) saw_failure_event = true;
+		}
+	}
+	REQUIRE( failed );
+	CHECK( saw_failure_event );
+	REQUIRE( api().del( std::format( "/download_sessions/{}", id ) ).status == 200 );
+	bool removed {};
+	for ( int attempt {}; attempt < 5 && !removed; ++attempt )
+	{
+		const auto update { events.waitFor( "update" ) };
+		REQUIRE( update[ "sessions" ].isArray() );
+		removed = true;
+		for ( const auto& session : update[ "sessions" ] )
+			if ( session[ "id" ].as< DownloadSessionID >() == id ) removed = false;
+	}
+	CHECK( removed );
 }
 
 SCENARIO_METHOD(

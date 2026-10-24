@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -18,6 +19,7 @@ namespace idhan::http
 
 class SSEBodySource final : public proxygen::coro::HTTPSource
 {
+	std::function< runtime::Task< ValidatedJson >() > m_render;
 	std::optional< proxygen::HTTPMessage > m_message;
 	SSESubscription m_subscription;
 	bool m_initial { true };
@@ -26,7 +28,11 @@ class SSEBodySource final : public proxygen::coro::HTTPSource
 
   public:
 
-	SSEBodySource( proxygen::HTTPMessage, SSESubscription subscription );
+	// A renderer resolves coalesced invalidations on the consumer, keeping I/O off producers.
+	SSEBodySource(
+		proxygen::HTTPMessage,
+		SSESubscription subscription,
+		std::function< runtime::Task< ValidatedJson >() > render = {} );
 	~SSEBodySource() override = default;
 	[[nodiscard]] folly::coro::Task< proxygen::coro::HTTPHeaderEvent > readHeaderEvent() override;
 	[[nodiscard]] folly::coro::Task< proxygen::coro::HTTPBodyEvent > readBodyEvent( std::uint32_t max ) override;

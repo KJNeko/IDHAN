@@ -196,8 +196,8 @@ export interface JobHandle {
 
 export interface JobsApi {
   /**
-   * Watches a job to completion. A 404 after a non-terminal status was already seen means the job
-   * completed and was reaped, not that it failed.
+   * Watches a job to completion through the shared SSE connection. Cancelling releases only
+   * this subscription; the server job continues running.
    */
   watch(jobId: number, onUpdate: (status: unknown) => void): JobHandle;
 }

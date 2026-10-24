@@ -73,6 +73,9 @@ class SessionObserver
 
 	virtual ~SessionObserver() = default;
 
+	// Called after diagnostic state is published, outside the session's state mutex.
+	virtual void onDiagnosticsChanged() {}
+
 	virtual void onStarted( const WorkInfo& ) {}
 
 	virtual void onCompleted( const WorkInfo& ) {}

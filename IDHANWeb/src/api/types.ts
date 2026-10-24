@@ -559,7 +559,20 @@ export interface StorageNode {
   children?: StorageNode[];
 }
 
-/** What a job-dispatching endpoint answers with; poll `/jobs/{job_id}/status` from there. */
+export interface JobStatus {
+    job_id: number;
+    job_name?: string;
+    status: string;
+    continuous?: boolean;
+    completed: boolean;
+    start_time?: number;
+    end_time?: number;
+    error?: string;
+    progress?: unknown;
+    response?: unknown;
+}
+
+/** What a job-dispatching endpoint answers with; subscribe to `/jobs/events` for progress. */
 export interface JobDispatch {
     job_id: number;
     status: string;

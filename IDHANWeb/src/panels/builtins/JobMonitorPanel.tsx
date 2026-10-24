@@ -1,10 +1,11 @@
 /**
- * Job Monitor: a live view of the server's in-memory jobs. Polls GET /jobs/status with no body for
- * every job; cleanup defaults to false, so polling never reaps one. Jobs are process-local and reset
+ * Job Monitor: a live view of the server's in-memory jobs. Receives snapshots and updates from
+ * the shared /jobs/events stream. Jobs are process-local and reset
  * on server restart, so this is not a durable history.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {useEffect, useState} from 'react';
+import {watchJobs} from '../../api/client';
 import type { PanelProps } from '../../host/types';
 import {ClusterScanProgress, type ClusterScanProgressData} from './ClusterScanProgress';
 import {BackgroundJobProgress, type BackgroundJobProgressData} from './BackgroundJobProgress';
@@ -19,8 +20,6 @@ interface Job {
   error?: string;
     progress?: ClusterScanProgressData | BackgroundJobProgressData;
 }
-
-const POLL_MS = 1000;
 
 function statusClass(status: string | undefined): string {
   switch (status) {
@@ -44,44 +43,36 @@ function elapsed(startSeconds: number | undefined, endSeconds: number | undefine
   return `${mins}m ${secs % 60}s`;
 }
 
-function JobMonitorPanel({ host }: PanelProps) {
+function JobMonitorPanel(_props: PanelProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [auto, setAuto] = useState(true);
   const [now, setNow] = useState(() => Date.now());
-  const timer = useRef<number | null>(null);
 
-  const refresh = useCallback(async () => {
-    try {
-      const res = await host.http.fetch('/jobs/status');
-      if (!res.ok) throw new Error(`/jobs/status → ${res.status}`);
-      const data = (await res.json()) as { jobs?: Job[] };
-      setJobs(data.jobs ?? []);
-      setError(null);
-      setNow(Date.now());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, [host]);
+    useEffect(() => {
+        if (!auto) return;
+        return watchJobs({
+            onJobs: (updated) => {
+                setJobs(updated as Job[]);
+                setError(null);
+                setNow(Date.now());
+            },
+            onError: setError,
+        });
+    }, [auto]);
 
+    // Elapsed time advances locally; it does not require another server request.
   useEffect(() => {
-    void refresh();
-    if (!auto) return;
-    timer.current = window.setInterval(() => void refresh(), POLL_MS);
-    return () => {
-      if (timer.current !== null) window.clearInterval(timer.current);
-    };
-  }, [auto, refresh]);
+      const timer = window.setInterval(() => setNow(Date.now()), 1000);
+      return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div className="panel-body job-monitor">
       <div className="job-toolbar">
-        <button type="button" className="toolbar-button" onClick={() => void refresh()}>
-          Refresh
-        </button>
         <label className="job-auto">
           <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
-          Auto
+            Live
         </label>
         <span className="muted grow">
           {jobs.length} job{jobs.length === 1 ? '' : 's'}

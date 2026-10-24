@@ -118,6 +118,7 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 		{ proxygen::HTTPMethod::POST, "/jobs/metadata/rescan", { {}, { { {}, { "records" } } } } },
 		{ proxygen::HTTPMethod::GET, "/jobs/{job_id}/status", { {}, {} } },
 		{ proxygen::HTTPMethod::GET, "/jobs/status", { { "cleanup" }, {} } },
+		{ proxygen::HTTPMethod::GET, "/jobs/events", { {}, {} } },
 		{ proxygen::HTTPMethod::GET, "/integrity", { {}, {} } },
 		{ proxygen::HTTPMethod::POST, "/purge/thumbnails", { {}, {} } },
 		{ proxygen::HTTPMethod::GET, "/db/stats/sunburst", { {}, {} } },
@@ -171,6 +172,7 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 		{ proxygen::HTTPMethod::POST, "/rate_limits/reset", { { "lane" }, {} } },
 		{ proxygen::HTTPMethod::GET, "/rate_limits/events", { {}, {} } },
 		{ proxygen::HTTPMethod::GET, "/downloader/debug", { { "event_cursors", "since" }, {} } },
+		{ proxygen::HTTPMethod::GET, "/downloader/debug/events", { {}, {} } },
 		{ proxygen::HTTPMethod::GET, "/plugins", { { "rescan" }, {} } },
 		{ proxygen::HTTPMethod::GET, "/log", { { "level", "since" }, {} } },
 	};

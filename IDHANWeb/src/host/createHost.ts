@@ -4,7 +4,7 @@
  * layout store, so the host stays decoupled from the store's internals.
  */
 
-import { api, getKey, stats as statsApi, tags as tagApi } from '../api/client';
+import {watchJobs, api, getKey, stats as statsApi, tags as tagApi} from '../api/client';
 import { thumbnailUrl as buildThumbnailUrl, fileUrl as buildFileUrl } from '../api/client';
 import {forgetMetadata, getMetadata} from './metadataCache';
 import { autocomplete } from './autocompleteCache';
@@ -17,7 +17,6 @@ import { HOST_API_VERSION } from './types';
 export type SettingsBinding = SettingsApi;
 
 const KEY_HEADER = 'X-API-Key';
-const JOB_POLL_MS = 750;
 
 function authHeaders(init?: HeadersInit): Headers {
   const headers = new Headers(init);
@@ -32,41 +31,27 @@ function isTerminalStatus(status: unknown): boolean {
   return value === 'completed' || value === 'failed' || value === 'error' || value === 'cancelled';
 }
 
-/**
- * Polls a job to completion. A 404 following an already-observed non-terminal status means the job
- * completed and was reaped, not that it failed.
- */
+/** Watches the shared jobs stream until completion or cancellation. */
 function watchJob(jobId: number, onUpdate: (status: unknown) => void): JobHandle {
   let cancelled = false;
-  let sawNonTerminal = false;
-
-  const tick = async (): Promise<void> => {
-    if (cancelled) return;
-    try {
-      const res = await fetch(`/jobs/${jobId}/status`, { headers: authHeaders() });
-      if (res.status === 404) {
-        if (sawNonTerminal) {
-          onUpdate({ status: 'completed', reaped: true });
-          return;
-        }
-      } else if (res.ok) {
-        const data: unknown = await res.json();
-        onUpdate(data);
-        if (isTerminalStatus(data)) return;
-        sawNonTerminal = true;
-      }
-    } catch {
-      // transient; keep polling
-    }
-    if (!cancelled) setTimeout(() => void tick(), JOB_POLL_MS);
-  };
-
-  void tick();
-  return {
-    cancel: () => {
-      cancelled = true;
+    const close = watchJobs({
+        onJobs: (jobs) => {
+            if (cancelled) return;
+            const job = jobs.find(value => value.job_id === jobId);
+            if (!job) return;
+            onUpdate(job);
+            if (isTerminalStatus(job)) {
+                cancelled = true;
+                close();
+            }
     },
-  };
+    });
+    return {
+        cancel: () => {
+            cancelled = true;
+            close();
+        }
+    };
 }
 
 /**

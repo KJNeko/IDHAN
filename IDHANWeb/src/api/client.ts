@@ -1,3 +1,4 @@
+import type {JobStatus} from './types';
 /**
  * Typed IDHAN REST client.
  *
@@ -521,7 +522,11 @@ const sharedStreams = new Map<string, SharedStream>();
  * open two streams: the browser caps concurrent connections, and the second stream only duplicates
  * work the first is already doing.
  */
-function sharedWatchSSE(path: string, handlers: SSEHandlers): () => void {
+function sharedWatchSSE(
+    path: string,
+    handlers: SSEHandlers,
+    reduceSnapshot?: (previous: Parameters<SSEHandlers['onEvent']> | null, event: Parameters<SSEHandlers['onEvent']>) => Parameters<SSEHandlers['onEvent']> | null,
+): () => void {
     const existing = sharedStreams.get(path);
     const stream: SharedStream = existing ?? {
         handlers: new Set(),
@@ -545,7 +550,8 @@ function sharedWatchSSE(path: string, handlers: SSEHandlers): () => void {
                 for (const handler of [...stream.handlers]) handler.onError?.(message);
             },
             onEvent: (name, data, timestamp) => {
-                if (name === 'snapshot') stream.lastSnapshot = [name, data, timestamp];
+                if (reduceSnapshot) stream.lastSnapshot = reduceSnapshot(stream.lastSnapshot, [name, data, timestamp]);
+                else if (name === 'snapshot') stream.lastSnapshot = [name, data, timestamp];
                 for (const handler of [...stream.handlers]) handler.onEvent(name, data, timestamp);
             },
         });
@@ -666,6 +672,117 @@ function watchSSE(path: string, handlers: SSEHandlers): () => void {
         if (retry !== undefined) clearTimeout(retry);
         controller?.abort();
     };
+}
+
+type JobHandlers = {
+    onJobs: (jobs: JobStatus[]) => void;
+    onError?: (message: string) => void;
+};
+
+type JobStream = {
+    jobs: Map<number, JobStatus>;
+    handlers: Set<JobHandlers>;
+    ready: boolean;
+    close: () => void;
+};
+
+let jobStream: JobStream | null = null;
+
+function isJobStatus(value: unknown): value is JobStatus {
+    if (typeof value !== 'object' || value === null) return false;
+    const job = value as Partial<JobStatus>;
+    return typeof job.job_id === 'number' && typeof job.status === 'string' && typeof job.completed === 'boolean';
+}
+
+/** One shared connection and current snapshot for every job consumer, including late subscribers. */
+export function watchJobs(handlers: JobHandlers): () => void {
+    if (!jobStream) {
+        const stream: JobStream = {
+            jobs: new Map(), handlers: new Set(), ready: false, close: () => {
+            }
+        };
+        jobStream = stream;
+        stream.close = watchSSE('/jobs/events', {
+            onOpen: () => {
+                stream.ready = false;
+            },
+            onError: (message) => {
+                for (const handler of [...stream.handlers]) handler.onError?.(message);
+            },
+            onEvent: (name, data) => {
+                const payload = safeParse(data);
+                if (typeof payload !== 'object' || payload === null) return;
+                if (name === 'snapshot') {
+                    const jobs = (payload as { jobs?: unknown }).jobs;
+                    if (!Array.isArray(jobs) || !jobs.every(isJobStatus)) return;
+                    stream.jobs = new Map(jobs.map(job => [job.job_id, job]));
+                    stream.ready = true;
+                } else if (name === 'update') {
+                    const update = payload as { job_id?: unknown; removed?: unknown };
+                    if (typeof update.job_id === 'number' && update.removed === true) stream.jobs.delete(update.job_id);
+                    else if (isJobStatus(payload)) stream.jobs.set(payload.job_id, payload);
+                    else return;
+                } else return;
+                const jobs = [...stream.jobs.values()].sort((a, b) => a.job_id - b.job_id);
+                for (const handler of [...stream.handlers]) handler.onJobs(jobs);
+            },
+        });
+    }
+    const stream = jobStream;
+    stream.handlers.add(handlers);
+    queueMicrotask(() => {
+        if (stream.ready && stream.handlers.has(handlers)) handlers.onJobs([...stream.jobs.values()].sort((a, b) => a.job_id - b.job_id));
+    });
+    return () => {
+        stream.handlers.delete(handlers);
+        if (stream.handlers.size > 0) return;
+        stream.close();
+        if (jobStream === stream) jobStream = null;
+    };
+}
+
+function isDownloaderDebug(value: unknown): value is DownloaderDebug {
+    if (typeof value !== 'object' || value === null) return false;
+    const debug = value as Partial<DownloaderDebug>;
+    return Array.isArray(debug.sessions) && Array.isArray(debug.lanes);
+}
+
+function retainDebugSnapshot(
+    previous: Parameters<SSEHandlers['onEvent']> | null,
+    event: Parameters<SSEHandlers['onEvent']>,
+): Parameters<SSEHandlers['onEvent']> | null {
+    const [name, data, timestamp] = event;
+    const incoming = safeParse(data);
+    if (!isDownloaderDebug(incoming)) return previous;
+    if (name === 'snapshot' || !previous) return ['snapshot', data, timestamp];
+    if (name !== 'update') return previous;
+    const old = safeParse(previous[1]);
+    if (!isDownloaderDebug(old)) return ['snapshot', data, timestamp];
+    const sessions = incoming.sessions.map(session => {
+        const prior = old.sessions.find(value => value.id === session.id);
+        const events = new Map((prior?.events ?? []).map(value => [value.sequence, value]));
+        for (const event of session.events) events.set(event.sequence, event);
+        return {
+            ...session, events: [...events.values()].sort((a, b) => a.sequence - b.sequence).slice(-500),
+            events_dropped: (prior?.events_dropped ?? 0) + session.events_dropped
+        };
+    });
+    return ['snapshot', JSON.stringify({...incoming, sessions}), timestamp];
+}
+
+/** Complete diagnostic state and incremental event history over one shared SSE subscription. */
+export function watchDownloaderDebug(handlers: {
+    onState: (debug: DownloaderDebug, reset: boolean) => void;
+    onError?: (message: string) => void;
+}): () => void {
+    return sharedWatchSSE('/downloader/debug/events', {
+        onError: handlers.onError,
+        onEvent: (name, data) => {
+            if (name !== 'snapshot' && name !== 'update') return;
+            const debug = safeParse(data);
+            if (isDownloaderDebug(debug)) handlers.onState(debug, name === 'snapshot');
+        },
+    }, retainDebugSnapshot);
 }
 
 export function watchRateLimits(handlers: {

@@ -28,6 +28,9 @@ class SessionRowObserver final : public SessionObserver
 	void forget( WorkID work );
 
 	void onStarted( const WorkInfo& info ) override;
+	void onDiagnosticsChanged() override;
+	void onRequest( const RequestInfo& info ) override;
+	void onFinished() override;
 	void onCompleted( const WorkInfo& info ) override;
 	void onFailed( const WorkInfo& info, const std::string& error ) override;
 	void onRequestFailed( const RequestFailure& failure ) override;

@@ -181,7 +181,7 @@ void SSEEventHub::publish( std::string entity, ValidatedJson snapshot )
 	}
 }
 
-void SSEEventHub::remove( std::string entity )
+void SSEEventHub::remove( std::string entity, std::optional< ValidatedJson > removal )
 {
 	std::lock_guard lock { m_mutex };
 	m_snapshots.erase( entity );
@@ -200,12 +200,12 @@ void SSEEventHub::remove( std::string entity )
 			{ return event.kind == SSEEvent::Kind::update && event.entity == entity; } );
 		if ( pending != subscriber->pending.end() )
 		{
-			*pending = SSEEvent { SSEEvent::Kind::update, entity, std::nullopt, sequence, nowSeconds() };
+			*pending = SSEEvent { SSEEvent::Kind::update, entity, removal, sequence, nowSeconds() };
 		}
 		else
 		{
 			subscriber->pending.emplace_back(
-				SSEEvent { SSEEvent::Kind::update, entity, std::nullopt, sequence, nowSeconds() } );
+				SSEEvent { SSEEvent::Kind::update, entity, removal, sequence, nowSeconds() } );
 		}
 		subscriber->readable.post();
 	}
