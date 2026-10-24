@@ -16,6 +16,7 @@
 #include "idhan/db/DBError.hpp"
 #include "idhan/db/DBOperation.hpp"
 #include "idhan/db/DBReactor.hpp"
+#include "idhan/db/formatSqlForLog.hpp"
 
 namespace idhan::db
 {
@@ -99,13 +100,15 @@ void DBConnection::logFirstResult( const DBOperation& operation ) const
 	if ( !latency ) return;
 
 	const auto level { *latency >= config.slow_query_threshold ? spdlog::level::warn : spdlog::level::debug };
+	if ( !spdlog::should_log( level ) ) return;
+
 	spdlog::log(
 		level,
 		"PostgreSQL query first result: {} ms (connection {}, query {}): {}",
 		latency->count(),
 		id,
 		operation.id(),
-		operation.sql() );
+		formatSqlForLog( operation.sql() ) );
 }
 
 void DBConnection::logCompletion( const DBOperation& operation ) const
@@ -115,6 +118,8 @@ void DBConnection::logCompletion( const DBOperation& operation ) const
 
 	const auto first_result { operation.firstResultLatency() };
 	const auto level { *latency >= config.slow_query_threshold ? spdlog::level::warn : spdlog::level::debug };
+	if ( !spdlog::should_log( level ) ) return;
+
 	spdlog::log(
 		level,
 		"PostgreSQL query complete: first result {} ms, final result {} ms (connection {}, query {}): {}",
@@ -122,7 +127,7 @@ void DBConnection::logCompletion( const DBOperation& operation ) const
 		latency->count(),
 		id,
 		operation.id(),
-		operation.sql() );
+		formatSqlForLog( operation.sql() ) );
 }
 
 bool DBConnection::hasWork() const

@@ -10,12 +10,13 @@
 #include <unordered_set>
 
 #include "apiAuth.hpp"
+#include "db/records.hpp"
 #include "helpers.hpp"
+#include "idValidation.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/db/DBTransaction.hpp"
 #include "jsonBody.hpp"
-#include "idValidation.hpp"
 #include "logging/log.hpp"
 #include "recordValidator.hpp"
 #include "splitTag.hpp"
@@ -55,65 +56,27 @@ namespace idhan::httpapi
 	return *hash;
 }
 
-template < typename Database >
-static runtime::Task< std::optional< RecordID > > findRecordWith( const SHA256& sha256, Database& db )
-{
-	db::DBBindings bindings {};
-	bindings.bind( std::vector< std::byte > { sha256.data().begin(), sha256.data().end() } );
-
-	const auto rows { co_await db.query( "SELECT record_id FROM records WHERE sha256 = $1", std::move( bindings ) )
-		                  .template rows< RecordID >() };
-
-	if ( rows.empty() ) co_return std::nullopt;
-	co_return std::get< 0 >( rows.row( 0 ) );
-}
-
-template < typename Database >
-static runtime::Task< std::expected< RecordID, http::Response > > createRecordWith( const SHA256& sha256, Database& db )
-{
-	const auto existing { co_await findRecordWith( sha256, db ) };
-	if ( existing ) co_return *existing;
-
-	constexpr std::size_t max_tries { 16 };
-
-	for ( std::size_t tries { 0 }; tries < max_tries; ++tries )
-	{
-		db::DBBindings bindings {};
-		bindings.bind( std::vector< std::byte > { sha256.data().begin(), sha256.data().end() } );
-
-		const auto rows {
-			co_await db
-				.query(
-					"INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING RETURNING record_id",
-					std::move( bindings ) )
-				.template rows< RecordID >()
-		};
-
-		if ( !rows.empty() ) co_return std::get< 0 >( rows.row( 0 ) );
-
-		const auto found { co_await findRecordWith( sha256, db ) };
-		if ( found ) co_return *found;
-	}
-
-	co_return std::unexpected(
-		http::Response::error( 500, std::format( "Failed to insert record {}", sha256.hex() ) ) );
-}
-
 runtime::Task< std::optional< RecordID > > findRecord( const SHA256& sha256, db::DBContext& db )
 {
-	co_return co_await findRecordWith( sha256, db );
+	co_return co_await db::recordForHash( sha256, db );
 }
 
 runtime::Task< std::expected< RecordID, http::Response > > createRecord( const SHA256& sha256, db::DBContext& db )
 {
-	co_return co_await createRecordWith( sha256, db );
+	auto record { co_await db::ensureRecord( sha256, db ) };
+	if ( !record ) co_return std::unexpected( http::Response::error( 500, record.error() ) );
+
+	co_return *record;
 }
 
 runtime::Task< std::expected< RecordID, http::Response > > createRecord(
 	const SHA256& sha256,
 	db::DBTransaction& transaction )
 {
-	co_return co_await createRecordWith( sha256, transaction );
+	auto record { co_await db::ensureRecord( sha256, transaction ) };
+	if ( !record ) co_return std::unexpected( http::Response::error( 500, record.error() ) );
+
+	co_return *record;
 }
 
 static runtime::Task< std::vector< RecordID > > massCreateRecord(
@@ -592,16 +555,15 @@ static http::HTTPTask< http::Response > addUrls( db::DBContext& db, http::Reques
 			std::move( domain_bindings ) )
 		.result();
 
+	static constexpr char query[] {
+#embed "sql/insert_record_urls.sql" suffix(, )
+		'\0'
+	};
+
 	db::DBBindings url_bindings {};
 	url_bindings.bind( urls );
 	url_bindings.bind( domains );
-	co_await db
-		.query(
-			"INSERT INTO urls (url, url_domain_id) "
-			"SELECT pairs.url, ud.url_domain_id FROM UNNEST($1, $2) AS pairs(url, domain) "
-			"JOIN url_domains ud ON ud.url_domain = pairs.domain ON CONFLICT (url) DO NOTHING",
-			std::move( url_bindings ) )
-		.result();
+	co_await db.query( query, std::move( url_bindings ) ).result();
 
 	db::DBBindings mapping_bindings {};
 	mapping_bindings.bind( urls );
@@ -740,23 +702,13 @@ static http::HTTPTask< http::Response > listActiveTagsVerbose( db::DBContext& db
 	db::DBBindings bindings {};
 	bindings.bind( record_id );
 
-	const auto rows {
-		co_await db
-			.query(
-				R"(
-				SELECT COALESCE(ideal_tag_id, tag_id) AS effective_tag_id, tag_domain_id,
-				       tag_id AS original_tag_id, NULL::INTEGER AS origin_id
-				FROM active_tag_mappings
-				WHERE record_id = $1
-				UNION ALL
-				SELECT tag_id, tag_domain_id,
-				       NULL::INTEGER AS original_tag_id, origin_id
-				FROM active_tag_mappings_parents
-				WHERE record_id = $1
-			)",
-				std::move( bindings ) )
-			.rows< TagID, TagDomainID, std::optional< TagID >, std::optional< TagID > >()
+	static constexpr char query[] {
+#embed "sql/active_record_tag_provenance.sql" suffix(, )
+		'\0'
 	};
+
+	const auto rows { co_await db.query( query, std::move( bindings ) )
+		                  .rows< TagID, TagDomainID, std::optional< TagID >, std::optional< TagID > >() };
 
 	struct TagProvenance
 	{

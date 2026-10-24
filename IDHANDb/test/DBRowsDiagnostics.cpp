@@ -22,7 +22,7 @@ static DBResult distanceResult()
 
 TEST_CASE( "Row type mismatches identify the query and column", "[db][decode]" )
 {
-	const std::string sql { "SELECT distance FROM hamming_distance" };
+	const std::string sql { " \r\nSELECT\n\tdistance\rFROM hamming_distance\n" };
 	try
 	{
 		DBRows< std::int32_t > rows { distanceResult(), sql };
@@ -35,7 +35,8 @@ TEST_CASE( "Row type mismatches identify the query and column", "[db][decode]" )
 		CHECK( error.actual_oid == 21 );
 		const std::string message { error.what() };
 		CHECK( message.find( "distance" ) != std::string::npos );
-		CHECK( message.find( sql ) != std::string::npos );
+		CHECK( message.find( "SELECT distance FROM hamming_distance" ) != std::string::npos );
+		CHECK( message.find_first_of( "\r\n\t" ) == std::string::npos );
 	}
 }
 
