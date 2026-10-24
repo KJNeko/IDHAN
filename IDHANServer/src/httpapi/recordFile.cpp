@@ -50,21 +50,20 @@ http::HTTPTask< http::Response > recordFileResponse(
 	auto rows {
 		co_await db
 			.query(
-				"SELECT file_clusters.cluster_id, folder_path, sha256, "
+				"SELECT file_info.cluster_id, sha256, "
 				"COALESCE(file_info.extension, mime.best_extension, '') AS extension, mime.name AS mime_name "
 				"FROM records "
 				"JOIN file_info ON records.record_id = file_info.record_id "
 				"LEFT JOIN mime ON file_info.mime_id = mime.mime_id "
-				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
-				"WHERE records.record_id = $1",
+				"WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
 				std::move( bindings ) )
-			.rows< ClusterID, std::string, std::span< const std::byte >, std::string, std::optional< std::string > >()
+			.rows< ClusterID, std::span< const std::byte >, std::string, std::optional< std::string > >()
 	};
 
 	if ( rows.empty() )
 		co_return http::Response::error( 404, std::format( "Record {} is not stored in any cluster", record_id ) );
 
-	const auto& [ cluster_id, folder_path, sha256_bytes, extension, mime_name ] { rows.row( 0 ) };
+	const auto& [ cluster_id, sha256_bytes, extension, mime_name ] { rows.row( 0 ) };
 
 	auto cluster { co_await filesystem::openCluster( db, cluster_id ) };
 	if ( !cluster ) co_return http::Response::error( 503, cluster.error() );

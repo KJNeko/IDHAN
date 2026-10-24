@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "jobs/JobContext.hpp"
+#include "scanning/ScanProgress.hpp"
 #include "scanning/clusterScan.hpp"
 
 namespace idhan::httpapi
@@ -41,9 +42,21 @@ JobTask scanClusterJob(
 	const ClusterScanParams params,
 	db::DBContext& db )
 {
+	const auto progress { std::make_shared< scanning::ScanProgress >() };
+	co_await setJobProgress( progress );
 	const auto executor { getJobRuntime().executor() };
-	const auto totals { co_await folly::coro::co_withExecutor(
-		executor, scanning::scanCluster( db, cluster_id, std::move( cluster_path ), scanOptions( params ) ) ) };
+	scanning::ScanTotals totals {};
+	try
+	{
+		totals = co_await folly::coro::co_withExecutor(
+			executor,
+			scanning::scanCluster( db, cluster_id, std::move( cluster_path ), scanOptions( params ), *progress ) );
+	}
+	catch ( ... )
+	{
+		progress->setPhase( "failed" );
+		throw;
+	}
 
 	Json::Value failures { Json::arrayValue };
 	for ( const auto& failure : totals.failures )

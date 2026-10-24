@@ -6,6 +6,7 @@
 #include <shared_mutex>
 #include <unordered_map>
 
+#include "filesystem/clusters/ClusterManager.hpp"
 #include "hyapi/constants/ServiceTypes.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "logging/format_ns.hpp"
@@ -162,13 +163,7 @@ runtime::Task< std::vector< ServiceInfo > > listServices( db::DBContext& db )
 			.rows< TagDomainID, std::string >()
 	};
 
-	const auto clusters {
-		co_await db
-			.query(
-				"SELECT cluster_id, coalesce(cluster_name, folder_path) AS cluster_name FROM file_clusters "
-				"ORDER BY cluster_id" )
-			.rows< ClusterID, std::string >()
-	};
+	const auto clusters { filesystem::ClusterManager::getInstance().list() };
 
 	std::vector< ServiceInfo > services {};
 
@@ -176,9 +171,11 @@ runtime::Task< std::vector< ServiceInfo > > listServices( db::DBContext& db )
 		services.emplace_back(
 			makeService( tagDomainServiceKey( tag_domain_id ), domain_name, hydrus::gen_constants::LOCAL_TAG ) );
 
-	for ( const auto& [ cluster_id, cluster_name ] : clusters )
+	for ( const auto& cluster : clusters )
 		services.emplace_back( makeService(
-			fileClusterServiceKey( cluster_id ), cluster_name, hydrus::gen_constants::LOCAL_FILE_DOMAIN ) );
+			fileClusterServiceKey( cluster.id ),
+			cluster.name.value_or( cluster.path.string() ),
+			hydrus::gen_constants::LOCAL_FILE_DOMAIN ) );
 
 	for ( const auto& fixed : FIXED_SERVICES )
 		services.emplace_back(

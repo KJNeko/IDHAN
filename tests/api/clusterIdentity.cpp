@@ -1,12 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <unistd.h>
-
 #include <barrier>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <future>
+#include <unistd.h>
 
 #include "ServerFixture.hpp"
 
@@ -79,9 +78,76 @@ class ClusterIdentityFixture : public ServerFixture
 	}
 
 	void remember( const ClusterID id ) { m_clusters.push_back( id ); }
+
+	void remove( const ClusterID id )
+	{
+		REQUIRE( api().del( std::format( "/clusters/{}/remove", id ) ).status == 200 );
+		std::erase( m_clusters, id );
+	}
 };
 
-TEST_CASE_METHOD( ClusterIdentityFixture, "Cluster names are checked before filesystem work", "[api][cluster-identity]" )
+TEST_CASE_METHOD(
+	ClusterIdentityFixture,
+	"Cluster configuration cache publishes committed updates and preserves rollback",
+	"[api][cluster-identity][cluster-cache]" )
+{
+	const auto first { create( "first", directory / "first" ) };
+	create( "second", directory / "second" );
+	const auto route { std::format( "/clusters/{}/info", first ) };
+	REQUIRE( api().get( route ).json[ "readonly" ].asBool() );
+	Json::Value change { Json::objectValue };
+	change[ "name" ] = prefix + "-renamed";
+	change[ "readonly" ] = false;
+	change[ "ratio" ] = 7;
+	change[ "size" ][ "limit" ] = 4096;
+	REQUIRE( api().patch( std::format( "/clusters/{}/modify", first ), change ).status == 200 );
+
+	const auto updated { api().get( route ) };
+	REQUIRE( updated.status == 200 );
+	CHECK( updated.json[ "name" ].asString() == prefix + "-renamed" );
+	CHECK_FALSE( updated.json[ "readonly" ].asBool() );
+	CHECK( updated.json[ "ratio_number" ].asInt() == 7 );
+	CHECK( updated.json[ "size" ][ "limit" ].asInt64() == 4096 );
+	CHECK( api().get( "/hyapi/get_services" ).body.contains( prefix + "-renamed" ) );
+
+	change[ "name" ] = prefix + "-second";
+	change[ "readonly" ] = true;
+	change[ "ratio" ] = 13;
+	change[ "size" ][ "limit" ] = 8192;
+	CHECK( api().patch( std::format( "/clusters/{}/modify", first ), change ).status == 409 );
+	const auto rolled_back { api().get( route ) };
+	CHECK( rolled_back.json[ "name" ] == updated.json[ "name" ] );
+	CHECK_FALSE( rolled_back.json[ "readonly" ].asBool() );
+	CHECK( rolled_back.json[ "ratio_number" ].asInt() == 7 );
+	CHECK( rolled_back.json[ "size" ][ "limit" ].asInt64() == 4096 );
+
+	const std::string bytes { "Import uses the updated writable cluster configuration" };
+	const auto imported { api().postOctets( "/file/import", bytes, { { "force_import", "true" } } ) };
+	REQUIRE( imported.status == 200 );
+	CHECK( imported.json[ "status" ].asInt() == 1 );
+	const auto info { api().get( route ) };
+	CHECK( info.json[ "file_count" ].asInt64() == 1 );
+	CHECK( info.json[ "size" ][ "used" ].asUInt64() == bytes.size() );
+	CHECK(
+		api().get( std::format( "/records/{}/file", imported.json[ "record_id" ].as< RecordID >() ) ).body == bytes );
+
+	Json::Value readonly { Json::objectValue };
+	readonly[ "readonly" ] = true;
+	REQUIRE( api().patch( std::format( "/clusters/{}/modify", first ), readonly ).status == 200 );
+	const auto rejected { api().postOctets(
+		"/file/import", "A new file after making all clusters read-only", { { "force_import", "true" } } ) };
+	CHECK( rejected.status == 400 );
+	CHECK( rejected.body.contains( "All clusters are read-only" ) );
+	remove( first );
+	CHECK( api().get( route ).status == 404 );
+	CHECK_FALSE( api().get( "/clusters/list" ).body.contains( prefix + "-renamed" ) );
+	CHECK_FALSE( api().get( "/hyapi/get_services" ).body.contains( prefix + "-renamed" ) );
+}
+
+TEST_CASE_METHOD(
+	ClusterIdentityFixture,
+	"Cluster names are checked before filesystem work",
+	"[api][cluster-identity]" )
 {
 	create( "archive", directory / "original" );
 	const auto absent { directory / "must-not-be-created" };
@@ -109,7 +175,10 @@ TEST_CASE_METHOD( ClusterIdentityFixture, "Cluster names are checked before file
 	CHECK( distinct.status == 201 );
 }
 
-TEST_CASE_METHOD( ClusterIdentityFixture, "Cluster paths use absolute lexical normalization", "[api][cluster-identity]" )
+TEST_CASE_METHOD(
+	ClusterIdentityFixture,
+	"Cluster paths use absolute lexical normalization",
+	"[api][cluster-identity]" )
 {
 	const auto path { directory / "archive" };
 	std::filesystem::create_directory( path );
@@ -128,7 +197,10 @@ TEST_CASE_METHOD( ClusterIdentityFixture, "Cluster paths use absolute lexical no
 	}
 }
 
-TEST_CASE_METHOD( ClusterIdentityFixture, "Legacy relative cluster paths participate in uniqueness", "[api][cluster-identity]" )
+TEST_CASE_METHOD(
+	ClusterIdentityFixture,
+	"Legacy relative cluster paths participate in uniqueness",
+	"[api][cluster-identity]" )
 {
 	const auto path { directory / "legacy" };
 	std::filesystem::create_directory( path );
@@ -155,17 +227,23 @@ TEST_CASE_METHOD( ClusterIdentityFixture, "Cluster renames preserve name uniquen
 	CHECK( api().patch( std::format( "/clusters/{}/modify", second ), change ).status == 200 );
 }
 
-TEST_CASE_METHOD( ClusterIdentityFixture, "Concurrent cluster creations retain database uniqueness", "[api][cluster-identity]" )
+TEST_CASE_METHOD(
+	ClusterIdentityFixture,
+	"Concurrent cluster creations retain database uniqueness",
+	"[api][cluster-identity]" )
 {
 	const auto first_path { directory / "first" };
 	const auto second_path { directory / "second" };
 	std::filesystem::create_directory( first_path );
 	std::filesystem::create_directory( second_path );
 	std::barrier start { 2 };
-	auto first { std::async( std::launch::async, [ this, &start, first_path ] {
-		start.arrive_and_wait();
-		return api().post( "/clusters/add", body( "shared", first_path ) );
-	} ) };
+	auto first { std::async(
+		std::launch::async,
+		[ this, &start, first_path ]
+		{
+			start.arrive_and_wait();
+			return api().post( "/clusters/add", body( "shared", first_path ) );
+		} ) };
 	start.arrive_and_wait();
 	const auto second { api().post( "/clusters/add", body( "shared", second_path ) ) };
 	const auto first_result { first.get() };
@@ -175,17 +253,23 @@ TEST_CASE_METHOD( ClusterIdentityFixture, "Concurrent cluster creations retain d
 	CHECK( ( first_result.status == 409 || second.status == 409 ) );
 }
 
-TEST_CASE_METHOD( ClusterIdentityFixture, "Concurrent cluster renames report a name conflict", "[api][cluster-identity]" )
+TEST_CASE_METHOD(
+	ClusterIdentityFixture,
+	"Concurrent cluster renames report a name conflict",
+	"[api][cluster-identity]" )
 {
 	const auto first_id { create( "first", directory / "first" ) };
 	const auto second_id { create( "second", directory / "second" ) };
 	Json::Value change { Json::objectValue };
 	change[ "name" ] = prefix + "-shared";
 	std::barrier start { 2 };
-	auto first { std::async( std::launch::async, [ this, &start, first_id, &change ] {
-		start.arrive_and_wait();
-		return api().patch( std::format( "/clusters/{}/modify", first_id ), change );
-	} ) };
+	auto first { std::async(
+		std::launch::async,
+		[ this, &start, first_id, &change ]
+		{
+			start.arrive_and_wait();
+			return api().patch( std::format( "/clusters/{}/modify", first_id ), change );
+		} ) };
 	start.arrive_and_wait();
 	const auto second { api().patch( std::format( "/clusters/{}/modify", second_id ), change ) };
 	const auto first_result { first.get() };
@@ -198,10 +282,13 @@ TEST_CASE_METHOD( ClusterIdentityFixture, "Concurrent normalized cluster paths c
 	const auto path { directory / "shared" };
 	std::filesystem::create_directory( path );
 	std::barrier start { 2 };
-	auto first { std::async( std::launch::async, [ this, &start, path ] {
-		start.arrive_and_wait();
-		return api().post( "/clusters/add", body( "first", path / "." ) );
-	} ) };
+	auto first { std::async(
+		std::launch::async,
+		[ this, &start, path ]
+		{
+			start.arrive_and_wait();
+			return api().post( "/clusters/add", body( "first", path / "." ) );
+		} ) };
 	start.arrive_and_wait();
 	const auto second { api().post( "/clusters/add", body( "second", path / "child" / ".." / "" ) ) };
 	const auto first_result { first.get() };

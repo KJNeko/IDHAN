@@ -110,7 +110,7 @@ render_threads = 2
 # Requires a writable TOML file and directory; true environment/CLI overrides are rejected.
 #recreate_missing_markers = false
 # Concurrent files per cluster scan; overridable per request by "concurrency" and clamped to 1..64.
-#scan_concurrency = 4
+scan_concurrency = 12
 
 [downloader]
 # Directory containing parser JavaScript modules. The packaged server uses its bundled parsers.

@@ -19,6 +19,7 @@ namespace idhan::test
 class TemporaryCluster
 {
 	pqxx::connection& m_connection;
+	ApiClient* m_api {};
 	std::filesystem::path m_path;
 	ClusterID m_cluster_id {};
 
@@ -46,8 +47,8 @@ class TemporaryCluster
 		{
 			pqxx::work tx { m_connection };
 			tx.exec( "DELETE FROM file_info WHERE cluster_id = $1", pqxx::params { m_cluster_id } );
-			tx.exec( "DELETE FROM file_clusters WHERE cluster_id = $1", pqxx::params { m_cluster_id } );
 			tx.commit();
+			if ( m_api ) CHECK( m_api->del( std::format( "/clusters/{}/remove", m_cluster_id ) ).status == 200 );
 		}
 		catch ( const std::exception& e )
 		{
@@ -59,6 +60,7 @@ class TemporaryCluster
 
 	ClusterID registerWith( ApiClient& api )
 	{
+		m_api = &api;
 		std::filesystem::create_directories( m_path );
 		Json::Value body;
 		body[ "name" ] = m_path.filename().string();

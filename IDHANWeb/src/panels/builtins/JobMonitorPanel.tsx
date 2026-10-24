@@ -6,13 +6,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PanelProps } from '../../host/types';
+import {ClusterScanProgress, type ClusterScanProgressData} from './ClusterScanProgress';
+import {BackgroundJobProgress, type BackgroundJobProgressData} from './BackgroundJobProgress';
 
 interface Job {
   job_id: number;
   job_name?: string;
   status?: string;
+    continuous?: boolean;
   start_time?: number; // unix seconds
+    end_time?: number; // unix seconds, present once the job is done
   error?: string;
+    progress?: ClusterScanProgressData | BackgroundJobProgressData;
 }
 
 const POLL_MS = 1000;
@@ -30,9 +35,10 @@ function statusClass(status: string | undefined): string {
   }
 }
 
-function elapsed(startSeconds: number | undefined, now: number): string | null {
+function elapsed(startSeconds: number | undefined, endSeconds: number | undefined, now: number): string | null {
   if (typeof startSeconds !== 'number' || startSeconds <= 0) return null;
-  const secs = Math.max(0, Math.floor(now / 1000 - startSeconds));
+    const until = typeof endSeconds === 'number' ? endSeconds : now / 1000;
+    const secs = Math.max(0, Math.floor(until - startSeconds));
   if (secs < 60) return `${secs}s`;
   const mins = Math.floor(secs / 60);
   return `${mins}m ${secs % 60}s`;
@@ -88,14 +94,21 @@ function JobMonitorPanel({ host }: PanelProps) {
       {jobs.length > 0 && (
         <ul className="job-items">
           {jobs.map((job) => {
-            const since = elapsed(job.start_time, now);
+              const since = elapsed(job.start_time, job.end_time, now);
             return (
-              <li key={job.job_id} className="job-row">
-                <span className={`job-status ${statusClass(job.status)}`}>{job.status ?? 'unknown'}</span>
-                <span className="grow" title={job.error}>
-                  <span className="job-name">{job.job_name ?? 'job'}</span> <span className="muted">#{job.job_id}</span>
-                </span>
-                {since && <span className="muted job-elapsed">{since}</span>}
+                <li key={job.job_id} className="job-item">
+                    <div className="job-row">
+                        <span className={`job-status ${statusClass(job.status)}`}>{job.status ?? 'unknown'}</span>
+                        {job.continuous && <span className="job-status job-continuous">Continuous</span>}
+                        <span className="grow" title={job.error}>
+                    <span className="job-name">{job.job_name ?? 'job'}</span> <span
+                            className="muted">#{job.job_id}</span>
+                  </span>
+                        {since && <span className="muted job-elapsed">{since}</span>}
+                    </div>
+                    {job.error && <p className="error">{job.error}</p>}
+                    {job.progress?.kind === 'cluster_scan' && <ClusterScanProgress progress={job.progress}/>}
+                    {job.progress?.kind === 'background_service' && <BackgroundJobProgress progress={job.progress}/>}
               </li>
             );
           })}

@@ -2453,6 +2453,54 @@ body {
 }
 
 /* Job Monitor */
+.job-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    min-width: 0;
+}
+
+.job-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.job-progress progress {
+    width: 100%;
+    accent-color: #6ea8ff;
+}
+
+.job-subtasks summary {
+    cursor: pointer;
+}
+
+.job-subtasks ul {
+    list-style: none;
+    margin: 0.3rem 0 0;
+    padding-left: 0.75rem;
+}
+
+.job-subtasks li {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.job-subtasks li > span:first-child {
+    flex-shrink: 0;
+}
+
+.job-task-path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-last-failure {
+    overflow-wrap: anywhere;
+}
+
 .job-toolbar {
   display: flex;
   align-items: center;
@@ -2487,6 +2535,11 @@ body {
 
 .job-status.running {
   color: #6ea8ff;
+}
+
+.job-continuous {
+    color: var(--muted);
+    text-transform: none;
 }
 
 .job-elapsed {

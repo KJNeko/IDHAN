@@ -4,6 +4,8 @@
 
 #include <thread>
 
+#include "jobs/BackgroundJob.hpp"
+
 namespace idhan::db
 {
 class DBContext;
@@ -17,6 +19,8 @@ class HashMaintenance
 {
 	db::DBContext& m_db;
 	folly::Executor::KeepAlive<> m_executor;
+	jobs::BackgroundJob m_hamming_job { "Hamming distance maintenance", "hamming_distance" };
+	jobs::BackgroundJob m_phash_job { "Missing perceptual hash backfill", "phash_backfill", false };
 	std::jthread m_hamming;
 	std::jthread m_phash;
 

@@ -31,6 +31,7 @@ class JobRuntime
 	std::unique_ptr< folly::CPUThreadPoolExecutor > m_pool {};
 	std::mutex m_queue_mtx {};
 	std::condition_variable m_cv;
+	std::condition_variable m_cleanup_cv {};
 	using JobPtr = std::shared_ptr< JobContext >;
 	std::queue< std::shared_ptr< JobContext > > m_queue {};
 	std::unordered_map< idhan::JobID, JobPtr > m_jobs {};
@@ -116,8 +117,7 @@ struct SetJobResponseWaitable
 	template < typename Promise >
 	bool await_suspend( std::coroutine_handle< Promise > h ) noexcept
 	{
-		static_assert( requires { h.promise().m_status->m_response; }, "Promise must have m_status->m_response" );
-		h.promise().m_status->m_response = m_response;
+		h.promise().m_status->setResponse( std::move( m_response ) );
 		return false;
 	}
 
@@ -129,9 +129,31 @@ inline SetJobResponseWaitable setJobResponse( Json::Value response )
 	return SetJobResponseWaitable { std::move( response ) };
 }
 
+struct SetJobProgressWaitable
+{
+	std::shared_ptr< const JobProgress > progress;
+
+	static bool await_ready() noexcept { return false; }
+
+	template < typename Promise >
+	bool await_suspend( std::coroutine_handle< Promise > handle )
+	{
+		handle.promise().m_status->setProgress( std::move( progress ) );
+		return false;
+	}
+
+	void await_resume() const noexcept {}
+};
+
+[[nodiscard]] inline SetJobProgressWaitable setJobProgress( std::shared_ptr< const JobProgress > progress )
+{
+	return SetJobProgressWaitable { std::move( progress ) };
+}
+
 JobRuntime& getJobRuntime();
 
 [[nodiscard]] std::shared_ptr< JobContext > queueJob(
 	JobTask task,
 	std::string_view name = "",
-	std::source_location loc = std::source_location::current() );
+	std::source_location loc = std::source_location::current(),
+	bool continuous = false );

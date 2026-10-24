@@ -13,6 +13,7 @@
 #include "MimeIDs.hpp"
 #include "filesystem/PathHelpers.hpp"
 #include "filesystem/VerifiedRecordPath.hpp"
+#include "filesystem/clusters/ClusterManager.hpp"
 #include "filesystem/clusters/clusterIdentity.hpp"
 #include "filesystem/hashFile.hpp"
 #include "filesystem/recordFilePath.hpp"
@@ -70,13 +71,15 @@ struct ImportTarget
 
 	db::DBBindings current_bindings {};
 	current_bindings.bind( record_id );
-	const auto current { co_await db.query( query, std::move( current_bindings ) )
-		                     .rows< std::optional< ClusterID >, bool, std::optional< bool > >() };
+	const auto current {
+		co_await db.query( query, std::move( current_bindings ) ).rows< std::optional< ClusterID >, bool >()
+	};
 
 	if ( !current.empty() )
 	{
-		const auto& [ cluster_id, delete_time_null, read_only ] { current.row( 0 ) };
-		if ( cluster_id && delete_time_null && read_only && !*read_only )
+		const auto& [ cluster_id, delete_time_null ] { current.row( 0 ) };
+		const auto info { cluster_id ? filesystem::ClusterManager::getInstance().find( *cluster_id ) : std::nullopt };
+		if ( info && delete_time_null && !info->read_only )
 		{
 			auto cluster { co_await filesystem::openCluster( db, *cluster_id ) };
 			if ( !cluster ) co_return std::unexpected( ImportError { 503, cluster.error() } );
@@ -84,22 +87,16 @@ struct ImportTarget
 		}
 	}
 
-	const auto clusters {
-		co_await db.query( "SELECT cluster_id, size_used, size_limit FROM file_clusters WHERE read_only = FALSE" )
-			.rows< ClusterID, std::int64_t, std::int64_t >()
-	};
-
+	const auto clusters { filesystem::ClusterManager::getInstance().list() };
 	if ( clusters.empty() )
-	{
-		const auto total { co_await db.query( "SELECT count(*) FROM file_clusters" ).rows< std::int64_t >() };
-
-		if ( std::get< 0 >( total.row( 0 ) ) == 0 )
-			co_return std::unexpected(
-				ImportError { 400, "No clusters available, You must create one before importing files" } );
-
+		co_return std::unexpected(
+			ImportError { 400, "No clusters available, You must create one before importing files" } );
+	if ( std::ranges::none_of( clusters, []( const filesystem::ClusterInfo& info ) { return !info.read_only; } ) )
 		co_return std::unexpected(
 			ImportError { 400, "All clusters are read-only, You must mark one as writable before importing files" } );
-	}
+	const auto usage {
+		co_await db.query( "SELECT cluster_id, size_used FROM file_clusters" ).rows< ClusterID, std::int64_t >()
+	};
 
 	struct ClusterCandidate
 	{
@@ -110,12 +107,20 @@ struct ImportTarget
 	std::vector< ClusterCandidate > candidates {};
 	candidates.reserve( clusters.size() );
 
-	for ( const auto& [ cluster_id, size_used, size_limit ] : clusters )
+	for ( const auto& info : clusters )
 	{
+		if ( info.read_only ) continue;
+		std::int64_t size_used {};
+		for ( const auto& [ id, used ] : usage )
+			if ( id == info.id )
+			{
+				size_used = used;
+				break;
+			}
 		const double score {
-			size_limit <= 0 ? 0.0 : static_cast< double >( size_used ) / static_cast< double >( size_limit )
+			info.size_limit <= 0 ? 0.0 : static_cast< double >( size_used ) / static_cast< double >( info.size_limit )
 		};
-		candidates.push_back( ClusterCandidate { cluster_id, score } );
+		candidates.push_back( ClusterCandidate { info.id, score } );
 	}
 
 	std::ranges::sort( candidates, {}, &ClusterCandidate::score );
@@ -194,14 +199,18 @@ struct ImportTarget
 	const auto current {
 		co_await db
 			.query(
-				"SELECT file_clusters.read_only FROM file_info "
-				"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
+				"SELECT cluster_id FROM file_info "
 				"WHERE file_info.record_id = $1",
 				std::move( current_bindings ) )
-			.rows< bool >()
+			.rows< std::optional< ClusterID > >()
 	};
-
-	if ( !current.empty() && std::get< 0 >( current.row( 0 ) ) )
+	std::optional< filesystem::ClusterInfo > current_cluster;
+	if ( !current.empty() )
+	{
+		const auto id { std::get< 0 >( current.row( 0 ) ) };
+		if ( id ) current_cluster = filesystem::ClusterManager::getInstance().find( *id );
+	}
+	if ( current_cluster && current_cluster->read_only )
 	{
 		auto valid { co_await storedFileIsValid( db, record_id, sha256 ) };
 		if ( !valid ) co_return std::unexpected( std::move( valid.error() ) );

@@ -14,11 +14,11 @@
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
 #include "fileMetadata.hpp"
+#include "idValidation.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "jobs/JobContext.hpp"
 #include "jobs/JobTask.hpp"
 #include "jsonBody.hpp"
-#include "idValidation.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::httpapi
@@ -54,12 +54,11 @@ namespace idhan::httpapi
 	return Json::writeString( builder, value );
 }
 
-[[nodiscard]] static std::optional< std::int64_t > startEpochSeconds( const JobTaskStatus& status )
+[[nodiscard]] static std::optional< std::int64_t > epochSeconds( const std::chrono::steady_clock::time_point point )
 {
-	const auto start { status.m_start_time.load() };
-	if ( start == std::chrono::steady_clock::time_point {} ) return std::nullopt;
+	if ( point == std::chrono::steady_clock::time_point {} ) return std::nullopt;
 
-	const auto elapsed { std::chrono::steady_clock::now() - start };
+	const auto elapsed { std::chrono::steady_clock::now() - point };
 	const auto started {
 		std::chrono::system_clock::now() - std::chrono::duration_cast< std::chrono::system_clock::duration >( elapsed )
 	};
@@ -88,12 +87,14 @@ static void appendJobStatus(
 	builder.append_comma();
 	builder.append_key_value( "job_name", status->m_function_name );
 	builder.append_comma();
+	builder.append_key_value( "continuous", status->m_continuous );
+	builder.append_comma();
 	builder.append_key_value(
 		"location",
 		std::format(
 			"{}:{}:{}", status->m_location.file_name(), status->m_location.line(), status->m_location.column() ) );
 
-	if ( const auto epoch { startEpochSeconds( *status ) } )
+	if ( const auto epoch { epochSeconds( status->m_start_time.load() ) } )
 	{
 		builder.append_comma();
 		builder.append_key_value( "start_time", *epoch );
@@ -103,6 +104,13 @@ static void appendJobStatus(
 	builder.append_comma();
 	builder.append_key_value( "completed", done );
 	builder.append_comma();
+
+	if ( done )
+		if ( const auto epoch { epochSeconds( status->m_completion_time ) } )
+		{
+			builder.append_key_value( "end_time", *epoch );
+			builder.append_comma();
+		}
 
 	if ( !done )
 		builder.append_key_value( "status", "running" );
@@ -117,12 +125,22 @@ static void appendJobStatus(
 
 	if ( done && cleanup_on_completion ) status->m_cleanup_requested = true;
 
-	if ( status->m_response )
+	const auto progress { status->progressSnapshot() };
+	if ( progress )
+	{
+		builder.append_comma();
+		builder.escape_and_append_with_quotes( "progress" );
+		builder.append_colon();
+		builder.append_raw( toCompactJson( *progress ) );
+	}
+
+	const auto response { status->responseSnapshot() };
+	if ( response )
 	{
 		builder.append_comma();
 		builder.escape_and_append_with_quotes( "response" );
 		builder.append_colon();
-		builder.append_raw( toCompactJson( *status->m_response ) );
+		builder.append_raw( toCompactJson( *response ) );
 	}
 
 	builder.end_object();

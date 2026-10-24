@@ -13,6 +13,7 @@ cluster scans report that file as failed.
 | Normalize scan modes and publish job JSON   | `IDHANServer/src/httpapi/clusterScan.cpp`     |
 | Directory traversal and candidate ownership | `IDHANServer/src/scanning/ScanDirectory.*`    |
 | Plan and process files; schedule workers    | `IDHANServer/src/scanning/clusterScan.cpp`    |
+| Live phases, counters and active file tasks | `IDHANServer/src/scanning/ScanProgress.*`     |
 | Record and file-info queries                | `IDHANServer/src/db/records.*`, `fileInfo.*`  |
 | Resolve and pin a record's assigned cluster | `IDHANServer/src/filesystem/recordFilePath.*` |
 | Hash files with bounded memory              | `IDHANServer/src/filesystem/hashFile.*`       |
@@ -40,6 +41,10 @@ establish content integrity and never suppress requested hashing or rescanning.
 Parsing happens outside the metadata transaction. Metadata and its file times
 commit together after identity verification. A metadata failure can therefore
 leave successfully updated file information, matching the existing scan policy.
+Active file tasks report `parsing_metadata` while the module parses the file, then
+`storing_metadata` while verifying identity, acquiring a transaction, writing the
+metadata and file times, and committing. The Job Monitor labels these separately
+as "Parsing metadata" and "Storing metadata" so database waits are visible.
 
 Larger static queries live in an `sql/` directory next to their owning C++ source
 and are compiled into null-terminated character arrays with C++26 `#embed`.
@@ -79,10 +84,44 @@ For future concurrency changes, preserve the ownership boundaries and keep disk
 reads, module capacity, and database connection limits in mind. Increasing the
 number of file workers alone may not increase throughput.
 
+## Live job feedback
+
+Both job-status endpoints expose an optional `progress` snapshot, separate from
+the unchanged final `response`. Cluster scans report identity verification,
+missing-file preflight, file counting, processing, draining after failure, and
+completion or early stop. The Job Monitor displays these phases, processed and
+remaining counts, failures, and expandable active file subtasks with their paths
+and current steps. Subtasks have IDs local to their parent job; they do not
+create queued jobs or retain a per-file history.
+
+After preflight, the scanner makes a directory-and-size counting pass using the
+same traversal filters as processing. It does not hash or parse files or retain
+all paths. This adds filesystem reads before processing. Totals are estimates
+while files can change; new admissions raise the total when necessary, and normal
+completion reconciles it to the processed count. Stop-on-fail leaves the estimated
+unfinished count visible after draining. If traversal errors prevent counting,
+the total is omitted and processing reports those errors. Counting itself stops
+at its first traversal error when stop-on-fail is enabled.
+
+`ScanProgress` protects its counters and bounded task map with a mutex so workers
+can update their own stages safely. Job status holds a shared progress provider;
+it requests JSON only when polled, rather than serializing on every file update.
+The generic job response is also synchronized for jobs that publish partial results.
+Snapshots are consistent individually but the job envelope and progress are not
+one atomic transaction. Progress survives job completion until normal job cleanup;
+it resets with the process. Processed bytes are file sizes, including failed attempts,
+rather than measured disk I/O. Missing-file preflight reports checked records without
+adding a separate database count query.
+
 ## Focused checks
 
 The `[api][cluster-scan]` cases cover scheduling after failures, early rejection
 without record creation, writable orphan adoption, unchanged file-info rows,
 explicit hash verification and metadata rescanning, traversal exclusions,
 paginated missing-file checks, and metadata failure policy.
+Progress checks hold record lookups with a database lock to verify bounded live
+subtasks deterministically, then verify completion, empty totals, and early stops.
 `[api][cluster-markers]` covers unavailable cluster identities at the API boundary.
+
+Cluster configuration reads and mutations use the shared cache described in
+[cluster-cache.md](cluster-cache.md). Usage counters remain live.

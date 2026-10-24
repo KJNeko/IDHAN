@@ -137,10 +137,12 @@ TEST_CASE_METHOD(
 	auto locker { otherConnection() };
 	pqxx::work held { *locker };
 	held.exec( "SELECT record_id FROM hamming_distance_queue WHERE record_id = $1 FOR UPDATE", pqxx::params { first } );
-	REQUIRE( run( hamming::processQueueBatch( context(), *through ) ).has_value() );
+	const auto batch { run( hamming::processQueueBatch( context(), *through ) ) };
+	REQUIRE( batch.has_value() );
+	CHECK( batch->processed_records == 32 );
 	REQUIRE( count( "hamming_distance_queue" ) == 3 );
 	held.abort();
-	run( hamming::runQueueSweep( context() ) );
+	CHECK( run( hamming::runQueueSweep( context() ) ) == 3 );
 	REQUIRE( count( "hamming_distance_queue" ) == 0 );
 	REQUIRE( count( "hamming_distance" ) == 35 * 34 / 2 );
 }

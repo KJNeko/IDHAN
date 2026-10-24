@@ -11,6 +11,11 @@ post:
     missing-file preflight without detaching records. The root identity marker
     is not media and is not scanned.
     When the job publishes a result, its response follows ClusterScanResult.
+    While running, progress follows ClusterScanProgress with phases, counts, the latest
+    failure, and bounded active file subtasks. After optional missing-file preflight,
+    a directory-and-size pass counts eligible files without reading contents. Remaining
+    counts are estimates while the filesystem can change. Stop-on-fail retains unfinished
+    work in the remaining count and drains active files before reporting stopped.
   parameters:
     - name: cluster_id
       in: path
@@ -113,7 +118,7 @@ post:
           schema:
             type: string
     '200':
-      description: Job enqueued. Poll `/jobs/{job_id}/status` for `response.scanned_count`, `response.failed_count`,
+      description: Job enqueued. Poll `/jobs/{job_id}/status` for live `progress` and final `response.scanned_count`, `response.failed_count`,
         and up to 1000 entries in `response.failures`.
       content:
         application/json:
