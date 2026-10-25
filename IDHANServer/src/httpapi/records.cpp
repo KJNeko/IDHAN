@@ -3,6 +3,7 @@
 #include <folly/coro/Collect.h>
 #include <folly/io/IOBuf.h>
 
+#include <cerrno>
 #include <format>
 #include <limits>
 #include <simdjson.h>
@@ -11,6 +12,8 @@
 
 #include "apiAuth.hpp"
 #include "db/records.hpp"
+#include "filesystem/io/IOUring.hpp"
+#include "filesystem/recordFilePath.hpp"
 #include "helpers.hpp"
 #include "idValidation.hpp"
 #include "idhan/SHA256.hpp"
@@ -557,6 +560,7 @@ static http::HTTPTask< http::Response > addUrls( db::DBContext& db, http::Reques
 
 	static constexpr char query[] {
 #embed "sql/insert_record_urls.sql" suffix(, )
+
 		'\0'
 	};
 
@@ -704,17 +708,20 @@ static http::HTTPTask< http::Response > listActiveTagsVerbose( db::DBContext& db
 
 	static constexpr char query[] {
 #embed "sql/active_record_tag_provenance.sql" suffix(, )
+
 		'\0'
 	};
 
 	const auto rows { co_await db.query( query, std::move( bindings ) )
-		                  .rows< TagID, TagDomainID, std::optional< TagID >, std::optional< TagID > >() };
+	                      .rows< TagID, TagDomainID, std::optional< TagID >, std::optional< TagID > >() };
 
 	struct TagProvenance
 	{
-		bool is_explicit { false };
+		bool is_explicit;
 		std::vector< TagID > aliased_from;
 		std::vector< TagID > inherited_from;
+
+		TagProvenance() : is_explicit( false ), aliased_from(), inherited_from() {}
 	};
 
 	std::unordered_map< TagDomainID, std::unordered_map< TagID, TagProvenance > > provenance_map;
@@ -1180,6 +1187,73 @@ static http::HTTPTask< http::Response > getRandomActiveRecord(
 	co_return jsonResponse( builder );
 }
 
+static http::HTTPTask< http::Response > deleteRecordFile( db::DBContext& db, http::RequestContext context )
+{
+	const auto record_id_e { context.parameters().scalar< RecordID >( "record_id" ) };
+	if ( !record_id_e.has_value() ) co_return http::Response::error( 400, record_id_e.error().message );
+	const RecordID record_id { record_id_e.value() };
+	db::DBBindings bindings {};
+	bindings.bind( record_id );
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT file_info.cluster_id, file_info.cluster_delete_time IS NOT NULL "
+				"FROM file_info WHERE file_info.record_id = $1",
+				std::move( bindings ) )
+			.rows< std::optional< ClusterID >, std::optional< bool > >()
+	};
+
+	if ( rows.empty() ) co_return http::Response::error( 404, std::format( "Record {} has no file info", record_id ) );
+
+	const auto [ cluster_id, deletion_recorded ] { rows.row( 0 ) };
+	if ( !deletion_recorded.has_value() )
+		co_return http::Response::error( 404, std::format( "Record {} has no file info", record_id ) );
+
+	if ( deletion_recorded.value() )
+	{
+		simdjson::builder::string_builder builder;
+		builder.start_object();
+		builder.append_key_value( "deleted", false );
+		builder.end_object();
+		co_return jsonResponse( builder );
+	}
+
+	if ( cluster_id.has_value() )
+	{
+		auto location_e { co_await filesystem::findRecordFilePath( db, record_id ) };
+		if ( !location_e.has_value() ) co_return http::Response::error( 503, location_e.error() );
+
+		auto& optional_location { location_e.value() };
+		if ( !optional_location.has_value() )
+			co_return http::Response::error( 409, "The record no longer has an assigned file cluster" );
+
+		auto& location { optional_location.value() };
+		if ( location.cluster().readonly() )
+			co_return http::Response::error( 409, "The record's cluster is read-only" );
+
+		const auto verified_e { location.verify() };
+		if ( !verified_e.has_value() ) co_return http::Response::error( 503, verified_e.error() );
+
+		const auto removed { co_await IOUring::getInstance().removeFile( location.path() ) };
+		if ( removed != 0 && removed != -ENOENT )
+			co_return http::Response::error( 500, std::format( "Could not delete record file: errno {}", removed ) );
+	}
+
+	db::DBBindings update_bindings {};
+	update_bindings.bind( record_id );
+	co_await db
+		.query(
+			"UPDATE file_info SET cluster_id = NULL, cluster_delete_time = now() "
+			"WHERE record_id = $1 AND cluster_delete_time IS NULL",
+			std::move( update_bindings ) )
+		.result();
+	simdjson::builder::string_builder builder;
+	builder.start_object();
+	builder.append_key_value( "deleted", true );
+	builder.end_object();
+	co_return jsonResponse( builder );
+}
+
 std::vector< http::RouteDefinition > recordRoutes( db::DBContext& db )
 {
 	std::vector< http::RouteDefinition > routes {};
@@ -1206,6 +1280,11 @@ std::vector< http::RouteDefinition > recordRoutes( db::DBContext& db )
 	};
 
 	add( proxygen::HTTPMethod::GET, "/records/{record_id}/notes", { recordIdPathParameter() }, true, getNotes );
+	add( proxygen::HTTPMethod::DELETE,
+	     "/records/{record_id}/file",
+	     { recordIdPathParameter() },
+	     true,
+	     deleteRecordFile );
 	add( proxygen::HTTPMethod::POST, "/records/{record_id}/add_note", { recordIdPathParameter() }, true, addNote );
 	add( proxygen::HTTPMethod::DELETE,
 	     "/records/{record_id}/remove_note/{note_id}",

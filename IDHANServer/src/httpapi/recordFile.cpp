@@ -4,7 +4,6 @@
 
 #include <chrono>
 #include <fcntl.h>
-#include <filesystem>
 #include <format>
 #include <optional>
 #include <span>
@@ -12,8 +11,7 @@
 
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
-#include "filesystem/PathHelpers.hpp"
-#include "filesystem/clusters/clusterIdentity.hpp"
+#include "filesystem/recordFilePath.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/http/FileResponse.hpp"
@@ -50,29 +48,63 @@ http::HTTPTask< http::Response > recordFileResponse(
 	auto rows {
 		co_await db
 			.query(
-				"SELECT file_info.cluster_id, sha256, "
-				"COALESCE(file_info.extension, mime.best_extension, '') AS extension, mime.name AS mime_name "
+				"SELECT sha256, mime.name AS mime_name "
 				"FROM records "
 				"JOIN file_info ON records.record_id = file_info.record_id "
 				"LEFT JOIN mime ON file_info.mime_id = mime.mime_id "
 				"WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
 				std::move( bindings ) )
-			.rows< ClusterID, std::span< const std::byte >, std::string, std::optional< std::string > >()
+			.rows< std::span< const std::byte >, std::optional< std::string > >()
 	};
 
 	if ( rows.empty() )
-		co_return http::Response::error( 404, std::format( "Record {} is not stored in any cluster", record_id ) );
+	{
+		db::DBBindings state_bindings {};
+		state_bindings.bind( record_id );
+		const auto state_rows {
+			co_await db
+				.query(
+					"SELECT cluster_delete_time IS NOT NULL, cluster_store_time IS NOT NULL "
+					"FROM file_info WHERE record_id = $1",
+					std::move( state_bindings ) )
+				.rows< bool, bool >()
+		};
+		if ( state_rows.empty() )
+			co_return http::Response::error( 404, std::format( "Record {} has no file info", record_id ) );
 
-	const auto& [ cluster_id, sha256_bytes, extension, mime_name ] { rows.row( 0 ) };
+		const auto [ explicitly_deleted, expected_in_storage ] { state_rows.row( 0 ) };
+		if ( explicitly_deleted )
+			co_return http::Response::error(
+				404, std::format( "The file for record {} was explicitly removed", record_id ) );
 
-	auto cluster { co_await filesystem::openCluster( db, cluster_id ) };
-	if ( !cluster ) co_return http::Response::error( 503, cluster.error() );
+		if ( expected_in_storage )
+			co_return http::Response::error(
+				404,
+				std::format(
+					"The file for record {} is missing from storage, but was expected to be present", record_id ) );
+
+		co_return http::Response::error(
+			404, std::format( "Record {} has not been stored in any cluster", record_id ) );
+	}
+
+	const auto& [ sha256_bytes, mime_name ] { rows.row( 0 ) };
+
+	auto file_path_e { co_await filesystem::findPresentRecordFilePath( db, record_id ) };
+	if ( !file_path_e.has_value() ) co_return http::Response::error( 503, file_path_e.error() );
+
+	auto& optional_file_path { file_path_e.value() };
+	if ( !optional_file_path.has_value() )
+		co_return http::Response::error(
+			404,
+			std::format(
+				"The file for record {} is missing from storage, but was expected to be present", record_id ) );
+
+	auto& file_location { optional_file_path.value() };
 
 	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
-	const auto relative_path { filesystem::getClusterRelativePath( sha256, extension ) };
-	const auto filename { relative_path.filename().string() };
-	const auto file_path { cluster->root() / relative_path };
+	const auto file_path { file_location.path() };
+	const auto filename { file_path.filename().string() };
 
 	auto file_e { folly::File::makeFile( file_path.c_str(), O_RDONLY ) };
 	if ( !file_e )

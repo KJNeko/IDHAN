@@ -103,6 +103,9 @@ export interface RecordsApi {
    */
   getMetadata(ids: readonly RecordId[]): Promise<MetadataResponse>;
 
+    /** Permanently removes a stored file and marks its record as deliberately deleted. */
+    deleteFile(id: RecordId, signal?: AbortSignal): Promise<{ deleted: boolean }>;
+
     /** Better/worse duplicates and alternatives directly related to one record. */
     relationships(id: RecordId, signal?: AbortSignal): Promise<FileRelationships>;
 

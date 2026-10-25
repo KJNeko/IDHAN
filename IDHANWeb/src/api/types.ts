@@ -32,6 +32,8 @@ export interface SearchRequest {
   tags?: string[];
   tag_ids?: number[];
   tag_domains?: number[];
+    /** Include files marked as explicitly deleted. Defaults to false. */
+    include_deleted?: boolean;
   display?: 'display' | 'storage';
   sort?: { by: string; order: SortOrder };
   /** Omit both to get the full ordered id set (the grid's default). */

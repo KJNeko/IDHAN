@@ -1202,6 +1202,11 @@ void SearchQuery::setDisplay( const HydrusDisplayType type )
 	m_display_mode = type;
 }
 
+void SearchQuery::setIncludeDeleted( const bool value )
+{
+	m_include_deleted = value;
+}
+
 runtime::Task< idhan::search::Set > SearchQuery::evaluate(
 	db::DBContext& db,
 	std::vector< TagDomainID > tag_domain_ids,
@@ -1234,7 +1239,7 @@ runtime::Task< idhan::search::Set > SearchQuery::evaluate(
 	co_await completeNames( db, std::string { namespace_name_query }, m_namespace_ids, m_namespace_names );
 
 	const searchfetch::FetchContext ctx {
-		db, m_sort_type, want_hashes, std::move( tag_domain_ids ), m_stats, m_display_mode
+		db, m_sort_type, want_hashes, std::move( tag_domain_ids ), m_stats, m_display_mode, m_include_deleted
 	};
 
 	std::vector< runtime::Task< idhan::search::Set > > tasks {};
@@ -1330,7 +1335,9 @@ runtime::Task< SearchResults > SearchQuery::query(
 
 	if ( set.inverted() )
 	{
-		const searchfetch::FetchContext page_ctx { db, m_sort_type, return_hashes, {}, m_stats, m_display_mode };
+		const searchfetch::FetchContext page_ctx {
+			db, m_sort_type, return_hashes, {}, m_stats, m_display_mode, m_include_deleted
+		};
 		const auto page { co_await searchfetch::fetchPage( page_ctx, set.ids(), m_order, offset, limit ) };
 
 		log::debug( "{}", m_stats->summary() );

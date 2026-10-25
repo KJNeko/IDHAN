@@ -77,6 +77,10 @@ binary when practical:
   when failure details matter. Return a struct or tuple for multiple results.
   Keep reference returns only for intentional borrowed access with clear lifetime
   requirements; preserve signatures required by external interfaces.
+- Name `std::expected` results with an `_e` suffix. Check `has_value()` before
+  accessing the result, then bind a named reference to `.value()` when it will
+  be used more than once. Prefer this over repeated `*` dereferences, especially
+  for nested `expected` and `optional` values.
 
 - Keep one class per header unless additional classes are tightly integrated or
   used only by that class.
@@ -98,6 +102,8 @@ binary when practical:
   do not chain setup and branching in one condition.
 - Prefer small sequential guard clauses over compound or multi-line `if`
   conditions.
+- Leave a blank line after every `if` body before the next statement, including
+  single-statement bodies.
 - Separate consecutive guard branches with two blank lines after an early
   `return`, so each validation step remains visually distinct.
 - Place an adjacent comment on every regular expression describing the value

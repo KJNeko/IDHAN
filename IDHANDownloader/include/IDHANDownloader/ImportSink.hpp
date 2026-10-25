@@ -26,6 +26,8 @@ struct ImportRequest
 	std::uint64_t host_tag {};
 	// A URL alone identifies only a GET response without a request body.
 	bool direct_eligible { true };
+	// Whether an explicit force setting allows replacing a deliberately deleted record.
+	bool force_download {};
 	// Host-scoped comparison policy; never removes parameters from the request itself.
 	std::vector< std::string > ephemeral_query {};
 };

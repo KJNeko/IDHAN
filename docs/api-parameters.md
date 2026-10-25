@@ -38,17 +38,27 @@ handler reads the validated text. A `JsonParameterObject` contains a path and th
 allowed member names at that path:
 
 ```cpp
+using http::root;
+
 http::ParameterRules rules {
-    {},
-    {
-        { {}, { "sort", "tags" } },
-        { { "sort" }, { "by", "order" } },
-        { { "tags", "*" }, { "namespace", "subtag" } }
-    }
+    .query = {},
+    .json = {
+        root().allowFields({ "sort", "tags", "sets" }),
+        root().field("sort").allowFields({ "by", "order" }),
+        root().field("tags").eachElement().allowFields({ "namespace", "subtag" }),
+        root().field("sets").eachElement().eachElement().allowFields({ "namespace", "subtag" }),
+    },
 };
 ```
 
-An empty path selects the root object. A `*` segment visits array elements.
+Include `idhan/http/JsonParameterPath.hpp` to use the builder. `root()` selects
+the whole JSON document, `field("name")` selects a member, and `eachElement()`
+visits every element of the selected array. Thus `tags` above contains tag
+objects directly, while `sets` contains arrays of tag objects. `allowFields()`
+finishes the path and declares the recognized object member names; it does not
+require those members to be present or validate their types. Each builder call
+returns an owned value, so a shared path can be reused without modifying it.
+The builder produces the existing `JsonParameterObject` representation.
 Warnings identify nested fields using JSON Pointer syntax, including array
 indices and escaping for `/` and `~`. Missing objects or unexpected types are
 left to the handler's existing validation. This check does not change the body.
@@ -61,7 +71,9 @@ not receive native API parameter rules.
 ## Maintaining the lists
 
 When adding a native method/path or changing the parameters a handler consumes,
-update its declaration and OpenAPI contract together. All native route factories
+update its declaration and OpenAPI contract together. Declarations are grouped
+by API area, with a separate block per route and named `.method`, `.path`,
+and `.rules` fields. All native route factories
 pass through `declareEndpointParameters` before registration. A missing native
 declaration throws during startup so a new endpoint cannot silently bypass the
 policy. JSON endpoints must use `readValidatedJsonBody` for these checks.

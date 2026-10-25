@@ -221,6 +221,10 @@ export const api = {
     return request<MetadataResponse>('/records/metadata', { method: 'POST', body, signal });
   },
 
+    deleteRecordFile(recordId: number, signal?: AbortSignal): Promise<{ deleted: boolean }> {
+        return request<{ deleted: boolean }>(`/records/${recordId}/file`, {method: 'DELETE', signal});
+    },
+
     /**
      * Dispatches a metadata reparse over `recordIds`, or over every record when none are given
      * (POST /jobs/metadata/rescan). Returns as soon as the job is queued.
