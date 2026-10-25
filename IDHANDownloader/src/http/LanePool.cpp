@@ -158,7 +158,7 @@ void LanePool::reportThrottleHeaders( const std::string& key, LanePolicy* policy
 
 	if ( policy != nullptr ) policy->advertised( reported );
 
-	spdlog::info( "downloader http: lane '{}' throttle headers: {}", key, reported );
+	spdlog::trace( "downloader http: lane '{}' throttle headers: {}", key, reported );
 }
 
 void LanePool::publish( const std::string& key )

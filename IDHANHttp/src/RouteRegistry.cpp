@@ -271,7 +271,7 @@ HTTPTask< Response > RouteRegistry::dispatch( RouteMatch match, RequestContext c
 	const auto& route { m_routes[ *match.route_id ] };
 	context.setParameterRules( route.metadata.parameters ? &*route.metadata.parameters : nullptr );
 	const auto request_path { context.message().getPathAsStringPiece() };
-	spdlog::debug(
+	spdlog::trace(
 		"Routing {} {} -> {}",
 		proxygen::methodToString( route.metadata.method ),
 		std::string_view { request_path.data(), request_path.size() },

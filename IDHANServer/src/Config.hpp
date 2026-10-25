@@ -359,7 +359,7 @@ template < typename T >
 	{
 		if ( auto result = getValueFromFile< T >( path, group, name ); result )
 		{
-			log::debug( "Loaded config from {}: {}.{}={}", path, group, name, *result );
+			log::trace( "Loaded config from {}: {}.{}", path, group, name );
 			return *result;
 		}
 	}

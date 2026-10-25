@@ -55,11 +55,11 @@ void JobRuntime::runner()
 		const auto job { getNextJob() };
 		if ( !job ) continue;
 
-		log::debug( "Acquired Job" );
+		log::trace( "Acquired job {}", job->id() );
 
 		m_pool->add( [ job ]() { job->run(); } );
 
-		log::debug( "Job dispatched to thread" );
+		log::trace( "Dispatched job {}", job->id() );
 	}
 }
 
@@ -197,7 +197,7 @@ void JobContext::run()
 		m_coro.m_status->notifyChanged();
 	}
 
-	log::debug( "Resuming job {}", m_id );
+	log::trace( "Resuming job {}", m_id );
 	m_coro.m_handle.resume();
 }
 
@@ -231,7 +231,7 @@ std::shared_ptr< JobContext > queueJob(
 	auto ctx { std::make_shared< JobContext >( std::move( task ), job_id ) };
 
 	getJobRuntime().enqueue( ctx );
-	log::debug( "Queued Job" );
+	log::debug( "Queued job {} ({})", job_id, name );
 
 	return ctx;
 }

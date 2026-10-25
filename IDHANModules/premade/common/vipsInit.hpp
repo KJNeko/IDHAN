@@ -46,7 +46,7 @@ inline void vipsLogHandler(
 			// Dropped: vips is far too noisy at these levels to be worth logging.
 			break;
 		case G_LOG_LEVEL_DEBUG:
-			spdlog::debug( std::format( "VIPS: {}", message ) );
+			spdlog::trace( "VIPS: {}", message );
 	}
 }
 
