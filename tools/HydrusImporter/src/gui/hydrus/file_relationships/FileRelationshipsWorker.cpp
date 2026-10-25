@@ -16,14 +16,16 @@ FileRelationshipsWorker::FileRelationshipsWorker( QObject* parent, idhan::hydrus
 
 void FileRelationshipsWorker::preprocess()
 {
+	emit statusMessage( "Counting duplicate relationships in Hydrus" );
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 
 		client_tr
-				<< "SELECT COUNT(*) FROM duplicate_file_members dfm JOIN duplicate_files df ON dfm.media_id = df.media_id WHERE hash_id != king_hash_id"
-			>> [ & ]( std::size_t count ) { emit processedMaxDuplicates( count ); };
+		        << "SELECT COUNT(*) FROM duplicate_file_members dfm JOIN duplicate_files df ON dfm.media_id = df.media_id WHERE hash_id != king_hash_id"
+		    >> [ & ]( std::size_t count ) { emit processedMaxDuplicates( count ); };
 	}
 
+	emit statusMessage( "Counting alternative file relationships in Hydrus" );
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 
@@ -31,10 +33,8 @@ void FileRelationshipsWorker::preprocess()
 					 "( SELECT COUNT(*) AS member_count FROM alternate_file_group_members "
 					 "JOIN duplicate_files USING (media_id) GROUP BY alternates_group_id ) grouped "
 					 "WHERE member_count > 1"
-			>> [ & ]( std::size_t count ) { emit processedMaxAlternatives( count ); };
+		    >> [ & ]( std::size_t count ) { emit processedMaxAlternatives( count ); };
 	}
-
-	emit finished();
 }
 
 void FileRelationshipsWorker::process()
@@ -48,11 +48,11 @@ void FileRelationshipsWorker::process()
 
 	std::unordered_map< HashID, idhan::RecordID > record_map {};
 
-	emit statusMessage( "Started" );
+	emit statusMessage( "Reading duplicate relationships from Hydrus" );
 
 	auto flushHashIDs = [ &, this ]()
 	{
-		emit statusMessage( "Mapping Hydrus IDs to IDHAN IDs" );
+		emit statusMessage( "Resolving file hashes and creating records on server" );
 		std::ranges::sort( hash_ids );
 		const auto duplicates { std::ranges::unique( hash_ids ) };
 		hash_ids.erase( duplicates.begin(), duplicates.end() );
@@ -87,7 +87,7 @@ void FileRelationshipsWorker::process()
 	{
 		flushHashIDs();
 
-		emit statusMessage( "Setting duplicates for batch" );
+		emit statusMessage( "Preparing duplicate relationship batch" );
 
 		std::vector< std::pair< idhan::RecordID, idhan::RecordID > > idhan_pairs {};
 		idhan_pairs.reserve( pairs.size() );
@@ -104,11 +104,14 @@ void FileRelationshipsWorker::process()
 
 		try
 		{
+			emit statusMessage(
+				QString( "Waiting for server to set %L1 duplicate relationships" ).arg( idhan_pairs.size() ) );
 			auto future { client.setDuplicates( idhan_pairs ) };
 			future.waitForFinished();
 		}
 		catch ( const std::exception& e )
 		{
+			emit warningOccurred( QString( "Duplicate batch failed: %1" ).arg( e.what() ) );
 			idhan::logging::error( "Failed to set duplicate batch of {} pairs: {}", idhan_pairs.size(), e.what() );
 		}
 
@@ -130,7 +133,7 @@ void FileRelationshipsWorker::process()
 		if ( pairs.size() >= 100 )
 		{
 			flushPairs();
-			emit statusMessage( "Getting additional rows to process" );
+			emit statusMessage( "Reading next duplicate relationship batch from Hydrus" );
 		}
 	}
 
@@ -138,6 +141,7 @@ void FileRelationshipsWorker::process()
 
 	using GroupID = std::uint32_t;
 
+	emit statusMessage( "Reading alternative file groups from Hydrus" );
 	idhan::hydrus::Query< HashID, GroupID > alternative_files {
 		client_tr,
 		"SELECT king_hash_id, alternates_group_id FROM alternate_file_group_members JOIN duplicate_files USING (media_id)"
@@ -145,7 +149,7 @@ void FileRelationshipsWorker::process()
 
 	std::unordered_map< GroupID, std::vector< idhan::hydrus::HashID > > alternative_map {};
 
-	emit statusMessage( "Mapping alternative hashes to IDHAN" );
+	emit statusMessage( "Preparing alternative file groups" );
 
 	for ( const auto& [ king_hash_id, alternative_group_id ] : alternative_files )
 	{
@@ -161,7 +165,7 @@ void FileRelationshipsWorker::process()
 
 	flushHashIDs();
 
-	emit statusMessage( "Pairing alternatives" );
+	emit statusMessage( "Preparing alternative relationships" );
 
 	std::size_t alternative_count { 0 };
 
@@ -184,6 +188,8 @@ void FileRelationshipsWorker::process()
 
 		try
 		{
+			emit statusMessage(
+				QString( "Waiting for server to set alternatives for %L1 records" ).arg( record_ids.size() ) );
 			auto future = client.setAlternatives( record_ids );
 			future.waitForFinished();
 
@@ -192,11 +198,10 @@ void FileRelationshipsWorker::process()
 		}
 		catch ( const std::exception& e )
 		{
+			emit warningOccurred( QString( "Alternative group failed: %1" ).arg( e.what() ) );
 			idhan::logging::error( "Failed to set alternatives of {} records: {}", record_ids.size(), e.what() );
 		}
 	}
-
-	emit statusMessage( "Finished" );
 }
 
 void FileRelationshipsWorker::run()
@@ -205,21 +210,25 @@ void FileRelationshipsWorker::run()
 	{
 		if ( !m_preprocessed )
 		{
-			m_preprocessed = true;
 			preprocess();
+			m_preprocessed = true;
+			emit preprocessingFinished( true );
 			return;
 		}
 
 		process();
+		emit finished();
 	}
 	catch ( std::exception& e )
 	{
 		idhan::logging::error( e.what() );
 		emit errorOccurred( QString::fromStdString( e.what() ) );
+		if ( !m_preprocessed ) emit preprocessingFinished( false );
 	}
 	catch ( ... )
 	{
 		idhan::logging::error( "Unknown exception in FileRelationshipsWorker" );
 		emit errorOccurred( "Unknown exception during file relationship import" );
+		if ( !m_preprocessed ) emit preprocessingFinished( false );
 	}
 }

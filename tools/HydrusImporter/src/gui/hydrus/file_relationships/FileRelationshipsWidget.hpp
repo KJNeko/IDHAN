@@ -2,6 +2,7 @@
 #include <QWidget>
 
 #include "FileRelationshipsWorker.hpp"
+#include "gui/hydrus/ImportServiceStatus.hpp"
 
 namespace Ui
 {
@@ -20,9 +21,11 @@ class FileRelationshipsWidget : public QWidget
 	std::size_t duplicates_processed { 0 };
 	std::size_t duplicates_total { 0 };
 	FileRelationshipsWorker* m_worker;
+	idhan::hydrus::ImportServiceStatus* m_status { nullptr };
+	bool m_preprocessed { false };
 
   signals:
-	void preprocessingComplete();
+	void preprocessingComplete( bool success );
 
   public:
 
@@ -38,6 +41,8 @@ class FileRelationshipsWidget : public QWidget
 	void startImport();
 	void startPreImport();
 	void statusMessage( const QString& msg );
+	void preprocessingFinished( bool success );
+	void importFinished();
 
 	void processedDuplicates( std::size_t count );
 	void processedMaxDuplicates( std::size_t count );

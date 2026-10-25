@@ -22,8 +22,11 @@
   <layout class="QVBoxLayout" name="verticalLayout_5">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_4">
+        <property name="spacing">
+            <number>0</number>
+        </property>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1">
        <item>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
@@ -41,14 +44,8 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item alignment="Qt::AlignmentFlag::AlignTop">
-          <widget class="QLabel" name="name">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
+            <item>
+                <widget class="idhan::hydrus::ImportServiceLabel" name="name">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -59,12 +56,8 @@
             <string>Name: Record URLs
 Type: URLs</string>
            </property>
-          </widget>
-         </item>
-         <item alignment="Qt::AlignmentFlag::AlignBottom">
-          <widget class="QLabel" name="statusLabel">
-           <property name="text">
-            <string/>
+                    <property name="minimumLines" stdset="0">
+                        <number>2</number>
            </property>
           </widget>
          </item>
@@ -75,16 +68,13 @@ Type: URLs</string>
          <property name="spacing">
           <number>0</number>
          </property>
-         <item alignment="Qt::AlignmentFlag::AlignTop">
-          <widget class="QLabel" name="urlCount">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
+            <item>
+                <widget class="idhan::hydrus::ImportServiceLabel" name="urlCount">
            <property name="text">
             <string>URLs: 0</string>
+           </property>
+                    <property name="minimumLines" stdset="0">
+                        <number>2</number>
            </property>
           </widget>
          </item>
@@ -93,6 +83,23 @@ Type: URLs</string>
       </layout>
      </item>
      <item>
+         <widget class="idhan::hydrus::ImportServiceLabel" name="statusLabel">
+             <property name="text">
+                 <string/>
+             </property>
+             <property name="minimumLines" stdset="0">
+                 <number>1</number>
+             </property>
+         </widget>
+     </item>
+        <item>
+            <widget class="idhan::hydrus::ImportServiceLabel" name="timingLabel">
+                <property name="minimumLines" stdset="0">
+                    <number>1</number>
+                </property>
+            </widget>
+        </item>
+        <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
         <widget class="QProgressBar" name="progressBar">
@@ -138,6 +145,13 @@ Type: URLs</string>
    </item>
   </layout>
  </widget>
- <resources/>
- <connections/>
+    <customwidgets>
+        <customwidget>
+            <class>idhan::hydrus::ImportServiceLabel</class>
+            <extends>QLabel</extends>
+            <header>gui/hydrus/ImportServiceLabel.hpp</header>
+        </customwidget>
+    </customwidgets>
+    <resources/>
+    <connections/>
 </ui>
