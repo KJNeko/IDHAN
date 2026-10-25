@@ -74,7 +74,7 @@ function filenameFromUrl(url) {
 const API_PAGE_SIZE = 100;
 
 const TAG_NAMESPACES = {
-    1: "artist",
+    1: "creator",
     2: "series",
     3: "copyright",
     4: "character",
