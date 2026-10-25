@@ -49,3 +49,4 @@ run-dev-remote.sh
 
 # Local downloader parser credentials
 /IDHANDownloader/premade/secrets.json
+/IDHANDownloader/premade/url-classes/private/**

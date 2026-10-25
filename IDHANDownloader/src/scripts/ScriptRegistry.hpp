@@ -1,5 +1,7 @@
 #pragma once
 
+#include <json/value.h>
+
 #include <expected>
 #include <filesystem>
 #include <memory>
@@ -20,6 +22,7 @@ struct ScriptRoute
 	std::string url_class {};
 	std::filesystem::path script {};
 	std::string export_name {};
+	bool download {};
 };
 
 class ScriptRegistry
@@ -45,6 +48,8 @@ class ScriptRegistry
 		std::filesystem::path script {};
 		std::vector< Host > hosts {};
 		std::vector< Route > routes {};
+		std::vector< std::string > ephemeral_query {};
+		bool sort_query_parameters { true };
 	};
 
 	std::vector< URLClass > m_classes {};
@@ -62,6 +67,14 @@ class ScriptRegistry
 		LaneSettings defaults = {} );
 
 	[[nodiscard]] std::expected< std::optional< ScriptRoute >, std::string > route( std::string_view url ) const;
+
+	[[nodiscard]] std::vector< std::string > ephemeralQuery( std::string_view url ) const;
+
+	[[nodiscard]] std::string storageUrl( std::string_view url ) const;
+
+	[[nodiscard]] Json::Value storageOptions( Json::Value options ) const;
+
+	[[nodiscard]] std::string comparisonKey( std::string_view url ) const;
 
 	[[nodiscard]] LaneSettings laneSettings( std::string_view host ) const;
 

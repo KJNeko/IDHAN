@@ -7,6 +7,7 @@
 
 #include "HostCallback.hpp"
 #include "URLUtils.hpp"
+#include "UrlStorageImportSink.hpp"
 #include "http/HttpMessage.hpp"
 #include "js/JSValueHandle.hpp"
 #include "js/ScriptContext.hpp"
@@ -93,7 +94,7 @@ bool SessionContext::Impl::enqueue( const WorkID id, const std::optional< WorkID
 
 	{
 		const std::scoped_lock lock { m_mutex };
-		m_seen.emplace( url );
+		m_seen.emplace( m_environment.registry->comparisonKey( url ) );
 		++m_queued;
 		m_outstanding.fetch_add( 1 );
 		m_drained_reported = false;
@@ -363,6 +364,17 @@ std::unique_ptr< ScriptExecution > SessionContext::Impl::beginWork(
 
 	if ( m_options.observer != nullptr ) (void)hostCallback( [ & ] { m_options.observer->onStarted( info ); } );
 
+	if ( execution->route.download )
+	{
+		Json::Value options { Json::objectValue };
+		options[ "request" ][ "url" ] = work.url;
+		options[ "requireFile" ] = true;
+		startImport( *execution, std::move( options ) );
+		execution->stage = ScriptStage::DONE;
+		publishDiagnostics();
+		return execution;
+	}
+
 	auto evaluated { scripts.evaluate( *execution, execution->route.script ) };
 
 	if ( !evaluated )
@@ -557,7 +569,7 @@ void SessionContext::Impl::abandon( ScriptExecution& execution )
 
 FollowResult SessionContext::Impl::follow( ScriptExecution& execution, std::string url )
 {
-	WorkInfo target { .id = 0, .parent = execution.work_id, .url = url };
+	WorkInfo target { .id = 0, .parent = execution.work_id, .url = m_environment.registry->storageUrl( url ) };
 
 	const auto report = [ & ]( const FollowStatus status )
 	{
@@ -578,7 +590,7 @@ FollowResult SessionContext::Impl::follow( ScriptExecution& execution, std::stri
 
 	{
 		const std::scoped_lock lock { m_mutex };
-		seen = m_seen.contains( url );
+		seen = m_seen.contains( m_environment.registry->comparisonKey( url ) );
 	}
 
 	if ( seen )
@@ -596,7 +608,7 @@ FollowResult SessionContext::Impl::follow( ScriptExecution& execution, std::stri
 		{
 			{
 				const std::scoped_lock lock { m_mutex };
-				m_seen.emplace( url );
+				m_seen.emplace( m_environment.registry->comparisonKey( url ) );
 			}
 
 			report( FollowStatus::ALREADY_IMPORTED );
@@ -619,7 +631,7 @@ FollowResult SessionContext::Impl::follow( ScriptExecution& execution, std::stri
 	{
 		// Insertion atomically claims the URL against concurrent followers.
 		const std::scoped_lock lock { m_mutex };
-		claimed = m_seen.insert( url ).second;
+		claimed = m_seen.insert( m_environment.registry->comparisonKey( url ) ).second;
 	}
 
 	if ( !claimed )
@@ -645,6 +657,19 @@ FollowResult SessionContext::Impl::follow( ScriptExecution& execution, std::stri
 	}
 
 	return FollowResult { .status = FollowStatus::QUEUED, .work_id = id };
+}
+
+std::expected< void, std::string > SessionContext::Impl::setUrlType( std::string url, std::string type )
+{
+	if ( m_cancelled.load() || m_closed.load() ) return std::unexpected( "The download session is closed" );
+
+	const auto parsed { ada::parse< ada::url_aggregator >( url ) };
+	if ( !parsed ) return std::unexpected( "URL type declarations require a valid absolute URL" );
+
+	if ( m_options.observer == nullptr ) return {};
+
+	url = m_environment.registry->storageUrl( url );
+	return hostOperation( [ & ] { return m_options.observer->onUrlTypeSet( url, type ); } );
 }
 
 std::optional< std::string > SessionContext::Impl::secret( const std::string_view name )
@@ -845,7 +870,9 @@ void SessionContext::Impl::startImport( ScriptExecution& execution, Json::Value 
 		return;
 	}
 
-	const WorkInfo info { .id = import_id, .parent = execution.work_id, .url = request->url };
+	const WorkInfo info {
+		.id = import_id, .parent = execution.work_id, .url = m_environment.registry->storageUrl( request->url )
+	};
 
 	if ( m_options.observer != nullptr )
 	{
@@ -858,16 +885,47 @@ void SessionContext::Impl::startImport( ScriptExecution& execution, Json::Value 
 		}
 	}
 
-	Json::Value import_options { options };
+	Json::Value import_options { m_environment.registry->storageOptions( options ) };
 	import_options.removeMember( "request" );
 
 	ImportRequest import {
 		.work = import_id,
-		.url = request->url,
-		.source_url = execution.parser_url,
+		.url = m_environment.registry->storageUrl( request->url ),
+		.source_url = m_environment.registry->storageUrl( execution.parser_url ),
 		.options = import_options,
-		.host_tag = m_options.host_tag
+		.host_tag = m_options.host_tag,
+		.direct_eligible = request->method == HttpMethod::GET && request->body.empty(),
+		.ephemeral_query = m_environment.registry->ephemeralQuery( request->url )
 	};
+
+	const auto& force_download { options[ "forceDownload" ] };
+	if ( !force_download.isNull() && !force_download.isBool() )
+	{
+		reportImportFailure( import_id, request->url, "forceDownload must be a boolean", execution.work_id );
+		return;
+	}
+
+	if ( import.direct_eligible && !m_options.force_download && !m_environment.config.force_download
+	     && !force_download.asBool() )
+	{
+		auto existing { hostOperation( [ & ] { return m_environment.imports->reuse( import ); } ) };
+		if ( !existing )
+		{
+			reportImportFailure( import_id, request->url, existing.error(), execution.work_id );
+			return;
+		}
+
+		if ( existing->has_value() )
+		{
+			const ImportInfo reused {
+				.work = import_id, .url = import.url, .record_id = ( **existing ).record_id, .note = ( **existing ).note
+			};
+			m_diagnostics.recordImported( reused );
+			if ( m_options.observer != nullptr )
+				(void)hostCallback( [ & ] { m_options.observer->onImported( reused ); } );
+			return;
+		}
+	}
 
 	auto sink { hostOperation( [ & ] { return m_environment.imports->open( import ); } ) };
 
@@ -877,7 +935,7 @@ void SessionContext::Impl::startImport( ScriptExecution& execution, Json::Value 
 		return;
 	}
 
-	request->sink = std::move( *sink );
+	request->sink = std::make_unique< UrlStorageImportSink >( std::move( *sink ), *m_environment.registry );
 	request->import = std::move( import );
 	request->cancellation = m_transfer_cancelled;
 

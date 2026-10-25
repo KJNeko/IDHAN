@@ -1,0 +1,22 @@
+{
+  "urlClasses": [
+    {
+      "name": "pixiv-image",
+      "sortQueryParameters": true,
+      "script": "pixiv.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 2
+      },
+      "hosts": [
+        "i.pximg.net"
+      ],
+      "routes": [
+        {
+          "export": "image",
+          "pathPrefix": "/img-original/"
+        }
+      ]
+    }
+  ]
+}

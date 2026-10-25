@@ -39,6 +39,19 @@ struct ClusterRecordFile
 	DBContext& db,
 	const SHA256& hash );
 
+// At least one equivalent URL must be classified as 'file'; all equivalent mappings
+// must identify the same stored record, including aliases of other URL types.
+[[nodiscard]] runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl(
+	DBContext& db,
+	std::string url,
+	std::vector< std::string > ephemeral_query = {} );
+
+[[nodiscard]] runtime::Task< void > markDirectUrls( DBContext& db, std::vector< std::string > urls );
+
+[[nodiscard]] runtime::Task< std::optional< RecordID > > findMissingRecordForHash( DBContext& db, const SHA256& hash );
+
+[[nodiscard]] runtime::Task< bool > isRecordFileMissing( DBContext& db, RecordID record_id );
+
 [[nodiscard]] runtime::Task< std::optional< std::string > > bestMimeExtension( DBContext& db, MimeID mime_id );
 
 [[nodiscard]] runtime::Task< void > storeRecordFileInfo(

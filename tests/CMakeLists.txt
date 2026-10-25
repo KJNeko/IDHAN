@@ -52,6 +52,24 @@ target_compile_definitions(
 add_dependencies(IDHANDownloaderTests IDHANDownloaderAssets)
 catch_discover_tests(IDHANDownloaderTests)
 
+AddFGLExecutable(IDHANFileRecoveryTests ${CMAKE_CURRENT_SOURCE_DIR}/fileRecovery)
+target_sources(IDHANFileRecoveryTests PRIVATE
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/urls/AssociateUrls.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/db/fileInfo.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/PathHelpers.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/getFileTimes.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/recordFilePath.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/clusters/ClusterAccess.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/clusters/ClusterManager.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/clusters/ClusterMarker.cpp
+		${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/clusters/clusterIdentity.cpp)
+target_include_directories(IDHANFileRecoveryTests PRIVATE
+		${CMAKE_SOURCE_DIR}/IDHANServer/src ${CMAKE_CURRENT_SOURCE_DIR}/common)
+target_link_libraries(IDHANFileRecoveryTests PRIVATE Catch2::Catch2WithMain libpqxx::pqxx
+		IDHANDb IDHAN IDHANDownloader spdlog::spdlog Jsoncpp_lib Folly::folly_file Folly::folly_coro_mutex
+		Folly::folly_executors_cpu_thread_pool_executor)
+catch_discover_tests(IDHANFileRecoveryTests)
+
 AddFGLExecutable(IDHANDBTests ${CMAKE_CURRENT_SOURCE_DIR}/db)
 target_sources(IDHANDBTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src/db/tagCounts.cpp)
 target_compile_definitions(IDHANDBTests PRIVATE IDHAN_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
