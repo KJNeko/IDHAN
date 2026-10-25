@@ -26,6 +26,7 @@ namespace idhan::maintenance
 {
 class HashMaintenance;
 class ModuleMaintenance;
+class TagCountMaintenance;
 }
 
 namespace idhan::http
@@ -56,6 +57,7 @@ class ServerContext
 	// Keep module health checks alive while hash workers drain, including failed startup.
 	std::unique_ptr< maintenance::ModuleMaintenance > m_module_maintenance {};
 	std::unique_ptr< maintenance::HashMaintenance > m_hash_maintenance {};
+	std::unique_ptr< maintenance::TagCountMaintenance > m_tag_count_maintenance {};
 	std::unique_ptr< httpapi::HeartbeatService > m_heartbeat {};
 
 	std::unique_ptr< http::HTTPServer > m_http_server {};

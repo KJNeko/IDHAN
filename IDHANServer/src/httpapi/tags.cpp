@@ -646,22 +646,25 @@ static http::HTTPTask< http::Response > createRelationshipPairs(
 	auto validation { co_await validateRelationshipIds( tag_domain_id, std::move( referenced_tags ), db ) };
 	if ( !validation ) co_return std::move( validation.error() );
 
-	for ( const auto& [ a_id, b_id ] : pairs )
+	try
 	{
-		try
+		auto transaction { co_await db.transaction() };
+		for ( const auto& [ a_id, b_id ] : pairs )
 		{
 			db::DBBindings bindings {};
 			bindings.bind( tag_domain_id );
 			bindings.bind( a_id );
 			bindings.bind( b_id );
-			co_await db.query( insert_sql, std::move( bindings ) ).result();
+			co_await transaction.query( insert_sql, std::move( bindings ) ).result();
 		}
-		catch ( const std::exception& e )
-		{
-			if ( std::string_view { e.what() }.find( "Cycle detected" ) != std::string_view::npos )
-				co_return http::Response::error( 409, std::format( "Error adding {}s: {}", action, e.what() ) );
-			co_return http::Response::error( 500, std::format( "Error adding {}s: {}", action, e.what() ) );
-		}
+		co_await transaction.commit();
+	}
+	catch ( const std::exception& e )
+	{
+		if ( std::string_view { e.what() }.find( "Cycle detected" ) != std::string_view::npos )
+			co_return http::Response::error( 409, std::format( "Error adding {}s: {}", action, e.what() ) );
+
+		co_return http::Response::error( 500, std::format( "Error adding {}s: {}", action, e.what() ) );
 	}
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
@@ -693,6 +696,8 @@ static http::HTTPTask< http::Response > removeRelationshipPairs(
 		co_return http::Response::error( 400, e.what() );
 	}
 
+	std::vector< std::pair< TagID, TagID > > pairs {};
+	pairs.reserve( items.size() );
 	for ( const simdjson::dom::element item : items )
 	{
 		std::int64_t a {}, b {};
@@ -707,18 +712,25 @@ static http::HTTPTask< http::Response > removeRelationshipPairs(
 		auto b_id { positiveId< TagID >( b, b_key ) };
 		if ( !b_id ) co_return std::move( b_id.error() );
 
-		try
+		pairs.emplace_back( *a_id, *b_id );
+	}
+
+	try
+	{
+		auto transaction { co_await db.transaction() };
+		for ( const auto& [ a_id, b_id ] : pairs )
 		{
 			db::DBBindings bindings {};
 			bindings.bind( tag_domain_id );
-			bindings.bind( *a_id );
-			bindings.bind( *b_id );
-			co_await db.query( delete_sql, std::move( bindings ) ).result();
+			bindings.bind( a_id );
+			bindings.bind( b_id );
+			co_await transaction.query( delete_sql, std::move( bindings ) ).result();
 		}
-		catch ( const std::exception& e )
-		{
-			co_return http::Response::error( 500, std::format( "Error removing relationship: {}", e.what() ) );
-		}
+		co_await transaction.commit();
+	}
+	catch ( const std::exception& e )
+	{
+		co_return http::Response::error( 500, std::format( "Error removing relationship: {}", e.what() ) );
 	}
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );

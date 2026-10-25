@@ -1,11 +1,16 @@
 # Tag System Migrations & Trigger Review
 
+Count maintenance in the historical inventory below is superseded by
+[background tag counts](tag-counts.md), implemented in migrations 418–429.
+Ideal resolution remains immediate; count accumulation runs in a server job.
+
 > This system is hell, I'm not sorry if you are trying to understand this.
 
 This document is a deep-dive description of every trigger and function that drives IDHAN's tag
 resolution system: raw mappings → active (alias-resolved) mappings → parent propagation →
-counts. It documents the *current* effective behaviour and walks through worked examples for the
-cases that matter operationally.
+counts. Some sections describe earlier migration states; consult the latest migration for each
+object. See [the performance review](tag-relationship-performance.md) for the 2026-10-25 live
+observations, scaling analysis, and proposed refactoring.
 
 Migrations execute in ascending numeric-prefix order at server startup. Each database object lives
 in its own directory (`func_<name>/`, `table_<name>/`, `view_<name>/`), a trigger's `CREATE TRIGGER`
@@ -30,9 +35,9 @@ needs no dedup.
 
 `tag_mappings`, `tag_aliases`, and `tag_parents` are `PARTITION BY LIST (tag_domain_id)`; a
 partition per domain is created automatically the moment a row is inserted into `tag_domains`
-(`func_createtagdomainpartitions/031-create.sql`). `active_tag_mappings`,
-`active_tag_mappings_parents`, and `tag_counts` are **not** partitioned; `tag_domain_id` is
-just an indexed column there.
+(`func_createtagdomainpartitions/031-create.sql`). `active_tag_mappings` and `active_tag_mappings_parents` are also
+partitioned by domain
+since migrations 330 and 331. `tag_counts` remains a shared, unpartitioned table.
 
 ## 1. High level overview
 
@@ -98,10 +103,10 @@ triggers fire before any statement-level one. On `tag_aliases` AFTER INSERT that
 | `active_tag_mappings_parents` | `trg_accumulate_tag_count_parents`        | AFTER INSERT OR DELETE, ROW                                       | `accumulate_tag_count_parents()`          | `func_accumulate_tag_count_parents/086-create.sql`        |
 
 The count helpers `add_count()` and `remove_count()` are not triggers; they are called by the two
-`accumulate_*` functions above. Both were rewritten to drop a `LOCK TABLE tag_counts IN EXCLUSIVE
-MODE` that serialised every writer process-wide for the duration of a transaction
-(`func_add_count/094-rewrite.sql`, `func_remove_count/095-rewrite.sql`). The `ON CONFLICT` target is
-already the primary key, so the lock bought nothing.
+`accumulate_*` functions above. Migrations 094 and 095 removed the original exclusive table lock,
+but migration 200 reintroduced a `SHARE ROW EXCLUSIVE` lock in `add_count()`. That lock still
+serializes count writers across domains for the duration of the transaction. The live definition
+was verified during the performance review; it must be accounted for when evaluating concurrency.
 
 `tag_text(...)` overloads (`func_tag_text/008-create.sql`, `func_tag_text_by_id/051-create.sql`) and
 `concat_tag(...)` (`func_concat_tag/007-create.sql`) are plain `IMMUTABLE` functions backing the
@@ -353,30 +358,11 @@ up `aliased_id = A` (the target, `A`) — finds the first row, `effective_tag_id
 aliasing B to A would create an alias cycle in domain 0'`. `createTagAliases` (API layer) greps
 for the `Cycle detected` prefix and returns **409 Conflict** rather than a generic 500.
 
-Longer chains (`A→B→C`, then attempting `C→A`) are also caught: `ideal_alias_id` for a `C→A`
-insert resolves through the collapsed chain to `aliased_id=A`'s effective target, which is
-itself `A`'s own... actually resolving `aliased_id = A` (the new alias's *target*) finds nothing
-if `A` isn't aliased to anything (`A` is the root of the chain) — so a 3-node cycle `A→B→C→A`
-*is* caught because inserting `C→A` looks up `aliased_id = A`: no row (A is not further
-aliased), so `ideal_alias_id = NULL`, and `NULL != C` (`new.aliased_id`), so **no exception is
-raised by the before-insert trigger** — the row `(C, A, ideal_alias_id=NULL)` is inserted. This
-is fine and not actually a cycle *yet* in the alias-resolution sense (`A`'s `effective_tag_id`
-is still `A` itself pre-insert). The unnamed `CHECK (aliased_id != ideal_alias_id)` also doesn't
-fire, since `ideal_alias_id` is `NULL`. **What actually creates the cycle** is the direct
-`aliased_id=A, alias_id=B` edge combined with `alias_id` chains eventually pointing back — for
-`tag_aliases`, since each tag can only be `aliased_id` **once** (`UNIQUE (tag_domain_id,
-aliased_id)`), a true cycle would require `A`'s row (`aliased_id=A`) to itself later be
-`UPDATE`d to point back into the chain, which is where `tag_aliases_after_update_trigger`'s
-explicit `RAISE EXCEPTION 'Recursive alias detected during update'` guard is the actual
-backstop for that direction — not the before-insert trigger. In short: the insert-time cycle
-guard only catches an immediate 2-cycle (`X→Y` then `Y→X`) or an N-cycle where the *last* edge
-closes the loop back to a tag that already resolves through the chain; genuine 3+-cycles formed
-by inserting edges in "the wrong order" are prevented by the `UNIQUE(tag_domain_id, aliased_id)`
-constraint making it structurally impossible to give a tag two outgoing alias edges in the first
-place — a tag can only be `aliased_id` once, so you cannot build a cycle by insertion order at
-all; the only way back into a chain is via `UPDATE`, which is where the update-trigger's
-explicit guard applies.
-
+Longer chains are checked in the same way when the cached resolution is current: for
+`A→B→C`, A's effective target is C, so inserting `C→A` resolves the target A to C and rejects
+the equality with the new source C. The unique outgoing-edge constraint does **not** itself
+prevent cycles. Concurrent writes and batches need additional validation/serialization so
+that this check cannot run against an obsolete graph.
 ### 4.9 Parent cycle rejection
 
 ```

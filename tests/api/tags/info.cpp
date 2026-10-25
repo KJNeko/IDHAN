@@ -1,7 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "ServerFixture.hpp"
 #include "MimeIDs.hpp"
+#include "ServerFixture.hpp"
+#include "accumulateTagCounts.hpp"
 
 namespace idhan::test
 {
@@ -138,6 +139,9 @@ class TagCountFixture : public ServerFixture
 		REQUIRE( api().addTags( first, { records[ 0 ], records[ 1 ], records[ 2 ] }, { applied } ).status == 200 );
 		REQUIRE( api().addTags( second, { records[ 0 ], records[ 1 ] }, { canonical } ).status == 200 );
 		REQUIRE( api().addTags( outside, records, { canonical } ).status == 200 );
+		pqxx::work accumulation { db() };
+		accumulateTagCountsForTest( accumulation );
+		accumulation.commit();
 	}
 };
 
@@ -213,7 +217,7 @@ TEST_CASE_METHOD( TagCountFixture, "Tag info validates domain selections on both
 			CAPTURE( path, value );
 			CHECK(
 				api().get( path, { { "tag_id", std::to_string( canonical ) }, { "tag_domains", value } } ).status
-				== 400 );
+			    == 400 );
 		}
 	}
 	CHECK( info( canonical, { 32767 } ).status == 404 );
