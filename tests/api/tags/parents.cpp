@@ -30,7 +30,7 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 					tx.query_value< int >(
 						"SELECT count(*) FROM tag_parents WHERE tag_domain_id = $1 AND parent_id = $2 AND child_id = $3",
 						pqxx::params { domain, metroid, samus } )
-					== 1 );
+				    == 1 );
 			}
 
 			AND_WHEN( "the same pair is created again" )
@@ -162,6 +162,23 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 			}
 		}
 	}
+}
+
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Parent batches roll back completely when a later pair creates a cycle",
+	"[api][tags][parents][atomic]" )
+{
+	const auto domain { api().createDomain( "atomic parents" ) };
+	const auto a { api().createTag( "", "a" ) };
+	const auto b { api().createTag( "", "b" ) };
+	const auto c { api().createTag( "", "c" ) };
+	CHECK( api().createParents( domain, { { a, b }, { b, c }, { c, a } } ).status == 409 );
+	pqxx::nontransaction read { db() };
+	CHECK(
+		read.query_value< int >( "SELECT COUNT(*) FROM tag_parents WHERE tag_domain_id = $1", pqxx::params { domain } )
+	    == 0 );
+	CHECK( api().createParents( domain, { { a, b }, { b, c } } ).status == 200 );
 }
 
 } // namespace idhan::test

@@ -1,7 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "ServerFixture.hpp"
 #include "MimeIDs.hpp"
+#include "ServerFixture.hpp"
+#include "accumulateTagCounts.hpp"
 
 namespace idhan::test
 {
@@ -195,7 +196,10 @@ class AutocompleteScopeFixture : public ServerFixture
 		REQUIRE( api().addTags( first, { records[ 4 ] }, { other } ).status == 200 );
 		REQUIRE(
 			api().addTags( second, { records[ 0 ], records[ 1 ], records[ 2 ], records[ 3 ] }, { other } ).status
-			== 200 );
+		    == 200 );
+		pqxx::work accumulation { db() };
+		accumulateTagCountsForTest( accumulation );
+		accumulation.commit();
 	}
 };
 
@@ -217,7 +221,7 @@ TEST_CASE_METHOD(
 	CHECK( countFor( display, other ) == 1 );
 	CHECK(
 		api().get( "/tags/autocomplete", { { "tag", "scope:" }, { "tag_domains", std::to_string( first ) } } ).json
-		== display.json );
+	    == display.json );
 	CHECK( complete( { first }, "storage", false ).json.size() == 2 );
 	CHECK( complete( { first }, "display", false ).json.size() == 3 );
 	const auto no_counts { complete( { empty } ) };
@@ -245,16 +249,16 @@ TEST_CASE_METHOD(
 	CHECK( countFor( selected_display, parent ) == 3 );
 	CHECK(
 		api().get( "/tags/autocomplete", { { "tag", "scope:" }, { "tag_domain", std::to_string( first ) } } ).json
-		== complete( { first } ).json );
+	    == complete( { first } ).json );
 	CHECK(
 		api()
 			.get(
 				"/tags/autocomplete",
 				{ { "tag", "scope:" },
-	              { "tag_domains", std::to_string( first ) },
-	              { "tag_domain", std::to_string( outside ) } } )
+				  { "tag_domains", std::to_string( first ) },
+				  { "tag_domain", std::to_string( outside ) } } )
 			.json
-		== complete( { first } ).json );
+	    == complete( { first } ).json );
 	const auto exact {
 		api().get( "/tags/autocomplete", { { "tag", "scope:alpha" }, { "tag_domains", std::to_string( first ) } } )
 	};
@@ -265,7 +269,7 @@ TEST_CASE_METHOD(
 		countFor(
 			api().get( "/tags/autocomplete", { { "tag", "-scope:" }, { "tag_domains", std::to_string( first ) } } ),
 			canonical )
-		== 3 );
+	    == 3 );
 }
 
 TEST_CASE_METHOD(

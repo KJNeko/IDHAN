@@ -1,6 +1,7 @@
 #include "ServerContext.hpp"
 #include "jobs/JobContext.hpp"
 #include "maintenance/HashMaintenance.hpp"
+#include "maintenance/TagCountMaintenance.hpp"
 #include "maintenance/ModuleMaintenance.hpp"
 #include "config/consumeFlag.hpp"
 
@@ -273,6 +274,7 @@ void ServerContext::startReplacementStack()
 	resumeDownloads( *m_db_context, db_executor );
 	m_module_maintenance = std::make_unique< maintenance::ModuleMaintenance >( *m_module_loader );
 	m_hash_maintenance = std::make_unique< maintenance::HashMaintenance >( *m_db_context, db_executor );
+	m_tag_count_maintenance = std::make_unique< maintenance::TagCountMaintenance >( *m_db_context, db_executor );
 
 	http::HTTPConfig http_config { http::HTTPConfig::defaults() };
 	http_config.ipv4_listen = config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" );
@@ -420,6 +422,7 @@ ServerContext::~ServerContext()
 	getJobRuntime().shutdownEvents();
 	downloader::debugEvents().shutdown();
 	if ( m_http_server != nullptr ) m_http_server->stop();
+	m_tag_count_maintenance.reset();
 	m_hash_maintenance.reset();
 	m_module_maintenance.reset();
 	downloader::DownloadSessionEventHub::instance().shutdown();

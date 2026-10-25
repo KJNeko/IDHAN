@@ -30,7 +30,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 					tx.query_value< int >(
 						"SELECT count(*) FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2 AND alias_id = $3",
 						pqxx::params { domain, samus, samus_aran } )
-					== 1 );
+				    == 1 );
 			}
 
 			AND_WHEN( "the same alias is created again" )
@@ -62,7 +62,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 						tx.query_value< int >(
 							"SELECT alias_id FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2",
 							pqxx::params { domain, samus } )
-						== samus_aran );
+					    == samus_aran );
 				}
 			}
 
@@ -213,6 +213,48 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 			}
 		}
 	}
+}
+
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Alias batches roll back completely when a later pair creates a cycle",
+	"[api][tags][aliases][atomic]" )
+{
+	const auto domain { api().createDomain( "atomic aliases" ) };
+	const auto a { api().createTag( "", "a" ) };
+	const auto b { api().createTag( "", "b" ) };
+	const auto c { api().createTag( "", "c" ) };
+	CHECK( api().createAliases( domain, { { a, b }, { b, c }, { c, a } } ).status == 409 );
+	pqxx::nontransaction read { db() };
+	CHECK(
+		read.query_value< int >( "SELECT COUNT(*) FROM tag_aliases WHERE tag_domain_id = $1", pqxx::params { domain } )
+	    == 0 );
+	CHECK( api().createAliases( domain, { { a, b }, { b, c } } ).status == 200 );
+	CHECK(
+		read.query_value< int >(
+			"SELECT effective_tag_id FROM tag_aliases "
+			"WHERE tag_domain_id = $1 AND aliased_id = $2",
+			pqxx::params { domain, a } )
+	    == c );
+}
+
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Malformed alias removal batches preserve all existing relationships",
+	"[api][tags][aliases][atomic]" )
+{
+	const auto domain { api().createDomain( "atomic removal" ) };
+	const auto a { api().createTag( "", "a" ) };
+	const auto b { api().createTag( "", "b" ) };
+	const auto c { api().createTag( "", "c" ) };
+	REQUIRE( api().createAliases( domain, { { a, b }, { b, c } } ).status == 200 );
+	auto body { aliasBody( { { a, b }, { b, c } } ) };
+	body[ 1 ][ "aliased_id" ] = "invalid";
+	CHECK( api().post( "/tags/alias/remove", body, { { "tag_domain_id", std::to_string( domain ) } } ).status == 400 );
+	pqxx::nontransaction read { db() };
+	CHECK(
+		read.query_value< int >( "SELECT COUNT(*) FROM tag_aliases WHERE tag_domain_id = $1", pqxx::params { domain } )
+	    == 2 );
 }
 
 } // namespace idhan::test
