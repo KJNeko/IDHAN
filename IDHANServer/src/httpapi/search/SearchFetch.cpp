@@ -43,7 +43,8 @@ static std::string buildTermQuery(
 	const SortOrder order = SortOrder::ASC,
 	const bool random_order = false,
 	const bool distinct_rows = false,
-	const HydrusDisplayType display = HydrusDisplayType::DEFAULT )
+	const HydrusDisplayType display = HydrusDisplayType::DEFAULT,
+	const bool include_deleted = false )
 {
 	const auto spec { sortKeySpec( sort_type, display ) };
 
@@ -73,6 +74,7 @@ static std::string buildTermQuery(
 	query += extra_joins;
 
 	query += " WHERE fi.mime_id IS NOT NULL";
+	if ( !include_deleted ) query += " AND fi.cluster_delete_time IS NULL";
 
 	if ( !where_core.empty() )
 	{
@@ -290,7 +292,8 @@ runtime::Task< Set > fetchTag( FetchContext ctx, const TagID tag, std::string la
 		SortOrder::ASC,
 		false,
 		true,
-		ctx.display ) };
+		ctx.display,
+		ctx.include_deleted ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
 }
@@ -309,7 +312,8 @@ runtime::Task< Set > fetchAnyTag( FetchContext ctx, std::vector< TagID > tags, s
 		SortOrder::ASC,
 		false,
 		true,
-		ctx.display ) };
+		ctx.display,
+		ctx.include_deleted ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
 }
@@ -328,7 +332,8 @@ runtime::Task< Set > fetchNamespace( FetchContext ctx, const NamespaceID tag_nam
 		SortOrder::ASC,
 		false,
 		true,
-		ctx.display ) };
+		ctx.display,
+		ctx.include_deleted ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
 }
@@ -348,7 +353,8 @@ runtime::Task< Set > fetchPredicate( FetchContext ctx, PredicateSource predicate
 		SortOrder::ASC,
 		false,
 		false,
-		ctx.display ) };
+		ctx.display,
+		ctx.include_deleted ) };
 
 	co_return co_await runFetch( std::move( ctx ), std::move( query ), std::move( label ) );
 }
@@ -360,7 +366,8 @@ std::string buildPageQuery(
 	const SortOrder order,
 	const std::size_t offset,
 	const std::optional< std::size_t > limit,
-	const HydrusDisplayType display )
+	const HydrusDisplayType display,
+	const bool include_deleted )
 {
 	auto query { buildTermQuery(
 		sort_type,
@@ -373,7 +380,8 @@ std::string buildPageQuery(
 		order,
 		sort_type == SortType::RANDOM,
 		false,
-		display ) };
+		display,
+		include_deleted ) };
 
 	if ( limit ) query += " LIMIT " + std::to_string( *limit );
 	if ( offset > 0 ) query += " OFFSET " + std::to_string( offset );
@@ -390,9 +398,8 @@ runtime::Task< Set > fetchPage(
 {
 	const auto key_type { sortKeySpec( ctx.sort_type ).type };
 	const auto exclusion_count { excluded.size() };
-	const auto query {
-		buildPageQuery( ctx.sort_type, ctx.want_hashes, !excluded.empty(), order, offset, limit, ctx.display )
-	};
+	const auto query { buildPageQuery(
+		ctx.sort_type, ctx.want_hashes, !excluded.empty(), order, offset, limit, ctx.display, ctx.include_deleted ) };
 
 	log::trace( "Search page: {}", query );
 

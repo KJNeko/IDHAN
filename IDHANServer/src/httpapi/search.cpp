@@ -45,8 +45,11 @@ namespace idhan::httpapi
 	if ( !by_e ) co_return http::Response::error( 400, by_e.error().message );
 	auto order_e { context.parameters().optional< std::string >( "order" ) };
 	if ( !order_e ) co_return http::Response::error( 400, order_e.error().message );
+	auto include_deleted_e { context.parameters().optional< bool >( "include_deleted" ) };
+	if ( !include_deleted_e.has_value() ) co_return http::Response::error( 400, include_deleted_e.error().message );
 
 	SearchQuery query {};
+	query.setIncludeDeleted( include_deleted_e.value().value_or( false ) );
 	query.addPositiveTags( tag_ids );
 
 	if ( *by_e )
@@ -125,6 +128,12 @@ struct SplitTags
 		if ( !root.is_object() ) co_return http::Response::error( 400, "Request body must be a JSON object" );
 
 		SearchQuery query {};
+		bool include_deleted {};
+		const auto include_deleted_error { root[ "include_deleted" ].get( include_deleted ) };
+		if ( include_deleted_error != simdjson::SUCCESS && include_deleted_error != simdjson::NO_SUCH_FIELD )
+			co_return http::Response::error( 400, "'include_deleted' must be a boolean" );
+
+		query.setIncludeDeleted( include_deleted );
 
 		simdjson::dom::array tags_array {};
 		const auto tags_ec { root[ "tags" ].get( tags_array ) };

@@ -50,10 +50,17 @@ type Config = {
   tags: string[];
   sortBy: SortBy;
   sortOrder: SortOrder;
+    includeDeleted: boolean;
     showBreakdown: boolean;
 };
 
-const DEFAULT_CONFIG: Config = {tags: [], sortBy: 'import_time', sortOrder: 'desc', showBreakdown: false};
+const DEFAULT_CONFIG: Config = {
+    tags: [],
+    sortBy: 'import_time',
+    sortOrder: 'desc',
+    includeDeleted: false,
+    showBreakdown: false,
+};
 const DEBOUNCE_MS = 130;
 
 function readConfig(raw: Partial<Config>): Config {
@@ -61,6 +68,7 @@ function readConfig(raw: Partial<Config>): Config {
     tags: Array.isArray(raw.tags) ? raw.tags : DEFAULT_CONFIG.tags,
     sortBy: SORT_OPTIONS.some((o) => o.value === raw.sortBy) ? (raw.sortBy as SortBy) : DEFAULT_CONFIG.sortBy,
     sortOrder: raw.sortOrder === 'asc' ? 'asc' : DEFAULT_CONFIG.sortOrder,
+      includeDeleted: raw.includeDeleted === true,
       showBreakdown: raw.showBreakdown === true,
   };
 }
@@ -197,6 +205,7 @@ function SearchPanel({ host }: PanelProps) {
   const [tags, setTags] = useState<string[]>(initial.tags);
   const [sortBy, setSortBy] = useState<SortBy>(initial.sortBy);
   const [sortOrder, setSortOrder] = useState<SortOrder>(initial.sortOrder);
+    const [includeDeleted, setIncludeDeleted] = useState(initial.includeDeleted);
   const [input, setInput] = useState('');
   const [highlight, setHighlight] = useState(-1);
   const [running, setRunning] = useState(false);
@@ -231,12 +240,13 @@ function SearchPanel({ host }: PanelProps) {
   );
 
   const runSearch = useCallback(
-    async (queryTags: string[], by: SortBy, order: SortOrder) => {
+      async (queryTags: string[], by: SortBy, order: SortOrder, showDeleted = includeDeleted) => {
       setRunning(true);
       try {
         const response = await host.search.run({
           tags: queryTags,
           sort: { by, order },
+            include_deleted: showDeleted,
             debug: breakdownRef.current,
         });
         const ids = Int32Array.from(response.record_ids);
@@ -252,7 +262,7 @@ function SearchPanel({ host }: PanelProps) {
         setRunning(false);
       }
     },
-    [host],
+      [host, includeDeleted],
   );
 
   // Restore results on (re)mount when a prior query was persisted; a fresh panel stays idle until asked.
@@ -260,7 +270,8 @@ function SearchPanel({ host }: PanelProps) {
   useEffect(() => {
     if (bootRef.current) return;
     bootRef.current = true;
-    if (initial.tags.length > 0) void runSearch(initial.tags, initial.sortBy, initial.sortOrder);
+      if (initial.tags.length > 0)
+          void runSearch(initial.tags, initial.sortBy, initial.sortOrder, initial.includeDeleted);
     // initial.* is captured once from settings on first render; intentionally a mount-only effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -376,6 +387,14 @@ function SearchPanel({ host }: PanelProps) {
         if (!next) setSteps(null);
     }
 
+    function toggleIncludeDeleted() {
+        const next = !includeDeleted;
+        setIncludeDeleted(next);
+        persist({includeDeleted: next});
+
+        if (summary !== null) void runSearch(tags, sortBy, sortOrder, next);
+    }
+
     const termRows = steps ? toTermRows(steps) : [];
     const pageStep = steps?.find((s) => s.kind === 'page') ?? null;
 
@@ -463,6 +482,9 @@ function SearchPanel({ host }: PanelProps) {
       </div>
 
       <div className="search-controls">
+          <label className="panel-checkbox">
+              <input type="checkbox" checked={includeDeleted} onChange={toggleIncludeDeleted}/> Include deleted files
+          </label>
         <label className="search-sort">
           Sort
           <select value={sortBy} onChange={(e) => changeSort(e.target.value as SortBy, sortOrder)}>

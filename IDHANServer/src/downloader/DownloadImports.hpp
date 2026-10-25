@@ -21,6 +21,7 @@ class DownloadImports final : public ImportSinkFactory
 		DownloadSessionID m_session_id {};
 		std::string m_tag_domain {};
 		bool m_direct_eligible {};
+		bool m_force_download {};
 
 	  public:
 
@@ -30,13 +31,15 @@ class DownloadImports final : public ImportSinkFactory
 			std::string url,
 			const DownloadSessionID session_id,
 			std::string tag_domain,
-			bool direct_eligible ) :
+			bool direct_eligible,
+			bool force_download ) :
 		  m_filename( std::move( filename ) ),
 		  m_options( std::move( options ) ),
 		  m_url( std::move( url ) ),
 		  m_session_id( session_id ),
 		  m_tag_domain( std::move( tag_domain ) ),
-		  m_direct_eligible( direct_eligible )
+		  m_direct_eligible( direct_eligible ),
+		  m_force_download( force_download )
 		{}
 
 		Sink( const Sink& ) = delete;
@@ -70,7 +73,8 @@ class DownloadImports final : public ImportSinkFactory
 			request.url,
 			static_cast< DownloadSessionID >( request.host_tag ),
 			m_tag_domain,
-			request.direct_eligible );
+			request.direct_eligible,
+			request.force_download );
 	}
 };
 

@@ -110,9 +110,10 @@ static runtime::Task< std::expected< ImportResult, std::string > > finishImport(
 	std::vector< std::string > tags,
 	const std::string tag_domain,
 	const DownloadSessionID session_id,
+	const bool force_download,
 	db::DBContext& db )
 {
-	auto imported { co_await imports::importFile( data, sha256, filename, false, db ) };
+	auto imported { co_await imports::importFile( data, sha256, filename, force_download, db ) };
 	if ( !imported )
 		co_return std::unexpected( std::format( "Importing {}: {}", description, imported.error().message ) );
 
@@ -205,6 +206,7 @@ std::expected< ImportResult, std::string > DownloadImports::Sink::finish( const 
 		collectTags( m_options ),
 		m_tag_domain,
 		m_session_id,
+		m_force_download,
 		db::DBContext::instance() ) ) };
 
 	m_buffer.discard();

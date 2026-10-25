@@ -23,6 +23,7 @@ struct FetchContext
 	std::vector< TagDomainID > tag_domains {};
 	std::shared_ptr< idhan::search::SearchStats > stats {};
 	HydrusDisplayType display { HydrusDisplayType::DEFAULT };
+	bool include_deleted { false };
 };
 
 struct PredicateSource
@@ -56,6 +57,7 @@ runtime::Task< idhan::search::Set > fetchPage(
 	SortOrder order,
 	std::size_t offset,
 	std::optional< std::size_t > limit,
-	HydrusDisplayType display = HydrusDisplayType::DEFAULT );
+	HydrusDisplayType display = HydrusDisplayType::DEFAULT,
+	bool include_deleted = false );
 
 } // namespace idhan::httpapi::searchfetch

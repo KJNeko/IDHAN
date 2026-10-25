@@ -7,7 +7,7 @@
 
 #include "httpapi/jsonBody.hpp"
 #include "httpapi/parameterDeclarations.hpp"
-#include "idhan/http/ParameterRules.hpp"
+#include "idhan/http/JsonParameterPath.hpp"
 #include "idhan/http/RouteRegistry.hpp"
 
 // Folly includes glog, which also defines CHECK. Use Catch2 assertions below.
@@ -58,20 +58,28 @@ TEST_CASE( "Query parameter declarations allow repeats and ignore empty separato
 TEST_CASE( "JSON declarations inspect nested fields and leave free-form objects open", "[parameters][json]" )
 {
 	simdjson::dom::parser parser;
-	const simdjson::padded_string input {
-		std::string_view {
-			R"({"sort":{"by":"size","ordr":"asc"},"tags":[{"namespace":"x","subtag":"y","typo":1}],"extra":{"custom":1},"bad/name~":2})" }
-	};
+	const simdjson::padded_string input { std::string_view { R"({
+        "sort": { "by": "size", "ordr": "asc" },
+        "tags": [{ "namespace": "x", "subtag": "y", "typo": 1 }],
+        "sets": [
+            [{ "namespace": "x", "typo": 1 }],
+            [{ "subtag": "y", "extra": 2 }]
+        ],
+        "extra": { "custom": 1 },
+        "bad/name~": 2
+    })" } };
 	auto document { parser.parse( input ) };
 	REQUIRE( !document.error() );
 	const std::vector< JsonParameterObject > declarations {
-		{ {}, { "sort", "tags", "extra" } },
-		{ { "sort" }, { "by", "order" } },
-		{ { "tags", "*" }, { "namespace", "subtag" } }
+		root().allowFields( { "sort", "tags", "sets", "extra" } ),
+		root().field( "sort" ).allowFields( { "by", "order" } ),
+		root().field( "tags" ).eachElement().allowFields( { "namespace", "subtag" } ),
+		root().field( "sets" ).eachElement().eachElement().allowFields( { "namespace", "subtag" } )
 	};
 	CHECK(
 		unknownJsonParameters( *document, declarations )
-		== std::vector< std::string > { "/bad~1name~0", "/sort/ordr", "/tags/0/typo" } );
+	    == std::vector< std::string > {
+			"/bad~1name~0", "/sort/ordr", "/tags/0/typo", "/sets/0/0/typo", "/sets/1/0/extra" } );
 	CHECK( unknownJsonParameters( *document, {} ).empty() );
 }
 
@@ -134,7 +142,7 @@ TEST_CASE( "The JSON body reader warns today and can reject by policy", "[parame
 	runtime::DrainRegistry work;
 	for ( const auto policy : { UnknownParameterPolicy::warn, UnknownParameterPolicy::reject } )
 	{
-		ParameterRules rules { {}, { { {}, { "known" } } }, policy };
+		ParameterRules rules { {}, { root().allowFields( { "known" } ) }, policy };
 		proxygen::HTTPMessage message;
 		message.setMethod( proxygen::HTTPMethod::POST );
 		message.setURL( "/example" );
@@ -173,7 +181,7 @@ TEST_CASE( "Native routes require explicit warn-mode declarations", "[parameters
 	CHECK_THROWS_AS(
 		httpapi::declareEndpointParameters(
 			RouteDefinition { RouteMetadata { proxygen::HTTPMethod::GET, "/undeclared-native-route", {}, {} },
-	                          parameterTestHandler } ),
+			                  parameterTestHandler } ),
 		std::invalid_argument );
 }
 

@@ -213,6 +213,7 @@ class SearchQuery
 	[[nodiscard]] static std::string wildcardLabel( char sign, const WildcardGroup& group, std::size_t index );
 
 	HydrusDisplayType m_display_mode { HydrusDisplayType::DEFAULT };
+	bool m_include_deleted { false };
 
 	[[nodiscard]] std::optional< std::size_t > effectiveLimit() const;
 
@@ -273,6 +274,7 @@ class SearchQuery
 	void setSystemTags( const std::vector< std::string >& vector );
 
 	void setDisplay( HydrusDisplayType type );
+	void setIncludeDeleted( bool value );
 };
 
 } // namespace idhan::httpapi

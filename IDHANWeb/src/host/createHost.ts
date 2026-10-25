@@ -83,6 +83,7 @@ export function createHost(instanceId: PanelInstanceId, settings: SettingsBindin
     },
     records: {
         getMetadata: (ids) => getMetadata(ids),
+        deleteFile: (id, signal) => api.deleteRecordFile(id, signal),
         relationships: (id, signal) => api.recordRelationships(id, signal),
         similar: (id, opts, signal) => api.recordsSimilar(id, opts, signal),
         nextUndecidedDuplicate: (opts, signal) => api.nextUndecidedDuplicate(opts, signal),

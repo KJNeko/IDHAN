@@ -107,6 +107,17 @@ export const RECORD_ACTIONS: RecordAction[] = [
         },
     },
     {
+        key: 'delete-file',
+        group: 'maintenance',
+        label: ({target}) => `Delete file for #${target}`,
+        available: ({ids}) => ids.length === 1,
+        run: async ({host, target}) => {
+            if (!window.confirm(`Permanently delete the file for record #${target}? This will mark it as explicitly removed.`)) return;
+            await host.records.deleteFile(target);
+            host.ui.toast(`Deleted file for #${target}`, {kind: 'success'});
+        },
+    },
+    {
         key: 'send-to-relationships',
         group: 'view',
         label: () => 'Send to Relationships View',

@@ -904,6 +904,7 @@ void SessionContext::Impl::startImport( ScriptExecution& execution, Json::Value 
 		reportImportFailure( import_id, request->url, "forceDownload must be a boolean", execution.work_id );
 		return;
 	}
+	import.force_download = m_options.force_download || m_environment.config.force_download || force_download.asBool();
 
 	if ( import.direct_eligible && !m_options.force_download && !m_environment.config.force_download
 	     && !force_download.asBool() )
