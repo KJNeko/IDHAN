@@ -49,7 +49,7 @@ std::expected< std::unique_ptr< DownloaderContext >, std::string > DownloaderCon
 {
 	if ( config.parser_directory.empty() ) return std::unexpected( "The downloader needs a parser directory" );
 
-	if ( config.url_classes.empty() ) config.url_classes = config.parser_directory / "url-classes.json";
+	if ( config.url_classes.empty() ) config.url_classes = config.parser_directory / "url-classes";
 
 	auto impl { std::make_unique< Impl >( host ) };
 

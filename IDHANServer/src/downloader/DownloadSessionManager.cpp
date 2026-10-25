@@ -112,6 +112,7 @@ std::expected< void, std::string > DownloadSessionManager::initialize()
 		config::get< std::size_t >( "downloader", "max_response_bytes", std::size_t { 32 * 1024 * 1024 } );
 	configuration.user_agent = config::get< std::string >( "downloader", "user_agent", std::string {} );
 	configuration.flags = config::getBoolTable( "downloader.flags" );
+	configuration.force_download = config::get< bool >( "downloader", "force_download", false );
 
 	const std::string version { config::get< std::string >( "downloader", "http_version", "3" ) };
 

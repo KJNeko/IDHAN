@@ -17,6 +17,8 @@ class DownloaderContext;
 
 struct SessionOptions
 {
+	// Bypass reuse of a known direct URL and transfer the file again.
+	bool force_download {};
 	std::string root_url {};
 	SessionObserver* observer {};
 	//! In-flight HTTP requests allowed before the loop stops starting new scripts. 0 takes the context default.

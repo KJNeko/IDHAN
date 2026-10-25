@@ -4,12 +4,13 @@
 
 #include <stdexcept>
 
-#include "DownloadSessionEventHub.hpp"
 #include "DebugEvents.hpp"
+#include "DownloadSessionEventHub.hpp"
 #include "DownloadSessionManager.hpp"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
 #include "sessionRows.hpp"
+#include "urls/AssociateUrls.hpp"
 
 namespace idhan::downloader
 {
@@ -153,6 +154,11 @@ void SessionRowObserver::onFollowed( const WorkInfo& info, const FollowStatus st
 				DownloadSessionManager::addRow( m_session_id, parent, info.url, "skipped", "Already in the database" );
 			break;
 	}
+}
+
+std::expected< void, std::string > SessionRowObserver::onUrlTypeSet( const std::string& url, const std::string& type )
+{
+	return folly::coro::blockingWait( helpers::setUrlType( url, type, DownloadSessionManager::dbContext() ) );
 }
 
 std::optional< std::int64_t > SessionRowObserver::alreadyImported( const std::string& )

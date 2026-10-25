@@ -117,7 +117,7 @@ async function creator(input, idhan, route) {
         );
 
         for (const post of page) {
-            idhan.follow({url: postUrl(route.service, route.creator, post.id)});
+            idhan.follow({url: postUrl(route.service, route.creator, post.id), type: "post"});
         }
 
         if (page.length < pageSize) {

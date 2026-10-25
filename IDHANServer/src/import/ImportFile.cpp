@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "MimeIDs.hpp"
+#include "db/fileInfo.hpp"
 #include "filesystem/PathHelpers.hpp"
 #include "filesystem/VerifiedRecordPath.hpp"
 #include "filesystem/clusters/ClusterManager.hpp"
@@ -23,6 +24,7 @@
 #include "idhan/db/DBContext.hpp"
 #include "logging/log.hpp"
 #include "mime/identifyMime.hpp"
+#include "notifications/MissingFiles.hpp"
 
 namespace idhan::imports
 {
@@ -32,18 +34,17 @@ namespace idhan::imports
 	const RecordID record_id,
 	const SHA256& expected_sha256 )
 {
-	auto path_e { co_await httpapi::recordFilePathForScan( db, record_id ) };
-	if ( !path_e )
-	{
-		if ( path_e.error().message.getStatusCode() == 503 )
-			co_return std::unexpected( ImportError { 503, "Assigned cluster identity could not be verified" } );
-		co_return false;
-	}
+	auto resolved { co_await filesystem::findPresentRecordFilePath( db, record_id ) };
+	if ( !resolved ) co_return std::unexpected( ImportError { 503, resolved.error() } );
+
+	if ( !*resolved ) co_return false;
+
+	auto& path { **resolved };
 
 	try
 	{
-		const auto actual { co_await filesystem::hashFile( path_e->path() ) };
-		const auto valid { path_e->verify() };
+		const auto actual { co_await filesystem::hashFile( path.path() ) };
+		const auto valid { path.verify() };
 		if ( !valid ) co_return std::unexpected( ImportError { 503, valid.error() } );
 
 		co_return actual == expected_sha256;
@@ -285,10 +286,10 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 						.status = Deleted, .record_id = *existing_record, .deleted_time = delete_epoch
 					};
 
-				auto path_e { co_await httpapi::recordFilePathForScan( db, *existing_record ) };
-				if ( path_e ) co_return ImportOutcome { .status = Exists, .record_id = *existing_record };
-				if ( path_e.error().message.getStatusCode() == 503 )
-					co_return std::unexpected( ImportError { 503, "Assigned cluster identity could not be verified" } );
+				auto path_e { co_await filesystem::findPresentRecordFilePath( db, *existing_record ) };
+				if ( !path_e ) co_return std::unexpected( ImportError { 503, path_e.error() } );
+
+				if ( *path_e ) co_return ImportOutcome { .status = Exists, .record_id = *existing_record };
 			}
 		}
 	}
@@ -338,9 +339,16 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 	if ( delete_recorded && !force_import )
 		co_return ImportOutcome { .status = Deleted, .record_id = record_id, .deleted_time = delete_epoch };
 
-	auto theoretical_path { co_await filesystem::findRecordFilePath( db, record_id ) };
-	if ( !theoretical_path ) co_return std::unexpected( ImportError { 503, theoretical_path.error() } );
-	const bool store_confirmed { *theoretical_path && std::filesystem::exists( ( **theoretical_path ).path() ) };
+	bool store_confirmed {};
+	if ( store_recorded )
+	{
+		auto present_path { co_await filesystem::findPresentRecordFilePath( db, record_id ) };
+		if ( !present_path ) co_return std::unexpected( ImportError { 503, present_path.error() } );
+
+		store_confirmed = present_path->has_value();
+	}
+
+	const auto missing_record { co_await db::findMissingRecordForHash( db, sha256 ) };
 	const bool should_store {
 		( !delete_recorded && !store_recorded ) || force_import || ( !store_confirmed && store_recorded )
 	};
@@ -349,6 +357,8 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 	{
 		auto stored { co_await storeRecordFile( db, record_id, sha256, data, *target_cluster_e ) };
 		if ( !stored ) co_return std::unexpected( std::move( stored.error() ) );
+
+		if ( missing_record ) notifications::onFileFound( *missing_record );
 	}
 
 	auto scanned { co_await httpapi::parseAndStoreRecordMetadata( db, record_id ) };

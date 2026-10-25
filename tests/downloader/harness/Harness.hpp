@@ -31,12 +31,14 @@ struct Harness
 		parsers.write( "url-classes.json", url_classes );
 
 		config.parser_directory = parsers.root();
+		config.url_classes = parsers.urlClassesPath();
 		config.http_version = downloader::HttpVersion::HTTP_1_1;
 
 		auto created { downloader::DownloaderContext::create(
 			std::move( config ),
 			downloader::DownloaderHost {
 				.imports = &imports, .cookies = nullptr, .secrets = &secrets, .lanes = &lane_observer } ) };
+		if ( !created ) INFO( created.error() );
 		REQUIRE( created.has_value() );
 		context = std::move( *created );
 	}

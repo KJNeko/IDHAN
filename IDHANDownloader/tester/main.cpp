@@ -35,9 +35,9 @@ static void printUsage()
 		<< "                           Override a manifest-declared parser flag\n"
 		<< "  --secrets <path>         JSON secret store (default: secrets.json beside the parser)\n"
 		<< "  --parsers <directory>    Parser scripts directory (default: ./downloader)\n"
-		<< "  --url-classes <path>     URL Classes JSON (default: url-classes.json in parser directory)\n"
-		<< "  --save <directory>       Write downloaded files here instead of discarding them\n"
-		<< "  --inflight <count>       In-flight requests before the session stops starting scripts\n"
+	    << "  --url-classes <path>     URL Classes directory or JSON file (default: url-classes in parser directory)\n"
+	    << "  --save <directory>       Write downloaded files here instead of discarding them\n"
+	    << "  --inflight <count>       In-flight requests before the session stops starting scripts\n"
 		<< "  --http <1.1|2|3>         Wire version to offer\n"
 		<< "  --reset-backoff          Clear every lane's backoff before starting\n"
 		<< "  --verbose                Show queued work, response headers, and other debug logs\n"
@@ -438,7 +438,7 @@ static std::optional< Options > parse( const int argc, char* argv[] )
 		return std::nullopt;
 	}
 
-	if ( options.url_classes.empty() ) options.url_classes = options.parsers / "url-classes.json";
+	if ( options.url_classes.empty() ) options.url_classes = options.parsers / "url-classes";
 	if ( options.secrets.empty() ) options.secrets = options.parsers / "secrets.json";
 
 	return options;

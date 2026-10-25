@@ -97,6 +97,9 @@ class SessionObserver
 	//! WorkInfo describes the followed URL; id is 0 unless it was queued.
 	virtual void onFollowed( const WorkInfo&, FollowStatus ) {}
 
+	// Persists an explicit parser classification before follow/import work is dispatched.
+	virtual std::expected< void, std::string > onUrlTypeSet( const std::string&, const std::string& ) { return {}; }
+
 	//! Fires on every transition to idle.
 	virtual void onFinished() {}
 
