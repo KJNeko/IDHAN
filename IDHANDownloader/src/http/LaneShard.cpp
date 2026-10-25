@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "HostCallback.hpp"
+#include "IDHANDownloader/DirectResponse.hpp"
 #include "URLUtils.hpp"
 #include "http/IoPool.hpp"
 #include "http/Lane.hpp"
@@ -320,8 +321,8 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 		return;
 	}
 
-	if ( spdlog::should_log( spdlog::level::info ) )
-		spdlog::info(
+	if ( spdlog::should_log( spdlog::level::trace ) )
+		spdlog::trace(
 			"downloader http: dispatching {} {} [{}]",
 			httpMethodName( active->request.method ),
 			detail::redactUrlQuery( active->request.url, active->request.sensitive_query ),
@@ -382,8 +383,8 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 
 	release( active );
 
-	if ( !active.response.headers.empty() && spdlog::should_log( spdlog::level::debug ) )
-		spdlog::debug(
+	if ( !active.response.headers.empty() && spdlog::should_log( spdlog::level::trace ) )
+		spdlog::trace(
 			"downloader http: {} {} answered {} [{}]",
 			httpMethodName( active.request.method ),
 			detail::redactUrlQuery( final_url, active.request.sensitive_query ),
@@ -440,6 +441,17 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 		{
 			active.response.sink = std::move( active.request.sink );
 			result = std::move( active.response );
+		}
+		else if (
+			active.request.sink && active.request.import.options[ "requireFile" ].isBool()
+		    && active.request.import.options[ "requireFile" ].asBool()
+		    && !isDirectResponse( content_type, active.preview ) )
+		{
+			(void)hostCallback( [ & ] { active.request.sink->abort(); } );
+			result = std::unexpected(
+				TransferError {
+					.code = TransferErrorCode::SINK,
+					.message = "URL did not return a single file (HTML, structured data, or unknown content type)" } );
 		}
 		else if ( active.request.sink )
 		{

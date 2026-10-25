@@ -21,6 +21,7 @@ class ScriptSession
 	virtual ~ScriptSession() = default;
 
 	virtual FollowResult follow( ScriptExecution& execution, std::string url ) = 0;
+	virtual std::expected< void, std::string > setUrlType( std::string url, std::string type ) = 0;
 	virtual std::optional< std::string > secret( std::string_view name ) = 0;
 	virtual void startRequest( ScriptExecution& execution, Json::Value options, PendingPromise promise ) = 0;
 	virtual void startImport( ScriptExecution& execution, Json::Value options ) = 0;

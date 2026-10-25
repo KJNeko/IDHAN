@@ -166,6 +166,7 @@ class SessionContext::Impl final : public ScriptSession
 	void retireQueued( WorkID id );
 
 	FollowResult follow( ScriptExecution& execution, std::string url ) override;
+	std::expected< void, std::string > setUrlType( std::string url, std::string type ) override;
 	std::optional< std::string > secret( std::string_view name ) override;
 	void startRequest( ScriptExecution& execution, Json::Value options, PendingPromise promise ) override;
 	void startImport( ScriptExecution& execution, Json::Value options ) override;

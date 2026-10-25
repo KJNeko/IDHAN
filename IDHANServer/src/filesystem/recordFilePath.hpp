@@ -20,4 +20,9 @@ namespace idhan::filesystem
 [[nodiscard]] runtime::Task< std::expected< std::optional< VerifiedRecordPath >, std::string > > findRecordFilePath(
 	db::DBContext& db,
 	RecordID record_id );
+
+// Confirms a regular file on a verified cluster. Confirmed absence records missing-file state;
+// an inaccessible or unverifiable cluster is an error and does not change the assignment.
+[[nodiscard]] runtime::Task< std::expected< std::optional< VerifiedRecordPath >, std::string > >
+	findPresentRecordFilePath( db::DBContext& db, RecordID record_id );
 } // namespace idhan::filesystem

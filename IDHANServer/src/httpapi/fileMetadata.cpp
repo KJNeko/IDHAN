@@ -244,50 +244,12 @@ http::HTTPTask< std::expected< filesystem::VerifiedRecordPath, http::Response > 
 	db::DBContext& db,
 	const RecordID record_id )
 {
-	auto resolved { co_await filesystem::findRecordFilePath( db, record_id ) };
+	auto resolved { co_await filesystem::findPresentRecordFilePath( db, record_id ) };
 	if ( !resolved ) co_return std::unexpected( http::Response::error( 503, resolved.error() ) );
 
 	if ( !*resolved )
 		co_return std::unexpected(
 			http::Response::error( 404, std::format( "Record {} is not stored in any cluster", record_id ) ) );
-
-	const auto file_location { ( **resolved ).path() };
-
-	std::error_code status_error {};
-	const auto file_status { std::filesystem::status( file_location, status_error ) };
-
-	if ( status_error == std::errc::no_such_file_or_directory )
-	{
-		db::DBBindings missing_bindings {};
-		missing_bindings.bind( record_id );
-		co_await db
-			.query(
-				"UPDATE file_info SET cluster_id = NULL WHERE record_id = $1 AND cluster_delete_time IS NULL",
-				std::move( missing_bindings ) )
-			.result();
-		co_return std::unexpected(
-			http::Response::error(
-				500,
-				std::format(
-					"Record {} does not exist at the expected path '{}'.", record_id, file_location.string() ) ) );
-	}
-
-	if ( status_error )
-		co_return std::unexpected(
-			http::Response::error(
-				500,
-				std::format(
-					"Could not inspect the expected path for record {} at '{}': {}",
-					record_id,
-					file_location.string(),
-					status_error.message() ) ) );
-
-	if ( !std::filesystem::is_regular_file( file_status ) )
-		co_return std::unexpected(
-			http::Response::error(
-				500,
-				std::format(
-					"Expected path for record {} is not a regular file: '{}'.", record_id, file_location.string() ) ) );
 
 	co_return std::move( **resolved );
 }

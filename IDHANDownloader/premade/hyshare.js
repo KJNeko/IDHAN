@@ -103,6 +103,7 @@ export async function gallery(input, idhan) {
     for (const hash of gallery.hashes) {
         idhan.follow({
             url: postUrl(response.url, hash).href,
+            type: "post",
         });
     }
 }

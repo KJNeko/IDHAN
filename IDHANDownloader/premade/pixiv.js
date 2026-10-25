@@ -136,6 +136,7 @@ function workIds(value) {
 export function image(input, idhan) {
     idhan.follow({
         url: postUrl(imageArtworkId(input.url)),
+        type: "post",
     });
 }
 
@@ -161,6 +162,7 @@ export async function user(input, idhan) {
     for (const workId of [...illustrationIds, ...mangaIds]) {
         idhan.follow({
             url: postUrl(workId),
+            type: "post",
         });
     }
 }

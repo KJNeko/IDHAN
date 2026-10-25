@@ -15,8 +15,10 @@ namespace idhan::downloader
 
 struct DownloaderConfig
 {
+	// Bypass reuse of a known direct URL and transfer the file again.
+	bool force_download {};
 	std::filesystem::path parser_directory {};
-	//! Defaults to url-classes.json inside parser_directory.
+	//! Defaults to the url-classes directory inside parser_directory.
 	std::filesystem::path url_classes {};
 
 	//! 0 takes max( 2, hardware_concurrency() / 2 ).

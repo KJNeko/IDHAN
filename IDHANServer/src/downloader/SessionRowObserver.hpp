@@ -38,6 +38,7 @@ class SessionRowObserver final : public SessionObserver
 	void onImported( const ImportInfo& info ) override;
 	void onImportFailed( const WorkInfo& info, const std::string& url, const std::string& error ) override;
 	void onFollowed( const WorkInfo& info, FollowStatus status ) override;
+	std::expected< void, std::string > onUrlTypeSet( const std::string& url, const std::string& type ) override;
 	std::optional< std::int64_t > alreadyImported( const std::string& url ) override;
 };
 

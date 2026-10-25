@@ -7,6 +7,8 @@
 #include <cctype>
 #include <expected>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 #include "js/QuickJSBinding.hpp"
 #include "js/ScriptExecution.hpp"
@@ -245,6 +247,44 @@ static JSValue requestBinding( JSContext* context, JSValueConst, const int count
 	IDHAN_QJS_TRANSLATE_EXCEPTIONS( context )
 }
 
+using UrlTypeDeclaration = std::pair< std::string, std::string >;
+
+static std::expected< std::optional< UrlTypeDeclaration >, std::string > urlTypeDeclaration( const Json::Value& entry )
+{
+	if ( !entry.isObject() ) return std::unexpected( "URL declarations must be objects" );
+
+	if ( !entry[ "url" ].isString() || entry[ "url" ].asString().empty() )
+		return std::unexpected( "URL declarations require a non-empty url string" );
+
+	if ( !entry.isMember( "type" ) ) return std::nullopt;
+
+	if ( !entry[ "type" ].isString() ) return std::unexpected( "URL type must be a string" );
+
+	const std::string type { entry[ "type" ].asString() };
+	if ( type != "file" && type != "post" && type != "gallery" && type != "unknown" )
+		return std::unexpected( "URL type must be file, post, gallery, or unknown" );
+
+	return std::optional { UrlTypeDeclaration { entry[ "url" ].asString(), type } };
+}
+
+static std::expected< std::vector< UrlTypeDeclaration >, std::string > importUrlTypes( const Json::Value& options )
+{
+	const auto& urls { options[ "urls" ] };
+	if ( urls.isNull() ) return std::vector< UrlTypeDeclaration > {};
+
+	if ( !urls.isArray() ) return std::unexpected( "idhan.import urls must be an array" );
+
+	std::vector< UrlTypeDeclaration > declarations {};
+	for ( const auto& entry : urls )
+	{
+		auto declaration { urlTypeDeclaration( entry ) };
+		if ( !declaration ) return std::unexpected( declaration.error() );
+
+		if ( *declaration ) declarations.emplace_back( std::move( **declaration ) );
+	}
+	return declarations;
+}
+
 static JSValue importBinding( JSContext* context, JSValueConst, const int count, JSValueConst* arguments )
 {
 	try
@@ -261,6 +301,9 @@ static JSValue importBinding( JSContext* context, JSValueConst, const int count,
 		if ( !request.isObject() || !request[ "url" ].isString() || request[ "url" ].asString().empty() )
 			return JS_ThrowTypeError( context, "idhan.import requires request.url" );
 
+		const auto declarations { importUrlTypes( *options ) };
+		if ( !declarations ) return JS_ThrowTypeError( context, "%s", declarations.error().c_str() );
+
 		auto* execution { executionFor( context ) };
 
 		if ( execution == nullptr || execution->session == nullptr )
@@ -268,7 +311,41 @@ static JSValue importBinding( JSContext* context, JSValueConst, const int count,
 
 		applyDefaultReferer( ( *options )[ "request" ], execution->parser_url );
 
+		for ( const auto& [ url, type ] : *declarations )
+		{
+			const auto saved { execution->session->setUrlType( url, type ) };
+			if ( !saved ) return JS_ThrowInternalError( context, "Setting URL type failed: %s", saved.error().c_str() );
+		}
+
 		execution->session->startImport( *execution, std::move( *options ) );
+		return JS_UNDEFINED;
+	}
+	IDHAN_QJS_TRANSLATE_EXCEPTIONS( context )
+}
+
+static JSValue setUrlTypeBinding( JSContext* context, JSValueConst, const int count, JSValueConst* arguments )
+{
+	try
+	{
+		if ( count == 0 || !JS_IsObject( arguments[ 0 ] ) )
+			return JS_ThrowTypeError( context, "idhan.setUrlType expects an options object" );
+
+		const auto options { scriptValueToJson( context, arguments[ 0 ] ) };
+		if ( !options ) return JS_ThrowTypeError( context, "%s", options.error().c_str() );
+
+		const auto declaration { urlTypeDeclaration( *options ) };
+		if ( !declaration ) return JS_ThrowTypeError( context, "%s", declaration.error().c_str() );
+
+		if ( !*declaration ) return JS_ThrowTypeError( context, "idhan.setUrlType requires a type" );
+
+		auto* execution { executionFor( context ) };
+		if ( execution == nullptr || execution->session == nullptr )
+			return JS_ThrowInternalError( context, "idhan.setUrlType has no download session" );
+
+		const auto& [ url, type ] { **declaration };
+		const auto saved { execution->session->setUrlType( url, type ) };
+		if ( !saved ) return JS_ThrowInternalError( context, "Setting URL type failed: %s", saved.error().c_str() );
+
 		return JS_UNDEFINED;
 	}
 	IDHAN_QJS_TRANSLATE_EXCEPTIONS( context )
@@ -314,10 +391,23 @@ static JSValue followBinding( JSContext* context, JSValueConst, const int count,
 		if ( !url.has_value() ) return JS_EXCEPTION;
 		if ( url->empty() ) return JS_ThrowTypeError( context, "idhan.follow requires a non-empty URL" );
 
+		const auto options { scriptValueToJson( context, arguments[ 0 ] ) };
+		if ( !options ) return JS_ThrowTypeError( context, "%s", options.error().c_str() );
+
+		const auto declaration { urlTypeDeclaration( *options ) };
+		if ( !declaration ) return JS_ThrowTypeError( context, "%s", declaration.error().c_str() );
+
 		auto* execution { executionFor( context ) };
 
 		if ( execution == nullptr || execution->session == nullptr )
 			return JS_ThrowInternalError( context, "idhan.follow has no download session" );
+
+		if ( *declaration )
+		{
+			const auto& [ declared_url, type ] { **declaration };
+			const auto saved { execution->session->setUrlType( declared_url, type ) };
+			if ( !saved ) return JS_ThrowInternalError( context, "Setting URL type failed: %s", saved.error().c_str() );
+		}
 
 		const auto result { execution->session->follow( *execution, *url ) };
 
@@ -413,6 +503,7 @@ std::expected< void, std::string > installIdhanBindings( JSContext* context )
 	bool success { setFunction( context, idhan, "request", requestBinding, 1 ) };
 	success = setFunction( context, idhan, "import", importBinding, 1 ) && success;
 	success = setFunction( context, idhan, "follow", followBinding, 1 ) && success;
+	success = setFunction( context, idhan, "setUrlType", setUrlTypeBinding, 1 ) && success;
 	success = setFunction( context, idhan, "secret", secretBinding, 1 ) && success;
 	success = setFunction( context, idhan, "parseHtml", quickjs::parseHTML, 1 ) && success;
 	success = JS_SetPropertyStr( context, global, "idhan", idhan ) >= 0 && success;

@@ -91,6 +91,7 @@ function followSiblings(idhan, post, id) {
         if (parentId !== id) {
             idhan.follow({
                 url: postUrl(parentId),
+                type: "post",
             });
         }
     }
@@ -102,6 +103,7 @@ function followSiblings(idhan, post, id) {
 
         idhan.follow({
             url: postUrl(childId),
+            type: "post",
         });
     }
 }
@@ -148,7 +150,7 @@ export async function gallery(input, idhan) {
         }
 
         for (const post of posts) {
-            idhan.follow({url: postUrl(post.id)});
+            idhan.follow({url: postUrl(post.id), type: "post"});
         }
 
         if (posts.length < pageSize) {

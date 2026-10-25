@@ -113,10 +113,12 @@ render_threads = 2
 scan_concurrency = 12
 
 [downloader]
+# Download known direct URLs again instead of reusing their stored file.
+#force_download = false
 # Directory containing parser JavaScript modules. The packaged server uses its bundled parsers.
 #parser_directory = "/usr/share/idhan/downloader"
-# URL-class routing file. Defaults to url-classes.json in parser_directory.
-#url_classes = "/usr/share/idhan/downloader/url-classes.json"
+# URL-class routing directory or legacy JSON file. Defaults to url-classes in parser_directory.
+#url_classes = "/usr/share/idhan/downloader/url-classes"
 # URL classes without requestRate are limited to one request every five seconds.
 # Set requestRate to false for an explicitly unthrottled class or host.
 # Wire version offered to sites: "1.1", "2", or "3". HTTP/3 is preferred and falls back when unavailable.

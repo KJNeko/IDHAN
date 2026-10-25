@@ -70,6 +70,8 @@ class RecordingObserver final : public downloader::SessionObserver
 	std::vector< downloader::RequestInfo > requests {};
 	std::vector< RecordedImport > imports {};
 	std::vector< std::pair< std::string, downloader::FollowStatus > > follows {};
+	std::vector< std::pair< std::string, std::string > > url_types {};
+	std::optional< std::string > url_type_error {};
 	std::vector< std::pair< downloader::WorkID, std::string > > failures {};
 	std::vector< std::pair< std::string, std::string > > import_failures {};
 	std::atomic_size_t finished {};
@@ -108,6 +110,15 @@ class RecordingObserver final : public downloader::SessionObserver
 	{
 		const std::scoped_lock lock { m_mutex };
 		follows.emplace_back( info.url, status );
+	}
+
+	std::expected< void, std::string > onUrlTypeSet( const std::string& url, const std::string& type ) override
+	{
+		const std::scoped_lock lock { m_mutex };
+		if ( url_type_error ) return std::unexpected( *url_type_error );
+
+		url_types.emplace_back( url, type );
+		return {};
 	}
 
 	void onFailed( const downloader::WorkInfo& info, const std::string& error ) override
@@ -190,6 +201,19 @@ class MemoryImportFactory final : public downloader::ImportSinkFactory
 	std::vector< std::pair< std::int64_t, std::string > > stored {};
 	std::vector< downloader::ImportMetadata > metadata {};
 	std::atomic_size_t aborted {};
+	std::optional< downloader::ImportResult > reusable {};
+	std::optional< std::string > reuse_error {};
+	std::vector< downloader::ImportRequest > reuse_requests {};
+
+	std::expected< std::optional< downloader::ImportResult >, std::string > reuse(
+		const downloader::ImportRequest& request ) override
+	{
+		const std::scoped_lock lock { m_mutex };
+		reuse_requests.emplace_back( request );
+		if ( reuse_error ) return std::unexpected( *reuse_error );
+
+		return reusable;
+	}
 
 	std::expected< std::unique_ptr< downloader::ImportSink >, std::string > open( const downloader::ImportRequest& )
 		override

@@ -20,6 +20,7 @@ class DownloadImports final : public ImportSinkFactory
 		std::string m_url {};
 		DownloadSessionID m_session_id {};
 		std::string m_tag_domain {};
+		bool m_direct_eligible {};
 
 	  public:
 
@@ -28,12 +29,14 @@ class DownloadImports final : public ImportSinkFactory
 			Json::Value options,
 			std::string url,
 			const DownloadSessionID session_id,
-			std::string tag_domain ) :
+			std::string tag_domain,
+			bool direct_eligible ) :
 		  m_filename( std::move( filename ) ),
 		  m_options( std::move( options ) ),
 		  m_url( std::move( url ) ),
 		  m_session_id( session_id ),
-		  m_tag_domain( std::move( tag_domain ) )
+		  m_tag_domain( std::move( tag_domain ) ),
+		  m_direct_eligible( direct_eligible )
 		{}
 
 		Sink( const Sink& ) = delete;
@@ -57,6 +60,8 @@ class DownloadImports final : public ImportSinkFactory
 
 	explicit DownloadImports( std::string tag_domain ) : m_tag_domain( std::move( tag_domain ) ) {}
 
+	std::expected< std::optional< ImportResult >, std::string > reuse( const ImportRequest& request ) override;
+
 	std::expected< std::unique_ptr< ImportSink >, std::string > open( const ImportRequest& request ) override
 	{
 		return std::make_unique< Sink >(
@@ -64,7 +69,8 @@ class DownloadImports final : public ImportSinkFactory
 			request.options,
 			request.url,
 			static_cast< DownloadSessionID >( request.host_tag ),
-			m_tag_domain );
+			m_tag_domain,
+			request.direct_eligible );
 	}
 };
 
