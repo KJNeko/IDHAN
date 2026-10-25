@@ -1,0 +1,24 @@
+{
+  "urlClasses": [
+    {
+      "name": "pawchive",
+      "sortQueryParameters": true,
+      "script": "pawchive.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 1
+      },
+      "hosts": [
+        "pawchive.pw",
+        "kemono.cr",
+        "kemono.su"
+      ],
+      "routes": [
+        {
+          "export": "route",
+          "pathPrefix": "/"
+        }
+      ]
+    }
+  ]
+}

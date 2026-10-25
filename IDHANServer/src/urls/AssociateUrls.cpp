@@ -1,12 +1,63 @@
 #include "AssociateUrls.hpp"
 
 #include <utility>
+#include <IDHANDownloader/UrlComparison.hpp>
 
 #include "UrlDomain.hpp"
 #include "idhan/db/DBContext.hpp"
 
 namespace idhan::helpers
 {
+
+runtime::Task< std::vector< UrlID > > findEquivalentUrls(
+	std::string url,
+	std::vector< std::string > ephemeral_query,
+	db::DBContext& db )
+{
+	db::DBBindings bindings {};
+	bindings.bind( downloader::urlComparisonBase( url ) );
+	const auto candidates {
+		co_await db
+			.query(
+				"SELECT url_id, url FROM urls WHERE split_part(split_part(url, '#', 1), '?', 1) = $1",
+				std::move( bindings ) )
+			.rows< UrlID, std::string >()
+	};
+	const auto key { downloader::urlComparisonKey( url, ephemeral_query ) };
+	std::vector< UrlID > matches {};
+	for ( const auto& [ id, stored_url ] : candidates )
+	{
+		if ( downloader::urlComparisonKey( stored_url, ephemeral_query ) == key ) matches.emplace_back( id );
+	}
+	co_return matches;
+}
+
+runtime::Task< std::expected< void, std::string > > setUrlType( std::string url, std::string type, db::DBContext& db )
+{
+	try
+	{
+		db::DBBindings bindings {};
+		bindings.bind( url );
+		bindings.bind( extractDomain( url ) );
+		bindings.bind( type );
+		co_await db
+			.query(
+				"WITH domain AS ("
+				"INSERT INTO url_domains (url_domain) VALUES ($2) "
+				"ON CONFLICT (url_domain) DO UPDATE SET url_domain = EXCLUDED.url_domain RETURNING url_domain_id) "
+				"INSERT INTO urls (url, url_domain_id, url_type) "
+				"SELECT $1, url_domain_id, $3::UrlType FROM domain "
+				"ON CONFLICT (url) DO UPDATE SET url_type = EXCLUDED.url_type",
+				std::move( bindings ) )
+			.result();
+	}
+	catch ( const std::exception& error )
+	{
+		co_return std::unexpected( std::string { error.what() } );
+	}
+
+	co_return std::expected< void, std::string > {};
+}
 
 runtime::Task< std::expected< void, std::string > > associateUrls(
 	const RecordID record_id,

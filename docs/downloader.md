@@ -106,7 +106,7 @@ flowchart TB
     end
 
     subgraph shared_inputs["Shared inputs loaded at downloader startup"]
-        CLASSES["url-classes.json<br/>routes and lane settings"]
+        CLASSES["url-classes/*.json<br/>class definitions and host additions"]
         MODULES["Parser modules and generated packages<br/>compiled by BytecodeCache on first use"]
         COOKIES[("Persistent cookies")]
         SECRETS[("Downloader secrets")]
@@ -197,7 +197,7 @@ thread, and a shard is not a single connection.
 | **Script runner**      | The process-wide pool of script threads. Each worker owns one QuickJS runtime, and a work item is bound at start to the worker whose runtime holds its realm.                                                    |
 | **Root URL**           | Caller-supplied session metadata exposed by `rootUrl()`. The server adapter currently leaves it empty; submitted and followed URLs are separate work items.                                                      |
 | **Work item**          | One URL selected for parser execution. It has a `WorkID` and may name the parent work item that followed it.                                                                                                     |
-| **URL class**          | A `url-classes.json` entry that associates hosts and route conditions with a JavaScript module and lane settings.                                                                                                |
+| **URL class**          | A merged entry from JSON fragments in the `url-classes` directory that associates hosts and route conditions with a JavaScript module and lane settings.                                                         |
 | **Route**              | The matching host plus optional exact path, path prefix, and query requirements that select a parser export.                                                                                                     |
 | **Parser**             | A JavaScript module. The routed export receives the URL and IDHAN bindings and may request pages, follow URLs, or import files.                                                                                  |
 | **Manifest**           | Optional parser metadata currently used to declare flags and session cookies loaded when a work item starts.                                                                                                     |
@@ -222,10 +222,18 @@ thread, and a shard is not a single connection.
 
 `DownloaderContext::create()` performs the process-wide setup:
 
-1. It loads `url-classes.json` into the script registry.
+1. It loads JSON fragments from `url-classes` into the script registry. Files in its optional `private` subdirectory are
+   loaded too. Fragments may add hosts to a class defined earlier by repeating its `name` and providing only `hosts`.
 2. It loads unexpired persistent cookies through the host's `CookiePersistence`, when supplied.
 3. It creates the lane pool and its IO threads.
 4. It retains host adapters for imports, secrets, cookie persistence, and lane observation.
+
+Keep reusable class behavior in a public fragment and put machine-specific hosts in
+`url-classes/private/*.json`. For example, a private fragment can extend the public
+`hyshare` class with `{"urlClasses":[{"name":"hyshare","hosts":["your-private-host.example"]}]}`.
+The registry appends those hosts while retaining the public class's script, routes, and
+lane settings. The private directory is ignored by Git and is explicitly off limits for
+AI agents; add hosts there locally without sharing its contents.
 
 Parser modules are compiled to QuickJS bytecode lazily. The first session that needs a module asks
 the shared bytecode cache to compile it and its imports. Later work items deserialize that cached
@@ -259,8 +267,59 @@ The URL-class file answers two separate questions:
   group apply to a request host?
 
 A class names a script, one or more hosts, and one or more routes. A route can require an exact
-path, a path prefix, query key/value pairs, or any combination that is valid in the schema. Exactly
-one route must match: no match filters the URL, while multiple matches are reported as an error.
+path, a path prefix, query key/value pairs, or any combination that is valid in the schema. Multiple
+matching routes are reported as an error; unmatched HTTP(S) URLs use automatic file inspection.
+
+URL comparisons use a separate key: query parameters are sorted by name, equivalent query
+encodings and trailing `&` separators are normalized, and fragments are ignored. Repeated values
+for the same name keep their order. Paths retain their original spelling and case. The full original
+URL remains available for HTTP requests. Stored URL ordering follows `sortQueryParameters`.
+
+URL classes accept `"sortQueryParameters": true` (the default when omitted) to sort query
+parameters by name before passing URLs to storage. Set it to `false` to preserve their original
+order. All public premade classes explicitly enable it. Automatic file URLs without a configured
+host also use the default. Matching parser routes use their class's setting. For automatic file
+inspection, an opt-out wins if multiple classes list the same host. Each associated URL and final
+redirect URL resolves its own class policy. Sorting preserves every parameter, its
+original encoding, repeated-name value order, and fragments, including ephemeral signatures.
+HTTP requests and route matching continue to use the original URL. Comparison keys still sort
+parameters even when storage sorting is disabled.
+
+A URL class may declare `"ephemeralQuery": ["ex", "hm"]`. These case-sensitive parameter names
+are omitted only from comparison keys for that class's explicitly listed hosts, including automatic
+file imports on those hosts. They are retained in the URL sent to the server and stored in the
+database. The public Discord class uses this declaration; its `is` parameter remains significant.
+Route query conditions inspect the complete original query independently of `ephemeralQuery`.
+A route may require a particular value for an ephemeral parameter; that requirement still applies.
+Parameters absent from a route's `query` conditions do not constrain route matching, while parameters
+absent from `ephemeralQuery` remain significant for URL comparisons.
+Session follow deduplication and direct-file reuse apply the same policy. Existing URL rows are
+compared using the current policy, so changing a signature or parameter order still finds prior
+imports without rewriting stored URLs. Equivalent spellings mapped to different records prevent
+reuse. Migration 430 adds an index to restrict database comparisons to the same resource path.
+
+URLs are classified as direct automatically after successfully importing a single file response.
+The classification uses the response MIME type and opening bytes, excluding HTML, XML, JSON,
+and unknown content types. It applies to the file URL and final redirect destination, never to
+associated post or source URLs. Unclaimed HTTP(S) URLs are inspected as possible files regardless
+of their host or extension; explicit parser routes still take precedence.
+
+The learned classification is stored as `urls.url_type = 'file'`. On later imports, an unambiguous direct URL
+mapping to a record whose file is physically present in a verified cluster reuses the record without HTTP.
+A confirmed missing file is recorded immediately and downloaded again; inaccessible storage or a
+failed cluster-identity check is an error and does not mark the file missing. Tags, URL associations,
+and session membership still update. Unknown, ambiguous, or no-longer-stored mappings download
+normally. Concurrent first-time downloads can still overlap.
+
+Set `forceDownload: true` on an `idhan.import` call to transfer the file again. Hosts can set
+`SessionOptions::force_download` or `DownloaderConfig::force_download` for the same override;
+the server exposes the latter as `downloader.force_download` (or `IDHAN_DOWNLOADER_FORCE_DOWNLOAD`).
+Forcing a transfer bypasses reuse; it does not suppress response classification.
+
+Imports also look up the incoming SHA-256 in `missing_files`. Restoring the same hash keeps its
+record identity and removes it from missing-file state after storage succeeds. Deliberately deleted
+records remain protected. Missing and recovered transitions call the notification stubs in
+`notifications/MissingFiles.hpp`; notification delivery will be implemented later.
 
 Lane settings begin with the downloader default of one request every five seconds, then class
 settings apply, then a host object may override them. `requestRate: false` makes a host explicitly
@@ -284,10 +343,10 @@ For example, a pooled host family can be configured as:
 `poolSubdomains` requires `shareSubdomains`; without pooling, inherited limits are enforced
 independently for each hostname.
 
-Routing and lane grouping are intentionally separate. A URL still needs an explicit matching host
-and route to become work; sharing a lane policy does not make a parser accept more URLs.
+Routing and lane grouping are intentionally separate. An explicit matching host
+and route select a parser; sharing a lane policy does not make a parser accept more URLs.
 
-See the shipped [URL-class configuration](../IDHANDownloader/premade/url-classes.json) and
+See the shipped [URL-class configuration](../IDHANDownloader/premade/url-classes/) and
 [premade parsers](../IDHANDownloader/premade/) for concrete definitions.
 
 ## Sessions and work items
@@ -318,6 +377,21 @@ The burst timeout limits one uninterrupted period of JavaScript execution; it is
 timeout for an entire parser.
 
 ### Follow and deduplication
+
+Parsers can declare a URL's database type explicitly:
+
+```javascript
+idhan.setUrlType({url: input.url, type: "gallery"});
+idhan.follow({url: postUrl, type: "post"});
+idhan.import({request: {url: fileUrl}, urls: [{url: postUrl, type: "post"}]});
+```
+
+The accepted values are `file`, `post`, `gallery`, and `unknown`. The server creates missing URL
+and domain rows and saves the type before queuing work, including when a followed URL has already
+been seen. `setUrlType` classifies without fetching or queuing the URL. Omitting a type preserves
+its existing classification. Invalid declarations throw a JavaScript error, and persistence failures
+reach the parser. Successful automatic file detection can subsequently update the type to `file`.
+Hosts persist declarations through `SessionObserver::onUrlTypeSet`.
 
 `idhan.follow({url})` asks the same session to create child work. Before queuing it, the session:
 

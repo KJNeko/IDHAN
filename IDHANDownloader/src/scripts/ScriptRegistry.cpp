@@ -6,9 +6,11 @@
 #include <ada.h>
 #include <algorithm>
 #include <fstream>
+#include <map>
 #include <unordered_set>
 
 #include "URLUtils.hpp"
+#include "IDHANDownloader/UrlComparison.hpp"
 #include "logging/format_ns.hpp"
 
 namespace idhan::downloader
@@ -54,7 +56,10 @@ static std::expected< RateDefinition, std::string > requestRate(
 	const Json::Value& object,
 	const std::string_view owner )
 {
-	const auto& value { object[ "requestRate" ] };
+	const auto& legacy_value { object[ "requestRate" ] };
+	const auto& new_value { object[ "rateLimit" ] };
+
+	const auto& value { new_value.isNull() ? legacy_value : new_value };
 
 	if ( value.isNull() ) return RateDefinition {};
 
@@ -184,30 +189,86 @@ std::expected< std::unique_ptr< ScriptRegistry >, std::string > ScriptRegistry::
 	std::filesystem::path parser_directory,
 	LaneSettings defaults )
 {
-	std::ifstream input { url_classes, std::ios::binary };
-
-	if ( !input )
-		return std::unexpected( format_ns::format( "Unable to read URL Classes file: {}", url_classes.string() ) );
-
-	Json::Value root {};
 	Json::CharReaderBuilder reader {};
-	std::string errors {};
+	std::vector< std::filesystem::path > files {};
+	std::error_code filesystem_error {};
+	if ( std::filesystem::is_directory( url_classes, filesystem_error ) )
+	{
+		for ( const auto& entry : std::filesystem::directory_iterator( url_classes, filesystem_error ) )
+			if ( entry.is_regular_file() && entry.path().extension() == ".json" ) files.emplace_back( entry.path() );
+		const auto private_directory { url_classes / "private" };
+		if ( std::filesystem::is_directory( private_directory, filesystem_error ) )
+			for ( const auto& entry : std::filesystem::directory_iterator( private_directory, filesystem_error ) )
+				if ( entry.is_regular_file() && entry.path().extension() == ".json" )
+					files.emplace_back( entry.path() );
+		if ( filesystem_error )
+			return std::unexpected(
+				format_ns::format(
+					"Unable to list URL Classes directory {}: {}", url_classes.string(), filesystem_error.message() ) );
+		std::ranges::sort( files );
+	}
+	else
+		files.emplace_back( url_classes );
 
-	if ( !Json::parseFromStream( reader, input, &root, &errors ) )
-		return std::unexpected(
-			format_ns::format( "Unable to parse URL Classes file {}: {}", url_classes.string(), errors ) );
+	if ( files.empty() )
+		return std::unexpected( format_ns::format( "No URL Classes JSON files found in {}", url_classes.string() ) );
 
-	const auto& classes { root[ "urlClasses" ] };
-
-	if ( !root.isObject() || !classes.isArray() )
-		return std::unexpected(
-			format_ns::format( "URL Classes file must contain a 'urlClasses' array: {}", url_classes.string() ) );
+	Json::Value merged { Json::objectValue };
+	merged[ "urlClasses" ] = Json::arrayValue;
+	std::map< std::string, Json::ArrayIndex > class_indices {};
+	for ( const auto& file : files )
+	{
+		std::ifstream input { file, std::ios::binary };
+		if ( !input )
+			return std::unexpected( format_ns::format( "Unable to read URL Classes file: {}", file.string() ) );
+		Json::Value root {};
+		std::string errors {};
+		if ( !Json::parseFromStream( reader, input, &root, &errors ) )
+			return std::unexpected(
+				format_ns::format( "Unable to parse URL Classes file {}: {}", file.string(), errors ) );
+		const auto& classes { root[ "urlClasses" ] };
+		if ( !root.isObject() || !classes.isArray() )
+			return std::unexpected(
+				format_ns::format( "URL Classes file must contain a 'urlClasses' array: {}", file.string() ) );
+		for ( const auto& definition : classes )
+		{
+			if ( !definition.isObject() || !definition[ "name" ].isString() )
+				return std::unexpected(
+					format_ns::format( "URL Classes entries in {} require a name", file.string() ) );
+			const auto name { definition[ "name" ].asString() };
+			const auto found { class_indices.find( name ) };
+			if ( found == class_indices.end() )
+			{
+				class_indices.emplace( name, merged[ "urlClasses" ].size() );
+				merged[ "urlClasses" ].append( definition );
+				continue;
+			}
+			Json::Value& existing { merged[ "urlClasses" ][ found->second ] };
+			for ( const auto& key : definition.getMemberNames() )
+			{
+				if ( key == "name" ) continue;
+				if ( key != "hosts" )
+					return std::unexpected(
+						format_ns::format(
+							"URL Class '{}' may only add hosts in later files (field '{}', {})",
+							name,
+							key,
+							file.string() ) );
+				if ( !definition[ key ].isArray() )
+					return std::unexpected(
+						format_ns::format( "URL Class '{}' hosts must be an array in {}", name, file.string() ) );
+				if ( !existing[ "hosts" ].isArray() ) existing[ "hosts" ] = Json::arrayValue;
+				for ( const auto& host : definition[ key ] ) existing[ "hosts" ].append( host );
+			}
+		}
+	}
+	const Json::Value& classes { merged[ "urlClasses" ] };
 
 	std::unique_ptr< ScriptRegistry > registry {
 		new ScriptRegistry( std::move( parser_directory ), std::move( defaults ) )
 	};
 	std::unordered_set< std::string > names {};
-	const auto base_path { std::filesystem::absolute( url_classes ).parent_path() };
+	const auto base_path { std::filesystem::absolute( url_classes.parent_path() ) };
 
 	for ( const auto& value : classes )
 	{
@@ -227,13 +288,37 @@ std::expected< std::unique_ptr< ScriptRegistry >, std::string > ScriptRegistry::
 		const auto& hosts { value[ "hosts" ] };
 		const auto& routes { value[ "routes" ] };
 
-		if ( !hosts.isArray() || hosts.empty() )
-			return std::unexpected( format_ns::format( "{} requires a non-empty 'hosts' array", owner ) );
+		if ( !hosts.isArray() ) return std::unexpected( format_ns::format( "{} requires a 'hosts' array", owner ) );
 
 		if ( !routes.isArray() || routes.empty() )
 			return std::unexpected( format_ns::format( "{} requires a non-empty 'routes' array", owner ) );
 
 		URLClass url_class { .name = *name, .script = ( base_path / *script ).lexically_normal() };
+
+		if ( value.isMember( "sortQueryParameters" ) )
+		{
+			const auto& sort { value[ "sortQueryParameters" ] };
+			if ( !sort.isBool() )
+				return std::unexpected( format_ns::format( "{} sortQueryParameters must be a boolean", owner ) );
+
+			url_class.sort_query_parameters = sort.asBool();
+		}
+
+		const auto& ephemeral_query { value[ "ephemeralQuery" ] };
+		if ( value.isMember( "ephemeralQuery" ) )
+		{
+			if ( !ephemeral_query.isArray() )
+				return std::unexpected( format_ns::format( "{} ephemeralQuery must be an array", owner ) );
+
+			for ( const auto& parameter : ephemeral_query )
+			{
+				if ( !parameter.isString() || parameter.asString().empty() )
+					return std::unexpected(
+						format_ns::format( "{} ephemeralQuery requires non-empty strings", owner ) );
+
+				url_class.ephemeral_query.emplace_back( parameter.asString() );
+			}
+		}
 
 		LaneSettings class_settings { registry->m_defaults };
 		auto class_rate { requestRate( value, owner ) };
@@ -292,8 +377,8 @@ std::expected< std::unique_ptr< ScriptRegistry >, std::string > ScriptRegistry::
 
 			url_class.hosts.emplace_back(
 				Host { .host = std::move( hostname ),
-			           .settings = std::move( settings ),
-			           .include_subdomains = include_subdomains } );
+				       .settings = std::move( settings ),
+				       .include_subdomains = include_subdomains } );
 		}
 
 		for ( const auto& route_value : routes )
@@ -317,8 +402,8 @@ std::expected< std::unique_ptr< ScriptRegistry >, std::string > ScriptRegistry::
 				return std::unexpected( "URL Class routes cannot define both 'path' and 'pathPrefix'" );
 
 			Route route { .export_name = std::move( *export_name ),
-				          .path = std::move( *route_path ),
-				          .path_prefix = std::move( *path_prefix ) };
+			              .path = std::move( *route_path ),
+			              .path_prefix = std::move( *path_prefix ) };
 
 			if ( const auto& query { route_value[ "query" ] }; !query.isNull() )
 			{
@@ -390,7 +475,78 @@ std::expected< std::optional< ScriptRoute >, std::string > ScriptRegistry::route
 		}
 	}
 
+	// An unclaimed HTTP URL is inspected as a possible file, regardless of its path or host.
+	if ( !match.has_value() && ( parsed->get_protocol() == "http:" || parsed->get_protocol() == "https:" ) )
+		match = ScriptRoute { .url_class = "file", .download = true };
+
 	return match;
+}
+
+std::vector< std::string > ScriptRegistry::ephemeralQuery( const std::string_view url ) const
+{
+	const auto parsed { ada::parse< ada::url_aggregator >( url ) };
+	if ( !parsed ) return {};
+
+	const auto host { parsed->get_hostname() };
+	std::vector< std::string > names {};
+	for ( const auto& url_class : m_classes )
+	{
+		for ( const auto& held : url_class.hosts )
+		{
+			if ( held.host != host ) continue;
+
+			names.insert( names.end(), url_class.ephemeral_query.begin(), url_class.ephemeral_query.end() );
+			break;
+		}
+	}
+	std::ranges::sort( names );
+	names.erase( std::unique( names.begin(), names.end() ), names.end() );
+	return names;
+}
+
+std::string ScriptRegistry::storageUrl( const std::string_view url ) const
+{
+	const auto parsed { ada::parse< ada::url_aggregator >( url ) };
+	if ( !parsed ) return std::string { url };
+
+	const auto matched { route( url ) };
+	if ( matched && matched->has_value() && !( **matched ).download )
+	{
+		for ( const auto& url_class : m_classes )
+			if ( url_class.name == ( **matched ).url_class )
+				return url_class.sort_query_parameters ? sortUrlQueryParameters( url ) : std::string { url };
+	}
+
+	// Automatic file inspection has no parser class. A configured host opt-out wins.
+	for ( const auto& url_class : m_classes )
+	{
+		if ( url_class.sort_query_parameters ) continue;
+
+		for ( const auto& host : url_class.hosts )
+			if ( host.host == parsed->get_hostname() ) return std::string { url };
+	}
+	return sortUrlQueryParameters( url );
+}
+
+Json::Value ScriptRegistry::storageOptions( Json::Value options ) const
+{
+	const auto& declared { std::as_const( options )[ "urls" ] };
+	if ( declared.isArray() )
+		for ( auto& entry : options[ "urls" ] )
+			if ( entry.isObject() && entry[ "url" ].isString() )
+				entry[ "url" ] = storageUrl( entry[ "url" ].asString() );
+
+	const auto& discovered { std::as_const( options )[ "discoveredUrls" ] };
+	if ( discovered.isArray() )
+		for ( auto& url : options[ "discoveredUrls" ] )
+			if ( url.isString() ) url = storageUrl( url.asString() );
+
+	return options;
+}
+
+std::string ScriptRegistry::comparisonKey( const std::string_view url ) const
+{
+	return urlComparisonKey( url, ephemeralQuery( url ) );
 }
 
 LaneSettings ScriptRegistry::laneSettings( const std::string_view host ) const

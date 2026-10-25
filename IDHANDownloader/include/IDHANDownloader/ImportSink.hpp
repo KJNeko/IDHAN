@@ -8,6 +8,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <vector>
 
 #include "SessionObserver.hpp"
 
@@ -18,10 +19,15 @@ struct ImportRequest
 {
 	// Identity reserved by onImportQueued, distinct from the parent parser work.
 	WorkID work {};
+	// Storage form; query ordering follows the URL class without changing the HTTP request.
 	std::string url {};
 	std::string source_url {};
 	Json::Value options {};
 	std::uint64_t host_tag {};
+	// A URL alone identifies only a GET response without a request body.
+	bool direct_eligible { true };
+	// Host-scoped comparison policy; never removes parameters from the request itself.
+	std::vector< std::string > ephemeral_query {};
 };
 
 struct ImportMetadata

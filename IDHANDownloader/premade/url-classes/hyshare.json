@@ -1,0 +1,20 @@
+{
+  "urlClasses": [
+    {
+      "name": "hyshare",
+      "sortQueryParameters": true,
+      "script": "hyshare.js",
+      "hosts": [],
+      "routes": [
+        {
+          "export": "gallery",
+          "pathPrefix": "/gallery/"
+        },
+        {
+          "export": "post",
+          "pathPrefix": "/view/"
+        }
+      ]
+    }
+  ]
+}

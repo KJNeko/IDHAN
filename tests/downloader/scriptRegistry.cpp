@@ -1,4 +1,8 @@
 #include "scripts/ScriptRegistry.hpp"
+#include <IDHANDownloader/DownloaderConfig.hpp>
+#include <IDHANDownloader/UrlComparison.hpp>
+#include "harness/Fixtures.hpp"
+#include "UrlStorageImportSink.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -39,13 +43,14 @@ TEST_CASE( "URLs route to the class and export that claims them", "[downloader][
 	CHECK( ( *image )->script.filename() == "pixiv.js" );
 }
 
-TEST_CASE( "A host with no URL class routes to nothing without erroring", "[downloader][registry]" )
+TEST_CASE( "A host with no URL class uses automatic file inspection", "[downloader][registry]" )
 {
 	const auto registry { examples() };
 	const auto route { registry->route( "https://example.com/nowhere" ) };
 
 	REQUIRE( route.has_value() );
-	CHECK_FALSE( route->has_value() );
+	REQUIRE( route->has_value() );
+	CHECK( ( **route ).download );
 }
 
 TEST_CASE( "Two classes claiming one URL is an error, not a first match", "[downloader][registry]" )
@@ -230,4 +235,208 @@ TEST_CASE( "Pooling subdomains requires subdomain inheritance", "[downloader][re
 
 	std::error_code error {};
 	std::filesystem::remove_all( directory, error );
+}
+
+TEST_CASE( "Unclaimed URLs are inspected without host or extension rules", "[downloader][registry][direct]" )
+{
+	const auto testdata { source_root / "tests/downloader/testdata" };
+	auto registry { ScriptRegistry::create( testdata / "executor-url-classes.json", testdata ) };
+	REQUIRE( registry.has_value() );
+	for ( const auto url :
+	      { "https://img4.gelbooru.com/images/file",
+	        "https://other.example/image.PNG?x=1",
+	        "https://other.example/download?id=1" } )
+	{
+		const auto route { ( *registry )->route( url ) };
+		REQUIRE( route.has_value() );
+		REQUIRE( route->has_value() );
+		CHECK( ( **route ).download );
+		CHECK( ( **route ).script.empty() );
+	}
+	const auto page { ( *registry )->route( "https://executor.example/gallery" ) };
+	REQUIRE( page.has_value() );
+	REQUIRE( page->has_value() );
+	CHECK_FALSE( ( **page ).download );
+	const auto unsupported { ( *registry )->route( "ftp://other.example/file.png" ) };
+	REQUIRE( unsupported.has_value() );
+	CHECK_FALSE( unsupported->has_value() );
+}
+
+TEST_CASE( "URL comparison sorts query names without changing the resource", "[downloader][url-comparison]" )
+{
+	CHECK( urlComparisonKey( "https://example.com/file?b=2&a=1&" ) == "https://example.com/file?a=1&b=2" );
+	CHECK(
+		urlComparisonKey( "https://example.com/file?b=2&a=%20#preview" )
+	    == urlComparisonKey( "https://example.com/file?a=+&b=2" ) );
+	CHECK( urlComparisonKey( "https://example.com/file?" ) == "https://example.com/file" );
+	CHECK(
+		urlComparisonKey( "https://example.com/file?ex=1&%68m=2&ex=3&", { "ex", "hm" } )
+	    == "https://example.com/file" );
+	CHECK(
+		urlComparisonKey( "https://example.com/file?hm=2&is=1&ex=3", { "ex", "hm" } )
+	    == "https://example.com/file?is=1" );
+	CHECK( urlComparisonKey( "https://example.com/file?EX=3", { "ex" } ) == "https://example.com/file?EX=3" );
+	CHECK( urlComparisonKey( "https://example.com/file?b=2&a=2&a=1" ) == "https://example.com/file?a=2&a=1&b=2" );
+	CHECK(
+		urlComparisonKey( "https://example.com/file?a=2&a=1" )
+	    != urlComparisonKey( "https://example.com/file?a=1&a=2" ) );
+	CHECK( urlComparisonKey( "https://example.com/File?a=1" ) != urlComparisonKey( "https://example.com/file?a=1" ) );
+	CHECK( urlComparisonBase( "https://example.com/file#preview?x=1" ) == "https://example.com/file" );
+}
+
+TEST_CASE( "Ephemeral query declarations are validated", "[downloader][url-comparison]" )
+{
+	idhan::test::ParserFixture fixture {};
+	for ( const auto& value : { "true", "null", "42", "\"ex\"", "[42]", "[\"\"]" } )
+	{
+		fixture.write(
+			"url-classes.json",
+			std::format(
+				R"({{"urlClasses":[{{"name":"test","script":"test.js","hosts":["example.com"],"routes":[{{"export":"page"}}],"ephemeralQuery":{}}}]}})",
+				value ) );
+		const auto registry { ScriptRegistry::create( fixture.urlClassesPath(), fixture.root() ) };
+		CHECK_FALSE( registry.has_value() );
+		if ( !registry ) CHECK( registry.error().contains( "ephemeralQuery" ) );
+	}
+}
+
+TEST_CASE( "The Discord comparison policy preserves the supplied URL", "[downloader][url-comparison]" )
+{
+	const auto registry { ScriptRegistry::create(
+		source_root / "IDHANDownloader/premade/url-classes/discord.json", source_root / "IDHANDownloader/premade" ) };
+	REQUIRE( registry.has_value() );
+	const std::string url {
+		"https://cdn.discordapp.com/attachments/1538534554133069854/1564013740284842005/Screenshot_20261025_163204.png?ex=6adfb8cd&is=6ade674d&hm=1663a3f6c22e6c3c16d08d0c17d5f2d8cca516fb7816a0dccf02fbc07e6d5b5f&"
+	};
+	const auto key { ( *registry )->comparisonKey( url ) };
+	CHECK( key == urlComparisonBase( url ) + "?is=6ade674d" );
+	CHECK( url.contains( "?ex=6adfb8cd" ) );
+	CHECK( ( *registry )->ephemeralQuery( "https://other.example/file?ex=1" ).empty() );
+	CHECK( ( *registry )->ephemeralQuery( "https://cdn.discordapp.com.evil.example/file?ex=1" ).empty() );
+}
+
+TEST_CASE( "Ephemeral parameters remain available to route matching", "[downloader][registry][url-comparison]" )
+{
+	idhan::test::ParserFixture fixture {};
+	fixture.write( "url-classes.json", R"JSON({"urlClasses":[{
+		"name":"test", "script":"test.js", "hosts":["example.com"],
+		"ephemeralQuery":["token"], "routes":[
+			{"export":"first", "path":"/file", "query":{"token":"first"}},
+			{"export":"second", "path":"/file", "query":{"token":"second"}}
+		]
+	}]})JSON" );
+	const auto registry { ScriptRegistry::create( fixture.urlClassesPath(), fixture.root() ) };
+	REQUIRE( registry.has_value() );
+	const std::string first { "https://example.com/file?token=first&id=42&extra=1" };
+	const std::string second { "https://example.com/file?extra=1&id=42&token=second" };
+	const auto first_route { ( *registry )->route( first ) };
+	REQUIRE( first_route.has_value() );
+	REQUIRE( first_route->has_value() );
+	CHECK( ( **first_route ).export_name == "first" );
+	const auto second_route { ( *registry )->route( second ) };
+	REQUIRE( second_route.has_value() );
+	REQUIRE( second_route->has_value() );
+	CHECK( ( **second_route ).export_name == "second" );
+	CHECK( ( *registry )->comparisonKey( first ) == ( *registry )->comparisonKey( second ) );
+	CHECK( ( *registry )->comparisonKey( first ) == "https://example.com/file?extra=1&id=42" );
+
+	// An unlisted parameter does not constrain a route, but it still identifies the resource.
+	const std::string changed { "https://example.com/file?token=first&id=42&extra=2" };
+	const auto changed_route { ( *registry )->route( changed ) };
+	REQUIRE( changed_route.has_value() );
+	REQUIRE( changed_route->has_value() );
+	CHECK( ( **changed_route ).export_name == "first" );
+	CHECK( ( *registry )->comparisonKey( first ) != ( *registry )->comparisonKey( changed ) );
+
+	// Being ephemeral does not waive a route's requirement for the parameter to be present.
+	const auto absent { ( *registry )->route( "https://example.com/file?id=42&extra=1" ) };
+	REQUIRE( absent.has_value() );
+	REQUIRE( absent->has_value() );
+	CHECK( ( **absent ).download );
+}
+
+TEST_CASE( "Storage query sorting preserves signed parameter bytes", "[downloader][url-storage]" )
+{
+	CHECK(
+		sortUrlQueryParameters( "https://example.com/file?z=%2f&a=%20&a=+&ex=token%2Braw&hm=hash#view" )
+	    == "https://example.com/file?a=%20&a=+&ex=token%2Braw&hm=hash&z=%2f#view" );
+	CHECK( sortUrlQueryParameters( "https://example.com/file?b=2&%61=1&" ) == "https://example.com/file?%61=1&b=2" );
+	CHECK( sortUrlQueryParameters( "https://example.com/file?b=2&a&b=1" ) == "https://example.com/file?a&b=2&b=1" );
+	CHECK(
+		sortUrlQueryParameters( "https://example.com/file#view?b=2&a=1" ) == "https://example.com/file#view?b=2&a=1" );
+	CHECK( sortUrlQueryParameters( "https://example.com/file" ) == "https://example.com/file" );
+}
+
+TEST_CASE( "URL classes control storage sorting independently of comparisons", "[downloader][url-storage]" )
+{
+	idhan::test::ParserFixture fixture {};
+	for ( const std::string setting : { "", ",\"sortQueryParameters\":true", ",\"sortQueryParameters\":false" } )
+	{
+		fixture.write(
+			"url-classes.json",
+			std::format(
+				R"({{"urlClasses":[{{"name":"test","script":"test.js","hosts":["example.com"],"routes":[{{"export":"page"}}]{}}}]}})",
+				setting ) );
+		const auto registry { ScriptRegistry::create( fixture.urlClassesPath(), fixture.root() ) };
+		REQUIRE( registry.has_value() );
+		const std::string url { "https://example.com/file?z=2&a=1&ex=keep#view" };
+		const std::string sorted { "https://example.com/file?a=1&ex=keep&z=2#view" };
+		const bool enabled { !setting.contains( "false" ) };
+		CHECK( ( *registry )->storageUrl( url ) == ( enabled ? sorted : url ) );
+		CHECK( ( *registry )->comparisonKey( url ) == "https://example.com/file?a=1&ex=keep&z=2" );
+		CHECK(
+			( *registry )->storageUrl( "https://unconfigured.example/file?z=2&a=1" )
+		    == "https://unconfigured.example/file?a=1&z=2" );
+	}
+}
+
+TEST_CASE( "Storage sorting rejects non-boolean settings", "[downloader][url-storage]" )
+{
+	idhan::test::ParserFixture fixture {};
+	for ( const auto setting : { "null", "1", "\"false\"", "[]", "{}" } )
+	{
+		fixture.write(
+			"url-classes.json",
+			std::format(
+				R"({{"urlClasses":[{{"name":"test","script":"test.js","hosts":["example.com"],"routes":[{{"export":"page"}}],"sortQueryParameters":{}}}]}})",
+				setting ) );
+		const auto registry { ScriptRegistry::create( fixture.urlClassesPath(), fixture.root() ) };
+		REQUIRE_FALSE( registry.has_value() );
+		CHECK( registry.error().contains( "sortQueryParameters" ) );
+	}
+}
+
+TEST_CASE( "Storage sorting uses the matched class and redirect destination", "[downloader][url-storage]" )
+{
+	idhan::test::ParserFixture fixture {};
+	fixture.write( "url-classes.json", R"JSON({"urlClasses":[
+		{"name":"raw","script":"test.js","hosts":["example.com"],
+		 "routes":[{"export":"page","path":"/raw"}],"sortQueryParameters":false},
+		{"name":"sorted","script":"test.js","hosts":["example.com"],
+		 "routes":[{"export":"page","path":"/sorted"}],"sortQueryParameters":true}
+	]})JSON" );
+	const auto registry { ScriptRegistry::create( fixture.urlClassesPath(), fixture.root() ) };
+	REQUIRE( registry.has_value() );
+	CHECK( ( *registry )->storageUrl( "https://example.com/raw?z=2&a=1" ) == "https://example.com/raw?z=2&a=1" );
+	CHECK( ( *registry )->storageUrl( "https://example.com/sorted?z=2&a=1" ) == "https://example.com/sorted?a=1&z=2" );
+	CHECK(
+		( *registry )->storageUrl( "https://example.com/automatic?z=2&a=1" )
+	    == "https://example.com/automatic?z=2&a=1" );
+
+	idhan::test::MemoryImportFactory imports {};
+	auto inner { imports.open( ImportRequest { .url = "https://source.example/file?z=2&a=1" } ) };
+	REQUIRE( inner.has_value() );
+	UrlStorageImportSink sink { std::move( *inner ), **registry };
+	std::string final { "https://other.example/file?z=2&a=1&hm=signed" };
+	std::string expected { "https://other.example/file?a=1&hm=signed&z=2" };
+	SECTION( "An unconfigured destination sorts by default" )
+	{}
+	SECTION( "A redirect to an opted-out class preserves its query order" )
+	{
+		final = "https://example.com/raw?z=2&a=1&hm=signed";
+		expected = final;
+	}
+	REQUIRE( sink.finish( ImportMetadata { .final_url = final } ).has_value() );
+	REQUIRE( imports.metadata.size() == 1 );
+	CHECK( imports.metadata.front().final_url == expected );
 }
