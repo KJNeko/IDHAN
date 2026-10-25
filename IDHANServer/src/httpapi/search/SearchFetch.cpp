@@ -243,7 +243,7 @@ static runtime::Task< Set > runFetch( FetchContext ctx, std::string query, std::
 {
 	const auto key_type { sortKeySpec( ctx.sort_type ).type };
 
-	log::debug( "Search fetch {}: {}", label, query );
+	log::trace( "Search fetch {}: {}", label, query );
 
 	const auto started { std::chrono::steady_clock::now() };
 
@@ -394,7 +394,7 @@ runtime::Task< Set > fetchPage(
 		buildPageQuery( ctx.sort_type, ctx.want_hashes, !excluded.empty(), order, offset, limit, ctx.display )
 	};
 
-	log::debug( "Search page: {}", query );
+	log::trace( "Search page: {}", query );
 
 	const auto started { std::chrono::steady_clock::now() };
 

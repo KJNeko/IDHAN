@@ -144,9 +144,11 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	logger->flush_on( spdlog::level::warn );
 	spdlog::flush_every( std::chrono::seconds( 5 ) );
 
-	spdlog::trace( "Trace logging enabled" );
-	spdlog::debug( "Debug logging enabled" );
-	spdlog::info( "Info logging enabled" );
+	const auto console_level { spdlog::level::to_string_view( arguments.log_level ) };
+	log::info(
+		"Logging initialized: console {}, directory {}",
+		arguments.use_stdout ? std::string_view { console_level.data(), console_level.size() } : "disabled",
+		log_path );
 
 	return logger;
 }
@@ -367,8 +369,6 @@ ServerContext::ServerContext( const ConnectionArguments& arguments ) :
 	spdlog::enable_backtrace( 32 );
 
 	log::trace( "Backtrace buffer enabled (32 entries)" );
-	log::debug( "Logging show debug" );
-	log::info( "Logging show info" );
 	log::trace( "Calling printCoreLocation" );
 	printCoreLocation();
 	log::trace( "printCoreLocation completed" );

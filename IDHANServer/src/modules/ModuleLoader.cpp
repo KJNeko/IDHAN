@@ -110,8 +110,8 @@ template < typename T >
 		moduleSetting< std::size_t >( name, "liveness_grace_ms", 5000 )
 	};
 
-	const auto level_name { spdlog::level::to_string_view( spdlog::get_level() ) };
-	settings.log_level = std::string { level_name.data(), level_name.size() };
+	// The server logger accepts trace for its file sinks; workers write directly to the console.
+	settings.log_level = config::getSilentDefault< std::string >( "logging", "level", "info" );
 
 	return settings;
 }

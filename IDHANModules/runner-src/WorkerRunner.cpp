@@ -709,7 +709,7 @@ void WorkerRunner::runCall( QueuedCall call )
 	};
 
 	if ( failure.empty() )
-		spdlog::debug(
+		spdlog::trace(
 			"Call {} finished: {} on '{}' ({}) in {}ms: {}",
 			call.call_id,
 			toString( call.op ),

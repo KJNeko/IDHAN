@@ -143,7 +143,7 @@ int main( int argc, char** argv )
 			std::fputs( "Could not publish the render thread count; modules will use their own default\n", stderr );
 	}
 
-	spdlog::set_pattern( "[module-worker] [%^%l%$] %v" );
+	spdlog::set_pattern( "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [module-worker %P] [thread %t] %v" );
 
 	if ( const auto level { spdlog::level::from_str( log_level ) }; level != spdlog::level::off || log_level == "off" )
 	{

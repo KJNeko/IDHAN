@@ -62,7 +62,7 @@ void checkPgVersion( const std::string& pg_version )
 
 ManagementConnection::ManagementConnection( const ConnectionArguments& arguments ) : connection( arguments.format() )
 {
-	log::info( "Postgres management connection made: {}", arguments.format() );
+	log::info( "Postgres management connection made" );
 
 	log::info( "Interrogating postgres version" );
 	{
@@ -94,8 +94,6 @@ std::string ConnectionArguments::format() const
 	str += format_ns::format( "user={} ", user );
 	if ( !password.empty() ) str += format_ns::format( "password={} ", password );
 	if ( log_level <= spdlog::level::debug ) str += "options='-c client_min_messages=debug1'";
-
-	log::debug( "Connecting using: {}", str );
 
 	return str;
 }

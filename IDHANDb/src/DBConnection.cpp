@@ -94,12 +94,14 @@ void DBConnection::postDrainedIfIdle()
 	if ( queued.empty() && inflight.empty() ) drained.post();
 }
 
+constexpr auto query_time_log_level { spdlog::level::trace };
+
 void DBConnection::logFirstResult( const DBOperation& operation ) const
 {
 	const auto latency { operation.firstResultLatency() };
 	if ( !latency ) return;
 
-	const auto level { *latency >= config.slow_query_threshold ? spdlog::level::warn : spdlog::level::debug };
+	const auto level { *latency >= config.slow_query_threshold ? spdlog::level::warn : query_time_log_level };
 	if ( !spdlog::should_log( level ) ) return;
 
 	spdlog::log(
@@ -117,7 +119,7 @@ void DBConnection::logCompletion( const DBOperation& operation ) const
 	if ( !latency ) return;
 
 	const auto first_result { operation.firstResultLatency() };
-	const auto level { *latency >= config.slow_query_threshold ? spdlog::level::warn : spdlog::level::debug };
+	const auto level { *latency >= config.slow_query_threshold ? spdlog::level::warn : query_time_log_level };
 	if ( !spdlog::should_log( level ) ) return;
 
 	spdlog::log(

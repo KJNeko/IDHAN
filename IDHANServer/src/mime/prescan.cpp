@@ -58,11 +58,11 @@ runtime::Task< MimeID > prescanMime( MimeReader reader )
 	{
 		if ( !co_await testSignature( signature, reader ) ) continue;
 
-		log::debug( "Pre-scan matched mime id {}", signature.mime_id );
+		log::trace( "Pre-scan matched mime id {}", signature.mime_id );
 		co_return signature.mime_id;
 	}
 
-	log::debug( "Pre-scan matched no signature" );
+	log::trace( "Pre-scan matched no signature" );
 	co_return mime_ids::UNKNOWN;
 }
 

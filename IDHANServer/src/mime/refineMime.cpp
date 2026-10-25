@@ -64,7 +64,7 @@ runtime::Task< MimeID > specializeMimeID(
 			continue;
 		}
 
-		log::debug( "Mime parser '{}' specialized mime id {} to {}", parser->name(), base_id, *specialized );
+		log::trace( "Mime parser '{}' specialized mime id {} to {}", parser->name(), base_id, *specialized );
 
 		co_return *specialized;
 	}

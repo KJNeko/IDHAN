@@ -147,7 +147,7 @@ SearchQuery::RangeTerm SearchQuery::parseRangeTerm( const std::string_view tag )
 	if ( is_not ) op |= SearchOperationFlags::Not;
 	if ( is_approximate ) op |= SearchOperationFlags::Approximate;
 
-	log::debug( "Parsing range for {}", tag );
+	log::trace( "Parsing range for {}", tag );
 
 	const auto number_start { tag.find_first_of( "0123456789" ) };
 
@@ -158,7 +158,7 @@ SearchQuery::RangeTerm SearchQuery::parseRangeTerm( const std::string_view tag )
 
 	const std::string number_substr { tag.substr( number_start, number_end - number_start + 1 ) };
 
-	log::debug( "Got number from \'{}\'", number_substr );
+	log::trace( "Got number from \'{}\'", number_substr );
 
 	std::size_t value { 0 };
 
@@ -948,21 +948,21 @@ void SearchQuery::addPositiveTags( std::vector< TagID > tag_ids )
 {
 	const auto added { tag_ids.size() };
 	mergeUnique( m_positive_tags, std::move( tag_ids ) );
-	log::debug( "Added {} positive tags, {} total", added, m_positive_tags.size() );
+	log::trace( "Added {} positive tags, {} total", added, m_positive_tags.size() );
 }
 
 void SearchQuery::addNegativeTags( std::vector< TagID > tag_ids )
 {
 	const auto added { tag_ids.size() };
 	mergeUnique( m_negative_tags, std::move( tag_ids ) );
-	log::debug( "Added {} negative tags, {} total", added, m_negative_tags.size() );
+	log::trace( "Added {} negative tags, {} total", added, m_negative_tags.size() );
 }
 
 void SearchQuery::addNamespaces( std::vector< NamespaceID > namespace_ids )
 {
 	const auto added { namespace_ids.size() };
 	mergeUnique( m_namespace_ids, std::move( namespace_ids ) );
-	log::debug( "Added {} wildcard namespaces, {} total", added, m_namespace_ids.size() );
+	log::trace( "Added {} wildcard namespaces, {} total", added, m_namespace_ids.size() );
 }
 
 template < typename Group >
@@ -1097,7 +1097,7 @@ bool SearchQuery::setHydrusSystemTags( const std::string_view system_subtag )
 
 void SearchQuery::setSystemTags( const std::vector< std::string >& vector )
 {
-	log::debug( "Got {} system tags", vector.size() );
+	log::trace( "Got {} system tags", vector.size() );
 	for ( const auto& tag : vector )
 	{
 		constexpr auto system_namespace { "system:" };
@@ -1107,7 +1107,7 @@ void SearchQuery::setSystemTags( const std::vector< std::string >& vector )
 
 		const std::string_view system_subtag { std::string_view { tag }.substr( system_namespace_len ) };
 
-		log::debug( "Got system tag \'{}\'", system_subtag );
+		log::trace( "Got system tag \'{}\'", system_subtag );
 
 		if ( setHydrusSystemTags( system_subtag ) ) continue;
 
@@ -1189,7 +1189,7 @@ void SearchQuery::setSortOrder( const SortOrder value )
 void SearchQuery::setLimit( const std::optional< std::size_t > value )
 {
 	m_limit = value;
-	log::debug( "Set search limit to {}", value.value_or( -1 ) );
+	log::trace( "Set search limit to {}", value.value_or( -1 ) );
 }
 
 void SearchQuery::setOffset( const std::optional< std::size_t > value )
