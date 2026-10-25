@@ -245,6 +245,7 @@ void HydrusImporterWidget::on_parseHydrusDB_pressed()
 
 			m_total_preprocess = 0;
 			m_completed_preprocess = 0;
+			m_preprocessing_failed = false;
 
 			parseTagServices( result.services );
 			parseFileRelationships();
@@ -257,14 +258,15 @@ void HydrusImporterWidget::on_parseHydrusDB_pressed()
 	watcher->setFuture( future );
 }
 
-void HydrusImporterWidget::onPreprocessingComplete()
+void HydrusImporterWidget::onPreprocessingComplete( const bool success )
 {
+	if ( !success ) m_preprocessing_failed = true;
 	++m_completed_preprocess;
 	updatePreprocessProgress();
 
 	if ( m_completed_preprocess >= m_total_preprocess )
 	{
-		ui->importButton->setEnabled( true );
+		ui->importButton->setEnabled( !m_preprocessing_failed );
 		ui->parseHydrusDB->setEnabled( true );
 	}
 }
@@ -272,6 +274,12 @@ void HydrusImporterWidget::onPreprocessingComplete()
 void HydrusImporterWidget::updatePreprocessProgress()
 {
 	const bool has_ptr { m_has_ptr };
+
+	if ( m_preprocessing_failed )
+	{
+		ui->parseStatusLabel->setText( "Preprocessing failed; see the affected service for details" );
+		return;
+	}
 
 	if ( m_total_preprocess == 0 )
 	{

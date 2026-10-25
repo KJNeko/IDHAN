@@ -26,7 +26,7 @@
       <number>0</number>
      </property>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1">
        <property name="spacing">
         <number>0</number>
        </property>
@@ -48,13 +48,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QLabel" name="name">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
+             <widget class="idhan::hydrus::ImportServiceLabel" name="name">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -64,19 +58,19 @@
            <property name="text">
             <string>Name: </string>
            </property>
+                 <property name="minimumLines" stdset="0">
+                     <number>2</number>
+           </property>
           </widget>
          </item>
-         <item alignment="Qt::AlignmentFlag::AlignBottom">
-          <widget class="QLabel" name="statusLabel">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
+            <item>
+                <widget class="idhan::hydrus::ImportServiceLabel" name="statusLabel">
            <property name="text">
             <string>Preprocessing</string>
            </property>
+                    <property name="minimumLines" stdset="0">
+                        <number>3</number>
+                    </property>
           </widget>
          </item>
         </layout>
@@ -95,23 +89,23 @@
             <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="mappingsCount">
+               <widget class="idhan::hydrus::ImportServiceLabel" name="mappingsCount">
              <property name="text">
               <string>Mappings: 0</string>
              </property>
+                   <property name="minimumLines" stdset="0">
+                       <number>2</number>
+                   </property>
             </widget>
            </item>
-           <item alignment="Qt::AlignmentFlag::AlignTop">
-            <widget class="QLabel" name="aliasesCount">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
+              <item>
+                  <widget class="idhan::hydrus::ImportServiceLabel" name="aliasesCount">
              <property name="text">
               <string>Aliases: 0</string>
              </property>
+                      <property name="minimumLines" stdset="0">
+                          <number>1</number>
+                      </property>
             </widget>
            </item>
           </layout>
@@ -121,17 +115,14 @@
            <property name="spacing">
             <number>0</number>
            </property>
-           <item alignment="Qt::AlignmentFlag::AlignTop">
-            <widget class="QLabel" name="parentsCount">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
+              <item>
+                  <widget class="idhan::hydrus::ImportServiceLabel" name="parentsCount">
              <property name="text">
               <string>Parents/Children: 0</string>
              </property>
+                      <property name="minimumLines" stdset="0">
+                          <number>1</number>
+                      </property>
             </widget>
            </item>
            <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignBottom">
@@ -160,6 +151,23 @@
       </layout>
      </item>
      <item>
+         <widget class="idhan::hydrus::ImportServiceLabel" name="operationLabel">
+             <property name="text">
+                 <string>Waiting for preprocessing</string>
+             </property>
+             <property name="minimumLines" stdset="0">
+                 <number>1</number>
+             </property>
+         </widget>
+     </item>
+        <item>
+            <widget class="idhan::hydrus::ImportServiceLabel" name="timingLabel">
+                <property name="minimumLines" stdset="0">
+                    <number>1</number>
+                </property>
+            </widget>
+        </item>
+        <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <property name="spacing">
         <number>0</number>
@@ -208,6 +216,13 @@
    </item>
   </layout>
  </widget>
- <resources/>
- <connections/>
+    <customwidgets>
+        <customwidget>
+            <class>idhan::hydrus::ImportServiceLabel</class>
+            <extends>QLabel</extends>
+            <header>gui/hydrus/ImportServiceLabel.hpp</header>
+        </customwidget>
+    </customwidgets>
+    <resources/>
+    <connections/>
 </ui>

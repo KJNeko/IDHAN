@@ -2,8 +2,22 @@
 
 #include <QWidget>
 
+#include <cmath>
+
 #include "TagServiceWorker.hpp"
 #include "ui_TagServiceWidget.h"
+
+namespace idhan::hydrus
+{
+
+QString formatImportRate( const double rate )
+{
+	if ( rate > 0 && rate < 0.001 ) return "<0.001";
+
+	return QLocale().toString( rate, 'f', rate > 0 && rate < 1 ? 3 : 1 );
+}
+
+} // namespace idhan::hydrus
 
 TagServiceWidget::TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWidget* parent ) :
   QWidget( parent ),
@@ -11,10 +25,30 @@ TagServiceWidget::TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWi
   m_name(),
   m_worker( new TagServiceWorker( this, importer ) ),
   m_start(),
-  m_mapping_records(),
   ui( new Ui::TagServiceWidget )
 {
 	ui->setupUi( this );
+	ui->statusLabel->setToolTip(
+		"ETA covers the current phase only. Rate is source entries processed per second over the last minute; "
+		"Avg is source entries per minute since this phase began. Completed batches include their full processing "
+		"and server wait time. Skipped or failed entries count as processed work and remain listed in the operation status." );
+	m_status = new idhan::hydrus::ImportServiceStatus( ui->operationLabel, ui->timingLabel, this );
+	m_time_timer.setInterval( 1000 );
+	connect( &m_time_timer, &QTimer::timeout, this, &TagServiceWidget::updateTime );
+	connect( m_worker, &TagServiceWorker::phaseStarted, this, &TagServiceWidget::phaseStarted );
+	connect( m_worker, &TagServiceWorker::phaseProgress, this, &TagServiceWidget::phaseProgress );
+	connect(
+		m_worker,
+		&TagServiceWorker::statusMessage,
+		m_status,
+		&idhan::hydrus::ImportServiceStatus::setOperation,
+		Qt::QueuedConnection );
+	connect(
+		m_worker,
+		&TagServiceWorker::warningOccurred,
+		m_status,
+		&idhan::hydrus::ImportServiceStatus::warning,
+		Qt::QueuedConnection );
 
 	m_worker->setService( m_info );
 
@@ -38,14 +72,9 @@ TagServiceWidget::TagServiceWidget( idhan::hydrus::HydrusImporter* importer, QWi
 		m_worker, &TagServiceWorker::processedMaxParents, this, &TagServiceWidget::setMaxParents, Qt::AutoConnection );
 	connect(
 		m_worker, &TagServiceWorker::processedMaxAliases, this, &TagServiceWidget::setMaxAliases, Qt::AutoConnection );
-	connect(
-		m_worker, &TagServiceWorker::finished, this, &TagServiceWidget::preprocessingFinished, Qt::AutoConnection );
-	connect(
-		m_worker,
-		&TagServiceWorker::errorOccurred,
-		this,
-		[ this ]( const QString& message ) { ui->statusLabel->setText( QString( "Error: %1" ).arg( message ) ); },
-		Qt::AutoConnection );
+	connect( m_worker, &TagServiceWorker::preprocessingFinished, this, &TagServiceWidget::preprocessingFinished );
+	connect( m_worker, &TagServiceWorker::finished, this, &TagServiceWidget::importFinished );
+	connect( m_worker, &TagServiceWorker::errorOccurred, this, &TagServiceWidget::importFailed, Qt::AutoConnection );
 }
 
 TagServiceWidget::~TagServiceWidget()
@@ -59,108 +88,92 @@ void TagServiceWidget::setName( const QString& name )
 	ui->name->setText( QString( "Name: %L1\nType: Tag Service" ).arg( name ) );
 }
 
-void TagServiceWidget::recordMappingProcessed( std::size_t count )
+void TagServiceWidget::phaseStarted( const TagServiceWorker::Phase phase, const Clock::time_point started )
 {
-	const auto now = Clock::now();
-
-	m_mapping_records.emplace_back( now, count );
-
-	// Clean old records (older than 1 minute)
-	cleanOldRecords();
+	m_phase = phase;
+	std::size_t total { 0 };
+	switch ( phase )
+	{
+		case TagServiceWorker::Phase::Mappings:
+			total = m_info.num_mappings;
+			break;
+		case TagServiceWorker::Phase::Aliases:
+			total = m_info.num_aliases;
+			break;
+		case TagServiceWorker::Phase::Parents:
+			total = m_info.num_parents;
+			break;
+		case TagServiceWorker::Phase::PreparingRelationships:
+			break;
+	}
+	m_progress.start( total, started );
+	updateTime();
 }
 
-void TagServiceWidget::cleanOldRecords()
+void TagServiceWidget::phaseProgress( const std::size_t count, const Clock::time_point completed )
 {
-	const auto now = Clock::now();
-	const auto one_minute_ago = now - std::chrono::minutes( 1 );
+	if ( !m_importing ) return;
 
-	while ( !m_mapping_records.empty() && m_mapping_records.front().timestamp < one_minute_ago )
-	{
-		m_mapping_records.pop_front();
-	}
-}
-
-double TagServiceWidget::getAverageMappingsPerMinute() const
-{
-	if ( m_mapping_records.empty() ) return 0.0;
-
-	std::size_t total_mappings = 0;
-
-	// Sum up all complete seconds
-	for ( const auto& record : m_mapping_records )
-	{
-		total_mappings += record.count;
-	}
-
-	// Calculate time span
-	const auto now = Clock::now();
-	auto time_span = std::chrono::milliseconds( 0 );
-
-	if ( !m_mapping_records.empty() )
-	{
-		time_span =
-			std::chrono::duration_cast< std::chrono::milliseconds >( now - m_mapping_records.front().timestamp );
-	}
-
-	if ( time_span.count() > 0 )
-	{
-		// Convert to mappings per minute
-		return static_cast< double >( total_mappings ) / ( static_cast< double >( time_span.count() ) / 60000.0 );
-	}
-
-	return 0.0;
+	m_progress.advance( count, completed );
+	if ( count > 0 ) m_status->recordProgress();
+	updateTime();
 }
 
 void TagServiceWidget::updateTime()
 {
-	const std::size_t to_process { m_info.num_mappings + m_info.num_parents + m_info.num_aliases };
-	const std::size_t total_processed { mappings_processed + parents_processed + aliases_processed };
+	if ( !m_importing ) return;
 
-	if ( total_processed == 0 )
+	if ( !m_phase )
 	{
-		ui->statusLabel->setText( "Ready!" );
+		ui->statusLabel->setText( "ETA: waiting to start" );
 		return;
 	}
 
-	const auto time_elapsed {
-		std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::high_resolution_clock::now() - m_start )
-			.count()
-	};
-
-	if ( to_process == total_processed )
+	if ( *m_phase == TagServiceWorker::Phase::PreparingRelationships )
 	{
-		const auto hours = time_elapsed / 3600000;
-		const auto minutes = ( time_elapsed % 3600000 ) / 60000;
-		const auto seconds = ( time_elapsed % 60000 ) / 1000;
-		ui->statusLabel->setText(
-			QString( "Finished: %1:%2:%3" )
-				.arg( hours, 2, 10, QChar( '0' ) )
-				.arg( minutes, 2, 10, QChar( '0' ) )
-				.arg( seconds, 2, 10, QChar( '0' ) ) );
+		ui->statusLabel->setText( "ETA: estimating after relationship preparation" );
 		return;
 	}
 
-	const double ms_per_mapping { static_cast< double >( time_elapsed ) / static_cast< double >( total_processed ) };
+	QString phase_name;
+	switch ( *m_phase )
+	{
+		case TagServiceWorker::Phase::Mappings:
+			phase_name = "Mappings";
+			break;
+		case TagServiceWorker::Phase::Aliases:
+			phase_name = "Aliases";
+			break;
+		case TagServiceWorker::Phase::Parents:
+			phase_name = "Parents";
+			break;
+		case TagServiceWorker::Phase::PreparingRelationships:
+			return;
+	}
 
-	const auto time_remaining { static_cast< std::size_t >( ( to_process - total_processed ) * ms_per_mapping ) };
-
-	const auto hours = time_remaining / 3600000;
-	const auto minutes = ( time_remaining % 3600000 ) / 60000;
-	const auto seconds = ( time_remaining % 60000 ) / 1000;
-
-	// Add rate information to the status
-	const double current_rate = getMappingsPerSecond();
-	const double avg_rate = getAverageMappingsPerMinute();
+	const auto progress = m_progress.snapshot();
+	QString eta;
+	if ( progress.processed >= progress.total )
+		eta = "complete";
+	else if ( progress.processed == 0 )
+		eta = "estimating";
+	else if ( !progress.remaining )
+		eta = "waiting for progress";
+	else
+	{
+		const auto seconds = progress.remaining->count();
+		eta = QString( "%1:%2:%3" )
+		          .arg( seconds / 3600, 2, 10, QChar( '0' ) )
+		          .arg( ( seconds % 3600 ) / 60, 2, 10, QChar( '0' ) )
+		          .arg( seconds % 60, 2, 10, QChar( '0' ) );
+	}
 
 	ui->statusLabel->setText(
-		QString( "ETA: %1:%2:%3 | Rate: %L4/s | Avg: %L5/min" )
-			.arg( hours, 2, 10, QChar( '0' ) )
-			.arg( minutes, 2, 10, QChar( '0' ) )
-			.arg( seconds, 2, 10, QChar( '0' ) )
-			.arg( static_cast< int >( current_rate ) )
-			.arg( static_cast< int >( avg_rate ) )
-
-	);
+		QString( "%1 ETA: %2\nRate: %3/s | Avg: %4/min" )
+			.arg( phase_name )
+			.arg( eta )
+			.arg( idhan::hydrus::formatImportRate( progress.recent_per_second ) )
+			.arg( idhan::hydrus::formatImportRate( progress.average_per_second * 60 ) ) );
 }
 
 void TagServiceWidget::updateProcessed()
@@ -177,7 +190,6 @@ void TagServiceWidget::processedMappings( std::size_t count, std::size_t record_
 {
 	mappings_processed += count;
 	records_processed += record_count;
-	recordMappingProcessed( count );
 
 	QLocale locale { QLocale::English, QLocale::UnitedStates };
 	locale.setNumberOptions( QLocale::DefaultNumberOptions );
@@ -211,12 +223,30 @@ void TagServiceWidget::processedAliases( std::size_t count )
 	updateTime();
 }
 
-void TagServiceWidget::preprocessingFinished()
+void TagServiceWidget::preprocessingFinished( const bool success )
 {
-	m_preprocessed = true;
+	m_preprocessed = success;
 	updateProcessed();
-	updateTime();
-	emit preprocessingComplete();
+	if ( success ) m_status->finish( "Ready to import" );
+	emit preprocessingComplete( success );
+}
+
+void TagServiceWidget::importFinished()
+{
+	m_importing = false;
+	m_time_timer.stop();
+	m_status->finish( "Finished" );
+	ui->statusLabel->setText(
+		QString( "Import elapsed: %L1s" )
+			.arg( std::chrono::duration_cast< std::chrono::seconds >( Clock::now() - m_start ).count() ) );
+}
+
+void TagServiceWidget::importFailed( const QString& message )
+{
+	m_importing = false;
+	m_time_timer.stop();
+	ui->statusLabel->clear();
+	m_status->fail( message );
 }
 
 void TagServiceWidget::setMaxMappings( std::size_t count )
@@ -260,11 +290,26 @@ void TagServiceWidget::setInfo( const idhan::hydrus::ServiceInfo& service_info )
 
 void TagServiceWidget::startImport()
 {
-	if ( ui->cbShouldImport->isChecked() ) QThreadPool::globalInstance()->start( m_worker );
-	m_start = std::chrono::high_resolution_clock::now();
+	if ( !ui->cbShouldImport->isChecked() )
+	{
+		m_status->finish( "Skipped" );
+		return;
+	}
+
+	if ( !m_preprocessed ) return;
+
+	m_start = Clock::now();
+	m_importing = true;
+	m_phase.reset();
+	m_status->begin( "Queued for import" );
+	m_time_timer.start();
+	updateTime();
+	QThreadPool::globalInstance()->start( m_worker );
 }
 
 void TagServiceWidget::startPreImport()
 {
+	ui->statusLabel->clear();
+	m_status->begin( "Queued for preprocessing" );
 	QThreadPool::globalInstance()->start( m_worker );
 }
