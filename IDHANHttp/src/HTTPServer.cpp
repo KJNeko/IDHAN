@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "idhan/http/UploadPipeline.hpp"
 
@@ -171,27 +172,31 @@ static void addCorsHeaders( proxygen::HTTPMessage& message )
 			{
 				if ( !end_of_message ) source.setReadTimeout( std::chrono::milliseconds { 0 } );
 
-				co_await body.append( event.event.body.move() ).scheduleOn( &executor );
+				// co_await body.append( event.event.body.move() ).scheduleOn( &executor );
+				co_await folly::coro::co_withExecutor( &executor, body.append( event.event.body.move() ) );
 				if ( !end_of_message ) source.setReadTimeout( config.upload_idle_timeout );
 			}
 		}
-		context.setBody( co_await body.finish().scheduleOn( &executor ) );
+
+		context.setBody( co_await folly::coro::co_withExecutor( &executor, body.finish() ) );
 		response = co_await routes.dispatch( std::move( match ), std::move( context ) );
 	}
 	catch ( const proxygen::coro::HTTPError& error )
 	{
-		spdlog::warn( "httpapi: malformed request body for {} {}: {}", method_name, path, error.what() );
-		response = Response::error( 400, "Malformed request body" );
+		const auto error_msg { std::format( "malformed request body for {} {}: {}", method_name, path, error.what() ) };
+		spdlog::warn( "httpapi: {}", error_msg );
+		response = Response::error( 400, error_msg );
 	}
 	catch ( const std::exception& error )
 	{
-		spdlog::error( "httpapi: unhandled exception in {} {}: {}", method_name, path, error.what() );
-		response = Response::error( 500, "Internal server error" );
+		const auto error_msg { std::format( "unhandled exception in {} {}: {}", method_name, path, error.what() ) };
+		spdlog::error( "httpapi: {}", error_msg );
+		response = Response::error( 500, std::format( "Internal server error: {}", error_msg ) );
 	}
 	catch ( ... )
 	{
 		spdlog::error( "httpapi: unhandled non-standard exception in {} {}", method_name, path );
-		response = Response::error( 500, "Internal server error" );
+		response = Response::error( 500, "Internal server error (Nonstandard exception)" );
 	}
 	co_return makeResponseSource( std::move( response ), head );
 }
@@ -250,7 +255,7 @@ void HTTPServer::start()
 					[ &started ] noexcept { started.post(); },
 					[ &started, &start_error ]( std::exception_ptr error ) noexcept
 					{
-						start_error = error;
+						start_error = std::move( error );
 						started.post();
 					} );
 			}
@@ -355,18 +360,17 @@ HTTPTask< proxygen::coro::HTTPSourceHolder > HTTPServer::handleRequest(
 	}
 	catch ( const std::exception& error )
 	{
-		spdlog::error(
-			"httpapi: unhandled exception validating {} {}: {}",
-			proxygen::methodToString( *method ),
-			path,
-			error.what() );
-		rejection = Response::error( 500, "Internal server error" );
+		const auto error_msg { std::format(
+			"unhandled exception validating {} {}: {}", proxygen::methodToString( *method ), path, error.what() ) };
+		spdlog::error( error_msg );
+		rejection = Response::error( 500, error_msg );
 	}
 	catch ( ... )
 	{
-		spdlog::error(
-			"httpapi: unhandled non-standard exception validating {} {}", proxygen::methodToString( *method ), path );
-		rejection = Response::error( 500, "Internal server error" );
+		const auto error_msg { std::format(
+			"unhandled non-standard exception validating {} {}", proxygen::methodToString( *method ), path ) };
+		spdlog::error( error_msg );
+		rejection = Response::error( 500, error_msg );
 	}
 	if ( rejection ) co_return rejectRequest( std::move( *rejection ), http1, head );
 
@@ -381,8 +385,10 @@ HTTPTask< proxygen::coro::HTTPSourceHolder > HTTPServer::handleRequest(
 		folly::IOBuf::create( 0 ),
 		std::move( *work )
 	};
+
 	auto response { readBodyAndDispatch(
 		m_routes, match, std::move( context ), std::move( source ), headers->eom, m_config, m_body_executor ) };
+
 	co_return co_await std::move( response );
 }
 } // namespace idhan::http

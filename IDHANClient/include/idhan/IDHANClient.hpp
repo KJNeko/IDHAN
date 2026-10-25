@@ -348,7 +348,7 @@ auto defaultErrorHandler( TPromise&& promise )
 	{
 		// logging::logResponse( reply );
 
-		const std::runtime_error exception { format_ns::format( "{}", server_msg ) };
+		const std::runtime_error exception { format_ns::format( "Server Message: {}", server_msg ) };
 
 		logging::error( server_msg );
 

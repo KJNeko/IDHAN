@@ -108,6 +108,13 @@ binary when practical:
 
 ## Database and storage
 
+- Never apply persistent schema changes directly to the live database, including
+  indexes, tables, functions, and triggers. Implement them as migrations and let
+  the normal migration process apply them. A request to implement a schema change
+  does not authorize applying it manually to the live database.
+- Temporary, non-destructive changes solely for testing are allowed, provided
+  they are rolled back or cleaned up after testing and leave no persistent changes
+  to the live schema or existing data.
 - Add migrations only as the next sequentially numbered SQL file in
   `IDHANMigration/src/`; they run in ascending order at server startup.
 - Prefer typed domain helpers for reusable queries, including ordinary CRUD,
