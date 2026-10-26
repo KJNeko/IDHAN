@@ -14,6 +14,4 @@ namespace idhan::httpapi
 
 [[nodiscard]] http::RouteDefinition rateLimitResetRoute( db::DBContext& db );
 
-[[nodiscard]] http::RouteDefinition rateLimitEventsRoute( db::DBContext& db );
-
 } // namespace idhan::httpapi

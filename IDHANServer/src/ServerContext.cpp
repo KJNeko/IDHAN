@@ -26,10 +26,9 @@
 #include "auth/authKeys.hpp"
 #include "idhan/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
-#include "downloader/DownloadSessionEventHub.hpp"
+#include "events/ServerEvents.hpp"
 #include "downloader/DebugEvents.hpp"
 #include "downloader/DownloadSessionManager.hpp"
-#include "downloader/RateLimitEventHub.hpp"
 #include "embeddings/embeddings.hpp"
 #include "filesystem/ThumbnailCache.hpp"
 #include "filesystem/io/IOUring.hpp"
@@ -291,7 +290,6 @@ void ServerContext::startReplacementStack()
 
 	http::RouteRegistry routes {};
 	m_heartbeat = std::make_unique< httpapi::HeartbeatService >();
-	routes.add( httpapi::declareEndpointParameters( m_heartbeat->route() ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::versionRoute() ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::healthRoute() ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::generateApiKeyRoute( *m_db_context ) ) );
@@ -313,12 +311,11 @@ void ServerContext::startReplacementStack()
 	routes.add( httpapi::declareEndpointParameters( httpapi::searchPostRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::rateLimitListRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::rateLimitResetRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::rateLimitEventsRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::apiDocsIndexRoute() ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::logRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::pluginsRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderDebugRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderDebugEventsRoute( *m_db_context ) ) );
+	routes.add( httpapi::declareEndpointParameters( httpapi::eventsRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderSecretsListRoute( *m_db_context ) ) );
 	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderSecretsSetRoute( *m_db_context ) ) );
 	for ( auto& route : httpapi::layoutRoutes( *m_db_context ) )
@@ -419,15 +416,11 @@ void ServerContext::run()
 ServerContext::~ServerContext()
 {
 	if ( m_heartbeat != nullptr ) m_heartbeat->shutdown();
-	getJobRuntime().shutdownEvents();
-	downloader::debugEvents().shutdown();
 	if ( m_http_server != nullptr ) m_http_server->stop();
+	server::events().shutdown();
 	m_tag_count_maintenance.reset();
 	m_hash_maintenance.reset();
 	m_module_maintenance.reset();
-	downloader::DownloadSessionEventHub::instance().shutdown();
-	downloader::RateLimitEventHub::instance().shutdown();
-
 	downloader::downloadSessionManager().shutdown();
 	// The same key setupTempPath() created it under. Reading a different one deleted /tmp/idhan and
 	// left the configured directory behind, marker file and all, which aborts the next boot.

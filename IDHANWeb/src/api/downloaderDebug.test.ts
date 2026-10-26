@@ -46,7 +46,7 @@ it('streams diagnostics directly and catches up late subscribers without REST re
         },
     })));
     const send = (name: string, sessions: unknown[]) => stream.enqueue(new TextEncoder().encode(
-        `event: ${name}\ndata: ${JSON.stringify({sessions, lanes: []})}\n\n`,
+        `event: ${name}\ntype: downloader.debug\ndata: ${JSON.stringify({sessions, lanes: []})}\n\n`,
     ));
     const first = vi.fn();
     const second = vi.fn();
@@ -64,7 +64,7 @@ it('streams diagnostics directly and catches up late subscribers without REST re
         }) => event.sequence)).toEqual([1, 2]);
         expect(second.mock.lastCall?.[1]).toBe(true);
         expect(fetchMock).toHaveBeenCalledTimes(1);
-        expect(String(fetchMock.mock.calls[0][0])).toBe('/downloader/debug/events');
+        expect(String(fetchMock.mock.calls[0][0])).toBe('/events?types=downloader.debug');
         send('update', []);
         await vi.waitFor(() => expect(second.mock.lastCall?.[0].sessions).toEqual([]));
     } finally {

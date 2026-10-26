@@ -1,7 +1,7 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {watchDownloadSessions} from './client';
 
-const SNAPSHOT = 'event: snapshot\ntimestamp: 1758542400\ndata: {"sessions":[7]}\n\n';
+const SNAPSHOT = 'event: snapshot\ntimestamp: 1758542400\ntype: downloader.session\ndata: {"sessions":[7]}\n\n';
 
 const session = {id: 7, name: 'gelbooru', created_at: 1, last_used_at: 2, error_count: 0};
 
@@ -20,7 +20,7 @@ function install(): { calls: string[] } {
     vi.stubGlobal('fetch', (input: string) => {
         const url = String(input);
         calls.push(url);
-        if (url.includes('/download_sessions/events')) return Promise.resolve(eventStream());
+        if (url.includes('/events?types=downloader.session')) return Promise.resolve(eventStream());
         if (url.endsWith('/urls')) return Promise.resolve(Response.json([]));
         return Promise.resolve(Response.json(session));
     });
@@ -44,7 +44,7 @@ describe('download session stream sharing', () => {
         const closeSecond = watchDownloadSessions({onSession: (s) => void second.push(s.id)});
         await settle();
 
-        const streams = calls.filter((url) => url.includes('/download_sessions/events'));
+        const streams = calls.filter((url) => url.includes('/events?types=downloader.session'));
         expect(streams).toHaveLength(1);
 
         // The second subscriber joined after the snapshot had already been delivered, so it can only
@@ -73,7 +73,7 @@ describe('download session stream sharing', () => {
         await settle();
 
         // Dropping one subscriber must not reopen or tear down the shared stream.
-        expect(calls.filter((url) => url.includes('/download_sessions/events'))).toHaveLength(1);
+        expect(calls.filter((url) => url.includes('/events?types=downloader.session'))).toHaveLength(1);
 
         closeSecond();
     });

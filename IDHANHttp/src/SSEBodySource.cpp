@@ -9,9 +9,13 @@
 namespace idhan::http
 {
 
-std::string encodeSSEFrame( const std::string_view event, const std::int64_t timestamp, const std::string_view data )
+std::string encodeSSEFrame(
+	const std::string_view event,
+	const std::int64_t timestamp,
+	const std::string_view type,
+	const std::string_view data )
 {
-	return std::format( "event: {}\ntimestamp: {}\ndata: {}\n\n", event, timestamp, data );
+	return std::format( "event: {}\ntimestamp: {}\ntype: {}\ndata: {}\n\n", event, timestamp, type, data );
 }
 
 [[nodiscard]] static std::string encodeEvent( const SSEEvent& event )
@@ -19,10 +23,10 @@ std::string encodeSSEFrame( const std::string_view event, const std::int64_t tim
 	// A comment, so it holds the connection open without any client seeing an event for it.
 	if ( event.kind == SSEEvent::Kind::keepalive ) return ": keepalive\n\n";
 
-	if ( event.kind == SSEEvent::Kind::shutdown ) return encodeSSEFrame( "shutdown", event.timestamp, "" );
+	if ( event.kind == SSEEvent::Kind::shutdown ) return encodeSSEFrame( "shutdown", event.timestamp, "", "" );
 
 	const std::string_view name { event.kind == SSEEvent::Kind::snapshot ? "snapshot" : "update" };
-	return encodeSSEFrame( name, event.timestamp, event.data ? event.data->text() : "" );
+	return encodeSSEFrame( name, event.timestamp, event.type, event.data ? event.data->text() : "" );
 }
 
 SSEBodySource::SSEBodySource(
@@ -83,7 +87,8 @@ folly::coro::Task< proxygen::coro::HTTPBodyEvent > SSEBodySource::readBodyEvent(
 		co_return eom;
 	}
 
-	if ( m_render && ( event->kind == SSEEvent::Kind::snapshot || event->kind == SSEEvent::Kind::update ) )
+	if ( m_render && event->type == "downloader.debug"
+	     && ( event->kind == SSEEvent::Kind::snapshot || event->kind == SSEEvent::Kind::update ) )
 		event->data = co_await m_render();
 	payload += encodeEvent( *event );
 

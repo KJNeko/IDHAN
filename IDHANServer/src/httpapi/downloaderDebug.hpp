@@ -11,6 +11,6 @@ namespace idhan::httpapi
 {
 
 [[nodiscard]] http::RouteDefinition downloaderDebugRoute( db::DBContext& db );
-[[nodiscard]] http::RouteDefinition downloaderDebugEventsRoute( db::DBContext& db );
+[[nodiscard]] http::RouteDefinition eventsRoute( db::DBContext& db );
 
 }

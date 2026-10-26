@@ -283,7 +283,7 @@ TEST_CASE_METHOD(
 	"[api][download-sessions][debug-events]" )
 {
 	DownloadSessionHttpFixture fixture;
-	JobEventStream events { serverPort(), api().key(), "/downloader/debug/events" };
+	JobEventStream events { serverPort(), api().key(), "/events?types=downloader.debug" };
 	const auto initial { events.waitFor( "snapshot" ) };
 	REQUIRE( initial[ "sessions" ].isArray() );
 	REQUIRE( initial[ "lanes" ].isArray() );

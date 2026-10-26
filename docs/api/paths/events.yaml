@@ -1,0 +1,53 @@
+get:
+  tags:
+    - events
+  summary: Streams authenticated server events
+  description: |
+    Opens the shared authenticated SSE stream. The optional `types` query parameter is a
+    comma-separated list of exact event types. Omitting it subscribes to all types.
+    `downloader.*` selects every event type whose name starts with `downloader.`.
+
+    SSE `event` names describe frame lifecycle (`snapshot`, `update`, or `shutdown`).
+    The custom `type` field identifies the event category and is a string. The custom
+    `timestamp` field is Unix seconds. The `stream.snapshot.complete` type marks the end
+    of the opening snapshots. Reconnect with a new stream and replace local state from
+    its snapshots; the endpoint does not support replay cursors or `Last-Event-ID`.
+
+    Current types are `job.status`, `downloader.session`, `downloader.rate_limit`, and
+    `downloader.debug`. Job, session, and lane state updates can coalesce by entity.
+    Downloader debug invalidations are rendered from the current diagnostic state and
+    retained event rings when the client reads them.
+  parameters:
+    - name: types
+      in: query
+      required: false
+      description: Comma-separated event types; `downloader.*` is a downloader prefix filter.
+      schema:
+        type: string
+      example: job.status,downloader.rate_limit
+  responses:
+    '200':
+      description: SSE snapshot and update frames, followed by keepalive comments as needed.
+      content:
+        text/event-stream:
+          schema:
+            type: string
+          example: |+
+            retry: 3000
+
+            event: snapshot
+            timestamp: 1793030400
+            type: job.status
+            data: {"job_id":42,"status":"running","completed":false}
+
+            event: snapshot
+            timestamp: 1793030400
+            type: stream.snapshot.complete
+            data: {}
+
+            event: update
+            timestamp: 1793030402
+            type: job.status
+            data: {"job_id":42,"status":"completed","completed":true}
+    '401':
+      description: Authentication required or API key not recognized.

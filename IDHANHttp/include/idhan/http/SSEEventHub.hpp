@@ -29,6 +29,7 @@ struct SSEEvent
 		shutdown
 	};
 	Kind kind;
+	std::string type;
 	std::string entity;
 	std::optional< ValidatedJson > data;
 	std::uint64_t sequence;
@@ -36,14 +37,21 @@ struct SSEEvent
 	std::int64_t timestamp;
 };
 
+struct SSEInitialEvent
+{
+	std::string type;
+	std::string entity;
+	ValidatedJson data;
+};
+
 struct SSESubscriber
 {
-	std::vector< std::string > entities;
+	std::vector< std::string > types;
 	std::vector< SSEEvent > pending;
 	bool closed { false };
 	folly::coro::Baton readable;
 
-	SSESubscriber() noexcept : entities {}, pending {}, closed { false }, readable {} {}
+	SSESubscriber() noexcept : types {}, pending {}, closed { false }, readable {} {}
 };
 
 class SSESubscription
@@ -77,11 +85,19 @@ class SSEEventHub
 
 	SSEEventHub();
 	~SSEEventHub();
+	//! Empty selectors receive every type; selectors ending in `.*` match that type prefix.
 	[[nodiscard]] SSESubscription subscribe(
-		std::vector< std::string > entities,
+		std::vector< std::string > types,
 		std::vector< ValidatedJson > initial_snapshots = {},
 		bool include_stored_snapshots = true );
+	[[nodiscard]] SSESubscription subscribeEvents(
+		std::vector< std::string > types,
+		std::vector< SSEInitialEvent > initial_events = {},
+		bool include_stored_snapshots = true );
+	//! Pending updates coalesce by type and entity. Set retain_snapshot false for rendered invalidations.
+	void publish( std::string type, std::string entity, ValidatedJson snapshot, bool retain_snapshot = true );
 	void publish( std::string entity, ValidatedJson snapshot );
+	void remove( std::string type, std::string entity, std::optional< ValidatedJson > removal = {} );
 	void remove( std::string entity, std::optional< ValidatedJson > removal = {} );
 	void heartbeat();
 	//! Keeps every hub's streams alive, not just the one the caller happens to hold. An SSE stream

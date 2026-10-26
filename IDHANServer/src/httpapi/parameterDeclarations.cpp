@@ -568,13 +568,6 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 			},
 		},
 
-		{
-			.method = proxygen::HTTPMethod::GET,
-			.path = "/jobs/events",
-			.rules = {},
-		},
-
-
 		// Integrity
 		{
 			.method = proxygen::HTTPMethod::GET,
@@ -608,6 +601,14 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 		// Downloader
 		{
 			.method = proxygen::HTTPMethod::GET,
+			.path = "/events",
+			.rules = {
+				.query = { "types" },
+			},
+		},
+
+		{
+			.method = proxygen::HTTPMethod::GET,
 			.path = "/downloader/secrets",
 			.rules = {},
 		},
@@ -626,13 +627,6 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 			},
 		},
 
-		{
-			.method = proxygen::HTTPMethod::GET,
-			.path = "/downloader/debug/events",
-			.rules = {},
-		},
-
-
 		// Health
 		{
 			.method = proxygen::HTTPMethod::GET,
@@ -650,13 +644,6 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 
 
 		// Heartbeat
-		{
-			.method = proxygen::HTTPMethod::GET,
-			.path = "/heartbeat",
-			.rules = {},
-		},
-
-
 		// Layouts
 		{
 			.method = proxygen::HTTPMethod::GET,
@@ -812,15 +799,6 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 			},
 		},
 
-		{
-			.method = proxygen::HTTPMethod::GET,
-			.path = "/download_sessions/events",
-			.rules = {
-				.query = { "session_id" },
-			},
-		},
-
-
 		// Rate limits
 		{
 			.method = proxygen::HTTPMethod::GET,
@@ -835,13 +813,6 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 				.query = { "lane" },
 			},
 		},
-
-		{
-			.method = proxygen::HTTPMethod::GET,
-			.path = "/rate_limits/events",
-			.rules = {},
-		},
-
 
 		// Plugins
 		{

@@ -453,21 +453,38 @@ export function watchDownloadSessions(handlers: {
     onError?: (message: string) => void;
     onOpen?: () => void;
 }): () => void {
+    const refreshing = new Map<number, boolean>();
     const refresh = async (sessionId: number) => {
-        try {
-            const [session, urls] = await Promise.all([api.downloadSessions.get(sessionId), api.downloadSessions.urls(sessionId)]);
-            handlers.onSession(session, urls);
-        } catch (error) {
-            if (error instanceof ApiError && error.status === 404) handlers.onRemoved?.(sessionId);
-            else handlers.onError?.('Unable to refresh a download session.');
+        if (refreshing.has(sessionId)) {
+            refreshing.set(sessionId, true);
+            return;
+        }
+
+        refreshing.set(sessionId, false);
+        while (refreshing.has(sessionId)) {
+            refreshing.set(sessionId, false);
+            try {
+                const [session, urls] = await Promise.all([
+                    api.downloadSessions.get(sessionId), api.downloadSessions.urls(sessionId),
+                ]);
+                handlers.onSession(session, urls);
+            } catch (error) {
+                if (error instanceof ApiError && error.status === 404) handlers.onRemoved?.(sessionId);
+                else handlers.onError?.('Unable to refresh a download session.');
+            }
+
+            if (refreshing.get(sessionId) !== true) {
+                refreshing.delete(sessionId);
+                return;
+            }
         }
     };
 
-    return sharedWatchSSE('/download_sessions/events', {
+    return sharedWatchSSE([EVENT_TYPES.downloadSessionChanged], {
         onOpen: handlers.onOpen,
         onError: handlers.onError,
-        onEvent: (name, data) => {
-            if (name === 'shutdown') return;
+        onEvent: (name, data, _timestamp, type) => {
+            if (type !== EVENT_TYPES.downloadSessionChanged || name === 'shutdown') return;
 
             const payload = safeParse(data);
             if (typeof payload !== 'object' || payload === null) return;
@@ -476,8 +493,12 @@ export function watchDownloadSessions(handlers: {
             // shows downloads already in progress rather than waiting for one of them to change.
             if (name === 'snapshot') {
                 const sessions = (payload as { sessions?: unknown }).sessions;
-                if (!Array.isArray(sessions)) return;
-                void Promise.all(sessions.filter((id): id is number => typeof id === 'number').map(refresh));
+                if (Array.isArray(sessions)) {
+                    void Promise.all(sessions.filter((id): id is number => typeof id === 'number').map(refresh));
+                    return;
+                }
+                const id = (payload as { id?: unknown }).id;
+                if (typeof id === 'number') void refresh(id);
                 return;
             }
 
@@ -508,82 +529,157 @@ export function isRateLimitLane(value: unknown): value is RateLimitLane {
         && (lane.throttled ? requests > 0 && seconds > 0 : requests === 0 && seconds === 0);
 }
 
-type SSEHandlers = {
+export type SSEHandlers = {
     /** `timestamp` is seconds since the epoch, stamped by the server when the event was generated. */
-    onEvent: (name: string, data: string, timestamp: number | null) => void;
+    onEvent: (name: string, data: string, timestamp: number | null, type: string) => void;
     onError?: (message: string) => void;
     onOpen?: () => void;
 };
 
+export const EVENT_TYPES = {
+    jobStatus: 'job.status',
+    downloadSessionChanged: 'downloader.session',
+    allDownloader: 'downloader.*',
+    downloaderDebug: 'downloader.debug',
+    downloaderRateLimit: 'downloader.rate_limit',
+} as const;
+
+type EventSubscription = { types: readonly string[] | null; handlers: SSEHandlers };
+
 type SharedStream = {
-    handlers: Set<SSEHandlers>;
+    subscriptions: Set<EventSubscription>;
     close: () => void;
+    path: string | null;
     opened: boolean;
-    /** Replayed to late subscribers, which joined too late to receive the stream's own snapshot. */
-    lastSnapshot: Parameters<SSEHandlers['onEvent']> | null;
+    snapshotReady: boolean;
+    snapshots: Map<string, Parameters<SSEHandlers['onEvent']>>;
 };
 
-const sharedStreams = new Map<string, SharedStream>();
+let sharedStream: SharedStream | null = null;
 
-/**
- * One connection per path, fanned out to every subscriber. Two panels of the same kind must not
- * open two streams: the browser caps concurrent connections, and the second stream only duplicates
- * work the first is already doing.
- */
-function sharedWatchSSE(
-    path: string,
-    handlers: SSEHandlers,
-    reduceSnapshot?: (previous: Parameters<SSEHandlers['onEvent']> | null, event: Parameters<SSEHandlers['onEvent']>) => Parameters<SSEHandlers['onEvent']> | null,
-): () => void {
-    const existing = sharedStreams.get(path);
-    const stream: SharedStream = existing ?? {
-        handlers: new Set(),
-        close: () => {
-        },
-        opened: false,
-        lastSnapshot: null,
-    };
+function matchesEventType(types: readonly string[] | null, type: string): boolean {
+    if (types === null || types.length === 0 || type === 'stream.snapshot.complete') return true;
+    return types.some((selector) => selector === type
+        || (selector.endsWith('.*') && type.startsWith(selector.slice(0, -1))));
+}
 
-    if (!existing) {
-        sharedStreams.set(path, stream);
-        stream.close = watchSSE(path, {
-            onOpen: () => {
-                stream.opened = true;
-                // A reconnect re-sends its own snapshot, so the cached one is stale from here.
-                stream.lastSnapshot = null;
-                for (const handler of [...stream.handlers]) handler.onOpen?.();
-            },
-            onError: (message) => {
-                stream.opened = false;
-                for (const handler of [...stream.handlers]) handler.onError?.(message);
-            },
-            onEvent: (name, data, timestamp) => {
-                if (reduceSnapshot) stream.lastSnapshot = reduceSnapshot(stream.lastSnapshot, [name, data, timestamp]);
-                else if (name === 'snapshot') stream.lastSnapshot = [name, data, timestamp];
-                for (const handler of [...stream.handlers]) handler.onEvent(name, data, timestamp);
-            },
-        });
+function streamPath(subscriptions: Set<EventSubscription>): string | null {
+    if (subscriptions.size === 0) return null;
+    const selectors = new Set<string>();
+    for (const subscription of subscriptions) {
+        if (subscription.types === null || subscription.types.length === 0) return '/events';
+        for (const type of subscription.types) selectors.add(type);
     }
+    return `/events?types=${encodeURIComponent([...selectors].sort().join(','))}`;
+}
 
-    stream.handlers.add(handlers);
+function startSharedStream(stream: SharedStream): void {
+    const path = streamPath(stream.subscriptions);
+    if (path === stream.path) return;
 
-    // Catch up a subscriber that joined an already-running stream, so it starts from the same
-    // state as the subscriber that opened it rather than waiting for the next event.
-    if (stream.opened || stream.lastSnapshot) {
+    stream.close();
+    stream.path = path;
+    stream.opened = false;
+    stream.snapshotReady = false;
+    stream.snapshots.clear();
+    if (path === null) return;
+
+    stream.close = watchSSE(path, {
+        onOpen: () => {
+            stream.opened = true;
+            stream.snapshotReady = false;
+            stream.snapshots.clear();
+            for (const subscription of [...stream.subscriptions]) subscription.handlers.onOpen?.();
+        },
+        onError: (message) => {
+            stream.opened = false;
+            for (const subscription of [...stream.subscriptions]) subscription.handlers.onError?.(message);
+        },
+        onEvent: (name, data, timestamp, type) => {
+            const event = [name, data, timestamp, type] as Parameters<SSEHandlers['onEvent']>;
+            if (type === 'stream.snapshot.complete') {
+                stream.snapshotReady = true;
+                for (const subscription of [...stream.subscriptions])
+                    subscription.handlers.onEvent(name, data, timestamp, type);
+                return;
+            }
+
+            const payload = safeParse(data) as {
+                job_id?: unknown;
+                id?: unknown;
+                scheduling_key?: unknown;
+                removed?: unknown
+            };
+            const identity = typeof payload === 'object' && payload !== null
+                ? payload.job_id ?? payload.id ?? payload.scheduling_key ?? type
+                : type;
+            const key = `${type}:${String(identity)}`;
+            if (name === 'update' && payload && typeof payload === 'object' && payload.removed === true) {
+                stream.snapshots.delete(key);
+            } else if (name === 'snapshot' || name === 'update') {
+                if (type === EVENT_TYPES.downloaderDebug) {
+                    const previous = stream.snapshots.get(key) ?? null;
+                    const reduced = retainDebugSnapshot(previous, event);
+                    if (reduced) stream.snapshots.set(key, reduced);
+                } else {
+                    stream.snapshots.set(key, event);
+                }
+            }
+            for (const subscription of [...stream.subscriptions]) {
+                if (matchesEventType(subscription.types, type))
+                    subscription.handlers.onEvent(name, data, timestamp, type);
+            }
+        },
+    });
+}
+
+/** One shared connection; adding/removing filters reconnects once with the union of requested types. */
+function sharedWatchSSE(types: readonly string[] | null, handlers: SSEHandlers): () => void {
+    if (sharedStream === null) {
+        sharedStream = {
+            subscriptions: new Set(), close: () => {
+            }, path: null,
+            opened: false, snapshotReady: false, snapshots: new Map(),
+        };
+    }
+    const stream = sharedStream;
+    const subscription = {types, handlers};
+    stream.subscriptions.add(subscription);
+    startSharedStream(stream);
+
+    if (stream.opened) {
         queueMicrotask(() => {
-            if (!stream.handlers.has(handlers)) return;
-            if (stream.opened) handlers.onOpen?.();
-            if (stream.lastSnapshot) handlers.onEvent(...stream.lastSnapshot);
+            if (!stream.subscriptions.has(subscription)) return;
+            handlers.onOpen?.();
+            for (const snapshot of stream.snapshots.values()) {
+                if (matchesEventType(types, snapshot[3])) handlers.onEvent(...snapshot);
+            }
+            if (stream.snapshotReady) handlers.onEvent('snapshot', '{}', null, 'stream.snapshot.complete');
         });
     }
 
     return () => {
-        stream.handlers.delete(handlers);
-        if (stream.handlers.size > 0) return;
-
-        stream.close();
-        if (sharedStreams.get(path) === stream) sharedStreams.delete(path);
+        stream.subscriptions.delete(subscription);
+        startSharedStream(stream);
+        if (stream.subscriptions.size === 0 && sharedStream === stream) sharedStream = null;
     };
+}
+
+/** Subscribe to the unified event stream. Omit `types` for all types; `downloader.*` is a prefix filter. */
+export function watchEvents(
+    handlers: {
+        onEvent: (event: { event: string; type: string; data: string; timestamp: number | null }) => void;
+        onError?: (message: string) => void;
+        onOpen?: () => void;
+    },
+    types?: readonly string[],
+): () => void {
+    const selected = types?.length ? [...new Set(types)].sort() : [];
+    return sharedWatchSSE(selected.length ? selected : null, {
+        onOpen: handlers.onOpen,
+        onError: handlers.onError,
+        onEvent: (event, data, timestamp, type) => handlers.onEvent({event, type, data, timestamp}),
+    });
 }
 
 function watchSSE(path: string, handlers: SSEHandlers): () => void {
@@ -626,12 +722,14 @@ function watchSSE(path: string, handlers: SSEHandlers): () => void {
             let eventName = 'message';
             let data: string[] = [];
             let timestamp: number | null = null;
+            let type = '';
 
             const dispatch = () => {
-                if (data.length > 0) handlers.onEvent(eventName, data.join('\n'), timestamp);
+                if (data.length > 0) handlers.onEvent(eventName, data.join('\n'), timestamp, type);
                 eventName = 'message';
                 data = [];
                 timestamp = null;
+                type = '';
             };
 
             const consumeLine = (line: string) => {
@@ -645,6 +743,7 @@ function watchSSE(path: string, handlers: SSEHandlers): () => void {
                 const field = separator === -1 ? line : line.slice(0, separator);
                 const value = separator === -1 ? '' : line.slice(separator + 1).replace(/^ /, '');
                 if (field === 'event') eventName = value;
+                if (field === 'type') type = value;
                 if (field === 'data') data.push(value);
                 if (field === 'timestamp') {
                     const parsed = Number(value);
@@ -710,29 +809,41 @@ export function watchJobs(handlers: JobHandlers): () => void {
             }
         };
         jobStream = stream;
-        stream.close = watchSSE('/jobs/events', {
+        stream.close = sharedWatchSSE([EVENT_TYPES.jobStatus], {
             onOpen: () => {
                 stream.ready = false;
+                stream.jobs.clear();
             },
             onError: (message) => {
                 for (const handler of [...stream.handlers]) handler.onError?.(message);
             },
-            onEvent: (name, data) => {
+            onEvent: (name, data, _timestamp, type) => {
+                if (type === 'stream.snapshot.complete') {
+                    stream.ready = true;
+                    const jobs = [...stream.jobs.values()].sort((a, b) => a.job_id - b.job_id);
+                    for (const handler of [...stream.handlers]) handler.onJobs(jobs);
+                    return;
+                }
+                if (type !== EVENT_TYPES.jobStatus) return;
                 const payload = safeParse(data);
                 if (typeof payload !== 'object' || payload === null) return;
                 if (name === 'snapshot') {
                     const jobs = (payload as { jobs?: unknown }).jobs;
-                    if (!Array.isArray(jobs) || !jobs.every(isJobStatus)) return;
-                    stream.jobs = new Map(jobs.map(job => [job.job_id, job]));
-                    stream.ready = true;
+                    if (Array.isArray(jobs) && jobs.every(isJobStatus)) {
+                        stream.jobs = new Map(jobs.map(job => [job.job_id, job]));
+                    } else if (isJobStatus(payload)) {
+                        stream.jobs.set(payload.job_id, payload);
+                    } else return;
                 } else if (name === 'update') {
                     const update = payload as { job_id?: unknown; removed?: unknown };
                     if (typeof update.job_id === 'number' && update.removed === true) stream.jobs.delete(update.job_id);
                     else if (isJobStatus(payload)) stream.jobs.set(payload.job_id, payload);
                     else return;
                 } else return;
-                const jobs = [...stream.jobs.values()].sort((a, b) => a.job_id - b.job_id);
-                for (const handler of [...stream.handlers]) handler.onJobs(jobs);
+                if (stream.ready) {
+                    const jobs = [...stream.jobs.values()].sort((a, b) => a.job_id - b.job_id);
+                    for (const handler of [...stream.handlers]) handler.onJobs(jobs);
+                }
             },
         });
     }
@@ -759,13 +870,13 @@ function retainDebugSnapshot(
     previous: Parameters<SSEHandlers['onEvent']> | null,
     event: Parameters<SSEHandlers['onEvent']>,
 ): Parameters<SSEHandlers['onEvent']> | null {
-    const [name, data, timestamp] = event;
+    const [name, data, timestamp, type] = event;
     const incoming = safeParse(data);
     if (!isDownloaderDebug(incoming)) return previous;
-    if (name === 'snapshot' || !previous) return ['snapshot', data, timestamp];
+    if (name === 'snapshot' || !previous) return ['snapshot', data, timestamp, type];
     if (name !== 'update') return previous;
     const old = safeParse(previous[1]);
-    if (!isDownloaderDebug(old)) return ['snapshot', data, timestamp];
+    if (!isDownloaderDebug(old)) return ['snapshot', data, timestamp, type];
     const sessions = incoming.sessions.map(session => {
         const prior = old.sessions.find(value => value.id === session.id);
         const events = new Map((prior?.events ?? []).map(value => [value.sequence, value]));
@@ -775,7 +886,7 @@ function retainDebugSnapshot(
             events_dropped: (prior?.events_dropped ?? 0) + session.events_dropped
         };
     });
-    return ['snapshot', JSON.stringify({...incoming, sessions}), timestamp];
+    return ['snapshot', JSON.stringify({...incoming, sessions}), timestamp, type];
 }
 
 /** Complete diagnostic state and incremental event history over one shared SSE subscription. */
@@ -783,14 +894,15 @@ export function watchDownloaderDebug(handlers: {
     onState: (debug: DownloaderDebug, reset: boolean) => void;
     onError?: (message: string) => void;
 }): () => void {
-    return sharedWatchSSE('/downloader/debug/events', {
+    return sharedWatchSSE([EVENT_TYPES.downloaderDebug], {
         onError: handlers.onError,
-        onEvent: (name, data) => {
+        onEvent: (name, data, _timestamp, type) => {
+            if (type !== EVENT_TYPES.downloaderDebug) return;
             if (name !== 'snapshot' && name !== 'update') return;
             const debug = safeParse(data);
             if (isDownloaderDebug(debug)) handlers.onState(debug, name === 'snapshot');
         },
-    }, retainDebugSnapshot);
+    });
 }
 
 export function watchRateLimits(handlers: {
@@ -799,16 +911,31 @@ export function watchRateLimits(handlers: {
     onError?: (message: string) => void;
     onOpen?: () => void;
 }): () => void {
-    return sharedWatchSSE('/rate_limits/events', {
-        onOpen: handlers.onOpen,
+    let snapshotting = false;
+    let snapshottingValues = new Map<string, RateLimitLane>();
+    return sharedWatchSSE([EVENT_TYPES.downloaderRateLimit], {
+        onOpen: () => {
+            snapshotting = true;
+            snapshottingValues.clear();
+            handlers.onOpen?.();
+        },
         onError: handlers.onError,
-        onEvent: (name, data) => {
+        onEvent: (name, data, _timestamp, type) => {
             if (name === 'shutdown') return;
+            if (type === 'stream.snapshot.complete') {
+                if (snapshotting) {
+                    handlers.onSnapshot([...snapshottingValues.values()]);
+                    snapshotting = false;
+                    snapshottingValues.clear();
+                }
+                return;
+            }
+            if (type !== EVENT_TYPES.downloaderRateLimit) return;
 
             const payload = safeParse(data);
-            if (name === 'snapshot' && typeof payload === 'object' && payload !== null) {
-                const limits = (payload as { limits?: unknown }).limits;
-                if (Array.isArray(limits) && limits.every(isRateLimitLane)) handlers.onSnapshot(limits);
+            if (name === 'snapshot' && isRateLimitLane(payload)) {
+                snapshotting = true;
+                snapshottingValues.set(payload.scheduling_key, payload);
                 return;
             }
 

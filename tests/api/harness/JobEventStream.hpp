@@ -125,7 +125,7 @@ class JobEventStream
 	JobEventStream(
 		const std::uint16_t port,
 		const std::string& key,
-		const std::string_view path = "/jobs/events",
+		const std::string_view path = "/events?types=job.status",
 		std::string accept_encoding = "identity" ) :
 	  m_url( std::format( "http://127.0.0.1:{}{}", port, path ) ),
 	  m_auth( "X-API-Key: " + key ),

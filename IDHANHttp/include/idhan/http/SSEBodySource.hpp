@@ -13,9 +13,13 @@
 namespace idhan::http
 {
 
-//! One `event:`/`timestamp:`/`data:` frame, terminated by the blank line that dispatches it.
+//! One `event:`/`timestamp:`/`type:`/`data:` frame, terminated by the blank line that dispatches it.
 //! Shared so sources that render their own payloads stay identical to SSEBodySource on the wire.
-[[nodiscard]] std::string encodeSSEFrame( std::string_view event, std::int64_t timestamp, std::string_view data );
+[[nodiscard]] std::string encodeSSEFrame(
+	std::string_view event,
+	std::int64_t timestamp,
+	std::string_view type,
+	std::string_view data );
 
 class SSEBodySource final : public proxygen::coro::HTTPSource
 {

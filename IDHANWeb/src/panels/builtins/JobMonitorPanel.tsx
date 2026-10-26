@@ -1,6 +1,6 @@
 /**
  * Job Monitor starts manual maintenance jobs and follows the server's in-memory jobs
- * through the shared /jobs/events stream. Jobs are process-local and reset
+ * through the shared /events stream. Jobs are process-local and reset
  * on server restart, so this is not a durable history.
  */
 
