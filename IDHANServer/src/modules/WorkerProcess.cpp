@@ -20,6 +20,7 @@
 #include <span>
 #include <unistd.h>
 
+#include "downloader/DebugEvents.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::modules
@@ -332,6 +333,44 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 				}
 				m_rss_kb.store( frame.body[ ipc::field::RSS_KB ].asUInt64() );
 				m_active_calls.store( frame.body[ ipc::field::ACTIVE_CALLS ].asUInt64() );
+				// Older runners may omit activity; continue accepting their liveness reports.
+				if ( frame.body.isMember( ipc::field::MODULE_ACTIVITY ) )
+				{
+					const auto& entries { frame.body[ ipc::field::MODULE_ACTIVITY ] };
+					if ( !entries.isArray() )
+					{
+						reject( "heartbeat module activity is not an array" );
+						return;
+					}
+
+					std::vector< ipc::ModuleActivity > activity {};
+					for ( const auto& entry : entries )
+					{
+						if ( !entry.isObject() )
+						{
+							reject( "heartbeat module activity is not an object" );
+							return;
+						}
+
+						if ( !entry[ ipc::field::QUEUED ].isUInt64() || !entry[ ipc::field::RUNNING ].isUInt64() )
+						{
+							reject( "heartbeat module activity has invalid counters" );
+							return;
+						}
+
+						activity.emplace_back(
+							ipc::ModuleActivity { .queued = entry[ ipc::field::QUEUED ].asUInt64(),
+							                      .running = entry[ ipc::field::RUNNING ].asUInt64() } );
+					}
+					bool changed { false };
+					{
+						const std::lock_guard< std::mutex > guard { m_calls_mutex };
+						changed = !m_module_activity.has_value() || m_module_activity.value() != activity;
+						m_module_activity = std::move( activity );
+					}
+					if ( changed ) downloader::notifyDebugChanged();
+				}
+
 				m_last_heartbeat = std::chrono::steady_clock::now();
 				return;
 			}
@@ -481,6 +520,7 @@ void WorkerProcess::terminate( const std::string& reason, const Termination kind
 	}
 
 	failAll( reason, true );
+	if ( !m_settings.describe_only ) downloader::notifyDebugChanged();
 }
 
 std::chrono::steady_clock::time_point WorkerProcess::lastActivity()
@@ -717,6 +757,12 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 	}
 
 	co_return outcome;
+}
+
+std::optional< std::vector< ipc::ModuleActivity > > WorkerProcess::moduleActivity()
+{
+	const std::lock_guard< std::mutex > guard { m_calls_mutex };
+	return m_module_activity;
 }
 
 } // namespace idhan::modules

@@ -12,6 +12,7 @@ import {watchDownloaderDebug, watchRateLimits} from '../../api/client';
 import type {
     DebugEventKind,
     DebugLane,
+    DebugModule,
     DebugSession,
     DebugSessionEvent,
     RateLimitLane,
@@ -484,7 +485,57 @@ function Lanes({lanes, receivedAt, now}: { lanes: readonly DebugLane[]; received
     );
 }
 
+function ModuleQueues({modules}: { modules: readonly DebugModule[] | null }) {
+    const rows = useMemo(() => [...(modules ?? [])].sort((a, b) =>
+        b.queued - a.queued || b.running - a.running || a.library.localeCompare(b.library)
+        || a.module_index - b.module_index), [modules]);
+
+    if (modules === null) return <p className="muted">Waiting for module reporting.</p>;
+    if (rows.length === 0) return <p className="muted">No modules are loaded.</p>;
+
+    return (
+        <div className="debug-lane-scroll">
+            <table className="debug-table">
+                <thead>
+                <tr>
+                    <th scope="col">Module</th>
+                    <th scope="col">Library</th>
+                    <th scope="col">State</th>
+                    <th scope="col" className="debug-col-num"
+                        title="Calls waiting for a worker thread or this module's serialization lock">Queued
+                    </th>
+                    <th scope="col" className="debug-col-num"
+                        title="Calls executing module code, including calls waiting for callbacks">Running
+                    </th>
+                    <th scope="col" className="debug-col-num"
+                        title="Live processes shared by all modules in this library">Library workers
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                {rows.map(module => (
+                    <tr key={`${module.library_index}:${module.module_index}`}>
+                        <td title={module.thread_safe ? 'Allows concurrent calls' : 'Calls run serially in each worker'}>
+                            {module.name}
+                        </td>
+                        <td className="muted">{module.library}</td>
+                        <td>{!module.reporting ? 'Awaiting report' : module.running > 0 ? 'Running'
+                            : module.queued > 0 ? 'Queued' : module.workers > 0 ? 'Idle' : 'Stopped'}</td>
+                        <td className="debug-num">{module.reporting ? module.queued.toLocaleString() : '—'}</td>
+                        <td className="debug-num">{module.reporting ? module.running.toLocaleString() : '—'}</td>
+                        <td className="debug-num">{module.workers.toLocaleString()}</td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+            <p className="muted">Activity is sampled at each worker heartbeat. Library workers are shared across
+                modules.</p>
+        </div>
+    );
+}
+
 function DownloadSessions(_props: PanelProps) {
+    const [modules, setModules] = useState<DebugModule[] | null>(null);
     const [lanes, setLanes] = useState<DebugLane[]>([]);
     const [sessions, setSessions] = useState<DebugSession[]>([]);
     const [receivedAt, setReceivedAt] = useState(() => performance.now());
@@ -502,6 +553,7 @@ function DownloadSessions(_props: PanelProps) {
             buffers.current = mergeEventBuffers(reset ? new Map() : buffers.current, debug.sessions);
             setSessions(debug.sessions);
             setLanes(debug.lanes);
+            setModules(debug.modules ?? null);
             setReceivedAt(performance.now());
             setError(null);
         },
@@ -512,6 +564,8 @@ function DownloadSessions(_props: PanelProps) {
 
     return (
         <div className="debug-tool">
+            <h4 className="debug-subsection muted">Modules</h4>
+            <ModuleQueues modules={modules}/>
             <h4 className="debug-subsection muted">Lanes</h4>
             <Lanes lanes={lanes} receivedAt={receivedAt} now={now}/>
 

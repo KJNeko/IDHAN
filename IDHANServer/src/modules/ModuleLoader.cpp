@@ -595,4 +595,34 @@ void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc
 		.start();
 }
 
+std::vector< ModuleQueueSnapshot > ModuleLoader::queueSnapshots() const
+{
+	std::vector< WorkerPoolSnapshot > pools {};
+	pools.reserve( m_pools.size() );
+	for ( const auto& pool : m_pools ) pools.emplace_back( pool->snapshot() );
+
+	std::vector< ModuleQueueSnapshot > snapshots {};
+	snapshots.reserve( m_descriptors.size() );
+	for ( const auto& descriptor : m_descriptors )
+	{
+		const auto& pool { pools[ descriptor.library_index ] };
+		const auto activity {
+			descriptor.module_index < pool.modules.size() ?
+				pool.modules[ descriptor.module_index ] :
+				ipc::ModuleActivity {}
+		};
+		snapshots.emplace_back(
+			ModuleQueueSnapshot {
+				.library_index = descriptor.library_index,
+				.module_index = descriptor.module_index,
+				.library = m_pools[ descriptor.library_index ]->library().filename().string(),
+				.name = descriptor.name,
+				.activity = activity,
+				.workers = pool.workers,
+				.reporting = pool.reporting,
+				.thread_safe = descriptor.thread_safe } );
+	}
+	return snapshots;
+}
+
 } // namespace idhan::modules
