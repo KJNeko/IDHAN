@@ -45,6 +45,9 @@ folly::coro::Task< proxygen::coro::HTTPHeaderEvent > SSEBodySource::readHeaderEv
 	m_message->getHeaders().set( "Content-Type", "text/event-stream; charset=utf-8" );
 	m_message->getHeaders().set( "Cache-Control", "no-cache" );
 	m_message->getHeaders().set( "X-Accel-Buffering", "no" );
+	// Compression is selected before transport framing; an unknown-length stream must be
+	// marked chunked here to bypass the filter's Content-Length threshold.
+	m_message->setIsChunked( true );
 
 	auto message { std::make_unique< proxygen::HTTPMessage >( std::move( *m_message ) ) };
 	m_message.reset();

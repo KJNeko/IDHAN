@@ -28,6 +28,13 @@ delays for elapsed time; updates are not a continuous countdown.
 
 ## Framing and browser clients
 
+SSE responses negotiate gzip or zstd through `Accept-Encoding`, using the same
+compression settings as other HTTP responses. Clients that do not advertise a
+supported encoding receive uncompressed events. The compressor flushes after
+each event, including keepalive comments, so delivery does not wait for the stream
+to close or a size threshold to be reached. Browser clients decompress the HTTP
+response before parsing SSE frames.
+
 The opening `retry: 3000` block sets a reconnect delay of 3000 milliseconds.
 Blank lines terminate frames. `: keepalive` comments keep idle subscriptions
 open; the server checks for them approximately every ten seconds. A stream

@@ -426,55 +426,57 @@ function Lanes({lanes, receivedAt, now}: { lanes: readonly DebugLane[]; received
     if (rows.length === 0) return <p className="muted">No lanes are holding connections right now.</p>;
 
     return (
-        <table className="debug-table debug-lane-table">
-            <thead>
-            <tr>
-                <th scope="col">Lane</th>
-                <th scope="col">Rate</th>
-                <th scope="col" className="debug-col-num" title="Transfers waiting for a slot on this lane">
-                    Queued
-                </th>
-                <th scope="col" className="debug-col-num" title="Transfers this lane has running">
-                    In flight
-                </th>
-                <th scope="col" className="debug-col-num" title="Received body bytes per second across all transfers">
-                    Download speed
-                </th>
-                <th scope="col" className="debug-col-num" title="Connection pools backing this lane">
-                    Shards
-                </th>
-                <th scope="col" className="debug-col-num" title="Time until this lane may dispatch again">
-                    Next slot
-                </th>
-            </tr>
-            </thead>
-            <tbody>
-            {rows.map((lane) => {
-                const remaining = Math.max(0, lane.remaining_ms - Math.max(0, now - receivedAt));
+        <div className="debug-lane-scroll">
+            <table className="debug-table debug-lane-table">
+                <thead>
+                <tr>
+                    <th scope="col">Lane</th>
+                    <th scope="col">Rate</th>
+                    <th scope="col" className="debug-col-num" title="Transfers waiting for a slot on this lane">
+                        Queued
+                    </th>
+                    <th scope="col" className="debug-col-num" title="Transfers this lane has running">
+                        In flight
+                    </th>
+                    <th scope="col" className="debug-col-num"
+                        title="Received body bytes per second across all transfers">
+                        Download speed
+                    </th>
+                    <th scope="col" className="debug-col-num" title="Connection pools backing this lane">
+                        Shards
+                    </th>
+                    <th scope="col" className="debug-col-num" title="Time until this lane may dispatch again">
+                        Next slot
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                {rows.map((lane) => {
+                    const remaining = Math.max(0, lane.remaining_ms - Math.max(0, now - receivedAt));
 
-                return (
-                    <tr key={lane.scheduling_key}>
-                        <td className="debug-ellipsis"
-                            title={lane.group ? `${lane.scheduling_key} (group: ${lane.group})` : lane.scheduling_key}>
-                            {lane.scheduling_key}
-                        </td>
-                        <td className="muted"
-                            title={lane.throttled ? formatEffectiveRateLimitRate(lane.effective_interval_ms) : 'Unlimited'}>
-                            {formatLaneInterval(lane)}
-                        </td>
-                        <td className="debug-num">{lane.queued.toLocaleString()}</td>
-                        <td className="debug-num">{lane.in_flight}</td>
-                        <td className="debug-num">{formatBytes(lane.download_bytes_per_second ?? 0)}/s</td>
-                        <td className="debug-num">{lane.shards}</td>
-                        <td className={`debug-num ${lane.backed_off ? 'debug-lane-backoff' : ''}`}
-                            title={lane.backed_off ? `Backed off after ${lane.consecutive_limits} failures` : undefined}>
-                            {formatRateLimitRemaining(remaining)}
-                        </td>
-                    </tr>
-                );
-            })}
-            </tbody>
-        </table>
+                    return (
+                        <tr key={lane.scheduling_key}>
+                            <td title={lane.group ? `${lane.scheduling_key} (group: ${lane.group})` : lane.scheduling_key}>
+                                {lane.scheduling_key}
+                            </td>
+                            <td className="muted"
+                                title={lane.throttled ? formatEffectiveRateLimitRate(lane.effective_interval_ms) : 'Unlimited'}>
+                                {formatLaneInterval(lane)}
+                            </td>
+                            <td className="debug-num">{lane.queued.toLocaleString()}</td>
+                            <td className="debug-num">{lane.in_flight}</td>
+                            <td className="debug-num">{formatBytes(lane.download_bytes_per_second ?? 0)}/s</td>
+                            <td className="debug-num">{lane.shards}</td>
+                            <td className={`debug-num ${lane.backed_off ? 'debug-lane-backoff' : ''}`}
+                                title={lane.backed_off ? `Backed off after ${lane.consecutive_limits} failures` : undefined}>
+                                {formatRateLimitRemaining(remaining)}
+                            </td>
+                        </tr>
+                    );
+                })}
+                </tbody>
+            </table>
+        </div>
     );
 }
 

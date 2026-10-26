@@ -23,6 +23,7 @@ namespace idhan::http
 		std::make_shared< const std::set< std::string > >( std::set< std::string > {
 			"application/json",
 			"text/plain",
+			"text/event-stream",
 			"text/html",
 			"text/css",
 			"text/javascript",
