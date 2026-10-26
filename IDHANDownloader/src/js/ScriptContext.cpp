@@ -13,6 +13,27 @@
 namespace idhan::downloader
 {
 
+thread_local ScriptContext* ScriptContext::s_active {};
+
+ScriptContext::HostCall::HostCall()
+{
+	if ( s_active == nullptr ) return;
+
+	if ( !s_active->m_burst.armed ) return;
+
+	m_context = s_active;
+	m_started = std::chrono::steady_clock::now();
+	m_context->m_burst.armed = false;
+}
+
+ScriptContext::HostCall::~HostCall()
+{
+	if ( m_context == nullptr ) return;
+
+	m_context->m_burst.deadline += std::chrono::steady_clock::now() - m_started;
+	m_context->m_burst.armed = true;
+}
+
 int ScriptContext::interrupt( JSRuntime*, void* opaque )
 {
 	const auto* burst { static_cast< Burst* >( opaque ) };
@@ -173,11 +194,13 @@ void ScriptContext::enterBurst()
 {
 	m_burst.deadline = std::chrono::steady_clock::now() + m_options.burst_timeout;
 	m_burst.armed = true;
+	s_active = this;
 }
 
 void ScriptContext::leaveBurst()
 {
 	m_burst.armed = false;
+	s_active = nullptr;
 }
 
 bool ScriptContext::pumpJobs( std::string& error )

@@ -373,8 +373,9 @@ Realms sharing a worker share that worker's QuickJS runtime and job queue. A scr
 is not executing JavaScript: it leaves its worker immediately, so the worker runs microtasks for its
 other resident work and starts more queued work while the transfer is outstanding. One session's work
 items are spread across every worker, so they also run genuinely in parallel.
-The burst timeout limits one uninterrupted period of JavaScript execution; it is not a wall-clock
-timeout for an entire parser.
+The burst timeout limits one uninterrupted period of JavaScript execution, including a drain of the
+worker's pending promise jobs. Time in synchronous host callbacks, including database operations during
+import setup, is excluded, as is time awaiting HTTP. It is not a wall-clock timeout for an entire parser.
 
 ### Follow and deduplication
 
@@ -644,7 +645,7 @@ The similarly named limits apply at different layers:
 | `script_threads`             | Threads executing parser JavaScript, shared by every session. Each owns one QuickJS runtime.           |
 | `worker_memory_limit`        | QuickJS heap budget for one worker's runtime. The whole downloader is bounded by threads times this.   |
 | `worker_stack_limit`         | Stack ceiling for one worker's runtime.                                                                |
-| `script_burst_timeout_ms`    | Maximum uninterrupted JavaScript execution burst, excluding time awaiting asynchronous work.           |
+| `script_burst_timeout_ms`    | Maximum uninterrupted JavaScript execution burst, excluding host callbacks and asynchronous waits.     |
 | `max_response_bytes`         | Maximum buffered `idhan.request()` body; streaming imports bypass it.                                  |
 | lane `bandwidth`             | curl receive-rate cap applied to each transfer in the lane.                                            |
 | `lane_keep_alive_seconds`    | Global idle interval before live lane transport and cached connections are retired.                    |

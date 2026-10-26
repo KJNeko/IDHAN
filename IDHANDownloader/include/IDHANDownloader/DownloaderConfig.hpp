@@ -40,7 +40,7 @@ struct DownloaderConfig
 	//! Memory limit per worker runtime.
 	std::size_t worker_memory_limit { 256 * 1024 * 1024 };
 	std::size_t worker_stack_limit { 1024 * 1024 };
-	//! Limit for one uninterrupted JavaScript run.
+	//! Limit for one uninterrupted JavaScript run, excluding synchronous host callbacks.
 	std::chrono::milliseconds script_burst_timeout { 5000 };
 	//! In-memory response limit; streamed imports bypass it.
 	std::size_t max_response_bytes { 32 * 1024 * 1024 };

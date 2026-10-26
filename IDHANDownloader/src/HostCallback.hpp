@@ -9,12 +9,16 @@
 #include <type_traits>
 #include <utility>
 
+#include "js/ScriptContext.hpp"
+
 namespace idhan::downloader
 {
 // Host adapters may call databases or user code. Never let their exceptions escape a worker.
 template < typename Function >
 auto hostCallback( Function&& function ) -> std::expected< std::invoke_result_t< Function >, std::string >
 {
+	const ScriptContext::HostCall host_call {};
+
 	try
 	{
 		if constexpr ( std::is_void_v< std::invoke_result_t< Function > > )
