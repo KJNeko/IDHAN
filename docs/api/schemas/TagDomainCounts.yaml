@@ -1,0 +1,17 @@
+type: object
+description: Stored counter estimates for one tag in one domain, including zero when the tag is unused there.
+required:
+  - tag_domain_id
+  - storage_count
+  - display_count
+properties:
+  tag_domain_id:
+    $ref: TagDomainID.yaml
+  storage_count:
+    type: integer
+    format: int64
+    description: Count of active directly applied mappings for this tag in this domain.
+  display_count:
+    type: integer
+    format: int64
+    description: Count of active resolved mappings for this tag in this domain, including alias and parent resolution. Sibling resolution remains stubbed out.

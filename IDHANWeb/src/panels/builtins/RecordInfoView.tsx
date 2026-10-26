@@ -36,6 +36,21 @@ function formatBitrate(bitsPerSecond: number): string {
     return `${bitsPerSecond} bps`;
 }
 
+function formatFileTimestamp(microseconds: number): string {
+    const date = new Date(microseconds / 1000);
+    if (!Number.isFinite(date.getTime())) return '-';
+
+    return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short',
+    });
+}
+
 const SIMPLE_TYPE_LABELS: Record<string, string> = {
     none: 'Unknown',
     image: 'Image',
@@ -53,7 +68,11 @@ const SIMPLE_TYPE_LABELS: Record<string, string> = {
 const KNOWN = new Set([
     'record_id',
     'hashes',
+    'tags',
+    'urls',
     'size',
+    'file_mtime',
+    'file_ctime',
     'mime',
     'extension',
     'parsed',
@@ -67,6 +86,11 @@ const KNOWN = new Set([
     'has_xmp',
     'has_iptc',
     'has_icc_profile',
+    'lossless',
+    'quality',
+    'chroma_subsampling',
+    'progressive',
+    'comment',
     'layers',
     'duration',
     'bitrate',
@@ -104,6 +128,8 @@ const bool = (value: unknown): boolean | undefined => (typeof value === 'boolean
 export function RecordInfoView({ info }: { info: RecordInfo }) {
     const sha256 = info.hashes?.sha256;
     const size = num(info.size);
+    const fileModified = num(info.file_mtime);
+    const fileCreated = num(info.file_ctime);
     const width = num(info.width);
     const height = num(info.height);
     const channels = num(info.channels);
@@ -116,6 +142,9 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
     const archiveId = num(info.archive_id);
     const fileCount = num(info.file_count);
     const hasAudio = bool(info.has_audio);
+    const lossless = bool(info.lossless);
+    const quality = num(info.quality);
+    const progressive = bool(info.progressive);
     const embedded = EMBEDDED_BLOCKS.filter(({key}) => info[key] === true).map(({label}) => label);
     // Every block is reported together, so one known flag means the image was parsed for all of them.
     const embeddedKnown = EMBEDDED_BLOCKS.some(({key}) => typeof info[key] === 'boolean');
@@ -132,6 +161,17 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
       !KNOWN.has(key) && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'),
   );
 
+    // Grouped so a record tagged in several domains reads as one row per domain rather than one
+    // undifferentiated list.
+    const tagDomains = new Map<string, string[]>();
+    for (const tag of info.tags ?? []) {
+        const texts = tagDomains.get(tag.domain);
+        if (texts) texts.push(tag.text);
+        else tagDomains.set(tag.domain, [tag.text]);
+    }
+
+    const urls = info.urls ?? [];
+
   return (
     <dl className="info-list">
       <Row label="Record">#{info.record_id}</Row>
@@ -145,6 +185,8 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
           {formatBytes(size)} <span className="muted">({size.toLocaleString()} B)</span>
         </Row>
       )}
+        {fileModified !== undefined && <Row label="File modified">{formatFileTimestamp(fileModified)}</Row>}
+        {fileCreated !== undefined && <Row label="File created">{formatFileTimestamp(fileCreated)}</Row>}
 
         {width !== undefined && height !== undefined && (
             <Row label="Dimensions">
@@ -152,6 +194,13 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
             </Row>
         )}
         {channels !== undefined && <Row label="Channels">{channels}</Row>}
+        {lossless !== undefined && <Row label="Encoding">{lossless ? 'Lossless' : 'Lossy'}</Row>}
+        {quality !== undefined && <Row label="Quality">q{quality}</Row>}
+        {typeof info.chroma_subsampling === 'string' && (
+            <Row label="Subsampling">{info.chroma_subsampling}</Row>
+        )}
+        {progressive !== undefined && <Row label="Scan">{progressive ? 'Progressive' : 'Baseline'}</Row>}
+        {typeof info.comment === 'string' && info.comment !== '' && <Row label="Comment">{info.comment}</Row>}
         {embeddedKnown && (
             <Row label="Embedded">
                 {embedded.length > 0 ? embedded.join(', ') : <span className="muted">None</span>}
@@ -180,6 +229,22 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
           <span className="mono">{sha256}</span>
         </Row>
       )}
+
+        {[...tagDomains].map(([domain, texts]) => (
+            <Row key={`tags:${domain}`} label={tagDomains.size === 1 ? 'Tags' : `Tags (${domain})`}>
+                {texts.join(', ')}
+            </Row>
+        ))}
+
+        {urls.length > 0 && (
+            <Row label={urls.length === 1 ? 'Source' : 'Sources'}>
+                {urls.map((url) => (
+                    <a key={url} className="info-source" href={url} target="_blank" rel="noreferrer noopener">
+                        {url}
+                    </a>
+                ))}
+            </Row>
+        )}
         {info.parsed === false && (
             <Row label="Metadata">
                 <span className="muted">Not yet parsed</span>

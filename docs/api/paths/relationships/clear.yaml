@@ -1,0 +1,61 @@
+post:
+  tags:
+    - relationships
+  summary: Clears direct relationships between two records
+  responses:
+    '200':
+      description: Clears direct relationships between two records
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              duplicate_removed:
+                type: boolean
+              alternative_removed:
+                type: boolean
+              unrelated_removed:
+                type: boolean
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            record_id_a:
+              $ref: ../../schemas/RecordID.yaml
+            record_id_b:
+              $ref: ../../schemas/RecordID.yaml
+          required:
+            - record_id_a
+            - record_id_b
+  description: |-
+    Removes a member-to-king duplicate assignment, an alternative ruling, and an
+    unrelated ruling where applicable. Either argument order is accepted.
+    Detaching a subordinate leaves the existing king and every other member in place.
+    Two subordinates in the same group have no direct duplicate assignment to clear.

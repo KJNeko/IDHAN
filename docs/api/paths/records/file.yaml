@@ -2,47 +2,80 @@ get:
   tags:
     - records
   summary: Returns the record's file
-  description: |
-    `Content-Type` is the record's stored MIME type, or `application/octet-stream`
-    if none has been recorded yet.
-
-    Range requests use `bytes=start-end`. A `bytes=0-` range is served as a full file.
-
-    Also registered at `/records/{record_id}`.
+  description: Returns stored file bytes using the recorded MIME or application/octet-stream. Supports
+    a single bytes=N-M or bytes=N- range, including bytes=0-. Suffix and multiple ranges fall back to
+    a full 200 response. Conditional requests can return 304 or 412. Also registered at /records/{record_id}.
   parameters:
-    - $ref: '../../parameters/record_id.yaml'
+    - $ref: ../../parameters/record_id.yaml
     - in: query
       name: download
       required: false
       schema:
         type: boolean
         default: false
-      description: >
-        Serve with `Content-Disposition: attachment` instead of inline.
+      description: 'Serve with `Content-Disposition: attachment` instead of inline.'
     - in: header
       name: Range
       required: false
       schema:
         type: string
-        example: 'bytes=0-1023'
-      description: Only `bytes=start-end` is supported. Omit for the full file.
+        examples:
+          - bytes=0-1023
+      description: 'One byte range: bytes=N-M or bytes=N-. Suffix and multiple ranges are ignored.'
+    - name: If-Match
+      in: header
+      required: false
+      schema:
+        type: string
+    - name: If-None-Match
+      in: header
+      required: false
+      schema:
+        type: string
+    - name: If-Modified-Since
+      in: header
+      required: false
+      schema:
+        type: string
+    - name: If-Unmodified-Since
+      in: header
+      required: false
+      schema:
+        type: string
+    - name: If-Range
+      in: header
+      required: false
+      schema:
+        type: string
   responses:
+    '503':
+      description: The assigned cluster identity could not be verified.
     '200':
       description: Full file content
       headers:
-        Content-Type:
-          description: Stored MIME type, or `application/octet-stream` if unknown.
-          schema:
-            type: string
         Cache-Control:
           description: Roughly one year.
           schema:
             type: string
-      content:
-        '*/*':
+        ETag:
           schema:
             type: string
-            format: binary
+          description: Quoted SHA-256 entity tag.
+        Last-Modified:
+          schema:
+            type: string
+          description: HTTP date of file modification.
+        Content-Disposition:
+          schema:
+            type: string
+          description: inline or attachment with a sanitized hash filename.
+        Accept-Ranges:
+          schema:
+            type: string
+          description: bytes
+      content:
+        '*/*':
+          schema: { }
     '206':
       description: Partial file content
       headers:
@@ -50,66 +83,176 @@ get:
           description: Bytes returned, against the total file size.
           schema:
             type: string
-            example: 'bytes 0-1023/204800'
+            examples:
+              - bytes 0-1023/204800
         Accept-Ranges:
-          description: Always `bytes`.
           schema:
             type: string
+          description: bytes
+        ETag:
+          schema:
+            type: string
+          description: Quoted SHA-256 entity tag.
+        Last-Modified:
+          schema:
+            type: string
+          description: HTTP date of file modification.
+        Content-Disposition:
+          schema:
+            type: string
+          description: inline or attachment with a sanitized hash filename.
       content:
         '*/*':
-          schema:
-            type: string
-            format: binary
+          schema: { }
     '400':
       description: Bad request
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
+            type: string
     '500':
       description: Internal server error
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
-
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '304':
+      description: Not modified; no body.
+    '412':
+      description: Precondition failed; no body.
+    '416':
+      description: Unsatisfiable byte range; no body.
+      headers:
+        Content-Range:
+          schema:
+            type: string
+          description: bytes */<full file size>
 head:
   tags:
     - records
-  summary: Returns the file's headers without a body
-  description: |
-    Same as GET, minus the body. Always sets `Accept-Ranges`, `Content-Length`,
-    and `Content-Type`.
+  summary: Returns file response headers without a body
+  description: Uses the same conditional request and range handling as GET, with every response body omitted.
   parameters:
-    - $ref: '../../parameters/record_id.yaml'
+    - $ref: ../../parameters/record_id.yaml
+    - in: query
+      name: download
+      required: false
+      schema:
+        type: boolean
+        default: false
+      description: 'Serve with `Content-Disposition: attachment` instead of inline.'
+    - in: header
+      name: Range
+      required: false
+      schema:
+        type: string
+        examples:
+          - bytes=0-1023
+      description: 'One byte range: bytes=N-M or bytes=N-. Suffix and multiple ranges are ignored.'
+    - name: If-Match
+      in: header
+      required: false
+      schema:
+        type: string
+    - name: If-None-Match
+      in: header
+      required: false
+      schema:
+        type: string
+    - name: If-Modified-Since
+      in: header
+      required: false
+      schema:
+        type: string
+    - name: If-Unmodified-Since
+      in: header
+      required: false
+      schema:
+        type: string
+    - name: If-Range
+      in: header
+      required: false
+      schema:
+        type: string
   responses:
+    '503':
+      description: The assigned cluster identity could not be verified.
     '200':
-      description: File headers, no body
+      description: Full file content
       headers:
+        Cache-Control:
+          description: Roughly one year.
+          schema:
+            type: string
+        ETag:
+          schema:
+            type: string
+          description: Quoted SHA-256 entity tag.
+        Last-Modified:
+          schema:
+            type: string
+          description: HTTP date of file modification.
+        Content-Disposition:
+          schema:
+            type: string
+          description: inline or attachment with a sanitized hash filename.
         Accept-Ranges:
-          description: Always `bytes`.
           schema:
             type: string
-        Content-Length:
-          description: File size in bytes.
-          schema:
-            type: integer
-        Content-Type:
-          description: Stored MIME type, or `application/octet-stream` if unknown.
+          description: bytes
+    '206':
+      description: Partial file content
+      headers:
+        Content-Range:
+          description: Bytes returned, against the total file size.
           schema:
             type: string
+            examples:
+              - bytes 0-1023/204800
+        Accept-Ranges:
+          schema:
+            type: string
+          description: bytes
+        ETag:
+          schema:
+            type: string
+          description: Quoted SHA-256 entity tag.
+        Last-Modified:
+          schema:
+            type: string
+          description: HTTP date of file modification.
+        Content-Disposition:
+          schema:
+            type: string
+          description: inline or attachment with a sanitized hash filename.
+    '400':
+      description: Bad request
     '500':
       description: Internal server error
-      content:
-        application/json:
+    '401':
+      description: The supplied API key is not recognized.
+    '404':
+      description: Record does not exist or is unavailable.
+    '304':
+      description: Not modified; no body.
+    '412':
+      description: Precondition failed; no body.
+    '416':
+      description: Unsatisfiable byte range; no body.
+      headers:
+        Content-Range:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
+            type: string
+          description: bytes */<full file size>

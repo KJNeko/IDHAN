@@ -1,0 +1,22 @@
+type: object
+required: [ kind, total_count, unique_count, merged_count, sorted_count ]
+properties:
+  kind:
+    type: string
+    const: url_reorganization
+  total_count:
+    type: integer
+    minimum: 0
+    description: URL rows scanned at startup plus canonical URL rows inserted concurrently and encountered during merging.
+  unique_count:
+    type: integer
+    minimum: 0
+    description: Survivors among the considered URLs after sorting and merging; excludes new unsorted imports.
+  merged_count:
+    type: integer
+    minimum: 0
+    description: Duplicate URL rows removed; total_count minus unique_count.
+  sorted_count:
+    type: integer
+    minimum: 0
+    description: Original URL rows whose query spelling changed, including rows subsequently merged.

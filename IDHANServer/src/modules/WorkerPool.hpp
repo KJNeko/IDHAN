@@ -10,6 +10,13 @@
 namespace idhan::modules
 {
 
+struct WorkerPoolSnapshot
+{
+	std::size_t workers { 0 };
+	bool reporting { true };
+	std::vector< ipc::ModuleActivity > modules {};
+};
+
 //! Owns the worker process(es) for one module library and decides how long they live.
 class WorkerPool
 {
@@ -22,6 +29,8 @@ class WorkerPool
 
 	std::mutex m_mutex {};
 	std::shared_ptr< WorkerProcess > m_worker {};
+	//! Weak references also cover single-run workers and isolated callback workers.
+	std::vector< std::weak_ptr< WorkerProcess > > m_workers {};
 	bool m_shutting_down { false };
 
 	//! Returns a live worker, spawning one if needed. A callback dispatch is isolated from the
@@ -45,6 +54,8 @@ class WorkerPool
 	[[nodiscard]] const std::filesystem::path& library() const { return m_settings.library; }
 
 	[[nodiscard]] ModuleResidency residency() const { return m_residency; }
+
+	[[nodiscard]] WorkerPoolSnapshot snapshot();
 
 	//! Runs one call, retrying once in a fresh process if the worker died mid-flight.
 	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > dispatch(

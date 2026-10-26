@@ -64,7 +64,7 @@ SCENARIO_METHOD( ServerFixture, "URL batches preserve their hostname association
 
 		THEN( "every URL is stored beside the hostname extracted from its own authority" )
 		{
-			REQUIRE( added.status == drogon::k200OK );
+			REQUIRE( added.status == 200 );
 
 			auto expected { pairs };
 			std::ranges::sort( expected );
@@ -74,7 +74,7 @@ SCENARIO_METHOD( ServerFixture, "URL batches preserve their hostname association
 		THEN( "fetching the record returns every submitted URL" )
 		{
 			const auto fetched { api().get( path ) };
-			REQUIRE( fetched.status == drogon::k200OK );
+			REQUIRE( fetched.status == 200 );
 			REQUIRE( fetched.json.isArray() );
 
 			std::vector< std::string > actual {};
@@ -97,7 +97,7 @@ SCENARIO_METHOD( ServerFixture, "URL batches preserve their hostname association
 
 			THEN( "the operation remains idempotent" )
 			{
-				REQUIRE( added_again.status == drogon::k200OK );
+				REQUIRE( added_again.status == 200 );
 				CHECK( tableCount( db(), "urls" ) == url_count );
 				CHECK( tableCount( db(), "url_mappings" ) == mapping_count );
 			}

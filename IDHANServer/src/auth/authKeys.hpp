@@ -2,15 +2,18 @@
 
 #include <cstddef>
 
-#include "crypto/SHA256.hpp"
-#include "db/dbTypes.hpp"
-#include "drogon/utils/coroutine.h"
+#include "idhan/SHA256.hpp"
+#include "idhan/runtime/Task.hpp"
+
+namespace idhan::db
+{
+class DBContext;
+}
 
 namespace idhan::auth
 {
 
-[[nodiscard]] drogon::Task< bool > keyExists( const SHA256& key_hash, DbClientPtr db );
-
-[[nodiscard]] drogon::Task< std::size_t > keyCount( DbClientPtr db );
+[[nodiscard]] runtime::Task< bool > keyExists( const SHA256& key_hash, db::DBContext& db );
+[[nodiscard]] runtime::Task< std::size_t > keyCount( db::DBContext& db );
 
 } // namespace idhan::auth

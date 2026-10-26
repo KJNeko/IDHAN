@@ -3,15 +3,15 @@ get:
     - tags
     - search
   summary: Autocompletes tags from a partial input
-  description: >
-    Similarity search over tag text. Ordered by exact match, then by similarity
-    weighted by use count, then by similarity alone.
+  description: Similarity search over tag text. Ordered by exact match, then by similarity weighted by
+    estimated use count, then by similarity alone and tag ID. Counts use the largest per-domain count
+    among the selected domains. Omitting domain selection searches all domains. These estimates are
+    suggestion weights, not exact search-result totals.
   parameters:
     - in: query
       name: tag
       schema:
         type: string
-        default: ""
       required: true
       description: Partial tag text. A leading `-` is stripped if present.
     - in: query
@@ -19,16 +19,36 @@ get:
       schema:
         type: integer
         default: 10
-        maximum: 32
       required: false
-      description: Clamped to 32 if a larger value is given.
+      description: Maximum returned matches; capped at 256.
     - in: query
       name: include_unused
       schema:
         type: boolean
         default: true
       required: false
-      description: When false, only tags applied to at least one record are returned.
+      description: When false, only tags with a positive count in the selected domains and storage/display mode are returned.
+    - in: query
+      name: tag_domains
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          $ref: ../../schemas/TagDomainID.yaml
+      description: >-
+        Tag domains used for counts and ranking. Repeat the parameter to select multiple domains
+        (?tag_domains=1&tag_domains=2). Duplicate values are ignored. Only these domains contribute
+        to the maximum count. Omission selects all domains; an empty or malformed parameter value is invalid.
+        Takes precedence over tag_domain.
+    - in: query
+      name: tag_domain
+      required: false
+      deprecated: true
+      schema:
+        $ref: ../../schemas/TagDomainID.yaml
+      description: Legacy single-domain alias, used only when tag_domains is absent.
     - in: query
       name: tag_display_type
       schema:
@@ -36,13 +56,14 @@ get:
         enum:
           - storage
           - display
-        default: storage
+        default: display
       required: false
-      description: >
-        Which use count feeds the score. `storage` is the raw count, `display`
-        is the count after relationship resolution.
+      description: >-
+        Selects the estimated count used for ranking, returned count, and include_unused filtering.
+        Storage uses directly applied mappings; display uses counts after alias and parent resolution.
+        Each mode returns the largest corresponding count across the selected domains.
   responses:
-    "200":
+    '200':
       description: Matches, best first
       content:
         application/json:
@@ -53,23 +74,30 @@ get:
               properties:
                 tag_id:
                   type: integer
-                  example: 42
+                  examples:
+                    - 42
                 tag_text:
                   type: string
                   description: Full tag text, or just the subtag if the namespace is empty.
-                  example: "species:catgirl"
+                  examples:
+                    - species:catgirl
                 similarity:
                   type: number
                   format: double
                   description: PostgreSQL `similarity()` score, 0.0 to 1.0.
-                  example: 0.8
+                  examples:
+                    - 0.8
                 count:
                   type: integer
-                  description: Records this tag is applied to.
-                  example: 17
+                  format: int64
+                  description: >-
+                    Largest estimated usage count across the selected domains in the selected mode;
+                    zero when no selected-domain count exists. Relationship contributions can count
+                    the same record more than once. This is not an exact or distinct-record search total.
+                  examples:
+                    - 17
               required:
                 - tag_id
-                - value
                 - tag_text
                 - similarity
                 - count
@@ -78,22 +106,34 @@ get:
               summary: Query was 'cat'
               value:
                 - tag_id: 1
-                  value: "species:catgirl"
-                  tag_text: "species:catgirl"
+                  tag_text: species:catgirl
                   similarity: 0.5
                   count: 120
                 - tag_id: 2
-                  value: "cat ears"
-                  tag_text: "cat ears"
+                  tag_text: cat ears
                   similarity: 0.36
                   count: 45
-    "400":
-      description: Invalid `tag_display_type`
+    '400':
+      description: Missing tag or malformed mode, domain ID, limit, or include_unused value.
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
-                example: "Invalid tag display type"
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: A requested tag domain does not exist.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

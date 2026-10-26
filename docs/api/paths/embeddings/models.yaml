@@ -1,0 +1,54 @@
+get:
+  tags:
+    - embeddings
+  summary: Lists registered embedding models
+  responses:
+    '200':
+      description: Lists registered embedding models
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - model_id
+                - model_name
+                - dimensions
+                - available
+                - supports_text
+              properties:
+                model_id:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                model_name:
+                  type: string
+                dimensions:
+                  type: integer
+                available:
+                  type: boolean
+                supports_text:
+                  type: boolean
+                embedding_estimate:
+                  type: integer
+                  format: int64
+                  description: Optional nonnegative PostgreSQL row estimate; omitted when table statistics are missing or unavailable.
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

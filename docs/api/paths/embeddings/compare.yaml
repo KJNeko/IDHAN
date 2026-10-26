@@ -1,0 +1,83 @@
+post:
+  tags:
+    - embeddings
+  summary: Compares embedding terms against selected records
+  responses:
+    '200':
+      description: Compares embedding terms against selected records
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_ids:
+                type: array
+                items:
+                  $ref: ../../schemas/RecordID.yaml
+              distances:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: number
+              pair_distance:
+                type: number
+              query_ms:
+                type: integer
+                format: int64
+                minimum: 0
+            required:
+              - record_ids
+              - distances
+              - query_ms
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            model_name:
+              type: string
+            record_ids:
+              type: array
+              items:
+                $ref: ../../schemas/RecordID.yaml
+              minItems: 1
+              maxItems: 8
+            terms:
+              anyOf:
+                - type: array
+                  items:
+                    $ref: ../../schemas/EmbeddingTerm.yaml
+                  maxItems: 64
+                - type: 'null'
+          required:
+            - model_name
+            - record_ids
+  description: Distances are a matrix with one row per query term and one column per record_id. pair_distance
+    is present when at least two records are supplied and compares the first two.

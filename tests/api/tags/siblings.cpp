@@ -30,7 +30,7 @@ SCENARIO_METHOD( ServerFixture, "Tag siblings", "[api][tags][siblings]" )
 
 			THEN( "the endpoint reports itself unimplemented" )
 			{
-				CHECK( created.status == drogon::k501NotImplemented );
+				CHECK( created.status == 501 );
 			}
 		}
 
@@ -42,7 +42,7 @@ SCENARIO_METHOD( ServerFixture, "Tag siblings", "[api][tags][siblings]" )
 
 			THEN( "the endpoint reports itself unimplemented" )
 			{
-				CHECK( removed.status == drogon::k501NotImplemented );
+				CHECK( removed.status == 501 );
 			}
 		}
 	}

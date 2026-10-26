@@ -21,6 +21,7 @@ class UrlServiceWorker : public QObject, public QRunnable
 	std::unordered_map< idhan::hydrus::HashID, idhan::RecordID > m_record_cache {};
 
   signals:
+	void preprocessingFinished( bool success );
 	void finished();
 	void processedMaxUrls( std::size_t counter, std::size_t unique_counter );
 	void processedUrls( std::size_t counter, std::size_t unique_counter );

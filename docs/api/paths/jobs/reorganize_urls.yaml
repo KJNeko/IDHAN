@@ -1,0 +1,34 @@
+post:
+  tags:
+    - jobs
+    - maintenance
+  summary: Sort stored URLs using URL class rules and merge duplicates
+  description: >-
+    Reads stored URLs in keyset pages of 1000 and sorts only URLs accepted by a
+    configured URL class with sorting enabled. Already sorted URLs are looked up
+    through the URL index. New unsorted URLs inserted after the scan starts are
+    left for a subsequent run; newly inserted canonical spellings are merged too.
+    Each transaction moves at most 1000 record mappings from one duplicate URL.
+    Only the affected URL rows are locked while moving mappings. Short URL-table
+    write locks protect type preparation and final canonical URL updates.
+    The lowest URL ID survives and stores the sorted URL. Known types are preferred,
+    with the lowest original ID resolving conflicts. The preferred type is saved
+    before removing duplicate rows so rerunning after partial completion preserves it.
+    Mappings are combined and the latest log is retained, with the lowest original
+    ID breaking equal timestamps. Query bytes, repeated-value order, and fragments
+    are preserved. Each batch commits independently. A failed batch rolls back;
+    earlier commits remain saved, and the job can be rerun safely.
+    Live UrlReorganizationProgress snapshots include checked URLs, planned merges,
+    committed merges, mapping counts, and committed batch counts. The total count
+    becomes available after the scan. Results follow ReorganizeUrlsResult.
+  responses:
+    '200':
+      description: Job queued; its eventual response follows ReorganizeUrlsResult.
+      content:
+        application/json:
+          schema:
+            $ref: ../../schemas/JobQueued.yaml
+    '401':
+      description: The supplied API key is not recognized.
+    '500':
+      description: Internal server error.

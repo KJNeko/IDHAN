@@ -1,10 +1,10 @@
 #pragma once
 
-#include <drogon/HttpClient.h>
-#include <trantor/net/EventLoopThread.h>
+#include <json/json.h>
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -22,10 +22,10 @@ using RecordIDs = std::vector< RecordID >;
 
 struct ApiResponse
 {
-	drogon::HttpStatusCode status;
+	long status {};
 	Json::Value json;
 	std::string body;
-	//! Header names as drogon reports them, which is lowercased.
+	// Header names are normalized to lowercase.
 	std::unordered_map< std::string, std::string > headers {};
 
 	//! The named header, or an empty string when the response did not carry it.
@@ -40,20 +40,30 @@ struct ApiResponse
 //! explicitly unauthenticated calls.
 class ApiClient
 {
-	trantor::EventLoopThread m_loop_thread {};
-	drogon::HttpClientPtr m_client;
+	std::string m_base_url;
 	std::string m_key {};
+	long m_timeout_seconds;
+	long m_upload_timeout_seconds;
 
 	[[nodiscard]] ApiResponse send(
-		drogon::HttpMethod method,
+		const char* method,
 		const std::string& path,
 		const QueryParams& query,
 		const Json::Value* body,
 		const std::string& key );
 
+	[[nodiscard]] ApiResponse sendRaw(
+		const char* method,
+		const std::string& path,
+		const QueryParams& query,
+		std::string_view body,
+		const char* content_type,
+		const std::string& key,
+		long timeout_seconds );
+
   public:
 
-	ApiClient( std::uint16_t port );
+	ApiClient( std::uint16_t port, long timeout_seconds = 30, long upload_timeout_seconds = 60 );
 
 	//! Mints the one API key the schema allows, and carries it on every later request.
 	void authenticate();
@@ -62,10 +72,12 @@ class ApiClient
 
 	[[nodiscard]] ApiResponse get( const std::string& path, const QueryParams& query = {} );
 	[[nodiscard]] ApiResponse post( const std::string& path, const Json::Value& body, const QueryParams& query = {} );
+	[[nodiscard]] ApiResponse patch( const std::string& path, const Json::Value& body );
 	[[nodiscard]] ApiResponse postWithoutBody( const std::string& path, const QueryParams& query = {} );
 	[[nodiscard]] ApiResponse del( const std::string& path, const QueryParams& query = {} );
 
 	[[nodiscard]] ApiResponse getWithKey( const std::string& path, const std::string& key );
+	[[nodiscard]] ApiResponse postWithKey( const std::string& path, const Json::Value& body, const std::string& key );
 
 	[[nodiscard]] ApiResponse postOctets(
 		const std::string& path,

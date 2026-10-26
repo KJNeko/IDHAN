@@ -2,20 +2,26 @@
 
 #include "filesystem/io/linux/ReadAwaiter.hpp"
 
+#include <folly/Executor.h>
+
 #include <liburing.h>
 
 #include "filesystem/io/linux/IOUringLinux.hpp"
 #include "logging/log.hpp"
-#include "trantor/net/EventLoop.h"
 
 namespace idhan
 {
 
-ReadAwaiter::ReadAwaiter( IOUringLinux* uring, io_uring_sqe sqe, std::shared_ptr< std::vector< std::byte > >& data ) :
+ReadAwaiter::ReadAwaiter(
+	IOUringLinux* uring,
+	io_uring_sqe sqe,
+	std::shared_ptr< std::vector< std::byte > >& data,
+	folly::Executor* executor ) :
   m_data( data ),
   m_cont(),
   m_uring( uring ),
-  m_sqe( sqe )
+  m_sqe( sqe ),
+  m_executor( executor )
 {}
 
 void ReadAwaiter::complete( const int result )
@@ -39,7 +45,7 @@ void ReadAwaiter::complete( const int result )
 	if ( !m_cont ) log::critical( "ReadAwaiter had no coroutine to resume" );
 	if ( m_cont.done() ) log::critical( "ReadAwaiter coroutine was already finished" );
 
-	m_event_loop->queueInLoop( m_cont );
+	m_executor->add( [ cont = m_cont ] { cont.resume(); } );
 }
 
 bool ReadAwaiter::await_ready() const noexcept
@@ -49,7 +55,6 @@ bool ReadAwaiter::await_ready() const noexcept
 
 void ReadAwaiter::await_suspend( const std::coroutine_handle<> h )
 {
-	m_event_loop = trantor::EventLoop::getEventLoopOfCurrentThread();
 	m_cont = h;
 
 	std::lock_guard lock { m_uring->mtx };

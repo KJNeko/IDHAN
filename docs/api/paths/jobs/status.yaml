@@ -2,9 +2,14 @@ get:
   tags:
     - jobs
   summary: Returns the status of a job
-  description: |
-    Polling a completed job makes it eligible for cleanup, so it may be dropped
-    from the runtime afterwards.
+  description: Poll the job status. Polling a completed job marks it eligible for cleanup. Results are
+    also retained for at most one hour after completion. Unknown IDs return 404. Per-file scan failures
+    may be reported in response even when status is completed.
+    The optional response accepts any JSON value. Known cluster-scan and metadata-rescan
+    producer contracts are documented separately as ClusterScanResult and RescanMetadataResult;
+    job_name is descriptive text and does not discriminate the result type.
+    The continuous flag identifies ongoing maintenance independently of its current
+    activity; such jobs remain running while waiting between passes.
   parameters:
     - name: job_id
       in: path
@@ -13,48 +18,33 @@ get:
         type: integer
         format: int64
   responses:
-    200:
+    '200':
       description: Job status
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              job_id:
-                type: integer
-              job_name:
-                type: string
-              status:
-                type: string
-                enum: [ running, completed, failed, not_found ]
-              completed:
-                type: boolean
-              start_time:
-                type: integer
-                description: Unix timestamp.
-              error:
-                type: string
-                description: Present only when `status` is `failed`.
-              response:
-                description: >
-                  Operation-specific result, present when a job supplies one.
-                  Metadata rescan jobs return `RescanMetadataResult`.
-                anyOf:
-                  - $ref: '../../schemas/RescanMetadataResult.yaml'
-                  - type: object
-                    additionalProperties: true
-                  - type: string
-          examples:
-            rescan_metadata_completed:
-              summary: Completed metadata rescan
-              value:
-                job_id: 123
-                job_name: rescanMetadata
-                status: completed
-                completed: true
-                start_time: 1787756400
-                response:
-                  scanned_count: 42
-                  failed_count: 1
-    404:
+            $ref: ../../schemas/JobStatus.yaml
+    '404':
       description: Job not found
+      content:
+        text/plain:
+          schema:
+            type: string
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

@@ -1,0 +1,27 @@
+{
+  "urlClasses": [
+    {
+      "name": "e621",
+      "sortQueryParameters": true,
+      "script": "e621.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 1,
+        "shareSubdomains": true
+      },
+      "hosts": [
+        "e621.net"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "path": "/posts"
+        },
+        {
+          "export": "post",
+          "pathPrefix": "/posts/"
+        }
+      ]
+    }
+  ]
+}

@@ -3,13 +3,13 @@ post:
     - jobs
     - maintenance
   summary: Rescans metadata for records
-  description: |
-    Dispatches a job that re-runs the metadata parser and returns its `job_id`
-    immediately; poll `/jobs/{job_id}/status` for the result.
-
-    With no body, or a body without `record_ids`, every record that has file
-    info is rescanned. With `record_ids`, only those records are, and every id
-    must exist.
+  description: Enqueues metadata parsing and returns only job_id. Supply a records array to select IDs.
+    An omitted or empty array rescans every record with file_info. IDs must be positive and fit RecordID;
+    record existence is not checked before enqueueing. Parse failures are reported by the job.
+    Successful metadata writes commit atomically per record.
+    When the job publishes a result, its response follows RescanMetadataResult
+    (scanned_count, failed_count, and per-record failures). Per-record failures
+    do not by themselves make the job status failed.
   requestBody:
     required: false
     content:
@@ -17,29 +17,32 @@ post:
         schema:
           type: object
           properties:
-            record_ids:
+            records:
               type: array
-              minItems: 1
               items:
-                $ref: '../../schemas/RecordID.yaml'
-              description: Records to rescan. Omit to rescan everything.
+                $ref: ../../schemas/RecordID.yaml
   responses:
-    200:
-      description: Rescan job dispatched
+    '200':
+      description: Success
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              job_id:
-                type: integer
-              status:
-                type: string
-                example: dispatched
-              record_count:
-                type: integer
-                description: Records the job was scoped to, or 0 when it rescans everything.
-    400:
-      description: record_ids was present but not a non-empty array of unsigned integers
-    404:
-      description: One of the listed records does not exist
+            $ref: ../../schemas/JobQueued.yaml
+    '400':
+      description: Malformed JSON or a non-integral, nonpositive, or out-of-range item in records.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import type {RecordMetadata} from '../../api/types';
 import {describeRecord, RECORD_ACTIONS} from './recordActions';
 import type {RecordActionContext} from './recordActions';
@@ -55,5 +55,34 @@ describe('RECORD_ACTIONS', () => {
 
     it('keys every action uniquely, so the menu can list them', () => {
         expect(new Set(RECORD_ACTIONS.map((action) => action.key)).size).toBe(RECORD_ACTIONS.length);
+    });
+});
+
+describe('file actions', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('opens the authenticated original URL in a separate tab', () => {
+        const open = vi.fn();
+        vi.stubGlobal('window', {open});
+        const context = {
+            ...ctx([12]),
+            host: {records: {fileUrl: () => '/records/12/file?idhan_key=test'}},
+        } as unknown as RecordActionContext;
+        find('open').run(context);
+        expect(open).toHaveBeenCalledWith('/records/12/file?idhan_key=test', '_blank', 'noopener,noreferrer');
+    });
+
+    it('copies valid JSON in selection order for multiple records', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        vi.stubGlobal('navigator', {clipboard: {writeText}});
+        const context = {
+            ...ctx([13, 12]),
+            host: {
+                records: {getMetadata: async () => ({records: [record(), record({record_id: 13})]})},
+                ui: {toast: vi.fn()},
+            },
+        } as unknown as RecordActionContext;
+        await find('copy-json').run(context);
+        expect(JSON.parse(writeText.mock.calls[0]![0])).toEqual([record({record_id: 13}), record()]);
     });
 });

@@ -32,8 +32,8 @@ using TagID = Integer;
 using ClusterID = SmallInt;
 #define CLUSTER_ID_PG_TYPE_NAME SMALLINT_PG_TYPE_NAME
 
-using MimeID = Integer;
-#define MIME_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
+using MimeID = SmallInt;
+#define MIME_PG_TYPE_NAME SMALLINT_PG_TYPE_NAME
 
 using TagDomainID = SmallInt;
 #define TAG_DOMAIN_PG_TYPE_NAME SMALLINT_PG_TYPE_NAME
@@ -49,6 +49,9 @@ using CursorID = Integer;
 
 using NoteID = Integer;
 #define NOTE_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
+
+using DownloadSessionID = BigInt;
+using DownloadSessionUrlID = BigInt;
 
 enum class SimpleMimeType : std::uint16_t
 {

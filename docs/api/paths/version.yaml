@@ -4,9 +4,15 @@ get:
   summary: Returns version info
   security: [ ]
   responses:
-    "200":
+    '200':
       description: Version info
       content:
         application/json:
           schema:
-            $ref: '../schemas/VersionInfo.yaml'
+            $ref: ../schemas/VersionInfo.yaml
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

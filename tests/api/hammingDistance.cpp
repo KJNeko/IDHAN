@@ -39,9 +39,10 @@ static Distances storedDistances( pqxx::connection& connection )
 	return distances;
 }
 
-//! The sweep runs on a timer, so the assertions wait for it rather than for a request to finish.
+// Use the immediate startup sweep rather than depending on the five-minute idle timer.
 static Distances awaitDistances( pqxx::connection& connection, const std::size_t expected )
 {
+	testServer().restart( false );
 	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds( 40 ) };
 
 	Distances distances { storedDistances( connection ) };
@@ -62,6 +63,7 @@ static bool queueDrained( pqxx::connection& connection )
 
 static Distances awaitQueueDrain( pqxx::connection& connection )
 {
+	testServer().restart( false );
 	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds( 40 ) };
 	while ( !queueDrained( connection ) && std::chrono::steady_clock::now() < deadline )
 		std::this_thread::sleep_for( std::chrono::milliseconds( 250 ) );

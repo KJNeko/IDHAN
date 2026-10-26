@@ -4,7 +4,8 @@ required:
   - domain_name
 properties:
   tag_domain_id:
-    $ref: 'TagDomainID.yaml'
+    $ref: TagDomainID.yaml
   domain_name:
     type: string
-    example: "my domain"
+    examples:
+      - my domain

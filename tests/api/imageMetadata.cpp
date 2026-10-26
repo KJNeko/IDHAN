@@ -10,16 +10,14 @@
 
 namespace idhan::test
 {
-namespace
-{
 
-Json::Value awaitJob( ApiClient& api, const JobID job_id )
+static Json::Value awaitJob( ApiClient& api, const JobID job_id )
 {
 	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds( 10 ) };
 	while ( std::chrono::steady_clock::now() < deadline )
 	{
 		const auto response { api.get( std::format( "/jobs/{}/status", job_id ) ) };
-		if ( response.status != drogon::k200OK )
+		if ( response.status != 200 )
 			throw std::runtime_error( std::format( "Could not read metadata job status: {}", response.body ) );
 
 		if ( response.json[ "completed" ].asBool() ) return response.json;
@@ -29,7 +27,7 @@ Json::Value awaitJob( ApiClient& api, const JobID job_id )
 	throw std::runtime_error( std::format( "Metadata job {} timed out", job_id ) );
 }
 
-void seedImageMetadata( pqxx::connection& connection, const RecordID record_id, const bool with_phash )
+static void seedImageMetadata( pqxx::connection& connection, const RecordID record_id, const bool with_phash )
 {
 	pqxx::work tx { connection };
 	tx.exec(
@@ -50,25 +48,25 @@ void seedImageMetadata( pqxx::connection& connection, const RecordID record_id, 
 	tx.commit();
 }
 
-} // namespace
-
 SCENARIO_METHOD(
 	ServerFixture,
-	"Metadata rescan jobs fail when a requested record cannot be parsed",
+	"Metadata rescan jobs report unparseable records in their completed result",
 	"[api][metadata][jobs]" )
 {
 	const auto record_id { api().createRecord( 405 ) };
 	Json::Value body;
-	body[ "record_ids" ] = Json::Value { Json::arrayValue };
-	body[ "record_ids" ].append( record_id );
+	body[ "records" ] = Json::Value { Json::arrayValue };
+	body[ "records" ].append( record_id );
 
 	const auto dispatched { api().post( "/jobs/metadata/rescan", body ) };
-	REQUIRE( dispatched.status == drogon::k200OK );
+	REQUIRE( dispatched.status == 200 );
 	REQUIRE( dispatched.json[ "job_id" ].isIntegral() );
 
 	const auto status { awaitJob( api(), dispatched.json[ "job_id" ].as< JobID >() ) };
-	CHECK( status[ "status" ].asString() == "failed" );
-	CHECK( status[ "error" ].asString().find( "1 of 1" ) != std::string::npos );
+	CHECK( status[ "status" ].asString() == "completed" );
+	CHECK( status[ "completed" ].asBool() );
+	CHECK_FALSE( status.isMember( "error" ) );
+	CHECK( status[ "response" ][ "scanned_count" ].asUInt64() == 0 );
 	REQUIRE( status[ "response" ][ "failed_count" ].asUInt64() == 1 );
 	REQUIRE( status[ "response" ][ "failures" ].size() == 1 );
 	CHECK( status[ "response" ][ "failures" ][ 0 ][ "record_id" ].as< RecordID >() == record_id );
@@ -82,7 +80,7 @@ SCENARIO_METHOD( ServerFixture, "Image metadata APIs expose only present percept
 	seedImageMetadata( db(), blank_id, false );
 
 	const auto single { api().get( std::format( "/records/{}/info", hashed_id ) ) };
-	REQUIRE( single.status == drogon::k200OK );
+	REQUIRE( single.status == 200 );
 	CHECK( single.json[ "phash" ].asString() == "b44dc7b24dcb381c" );
 
 	Json::Value body {};
@@ -90,7 +88,7 @@ SCENARIO_METHOD( ServerFixture, "Image metadata APIs expose only present percept
 	body[ "record_ids" ].append( hashed_id );
 	body[ "record_ids" ].append( blank_id );
 	const auto batch { api().post( "/records/metadata", body ) };
-	REQUIRE( batch.status == drogon::k200OK );
+	REQUIRE( batch.status == 200 );
 	REQUIRE( batch.json[ "records" ].size() == 2 );
 
 	for ( const auto& record : batch.json[ "records" ] )
@@ -121,7 +119,7 @@ SCENARIO_METHOD( ServerFixture, "Record info reports only known embedded metadat
 	}
 
 	const auto scanned { api().get( std::format( "/records/{}/info", scanned_id ) ) };
-	REQUIRE( scanned.status == drogon::k200OK );
+	REQUIRE( scanned.status == 200 );
 	CHECK( scanned.json[ "has_exif" ].asBool() );
 	CHECK( scanned.json[ "has_gps" ].asBool() );
 	CHECK_FALSE( scanned.json[ "has_xmp" ].asBool() );
@@ -130,7 +128,7 @@ SCENARIO_METHOD( ServerFixture, "Record info reports only known embedded metadat
 
 	// An image parsed before the flags existed leaves them NULL, which is not the same as false.
 	const auto unscanned { api().get( std::format( "/records/{}/info", unscanned_id ) ) };
-	REQUIRE( unscanned.status == drogon::k200OK );
+	REQUIRE( unscanned.status == 200 );
 	CHECK_FALSE( unscanned.json.isMember( "has_exif" ) );
 	CHECK_FALSE( unscanned.json.isMember( "has_icc_profile" ) );
 }

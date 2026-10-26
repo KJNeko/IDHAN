@@ -1,0 +1,42 @@
+type: object
+required: [ kind, phase, message, processed_count, sorted_count, merged_count ]
+properties:
+  kind:
+    const: url_reorganization
+  phase:
+    type: string
+    enum: [ starting, waiting, loading, sorting, planning, merging, saving, committing, completed, failed ]
+  message:
+    type: string
+  processed_count:
+    type: integer
+    minimum: 0
+    description: URLs checked against URL class rules, updated in batches of 1000.
+  total_count:
+    type: integer
+    minimum: 0
+    description: Original URL count; available after the paged scan.
+  sorted_count:
+    type: integer
+    minimum: 0
+    description: Checked URLs requiring query sorting; counts candidates discovered by the scan.
+  unique_count:
+    type: integer
+    minimum: 0
+    description: Planned survivor count; available after planning.
+  merge_candidate_count:
+    type: integer
+    minimum: 0
+    description: Planned duplicate count; refined as existing canonical spellings are found.
+  merged_count:
+    type: integer
+    minimum: 0
+    description: Duplicate rows removed by successfully committed batches; retained on failure.
+  mappings_processed_count:
+    type: integer
+    minimum: 0
+    description: Duplicate URL mappings processed by committed batches, including overlapping mappings.
+  committed_batch_count:
+    type: integer
+    minimum: 0
+    description: Committed mapping-move batches, including batches that finish removing a duplicate URL.

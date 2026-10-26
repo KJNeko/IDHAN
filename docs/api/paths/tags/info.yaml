@@ -2,18 +2,42 @@ get:
   tags:
     - tags
   summary: Returns information about a tag
+  description: Returns tag text and domain-specific storage/display counter estimates. Each top-level count is the maximum over the selected domains, calculated independently. See domain_counts for the individual domain values.
   parameters:
     - in: path
       name: tag_id
       required: true
       schema:
-        $ref: '../../schemas/TagID.yaml'
+        $ref: ../../schemas/TagID.yaml
+    - $ref: ../../parameters/tag_domains.yaml
   responses:
-    "200":
+    '200':
       description: Tag info
       content:
         application/json:
           schema:
-            $ref: '../../schemas/TagInfoExtended.yaml'
-    "400":
-      description: Tag not found, or not yet committed
+            $ref: ../../schemas/TagInfoExtended.yaml
+    '400':
+      description: Invalid tag or domain ID, or tag not found or not yet committed.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: A requested tag domain does not exist.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

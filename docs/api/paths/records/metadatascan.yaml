@@ -2,19 +2,45 @@ post:
   tags:
     - records
   summary: Parses and stores a record's metadata
-  description: |
-    Parses file metadata (EXIF, video streams, and so on) and stores it, then
-    returns the same body as `GET /records/{record_id}/info`.
+  description: Parses the stored file through a module, then commits general metadata, type-specific data,
+    archive mappings and contained records, and file timestamps in one transaction. Parsing occurs before
+    the transaction. Returns record info after commit.
   parameters:
-    - $ref: '../../parameters/record_id.yaml'
+    - $ref: ../../parameters/record_id.yaml
   responses:
-    200:
+    '503':
+      description: Cluster identity could not be verified when accessing the original or before committing parsed metadata.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '200':
       description: Record info after the scan
       content:
         application/json:
           schema:
-            $ref: '../../schemas/RecordInfo.yaml'
-    400:
-      description: Record not found, or the parse failed
-    500:
-      description: Internal server error
+            $ref: ../../schemas/RecordInfo.yaml
+    '400':
+      description: Missing file info or MIME, or no parser is available.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: The expected file is absent or unreadable, parsing failed, or a database write failed.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is not assigned to a cluster.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

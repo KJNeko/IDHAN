@@ -1,23 +1,51 @@
 /**
- * Thumbnail Grid: the workhorse view, backed directly by the shared result set's Int32Array
- * (host.results), so a 100k set costs around 400 KB. Rows are virtualized with
- * @tanstack/react-virtual, keeping the DOM to the visible window plus a little overscan regardless of
- * set size; discrete tile sizes {128,256,512} give fixed rows, so there is no measurement pass.
- *
- * Selection is driven here (click, ctrl-toggle, shift-range) and pushed to host.selection so the
- * viewer, record info, and tag editor follow along. Double-click activates a record on the bus.
+ * Virtualized thumbnail grid backed by host.results. Selection updates host.selection;
+ * activation uses the bus. Prefetch visible rows before neighboring viewports.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { PanelProps, RecordId, SearchResultSet } from '../../host/types';
-import {RECORD_ACTIVATE_TOPIC, useRecordMenu} from './recordActions';
-import type {RecordAction} from './recordActions';
+import type {PanelProps, SearchResultSet} from '../../host/types';
+import {useGridSelection} from './useGridSelection';
 
 // Convenience presets offered in the size dropdown; the server accepts any positive edge length.
 const TILE_SIZES: readonly number[] = [128, 256, 512];
 const GAP = 6;
 const OVERSCAN_ROWS = 2;
+// Bound thumbnail prefetch concurrency to reserve capacity for visible tiles.
+const MAX_INFLIGHT_PREFETCH = 6;
+const PREFETCH_MEMORY = 4096;
+
+/** Replace pending prefetches on each submission; preserve requests already in progress. */
+function createPrefetchQueue() {
+  const requested = new Set<string>();
+  let queue: string[] = [];
+  let inflight = 0;
+
+  const pump = () => {
+    while (inflight < MAX_INFLIGHT_PREFETCH && queue.length > 0) {
+      const url = queue.shift()!;
+      if (requested.has(url)) continue;
+      if (requested.size >= PREFETCH_MEMORY) requested.clear();
+      requested.add(url);
+      inflight += 1;
+      const img = new Image();
+      const finish = () => {
+        inflight -= 1;
+        pump();
+      };
+      img.onload = finish;
+      img.onerror = finish;
+      img.decoding = 'async';
+      img.src = url;
+    }
+  };
+
+  return (urls: readonly string[]) => {
+    queue = urls.filter((url) => !requested.has(url));
+    pump();
+  };
+}
 
 type Config = { tileSize: number };
 const DEFAULT_CONFIG: Config = { tileSize: 256 };
@@ -47,15 +75,14 @@ function useColumns(ref: React.RefObject<HTMLDivElement | null>, tile: number): 
 function GridPanel({ host }: PanelProps) {
   const [tileSize, setTileSize] = useState<number>(() => readTileSize(host.settings.get() as Partial<Config>));
   const [results, setResults] = useState<SearchResultSet>(() => host.results.get());
-  const [selected, setSelected] = useState<ReadonlySet<RecordId>>(() => new Set(host.selection.get()));
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const anchorIndex = useRef<number | null>(null);
+  const [prefetch] = useState(createPrefetchQueue);
 
   useEffect(() => host.results.subscribe(setResults), [host]);
-  useEffect(() => host.selection.subscribe((ids) => setSelected(new Set(ids))), [host]);
 
   const ids = results.ids;
+    const {selected, onTileClick, activate, onTileContextMenu, recordMenu} = useGridSelection(host, ids);
   const columns = useColumns(scrollRef, tileSize);
   const rowCount = Math.ceil(ids.length / columns);
   const rowHeight = tileSize + GAP;
@@ -67,78 +94,40 @@ function GridPanel({ host }: PanelProps) {
     overscan: OVERSCAN_ROWS,
   });
 
-  const applySelection = useCallback(
-    (next: Set<RecordId>) => {
-      // Push to the host; the subscription above mirrors it back into local state.
-      host.selection.set([...next]);
-    },
-    [host],
-  );
-
-    /** Entries that only mean anything in a grid; everything record-scoped lives in RECORD_ACTIONS. */
-    const gridActions: RecordAction[] = [
-        {
-            key: 'select-all',
-            group: 'grid',
-            label: () => 'Select all',
-            available: () => ids.length > 0,
-            run: () => applySelection(new Set(ids)),
-        },
-        {
-            key: 'clear-selection',
-            group: 'grid',
-            label: () => 'Clear selection',
-            available: () => selected.size > 0,
-            run: () => applySelection(new Set()),
-        },
-    ];
-
-    const {openRecordMenu, recordMenu} = useRecordMenu(host, gridActions);
-
   function changeTileSize(size: number) {
     setTileSize(size);
     host.settings.set({ tileSize: size });
   }
 
-  function onTileClick(event: React.MouseEvent, index: number) {
-    const id = ids[index]!;
-    if (event.shiftKey && anchorIndex.current !== null) {
-      const lo = Math.min(anchorIndex.current, index);
-      const hi = Math.max(anchorIndex.current, index);
-      const range = new Set<RecordId>(event.ctrlKey || event.metaKey ? selected : []);
-      for (let i = lo; i <= hi; i++) range.add(ids[i]!);
-      applySelection(range);
-    } else if (event.ctrlKey || event.metaKey) {
-      const next = new Set(selected);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      anchorIndex.current = index;
-      applySelection(next);
-    } else {
-      anchorIndex.current = index;
-      applySelection(new Set([id]));
-    }
-  }
-
-  function activate(index: number) {
-    const id = ids[index]!;
-    anchorIndex.current = index;
-    applySelection(new Set([id]));
-    host.bus.emit(RECORD_ACTIVATE_TOPIC, id);
-  }
-
-  function onTileContextMenu(event: React.MouseEvent, index: number) {
-    const id = ids[index]!;
-    // Right-clicking outside the current selection targets just that record.
-    const targetIds = selected.has(id) ? [...selected] : [id];
-    if (!selected.has(id)) {
-      anchorIndex.current = index;
-      applySelection(new Set([id]));
-    }
-      openRecordMenu(event, targetIds, id);
-  }
-
   const virtualRows = virtualizer.getVirtualItems();
+  const firstRow = virtualRows[0]?.index ?? -1;
+  const lastRow = virtualRows[virtualRows.length - 1]?.index ?? -1;
+
+  // Warm the rendered rows first, then walk outwards a viewport in each direction.
+  useEffect(() => {
+    if (firstRow < 0) return;
+    const viewportRows = Math.max(1, Math.ceil((scrollRef.current?.clientHeight ?? 0) / rowHeight));
+    const top = Math.max(0, firstRow - viewportRows);
+    const bottom = Math.min(rowCount - 1, lastRow + viewportRows);
+
+    const rows: number[] = [];
+    for (let row = firstRow; row <= lastRow; row++) rows.push(row);
+    for (let offset = 1; ; offset++) {
+      const below = lastRow + offset;
+      const above = firstRow - offset;
+      if (below > bottom && above < top) break;
+      if (below <= bottom) rows.push(below);
+      if (above >= top) rows.push(above);
+    }
+
+    const urls: string[] = [];
+    for (const row of rows) {
+      const start = row * columns;
+      const end = Math.min(start + columns, ids.length);
+      for (let i = start; i < end; i++) urls.push(host.records.thumbnailUrl(ids[i]!, tileSize));
+    }
+    prefetch(urls);
+  }, [host, prefetch, ids, tileSize, columns, rowCount, rowHeight, firstRow, lastRow]);
 
   return (
     <div className="grid-panel">

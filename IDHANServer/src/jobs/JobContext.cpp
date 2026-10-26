@@ -1,5 +1,7 @@
 #include "JobContext.hpp"
 
+#include <folly/executors/thread_factory/NamedThreadFactory.h>
+
 #include <algorithm>
 #include <chrono>
 #include <mutex>
@@ -8,7 +10,6 @@
 #include "Config.hpp"
 #include "JobTaskStatus.hpp"
 #include "logging/log.hpp"
-#include "trantor/net/EventLoopThreadPool.h"
 
 inline static std::atomic< idhan::JobID > job_id_counter { 1 };
 
@@ -54,55 +55,55 @@ void JobRuntime::runner()
 		const auto job { getNextJob() };
 		if ( !job ) continue;
 
-		log::debug( "Acquired Job" );
+		log::trace( "Acquired job {}", job->id() );
 
-		trantor::EventLoop* loop { nullptr };
-		do
-		{
-			loop = m_pool->getNextLoop();
-		}
-		while ( !loop );
+		m_pool->add( [ job ]() { job->run(); } );
 
-		loop->queueInLoop( [ job ]() { job->run(); } );
-
-		log::debug( "Job dispatched to thread" );
+		log::trace( "Dispatched job {}", job->id() );
 	}
 }
 
 void JobRuntime::cleanup()
 {
+	std::unique_lock lock { m_queue_mtx };
 	while ( !m_hard_stop.load( std::memory_order_acquire ) )
 	{
-		{
-			std::lock_guard lock { m_queue_mtx };
-			std::erase_if(
-				m_jobs,
-				[]( const auto& item )
-				{
-					const auto& job = item.second;
-					if ( !job->done() ) return false;
+		std::erase_if(
+			m_jobs,
+			[ this ]( const auto& item )
+			{
+				const auto& job = item.second;
+				if ( !job->done() ) return false;
 
-					const auto status = job->status();
-					if ( !status ) return true;
+				const auto status = job->status();
+				if ( !status ) return true;
 
-					if ( status->m_cleanup_requested ) return true;
-
-					const auto now = std::chrono::steady_clock::now();
-					return ( now - status->m_completion_time ) >= job_retention_period;
-				} );
-		}
-		std::this_thread::sleep_for( job_cleanup_interval );
+				const auto now = std::chrono::steady_clock::now();
+				const bool remove {
+					status->m_cleanup_requested || now - status->m_completion_time >= job_retention_period
+				};
+				if ( remove ) m_events->remove( item.first );
+				return remove;
+			} );
+		m_cleanup_cv.wait_for(
+			lock, job_cleanup_interval, [ this ] { return m_hard_stop.load( std::memory_order_acquire ); } );
 	}
 }
 
 void JobRuntime::enqueue( const std::shared_ptr< JobContext >& ctx )
 {
+	m_events->add( ctx->status() );
 	{
 		std::lock_guard< std::mutex > lock { m_queue_mtx };
 		m_queue.push( ctx );
 		m_jobs[ ctx->id() ] = ctx;
 	}
 	m_cv.notify_one();
+}
+
+folly::Executor::KeepAlive<> JobRuntime::executor() const
+{
+	return folly::getKeepAliveToken( m_pool.get() );
 }
 
 std::shared_ptr< JobContext > JobRuntime::getJob( idhan::JobID id )
@@ -138,8 +139,8 @@ JobRuntime::JobRuntime() : m_pool( nullptr ), m_queue_mtx(), m_cv(), m_queue(), 
 
 	job_thread_count = std::max< std::size_t >( job_thread_count, 2 );
 
-	m_pool = std::make_unique< trantor::EventLoopThreadPool >( job_thread_count );
-	m_pool->start();
+	m_pool = std::make_unique< folly::CPUThreadPoolExecutor >(
+		job_thread_count, std::make_shared< folly::NamedThreadFactory >( "idhan-job" ) );
 
 	m_runner_thread = std::jthread( [ this ]() { runner(); } );
 	m_cleanup_thread = std::jthread( [ this ]() { cleanup(); } );
@@ -175,6 +176,7 @@ JobRuntime::~JobRuntime()
 
 	m_hard_stop.store( true, std::memory_order_release );
 	m_cv.notify_all();
+	m_cleanup_cv.notify_all();
 }
 
 JobContext::JobContext( JobTask&& coro, const idhan::JobID id ) noexcept : m_coro( std::move( coro ) ), m_id( id )
@@ -192,9 +194,10 @@ void JobContext::run()
 	if ( m_coro.m_status && m_coro.m_status->m_start_time.load() == std::chrono::steady_clock::time_point {} )
 	{
 		m_coro.m_status->m_start_time = std::chrono::steady_clock::now();
+		m_coro.m_status->notifyChanged();
 	}
 
-	log::debug( "Resuming job {}", m_id );
+	log::trace( "Resuming job {}", m_id );
 	m_coro.m_handle.resume();
 }
 
@@ -209,13 +212,18 @@ JobRuntime& getJobRuntime()
 	return job_runtime;
 }
 
-std::shared_ptr< JobContext > queueJob( JobTask task, const std::string_view name, const std::source_location loc )
+std::shared_ptr< JobContext > queueJob(
+	JobTask task,
+	const std::string_view name,
+	const std::source_location loc,
+	const bool continuous )
 {
 	const auto job_id { generateNewJobID() };
 
 	if ( task.m_status )
 	{
 		task.m_status->m_id = job_id;
+		task.m_status->m_continuous = continuous;
 		task.m_status->m_function_name = name;
 		task.m_status->m_location = loc;
 	}
@@ -223,7 +231,7 @@ std::shared_ptr< JobContext > queueJob( JobTask task, const std::string_view nam
 	auto ctx { std::make_shared< JobContext >( std::move( task ), job_id ) };
 
 	getJobRuntime().enqueue( ctx );
-	log::debug( "Queued Job" );
+	log::debug( "Queued job {} ({})", job_id, name );
 
 	return ctx;
 }

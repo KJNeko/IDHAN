@@ -1,0 +1,34 @@
+{
+  "urlClasses": [
+    {
+      "name": "pixiv",
+      "sortQueryParameters": true,
+      "script": "pixiv.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 2
+      },
+      "hosts": [
+        "www.pixiv.net"
+      ],
+      "routes": [
+        {
+          "export": "post",
+          "pathPrefix": "/artworks/"
+        },
+        {
+          "export": "post",
+          "pathPrefix": "/en/artworks/"
+        },
+        {
+          "export": "user",
+          "pathPrefix": "/users/"
+        },
+        {
+          "export": "user",
+          "pathPrefix": "/en/users/"
+        }
+      ]
+    }
+  ]
+}

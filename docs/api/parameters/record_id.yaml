@@ -2,5 +2,4 @@ in: path
 name: record_id
 required: true
 schema:
-  type: integer
-  format: int64
+  $ref: ../schemas/RecordID.yaml

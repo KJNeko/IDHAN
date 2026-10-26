@@ -27,6 +27,18 @@ struct ModuleDescriptor
 	std::uint32_t dimensions { 0 };
 };
 
+struct ModuleQueueSnapshot
+{
+	std::size_t library_index { 0 };
+	std::size_t module_index { 0 };
+	std::string library {};
+	std::string name {};
+	ipc::ModuleActivity activity {};
+	std::size_t workers { 0 };
+	bool reporting { false };
+	bool thread_safe { false };
+};
+
 class ModuleLoader
 {
 	std::vector< std::shared_ptr< WorkerPool > > m_pools {};
@@ -73,6 +85,9 @@ class ModuleLoader
 
 	//! Retires workers that have outgrown their memory ceiling or gone idle.
 	void maintainWorkers();
+
+	//! Aggregates heartbeat samples across persistent, single-run and isolated workers.
+	[[nodiscard]] std::vector< ModuleQueueSnapshot > queueSnapshots() const;
 
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getThumbnailerFor( MimeID mime_id ) const;
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getParserFor( MimeID mime_id ) const;

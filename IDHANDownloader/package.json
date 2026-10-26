@@ -1,0 +1,10 @@
+{
+  "name": "idhan-downloader-assets",
+  "private": true,
+  "dependencies": {
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

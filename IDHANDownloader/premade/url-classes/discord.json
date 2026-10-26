@@ -1,0 +1,27 @@
+{
+  "urlClasses": [
+    {
+      "name": "discord",
+      "sortQueryParameters": true,
+      "script": "discord.js",
+      "requestRate": {
+        "requests": 1,
+        "seconds": 2,
+        "shareSubdomains": true
+      },
+      "hosts": [
+        "cdn.discordapp.com"
+      ],
+      "routes": [
+        {
+          "export": "attachment",
+          "path": "/attachments"
+        }
+      ],
+      "ephemeralQuery": [
+        "ex",
+        "hm"
+      ]
+    }
+  ]
+}
