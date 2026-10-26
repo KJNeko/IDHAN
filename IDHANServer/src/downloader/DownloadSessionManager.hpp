@@ -41,7 +41,6 @@ class DownloadSessionManager final
 	std::unique_ptr< DatabaseSecrets > m_secrets {};
 	std::unique_ptr< DatabaseCookies > m_cookies {};
 	std::unordered_map< DownloadSessionID, std::shared_ptr< Session > > m_sessions {};
-	std::string m_tag_domain { "default" };
 	std::atomic_bool m_stopped {};
 
 	[[nodiscard]] std::expected< void, std::string > initialize();
@@ -102,7 +101,6 @@ class DownloadSessionManager final
 	[[nodiscard]] std::vector< SessionDebugInfo > debugSnapshots(
 		const std::unordered_map< DownloadSessionID, std::uint64_t >& cursors );
 
-	[[nodiscard]] const std::string& tagDomain() const { return m_tag_domain; }
 
 	static DownloadSessionUrlID addRow(
 		DownloadSessionID session_id,

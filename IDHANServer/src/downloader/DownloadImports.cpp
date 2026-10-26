@@ -4,6 +4,7 @@
 #include <folly/coro/BlockingWait.h>
 
 #include <format>
+#include <map>
 #include <span>
 #include <utility>
 #include <vector>
@@ -42,15 +43,30 @@ namespace idhan::downloader
 	return urls;
 }
 
-[[nodiscard]] static std::vector< std::string > collectTags( const Json::Value& options )
+[[nodiscard]] static std::map< std::string, std::vector< std::string > > collectTags( const Json::Value& options )
 {
-	std::vector< std::string > tags {};
+	std::map< std::string, std::vector< std::string > > tags {};
 
-	if ( const auto& declared { options[ "tags" ] }; declared.isArray() )
+	const auto& declared { options[ "tags" ] };
+	if ( declared.isArray() )
 	{
 		for ( const auto& tag : declared )
 		{
-			if ( tag.isString() ) tags.emplace_back( tag.asString() );
+			if ( tag.isString() ) tags[ "downloader tags" ].emplace_back( tag.asString() );
+		}
+	}
+
+	if ( declared.isObject() )
+	{
+		for ( const auto& domain : declared.getMemberNames() )
+		{
+			const auto& entries { declared[ domain ] };
+			if ( !entries.isArray() ) continue;
+
+			for ( const auto& tag : entries )
+			{
+				if ( tag.isString() ) tags[ domain ].emplace_back( tag.asString() );
+			}
 		}
 	}
 
@@ -61,17 +77,20 @@ static runtime::Task< std::expected< ImportResult, std::string > > finishImport(
 	const RecordID record_id,
 	const bool existing,
 	std::vector< std::string > urls,
-	std::vector< std::string > tags,
-	const std::string tag_domain,
+	std::map< std::string, std::vector< std::string > > tags_by_domain,
 	const DownloadSessionID session_id,
 	db::DBContext& db )
 {
 	if ( const auto result { co_await helpers::associateUrls( record_id, std::move( urls ), db ) }; !result )
 		co_return std::unexpected( std::format( "Associating URLs with record {}: {}", record_id, result.error() ) );
 
-	if ( const auto result { co_await helpers::associateTags( record_id, std::move( tags ), tag_domain, db ) };
-	     !result )
-		co_return std::unexpected( std::format( "Applying tags to record {}: {}", record_id, result.error() ) );
+	for ( auto& [ domain, tags ] : tags_by_domain )
+	{
+		const auto result_e { co_await helpers::associateTags( record_id, std::move( tags ), domain, db ) };
+		if ( !result_e.has_value() )
+			co_return std::unexpected(
+				std::format( "Applying tags to record {} in domain '{}': {}", record_id, domain, result_e.error() ) );
+	}
 
 	std::string note { existing ? "Already in the database" : "" };
 
@@ -107,8 +126,7 @@ static runtime::Task< std::expected< ImportResult, std::string > > finishImport(
 	const std::string description,
 	std::vector< std::string > direct_urls,
 	std::vector< std::string > urls,
-	std::vector< std::string > tags,
-	const std::string tag_domain,
+	std::map< std::string, std::vector< std::string > > tags_by_domain,
 	const DownloadSessionID session_id,
 	const bool force_download,
 	db::DBContext& db )
@@ -127,8 +145,7 @@ static runtime::Task< std::expected< ImportResult, std::string > > finishImport(
 		imported->record_id,
 		imported->status == Exists,
 		std::move( urls ),
-		std::move( tags ),
-		tag_domain,
+		std::move( tags_by_domain ),
 		session_id,
 		db ) };
 	if ( !result ) co_return std::unexpected( result.error() );
@@ -140,7 +157,6 @@ static runtime::Task< std::expected< ImportResult, std::string > > finishImport(
 
 static runtime::Task< std::expected< std::optional< ImportResult >, std::string > > reuseImport(
 	ImportRequest request,
-	std::string tag_domain,
 	db::DBContext& db )
 {
 	const auto record { co_await db::findStoredDirectRecordByUrl( db, request.url, request.ephemeral_query ) };
@@ -156,7 +172,6 @@ static runtime::Task< std::expected< std::optional< ImportResult >, std::string 
 		true,
 		collectUrls( request.options, request.url ),
 		collectTags( request.options ),
-		std::move( tag_domain ),
 		static_cast< DownloadSessionID >( request.host_tag ),
 		db ) };
 	if ( !result ) co_return std::unexpected( result.error() );
@@ -167,7 +182,7 @@ static runtime::Task< std::expected< std::optional< ImportResult >, std::string 
 
 std::expected< std::optional< ImportResult >, std::string > DownloadImports::reuse( const ImportRequest& request )
 {
-	return folly::coro::blockingWait( reuseImport( request, m_tag_domain, db::DBContext::instance() ) );
+	return folly::coro::blockingWait( reuseImport( request, db::DBContext::instance() ) );
 }
 
 std::expected< ImportResult, std::string > DownloadImports::Sink::finish( const ImportMetadata& metadata )
@@ -204,7 +219,6 @@ std::expected< ImportResult, std::string > DownloadImports::Sink::finish( const 
 			std::vector< std::string > {},
 		std::move( urls ),
 		collectTags( m_options ),
-		m_tag_domain,
 		m_session_id,
 		m_force_download,
 		db::DBContext::instance() ) ) };

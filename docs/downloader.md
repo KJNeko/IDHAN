@@ -200,7 +200,7 @@ thread, and a shard is not a single connection.
 | **URL class**          | A merged entry from JSON fragments in the `url-classes` directory that associates hosts and route conditions with a JavaScript module and lane settings.                                                         |
 | **Route**              | The matching host plus optional exact path, path prefix, and query requirements that select a parser export.                                                                                                     |
 | **Parser**             | A JavaScript module. The routed export receives the URL and IDHAN bindings and may request pages, follow URLs, or import files.                                                                                  |
-| **Manifest**           | Optional parser metadata currently used to declare flags and session cookies loaded when a work item starts.                                                                                                     |
+| **Manifest**           | Optional parser metadata used to declare flags and session cookies.                                                                                                                                              |
 | **Runtime**            | The QuickJS engine owned by one script worker. All realms resident on that worker share its memory limit and microtask queue.                                                                                    |
 | **Realm**              | An isolated QuickJS context for one running work item. It has its own module globals and points back to that work item's `ScriptExecution`.                                                                      |
 | **Pending operation**  | A request or import whose transfer has not settled. Requests retain the originating realm; imports continue independently after it is released.                                                                  |
@@ -251,12 +251,54 @@ the parser directory. A specifier that names no file is retried with `.js`, `/in
 
 Every OpenAPI document in `IDHANDownloader/specs/` is generated into a JavaScript client under
 `packages/` during the build, so a parser talks to a documented API through a typed client rather
-than hand-written URL building. Generation needs `npx` and a JRE; without them the build warns and
-the parsers that import a client fail to load. `packages/superagent.js` supplies the HTTP layer the
+than hand-written URL building. Generation needs `npx` and a JRE; configuration requires them when
+generation is enabled. `BUILD_IDHAN_DOWNLOADER_SPECS=OFF` opts out of generation, and parsers that
+import a client still need its generated package to load. `packages/superagent.js` supplies the HTTP layer the
 generated clients expect on top of `idhan.request`; multipart bodies are not supported.
 
 The context creates sessions, but a returned session borrows the registry, lanes, and cookie store.
 All session handles must therefore be released before the downloader context is destroyed.
+
+### Shared parser helpers
+
+Import filename handling from `parser` and response validation from `validation`. Keep the import
+request and URL associations explicit so readers can see exactly what a parser sends to IDHAN:
+
+```js
+import {filenameFromUrl} from "parser";
+import {requestJson, z} from "validation";
+
+const postSchema = z.object({file_url: z.string(), tags: z.array(z.string())});
+
+export async function post(input, idhan) {
+    const source = new URL(input.url);
+    const data = await requestJson(idhan, postSchema, "Example post API", {
+        url: new URL("/api/post.json", source).href,
+        referer: source.href,
+    });
+    const file = new URL(data.file_url, source);
+    idhan.import({
+        request: {url: file.href, referer: source.href},
+        filename: filenameFromUrl(file),
+        urls: [
+            {url: source.href, type: "post"},
+            {url: file.href, type: "file"},
+        ],
+        tags: {[source.hostname]: data.tags},
+    });
+}
+```
+
+`filenameFromUrl(url)` takes a native `URL` object and extracts its final path component without
+including the query or fragment. Request options, filenames, URL associations, tags, and metadata
+are supplied directly to `idhan.import()` in each site parser.
+
+`requestJson(idhan, schema, description, options)` always requests text, checks the HTTP status,
+and validates the parsed JSON while retaining useful errors from the response body. Parsers that
+need the final response URL or special authentication errors can use `idhan.request()` followed by
+`parseJsonResponse()` directly. `validation` also exports `idSchema` for string-or-number IDs and
+`recordsSchema(member, entrySchema)` for APIs returning bare arrays, wrapped singletons/arrays, or
+empty results. Site-specific envelopes, authentication, and pagination stay in the site parser.
 
 ## URL classes, routes, and lane settings
 
@@ -546,6 +588,39 @@ to failures; observer exceptions are logged without unwinding a worker thread.
 The server adapter implements a sink with a temporary file. On finish it passes those bytes through
 IDHAN's normal file import, associates parser-supplied URLs and tags, and links the record to the
 download session.
+
+A parser can supply `tags` as a JSON object mapping domain names to arrays of tags. A single
+import can place tags into multiple domains, and both the domain names and tags can be computed
+from any data the script has:
+
+```js
+export function post(input, idhan) {
+    idhan.import({
+        request: {url: new URL("/file.jpg", input.url).href},
+        tags: {
+            pixiv: ["artist:example", "landscape"],
+            curated: ["favorite"],
+        },
+    });
+}
+```
+
+Domain names must be non-empty strings containing more than whitespace, and every domain's value
+must be an array of strings. Invalid tag data is rejected before the import is queued. The server
+creates missing domains when applying non-empty tags, including their normal tag partitions.
+Empty arrays and an empty object add no tags and create no domains. The same domain assignments
+apply when reusing an existing file without downloading it again.
+
+Tags without a domain, such as `tags: ["artist:example", "landscape"]`, go into the
+`downloader tags` domain. The downloader normalizes that array to
+`tags: {"downloader tags": ["artist:example", "landscape"]}` before queuing the import. An object
+of domain-specific arrays uses its keys directly. The single-domain `tagDomain` import option is
+retired and rejected; `manifest.tagDomain` and the `downloader.tag_domain` server setting no longer
+select a domain. A followed URL uses its own parser's tag assignments.
+
+HyShare places its tags in the source site's full hostname, retaining subdomains and dots. For
+example, `https://testing.mydomain.com:8443/view/...` uses `testing.mydomain.com`. The scheme,
+credentials, port, path, query, and fragment are excluded.
 
 `idhan.import()` never suspends the script: it returns immediately and does not hold the realm open.
 The realm is released as soon as the parser returns while the transfer continues independently. A

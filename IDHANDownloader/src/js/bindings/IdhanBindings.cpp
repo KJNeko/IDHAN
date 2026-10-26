@@ -285,6 +285,53 @@ static std::expected< std::vector< UrlTypeDeclaration >, std::string > importUrl
 	return declarations;
 }
 
+static std::expected< void, std::string > prepareImportTags( Json::Value& options )
+{
+	if ( options.isMember( "tagDomain" ) )
+		return std::unexpected( "idhan.import tagDomain is no longer supported; use tags: {domain: [tags]}" );
+
+	const auto& tags { options[ "tags" ] };
+	if ( tags.isNull() ) return {};
+
+	if ( tags.isArray() )
+	{
+		for ( const auto& tag : tags )
+		{
+			if ( !tag.isString() ) return std::unexpected( "idhan.import tags must contain only strings" );
+		}
+
+		Json::Value grouped { Json::objectValue };
+		grouped[ "downloader tags" ] = tags;
+		options[ "tags" ] = std::move( grouped );
+		return {};
+	}
+
+	if ( !tags.isObject() )
+		return std::unexpected( "idhan.import tags must be an array or an object mapping domains to tag arrays" );
+
+	for ( const auto& domain : tags.getMemberNames() )
+	{
+		if ( domain.find_first_not_of( " \t\r\n\f\v" ) == std::string::npos )
+			return std::unexpected( "idhan.import tags domain names must be non-empty strings" );
+
+		if ( domain.contains( '\0' ) )
+			return std::unexpected( "idhan.import tags domain names must not contain NUL characters" );
+
+		const auto& entries { tags[ domain ] };
+		if ( !entries.isArray() )
+			return std::unexpected( format_ns::format( "idhan.import tags for domain '{}' must be an array", domain ) );
+
+		for ( const auto& tag : entries )
+		{
+			if ( !tag.isString() )
+				return std::unexpected(
+					format_ns::format( "idhan.import tags for domain '{}' must contain only strings", domain ) );
+		}
+	}
+
+	return {};
+}
+
 static JSValue importBinding( JSContext* context, JSValueConst, const int count, JSValueConst* arguments )
 {
 	try
@@ -292,16 +339,17 @@ static JSValue importBinding( JSContext* context, JSValueConst, const int count,
 		if ( count == 0 || !JS_IsObject( arguments[ 0 ] ) )
 			return JS_ThrowTypeError( context, "idhan.import expects an options object" );
 
-		auto options { scriptValueToJson( context, arguments[ 0 ] ) };
+		auto options_e { scriptValueToJson( context, arguments[ 0 ] ) };
 
-		if ( !options ) return JS_ThrowTypeError( context, "%s", options.error().c_str() );
+		if ( !options_e.has_value() ) return JS_ThrowTypeError( context, "%s", options_e.error().c_str() );
 
-		const auto& request { ( *options )[ "request" ] };
+		auto& options { options_e.value() };
+		const auto& request { options[ "request" ] };
 
 		if ( !request.isObject() || !request[ "url" ].isString() || request[ "url" ].asString().empty() )
 			return JS_ThrowTypeError( context, "idhan.import requires request.url" );
 
-		const auto declarations { importUrlTypes( *options ) };
+		const auto declarations { importUrlTypes( options ) };
 		if ( !declarations ) return JS_ThrowTypeError( context, "%s", declarations.error().c_str() );
 
 		auto* execution { executionFor( context ) };
@@ -309,7 +357,10 @@ static JSValue importBinding( JSContext* context, JSValueConst, const int count,
 		if ( execution == nullptr || execution->session == nullptr )
 			return JS_ThrowInternalError( context, "idhan.import has no download session" );
 
-		applyDefaultReferer( ( *options )[ "request" ], execution->parser_url );
+		const auto tags_e { prepareImportTags( options ) };
+		if ( !tags_e.has_value() ) return JS_ThrowTypeError( context, "%s", tags_e.error().c_str() );
+
+		applyDefaultReferer( options[ "request" ], execution->parser_url );
 
 		for ( const auto& [ url, type ] : *declarations )
 		{
@@ -317,7 +368,7 @@ static JSValue importBinding( JSContext* context, JSValueConst, const int count,
 			if ( !saved ) return JS_ThrowInternalError( context, "Setting URL type failed: %s", saved.error().c_str() );
 		}
 
-		execution->session->startImport( *execution, std::move( *options ) );
+		execution->session->startImport( *execution, std::move( options ) );
 		return JS_UNDEFINED;
 	}
 	IDHAN_QJS_TRANSLATE_EXCEPTIONS( context )

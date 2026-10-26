@@ -15,7 +15,7 @@ class DBContext;
 namespace idhan::helpers
 {
 
-//! Creates any missing tags, then maps them onto the record within the named domain. Idempotent.
+//! Creates the domain and any missing tags, then maps them onto the record. Idempotent.
 [[nodiscard]] runtime::Task< std::expected< void, std::string > > associateTags(
 	RecordID record_id,
 	std::vector< std::string > tags,

@@ -1,4 +1,5 @@
-import {parseJsonResponse, z} from "validation";
+import {filenameFromUrl} from "parser";
+import {idSchema, requestJson, z} from "validation";
 
 const pageSize = 200;
 
@@ -17,7 +18,6 @@ export const manifest = {
 
 // Matches the path from a post URL such as https://e621.net/posts/12345.
 const postPath = /^\/posts\/(\d+)\/?$/;
-const idSchema = z.union([z.string(), z.number()]);
 const galleryResponseSchema = z.object({
     posts: z.array(z.object({id: idSchema})),
 });
@@ -138,12 +138,10 @@ export async function gallery(input, idhan) {
     let previousLastId = null;
 
     while (true) {
-        const response = await idhan.request({
+        const {posts} = await requestJson(idhan, galleryResponseSchema, "e621 gallery API", {
             url: apiUrl.href,
             referer: sourceUrl.href,
-            responseType: "text",
         });
-        const {posts} = parseJsonResponse(galleryResponseSchema, response, "e621 gallery API");
 
         if (posts.length === 0) {
             break;
@@ -171,12 +169,10 @@ export async function gallery(input, idhan) {
 export async function post(input, idhan) {
     const id = postId(input.url);
     const sourceUrl = postUrl(id);
-    const response = await idhan.request({
+    const {post} = await requestJson(idhan, postResponseSchema, "e621 post API", {
         url: postDataUrl(id).href,
         referer: sourceUrl.href,
-        responseType: "text",
     });
-    const {post} = parseJsonResponse(postResponseSchema, response, "e621 post API");
 
     if (String(post.id) !== id) {
         throw new Error(`e621 returned post ${post.id} instead of ${id}`);
@@ -189,24 +185,19 @@ export async function post(input, idhan) {
         throw new Error(`e621 post ${id} has no downloadable file`);
     }
 
-    const filename = fileUrl.pathname.split("/").pop();
-
     if (input.flags["e621.followSiblings"]) {
         followSiblings(idhan, post, id);
     }
 
     idhan.import({
-        request: {
-            url: fileUrl.href,
-            referer: sourceUrl.href,
-        },
-        filename,
+        request: {url: fileUrl.href, referer: sourceUrl.href},
+        filename: filenameFromUrl(fileUrl),
         urls: [
             {url: sourceUrl.href, type: "post"},
             {url: fileUrl.href, type: "file"},
         ],
         discoveredUrls: sourceUrls(post.sources),
-        tags: postTags(post),
+        tags: {e621: postTags(post)},
         metadata: {
             site: "e621",
             postId: id,

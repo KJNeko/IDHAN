@@ -574,6 +574,136 @@ export async function post(input, idhan) {
 	CHECK( harness.server.requestCount() == 0 );
 }
 
+TEST_CASE(
+	"Unscoped parser tags use downloader tags and single-domain selectors are retired",
+	"[downloader][session][tag-domain]" )
+{
+	Harness harness {};
+	std::string manifest {};
+	std::string domain_option {};
+	bool invalid {};
+
+	SECTION( "No domain uses downloader tags" )
+	{}
+	SECTION( "An obsolete manifest domain does not change the default" )
+	{
+		manifest = R"(export const manifest = {tagDomain: "parser tags"};)";
+	}
+	SECTION( "Single-domain import selectors are rejected" )
+	{
+		domain_option = R"(tagDomain: "other tags",)";
+		invalid = true;
+	}
+
+	harness.imports.reusable = ImportResult { .record_id = 42 };
+	harness.parsers.write(
+		"test.js",
+		std::format(
+			R"JS(
+{}
+export function post(input, idhan) {{
+    idhan.import({{{} request: {{url: new URL("/file.png", input.url).href}}, tags: ["test"]}});
+}}
+)JS",
+			manifest,
+			domain_option ) );
+	harness.configure( R"([{"export":"post","path":"/post"}])" );
+	const auto session { harness.session( harness.server.url( "/post" ) ) };
+	REQUIRE( session->submit( harness.server.url( "/post" ) ).has_value() );
+	session->wait();
+
+	if ( invalid )
+	{
+		REQUIRE( harness.observer.failures.size() == 1 );
+		CHECK( harness.observer.failures.front().second.contains( "tagDomain is no longer supported" ) );
+		CHECK( harness.imports.reuse_requests.empty() );
+		return;
+	}
+
+	idhan::test::checkNoFailures( harness.observer );
+	REQUIRE( harness.imports.reuse_requests.size() == 1 );
+	const auto& options { harness.imports.reuse_requests.front().options };
+	CHECK_FALSE( options.isMember( "tagDomain" ) );
+	REQUIRE( options[ "tags" ].isObject() );
+	CHECK( options[ "tags" ].size() == 1 );
+	CHECK( options[ "tags" ][ "downloader tags" ][ 0 ].asString() == "test" );
+}
+
+TEST_CASE( "A parser sends tags to multiple explicit domains", "[downloader][session][tag-domain]" )
+{
+	Harness harness {};
+	harness.imports.reusable = ImportResult { .record_id = 42 };
+	harness.parsers.write( "test.js", R"JS(
+export function post(input, idhan) {
+    idhan.import({
+        request: {url: new URL("/file.png", input.url).href},
+        tags: {pixiv: ["artist:example", "landscape"], curated: ["favorite"], "mydomain.com": ["shared"]},
+    });
+}
+)JS" );
+	harness.configure( R"([{"export":"post","path":"/post"}])" );
+	const auto session { harness.session( harness.server.url( "/post" ) ) };
+	REQUIRE( session->submit( harness.server.url( "/post" ) ).has_value() );
+	session->wait();
+	idhan::test::checkNoFailures( harness.observer );
+	REQUIRE( harness.imports.reuse_requests.size() == 1 );
+	const auto& options { harness.imports.reuse_requests.front().options };
+	CHECK_FALSE( options.isMember( "tagDomain" ) );
+	REQUIRE( options[ "tags" ].isObject() );
+	CHECK( options[ "tags" ].size() == 3 );
+	CHECK( options[ "tags" ][ "pixiv" ][ 0 ].asString() == "artist:example" );
+	CHECK( options[ "tags" ][ "pixiv" ][ 1 ].asString() == "landscape" );
+	CHECK( options[ "tags" ][ "curated" ][ 0 ].asString() == "favorite" );
+	CHECK( options[ "tags" ][ "mydomain.com" ][ 0 ].asString() == "shared" );
+}
+
+TEST_CASE( "Invalid tag domain maps are rejected before dispatch", "[downloader][session][tag-domain]" )
+{
+	Harness harness {};
+	std::string tags {};
+	SECTION( "Blank domain names" )
+	{
+		tags = R"({"  ":["tag"]})";
+	}
+	SECTION( "NUL in domain names" )
+	{
+		tags = R"({"bad\u0000domain":["tag"]})";
+	}
+	SECTION( "Domain tags must be arrays" )
+	{
+		tags = R"({"pixiv":"tag"})";
+	}
+	SECTION( "Domain tags must be strings" )
+	{
+		tags = R"({"pixiv":["tag",42]})";
+	}
+	SECTION( "Unscoped arrays must also contain strings" )
+	{
+		tags = R"(["tag",42])";
+	}
+	SECTION( "Tags cannot be a scalar" )
+	{
+		tags = "42";
+	}
+
+	harness.parsers.write(
+		"test.js",
+		std::format(
+			R"JS(
+export function post(input, idhan) {{
+    idhan.import({{request: {{url: new URL("/file.png", input.url).href}}, tags: {}}});
+}}
+)JS",
+			tags ) );
+	harness.configure( R"([{"export":"post","path":"/post"}])" );
+	const auto session { harness.session( harness.server.url( "/post" ) ) };
+	REQUIRE( session->submit( harness.server.url( "/post" ) ).has_value() );
+	session->wait();
+	REQUIRE( harness.observer.failures.size() == 1 );
+	CHECK( harness.observer.failures.front().second.contains( "idhan.import tags" ) );
+	CHECK( harness.imports.reuse_requests.empty() );
+}
+
 TEST_CASE( "Direct media URLs import without a parser", "[downloader][session][direct]" )
 {
 	Harness harness {};
@@ -749,7 +879,8 @@ export function page(input, idhan) {
 	{
 		CHECK( requests == 0 );
 		CHECK( harness.observer.imports.front().record_id == 42 );
-		CHECK( harness.imports.reuse_requests.front().options[ "tags" ][ 0 ].asString() == "test" );
+		CHECK(
+			harness.imports.reuse_requests.front().options[ "tags" ][ "downloader tags" ][ 0 ].asString() == "test" );
 		CHECK(
 			harness.imports.reuse_requests.front().options[ "urls" ][ 0 ][ "url" ].asString()
 		    == harness.server.url( "/page" ) );

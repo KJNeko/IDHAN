@@ -15,11 +15,128 @@ static void copyPackages( Harness& harness )
 	const auto packages { harness.parsers.root() / "packages" };
 	std::filesystem::create_directories( packages );
 
-	for ( const std::string_view name : { "zod.js", "validation.js" } )
+	for ( const std::string_view name : { "zod.js", "validation.js", "parser.js" } )
 	{
-		std::filesystem::copy_file(
-			std::filesystem::path { IDHAN_DOWNLOADER_PARSER_DIR } / "packages" / name, packages / name );
+		const auto source {
+			name == "zod.js" ? std::filesystem::path { IDHAN_DOWNLOADER_PARSER_DIR } / "packages" / name :
+							   std::filesystem::path { IDHAN_SOURCE_DIR } / "IDHANDownloader/premade/packages" / name
+		};
+		std::filesystem::copy_file( source, packages / name );
 	}
+}
+
+TEST_CASE( "Shipped parsers preserve their import and URL contracts", "[downloader][parser-contracts]" )
+{
+	std::string entry {};
+	SECTION( "e621 posts, siblings and galleries" )
+	{
+		entry = "e621Contract";
+	}
+	SECTION( "Gelbooru tag categories and credentials" )
+	{
+		entry = "gelbooruContract";
+	}
+	SECTION( "Pixiv pages and artist galleries" )
+	{
+		entry = "pixivContract";
+	}
+	SECTION( "HyShare hostnames, redirects and identity" )
+	{
+		entry = "hyshareContract";
+	}
+	SECTION( "pawchive attachments and creator pagination" )
+	{
+		entry = "pawchiveContract";
+	}
+	SECTION( "Shared import and response helpers" )
+	{
+		entry = "helpersContract";
+	}
+
+	Harness harness {};
+	copyPackages( harness );
+	const std::filesystem::path source { IDHAN_SOURCE_DIR };
+	for ( const std::string_view name : { "e621.js", "gelbooru.js", "hyshare.js", "pawchive.js", "pixiv.js" } )
+	{
+		std::filesystem::copy_file( source / "IDHANDownloader/premade" / name, harness.parsers.root() / name );
+	}
+	std::filesystem::copy_file(
+		source / "tests/downloader/testdata/parser-contracts.js", harness.parsers.root() / "test.js" );
+	harness.parsers.write( "packages/pawchive-api.js", R"JS(
+export class ApiClient {
+    constructor() { this.defaultHeaders = {}; }
+}
+function response(args) {
+    globalThis.pawchiveCalls.push(args);
+    if (globalThis.pawchiveResponses.length === 0) throw new Error("Unexpected pawchive API call");
+    return Promise.resolve(globalThis.pawchiveResponses.shift());
+}
+export class PostsApi {
+    serviceUserCreatorIdGet(...args) { return response(args); }
+    serviceUserCreatorIdPostPostIdGet(...args) { return response(args); }
+}
+)JS" );
+	harness.configure( std::format( R"([{{"export":"{}","path":"/page"}}])", entry ) );
+	const auto session { harness.session( harness.server.url( "/page" ) ) };
+	REQUIRE( session->submit( harness.server.url( "/page" ) ).has_value() );
+	session->wait();
+	idhan::test::checkNoFailures( harness.observer );
+	CHECK( harness.observer.completed.size() == 1 );
+}
+
+TEST_CASE( "HyShare assigns tags to the full source hostname", "[downloader][modules][hyshare]" )
+{
+	Harness harness {};
+	copyPackages( harness );
+	std::filesystem::copy_file(
+		std::filesystem::path { IDHAN_DOWNLOADER_PARSER_DIR } / "hyshare.js", harness.parsers.root() / "hyshare.js" );
+	harness.parsers.write( "test.js", R"JS(
+import {post} from "./hyshare.js";
+
+const hash = "a".repeat(64);
+
+function mockHost(expectedHostname) {
+    return {
+        imports: 0,
+        async request(request) {
+            return {status: 200, url: request.url, body: JSON.stringify({
+                hash, ext: ".png",
+                tag_services_to_tags: {one: ["landscape"], two: ["landscape", "favorite"]},
+            })};
+        },
+        import(options) {
+            const domains = Object.keys(options.tags);
+            if (domains.length !== 1 || domains[0] !== expectedHostname) {
+                throw new Error(`Wrong tag domains: ${JSON.stringify(domains)}`);
+            }
+            if (options.tags[expectedHostname].slice().sort().join(",") !== "favorite,landscape") {
+                throw new Error("HyShare tags were lost or duplicated");
+            }
+            this.imports += 1;
+        },
+    };
+}
+
+export async function page() {
+    const cases = [
+        ["https://testing.mydomain.com:8443", "testing.mydomain.com"],
+        ["https://other.mydomain.com", "other.mydomain.com"],
+        ["https://user:password@testing.example.co.uk:8443", "testing.example.co.uk"],
+        ["http://127.0.0.1:9000", "127.0.0.1"],
+    ];
+    for (const [base, hostname] of cases) {
+        const host = mockHost(hostname);
+        await post({url: `${base}/view/${hash}?source=example#fragment`}, host);
+        if (host.imports !== 1) throw new Error("HyShare did not import the file");
+    }
+}
+)JS" );
+	harness.configure( R"([{"export":"page","path":"/page"}])" );
+	const auto session { harness.session( harness.server.url( "/page" ) ) };
+	REQUIRE( session->submit( harness.server.url( "/page" ) ).has_value() );
+	session->wait();
+	idhan::test::checkNoFailures( harness.observer );
+	CHECK( harness.observer.completed.size() == 1 );
 }
 
 TEST_CASE( "A parser can import a helper module beside it", "[downloader][modules]" )

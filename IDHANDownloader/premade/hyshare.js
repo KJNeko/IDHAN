@@ -1,4 +1,4 @@
-import {parseJsonResponse, z} from "validation";
+import {parseJsonResponse, requestJson, z} from "validation";
 
 export const manifest = {
     id: "zip.lolicon.share",
@@ -90,7 +90,7 @@ function discoveredUrls(knownUrls) {
 }
 
 function wellKnownUrl(url) {
-    return new URL(".well-known/hyshare", url);
+    return new URL("/.well-known/hyshare", url);
 }
 
 export async function gallery(input, idhan) {
@@ -109,11 +109,9 @@ export async function gallery(input, idhan) {
 }
 
 export async function checkWellKnown(input, idhan) {
-    const response = await idhan.request({
+    await requestJson(idhan, wellKnownResponseSchema, "HyShare well-known endpoint", {
         url: wellKnownUrl(input.url).href,
-        responseType: "text",
     });
-    parseJsonResponse(wellKnownResponseSchema, response, "HyShare well-known endpoint");
 }
 
 export async function post(input, idhan) {
@@ -125,20 +123,22 @@ export async function post(input, idhan) {
     const post = parseJsonResponse(postResponseSchema, response, "HyShare post API");
     const hash = post.hash;
 
+    if (hash !== expectedHash) {
+        throw new Error(`HyShare returned hash ${hash} instead of ${expectedHash}`);
+    }
+
     const sourceUrl = postUrl(response.url, hash);
     const downloadUrl = fileUrl(response.url, hash);
 
     idhan.import({
-        request: {
-            url: downloadUrl.href,
-        },
+        request: {url: downloadUrl.href, referer: sourceUrl.href},
         filename: `${hash}${post.ext}`,
         urls: [
             {url: sourceUrl.href, type: "post"},
             {url: downloadUrl.href, type: "file"},
         ],
         discoveredUrls: discoveredUrls(post.detailed_known_urls),
-        tags: postTags(post.tag_services_to_tags),
+        tags: {[sourceUrl.hostname]: postTags(post.tag_services_to_tags)},
         metadata: {
             site: "hyshare",
             sha256: hash,

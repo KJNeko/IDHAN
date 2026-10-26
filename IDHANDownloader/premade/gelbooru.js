@@ -1,4 +1,5 @@
-import {parseJsonResponse, requireOk, z} from "validation";
+import {filenameFromUrl} from "parser";
+import {idSchema, parseJsonResponse, recordsSchema, requireOk, z} from "validation";
 
 export const manifest = {
     id: "com.gelbooru",
@@ -39,10 +40,6 @@ export function configure(server) {
     };
 }
 
-function absoluteUrl(value, base) {
-    return new URL(value, base);
-}
-
 // Matches a decimal post ID such as 12345.
 const decimalId = /^\d+$/;
 
@@ -65,12 +62,6 @@ function postUrl(id) {
     return url;
 }
 
-function filenameFromUrl(url) {
-    const pathname = url.pathname;
-
-    return pathname.slice(pathname.lastIndexOf("/") + 1);
-}
-
 const API_PAGE_SIZE = 100;
 
 const TAG_NAMESPACES = {
@@ -80,7 +71,6 @@ const TAG_NAMESPACES = {
     4: "character",
     5: "meta",
 };
-const idSchema = z.union([z.string(), z.number()]);
 const postSchema = z.object({
     id: idSchema,
     file_url: z.string().min(1),
@@ -91,29 +81,6 @@ const tagSchema = z.object({
     name: z.string(),
     type: z.coerce.number(),
 });
-
-// Gelbooru varies between omitted, singleton, wrapped, and bare-array results.
-function recordsSchema(member, entrySchema) {
-    const entriesSchema = z.union([entrySchema, z.array(entrySchema)]).nullish();
-
-    return z.union([
-        z.array(entrySchema),
-        z.object({[member]: entriesSchema}),
-        z.null(),
-    ]).transform((body) => {
-        if (Array.isArray(body)) {
-            return body;
-        }
-
-        const records = body?.[member];
-
-        if (records === undefined || records === null) {
-            return [];
-        }
-
-        return Array.isArray(records) ? records : [records];
-    });
-}
 
 const postRecordsResponseSchema = recordsSchema("post", postSchema);
 const tagRecordsResponseSchema = recordsSchema("tag", tagSchema);
@@ -226,7 +193,7 @@ function startingPage(url) {
 function importPost(idhan, input, entry, types) {
     const id = String(entry.id);
     const sourceUrl = postUrl(id);
-    const fileUrl = absoluteUrl(entry.file_url, input.url);
+    const fileUrl = new URL(entry.file_url, input.url);
     const originalSourceUrl = entry.source?.trim() ?? "";
     const discoveredUrls = [];
 
@@ -239,17 +206,14 @@ function importPost(idhan, input, entry, types) {
     }
 
     idhan.import({
-        request: {
-            url: fileUrl.href,
-            referer: sourceUrl.href,
-        },
+        request: {url: fileUrl.href, referer: sourceUrl.href},
         filename: filenameFromUrl(fileUrl),
         urls: [
             {url: sourceUrl.href, type: "post"},
             {url: fileUrl.href, type: "file"},
         ],
         discoveredUrls,
-        tags: namespacedTags(tagNames(entry), types),
+        tags: {gelbooru: namespacedTags(tagNames(entry), types)},
         metadata: {
             site: "gelbooru",
             postId: id,
@@ -278,7 +242,7 @@ export async function gallery(input, idhan) {
 
     let page = startingPage(input.url);
 
-    for (; ;) {
+    while (true) {
         const url = apiUrl(input.url, credentials, "post", {
             limit: String(API_PAGE_SIZE),
             pid: String(page),

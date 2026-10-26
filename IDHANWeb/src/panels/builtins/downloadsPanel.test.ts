@@ -13,6 +13,7 @@ import {
     sessionRecords,
     stateLabel,
     statusLabel,
+    summarizeDownloadSession,
     subtreeRecords,
     toggleStatus,
 } from './DownloadsPanel';
@@ -54,6 +55,35 @@ describe('download tree projection', () => {
 
     it('projects unique records from every root in a session', () => {
         expect(sessionRecords(tree)).toEqual([10, 20, 40, 50]);
+    });
+});
+
+describe('download session summary', () => {
+    it('counts unique new and existing files and includes already seen skips in progress totals', () => {
+        const repeatedImport = {...node(3, 10), note: 'Already imported earlier in this session'};
+        const existingImport = {...node(4, 20), note: 'Already in the database'};
+        const alreadySeen = {...node(5, null, [], 'skipped'), note: 'Already seen in this session'};
+        const tree = [node(1, null, [
+            repeatedImport,
+            node(2, 10),
+            existingImport,
+            {...existingImport, id: 9},
+            alreadySeen,
+            node(6, null, [], 'pending'),
+            node(7, null, [], 'processing'),
+            node(8, null, [], 'failed'),
+            node(10, null, [], 'skipped'),
+        ])];
+
+        expect(summarizeDownloadSession(tree)).toEqual({
+            files: 2,
+            newlyImported: 1,
+            existing: 1,
+            pending: 1,
+            processing: 1,
+            failed: 1,
+            skipped: 2,
+        });
     });
 });
 
@@ -140,7 +170,7 @@ describe('display state', () => {
 
 describe('error log status filter', () => {
     it('names a status by its code and a missing one as no response', () => {
-        expect(statusLabel(404)).toBe('404');
+        expect(statusLabel(404)).toBe('404 Not Found');
         expect(statusLabel(null)).toBe('no response');
     });
 

@@ -91,7 +91,7 @@ async function call(request, schema, description) {
     return parseResponse(schema, response, `pawchive ${description}`);
 }
 
-function importFile(idhan, file, source, metadata) {
+function importPostFile(idhan, file, source, metadata) {
     if (!file) {
         return;
     }
@@ -105,12 +105,12 @@ function importFile(idhan, file, source, metadata) {
             {url: source.href, type: "post"},
             {url: url.href, type: "file"},
         ],
-        tags: [`service:${metadata.service}`, `creator:${metadata.creatorId}`],
+        tags: {pawchive: [`service:${metadata.service}`, `creator:${metadata.creatorId}`]},
         metadata,
     });
 }
 
-async function creator(input, idhan, route) {
+async function creator(idhan, route) {
     const posts = api();
     let offset = 0;
 
@@ -152,11 +152,11 @@ async function post(input, idhan, route) {
         added: found.added?.toISOString(),
     };
 
-    importFile(idhan, found.file, source, metadata);
+    importPostFile(idhan, found.file, source, metadata);
 
     if (input.flags["pawchive.importAttachments"]) {
         for (const [index, attachment] of found.attachments.entries()) {
-            importFile(idhan, attachment, source, {...metadata, attachment: index});
+            importPostFile(idhan, attachment, source, {...metadata, attachment: index});
         }
     }
 }
@@ -169,7 +169,7 @@ export async function route(input, idhan) {
     }
 
     if (found.kind === "creator") {
-        return creator(input, idhan, found);
+        return creator(idhan, found);
     }
 
     return post(input, idhan, found);

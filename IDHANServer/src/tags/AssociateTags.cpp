@@ -1,9 +1,8 @@
 #include "AssociateTags.hpp"
 
-#include <format>
 #include <utility>
 
-#include "httpapi/tagHelpers.hpp"
+#include "db/tagDomains.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "splitTag.hpp"
 
@@ -20,8 +19,8 @@ runtime::Task< std::expected< void, std::string > > associateTags(
 
 	try
 	{
-		const auto domain { co_await httpapi::findTagDomain( tag_domain, db ) };
-		if ( !domain ) co_return std::unexpected( std::format( "Tag domain '{}' does not exist", tag_domain ) );
+		auto transaction { co_await db.transaction() };
+		const auto domain_id { co_await db::getOrCreateTagDomain( transaction, std::move( tag_domain ) ) };
 
 		std::vector< std::string > namespaces {};
 		std::vector< std::string > subtags {};
@@ -39,7 +38,7 @@ runtime::Task< std::expected< void, std::string > > associateTags(
 		create_bindings.bind( namespaces );
 		create_bindings.bind( subtags );
 		const auto created {
-			co_await db
+			co_await transaction
 				.query( "SELECT tag_id FROM createbatchtags($1::TEXT[], $2::TEXT[])", std::move( create_bindings ) )
 				.rows< TagID >()
 		};
@@ -51,13 +50,14 @@ runtime::Task< std::expected< void, std::string > > associateTags(
 		db::DBBindings mapping_bindings {};
 		mapping_bindings.bind( record_id );
 		mapping_bindings.bind( tag_ids );
-		mapping_bindings.bind( domain->id );
-		co_await db
+		mapping_bindings.bind( domain_id );
+		co_await transaction
 			.query(
 				"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
 				"SELECT $1, unnest($2::" TAG_PG_TYPE_NAME "[]), $3 ON CONFLICT DO NOTHING",
 				std::move( mapping_bindings ) )
 			.result();
+		co_await transaction.commit();
 	}
 	catch ( const std::exception& error )
 	{

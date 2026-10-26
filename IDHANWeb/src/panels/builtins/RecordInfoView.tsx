@@ -36,6 +36,21 @@ function formatBitrate(bitsPerSecond: number): string {
     return `${bitsPerSecond} bps`;
 }
 
+function formatFileTimestamp(microseconds: number): string {
+    const date = new Date(microseconds / 1000);
+    if (!Number.isFinite(date.getTime())) return '-';
+
+    return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short',
+    });
+}
+
 const SIMPLE_TYPE_LABELS: Record<string, string> = {
     none: 'Unknown',
     image: 'Image',
@@ -56,6 +71,8 @@ const KNOWN = new Set([
     'tags',
     'urls',
     'size',
+    'file_mtime',
+    'file_ctime',
     'mime',
     'extension',
     'parsed',
@@ -111,6 +128,8 @@ const bool = (value: unknown): boolean | undefined => (typeof value === 'boolean
 export function RecordInfoView({ info }: { info: RecordInfo }) {
     const sha256 = info.hashes?.sha256;
     const size = num(info.size);
+    const fileModified = num(info.file_mtime);
+    const fileCreated = num(info.file_ctime);
     const width = num(info.width);
     const height = num(info.height);
     const channels = num(info.channels);
@@ -166,6 +185,8 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
           {formatBytes(size)} <span className="muted">({size.toLocaleString()} B)</span>
         </Row>
       )}
+        {fileModified !== undefined && <Row label="File modified">{formatFileTimestamp(fileModified)}</Row>}
+        {fileCreated !== undefined && <Row label="File created">{formatFileTimestamp(fileCreated)}</Row>}
 
         {width !== undefined && height !== undefined && (
             <Row label="Dimensions">

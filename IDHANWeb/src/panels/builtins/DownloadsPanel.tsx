@@ -77,10 +77,124 @@ function countStates(node: DownloadSessionUrlNode, into: Map<string, number>): M
     return into;
 }
 
+function countImportOutcomes(
+    nodes: DownloadSessionUrlNode[],
+    into: { processed: number; newlyImported: number },
+): void {
+    for (const node of nodes) {
+        if (node.state === 'completed' && node.record_id !== null) {
+            if (node.note === null) into.newlyImported += 1;
+            else into.processed += 1;
+        }
+
+        countImportOutcomes(node.children, into);
+    }
+}
+
+export function summarizeDownloadSession(nodes: DownloadSessionUrlNode[]) {
+    const records = new Set<number>();
+    const newRecords = new Set<number>();
+    const counts = {pending: 0, processing: 0, failed: 0, skipped: 0};
+    const remaining = [...nodes];
+
+    while (remaining.length > 0) {
+        const node = remaining.pop()!;
+        remaining.push(...node.children);
+        if (node.state !== 'completed') counts[node.state] += 1;
+
+        if (node.record_id === null) continue;
+
+        records.add(node.record_id);
+        if (node.state === 'completed' && !isImportedMarker(node.note)) newRecords.add(node.record_id);
+    }
+
+    return {
+        files: records.size,
+        newlyImported: newRecords.size,
+        existing: records.size - newRecords.size,
+        ...counts,
+    };
+}
+
+function DownloadSessionSummary({nodes}: { nodes: DownloadSessionUrlNode[] | undefined }) {
+    const counts = useMemo(() => nodes === undefined ? undefined : summarizeDownloadSession(nodes), [nodes]);
+    if (counts === undefined) return <p className="download-session-summary-loading muted">Loading summary…</p>;
+
+    return (
+        <dl className="download-session-summary" aria-label="Download session summary">
+            <div title="Unique files identified so far. Pending URLs are counted separately.">
+                <dt>Files found</dt>
+                <dd>{counts.files.toLocaleString()}</dd>
+            </div>
+            <div className="download-session-summary-new" title="Unique files newly imported during this session.">
+                <dt>New</dt>
+                <dd>{counts.newlyImported.toLocaleString()}</dd>
+            </div>
+            <div title="Unique files that were already in the library.">
+                <dt>Existing</dt>
+                <dd>{counts.existing.toLocaleString()}</dd>
+            </div>
+            {counts.pending > 0 && <div>
+                <dt>URLs queued</dt>
+                <dd>{counts.pending.toLocaleString()}</dd>
+            </div>}
+            {counts.processing > 0 && <div>
+                <dt>URLs active</dt>
+                <dd>{counts.processing.toLocaleString()}</dd>
+            </div>}
+            {counts.failed > 0 && <div className="download-session-summary-failed">
+                <dt>URLs failed</dt>
+                <dd>{counts.failed.toLocaleString()}</dd>
+            </div>}
+            {counts.skipped > 0 && <div>
+                <dt>URLs skipped</dt>
+                <dd>{counts.skipped.toLocaleString()}</dd>
+            </div>}
+        </dl>
+    );
+}
+
 /** A request that never got a response has no status to show. */
 export function statusLabel(status: number | null): string {
-    return status === null ? 'no response' : String(status);
+    if (status === null) return 'no response';
+
+    const phrase = HTTP_STATUS_PHRASES[status];
+    return phrase === undefined ? `HTTP ${status}` : `${status} ${phrase}`;
 }
+
+const HTTP_STATUS_PHRASES: Record<number, string> = {
+    100: 'Continue',
+    101: 'Switching Protocols',
+    200: 'OK',
+    201: 'Created',
+    202: 'Accepted',
+    204: 'No Content',
+    206: 'Partial Content',
+    301: 'Moved Permanently',
+    302: 'Found',
+    304: 'Not Modified',
+    307: 'Temporary Redirect',
+    308: 'Permanent Redirect',
+    400: 'Bad Request',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'Not Found',
+    405: 'Method Not Allowed',
+    408: 'Request Timeout',
+    409: 'Conflict',
+    410: 'Gone',
+    413: 'Content Too Large',
+    414: 'URI Too Long',
+    415: 'Unsupported Media Type',
+    418: "I'm a Teapot",
+    422: 'Unprocessable Content',
+    429: 'Too Many Requests',
+    500: 'Internal Server Error',
+    501: 'Not Implemented',
+    502: 'Bad Gateway',
+    503: 'Service Unavailable',
+    504: 'Gateway Timeout',
+};
 
 export type StatusFilter = readonly (number | null)[];
 
@@ -98,6 +212,61 @@ function shortUrl(url: string): string {
     } catch {
         return url;
     }
+}
+
+function openDownloadUrl(url: string): void {
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function isKnownUrlMarker(note: string | null): boolean {
+    return note !== null && /^already (seen|in the database|imported earlier in this session)/i.test(note);
+}
+
+function isImportedMarker(note: string | null): boolean {
+    return note !== null && /^already (in the database|imported earlier in this session)/i.test(note);
+}
+
+function rowStatusLabel(
+    state: DownloadDisplayState,
+    note: string | null,
+): string {
+    if (state === 'skipped' && note !== null && /^already seen/i.test(note)) {
+        return 'skipped (Already Seen)';
+    }
+
+    return stateLabel(state);
+}
+
+function downloadRowRank(state: DownloadDisplayState, note: string | null): number {
+    if (state === 'pending' || state === 'processing' || state === 'pending-children') return 0;
+    if (state === 'skipped' && note !== null && /^already seen/i.test(note)) return 3;
+    if (state === 'completed') return 1;
+    return 2;
+}
+
+function completedUrlGroup(url: string): string {
+    try {
+        return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    } catch {
+        return url.toLowerCase();
+    }
+}
+
+function sortDownloadRows<T extends DownloadSessionUrlJob>(
+    rows: T[],
+    getState: (row: T) => DownloadDisplayState,
+): T[] {
+    return rows
+        .map((row, index) => ({row, index}))
+        .sort((left, right) => (
+            downloadRowRank(getState(left.row), left.row.note) - downloadRowRank(getState(right.row), right.row.note)
+            || (getState(left.row) === 'completed' && getState(right.row) === 'completed'
+                ? completedUrlGroup(left.row.url).localeCompare(completedUrlGroup(right.row.url))
+                || left.row.url.localeCompare(right.row.url)
+                : 0)
+            || left.index - right.index
+        ))
+        .map(({row}) => row);
 }
 
 export function parseNewlineUrlList(value: string): string[] {
@@ -154,12 +323,15 @@ function ErrorLog({count, log, selected, open, onToggle, onToggleStatus, onClear
                     ) : (
                         <ul className="download-error-list">
                             {log.errors.map((entry: DownloadSessionError) => (
-                                <li key={entry.id}>
-                                    <span className="download-error-status">{statusLabel(entry.status)}</span>
-                                    <span className="grow" title={entry.url}>{shortUrl(entry.url)}</span>
-                                    <span className="muted">
-                                        {new Date(entry.occurred_at * 1000).toLocaleTimeString()}
-                                    </span>
+                                <li key={entry.id} className="download-error-item">
+                                    <div className="download-error-head">
+                                        <span className="download-error-status">{statusLabel(entry.status)}</span>
+                                        <time className="download-error-time"
+                                              dateTime={new Date(entry.occurred_at * 1000).toISOString()}>
+                                            {new Date(entry.occurred_at * 1000).toLocaleTimeString()}
+                                        </time>
+                                    </div>
+                                    <span className="download-error-url" title={entry.url}>{shortUrl(entry.url)}</span>
                                     {entry.message && <pre className="download-error-message">{entry.message}</pre>}
                                 </li>
                             ))}
@@ -222,12 +394,20 @@ function TreeRow({
                     type="button"
                     className="download-tree-url"
                     title={node.url}
-                    onClick={() => onSelect(node)}
+                    onClick={(event) => {
+                        if (event.ctrlKey) {
+                            openDownloadUrl(node.url);
+                            return;
+                        }
+                        onSelect(node);
+                    }}
+                    onDoubleClick={() => openDownloadUrl(node.url)}
                 >
-                    {shortUrl(node.url)}
+                    <span className="download-tree-url-text">{shortUrl(node.url)}</span>
+                    {isImportedMarker(node.note) && <span className="download-tree-url-marker">Already Imported</span>}
                 </button>
                 {node.record_id !== null && <span className="download-tree-record">#{node.record_id}</span>}
-                <span className="download-tree-state">{stateLabel(state)}</span>
+                <span className="download-tree-state">{rowStatusLabel(state, node.note)}</span>
                 {TERMINAL.has(node.state) && (
                     <button type="button" className="download-tree-retry" onClick={() => onRetry(node.id)}>
                         Retry
@@ -239,7 +419,7 @@ function TreeRow({
                     <pre className="download-tree-error">{node.error}</pre>
                 </li>
             )}
-            {node.note && (
+            {node.note && !isKnownUrlMarker(node.note) && (
                 <li className="download-tree-detail" style={{paddingLeft: `${1.9 + depth * 0.85}rem`}}>
                     <span className="muted">{node.note}</span>
                 </li>
@@ -269,7 +449,7 @@ function TreeRow({
                     </div>
                 </li>
             )}
-            {open && node.children.map((child) => (
+            {open && sortDownloadRows(node.children, displayState).map((child) => (
                 <TreeRow
                     key={child.id}
                     node={child}
@@ -559,7 +739,12 @@ function DownloadsPanel({host}: PanelProps) {
     const summary = useMemo(() => {
         const counts = new Map<string, number>();
         for (const roots of Object.values(trees)) for (const root of roots) countStates(root, counts);
-        return [...counts.entries()].sort(([a], [b]) => a.localeCompare(b));
+        return [...counts.entries()].filter(([state]) => state !== 'completed').sort(([a], [b]) => a.localeCompare(b));
+    }, [trees]);
+    const importOutcomes = useMemo(() => {
+        const counts = {processed: 0, newlyImported: 0};
+        for (const roots of Object.values(trees)) countImportOutcomes(roots, counts);
+        return counts;
     }, [trees]);
 
     return (
@@ -581,6 +766,8 @@ function DownloadsPanel({host}: PanelProps) {
                     Flat list
                 </label>
                 <span className={live ? 'download-tree-live' : 'muted'}>{live ? 'Live' : 'Reconnecting'}</span>
+                <span
+                    className="download-tree-tally">{importOutcomes.processed} Processed, {importOutcomes.newlyImported} New</span>
                 {summary.map(([state, count]) => (
                     <span key={state} className={`download-tree-tally state-${state}`}>
                         {count} {stateLabel(state as DownloadDisplayState)}
@@ -605,6 +792,7 @@ function DownloadsPanel({host}: PanelProps) {
                             </button>
                             <button type="button" onClick={() => void destroy(session)}>Delete</button>
                         </header>
+                        <DownloadSessionSummary nodes={trees[session.id]}/>
                         <ErrorLog
                             count={session.error_count}
                             log={errorLogs[session.id]}
@@ -616,30 +804,51 @@ function DownloadsPanel({host}: PanelProps) {
                         />
                         {flatten ? (
                             <ul className="download-tree">
-                                {(flat[session.id] ?? []).map((entry) => (
+                                {sortDownloadRows(flat[session.id] ?? [], flatDisplayState).map((entry) => (
                                     <li key={entry.id} className="download-tree-flat">
                                         <button
                                             type="button"
                                             className={`download-tree-url${selectedId === entry.id ? ' is-selected' : ''}`}
                                             title={entry.url}
-                                            onClick={() => selectFlat(entry)}
+                                            onClick={(event) => {
+                                                if (event.ctrlKey) {
+                                                    openDownloadUrl(entry.url);
+                                                    return;
+                                                }
+                                                selectFlat(entry);
+                                            }}
+                                            onDoubleClick={() => openDownloadUrl(entry.url)}
                                         >
-                                            {shortUrl(entry.url)}
+                                            <span className="download-tree-url-text">{shortUrl(entry.url)}</span>
+                                            {isImportedMarker(entry.note) &&
+                                                <span className="download-tree-url-marker">Already Imported</span>}
                                         </button>
                                         <span className="download-tree-state">
-                                            {stateLabel(flatDisplayState(entry))}
+                                            {rowStatusLabel(flatDisplayState(entry), entry.note)}
                                         </span>
                                         <p className="muted">
                                             {entry.urls.length} discovered, {entry.record_ids.length} imported
                                         </p>
                                         <ul className="download-tree-flat-urls">
-                                            {entry.urls.map((child: DownloadSessionUrlJob) => (
+                                            {sortDownloadRows(entry.urls, (child) => child.state).map((child: DownloadSessionUrlJob) => (
                                                 <li key={child.id} className={`state-${child.state}`}>
-                                                    <span className="grow"
-                                                          title={child.url}>{shortUrl(child.url)}</span>
+                                                    <span
+                                                        className="grow download-tree-child-url"
+                                                        title={child.url}
+                                                        onClick={(event) => {
+                                                            if (event.ctrlKey) openDownloadUrl(child.url);
+                                                        }}
+                                                        onDoubleClick={() => openDownloadUrl(child.url)}
+                                                    >
+                                                        <span
+                                                            className="download-tree-url-text">{shortUrl(child.url)}</span>
+                                                        {isImportedMarker(child.note) && <span
+                                                            className="download-tree-url-marker">Already Imported</span>}
+                                                    </span>
                                                     {child.record_id !== null && <span
                                                         className="download-tree-record">#{child.record_id}</span>}
-                                                    <span className="download-tree-state">{child.state}</span>
+                                                    <span
+                                                        className="download-tree-state">{rowStatusLabel(child.state, child.note)}</span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -648,7 +857,7 @@ function DownloadsPanel({host}: PanelProps) {
                             </ul>
                         ) : (
                             <ul className="download-tree">
-                                {(trees[session.id] ?? []).map((root) => (
+                                {sortDownloadRows(trees[session.id] ?? [], displayState).map((root) => (
                                     <TreeRow
                                         key={root.id}
                                         node={root}
