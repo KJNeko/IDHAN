@@ -449,9 +449,27 @@ export interface DebugLane {
     active: boolean;
 }
 
+export interface DebugModule {
+    library_index: number;
+    module_index: number;
+    library: string;
+    name: string;
+    /** Includes calls waiting for a worker thread or the module's serialization lock. */
+    queued: number;
+    /** Includes module code waiting for callbacks to finish. */
+    running: number;
+    /** Live processes for the shared library, including isolated callback workers. */
+    workers: number;
+    /** False while a live worker has not supplied its first activity report. */
+    reporting: boolean;
+    thread_safe: boolean;
+}
+
 export interface DownloaderDebug {
     sessions: DebugSession[];
     lanes: DebugLane[];
+    /** Omitted by servers predating module activity reporting. */
+    modules?: DebugModule[];
 }
 
 export type DownloaderSecrets = Record<string, string>;

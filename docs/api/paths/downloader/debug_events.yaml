@@ -4,13 +4,14 @@ get:
   summary: Streams downloader runtime diagnostics
   description: |
     Authenticated SSE carrying the same diagnostic state as GET /downloader/debug.
-    The initial snapshot contains all live sessions, retained events, and lanes.
-    Each update replaces sessions and lanes while carrying only session events
+    The initial snapshot contains all live sessions, retained events, lanes, and module queues.
+    Each update replaces sessions, lanes, and modules while carrying only session events
     after the previous event sequence on this connection. events_dropped reports
     missed events if a session's bounded history overtakes that cursor.
 
     Session diagnostic publications, session changes/removals, and lane changes
-    trigger notifications. Concurrent changes coalesce before rendering. Idle
+    trigger notifications, as do module worker starts/stops and changed heartbeat
+    activity reports. Concurrent changes coalesce before rendering. Idle
     streams only send keepalive comments; rendering is not polled on a timer and
     producers perform no diagnostic database reads.
 
@@ -27,7 +28,7 @@ get:
             type: string
           example: |+
             event: snapshot
-            data: {"sessions":[],"lanes":[]}
+            data: {"sessions":[],"lanes":[],"modules":[]}
 
     '401':
       description: Authentication required or API key not recognized.

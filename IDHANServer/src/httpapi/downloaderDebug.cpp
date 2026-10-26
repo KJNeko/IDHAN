@@ -21,6 +21,7 @@
 #include "downloader/DownloadSessionManager.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/http/SSEBodySource.hpp"
+#include "modules/ModuleLoader.hpp"
 
 namespace idhan::httpapi
 {
@@ -406,6 +407,38 @@ static runtime::Task< DownloaderDebugSnapshot > debugSnapshot(
 		if ( !first_lane ) builder.append_comma();
 		first_lane = false;
 		appendLane( builder, lane );
+	}
+	builder.end_array();
+
+	builder.append_comma();
+	builder.escape_and_append_with_quotes( "modules" );
+	builder.append_colon();
+	builder.start_array();
+	bool first_module { true };
+	for ( const auto& module : modules::ModuleLoader::instance().queueSnapshots() )
+	{
+		if ( !first_module ) builder.append_comma();
+
+		first_module = false;
+		builder.start_object();
+		builder.append_key_value( "library_index", static_cast< std::uint64_t >( module.library_index ) );
+		builder.append_comma();
+		builder.append_key_value( "module_index", static_cast< std::uint64_t >( module.module_index ) );
+		builder.append_comma();
+		builder.append_key_value( "library", module.library );
+		builder.append_comma();
+		builder.append_key_value( "name", module.name );
+		builder.append_comma();
+		builder.append_key_value( "queued", static_cast< std::uint64_t >( module.activity.queued ) );
+		builder.append_comma();
+		builder.append_key_value( "running", static_cast< std::uint64_t >( module.activity.running ) );
+		builder.append_comma();
+		builder.append_key_value( "workers", static_cast< std::uint64_t >( module.workers ) );
+		builder.append_comma();
+		builder.append_key_value( "reporting", module.reporting );
+		builder.append_comma();
+		builder.append_key_value( "thread_safe", module.thread_safe );
+		builder.end_object();
 	}
 	builder.end_array();
 

@@ -55,8 +55,19 @@ get:
         Supply at most once and only when event_cursors is absent. Despite its
         name, this is not a timestamp filter.
   description: |
-    Includes current session work, in-flight requests, lane snapshots, counters,
+    Includes current session work, in-flight requests, lane snapshots, module queues, counters,
     and retained events. Diagnostic fields may evolve; unknown fields should be ignored.
+
+    `modules` lists every loaded module, identified by `library_index` and `module_index`,
+    with its `name`, `library` filename, `thread_safe` flag, `queued` and `running`
+    call counts, and live library `workers`. Worker counts are shared by modules in
+    the same library; do not sum them across module rows. Activity is sampled at
+    the configured worker heartbeat interval and includes persistent, single-run,
+    and isolated callback workers. Queued calls include calls waiting for a worker
+    thread or a module serialization lock. Running calls include module code
+    waiting for callbacks. `reporting` is false while any live worker lacks an
+    activity report; treat counts as incomplete until reporting becomes true.
+    A library with no live workers reports zero queued and running calls.
 
     Use `event_cursors=12:100,15:40` to poll for newer events. Each event sequence
     is a monotonically increasing counter scoped to its runtime session, starting
