@@ -80,6 +80,8 @@ class DownloadSessionManager final
 		DownloadSessionUrlID job_id,
 		DownloadSessionID session_id,
 		std::string url );
+	[[nodiscard]] std::expected< std::vector< std::string >, std::string > classStorageUrls(
+		std::vector< std::string > urls );
 	void destroy( DownloadSessionID session_id );
 	void shutdown();
 

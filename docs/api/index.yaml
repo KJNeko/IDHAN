@@ -154,6 +154,8 @@ paths:
     $ref: ./paths/mime/parse.yaml
   /mime/generate_thumbnail:
     $ref: ./paths/mime/generate_thumbnail.yaml
+  /jobs/urls/reorganize:
+    $ref: ./paths/jobs/reorganize_urls.yaml
   /jobs/metadata/rescan:
     $ref: ./paths/jobs/rescan_metadata.yaml
   /jobs/{job_id}/status:

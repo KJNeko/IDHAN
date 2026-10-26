@@ -540,6 +540,12 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 		// Jobs
 		{
 			.method = proxygen::HTTPMethod::POST,
+			.path = "/jobs/urls/reorganize",
+			.rules = {},
+		},
+
+		{
+			.method = proxygen::HTTPMethod::POST,
 			.path = "/jobs/metadata/rescan",
 			.rules = {
 				.json = {

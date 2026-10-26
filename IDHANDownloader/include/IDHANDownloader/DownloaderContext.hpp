@@ -42,6 +42,9 @@ class DownloaderContext
 	//! Returns an error when the URL is invalid or no URL class accepts it.
 	[[nodiscard]] std::expected< void, std::string > validate( std::string_view url ) const;
 
+	// Maintenance only sorts URLs accepted by a configured class with sorting enabled.
+	[[nodiscard]] std::string classStorageUrl( std::string_view url ) const;
+
 	//! Backoff persists until explicitly cleared by either reset function.
 	void resetBackoff( std::string_view lane_key );
 	void resetAllBackoff();
